@@ -1,0 +1,15 @@
+* Window management (GLFW)
+* Input
+* Engine loop.
+* Modules!
+* Smallpt app.
+* Thread management?
+** http://crascit.com/2015/07/25/cmake-gtest/
+
+libs
+* GLFW
+* TinyEXR
+* TinyOBJ
+* OptiX
+
+* Use Visual Studio 2015 to allow Math/Constants.h to use variable templates. (I'm looking at you PI!)

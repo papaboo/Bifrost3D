@@ -1,0 +1,67 @@
+// Test Cogwheel Quaternions.
+// ---------------------------------------------------------------------------
+// Copyright (C) 2015, Cogwheel. See AUTHORS.txt for authors
+//
+// This program is open source and distributed under the New BSD License. See
+// LICENSE.txt for more detail.
+// ---------------------------------------------------------------------------
+
+#ifndef _COGWHEEL_MATH_QUATERNION_TEST_H_
+#define _COGWHEEL_MATH_QUATERNION_TEST_H_
+
+#include <Math/Quaternion.h>
+#include <Math/Conversions.h>
+
+#include <gtest/gtest.h>
+
+namespace Cogwheel {
+namespace Math {
+
+class Math_QuaternionTest : public ::testing::Test {
+protected:
+    // Redefine comparison methods as gtest's EXPECT_PRED and argument overloading doesn't play well with each other.
+    static bool compareQuaternion(Quaternionf lhs, Quaternionf rhs, unsigned short maxUlps) {
+        return almostEqual(lhs, rhs, maxUlps);
+    }
+    static bool compareVector(Vector3f lhs, Vector3f rhs, unsigned short maxUlps) {
+        return almostEqual(lhs, rhs, maxUlps);
+    }
+};
+
+TEST_F(Math_QuaternionTest, DirectionHelpers) {
+    Quaternionf quat = Quaternionf::fromAngleAxis(25, Vector3f::up());
+
+    unsigned short maxError = 10;
+    EXPECT_PRED3(compareVector, quat.forward(), quat * Vector3f::forward(), maxError);
+    EXPECT_PRED3(compareVector, quat.up(), quat * Vector3f::up(), maxError);
+    EXPECT_PRED3(compareVector, quat.right(), quat * Vector3f::right(), maxError);
+}
+
+TEST_F(Math_QuaternionTest, MatrixRepresentation) {
+    // Test N number of quaternions.
+    const int N = 10;
+    for (int i = 0; i < N; ++i) {
+        // Construct a 'random' quaternion.
+        float angle = (i * 360.0f) / N;
+        Vector3f axis = i % 2 ? Vector3f::up() : Vector3f::zero();
+        axis += i % 4 ? Vector3f::forward() : Vector3f::zero();
+        axis += i % 8 ? Vector3f::right() : Vector3f::zero();
+        
+        Quaternionf q0 = Quaternionf::fromAngleAxis(angle, normalize(axis));
+
+        Matrix3x3f m = toMatrix3x3(q0);
+
+        Quaternionf q1 = toQuaternion(m);
+
+        // Compare transformations of vectors.
+        for (Vector3f v : { Vector3f::forward(), Vector3f::right(), Vector3f::up() }) {
+            EXPECT_PRED3(compareVector, q0 * v, m * v, 20);
+            EXPECT_PRED3(compareVector, q1 * v, m * v, 30); // Apparently toQuaternion has bigger precision issues than toMatrix3x3.
+        }
+    }
+}
+
+} // NS Math
+} // NS Cogwheel
+
+#endif // _COGWHEEL_MATH_QUATERNION_TEST_H_

@@ -1,0 +1,118 @@
+// Cogwheel Unique ID Generator.
+// -----------------------------------------------------------------------------
+// Copyright (C) 2015, Cogwheel. See AUTHORS.txt for authors
+//
+// This program is open source and distributed under the New BSD License. See
+// LICENSE.txt for more detail.
+// -----------------------------------------------------------------------------
+
+namespace Cogwheel {
+namespace Core {
+
+template <typename T>
+TypedUIDGenerator<T>::TypedUIDGenerator(unsigned int startCapacity) 
+    : mCapacity(startCapacity < 2 ? 2 : startCapacity)
+    , mIDs(new UID[mCapacity]), mNextIndex(1u), mLastIndex(mCapacity - 1) {
+    mIDs[0] = UID(UID::MAX_IDS,1); // The invalid ID is at 0, so the 0'th index needs to point to something else for has() to return false;
+    for (unsigned int i = 1; i < mCapacity; ++i)
+        mIDs[i] = UID(i + 1, 0);
+}
+
+template <typename T>
+TypedUIDGenerator<T>::TypedUIDGenerator(TypedUIDGenerator<T>&& other)
+    : mCapacity(other.mCapacity), mIDs(other.mIDs), mNextIndex(other.mNextIndex), mLastIndex(other.mLastIndex) {
+    other.mIDs = nullptr;
+    other.mCapacity = other.mNextIndex = other.mLastIndex = 0;
+}
+
+template <typename T>
+TypedUIDGenerator<T>::~TypedUIDGenerator() {
+    if (mIDs)
+        delete[] mIDs;
+}
+
+template <typename T>
+TypedUIDGenerator<T>& TypedUIDGenerator<T>::operator=(TypedUIDGenerator<T>&& rhs) {
+    mCapacity = rhs.mCapacity;
+    mIDs = rhs.mIDs;
+    mNextIndex = rhs.mNextIndex;
+    mLastIndex = rhs.mLastIndex;
+    rhs.mIDs = nullptr;
+    rhs.mCapacity = rhs.mNextIndex = rhs.mLastIndex = 0;
+    return *this;
+}
+
+inline unsigned int min(unsigned int lhs, unsigned int rhs) {
+    return lhs < rhs ? lhs : rhs;
+}
+
+template <typename T>
+typename TypedUIDGenerator<T>::UID TypedUIDGenerator<T>::generate() {
+    if (mNextIndex == mLastIndex)
+        reserve(mCapacity + mCapacity / 2 + 1); // +1 to ensure that the capacity grows by at least one!
+
+    unsigned int index = mNextIndex;
+    UID& id = mIDs[index];
+    mNextIndex = id.mID;
+    id.mID = index;
+
+    return id;
+}
+
+template <typename T>
+void TypedUIDGenerator<T>::erase(UID id) {
+    if (has(id)) {
+        mIDs[mLastIndex].mID = id.mID;
+        mLastIndex = id.mID;
+
+        // Invalidate the old ID
+        ++mIDs[id].mIncarnation;
+        mIDs[id].mID = 0;
+    }
+}
+
+template <typename T>
+bool TypedUIDGenerator<T>::has(const UID id) const {
+    // If the ID equals it's own ID it is in use.
+    return id.mID < mCapacity && mIDs[id.mID] == id;
+}
+
+template <typename T>
+void TypedUIDGenerator<T>::reserve(unsigned int newCapacity) {
+    newCapacity = min(newCapacity, UID::MAX_IDS);
+    if (newCapacity <= mCapacity)
+        return;
+
+    // Resize the array of IDs.
+    UID* newIDs = new UID[newCapacity];
+    memcpy(newIDs, mIDs, sizeof(UID) * mCapacity);
+    delete[] mIDs;
+    mIDs = newIDs;
+    
+    // Rewire the pointers to the next free ID.
+    mIDs[mNextIndex].mID = mCapacity;
+    for (unsigned int i = mCapacity; i < newCapacity; ++i)
+        mIDs[i] = UID(i + 1, 0u);
+
+    mCapacity = newCapacity;
+    mLastIndex = mCapacity - 1;
+}
+
+/* Debug! 
+template <typename T>
+std::string TypedUIDGenerator<T>::toString() {
+    std::ostringstream out;
+    for (unsigned int i = 0; i < mCapacity; ++i) {
+        out << "[";
+        if (i == mNextIndex) out << "NEXT ";
+        if (i == mLastIndex) out << "LAST ";
+        out << "id: " << mIDs[i].mID << ", incarnation: " << mIDs[i].mIncarnation << "]";
+        if (i + 1 < mCapacity)
+            out << ", ";
+    }
+    return out.str();
+}
+*/
+
+}
+}
