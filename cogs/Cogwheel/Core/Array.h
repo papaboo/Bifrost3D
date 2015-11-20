@@ -67,11 +67,13 @@ public:
         mData = rhs.mData;
         rhs.mSize = 0;
         rhs.mData = nullptr;
+        return *this;
     }
     Array& operator=(const Array<T>& rhs) {
         mSize = rhs.mSize;
         mData = new T[mSize]; // TODO malloc to avoid default initialization.
         std::copy(rhs.mData, rhs.mData + mSize, mData);
+        return *this;
     }
     
     // -----------------------------------------------------------------------
