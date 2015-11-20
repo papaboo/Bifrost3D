@@ -65,11 +65,11 @@ public:
     //*****************************************************************************
     inline void operator+=(float v) {
         for (int i = 0; i < N; ++i)
-            this[i] += v;
+            begin()[i] += v;
     }
     inline void operator+=(RGB v) {
         for (int i = 0; i < N; ++i)
-            this[i] += v[i];
+            begin()[i] += v[i];
     }
     inline RGB operator+(float rhs) const {
         RGB ret(*this);
@@ -89,11 +89,11 @@ public:
     //*****************************************************************************
     inline void operator-=(const float v) {
         for (int i = 0; i < N; ++i)
-            this[i] -= v;
+            begin()[i] -= v;
     }
     inline void operator-=(RGB v) {
         for (int i = 0; i < N; ++i)
-            this[i] -= v[i];
+            begin()[i] -= v[i];
     }
     inline RGB operator-(float rhs) const {
         RGB ret(*this);
@@ -113,11 +113,11 @@ public:
     //*****************************************************************************
     inline void operator*=(float v) {
         for (int i = 0; i < N; ++i)
-            this[i] *= v;
+            begin()[i] *= v;
     }
     inline void operator*=(RGB v) {
         for (int i = 0; i < N; ++i)
-            this[i] *= v[i];
+            begin()[i] *= v[i];
     }
     inline RGB operator*(float rhs) const {
         RGB ret(*this);
@@ -137,11 +137,11 @@ public:
     //*****************************************************************************
     inline void operator/=(float v) {
         for (int i = 0; i < N; ++i)
-            this[i] /= v;
+            begin()[i] /= v;
     }
     inline void operator/=(RGB v) {
         for (int i = 0; i < N; ++i)
-            this[i] /= v[i];
+            begin()[i] /= v[i];
     }
     inline RGB operator/(float rhs) const {
         RGB ret(*this);
