@@ -1,10 +1,11 @@
 * Window management (GLFW)
-* Input
+* Rename Math/Utils.h to Math/Math.h and include everything in it.
+* Use alias instead of typedef?
+* Visual studio - integrate OpenMP in vs.cmake.
 * Engine loop.
+* Input
 * Modules!
-* Smallpt app.
-* Thread management?
-** http://crascit.com/2015/07/25/cmake-gtest/
+* Thread management
 
 libs
 * GLFW
