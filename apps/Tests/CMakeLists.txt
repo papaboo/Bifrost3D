@@ -34,3 +34,7 @@ source_group("Math" FILES ${MATH_SRCS})
 source_group("Scene" FILES ${SCENE_SRCS})
 
 # setup_gtest(${PROJECT_NAME})
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+  FOLDER "Apps"
+)

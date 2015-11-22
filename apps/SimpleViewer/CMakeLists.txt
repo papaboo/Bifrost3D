@@ -11,3 +11,7 @@ SOURCE_GROUP("" FILES ${SRCS})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME}
   Gogwheel
 )
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+  FOLDER "Apps"
+)

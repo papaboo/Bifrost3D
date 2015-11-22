@@ -20,14 +20,12 @@ if(NOT OPENGL_FOUND)
     message(ERROR " OPENGL not found!")
 endif(NOT OPENGL_FOUND)
 
-find_package(OpenMP REQUIRED)
-if (OPENMP_FOUND)
-	# Add OpenMP to host C++ compiler flags
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-endif()
-
 TARGET_LINK_LIBRARIES(${PROJECT_NAME}
   Gogwheel
   glfw
   ${OPENGL_LIBRARIES}
+)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+  FOLDER "Apps"
 )
