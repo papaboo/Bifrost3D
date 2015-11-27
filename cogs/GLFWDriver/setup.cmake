@@ -1,13 +1,15 @@
+set(GLFW_COG_DIR "${COGWHEEL_COGS_DIR}/GLFWDriver")
 set(GLFW_ZIP_URL "https://github.com/glfw/glfw/releases/download/3.1.2/glfw-3.1.2.zip")
-set(GLFW_ZIP_DEST "${COGWHEEL_COGS_DIR}/GLFW/lib/glfw-3.1.2.zip")
-set(GLFW_SOURCE_CMAKE "${COGWHEEL_COGS_DIR}/GLFW/lib/glfw-3.1.2.zip")
-set(GLFW_LIBS_DIR "${COGWHEEL_COGS_DIR}/GLFW/lib/glfw-3.1.2")
+set(GLFW_ZIP_DEST "${GLFW_COG_DIR}/lib/glfw-3.1.2.zip")
+set(GLFW_SOURCE_CMAKE "${GLFW_COG_DIR}/lib/glfw-3.1.2.zip")
+set(GLFW_LIBS_DIR "${GLFW_COG_DIR}/lib/glfw-3.1.2")
 
 # TODO Split into function that downloads, unzips and deletes.
 if (NOT EXISTS ${GLFW_LIBS_DIR}/CMakeLists.txt)
   message(STATUS "Downloading '${GLFW_ZIP_URL}'
     to '${GLFW_ZIP_DEST}'
-    if the download fails, then manually downloading the zip will work as well.")
+    if the download fails, then manually downloading the zip will work as well."
+  )
 
   file(DOWNLOAD
     "${GLFW_ZIP_URL}"
@@ -26,13 +28,14 @@ if (NOT EXISTS ${GLFW_LIBS_DIR}/CMakeLists.txt)
     message(FATAL_ERROR "error: downloading '${GLFW_ZIP_URL}'
     status_code: ${status_code}
     status_string: ${status_string}
-    log: ${log}")
+    log: ${log}"
+  )
 
   else()
 
     # Unzip the source
     message(STATUS "Unzipping glfw-3.1.2.zip")
-    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${GLFW_ZIP_DEST}" WORKING_DIRECTORY "${COGWHEEL_COGS_DIR}/GLFW/lib" )
+    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${GLFW_ZIP_DEST}" WORKING_DIRECTORY "${GLFW_COG_DIR}/lib" )
     
     # TODO Delete the zip file
     message(STATUS "Deleting glfw-3.1.2.zip")
@@ -46,6 +49,16 @@ if (EXISTS ${GLFW_LIBS_DIR}/CMakeLists.txt)
   option(GLFW_BUILD_DOCS "Build the GLFW documentation" OFF)
   option(GLFW_INSTALL "Generate installation target" OFF)
 
+  # Add GLFW lib
   add_subdirectory(${GLFW_LIBS_DIR})
   include_directories("${GLFW_LIBS_DIR}/include")
+  
+  # Move GLFW source into Libs folder
+  set_target_properties(glfw PROPERTIES
+                        FOLDER "Libs")
+
+  # Add the GLFW driver project
+  subdirs(${GLFW_COG_DIR}/src)
+  include_directories(${GLFW_COG_DIR}/src)
+
 endif()
