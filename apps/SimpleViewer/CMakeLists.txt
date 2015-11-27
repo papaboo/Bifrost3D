@@ -10,6 +10,7 @@ SOURCE_GROUP("" FILES ${SRCS})
 
 TARGET_LINK_LIBRARIES(${PROJECT_NAME}
   Gogwheel
+  glfw
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
