@@ -19,6 +19,8 @@ namespace Core {
 // and it will not require objects to have a default constructor, and as such 
 // elements not explicitly initialized will contain undefined data.
 // TODO
+// * Specialize for booleans and add 'clearAll()' and 'setAll()' methods.
+// * Specialize for arbitrary bits pr integer element?
 // * Constructor taking two iterators as argument
 // * Add emplace.
 // * Add swap.
