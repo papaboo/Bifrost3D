@@ -13,7 +13,6 @@
 
 #include <initializer_list>
 #include <sstream>
-// #include <type_traits>
 
 namespace Cogwheel {
 namespace Math {
