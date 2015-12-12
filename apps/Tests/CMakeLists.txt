@@ -9,6 +9,10 @@ set(CORE_SRCS
   Core/UniqueIDGeneratorTest.h
 )
 
+set(INPUT_SRCS
+  Input/KeyboardTest.h
+)
+
 set(MATH_SRCS
   Math/QuaternionTest.h
   Math/TransformTest.h
@@ -19,7 +23,7 @@ set(SCENE_SRCS
   Scene/TransformTest.h
 )
 
-add_executable(${PROJECT_NAME} ${SRCS} ${CORE_SRCS} ${MATH_SRCS} ${SCENE_SRCS})
+add_executable(${PROJECT_NAME} ${SRCS} ${CORE_SRCS} ${INPUT_SRCS} ${MATH_SRCS} ${SCENE_SRCS})
 
 include_directories(.)
 
@@ -30,6 +34,7 @@ target_link_libraries(${PROJECT_NAME}
 
 source_group("" FILES ${SRCS})
 source_group("Core" FILES ${CORE_SRCS})
+source_group("Input" FILES ${INPUT_SRCS})
 source_group("Math" FILES ${MATH_SRCS})
 source_group("Scene" FILES ${SCENE_SRCS})
 

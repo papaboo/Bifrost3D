@@ -3,6 +3,8 @@
 #include <Core/ArrayTest.h>
 #include <Core/UniqueIDGeneratorTest.h>
 
+#include <Input/KeyboardTest.h>
+
 #include <Math/QuaternionTest.h>
 #include <Math/TransformTest.h>
 
