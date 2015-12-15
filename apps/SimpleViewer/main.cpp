@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <iostream>
 
-void initializer(Core::Engine& engine) {
+void initializer(Cogwheel::Core::Engine& engine) {
     std::cout << "Initialize baby!" << std::endl;
     engine.getWindow().setName("SimpleViewer");
 }
