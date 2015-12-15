@@ -1,14 +1,17 @@
-* Window management (GLFW)
-* Rename Math/Utils.h to Math/Math.h and include everything in it.
+* Mouse tests.
+* inline header methods in keyboard and mouse interface.
+* Add getters to the mouse to stay consistent with the keyboard.
+* Use _ in tests instead of camel case. See keyboard (and mouse) tests.
+* Move GLFW into a root lib folder to keep solution and file layout in sync?
+* Include everything math'y in Math/Math.h.
 * Use alias instead of typedef?
-* Visual studio - integrate OpenMP in vs.cmake.
-* Engine loop.
-* Input
+* Camera scene objects.
+** Contains viewport and projection matrix. Inverse projection as well? Probably.
+** Plus Utils for creating the projection matrices.
 * Modules!
-* Thread management
+* Renderer.
 
 libs
-* GLFW
 * TinyEXR
 * TinyOBJ
 * OptiX
