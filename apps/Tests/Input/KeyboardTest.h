@@ -61,7 +61,7 @@ GTEST_TEST(Input_Keyboard, resetting) {
         }
     }
 
-    keyboard.resetKeyState();
+    keyboard.perFrameReset();
     for (int k = 0; k < (int)Keyboard::Key::KeyCount; ++k) {
         Keyboard::Key key = Keyboard::Key(k);
         if (key == Keyboard::Key::A || key == Keyboard::Key::B || key == Keyboard::Key::C)
