@@ -112,14 +112,14 @@ public:
         mKeyStates[(int)key].halftaps = halftaps == MAX_HALFTAP_COUNT ? MAX_HALFTAP_COUNT-1 : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
     }
 
-    void resetKeyState() {
+    void perFrameReset() {
         for (KeyState& state : mKeyStates)
             state.halftaps = 0u;
     }
 
 private:
 
-    // 8 bit struct containing state of a key; is it pressed or released and how many times has it been pressed per frame.
+    // 8 bit struct containing state of a key; is it pressed or released and how many times was it pressed last frame.
     // TODO
     //    3 bits for halftaps should be enough. Compress the keystate to 4 bits and store two states pr 8 bit.
     struct KeyState {
