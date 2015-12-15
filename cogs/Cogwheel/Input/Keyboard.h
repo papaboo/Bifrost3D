@@ -102,17 +102,17 @@ public:
         }
     }
 
-    bool isPressed(Key key) const { return mKeyStates[(int)key].isPressed; }
-    bool isReleased(Key key) const { return !isPressed(key); }
-    int halftaps(Key key) const { return mKeyStates[(int)key].halftaps; }
+    inline bool isPressed(Key key) const { return mKeyStates[(int)key].isPressed; }
+    inline bool isReleased(Key key) const { return !isPressed(key); }
+    inline int halftaps(Key key) const { return mKeyStates[(int)key].halftaps; }
 
-    void keyTapped(Key key, bool pressed) {
+    inline void keyTapped(Key key, bool pressed) {
         mKeyStates[(int)key].isPressed = pressed;
         unsigned int halftaps = mKeyStates[(int)key].halftaps;
         mKeyStates[(int)key].halftaps = halftaps == MAX_HALFTAP_COUNT ? MAX_HALFTAP_COUNT-1 : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
     }
 
-    void perFrameReset() {
+    inline void perFrameReset() {
         for (KeyState& state : mKeyStates)
             state.halftaps = 0u;
     }

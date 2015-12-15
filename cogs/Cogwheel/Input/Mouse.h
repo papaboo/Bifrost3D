@@ -36,14 +36,14 @@ public:
 
     float scrollDelta;
 
-    void buttonTapped(int buttonId, bool pressed) {
+    inline void buttonTapped(int buttonId, bool pressed) {
         ButtonState* buttons = &leftButton;
         buttons[buttonId].isPressed = pressed;
         unsigned int halftaps = buttons[buttonId].halftaps;
         buttons[buttonId].halftaps = halftaps == MAX_HALFTAP_COUNT ? MAX_HALFTAP_COUNT - 1 : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
     }
 
-    void perFrameReset() {
+    inline void perFrameReset() {
         delta = Math::Vector2i::zero();
 
         leftButton.halftaps = 0u;
