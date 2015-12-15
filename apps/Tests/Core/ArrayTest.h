@@ -16,7 +16,7 @@
 namespace Cogwheel {
 namespace Core {
 
-GTEST_TEST(Core_ArrayTest, TestSize) {
+GTEST_TEST(Core_Array, resizing) {
     Array<unsigned int> array = Array<unsigned int>(8u);
     EXPECT_EQ(8u, array.size());
 
@@ -27,7 +27,7 @@ GTEST_TEST(Core_ArrayTest, TestSize) {
     EXPECT_EQ(5u, array.size());
 }
 
-GTEST_TEST(Core_ArrayTest, TestCopy) {
+GTEST_TEST(Core_Array, copying) {
     Array<unsigned int> array0 = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
     Array<unsigned int> array1 = array0;
 
@@ -38,7 +38,7 @@ GTEST_TEST(Core_ArrayTest, TestCopy) {
         EXPECT_EQ(array0[i], array1[i]);
 }
 
-GTEST_TEST(Core_ArrayTest, TestIndexing) {
+GTEST_TEST(Core_Array, indexing) {
     // Create array and test that index and data are equal.
     Array<unsigned int> array = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
     for (unsigned int i = 0; i != array.size(); ++i) {

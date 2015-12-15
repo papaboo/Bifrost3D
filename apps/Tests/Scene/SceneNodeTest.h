@@ -16,7 +16,7 @@
 namespace Cogwheel {
 namespace Scene {
 
-GTEST_TEST(Scene_SceneNodeTest, TestSize) {
+GTEST_TEST(Scene_SceneNode, resizing) {
     SceneNodes::allocate(8u);
     EXPECT_GE(SceneNodes::capacity(), 8u);
 
@@ -33,7 +33,7 @@ GTEST_TEST(Scene_SceneNodeTest, TestSize) {
     EXPECT_LT(SceneNodes::capacity(), largerCapacity);
 }
 
-GTEST_TEST(Scene_SceneNodeTest, CreateNode) {
+GTEST_TEST(Scene_SceneNode, creating) {
     SceneNodes::allocate(2u);
     SceneNodes::UID id = SceneNodes::create("Foo");
     EXPECT_TRUE(SceneNodes::has(id));
@@ -43,7 +43,7 @@ GTEST_TEST(Scene_SceneNodeTest, CreateNode) {
     SceneNodes::deallocate();
 }
 
-GTEST_TEST(Scene_SceneNodeTest, TestSentinelNode) {
+GTEST_TEST(Scene_SceneNode, sentinel_node) {
     SceneNodes::allocate(1u);
 
     SceneNode sentinel = SceneNodes::UID::InvalidUID();
@@ -59,7 +59,7 @@ GTEST_TEST(Scene_SceneNodeTest, TestSentinelNode) {
     SceneNodes::deallocate();
 }
 
-GTEST_TEST(Scene_SceneNodeTest, TestParenting) {
+GTEST_TEST(Scene_SceneNode, parenting) {
     SceneNodes::allocate(1u);
     SceneNode n0 = SceneNodes::create("n0");
     SceneNode n1 = SceneNodes::create("n1");
@@ -86,7 +86,7 @@ GTEST_TEST(Scene_SceneNodeTest, TestParenting) {
     SceneNodes::deallocate();
 }
 
-GTEST_TEST(Scene_SceneNodeTest, TestHierarchy) {
+GTEST_TEST(Scene_SceneNode, creating_hierarchy) {
     // Tests the following hierachy
     //      id3
     //    /  |  \
@@ -157,7 +157,7 @@ GTEST_TEST(Scene_SceneNodeTest, TestHierarchy) {
     SceneNodes::deallocate();
 }
 
-GTEST_TEST(Scene_SceneNodeTest, TestGrapTraversal) {
+GTEST_TEST(Scene_SceneNode, grap_traversal) {
     // Tests the following hierachy
     //      id3
     //    /  |  \

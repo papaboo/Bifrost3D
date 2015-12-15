@@ -17,27 +17,27 @@
 namespace Cogwheel {
 namespace Math {
 
-class Math_QuaternionTest : public ::testing::Test {
+class Math_Quaternion : public ::testing::Test {
 protected:
     // Redefine comparison methods as gtest's EXPECT_PRED and argument overloading doesn't play well with each other.
-    static bool compareQuaternion(Quaternionf lhs, Quaternionf rhs, unsigned short maxUlps) {
+    static bool compare_quaternion(Quaternionf lhs, Quaternionf rhs, unsigned short maxUlps) {
         return almostEqual(lhs, rhs, maxUlps);
     }
-    static bool compareVector(Vector3f lhs, Vector3f rhs, unsigned short maxUlps) {
+    static bool compare_vector(Vector3f lhs, Vector3f rhs, unsigned short maxUlps) {
         return almostEqual(lhs, rhs, maxUlps);
     }
 };
 
-TEST_F(Math_QuaternionTest, DirectionHelpers) {
+TEST_F(Math_Quaternion, axis_helpers) {
     Quaternionf quat = Quaternionf::fromAngleAxis(25, Vector3f::up());
 
-    unsigned short maxError = 10;
-    EXPECT_PRED3(compareVector, quat.forward(), quat * Vector3f::forward(), maxError);
-    EXPECT_PRED3(compareVector, quat.up(), quat * Vector3f::up(), maxError);
-    EXPECT_PRED3(compareVector, quat.right(), quat * Vector3f::right(), maxError);
+    unsigned short max_error = 10;
+    EXPECT_PRED3(compare_vector, quat.forward(), quat * Vector3f::forward(), max_error);
+    EXPECT_PRED3(compare_vector, quat.up(), quat * Vector3f::up(), max_error);
+    EXPECT_PRED3(compare_vector, quat.right(), quat * Vector3f::right(), max_error);
 }
 
-TEST_F(Math_QuaternionTest, MatrixRepresentation) {
+TEST_F(Math_Quaternion, matrix_representation) {
     // Test N number of quaternions.
     const int N = 10;
     for (int i = 0; i < N; ++i) {
@@ -55,8 +55,8 @@ TEST_F(Math_QuaternionTest, MatrixRepresentation) {
 
         // Compare transformations of vectors.
         for (Vector3f v : { Vector3f::forward(), Vector3f::right(), Vector3f::up() }) {
-            EXPECT_PRED3(compareVector, q0 * v, m * v, 20);
-            EXPECT_PRED3(compareVector, q1 * v, m * v, 30); // Apparently toQuaternion has bigger precision issues than toMatrix3x3.
+            EXPECT_PRED3(compare_vector, q0 * v, m * v, 20);
+            EXPECT_PRED3(compare_vector, q1 * v, m * v, 30); // Apparently toQuaternion has bigger precision issues than toMatrix3x3.
         }
     }
 }

@@ -16,7 +16,7 @@
 namespace Cogwheel {
 namespace Core {
 
-GTEST_TEST(Core_UniqueIDGeneratorTest, TestCapacity) {
+GTEST_TEST(Core_UniqueIDGenerator, capacity) {
     UIDGenerator gen = UIDGenerator(8u);
     EXPECT_GE(gen.capacity(), 8u);
 
@@ -30,7 +30,7 @@ GTEST_TEST(Core_UniqueIDGeneratorTest, TestCapacity) {
     EXPECT_EQ(gen.capacity(), largerCapacity);
 }
 
-GTEST_TEST(Core_UniqueIDGeneratorTest, TestGenerateAndErase) {
+GTEST_TEST(Core_UniqueIDGenerator, generate_and_erase) {
     UIDGenerator gen = UIDGenerator(2u);
     UID id = gen.generate();
     EXPECT_TRUE(gen.has(id));
@@ -39,7 +39,7 @@ GTEST_TEST(Core_UniqueIDGeneratorTest, TestGenerateAndErase) {
     EXPECT_FALSE(gen.has(id));
 }
 
-GTEST_TEST(Core_UniqueIDGeneratorTest, TestExpanding) {
+GTEST_TEST(Core_UniqueIDGenerator, expanding) {
     UIDGenerator gen = UIDGenerator(2u);
     UID id0 = gen.generate();
     UID id1 = gen.generate();
@@ -51,7 +51,7 @@ GTEST_TEST(Core_UniqueIDGeneratorTest, TestExpanding) {
     EXPECT_TRUE(gen.has(id2));
 }
 
-GTEST_TEST(Core_UniqueIDGeneratorTest, TestReusableEntries) {
+GTEST_TEST(Core_UniqueIDGenerator, reusable_entries) {
     UIDGenerator gen = UIDGenerator(2u);
 
     UID id0 = gen.generate();
@@ -95,7 +95,7 @@ GTEST_TEST(Core_UniqueIDGeneratorTest, TestReusableEntries) {
     EXPECT_EQ(startCapacity, gen.capacity());
 }
 
-GTEST_TEST(Core_UniqueIDGeneratorTest, TestMultipleGenerateAndErase) {
+GTEST_TEST(Core_UniqueIDGenerator, multiple_generate_and_erase) {
     UIDGenerator gen = UIDGenerator(8u);
 
     UID id0 = gen.generate();

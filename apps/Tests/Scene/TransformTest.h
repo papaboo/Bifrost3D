@@ -18,7 +18,7 @@ namespace Scene {
 
 using namespace Math;
 
-class Scene_TransformTest : public ::testing::Test {
+class Scene_Transform : public ::testing::Test {
 protected:
     // Per-test set-up and tear-down logic.
     virtual void SetUp() {
@@ -28,48 +28,48 @@ protected:
         SceneNodes::deallocate();
     }
 
-    static bool compareVectors(Vector3f lhs, Vector3f rhs) {
+    static bool compare_vector(Vector3f lhs, Vector3f rhs) {
         return almostEqual(lhs, rhs, 10);
     }
 
-    static bool compareQuaternions(Quaternionf lhs, Quaternionf rhs) {
+    static bool compare_quaternions(Quaternionf lhs, Quaternionf rhs) {
         return almostEqual(lhs, rhs);
     }
 
-    static bool compareTransforms(Transform lhs, Transform rhs) {
+    static bool compare_transforms(Transform lhs, Transform rhs) {
         return almostEqual(lhs.mTranslation, rhs.mTranslation)
             && almostEqual(lhs.mRotation, rhs.mRotation)
             && almostEqual(lhs.mScale, rhs.mScale);
     }
 };
 
-TEST_F(Scene_TransformTest, IdentityAsDefault) {
+TEST_F(Scene_Transform, identity_as_default) {
     SceneNode foo = SceneNodes::create("Foo");
-    const Transform globalTrans = foo.getGlobalTransform();
-    const Transform localTrans = foo.getLocalTransform();
+    const Transform global_trans = foo.getGlobalTransform();
+    const Transform local_trans = foo.getLocalTransform();
 
     const Transform identity = Transform::identity();
 
-    EXPECT_EQ(localTrans, identity);
-    EXPECT_EQ(globalTrans, identity);
+    EXPECT_EQ(local_trans, identity);
+    EXPECT_EQ(global_trans, identity);
 }
 
-TEST_F(Scene_TransformTest, SetTransform) {
+TEST_F(Scene_Transform, set_transform) {
     SceneNode foo = SceneNodes::create("Foo");
-    const Transform newTrans = Transform(Vector3f(3, 5, 9), normalize(Quaternionf(1, 2, 3, 4)), 3);
-    foo.setGlobalTransform(newTrans);
+    const Transform new_trans = Transform(Vector3f(3, 5, 9), normalize(Quaternionf(1, 2, 3, 4)), 3);
+    foo.setGlobalTransform(new_trans);
 
-    EXPECT_EQ(foo.getGlobalTransform(), newTrans);
+    EXPECT_EQ(foo.getGlobalTransform(), new_trans);
 }
 
-TEST_F(Scene_TransformTest, HierarchicalTranslation) {
+TEST_F(Scene_Transform, hierarchical_translation) {
     SceneNode foo = SceneNodes::create("Foo");
     SceneNode bar = SceneNodes::create("Bar");
     bar.setParent(foo);
 
     const Vector3f translation = Vector3f(3, 5, 9);
-    const Transform newTrans = Transform(translation);
-    foo.setGlobalTransform(newTrans);
+    const Transform new_trans = Transform(translation);
+    foo.setGlobalTransform(new_trans);
     bar.setGlobalTransform(Transform::identity());
 
     EXPECT_EQ(foo.getGlobalTransform().mTranslation, translation);
@@ -77,14 +77,14 @@ TEST_F(Scene_TransformTest, HierarchicalTranslation) {
     EXPECT_EQ(bar.getGlobalTransform().mTranslation, Vector3f::zero());
 }
 
-TEST_F(Scene_TransformTest, HierarchicalRotation) {
+TEST_F(Scene_Transform, hierarchical_rotation) {
     SceneNode foo = SceneNodes::create("Foo");
     SceneNode bar = SceneNodes::create("Bar");
     bar.setParent(foo);
 
     const Quaternionf rotation = normalize(Quaternionf(1, 2, 3, 4));
-    const Transform newTrans = Transform(Vector3f::zero(), rotation);
-    foo.setGlobalTransform(newTrans);
+    const Transform new_trans = Transform(Vector3f::zero(), rotation);
+    foo.setGlobalTransform(new_trans);
     bar.setGlobalTransform(Transform::identity());
 
     EXPECT_EQ(foo.getGlobalTransform().mRotation, rotation);
@@ -92,7 +92,7 @@ TEST_F(Scene_TransformTest, HierarchicalRotation) {
     EXPECT_EQ(bar.getGlobalTransform().mRotation, Quaternionf::identity());
 }
 
-TEST_F(Scene_TransformTest, LocalTransform) {
+TEST_F(Scene_Transform, local_transform) {
     SceneNode n0 = SceneNodes::create("n0");
     SceneNode n1 = SceneNodes::create("n1");
     n0.setGlobalTransform(Transform(Vector3f(1, 2, 3), Quaternionf::fromAngleAxis(45.0f, Vector3f(0, 1, 0))));
@@ -103,8 +103,8 @@ TEST_F(Scene_TransformTest, LocalTransform) {
     EXPECT_EQ(n1.getLocalTransform().mTranslation, Vector3f::zero());
 
     // Test rotation of transformed child node.
-    Quaternionf expectedLocalRot = Quaternionf::fromAngleAxis(-90.0f, Vector3f(0, 1, 0));
-    EXPECT_PRED2(compareQuaternions, n1.getLocalTransform().mRotation, expectedLocalRot);
+    Quaternionf expected_local_rot = Quaternionf::fromAngleAxis(-90.0f, Vector3f(0, 1, 0));
+    EXPECT_PRED2(compare_quaternions, n1.getLocalTransform().mRotation, expected_local_rot);
 
     // Verify that applying n0's global transform to n1's local transform yields n1's global transform.
     // TBH I'm amazed that this works with EXPECT_EQ.
@@ -112,21 +112,21 @@ TEST_F(Scene_TransformTest, LocalTransform) {
     EXPECT_EQ(computedN1Global, n1.getGlobalTransform());
 }
 
-TEST_F(Scene_TransformTest, PreserveLocalTransformOnParentTransformation) {
+TEST_F(Scene_Transform, preserve_local_transform_on_parent_transformation) {
     SceneNode n0 = SceneNodes::create("n0");
     SceneNode n1 = SceneNodes::create("n1");
 
-    Transform n1LocalTrans = Transform(Vector3f(1, 2, 3), Quaternionf::fromAngleAxis(-45.0f, Vector3f::up()));
-    n1.setGlobalTransform(n1LocalTrans);
+    Transform n1_local_trans = Transform(Vector3f(1, 2, 3), Quaternionf::fromAngleAxis(-45.0f, Vector3f::up()));
+    n1.setGlobalTransform(n1_local_trans);
 
     n1.setParent(n0);
 
     n0.setGlobalTransform(Transform(Vector3f(4, 2, 0), Quaternionf::fromAngleAxis(30.0f, Vector3f::forward())));
 
-    EXPECT_PRED2(compareTransforms, n1LocalTrans, n1.getLocalTransform());
+    EXPECT_PRED2(compare_transforms, n1_local_trans, n1.getLocalTransform());
 }
 
-TEST_F(Scene_TransformTest, ComplexHierachy) {
+TEST_F(Scene_Transform, complex_hierachy) {
     // Tests the following hierachy
     //    t0
     //   / | \
@@ -161,60 +161,60 @@ TEST_F(Scene_TransformTest, ComplexHierachy) {
     // n0
     //     global: position: (3, 2, 1), rotation: (1, [0, 0, 0]), scale: 1
     //     local: position: (3, 2, 1), rotation: (1, [0, 0, 0]), scale: 1
-    Transform n0Transform = Transform(Vector3f(3, 2, 1), Quaternionf::identity(), 1.0f);
-    EXPECT_PRED2(compareTransforms, n0.getGlobalTransform(), n0Transform);
-    EXPECT_PRED2(compareTransforms, n0.getLocalTransform(), n0Transform);
+    Transform n0_transform = Transform(Vector3f(3, 2, 1), Quaternionf::identity(), 1.0f);
+    EXPECT_PRED2(compare_transforms, n0.getGlobalTransform(), n0_transform);
+    EXPECT_PRED2(compare_transforms, n0.getLocalTransform(), n0_transform);
 
     // n1
     //     global: position: (0, 0, 0), rotation: (1, [0, 0, 0]), scale: 1
     //     local: position: (-3, -2, -1), rotation: (1, [0, 0, 0]), scale: 1
-    Transform n1Global = Transform(Vector3f(0, 0, 0), Quaternionf::identity(), 1.0f);
-    Transform n1Local = Transform(Vector3f(-3, -2, -1), Quaternionf::identity(), 1.0f);
-    EXPECT_PRED2(compareTransforms, n1.getGlobalTransform(), n1Global);
-    EXPECT_PRED2(compareTransforms, n1.getLocalTransform(), n1Local);
+    Transform n1_global = Transform(Vector3f(0, 0, 0), Quaternionf::identity(), 1.0f);
+    Transform n1_local = Transform(Vector3f(-3, -2, -1), Quaternionf::identity(), 1.0f);
+    EXPECT_PRED2(compare_transforms, n1.getGlobalTransform(), n1_global);
+    EXPECT_PRED2(compare_transforms, n1.getLocalTransform(), n1_local);
 
     // n2
     //     global: position: (1, 2, 3), rotation: (0.92388, [0, 0.382683, 0]), scale: 1
     //     local: position: (-2, 0, 2), rotation: (0.92388, [0, 0.382683, 0]), scale: 1
-    Transform n2Global = Transform(Vector3f(1, 2, 3), Quaternionf(0.0f, 0.382683456f, 0.0f, 0.923879504f), 1.0f);
-    Transform n2Local = Transform(Vector3f(-2, 0, 2), Quaternionf(0.0f, 0.382683456f, 0.0f, 0.923879504f), 1.0f);
-    EXPECT_PRED2(compareTransforms, n2.getGlobalTransform(), n2Global);
-    EXPECT_PRED2(compareTransforms, n2.getLocalTransform(), n2Local);
+    Transform n2_global = Transform(Vector3f(1, 2, 3), Quaternionf(0.0f, 0.382683456f, 0.0f, 0.923879504f), 1.0f);
+    Transform n2_local = Transform(Vector3f(-2, 0, 2), Quaternionf(0.0f, 0.382683456f, 0.0f, 0.923879504f), 1.0f);
+    EXPECT_PRED2(compare_transforms, n2.getGlobalTransform(), n2_global);
+    EXPECT_PRED2(compare_transforms, n2.getLocalTransform(), n2_local);
 
     // n3
     //     global: position: (0, 0, 0), rotation: (1, [0, 0, 0]), scale: 1
     //     local: position: (1.41421, -2, -2.82843), rotation: (0.92388, [0, -0.38268, 0]), scale: 1
-    Transform n3Global = Transform::identity();
-    Transform n3Local = Transform(Vector3f(1.41421342f, -2.0f, -2.82842708f), Quaternionf(0.0f, -0.382683456f, 0.0f, 0.923879504f), 1.0f);
-    EXPECT_PRED2(compareTransforms, n3.getGlobalTransform(), n3Global);
-    EXPECT_PRED2(compareTransforms, n3.getLocalTransform(), n3Local);
+    Transform n3_global = Transform::identity();
+    Transform n3_local = Transform(Vector3f(1.41421342f, -2.0f, -2.82842708f), Quaternionf(0.0f, -0.382683456f, 0.0f, 0.923879504f), 1.0f);
+    EXPECT_PRED2(compare_transforms, n3.getGlobalTransform(), n3_global);
+    EXPECT_PRED2(compare_transforms, n3.getLocalTransform(), n3_local);
 
     // n4
     //     global: position: (1, 2, 3), rotation: (0.92388, [0, -0.38268, 0]), scale: 0.9999999
     //     local: position: (0, 0, 0), rotation: (0.70711, [0, -0.70711, 0]), scale: 1
-    Transform n4Global = Transform(Vector3f(1, 2, 3), Quaternionf(0.0f, -0.382683456f, 0.0f, 0.923879504f), 1.0f);
-    Transform n4Local = Transform(Vector3f::zero(), Quaternionf(0.0f, -0.707106829f, 0.0f, 0.707106709f), 1.0f);
-    EXPECT_PRED2(compareTransforms, n4.getGlobalTransform(), n4Global);
-    EXPECT_PRED2(compareTransforms, n4.getLocalTransform(), n4Local);
+    Transform n4_global = Transform(Vector3f(1, 2, 3), Quaternionf(0.0f, -0.382683456f, 0.0f, 0.923879504f), 1.0f);
+    Transform n4_local = Transform(Vector3f::zero(), Quaternionf(0.0f, -0.707106829f, 0.0f, 0.707106709f), 1.0f);
+    EXPECT_PRED2(compare_transforms, n4.getGlobalTransform(), n4_global);
+    EXPECT_PRED2(compare_transforms, n4.getLocalTransform(), n4_local);
 
     // n5
     //     global: position: (4, 4, 4), rotation: (1, [0, 0, 0]), scale: 0.5
     //     local: position: (1, 2, 3), rotation: (1, [0, 0, 0]), scale: 0.5
-    Transform n5Global = Transform(Vector3f(4, 4, 4), Quaternionf::identity(), 0.5f);
-    Transform n5Local = Transform(Vector3f(1, 2, 3), Quaternionf::identity(), 0.5f);
-    EXPECT_PRED2(compareTransforms, n5.getGlobalTransform(), n5Global);
-    EXPECT_PRED2(compareTransforms, n5.getLocalTransform(), n5Local);
+    Transform n5_global = Transform(Vector3f(4, 4, 4), Quaternionf::identity(), 0.5f);
+    Transform n5_local = Transform(Vector3f(1, 2, 3), Quaternionf::identity(), 0.5f);
+    EXPECT_PRED2(compare_transforms, n5.getGlobalTransform(), n5_global);
+    EXPECT_PRED2(compare_transforms, n5.getLocalTransform(), n5_local);
 
     // n6
     //     global: position: (2, 2, 2), rotation: (0.92388, [-0.38268, 0, 0]), scale: 0.5
     //     local: position: (-4, -4, -4), rotation: (0.92388, [-0.38268, 0, 0]), scale: 1
-    Transform n6Global = Transform(Vector3f(2, 2, 2), Quaternionf(-0.382683456f, 0.0f, 0.0f, 0.923879504f), 0.5f);
-    Transform n6Local = Transform(Vector3f(-4, -4, -4), Quaternionf(-0.382683456f, 0.0f, 0.0f, 0.923879504f), 1.0f);
-    EXPECT_PRED2(compareTransforms, n6.getGlobalTransform(), n6Global);
-    EXPECT_PRED2(compareTransforms, n6.getLocalTransform(), n6Local);
+    Transform n6_global = Transform(Vector3f(2, 2, 2), Quaternionf(-0.382683456f, 0.0f, 0.0f, 0.923879504f), 0.5f);
+    Transform n6_local = Transform(Vector3f(-4, -4, -4), Quaternionf(-0.382683456f, 0.0f, 0.0f, 0.923879504f), 1.0f);
+    EXPECT_PRED2(compare_transforms, n6.getGlobalTransform(), n6_global);
+    EXPECT_PRED2(compare_transforms, n6.getLocalTransform(), n6_local);
 }
 
-TEST_F(Scene_TransformTest, LookAt) {
+TEST_F(Scene_Transform, look_at) {
     SceneNode n0 = SceneNodes::create("n0");
     SceneNode n1 = SceneNodes::create("n1");
     n0.setGlobalTransform(Transform::identity());
@@ -229,13 +229,13 @@ TEST_F(Scene_TransformTest, LookAt) {
     n0.setGlobalTransform(t0);
 
     { // Test that both transforms are 'facing' each other.
-        Vector3f n0ToN1Direction = normalize(n1.getGlobalTransform().mTranslation - n0.getGlobalTransform().mTranslation);
+        Vector3f n0_to_n1_direction = normalize(n1.getGlobalTransform().mTranslation - n0.getGlobalTransform().mTranslation);
 
-        Vector3f n0Forward = n0.getGlobalTransform().mRotation * Vector3f::forward();
-        EXPECT_PRED2(compareVectors, n0Forward, n0ToN1Direction);
+        Vector3f n0_forward = n0.getGlobalTransform().mRotation * Vector3f::forward();
+        EXPECT_PRED2(compare_vector, n0_forward, n0_to_n1_direction);
 
-        Vector3f n1Forward = n1.getGlobalTransform().mRotation * Vector3f::forward();
-        EXPECT_PRED2(compareVectors, n1Forward, -n0ToN1Direction);
+        Vector3f n1_forward = n1.getGlobalTransform().mRotation * Vector3f::forward();
+        EXPECT_PRED2(compare_vector, n1_forward, -n0_to_n1_direction);
     }
 }
 

@@ -16,7 +16,7 @@
 namespace Cogwheel {
 namespace Input {
 
-GTEST_TEST(Input_Keyboard, Initial_state) {
+GTEST_TEST(Input_Keyboard, initial_state) {
     Keyboard keyboard = Keyboard();
     for (int k = 0; k < (int)Keyboard::Key::KeyCount; ++k) {
         EXPECT_EQ(keyboard.isPressed(Keyboard::Key(k)), false);
