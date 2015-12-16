@@ -22,7 +22,7 @@ namespace Math {
 * The rotation is given by a quaternion, the position by a vector3 and the transform can be uniformly scaled.
 * Only uniform scaling is supported, which leaves out shearing and non-uniform scaling.
 */
-struct Transform {
+struct Transform final {
     //*****************************************************************************
     // Public members
     //*****************************************************************************

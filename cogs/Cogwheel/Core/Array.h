@@ -26,7 +26,7 @@ namespace Core {
 // * Add swap.
 // ---------------------------------------------------------------------------
 template <typename T, typename SizeType = unsigned int>
-struct Array {
+struct Array final {
 public:
     typedef T value_type;
     typedef SizeType size_type;
