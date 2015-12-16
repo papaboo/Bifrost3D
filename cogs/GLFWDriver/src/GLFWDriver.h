@@ -23,70 +23,70 @@ namespace Core {
 class Window final {
 public:
     Window(const std::string& name, int width, int height)
-        : mName(name), mWidth(width), mHeight(height) { }
+        : m_name(name), m_width(width), m_height(height) { }
     
-    inline std::string getName() const { return mName; }
-    inline void setName(const std::string& name) { mName = name; }
+    inline std::string get_name() const { return m_name; }
+    inline void set_name(const std::string& name) { m_name = name; }
 
-    inline int getWidth() const { return mWidth; }
-    inline int getHeight() const { return mHeight; }
+    inline int get_width() const { return m_width; }
+    inline int get_height() const { return m_height; }
 
     inline int resize(int width, int height) {
-        mWidth = width; mHeight = height;
+        m_width = width; m_height = height;
     }
 
 private:
-    std::string mName;
-    int mWidth, mHeight;
+    std::string m_name;
+    int m_width, m_height;
 };
 
 // TODO Make it a singleton.
 class Engine final {
 public:
     Engine()
-        : mWindow(Window("Cogwheel", 640, 480))
-        , mQuit(false)
-        , mIterations(0)
-        , mKeyboard(nullptr)
-        , mMouse(nullptr) { }
+        : m_window(Window("Cogwheel", 640, 480))
+        , m_quit(false)
+        , m_iterations(0)
+        , m_keyboard(nullptr)
+        , m_mouse(nullptr) { }
 
-    inline Window& getWindow() { return mWindow; }
+    inline Window& get_window() { return m_window; }
 
-    inline bool quitRequested() const { return mQuit; }
+    inline bool requested_quit() const { return m_quit; }
 
-    void setKeyboard(const Input::Keyboard* const keyboard) { mKeyboard = keyboard; }
-    const Input::Keyboard* const getKeyboard() const { return mKeyboard; } // So .... you're saying it's const?
-    void setMouse(const Input::Mouse* const mouse) { mMouse = mouse; }
-    const Input::Mouse* const getMouse() const { return mMouse; }
+    void set_keyboard(const Input::Keyboard* const keyboard) { m_keyboard = keyboard; }
+    const Input::Keyboard* const get_keyboard() const { return m_keyboard; } // So .... you're saying it's const?
+    void set_mouse(const Input::Mouse* const mouse) { m_mouse = mouse; }
+    const Input::Mouse* const get_mouse() const { return m_mouse; }
 
-    void doLoop(float dt) {
+    void do_loop(double dt) {
         // TODO Time struct with smooth delta time as well. Smooth delta time is handled as smoothDt = lerp(dt, smoothDt, a), let a be 0.666 or setable by the user?
         // Or use the bitsquid approach. http://bitsquid.blogspot.dk/2010/10/time-step-smoothing.html.
         // Remember, all debt must be payed. Time, technical or loans.
         printf("dt: %f\n", dt);
 
-        int keysPressed = 0;
-        int halfTaps = 0;
+        int keys_pressed = 0;
+        int halftaps = 0;
         for (int k = 0; k < (int)Input::Keyboard::Key::KeyCount; ++k) {
-            keysPressed += mKeyboard->is_pressed(Input::Keyboard::Key(k));
-            halfTaps += mKeyboard->halftaps(Input::Keyboard::Key(k));
+            keys_pressed += m_keyboard->is_pressed(Input::Keyboard::Key(k));
+            halftaps += m_keyboard->halftaps(Input::Keyboard::Key(k));
         }
 
-        printf("Keys held down %u and total halftaps %u\n", keysPressed, halfTaps);
+        printf("Keys held down %u and total halftaps %u\n", keys_pressed, halftaps);
 
         // TODO Invoke modules.
 
-        ++mIterations;
+        ++m_iterations;
     }
 
 private:
-    Window mWindow;
-    bool mQuit;
-    unsigned int mIterations;
+    Window m_window;
+    bool m_quit;
+    unsigned int m_iterations;
 
     // Input should only be updated by whoever created it and not by access via the engine.
-    const Input::Keyboard* mKeyboard;
-    const Input::Mouse* mMouse;
+    const Input::Keyboard* m_keyboard;
+    const Input::Mouse* m_mouse;
 };
 
 } // NS Core
@@ -113,7 +113,8 @@ void run(on_launch_callback on_launch) {
     Engine engine = Engine();
     on_launch(engine);
 
-    GLFWwindow* window = glfwCreateWindow(engine.getWindow().getWidth(), engine.getWindow().getHeight(), engine.getWindow().getName().c_str(), NULL, NULL);
+    Cogwheel::Core::Window& engine_window = engine.get_window();
+    GLFWwindow* window = glfwCreateWindow(engine_window.get_width(), engine_window.get_height(), engine_window.get_name().c_str(), NULL, NULL);
 
     if (!window) {
         glfwTerminate();
@@ -127,7 +128,7 @@ void run(on_launch_callback on_launch) {
 
     { // Setup keyboard
         g_keyboard = new Keyboard();
-        engine.setKeyboard(g_keyboard);
+        engine.set_keyboard(g_keyboard);
         GLFWkeyfun keyboard_callback = [](GLFWwindow* window, int key, int scancode, int action, int mods) {
             if (action == GLFW_REPEAT)
                 return;
@@ -140,7 +141,7 @@ void run(on_launch_callback on_launch) {
         double mouse_pos_x, mouse_pos_y;
         glfwGetCursorPos(window, &mouse_pos_x, &mouse_pos_y);
         g_mouse = new Mouse(Vector2i(int(mouse_pos_x), int(mouse_pos_y)));
-        engine.setMouse(g_mouse);
+        engine.set_mouse(g_mouse);
         
         static GLFWcursorposfun mouse_position_callback = [](GLFWwindow* window, double x, double y) {
             g_mouse->set_position(Vector2i(int(x), int(y)));
@@ -173,11 +174,11 @@ void run(on_launch_callback on_launch) {
         float delta_time = float(current_time - previous_time);
         previous_time = current_time;
             
-        engine.doLoop(delta_time);
+        engine.do_loop(delta_time);
 
         glfwSwapBuffers(window);
 
-        if (engine.quitRequested())
+        if (engine.requested_quit())
             glfwSetWindowShouldClose(window, GL_TRUE);
     }
 
