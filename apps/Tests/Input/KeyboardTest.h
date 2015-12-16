@@ -19,7 +19,7 @@ namespace Input {
 GTEST_TEST(Input_Keyboard, initial_state) {
     Keyboard keyboard = Keyboard();
     for (int k = 0; k < (int)Keyboard::Key::KeyCount; ++k) {
-        EXPECT_EQ(keyboard.isPressed(Keyboard::Key(k)), false);
+        EXPECT_EQ(keyboard.is_pressed(Keyboard::Key(k)), false);
         EXPECT_EQ(keyboard.halftaps(Keyboard::Key(k)), 0u);
     }
 }
@@ -27,47 +27,47 @@ GTEST_TEST(Input_Keyboard, initial_state) {
 GTEST_TEST(Input_Keyboard, key_taps) {
     Keyboard keyboard = Keyboard();
     
-    keyboard.keyTapped(Keyboard::Key::C, true);
-    EXPECT_TRUE(keyboard.isPressed(Keyboard::Key::C));
+    keyboard.key_tapped(Keyboard::Key::C, true);
+    EXPECT_TRUE(keyboard.is_pressed(Keyboard::Key::C));
     EXPECT_EQ(keyboard.halftaps(Keyboard::Key::C), 1u);
 
-    keyboard.keyTapped(Keyboard::Key::B, true);
-    keyboard.keyTapped(Keyboard::Key::B, false);
-    EXPECT_FALSE(keyboard.isPressed(Keyboard::Key::B));
+    keyboard.key_tapped(Keyboard::Key::B, true);
+    keyboard.key_tapped(Keyboard::Key::B, false);
+    EXPECT_FALSE(keyboard.is_pressed(Keyboard::Key::B));
     EXPECT_EQ(keyboard.halftaps(Keyboard::Key::B), 2u);
 
-    keyboard.keyTapped(Keyboard::Key::A, true);
-    keyboard.keyTapped(Keyboard::Key::A, false);
-    keyboard.keyTapped(Keyboard::Key::A, true);
-    EXPECT_TRUE(keyboard.isPressed(Keyboard::Key::A));
+    keyboard.key_tapped(Keyboard::Key::A, true);
+    keyboard.key_tapped(Keyboard::Key::A, false);
+    keyboard.key_tapped(Keyboard::Key::A, true);
+    EXPECT_TRUE(keyboard.is_pressed(Keyboard::Key::A));
     EXPECT_EQ(keyboard.halftaps(Keyboard::Key::A), 3u);
 }
 
 GTEST_TEST(Input_Keyboard, resetting) {
     Keyboard keyboard = Keyboard();
 
-    keyboard.keyTapped(Keyboard::Key::A, true);
-    keyboard.keyTapped(Keyboard::Key::B, true);
-    keyboard.keyTapped(Keyboard::Key::C, true);
+    keyboard.key_tapped(Keyboard::Key::A, true);
+    keyboard.key_tapped(Keyboard::Key::B, true);
+    keyboard.key_tapped(Keyboard::Key::C, true);
 
     for (int k = 0; k < (int)Keyboard::Key::KeyCount; ++k) {
         Keyboard::Key key = Keyboard::Key(k);
         if (key == Keyboard::Key::A || key == Keyboard::Key::B || key == Keyboard::Key::C) {
-            EXPECT_TRUE(keyboard.isPressed(key));
+            EXPECT_TRUE(keyboard.is_pressed(key));
             EXPECT_EQ(keyboard.halftaps(key), 1u);
         } else {
-            EXPECT_FALSE(keyboard.isPressed(key));
+            EXPECT_FALSE(keyboard.is_pressed(key));
             EXPECT_EQ(keyboard.halftaps(key), 0u);
         }
     }
 
-    keyboard.perFrameReset();
+    keyboard.per_frame_reset();
     for (int k = 0; k < (int)Keyboard::Key::KeyCount; ++k) {
         Keyboard::Key key = Keyboard::Key(k);
         if (key == Keyboard::Key::A || key == Keyboard::Key::B || key == Keyboard::Key::C)
-            EXPECT_TRUE(keyboard.isPressed(key));
+            EXPECT_TRUE(keyboard.is_pressed(key));
         else
-            EXPECT_FALSE(keyboard.isPressed(key));
+            EXPECT_FALSE(keyboard.is_pressed(key));
         EXPECT_EQ(keyboard.halftaps(key), 0u);
     }
 }
@@ -77,24 +77,24 @@ GTEST_TEST(Input_Keyboard, tap_overflow_handling) {
 
     // Simulate pressing and relasing A more times than can be represented by the halftap precision.
     for (int i = 0; i < Keyboard::MAX_HALFTAP_COUNT+1; ++i) {
-        keyboard.keyTapped(Keyboard::Key::A, true);
-        keyboard.keyTapped(Keyboard::Key::A, false);
+        keyboard.key_tapped(Keyboard::Key::A, true);
+        keyboard.key_tapped(Keyboard::Key::A, false);
     }
 
     for (int i = 0; i < 3; ++i) {
 
-        keyboard.keyTapped(Keyboard::Key::A, true);
+        keyboard.key_tapped(Keyboard::Key::A, true);
 
-        EXPECT_TRUE(keyboard.isPressed(Keyboard::Key::A));
-        bool oddNumberOfHalftaps = (keyboard.halftaps(Keyboard::Key::A) % 2) == 1;
-        EXPECT_TRUE(oddNumberOfHalftaps);
+        EXPECT_TRUE(keyboard.is_pressed(Keyboard::Key::A));
+        bool odd_number_of_halftaps = (keyboard.halftaps(Keyboard::Key::A) % 2) == 1;
+        EXPECT_TRUE(odd_number_of_halftaps);
         EXPECT_GE(keyboard.halftaps(Keyboard::Key::A), Keyboard::MAX_HALFTAP_COUNT - 1);
 
-        keyboard.keyTapped(Keyboard::Key::A, false);
+        keyboard.key_tapped(Keyboard::Key::A, false);
 
-        EXPECT_TRUE(keyboard.isReleased(Keyboard::Key::A));
-        bool evenNumberOfHalftaps = (keyboard.halftaps(Keyboard::Key::A) % 2) == 0;
-        EXPECT_TRUE(evenNumberOfHalftaps);
+        EXPECT_TRUE(keyboard.is_released(Keyboard::Key::A));
+        bool even_number_of_halftaps = (keyboard.halftaps(Keyboard::Key::A) % 2) == 0;
+        EXPECT_TRUE(even_number_of_halftaps);
         EXPECT_GE(keyboard.halftaps(Keyboard::Key::A), Keyboard::MAX_HALFTAP_COUNT - 1);
     }
 }

@@ -14,7 +14,7 @@
 namespace Cogwheel {
 namespace Input {
 
-class Keyboard {
+class Keyboard final {
 public:
 
     static const int MAX_HALFTAP_COUNT = 7;
@@ -96,24 +96,24 @@ public:
     };
 
     Keyboard() {
-        for (KeyState& state : mKeyStates) {
-            state.isPressed = false;
+        for (KeyState& state : m_key_states) {
+            state.is_pressed = false;
             state.halftaps = 0u;
         }
     }
 
-    inline bool isPressed(Key key) const { return mKeyStates[(int)key].isPressed; }
-    inline bool isReleased(Key key) const { return !isPressed(key); }
-    inline int halftaps(Key key) const { return mKeyStates[(int)key].halftaps; }
+    inline bool is_pressed(Key key) const { return m_key_states[(int)key].is_pressed; }
+    inline bool is_released(Key key) const { return !is_pressed(key); }
+    inline int halftaps(Key key) const { return m_key_states[(int)key].halftaps; }
 
-    inline void keyTapped(Key key, bool pressed) {
-        mKeyStates[(int)key].isPressed = pressed;
-        unsigned int halftaps = mKeyStates[(int)key].halftaps;
-        mKeyStates[(int)key].halftaps = halftaps == MAX_HALFTAP_COUNT ? MAX_HALFTAP_COUNT-1 : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
+    inline void key_tapped(Key key, bool pressed) {
+        m_key_states[(int)key].is_pressed = pressed;
+        unsigned int halftaps = m_key_states[(int)key].halftaps;
+        m_key_states[(int)key].halftaps = (halftaps == MAX_HALFTAP_COUNT) ? (MAX_HALFTAP_COUNT-1) : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
     }
 
-    inline void perFrameReset() {
-        for (KeyState& state : mKeyStates)
+    inline void per_frame_reset() {
+        for (KeyState& state : m_key_states)
             state.halftaps = 0u;
     }
 
@@ -123,11 +123,11 @@ private:
     // TODO
     //    3 bits for halftaps should be enough. Compress the keystate to 4 bits and store two states pr 8 bit.
     struct KeyState {
-        bool isPressed : 1;
+        bool is_pressed : 1;
         unsigned int halftaps : 7;
     };
 
-    std::array<KeyState, (int)Key::KeyCount> mKeyStates;
+    std::array<KeyState, (int)Key::KeyCount> m_key_states;
 };
 
 } // NS Input

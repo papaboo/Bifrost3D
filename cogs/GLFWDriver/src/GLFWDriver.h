@@ -20,7 +20,7 @@
 namespace Cogwheel {
 namespace Core {
 
-class Window {
+class Window final {
 public:
     Window(const std::string& name, int width, int height)
         : mName(name), mWidth(width), mHeight(height) { }
@@ -41,7 +41,7 @@ private:
 };
 
 // TODO Make it a singleton.
-class Engine {
+class Engine final {
 public:
     Engine()
         : mWindow(Window("Cogwheel", 640, 480))
@@ -68,7 +68,7 @@ public:
         int keysPressed = 0;
         int halfTaps = 0;
         for (int k = 0; k < (int)Input::Keyboard::Key::KeyCount; ++k) {
-            keysPressed += mKeyboard->isPressed(Input::Keyboard::Key(k));
+            keysPressed += mKeyboard->is_pressed(Input::Keyboard::Key(k));
             halfTaps += mKeyboard->halftaps(Input::Keyboard::Key(k));
         }
 
@@ -131,22 +131,19 @@ void run(on_launch_callback on_launch) {
         GLFWkeyfun keyboard_callback = [](GLFWwindow* window, int key, int scancode, int action, int mods) {
             if (action == GLFW_REPEAT)
                 return;
-            g_keyboard->keyTapped(Keyboard::Key(key), action == GLFW_PRESS);
+            g_keyboard->key_tapped(Keyboard::Key(key), action == GLFW_PRESS);
         };
         glfwSetKeyCallback(window, keyboard_callback);
     }
 
     { // Setup mouse
-        g_mouse = new Mouse();
-        engine.setMouse(g_mouse);
         double mouse_pos_x, mouse_pos_y;
         glfwGetCursorPos(window, &mouse_pos_x, &mouse_pos_y);
-        g_mouse->position = Vector2i(int(mouse_pos_x), int(mouse_pos_y));
+        g_mouse = new Mouse(Vector2i(int(mouse_pos_x), int(mouse_pos_y)));
+        engine.setMouse(g_mouse);
         
         static GLFWcursorposfun mouse_position_callback = [](GLFWwindow* window, double x, double y) {
-            Vector2i new_pos = Vector2i(int(x), int(y));
-            g_mouse->delta = new_pos - g_mouse->position;
-            g_mouse->position = new_pos;
+            g_mouse->set_position(Vector2i(int(x), int(y)));
         };
         glfwSetCursorPosCallback(window, mouse_position_callback);
 
@@ -154,12 +151,12 @@ void run(on_launch_callback on_launch) {
             if (action == GLFW_REPEAT || button > Mouse::BUTTON_COUNT)
                 return;
 
-            g_mouse->buttonTapped(button, action == GLFW_PRESS);
+            g_mouse->button_tapped(button, action == GLFW_PRESS);
         };
         glfwSetMouseButtonCallback(window, mouse_button_callback);
 
         static GLFWscrollfun mouse_scroll_callback = [](GLFWwindow* window, double horizontalScroll, double verticalScroll) {
-            g_mouse->scrollDelta += float(verticalScroll);
+            g_mouse->add_scroll_delta(float(verticalScroll));
         };
         glfwSetScrollCallback(window, mouse_scroll_callback);
     }
@@ -167,8 +164,8 @@ void run(on_launch_callback on_launch) {
     double previous_time = glfwGetTime();
 
     while (!glfwWindowShouldClose(window)) {
-        g_keyboard->perFrameReset();
-        g_mouse->perFrameReset();
+        g_keyboard->per_frame_reset();
+        g_mouse->per_frame_reset();
         glfwPollEvents();
 
         // Poll and update time.
