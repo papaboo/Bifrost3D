@@ -18,7 +18,7 @@ namespace Cogwheel {
 namespace Math {
 
 template <typename Row, typename Column>
-struct Matrix {
+struct Matrix final {
 public:
     typedef typename Column::value_type T;
     typedef typename Column::value_type value_type;
@@ -185,10 +185,10 @@ template <typename T> using Matrix3x3 = Matrix<Vector3<T>, Vector3<T>>;
 template <typename T> using Matrix4x3 = Matrix<Vector4<T>, Vector3<T>>;
 template <typename T> using Matrix4x4 = Matrix<Vector4<T>, Vector4<T>>;
 
-typedef Matrix2x2<float> Matrix2x2f;
-typedef Matrix3x3<float> Matrix3x3f;
-typedef Matrix4x3<float> Matrix4x3f;
-typedef Matrix4x4<float> Matrix4x4f;
+using Matrix2x2f = Matrix2x2<float>;
+using Matrix3x3f = Matrix3x3<float>;
+using Matrix4x3f = Matrix4x3<float>;
+using Matrix4x4f = Matrix4x4<float>;
 
 } // NS Math
 } // NS Cogwheel
