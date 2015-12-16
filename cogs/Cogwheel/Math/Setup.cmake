@@ -2,6 +2,7 @@ SET(MATH_SRCS
   Math/Color.h
   Math/Conversions.h
   Math/Constants.h
+  Math/Math.h
   Math/Matrix.h
   Math/Quaternion.h
   Math/Transform.h
