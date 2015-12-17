@@ -34,13 +34,15 @@ public:
     typedef Core::TypedUIDGenerator<SceneNodes> UIDGenerator;
     typedef UIDGenerator::UID UID;
 
-    static void allocate(unsigned int capacity);
     static bool isAllocated() { return mGlobalTransforms != nullptr; }
+    static void allocate(unsigned int capacity);
     static void deallocate();
 
-    static SceneNodes::UID create(const std::string& name);
-
+    static inline unsigned int capacity() { return mUIDGenerator.capacity(); }
     static void reserve(unsigned int capacity);
+    static bool has(SceneNodes::UID nodeID) { return mUIDGenerator.has(nodeID); }
+
+    static SceneNodes::UID create(const std::string& name);
 
     static inline std::string getName(SceneNodes::UID nodeID) { return mNames[nodeID]; }
     static inline void setName(SceneNodes::UID nodeID, const std::string& name) { mNames[nodeID] = name; }
@@ -51,9 +53,6 @@ public:
     static std::vector<SceneNodes::UID> getSiblingIDs(SceneNodes::UID nodeID);
     static std::vector<SceneNodes::UID> getChildrenIDs(SceneNodes::UID nodeID);
 
-    static inline unsigned int capacity() { return mUIDGenerator.capacity(); }
-    static bool has(SceneNodes::UID nodeID) { return mUIDGenerator.has(nodeID); }
-    
     static Math::Transform getLocalTransform(SceneNodes::UID nodeID);
     static void setLocalTransform(SceneNodes::UID nodeID, Math::Transform transform);
     static Math::Transform getGlobalTransform(SceneNodes::UID nodeID) { return mGlobalTransforms[nodeID];}

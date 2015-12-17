@@ -11,7 +11,7 @@
 namespace Cogwheel {
 namespace Scene {
 
-SceneNodes::UIDGenerator SceneNodes::mUIDGenerator = UIDGenerator(0u);;
+SceneNodes::UIDGenerator SceneNodes::mUIDGenerator = UIDGenerator(0u);
 std::string* SceneNodes::mNames = nullptr;
 
 SceneNodes::UID* SceneNodes::mParentIDs = nullptr;
@@ -55,19 +55,6 @@ void SceneNodes::deallocate() {
     delete[] mGlobalTransforms; mGlobalTransforms = nullptr;
 }
 
-SceneNodes::UID SceneNodes::create(const std::string& name) {
-    unsigned int oldCapacity = mUIDGenerator.capacity();
-    UID id = mUIDGenerator.generate();
-    if (oldCapacity != mUIDGenerator.capacity())
-        // The capacity has changed and the size of all arrays need to be adjusted.
-        reserveNodeData(mUIDGenerator.capacity(), oldCapacity);
-
-    mNames[id] = name;
-    mParentIDs[id] = mFirstChildIDs[id] = mSiblingIDs[id] = UID::InvalidUID();
-    mGlobalTransforms[id] = Math::Transform::identity();
-    return id;
-}
-
 void SceneNodes::reserve(unsigned int newCapacity) {
     unsigned int oldCapacity = capacity();
     mUIDGenerator.reserve(newCapacity);
@@ -75,7 +62,7 @@ void SceneNodes::reserve(unsigned int newCapacity) {
 }
 
 template <typename T>
-T* resizeAndCopyArray(T* oldArray, unsigned int newCapacity, unsigned int copyableElements) {
+static inline T* resizeAndCopyArray(T* oldArray, unsigned int newCapacity, unsigned int copyableElements) {
     T* newArray = new T[newCapacity];
     std::copy(oldArray, oldArray + copyableElements, newArray);
     delete[] oldArray;
@@ -92,6 +79,19 @@ void SceneNodes::reserveNodeData(unsigned int newCapacity, unsigned int oldCapac
     mFirstChildIDs = resizeAndCopyArray(mFirstChildIDs, newCapacity, copyableElements);
 
     mGlobalTransforms = resizeAndCopyArray(mGlobalTransforms, newCapacity, copyableElements);
+}
+
+SceneNodes::UID SceneNodes::create(const std::string& name) {
+    unsigned int oldCapacity = mUIDGenerator.capacity();
+    UID id = mUIDGenerator.generate();
+    if (oldCapacity != mUIDGenerator.capacity())
+        // The capacity has changed and the size of all arrays need to be adjusted.
+        reserveNodeData(mUIDGenerator.capacity(), oldCapacity);
+
+    mNames[id] = name;
+    mParentIDs[id] = mFirstChildIDs[id] = mSiblingIDs[id] = UID::InvalidUID();
+    mGlobalTransforms[id] = Math::Transform::identity();
+    return id;
 }
 
 void SceneNodes::setParent(SceneNodes::UID nodeID, const SceneNodes::UID parentID) {

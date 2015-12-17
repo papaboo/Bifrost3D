@@ -12,9 +12,6 @@
 namespace Cogwheel {
 namespace Math {
 
-// template<typename T>
-// constexpr T PI = T(3.1415926535897932385);
-
 template<typename T>
 inline T PI() { return T(3.1415926535897932385); }
 
