@@ -104,15 +104,14 @@ public:
     //*****************************************************************************
     // Multiplication operators
     //*****************************************************************************
-    inline void operator*=(T rhs) {
+    inline Matrix<Row, Column>& operator*=(T rhs) {
         for (int i = 0; i < N; ++i)
             begin()[i] *= rhs;
+        return *this;
     }
     inline Matrix<Row, Column> operator*(T rhs) const {
         Matrix<Row, Column> ret(*this);
-        for (int i = 0; i < N; ++i)
-            ret[i] *= rhs;
-        return ret;
+        return ret *= rhs;
     }
     template <typename RhsRow>
     inline Matrix<RhsRow, Column> operator*(Matrix<RhsRow, Row> rhs) const {
@@ -132,14 +131,14 @@ public:
     //*****************************************************************************
     // Division operators
     //*****************************************************************************
-    inline void operator/=(T rhs) {
+    inline Matrix<Row, Column>& operator/=(T rhs) {
         for (int i = 0; i < N; ++i)
             begin()[i] /= rhs;
+        return *this;
     }
     inline Matrix<Row, Column> operator/(T rhs) const {
         Matrix<Row, Column> ret(*this);
-        ret /= rhs;
-        return ret;
+        return ret /= rhs;
     }
 
 

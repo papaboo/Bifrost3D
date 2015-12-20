@@ -20,13 +20,15 @@ inline T operator[](const int i) const { return begin()[i]; }
 //*****************************************************************************
 // Addition operators.
 //*****************************************************************************
-inline void operator+=(T rhs) {
+inline Vector<T>& operator+=(T rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] += rhs;
+    return *this;
 }
-inline void operator+=(Vector<T> rhs) {
+inline Vector<T>& operator+=(Vector<T> rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] += rhs[i];
+    return *this;
 }
 inline Vector<T> operator+(T rhs) const {
     Vector<T> ret(*this);
@@ -44,13 +46,15 @@ inline Vector<T> operator+(Vector<T> rhs) const {
 //*****************************************************************************
 // Subtraction operators.
 //*****************************************************************************
-inline void operator-=(T rhs) {
+inline Vector<T>& operator-=(T rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] -= rhs;
+    return *this;
 }
-inline void operator-=(Vector<T> rhs) {
+inline Vector<T>& operator-=(Vector<T> rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] -= rhs[i];
+    return *this;
 }
 inline Vector<T> operator-(T rhs) const {
     Vector<T> ret(*this);
@@ -74,13 +78,15 @@ inline Vector<T> operator-() const {
 //*****************************************************************************
 // Multiplication operators.
 //*****************************************************************************
-inline void operator*=(T rhs) {
+inline Vector<T>& operator*=(T rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] *= rhs;
+    return *this;
 }
-inline void operator*=(Vector<T> rhs) {
+inline Vector<T>& operator*=(Vector<T> rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] *= rhs[i];
+    return *this;
 }
 inline Vector<T> operator*(T rhs) const {
     Vector<T> ret(*this);
@@ -98,13 +104,15 @@ inline Vector<T> operator*(Vector<T> rhs) const {
 //*****************************************************************************
 // Division operators.
 //*****************************************************************************
-inline void operator/=(T rhs) {
+inline Vector<T>& operator/=(T rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] /= rhs;
+    return *this;
 }
-inline void operator/=(Vector<T> rhs) {
+inline Vector<T>& operator/=(Vector<T> rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] /= rhs[i];
+    return *this;
 }
 inline Vector<T> operator/(T rhs) const {
     Vector<T> ret(*this);

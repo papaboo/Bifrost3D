@@ -63,13 +63,15 @@ public:
     //*****************************************************************************
     // Addition operators.
     //*****************************************************************************
-    inline void operator+=(float v) {
+    inline RGB& operator+=(float v) {
         for (int i = 0; i < N; ++i)
             begin()[i] += v;
+        return *this;
     }
-    inline void operator+=(RGB v) {
+    inline RGB& operator+=(RGB v) {
         for (int i = 0; i < N; ++i)
             begin()[i] += v[i];
+        return *this;
     }
     inline RGB operator+(float rhs) const {
         RGB ret(*this);
@@ -87,13 +89,15 @@ public:
     //*****************************************************************************
     // Subtraction operators.
     //*****************************************************************************
-    inline void operator-=(const float v) {
+    inline RGB& operator-=(const float v) {
         for (int i = 0; i < N; ++i)
             begin()[i] -= v;
+        return *this;
     }
-    inline void operator-=(RGB v) {
+    inline RGB& operator-=(RGB v) {
         for (int i = 0; i < N; ++i)
             begin()[i] -= v[i];
+        return *this;
     }
     inline RGB operator-(float rhs) const {
         RGB ret(*this);
@@ -111,13 +115,15 @@ public:
     //*****************************************************************************
     // Multiplication operators.
     //*****************************************************************************
-    inline void operator*=(float v) {
+    inline RGB& operator*=(float v) {
         for (int i = 0; i < N; ++i)
             begin()[i] *= v;
+        return *this;
     }
-    inline void operator*=(RGB v) {
+    inline RGB& operator*=(RGB v) {
         for (int i = 0; i < N; ++i)
             begin()[i] *= v[i];
+        return *this;
     }
     inline RGB operator*(float rhs) const {
         RGB ret(*this);
@@ -135,13 +141,15 @@ public:
     //*****************************************************************************
     // Division operators.
     //*****************************************************************************
-    inline void operator/=(float v) {
+    inline RGB& operator/=(float v) {
         for (int i = 0; i < N; ++i)
             begin()[i] /= v;
+        return *this;
     }
-    inline void operator/=(RGB v) {
+    inline RGB& operator/=(RGB v) {
         for (int i = 0; i < N; ++i)
             begin()[i] /= v[i];
+        return *this;
     }
     inline RGB operator/(float rhs) const {
         RGB ret(*this);
