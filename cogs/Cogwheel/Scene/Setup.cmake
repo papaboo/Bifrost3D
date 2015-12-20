@@ -1,4 +1,6 @@
 SET(SCENE_SRCS 
+  Scene/Camera.cpp
+  Scene/Camera.h
   Scene/SceneNode.cpp
   Scene/SceneNode.h
 )

@@ -5,6 +5,7 @@
 
 #include <Input/KeyboardTest.h>
 
+#include <Math/MatrixTest.h>
 #include <Math/QuaternionTest.h>
 #include <Math/TransformTest.h>
 

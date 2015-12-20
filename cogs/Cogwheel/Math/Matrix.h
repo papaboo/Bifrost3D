@@ -77,8 +77,8 @@ public:
     //*****************************************************************************
     inline T* begin() { return &mRows[0][0]; }
     inline const T* const begin() const { return &mRows[0][0]; }
-    inline Row& operator[](int i) { return mRows[i]; }
-    inline Row operator[](int i) const { return mRows[i]; }
+    inline Row& operator[](int r) { return mRows[r]; }
+    inline Row operator[](int r) const { return mRows[r]; }
 
     //*****************************************************************************
     // Row and column getters and setters.
@@ -86,7 +86,7 @@ public:
     inline Row getRow(int i) const {
         return mRows[i];
     }
-    inline void setRow(int i, Row row) const {
+    inline void setRow(int i, Row row) {
         mRows[i] = row;
     }
 
@@ -96,7 +96,7 @@ public:
             column[r] = mRows[r][i];
         return column;
     }
-    inline void setColumn(int i, Column column) const {
+    inline void setColumn(int i, Column column) {
         for (int r = 0; r < RowCount; ++r)
             mRows[r][i] = column[r];
     }
@@ -130,6 +130,20 @@ public:
     }
 
     //*****************************************************************************
+    // Division operators
+    //*****************************************************************************
+    inline void operator/=(T rhs) {
+        for (int i = 0; i < N; ++i)
+            begin()[i] /= rhs;
+    }
+    inline Matrix<Row, Column> operator/(T rhs) const {
+        Matrix<Row, Column> ret(*this);
+        ret /= rhs;
+        return ret;
+    }
+
+
+    //*****************************************************************************
     // Comparison operators.
     //*****************************************************************************
     inline bool operator==(Matrix<Row, Column> rhs) const {
@@ -159,23 +173,6 @@ public:
     }
 };
 
-// Returns the matrix transposed.
-template <typename Row, typename Column>
-inline Matrix<Column, Row> transpose(Matrix<Row, Column> v) {
-    Matrix<Column, Row> res;
-    for (int r = 0; r < Column::N, ++r)
-        res.setColumn(r, v.getRow(r));
-    return res;
-}
-
-template <typename Row, typename Column>
-inline bool almostEqual(Matrix<Row, Column> lhs, Matrix<Row, Column> rhs, unsigned short maxUlps = 4) {
-    bool equal = true;
-    for (int i = 0; i < lhs::N; ++i)
-        equal &= almostEqual(lhs.getData()[i], rhs.getData()[i], maxUlps);
-    return equal;
-}
-
 //*************************************************************************
 // Aliases and typedefs.
 //*************************************************************************
@@ -189,6 +186,104 @@ using Matrix2x2f = Matrix2x2<float>;
 using Matrix3x3f = Matrix3x3<float>;
 using Matrix4x3f = Matrix4x3<float>;
 using Matrix4x4f = Matrix4x4<float>;
+
+// Compute the determinant of a 2x2 matrix.
+template <typename T>
+inline T determinant(Matrix2x2<T> v) {
+    return v[0][0] * v[1][1] - v[1][0] * v[0][1];
+}
+
+// Compute the determinant of a 3x3 matrix.
+template <typename T>
+inline T determinant(Matrix3x3<T> v) {
+    return v[0][0] * (v[1][1] * v[2][2] - v[1][2] * v[2][1])
+         - v[0][1] * (v[1][0] * v[2][2] - v[1][2] * v[2][0])
+         + v[0][2] * (v[1][0] * v[2][1] - v[1][1] * v[2][0]);
+}
+
+// Compute the determinant of a 4x4 matrix.
+template <typename T>
+inline T determinant(Matrix4x4<T> v) {
+    return v[0][3] * v[1][2] * v[2][1] * v[3][0] - v[0][2] * v[1][3] * v[2][1] * v[3][0] - v[0][3] * v[1][1] * v[2][2] * v[3][0] + v[0][1] * v[1][3] * v[2][2] * v[3][0]
+         + v[0][2] * v[1][1] * v[2][3] * v[3][0] - v[0][1] * v[1][2] * v[2][3] * v[3][0] - v[0][3] * v[1][2] * v[2][0] * v[3][1] + v[0][2] * v[1][3] * v[2][0] * v[3][1]
+         + v[0][3] * v[1][0] * v[2][2] * v[3][1] - v[0][0] * v[1][3] * v[2][2] * v[3][1] - v[0][2] * v[1][0] * v[2][3] * v[3][1] + v[0][0] * v[1][2] * v[2][3] * v[3][1]
+         + v[0][3] * v[1][1] * v[2][0] * v[3][2] - v[0][1] * v[1][3] * v[2][0] * v[3][2] - v[0][3] * v[1][0] * v[2][1] * v[3][2] + v[0][0] * v[1][3] * v[2][1] * v[3][2]
+         + v[0][1] * v[1][0] * v[2][3] * v[3][2] - v[0][0] * v[1][1] * v[2][3] * v[3][2] - v[0][2] * v[1][1] * v[2][0] * v[3][3] + v[0][1] * v[1][2] * v[2][0] * v[3][3]
+         + v[0][2] * v[1][0] * v[2][1] * v[3][3] - v[0][0] * v[1][2] * v[2][1] * v[3][3] - v[0][1] * v[1][0] * v[2][2] * v[3][3] + v[0][0] * v[1][1] * v[2][2] * v[3][3];
+}
+
+template <typename T>
+inline Matrix2x2<T> invert(Matrix2x2<T> v) {
+    Matrix2x2<T> inverse;
+    inverse[0][0] =  v[1][1];
+    inverse[0][1] = -v[0][1];
+    inverse[1][0] = -v[1][0];
+    inverse[1][1] =  v[0][0];
+    return inverse / determinant(v);
+}
+
+template <typename T>
+inline Matrix3x3<T> invert(Matrix3x3<T> v) {
+    Matrix3x3<T> inverse;
+
+    inverse[0][0] = v[1][1]*v[2][2] - v[1][2]*v[2][1];
+    inverse[0][1] = v[0][2]*v[2][1] - v[0][1]*v[2][2];
+    inverse[0][2] = v[0][1]*v[1][2] - v[0][2]*v[1][1];
+
+    inverse[1][0] = v[1][2]*v[2][0] - v[1][0]*v[2][2];
+    inverse[1][1] = v[0][0]*v[2][2] - v[0][2]*v[2][0];
+    inverse[1][2] = v[0][2]*v[1][0] - v[0][0]*v[1][2];
+
+    inverse[2][0] = v[1][0]*v[2][1] - v[1][1]*v[2][0];
+    inverse[2][1] = v[0][1]*v[2][0] - v[0][0]*v[2][1];
+    inverse[2][2] = v[0][0]*v[1][1] - v[0][1]*v[1][0];
+
+    return inverse / determinant(v);
+}
+
+template <typename T>
+inline Matrix4x4<T> invert(Matrix4x4<T> v) {
+    Matrix4x4<T> inverse;
+
+    inverse[0][0] = v[1][2]*v[2][3]*v[3][1] - v[1][3]*v[2][2]*v[3][1] + v[1][3]*v[2][1]*v[3][2] - v[1][1]*v[2][3]*v[3][2] - v[1][2]*v[2][1]*v[3][3] + v[1][1]*v[2][2]*v[3][3];
+    inverse[0][1] = v[0][3]*v[2][2]*v[3][1] - v[0][2]*v[2][3]*v[3][1] - v[0][3]*v[2][1]*v[3][2] + v[0][1]*v[2][3]*v[3][2] + v[0][2]*v[2][1]*v[3][3] - v[0][1]*v[2][2]*v[3][3];
+    inverse[0][2] = v[0][2]*v[1][3]*v[3][1] - v[0][3]*v[1][2]*v[3][1] + v[0][3]*v[1][1]*v[3][2] - v[0][1]*v[1][3]*v[3][2] - v[0][2]*v[1][1]*v[3][3] + v[0][1]*v[1][2]*v[3][3];
+    inverse[0][3] = v[0][3]*v[1][2]*v[2][1] - v[0][2]*v[1][3]*v[2][1] - v[0][3]*v[1][1]*v[2][2] + v[0][1]*v[1][3]*v[2][2] + v[0][2]*v[1][1]*v[2][3] - v[0][1]*v[1][2]*v[2][3];
+
+    inverse[1][0] = v[1][3]*v[2][2]*v[3][0] - v[1][2]*v[2][3]*v[3][0] - v[1][3]*v[2][0]*v[3][2] + v[1][0]*v[2][3]*v[3][2] + v[1][2]*v[2][0]*v[3][3] - v[1][0]*v[2][2]*v[3][3];
+    inverse[1][1] = v[0][2]*v[2][3]*v[3][0] - v[0][3]*v[2][2]*v[3][0] + v[0][3]*v[2][0]*v[3][2] - v[0][0]*v[2][3]*v[3][2] - v[0][2]*v[2][0]*v[3][3] + v[0][0]*v[2][2]*v[3][3];
+    inverse[1][2] = v[0][3]*v[1][2]*v[3][0] - v[0][2]*v[1][3]*v[3][0] - v[0][3]*v[1][0]*v[3][2] + v[0][0]*v[1][3]*v[3][2] + v[0][2]*v[1][0]*v[3][3] - v[0][0]*v[1][2]*v[3][3];
+    inverse[1][3] = v[0][2]*v[1][3]*v[2][0] - v[0][3]*v[1][2]*v[2][0] + v[0][3]*v[1][0]*v[2][2] - v[0][0]*v[1][3]*v[2][2] - v[0][2]*v[1][0]*v[2][3] + v[0][0]*v[1][2]*v[2][3];
+
+    inverse[2][0] = v[1][1]*v[2][3]*v[3][0] - v[1][3]*v[2][1]*v[3][0] + v[1][3]*v[2][0]*v[3][1] - v[1][0]*v[2][3]*v[3][1] - v[1][1]*v[2][0]*v[3][3] + v[1][0]*v[2][1]*v[3][3];
+    inverse[2][1] = v[0][3]*v[2][1]*v[3][0] - v[0][1]*v[2][3]*v[3][0] - v[0][3]*v[2][0]*v[3][1] + v[0][0]*v[2][3]*v[3][1] + v[0][1]*v[2][0]*v[3][3] - v[0][0]*v[2][1]*v[3][3];
+    inverse[2][2] = v[0][1]*v[1][3]*v[3][0] - v[0][3]*v[1][1]*v[3][0] + v[0][3]*v[1][0]*v[3][1] - v[0][0]*v[1][3]*v[3][1] - v[0][1]*v[1][0]*v[3][3] + v[0][0]*v[1][1]*v[3][3];
+    inverse[2][3] = v[0][3]*v[1][1]*v[2][0] - v[0][1]*v[1][3]*v[2][0] - v[0][3]*v[1][0]*v[2][1] + v[0][0]*v[1][3]*v[2][1] + v[0][1]*v[1][0]*v[2][3] - v[0][0]*v[1][1]*v[2][3];
+
+    inverse[3][0] = v[1][2]*v[2][1]*v[3][0] - v[1][1]*v[2][2]*v[3][0] - v[1][2]*v[2][0]*v[3][1] + v[1][0]*v[2][2]*v[3][1] + v[1][1]*v[2][0]*v[3][2] - v[1][0]*v[2][1]*v[3][2];
+    inverse[3][1] = v[0][1]*v[2][2]*v[3][0] - v[0][2]*v[2][1]*v[3][0] + v[0][2]*v[2][0]*v[3][1] - v[0][0]*v[2][2]*v[3][1] - v[0][1]*v[2][0]*v[3][2] + v[0][0]*v[2][1]*v[3][2];
+    inverse[3][2] = v[0][2]*v[1][1]*v[3][0] - v[0][1]*v[1][2]*v[3][0] - v[0][2]*v[1][0]*v[3][1] + v[0][0]*v[1][2]*v[3][1] + v[0][1]*v[1][0]*v[3][2] - v[0][0]*v[1][1]*v[3][2];
+    inverse[3][3] = v[0][1]*v[1][2]*v[2][0] - v[0][2]*v[1][1]*v[2][0] + v[0][2]*v[1][0]*v[2][1] - v[0][0]*v[1][2]*v[2][1] - v[0][1]*v[1][0]*v[2][2] + v[0][0]*v[1][1]*v[2][2];
+
+    return inverse / determinant(v);
+}
+
+// Returns the matrix transposed.
+template <typename Row, typename Column>
+inline Matrix<Column, Row> transpose(Matrix<Row, Column> v) {
+    Matrix<Column, Row> res;
+    for (int r = 0; r < Column::N; ++r)
+        res.setColumn(r, v.getRow(r));
+    return res;
+}
+
+template <typename Row, typename Column>
+inline bool almostEqual(Matrix<Row, Column> lhs, Matrix<Row, Column> rhs, unsigned short maxUlps = 4) {
+    bool equal = true;
+    for (int i = 0; i < Matrix<Row, Column>::N; ++i)
+        equal &= almostEqual(lhs.begin()[i], rhs.begin()[i], maxUlps);
+    return equal;
+}
 
 } // NS Math
 } // NS Cogwheel

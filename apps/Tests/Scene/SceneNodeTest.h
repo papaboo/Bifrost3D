@@ -49,6 +49,7 @@ GTEST_TEST(Scene_SceneNode, sentinel_node) {
     SceneNode sentinel = SceneNodes::UID::InvalidUID();
     SceneNode node = SceneNodes::create("Foo");
 
+    // Test that sentinel node cannot have it's parent set.
     sentinel.setParent(node);
     SceneNode parentSet = sentinel.getParent();
     EXPECT_NE(parentSet, node);
@@ -230,7 +231,7 @@ GTEST_TEST(Scene_SceneNode, grap_traversal) {
     SceneNodes::deallocate();
 }
 
-} // NS Core
+} // NS Scene
 } // NS Cogwheel
 
 #endif // _COGWHEEL_SCENE_SCENE_NODE_TEST_H_

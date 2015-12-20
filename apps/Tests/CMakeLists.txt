@@ -14,6 +14,7 @@ set(INPUT_SRCS
 )
 
 set(MATH_SRCS
+  Math/MatrixTest.h
   Math/QuaternionTest.h
   Math/TransformTest.h
 )
