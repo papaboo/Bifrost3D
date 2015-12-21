@@ -1,8 +1,14 @@
 include_directories(.)
 
-add_library(GLFWDriver GLFWDriver.h)
+add_library(GLFWDriver GLFWDriver.h GLFWDriver.cpp)
 
-SOURCE_GROUP("" FILES GLFWDriver.h)
+TARGET_LINK_LIBRARIES(GLFWDriver
+  Gogwheel
+  glfw
+)
+
+
+source_group("" FILES GLFWDriver.h GLFWDriver.cpp)
 
 set_target_properties(GLFWDriver PROPERTIES 
   LINKER_LANGUAGE CXX
