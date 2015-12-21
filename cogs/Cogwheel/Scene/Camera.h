@@ -37,24 +37,18 @@ public:
 
     static Math::Matrix4x4f get_projection_matrix(Cameras::UID cameraID) { return m_projection_matrices[cameraID]; }
     static Math::Matrix4x4f get_inverse_projection_matrix(Cameras::UID cameraID) { return m_inverse_projection_matrices[cameraID]; }
-    // static void set_projection_matrix(Cameras::UID cameraID, Math::Matrix4x4f projection_matrix) { 
-    // 	m_projection_matrices[cameraID] = projection_matrix;
-    // 	m_inverse_projection_matrices[cameraID] = invert(projection_matrix);
-    // }
     static void set_projection_matrix(Cameras::UID cameraID, Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inv_projection_matrix) {
         m_projection_matrices[cameraID] = projection_matrix;
         m_inverse_projection_matrices[cameraID] = inv_projection_matrix;
+    }
+    static void set_projection_matrix(Cameras::UID cameraID, Math::Matrix4x4f projection_matrix) {
+        set_projection_matrix(cameraID, projection_matrix, invert(projection_matrix));
     }
 
     static Math::Rectf get_viewport(Cameras::UID cameraID) { return m_viewports[cameraID]; }
     static void set_viewport(Cameras::UID cameraID, Math::Rectf projectionport) { m_viewports[cameraID] = projectionport; }
 
-    // TODO helper methods that set the matrices for perspective and ortho cameras
-
     // TODO Iterators that iterates through the cameras in order of their render indices.
-
-    // TODO Ray3<T> struct. Should be transformable by transforms.
-    // TODO generate rays from the cameras. Both in local and world space? We can get the world space one by applying the transform ourselves.
 
 private:
 
@@ -67,12 +61,15 @@ private:
     static Math::Matrix4x4f* m_projection_matrices;
     static Math::Matrix4x4f* m_inverse_projection_matrices;
     static Math::Rectf* m_viewports;
+    // TODO Some reference to a backbuffer or render_target to allow cameras to render to windows and FBO's.
 };
 
 namespace CameraUtils {
 
-void compute_perspective_projection(float near, float far, float field_of_view, float aspect,
+void compute_perspective_projection(float near, float far, float field_of_view_in_radians, float aspect,
                                     Math::Matrix4x4f& projection_matrix, Math::Matrix4x4f& inverse_projection_matrix);
+
+// TODO compute_orthographic_projection
 
 } // NS CameraUtils
 

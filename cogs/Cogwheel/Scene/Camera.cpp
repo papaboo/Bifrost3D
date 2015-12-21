@@ -104,19 +104,47 @@ Cameras::UID Cameras::create(SceneNodes::UID nodeUID, Math::Matrix4x4f projectio
 
 namespace CameraUtils {
 
-void compute_perspective_projection(float near, float far, float field_of_view, float aspect,
+void compute_perspective_projection(float near, float far, float field_of_view_in_radians, float aspect,
     Math::Matrix4x4f& projection_matrix, Math::Matrix4x4f& inverse_projection_matrix) {
 
     // http://www.3dcpptutorials.sk/index.php?id=2
-    float f = 1.0f / tan(field_of_view * 0.5f);
+    float f = 1.0f / tan(field_of_view_in_radians * 0.5f);
     float a = (far + near) / (near - far);
     float b = (2.0f * far * near) / (near - far);
 
     projection_matrix[0][0] = f / aspect;
     projection_matrix[1][1] = f;
     projection_matrix[2][2] = a;
-    projection_matrix[3][2] = b;
     projection_matrix[2][3] = -1.0f;
+    projection_matrix[3][2] = b;
+
+    // Yes you could just use inverse_projection_matrix = invert(projection_matrix) as this is by no means performance critical code.
+    // But this wasn't done to speed up perspective camera creation. This was done for fun and to have a way to easily derive the inverse perspective matrix later given the perspective matrix.
+
+    Math::Matrix4x4f& v = projection_matrix;
+
+    inverse_projection_matrix[0][0] = v[1][1] * v[3][2];
+    inverse_projection_matrix[0][1] = 0.0f;
+    inverse_projection_matrix[0][2] = 0.0f;
+    inverse_projection_matrix[0][3] = 0.0f;
+
+    inverse_projection_matrix[1][0] = 0.0f;
+    inverse_projection_matrix[1][1] = v[0][0] * v[3][2];
+    inverse_projection_matrix[1][2] = 0.0f;
+    inverse_projection_matrix[1][3] = 0.0f;
+
+    inverse_projection_matrix[2][0] = 0.0f;
+    inverse_projection_matrix[2][1] = 0.0f;
+    inverse_projection_matrix[2][2] = 0.0f;
+    inverse_projection_matrix[2][3] = v[0][0] * v[1][1];
+
+    inverse_projection_matrix[3][0] = 0.0f;
+    inverse_projection_matrix[3][1] = 0.0f;
+    inverse_projection_matrix[3][2] = - v[0][0] * v[1][1] * v[3][2];
+    inverse_projection_matrix[3][3] = v[0][0] * v[1][1] * v[2][2];
+
+    float determinant = v[0][0] * v[1][1] * v[3][2];
+    inverse_projection_matrix /= determinant;
 }
 
 } // NS CameraUtils
