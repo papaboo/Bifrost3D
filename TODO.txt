@@ -1,12 +1,10 @@
-* Camera scene objects.
-** Contains viewport and projection matrix. Inverse projection as well? Probably.
-** Plus Utils for creating the projection matrices.
+* Scene root node.
 * Modules!
 * Renderer.
+* destroy - SceneNode, Camera
 
 libs
 * TinyEXR
 * TinyOBJ
+* FreeImage. It has a commercial license.
 * OptiX
-
-* Use Visual Studio 2015 to allow Math/Constants.h to use variable templates. (I'm looking at you PI!)
