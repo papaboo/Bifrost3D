@@ -20,6 +20,7 @@ set(MATH_SRCS
 )
 
 set(SCENE_SRCS
+  Scene/CameraTest.h
   Scene/SceneNodeTest.h
   Scene/TransformTest.h
 )

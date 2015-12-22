@@ -10,6 +10,7 @@
 #include <Math/TransformTest.h>
 
 #include <Scene/SceneNodeTest.h>
+#include <Scene/CameraTest.h>
 #include <Scene/TransformTest.h>
 
 int main(int argc, char** argv) {
