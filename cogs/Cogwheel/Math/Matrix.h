@@ -75,8 +75,8 @@ public:
     //*****************************************************************************
     // Direct data access.
     //*****************************************************************************
-    inline T* begin() { return &mRows[0][0]; }
-    inline const T* const begin() const { return &mRows[0][0]; }
+    inline T* begin() { return mRows[0].begin(); }
+    inline const T* const begin() const { return mRows[0].begin(); }
     inline Row& operator[](int r) { return mRows[r]; }
     inline Row operator[](int r) const { return mRows[r]; }
 
@@ -147,13 +147,13 @@ public:
     //*****************************************************************************
     inline bool operator==(Matrix<Row, Column> rhs) const {
         for (int i = 0; i < N; ++i) {
-            if (begin()[i] != rhs[i]) return false;
+            if (begin()[i] != rhs.begin()[i]) return false;
         }
         return true;
     }
     inline bool operator!=(Matrix<Row, Column> rhs) const {
         for (int i = 0; i < N; ++i)
-            if (begin()[i] == rhs[i]) return false;
+            if (begin()[i] == rhs.begin()[i]) return false;
         return true;
     }
 
