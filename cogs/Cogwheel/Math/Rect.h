@@ -36,6 +36,16 @@ public:
     inline Vector2<T> get_min() const { return Vector2<T>(x, y); }
     inline Vector2<T> get_max() const { return Vector2<T>(x+width, y+height); }
 
+    //*****************************************************************************
+    // Comparison operators.
+    //*****************************************************************************
+    inline bool operator==(Rect<T> rhs) const {
+        return x == rhs.x && y == rhs.y && width == rhs.width && height == rhs.height;
+    }
+    inline bool operator!=(Rect<T> rhs) const {
+        return x != rhs.x || y != rhs.y || width != rhs.width || height != rhs.height;
+    }
+
     const std::string toString() const {
         std::ostringstream out;
         out << "[x: " << x << ", y: " << y << ", width: " << width << ", height: " << height << "]";
