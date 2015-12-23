@@ -10,6 +10,7 @@
 #define _COGWHEEL_MATH_VECTOR_H_
 
 #include <algorithm>
+#include <cstring>
 #include <sstream>
 
 namespace Cogwheel {

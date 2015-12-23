@@ -12,6 +12,7 @@
 #include <Math/Quaternion.h>
 #include <Math/Vector.h>
 
+#include <cstring>
 #include <sstream>
 
 namespace Cogwheel {
@@ -42,10 +43,10 @@ struct Transform final {
     // Comparison operators.
     //*****************************************************************************
     inline bool operator==(Transform rhs) const {
-        return mRotation == rhs.mRotation && mTranslation == rhs.mTranslation && mScale == rhs.mScale;
+        return memcmp(this, &rhs, sizeof(rhs)) == 0;
     }
     inline bool operator!=(Transform rhs) const {
-        return mRotation != rhs.mRotation || mTranslation != rhs.mTranslation || mScale != rhs.mScale;
+        return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
     // Apply the transform to a vector.
