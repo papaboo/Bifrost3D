@@ -74,7 +74,7 @@ TEST_F(Math_Transform, matrix_representation) {
     Matrix4x3f m4x3 = toMatrix4x3(t);
     Matrix4x4f m4x4 = toMatrix4x4(t);
 
-    // Compare transformations of points. TODO Use an RNG to create more random vectors
+    // Compare transformations of points.
     for (Vector3f p : { Vector3f::forward(), Vector3f::right(), Vector3f::up() }) {
         Vector3f transformed_by_quat = t * p;
         

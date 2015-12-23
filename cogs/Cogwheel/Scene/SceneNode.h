@@ -22,7 +22,6 @@ namespace Scene {
 // Container class for the cogwheel scene node.
 // TODO 
 // * Allocate all (or most) internal arrays in one big chunk.
-// * In place iteration over siblings and children and apply a lambda/closure/functor.
 // * Read/write lock on all scene nodes(multiple readers obviously)
 // * Change the sibling/children layout, so sibling IDs or perhaps siblings are always allocated next too each other?
 //  * Requires an extra indirection though, since node ID's wonøt match the node positions anymore.
