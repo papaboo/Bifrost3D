@@ -11,6 +11,7 @@
 
 #include <Math/Vector.h>
 
+#include <cstring>
 #include <initializer_list>
 #include <sstream>
 
@@ -146,15 +147,10 @@ public:
     // Comparison operators.
     //*****************************************************************************
     inline bool operator==(Matrix<Row, Column> rhs) const {
-        for (int i = 0; i < N; ++i) {
-            if (begin()[i] != rhs.begin()[i]) return false;
-        }
-        return true;
+        return memcmp(this, &rhs, sizeof(rhs)) == 0;
     }
     inline bool operator!=(Matrix<Row, Column> rhs) const {
-        for (int i = 0; i < N; ++i)
-            if (begin()[i] == rhs.begin()[i]) return false;
-        return true;
+        return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
     const std::string toString() const {

@@ -14,6 +14,7 @@
 #include <Math/Vector.h>
 
 #include <algorithm>
+#include <cstring>
 #include <cmath>
 #include <sstream>
 
@@ -73,7 +74,6 @@ public:
         Vector3<T> right = Math::normalize(cross(up, direction));
         up = cross(direction, right);
 
-        // TODO inline memory
         float real = sqrt(T(1) + right.x + up.y + direction.z) * T(0.5);
         float d = T(1) / (T(4) * real);
         Vector3<T> imaginary = Vector3<T>(up.z - direction.y,
@@ -87,10 +87,10 @@ public:
     // Comparison operators.
     //*****************************************************************************
     inline bool operator==(Quaternion<T> rhs) const {
-        return x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w;
+        return memcmp(this, &rhs, sizeof(rhs)) == 0;
     }
     inline bool operator!=(Quaternion<T> rhs) const {
-        return x != rhs.x || y != rhs.y || z != rhs.z || w != rhs.w;
+        return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
     // Pointer to the first element of the quaternion.

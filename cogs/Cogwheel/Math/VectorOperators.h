@@ -6,9 +6,6 @@
 // * The number of elements in the Vector is given by N.
 // * A pointer to the first element can be obtained by calling begin().
 // * The type of each element is T.
-//
-// TODO
-// * Can/should I use copy constructors when returning Vectors?
 //*****************************************************************************
 
 //*****************************************************************************
@@ -131,13 +128,8 @@ inline Vector<T> operator/(Vector<T> rhs) const {
 // Comparison operators.
 //*****************************************************************************
 inline bool operator==(Vector<T> rhs) const {
-    for (int i = 0; i < N; ++i) {
-        if (begin()[i] != rhs[i]) return false;
-    }
-    return true;
+    return memcmp(this, &rhs, sizeof(rhs)) == 0;
 }
 inline bool operator!=(Vector<T> rhs) const {
-    for (int i = 0; i < N; ++i)
-        if (begin()[i] == rhs[i]) return false;
-    return true;
+    return memcmp(this, &rhs, sizeof(rhs)) != 0;
 }

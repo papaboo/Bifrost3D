@@ -107,9 +107,8 @@ TEST_F(Scene_Transform, local_transform) {
     EXPECT_PRED2(compare_quaternions, n1.getLocalTransform().mRotation, expected_local_rot);
 
     // Verify that applying n0's global transform to n1's local transform yields n1's global transform.
-    // TBH I'm amazed that this works with EXPECT_EQ.
     Transform computedN1Global = n0.getGlobalTransform() * n1.getLocalTransform();
-    EXPECT_EQ(computedN1Global, n1.getGlobalTransform());
+    EXPECT_PRED2(compare_transforms, computedN1Global, n1.getGlobalTransform());
 }
 
 TEST_F(Scene_Transform, preserve_local_transform_on_parent_transformation) {

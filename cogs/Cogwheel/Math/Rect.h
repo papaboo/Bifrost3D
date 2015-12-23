@@ -9,6 +9,7 @@
 #ifndef _COGWHEEL_MATH_RECT_H_
 #define _COGWHEEL_MATH_RECT_H_
 
+#include <cstring>
 #include <sstream>
 
 namespace Cogwheel {
@@ -40,10 +41,10 @@ public:
     // Comparison operators.
     //*****************************************************************************
     inline bool operator==(Rect<T> rhs) const {
-        return x == rhs.x && y == rhs.y && width == rhs.width && height == rhs.height;
+        return memcmp(this, &rhs, sizeof(rhs)) == 0;
     }
     inline bool operator!=(Rect<T> rhs) const {
-        return x != rhs.x || y != rhs.y || width != rhs.width || height != rhs.height;
+        return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
     const std::string toString() const {
