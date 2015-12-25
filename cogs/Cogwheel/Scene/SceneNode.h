@@ -86,7 +86,7 @@ public:
     // -----------------------------------------------------------------------
     // Constructors and destructors
     // -----------------------------------------------------------------------
-    SceneNode() : mID(SceneNodes::UID::InvalidUID()) { }
+    SceneNode() : mID(SceneNodes::UID::invalid_UID()) { }
     SceneNode(SceneNodes::UID id) : mID(id) { }
     ~SceneNode() { }
 
@@ -126,16 +126,16 @@ private:
 template<typename F>
 void SceneNodes::traverseAllChildren(SceneNodes::UID nodeID, F& function) {
     UID node = mFirstChildIDs[nodeID];
-    if (node == UID::InvalidUID())
+    if (node == UID::invalid_UID())
         return;
 
     do {
         function(node);
 
-        if (mFirstChildIDs[node] != UID::InvalidUID())
+        if (mFirstChildIDs[node] != UID::invalid_UID())
             // Visit the next child.
             node = mFirstChildIDs[node];
-        else if (mSiblingIDs[node] != UID::InvalidUID())
+        else if (mSiblingIDs[node] != UID::invalid_UID())
             // Visit the next sibling.
             node = mSiblingIDs[node];
         else
@@ -144,7 +144,7 @@ void SceneNodes::traverseAllChildren(SceneNodes::UID nodeID, F& function) {
             node = mParentIDs[node];
             while (node != nodeID) {
                 UID parentSibling = mSiblingIDs[node];
-                if (parentSibling == UID::InvalidUID())
+                if (parentSibling == UID::invalid_UID())
                     node = mParentIDs[node];
                 else {
                     node = parentSibling;

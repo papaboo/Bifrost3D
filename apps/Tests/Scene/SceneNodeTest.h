@@ -46,7 +46,7 @@ GTEST_TEST(Scene_SceneNode, creating) {
 GTEST_TEST(Scene_SceneNode, sentinel_node) {
     SceneNodes::allocate(1u);
 
-    SceneNode sentinel = SceneNodes::UID::InvalidUID();
+    SceneNode sentinel = SceneNodes::UID::invalid_UID();
     SceneNode node = SceneNodes::create("Foo");
 
     // Test that sentinel node cannot have it's parent set.

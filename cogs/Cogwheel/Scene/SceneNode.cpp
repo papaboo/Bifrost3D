@@ -37,7 +37,7 @@ void SceneNodes::allocate(unsigned int capacity) {
 
     // Allocate dummy element at 0.
     mNames[0] = "Dummy Node";
-    mParentIDs[0] = mFirstChildIDs[0] = mSiblingIDs[0] = UID::InvalidUID();
+    mParentIDs[0] = mFirstChildIDs[0] = mSiblingIDs[0] = UID::invalid_UID();
     mGlobalTransforms[0] = Math::Transform::identity();
 }
 
@@ -89,16 +89,16 @@ SceneNodes::UID SceneNodes::create(const std::string& name) {
         reserveNodeData(mUIDGenerator.capacity(), oldCapacity);
 
     mNames[id] = name;
-    mParentIDs[id] = mFirstChildIDs[id] = mSiblingIDs[id] = UID::InvalidUID();
+    mParentIDs[id] = mFirstChildIDs[id] = mSiblingIDs[id] = UID::invalid_UID();
     mGlobalTransforms[id] = Math::Transform::identity();
     return id;
 }
 
 void SceneNodes::setParent(SceneNodes::UID nodeID, const SceneNodes::UID parentID) {
     SceneNodes::UID oldParentID = mParentIDs[nodeID];
-    if (nodeID != parentID && nodeID != UID::InvalidUID()) {
+    if (nodeID != parentID && nodeID != UID::invalid_UID()) {
         // Detach current node from it's place in the hierarchy
-        if (oldParentID != UID::InvalidUID()) {
+        if (oldParentID != UID::invalid_UID()) {
             // Find old previous sibling.
             UID sibling = mFirstChildIDs[oldParentID];
             if (sibling == nodeID) {
@@ -126,7 +126,7 @@ std::vector<SceneNodes::UID> SceneNodes::getSiblingIDs(SceneNodes::UID nodeID) {
 std::vector<SceneNodes::UID> SceneNodes::getChildrenIDs(SceneNodes::UID nodeID) {
     std::vector<SceneNodes::UID> res(0);
     SceneNodes::UID child = mFirstChildIDs[nodeID];
-    while (child != UID::InvalidUID()) {
+    while (child != UID::invalid_UID()) {
         res.push_back(child);
         child = mSiblingIDs[child];
     }
@@ -135,7 +135,7 @@ std::vector<SceneNodes::UID> SceneNodes::getChildrenIDs(SceneNodes::UID nodeID) 
 
 bool SceneNodes::hasChild(SceneNodes::UID nodeID, SceneNodes::UID testedChildID) {
     SceneNodes::UID child = mFirstChildIDs[nodeID];
-    while (child != UID::InvalidUID()) {
+    while (child != UID::invalid_UID()) {
         if (child == testedChildID)
             return true;
         child = mSiblingIDs[child];
@@ -160,7 +160,7 @@ Math::Transform SceneNodes::getLocalTransform(SceneNodes::UID nodeID) {
 }
 
 void SceneNodes::setLocalTransform(SceneNodes::UID nodeID, Math::Transform transform) {
-    if (nodeID == UID::InvalidUID()) return;
+    if (nodeID == UID::invalid_UID()) return;
 
     // Update global transform.
     UID parentID = mParentIDs[nodeID];
@@ -176,7 +176,7 @@ void SceneNodes::setLocalTransform(SceneNodes::UID nodeID, Math::Transform trans
 }
 
 void SceneNodes::setGlobalTransform(SceneNodes::UID nodeID, Math::Transform transform) {
-    if (nodeID == UID::InvalidUID()) return;
+    if (nodeID == UID::invalid_UID()) return;
     
     Math::Transform deltaTransform = inverse(mGlobalTransforms[nodeID]) * transform; // TODO Move into delta method.
     mGlobalTransforms[nodeID] = transform;

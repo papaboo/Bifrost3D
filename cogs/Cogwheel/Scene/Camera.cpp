@@ -37,7 +37,7 @@ void Cameras::allocate(unsigned int capacity) {
     m_viewports = new Math::Rectf[capacity];
 
     // Allocate dummy camera at 0.
-    m_parent_IDs[0] = SceneNodes::UID::InvalidUID();
+    m_parent_IDs[0] = SceneNodes::UID::invalid_UID();
     m_render_indices[0] = 0u;
     m_projection_matrices[0] = Math::Matrix4x4f::zero();
     m_inverse_projection_matrices[0] = Math::Matrix4x4f::zero();

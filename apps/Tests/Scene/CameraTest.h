@@ -66,11 +66,11 @@ TEST_F(Scene_Camera, perspective_matrices) {
 TEST_F(Scene_Camera, sentinel_camera) {
     Cameras::allocate(2u);
     
-    Cameras::UID sentinel_id = Cameras::UID::InvalidUID();
+    Cameras::UID sentinel_id = Cameras::UID::invalid_UID();
 
     EXPECT_FALSE(Cameras::has(sentinel_id));
 
-    EXPECT_EQ(Cameras::get_parent_ID(sentinel_id), SceneNodes::UID::InvalidUID());
+    EXPECT_EQ(Cameras::get_parent_ID(sentinel_id), SceneNodes::UID::invalid_UID());
     EXPECT_EQ(Cameras::get_viewport(sentinel_id), Math::Rectf(0.0f, 0.0f, 0.0f, 0.0f));
 
     Cameras::deallocate();
