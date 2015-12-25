@@ -14,7 +14,7 @@
 namespace Cogwheel {
 namespace Input {
 
-struct Mouse final {
+class Mouse final {
 public:
     static const int BUTTON_COUNT = 4;
     static const int MAX_HALFTAP_COUNT = 127;
