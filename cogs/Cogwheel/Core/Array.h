@@ -1,4 +1,4 @@
-// Cogwheel resiable array.
+// Cogwheel resizable array.
 // ---------------------------------------------------------------------------
 // Copyright (C) 2015, Cogwheel. See AUTHORS.txt for authors
 //
