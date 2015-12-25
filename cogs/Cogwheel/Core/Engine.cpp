@@ -16,8 +16,9 @@ namespace Core {
 
 Engine::Engine()
     : m_window(Window("Cogwheel", 640, 480))
-    , m_quit(false)
+    , m_scene_root(Scene::SceneNodes::UID::invalid_UID())
     , m_iterations(0)
+    , m_quit(false)
     , m_keyboard(nullptr)
     , m_mouse(nullptr) { }
     

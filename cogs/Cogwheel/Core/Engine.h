@@ -10,14 +10,14 @@
 #define _COGWHEEL_CORE_ENGINE_H_
 
 #include <Core/Window.h>
-
 #include <Input/Keyboard.h>
 #include <Input/Mouse.h>
+#include <Scene/SceneNode.h>
 
 namespace Cogwheel {
 namespace Input {
-class Keyboard;
-class Mouse;
+    class Keyboard;
+    class Mouse;
 }
 }
 
@@ -47,16 +47,23 @@ public:
     void set_mouse(const Input::Mouse* const mouse) { m_mouse = mouse; }
     const Input::Mouse* const get_mouse() const { return m_mouse; }
 
+    inline void set_scene_root(Scene::SceneNodes::UID root_ID) { m_scene_root = root_ID; }
+    inline Scene::SceneNodes::UID get_scene_root() const { return m_scene_root; }
+
     void do_loop(double dt);
 
 private:
     Window m_window;
-    bool m_quit;
+    Scene::SceneNodes::UID m_scene_root; // NOTE Replace by list of multiple scenes. A camera should reference it's scene id.
+
     unsigned int m_iterations;
+
+    bool m_quit;
 
     // Input should only be updated by whoever created it and not by access via the engine.
     const Input::Keyboard* m_keyboard;
     const Input::Mouse* m_mouse;
+
 };
 
 } // NS Core
