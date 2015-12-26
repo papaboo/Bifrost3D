@@ -82,8 +82,8 @@ public:
     // Iterators
     // -----------------------------------------------------------------------
     inline iterator begin() { return mData; }
-    inline const_iterator begin() const { return mData + mSize; }
-    inline iterator end() { return mData; }
+    inline const_iterator begin() const { return mData; }
+    inline iterator end() { return mData + mSize; }
     inline const_iterator end() const { return mData + mSize; }
 
     // -----------------------------------------------------------------------
