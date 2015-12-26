@@ -106,6 +106,24 @@ public:
     inline const T& operator[](size_type i) const { return mData[i]; }
     inline T* data() { return mData; }
     inline const T* data() const { return mData; }
+
+    // -----------------------------------------------------------------------
+    // Modifiers
+    // -----------------------------------------------------------------------
+    void push_back(const T* begin, const T* end) {
+        size_type previous_size = mSize;
+        resize(mSize + size_type(end - begin));
+        const T* from = begin;
+        T* to = mData + previous_size;
+        while (from != end) {
+            *to = *from;
+            ++from;
+            ++to;
+        }
+    }
+    void push_back(const std::initializer_list<T>& list) {
+        push_back(list.begin(), list.end());
+    }
 };
 
 } // NS Core

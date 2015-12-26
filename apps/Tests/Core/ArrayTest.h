@@ -28,7 +28,7 @@ GTEST_TEST(Core_Array, resizing) {
 }
 
 GTEST_TEST(Core_Array, copying) {
-    Array<unsigned int> array0 = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+    Array<unsigned int> array0 = { 0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u };
     Array<unsigned int> array1 = array0;
 
     EXPECT_NE(array0.begin(), array1.begin());
@@ -40,7 +40,7 @@ GTEST_TEST(Core_Array, copying) {
 
 GTEST_TEST(Core_Array, indexing) {
     // Create array and test that index and data are equal.
-    Array<unsigned int> array = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+    Array<unsigned int> array = { 0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u };
     for (unsigned int i = 0; i != array.size(); ++i) {
         EXPECT_EQ(i, array[i]);
         EXPECT_EQ(i, array.data()[i]);
@@ -61,6 +61,21 @@ GTEST_TEST(Core_Array, zero_sized) {
     Array<unsigned int> array2 = {};
     array2.resize(2);
     array2.resize(0);
+}
+
+GTEST_TEST(Core_Array, push_back) {
+    Array<unsigned int> array = { 0u, 1u, 2u };
+    
+    Array<unsigned int> tail = { 3u, 4u, 5u };
+    array.push_back(tail.begin(), tail.end());
+    EXPECT_EQ(array.size(), 6u);
+    for (unsigned int i = 0; i != array.size(); ++i)
+        EXPECT_EQ(i, array[i]);
+
+    array.push_back( {6u, 7u, 8u} );
+    EXPECT_EQ(array.size(), 9u);
+    for (unsigned int i = 0; i != array.size(); ++i)
+        EXPECT_EQ(i, array[i]);
 }
 
 } // NS Core
