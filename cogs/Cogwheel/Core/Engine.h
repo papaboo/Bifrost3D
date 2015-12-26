@@ -47,17 +47,29 @@ public:
 
     inline bool requested_quit() const { return m_quit; }
 
+    // -----------------------------------------------------------------------
+    // Input
+    // -----------------------------------------------------------------------
     void set_keyboard(const Input::Keyboard* const keyboard) { m_keyboard = keyboard; }
     const Input::Keyboard* const get_keyboard() const { return m_keyboard; } // So .... you're saying it's const?
     void set_mouse(const Input::Mouse* const mouse) { m_mouse = mouse; }
     const Input::Mouse* const get_mouse() const { return m_mouse; }
 
+    // -----------------------------------------------------------------------
+    // Scene root.
+    // -----------------------------------------------------------------------
     inline void set_scene_root(Scene::SceneNodes::UID root_ID) { m_scene_root = root_ID; }
     inline Scene::SceneNodes::UID get_scene_root() const { return m_scene_root; }
 
+    // -----------------------------------------------------------------------
+    // Modules
+    // -----------------------------------------------------------------------
     void add_mutating_module(Core::IModule* module);
     void add_non_mutating_module(Core::IModule* module);
 
+    // -----------------------------------------------------------------------
+    // Main loop
+    // -----------------------------------------------------------------------
     void do_loop(double dt);
 
 private:
