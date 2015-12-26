@@ -104,7 +104,7 @@ void main(int argc, char** argv) {
             gRestartAccumulation = false;
             accumulations = 0;
             glfwGetFramebufferSize(window, &gWindowWidth, &gWindowHeight);
-            if (gWindowWidth * gWindowHeight != gBackbuffer.size()) {
+            if (gWindowWidth * gWindowHeight != int(gBackbuffer.size())) {
                 gBackbuffer.resize(gWindowWidth * gWindowHeight);
                 for (RGB& p : gBackbuffer)
                     p = RGB::black();

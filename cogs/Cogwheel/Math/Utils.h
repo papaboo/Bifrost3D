@@ -25,11 +25,11 @@ inline bool almostEqual(float a, float b, unsigned short maxUlps = 4) {
     int aInt = *(int*)&a;
     // Make aInt lexicographically ordered as a twos-complement int
     if (aInt < 0)
-        aInt = 0x80000000 - aInt;
+        aInt = int(0x80000000) - aInt;
     // Make bInt lexicographically ordered as a twos-complement int
     int bInt = *(int*)&b;
     if (bInt < 0)
-        bInt = 0x80000000 - bInt;
+        bInt = int(0x80000000) - bInt;
     int intDiff = abs(aInt - bInt);
     if (intDiff <= maxUlps)
         return true;

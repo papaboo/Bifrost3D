@@ -185,7 +185,7 @@ void accumulateRadiance(Ray cam, int w, int h,
             int sx = accumulations % 2;
             int sy = (accumulations >> 1) % 2;
             int index = (y * 2 + sy) * (w * 2) + x * 2 + sx;
-            LinearCongruential rng = LinearCongruential(RobertJenkinsHash(index) ^ reverseBits(accumulations));
+            LinearCongruential rng = LinearCongruential(RobertJenkinsHash(unsigned int(index)) ^ reverseBits(unsigned int(accumulations)));
             double r1 = 2 * rng.sample1D(), dx = r1 < 1 ? sqrt(r1) - 1 : 1 - sqrt(2 - r1);
             double r2 = 2 * rng.sample1D(), dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
             Vector3d d = cx * (((sx + .5 + dx) / 2 + x) / w - .5) +

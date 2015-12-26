@@ -102,14 +102,14 @@ public:
         }
     }
 
-    inline bool is_pressed(Key key) const { return m_key_states[(int)key].is_pressed; }
+    inline bool is_pressed(Key key) const { return m_key_states[(unsigned int)key].is_pressed; }
     inline bool is_released(Key key) const { return !is_pressed(key); }
-    inline int halftaps(Key key) const { return m_key_states[(int)key].halftaps; }
+    inline unsigned int halftaps(Key key) const { return m_key_states[(unsigned int)key].halftaps; }
 
     inline void key_tapped(Key key, bool pressed) {
-        m_key_states[(int)key].is_pressed = pressed;
-        unsigned int halftaps = m_key_states[(int)key].halftaps;
-        m_key_states[(int)key].halftaps = (halftaps == MAX_HALFTAP_COUNT) ? (MAX_HALFTAP_COUNT-1) : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
+        m_key_states[(unsigned int)key].is_pressed = pressed;
+        unsigned int halftaps = m_key_states[(unsigned int)key].halftaps;
+        m_key_states[(unsigned int)key].halftaps = (halftaps == MAX_HALFTAP_COUNT) ? (MAX_HALFTAP_COUNT-1) : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
     }
 
     inline void per_frame_reset() {
@@ -124,10 +124,10 @@ private:
     //    3 bits for halftaps should be enough. Compress the keystate to 4 bits and store two states pr 8 bit.
     struct KeyState {
         bool is_pressed : 1;
-        unsigned int halftaps : 7;
+        unsigned char halftaps : 7;
     };
 
-    std::array<KeyState, (int)Key::KeyCount> m_key_states;
+    std::array<KeyState, (unsigned int)Key::KeyCount> m_key_states;
 };
 
 } // NS Input

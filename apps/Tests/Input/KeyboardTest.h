@@ -88,14 +88,14 @@ GTEST_TEST(Input_Keyboard, tap_overflow_handling) {
         EXPECT_TRUE(keyboard.is_pressed(Keyboard::Key::A));
         bool odd_number_of_halftaps = (keyboard.halftaps(Keyboard::Key::A) % 2) == 1;
         EXPECT_TRUE(odd_number_of_halftaps);
-        EXPECT_GE(keyboard.halftaps(Keyboard::Key::A), Keyboard::MAX_HALFTAP_COUNT - 1);
+        EXPECT_GE(keyboard.halftaps(Keyboard::Key::A), Keyboard::MAX_HALFTAP_COUNT - 1u);
 
         keyboard.key_tapped(Keyboard::Key::A, false);
 
         EXPECT_TRUE(keyboard.is_released(Keyboard::Key::A));
         bool even_number_of_halftaps = (keyboard.halftaps(Keyboard::Key::A) % 2) == 0;
         EXPECT_TRUE(even_number_of_halftaps);
-        EXPECT_GE(keyboard.halftaps(Keyboard::Key::A), Keyboard::MAX_HALFTAP_COUNT - 1);
+        EXPECT_GE(keyboard.halftaps(Keyboard::Key::A), Keyboard::MAX_HALFTAP_COUNT - 1u);
     }
 }
 
