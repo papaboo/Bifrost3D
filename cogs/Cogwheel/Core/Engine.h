@@ -10,6 +10,7 @@
 #define _COGWHEEL_CORE_ENGINE_H_
 
 #include <Core/Array.h>
+#include <Core/Time.h>
 #include <Core/Window.h>
 #include <Input/Keyboard.h>
 #include <Input/Mouse.h>
@@ -31,10 +32,6 @@ namespace Core {
 // ---------------------------------------------------------------------------
 // Engine driver, responsible for invoking the modules and handling all engine
 // 'tick' logic not related to the operating system.
-// TODO 
-//   * Time struct with smooth delta time as well. Smooth delta time is handled as smoothDt = lerp(dt, smoothDt, a), let a be 0.666 or setable by the user?
-//     Or use the bitsquid approach. http://bitsquid.blogspot.dk/2010/10/time-step-smoothing.html.
-//     Remember Lanister time deltas, all debts must be payed. Time, technical or loans.
 // ---------------------------------------------------------------------------
 class Engine final {
 public:
@@ -43,6 +40,7 @@ public:
     Engine();
     ~Engine();
 
+    inline Time& get_time() { return m_time; }
     inline Window& get_window() { return m_window; }
 
     inline bool requested_quit() const { return m_quit; }
@@ -65,27 +63,30 @@ public:
     // Modules
     // -----------------------------------------------------------------------
     void add_mutating_module(Core::IModule* module);
+    void add_mutating_modules(Core::IModule** begin, Core::IModule** end);
+    
     void add_non_mutating_module(Core::IModule* module);
+    void add_non_mutating_modules(Core::IModule** begin, Core::IModule** end);
 
     // -----------------------------------------------------------------------
     // Main loop
     // -----------------------------------------------------------------------
-    void do_loop(double dt);
+    void do_loop(double delta_time);
 
 private:
 
-    Engine(const Engine& rhs);
-    Engine& operator=(const Engine& rhs);
+    // Delete copy constructors.
+    Engine(const Engine& rhs) = delete;
+    Engine& operator=(Engine& rhs) = delete;
 
     static Engine* m_instance;
 
+    Time m_time;
     Window m_window;
     Scene::SceneNodes::UID m_scene_root; // NOTE Replace by list of multiple scenes. A camera should reference it's scene id.
 
     Core::Array<Core::IModule*> m_mutating_modules;
     Core::Array<Core::IModule*> m_non_mutating_modules;
-
-    unsigned int m_iterations;
 
     bool m_quit;
 

@@ -22,7 +22,6 @@ Engine::Engine()
     , m_scene_root(Scene::SceneNodes::UID::invalid_UID())
     , m_mutating_modules(0)
     , m_non_mutating_modules(0)
-    , m_iterations(0)
     , m_quit(false)
     , m_keyboard(nullptr)
     , m_mouse(nullptr) {
@@ -40,21 +39,27 @@ void Engine::add_mutating_module(Core::IModule* module) {
     m_mutating_modules[m_mutating_modules.size() - 1] = module;
 }
 
+void Engine::add_mutating_modules(Core::IModule** begin, Core::IModule** end) {
+    m_mutating_modules.push_back(begin, end);
+}
+
 void Engine::add_non_mutating_module(Core::IModule* module) {
     m_non_mutating_modules.resize(m_non_mutating_modules.size() + 1u);
     m_non_mutating_modules[m_non_mutating_modules.size() - 1] = module;
 }
 
-void Engine::do_loop(double dt) {
-    // printf("dt: %f\n", dt);
+void Engine::add_non_mutating_modules(Core::IModule** begin, Core::IModule** end) {
+    m_non_mutating_modules.push_back(begin, end);
+}
 
+void Engine::do_loop(double delta_time) {
+    m_time.tick(delta_time);
+    
     for (IModule* module : m_mutating_modules)
         module->apply();
 
     for (IModule* module : m_non_mutating_modules)
         module->apply();
-
-    ++m_iterations;
 }
 
 } // NS Core
