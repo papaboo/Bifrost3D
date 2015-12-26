@@ -53,6 +53,16 @@ GTEST_TEST(Core_Array, indexing) {
         EXPECT_EQ(i, array[i]);
 }
 
+GTEST_TEST(Core_Array, zero_sized) {
+    Array<unsigned int> array1 = Array<unsigned int>(0);
+    array1.resize(2);
+    array1.resize(0);
+
+    Array<unsigned int> array2 = {};
+    array2.resize(2);
+    array2.resize(0);
+}
+
 } // NS Core
 } // NS Cogwheel
 

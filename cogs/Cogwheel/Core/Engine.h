@@ -9,12 +9,16 @@
 #ifndef _COGWHEEL_CORE_ENGINE_H_
 #define _COGWHEEL_CORE_ENGINE_H_
 
+#include <Core/Array.h>
 #include <Core/Window.h>
 #include <Input/Keyboard.h>
 #include <Input/Mouse.h>
 #include <Scene/SceneNode.h>
 
 namespace Cogwheel {
+namespace Core {
+    class IModule;
+}
 namespace Input {
     class Keyboard;
     class Mouse;
@@ -28,15 +32,16 @@ namespace Core {
 // Engine driver, responsible for invoking the modules and handling all engine
 // 'tick' logic not related to the operating system.
 // TODO 
-//   * Make it a singleton.
 //   * Time struct with smooth delta time as well. Smooth delta time is handled as smoothDt = lerp(dt, smoothDt, a), let a be 0.666 or setable by the user?
 //     Or use the bitsquid approach. http://bitsquid.blogspot.dk/2010/10/time-step-smoothing.html.
 //     Remember Lanister time deltas, all debts must be payed. Time, technical or loans.
-//   * Modules.
 // ---------------------------------------------------------------------------
 class Engine final {
 public:
+    static inline Engine* get_instance() { return m_instance; }
+
     Engine();
+    ~Engine();
 
     inline Window& get_window() { return m_window; }
 
@@ -50,11 +55,23 @@ public:
     inline void set_scene_root(Scene::SceneNodes::UID root_ID) { m_scene_root = root_ID; }
     inline Scene::SceneNodes::UID get_scene_root() const { return m_scene_root; }
 
+    void add_mutating_module(Core::IModule* module);
+    void add_non_mutating_module(Core::IModule* module);
+
     void do_loop(double dt);
 
 private:
+
+    Engine(const Engine& rhs);
+    Engine& operator=(const Engine& rhs);
+
+    static Engine* m_instance;
+
     Window m_window;
     Scene::SceneNodes::UID m_scene_root; // NOTE Replace by list of multiple scenes. A camera should reference it's scene id.
+
+    Core::Array<Core::IModule*> m_mutating_modules;
+    Core::Array<Core::IModule*> m_non_mutating_modules;
 
     unsigned int m_iterations;
 

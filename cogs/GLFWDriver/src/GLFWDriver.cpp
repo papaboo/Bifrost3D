@@ -30,7 +30,7 @@ void run(on_launch_callback on_launch) {
     // TODO Splash screen. With possibility to print resource processing text.
 
     // Create engine.
-    Engine engine = Engine();
+    Engine engine;
     on_launch(engine);
 
     Cogwheel::Core::Window& engine_window = engine.get_window();
