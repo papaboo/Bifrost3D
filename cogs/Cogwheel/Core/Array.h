@@ -34,8 +34,8 @@ public:
     typedef const T* const_iterator;
 
 private:
-    size_type mSize;
-    T* mData;
+    size_type m_size;
+    T* m_data;
 
 public:
 
@@ -43,78 +43,78 @@ public:
     // Constructors and destrcutor
     // -----------------------------------------------------------------------
     Array(size_type size)
-        : mSize(size), mData(new T[mSize]) {}
+        : m_size(size), m_data(new T[m_size]) {}
     Array(Array<T>&& other)
-        : mSize(other.mSize), mData(other.mData) {
-        other.mSize = 0; other.mData = nullptr;
+        : m_size(other.m_size), m_data(other.m_data) {
+        other.m_size = 0; other.m_data = nullptr;
     }
 	Array(const Array<T>& other)
-		: mSize(other.mSize), mData(new T[mSize]) {
-		std::copy(other.mData, other.mData + mSize, mData);
+		: m_size(other.m_size), m_data(new T[m_size]) {
+		std::copy(other.m_data, other.m_data + m_size, m_data);
 	}
     Array(const std::initializer_list<T>& list)
-        : mSize(static_cast<size_type>(list.size())), mData(new T[mSize]) {
-        std::copy(list.begin(), list.end(), mData);
+        : m_size(static_cast<size_type>(list.size())), m_data(new T[m_size]) {
+        std::copy(list.begin(), list.end(), m_data);
     }
     ~Array() {
-        if (mData) 
-            delete[] mData;
+        if (m_data) 
+            delete[] m_data;
     }
 
     // -----------------------------------------------------------------------
     // Assignment
     // -----------------------------------------------------------------------
     Array& operator=(Array<T>&& rhs) {
-        mSize = rhs.mSize; 
-        mData = rhs.mData;
-        rhs.mSize = 0;
-        rhs.mData = nullptr;
+        m_size = rhs.m_size; 
+        m_data = rhs.m_data;
+        rhs.m_size = 0;
+        rhs.m_data = nullptr;
         return *this;
     }
     Array& operator=(const Array<T>& rhs) {
-        mSize = rhs.mSize;
-        mData = new T[mSize]; // TODO malloc to avoid default initialization.
-        std::copy(rhs.mData, rhs.mData + mSize, mData);
+        m_size = rhs.m_size;
+        m_data = new T[m_size]; // TODO malloc to avoid default initialization.
+        std::copy(rhs.m_data, rhs.m_data + m_size, m_data);
         return *this;
     }
     
     // -----------------------------------------------------------------------
     // Iterators
     // -----------------------------------------------------------------------
-    inline iterator begin() { return mData; }
-    inline const_iterator begin() const { return mData; }
-    inline iterator end() { return mData + mSize; }
-    inline const_iterator end() const { return mData + mSize; }
+    inline iterator begin() { return m_data; }
+    inline const_iterator begin() const { return m_data; }
+    inline iterator end() { return m_data + m_size; }
+    inline const_iterator end() const { return m_data + m_size; }
 
     // -----------------------------------------------------------------------
     // Size
     // -----------------------------------------------------------------------
-    inline size_type size() const { return mSize; }
+    inline size_type size() const { return m_size; }
     inline void resize(size_type size) {
-        T* newData = new T[size];
-        size_type minSize = size < mSize ? size : mSize;
-        memcpy(newData, mData, sizeof(T) * minSize);
-        delete[] mData;
-        mData = newData;
-        mSize = size;
+        T* new_data = new T[size];
+        size_type minSize = size < m_size ? size : m_size;
+        memcpy(new_data, m_data, sizeof(T) * minSize);
+        delete[] m_data;
+        m_data = new_data;
+        m_size = size;
     }
 
     // -----------------------------------------------------------------------
     // Element access
     // -----------------------------------------------------------------------
-    inline T& operator[](size_type i) { return mData[i]; }
-    inline const T& operator[](size_type i) const { return mData[i]; }
-    inline T* data() { return mData; }
-    inline const T* data() const { return mData; }
+    inline T& operator[](size_type i) { return m_data[i]; }
+    inline const T& operator[](size_type i) const { return m_data[i]; }
+    inline T* data() { return m_data; }
+    inline const T* data() const { return m_data; }
 
     // -----------------------------------------------------------------------
     // Modifiers
     // -----------------------------------------------------------------------
     void push_back(const T* begin, const T* end) {
-        size_type previous_size = mSize;
-        resize(mSize + size_type(end - begin));
+        size_type previous_size = m_size;
+        resize(m_size + size_type(end - begin));
         const T* from = begin;
-        T* to = mData + previous_size;
+        T* to = m_data + previous_size;
         while (from != end) {
             *to = *from;
             ++from;
