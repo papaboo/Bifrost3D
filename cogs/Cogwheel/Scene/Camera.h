@@ -33,7 +33,7 @@ public:
     static Cameras::UID create(SceneNodes::UID parent_ID, Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix);
 
     static SceneNodes::UID get_parent_ID(Cameras::UID camera_ID) { return m_parent_IDs[camera_ID]; }
-    static void set_parent_ID(Cameras::UID camera_ID, SceneNodes::UID parentID) { m_parent_IDs[camera_ID] = parentID; }
+    static void set_parent_ID(Cameras::UID camera_ID, SceneNodes::UID parent_ID) { m_parent_IDs[camera_ID] = parent_ID; }
 
     static unsigned int get_render_index(Cameras::UID camera_ID) { return m_render_indices[camera_ID]; }
     static void set_render_index(Cameras::UID camera_ID, unsigned int index) { m_render_indices[camera_ID] = index; }

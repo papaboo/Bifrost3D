@@ -21,16 +21,16 @@ GTEST_TEST(Scene_SceneNode, resizing) {
     EXPECT_GE(SceneNodes::capacity(), 8u);
 
     // Test that capacity can be increased.
-    unsigned int largerCapacity = SceneNodes::capacity() + 4u;
-    SceneNodes::reserve(largerCapacity);
-    EXPECT_GE(SceneNodes::capacity(), largerCapacity);
+    unsigned int larger_capacity = SceneNodes::capacity() + 4u;
+    SceneNodes::reserve(larger_capacity);
+    EXPECT_GE(SceneNodes::capacity(), larger_capacity);
 
     // Test that capacity won't be decreased.
     SceneNodes::reserve(5u);
-    EXPECT_GE(SceneNodes::capacity(), largerCapacity);
+    EXPECT_GE(SceneNodes::capacity(), larger_capacity);
 
     SceneNodes::deallocate();
-    EXPECT_LT(SceneNodes::capacity(), largerCapacity);
+    EXPECT_LT(SceneNodes::capacity(), larger_capacity);
 }
 
 GTEST_TEST(Scene_SceneNode, creating) {
@@ -38,7 +38,7 @@ GTEST_TEST(Scene_SceneNode, creating) {
     SceneNodes::UID id = SceneNodes::create("Foo");
     EXPECT_TRUE(SceneNodes::has(id));
     
-    EXPECT_EQ(SceneNodes::getName(id), "Foo");
+    EXPECT_EQ(SceneNodes::get_name(id), "Foo");
 
     SceneNodes::deallocate();
 }
@@ -50,12 +50,12 @@ GTEST_TEST(Scene_SceneNode, sentinel_node) {
     SceneNode node = SceneNodes::create("Foo");
 
     // Test that sentinel node cannot have it's parent set.
-    sentinel.setParent(node);
-    SceneNode parentSet = sentinel.getParent();
-    EXPECT_NE(parentSet, node);
-    EXPECT_EQ(parentSet, sentinel);
+    sentinel.set_parent(node);
+    SceneNode parent_set = sentinel.get_parent();
+    EXPECT_NE(parent_set, node);
+    EXPECT_EQ(parent_set, sentinel);
 
-    EXPECT_EQ(sentinel.getChildren().size(), 0u);
+    EXPECT_EQ(sentinel.get_children().size(), 0u);
 
     SceneNodes::deallocate();
 }
@@ -66,23 +66,23 @@ GTEST_TEST(Scene_SceneNode, parenting) {
     SceneNode n1 = SceneNodes::create("n1");
     SceneNode n2 = SceneNodes::create("n2");
 
-    EXPECT_FALSE(n1.getParent().exists());
+    EXPECT_FALSE(n1.get_parent().exists());
     
     // Set n0 to the parent and check the parent-child relationship.
-    n1.setParent(n0);
-    EXPECT_TRUE(n1.getParent().exists());
-    EXPECT_EQ(n1.getParent(), n0);
-    EXPECT_EQ(n0.getChildren().size(), 1u);
-    EXPECT_TRUE(n0.hasChild(n1));
+    n1.set_parent(n0);
+    EXPECT_TRUE(n1.get_parent().exists());
+    EXPECT_EQ(n1.get_parent(), n0);
+    EXPECT_EQ(n0.get_children().size(), 1u);
+    EXPECT_TRUE(n0.has_child(n1));
 
     // Set n2 to the parent and check the parent-child relationship.
-    n1.setParent(n2);
-    EXPECT_TRUE(n1.getParent().exists());
-    EXPECT_EQ(n1.getParent(), n2);
-    EXPECT_EQ(n2.getChildren().size(), 1u);
-    EXPECT_TRUE(n2.hasChild(n1));
+    n1.set_parent(n2);
+    EXPECT_TRUE(n1.get_parent().exists());
+    EXPECT_EQ(n1.get_parent(), n2);
+    EXPECT_EQ(n2.get_children().size(), 1u);
+    EXPECT_TRUE(n2.has_child(n1));
     // ... also check that n0 no longer has any children.
-    EXPECT_EQ(0u, n0.getChildren().size());
+    EXPECT_EQ(0u, n0.get_children().size());
     
     SceneNodes::deallocate();
 }
@@ -111,25 +111,25 @@ GTEST_TEST(Scene_SceneNode, creating_hierarchy) {
     EXPECT_TRUE(n5.exists());
     EXPECT_TRUE(n6.exists());
 
-    n0.setParent(n3);
-    n4.setParent(n3);
-    n6.setParent(n3);
-    n2.setParent(n4);
-    n5.setParent(n4);
-    n1.setParent(n6);
+    n0.set_parent(n3);
+    n4.set_parent(n3);
+    n6.set_parent(n3);
+    n2.set_parent(n4);
+    n5.set_parent(n4);
+    n1.set_parent(n6);
 
-    EXPECT_EQ(n0.getParent(), n3);
-    EXPECT_TRUE(n3.hasChild(n0));
-    EXPECT_EQ(n4.getParent(), n3);
-    EXPECT_TRUE(n3.hasChild(n4));
-    EXPECT_EQ(n6.getParent(), n3);
-    EXPECT_TRUE(n3.hasChild(n6));
-    EXPECT_EQ(n2.getParent(), n4);
-    EXPECT_TRUE(n4.hasChild(n2));
-    EXPECT_EQ(n5.getParent(), n4);
-    EXPECT_TRUE(n4.hasChild(n5));
-    EXPECT_EQ(n1.getParent(), n6);
-    EXPECT_TRUE(n6.hasChild(n1));
+    EXPECT_EQ(n0.get_parent(), n3);
+    EXPECT_TRUE(n3.has_child(n0));
+    EXPECT_EQ(n4.get_parent(), n3);
+    EXPECT_TRUE(n3.has_child(n4));
+    EXPECT_EQ(n6.get_parent(), n3);
+    EXPECT_TRUE(n3.has_child(n6));
+    EXPECT_EQ(n2.get_parent(), n4);
+    EXPECT_TRUE(n4.has_child(n2));
+    EXPECT_EQ(n5.get_parent(), n4);
+    EXPECT_TRUE(n4.has_child(n5));
+    EXPECT_EQ(n1.get_parent(), n6);
+    EXPECT_TRUE(n6.has_child(n1));
 
     // Now parent id4 below id0, just for fun and profit.
     //     n3
@@ -139,21 +139,21 @@ GTEST_TEST(Scene_SceneNode, creating_hierarchy) {
     //   n4  n1
     //  / \
     // n2 n5
-    n4.setParent(n0);
+    n4.set_parent(n0);
 
-    EXPECT_FALSE(n3.getParent().exists());
-    EXPECT_EQ(n0.getParent(), n3);
-    EXPECT_TRUE(n3.hasChild(n0));
-    EXPECT_EQ(n6.getParent(), n3);
-    EXPECT_TRUE(n3.hasChild(n6));
-    EXPECT_EQ(n4.getParent(), n0);
-    EXPECT_TRUE(n0.hasChild(n4));
-    EXPECT_EQ(n1.getParent(), n6);
-    EXPECT_TRUE(n6.hasChild(n1));
-    EXPECT_EQ(n2.getParent(), n4);
-    EXPECT_TRUE(n4.hasChild(n2));
-    EXPECT_EQ(n5.getParent(), n4);
-    EXPECT_TRUE(n4.hasChild(n5));
+    EXPECT_FALSE(n3.get_parent().exists());
+    EXPECT_EQ(n0.get_parent(), n3);
+    EXPECT_TRUE(n3.has_child(n0));
+    EXPECT_EQ(n6.get_parent(), n3);
+    EXPECT_TRUE(n3.has_child(n6));
+    EXPECT_EQ(n4.get_parent(), n0);
+    EXPECT_TRUE(n0.has_child(n4));
+    EXPECT_EQ(n1.get_parent(), n6);
+    EXPECT_TRUE(n6.has_child(n1));
+    EXPECT_EQ(n2.get_parent(), n4);
+    EXPECT_TRUE(n4.has_child(n2));
+    EXPECT_EQ(n5.get_parent(), n4);
+    EXPECT_TRUE(n4.has_child(n5));
 
     SceneNodes::deallocate();
 }
@@ -174,59 +174,59 @@ GTEST_TEST(Scene_SceneNode, grap_traversal) {
     SceneNode n5 = SceneNodes::create("n5");
     SceneNode n6 = SceneNodes::create("n6");
 
-    n0.setParent(n3);
-    n4.setParent(n3);
-    n6.setParent(n3);
-    n2.setParent(n4);
-    n5.setParent(n4);
-    n1.setParent(n6);
+    n0.set_parent(n3);
+    n4.set_parent(n3);
+    n6.set_parent(n3);
+    n2.set_parent(n4);
+    n5.set_parent(n4);
+    n1.set_parent(n6);
 
     unsigned int* visits = new unsigned int[SceneNodes::capacity()];
     for (unsigned int i = 0; i < SceneNodes::capacity(); ++i)
         visits[i] = 0u;
-    n2.traverseAllChildren([&](SceneNodes::UID id) {
+    n2.traverse_all_children([&](SceneNodes::UID id) {
         ++visits[id];
     });
-    EXPECT_EQ(visits[n0.getID()], 0u);
-    EXPECT_EQ(visits[n1.getID()], 0u);
-    EXPECT_EQ(visits[n2.getID()], 0u);
-    EXPECT_EQ(visits[n3.getID()], 0u);
-    EXPECT_EQ(visits[n4.getID()], 0u);
-    EXPECT_EQ(visits[n5.getID()], 0u);
-    EXPECT_EQ(visits[n6.getID()], 0u);
+    EXPECT_EQ(visits[n0.get_ID()], 0u);
+    EXPECT_EQ(visits[n1.get_ID()], 0u);
+    EXPECT_EQ(visits[n2.get_ID()], 0u);
+    EXPECT_EQ(visits[n3.get_ID()], 0u);
+    EXPECT_EQ(visits[n4.get_ID()], 0u);
+    EXPECT_EQ(visits[n5.get_ID()], 0u);
+    EXPECT_EQ(visits[n6.get_ID()], 0u);
 
-    n4.traverseGraph([&](SceneNodes::UID id) {
+    n4.traverse_graph([&](SceneNodes::UID id) {
         ++visits[id];
     });
-    EXPECT_EQ(visits[n0.getID()], 0u);
-    EXPECT_EQ(visits[n1.getID()], 0u);
-    EXPECT_EQ(visits[n2.getID()], 1u);
-    EXPECT_EQ(visits[n3.getID()], 0u);
-    EXPECT_EQ(visits[n4.getID()], 1u);
-    EXPECT_EQ(visits[n5.getID()], 1u);
-    EXPECT_EQ(visits[n6.getID()], 0u);
+    EXPECT_EQ(visits[n0.get_ID()], 0u);
+    EXPECT_EQ(visits[n1.get_ID()], 0u);
+    EXPECT_EQ(visits[n2.get_ID()], 1u);
+    EXPECT_EQ(visits[n3.get_ID()], 0u);
+    EXPECT_EQ(visits[n4.get_ID()], 1u);
+    EXPECT_EQ(visits[n5.get_ID()], 1u);
+    EXPECT_EQ(visits[n6.get_ID()], 0u);
 
-    n6.traverseAllChildren([&](SceneNodes::UID id) {
+    n6.traverse_all_children([&](SceneNodes::UID id) {
         ++visits[id];
     });
-    EXPECT_EQ(visits[n0.getID()], 0u);
-    EXPECT_EQ(visits[n1.getID()], 1u);
-    EXPECT_EQ(visits[n2.getID()], 1u);
-    EXPECT_EQ(visits[n3.getID()], 0u);
-    EXPECT_EQ(visits[n4.getID()], 1u);
-    EXPECT_EQ(visits[n5.getID()], 1u);
-    EXPECT_EQ(visits[n6.getID()], 0u);
+    EXPECT_EQ(visits[n0.get_ID()], 0u);
+    EXPECT_EQ(visits[n1.get_ID()], 1u);
+    EXPECT_EQ(visits[n2.get_ID()], 1u);
+    EXPECT_EQ(visits[n3.get_ID()], 0u);
+    EXPECT_EQ(visits[n4.get_ID()], 1u);
+    EXPECT_EQ(visits[n5.get_ID()], 1u);
+    EXPECT_EQ(visits[n6.get_ID()], 0u);
 
-    n3.traverseGraph([&](SceneNodes::UID id) {
+    n3.traverse_graph([&](SceneNodes::UID id) {
         ++visits[id];
     });
-    EXPECT_EQ(visits[n0.getID()], 1u);
-    EXPECT_EQ(visits[n1.getID()], 2u);
-    EXPECT_EQ(visits[n2.getID()], 2u);
-    EXPECT_EQ(visits[n3.getID()], 1u);
-    EXPECT_EQ(visits[n4.getID()], 2u);
-    EXPECT_EQ(visits[n5.getID()], 2u);
-    EXPECT_EQ(visits[n6.getID()], 1u);
+    EXPECT_EQ(visits[n0.get_ID()], 1u);
+    EXPECT_EQ(visits[n1.get_ID()], 2u);
+    EXPECT_EQ(visits[n2.get_ID()], 2u);
+    EXPECT_EQ(visits[n3.get_ID()], 1u);
+    EXPECT_EQ(visits[n4.get_ID()], 2u);
+    EXPECT_EQ(visits[n5.get_ID()], 2u);
+    EXPECT_EQ(visits[n6.get_ID()], 1u);
 
     SceneNodes::deallocate();
 }

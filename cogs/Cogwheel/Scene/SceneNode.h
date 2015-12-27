@@ -14,7 +14,6 @@
 
 #include <vector>
 
-
 namespace Cogwheel {
 namespace Scene {
 
@@ -33,46 +32,46 @@ public:
     typedef Core::TypedUIDGenerator<SceneNodes> UIDGenerator;
     typedef UIDGenerator::UID UID;
 
-    static bool isAllocated() { return mGlobalTransforms != nullptr; }
+    static bool is_allocated() { return m_global_transforms != nullptr; }
     static void allocate(unsigned int capacity);
     static void deallocate();
 
-    static inline unsigned int capacity() { return mUIDGenerator.capacity(); }
+    static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int capacity);
-    static bool has(SceneNodes::UID nodeID) { return mUIDGenerator.has(nodeID); }
+    static bool has(SceneNodes::UID node_ID) { return m_UID_generator.has(node_ID); }
 
     static SceneNodes::UID create(const std::string& name);
 
-    static inline std::string getName(SceneNodes::UID nodeID) { return mNames[nodeID]; }
-    static inline void setName(SceneNodes::UID nodeID, const std::string& name) { mNames[nodeID] = name; }
+    static inline std::string get_name(SceneNodes::UID node_ID) { return m_names[node_ID]; }
+    static inline void set_name(SceneNodes::UID node_ID, const std::string& name) { m_names[node_ID] = name; }
 
-    static inline SceneNodes::UID getParentID(SceneNodes::UID nodeID) { return mParentIDs[nodeID]; }
-    static void setParent(SceneNodes::UID nodeID, const SceneNodes::UID parentID);
-    static bool hasChild(SceneNodes::UID nodeID, SceneNodes::UID testedChildID);
-    static std::vector<SceneNodes::UID> getSiblingIDs(SceneNodes::UID nodeID);
-    static std::vector<SceneNodes::UID> getChildrenIDs(SceneNodes::UID nodeID);
+    static inline SceneNodes::UID get_parent_ID(SceneNodes::UID node_ID) { return m_parent_IDs[node_ID]; }
+    static void set_parent(SceneNodes::UID node_ID, const SceneNodes::UID parent_ID);
+    static bool has_child(SceneNodes::UID node_ID, SceneNodes::UID tested_child_ID);
+    static std::vector<SceneNodes::UID> get_sibling_IDs(SceneNodes::UID node_ID);
+    static std::vector<SceneNodes::UID> get_children_IDs(SceneNodes::UID node_ID);
 
-    static Math::Transform getLocalTransform(SceneNodes::UID nodeID);
-    static void setLocalTransform(SceneNodes::UID nodeID, Math::Transform transform);
-    static Math::Transform getGlobalTransform(SceneNodes::UID nodeID) { return mGlobalTransforms[nodeID];}
-    static void setGlobalTransform(SceneNodes::UID nodeID, Math::Transform transform);
+    static Math::Transform get_local_transform(SceneNodes::UID node_ID);
+    static void set_local_transform(SceneNodes::UID node_ID, Math::Transform transform);
+    static Math::Transform get_global_transform(SceneNodes::UID node_ID) { return m_global_transforms[node_ID];}
+    static void set_global_transform(SceneNodes::UID node_ID, Math::Transform transform);
 
     template<typename F>
-    static void traverseGraph(SceneNodes::UID nodeID, F& function);
+    static void traverse_graph(SceneNodes::UID node_ID, F& function);
     template<typename F>
-    static void traverseAllChildren(SceneNodes::UID nodeID, F& function);
+    static void traverse_all_children(SceneNodes::UID node_ID, F& function);
 
 private:
-    static void reserveNodeData(unsigned int capacity, unsigned int oldCapacity);
+    static void reserve_node_data(unsigned int capacity, unsigned int old_capacity);
 
-    static UIDGenerator mUIDGenerator;
-    static std::string* mNames;
+    static UIDGenerator m_UID_generator;
+    static std::string* m_names;
 
-    static SceneNodes::UID* mParentIDs;
-    static SceneNodes::UID* mSiblingIDs;
-    static SceneNodes::UID* mFirstChildIDs;
+    static SceneNodes::UID* m_parent_IDs;
+    static SceneNodes::UID* m_sibling_IDs;
+    static SceneNodes::UID* m_first_child_IDs;
 
-    static Math::Transform* mGlobalTransforms;
+    static Math::Transform* m_global_transforms;
 };
 
 // ---------------------------------------------------------------------------
@@ -86,37 +85,37 @@ public:
     // -----------------------------------------------------------------------
     // Constructors and destructors
     // -----------------------------------------------------------------------
-    SceneNode() : mID(SceneNodes::UID::invalid_UID()) { }
-    SceneNode(SceneNodes::UID id) : mID(id) { }
+    SceneNode() : m_ID(SceneNodes::UID::invalid_UID()) { }
+    SceneNode(SceneNodes::UID id) : m_ID(id) { }
     ~SceneNode() { }
 
-    inline const SceneNodes::UID getID() const { return mID; }
+    inline const SceneNodes::UID get_ID() const { return m_ID; }
 
-    inline std::string getName() const { return SceneNodes::getName(mID); }
-    inline void setName(std::string name) { SceneNodes::setName(mID, name); }
+    inline std::string get_name() const { return SceneNodes::get_name(m_ID); }
+    inline void set_name(std::string name) { SceneNodes::set_name(m_ID, name); }
 
-    inline SceneNode getParent() const { return SceneNode(SceneNodes::getParentID(mID)); }
-    inline void setParent(SceneNode parent) { SceneNodes::setParent(mID, parent.getID()); }
-    inline bool hasChild(SceneNode testedChild) { return SceneNodes::hasChild(mID, testedChild.getID()); }
-    std::vector<SceneNode> getChildren() const;
+    inline SceneNode get_parent() const { return SceneNode(SceneNodes::get_parent_ID(m_ID)); }
+    inline void set_parent(SceneNode parent) { SceneNodes::set_parent(m_ID, parent.get_ID()); }
+    inline bool has_child(SceneNode tested_child) { return SceneNodes::has_child(m_ID, tested_child.get_ID()); }
+    std::vector<SceneNode> get_children() const;
 
-    inline bool exists() const { return SceneNodes::has(mID); }
+    inline bool exists() const { return SceneNodes::has(m_ID); }
 
-    inline Math::Transform getLocalTransform() const { return SceneNodes::getLocalTransform(mID); }
-    inline void setLocalTransform(Math::Transform transform) { SceneNodes::setLocalTransform(mID, transform); }
-    inline Math::Transform getGlobalTransform() const { return SceneNodes::getGlobalTransform(mID); }
-    inline void setGlobalTransform(Math::Transform transform) { SceneNodes::setGlobalTransform(mID, transform); }
+    inline Math::Transform get_local_transform() const { return SceneNodes::get_local_transform(m_ID); }
+    inline void set_local_transform(Math::Transform transform) { SceneNodes::set_local_transform(m_ID, transform); }
+    inline Math::Transform get_global_transform() const { return SceneNodes::get_global_transform(m_ID); }
+    inline void set_global_transform(Math::Transform transform) { SceneNodes::set_global_transform(m_ID, transform); }
 
     template<typename F>
-    inline void traverseGraph(F& function) { SceneNodes::traverseGraph<F>(mID, function); }
+    inline void traverse_graph(F& function) { SceneNodes::traverse_graph<F>(m_ID, function); }
     template<typename F>
-    inline void traverseAllChildren(F& function) { SceneNodes::traverseAllChildren<F>(mID, function); }
+    inline void traverse_all_children(F& function) { SceneNodes::traverse_all_children<F>(m_ID, function); }
 
-    inline bool operator==(SceneNode rhs) const { return mID == rhs.mID; }
-    inline bool operator!=(SceneNode rhs) const { return mID != rhs.mID; }
+    inline bool operator==(SceneNode rhs) const { return m_ID == rhs.m_ID; }
+    inline bool operator!=(SceneNode rhs) const { return m_ID != rhs.m_ID; }
 
 private:
-    const SceneNodes::UID mID;
+    const SceneNodes::UID m_ID;
 };
 
 // ---------------------------------------------------------------------------
@@ -124,41 +123,41 @@ private:
 // ---------------------------------------------------------------------------
 
 template<typename F>
-void SceneNodes::traverseAllChildren(SceneNodes::UID nodeID, F& function) {
-    UID node = mFirstChildIDs[nodeID];
+void SceneNodes::traverse_all_children(SceneNodes::UID node_ID, F& function) {
+    UID node = m_first_child_IDs[node_ID];
     if (node == UID::invalid_UID())
         return;
 
     do {
         function(node);
 
-        if (mFirstChildIDs[node] != UID::invalid_UID())
+        if (m_first_child_IDs[node] != UID::invalid_UID())
             // Visit the next child.
-            node = mFirstChildIDs[node];
-        else if (mSiblingIDs[node] != UID::invalid_UID())
+            node = m_first_child_IDs[node];
+        else if (m_sibling_IDs[node] != UID::invalid_UID())
             // Visit the next sibling.
-            node = mSiblingIDs[node];
+            node = m_sibling_IDs[node];
         else
         {
             // search upwards for next node not visited.
-            node = mParentIDs[node];
-            while (node != nodeID) {
-                UID parentSibling = mSiblingIDs[node];
-                if (parentSibling == UID::invalid_UID())
-                    node = mParentIDs[node];
+            node = m_parent_IDs[node];
+            while (node != node_ID) {
+                UID parent_sibling = m_sibling_IDs[node];
+                if (parent_sibling == UID::invalid_UID())
+                    node = m_parent_IDs[node];
                 else {
-                    node = parentSibling;
+                    node = parent_sibling;
                     break;
                 }
             }
         }
-    } while (node != nodeID);
+    } while (node != node_ID);
 }
 
 template<typename F>
-void SceneNodes::traverseGraph(SceneNodes::UID nodeID, F& function) {
-    function(nodeID);
-    traverseAllChildren(nodeID, function);
+void SceneNodes::traverse_graph(SceneNodes::UID node_ID, F& function) {
+    function(node_ID);
+    traverse_all_children(node_ID, function);
 }
 
 } // NS Scene

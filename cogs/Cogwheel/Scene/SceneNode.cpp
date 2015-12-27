@@ -11,179 +11,179 @@
 namespace Cogwheel {
 namespace Scene {
 
-SceneNodes::UIDGenerator SceneNodes::mUIDGenerator = UIDGenerator(0u);
-std::string* SceneNodes::mNames = nullptr;
+SceneNodes::UIDGenerator SceneNodes::m_UID_generator = UIDGenerator(0u);
+std::string* SceneNodes::m_names = nullptr;
 
-SceneNodes::UID* SceneNodes::mParentIDs = nullptr;
-SceneNodes::UID* SceneNodes::mSiblingIDs = nullptr;
-SceneNodes::UID* SceneNodes::mFirstChildIDs = nullptr;
+SceneNodes::UID* SceneNodes::m_parent_IDs = nullptr;
+SceneNodes::UID* SceneNodes::m_sibling_IDs = nullptr;
+SceneNodes::UID* SceneNodes::m_first_child_IDs = nullptr;
 
-Math::Transform* SceneNodes::mGlobalTransforms = nullptr;
+Math::Transform* SceneNodes::m_global_transforms = nullptr;
 
 void SceneNodes::allocate(unsigned int capacity) {
-    if (isAllocated())
+    if (is_allocated())
         return;
 
-    mUIDGenerator = UIDGenerator(capacity);
-    capacity = mUIDGenerator.capacity();
+    m_UID_generator = UIDGenerator(capacity);
+    capacity = m_UID_generator.capacity();
     
-    mNames = new std::string[capacity];
+    m_names = new std::string[capacity];
     
-    mParentIDs = new SceneNodes::UID[capacity];
-    mSiblingIDs = new SceneNodes::UID[capacity];
-    mFirstChildIDs = new SceneNodes::UID[capacity];
+    m_parent_IDs = new SceneNodes::UID[capacity];
+    m_sibling_IDs = new SceneNodes::UID[capacity];
+    m_first_child_IDs = new SceneNodes::UID[capacity];
 
-    mGlobalTransforms = new Math::Transform[capacity];
+    m_global_transforms = new Math::Transform[capacity];
 
     // Allocate dummy element at 0.
-    mNames[0] = "Dummy Node";
-    mParentIDs[0] = mFirstChildIDs[0] = mSiblingIDs[0] = UID::invalid_UID();
-    mGlobalTransforms[0] = Math::Transform::identity();
+    m_names[0] = "Dummy Node";
+    m_parent_IDs[0] = m_first_child_IDs[0] = m_sibling_IDs[0] = UID::invalid_UID();
+    m_global_transforms[0] = Math::Transform::identity();
 }
 
 void SceneNodes::deallocate() {
-    if (!isAllocated())
+    if (!is_allocated())
         return;
 
-    mUIDGenerator = UIDGenerator(0u);
-    delete[] mNames; mNames = nullptr;
+    m_UID_generator = UIDGenerator(0u);
+    delete[] m_names; m_names = nullptr;
 
-    delete[] mParentIDs; mParentIDs = nullptr;
-    delete[] mSiblingIDs; mSiblingIDs = nullptr;
-    delete[] mFirstChildIDs; mFirstChildIDs = nullptr;
+    delete[] m_parent_IDs; m_parent_IDs = nullptr;
+    delete[] m_sibling_IDs; m_sibling_IDs = nullptr;
+    delete[] m_first_child_IDs; m_first_child_IDs = nullptr;
 
-    delete[] mGlobalTransforms; mGlobalTransforms = nullptr;
+    delete[] m_global_transforms; m_global_transforms = nullptr;
 }
 
-void SceneNodes::reserve(unsigned int newCapacity) {
-    unsigned int oldCapacity = capacity();
-    mUIDGenerator.reserve(newCapacity);
-    reserveNodeData(newCapacity, oldCapacity);
+void SceneNodes::reserve(unsigned int new_capacity) {
+    unsigned int old_capacity = capacity();
+    m_UID_generator.reserve(new_capacity);
+    reserve_node_data(new_capacity, old_capacity);
 }
 
 template <typename T>
-static inline T* resizeAndCopyArray(T* oldArray, unsigned int newCapacity, unsigned int copyableElements) {
-    T* newArray = new T[newCapacity];
-    std::copy(oldArray, oldArray + copyableElements, newArray);
-    delete[] oldArray;
-    return newArray;
+static inline T* resize_and_copy_array(T* old_array, unsigned int new_capacity, unsigned int copyable_elements) {
+    T* new_array = new T[new_capacity];
+    std::copy(old_array, old_array + copyable_elements, new_array);
+    delete[] old_array;
+    return new_array;
 }
 
-void SceneNodes::reserveNodeData(unsigned int newCapacity, unsigned int oldCapacity) {
-    const unsigned int copyableElements = newCapacity < oldCapacity ? newCapacity : oldCapacity;
+void SceneNodes::reserve_node_data(unsigned int new_capacity, unsigned int old_capacity) {
+    const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
 
-    mNames = resizeAndCopyArray(mNames, newCapacity, copyableElements);
+    m_names = resize_and_copy_array(m_names, new_capacity, copyable_elements);
 
-    mParentIDs = resizeAndCopyArray(mParentIDs, newCapacity, copyableElements);
-    mSiblingIDs = resizeAndCopyArray(mSiblingIDs, newCapacity, copyableElements);
-    mFirstChildIDs = resizeAndCopyArray(mFirstChildIDs, newCapacity, copyableElements);
+    m_parent_IDs = resize_and_copy_array(m_parent_IDs, new_capacity, copyable_elements);
+    m_sibling_IDs = resize_and_copy_array(m_sibling_IDs, new_capacity, copyable_elements);
+    m_first_child_IDs = resize_and_copy_array(m_first_child_IDs, new_capacity, copyable_elements);
 
-    mGlobalTransforms = resizeAndCopyArray(mGlobalTransforms, newCapacity, copyableElements);
+    m_global_transforms = resize_and_copy_array(m_global_transforms, new_capacity, copyable_elements);
 }
 
 SceneNodes::UID SceneNodes::create(const std::string& name) {
-    unsigned int oldCapacity = mUIDGenerator.capacity();
-    UID id = mUIDGenerator.generate();
-    if (oldCapacity != mUIDGenerator.capacity())
+    unsigned int old_capacity = m_UID_generator.capacity();
+    UID id = m_UID_generator.generate();
+    if (old_capacity != m_UID_generator.capacity())
         // The capacity has changed and the size of all arrays need to be adjusted.
-        reserveNodeData(mUIDGenerator.capacity(), oldCapacity);
+        reserve_node_data(m_UID_generator.capacity(), old_capacity);
 
-    mNames[id] = name;
-    mParentIDs[id] = mFirstChildIDs[id] = mSiblingIDs[id] = UID::invalid_UID();
-    mGlobalTransforms[id] = Math::Transform::identity();
+    m_names[id] = name;
+    m_parent_IDs[id] = m_first_child_IDs[id] = m_sibling_IDs[id] = UID::invalid_UID();
+    m_global_transforms[id] = Math::Transform::identity();
     return id;
 }
 
-void SceneNodes::setParent(SceneNodes::UID nodeID, const SceneNodes::UID parentID) {
-    SceneNodes::UID oldParentID = mParentIDs[nodeID];
-    if (nodeID != parentID && nodeID != UID::invalid_UID()) {
+void SceneNodes::set_parent(SceneNodes::UID node_ID, const SceneNodes::UID parent_ID) {
+    SceneNodes::UID old_parent_ID = m_parent_IDs[node_ID];
+    if (node_ID != parent_ID && node_ID != UID::invalid_UID()) {
         // Detach current node from it's place in the hierarchy
-        if (oldParentID != UID::invalid_UID()) {
+        if (old_parent_ID != UID::invalid_UID()) {
             // Find old previous sibling.
-            UID sibling = mFirstChildIDs[oldParentID];
-            if (sibling == nodeID) {
-                mFirstChildIDs[oldParentID] = mSiblingIDs[sibling];
+            UID sibling = m_first_child_IDs[old_parent_ID];
+            if (sibling == node_ID) {
+                m_first_child_IDs[old_parent_ID] = m_sibling_IDs[sibling];
             } else {
-                while (nodeID != mSiblingIDs[sibling])
-                    sibling = mSiblingIDs[sibling];
-                mSiblingIDs[sibling] = mSiblingIDs[nodeID];
+                while (node_ID != m_sibling_IDs[sibling])
+                    sibling = m_sibling_IDs[sibling];
+                m_sibling_IDs[sibling] = m_sibling_IDs[node_ID];
             }
         }
 
         // Attach it to the new parent as the first child and link it to the other siblings.
-        mParentIDs[nodeID] = parentID;
-        mSiblingIDs[nodeID] = mFirstChildIDs[parentID];
-        mFirstChildIDs[parentID] = nodeID;
+        m_parent_IDs[node_ID] = parent_ID;
+        m_sibling_IDs[node_ID] = m_first_child_IDs[parent_ID];
+        m_first_child_IDs[parent_ID] = node_ID;
     }
 }
 
-std::vector<SceneNodes::UID> SceneNodes::getSiblingIDs(SceneNodes::UID nodeID) {
-    SceneNodes::UID parentID = mParentIDs[nodeID];
+std::vector<SceneNodes::UID> SceneNodes::get_sibling_IDs(SceneNodes::UID node_ID) {
+    SceneNodes::UID parent_ID = m_parent_IDs[node_ID];
     
-    return getChildrenIDs(parentID);
+    return get_children_IDs(parent_ID);
 }
 
-std::vector<SceneNodes::UID> SceneNodes::getChildrenIDs(SceneNodes::UID nodeID) {
+std::vector<SceneNodes::UID> SceneNodes::get_children_IDs(SceneNodes::UID node_ID) {
     std::vector<SceneNodes::UID> res(0);
-    SceneNodes::UID child = mFirstChildIDs[nodeID];
+    SceneNodes::UID child = m_first_child_IDs[node_ID];
     while (child != UID::invalid_UID()) {
         res.push_back(child);
-        child = mSiblingIDs[child];
+        child = m_sibling_IDs[child];
     }
     return res;
 }
 
-bool SceneNodes::hasChild(SceneNodes::UID nodeID, SceneNodes::UID testedChildID) {
-    SceneNodes::UID child = mFirstChildIDs[nodeID];
+bool SceneNodes::has_child(SceneNodes::UID node_ID, SceneNodes::UID tested_Child_ID) {
+    SceneNodes::UID child = m_first_child_IDs[node_ID];
     while (child != UID::invalid_UID()) {
-        if (child == testedChildID)
+        if (child == tested_Child_ID)
             return true;
-        child = mSiblingIDs[child];
+        child = m_sibling_IDs[child];
     }
     return false;
 }
 
-std::vector<SceneNode> SceneNode::getChildren() const {
-    std::vector<SceneNodes::UID> childrenIDs = SceneNodes::getChildrenIDs(mID);
+std::vector<SceneNode> SceneNode::get_children() const {
+    std::vector<SceneNodes::UID> children_IDs = SceneNodes::get_children_IDs(m_ID);
     std::vector<SceneNode> children;
-    children.reserve(childrenIDs.size());
-    for (SceneNodes::UID id : childrenIDs)
+    children.reserve(children_IDs.size());
+    for (SceneNodes::UID id : children_IDs)
         children.push_back(SceneNode(id));
     return children;
 }
 
-Math::Transform SceneNodes::getLocalTransform(SceneNodes::UID nodeID) {
-    UID parentID = mParentIDs[nodeID];
-    const Math::Transform parentTransform = mGlobalTransforms[parentID];
-    const Math::Transform transform = mGlobalTransforms[nodeID];
-    return inverse(parentTransform) * transform; // TODO Move delta transform computation into method.
+Math::Transform SceneNodes::get_local_transform(SceneNodes::UID node_ID) {
+    UID parent_ID = m_parent_IDs[node_ID];
+    const Math::Transform parent_transform = m_global_transforms[parent_ID];
+    const Math::Transform transform = m_global_transforms[node_ID];
+    return inverse(parent_transform) * transform; // TODO Move delta transform computation into method.
 }
 
-void SceneNodes::setLocalTransform(SceneNodes::UID nodeID, Math::Transform transform) {
-    if (nodeID == UID::invalid_UID()) return;
+void SceneNodes::set_local_transform(SceneNodes::UID node_ID, Math::Transform transform) {
+    if (node_ID == UID::invalid_UID()) return;
 
     // Update global transform.
-    UID parentID = mParentIDs[nodeID];
-    Math::Transform parentTransform = mGlobalTransforms[parentID];
-    Math::Transform newGlobalTransform = parentTransform * transform;
-    Math::Transform deltaTransform = inverse(mGlobalTransforms[nodeID]) * newGlobalTransform; // TODO Move into delta method.
-    mGlobalTransforms[nodeID] = newGlobalTransform;
+    UID parent_ID = m_parent_IDs[node_ID];
+    Math::Transform parent_transform = m_global_transforms[parent_ID];
+    Math::Transform new_global_transform = parent_transform * transform;
+    Math::Transform delta_transform = inverse(m_global_transforms[node_ID]) * new_global_transform; // TODO Move into delta method.
+    m_global_transforms[node_ID] = new_global_transform;
 
     // Update global transforms of all children.
-    traverseAllChildren(nodeID, [=](SceneNodes::UID childID) {
-        mGlobalTransforms[childID] = deltaTransform * mGlobalTransforms[childID];
+    traverse_all_children(node_ID, [=](SceneNodes::UID childID) {
+        m_global_transforms[childID] = delta_transform * m_global_transforms[childID];
     });
 }
 
-void SceneNodes::setGlobalTransform(SceneNodes::UID nodeID, Math::Transform transform) {
-    if (nodeID == UID::invalid_UID()) return;
+void SceneNodes::set_global_transform(SceneNodes::UID node_ID, Math::Transform transform) {
+    if (node_ID == UID::invalid_UID()) return;
     
-    Math::Transform deltaTransform = inverse(mGlobalTransforms[nodeID]) * transform; // TODO Move into delta method.
-    mGlobalTransforms[nodeID] = transform;
+    Math::Transform delta_transform = inverse(m_global_transforms[node_ID]) * transform; // TODO Move into delta method.
+    m_global_transforms[node_ID] = transform;
 
     // Update global transforms of all children.
-    traverseAllChildren(nodeID, [=](SceneNodes::UID childID) {
-        mGlobalTransforms[childID] = deltaTransform * mGlobalTransforms[childID];
+    traverse_all_children(node_ID, [=](SceneNodes::UID childID) {
+        m_global_transforms[childID] = delta_transform * m_global_transforms[childID];
     });
 }
 
