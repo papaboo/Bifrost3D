@@ -16,6 +16,9 @@
 namespace Cogwheel {
 namespace Scene {
 
+// ---------------------------------------------------------------------------
+// Container for cogwheel matrix cameras.
+// ---------------------------------------------------------------------------
 class Cameras final {
 public:
 
