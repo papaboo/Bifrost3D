@@ -1,10 +1,23 @@
-* Scene root node.
-* Modules!
-* Renderer.
+* RT Renderer.
 * Switch to underscores instead of camel case.
+** Only missing in Cogwheel::Math.
+* Multiple cameras.
+* Multiple scenes.
+* -Wall?
+** It's a pain now that I'm using source code instead of dlls. All my libs are being checked an produce a ton of pedantic warnings.
+** However it's also nice and produce some helpful warnings, fx about struct padding (which GLFW is full of, making that warning helpful and horrible at the same time.)
+* Materials
+** Coated rubber/metal.
+* Load FBX.
+* Serialize scene and models.
+* Screenshot
+** Grab backbuffer.
+** Render to offscreen buffer.
+* GL Renderer
 * destroy - SceneNode, Camera
 
 libs
 * OptiX
 * TinyOBJ
 * FreeImage. It has a commercial license.
+* Emscripten
