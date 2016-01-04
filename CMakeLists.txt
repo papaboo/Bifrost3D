@@ -14,16 +14,21 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 include("cmake/SetupVS.cmake")
 
 # Functions
-# Copy files to build folder
-function (install_files FILES)
-  foreach(FILE ${FILES})
-    get_filename_component(NAME ${FILE} NAME)
-    foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
-      set(PATH "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CONFIG}/")
-      execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FILE} ${PATH}/${NAME})
-    endforeach()
+# Copy file to build folder.
+function (install_file FILE)
+  get_filename_component(NAME ${FILE} NAME)
+  foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
+    set(PATH "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CONFIG}/")
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FILE} ${PATH}/${NAME})
   endforeach()
 endfunction()
+
+# Copy files passed via ARGN to build folder.
+macro(install_files)
+  foreach(FILE ${ARGN})
+    install_file(${FILE})
+  endforeach()
+endmacro()
 
 # Setup cogs
 file(GLOB COG_SUB_DIRECTORIES RELATIVE ${COGWHEEL_COGS_DIR} "${COGWHEEL_COGS_DIR}/*")
