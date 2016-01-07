@@ -1,6 +1,6 @@
-SET(PROJECT_NAME "SmallPT")
+set(PROJECT_NAME "SmallPT")
 
-SET(SRCS 
+set(SRCS 
   main.cpp
   smallpt.h
 )
@@ -20,7 +20,7 @@ if(NOT OPENGL_FOUND)
     message(ERROR " OPENGL not found!")
 endif(NOT OPENGL_FOUND)
 
-TARGET_LINK_LIBRARIES(${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME}
   Gogwheel
   glfw
   ${OPENGL_LIBRARIES}
