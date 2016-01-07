@@ -1,10 +1,17 @@
 * RT Renderer.
 ** OptiX
+*** OpenGL output using interop.
+*** Sphere intersection program (TODO about the one from pbrt3/ompf)
+*** Render normals
+* CUDA
+** helper methods.
+*** Debugging/error checking. Array management.
 * Switch to underscores instead of camel case.
 ** Only missing in Cogwheel::Math.
+* Prepend 'Cogwheel' to cogwheel includes.
 * Multiple cameras.
 * Multiple scenes.
-* -Wall?
+* -Wall? -W3?
 ** It's a pain now that I'm using source code instead of dlls. All my libs are being checked an produce a ton of pedantic warnings.
 ** However it's also nice and produce some helpful warnings, fx about struct padding (which GLFW is full of, making that warning helpful and horrible at the same time.)
 * Materials
@@ -21,3 +28,4 @@
 libs
 * FreeImage. It has a commercial license.
 * Emscripten
+* LuaJit - OpenSource (Fallback to standard Lua if the target architecture isn't supported.)
