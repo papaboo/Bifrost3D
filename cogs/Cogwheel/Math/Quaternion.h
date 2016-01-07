@@ -21,16 +21,16 @@
 namespace Cogwheel {
 namespace Math {
 
-/**
-* Implementation of a quaternion for rotations in 3D.
-* http://en.wikipedia.org/wiki/Quaternion
-* w holds the real part, (i,j,k) holds the imaginary part.
-*
-* For Cogwheel the only real usage we have for quaternions are as rotations and as
-* such they should always be normalized. We therefore do not expose any
-* functions that can return a non-normalized quaternion, within the limits of
-* floating point precision.
-*/
+//----------------------------------------------------------------------------
+// Implementation of a quaternion for rotations in 3D.
+// http://en.wikipedia.org/wiki/Quaternion
+// w holds the real part, (x,y,z) holds the imaginary part.
+//
+// For Cogwheel the only real usage we have for quaternions are as rotations and as
+// such they should always be normalized. We therefore do not expose any
+// functions that can return a non-normalized quaternion, within the limits of
+// floating point precision.
+//----------------------------------------------------------------------------
 template <typename T>
 struct Quaternion final {
 public:
