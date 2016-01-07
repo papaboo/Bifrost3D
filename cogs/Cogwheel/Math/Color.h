@@ -52,14 +52,6 @@ public:
     inline float& operator[](const int i) { return begin()[i]; }
     inline float operator[](const int i) const { return begin()[i]; }
 
-    // TODO Remove once we have 8bit colors.
-    inline void copyData(unsigned char* vs, const int entries = 3) const {
-        for (int e = 0; e < entries; ++e) {
-            const float v = 255 * begin()[e] + 0.5f;
-            vs[e] = static_cast<unsigned char>(std::max(std::min(v, 0.0f), 1.0f));
-        }
-    }
-
     //*****************************************************************************
     // Addition operators.
     //*****************************************************************************
@@ -213,14 +205,6 @@ public:
 
     inline RGB& rgb() {
         return *static_cast<RGB*>(static_cast<void*>(begin()));
-    }
-
-    // TODO Remove once we have 8bit colors.
-    inline void copyData(unsigned char* vs, const int entries = 4) const {
-        for (int e = 0; e < entries; ++e) {
-            const float v = 255 * begin()[e] + 0.5f;
-            vs[e] = static_cast<unsigned char>(std::max(std::min(v, 0.0f), 1.0f));
-        }
     }
 
     const std::string toString() const {
