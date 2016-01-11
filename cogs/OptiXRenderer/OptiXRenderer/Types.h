@@ -13,13 +13,11 @@ namespace OptiXRenderer {
 
 enum class RayTypes {
     MonteCarlo = 0,
-    Normal,
     Count
 };
 
 enum class EntryPoints {
     PathTracing = 0,
-    Normal,
     Count
 };
 
