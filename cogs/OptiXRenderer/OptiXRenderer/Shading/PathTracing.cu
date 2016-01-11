@@ -9,7 +9,6 @@
 #include <OptiXRenderer/Types.h>
 
 #include <optix.h>
-#include <optixu/optixu_math.h>
 
 rtDeclareVariable(uint2, g_launch_index, rtLaunchIndex, );
 
@@ -19,7 +18,7 @@ rtBuffer<float4, 2>  g_accumulation_buffer; // TODO Make double4
 //----------------------------------------------------------------------------
 // Ray generation program
 //----------------------------------------------------------------------------
-RT_PROGRAM void PathTracing() {
+RT_PROGRAM void path_tracing() {
     if (g_frame_number == 0.0f)
         g_accumulation_buffer[g_launch_index] = make_float4(0.0, 0.0, 0.0, 0.0);
 

@@ -23,14 +23,14 @@ using namespace Cogwheel::Core;
 
 namespace OptiXRenderer {
 
-static inline std::string get_ptx_path(std::string shader_filename) {
-    return std::string(OPTIXRENDERER_PTX_DIR) + "/OptiXRenderer_generated_" + shader_filename + ".ptx";
-}
-
 struct Renderer::State {
     uint2 screensize;
     Context context;
 };
+
+static inline std::string get_ptx_path(std::string shader_filename) {
+    return std::string(OPTIXRENDERER_PTX_DIR) + "/OptiXRenderer_generated_" + shader_filename + ".ptx";
+}
 
 Renderer::Renderer()
     : m_device_ids( {-1, -1} )
@@ -68,7 +68,7 @@ Renderer::Renderer()
 
     std::string ptxPath = get_ptx_path("PathTracing.cu");
     context->setRayGenerationProgram(int(EntryPoints::PathTracing),
-        context->createProgramFromPTXFile(ptxPath, "PathTracing"));
+        context->createProgramFromPTXFile(ptxPath, "path_tracing"));
 
     context->validate();
     context->compile();

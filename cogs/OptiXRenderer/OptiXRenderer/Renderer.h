@@ -13,7 +13,19 @@
 
 namespace OptiXRenderer {
 
-// TODO Create method that only returns a valid pointer in case a Renderer could be created.
+//----------------------------------------------------------------------------
+// OptiX renderer.
+// Supports several different rendering modes; Normal visualization and 
+// path tracing. 
+// Future work
+// * Create Initialization method that only returns a valid pointer in case 
+//   a Renderer could be created. Should take a GL (ES) Context and 
+//   a device ID begin/end iterator.
+// * Several backbuffer modes: VBO, data transfer over the CPU, .. more? PBO?
+//   See OptiX samples SampleScene.cpp.
+// * ImageComposer that composes images pr camera from several renderers, 
+//   probably requires an IRenderer interface.
+//----------------------------------------------------------------------------
 class Renderer final : public Cogwheel::Core::IModule {
 public:
     Renderer();
