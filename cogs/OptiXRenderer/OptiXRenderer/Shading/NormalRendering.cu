@@ -32,8 +32,8 @@ RT_PROGRAM void normal_visualization() {
     const float3 position = make_float3(0.0f, 0.0f, 0.0f);
     const float3 direction = make_float3(0.0f, 0.0f, 1.0f);
 
-    optix::Ray ray(position, direction, unsigned int(OptiXRenderer::RayTypes::Normal), g_scene_epsilon);
-    rtTrace(g_scene_root, ray, prd);
+    //optix::Ray ray(position, direction, unsigned int(OptiXRenderer::RayTypes::NormalVisualization), g_scene_epsilon);
+    //rtTrace(g_scene_root, ray, prd);
 
     g_accumulation_buffer[g_launch_index] = prd.color; 
 }

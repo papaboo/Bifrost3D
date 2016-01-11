@@ -65,10 +65,18 @@ Renderer::Renderer()
     m_state->screensize = make_uint2(window.get_width(), window.get_height());
     Buffer accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, m_state->screensize.x, m_state->screensize.y);
     context["g_accumulation_buffer"]->set(accumulation_buffer);
+    
+    { // Path tracing setup.
+        std::string ptxPath = get_ptx_path("PathTracing.cu");
+        context->setRayGenerationProgram(int(EntryPoints::PathTracing),
+            context->createProgramFromPTXFile(ptxPath, "path_tracing"));
+    }
 
-    std::string ptxPath = get_ptx_path("PathTracing.cu");
-    context->setRayGenerationProgram(int(EntryPoints::PathTracing),
-        context->createProgramFromPTXFile(ptxPath, "path_tracing"));
+    { // Normal visualization setup.
+        std::string ptxPath = get_ptx_path("NormalRendering.cu");
+        context->setRayGenerationProgram(int(EntryPoints::NormalVisualization),
+            context->createProgramFromPTXFile(ptxPath, "normal_visualization"));
+    }
 
     context->validate();
     context->compile();
