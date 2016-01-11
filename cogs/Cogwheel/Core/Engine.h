@@ -12,8 +12,6 @@
 #include <Core/Array.h>
 #include <Core/Time.h>
 #include <Core/Window.h>
-#include <Input/Keyboard.h>
-#include <Input/Mouse.h>
 #include <Scene/SceneNode.h>
 
 namespace Cogwheel {
