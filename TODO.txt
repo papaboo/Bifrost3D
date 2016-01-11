@@ -10,6 +10,8 @@
 ** Only missing in Cogwheel::Math.
 * Prepend 'Cogwheel' to cogwheel includes.
 * Multiple cameras.
+** G-Buffer pr camera.
+** Compose when all cameras are done.
 * Multiple scenes.
 * -Wall? -W3?
 ** It's a pain now that I'm using source code instead of dlls. All my libs are being checked an produce a ton of pedantic warnings.
@@ -20,7 +22,9 @@
 ** TinyOBJ
 * Serialize scene and models.
 * Screenshot
-** Grab backbuffer.
+** Grab backbuffer. 
+*** Request to composer, not renderers
+*** Pass along function to evaluate if the backbuffer is 'ready', fx iteration count of certain viewport.
 ** Render to offscreen buffer.
 * GL Renderer
 * destroy - SceneNode, Camera
