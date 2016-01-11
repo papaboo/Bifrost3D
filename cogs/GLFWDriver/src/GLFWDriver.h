@@ -9,13 +9,22 @@
 #ifndef _COGWHEEL_GLFW_DRIVER_H_
 #define _COGWHEEL_GLFW_DRIVER_H_
 
-#include <Core/Engine.h>
+//----------------------------------------------------------------------------
+// Forward declerations
+//----------------------------------------------------------------------------
+namespace Cogwheel {
+namespace Core {
+class Engine;
+class Window;
+}
+}
 
 namespace GLFWDriver {
 
 typedef void (*on_launch_callback)(Cogwheel::Core::Engine& engine);
+typedef void (*on_window_created_callback)(Cogwheel::Core::Window& window);
 
-void run(on_launch_callback on_launch);
+void run(on_launch_callback on_launch, on_window_created_callback on_window_created);
 
 } // NS GLFWDriver
 

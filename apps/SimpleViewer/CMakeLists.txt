@@ -1,16 +1,17 @@
-SET(PROJECT_NAME "SimpleViewer")
+set(PROJECT_NAME "SimpleViewer")
 
-SET(SRCS 
+set(SRCS 
   main.cpp
 )
 
-ADD_EXECUTABLE(${PROJECT_NAME} ${SRCS})
+add_executable(${PROJECT_NAME} ${SRCS})
 
-SOURCE_GROUP("" FILES ${SRCS})
+source_group("" FILES ${SRCS})
 
-TARGET_LINK_LIBRARIES(${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME}
   Gogwheel
   GLFWDriver
+  OptiXRenderer
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

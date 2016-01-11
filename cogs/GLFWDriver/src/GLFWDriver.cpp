@@ -10,6 +10,7 @@
 
 #include <glfw/glfw3.h>
 
+#include <Core/Engine.h>
 #include <Input/Keyboard.h>
 #include <Input/Mouse.h>
 
@@ -23,7 +24,7 @@ static Mouse* g_mouse = NULL;
 
 namespace GLFWDriver {
 
-void run(on_launch_callback on_launch) {
+void run(on_launch_callback on_launch, on_window_created_callback on_window_created) {
     if (!glfwInit())
         exit(EXIT_FAILURE);
 
@@ -45,6 +46,8 @@ void run(on_launch_callback on_launch) {
 
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
+
+    on_window_created(engine_window);
 
     { // Setup keyboard
         g_keyboard = new Keyboard();

@@ -1,6 +1,11 @@
 #include <GLFWDriver.h>
 
+#include <Core/Engine.h>
 #include <Core/IModule.h>
+#include <Input/Keyboard.h>
+#include <Input/Mouse.h>
+
+#include <OptiXRenderer/Renderer.h>
 
 #include <cstdio>
 #include <iostream>
@@ -32,9 +37,13 @@ void initializer(Cogwheel::Core::Engine& engine) {
     std::cout << "Initialize baby!" << std::endl;
     engine.get_window().set_name("SimpleViewer");
 
-    engine.add_mutating_module(new DebugInput());
+    // engine.add_mutating_module(new DebugInput());
+}
+
+void initialize_window(Cogwheel::Core::Window& window) {
+    Core::Engine::get_instance()->add_non_mutating_module(new OptiXRenderer::Renderer());
 }
 
 void main(int argc, char** argv) {
-    GLFWDriver::run(initializer);
+    GLFWDriver::run(initializer, initialize_window);
 }
