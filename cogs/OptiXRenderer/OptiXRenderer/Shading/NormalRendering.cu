@@ -9,7 +9,6 @@
 #include <OptiXRenderer/Types.h>
 
 #include <optix.h>
-#include <optixu/optixu_math.h>
 
 struct NormalVisualizationPRD {
     float4 color;
