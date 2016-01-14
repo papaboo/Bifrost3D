@@ -16,8 +16,6 @@
 #include <optixu/optixpp_namespace.h>
 #include <optixu/optixu_math_namespace.h>
 
-#include <cuda.h>
-
 using namespace optix;
 using namespace Cogwheel::Core;
 
@@ -42,8 +40,6 @@ Renderer::Renderer()
     m_state->context = Context::create();
     Context& context = m_state->context;
         
-    printf("Devices: %u\n", Context::getDeviceCount());
-
     m_device_ids.optix = 0;
     context->setDevices(&m_device_ids.optix, &m_device_ids.optix + 1);
 
@@ -51,8 +47,6 @@ Renderer::Renderer()
     context->getDeviceAttribute(devices[m_device_ids.optix], RT_DEVICE_ATTRIBUTE_CUDA_DEVICE_ORDINAL, sizeof(m_device_ids.cuda), &m_device_ids.cuda);
 
     printf("OptiX ID: %u, CUDA ID: %u\n", m_device_ids.optix, m_device_ids.cuda);
-
-    printf("%s\n", OPTIXRENDERER_PTX_DIR);
 
     context->setRayTypeCount(int(RayTypes::Count));
     context->setEntryPointCount(int(EntryPoints::Count));
@@ -67,15 +61,15 @@ Renderer::Renderer()
     context["g_accumulation_buffer"]->set(accumulation_buffer);
     
     { // Path tracing setup.
-        std::string ptxPath = get_ptx_path("PathTracing.cu");
+        std::string ptx_path = get_ptx_path("PathTracing.cu");
         context->setRayGenerationProgram(int(EntryPoints::PathTracing),
-            context->createProgramFromPTXFile(ptxPath, "path_tracing"));
+            context->createProgramFromPTXFile(ptx_path, "path_tracing"));
     }
 
     { // Normal visualization setup.
-        std::string ptxPath = get_ptx_path("NormalRendering.cu");
+        std::string ptx_path = get_ptx_path("NormalRendering.cu");
         context->setRayGenerationProgram(int(EntryPoints::NormalVisualization),
-            context->createProgramFromPTXFile(ptxPath, "normal_visualization"));
+            context->createProgramFromPTXFile(ptx_path, "normal_visualization"));
     }
 
     context->validate();
