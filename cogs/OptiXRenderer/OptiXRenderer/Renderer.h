@@ -25,6 +25,9 @@ namespace OptiXRenderer {
 //   See OptiX samples SampleScene.cpp.
 // * ImageComposer that composes images pr camera from several renderers, 
 //   probably requires an IRenderer interface.
+// * Logarithmic upload of the accumulated image.
+// * Have path tracer stop per bounce, filter and display the result.
+//   Should be good for interactivity and convergence. :)
 //----------------------------------------------------------------------------
 class Renderer final : public Cogwheel::Core::IModule {
 public:

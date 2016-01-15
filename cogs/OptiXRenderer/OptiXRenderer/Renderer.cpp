@@ -16,6 +16,8 @@
 #include <optixu/optixpp_namespace.h>
 #include <optixu/optixu_math_namespace.h>
 
+#include <GL/gl.h> // TODO #ifdef to work on OS X as well. But do that when we create a special GL context.
+
 using namespace optix;
 using namespace Cogwheel::Core;
 
@@ -24,6 +26,10 @@ namespace OptiXRenderer {
 struct Renderer::State {
     uint2 screensize;
     Context context;
+
+    Buffer accumulation_buffer;
+
+    GLuint backbuffer_gl_id; // TODO Should also be used when we later support interop by rendering to a VBO/PBO.
 };
 
 static inline std::string get_ptx_path(std::string shader_filename) {
@@ -54,12 +60,24 @@ Renderer::Renderer()
 
     context["g_frame_number"]->setFloat(2.0f);
 
-    // Screen buffers
-    const Window& window = Engine::get_instance()->get_window();
-    m_state->screensize = make_uint2(window.get_width(), window.get_height());
-    Buffer accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, m_state->screensize.x, m_state->screensize.y);
-    context["g_accumulation_buffer"]->set(accumulation_buffer);
-    
+    { // Screen buffers
+        const Window& window = Engine::get_instance()->get_window();
+        m_state->screensize = make_uint2(window.get_width(), window.get_height());
+        m_state->accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, m_state->screensize.x, m_state->screensize.y);
+        context["g_accumulation_buffer"]->set(m_state->accumulation_buffer);
+
+        { // Setup back buffer texture used for copying data to OpenGL
+            glEnable(GL_TEXTURE_2D);
+            glGenTextures(1, &m_state->backbuffer_gl_id);
+            glBindTexture(GL_TEXTURE_2D, m_state->backbuffer_gl_id);
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        }
+    }
+
     { // Path tracing setup.
         std::string ptx_path = get_ptx_path("PathTracing.cu");
         context->setRayGenerationProgram(int(EntryPoints::PathTracing),
@@ -83,13 +101,43 @@ void Renderer::apply() {
 
     context["g_frame_number"]->setFloat(float(Engine::get_instance()->get_time().get_ticks()));
 
-    Buffer accumulation_buffer = context["g_accumulation_buffer"]->getBuffer();
-
     context->launch(int(EntryPoints::PathTracing), m_state->screensize.x, m_state->screensize.y);
 
-    float4* accumulation_buffer_mapped = (float4*)accumulation_buffer->map();
-    printf("[%f, %f, %f, %f]\n", accumulation_buffer_mapped->x, accumulation_buffer_mapped->y, accumulation_buffer_mapped->z, accumulation_buffer_mapped->w);
-    accumulation_buffer->unmap();
+    { // Update the backbuffer.
+        glViewport(0, 0, m_state->screensize.x, m_state->screensize.y);
+
+        { // Setup matrices. I really don't need to do this every frame, since they never change.
+            glMatrixMode(GL_PROJECTION);
+            glLoadIdentity();
+            glOrtho(-1, 1, -1.f, 1.f, 1.f, -1.f);
+
+            glMatrixMode(GL_MODELVIEW);
+            glLoadIdentity();
+        }
+
+        float4* mapped_accumulation_buffer = (float4*)m_state->accumulation_buffer->map();
+        glBindTexture(GL_TEXTURE_2D, m_state->backbuffer_gl_id);
+        const GLint BASE_IMAGE_LEVEL = 0;
+        const GLint noBorder = 0;
+        glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGBA, m_state->screensize.x, m_state->screensize.y, noBorder, GL_RGBA, GL_FLOAT, mapped_accumulation_buffer);
+        m_state->accumulation_buffer->unmap();
+
+        glBegin(GL_QUADS); {
+
+            glTexCoord2f(0.0f, 1.0f);
+            glVertex3f(-1.0f, -1.0f, 0.f);
+
+            glTexCoord2f(1.0f, 1.0f);
+            glVertex3f(1.0f, -1.0f, 0.f);
+
+            glTexCoord2f(1.0f, 0.0f);
+            glVertex3f(1.0f, 1.0f, 0.f);
+
+            glTexCoord2f(0.0f, 0.0f);
+            glVertex3f(-1.0f, 1.0f, 0.f);
+
+        } glEnd();
+    }
 }
 
 std::string Renderer::get_name() {

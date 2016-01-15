@@ -6,16 +6,17 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
 )
 
-find_package(CUDA 7.5 REQUIRED)
-find_package(OptiX)
-
 # TODO Just disable cog if CUDA or OptiX isn't found and report useful error messages about what to install to the user.
 # Also disable when OS isn't windows, as nothing else has been tested yet
+
+find_package(CUDA 7.5 REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(OptiX)
 
 install_file(${OPTIX_1_DLL})
 install_file(${OPTIX_U_1_DLL})
 
-include_directories(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_PATH})
+include_directories(. ${CUDA_INCLUDE_DIRS} ${OpenGL_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
 
 set(ROOT_SRC
   OptiXRenderer/Kernel.h
@@ -51,11 +52,12 @@ cuda_add_library(${LIBRARY_NAME} ${ROOT_SRC} ${SHADING_SRC})
 
 source_group("" FILES ${ROOT_SRC})
 source_group("Shading" FILES ${SHADING_SRC})
-source_group("Shading\\ptx" FILES ${SHADING_PTX_SRC}) # TODO Add the ptx files to a source gorup.
+source_group("Shading\\ptx" FILES ${SHADING_PTX_SRC}) # Add the ptx files to a source group.
 
 target_link_libraries(${LIBRARY_NAME}
   Gogwheel
   ${CUDA_LIBRARIES}
+  ${OPENGL_LIBRARIES}
   ${OPTIX_LIBRARIES}
 )
 

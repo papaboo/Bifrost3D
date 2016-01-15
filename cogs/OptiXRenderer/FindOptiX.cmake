@@ -26,21 +26,24 @@ endforeach()
 # Find dlls, libs and include dirs.
 
 # Include directory.
-find_path(OPTIX_INCLUDE_PATH optix.h
+find_path(OPTIX_INCLUDE_DIRS optix.h
           PATHS
-			    ${OPTIX_PATH}/include
-			    DOC "The directory to include optix headers from")
+          ${OPTIX_PATH}/include
+          DOC "The directory to include optix headers from"
+)
 
 # Find libraries.
 find_library(OPTIX_1_LIB optix.1
-	           PATHS
-				     ${OPTIX_PATH}/lib64
-				     DOC "The main optix library")
+             PATHS
+             ${OPTIX_PATH}/lib64
+             DOC "The main optix library"
+)
 
 find_library(OPTIX_U_1_LIB optixu.1
-	           PATHS
-				     ${OPTIX_PATH}/lib64
-				     DOC "The optix C++ namespace library")
+             PATHS
+             ${OPTIX_PATH}/lib64
+             DOC "The optix C++ namespace library"
+)
 
 set(OPTIX_LIBRARIES "${OPTIX_1_LIB}" "${OPTIX_U_1_LIB}")
 
@@ -55,7 +58,7 @@ endif()
 
 set(OPTIX_DLLS "${OPTIX_1_DLL}" "${OPTIX_U_1_DLL}")
 
-set_boolean(OPTIX_FOUND OPTIX_INCLUDE_PATH AND OPTIX_1_LIB AND OPTIX_U_1_LIB AND OPTIX_1_DLL AND OPTIX_U_1_DLL)
+set_boolean(OPTIX_FOUND OPTIX_INCLUDE_DIRS AND OPTIX_1_LIB AND OPTIX_U_1_LIB AND OPTIX_1_DLL AND OPTIX_U_1_DLL)
 
 if (OPTIX_FOUND)
   message(STATUS "Found OptiX: ${OPTIX_PATH}")
