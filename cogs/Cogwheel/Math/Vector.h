@@ -39,7 +39,7 @@ public:
     static inline Vector2<T> one() { return Vector2<T>(1, 1); }
 
     inline T* begin() { return &x; }
-    inline const T* const begin() const { return &x; }
+    inline const T* begin() const { return &x; }
 
     const std::string to_string() const {
         std::ostringstream out;
@@ -78,7 +78,7 @@ public:
     static inline Vector3<T> right() { return Vector3(1, 0, 0); }
 
     inline T* begin() { return &x; }
-    inline const T* const begin() const { return &x; }
+    inline const T* begin() const { return &x; }
 
     const std::string to_string() const {
         std::ostringstream out;
@@ -114,7 +114,7 @@ public:
     static inline Vector4<T> one() { return Vector4<T>(1, 1, 1, 1); }
 
     inline T* begin() { return &x; }
-    inline const T* const begin() const { return &x; }
+    inline const T* begin() const { return &x; }
 
     const std::string to_string() const {
         std::ostringstream out;

@@ -47,7 +47,7 @@ public:
     static inline RGB white()  { return RGB(1.0f, 1.0f, 1.0f); }
 
     inline float* begin() { return &r; }
-    inline const float* const begin() const { return &r; }
+    inline const float* begin() const { return &r; }
 
     inline float& operator[](const int i) { return begin()[i]; }
     inline float operator[](const int i) const { return begin()[i]; }
@@ -198,7 +198,7 @@ public:
     static inline RGBA white()  { return RGBA(RGB::white()); }
 
     inline float* begin() { return &r; }
-    inline const float* const begin() const { return &r; }
+    inline const float* begin() const { return &r; }
 
     inline float& operator[](const int i) { return begin()[i]; }
     inline float operator[](const int i) const { return begin()[i]; }

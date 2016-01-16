@@ -95,7 +95,7 @@ public:
 
     // Pointer to the first element of the quaternion.
     inline T* begin() { return &x; }
-    inline const T* const begin() const { return &x; }
+    inline const T* begin() const { return &x; }
 
     // The imaginary part of the quaternion.
     inline Vector3<T>& imaginary() {

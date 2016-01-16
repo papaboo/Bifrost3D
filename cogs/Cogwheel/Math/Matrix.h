@@ -77,7 +77,7 @@ public:
     // Direct data access.
     //*****************************************************************************
     inline T* begin() { return m_rows[0].begin(); }
-    inline const T* const begin() const { return m_rows[0].begin(); }
+    inline const T* begin() const { return m_rows[0].begin(); }
     inline Row& operator[](int r) { return m_rows[r]; }
     inline Row operator[](int r) const { return m_rows[r]; }
 
