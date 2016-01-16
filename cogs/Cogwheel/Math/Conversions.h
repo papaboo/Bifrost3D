@@ -19,7 +19,7 @@ namespace Math {
 // Converts a quaternion to it's 3x3 matrix representation.
 // http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm
 template <typename T>
-inline Matrix3x3<T> toMatrix3x3(Quaternion<T> q) {
+inline Matrix3x3<T> to_matrix3x3(Quaternion<T> q) {
     const T one = T(1);
     const T two = T(2);
     const T x = q.x; const T y = q.y; const T z = q.z; const T w = q.w;
@@ -33,7 +33,7 @@ inline Matrix3x3<T> toMatrix3x3(Quaternion<T> q) {
 // Constructs a Quaternion from a rotation matrix.
 // http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
 template <typename T>
-inline Quaternion<T> toQuaternion(const Matrix3x3<T> m) {
+inline Quaternion<T> to_quaternion(const Matrix3x3<T> m) {
     // Compute the trace of the matrix
     T trace = m[0][0] + m[1][1] + m[2][2];
 
@@ -71,21 +71,21 @@ inline Quaternion<T> toQuaternion(const Matrix3x3<T> m) {
     }
 }
 
-inline Matrix4x3f toMatrix4x3(Transform t) {
-    const Matrix3x3f r = toMatrix3x3(t.mRotation);
-    const float s = t.mScale;
-    Matrix4x3f res = { s * r[0][0], s * r[0][1], s * r[0][2], t.mTranslation.x,
-                       s * r[1][0], s * r[1][1], s * r[1][2], t.mTranslation.y,
-                       s * r[2][0], s * r[2][1], s * r[2][2], t.mTranslation.z };
+inline Matrix4x3f to_matrix4x3(Transform t) {
+    const Matrix3x3f r = to_matrix3x3(t.rotation);
+    const float s = t.scale;
+    Matrix4x3f res = { s * r[0][0], s * r[0][1], s * r[0][2], t.translation.x,
+                       s * r[1][0], s * r[1][1], s * r[1][2], t.translation.y,
+                       s * r[2][0], s * r[2][1], s * r[2][2], t.translation.z };
     return res;
 }
 
-inline Matrix4x4f toMatrix4x4(Transform t) {
-    const Matrix3x3f r = toMatrix3x3(t.mRotation);
-    const float s = t.mScale;
-    Matrix4x4f res = { s * r[0][0], s * r[0][1], s * r[0][2], t.mTranslation.x,
-        s * r[1][0], s * r[1][1], s * r[1][2], t.mTranslation.y,
-        s * r[2][0], s * r[2][1], s * r[2][2], t.mTranslation.z,
+inline Matrix4x4f to_matrix4x4(Transform t) {
+    const Matrix3x3f r = to_matrix3x3(t.rotation);
+    const float s = t.scale;
+    Matrix4x4f res = { s * r[0][0], s * r[0][1], s * r[0][2], t.translation.x,
+        s * r[1][0], s * r[1][1], s * r[1][2], t.translation.y,
+        s * r[2][0], s * r[2][1], s * r[2][2], t.translation.z,
         0.0f, 0.0f, 0.0f, 1.0f };
     return res;
 }

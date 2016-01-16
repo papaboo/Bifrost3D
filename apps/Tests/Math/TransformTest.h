@@ -22,15 +22,15 @@ protected:
 
     // Redefine comparison methods as gtest's EXPECT_PRED and argument overloading doesn't play well with each other.
     static bool compare_transform(Transform lhs, Transform rhs) {
-        return almostEqual(lhs.mTranslation, rhs.mTranslation, 10)
-            && almostEqual(lhs.mRotation, rhs.mRotation, 10)
-            && almostEqual(lhs.mScale, rhs.mScale, 10);
+        return almost_equal(lhs.translation, rhs.translation, 10)
+            && almost_equal(lhs.rotation, rhs.rotation, 10)
+            && almost_equal(lhs.scale, rhs.scale, 10);
     }
     static bool compare_quaternion(Quaternionf lhs, Quaternionf rhs, unsigned short maxUlps) {
-        return almostEqual(lhs, rhs, maxUlps);
+        return almost_equal(lhs, rhs, maxUlps);
     }
     static bool compare_vector(Vector3f lhs, Vector3f rhs, unsigned short maxUlps) {
-        return almostEqual(lhs, rhs, maxUlps);
+        return almost_equal(lhs, rhs, maxUlps);
     }
 };
 
@@ -39,16 +39,16 @@ TEST_F(Math_Transform, applying_translation) {
 
     EXPECT_PRED2(compare_transform, t.apply(inverse(t)), Transform::identity());
 
-    EXPECT_PRED3(compare_vector, t.apply(Vector3f::zero()), t.mTranslation, 10);
+    EXPECT_PRED3(compare_vector, t.apply(Vector3f::zero()), t.translation, 10);
 
-    EXPECT_PRED3(compare_vector, t.apply(-t.mTranslation), Vector3f::zero(), 10);
+    EXPECT_PRED3(compare_vector, t.apply(-t.translation), Vector3f::zero(), 10);
 
     Vector3f v = Vector3f(7, 3, -1);
     EXPECT_PRED3(compare_vector, t.apply(v), Vector3f(10, -1, 0), 10);
 }
 
 TEST_F(Math_Transform, apply_rotation) {
-    Transform t = Transform(Vector3f::zero(), Quaternionf::fromAngleAxis(45.0f, Vector3f::up()));
+    Transform t = Transform(Vector3f::zero(), Quaternionf::from_angle_axis(45.0f, Vector3f::up()));
 
     EXPECT_PRED3(compare_vector, t.apply(Vector3f::zero()), Vector3f::zero(), 10);
 
@@ -71,8 +71,8 @@ TEST_F(Math_Transform, apply_scale) {
 TEST_F(Math_Transform, matrix_representation) {
     Transform t = Transform(Vector3f(3, -4, 1), normalize(Quaternionf(4,2,-7, 3)), 0.75f);
 
-    Matrix4x3f m4x3 = toMatrix4x3(t);
-    Matrix4x4f m4x4 = toMatrix4x4(t);
+    Matrix4x3f m4x3 = to_matrix4x3(t);
+    Matrix4x4f m4x4 = to_matrix4x4(t);
 
     // Compare transformations of points.
     for (Vector3f p : { Vector3f::forward(), Vector3f::right(), Vector3f::up() }) {

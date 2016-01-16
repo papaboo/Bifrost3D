@@ -60,7 +60,7 @@ public:
 
     // Create a quaternion describing a rotation in angles around a normalized axis in R^3.
     // http://www.euclideanspace.com/maths/geometry/rotations/conversions/angleToQuaternion/
-    static inline Quaternion<T> fromAngleAxis(T angle, Vector3<T> axis) {
+    static inline Quaternion<T> from_angle_axis(T angle, Vector3<T> axis) {
         T radianHalved = angle / T(360.0) * PI<T>();
         T sinAngle = sin(radianHalved);
         Vector3<T> imaginary = axis * sinAngle;
@@ -70,7 +70,7 @@ public:
 
     // Create a quaternion that looks in direction and has the upvector up.
     // http://www.gamedev.net/topic/613595-quaternion-lookrotationlookat-up/
-    static inline Quaternion<T> lookIn(Vector3<T> direction, Vector3<T> up = Vector3<T>::up()) {
+    static inline Quaternion<T> look_in(Vector3<T> direction, Vector3<T> up = Vector3<T>::up()) {
         Vector3<T> right = Math::normalize(cross(up, direction));
         up = cross(direction, right);
 
@@ -150,7 +150,7 @@ public:
     }
 
     // To string.
-    const std::string toString() const {
+    const std::string to_string() const {
         std::ostringstream out;
         out << "[v: [x: " << x << ", y: " << y << ", z: " << z << "], w: " << w << "]";
         return out.str();
@@ -199,25 +199,25 @@ inline Quaternion<T> nlerp(Quaternion<T> from, Quaternion<T> to, T by) {
 
 // Comparison that checks if two quaternions are almost equal.
 template<typename T>
-inline bool almostEqual(Quaternion<T> lhs, Quaternion<T> rhs, unsigned short maxUlps = 4) {
-    return almostEqual(lhs.x, rhs.x, maxUlps)
-        && almostEqual(lhs.y, rhs.y, maxUlps)
-        && almostEqual(lhs.z, rhs.z, maxUlps)
-        && almostEqual(lhs.w, rhs.w, maxUlps);
+inline bool almost_equal(Quaternion<T> lhs, Quaternion<T> rhs, unsigned short maxUlps = 4) {
+    return almost_equal(lhs.x, rhs.x, maxUlps)
+        && almost_equal(lhs.y, rhs.y, maxUlps)
+        && almost_equal(lhs.z, rhs.z, maxUlps)
+        && almost_equal(lhs.w, rhs.w, maxUlps);
 }
 
 // Comparison that checks if two quaternions interpreted as rotations in R3 are almost equal.
 template<typename T>
-inline bool almostEqualRotation(Quaternion<T> lhs, Quaternion<T> rhs, unsigned short maxUlps = 4) {
+inline bool almost_equal_rotation(Quaternion<T> lhs, Quaternion<T> rhs, unsigned short maxUlps = 4) {
     // A quaternion as rotation is conceptually equal to the same quaternion with all elements negated.
     // Therefore if the left and right quaternion's real component do not have the same sign, we negate rhs.
     if (lhs.w * rhs.w < T(0))
         rhs = Quaternion<T>(-rhs.x, -rhs.y, -rhs.z, -rhs.w);
 
-    return almostEqual(lhs.x, rhs.x, maxUlps)
-        && almostEqual(lhs.y, rhs.y, maxUlps)
-        && almostEqual(lhs.z, rhs.z, maxUlps)
-        && almostEqual(lhs.w, rhs.w, maxUlps);
+    return almost_equal(lhs.x, rhs.x, maxUlps)
+        && almost_equal(lhs.y, rhs.y, maxUlps)
+        && almost_equal(lhs.z, rhs.z, maxUlps)
+        && almost_equal(lhs.w, rhs.w, maxUlps);
 }
 
 
@@ -231,10 +231,10 @@ typedef Quaternion<double> Quaterniond;
 } // NS Math
 } // NS Cogwheel
 
-// Convinience function that appends a quaternion's string representation to an ostream.
+// Convenience function that appends a quaternion's string representation to an ostream.
 template<class T>
 inline std::ostream& operator<<(std::ostream& s, Cogwheel::Math::Quaternion<T> v){
-    return s << v.toString();
+    return s << v.to_string();
 }
 
 #endif // _COGWHEEL_MATH_QUATERNION_H_

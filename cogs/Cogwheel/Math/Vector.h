@@ -41,7 +41,7 @@ public:
     inline T* begin() { return &x; }
     inline const T* const begin() const { return &x; }
 
-    const std::string toString() const {
+    const std::string to_string() const {
         std::ostringstream out;
         out << "[x: " << x << ", y: " << y << "]";
         return out.str();
@@ -80,7 +80,7 @@ public:
     inline T* begin() { return &x; }
     inline const T* const begin() const { return &x; }
 
-    const std::string toString() const {
+    const std::string to_string() const {
         std::ostringstream out;
         out << "[x: " << x << ", y: " << y << ", z: " << z << "]";
         return out.str();
@@ -116,7 +116,7 @@ public:
     inline T* begin() { return &x; }
     inline const T* const begin() const { return &x; }
 
-    const std::string toString() const {
+    const std::string to_string() const {
         std::ostringstream out;
         out << "[x: " << x << ", y: " << y << ", z: " << z << ", w: " << w << "]";
         return out.str();
@@ -141,7 +141,7 @@ inline T dot(Vector<T> lhs, Vector<T> rhs) {
 // Compute the squared magnitude of the input vector.
 // Useful when comparing the relative size between vectors, where the exact magnitude isn't needed.
 template<template<typename> class Vector, typename T>
-inline T squaredMagnitude(Vector<T> v) {
+inline T squared_magnitude(Vector<T> v) {
     return dot(v, v);
 }
 
@@ -159,7 +159,7 @@ inline Vector<T> normalize(Vector<T> v){
 }
 
 // Cross product between two 3-dimensional vectors.
-// TODO ASSERT that the type is a float.
+// TODO Use enable_if to only allow cross on floating point types.
 template<typename T>
 inline Vector3<T> cross(Vector3<T> lhs, Vector3<T> rhs) {
     return Vector3<T>((lhs.y * rhs.z) - (lhs.z * rhs.y),
@@ -169,22 +169,22 @@ inline Vector3<T> cross(Vector3<T> lhs, Vector3<T> rhs) {
 
 // Comparison that checks if two vectors are almost equal.
 template<typename T>
-inline bool almostEqual(Vector2<T> lhs, Vector2<T> rhs, unsigned short maxUlps = 4) {
-    return almostEqual(lhs.x, rhs.x, maxUlps)
-        && almostEqual(lhs.y, rhs.y, maxUlps);
+inline bool almost_equal(Vector2<T> lhs, Vector2<T> rhs, unsigned short maxUlps = 4) {
+    return almost_equal(lhs.x, rhs.x, maxUlps)
+        && almost_equal(lhs.y, rhs.y, maxUlps);
 }
 template<typename T>
-inline bool almostEqual(Vector3<T> lhs, Vector3<T> rhs, unsigned short maxUlps = 4) {
-    return almostEqual(lhs.x, rhs.x, maxUlps)
-        && almostEqual(lhs.y, rhs.y, maxUlps)
-        && almostEqual(lhs.z, rhs.z, maxUlps);
+inline bool almost_equal(Vector3<T> lhs, Vector3<T> rhs, unsigned short maxUlps = 4) {
+    return almost_equal(lhs.x, rhs.x, maxUlps)
+        && almost_equal(lhs.y, rhs.y, maxUlps)
+        && almost_equal(lhs.z, rhs.z, maxUlps);
 }
 template<typename T>
-inline bool almostEqual(Vector4<T> lhs, Vector4<T> rhs, unsigned short maxUlps = 4) {
-    return almostEqual(lhs.x, rhs.x, maxUlps)
-        && almostEqual(lhs.y, rhs.y, maxUlps)
-        && almostEqual(lhs.z, rhs.z, maxUlps)
-        && almostEqual(lhs.w, rhs.w, maxUlps);
+inline bool almost_equal(Vector4<T> lhs, Vector4<T> rhs, unsigned short maxUlps = 4) {
+    return almost_equal(lhs.x, rhs.x, maxUlps)
+        && almost_equal(lhs.y, rhs.y, maxUlps)
+        && almost_equal(lhs.z, rhs.z, maxUlps)
+        && almost_equal(lhs.w, rhs.w, maxUlps);
 }
 
 //*************************************************************************
@@ -204,22 +204,22 @@ typedef Vector4<int> Vector4i;
 } // NS Math
 } // NS Cogwheel
 
-// Convinience function that appends a vector's string representation to an ostream.
+// Convenience function that appends a vector's string representation to an ostream.
 template<class T>
 inline std::ostream& operator<<(std::ostream& s, Cogwheel::Math::Vector2<T> v){
-    return s << v.toString();
+    return s << v.to_string();
 }
 
-// Convinience function that appends a vector's string representation to an ostream.
+// Convenience function that appends a vector's string representation to an ostream.
 template<class T>
 inline std::ostream& operator<<(std::ostream& s, Cogwheel::Math::Vector3<T> v){
-    return s << v.toString();
+    return s << v.to_string();
 }
 
-// Convinience function that appends a vector's string representation to an ostream.
+// Convenience function that appends a vector's string representation to an ostream.
 template<class T>
 inline std::ostream& operator<<(std::ostream& s, Cogwheel::Math::Vector4<T> v){
-    return s << v.toString();
+    return s << v.to_string();
 }
 
 #endif // _COGWHEEL_MATH_VECTOR_H_

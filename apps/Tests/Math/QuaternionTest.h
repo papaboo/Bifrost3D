@@ -21,15 +21,15 @@ class Math_Quaternion : public ::testing::Test {
 protected:
     // Redefine comparison methods as gtest's EXPECT_PRED and argument overloading doesn't play well with each other.
     static bool compare_quaternion(Quaternionf lhs, Quaternionf rhs, unsigned short maxUlps) {
-        return almostEqual(lhs, rhs, maxUlps);
+        return almost_equal(lhs, rhs, maxUlps);
     }
     static bool compare_vector(Vector3f lhs, Vector3f rhs, unsigned short maxUlps) {
-        return almostEqual(lhs, rhs, maxUlps);
+        return almost_equal(lhs, rhs, maxUlps);
     }
 };
 
 TEST_F(Math_Quaternion, axis_helpers) {
-    Quaternionf quat = Quaternionf::fromAngleAxis(25, Vector3f::up());
+    Quaternionf quat = Quaternionf::from_angle_axis(25, Vector3f::up());
 
     unsigned short max_error = 10;
     EXPECT_PRED3(compare_vector, quat.forward(), quat * Vector3f::forward(), max_error);
@@ -47,11 +47,11 @@ TEST_F(Math_Quaternion, matrix_representation) {
         axis += i % 4 ? Vector3f::forward() : Vector3f::zero();
         axis += i % 8 ? Vector3f::right() : Vector3f::zero();
         
-        Quaternionf q0 = Quaternionf::fromAngleAxis(angle, normalize(axis));
+        Quaternionf q0 = Quaternionf::from_angle_axis(angle, normalize(axis));
 
-        Matrix3x3f m = toMatrix3x3(q0);
+        Matrix3x3f m = to_matrix3x3(q0);
 
-        Quaternionf q1 = toQuaternion(m);
+        Quaternionf q1 = to_quaternion(m);
 
         // Compare transformations of vectors.
         for (Vector3f v : { Vector3f::forward(), Vector3f::right(), Vector3f::up() }) {

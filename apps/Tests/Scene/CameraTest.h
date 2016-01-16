@@ -27,7 +27,7 @@ protected:
     }
 
     static bool compare_matrix4x4f(Math::Matrix4x4f lhs, Math::Matrix4x4f rhs, unsigned short maxUlps) {
-        return almostEqual(lhs, rhs, maxUlps);
+        return almost_equal(lhs, rhs, maxUlps);
     }
 };
 

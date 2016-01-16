@@ -16,9 +16,9 @@ namespace Math {
 // Helper methods
 //*****************************************************************************
 
-// Floating point AlmostEqual function.
+// Floating point almost_equal function.
 // http://www.cygnus-software.com/papers/comparingfloats/comparingfloats.htm
-inline bool almostEqual(float a, float b, unsigned short maxUlps = 4) {
+inline bool almost_equal(float a, float b, unsigned short maxUlps = 4) {
     
     // TODO Use memcpy to move the float bitpattern to an int. See PBRT 3 chapter 7 for why.
 
@@ -36,7 +36,7 @@ inline bool almostEqual(float a, float b, unsigned short maxUlps = 4) {
     return false;
 }
 
-inline unsigned int ceilDivide(unsigned int a, unsigned int b) {
+inline unsigned int ceil_divide(unsigned int a, unsigned int b) {
     return (a / b) + ((a % b) > 0);
 }
 

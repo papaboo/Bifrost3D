@@ -100,7 +100,7 @@ void TypedUIDGenerator<T>::reserve(unsigned int new_capacity) {
 
 /* Debug! 
 template <typename T>
-std::string TypedUIDGenerator<T>::toString() {
+std::string TypedUIDGenerator<T>::to_string() {
     std::ostringstream out;
     for (unsigned int i = 0; i < m_capacity; ++i) {
         out << "[";

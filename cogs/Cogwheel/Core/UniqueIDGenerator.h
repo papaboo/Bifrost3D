@@ -71,7 +71,7 @@ public:
     void reserve(unsigned int capacity);
     unsigned int max_capacity() { return UID::MAX_IDS; }
 
-    // Debug! std::string UIDGenerator::toString();
+    // Debug! std::string UIDGenerator::to_string();
 
 private:
     // Delete copy constructors to avoid having multiple versions of the same UID generator.

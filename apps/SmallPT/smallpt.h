@@ -90,7 +90,7 @@ struct Sphere { // TODO Align to float4?
 
     double intersect(Ray r) const { // returns distance, 0 if nohit
         Vector3d op = position - r.origin; // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
-        double t, eps = 1e-4, b = dot(op, r.direction), det = b*b - squaredMagnitude(op) + radius*radius;
+        double t, eps = 1e-4, b = dot(op, r.direction), det = b*b - squared_magnitude(op) + radius*radius;
         if (det<0) return 0; else det = sqrt(det);
         return (t = b - det)>eps ? t : ((t = b + det)>eps ? t : 0);
     }

@@ -47,7 +47,7 @@ public:
         return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
-    const std::string toString() const {
+    const std::string to_string() const {
         std::ostringstream out;
         out << "[x: " << x << ", y: " << y << ", width: " << width << ", height: " << height << "]";
         return out.str();
@@ -65,10 +65,10 @@ typedef Rect<int> Recti;
 } // NS Math
 } // NS Cogwheel
 
-// Convinience function that appends a vector's string representation to an ostream.
+// Convenience function that appends a vector's string representation to an ostream.
 template<class T>
 inline std::ostream& operator<<(std::ostream& s, Cogwheel::Math::Rect<T> v) {
-    return s << v.toString();
+    return s << v.to_string();
 }
 
 #endif // _COGWHEEL_MATH_UTILS_H_

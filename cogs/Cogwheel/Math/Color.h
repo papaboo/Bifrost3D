@@ -156,7 +156,7 @@ public:
         return ret;
     }
 
-    const std::string toString() const {
+    const std::string to_string() const {
         std::ostringstream out;
         out << "[r: " << r << ", g: " << g << ", b: " << b << "]";
         return out.str();
@@ -207,7 +207,7 @@ public:
         return *static_cast<RGB*>(static_cast<void*>(begin()));
     }
 
-    const std::string toString() const {
+    const std::string to_string() const {
         std::ostringstream out;
         out << "[r: " << r << ", g: " << g << ", b: " << b << ", a: " << a << "]";
         return out.str();
@@ -217,14 +217,14 @@ public:
 } // NS Math
 } // NS Cogwheel
 
-// Convinience function that appends an RGBA's string representation to an ostream.
+// Convenience function that appends an RGBA's string representation to an ostream.
 inline std::ostream& operator<<(std::ostream& s, Cogwheel::Math::RGB v){
-    return s << v.toString();
+    return s << v.to_string();
 }
 
-// Convinience function that appends an RGBA's string representation to an ostream.
+// Convenience function that appends an RGBA's string representation to an ostream.
 inline std::ostream& operator<<(std::ostream& s, Cogwheel::Math::RGBA v){
-    return s << v.toString();
+    return s << v.to_string();
 }
 
 #endif // _COGWHEEL_MATH_COLOR_H_

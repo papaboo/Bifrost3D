@@ -27,13 +27,13 @@ struct Transform final {
     //*****************************************************************************
     // Public members
     //*****************************************************************************
-    Quaternionf mRotation;
-    Vector3f mTranslation;
-    float mScale;
+    Quaternionf rotation;
+    Vector3f translation;
+    float scale;
 
     // Constructor.
     Transform(Vector3f translation = Vector3f::zero(), Quaternionf rotation = Quaternionf::identity(), float scale = 1.0f)
-        : mRotation(rotation), mTranslation(translation), mScale(scale) { }
+        : rotation(rotation), translation(translation), scale(scale) { }
 
     static inline Transform identity() {
         return Transform(Vector3f::zero(), Quaternionf::identity(), 1.0f);
@@ -51,7 +51,7 @@ struct Transform final {
 
     // Apply the transform to a vector.
     inline Vector3f apply(Vector3f v) const {
-        return mTranslation + mRotation * v * mScale;
+        return translation + rotation * v * scale;
     }
 
     // Shorthand overloaded multiplication operator for applying the transform to a vector.
@@ -61,10 +61,7 @@ struct Transform final {
 
     // Apply the transform to another transform.
     inline Transform apply(Transform t) const {
-        float scale = mScale * t.mScale;
-        Quaternionf rotation = mRotation * t.mRotation;
-        Vector3f translation = this->apply(t.mTranslation);
-        return Transform(translation, rotation, scale);
+        return Transform(this->apply(t.translation), rotation * t.rotation, scale * t.scale);
     }
     // Shorthand overloaded multiplication operator for applying the transform to another transform.
     inline Transform operator*(Transform v) const {
@@ -72,14 +69,14 @@ struct Transform final {
     }
 
     // Rotate transform to look at the target.
-    inline void lookAt(Vector3f target, Vector3f up = Vector3f::up()) {
-        Vector3f direction = normalize(target - mTranslation);
-        mRotation = Quaternionf::lookIn(direction, up);
+    inline void look_at(Vector3f target, Vector3f up = Vector3f::up()) {
+        Vector3f direction = normalize(target - translation);
+        rotation = Quaternionf::look_in(direction, up);
     }
 
-    const std::string toString() const {
+    const std::string to_string() const {
         std::ostringstream out;
-        out << "[translation: " << mTranslation << ", rotation: " << mRotation << ", scale: " << mScale << "]";
+        out << "[translation: " << translation << ", rotation: " << rotation << ", scale: " << scale << "]";
         return out.str();
     }
 };
@@ -87,18 +84,18 @@ struct Transform final {
 // Returns the inverse of the transform.
 inline Transform inverse(Transform t) {
     // TODO Safe inversion of scale, e.g handle NaN (or is it already infinite? Check!)
-    float scale = 1.0f / t.mScale;
-    Quaternionf rotation = inverse_unit(t.mRotation);
-    Vector3f translation = (rotation * t.mTranslation) * -scale;
+    float scale = 1.0f / t.scale;
+    Quaternionf rotation = inverse_unit(t.rotation);
+    Vector3f translation = (rotation * t.translation) * -scale;
     return Transform(translation, rotation, scale);
 }
 
 } // NS Math
 } // NS Cogwheel
 
-// Convinience function that appends a transforms's string representation to an ostream.
+// Convenience function that appends a transforms's string representation to an ostream.
 inline std::ostream& operator<<(std::ostream& s, Cogwheel::Math::Transform t){
-    return s << t.toString();
+    return s << t.to_string();
 }
 
 #endif // _COGWHEEL_MATH_TRANSFORM_H_
