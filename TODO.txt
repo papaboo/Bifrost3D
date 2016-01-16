@@ -6,8 +6,6 @@
 * CUDA
 ** helper methods.
 *** Debugging/error checking. Array management.
-* Switch to underscores instead of camel case.
-** Only missing in Cogwheel::Math.
 * Prepend 'Cogwheel' to cogwheel includes.
 * Multiple cameras.
 ** G-Buffer pr camera.
