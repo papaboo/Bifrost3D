@@ -15,7 +15,7 @@ namespace Core {
 // ---------------------------------------------------------------------------
 // Container for values related to time, such as total time, delta time and 
 // smoothe delta time.
-// TODO 
+// Future work
 //   * Time struct with smooth delta time as well. Smooth delta time is handled as smoothDt = lerp(dt, smoothDt, a), let a be 0.666 or setable by the user?
 //     Or use the bitsquid approach. http://bitsquid.blogspot.dk/2010/10/time-step-smoothing.html.
 //     Remember Lanister time deltas, all debts must be payed. Time, technical or loans.

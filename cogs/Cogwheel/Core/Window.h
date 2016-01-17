@@ -17,8 +17,8 @@ namespace Core {
 // ---------------------------------------------------------------------------
 // Window class.
 // Contains the size and name of windows.
-// TODO
-// * Resize events?
+// Future work
+// * Resize events? How to handle?
 // ---------------------------------------------------------------------------
 class Window final {
 public:

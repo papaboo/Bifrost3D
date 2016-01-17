@@ -30,6 +30,9 @@ namespace Core {
 // ---------------------------------------------------------------------------
 // Engine driver, responsible for invoking the modules and handling all engine
 // 'tick' logic not related to the operating system.
+// Future work
+// * Mutating and non-mutating modules should be separate interfaces! For typesafety!
+// * Add a 'mutation complete' (said in the Zerg voice) callback interface.
 // ---------------------------------------------------------------------------
 class Engine final {
 public:

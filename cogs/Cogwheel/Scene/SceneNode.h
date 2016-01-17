@@ -19,13 +19,12 @@ namespace Scene {
 
 // ---------------------------------------------------------------------------
 // Container class for the cogwheel scene node.
-// TODO 
+// Future work
 // * Allocate all (or most) internal arrays in one big chunk.
-// * Read/write lock on all scene nodes(multiple readers obviously)
 // * Change the sibling/children layout, so sibling IDs or perhaps siblings are always allocated next too each other?
-//  * Requires an extra indirection though, since node ID's wonøt match the node positions anymore.
+//  * Requires an extra indirection though, since node ID's won't match the node positions anymore.
 //  * Then I could use Core::Array to quickly construct a list of children.
-//  * Could be done (partially) at the end of the main loop.
+//  * Could be done (incrementally?) when all mutating modules have been run.
 // ---------------------------------------------------------------------------
 class SceneNodes final {
 public:

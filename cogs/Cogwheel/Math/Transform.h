@@ -83,7 +83,6 @@ struct Transform final {
 
 // Returns the inverse of the transform.
 inline Transform inverse(Transform t) {
-    // TODO Safe inversion of scale, e.g handle NaN (or is it already infinite? Check!)
     float scale = 1.0f / t.scale;
     Quaternionf rotation = inverse_unit(t.rotation);
     Vector3f translation = (rotation * t.translation) * -scale;

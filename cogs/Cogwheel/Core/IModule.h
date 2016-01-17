@@ -20,8 +20,6 @@ namespace Core {
 // A module needs to implement the apply() method, which will be invoked by 
 // the engine. Additionally there is a get_name() method, which is used to
 // quickly determine which modules are used.
-// TODO
-// * Serialization? Do we really care about that here or should it only be in the 'heaps abstractions', such as SceneNodes, Cameras and Models.
 // ---------------------------------------------------------------------------
 class IModule {
 public:

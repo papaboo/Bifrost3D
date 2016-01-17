@@ -18,12 +18,12 @@ namespace Core {
 // Array is similar to std::vector, except that size and capacity are the same 
 // and it will not require objects to have a default constructor, and as such 
 // elements not explicitly initialized will contain undefined data.
-// TODO
-// * Specialize for booleans and add 'clearAll()' and 'setAll()' methods.
-// * Specialize for arbitrary bits pr integer element?
+// Future work
 // * Constructor taking two iterators as argument
 // * Add emplace.
 // * Add swap.
+// * Specialize for booleans and add 'clearAll()' and 'setAll()' methods.
+// * Specialize for arbitrary bits pr integer element?
 // ---------------------------------------------------------------------------
 template <typename T, typename SizeType = unsigned int>
 struct Array final {
