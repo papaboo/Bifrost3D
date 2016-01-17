@@ -9,12 +9,12 @@
 #ifndef _COGWHEEL_MATH_MATH_H_
 #define _COGWHEEL_MATH_MATH_H_
 
-#include <Color.h>
-#include <Constants.h>
-#include <conversions.h>
-#include <Matrix.h>
-#include <Quaternion.h>
-#include <Utils.h>
-#include <Vector.h>
+#include <Math/Color.h>
+#include <Math/Constants.h>
+#include <Math/conversions.h>
+#include <Math/Matrix.h>
+#include <Math/Quaternion.h>
+#include <Math/Utils.h>
+#include <Math/Vector.h>
 
 #endif // _COGWHEEL_MATH_MATH_H_
