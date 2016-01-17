@@ -14,21 +14,26 @@
 namespace Cogwheel {
 namespace Core {
 
+//----------------------------------------------------------------------------
 // Unique ID Generator.
 // Used to generate unique ID's, which can be associated with different resources, 
 // fx a unique ID is created pr resource, to distinguish between all resources, 
 // but a unique ID is also created pr SceneNode to distinguish all nodes.
 // See http://bitsquid.blogspot.de/2011/09/managing-decoupling-part-4-id-lookup.html.
-// TODO
-// * Possibility of looping over active IDs.
+// Future work
 // * We could generate something like OwnedUIDs, that can only be stored in one place an will erase themselves when they are no longer needed.
 // ** In order to avoid the user accidentally deleting an OwnedUID, the UID member would of course have to be unaccessable. (or require an owned ID for erase, but then it needs to be used everywhere!)
+//----------------------------------------------------------------------------
 template <typename T>
 class TypedUIDGenerator final {
 public:
-        
+
+    //------------------------------------------------------------------------
     // Unique identifier.
-    // The unique identifier contains a 24bit identifier, mID. Apart from that it contains an 8 bit incarnation count, used to avoid clashes when an ID is reused.
+    // The unique identifier contains a 24bit identifier, mID. 
+    // Apart from that it contains an 8 bit incarnation count, 
+    // which is used to avoid clashes when an ID is reused.
+    //------------------------------------------------------------------------
     struct UID final {
     private:
         unsigned int m_incarnation : 8;
@@ -57,6 +62,33 @@ public:
         }
     };
 
+    //------------------------------------------------------------------------
+    // Constant iterator.
+    // Searches all UIDs linearly and returns the ones that are valid.
+    // Future work
+    // * Use one bit from the UID incarnation count to signal if the UID is 
+    //   valid or not. This would allow us to iterate over the UIDs without 
+    //   needing a reference to the generator to tell us if a UID is valid.
+    //------------------------------------------------------------------------
+    class ConstIterator {
+    public:
+        ConstIterator(UID* id, const TypedUIDGenerator& UID_generator)
+            : m_id(id), m_UID_generator(UID_generator) { }
+        inline ConstIterator& operator++() {
+            ++m_id;
+            while (!m_UID_generator.has(*m_id) && (*this) != m_UID_generator.end())
+                ++m_id;
+            return *this;
+        }
+        inline ConstIterator operator++(int) { ConstIterator tmp(*this); operator++(); return tmp; }
+        inline bool operator==(const ConstIterator& rhs) { return m_id == rhs.m_id; }
+        inline bool operator!=(const ConstIterator& rhs) { return m_id != rhs.m_id; }
+        inline UID operator*() { return *m_id; }
+    private:
+        UID* m_id;
+        const TypedUIDGenerator& m_UID_generator;
+    };
+
     TypedUIDGenerator(unsigned int start_capacity = 256);
     TypedUIDGenerator(TypedUIDGenerator<T>&& other);
     ~TypedUIDGenerator();
@@ -70,6 +102,16 @@ public:
     unsigned int capacity() const { return m_capacity; }
     void reserve(unsigned int capacity);
     unsigned int max_capacity() { return UID::MAX_IDS; }
+
+    inline ConstIterator begin() const {
+        ConstIterator itr = ConstIterator(m_IDs, *this);
+        if (!has(*itr))
+            // Advance iterator if the first element in the array isn't valid.
+            ++itr;
+        return itr;
+    }
+
+    inline ConstIterator end() const { return ConstIterator(m_IDs + m_capacity, *this); }
 
     // Debug! std::string UIDGenerator::to_string();
 

@@ -13,6 +13,8 @@
 
 #include <gtest/gtest.h>
 
+#include <set>
+
 namespace Cogwheel {
 namespace Core {
 
@@ -175,6 +177,86 @@ GTEST_TEST(Core_UniqueIDGenerator, multiple_generate_and_erase) {
     EXPECT_FALSE(gen.has(id5));
     EXPECT_TRUE(gen.has(id6));
     EXPECT_TRUE(gen.has(id7));
+}
+
+GTEST_TEST(Core_UniqueIDGenerator, iterator) {
+    UIDGenerator gen = UIDGenerator(8u);
+
+    UID id0 = gen.generate();
+    EXPECT_TRUE(gen.has(id0));
+
+    UID id1 = gen.generate();
+    EXPECT_TRUE(gen.has(id1));
+
+    UID id2 = gen.generate();
+    EXPECT_TRUE(gen.has(id2));
+    
+    UID id3 = gen.generate();
+    EXPECT_TRUE(gen.has(id3));
+    
+    UID id4 = gen.generate();
+    EXPECT_TRUE(gen.has(id4));
+    
+    UID id5 = gen.generate();
+    EXPECT_TRUE(gen.has(id5));
+
+    { // Test that all ID's are looped over.
+        std::set<UID> id_set;
+        for (UID id : gen)
+            id_set.insert(id);
+
+        EXPECT_TRUE(id_set.find(id0) != id_set.end());
+        EXPECT_TRUE(id_set.find(id1) != id_set.end());
+        EXPECT_TRUE(id_set.find(id2) != id_set.end());
+        EXPECT_TRUE(id_set.find(id3) != id_set.end());
+        EXPECT_TRUE(id_set.find(id4) != id_set.end());
+        EXPECT_TRUE(id_set.find(id5) != id_set.end());
+    }
+
+    { // Remove the first id.
+        gen.erase(id0);
+
+        std::set<UID> id_set;
+        for (UID id : gen)
+            id_set.insert(id);
+
+        EXPECT_TRUE(id_set.find(id0) == id_set.end());
+        EXPECT_TRUE(id_set.find(id1) != id_set.end());
+        EXPECT_TRUE(id_set.find(id2) != id_set.end());
+        EXPECT_TRUE(id_set.find(id3) != id_set.end());
+        EXPECT_TRUE(id_set.find(id4) != id_set.end());
+        EXPECT_TRUE(id_set.find(id5) != id_set.end());
+    }
+    
+    { // Remove an id in the middle of the list.
+        gen.erase(id3);
+
+        std::set<UID> id_set;
+        for (UID id : gen)
+            id_set.insert(id);
+
+        EXPECT_TRUE(id_set.find(id0) == id_set.end());
+        EXPECT_TRUE(id_set.find(id1) != id_set.end());
+        EXPECT_TRUE(id_set.find(id2) != id_set.end());
+        EXPECT_TRUE(id_set.find(id3) == id_set.end());
+        EXPECT_TRUE(id_set.find(id4) != id_set.end());
+        EXPECT_TRUE(id_set.find(id5) != id_set.end());
+    }
+
+    { // Remove the id at the end of the list.
+        gen.erase(id5);
+
+        std::set<UID> id_set;
+        for (UID id : gen)
+            id_set.insert(id);
+
+        EXPECT_TRUE(id_set.find(id0) == id_set.end());
+        EXPECT_TRUE(id_set.find(id1) != id_set.end());
+        EXPECT_TRUE(id_set.find(id2) != id_set.end());
+        EXPECT_TRUE(id_set.find(id3) == id_set.end());
+        EXPECT_TRUE(id_set.find(id4) != id_set.end());
+        EXPECT_TRUE(id_set.find(id5) == id_set.end());
+    }
 }
 
 } // NS Core
