@@ -18,6 +18,9 @@ namespace Scene {
 
 // ---------------------------------------------------------------------------
 // Container for cogwheel matrix cameras.
+// Future work
+// * Iterators that iterates through the cameras in order of their render indices.
+// * Reference a backbuffer or render_target to allow cameras to render to windows and FBO's.
 // ---------------------------------------------------------------------------
 class Cameras final {
 public:
@@ -54,7 +57,8 @@ public:
     static Math::Rectf get_viewport(Cameras::UID camera_ID) { return m_viewports[camera_ID]; }
     static void set_viewport(Cameras::UID camera_ID, Math::Rectf projectionport) { m_viewports[camera_ID] = projectionport; }
 
-    // TODO Iterators that iterates through the cameras in order of their render indices.
+    static UIDGenerator::ConstIterator begin() { return m_UID_generator.begin(); }
+    static UIDGenerator::ConstIterator end() { return m_UID_generator.end(); }
 
 private:
 
@@ -67,7 +71,6 @@ private:
     static Math::Matrix4x4f* m_projection_matrices;
     static Math::Matrix4x4f* m_inverse_projection_matrices;
     static Math::Rectf* m_viewports;
-    // TODO Some reference to a backbuffer or render_target to allow cameras to render to windows and FBO's.
 };
 
 namespace CameraUtils {
@@ -75,7 +78,7 @@ namespace CameraUtils {
 void compute_perspective_projection(float near_distance, float far_distance, float field_of_view_in_radians, float aspect_ratio,
                                     Math::Matrix4x4f& projection_matrix, Math::Matrix4x4f& inverse_projection_matrix);
 
-// TODO compute_orthographic_projection
+// Future work: compute_orthographic_projection
 
 } // NS CameraUtils
 
