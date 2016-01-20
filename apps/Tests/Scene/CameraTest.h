@@ -79,17 +79,17 @@ TEST_F(Scene_Camera, sentinel_camera) {
 TEST_F(Scene_Camera, creating) {
     Cameras::allocate(2u);
 
-    SceneNodes::UID camNode = SceneNodes::create("Cam");
+    SceneNodes::UID cam_node = SceneNodes::create("Cam");
 
     Math::Matrix4x4f perspective_matrix, inverse_perspective_matrix;
     CameraUtils::compute_perspective_projection(1, 1000, Math::PI<float>() / 4.0f, 8.0f / 6.0f,
                                                 perspective_matrix, inverse_perspective_matrix);
 
     Cameras::allocate(2u);
-    Cameras::UID cam_id = Cameras::create(camNode, perspective_matrix, inverse_perspective_matrix);
+    Cameras::UID cam_id = Cameras::create(cam_node, perspective_matrix, inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_id));
     
-    EXPECT_EQ(Cameras::get_parent_ID(cam_id), camNode);
+    EXPECT_EQ(Cameras::get_parent_ID(cam_id), cam_node);
     EXPECT_EQ(Cameras::get_render_index(cam_id), 0u);
     EXPECT_EQ(Cameras::get_projection_matrix(cam_id), perspective_matrix);
     EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_id), inverse_perspective_matrix);
@@ -102,13 +102,13 @@ TEST_F(Scene_Camera, set_new_matrices) {
     Cameras::allocate(2u);
 
     // Create initial camera and projection matrices.
-    SceneNodes::UID camNode = SceneNodes::create("Cam");
+    SceneNodes::UID cam_node = SceneNodes::create("Cam");
 
     Math::Matrix4x4f initial_perspective_matrix, initial_inverse_perspective_matrix;
     CameraUtils::compute_perspective_projection(1, 1000, Math::PI<float>() / 4.0f, 8.0f / 6.0f,
         initial_perspective_matrix, initial_inverse_perspective_matrix);
 
-    Cameras::UID cam_id = Cameras::create(camNode, initial_perspective_matrix, initial_inverse_perspective_matrix);
+    Cameras::UID cam_id = Cameras::create(cam_node, initial_perspective_matrix, initial_inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_id));
 
     EXPECT_EQ(Cameras::get_projection_matrix(cam_id), initial_perspective_matrix);

@@ -15,14 +15,17 @@
 namespace Cogwheel {
 namespace Math {
 
+//----------------------------------------------------------------------------
+// Implementation of a templated rectangle.
+//----------------------------------------------------------------------------
 template <typename T>
 struct Rect final {
 public:
     typedef T value_type;
 
-    //*****************************************************************************
+    //*************************************************************************
     // Public members
-    //*****************************************************************************
+    //*************************************************************************
     T x;
     T y;
     T width;
@@ -37,9 +40,9 @@ public:
     inline Vector2<T> get_min() const { return Vector2<T>(x, y); }
     inline Vector2<T> get_max() const { return Vector2<T>(x+width, y+height); }
 
-    //*****************************************************************************
+    //*************************************************************************
     // Comparison operators.
-    //*****************************************************************************
+    //*************************************************************************
     inline bool operator==(Rect<T> rhs) const {
         return memcmp(this, &rhs, sizeof(rhs)) == 0;
     }
@@ -54,9 +57,9 @@ public:
     }
 };
 
-//*************************************************************************
+//*****************************************************************************
 // Typedefs.
-//*************************************************************************
+//*****************************************************************************
 
 typedef Rect<double> Rectd;
 typedef Rect<float> Rectf;
@@ -65,10 +68,10 @@ typedef Rect<int> Recti;
 } // NS Math
 } // NS Cogwheel
 
-// Convenience function that appends a vector's string representation to an ostream.
+// Convenience function that appends a rectangle's string representation to an ostream.
 template<class T>
 inline std::ostream& operator<<(std::ostream& s, Cogwheel::Math::Rect<T> v) {
     return s << v.to_string();
 }
 
-#endif // _COGWHEEL_MATH_UTILS_H_
+#endif // _COGWHEEL_MATH_RECT_H_
