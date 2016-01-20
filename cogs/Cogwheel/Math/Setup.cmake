@@ -5,6 +5,7 @@ SET(MATH_SRCS
   Math/Math.h
   Math/Matrix.h
   Math/Quaternion.h
+  Math/Ray.h
   Math/Rect.h
   Math/Transform.h
   Math/Utils.h
