@@ -273,6 +273,15 @@ inline Matrix<Column, Row> transpose(Matrix<Row, Column> v) {
 }
 
 template <typename Row, typename Column>
+inline Row operator*(Column lhs, Matrix<Row, Column> rhs) {
+    Row res;
+    for (int c = 0; c < Matrix<Row, Column>::COLUMN_COUNT; ++c)
+        res[c] = dot(lhs, rhs.get_column(c));
+    return res;
+}
+
+
+template <typename Row, typename Column>
 inline bool almost_equal(Matrix<Row, Column> lhs, Matrix<Row, Column> rhs, unsigned short maxUlps = 4) {
     bool equal = true;
     for (int i = 0; i < Matrix<Row, Column>::N; ++i)
