@@ -82,7 +82,7 @@ struct Transform final {
 };
 
 // Returns the inverse of the transform.
-inline Transform inverse(Transform t) {
+inline Transform invert(Transform t) {
     float scale = 1.0f / t.scale;
     Quaternionf rotation = inverse_unit(t.rotation);
     Vector3f translation = (rotation * t.translation) * -scale;

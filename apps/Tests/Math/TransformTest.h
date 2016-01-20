@@ -37,7 +37,7 @@ protected:
 TEST_F(Math_Transform, applying_translation) {
     Transform t = Transform(Vector3f(3, -4, 1));
 
-    EXPECT_PRED2(compare_transform, t.apply(inverse(t)), Transform::identity());
+    EXPECT_PRED2(compare_transform, t.apply(invert(t)), Transform::identity());
 
     EXPECT_PRED3(compare_vector, t.apply(Vector3f::zero()), t.translation, 10);
 
@@ -52,7 +52,7 @@ TEST_F(Math_Transform, apply_rotation) {
 
     EXPECT_PRED3(compare_vector, t.apply(Vector3f::zero()), Vector3f::zero(), 10);
 
-    EXPECT_PRED2(compare_transform, t.apply(inverse(t)), Transform::identity());
+    EXPECT_PRED2(compare_transform, t.apply(invert(t)), Transform::identity());
 
     // Should rotate forward by 45 degress around up.
     EXPECT_PRED3(compare_vector, t.apply(Vector3f::forward()), Vector3f(sqrt(0.5f), 0.0f, sqrt(0.5f)), 10);
@@ -61,7 +61,7 @@ TEST_F(Math_Transform, apply_rotation) {
 TEST_F(Math_Transform, apply_scale) {
     Transform t = Transform(Vector3f::zero(), Quaternionf::identity(), 0.5f);
 
-    EXPECT_PRED2(compare_transform, t.apply(inverse(t)), Transform::identity());
+    EXPECT_PRED2(compare_transform, t.apply(invert(t)), Transform::identity());
 
     EXPECT_PRED3(compare_vector, t.apply(Vector3f::zero()), Vector3f::zero(), 10);
 
