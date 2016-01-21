@@ -20,7 +20,7 @@ rtDeclareVariable(float4, sphere, , );
 
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
 
-rtDeclareVariable(float3, texcoord, attribute texcoord, );
+rtDeclareVariable(float2, texcoord, attribute texcoord, );
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 
@@ -64,7 +64,7 @@ __inline_dev__ void intersect_sphere() {
             shading_normal = geometric_normal = (O + (root1 + root11)*D) / radius;
             float s = (shading_normal.z + 1.0f) * 0.5f;
             float t = (atan2(shading_normal.y, shading_normal.x) + PIf) * 0.5f / PIf;
-            texcoord = make_float3(s, t, 0.0f);
+            texcoord = make_float2(s, t);
             if (rtReportIntersection(0))
                 check_second = false;
         }
@@ -74,7 +74,7 @@ __inline_dev__ void intersect_sphere() {
                 shading_normal = geometric_normal = (O + root2*D) / radius;
                 float s = (shading_normal.z + 1.0f) * 0.5f;
                 float t = (atan2(shading_normal.y, shading_normal.x) + PIf) * 0.5f / PIf;
-                texcoord = make_float3(s, t, 0.0f);
+                texcoord = make_float2(s, t);
                 rtReportIntersection(0);
             }
         }

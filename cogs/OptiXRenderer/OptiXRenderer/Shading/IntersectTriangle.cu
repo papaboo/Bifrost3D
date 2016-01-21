@@ -21,7 +21,7 @@ rtBuffer<float3> vertex_buffer;
 rtBuffer<float3> normal_buffer;
 rtBuffer<float2> texcoord_buffer;
 
-rtDeclareVariable(float3, texcoord, attribute texcoord, ); 
+rtDeclareVariable(float2, texcoord, attribute texcoord, ); 
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, ); 
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, ); 
 
@@ -48,7 +48,7 @@ RT_PROGRAM void mesh_intersect(int primitiveIndex) {
             const float2 t0 = texcoord_buffer[vertex_index.x];
             const float2 t1 = texcoord_buffer[vertex_index.y];
             const float2 t2 = texcoord_buffer[vertex_index.z];
-            texcoord = make_float3(t1*beta + t2*gamma + t0*(1.0f - beta - gamma));
+            texcoord = t1*beta + t2*gamma + t0*(1.0f - beta - gamma);
 
             rtReportIntersection(0);
         }
