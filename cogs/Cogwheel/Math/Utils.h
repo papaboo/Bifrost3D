@@ -9,6 +9,8 @@
 #ifndef _COGWHEEL_MATH_UTILS_H_
 #define _COGWHEEL_MATH_UTILS_H_
 
+#include <Math/Constants.h>
+
 namespace Cogwheel {
 namespace Math {
 
@@ -60,6 +62,14 @@ inline unsigned int pow2roundup(unsigned int x) {
     x |= x >> 8;
     x |= x >> 16;
     return x + 1;
+}
+
+inline float degrees_to_radians(float degress) {
+    return degress * (PI<float>() / 180.0f);
+}
+
+inline float radians_to_degress(float radians) {
+    return radians * (180.0f / PI<float>());
 }
 
 } // NS Math
