@@ -10,6 +10,7 @@
 #define _COGWHEEL_SCENE_CAMERA_H_
 
 #include <Math/Matrix.h>
+#include <Math/Ray.h>
 #include <Math/Rect.h>
 #include <Scene/SceneNode.h>
 
@@ -54,6 +55,9 @@ public:
         set_projection_matrices(camera_ID, projection_matrix, invert(projection_matrix));
     }
 
+    static Math::Transform get_inverse_view_transform(Cameras::UID camera_ID) { return SceneNodes::get_global_transform(m_parent_IDs[camera_ID]); }
+    static Math::Transform get_view_transform(Cameras::UID camera_ID) { return Math::invert(get_inverse_view_transform(camera_ID)); }
+
     static Math::Rectf get_viewport(Cameras::UID camera_ID) { return m_viewports[camera_ID]; }
     static void set_viewport(Cameras::UID camera_ID, Math::Rectf projectionport) { m_viewports[camera_ID] = projectionport; }
 
@@ -62,7 +66,7 @@ public:
 
 private:
 
-    static void reserve_node_data(unsigned int capacity, unsigned int oldCapacity);
+    static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);
 
     static UIDGenerator m_UID_generator;
 
@@ -79,6 +83,8 @@ void compute_perspective_projection(float near_distance, float far_distance, flo
                                     Math::Matrix4x4f& projection_matrix, Math::Matrix4x4f& inverse_projection_matrix);
 
 // Future work: compute_orthographic_projection
+
+Math::Ray ray_from_viewport_point(Cameras::UID camera_ID, Math::Vector2f viewport_point);
 
 } // NS CameraUtils
 

@@ -51,12 +51,14 @@ TEST_F(Scene_Camera, resizing) {
 TEST_F(Scene_Camera, perspective_matrices) {
     Math::Matrix4x4f perspective_matrix, inverse_perspective_matrix;
     CameraUtils::compute_perspective_projection(1, 1000, Math::PI<float>() / 4.0f, 8.0f / 6.0f,
-        perspective_matrix, inverse_perspective_matrix);
+                                                perspective_matrix, inverse_perspective_matrix);
 
     // Ground truth matrix computed in Unity.
+    // Has the third 'column' flipped, to switch from OpenGL representation to DX, +Z forward.
+    // TODO Shouldn't this be transposed?
     Math::Matrix4x4f qed = { 1.81066f, 0.0000f, 0.00000f, 0.00000f,
                              0.00000f, 2.41421f, 0.00000f, 0.00000f,
-                             0.00000f, 0.00000f, -1.00200f, -1.00000f,
+                             0.00000f, 0.00000f, 1.00200f, 1.00000f,
                              0.00000f, 0.00000f, -2.00200f, 0.00000f };
 
     EXPECT_PRED3(compare_matrix4x4f, perspective_matrix, qed, 25);
