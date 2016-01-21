@@ -1,7 +1,6 @@
 * RT Renderer.
 ** OptiX
 *** OpenGL output using interop.
-*** Sphere intersection program (TODO about the one from pbrt3/ompf)
 *** Render normals
 * CUDA
 ** helper methods.
