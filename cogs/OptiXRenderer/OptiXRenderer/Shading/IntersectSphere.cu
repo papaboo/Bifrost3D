@@ -5,6 +5,8 @@
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
+// Inspired by the OptiX samples.
+// ---------------------------------------------------------------------------
 
 #include <OptiXRenderer/Types.h>
 
@@ -12,16 +14,17 @@
 #include <optixu/optixu_aabb.h>
 #include <optixu/optixu_math.h>
 
+using namespace optix;
+
 rtDeclareVariable(float4, sphere, , );
 
-rtDeclareVariable(optix::Ray, ray, rtCurrentRay, );
+rtDeclareVariable(Ray, ray, rtCurrentRay, );
 
 rtDeclareVariable(float3, texcoord, attribute texcoord, );
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 
 // Intersection copied from CUDA OptiX Sampels.
-// TODO Replace by more robust version from pbrt3/ompf.
 template<bool use_robust_method>
 __inline_dev__ void intersect_sphere() {
     float3 center = make_float3(sphere);
