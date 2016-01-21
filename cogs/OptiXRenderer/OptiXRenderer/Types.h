@@ -9,7 +9,7 @@
 #ifndef _OPTIXRENDERER_TYPES_H_
 #define _OPTIXRENDERER_TYPES_H_
 
-#include <optixu/optixu_math.h>
+#include <optixu/optixu_math_namespace.h>
 
 #ifndef __inline_all__
 #    if (defined(__CUDACC__) || defined(__CUDABE__))
@@ -44,8 +44,8 @@ enum class EntryPoints {
 };
 
 struct MonteCarloPRD {
-    float3 weight;
-    float3 color;
+    optix::float3 weight;
+    optix::float3 color;
 };
 
 } // NS OptiXRenderer
