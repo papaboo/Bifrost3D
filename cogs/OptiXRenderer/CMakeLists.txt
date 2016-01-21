@@ -28,6 +28,7 @@ set(ROOT_SRC
 
 set(SHADING_SRC
   OptiXRenderer/Shading/IntersectSphere.cu
+  OptiXRenderer/Shading/IntersectTriangle.cu
   OptiXRenderer/Shading/NormalRendering.cu
   OptiXRenderer/Shading/PathTracing.cu
 )
