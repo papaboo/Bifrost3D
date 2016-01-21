@@ -12,14 +12,18 @@
 #include <OptiXRenderer/Types.h>
 
 #include <Core/Engine.h>
+#include <Math/Math.h>
+#include <Scene/Camera.h>
 
 #include <optixu/optixpp_namespace.h>
 #include <optixu/optixu_math_namespace.h>
 
 #include <GL/gl.h> // TODO #ifdef to work on OS X as well. But do that when we create a special GL context.
 
-using namespace optix;
 using namespace Cogwheel::Core;
+using namespace Cogwheel::Math;
+using namespace Cogwheel::Scene;
+using namespace optix;
 
 namespace OptiXRenderer {
 
@@ -92,14 +96,40 @@ Renderer::Renderer()
 
     context->validate();
     context->compile();
-
-    // launch();
 }
 
 void Renderer::apply() {
     Context& context = m_state->context;
 
+    const Window& window = Engine::get_instance()->get_window();
+    const uint2 current_screensize = make_uint2(window.get_width(), window.get_height());
+    if (current_screensize != m_state->screensize) {
+        // Screen buffers should be resized.
+        m_state->accumulation_buffer->setSize(window.get_width(), window.get_height());
+        m_state->screensize = make_uint2(window.get_width(), window.get_height());
+    }
+
     context["g_frame_number"]->setFloat(float(Engine::get_instance()->get_time().get_ticks()));
+
+    { // Upload camera parameters.
+        Vector3f cam_pos = Vector3f::zero();
+        Matrix4x4f inverse_view_projection_matrix;
+        if (Cameras::begin() == Cameras::end()) {
+            // Some default camera.
+            Matrix4x4f view_projection_matrix; // Unused!
+            CameraUtils::compute_perspective_projection(0.1f, 1000.0f, degrees_to_radians(60.0f), m_state->screensize.x / float(m_state->screensize.y),
+                                                        view_projection_matrix, inverse_view_projection_matrix);
+        } else {
+            Cameras::UID camera_ID = *Cameras::begin();
+            Matrix4x4f& inverse_projection_matrix = Cameras::get_projection_matrix(camera_ID);
+            Matrix4x4f inverse_view_matrix = to_matrix4x4(Cameras::get_inverse_view_transform(camera_ID));
+            inverse_view_projection_matrix = inverse_projection_matrix * inverse_view_matrix;
+        }
+
+        context["g_inverted_view_projection_matrix"]->setMatrix4x4fv(false, inverse_view_projection_matrix.begin());
+        float4 camera_position = make_float4(cam_pos.x, cam_pos.y, cam_pos.z, 0.0f);
+        context["g_camera_position"]->setFloat(camera_position);
+    }
 
     context->launch(int(EntryPoints::PathTracing), m_state->screensize.x, m_state->screensize.y);
 
