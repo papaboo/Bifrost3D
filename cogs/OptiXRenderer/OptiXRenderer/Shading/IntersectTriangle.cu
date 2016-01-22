@@ -61,14 +61,14 @@ RT_PROGRAM void mesh_bounds(int primIdx, float result[6]) {
     const float3 v0 = vertex_buffer[vertex_index.x];
     const float3 v1 = vertex_buffer[vertex_index.y];
     const float3 v2 = vertex_buffer[vertex_index.z];
-    const float area = length(cross(v1 - v0, v2 - v0));
 
-    optix::Aabb* aabb = (optix::Aabb*)result;
+    Aabb* aabb = (Aabb*)result;
 
-    if (area > 0.0f && !isinf(area)) {
+    float3 up = cross(v1 - v0, v2 - v0);
+    float normal_length_squared = dot(up, up);
+    if (normal_length_squared > 0.0f && !isinf(normal_length_squared)) {
         aabb->m_min = fminf(fminf(v0, v1), v2);
         aabb->m_max = fmaxf(fmaxf(v0, v1), v2);
-    } else {
+    } else
         aabb->invalidate();
-    }
 }
