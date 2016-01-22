@@ -121,9 +121,13 @@ void Renderer::apply() {
                                                         view_projection_matrix, inverse_view_projection_matrix);
         } else {
             Cameras::UID camera_ID = *Cameras::begin();
+
+            SceneNode cam_node = Cameras::get_parent_ID(camera_ID);
+            cam_pos = cam_node.get_global_transform().translation;
+            
             Matrix4x4f& inverse_projection_matrix = Cameras::get_projection_matrix(camera_ID);
             Matrix4x4f inverse_view_matrix = to_matrix4x4(Cameras::get_inverse_view_transform(camera_ID));
-            inverse_view_projection_matrix = inverse_projection_matrix * inverse_view_matrix;
+            inverse_view_projection_matrix = inverse_view_matrix * inverse_projection_matrix;
         }
 
         context["g_inverted_view_projection_matrix"]->setMatrix4x4fv(false, inverse_view_projection_matrix.begin());

@@ -34,7 +34,7 @@ RT_PROGRAM void path_tracing() {
     const float2 screen_pos = make_float2(g_launch_index.x / float(g_accumulation_buffer.size().x), g_launch_index.y / float(g_accumulation_buffer.size().y));
     const float4 normalized_screen_pos = make_float4(screen_pos.x * 2.0f - 1.0f, screen_pos.y * 2.0f - 1.0f, 1.0f, 1.0f);
 
-    const float4 screenspace_world_pos = normalized_screen_pos * g_inverted_view_projection_matrix;
+    const float4 screenspace_world_pos = g_inverted_view_projection_matrix * normalized_screen_pos;
 
     const float3 ray_end = make_float3(screenspace_world_pos) / screenspace_world_pos.w;
 

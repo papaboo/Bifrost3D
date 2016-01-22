@@ -55,11 +55,10 @@ TEST_F(Scene_Camera, perspective_matrices) {
 
     // Ground truth matrix computed in Unity.
     // Has the third 'column' flipped, to switch from OpenGL representation to DX, +Z forward.
-    // TODO Shouldn't this be transposed?
-    Math::Matrix4x4f qed = { 1.81066f, 0.0000f, 0.00000f, 0.00000f,
-                             0.00000f, 2.41421f, 0.00000f, 0.00000f,
-                             0.00000f, 0.00000f, 1.00200f, 1.00000f,
-                             0.00000f, 0.00000f, -2.00200f, 0.00000f };
+    Math::Matrix4x4f qed = { 1.81066f, 0.00000f, 0.00000f,  0.00000f,
+                             0.00000f, 2.41421f, 0.00000f,  0.00000f,
+                             0.00000f, 0.00000f, 1.00200f, -2.00200f,
+                             0.00000f, 0.00000f, 1.00000f,  0.00000f };
 
     EXPECT_PRED3(compare_matrix4x4f, perspective_matrix, qed, 25);
     EXPECT_EQ(invert(perspective_matrix), inverse_perspective_matrix);
