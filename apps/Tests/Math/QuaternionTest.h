@@ -20,11 +20,11 @@ namespace Math {
 class Math_Quaternion : public ::testing::Test {
 protected:
     // Redefine comparison methods as gtest's EXPECT_PRED and argument overloading doesn't play well with each other.
-    static bool compare_quaternion(Quaternionf lhs, Quaternionf rhs, unsigned short maxUlps) {
-        return almost_equal(lhs, rhs, maxUlps);
+    static bool compare_quaternion(Quaternionf lhs, Quaternionf rhs, unsigned short max_ulps) {
+        return almost_equal(lhs, rhs, max_ulps);
     }
-    static bool compare_vector(Vector3f lhs, Vector3f rhs, unsigned short maxUlps) {
-        return almost_equal(lhs, rhs, maxUlps);
+    static bool compare_vector(Vector3f lhs, Vector3f rhs, unsigned short max_ulps) {
+        return almost_equal(lhs, rhs, max_ulps);
     }
 };
 

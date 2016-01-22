@@ -26,11 +26,11 @@ protected:
             && almost_equal(lhs.rotation, rhs.rotation, 10)
             && almost_equal(lhs.scale, rhs.scale, 10);
     }
-    static bool compare_quaternion(Quaternionf lhs, Quaternionf rhs, unsigned short maxUlps) {
-        return almost_equal(lhs, rhs, maxUlps);
+    static bool compare_quaternion(Quaternionf lhs, Quaternionf rhs, unsigned short max_ulps) {
+        return almost_equal(lhs, rhs, max_ulps);
     }
-    static bool compare_vector(Vector3f lhs, Vector3f rhs, unsigned short maxUlps) {
-        return almost_equal(lhs, rhs, maxUlps);
+    static bool compare_vector(Vector3f lhs, Vector3f rhs, unsigned short max_ulps) {
+        return almost_equal(lhs, rhs, max_ulps);
     }
 };
 

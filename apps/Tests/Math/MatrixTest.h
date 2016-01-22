@@ -19,14 +19,14 @@ namespace Math {
 class Math_Matrix : public ::testing::Test {
 protected:
     // Redefine comparison methods as gtest's EXPECT_PRED and argument overloading doesn't play well with each other.
-    static bool compare_matrix2x2f(Matrix2x2f lhs, Matrix2x2f rhs, unsigned short maxUlps) {
-        return almost_equal(lhs, rhs, maxUlps);
+    static bool compare_matrix2x2f(Matrix2x2f lhs, Matrix2x2f rhs, unsigned short max_ulps) {
+        return almost_equal(lhs, rhs, max_ulps);
     }
-    static bool compare_matrix3x3f(Matrix3x3f lhs, Matrix3x3f rhs, unsigned short maxUlps) {
-        return almost_equal(lhs, rhs, maxUlps);
+    static bool compare_matrix3x3f(Matrix3x3f lhs, Matrix3x3f rhs, unsigned short max_ulps) {
+        return almost_equal(lhs, rhs, max_ulps);
     }
-    static bool compare_matrix4x4f(Matrix4x4f lhs, Matrix4x4f rhs, unsigned short maxUlps) {
-        return almost_equal(lhs, rhs, maxUlps);
+    static bool compare_matrix4x4f(Matrix4x4f lhs, Matrix4x4f rhs, unsigned short max_ulps) {
+        return almost_equal(lhs, rhs, max_ulps);
     }
 };
 

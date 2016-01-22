@@ -20,7 +20,7 @@ namespace Math {
 
 // Floating point almost_equal function.
 // http://www.cygnus-software.com/papers/comparingfloats/comparingfloats.htm
-inline bool almost_equal(float a, float b, unsigned short maxUlps = 4) {
+inline bool almost_equal(float a, float b, unsigned short max_ulps = 4) {
     
     // TODO Use memcpy to move the float bitpattern to an int. See PBRT 3 chapter 7 for why.
 
@@ -33,7 +33,7 @@ inline bool almost_equal(float a, float b, unsigned short maxUlps = 4) {
     if (bInt < 0)
         bInt = int(0x80000000) - bInt;
     int intDiff = abs(aInt - bInt);
-    if (intDiff <= maxUlps)
+    if (intDiff <= max_ulps)
         return true;
     return false;
 }

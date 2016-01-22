@@ -282,10 +282,10 @@ inline Row operator*(Column lhs, Matrix<Row, Column> rhs) {
 
 
 template <typename Row, typename Column>
-inline bool almost_equal(Matrix<Row, Column> lhs, Matrix<Row, Column> rhs, unsigned short maxUlps = 4) {
+inline bool almost_equal(Matrix<Row, Column> lhs, Matrix<Row, Column> rhs, unsigned short max_ulps = 4) {
     bool equal = true;
     for (int i = 0; i < Matrix<Row, Column>::N; ++i)
-        equal &= almost_equal(lhs.begin()[i], rhs.begin()[i], maxUlps);
+        equal &= almost_equal(lhs.begin()[i], rhs.begin()[i], max_ulps);
     return equal;
 }
 

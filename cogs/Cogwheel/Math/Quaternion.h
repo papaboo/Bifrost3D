@@ -199,25 +199,25 @@ inline Quaternion<T> nlerp(Quaternion<T> from, Quaternion<T> to, T by) {
 
 // Comparison that checks if two quaternions are almost equal.
 template<typename T>
-inline bool almost_equal(Quaternion<T> lhs, Quaternion<T> rhs, unsigned short maxUlps = 4) {
-    return almost_equal(lhs.x, rhs.x, maxUlps)
-        && almost_equal(lhs.y, rhs.y, maxUlps)
-        && almost_equal(lhs.z, rhs.z, maxUlps)
-        && almost_equal(lhs.w, rhs.w, maxUlps);
+inline bool almost_equal(Quaternion<T> lhs, Quaternion<T> rhs, unsigned short max_ulps = 4) {
+    return almost_equal(lhs.x, rhs.x, max_ulps)
+        && almost_equal(lhs.y, rhs.y, max_ulps)
+        && almost_equal(lhs.z, rhs.z, max_ulps)
+        && almost_equal(lhs.w, rhs.w, max_ulps);
 }
 
 // Comparison that checks if two quaternions interpreted as rotations in R3 are almost equal.
 template<typename T>
-inline bool almost_equal_rotation(Quaternion<T> lhs, Quaternion<T> rhs, unsigned short maxUlps = 4) {
+inline bool almost_equal_rotation(Quaternion<T> lhs, Quaternion<T> rhs, unsigned short max_ulps = 4) {
     // A quaternion as rotation is conceptually equal to the same quaternion with all elements negated.
     // Therefore if the left and right quaternion's real component do not have the same sign, we negate rhs.
     if (lhs.w * rhs.w < T(0))
         rhs = Quaternion<T>(-rhs.x, -rhs.y, -rhs.z, -rhs.w);
 
-    return almost_equal(lhs.x, rhs.x, maxUlps)
-        && almost_equal(lhs.y, rhs.y, maxUlps)
-        && almost_equal(lhs.z, rhs.z, maxUlps)
-        && almost_equal(lhs.w, rhs.w, maxUlps);
+    return almost_equal(lhs.x, rhs.x, max_ulps)
+        && almost_equal(lhs.y, rhs.y, max_ulps)
+        && almost_equal(lhs.z, rhs.z, max_ulps)
+        && almost_equal(lhs.w, rhs.w, max_ulps);
 }
 
 

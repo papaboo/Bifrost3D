@@ -169,22 +169,22 @@ inline Vector3<T> cross(Vector3<T> lhs, Vector3<T> rhs) {
 
 // Comparison that checks if two vectors are almost equal.
 template<typename T>
-inline bool almost_equal(Vector2<T> lhs, Vector2<T> rhs, unsigned short maxUlps = 4) {
-    return almost_equal(lhs.x, rhs.x, maxUlps)
-        && almost_equal(lhs.y, rhs.y, maxUlps);
+inline bool almost_equal(Vector2<T> lhs, Vector2<T> rhs, unsigned short max_ulps = 4) {
+    return almost_equal(lhs.x, rhs.x, max_ulps)
+        && almost_equal(lhs.y, rhs.y, max_ulps);
 }
 template<typename T>
-inline bool almost_equal(Vector3<T> lhs, Vector3<T> rhs, unsigned short maxUlps = 4) {
-    return almost_equal(lhs.x, rhs.x, maxUlps)
-        && almost_equal(lhs.y, rhs.y, maxUlps)
-        && almost_equal(lhs.z, rhs.z, maxUlps);
+inline bool almost_equal(Vector3<T> lhs, Vector3<T> rhs, unsigned short max_ulps = 4) {
+    return almost_equal(lhs.x, rhs.x, max_ulps)
+        && almost_equal(lhs.y, rhs.y, max_ulps)
+        && almost_equal(lhs.z, rhs.z, max_ulps);
 }
 template<typename T>
-inline bool almost_equal(Vector4<T> lhs, Vector4<T> rhs, unsigned short maxUlps = 4) {
-    return almost_equal(lhs.x, rhs.x, maxUlps)
-        && almost_equal(lhs.y, rhs.y, maxUlps)
-        && almost_equal(lhs.z, rhs.z, maxUlps)
-        && almost_equal(lhs.w, rhs.w, maxUlps);
+inline bool almost_equal(Vector4<T> lhs, Vector4<T> rhs, unsigned short max_ulps = 4) {
+    return almost_equal(lhs.x, rhs.x, max_ulps)
+        && almost_equal(lhs.y, rhs.y, max_ulps)
+        && almost_equal(lhs.z, rhs.z, max_ulps)
+        && almost_equal(lhs.w, rhs.w, max_ulps);
 }
 
 //*************************************************************************
