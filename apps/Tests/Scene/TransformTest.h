@@ -95,15 +95,15 @@ TEST_F(Scene_Transform, hierarchical_rotation) {
 TEST_F(Scene_Transform, local_transform) {
     SceneNode n0 = SceneNodes::create("n0");
     SceneNode n1 = SceneNodes::create("n1");
-    n0.set_global_transform(Transform(Vector3f(1, 2, 3), Quaternionf::from_angle_axis(45.0f, Vector3f(0, 1, 0))));
-    n1.set_global_transform(Transform(Vector3f(1, 2, 3), Quaternionf::from_angle_axis(-45.0f, Vector3f(0, 1, 0))));
+    n0.set_global_transform(Transform(Vector3f(1, 2, 3), Quaternionf::from_angle_axis(degrees_to_radians(45.0f), Vector3f(0, 1, 0))));
+    n1.set_global_transform(Transform(Vector3f(1, 2, 3), Quaternionf::from_angle_axis(degrees_to_radians(-45.0f), Vector3f(0, 1, 0))));
     n1.set_parent(n0);
 
     // Test position of transformed child node.
     EXPECT_EQ(n1.get_local_transform().translation, Vector3f::zero());
 
     // Test rotation of transformed child node.
-    Quaternionf expected_local_rot = Quaternionf::from_angle_axis(-90.0f, Vector3f(0, 1, 0));
+    Quaternionf expected_local_rot = Quaternionf::from_angle_axis(degrees_to_radians(-90.0f), Vector3f(0, 1, 0));
     EXPECT_PRED2(compare_quaternions, n1.get_local_transform().rotation, expected_local_rot);
 
     // Verify that applying n0's global transform to n1's local transform yields n1's global transform.
@@ -115,12 +115,12 @@ TEST_F(Scene_Transform, preserve_local_transform_on_parent_transformation) {
     SceneNode n0 = SceneNodes::create("n0");
     SceneNode n1 = SceneNodes::create("n1");
 
-    Transform n1_local_trans = Transform(Vector3f(1, 2, 3), Quaternionf::from_angle_axis(-45.0f, Vector3f::up()));
+    Transform n1_local_trans = Transform(Vector3f(1, 2, 3), Quaternionf::from_angle_axis(degrees_to_radians(-45.0f), Vector3f::up()));
     n1.set_global_transform(n1_local_trans);
 
     n1.set_parent(n0);
 
-    n0.set_global_transform(Transform(Vector3f(4, 2, 0), Quaternionf::from_angle_axis(30.0f, Vector3f::forward())));
+    n0.set_global_transform(Transform(Vector3f(4, 2, 0), Quaternionf::from_angle_axis(degrees_to_radians(30.0f), Vector3f::forward())));
 
     EXPECT_PRED2(compare_transforms, n1_local_trans, n1.get_local_transform());
 }
@@ -150,12 +150,12 @@ TEST_F(Scene_Transform, complex_hierachy) {
     n0.set_global_transform(Transform(Vector3f(3, 2, 1), Quaternionf::identity()));
     n1.set_global_transform(Transform::identity());
 
-    n2.set_global_transform(Transform(Vector3f(1, 2, 3), Quaternionf::from_angle_axis(45.0f, Vector3f(0, 1, 0))));
+    n2.set_global_transform(Transform(Vector3f(1, 2, 3), Quaternionf::from_angle_axis(degrees_to_radians(45.0f), Vector3f(0, 1, 0))));
     n3.set_global_transform(Transform::identity());
-    n4.set_global_transform(Transform(Vector3f(1, 2, 3), Quaternionf::from_angle_axis(-45.0f, Vector3f(0, 1, 0))));
+    n4.set_global_transform(Transform(Vector3f(1, 2, 3), Quaternionf::from_angle_axis(degrees_to_radians(-45.0f), Vector3f(0, 1, 0))));
 
     n5.set_global_transform(Transform(Vector3f(4, 4, 4), Quaternionf::identity(), 0.5f));
-    n6.set_global_transform(Transform(Vector3f(2, 2, 2), Quaternionf::from_angle_axis(-45.0f, Vector3f(1, 0, 0)), 0.5f));
+    n6.set_global_transform(Transform(Vector3f(2, 2, 2), Quaternionf::from_angle_axis(degrees_to_radians(-45.0f), Vector3f(1, 0, 0)), 0.5f));
 
     // n0
     //     global: position: (3, 2, 1), rotation: (1, [0, 0, 0]), scale: 1

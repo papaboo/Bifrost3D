@@ -60,18 +60,18 @@ public:
 
     // Create a quaternion describing a rotation in angles around a normalized axis in R^3.
     // http://www.euclideanspace.com/maths/geometry/rotations/conversions/angleToQuaternion/
-    static inline Quaternion<T> from_angle_axis(T angle, Vector3<T> axis) {
-        T radianHalved = angle / T(360.0) * PI<T>();
-        T sinAngle = sin(radianHalved);
-        Vector3<T> imaginary = axis * sinAngle;
-        T real = cos(radianHalved);
+    static inline Quaternion<T> from_angle_axis(T angle_in_radians, Vector3<T> axis) {
+        T radian_halved = angle_in_radians * T(0.5); // TODO really? Halve it?
+        T sin_angle = sin(radian_halved);
+        Vector3<T> imaginary = axis * sin_angle;
+        T real = cos(radian_halved);
         return Quaternion<T>(imaginary, real);
     }
 
     // Create a quaternion that looks in direction and has the upvector up.
     // http://www.gamedev.net/topic/613595-quaternion-lookrotationlookat-up/
     static inline Quaternion<T> look_in(Vector3<T> direction, Vector3<T> up = Vector3<T>::up()) {
-        Vector3<T> right = Math::normalize(cross(up, direction));
+        Vector3<T> right = normalize(cross(up, direction));
         up = cross(direction, right);
 
         float real = sqrt(T(1) + right.x + up.y + direction.z) * T(0.5);
@@ -117,9 +117,9 @@ public:
         //                 self.w * rhs.i + self.i * rhs.w + self.j * rhs.k - self.k * rhs.j,
         //                 self.w * rhs.j + self.j * rhs.w + self.k * rhs.i - self.i * rhs.k,
         //                 self.w * rhs.k + self.k * rhs.w + self.i * rhs.j - self.j * rhs.i)
-        float realPart = w * rhs.w - dot(imaginary(), rhs.imaginary());
-        Vector3<T> imaginaryPart = cross(imaginary(), rhs.imaginary()) + rhs.imaginary() * w + imaginary() * rhs.w;
-        return Quaternion(imaginaryPart, realPart);
+        float real_part = w * rhs.w - dot(imaginary(), rhs.imaginary());
+        Vector3<T> imaginary_part = cross(imaginary(), rhs.imaginary()) + rhs.imaginary() * w + imaginary() * rhs.w;
+        return Quaternion(imaginary_part, real_part);
     }
 
     // Multiplying a vector by a quaternion, e.g. rotating it.

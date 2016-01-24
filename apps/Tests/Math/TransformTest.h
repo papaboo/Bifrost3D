@@ -48,7 +48,7 @@ TEST_F(Math_Transform, applying_translation) {
 }
 
 TEST_F(Math_Transform, apply_rotation) {
-    Transform t = Transform(Vector3f::zero(), Quaternionf::from_angle_axis(45.0f, Vector3f::up()));
+    Transform t = Transform(Vector3f::zero(), Quaternionf::from_angle_axis(degrees_to_radians(45.0f), Vector3f::up()));
 
     EXPECT_PRED3(compare_vector, t.apply(Vector3f::zero()), Vector3f::zero(), 10);
 

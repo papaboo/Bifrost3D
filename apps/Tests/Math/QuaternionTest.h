@@ -11,6 +11,7 @@
 
 #include <Math/Quaternion.h>
 #include <Math/Conversions.h>
+#include <Math/Utils.h>
 
 #include <gtest/gtest.h>
 
@@ -29,7 +30,7 @@ protected:
 };
 
 TEST_F(Math_Quaternion, axis_helpers) {
-    Quaternionf quat = Quaternionf::from_angle_axis(25, Vector3f::up());
+    Quaternionf quat = Quaternionf::from_angle_axis(degrees_to_radians(25.0f), Vector3f::up());
 
     unsigned short max_error = 10;
     EXPECT_PRED3(compare_vector, quat.forward(), quat * Vector3f::forward(), max_error);
@@ -47,7 +48,7 @@ TEST_F(Math_Quaternion, matrix_representation) {
         axis += i % 4 ? Vector3f::forward() : Vector3f::zero();
         axis += i % 8 ? Vector3f::right() : Vector3f::zero();
         
-        Quaternionf q0 = Quaternionf::from_angle_axis(angle, normalize(axis));
+        Quaternionf q0 = Quaternionf::from_angle_axis(degrees_to_radians(angle), normalize(axis));
 
         Matrix3x3f m = to_matrix3x3(q0);
 

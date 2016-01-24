@@ -167,7 +167,7 @@ TEST_F(Scene_Camera, ray_projection) {
 
     { // The rays direction and the transform applied to the forward direction should be similar after rotation.
         Transform cam_transform = Transform::identity();
-        cam_transform.rotation = Quaternionf::from_angle_axis(30.0f, normalize(Vector3f(1,2,3)));
+        cam_transform.rotation = Quaternionf::from_angle_axis(degrees_to_radians(30.0f), normalize(Vector3f(1, 2, 3)));
         cam_node.set_global_transform(cam_transform);
 
         Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
@@ -179,7 +179,7 @@ TEST_F(Scene_Camera, ray_projection) {
     { // Rotation and translation.
         Transform cam_transform = Transform::identity();
         cam_transform.translation = Vector3f(100, 10, -30);
-        cam_transform.rotation = Quaternionf::from_angle_axis(30.0f, normalize(Vector3f(1, 2, 3)));
+        cam_transform.rotation = Quaternionf::from_angle_axis(degrees_to_radians(30.0f), normalize(Vector3f(1, 2, 3)));
         cam_node.set_global_transform(cam_transform);
 
         Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
