@@ -18,24 +18,26 @@ namespace Math {
 // Helper methods
 //*****************************************************************************
 
+inline unsigned int compute_ulps(float a, float b) {
+    // TODO Use memcpy to move the float bitpattern to an int. See PBRT 3 chapter 7 for why.
+
+    int a_as_int = *(int*)&a;
+    // Make a_as_int lexicographically ordered as a twos-complement int
+    if (a_as_int < 0)
+        a_as_int = int(0x80000000) - a_as_int;
+
+    int b_as_int = *(int*)&b;
+    // Make b_as_int lexicographically ordered as a twos-complement int
+    if (b_as_int < 0)
+        b_as_int = int(0x80000000) - b_as_int;
+
+    return abs(a_as_int - b_as_int);
+}
+
 // Floating point almost_equal function.
 // http://www.cygnus-software.com/papers/comparingfloats/comparingfloats.htm
 inline bool almost_equal(float a, float b, unsigned short max_ulps = 4) {
-    
-    // TODO Use memcpy to move the float bitpattern to an int. See PBRT 3 chapter 7 for why.
-
-    int aInt = *(int*)&a;
-    // Make aInt lexicographically ordered as a twos-complement int
-    if (aInt < 0)
-        aInt = int(0x80000000) - aInt;
-    // Make bInt lexicographically ordered as a twos-complement int
-    int bInt = *(int*)&b;
-    if (bInt < 0)
-        bInt = int(0x80000000) - bInt;
-    int intDiff = abs(aInt - bInt);
-    if (intDiff <= max_ulps)
-        return true;
-    return false;
+    return compute_ulps(a, b) <= max_ulps;
 }
 
 inline unsigned int ceil_divide(unsigned int a, unsigned int b) {
