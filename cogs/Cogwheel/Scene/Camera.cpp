@@ -161,7 +161,7 @@ Ray ray_from_viewport_point(Cameras::UID camera_ID, Vector2f viewport_point) {
     
     Matrix4x4f inverse_view_matrix = to_matrix4x4(Cameras::get_inverse_view_transform(camera_ID));
     Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
-    Matrix4x4f inverse_view_projection_matrix = inverse_projection_matrix * inverse_view_matrix;
+    Matrix4x4f inverse_view_projection_matrix = inverse_view_matrix * inverse_projection_matrix;
 
     // TODO If I set normalized_screen_pos.z to 0, do I then get the point on the nearplane? Beacuse that is actually the proper ray origin.
     Vector4f normalized_screen_pos = Vector4f(viewport_point.x * 2.0f - 1.0f, viewport_point.y * 2.0f - 1.0f, 1.0f, 1.0f); // TODO We can elliminate some multiplications here by not doing the full mat/vec multiplication.

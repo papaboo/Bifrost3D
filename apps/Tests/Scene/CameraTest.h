@@ -9,6 +9,7 @@
 #ifndef _COGWHEEL_SCENE_CAMERA_TEST_H_
 #define _COGWHEEL_SCENE_CAMERA_TEST_H_
 
+#include <Math/Utils.h>
 #include <Scene/Camera.h>
 
 #include <gtest/gtest.h>
@@ -26,8 +27,12 @@ protected:
         SceneNodes::deallocate();
     }
 
-    static bool compare_matrix4x4f(Math::Matrix4x4f lhs, Math::Matrix4x4f rhs, unsigned short maxUlps) {
-        return almost_equal(lhs, rhs, maxUlps);
+    static bool compare_matrix4x4f(Math::Matrix4x4f lhs, Math::Matrix4x4f rhs, unsigned short max_ulps) {
+        return almost_equal(lhs, rhs, max_ulps);
+    }
+
+    static bool compare_vector3f(Math::Vector3f lhs, Math::Vector3f rhs, unsigned short max_ulps) {
+        return almost_equal(lhs, rhs, max_ulps);
     }
 };
 
@@ -125,6 +130,63 @@ TEST_F(Scene_Camera, set_new_matrices) {
     EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_id), new_inverse_perspective_matrix);
 
     Cameras::deallocate();
+}
+
+TEST_F(Scene_Camera, ray_projection) {
+    using namespace Cogwheel::Math;
+
+    Cameras::allocate(2u);
+
+    // Create initial camera and projection matrices.
+    SceneNode cam_node = SceneNodes::create("Cam");
+
+    Matrix4x4f initial_perspective_matrix, initial_inverse_perspective_matrix;
+    CameraUtils::compute_perspective_projection(1, 1000, PI<float>() / 4.0f, 8.0f / 6.0f,
+        initial_perspective_matrix, initial_inverse_perspective_matrix);
+
+    Cameras::UID cam_id = Cameras::create(cam_node.get_ID(), initial_perspective_matrix, initial_inverse_perspective_matrix);
+    EXPECT_TRUE(Cameras::has(cam_id));
+
+    { // Forward should be +Z when the transform is identity.
+        Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
+        EXPECT_EQ(ray.direction, Vector3f::forward());
+    }
+
+    const float maximally_allowed_cos_angle = cos(degrees_to_radians(0.5f));
+
+    { // Translation shouldn't change forward.
+        Transform cam_transform = Transform::identity();
+        cam_transform.translation = Vector3f(100, 10, -30);
+        cam_node.set_global_transform(cam_transform);
+
+        Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
+
+        float cos_angle_between_rays = dot(ray.direction, Vector3f::forward());
+        EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
+    }
+
+    { // The rays direction and the transform applied to the forward direction should be similar after rotation.
+        Transform cam_transform = Transform::identity();
+        cam_transform.rotation = Quaternionf::from_angle_axis(30.0f, normalize(Vector3f(1,2,3)));
+        cam_node.set_global_transform(cam_transform);
+
+        Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
+
+        float cos_angle_between_rays = dot(ray.direction, cam_transform * Vector3f::forward());
+        EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
+    }
+
+    { // Rotation and translation.
+        Transform cam_transform = Transform::identity();
+        cam_transform.translation = Vector3f(100, 10, -30);
+        cam_transform.rotation = Quaternionf::from_angle_axis(30.0f, normalize(Vector3f(1, 2, 3)));
+        cam_node.set_global_transform(cam_transform);
+
+        Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
+
+        float cos_angle_between_rays = dot(ray.direction, cam_transform * Vector3f::forward());
+        EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
+    }
 }
 
 } // NS Scene
