@@ -55,6 +55,20 @@ inline T lerp(const T a, const T b, const float t) {
     return a + (b - a) * t;
 }
 
+template <typename T>
+inline T min(const T a, const T b) {
+    return a < b ? a : b;
+}
+
+template <typename T>
+inline T max(const T a, const T b) {
+    return a > b ? a : b;
+}
+template <typename T>
+inline T clamp(const T value, const T lower_bound, const T upper_bound) {
+    return min(max(value, lower_bound), upper_bound);
+}
+
 // Finds the smallest power of 2 greater or equal to x.
 inline unsigned int pow2roundup(unsigned int x) {
     --x;
