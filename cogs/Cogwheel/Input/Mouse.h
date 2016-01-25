@@ -22,11 +22,16 @@ public:
     // 8 bit struct containing state of a key; is it pressed or released and how many times was it pressed last frame.
     struct ButtonState {
         bool is_pressed : 1;
-        unsigned int halftaps : 7;
+        unsigned char halftaps : 7;
     };
 
     Mouse(Math::Vector2i initial_position)
-        : m_position(initial_position) { }
+        : m_position(initial_position)
+        , m_delta(Math::Vector2i(0, 0))
+        , m_scroll_delta(0.0f) {
+        ButtonState init_state = { false, 0u };
+        m_left_button = m_right_button = m_middle_button = m_button_4 = init_state;
+    }
 
     inline void set_position(Math::Vector2i new_position) {
         m_delta += new_position - m_position;
@@ -43,10 +48,10 @@ public:
         buttons[buttonId].halftaps = (halftaps == MAX_HALFTAP_COUNT) ? (MAX_HALFTAP_COUNT - 1) : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
     }
 
-    inline ButtonState get_left_button() { return m_left_button; }
-    inline ButtonState get_right_button() { return m_right_button; }
-    inline ButtonState get_middle_button() { return m_middle_button; }
-    inline ButtonState get_button_4() { return m_button_4; }
+    inline ButtonState get_left_button() const { return m_left_button; }
+    inline ButtonState get_right_button() const { return m_right_button; }
+    inline ButtonState get_middle_button() const { return m_middle_button; }
+    inline ButtonState get_button_4() const { return m_button_4; }
 
     inline void add_scroll_delta(float scroll_delta) { m_scroll_delta += scroll_delta; }
     inline float get_scroll_delta() const { return m_scroll_delta; }
