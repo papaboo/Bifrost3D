@@ -52,11 +52,11 @@ Renderer::Renderer()
         
     m_device_ids.optix = 0;
     context->setDevices(&m_device_ids.optix, &m_device_ids.optix + 1);
+    int2 compute_capability;
+    context->getDeviceAttribute(m_device_ids.optix, RT_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY, sizeof(compute_capability), &compute_capability);
+    printf("OptiXRenderer using device %u: '%s' with compute capability %u.%u.\n", m_device_ids.optix, context->getDeviceName(m_device_ids.optix).c_str(), compute_capability.x, compute_capability.y);
 
-    std::vector<int> devices = context->getEnabledDevices();
-    context->getDeviceAttribute(devices[m_device_ids.optix], RT_DEVICE_ATTRIBUTE_CUDA_DEVICE_ORDINAL, sizeof(m_device_ids.cuda), &m_device_ids.cuda);
-
-    printf("OptiX ID: %u, CUDA ID: %u\n", m_device_ids.optix, m_device_ids.cuda);
+    context->getDeviceAttribute(m_device_ids.optix, RT_DEVICE_ATTRIBUTE_CUDA_DEVICE_ORDINAL, sizeof(m_device_ids.cuda), &m_device_ids.cuda);
 
     context->setRayTypeCount(int(RayTypes::Count));
     context->setEntryPointCount(int(EntryPoints::Count));
@@ -122,12 +122,12 @@ void Renderer::apply() {
         } else {
             Cameras::UID camera_ID = *Cameras::begin();
 
-            SceneNode cam_node = Cameras::get_parent_ID(camera_ID);
-            cam_pos = cam_node.get_global_transform().translation;
-            
-            Matrix4x4f& inverse_projection_matrix = Cameras::get_projection_matrix(camera_ID);
             Matrix4x4f inverse_view_matrix = to_matrix4x4(Cameras::get_inverse_view_transform(camera_ID));
+            Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
             inverse_view_projection_matrix = inverse_view_matrix * inverse_projection_matrix;
+
+            SceneNode camera_node = Cameras::get_parent_ID(camera_ID);
+            cam_pos = camera_node.get_global_transform().translation;
         }
 
         context["g_inverted_view_projection_matrix"]->setMatrix4x4fv(false, inverse_view_projection_matrix.begin());
