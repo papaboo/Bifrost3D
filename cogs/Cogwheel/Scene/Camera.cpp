@@ -123,38 +123,33 @@ void compute_perspective_projection(float near_distance, float far_distance, flo
     projection_matrix[3][2] = 1.0f;
     projection_matrix[2][3] = b;
 
-    inverse_projection_matrix = invert(projection_matrix);
-    return;
-
     // Yes you could just use inverse_projection_matrix = invert(projection_matrix) as this is by no means performance critical code.
     // But this wasn't done to speed up perspective camera creation. This was done for fun and to have a way to easily derive the inverse perspective matrix later given the perspective matrix.
     
-    /* Redo 
     const Math::Matrix4x4f& v = projection_matrix;
 
-    inverse_projection_matrix[0][0] = v[1][1] * v[3][2];
+    inverse_projection_matrix[0][0] = v[1][1] * v[2][3];
     inverse_projection_matrix[0][1] = -0.0f;
     inverse_projection_matrix[0][2] = -0.0f;
     inverse_projection_matrix[0][3] = -0.0f;
 
     inverse_projection_matrix[1][0] = -0.0f;
-    inverse_projection_matrix[1][1] = v[0][0] * v[3][2];
+    inverse_projection_matrix[1][1] = v[0][0] * v[2][3];
     inverse_projection_matrix[1][2] = -0.0f;
     inverse_projection_matrix[1][3] = -0.0f;
 
     inverse_projection_matrix[2][0] = -0.0f;
     inverse_projection_matrix[2][1] = -0.0f;
     inverse_projection_matrix[2][2] = -0.0f;
-    inverse_projection_matrix[2][3] = v[0][0] * v[1][1];
+    inverse_projection_matrix[2][3] = v[0][0] * v[1][1] * v[2][3];
 
     inverse_projection_matrix[3][0] = -0.0f;
     inverse_projection_matrix[3][1] = -0.0f;
-    inverse_projection_matrix[3][2] = v[0][0] * v[1][1] * v[3][2];
+    inverse_projection_matrix[3][2] = v[0][0] * v[1][1];
     inverse_projection_matrix[3][3] = - v[0][0] * v[1][1] * v[2][2];
 
-    float determinant = v[0][0] * v[1][1] * v[3][2];
+    float determinant = v[0][0] * v[1][1] * v[2][3];
     inverse_projection_matrix /= determinant;
-    */
 }
 
 Ray ray_from_viewport_point(Cameras::UID camera_ID, Vector2f viewport_point) {
