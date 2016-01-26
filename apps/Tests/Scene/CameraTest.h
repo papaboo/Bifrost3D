@@ -147,22 +147,34 @@ TEST_F(Scene_Camera, ray_projection) {
     Cameras::UID cam_id = Cameras::create(cam_node.get_ID(), initial_perspective_matrix, initial_inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_id));
 
+    const float maximally_allowed_cos_angle = cos(degrees_to_radians(0.5f));
+
     { // Forward should be +Z when the transform is identity.
         Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
         EXPECT_EQ(ray.direction, Vector3f::forward());
-    }
 
-    const float maximally_allowed_cos_angle = cos(degrees_to_radians(0.5f));
+        // Unity QED ray: Origin : (-0.55228, -0.41421, 1.00000), Dir : (-0.45450, -0.34087, 0.82294)
+        Ray ray_periferi = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.0f, 0.0f));
+        float cos_angle_between_rays = dot(ray_periferi.direction, Vector3f(-0.45450f, -0.34087f, 0.82294f));
+        EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
+    }
 
     { // Translation shouldn't change forward.
         Transform cam_transform = Transform::identity();
         cam_transform.translation = Vector3f(100, 10, -30);
         cam_node.set_global_transform(cam_transform);
 
-        Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
+        {
+            Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
+            float cos_angle_between_rays = dot(ray.direction, Vector3f::forward());
+            EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
+        }
 
-        float cos_angle_between_rays = dot(ray.direction, Vector3f::forward());
-        EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
+        { // Unity QED ray: Origin : (99.44772, 9.58579, -29.00000), Dir : (-0.45450, -0.34087, 0.82294)
+            Ray ray_periferi = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.0f, 0.0f));
+            float cos_angle_between_rays = dot(ray_periferi.direction, Vector3f(-0.45450f, -0.34087f, 0.82294f));
+            EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
+        }
     }
 
     { // The rays direction and the transform applied to the forward direction should be similar after rotation.
@@ -170,10 +182,17 @@ TEST_F(Scene_Camera, ray_projection) {
         cam_transform.rotation = Quaternionf::from_angle_axis(degrees_to_radians(30.0f), normalize(Vector3f(1, 2, 3)));
         cam_node.set_global_transform(cam_transform);
 
-        Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
+        {
+            Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
+            float cos_angle_between_rays = dot(ray.direction, cam_transform * Vector3f::forward());
+            EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
+        }
 
-        float cos_angle_between_rays = dot(ray.direction, cam_transform * Vector3f::forward());
-        EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
+        { // Unity QED ray: Origin : (-0.02948, -0.68276, 1.00477), Dir: (-0.02426, -0.56188, 0.82687)
+            Ray ray_periferi = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.0f, 0.0f));
+            float cos_angle_between_rays = dot(ray_periferi.direction, Vector3f(-0.02426f, -0.56188f, 0.82687f));
+            EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
+        }
     }
 
     { // Rotation and translation.
@@ -182,10 +201,17 @@ TEST_F(Scene_Camera, ray_projection) {
         cam_transform.rotation = Quaternionf::from_angle_axis(degrees_to_radians(30.0f), normalize(Vector3f(1, 2, 3)));
         cam_node.set_global_transform(cam_transform);
 
-        Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
+        {
+            Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
+            float cos_angle_between_rays = dot(ray.direction, cam_transform * Vector3f::forward());
+            EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
+        }
 
-        float cos_angle_between_rays = dot(ray.direction, cam_transform * Vector3f::forward());
-        EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
+        { // Unity QED ray: Origin : (-0.02948, -0.68276, 1.00477), Dir: (-0.02426, -0.56188, 0.82687)
+            Ray ray_periferi = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.0f, 0.0f));
+            float cos_angle_between_rays = dot(ray_periferi.direction, Vector3f(-0.02426f, -0.56188f, 0.82687f));
+            EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
+        }
     }
 }
 
