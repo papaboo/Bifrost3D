@@ -25,7 +25,13 @@ rtDeclareVariable(float2, texcoord, attribute texcoord, );
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, ); 
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, ); 
 
-RT_PROGRAM void mesh_intersect(int primitiveIndex) {
+
+//----------------------------------------------------------------------------
+// Intersection program for triangle meshes.
+// Future work:
+// * Test if interleaving the vertex attributes will improve performance.
+//----------------------------------------------------------------------------
+RT_PROGRAM void triangle_intersect(int primitiveIndex) {
     const int3 vertex_index = index_buffer[primitiveIndex];
 
     const float3 p0 = vertex_buffer[vertex_index.x];
@@ -55,7 +61,7 @@ RT_PROGRAM void mesh_intersect(int primitiveIndex) {
     }
 }
 
-RT_PROGRAM void mesh_bounds(int primIdx, float result[6]) {
+RT_PROGRAM void triangle_bounds(int primIdx, float result[6]) {
     const int3 vertex_index = index_buffer[primIdx];
 
     const float3 v0 = vertex_buffer[vertex_index.x];
