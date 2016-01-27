@@ -35,40 +35,68 @@ struct Renderer::State {
 
     GLuint backbuffer_gl_id; // TODO Should also be used when we later support interop by rendering to a VBO/PBO.
 
-    optix::GeometryGroup root_node;
+    optix::Group root_node;
 };
 
 static inline std::string get_ptx_path(std::string shader_filename) {
     return std::string(OPTIXRENDERER_PTX_DIR) + "/OptiXRenderer_generated_" + shader_filename + ".cu.ptx";
 }
 
-static inline void setup_debug_scene(optix::Context& context, optix::GeometryGroup& geoGroup) {
-    optix::Geometry mesh = context->createGeometry();
+static inline optix::GeometryGroup setup_debug_scene(optix::Context& context) {
+    optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
+    acceleration->setProperty("refit", "1");
+    acceleration->validate();
 
-    std::string intersection_ptx_path = get_ptx_path("IntersectSphere");
-    mesh->setIntersectionProgram(context->createProgramFromPTXFile(intersection_ptx_path, "intersect"));
-    mesh->setBoundingBoxProgram(context->createProgramFromPTXFile(intersection_ptx_path, "bounds"));
-    mesh->setPrimitiveCount(1);
-
-    optix::float4 sphere = optix::make_float4(0,0,0,1);
-    mesh["sphere"]->setFloat(sphere);
-    mesh->validate();
+    optix::GeometryGroup geoGroup = context->createGeometryGroup();
+    geoGroup->setAcceleration(acceleration);
 
     optix::Material material = context->createMaterial();
     {
         std::string monte_carlo_ptx_path = get_ptx_path("MonteCarlo");
         material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
-        
+
         std::string normal_vis_ptx_path = get_ptx_path("NormalRendering");
         material->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
         material->validate();
     }
 
-    optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
-    model->validate();
+    std::string intersection_ptx_path = get_ptx_path("IntersectSphere");
+    optix::Program sphere_intersection_program = context->createProgramFromPTXFile(intersection_ptx_path, "intersect");
+    optix::Program sphere_bounds_program = context->createProgramFromPTXFile(intersection_ptx_path, "bounds");
 
-    geoGroup->addChild(model);
+    { // center
+        optix::Geometry mesh = context->createGeometry();
+        mesh->setIntersectionProgram(sphere_intersection_program);
+        mesh->setBoundingBoxProgram(sphere_bounds_program);
+        mesh->setPrimitiveCount(1);
+
+        optix::float4 sphere = optix::make_float4(0, -0.5f, 0, 0.5f);
+        mesh["sphere"]->setFloat(sphere);
+        mesh->validate();
+
+        optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
+        geoGroup->addChild(model);
+        model->validate();
+    }
+
+    { // floor
+        optix::Geometry mesh = context->createGeometry();
+        mesh->setIntersectionProgram(sphere_intersection_program);
+        mesh->setBoundingBoxProgram(sphere_bounds_program);
+        mesh->setPrimitiveCount(1);
+
+        optix::float4 sphere = optix::make_float4(0, 1000.0f, 0, 1000.0f);
+        mesh["sphere"]->setFloat(sphere);
+        mesh->validate();
+
+        optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
+        geoGroup->addChild(model);
+        model->validate();
+    }
+
     geoGroup->validate();
+
+    return geoGroup;
 }
 
 Renderer::Renderer()
@@ -96,15 +124,21 @@ Renderer::Renderer()
     context["g_frame_number"]->setFloat(2.0f);
 
     { // Setup root node
-        optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
-        acceleration->setProperty("refit", "1");
+        optix::GeometryGroup geoGroup = setup_debug_scene(context);
 
-        m_state->root_node = context->createGeometryGroup();
-        m_state->root_node->setAcceleration(acceleration);
+        optix::Transform transform = context->createTransform();
+        transform->setChild(geoGroup);
+        transform->validate();
+
+        optix::Acceleration root_acceleration = context->createAcceleration("Bvh", "Bvh");
+        root_acceleration->setProperty("refit", "1");
+
+        m_state->root_node = context->createGroup();
+        m_state->root_node->setAcceleration(root_acceleration);
+        m_state->root_node->addChild(transform);
+        m_state->root_node->validate();
 
         context["g_scene_root"]->set(m_state->root_node);
-
-        setup_debug_scene(context, m_state->root_node);
     }
 
     { // Screen buffers
