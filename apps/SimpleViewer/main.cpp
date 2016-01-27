@@ -55,7 +55,7 @@ public:
                 m_vertical_rotation += degrees_to_radians(float(mouse->get_delta().x));
 
                 // Clamp horizontal rotation to -89 and 89 degrees to avoid turning the camera on it's head and the singularities of cross products at the poles.
-                m_horizontal_rotation -= degrees_to_radians(float(mouse->get_delta().y));
+                m_horizontal_rotation += degrees_to_radians(float(mouse->get_delta().y));
                 m_horizontal_rotation = clamp(m_horizontal_rotation, -PI<float>() * 0.49f, PI<float>() * 0.49f);
 
                 transform.rotation = Quaternionf::from_angle_axis(m_vertical_rotation, Vector3f::up()) * Quaternionf::from_angle_axis(m_horizontal_rotation, Vector3f::right());
