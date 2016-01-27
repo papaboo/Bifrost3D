@@ -29,6 +29,7 @@ set(ROOT_SRC
 set(SHADING_SRC
   OptiXRenderer/Shading/IntersectSphere.cu
   OptiXRenderer/Shading/IntersectTriangle.cu
+  OptiXRenderer/Shading/MonteCarlo.cu
   OptiXRenderer/Shading/NormalRendering.cu
   OptiXRenderer/Shading/PathTracing.cu
 )
@@ -40,6 +41,8 @@ add_definitions(-DOPTIXRENDERER_PTX_DIR="${OPTIX_PTX_DIR}") #TODO When distribut
 # Construct the list of PTX files TODO Can I do this in a more generic way? By querying the library or FindCUDA for the list? Or replicating CUDA_ADD_EXECUTABLE here.
 set(SHADING_PTX_SRC
   ${OPTIX_PTX_DIR}/${LIBRARY_NAME}_generated_IntersectSphere.cu.ptx
+  ${OPTIX_PTX_DIR}/${LIBRARY_NAME}_generated_IntersectTriangle.cu.ptx
+  ${OPTIX_PTX_DIR}/${LIBRARY_NAME}_generated_MonteCarlo.cu.ptx
   ${OPTIX_PTX_DIR}/${LIBRARY_NAME}_generated_NormalRendering.cu.ptx
   ${OPTIX_PTX_DIR}/${LIBRARY_NAME}_generated_PathTracing.cu.ptx
 )
