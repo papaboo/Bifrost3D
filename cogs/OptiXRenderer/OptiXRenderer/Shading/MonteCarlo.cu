@@ -13,6 +13,9 @@
 using namespace OptiXRenderer;
 using namespace optix;
 
+rtDeclareVariable(float3, g_color, , );
+
+
 rtDeclareVariable(MonteCarloPRD, monte_carlo_PRD, rtPayload, );
 
 //----------------------------------------------------------------------------
@@ -20,7 +23,7 @@ rtDeclareVariable(MonteCarloPRD, monte_carlo_PRD, rtPayload, );
 //----------------------------------------------------------------------------
 
 RT_PROGRAM void closest_hit() {
-    monte_carlo_PRD.color = make_float3(0, 1, 0);
+    monte_carlo_PRD.color = g_color;
 }
 
 //----------------------------------------------------------------------------
@@ -28,5 +31,5 @@ RT_PROGRAM void closest_hit() {
 //----------------------------------------------------------------------------
 
 RT_PROGRAM void miss() {
-    monte_carlo_PRD.color = make_float3(1, 0, 0);
+    monte_carlo_PRD.color = make_float3(0.68f, 0.92f, 1.0f);
 }

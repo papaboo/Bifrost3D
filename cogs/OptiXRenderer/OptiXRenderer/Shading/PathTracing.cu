@@ -34,7 +34,9 @@ RT_PROGRAM void path_tracing() {
 
     // Generate rays.
     const float2 screen_pos = make_float2(g_launch_index.x / float(g_accumulation_buffer.size().x), g_launch_index.y / float(g_accumulation_buffer.size().y));
-    const float4 normalized_screen_pos = make_float4(screen_pos.x * 2.0f - 1.0f, screen_pos.y * 2.0f - 1.0f, 1.0f, 1.0f);
+    const float4 normalized_screen_pos = make_float4(screen_pos.x * 2.0f - 1.0f, 
+                                                     1.0f - screen_pos.y * 2.0f, // Inlined negate of the screen position.
+                                                     1.0f, 1.0f);
 
     const float4 screenspace_world_pos = g_inverted_view_projection_matrix * normalized_screen_pos;
 
@@ -48,6 +50,12 @@ RT_PROGRAM void path_tracing() {
 
     MonteCarloPRD prd;
     rtTrace(g_scene_root, ray, prd);
+
+    // Simple gamma correction.
+    const float inv_screen_gamma = 1.0f / 2.2f;
+    prd.color.x = pow(prd.color.x, inv_screen_gamma);
+    prd.color.y = pow(prd.color.y, inv_screen_gamma);
+    prd.color.z = pow(prd.color.z, inv_screen_gamma);
 
     g_accumulation_buffer[g_launch_index] = make_float4(prd.color, 1.0f);
 }

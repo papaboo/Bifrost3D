@@ -64,34 +64,95 @@ static inline optix::GeometryGroup setup_debug_scene(optix::Context& context) {
     optix::Program sphere_intersection_program = context->createProgramFromPTXFile(intersection_ptx_path, "intersect");
     optix::Program sphere_bounds_program = context->createProgramFromPTXFile(intersection_ptx_path, "bounds");
 
-    { // center
+    { // Center
         optix::Geometry mesh = context->createGeometry();
         mesh->setIntersectionProgram(sphere_intersection_program);
         mesh->setBoundingBoxProgram(sphere_bounds_program);
         mesh->setPrimitiveCount(1);
 
-        optix::float4 sphere = optix::make_float4(0, -0.5f, 0, 0.5f);
-        mesh["sphere"]->setFloat(sphere);
-        mesh->validate();
+        mesh["sphere"]->setFloat(optix::make_float4(0, 0, 0, 0.5f));
 
         optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
+        model["g_color"]->setFloat(optix::make_float3(1, 1, 1));
         geoGroup->addChild(model);
-        model->validate();
     }
 
-    { // floor
+    { // Up
         optix::Geometry mesh = context->createGeometry();
         mesh->setIntersectionProgram(sphere_intersection_program);
         mesh->setBoundingBoxProgram(sphere_bounds_program);
         mesh->setPrimitiveCount(1);
 
-        optix::float4 sphere = optix::make_float4(0, 1000.0f, 0, 1000.0f);
-        mesh["sphere"]->setFloat(sphere);
-        mesh->validate();
+        mesh["sphere"]->setFloat(optix::make_float4(0, 2, 0, 0.5f));
 
         optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
+        model["g_color"]->setFloat(optix::make_float3(0, 1, 0));
         geoGroup->addChild(model);
-        model->validate();
+    }
+
+    { // Down
+        optix::Geometry mesh = context->createGeometry();
+        mesh->setIntersectionProgram(sphere_intersection_program);
+        mesh->setBoundingBoxProgram(sphere_bounds_program);
+        mesh->setPrimitiveCount(1);
+
+        mesh["sphere"]->setFloat(optix::make_float4(0, -2, 0, 0.5f));
+
+        optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
+        model["g_color"]->setFloat(optix::make_float3(1, 0, 1));
+        geoGroup->addChild(model);
+    }
+
+    { // Right
+        optix::Geometry mesh = context->createGeometry();
+        mesh->setIntersectionProgram(sphere_intersection_program);
+        mesh->setBoundingBoxProgram(sphere_bounds_program);
+        mesh->setPrimitiveCount(1);
+
+        mesh["sphere"]->setFloat(optix::make_float4(2, 0, 0, 0.5f));
+
+        optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
+        model["g_color"]->setFloat(optix::make_float3(1, 0, 0));
+        geoGroup->addChild(model);
+    }
+
+    { // Left
+        optix::Geometry mesh = context->createGeometry();
+        mesh->setIntersectionProgram(sphere_intersection_program);
+        mesh->setBoundingBoxProgram(sphere_bounds_program);
+        mesh->setPrimitiveCount(1);
+
+        mesh["sphere"]->setFloat(optix::make_float4(-2, 0, 0, 0.5f));
+
+        optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
+        model["g_color"]->setFloat(optix::make_float3(0, 1, 1));
+        geoGroup->addChild(model);
+    }
+
+    { // Forward
+        optix::Geometry mesh = context->createGeometry();
+        mesh->setIntersectionProgram(sphere_intersection_program);
+        mesh->setBoundingBoxProgram(sphere_bounds_program);
+        mesh->setPrimitiveCount(1);
+
+        mesh["sphere"]->setFloat(optix::make_float4(0, 0, 2, 0.5f));
+
+        optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
+        model["g_color"]->setFloat(optix::make_float3(0, 0, 1));
+        geoGroup->addChild(model);
+    }
+
+    { // Backwards
+        optix::Geometry mesh = context->createGeometry();
+        mesh->setIntersectionProgram(sphere_intersection_program);
+        mesh->setBoundingBoxProgram(sphere_bounds_program);
+        mesh->setPrimitiveCount(1);
+
+        mesh["sphere"]->setFloat(optix::make_float4(0, 0, -2, 0.5f));
+
+        optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
+        model["g_color"]->setFloat(optix::make_float3(1, 1, 0));
+        geoGroup->addChild(model);
     }
 
     geoGroup->validate();
@@ -214,7 +275,7 @@ void Renderer::apply() {
         context["g_camera_position"]->setFloat(camera_position);
     }
 
-    context->launch(int(EntryPoints::NormalVisualization), m_state->screensize.x, m_state->screensize.y);
+    context->launch(int(EntryPoints::PathTracing), m_state->screensize.x, m_state->screensize.y);
 
     { // Update the backbuffer.
         glViewport(0, 0, m_state->screensize.x, m_state->screensize.y);

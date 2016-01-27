@@ -35,7 +35,9 @@ rtBuffer<float4, 2>  g_accumulation_buffer; // TODO Make double4
 RT_PROGRAM void ray_generation() {
     // Generate rays.
     const float2 screen_pos = make_float2(g_launch_index.x / float(g_accumulation_buffer.size().x), g_launch_index.y / float(g_accumulation_buffer.size().y));
-    const float4 normalized_screen_pos = make_float4(screen_pos.x * 2.0f - 1.0f, screen_pos.y * 2.0f - 1.0f, 1.0f, 1.0f);
+    const float4 normalized_screen_pos = make_float4(screen_pos.x * 2.0f - 1.0f,
+                                                     1.0f - screen_pos.y * 2.0f, // Inlined negate of the screen position.
+                                                     1.0f, 1.0f);
 
     const float4 screenspace_world_pos = g_inverted_view_projection_matrix * normalized_screen_pos;
 
