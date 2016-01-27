@@ -25,7 +25,7 @@ rtBuffer<float4, 2>  g_accumulation_buffer; // TODO Make double4
 //----------------------------------------------------------------------------
 // Ray generation program for visualizing normals.
 //----------------------------------------------------------------------------
-RT_PROGRAM void normal_visualization() {
+RT_PROGRAM void ray_generation() {
     NormalVisualizationPRD prd;
 
     const float3 position = make_float3(0.0f, 0.0f, 0.0f);
@@ -43,6 +43,15 @@ RT_PROGRAM void normal_visualization() {
 
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
 
-RT_PROGRAM void closest_hit_normal() {
-    normal_visualization_PRD.color = make_float4(geometric_normal.x * 0.5f + 0.5f, geometric_normal.y * 0.5f + 0.5f, geometric_normal.z * 0.5f + 0.5f, 1.0);
+RT_PROGRAM void closest_hit() {
+    float3 remapped_normal = geometric_normal * 0.5f + 0.5f;
+    normal_visualization_PRD.color = make_float4(remapped_normal, 1.0);
+}
+
+//----------------------------------------------------------------------------
+// Miss program for normal visualization.
+//----------------------------------------------------------------------------
+
+RT_PROGRAM void miss() {
+    normal_visualization_PRD.color = make_float4(0.0f, 0.0f, 0.0f, 1.0);
 }

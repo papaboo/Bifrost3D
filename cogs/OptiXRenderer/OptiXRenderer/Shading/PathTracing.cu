@@ -11,6 +11,7 @@
 #include <optix.h>
 #include <optixu/optixu_matrix_namespace.h>
 
+using namespace OptiXRenderer;
 using namespace optix;
 
 rtDeclareVariable(uint2, g_launch_index, rtLaunchIndex, );
@@ -21,6 +22,7 @@ rtBuffer<float4, 2>  g_accumulation_buffer; // TODO Make double4
 rtDeclareVariable(float4, g_camera_position, , );
 rtDeclareVariable(Matrix4x4, g_inverted_view_projection_matrix, , );
 
+rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(float, g_scene_epsilon, , );
 
 //----------------------------------------------------------------------------
@@ -40,7 +42,12 @@ RT_PROGRAM void path_tracing() {
 
     float3 origin = make_float3(g_camera_position);
     float3 direction = normalize(ray_end - origin);
-    Ray ray(origin, direction, unsigned int(OptiXRenderer::RayTypes::MonteCarlo), g_scene_epsilon);
+    Ray ray(origin, direction, unsigned int(RayTypes::MonteCarlo), g_scene_epsilon);
 
-    g_accumulation_buffer[g_launch_index] = make_float4(direction * 0.5f + 0.5f, 1.0f);
+    // g_accumulation_buffer[g_launch_index] = make_float4(direction * 0.5f + 0.5f, 1.0f);
+
+    MonteCarloPRD prd;
+    rtTrace(g_scene_root, ray, prd);
+
+    g_accumulation_buffer[g_launch_index] = make_float4(prd.color, 1.0f);
 }
