@@ -159,7 +159,6 @@ inline Vector<T> normalize(Vector<T> v){
 }
 
 // Cross product between two 3-dimensional vectors.
-// TODO Use enable_if to only allow cross on floating point types.
 template<typename T>
 inline Vector3<T> cross(Vector3<T> lhs, Vector3<T> rhs) {
     return Vector3<T>((lhs.y * rhs.z) - (lhs.z * rhs.y),
