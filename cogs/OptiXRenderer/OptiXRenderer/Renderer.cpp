@@ -55,9 +55,14 @@ static inline void setup_debug_scene(optix::Context& context, optix::GeometryGro
     mesh->validate();
 
     optix::Material material = context->createMaterial();
-    std::string monte_carlo_ptx_path = get_ptx_path("MonteCarlo");
-    material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
-    material->validate();
+    {
+        std::string monte_carlo_ptx_path = get_ptx_path("MonteCarlo");
+        material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
+        
+        std::string normal_vis_ptx_path = get_ptx_path("NormalRendering");
+        material->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
+        material->validate();
+    }
 
     optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
     model->validate();
@@ -128,11 +133,11 @@ Renderer::Renderer()
         context->setMissProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_miss_ptx_path, "miss"));
     }
 
-    /* { // Normal visualization setup.
-        std::string ptx_path = get_ptx_path("NormalRendering.cu");
-        context->setRayGenerationProgram(int(EntryPoints::NormalVisualization),
-            context->createProgramFromPTXFile(ptx_path, "normal_visualization"));
-    } */
+    { // Normal visualization setup.
+        std::string ptx_path = get_ptx_path("NormalRendering");
+        context->setRayGenerationProgram(int(EntryPoints::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "ray_generation"));
+        context->setMissProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "miss"));
+    }
 
     context->validate();
     context->compile();
@@ -175,7 +180,7 @@ void Renderer::apply() {
         context["g_camera_position"]->setFloat(camera_position);
     }
 
-    context->launch(int(EntryPoints::PathTracing), m_state->screensize.x, m_state->screensize.y);
+    context->launch(int(EntryPoints::NormalVisualization), m_state->screensize.x, m_state->screensize.y);
 
     { // Update the backbuffer.
         glViewport(0, 0, m_state->screensize.x, m_state->screensize.y);
