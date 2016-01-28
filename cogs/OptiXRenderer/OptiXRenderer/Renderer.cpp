@@ -31,7 +31,9 @@ struct Renderer::State {
     uint2 screensize;
     Context context;
 
+    // Per camera members.
     Buffer accumulation_buffer;
+    unsigned int accumulations;
 
     GLuint backbuffer_gl_id; // TODO Should also be used when we later support interop by rendering to a VBO/PBO.
 
@@ -182,6 +184,8 @@ Renderer::Renderer()
     context->setEntryPointCount(int(EntryPoints::Count));
     context->setStackSize(960);
 
+    m_state->accumulations = 0u;
+
     context["g_frame_number"]->setFloat(2.0f);
 
     { // Setup root node
@@ -249,7 +253,7 @@ void Renderer::apply() {
         m_state->screensize = make_uint2(window.get_width(), window.get_height());
     }
 
-    context["g_frame_number"]->setFloat(float(Engine::get_instance()->get_time().get_ticks()));
+    context["g_accumulations"]->setFloat(float(m_state->accumulations));
 
     { // Upload camera parameters.
         Vector3f cam_pos = Vector3f::zero();
@@ -277,6 +281,8 @@ void Renderer::apply() {
 
     context->launch(int(EntryPoints::PathTracing), m_state->screensize.x, m_state->screensize.y);
 
+    m_state->accumulations += 1u;
+
     { // Update the backbuffer.
         glViewport(0, 0, m_state->screensize.x, m_state->screensize.y);
 
@@ -292,8 +298,8 @@ void Renderer::apply() {
         float4* mapped_accumulation_buffer = (float4*)m_state->accumulation_buffer->map();
         glBindTexture(GL_TEXTURE_2D, m_state->backbuffer_gl_id);
         const GLint BASE_IMAGE_LEVEL = 0;
-        const GLint noBorder = 0;
-        glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGBA, m_state->screensize.x, m_state->screensize.y, noBorder, GL_RGBA, GL_FLOAT, mapped_accumulation_buffer);
+        const GLint NO_BORDER = 0;
+        glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGBA, m_state->screensize.x, m_state->screensize.y, NO_BORDER, GL_RGBA, GL_FLOAT, mapped_accumulation_buffer);
         m_state->accumulation_buffer->unmap();
 
         glBegin(GL_QUADS); {

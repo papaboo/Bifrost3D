@@ -11,7 +11,7 @@ set(CMAKE_MODULE_PATH
 
 find_package(CUDA 7.5 REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(OptiX)
+find_package(OptiX REQUIRED)
 
 install_file(${OPTIX_1_DLL})
 install_file(${OPTIX_U_1_DLL})
@@ -34,6 +34,11 @@ set(SHADING_SRC
   OptiXRenderer/Shading/PathTracing.cu
 )
 
+set(SHADING_HEADERS
+  OptiXRenderer/Shading/Defines.h
+  OptiXRenderer/Shading/Utils.h
+)
+
 # Add the path to the ptx to a define.
 set(OPTIX_PTX_DIR ${CMAKE_BINARY_DIR}/${LIBRARY_NAME})
 add_definitions(-DOPTIXRENDERER_PTX_DIR="${OPTIX_PTX_DIR}") #TODO When distributing releases I need a better way of handling the path to the PTX.
@@ -52,10 +57,10 @@ set_source_files_properties(${SHADING_SRC}
   PROPERTIES CUDA_SOURCE_PROPERTY_FORMAT PTX
 )
 
-cuda_add_library(${LIBRARY_NAME} ${ROOT_SRC} ${SHADING_SRC})
+cuda_add_library(${LIBRARY_NAME} ${ROOT_SRC} ${SHADING_SRC} ${SHADING_HEADERS})
 
 source_group("" FILES ${ROOT_SRC})
-source_group("Shading" FILES ${SHADING_SRC})
+source_group("Shading" FILES ${SHADING_SRC} ${SHADING_HEADERS})
 source_group("Shading\\ptx" FILES ${SHADING_PTX_SRC}) # Add the ptx files to a source group.
 
 target_link_libraries(${LIBRARY_NAME}

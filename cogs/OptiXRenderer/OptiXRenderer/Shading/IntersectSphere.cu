@@ -8,7 +8,7 @@
 // Inspired by the OptiX samples.
 // ---------------------------------------------------------------------------
 
-#include <OptiXRenderer/Types.h>
+#include <OptiXRenderer/Shading/Utils.h>
 
 #include <optix.h>
 #include <optixu/optixu_aabb.h>

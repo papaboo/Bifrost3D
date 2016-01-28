@@ -13,17 +13,22 @@
 using namespace OptiXRenderer;
 using namespace optix;
 
-rtDeclareVariable(float3, g_color, , );
-
-
+// Ray params
+rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(MonteCarloPRD, monte_carlo_PRD, rtPayload, );
+
+// Material params
+rtDeclareVariable(float3, g_color, , );
 
 //----------------------------------------------------------------------------
 // Closest hit program for monte carlo sampling rays.
 //----------------------------------------------------------------------------
 
+rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
+
 RT_PROGRAM void closest_hit() {
-    monte_carlo_PRD.color = g_color;
+    const float3 world_geometric_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, geometric_normal));
+    monte_carlo_PRD.color = g_color * abs(dot(world_geometric_normal, ray.direction));
 }
 
 //----------------------------------------------------------------------------
