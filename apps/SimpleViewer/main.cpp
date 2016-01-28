@@ -1,10 +1,10 @@
 #include <GLFWDriver.h>
 
-#include <Core/Engine.h>
-#include <Core/IModule.h>
-#include <Input/Keyboard.h>
-#include <Input/Mouse.h>
-#include <Scene/Camera.h>
+#include <Cogwheel/Core/Engine.h>
+#include <Cogwheel/Core/IModule.h>
+#include <Cogwheel/Input/Keyboard.h>
+#include <Cogwheel/Input/Mouse.h>
+#include <Cogwheel/Scene/Camera.h>
 
 #include <OptiXRenderer/Renderer.h>
 

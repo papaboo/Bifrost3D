@@ -9,7 +9,7 @@
 #ifndef _COGWHEEL_MATH_MATRIX_H_
 #define _COGWHEEL_MATH_MATRIX_H_
 
-#include <Math/Vector.h>
+#include <Cogwheel/Math/Vector.h>
 
 #include <cstring>
 #include <initializer_list>

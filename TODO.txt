@@ -1,30 +1,28 @@
-* RT Renderer.
-** OptiX
-*** OpenGL output using interop.
-*** Render normals
-* CUDA
-** helper methods.
-*** Debugging/error checking. Array management.
-* Prepend 'Cogwheel' to cogwheel includes.
+* OptiX
+** Inline cuda_add_libraries and use it to setup the ptx source group.
+* Load models.
+** TinyOBJ
+* Notifications when changing the scene. / Pullable events.
+* Materials
+** Coated rubber/metal.
 * Multiple cameras.
 ** G-Buffer pr camera.
 ** Compose when all cameras are done.
-* Multiple scenes.
-* -Wall? -W3?
-** It's a pain now that I'm using source code instead of dlls. All my libs are being checked an produce a ton of pedantic warnings.
-** However it's also nice and produce some helpful warnings, fx about struct padding (which GLFW is full of, making that warning helpful and horrible at the same time.)
-* Materials
-** Coated rubber/metal.
-* Load models.
-** TinyOBJ
-* Serialize scene and models.
 * Screenshot
 ** Grab backbuffer. 
 *** Request to composer, not renderers
 *** Pass along function to evaluate if the backbuffer is 'ready', fx iteration count of certain viewport.
 ** Render to offscreen buffer.
 * GL Renderer
+    * Multiple scenes.
 * destroy - SceneNode, Camera
+* Serialize scene and models.
+* CUDA
+** helper methods.
+*** Debugging/error checking. Array management.
+* -Wall? -W3?
+** It's a pain now that I'm using source code instead of dlls. All my libs are being checked an produce a ton of pedantic warnings.
+** However it's also nice and produce some helpful warnings, fx about struct padding (which GLFW is full of, making that warning helpful and horrible at the same time.)
 
 libs
 * FreeImage. It has a commercial license.

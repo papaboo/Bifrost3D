@@ -9,8 +9,8 @@
 #ifndef _COGWHEEL_SCENE_SCENE_NODE_H_
 #define _COGWHEEL_SCENE_SCENE_NODE_H_
 
-#include <Core/UniqueIDGenerator.h>
-#include <Math/Transform.h>
+#include <Cogwheel/Core/UniqueIDGenerator.h>
+#include <Cogwheel/Math/Transform.h>
 
 #include <vector>
 

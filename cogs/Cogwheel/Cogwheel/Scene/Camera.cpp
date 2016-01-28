@@ -6,9 +6,9 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include <Scene/Camera.h>
+#include <Cogwheel/Scene/Camera.h>
 
-#include <Math/Conversions.h>
+#include <Cogwheel/Math/Conversions.h>
 
 using namespace Cogwheel::Math;
 

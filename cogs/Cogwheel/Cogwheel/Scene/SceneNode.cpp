@@ -6,7 +6,7 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include "SceneNode.h"
+#include <Cogwheel/Scene/SceneNode.h>
 
 namespace Cogwheel {
 namespace Scene {

@@ -9,10 +9,10 @@
 #ifndef _COGWHEEL_SCENE_CAMERA_H_
 #define _COGWHEEL_SCENE_CAMERA_H_
 
-#include <Math/Matrix.h>
-#include <Math/Ray.h>
-#include <Math/Rect.h>
-#include <Scene/SceneNode.h>
+#include <Cogwheel/Math/Matrix.h>
+#include <Cogwheel/Math/Ray.h>
+#include <Cogwheel/Math/Rect.h>
+#include <Cogwheel/Scene/SceneNode.h>
 
 namespace Cogwheel {
 namespace Scene {

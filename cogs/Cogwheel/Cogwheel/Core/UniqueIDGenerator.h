@@ -9,8 +9,6 @@
 #ifndef _COGWHEEL_CORE_UNIQUE_ID_GENERATOR_H_
 #define _COGWHEEL_CORE_UNIQUE_ID_GENERATOR_H_
 
-#include <vector>
-
 namespace Cogwheel {
 namespace Core {
 

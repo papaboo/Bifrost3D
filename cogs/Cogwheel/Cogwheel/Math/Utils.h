@@ -9,7 +9,9 @@
 #ifndef _COGWHEEL_MATH_UTILS_H_
 #define _COGWHEEL_MATH_UTILS_H_
 
-#include <Math/Constants.h>
+#include <Cogwheel/Math/Constants.h>
+
+#include <cmath>
 
 namespace Cogwheel {
 namespace Math {

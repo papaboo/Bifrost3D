@@ -9,8 +9,8 @@
 #ifndef _COGWHEEL_MATH_TRANSFORM_TEST_H_
 #define _COGWHEEL_MATH_TRANSFORM_TEST_H_
 
-#include <Math/Quaternion.h>
-#include <Math/Conversions.h>
+#include <Cogwheel/Math/Quaternion.h>
+#include <Cogwheel/Math/Conversions.h>
 
 #include <gtest/gtest.h>
 

@@ -10,9 +10,9 @@
 
 #include <glfw/glfw3.h>
 
-#include <Core/Engine.h>
-#include <Input/Keyboard.h>
-#include <Input/Mouse.h>
+#include <Cogwheel/Core/Engine.h>
+#include <Cogwheel/Input/Keyboard.h>
+#include <Cogwheel/Input/Mouse.h>
 
 using Cogwheel::Core::Engine;
 using Cogwheel::Input::Keyboard;

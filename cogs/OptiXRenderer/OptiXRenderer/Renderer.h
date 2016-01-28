@@ -9,7 +9,7 @@
 #ifndef _OPTIXRENDERER_RENDERER_H_
 #define _OPTIXRENDERER_RENDERER_H_
 
-#include <Core/IModule.h>
+#include <Cogwheel/Core/IModule.h>
 
 namespace OptiXRenderer {
 

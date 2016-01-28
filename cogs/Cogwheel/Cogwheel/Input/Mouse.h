@@ -9,7 +9,7 @@
 #ifndef _COGWHEEL_INPUT_MOUSE_H_
 #define _COGWHEEL_INPUT_MOUSE_H_
 
-#include <Math/Vector.h>
+#include <Cogwheel/Math/Vector.h>
 
 namespace Cogwheel {
 namespace Input {

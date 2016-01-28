@@ -9,7 +9,7 @@
 #ifndef _COGWHEEL_CORE_ARRAY_TEST_H_
 #define _COGWHEEL_CORE_ARRAY_TEST_H_
 
-#include <Core/Array.h>
+#include <Cogwheel/Core/Array.h>
 
 #include <gtest/gtest.h>
 

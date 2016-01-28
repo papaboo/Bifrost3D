@@ -13,7 +13,7 @@
 
 #include <smallpt.h>
 
-#include <Core/Array.h>
+#include <Cogwheel/Core/Array.h>
 
 #include <glfw/glfw3.h>
 

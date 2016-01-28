@@ -9,7 +9,7 @@
 #ifndef _COGWHEEL_MATH_MATRIX_TEST_H_
 #define _COGWHEEL_MATH_MATRIX_TEST_H_
 
-#include <Math/Matrix.h>
+#include <Cogwheel/Math/Matrix.h>
 
 #include <gtest/gtest.h>
 

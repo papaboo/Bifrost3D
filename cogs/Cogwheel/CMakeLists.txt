@@ -1,9 +1,9 @@
 include_directories(.)
 
-include("Core/Setup.cmake")
-include("Input/Setup.cmake")
-include("Math/Setup.cmake")
-include("Scene/Setup.cmake")
+include("Cogwheel/Core/Setup.cmake")
+include("Cogwheel/Input/Setup.cmake")
+include("Cogwheel/Math/Setup.cmake")
+include("Cogwheel/Scene/Setup.cmake")
 
 add_library(Gogwheel ${CORE_SRCS} ${INPUT_SRCS} ${MATH_SRCS} ${SCENE_SRCS})
 

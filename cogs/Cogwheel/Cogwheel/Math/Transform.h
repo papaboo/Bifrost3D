@@ -9,8 +9,8 @@
 #ifndef _COGWHEEL_MATH_TRANSFORM_H_
 #define _COGWHEEL_MATH_TRANSFORM_H_
 
-#include <Math/Quaternion.h>
-#include <Math/Vector.h>
+#include <Cogwheel/Math/Quaternion.h>
+#include <Cogwheel/Math/Vector.h>
 
 #include <cstring>
 #include <sstream>

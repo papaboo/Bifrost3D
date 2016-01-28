@@ -9,11 +9,11 @@
 #ifndef _SMALL_PT_H_
 #define _SMALL_PT_H_
 
-#include <Core/Array.h>
-#include <Math/Color.h>
-#include <Math/Constants.h>
-#include <Math/Vector.h>
-#include <Math/Utils.h>
+#include <Cogwheel/Core/Array.h>
+#include <Cogwheel/Math/Color.h>
+#include <Cogwheel/Math/Constants.h>
+#include <Cogwheel/Math/Vector.h>
+#include <Cogwheel/Math/Utils.h>
 
 #include <math.h>
 

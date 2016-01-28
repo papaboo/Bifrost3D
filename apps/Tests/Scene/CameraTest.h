@@ -9,8 +9,8 @@
 #ifndef _COGWHEEL_SCENE_CAMERA_TEST_H_
 #define _COGWHEEL_SCENE_CAMERA_TEST_H_
 
-#include <Math/Utils.h>
-#include <Scene/Camera.h>
+#include <Cogwheel/Math/Utils.h>
+#include <Cogwheel/Scene/Camera.h>
 
 #include <gtest/gtest.h>
 

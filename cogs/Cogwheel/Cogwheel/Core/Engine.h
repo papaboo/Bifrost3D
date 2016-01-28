@@ -9,10 +9,10 @@
 #ifndef _COGWHEEL_CORE_ENGINE_H_
 #define _COGWHEEL_CORE_ENGINE_H_
 
-#include <Core/Array.h>
-#include <Core/Time.h>
-#include <Core/Window.h>
-#include <Scene/SceneNode.h>
+#include <Cogwheel/Core/Array.h>
+#include <Cogwheel/Core/Time.h>
+#include <Cogwheel/Core/Window.h>
+#include <Cogwheel/Scene/SceneNode.h>
 
 namespace Cogwheel {
 namespace Core {

@@ -9,7 +9,7 @@
 #ifndef _COGWHEEL_MATH_RAY_H_
 #define _COGWHEEL_MATH_RAY_H_
 
-#include <Math/Vector.h>
+#include <Cogwheel/Math/Vector.h>
 
 #include <cstring>
 #include <sstream>

@@ -9,7 +9,7 @@
 #ifndef _COGWHEEL_SCENE_TRANSFORM_TEST_H_
 #define _COGWHEEL_SCENE_TRANSFORM_TEST_H_
 
-#include <Scene/SceneNode.h>
+#include <Cogwheel/Scene/SceneNode.h>
 
 #include <gtest/gtest.h>
 

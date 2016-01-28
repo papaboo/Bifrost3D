@@ -9,7 +9,7 @@
 #ifndef _COGWHEEL_INPUT_KEYBOARD_TEST_H_
 #define _COGWHEEL_INPUT_KEYBOARD_TEST_H_
 
-#include <Input/Keyboard.h>
+#include <Cogwheel/Input/Keyboard.h>
 
 #include <gtest/gtest.h>
 

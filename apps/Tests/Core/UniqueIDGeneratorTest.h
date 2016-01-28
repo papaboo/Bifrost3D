@@ -9,7 +9,7 @@
 #ifndef _COGWHEEL_CORE_UNIQUE_ID_GENERATOR_TEST_H_
 #define _COGWHEEL_CORE_UNIQUE_ID_GENERATOR_TEST_H_
 
-#include <Core/UniqueIDGenerator.h>
+#include <Cogwheel/Core/UniqueIDGenerator.h>
 
 #include <gtest/gtest.h>
 

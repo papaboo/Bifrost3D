@@ -9,9 +9,9 @@
 #ifndef _COGWHEEL_MATH_QUATERNION_H_
 #define _COGWHEEL_MATH_QUATERNION_H_
 
-#include <Math/Constants.h>
-#include <Math/Utils.h>
-#include <Math/Vector.h>
+#include <Cogwheel/Math/Constants.h>
+#include <Cogwheel/Math/Utils.h>
+#include <Cogwheel/Math/Vector.h>
 
 #include <algorithm>
 #include <cstring>

@@ -11,9 +11,9 @@
 #include <OptiXRenderer/Kernel.h>
 #include <OptiXRenderer/Types.h>
 
-#include <Core/Engine.h>
-#include <Math/Math.h>
-#include <Scene/Camera.h>
+#include <Cogwheel/Core/Engine.h>
+#include <Cogwheel/Math/Math.h>
+#include <Cogwheel/Scene/Camera.h>
 
 #include <optixu/optixpp_namespace.h>
 #include <optixu/optixu_math_namespace.h>

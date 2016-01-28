@@ -6,11 +6,11 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include <Core/Engine.h>
-#include <Core/IModule.h>
+#include <Cogwheel/Core/Engine.h>
 
-#include <Input/Keyboard.h>
-#include <Input/Mouse.h>
+#include <Cogwheel/Core/IModule.h>
+#include <Cogwheel/Input/Keyboard.h>
+#include <Cogwheel/Input/Mouse.h>
 
 namespace Cogwheel {
 namespace Core {

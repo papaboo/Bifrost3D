@@ -9,9 +9,9 @@
 #ifndef _COGWHEEL_MATH_CONVERSIONS_H_
 #define _COGWHEEL_MATH_CONVERSIONS_H_
 
-#include <Math/Matrix.h>
-#include <Math/Quaternion.h>
-#include <Math/Transform.h>
+#include <Cogwheel/Math/Matrix.h>
+#include <Cogwheel/Math/Quaternion.h>
+#include <Cogwheel/Math/Transform.h>
 
 namespace Cogwheel {
 namespace Math {
