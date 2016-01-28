@@ -1,4 +1,4 @@
-// OptiX path tracing ray generation program and integrator.
+// OptiX path tracing ray generation and miss program.
 // ---------------------------------------------------------------------------
 // Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
 //

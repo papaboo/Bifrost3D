@@ -1,4 +1,4 @@
-// OptiX path tracing ray generation program and integrator.
+// OptiX programs for visualizing a models normals.
 // ---------------------------------------------------------------------------
 // Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
 //
