@@ -18,7 +18,7 @@
 #include <optixu/optixpp_namespace.h>
 #include <optixu/optixu_math_namespace.h>
 
-#include <GL/gl.h> // TODO #ifdef to work on OS X as well. But do that when we create a special GL context.
+#include <GL/gl.h>
 
 using namespace Cogwheel::Core;
 using namespace Cogwheel::Math;
@@ -35,7 +35,7 @@ struct Renderer::State {
     Buffer accumulation_buffer;
     unsigned int accumulations;
 
-    GLuint backbuffer_gl_id; // TODO Should also be used when we later support interop by rendering to a VBO/PBO.
+    GLuint backbuffer_gl_id;
 
     optix::Group root_node;
 };

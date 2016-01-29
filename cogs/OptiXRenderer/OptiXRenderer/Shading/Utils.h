@@ -23,15 +23,15 @@ __inline_dev__ optix::float3 project_ray_direction(optix::float2 viewport_pos,
     using namespace optix;
 
     // Generate rays.
-    float4 normalized_device_pos = make_float4(viewport_pos.x * 2.0f - 1.0f,
-                                               1.0f - viewport_pos.y * 2.0f, // Inlined negate of the screen position.
-                                               1.0f, 1.0f);
+    float4 normalized_projected_pos = make_float4(viewport_pos.x * 2.0f - 1.0f,
+                                                  1.0f - viewport_pos.y * 2.0f, // Inline flipping of the viewport's y.
+                                                  -1.0f, 1.0f);
 
-    float4 screenspace_world_pos = inverted_view_projection_matrix * normalized_device_pos;
+    float4 projected_world_pos = inverted_view_projection_matrix * normalized_projected_pos;
 
-    float3 ray_end = make_float3(screenspace_world_pos) / screenspace_world_pos.w;
+    float3 ray_origin = make_float3(projected_world_pos) / projected_world_pos.w;
 
-    return normalize(ray_end - camera_position);
+    return normalize(ray_origin - camera_position);
 }
 
 __inline_dev__ optix::float3 gammacorrect(const optix::float3& color, float gamma) {

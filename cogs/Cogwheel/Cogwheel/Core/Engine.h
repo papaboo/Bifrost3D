@@ -44,7 +44,8 @@ public:
     inline Time& get_time() { return m_time; }
     inline Window& get_window() { return m_window; }
 
-    inline bool requested_quit() const { return m_quit; }
+    inline void request_quit() { m_quit = true; }
+    inline bool is_quit_requested() const { return m_quit; }
 
     // -----------------------------------------------------------------------
     // Input
@@ -84,7 +85,7 @@ private:
 
     Time m_time;
     Window m_window;
-    Scene::SceneNodes::UID m_scene_root; // NOTE Replace by list of multiple scenes. A camera should reference it's scene id.
+    Scene::SceneNodes::UID m_scene_root;
 
     Core::Array<Core::IModule*> m_mutating_modules;
     Core::Array<Core::IModule*> m_non_mutating_modules;

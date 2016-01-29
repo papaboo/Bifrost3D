@@ -101,7 +101,7 @@ void run(on_launch_callback on_launch, on_window_created_callback on_window_crea
 
         glfwSwapBuffers(window);
 
-        if (engine.requested_quit())
+        if (engine.is_quit_requested())
             glfwSetWindowShouldClose(window, GL_TRUE);
     }
 

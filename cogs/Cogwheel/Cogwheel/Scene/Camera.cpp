@@ -158,15 +158,15 @@ Ray ray_from_viewport_point(Cameras::UID camera_ID, Vector2f viewport_point) {
     Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
     Matrix4x4f inverse_view_projection_matrix = inverse_view_matrix * inverse_projection_matrix;
 
-    // TODO If I set normalized_screen_pos.z to 0, do I then get the point on the nearplane? Beacuse that is actually the proper ray origin.
-    Vector4f normalized_screen_pos = Vector4f(viewport_point.x * 2.0f - 1.0f, viewport_point.y * 2.0f - 1.0f, 1.0f, 1.0f); // TODO We can elliminate some multiplications here by not doing the full mat/vec multiplication.
-    Vector4f screenspace_world_pos = inverse_view_projection_matrix * normalized_screen_pos;
-    Vector3f point_on_ray = Vector3f(screenspace_world_pos.x, screenspace_world_pos.y, screenspace_world_pos.z) / screenspace_world_pos.w;
+    // TODO Can we elliminate some multiplications here by not doing the full mat/vec multiplication.
+    Vector4f normalized_projected_pos = Vector4f(viewport_point.x * 2.0f - 1.0f, viewport_point.y * 2.0f - 1.0f, -1.0f, 1.0f);
+    Vector4f projected_world_pos = inverse_view_projection_matrix * normalized_projected_pos;
+    Vector3f ray_origin = Vector3f(projected_world_pos.x, projected_world_pos.y, projected_world_pos.z) / projected_world_pos.w;
     
     SceneNode camera_node = Cameras::get_parent_ID(camera_ID);
-    Vector3f ray_origin = camera_node.get_global_transform().translation;
+    Vector3f camera_position = camera_node.get_global_transform().translation;
 
-    return Ray(ray_origin, normalize(point_on_ray - ray_origin));
+    return Ray(ray_origin, normalize(ray_origin - camera_position));
 }
 
 } // NS CameraUtils

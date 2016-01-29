@@ -12,6 +12,7 @@
 #include <Cogwheel/Math/Constants.h>
 
 #include <cmath>
+#include <string>
 
 namespace Cogwheel {
 namespace Math {
@@ -21,14 +22,16 @@ namespace Math {
 //*****************************************************************************
 
 inline unsigned int compute_ulps(float a, float b) {
-    // TODO Use memcpy to move the float bitpattern to an int. See PBRT 3 chapter 7 for why.
+    // TODO Static assert that float and int have the same sizes.
 
-    int a_as_int = *(int*)&a;
+    int a_as_int;
+    memcpy(&a_as_int, &a, sizeof(a));
     // Make a_as_int lexicographically ordered as a twos-complement int
     if (a_as_int < 0)
         a_as_int = int(0x80000000) - a_as_int;
 
-    int b_as_int = *(int*)&b;
+    int b_as_int;
+    memcpy(&b_as_int, &b, sizeof(a));
     // Make b_as_int lexicographically ordered as a twos-complement int
     if (b_as_int < 0)
         b_as_int = int(0x80000000) - b_as_int;

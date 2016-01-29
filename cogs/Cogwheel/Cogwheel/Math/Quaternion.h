@@ -61,7 +61,7 @@ public:
     // Create a quaternion describing a rotation in angles around a normalized axis in R^3.
     // http://www.euclideanspace.com/maths/geometry/rotations/conversions/angleToQuaternion/
     static inline Quaternion<T> from_angle_axis(T angle_in_radians, Vector3<T> axis) {
-        T radian_halved = angle_in_radians * T(0.5); // TODO really? Halve it?
+        T radian_halved = angle_in_radians * T(0.5);
         T sin_angle = sin(radian_halved);
         Vector3<T> imaginary = axis * sin_angle;
         T real = cos(radian_halved);
@@ -112,11 +112,6 @@ public:
 
     // Quaternion multiplication.
     inline Quaternion<T> operator*(const Quaternion<T>& rhs) const {
-        // TODO Test new and old implementation for speed. Commented version is written in Rust.
-        // Quaternion::new(self.w * rhs.w - self.i * rhs.i - self.j * rhs.j - self.k * rhs.k,
-        //                 self.w * rhs.i + self.i * rhs.w + self.j * rhs.k - self.k * rhs.j,
-        //                 self.w * rhs.j + self.j * rhs.w + self.k * rhs.i - self.i * rhs.k,
-        //                 self.w * rhs.k + self.k * rhs.w + self.i * rhs.j - self.j * rhs.i)
         float real_part = w * rhs.w - dot(imaginary(), rhs.imaginary());
         Vector3<T> imaginary_part = cross(imaginary(), rhs.imaginary()) + rhs.imaginary() * w + imaginary() * rhs.w;
         return Quaternion(imaginary_part, real_part);
