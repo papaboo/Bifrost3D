@@ -26,6 +26,12 @@ protected:
             && almost_equal(lhs.rotation, rhs.rotation, 10)
             && almost_equal(lhs.scale, rhs.scale, 10);
     }
+    static bool compare_transform_loosely(Transform lhs, Transform rhs) {
+        float cos_rotation_angle = dot(lhs.rotation.forward(), rhs.rotation.forward());
+        return almost_equal(lhs.translation, rhs.translation, 10)
+            && cos_rotation_angle > cos(degrees_to_radians(0.05f))
+            && almost_equal(lhs.scale, rhs.scale, 10);
+    }
     static bool compare_quaternion(Quaternionf lhs, Quaternionf rhs, unsigned short max_ulps) {
         return almost_equal(lhs, rhs, max_ulps);
     }
@@ -85,6 +91,16 @@ TEST_F(Math_Transform, matrix_representation) {
         transformed_by_matrix = m4x3 * Vector4f(p.x, p.y, p.z, 1);
         EXPECT_PRED3(compare_vector, transformed_by_quat, transformed_by_matrix, 10);
     }
+}
+
+TEST_F(Math_Transform, compute_delta) {
+    Transform from_transform = Transform(Vector3f(1, 2, 3), normalize(Quaternionf::from_angle_axis(1, Vector3f(3, 4, 5))), 0.5f);
+    Transform to_transform = Transform(Vector3f(3, 5, 4), normalize(Quaternionf::from_angle_axis(1, Vector3f::right())), 1.0f);
+
+    Transform delta_transform = Transform::delta(from_transform, to_transform);
+
+    EXPECT_PRED2(compare_transform_loosely, from_transform * delta_transform, to_transform);
+    EXPECT_PRED2(compare_transform_loosely, to_transform * invert(delta_transform), from_transform);
 }
 
 } // NS Math
