@@ -39,6 +39,12 @@ struct Transform final {
         return Transform(Vector3f::zero(), Quaternionf::identity(), 1.0f);
     }
 
+    // Computes the delta transform that multiplied onto 'from' produces 'to'.
+    // I.e. from * delta = to.
+    static inline Transform delta(Transform from, Transform to) {
+        return from.inverse() * to;
+    }
+
     //*****************************************************************************
     // Comparison operators.
     //*****************************************************************************
@@ -79,14 +85,18 @@ struct Transform final {
         out << "[translation: " << translation << ", rotation: " << rotation << ", scale: " << scale << "]";
         return out.str();
     }
+
+    inline Transform inverse() {
+        float s = 1.0f / scale;
+        Quaternionf r = inverse_unit(rotation);
+        Vector3f t = (r * translation) * -s;
+        return Transform(t, r, s);
+    }
 };
 
 // Returns the inverse of the transform.
 inline Transform invert(Transform t) {
-    float scale = 1.0f / t.scale;
-    Quaternionf rotation = inverse_unit(t.rotation);
-    Vector3f translation = (rotation * t.translation) * -scale;
-    return Transform(translation, rotation, scale);
+    return t.inverse();
 }
 
 } // NS Math

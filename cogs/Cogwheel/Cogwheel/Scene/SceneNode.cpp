@@ -156,7 +156,7 @@ Math::Transform SceneNodes::get_local_transform(SceneNodes::UID node_ID) {
     UID parent_ID = m_parent_IDs[node_ID];
     const Math::Transform parent_transform = m_global_transforms[parent_ID];
     const Math::Transform transform = m_global_transforms[node_ID];
-    return invert(parent_transform) * transform; // TODO Move delta transform computation into method.
+    return Math::Transform::delta(parent_transform, transform);
 }
 
 void SceneNodes::set_local_transform(SceneNodes::UID node_ID, Math::Transform transform) {
@@ -166,19 +166,13 @@ void SceneNodes::set_local_transform(SceneNodes::UID node_ID, Math::Transform tr
     UID parent_ID = m_parent_IDs[node_ID];
     Math::Transform parent_transform = m_global_transforms[parent_ID];
     Math::Transform new_global_transform = parent_transform * transform;
-    Math::Transform delta_transform = invert(m_global_transforms[node_ID]) * new_global_transform; // TODO Move into delta method.
-    m_global_transforms[node_ID] = new_global_transform;
-
-    // Update global transforms of all children.
-    traverse_all_children(node_ID, [=](SceneNodes::UID childID) {
-        m_global_transforms[childID] = delta_transform * m_global_transforms[childID];
-    });
+    set_global_transform(node_ID, new_global_transform);
 }
 
 void SceneNodes::set_global_transform(SceneNodes::UID node_ID, Math::Transform transform) {
     if (node_ID == UID::invalid_UID()) return;
     
-    Math::Transform delta_transform = invert(m_global_transforms[node_ID]) * transform; // TODO Move into delta method.
+    Math::Transform delta_transform = Math::Transform::delta(m_global_transforms[node_ID], transform);
     m_global_transforms[node_ID] = transform;
 
     // Update global transforms of all children.
