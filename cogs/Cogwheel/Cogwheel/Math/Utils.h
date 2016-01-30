@@ -22,7 +22,7 @@ namespace Math {
 //*****************************************************************************
 
 inline unsigned int compute_ulps(float a, float b) {
-    // TODO Static assert that float and int have the same sizes.
+    static_assert(sizeof(float) == sizeof(int), "Implementation needed for when float and int have different sizes.");
 
     int a_as_int;
     memcpy(&a_as_int, &a, sizeof(a));
@@ -75,7 +75,7 @@ inline T clamp(const T value, const T lower_bound, const T upper_bound) {
 }
 
 // Finds the smallest power of 2 greater or equal to x.
-inline unsigned int pow2roundup(unsigned int x) {
+inline unsigned int next_power_of_two(unsigned int x) {
     --x;
     x |= x >> 1;
     x |= x >> 2;
@@ -83,6 +83,10 @@ inline unsigned int pow2roundup(unsigned int x) {
     x |= x >> 8;
     x |= x >> 16;
     return x + 1;
+}
+
+inline bool is_power_of_two(unsigned int v) {
+    return v && !(v & (v - 1));;
 }
 
 inline float degrees_to_radians(float degress) {

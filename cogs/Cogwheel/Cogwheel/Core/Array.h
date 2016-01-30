@@ -24,6 +24,7 @@ namespace Core {
 // * Add swap.
 // * Specialize for booleans and add 'clearAll()' and 'setAll()' methods.
 // * Specialize for arbitrary bits pr integer element?
+// * Use malloc to allocate, but make sure that it supports memory aligned structs.
 // ---------------------------------------------------------------------------
 template <typename T, typename SizeType = unsigned int>
 struct Array final {
@@ -73,7 +74,7 @@ public:
     }
     Array& operator=(const Array<T>& rhs) {
         m_size = rhs.m_size;
-        m_data = new T[m_size]; // TODO malloc to avoid default initialization.
+        m_data = new T[m_size];
         std::copy(rhs.m_data, rhs.m_data + m_size, m_data);
         return *this;
     }

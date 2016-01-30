@@ -14,13 +14,26 @@
 namespace Cogwheel {
 namespace Input {
 
+//----------------------------------------------------------------------------
+// Implementats a keyboard abstraction.
+// The keyboard supports up to MAX_HALFTAP_COUNT half taps, press or release, 
+// pr frame. This can be used to implement such interactions as double tap 
+// for dash without worrying (too much) about the framerate.
+//
+// Future work
+// * 3 bits should be enough for halftaps. 
+//   Compress Keystate to 4 bits and store two states pr. 8 bit.
+// * Remap the key enumeration. GLFW's values are not tight and does in fact 
+//   have a ton of holes between them, which causes us to use more memory than
+//   necessary when allocating an array of length 'KeyCount'.
+//   Instead try mapping to ASCII + additional keys.
+//----------------------------------------------------------------------------
 class Keyboard final {
 public:
 
     static const int MAX_HALFTAP_COUNT = 7;
 
     // Maps to the same key values as GLFW to make the initial implementation faster.
-    // TODO Remap the values. GLFW's values are not tight and does in fact have a ton of holes between them, which causes us to use more memory than we really should, when allocating an array of length 'KeyCount'. Instead try mapping to ASCII + additional keys.
     // ASCII http://www.asciitable.com/
     // GLFW  http://www.glfw.org/docs/latest/group__keys.html#gac556b360f7f6fca4b70ba0aecf313fd4
     // SDL   http://www.libsdl.org/release/SDL-1.2.15/include/SDL_keysym.h
@@ -120,8 +133,6 @@ public:
 private:
 
     // 8 bit struct containing state of a key; is it pressed or released and how many times was it pressed last frame.
-    // TODO
-    //    3 bits for halftaps should be enough. Compress the keystate to 4 bits and store two states pr 8 bit.
     struct KeyState {
         bool is_pressed : 1;
         unsigned char halftaps : 7;

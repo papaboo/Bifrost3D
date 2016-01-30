@@ -26,7 +26,7 @@ inline float clamp(float x) { return x < 0.0f ? 0.0f : x > 1.0f ? 1.0f : x; }
 inline int toInt(float x) { return int(pow(clamp(x), 1.0f / 2.2f) * 255.0f + .5f); }
 
 bool gRestartAccumulation = true;
-Array<RGB> gBackbuffer = Array<RGB>(0); // TODO double3* backbuffer for precission and because the size is known.
+RGB* gBackbuffer = nullptr;
 int gWindowWidth = 0;
 int gWindowHeight = 0;
 
@@ -48,7 +48,7 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
             // Write image to PPM file.
             FILE *f = fopen("image.ppm", "w");
             fprintf(f, "P3\n%d %d\n%d\n", gWindowWidth, gWindowHeight, 255);
-            for (unsigned int i = 0; i < gBackbuffer.size(); ++i) {
+            for (int i = 0; i < gWindowWidth * gWindowHeight; ++i) {
                 RGB& c = gBackbuffer[i];
                 fprintf(f, "%d %d %d ", toInt(c.r), toInt(c.g), toInt(c.b));
             }
@@ -60,6 +60,10 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 void windowSizeCallback(GLFWwindow* window, int width, int height) {
     // Backbuffer and window sizes are updated by the re-initialization in the main loop.
     gRestartAccumulation = true;
+}
+
+inline bool is_power_of_two_or_zero(unsigned int v) {
+    return (v & (v - 1)) == 0;
 }
 
 void main(int argc, char** argv) {
@@ -82,7 +86,6 @@ void main(int argc, char** argv) {
     // Initialization
     smallpt::Ray camera(Vector3d(50, 52, 295.6), normalize(Vector3d(0, -0.042612, -1))); // cam pos, dir
     gRestartAccumulation = true;
-    gBackbuffer = Array<RGB>(0);
     int accumulations = 0;
     GLuint texID; {
         glEnable(GL_TEXTURE_2D);
@@ -103,15 +106,18 @@ void main(int argc, char** argv) {
         if (gRestartAccumulation) {
             gRestartAccumulation = false;
             accumulations = 0;
+            int pixelCount = gWindowWidth * gWindowHeight;
             glfwGetFramebufferSize(window, &gWindowWidth, &gWindowHeight);
-            if (gWindowWidth * gWindowHeight != int(gBackbuffer.size())) {
-                gBackbuffer.resize(gWindowWidth * gWindowHeight);
-                for (RGB& p : gBackbuffer)
-                    p = RGB::black();
+            if (gWindowWidth * gWindowHeight != int(pixelCount)) {
+                delete[] gBackbuffer;
+                gBackbuffer = new RGB[gWindowWidth * gWindowHeight];
+                //for (RGB& p : gBackbuffer)
+                for (RGB* p = gBackbuffer; p < (gBackbuffer + gWindowWidth * gWindowHeight); ++p)
+                    *p = RGB::black();
             }
         }
 
-        smallpt::accumulateRadiance(camera, gWindowWidth, gWindowHeight, gBackbuffer.data(), accumulations);
+        smallpt::accumulateRadiance(camera, gWindowWidth, gWindowHeight, gBackbuffer, accumulations);
 
         { // Update the backbuffer.
             glViewport(0, 0, gWindowWidth, gWindowHeight);
@@ -125,12 +131,15 @@ void main(int argc, char** argv) {
                 glLoadIdentity();
             }
 
-            // TODO Logarithmic upload.
-
-            glBindTexture(GL_TEXTURE_2D, texID);
-            const GLint BASE_IMAGE_LEVEL = 0;
-            const GLint noBorder = 0;
-            glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGB, gWindowWidth, gWindowHeight, noBorder, GL_RGB, GL_FLOAT, gBackbuffer.data());
+            // Logarithmic upload. Uploaded every time the number of accumulations is a power of two.
+            // Divide by four to get the first 8 frames.
+            int INTERACTIVE_FRAMES = 3;
+            if (accumulations < INTERACTIVE_FRAMES || is_power_of_two_or_zero(accumulations - INTERACTIVE_FRAMES)) {
+                glBindTexture(GL_TEXTURE_2D, texID);
+                const GLint BASE_IMAGE_LEVEL = 0;
+                const GLint NO_BORDER = 0;
+                glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGB, gWindowWidth, gWindowHeight, NO_BORDER, GL_RGB, GL_FLOAT, gBackbuffer);
+            }
 
             glClear(GL_COLOR_BUFFER_BIT);
             glBegin(GL_QUADS); {
@@ -146,7 +155,7 @@ void main(int argc, char** argv) {
 
                 glTexCoord2f(0.0f, 0.0f);
                 glVertex3f(-1.0f, 1.0f, 0.f);
-            
+
             } glEnd();
         }
 

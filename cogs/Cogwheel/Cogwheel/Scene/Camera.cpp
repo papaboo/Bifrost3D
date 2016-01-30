@@ -10,6 +10,8 @@
 
 #include <Cogwheel/Math/Conversions.h>
 
+#include <assert.h>
+
 using namespace Cogwheel::Math;
 
 namespace Cogwheel {
@@ -76,6 +78,12 @@ static inline T* resize_and_copy_array(T* old_array, unsigned int new_capacity, 
 }
 
 void Cameras::reserve_node_data(unsigned int new_capacity, unsigned int old_capacity) {
+    assert(m_parent_IDs != nullptr);
+    assert(m_render_indices != nullptr);
+    assert(m_projection_matrices != nullptr);
+    assert(m_inverse_projection_matrices != nullptr);
+    assert(m_viewports != nullptr);
+
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
 
     m_parent_IDs = resize_and_copy_array(m_parent_IDs, new_capacity, copyable_elements);
@@ -88,6 +96,12 @@ void Cameras::reserve_node_data(unsigned int new_capacity, unsigned int old_capa
 }
 
 Cameras::UID Cameras::create(SceneNodes::UID parent_ID, Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix) {
+    assert(m_parent_IDs != nullptr);
+    assert(m_render_indices != nullptr);
+    assert(m_projection_matrices != nullptr);
+    assert(m_inverse_projection_matrices != nullptr);
+    assert(m_viewports != nullptr);
+
     unsigned int old_capacity = m_UID_generator.capacity();
     UID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())
@@ -158,7 +172,7 @@ Ray ray_from_viewport_point(Cameras::UID camera_ID, Vector2f viewport_point) {
     Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
     Matrix4x4f inverse_view_projection_matrix = inverse_view_matrix * inverse_projection_matrix;
 
-    // TODO Can we elliminate some multiplications here by not doing the full mat/vec multiplication.
+    // TODO Can we elliminate some multiplications here by not doing the full mat/vec multiplication or does the compiler already do that for us (constants and all that.)
     Vector4f normalized_projected_pos = Vector4f(viewport_point.x * 2.0f - 1.0f, viewport_point.y * 2.0f - 1.0f, -1.0f, 1.0f);
     Vector4f projected_world_pos = inverse_view_projection_matrix * normalized_projected_pos;
     Vector3f ray_origin = Vector3f(projected_world_pos.x, projected_world_pos.y, projected_world_pos.z) / projected_world_pos.w;

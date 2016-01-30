@@ -114,7 +114,6 @@ inline bool intersect(Ray r, double &t, int &id) {
 }
 
 RGB radiance(const Ray &ray, int depth, LinearCongruential& rng) {
-    // TODO AVH Return intersection struct with a t and a sphere reference. Wrap it in an option.
     // distance to intersection
     double t;
     // id of intersected object                               

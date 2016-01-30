@@ -45,8 +45,8 @@ public:
         static const unsigned int MAX_IDS = 0xFFFFFF;
 
         // Creates a sentinel UID that will never be valid.
-        UID() : m_incarnation(0), m_ID(0) { } // NOTE AVH Should really be private or non-existent, but that requires not using the UID in any containers that needs default initialization
-        static inline UID invalid_UID() { return UID(0, 0u); }
+        UID() : m_incarnation(0u), m_ID(0u) { } // NOTE AVH Should really be private or non-existent, but that requires not using the UID in any containers that needs default initialization
+        static inline UID invalid_UID() { return UID(0u, 0u); }
 
         // The ID.
         inline unsigned int ID() const { return m_ID; }

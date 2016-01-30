@@ -8,6 +8,8 @@
 
 #include <Cogwheel/Scene/SceneNode.h>
 
+#include <assert.h>
+
 namespace Cogwheel {
 namespace Scene {
 
@@ -70,6 +72,12 @@ static inline T* resize_and_copy_array(T* old_array, unsigned int new_capacity, 
 }
 
 void SceneNodes::reserve_node_data(unsigned int new_capacity, unsigned int old_capacity) {
+    assert(m_first_child_IDs != nullptr);
+    assert(m_global_transforms != nullptr);
+    assert(m_names != nullptr);
+    assert(m_parent_IDs != nullptr);
+    assert(m_sibling_IDs != nullptr);
+
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
 
     m_names = resize_and_copy_array(m_names, new_capacity, copyable_elements);
@@ -82,6 +90,12 @@ void SceneNodes::reserve_node_data(unsigned int new_capacity, unsigned int old_c
 }
 
 SceneNodes::UID SceneNodes::create(const std::string& name) {
+    assert(m_first_child_IDs != nullptr);
+    assert(m_global_transforms != nullptr);
+    assert(m_names != nullptr);
+    assert(m_parent_IDs != nullptr);
+    assert(m_sibling_IDs != nullptr);
+
     unsigned int old_capacity = m_UID_generator.capacity();
     UID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())
@@ -95,6 +109,10 @@ SceneNodes::UID SceneNodes::create(const std::string& name) {
 }
 
 void SceneNodes::set_parent(SceneNodes::UID node_ID, const SceneNodes::UID parent_ID) {
+    assert(m_parent_IDs != nullptr);
+    assert(m_sibling_IDs != nullptr);
+    assert(m_first_child_IDs != nullptr);
+
     SceneNodes::UID old_parent_ID = m_parent_IDs[node_ID];
     if (node_ID != parent_ID && node_ID != UID::invalid_UID()) {
         // Detach current node from it's place in the hierarchy
@@ -118,12 +136,17 @@ void SceneNodes::set_parent(SceneNodes::UID node_ID, const SceneNodes::UID paren
 }
 
 std::vector<SceneNodes::UID> SceneNodes::get_sibling_IDs(SceneNodes::UID node_ID) {
+    assert(m_parent_IDs != nullptr);
+
     SceneNodes::UID parent_ID = m_parent_IDs[node_ID];
     
     return get_children_IDs(parent_ID);
 }
 
 std::vector<SceneNodes::UID> SceneNodes::get_children_IDs(SceneNodes::UID node_ID) {
+    assert(m_first_child_IDs != nullptr);
+    assert(m_sibling_IDs != nullptr);
+
     std::vector<SceneNodes::UID> res(0);
     SceneNodes::UID child = m_first_child_IDs[node_ID];
     while (child != UID::invalid_UID()) {
@@ -134,6 +157,9 @@ std::vector<SceneNodes::UID> SceneNodes::get_children_IDs(SceneNodes::UID node_I
 }
 
 bool SceneNodes::has_child(SceneNodes::UID node_ID, SceneNodes::UID tested_Child_ID) {
+    assert(m_first_child_IDs != nullptr);
+    assert(m_sibling_IDs != nullptr);
+
     SceneNodes::UID child = m_first_child_IDs[node_ID];
     while (child != UID::invalid_UID()) {
         if (child == tested_Child_ID)
@@ -160,6 +186,9 @@ Math::Transform SceneNodes::get_local_transform(SceneNodes::UID node_ID) {
 }
 
 void SceneNodes::set_local_transform(SceneNodes::UID node_ID, Math::Transform transform) {
+    assert(m_global_transforms != nullptr);
+    assert(m_parent_IDs != nullptr);
+
     if (node_ID == UID::invalid_UID()) return;
 
     // Update global transform.
@@ -170,6 +199,8 @@ void SceneNodes::set_local_transform(SceneNodes::UID node_ID, Math::Transform tr
 }
 
 void SceneNodes::set_global_transform(SceneNodes::UID node_ID, Math::Transform transform) {
+    assert(m_global_transforms != nullptr);
+
     if (node_ID == UID::invalid_UID()) return;
     
     Math::Transform delta_transform = Math::Transform::delta(m_global_transforms[node_ID], transform);
