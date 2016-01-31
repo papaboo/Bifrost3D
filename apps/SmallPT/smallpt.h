@@ -159,7 +159,6 @@ RGB radiance(const Ray &ray, int depth, LinearCongruential& rng) {
             float c = 1.0f - float(into ? -ddn : dot(tdir, norm)); // cosTheta
             float Re = R0 + (1.0f - R0)*c*c*c*c*c; // Schlick's fresnel approximation.
             float Tr = 1.0f - Re;
-            // TODO AVH investigate this probability and switch to always use russian roulette. Then we could switch from recursive to iterative ray tracing.
             float P = .25f + .5f * Re;
             float RP = Re / P;
             float TP = Tr / (1.0f - P);
