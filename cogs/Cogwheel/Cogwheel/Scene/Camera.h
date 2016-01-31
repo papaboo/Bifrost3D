@@ -34,7 +34,7 @@ public:
     static void deallocate();
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
-    static void reserve(unsigned int capacity);
+    static void reserve(unsigned int new_capacity);
     static bool has(Cameras::UID cameraID) { return m_UID_generator.has(cameraID); }
 
     static Cameras::UID create(SceneNodes::UID parent_ID, Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix);

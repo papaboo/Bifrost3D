@@ -66,7 +66,7 @@ void Cameras::deallocate() {
 void Cameras::reserve(unsigned int new_capacity) {
     unsigned int old_capacity = capacity();
     m_UID_generator.reserve(new_capacity);
-    reserve_node_data(new_capacity, old_capacity);
+    reserve_node_data(m_UID_generator.capacity(), old_capacity);
 }
 
 template <typename T>

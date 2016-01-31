@@ -36,7 +36,7 @@ public:
     static void deallocate();
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
-    static void reserve(unsigned int capacity);
+    static void reserve(unsigned int new_capacity);
     static bool has(SceneNodes::UID node_ID) { return m_UID_generator.has(node_ID); }
 
     static SceneNodes::UID create(const std::string& name);
@@ -61,7 +61,7 @@ public:
     static void traverse_all_children(SceneNodes::UID node_ID, F& function);
 
 private:
-    static void reserve_node_data(unsigned int capacity, unsigned int old_capacity);
+    static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);
 
     static UIDGenerator m_UID_generator;
     static std::string* m_names;
