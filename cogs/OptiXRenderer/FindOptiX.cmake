@@ -1,5 +1,6 @@
 # Find and setup OptiX.
 # Search in the default install locations.
+# TODO Cache these things.
 
 MACRO(set_boolean variable)
   if(${ARGN})

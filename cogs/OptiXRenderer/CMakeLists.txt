@@ -6,75 +6,92 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
 )
 
-# TODO Just disable cog if CUDA or OptiX isn't found and report useful error messages about what to install to the user.
-# Also disable when OS isn't windows, as nothing else has been tested yet
+find_package(CUDA 7.5)
+find_package(OpenGL)
+find_package(OptiX)
 
-find_package(CUDA 7.5 REQUIRED)
-find_package(OpenGL REQUIRED)
-find_package(OptiX REQUIRED)
+if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
+  install_file(${OPTIX_1_DLL})
+  install_file(${OPTIX_U_1_DLL})
 
-install_file(${OPTIX_1_DLL})
-install_file(${OPTIX_U_1_DLL})
+  include_directories(. ${CUDA_INCLUDE_DIRS} ${OpenGL_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
 
-include_directories(. ${CUDA_INCLUDE_DIRS} ${OpenGL_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
+  set(ROOT_SRC
+    OptiXRenderer/Kernel.h
+    OptiXRenderer/Kernel.cu
+    OptiXRenderer/Renderer.h
+    OptiXRenderer/Renderer.cpp
+    OptiXRenderer/Types.h
+  )
 
-set(ROOT_SRC
-  OptiXRenderer/Kernel.h
-  OptiXRenderer/Kernel.cu
-  OptiXRenderer/Renderer.h
-  OptiXRenderer/Renderer.cpp
-  OptiXRenderer/Types.h
-)
+  set(SHADING_SRC
+    OptiXRenderer/Shading/Defines.h
+    OptiXRenderer/Shading/IntersectSphere.cu
+    OptiXRenderer/Shading/IntersectTriangle.cu
+    OptiXRenderer/Shading/MonteCarlo.cu
+    OptiXRenderer/Shading/NormalRendering.cu
+    OptiXRenderer/Shading/PathTracing.cu
+    OptiXRenderer/Shading/Utils.h
+  )
 
-set(SHADING_SRC
-  OptiXRenderer/Shading/IntersectSphere.cu
-  OptiXRenderer/Shading/IntersectTriangle.cu
-  OptiXRenderer/Shading/MonteCarlo.cu
-  OptiXRenderer/Shading/NormalRendering.cu
-  OptiXRenderer/Shading/PathTracing.cu
-)
+  # Add the path to the ptx to a define.
+  set(OPTIX_PTX_DIR ${CMAKE_BINARY_DIR}/${LIBRARY_NAME})
+  add_definitions(-DOPTIXRENDERER_PTX_DIR="${OPTIX_PTX_DIR}") #TODO For distributing releases I need a better way of handling the path to the PTX.
 
-set(SHADING_HEADERS
-  OptiXRenderer/Shading/Defines.h
-  OptiXRenderer/Shading/Utils.h
-)
+  CUDA_ADD_CUDA_INCLUDE_ONCE() # TODO Needed??
 
-# Add the path to the ptx to a define.
-set(OPTIX_PTX_DIR ${CMAKE_BINARY_DIR}/${LIBRARY_NAME})
-add_definitions(-DOPTIXRENDERER_PTX_DIR="${OPTIX_PTX_DIR}") #TODO When distributing releases I need a better way of handling the path to the PTX.
+  # Create custom commands and targets for each file.
+  set(_OPTIONS "")
+  CUDA_WRAP_SRCS( ${LIBRARY_NAME} PTX _GENERATED_FILES ${SHADING_SRC} OPTIONS ${_OPTIONS} )
 
-# Construct the list of PTX files TODO Can I do this in a more generic way? By querying the library or FindCUDA for the list? Or replicating CUDA_ADD_EXECUTABLE here.
-set(SHADING_PTX_SRC
-  ${OPTIX_PTX_DIR}/${LIBRARY_NAME}_generated_IntersectSphere.cu.ptx
-  ${OPTIX_PTX_DIR}/${LIBRARY_NAME}_generated_IntersectTriangle.cu.ptx
-  ${OPTIX_PTX_DIR}/${LIBRARY_NAME}_generated_MonteCarlo.cu.ptx
-  ${OPTIX_PTX_DIR}/${LIBRARY_NAME}_generated_NormalRendering.cu.ptx
-  ${OPTIX_PTX_DIR}/${LIBRARY_NAME}_generated_PathTracing.cu.ptx
-)
+  # Compute the file name of the intermedate link file used for separable compilation.
+  CUDA_COMPUTE_SEPARABLE_COMPILATION_OBJECT_FILE_NAME(LINK_FILE ${LIBRARY_NAME} "${${LIBRARY_NAME}_SEPARABLE_COMPILATION_OBJECTS}")
 
-# Compile OptiX shader sources to ptx
-set_source_files_properties(${SHADING_SRC}
-  PROPERTIES CUDA_SOURCE_PROPERTY_FORMAT PTX
-)
+  # Add the library.
+  add_library(${LIBRARY_NAME} ${_cmake_options}
+    ${_GENERATED_FILES}
+    ${ROOT_SRC}
+    ${SHADING_SRC}
+    ${SHADING_HEADERS}
+    ${LINK_FILE}
+  )
 
-cuda_add_library(${LIBRARY_NAME} ${ROOT_SRC} ${SHADING_SRC} ${SHADING_HEADERS})
+  # Add a link phase for the separable compilation if it has been enabled.  If
+  # it has been enabled then the ${LIBRARY_NAME}_SEPARABLE_COMPILATION_OBJECTS
+  # variable will have been defined.
+  CUDA_LINK_SEPARABLE_COMPILATION_OBJECTS("${LINK_FILE}" ${LIBRARY_NAME} "${_OPTIONS}" "${${LIBRARY_NAME}_SEPARABLE_COMPILATION_OBJECTS}")
+  
+  source_group("" FILES ${ROOT_SRC})
+  source_group("Shading" FILES ${SHADING_SRC} ${SHADING_HEADERS})
+  source_group("Shading\\ptx" FILES ${_GENERATED_FILES}) # Add the ptx files to a source group.
 
-source_group("" FILES ${ROOT_SRC})
-source_group("Shading" FILES ${SHADING_SRC} ${SHADING_HEADERS})
-source_group("Shading\\ptx" FILES ${SHADING_PTX_SRC}) # Add the ptx files to a source group.
+  target_link_libraries(${LIBRARY_NAME}
+    Gogwheel
+    ${CUDA_LIBRARIES}
+    ${OPENGL_LIBRARIES}
+    ${OPTIX_LIBRARIES}
+  )
 
-target_link_libraries(${LIBRARY_NAME}
-  Gogwheel
-  ${CUDA_LIBRARIES}
-  ${OPENGL_LIBRARIES}
-  ${OPTIX_LIBRARIES}
-)
+  set_target_properties(${LIBRARY_NAME} PROPERTIES 
+    LINKER_LANGUAGE CXX
+    FOLDER "Cogs"
+  )
 
-set_target_properties(${LIBRARY_NAME} PROPERTIES 
-  LINKER_LANGUAGE CXX
-  FOLDER "Cogs"
-)
-
-if (WIN32)
-  add_definitions(-DNOMINMAX) # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
+  if (WIN32)
+    add_definitions(-DNOMINMAX) # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
+  endif()
+else()
+  if (NOT CUDA_FOUND)
+    message(WARNING "CUDA not installed.")
+  endif()
+  if (NOT OpenGL_FOUND)
+    message(WARNING "OpenGL not found.")
+  endif()
+  if (NOT OPTIX_FOUND)
+    message(WARNING "OptiX not installed.")
+  endif()
+  if (NOT WIN32)
+    message(WARNING "Only supported on windows.")
+  endif()
+  message(WARNING "Disabling OptiXRenderer.")
 endif()
