@@ -320,8 +320,4 @@ void Renderer::apply() {
     }
 }
 
-std::string Renderer::get_name() {
-    return "OptiXRenderer";
-}
-
 } // NS OptiXRenderer

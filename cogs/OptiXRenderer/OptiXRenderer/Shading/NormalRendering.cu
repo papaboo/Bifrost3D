@@ -29,7 +29,7 @@ rtDeclareVariable(float, g_scene_epsilon, , );
 rtDeclareVariable(float4, g_camera_position, , );
 rtDeclareVariable(Matrix4x4, g_inverted_view_projection_matrix, , );
 
-rtBuffer<float4, 2>  g_accumulation_buffer; // TODO Make double4
+rtBuffer<float4, 2>  g_accumulation_buffer;
 
 //----------------------------------------------------------------------------
 // Ray generation program for visualizing normals.

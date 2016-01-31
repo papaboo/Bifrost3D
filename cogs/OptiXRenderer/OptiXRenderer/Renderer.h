@@ -25,10 +25,13 @@ namespace OptiXRenderer {
 //   See OptiX samples SampleScene.cpp.
 // * ImageComposer that composes images pr camera from several renderers, 
 //   probably requires an IRenderer interface.
+// * Tone mapping and gamma correction as part of the image composer.
+// * Define for switching between float and double backbuffer.
+//   Float should generally be used to save memory, 
+//   but double is useful for ground truth images.
 // * Logarithmic upload of the accumulated image.
 // * Have path tracer stop per bounce, filter and display the result.
 //   Should be good for interactivity and convergence. :)
-// * Tone mapping and gamma correction as part of the image composer.
 //----------------------------------------------------------------------------
 class Renderer final : public Cogwheel::Core::IModule {
 public:
@@ -38,7 +41,7 @@ public:
 
     void apply() override;
 
-    std::string get_name() override;
+    inline std::string get_name() override { return "OptiXRenderer"; }
 
 private:
 
