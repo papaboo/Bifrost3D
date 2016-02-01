@@ -1,21 +1,24 @@
-* OptiX
-** Inline cuda_add_libraries and use it to setup the ptx source group.
-* Load models.
+* Inline source files in Cogwheel CMakeLists.txt. Probably add header and cpp to the same line.
 ** TinyOBJ
+*** Load indices and positions.
+*** Then the rest
 * Notifications when changing the scene. / Pullable events.
+* Point light
+* destroy - SceneNode, Camera
 * Materials
 ** Coated rubber/metal.
+** Textures.
+* Environment models.
 * Multiple cameras.
 ** G-Buffer pr camera.
 ** Compose when all cameras are done.
 * Screenshot
-** Grab backbuffer. 
-*** Request to composer, not renderers
-*** Pass along function to evaluate if the backbuffer is 'ready', fx iteration count of certain viewport.
+** Grab backbuffer on the CPU.
+*** Request to composer or through the camera, not renderers
+*** Expose certain backbuffer state pr camera/viewport in a renderer interface. Fx iteration_count, is_continuous_renderer and so on. Members that can be used to evaluate the 'doneness' of a backbuffer.
 ** Render to offscreen buffer.
 * GL Renderer
-    * Multiple scenes.
-* destroy - SceneNode, Camera
+* Multiple scenes.
 * Serialize scene and models.
 * CUDA
 ** helper methods.
