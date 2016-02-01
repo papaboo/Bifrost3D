@@ -38,8 +38,6 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
   set(OPTIX_PTX_DIR ${CMAKE_BINARY_DIR}/${LIBRARY_NAME})
   add_definitions(-DOPTIXRENDERER_PTX_DIR="${OPTIX_PTX_DIR}") #TODO For distributing releases I need a better way of handling the path to the PTX.
 
-  CUDA_ADD_CUDA_INCLUDE_ONCE() # TODO Needed??
-
   # Create custom commands and targets for each file.
   set(_OPTIONS "")
   CUDA_WRAP_SRCS( ${LIBRARY_NAME} PTX _GENERATED_FILES ${SHADING_SRC} OPTIONS ${_OPTIONS} )
