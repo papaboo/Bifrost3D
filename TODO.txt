@@ -1,4 +1,3 @@
-* Inline source files in Cogwheel CMakeLists.txt. Probably add header and cpp to the same line.
 ** TinyOBJ
 *** Load indices and positions.
 *** Then the rest
