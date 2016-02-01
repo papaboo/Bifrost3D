@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
 
+#include <Assets/MeshTest.h>
+#include <Assets/MeshModelTest.h>
+
 #include <Core/ArrayTest.h>
 #include <Core/UniqueIDGeneratorTest.h>
 
