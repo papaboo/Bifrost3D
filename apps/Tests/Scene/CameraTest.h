@@ -72,34 +72,34 @@ TEST_F(Scene_Camera, perspective_matrices) {
 TEST_F(Scene_Camera, sentinel_camera) {
     Cameras::allocate(2u);
     
-    Cameras::UID sentinel_id = Cameras::UID::invalid_UID();
+    Cameras::UID sentinel_ID = Cameras::UID::invalid_UID();
 
-    EXPECT_FALSE(Cameras::has(sentinel_id));
+    EXPECT_FALSE(Cameras::has(sentinel_ID));
 
-    EXPECT_EQ(Cameras::get_parent_ID(sentinel_id), SceneNodes::UID::invalid_UID());
-    EXPECT_EQ(Cameras::get_viewport(sentinel_id), Math::Rectf(0.0f, 0.0f, 0.0f, 0.0f));
+    EXPECT_EQ(Cameras::get_parent_ID(sentinel_ID), SceneNodes::UID::invalid_UID());
+    EXPECT_EQ(Cameras::get_viewport(sentinel_ID), Math::Rectf(0.0f, 0.0f, 0.0f, 0.0f));
 
     Cameras::deallocate();
 }
 
-TEST_F(Scene_Camera, creating) {
+TEST_F(Scene_Camera, create) {
     Cameras::allocate(2u);
 
-    SceneNodes::UID cam_node = SceneNodes::create("Cam");
+    SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
 
     Math::Matrix4x4f perspective_matrix, inverse_perspective_matrix;
     CameraUtils::compute_perspective_projection(1, 1000, Math::PI<float>() / 4.0f, 8.0f / 6.0f,
                                                 perspective_matrix, inverse_perspective_matrix);
 
     Cameras::allocate(2u);
-    Cameras::UID cam_id = Cameras::create(cam_node, perspective_matrix, inverse_perspective_matrix);
-    EXPECT_TRUE(Cameras::has(cam_id));
+    Cameras::UID cam_ID = Cameras::create(cam_node_ID, perspective_matrix, inverse_perspective_matrix);
+    EXPECT_TRUE(Cameras::has(cam_ID));
     
-    EXPECT_EQ(Cameras::get_parent_ID(cam_id), cam_node);
-    EXPECT_EQ(Cameras::get_render_index(cam_id), 0u);
-    EXPECT_EQ(Cameras::get_projection_matrix(cam_id), perspective_matrix);
-    EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_id), inverse_perspective_matrix);
-    EXPECT_EQ(Cameras::get_viewport(cam_id), Math::Rectf(0.0f, 0.0f, 1.0f, 1.0f));
+    EXPECT_EQ(Cameras::get_parent_ID(cam_ID), cam_node_ID);
+    EXPECT_EQ(Cameras::get_render_index(cam_ID), 0u);
+    EXPECT_EQ(Cameras::get_projection_matrix(cam_ID), perspective_matrix);
+    EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_ID), inverse_perspective_matrix);
+    EXPECT_EQ(Cameras::get_viewport(cam_ID), Math::Rectf(0.0f, 0.0f, 1.0f, 1.0f));
 
     Cameras::deallocate();
 }
@@ -114,20 +114,20 @@ TEST_F(Scene_Camera, set_new_matrices) {
     CameraUtils::compute_perspective_projection(1, 1000, Math::PI<float>() / 4.0f, 8.0f / 6.0f,
         initial_perspective_matrix, initial_inverse_perspective_matrix);
 
-    Cameras::UID cam_id = Cameras::create(cam_node, initial_perspective_matrix, initial_inverse_perspective_matrix);
-    EXPECT_TRUE(Cameras::has(cam_id));
+    Cameras::UID cam_ID = Cameras::create(cam_node, initial_perspective_matrix, initial_inverse_perspective_matrix);
+    EXPECT_TRUE(Cameras::has(cam_ID));
 
-    EXPECT_EQ(Cameras::get_projection_matrix(cam_id), initial_perspective_matrix);
-    EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_id), initial_inverse_perspective_matrix);
+    EXPECT_EQ(Cameras::get_projection_matrix(cam_ID), initial_perspective_matrix);
+    EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_ID), initial_inverse_perspective_matrix);
 
     // Create and set new projection matrices.
     Math::Matrix4x4f new_perspective_matrix, new_inverse_perspective_matrix;
     CameraUtils::compute_perspective_projection(0.3f, 100, Math::PI<float>() / 3.0f, 8.0f / 6.0f,
         new_perspective_matrix, new_inverse_perspective_matrix);
 
-    Cameras::set_projection_matrices(cam_id, new_perspective_matrix, new_inverse_perspective_matrix);
-    EXPECT_EQ(Cameras::get_projection_matrix(cam_id), new_perspective_matrix);
-    EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_id), new_inverse_perspective_matrix);
+    Cameras::set_projection_matrices(cam_ID, new_perspective_matrix, new_inverse_perspective_matrix);
+    EXPECT_EQ(Cameras::get_projection_matrix(cam_ID), new_perspective_matrix);
+    EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_ID), new_inverse_perspective_matrix);
 
     Cameras::deallocate();
 }
@@ -144,17 +144,17 @@ TEST_F(Scene_Camera, ray_projection) {
     CameraUtils::compute_perspective_projection(1, 1000, PI<float>() / 4.0f, 8.0f / 6.0f,
         initial_perspective_matrix, initial_inverse_perspective_matrix);
 
-    Cameras::UID cam_id = Cameras::create(cam_node.get_ID(), initial_perspective_matrix, initial_inverse_perspective_matrix);
-    EXPECT_TRUE(Cameras::has(cam_id));
+    Cameras::UID cam_ID = Cameras::create(cam_node.get_ID(), initial_perspective_matrix, initial_inverse_perspective_matrix);
+    EXPECT_TRUE(Cameras::has(cam_ID));
 
     const float maximally_allowed_cos_angle = cos(degrees_to_radians(0.5f));
 
     { // Forward should be +Z when the transform is identity.
-        Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
+        Ray ray = CameraUtils::ray_from_viewport_point(cam_ID, Vector2f(0.5f, 0.5f));
         EXPECT_EQ(ray.direction, Vector3f::forward());
 
         // Unity QED ray: Origin : (-0.55228, -0.41421, 1.00000), Dir : (-0.45450, -0.34087, 0.82294)
-        Ray ray_periferi = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.0f, 0.0f));
+        Ray ray_periferi = CameraUtils::ray_from_viewport_point(cam_ID, Vector2f(0.0f, 0.0f));
         float cos_angle_between_rays = dot(ray_periferi.direction, Vector3f(-0.45450f, -0.34087f, 0.82294f));
         EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
     }
@@ -165,13 +165,13 @@ TEST_F(Scene_Camera, ray_projection) {
         cam_node.set_global_transform(cam_transform);
 
         {
-            Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
+            Ray ray = CameraUtils::ray_from_viewport_point(cam_ID, Vector2f(0.5f, 0.5f));
             float cos_angle_between_rays = dot(ray.direction, Vector3f::forward());
             EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
         }
 
         { // Unity QED ray: Origin : (99.44772, 9.58579, -29.00000), Dir : (-0.45450, -0.34087, 0.82294)
-            Ray ray_periferi = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.0f, 0.0f));
+            Ray ray_periferi = CameraUtils::ray_from_viewport_point(cam_ID, Vector2f(0.0f, 0.0f));
             float cos_angle_between_rays = dot(ray_periferi.direction, Vector3f(-0.45450f, -0.34087f, 0.82294f));
             EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
         }
@@ -183,13 +183,13 @@ TEST_F(Scene_Camera, ray_projection) {
         cam_node.set_global_transform(cam_transform);
 
         {
-            Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
+            Ray ray = CameraUtils::ray_from_viewport_point(cam_ID, Vector2f(0.5f, 0.5f));
             float cos_angle_between_rays = dot(ray.direction, cam_transform * Vector3f::forward());
             EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
         }
 
         { // Unity QED ray: Origin : (-0.02948, -0.68276, 1.00477), Dir: (-0.02426, -0.56188, 0.82687)
-            Ray ray_periferi = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.0f, 0.0f));
+            Ray ray_periferi = CameraUtils::ray_from_viewport_point(cam_ID, Vector2f(0.0f, 0.0f));
             float cos_angle_between_rays = dot(ray_periferi.direction, Vector3f(-0.02426f, -0.56188f, 0.82687f));
             EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
         }
@@ -202,17 +202,19 @@ TEST_F(Scene_Camera, ray_projection) {
         cam_node.set_global_transform(cam_transform);
 
         {
-            Ray ray = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.5f, 0.5f));
+            Ray ray = CameraUtils::ray_from_viewport_point(cam_ID, Vector2f(0.5f, 0.5f));
             float cos_angle_between_rays = dot(ray.direction, cam_transform * Vector3f::forward());
             EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
         }
 
         { // Unity QED ray: Origin : (-0.02948, -0.68276, 1.00477), Dir: (-0.02426, -0.56188, 0.82687)
-            Ray ray_periferi = CameraUtils::ray_from_viewport_point(cam_id, Vector2f(0.0f, 0.0f));
+            Ray ray_periferi = CameraUtils::ray_from_viewport_point(cam_ID, Vector2f(0.0f, 0.0f));
             float cos_angle_between_rays = dot(ray_periferi.direction, Vector3f(-0.02426f, -0.56188f, 0.82687f));
             EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
         }
     }
+
+    Cameras::deallocate();
 }
 
 } // NS Scene

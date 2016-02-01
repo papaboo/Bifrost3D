@@ -33,7 +33,7 @@ GTEST_TEST(Scene_SceneNode, resizing) {
     EXPECT_LT(SceneNodes::capacity(), larger_capacity);
 }
 
-GTEST_TEST(Scene_SceneNode, creating) {
+GTEST_TEST(Scene_SceneNode, create) {
     SceneNodes::allocate(2u);
     SceneNodes::UID id = SceneNodes::create("Foo");
     EXPECT_TRUE(SceneNodes::has(id));
