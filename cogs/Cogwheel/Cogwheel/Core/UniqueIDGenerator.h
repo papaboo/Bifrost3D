@@ -87,6 +87,7 @@ public:
         inline bool operator==(const ConstIterator& rhs) { return m_id == rhs.m_id; }
         inline bool operator!=(const ConstIterator& rhs) { return m_id != rhs.m_id; }
         inline UID operator*() { return *m_id; }
+        inline UID operator->() { return *m_id; }
     private:
         UID* m_id;
         const TypedUIDGenerator& m_UID_generator;
@@ -107,7 +108,8 @@ public:
     unsigned int max_capacity() { return UID::MAX_IDS; }
 
     inline ConstIterator begin() const {
-        ConstIterator itr = ConstIterator(m_IDs, *this);
+        UID* first_valid_ID = m_IDs + 1u; // Skip sentinel invalid id.
+        ConstIterator itr = ConstIterator(first_valid_ID, *this);
         if (!has(*itr))
             // Advance iterator if the first element in the array isn't valid.
             ++itr;
