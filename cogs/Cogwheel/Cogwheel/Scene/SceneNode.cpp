@@ -207,8 +207,8 @@ void SceneNodes::set_global_transform(SceneNodes::UID node_ID, Math::Transform t
     m_global_transforms[node_ID] = transform;
 
     // Update global transforms of all children.
-    traverse_all_children(node_ID, [=](SceneNodes::UID childID) {
-        m_global_transforms[childID] = delta_transform * m_global_transforms[childID];
+    traverse_all_children(node_ID, [=](SceneNodes::UID child_ID) {
+        m_global_transforms[child_ID] = delta_transform * m_global_transforms[child_ID];
     });
 }
 
