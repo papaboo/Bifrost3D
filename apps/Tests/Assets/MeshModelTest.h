@@ -55,7 +55,7 @@ TEST_F(Assets_MeshModels, create) {
     Scene::SceneNodes::allocate(1u);
     Scene::SceneNodes::UID node_ID = Scene::SceneNodes::create("TestNode");
     Meshes::allocate(1u);
-    Meshes::UID mesh_ID = Meshes::create("TestMesh", 16u);
+    Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
     
     MeshModels::UID model_ID = MeshModels::create(node_ID, mesh_ID);
 

@@ -18,30 +18,41 @@ namespace Assets {
 //----------------------------------------------------------------------------
 // Container for the buffers that make up a mesh, such as positions and normals.
 // Future work:
+// * Pass bitmask of vertex attributes to be created to constructor.
+// * Add local space bounding box.
 // * How to handle other buffers, such as texcoords? Just be explicit?
 //   The user shouldn't be able to set any userdefined ones anyway or?
 //----------------------------------------------------------------------------
 struct Mesh final {
+    size_t m_indices_count;
+    Math::Vector3i* m_indices;
+
     size_t m_vertex_count;
     Math::Vector3f* m_positions;
     Math::Vector3f* m_normals;
     Math::Vector2f* m_texcoords;
 
     Mesh()
-        : m_vertex_count(0u)
+        : m_indices_count(0u)
+        , m_indices(nullptr)
+        , m_vertex_count(0u)
         , m_positions(nullptr)
         , m_normals(nullptr)
         , m_texcoords(nullptr) {
     }
 
-    Mesh(size_t vertex_count)
-        : m_vertex_count(vertex_count)
+    Mesh(size_t indices_count, size_t vertex_count)
+        : m_indices_count(indices_count)
+        , m_indices(new Math::Vector3i[m_indices_count])
+        , m_vertex_count(vertex_count)
         , m_positions(new Math::Vector3f[m_vertex_count])
         , m_normals(new Math::Vector3f[m_vertex_count])
         , m_texcoords(new Math::Vector2f[m_vertex_count]) {
     }
 
     Mesh(Mesh&& other) {
+        m_indices_count = other.m_indices_count; other.m_indices_count = 0u;
+        m_indices = other.m_indices; other.m_indices = nullptr;
         m_vertex_count = other.m_vertex_count; other.m_vertex_count = 0u;
         m_positions = other.m_positions; other.m_positions = nullptr;
         m_normals = other.m_normals; other.m_normals = nullptr;
@@ -49,6 +60,8 @@ struct Mesh final {
     }
 
     Mesh& operator=(Mesh&& other) {
+        m_indices_count = other.m_indices_count; other.m_indices_count = 0u;
+        m_indices = other.m_indices; other.m_indices = nullptr;
         m_vertex_count = other.m_vertex_count; other.m_vertex_count = 0u;
         m_positions = other.m_positions; other.m_positions = nullptr;
         m_normals = other.m_normals; other.m_normals = nullptr;
@@ -57,6 +70,7 @@ struct Mesh final {
     }
 
     ~Mesh() {
+        delete[] m_indices;
         delete[] m_positions;
         delete[] m_normals;
         delete[] m_texcoords;
@@ -81,7 +95,7 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(Meshes::UID mesh_ID) { return m_UID_generator.has(mesh_ID); }
 
-    static Meshes::UID create(const std::string& name, unsigned int vertex_count);
+    static Meshes::UID create(const std::string& name, unsigned int indices_count, unsigned int vertex_count);
 
     static inline std::string get_name(Meshes::UID mesh_ID) { return m_names[mesh_ID]; }
     static inline void set_name(Meshes::UID mesh_ID, const std::string& name) { m_names[mesh_ID] = name; }

@@ -35,8 +35,8 @@ add_executable(${PROJECT_NAME} ${SRCS} ${ASSETS_SRCS} ${CORE_SRCS} ${INPUT_SRCS}
 include_directories(.)
 
 target_link_libraries(${PROJECT_NAME}
-  Gogwheel
   gtest
+  Gogwheel
 )
 
 source_group("" FILES ${SRCS})

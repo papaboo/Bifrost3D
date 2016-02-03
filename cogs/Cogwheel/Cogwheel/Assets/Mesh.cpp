@@ -69,7 +69,7 @@ void Meshes::reserve(unsigned int new_capacity) {
     reserve_node_data(m_UID_generator.capacity(), old_capacity);
 }
 
-Meshes::UID Meshes::create(const std::string& name, unsigned int vertex_count) {
+Meshes::UID Meshes::create(const std::string& name, unsigned int indices_count, unsigned int vertex_count) {
     assert(m_meshes != nullptr);
     assert(m_names != nullptr);
 
@@ -80,7 +80,7 @@ Meshes::UID Meshes::create(const std::string& name, unsigned int vertex_count) {
         reserve_node_data(m_UID_generator.capacity(), old_capacity);
 
     m_names[id] = name;
-    m_meshes[id] = Mesh(vertex_count);
+    m_meshes[id] = Mesh(indices_count, vertex_count);
     return id;
 }
 
