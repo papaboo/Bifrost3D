@@ -1,12 +1,10 @@
-** TinyOBJ
-*** Load indices and positions.
-*** Then the rest
 * Notifications when changing the scene. / Pullable events.
 * Point light
 * destroy - SceneNode, Camera
 * Materials
 ** Coated rubber/metal.
 ** Textures.
+* AssetManager.
 * Environment models.
 * Multiple cameras.
 ** G-Buffer pr camera.
