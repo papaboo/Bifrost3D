@@ -7,7 +7,6 @@ TARGET_LINK_LIBRARIES(GLFWDriver
   glfw
 )
 
-
 source_group("" FILES GLFWDriver.h GLFWDriver.cpp)
 
 set_target_properties(GLFWDriver PROPERTIES 
