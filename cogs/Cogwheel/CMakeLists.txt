@@ -24,6 +24,7 @@ SET(INPUT_SRCS
 )
 
 SET(MATH_SRCS 
+  Cogwheel/Math/AABB.h
   Cogwheel/Math/Color.h
   Cogwheel/Math/Conversions.h
   Cogwheel/Math/Constants.h

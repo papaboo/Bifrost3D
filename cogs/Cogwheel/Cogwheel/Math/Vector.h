@@ -166,6 +166,36 @@ inline Vector3<T> cross(Vector3<T> lhs, Vector3<T> rhs) {
         (lhs.x * rhs.y) - (lhs.y * rhs.x));
 }
 
+template<typename T>
+inline Vector2<T> min(Vector2<T> lhs, Vector2<T> rhs) {
+    return Vector2<T>(std::min(lhs.x, rhs.x), std::min(lhs.y, rhs.y));
+}
+
+template<typename T>
+inline Vector3<T> min(Vector3<T> lhs, Vector3<T> rhs) {
+    return Vector3<T>(std::min(lhs.x, rhs.x), std::min(lhs.y, rhs.y), std::min(lhs.z, rhs.z));
+}
+
+template<typename T>
+inline Vector4<T> min(Vector4<T> lhs, Vector4<T> rhs) {
+    return Vector4<T>(std::min(lhs.x, rhs.x), std::min(lhs.y, rhs.y), std::min(lhs.z, rhs.z), std::min(lhs.w, rhs.w));
+}
+
+template<typename T>
+inline Vector2<T> max(Vector2<T> lhs, Vector2<T> rhs) {
+    return Vector2<T>(std::max(lhs.x, rhs.x), std::max(lhs.y, rhs.y));
+}
+
+template<typename T>
+inline Vector3<T> max(Vector3<T> lhs, Vector3<T> rhs) {
+    return Vector3<T>(std::max(lhs.x, rhs.x), std::max(lhs.y, rhs.y), std::max(lhs.z, rhs.z));
+}
+
+template<typename T>
+inline Vector4<T> max(Vector4<T> lhs, Vector4<T> rhs) {
+    return Vector4<T>(std::max(lhs.x, rhs.x), std::max(lhs.y, rhs.y), std::max(lhs.z, rhs.z), std::max(lhs.w, rhs.w));
+}
+
 // Comparison that checks if two vectors are almost equal.
 template<typename T>
 inline bool almost_equal(Vector2<T> lhs, Vector2<T> rhs, unsigned short max_ulps = 4) {
@@ -196,6 +226,7 @@ typedef Vector2<int> Vector2i;
 typedef Vector3<double> Vector3d;
 typedef Vector3<float> Vector3f;
 typedef Vector3<int> Vector3i;
+typedef Vector3<unsigned int> Vector3ui;
 typedef Vector4<double> Vector4d;
 typedef Vector4<float> Vector4f;
 typedef Vector4<int> Vector4i;
