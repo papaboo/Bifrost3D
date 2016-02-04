@@ -6,6 +6,8 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
+#pragma warning(disable : 4996)
+
 #include <ObjLoader/ObjLoader.h>
 
 #include <Cogwheel/Assets/Mesh.h>
@@ -74,6 +76,8 @@ SceneNodes::UID load(const std::string& path) {
             memcpy(cogwheel_mesh.m_positions, tiny_mesh.positions.data(), tiny_mesh.positions.size() * sizeof(float));
             memcpy(cogwheel_mesh.m_normals, tiny_mesh.normals.data(), tiny_mesh.normals.size() * sizeof(float));
             memcpy(cogwheel_mesh.m_texcoords, tiny_mesh.texcoords.data(), tiny_mesh.texcoords.size() * sizeof(float));
+
+            Meshes::compute_bounds(mesh_ID);
         }
 
         SceneNodes::UID node_ID = SceneNodes::create(shapes[i].name);

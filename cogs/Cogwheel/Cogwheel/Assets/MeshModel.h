@@ -32,6 +32,7 @@ class MeshModels final {
 public:
     typedef Core::TypedUIDGenerator<Meshes> UIDGenerator;
     typedef UIDGenerator::UID UID;
+    typedef UIDGenerator::ConstIterator ConstUIDIterator;
 
     static bool is_allocated() { return m_models != nullptr; }
     static void allocate(unsigned int capacity);
@@ -52,8 +53,8 @@ public:
     static inline Assets::Meshes::UID get_mesh_ID(MeshModels::UID model_ID) { return m_models[model_ID].m_mesh_ID; }
     static inline void set_mesh_ID(MeshModels::UID model_ID, Assets::Meshes::UID mesh_ID) { m_models[model_ID].m_mesh_ID = mesh_ID; }
 
-    static UIDGenerator::ConstIterator begin() { return m_UID_generator.begin(); }
-    static UIDGenerator::ConstIterator end() { return m_UID_generator.end(); }
+    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
+    static ConstUIDIterator end() { return m_UID_generator.end(); }
 
 private:
     static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);
