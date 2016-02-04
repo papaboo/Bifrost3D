@@ -16,8 +16,8 @@ using namespace optix;
 
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
 
-rtBuffer<int3>   index_buffer;
-rtBuffer<float3> vertex_buffer;
+rtBuffer<uint3>   index_buffer;
+rtBuffer<float3> position_buffer;
 rtBuffer<float3> normal_buffer;
 rtBuffer<float2> texcoord_buffer;
 
@@ -31,12 +31,12 @@ rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 // Future work:
 // * Test if interleaving the vertex attributes will improve performance.
 //----------------------------------------------------------------------------
-RT_PROGRAM void triangle_intersect(int primitiveIndex) {
-    const int3 vertex_index = index_buffer[primitiveIndex];
+RT_PROGRAM void intersect(int primitiveIndex) {
+    const uint3 vertex_index = index_buffer[primitiveIndex];
 
-    const float3 p0 = vertex_buffer[vertex_index.x];
-    const float3 p1 = vertex_buffer[vertex_index.y];
-    const float3 p2 = vertex_buffer[vertex_index.z];
+    const float3 p0 = position_buffer[vertex_index.x];
+    const float3 p1 = position_buffer[vertex_index.y];
+    const float3 p2 = position_buffer[vertex_index.z];
 
     // Intersect ray with triangle
     float3 geo_normal;
@@ -61,12 +61,12 @@ RT_PROGRAM void triangle_intersect(int primitiveIndex) {
     }
 }
 
-RT_PROGRAM void triangle_bounds(int primIdx, float result[6]) {
-    const int3 vertex_index = index_buffer[primIdx];
+RT_PROGRAM void bounds(int primIdx, float result[6]) {
+    const uint3 vertex_index = index_buffer[primIdx];
 
-    const float3 v0 = vertex_buffer[vertex_index.x];
-    const float3 v1 = vertex_buffer[vertex_index.y];
-    const float3 v2 = vertex_buffer[vertex_index.z];
+    const float3 v0 = position_buffer[vertex_index.x];
+    const float3 v1 = position_buffer[vertex_index.y];
+    const float3 v2 = position_buffer[vertex_index.z];
 
     Aabb* aabb = (Aabb*)result;
 
