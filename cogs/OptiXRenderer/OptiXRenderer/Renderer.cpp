@@ -11,15 +11,20 @@
 #include <OptiXRenderer/Kernel.h>
 #include <OptiXRenderer/Types.h>
 
+#include <Cogwheel/Assets/Mesh.h>
+#include <Cogwheel/Assets/MeshModel.h>
 #include <Cogwheel/Core/Engine.h>
 #include <Cogwheel/Math/Math.h>
 #include <Cogwheel/Scene/Camera.h>
+#include <Cogwheel/Scene/SceneNode.h>
 
 #include <optixu/optixpp_namespace.h>
 #include <optixu/optixu_math_namespace.h>
 
 #include <GL/gl.h>
 
+using namespace Cogwheel;
+using namespace Cogwheel::Assets;
 using namespace Cogwheel::Core;
 using namespace Cogwheel::Math;
 using namespace Cogwheel::Scene;
@@ -162,6 +167,118 @@ static inline optix::GeometryGroup setup_debug_scene(optix::Context& context) {
     return geoGroup;
 }
 
+//----------------------------------------------------------------------------
+// Model loading.
+//----------------------------------------------------------------------------
+
+static inline size_t size_of(RTformat format) {
+    switch (format) {
+    case RT_FORMAT_FLOAT:
+        return sizeof(float);
+    case RT_FORMAT_FLOAT2:
+        return sizeof(float2);
+    case RT_FORMAT_FLOAT3:
+        return sizeof(float3);
+    case RT_FORMAT_FLOAT4:
+        return sizeof(float4);
+    case RT_FORMAT_INT:
+        return sizeof(int);
+    case RT_FORMAT_INT2:
+        return sizeof(int2);
+    case RT_FORMAT_INT3:
+        return sizeof(int3);
+    case RT_FORMAT_INT4:
+        return sizeof(int4);
+    case RT_FORMAT_UNSIGNED_INT:
+        return sizeof(unsigned int);
+    case RT_FORMAT_UNSIGNED_INT2:
+        return sizeof(uint2);
+    case RT_FORMAT_UNSIGNED_INT3:
+        return sizeof(uint3);
+    case RT_FORMAT_UNSIGNED_INT4:
+        return sizeof(uint4);
+    default:
+        printf("ERROR: OptiXRenderer::Renderer::size_of does not support format: %u\n", (unsigned int)format);
+        return 0;
+    }
+}
+
+static inline optix::Buffer create_buffer(optix::Context& context, unsigned int buffer_type, RTformat format, RTsize element_count, void* data) {
+    optix::Buffer buffer = context->createBuffer(buffer_type, format, element_count);
+    memcpy(buffer->map(), data, element_count * size_of(format));
+    buffer->unmap();
+    return buffer;
+}
+
+static inline optix::Transform load_model(optix::Context& context, MeshModel model) {
+    // TODO Check if we gain any loading performance by caching intersection programs.
+
+    printf("load model: [scene node id: %u, mesh id: %u]\n", model.m_scene_node_ID, model.m_mesh_ID);
+
+    optix::Geometry optixMesh = context->createGeometry();
+    {
+        // TODO Handle nulled index buffers. Can I check if a buffer is null on the GPU?
+        Mesh& mesh = Meshes::get_mesh(model.m_mesh_ID);
+
+        std::string intersection_ptx_path = get_ptx_path("IntersectTriangle");
+        optixMesh->setIntersectionProgram(context->createProgramFromPTXFile(intersection_ptx_path, "intersect"));
+        optixMesh->setBoundingBoxProgram(context->createProgramFromPTXFile(intersection_ptx_path, "bounds"));
+
+        optix::Buffer index_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT3, mesh.m_indices_count, mesh.m_indices);
+        optixMesh["index_buffer"]->setBuffer(index_buffer);
+        optixMesh->setPrimitiveCount(mesh.m_indices_count);
+
+        // Vertex attributes
+        optix::Buffer position_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, mesh.m_vertex_count, mesh.m_positions);
+        optixMesh["position_buffer"]->setBuffer(position_buffer);
+        optix::Buffer normal_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, mesh.m_vertex_count, mesh.m_positions);
+        optixMesh["normal_buffer"]->setBuffer(normal_buffer);
+        optix::Buffer texcoord_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, mesh.m_vertex_count, mesh.m_positions);
+        optixMesh["texcoord_buffer"]->setBuffer(texcoord_buffer);
+        optixMesh->validate(); // TODO debug validate macro.
+    }
+
+    optix::Material optixMaterial = context->createMaterial();
+    {
+        std::string monte_carlo_ptx_path = get_ptx_path("MonteCarlo");
+        optixMaterial->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
+
+        std::string normal_vis_ptx_path = get_ptx_path("NormalRendering");
+        optixMaterial->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
+        optixMaterial->validate();
+    }
+
+    optix::GeometryInstance optixModel = context->createGeometryInstance(optixMesh, &optixMaterial, &optixMaterial + 1);
+    optixModel->validate();
+
+    optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
+    acceleration->setProperty("index_buffer_name", "index_buffer");
+    acceleration->setProperty("vertex_buffer_name", "position_buffer");
+    acceleration->markDirty();
+    acceleration->validate();
+
+    // optix::GeometryGroup geometryGroup = context->createGeometryGroup(&optixModel, &optixModel + 1);
+    optix::GeometryGroup geometryGroup = context->createGeometryGroup();
+    geometryGroup->addChild(optixModel);
+    geometryGroup->setAcceleration(acceleration);
+    geometryGroup->validate();
+
+    optix::Transform optixTransform = context->createTransform();
+    {
+        Math::Transform transform = SceneNodes::get_global_transform(model.m_scene_node_ID);
+        Math::Transform inverse_transform = invert(transform);
+        optixTransform->setMatrix(false, to_matrix4x4(transform).begin(), to_matrix4x4(inverse_transform).begin());
+        optixTransform->setChild(geometryGroup);
+        optixTransform->validate();
+    }
+
+    return optixTransform;
+}
+
+//----------------------------------------------------------------------------
+// Renderer implementation.
+//----------------------------------------------------------------------------
+
 Renderer::Renderer()
     : m_device_ids( {-1, -1} )
     , m_state(new State()) {
@@ -189,21 +306,25 @@ Renderer::Renderer()
     context["g_frame_number"]->setFloat(2.0f);
 
     { // Setup root node
-        optix::GeometryGroup geoGroup = setup_debug_scene(context);
-
-        optix::Transform transform = context->createTransform();
-        transform->setChild(geoGroup);
-        transform->validate();
-
         optix::Acceleration root_acceleration = context->createAcceleration("Bvh", "Bvh");
         root_acceleration->setProperty("refit", "1");
 
         m_state->root_node = context->createGroup();
         m_state->root_node->setAcceleration(root_acceleration);
-        m_state->root_node->addChild(transform);
         m_state->root_node->validate();
 
         context["g_scene_root"]->set(m_state->root_node);
+
+        // optix::Transform transform = context->createTransform();
+        // transform->setChild(setup_debug_scene(context));
+        // transform->validate();
+        // m_state->root_node->addChild(transform);
+
+        for (MeshModels::ConstUIDIterator model_itr = MeshModels::begin();
+            model_itr != MeshModels::end(); ++model_itr) {
+            MeshModel model = MeshModels::get_model(*model_itr);
+            m_state->root_node->addChild(load_model(context, model));
+        }
     }
 
     { // Screen buffers
@@ -237,6 +358,10 @@ Renderer::Renderer()
         context->setRayGenerationProgram(int(EntryPoints::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "ray_generation"));
         context->setMissProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "miss"));
     }
+
+    // context->setPrintEnabled(true);
+    // context->setPrintLaunchIndex(0, 0);
+    // context->setExceptionEnabled(RT_EXCEPTION_ALL, true);
 
     context->validate();
     context->compile();
