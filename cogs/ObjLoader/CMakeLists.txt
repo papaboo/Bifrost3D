@@ -3,11 +3,11 @@ include_directories(.)
 add_library(ObjLoader 
   ObjLoader/ObjLoader.h
   ObjLoader/ObjLoader.cpp
+  ObjLoader/tiny_obj_loader.h
 )
 
 TARGET_LINK_LIBRARIES(ObjLoader
   Gogwheel
-  # TinyObjLoader
 )
 
 source_group("ObjLoader" FILES 

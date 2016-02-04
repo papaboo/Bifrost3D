@@ -19,6 +19,7 @@ namespace ObjLoader {
 // Future work:
 // * Support for materials.
 // * Pass in texture 2D loader function as argument.
+// * Return an (optional) list of created mesh model IDs?
 // * Reserve capacity for Mesh, MeshModels and SceneNodes before creating them.
 // -----------------------------------------------------------------------
 Cogwheel::Scene::SceneNodes::UID load(const std::string& filename);
