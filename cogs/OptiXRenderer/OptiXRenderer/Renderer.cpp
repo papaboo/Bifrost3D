@@ -77,10 +77,10 @@ static inline optix::GeometryGroup setup_debug_scene(optix::Context& context) {
         mesh->setBoundingBoxProgram(sphere_bounds_program);
         mesh->setPrimitiveCount(1);
 
-        mesh["sphere"]->setFloat(optix::make_float4(0, 0, 0, 0.5f));
+        mesh["sphere"]->setFloat(make_float4(0, 0, 0, 0.5f));
 
         optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
-        model["g_color"]->setFloat(optix::make_float3(1, 1, 1));
+        model["g_color"]->setFloat(make_float3(1, 1, 1));
         geoGroup->addChild(model);
     }
 
@@ -90,10 +90,10 @@ static inline optix::GeometryGroup setup_debug_scene(optix::Context& context) {
         mesh->setBoundingBoxProgram(sphere_bounds_program);
         mesh->setPrimitiveCount(1);
 
-        mesh["sphere"]->setFloat(optix::make_float4(0, 2, 0, 0.5f));
+        mesh["sphere"]->setFloat(make_float4(0, 2, 0, 0.5f));
 
         optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
-        model["g_color"]->setFloat(optix::make_float3(0, 1, 0));
+        model["g_color"]->setFloat(make_float3(0, 1, 0));
         geoGroup->addChild(model);
     }
 
@@ -103,10 +103,10 @@ static inline optix::GeometryGroup setup_debug_scene(optix::Context& context) {
         mesh->setBoundingBoxProgram(sphere_bounds_program);
         mesh->setPrimitiveCount(1);
 
-        mesh["sphere"]->setFloat(optix::make_float4(0, -2, 0, 0.5f));
+        mesh["sphere"]->setFloat(make_float4(0, -2, 0, 0.5f));
 
         optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
-        model["g_color"]->setFloat(optix::make_float3(1, 0, 1));
+        model["g_color"]->setFloat(make_float3(1, 0, 1));
         geoGroup->addChild(model);
     }
 
@@ -116,10 +116,10 @@ static inline optix::GeometryGroup setup_debug_scene(optix::Context& context) {
         mesh->setBoundingBoxProgram(sphere_bounds_program);
         mesh->setPrimitiveCount(1);
 
-        mesh["sphere"]->setFloat(optix::make_float4(2, 0, 0, 0.5f));
+        mesh["sphere"]->setFloat(make_float4(2, 0, 0, 0.5f));
 
         optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
-        model["g_color"]->setFloat(optix::make_float3(1, 0, 0));
+        model["g_color"]->setFloat(make_float3(1, 0, 0));
         geoGroup->addChild(model);
     }
 
@@ -129,10 +129,10 @@ static inline optix::GeometryGroup setup_debug_scene(optix::Context& context) {
         mesh->setBoundingBoxProgram(sphere_bounds_program);
         mesh->setPrimitiveCount(1);
 
-        mesh["sphere"]->setFloat(optix::make_float4(-2, 0, 0, 0.5f));
+        mesh["sphere"]->setFloat(make_float4(-2, 0, 0, 0.5f));
 
         optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
-        model["g_color"]->setFloat(optix::make_float3(0, 1, 1));
+        model["g_color"]->setFloat(make_float3(0, 1, 1));
         geoGroup->addChild(model);
     }
 
@@ -142,10 +142,10 @@ static inline optix::GeometryGroup setup_debug_scene(optix::Context& context) {
         mesh->setBoundingBoxProgram(sphere_bounds_program);
         mesh->setPrimitiveCount(1);
 
-        mesh["sphere"]->setFloat(optix::make_float4(0, 0, 2, 0.5f));
+        mesh["sphere"]->setFloat(make_float4(0, 0, 2, 0.5f));
 
         optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
-        model["g_color"]->setFloat(optix::make_float3(0, 0, 1));
+        model["g_color"]->setFloat(make_float3(0, 0, 1));
         geoGroup->addChild(model);
     }
 
@@ -155,10 +155,10 @@ static inline optix::GeometryGroup setup_debug_scene(optix::Context& context) {
         mesh->setBoundingBoxProgram(sphere_bounds_program);
         mesh->setPrimitiveCount(1);
 
-        mesh["sphere"]->setFloat(optix::make_float4(0, 0, -2, 0.5f));
+        mesh["sphere"]->setFloat(make_float4(0, 0, -2, 0.5f));
 
         optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
-        model["g_color"]->setFloat(optix::make_float3(1, 1, 0));
+        model["g_color"]->setFloat(make_float3(1, 1, 0));
         geoGroup->addChild(model);
     }
 
@@ -211,9 +211,7 @@ static inline optix::Buffer create_buffer(optix::Context& context, unsigned int 
 }
 
 static inline optix::Transform load_model(optix::Context& context, MeshModel model) {
-    // TODO Check if we gain any loading performance by caching intersection programs.
-
-    printf("load model: [scene node id: %u, mesh id: %u]\n", model.m_scene_node_ID, model.m_mesh_ID);
+    // TODO Check if we gain any loading performance by caching intersection and closest hit programs.
 
     optix::Geometry optixMesh = context->createGeometry();
     {
@@ -249,6 +247,7 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
     }
 
     optix::GeometryInstance optixModel = context->createGeometryInstance(optixMesh, &optixMaterial, &optixMaterial + 1);
+    optixModel["g_color"]->setFloat(make_float3(0.5f, 0.5f, 0.5f));
     optixModel->validate();
 
     optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
@@ -257,9 +256,7 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
     acceleration->markDirty();
     acceleration->validate();
 
-    // optix::GeometryGroup geometryGroup = context->createGeometryGroup(&optixModel, &optixModel + 1);
-    optix::GeometryGroup geometryGroup = context->createGeometryGroup();
-    geometryGroup->addChild(optixModel);
+    optix::GeometryGroup geometryGroup = context->createGeometryGroup(&optixModel, &optixModel + 1);
     geometryGroup->setAcceleration(acceleration);
     geometryGroup->validate();
 
