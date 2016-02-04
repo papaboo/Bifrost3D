@@ -79,7 +79,7 @@ public:
             : m_id(id), m_UID_generator(UID_generator) { }
         inline ConstIterator& operator++() {
             ++m_id;
-            while (*m_id < m_UID_generator.capacity() && !m_UID_generator.has(*m_id))
+            while (m_id != m_UID_generator.end().m_id && !m_UID_generator.has(*m_id))
                 ++m_id;
             return *this;
         }
