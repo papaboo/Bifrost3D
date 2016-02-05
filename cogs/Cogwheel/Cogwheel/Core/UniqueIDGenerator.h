@@ -68,11 +68,6 @@ public:
     //------------------------------------------------------------------------
     // Constant iterator.
     // Searches all UIDs linearly and returns the ones that are valid.
-    // Future work
-    // * Use one bit from the UID incarnation count to signal if the UID is 
-    //   valid or not. This would allow us to iterate over the UIDs without 
-    //   needing a reference to the generator to tell us if a UID is valid.
-    //------------------------------------------------------------------------
     class ConstIterator {
     public:
         ConstIterator(UID* id, const TypedUIDGenerator& UID_generator)
@@ -80,6 +75,7 @@ public:
         inline ConstIterator& operator++() {
             ++m_id;
             while (m_id != m_UID_generator.end().m_id && !m_UID_generator.has(*m_id))
+            // while (m_id != m_UID_generator.end().m_id && m_UID_generator.m_IDs[*m_id] != *m_id)
                 ++m_id;
             return *this;
         }
