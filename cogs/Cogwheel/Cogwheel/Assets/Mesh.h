@@ -84,6 +84,7 @@ class Meshes final {
 public:
     typedef Core::TypedUIDGenerator<Meshes> UIDGenerator;
     typedef UIDGenerator::UID UID;
+    typedef UIDGenerator::ConstIterator ConstUIDIterator;
 
     static bool is_allocated() { return m_meshes != nullptr; }
     static void allocate(unsigned int capacity);

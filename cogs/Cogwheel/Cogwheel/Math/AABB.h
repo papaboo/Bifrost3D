@@ -33,6 +33,10 @@ public:
         : minimum(minimum), maximum(maximum) {
     }
 
+    static inline AABB invalid() {
+        return AABB(Vector3f(1e30f), Vector3f(-1e30f));
+    }
+
     //*************************************************************************
     // Comparison operators.
     //*************************************************************************
@@ -43,9 +47,14 @@ public:
         return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
-    inline void include_point(Vector3f point) {
+    inline void grow_to_contain(Vector3f point) {
         minimum = min(minimum, point);
         maximum = max(maximum, point);
+    }
+
+    inline void grow_to_contain(AABB aabb) {
+        minimum = min(minimum, aabb.minimum);
+        maximum = max(maximum, aabb.maximum);
     }
 
     inline Vector3f size() const {

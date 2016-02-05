@@ -100,7 +100,7 @@ AABB Meshes::compute_bounds(Meshes::UID mesh_ID) {
 
     AABB bounds = AABB(mesh.m_positions[0], mesh.m_positions[0]);
     for (Vector3f* position_itr = mesh.m_positions + 1; position_itr < (mesh.m_positions + mesh.m_vertex_count); ++position_itr) {
-        bounds.include_point(*position_itr);
+        bounds.grow_to_contain(*position_itr);
     }
 
     m_bounds[mesh_ID] = bounds;
