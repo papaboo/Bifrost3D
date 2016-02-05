@@ -11,6 +11,7 @@ source_group("" FILES ${SRCS})
 target_link_libraries(${PROJECT_NAME}
   Gogwheel
   GLFWDriver
+  ObjLoader
   OptiXRenderer
 )
 
