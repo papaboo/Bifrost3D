@@ -184,7 +184,7 @@ GTEST_TEST(Scene_SceneNode, grap_traversal) {
     unsigned int* visits = new unsigned int[SceneNodes::capacity()];
     for (unsigned int i = 0; i < SceneNodes::capacity(); ++i)
         visits[i] = 0u;
-    n2.traverse_all_children([&](SceneNodes::UID id) {
+    n2.traverser_children_recursively([&](SceneNodes::UID id) {
         ++visits[id];
     });
     EXPECT_EQ(visits[n0.get_ID()], 0u);
@@ -195,7 +195,7 @@ GTEST_TEST(Scene_SceneNode, grap_traversal) {
     EXPECT_EQ(visits[n5.get_ID()], 0u);
     EXPECT_EQ(visits[n6.get_ID()], 0u);
 
-    n4.traverse_graph([&](SceneNodes::UID id) {
+    n4.traverser_recursively([&](SceneNodes::UID id) {
         ++visits[id];
     });
     EXPECT_EQ(visits[n0.get_ID()], 0u);
@@ -206,7 +206,7 @@ GTEST_TEST(Scene_SceneNode, grap_traversal) {
     EXPECT_EQ(visits[n5.get_ID()], 1u);
     EXPECT_EQ(visits[n6.get_ID()], 0u);
 
-    n6.traverse_all_children([&](SceneNodes::UID id) {
+    n6.traverser_children_recursively([&](SceneNodes::UID id) {
         ++visits[id];
     });
     EXPECT_EQ(visits[n0.get_ID()], 0u);
@@ -217,7 +217,7 @@ GTEST_TEST(Scene_SceneNode, grap_traversal) {
     EXPECT_EQ(visits[n5.get_ID()], 1u);
     EXPECT_EQ(visits[n6.get_ID()], 0u);
 
-    n3.traverse_graph([&](SceneNodes::UID id) {
+    n3.traverser_recursively([&](SceneNodes::UID id) {
         ++visits[id];
     });
     EXPECT_EQ(visits[n0.get_ID()], 1u);

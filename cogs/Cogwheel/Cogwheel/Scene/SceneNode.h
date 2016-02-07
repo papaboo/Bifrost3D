@@ -56,9 +56,14 @@ public:
     static void set_global_transform(SceneNodes::UID node_ID, Math::Transform transform);
 
     template<typename F>
-    static void traverse_graph(SceneNodes::UID node_ID, F& function);
+    static void traverser_recursively(SceneNodes::UID node_ID, F& function);
     template<typename F>
-    static void traverse_all_children(SceneNodes::UID node_ID, F& function);
+    static void traverser_children_recursively(SceneNodes::UID node_ID, F& function);
+
+    //-------------------------------------------------------------------------
+    // Changes since last game loop tick.
+    //-------------------------------------------------------------------------
+    // static Range<SceneNodes::UID*> get_changed_transforms();
 
 private:
     static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);
@@ -106,9 +111,9 @@ public:
     inline void set_global_transform(Math::Transform transform) { SceneNodes::set_global_transform(m_ID, transform); }
 
     template<typename F>
-    inline void traverse_graph(F& function) { SceneNodes::traverse_graph<F>(m_ID, function); }
+    inline void traverser_recursively(F& function) { SceneNodes::traverser_recursively<F>(m_ID, function); }
     template<typename F>
-    inline void traverse_all_children(F& function) { SceneNodes::traverse_all_children<F>(m_ID, function); }
+    inline void traverser_children_recursively(F& function) { SceneNodes::traverser_children_recursively<F>(m_ID, function); }
 
     inline bool operator==(SceneNode rhs) const { return m_ID == rhs.m_ID; }
     inline bool operator!=(SceneNode rhs) const { return m_ID != rhs.m_ID; }
@@ -122,7 +127,7 @@ private:
 // ---------------------------------------------------------------------------
 
 template<typename F>
-void SceneNodes::traverse_all_children(SceneNodes::UID node_ID, F& function) {
+void SceneNodes::traverser_children_recursively(SceneNodes::UID node_ID, F& function) {
     UID node = m_first_child_IDs[node_ID];
     if (node == UID::invalid_UID())
         return;
@@ -154,9 +159,9 @@ void SceneNodes::traverse_all_children(SceneNodes::UID node_ID, F& function) {
 }
 
 template<typename F>
-void SceneNodes::traverse_graph(SceneNodes::UID node_ID, F& function) {
+void SceneNodes::traverser_recursively(SceneNodes::UID node_ID, F& function) {
     function(node_ID);
-    traverse_all_children(node_ID, function);
+    traverser_children_recursively(node_ID, function);
 }
 
 } // NS Scene
