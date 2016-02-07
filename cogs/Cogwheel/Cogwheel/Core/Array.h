@@ -19,7 +19,8 @@ namespace Core {
 // and it will not require objects to have a default constructor, and as such 
 // elements not explicitly initialized will contain undefined data.
 // Future work
-// * Constructor taking two iterators as argument
+// * Support function pointers. (possibly by using aligned_alloc? Check how std::vetor does it.)
+// * Constructor taking two iterators as argument.
 // * Add emplace.
 // * Add swap.
 // * Specialize for booleans and add 'clearAll()' and 'setAll()' methods.
@@ -111,6 +112,11 @@ public:
     // -----------------------------------------------------------------------
     // Modifiers
     // -----------------------------------------------------------------------
+    void push_back(T element) {
+        size_type previous_size = m_size;
+        resize(m_size + 1u);
+        m_data[previous_size] = element;
+    }
     void push_back(const T* begin, const T* end) {
         size_type previous_size = m_size;
         resize(m_size + size_type(end - begin));
