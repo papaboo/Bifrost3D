@@ -1,21 +1,29 @@
 * Notifications when changing the scene. / Pullable events.
+** Transform changed event.
+** Probably a parent changed event. (node_id, old_parent_id)
+** setup_for_engine initializers that initializes the managers and also hooks them up to the engine.
+** Decide if callbacks should be interfaces or raw function pointers.
 * Point light
-* destroy - SceneNode, Camera
+* destroy - SceneNode, Camera, Meshes, Models.
 * Materials
 ** Coated rubber/metal.
 ** Textures.
-* AssetManager.
 * Environment models.
-* Multiple cameras.
-** G-Buffer pr camera.
-** Compose when all cameras are done.
+* GL Renderer
+* Natvis visualizations
+** Natvis install target.
+** Mesh, Meshes, MeshModels, SceneNodes, Cameras
 * Screenshot
 ** Grab backbuffer on the CPU.
 *** Request to composer or through the camera, not renderers
 *** Expose certain backbuffer state pr camera/viewport in a renderer interface. Fx iteration_count, is_continuous_renderer and so on. Members that can be used to evaluate the 'doneness' of a backbuffer.
 ** Render to offscreen buffer.
-* GL Renderer
+* Multiple cameras.
+** G-Buffer pr camera.
+** Compose when all cameras are done.
 * Multiple scenes.
+** Rendermask?
+* AssetManager.
 * Serialize scene and models.
 * CUDA
 ** helper methods.
