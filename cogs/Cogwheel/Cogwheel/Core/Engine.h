@@ -14,6 +14,8 @@
 #include <Cogwheel/Core/Window.h>
 #include <Cogwheel/Scene/SceneNode.h>
 
+#include <vector>
+
 namespace Cogwheel {
 namespace Core {
     class IModule;
@@ -62,13 +64,14 @@ public:
     inline Scene::SceneNodes::UID get_scene_root() const { return m_scene_root; }
 
     // -----------------------------------------------------------------------
-    // Modules
+    // Callbacks
     // -----------------------------------------------------------------------
-    void add_mutating_module(Core::IModule* module);
-    void add_mutating_modules(Core::IModule** begin, Core::IModule** end);
-    
-    void add_non_mutating_module(Core::IModule* module);
-    void add_non_mutating_modules(Core::IModule** begin, Core::IModule** end);
+    void add_mutating_callback(Core::IModule* callback);
+
+    void add_non_mutating_callback(Core::IModule* callback);
+
+    typedef void (*on_loop_finished_callback)();
+    void add_loop_finished_callback(on_loop_finished_callback callback);
 
     // -----------------------------------------------------------------------
     // Main loop
@@ -87,8 +90,9 @@ private:
     Window m_window;
     Scene::SceneNodes::UID m_scene_root;
 
-    Core::Array<Core::IModule*> m_mutating_modules;
-    Core::Array<Core::IModule*> m_non_mutating_modules;
+    Core::Array<Core::IModule*> m_mutating_callbacks;
+    Core::Array<Core::IModule*> m_non_mutating_callbacks;
+    std::vector<on_loop_finished_callback> m_on_loop_finished_callbacks;
 
     bool m_quit;
 

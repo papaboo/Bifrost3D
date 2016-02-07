@@ -113,17 +113,17 @@ void initializer(Cogwheel::Core::Engine& engine) {
         Cameras::UID cam_ID = Cameras::create(cam_node_ID, perspective_matrix, inverse_perspective_matrix);
 
         float camera_velocity = magnitude(scene_bounds.size()) * 0.1f;
-        engine.add_mutating_module(new Navigation(cam_node_ID, camera_velocity));
+        engine.add_mutating_callback(new Navigation(cam_node_ID, camera_velocity));
     }
 }
 
 void initialize_window(Cogwheel::Core::Window& window) {
-    Engine::get_instance()->add_non_mutating_module(new OptiXRenderer::Renderer());
+    Engine::get_instance()->add_non_mutating_callback(new OptiXRenderer::Renderer());
 }
 
 void main(int argc, char** argv) {
     g_filepath = argc >= 2 ? std::string(argv[1]) : "";
-    // g_filepath = "../../data/models/teapot/teapot.obj";
+    // g_filepath = "../../data/models/cube/cube.obj";
 
     if (g_filepath.empty()) {
         printf("SimpleViewer requires path to model as first argument.\n");
