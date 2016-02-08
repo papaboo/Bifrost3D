@@ -22,6 +22,8 @@ SceneNodes::UID* SceneNodes::m_first_child_IDs = nullptr;
 
 Math::Transform* SceneNodes::m_global_transforms = nullptr;
 
+std::vector<SceneNodes::UID> SceneNodes::m_transforms_changed = std::vector<SceneNodes::UID>(0);
+
 void SceneNodes::allocate(unsigned int capacity) {
     if (is_allocated())
         return;
@@ -36,6 +38,8 @@ void SceneNodes::allocate(unsigned int capacity) {
     m_first_child_IDs = new SceneNodes::UID[capacity];
 
     m_global_transforms = new Math::Transform[capacity];
+
+    m_transforms_changed.reserve(capacity / 4);
 
     // Allocate dummy element at 0.
     m_names[0] = "Dummy Node";
@@ -55,6 +59,8 @@ void SceneNodes::deallocate() {
     delete[] m_first_child_IDs; m_first_child_IDs = nullptr;
 
     delete[] m_global_transforms; m_global_transforms = nullptr;
+
+    m_transforms_changed.resize(0);
 }
 
 void SceneNodes::reserve(unsigned int new_capacity) {
@@ -205,10 +211,12 @@ void SceneNodes::set_global_transform(SceneNodes::UID node_ID, Math::Transform t
     
     Math::Transform delta_transform = Math::Transform::delta(m_global_transforms[node_ID], transform);
     m_global_transforms[node_ID] = transform;
+    m_transforms_changed.push_back(node_ID);
 
     // Update global transforms of all children.
     traverser_children_recursively(node_ID, [=](SceneNodes::UID child_ID) {
         m_global_transforms[child_ID] = delta_transform * m_global_transforms[child_ID];
+        m_transforms_changed.push_back(child_ID);
     });
 }
 

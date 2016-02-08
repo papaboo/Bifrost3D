@@ -9,6 +9,7 @@
 #ifndef _COGWHEEL_SCENE_SCENE_NODE_H_
 #define _COGWHEEL_SCENE_SCENE_NODE_H_
 
+#include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Math/Transform.h>
 
@@ -20,11 +21,12 @@ namespace Scene {
 // ---------------------------------------------------------------------------
 // Container class for the cogwheel scene node.
 // Future work
+// * A parent changed event: (node_id, old_parent_id). Is this actually needed by anything?
 // * Allocate all (or most) internal arrays in one big chunk.
 // * Change the sibling/children layout, so sibling IDs or perhaps siblings are always allocated next too each other?
 //  * Requires an extra indirection though, since node ID's won't match the node positions anymore.
 //  * Then I could use Core::Array to quickly construct a list of children.
-//  * Could be done (incrementally?) when all mutating modules have been run.
+//  * Could be done (incrementally?) when all mutations in a tick are done.
 // ---------------------------------------------------------------------------
 class SceneNodes final {
 public:
@@ -63,7 +65,11 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    // static Range<SceneNodes::UID*> get_changed_transforms();
+    typedef std::vector<UID>::iterator transform_changed_iterator;
+    static Core::Iterable<transform_changed_iterator> get_changed_transforms() { 
+        return Core::Iterable<transform_changed_iterator>(m_transforms_changed.begin(), m_transforms_changed.end());
+    }
+    static void clear_change_notifications() { m_transforms_changed.resize(0); }
 
 private:
     static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);
@@ -76,6 +82,9 @@ private:
     static SceneNodes::UID* m_first_child_IDs;
 
     static Math::Transform* m_global_transforms;
+
+    // Change notifications.
+    static std::vector<UID> m_transforms_changed;
 };
 
 // ---------------------------------------------------------------------------
