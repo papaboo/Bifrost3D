@@ -364,7 +364,7 @@ Renderer::Renderer()
     context->compile();
 }
 
-void Renderer::apply() {
+void Renderer::render() {
     Context& context = m_state->context;
 
     const Window& window = Engine::get_instance()->get_window();

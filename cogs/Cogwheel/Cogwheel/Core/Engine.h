@@ -70,10 +70,11 @@ public:
     // -----------------------------------------------------------------------
     void add_mutating_callback(Core::IModule* callback);
 
-    void add_non_mutating_callback(Core::IModule* callback);
+    typedef void(*non_mutating_callback)(const Engine& engine, void* callback_state);
+    void add_non_mutating_callback(non_mutating_callback callback, void* callback_state);
 
-    typedef void(*on_tick_cleanup_callback)(void* callback_state);
-    void add_tick_cleanup_callback(on_tick_cleanup_callback callback, void* callback_state);
+    typedef void(*tick_cleanup_callback)(void* callback_state);
+    void add_tick_cleanup_callback(tick_cleanup_callback callback, void* callback_state);
 
     // -----------------------------------------------------------------------
     // Main loop
@@ -102,8 +103,8 @@ private:
 
     // All engine callbacks.
     Core::Array<Core::IModule*> m_mutating_callbacks;
-    Core::Array<Core::IModule*> m_non_mutating_callbacks;
-    std::vector<Closure<on_tick_cleanup_callback> > m_on_tick_cleanup_callbacks;
+    std::vector<Closure<non_mutating_callback>> m_non_mutating_callbacks;
+    std::vector<Closure<tick_cleanup_callback>> m_tick_cleanup_callbacks;
 
     // Input should only be updated by whoever created it and not by access via the engine.
     const Input::Keyboard* m_keyboard;

@@ -22,7 +22,7 @@ Engine::Engine()
     , m_scene_root(Scene::SceneNodes::UID::invalid_UID())
     , m_mutating_callbacks(0)
     , m_non_mutating_callbacks(0)
-    , m_on_tick_cleanup_callbacks(0)
+    , m_tick_cleanup_callbacks(0)
     , m_quit(false)
     , m_keyboard(nullptr)
     , m_mouse(nullptr) {
@@ -39,13 +39,14 @@ void Engine::add_mutating_callback(Core::IModule* callback) {
     m_mutating_callbacks.push_back(callback);
 }
 
-void Engine::add_non_mutating_callback(Core::IModule* callback) {
-    m_non_mutating_callbacks.push_back(callback);
+void Engine::add_non_mutating_callback(non_mutating_callback callback, void* callback_state) {
+    Closure<non_mutating_callback> callback_closure = { callback, callback_state };
+    m_non_mutating_callbacks.push_back(callback_closure);
 }
 
-void Engine::add_tick_cleanup_callback(on_tick_cleanup_callback callback, void* callback_state) {
-    Closure<on_tick_cleanup_callback> callback_closure = { callback, callback_state };
-    m_on_tick_cleanup_callbacks.push_back(callback_closure);
+void Engine::add_tick_cleanup_callback(tick_cleanup_callback callback, void* callback_state) {
+    Closure<tick_cleanup_callback> callback_closure = { callback, callback_state };
+    m_tick_cleanup_callbacks.push_back(callback_closure);
 }
 
 void Engine::do_tick(double delta_time) {
@@ -54,11 +55,11 @@ void Engine::do_tick(double delta_time) {
     for (IModule* mutating_callback : m_mutating_callbacks)
         mutating_callback->apply();
 
-    for (IModule* non_mutating_callback : m_non_mutating_callbacks)
-        non_mutating_callback->apply();
+    for (Closure<non_mutating_callback> non_mutating_callback : m_non_mutating_callbacks)
+        non_mutating_callback.callback(*this, non_mutating_callback.data);
 
-    for (Closure<on_tick_cleanup_callback> on_tick_cleanup_closure : m_on_tick_cleanup_callbacks)
-        on_tick_cleanup_closure.callback(on_tick_cleanup_closure.data);
+    for (Closure<tick_cleanup_callback> tick_cleanup_closure : m_tick_cleanup_callbacks)
+        tick_cleanup_closure.callback(tick_cleanup_closure.data);
 }
 
 } // NS Core

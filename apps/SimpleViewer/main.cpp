@@ -118,7 +118,8 @@ void initializer(Cogwheel::Core::Engine& engine) {
 }
 
 void initialize_window(Cogwheel::Core::Window& window) {
-    Engine::get_instance()->add_non_mutating_callback(new OptiXRenderer::Renderer());
+    OptiXRenderer::Renderer* renderer = new OptiXRenderer::Renderer();
+    Engine::get_instance()->add_non_mutating_callback(OptiXRenderer::render_callback, renderer);
 }
 
 void main(int argc, char** argv) {

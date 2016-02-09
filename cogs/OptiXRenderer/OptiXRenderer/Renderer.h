@@ -9,7 +9,14 @@
 #ifndef _OPTIXRENDERER_RENDERER_H_
 #define _OPTIXRENDERER_RENDERER_H_
 
-#include <Cogwheel/Core/IModule.h>
+//----------------------------------------------------------------------------
+// Forward declarations.
+//----------------------------------------------------------------------------
+namespace Cogwheel {
+namespace Core {
+class Engine;
+}
+}
 
 namespace OptiXRenderer {
 
@@ -33,15 +40,13 @@ namespace OptiXRenderer {
 // * Have path tracer stop per bounce, filter and display the result.
 //   Should be good for interactivity and convergence. :)
 //----------------------------------------------------------------------------
-class Renderer final : public Cogwheel::Core::IModule {
+class Renderer final {
 public:
     Renderer();
 
     inline bool could_initialize() const { return m_device_ids.optix>= 0;  }
 
-    void apply() override;
-
-    inline std::string get_name() override { return "OptiXRenderer"; }
+    void render();
 
 private:
 
@@ -54,6 +59,10 @@ private:
     struct State;
     State* m_state;
 };
+
+static inline void render_callback(const Cogwheel::Core::Engine& engine, void* renderer) {
+    static_cast<Renderer*>(renderer)->render();
+}
 
 } // NS OptiXRenderer
 
