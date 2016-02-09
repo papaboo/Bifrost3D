@@ -22,7 +22,7 @@ Engine::Engine()
     , m_scene_root(Scene::SceneNodes::UID::invalid_UID())
     , m_mutating_callbacks(0)
     , m_non_mutating_callbacks(0)
-    , m_on_loop_finished_callbacks(0)
+    , m_on_tick_cleanup_callbacks(0)
     , m_quit(false)
     , m_keyboard(nullptr)
     , m_mouse(nullptr) {
@@ -43,11 +43,12 @@ void Engine::add_non_mutating_callback(Core::IModule* callback) {
     m_non_mutating_callbacks.push_back(callback);
 }
 
-void Engine::add_loop_finished_callback(on_loop_finished_callback callback) {
-    m_on_loop_finished_callbacks.push_back(callback);
+void Engine::add_tick_cleanup_callback(on_tick_cleanup_callback callback, void* callback_state) {
+    Closure<on_tick_cleanup_callback> callback_closure = { callback, callback_state };
+    m_on_tick_cleanup_callbacks.push_back(callback_closure);
 }
 
-void Engine::do_loop(double delta_time) {
+void Engine::do_tick(double delta_time) {
     m_time.tick(delta_time);
     
     for (IModule* mutating_callback : m_mutating_callbacks)
@@ -56,8 +57,8 @@ void Engine::do_loop(double delta_time) {
     for (IModule* non_mutating_callback : m_non_mutating_callbacks)
         non_mutating_callback->apply();
 
-    for (on_loop_finished_callback on_loop_finished_callback : m_on_loop_finished_callbacks)
-        on_loop_finished_callback();
+    for (Closure<on_tick_cleanup_callback> on_tick_cleanup_closure : m_on_tick_cleanup_callbacks)
+        on_tick_cleanup_closure.callback(on_tick_cleanup_closure.data);
 }
 
 } // NS Core

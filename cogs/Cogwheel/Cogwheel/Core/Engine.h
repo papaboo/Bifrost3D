@@ -33,8 +33,10 @@ namespace Core {
 // Engine driver, responsible for invoking the modules and handling all engine
 // 'tick' logic not related to the operating system.
 // Future work
-// * Mutating and non-mutating modules should be separate interfaces! For typesafety!
-// * Add a 'mutation complete' (said in the Zerg voice) callback interface.
+// * Add a 'mutation complete' (said in the Zerg voice) callback.
+// * Add on_exit callback and deallocate the managers internal state.
+// * Can I setup callbacks using lambdas?
+// * Consider if anything is made easier by having the engine as a singleton.
 // ---------------------------------------------------------------------------
 class Engine final {
 public:
@@ -70,13 +72,13 @@ public:
 
     void add_non_mutating_callback(Core::IModule* callback);
 
-    typedef void (*on_loop_finished_callback)();
-    void add_loop_finished_callback(on_loop_finished_callback callback);
+    typedef void(*on_tick_cleanup_callback)(void* callback_state);
+    void add_tick_cleanup_callback(on_tick_cleanup_callback callback, void* callback_state);
 
     // -----------------------------------------------------------------------
     // Main loop
     // -----------------------------------------------------------------------
-    void do_loop(double delta_time);
+    void do_tick(double delta_time);
 
 private:
 
@@ -89,12 +91,19 @@ private:
     Time m_time;
     Window m_window;
     Scene::SceneNodes::UID m_scene_root;
+    bool m_quit;
 
+    // A closure wrapping a callback function and its state.
+    template <typename Function>
+    struct Closure {
+        Function callback;
+        void* data;
+    };
+
+    // All engine callbacks.
     Core::Array<Core::IModule*> m_mutating_callbacks;
     Core::Array<Core::IModule*> m_non_mutating_callbacks;
-    std::vector<on_loop_finished_callback> m_on_loop_finished_callbacks;
-
-    bool m_quit;
+    std::vector<Closure<on_tick_cleanup_callback> > m_on_tick_cleanup_callbacks;
 
     // Input should only be updated by whoever created it and not by access via the engine.
     const Input::Keyboard* m_keyboard;

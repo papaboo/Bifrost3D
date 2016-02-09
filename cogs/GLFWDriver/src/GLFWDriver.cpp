@@ -97,7 +97,7 @@ void run(on_launch_callback on_launch, on_window_created_callback on_window_crea
         float delta_time = float(current_time - previous_time);
         previous_time = current_time;
             
-        engine.do_loop(delta_time);
+        engine.do_tick(delta_time);
 
         glfwSwapBuffers(window);
 
