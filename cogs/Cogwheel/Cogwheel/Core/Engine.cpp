@@ -8,7 +8,6 @@
 
 #include <Cogwheel/Core/Engine.h>
 
-#include <Cogwheel/Core/IModule.h>
 #include <Cogwheel/Input/Keyboard.h>
 #include <Cogwheel/Input/Mouse.h>
 
@@ -35,8 +34,9 @@ Engine::~Engine() {
         m_instance = nullptr;
 }
 
-void Engine::add_mutating_callback(Core::IModule* callback) {
-    m_mutating_callbacks.push_back(callback);
+void Engine::add_mutating_callback(mutating_callback callback, void* callback_state) {
+    Closure<mutating_callback> callback_closure = { callback, callback_state };
+    m_mutating_callbacks.push_back(callback_closure);
 }
 
 void Engine::add_non_mutating_callback(non_mutating_callback callback, void* callback_state) {
@@ -52,8 +52,8 @@ void Engine::add_tick_cleanup_callback(tick_cleanup_callback callback, void* cal
 void Engine::do_tick(double delta_time) {
     m_time.tick(delta_time);
     
-    for (IModule* mutating_callback : m_mutating_callbacks)
-        mutating_callback->apply();
+    for (Closure<mutating_callback> mutating_callback : m_mutating_callbacks)
+        mutating_callback.callback(*this, mutating_callback.data);
 
     for (Closure<non_mutating_callback> non_mutating_callback : m_non_mutating_callbacks)
         non_mutating_callback.callback(*this, non_mutating_callback.data);

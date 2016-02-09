@@ -3,7 +3,6 @@
 #include <Cogwheel/Assets/Mesh.h>
 #include <Cogwheel/Assets/MeshModel.h>
 #include <Cogwheel/Core/Engine.h>
-#include <Cogwheel/Core/IModule.h>
 #include <Cogwheel/Input/Keyboard.h>
 #include <Cogwheel/Input/Mouse.h>
 #include <Cogwheel/Scene/Camera.h>
@@ -23,7 +22,7 @@ using namespace Cogwheel::Scene;
 
 static std::string g_filepath;
 
-class Navigation final : public IModule {
+class Navigation final {
 public:
 
     Navigation(SceneNodes::UID node_ID, float velocity) 
@@ -33,10 +32,9 @@ public:
         , m_velocity(velocity)
     { }
 
-    void apply() override {
-        Engine* engine = Engine::get_instance();
-        const Keyboard* keyboard = engine->get_keyboard();
-        const Mouse* mouse = engine->get_mouse();
+    void navigate(Engine& engine) {
+        const Keyboard* keyboard = engine.get_keyboard();
+        const Mouse* mouse = engine.get_mouse();
 
         SceneNode node = m_node_ID;
         Transform transform = node.get_global_transform();
@@ -56,7 +54,7 @@ public:
 
             if (strafing != 0.0f || forward != 0.0f) {
                 Vector3f translation_offset = transform.rotation * Vector3f(strafing, 0.0f, forward);
-                transform.translation += normalize(translation_offset) * m_velocity * engine->get_time().get_smooth_delta_time();
+                transform.translation += normalize(translation_offset) * m_velocity * engine.get_time().get_smooth_delta_time();
             }
         }
 
@@ -75,8 +73,8 @@ public:
         node.set_global_transform(transform);
     }
 
-    std::string get_name() override {
-        return "Navigation";
+    static inline void navigate_callback(Cogwheel::Core::Engine& engine, void* state) {
+        static_cast<Navigation*>(state)->navigate(engine);
     }
 
 private:
@@ -113,7 +111,8 @@ void initializer(Cogwheel::Core::Engine& engine) {
         Cameras::UID cam_ID = Cameras::create(cam_node_ID, perspective_matrix, inverse_perspective_matrix);
 
         float camera_velocity = magnitude(scene_bounds.size()) * 0.1f;
-        engine.add_mutating_callback(new Navigation(cam_node_ID, camera_velocity));
+        Navigation* camera_navigation = new Navigation(cam_node_ID, camera_velocity);
+        engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
     }
 }
 

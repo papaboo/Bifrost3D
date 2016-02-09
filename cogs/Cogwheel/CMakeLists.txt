@@ -11,7 +11,6 @@ SET(CORE_SRCS
   Cogwheel/Core/Array.h
   Cogwheel/Core/Engine.h
   Cogwheel/Core/Engine.cpp
-  Cogwheel/Core/IModule.h
   Cogwheel/Core/Iterable.h
   Cogwheel/Core/Time.h
   Cogwheel/Core/UniqueIDGenerator.h

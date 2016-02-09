@@ -14,8 +14,6 @@
 #include <Cogwheel/Core/Window.h>
 #include <Cogwheel/Scene/SceneNode.h>
 
-#include <vector>
-
 namespace Cogwheel {
 namespace Core {
     class IModule;
@@ -68,7 +66,8 @@ public:
     // -----------------------------------------------------------------------
     // Callbacks
     // -----------------------------------------------------------------------
-    void add_mutating_callback(Core::IModule* callback);
+    typedef void(*mutating_callback)(Engine& engine, void* callback_state);
+    void add_mutating_callback(mutating_callback callback, void* callback_state);
 
     typedef void(*non_mutating_callback)(const Engine& engine, void* callback_state);
     void add_non_mutating_callback(non_mutating_callback callback, void* callback_state);
@@ -102,9 +101,9 @@ private:
     };
 
     // All engine callbacks.
-    Core::Array<Core::IModule*> m_mutating_callbacks;
-    std::vector<Closure<non_mutating_callback>> m_non_mutating_callbacks;
-    std::vector<Closure<tick_cleanup_callback>> m_tick_cleanup_callbacks;
+    Core::Array<Closure<mutating_callback>> m_mutating_callbacks;
+    Core::Array<Closure<non_mutating_callback>> m_non_mutating_callbacks;
+    Core::Array<Closure<tick_cleanup_callback>> m_tick_cleanup_callbacks;
 
     // Input should only be updated by whoever created it and not by access via the engine.
     const Input::Keyboard* m_keyboard;
