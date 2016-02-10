@@ -70,7 +70,8 @@ public:
             }
         }
 
-        node.set_global_transform(transform);
+        if (transform != node.get_global_transform())
+            node.set_global_transform(transform);
     }
 
     static inline void navigate_callback(Cogwheel::Core::Engine& engine, void* state) {
@@ -84,10 +85,15 @@ private:
     float m_velocity;
 };
 
+static inline void scenenode_cleanup_callback(void* dummy) {
+    SceneNodes::clear_change_notifications();
+}
+
 void initializer(Cogwheel::Core::Engine& engine) {
     engine.get_window().set_name("SimpleViewer");
 
     SceneNodes::allocate(8u);
+    engine.add_tick_cleanup_callback(scenenode_cleanup_callback, nullptr);
     Meshes::allocate(8u);
     MeshModels::allocate(8u);
 
@@ -98,7 +104,6 @@ void initializer(Cogwheel::Core::Engine& engine) {
         AABB mesh_aabb = Meshes::get_bounds(*uid_itr);
         scene_bounds.grow_to_contain(mesh_aabb);
     }
-    std::cout << "Scene bounds " << scene_bounds << std::endl;
     
     { // Add camera
         Cameras::allocate(1u);
@@ -123,7 +128,6 @@ void initialize_window(Cogwheel::Core::Window& window) {
 
 void main(int argc, char** argv) {
     g_filepath = argc >= 2 ? std::string(argv[1]) : "";
-    // g_filepath = "../../data/models/cube/cube.obj";
 
     if (g_filepath.empty()) {
         printf("SimpleViewer requires path to model as first argument.\n");
