@@ -3,6 +3,8 @@ include_directories(.)
 SET(ASSETS_SRCS 
   Cogwheel/Assets/Mesh.h
   Cogwheel/Assets/Mesh.cpp
+  Cogwheel/Assets/MeshCreation.h
+  Cogwheel/Assets/MeshCreation.cpp
   Cogwheel/Assets/MeshModel.h
   Cogwheel/Assets/MeshModel.cpp
 )
