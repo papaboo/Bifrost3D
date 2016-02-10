@@ -1,10 +1,13 @@
+* MeshUtils cog.
+** Create Cube, plane cylinder and sphere.
+** Parameterize by texcoord generation method that takes the position and normals parameter.
 * Notifications when changing the scene. / Pullable events.
-** Transform changed event.
-** Probably a parent changed event. (node_id, old_parent_id)
-** setup_for_engine initializers that initializes the managers and also hooks them up to the engine.
-** Decide if callbacks should be interfaces or raw function pointers.
+** SceneNode - Create and destroy.
+** Camera - Create, destroy, parent changed and matrix changed. Store in bitmask pr camera instead of as separate notifications.
+** Meshes - Create and destroy.
+** Models - Create and destroy.
 * Point light
-* destroy - SceneNode, Camera, Meshes, Models.
+* Setup_for_engine(...) initializers that initializes the managers and also hooks them up to the engine.
 * Materials
 ** Coated rubber/metal.
 ** Textures.
@@ -13,6 +16,7 @@
 * Natvis visualizations
 ** Natvis install target.
 ** Mesh, Meshes, MeshModels, SceneNodes, Cameras
+** Remember to add a raw_view that will visualize the data as-is.
 * Screenshot
 ** Grab backbuffer on the CPU.
 *** Request to composer or through the camera, not renderers
@@ -22,7 +26,9 @@
 ** G-Buffer pr camera.
 ** Compose when all cameras are done.
 * Multiple scenes.
-** Rendermask?
+** Only nodes in a certain scene should be rendered.
+** A scene node should know if it is in a scene and in which. Store the root scene ID pr node?
+** A requirement for the asset manager to not simply add loaded nodes directly into the scene.
 * AssetManager.
 * Serialize scene and models.
 * CUDA
