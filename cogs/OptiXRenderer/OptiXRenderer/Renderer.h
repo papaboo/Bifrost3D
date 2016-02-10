@@ -50,6 +50,8 @@ public:
 
 private:
 
+    void handle_updates();
+
     struct {
         int optix;
         int cuda;

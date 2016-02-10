@@ -13,6 +13,7 @@
 
 #include <Cogwheel/Assets/Mesh.h>
 #include <Cogwheel/Assets/MeshModel.h>
+#include <Cogwheel/Core/Array.h>
 #include <Cogwheel/Core/Engine.h>
 #include <Cogwheel/Math/Math.h>
 #include <Cogwheel/Scene/Camera.h>
@@ -43,6 +44,8 @@ struct Renderer::State {
     GLuint backbuffer_gl_id;
 
     optix::Group root_node;
+
+    Array<optix::Transform> transforms = Array<optix::Transform>(0);
 };
 
 static inline std::string get_ptx_path(std::string shader_filename) {
@@ -317,10 +320,16 @@ Renderer::Renderer()
         // transform->validate();
         // m_state->root_node->addChild(transform);
 
+        // TODO Move into mesh_model_created event listener.
         for (MeshModels::ConstUIDIterator model_itr = MeshModels::begin();
             model_itr != MeshModels::end(); ++model_itr) {
             MeshModel model = MeshModels::get_model(*model_itr);
-            m_state->root_node->addChild(load_model(context, model));
+            optix::Transform transform = load_model(context, model);
+            m_state->root_node->addChild(transform);
+
+            if (m_state->transforms.size() <= model.m_scene_node_ID)
+                m_state->transforms.resize(SceneNodes::capacity());
+            m_state->transforms[model.m_scene_node_ID] = transform;
         }
     }
 
@@ -365,6 +374,9 @@ Renderer::Renderer()
 }
 
 void Renderer::render() {
+
+    handle_updates();
+
     Context& context = m_state->context;
 
     const Window& window = Engine::get_instance()->get_window();
@@ -439,6 +451,29 @@ void Renderer::render() {
             glVertex3f(-1.0f, 1.0f, 0.f);
 
         } glEnd();
+    }
+}
+
+void Renderer::handle_updates() {
+    { // Transform updates
+        // We're only interested in changes in the transforms that are connected to renderables, such as meshes.
+        bool important_transform_changed = false; 
+        for (SceneNodes::UID node_ID : SceneNodes::get_changed_transforms()) {
+            optix::Transform optixTransform = m_state->transforms[node_ID];
+            if (optixTransform) {
+                Math::Transform transform = SceneNodes::get_global_transform(node_ID);
+                Math::Transform inverse_transform = invert(transform);
+                optixTransform->setMatrix(false, to_matrix4x4(transform).begin(), to_matrix4x4(inverse_transform).begin());
+                important_transform_changed = true;
+            }
+        }
+
+        if (important_transform_changed) {
+            m_state->root_node->getAcceleration()->markDirty();
+            m_state->accumulations = 0u;
+        }
+
+        // TODO Check for camera updates seperately.
     }
 }
 
