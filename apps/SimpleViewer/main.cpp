@@ -22,6 +22,25 @@ using namespace Cogwheel::Scene;
 
 static std::string g_filepath;
 
+class SimpleRotator final {
+public:
+    SimpleRotator(SceneNodes::UID node_ID)
+        : m_node_ID(node_ID) { }
+
+    void rotate(Engine& engine) {
+        Transform transform = SceneNodes::get_global_transform(m_node_ID);
+        transform.rotation = Quaternionf::from_angle_axis(engine.get_time().get_total_time() * 0.1f, Vector3f::up());
+        SceneNodes::set_global_transform(m_node_ID, transform);
+    }
+
+    static inline void rotate_callback(Cogwheel::Core::Engine& engine, void* state) {
+        static_cast<SimpleRotator*>(state)->rotate(engine);
+    }
+
+private:
+    SceneNodes::UID m_node_ID;
+};
+
 class Navigation final {
 public:
 
@@ -105,6 +124,12 @@ void initializer(Cogwheel::Core::Engine& engine) {
         scene_bounds.grow_to_contain(mesh_aabb);
     }
     
+    if (SceneNodes::begin() != SceneNodes::end()) {
+        // Rotate first node.
+        SimpleRotator* simple_rotator = new SimpleRotator(*SceneNodes::begin());
+        engine.add_mutating_callback(SimpleRotator::rotate_callback, simple_rotator);
+    }
+
     { // Add camera
         Cameras::allocate(1u);
         SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
