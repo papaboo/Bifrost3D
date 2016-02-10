@@ -20,6 +20,8 @@ namespace Assets {
 // Container for the buffers that make up a mesh, such as positions and normals.
 // Future work:
 // * Pass bitmask of vertex attributes to be created to constructor.
+// * Simplify to POD struct and get rid of the RAII destructor. 
+//   Then let Meshes handle desctruction.
 //----------------------------------------------------------------------------
 struct Mesh final {
     unsigned int m_indices_count;
@@ -104,8 +106,8 @@ public:
     static inline void set_bounds(Meshes::UID mesh_ID, Math::AABB bounds) { m_bounds[mesh_ID] = bounds; }
     static Math::AABB compute_bounds(Meshes::UID mesh_ID);
 
-    static UIDGenerator::ConstIterator begin() { return m_UID_generator.begin(); }
-    static UIDGenerator::ConstIterator end() { return m_UID_generator.end(); }
+    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
+    static ConstUIDIterator end() { return m_UID_generator.end(); }
 
 private:
     static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);

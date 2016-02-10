@@ -21,17 +21,18 @@ namespace Scene {
 // ---------------------------------------------------------------------------
 // Container class for the cogwheel scene node.
 // Future work
-// * A parent changed event: (node_id, old_parent_id). Is this actually needed by anything?
+// * Add node created/deleted notification.
+// * A parent changed event: (node_id, old_parent_id). Is this actually needed by anything when transforms are global?
 // * Allocate all (or most) internal arrays in one big chunk.
 // * Change the sibling/children layout, so sibling IDs or perhaps siblings are always allocated next too each other?
 //  * Requires an extra indirection though, since node ID's won't match the node positions anymore.
-//  * Then I could use Core::Array to quickly construct a list of children.
 //  * Could be done (incrementally?) when all mutations in a tick are done.
 // ---------------------------------------------------------------------------
 class SceneNodes final {
 public:
     typedef Core::TypedUIDGenerator<SceneNodes> UIDGenerator;
     typedef UIDGenerator::UID UID;
+    typedef UIDGenerator::ConstIterator ConstUIDIterator;
 
     static bool is_allocated() { return m_global_transforms != nullptr; }
     static void allocate(unsigned int capacity);
@@ -56,6 +57,9 @@ public:
     static void set_local_transform(SceneNodes::UID node_ID, Math::Transform transform);
     static Math::Transform get_global_transform(SceneNodes::UID node_ID) { return m_global_transforms[node_ID];}
     static void set_global_transform(SceneNodes::UID node_ID, Math::Transform transform);
+
+    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
+    static ConstUIDIterator end() { return m_UID_generator.end(); }
 
     template<typename F>
     static void traverser_recursively(SceneNodes::UID node_ID, F& function);
