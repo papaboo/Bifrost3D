@@ -1,5 +1,5 @@
 * MeshUtils cog.
-** Create Cube, plane cylinder and sphere.
+** Create cylinder and sphere.
 ** Parameterize by texcoord generation method that takes the position and normals parameter.
 * Notifications when changing the scene. / Pullable events.
 ** SceneNode - Create and destroy.

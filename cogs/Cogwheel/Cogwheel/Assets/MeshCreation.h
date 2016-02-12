@@ -17,6 +17,8 @@ namespace MeshCreation {
 
 Meshes::UID plane(unsigned int quads_pr_side);
 
+Meshes::UID cube(unsigned int quads_pr_side);
+
 } // NS MeshCreation
 } // NS Assets
 } // NS Cogwheel
