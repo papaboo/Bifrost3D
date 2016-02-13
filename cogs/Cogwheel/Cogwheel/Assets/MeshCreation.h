@@ -13,6 +13,12 @@
 
 namespace Cogwheel {
 namespace Assets {
+
+//----------------------------------------------------------------------------
+// Mesh creation utilities.
+// Future work
+// * Tex coord functions and pass them to the relevant mesh creators.
+//----------------------------------------------------------------------------
 namespace MeshCreation {
 
 Meshes::UID plane(unsigned int quads_pr_side);

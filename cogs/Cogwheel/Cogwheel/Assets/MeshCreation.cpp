@@ -128,6 +128,8 @@ Meshes::UID cube(unsigned int quads_pr_edge) {
                                                     j + (i + 1) * verts_pr_edge) + side_offset;
             }
 
+    Meshes::set_bounds(mesh_ID, AABB(Vector3f(-halfsize), Vector3f(halfsize)));
+
     return mesh_ID;
 }
 
