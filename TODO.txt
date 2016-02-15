@@ -1,4 +1,3 @@
-* Warnings as errors.
 * Notifications when changing the scene. / Pullable events.
 ** SceneNode - Create and destroy.
 ** Camera - Create, destroy, parent changed and matrix changed. Store in bitmask pr camera instead of as separate notifications.
