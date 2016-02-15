@@ -18,12 +18,18 @@ namespace Assets {
 // Mesh creation utilities.
 // Future work
 // * Tex coord functions and pass them to the relevant mesh creators.
+// * Allow for non uniform scaling on creation, 
+//   since the transforms only support uniform scaling.
+// * Test winding order is correct in a renderer that supports 
+//   backface culling.
 //----------------------------------------------------------------------------
 namespace MeshCreation {
 
 Meshes::UID plane(unsigned int quads_pr_side);
 
 Meshes::UID cube(unsigned int quads_pr_side);
+
+Meshes::UID cylinder(unsigned int quads_vertically, unsigned int circumference_quads);
 
 } // NS MeshCreation
 } // NS Assets
