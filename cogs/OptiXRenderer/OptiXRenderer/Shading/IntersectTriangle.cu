@@ -21,18 +21,17 @@ rtBuffer<float3> position_buffer;
 rtBuffer<float3> normal_buffer;
 rtBuffer<float2> texcoord_buffer;
 
-rtDeclareVariable(float2, texcoord, attribute texcoord, ); 
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, ); 
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, ); 
-
+rtDeclareVariable(float2, texcoord, attribute texcoord, );
 
 //----------------------------------------------------------------------------
 // Intersection program for triangle meshes.
 // Future work:
 // * Test if interleaving the vertex attributes will improve performance.
 //----------------------------------------------------------------------------
-RT_PROGRAM void intersect(int primitiveIndex) {
-    const uint3 vertex_index = index_buffer[primitiveIndex];
+RT_PROGRAM void intersect(int primitive_index) {
+    const uint3 vertex_index = index_buffer[primitive_index];
 
     const float3 p0 = position_buffer[vertex_index.x];
     const float3 p1 = position_buffer[vertex_index.y];
@@ -61,8 +60,8 @@ RT_PROGRAM void intersect(int primitiveIndex) {
     }
 }
 
-RT_PROGRAM void bounds(int primIdx, float result[6]) {
-    const uint3 vertex_index = index_buffer[primIdx];
+RT_PROGRAM void bounds(int primitive_index, float result[6]) {
+    const uint3 vertex_index = index_buffer[primitive_index];
 
     const float3 v0 = position_buffer[vertex_index.x];
     const float3 v1 = position_buffer[vertex_index.y];
