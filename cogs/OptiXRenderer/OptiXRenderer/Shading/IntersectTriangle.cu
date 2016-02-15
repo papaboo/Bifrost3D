@@ -16,7 +16,7 @@ using namespace optix;
 
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
 
-rtBuffer<uint3>   index_buffer;
+rtBuffer<uint3> index_buffer;
 rtBuffer<float3> position_buffer;
 rtBuffer<float3> normal_buffer;
 rtBuffer<float2> texcoord_buffer;

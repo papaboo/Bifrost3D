@@ -232,9 +232,9 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
         // Vertex attributes
         optix::Buffer position_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, mesh.m_vertex_count, mesh.m_positions);
         optixMesh["position_buffer"]->setBuffer(position_buffer);
-        optix::Buffer normal_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, mesh.m_vertex_count, mesh.m_positions);
+        optix::Buffer normal_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, mesh.m_vertex_count, mesh.m_normals);
         optixMesh["normal_buffer"]->setBuffer(normal_buffer);
-        optix::Buffer texcoord_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, mesh.m_vertex_count, mesh.m_positions);
+        optix::Buffer texcoord_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, mesh.m_vertex_count, mesh.m_texcoords);
         optixMesh["texcoord_buffer"]->setBuffer(texcoord_buffer);
         optixMesh->validate(); // TODO debug validate macro.
     }
