@@ -1,7 +1,10 @@
 set(PROJECT_NAME "SimpleViewer")
 
+include_directories(.)
+
 set(SRCS 
   main.cpp
+  TestScene.h
 )
 
 add_executable(${PROJECT_NAME} ${SRCS})

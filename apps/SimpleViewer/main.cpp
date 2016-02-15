@@ -1,4 +1,4 @@
-#include <GLFWDriver.h>
+#include <TestScene.h>
 
 #include <Cogwheel/Assets/Mesh.h>
 #include <Cogwheel/Assets/MeshModel.h>
@@ -6,6 +6,8 @@
 #include <Cogwheel/Input/Keyboard.h>
 #include <Cogwheel/Input/Mouse.h>
 #include <Cogwheel/Scene/Camera.h>
+
+#include <GLFWDriver.h>
 
 #include <ObjLoader/ObjLoader.h>
 
@@ -29,11 +31,11 @@ public:
 
     void rotate(Engine& engine) {
         Transform transform = SceneNodes::get_global_transform(m_node_ID);
-        transform.rotation = Quaternionf::from_angle_axis(engine.get_time().get_total_time() * 0.1f, Vector3f::up());
+        transform.rotation = Quaternionf::from_angle_axis(float(engine.get_time().get_total_time()) * 0.1f, Vector3f::up());
         SceneNodes::set_global_transform(m_node_ID, transform);
     }
 
-    static inline void rotate_callback(Cogwheel::Core::Engine& engine, void* state) {
+    static inline void rotate_callback(Engine& engine, void* state) {
         static_cast<SimpleRotator*>(state)->rotate(engine);
     }
 
@@ -71,9 +73,13 @@ public:
             if (keyboard->is_pressed(Keyboard::Key::S))
                 forward -= 1.0f;
 
+            float velocity = m_velocity;
+            if (keyboard->is_pressed(Keyboard::Key::LeftShift) || keyboard->is_pressed(Keyboard::Key::RightShift))
+                velocity *= 5.0f;
+
             if (strafing != 0.0f || forward != 0.0f) {
                 Vector3f translation_offset = transform.rotation * Vector3f(strafing, 0.0f, forward);
-                transform.translation += normalize(translation_offset) * m_velocity * engine.get_time().get_smooth_delta_time();
+                transform.translation += normalize(translation_offset) * velocity * engine.get_time().get_smooth_delta_time();
             }
         }
 
@@ -116,23 +122,32 @@ void initializer(Cogwheel::Core::Engine& engine) {
     Meshes::allocate(8u);
     MeshModels::allocate(8u);
 
-    ObjLoader::load(g_filepath);
+    if (g_filepath.empty())
+        engine.set_scene_root(create_test_scene(engine));
+    else
+        engine.set_scene_root(ObjLoader::load(g_filepath));
 
+    // TODO Should be based on the transformed global mesh bounds and not the local bounds.
+    //      These could be calculated as a helper function on the model.
     AABB scene_bounds = AABB::invalid();
     for (Meshes::ConstUIDIterator uid_itr = Meshes::begin(); uid_itr != Meshes::end(); ++uid_itr) {
         AABB mesh_aabb = Meshes::get_bounds(*uid_itr);
         scene_bounds.grow_to_contain(mesh_aabb);
     }
-    
-    if (SceneNodes::begin() != SceneNodes::end()) {
-        // Rotate first node.
-        SimpleRotator* simple_rotator = new SimpleRotator(*SceneNodes::begin());
+
+    // Rotate root node.
+    if (engine.get_scene_root() != SceneNodes::UID::invalid_UID()) {
+        SimpleRotator* simple_rotator = new SimpleRotator(engine.get_scene_root());
         engine.add_mutating_callback(SimpleRotator::rotate_callback, simple_rotator);
     }
 
     { // Add camera
         Cameras::allocate(1u);
         SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
+
+        Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
+        cam_transform.translation = Vector3f(0, 1, -4);
+        SceneNodes::set_global_transform(cam_node_ID, cam_transform);
 
         Matrix4x4f perspective_matrix, inverse_perspective_matrix;
         CameraUtils::compute_perspective_projection(0.1f, 100.0f, PI<float>() / 4.0f, 8.0f / 6.0f,
@@ -154,10 +169,8 @@ void initialize_window(Cogwheel::Core::Window& window) {
 void main(int argc, char** argv) {
     g_filepath = argc >= 2 ? std::string(argv[1]) : "";
 
-    if (g_filepath.empty()) {
-        printf("SimpleViewer requires path to model as first argument.\n");
-        exit(1);
-    }
+    if (g_filepath.empty())
+        printf("SimpleViewer will display the debug scene.\n");
 
     GLFWDriver::run(initializer, initialize_window);
 }
