@@ -22,9 +22,9 @@ Meshes::UID plane(unsigned int quads_pr_edge) {
         return Meshes::UID::invalid_UID();
 
     unsigned int size = quads_pr_edge + 1;
+    unsigned int vertex_count = size * size;
     unsigned int quad_count = quads_pr_edge * quads_pr_edge;
     unsigned int indices_count = quad_count * 2;
-    unsigned int vertex_count = size * size;
     
     Meshes::UID mesh_ID = Meshes::create("Plane", indices_count, vertex_count);
     Mesh& mesh = Meshes::get_mesh(mesh_ID);
@@ -35,7 +35,7 @@ Meshes::UID plane(unsigned int quads_pr_edge) {
         for (unsigned int x = 0; x < size; ++x) {
             mesh.m_positions[z * size + x] = Vector3f(x - quads_pr_edge * 0.5f, 0.0f, z - quads_pr_edge * 0.5f);
             mesh.m_normals[z * size + x] = Vector3f(0.0f, 1.0f, 0.0f);
-            mesh.m_texcoords[z * size + x] = Vector2f(x * tc_normalizer, z * tc_normalizer);
+            mesh.m_texcoords[z * size + x] = Vector2f(float(x), float(z)) * tc_normalizer;
         }
     }
 
@@ -138,15 +138,15 @@ Meshes::UID cube(unsigned int quads_pr_edge) {
     return mesh_ID;
 }
 
-Meshes::UID cylinder(unsigned int quads_vertically, unsigned int circumference_quads) {
-    if (quads_vertically == 0 || circumference_quads == 0)
+Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_quads) {
+    if (vertical_quads == 0 || circumference_quads == 0)
         return Meshes::UID::invalid_UID();
 
     unsigned int lid_vertex_count = circumference_quads + 1;
-    unsigned int side_vertex_count = (quads_vertically + 1) * circumference_quads;
+    unsigned int side_vertex_count = (vertical_quads + 1) * circumference_quads;
     unsigned int vertex_count = 2 * lid_vertex_count + side_vertex_count;
     unsigned int lid_indices_count = circumference_quads;
-    unsigned int side_indices_count = 2 * quads_vertically * circumference_quads;
+    unsigned int side_indices_count = 2 * vertical_quads * circumference_quads;
     unsigned int indices_count = 2 * lid_indices_count + side_indices_count;
     float radius = 0.5f;
 
@@ -171,8 +171,8 @@ Meshes::UID cylinder(unsigned int quads_vertically, unsigned int circumference_q
         }
 
         // Create side vertices
-        for (unsigned int i = 0; i < quads_vertically+1; ++i) {
-            float l = i / float(quads_vertically);
+        for (unsigned int i = 0; i < vertical_quads + 1; ++i) {
+            float l = i / float(vertical_quads);
             for (unsigned int j = 0; j < circumference_quads; ++j) {
                 unsigned int vertex_index = 2 * lid_vertex_count + i * circumference_quads + j;
                 mesh.m_positions[vertex_index] = mesh.m_positions[j+1];
@@ -203,8 +203,8 @@ Meshes::UID cylinder(unsigned int quads_vertically, unsigned int circumference_q
         }
 
         // Side
-        for (unsigned int i = 0; i < quads_vertically + 1; ++i) {
-            float v = i / float(quads_vertically);
+        for (unsigned int i = 0; i < vertical_quads + 1; ++i) {
+            float v = i / float(vertical_quads);
             for (unsigned int j = 0; j < circumference_quads; ++j) {
                 unsigned int vertex_index = 2 * lid_vertex_count + i * circumference_quads + j;
                 float u = abs(-2.0f * j / float(circumference_quads) + 1.0f); // Magic u mapping. Mirror repeat mapping of the texture coords.
@@ -227,7 +227,7 @@ Meshes::UID cylinder(unsigned int quads_vertically, unsigned int circumference_q
         // Side
         Vector3f* side_positions = mesh.m_positions + 2 * lid_vertex_count;
         unsigned int side_vertex_offset = 2 * lid_vertex_count;
-        for (unsigned int i = 0; i < quads_vertically; ++i) {
+        for (unsigned int i = 0; i < vertical_quads; ++i) {
             for (unsigned int j = 0; j < circumference_quads; ++j) {
                 unsigned int side_index = 2 * lid_indices_count + 2 * (i * circumference_quads + j);
                 
@@ -240,6 +240,62 @@ Meshes::UID cylinder(unsigned int quads_vertically, unsigned int circumference_q
                 mesh.m_indices[side_index + 0] = Vector3ui(i0, i1, i3) + side_vertex_offset;
                 mesh.m_indices[side_index + 1] = Vector3ui(i0, i3, i2) + side_vertex_offset;
             }
+        }
+    }
+
+    Meshes::set_bounds(mesh_ID, AABB(Vector3f(-radius), Vector3f(radius)));
+
+    return mesh_ID;
+}
+
+static Vector3f spherical_to_direction(float theta, float phi) {
+    float sinTheta = sin(theta);
+    float z = sinTheta * cos(phi);
+    float x = -sinTheta * sin(phi);
+    float y = cos(theta);
+    return Vector3f(x, y, z);
+}
+
+Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads) {
+    if (longitude_quads < 3 || latitude_quads < 2)
+        return Meshes::UID::invalid_UID();
+
+    unsigned int latitude_size = latitude_quads + 1;
+    unsigned int longitude_size = longitude_quads + 1;
+    unsigned int vertex_count = latitude_size * longitude_size;
+    unsigned int quad_count = latitude_quads * longitude_quads;
+    unsigned int indices_count = quad_count * 2;
+    float radius = 0.5f;
+
+    Meshes::UID mesh_ID = Meshes::create("RevolvedSphere", indices_count, vertex_count);
+    Mesh& mesh = Meshes::get_mesh(mesh_ID);
+
+    { // Vertex attributes.
+        Vector2f tc_normalizer = Vector2f(1.0f / longitude_quads, 1.0f / latitude_quads);
+        for (unsigned int y = 0; y < latitude_size; ++y) {
+            for (unsigned int x = 0; x < longitude_size; ++x) {
+                unsigned int vertex_index = y * longitude_size + x;
+                Vector2f tc = mesh.m_texcoords[vertex_index] = Vector2f(float(x), float(y)) * tc_normalizer;
+                mesh.m_positions[vertex_index] = spherical_to_direction(tc.y * Math::PI<float>(),
+                                                                        tc.x * 2.0f * Math::PI<float>()) * radius;
+                mesh.m_normals[vertex_index] = normalize(mesh.m_positions[vertex_index]);
+            }
+        }
+
+        // Hard set the poles to [0,1,0] and [0,-1,0].
+        for (unsigned int x = 0; x < longitude_size; ++x) {
+            mesh.m_positions[x] = Vector3f(0, radius, 0);
+            mesh.m_positions[(latitude_size - 1) * longitude_size + x] = Vector3f(0, -radius, 0);
+        }
+    }
+
+    // Indices
+    for (unsigned int y = 0; y < latitude_quads; ++y) {
+        for (unsigned int x = 0; x < longitude_quads; ++x) {
+            Vector3ui* indices = mesh.m_indices + (y * longitude_quads + x) * 2;
+            unsigned int base_vertex_index = x + y * longitude_size;
+            indices[0] = Vector3ui(0, longitude_size, 1) + base_vertex_index;
+            indices[1] = Vector3ui(1, longitude_size, longitude_size + 1) + base_vertex_index;
         }
     }
 

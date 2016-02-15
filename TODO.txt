@@ -1,6 +1,4 @@
-* MeshUtils cog.
-** Create cylinder and sphere.
-** Parameterize by texcoord generation method that takes the position and normals parameter.
+* Warnings as errors.
 * Notifications when changing the scene. / Pullable events.
 ** SceneNode - Create and destroy.
 ** Camera - Create, destroy, parent changed and matrix changed. Store in bitmask pr camera instead of as separate notifications.

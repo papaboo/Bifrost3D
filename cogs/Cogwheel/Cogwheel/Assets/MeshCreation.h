@@ -29,7 +29,9 @@ Meshes::UID plane(unsigned int quads_pr_side);
 
 Meshes::UID cube(unsigned int quads_pr_side);
 
-Meshes::UID cylinder(unsigned int quads_vertically, unsigned int circumference_quads);
+Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_quads);
+
+Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads);
 
 } // NS MeshCreation
 } // NS Assets
