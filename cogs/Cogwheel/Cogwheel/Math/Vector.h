@@ -68,7 +68,7 @@ public:
     explicit Vector3(T s) : x(s), y(s), z(s) { }
     Vector3(T x, T y, T z) : x(x), y(y), z(z) { }
     template <typename U>
-    Vector3(const Vector3<U>& v) : x(v.x), y(v.y), z(v.z) { }
+    explicit Vector3(const Vector3<U>& v) : x(T(v.x)), y(T(v.y)), z(T(v.z)) { }
 
     static inline Vector3<T> zero() { return Vector3(0, 0, 0); }
     static inline Vector3<T> one() { return Vector3(1, 1, 1); }
