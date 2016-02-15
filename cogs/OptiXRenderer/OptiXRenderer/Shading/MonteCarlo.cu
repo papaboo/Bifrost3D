@@ -25,10 +25,14 @@ rtDeclareVariable(float3, g_color, , );
 //----------------------------------------------------------------------------
 
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
+rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
+rtDeclareVariable(float2, texcoord, attribute texcoord, );
 
 RT_PROGRAM void closest_hit() {
-    const float3 world_geometric_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, geometric_normal));
-    monte_carlo_PRD.color = g_color * abs(dot(world_geometric_normal, ray.direction));
+    // const float3 world_geometric_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, geometric_normal));
+    const float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
+    // const float3 color = make_float3(texcoord.x, texcoord.y, 1.0f - texcoord.x - texcoord.y);
+    monte_carlo_PRD.color = g_color * abs(dot(world_shading_normal, ray.direction));
 }
 
 //----------------------------------------------------------------------------
