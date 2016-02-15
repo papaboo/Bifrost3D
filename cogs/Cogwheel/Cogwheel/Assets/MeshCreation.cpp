@@ -29,6 +29,7 @@ Meshes::UID plane(unsigned int quads_pr_edge) {
     Meshes::UID mesh_ID = Meshes::create("Plane", indices_count, vertex_count);
     Mesh& mesh = Meshes::get_mesh(mesh_ID);
 
+    // Vertex attributes.
     float tc_normalizer = 1.0f / quads_pr_edge;
     for (unsigned int z = 0; z < size; ++z) {
         for (unsigned int x = 0; x < size; ++x) {
@@ -38,6 +39,7 @@ Meshes::UID plane(unsigned int quads_pr_edge) {
         }
     }
 
+    // Indices
     for (unsigned int z = 0; z < quads_pr_edge; ++z) {
         for (unsigned int x = 0; x < quads_pr_edge; ++x) {
             Vector3ui* indices = mesh.m_indices + (z * quads_pr_edge + x) * 2;
@@ -187,8 +189,10 @@ Meshes::UID cylinder(unsigned int quads_vertically, unsigned int circumference_q
         while (normal_iterator < mesh.m_normals + 2 * lid_vertex_count) // Bottom
             *normal_iterator++ = Vector3f(0, -1, 0);
         Vector3f* side_position_iterator = mesh.m_positions + 2 * lid_vertex_count;
-        while (normal_iterator < mesh.m_normals + mesh.m_vertex_count) // Side
-            *normal_iterator++ = normalize(*side_position_iterator++);
+        while (normal_iterator < mesh.m_normals + mesh.m_vertex_count) {// Side
+            Vector3f position = *side_position_iterator++;
+            *normal_iterator++ = normalize(Vector3f(position.x, 0.0f, position.z));
+        }
     }
 
     { // tex coords
