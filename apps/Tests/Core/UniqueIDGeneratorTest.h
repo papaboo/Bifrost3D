@@ -37,8 +37,12 @@ GTEST_TEST(Core_UniqueIDGenerator, generate_and_erase) {
     UID id = gen.generate();
     EXPECT_TRUE(gen.has(id));
 
-    gen.erase(id);
+    bool erased = gen.erase(id);
+    EXPECT_TRUE(erased);
     EXPECT_FALSE(gen.has(id));
+
+    bool not_erased = !gen.erase(id);
+    EXPECT_TRUE(not_erased);
 }
 
 GTEST_TEST(Core_UniqueIDGenerator, expanding) {

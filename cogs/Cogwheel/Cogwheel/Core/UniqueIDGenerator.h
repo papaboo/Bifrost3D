@@ -96,7 +96,7 @@ public:
     TypedUIDGenerator<T>& operator=(TypedUIDGenerator<T>&& rhs);
 
     UID generate();
-    void erase(UID id);
+    bool erase(UID id);
     bool has(UID id) const;
 
     unsigned int capacity() const { return m_capacity; }

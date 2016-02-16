@@ -62,7 +62,7 @@ typename TypedUIDGenerator<T>::UID TypedUIDGenerator<T>::generate() {
 }
 
 template <typename T>
-void TypedUIDGenerator<T>::erase(UID id) {
+bool TypedUIDGenerator<T>::erase(UID id) {
     if (has(id)) {
         m_IDs[m_last_index].set_ID(id.get_ID());
         m_last_index = id.get_ID();
@@ -70,7 +70,11 @@ void TypedUIDGenerator<T>::erase(UID id) {
         // Invalidate the old ID
         m_IDs[id].increment_incarnation();
         m_IDs[id].set_ID(0);
+
+        return true;
     }
+
+    return false;
 }
 
 template <typename T>
