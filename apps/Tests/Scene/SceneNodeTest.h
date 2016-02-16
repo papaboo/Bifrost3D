@@ -57,7 +57,7 @@ GTEST_TEST(Scene_SceneNode, create) {
     
     EXPECT_EQ(SceneNodes::get_name(node_ID), "Foo");
 
-    // Test scene node notifications.
+    // Test scene node created notification.
     Core::Iterable<SceneNodes::node_created_iterator> created_nodes = SceneNodes::get_created_nodes();
     EXPECT_EQ(created_nodes.end() - created_nodes.begin(), 1);
     EXPECT_EQ(*created_nodes.begin(), node_ID);
@@ -75,7 +75,7 @@ GTEST_TEST(Scene_SceneNode, destroy) {
     SceneNodes::destroy(node_ID);
     EXPECT_FALSE(SceneNodes::has(node_ID));
 
-    // Test scene node notifications.
+    // Test scene node destroyed notification.
     Core::Iterable<SceneNodes::node_destroyed_iterator> destroyed_nodes = SceneNodes::get_destroyed_nodes();
     EXPECT_EQ(destroyed_nodes.end() - destroyed_nodes.begin(), 1);
     EXPECT_EQ(*destroyed_nodes.begin(), node_ID);
