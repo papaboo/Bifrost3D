@@ -1,8 +1,7 @@
+* Box-gun!
 * Notifications when changing the scene. / Pullable events.
-** SceneNode - Create and destroy.
 ** Camera - Create, destroy, parent changed and matrix changed. Store in bitmask pr camera instead of as separate notifications.
 ** Meshes - Create and destroy.
-** Models - Create and destroy.
 * Point light
 * Setup_for_engine(...) initializers that initializes the managers and also hooks them up to the engine.
 * Materials

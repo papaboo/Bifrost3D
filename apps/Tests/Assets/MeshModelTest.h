@@ -65,8 +65,93 @@ TEST_F(Assets_MeshModels, create) {
     EXPECT_EQ(MeshModels::get_model(model_ID).m_mesh_ID, mesh_ID);
     EXPECT_EQ(MeshModels::get_mesh_ID(model_ID), mesh_ID);
 
+    // Test model created notification.
+    Core::Iterable<MeshModels::model_created_iterator> created_models = MeshModels::get_created_models();
+    EXPECT_EQ(created_models.end() - created_models.begin(), 1);
+    EXPECT_EQ(*created_models.begin(), node_ID);
+
     Meshes::deallocate();
     Scene::SceneNodes::deallocate();
+}
+
+TEST_F(Assets_MeshModels, destroy) {
+    MeshModels::UID model_ID = MeshModels::create(Scene::SceneNodes::UID::invalid_UID(), Meshes::UID::invalid_UID());
+    EXPECT_TRUE(MeshModels::has(model_ID));
+
+    MeshModels::clear_change_notifications();
+
+    MeshModels::destroy(model_ID);
+    EXPECT_FALSE(MeshModels::has(model_ID));
+
+    // Test model destroyed notification.
+    Core::Iterable<MeshModels::model_destroyed_iterator> destroyed_models = MeshModels::get_destroyed_models();
+    EXPECT_EQ(destroyed_models.end() - destroyed_models.begin(), 1);
+    EXPECT_EQ(*destroyed_models.begin(), model_ID);
+
+    MeshModels::deallocate();
+}
+
+
+TEST_F(Assets_MeshModels, create_and_destroy_notifications) {
+    MeshModels::UID model_ID0 = MeshModels::create(Scene::SceneNodes::UID::invalid_UID(), Meshes::UID::invalid_UID());
+    MeshModels::UID model_ID1 = MeshModels::create(Scene::SceneNodes::UID::invalid_UID(), Meshes::UID::invalid_UID());
+    EXPECT_TRUE(MeshModels::has(model_ID0));
+    EXPECT_TRUE(MeshModels::has(model_ID1));
+
+    { // Test model create notifications.
+        Core::Iterable<MeshModels::model_created_iterator> created_models = MeshModels::get_created_models();
+        EXPECT_EQ(created_models.end() - created_models.begin(), 2);
+        Core::Iterable<MeshModels::model_destroyed_iterator> destroyed_models = MeshModels::get_destroyed_models();
+        EXPECT_EQ(destroyed_models.end() - destroyed_models.begin(), 0);
+
+        bool model0_created = false;
+        bool model1_created = false;
+        for (const MeshModels::UID model_ID : created_models) {
+            if (model_ID == model_ID0)
+                model0_created = true;
+            if (model_ID == model_ID1)
+                model1_created = true;
+        }
+
+        EXPECT_TRUE(model0_created);
+        EXPECT_TRUE(model1_created);
+    }
+
+    MeshModels::clear_change_notifications();
+
+    { // Test destroy.
+        MeshModels::destroy(model_ID0);
+        EXPECT_FALSE(MeshModels::has(model_ID0));
+
+        Core::Iterable<MeshModels::model_created_iterator> created_models = MeshModels::get_created_models();
+        EXPECT_EQ(created_models.end() - created_models.begin(), 0);
+        Core::Iterable<MeshModels::model_destroyed_iterator> destroyed_models = MeshModels::get_destroyed_models();
+        EXPECT_EQ(destroyed_models.end() - destroyed_models.begin(), 1);
+
+        bool model0_destroyed = false;
+        bool model1_destroyed = false;
+        for (const MeshModels::UID model_ID : destroyed_models) {
+            if (model_ID == model_ID0)
+                model0_destroyed = true;
+            if (model_ID == model_ID1)
+                model1_destroyed = true;
+        }
+
+        EXPECT_TRUE(model0_destroyed);
+        EXPECT_FALSE(model1_destroyed);
+    }
+
+    MeshModels::clear_change_notifications();
+
+    { // Test that destroyed model cannot be destroyed again.
+        MeshModels::destroy(model_ID0);
+        EXPECT_FALSE(MeshModels::has(model_ID0));
+
+        Core::Iterable<MeshModels::model_created_iterator> created_models = MeshModels::get_created_models();
+        EXPECT_EQ(created_models.end() - created_models.begin(), 0);
+        Core::Iterable<MeshModels::model_destroyed_iterator> destroyed_models = MeshModels::get_destroyed_models();
+        EXPECT_EQ(destroyed_models.end() - destroyed_models.begin(), 0);
+    }
 }
 
 } // NS Assets

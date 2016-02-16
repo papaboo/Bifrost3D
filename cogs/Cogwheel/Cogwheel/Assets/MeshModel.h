@@ -43,24 +43,41 @@ public:
     static bool has(MeshModels::UID model_ID) { return m_UID_generator.has(model_ID); }
 
     static MeshModels::UID create(Scene::SceneNodes::UID scene_node_ID, Assets::Meshes::UID mesh_ID);
+    static void destroy(MeshModels::UID& node_ID);
 
     static inline MeshModel get_model(MeshModels::UID model_ID) { return m_models[model_ID]; }
     static inline void set_model(MeshModels::UID model_ID, MeshModel model) { m_models[model_ID] = model; }
 
     static inline Scene::SceneNodes::UID get_scene_node_ID(MeshModels::UID model_ID) { return m_models[model_ID].m_scene_node_ID; }
-    static inline void set_scene_node_ID(MeshModels::UID model_ID, Scene::SceneNodes::UID node_ID) { m_models[model_ID].m_scene_node_ID = node_ID; }
-
     static inline Assets::Meshes::UID get_mesh_ID(MeshModels::UID model_ID) { return m_models[model_ID].m_mesh_ID; }
-    static inline void set_mesh_ID(MeshModels::UID model_ID, Assets::Meshes::UID mesh_ID) { m_models[model_ID].m_mesh_ID = mesh_ID; }
 
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
     static ConstUIDIterator end() { return m_UID_generator.end(); }
+
+    //-------------------------------------------------------------------------
+    // Changes since last game loop tick.
+    //-------------------------------------------------------------------------
+    typedef std::vector<UID>::iterator model_created_iterator;
+    static Core::Iterable<model_created_iterator> get_created_models() {
+        return Core::Iterable<model_created_iterator>(m_models_created.begin(), m_models_created.end());
+    }
+
+    typedef std::vector<UID>::iterator model_destroyed_iterator;
+    static Core::Iterable<model_destroyed_iterator> get_destroyed_models() {
+        return Core::Iterable<model_destroyed_iterator>(m_models_destroyed.begin(), m_models_destroyed.end());
+    }
+
+    static void clear_change_notifications();
 
 private:
     static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);
 
     static UIDGenerator m_UID_generator;
     static MeshModel* m_models;
+
+    // Change notifications.
+    static std::vector<UID> m_models_created;
+    static std::vector<UID> m_models_destroyed;
 };
 
 } // NS Assets

@@ -16,6 +16,9 @@ namespace Assets {
 MeshModels::UIDGenerator MeshModels::m_UID_generator = UIDGenerator(0u);
 MeshModel* MeshModels::m_models = nullptr;
 
+std::vector<MeshModels::UID> MeshModels::m_models_created = std::vector<MeshModels::UID>(0);
+std::vector<MeshModels::UID> MeshModels::m_models_destroyed = std::vector<MeshModels::UID>(0);
+
 void MeshModels::allocate(unsigned int capacity) {
     if (is_allocated())
         return;
@@ -24,6 +27,9 @@ void MeshModels::allocate(unsigned int capacity) {
     capacity = m_UID_generator.capacity();
 
     m_models = new MeshModel[capacity];
+
+    m_models_created.reserve(capacity / 4);
+    m_models_destroyed.reserve(capacity / 4);
 
     // Allocate dummy element at 0.
     m_models[0] = { Scene::SceneNodes::UID::invalid_UID(), Assets::Meshes::UID::invalid_UID() };
@@ -35,6 +41,9 @@ void MeshModels::deallocate() {
 
     m_UID_generator = UIDGenerator(0u);
     delete[] m_models; m_models = nullptr;
+
+    m_models_created.resize(0); m_models_created.shrink_to_fit();
+    m_models_destroyed.resize(0); m_models_destroyed.shrink_to_fit();
 }
 
 template <typename T>
@@ -68,7 +77,20 @@ MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Assets:
         reserve_node_data(m_UID_generator.capacity(), old_capacity);
 
     m_models[id] = { scene_node_ID, mesh_ID };
+
+    m_models_created.push_back(id);
+
     return id;
+}
+
+void MeshModels::destroy(MeshModels::UID& node_ID) {
+    if (m_UID_generator.erase(node_ID))
+        m_models_destroyed.push_back(node_ID);
+}
+
+void MeshModels::clear_change_notifications() {
+    m_models_created.resize(0);
+    m_models_destroyed.resize(0);
 }
 
 } // NS Assets
