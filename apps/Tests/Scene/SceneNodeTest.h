@@ -33,16 +33,6 @@ GTEST_TEST(Scene_SceneNode, resizing) {
     EXPECT_LT(SceneNodes::capacity(), larger_capacity);
 }
 
-GTEST_TEST(Scene_SceneNode, create) {
-    SceneNodes::allocate(2u);
-    SceneNodes::UID id = SceneNodes::create("Foo");
-    EXPECT_TRUE(SceneNodes::has(id));
-    
-    EXPECT_EQ(SceneNodes::get_name(id), "Foo");
-
-    SceneNodes::deallocate();
-}
-
 GTEST_TEST(Scene_SceneNode, sentinel_node) {
     SceneNodes::allocate(1u);
 
@@ -60,8 +50,107 @@ GTEST_TEST(Scene_SceneNode, sentinel_node) {
     SceneNodes::deallocate();
 }
 
+GTEST_TEST(Scene_SceneNode, create) {
+    SceneNodes::allocate(2u);
+    SceneNodes::UID node_ID = SceneNodes::create("Foo");
+    EXPECT_TRUE(SceneNodes::has(node_ID));
+    
+    EXPECT_EQ(SceneNodes::get_name(node_ID), "Foo");
+
+    // Test scene node notifications.
+    Core::Iterable<SceneNodes::node_created_iterator> created_nodes = SceneNodes::get_created_nodes();
+    EXPECT_EQ(created_nodes.end() - created_nodes.begin(), 1);
+    EXPECT_EQ(*created_nodes.begin(), node_ID);
+
+    SceneNodes::deallocate();
+}
+
+GTEST_TEST(Scene_SceneNode, destroy) {
+    SceneNodes::allocate(2u);
+    SceneNodes::UID node_ID = SceneNodes::create("Foo");
+    EXPECT_TRUE(SceneNodes::has(node_ID));
+
+    SceneNodes::clear_change_notifications();
+
+    SceneNodes::destroy(node_ID);
+    EXPECT_FALSE(SceneNodes::has(node_ID));
+
+    // Test scene node notifications.
+    Core::Iterable<SceneNodes::node_destroyed_iterator> destroyed_nodes = SceneNodes::get_destroyed_nodes();
+    EXPECT_EQ(destroyed_nodes.end() - destroyed_nodes.begin(), 1);
+    EXPECT_EQ(*destroyed_nodes.begin(), node_ID);
+
+    SceneNodes::deallocate();
+}
+
+GTEST_TEST(Scene_SceneNode, create_and_destroy_notifications) {
+    SceneNodes::allocate(8u);
+
+    SceneNodes::UID node_ID0 = SceneNodes::create("Foo");
+    SceneNodes::UID node_ID1 = SceneNodes::create("Bar");
+    EXPECT_TRUE(SceneNodes::has(node_ID0));
+    EXPECT_TRUE(SceneNodes::has(node_ID1));
+
+    { // Test scene node create notifications.
+        Core::Iterable<SceneNodes::node_created_iterator> created_nodes = SceneNodes::get_created_nodes();
+        EXPECT_EQ(created_nodes.end() - created_nodes.begin(), 2);
+        Core::Iterable<SceneNodes::node_destroyed_iterator> destroyed_nodes = SceneNodes::get_destroyed_nodes();
+        EXPECT_EQ(destroyed_nodes.end() - destroyed_nodes.begin(), 0);
+
+        bool node0_created = false;
+        bool node1_created = false;
+        for (const SceneNodes::UID node_ID : created_nodes) {
+            if (node_ID == node_ID0)
+                node0_created = true;
+            if (node_ID == node_ID1)
+                node1_created = true;
+        }
+
+        EXPECT_TRUE(node0_created);
+        EXPECT_TRUE(node1_created);
+    }
+
+    SceneNodes::clear_change_notifications();
+
+    { // Test destroy.
+        SceneNodes::destroy(node_ID0);
+        EXPECT_FALSE(SceneNodes::has(node_ID0));
+
+        Core::Iterable<SceneNodes::node_created_iterator> created_nodes = SceneNodes::get_created_nodes();
+        EXPECT_EQ(created_nodes.end() - created_nodes.begin(), 0);
+        Core::Iterable<SceneNodes::node_destroyed_iterator> destroyed_nodes = SceneNodes::get_destroyed_nodes();
+        EXPECT_EQ(destroyed_nodes.end() - destroyed_nodes.begin(), 1);
+
+        bool node0_destroyed = false;
+        bool node1_destroyed = false;
+        for (const SceneNodes::UID node_ID : destroyed_nodes) {
+            if (node_ID == node_ID0)
+                node0_destroyed = true;
+            if (node_ID == node_ID1)
+                node1_destroyed = true;
+        }
+
+        EXPECT_TRUE(node0_destroyed);
+        EXPECT_FALSE(node1_destroyed);
+    }
+
+    SceneNodes::clear_change_notifications();
+
+    { // Test that destroyed node cannot be destroyed again.
+        SceneNodes::destroy(node_ID0);
+        EXPECT_FALSE(SceneNodes::has(node_ID0));
+
+        Core::Iterable<SceneNodes::node_created_iterator> created_nodes = SceneNodes::get_created_nodes();
+        EXPECT_EQ(created_nodes.end() - created_nodes.begin(), 0);
+        Core::Iterable<SceneNodes::node_destroyed_iterator> destroyed_nodes = SceneNodes::get_destroyed_nodes();
+        EXPECT_EQ(destroyed_nodes.end() - destroyed_nodes.begin(), 0);
+    }
+
+    SceneNodes::deallocate();
+}
+
 GTEST_TEST(Scene_SceneNode, parenting) {
-    SceneNodes::allocate(1u);
+    SceneNodes::allocate(4u);
     SceneNode n0 = SceneNodes::create("n0");
     SceneNode n1 = SceneNodes::create("n1");
     SceneNode n2 = SceneNodes::create("n2");

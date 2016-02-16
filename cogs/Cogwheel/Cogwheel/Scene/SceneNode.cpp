@@ -22,6 +22,8 @@ SceneNodes::UID* SceneNodes::m_first_child_IDs = nullptr;
 
 Math::Transform* SceneNodes::m_global_transforms = nullptr;
 
+std::vector<SceneNodes::UID> SceneNodes::m_nodes_created = std::vector<SceneNodes::UID>(0);
+std::vector<SceneNodes::UID> SceneNodes::m_nodes_destroyed = std::vector<SceneNodes::UID>(0);
 std::vector<SceneNodes::UID> SceneNodes::m_transforms_changed = std::vector<SceneNodes::UID>(0);
 
 void SceneNodes::allocate(unsigned int capacity) {
@@ -39,6 +41,8 @@ void SceneNodes::allocate(unsigned int capacity) {
 
     m_global_transforms = new Math::Transform[capacity];
 
+    m_nodes_created.reserve(capacity / 4);
+    m_nodes_destroyed.reserve(capacity / 4);
     m_transforms_changed.reserve(capacity / 4);
 
     // Allocate dummy element at 0.
@@ -60,7 +64,9 @@ void SceneNodes::deallocate() {
 
     delete[] m_global_transforms; m_global_transforms = nullptr;
 
-    m_transforms_changed.resize(0);
+    m_nodes_created.resize(0); m_nodes_created.shrink_to_fit();
+    m_nodes_destroyed.resize(0); m_nodes_destroyed.shrink_to_fit();
+    m_transforms_changed.resize(0); m_transforms_changed.shrink_to_fit();
 }
 
 void SceneNodes::reserve(unsigned int new_capacity) {
@@ -111,7 +117,16 @@ SceneNodes::UID SceneNodes::create(const std::string& name) {
     m_names[id] = name;
     m_parent_IDs[id] = m_first_child_IDs[id] = m_sibling_IDs[id] = UID::invalid_UID();
     m_global_transforms[id] = Math::Transform::identity();
+
+    m_nodes_created.push_back(id);
+
     return id;
+}
+
+void SceneNodes::destroy(SceneNodes::UID& node_ID) {
+    // We don't actually destroy anything when destroying a node. The properties will get overwritten later when a node is created in same the spot.
+    if (m_UID_generator.erase(node_ID))
+        m_nodes_destroyed.push_back(node_ID);
 }
 
 void SceneNodes::set_parent(SceneNodes::UID node_ID, const SceneNodes::UID parent_ID) {
@@ -218,6 +233,12 @@ void SceneNodes::set_global_transform(SceneNodes::UID node_ID, Math::Transform t
         m_global_transforms[child_ID] = delta_transform * m_global_transforms[child_ID];
         m_transforms_changed.push_back(child_ID);
     });
+}
+
+void SceneNodes::clear_change_notifications() {
+    m_nodes_created.resize(0);
+    m_nodes_destroyed.resize(0);
+    m_transforms_changed.resize(0);
 }
 
 } // NS Scene

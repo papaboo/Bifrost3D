@@ -21,12 +21,15 @@ namespace Scene {
 // ---------------------------------------------------------------------------
 // Container class for the cogwheel scene node.
 // Future work
-// * Add node created/deleted notification.
+// * If the transform can be set on node creation, then we can avoid generating a transform changed event.
 // * A parent changed event: (node_id, old_parent_id). Is this actually needed by anything when transforms are global?
 // * Allocate all (or most) internal arrays in one big chunk.
 // * Change the sibling/children layout, so sibling IDs or perhaps siblings are always allocated next too each other?
 //  * Requires an extra indirection though, since node ID's won't match the node positions anymore.
 //  * Could be done (incrementally?) when all mutations in a tick are done.
+// * The create / delete notifications are going to explode when setting up or tearing down a scene. 
+//   We should implement a better solution for these cases.
+//   Perhaps a global 'a lot has changed, rebuild everything and ignore the notifications' flag?
 // ---------------------------------------------------------------------------
 class SceneNodes final {
 public:
@@ -43,6 +46,7 @@ public:
     static bool has(SceneNodes::UID node_ID) { return m_UID_generator.has(node_ID); }
 
     static SceneNodes::UID create(const std::string& name);
+    static void destroy(SceneNodes::UID& node_ID);
 
     static inline std::string get_name(SceneNodes::UID node_ID) { return m_names[node_ID]; }
     static inline void set_name(SceneNodes::UID node_ID, const std::string& name) { m_names[node_ID] = name; }
@@ -69,11 +73,22 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
+    typedef std::vector<UID>::iterator node_created_iterator;
+    static Core::Iterable<node_created_iterator> get_created_nodes() {
+        return Core::Iterable<node_created_iterator>(m_nodes_created.begin(), m_nodes_created.end());
+    }
+
+    typedef std::vector<UID>::iterator node_destroyed_iterator;
+    static Core::Iterable<node_destroyed_iterator> get_destroyed_nodes() {
+        return Core::Iterable<node_destroyed_iterator>(m_nodes_destroyed.begin(), m_nodes_destroyed.end());
+    }
+
     typedef std::vector<UID>::iterator transform_changed_iterator;
     static Core::Iterable<transform_changed_iterator> get_changed_transforms() { 
         return Core::Iterable<transform_changed_iterator>(m_transforms_changed.begin(), m_transforms_changed.end());
     }
-    static void clear_change_notifications() { m_transforms_changed.resize(0); }
+    
+    static void clear_change_notifications();
 
 private:
     static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);
@@ -88,6 +103,8 @@ private:
     static Math::Transform* m_global_transforms;
 
     // Change notifications.
+    static std::vector<UID> m_nodes_created;
+    static std::vector<UID> m_nodes_destroyed;
     static std::vector<UID> m_transforms_changed;
 };
 
