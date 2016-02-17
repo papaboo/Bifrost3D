@@ -112,6 +112,7 @@ private:
 
 static inline void scenenode_cleanup_callback(void* dummy) {
     SceneNodes::clear_change_notifications();
+    MeshModels::clear_change_notifications();
 }
 
 void initializer(Cogwheel::Core::Engine& engine) {
