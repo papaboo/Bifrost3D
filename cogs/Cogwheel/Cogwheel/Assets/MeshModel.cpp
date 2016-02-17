@@ -54,7 +54,7 @@ static inline T* resize_and_copy_array(T* old_array, unsigned int new_capacity, 
     return new_array;
 }
 
-void MeshModels::reserve_node_data(unsigned int new_capacity, unsigned int old_capacity) {
+void MeshModels::reserve_model_data(unsigned int new_capacity, unsigned int old_capacity) {
     assert(m_models != nullptr);
 
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
@@ -64,7 +64,11 @@ void MeshModels::reserve_node_data(unsigned int new_capacity, unsigned int old_c
 void MeshModels::reserve(unsigned int new_capacity) {
     unsigned int old_capacity = capacity();
     m_UID_generator.reserve(new_capacity);
-    reserve_node_data(m_UID_generator.capacity(), old_capacity);
+    reserve_model_data(m_UID_generator.capacity(), old_capacity);
+}
+
+bool MeshModels::has(MeshModels::UID model_ID) { 
+    return m_UID_generator.has(model_ID) && !(m_models[model_ID].properties & MeshModelProperties::Destroyed);
 }
 
 MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Assets::Meshes::UID mesh_ID) {
@@ -74,7 +78,7 @@ MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Assets:
     UID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())
         // The capacity has changed and the size of all arrays need to be adjusted.
-        reserve_node_data(m_UID_generator.capacity(), old_capacity);
+        reserve_model_data(m_UID_generator.capacity(), old_capacity);
 
     m_models[id] = { scene_node_ID, mesh_ID };
 
@@ -83,12 +87,17 @@ MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Assets:
     return id;
 }
 
-void MeshModels::destroy(MeshModels::UID& node_ID) {
-    if (m_UID_generator.erase(node_ID))
-        m_models_destroyed.push_back(node_ID);
+void MeshModels::destroy(MeshModels::UID& model_ID) {
+    MeshModel& model = m_models[model_ID];
+    if (!(model.properties & MeshModelProperties::Destroyed)) {
+        model.properties |= MeshModelProperties::Destroyed;
+        m_models_destroyed.push_back(model_ID);
+    }
 }
 
 void MeshModels::clear_change_notifications() {
+    for (UID model_ID : m_models_destroyed)
+        m_UID_generator.erase(model_ID);
     m_models_created.resize(0);
     m_models_destroyed.resize(0);
 }

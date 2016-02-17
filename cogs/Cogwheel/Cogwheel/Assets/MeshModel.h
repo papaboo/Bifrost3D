@@ -16,16 +16,25 @@
 namespace Cogwheel {
 namespace Assets {
 
+// Model properties
+namespace MeshModelProperties {
+// const unsigned int Visible =       1 << 0;
+const unsigned int Destroyed =     1 << 1;
+}
+
 //----------------------------------------------------------------------------
 // A mesh model contains the mesh and material IDs and combines them with 
 // the scene node ID.
+// When a MeshModel is deleted, it is still possible to access it's values 
+// until clear_change_notifications has been called, usually at the 
+// end of the game loop.
 // Future work:
 // * Add material IDs.
-// * Add model properties: Static, visible, etc.
 //----------------------------------------------------------------------------
 struct MeshModel final {
-    Scene::SceneNodes::UID m_scene_node_ID;
-    Assets::Meshes::UID m_mesh_ID;
+    Scene::SceneNodes::UID scene_node_ID;
+    Assets::Meshes::UID mesh_ID;
+    unsigned int properties;
 };
 
 class MeshModels final {
@@ -40,16 +49,16 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(MeshModels::UID model_ID) { return m_UID_generator.has(model_ID); }
+    static bool has(MeshModels::UID model_ID);
 
     static MeshModels::UID create(Scene::SceneNodes::UID scene_node_ID, Assets::Meshes::UID mesh_ID);
-    static void destroy(MeshModels::UID& node_ID);
+    static void destroy(MeshModels::UID& model_ID);
 
     static inline MeshModel get_model(MeshModels::UID model_ID) { return m_models[model_ID]; }
     static inline void set_model(MeshModels::UID model_ID, MeshModel model) { m_models[model_ID] = model; }
 
-    static inline Scene::SceneNodes::UID get_scene_node_ID(MeshModels::UID model_ID) { return m_models[model_ID].m_scene_node_ID; }
-    static inline Assets::Meshes::UID get_mesh_ID(MeshModels::UID model_ID) { return m_models[model_ID].m_mesh_ID; }
+    static inline Scene::SceneNodes::UID get_scene_node_ID(MeshModels::UID model_ID) { return m_models[model_ID].scene_node_ID; }
+    static inline Assets::Meshes::UID get_mesh_ID(MeshModels::UID model_ID) { return m_models[model_ID].mesh_ID; }
 
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
     static ConstUIDIterator end() { return m_UID_generator.end(); }
@@ -70,7 +79,7 @@ public:
     static void clear_change_notifications();
 
 private:
-    static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);
+    static void reserve_model_data(unsigned int new_capacity, unsigned int old_capacity);
 
     static UIDGenerator m_UID_generator;
     static MeshModel* m_models;
