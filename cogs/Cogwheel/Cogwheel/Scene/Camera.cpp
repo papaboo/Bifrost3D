@@ -66,7 +66,7 @@ void Cameras::deallocate() {
 void Cameras::reserve(unsigned int new_capacity) {
     unsigned int old_capacity = capacity();
     m_UID_generator.reserve(new_capacity);
-    reserve_node_data(m_UID_generator.capacity(), old_capacity);
+    reserve_camera_data(m_UID_generator.capacity(), old_capacity);
 }
 
 template <typename T>
@@ -77,7 +77,7 @@ static inline T* resize_and_copy_array(T* old_array, unsigned int new_capacity, 
     return new_array;
 }
 
-void Cameras::reserve_node_data(unsigned int new_capacity, unsigned int old_capacity) {
+void Cameras::reserve_camera_data(unsigned int new_capacity, unsigned int old_capacity) {
     assert(m_parent_IDs != nullptr);
     assert(m_render_indices != nullptr);
     assert(m_projection_matrices != nullptr);
@@ -106,7 +106,7 @@ Cameras::UID Cameras::create(SceneNodes::UID parent_ID, Math::Matrix4x4f project
     UID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())
         // The capacity has changed and the size of all arrays need to be adjusted.
-        reserve_node_data(m_UID_generator.capacity(), old_capacity);
+        reserve_camera_data(m_UID_generator.capacity(), old_capacity);
 
     m_parent_IDs[id] = parent_ID;
     m_render_indices[id] = 0u;

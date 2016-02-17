@@ -24,56 +24,56 @@ namespace Assets {
 //   Then let Meshes handle desctruction.
 //----------------------------------------------------------------------------
 struct Mesh final {
-    unsigned int m_indices_count;
-    unsigned int m_vertex_count;
+    unsigned int indices_count;
+    unsigned int vertex_count;
     
-    Math::Vector3ui* m_indices;
-    Math::Vector3f* m_positions;
-    Math::Vector3f* m_normals;
-    Math::Vector2f* m_texcoords;
+    Math::Vector3ui* indices;
+    Math::Vector3f* positions;
+    Math::Vector3f* normals;
+    Math::Vector2f* texcoords;
 
     Mesh()
-        : m_indices_count(0u)
-        , m_indices(nullptr)
-        , m_vertex_count(0u)
-        , m_positions(nullptr)
-        , m_normals(nullptr)
-        , m_texcoords(nullptr) {
+        : indices_count(0u)
+        , indices(nullptr)
+        , vertex_count(0u)
+        , positions(nullptr)
+        , normals(nullptr)
+        , texcoords(nullptr) {
     }
 
     Mesh(unsigned int indices_count, unsigned int vertex_count)
-        : m_indices_count(indices_count)
-        , m_vertex_count(vertex_count)
-        , m_indices(new Math::Vector3ui[m_indices_count])
-        , m_positions(new Math::Vector3f[m_vertex_count])
-        , m_normals(new Math::Vector3f[m_vertex_count])
-        , m_texcoords(new Math::Vector2f[m_vertex_count]) {
+        : indices_count(indices_count)
+        , vertex_count(vertex_count)
+        , indices(new Math::Vector3ui[indices_count])
+        , positions(new Math::Vector3f[vertex_count])
+        , normals(new Math::Vector3f[vertex_count])
+        , texcoords(new Math::Vector2f[vertex_count]) {
     }
 
     Mesh(Mesh&& other) {
-        m_indices_count = other.m_indices_count; other.m_indices_count = 0u;
-        m_vertex_count = other.m_vertex_count; other.m_vertex_count = 0u;
-        m_indices = other.m_indices; other.m_indices = nullptr;
-        m_positions = other.m_positions; other.m_positions = nullptr;
-        m_normals = other.m_normals; other.m_normals = nullptr;
-        m_texcoords = other.m_texcoords; other.m_texcoords = nullptr;
+        indices_count = other.indices_count; other.indices_count = 0u;
+        vertex_count = other.vertex_count; other.vertex_count = 0u;
+        indices = other.indices; other.indices = nullptr;
+        positions = other.positions; other.positions = nullptr;
+        normals = other.normals; other.normals = nullptr;
+        texcoords = other.texcoords; other.texcoords = nullptr;
     }
 
     Mesh& operator=(Mesh&& other) {
-        m_indices_count = other.m_indices_count; other.m_indices_count = 0u;
-        m_vertex_count = other.m_vertex_count; other.m_vertex_count = 0u;
-        m_indices = other.m_indices; other.m_indices = nullptr;
-        m_positions = other.m_positions; other.m_positions = nullptr;
-        m_normals = other.m_normals; other.m_normals = nullptr;
-        m_texcoords = other.m_texcoords; other.m_texcoords = nullptr;
+        indices_count = other.indices_count; other.indices_count = 0u;
+        vertex_count = other.vertex_count; other.vertex_count = 0u;
+        indices = other.indices; other.indices = nullptr;
+        positions = other.positions; other.positions = nullptr;
+        normals = other.normals; other.normals = nullptr;
+        texcoords = other.texcoords; other.texcoords = nullptr;
         return *this;
     }
 
     ~Mesh() {
-        delete[] m_indices;
-        delete[] m_positions;
-        delete[] m_normals;
-        delete[] m_texcoords;
+        delete[] indices;
+        delete[] positions;
+        delete[] normals;
+        delete[] texcoords;
     }
 
 private:
@@ -110,7 +110,7 @@ public:
     static ConstUIDIterator end() { return m_UID_generator.end(); }
 
 private:
-    static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);
+    static void reserve_mesh_data(unsigned int new_capacity, unsigned int old_capacity);
 
     static UIDGenerator m_UID_generator;
     static std::string* m_names;

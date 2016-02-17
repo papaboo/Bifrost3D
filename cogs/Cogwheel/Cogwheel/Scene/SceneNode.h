@@ -21,7 +21,6 @@ namespace Scene {
 // ---------------------------------------------------------------------------
 // Container class for the cogwheel scene node.
 // Future work
-// * If the transform can be set on node creation, then we can avoid generating a transform changed event.
 // * A parent changed event: (node_id, old_parent_id). Is this actually needed by anything when transforms are global?
 // * Allocate all (or most) internal arrays in one big chunk.
 // * Change the sibling/children layout, so sibling IDs or perhaps siblings are always allocated next too each other?

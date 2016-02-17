@@ -55,7 +55,7 @@ static inline T* resize_and_copy_array(T* old_array, unsigned int new_capacity, 
     return new_array;
 }
 
-void Meshes::reserve_node_data(unsigned int new_capacity, unsigned int old_capacity) {
+void Meshes::reserve_mesh_data(unsigned int new_capacity, unsigned int old_capacity) {
     assert(m_names != nullptr);
     assert(m_meshes != nullptr);
     assert(m_bounds != nullptr);
@@ -75,7 +75,7 @@ void Meshes::reserve_node_data(unsigned int new_capacity, unsigned int old_capac
 void Meshes::reserve(unsigned int new_capacity) {
     unsigned int old_capacity = capacity();
     m_UID_generator.reserve(new_capacity);
-    reserve_node_data(m_UID_generator.capacity(), old_capacity);
+    reserve_mesh_data(m_UID_generator.capacity(), old_capacity);
 }
 
 Meshes::UID Meshes::create(const std::string& name, unsigned int indices_count, unsigned int vertex_count) {
@@ -87,7 +87,7 @@ Meshes::UID Meshes::create(const std::string& name, unsigned int indices_count, 
     UID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())
         // The capacity has changed and the size of all arrays need to be adjusted.
-        reserve_node_data(m_UID_generator.capacity(), old_capacity);
+        reserve_mesh_data(m_UID_generator.capacity(), old_capacity);
 
     m_names[id] = name;
     m_meshes[id] = Mesh(indices_count, vertex_count);
@@ -98,8 +98,8 @@ Meshes::UID Meshes::create(const std::string& name, unsigned int indices_count, 
 AABB Meshes::compute_bounds(Meshes::UID mesh_ID) {
     Mesh& mesh = get_mesh(mesh_ID);
 
-    AABB bounds = AABB(mesh.m_positions[0], mesh.m_positions[0]);
-    for (Vector3f* position_itr = mesh.m_positions + 1; position_itr < (mesh.m_positions + mesh.m_vertex_count); ++position_itr) {
+    AABB bounds = AABB(mesh.positions[0], mesh.positions[0]);
+    for (Vector3f* position_itr = mesh.positions + 1; position_itr < (mesh.positions + mesh.vertex_count); ++position_itr) {
         bounds.grow_to_contain(*position_itr);
     }
 

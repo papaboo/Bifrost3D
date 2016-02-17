@@ -66,7 +66,7 @@ public:
 
 private:
 
-    static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);
+    static void reserve_camera_data(unsigned int new_capacity, unsigned int old_capacity);
 
     static UIDGenerator m_UID_generator;
 

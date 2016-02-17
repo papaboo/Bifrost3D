@@ -319,18 +319,6 @@ Renderer::Renderer()
         // transform->setChild(setup_debug_scene(context));
         // transform->validate();
         // m_state->root_node->addChild(transform);
-
-        // TODO Move into mesh_model_created event listener.
-        for (MeshModels::ConstUIDIterator model_itr = MeshModels::begin();
-            model_itr != MeshModels::end(); ++model_itr) {
-            MeshModel model = MeshModels::get_model(*model_itr);
-            optix::Transform transform = load_model(context, model);
-            m_state->root_node->addChild(transform);
-
-            if (m_state->transforms.size() <= model.scene_node_ID)
-                m_state->transforms.resize(SceneNodes::capacity());
-            m_state->transforms[model.scene_node_ID] = transform;
-        }
     }
 
     { // Screen buffers
@@ -375,6 +363,7 @@ Renderer::Renderer()
 
 void Renderer::render() {
 
+    // TODO Add a genesis event here when rendering the very very very first frame. Otherwise handle incremental updates.
     handle_updates();
 
     Context& context = m_state->context;
@@ -459,12 +448,14 @@ void Renderer::handle_updates() {
         // We're only interested in changes in the transforms that are connected to renderables, such as meshes.
         bool important_transform_changed = false; 
         for (SceneNodes::UID node_ID : SceneNodes::get_changed_transforms()) {
-            optix::Transform optixTransform = m_state->transforms[node_ID];
-            if (optixTransform) {
-                Math::Transform transform = SceneNodes::get_global_transform(node_ID);
-                Math::Transform inverse_transform = invert(transform);
-                optixTransform->setMatrix(false, to_matrix4x4(transform).begin(), to_matrix4x4(inverse_transform).begin());
-                important_transform_changed = true;
+            if (node_ID < m_state->transforms.size()) {
+                optix::Transform optixTransform = m_state->transforms[node_ID];
+                if (optixTransform) {
+                    Math::Transform transform = SceneNodes::get_global_transform(node_ID);
+                    Math::Transform inverse_transform = invert(transform);
+                    optixTransform->setMatrix(false, to_matrix4x4(transform).begin(), to_matrix4x4(inverse_transform).begin());
+                    important_transform_changed = true;
+                }
             }
         }
 
@@ -472,8 +463,41 @@ void Renderer::handle_updates() {
             m_state->root_node->getAcceleration()->markDirty();
             m_state->accumulations = 0u;
         }
+    }
 
-        // TODO Check for camera updates seperately.
+    { // Model updates.
+        // TODO Cache and share geometry.
+        // TODO Properly handle reused model ID's. Is it faster to reuse the rt components then it is to destroy and recreate them?
+
+        bool models_changed = false;
+        for (MeshModels::UID model_ID : MeshModels::get_destroyed_models()) {
+            SceneNodes::UID node_ID = MeshModels::get_scene_node_ID(model_ID);
+            optix::Transform optixTransform = m_state->transforms[node_ID];
+            m_state->root_node->removeChild(optixTransform);
+            optixTransform->destroy();
+            // TODO check if I need to destroy the subgraph.
+
+            models_changed = true;
+        }
+
+        for (MeshModels::UID model_ID : MeshModels::get_created_models()) {
+            SceneNodes::UID node_ID = MeshModels::get_scene_node_ID(model_ID);
+
+            MeshModel model = MeshModels::get_model(model_ID);
+            optix::Transform transform = load_model(m_state->context, model);
+            m_state->root_node->addChild(transform);
+
+            if (m_state->transforms.size() <= model.scene_node_ID)
+                m_state->transforms.resize(SceneNodes::capacity());
+            m_state->transforms[model.scene_node_ID] = transform;
+
+            models_changed = true;
+        }
+
+        if (models_changed) {
+            m_state->root_node->getAcceleration()->markDirty();
+            m_state->accumulations = 0u;
+        }
     }
 }
 

@@ -72,10 +72,10 @@ SceneNodes::UID load(const std::string& path) {
 
             // TODO Verify if any of these arrays are null.
             Mesh& cogwheel_mesh = Meshes::get_mesh(mesh_ID);
-            memcpy(cogwheel_mesh.m_indices, tiny_mesh.indices.data(), tiny_mesh.indices.size() * sizeof(unsigned int));
-            memcpy(cogwheel_mesh.m_positions, tiny_mesh.positions.data(), tiny_mesh.positions.size() * sizeof(float));
-            memcpy(cogwheel_mesh.m_normals, tiny_mesh.normals.data(), tiny_mesh.normals.size() * sizeof(float));
-            memcpy(cogwheel_mesh.m_texcoords, tiny_mesh.texcoords.data(), tiny_mesh.texcoords.size() * sizeof(float));
+            memcpy(cogwheel_mesh.indices, tiny_mesh.indices.data(), tiny_mesh.indices.size() * sizeof(unsigned int));
+            memcpy(cogwheel_mesh.positions, tiny_mesh.positions.data(), tiny_mesh.positions.size() * sizeof(float));
+            memcpy(cogwheel_mesh.normals, tiny_mesh.normals.data(), tiny_mesh.normals.size() * sizeof(float));
+            memcpy(cogwheel_mesh.texcoords, tiny_mesh.texcoords.data(), tiny_mesh.texcoords.size() * sizeof(float));
 
             Meshes::compute_bounds(mesh_ID);
         }
