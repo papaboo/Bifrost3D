@@ -101,7 +101,7 @@ void SceneNodes::reserve_node_data(unsigned int new_capacity, unsigned int old_c
     m_global_transforms = resize_and_copy_array(m_global_transforms, new_capacity, copyable_elements);
 }
 
-SceneNodes::UID SceneNodes::create(const std::string& name) {
+SceneNodes::UID SceneNodes::create(const std::string& name, Math::Transform transform) {
     assert(m_first_child_IDs != nullptr);
     assert(m_global_transforms != nullptr);
     assert(m_names != nullptr);
@@ -116,7 +116,7 @@ SceneNodes::UID SceneNodes::create(const std::string& name) {
 
     m_names[id] = name;
     m_parent_IDs[id] = m_first_child_IDs[id] = m_sibling_IDs[id] = UID::invalid_UID();
-    m_global_transforms[id] = Math::Transform::identity();
+    m_global_transforms[id] = transform;
 
     m_nodes_created.push_back(id);
 

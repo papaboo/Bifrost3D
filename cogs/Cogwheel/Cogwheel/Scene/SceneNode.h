@@ -45,7 +45,7 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(SceneNodes::UID node_ID) { return m_UID_generator.has(node_ID); }
 
-    static SceneNodes::UID create(const std::string& name);
+    static SceneNodes::UID create(const std::string& name, Math::Transform transform = Math::Transform::identity());
     static void destroy(SceneNodes::UID& node_ID);
 
     static inline std::string get_name(SceneNodes::UID node_ID) { return m_names[node_ID]; }
