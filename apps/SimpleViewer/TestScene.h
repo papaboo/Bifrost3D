@@ -53,12 +53,10 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
     }
 
     { // Create rotating box. TODO Replace by those three cool spinning rings later.
-        SceneNode cube_node = SceneNodes::create("Rotating cube");
+        Transform transform = Transform(Vector3f(1.0f, 0.5f, 0.0f));
+        SceneNode cube_node = SceneNodes::create("Rotating cube", transform);
         Meshes::UID cube_mesh_ID = MeshCreation::cube(3);
         MeshModels::UID cube_model_ID = MeshModels::create(cube_node.get_ID(), cube_mesh_ID);
-        Transform transform = cube_node.get_global_transform();
-        transform.translation = Vector3f(1.0f, 0.5f, 0.0f);
-        cube_node.set_global_transform(transform);
         cube_node.set_parent(root_node);
 
         LocalRotator* simple_rotator = new LocalRotator(cube_node.get_ID());
@@ -66,22 +64,18 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
     }
 
     { // Destroyable cylinder. Test by destroying the mesh, model and scene node.
-        SceneNode cylinder_node = SceneNodes::create("Destroyed Cylinder");
+        Transform transform = Transform(Vector3f(-1.0f, 0.5f, 0.0f));
+        SceneNode cylinder_node = SceneNodes::create("Destroyed Cylinder", transform);
         Meshes::UID cylinder_mesh_ID = MeshCreation::cylinder(4, 16);
         MeshModels::UID cylinder_model_ID = MeshModels::create(cylinder_node.get_ID(), cylinder_mesh_ID);
-        Transform transform = cylinder_node.get_global_transform();
-        transform.translation = Vector3f(-1.0f, 0.5f, 0.0f);
-        cylinder_node.set_global_transform(transform);
         cylinder_node.set_parent(root_node);
     }
 
     { // Sphere for the hell of it. 
-        SceneNode sphere_node = SceneNodes::create("Sphere");
+        Transform transform = Transform(Vector3f(3.0f, 0.5f, 0.0f));
+        SceneNode sphere_node = SceneNodes::create("Sphere", transform);
         Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(32, 16);
         MeshModels::UID sphere_model_ID = MeshModels::create(sphere_node.get_ID(), sphere_mesh_ID);
-        Transform transform = sphere_node.get_global_transform();
-        transform.translation = Vector3f(3.0f, 0.5f, 0.0f);
-        sphere_node.set_global_transform(transform);
         sphere_node.set_parent(root_node);
     }
 
