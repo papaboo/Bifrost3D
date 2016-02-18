@@ -52,7 +52,7 @@ public:
     static bool has(MeshModels::UID model_ID);
 
     static MeshModels::UID create(Scene::SceneNodes::UID scene_node_ID, Assets::Meshes::UID mesh_ID);
-    static void destroy(MeshModels::UID& model_ID);
+    static void destroy(MeshModels::UID model_ID);
 
     static inline MeshModel get_model(MeshModels::UID model_ID) { return m_models[model_ID]; }
     static inline void set_model(MeshModels::UID model_ID, MeshModel model) { m_models[model_ID] = model; }

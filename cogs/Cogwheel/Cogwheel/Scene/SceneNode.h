@@ -45,7 +45,7 @@ public:
     static bool has(SceneNodes::UID node_ID) { return m_UID_generator.has(node_ID); }
 
     static SceneNodes::UID create(const std::string& name, Math::Transform transform = Math::Transform::identity());
-    static void destroy(SceneNodes::UID& node_ID);
+    static void destroy(SceneNodes::UID node_ID);
 
     static inline std::string get_name(SceneNodes::UID node_ID) { return m_names[node_ID]; }
     static inline void set_name(SceneNodes::UID node_ID, const std::string& name) { m_names[node_ID] = name; }

@@ -87,7 +87,7 @@ MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Assets:
     return id;
 }
 
-void MeshModels::destroy(MeshModels::UID& model_ID) {
+void MeshModels::destroy(MeshModels::UID model_ID) {
     MeshModel& model = m_models[model_ID];
     if (!(model.properties & MeshModelProperties::Destroyed)) {
         model.properties |= MeshModelProperties::Destroyed;

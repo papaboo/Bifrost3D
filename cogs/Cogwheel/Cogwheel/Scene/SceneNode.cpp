@@ -123,7 +123,7 @@ SceneNodes::UID SceneNodes::create(const std::string& name, Math::Transform tran
     return id;
 }
 
-void SceneNodes::destroy(SceneNodes::UID& node_ID) {
+void SceneNodes::destroy(SceneNodes::UID node_ID) {
     // We don't actually destroy anything when destroying a node. The properties will get overwritten later when a node is created in same the spot.
     if (m_UID_generator.erase(node_ID))
         m_nodes_destroyed.push_back(node_ID);
