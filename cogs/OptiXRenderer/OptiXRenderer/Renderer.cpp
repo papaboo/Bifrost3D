@@ -24,6 +24,8 @@
 
 #include <GL/gl.h>
 
+#include <vector>
+
 using namespace Cogwheel;
 using namespace Cogwheel::Assets;
 using namespace Cogwheel::Core;
@@ -45,129 +47,11 @@ struct Renderer::State {
 
     optix::Group root_node;
 
-    Array<optix::Transform> transforms = Array<optix::Transform>(0);
+    std::vector<optix::Transform> transforms = std::vector<optix::Transform>(0); // TODO I would really like to use Core::Array here, but it assumes that optix::Transform is a POD type and it isn't. The damn thing is reference counted and doesn't like being memcopied.
 };
 
 static inline std::string get_ptx_path(std::string shader_filename) {
     return std::string(OPTIXRENDERER_PTX_DIR) + "/OptiXRenderer_generated_" + shader_filename + ".cu.ptx";
-}
-
-static inline optix::GeometryGroup setup_debug_scene(optix::Context& context) {
-    optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
-    acceleration->setProperty("refit", "1");
-    acceleration->validate();
-
-    optix::GeometryGroup geoGroup = context->createGeometryGroup();
-    geoGroup->setAcceleration(acceleration);
-
-    optix::Material material = context->createMaterial();
-    {
-        std::string monte_carlo_ptx_path = get_ptx_path("MonteCarlo");
-        material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
-
-        std::string normal_vis_ptx_path = get_ptx_path("NormalRendering");
-        material->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
-        material->validate();
-    }
-
-    std::string intersection_ptx_path = get_ptx_path("IntersectSphere");
-    optix::Program sphere_intersection_program = context->createProgramFromPTXFile(intersection_ptx_path, "intersect");
-    optix::Program sphere_bounds_program = context->createProgramFromPTXFile(intersection_ptx_path, "bounds");
-
-    { // Center
-        optix::Geometry mesh = context->createGeometry();
-        mesh->setIntersectionProgram(sphere_intersection_program);
-        mesh->setBoundingBoxProgram(sphere_bounds_program);
-        mesh->setPrimitiveCount(1);
-
-        mesh["sphere"]->setFloat(make_float4(0, 0, 0, 0.5f));
-
-        optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
-        model["g_color"]->setFloat(make_float3(1, 1, 1));
-        geoGroup->addChild(model);
-    }
-
-    { // Up
-        optix::Geometry mesh = context->createGeometry();
-        mesh->setIntersectionProgram(sphere_intersection_program);
-        mesh->setBoundingBoxProgram(sphere_bounds_program);
-        mesh->setPrimitiveCount(1);
-
-        mesh["sphere"]->setFloat(make_float4(0, 2, 0, 0.5f));
-
-        optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
-        model["g_color"]->setFloat(make_float3(0, 1, 0));
-        geoGroup->addChild(model);
-    }
-
-    { // Down
-        optix::Geometry mesh = context->createGeometry();
-        mesh->setIntersectionProgram(sphere_intersection_program);
-        mesh->setBoundingBoxProgram(sphere_bounds_program);
-        mesh->setPrimitiveCount(1);
-
-        mesh["sphere"]->setFloat(make_float4(0, -2, 0, 0.5f));
-
-        optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
-        model["g_color"]->setFloat(make_float3(1, 0, 1));
-        geoGroup->addChild(model);
-    }
-
-    { // Right
-        optix::Geometry mesh = context->createGeometry();
-        mesh->setIntersectionProgram(sphere_intersection_program);
-        mesh->setBoundingBoxProgram(sphere_bounds_program);
-        mesh->setPrimitiveCount(1);
-
-        mesh["sphere"]->setFloat(make_float4(2, 0, 0, 0.5f));
-
-        optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
-        model["g_color"]->setFloat(make_float3(1, 0, 0));
-        geoGroup->addChild(model);
-    }
-
-    { // Left
-        optix::Geometry mesh = context->createGeometry();
-        mesh->setIntersectionProgram(sphere_intersection_program);
-        mesh->setBoundingBoxProgram(sphere_bounds_program);
-        mesh->setPrimitiveCount(1);
-
-        mesh["sphere"]->setFloat(make_float4(-2, 0, 0, 0.5f));
-
-        optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
-        model["g_color"]->setFloat(make_float3(0, 1, 1));
-        geoGroup->addChild(model);
-    }
-
-    { // Forward
-        optix::Geometry mesh = context->createGeometry();
-        mesh->setIntersectionProgram(sphere_intersection_program);
-        mesh->setBoundingBoxProgram(sphere_bounds_program);
-        mesh->setPrimitiveCount(1);
-
-        mesh["sphere"]->setFloat(make_float4(0, 0, 2, 0.5f));
-
-        optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
-        model["g_color"]->setFloat(make_float3(0, 0, 1));
-        geoGroup->addChild(model);
-    }
-
-    { // Backwards
-        optix::Geometry mesh = context->createGeometry();
-        mesh->setIntersectionProgram(sphere_intersection_program);
-        mesh->setBoundingBoxProgram(sphere_bounds_program);
-        mesh->setPrimitiveCount(1);
-
-        mesh["sphere"]->setFloat(make_float4(0, 0, -2, 0.5f));
-
-        optix::GeometryInstance model = context->createGeometryInstance(mesh, &material, &material + 1);
-        model["g_color"]->setFloat(make_float3(1, 1, 0));
-        geoGroup->addChild(model);
-    }
-
-    geoGroup->validate();
-
-    return geoGroup;
 }
 
 //----------------------------------------------------------------------------
@@ -314,23 +198,6 @@ Renderer::Renderer()
         m_state->root_node->validate();
 
         context["g_scene_root"]->set(m_state->root_node);
-
-        // optix::Transform transform = context->createTransform();
-        // transform->setChild(setup_debug_scene(context));
-        // transform->validate();
-        // m_state->root_node->addChild(transform);
-
-        // TODO Move into mesh_model_created event listener.
-        for (MeshModels::ConstUIDIterator model_itr = MeshModels::begin();
-            model_itr != MeshModels::end(); ++model_itr) {
-            MeshModel model = MeshModels::get_model(*model_itr);
-            optix::Transform transform = load_model(context, model);
-            m_state->root_node->addChild(transform);
-
-            if (m_state->transforms.size() <= model.scene_node_ID)
-                m_state->transforms.resize(SceneNodes::capacity());
-            m_state->transforms[model.scene_node_ID] = transform;
-        }
     }
 
     { // Screen buffers
@@ -375,6 +242,7 @@ Renderer::Renderer()
 
 void Renderer::render() {
 
+    // TODO Add a genesis event here when rendering the very very very first frame. Otherwise handle incremental updates.
     handle_updates();
 
     Context& context = m_state->context;
@@ -459,12 +327,14 @@ void Renderer::handle_updates() {
         // We're only interested in changes in the transforms that are connected to renderables, such as meshes.
         bool important_transform_changed = false; 
         for (SceneNodes::UID node_ID : SceneNodes::get_changed_transforms()) {
-            optix::Transform optixTransform = m_state->transforms[node_ID];
-            if (optixTransform) {
-                Math::Transform transform = SceneNodes::get_global_transform(node_ID);
-                Math::Transform inverse_transform = invert(transform);
-                optixTransform->setMatrix(false, to_matrix4x4(transform).begin(), to_matrix4x4(inverse_transform).begin());
-                important_transform_changed = true;
+            if (node_ID < m_state->transforms.size()) {
+                optix::Transform optixTransform = m_state->transforms[node_ID];
+                if (optixTransform) {
+                    Math::Transform transform = SceneNodes::get_global_transform(node_ID);
+                    Math::Transform inverse_transform = invert(transform);
+                    optixTransform->setMatrix(false, to_matrix4x4(transform).begin(), to_matrix4x4(inverse_transform).begin());
+                    important_transform_changed = true;
+                }
             }
         }
 
@@ -472,8 +342,42 @@ void Renderer::handle_updates() {
             m_state->root_node->getAcceleration()->markDirty();
             m_state->accumulations = 0u;
         }
+    }
 
-        // TODO Check for camera updates seperately.
+    { // Model updates.
+        // TODO Cache and share geometry.
+        // TODO Properly handle reused model ID's. Is it faster to reuse the rt components then it is to destroy and recreate them?
+
+        bool models_changed = false;
+        for (MeshModels::UID model_ID : MeshModels::get_destroyed_models()) {
+            SceneNodes::UID node_ID = MeshModels::get_scene_node_ID(model_ID);
+            optix::Transform optixTransform = m_state->transforms[node_ID];
+            m_state->root_node->removeChild(optixTransform);
+            optixTransform->destroy();
+            m_state->transforms[node_ID] = NULL;
+            // TODO check if I need to destroy the subgraph.
+
+            models_changed = true;
+        }
+
+        for (MeshModels::UID model_ID : MeshModels::get_created_models()) {
+            SceneNodes::UID node_ID = MeshModels::get_scene_node_ID(model_ID);
+
+            MeshModel model = MeshModels::get_model(model_ID);
+            optix::Transform transform = load_model(m_state->context, model);
+            m_state->root_node->addChild(transform);
+
+            if (m_state->transforms.size() <= model.scene_node_ID)
+                m_state->transforms.resize(SceneNodes::capacity());
+            m_state->transforms[model.scene_node_ID] = transform;
+
+            models_changed = true;
+        }
+
+        if (models_changed) {
+            m_state->root_node->getAcceleration()->markDirty();
+            m_state->accumulations = 0u;
+        }
     }
 }
 
