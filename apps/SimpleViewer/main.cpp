@@ -24,25 +24,6 @@ using namespace Cogwheel::Scene;
 
 static std::string g_filepath;
 
-class SimpleRotator final {
-public:
-    SimpleRotator(SceneNodes::UID node_ID)
-        : m_node_ID(node_ID) { }
-
-    void rotate(Engine& engine) {
-        Transform transform = SceneNodes::get_global_transform(m_node_ID);
-        transform.rotation = Quaternionf::from_angle_axis(float(engine.get_time().get_total_time()) * 0.1f, Vector3f::up());
-        SceneNodes::set_global_transform(m_node_ID, transform);
-    }
-
-    static inline void rotate_callback(Engine& engine, void* state) {
-        static_cast<SimpleRotator*>(state)->rotate(engine);
-    }
-
-private:
-    SceneNodes::UID m_node_ID;
-};
-
 class Navigation final {
 public:
 
@@ -111,8 +92,9 @@ private:
 };
 
 static inline void scenenode_cleanup_callback(void* dummy) {
-    SceneNodes::clear_change_notifications();
-    MeshModels::clear_change_notifications();
+    SceneNodes::reset_change_notifications();
+    Meshes::reset_change_notifications();
+    MeshModels::reset_change_notifications();
 }
 
 void initializer(Cogwheel::Core::Engine& engine) {
@@ -125,8 +107,24 @@ void initializer(Cogwheel::Core::Engine& engine) {
 
     if (g_filepath.empty())
         engine.set_scene_root(create_test_scene(engine));
-    else
+    else {
         engine.set_scene_root(ObjLoader::load(g_filepath));
+
+        { // Add camera
+            Cameras::allocate(1u);
+            SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
+
+            Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
+            cam_transform.translation = Vector3f(0, 1, -4);
+            SceneNodes::set_global_transform(cam_node_ID, cam_transform);
+
+            Matrix4x4f perspective_matrix, inverse_perspective_matrix;
+            CameraUtils::compute_perspective_projection(0.1f, 100.0f, PI<float>() / 4.0f, 8.0f / 6.0f,
+                perspective_matrix, inverse_perspective_matrix);
+
+            Cameras::UID cam_ID = Cameras::create(cam_node_ID, perspective_matrix, inverse_perspective_matrix);
+        }
+    }
 
     // TODO Should be based on the transformed global mesh bounds and not the local bounds.
     //      These could be calculated as a helper function on the model.
@@ -136,30 +134,11 @@ void initializer(Cogwheel::Core::Engine& engine) {
         scene_bounds.grow_to_contain(mesh_aabb);
     }
 
-    // Rotate root node.
-    if (engine.get_scene_root() != SceneNodes::UID::invalid_UID()) {
-        SimpleRotator* simple_rotator = new SimpleRotator(engine.get_scene_root());
-        engine.add_mutating_callback(SimpleRotator::rotate_callback, simple_rotator);
-    }
-
-    { // Add camera
-        Cameras::allocate(1u);
-        SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
-
-        Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
-        cam_transform.translation = Vector3f(0, 1, -4);
-        SceneNodes::set_global_transform(cam_node_ID, cam_transform);
-
-        Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-        CameraUtils::compute_perspective_projection(0.1f, 100.0f, PI<float>() / 4.0f, 8.0f / 6.0f,
-            perspective_matrix, inverse_perspective_matrix);
-
-        Cameras::UID cam_ID = Cameras::create(cam_node_ID, perspective_matrix, inverse_perspective_matrix);
-
-        float camera_velocity = magnitude(scene_bounds.size()) * 0.1f;
-        Navigation* camera_navigation = new Navigation(cam_node_ID, camera_velocity);
-        engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
-    }
+    Cameras::UID cam_ID = *Cameras::begin();
+    SceneNodes::UID cam_node_ID = Cameras::get_parent_ID(cam_ID);
+    float camera_velocity = magnitude(scene_bounds.size()) * 0.1f;
+    Navigation* camera_navigation = new Navigation(cam_node_ID, camera_velocity);
+    engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
 }
 
 void initialize_window(Cogwheel::Core::Window& window) {
