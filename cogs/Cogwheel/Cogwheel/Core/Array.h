@@ -19,7 +19,7 @@ namespace Core {
 // and it will not require objects to have a default constructor, and as such 
 // elements not explicitly initialized will contain undefined data.
 // Future work
-// * Support function pointers. (possibly by using aligned_alloc? Check how std::vetor does it.)
+// * Support function pointers. (possibly by using aligned_alloc? Check how std::vector does it.)
 // * Constructor taking two iterators as argument.
 // * Add emplace.
 // * Add swap.

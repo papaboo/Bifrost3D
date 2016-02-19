@@ -19,8 +19,6 @@ namespace Core {
 // allowing easy use of c++11 for-each when an object contains multiple arrays.
 // See fx Scene::SceneNodes.
 // See http://ericniebler.com/2014/10/06/counted-ranges-and-efficiency/
-// Future work:
-// * Make m_end a user defined condition to allow iterating over any set of elements.
 // ---------------------------------------------------------------------------
 template <typename Iterator>
 struct Iterable final {
