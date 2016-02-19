@@ -47,9 +47,13 @@ struct Renderer::State {
 
     optix::Group root_node;
 
-    std::vector<optix::Transform> transforms = std::vector<optix::Transform>(0); // TODO I would really like to use Core::Array here, but it assumes that optix::Transform is a POD type and it isn't. The damn thing is reference counted and doesn't like being memcopied.
+    std::vector<optix::Transform> transforms = std::vector<optix::Transform>(0);
+    std::vector<optix::Geometry> meshes = std::vector<optix::Geometry>(0);
 
     optix::Material default_material;
+
+    optix::Program triangle_intersection_program;
+    optix::Program triangle_bounds_program;
 };
 
 static inline std::string get_ptx_path(std::string shader_filename) {
@@ -99,35 +103,38 @@ static inline optix::Buffer create_buffer(optix::Context& context, unsigned int 
     return buffer;
 }
 
-static inline optix::Transform load_model(optix::Context& context, MeshModel model, optix::Material optixMaterial) {
-    // TODO Check if we gain any loading performance by caching intersection and closest hit programs.
-
+static inline optix::Geometry load_mesh(optix::Context& context, Meshes::UID mesh_ID, 
+                                        optix::Program intersection_program, optix::Program bounds_program) {
     optix::Geometry optixMesh = context->createGeometry();
-    {
-        // TODO Handle nulled index buffers. Can I check if a buffer is null on the GPU?
-        Mesh& mesh = Meshes::get_mesh(model.mesh_ID);
+    
+    // TODO Don't upload nulled buffers and upload bitmask of nulled buffers to the intersection program.
+    Mesh& mesh = Meshes::get_mesh(mesh_ID);
 
-        std::string intersection_ptx_path = get_ptx_path("IntersectTriangle");
-        optixMesh->setIntersectionProgram(context->createProgramFromPTXFile(intersection_ptx_path, "intersect"));
-        optixMesh->setBoundingBoxProgram(context->createProgramFromPTXFile(intersection_ptx_path, "bounds"));
+    optixMesh->setIntersectionProgram(intersection_program);
+    optixMesh->setBoundingBoxProgram(bounds_program);
 
-        optix::Buffer index_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT3, mesh.indices_count, mesh.indices);
-        optixMesh["index_buffer"]->setBuffer(index_buffer);
-        optixMesh->setPrimitiveCount(mesh.indices_count);
+    optix::Buffer index_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT3, mesh.indices_count, mesh.indices);
+    optixMesh["index_buffer"]->setBuffer(index_buffer);
+    optixMesh->setPrimitiveCount(mesh.indices_count);
 
-        // Vertex attributes
-        optix::Buffer position_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, mesh.vertex_count, mesh.positions);
-        optixMesh["position_buffer"]->setBuffer(position_buffer);
-        optix::Buffer normal_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, mesh.vertex_count, mesh.normals);
-        optixMesh["normal_buffer"]->setBuffer(normal_buffer);
-        optix::Buffer texcoord_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, mesh.vertex_count, mesh.texcoords);
-        optixMesh["texcoord_buffer"]->setBuffer(texcoord_buffer);
-        optixMesh->validate(); // TODO debug validate macro.
-    }
+    // Vertex attributes
+    optix::Buffer position_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, mesh.vertex_count, mesh.positions);
+    optixMesh["position_buffer"]->setBuffer(position_buffer);
+    optix::Buffer normal_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, mesh.vertex_count, mesh.normals);
+    optixMesh["normal_buffer"]->setBuffer(normal_buffer);
+    optix::Buffer texcoord_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, mesh.vertex_count, mesh.texcoords);
+    optixMesh["texcoord_buffer"]->setBuffer(texcoord_buffer);
+    optixMesh->validate(); // TODO debug validate macro.
 
-    optix::GeometryInstance optixModel = context->createGeometryInstance(optixMesh, &optixMaterial, &optixMaterial + 1);
-    optixModel["g_color"]->setFloat(make_float3(0.5f, 0.5f, 0.5f));
-    optixModel->validate();
+    return optixMesh;
+}
+
+static inline optix::Transform load_model(optix::Context& context, MeshModel model, optix::Geometry* meshes, optix::Material optix_material) {
+    optix::Geometry optix_mesh = meshes[model.mesh_ID];
+
+    optix::GeometryInstance optix_model = context->createGeometryInstance(optix_mesh, &optix_material, &optix_material + 1);
+    optix_model["g_color"]->setFloat(make_float3(0.5f, 0.5f, 0.5f));
+    optix_model->validate();
 
     optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
     acceleration->setProperty("index_buffer_name", "index_buffer");
@@ -135,20 +142,20 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
     acceleration->markDirty();
     acceleration->validate();
 
-    optix::GeometryGroup geometryGroup = context->createGeometryGroup(&optixModel, &optixModel + 1);
-    geometryGroup->setAcceleration(acceleration);
-    geometryGroup->validate();
+    optix::GeometryGroup geometry_group = context->createGeometryGroup(&optix_model, &optix_model + 1);
+    geometry_group->setAcceleration(acceleration);
+    geometry_group->validate();
 
-    optix::Transform optixTransform = context->createTransform();
+    optix::Transform optix_transform = context->createTransform();
     {
         Math::Transform transform = SceneNodes::get_global_transform(model.scene_node_ID);
         Math::Transform inverse_transform = invert(transform);
-        optixTransform->setMatrix(false, to_matrix4x4(transform).begin(), to_matrix4x4(inverse_transform).begin());
-        optixTransform->setChild(geometryGroup);
-        optixTransform->validate();
+        optix_transform->setMatrix(false, to_matrix4x4(transform).begin(), to_matrix4x4(inverse_transform).begin());
+        optix_transform->setChild(geometry_group);
+        optix_transform->validate();
     }
 
-    return optixTransform;
+    return optix_transform;
 }
 
 //----------------------------------------------------------------------------
@@ -200,6 +207,10 @@ Renderer::Renderer()
         std::string normal_vis_ptx_path = get_ptx_path("NormalRendering");
         m_state->default_material->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
         m_state->default_material->validate();
+
+        std::string trangle_intersection_ptx_path = get_ptx_path("IntersectTriangle");
+        m_state->triangle_intersection_program = context->createProgramFromPTXFile(trangle_intersection_ptx_path, "intersect");
+        m_state->triangle_bounds_program = context->createProgramFromPTXFile(trangle_intersection_ptx_path, "bounds");
     }
 
     { // Screen buffers
@@ -325,6 +336,19 @@ void Renderer::render() {
 }
 
 void Renderer::handle_updates() {
+    { // Mesh updates
+        for (Meshes::UID mesh_ID : Meshes::get_destroyed_meshes()) {
+            m_state->meshes[mesh_ID]->destroy();
+            m_state->meshes[mesh_ID] = NULL;
+        }
+
+        for (Meshes::UID mesh_ID : Meshes::get_created_meshes()) {
+            if (m_state->meshes.size() <= mesh_ID)
+                m_state->meshes.resize(Meshes::capacity());
+            m_state->meshes[mesh_ID] = load_mesh(m_state->context, mesh_ID, m_state->triangle_intersection_program, m_state->triangle_bounds_program);
+        }
+    }
+
     { // Transform updates
         // We're only interested in changes in the transforms that are connected to renderables, such as meshes.
         bool important_transform_changed = false; 
@@ -366,7 +390,7 @@ void Renderer::handle_updates() {
             SceneNodes::UID node_ID = MeshModels::get_scene_node_ID(model_ID);
 
             MeshModel model = MeshModels::get_model(model_ID);
-            optix::Transform transform = load_model(m_state->context, model, m_state->default_material);
+            optix::Transform transform = load_model(m_state->context, model, m_state->meshes.data(), m_state->default_material);
             m_state->root_node->addChild(transform);
 
             if (m_state->transforms.size() <= model.scene_node_ID)

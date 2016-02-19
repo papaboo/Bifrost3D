@@ -52,14 +52,14 @@ private:
 
     void handle_updates();
 
+    // Pimpl the state to avoid exposing OptiX headers.
+    struct State;
+    State* m_state;
+
     struct {
         int optix;
         int cuda;
     } m_device_ids;
-
-    // Pimpl the state to avoid exposing OptiX headers.
-    struct State;
-    State* m_state;
 };
 
 static inline void render_callback(const Cogwheel::Core::Engine& engine, void* renderer) {
