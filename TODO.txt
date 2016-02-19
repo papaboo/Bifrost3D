@@ -1,14 +1,11 @@
-* Box-gun!
-** Cache meshes in OptiXRenderer
-* Notifications when changing the scene. / Pullable events.
-** Camera - Create, destroy, parent changed and matrix changed. Store in bitmask pr camera instead of as separate notifications.
 * Point light
-* Setup_for_engine(...) initializers that initializes the managers and also hooks them up to the engine.
-* Materials
+* Material
 ** Coated rubber/metal.
 ** Textures.
 * Environment models.
 * GL Renderer
+* Notifications when changing the scene. / Pullable events.
+** Camera - Create, destroy, parent changed and matrix changed. Store in bitmask pr camera instead of as separate notifications.
 * Natvis visualizations
 ** Natvis install target.
 ** Array, Meshes, MeshModels, SceneNodes, Cameras
@@ -25,7 +22,6 @@
 ** Only nodes in a certain scene should be rendered.
 ** A scene node should know if it is in a scene and in which. Store the root scene ID pr node?
 ** A requirement for the asset manager to not simply add loaded nodes directly into the scene.
-* AssetManager.
 * Serialize scene and models.
 * CUDA
 ** helper methods.
