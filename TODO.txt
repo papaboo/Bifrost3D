@@ -1,7 +1,7 @@
 * Box-gun!
+** Cache meshes in OptiXRenderer
 * Notifications when changing the scene. / Pullable events.
 ** Camera - Create, destroy, parent changed and matrix changed. Store in bitmask pr camera instead of as separate notifications.
-** Meshes - Create and destroy.
 * Point light
 * Setup_for_engine(...) initializers that initializes the managers and also hooks them up to the engine.
 * Materials
@@ -11,7 +11,7 @@
 * GL Renderer
 * Natvis visualizations
 ** Natvis install target.
-** Mesh, Meshes, MeshModels, SceneNodes, Cameras
+** Array, Meshes, MeshModels, SceneNodes, Cameras
 ** Remember to add a raw_view that will visualize the data as-is.
 * Screenshot
 ** Grab backbuffer on the CPU.
@@ -33,6 +33,12 @@
 * -Wall? -W3?
 ** It's a pain now that I'm using source code instead of dlls. All my libs are being checked an produce a ton of pedantic warnings.
 ** However it's also nice and produce some helpful warnings, fx about struct padding (which GLFW is full of, making that warning helpful and horrible at the same time.)
+
+Design decision
+* Should I use reference counting on some/all components?
+** Right now I have the issue that a Mesh could be deleted, but the MeshModel would still exists.
+   All MeshModels can ofcourse check the validity of their ID's, but having ALL MeshModels check it whenever a mesh_destroyed notification exists is a bit much.
+   If I use reference counting, then that problem would go away and the MeshModel would always keep the Mesh alive.
 
 libs
 * FreeImage. It has a commercial license.

@@ -20,6 +20,9 @@ std::string* Meshes::m_names = nullptr;
 Mesh* Meshes::m_meshes = nullptr;
 AABB* Meshes::m_bounds = nullptr;
 
+std::vector<Meshes::UID> Meshes::m_meshes_created = std::vector<Meshes::UID>(0);
+std::vector<Meshes::UID> Meshes::m_meshes_destroyed = std::vector<Meshes::UID>(0);
+
 void Meshes::allocate(unsigned int capacity) {
     if (is_allocated())
         return;
@@ -30,6 +33,9 @@ void Meshes::allocate(unsigned int capacity) {
     m_names = new std::string[capacity];
     m_meshes = new Mesh[capacity];
     m_bounds = new AABB[capacity];
+
+    m_meshes_created.reserve(capacity / 4);
+    m_meshes_destroyed.reserve(capacity / 4);
 
     // Allocate dummy element at 0.
     m_names[0] = "Dummy Node";
@@ -45,6 +51,9 @@ void Meshes::deallocate() {
     delete[] m_names; m_names = nullptr;
     delete[] m_meshes; m_meshes = nullptr;
     delete[] m_bounds; m_bounds = nullptr;
+
+    m_meshes_created.resize(0); m_meshes_created.shrink_to_fit();
+    m_meshes_destroyed.resize(0); m_meshes_destroyed.shrink_to_fit();
 }
 
 template <typename T>
@@ -92,7 +101,15 @@ Meshes::UID Meshes::create(const std::string& name, unsigned int indices_count, 
     m_names[id] = name;
     m_meshes[id] = Mesh(indices_count, vertex_count);
     m_bounds[id] = AABB(Vector3f(-1e30f, -1e30f, -1e30f), Vector3f(1e30f, 1e30f, 1e30f));
+
+    m_meshes_created.push_back(id);
+
     return id;
+}
+
+void Meshes::destroy(Meshes::UID mesh_ID) {
+    if (m_UID_generator.erase(mesh_ID))
+        m_meshes_destroyed.push_back(mesh_ID);
 }
 
 AABB Meshes::compute_bounds(Meshes::UID mesh_ID) {
@@ -105,6 +122,11 @@ AABB Meshes::compute_bounds(Meshes::UID mesh_ID) {
 
     m_bounds[mesh_ID] = bounds;
     return bounds;
+}
+
+void Meshes::reset_change_notifications() {
+    m_meshes_created.resize(0);
+    m_meshes_destroyed.resize(0);
 }
 
 } // NS Assets

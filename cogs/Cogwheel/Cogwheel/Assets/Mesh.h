@@ -9,9 +9,12 @@
 #ifndef _COGWHEEL_ASSETS_MESH_H_
 #define _COGWHEEL_ASSETS_MESH_H_
 
+#include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Math/AABB.h>
 #include <Cogwheel/Math/Vector.h>
+
+#include <vector>
 
 namespace Cogwheel {
 namespace Assets {
@@ -97,6 +100,7 @@ public:
     static bool has(Meshes::UID mesh_ID) { return m_UID_generator.has(mesh_ID); }
 
     static Meshes::UID create(const std::string& name, unsigned int indices_count, unsigned int vertex_count);
+    static void destroy(Meshes::UID mesh_ID);
 
     static inline std::string get_name(Meshes::UID mesh_ID) { return m_names[mesh_ID]; }
     static inline void set_name(Meshes::UID mesh_ID, const std::string& name) { m_names[mesh_ID] = name; }
@@ -109,6 +113,21 @@ public:
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
     static ConstUIDIterator end() { return m_UID_generator.end(); }
 
+    //-------------------------------------------------------------------------
+    // Changes since last game loop tick.
+    //-------------------------------------------------------------------------
+    typedef std::vector<UID>::iterator mesh_created_iterator;
+    static Core::Iterable<mesh_created_iterator> get_created_meshes() {
+        return Core::Iterable<mesh_created_iterator>(m_meshes_created.begin(), m_meshes_created.end());
+    }
+
+    typedef std::vector<UID>::iterator mesh_destroyed_iterator;
+    static Core::Iterable<mesh_destroyed_iterator> get_destroyed_meshes() {
+        return Core::Iterable<mesh_destroyed_iterator>(m_meshes_destroyed.begin(), m_meshes_destroyed.end());
+    }
+
+    static void reset_change_notifications();
+
 private:
     static void reserve_mesh_data(unsigned int new_capacity, unsigned int old_capacity);
 
@@ -117,6 +136,10 @@ private:
 
     static Mesh* m_meshes;
     static Math::AABB* m_bounds;
+
+    // Change notifications.
+    static std::vector<UID> m_meshes_created;
+    static std::vector<UID> m_meshes_destroyed;
 };
 
 } // NS Assets
