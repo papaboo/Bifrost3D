@@ -78,7 +78,7 @@ TEST_F(Assets_MeshModels, destroy) {
     MeshModels::UID model_ID = MeshModels::create(Scene::SceneNodes::UID::invalid_UID(), Meshes::UID::invalid_UID());
     EXPECT_TRUE(MeshModels::has(model_ID));
 
-    MeshModels::clear_change_notifications();
+    MeshModels::reset_change_notifications();
 
     MeshModels::destroy(model_ID);
     EXPECT_FALSE(MeshModels::has(model_ID));
@@ -87,10 +87,7 @@ TEST_F(Assets_MeshModels, destroy) {
     Core::Iterable<MeshModels::model_destroyed_iterator> destroyed_models = MeshModels::get_destroyed_models();
     EXPECT_EQ(destroyed_models.end() - destroyed_models.begin(), 1);
     EXPECT_EQ(*destroyed_models.begin(), model_ID);
-
-    MeshModels::deallocate();
 }
-
 
 TEST_F(Assets_MeshModels, create_and_destroy_notifications) {
     MeshModels::UID model_ID0 = MeshModels::create(Scene::SceneNodes::UID::invalid_UID(), Meshes::UID::invalid_UID());
@@ -117,7 +114,7 @@ TEST_F(Assets_MeshModels, create_and_destroy_notifications) {
         EXPECT_TRUE(model1_created);
     }
 
-    MeshModels::clear_change_notifications();
+    MeshModels::reset_change_notifications();
 
     { // Test destroy.
         MeshModels::destroy(model_ID0);
@@ -141,7 +138,7 @@ TEST_F(Assets_MeshModels, create_and_destroy_notifications) {
         EXPECT_FALSE(model1_destroyed);
     }
 
-    MeshModels::clear_change_notifications();
+    MeshModels::reset_change_notifications();
 
     { // Test that destroyed model cannot be destroyed again.
         MeshModels::destroy(model_ID0);

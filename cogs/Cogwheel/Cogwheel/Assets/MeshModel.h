@@ -10,8 +10,11 @@
 #define _COGWHEEL_ASSETS_MESH_MODEL_H_
 
 #include <Cogwheel/Assets/Mesh.h>
+#include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Scene/SceneNode.h>
+
+#include <vector>
 
 namespace Cogwheel {
 namespace Assets {
@@ -76,7 +79,7 @@ public:
         return Core::Iterable<model_destroyed_iterator>(m_models_destroyed.begin(), m_models_destroyed.end());
     }
 
-    static void clear_change_notifications();
+    static void reset_change_notifications();
 
 private:
     static void reserve_model_data(unsigned int new_capacity, unsigned int old_capacity);

@@ -87,7 +87,7 @@ public:
         return Core::Iterable<transform_changed_iterator>(m_transforms_changed.begin(), m_transforms_changed.end());
     }
     
-    static void clear_change_notifications();
+    static void reset_change_notifications();
 
 private:
     static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);

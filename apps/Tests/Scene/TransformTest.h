@@ -269,9 +269,9 @@ TEST_F(Scene_Transform, Transform_changed_notification) {
         EXPECT_TRUE(n2_changed);
     }
 
-    { // Test that after clearing the change notifications no nodes are flagged as changed.
-        SceneNodes::clear_change_notifications();
+    SceneNodes::reset_change_notifications();
 
+    { // Test that after clearing the change notifications no nodes are flagged as changed.
         bool n0_changed = false;
         bool n1_changed = false;
         bool n2_changed = false;
@@ -290,9 +290,10 @@ TEST_F(Scene_Transform, Transform_changed_notification) {
         EXPECT_FALSE(n2_changed);
     }
 
+    SceneNodes::reset_change_notifications();
+
     { // Test that transform changes are propagated downwards.
         n2.set_parent(n1);
-
         n1.set_global_transform(Transform(Vector3f(-1, -2, -3)));
 
         bool n0_changed = false;

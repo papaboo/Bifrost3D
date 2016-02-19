@@ -235,7 +235,7 @@ void SceneNodes::set_global_transform(SceneNodes::UID node_ID, Math::Transform t
     });
 }
 
-void SceneNodes::clear_change_notifications() {
+void SceneNodes::reset_change_notifications() {
     m_nodes_created.resize(0);
     m_nodes_destroyed.resize(0);
     m_transforms_changed.resize(0);

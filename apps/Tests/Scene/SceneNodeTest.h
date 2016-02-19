@@ -70,7 +70,7 @@ GTEST_TEST(Scene_SceneNode, destroy) {
     SceneNodes::UID node_ID = SceneNodes::create("Foo");
     EXPECT_TRUE(SceneNodes::has(node_ID));
 
-    SceneNodes::clear_change_notifications();
+    SceneNodes::reset_change_notifications();
 
     SceneNodes::destroy(node_ID);
     EXPECT_FALSE(SceneNodes::has(node_ID));
@@ -110,7 +110,7 @@ GTEST_TEST(Scene_SceneNode, create_and_destroy_notifications) {
         EXPECT_TRUE(node1_created);
     }
 
-    SceneNodes::clear_change_notifications();
+    SceneNodes::reset_change_notifications();
 
     { // Test destroy.
         SceneNodes::destroy(node_ID0);
@@ -134,7 +134,7 @@ GTEST_TEST(Scene_SceneNode, create_and_destroy_notifications) {
         EXPECT_FALSE(node1_destroyed);
     }
 
-    SceneNodes::clear_change_notifications();
+    SceneNodes::reset_change_notifications();
 
     { // Test that destroyed node cannot be destroyed again.
         SceneNodes::destroy(node_ID0);

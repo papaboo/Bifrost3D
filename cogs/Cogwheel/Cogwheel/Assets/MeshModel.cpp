@@ -89,13 +89,13 @@ MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Assets:
 
 void MeshModels::destroy(MeshModels::UID model_ID) {
     MeshModel& model = m_models[model_ID];
-    if (!(model.properties & MeshModelProperties::Destroyed)) {
+    if (!(model.properties & MeshModelProperties::Destroyed) && m_UID_generator.has(model_ID)) {
         model.properties |= MeshModelProperties::Destroyed;
         m_models_destroyed.push_back(model_ID);
     }
 }
 
-void MeshModels::clear_change_notifications() {
+void MeshModels::reset_change_notifications() {
     for (UID model_ID : m_models_destroyed)
         m_UID_generator.erase(model_ID);
     m_models_created.resize(0);
