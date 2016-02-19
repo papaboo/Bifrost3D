@@ -48,6 +48,8 @@ struct Renderer::State {
     optix::Group root_node;
 
     std::vector<optix::Transform> transforms = std::vector<optix::Transform>(0); // TODO I would really like to use Core::Array here, but it assumes that optix::Transform is a POD type and it isn't. The damn thing is reference counted and doesn't like being memcopied.
+
+    optix::Material default_material;
 };
 
 static inline std::string get_ptx_path(std::string shader_filename) {
@@ -97,7 +99,7 @@ static inline optix::Buffer create_buffer(optix::Context& context, unsigned int 
     return buffer;
 }
 
-static inline optix::Transform load_model(optix::Context& context, MeshModel model) {
+static inline optix::Transform load_model(optix::Context& context, MeshModel model, optix::Material optixMaterial) {
     // TODO Check if we gain any loading performance by caching intersection and closest hit programs.
 
     optix::Geometry optixMesh = context->createGeometry();
@@ -121,16 +123,6 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
         optix::Buffer texcoord_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, mesh.vertex_count, mesh.texcoords);
         optixMesh["texcoord_buffer"]->setBuffer(texcoord_buffer);
         optixMesh->validate(); // TODO debug validate macro.
-    }
-
-    optix::Material optixMaterial = context->createMaterial();
-    {
-        std::string monte_carlo_ptx_path = get_ptx_path("MonteCarlo");
-        optixMaterial->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
-
-        std::string normal_vis_ptx_path = get_ptx_path("NormalRendering");
-        optixMaterial->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
-        optixMaterial->validate();
     }
 
     optix::GeometryInstance optixModel = context->createGeometryInstance(optixMesh, &optixMaterial, &optixMaterial + 1);
@@ -198,6 +190,16 @@ Renderer::Renderer()
         m_state->root_node->validate();
 
         context["g_scene_root"]->set(m_state->root_node);
+    }
+
+    { // Setup default material.
+        m_state->default_material = context->createMaterial();
+        std::string monte_carlo_ptx_path = get_ptx_path("MonteCarlo");
+        m_state->default_material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
+
+        std::string normal_vis_ptx_path = get_ptx_path("NormalRendering");
+        m_state->default_material->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
+        m_state->default_material->validate();
     }
 
     { // Screen buffers
@@ -364,7 +366,7 @@ void Renderer::handle_updates() {
             SceneNodes::UID node_ID = MeshModels::get_scene_node_ID(model_ID);
 
             MeshModel model = MeshModels::get_model(model_ID);
-            optix::Transform transform = load_model(m_state->context, model);
+            optix::Transform transform = load_model(m_state->context, model, m_state->default_material);
             m_state->root_node->addChild(transform);
 
             if (m_state->transforms.size() <= model.scene_node_ID)
