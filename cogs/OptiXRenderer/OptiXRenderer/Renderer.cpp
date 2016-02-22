@@ -24,6 +24,7 @@
 
 #include <GL/gl.h>
 
+#include <assert.h>
 #include <vector>
 
 using namespace Cogwheel;
@@ -131,6 +132,8 @@ static inline optix::Geometry load_mesh(optix::Context& context, Meshes::UID mes
 
 static inline optix::Transform load_model(optix::Context& context, MeshModel model, optix::Geometry* meshes, optix::Material optix_material) {
     optix::Geometry optix_mesh = meshes[model.mesh_ID];
+
+    assert(optix_mesh);
 
     optix::GeometryInstance optix_model = context->createGeometryInstance(optix_mesh, &optix_material, &optix_material + 1);
     optix_model["g_color"]->setFloat(make_float3(0.5f, 0.5f, 0.5f));
@@ -338,7 +341,7 @@ void Renderer::render() {
 void Renderer::handle_updates() {
     { // Mesh updates
         for (Meshes::UID mesh_ID : Meshes::get_destroyed_meshes()) {
-            m_state->meshes[mesh_ID]->destroy();
+            m_state->meshes[mesh_ID]->destroy(); // TODO Can I not simply null this and have reference counting take care of it? That would be safer, but would also 'hide' errors. (And ideally I would like to get rid of reference counting inside my renderer blast dang it!)
             m_state->meshes[mesh_ID] = NULL;
         }
 
@@ -371,7 +374,6 @@ void Renderer::handle_updates() {
     }
 
     { // Model updates.
-        // TODO Cache and share geometry.
         // TODO Properly handle reused model ID's. Is it faster to reuse the rt components then it is to destroy and recreate them?
 
         bool models_changed = false;
@@ -381,7 +383,7 @@ void Renderer::handle_updates() {
             m_state->root_node->removeChild(optixTransform);
             optixTransform->destroy();
             m_state->transforms[node_ID] = NULL;
-            // TODO check if I need to destroy the subgraph.
+            // TODO check if I need to destroy the subgraph. I think reference counting might take care of that.
 
             models_changed = true;
         }
