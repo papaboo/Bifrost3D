@@ -152,7 +152,7 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
 
     { // GUN!
         Cameras::UID cam_ID = *Cameras::begin();
-        SceneNodes::UID cam_node_ID = Cameras::get_parent_ID(cam_ID);
+        SceneNodes::UID cam_node_ID = Cameras::get_node_ID(cam_ID);
         BoxGun* boxgun = new BoxGun(cam_node_ID);
         engine.add_mutating_callback(BoxGun::update_callback, boxgun);
     }

@@ -29,7 +29,7 @@ public:
     typedef Core::TypedUIDGenerator<Cameras> UIDGenerator;
     typedef UIDGenerator::UID UID;
 
-    static bool is_allocated() { return m_parent_IDs != nullptr; }
+    static bool is_allocated() { return m_node_IDs != nullptr; }
     static void allocate(unsigned int capacity);
     static void deallocate();
 
@@ -39,8 +39,8 @@ public:
 
     static Cameras::UID create(SceneNodes::UID parent_ID, Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix);
 
-    static SceneNodes::UID get_parent_ID(Cameras::UID camera_ID) { return m_parent_IDs[camera_ID]; }
-    static void set_parent_ID(Cameras::UID camera_ID, SceneNodes::UID parent_ID) { m_parent_IDs[camera_ID] = parent_ID; }
+    static SceneNodes::UID get_node_ID(Cameras::UID camera_ID) { return m_node_IDs[camera_ID]; }
+    static void set_node_ID(Cameras::UID camera_ID, SceneNodes::UID node_ID) { m_node_IDs[camera_ID] = node_ID; }
 
     static unsigned int get_render_index(Cameras::UID camera_ID) { return m_render_indices[camera_ID]; }
     static void set_render_index(Cameras::UID camera_ID, unsigned int index) { m_render_indices[camera_ID] = index; }
@@ -55,7 +55,7 @@ public:
         set_projection_matrices(camera_ID, projection_matrix, invert(projection_matrix));
     }
 
-    static Math::Transform get_inverse_view_transform(Cameras::UID camera_ID) { return SceneNodes::get_global_transform(m_parent_IDs[camera_ID]); }
+    static Math::Transform get_inverse_view_transform(Cameras::UID camera_ID) { return SceneNodes::get_global_transform(m_node_IDs[camera_ID]); }
     static Math::Transform get_view_transform(Cameras::UID camera_ID) { return Math::invert(get_inverse_view_transform(camera_ID)); }
 
     static Math::Rectf get_viewport(Cameras::UID camera_ID) { return m_viewports[camera_ID]; }
@@ -70,7 +70,7 @@ private:
 
     static UIDGenerator m_UID_generator;
 
-    static SceneNodes::UID* m_parent_IDs;
+    static SceneNodes::UID* m_node_IDs;
     static unsigned int* m_render_indices;
     static Math::Matrix4x4f* m_projection_matrices;
     static Math::Matrix4x4f* m_inverse_projection_matrices;

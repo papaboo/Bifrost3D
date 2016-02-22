@@ -288,7 +288,7 @@ void Renderer::render() {
             Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
             inverse_view_projection_matrix = inverse_view_matrix * inverse_projection_matrix;
 
-            SceneNode camera_node = Cameras::get_parent_ID(camera_ID);
+            SceneNode camera_node = Cameras::get_node_ID(camera_ID);
             cam_pos = camera_node.get_global_transform().translation;
         }
 

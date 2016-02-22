@@ -76,7 +76,7 @@ TEST_F(Scene_Camera, sentinel_camera) {
 
     EXPECT_FALSE(Cameras::has(sentinel_ID));
 
-    EXPECT_EQ(Cameras::get_parent_ID(sentinel_ID), SceneNodes::UID::invalid_UID());
+    EXPECT_EQ(Cameras::get_node_ID(sentinel_ID), SceneNodes::UID::invalid_UID());
     EXPECT_EQ(Cameras::get_viewport(sentinel_ID), Math::Rectf(0.0f, 0.0f, 0.0f, 0.0f));
 
     Cameras::deallocate();
@@ -95,7 +95,7 @@ TEST_F(Scene_Camera, create) {
     Cameras::UID cam_ID = Cameras::create(cam_node_ID, perspective_matrix, inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
     
-    EXPECT_EQ(Cameras::get_parent_ID(cam_ID), cam_node_ID);
+    EXPECT_EQ(Cameras::get_node_ID(cam_ID), cam_node_ID);
     EXPECT_EQ(Cameras::get_render_index(cam_ID), 0u);
     EXPECT_EQ(Cameras::get_projection_matrix(cam_ID), perspective_matrix);
     EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_ID), inverse_perspective_matrix);

@@ -135,7 +135,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
     }
 
     Cameras::UID cam_ID = *Cameras::begin();
-    SceneNodes::UID cam_node_ID = Cameras::get_parent_ID(cam_ID);
+    SceneNodes::UID cam_node_ID = Cameras::get_node_ID(cam_ID);
     float camera_velocity = magnitude(scene_bounds.size()) * 0.1f;
     Navigation* camera_navigation = new Navigation(cam_node_ID, camera_velocity);
     engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
