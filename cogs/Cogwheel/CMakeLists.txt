@@ -44,6 +44,8 @@ SET(MATH_SRCS
 SET(SCENE_SRCS 
   Cogwheel/Scene/Camera.cpp
   Cogwheel/Scene/Camera.h
+  Cogwheel/Scene/LightSource.cpp
+  Cogwheel/Scene/LightSource.h
   Cogwheel/Scene/SceneNode.cpp
   Cogwheel/Scene/SceneNode.h
 )
