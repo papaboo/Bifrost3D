@@ -57,6 +57,10 @@ public:
         maximum = max(maximum, aabb.maximum);
     }
 
+    inline Vector3f center() const {
+        return (maximum + minimum) * 0.5f;
+    }
+
     inline Vector3f size() const {
         return maximum - minimum;
     }
