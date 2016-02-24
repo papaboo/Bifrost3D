@@ -6,6 +6,7 @@
 #include <Cogwheel/Input/Keyboard.h>
 #include <Cogwheel/Input/Mouse.h>
 #include <Cogwheel/Scene/Camera.h>
+#include <Cogwheel/Scene/LightSource.h>
 
 #include <GLFWDriver.h>
 
@@ -92,9 +93,10 @@ private:
 };
 
 static inline void scenenode_cleanup_callback(void* dummy) {
-    SceneNodes::reset_change_notifications();
+    LightSources::reset_change_notifications();
     Meshes::reset_change_notifications();
     MeshModels::reset_change_notifications();
+    SceneNodes::reset_change_notifications();
 }
 
 void initializer(Cogwheel::Core::Engine& engine) {
@@ -104,6 +106,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
     engine.add_tick_cleanup_callback(scenenode_cleanup_callback, nullptr);
     Meshes::allocate(8u);
     MeshModels::allocate(8u);
+    LightSources::allocate(8u);
 
     if (g_filepath.empty())
         engine.set_scene_root(create_test_scene(engine));
@@ -139,6 +142,11 @@ void initializer(Cogwheel::Core::Engine& engine) {
     float camera_velocity = magnitude(scene_bounds.size()) * 0.1f;
     Navigation* camera_navigation = new Navigation(cam_node_ID, camera_velocity);
     engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
+
+    Vector3f light_position = scene_bounds.center() + scene_bounds.size() * 10.0f;
+    Transform light_transform = Transform(light_position);
+    SceneNodes::UID light_node_ID = SceneNodes::create("Light", light_transform);
+    LightSources::UID light_ID = LightSources::create_point_light(light_node_ID, RGB(1000000.0f));
 }
 
 void initialize_window(Cogwheel::Core::Window& window) {
