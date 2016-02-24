@@ -34,6 +34,9 @@ public:
     RGB(unsigned char r, unsigned char g, unsigned char b)
         : r(r / 255.0f), g(g / 255.0f), b(b / 255.0f) { }
 
+    RGB(float intensity)
+        : r(intensity), g(intensity), b(intensity) { }
+
     RGB(float r, float g, float b)
         : r(r), g(g), b(b) { }
 

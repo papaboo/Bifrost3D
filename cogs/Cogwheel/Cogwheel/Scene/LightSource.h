@@ -11,7 +11,7 @@
 
 #include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
-#include <Cogwheel/Math/Vector.h>
+#include <Cogwheel/Math/Color.h>
 #include <Cogwheel/Scene/SceneNode.h>
 
 #include <vector>
@@ -43,11 +43,11 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(LightSources::UID light_ID) { return m_UID_generator.has(light_ID); }
 
-    static LightSources::UID create_point_light(SceneNodes::UID node_ID, Math::Vector3f power);
+    static LightSources::UID create_point_light(SceneNodes::UID node_ID, Math::RGB power);
     static void destroy(LightSources::UID light_ID);
 
     static inline SceneNodes::UID get_node_ID(LightSources::UID light_ID) { return m_node_IDs[light_ID]; }
-    static inline Math::Vector3f get_power(LightSources::UID light_ID) { return m_power[light_ID]; }
+    static inline Math::RGB get_power(LightSources::UID light_ID) { return m_power[light_ID]; }
     
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
     static ConstUIDIterator end() { return m_UID_generator.end(); }
@@ -73,7 +73,7 @@ private:
     static UIDGenerator m_UID_generator;
 
     static SceneNodes::UID* m_node_IDs;
-    static Math::Vector3f* m_power;
+    static Math::RGB* m_power;
 
     // Change notifications.
     static std::vector<UID> m_lights_created;
