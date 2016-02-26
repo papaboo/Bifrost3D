@@ -24,7 +24,6 @@ rtDeclareVariable(NormalVisualizationPRD, normal_visualization_PRD, rtPayload, )
 
 rtDeclareVariable(uint2, g_launch_index, rtLaunchIndex, );
 rtDeclareVariable(rtObject, g_scene_root, , );
-rtDeclareVariable(float, g_scene_epsilon, , );
 
 rtDeclareVariable(float4, g_camera_position, , );
 rtDeclareVariable(Matrix4x4, g_inverted_view_projection_matrix, , );
@@ -39,7 +38,7 @@ RT_PROGRAM void ray_generation() {
     float2 viewport_pos = make_float2(g_launch_index.x / float(g_accumulation_buffer.size().x), g_launch_index.y / float(g_accumulation_buffer.size().y));
     float3 origin = make_float3(g_camera_position);
     float3 direction = project_ray_direction(viewport_pos, origin, g_inverted_view_projection_matrix);
-    Ray ray(origin, direction, unsigned int(RayTypes::NormalVisualization), g_scene_epsilon);
+    Ray ray(origin, direction, unsigned int(RayTypes::NormalVisualization), 0.0f);
 
     NormalVisualizationPRD prd;
     rtTrace(g_scene_root, ray, prd);
@@ -56,9 +55,10 @@ RT_PROGRAM void ray_generation() {
 //----------------------------------------------------------------------------
 
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
+rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 
 RT_PROGRAM void closest_hit() {
-    float3 remapped_normal = geometric_normal * 0.5f + 0.5f;
+    float3 remapped_normal = shading_normal * 0.5f + 0.5f;
     normal_visualization_PRD.color = make_float4(remapped_normal, 1.0);
 }
 
