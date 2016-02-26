@@ -88,10 +88,10 @@ Meshes::UID cube(unsigned int quads_pr_edge) {
             *position_iterator++ = Vector3f(halfsize, i * scale - halfsize, j * scale - halfsize);
     for (unsigned int i = 0; i < verts_pr_edge; ++i) // Front
         for (unsigned int j = 0; j < verts_pr_edge; ++j)
-            *position_iterator++ = Vector3f(i * scale - halfsize, halfsize - j * scale, -halfsize);
+            *position_iterator++ = Vector3f(halfsize - i * scale, halfsize - j * scale, halfsize);
     for (unsigned int i = 0; i < verts_pr_edge; ++i) // Back
         for (unsigned int j = 0; j < verts_pr_edge; ++j)
-            *position_iterator++ = Vector3f(halfsize - i * scale, halfsize - j * scale, halfsize);
+            *position_iterator++ = Vector3f(i * scale - halfsize, halfsize - j * scale, -halfsize);
 
     // Create the normals.
     Vector3f* normal_iterator = mesh.normals;
