@@ -189,7 +189,7 @@ Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_qua
         while (normal_iterator < mesh.normals + 2 * lid_vertex_count) // Bottom
             *normal_iterator++ = Vector3f(0, -1, 0);
         Vector3f* side_position_iterator = mesh.positions + 2 * lid_vertex_count;
-        while (normal_iterator < mesh.normals + mesh.vertex_count) {// Side
+        while (normal_iterator < mesh.normals + mesh.vertex_count) { // Side
             Vector3f position = *side_position_iterator++;
             *normal_iterator++ = normalize(Vector3f(position.x, 0.0f, position.z));
         }
@@ -221,8 +221,8 @@ Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_qua
         
         // Bottom
         for (unsigned int i = 0; i < lid_indices_count; ++i)
-            mesh.indices[i + lid_indices_count] = Vector3ui(0, i + 1, i + 2) + lid_vertex_count;
-        mesh.indices[2 * lid_indices_count - 1].z = 1 + lid_vertex_count;
+            mesh.indices[i + lid_indices_count] = Vector3ui(0, i + 2, i + 1) + lid_vertex_count;
+        mesh.indices[2 * lid_indices_count - 1].y = 1 + lid_vertex_count;
 
         // Side
         Vector3f* side_positions = mesh.positions + 2 * lid_vertex_count;
