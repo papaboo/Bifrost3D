@@ -9,4 +9,15 @@
     <DisplayString>{{ ID = {m_ID_incarnation &amp; 0xFFFFFF}, incarnation = {m_ID_incarnation >> 24} }}</DisplayString>
   </Type>
 
+  <Type Name="Cogwheel::Core::Array&lt;*&gt;">
+    <DisplayString>{{ size={m_size} }}</DisplayString>
+    <Expand>
+        <Item Name="[size]" ExcludeView="simple">m_size</Item>
+        <ArrayItems>
+            <Size>m_size</Size>
+            <ValuePointer>m_data</ValuePointer>
+        </ArrayItems>
+    </Expand>
+  </Type>
+  
 </AutoVisualizer>
