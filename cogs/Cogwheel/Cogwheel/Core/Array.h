@@ -44,6 +44,9 @@ public:
     // -----------------------------------------------------------------------
     // Constructors and destrcutor
     // -----------------------------------------------------------------------
+    Array()
+        : m_size(0), m_data(nullptr) {
+    }
     explicit Array(size_type size)
         : m_size(size), m_data(new T[m_size]) {}
     Array(Array<T>&& other)
