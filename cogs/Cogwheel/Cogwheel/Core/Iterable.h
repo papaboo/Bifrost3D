@@ -30,7 +30,7 @@ public:
     Iterator begin() { return m_begin; }
     Iterator end() { return m_end; }
 
-    bool is_empty() { return m_begin != m_end; }
+    bool is_empty() { return m_begin == m_end; }
 
 private:
     Iterator m_begin;
