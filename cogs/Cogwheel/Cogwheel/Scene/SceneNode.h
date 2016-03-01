@@ -63,6 +63,7 @@ public:
 
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
     static ConstUIDIterator end() { return m_UID_generator.end(); }
+    static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
 
     template<typename F>
     static void traverser_recursively(SceneNodes::UID node_ID, F& function);

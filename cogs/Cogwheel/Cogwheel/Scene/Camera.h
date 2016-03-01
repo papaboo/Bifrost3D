@@ -25,9 +25,9 @@ namespace Scene {
 // ---------------------------------------------------------------------------
 class Cameras final {
 public:
-
     typedef Core::TypedUIDGenerator<Cameras> UIDGenerator;
     typedef UIDGenerator::UID UID;
+    typedef UIDGenerator::ConstIterator ConstUIDIterator;
 
     static bool is_allocated() { return m_node_IDs != nullptr; }
     static void allocate(unsigned int capacity);
@@ -63,6 +63,7 @@ public:
 
     static UIDGenerator::ConstIterator begin() { return m_UID_generator.begin(); }
     static UIDGenerator::ConstIterator end() { return m_UID_generator.end(); }
+    static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
 
 private:
 

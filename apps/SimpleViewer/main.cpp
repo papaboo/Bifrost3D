@@ -132,8 +132,8 @@ void initializer(Cogwheel::Core::Engine& engine) {
     // TODO Should be based on the transformed global mesh bounds and not the local bounds.
     //      These could be calculated as a helper function on the model.
     AABB scene_bounds = AABB::invalid();
-    for (Meshes::ConstUIDIterator uid_itr = Meshes::begin(); uid_itr != Meshes::end(); ++uid_itr) {
-        AABB mesh_aabb = Meshes::get_bounds(*uid_itr);
+    for (Meshes::UID mesh_ID : Meshes::get_iterable()) {
+        AABB mesh_aabb = Meshes::get_bounds(mesh_ID);
         scene_bounds.grow_to_contain(mesh_aabb);
     }
 
