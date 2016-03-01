@@ -17,6 +17,7 @@
 #include <Cogwheel/Core/Engine.h>
 #include <Cogwheel/Math/Math.h>
 #include <Cogwheel/Scene/Camera.h>
+#include <Cogwheel/Scene/LightSource.h>
 #include <Cogwheel/Scene/SceneNode.h>
 
 #include <optixu/optixpp_namespace.h>
@@ -38,10 +39,10 @@ namespace OptiXRenderer {
 
 struct Renderer::State {
     uint2 screensize;
-    Context context;
+    optix::Context context;
 
     // Per camera members.
-    Buffer accumulation_buffer;
+    optix::Buffer accumulation_buffer;
     unsigned int accumulations;
 
     GLuint backbuffer_gl_id;
@@ -55,6 +56,11 @@ struct Renderer::State {
 
     optix::Program triangle_intersection_program;
     optix::Program triangle_bounds_program;
+
+    Core::Array<unsigned int> light_ID_to_index;
+    Core::Array<LightSources::UID> light_index_to_ID;
+    optix::Buffer light_sources;
+    unsigned int active_light_count;
 };
 
 static inline std::string get_ptx_path(std::string shader_filename) {
@@ -189,7 +195,7 @@ Renderer::Renderer()
 
     m_state->accumulations = 0u;
 
-    context["g_frame_number"]->setFloat(2.0f);
+    context["g_frame_number"]->setFloat(0.0f);
 
     { // Setup root node
         optix::Acceleration root_acceleration = context->createAcceleration("Bvh", "Bvh");
@@ -200,15 +206,27 @@ Renderer::Renderer()
         m_state->root_node->validate();
 
         context["g_scene_root"]->set(m_state->root_node);
+        context["g_scene_epsilon"]->setFloat(0.001f); // TODO, base on scene size. Can I query the scene bounds from OptiX?
+    }
+
+    { // Light sources
+        m_state->light_sources = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, 0);
+        m_state->light_sources->setElementSize(sizeof(PointLight));
+        m_state->active_light_count = 0;
+        context["g_lights"]->set(m_state->light_sources);
+        context["g_light_count"]->setInt(m_state->active_light_count);
     }
 
     { // Setup default material.
         m_state->default_material = context->createMaterial();
+
         std::string monte_carlo_ptx_path = get_ptx_path("MonteCarlo");
         m_state->default_material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
+        m_state->default_material->setAnyHitProgram(int(RayTypes::Shadow), context->createProgramFromPTXFile(monte_carlo_ptx_path, "shadow_any_hit"));
 
         std::string normal_vis_ptx_path = get_ptx_path("NormalRendering");
         m_state->default_material->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
+
         m_state->default_material->validate();
 
         std::string trangle_intersection_ptx_path = get_ptx_path("IntersectTriangle");
@@ -237,9 +255,8 @@ Renderer::Renderer()
     { // Path tracing setup.
         std::string rgp_ptx_path = get_ptx_path("PathTracing");
         context->setRayGenerationProgram(int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "path_tracing"));
-
-        std::string monte_carlo_miss_ptx_path = get_ptx_path("MonteCarlo");
-        context->setMissProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_miss_ptx_path, "miss"));
+        context->setExceptionProgram(int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "exceptions"));
+        context->setMissProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(rgp_ptx_path, "miss"));
     }
 
     { // Normal visualization setup.
@@ -248,9 +265,11 @@ Renderer::Renderer()
         context->setMissProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "miss"));
     }
 
-    // context->setPrintEnabled(true);
-    // context->setPrintLaunchIndex(0, 0);
-    // context->setExceptionEnabled(RT_EXCEPTION_ALL, true);
+#ifdef _DEBUG
+    context->setPrintEnabled(true);
+    context->setPrintLaunchIndex(0, 0);
+    context->setExceptionEnabled(RT_EXCEPTION_ALL, true);
+#endif
 
     context->validate();
     context->compile();
@@ -269,9 +288,13 @@ void Renderer::render() {
         // Screen buffers should be resized.
         m_state->accumulation_buffer->setSize(window.get_width(), window.get_height());
         m_state->screensize = make_uint2(window.get_width(), window.get_height());
+        m_state->accumulations = 0u;
+#ifdef _DEBUG
+        // context->setPrintLaunchIndex(window.get_width() / 2, window.get_height() / 2);
+#endif
     }
 
-    context["g_accumulations"]->setFloat(float(m_state->accumulations));
+    context["g_accumulations"]->setInt(m_state->accumulations);
 
     { // Upload camera parameters.
         Vector3f cam_pos = Vector3f::zero();
@@ -352,6 +375,106 @@ void Renderer::handle_updates() {
         }
     }
 
+    { // Light updates
+        if (!LightSources::get_created_lights().is_empty() || !LightSources::get_destroyed_lights().is_empty()) {
+            if (m_state->light_ID_to_index.size() < LightSources::capacity()) {
+                m_state->light_ID_to_index.resize(LightSources::capacity());
+                m_state->light_index_to_ID.resize(LightSources::capacity());
+            }
+
+            LightSources::light_created_iterator created_lights_begin = LightSources::get_created_lights().begin();
+            LightSources::light_created_iterator created_lights_end = LightSources::get_created_lights().end();
+            LightSources::light_destroyed_iterator destroyed_lights_begin = LightSources::get_destroyed_lights().begin();
+            LightSources::light_destroyed_iterator destroyed_lights_end = LightSources::get_destroyed_lights().end();
+
+            unsigned int lights_created_count = unsigned int(created_lights_end - created_lights_begin);
+            unsigned int lights_destroyed_count = unsigned int(destroyed_lights_end - destroyed_lights_begin);
+            unsigned int old_light_count = m_state->active_light_count;
+            unsigned int rolling_light_count = old_light_count;
+            m_state->active_light_count += lights_created_count - lights_destroyed_count;
+
+            // Light creation helper method.
+            static auto light_creation = [](LightSources::UID light_ID, unsigned int light_index, PointLight* device_lights) {
+                PointLight& light = device_lights[light_index];
+
+                SceneNodes::UID node_ID = LightSources::get_node_ID(light_ID);
+                Vector3f position = SceneNodes::get_global_transform(node_ID).translation;
+                memcpy(&light.position, &position, sizeof(light.position));
+
+                RGB power = LightSources::get_power(light_ID);
+                memcpy(&light.power, &power, sizeof(light.power));
+            };
+
+            if (old_light_count < m_state->active_light_count) {
+                // Resize to add room for new light sources.
+                m_state->light_sources->setSize(m_state->active_light_count);
+
+                // Resizing removes old data, so see this as an opportunity to linearize the light data.
+                PointLight* device_lights = (PointLight*)m_state->light_sources->map();
+                unsigned int light_index = 0;
+                for (LightSources::UID light_ID : LightSources::get_iterable()) {
+                    m_state->light_ID_to_index[light_ID] = light_index;
+                    m_state->light_index_to_ID[light_index] = light_ID;
+
+                    light_creation(light_ID, light_index, device_lights);
+                    ++light_index;
+                }
+                m_state->light_sources->unmap();
+
+            } else {
+
+                PointLight* device_lights = (PointLight*)m_state->light_sources->map();
+
+                for (LightSources::UID light_ID : Iterable<LightSources::light_destroyed_iterator>(destroyed_lights_begin, destroyed_lights_end)) {
+                    unsigned int light_index = m_state->light_ID_to_index[light_ID];
+                    if (created_lights_begin != created_lights_end) {
+                        // Replace deleted light by new light source.
+                        LightSources::UID new_light_ID = *created_lights_begin++;
+                        light_creation(new_light_ID, light_index, device_lights);
+                        m_state->light_ID_to_index[new_light_ID] = light_index;
+                        m_state->light_index_to_ID[light_index] = new_light_ID;
+                    } else {
+                        // Replace deleted light by light from the end of the array.
+                        --rolling_light_count;
+                        if (light_index != rolling_light_count) {
+                            memcpy(device_lights + light_index, device_lights + rolling_light_count, sizeof(PointLight));
+
+                            // Rewire light ID and index maps.
+                            m_state->light_index_to_ID[light_index] = m_state->light_index_to_ID[rolling_light_count];
+                            m_state->light_ID_to_index[m_state->light_index_to_ID[light_index]] = light_index;
+                        }
+                    }
+                }
+
+                for (LightSources::UID light_ID : Iterable<LightSources::light_destroyed_iterator>(created_lights_begin, created_lights_end)) {
+                    unsigned int light_index = rolling_light_count++;
+                    m_state->light_ID_to_index[light_ID] = light_index;
+                    m_state->light_index_to_ID[light_index] = light_ID;
+
+                    light_creation(light_ID, light_index, device_lights);
+                }
+
+                m_state->light_sources->unmap();
+            }
+
+            m_state->context["g_light_count"]->setInt(m_state->active_light_count);
+            m_state->accumulations = 0u;
+
+            /* {
+                printf("Lights after changes:\n");
+                PointLight* device_lights = (PointLight*)m_state->light_sources->map();
+                RTsize size;
+                m_state->light_sources->getSize(size);
+                for (unsigned int i = 0; i < size; ++i) {
+                    PointLight& l = device_lights[i];
+                    printf("  %i: position: [%f, %f, %f], power: [%f, %f, %f]\n", i, l.position.x, l.position.y, l.position.z, l.power.x, l.power.y, l.power.z);
+                }
+                m_state->light_sources->unmap();
+                printf("\n");
+            } */
+        }
+    }
+
     { // Transform updates
         // We're only interested in changes in the transforms that are connected to renderables, such as meshes.
         bool important_transform_changed = false; 
@@ -374,7 +497,7 @@ void Renderer::handle_updates() {
     }
 
     { // Model updates.
-        // TODO Properly handle reused model ID's. Is it faster to reuse the rt components then it is to destroy and recreate them?
+        // TODO Properly handle reused model ID's. Is it faster to reuse the rt components then it is to destroy and recreate them? Perhaps even keep a list of 'ready to use' components?
 
         bool models_changed = false;
         for (MeshModels::UID model_ID : MeshModels::get_destroyed_models()) {

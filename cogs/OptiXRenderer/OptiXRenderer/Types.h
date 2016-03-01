@@ -9,6 +9,8 @@
 #ifndef _OPTIXRENDERER_TYPES_H_
 #define _OPTIXRENDERER_TYPES_H_
 
+#include <OptiXRenderer/Shading/Defines.h>
+
 #include <optixu/optixu_math_namespace.h>
 
 namespace OptiXRenderer {
@@ -16,6 +18,7 @@ namespace OptiXRenderer {
 enum class RayTypes {
     MonteCarlo = 0,
     NormalVisualization,
+    Shadow,
     Count
 };
 
@@ -25,9 +28,40 @@ enum class EntryPoints {
     Count
 };
 
+//----------------------------------------------------------------------------
+// Per ray data.
+//----------------------------------------------------------------------------
+
 struct MonteCarloPRD {
-    optix::float3 weight;
-    optix::float3 color;
+    optix::float3 radiance;
+    optix::float3 throughput;
+};
+
+struct ShadowPRD {
+    optix::float3 attenuation;
+};
+
+//----------------------------------------------------------------------------
+// Light source structs
+//----------------------------------------------------------------------------
+
+struct __align__(16) LightSample {
+    optix::float3 radiance;
+    float PDF;
+    optix::float3 direction;
+    float distance;
+
+    __inline_all__ static LightSample None() {
+        LightSample sample = {};
+        return sample;
+    }
+};
+
+struct __align__(16) PointLight{
+    unsigned int flags;
+    optix::float3 position;
+    optix::float3 power;
+    float _padding; // TODO radius!
 };
 
 } // NS OptiXRenderer

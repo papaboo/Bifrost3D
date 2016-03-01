@@ -27,7 +27,7 @@ namespace OptiXRenderer {
 // Future work
 // * Create Initialization method that only returns a valid pointer in case 
 //   a Renderer could be created. Should take a GL (ES) Context and 
-//   a device ID begin/end iterator.
+//   possibly a device ID begin/end iterator. But how to uniquely enumerate devices?
 // * Several backbuffer modes: VBO, data transfer over the CPU, .. more? PBO?
 //   See OptiX samples SampleScene.cpp.
 // * ImageComposer that composes images pr camera from several renderers, 
@@ -39,6 +39,8 @@ namespace OptiXRenderer {
 // * Logarithmic upload of the accumulated image.
 // * Have path tracer stop per bounce, filter and display the result.
 //   Should be good for interactivity and convergence. :)
+// * Cache acceleration structures for meshes not in the scene, but still active.
+//   Test if it speeds up the bullet creation of my boxgun!
 //----------------------------------------------------------------------------
 class Renderer final {
 public:

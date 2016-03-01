@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 
 #include <OptiXRenderer/Types.h>
+#include <OptiXRenderer/Shading/LightSources/PointLightImpl.h>
 
 #include <optix.h>
 
@@ -15,7 +16,14 @@ using namespace optix;
 
 // Ray params
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
+rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
 rtDeclareVariable(MonteCarloPRD, monte_carlo_PRD, rtPayload, );
+
+// Scene params
+rtDeclareVariable(rtObject, g_scene_root, , );
+rtDeclareVariable(float, g_scene_epsilon, , );
+rtBuffer<PointLight, 1> g_lights;
+rtDeclareVariable(int, g_light_count, , );
 
 // Material params
 rtDeclareVariable(float3, g_color, , );
@@ -31,14 +39,34 @@ rtDeclareVariable(float2, texcoord, attribute texcoord, );
 RT_PROGRAM void closest_hit() {
     // const float3 world_geometric_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, geometric_normal));
     const float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
-    // const float3 color = make_float3(texcoord.x, texcoord.y, 1.0f - texcoord.x - texcoord.y);
-    monte_carlo_PRD.color = g_color * abs(dot(world_shading_normal, ray.direction));
+    const float3 forward_shading_normal = dot(world_shading_normal, -ray.direction) >= 0.0f ? world_shading_normal : -world_shading_normal;
+
+    const float3 intersection_point = ray.direction * t_hit + ray.origin;
+
+    for (int i = 0; i < g_light_count; ++i) {
+        const PointLight& light = g_lights[i];
+        LightSample light_sample = LightSources::sample_radiance(light, intersection_point, make_float2(0.0f, 0.0f));
+        light_sample.radiance *= abs(dot(forward_shading_normal, light_sample.direction));
+
+        const float3 bsdf_response = g_color / PIf;
+        if (dot(forward_shading_normal, light_sample.direction) >= 0.0f) {
+            ShadowPRD shadow_PRD = { 1.0f, 1.0f, 1.0f };
+            // TODO Always offset slightly along the geometric normal.
+            Ray shadow_ray(intersection_point, light_sample.direction, unsigned int(RayTypes::Shadow), g_scene_epsilon, light_sample.distance - g_scene_epsilon);
+            rtTrace(g_scene_root, shadow_ray, shadow_PRD);
+
+            monte_carlo_PRD.radiance += light_sample.radiance * bsdf_response * shadow_PRD.attenuation;
+        }
+    }
 }
 
 //----------------------------------------------------------------------------
-// Miss program for monte carlo rays.
+// Any hit program for monte carlo shadow rays.
 //----------------------------------------------------------------------------
 
-RT_PROGRAM void miss() {
-    monte_carlo_PRD.color = make_float3(0.68f, 0.92f, 1.0f);
+rtDeclareVariable(ShadowPRD, shadow_PRD, rtPayload, );
+
+RT_PROGRAM void shadow_any_hit() {
+    shadow_PRD.attenuation = make_float3(0.0f);
+    rtTerminateRay();
 }
