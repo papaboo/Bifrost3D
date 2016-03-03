@@ -81,11 +81,11 @@ __inline_dev__ void intersect_sphere() {
     }
 }
 
-RT_PROGRAM void intersect(int primIdx) {
+RT_PROGRAM void intersect(int) {
     intersect_sphere<false>();
 }
 
-RT_PROGRAM void robust_intersect(int primIdx) {
+RT_PROGRAM void robust_intersect(int) {
     intersect_sphere<true>();
 }
 
