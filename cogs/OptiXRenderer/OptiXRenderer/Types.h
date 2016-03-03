@@ -10,6 +10,7 @@
 #define _OPTIXRENDERER_TYPES_H_
 
 #include <OptiXRenderer/Shading/Defines.h>
+#include <OptiXRenderer/RNG.h>
 
 #include <optixu/optixu_math_namespace.h>
 
@@ -32,8 +33,9 @@ enum class EntryPoints {
 // Per ray data.
 //----------------------------------------------------------------------------
 
-struct MonteCarloPRD {
+struct __align__(16) MonteCarloPRD{
     optix::float3 radiance;
+    RNG::LinearCongruential rng;
     optix::float3 throughput;
 };
 
