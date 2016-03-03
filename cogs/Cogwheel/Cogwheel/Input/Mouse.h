@@ -14,6 +14,15 @@
 namespace Cogwheel {
 namespace Input {
 
+//----------------------------------------------------------------------------
+// Implementats a mouse abstraction.
+// The mouse supports up to MAX_HALFTAP_COUNT half taps, presses and releases, 
+// pr frame. This can be used to implement such interactions as double tap 
+// for dash without worrying (too much) about the framerate.
+//
+// Future work
+// * Use an enum over mouse buttons to access state, such as in Keyboard, instead of exposing ButtonState directly. This will help when I change the layout of ButtonState and will make Keyboard and Mouse consistent.
+//----------------------------------------------------------------------------
 class Mouse final {
 public:
     static const int BUTTON_COUNT = 4;
