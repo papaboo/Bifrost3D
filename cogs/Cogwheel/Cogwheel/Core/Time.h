@@ -25,6 +25,7 @@ public:
     Time()
         : m_total_time(0.0)
         , m_delta_time(0.0f)
+        , m_time_scale(1.0f)
         , m_ticks(0u) {}
 
     inline double get_total_time() const { return m_total_time; }
@@ -32,15 +33,20 @@ public:
     inline float get_smooth_delta_time() const { return m_delta_time; }
     inline unsigned int get_ticks() const { return m_ticks; }
 
+    inline float get_time_scale() const { return m_time_scale; }
+    inline void set_time_scale(float s) { m_time_scale = s; }
+    inline bool is_paused() const { return m_time_scale == 0.0f; }
+
     void tick(double delta_time) {
-        m_total_time += delta_time;
-        m_delta_time = float(delta_time);
+        m_total_time += delta_time * m_time_scale;
+        m_delta_time = float(delta_time * m_time_scale);
         ++m_ticks;
     }
 
 private:
     double m_total_time;
     float m_delta_time;
+    float m_time_scale;
     unsigned int m_ticks;
 };
 
