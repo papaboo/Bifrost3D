@@ -72,6 +72,48 @@ GTEST_TEST(Input_Keyboard, resetting) {
     }
 }
 
+GTEST_TEST(Input_Keyboard, was_pressed_and_released) {
+    Keyboard keyboard = Keyboard();
+
+    EXPECT_FALSE(keyboard.is_pressed(Keyboard::Key::A));
+
+    // Key held down.
+    keyboard.key_tapped(Keyboard::Key::A, true);
+    EXPECT_TRUE(keyboard.is_pressed(Keyboard::Key::A));
+    EXPECT_FALSE(keyboard.is_released(Keyboard::Key::A));
+    EXPECT_TRUE(keyboard.was_pressed(Keyboard::Key::A));
+    EXPECT_FALSE(keyboard.was_released(Keyboard::Key::A));
+
+    // Key held down and released.
+    keyboard.key_tapped(Keyboard::Key::A, false);
+    EXPECT_FALSE(keyboard.is_pressed(Keyboard::Key::A));
+    EXPECT_TRUE(keyboard.is_released(Keyboard::Key::A));
+    EXPECT_TRUE(keyboard.was_pressed(Keyboard::Key::A));
+    EXPECT_TRUE(keyboard.was_released(Keyboard::Key::A));
+
+    // Key held down, released and held down again.
+    keyboard.key_tapped(Keyboard::Key::A, true);
+    EXPECT_TRUE(keyboard.is_pressed(Keyboard::Key::A));
+    EXPECT_FALSE(keyboard.is_released(Keyboard::Key::A));
+    EXPECT_TRUE(keyboard.was_pressed(Keyboard::Key::A));
+    EXPECT_TRUE(keyboard.was_released(Keyboard::Key::A));
+
+    keyboard.per_frame_reset();
+
+    // Key held down from before reset.
+    EXPECT_TRUE(keyboard.is_pressed(Keyboard::Key::A));
+    EXPECT_FALSE(keyboard.is_released(Keyboard::Key::A));
+    EXPECT_FALSE(keyboard.was_pressed(Keyboard::Key::A));
+    EXPECT_FALSE(keyboard.was_released(Keyboard::Key::A));
+
+    // Key held down and relased.
+    keyboard.key_tapped(Keyboard::Key::A, false);
+    EXPECT_FALSE(keyboard.is_pressed(Keyboard::Key::A));
+    EXPECT_TRUE(keyboard.is_released(Keyboard::Key::A));
+    EXPECT_FALSE(keyboard.was_pressed(Keyboard::Key::A));
+    EXPECT_TRUE(keyboard.was_released(Keyboard::Key::A));
+}
+
 GTEST_TEST(Input_Keyboard, tap_overflow_handling) {
     Keyboard keyboard = Keyboard();
 

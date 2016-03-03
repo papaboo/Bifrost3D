@@ -119,6 +119,15 @@ public:
     inline bool is_released(Key key) const { return !is_pressed(key); }
     inline unsigned int halftaps(Key key) const { return m_key_states[(unsigned int)key].halftaps; }
 
+    inline bool was_pressed(Key key) const {
+        const KeyState state = m_key_states[(unsigned int)key];
+        return (state.is_pressed && state.halftaps == 1) || state.halftaps > 1;
+    }
+    inline bool was_released(Key key) const {
+        const KeyState state = m_key_states[(unsigned int)key];
+        return (!state.is_pressed && state.halftaps == 1) || state.halftaps > 1;
+    }
+
     inline void key_tapped(Key key, bool pressed) {
         m_key_states[(unsigned int)key].is_pressed = pressed;
         unsigned int halftaps = m_key_states[(unsigned int)key].halftaps;
