@@ -415,6 +415,9 @@ void Renderer::handle_updates() {
                 m_state->lights.index_to_ID.resize(LightSources::capacity());
             }
 
+            // Deferred area light geometry update helper. Keeps track of the highest delta light index updated.
+            int highest_area_light_index_updated = -1;
+
             LightSources::light_created_iterator created_lights_begin = LightSources::get_created_lights().begin();
             LightSources::light_created_iterator created_lights_end = LightSources::get_created_lights().end();
             LightSources::light_destroyed_iterator destroyed_lights_begin = LightSources::get_destroyed_lights().begin();
@@ -428,7 +431,7 @@ void Renderer::handle_updates() {
 
             // Light creation helper method.
             static auto light_creation = [](LightSources::UID light_ID, unsigned int light_index, PointLight* device_lights, 
-                                            optix::Geometry& area_light_geometry, optix::GeometryGroup area_lights_group, optix::Group root_node) {
+                                            int& highest_area_light_index_updated) {
                 PointLight& light = device_lights[light_index];
 
                 SceneNodes::UID node_ID = LightSources::get_node_ID(light_ID);
@@ -440,16 +443,8 @@ void Renderer::handle_updates() {
 
                 light.radius = LightSources::get_radius(light_ID);
 
-                // Make sure that all area lights are part of the area light model.
-                // TODO Possibly defer this to the end of the light updates, as changing OptiX state can be very costly. Wait until we can benchmark the fps in a scene with tons of light changes first.
-                if (light.radius > 0.0f) {
-                    area_lights_group->getAcceleration()->markDirty();
-                    root_node->getAcceleration()->markDirty();
-                    
-                    unsigned int primitive_count = area_light_geometry->getPrimitiveCount();
-                    if (primitive_count < (light_index + 1))
-                        area_light_geometry->setPrimitiveCount(light_index + 1);
-                }
+                if (!LightSources::is_delta_light(light_ID))
+                    highest_area_light_index_updated = max(highest_area_light_index_updated, light_index);
             };
 
             if (old_light_count < m_state->lights.count) {
@@ -463,7 +458,7 @@ void Renderer::handle_updates() {
                     m_state->lights.ID_to_index[light_ID] = light_index;
                     m_state->lights.index_to_ID[light_index] = light_ID;
 
-                    light_creation(light_ID, light_index, device_lights, m_state->lights.area_lights_geometry, m_state->lights.area_lights, m_state->root_node);
+                    light_creation(light_ID, light_index, device_lights, highest_area_light_index_updated);
                     ++light_index;
                 }
                 m_state->lights.sources->unmap();
@@ -474,10 +469,14 @@ void Renderer::handle_updates() {
 
                 for (LightSources::UID light_ID : Iterable<LightSources::light_destroyed_iterator>(destroyed_lights_begin, destroyed_lights_end)) {
                     unsigned int light_index = m_state->lights.ID_to_index[light_ID];
+
+                    if (!LightSources::is_delta_light(light_ID))
+                        highest_area_light_index_updated = max(highest_area_light_index_updated, light_index);
+
                     if (created_lights_begin != created_lights_end) {
                         // Replace deleted light by new light source.
                         LightSources::UID new_light_ID = *created_lights_begin++;
-                        light_creation(new_light_ID, light_index, device_lights, m_state->lights.area_lights_geometry, m_state->lights.area_lights, m_state->root_node);
+                        light_creation(new_light_ID, light_index, device_lights, highest_area_light_index_updated);
                         m_state->lights.ID_to_index[new_light_ID] = light_index;
                         m_state->lights.index_to_ID[light_index] = new_light_ID;
                     } else {
@@ -489,6 +488,8 @@ void Renderer::handle_updates() {
                             // Rewire light ID and index maps.
                             m_state->lights.index_to_ID[light_index] = m_state->lights.index_to_ID[rolling_light_count];
                             m_state->lights.ID_to_index[m_state->lights.index_to_ID[light_index]] = light_index;
+
+                            highest_area_light_index_updated = max(highest_area_light_index_updated, rolling_light_count);
                         }
                     }
                 }
@@ -498,7 +499,7 @@ void Renderer::handle_updates() {
                     m_state->lights.ID_to_index[light_ID] = light_index;
                     m_state->lights.index_to_ID[light_index] = light_ID;
 
-                    light_creation(light_ID, light_index, device_lights, m_state->lights.area_lights_geometry, m_state->lights.area_lights, m_state->root_node);
+                    light_creation(light_ID, light_index, device_lights, highest_area_light_index_updated);
                 }
 
                 m_state->lights.sources->unmap();
@@ -506,6 +507,24 @@ void Renderer::handle_updates() {
 
             m_state->context["g_light_count"]->setInt(m_state->lights.count);
             m_state->accumulations = 0u;
+
+            // Update area light geometry if needed.
+            if (highest_area_light_index_updated >= 0) {
+                // Some area light was updated.
+                m_state->lights.area_lights->getAcceleration()->markDirty();
+                m_state->root_node->getAcceleration()->markDirty();
+
+                // Increase primitive count if new area lights have been added.
+                int primitive_count = m_state->lights.area_lights_geometry->getPrimitiveCount();
+                if (primitive_count < (highest_area_light_index_updated + 1)) {
+                    m_state->lights.area_lights_geometry->setPrimitiveCount(highest_area_light_index_updated + 1);
+                    primitive_count = highest_area_light_index_updated + 1;
+                }
+
+                // And reduce primitive count if lights have been removed.
+                if (int(m_state->lights.count) < primitive_count)
+                    m_state->lights.area_lights_geometry->setPrimitiveCount(m_state->lights.count);
+            }
 
             /* {
                 printf("Lights after changes:\n");
