@@ -13,9 +13,10 @@
 #include <Cogwheel/Assets/MeshCreation.h>
 #include <Cogwheel/Assets/MeshModel.h>
 #include <Cogwheel/Core/Engine.h>
-#include <Cogwheel/Input/Keyboard.h>
+#include <Cogwheel/Input/Mouse.h>
 #include <Cogwheel/Math/Transform.h>
 #include <Cogwheel/Scene/Camera.h>
+#include <Cogwheel/Scene/LightSource.h>
 #include <Cogwheel/Scene/SceneNode.h>
 
 using namespace Cogwheel;
@@ -27,9 +28,11 @@ public:
     }
 
     void rotate(Core::Engine& engine) {
-        Math::Transform transform = Scene::SceneNodes::get_local_transform(m_node_ID);
-        transform.rotation = Math::Quaternionf::from_angle_axis(float(engine.get_time().get_total_time()) * 0.1f, Math::Vector3f::up());
-        Scene::SceneNodes::set_local_transform(m_node_ID, transform);
+        if (!engine.get_time().is_paused()) {
+            Math::Transform transform = Scene::SceneNodes::get_local_transform(m_node_ID);
+            transform.rotation = Math::Quaternionf::from_angle_axis(float(engine.get_time().get_total_time()) * 0.1f, Math::Vector3f::up());
+            Scene::SceneNodes::set_local_transform(m_node_ID, transform);
+        }
     }
 
     static inline void rotate_callback(Core::Engine& engine, void* state) {
@@ -38,6 +41,43 @@ public:
 
 private:
     Scene::SceneNodes::UID m_node_ID;
+};
+
+class BlinkingLight final {
+public:
+    BlinkingLight() 
+        : m_light_ID(Scene::LightSources::UID::invalid_UID()) {
+        Math::Transform transform = Math::Transform(Math::Vector3f(1,5,2));
+        m_node_ID = Scene::SceneNodes::create("BlinkingLight", transform);
+    }
+
+    void blink(Core::Engine& engine) {
+        using namespace Scene;
+
+        if (engine.get_time().is_paused())
+            return;
+
+        // Blink every two seconds.
+        int light_should_be_enabled = int(engine.get_time().get_total_time() / 2) & 1;
+        
+        // Create light source.
+        if (light_should_be_enabled && m_light_ID == LightSources::UID::invalid_UID())
+            m_light_ID = LightSources::create_point_light(m_node_ID, Math::RGB(800.0f, 600.0f, 600.0f), 5.0f);
+        
+        // Destroy light source.
+        if (light_should_be_enabled != 1 && m_light_ID != LightSources::UID::invalid_UID()) {
+            LightSources::destroy(m_light_ID);
+            m_light_ID = LightSources::UID::invalid_UID();
+        }
+    }
+
+    static inline void blink_callback(Core::Engine& engine, void* state) {
+        static_cast<BlinkingLight*>(state)->blink(engine);
+    }
+
+private:
+    Scene::SceneNodes::UID m_node_ID;
+    Scene::LightSources::UID m_light_ID;
 };
 
 class BoxGun final {
@@ -54,9 +94,10 @@ public:
         using namespace Cogwheel::Input;
         using namespace Cogwheel::Scene;
 
-        const Keyboard* keyboard = engine.get_keyboard();
+        if (engine.get_time().is_paused())
+            return;
 
-        if (keyboard->is_pressed(Keyboard::Key::Space) && m_model_ID == MeshModels::UID::invalid_UID()) {
+        if (engine.get_mouse()->get_right_button().is_pressed && m_model_ID == MeshModels::UID::invalid_UID()) {
             Math::Transform transform = SceneNodes::get_global_transform(m_shooter_node_ID);
             transform.scale = 0.1f;
             transform.translation -= transform.rotation.up() * transform.scale;
@@ -156,6 +197,9 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
         BoxGun* boxgun = new BoxGun(cam_node_ID);
         engine.add_mutating_callback(BoxGun::update_callback, boxgun);
     }
+
+    BlinkingLight* blinking_light = new BlinkingLight();
+    engine.add_mutating_callback(BlinkingLight::blink_callback, blinking_light);
 
     return root_node.get_ID();
 }

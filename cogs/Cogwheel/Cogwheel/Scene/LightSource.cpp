@@ -17,6 +17,7 @@ LightSources::UIDGenerator LightSources::m_UID_generator = UIDGenerator(0u);
 
 SceneNodes::UID* LightSources::m_node_IDs = nullptr;
 RGB* LightSources::m_power = nullptr;
+float* LightSources::m_radius = nullptr;
 
 std::vector<LightSources::UID> LightSources::m_lights_created = std::vector<LightSources::UID>(0);
 std::vector<LightSources::UID> LightSources::m_lights_destroyed = std::vector<LightSources::UID>(0);
@@ -30,6 +31,7 @@ void LightSources::allocate(unsigned int capacity) {
 
     m_node_IDs = new SceneNodes::UID[capacity];
     m_power = new RGB[capacity];
+    m_radius = new float[capacity];
     
     m_lights_created.reserve(capacity / 4);
     m_lights_destroyed.reserve(capacity / 4);
@@ -37,6 +39,7 @@ void LightSources::allocate(unsigned int capacity) {
     // Allocate dummy element at 0.
     m_node_IDs[0] = SceneNodes::UID::invalid_UID();
     m_power[0] = RGB::black();
+    m_radius[0] = 0.0f;
 }
 
 void LightSources::deallocate() {
@@ -47,6 +50,7 @@ void LightSources::deallocate() {
 
     delete[] m_node_IDs; m_node_IDs = nullptr;
     delete[] m_power; m_power = nullptr;
+    delete[] m_radius; m_radius = nullptr;
     
     m_lights_created.resize(0); m_lights_created.shrink_to_fit();
     m_lights_destroyed.resize(0); m_lights_destroyed.shrink_to_fit();
@@ -63,11 +67,13 @@ static inline T* resize_and_copy_array(T* old_array, unsigned int new_capacity, 
 void LightSources::reserve_light_data(unsigned int new_capacity, unsigned int old_capacity) {
     assert(m_node_IDs != nullptr);
     assert(m_power != nullptr);
+    assert(m_radius != nullptr);
 
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
 
     m_node_IDs = resize_and_copy_array(m_node_IDs, new_capacity, copyable_elements);
     m_power = resize_and_copy_array(m_power, new_capacity, copyable_elements);
+    m_radius = resize_and_copy_array(m_radius, new_capacity, copyable_elements);
 }
 
 void LightSources::reserve(unsigned int new_capacity) {
@@ -76,9 +82,10 @@ void LightSources::reserve(unsigned int new_capacity) {
     reserve_light_data(m_UID_generator.capacity(), old_capacity);
 }
 
-LightSources::UID LightSources::create_point_light(SceneNodes::UID node_ID, Math::RGB power) {
+LightSources::UID LightSources::create_point_light(SceneNodes::UID node_ID, Math::RGB power, float radius) {
     assert(m_node_IDs != nullptr);
     assert(m_power != nullptr);
+    assert(m_radius != nullptr);
 
     unsigned int old_capacity = m_UID_generator.capacity();
     UID id = m_UID_generator.generate();
@@ -88,6 +95,7 @@ LightSources::UID LightSources::create_point_light(SceneNodes::UID node_ID, Math
 
     m_node_IDs[id] = node_ID;
     m_power[id] = power;
+    m_radius[id] = radius;
 
     m_lights_created.push_back(id);
 

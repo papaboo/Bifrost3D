@@ -79,6 +79,11 @@ public:
 
         if (transform != node.get_global_transform())
             node.set_global_transform(transform);
+
+        if (keyboard->was_pressed(Keyboard::Key::Space)) {
+            float new_time_scale = engine.get_time().is_paused() ? 1.0f : 0.0f;
+            engine.get_time().set_time_scale(new_time_scale);
+        }
     }
 
     static inline void navigate_callback(Cogwheel::Core::Engine& engine, void* state) {
@@ -146,7 +151,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
     Vector3f light_position = scene_bounds.center() + scene_bounds.size() * 10.0f;
     Transform light_transform = Transform(light_position);
     SceneNodes::UID light_node_ID = SceneNodes::create("Light", light_transform);
-    LightSources::UID light_ID = LightSources::create_point_light(light_node_ID, RGB(1000000.0f));
+    LightSources::UID light_ID = LightSources::create_point_light(light_node_ID, RGB(1000000.0f), 0.0f);
 }
 
 void initialize_window(Cogwheel::Core::Window& window) {

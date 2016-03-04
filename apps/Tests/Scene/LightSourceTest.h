@@ -52,7 +52,7 @@ TEST_F(Scene_LightSource, sentinel_node) {
     EXPECT_FALSE(LightSources::has(sentinel_ID));
 
     EXPECT_EQ(LightSources::get_node_ID(sentinel_ID), SceneNodes::UID::invalid_UID());
-    EXPECT_EQ(LightSources::get_power(sentinel_ID), Math::Vector3f::zero()); // TODO Replace this by a light type check? Or should the invalid light source be a point light?
+    EXPECT_EQ(LightSources::get_power(sentinel_ID), Math::RGB::black());
 
     LightSources::deallocate();
 }
@@ -65,7 +65,7 @@ TEST_F(Scene_LightSource, create) {
     const Math::RGB light_power(100.0f);
 
     LightSources::allocate(2u);
-    LightSources::UID light_ID = LightSources::create_point_light(light_node_ID, light_power);
+    LightSources::UID light_ID = LightSources::create_point_light(light_node_ID, light_power, 0.0f);
     EXPECT_TRUE(LightSources::has(light_ID));
 
     EXPECT_EQ(LightSources::get_node_ID(light_ID), light_node_ID);
@@ -78,7 +78,7 @@ TEST_F(Scene_LightSource, destroy) {
     LightSources::allocate(2u);
     
     SceneNodes::UID node_ID = SceneNodes::create("Foo");
-    LightSources::UID light_ID = LightSources::create_point_light(node_ID, Math::RGB::white());
+    LightSources::UID light_ID = LightSources::create_point_light(node_ID, Math::RGB::white(), 0.0f);
     EXPECT_TRUE(LightSources::has(light_ID));
 
     LightSources::reset_change_notifications();
@@ -87,7 +87,7 @@ TEST_F(Scene_LightSource, destroy) {
     EXPECT_FALSE(LightSources::has(light_ID));
 
     // Test scene node destroyed notification.
-    Core::Iterable<SceneNodes::node_destroyed_iterator> destroyed_lights = SceneNodes::get_destroyed_nodes();
+    Core::Iterable<LightSources::light_destroyed_iterator> destroyed_lights = LightSources::get_destroyed_lights();
     EXPECT_EQ(destroyed_lights.end() - destroyed_lights.begin(), 1);
     EXPECT_EQ(*destroyed_lights.begin(), light_ID);
 
@@ -99,8 +99,8 @@ TEST_F(Scene_LightSource, create_and_destroy_notifications) {
 
     SceneNodes::UID node_ID = SceneNodes::create("Foo");
 
-    LightSources::UID light_ID0 = LightSources::create_point_light(node_ID, Math::RGB(0.0f));
-    LightSources::UID light_ID1 = LightSources::create_point_light(node_ID, Math::RGB(1.0f));
+    LightSources::UID light_ID0 = LightSources::create_point_light(node_ID, Math::RGB(0.0f), 0.0f);
+    LightSources::UID light_ID1 = LightSources::create_point_light(node_ID, Math::RGB(1.0f), 0.0f);
     EXPECT_TRUE(LightSources::has(light_ID0));
     EXPECT_TRUE(LightSources::has(light_ID1));
 
