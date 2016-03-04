@@ -37,7 +37,7 @@ RT_PROGRAM void intersect(int primitive_index) {
     const float3 p1 = position_buffer[vertex_index.y];
     const float3 p2 = position_buffer[vertex_index.z];
 
-    // Intersect ray with triangle
+    // Intersect ray with triangle.
     float3 geo_normal;
     float t, beta, gamma;
     if (intersect_triangle(ray, p0, p1, p2, geo_normal, t, beta, gamma)) {

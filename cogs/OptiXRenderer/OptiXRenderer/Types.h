@@ -63,7 +63,7 @@ struct __align__(16) PointLight{
     unsigned int flags;
     optix::float3 position;
     optix::float3 power;
-    float _padding; // TODO radius!
+    float radius;
 };
 
 } // NS OptiXRenderer

@@ -19,6 +19,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
   set(ROOT_SRC
     OptiXRenderer/Kernel.h
     OptiXRenderer/Kernel.cu
+    OptiXRenderer/RNG.h
     OptiXRenderer/Renderer.h
     OptiXRenderer/Renderer.cpp
     OptiXRenderer/Types.h
@@ -35,6 +36,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
   )
 
   set(SHADING_LIGHTSOURCES_SRC
+    OptiXRenderer/Shading/LightSources/LightSources.cu
     OptiXRenderer/Shading/LightSources/PointLightImpl.h
   )
 
@@ -44,7 +46,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
 
   # Create custom commands and targets for each file.
   set(_OPTIONS "")
-  CUDA_WRAP_SRCS( ${LIBRARY_NAME} PTX _GENERATED_FILES ${SHADING_SRC} OPTIONS ${_OPTIONS} )
+  CUDA_WRAP_SRCS( ${LIBRARY_NAME} PTX _GENERATED_FILES ${SHADING_SRC} ${SHADING_LIGHTSOURCES_SRC} OPTIONS ${_OPTIONS} )
 
   # Compute the file name of the intermedate link file used for separable compilation.
   CUDA_COMPUTE_SEPARABLE_COMPILATION_OBJECT_FILE_NAME(LINK_FILE ${LIBRARY_NAME} "${${LIBRARY_NAME}_SEPARABLE_COMPILATION_OBJECTS}")

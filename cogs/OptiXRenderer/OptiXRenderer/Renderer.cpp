@@ -57,10 +57,15 @@ struct Renderer::State {
     optix::Program triangle_intersection_program;
     optix::Program triangle_bounds_program;
 
-    Core::Array<unsigned int> light_ID_to_index;
-    Core::Array<LightSources::UID> light_index_to_ID;
-    optix::Buffer light_sources;
-    unsigned int active_light_count;
+    struct {
+        Core::Array<unsigned int> ID_to_index;
+        Core::Array<LightSources::UID> index_to_ID;
+        optix::Buffer sources;
+        unsigned int count;
+
+        optix::GeometryGroup area_lights;
+        optix::Geometry area_lights_geometry;
+    } lights;
 };
 
 static inline std::string get_ptx_path(std::string shader_filename) {
@@ -114,7 +119,7 @@ static inline optix::Geometry load_mesh(optix::Context& context, Meshes::UID mes
                                         optix::Program intersection_program, optix::Program bounds_program) {
     optix::Geometry optixMesh = context->createGeometry();
     
-    // TODO Don't upload nulled buffers and upload bitmask of nulled buffers to the intersection program.
+    // TODO Don't upload nulled buffers and upload bitmask of non-null buffers to the intersection program.
     Mesh& mesh = Meshes::get_mesh(mesh_ID);
 
     optixMesh->setIntersectionProgram(intersection_program);
@@ -148,7 +153,7 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
     optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
     acceleration->setProperty("index_buffer_name", "index_buffer");
     acceleration->setProperty("vertex_buffer_name", "position_buffer");
-    acceleration->markDirty();
+    acceleration->markDirty(); // TODO Isn't it just dirty be default?
     acceleration->validate();
 
     optix::GeometryGroup geometry_group = context->createGeometryGroup(&optix_model, &optix_model + 1);
@@ -206,15 +211,43 @@ Renderer::Renderer()
         m_state->root_node->validate();
 
         context["g_scene_root"]->set(m_state->root_node);
-        context["g_scene_epsilon"]->setFloat(0.001f); // TODO, base on scene size. Can I query the scene bounds from OptiX?
+        context["g_scene_epsilon"]->setFloat(0.0001f); // TODO, base on scene size. Can I query the scene bounds from OptiX?
     }
 
     { // Light sources
-        m_state->light_sources = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, 0);
-        m_state->light_sources->setElementSize(sizeof(PointLight));
-        m_state->active_light_count = 0;
-        context["g_lights"]->set(m_state->light_sources);
-        context["g_light_count"]->setInt(m_state->active_light_count);
+        m_state->lights.sources = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, 0);
+        m_state->lights.sources->setElementSize(sizeof(PointLight));
+        m_state->lights.count = 0;
+        context["g_lights"]->set(m_state->lights.sources);
+        context["g_light_count"]->setInt(m_state->lights.count);
+
+        
+        // Analytical area light geometry.
+        m_state->lights.area_lights_geometry = context->createGeometry();
+        std::string light_intersection_ptx_path = get_ptx_path("LightSources");
+        m_state->lights.area_lights_geometry->setIntersectionProgram(context->createProgramFromPTXFile(light_intersection_ptx_path, "intersect"));
+        m_state->lights.area_lights_geometry->setBoundingBoxProgram(context->createProgramFromPTXFile(light_intersection_ptx_path, "bounds"));
+        m_state->lights.area_lights_geometry->setPrimitiveCount(0u);
+        m_state->lights.area_lights_geometry->validate();
+
+        // Analytical area light material.
+        optix::Material material = context->createMaterial();
+        std::string monte_carlo_ptx_path = get_ptx_path("MonteCarlo");
+        material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "light_closest_hit"));
+        material->validate();
+
+        optix::Acceleration acceleration = context->createAcceleration("NoAccel", "NoAccel"); // TODO No acceleration first, then check if we can use a Bvh?
+        acceleration->markDirty(); // TODO Isn't it just dirty be default?
+        acceleration->validate();
+
+        optix::GeometryInstance area_lights = context->createGeometryInstance(m_state->lights.area_lights_geometry, &material, &material + 1);
+        area_lights->validate();
+
+        m_state->lights.area_lights = context->createGeometryGroup(&area_lights, &area_lights + 1);
+        m_state->lights.area_lights->setAcceleration(acceleration);
+        m_state->lights.area_lights->validate();
+
+        m_state->root_node->addChild(m_state->lights.area_lights);
     }
 
     { // Setup default material.
@@ -377,9 +410,9 @@ void Renderer::handle_updates() {
 
     { // Light updates
         if (!LightSources::get_created_lights().is_empty() || !LightSources::get_destroyed_lights().is_empty()) {
-            if (m_state->light_ID_to_index.size() < LightSources::capacity()) {
-                m_state->light_ID_to_index.resize(LightSources::capacity());
-                m_state->light_index_to_ID.resize(LightSources::capacity());
+            if (m_state->lights.ID_to_index.size() < LightSources::capacity()) {
+                m_state->lights.ID_to_index.resize(LightSources::capacity());
+                m_state->lights.index_to_ID.resize(LightSources::capacity());
             }
 
             LightSources::light_created_iterator created_lights_begin = LightSources::get_created_lights().begin();
@@ -389,12 +422,13 @@ void Renderer::handle_updates() {
 
             unsigned int lights_created_count = unsigned int(created_lights_end - created_lights_begin);
             unsigned int lights_destroyed_count = unsigned int(destroyed_lights_end - destroyed_lights_begin);
-            unsigned int old_light_count = m_state->active_light_count;
+            unsigned int old_light_count = m_state->lights.count;
             unsigned int rolling_light_count = old_light_count;
-            m_state->active_light_count += lights_created_count - lights_destroyed_count;
+            m_state->lights.count += lights_created_count - lights_destroyed_count;
 
             // Light creation helper method.
-            static auto light_creation = [](LightSources::UID light_ID, unsigned int light_index, PointLight* device_lights) {
+            static auto light_creation = [](LightSources::UID light_ID, unsigned int light_index, PointLight* device_lights, 
+                                            optix::Geometry& area_light_geometry, optix::GeometryGroup area_lights_group, optix::Group root_node) {
                 PointLight& light = device_lights[light_index];
 
                 SceneNodes::UID node_ID = LightSources::get_node_ID(light_ID);
@@ -403,36 +437,49 @@ void Renderer::handle_updates() {
 
                 RGB power = LightSources::get_power(light_ID);
                 memcpy(&light.power, &power, sizeof(light.power));
+
+                light.radius = LightSources::get_radius(light_ID);
+
+                // Make sure that all area lights are part of the area light model.
+                // TODO Possibly defer this to the end of the light updates, as changing OptiX state can be very costly. Wait until we can benchmark the fps in a scene with tons of light changes first.
+                if (light.radius > 0.0f) {
+                    area_lights_group->getAcceleration()->markDirty();
+                    root_node->getAcceleration()->markDirty();
+                    
+                    unsigned int primitive_count = area_light_geometry->getPrimitiveCount();
+                    if (primitive_count < (light_index + 1))
+                        area_light_geometry->setPrimitiveCount(light_index + 1);
+                }
             };
 
-            if (old_light_count < m_state->active_light_count) {
+            if (old_light_count < m_state->lights.count) {
                 // Resize to add room for new light sources.
-                m_state->light_sources->setSize(m_state->active_light_count);
+                m_state->lights.sources->setSize(m_state->lights.count);
 
                 // Resizing removes old data, so see this as an opportunity to linearize the light data.
-                PointLight* device_lights = (PointLight*)m_state->light_sources->map();
+                PointLight* device_lights = (PointLight*)m_state->lights.sources->map();
                 unsigned int light_index = 0;
                 for (LightSources::UID light_ID : LightSources::get_iterable()) {
-                    m_state->light_ID_to_index[light_ID] = light_index;
-                    m_state->light_index_to_ID[light_index] = light_ID;
+                    m_state->lights.ID_to_index[light_ID] = light_index;
+                    m_state->lights.index_to_ID[light_index] = light_ID;
 
-                    light_creation(light_ID, light_index, device_lights);
+                    light_creation(light_ID, light_index, device_lights, m_state->lights.area_lights_geometry, m_state->lights.area_lights, m_state->root_node);
                     ++light_index;
                 }
-                m_state->light_sources->unmap();
+                m_state->lights.sources->unmap();
 
             } else {
 
-                PointLight* device_lights = (PointLight*)m_state->light_sources->map();
+                PointLight* device_lights = (PointLight*)m_state->lights.sources->map();
 
                 for (LightSources::UID light_ID : Iterable<LightSources::light_destroyed_iterator>(destroyed_lights_begin, destroyed_lights_end)) {
-                    unsigned int light_index = m_state->light_ID_to_index[light_ID];
+                    unsigned int light_index = m_state->lights.ID_to_index[light_ID];
                     if (created_lights_begin != created_lights_end) {
                         // Replace deleted light by new light source.
                         LightSources::UID new_light_ID = *created_lights_begin++;
-                        light_creation(new_light_ID, light_index, device_lights);
-                        m_state->light_ID_to_index[new_light_ID] = light_index;
-                        m_state->light_index_to_ID[light_index] = new_light_ID;
+                        light_creation(new_light_ID, light_index, device_lights, m_state->lights.area_lights_geometry, m_state->lights.area_lights, m_state->root_node);
+                        m_state->lights.ID_to_index[new_light_ID] = light_index;
+                        m_state->lights.index_to_ID[light_index] = new_light_ID;
                     } else {
                         // Replace deleted light by light from the end of the array.
                         --rolling_light_count;
@@ -440,36 +487,36 @@ void Renderer::handle_updates() {
                             memcpy(device_lights + light_index, device_lights + rolling_light_count, sizeof(PointLight));
 
                             // Rewire light ID and index maps.
-                            m_state->light_index_to_ID[light_index] = m_state->light_index_to_ID[rolling_light_count];
-                            m_state->light_ID_to_index[m_state->light_index_to_ID[light_index]] = light_index;
+                            m_state->lights.index_to_ID[light_index] = m_state->lights.index_to_ID[rolling_light_count];
+                            m_state->lights.ID_to_index[m_state->lights.index_to_ID[light_index]] = light_index;
                         }
                     }
                 }
 
                 for (LightSources::UID light_ID : Iterable<LightSources::light_destroyed_iterator>(created_lights_begin, created_lights_end)) {
                     unsigned int light_index = rolling_light_count++;
-                    m_state->light_ID_to_index[light_ID] = light_index;
-                    m_state->light_index_to_ID[light_index] = light_ID;
+                    m_state->lights.ID_to_index[light_ID] = light_index;
+                    m_state->lights.index_to_ID[light_index] = light_ID;
 
-                    light_creation(light_ID, light_index, device_lights);
+                    light_creation(light_ID, light_index, device_lights, m_state->lights.area_lights_geometry, m_state->lights.area_lights, m_state->root_node);
                 }
 
-                m_state->light_sources->unmap();
+                m_state->lights.sources->unmap();
             }
 
-            m_state->context["g_light_count"]->setInt(m_state->active_light_count);
+            m_state->context["g_light_count"]->setInt(m_state->lights.count);
             m_state->accumulations = 0u;
 
             /* {
                 printf("Lights after changes:\n");
-                PointLight* device_lights = (PointLight*)m_state->light_sources->map();
+                PointLight* device_lights = (PointLight*)m_state->lights.sources->map();
                 RTsize size;
-                m_state->light_sources->getSize(size);
+                m_state->lights.sources->getSize(size);
                 for (unsigned int i = 0; i < size; ++i) {
                     PointLight& l = device_lights[i];
                     printf("  %i: position: [%f, %f, %f], power: [%f, %f, %f]\n", i, l.position.x, l.position.y, l.position.z, l.power.x, l.power.y, l.power.z);
                 }
-                m_state->light_sources->unmap();
+                m_state->lights.sources->unmap();
                 printf("\n");
             } */
         }

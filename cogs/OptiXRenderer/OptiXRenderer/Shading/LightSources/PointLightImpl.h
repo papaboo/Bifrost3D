@@ -9,6 +9,8 @@
 #ifndef _OPTIXRENDERER_POINT_LIGHT_IMPLEMENTATION_H_
 #define _OPTIXRENDERER_POINT_LIGHT_IMPLEMENTATION_H_
 
+#include <OptiXRenderer/Types.h>
+
 namespace OptiXRenderer {
 namespace LightSources {
 
