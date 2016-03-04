@@ -62,7 +62,7 @@ public:
         
         // Create light source.
         if (light_should_be_enabled && m_light_ID == LightSources::UID::invalid_UID())
-            m_light_ID = LightSources::create_point_light(m_node_ID, Math::RGB(800.0f, 600.0f, 600.0f), 5.0f);
+            m_light_ID = LightSources::create_point_light(m_node_ID, Math::RGB(800.0f, 600.0f, 600.0f), 1.0f);
         
         // Destroy light source.
         if (light_should_be_enabled != 1 && m_light_ID != LightSources::UID::invalid_UID()) {
