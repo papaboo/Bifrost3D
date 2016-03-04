@@ -163,6 +163,16 @@ public:
         return ret;
     }
 
+    //*****************************************************************************
+    // Comparison operators.
+    //*****************************************************************************
+    inline bool operator==(RGB rhs) const {
+        return memcmp(this, &rhs, sizeof(rhs)) == 0;
+    }
+    inline bool operator!=(RGB rhs) const {
+        return memcmp(this, &rhs, sizeof(rhs)) != 0;
+    }
+
     const std::string to_string() const {
         std::ostringstream out;
         out << "[r: " << r << ", g: " << g << ", b: " << b << "]";
@@ -212,6 +222,16 @@ public:
 
     inline RGB& rgb() {
         return *static_cast<RGB*>(static_cast<void*>(begin()));
+    }
+
+    //*****************************************************************************
+    // Comparison operators.
+    //*****************************************************************************
+    inline bool operator==(RGBA rhs) const {
+        return memcmp(this, &rhs, sizeof(rhs)) == 0;
+    }
+    inline bool operator!=(RGBA rhs) const {
+        return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
     const std::string to_string() const {
