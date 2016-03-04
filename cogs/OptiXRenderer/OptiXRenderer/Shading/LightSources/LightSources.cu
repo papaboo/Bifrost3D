@@ -61,14 +61,9 @@ RT_PROGRAM void bounds(int primitive_index, float result[6]) {
 
     optix::Aabb* aabb = (optix::Aabb*)result;
 
-    printf("position: [%f, %f, %f], radius: %f\n", light.position.x, light.position.y, light.position.z, light.radius);
-
     if (light.radius > 0.0f) {
         aabb->m_min = light.position - light.radius;
         aabb->m_max = light.position + light.radius;
     } else
         aabb->invalidate();
-
-    printf("Bounds for light source %u is [min: [%f, %f, %f], max: [%f, %f, %f]]\n", 
-        primitive_index, aabb->m_min.x, aabb->m_min.y, aabb->m_min.z, aabb->m_max.x, aabb->m_max.y, aabb->m_max.z);
 }
