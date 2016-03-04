@@ -50,7 +50,6 @@ public:
     static inline bool is_delta_light(LightSources::UID light_ID) { return m_radius[light_ID] == 0.0f; }
     static inline Math::RGB get_power(LightSources::UID light_ID) { return m_power[light_ID]; }
     static inline float get_radius(LightSources::UID light_ID) { return m_radius[light_ID]; }
-    
 
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
     static ConstUIDIterator end() { return m_UID_generator.end(); }
