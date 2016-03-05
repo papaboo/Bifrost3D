@@ -66,7 +66,8 @@ public:
         }
 
         { // Rotation
-            if (mouse->get_left_button().is_pressed) {
+            if (mouse->is_pressed(Mouse::Button::Left)) {
+
                 m_vertical_rotation += degrees_to_radians(float(mouse->get_delta().x));
 
                 // Clamp horizontal rotation to -89 and 89 degrees to avoid turning the camera on it's head and the singularities of cross products at the poles.

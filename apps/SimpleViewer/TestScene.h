@@ -97,7 +97,7 @@ public:
         if (engine.get_time().is_paused())
             return;
 
-        if (engine.get_mouse()->get_right_button().is_pressed && m_model_ID == MeshModels::UID::invalid_UID()) {
+        if (engine.get_mouse()->was_released(Mouse::Button::Right) && m_model_ID == MeshModels::UID::invalid_UID()) {
             Math::Transform transform = SceneNodes::get_global_transform(m_shooter_node_ID);
             transform.scale = 0.1f;
             transform.translation -= transform.rotation.up() * transform.scale;

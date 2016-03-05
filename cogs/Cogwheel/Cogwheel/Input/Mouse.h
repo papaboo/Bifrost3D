@@ -11,6 +11,8 @@
 
 #include <Cogwheel/Math/Vector.h>
 
+#include <array>
+
 namespace Cogwheel {
 namespace Input {
 
@@ -20,13 +22,18 @@ namespace Input {
 // pr frame. This can be used to implement such interactions as double tap 
 // for dash without worrying (too much) about the framerate.
 //
-// Future work
-// * Use an enum over mouse buttons to access state, such as in Keyboard, instead of exposing ButtonState directly. This will help when I change the layout of ButtonState and will make Keyboard and Mouse consistent.
 //----------------------------------------------------------------------------
 class Mouse final {
 public:
-    static const int BUTTON_COUNT = 4;
     static const int MAX_HALFTAP_COUNT = 127;
+
+    enum class Button : unsigned char {
+        Left,
+        Right,
+        Middle,
+        Button4,
+        ButtonCount
+    };
 
     // 8 bit struct containing state of a key; is it pressed or released and how many times was it pressed last frame.
     struct ButtonState {
@@ -38,8 +45,11 @@ public:
         : m_position(initial_position)
         , m_delta(Math::Vector2i(0, 0))
         , m_scroll_delta(0.0f) {
-        ButtonState init_state = { false, 0u };
-        m_left_button = m_right_button = m_middle_button = m_button_4 = init_state;
+
+        for (ButtonState& button : m_button_states) {
+            button.halftaps = 0u;
+            button.is_pressed = false;
+        }
     }
 
     inline void set_position(Math::Vector2i new_position) {
@@ -51,16 +61,23 @@ public:
     inline Math::Vector2i get_delta() const { return m_delta; }
 
     inline void button_tapped(int buttonId, bool pressed) {
-        ButtonState* buttons = &m_left_button;
-        buttons[buttonId].is_pressed = pressed;
-        unsigned int halftaps = buttons[buttonId].halftaps;
-        buttons[buttonId].halftaps = (halftaps == MAX_HALFTAP_COUNT) ? (MAX_HALFTAP_COUNT - 1) : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
+        m_button_states[buttonId].is_pressed = pressed;
+        unsigned int halftaps = m_button_states[buttonId].halftaps;
+        m_button_states[buttonId].halftaps = (halftaps == MAX_HALFTAP_COUNT) ? (MAX_HALFTAP_COUNT - 1) : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
     }
 
-    inline ButtonState get_left_button() const { return m_left_button; }
-    inline ButtonState get_right_button() const { return m_right_button; }
-    inline ButtonState get_middle_button() const { return m_middle_button; }
-    inline ButtonState get_button_4() const { return m_button_4; }
+    inline bool is_pressed(Button button) const { return m_button_states[(unsigned int)button].is_pressed; }
+    inline bool is_released(Button button) const { return !is_pressed(button); }
+    inline unsigned int halftaps(Button button) const { return m_button_states[(unsigned int)button].halftaps; }
+
+    inline bool was_pressed(Button button) const {
+        const ButtonState state = m_button_states[(unsigned int)button];
+        return (state.is_pressed && state.halftaps == 1) || state.halftaps > 1;
+    }
+    inline bool was_released(Button button) const {
+        const ButtonState state = m_button_states[(unsigned int)button];
+        return (!state.is_pressed && state.halftaps == 1) || state.halftaps > 1;
+    }
 
     inline void add_scroll_delta(float scroll_delta) { m_scroll_delta += scroll_delta; }
     inline float get_scroll_delta() const { return m_scroll_delta; }
@@ -68,10 +85,8 @@ public:
     inline void per_frame_reset() {
         m_delta = Math::Vector2i::zero();
 
-        m_left_button.halftaps = 0u;
-        m_right_button.halftaps = 0u;
-        m_middle_button.halftaps = 0u;
-        m_button_4.halftaps = 0u;
+        for (ButtonState& button : m_button_states)
+            button.halftaps = 0u;
 
         m_scroll_delta = 0.0f;
     }
@@ -80,10 +95,7 @@ private:
     Math::Vector2i m_position;
     Math::Vector2i m_delta;
 
-    ButtonState m_left_button;
-    ButtonState m_right_button;
-    ButtonState m_middle_button;
-    ButtonState m_button_4;
+    std::array<ButtonState, (unsigned int)Button::ButtonCount> m_button_states;
 
     float m_scroll_delta;
 };
