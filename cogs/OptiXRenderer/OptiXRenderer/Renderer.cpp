@@ -153,7 +153,6 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
     optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
     acceleration->setProperty("index_buffer_name", "index_buffer");
     acceleration->setProperty("vertex_buffer_name", "position_buffer");
-    acceleration->markDirty(); // TODO Isn't it just dirty be default?
     acceleration->validate();
 
     optix::GeometryGroup geometry_group = context->createGeometryGroup(&optix_model, &optix_model + 1);
@@ -237,7 +236,6 @@ Renderer::Renderer()
         material->validate();
 
         optix::Acceleration acceleration = context->createAcceleration("NoAccel", "NoAccel"); // TODO No acceleration first, then check if we can use a Bvh?
-        acceleration->markDirty(); // TODO Isn't it just dirty be default?
         acceleration->validate();
 
         optix::GeometryInstance area_lights = context->createGeometryInstance(m_state->lights.area_lights_geometry, &material, &material + 1);
