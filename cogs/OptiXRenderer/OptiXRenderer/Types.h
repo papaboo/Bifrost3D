@@ -30,10 +30,24 @@ enum class EntryPoints {
 };
 
 //----------------------------------------------------------------------------
+// Base types.
+//----------------------------------------------------------------------------
+
+struct __align__(16) Sphere {
+    optix::float3 center;
+    float radius;
+
+    __inline_all__ static Sphere make(optix::float3 center, float radius) {
+        Sphere s = { center, radius };
+        return s;
+    }
+};
+
+//----------------------------------------------------------------------------
 // Per ray data.
 //----------------------------------------------------------------------------
 
-struct __align__(16) MonteCarloPRD{
+struct __align__(16) MonteCarloPRD {
     optix::float3 radiance;
     RNG::LinearCongruential rng;
     optix::float3 throughput;
@@ -59,10 +73,10 @@ struct __align__(16) LightSample {
     }
 };
 
-struct __align__(16) PointLight{
+struct __align__(16) PointLight {
     unsigned int flags;
-    optix::float3 position;
     optix::float3 power;
+    optix::float3 position;
     float radius;
 };
 

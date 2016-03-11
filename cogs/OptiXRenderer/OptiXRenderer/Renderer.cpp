@@ -233,6 +233,8 @@ Renderer::Renderer()
         optix::Material material = context->createMaterial();
         std::string monte_carlo_ptx_path = get_ptx_path("MonteCarlo");
         material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "light_closest_hit"));
+        std::string normal_vis_ptx_path = get_ptx_path("NormalRendering");
+        material->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
         material->validate();
 
         optix::Acceleration acceleration = context->createAcceleration("NoAccel", "NoAccel"); // TODO No acceleration first, then check if we can use a Bvh?

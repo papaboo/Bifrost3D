@@ -6,6 +6,7 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
+#include <OptiXRenderer/Intersect.h>
 #include <OptiXRenderer/Shading/LightSources/PointLightImpl.h>
 
 #include <optix.h>
@@ -21,6 +22,7 @@ rtBuffer<PointLight, 1> g_lights;
 
 // Encode light index in geometric_normal.x
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
+rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 
 //=============================================================================
 // Point light intersection programs.
@@ -29,30 +31,13 @@ RT_PROGRAM void intersect(int primitive_index) {
 
     const PointLight& light = g_lights[primitive_index];
 
-    // TODO Move sphere intersection into util function and use here and in IntersectSphere.cu.
-    float3 O = ray.origin - light.position;
-    float3 D = ray.direction;
-
-    float b = dot(O, D);
-    float c = dot(O, O) - light.radius * light.radius;
-    float disc = b * b - c;
-    if (disc > 0.0f) {
-        float sdisc = sqrtf(disc);
-        float root1 = (-b - sdisc);
-        float root11 = 0.0f;
-        bool check_second = true;
-        if (rtPotentialIntersection(root1 + root11)) {
-            geometric_normal.x = __int_as_float(primitive_index);
-            if (rtReportIntersection(0))
-                check_second = false;
-        }
-        if (check_second) {
-            float root2 = (-b + sdisc);
-            if (rtPotentialIntersection(root2)) {
-                geometric_normal.x = __int_as_float(primitive_index);
-                rtReportIntersection(0);
-            }
-        }
+    float t = Intersect::ray_sphere(ray, Sphere::make(light.position, light.radius));
+    if (t > 0.0f && rtPotentialIntersection(t)) {
+        float3 intersection_point = t * ray.direction + ray.origin;
+        float inv_radius = 1.0f / light.radius;
+        shading_normal = (intersection_point - light.position) * inv_radius;
+        geometric_normal.x = __int_as_float(primitive_index);
+        rtReportIntersection(0);
     }
 }
 

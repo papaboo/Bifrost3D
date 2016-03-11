@@ -79,10 +79,10 @@ RT_PROGRAM void shadow_any_hit() {
 
 RT_PROGRAM void light_closest_hit() {
 
+    // This should only be sampled by rays leaving specular BRDFs right now!
     int light_index = __float_as_int(geometric_normal.x);
-
-    // This should be sampled by specular rays right now!
     const PointLight& light = g_lights[light_index];
+
     const float power_normalizer = 4.0f * PIf * PIf * light.radius * light.radius;
     const float3 light_radiance = light.power / power_normalizer;
     monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * light_radiance;

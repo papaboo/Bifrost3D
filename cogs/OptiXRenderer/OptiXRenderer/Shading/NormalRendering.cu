@@ -54,20 +54,23 @@ RT_PROGRAM void ray_generation() {
 // Closest hit program for visualizing normals.
 //----------------------------------------------------------------------------
 
+rtDeclareVariable(Ray, ray, rtCurrentRay, );
+
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 
 RT_PROGRAM void closest_hit() {
-    float3 remapped_normal = shading_normal * 0.5f + 0.5f;
-    normal_visualization_PRD.color = make_float4(remapped_normal, 1.0);
+    const float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
+    float D_dot_N = -dot(ray.direction, world_shading_normal);
+    if (D_dot_N < 0.0f)
+        normal_visualization_PRD.color = make_float4(0.25f - 0.75f * D_dot_N, 0.0f, 0.0f, 1.0);
+    else
+        normal_visualization_PRD.color = make_float4(0.0f, 0.25f + 0.75f * D_dot_N, 0.0f, 1.0);
 }
 
 //----------------------------------------------------------------------------
 // Miss program for normal visualization.
 //----------------------------------------------------------------------------
-
-rtDeclareVariable(Ray, ray, rtCurrentRay, );
-
 RT_PROGRAM void miss() {
     normal_visualization_PRD.color = make_float4(ray.direction * 0.2f + 0.2f, 1.0);
 }
