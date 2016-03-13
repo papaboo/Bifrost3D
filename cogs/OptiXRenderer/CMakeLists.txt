@@ -17,6 +17,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
   include_directories(. ${CUDA_INCLUDE_DIRS} ${OpenGL_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
 
   set(ROOT_SRC
+    OptiXRenderer/Defines.h
     OptiXRenderer/Distributions.h
     OptiXRenderer/Intersect.h
     OptiXRenderer/Kernel.h
@@ -28,7 +29,6 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
   )
 
   set(SHADING_SRC
-    OptiXRenderer/Shading/Defines.h
     OptiXRenderer/Shading/IntersectSphere.cu
     OptiXRenderer/Shading/IntersectTriangle.cu
     OptiXRenderer/Shading/MonteCarlo.cu

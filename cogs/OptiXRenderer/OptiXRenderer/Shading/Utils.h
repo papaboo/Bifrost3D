@@ -9,7 +9,7 @@
 #ifndef _OPTIXRENDERER_SHADING_UTILS_H_
 #define _OPTIXRENDERER_SHADING_UTILS_H_
 
-#include <OptiXRenderer/Shading/Defines.h>
+#include <OptiXRenderer/Defines.h>
 
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_matrix_namespace.h>

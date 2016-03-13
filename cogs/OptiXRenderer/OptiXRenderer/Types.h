@@ -9,7 +9,7 @@
 #ifndef _OPTIXRENDERER_TYPES_H_
 #define _OPTIXRENDERER_TYPES_H_
 
-#include <OptiXRenderer/Shading/Defines.h>
+#include <OptiXRenderer/Defines.h>
 #include <OptiXRenderer/RNG.h>
 
 #include <optixu/optixu_math_namespace.h>

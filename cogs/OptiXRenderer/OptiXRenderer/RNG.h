@@ -9,7 +9,7 @@
 #ifndef _OPTIXRENDERER_RNG_H_
 #define _OPTIXRENDERER_RNG_H_
 
-#include <OptiXRenderer/Shading/Defines.h>
+#include <OptiXRenderer/Defines.h>
 
 #include <optixu/optixu_math_namespace.h>
 
