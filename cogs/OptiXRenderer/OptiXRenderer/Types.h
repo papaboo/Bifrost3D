@@ -73,7 +73,7 @@ struct __align__(16) LightSample {
     }
 };
 
-struct __align__(16) PointLight {
+struct __align__(16) SphereLight {
     unsigned int flags;
     optix::float3 power;
     optix::float3 position;

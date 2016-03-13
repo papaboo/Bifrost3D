@@ -7,7 +7,7 @@
 // ---------------------------------------------------------------------------
 
 #include <OptiXRenderer/Types.h>
-#include <OptiXRenderer/Shading/LightSources/PointLightImpl.h>
+#include <OptiXRenderer/Shading/LightSources/SphereLightImpl.h>
 
 #include <optix.h>
 
@@ -22,7 +22,7 @@ rtDeclareVariable(MonteCarloPRD, monte_carlo_PRD, rtPayload, );
 // Scene params
 rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(float, g_scene_epsilon, , );
-rtBuffer<PointLight, 1> g_lights;
+rtBuffer<SphereLight, 1> g_lights;
 rtDeclareVariable(int, g_light_count, , );
 
 // Material params
@@ -44,10 +44,10 @@ RT_PROGRAM void closest_hit() {
     const float3 intersection_point = ray.direction * t_hit + ray.origin;
 
     for (int i = 0; i < g_light_count; ++i) {
-        const PointLight& light = g_lights[i];
-        LightSample light_sample = LightSources::sample_radiance(light, intersection_point, make_float2(0.0f, 0.0f));
+        const SphereLight& light = g_lights[i];
+        LightSample light_sample = LightSources::sample_radiance(light, intersection_point, monte_carlo_PRD.rng.sample2f());
         float N_dot_L = dot(forward_shading_normal, light_sample.direction);
-        light_sample.radiance *= abs(N_dot_L);
+        light_sample.radiance *= abs(N_dot_L) / light_sample.PDF;
 
         const float3 bsdf_response = g_color / PIf;
         if (dot(forward_shading_normal, light_sample.direction) >= 0.0f) {
@@ -81,7 +81,7 @@ RT_PROGRAM void light_closest_hit() {
 
     // This should only be sampled by rays leaving specular BRDFs right now!
     int light_index = __float_as_int(geometric_normal.x);
-    const PointLight& light = g_lights[light_index];
+    const SphereLight& light = g_lights[light_index];
 
     const float power_normalizer = 4.0f * PIf * PIf * light.radius * light.radius;
     const float3 light_radiance = light.power / power_normalizer;

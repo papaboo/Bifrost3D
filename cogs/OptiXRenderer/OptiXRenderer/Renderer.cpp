@@ -195,7 +195,7 @@ Renderer::Renderer()
 
     context->setRayTypeCount(int(RayTypes::Count));
     context->setEntryPointCount(int(EntryPoints::Count));
-    context->setStackSize(960);
+    context->setStackSize(1280);
 
     m_state->accumulations = 0u;
 
@@ -215,7 +215,7 @@ Renderer::Renderer()
 
     { // Light sources
         m_state->lights.sources = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, 0);
-        m_state->lights.sources->setElementSize(sizeof(PointLight));
+        m_state->lights.sources->setElementSize(sizeof(SphereLight));
         m_state->lights.count = 0;
         context["g_lights"]->set(m_state->lights.sources);
         context["g_light_count"]->setInt(m_state->lights.count);
@@ -430,9 +430,9 @@ void Renderer::handle_updates() {
             m_state->lights.count += lights_created_count - lights_destroyed_count;
 
             // Light creation helper method.
-            static auto light_creation = [](LightSources::UID light_ID, unsigned int light_index, PointLight* device_lights, 
+            static auto light_creation = [](LightSources::UID light_ID, unsigned int light_index, SphereLight* device_lights,
                                             int& highest_area_light_index_updated) {
-                PointLight& light = device_lights[light_index];
+                SphereLight& light = device_lights[light_index];
 
                 SceneNodes::UID node_ID = LightSources::get_node_ID(light_ID);
                 Vector3f position = SceneNodes::get_global_transform(node_ID).translation;
@@ -452,7 +452,7 @@ void Renderer::handle_updates() {
                 m_state->lights.sources->setSize(m_state->lights.count);
 
                 // Resizing removes old data, so see this as an opportunity to linearize the light data.
-                PointLight* device_lights = (PointLight*)m_state->lights.sources->map();
+                SphereLight* device_lights = (SphereLight*)m_state->lights.sources->map();
                 unsigned int light_index = 0;
                 for (LightSources::UID light_ID : LightSources::get_iterable()) {
                     m_state->lights.ID_to_index[light_ID] = light_index;
@@ -465,7 +465,7 @@ void Renderer::handle_updates() {
 
             } else {
 
-                PointLight* device_lights = (PointLight*)m_state->lights.sources->map();
+                SphereLight* device_lights = (SphereLight*)m_state->lights.sources->map();
 
                 for (LightSources::UID light_ID : Iterable<LightSources::light_destroyed_iterator>(destroyed_lights_begin, destroyed_lights_end)) {
                     unsigned int light_index = m_state->lights.ID_to_index[light_ID];
@@ -483,7 +483,7 @@ void Renderer::handle_updates() {
                         // Replace deleted light by light from the end of the array.
                         --rolling_light_count;
                         if (light_index != rolling_light_count) {
-                            memcpy(device_lights + light_index, device_lights + rolling_light_count, sizeof(PointLight));
+                            memcpy(device_lights + light_index, device_lights + rolling_light_count, sizeof(SphereLight));
 
                             // Rewire light ID and index maps.
                             m_state->lights.index_to_ID[light_index] = m_state->lights.index_to_ID[rolling_light_count];
@@ -525,19 +525,6 @@ void Renderer::handle_updates() {
                 if (int(m_state->lights.count) < primitive_count)
                     m_state->lights.area_lights_geometry->setPrimitiveCount(m_state->lights.count);
             }
-
-            /* {
-                printf("Lights after changes:\n");
-                PointLight* device_lights = (PointLight*)m_state->lights.sources->map();
-                RTsize size;
-                m_state->lights.sources->getSize(size);
-                for (unsigned int i = 0; i < size; ++i) {
-                    PointLight& l = device_lights[i];
-                    printf("  %i: position: [%f, %f, %f], power: [%f, %f, %f]\n", i, l.position.x, l.position.y, l.position.z, l.power.x, l.power.y, l.power.z);
-                }
-                m_state->lights.sources->unmap();
-                printf("\n");
-            } */
         }
     }
 

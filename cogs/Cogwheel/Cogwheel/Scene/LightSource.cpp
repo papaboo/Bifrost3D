@@ -82,7 +82,7 @@ void LightSources::reserve(unsigned int new_capacity) {
     reserve_light_data(m_UID_generator.capacity(), old_capacity);
 }
 
-LightSources::UID LightSources::create_point_light(SceneNodes::UID node_ID, Math::RGB power, float radius) {
+LightSources::UID LightSources::create_sphere_light(SceneNodes::UID node_ID, Math::RGB power, float radius) {
     assert(m_node_IDs != nullptr);
     assert(m_power != nullptr);
     assert(m_radius != nullptr);

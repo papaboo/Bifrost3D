@@ -17,6 +17,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
   include_directories(. ${CUDA_INCLUDE_DIRS} ${OpenGL_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
 
   set(ROOT_SRC
+    OptiXRenderer/Distributions.h
     OptiXRenderer/Intersect.h
     OptiXRenderer/Kernel.h
     OptiXRenderer/Kernel.cu
@@ -38,7 +39,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
 
   set(SHADING_LIGHTSOURCES_SRC
     OptiXRenderer/Shading/LightSources/LightSources.cu
-    OptiXRenderer/Shading/LightSources/PointLightImpl.h
+    OptiXRenderer/Shading/LightSources/SphereLightImpl.h
   )
 
   # Add the path to the ptx to a define.

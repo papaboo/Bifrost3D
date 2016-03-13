@@ -18,15 +18,20 @@ namespace Intersect {
 
 // Intersection of ray and sphere.
 // Returns the distance to the sphere or negative if no hit.
-__inline_all__ float ray_sphere(const optix::Ray& ray, const Sphere& sphere) {
-    optix::float3 o = ray.origin - sphere.center;
-    float b = optix::dot(o, ray.direction);
-    float c = optix::dot(o, o) - sphere.radius * sphere.radius;
+__inline_all__ float ray_sphere(const optix::float3& ray_origin, const optix::float3& ray_direction, const optix::float3& sphere_center, float sphere_radius) {
+    optix::float3 direction_to_sphere = ray_origin - sphere_center;
+    float b = optix::dot(direction_to_sphere, ray_direction);
+    float c = optix::dot(direction_to_sphere, direction_to_sphere) - sphere_radius * sphere_radius;
     float disc = b * b - c;
     if (disc > 0.0f)
         return -b - sqrtf(disc);
     else
         return -1e30f;
+
+}
+
+__inline_all__ float ray_sphere(const optix::Ray& ray, const Sphere& sphere) {
+    return ray_sphere(ray.origin, ray.direction, sphere.center, sphere.radius);
 }
 
 } // NS Intersect

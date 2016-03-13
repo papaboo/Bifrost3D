@@ -43,7 +43,7 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(LightSources::UID light_ID) { return m_UID_generator.has(light_ID); }
 
-    static LightSources::UID create_point_light(SceneNodes::UID node_ID, Math::RGB power, float radius);
+    static LightSources::UID create_sphere_light(SceneNodes::UID node_ID, Math::RGB power, float radius);
     static void destroy(LightSources::UID light_ID);
 
     static inline SceneNodes::UID get_node_ID(LightSources::UID light_ID) { return m_node_IDs[light_ID]; }
