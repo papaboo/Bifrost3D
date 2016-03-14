@@ -1,15 +1,15 @@
-* Point light
-* Material
-** Coated rubber/metal.
-** Textures.
+* Coated rubber/metal materials
+** First diffuse material + GI and sampling.
+** Add GGX.
+** Test BRDFs
+* Textures.
 * Environment models.
+* Reduce TODOs
 * GL Renderer
 * Notifications when changing the scene. / Pullable events.
 ** Camera - Create, destroy, parent changed and matrix changed. Store in bitmask pr camera instead of as separate notifications.
-* Natvis visualizations
-** Natvis install target.
-** Array, Meshes, MeshModels, SceneNodes, Cameras
-** Remember to add a raw_view that will visualize the data as-is.
+** Preprocess the create/destroy events to remove pairs, i.e. just remove creation events for components that would be destroyed again.
+*** Or keep event flags pr object, then its easy to spot created and destroyed objects and if an object has had an event in general.
 * Screenshot
 ** Grab backbuffer on the CPU.
 *** Request to composer or through the camera, not renderers
@@ -22,12 +22,14 @@
 ** Only nodes in a certain scene should be rendered.
 ** A scene node should know if it is in a scene and in which. Store the root scene ID pr node?
 ** A requirement for the asset manager to not simply add loaded nodes directly into the scene.
+* Natvis visualizations
+** Natvis install bat file.
 * Serialize scene and models.
 * CUDA
 ** helper methods.
 *** Debugging/error checking. Array management.
 * -Wall? -W3?
-** It's a pain now that I'm using source code instead of dlls. All my libs are being checked an produce a ton of pedantic warnings.
+** It's a pain now that I'm using source code instead of dlls. All my libs are being checked and produce a ton of pedantic warnings.
 ** However it's also nice and produce some helpful warnings, fx about struct padding (which GLFW is full of, making that warning helpful and horrible at the same time.)
 
 Design decision
