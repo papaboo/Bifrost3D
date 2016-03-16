@@ -35,6 +35,13 @@ using namespace Cogwheel::Math;
 using namespace Cogwheel::Scene;
 using namespace optix;
 
+// Validate macro. Will validate the optix object in debug mode.
+#ifdef _DEBUG
+#define OPTIX_VALIDATE(o) o->validate()
+#else
+#define OPTIX_VALIDATE(o)
+#endif
+
 namespace OptiXRenderer {
 
 struct Renderer::State {
@@ -137,7 +144,7 @@ static inline optix::Geometry load_mesh(optix::Context& context, Meshes::UID mes
     optixMesh["normal_buffer"]->setBuffer(normal_buffer);
     optix::Buffer texcoord_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, mesh.vertex_count, mesh.texcoords);
     optixMesh["texcoord_buffer"]->setBuffer(texcoord_buffer);
-    optixMesh->validate(); // TODO debug validate macro.
+    OPTIX_VALIDATE(optixMesh);
 
     return optixMesh;
 }
@@ -149,16 +156,16 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
 
     optix::GeometryInstance optix_model = context->createGeometryInstance(optix_mesh, &optix_material, &optix_material + 1);
     optix_model["g_color"]->setFloat(make_float3(0.5f, 0.5f, 0.5f));
-    optix_model->validate();
+    OPTIX_VALIDATE(optix_model);
 
     optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
     acceleration->setProperty("index_buffer_name", "index_buffer");
     acceleration->setProperty("vertex_buffer_name", "position_buffer");
-    acceleration->validate();
+    OPTIX_VALIDATE(acceleration);
 
     optix::GeometryGroup geometry_group = context->createGeometryGroup(&optix_model, &optix_model + 1);
     geometry_group->setAcceleration(acceleration);
-    geometry_group->validate();
+    OPTIX_VALIDATE(geometry_group);
 
     optix::Transform optix_transform = context->createTransform();
     {
@@ -166,7 +173,7 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
         Math::Transform inverse_transform = invert(transform);
         optix_transform->setMatrix(false, to_matrix4x4(transform).begin(), to_matrix4x4(inverse_transform).begin());
         optix_transform->setChild(geometry_group);
-        optix_transform->validate();
+        OPTIX_VALIDATE(optix_transform);
     }
 
     return optix_transform;
@@ -208,7 +215,7 @@ Renderer::Renderer()
 
         m_state->root_node = context->createGroup();
         m_state->root_node->setAcceleration(root_acceleration);
-        m_state->root_node->validate();
+        OPTIX_VALIDATE(m_state->root_node);
 
         context["g_scene_root"]->set(m_state->root_node);
         context["g_scene_epsilon"]->setFloat(0.0001f); // TODO, base on scene size. Can I query the scene bounds from OptiX?
@@ -220,7 +227,6 @@ Renderer::Renderer()
         m_state->lights.count = 0;
         context["g_lights"]->set(m_state->lights.sources);
         context["g_light_count"]->setInt(m_state->lights.count);
-
         
         // Analytical area light geometry.
         m_state->lights.area_lights_geometry = context->createGeometry();
@@ -228,7 +234,7 @@ Renderer::Renderer()
         m_state->lights.area_lights_geometry->setIntersectionProgram(context->createProgramFromPTXFile(light_intersection_ptx_path, "intersect"));
         m_state->lights.area_lights_geometry->setBoundingBoxProgram(context->createProgramFromPTXFile(light_intersection_ptx_path, "bounds"));
         m_state->lights.area_lights_geometry->setPrimitiveCount(0u);
-        m_state->lights.area_lights_geometry->validate();
+        OPTIX_VALIDATE(m_state->lights.area_lights_geometry);
 
         // Analytical area light material.
         optix::Material material = context->createMaterial();
@@ -236,17 +242,17 @@ Renderer::Renderer()
         material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "light_closest_hit"));
         std::string normal_vis_ptx_path = get_ptx_path("NormalRendering");
         material->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
-        material->validate();
+        OPTIX_VALIDATE(material);
 
-        optix::Acceleration acceleration = context->createAcceleration("NoAccel", "NoAccel"); // TODO No acceleration first, then check if we can use a Bvh?
-        acceleration->validate();
+        optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
+        OPTIX_VALIDATE(acceleration);
 
         optix::GeometryInstance area_lights = context->createGeometryInstance(m_state->lights.area_lights_geometry, &material, &material + 1);
-        area_lights->validate();
+        OPTIX_VALIDATE(area_lights);
 
         m_state->lights.area_lights = context->createGeometryGroup(&area_lights, &area_lights + 1);
         m_state->lights.area_lights->setAcceleration(acceleration);
-        m_state->lights.area_lights->validate();
+        OPTIX_VALIDATE(m_state->lights.area_lights);
 
         m_state->root_node->addChild(m_state->lights.area_lights);
     }
@@ -261,7 +267,7 @@ Renderer::Renderer()
         std::string normal_vis_ptx_path = get_ptx_path("NormalRendering");
         m_state->default_material->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
 
-        m_state->default_material->validate();
+        OPTIX_VALIDATE(m_state->default_material);
 
         std::string trangle_intersection_ptx_path = get_ptx_path("IntersectTriangle");
         m_state->triangle_intersection_program = context->createProgramFromPTXFile(trangle_intersection_ptx_path, "intersect");
@@ -307,7 +313,7 @@ Renderer::Renderer()
     context->setExceptionEnabled(RT_EXCEPTION_ALL, true);
 #endif
 
-    context->validate();
+    OPTIX_VALIDATE(context);
     context->compile();
 }
 
@@ -316,7 +322,6 @@ void Renderer::render() {
     if (Cameras::begin() == Cameras::end())
         return;
 
-    // TODO Add a genesis event here when rendering the very very very first frame. Otherwise handle incremental updates.
     handle_updates();
 
     Context& context = m_state->context;
@@ -332,8 +337,6 @@ void Renderer::render() {
         // context->setPrintLaunchIndex(window.get_width() / 2, window.get_height() / 2);
 #endif
     }
-
-    context["g_accumulations"]->setInt(m_state->accumulations);
 
     { // Upload camera parameters.
         Cameras::UID camera_ID = *Cameras::begin();
@@ -356,6 +359,8 @@ void Renderer::render() {
             m_state->accumulations = 0u;
         }
     }
+
+    context["g_accumulations"]->setInt(m_state->accumulations);
 
     context->launch(int(EntryPoints::PathTracing), m_state->screensize.x, m_state->screensize.y);
 
@@ -401,7 +406,7 @@ void Renderer::render() {
 void Renderer::handle_updates() {
     { // Mesh updates
         for (Meshes::UID mesh_ID : Meshes::get_destroyed_meshes()) {
-            m_state->meshes[mesh_ID]->destroy(); // TODO Can I not simply null this and have reference counting take care of it? That would be safer, but would also 'hide' errors. (And ideally I would like to get rid of reference counting inside my renderer blast dang it!)
+            m_state->meshes[mesh_ID]->destroy();
             m_state->meshes[mesh_ID] = NULL;
         }
 

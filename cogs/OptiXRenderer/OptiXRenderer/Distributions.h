@@ -18,7 +18,7 @@ namespace Distributions {
 
 struct __align__(16) DirectionalSample {
     optix::float3 direction;
-    float pdf;
+    float PDF;
 };
 
 //==============================================================================
@@ -37,7 +37,7 @@ __inline_all__ DirectionalSample sample(float cos_theta_max, optix::float2 rando
 
     DirectionalSample res;
     res.direction = optix::make_float3(cos(phi) * sin_theta, sin(phi) * sin_theta, cos_theta);
-    res.pdf = pdf(cos_theta_max);
+    res.PDF = pdf(cos_theta_max);
     return res;
 }
 
@@ -60,7 +60,7 @@ __inline_all__ DirectionalSample sample(optix::float2 random_sample) {
 
     DirectionalSample res;
     res.direction = optix::make_float3(cos(phi) * r, sin(phi) * r, z);
-    res.pdf = z / PIf;
+    res.PDF = z / PIf;
     return res;
 }
 

@@ -25,6 +25,8 @@ namespace OptiXRenderer {
 // Supports several different rendering modes; Normal visualization and 
 // path tracing. 
 // Future work
+// * Cache acceleration structures for meshes not in the scene, but still active.
+//   Test if it speeds up the bullet creation of my boxgun!
 // * Create Initialization method that only returns a valid pointer in case 
 //   a Renderer could be created. Should take a GL (ES) Context and 
 //   possibly a device ID begin/end iterator. But how to uniquely enumerate devices?
@@ -39,14 +41,14 @@ namespace OptiXRenderer {
 // * Logarithmic upload of the accumulated image.
 // * Have path tracer stop per bounce, filter and display the result.
 //   Should be good for interactivity and convergence. :)
-// * Cache acceleration structures for meshes not in the scene, but still active.
-//   Test if it speeds up the bullet creation of my boxgun!
+// * Add a genesis event when rendering the very very very first frame. Can also 
+//   be used if the renderer 'falls behind' and it's faster to simply reinitialize
 //----------------------------------------------------------------------------
 class Renderer final {
 public:
     Renderer();
 
-    inline bool could_initialize() const { return m_device_ids.optix>= 0;  }
+    inline bool could_initialize() const { return m_device_ids.optix >= 0;  }
 
     void render();
 

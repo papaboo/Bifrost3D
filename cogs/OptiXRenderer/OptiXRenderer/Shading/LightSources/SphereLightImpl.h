@@ -20,9 +20,13 @@ __inline_all__ float surface_area(const SphereLight& light) {
     return 4.0f * M_PIf * light.radius * light.radius;
 }
 
-__inline_all__ bool is_delta_light(const SphereLight& light) {
-    // TODO Take the subtended angle into account here, as is done in sample_radiance.
-    return light.radius == 0.0f;
+// Returns true if the sphere light should be interpreted as a delta light / point light.
+// Ideally this should only happen if the radius is zero, but due to floating point 
+// imprecission when sampling cones, we draw the line at very tiny subtended angles.
+__inline_all__ bool is_delta_light(const SphereLight& light, const optix::float3& position) {
+    optix::float3 vector_to_light = light.position - position;
+    float sin_theta_squared = light.radius * light.radius / optix::dot(vector_to_light, vector_to_light);
+    return sin_theta_squared < 1e-5f;
 }
 
 __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix::float3& position, optix::float2 random_sample) {
@@ -51,7 +55,7 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix
 
         optix::Onb onb = (vector_to_light / optix::length(vector_to_light));
         light_sample.direction = cone_sample.direction.x * onb.m_tangent + cone_sample.direction.y * onb.m_binormal + cone_sample.direction.z * onb.m_normal;
-        light_sample.PDF = cone_sample.pdf; // TODO Upper case pdf
+        light_sample.PDF = cone_sample.PDF;
         light_sample.distance = Intersect::ray_sphere(position, light_sample.direction, light.position, light.radius);
         if (light_sample.distance <= 0.0f) // The ray missed the sphere, but since it was sampled to be inside the sphere, just assume that it hit at a grazing angle.
             light_sample.distance = optix::dot(vector_to_light, light_sample.direction);
@@ -65,7 +69,7 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix
 }
 
 __inline_all__ optix::float3 evaluate(const SphereLight& light, const optix::float3& position, const optix::float3& direction) {
-    float inv_divisor = 1.0f / (is_delta_light(light) ? (4.0f * PIf) : (PIf * surface_area(light)));
+    float inv_divisor = 1.0f / (is_delta_light(light, position) ? (4.0f * PIf) : (PIf * surface_area(light)));
     return light.power * inv_divisor;
 }
 
