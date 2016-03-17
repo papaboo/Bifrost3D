@@ -1,15 +1,19 @@
 * Coated rubber/metal materials
+** Add Assets::Materials with diffuse color + roughness.
+** Create, destroy and updated events.
+** Test
 ** First diffuse material + GI and sampling.
+** Test BRDFs in OptiXRendererTests
 ** Add GGX.
-** Test BRDFs
+** Add Burley and Oren-Nayar?
 * Textures.
 * Environment models.
 * Reduce TODOs
-* GL Renderer
 * Notifications when changing the scene. / Pullable events.
 ** Camera - Create, destroy, parent changed and matrix changed. Store in bitmask pr camera instead of as separate notifications.
 ** Preprocess the create/destroy events to remove pairs, i.e. just remove creation events for components that would be destroyed again.
 *** Or keep event flags pr object, then its easy to spot created and destroyed objects and if an object has had an event in general.
+* GL Renderer
 * Screenshot
 ** Grab backbuffer on the CPU.
 *** Request to composer or through the camera, not renderers
@@ -22,8 +26,6 @@
 ** Only nodes in a certain scene should be rendered.
 ** A scene node should know if it is in a scene and in which. Store the root scene ID pr node?
 ** A requirement for the asset manager to not simply add loaded nodes directly into the scene.
-* Natvis visualizations
-** Natvis install bat file.
 * Serialize scene and models.
 * CUDA
 ** helper methods.
