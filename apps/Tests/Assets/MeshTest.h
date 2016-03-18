@@ -54,7 +54,7 @@ TEST_F(Assets_Mesh, sentinel_mesh) {
 }
 
 TEST_F(Assets_Mesh, create) {
-    Meshes::UID mesh_ID = Meshes::create("TestMesh", 32, 16u);
+    Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
 
     EXPECT_TRUE(Meshes::has(mesh_ID));
     EXPECT_EQ(Meshes::get_mesh(mesh_ID).indices_count, 32);
@@ -71,7 +71,7 @@ TEST_F(Assets_Mesh, create) {
 }
 
 TEST_F(Assets_Mesh, destroy) {
-    Meshes::UID mesh_ID = Meshes::create("TestMesh", 32, 16u);
+    Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
     EXPECT_TRUE(Meshes::has(mesh_ID));
 
     Meshes::reset_change_notifications();
@@ -79,15 +79,15 @@ TEST_F(Assets_Mesh, destroy) {
     Meshes::destroy(mesh_ID);
     EXPECT_FALSE(Meshes::has(mesh_ID));
 
-    // Test model destroyed notification.
+    // Test mesh destroyed notification.
     Core::Iterable<Meshes::mesh_destroyed_iterator> destroyed_meshes = Meshes::get_destroyed_meshes();
     EXPECT_EQ(destroyed_meshes.end() - destroyed_meshes.begin(), 1);
     EXPECT_EQ(*destroyed_meshes.begin(), mesh_ID);
 }
 
 TEST_F(Assets_Mesh, create_and_destroy_notifications) {
-    Meshes::UID mesh_ID0 = Meshes::create("TestMesh0", 32, 16u);
-    Meshes::UID mesh_ID1 = Meshes::create("TestMesh1", 32, 16u);
+    Meshes::UID mesh_ID0 = Meshes::create("TestMesh0", 32u, 16u);
+    Meshes::UID mesh_ID1 = Meshes::create("TestMesh1", 32u, 16u);
     EXPECT_TRUE(Meshes::has(mesh_ID0));
     EXPECT_TRUE(Meshes::has(mesh_ID1));
 

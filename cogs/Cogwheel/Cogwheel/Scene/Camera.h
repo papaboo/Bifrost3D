@@ -39,6 +39,10 @@ public:
 
     static Cameras::UID create(SceneNodes::UID parent_ID, Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix);
 
+    static UIDGenerator::ConstIterator begin() { return m_UID_generator.begin(); }
+    static UIDGenerator::ConstIterator end() { return m_UID_generator.end(); }
+    static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
+
     static SceneNodes::UID get_node_ID(Cameras::UID camera_ID) { return m_node_IDs[camera_ID]; }
     static void set_node_ID(Cameras::UID camera_ID, SceneNodes::UID node_ID) { m_node_IDs[camera_ID] = node_ID; }
 
@@ -60,10 +64,6 @@ public:
 
     static Math::Rectf get_viewport(Cameras::UID camera_ID) { return m_viewports[camera_ID]; }
     static void set_viewport(Cameras::UID camera_ID, Math::Rectf projectionport) { m_viewports[camera_ID] = projectionport; }
-
-    static UIDGenerator::ConstIterator begin() { return m_UID_generator.begin(); }
-    static UIDGenerator::ConstIterator end() { return m_UID_generator.end(); }
-    static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
 
 private:
 

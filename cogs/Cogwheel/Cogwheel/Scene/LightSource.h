@@ -46,14 +46,14 @@ public:
     static LightSources::UID create_sphere_light(SceneNodes::UID node_ID, Math::RGB power, float radius);
     static void destroy(LightSources::UID light_ID);
 
+    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
+    static ConstUIDIterator end() { return m_UID_generator.end(); }
+    static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
+
     static inline SceneNodes::UID get_node_ID(LightSources::UID light_ID) { return m_node_IDs[light_ID]; }
     static inline bool is_delta_light(LightSources::UID light_ID) { return m_radius[light_ID] == 0.0f; }
     static inline Math::RGB get_power(LightSources::UID light_ID) { return m_power[light_ID]; }
     static inline float get_radius(LightSources::UID light_ID) { return m_radius[light_ID]; }
-
-    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
-    static ConstUIDIterator end() { return m_UID_generator.end(); }
-    static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.

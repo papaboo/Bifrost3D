@@ -102,6 +102,10 @@ public:
     static Meshes::UID create(const std::string& name, unsigned int indices_count, unsigned int vertex_count);
     static void destroy(Meshes::UID mesh_ID);
 
+    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
+    static ConstUIDIterator end() { return m_UID_generator.end(); }
+    static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
+
     static inline std::string get_name(Meshes::UID mesh_ID) { return m_names[mesh_ID]; }
     static inline void set_name(Meshes::UID mesh_ID, const std::string& name) { m_names[mesh_ID] = name; }
 
@@ -109,10 +113,6 @@ public:
     static inline Math::AABB get_bounds(Meshes::UID mesh_ID) { return m_bounds[mesh_ID]; }
     static inline void set_bounds(Meshes::UID mesh_ID, Math::AABB bounds) { m_bounds[mesh_ID] = bounds; }
     static Math::AABB compute_bounds(Meshes::UID mesh_ID);
-
-    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
-    static ConstUIDIterator end() { return m_UID_generator.end(); }
-    static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.

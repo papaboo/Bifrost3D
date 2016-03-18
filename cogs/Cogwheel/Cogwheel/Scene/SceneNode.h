@@ -47,6 +47,10 @@ public:
     static SceneNodes::UID create(const std::string& name, Math::Transform transform = Math::Transform::identity());
     static void destroy(SceneNodes::UID node_ID);
 
+    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
+    static ConstUIDIterator end() { return m_UID_generator.end(); }
+    static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
+
     static inline std::string get_name(SceneNodes::UID node_ID) { return m_names[node_ID]; }
     static inline void set_name(SceneNodes::UID node_ID, const std::string& name) { m_names[node_ID] = name; }
 
@@ -61,14 +65,10 @@ public:
     static Math::Transform get_global_transform(SceneNodes::UID node_ID) { return m_global_transforms[node_ID];}
     static void set_global_transform(SceneNodes::UID node_ID, Math::Transform transform);
 
-    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
-    static ConstUIDIterator end() { return m_UID_generator.end(); }
-    static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
-
     template<typename F>
-    static void traverser_recursively(SceneNodes::UID node_ID, F& function);
+    static void apply_recursively(SceneNodes::UID node_ID, F& function);
     template<typename F>
-    static void traverser_children_recursively(SceneNodes::UID node_ID, F& function);
+    static void apply_to_children_recursively(SceneNodes::UID node_ID, F& function);
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -117,14 +117,20 @@ private:
 class SceneNode final {
 public:
     // -----------------------------------------------------------------------
-    // Constructors and destructors
+    // Constructors and destructors.
     // -----------------------------------------------------------------------
     SceneNode() : m_ID(SceneNodes::UID::invalid_UID()) { }
     SceneNode(SceneNodes::UID id) : m_ID(id) { }
-    ~SceneNode() { }
 
     inline const SceneNodes::UID get_ID() const { return m_ID; }
+    inline bool exists() const { return SceneNodes::has(m_ID); }
 
+    inline bool operator==(SceneNode rhs) const { return m_ID == rhs.m_ID; }
+    inline bool operator!=(SceneNode rhs) const { return m_ID != rhs.m_ID; }
+
+    // -----------------------------------------------------------------------
+    // Getters and setters.
+    // -----------------------------------------------------------------------
     inline std::string get_name() const { return SceneNodes::get_name(m_ID); }
     inline void set_name(std::string name) { SceneNodes::set_name(m_ID, name); }
 
@@ -133,20 +139,18 @@ public:
     inline bool has_child(SceneNode tested_child) { return SceneNodes::has_child(m_ID, tested_child.get_ID()); }
     std::vector<SceneNode> get_children() const;
 
-    inline bool exists() const { return SceneNodes::has(m_ID); }
-
     inline Math::Transform get_local_transform() const { return SceneNodes::get_local_transform(m_ID); }
     inline void set_local_transform(Math::Transform transform) { SceneNodes::set_local_transform(m_ID, transform); }
     inline Math::Transform get_global_transform() const { return SceneNodes::get_global_transform(m_ID); }
     inline void set_global_transform(Math::Transform transform) { SceneNodes::set_global_transform(m_ID, transform); }
 
+    // -----------------------------------------------------------------------
+    // Applies a function recursively.
+    // -----------------------------------------------------------------------
     template<typename F>
-    inline void traverser_recursively(F& function) { SceneNodes::traverser_recursively<F>(m_ID, function); }
+    inline void apply_recursively(F& function) { SceneNodes::apply_recursively<F>(m_ID, function); }
     template<typename F>
-    inline void traverser_children_recursively(F& function) { SceneNodes::traverser_children_recursively<F>(m_ID, function); }
-
-    inline bool operator==(SceneNode rhs) const { return m_ID == rhs.m_ID; }
-    inline bool operator!=(SceneNode rhs) const { return m_ID != rhs.m_ID; }
+    inline void apply_to_children_recursively(F& function) { SceneNodes::apply_to_children_recursively<F>(m_ID, function); }
 
 private:
     const SceneNodes::UID m_ID;
@@ -157,7 +161,7 @@ private:
 // ---------------------------------------------------------------------------
 
 template<typename F>
-void SceneNodes::traverser_children_recursively(SceneNodes::UID node_ID, F& function) {
+void SceneNodes::apply_to_children_recursively(SceneNodes::UID node_ID, F& function) {
     UID node = m_first_child_IDs[node_ID];
     if (node == UID::invalid_UID())
         return;
@@ -189,9 +193,9 @@ void SceneNodes::traverser_children_recursively(SceneNodes::UID node_ID, F& func
 }
 
 template<typename F>
-void SceneNodes::traverser_recursively(SceneNodes::UID node_ID, F& function) {
+void SceneNodes::apply_recursively(SceneNodes::UID node_ID, F& function) {
     function(node_ID);
-    traverser_children_recursively(node_ID, function);
+    apply_to_children_recursively(node_ID, function);
 }
 
 } // NS Scene

@@ -57,15 +57,15 @@ public:
     static MeshModels::UID create(Scene::SceneNodes::UID scene_node_ID, Assets::Meshes::UID mesh_ID);
     static void destroy(MeshModels::UID model_ID);
 
+    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
+    static ConstUIDIterator end() { return m_UID_generator.end(); }
+    static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
+
     static inline MeshModel get_model(MeshModels::UID model_ID) { return m_models[model_ID]; }
     static inline void set_model(MeshModels::UID model_ID, MeshModel model) { m_models[model_ID] = model; }
 
     static inline Scene::SceneNodes::UID get_scene_node_ID(MeshModels::UID model_ID) { return m_models[model_ID].scene_node_ID; }
     static inline Assets::Meshes::UID get_mesh_ID(MeshModels::UID model_ID) { return m_models[model_ID].mesh_ID; }
-
-    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
-    static ConstUIDIterator end() { return m_UID_generator.end(); }
-    static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.

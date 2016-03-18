@@ -229,7 +229,7 @@ void SceneNodes::set_global_transform(SceneNodes::UID node_ID, Math::Transform t
     m_transforms_changed.push_back(node_ID);
 
     // Update global transforms of all children.
-    traverser_children_recursively(node_ID, [=](SceneNodes::UID child_ID) {
+    apply_to_children_recursively(node_ID, [=](SceneNodes::UID child_ID) {
         m_global_transforms[child_ID] = delta_transform * m_global_transforms[child_ID];
         m_transforms_changed.push_back(child_ID);
     });

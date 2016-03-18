@@ -1,7 +1,8 @@
-* Move collection object iterators up after create/destroy, as is done in Materials.
 * Coated rubber/metal materials
+** Integrate into Model.
 ** First diffuse material + GI and sampling.
 ** Test BRDFs in OptiXRendererTests
+** Integrate into obj loader.
 ** Add GGX.
 ** Metalic.
 ** Add Burley and Oren-Nayar?
