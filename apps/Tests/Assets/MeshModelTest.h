@@ -56,14 +56,19 @@ TEST_F(Assets_MeshModels, create) {
     Scene::SceneNodes::UID node_ID = Scene::SceneNodes::create("TestNode");
     Meshes::allocate(1u);
     Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
-    
-    MeshModels::UID model_ID = MeshModels::create(node_ID, mesh_ID);
+    Materials::allocate(1u);
+    Materials::Data data = {};
+    Materials::UID material_ID = Materials::create("TestMaterial", data);
+
+    MeshModels::UID model_ID = MeshModels::create(node_ID, mesh_ID, material_ID);
 
     EXPECT_TRUE(MeshModels::has(model_ID));
     EXPECT_EQ(MeshModels::get_model(model_ID).scene_node_ID, node_ID);
     EXPECT_EQ(MeshModels::get_scene_node_ID(model_ID), node_ID);
     EXPECT_EQ(MeshModels::get_model(model_ID).mesh_ID, mesh_ID);
     EXPECT_EQ(MeshModels::get_mesh_ID(model_ID), mesh_ID);
+    EXPECT_EQ(MeshModels::get_model(model_ID).material_ID, material_ID);
+    EXPECT_EQ(MeshModels::get_material_ID(model_ID), material_ID);
 
     // Test model created notification.
     Core::Iterable<MeshModels::model_created_iterator> created_models = MeshModels::get_created_models();
@@ -75,7 +80,7 @@ TEST_F(Assets_MeshModels, create) {
 }
 
 TEST_F(Assets_MeshModels, destroy) {
-    MeshModels::UID model_ID = MeshModels::create(Scene::SceneNodes::UID::invalid_UID(), Meshes::UID::invalid_UID());
+    MeshModels::UID model_ID = MeshModels::create(Scene::SceneNodes::UID::invalid_UID(), Meshes::UID::invalid_UID(), Materials::UID::invalid_UID());
     EXPECT_TRUE(MeshModels::has(model_ID));
 
     MeshModels::reset_change_notifications();
@@ -90,8 +95,8 @@ TEST_F(Assets_MeshModels, destroy) {
 }
 
 TEST_F(Assets_MeshModels, create_and_destroy_notifications) {
-    MeshModels::UID model_ID0 = MeshModels::create(Scene::SceneNodes::UID::invalid_UID(), Meshes::UID::invalid_UID());
-    MeshModels::UID model_ID1 = MeshModels::create(Scene::SceneNodes::UID::invalid_UID(), Meshes::UID::invalid_UID());
+    MeshModels::UID model_ID0 = MeshModels::create(Scene::SceneNodes::UID::invalid_UID(), Meshes::UID::invalid_UID(), Materials::UID::invalid_UID());
+    MeshModels::UID model_ID1 = MeshModels::create(Scene::SceneNodes::UID::invalid_UID(), Meshes::UID::invalid_UID(), Materials::UID::invalid_UID());
     EXPECT_TRUE(MeshModels::has(model_ID0));
     EXPECT_TRUE(MeshModels::has(model_ID1));
 

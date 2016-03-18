@@ -1,5 +1,4 @@
 * Coated rubber/metal materials
-** Integrate into Model.
 ** First diffuse material + GI and sampling.
 ** Test BRDFs in OptiXRendererTests
 ** Integrate into obj loader.

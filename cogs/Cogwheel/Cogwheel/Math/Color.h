@@ -51,6 +51,7 @@ public:
     static inline RGB red()    { return RGB(1.0f, 0.0f, 0.0f); }
     static inline RGB purple() { return RGB(1.0f, 0.0f, 1.0f); }
     static inline RGB yellow() { return RGB(1.0f, 1.0f, 0.0f); }
+    static inline RGB grey()   { return RGB(0.5f, 0.5f, 0.5f); }
     static inline RGB white()  { return RGB(1.0f, 1.0f, 1.0f); }
 
     inline float* begin() { return &r; }

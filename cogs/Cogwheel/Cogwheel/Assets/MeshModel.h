@@ -10,6 +10,7 @@
 #define _COGWHEEL_ASSETS_MESH_MODEL_H_
 
 #include <Cogwheel/Assets/Mesh.h>
+#include <Cogwheel/Assets/Material.h>
 #include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Scene/SceneNode.h>
@@ -31,12 +32,11 @@ const unsigned int Destroyed =     1 << 1;
 // When a MeshModel is deleted, it is still possible to access it's values 
 // until clear_change_notifications has been called, usually at the 
 // end of the game loop.
-// Future work:
-// * Add material IDs.
 //----------------------------------------------------------------------------
 struct MeshModel final {
     Scene::SceneNodes::UID scene_node_ID;
     Assets::Meshes::UID mesh_ID;
+    Assets::Materials::UID material_ID;
     unsigned int properties;
 };
 
@@ -54,7 +54,7 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(MeshModels::UID model_ID);
 
-    static MeshModels::UID create(Scene::SceneNodes::UID scene_node_ID, Assets::Meshes::UID mesh_ID);
+    static MeshModels::UID create(Scene::SceneNodes::UID scene_node_ID, Assets::Meshes::UID mesh_ID, Assets::Materials::UID material_ID);
     static void destroy(MeshModels::UID model_ID);
 
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
@@ -66,6 +66,7 @@ public:
 
     static inline Scene::SceneNodes::UID get_scene_node_ID(MeshModels::UID model_ID) { return m_models[model_ID].scene_node_ID; }
     static inline Assets::Meshes::UID get_mesh_ID(MeshModels::UID model_ID) { return m_models[model_ID].mesh_ID; }
+    static inline Assets::Materials::UID get_material_ID(MeshModels::UID model_ID) { return m_models[model_ID].material_ID; }
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.

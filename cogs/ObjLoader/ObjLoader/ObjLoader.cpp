@@ -86,7 +86,7 @@ SceneNodes::UID load(const std::string& path) {
         else
             root_ID = node_ID;
 
-        MeshModels::UID model_ID = MeshModels::create(node_ID, mesh_ID);
+        MeshModels::UID model_ID = MeshModels::create(node_ID, mesh_ID, Materials::UID::invalid_UID()); // TODO Handle materials properly.
     }
 
     return root_ID;

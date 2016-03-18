@@ -71,7 +71,7 @@ bool MeshModels::has(MeshModels::UID model_ID) {
     return m_UID_generator.has(model_ID) && !(m_models[model_ID].properties & MeshModelProperties::Destroyed);
 }
 
-MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Assets::Meshes::UID mesh_ID) {
+MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Assets::Meshes::UID mesh_ID, Assets::Materials::UID material_ID) {
     assert(m_models != nullptr);
 
     unsigned int old_capacity = m_UID_generator.capacity();
@@ -80,7 +80,7 @@ MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Assets:
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_model_data(m_UID_generator.capacity(), old_capacity);
 
-    m_models[id] = { scene_node_ID, mesh_ID };
+    m_models[id] = { scene_node_ID, mesh_ID, material_ID, 0u };
 
     m_models_created.push_back(id);
 
