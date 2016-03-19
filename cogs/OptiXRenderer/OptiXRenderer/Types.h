@@ -58,7 +58,7 @@ struct ShadowPRD {
 };
 
 //----------------------------------------------------------------------------
-// Light source structs
+// Light source structs.
 //----------------------------------------------------------------------------
 
 struct __align__(16) LightSample {
@@ -78,6 +78,15 @@ struct __align__(16) SphereLight {
     optix::float3 power;
     optix::float3 position;
     float radius;
+};
+
+//----------------------------------------------------------------------------
+// Materials. (Only one so far)
+//----------------------------------------------------------------------------
+
+struct __align__(16) Material {
+    optix::float3 base_color;
+    float base_roughness;
 };
 
 } // NS OptiXRenderer

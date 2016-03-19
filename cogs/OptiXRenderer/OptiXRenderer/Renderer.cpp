@@ -61,6 +61,8 @@ struct Renderer::State {
     std::vector<optix::Geometry> meshes = std::vector<optix::Geometry>(0);
 
     optix::Material default_material;
+    optix::Buffer material_parameters;
+    unsigned int material_parameter_count;
 
     optix::Program triangle_intersection_program;
     optix::Program triangle_bounds_program;
@@ -155,7 +157,7 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
     assert(optix_mesh);
 
     optix::GeometryInstance optix_model = context->createGeometryInstance(optix_mesh, &optix_material, &optix_material + 1);
-    optix_model["g_color"]->setFloat(make_float3(0.5f, 0.5f, 0.5f));
+    optix_model["material_index"]->setInt(model.material_ID.get_ID());
     OPTIX_VALIDATE(optix_model);
 
     optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
@@ -272,6 +274,11 @@ Renderer::Renderer()
         std::string trangle_intersection_ptx_path = get_ptx_path("IntersectTriangle");
         m_state->triangle_intersection_program = context->createProgramFromPTXFile(trangle_intersection_ptx_path, "intersect");
         m_state->triangle_bounds_program = context->createProgramFromPTXFile(trangle_intersection_ptx_path, "bounds");
+
+        m_state->material_parameter_count = 0;
+        m_state->material_parameters = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, m_state->material_parameter_count);
+        m_state->material_parameters->setElementSize(sizeof(OptiXRenderer::Material));
+        context["g_materials"]->set(m_state->material_parameters);
     }
 
     { // Screen buffers
@@ -404,7 +411,7 @@ void Renderer::render() {
 }
 
 void Renderer::handle_updates() {
-    { // Mesh updates
+    { // Mesh updates.
         for (Meshes::UID mesh_ID : Meshes::get_destroyed_meshes()) {
             m_state->meshes[mesh_ID]->destroy();
             m_state->meshes[mesh_ID] = NULL;
@@ -417,7 +424,41 @@ void Renderer::handle_updates() {
         }
     }
 
-    { // Light updates
+    { // Material updates.
+        static auto upload_material = [](Materials::UID material_ID, OptiXRenderer::Material* device_materials) {
+            OptiXRenderer::Material& device_material = device_materials[material_ID];
+            Assets::Material host_material = material_ID;
+            // TODO Memcopy.
+            device_material.base_color.x = host_material.get_base_color().r;
+            device_material.base_color.y = host_material.get_base_color().g;
+            device_material.base_color.z = host_material.get_base_color().b;
+            device_material.base_roughness = host_material.get_base_roughness();
+        };
+
+        if (!Materials::get_created_materials().is_empty() || !Materials::get_changed_materials().is_empty()) {
+            if (m_state->material_parameter_count < Materials::capacity()) {
+                // Buffer size changed. Re-upload all parameters.
+                m_state->material_parameter_count = Materials::capacity();
+                m_state->material_parameters->setSize(m_state->material_parameter_count);
+
+                OptiXRenderer::Material* device_materials = (OptiXRenderer::Material*)m_state->material_parameters->map();
+                upload_material(Materials::UID::invalid_UID(), device_materials); // Upload invalid material params as well.
+                for (Materials::UID material_ID : Materials::get_iterable())
+                    upload_material(material_ID, device_materials);
+                m_state->material_parameters->unmap();
+            } else {
+                // Update new and changed materials. Just ignore destroyed ones.
+                OptiXRenderer::Material* device_materials = (OptiXRenderer::Material*)m_state->material_parameters->map();
+                for (Materials::UID material_ID : Materials::get_created_materials())
+                    upload_material(material_ID, device_materials);
+                for (Materials::UID material_ID : Materials::get_changed_materials())
+                    upload_material(material_ID, device_materials);
+                m_state->material_parameters->unmap();
+            }
+        }
+    }
+
+    { // Light updates.
         if (!LightSources::get_created_lights().is_empty() || !LightSources::get_destroyed_lights().is_empty()) {
             if (m_state->lights.ID_to_index.size() < LightSources::capacity()) {
                 m_state->lights.ID_to_index.resize(LightSources::capacity());
@@ -537,7 +578,7 @@ void Renderer::handle_updates() {
         }
     }
 
-    { // Transform updates
+    { // Transform updates.
         // We're only interested in changes in the transforms that are connected to renderables, such as meshes.
         bool important_transform_changed = false; 
         for (SceneNodes::UID node_ID : SceneNodes::get_changed_transforms()) {

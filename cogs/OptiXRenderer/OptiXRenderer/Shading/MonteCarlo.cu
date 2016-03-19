@@ -26,7 +26,8 @@ rtBuffer<SphereLight, 1> g_lights;
 rtDeclareVariable(int, g_light_count, , );
 
 // Material params
-rtDeclareVariable(float3, g_color, , );
+rtBuffer<Material, 1> g_materials;
+rtDeclareVariable(int, material_index, , );
 
 //----------------------------------------------------------------------------
 // Closest hit program for monte carlo sampling rays.
@@ -43,13 +44,15 @@ RT_PROGRAM void closest_hit() {
 
     const float3 intersection_point = ray.direction * t_hit + ray.origin;
 
+    Material material_parameter = g_materials[material_index];
+
     for (int i = 0; i < g_light_count; ++i) {
         const SphereLight& light = g_lights[i];
         LightSample light_sample = LightSources::sample_radiance(light, intersection_point, monte_carlo_PRD.rng.sample2f());
         float N_dot_L = dot(forward_shading_normal, light_sample.direction);
         light_sample.radiance *= abs(N_dot_L) / light_sample.PDF;
 
-        const float3 bsdf_response = g_color / PIf;
+        const float3 bsdf_response = material_parameter.base_color / PIf;
         if (dot(forward_shading_normal, light_sample.direction) >= 0.0f) {
             ShadowPRD shadow_PRD = { 1.0f, 1.0f, 1.0f };
             // TODO Always offset slightly along the geometric normal?
