@@ -42,6 +42,7 @@ void Materials::allocate(unsigned int capacity) {
     // Allocate dummy element at 0.
     m_names[0] = "Dummy Material";
     Data dummy_data = {};
+    dummy_data.base_color = Math::RGB::red();
     m_materials[0] = dummy_data;
 }
 
