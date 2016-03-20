@@ -6,8 +6,8 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include <OptiXRenderer/Shading/Utils.h>
 #include <OptiXRenderer/Types.h>
+#include <OptiXRenderer/Utils.h>
 
 #include <optix.h>
 #include <optixu/optixu_matrix_namespace.h>

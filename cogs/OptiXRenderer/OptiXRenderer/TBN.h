@@ -10,7 +10,7 @@
 #define _OPTIXRENDERER_TBN_H_
 
 #include <OptiXRenderer/Defines.h>
-#include <OptiXRenderer/Shading/Utils.h>
+#include <OptiXRenderer/Utils.h>
 
 #include <optixu/optixu_math_namespace.h>
 

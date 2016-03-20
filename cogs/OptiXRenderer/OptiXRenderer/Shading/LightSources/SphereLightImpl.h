@@ -58,7 +58,8 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix
         light_sample.direction = cone_sample.direction * tbn;
         light_sample.PDF = cone_sample.PDF;
         light_sample.distance = Intersect::ray_sphere(position, light_sample.direction, light.position, light.radius);
-        if (light_sample.distance <= 0.0f) // The ray missed the sphere, but since it was sampled to be inside the sphere, just assume that it hit at a grazing angle.
+        if (light_sample.distance <= 0.0f)
+            // The ray missed the sphere, but since it was sampled to be inside the sphere, just assume that it hit at a grazing angle.
             light_sample.distance = optix::dot(vector_to_light, light_sample.direction);
         
         // Compute radiance.

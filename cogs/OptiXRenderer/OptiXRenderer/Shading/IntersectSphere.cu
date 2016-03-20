@@ -9,16 +9,14 @@
 // ---------------------------------------------------------------------------
 
 #include <OptiXRenderer/Intersect.h>
-#include <OptiXRenderer/Shading/Utils.h>
 
 #include <optix.h>
 #include <optixu/optixu_aabb.h>
 #include <optixu/optixu_math.h>
 
 using namespace optix;
-using namespace OptiXRenderer;
 
-rtDeclareVariable(Sphere, sphere, , );
+rtDeclareVariable(OptiXRenderer::Sphere, sphere, , );
 
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
 
@@ -27,7 +25,7 @@ rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 
 RT_PROGRAM void intersect(int) {
-    float t = Intersect::ray_sphere(ray, sphere);
+    float t = OptiXRenderer::Intersect::ray_sphere(ray, sphere);
     if (t > 0.0f && rtPotentialIntersection(t)) {
         float3 intersection_point = t * ray.direction + ray.origin;
         float inv_radius = 1.0f / sphere.radius;

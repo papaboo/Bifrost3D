@@ -27,6 +27,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
     OptiXRenderer/Renderer.cpp
     OptiXRenderer/TBN.h
     OptiXRenderer/Types.h
+    OptiXRenderer/Utils.h
   )
 
   set(SHADING_SRC
@@ -35,7 +36,6 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
     OptiXRenderer/Shading/MonteCarlo.cu
     OptiXRenderer/Shading/NormalRendering.cu
     OptiXRenderer/Shading/PathTracing.cu
-    OptiXRenderer/Shading/Utils.h
   )
 
   set(SHADING_BSDFS_SRC
