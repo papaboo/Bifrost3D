@@ -25,6 +25,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
     OptiXRenderer/RNG.h
     OptiXRenderer/Renderer.h
     OptiXRenderer/Renderer.cpp
+    OptiXRenderer/TBN.h
     OptiXRenderer/Types.h
   )
 
@@ -35,6 +36,10 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
     OptiXRenderer/Shading/NormalRendering.cu
     OptiXRenderer/Shading/PathTracing.cu
     OptiXRenderer/Shading/Utils.h
+  )
+
+  set(SHADING_BSDFS_SRC
+    OptiXRenderer/Shading/BSDFs/Lambert.h
   )
 
   set(SHADING_LIGHTSOURCES_SRC
@@ -58,6 +63,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
     ${_GENERATED_FILES}
     ${ROOT_SRC}
     ${SHADING_SRC}
+    ${SHADING_BSDFS_SRC}
     ${SHADING_LIGHTSOURCES_SRC}
     ${LINK_FILE}
   )
@@ -69,6 +75,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
   
   source_group("" FILES ${ROOT_SRC})
   source_group("Shading" FILES ${SHADING_SRC})
+  source_group("Shading\\BSDFs" FILES ${SHADING_BSDFS_SRC})
   source_group("Shading\\LightSources" FILES ${SHADING_LIGHTSOURCES_SRC})
   source_group("Shading\\ptx" FILES ${_GENERATED_FILES}) # Add the ptx files to a source group.
 

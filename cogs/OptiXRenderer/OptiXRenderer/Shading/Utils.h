@@ -15,7 +15,6 @@
 #include <optixu/optixu_matrix_namespace.h>
 
 namespace OptiXRenderer {
-namespace Shading {
 
 __inline_dev__ optix::float3 project_ray_direction(optix::float2 viewport_pos, 
                                                    const optix::float3& camera_position, 
@@ -59,7 +58,25 @@ __inline_all__ unsigned int hash(unsigned int a) {
     return a;
 }
 
-} // NS Shading
+// Computes a tangent and bitangent that together with the normal creates an orthonormal bases.
+// Consider using TBN to wrap the tangents.
+__inline_all__ static void compute_tangents(const optix::float3& normal,
+                                            optix::float3& tangent, optix::float3& bitangent) {
+    using namespace optix;
+
+    float3 a0;
+    if (abs(normal.x) < abs(normal.y)) {
+        const float zup = abs(normal.z) < abs(normal.x) ? 0.0f : 1.0f;
+        a0 = make_float3(zup, 0.0f, 1.0f - zup);
+    } else {
+        const float zup = (abs(normal.z) < abs(normal.y)) ? 0.0f : 1.0f;
+        a0 = make_float3(0.0f, zup, 1.0f - zup);
+    }
+
+    bitangent = normalize(cross(normal, a0));
+    tangent = normalize(cross(bitangent, normal));
+}
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_SHADING_UTILS_H_

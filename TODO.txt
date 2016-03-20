@@ -1,11 +1,12 @@
 * Coated rubber/metal materials
-** First diffuse material + GI and sampling.
 ** Test BRDFs in OptiXRendererTests
+** Multiple importance sampling.
 ** Integrate into obj loader.
 ** Add GGX.
 ** Metalic.
-** Add Burley and Oren-Nayar?
 ** Fresnel coat.
+** Add Burley and Oren-Nayar?
+** Rewrite the events to just be a single list of materials with 'some' event. Then I can guarantee that there are no duplicates.
 * Textures.
 * Environment models.
 * Reduce TODOs
@@ -13,6 +14,8 @@
 ** Camera - Create, destroy, parent changed and matrix changed. Store in bitmask pr camera instead of as separate notifications.
 ** Preprocess the create/destroy events to remove pairs, i.e. just remove creation events for components that would be destroyed again.
 *** Or keep event flags pr object, then its easy to spot created and destroyed objects and if an object has had an event in general.
+* Bump mapping
+** Including 'fixing' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles.
 * GL Renderer
 * Screenshot
 ** Grab backbuffer on the CPU.

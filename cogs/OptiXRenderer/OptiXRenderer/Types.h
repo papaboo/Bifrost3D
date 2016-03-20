@@ -51,6 +51,11 @@ struct __align__(16) MonteCarloPRD {
     optix::float3 radiance;
     RNG::LinearCongruential rng;
     optix::float3 throughput;
+    unsigned int bounces;
+
+    optix::float3 position;
+    float bsdf_sample_pdf;
+    optix::float3 direction;
 };
 
 struct ShadowPRD {
@@ -67,7 +72,7 @@ struct __align__(16) LightSample {
     optix::float3 direction;
     float distance;
 
-    __inline_all__ static LightSample None() {
+    __inline_all__ static LightSample none() {
         LightSample sample = {};
         return sample;
     }
@@ -81,8 +86,21 @@ struct __align__(16) SphereLight {
 };
 
 //----------------------------------------------------------------------------
-// Materials. (Only one so far)
+// Material type and sampling structs.
 //----------------------------------------------------------------------------
+
+struct __align__(16) BSDFSample {
+    optix::float3 weight;
+    float PDF;
+    optix::float3 direction;
+    float __padding;
+
+    __inline_all__ static BSDFSample none() {
+        BSDFSample sample = {};
+        return sample;
+    }
+};
+
 
 struct __align__(16) Material {
     optix::float3 base_color;

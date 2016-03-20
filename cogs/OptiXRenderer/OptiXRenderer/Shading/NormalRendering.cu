@@ -13,7 +13,6 @@
 #include <optixu/optixu_matrix_namespace.h>
 
 using namespace OptiXRenderer;
-using namespace OptiXRenderer::Shading;
 using namespace optix;
 
 struct NormalVisualizationPRD {

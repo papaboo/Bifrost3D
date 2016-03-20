@@ -1,6 +1,6 @@
 // OptiX renderer functions for sphere lights.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
@@ -11,6 +11,7 @@
 
 #include <OptiXRenderer/Distributions.h>
 #include <OptiXRenderer/Intersect.h>
+#include <OptiXRenderer/TBN.h>
 #include <OptiXRenderer/Types.h>
 
 namespace OptiXRenderer {
@@ -53,8 +54,8 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix
         
         DirectionalSample cone_sample = Cone::sample(cos_theta, random_sample);
 
-        optix::Onb onb = (vector_to_light / optix::length(vector_to_light));
-        light_sample.direction = cone_sample.direction.x * onb.m_tangent + cone_sample.direction.y * onb.m_binormal + cone_sample.direction.z * onb.m_normal;
+        const TBN tbn = TBN(vector_to_light / optix::length(vector_to_light));
+        light_sample.direction = cone_sample.direction * tbn;
         light_sample.PDF = cone_sample.PDF;
         light_sample.distance = Intersect::ray_sphere(position, light_sample.direction, light.position, light.radius);
         if (light_sample.distance <= 0.0f) // The ray missed the sphere, but since it was sampled to be inside the sphere, just assume that it hit at a grazing angle.
