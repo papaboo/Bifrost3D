@@ -13,6 +13,7 @@
 #include <OptiXRenderer/Types.h>
 
 namespace OptiXRenderer {
+namespace Shading {
 namespace BSDFs {
 namespace Lambert {
 
@@ -35,6 +36,7 @@ __inline_all__ BSDFSample sample(const optix::float3& tint, optix::float2 random
 
 } // NS Lambert
 } // NS BSDFs
+} // NS Shading
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_BSDFS_LAMBERT_H_

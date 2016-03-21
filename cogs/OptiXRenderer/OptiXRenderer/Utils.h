@@ -46,18 +46,6 @@ __inline_dev__ optix::float4 gammacorrect(const optix::float4& color, float gamm
                               color.w);
 }
 
-// Robert Jenkins hash function.
-// https://gist.github.com/badboy/6267743
-__inline_all__ unsigned int hash(unsigned int a) {
-    a = (a + 0x7ed55d16) + (a << 12);
-    a = (a ^ 0xc761c23c) ^ (a >> 19);
-    a = (a + 0x165667b1) + (a << 5);
-    a = (a + 0xd3a2646c) ^ (a << 9);
-    a = (a + 0xfd7046c5) + (a << 3);
-    a = (a ^ 0xb55a4f09) ^ (a >> 16);
-    return a;
-}
-
 // Computes a tangent and bitangent that together with the normal creates an orthonormal bases.
 // Consider using TBN to wrap the tangents.
 __inline_all__ static void compute_tangents(const optix::float3& normal,
