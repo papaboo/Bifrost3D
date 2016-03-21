@@ -9,46 +9,13 @@
 #ifndef _OPTIXRENDERER_LIGHT_SOURCES_SPHERE_LIGHT_TEST_H_
 #define _OPTIXRENDERER_LIGHT_SOURCES_SPHERE_LIGHT_TEST_H_
 
+#include <Utils.h>
+
 #include <OptiXRenderer/Shading/LightSources/SphereLightImpl.h>
 
 #include <gtest/gtest.h>
 
-#include <algorithm>
-
 namespace OptiXRenderer {
-    
-// Inplace iterative pairwise summation.
-// Uses the input iterators to store the temporaries.
-// http://en.wikipedia.org/wiki/Pairwise_summation
-// TODO Move to OptiXRenderer or probably Cogwheel::Math.
-template <typename InputIterator>
-typename std::iterator_traits<InputIterator>::value_type pairwise_summation(InputIterator begin, InputIterator end) {
-    size_t elementCount = end - begin;
-
-    while (elementCount > 1) {
-        size_t summations = elementCount / 2;
-        for (size_t s = 0; s < summations; ++s)
-            begin[s] = begin[2 * s] + begin[2 * s + 1];
-
-        // Copy last element if element count is odd.
-        if ((elementCount % 2) == 1)
-            begin[summations] = begin[elementCount - 1];
-
-        elementCount = summations + (elementCount & 1);
-    }
-
-    return *begin;
-}
-
-template <typename InputIterator>
-typename std::iterator_traits<InputIterator>::value_type sort_and_pairwise_summation(InputIterator begin, InputIterator end) {
-    std::sort(begin, end);
-    return pairwise_summation(begin, end);
-}
-
-inline bool almost_equal_eps(float lhs, float rhs, float eps) {
-    return lhs < rhs + eps && lhs + eps > rhs;
-}
 
 GTEST_TEST(SphereLight, power_preservation_when_radius_changes) {
     

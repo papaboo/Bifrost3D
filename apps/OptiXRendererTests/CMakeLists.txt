@@ -12,13 +12,18 @@ find_package(OptiX)
 
 set(SRCS 
   main.cpp
+  Utils.h
+)
+
+set(BSDFS_SRCS
+  BSDFs/LambertTest.h
 )
 
 set(LIGHTSOURCES_SRCS
   LightSources/SphereLightTest.h
 )
 
-add_executable(${PROJECT_NAME} ${SRCS} ${LIGHTSOURCES_SRCS})
+add_executable(${PROJECT_NAME} ${SRCS} ${BSDFS_SRCS} ${LIGHTSOURCES_SRCS})
 
 include_directories(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
 
@@ -31,6 +36,7 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 source_group("" FILES ${SRCS})
+source_group("BSDFs" FILES ${BSDFS_SRCS})
 source_group("LightSources" FILES ${LIGHTSOURCES_SRCS})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

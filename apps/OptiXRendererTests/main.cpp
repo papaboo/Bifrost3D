@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <BSDFs/LambertTest.h>
 #include <LightSources/SphereLightTest.h>
 
 int main(int argc, char** argv) {

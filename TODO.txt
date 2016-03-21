@@ -1,8 +1,7 @@
 * Coated rubber/metal materials
-** Test BRDFs in OptiXRendererTests
-** Multiple importance sampling.
-** Integrate into obj loader.
 ** Add GGX.
+** Integrate into obj loader.
+** Multiple importance sampling.
 ** Metalic.
 ** Fresnel coat.
 ** Add Burley and Oren-Nayar?
