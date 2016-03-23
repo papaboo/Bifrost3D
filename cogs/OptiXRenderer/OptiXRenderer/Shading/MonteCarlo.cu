@@ -57,7 +57,7 @@ RT_PROGRAM void closest_hit() {
         float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction);
         light_sample.radiance *= abs(N_dot_L) / light_sample.PDF;
 
-        const float3 bsdf_response = material_parameter.base_color / PIf;
+        const float3 bsdf_response = Shading::BSDFs::Lambert::evaluate(material_parameter.base_color);
         if (N_dot_L >= 0.0f) {
             ShadowPRD shadow_PRD = { 1.0f, 1.0f, 1.0f };
             // TODO Always offset slightly along the geometric normal?
@@ -70,11 +70,13 @@ RT_PROGRAM void closest_hit() {
     }
 
     // Sample material.
-    BSDFSample bsdf_sample = BSDFs::Lambert::sample(material_parameter.base_color, monte_carlo_PRD.rng.sample2f());
-    // TODO PDF validity check.
+    BSDFSample bsdf_sample = Shading::BSDFs::Lambert::sample(material_parameter.base_color, monte_carlo_PRD.rng.sample2f());
     monte_carlo_PRD.direction = bsdf_sample.direction * world_shading_tbn;
     monte_carlo_PRD.bsdf_sample_pdf = bsdf_sample.PDF;
-    monte_carlo_PRD.throughput *= bsdf_sample.weight * (abs(bsdf_sample.direction.z) / bsdf_sample.PDF); // f * ||cos(theta)|| / pdf
+    if (!bsdf_sample.is_valid())
+        monte_carlo_PRD.throughput = make_float3(0.0f);
+    else
+        monte_carlo_PRD.throughput *= bsdf_sample.weight * (abs(bsdf_sample.direction.z) / bsdf_sample.PDF); // f * ||cos(theta)|| / pdf
     monte_carlo_PRD.bounces += 1u;
 }
 

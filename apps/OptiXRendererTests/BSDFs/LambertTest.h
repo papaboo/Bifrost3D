@@ -18,21 +18,20 @@
 
 namespace OptiXRenderer {
 
-GTEST_TEST(LambertTest, power_conservation) {
-    
+GTEST_TEST(Lambert, power_conservation) {
     using namespace optix;
 
     const unsigned int MAX_SAMPLES = 1024u;
     const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
 
-    float fs[MAX_SAMPLES];
+    float ws[MAX_SAMPLES];
     for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
         BSDFSample sample = Shading::BSDFs::Lambert::sample(tint, RNG::sample02(i));
-        fs[i] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
+        ws[i] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
     }
     
-    float average_f = sort_and_pairwise_summation(fs, fs + MAX_SAMPLES) / float(MAX_SAMPLES);
-    EXPECT_TRUE(almost_equal_eps(average_f, 1.0f, 0.0001f));
+    float average_w = sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
+    EXPECT_TRUE(almost_equal_eps(average_w, 1.0f, 0.0001f));
 }
 
 } // NS OptiXRenderer

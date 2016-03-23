@@ -1,4 +1,4 @@
-// OptiX renderer functions for sphere lights.
+// OptiX renderer functions for the Lambert BSDF.
 // ---------------------------------------------------------------------------
 // Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
 //
