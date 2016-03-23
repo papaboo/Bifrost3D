@@ -33,6 +33,10 @@ __inline_all__ float roughness_from_alpha(float alpha) {
     return alpha;
 }
 
+__inline_all__ float square(float v) {
+    return v * v;
+}
+
 __inline_all__ float D(float alpha, const optix::float3& halfway) {
     // TODO Do we need this check here? Can we move it further out?
     if (halfway.z < 0.0f)
@@ -42,11 +46,11 @@ __inline_all__ float D(float alpha, const optix::float3& halfway) {
     float cos_theta_sqrd = halfway.z * halfway.z;
     float tan_theta_sqrd = optix::fmaxf(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
     float cos_theta_cubed = cos_theta_sqrd * cos_theta_sqrd;
-    return (alpha_sqrd / PIf) / (cos_theta_cubed * sqrt(alpha_sqrd + tan_theta_sqrd)); // TODO Combine divisions into a single one. TODO Check if sqr means sqrt.
+    return (alpha_sqrd / PIf) / (cos_theta_cubed * square(alpha_sqrd + tan_theta_sqrd)); // TODO Combine divisions into a single one.
 }
 
 __inline_all__ float G1(float alpha, const optix::float3& w, const optix::float3& halfway) {
-    if (dot(w, halfway) * w.z <= 0.0f)
+    if (optix::dot(w, halfway) * w.z <= 0.0f)
         return 0.0f;
 
     float alpha_sqrd = alpha * alpha;
@@ -61,11 +65,11 @@ __inline_all__ float G(float alpha, const optix::float3& wo, const optix::float3
 
 namespace Distribution {
 
-float PDF(float alpha, const optix::float3& halfway) {
+__inline_all__ float PDF(float alpha, const optix::float3& halfway) {
     return D(alpha, halfway) * halfway.z;
 }
 
-optix::float3 sample(float alpha, optix::float2 random_sample) {
+__inline_all__ optix::float3 sample(float alpha, optix::float2 random_sample) {
     float phi = random_sample.y * (2.0f * PIf);
 
     float tan_theta_sqrd = alpha * alpha * random_sample.x / (1.0f - random_sample.x);
@@ -81,7 +85,7 @@ optix::float3 sample(float alpha, optix::float2 random_sample) {
 // GGX BSDF, Walter et al 07.
 //----------------------------------------------------------------------------
 
-optix::float3 evaluate(const optix::float3& tint, float alpha, const optix::float3& wo, const optix::float3& wi, const optix::float3& halfway) {
+__inline_all__ optix::float3 evaluate(const optix::float3& tint, float alpha, const optix::float3& wo, const optix::float3& wi, const optix::float3& halfway) {
     float G = GGX::G(alpha, wo, wi, halfway);
     float D = GGX::D(alpha, halfway);
     float F = 1.0f; // No fresnel for now.
@@ -89,30 +93,30 @@ optix::float3 evaluate(const optix::float3& tint, float alpha, const optix::floa
     return tint * f;
 }
 
-optix::float3 evaluate(const optix::float3& tint, float alpha, const optix::float3& wo, const optix::float3& wi) {
-    const optix::float3 halfway = normalize(wi + wo);
+__inline_all__ optix::float3 evaluate(const optix::float3& tint, float alpha, const optix::float3& wo, const optix::float3& wi) {
+    const optix::float3 halfway = optix::normalize(wi + wo);
     return evaluate(tint, alpha, wo, wi, halfway);
 }
 
-BSDFSample sample(const optix::float3& tint, float alpha, const optix::float3& wo, optix::float2 random_sample) {
+__inline_all__ BSDFSample sample(const optix::float3& tint, float alpha, const optix::float3& wo, optix::float2 random_sample) {
 
     BSDFSample bsdf_sample;
 
     // Distribution::DirectionalSample halfway_sample = sample(random_sample); TODO
     optix::float3 halfway = Distribution::sample(alpha, random_sample);
     float PDF = Distribution::PDF(alpha, halfway);
-    bsdf_sample.direction = reflect(-wo, halfway);
+    bsdf_sample.direction = optix::reflect(-wo, halfway);
     bool discardSample = PDF < 0.00001f || bsdf_sample.direction.z < 0.00001f; // Discard samples if the pdf is too low (precision issues) or if the new direction points into the surface (energy loss).
     if (discardSample) return BSDFSample::none();
 
     bsdf_sample.weight = evaluate(tint, alpha, wo, bsdf_sample.direction, halfway);
-    bsdf_sample.PDF = PDF / (4.0f * abs(dot(wo, halfway)));
+    bsdf_sample.PDF = PDF / (4.0f * abs(optix::dot(wo, halfway)));
 
     return bsdf_sample;
 }
 
-float PDF(float alpha, const optix::float3& wo, const optix::float3& halfway) {
-    return Distribution::PDF(alpha, halfway) / (4.0f * abs(dot(wo, halfway)));
+__inline_all__ float PDF(float alpha, const optix::float3& wo, const optix::float3& halfway) {
+    return Distribution::PDF(alpha, halfway) / (4.0f * abs(optix::dot(wo, halfway)));
 }
 
 } // NS GGX
