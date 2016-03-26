@@ -1,17 +1,17 @@
 * Coated rubber/metal materials
-** Add GGX.
+** GGX is black with a roughness parameter of 0.
+** Specular parameter.
+** Metalic. Metallic metals do not use fresnel.
 ** Integrate into obj loader.
-** Multiple importance sampling.
-** Metalic.
-** Fresnel coat.
-** Add Burley and Oren-Nayar?
+*** Specular amount given as average(specular color) and then lerp as is done in disneys.
+** Test DefaultShading and Fresnel.
 ** Rewrite the events to just be a single list of materials with 'some' event. Then I can guarantee that there are no duplicates.
+** Multiple importance sampling.
 * Textures.
 * Environment models.
 * Reduce TODOs
 * Notifications when changing the scene. / Pullable events.
 ** Camera - Create, destroy, parent changed and matrix changed. Store in bitmask pr camera instead of as separate notifications.
-** Preprocess the create/destroy events to remove pairs, i.e. just remove creation events for components that would be destroyed again.
 *** Or keep event flags pr object, then its easy to spot created and destroyed objects and if an object has had an event in general.
 * Bump mapping
 ** Including 'fixing' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles.
@@ -21,6 +21,11 @@
 *** Request to composer or through the camera, not renderers
 *** Expose certain backbuffer state pr camera/viewport in a renderer interface. Fx iteration_count, is_continuous_renderer and so on. Members that can be used to evaluate the 'doneness' of a backbuffer.
 ** Render to offscreen buffer.
+* Materials revisited.
+** Application with material test scene.
+*** Allow user to lerp between two materials in 10 steps, i.e. have 10 instances of the same model rendered side-by-side and then lerp the material parameters from left to right.
+** Add Burley and Oren-Nayar BRDF. Burley should exclude the fresnel term, as that is part of the overall combiner.
+** Add Fresnel coat. How to sample the Fresnel combiner? Add it as a coated shading model in OptiXRenderer, so I have access to both materials.
 * Multiple cameras.
 ** G-Buffer pr camera.
 ** Compose when all cameras are done.
