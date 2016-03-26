@@ -142,11 +142,6 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
 
     SceneNode root_node = SceneNodes::create("Root");
 
-    Materials::Data debug_material_data;
-    debug_material_data.base_color = RGB::grey();
-    debug_material_data.base_roughness = 0.0f;
-    Materials::UID debug_material_ID = Materials::create("Debug material", debug_material_data);
-
     { // Add camera
         Cameras::allocate(1u);
         SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
@@ -163,36 +158,57 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
     }
 
     { // Create floor.
+        // TODO A checker pattern would be really nice on the floor.
+        Materials::Data material_data;
+        material_data.base_color = RGB(0.9f, 0.9f, 0.9f);
+        material_data.base_roughness = 1.0f;
+        Materials::UID material_ID = Materials::create("Floor", material_data);
+
         SceneNode plane_node = SceneNodes::create("Floor");
         Meshes::UID plane_mesh_ID = MeshCreation::plane(10);
-        MeshModels::UID plane_model_ID = MeshModels::create(plane_node.get_ID(), plane_mesh_ID, debug_material_ID);
+        MeshModels::UID plane_model_ID = MeshModels::create(plane_node.get_ID(), plane_mesh_ID, material_ID);
         plane_node.set_parent(root_node);
     }
 
     { // Create rotating box. TODO Replace by those three cool spinning rings later.
+        Materials::Data material_data;
+        material_data.base_color = RGB(1.0f, 0.766f, 0.336f);
+        material_data.base_roughness = 0.02f;
+        Materials::UID material_ID = Materials::create("Gold", material_data);
+
         Transform transform = Transform(Vector3f(0.0f, 0.5f, 0.0f));
         SceneNode cube_node = SceneNodes::create("Rotating cube", transform);
         Meshes::UID cube_mesh_ID = MeshCreation::cube(3);
-        MeshModels::UID cube_model_ID = MeshModels::create(cube_node.get_ID(), cube_mesh_ID, debug_material_ID);
+        MeshModels::UID cube_model_ID = MeshModels::create(cube_node.get_ID(), cube_mesh_ID, material_ID);
         cube_node.set_parent(root_node);
 
         LocalRotator* simple_rotator = new LocalRotator(cube_node.get_ID());
         engine.add_mutating_callback(LocalRotator::rotate_callback, simple_rotator);
     }
 
-    { // Destroyable cylinder. Test by destroying the mesh, model and scene node.
+    { // Destroyable cylinder. TODO Implement destruction of the mesh, model and scene node.
+        Materials::Data material_data;
+        material_data.base_color = RGB(0.56f, 0.57f, 0.58f);
+        material_data.base_roughness = 0.15f;
+        Materials::UID material_ID = Materials::create("Iron", material_data);
+
         Transform transform = Transform(Vector3f(-1.5f, 0.5f, 0.0f));
         SceneNode cylinder_node = SceneNodes::create("Destroyed Cylinder", transform);
         Meshes::UID cylinder_mesh_ID = MeshCreation::cylinder(4, 16);
-        MeshModels::UID cylinder_model_ID = MeshModels::create(cylinder_node.get_ID(), cylinder_mesh_ID, debug_material_ID);
+        MeshModels::UID cylinder_model_ID = MeshModels::create(cylinder_node.get_ID(), cylinder_mesh_ID, material_ID);
         cylinder_node.set_parent(root_node);
     }
 
-    { // Sphere for the hell of it. 
+    { // Sphere for the hell of it.
+        Materials::Data material_data;
+        material_data.base_color = RGB(0.001f, 0.001f, 0.001f);
+        material_data.base_roughness = 1.0f;
+        Materials::UID material_ID = Materials::create("Dark rubber", material_data);
+
         Transform transform = Transform(Vector3f(1.5f, 0.5f, 0.0f));
         SceneNode sphere_node = SceneNodes::create("Sphere", transform);
         Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(32, 16);
-        MeshModels::UID sphere_model_ID = MeshModels::create(sphere_node.get_ID(), sphere_mesh_ID, debug_material_ID);
+        MeshModels::UID sphere_model_ID = MeshModels::create(sphere_node.get_ID(), sphere_mesh_ID, material_ID);
         sphere_node.set_parent(root_node);
     }
 
