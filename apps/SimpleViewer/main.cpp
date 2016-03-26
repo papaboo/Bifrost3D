@@ -61,7 +61,8 @@ public:
 
             if (strafing != 0.0f || forward != 0.0f) {
                 Vector3f translation_offset = transform.rotation * Vector3f(strafing, 0.0f, forward);
-                transform.translation += normalize(translation_offset) * velocity * engine.get_time().get_smooth_delta_time();
+                float dt = engine.get_time().is_paused() ? engine.get_time().get_raw_delta_time() : engine.get_time().get_smooth_delta_time();
+                transform.translation += normalize(translation_offset) * velocity * dt;
             }
         }
 
