@@ -50,7 +50,7 @@ __inline_all__ float D(float alpha, const optix::float3& halfway) {
 }
 
 __inline_all__ float G1(float alpha, const optix::float3& w, const optix::float3& halfway) {
-    if (optix::dot(w, halfway) * w.z <= 0.0f)
+    if (optix::dot(w, halfway) * w.z <= 0.0f) // TODO Really? Can't I just check that they are on the same side, i.e w.z * halfway.z >= 0.0f. Perhaps even mvoe the check out to G().
         return 0.0f;
 
     float alpha_sqrd = alpha * alpha;
@@ -88,7 +88,7 @@ __inline_all__ optix::float3 sample(float alpha, optix::float2 random_sample) {
 __inline_all__ optix::float3 evaluate(const optix::float3& tint, float alpha, const optix::float3& wo, const optix::float3& wi, const optix::float3& halfway) {
     float G = GGX::G(alpha, wo, wi, halfway);
     float D = GGX::D(alpha, halfway);
-    float F = 1.0f; // No fresnel for now.
+    float F = 1.0f; // No fresnel.
     float f = (D * F * G) / (4.0f * wo.z * wi.z);
     return tint * f;
 }

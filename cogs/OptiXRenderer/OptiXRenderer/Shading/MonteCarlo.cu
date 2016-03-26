@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 
 #include <OptiXRenderer/Shading/BSDFs/Lambert.h>
+#include <OptiXRenderer/Shading/BSDFs/GGX.h>
 #include <OptiXRenderer/Shading/LightSources/SphereLightImpl.h>
 #include <OptiXRenderer/TBN.h>
 #include <OptiXRenderer/Types.h>
@@ -46,7 +47,9 @@ RT_PROGRAM void closest_hit() {
 
     const TBN world_shading_tbn = TBN(forward_shading_normal);
 
+    // Store intersection point and wo in PRD.
     monte_carlo_PRD.position = ray.direction * t_hit + ray.origin;
+    monte_carlo_PRD.direction = world_shading_tbn * -ray.direction;
 
     Material material_parameter = g_materials[material_index];
 
@@ -57,7 +60,9 @@ RT_PROGRAM void closest_hit() {
         float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction);
         light_sample.radiance *= abs(N_dot_L) / light_sample.PDF;
 
-        const float3 bsdf_response = Shading::BSDFs::Lambert::evaluate(material_parameter.base_color);
+        const float3 shading_light_direction = world_shading_tbn * light_sample.direction;
+        // const float3 bsdf_response = Shading::BSDFs::Lambert::evaluate(material_parameter.base_color);
+        const float3 bsdf_response = Shading::BSDFs::GGX::evaluate(material_parameter.base_color, material_parameter.base_roughness, monte_carlo_PRD.direction, shading_light_direction);
         if (N_dot_L >= 0.0f) {
             ShadowPRD shadow_PRD = { 1.0f, 1.0f, 1.0f };
             // TODO Always offset slightly along the geometric normal?
@@ -70,7 +75,8 @@ RT_PROGRAM void closest_hit() {
     }
 
     // Sample material.
-    BSDFSample bsdf_sample = Shading::BSDFs::Lambert::sample(material_parameter.base_color, monte_carlo_PRD.rng.sample2f());
+    // BSDFSample bsdf_sample = Shading::BSDFs::Lambert::sample(material_parameter.base_color, monte_carlo_PRD.rng.sample2f());
+    BSDFSample bsdf_sample = Shading::BSDFs::GGX::sample(material_parameter.base_color, material_parameter.base_roughness, monte_carlo_PRD.direction, monte_carlo_PRD.rng.sample2f());
     monte_carlo_PRD.direction = bsdf_sample.direction * world_shading_tbn;
     monte_carlo_PRD.bsdf_sample_pdf = bsdf_sample.PDF;
     if (!bsdf_sample.is_valid())
