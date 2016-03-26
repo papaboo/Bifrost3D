@@ -31,15 +31,9 @@ public:
     RGB()
         : r(0.0f), g(0.0f), b(0.0f) { }
 
-    RGB(unsigned char intensity)
-        : r(intensity / 255.0f), g(intensity / 255.0f), b(intensity / 255.0f) {
-    }
     RGB(float intensity)
         : r(intensity), g(intensity), b(intensity) {
     }
-
-    RGB(unsigned char r, unsigned char g, unsigned char b)
-        : r(r / 255.0f), g(g / 255.0f), b(b / 255.0f) { }
 
     RGB(float r, float g, float b)
         : r(r), g(g), b(b) { }
@@ -213,6 +207,7 @@ public:
     static inline RGBA red()    { return RGBA(RGB::red()); }
     static inline RGBA purple() { return RGBA(RGB::purple()); }
     static inline RGBA yellow() { return RGBA(RGB::yellow()); }
+    static inline RGBA grey()   { return RGBA(RGB::grey()); }
     static inline RGBA white()  { return RGBA(RGB::white()); }
 
     inline float* begin() { return &r; }
