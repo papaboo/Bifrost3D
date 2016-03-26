@@ -85,12 +85,15 @@ __inline_all__ optix::float3 sample(float alpha, optix::float2 random_sample) {
 // GGX BSDF, Walter et al 07.
 //----------------------------------------------------------------------------
 
-__inline_all__ optix::float3 evaluate(const optix::float3& tint, float alpha, const optix::float3& wo, const optix::float3& wi, const optix::float3& halfway) {
+__inline_all__ float evaluate(float alpha, const optix::float3& wo, const optix::float3& wi, const optix::float3& halfway) {
     float G = GGX::G(alpha, wo, wi, halfway);
     float D = GGX::D(alpha, halfway);
     float F = 1.0f; // No fresnel.
-    float f = (D * F * G) / (4.0f * wo.z * wi.z);
-    return tint * f;
+    return (D * F * G) / (4.0f * wo.z * wi.z);
+}
+
+__inline_all__ optix::float3 evaluate(const optix::float3& tint, float alpha, const optix::float3& wo, const optix::float3& wi, const optix::float3& halfway) {
+    return tint * evaluate(alpha, wo, wi, halfway);
 }
 
 __inline_all__ optix::float3 evaluate(const optix::float3& tint, float alpha, const optix::float3& wo, const optix::float3& wi) {

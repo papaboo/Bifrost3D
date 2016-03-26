@@ -27,11 +27,11 @@ __inline_all__ optix::float3 evaluate(const optix::float3& tint) {
 
 __inline_all__ BSDFSample sample(const optix::float3& tint, optix::float2 random_sample) {
     Distributions::DirectionalSample cosine_sample = Distributions::Cosine::sample(random_sample);
-    BSDFSample bsdf_samle;
-    bsdf_samle.direction = cosine_sample.direction;
-    bsdf_samle.PDF = cosine_sample.PDF;
-    bsdf_samle.weight = tint / PIf;
-    return bsdf_samle;
+    BSDFSample bsdf_sample;
+    bsdf_sample.direction = cosine_sample.direction;
+    bsdf_sample.PDF = cosine_sample.PDF;
+    bsdf_sample.weight = tint / PIf;
+    return bsdf_sample;
 }
 
 } // NS Lambert

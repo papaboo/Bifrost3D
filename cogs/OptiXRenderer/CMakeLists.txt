@@ -48,6 +48,10 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
     OptiXRenderer/Shading/LightSources/SphereLightImpl.h
   )
 
+  set(SHADING_SHADING_MODELS_SRC
+    OptiXRenderer/Shading/ShadingModels/DefaultShading.h
+  )
+
   # Add the path to the ptx to a define.
   set(OPTIX_PTX_DIR ${CMAKE_BINARY_DIR}/${LIBRARY_NAME})
   add_definitions(-DOPTIXRENDERER_PTX_DIR="${OPTIX_PTX_DIR}") #TODO For distributing releases I need a better way of handling the path to the PTX.
@@ -66,6 +70,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
     ${SHADING_SRC}
     ${SHADING_BSDFS_SRC}
     ${SHADING_LIGHTSOURCES_SRC}
+    ${SHADING_SHADING_MODELS_SRC}
     ${LINK_FILE}
   )
 
@@ -78,6 +83,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
   source_group("Shading" FILES ${SHADING_SRC})
   source_group("Shading\\BSDFs" FILES ${SHADING_BSDFS_SRC})
   source_group("Shading\\LightSources" FILES ${SHADING_LIGHTSOURCES_SRC})
+  source_group("Shading\\ShadingModels" FILES ${SHADING_SHADING_MODELS_SRC})
   source_group("Shading\\ptx" FILES ${_GENERATED_FILES}) # Add the ptx files to a source group.
 
   target_link_libraries(${LIBRARY_NAME}
