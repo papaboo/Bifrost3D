@@ -24,7 +24,11 @@ set(LIGHTSOURCES_SRCS
   LightSources/SphereLightTest.h
 )
 
-add_executable(${PROJECT_NAME} ${SRCS} ${BSDFS_SRCS} ${LIGHTSOURCES_SRCS})
+set(SHADING_MODELS_SRCS
+  ShadingModels/DefaultShadingTest.h
+)
+
+add_executable(${PROJECT_NAME} ${SRCS} ${BSDFS_SRCS} ${LIGHTSOURCES_SRCS} ${SHADING_MODELS_SRCS})
 
 include_directories(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
 
@@ -39,6 +43,7 @@ target_link_libraries(${PROJECT_NAME}
 source_group("" FILES ${SRCS})
 source_group("BSDFs" FILES ${BSDFS_SRCS})
 source_group("LightSources" FILES ${LIGHTSOURCES_SRCS})
+source_group("ShadingModels" FILES ${SHADING_MODELS_SRCS})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
   FOLDER "Apps"
