@@ -1,10 +1,8 @@
 * Coated rubber/metal materials
-** GGX is black with a roughness parameter of 0.
-** Specular parameter.
-** Metalic. Metallic metals do not use fresnel.
 ** Integrate into obj loader.
 *** Specular amount given as average(specular color) and then lerp as is done in disneys.
 ** Test DefaultShading and Fresnel.
+*** GGX is black with a roughness parameter of 0.
 ** Rewrite the events to just be a single list of materials with 'some' event. Then I can guarantee that there are no duplicates.
 ** Multiple importance sampling.
 * Textures.

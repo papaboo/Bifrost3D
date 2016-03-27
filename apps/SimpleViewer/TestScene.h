@@ -158,10 +158,12 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
     }
 
     { // Create floor.
-        // TODO A checker pattern would be really nice on the floor.
+        // TODO A checker pattern texture would be really nice on the floor.
         Materials::Data material_data;
-        material_data.base_color = RGB(0.9f, 0.9f, 0.9f);
+        material_data.base_color = RGB(0.27f, 0.3f, 0.33f);
         material_data.base_roughness = 1.0f;
+        material_data.specularity = 0.25f;
+        material_data.metallic = 0.0f;
         Materials::UID material_ID = Materials::create("Floor", material_data);
 
         SceneNode plane_node = SceneNodes::create("Floor");
@@ -174,6 +176,8 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
         Materials::Data material_data;
         material_data.base_color = RGB(1.0f, 0.766f, 0.336f);
         material_data.base_roughness = 0.02f;
+        material_data.specularity = 0.0f;
+        material_data.metallic = 1.0f;
         Materials::UID material_ID = Materials::create("Gold", material_data);
 
         Transform transform = Transform(Vector3f(0.0f, 0.5f, 0.0f));
@@ -190,6 +194,8 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
         Materials::Data material_data;
         material_data.base_color = RGB(0.56f, 0.57f, 0.58f);
         material_data.base_roughness = 0.15f;
+        material_data.specularity = 0.0f;
+        material_data.metallic = 1.0f;
         Materials::UID material_ID = Materials::create("Iron", material_data);
 
         Transform transform = Transform(Vector3f(-1.5f, 0.5f, 0.0f));
@@ -202,7 +208,9 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
     { // Sphere for the hell of it.
         Materials::Data material_data;
         material_data.base_color = RGB(0.001f, 0.001f, 0.001f);
-        material_data.base_roughness = 1.0f;
+        material_data.base_roughness = 0.75f;
+        material_data.specularity = 0.5f;
+        material_data.metallic = 0.0f;
         Materials::UID material_ID = Materials::create("Dark rubber", material_data);
 
         Transform transform = Transform(Vector3f(1.5f, 0.5f, 0.0f));

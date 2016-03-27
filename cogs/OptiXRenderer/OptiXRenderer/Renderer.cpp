@@ -428,11 +428,12 @@ void Renderer::handle_updates() {
         static auto upload_material = [](Materials::UID material_ID, OptiXRenderer::Material* device_materials) {
             OptiXRenderer::Material& device_material = device_materials[material_ID];
             Assets::Material host_material = material_ID;
-            // TODO Memcopy.
             device_material.base_color.x = host_material.get_base_color().r;
             device_material.base_color.y = host_material.get_base_color().g;
             device_material.base_color.z = host_material.get_base_color().b;
             device_material.base_roughness = host_material.get_base_roughness();
+            device_material.specularity = host_material.get_specularity() * 0.08f; // See Physically-Based Shading at Disney bottom of page 8 for why we remap. TODO Consider moving this into Cogwheel or maybe even remove completely in favor of just letting GUI handle this.
+            device_material.metallic = host_material.get_metallic();
         };
 
         if (!Materials::get_created_materials().is_empty() || !Materials::get_changed_materials().is_empty()) {

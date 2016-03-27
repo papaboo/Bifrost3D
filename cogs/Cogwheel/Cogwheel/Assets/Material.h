@@ -29,6 +29,8 @@ public:
     struct Data {
         Math::RGB base_color;
         float base_roughness;
+        float specularity;
+        float metallic;
     };
 
     static bool is_allocated() { return m_materials != nullptr; }
@@ -53,6 +55,10 @@ public:
     static void set_base_color(Materials::UID material_ID, Math::RGB color);
     static inline float get_base_roughness(Materials::UID material_ID) { return m_materials[material_ID].base_roughness; }
     static void set_base_roughness(Materials::UID material_ID, float roughness);
+    static inline float get_specularity(Materials::UID material_ID) { return m_materials[material_ID].specularity; }
+    static void set_specularity(Materials::UID material_ID, float incident_specularity);
+    static inline float get_metallic(Materials::UID material_ID) { return m_materials[material_ID].metallic; }
+    static void set_metallic(Materials::UID material_ID, float metallic);
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -130,6 +136,10 @@ public:
     void set_base_color(Math::RGB color) { Materials::set_base_color(m_ID, color); }
     inline float get_base_roughness() { return Materials::get_base_roughness(m_ID); }
     void set_base_roughness(float roughness) { Materials::set_base_roughness(m_ID, roughness); }
+    inline float get_specularity() { return Materials::get_specularity(m_ID); }
+    void set_specularity(float specularity) { Materials::set_specularity(m_ID, specularity); }
+    inline float get_metallic() { return Materials::get_metallic(m_ID); }
+    void set_metallic(float metallic) { Materials::set_metallic(m_ID, metallic); }
 
     inline unsigned char get_events() { return Materials::get_material_events(m_ID); }
     inline bool has_events(unsigned char event_bitmask) { return Materials::has_events(m_ID, event_bitmask); }

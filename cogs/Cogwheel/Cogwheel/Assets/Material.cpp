@@ -114,13 +114,21 @@ void Materials::destroy(Materials::UID material_ID) {
 
 void Materials::set_base_color(Materials::UID material_ID, Math::RGB color) {
     m_materials[material_ID].base_color = color;
-    m_materials_changed.push_back(material_ID);
     flag_as_changed(material_ID);
 }
 
 void Materials::set_base_roughness(Materials::UID material_ID, float roughness) {
     m_materials[material_ID].base_roughness = roughness;
-    m_materials_changed.push_back(material_ID);
+    flag_as_changed(material_ID);
+}
+
+void Materials::set_specularity(Materials::UID material_ID, float incident_specularity) {
+    m_materials[material_ID].specularity = incident_specularity;
+    flag_as_changed(material_ID);
+}
+
+void Materials::set_metallic(Materials::UID material_ID, float metallic) {
+    m_materials[material_ID].metallic = metallic;
     flag_as_changed(material_ID);
 }
 
