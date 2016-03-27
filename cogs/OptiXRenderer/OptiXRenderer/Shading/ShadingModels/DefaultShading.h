@@ -43,8 +43,8 @@ public:
         }
 
         float3 halfway = normalize(wo + wi);
-        float fresnel = schlick_fresnel(m_material.specularity, dot(wo, halfway));
-        fresnel = lerp(fresnel, 1.0f, m_material.metallic);
+        float specularity = lerp(m_material.specularity, 1.0f, m_material.metallic);
+        float fresnel = schlick_fresnel(specularity, dot(wo, halfway));
         float3 specular_tint = lerp(make_float3(1.0f), m_material.base_color, m_material.metallic);
         float3 specular = specular_tint * (fresnel * BSDFs::GGX::evaluate(m_material.base_roughness, wo, wi, halfway));
         float3 diffuse = (1.0f - fresnel) * BSDFs::Lambert::evaluate(m_material.base_color);
@@ -69,8 +69,8 @@ public:
 
         // Apply Fresnel.
         optix::float3 halfway = normalize(wo + bsdf_sample.direction);
-        float fresnel = schlick_fresnel(m_material.specularity, dot(wo, halfway));
-        fresnel = lerp(fresnel, 1.0f, m_material.metallic);
+        float specularity = lerp(m_material.specularity, 1.0f, m_material.metallic);
+        float fresnel = schlick_fresnel(specularity, dot(wo, halfway));
 
         if (sample_specular)
             bsdf_sample.weight *= fresnel;
