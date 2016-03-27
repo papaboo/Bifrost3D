@@ -21,7 +21,7 @@ namespace Math {
 // Helper methods
 //*****************************************************************************
 
-inline unsigned int compute_ulps(float a, float b) {
+inline int compute_ulps(float a, float b) {
     static_assert(sizeof(float) == sizeof(int), "Implementation needed for when float and int have different sizes.");
 
     int a_as_int;
