@@ -8,9 +8,6 @@
 * Textures.
 * Environment models.
 * Reduce TODOs
-* Notifications when changing the scene. / Pullable events.
-** Camera - Create, destroy, parent changed and matrix changed. Store in bitmask pr camera instead of as separate notifications.
-*** Or keep event flags pr object, then its easy to spot created and destroyed objects and if an object has had an event in general.
 * Bump mapping
 ** Including 'fixing' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles.
 * GL Renderer
@@ -35,9 +32,6 @@
 * CUDA
 ** helper methods.
 *** Debugging/error checking. Array management.
-* -Wall? -W3?
-** It's a pain now that I'm using source code instead of dlls. All my libs are being checked and produce a ton of pedantic warnings.
-** However it's also nice and produce some helpful warnings, fx about struct padding (which GLFW is full of, making that warning helpful and horrible at the same time.)
 
 Design decision
 * Should I use reference counting on some/all components?

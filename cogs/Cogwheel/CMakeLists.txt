@@ -63,4 +63,5 @@ SOURCE_GROUP("Scene" FILES ${SCENE_SRCS})
 set_target_properties(Gogwheel PROPERTIES 
   LINKER_LANGUAGE CXX
   FOLDER "Cogs"
+  COMPILE_FLAGS "-W3"
 )
