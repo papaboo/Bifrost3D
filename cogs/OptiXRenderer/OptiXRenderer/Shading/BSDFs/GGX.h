@@ -26,11 +26,11 @@ namespace BSDFs {
 namespace GGX {
 
 __inline_all__ float alpha_from_roughness(float roughness) {
-    return roughness;
+    return roughness * roughness;
 }
 
 __inline_all__ float roughness_from_alpha(float alpha) {
-    return alpha;
+    return sqrt(alpha);
 }
 
 __inline_all__ float square(float v) {

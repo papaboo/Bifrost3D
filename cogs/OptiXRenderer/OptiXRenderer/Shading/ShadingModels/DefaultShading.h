@@ -46,7 +46,8 @@ public:
         float specularity = lerp(m_material.specularity, 1.0f, m_material.metallic);
         float fresnel = schlick_fresnel(specularity, dot(wo, halfway));
         float3 specular_tint = lerp(make_float3(1.0f), m_material.base_color, m_material.metallic);
-        float3 specular = specular_tint * (fresnel * BSDFs::GGX::evaluate(m_material.base_roughness, wo, wi, halfway));
+        float alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
+        float3 specular = specular_tint * (fresnel * BSDFs::GGX::evaluate(alpha, wo, wi, halfway));
         float3 diffuse = (1.0f - fresnel) * BSDFs::Lambert::evaluate(m_material.base_color);
         return diffuse + specular;
     }
@@ -61,7 +62,8 @@ public:
         
         if (sample_specular) {
             float3 specular_tint = lerp(make_float3(1.0f), m_material.base_color, m_material.metallic);
-            bsdf_sample = BSDFs::GGX::sample(specular_tint, m_material.base_roughness, wo, make_float2(random_sample));
+            float alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
+            bsdf_sample = BSDFs::GGX::sample(specular_tint, alpha, wo, make_float2(random_sample));
         } else {
             bsdf_sample = BSDFs::Lambert::sample(m_material.base_color, make_float2(random_sample));
         }

@@ -1,10 +1,11 @@
+* Meshes should support not having normals and tcs.
+** And simplify!
 * Coated rubber/metal materials
-** Integrate into obj loader.
-*** Specular amount given as average(specular color) and then lerp as is done in disneys.
 ** Test DefaultShading and Fresnel.
 *** GGX is black with a roughness parameter of 0.
 ** Rewrite the events to just be a single list of materials with 'some' event. Then I can guarantee that there are no duplicates.
 ** Multiple importance sampling.
+*** Test that DefaultShading::sample and DefaultShading::PDF return the same values.
 * Textures.
 * Environment models.
 * Reduce TODOs

@@ -193,7 +193,7 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
     { // Destroyable cylinder. TODO Implement destruction of the mesh, model and scene node.
         Materials::Data material_data;
         material_data.base_color = RGB(0.56f, 0.57f, 0.58f);
-        material_data.base_roughness = 0.15f;
+        material_data.base_roughness = 0.4f;
         material_data.specularity = 0.0f;
         material_data.metallic = 1.0f;
         Materials::UID material_ID = Materials::create("Iron", material_data);
