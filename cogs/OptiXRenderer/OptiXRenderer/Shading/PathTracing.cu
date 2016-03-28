@@ -41,7 +41,7 @@ RT_PROGRAM void path_tracing() {
 
     MonteCarloPRD prd;
     prd.radiance = make_float3(0.0f);
-    prd.rng.seed(hash(index) ^ __brev(g_accumulations));
+    prd.rng.seed(RNG::hash(index) ^ __brev(g_accumulations));
     prd.throughput = make_float3(1.0f);
     prd.bounces = 0;
     prd.bsdf_sample_pdf = 1.0f;
