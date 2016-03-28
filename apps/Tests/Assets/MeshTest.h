@@ -70,6 +70,23 @@ TEST_F(Assets_Mesh, create) {
     EXPECT_EQ(*created_meshes.begin(), mesh_ID);
 }
 
+TEST_F(Assets_Mesh, create_only_positions) {
+    Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u, MeshFlags::Position);
+
+    EXPECT_TRUE(Meshes::has(mesh_ID));
+    EXPECT_EQ(Meshes::get_mesh(mesh_ID).indices_count, 32);
+    EXPECT_NE(Meshes::get_mesh(mesh_ID).indices, nullptr);
+    EXPECT_EQ(Meshes::get_mesh(mesh_ID).vertex_count, 16u);
+    EXPECT_NE(Meshes::get_mesh(mesh_ID).positions, nullptr);
+    EXPECT_EQ(Meshes::get_mesh(mesh_ID).normals, nullptr);
+    EXPECT_EQ(Meshes::get_mesh(mesh_ID).texcoords, nullptr);
+
+    // Test mesh created notification.
+    Core::Iterable<Meshes::mesh_created_iterator> created_meshes = Meshes::get_created_meshes();
+    EXPECT_EQ(created_meshes.end() - created_meshes.begin(), 1);
+    EXPECT_EQ(*created_meshes.begin(), mesh_ID);
+}
+
 TEST_F(Assets_Mesh, destroy) {
     Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
     EXPECT_TRUE(Meshes::has(mesh_ID));

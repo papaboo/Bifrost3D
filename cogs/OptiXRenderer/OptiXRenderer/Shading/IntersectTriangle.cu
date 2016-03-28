@@ -8,14 +8,18 @@
 // Inspired by the OptiX samples.
 // ---------------------------------------------------------------------------
 
+#include <OptiXRenderer/Types.h>
+
 #include <optix.h>
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_aabb_namespace.h>
 
+using namespace OptiXRenderer;
 using namespace optix;
 
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
 
+rtDeclareVariable(int, mesh_flags, , );
 rtBuffer<uint3> index_buffer;
 rtBuffer<float3> position_buffer;
 rtBuffer<float3> normal_buffer;
@@ -45,15 +49,21 @@ RT_PROGRAM void intersect(int primitive_index) {
 
             geometric_normal = normalize(geo_normal);
 
-            const float3 n0 = normal_buffer[vertex_index.x];
-            const float3 n1 = normal_buffer[vertex_index.y];
-            const float3 n2 = normal_buffer[vertex_index.z];
-            shading_normal = normalize(n1*beta + n2*gamma + n0*(1.0f - beta - gamma));
+            if (mesh_flags & MeshFlags::Normals) {
+                const float3 n0 = normal_buffer[vertex_index.x];
+                const float3 n1 = normal_buffer[vertex_index.y];
+                const float3 n2 = normal_buffer[vertex_index.z];
+                shading_normal = normalize(n1*beta + n2*gamma + n0*(1.0f - beta - gamma));
+            } else
+                shading_normal = geometric_normal;
 
-            const float2 t0 = texcoord_buffer[vertex_index.x];
-            const float2 t1 = texcoord_buffer[vertex_index.y];
-            const float2 t2 = texcoord_buffer[vertex_index.z];
-            texcoord = t1*beta + t2*gamma + t0*(1.0f - beta - gamma);
+            if (mesh_flags & MeshFlags::Texcoords) {
+                const float2 t0 = texcoord_buffer[vertex_index.x];
+                const float2 t1 = texcoord_buffer[vertex_index.y];
+                const float2 t2 = texcoord_buffer[vertex_index.z];
+                texcoord = t1*beta + t2*gamma + t0*(1.0f - beta - gamma);
+            } else
+                texcoord = make_float2(0.0f);
 
             rtReportIntersection(0);
         }

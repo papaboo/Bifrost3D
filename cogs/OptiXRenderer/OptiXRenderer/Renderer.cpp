@@ -129,8 +129,7 @@ static inline optix::Geometry load_mesh(optix::Context& context, Meshes::UID mes
                                         optix::Program intersection_program, optix::Program bounds_program) {
     optix::Geometry optixMesh = context->createGeometry();
     
-    // TODO Don't upload nulled buffers and upload bitmask of non-null buffers to the intersection program.
-    Mesh& mesh = Meshes::get_mesh(mesh_ID);
+    const Mesh& mesh = Meshes::get_mesh(mesh_ID);
 
     optixMesh->setIntersectionProgram(intersection_program);
     optixMesh->setBoundingBoxProgram(bounds_program);
@@ -158,6 +157,9 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
 
     optix::GeometryInstance optix_model = context->createGeometryInstance(optix_mesh, &optix_material, &optix_material + 1);
     optix_model["material_index"]->setInt(model.material_ID.get_ID());
+    unsigned char mesh_flags = Meshes::get_normals(model.mesh_ID) != nullptr ? MeshFlags::Normals : MeshFlags::None;
+    mesh_flags |= Meshes::get_texcoords(model.mesh_ID) != nullptr ? MeshFlags::Texcoords : MeshFlags::None;
+    optix_model["mesh_flags"]->setInt(mesh_flags);
     OPTIX_VALIDATE(optix_model);
 
     optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");

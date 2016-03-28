@@ -1,8 +1,7 @@
-* Meshes should support not having normals and tcs.
-** And simplify!
 * Coated rubber/metal materials
 ** Test DefaultShading and Fresnel.
 *** GGX is black with a roughness parameter of 0.
+** Base importance sampling on tint!
 ** Rewrite the events to just be a single list of materials with 'some' event. Then I can guarantee that there are no duplicates.
 ** Multiple importance sampling.
 *** Test that DefaultShading::sample and DefaultShading::PDF return the same values.

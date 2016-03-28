@@ -19,12 +19,17 @@
 namespace Cogwheel {
 namespace Assets {
 
+namespace MeshFlags {
+static const unsigned char Position   = 1u << 1u;
+static const unsigned char Normal     = 1u << 2u;
+static const unsigned char Texcoords  = 1u << 3u;
+static const unsigned char AllBuffers = Position | Normal | Texcoords;
+}
+
 //----------------------------------------------------------------------------
 // Container for the buffers that make up a mesh, such as positions and normals.
 // Future work:
-// * Pass bitmask of vertex attributes to be created to constructor.
-// * Simplify to POD struct and get rid of the RAII destructor. 
-//   Then let Meshes handle desctruction.
+// * Verify that creating and destroying meshes don't leak!
 //----------------------------------------------------------------------------
 struct Mesh final {
     unsigned int indices_count;
@@ -37,52 +42,20 @@ struct Mesh final {
 
     Mesh()
         : indices_count(0u)
-        , indices(nullptr)
         , vertex_count(0u)
+        , indices(nullptr)
         , positions(nullptr)
         , normals(nullptr)
-        , texcoords(nullptr) {
-    }
+        , texcoords(nullptr) { }
 
-    Mesh(unsigned int indices_count, unsigned int vertex_count)
+    Mesh(unsigned int indices_count, unsigned int vertex_count, unsigned char buffer_bitmask = MeshFlags::AllBuffers)
         : indices_count(indices_count)
         , vertex_count(vertex_count)
         , indices(new Math::Vector3ui[indices_count])
-        , positions(new Math::Vector3f[vertex_count])
-        , normals(new Math::Vector3f[vertex_count])
-        , texcoords(new Math::Vector2f[vertex_count]) {
+        , positions((buffer_bitmask & MeshFlags::Position) ? new Math::Vector3f[vertex_count] : nullptr)
+        , normals((buffer_bitmask & MeshFlags::Normal) ? new Math::Vector3f[vertex_count] : nullptr)
+        , texcoords((buffer_bitmask & MeshFlags::Texcoords) ? new Math::Vector2f[vertex_count] : nullptr) {
     }
-
-    Mesh(Mesh&& other) {
-        indices_count = other.indices_count; other.indices_count = 0u;
-        vertex_count = other.vertex_count; other.vertex_count = 0u;
-        indices = other.indices; other.indices = nullptr;
-        positions = other.positions; other.positions = nullptr;
-        normals = other.normals; other.normals = nullptr;
-        texcoords = other.texcoords; other.texcoords = nullptr;
-    }
-
-    Mesh& operator=(Mesh&& other) {
-        indices_count = other.indices_count; other.indices_count = 0u;
-        vertex_count = other.vertex_count; other.vertex_count = 0u;
-        indices = other.indices; other.indices = nullptr;
-        positions = other.positions; other.positions = nullptr;
-        normals = other.normals; other.normals = nullptr;
-        texcoords = other.texcoords; other.texcoords = nullptr;
-        return *this;
-    }
-
-    ~Mesh() {
-        delete[] indices;
-        delete[] positions;
-        delete[] normals;
-        delete[] texcoords;
-    }
-
-private:
-    // Delete copy constructors to avoid issues with shared ownership.
-    Mesh(Mesh& other) = delete;
-    Mesh& operator=(const Mesh& other) = delete;
 };
 
 class Meshes final {
@@ -99,7 +72,7 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(Meshes::UID mesh_ID) { return m_UID_generator.has(mesh_ID); }
 
-    static Meshes::UID create(const std::string& name, unsigned int indices_count, unsigned int vertex_count);
+    static Meshes::UID create(const std::string& name, unsigned int indices_count, unsigned int vertex_count, unsigned char buffer_bitmask = MeshFlags::AllBuffers);
     static void destroy(Meshes::UID mesh_ID);
 
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
@@ -110,6 +83,12 @@ public:
     static inline void set_name(Meshes::UID mesh_ID, const std::string& name) { m_names[mesh_ID] = name; }
 
     static inline Mesh& get_mesh(Meshes::UID mesh_ID) { return m_meshes[mesh_ID]; }
+    static inline unsigned int get_indices_count(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].indices_count; }
+    static inline Math::Vector3ui* get_indices(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].indices; }
+    static inline unsigned int get_vertex_count(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].vertex_count; }
+    static inline Math::Vector3f* get_positions(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].positions; }
+    static inline Math::Vector3f* get_normals(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].normals; }
+    static inline Math::Vector2f* get_texcoords(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].texcoords; }
     static inline Math::AABB get_bounds(Meshes::UID mesh_ID) { return m_bounds[mesh_ID]; }
     static inline void set_bounds(Meshes::UID mesh_ID, Math::AABB bounds) { m_bounds[mesh_ID] = bounds; }
     static Math::AABB compute_bounds(Meshes::UID mesh_ID);

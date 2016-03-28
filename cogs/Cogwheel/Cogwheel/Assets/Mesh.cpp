@@ -47,13 +47,20 @@ void Meshes::deallocate() {
     if (!is_allocated())
         return;
 
-    m_UID_generator = UIDGenerator(0u);
     delete[] m_names; m_names = nullptr;
+    for (Mesh& mesh : Core::Iterable<Mesh*>(m_meshes, m_meshes + capacity())) {
+        delete[] mesh.indices;
+        delete[] mesh.positions;
+        delete[] mesh.normals;
+        delete[] mesh.texcoords;
+    }
     delete[] m_meshes; m_meshes = nullptr;
     delete[] m_bounds; m_bounds = nullptr;
 
     m_meshes_created.resize(0); m_meshes_created.shrink_to_fit();
     m_meshes_destroyed.resize(0); m_meshes_destroyed.shrink_to_fit();
+
+    m_UID_generator = UIDGenerator(0u);
 }
 
 template <typename T>
@@ -87,7 +94,7 @@ void Meshes::reserve(unsigned int new_capacity) {
     reserve_mesh_data(m_UID_generator.capacity(), old_capacity);
 }
 
-Meshes::UID Meshes::create(const std::string& name, unsigned int indices_count, unsigned int vertex_count) {
+Meshes::UID Meshes::create(const std::string& name, unsigned int indices_count, unsigned int vertex_count, unsigned char buffer_bitmask) {
     assert(m_meshes != nullptr);
     assert(m_names != nullptr);
     assert(m_bounds != nullptr);
@@ -99,7 +106,7 @@ Meshes::UID Meshes::create(const std::string& name, unsigned int indices_count, 
         reserve_mesh_data(m_UID_generator.capacity(), old_capacity);
 
     m_names[id] = name;
-    m_meshes[id] = Mesh(indices_count, vertex_count);
+    m_meshes[id] = Mesh(indices_count, vertex_count, buffer_bitmask);
     m_bounds[id] = AABB(Vector3f(-1e30f, -1e30f, -1e30f), Vector3f(1e30f, 1e30f, 1e30f));
 
     m_meshes_created.push_back(id);

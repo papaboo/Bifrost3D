@@ -29,6 +29,12 @@ enum class EntryPoints {
     Count
 };
 
+namespace MeshFlags {
+static const unsigned char None = 0u;
+static const unsigned char Normals = 1u << 1u;
+static const unsigned char Texcoords = 1u << 2u;
+};
+
 //----------------------------------------------------------------------------
 // Base types.
 //----------------------------------------------------------------------------
