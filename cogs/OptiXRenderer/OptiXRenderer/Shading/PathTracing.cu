@@ -58,12 +58,12 @@ RT_PROGRAM void path_tracing() {
         rtTrace(g_scene_root, ray, prd);
     } while (prd.bounces < 4 && !is_black(prd.throughput));
 
-    // Simple gamma correction.
-    float inv_screen_gamma = 1.0f / 2.2f;
-    prd.radiance = gammacorrect(prd.radiance, inv_screen_gamma);
-
-    float4 prev_radiance = g_accumulation_buffer[g_launch_index];
-    g_accumulation_buffer[g_launch_index] = lerp(prev_radiance, make_float4(prd.radiance, 1.0f), 1.0f / (g_accumulations + 1.0f));
+    // Apply simple gamma correction to the output. TODO Use second output buffer, to avoid transforming back and forth between linear and gamma space.
+    const float screen_gamma = 2.2f;
+    const float inv_screen_gamma = 1.0f / 2.2f;
+    float3 prev_radiance = gammacorrect(make_float3(g_accumulation_buffer[g_launch_index]), screen_gamma);
+    float3 accumulated_radiance = lerp(prev_radiance, prd.radiance, 1.0f / (g_accumulations + 1.0f));
+    g_accumulation_buffer[g_launch_index] = make_float4(gammacorrect(accumulated_radiance, inv_screen_gamma), 1.0f);
 }
 
 //----------------------------------------------------------------------------
