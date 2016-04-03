@@ -11,8 +11,8 @@
 
 #include <Utils.h>
 
-#include <OptiXRenderer/Shading/BSDFs/Lambert.h>
 #include <OptiXRenderer/RNG.h>
+#include <OptiXRenderer/Shading/BSDFs/Lambert.h>
 
 #include <gtest/gtest.h>
 

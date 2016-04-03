@@ -11,8 +11,8 @@
 
 #include <Utils.h>
 
-#include <OptiXRenderer/Shading/BSDFs/GGX.h>
 #include <OptiXRenderer/RNG.h>
+#include <OptiXRenderer/Shading/BSDFs/GGX.h>
 
 #include <gtest/gtest.h>
 
@@ -85,6 +85,29 @@ GTEST_TEST(GGX, consistent_PDF) {
             }
         }
     }
+}
+
+GTEST_TEST(GGX, minimal_alpha) {
+    using namespace optix;
+        
+    const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
+    const float alpha = 0.0f;
+
+    const float3 incident_w = make_float3(0.0f, 0.0f, 1.0f);
+    const float3 grazing_w = normalize(make_float3(0.0f, 1.0f, 0.001f));
+
+    float3 f = Shading::BSDFs::GGX::evaluate(tint, 0.00000000001f, incident_w, incident_w);
+    EXPECT_FALSE(isnan(f.x));
+
+    f = Shading::BSDFs::GGX::evaluate(tint, alpha, grazing_w, incident_w);
+    EXPECT_FALSE(isnan(f.x));
+
+    f = Shading::BSDFs::GGX::evaluate(tint, alpha, grazing_w, grazing_w);
+    EXPECT_FALSE(isnan(f.x));
+
+    const float3 grazing_wi = make_float3(grazing_w.x, -grazing_w.y, grazing_w.z);
+    f = Shading::BSDFs::GGX::evaluate(tint, 0.00000000001f, grazing_w, grazing_wi);
+    EXPECT_FALSE(isnan(f.x));
 }
 
 } // NS OptiXRenderer

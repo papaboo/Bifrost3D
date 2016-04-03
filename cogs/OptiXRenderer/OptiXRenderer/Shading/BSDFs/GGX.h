@@ -21,12 +21,13 @@ namespace BSDFs {
 // * Walter et al 07.
 // * https://github.com/tunabrain/tungsten/blob/master/src/core/bsdfs/Microfacet.hpp
 // TODO
+// * Reference equations in Walter07 and implement different G terms.
 // * Create an optimized version where some expressions have been cancelled out.
 //----------------------------------------------------------------------------
 namespace GGX {
 
 __inline_all__ float alpha_from_roughness(float roughness) {
-    return roughness * roughness;
+    return optix::fmaxf(0.00000000001f, roughness * roughness);
 }
 
 __inline_all__ float roughness_from_alpha(float alpha) {
@@ -50,7 +51,8 @@ __inline_all__ float D(float alpha, const optix::float3& halfway) {
 }
 
 __inline_all__ float G1(float alpha, const optix::float3& w, const optix::float3& halfway) {
-    if (optix::dot(w, halfway) * w.z <= 0.0f) // TODO Really? Can't I just check that they are on the same side, i.e w.z * halfway.z >= 0.0f. Perhaps even mvoe the check out to G().
+    // Check if the w vector projected onto the halfway vector is in the same hemisphere as the halfway vector and the normal, otherwise the response is black.
+    if (optix::dot(w, halfway) * w.z <= 0.0f)
         return 0.0f;
 
     float alpha_sqrd = alpha * alpha;
