@@ -78,13 +78,7 @@ void Meshes::reserve_mesh_data(unsigned int new_capacity, unsigned int old_capac
 
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
     m_names = resize_and_copy_array(m_names, new_capacity, copyable_elements);
-
-    Mesh* new_meshes = new Mesh[new_capacity];
-    for (unsigned int i = 0; i < copyable_elements; ++i)
-        new_meshes[i] = std::move(m_meshes[i]);
-    delete[] m_meshes;
-    m_meshes = new_meshes;
-
+    m_meshes = resize_and_copy_array(m_meshes, new_capacity, copyable_elements);
     m_bounds = resize_and_copy_array(m_bounds, new_capacity, copyable_elements);
 }
 

@@ -20,9 +20,9 @@ namespace Cogwheel {
 namespace Assets {
 
 namespace MeshFlags {
-static const unsigned char Position   = 1u << 1u;
-static const unsigned char Normal     = 1u << 2u;
-static const unsigned char Texcoords  = 1u << 3u;
+static const unsigned char Position   = 1u << 0u;
+static const unsigned char Normal     = 1u << 1u;
+static const unsigned char Texcoords  = 1u << 2u;
 static const unsigned char AllBuffers = Position | Normal | Texcoords;
 }
 
