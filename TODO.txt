@@ -1,10 +1,8 @@
 * Coated rubber/metal materials
-** Test DefaultShading and Fresnel.
-*** GGX is black with a roughness parameter of 0.
-** Base importance sampling on tint!
 ** Rewrite the events to just be a single list of materials with 'some' event. Then I can guarantee that there are no duplicates.
+** Sampler that evaluates all BSDFs when sampling the material.
+*** Test that it has lower variance than just sampling one BRDF at a time based on tint.
 ** Multiple importance sampling.
-*** Test that DefaultShading::sample and DefaultShading::PDF return the same values.
 * Textures.
 * Environment models.
 * Reduce TODOs

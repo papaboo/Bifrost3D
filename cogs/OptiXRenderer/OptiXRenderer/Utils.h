@@ -33,19 +33,6 @@ __inline_dev__ optix::float3 project_ray_direction(optix::float2 viewport_pos,
     return normalize(ray_origin - camera_position);
 }
 
-__inline_dev__ optix::float3 gammacorrect(const optix::float3& color, float gamma) {
-    return optix::make_float3(pow(color.x, gamma),
-                              pow(color.y, gamma),
-                              pow(color.z, gamma));
-}
-
-__inline_dev__ optix::float4 gammacorrect(const optix::float4& color, float gamma) {
-    return optix::make_float4(pow(color.x, gamma),
-                              pow(color.y, gamma),
-                              pow(color.z, gamma),
-                              color.w);
-}
-
 // Computes a tangent and bitangent that together with the normal creates an orthonormal bases.
 // Consider using TBN to wrap the tangents.
 __inline_all__ static void compute_tangents(const optix::float3& normal,
@@ -63,6 +50,27 @@ __inline_all__ static void compute_tangents(const optix::float3& normal,
 
     bitangent = normalize(cross(normal, a0));
     tangent = normalize(cross(bitangent, normal));
+}
+
+//-----------------------------------------------------------------------------
+// Math utils
+//-----------------------------------------------------------------------------
+
+__inline_dev__ float average(const optix::float3& v) {
+    return (v.x + v.y + v.z) / 3.0f;
+}
+
+__inline_dev__ optix::float3 gammacorrect(const optix::float3& color, float gamma) {
+    return optix::make_float3(pow(color.x, gamma),
+                              pow(color.y, gamma),
+                              pow(color.z, gamma));
+}
+
+__inline_dev__ optix::float4 gammacorrect(const optix::float4& color, float gamma) {
+    return optix::make_float4(pow(color.x, gamma),
+                              pow(color.y, gamma),
+                              pow(color.z, gamma),
+                              color.w);
 }
 
 } // NS OptiXRenderer
