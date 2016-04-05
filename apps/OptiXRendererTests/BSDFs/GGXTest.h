@@ -78,9 +78,7 @@ GTEST_TEST(GGX, consistent_PDF) {
             BSDFSample sample = Shading::BSDFs::GGX::sample(tint, alpha, wo, RNG::sample02(i));
 
             if (sample.is_valid()) {
-                float3 halfway = normalize(wo + sample.direction);
-                float PDF = Shading::BSDFs::GGX::PDF(alpha, wo, halfway);
-
+                float PDF = Shading::BSDFs::GGX::PDF(alpha, wo, sample.direction);
                 EXPECT_TRUE(almost_equal_eps(sample.PDF, PDF, 0.0001f));
             }
         }

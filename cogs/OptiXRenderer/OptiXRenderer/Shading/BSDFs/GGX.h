@@ -114,14 +114,19 @@ __inline_all__ BSDFSample sample(const optix::float3& tint, float alpha, const o
     bool discardSample = PDF < 0.00001f || bsdf_sample.direction.z < 0.00001f; // Discard samples if the pdf is too low (precision issues) or if the new direction points into the surface (energy loss).
     if (discardSample) return BSDFSample::none();
 
-    bsdf_sample.weight = evaluate(tint, alpha, wo, bsdf_sample.direction, halfway);
-    bsdf_sample.PDF = PDF / (4.0f * abs(optix::dot(wo, halfway)));
+    bsdf_sample.weight = evaluate(tint, alpha, wo, bsdf_sample.direction, halfway); // TODO Optimize!! We already have the PDF, so we really just need to divide by cos_theta and apply the G term and normalize.
+    bsdf_sample.PDF = PDF / (4.0f * optix::dot(wo, halfway));
 
     return bsdf_sample;
 }
 
-__inline_all__ float PDF(float alpha, const optix::float3& wo, const optix::float3& halfway) {
-    return Distribution::PDF(alpha, halfway) / (4.0f * abs(optix::dot(wo, halfway)));
+__inline_all__ float PDF(float alpha, const optix::float3& wo, const optix::float3& wi) {
+    const optix::float3 halfway = optix::normalize(wo + wi);
+
+    if (optix::dot(wo, halfway) < 0.0f)
+        return 0.0f;
+
+    return Distribution::PDF(alpha, halfway) / (4.0f * optix::dot(wo, halfway));
 }
 
 } // NS GGX
