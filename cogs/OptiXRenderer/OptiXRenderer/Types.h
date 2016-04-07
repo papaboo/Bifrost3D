@@ -106,7 +106,7 @@ struct __align__(16) BSDFSample {
         return sample;
     }
 
-    __inline_all__ bool is_valid() { return PDF > 0.00001f; }
+    __inline_all__ bool is_valid() { return PDF > 0.000001f; }
 };
 
 
