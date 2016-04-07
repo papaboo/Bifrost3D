@@ -45,7 +45,7 @@ TEST_F(Assets_Material, sentinel_material) {
     Materials::UID sentinel_ID = Materials::UID::invalid_UID();
 
     EXPECT_FALSE(Materials::has(sentinel_ID));
-    EXPECT_EQ(Materials::get_base_color(sentinel_ID), Math::RGB::red());
+    EXPECT_EQ(Materials::get_base_tint(sentinel_ID), Math::RGB::red());
     EXPECT_EQ(Materials::get_base_roughness(sentinel_ID), 0.0f);
     EXPECT_EQ(Materials::get_metallic(sentinel_ID), 0.0f);
     EXPECT_EQ(Materials::get_specularity(sentinel_ID), 0.0f);
@@ -53,14 +53,14 @@ TEST_F(Assets_Material, sentinel_material) {
 
 TEST_F(Assets_Material, create) {
     Materials::Data data;
-    data.base_color = Math::RGB::red();
+    data.base_tint = Math::RGB::red();
     data.base_roughness = 0.5f;
     data.metallic = 1.0f;
     data.specularity = 0.04f;
     Materials::UID material_ID = Materials::create("TestMaterial", data);
 
     EXPECT_TRUE(Materials::has(material_ID));
-    EXPECT_EQ(Materials::get_base_color(material_ID), Math::RGB::red());
+    EXPECT_EQ(Materials::get_base_tint(material_ID), Math::RGB::red());
     EXPECT_EQ(Materials::get_base_roughness(material_ID), 0.5f);
     EXPECT_EQ(Materials::get_metallic(material_ID), 1.0f);
     EXPECT_EQ(Materials::get_specularity(material_ID), 0.04f);
@@ -163,15 +163,15 @@ TEST_F(Assets_Material, change_notifications) {
     EXPECT_EQ(changed_materials.end() - changed_materials.begin(), 0);
     EXPECT_FALSE(material.has_events(Materials::Events::Changed));
 
-    { // Change base color.
-        Math::RGB new_color = Math::RGB::red();
-        material.set_base_color(new_color);
+    { // Change base tint.
+        Math::RGB new_tint = Math::RGB::red();
+        material.set_base_tint(new_tint);
 
         // Test that only the material has changed.
         Core::Iterable<Materials::material_changed_iterator> changed_materials = Materials::get_changed_materials();
         for (const Materials::UID material_ID : changed_materials) {
             EXPECT_EQ(material_ID, material.get_ID());
-            EXPECT_EQ(Materials::get_base_color(material_ID), new_color);
+            EXPECT_EQ(Materials::get_base_tint(material_ID), new_tint);
             EXPECT_TRUE(Materials::has_events(material_ID, Materials::Events::Changed));
         }
     }

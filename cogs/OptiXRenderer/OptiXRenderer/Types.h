@@ -111,7 +111,7 @@ struct __align__(16) BSDFSample {
 
 
 struct __align__(16) Material {
-    optix::float3 base_color;
+    optix::float3 base_tint;
     float base_roughness;
     float specularity;
     float metallic;

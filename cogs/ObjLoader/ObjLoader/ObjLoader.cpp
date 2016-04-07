@@ -67,7 +67,7 @@ SceneNodes::UID load(const std::string& path) {
         tinyobj::material_t tiny_mat = tiny_materials[i];
 
         Materials::Data material_data;
-        material_data.base_color = Math::RGB(tiny_mat.diffuse[0], tiny_mat.diffuse[1], tiny_mat.diffuse[2]);
+        material_data.base_tint = Math::RGB(tiny_mat.diffuse[0], tiny_mat.diffuse[1], tiny_mat.diffuse[2]);
         material_data.base_roughness = sqrt(sqrt(2.0f / (tiny_mat.shininess + 2.0f))); // Map from blinn shininess to material roughness.
         material_data.metallic = 0.0f; // TODO Can I determine this at all? Maybe from the type ID?
         material_data.specularity = (tiny_mat.specular[0] + tiny_mat.specular[1] + tiny_mat.specular[2]) / 3.0f;

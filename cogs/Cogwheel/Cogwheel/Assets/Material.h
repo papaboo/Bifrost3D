@@ -27,7 +27,7 @@ public:
 
     // TODO align to float4.
     struct Data {
-        Math::RGB base_color;
+        Math::RGB base_tint;
         float base_roughness;
         float specularity;
         float metallic;
@@ -51,8 +51,8 @@ public:
     static inline std::string get_name(Materials::UID material_ID) { return m_names[material_ID]; }
     static inline void set_name(Materials::UID material_ID, const std::string& name) { m_names[material_ID] = name; }
 
-    static inline Math::RGB get_base_color(Materials::UID material_ID) { return m_materials[material_ID].base_color; }
-    static void set_base_color(Materials::UID material_ID, Math::RGB color);
+    static inline Math::RGB get_base_tint(Materials::UID material_ID) { return m_materials[material_ID].base_tint; }
+    static void set_base_tint(Materials::UID material_ID, Math::RGB tint);
     static inline float get_base_roughness(Materials::UID material_ID) { return m_materials[material_ID].base_roughness; }
     static void set_base_roughness(Materials::UID material_ID, float roughness);
     static inline float get_specularity(Materials::UID material_ID) { return m_materials[material_ID].specularity; }
@@ -132,8 +132,8 @@ public:
     inline std::string get_name() const { return Materials::get_name(m_ID); }
     inline void set_name(const std::string& name) { Materials::set_name(m_ID, name); }
 
-    inline Math::RGB get_base_color() { return Materials::get_base_color(m_ID); }
-    void set_base_color(Math::RGB color) { Materials::set_base_color(m_ID, color); }
+    inline Math::RGB get_base_tint() { return Materials::get_base_tint(m_ID); }
+    void set_base_tint(Math::RGB tint) { Materials::set_base_tint(m_ID, tint); }
     inline float get_base_roughness() { return Materials::get_base_roughness(m_ID); }
     void set_base_roughness(float roughness) { Materials::set_base_roughness(m_ID, roughness); }
     inline float get_specularity() { return Materials::get_specularity(m_ID); }

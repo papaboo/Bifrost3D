@@ -42,7 +42,7 @@ void Materials::allocate(unsigned int capacity) {
     // Allocate dummy element at 0.
     m_names[0] = "Dummy Material";
     Data dummy_data = {};
-    dummy_data.base_color = Math::RGB::red();
+    dummy_data.base_tint = Math::RGB::red();
     m_materials[0] = dummy_data;
 }
 
@@ -112,8 +112,8 @@ void Materials::destroy(Materials::UID material_ID) {
     }
 }
 
-void Materials::set_base_color(Materials::UID material_ID, Math::RGB color) {
-    m_materials[material_ID].base_color = color;
+void Materials::set_base_tint(Materials::UID material_ID, Math::RGB tint) {
+    m_materials[material_ID].base_tint = tint;
     flag_as_changed(material_ID);
 }
 

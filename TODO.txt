@@ -1,5 +1,4 @@
 * Coated rubber/metal materials
-** Rename base color to base tint.
 ** Rewrite the events to just be a single list of materials with 'some' event. Then I can guarantee that there are no duplicates.
 ** Multiple importance sampling.
 * Textures.
