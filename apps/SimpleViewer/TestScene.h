@@ -160,8 +160,8 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
     { // Create floor.
         // TODO A checker pattern texture would be really nice on the floor.
         Materials::Data material_data;
-        material_data.base_color = RGB(0.27f, 0.3f, 0.33f);
-        material_data.base_roughness = 1.0f;
+        material_data.base_color = RGB(0.02f, 0.27f, 0.33f);
+        material_data.base_roughness = 0.3f;
         material_data.specularity = 0.25f;
         material_data.metallic = 0.0f;
         Materials::UID material_ID = Materials::create("Floor", material_data);
