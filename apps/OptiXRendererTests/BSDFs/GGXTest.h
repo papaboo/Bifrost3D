@@ -76,7 +76,6 @@ GTEST_TEST(GGX, consistent_PDF) {
         const float alpha = fmaxf(1.0f, a / 10.0f);
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = Shading::BSDFs::GGX::sample(tint, alpha, wo, RNG::sample02(i));
-
             if (sample.is_valid()) {
                 float PDF = Shading::BSDFs::GGX::PDF(alpha, wo, sample.direction);
                 EXPECT_TRUE(almost_equal_eps(sample.PDF, PDF, 0.0001f));

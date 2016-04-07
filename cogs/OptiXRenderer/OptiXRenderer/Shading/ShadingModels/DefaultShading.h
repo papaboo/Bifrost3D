@@ -53,40 +53,8 @@ public:
         return diffuse + specular;
     }
 
-    __inline_all__ BSDFSample naive_sample(const optix::float3& wo, const optix::float3& random_sample) {
+    __inline_all__ BSDFSample sample_one(const optix::float3& wo, const optix::float3& random_sample) {
         using namespace optix;
-
-        BSDFSample bsdf_sample;
-        
-        // 50/50 split between the two BSDFs.
-        bool sample_specular = random_sample.z < 0.5f;
-        
-        if (sample_specular) {
-            float3 specular_tint = lerp(make_float3(1.0f), m_material.base_color, m_material.metallic);
-            float alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
-            bsdf_sample = BSDFs::GGX::sample(specular_tint, alpha, wo, make_float2(random_sample));
-        } else {
-            bsdf_sample = BSDFs::Lambert::sample(m_material.base_color, make_float2(random_sample));
-        }
-        bsdf_sample.PDF *= 0.5f;
-
-        // Apply Fresnel.
-        optix::float3 halfway = normalize(wo + bsdf_sample.direction);
-        float specularity = lerp(m_material.specularity, 1.0f, m_material.metallic);
-        float fresnel = schlick_fresnel(specularity, dot(wo, halfway));
-
-        if (sample_specular)
-            bsdf_sample.weight *= fresnel;
-        else
-            bsdf_sample.weight *= (1.0f - fresnel);
-
-        return bsdf_sample;
-    }
-
-    __inline_all__ BSDFSample sample_one_BSDF(const optix::float3& wo, const optix::float3& random_sample) {
-        using namespace optix;
-
-        BSDFSample bsdf_sample;
 
         const float3 specular_tint = lerp(make_float3(1.0f), m_material.base_color, m_material.metallic);
 
@@ -96,6 +64,8 @@ public:
         float specular_probability = specular_weight / (diffuse_weight + specular_weight);
         bool sample_specular = random_sample.z < specular_probability;
 
+        // Sample selected BRDF.
+        BSDFSample bsdf_sample;
         if (sample_specular) {
             float alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
             bsdf_sample = BSDFs::GGX::sample(specular_tint, alpha, wo, make_float2(random_sample));
@@ -116,6 +86,67 @@ public:
             bsdf_sample.weight *= (1.0f - fresnel);
 
         return bsdf_sample;
+    }
+
+    __inline_all__ BSDFSample sample_all(const optix::float3& wo, const optix::float3& random_sample) {
+        using namespace optix;
+
+        const float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
+        const float3 specular_tint = lerp(make_float3(1.0f), m_material.base_color, m_material.metallic);
+
+        // Sample BSDFs based on their tinted weight.
+        float diffuse_weight = average(m_material.base_color) * (1.0f - m_material.metallic);
+        float specular_weight = average(specular_tint);
+        float specular_probability = specular_weight / (diffuse_weight + specular_weight);
+        bool sample_specular = random_sample.z < specular_probability;
+
+        // Sample selected BRDF.
+        BSDFSample bsdf_sample;
+        if (sample_specular) {
+            bsdf_sample = BSDFs::GGX::sample(specular_tint, ggx_alpha, wo, make_float2(random_sample));
+            bsdf_sample.PDF *= specular_probability;
+        } else {
+            bsdf_sample = BSDFs::Lambert::sample(m_material.base_color, make_float2(random_sample));
+            bsdf_sample.PDF *= (1.0f - specular_probability);
+        }
+
+        // Compute Fresnel.
+        optix::float3 halfway = normalize(wo + bsdf_sample.direction);
+        float specularity = lerp(m_material.specularity, 1.0f, m_material.metallic);
+        float fresnel = schlick_fresnel(specularity, dot(wo, halfway));
+
+        // Apply fresnel and compute contribution of the rest of the material.
+        if (sample_specular) {
+            bsdf_sample.weight *= fresnel;
+
+            // Evaluate diffuse layer as well.
+            bsdf_sample.weight += (1.0f - fresnel) * BSDFs::Lambert::evaluate(m_material.base_color, wo, bsdf_sample.direction);
+            bsdf_sample.PDF += (1.0f - specular_probability) * BSDFs::Lambert::PDF(wo, bsdf_sample.direction);
+        } else {
+            bsdf_sample.weight *= (1.0f - fresnel);
+
+            // Evaluate specular layer as well.
+            bsdf_sample.weight += fresnel * BSDFs::GGX::evaluate(specular_tint, ggx_alpha, wo, bsdf_sample.direction);
+            bsdf_sample.PDF += specular_probability * BSDFs::GGX::PDF(ggx_alpha, wo, bsdf_sample.direction);
+        }
+
+        return bsdf_sample;
+    }
+
+    __inline_all__ float PDF(const optix::float3& wo, const optix::float3& wi) {
+        using namespace optix;
+
+        const float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
+        const float3 specular_tint = lerp(make_float3(1.0f), m_material.base_color, m_material.metallic);
+
+        // Sample BSDFs based on their tinted weight.
+        float diffuse_weight = average(m_material.base_color) * (1.0f - m_material.metallic);
+        float specular_weight = average(specular_tint);
+        float specular_probability = specular_weight / (diffuse_weight + specular_weight);
+        float base_probability = (1.0f - specular_probability);
+
+        return base_probability * BSDFs::Lambert::PDF(wo, wi) +
+            specular_probability * BSDFs::GGX::PDF(ggx_alpha, wo, wi);
     }
 
 }; // NS DefaultShading
