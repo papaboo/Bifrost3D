@@ -17,6 +17,8 @@
 namespace OptiXRenderer {
 namespace LightSources {
 
+__device__ static const float sphere_light_small_sin_theta_squared = 1e-5f;
+
 __inline_all__ float surface_area(const SphereLight& light) {
     return 4.0f * M_PIf * light.radius * light.radius;
 }
@@ -27,7 +29,7 @@ __inline_all__ float surface_area(const SphereLight& light) {
 __inline_all__ bool is_delta_light(const SphereLight& light, const optix::float3& position) {
     optix::float3 vector_to_light = light.position - position;
     float sin_theta_squared = light.radius * light.radius / optix::dot(vector_to_light, vector_to_light);
-    return sin_theta_squared < 1e-5f;
+    return sin_theta_squared < sphere_light_small_sin_theta_squared;
 }
 
 __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix::float3& position, optix::float2 random_sample) {
@@ -38,7 +40,7 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix
     float sin_theta_squared = light.radius * light.radius / optix::dot(vector_to_light, vector_to_light);
 
     LightSample light_sample;
-    if (sin_theta_squared < 1e-5f) {
+    if (sin_theta_squared < sphere_light_small_sin_theta_squared) {
         // If the subtended angle is too small, then sampling produces NaN's, so just fall back to a point light.
         light_sample.direction = vector_to_light;
         light_sample.distance = optix::length(light_sample.direction);
