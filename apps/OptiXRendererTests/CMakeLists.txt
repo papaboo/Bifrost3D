@@ -51,4 +51,5 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 if (WIN32)
   add_definitions(-DNOMINMAX) # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O1") # The default is /O2, but that has less precise floating point arithmetic.
 endif()
