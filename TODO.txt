@@ -1,6 +1,6 @@
 * Coated rubber/metal materials
-** Rewrite the events to just be a single list of materials with 'some' event. Then I can guarantee that there are no duplicates.
 ** Multiple importance sampling.
+*** Consistent PDF test for sphere lights.
 * Textures.
 * Environment models.
 * Reduce TODOs
@@ -28,12 +28,6 @@
 * CUDA
 ** helper methods.
 *** Debugging/error checking. Array management.
-
-Design decision
-* Should I use reference counting on some/all components?
-** Right now I have the issue that a Mesh could be deleted, but the MeshModel would still exists.
-   All MeshModels can ofcourse check the validity of their ID's, but having ALL MeshModels check it whenever a mesh_destroyed notification exists is a bit much.
-   If I use reference counting, then that problem would go away and the MeshModel would always keep the Mesh alive.
 
 libs
 * FreeImage. It has a commercial license.

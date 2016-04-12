@@ -67,22 +67,12 @@ public:
         static const unsigned char None = 0u;
         static const unsigned char Created = 1u << 0u;
         static const unsigned char Destroyed = 1u << 1u;
-        static const unsigned char Changed = 1u << 2u;
+        static const unsigned char Changed = 1u << 2u; // TODO Rename to Update
     };
 
     static inline unsigned char get_changes(Materials::UID material_ID) { return m_changes[material_ID]; }
     static inline bool has_changes(Materials::UID material_ID, unsigned char change_bitmask) {
-        return (m_changes[material_ID] & change_bitmask) == change_bitmask;
-    }
-
-    typedef std::vector<UID>::iterator material_created_iterator;
-    static Core::Iterable<material_created_iterator> get_created_materials() {
-        return Core::Iterable<material_created_iterator>(m_materials_created.begin(), m_materials_created.end());
-    }
-
-    typedef std::vector<UID>::iterator material_destroyed_iterator;
-    static Core::Iterable<material_destroyed_iterator> get_destroyed_materials() {
-        return Core::Iterable<material_destroyed_iterator>(m_materials_destroyed.begin(), m_materials_destroyed.end());
+        return (m_changes[material_ID] & change_bitmask) != Changes::None;
     }
 
     typedef std::vector<UID>::iterator material_changed_iterator;
@@ -102,10 +92,6 @@ private:
     static std::string* m_names;
     static Data* m_materials;
     static unsigned char* m_changes; // Bitmask of changes. Could be reduced to 4 bits pr material.
-
-    // Change notifications.
-    static std::vector<UID> m_materials_created;
-    static std::vector<UID> m_materials_destroyed;
     static std::vector<UID> m_materials_changed;
 };
 

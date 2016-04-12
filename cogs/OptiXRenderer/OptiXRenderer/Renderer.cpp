@@ -438,7 +438,7 @@ void Renderer::handle_updates() {
             device_material.metallic = host_material.get_metallic();
         };
 
-        if (!Materials::get_created_materials().is_empty() || !Materials::get_changed_materials().is_empty()) {
+        if (!Materials::get_changed_materials().is_empty()) {
             if (m_state->material_parameter_count < Materials::capacity()) {
                 // Buffer size changed. Re-upload all parameters.
                 m_state->material_parameter_count = Materials::capacity();
@@ -452,10 +452,9 @@ void Renderer::handle_updates() {
             } else {
                 // Update new and changed materials. Just ignore destroyed ones.
                 OptiXRenderer::Material* device_materials = (OptiXRenderer::Material*)m_state->material_parameters->map();
-                for (Materials::UID material_ID : Materials::get_created_materials())
-                    upload_material(material_ID, device_materials);
                 for (Materials::UID material_ID : Materials::get_changed_materials())
-                    upload_material(material_ID, device_materials);
+                    if (!Materials::has_changes(material_ID, Materials::Changes::Destroyed))
+                        upload_material(material_ID, device_materials);
                 m_state->material_parameters->unmap();
             }
         }
