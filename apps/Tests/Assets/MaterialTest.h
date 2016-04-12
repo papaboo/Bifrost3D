@@ -111,8 +111,8 @@ TEST_F(Assets_Material, create_and_destroy_notifications) {
 
         EXPECT_TRUE(material0_created);
         EXPECT_TRUE(material1_created);
-        EXPECT_TRUE(Materials::has_events(material_ID0, Materials::Events::Created));
-        EXPECT_TRUE(Materials::has_events(material_ID1, Materials::Events::Created));
+        EXPECT_TRUE(Materials::has_changes(material_ID0, Materials::Changes::Created));
+        EXPECT_TRUE(Materials::has_changes(material_ID1, Materials::Changes::Created));
     }
 
     Materials::reset_change_notifications();
@@ -137,8 +137,8 @@ TEST_F(Assets_Material, create_and_destroy_notifications) {
 
         EXPECT_TRUE(material0_destroyed);
         EXPECT_FALSE(material1_destroyed);
-        EXPECT_TRUE(Materials::has_events(material_ID0, Materials::Events::Destroyed));
-        EXPECT_FALSE(Materials::has_events(material_ID1, Materials::Events::Destroyed));
+        EXPECT_TRUE(Materials::has_changes(material_ID0, Materials::Changes::Destroyed));
+        EXPECT_FALSE(Materials::has_changes(material_ID1, Materials::Changes::Destroyed));
     }
 
     Materials::reset_change_notifications();
@@ -158,10 +158,10 @@ TEST_F(Assets_Material, change_notifications) {
     Materials::Data data = {};
     Material material = Materials::create("TestMaterial", data);
 
-    // Test that no materials are initially changed and that a creation event doesn't trigger a change notification as well.
+    // Test that no materials are initially changed and that a creation doesn't trigger a change notification as well.
     Core::Iterable<Materials::material_changed_iterator> changed_materials = Materials::get_changed_materials();
     EXPECT_EQ(changed_materials.end() - changed_materials.begin(), 0);
-    EXPECT_FALSE(material.has_events(Materials::Events::Changed));
+    EXPECT_FALSE(material.has_changes(Materials::Changes::Changed));
 
     { // Change base tint.
         Math::RGB new_tint = Math::RGB::red();
@@ -172,7 +172,7 @@ TEST_F(Assets_Material, change_notifications) {
         for (const Materials::UID material_ID : changed_materials) {
             EXPECT_EQ(material_ID, material.get_ID());
             EXPECT_EQ(Materials::get_base_tint(material_ID), new_tint);
-            EXPECT_TRUE(Materials::has_events(material_ID, Materials::Events::Changed));
+            EXPECT_TRUE(Materials::has_changes(material_ID, Materials::Changes::Changed));
         }
     }
 
@@ -182,7 +182,7 @@ TEST_F(Assets_Material, change_notifications) {
         // Check that change notifications have been properly reset.
         Core::Iterable<Materials::material_changed_iterator> changed_materials = Materials::get_changed_materials();
         EXPECT_EQ(changed_materials.end() - changed_materials.begin(), 0);
-        EXPECT_FALSE(material.has_events(Materials::Events::Changed));
+        EXPECT_FALSE(material.has_changes(Materials::Changes::Changed));
     }
 
     { // Change base roughness.
@@ -194,7 +194,7 @@ TEST_F(Assets_Material, change_notifications) {
         for (const Materials::UID material_ID : changed_materials) {
             EXPECT_EQ(material_ID, material.get_ID());
             EXPECT_EQ(Materials::get_base_roughness(material_ID), new_roughness);
-            EXPECT_TRUE(Materials::has_events(material_ID, Materials::Events::Changed));
+            EXPECT_TRUE(Materials::has_changes(material_ID, Materials::Changes::Changed));
         }
     }
 }

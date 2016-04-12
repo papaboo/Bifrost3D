@@ -97,7 +97,7 @@ Materials::UID Materials::create(const std::string& name, const Data& data) {
 
     m_names[id] = name;
     m_materials[id] = data;
-    m_changes[id] = Events::Created;
+    m_changes[id] = Changes::Created;
 
     m_materials_created.push_back(id);
 
@@ -106,7 +106,7 @@ Materials::UID Materials::create(const std::string& name, const Data& data) {
 
 void Materials::destroy(Materials::UID material_ID) {
     if (m_UID_generator.erase(material_ID)) {
-        m_changes[material_ID] |= Events::Destroyed;
+        m_changes[material_ID] |= Changes::Destroyed;
         m_materials_destroyed.push_back(material_ID);
         // TODO If material has been created this frame as well then remove that notification.
     }
@@ -133,15 +133,15 @@ void Materials::set_metallic(Materials::UID material_ID, float metallic) {
 }
 
 void Materials::flag_as_changed(Materials::UID material_ID) {
-    if ((m_changes[material_ID] & Events::Changed) != Events::Changed) {
-        m_changes[material_ID] |= Events::Changed;
+    if ((m_changes[material_ID] & Changes::Changed) != Changes::Changed) {
+        m_changes[material_ID] |= Changes::Changed;
         m_materials_changed.push_back(material_ID);
     }
 }
 
 void Materials::reset_change_notifications() {
     // NOTE We could use some heuristic here to choose between looping over 
-    // the notifications and only resetting the changed events.
+    // the notifications and only resetting the changed materials instead of resetting all.
     std::memset(m_changes, 0, capacity());
 
     m_materials_created.resize(0);

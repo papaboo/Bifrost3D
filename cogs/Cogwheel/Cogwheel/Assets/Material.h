@@ -63,16 +63,16 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    struct Events {
+    struct Changes {
         static const unsigned char None = 0u;
         static const unsigned char Created = 1u << 0u;
         static const unsigned char Destroyed = 1u << 1u;
         static const unsigned char Changed = 1u << 2u;
     };
 
-    static inline unsigned char get_change_events(Materials::UID material_ID) { return m_changes[material_ID]; }
-    static inline bool has_events(Materials::UID material_ID, unsigned char event_bitmask) {
-        return (m_changes[material_ID] & event_bitmask) == event_bitmask;
+    static inline unsigned char get_changes(Materials::UID material_ID) { return m_changes[material_ID]; }
+    static inline bool has_changes(Materials::UID material_ID, unsigned char change_bitmask) {
+        return (m_changes[material_ID] & change_bitmask) == change_bitmask;
     }
 
     typedef std::vector<UID>::iterator material_created_iterator;
@@ -101,7 +101,7 @@ private:
 
     static std::string* m_names;
     static Data* m_materials;
-    static unsigned char* m_changes; // Bitmask of change events. Could be reduced to 4 bits pr material.
+    static unsigned char* m_changes; // Bitmask of changes. Could be reduced to 4 bits pr material.
 
     // Change notifications.
     static std::vector<UID> m_materials_created;
@@ -141,8 +141,8 @@ public:
     inline float get_metallic() { return Materials::get_metallic(m_ID); }
     void set_metallic(float metallic) { Materials::set_metallic(m_ID, metallic); }
 
-    inline unsigned char get_change_events() { return Materials::get_change_events(m_ID); }
-    inline bool has_events(unsigned char event_bitmask) { return Materials::has_events(m_ID, event_bitmask); }
+    inline unsigned char get_changes() { return Materials::get_changes(m_ID); }
+    inline bool has_changes(unsigned char change_bitmask) { return Materials::has_changes(m_ID, change_bitmask); }
 };
 
 } // NS Assets
