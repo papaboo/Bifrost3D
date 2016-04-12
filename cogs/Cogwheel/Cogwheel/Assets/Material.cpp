@@ -131,9 +131,9 @@ void Materials::set_metallic(Materials::UID material_ID, float metallic) {
 }
 
 void Materials::flag_as_changed(Materials::UID material_ID) {
-    if (has_changes(material_ID, Changes::Changed))
+    if (has_changes(material_ID, Changes::Updated))
         m_materials_changed.push_back(material_ID);
-    m_changes[material_ID] |= Changes::Changed;
+    m_changes[material_ID] |= Changes::Updated;
 }
 
 void Materials::reset_change_notifications() {

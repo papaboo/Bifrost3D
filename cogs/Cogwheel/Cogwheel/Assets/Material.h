@@ -67,7 +67,7 @@ public:
         static const unsigned char None = 0u;
         static const unsigned char Created = 1u << 0u;
         static const unsigned char Destroyed = 1u << 1u;
-        static const unsigned char Changed = 1u << 2u; // TODO Rename to Update
+        static const unsigned char Updated = 1u << 2u;
     };
 
     static inline unsigned char get_changes(Materials::UID material_ID) { return m_changes[material_ID]; }

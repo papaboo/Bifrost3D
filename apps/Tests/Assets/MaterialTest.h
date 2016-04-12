@@ -70,7 +70,7 @@ TEST_F(Assets_Material, create) {
     EXPECT_EQ(changed_materials.end() - changed_materials.begin(), 1);
     EXPECT_EQ(*changed_materials.begin(), material_ID);
     EXPECT_TRUE(Materials::has_changes(material_ID, Materials::Changes::Created));
-    EXPECT_FALSE(Materials::has_changes(material_ID, Materials::Changes::Changed));
+    EXPECT_FALSE(Materials::has_changes(material_ID, Materials::Changes::Updated));
 }
 
 TEST_F(Assets_Material, destroy) {
@@ -106,7 +106,7 @@ TEST_F(Assets_Material, create_and_change) {
     EXPECT_EQ(changed_materials.end() - changed_materials.begin(), 1);
     EXPECT_EQ(*changed_materials.begin(), material.get_ID());
     EXPECT_TRUE(material.has_changes(Materials::Changes::Created));
-    EXPECT_TRUE(material.has_changes(Materials::Changes::Changed));
+    EXPECT_TRUE(material.has_changes(Materials::Changes::Updated));
 }
 
 TEST_F(Assets_Material, create_and_destroy_notifications) {
@@ -178,7 +178,7 @@ TEST_F(Assets_Material, change_notifications) {
     Core::Iterable<Materials::material_changed_iterator> changed_materials = Materials::get_changed_materials();
     EXPECT_EQ(changed_materials.end() - changed_materials.begin(), 1);
     EXPECT_TRUE(material.has_changes(Materials::Changes::Created));
-    EXPECT_FALSE(material.has_changes(Materials::Changes::Changed));
+    EXPECT_FALSE(material.has_changes(Materials::Changes::Updated));
 
     Materials::reset_change_notifications();
 
@@ -191,7 +191,7 @@ TEST_F(Assets_Material, change_notifications) {
         for (const Materials::UID material_ID : changed_materials) {
             EXPECT_EQ(material_ID, material.get_ID());
             EXPECT_EQ(Materials::get_base_tint(material_ID), new_tint);
-            EXPECT_TRUE(Materials::has_changes(material_ID, Materials::Changes::Changed));
+            EXPECT_TRUE(Materials::has_changes(material_ID, Materials::Changes::Updated));
         }
     }
 
@@ -201,7 +201,7 @@ TEST_F(Assets_Material, change_notifications) {
         // Check that change notifications have been properly reset.
         Core::Iterable<Materials::material_changed_iterator> changed_materials = Materials::get_changed_materials();
         EXPECT_EQ(changed_materials.end() - changed_materials.begin(), 0);
-        EXPECT_FALSE(material.has_changes(Materials::Changes::Changed));
+        EXPECT_FALSE(material.has_changes(Materials::Changes::Updated));
     }
 
     { // Change base roughness.
@@ -213,7 +213,7 @@ TEST_F(Assets_Material, change_notifications) {
         for (const Materials::UID material_ID : changed_materials) {
             EXPECT_EQ(material_ID, material.get_ID());
             EXPECT_EQ(Materials::get_base_roughness(material_ID), new_roughness);
-            EXPECT_TRUE(Materials::has_changes(material_ID, Materials::Changes::Changed));
+            EXPECT_TRUE(Materials::has_changes(material_ID, Materials::Changes::Updated));
         }
     }
 }
