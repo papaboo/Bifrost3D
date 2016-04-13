@@ -25,7 +25,6 @@ public:
     typedef UIDGenerator::UID UID;
     typedef UIDGenerator::ConstIterator ConstUIDIterator;
 
-    // TODO align to float4.
     struct Data {
         Math::RGB base_tint;
         float base_roughness;
