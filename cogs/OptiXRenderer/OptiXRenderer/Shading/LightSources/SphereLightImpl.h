@@ -56,7 +56,7 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix
         
         DirectionalSample cone_sample = Cone::sample(cos_theta, random_sample);
 
-        const TBN tbn = TBN(vector_to_light / optix::length(vector_to_light));
+        const TBN tbn = TBN(optix::normalize(vector_to_light));
         light_sample.direction = cone_sample.direction * tbn;
         light_sample.PDF = cone_sample.PDF;
         light_sample.distance = Intersect::ray_sphere(position, light_sample.direction, light.position, light.radius);
@@ -70,6 +70,18 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix
     }
 
     return light_sample;
+}
+
+__inline_all__ float PDF(const SphereLight& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
+    optix::float3 vector_to_light = light.position - lit_position;
+
+    float sin_theta_squared = light.radius * light.radius / optix::dot(vector_to_light, vector_to_light);
+    if (sin_theta_squared < sphere_light_small_sin_theta_squared)
+        return 0.0f;
+    else {
+        float cos_theta = sqrtf(1.0f - sin_theta_squared);
+        return Distributions::Cone::PDF(cos_theta);
+    }
 }
 
 __inline_all__ optix::float3 evaluate(const SphereLight& light, const optix::float3& position, const optix::float3& direction) {

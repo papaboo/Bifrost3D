@@ -1,6 +1,7 @@
 * Coated rubber/metal materials
 ** Multiple importance sampling.
-*** Consistent PDF test for sphere lights.
+* Change Mesh to use the same Change setup as Materials.
+* Change Camera to use the same Change setup as Materials.
 * Textures.
 * Environment models.
 * Reduce TODOs

@@ -26,7 +26,7 @@ struct __align__(16) DirectionalSample {
 //==============================================================================
 namespace Cone {
 
-__inline_all__ float pdf(float cos_theta_max) {
+__inline_all__ float PDF(float cos_theta_max) {
     return 1.0f / (2.0f * PIf * (1.0f - cos_theta_max));
 }
 
@@ -37,7 +37,7 @@ __inline_all__ DirectionalSample sample(float cos_theta_max, optix::float2 rando
 
     DirectionalSample res;
     res.direction = optix::make_float3(cos(phi) * sin_theta, sin(phi) * sin_theta, cos_theta);
-    res.PDF = pdf(cos_theta_max);
+    res.PDF = PDF(cos_theta_max);
     return res;
 }
 

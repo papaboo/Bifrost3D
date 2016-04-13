@@ -18,11 +18,10 @@
 namespace OptiXRenderer {
 
 GTEST_TEST(SphereLight, power_preservation_when_radius_changes) {
-    
     using namespace optix;
 
     const unsigned int MAX_SAMPLES = 1024u;
-    
+
     SphereLight light_with_radius_0;
     light_with_radius_0.position = make_float3(0.0f, 10.0f, 0.0f);
     light_with_radius_0.radius = 0.0f;
@@ -89,7 +88,36 @@ GTEST_TEST(SphereLight, power_preservation_when_radius_changes) {
     EXPECT_TRUE(almost_equal_eps(light_with_radius_5.power.x, light_5_power, 0.001f));
     EXPECT_TRUE(almost_equal_eps(light_with_radius_9.power.x, light_9_power, 0.004f));
 }
-    
+
+GTEST_TEST(SphereLight, consistent_PDF) {
+    using namespace optix;
+
+    const unsigned int MAX_SAMPLES = 128u;
+    const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
+    const float3 position = make_float3(10.0f, 0.0f, 0.0f); // TODO vary.
+
+    SphereLight light;
+    light.position = make_float3(0.0f, 10.0f, 0.0f);
+    light.radius = 1.0f;
+    light.power = make_float3(10.0f);
+
+    std::vector<SphereLight> lights = { light, light, light, light, light };
+    lights[1].radius = 2.0f;
+    lights[1].radius = 4.0f;
+    lights[1].radius = 7.0f;
+    lights[1].radius = 13.0f;
+
+    for (SphereLight& light : lights) {
+        for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
+            LightSample sample = LightSources::sample_radiance(light, position, RNG::sample02(i));
+            if (sample.is_valid()) {
+                float PDF = LightSources::PDF(light, position, sample.direction);
+                EXPECT_TRUE(almost_equal_eps(sample.PDF, PDF, 0.0001f));
+            }
+        }
+    }
+}
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_LIGHT_SOURCES_SPHERE_LIGHT_TEST_H_
