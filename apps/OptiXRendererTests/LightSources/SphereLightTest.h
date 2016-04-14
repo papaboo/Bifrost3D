@@ -93,7 +93,6 @@ GTEST_TEST(SphereLight, consistent_PDF) {
     using namespace optix;
 
     const unsigned int MAX_SAMPLES = 128u;
-    const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
     const float3 position = make_float3(10.0f, 0.0f, 0.0f); // TODO vary.
 
     SphereLight light;
@@ -116,6 +115,25 @@ GTEST_TEST(SphereLight, consistent_PDF) {
             }
         }
     }
+}
+
+GTEST_TEST(SphereLight, pdf_rejects_rays_that_miss) {
+    using namespace optix;
+
+    SphereLight light;
+    light.position = make_float3(0.0f, 10.0f, 0.0f);
+    light.radius = 2.0f;
+    light.power = make_float3(10.0f);
+
+    const float3 lit_position = make_float3(0.0f, 0.0f, 0.0f);
+    const float3 hit_light_direction = normalize(make_float3(1.0f, 10.0f, 0.0f));
+    const float3 miss_light_direction = normalize(make_float3(3.0f, 10.0f, 0.0f));
+
+    float hit_light_PDF = LightSources::PDF(light, lit_position, hit_light_direction);
+    EXPECT_GT(hit_light_PDF, 0.0f);
+
+    float miss_light_PDF = LightSources::PDF(light, lit_position, miss_light_direction);
+    EXPECT_FLOAT_EQ(miss_light_PDF, 0.0f);
 }
 
 } // NS OptiXRenderer

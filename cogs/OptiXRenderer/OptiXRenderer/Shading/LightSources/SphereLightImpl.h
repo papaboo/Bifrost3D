@@ -73,14 +73,17 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix
 }
 
 __inline_all__ float PDF(const SphereLight& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
-    optix::float3 vector_to_light = light.position - lit_position;
+    optix::float3 vector_to_light_center = light.position - lit_position;
 
-    float sin_theta_squared = light.radius * light.radius / optix::dot(vector_to_light, vector_to_light);
+    float sin_theta_squared = light.radius * light.radius / optix::dot(vector_to_light_center, vector_to_light_center);
     if (sin_theta_squared < sphere_light_small_sin_theta_squared)
         return 0.0f;
     else {
-        float cos_theta = sqrtf(1.0f - sin_theta_squared);
-        return Distributions::Cone::PDF(cos_theta);
+        float cos_theta_max = sqrtf(1.0f - sin_theta_squared);
+        float cos_theta = optix::dot(direction_to_light, optix::normalize(vector_to_light_center));
+
+        float valid_direction = cos_theta >= cos_theta_max ? 1.0f : 0.0f;
+        return Distributions::Cone::PDF(cos_theta_max) * valid_direction;
     }
 }
 
