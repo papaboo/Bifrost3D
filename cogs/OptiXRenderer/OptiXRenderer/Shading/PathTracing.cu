@@ -44,7 +44,7 @@ RT_PROGRAM void path_tracing() {
     prd.rng.seed(RNG::hash(index) ^ __brev(g_accumulations));
     prd.throughput = make_float3(1.0f);
     prd.bounces = 0;
-    prd.bsdf_sample_PDF = prd.path_PDF = 1.0f;
+    prd.bsdf_MIS_PDF = prd.path_PDF = 1.0f;
 
     // Generate rays.
     float2 screen_pos_offset = prd.rng.sample2f(); // Always advance the rng by two samples, even if we ignore them.
@@ -72,7 +72,7 @@ RT_PROGRAM void path_tracing() {
 
 rtDeclareVariable(MonteCarloPRD, monte_carlo_PRD, rtPayload, );
 RT_PROGRAM void miss() {
-    monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * make_float3(0.68f, 0.92f, 1.0f);
+    // monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * make_float3(0.68f, 0.92f, 1.0f);
     monte_carlo_PRD.throughput = make_float3(0.0f);
 }
 

@@ -60,7 +60,7 @@ struct __align__(16) MonteCarloPRD {
     unsigned int bounces;
 
     optix::float3 position;
-    float bsdf_sample_PDF;
+    float bsdf_MIS_PDF; // If negative, then it indicates that MIS should not be used.
     optix::float3 direction;
     float path_PDF;
 };
@@ -83,8 +83,6 @@ struct __align__(16) LightSample {
         LightSample sample = {};
         return sample;
     }
-
-    __inline_all__ bool is_valid() { return PDF > 0.000001f; }
 };
 
 struct __align__(16) SphereLight {
@@ -108,10 +106,7 @@ struct __align__(16) BSDFSample {
         BSDFSample sample = {};
         return sample;
     }
-
-    __inline_all__ bool is_valid() { return PDF > 0.000001f; }
 };
-
 
 struct __align__(16) Material {
     optix::float3 base_tint;

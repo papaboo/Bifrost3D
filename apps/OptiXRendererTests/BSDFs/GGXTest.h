@@ -13,6 +13,7 @@
 
 #include <OptiXRenderer/RNG.h>
 #include <OptiXRenderer/Shading/BSDFs/GGX.h>
+#include <OptiXRenderer/Utils.h>
 
 #include <gtest/gtest.h>
 
@@ -31,7 +32,7 @@ GTEST_TEST(GGX, power_conservation) {
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = Shading::BSDFs::GGX::sample(tint, alpha, wo, RNG::sample02(i));
 
-            if (sample.is_valid())
+            if (is_PDF_valid(sample.PDF))
                 ws[i] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
             else
                 ws[i] = 0.0f;
@@ -54,7 +55,7 @@ GTEST_TEST(GGX, Helmholtz_reciprocity) {
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = Shading::BSDFs::GGX::sample(tint, alpha, wo, RNG::sample02(i));
 
-            if (sample.is_valid()) {
+            if (is_PDF_valid(sample.PDF)) {
                 float3 f = Shading::BSDFs::GGX::evaluate(tint, alpha, sample.direction, wo);
 
                 EXPECT_TRUE(almost_equal_eps(sample.weight.x, f.x, 0.0001f));
@@ -76,7 +77,7 @@ GTEST_TEST(GGX, consistent_PDF) {
         const float alpha = fmaxf(1.0f, a / 10.0f);
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = Shading::BSDFs::GGX::sample(tint, alpha, wo, RNG::sample02(i));
-            if (sample.is_valid()) {
+            if (is_PDF_valid(sample.PDF)) {
                 float PDF = Shading::BSDFs::GGX::PDF(alpha, wo, sample.direction);
                 EXPECT_TRUE(almost_equal_eps(sample.PDF, PDF, 0.0001f));
             }

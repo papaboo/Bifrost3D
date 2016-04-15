@@ -109,7 +109,7 @@ GTEST_TEST(SphereLight, consistent_PDF) {
     for (SphereLight& light : lights) {
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             LightSample sample = LightSources::sample_radiance(light, position, RNG::sample02(i));
-            if (sample.is_valid()) {
+            if (is_PDF_valid(sample.PDF)) {
                 float PDF = LightSources::PDF(light, position, sample.direction);
                 EXPECT_TRUE(almost_equal_eps(sample.PDF, PDF, 0.0001f));
             }

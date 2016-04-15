@@ -13,6 +13,7 @@
 
 #include <OptiXRenderer/RNG.h>
 #include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>
+#include <OptiXRenderer/Utils.h>
 
 #include <gtest/gtest.h>
 
@@ -51,7 +52,7 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
         float ws[MAX_SAMPLES];
         for (unsigned int s = 0u; s < MAX_SAMPLES; ++s) {
             BSDFSample sample = plastic_material.sample_all(wo, rng.sample3f());
-            if (sample.is_valid())
+            if (is_PDF_valid(sample.PDF))
                 ws[s] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
             else
                 ws[s] = 0.0f;
@@ -76,7 +77,7 @@ GTEST_TEST(DefaultShadingModel, Helmholtz_reciprocity) {
         const float3 wo = normalize(make_float3(float(i), 0.0f, 1.001f - float(i) * 0.1f));
         for (unsigned int s = 0u; s < MAX_SAMPLES; ++s) {
             BSDFSample sample = plastic_material.sample_all(wo, rng.sample3f());
-            if (sample.is_valid()) {
+            if (is_PDF_valid(sample.PDF)) {
                 // Re-evaluate contribution from both directions to avoid 
                 // floating point imprecission between sampling and evaluating.
                 // (Yes, they can actually get quite high on smooth materials.)
@@ -100,7 +101,7 @@ static void default_shading_model_consistent_PDF_test(Shading::ShadingModels::De
 
     for (unsigned int i = 0u; i < 64; ++i) {
         BSDFSample sample = material.sample_all(wo, rng.sample3f());
-        if (sample.is_valid()) {
+        if (is_PDF_valid(sample.PDF)) {
             float PDF = material.PDF(wo, sample.direction);
             EXPECT_TRUE(almost_equal_eps(sample.PDF, PDF, 0.0001f));
         }
@@ -193,7 +194,7 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
     double* ws_squared = new double[MAX_SAMPLES];
     for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
         BSDFSample sample = material.sample_one(wo, rng.sample3f());
-        if (sample.is_valid()) {
+        if (is_PDF_valid(sample.PDF)) {
             ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
             ws_squared[i] = ws[i] * ws[i];
         } else
@@ -207,7 +208,7 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
     rng.seed(256237u);
     for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
         BSDFSample sample = material.sample_all(wo, rng.sample3f());
-        if (sample.is_valid()) {
+        if (is_PDF_valid(sample.PDF)) {
             ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
             ws_squared[i] = ws[i] * ws[i];
         } else

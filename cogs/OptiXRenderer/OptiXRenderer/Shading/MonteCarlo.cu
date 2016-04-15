@@ -65,8 +65,6 @@ RT_PROGRAM void closest_hit() {
         const float3 bsdf_response = material.evaluate(monte_carlo_PRD.direction, shading_light_direction);
         if (N_dot_L >= 0.0f) {
             ShadowPRD shadow_PRD = { 1.0f, 1.0f, 1.0f };
-            // TODO Always offset slightly along the geometric normal?
-            // float3 origin_offset = world_geometric_normal * g_scene_epsilon * (dot(world_geometric_normal, light_sample.direction) >= 0.0f ? 1.0f : -1.0f);
             Ray shadow_ray(monte_carlo_PRD.position, light_sample.direction, unsigned int(RayTypes::Shadow), g_scene_epsilon, light_sample.distance - g_scene_epsilon);
             rtTrace(g_scene_root, shadow_ray, shadow_PRD);
 
@@ -77,9 +75,9 @@ RT_PROGRAM void closest_hit() {
     // Sample material.
     BSDFSample bsdf_sample = material.sample_all(monte_carlo_PRD.direction, monte_carlo_PRD.rng.sample3f());
     monte_carlo_PRD.direction = bsdf_sample.direction * world_shading_tbn;
-    monte_carlo_PRD.bsdf_sample_PDF = bsdf_sample.PDF;
+    monte_carlo_PRD.bsdf_MIS_PDF = 0.0f; // bsdf_sample.PDF;
     monte_carlo_PRD.path_PDF *= bsdf_sample.PDF;
-    if (!bsdf_sample.is_valid())
+    if (!is_PDF_valid(bsdf_sample.PDF))
         monte_carlo_PRD.throughput = make_float3(0.0f);
     else
         monte_carlo_PRD.throughput *= bsdf_sample.weight * (abs(bsdf_sample.direction.z) / bsdf_sample.PDF); // f * ||cos(theta)|| / pdf
