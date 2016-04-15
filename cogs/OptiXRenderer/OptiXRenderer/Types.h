@@ -60,8 +60,9 @@ struct __align__(16) MonteCarloPRD {
     unsigned int bounces;
 
     optix::float3 position;
-    float bsdf_sample_pdf;
+    float bsdf_sample_PDF;
     optix::float3 direction;
+    float path_PDF;
 };
 
 struct ShadowPRD {
