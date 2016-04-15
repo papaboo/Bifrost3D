@@ -61,14 +61,17 @@ RT_PROGRAM void closest_hit() {
         float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction);
         light_sample.radiance *= abs(N_dot_L) / light_sample.PDF;
 
+        // Inline the material response into the light sample's contribution.
         const float3 shading_light_direction = world_shading_tbn * light_sample.direction;
-        const float3 bsdf_response = material.evaluate(monte_carlo_PRD.direction, shading_light_direction);
-        if (N_dot_L >= 0.0f) {
-            ShadowPRD shadow_PRD = { 1.0f, 1.0f, 1.0f };
+        const float3 bsdf_response = material.evaluate(monte_carlo_PRD.direction, shading_light_direction);// TODO Extend material and BRDFs with methods for evaluating contribution and PDF at the same time.
+        light_sample.radiance *= bsdf_response;
+
+        if (light_sample.radiance.x > 0.0f || light_sample.radiance.y > 0.0f || light_sample.radiance.z > 0.0f) {
+            ShadowPRD shadow_PRD = { light_sample.radiance };
             Ray shadow_ray(monte_carlo_PRD.position, light_sample.direction, unsigned int(RayTypes::Shadow), g_scene_epsilon, light_sample.distance - g_scene_epsilon);
             rtTrace(g_scene_root, shadow_ray, shadow_PRD);
 
-            monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * light_sample.radiance * bsdf_response * shadow_PRD.attenuation;
+            monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * shadow_PRD.attenuation;
         }
     }
 
@@ -106,9 +109,7 @@ RT_PROGRAM void light_closest_hit() {
         int light_index = __float_as_int(geometric_normal.x);
         const SphereLight& light = g_lights[light_index];
 
-        const float power_normalizer = 4.0f * PIf * PIf * light.radius * light.radius;
-        const float3 light_radiance = light.power / power_normalizer;
-        monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * light_radiance;
+        monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * LightSources::evaluate(light, ray.origin, ray.direction);
     }
 
     monte_carlo_PRD.throughput = make_float3(0.0f);
