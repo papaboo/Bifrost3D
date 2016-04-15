@@ -2,11 +2,13 @@
 ** Multiple importance sampling.
 * Change Mesh to use the same Change setup as Materials.
 * Change Camera to use the same Change setup as Materials.
+** And add changes notifications to the camera, such as matrix or parent node changed.
 * Textures.
 * Environment models.
 * Reduce TODOs
 * Bump mapping
 ** Including 'fixing' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles.
+** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
 * GL Renderer
 * Screenshot
 ** Grab backbuffer on the CPU.
@@ -18,6 +20,8 @@
 *** Allow user to lerp between two materials in 10 steps, i.e. have 10 instances of the same model rendered side-by-side and then lerp the material parameters from left to right.
 ** Add Burley and Oren-Nayar BRDF. Burley should exclude the fresnel term, as that is part of the overall combiner.
 ** Add Fresnel coat. How to sample the Fresnel combiner? Add it as a coated shading model in OptiXRenderer, so I have access to both materials.
+** Use perfectly specular BRDFs for tiny roughness values.
+*** Adapt MIS to handle specular surfaces.
 * Multiple cameras.
 ** G-Buffer pr camera.
 ** Compose when all cameras are done.
