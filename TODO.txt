@@ -1,4 +1,3 @@
-* Upload bounce count to optix.
 * Coated rubber/metal materials
 ** Glossy cornell box test scene.
 * Change Mesh to use the same Change setup as Materials.

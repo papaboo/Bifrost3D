@@ -17,18 +17,19 @@ using namespace optix;
 using namespace OptiXRenderer;
 using namespace OptiXRenderer::Shading::ShadingModels;
 
-// Ray params
+// Ray parameters.
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
 rtDeclareVariable(MonteCarloPRD, monte_carlo_PRD, rtPayload, );
 
-// Scene params
+// Scene parameters.
 rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(float, g_scene_epsilon, , );
 rtBuffer<SphereLight, 1> g_lights;
 rtDeclareVariable(int, g_light_count, , );
+rtDeclareVariable(int, g_max_bounce_count, , );
 
-// Material params
+// Material parameters.
 rtBuffer<Material, 1> g_materials;
 rtDeclareVariable(int, material_index, , );
 
@@ -119,7 +120,7 @@ __inline_dev__ void closest_hit_MIS() {
 
         // Apply MIS weights if the light isn't a delta function and if a new material ray will be spawned, i.e. it isn't the final bounce.
         bool delta_light = LightSources::is_delta_light(light, monte_carlo_PRD.position);
-        apply_MIS = !delta_light && monte_carlo_PRD.bounces < 4;
+        apply_MIS = !delta_light && monte_carlo_PRD.bounces < g_max_bounce_count;
         if (apply_MIS) {
             float bsdf_PDF = material.PDF(monte_carlo_PRD.direction, shading_light_direction);
             float mis_weight = RNG::power_heuristic(light_sample.PDF, bsdf_PDF); // TODO Check if the BSDF material PDF is valid. If it isn't we then disable MIS intirely? Or set contribution to black?

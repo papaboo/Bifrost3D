@@ -28,8 +28,10 @@ rtBuffer<float4, 2>  g_accumulation_buffer;
 rtDeclareVariable(float4, g_camera_position, , );
 rtDeclareVariable(Matrix4x4, g_inverted_view_projection_matrix, , );
 
+// Scene variables
 rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(float, g_scene_epsilon, , );
+rtDeclareVariable(int, g_max_bounce_count, , );
 
 __inline_dev__ bool is_black(const optix::float3 color) {
     return color.x <= 0.0f && color.y <= 0.0f && color.z <= 0.0f;
@@ -70,7 +72,7 @@ RT_PROGRAM void path_tracing() {
     do {
         Ray ray(prd.position, prd.direction, unsigned int(RayTypes::MonteCarlo), g_scene_epsilon);
         rtTrace(g_scene_root, ray, prd);
-    } while (prd.bounces < 4 && !is_black(prd.throughput));
+    } while (prd.bounces < g_max_bounce_count && !is_black(prd.throughput));
 
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
     double3 prev_radiance = make_double3(g_accumulation_buffer[g_launch_index].x, g_accumulation_buffer[g_launch_index].y, g_accumulation_buffer[g_launch_index].z);

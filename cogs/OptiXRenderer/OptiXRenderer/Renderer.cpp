@@ -224,6 +224,7 @@ Renderer::Renderer()
 
         context["g_scene_root"]->set(m_state->root_node);
         context["g_scene_epsilon"]->setFloat(0.0001f); // TODO, base on scene size. Can I query the scene bounds from OptiX?
+        context["g_max_bounce_count"]->setInt(4);
     }
 
     { // Light sources
