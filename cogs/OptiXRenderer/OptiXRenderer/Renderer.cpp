@@ -287,11 +287,11 @@ Renderer::Renderer()
     { // Screen buffers
         const Window& window = Engine::get_instance()->get_window();
         m_state->screensize = make_uint2(window.get_width(), window.get_height());
-#ifndef DOUBLE_PRECISION_ACCUMULATION_BUFFER
-        m_state->accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, m_state->screensize.x, m_state->screensize.y);
-#else
+#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
         m_state->accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER, m_state->screensize.x, m_state->screensize.y);
         m_state->accumulation_buffer->setElementSize(sizeof(double) * 4);
+#else
+        m_state->accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, m_state->screensize.x, m_state->screensize.y);
 #endif
         context["g_accumulation_buffer"]->set(m_state->accumulation_buffer);
 

@@ -27,14 +27,14 @@ rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(float4, g_camera_position, , );
 rtDeclareVariable(Matrix4x4, g_inverted_view_projection_matrix, , );
 
-rtBuffer<float4, 2>  g_accumulation_buffer;
+rtBuffer<float4, 2>  g_output_buffer;
 
 //----------------------------------------------------------------------------
 // Ray generation program for visualizing normals.
 //----------------------------------------------------------------------------
 RT_PROGRAM void ray_generation() {
     // Generate rays.
-    float2 viewport_pos = make_float2(g_launch_index.x / float(g_accumulation_buffer.size().x), g_launch_index.y / float(g_accumulation_buffer.size().y));
+    float2 viewport_pos = make_float2(g_launch_index.x / float(g_output_buffer.size().x), g_launch_index.y / float(g_output_buffer.size().y));
     float3 origin = make_float3(g_camera_position);
     float3 direction = project_ray_direction(viewport_pos, origin, g_inverted_view_projection_matrix);
     Ray ray(origin, direction, unsigned int(RayTypes::NormalVisualization), 0.0f);
@@ -46,7 +46,7 @@ RT_PROGRAM void ray_generation() {
     const float inv_screen_gamma = 1.0f / 2.2f;
     prd.color = gammacorrect(prd.color, inv_screen_gamma);
 
-    g_accumulation_buffer[g_launch_index] = prd.color;
+    g_output_buffer[g_launch_index] = prd.color;
 }
 
 //----------------------------------------------------------------------------

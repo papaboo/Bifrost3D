@@ -18,8 +18,12 @@ using namespace optix;
 rtDeclareVariable(uint2, g_launch_index, rtLaunchIndex, );
 
 rtDeclareVariable(int, g_accumulations, , );
-rtBuffer<float4, 2>  g_accumulation_buffer;
 rtBuffer<float4, 2>  g_output_buffer;
+#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
+rtBuffer<double4, 2>  g_accumulation_buffer;
+#else
+rtBuffer<float4, 2>  g_accumulation_buffer;
+#endif
 
 rtDeclareVariable(float4, g_camera_position, , );
 rtDeclareVariable(Matrix4x4, g_inverted_view_projection_matrix, , );
@@ -31,12 +35,20 @@ __inline_dev__ bool is_black(const optix::float3 color) {
     return color.x <= 0.0f && color.y <= 0.0f && color.z <= 0.0f;
 }
 
+__inline_dev__ inline optix::double3 lerp_double(const optix::double3& a, const optix::double3& b, const double t) {
+    return optix::make_double3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
+}
+
 //----------------------------------------------------------------------------
 // Ray generation program
 //----------------------------------------------------------------------------
 RT_PROGRAM void path_tracing() {
     if (g_accumulations == 0)
-        g_accumulation_buffer[g_launch_index] = make_float4(0.0, 0.0, 0.0, 0.0);
+#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
+        g_accumulation_buffer[g_launch_index] = make_double4(0.0, 0.0, 0.0, 0.0);
+#else
+        g_accumulation_buffer[g_launch_index] = make_float4(0.0f);
+#endif
 
     unsigned int index = g_launch_index.y * g_accumulation_buffer.size().x + g_launch_index.x;
 
@@ -60,12 +72,19 @@ RT_PROGRAM void path_tracing() {
         rtTrace(g_scene_root, ray, prd);
     } while (prd.bounces < 4 && !is_black(prd.throughput));
 
-    // Apply simple gamma correction to the output.
-    const float inv_screen_gamma = 1.0f / 2.2f;
+#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
+    double3 prev_radiance = make_double3(g_accumulation_buffer[g_launch_index].x, g_accumulation_buffer[g_launch_index].y, g_accumulation_buffer[g_launch_index].z);
+    double3 accumulated_radiance_d = lerp_double(prev_radiance, make_double3(prd.radiance.x, prd.radiance.y, prd.radiance.z), 1.0 / (g_accumulations + 1.0));
+    g_accumulation_buffer[g_launch_index] = make_double4(accumulated_radiance_d.x, accumulated_radiance_d.y, accumulated_radiance_d.z, 1.0f);
+    float3 accumulated_radiance = make_float3(accumulated_radiance_d.x, accumulated_radiance_d.y, accumulated_radiance_d.z);
+#else
     float3 prev_radiance = make_float3(g_accumulation_buffer[g_launch_index]);
     float3 accumulated_radiance = lerp(prev_radiance, prd.radiance, 1.0f / (g_accumulations + 1.0f));
     g_accumulation_buffer[g_launch_index] = make_float4(accumulated_radiance, 1.0f);
+#endif
 
+    // Apply simple gamma correction to the output.
+    const float inv_screen_gamma = 1.0f / 2.2f;
     g_output_buffer[g_launch_index] = make_float4(gammacorrect(accumulated_radiance, inv_screen_gamma), 1.0f);
 }
 
@@ -85,5 +104,9 @@ RT_PROGRAM void miss() {
 RT_PROGRAM void exceptions() {
     rtPrintExceptionDetails();
 
+#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
+    g_accumulation_buffer[g_launch_index] = make_double4(100000, 0, 0, 1.0);
+#else
     g_accumulation_buffer[g_launch_index] = make_float4(100000, 0, 0, 1.0f);
+#endif
 }
