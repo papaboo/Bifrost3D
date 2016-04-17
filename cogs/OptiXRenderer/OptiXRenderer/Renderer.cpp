@@ -50,6 +50,7 @@ struct Renderer::State {
 
     // Per camera members.
     optix::Buffer accumulation_buffer;
+    optix::Buffer output_buffer;
     unsigned int accumulations;
     Math::Transform camera_transform;
 
@@ -286,8 +287,16 @@ Renderer::Renderer()
     { // Screen buffers
         const Window& window = Engine::get_instance()->get_window();
         m_state->screensize = make_uint2(window.get_width(), window.get_height());
+#ifndef DOUBLE_PRECISION_ACCUMULATION_BUFFER
         m_state->accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, m_state->screensize.x, m_state->screensize.y);
+#else
+        m_state->accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER, m_state->screensize.x, m_state->screensize.y);
+        m_state->accumulation_buffer->setElementSize(sizeof(double) * 4);
+#endif
         context["g_accumulation_buffer"]->set(m_state->accumulation_buffer);
+
+        m_state->output_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, m_state->screensize.x, m_state->screensize.y);
+        context["g_output_buffer"]->set(m_state->output_buffer);
 
         { // Setup back buffer texture used for copying data to OpenGL
             glEnable(GL_TEXTURE_2D);
@@ -340,6 +349,7 @@ void Renderer::render() {
     if (current_screensize != m_state->screensize) {
         // Screen buffers should be resized.
         m_state->accumulation_buffer->setSize(window.get_width(), window.get_height());
+        m_state->output_buffer->setSize(window.get_width(), window.get_height());
         m_state->screensize = make_uint2(window.get_width(), window.get_height());
         m_state->accumulations = 0u;
 #ifdef _DEBUG
@@ -387,12 +397,12 @@ void Renderer::render() {
             glLoadIdentity();
         }
 
-        float4* mapped_accumulation_buffer = (float4*)m_state->accumulation_buffer->map();
+        float4* mapped_output_buffer = (float4*)m_state->output_buffer->map();
         glBindTexture(GL_TEXTURE_2D, m_state->backbuffer_gl_id);
         const GLint BASE_IMAGE_LEVEL = 0;
         const GLint NO_BORDER = 0;
-        glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGBA, m_state->screensize.x, m_state->screensize.y, NO_BORDER, GL_RGBA, GL_FLOAT, mapped_accumulation_buffer);
-        m_state->accumulation_buffer->unmap();
+        glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGBA, m_state->screensize.x, m_state->screensize.y, NO_BORDER, GL_RGBA, GL_FLOAT, mapped_output_buffer);
+        m_state->output_buffer->unmap();
 
         glBegin(GL_QUADS); {
 

@@ -19,6 +19,7 @@ rtDeclareVariable(uint2, g_launch_index, rtLaunchIndex, );
 
 rtDeclareVariable(int, g_accumulations, , );
 rtBuffer<float4, 2>  g_accumulation_buffer;
+rtBuffer<float4, 2>  g_output_buffer;
 
 rtDeclareVariable(float4, g_camera_position, , );
 rtDeclareVariable(Matrix4x4, g_inverted_view_projection_matrix, , );
@@ -59,12 +60,13 @@ RT_PROGRAM void path_tracing() {
         rtTrace(g_scene_root, ray, prd);
     } while (prd.bounces < 4 && !is_black(prd.throughput));
 
-    // Apply simple gamma correction to the output. TODO Use second output buffer, to avoid transforming back and forth between linear and gamma space.
-    const float screen_gamma = 2.2f;
+    // Apply simple gamma correction to the output.
     const float inv_screen_gamma = 1.0f / 2.2f;
-    float3 prev_radiance = gammacorrect(make_float3(g_accumulation_buffer[g_launch_index]), screen_gamma);
+    float3 prev_radiance = make_float3(g_accumulation_buffer[g_launch_index]);
     float3 accumulated_radiance = lerp(prev_radiance, prd.radiance, 1.0f / (g_accumulations + 1.0f));
-    g_accumulation_buffer[g_launch_index] = make_float4(gammacorrect(accumulated_radiance, inv_screen_gamma), 1.0f);
+    g_accumulation_buffer[g_launch_index] = make_float4(accumulated_radiance, 1.0f);
+
+    g_output_buffer[g_launch_index] = make_float4(gammacorrect(accumulated_radiance, inv_screen_gamma), 1.0f);
 }
 
 //----------------------------------------------------------------------------
@@ -73,7 +75,7 @@ RT_PROGRAM void path_tracing() {
 
 rtDeclareVariable(MonteCarloPRD, monte_carlo_PRD, rtPayload, );
 RT_PROGRAM void miss() {
-    // monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * make_float3(0.68f, 0.92f, 1.0f);
+    monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * make_float3(0.68f, 0.92f, 1.0f);
     monte_carlo_PRD.throughput = make_float3(0.0f);
 }
 

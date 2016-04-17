@@ -9,6 +9,8 @@
 #ifndef _OPTIXRENDERER_SHADING_DEFINES_H_
 #define _OPTIXRENDERER_SHADING_DEFINES_H_
 
+// #define DOUBLE_PRECISION_ACCUMULATION_BUFFER 1
+
 #ifndef __inline_all__
 #    if (defined(__CUDACC__) || defined(__CUDABE__))
 #        define __inline_all__ __forceinline__ __host__ __device__
