@@ -74,9 +74,9 @@ public:
         return (m_changes[material_ID] & change_bitmask) != Changes::None;
     }
 
-    typedef std::vector<UID>::iterator material_changed_iterator;
-    static Core::Iterable<material_changed_iterator> get_changed_materials() {
-        return Core::Iterable<material_changed_iterator>(m_materials_changed.begin(), m_materials_changed.end());
+    typedef std::vector<UID>::iterator ChangedIterator;
+    static Core::Iterable<ChangedIterator> get_changed_materials() {
+        return Core::Iterable<ChangedIterator>(m_materials_changed.begin(), m_materials_changed.end());
     }
 
     static void reset_change_notifications();
