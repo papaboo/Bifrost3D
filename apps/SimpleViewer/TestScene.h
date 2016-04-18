@@ -1,4 +1,4 @@
-// SimpleViewer test scene
+// SimpleViewer test scene.
 // ---------------------------------------------------------------------------
 // Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
 //
@@ -233,4 +233,4 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
     return root_node.get_ID();
 }
 
-#endif _SIMPLEVIEWER_TEST_SCENE_H_
+#endif // _SIMPLEVIEWER_TEST_SCENE_H_

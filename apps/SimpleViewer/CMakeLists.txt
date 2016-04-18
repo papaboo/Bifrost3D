@@ -3,6 +3,7 @@ set(PROJECT_NAME "SimpleViewer")
 include_directories(.)
 
 set(SRCS 
+  CornellBoxScene.h
   main.cpp
   TestScene.h
 )

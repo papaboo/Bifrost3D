@@ -1,12 +1,12 @@
-* Coated rubber/metal materials
-** Glossy cornell box test scene.
 * Change Mesh to use the same Change setup as Materials.
 * Change Camera to use the same Change setup as Materials.
 ** And add changes notifications to the camera, such as matrix or parent node changed.
-* Textures.
-* Environment models.
+* Add background colors to scenes.
+* Resize broke.
 * RIS
 ** None-MIS closest hit should only sample one light as well.
+* Textures.
+* Environment models.
 * Firefly reduction based on path PDF.
 * Reduce TODOs
 * Bump mapping

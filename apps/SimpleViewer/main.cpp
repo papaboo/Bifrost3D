@@ -1,3 +1,4 @@
+#include <CornellBoxScene.h>
 #include <TestScene.h>
 
 #include <Cogwheel/Assets/Mesh.h>
@@ -23,7 +24,7 @@ using namespace Cogwheel::Input;
 using namespace Cogwheel::Math;
 using namespace Cogwheel::Scene;
 
-static std::string g_filepath;
+static std::string g_scene;
 
 class Navigation final {
 public:
@@ -118,10 +119,12 @@ void initializer(Cogwheel::Core::Engine& engine) {
 
     engine.add_tick_cleanup_callback(scenenode_cleanup_callback, nullptr);
 
-    if (g_filepath.empty())
+    if (g_scene.empty() || g_scene.compare("CornellBox") == 0)
+        engine.set_scene_root(create_cornell_box_scene());
+    else if (g_scene.compare("TestScene") == 0)
         engine.set_scene_root(create_test_scene(engine));
     else {
-        engine.set_scene_root(ObjLoader::load(g_filepath));
+        engine.set_scene_root(ObjLoader::load(g_scene));
 
         { // Add camera
             Cameras::allocate(1u);
@@ -153,10 +156,14 @@ void initializer(Cogwheel::Core::Engine& engine) {
     Navigation* camera_navigation = new Navigation(cam_node_ID, camera_velocity);
     engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
 
-    Vector3f light_position = scene_bounds.center() + scene_bounds.size() * 10.0f;
-    Transform light_transform = Transform(light_position);
-    SceneNodes::UID light_node_ID = SceneNodes::create("Light", light_transform);
-    LightSources::UID light_ID = LightSources::create_sphere_light(light_node_ID, RGB(1000000.0f), 0.0f);
+    // Add a light source if none were added yet.
+    if (LightSources::begin() == LightSources::end()) {
+        Vector3f light_position = scene_bounds.center() + scene_bounds.size() * 10.0f;
+        Transform light_transform = Transform(light_position);
+        SceneNodes::UID light_node_ID = SceneNodes::create("Light", light_transform);
+        LightSources::UID light_ID = LightSources::create_sphere_light(light_node_ID, RGB(1000000.0f), 0.0f);
+        SceneNodes::set_parent(light_node_ID, engine.get_scene_root());
+    }
 }
 
 void initialize_window(Cogwheel::Core::Window& window) {
@@ -164,11 +171,24 @@ void initialize_window(Cogwheel::Core::Window& window) {
     Engine::get_instance()->add_non_mutating_callback(OptiXRenderer::render_callback, renderer);
 }
 
-void main(int argc, char** argv) {
-    g_filepath = argc >= 2 ? std::string(argv[1]) : "";
+void print_usage() {
+    char* usage =
+        "usage simpleviewer:\n"
+        "  -h | --help: Show command line usage for simpleviewer.\n"
+        "  -s | --scene <model>: Loads the model specified. Reserved names are 'CornellBox' and 'TestScene', which loads the corresponding builtin scenes.\n";
+    printf("%s", usage);
+}
 
-    if (g_filepath.empty())
-        printf("SimpleViewer will display the debug scene.\n");
+void main(int argc, char** argv) {
+    std::string command = g_scene = argc >= 2 ? std::string(argv[1]) : "";
+    if (command.compare("-h") == 0 || command.compare("--help") == 0) {
+        print_usage();
+        return;
+    }  
+    
+    g_scene = argc >= 3 ? std::string(argv[2]) : "";
+    if (g_scene.empty())
+        printf("SimpleViewer will display the Cornell Box scene.\n");
 
     GLFWDriver::run(initializer, initialize_window);
 }
