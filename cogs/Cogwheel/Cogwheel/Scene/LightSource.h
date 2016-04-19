@@ -27,7 +27,6 @@ namespace Scene {
 // * Directional light.
 // * Importance sampled environment map.
 // * Setters.
-// * Perhaps just have a single notification buffer?
 // ---------------------------------------------------------------------------
 class LightSources final {
 public:
@@ -58,14 +57,21 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    typedef std::vector<UID>::iterator light_created_iterator;
-    static Core::Iterable<light_created_iterator> get_created_lights() {
-        return Core::Iterable<light_created_iterator>(m_lights_created.begin(), m_lights_created.end());
+    struct Changes {
+        static const unsigned char None = 0u;
+        static const unsigned char Created = 1u << 0u;
+        static const unsigned char Destroyed = 1u << 1u;
+        static const unsigned char All = Created | Destroyed;
+    };
+
+    static inline unsigned char get_changes(LightSources::UID light_ID) { return m_changes[light_ID]; }
+    static inline bool has_changes(LightSources::UID light_ID, unsigned char change_bitmask = Changes::All) {
+        return (m_changes[light_ID] & change_bitmask) != Changes::None;
     }
 
-    typedef std::vector<UID>::iterator light_destroyed_iterator;
-    static Core::Iterable<light_destroyed_iterator> get_destroyed_lights() {
-        return Core::Iterable<light_destroyed_iterator>(m_lights_destroyed.begin(), m_lights_destroyed.end());
+    typedef std::vector<UID>::iterator ChangedIterator;
+    static Core::Iterable<ChangedIterator> get_changed_lights() {
+        return Core::Iterable<ChangedIterator>(m_lights_changed.begin(), m_lights_changed.end());
     }
 
     static void reset_change_notifications();
@@ -79,9 +85,8 @@ private:
     static Math::RGB* m_power;
     static float* m_radius;
 
-    // Change notifications.
-    static std::vector<UID> m_lights_created;
-    static std::vector<UID> m_lights_destroyed;
+    static unsigned char* m_changes; // Bitmask of changes.
+    static std::vector<UID> m_lights_changed;
 };
 
 } // NS Scene

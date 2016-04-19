@@ -19,8 +19,8 @@ SceneNodes::UID* LightSources::m_node_IDs = nullptr;
 RGB* LightSources::m_power = nullptr;
 float* LightSources::m_radius = nullptr;
 
-std::vector<LightSources::UID> LightSources::m_lights_created = std::vector<LightSources::UID>(0);
-std::vector<LightSources::UID> LightSources::m_lights_destroyed = std::vector<LightSources::UID>(0);
+unsigned char* LightSources::m_changes = nullptr;
+std::vector<LightSources::UID> LightSources::m_lights_changed = std::vector<LightSources::UID>(0);
 
 void LightSources::allocate(unsigned int capacity) {
     if (is_allocated())
@@ -32,10 +32,11 @@ void LightSources::allocate(unsigned int capacity) {
     m_node_IDs = new SceneNodes::UID[capacity];
     m_power = new RGB[capacity];
     m_radius = new float[capacity];
-    
-    m_lights_created.reserve(capacity / 4);
-    m_lights_destroyed.reserve(capacity / 4);
-    
+
+    m_changes = new unsigned char[capacity];
+    std::memset(m_changes, Changes::None, capacity);
+    m_lights_changed.reserve(capacity / 4);
+
     // Allocate dummy element at 0.
     m_node_IDs[0] = SceneNodes::UID::invalid_UID();
     m_power[0] = RGB::black();
@@ -51,9 +52,9 @@ void LightSources::deallocate() {
     delete[] m_node_IDs; m_node_IDs = nullptr;
     delete[] m_power; m_power = nullptr;
     delete[] m_radius; m_radius = nullptr;
-    
-    m_lights_created.resize(0); m_lights_created.shrink_to_fit();
-    m_lights_destroyed.resize(0); m_lights_destroyed.shrink_to_fit();
+    delete[] m_changes; m_changes = nullptr;
+
+    m_lights_changed.resize(0); m_lights_changed.shrink_to_fit();
 }
 
 template <typename T>
@@ -74,6 +75,10 @@ void LightSources::reserve_light_data(unsigned int new_capacity, unsigned int ol
     m_node_IDs = resize_and_copy_array(m_node_IDs, new_capacity, copyable_elements);
     m_power = resize_and_copy_array(m_power, new_capacity, copyable_elements);
     m_radius = resize_and_copy_array(m_radius, new_capacity, copyable_elements);
+    m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
+    if (copyable_elements < new_capacity)
+        // We need to zero the new change masks.
+        std::memset(m_changes + copyable_elements, Changes::None, new_capacity - copyable_elements);
 }
 
 void LightSources::reserve(unsigned int new_capacity) {
@@ -93,24 +98,30 @@ LightSources::UID LightSources::create_sphere_light(SceneNodes::UID node_ID, Mat
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_light_data(m_UID_generator.capacity(), old_capacity);
 
+    if (m_changes[id] == Changes::None)
+        m_lights_changed.push_back(id);
+
     m_node_IDs[id] = node_ID;
     m_power[id] = power;
     m_radius[id] = radius;
-
-    m_lights_created.push_back(id);
+    m_changes[id] = Changes::Created;
 
     return id;
 }
 
 void LightSources::destroy(LightSources::UID light_ID) {
     // We don't actually destroy anything when destroying a light. The properties will get overwritten later when a node is created in same the spot.
-    if (m_UID_generator.erase(light_ID))
-        m_lights_destroyed.push_back(light_ID);
+    if (m_UID_generator.erase(light_ID)) {
+        if (m_changes[light_ID] == Changes::None)
+            m_lights_changed.push_back(light_ID);
+
+        m_changes[light_ID] |= Changes::Destroyed;
+    }
 }
 
 void LightSources::reset_change_notifications() {
-    m_lights_created.resize(0);
-    m_lights_destroyed.resize(0);
+    std::memset(m_changes, Changes::None, capacity());
+    m_lights_changed.resize(0);
 }
 
 } // NS Scene

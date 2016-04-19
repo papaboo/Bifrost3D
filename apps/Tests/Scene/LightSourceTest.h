@@ -71,6 +71,12 @@ TEST_F(Scene_LightSource, create) {
     EXPECT_EQ(LightSources::get_node_ID(light_ID), light_node_ID);
     EXPECT_EQ(LightSources::get_power(light_ID), light_power);
 
+    // Test scene node created notification.
+    Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
+    EXPECT_EQ(changed_lights.end() - changed_lights.begin(), 1);
+    EXPECT_EQ(*changed_lights.begin(), light_ID);
+    EXPECT_EQ(LightSources::get_changes(light_ID), LightSources::Changes::Created);
+
     LightSources::deallocate();
 }
 
@@ -87,9 +93,10 @@ TEST_F(Scene_LightSource, destroy) {
     EXPECT_FALSE(LightSources::has(light_ID));
 
     // Test scene node destroyed notification.
-    Core::Iterable<LightSources::light_destroyed_iterator> destroyed_lights = LightSources::get_destroyed_lights();
-    EXPECT_EQ(destroyed_lights.end() - destroyed_lights.begin(), 1);
-    EXPECT_EQ(*destroyed_lights.begin(), light_ID);
+    Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
+    EXPECT_EQ(changed_lights.end() - changed_lights.begin(), 1);
+    EXPECT_EQ(*changed_lights.begin(), light_ID);
+    EXPECT_EQ(LightSources::get_changes(light_ID), LightSources::Changes::Destroyed);
 
     LightSources::deallocate();
 }
@@ -105,22 +112,25 @@ TEST_F(Scene_LightSource, create_and_destroy_notifications) {
     EXPECT_TRUE(LightSources::has(light_ID1));
 
     { // Test scene node create notifications.
-        Core::Iterable<LightSources::light_created_iterator> created_lights = LightSources::get_created_lights();
-        EXPECT_EQ(created_lights.end() - created_lights.begin(), 2);
-        Core::Iterable<LightSources::light_destroyed_iterator> destroyed_lights = LightSources::get_destroyed_lights();
-        EXPECT_EQ(destroyed_lights.end() - destroyed_lights.begin(), 0);
+        Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
+        EXPECT_EQ(changed_lights.end() - changed_lights.begin(), 2);
 
         bool node0_created = false;
         bool node1_created = false;
-        for (const LightSources::UID light_ID : created_lights) {
-            if (light_ID == light_ID0)
+        bool other_changes = false;
+        for (const LightSources::UID light_ID : changed_lights) {
+            bool light_created = LightSources::get_changes(light_ID) == LightSources::Changes::Created;
+            if (light_ID == light_ID0 && light_created)
                 node0_created = true;
-            if (light_ID == light_ID1)
+            else if (light_ID == light_ID1 && light_created)
                 node1_created = true;
+            else
+                other_changes = true;
         }
 
         EXPECT_TRUE(node0_created);
         EXPECT_TRUE(node1_created);
+        EXPECT_FALSE(other_changes);
     }
 
     LightSources::reset_change_notifications();
@@ -129,34 +139,30 @@ TEST_F(Scene_LightSource, create_and_destroy_notifications) {
         LightSources::destroy(light_ID0);
         EXPECT_FALSE(LightSources::has(light_ID0));
 
-        Core::Iterable<LightSources::light_created_iterator> created_lights = LightSources::get_created_lights();
-        EXPECT_EQ(created_lights.end() - created_lights.begin(), 0);
-        Core::Iterable<LightSources::light_destroyed_iterator> destroyed_lights = LightSources::get_destroyed_lights();
-        EXPECT_EQ(destroyed_lights.end() - destroyed_lights.begin(), 1);
+        Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
+        EXPECT_EQ(changed_lights.end() - changed_lights.begin(), 1);
 
         bool node0_destroyed = false;
-        bool node1_destroyed = false;
-        for (const LightSources::UID light_ID : destroyed_lights) {
-            if (light_ID == light_ID0)
+        bool other_changes = false;
+        for (const LightSources::UID light_ID : changed_lights) {
+            if (light_ID == light_ID0 && LightSources::get_changes(light_ID) == LightSources::Changes::Destroyed)
                 node0_destroyed = true;
-            if (light_ID == light_ID1)
-                node1_destroyed = true;
+            else
+                other_changes = true;
         }
 
         EXPECT_TRUE(node0_destroyed);
-        EXPECT_FALSE(node1_destroyed);
+        EXPECT_FALSE(other_changes);
     }
 
     LightSources::reset_change_notifications();
 
     { // Test that destroyed node cannot be destroyed again.
+        EXPECT_FALSE(LightSources::has(light_ID0));
+        
         LightSources::destroy(light_ID0);
         EXPECT_FALSE(LightSources::has(light_ID0));
-
-        Core::Iterable<LightSources::light_created_iterator> created_lights = LightSources::get_created_lights();
-        EXPECT_EQ(created_lights.end() - created_lights.begin(), 0);
-        Core::Iterable<LightSources::light_destroyed_iterator> destroyed_lights = LightSources::get_destroyed_lights();
-        EXPECT_EQ(destroyed_lights.end() - destroyed_lights.begin(), 0);
+        EXPECT_TRUE(LightSources::get_changed_lights().is_empty());
     }
 
     LightSources::deallocate();

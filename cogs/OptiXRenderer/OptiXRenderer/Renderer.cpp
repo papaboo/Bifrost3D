@@ -474,29 +474,10 @@ void Renderer::handle_updates() {
     }
 
     { // Light updates.
-        if (!LightSources::get_created_lights().is_empty() || !LightSources::get_destroyed_lights().is_empty()) {
-            if (m_state->lights.ID_to_index.size() < LightSources::capacity()) {
-                m_state->lights.ID_to_index.resize(LightSources::capacity());
-                m_state->lights.index_to_ID.resize(LightSources::capacity());
-            }
-
-            // Deferred area light geometry update helper. Keeps track of the highest delta light index updated.
-            int highest_area_light_index_updated = -1;
-
-            LightSources::light_created_iterator created_lights_begin = LightSources::get_created_lights().begin();
-            LightSources::light_created_iterator created_lights_end = LightSources::get_created_lights().end();
-            LightSources::light_destroyed_iterator destroyed_lights_begin = LightSources::get_destroyed_lights().begin();
-            LightSources::light_destroyed_iterator destroyed_lights_end = LightSources::get_destroyed_lights().end();
-
-            unsigned int lights_created_count = unsigned int(created_lights_end - created_lights_begin);
-            unsigned int lights_destroyed_count = unsigned int(destroyed_lights_end - destroyed_lights_begin);
-            unsigned int old_light_count = m_state->lights.count;
-            unsigned int rolling_light_count = old_light_count;
-            m_state->lights.count += lights_created_count - lights_destroyed_count;
-
+        if (!LightSources::get_changed_lights().is_empty()) {
             // Light creation helper method.
             static auto light_creation = [](LightSources::UID light_ID, unsigned int light_index, SphereLight* device_lights,
-                                            int& highest_area_light_index_updated) {
+                int& highest_area_light_index_updated) {
                 SphereLight& light = device_lights[light_index];
 
                 SceneNodes::UID node_ID = LightSources::get_node_ID(light_ID);
@@ -512,11 +493,16 @@ void Renderer::handle_updates() {
                     highest_area_light_index_updated = max(highest_area_light_index_updated, light_index);
             };
 
-            if (old_light_count < m_state->lights.count) {
-                // Resize to add room for new light sources.
-                m_state->lights.sources->setSize(m_state->lights.count);
+            // Deferred area light geometry update helper. Keeps track of the highest delta light index updated.
+            int highest_area_light_index_updated = -1;
 
-                // Resizing removes old data, so see this as an opportunity to linearize the light data.
+            if (m_state->lights.ID_to_index.size() < LightSources::capacity()) {
+                // Resize the light buffer to hold the new capacity.
+                m_state->lights.ID_to_index.resize(LightSources::capacity());
+                m_state->lights.index_to_ID.resize(LightSources::capacity());
+                m_state->lights.sources->setSize(LightSources::capacity());
+
+                // Resizing removes old data, so this as an opportunity to linearize the light data.
                 SphereLight* device_lights = (SphereLight*)m_state->lights.sources->map();
                 unsigned int light_index = 0;
                 for (LightSources::UID light_ID : LightSources::get_iterable()) {
@@ -527,40 +513,54 @@ void Renderer::handle_updates() {
                     ++light_index;
                 }
                 m_state->lights.sources->unmap();
-
             } else {
-
                 SphereLight* device_lights = (SphereLight*)m_state->lights.sources->map();
+                LightSources::ChangedIterator created_lights_begin = LightSources::get_changed_lights().begin();
+                while (created_lights_begin != LightSources::get_changed_lights().end() &&
+                    LightSources::get_changes(*created_lights_begin) != LightSources::Changes::Created)
+                    ++created_lights_begin;
 
-                for (LightSources::UID light_ID : Iterable<LightSources::light_destroyed_iterator>(destroyed_lights_begin, destroyed_lights_end)) {
+                // Process destroyed lights.
+                for (LightSources::UID light_ID : LightSources::get_changed_lights()) {
+                    if (LightSources::get_changes(light_ID) != LightSources::Changes::Destroyed)
+                        continue;
+
                     unsigned int light_index = m_state->lights.ID_to_index[light_ID];
 
                     if (!LightSources::is_delta_light(light_ID))
                         highest_area_light_index_updated = max(highest_area_light_index_updated, light_index);
 
-                    if (created_lights_begin != created_lights_end) {
+                    if (created_lights_begin != LightSources::get_changed_lights().end()) {
                         // Replace deleted light by new light source.
-                        LightSources::UID new_light_ID = *created_lights_begin++;
+                        LightSources::UID new_light_ID = *created_lights_begin;
                         light_creation(new_light_ID, light_index, device_lights, highest_area_light_index_updated);
                         m_state->lights.ID_to_index[new_light_ID] = light_index;
                         m_state->lights.index_to_ID[light_index] = new_light_ID;
+
+                        // Find next created light.
+                        while (created_lights_begin != LightSources::get_changed_lights().end() &&
+                            LightSources::get_changes(*created_lights_begin) != LightSources::Changes::Created)
+                            ++created_lights_begin;
                     } else {
                         // Replace deleted light by light from the end of the array.
-                        --rolling_light_count;
-                        if (light_index != rolling_light_count) {
-                            memcpy(device_lights + light_index, device_lights + rolling_light_count, sizeof(SphereLight));
+                        --m_state->lights.count;
+                        if (light_index != m_state->lights.count) {
+                            memcpy(device_lights + light_index, device_lights + m_state->lights.count, sizeof(SphereLight));
 
                             // Rewire light ID and index maps.
-                            m_state->lights.index_to_ID[light_index] = m_state->lights.index_to_ID[rolling_light_count];
+                            m_state->lights.index_to_ID[light_index] = m_state->lights.index_to_ID[m_state->lights.count];
                             m_state->lights.ID_to_index[m_state->lights.index_to_ID[light_index]] = light_index;
 
-                            highest_area_light_index_updated = max(highest_area_light_index_updated, rolling_light_count);
+                            highest_area_light_index_updated = max(highest_area_light_index_updated, m_state->lights.count);
                         }
                     }
                 }
 
-                for (LightSources::UID light_ID : Iterable<LightSources::light_destroyed_iterator>(created_lights_begin, created_lights_end)) {
-                    unsigned int light_index = rolling_light_count++;
+                for (LightSources::UID light_ID : Iterable<LightSources::ChangedIterator>(created_lights_begin, LightSources::get_changed_lights().end())) {
+                    if (LightSources::get_changes(light_ID) != LightSources::Changes::Created)
+                        continue;
+                    
+                    unsigned int light_index = m_state->lights.count++;
                     m_state->lights.ID_to_index[light_ID] = light_index;
                     m_state->lights.index_to_ID[light_index] = light_ID;
 
@@ -569,7 +569,7 @@ void Renderer::handle_updates() {
 
                 m_state->lights.sources->unmap();
             }
-
+            
             m_state->context["g_light_count"]->setInt(m_state->lights.count);
             m_state->accumulations = 0u;
 
