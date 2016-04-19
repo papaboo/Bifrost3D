@@ -67,10 +67,11 @@ public:
         static const unsigned char Created = 1u << 0u;
         static const unsigned char Destroyed = 1u << 1u;
         static const unsigned char Updated = 1u << 2u;
+        static const unsigned char All = Created | Destroyed | Updated;
     };
 
     static inline unsigned char get_changes(Materials::UID material_ID) { return m_changes[material_ID]; }
-    static inline bool has_changes(Materials::UID material_ID, unsigned char change_bitmask) {
+    static inline bool has_changes(Materials::UID material_ID, unsigned char change_bitmask = Changes::All) {
         return (m_changes[material_ID] & change_bitmask) != Changes::None;
     }
 
