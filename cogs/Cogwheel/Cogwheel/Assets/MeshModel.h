@@ -76,16 +76,6 @@ public:
         return (m_changes[model_ID] & change_bitmask) != Changes::None;
     }
 
-    typedef std::vector<UID>::iterator model_created_iterator;
-    static Core::Iterable<model_created_iterator> get_created_models() {
-        return Core::Iterable<model_created_iterator>(m_models_created.begin(), m_models_created.end());
-    }
-
-    typedef std::vector<UID>::iterator model_destroyed_iterator;
-    static Core::Iterable<model_destroyed_iterator> get_destroyed_models() {
-        return Core::Iterable<model_destroyed_iterator>(m_models_destroyed.begin(), m_models_destroyed.end());
-    }
-
     typedef std::vector<UID>::iterator ChangedIterator;
     static Core::Iterable<ChangedIterator> get_changed_models() {
         return Core::Iterable<ChangedIterator>(m_models_changed.begin(), m_models_changed.end());
@@ -100,10 +90,6 @@ private:
     static MeshModel* m_models;
     static unsigned char* m_changes; // Bitmask of changes. Could be reduced to 2 bits pr model.
     static std::vector<UID> m_models_changed;
-
-    // Change notifications.
-    static std::vector<UID> m_models_created;
-    static std::vector<UID> m_models_destroyed;
 };
 
 } // NS Assets

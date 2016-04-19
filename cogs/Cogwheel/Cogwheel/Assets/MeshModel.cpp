@@ -18,9 +18,6 @@ MeshModel* MeshModels::m_models = nullptr;
 unsigned char* MeshModels::m_changes = nullptr;
 std::vector<MeshModels::UID> MeshModels::m_models_changed = std::vector<MeshModels::UID>(0);
 
-std::vector<MeshModels::UID> MeshModels::m_models_created = std::vector<MeshModels::UID>(0);
-std::vector<MeshModels::UID> MeshModels::m_models_destroyed = std::vector<MeshModels::UID>(0);
-
 void MeshModels::allocate(unsigned int capacity) {
     if (is_allocated())
         return;
@@ -34,9 +31,6 @@ void MeshModels::allocate(unsigned int capacity) {
     
     m_models_changed.reserve(capacity / 4);
 
-    m_models_created.reserve(capacity / 4);
-    m_models_destroyed.reserve(capacity / 4);
-
     // Allocate dummy element at 0.
     m_models[0] = { Scene::SceneNodes::UID::invalid_UID(), Assets::Meshes::UID::invalid_UID() };
 }
@@ -49,9 +43,6 @@ void MeshModels::deallocate() {
     delete[] m_models; m_models = nullptr;
     delete[] m_changes; m_changes = nullptr;
     m_models_changed.resize(0); m_models_changed.shrink_to_fit();
-
-    m_models_created.resize(0); m_models_created.shrink_to_fit();
-    m_models_destroyed.resize(0); m_models_destroyed.shrink_to_fit();
 }
 
 template <typename T>
@@ -99,28 +90,26 @@ MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Assets:
     m_models[id] = { scene_node_ID, mesh_ID, material_ID };
     m_changes[id] = Changes::Created;
 
-    m_models_created.push_back(id);
-
     return id;
 }
 
 void MeshModels::destroy(MeshModels::UID model_ID) {
-    unsigned char& changes = m_changes[model_ID];
-    if (!(changes & Changes::Destroyed) && m_UID_generator.has(model_ID)) {
+    if (m_UID_generator.has(model_ID)) {
+        unsigned char& changes = m_changes[model_ID];
+        
+        if (changes == Changes::None)
+            m_models_changed.push_back(model_ID);
+
         changes |= Changes::Destroyed;
-        m_models_destroyed.push_back(model_ID);
-        m_models_changed.push_back(model_ID);
     }
 }
 
 void MeshModels::reset_change_notifications() {
-    for (UID model_ID : m_models_destroyed)
-        m_UID_generator.erase(model_ID);
+    for (UID model_ID : m_models_changed)
+        if (has_changes(model_ID, Changes::Destroyed))
+            m_UID_generator.erase(model_ID);
 
     std::memset(m_changes, Changes::None, capacity());
-
-    m_models_created.resize(0);
-    m_models_destroyed.resize(0);
     m_models_changed.resize(0);
 }
 
