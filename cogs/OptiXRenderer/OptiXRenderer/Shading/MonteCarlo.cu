@@ -124,7 +124,6 @@ __inline_dev__ void closest_hit_MIS() {
         if (apply_MIS) {
             float bsdf_PDF = material.PDF(monte_carlo_PRD.direction, shading_light_direction);
             float mis_weight = RNG::power_heuristic(light_sample.PDF, bsdf_PDF); // TODO Check if the BSDF material PDF is valid. If it isn't we then disable MIS intirely? Or set contribution to black?
-            rtPrintf("light PDF %f, bsdf PDF %f, MIS weight %f\n", light_sample.PDF, bsdf_PDF, mis_weight);
 
             light_sample.radiance *= mis_weight;
         }
