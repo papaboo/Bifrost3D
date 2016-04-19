@@ -27,7 +27,7 @@ void MeshModels::allocate(unsigned int capacity) {
 
     m_models = new MeshModel[capacity];
     m_changes = new unsigned char[capacity];
-    std::memset(m_changes, 0, capacity);
+    std::memset(m_changes, Changes::None, capacity);
     
     m_models_changed.reserve(capacity / 4);
 
