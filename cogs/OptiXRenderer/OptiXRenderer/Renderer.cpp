@@ -512,6 +512,7 @@ void Renderer::handle_updates() {
                     light_creation(light_ID, light_index, device_lights, highest_area_light_index_updated);
                     ++light_index;
                 }
+                m_state->lights.count = light_index;
                 m_state->lights.sources->unmap();
             } else {
                 SphereLight* device_lights = (SphereLight*)m_state->lights.sources->map();
