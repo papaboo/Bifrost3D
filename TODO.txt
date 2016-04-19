@@ -1,8 +1,3 @@
-* Change Camera to use the same Change setup as Materials.
-** And add changes notifications to the camera, such as matrix or parent node changed.
-* Change SceneNode to use the same Change setup as Materials.
-** And add changes notifications for updates.
-* Resize broke? Or did it never work? :p
 * RIS
 ** None-MIS closest hit should only sample one light as well.
 * Textures.

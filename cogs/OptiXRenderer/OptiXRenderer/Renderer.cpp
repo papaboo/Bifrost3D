@@ -597,7 +597,10 @@ void Renderer::handle_updates() {
     { // Transform updates.
         // We're only interested in changes in the transforms that are connected to renderables, such as meshes.
         bool important_transform_changed = false; 
-        for (SceneNodes::UID node_ID : SceneNodes::get_changed_transforms()) {
+        for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
+            if (!SceneNodes::has_changes(node_ID, SceneNodes::Changes::Transform) )
+                continue;
+
             if (node_ID < m_state->transforms.size()) {
                 optix::Transform optixTransform = m_state->transforms[node_ID];
                 if (optixTransform) {

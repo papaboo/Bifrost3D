@@ -26,9 +26,9 @@ namespace Scene {
 // * Change the sibling/children layout, so sibling IDs or perhaps siblings are always allocated next too each other?
 //  * Requires an extra indirection though, since node ID's won't match the node positions anymore.
 //  * Could be done (incrementally?) when all mutations in a tick are done.
-// * The create / delete notifications are going to explode when setting up or tearing down a scene. 
+// * The change notification count is going to explode when setting up or tearing down a scene. 
 //   We should implement a better solution for these cases.
-//   Perhaps a global 'a lot has changed, rebuild everything and ignore the notifications' flag?
+//   Perhaps a great big 'a lot has changed, rebuild everything and ignore the notifications' flag?
 // ---------------------------------------------------------------------------
 class SceneNodes final {
 public:
@@ -73,25 +73,30 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    typedef std::vector<UID>::iterator node_created_iterator;
-    static Core::Iterable<node_created_iterator> get_created_nodes() {
-        return Core::Iterable<node_created_iterator>(m_nodes_created.begin(), m_nodes_created.end());
+    struct Changes {
+        static const unsigned char None = 0u;
+        static const unsigned char Created = 1u << 0u;
+        static const unsigned char Destroyed = 1u << 1u;
+        static const unsigned char Transform = 1u << 2u;
+        static const unsigned char All = Created | Destroyed | Transform;
+    };
+
+    static inline unsigned char get_changes(SceneNodes::UID node_ID) { return m_changes[node_ID]; }
+    static inline bool has_changes(SceneNodes::UID node_ID, unsigned char change_bitmask = Changes::All) {
+        return (m_changes[node_ID] & change_bitmask) != Changes::None;
     }
 
-    typedef std::vector<UID>::iterator node_destroyed_iterator;
-    static Core::Iterable<node_destroyed_iterator> get_destroyed_nodes() {
-        return Core::Iterable<node_destroyed_iterator>(m_nodes_destroyed.begin(), m_nodes_destroyed.end());
+    typedef std::vector<UID>::iterator ChangedIterator;
+    static Core::Iterable<ChangedIterator> get_changed_nodes() {
+        return Core::Iterable<ChangedIterator>(m_nodes_changed.begin(), m_nodes_changed.end());
     }
 
-    typedef std::vector<UID>::iterator transform_changed_iterator;
-    static Core::Iterable<transform_changed_iterator> get_changed_transforms() { 
-        return Core::Iterable<transform_changed_iterator>(m_transforms_changed.begin(), m_transforms_changed.end());
-    }
-    
     static void reset_change_notifications();
 
 private:
     static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);
+
+    static void flag_as_changed(SceneNodes::UID material_ID, unsigned char change);
 
     static UIDGenerator m_UID_generator;
     static std::string* m_names;
@@ -102,10 +107,8 @@ private:
 
     static Math::Transform* m_global_transforms;
 
-    // Change notifications.
-    static std::vector<UID> m_nodes_created;
-    static std::vector<UID> m_nodes_destroyed;
-    static std::vector<UID> m_transforms_changed;
+    static unsigned char* m_changes; // Bitmask of changes.
+    static std::vector<UID> m_nodes_changed;
 };
 
 // ---------------------------------------------------------------------------
@@ -143,6 +146,9 @@ public:
     inline void set_local_transform(Math::Transform transform) { SceneNodes::set_local_transform(m_ID, transform); }
     inline Math::Transform get_global_transform() const { return SceneNodes::get_global_transform(m_ID); }
     inline void set_global_transform(Math::Transform transform) { SceneNodes::set_global_transform(m_ID, transform); }
+
+    inline unsigned char get_changes() const { return SceneNodes::get_changes(m_ID); }
+    inline bool has_changes(unsigned char changes) const { return SceneNodes::has_changes(m_ID, changes); }
 
     // -----------------------------------------------------------------------
     // Applies a function recursively.

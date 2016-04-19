@@ -243,9 +243,10 @@ TEST_F(Scene_Transform, Transform_changed_notification) {
     SceneNode n1 = SceneNodes::create("n1");
     SceneNode n2 = SceneNodes::create("n2");
 
-    { // Test that initialy no transforms have changed
-        EXPECT_EQ(SceneNodes::get_changed_transforms().begin(), SceneNodes::get_changed_transforms().end());
-    }
+    SceneNodes::reset_change_notifications();
+
+    // Test that initialy no transforms have changed
+    EXPECT_TRUE(SceneNodes::get_changed_nodes().is_empty());
 
     { // Test that transform change notifications are recorded.
         n0.set_global_transform(Transform(Vector3f(1, 2, 3)));
@@ -254,58 +255,51 @@ TEST_F(Scene_Transform, Transform_changed_notification) {
         bool n0_changed = false;
         bool n1_changed = false;
         bool n2_changed = false;
+        bool other_changes = false;
 
-        for (SceneNodes::UID node_ID : SceneNodes::get_changed_transforms()) {
-            if (node_ID == n0.get_ID())
+        for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
+            bool transform_changed = SceneNodes::get_changes(node_ID) == SceneNodes::Changes::Transform;
+            if (node_ID == n0.get_ID() && transform_changed)
                 n0_changed = true;
-            if (node_ID == n1.get_ID())
-                n1_changed = true;
-            if (node_ID == n2.get_ID())
+            else if (node_ID == n2.get_ID() && transform_changed)
                 n2_changed = true;
+            else
+                other_changes = true;
         }
 
         EXPECT_TRUE(n0_changed);
         EXPECT_FALSE(n1_changed);
         EXPECT_TRUE(n2_changed);
+        EXPECT_FALSE(other_changes);
     }
 
     SceneNodes::reset_change_notifications();
 
     { // Test that after clearing the change notifications no nodes are flagged as changed.
-        bool n0_changed = false;
-        bool n1_changed = false;
-        bool n2_changed = false;
-
-        for (SceneNodes::UID node_ID : SceneNodes::get_changed_transforms()) {
-            if (node_ID == n0.get_ID())
-                n0_changed = true;
-            if (node_ID == n1.get_ID())
-                n1_changed = true;
-            if (node_ID == n2.get_ID())
-                n2_changed = true;
-        }
-
-        EXPECT_FALSE(n0_changed);
-        EXPECT_FALSE(n1_changed);
-        EXPECT_FALSE(n2_changed);
+        EXPECT_TRUE(SceneNodes::get_changed_nodes().is_empty());
+        EXPECT_EQ(SceneNodes::get_changes(n0.get_ID()), SceneNodes::Changes::None);
+        EXPECT_EQ(SceneNodes::get_changes(n1.get_ID()), SceneNodes::Changes::None);
+        EXPECT_EQ(SceneNodes::get_changes(n2.get_ID()), SceneNodes::Changes::None);
     }
-
-    SceneNodes::reset_change_notifications();
 
     { // Test that transform changes are propagated downwards.
         n2.set_parent(n1);
         n1.set_global_transform(Transform(Vector3f(-1, -2, -3)));
 
+        Core::Iterable<SceneNodes::ChangedIterator> changed_nodes = SceneNodes::get_changed_nodes();
+        EXPECT_EQ(changed_nodes.end() - changed_nodes.begin(), 2);
+
         bool n0_changed = false;
         bool n1_changed = false;
         bool n2_changed = false;
 
-        for (SceneNodes::UID node_ID : SceneNodes::get_changed_transforms()) {
-            if (node_ID == n0.get_ID())
+        for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
+            bool transform_changed = SceneNodes::get_changes(node_ID) == SceneNodes::Changes::Transform;
+            if (node_ID == n0.get_ID() && transform_changed)
                 n0_changed = true;
-            if (node_ID == n1.get_ID())
+            if (node_ID == n1.get_ID() && transform_changed)
                 n1_changed = true;
-            if (node_ID == n2.get_ID())
+            if (node_ID == n2.get_ID() && transform_changed)
                 n2_changed = true;
         }
 

@@ -58,9 +58,10 @@ GTEST_TEST(Scene_SceneNode, create) {
     EXPECT_EQ(SceneNodes::get_name(node_ID), "Foo");
 
     // Test scene node created notification.
-    Core::Iterable<SceneNodes::node_created_iterator> created_nodes = SceneNodes::get_created_nodes();
-    EXPECT_EQ(created_nodes.end() - created_nodes.begin(), 1);
-    EXPECT_EQ(*created_nodes.begin(), node_ID);
+    Core::Iterable<SceneNodes::ChangedIterator> changed_nodes = SceneNodes::get_changed_nodes();
+    EXPECT_EQ(changed_nodes.end() - changed_nodes.begin(), 1);
+    EXPECT_EQ(*changed_nodes.begin(), node_ID);
+    EXPECT_EQ(SceneNodes::get_changes(node_ID), SceneNodes::Changes::Created);
 
     SceneNodes::deallocate();
 }
@@ -76,9 +77,10 @@ GTEST_TEST(Scene_SceneNode, destroy) {
     EXPECT_FALSE(SceneNodes::has(node_ID));
 
     // Test scene node destroyed notification.
-    Core::Iterable<SceneNodes::node_destroyed_iterator> destroyed_nodes = SceneNodes::get_destroyed_nodes();
-    EXPECT_EQ(destroyed_nodes.end() - destroyed_nodes.begin(), 1);
-    EXPECT_EQ(*destroyed_nodes.begin(), node_ID);
+    Core::Iterable<SceneNodes::ChangedIterator> changed_nodes = SceneNodes::get_changed_nodes();
+    EXPECT_EQ(changed_nodes.end() - changed_nodes.begin(), 1);
+    EXPECT_EQ(*changed_nodes.begin(), node_ID);
+    EXPECT_EQ(SceneNodes::get_changes(node_ID), SceneNodes::Changes::Destroyed);
 
     SceneNodes::deallocate();
 }
@@ -92,22 +94,25 @@ GTEST_TEST(Scene_SceneNode, create_and_destroy_notifications) {
     EXPECT_TRUE(SceneNodes::has(node_ID1));
 
     { // Test scene node create notifications.
-        Core::Iterable<SceneNodes::node_created_iterator> created_nodes = SceneNodes::get_created_nodes();
-        EXPECT_EQ(created_nodes.end() - created_nodes.begin(), 2);
-        Core::Iterable<SceneNodes::node_destroyed_iterator> destroyed_nodes = SceneNodes::get_destroyed_nodes();
-        EXPECT_EQ(destroyed_nodes.end() - destroyed_nodes.begin(), 0);
+        Core::Iterable<SceneNodes::ChangedIterator> changed_nodes = SceneNodes::get_changed_nodes();
+        EXPECT_EQ(changed_nodes.end() - changed_nodes.begin(), 2);
 
         bool node0_created = false;
         bool node1_created = false;
-        for (const SceneNodes::UID node_ID : created_nodes) {
-            if (node_ID == node_ID0)
+        bool other_changes = false;
+        for (const SceneNodes::UID node_ID : changed_nodes) {
+            bool node_created = SceneNodes::get_changes(node_ID) == SceneNodes::Changes::Created;
+            if (node_ID == node_ID0 && node_created)
                 node0_created = true;
-            if (node_ID == node_ID1)
+            else if (node_ID == node_ID1 && node_created)
                 node1_created = true;
+            else
+                other_changes = true;
         }
 
         EXPECT_TRUE(node0_created);
         EXPECT_TRUE(node1_created);
+        EXPECT_FALSE(other_changes);
     }
 
     SceneNodes::reset_change_notifications();
@@ -116,34 +121,30 @@ GTEST_TEST(Scene_SceneNode, create_and_destroy_notifications) {
         SceneNodes::destroy(node_ID0);
         EXPECT_FALSE(SceneNodes::has(node_ID0));
 
-        Core::Iterable<SceneNodes::node_created_iterator> created_nodes = SceneNodes::get_created_nodes();
-        EXPECT_EQ(created_nodes.end() - created_nodes.begin(), 0);
-        Core::Iterable<SceneNodes::node_destroyed_iterator> destroyed_nodes = SceneNodes::get_destroyed_nodes();
-        EXPECT_EQ(destroyed_nodes.end() - destroyed_nodes.begin(), 1);
+        Core::Iterable<SceneNodes::ChangedIterator> changed_nodes = SceneNodes::get_changed_nodes();
+        EXPECT_EQ(changed_nodes.end() - changed_nodes.begin(), 1);
 
         bool node0_destroyed = false;
-        bool node1_destroyed = false;
-        for (const SceneNodes::UID node_ID : destroyed_nodes) {
-            if (node_ID == node_ID0)
+        bool other_changes = false;
+        for (const SceneNodes::UID node_ID : changed_nodes) {
+            if (node_ID == node_ID0 && SceneNodes::get_changes(node_ID) == SceneNodes::Changes::Destroyed)
                 node0_destroyed = true;
-            if (node_ID == node_ID1)
-                node1_destroyed = true;
+            else
+                other_changes = true;
         }
 
         EXPECT_TRUE(node0_destroyed);
-        EXPECT_FALSE(node1_destroyed);
+        EXPECT_FALSE(other_changes);
     }
 
     SceneNodes::reset_change_notifications();
 
     { // Test that destroyed node cannot be destroyed again.
-        SceneNodes::destroy(node_ID0);
         EXPECT_FALSE(SceneNodes::has(node_ID0));
 
-        Core::Iterable<SceneNodes::node_created_iterator> created_nodes = SceneNodes::get_created_nodes();
-        EXPECT_EQ(created_nodes.end() - created_nodes.begin(), 0);
-        Core::Iterable<SceneNodes::node_destroyed_iterator> destroyed_nodes = SceneNodes::get_destroyed_nodes();
-        EXPECT_EQ(destroyed_nodes.end() - destroyed_nodes.begin(), 0);
+        SceneNodes::destroy(node_ID0);
+        EXPECT_FALSE(SceneNodes::has(node_ID0));
+        EXPECT_TRUE(SceneNodes::get_changed_nodes().is_empty());
     }
 
     SceneNodes::deallocate();

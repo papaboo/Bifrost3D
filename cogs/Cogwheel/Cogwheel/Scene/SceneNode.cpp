@@ -22,9 +22,8 @@ SceneNodes::UID* SceneNodes::m_first_child_IDs = nullptr;
 
 Math::Transform* SceneNodes::m_global_transforms = nullptr;
 
-std::vector<SceneNodes::UID> SceneNodes::m_nodes_created = std::vector<SceneNodes::UID>(0);
-std::vector<SceneNodes::UID> SceneNodes::m_nodes_destroyed = std::vector<SceneNodes::UID>(0);
-std::vector<SceneNodes::UID> SceneNodes::m_transforms_changed = std::vector<SceneNodes::UID>(0);
+unsigned char* SceneNodes::m_changes = nullptr;
+std::vector<SceneNodes::UID> SceneNodes::m_nodes_changed = std::vector<SceneNodes::UID>(0);
 
 void SceneNodes::allocate(unsigned int capacity) {
     if (is_allocated())
@@ -41,9 +40,10 @@ void SceneNodes::allocate(unsigned int capacity) {
 
     m_global_transforms = new Math::Transform[capacity];
 
-    m_nodes_created.reserve(capacity / 4);
-    m_nodes_destroyed.reserve(capacity / 4);
-    m_transforms_changed.reserve(capacity / 4);
+    m_changes = new unsigned char[capacity];
+    std::memset(m_changes, Changes::None, capacity);
+
+    m_nodes_changed.reserve(capacity / 4);
 
     // Allocate dummy element at 0.
     m_names[0] = "Dummy Node";
@@ -64,9 +64,8 @@ void SceneNodes::deallocate() {
 
     delete[] m_global_transforms; m_global_transforms = nullptr;
 
-    m_nodes_created.resize(0); m_nodes_created.shrink_to_fit();
-    m_nodes_destroyed.resize(0); m_nodes_destroyed.shrink_to_fit();
-    m_transforms_changed.resize(0); m_transforms_changed.shrink_to_fit();
+    delete[] m_changes; m_changes = nullptr;
+    m_nodes_changed.resize(0); m_nodes_changed.shrink_to_fit();
 }
 
 void SceneNodes::reserve(unsigned int new_capacity) {
@@ -99,6 +98,8 @@ void SceneNodes::reserve_node_data(unsigned int new_capacity, unsigned int old_c
     m_first_child_IDs = resize_and_copy_array(m_first_child_IDs, new_capacity, copyable_elements);
 
     m_global_transforms = resize_and_copy_array(m_global_transforms, new_capacity, copyable_elements);
+
+    m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
 }
 
 SceneNodes::UID SceneNodes::create(const std::string& name, Math::Transform transform) {
@@ -114,11 +115,13 @@ SceneNodes::UID SceneNodes::create(const std::string& name, Math::Transform tran
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_node_data(m_UID_generator.capacity(), old_capacity);
 
+    if (m_changes[id] == Changes::None)
+        m_nodes_changed.push_back(id);
+
     m_names[id] = name;
     m_parent_IDs[id] = m_first_child_IDs[id] = m_sibling_IDs[id] = UID::invalid_UID();
     m_global_transforms[id] = transform;
-
-    m_nodes_created.push_back(id);
+    m_changes[id] = Changes::Created;
 
     return id;
 }
@@ -126,7 +129,7 @@ SceneNodes::UID SceneNodes::create(const std::string& name, Math::Transform tran
 void SceneNodes::destroy(SceneNodes::UID node_ID) {
     // We don't actually destroy anything when destroying a node. The properties will get overwritten later when a node is created in same the spot.
     if (m_UID_generator.erase(node_ID))
-        m_nodes_destroyed.push_back(node_ID);
+        flag_as_changed(node_ID, Changes::Destroyed);
 }
 
 void SceneNodes::set_parent(SceneNodes::UID node_ID, const SceneNodes::UID parent_ID) {
@@ -226,19 +229,24 @@ void SceneNodes::set_global_transform(SceneNodes::UID node_ID, Math::Transform t
     
     Math::Transform delta_transform = Math::Transform::delta(m_global_transforms[node_ID], transform);
     m_global_transforms[node_ID] = transform;
-    m_transforms_changed.push_back(node_ID);
+    flag_as_changed(node_ID, Changes::Transform);
 
     // Update global transforms of all children.
     apply_to_children_recursively(node_ID, [=](SceneNodes::UID child_ID) {
         m_global_transforms[child_ID] = delta_transform * m_global_transforms[child_ID];
-        m_transforms_changed.push_back(child_ID);
+        flag_as_changed(child_ID, Changes::Transform);
     });
 }
 
+void SceneNodes::flag_as_changed(SceneNodes::UID node_ID, unsigned char change) {
+    if (m_changes[node_ID] == Changes::None)
+        m_nodes_changed.push_back(node_ID);
+    m_changes[node_ID] |= change;
+}
+
 void SceneNodes::reset_change_notifications() {
-    m_nodes_created.resize(0);
-    m_nodes_destroyed.resize(0);
-    m_transforms_changed.resize(0);
+    std::memset(m_changes, Changes::None, capacity());
+    m_nodes_changed.resize(0);
 }
 
 } // NS Scene
