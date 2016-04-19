@@ -1,11 +1,13 @@
-* Change Mesh to use the same Change setup as Materials.
 * Change Camera to use the same Change setup as Materials.
 ** And add changes notifications to the camera, such as matrix or parent node changed.
-* Add background colors to scenes.
-* Resize broke.
+* Change SceneNode to use the same Change setup as Materials.
+** And add changes notifications for updates.
+* Change LightSources to use the same Change setup as Materials.
+* Resize broke? Or did it never work? :p
 * RIS
 ** None-MIS closest hit should only sample one light as well.
 * Textures.
+* Add background colors and environment to scenes?
 * Environment models.
 * Firefly reduction based on path PDF.
 * Reduce TODOs

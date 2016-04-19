@@ -20,8 +20,8 @@ std::string* Meshes::m_names = nullptr;
 Mesh* Meshes::m_meshes = nullptr;
 AABB* Meshes::m_bounds = nullptr;
 
-std::vector<Meshes::UID> Meshes::m_meshes_created = std::vector<Meshes::UID>(0);
-std::vector<Meshes::UID> Meshes::m_meshes_destroyed = std::vector<Meshes::UID>(0);
+unsigned char* Meshes::m_changes = nullptr;
+std::vector<Meshes::UID> Meshes::m_meshes_changed = std::vector<Meshes::UID>(0);;
 
 void Meshes::allocate(unsigned int capacity) {
     if (is_allocated())
@@ -33,9 +33,10 @@ void Meshes::allocate(unsigned int capacity) {
     m_names = new std::string[capacity];
     m_meshes = new Mesh[capacity];
     m_bounds = new AABB[capacity];
+    m_changes = new unsigned char[capacity];
+    std::memset(m_changes, Changes::None, capacity);
 
-    m_meshes_created.reserve(capacity / 4);
-    m_meshes_destroyed.reserve(capacity / 4);
+    m_meshes_changed.reserve(capacity / 4);
 
     // Allocate dummy element at 0.
     m_names[0] = "Dummy Node";
@@ -56,9 +57,9 @@ void Meshes::deallocate() {
     }
     delete[] m_meshes; m_meshes = nullptr;
     delete[] m_bounds; m_bounds = nullptr;
+    delete[] m_changes; m_changes = nullptr;
 
-    m_meshes_created.resize(0); m_meshes_created.shrink_to_fit();
-    m_meshes_destroyed.resize(0); m_meshes_destroyed.shrink_to_fit();
+    m_meshes_changed.resize(0); m_meshes_changed.shrink_to_fit();
 
     m_UID_generator = UIDGenerator(0u);
 }
@@ -80,6 +81,10 @@ void Meshes::reserve_mesh_data(unsigned int new_capacity, unsigned int old_capac
     m_names = resize_and_copy_array(m_names, new_capacity, copyable_elements);
     m_meshes = resize_and_copy_array(m_meshes, new_capacity, copyable_elements);
     m_bounds = resize_and_copy_array(m_bounds, new_capacity, copyable_elements);
+    m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
+    if (copyable_elements < new_capacity)
+        // We need to zero the new change masks.
+        std::memset(m_changes + copyable_elements, Changes::None, new_capacity - copyable_elements);
 }
 
 void Meshes::reserve(unsigned int new_capacity) {
@@ -99,18 +104,24 @@ Meshes::UID Meshes::create(const std::string& name, unsigned int indices_count, 
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_mesh_data(m_UID_generator.capacity(), old_capacity);
 
+    if (m_changes[id] == Changes::None)
+        m_meshes_changed.push_back(id);
+
     m_names[id] = name;
     m_meshes[id] = Mesh(indices_count, vertex_count, buffer_bitmask);
     m_bounds[id] = AABB(Vector3f(-1e30f, -1e30f, -1e30f), Vector3f(1e30f, 1e30f, 1e30f));
-
-    m_meshes_created.push_back(id);
+    m_changes[id] = Changes::Created;
 
     return id;
 }
 
 void Meshes::destroy(Meshes::UID mesh_ID) {
-    if (m_UID_generator.erase(mesh_ID))
-        m_meshes_destroyed.push_back(mesh_ID);
+    if (m_UID_generator.erase(mesh_ID)) {
+        if (m_changes[mesh_ID] == Changes::None)
+            m_meshes_changed.push_back(mesh_ID);
+
+        m_changes[mesh_ID] |= Changes::Destroyed;
+    }
 }
 
 AABB Meshes::compute_bounds(Meshes::UID mesh_ID) {
@@ -126,8 +137,8 @@ AABB Meshes::compute_bounds(Meshes::UID mesh_ID) {
 }
 
 void Meshes::reset_change_notifications() {
-    m_meshes_created.resize(0);
-    m_meshes_destroyed.resize(0);
+    std::memset(m_changes, Changes::None, capacity());
+    m_meshes_changed.resize(0);
 }
 
 } // NS Assets

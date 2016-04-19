@@ -425,15 +425,17 @@ void Renderer::render() {
 
 void Renderer::handle_updates() {
     { // Mesh updates.
-        for (Meshes::UID mesh_ID : Meshes::get_destroyed_meshes()) {
-            m_state->meshes[mesh_ID]->destroy();
-            m_state->meshes[mesh_ID] = NULL;
-        }
+        for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
+            if (Meshes::get_changes(mesh_ID) == Meshes::Changes::Destroyed) {
+                m_state->meshes[mesh_ID]->destroy();
+                m_state->meshes[mesh_ID] = NULL;
+            }
 
-        for (Meshes::UID mesh_ID : Meshes::get_created_meshes()) {
-            if (m_state->meshes.size() <= mesh_ID)
-                m_state->meshes.resize(Meshes::capacity());
-            m_state->meshes[mesh_ID] = load_mesh(m_state->context, mesh_ID, m_state->triangle_intersection_program, m_state->triangle_bounds_program);
+            if (Meshes::get_changes(mesh_ID) == Meshes::Changes::Created) {
+                if (m_state->meshes.size() <= mesh_ID)
+                    m_state->meshes.resize(Meshes::capacity());
+                m_state->meshes[mesh_ID] = load_mesh(m_state->context, mesh_ID, m_state->triangle_intersection_program, m_state->triangle_bounds_program);
+            }
         }
     }
 

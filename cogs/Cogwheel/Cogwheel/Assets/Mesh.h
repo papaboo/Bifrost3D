@@ -96,14 +96,21 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    typedef std::vector<UID>::iterator mesh_created_iterator;
-    static Core::Iterable<mesh_created_iterator> get_created_meshes() {
-        return Core::Iterable<mesh_created_iterator>(m_meshes_created.begin(), m_meshes_created.end());
+    struct Changes {
+        static const unsigned char None = 0u;
+        static const unsigned char Created = 1u << 0u;
+        static const unsigned char Destroyed = 1u << 1u;
+        static const unsigned char All = Created | Destroyed;
+    };
+
+    static inline unsigned char get_changes(Meshes::UID mesh_ID) { return m_changes[mesh_ID]; }
+    static inline bool has_changes(Meshes::UID mesh_ID, unsigned char change_bitmask = Changes::All) {
+        return (m_changes[mesh_ID] & change_bitmask) != Changes::None;
     }
 
-    typedef std::vector<UID>::iterator mesh_destroyed_iterator;
-    static Core::Iterable<mesh_destroyed_iterator> get_destroyed_meshes() {
-        return Core::Iterable<mesh_destroyed_iterator>(m_meshes_destroyed.begin(), m_meshes_destroyed.end());
+    typedef std::vector<UID>::iterator ChangedIterator;
+    static Core::Iterable<ChangedIterator> get_changed_meshes() {
+        return Core::Iterable<ChangedIterator>(m_meshes_changed.begin(), m_meshes_changed.end());
     }
 
     static void reset_change_notifications();
@@ -117,9 +124,8 @@ private:
     static Mesh* m_meshes;
     static Math::AABB* m_bounds;
 
-    // Change notifications.
-    static std::vector<UID> m_meshes_created;
-    static std::vector<UID> m_meshes_destroyed;
+    static unsigned char* m_changes; // Bitmask of changes.
+    static std::vector<UID> m_meshes_changed;
 };
 
 } // NS Assets
