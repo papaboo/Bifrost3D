@@ -85,7 +85,7 @@ public:
 private:
     static void reserve_material_data(unsigned int new_capacity, unsigned int old_capacity);
 
-    static void flag_as_changed(Materials::UID material_ID);
+    static void flag_as_updated(Materials::UID material_ID);
 
     static UIDGenerator m_UID_generator;
 

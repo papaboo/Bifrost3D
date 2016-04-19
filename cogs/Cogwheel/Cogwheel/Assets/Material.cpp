@@ -31,7 +31,7 @@ void Materials::allocate(unsigned int capacity) {
     m_names = new std::string[capacity];
     m_materials = new Data[capacity];
     m_changes = new unsigned char[capacity];
-    std::memset(m_changes, 0, capacity);
+    std::memset(m_changes, Changes::None, capacity);
 
     m_materials_changed.reserve(capacity / 4);
 
@@ -115,26 +115,26 @@ void Materials::destroy(Materials::UID material_ID) {
 
 void Materials::set_base_tint(Materials::UID material_ID, Math::RGB tint) {
     m_materials[material_ID].base_tint = tint;
-    flag_as_changed(material_ID);
+    flag_as_updated(material_ID);
 }
 
 void Materials::set_base_roughness(Materials::UID material_ID, float roughness) {
     m_materials[material_ID].base_roughness = roughness;
-    flag_as_changed(material_ID);
+    flag_as_updated(material_ID);
 }
 
 void Materials::set_specularity(Materials::UID material_ID, float incident_specularity) {
     m_materials[material_ID].specularity = incident_specularity;
-    flag_as_changed(material_ID);
+    flag_as_updated(material_ID);
 }
 
 void Materials::set_metallic(Materials::UID material_ID, float metallic) {
     m_materials[material_ID].metallic = metallic;
-    flag_as_changed(material_ID);
+    flag_as_updated(material_ID);
 }
 
-void Materials::flag_as_changed(Materials::UID material_ID) {
-    if (has_changes(material_ID, Changes::Updated))
+void Materials::flag_as_updated(Materials::UID material_ID) {
+    if (m_changes[material_ID] == Changes::None)
         m_materials_changed.push_back(material_ID);
     m_changes[material_ID] |= Changes::Updated;
 }
