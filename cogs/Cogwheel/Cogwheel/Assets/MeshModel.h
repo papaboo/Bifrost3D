@@ -20,26 +20,19 @@
 namespace Cogwheel {
 namespace Assets {
 
-// Model properties
-namespace MeshModelProperties {
-// const unsigned int Visible =       1 << 0;
-const unsigned int Destroyed =     1 << 1;
-}
-
-//----------------------------------------------------------------------------
-// A mesh model contains the mesh and material IDs and combines them with 
-// the scene node ID.
-// When a MeshModel is deleted, it is still possible to access it's values 
-// until clear_change_notifications has been called, usually at the 
-// end of the game loop.
-//----------------------------------------------------------------------------
 struct MeshModel final {
     Scene::SceneNodes::UID scene_node_ID;
     Assets::Meshes::UID mesh_ID;
     Assets::Materials::UID material_ID;
-    unsigned int properties;
 };
 
+//----------------------------------------------------------------------------
+// A mesh model contains the mesh and material IDs and combines them with 
+// the scene node ID.
+// When a MeshModel ID is destroyed, it is still possible to access it's values 
+// until clear_change_notifications has been called, usually at the 
+// end of the game loop.
+//----------------------------------------------------------------------------
 class MeshModels final {
 public:
     typedef Core::TypedUIDGenerator<Meshes> UIDGenerator;
@@ -71,6 +64,18 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
+    struct Changes {
+        static const unsigned char None = 0u;
+        static const unsigned char Created = 1u << 0u;
+        static const unsigned char Destroyed = 1u << 1u;
+        static const unsigned char All = Created | Destroyed;
+    }; 
+    
+    static inline unsigned char get_changes(MeshModels::UID model_ID) { return m_changes[model_ID]; }
+    static inline bool has_changes(MeshModels::UID model_ID, unsigned char change_bitmask = Changes::All) {
+        return (m_changes[model_ID] & change_bitmask) != Changes::None;
+    }
+
     typedef std::vector<UID>::iterator model_created_iterator;
     static Core::Iterable<model_created_iterator> get_created_models() {
         return Core::Iterable<model_created_iterator>(m_models_created.begin(), m_models_created.end());
@@ -81,6 +86,11 @@ public:
         return Core::Iterable<model_destroyed_iterator>(m_models_destroyed.begin(), m_models_destroyed.end());
     }
 
+    typedef std::vector<UID>::iterator ChangedIterator;
+    static Core::Iterable<ChangedIterator> get_changed_models() {
+        return Core::Iterable<ChangedIterator>(m_models_changed.begin(), m_models_changed.end());
+    }
+
     static void reset_change_notifications();
 
 private:
@@ -88,6 +98,8 @@ private:
 
     static UIDGenerator m_UID_generator;
     static MeshModel* m_models;
+    static unsigned char* m_changes; // Bitmask of changes. Could be reduced to 2 bits pr model.
+    static std::vector<UID> m_models_changed;
 
     // Change notifications.
     static std::vector<UID> m_models_created;

@@ -616,29 +616,30 @@ void Renderer::handle_updates() {
         // TODO Properly handle reused model ID's. Is it faster to reuse the rt components then it is to destroy and recreate them? Perhaps even keep a list of 'ready to use' components?
 
         bool models_changed = false;
-        for (MeshModels::UID model_ID : MeshModels::get_destroyed_models()) {
-            SceneNodes::UID node_ID = MeshModels::get_scene_node_ID(model_ID);
-            optix::Transform optixTransform = m_state->transforms[node_ID];
-            m_state->root_node->removeChild(optixTransform);
-            optixTransform->destroy();
-            m_state->transforms[node_ID] = NULL;
-            // TODO check if I need to destroy the subgraph. I think reference counting might take care of that.
-
-            models_changed = true;
-        }
-
-        for (MeshModels::UID model_ID : MeshModels::get_created_models()) {
-            SceneNodes::UID node_ID = MeshModels::get_scene_node_ID(model_ID);
-
+        for (MeshModels::UID model_ID : MeshModels::get_changed_models()) {
             MeshModel model = MeshModels::get_model(model_ID);
-            optix::Transform transform = load_model(m_state->context, model, m_state->meshes.data(), m_state->default_material);
-            m_state->root_node->addChild(transform);
 
-            if (m_state->transforms.size() <= model.scene_node_ID)
-                m_state->transforms.resize(SceneNodes::capacity());
-            m_state->transforms[model.scene_node_ID] = transform;
+            if (MeshModels::get_changes(model_ID) == MeshModels::Changes::Destroyed) {
+                optix::Transform optixTransform = m_state->transforms[model.scene_node_ID];
+                m_state->root_node->removeChild(optixTransform);
+                optixTransform->destroy();
+                m_state->transforms[model.scene_node_ID] = NULL;
+                // TODO check if I need to destroy the subgraph. I think reference counting might take care of that.
 
-            models_changed = true;
+                models_changed = true;
+            }
+
+            if (MeshModels::get_changes(model_ID) == MeshModels::Changes::Created) {
+                MeshModel model = MeshModels::get_model(model_ID);
+                optix::Transform transform = load_model(m_state->context, model, m_state->meshes.data(), m_state->default_material);
+                m_state->root_node->addChild(transform);
+
+                if (m_state->transforms.size() <= model.scene_node_ID)
+                    m_state->transforms.resize(SceneNodes::capacity());
+                m_state->transforms[model.scene_node_ID] = transform;
+
+                models_changed = true;
+            }
         }
 
         if (models_changed) {
