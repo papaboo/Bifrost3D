@@ -227,6 +227,12 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
         engine.add_mutating_callback(BoxGun::update_callback, boxgun);
     }
 
+    Vector3f light_position = Vector3f(100.0f, 20.0f, 100.0f);
+    Transform light_transform = Transform(light_position);
+    SceneNodes::UID light_node_ID = SceneNodes::create("Light", light_transform);
+    LightSources::UID light_ID = LightSources::create_sphere_light(light_node_ID, RGB(1000000.0f), 0.0f);
+    SceneNodes::set_parent(light_node_ID, engine.get_scene_root());
+
     BlinkingLight* blinking_light = new BlinkingLight();
     engine.add_mutating_callback(BlinkingLight::blink_callback, blinking_light);
 
