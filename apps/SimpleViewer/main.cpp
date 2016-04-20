@@ -1,4 +1,5 @@
 #include <CornellBoxScene.h>
+#include <MaterialScene.h>
 #include <TestScene.h>
 
 #include <Cogwheel/Assets/Mesh.h>
@@ -118,13 +119,17 @@ void initializer(Cogwheel::Core::Engine& engine) {
     SceneNodes::allocate(8u);
 
     engine.add_tick_cleanup_callback(scenenode_cleanup_callback, nullptr);
-
+    
+    bool load_model_from_file = false;
     if (g_scene.empty() || g_scene.compare("CornellBox") == 0)
         engine.set_scene_root(create_cornell_box_scene());
+    else if (g_scene.compare("MaterialScene") == 0)
+        engine.set_scene_root(create_material_scene());
     else if (g_scene.compare("TestScene") == 0)
         engine.set_scene_root(create_test_scene(engine));
     else {
         engine.set_scene_root(ObjLoader::load(g_scene));
+        load_model_from_file = true;
 
         { // Add camera
             Cameras::allocate(1u);
@@ -157,7 +162,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
     engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
 
     // Add a light source if none were added yet.
-    if (LightSources::begin() == LightSources::end()) {
+    if (LightSources::begin() == LightSources::end() && load_model_from_file) {
         Vector3f light_position = scene_bounds.center() + scene_bounds.size() * 10.0f;
         Transform light_transform = Transform(light_position);
         SceneNodes::UID light_node_ID = SceneNodes::create("Light", light_transform);
@@ -175,7 +180,7 @@ void print_usage() {
     char* usage =
         "usage simpleviewer:\n"
         "  -h | --help: Show command line usage for simpleviewer.\n"
-        "  -s | --scene <model>: Loads the model specified. Reserved names are 'CornellBox' and 'TestScene', which loads the corresponding builtin scenes.\n";
+        "  -s | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'MaterialScene' and 'TestScene', which loads the corresponding builtin scenes.\n";
     printf("%s", usage);
 }
 

@@ -5,6 +5,7 @@ include_directories(.)
 set(SRCS 
   CornellBoxScene.h
   main.cpp
+  MaterialScene.h
   TestScene.h
 )
 

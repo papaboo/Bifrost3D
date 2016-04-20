@@ -16,10 +16,8 @@
 *** Expose certain backbuffer state pr camera/viewport in a renderer interface. Fx iteration_count, is_continuous_renderer and so on. Members that can be used to evaluate the 'doneness' of a backbuffer.
 ** Render to offscreen buffer.
 * Materials revisited.
-** Application with material test scene.
-*** Allow user to lerp between two materials in 10 steps, i.e. have 10 instances of the same model rendered side-by-side and then lerp the material parameters from left to right.
-** Add Burley and Oren-Nayar BRDF. Burley should exclude the fresnel term, as that is part of the overall combiner.
 ** Add Fresnel coat. How to sample the Fresnel combiner? Add it as a coated shading model in OptiXRenderer, so I have access to both materials.
+** Add Burley and Oren-Nayar BRDF. Burley should exclude the fresnel term, as that is part of the overall combiner.
 ** Use perfectly specular BRDFs for tiny roughness values.
 *** Adapt MIS to handle specular surfaces.
 * Multiple cameras.
