@@ -174,12 +174,16 @@ void initializer(Cogwheel::Core::Engine& engine) {
         SceneNodes::set_global_transform(cam_node_ID, cam_transform);
     }
 
-    // TODO Should be based on the transformed global mesh bounds and not the local bounds.
-    //      These could be calculated as a helper function on the model.
+    // Rough approximation of the scene bounds using bounding spheres.
     AABB scene_bounds = AABB::invalid();
-    for (Meshes::UID mesh_ID : Meshes::get_iterable()) {
-        AABB mesh_aabb = Meshes::get_bounds(mesh_ID);
-        scene_bounds.grow_to_contain(mesh_aabb);
+    for (MeshModels::UID model_ID : MeshModels::get_iterable()) {
+        MeshModel model = MeshModels::get_model(model_ID);
+        AABB mesh_aabb = Meshes::get_bounds(model.mesh_ID);
+        Transform transform = SceneNodes::get_global_transform(model.scene_node_ID);
+        Vector3f bounding_sphere_center = transform * mesh_aabb.center();
+        float bounding_sphere_radius = magnitude(mesh_aabb.size()) * 0.5f;
+        AABB global_mesh_aabb = AABB(bounding_sphere_center - bounding_sphere_radius, bounding_sphere_center + bounding_sphere_radius);
+        scene_bounds.grow_to_contain(global_mesh_aabb);
     }
 
     float camera_velocity = magnitude(scene_bounds.size()) * 0.1f;
