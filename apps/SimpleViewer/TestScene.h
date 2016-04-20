@@ -135,26 +135,18 @@ private:
     float m_existed_time;
 };
 
-Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
+Scene::SceneNodes::UID create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID) {
     using namespace Cogwheel::Assets;
     using namespace Cogwheel::Math;
     using namespace Cogwheel::Scene;
 
     SceneNode root_node = SceneNodes::create("Root");
 
-    { // Add camera
-        Cameras::allocate(1u);
-        SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
-
+    { // Setup camera transform.
+        SceneNodes::UID cam_node_ID = Cameras::get_node_ID(camera_ID);
         Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
         cam_transform.translation = Vector3f(0, 1, -6);
         SceneNodes::set_global_transform(cam_node_ID, cam_transform);
-
-        Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-        CameraUtils::compute_perspective_projection(0.1f, 100.0f, PI<float>() / 4.0f, 8.0f / 6.0f,
-            perspective_matrix, inverse_perspective_matrix);
-
-        Cameras::UID cam_ID = Cameras::create(cam_node_ID, perspective_matrix, inverse_perspective_matrix);
     }
 
     { // Create floor.

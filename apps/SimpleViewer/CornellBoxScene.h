@@ -18,7 +18,7 @@
 
 using namespace Cogwheel;
 
-Scene::SceneNodes::UID create_cornell_box_scene() {
+Scene::SceneNodes::UID create_cornell_box_scene(Scene::Cameras::UID camera_ID) {
     using namespace Cogwheel::Assets;
     using namespace Cogwheel::Math;
     using namespace Cogwheel::Scene;
@@ -60,19 +60,11 @@ Scene::SceneNodes::UID create_cornell_box_scene() {
     copper_material_data.metallic = 1.0f;
     Materials::UID copper_material_ID = Materials::create("Copper", copper_material_data);
 
-    { // Add camera
-        Cameras::allocate(1u);
-        SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
-
+    { // Set camera position
+        SceneNodes::UID cam_node_ID = Cameras::get_node_ID(camera_ID);
         Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
         cam_transform.translation = Vector3f(0, 0.0f, -1.5);
         SceneNodes::set_global_transform(cam_node_ID, cam_transform);
-
-        Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-        CameraUtils::compute_perspective_projection(0.1f, 100.0f, PI<float>() / 4.0f, 8.0f / 6.0f,
-            perspective_matrix, inverse_perspective_matrix);
-
-        Cameras::UID cam_ID = Cameras::create(cam_node_ID, perspective_matrix, inverse_perspective_matrix);
     }
 
     { // Add light source.

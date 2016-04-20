@@ -90,7 +90,7 @@ public:
         }
     }
 
-    static inline void navigate_callback(Cogwheel::Core::Engine& engine, void* state) {
+    static inline void navigate_callback(Engine& engine, void* state) {
         static_cast<Navigation*>(state)->navigate(engine);
     }
 
@@ -99,6 +99,33 @@ private:
     float m_vertical_rotation;
     float m_horizontal_rotation;
     float m_velocity;
+};
+
+class CameraHandler final {
+public:
+    CameraHandler(Cameras::UID camera_ID, float aspect_ratio)
+        : m_camera_ID(camera_ID), m_aspect_ratio(aspect_ratio) {
+    }
+
+    void handle(Window& window) {
+        float window_aspect_ratio = window.get_aspect_ratio();
+        if (window_aspect_ratio != m_aspect_ratio) {
+            Matrix4x4f perspective_matrix, inverse_perspective_matrix;
+            CameraUtils::compute_perspective_projection(0.1f, 100.0f, PI<float>() / 4.0f, window_aspect_ratio,
+                perspective_matrix, inverse_perspective_matrix);
+
+            Cameras::set_projection_matrices(m_camera_ID, perspective_matrix, inverse_perspective_matrix);
+            m_aspect_ratio = window_aspect_ratio;
+        }
+    }
+
+    static inline void handle_callback(Engine& engine, void* state) {
+        static_cast<CameraHandler*>(state)->handle(engine.get_window());
+    }
+
+private:
+    Cameras::UID m_camera_ID;
+    float m_aspect_ratio;
 };
 
 static inline void scenenode_cleanup_callback(void* dummy) {
@@ -120,31 +147,31 @@ void initializer(Cogwheel::Core::Engine& engine) {
 
     engine.add_tick_cleanup_callback(scenenode_cleanup_callback, nullptr);
     
+    // Create camera
+    SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
+
+    Matrix4x4f perspective_matrix, inverse_perspective_matrix;
+    CameraUtils::compute_perspective_projection(0.1f, 100.0f, PI<float>() / 4.0f, engine.get_window().get_aspect_ratio(),
+        perspective_matrix, inverse_perspective_matrix);
+
+    Cameras::allocate(1u);
+    Cameras::UID cam_ID = Cameras::create(cam_node_ID, perspective_matrix, inverse_perspective_matrix);
+
+    // Load model
     bool load_model_from_file = false;
     if (g_scene.empty() || g_scene.compare("CornellBox") == 0)
-        engine.set_scene_root(create_cornell_box_scene());
+        engine.set_scene_root(create_cornell_box_scene(cam_ID));
     else if (g_scene.compare("MaterialScene") == 0)
-        engine.set_scene_root(create_material_scene());
+        engine.set_scene_root(create_material_scene(cam_ID));
     else if (g_scene.compare("TestScene") == 0)
-        engine.set_scene_root(create_test_scene(engine));
+        engine.set_scene_root(create_test_scene(engine, cam_ID));
     else {
         engine.set_scene_root(ObjLoader::load(g_scene));
         load_model_from_file = true;
 
-        { // Add camera
-            Cameras::allocate(1u);
-            SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
-
-            Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
-            cam_transform.translation = Vector3f(0, 1, -4);
-            SceneNodes::set_global_transform(cam_node_ID, cam_transform);
-
-            Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-            CameraUtils::compute_perspective_projection(0.1f, 100.0f, PI<float>() / 4.0f, 8.0f / 6.0f,
-                perspective_matrix, inverse_perspective_matrix);
-
-            Cameras::UID cam_ID = Cameras::create(cam_node_ID, perspective_matrix, inverse_perspective_matrix);
-        }
+        Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
+        cam_transform.translation = Vector3f(0, 1, -4);
+        SceneNodes::set_global_transform(cam_node_ID, cam_transform);
     }
 
     // TODO Should be based on the transformed global mesh bounds and not the local bounds.
@@ -155,11 +182,11 @@ void initializer(Cogwheel::Core::Engine& engine) {
         scene_bounds.grow_to_contain(mesh_aabb);
     }
 
-    Cameras::UID cam_ID = *Cameras::begin();
-    SceneNodes::UID cam_node_ID = Cameras::get_node_ID(cam_ID);
     float camera_velocity = magnitude(scene_bounds.size()) * 0.1f;
     Navigation* camera_navigation = new Navigation(cam_node_ID, camera_velocity);
     engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
+    CameraHandler* camera_handler = new CameraHandler(cam_ID, engine.get_window().get_aspect_ratio());
+    engine.add_mutating_callback(CameraHandler::handle_callback, camera_handler);
 
     // Add a light source if none were added yet.
     if (LightSources::begin() == LightSources::end() && load_model_from_file) {

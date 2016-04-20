@@ -18,27 +18,19 @@
 
 using namespace Cogwheel;
 
-Scene::SceneNodes::UID create_material_scene() {
+Scene::SceneNodes::UID create_material_scene(Scene::Cameras::UID camera_ID) {
     using namespace Cogwheel::Assets;
     using namespace Cogwheel::Math;
     using namespace Cogwheel::Scene;
 
     SceneNode root_node = SceneNodes::create("Root");
 
-    { // Add camera
-        Cameras::allocate(1u);
-        SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
-
+    { // Setup camera transform.
+        SceneNodes::UID cam_node_ID = Cameras::get_node_ID(camera_ID);
         Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
         cam_transform.translation = Vector3f(0, 3.0f, -17.0f);
         cam_transform.look_at(Vector3f(0, 1.0f, 0.0f));
         SceneNodes::set_global_transform(cam_node_ID, cam_transform);
-
-        Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-        CameraUtils::compute_perspective_projection(0.1f, 100.0f, PI<float>() / 4.0f, 8.0f / 6.0f,
-            perspective_matrix, inverse_perspective_matrix);
-
-        Cameras::UID cam_ID = Cameras::create(cam_node_ID, perspective_matrix, inverse_perspective_matrix);
     }
 
     // TODO Add a directional light.
