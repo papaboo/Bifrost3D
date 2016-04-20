@@ -30,6 +30,7 @@ public:
 
     inline int get_width() const { return m_width; }
     inline int get_height() const { return m_height; }
+    inline float get_aspect_ratio() const { return m_width / float(m_height); }
 
     inline void resize(int width, int height) {
         m_width = width; m_height = height;
