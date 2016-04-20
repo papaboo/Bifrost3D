@@ -42,7 +42,11 @@ void run(on_launch_callback on_launch, on_window_created_callback on_window_crea
         exit(EXIT_FAILURE);
     }
 
-    // glfwSetWindowSizeCallback(window, windowSizeCallback);
+    GLFWwindowsizefun window_size_callback = [](GLFWwindow* window, int width, int height) {
+        Cogwheel::Core::Window& engine_window = Engine::get_instance()->get_window();
+        engine_window.resize(width, height);
+    };
+    glfwSetWindowSizeCallback(window, window_size_callback);
 
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
