@@ -168,7 +168,7 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
 
         SceneNode plane_node = SceneNodes::create("Floor");
         Meshes::UID plane_mesh_ID = MeshCreation::plane(10);
-        MeshModels::UID plane_model_ID = MeshModels::create(plane_node.get_ID(), plane_mesh_ID, material_ID);
+        MeshModels::create(plane_node.get_ID(), plane_mesh_ID, material_ID);
         plane_node.set_parent(root_node);
     }
 
@@ -183,7 +183,7 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
         Transform transform = Transform(Vector3f(0.0f, 0.5f, 0.0f));
         SceneNode cube_node = SceneNodes::create("Rotating cube", transform);
         Meshes::UID cube_mesh_ID = MeshCreation::cube(3);
-        MeshModels::UID cube_model_ID = MeshModels::create(cube_node.get_ID(), cube_mesh_ID, material_ID);
+        MeshModels::create(cube_node.get_ID(), cube_mesh_ID, material_ID);
         cube_node.set_parent(root_node);
 
         LocalRotator* simple_rotator = new LocalRotator(cube_node.get_ID());
@@ -201,7 +201,7 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
         Transform transform = Transform(Vector3f(-1.5f, 0.5f, 0.0f));
         SceneNode cylinder_node = SceneNodes::create("Destroyed Cylinder", transform);
         Meshes::UID cylinder_mesh_ID = MeshCreation::cylinder(4, 16);
-        MeshModels::UID cylinder_model_ID = MeshModels::create(cylinder_node.get_ID(), cylinder_mesh_ID, material_ID);
+        MeshModels::create(cylinder_node.get_ID(), cylinder_mesh_ID, material_ID);
         cylinder_node.set_parent(root_node);
     }
 
@@ -216,7 +216,7 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine) {
         Transform transform = Transform(Vector3f(1.5f, 0.5f, 0.0f));
         SceneNode sphere_node = SceneNodes::create("Sphere", transform);
         Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(32, 16);
-        MeshModels::UID sphere_model_ID = MeshModels::create(sphere_node.get_ID(), sphere_mesh_ID, material_ID);
+        MeshModels::create(sphere_node.get_ID(), sphere_mesh_ID, material_ID);
         sphere_node.set_parent(root_node);
     }
 
