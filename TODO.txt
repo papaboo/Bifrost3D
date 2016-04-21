@@ -1,4 +1,3 @@
-* Firefly reduction based on path PDF.
 * Textures.
 ** Precompute material parameters on initialize instead of continuesly recomputing them. Profile performance and register count in sponza!
 * Add background colors and environment to scenes?

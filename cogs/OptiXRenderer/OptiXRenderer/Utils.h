@@ -52,6 +52,19 @@ __inline_all__ static void compute_tangents(const optix::float3& normal,
     tangent = normalize(cross(bitangent, normal));
 }
 
+__inline_all__ optix::float3 clamp_light_contribution_by_pdf(const optix::float3& radiance, float path_PDF, int accumulations) {
+#ifdef PATH_PDF_FIREFLY_FILTER 
+    float contribution = optix::luminance(radiance);
+    float max_contribution = (1.0f / (1.0f - path_PDF)) - 1.0f;
+    // max_contribution = sqrtf(max_contribution);
+    max_contribution *= accumulations * 0.5f + 0.5f;
+    float scale = contribution > max_contribution ? max_contribution / contribution : 1.0f;
+    return radiance * scale;
+#else
+    return radiance;
+#endif
+}
+
 //-----------------------------------------------------------------------------
 // Math utils
 //-----------------------------------------------------------------------------

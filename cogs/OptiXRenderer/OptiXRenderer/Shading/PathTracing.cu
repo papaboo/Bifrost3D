@@ -60,7 +60,7 @@ RT_PROGRAM void path_tracing() {
     prd.throughput = make_float3(1.0f);
     prd.bounces = 0;
     prd.bsdf_MIS_PDF = 0.0f;
-    prd.path_PDF = 1.0f;
+    prd.clamped_path_PDF = prd.path_PDF = 1.0f;
 
     // Generate rays.
     float2 screen_pos_offset = prd.rng.sample2f(); // Always advance the rng by two samples, even if we ignore them.

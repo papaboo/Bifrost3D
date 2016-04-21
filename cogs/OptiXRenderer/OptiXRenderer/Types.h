@@ -63,6 +63,8 @@ struct __align__(16) MonteCarloPRD {
     float bsdf_MIS_PDF; // If negative, then it indicates that MIS should not be used.
     optix::float3 direction;
     float path_PDF;
+
+    float clamped_path_PDF; // The same as the path PDF, but the PDF's are clamped to 1 before being applied.
 };
 
 struct ShadowPRD {

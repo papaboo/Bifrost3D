@@ -28,6 +28,7 @@ rtDeclareVariable(float, g_scene_epsilon, , );
 rtBuffer<SphereLight, 1> g_lights;
 rtDeclareVariable(int, g_light_count, , );
 rtDeclareVariable(int, g_max_bounce_count, , );
+rtDeclareVariable(int, g_accumulations, , );
 
 // Material parameters.
 rtBuffer<Material, 1> g_materials;
@@ -136,15 +137,17 @@ __inline_dev__ void closest_hit_not_MIS() {
             Ray shadow_ray(monte_carlo_PRD.position, light_sample.direction, unsigned int(RayTypes::Shadow), g_scene_epsilon, light_sample.distance - g_scene_epsilon);
             rtTrace(g_scene_root, shadow_ray, shadow_PRD);
 
-            monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * shadow_PRD.attenuation;
+            float3 radiance = monte_carlo_PRD.throughput * shadow_PRD.attenuation;
+            monte_carlo_PRD.radiance += clamp_light_contribution_by_pdf(radiance, monte_carlo_PRD.clamped_path_PDF, g_accumulations);
         }
     }
 
-    // Sample material.
+    // Sample BSDF.
     BSDFSample bsdf_sample = material.sample_all(monte_carlo_PRD.direction, monte_carlo_PRD.rng.sample3f());
     monte_carlo_PRD.direction = bsdf_sample.direction * world_shading_tbn;
     monte_carlo_PRD.bsdf_MIS_PDF = 0.0f; // bsdf_sample.PDF;
     monte_carlo_PRD.path_PDF *= bsdf_sample.PDF;
+    monte_carlo_PRD.clamped_path_PDF *= fminf(bsdf_sample.PDF, 1.0f);
     if (!is_PDF_valid(bsdf_sample.PDF))
         monte_carlo_PRD.throughput = make_float3(0.0f);
     else
@@ -175,15 +178,17 @@ __inline_dev__ void closest_hit_MIS() {
             Ray shadow_ray(monte_carlo_PRD.position, light_sample.direction, unsigned int(RayTypes::Shadow), g_scene_epsilon, light_sample.distance - g_scene_epsilon);
             rtTrace(g_scene_root, shadow_ray, shadow_PRD);
 
-            monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * shadow_PRD.attenuation;
+            float3 radiance = monte_carlo_PRD.throughput * shadow_PRD.attenuation;
+            monte_carlo_PRD.radiance += clamp_light_contribution_by_pdf(radiance, monte_carlo_PRD.clamped_path_PDF, g_accumulations);
         }
     }
 
-    // Sample material.
+    // Sample BSDF.
     BSDFSample bsdf_sample = material.sample_all(monte_carlo_PRD.direction, monte_carlo_PRD.rng.sample3f());
     monte_carlo_PRD.direction = bsdf_sample.direction * world_shading_tbn;
     monte_carlo_PRD.bsdf_MIS_PDF = bsdf_sample.PDF;
     monte_carlo_PRD.path_PDF *= bsdf_sample.PDF;
+    monte_carlo_PRD.clamped_path_PDF *= fminf(bsdf_sample.PDF, 1.0f);
     if (!is_PDF_valid(bsdf_sample.PDF))
         monte_carlo_PRD.throughput = make_float3(0.0f);
     else
@@ -232,7 +237,8 @@ RT_PROGRAM void light_closest_hit() {
         // TODO Could this be handled by setting bsdf_MIS_PDF to 0 instead? Wait until we have a specular BRDF implementation.
         light_radiance = make_float3(0.0f);
 
-    monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * light_radiance;
+    float3 radiance = monte_carlo_PRD.throughput * light_radiance;
+    monte_carlo_PRD.radiance += clamp_light_contribution_by_pdf(radiance, monte_carlo_PRD.clamped_path_PDF, g_accumulations);
 
     monte_carlo_PRD.throughput = make_float3(0.0f);
 }
