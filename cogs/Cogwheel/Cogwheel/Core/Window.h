@@ -18,7 +18,9 @@ namespace Core {
 // Window class.
 // Contains the size and name of windows.
 // Future work
-// * Resize events? How to handle?
+// * Is fullscreen bool and supported fullscreen resolutions.
+//   The question is how the rendering backends should handle this.
+//   Does OptiX need a new context if we go fullscreen? What about GL?
 // ---------------------------------------------------------------------------
 class Window final {
 public:
