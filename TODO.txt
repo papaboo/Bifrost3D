@@ -1,20 +1,14 @@
-* RIS
-** None-MIS closest hit should only sample one light as well.
+* Firefly reduction based on path PDF.
 * Textures.
+** Precompute material parameters on initialize instead of continuesly recomputing them. Profile performance and register count in sponza!
 * Add background colors and environment to scenes?
 * Environment models.
-* Firefly reduction based on path PDF.
 * Reduce TODOs
 * Bump mapping
 ** Including 'fixing' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles.
 ** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
 * GL Renderer
-* Screenshot
-** Grab backbuffer on the CPU.
-*** Request to composer or through the camera, not renderers
-*** Expose certain backbuffer state pr camera/viewport in a renderer interface. Fx iteration_count, is_continuous_renderer and so on. Members that can be used to evaluate the 'doneness' of a backbuffer.
-** Render to offscreen buffer.
 * Materials revisited.
 ** Add Fresnel coat. How to sample the Fresnel combiner? Add it as a coated shading model in OptiXRenderer, so I have access to both materials.
 ** Add Burley and Oren-Nayar BRDF. Burley should exclude the fresnel term, as that is part of the overall combiner.
@@ -23,6 +17,11 @@
 * Multiple cameras.
 ** G-Buffer pr camera.
 ** Compose when all cameras are done.
+* Screenshot
+** Grab backbuffer on the CPU.
+*** Request to composer or through the camera, not renderers
+*** Expose certain backbuffer state pr camera/viewport in a renderer interface. Fx iteration_count, is_continuous_renderer and so on. Members that can be used to evaluate the 'doneness' of a backbuffer.
+** Render to offscreen buffer.
 * Multiple scenes.
 ** Only nodes in a certain scene should be rendered.
 ** A scene node should know if it is in a scene and in which. Store the root scene ID pr node?
