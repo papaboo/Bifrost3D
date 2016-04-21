@@ -30,7 +30,7 @@ public:
     __inline_all__ DefaultShading(const Material& material)
         : m_material(material) {}
 
-    __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) {
+    __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
         using namespace optix;
 
         bool is_same_hemisphere = wi.z * wo.z >= 0.00000001f;
@@ -53,7 +53,7 @@ public:
         return diffuse + specular;
     }
 
-    __inline_all__ BSDFSample sample_one(const optix::float3& wo, const optix::float3& random_sample) {
+    __inline_all__ BSDFSample sample_one(const optix::float3& wo, const optix::float3& random_sample) const {
         using namespace optix;
 
         const float3 specular_tint = lerp(make_float3(1.0f), m_material.base_tint, m_material.metallic);
@@ -88,7 +88,7 @@ public:
         return bsdf_sample;
     }
 
-    __inline_all__ BSDFSample sample_all(const optix::float3& wo, const optix::float3& random_sample) {
+    __inline_all__ BSDFSample sample_all(const optix::float3& wo, const optix::float3& random_sample) const {
         using namespace optix;
 
         const float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
@@ -133,7 +133,7 @@ public:
         return bsdf_sample;
     }
 
-    __inline_all__ float PDF(const optix::float3& wo, const optix::float3& wi) {
+    __inline_all__ float PDF(const optix::float3& wo, const optix::float3& wi) const {
         using namespace optix;
 
         const float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
