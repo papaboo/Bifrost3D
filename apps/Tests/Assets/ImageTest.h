@@ -187,53 +187,6 @@ TEST_F(Assets_Images, pixel_updates) {
     EXPECT_EQ(Images::get_pixel(image_ID, Math::Vector2ui(2, 1)), Math::RGBA(17, 18, 19, 1));
 }
 
-/*
-TEST_F(Assets_Images, change_notifications) {
-    Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA32, Math::Vector3ui(1, 2, 3));
-
-    // Test that no materials are initially changed and that a creation doesn't trigger a change notification as well.
-    Core::Iterable<Images::ChangedIterator> changed_materials = Images::get_changed_materials();
-    EXPECT_EQ(changed_materials.end() - changed_materials.begin(), 1);
-    EXPECT_TRUE(material.has_changes(Images::Changes::Created));
-    EXPECT_FALSE(material.has_changes(Images::Changes::Updated));
-
-    Images::reset_change_notifications();
-
-    { // Change base tint.
-        Math::RGB new_tint = Math::RGB::red();
-        material.set_base_tint(new_tint);
-
-        // Test that only the material has changed.
-        for (const Images::UID image_ID : Images::get_changed_materials()) {
-            EXPECT_EQ(image_ID, material.get_ID());
-            EXPECT_EQ(Images::get_base_tint(image_ID), new_tint);
-            EXPECT_TRUE(Images::has_changes(image_ID, Images::Changes::Updated));
-        }
-    }
-
-    {
-        Images::reset_change_notifications();
-
-        // Check that change notifications have been properly reset.
-        Core::Iterable<Images::ChangedIterator> changed_materials = Images::get_changed_materials();
-        EXPECT_EQ(changed_materials.end() - changed_materials.begin(), 0);
-        EXPECT_FALSE(material.has_changes(Images::Changes::Updated));
-    }
-
-    { // Change base roughness.
-        float new_roughness = 0.4f;
-        material.set_base_roughness(new_roughness);
-
-        // Test that only the material has changed.
-        for (const Images::UID image_ID : Images::get_changed_materials()) {
-            EXPECT_EQ(image_ID, material.get_ID());
-            EXPECT_EQ(Images::get_base_roughness(image_ID), new_roughness);
-            EXPECT_TRUE(Images::has_changes(image_ID, Images::Changes::Updated));
-        }
-    }
-}
-*/
-
 TEST_F(Assets_Images, mipmap_size) {
     unsigned int mipmap_count = 4u;
     Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA32, Math::Vector2ui(8, 6), mipmap_count);
