@@ -29,7 +29,7 @@ protected:
 
 TEST_F(Assets_MeshModels, resizing) {
     // Test that capacity can be increased.
-    unsigned int largerCapacity = Meshes::capacity() + 4u;
+    unsigned int largerCapacity = MeshModels::capacity() + 4u;
     MeshModels::reserve(largerCapacity);
     EXPECT_GE(MeshModels::capacity(), largerCapacity);
 
