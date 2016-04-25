@@ -80,7 +80,7 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
 }
 
 // Take multiple light samples and from that set pick one based on the contribution of the light scaled by the material.
-// TODO Link RIS paper.
+// Basic Resampled importance sampling: http://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=1662&context=etd.
 __inline_dev__ LightSample reestimated_light_samples(const DefaultShading& material, const TBN& world_shading_tbn, int samples) {
     LightSample light_sample = sample_single_light(material, world_shading_tbn);
     for (int s = 1; s < samples; ++s) {
