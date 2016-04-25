@@ -1,6 +1,8 @@
 include_directories(.)
 
 SET(ASSETS_SRCS 
+  Cogwheel/Assets/Image.h
+  Cogwheel/Assets/Image.cpp
   Cogwheel/Assets/Material.h
   Cogwheel/Assets/Material.cpp
   Cogwheel/Assets/Mesh.h

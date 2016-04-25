@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <Assets/ImageTest.h>
 #include <Assets/MaterialTest.h>
 #include <Assets/MeshTest.h>
 #include <Assets/MeshModelTest.h>

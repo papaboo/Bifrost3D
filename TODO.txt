@@ -1,4 +1,12 @@
 * Textures.
+** Dummy image should be red/white squares.
+** Textures / Samplers
+** Images::get_type (1D, 2D, 3D).
+** Image loaders and savers.
+** Gamma.
+** Images::set_pixels.
+** Image for_all_pixels(function)
+** Image format converters.
 ** Precompute material parameters on initialize instead of continuesly recomputing them. Profile performance and register count in sponza!
 * Add background colors and environment to scenes?
 * Environment models.
