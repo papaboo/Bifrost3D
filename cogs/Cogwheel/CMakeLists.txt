@@ -11,6 +11,8 @@ SET(ASSETS_SRCS
   Cogwheel/Assets/MeshCreation.cpp
   Cogwheel/Assets/MeshModel.h
   Cogwheel/Assets/MeshModel.cpp
+  Cogwheel/Assets/Texture.h
+  Cogwheel/Assets/Texture.cpp
 )
 
 SET(CORE_SRCS 
