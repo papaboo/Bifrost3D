@@ -9,6 +9,7 @@ set(ASSETS_SRCS
   Assets/MaterialTest.h
   Assets/MeshModelTest.h
   Assets/MeshTest.h
+  Assets/TextureTest.h
 )
 
 set(CORE_SRCS

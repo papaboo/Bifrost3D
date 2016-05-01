@@ -4,6 +4,7 @@
 #include <Assets/MaterialTest.h>
 #include <Assets/MeshTest.h>
 #include <Assets/MeshModelTest.h>
+#include <Assets/TextureTest.h>
 
 #include <Core/ArrayTest.h>
 #include <Core/UniqueIDGeneratorTest.h>
