@@ -26,10 +26,10 @@ if (NOT EXISTS ${GLFW_LIBS_DIR}/CMakeLists.txt)
 
   if(NOT status_code EQUAL 0)
     message(FATAL_ERROR "error: downloading '${GLFW_ZIP_URL}'
-    status_code: ${status_code}
-    status_string: ${status_string}
-    log: ${log}"
-  )
+      status_code: ${status_code}
+      status_string: ${status_string}
+      log: ${log}"
+    )
 
   else()
 
@@ -37,8 +37,9 @@ if (NOT EXISTS ${GLFW_LIBS_DIR}/CMakeLists.txt)
     message(STATUS "Unzipping glfw-3.1.2.zip")
     execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${GLFW_ZIP_DEST}" WORKING_DIRECTORY "${GLFW_COG_DIR}/lib" )
     
-    # TODO Delete the zip file
+    # Delete the zip file
     message(STATUS "Deleting glfw-3.1.2.zip")
+    file(REMOVE "${GLFW_ZIP_DEST}")
   endif()
 endif()  
   
