@@ -56,7 +56,7 @@ __inline_all__ optix::float3 clamp_light_contribution_by_pdf(const optix::float3
 #ifdef PATH_PDF_FIREFLY_FILTER 
     float contribution = optix::luminance(radiance);
     float max_contribution = (1.0f / (1.0f - path_PDF)) - 1.0f;
-    // max_contribution = sqrtf(max_contribution);
+    max_contribution = sqrtf(max_contribution);
     max_contribution *= accumulations * 0.5f + 0.5f;
     float scale = contribution > max_contribution ? max_contribution / contribution : 1.0f;
     return radiance * scale;
