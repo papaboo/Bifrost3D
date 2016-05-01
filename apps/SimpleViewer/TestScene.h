@@ -9,9 +9,11 @@
 #ifndef _SIMPLEVIEWER_TEST_SCENE_H_
 #define _SIMPLEVIEWER_TEST_SCENE_H_
 
+#include <Cogwheel/Assets/Image.h>
 #include <Cogwheel/Assets/Mesh.h>
 #include <Cogwheel/Assets/MeshCreation.h>
 #include <Cogwheel/Assets/MeshModel.h>
+#include <Cogwheel/Assets/Texture.h>
 #include <Cogwheel/Core/Engine.h>
 #include <Cogwheel/Input/Mouse.h>
 #include <Cogwheel/Math/Transform.h>
@@ -150,9 +152,21 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine, Scene::Cameras::U
     }
 
     { // Create floor.
-        // TODO A checker pattern texture would be really nice on the floor.
+        // A checker pattern texture would be really nice on the floor.
+        unsigned int width = 16, height = 16;
+        Images::UID image_ID = Images::create("Checker", PixelFormat::RGBA32, Vector2ui(width, height));
+        unsigned char* pixels = (unsigned char*)Images::get_pixels(image_ID);
+        for (unsigned int y = 0; y < height; ++y) {
+            for (unsigned int x = 0; x < width; ++x) {
+                unsigned char* pixel = pixels + (x + y * width) * 4u;
+                unsigned char intensity = ((x & 1) == (y & 1)) ? 2 : 255;
+                pixel[0] = intensity; pixel[1] = intensity; pixel[2] = intensity; pixel[3] = 255;
+            }
+        }
+
         Materials::Data material_data;
         material_data.base_tint = RGB(0.02f, 0.27f, 0.33f);
+        material_data.base_tint_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
         material_data.base_roughness = 0.3f;
         material_data.specularity = 0.25f;
         material_data.metallic = 0.0f;

@@ -129,21 +129,25 @@ private:
 };
 
 static inline void scenenode_cleanup_callback(void* dummy) {
+    Images::reset_change_notifications();
     LightSources::reset_change_notifications();
     Materials::reset_change_notifications();
     Meshes::reset_change_notifications();
     MeshModels::reset_change_notifications();
     SceneNodes::reset_change_notifications();
+    Textures::reset_change_notifications();
 }
 
 void initializer(Cogwheel::Core::Engine& engine) {
     engine.get_window().set_name("SimpleViewer");
 
+    Images::allocate(8u);
     LightSources::allocate(8u);
     Materials::allocate(8u);
     Meshes::allocate(8u);
     MeshModels::allocate(8u);
     SceneNodes::allocate(8u);
+    Textures::allocate(8u);
 
     engine.add_tick_cleanup_callback(scenenode_cleanup_callback, nullptr);
     
