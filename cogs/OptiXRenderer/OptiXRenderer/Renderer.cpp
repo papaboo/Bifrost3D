@@ -11,8 +11,10 @@
 #include <OptiXRenderer/Kernel.h>
 #include <OptiXRenderer/Types.h>
 
+#include <Cogwheel/Assets/Image.h>
 #include <Cogwheel/Assets/Mesh.h>
 #include <Cogwheel/Assets/MeshModel.h>
+#include <Cogwheel/Assets/Texture.h>
 #include <Cogwheel/Core/Array.h>
 #include <Cogwheel/Core/Engine.h>
 #include <Cogwheel/Math/Math.h>
@@ -60,6 +62,9 @@ struct Renderer::State {
 
     std::vector<optix::Transform> transforms = std::vector<optix::Transform>(0);
     std::vector<optix::Geometry> meshes = std::vector<optix::Geometry>(0);
+
+    std::vector<optix::Buffer> images = std::vector<optix::Buffer>(0);
+    std::vector<optix::TextureSampler> textures = std::vector<optix::TextureSampler>(0);
 
     optix::Material default_material;
     optix::Buffer material_parameters;
@@ -263,6 +268,42 @@ Renderer::Renderer()
         m_state->root_node->addChild(m_state->lights.area_lights);
     }
 
+    { // Setup dummy texture.
+        { // Create red/white pattern image.
+            m_state->images.resize(1);
+            unsigned int width = 16, height = 16;
+            m_state->images[0] = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_BYTE4, width, height);
+
+            uchar4* pixel_data = static_cast<uchar4*>(m_state->images[0]->map());
+            for (unsigned int y = 0; y < height; ++y)
+                for (unsigned int x = 0; x < width; ++x) {
+                    uchar4* pixel = pixel_data + x + y * width;
+                    if ((x & 1) == (y & 1))
+                        *pixel = make_uchar4(255, 0, 0, 255);
+                    else
+                        *pixel = make_uchar4(255, 255, 255, 255);
+                }
+            m_state->images[0]->unmap();
+            OPTIX_VALIDATE(m_state->images[0]);
+        }
+
+        { // ... and wrap it in a texture sampler.
+            m_state->textures.resize(1);
+            TextureSampler& texture = m_state->textures[0] = context->createTextureSampler();
+            texture->setWrapMode(0, RT_WRAP_REPEAT);
+            texture->setWrapMode(1, RT_WRAP_REPEAT);
+            texture->setWrapMode(2, RT_WRAP_REPEAT);
+            texture->setIndexingMode(RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
+            texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT);
+            texture->setMaxAnisotropy(1.0f);
+            texture->setMipLevelCount(1u);
+            texture->setFilteringModes(RT_FILTER_NEAREST, RT_FILTER_NEAREST, RT_FILTER_NONE);
+            texture->setArraySize(1u);
+            texture->setBuffer(0u, 0u, m_state->images[0]);
+            OPTIX_VALIDATE(m_state->textures[0]);
+        }
+    }
+
     { // Setup default material.
         m_state->default_material = context->createMaterial();
 
@@ -424,6 +465,8 @@ void Renderer::render() {
 }
 
 void Renderer::handle_updates() {
+    optix::Context& context = m_state->context;
+
     { // Mesh updates.
         for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
             if (Meshes::get_changes(mesh_ID) == Meshes::Changes::Destroyed) {
@@ -434,18 +477,99 @@ void Renderer::handle_updates() {
             if (Meshes::get_changes(mesh_ID) == Meshes::Changes::Created) {
                 if (m_state->meshes.size() <= mesh_ID)
                     m_state->meshes.resize(Meshes::capacity());
-                m_state->meshes[mesh_ID] = load_mesh(m_state->context, mesh_ID, m_state->triangle_intersection_program, m_state->triangle_bounds_program);
+                m_state->meshes[mesh_ID] = load_mesh(context, mesh_ID, m_state->triangle_intersection_program, m_state->triangle_bounds_program);
+            }
+        }
+    }
+
+    { // Image updates.
+        if (!Images::get_changed_images().is_empty()) {
+            m_state->images.resize(Images::capacity());
+
+            for (Images::UID image_ID : Images::get_changed_images()) {
+                if (Images::get_changes(image_ID) == Images::Changes::Destroyed) {
+                    m_state->images[image_ID]->destroy();
+                    m_state->images[image_ID] = NULL;
+                }
+
+                if (Images::get_changes(image_ID) == Images::Changes::Created) {
+
+                    RTformat pixel_format = RT_FORMAT_UNKNOWN;
+                    switch (Images::get_pixel_format(image_ID)) {
+                    case PixelFormat::RGB24:
+                        pixel_format = RT_FORMAT_UNSIGNED_BYTE3; break;
+                    case PixelFormat::RGBA32:
+                        pixel_format = RT_FORMAT_UNSIGNED_BYTE4; break;
+                    case PixelFormat::RGB_Float:
+                        pixel_format = RT_FORMAT_FLOAT3; break;
+                    case PixelFormat::RGBA_Float:
+                        pixel_format = RT_FORMAT_FLOAT4; break;
+                    }
+
+                    // NOTE setting the depth to 1 result in invalid 2D textures for some reason.
+                    // Since we know that images attached to materials will be 2D for the foreseeable future, 
+                    // we just don't set the depth for now.
+                    m_state->images[image_ID] = context->createBuffer(RT_BUFFER_INPUT, pixel_format,
+                        Images::get_width(image_ID), Images::get_height(image_ID));
+
+                    uchar4* pixel_data = static_cast<uchar4*>(m_state->images[image_ID]->map());
+                    std::memcpy(pixel_data, Images::get_pixels(image_ID), m_state->images[image_ID]->getElementSize() * Images::get_pixel_count(image_ID));
+                    m_state->images[image_ID]->unmap();
+                    OPTIX_VALIDATE(m_state->images[image_ID]);
+                }
+            }
+        }
+    }
+
+    { // Texture updates.
+        if (!Textures::get_changed_textures().is_empty()) {
+            m_state->textures.resize(Textures::capacity());
+
+            for (Textures::UID texture_ID : Textures::get_changed_textures()) {
+                if (Textures::get_changes(texture_ID) == Textures::Changes::Destroyed) {
+                    m_state->images[texture_ID]->destroy();
+                    m_state->images[texture_ID] = NULL;
+                }
+
+                static auto convert_wrap_mode = [](WrapMode wrapmode) {
+                    switch (wrapmode) {
+                    case WrapMode::Clamp: return RT_WRAP_CLAMP_TO_EDGE;
+                    case WrapMode::Repeat: return RT_WRAP_REPEAT;
+                    }
+                    return RT_WRAP_REPEAT;
+                };
+
+                if (Textures::get_changes(texture_ID) == Textures::Changes::Created) {
+                    TextureSampler& texture = m_state->textures[texture_ID] = context->createTextureSampler();
+                    texture->setWrapMode(0, convert_wrap_mode(Textures::get_wrapmode_U(texture_ID)));
+                    texture->setWrapMode(1, convert_wrap_mode(Textures::get_wrapmode_V(texture_ID)));
+                    texture->setWrapMode(2, convert_wrap_mode(Textures::get_wrapmode_W(texture_ID)));
+                    texture->setIndexingMode(RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
+                    texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT);
+                    texture->setMaxAnisotropy(1.0f);
+                    texture->setMipLevelCount(1u);
+                    RTfiltermode min_filtermode = Textures::get_minification_filter(texture_ID) == MinificationFilter::None ? RT_FILTER_NEAREST : RT_FILTER_LINEAR;
+                    RTfiltermode mag_filtermode = Textures::get_magnification_filter(texture_ID) == MagnificationFilter::Linear ? RT_FILTER_LINEAR : RT_FILTER_NEAREST;
+                    texture->setFilteringModes(min_filtermode, mag_filtermode, RT_FILTER_NONE);
+                    texture->setArraySize(1u);
+                    texture->setBuffer(0u, 0u, m_state->images[Textures::get_image_ID(texture_ID)]);
+                    OPTIX_VALIDATE(texture);
+                }
             }
         }
     }
 
     { // Material updates.
-        static auto upload_material = [](Materials::UID material_ID, OptiXRenderer::Material* device_materials) {
+        static auto upload_material = [](Materials::UID material_ID, OptiXRenderer::Material* device_materials, optix::TextureSampler* samplers) {
             OptiXRenderer::Material& device_material = device_materials[material_ID];
             Assets::Material host_material = material_ID;
             device_material.base_tint.x = host_material.get_base_tint().r;
             device_material.base_tint.y = host_material.get_base_tint().g;
             device_material.base_tint.z = host_material.get_base_tint().b;
+            if (host_material.get_base_tint_texture_ID() != Textures::UID::invalid_UID())
+                device_material.base_tint_texture_ID = samplers[host_material.get_base_tint_texture_ID()]->getId();
+            else
+                device_material.base_tint_texture_ID = 0u;
             device_material.base_roughness = host_material.get_base_roughness();
             device_material.specularity = host_material.get_specularity() * 0.08f; // See Physically-Based Shading at Disney bottom of page 8 for why we remap. TODO Consider moving this into Cogwheel or maybe even remove completely in favor of just letting GUI handle this.
             device_material.metallic = host_material.get_metallic();
@@ -458,16 +582,16 @@ void Renderer::handle_updates() {
                 m_state->material_parameters->setSize(m_state->material_parameter_count);
 
                 OptiXRenderer::Material* device_materials = (OptiXRenderer::Material*)m_state->material_parameters->map();
-                upload_material(Materials::UID::invalid_UID(), device_materials); // Upload invalid material params as well.
+                upload_material(Materials::UID::invalid_UID(), device_materials, m_state->textures.data()); // Upload invalid material params as well.
                 for (Materials::UID material_ID : Materials::get_iterable())
-                    upload_material(material_ID, device_materials);
+                    upload_material(material_ID, device_materials, m_state->textures.data());
                 m_state->material_parameters->unmap();
             } else {
                 // Update new and changed materials. Just ignore destroyed ones.
                 OptiXRenderer::Material* device_materials = (OptiXRenderer::Material*)m_state->material_parameters->map();
                 for (Materials::UID material_ID : Materials::get_changed_materials())
                     if (!Materials::has_changes(material_ID, Materials::Changes::Destroyed))
-                        upload_material(material_ID, device_materials);
+                        upload_material(material_ID, device_materials, m_state->textures.data());
                 m_state->material_parameters->unmap();
             }
         }
@@ -571,7 +695,7 @@ void Renderer::handle_updates() {
                 m_state->lights.sources->unmap();
             }
             
-            m_state->context["g_light_count"]->setInt(m_state->lights.count);
+            context["g_light_count"]->setInt(m_state->lights.count);
             m_state->accumulations = 0u;
 
             // Update area light geometry if needed.
@@ -601,7 +725,7 @@ void Renderer::handle_updates() {
             if (!SceneNodes::has_changes(node_ID, SceneNodes::Changes::Transform) )
                 continue;
 
-            if (node_ID < m_state->transforms.size()) {
+            if (node_ID < m_state->transforms.size()) { // TODO(avh) Assert instead. This should always be true. Possibly move the transform update down past the model updates though as they are the ones that creates the transforms.
                 optix::Transform optixTransform = m_state->transforms[node_ID];
                 if (optixTransform) {
                     Math::Transform transform = SceneNodes::get_global_transform(node_ID);
@@ -637,7 +761,7 @@ void Renderer::handle_updates() {
 
             if (MeshModels::get_changes(model_ID) == MeshModels::Changes::Created) {
                 MeshModel model = MeshModels::get_model(model_ID);
-                optix::Transform transform = load_model(m_state->context, model, m_state->meshes.data(), m_state->default_material);
+                optix::Transform transform = load_model(context, model, m_state->meshes.data(), m_state->default_material);
                 m_state->root_node->addChild(transform);
 
                 if (m_state->transforms.size() <= model.scene_node_ID)

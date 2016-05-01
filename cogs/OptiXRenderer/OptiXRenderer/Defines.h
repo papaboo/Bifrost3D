@@ -28,6 +28,10 @@
 #    endif
 #endif
 
+#if (defined(__CUDACC__) || defined(__CUDABE__))
+#define GPU_DEVICE 1
+#endif
+
 #define PIf 3.14159265358979323846f
 
 #endif // _OPTIXRENDERER_SHADING_DEFINES_H_

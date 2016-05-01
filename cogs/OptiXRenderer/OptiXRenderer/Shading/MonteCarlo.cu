@@ -117,7 +117,7 @@ __inline_dev__ void closest_hit_not_MIS() {
     monte_carlo_PRD.direction = world_shading_tbn * -ray.direction;
 
     const Material& material_parameter = g_materials[material_index];
-    DefaultShading material = DefaultShading(material_parameter);
+    DefaultShading material = DefaultShading(material_parameter, texcoord);
 
     // Sample light sources.
     // TODO Use RIS light sampling here as well. But wait until I have a scene with multiple area light sources.
@@ -167,7 +167,7 @@ __inline_dev__ void closest_hit_MIS() {
     monte_carlo_PRD.direction = world_shading_tbn * -ray.direction;
 
     const Material& material_parameter = g_materials[material_index];
-    const DefaultShading material = DefaultShading(material_parameter);
+    const DefaultShading material = DefaultShading(material_parameter, texcoord);
 
     // Sample a light source.
     if (g_light_count != 0) {

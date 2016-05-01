@@ -20,15 +20,38 @@ namespace ShadingModels {
 class DefaultShading {
 private:
     const Material& m_material;
+    optix::float3 m_base_tint;
 
-public:
     // TODO Implement Unreal 4 spherical gaussian Fresnel as well.
     __inline_all__ static float schlick_fresnel(float incident_specular, float abs_cos_theta) {
         return incident_specular + (1.0f - incident_specular) * pow(optix::fmaxf(0.0f, 1.0f - abs_cos_theta), 5.0f);
     }
 
+    // TODO Gamma parameter!
+    // TODO Template with return type? Might be hell on the CPU.
+    // TODO Move to utils.
+    __inline_all__ static optix::float4 tex2D(unsigned int texture_ID, optix::float2 texcoord) {
+#if GPU_DEVICE  
+        float4 texel = optix::rtTex2D<float4>(texture_ID, texcoord.x, texcoord.y);
+        return texel;
+#else
+        return optix::make_float4(1.0f);
+#endif
+    }
+
+public:
+
     __inline_all__ DefaultShading(const Material& material)
-        : m_material(material) {}
+        : m_material(material)
+        , m_base_tint(material.base_tint) { }
+
+    __inline_all__ DefaultShading(const Material& material, optix::float2 texcoord)
+        : m_material(material)
+    {
+        m_base_tint = material.base_tint;
+        if (material.base_tint_texture_ID)
+            m_base_tint *= make_float3(tex2D(material.base_tint_texture_ID, texcoord));
+    }
 
     __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
         using namespace optix;
@@ -46,20 +69,20 @@ public:
         float3 halfway = normalize(wo + wi);
         float specularity = lerp(m_material.specularity, 1.0f, m_material.metallic);
         float fresnel = schlick_fresnel(specularity, dot(wo, halfway));
-        float3 specular_tint = lerp(make_float3(1.0f), m_material.base_tint, m_material.metallic);
+        float3 specular_tint = lerp(make_float3(1.0f), m_base_tint, m_material.metallic);
         float alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
         float3 specular = specular_tint * (fresnel * BSDFs::GGX::evaluate(alpha, wo, wi, halfway));
-        float3 diffuse = (1.0f - fresnel) * BSDFs::Lambert::evaluate(m_material.base_tint);
+        float3 diffuse = (1.0f - fresnel) * BSDFs::Lambert::evaluate(m_base_tint);
         return diffuse + specular;
     }
 
     __inline_all__ BSDFSample sample_one(const optix::float3& wo, const optix::float3& random_sample) const {
         using namespace optix;
 
-        const float3 specular_tint = lerp(make_float3(1.0f), m_material.base_tint, m_material.metallic);
+        const float3 specular_tint = lerp(make_float3(1.0f), m_base_tint, m_material.metallic);
 
         // Sample BSDFs based on their tinted weight.
-        float diffuse_weight = average(m_material.base_tint) * (1.0f - m_material.metallic);
+        float diffuse_weight = average(m_base_tint) * (1.0f - m_material.metallic);
         float specular_weight = average(specular_tint);
         float specular_probability = specular_weight / (diffuse_weight + specular_weight);
         bool sample_specular = random_sample.z < specular_probability;
@@ -71,7 +94,7 @@ public:
             bsdf_sample = BSDFs::GGX::sample(specular_tint, alpha, wo, make_float2(random_sample));
             bsdf_sample.PDF *= specular_probability;
         } else {
-            bsdf_sample = BSDFs::Lambert::sample(m_material.base_tint, make_float2(random_sample));
+            bsdf_sample = BSDFs::Lambert::sample(m_base_tint, make_float2(random_sample));
             bsdf_sample.PDF *= (1.0f - specular_probability);
         }
 
@@ -92,10 +115,10 @@ public:
         using namespace optix;
 
         const float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
-        const float3 specular_tint = lerp(make_float3(1.0f), m_material.base_tint, m_material.metallic);
+        const float3 specular_tint = lerp(make_float3(1.0f), m_base_tint, m_material.metallic);
 
         // Sample BSDFs based on their tinted weight.
-        float diffuse_weight = average(m_material.base_tint) * (1.0f - m_material.metallic);
+        float diffuse_weight = average(m_base_tint) * (1.0f - m_material.metallic);
         float specular_weight = average(specular_tint);
         float specular_probability = specular_weight / (diffuse_weight + specular_weight);
         bool sample_specular = random_sample.z < specular_probability;
@@ -106,7 +129,7 @@ public:
             bsdf_sample = BSDFs::GGX::sample(specular_tint, ggx_alpha, wo, make_float2(random_sample));
             bsdf_sample.PDF *= specular_probability;
         } else {
-            bsdf_sample = BSDFs::Lambert::sample(m_material.base_tint, make_float2(random_sample));
+            bsdf_sample = BSDFs::Lambert::sample(m_base_tint, make_float2(random_sample));
             bsdf_sample.PDF *= (1.0f - specular_probability);
         }
 
@@ -120,7 +143,7 @@ public:
             bsdf_sample.weight *= fresnel;
 
             // Evaluate diffuse layer as well.
-            bsdf_sample.weight += (1.0f - fresnel) * BSDFs::Lambert::evaluate(m_material.base_tint, wo, bsdf_sample.direction);
+            bsdf_sample.weight += (1.0f - fresnel) * BSDFs::Lambert::evaluate(m_base_tint, wo, bsdf_sample.direction);
             bsdf_sample.PDF += (1.0f - specular_probability) * BSDFs::Lambert::PDF(wo, bsdf_sample.direction);
         } else {
             bsdf_sample.weight *= (1.0f - fresnel);
@@ -137,10 +160,10 @@ public:
         using namespace optix;
 
         const float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
-        const float3 specular_tint = lerp(make_float3(1.0f), m_material.base_tint, m_material.metallic);
+        const float3 specular_tint = lerp(make_float3(1.0f), m_base_tint, m_material.metallic);
 
         // Sample BSDFs based on their tinted weight.
-        float diffuse_weight = average(m_material.base_tint) * (1.0f - m_material.metallic);
+        float diffuse_weight = average(m_base_tint) * (1.0f - m_material.metallic);
         float specular_weight = average(specular_tint);
         float specular_probability = specular_weight / (diffuse_weight + specular_weight);
         float base_probability = (1.0f - specular_probability);

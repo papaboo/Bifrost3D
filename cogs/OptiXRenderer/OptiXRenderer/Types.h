@@ -112,10 +112,11 @@ struct __align__(16) BSDFSample {
 
 struct __align__(16) Material {
     optix::float3 base_tint;
+    unsigned int base_tint_texture_ID;
     float base_roughness;
     float specularity;
     float metallic;
-    optix::float2 __padding;
+    float __padding;
 };
 
 } // NS OptiXRenderer
