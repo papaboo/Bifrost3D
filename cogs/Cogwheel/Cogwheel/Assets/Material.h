@@ -9,6 +9,7 @@
 #ifndef _COGWHEEL_ASSETS_MATERIAL_H_
 #define _COGWHEEL_ASSETS_MATERIAL_H_
 
+#include <Cogwheel/Assets/Texture.h>
 #include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Math/Color.h>
@@ -27,6 +28,7 @@ public:
 
     struct Data {
         Math::RGB base_tint;
+        Textures::UID base_tint_texture_ID;
         float base_roughness;
         float specularity;
         float metallic;
@@ -52,6 +54,8 @@ public:
 
     static inline Math::RGB get_base_tint(Materials::UID material_ID) { return m_materials[material_ID].base_tint; }
     static void set_base_tint(Materials::UID material_ID, Math::RGB tint);
+    static inline Textures::UID get_base_tint_texture_ID(Materials::UID material_ID) { return m_materials[material_ID].base_tint_texture_ID; }
+    static void set_base_tint_texture_ID(Materials::UID material_ID, Textures::UID tint_texture_ID);
     static inline float get_base_roughness(Materials::UID material_ID) { return m_materials[material_ID].base_roughness; }
     static void set_base_roughness(Materials::UID material_ID, float roughness);
     static inline float get_specularity(Materials::UID material_ID) { return m_materials[material_ID].specularity; }
@@ -120,6 +124,8 @@ public:
 
     inline Math::RGB get_base_tint() { return Materials::get_base_tint(m_ID); }
     void set_base_tint(Math::RGB tint) { Materials::set_base_tint(m_ID, tint); }
+    inline Textures::UID get_base_tint_texture_ID() { return Materials::get_base_tint_texture_ID(m_ID); }
+    void set_base_tint(Textures::UID tint_texture_ID) { Materials::set_base_tint_texture_ID(m_ID, tint_texture_ID); }
     inline float get_base_roughness() { return Materials::get_base_roughness(m_ID); }
     void set_base_roughness(float roughness) { Materials::set_base_roughness(m_ID, roughness); }
     inline float get_specularity() { return Materials::get_specularity(m_ID); }

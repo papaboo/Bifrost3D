@@ -118,6 +118,11 @@ void Materials::set_base_tint(Materials::UID material_ID, Math::RGB tint) {
     flag_as_updated(material_ID);
 }
 
+void Materials::set_base_tint_texture_ID(Materials::UID material_ID, Textures::UID tint_texture_ID) {
+    m_materials[material_ID].base_tint_texture_ID = tint_texture_ID;
+    flag_as_updated(material_ID);
+}
+
 void Materials::set_base_roughness(Materials::UID material_ID, float roughness) {
     m_materials[material_ID].base_roughness = roughness;
     flag_as_updated(material_ID);
