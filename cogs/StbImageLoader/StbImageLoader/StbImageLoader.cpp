@@ -33,6 +33,11 @@ Images::UID load(const std::string& path) {
     int width, height, channels;
     unsigned char* loaded_data = stbi_load(path.c_str(), &width, &height, &channels, 0);
 
+    if (loaded_data == nullptr) {
+        printf("StbImageLoader::load(%s) failed with error: '%s'\n", path.c_str(), stbi_failure_reason());
+        return Images::UID::invalid_UID();
+    }
+
     PixelFormat pixel_format = resolve_format(channels);
     if (pixel_format == PixelFormat::Unknown)
         return Images::UID::invalid_UID();
