@@ -1,4 +1,4 @@
-// Cogwheel obj model laoder.
+// Cogwheel obj model loader.
 // ---------------------------------------------------------------------------
 // Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
 //
