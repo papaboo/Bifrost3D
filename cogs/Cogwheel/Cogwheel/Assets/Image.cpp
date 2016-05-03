@@ -100,7 +100,7 @@ static inline Images::PixelData allocate_pixels(PixelFormat format, unsigned int
     return nullptr;
 }
 
-Images::UID Images::create(std::string name, PixelFormat format, Math::Vector3ui size, unsigned int mipmap_count) {
+Images::UID Images::create(const std::string& name, PixelFormat format, Math::Vector3ui size, unsigned int mipmap_count) {
     assert(m_metainfo != nullptr);
     assert(m_pixels != nullptr);
     assert(m_changes != nullptr);
@@ -253,6 +253,34 @@ void Images::reset_change_notifications() {
     std::memset(m_changes, Changes::None, capacity());
     m_images_changed.resize(0);
 }
+
+
+//*****************************************************************************
+// Image Utilities
+//*****************************************************************************
+
+namespace ImageUtils {
+
+Images::UID change_format(Images::UID image_ID, PixelFormat new_format) {
+    unsigned int width = Images::get_width(image_ID);
+    unsigned int height = Images::get_height(image_ID);
+    unsigned int depth = Images::get_depth(image_ID);
+    unsigned int mipmap_count = Images::get_mipmap_count(image_ID);
+    Images::UID new_image_ID = Images::create(Images::get_name(image_ID), new_format, Math::Vector3ui(width, height, depth), mipmap_count);
+
+    // TODO Specialize for most common formats.
+    for (unsigned int m = 0; m < mipmap_count; ++m) {
+        unsigned int pixel_count = Images::get_pixel_count(image_ID, m);
+        for (unsigned int p = 0; p < pixel_count; ++p) {
+            RGBA pixel = Images::get_pixel(image_ID, p, m);
+            Images::set_pixel(new_image_ID, pixel, p, m);
+        }
+    }
+
+    return new_image_ID;
+}
+
+} // NS ImageUtils
 
 } // NS Assets
 } // NS Cogwheel

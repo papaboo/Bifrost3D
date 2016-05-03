@@ -29,6 +29,20 @@ enum class PixelFormat {
     RGBA_Float,
 };
 
+inline int channel_count(PixelFormat format) {
+    switch (format) {
+    case PixelFormat::RGBA32:
+    case PixelFormat::RGBA_Float:
+        return 4;
+    case PixelFormat::RGB24:
+    case PixelFormat::RGB_Float:
+        return 3;
+    case PixelFormat::Unknown:
+    default:
+        return 0;
+    }
+}
+
 //----------------------------------------------------------------------------
 // Cogwheel image container.
 // Future work:
@@ -54,11 +68,11 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(Images::UID image_ID);
 
-    static Images::UID create(std::string name, PixelFormat format, Math::Vector3ui size, unsigned int mipmap_count = 1);
-    static Images::UID create(std::string name, PixelFormat format, Math::Vector2ui size, unsigned int mipmap_count = 1) {
+    static Images::UID create(const std::string& name, PixelFormat format, Math::Vector3ui size, unsigned int mipmap_count = 1);
+    static Images::UID create(const std::string& name, PixelFormat format, Math::Vector2ui size, unsigned int mipmap_count = 1) {
         return create(name, format, Math::Vector3ui(size.x, size.y, 1u), mipmap_count);
     }
-    static Images::UID create(std::string name, PixelFormat format, unsigned int width, unsigned int mipmap_count = 1) {
+    static Images::UID create(const std::string& name, PixelFormat format, unsigned int width, unsigned int mipmap_count = 1) {
         return create(name, format, Math::Vector3ui(width, 1u, 1u), mipmap_count);
     }
     static void destroy(Images::UID image_ID);
@@ -67,8 +81,9 @@ public:
     static inline ConstUIDIterator end() { return m_UID_generator.end(); }
     static inline Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
 
-    // TODO Use mipmap_level for sizes.
     static inline std::string get_name(Images::UID image_ID) { return m_metainfo[image_ID].name; }
+    static inline void set_name(Images::UID image_ID, const std::string& name) { m_metainfo[image_ID].name = name; }
+
     static inline PixelFormat get_pixel_format(Images::UID image_ID) { return m_metainfo[image_ID].pixel_format; }
     static inline unsigned int get_mipmap_count(Images::UID image_ID) { return m_metainfo[image_ID].mipmap_count; }
     static inline unsigned int get_width(Images::UID image_ID, int mipmap_level = 0) { return Math::max(1u, m_metainfo[image_ID].width >> mipmap_level); }
@@ -129,6 +144,12 @@ private:
     static unsigned char* m_changes; // Bitmask of changes.
     static std::vector<UID> m_images_changed;
 };
+
+namespace ImageUtils {
+
+Images::UID change_format(Images::UID image_ID, PixelFormat new_format);
+
+} // NS ImageUtils
 
 } // NS Assets
 } // NS Cogwheel
