@@ -487,13 +487,10 @@ void Renderer::handle_updates() {
             m_state->images.resize(Images::capacity());
 
             for (Images::UID image_ID : Images::get_changed_images()) {
-                if (Images::get_changes(image_ID) == Images::Changes::Destroyed) {
+                if (Images::has_changes(image_ID, Images::Changes::Destroyed)) {
                     m_state->images[image_ID]->destroy();
                     m_state->images[image_ID] = NULL;
-                }
-
-                if (Images::get_changes(image_ID) == Images::Changes::Created) {
-
+                } else if (Images::has_changes(image_ID, Images::Changes::Created)) {
                     RTformat pixel_format = RT_FORMAT_UNKNOWN;
                     switch (Images::get_pixel_format(image_ID)) {
                     case PixelFormat::RGB24:
@@ -516,6 +513,9 @@ void Renderer::handle_updates() {
                     std::memcpy(pixel_data, Images::get_pixels(image_ID), m_state->images[image_ID]->getElementSize() * Images::get_pixel_count(image_ID));
                     m_state->images[image_ID]->unmap();
                     OPTIX_VALIDATE(m_state->images[image_ID]);
+                } else if (Images::has_changes(image_ID, Images::Changes::Created)) {
+                    // TODO Update buffer.
+                    assert(!"Pixel update not implemented yet.\n");
                 }
             }
         }
@@ -566,9 +566,12 @@ void Renderer::handle_updates() {
             device_material.base_tint.x = host_material.get_base_tint().r;
             device_material.base_tint.y = host_material.get_base_tint().g;
             device_material.base_tint.z = host_material.get_base_tint().b;
-            if (host_material.get_base_tint_texture_ID() != Textures::UID::invalid_UID())
-                device_material.base_tint_texture_ID = samplers[host_material.get_base_tint_texture_ID()]->getId();
-            else
+            if (host_material.get_base_tint_texture_ID() != Textures::UID::invalid_UID()) {
+                // Validate that the image has 4 channels! Otherwise OptiX goes boom boom.
+                Textures::UID texture_ID = host_material.get_base_tint_texture_ID();
+                assert(channel_count(Images::get_pixel_format(Textures::get_image_ID(texture_ID))) == 4);
+                device_material.base_tint_texture_ID = samplers[texture_ID]->getId();
+            } else
                 device_material.base_tint_texture_ID = 0u;
             device_material.base_roughness = host_material.get_base_roughness();
             device_material.specularity = host_material.get_specularity() * 0.08f; // See Physically-Based Shading at Disney bottom of page 8 for why we remap. TODO Consider moving this into Cogwheel or maybe even remove completely in favor of just letting GUI handle this.
