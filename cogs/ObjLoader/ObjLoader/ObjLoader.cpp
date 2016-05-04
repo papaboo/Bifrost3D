@@ -69,7 +69,8 @@ SceneNodes::UID load(const std::string& path) {
         Materials::Data material_data;
         material_data.base_tint = Math::RGB(tiny_mat.diffuse[0], tiny_mat.diffuse[1], tiny_mat.diffuse[2]);
         material_data.base_roughness = sqrt(sqrt(2.0f / (tiny_mat.shininess + 2.0f))); // Map from blinn shininess to material roughness.
-        material_data.metallic = 0.0f; // TODO Can I determine this at all? Maybe from the type ID?
+        bool is_metallic = tiny_mat.illum == 3 || tiny_mat.illum == 5;
+        material_data.metallic = is_metallic ? 1.0f : 0.0f;
         material_data.specularity = (tiny_mat.specular[0] + tiny_mat.specular[1] + tiny_mat.specular[2]) / 3.0f;
 
         materials[unsigned int(i)] = Materials::create(tiny_mat.name, material_data);
@@ -81,19 +82,29 @@ SceneNodes::UID load(const std::string& path) {
 
         Meshes::UID mesh_ID = Meshes::UID::invalid_UID();
         { // Create mesh 
+            assert(tiny_mesh.indices.size() != 0); // Assert that there are indices, because currently we don't support non-indexed meshes.
             assert((tiny_mesh.indices.size() % 3) == 0); // Assert that indices are for triangles.
             assert((tiny_mesh.positions.size() % 3) == 0); // Assert that positions are three dimensional.
             assert((tiny_mesh.normals.size() % 3) == 0); // Assert that normals are three dimensional.
             assert((tiny_mesh.texcoords.size() % 2) == 0); // Assert that texcoords are two dimensional.
 
-            mesh_ID = Meshes::create(shapes[i].name, unsigned int(tiny_mesh.indices.size() / 3u), unsigned int(tiny_mesh.positions.size() / 3u));
+            unsigned char mesh_flags = MeshFlags::Position;
+            if (tiny_mesh.normals.size() > 0)
+                mesh_flags |= MeshFlags::Normal;
+            if (tiny_mesh.texcoords.size() > 0)
+                mesh_flags |= MeshFlags::Texcoords;
 
-            // TODO Verify if any of these arrays are null.
+            unsigned int triangle_count = unsigned int(tiny_mesh.indices.size() / 3u);
+            unsigned int vertex_count = unsigned int(tiny_mesh.positions.size() / 3u);
+            mesh_ID = Meshes::create(shapes[i].name, triangle_count, vertex_count, mesh_flags);
+
             Mesh& cogwheel_mesh = Meshes::get_mesh(mesh_ID);
             memcpy(cogwheel_mesh.indices, tiny_mesh.indices.data(), tiny_mesh.indices.size() * sizeof(unsigned int));
             memcpy(cogwheel_mesh.positions, tiny_mesh.positions.data(), tiny_mesh.positions.size() * sizeof(float));
-            memcpy(cogwheel_mesh.normals, tiny_mesh.normals.data(), tiny_mesh.normals.size() * sizeof(float));
-            memcpy(cogwheel_mesh.texcoords, tiny_mesh.texcoords.data(), tiny_mesh.texcoords.size() * sizeof(float));
+            if (cogwheel_mesh.normals)
+                memcpy(cogwheel_mesh.normals, tiny_mesh.normals.data(), tiny_mesh.normals.size() * sizeof(float));
+            if (cogwheel_mesh.texcoords)
+                memcpy(cogwheel_mesh.texcoords, tiny_mesh.texcoords.data(), tiny_mesh.texcoords.size() * sizeof(float));
 
             Meshes::compute_bounds(mesh_ID);
         }
