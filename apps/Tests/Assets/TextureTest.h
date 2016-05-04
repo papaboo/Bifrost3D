@@ -50,7 +50,7 @@ TEST_F(Assets_Textures, sentinel_mesh) {
 
 TEST_F(Assets_Textures, create) {
     Images::allocate(1u);
-    Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA32, Math::Vector2ui(3, 3));
+    Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(3, 3));
     Textures::UID texture_ID = Textures::create2D(image_ID);
 
     EXPECT_TRUE(Textures::has(texture_ID));

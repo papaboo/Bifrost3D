@@ -154,7 +154,7 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine, Scene::Cameras::U
     { // Create floor.
         // A checker pattern texture would be really nice on the floor.
         unsigned int width = 16, height = 16;
-        Images::UID image_ID = Images::create("Checker", PixelFormat::RGBA32, Vector2ui(width, height));
+        Images::UID image_ID = Images::create("Checker", PixelFormat::RGBA32, 2.2f, Vector2ui(width, height));
         unsigned char* pixels = (unsigned char*)Images::get_pixels(image_ID);
         for (unsigned int y = 0; y < height; ++y) {
             for (unsigned int x = 0; x < width; ++x) {

@@ -42,7 +42,7 @@ Images::UID load(const std::string& path) {
     if (pixel_format == PixelFormat::Unknown)
         return Images::UID::invalid_UID();
 
-    Images::UID image_ID = Images::create(path, pixel_format, Vector2ui(width, height));
+    Images::UID image_ID = Images::create(path, pixel_format, 2.2f, Vector2ui(width, height));
     void* pixel_data = Images::get_pixels(image_ID);
     memcpy(pixel_data, loaded_data, sizeof(unsigned char) * width * height * channels);
 

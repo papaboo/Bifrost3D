@@ -68,12 +68,12 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(Images::UID image_ID);
 
-    static Images::UID create(const std::string& name, PixelFormat format, Math::Vector3ui size, unsigned int mipmap_count = 1);
-    static Images::UID create(const std::string& name, PixelFormat format, Math::Vector2ui size, unsigned int mipmap_count = 1) {
-        return create(name, format, Math::Vector3ui(size.x, size.y, 1u), mipmap_count);
+    static Images::UID create(const std::string& name, PixelFormat format, float gamma, Math::Vector3ui size, unsigned int mipmap_count = 1);
+    static Images::UID create(const std::string& name, PixelFormat format, float gamma, Math::Vector2ui size, unsigned int mipmap_count = 1) {
+        return create(name, format, gamma, Math::Vector3ui(size.x, size.y, 1u), mipmap_count);
     }
-    static Images::UID create(const std::string& name, PixelFormat format, unsigned int width, unsigned int mipmap_count = 1) {
-        return create(name, format, Math::Vector3ui(width, 1u, 1u), mipmap_count);
+    static Images::UID create(const std::string& name, PixelFormat format, float gamma, unsigned int width, unsigned int mipmap_count = 1) {
+        return create(name, format, gamma, Math::Vector3ui(width, 1u, 1u), mipmap_count);
     }
     static void destroy(Images::UID image_ID);
 
@@ -85,6 +85,8 @@ public:
     static inline void set_name(Images::UID image_ID, const std::string& name) { m_metainfo[image_ID].name = name; }
 
     static inline PixelFormat get_pixel_format(Images::UID image_ID) { return m_metainfo[image_ID].pixel_format; }
+    static inline float get_gamma(Images::UID image_ID) { return m_metainfo[image_ID].gamma; }
+    static void set_gamma(Images::UID image_ID, float gamma) { m_metainfo[image_ID].gamma = gamma; }
     static inline unsigned int get_mipmap_count(Images::UID image_ID) { return m_metainfo[image_ID].mipmap_count; }
     static inline unsigned int get_width(Images::UID image_ID, int mipmap_level = 0) { return Math::max(1u, m_metainfo[image_ID].width >> mipmap_level); }
     static inline unsigned int get_height(Images::UID image_ID, int mipmap_level = 0) { return Math::max(1u, m_metainfo[image_ID].height >> mipmap_level); }
@@ -136,6 +138,7 @@ private:
         unsigned int depth;
         unsigned int mipmap_count;
         PixelFormat pixel_format;
+        float gamma;
     };
 
     static UIDGenerator m_UID_generator;
@@ -169,6 +172,7 @@ public:
     inline void set_name(const std::string& name) { Images::set_name(m_ID, name); }
 
     inline PixelFormat get_pixel_format() { return Images::get_pixel_format(m_ID); }
+    inline float get_gamma() { return Images::get_gamma(m_ID); }
     inline unsigned int get_mipmap_count() { return Images::get_mipmap_count(m_ID); }
     inline unsigned int get_width(int mipmap_level = 0) { return Images::get_width(m_ID, mipmap_level); }
     inline unsigned int get_height(int mipmap_level = 0) { return Images::get_height(m_ID, mipmap_level); }

@@ -100,7 +100,7 @@ static inline Images::PixelData allocate_pixels(PixelFormat format, unsigned int
     return nullptr;
 }
 
-Images::UID Images::create(const std::string& name, PixelFormat format, Math::Vector3ui size, unsigned int mipmap_count) {
+Images::UID Images::create(const std::string& name, PixelFormat format, float gamma, Math::Vector3ui size, unsigned int mipmap_count) {
     assert(m_metainfo != nullptr);
     assert(m_pixels != nullptr);
     assert(m_changes != nullptr);
@@ -118,6 +118,7 @@ Images::UID Images::create(const std::string& name, PixelFormat format, Math::Ve
 
     m_metainfo[id].name = name;
     m_metainfo[id].pixel_format = format;
+    m_metainfo[id].gamma = gamma;
     m_metainfo[id].width = size.x;
     m_metainfo[id].height = size.y;
     m_metainfo[id].depth = size.z;
@@ -265,7 +266,7 @@ Images::UID change_format(Images::UID image_ID, PixelFormat new_format) {
     Image image = image_ID;
     unsigned int mipmap_count = image.get_mipmap_count();
     Math::Vector3ui size = Math::Vector3ui(image.get_width(), image.get_height(), image.get_depth());
-    Images::UID new_image_ID = Images::create(image.get_name(), new_format, size, mipmap_count);
+    Images::UID new_image_ID = Images::create(image.get_name(), new_format, image.get_gamma(), size, mipmap_count);
 
     // TODO Specialize for most common formats.
     for (unsigned int m = 0; m < mipmap_count; ++m) {
