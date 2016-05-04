@@ -486,8 +486,10 @@ void Renderer::handle_updates() {
     { // Mesh updates.
         for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
             if (Meshes::get_changes(mesh_ID) == Meshes::Changes::Destroyed) {
-                m_state->meshes[mesh_ID]->destroy();
-                m_state->meshes[mesh_ID] = NULL;
+                if (m_state->meshes[mesh_ID]) {
+                    m_state->meshes[mesh_ID]->destroy();
+                    m_state->meshes[mesh_ID] = NULL;
+                }
             }
 
             if (Meshes::get_changes(mesh_ID) == Meshes::Changes::Created) {
@@ -504,8 +506,10 @@ void Renderer::handle_updates() {
 
             for (Images::UID image_ID : Images::get_changed_images()) {
                 if (Images::has_changes(image_ID, Images::Changes::Destroyed)) {
-                    m_state->images[image_ID]->destroy();
-                    m_state->images[image_ID] = NULL;
+                    if (m_state->images[image_ID]) {
+                        m_state->images[image_ID]->destroy();
+                        m_state->images[image_ID] = NULL;
+                    }
                 } else if (Images::has_changes(image_ID, Images::Changes::Created)) {
                     RTformat pixel_format = RT_FORMAT_UNKNOWN;
                     switch (Images::get_pixel_format(image_ID)) {
@@ -543,8 +547,10 @@ void Renderer::handle_updates() {
 
             for (Textures::UID texture_ID : Textures::get_changed_textures()) {
                 if (Textures::get_changes(texture_ID) == Textures::Changes::Destroyed) {
-                    m_state->images[texture_ID]->destroy();
-                    m_state->images[texture_ID] = NULL;
+                    if (m_state->images[texture_ID]) {
+                        m_state->images[texture_ID]->destroy();
+                        m_state->images[texture_ID] = NULL;
+                    }
                 }
 
                 static auto convert_wrap_mode = [](WrapMode wrapmode) {
@@ -769,13 +775,14 @@ void Renderer::handle_updates() {
             MeshModel model = MeshModels::get_model(model_ID);
 
             if (MeshModels::get_changes(model_ID) == MeshModels::Changes::Destroyed) {
-                optix::Transform optixTransform = m_state->transforms[model.scene_node_ID];
-                m_state->root_node->removeChild(optixTransform);
-                optixTransform->destroy();
-                m_state->transforms[model.scene_node_ID] = NULL;
-                // TODO check if I need to destroy the subgraph. I think reference counting might take care of that.
+                if (m_state->transforms[model.scene_node_ID]) {
+                    optix::Transform optixTransform = m_state->transforms[model.scene_node_ID];
+                    m_state->root_node->removeChild(optixTransform);
+                    optixTransform->destroy();
+                    m_state->transforms[model.scene_node_ID] = NULL;
 
-                models_changed = true;
+                    models_changed = true;
+                }
             }
 
             if (MeshModels::get_changes(model_ID) == MeshModels::Changes::Created) {
