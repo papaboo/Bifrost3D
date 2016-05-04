@@ -1,5 +1,4 @@
 * Textures.
-** Image wrapper class.
 ** Gamma.
 ** Image for_all_pixels(function)
 ** Texture sampler

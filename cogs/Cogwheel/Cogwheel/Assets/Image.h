@@ -145,6 +145,54 @@ private:
     static std::vector<UID> m_images_changed;
 };
 
+// ---------------------------------------------------------------------------
+// Images::UID wrapper convinience class.
+// ---------------------------------------------------------------------------
+class Image final {
+public:
+    // -----------------------------------------------------------------------
+    // Constructors and destructors.
+    // -----------------------------------------------------------------------
+    Image() : m_ID(Images::UID::invalid_UID()) {}
+    Image(Images::UID id) : m_ID(id) {}
+
+    inline const Images::UID get_ID() const { return m_ID; }
+    inline bool exists() const { return Images::has(m_ID); }
+
+    inline bool operator==(Image rhs) const { return m_ID == rhs.m_ID; }
+    inline bool operator!=(Image rhs) const { return m_ID != rhs.m_ID; }
+
+    // -----------------------------------------------------------------------
+    // Getters and setters.
+    // -----------------------------------------------------------------------
+    inline std::string get_name() { return Images::get_name(m_ID); }
+    inline void set_name(const std::string& name) { Images::set_name(m_ID, name); }
+
+    inline PixelFormat get_pixel_format() { return Images::get_pixel_format(m_ID); }
+    inline unsigned int get_mipmap_count() { return Images::get_mipmap_count(m_ID); }
+    inline unsigned int get_width(int mipmap_level = 0) { return Images::get_width(m_ID, mipmap_level); }
+    inline unsigned int get_height(int mipmap_level = 0) { return Images::get_height(m_ID, mipmap_level); }
+    inline unsigned int get_depth(int mipmap_level = 0) { return Images::get_depth(m_ID, mipmap_level); }
+    inline unsigned int get_pixel_count(int mipmap_level = 0) { return Images::get_pixel_count(m_ID, mipmap_level); }
+    inline Images::PixelData get_pixels(int mipmap_level = 0) { return Images::get_pixels(m_ID, mipmap_level); }
+
+    inline Math::RGBA get_pixel(unsigned int index, int mipmap_level = 0) { return Images::get_pixel(m_ID, index, mipmap_level); }
+    inline Math::RGBA get_pixel(Math::Vector2ui index, int mipmap_level = 0) { return Images::get_pixel(m_ID, index, mipmap_level); }
+    inline Math::RGBA get_pixel(Math::Vector3ui index, int mipmap_level = 0) { return Images::get_pixel(m_ID, index, mipmap_level); }
+    inline void set_pixel(Math::RGBA rgba, unsigned int index, int mipmap_level = 0) { Images::set_pixel(m_ID, rgba, index, mipmap_level); }
+    inline void set_pixel(Math::RGBA rgba, Math::Vector2ui index, int mipmap_level = 0) { Images::set_pixel(m_ID, rgba, index, mipmap_level); }
+    inline void set_pixel(Math::RGBA rgba, Math::Vector3ui index, int mipmap_level = 0) { Images::set_pixel(m_ID, rgba, index, mipmap_level); }
+
+    //-------------------------------------------------------------------------
+    // Changes since last game loop tick.
+    //-------------------------------------------------------------------------
+    inline unsigned char get_changes() { return Images::get_changes(m_ID); }
+    inline bool has_changes(unsigned char change_bitmask = Images::Changes::All) { return Images::has_changes(m_ID, change_bitmask); }
+
+private:
+    Images::UID m_ID;
+};
+
 namespace ImageUtils {
 
 Images::UID change_format(Images::UID image_ID, PixelFormat new_format);

@@ -262,17 +262,16 @@ void Images::reset_change_notifications() {
 namespace ImageUtils {
 
 Images::UID change_format(Images::UID image_ID, PixelFormat new_format) {
-    unsigned int width = Images::get_width(image_ID);
-    unsigned int height = Images::get_height(image_ID);
-    unsigned int depth = Images::get_depth(image_ID);
-    unsigned int mipmap_count = Images::get_mipmap_count(image_ID);
-    Images::UID new_image_ID = Images::create(Images::get_name(image_ID), new_format, Math::Vector3ui(width, height, depth), mipmap_count);
+    Image image = image_ID;
+    unsigned int mipmap_count = image.get_mipmap_count();
+    Math::Vector3ui size = Math::Vector3ui(image.get_width(), image.get_height(), image.get_depth());
+    Images::UID new_image_ID = Images::create(image.get_name(), new_format, size, mipmap_count);
 
     // TODO Specialize for most common formats.
     for (unsigned int m = 0; m < mipmap_count; ++m) {
-        unsigned int pixel_count = Images::get_pixel_count(image_ID, m);
+        unsigned int pixel_count = image.get_pixel_count(m);
         for (unsigned int p = 0; p < pixel_count; ++p) {
-            RGBA pixel = Images::get_pixel(image_ID, p, m);
+            RGBA pixel = image.get_pixel(p, m);
             Images::set_pixel(new_image_ID, pixel, p, m);
         }
     }
