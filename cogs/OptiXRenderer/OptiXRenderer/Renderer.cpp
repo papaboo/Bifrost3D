@@ -59,6 +59,7 @@ struct Renderer::State {
     GLuint backbuffer_gl_id;
 
     optix::Group root_node;
+    float scene_epsilon;
 
     std::vector<optix::Transform> transforms = std::vector<optix::Transform>(0);
     std::vector<optix::Geometry> meshes = std::vector<optix::Geometry>(0);
@@ -133,27 +134,32 @@ static inline optix::Buffer create_buffer(optix::Context& context, unsigned int 
 
 static inline optix::Geometry load_mesh(optix::Context& context, Meshes::UID mesh_ID, 
                                         optix::Program intersection_program, optix::Program bounds_program) {
-    optix::Geometry optixMesh = context->createGeometry();
+    optix::Geometry optix_mesh = context->createGeometry();
     
     const Mesh& mesh = Meshes::get_mesh(mesh_ID);
 
-    optixMesh->setIntersectionProgram(intersection_program);
-    optixMesh->setBoundingBoxProgram(bounds_program);
+    optix_mesh->setIntersectionProgram(intersection_program);
+    optix_mesh->setBoundingBoxProgram(bounds_program);
 
     optix::Buffer index_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT3, mesh.indices_count, mesh.indices);
-    optixMesh["index_buffer"]->setBuffer(index_buffer);
-    optixMesh->setPrimitiveCount(mesh.indices_count);
+    optix_mesh["index_buffer"]->setBuffer(index_buffer);
+    optix_mesh->setPrimitiveCount(mesh.indices_count);
 
     // Vertex attributes
     optix::Buffer position_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, mesh.vertex_count, mesh.positions);
-    optixMesh["position_buffer"]->setBuffer(position_buffer);
-    optix::Buffer normal_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, mesh.vertex_count, mesh.normals);
-    optixMesh["normal_buffer"]->setBuffer(normal_buffer);
-    optix::Buffer texcoord_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, mesh.vertex_count, mesh.texcoords);
-    optixMesh["texcoord_buffer"]->setBuffer(texcoord_buffer);
-    OPTIX_VALIDATE(optixMesh);
+    optix_mesh["position_buffer"]->setBuffer(position_buffer);
 
-    return optixMesh;
+    RTsize normal_count = mesh.normals ? mesh.vertex_count : 0;
+    optix::Buffer normal_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, normal_count, mesh.normals);
+    optix_mesh["normal_buffer"]->setBuffer(normal_buffer);
+
+    RTsize texcoord_count = mesh.texcoords ? mesh.vertex_count : 0;
+    optix::Buffer texcoord_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, texcoord_count, mesh.texcoords);
+    optix_mesh["texcoord_buffer"]->setBuffer(texcoord_buffer);
+
+    OPTIX_VALIDATE(optix_mesh);
+
+    return optix_mesh;
 }
 
 static inline optix::Transform load_model(optix::Context& context, MeshModel model, optix::Geometry* meshes, optix::Material optix_material) {
@@ -228,7 +234,8 @@ Renderer::Renderer()
         OPTIX_VALIDATE(m_state->root_node);
 
         context["g_scene_root"]->set(m_state->root_node);
-        context["g_scene_epsilon"]->setFloat(0.0001f); // TODO, base on scene size. Can I query the scene bounds from OptiX?
+        m_state->scene_epsilon = 0.0001f;
+        context["g_scene_epsilon"]->setFloat(m_state->scene_epsilon);
         context["g_max_bounce_count"]->setInt(4);
     }
 
@@ -375,6 +382,15 @@ Renderer::Renderer()
 
     OPTIX_VALIDATE(context);
     context->compile();
+}
+
+float Renderer::get_scene_epsilon() const {
+    return m_state->scene_epsilon;
+}
+
+void Renderer::set_scene_epsilon(float scene_epsilon) {
+    m_state->context["g_scene_epsilon"]->setFloat(m_state->scene_epsilon);
+    m_state->scene_epsilon = scene_epsilon;
 }
 
 void Renderer::render() {

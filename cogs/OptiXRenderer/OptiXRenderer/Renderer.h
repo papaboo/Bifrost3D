@@ -50,6 +50,10 @@ public:
 
     inline bool could_initialize() const { return m_device_ids.optix >= 0;  }
 
+    // TODO Should be per scene root.
+    float get_scene_epsilon() const;
+    void set_scene_epsilon(float scene_epsilon);
+
     void render();
 
 private:
