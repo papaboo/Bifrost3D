@@ -547,9 +547,9 @@ void Renderer::handle_updates() {
 
             for (Textures::UID texture_ID : Textures::get_changed_textures()) {
                 if (Textures::get_changes(texture_ID) == Textures::Changes::Destroyed) {
-                    if (m_state->images[texture_ID]) {
-                        m_state->images[texture_ID]->destroy();
-                        m_state->images[texture_ID] = NULL;
+                    if (m_state->textures[texture_ID]) {
+                        m_state->textures[texture_ID]->destroy();
+                        m_state->textures[texture_ID] = NULL;
                     }
                 }
 
