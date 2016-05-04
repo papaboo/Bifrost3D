@@ -1,9 +1,7 @@
 * Textures.
-** Image loaders and savers.
-*** Use in ObjLoader.
-*** Gamma.
+** Image wrapper class.
+** Gamma.
 ** Image for_all_pixels(function)
-** Image format converters.
 ** Texture sampler
 * Encode normal.z sign in .x's exponent sign bit.
 * Add background colors and environment to scenes?
@@ -37,6 +35,8 @@
 *** Debugging/error checking. Array management.
 
 libs
-* FreeImage. It has a commercial license.
+* Add ZLib and LibPNG.
+** Generalize CMake source download function / macro. Found in GLFW.
+* OpenEXR.
 * Emscripten
 * LuaJit - OpenSource (Fallback to interpretted Lua if the target architecture isn't supported.)

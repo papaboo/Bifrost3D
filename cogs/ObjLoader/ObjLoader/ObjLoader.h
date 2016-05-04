@@ -9,10 +9,13 @@
 #ifndef _COGWHEEL_ASSETS_OBJ_LOADER_H_
 #define _COGWHEEL_ASSETS_OBJ_LOADER_H_
 
+#include <Cogwheel/Assets/Image.h>
 #include <Cogwheel/Scene/SceneNode.h>
 #include <string>
 
 namespace ObjLoader {
+
+typedef Cogwheel::Assets::Images::UID (*ImageLoader)(const std::string& filename);
 
 // -----------------------------------------------------------------------
 // Loads an obj file.
@@ -22,7 +25,7 @@ namespace ObjLoader {
 // * Return an (optional) list of created mesh model IDs?
 // * Reserve capacity for Mesh, MeshModels and SceneNodes before creating them.
 // -----------------------------------------------------------------------
-Cogwheel::Scene::SceneNodes::UID load(const std::string& filename);
+Cogwheel::Scene::SceneNodes::UID load(const std::string& filename, ImageLoader image_loader);
 
 } // NS ObjLoader
 

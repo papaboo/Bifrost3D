@@ -45,7 +45,7 @@ void split_path(std::string& directory, std::string& filename, const std::string
     }
 }
 
-SceneNodes::UID load(const std::string& path) {
+SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
     std::string directory, filename;
     split_path(directory, filename, path);
 
@@ -72,6 +72,17 @@ SceneNodes::UID load(const std::string& path) {
         bool is_metallic = tiny_mat.illum == 3 || tiny_mat.illum == 5;
         material_data.metallic = is_metallic ? 1.0f : 0.0f;
         material_data.specularity = (tiny_mat.specular[0] + tiny_mat.specular[1] + tiny_mat.specular[2]) / 3.0f;
+
+        if (!tiny_mat.diffuse_texname.empty()) {
+            Images::UID image_ID = image_loader(directory + tiny_mat.diffuse_texname);
+            if (channel_count(Images::get_pixel_format(image_ID)) != 4) {
+                Images::UID new_image_ID = ImageUtils::change_format(image_ID, PixelFormat::RGBA32); // TODO If someone really wants to use a floating point format, shouldn't we let them?
+                Images::destroy(image_ID);
+                image_ID = new_image_ID;
+            }
+            material_data.base_tint_texture_ID = Textures::create2D(image_ID);
+        } else
+            material_data.base_tint_texture_ID = Textures::UID::invalid_UID();
 
         materials[unsigned int(i)] = Materials::create(tiny_mat.name, material_data);
     }

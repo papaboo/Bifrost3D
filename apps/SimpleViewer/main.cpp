@@ -13,6 +13,7 @@
 #include <GLFWDriver.h>
 
 #include <ObjLoader/ObjLoader.h>
+#include <StbImageLoader/StbImageLoader.h>
 
 #include <OptiXRenderer/Renderer.h>
 
@@ -26,6 +27,7 @@ using namespace Cogwheel::Math;
 using namespace Cogwheel::Scene;
 
 static std::string g_scene;
+static float g_scene_size;
 
 class Navigation final {
 public:
@@ -170,12 +172,8 @@ void initializer(Cogwheel::Core::Engine& engine) {
     else if (g_scene.compare("TestScene") == 0)
         engine.set_scene_root(create_test_scene(engine, cam_ID));
     else {
-        engine.set_scene_root(ObjLoader::load(g_scene));
+        engine.set_scene_root(ObjLoader::load(g_scene, StbImageLoader::load));
         load_model_from_file = true;
-
-        Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
-        cam_transform.translation = Vector3f(0, 1, -4);
-        SceneNodes::set_global_transform(cam_node_ID, cam_transform);
     }
 
     // Rough approximation of the scene bounds using bounding spheres.
@@ -189,12 +187,20 @@ void initializer(Cogwheel::Core::Engine& engine) {
         AABB global_mesh_aabb = AABB(bounding_sphere_center - bounding_sphere_radius, bounding_sphere_center + bounding_sphere_radius);
         scene_bounds.grow_to_contain(global_mesh_aabb);
     }
+    g_scene_size = magnitude(scene_bounds.size());
 
-    float camera_velocity = magnitude(scene_bounds.size()) * 0.1f;
+    float camera_velocity = g_scene_size * 0.1f;
     Navigation* camera_navigation = new Navigation(cam_node_ID, camera_velocity);
     engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
     CameraHandler* camera_handler = new CameraHandler(cam_ID, engine.get_window().get_aspect_ratio());
     engine.add_mutating_callback(CameraHandler::handle_callback, camera_handler);
+
+    if (load_model_from_file) {
+        Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
+        cam_transform.translation = scene_bounds.center() + scene_bounds.size() * 1.0f;
+        cam_transform.look_at(scene_bounds.center());
+        SceneNodes::set_global_transform(cam_node_ID, cam_transform);
+    }
 
     // Add a light source if none were added yet.
     if (LightSources::begin() == LightSources::end() && load_model_from_file) {
@@ -208,6 +214,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
 
 void initialize_window(Cogwheel::Core::Window& window) {
     OptiXRenderer::Renderer* renderer = new OptiXRenderer::Renderer();
+    // renderer->set_scene_epsilon(g_scene_size * 0.00001f);
     Engine::get_instance()->add_non_mutating_callback(OptiXRenderer::render_callback, renderer);
 }
 

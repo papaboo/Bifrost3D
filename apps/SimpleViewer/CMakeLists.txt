@@ -18,6 +18,7 @@ target_link_libraries(${PROJECT_NAME}
   GLFWDriver
   ObjLoader
   OptiXRenderer
+  StbImageLoader
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
