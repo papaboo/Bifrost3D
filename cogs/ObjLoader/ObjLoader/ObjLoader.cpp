@@ -126,9 +126,8 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
         else
             root_ID = node_ID;
 
-        Materials::UID material_ID = tiny_mesh.material_ids.size() == 0 ? 
-                                     Materials::UID::invalid_UID() : 
-                                     materials[tiny_mesh.material_ids[0]];
+        int material_index = tiny_mesh.material_ids.size() == 0 ? -1 : tiny_mesh.material_ids[0];
+        Materials::UID material_ID = material_index >= 0 ? materials[material_index] : Materials::UID::invalid_UID();
         MeshModels::UID model_ID = MeshModels::create(node_ID, mesh_ID, material_ID);
     }
 
