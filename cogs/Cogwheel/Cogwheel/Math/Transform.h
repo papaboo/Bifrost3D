@@ -80,7 +80,7 @@ struct Transform final {
         rotation = Quaternionf::look_in(direction, up);
     }
 
-    const std::string to_string() const {
+    inline std::string to_string() const {
         std::ostringstream out;
         out << "[translation: " << translation << ", rotation: " << rotation << ", scale: " << scale << "]";
         return out.str();

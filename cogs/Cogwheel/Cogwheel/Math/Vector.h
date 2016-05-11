@@ -41,7 +41,7 @@ public:
     inline T* begin() { return &x; }
     inline const T* begin() const { return &x; }
 
-    const std::string to_string() const {
+    inline std::string to_string() const {
         std::ostringstream out;
         out << "[x: " << x << ", y: " << y << "]";
         return out.str();
@@ -80,7 +80,7 @@ public:
     inline T* begin() { return &x; }
     inline const T* begin() const { return &x; }
 
-    const std::string to_string() const {
+    inline std::string to_string() const {
         std::ostringstream out;
         out << "[x: " << x << ", y: " << y << ", z: " << z << "]";
         return out.str();
@@ -116,7 +116,7 @@ public:
     inline T* begin() { return &x; }
     inline const T* begin() const { return &x; }
 
-    const std::string to_string() const {
+    inline std::string to_string() const {
         std::ostringstream out;
         out << "[x: " << x << ", y: " << y << ", z: " << z << ", w: " << w << "]";
         return out.str();

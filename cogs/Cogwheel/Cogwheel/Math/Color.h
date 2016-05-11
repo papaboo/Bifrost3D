@@ -168,7 +168,7 @@ public:
         return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
-    const std::string to_string() const {
+    inline std::string to_string() const {
         std::ostringstream out;
         out << "[r: " << r << ", g: " << g << ", b: " << b << "]";
         return out.str();
@@ -227,7 +227,7 @@ public:
         return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
-    const std::string to_string() const {
+    inline std::string to_string() const {
         std::ostringstream out;
         out << "[r: " << r << ", g: " << g << ", b: " << b << ", a: " << a << "]";
         return out.str();

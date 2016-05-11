@@ -50,7 +50,7 @@ public:
         return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
-    const std::string to_string() const {
+    inline std::string to_string() const {
         std::ostringstream out;
         out << "[x: " << x << ", y: " << y << ", width: " << width << ", height: " << height << "]";
         return out.str();

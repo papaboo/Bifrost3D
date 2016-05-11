@@ -65,7 +65,7 @@ public:
         return maximum - minimum;
     }
 
-    std::string to_string() const {
+    inline std::string to_string() const {
         std::ostringstream out;
         out << "[minimum: " << minimum << ", maximum: " << maximum << "]";
         return out.str();

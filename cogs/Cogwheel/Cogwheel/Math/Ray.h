@@ -42,7 +42,7 @@ public:
         return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
-    std::string to_string() const {
+    inline std::string to_string() const {
         std::ostringstream out;
         out << "[origin: " << origin << ", direction: " << direction << "]";
         return out.str();

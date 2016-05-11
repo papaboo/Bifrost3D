@@ -145,7 +145,7 @@ public:
     }
 
     // To string.
-    const std::string to_string() const {
+    inline std::string to_string() const {
         std::ostringstream out;
         out << "[v: [x: " << x << ", y: " << y << ", z: " << z << "], w: " << w << "]";
         return out.str();
