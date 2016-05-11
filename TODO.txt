@@ -1,4 +1,3 @@
-* Encode normal.z sign in .x's exponent sign bit.
 * Natvis extension for wrapper classes?
 * Add background colors and environment to scenes?
 * Environment models.

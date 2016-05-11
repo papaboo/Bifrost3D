@@ -8,6 +8,7 @@
 
 #include <OptiXRenderer/Renderer.h>
 
+#include <OptiXRenderer/EncodedNormal.h>
 #include <OptiXRenderer/Kernel.h>
 #include <OptiXRenderer/Types.h>
 
@@ -150,7 +151,14 @@ static inline optix::Geometry load_mesh(optix::Context& context, Meshes::UID mes
     optix_mesh["position_buffer"]->setBuffer(position_buffer);
 
     RTsize normal_count = mesh.normals ? mesh.vertex_count : 0;
-    optix::Buffer normal_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, normal_count, mesh.normals);
+    optix::Buffer normal_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, normal_count);
+    normal_buffer->setElementSize(sizeof(EncodedNormal));
+    EncodedNormal* mapped_normals = (EncodedNormal*)normal_buffer->map();
+    for (RTsize i = 0; i < normal_count; ++i) {
+        Vector3f normal = mesh.normals[i];
+        mapped_normals[i] = EncodedNormal(normal.x, normal.y, normal.z);
+    }
+    normal_buffer->unmap();
     optix_mesh["normal_buffer"]->setBuffer(normal_buffer);
 
     RTsize texcoord_count = mesh.texcoords ? mesh.vertex_count : 0;

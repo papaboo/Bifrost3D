@@ -8,6 +8,7 @@
 // Inspired by the OptiX samples.
 // ---------------------------------------------------------------------------
 
+#include <OptiXRenderer/EncodedNormal.h>
 #include <OptiXRenderer/Types.h>
 
 #include <optix.h>
@@ -22,7 +23,7 @@ rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(int, mesh_flags, , );
 rtBuffer<uint3> index_buffer;
 rtBuffer<float3> position_buffer;
-rtBuffer<float3> normal_buffer;
+rtBuffer<EncodedNormal> normal_buffer;
 rtBuffer<float2> texcoord_buffer;
 
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, ); 
@@ -50,9 +51,9 @@ RT_PROGRAM void intersect(int primitive_index) {
             geometric_normal = normalize(geo_normal);
 
             if (mesh_flags & MeshFlags::Normals) {
-                const float3 n0 = normal_buffer[vertex_index.x];
-                const float3 n1 = normal_buffer[vertex_index.y];
-                const float3 n2 = normal_buffer[vertex_index.z];
+                const float3 n0 = normal_buffer[vertex_index.x].decode();
+                const float3 n1 = normal_buffer[vertex_index.y].decode();
+                const float3 n2 = normal_buffer[vertex_index.z].decode();
                 shading_normal = normalize(n1*beta + n2*gamma + n0*(1.0f - beta - gamma));
             } else
                 shading_normal = geometric_normal;
