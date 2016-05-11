@@ -10,8 +10,7 @@
 #define _COGWHEEL_ASSETS_IMAGE_TEST_H_
 
 #include <Cogwheel/Assets/Image.h>
-
-#include <gtest/gtest.h>
+#include <Expects.h>
 
 namespace Cogwheel {
 namespace Assets {
@@ -180,12 +179,12 @@ TEST_F(Assets_Images, pixel_updates) {
     EXPECT_EQ(changed_images.end() - changed_images.begin(), 1);
 
     // Test that the pixels have the correct colors.
-    EXPECT_EQ(Images::get_pixel(image_ID, Math::Vector2ui(0, 0)), Math::RGBA(1, 2, 3, 1));
-    EXPECT_EQ(Images::get_pixel(image_ID, Math::Vector2ui(1, 0)), Math::RGBA(4, 5, 6, 1));
-    EXPECT_EQ(Images::get_pixel(image_ID, Math::Vector2ui(2, 0)), Math::RGBA(7, 8, 9, 1));
-    EXPECT_EQ(Images::get_pixel(image_ID, Math::Vector2ui(0, 1)), Math::RGBA(11, 12, 13, 1));
-    EXPECT_EQ(Images::get_pixel(image_ID, Math::Vector2ui(1, 1)), Math::RGBA(14, 15, 16, 1));
-    EXPECT_EQ(Images::get_pixel(image_ID, Math::Vector2ui(2, 1)), Math::RGBA(17, 18, 19, 1));
+    EXPECT_RGBA_EQ(Images::get_pixel(image_ID, Math::Vector2ui(0, 0)), Math::RGBA(1, 2, 3, 1));
+    EXPECT_RGBA_EQ(Images::get_pixel(image_ID, Math::Vector2ui(1, 0)), Math::RGBA(4, 5, 6, 1));
+    EXPECT_RGBA_EQ(Images::get_pixel(image_ID, Math::Vector2ui(2, 0)), Math::RGBA(7, 8, 9, 1));
+    EXPECT_RGBA_EQ(Images::get_pixel(image_ID, Math::Vector2ui(0, 1)), Math::RGBA(11, 12, 13, 1));
+    EXPECT_RGBA_EQ(Images::get_pixel(image_ID, Math::Vector2ui(1, 1)), Math::RGBA(14, 15, 16, 1));
+    EXPECT_RGBA_EQ(Images::get_pixel(image_ID, Math::Vector2ui(2, 1)), Math::RGBA(17, 18, 19, 1));
 }
 
 TEST_F(Assets_Images, mipmap_size) {
