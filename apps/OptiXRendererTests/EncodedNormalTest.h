@@ -24,7 +24,7 @@ GTEST_TEST(EncodedNormal, encode_z_sign) {
                 if (x == 0 && y == 0 && z == 0)
                     continue;
                 optix::float3 normal = optix::normalize(optix::make_float3(float(x), float(y), float(z)));
-                EncodedNormal encoded_normal = EncodedNormal(normal);
+                EncodedNormal encoded_normal = EncodedNormal(normal.x, normal.y, normal.z);
                 optix::float3 decoded_normal = encoded_normal.decode();
                 EXPECT_NORMAL_EQ(normal, decoded_normal, 0.00046f);
             }
