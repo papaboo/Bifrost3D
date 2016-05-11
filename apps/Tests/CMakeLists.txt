@@ -1,6 +1,7 @@
 set(PROJECT_NAME "Tests")
 
 set(SRCS 
+  Expects.h
   main.cpp
 )
 
