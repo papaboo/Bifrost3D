@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 
 #include <Cogwheel/Assets/Texture.h>
+#include <Cogwheel/Math/Constants.h>
 
 #include <assert.h>
 
@@ -120,6 +121,71 @@ void Textures::destroy(Textures::UID texture_ID) {
 void Textures::reset_change_notifications() {
     std::memset(m_changes, Changes::None, capacity());
     m_textures_changed.resize(0);
+}
+
+//-----------------------------------------------------------------------------
+// Sampling functions.
+//-----------------------------------------------------------------------------
+
+Math::RGBA sample2D(Textures::UID texture_ID, Vector2f texcoord) {
+    TextureND texture = texture_ID;
+    
+    // TODO Does it make sense handling the wrapping out here when linear interpolation has to handle it pr lookup as well?
+    //      Maybe, since I can guarantee´that the texcoord won't be negative then
+    { // Modify tex coord based on wrap mode.
+        if (texture.get_wrapmode_U() == WrapMode::Clamp)
+            texcoord.x = clamp(texcoord.x, 0.0f, nearly_one);
+        else // WrapMode::Repeat
+            texcoord.x -= (int)texcoord.x;
+
+        if (texture.get_wrapmode_V() == WrapMode::Clamp)
+            texcoord.y = clamp(texcoord.y, 0.0f, nearly_one);
+        else // WrapMode::Repeat
+            texcoord.y -= (int)texcoord.y;
+    }
+
+    { // Get pixels.
+        Image image = texture.get_image_ID();
+
+        if (texture.get_minification_filter() == MinificationFilter::None) {
+            Vector2ui pixel_coord = Vector2ui(unsigned int(texcoord.x * image.get_width()),
+                                              unsigned int(texcoord.y * image.get_height()));
+            return image.get_pixel(pixel_coord);
+        } else { // MinificationFilter::Linear
+            unsigned int width = image.get_width(), height = image.get_height();
+            texcoord = Vector2f(texcoord.x * float(width), texcoord.y * float(height)) - 0.5f;
+            Vector2i lower_left_coord = Vector2i(int(texcoord.x), int(texcoord.y));
+            
+            // TODO Should capture texture and image in its scope.
+            auto lookup_pixel = [](int pixelcoord_x, int pixelcoord_y, TextureND texture, Image image) {
+                if (texture.get_wrapmode_U() == WrapMode::Clamp)
+                    pixelcoord_x = clamp(pixelcoord_x, 0, int(image.get_width()));
+                else // WrapMode::Repeat
+                    pixelcoord_x = pixelcoord_x % image.get_width();
+
+                if (texture.get_wrapmode_V() == WrapMode::Clamp)
+                    pixelcoord_y = clamp(pixelcoord_y, 0, int(image.get_height()));
+                else // WrapMode::Repeat
+                    // TODO Do I need to handle negative texcoord differently?
+                    pixelcoord_y = pixelcoord_y% image.get_height();
+
+                return image.get_pixel(Vector2ui(pixelcoord_x, pixelcoord_y));
+            };
+
+            // TODO What happens when the texcoords are negative?
+            float u_lerp = abs(texcoord.x - float(lower_left_coord.x));
+            RGBA lower_texel = lerp(lookup_pixel(lower_left_coord.x, lower_left_coord.y, texture, image),
+                                    lookup_pixel(lower_left_coord.x+1, lower_left_coord.y, texture, image), 
+                                    u_lerp);
+
+            RGBA upper_texel = lerp(lookup_pixel(lower_left_coord.x, lower_left_coord.y+1, texture, image),
+                                    lookup_pixel(lower_left_coord.x+1, lower_left_coord.y+1, texture, image),
+                                    u_lerp);
+            
+            float v_lerp = abs(texcoord.y - float(lower_left_coord.y));
+            return lerp(lower_texel, upper_texel, v_lerp);
+        }
+    }
 }
 
 } // NS Assets

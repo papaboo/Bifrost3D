@@ -117,6 +117,43 @@ private:
     static std::vector<UID> m_textures_changed;
 };
 
+class TextureND {
+public:
+    // -----------------------------------------------------------------------
+    // Constructors and destructors.
+    // -----------------------------------------------------------------------
+    TextureND() : m_ID(Textures::UID::invalid_UID()) {}
+    TextureND(Textures::UID id) : m_ID(id) {}
+
+    inline const Textures::UID get_ID() const { return m_ID; }
+    inline bool exists() const { return Textures::has(m_ID); }
+
+    inline bool operator==(TextureND rhs) const { return m_ID == rhs.m_ID; }
+    inline bool operator!=(TextureND rhs) const { return m_ID != rhs.m_ID; }
+
+    // -----------------------------------------------------------------------
+    // Getters and setters.
+    // -----------------------------------------------------------------------
+    inline Images::UID get_image_ID() { return Textures::get_image_ID(m_ID); }
+    inline Textures::Type get_type() { return Textures::get_type(m_ID); }
+    inline MagnificationFilter get_magnification_filter() { return Textures::get_magnification_filter(m_ID); }
+    inline MinificationFilter get_minification_filter() { return Textures::get_minification_filter(m_ID); }
+    inline WrapMode get_wrapmode_U() { return Textures::get_wrapmode_U(m_ID); }
+    inline WrapMode get_wrapmode_V() { return Textures::get_wrapmode_V(m_ID); }
+    inline WrapMode get_wrapmode_W() { return Textures::get_wrapmode_W(m_ID); }
+
+    //-------------------------------------------------------------------------
+    // Changes since last game loop tick.
+    //-------------------------------------------------------------------------
+    inline unsigned char get_changes() { return Textures::get_changes(m_ID); }
+    inline bool has_changes(unsigned char change_bitmask = Textures::Changes::All) { return Textures::has_changes(m_ID, change_bitmask); }
+
+private:
+    Textures::UID m_ID;
+};
+
+Math::RGBA sample2D(Textures::UID texture_ID, Math::Vector2f texcoord);
+
 } // NS Assets
 } // NS Cogwheel
 
