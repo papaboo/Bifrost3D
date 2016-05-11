@@ -1,4 +1,4 @@
-// Test OptiXRe0nderer's default shading model.
+// Test OptiXRenderer's default shading model.
 // ---------------------------------------------------------------------------
 // Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
 //
