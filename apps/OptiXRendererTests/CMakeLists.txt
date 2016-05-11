@@ -11,6 +11,7 @@ find_package(CUDA 7.5)
 find_package(OptiX)
 
 set(SRCS 
+  EncodedNormalTest.h
   main.cpp
   Utils.h
 )
