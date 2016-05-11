@@ -1,12 +1,10 @@
-* Textures.
-** Texture wrapper class.
-** Texture sampling.
-** Natvis extension for wrapper classes?
 * Encode normal.z sign in .x's exponent sign bit.
+* Natvis extension for wrapper classes?
 * Add background colors and environment to scenes?
 * Environment models.
 * Reduce TODOs
 * Bump mapping
+** Utility function for computing tangents and normals on bump mapped surfaces. Possibly splitting the mesh.
 ** Including 'fixing' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles.
 ** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.

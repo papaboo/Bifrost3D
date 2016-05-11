@@ -10,8 +10,7 @@
 #define _COGWHEEL_ASSETS_TEXTURE_TEST_H_
 
 #include <Cogwheel/Assets/Texture.h>
-
-#include <gtest/gtest.h>
+#include <Expects.h>
 
 namespace Cogwheel {
 namespace Assets {
@@ -62,8 +61,7 @@ TEST_F(Assets_Textures, create) {
     EXPECT_EQ(*changed_textures.begin(), texture_ID);
     EXPECT_EQ(Textures::get_changes(texture_ID), Textures::Changes::Created);
 
-    Meshes::deallocate();
-    Scene::SceneNodes::deallocate();
+    Images::deallocate();
 }
 
 TEST_F(Assets_Textures, destroy) {
@@ -141,6 +139,73 @@ TEST_F(Assets_Textures, create_and_destroy_notifications) {
         EXPECT_FALSE(Textures::has(texture_ID0));
         EXPECT_TRUE(Textures::get_changed_textures().is_empty());
     }
+}
+
+TEST_F(Assets_Textures, sample2D) {
+    using namespace Cogwheel::Math;
+
+    Images::allocate(1u);
+
+    Image image = Images::create("Test", PixelFormat::RGBA_Float, 1.0f, Vector2ui(2, 2));
+    image.set_pixel(RGBA(0, 0, 0, 1), Vector2ui(0, 0));
+    image.set_pixel(RGBA(0, 1, 0, 1), Vector2ui(0, 1));
+    image.set_pixel(RGBA(1, 0, 0, 1), Vector2ui(1, 0));
+    image.set_pixel(RGBA(1, 1, 0, 1), Vector2ui(1, 1));
+
+    { // Test with no filter and clamp.
+        Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::None, MinificationFilter::None, WrapMode::Clamp, WrapMode::Clamp);
+
+        { // Sample lower left corner.
+            RGBA color = sample2D(texture_ID, Vector2f(0, 0));
+            EXPECT_RGBA_EQ(RGBA(0, 0, 0, 1), color);
+        }
+
+        { // Sample upper right corner.
+            RGBA color = sample2D(texture_ID, Vector2f(1, 1));
+            EXPECT_RGBA_EQ(RGBA(1, 1, 0, 1), color);
+        }
+
+        { // Sample outside upper left corner.
+            RGBA color = sample2D(texture_ID, Vector2f(-2, 2));
+            EXPECT_RGBA_EQ(RGBA(0, 1, 0, 1), color);
+        }
+
+        { // Sample outside lower right corner.
+            RGBA color = sample2D(texture_ID, Vector2f(2, -2));
+            EXPECT_RGBA_EQ(RGBA(1, 0, 0, 1), color);
+        }
+    }
+
+    { // Test with linear filtering and repeat wrap mode.
+        Textures::UID texture_ID = Textures::create2D(image.get_ID());
+
+        { // Sample lower left corner.
+            RGBA color = sample2D(texture_ID, Vector2f(0.25f, 0.25f));
+            EXPECT_RGBA_EQ(RGBA(0, 0, 0, 1), color);
+
+            color = sample2D(texture_ID, Vector2f(0.25f, 1.25f));
+            EXPECT_RGBA_EQ(RGBA(0, 0, 0, 1), color);
+
+            color = sample2D(texture_ID, Vector2f(0.25f, -0.75f));
+            EXPECT_RGBA_EQ(RGBA(0, 0, 0, 1), color);
+
+            color = sample2D(texture_ID, Vector2f(0.25f, -0.95f));
+            EXPECT_RGBA_EQ(RGBA(0, 0.4f, 0, 1), color);
+        }
+
+        { // Sample upper left corner.
+            RGBA color = sample2D(texture_ID, Vector2f(0.25f, 0.75f));
+            EXPECT_RGBA_EQ(RGBA(0, 1, 0, 1), color);
+
+            color = sample2D(texture_ID, Vector2f(0.25f, -0.25f));
+            EXPECT_RGBA_EQ(RGBA(0, 1, 0, 1), color);
+
+            color = sample2D(texture_ID, Vector2f(0.40f, -0.25f));
+            EXPECT_RGBA_EQ(RGBA(0.3f, 1, 0, 1), color);
+        }
+    }
+
+    Images::deallocate();
 }
 
 } // NS Assets
