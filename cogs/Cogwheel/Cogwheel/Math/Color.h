@@ -234,6 +234,18 @@ public:
     }
 };
 
+inline RGBA lerp(RGBA a, RGBA b, float t) {
+    return RGBA(a.rgb() + (b.rgb() - a.rgb()) * t, a.a + (b.a - a.a) * t);
+}
+
+inline RGB gammacorrect(RGB color, float gamma) {
+    return RGB(pow(color.r, gamma), pow(color.g, gamma), pow(color.b, gamma));
+}
+
+inline RGBA gammacorrect(RGBA color, float gamma) {
+    return RGBA(gammacorrect(color.rgb(), gamma));
+}
+
 } // NS Math
 } // NS Cogwheel
 

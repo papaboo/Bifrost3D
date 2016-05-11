@@ -100,7 +100,7 @@ static inline Images::PixelData allocate_pixels(PixelFormat format, unsigned int
     return nullptr;
 }
 
-Images::UID Images::create(const std::string& name, PixelFormat format, float gamma, Math::Vector3ui size, unsigned int mipmap_count) {
+Images::UID Images::create(const std::string& name, PixelFormat format, float gamma, Vector3ui size, unsigned int mipmap_count) {
     assert(m_metainfo != nullptr);
     assert(m_pixels != nullptr);
     assert(m_changes != nullptr);
@@ -141,22 +141,23 @@ void Images::destroy(Images::UID image_ID) {
     }
 }
 
-Math::RGBA Images::get_pixel(Images::UID image_ID, unsigned int index, int mipmap_level) {
-    switch (m_metainfo[image_ID].pixel_format) {
+static RGBA get_gammaed_pixel(Images::UID image_ID, unsigned int index, int mipmap_level) {
+    Images::PixelData pixels = Images::get_pixels(image_ID);
+    switch (Images::get_pixel_format(image_ID)) {
     case PixelFormat::RGB24: {
-        unsigned char* pixel = ((unsigned char*)m_pixels[image_ID]) + index * 3;
+        unsigned char* pixel = ((unsigned char*)pixels) + index * 3;
         return RGBA(pixel[0] / 255.0f, pixel[1] / 255.0f, pixel[2] / 255.0f, 1.0f);
     }
     case PixelFormat::RGBA32: {
-        unsigned char* pixel = ((unsigned char*)m_pixels[image_ID]) + index * 4;
+        unsigned char* pixel = ((unsigned char*)pixels) + index * 4;
         return RGBA(pixel[0] / 255.0f, pixel[1] / 255.0f, pixel[2] / 255.0f, pixel[3] / 255.0f);
     }
     case PixelFormat::RGB_Float: {
-        float* pixel = ((float*)m_pixels[image_ID]) + index * 3;
+        float* pixel = ((float*)pixels) + index * 3;
         return RGBA(pixel[0], pixel[1], pixel[2], 1.0f);
     }
     case PixelFormat::RGBA_Float: {
-        float* pixel = ((float*)m_pixels[image_ID]) + index * 4;
+        float* pixel = ((float*)pixels) + index * 4;
         return RGBA(pixel[0], pixel[1], pixel[2], pixel[3]);
     }
     case PixelFormat::Unknown:
@@ -165,33 +166,39 @@ Math::RGBA Images::get_pixel(Images::UID image_ID, unsigned int index, int mipma
     return RGBA::red();
 }
 
-RGBA Images::get_pixel(Images::UID image_ID, Math::Vector2ui index, int mipmap_level) {
+RGBA Images::get_pixel(Images::UID image_ID, unsigned int index, int mipmap_level) {
+    RGBA gammaed_color = get_gammaed_pixel(image_ID, index, mipmap_level);
+    return gammacorrect(gammaed_color, Images::get_gamma(image_ID));
+}
+
+RGBA Images::get_pixel(Images::UID image_ID, Vector2ui index, int mipmap_level) {
     const MetaInfo& info = m_metainfo[image_ID];
     const unsigned int pixel_index = index.x + info.width * index.y;
     return get_pixel(image_ID, pixel_index, mipmap_level);
 }
 
-RGBA Images::get_pixel(Images::UID image_ID, Math::Vector3ui index, int mipmap_level) {
+RGBA Images::get_pixel(Images::UID image_ID, Vector3ui index, int mipmap_level) {
     const MetaInfo& info = m_metainfo[image_ID];
     const unsigned int pixel_index = index.x + info.width * (index.y + info.height * index.z);
     return get_pixel(image_ID, pixel_index, mipmap_level);
 }
 
-void Images::set_pixel(Images::UID image_ID, Math::RGBA color, unsigned int index, int mipmap_level) {
+void Images::set_pixel(Images::UID image_ID, RGBA color, unsigned int index, int mipmap_level) {
+    color = gammacorrect(color, 1.0f / Images::get_gamma(image_ID));
     switch (m_metainfo[image_ID].pixel_format) {
     case PixelFormat::RGB24: {
         unsigned char* pixel = ((unsigned char*)m_pixels[image_ID]) + index * 3;
-        pixel[0] = unsigned char(Math::clamp(color.r * 255.0f, 0.0f, 255.0f));
-        pixel[1] = unsigned char(Math::clamp(color.g * 255.0f, 0.0f, 255.0f));
-        pixel[2] = unsigned char(Math::clamp(color.b * 255.0f, 0.0f, 255.0f));
+        pixel[0] = unsigned char(clamp(color.r * 255.0f, 0.0f, 255.0f));
+        pixel[1] = unsigned char(clamp(color.g * 255.0f, 0.0f, 255.0f));
+        pixel[2] = unsigned char(clamp(color.b * 255.0f, 0.0f, 255.0f));
         break;
     }
     case PixelFormat::RGBA32: {
         unsigned char* pixel = ((unsigned char*)m_pixels[image_ID]) + index * 4;
-        pixel[0] = unsigned char(Math::clamp(color.r * 255.0f, 0.0f, 255.0f));
-        pixel[1] = unsigned char(Math::clamp(color.g * 255.0f, 0.0f, 255.0f));
-        pixel[2] = unsigned char(Math::clamp(color.b * 255.0f, 0.0f, 255.0f));
-        pixel[3] = unsigned char(Math::clamp(color.a * 255.0f, 0.0f, 255.0f));
+        pixel[0] = unsigned char(clamp(color.r * 255.0f, 0.0f, 255.0f));
+        pixel[1] = unsigned char(clamp(color.g * 255.0f, 0.0f, 255.0f));
+        pixel[2] = unsigned char(clamp(color.b * 255.0f, 0.0f, 255.0f));
+        pixel[3] = unsigned char(clamp(color.a * 255.0f, 0.0f, 255.0f));
         break;
     }
     case PixelFormat::RGB_Float: {
@@ -216,27 +223,27 @@ void Images::set_pixel(Images::UID image_ID, Math::RGBA color, unsigned int inde
     flag_as_changed(image_ID, Changes::PixelsUpdated);
 }
 
-void Images::set_pixel(Images::UID image_ID, Math::RGBA color, Math::Vector2ui index, int mipmap_level) {
+void Images::set_pixel(Images::UID image_ID, RGBA color, Vector2ui index, int mipmap_level) {
     const MetaInfo& info = m_metainfo[image_ID];
 #if _DEBUG
     if (index.x >= info.width || index.y >= info.height) {
         printf("Pixel index [%u, %u] is outside the bounds [%u, %u]\n", index.x, index.y, info.width, info.height);
-        index.x = Math::min(index.x, info.width - 1u);
-        index.y = Math::min(index.y, info.height - 1u);
+        index.x = min(index.x, info.width - 1u);
+        index.y = min(index.y, info.height - 1u);
     }
 #endif
     const unsigned int pixel_index = index.x + info.width * index.y;
     set_pixel(image_ID, color, pixel_index, mipmap_level);
 }
 
-void Images::set_pixel(Images::UID image_ID, Math::RGBA color, Math::Vector3ui index, int mipmap_level) {
+void Images::set_pixel(Images::UID image_ID, RGBA color, Vector3ui index, int mipmap_level) {
     const MetaInfo& info = m_metainfo[image_ID];
 #if _DEBUG
     if (index.x >= info.width || index.y >= info.height) {
         printf("Pixel index [%u, %u, %u] is outside the bounds [%u, %u, %u]\n", index.x, index.y, index.z, info.width, info.height, info.depth);
-        index.x = Math::min(index.x, info.width - 1u);
-        index.y = Math::min(index.y, info.height - 1u);
-        index.z = Math::min(index.z, info.depth - 1u);
+        index.x = min(index.x, info.width - 1u);
+        index.y = min(index.y, info.height - 1u);
+        index.z = min(index.z, info.depth - 1u);
     }
 #endif
     const unsigned int pixel_index = index.x + info.width * (index.y + info.height * index.z);
@@ -265,7 +272,7 @@ namespace ImageUtils {
 Images::UID change_format(Images::UID image_ID, PixelFormat new_format) {
     Image image = image_ID;
     unsigned int mipmap_count = image.get_mipmap_count();
-    Math::Vector3ui size = Math::Vector3ui(image.get_width(), image.get_height(), image.get_depth());
+    Vector3ui size = Vector3ui(image.get_width(), image.get_height(), image.get_depth());
     Images::UID new_image_ID = Images::create(image.get_name(), new_format, image.get_gamma(), size, mipmap_count);
 
     // TODO Specialize for most common formats.
