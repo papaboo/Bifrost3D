@@ -21,9 +21,9 @@ namespace OptiXRenderer {
 // Encodes a normal by storing the sign of the z component in 
 // the second most significant bit of the y component.
 // The reason why this works is because the second most significant bit,
-// or the most significant bit of the exponent, is only ever set when 
-// a floating point value is larger than abs(2), which is never the case for 
-// normals.
+// which is the most significant bit of the exponent, is only ever set when 
+// the absolute value of a floating point number is larger than two, 
+// which is never the case for normals.
 //----------------------------------------------------------------------------
 class __align__(8) EncodedNormal {
 private:
@@ -42,6 +42,8 @@ public:
         y_bitmask_z_sign_y |= z < 0.0f ? 0 : (1 << 30);
     }
 
+    // Decodes the normal and returns the original normal.
+    // Has an error of approximately 1:2222.
     __inline_all__ optix::float3 decode() const {
         optix::float3 res;
         res.x = x;
