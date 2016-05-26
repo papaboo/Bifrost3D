@@ -38,6 +38,7 @@ SET(MATH_SRCS
   Cogwheel/Math/Constants.h
   Cogwheel/Math/Math.h
   Cogwheel/Math/Matrix.h
+  Cogwheel/Math/Polynomial.h
   Cogwheel/Math/Quaternion.h
   Cogwheel/Math/Ray.h
   Cogwheel/Math/Rect.h
