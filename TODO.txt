@@ -1,17 +1,21 @@
-* Natvis extension for wrapper classes?
-* Add background colors and environment to scenes?
+* Precompute default shading albedo map and dump it as a header file and texture.
+* Create scene abstraction.
+** Add background colors and environment to scenes.
 * Environment models.
-* Reduce TODOs
+* Reduce TODOs.
+** There are some in the MIS sampling.
+** Precompute material parameters for DefaultShading.
+** Etc
 * Bump mapping
 ** Utility function for computing tangents and normals on bump mapped surfaces. Possibly splitting the mesh.
 ** Including 'fixing' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles.
 ** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
 * Materials revisited.
-** Add Fresnel coat. How to sample the Fresnel combiner? Add it as a coated shading model in OptiXRenderer, so I have access to both materials.
 ** Add Burley and Oren-Nayar BRDF. Burley should exclude the fresnel term, as that is part of the overall combiner.
 ** Use perfectly specular BRDFs for tiny roughness values.
 *** Adapt MIS to handle specular surfaces.
+** Add Fresnel coat. How to sample the Fresnel combiner? Add it as a coated shading model in OptiXRenderer, so I have access to both materials.
 * GL Renderer
 * Multiple cameras.
 ** G-Buffer pr camera.
@@ -31,6 +35,7 @@
 *** Debugging/error checking. Array management.
 
 libs
+* Integrate stb_image_write.
 * Add ZLib and LibPNG.
 ** Generalize CMake source download function / macro. Found in GLFW.
 * OpenEXR.
