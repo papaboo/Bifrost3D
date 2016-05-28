@@ -43,7 +43,7 @@ public:
     }
 
     // Decodes the normal and returns the original normal.
-    // Has an error of approximately 1:2222.
+    // Has a max error of approximately 1/2222.
     __inline_all__ optix::float3 decode() const {
         optix::float3 res;
         res.x = x;
