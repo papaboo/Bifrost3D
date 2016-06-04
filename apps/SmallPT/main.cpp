@@ -108,10 +108,9 @@ void main(int argc, char** argv) {
             accumulations = 0;
             int pixelCount = gWindowWidth * gWindowHeight;
             glfwGetFramebufferSize(window, &gWindowWidth, &gWindowHeight);
-            if (gWindowWidth * gWindowHeight != int(pixelCount)) {
+            if (gWindowWidth * gWindowHeight > int(pixelCount)) {
                 delete[] gBackbuffer;
                 gBackbuffer = new RGB[gWindowWidth * gWindowHeight];
-                //for (RGB& p : gBackbuffer)
                 for (RGB* p = gBackbuffer; p < (gBackbuffer + gWindowWidth * gWindowHeight); ++p)
                     *p = RGB::black();
             }
