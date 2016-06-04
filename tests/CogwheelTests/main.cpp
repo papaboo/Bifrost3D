@@ -1,3 +1,11 @@
+// Cogwheel unit tests.
+// ---------------------------------------------------------------------------
+// Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
+//
+// This program is open source and distributed under the New BSD License. See
+// LICENSE.txt for more detail.
+// ---------------------------------------------------------------------------
+
 #include <gtest/gtest.h>
 
 #include <Assets/ImageTest.h>

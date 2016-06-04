@@ -47,7 +47,7 @@ source_group("LightSources" FILES ${LIGHTSOURCES_SRCS})
 source_group("ShadingModels" FILES ${SHADING_MODELS_SRCS})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-  FOLDER "Apps"
+  FOLDER "Tests"
 )
 
 if (WIN32)

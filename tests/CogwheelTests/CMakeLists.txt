@@ -1,4 +1,4 @@
-set(PROJECT_NAME "Tests")
+set(PROJECT_NAME "CogwheelTests")
 
 set(SRCS 
   Expects.h
@@ -54,5 +54,5 @@ source_group("Scene" FILES ${SCENE_SRCS})
 # setup_gtest(${PROJECT_NAME})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-  FOLDER "Apps"
+  FOLDER "Tests"
 )
