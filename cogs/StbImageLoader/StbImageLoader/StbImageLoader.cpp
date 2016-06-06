@@ -30,21 +30,35 @@ static PixelFormat resolve_format(int channels) {
 
 Images::UID load(const std::string& path) {
     
-    int width, height, channels;
-    unsigned char* loaded_data = stbi_load(path.c_str(), &width, &height, &channels, 0);
+    int width, height, channel_count;
+    unsigned char* loaded_data = stbi_load(path.c_str(), &width, &height, &channel_count, 0);
 
     if (loaded_data == nullptr) {
         printf("StbImageLoader::load(%s) failed with error: '%s'\n", path.c_str(), stbi_failure_reason());
         return Images::UID::invalid_UID();
     }
 
-    PixelFormat pixel_format = resolve_format(channels);
+    // Flip the image vertically.
+    for (int y = 0; y < height / 2; ++y) {
+        unsigned char* bottom_row = loaded_data + y * width * channel_count;
+        unsigned char* bottom_row_end = bottom_row + width * channel_count;
+        unsigned char* top_row = loaded_data + (height - y - 1) * width * channel_count;
+        while (bottom_row != bottom_row_end) {
+            std::swap(*bottom_row, *top_row);
+            ++bottom_row;
+            ++top_row;
+        }
+    }
+
+    PixelFormat pixel_format = resolve_format(channel_count);
     if (pixel_format == PixelFormat::Unknown)
         return Images::UID::invalid_UID();
 
     Images::UID image_ID = Images::create(path, pixel_format, 2.2f, Vector2ui(width, height));
     void* pixel_data = Images::get_pixels(image_ID);
-    memcpy(pixel_data, loaded_data, sizeof(unsigned char) * width * height * channels);
+    memcpy(pixel_data, loaded_data, sizeof(unsigned char) * width * height * channel_count);
+
+    delete[] loaded_data;
 
     return image_ID;
 }
