@@ -45,10 +45,11 @@ inline int channel_count(PixelFormat format) {
 
 //----------------------------------------------------------------------------
 // Cogwheel image container.
+// Images are index from the lower left corner to the top right one.
+// E.g. (0, 0) is in the lower left corner.
 // Future work:
 // * set_pixels.
 // * set_pixels_rect.
-// * Gamma.
 // * Cubemap support.
 //----------------------------------------------------------------------------
 class Images final {
