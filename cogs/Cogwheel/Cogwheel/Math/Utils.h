@@ -11,6 +11,7 @@
 
 #include <Cogwheel/Math/Constants.h>
 
+#include <algorithm>
 #include <cmath>
 #include <string>
 
@@ -90,6 +91,38 @@ inline float degrees_to_radians(float degress) {
 
 inline float radians_to_degress(float radians) {
     return radians * (180.0f / PI<float>());
+}
+
+//-----------------------------------------------------------------------------
+// Stable pairwise summation.
+//-----------------------------------------------------------------------------
+
+// Inplace iterative pairwise summation.
+// Uses the input iterators to store the temporaries.
+// http://en.wikipedia.org/wiki/Pairwise_summation
+template <typename InputIterator>
+inline typename std::iterator_traits<InputIterator>::value_type pairwise_summation(InputIterator begin, InputIterator end) {
+    size_t elementCount = end - begin;
+
+    while (elementCount > 1) {
+        size_t summations = elementCount / 2;
+        for (size_t s = 0; s < summations; ++s)
+            begin[s] = begin[2 * s] + begin[2 * s + 1];
+
+        // Copy last element if element count is odd.
+        if ((elementCount % 2) == 1)
+            begin[summations] = begin[elementCount - 1];
+
+        elementCount = summations + (elementCount & 1);
+    }
+
+    return *begin;
+}
+
+template <typename InputIterator>
+inline typename std::iterator_traits<InputIterator>::value_type sort_and_pairwise_summation(InputIterator begin, InputIterator end) {
+    std::sort(begin, end);
+    return pairwise_summation(begin, end);
 }
 
 } // NS Math

@@ -11,6 +11,8 @@
 
 #include <Utils.h>
 
+#include <Cogwheel/Math/Utils.h>
+
 #include <OptiXRenderer/RNG.h>
 #include <OptiXRenderer/Shading/BSDFs/GGX.h>
 #include <OptiXRenderer/Utils.h>
@@ -38,7 +40,7 @@ GTEST_TEST(GGX, power_conservation) {
                 ws[i] = 0.0f;
         }
 
-        float average_w = sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
+        float average_w = Cogwheel::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
         EXPECT_LE(average_w, 1.0f);
     }
 }

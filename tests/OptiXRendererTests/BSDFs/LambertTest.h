@@ -11,6 +11,8 @@
 
 #include <Utils.h>
 
+#include <Cogwheel/Math/Utils.h>
+
 #include <OptiXRenderer/RNG.h>
 #include <OptiXRenderer/Shading/BSDFs/Lambert.h>
 
@@ -30,7 +32,7 @@ GTEST_TEST(Lambert, power_conservation) {
         ws[i] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
     }
     
-    float average_w = sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
+    float average_w = Cogwheel::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
     EXPECT_TRUE(almost_equal_eps(average_w, 1.0f, 0.0001f));
 }
 

@@ -11,6 +11,8 @@
 
 #include <Utils.h>
 
+#include <Cogwheel/Math/Utils.h>
+
 #include <OptiXRenderer/RNG.h>
 #include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>
 #include <OptiXRenderer/Utils.h>
@@ -29,21 +31,29 @@ Material gold_parameters() {
 }
 
 Material plastic_parameters() {
-    Material rubber_params;
-    rubber_params.base_tint = optix::make_float3(0.02f, 0.27f, 0.33f);
-    rubber_params.base_roughness = 0.7f;
-    rubber_params.metallic = 0.0f;
-    rubber_params.specularity = 0.02f;
-    return rubber_params;
+    Material plastic_params;
+    plastic_params.base_tint = optix::make_float3(0.02f, 0.27f, 0.33f);
+    plastic_params.base_roughness = 0.7f;
+    plastic_params.metallic = 0.0f;
+    plastic_params.specularity = 0.02f;
+    return plastic_params;
 }
 
 GTEST_TEST(DefaultShadingModel, power_conservation) {
     using namespace Shading::ShadingModels;
     using namespace optix;
 
-    const unsigned int MAX_SAMPLES = 1024u;
+    const unsigned int MAX_SAMPLES = 4096u;
     
-    DefaultShading plastic_material = DefaultShading(plastic_parameters());
+    // A nearly white material to stress test power_conservation.
+    // We do not use a completely white material, as monte carlo sampling and 
+    // floating point errors makes it impossible to guarantee white or less.
+    Material material_params;
+    material_params.base_tint = optix::make_float3(0.95f, 0.95f, 0.95f);
+    material_params.base_roughness = 0.7f;
+    material_params.metallic = 0.0f;
+    material_params.specularity = 0.02f;
+    DefaultShading material = DefaultShading(material_params);
     RNG::LinearCongruential rng;
     rng.seed(256237u);
     
@@ -51,14 +61,14 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
         const float3 wo = normalize(make_float3(float(i), 0.0f, 1.001f - float(i) * 0.1f));
         float ws[MAX_SAMPLES];
         for (unsigned int s = 0u; s < MAX_SAMPLES; ++s) {
-            BSDFSample sample = plastic_material.sample_all(wo, rng.sample3f());
+            BSDFSample sample = material.sample_all(wo, rng.sample3f());
             if (is_PDF_valid(sample.PDF))
                 ws[s] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
             else
                 ws[s] = 0.0f;
         }
 
-        float average_w = sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
+        float average_w = Cogwheel::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
         EXPECT_LE(average_w, 1.0f);
     }
 }
@@ -201,8 +211,8 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
             ws_squared[i] = ws[i] = 0.0f;
     }
     
-    double sample_one_mean = sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / double(MAX_SAMPLES);
-    double sample_one_mean_squared = sort_and_pairwise_summation(ws_squared, ws_squared + MAX_SAMPLES) / double(MAX_SAMPLES);
+    double sample_one_mean = Cogwheel::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / double(MAX_SAMPLES);
+    double sample_one_mean_squared = Cogwheel::Math::sort_and_pairwise_summation(ws_squared, ws_squared + MAX_SAMPLES) / double(MAX_SAMPLES);
     double sample_one_variance = sample_one_mean_squared - sample_one_mean * sample_one_mean;
 
     rng.seed(256237u);
@@ -215,8 +225,8 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
             ws_squared[i] = ws[i] = 0.0f;
     }
 
-    double sample_all_mean = sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / double(MAX_SAMPLES);
-    double sample_all_mean_squared = sort_and_pairwise_summation(ws_squared, ws_squared + MAX_SAMPLES) / double(MAX_SAMPLES);
+    double sample_all_mean = Cogwheel::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / double(MAX_SAMPLES);
+    double sample_all_mean_squared = Cogwheel::Math::sort_and_pairwise_summation(ws_squared, ws_squared + MAX_SAMPLES) / double(MAX_SAMPLES);
     double sample_all_variance = sample_all_mean_squared - sample_all_mean * sample_all_mean;
 
     EXPECT_TRUE(almost_equal_eps(float(sample_one_mean), float(sample_all_mean), 0.001f));

@@ -11,6 +11,8 @@
 
 #include <Utils.h>
 
+#include <Cogwheel/Math/Utils.h>
+
 #include <OptiXRenderer/Shading/LightSources/SphereLightImpl.h>
 
 #include <gtest/gtest.h>
@@ -67,11 +69,11 @@ GTEST_TEST(SphereLight, power_preservation_when_radius_changes) {
         luminances_at_radius_9[i] = sample9.radiance.x * (dot(shading_normal, sample9.direction) / sample9.PDF);
     }
 
-    float luminance_at_radius_0 = sort_and_pairwise_summation(luminances_at_radius_0, luminances_at_radius_0 + MAX_SAMPLES) / float(MAX_SAMPLES);
-    float luminance_at_radius_1 = sort_and_pairwise_summation(luminances_at_radius_1, luminances_at_radius_1 + MAX_SAMPLES) / float(MAX_SAMPLES);
-    float luminance_at_radius_2 = sort_and_pairwise_summation(luminances_at_radius_2, luminances_at_radius_2 + MAX_SAMPLES) / float(MAX_SAMPLES);
-    float luminance_at_radius_5 = sort_and_pairwise_summation(luminances_at_radius_5, luminances_at_radius_5 + MAX_SAMPLES) / float(MAX_SAMPLES);
-    float luminance_at_radius_9 = sort_and_pairwise_summation(luminances_at_radius_9, luminances_at_radius_9 + MAX_SAMPLES) / float(MAX_SAMPLES);
+    float luminance_at_radius_0 = Cogwheel::Math::sort_and_pairwise_summation(luminances_at_radius_0, luminances_at_radius_0 + MAX_SAMPLES) / float(MAX_SAMPLES);
+    float luminance_at_radius_1 = Cogwheel::Math::sort_and_pairwise_summation(luminances_at_radius_1, luminances_at_radius_1 + MAX_SAMPLES) / float(MAX_SAMPLES);
+    float luminance_at_radius_2 = Cogwheel::Math::sort_and_pairwise_summation(luminances_at_radius_2, luminances_at_radius_2 + MAX_SAMPLES) / float(MAX_SAMPLES);
+    float luminance_at_radius_5 = Cogwheel::Math::sort_and_pairwise_summation(luminances_at_radius_5, luminances_at_radius_5 + MAX_SAMPLES) / float(MAX_SAMPLES);
+    float luminance_at_radius_9 = Cogwheel::Math::sort_and_pairwise_summation(luminances_at_radius_9, luminances_at_radius_9 + MAX_SAMPLES) / float(MAX_SAMPLES);
 
     // Map radiance arriving at intersection point to light source power by applying an inverse quadratric fall off and assume that all lights are point lights.
     float distance_to_light = length(shading_position - light_with_radius_0.position);
