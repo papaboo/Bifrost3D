@@ -50,6 +50,7 @@ __inline_all__ float D(float alpha, const optix::float3& halfway) {
     return (alpha_sqrd / PIf) / (cos_theta_cubed * square(alpha_sqrd + tan_theta_sqrd)); // TODO Combine divisions into a single one.
 }
 
+// TODO This isn't the smith or schlick geometric term. Which is it?
 __inline_all__ float G1(float alpha, const optix::float3& w, const optix::float3& halfway) {
     // Check if the w vector projected onto the halfway vector is in the same hemisphere as the halfway vector and the normal, otherwise the response is black.
     if (optix::dot(w, halfway) * w.z <= 0.0f)
