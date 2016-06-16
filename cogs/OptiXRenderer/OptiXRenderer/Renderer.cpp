@@ -45,6 +45,7 @@ using namespace optix;
 #else
 #define OPTIX_VALIDATE(o)
 #endif
+// #define ENABLE_OPTIX_PRINT
 
 namespace OptiXRenderer {
 
@@ -346,7 +347,7 @@ Renderer::Renderer()
             // Create buffer.
             unsigned int width = default_shading_angle_sample_count;
             unsigned int height = default_shading_roughness_sample_count;
-            Buffer default_material_rho_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, width, height); // TODO Can I make this half2?
+            Buffer default_material_rho_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, width, height);
 
             float2* rho_data = static_cast<float2*>(default_material_rho_buffer->map());
             memcpy(rho_data, default_shading_rho, width * height * sizeof(float2));
@@ -413,7 +414,7 @@ Renderer::Renderer()
         context->setMissProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "miss"));
     }
 
-#ifdef _DEBUG
+#ifdef ENABLE_OPTIX_PRINT
     context->setPrintEnabled(true);
     context->setPrintLaunchIndex(m_state->screensize.x / 2, m_state->screensize.y / 2);
     context->setExceptionEnabled(RT_EXCEPTION_ALL, true);
@@ -449,7 +450,7 @@ void Renderer::render() {
         m_state->output_buffer->setSize(window.get_width(), window.get_height());
         m_state->screensize = make_uint2(window.get_width(), window.get_height());
         m_state->accumulations = 0u;
-#ifdef _DEBUG
+#ifdef ENABLE_OPTIX_PRINT
         context->setPrintLaunchIndex(window.get_width() / 2, window.get_height() / 2);
 #endif
     }
