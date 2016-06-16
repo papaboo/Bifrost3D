@@ -73,6 +73,10 @@ __inline_all__ float average(const optix::float3& v) {
     return (v.x + v.y + v.z) / 3.0f;
 }
 
+__inline_all__ float sum(const optix::float3& v) {
+    return v.x + v.y + v.z;
+}
+
 __inline_all__ optix::float3 gammacorrect(const optix::float3& color, float gamma) {
     return optix::make_float3(pow(color.x, gamma),
                               pow(color.y, gamma),
