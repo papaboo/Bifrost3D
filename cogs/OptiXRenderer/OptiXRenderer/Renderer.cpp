@@ -10,6 +10,7 @@
 
 #include <OptiXRenderer/EncodedNormal.h>
 #include <OptiXRenderer/Kernel.h>
+#include <OptiXRenderer/Shading/ShadingModels/DefaultShadingRho.h>
 #include <OptiXRenderer/Types.h>
 
 #include <Cogwheel/Assets/Image.h>
@@ -69,6 +70,7 @@ struct Renderer::State {
     std::vector<optix::TextureSampler> textures = std::vector<optix::TextureSampler>(0);
 
     optix::Material default_material;
+    optix::TextureSampler default_material_rho;
     optix::Buffer material_parameters;
     unsigned int material_parameter_count;
 
@@ -339,6 +341,35 @@ Renderer::Renderer()
         m_state->material_parameters = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, m_state->material_parameter_count);
         m_state->material_parameters->setElementSize(sizeof(OptiXRenderer::Material));
         context["g_materials"]->set(m_state->material_parameters);
+
+        { // Upload directional-hemispherical reflectance texture. TODO Approximate rho using a function instead.
+            // Create buffer.
+            unsigned int width = default_shading_angle_sample_count;
+            unsigned int height = default_shading_roughness_sample_count;
+            Buffer default_material_rho_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, width, height); // TODO Can I make this half2?
+
+            float2* rho_data = static_cast<float2*>(default_material_rho_buffer->map());
+            memcpy(rho_data, default_shading_rho, width * height * sizeof(float2));
+            default_material_rho_buffer->unmap();
+            OPTIX_VALIDATE(default_material_rho_buffer);
+
+            // ... and wrap it in a texture sampler.
+            m_state->textures.resize(1);
+            TextureSampler& rho_texture = m_state->default_material_rho = context->createTextureSampler();
+            rho_texture->setWrapMode(0, RT_WRAP_CLAMP_TO_EDGE);
+            rho_texture->setWrapMode(1, RT_WRAP_CLAMP_TO_EDGE);
+            rho_texture->setWrapMode(2, RT_WRAP_CLAMP_TO_EDGE);
+            rho_texture->setIndexingMode(RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
+            rho_texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT);
+            rho_texture->setMaxAnisotropy(1.0f);
+            rho_texture->setMipLevelCount(1u);
+            rho_texture->setFilteringModes(RT_FILTER_NEAREST, RT_FILTER_NEAREST, RT_FILTER_NONE);
+            rho_texture->setArraySize(1u);
+            rho_texture->setBuffer(0u, 0u, default_material_rho_buffer);
+            OPTIX_VALIDATE(m_state->default_material_rho);
+
+            context["default_shading_rho_texture_ID"]->setUint(m_state->default_material_rho->getId());
+        }
     }
 
     { // Screen buffers
@@ -384,7 +415,7 @@ Renderer::Renderer()
 
 #ifdef _DEBUG
     context->setPrintEnabled(true);
-    context->setPrintLaunchIndex(0, 0);
+    context->setPrintLaunchIndex(m_state->screensize.x / 2, m_state->screensize.y / 2);
     context->setExceptionEnabled(RT_EXCEPTION_ALL, true);
 #endif
 
@@ -419,7 +450,7 @@ void Renderer::render() {
         m_state->screensize = make_uint2(window.get_width(), window.get_height());
         m_state->accumulations = 0u;
 #ifdef _DEBUG
-        // context->setPrintLaunchIndex(window.get_width() / 2, window.get_height() / 2);
+        context->setPrintLaunchIndex(window.get_width() / 2, window.get_height() / 2);
 #endif
     }
 
