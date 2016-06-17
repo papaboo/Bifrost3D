@@ -70,7 +70,7 @@ public:
     {
         m_base_tint = material.base_tint;
         if (material.base_tint_texture_ID)
-            m_base_tint *= gammacorrect(make_float3(tex2D(material.base_tint_texture_ID, texcoord)), 2.2f);
+            m_base_tint *= make_float3(tex2D(material.base_tint_texture_ID, texcoord));
     }
 
     __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {

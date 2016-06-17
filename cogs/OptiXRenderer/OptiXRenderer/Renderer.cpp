@@ -607,7 +607,11 @@ void Renderer::handle_updates() {
                     texture->setWrapMode(1, convert_wrap_mode(Textures::get_wrapmode_V(texture_ID)));
                     texture->setWrapMode(2, convert_wrap_mode(Textures::get_wrapmode_W(texture_ID)));
                     texture->setIndexingMode(RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
-                    texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT);
+                    Images::UID image_id = Textures::get_image_ID(texture_ID);
+                    if (Images::get_gamma(Textures::get_image_ID(texture_ID)) == 1.0f)
+                        texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT); // Image is in linear color space.
+                    else
+                        texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT_SRGB); // Assume that image is in sRGB color space.
                     texture->setMaxAnisotropy(1.0f);
                     texture->setMipLevelCount(1u);
                     RTfiltermode min_filtermode = Textures::get_minification_filter(texture_ID) == MinificationFilter::None ? RT_FILTER_NEAREST : RT_FILTER_LINEAR;

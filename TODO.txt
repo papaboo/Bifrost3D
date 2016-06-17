@@ -1,4 +1,3 @@
-* Use builtin sRGB texture formats.
 * Create scene abstraction.
 ** Add background colors and environment to scenes.
 * Cache in FindOptix.
