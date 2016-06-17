@@ -59,10 +59,7 @@ endif()
 
 set(OPTIX_DLLS "${OPTIX_1_DLL}" "${OPTIX_U_1_DLL}")
 
-set_boolean(OPTIX_FOUND OPTIX_INCLUDE_DIRS AND OPTIX_1_LIB AND OPTIX_U_1_LIB AND OPTIX_1_DLL AND OPTIX_U_1_DLL)
-
-if (OPTIX_FOUND)
-  message(STATUS "Found OptiX: ${OPTIX_PATH}")
-else()
-  message(WARNING "OptiX not found")
-endif()
+# Handle the QUIETLY and REQUIRED arguments and set OPTIX_FOUND to TRUE if
+# all listed variables are set.
+include(${CMAKE_ROOT}/Modules/FindPackageHandleStandardArgs.cmake)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(OPTIX DEFAULT_MSG OPTIX_1_LIB OPTIX_U_1_LIB OPTIX_1_DLL OPTIX_U_1_DLL OPTIX_INCLUDE_DIRS)
