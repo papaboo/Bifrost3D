@@ -1,14 +1,16 @@
+* Directional light.
+* Half4 backbuffer in OptiXRenderer
 * Create scene abstraction.
 ** Add background colors and environment to scenes.
+** Environment models.
 * Shading should be energy conserving. The current material isn't energy conserving at grazing angles when the roughness is low.
 ** Poke Detlef
-*** Hemispherical -directional reflection
+*** Directional-hemispherical reflection
 *** Index sorting for vertex transform cache optimization.
-** Investigate how Disney and Unreal combines diffuse and specular layers
+** Investigate how Disney combines diffuse and specular layers
 *** Create DisneyBSDF dev project and just integrate over the damn thing!
 *** Use a Hammersley sampler for integration. See Unreal Shading paper.
-** Implement new energy conserving material.
-* Environment models.
+** Implement new energy conserving material or docuent findings and argue why we don't care (yet)
 * Reduce TODOs.
 ** There are some in the MIS sampling.
 ** Precompute material parameters for DefaultShading.
