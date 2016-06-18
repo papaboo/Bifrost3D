@@ -10,7 +10,7 @@
 
 #include <OptiXRenderer/EncodedNormal.h>
 #include <OptiXRenderer/Kernel.h>
-#include <OptiXRenderer/Shading/ShadingModels/DefaultShadingRho.h>
+#include <OptiXRenderer/RhoTexture.h>
 #include <OptiXRenderer/Types.h>
 
 #include <Cogwheel/Assets/Image.h>
@@ -343,34 +343,9 @@ Renderer::Renderer()
         m_state->material_parameters->setElementSize(sizeof(OptiXRenderer::Material));
         context["g_materials"]->set(m_state->material_parameters);
 
-        { // Upload directional-hemispherical reflectance texture. TODO Approximate rho using a function instead.
-            // Create buffer.
-            unsigned int width = default_shading_angle_sample_count;
-            unsigned int height = default_shading_roughness_sample_count;
-            Buffer default_material_rho_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, width, height);
-
-            float2* rho_data = static_cast<float2*>(default_material_rho_buffer->map());
-            memcpy(rho_data, default_shading_rho, width * height * sizeof(float2));
-            default_material_rho_buffer->unmap();
-            OPTIX_VALIDATE(default_material_rho_buffer);
-
-            // ... and wrap it in a texture sampler.
-            m_state->textures.resize(1);
-            TextureSampler& rho_texture = m_state->default_material_rho = context->createTextureSampler();
-            rho_texture->setWrapMode(0, RT_WRAP_CLAMP_TO_EDGE);
-            rho_texture->setWrapMode(1, RT_WRAP_CLAMP_TO_EDGE);
-            rho_texture->setWrapMode(2, RT_WRAP_CLAMP_TO_EDGE);
-            rho_texture->setIndexingMode(RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
-            rho_texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT);
-            rho_texture->setMaxAnisotropy(1.0f);
-            rho_texture->setMipLevelCount(1u);
-            rho_texture->setFilteringModes(RT_FILTER_NEAREST, RT_FILTER_NEAREST, RT_FILTER_NONE);
-            rho_texture->setArraySize(1u);
-            rho_texture->setBuffer(0u, 0u, default_material_rho_buffer);
-            OPTIX_VALIDATE(m_state->default_material_rho);
-
-            context["default_shading_rho_texture_ID"]->setUint(m_state->default_material_rho->getId());
-        }
+        // Upload directional-hemispherical reflectance texture. TODO Approximate rho using a function instead.
+        m_state->default_material_rho = default_shading_rho_texture(context);
+        context["default_shading_rho_texture_ID"]->setUint(m_state->default_material_rho->getId());
     }
 
     { // Screen buffers
