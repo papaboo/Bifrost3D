@@ -636,8 +636,6 @@ void Renderer::handle_updates() {
                 // Validate that the image has 4 channels! Otherwise OptiX goes boom boom.
                 Textures::UID texture_ID = host_material.get_base_tint_texture_ID();
                 assert(channel_count(Images::get_pixel_format(Textures::get_image_ID(texture_ID))) == 4);
-                if (Images::get_gamma(Textures::get_image_ID(texture_ID)) != 2.2f)
-                    printf("Default shading expects tint textures to have a gamma of 2.2.\n");
                 device_material.base_tint_texture_ID = samplers[texture_ID]->getId();
             } else
                 device_material.base_tint_texture_ID = 0u;
