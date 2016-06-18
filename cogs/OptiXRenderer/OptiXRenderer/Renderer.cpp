@@ -618,7 +618,7 @@ void Renderer::handle_updates() {
                     RTfiltermode mag_filtermode = Textures::get_magnification_filter(texture_ID) == MagnificationFilter::Linear ? RT_FILTER_LINEAR : RT_FILTER_NEAREST;
                     texture->setFilteringModes(min_filtermode, mag_filtermode, RT_FILTER_NONE);
                     texture->setArraySize(1u);
-                    texture->setBuffer(0u, 0u, m_state->images[Textures::get_image_ID(texture_ID)]);
+                    texture->setBuffer(0u, 0u, m_state->images[image_id]);
                     OPTIX_VALIDATE(texture);
                 }
             }

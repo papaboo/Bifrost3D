@@ -1,6 +1,5 @@
 * Create scene abstraction.
 ** Add background colors and environment to scenes.
-* Cache in FindOptix.
 * Shading should be energy conserving. The current material isn't energy conserving at grazing angles when the roughness is low.
 ** Poke Detlef
 *** Hemispherical -directional reflection
