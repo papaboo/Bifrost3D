@@ -366,7 +366,7 @@ Renderer::Renderer()
             glEnable(GL_TEXTURE_2D);
             glGenTextures(1, &m_state->backbuffer_gl_id);
             glBindTexture(GL_TEXTURE_2D, m_state->backbuffer_gl_id);
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // TODO Needed here or when rendering? Also, since the elements are larger than char, half4, should it stil be 1?
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -652,12 +652,12 @@ void Renderer::handle_updates() {
                 Vector3f position = SceneNodes::get_global_transform(node_ID).translation;
                 memcpy(&light.position, &position, sizeof(light.position));
 
-                RGB power = LightSources::get_power(light_ID);
+                RGB power = LightSources::get_sphere_light_power(light_ID);
                 memcpy(&light.power, &power, sizeof(light.power));
 
-                light.radius = LightSources::get_radius(light_ID);
+                light.radius = LightSources::get_sphere_light_radius(light_ID);
 
-                if (!LightSources::is_delta_light(light_ID))
+                if (!LightSources::is_delta_sphere_light(light_ID))
                     highest_area_light_index_updated = max(highest_area_light_index_updated, light_index);
             };
 
@@ -696,7 +696,7 @@ void Renderer::handle_updates() {
 
                     unsigned int light_index = m_state->lights.ID_to_index[light_ID];
 
-                    if (!LightSources::is_delta_light(light_ID))
+                    if (!LightSources::is_delta_sphere_light(light_ID))
                         highest_area_light_index_updated = max(highest_area_light_index_updated, light_index);
 
                     if (created_lights_begin != LightSources::get_changed_lights().end()) {

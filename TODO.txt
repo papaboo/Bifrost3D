@@ -1,5 +1,7 @@
 * Directional light.
-* Half4 backbuffer in OptiXRenderer
+** Direcetional light in OptiXRenderer.
+** Spread / diffusitivity, see the diffuse light paper
+* Hammersley and reverse halton RNG samplers.
 * Create scene abstraction.
 ** Add background colors and environment to scenes.
 ** Environment models.
@@ -7,9 +9,9 @@
 ** Poke Detlef
 *** Directional-hemispherical reflection
 *** Index sorting for vertex transform cache optimization.
+*** RGB macro in optixu/optixpp_namespace.h
 ** Investigate how Disney combines diffuse and specular layers
 *** Create DisneyBSDF dev project and just integrate over the damn thing!
-*** Use a Hammersley sampler for integration. See Unreal Shading paper.
 ** Implement new energy conserving material or docuent findings and argue why we don't care (yet)
 * Reduce TODOs.
 ** There are some in the MIS sampling.
@@ -26,6 +28,7 @@
 *** Adapt MIS to handle specular surfaces.
 ** Add coat.
 * GL Renderer
+** Half4 backbuffer in OptiXRenderer
 * Multiple cameras.
 ** G-Buffer pr camera.
 ** Compose when all cameras are done.

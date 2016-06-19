@@ -22,9 +22,9 @@ namespace Scene {
 // ---------------------------------------------------------------------------
 // Container class for cogwheel light sources.
 // Future work
-// * Environment map.
 // * Light source type 'easy to use' wrappers. (See SceneNode)
 // * Directional light.
+// * Environment map.
 // * Importance sampled environment map.
 // * Setters.
 // ---------------------------------------------------------------------------
@@ -34,7 +34,12 @@ public:
     typedef UIDGenerator::UID UID;
     typedef UIDGenerator::ConstIterator ConstUIDIterator;
 
-    static bool is_allocated() { return m_node_IDs != nullptr; }
+    enum class Type {
+        Sphere,
+        Directional
+    };
+
+    static bool is_allocated() { return m_lights != nullptr; }
     static void allocate(unsigned int capacity);
     static void deallocate();
 
@@ -43,16 +48,23 @@ public:
     static bool has(LightSources::UID light_ID) { return m_UID_generator.has(light_ID); }
 
     static LightSources::UID create_sphere_light(SceneNodes::UID node_ID, Math::RGB power, float radius);
+    static LightSources::UID create_directional_light(SceneNodes::UID node_ID, Math::RGB radiance);
     static void destroy(LightSources::UID light_ID);
 
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
     static ConstUIDIterator end() { return m_UID_generator.end(); }
     static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
 
-    static inline SceneNodes::UID get_node_ID(LightSources::UID light_ID) { return m_node_IDs[light_ID]; }
-    static inline bool is_delta_light(LightSources::UID light_ID) { return m_radius[light_ID] == 0.0f; }
-    static inline Math::RGB get_power(LightSources::UID light_ID) { return m_power[light_ID]; }
-    static inline float get_radius(LightSources::UID light_ID) { return m_radius[light_ID]; }
+    static inline SceneNodes::UID get_node_ID(LightSources::UID light_ID) { return m_lights[light_ID].node_ID; }
+    static inline Type get_type(LightSources::UID light_ID) { return m_lights[light_ID].type; }
+
+    // Sphere light.
+    static inline bool is_delta_sphere_light(LightSources::UID light_ID) { assert(get_type(light_ID) == Type::Sphere); return m_lights[light_ID].sphere.radius == 0.0f; }
+    static inline Math::RGB get_sphere_light_power(LightSources::UID light_ID) { return m_lights[light_ID].color; }
+    static inline float get_sphere_light_radius(LightSources::UID light_ID) { assert(get_type(light_ID) == Type::Sphere); return m_lights[light_ID].sphere.radius; }
+
+    // Directional light.
+    static inline Math::RGB get_directional_light_radiance(LightSources::UID light_ID) { return m_lights[light_ID].color; }
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -81,9 +93,21 @@ private:
 
     static UIDGenerator m_UID_generator;
 
-    static SceneNodes::UID* m_node_IDs;
-    static Math::RGB* m_power;
-    static float* m_radius;
+    struct Light {
+        SceneNodes::UID node_ID;
+        Math::RGB color; // The power in case of sphere lights and radiance in case of directional lights.
+        Type type;
+        union {
+            struct {
+                float radius;
+            } sphere;
+
+            struct {
+            } directional;
+        };
+    };
+
+    static Light* m_lights;
 
     static unsigned char* m_changes; // Bitmask of changes.
     static std::vector<UID> m_lights_changed;

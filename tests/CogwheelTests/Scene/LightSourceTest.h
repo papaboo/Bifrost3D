@@ -51,31 +51,58 @@ TEST_F(Scene_LightSource, sentinel_node) {
 
     EXPECT_FALSE(LightSources::has(sentinel_ID));
 
-    EXPECT_EQ(LightSources::get_node_ID(sentinel_ID), SceneNodes::UID::invalid_UID());
-    EXPECT_EQ(LightSources::get_power(sentinel_ID), Math::RGB::black());
+    EXPECT_EQ(SceneNodes::UID::invalid_UID(), LightSources::get_node_ID(sentinel_ID));
+    EXPECT_EQ(Math::RGB::black(), LightSources::get_sphere_light_power(sentinel_ID));
 
     LightSources::deallocate();
 }
 
-TEST_F(Scene_LightSource, create) {
+TEST_F(Scene_LightSource, create_sphere_light) {
     LightSources::allocate(2u);
 
     SceneNodes::UID light_node_ID = SceneNodes::create("Light");
 
     const Math::RGB light_power(100.0f);
+    const float light_radius = 2.0f;
 
     LightSources::allocate(2u);
-    LightSources::UID light_ID = LightSources::create_sphere_light(light_node_ID, light_power, 0.0f);
+    LightSources::UID light_ID = LightSources::create_sphere_light(light_node_ID, light_power, light_radius);
     EXPECT_TRUE(LightSources::has(light_ID));
 
-    EXPECT_EQ(LightSources::get_node_ID(light_ID), light_node_ID);
-    EXPECT_EQ(LightSources::get_power(light_ID), light_power);
+    EXPECT_EQ(LightSources::Type::Sphere, LightSources::get_type(light_ID));
+    EXPECT_EQ(light_node_ID, LightSources::get_node_ID(light_ID));
+    EXPECT_EQ(light_power, LightSources::get_sphere_light_power(light_ID));
+    EXPECT_EQ(light_radius, LightSources::get_sphere_light_radius(light_ID));
 
     // Test scene node created notification.
     Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
-    EXPECT_EQ(changed_lights.end() - changed_lights.begin(), 1);
-    EXPECT_EQ(*changed_lights.begin(), light_ID);
-    EXPECT_EQ(LightSources::get_changes(light_ID), LightSources::Changes::Created);
+    EXPECT_EQ(1, changed_lights.end() - changed_lights.begin());
+    EXPECT_EQ(light_ID, *changed_lights.begin());
+    EXPECT_EQ(LightSources::Changes::Created, LightSources::get_changes(light_ID));
+
+    LightSources::deallocate();
+}
+
+TEST_F(Scene_LightSource, create_directional_light) {
+    LightSources::allocate(2u);
+
+    SceneNodes::UID light_node_ID = SceneNodes::create("Light");
+
+    const Math::RGB light_radiance(2.0f);
+
+    LightSources::allocate(2u);
+    LightSources::UID light_ID = LightSources::create_directional_light(light_node_ID, light_radiance);
+    EXPECT_TRUE(LightSources::has(light_ID));
+
+    EXPECT_EQ(LightSources::Type::Directional, LightSources::get_type(light_ID));
+    EXPECT_EQ(light_node_ID, LightSources::get_node_ID(light_ID));
+    EXPECT_EQ(light_radiance, LightSources::get_directional_light_radiance(light_ID));
+
+    // Test scene node created notification.
+    Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
+    EXPECT_EQ(1, changed_lights.end() - changed_lights.begin());
+    EXPECT_EQ(light_ID, *changed_lights.begin());
+    EXPECT_EQ(LightSources::Changes::Created, LightSources::get_changes(light_ID));
 
     LightSources::deallocate();
 }
@@ -113,7 +140,7 @@ TEST_F(Scene_LightSource, create_and_destroy_notifications) {
 
     { // Test scene node create notifications.
         Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
-        EXPECT_EQ(changed_lights.end() - changed_lights.begin(), 2);
+        EXPECT_EQ(2, changed_lights.end() - changed_lights.begin());
 
         bool node0_created = false;
         bool node1_created = false;
@@ -140,7 +167,7 @@ TEST_F(Scene_LightSource, create_and_destroy_notifications) {
         EXPECT_FALSE(LightSources::has(light_ID0));
 
         Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
-        EXPECT_EQ(changed_lights.end() - changed_lights.begin(), 1);
+        EXPECT_EQ(1, changed_lights.end() - changed_lights.begin());
 
         bool node0_destroyed = false;
         bool other_changes = false;
