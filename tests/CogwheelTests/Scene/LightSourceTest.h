@@ -66,19 +66,19 @@ TEST_F(Scene_LightSource, create_sphere_light) {
     const float light_radius = 2.0f;
 
     LightSources::allocate(2u);
-    LightSources::UID light_ID = LightSources::create_sphere_light(light_node_ID, light_power, light_radius);
-    EXPECT_TRUE(LightSources::has(light_ID));
+    SphereLight light = LightSources::create_sphere_light(light_node_ID, light_power, light_radius);
+    EXPECT_TRUE(light.exists());
 
-    EXPECT_EQ(LightSources::Type::Sphere, LightSources::get_type(light_ID));
-    EXPECT_EQ(light_node_ID, LightSources::get_node_ID(light_ID));
-    EXPECT_EQ(light_power, LightSources::get_sphere_light_power(light_ID));
-    EXPECT_EQ(light_radius, LightSources::get_sphere_light_radius(light_ID));
+    EXPECT_EQ(LightSources::Type::Sphere, LightSources::get_type(light.get_ID()));
+    EXPECT_EQ(light_node_ID, light.get_node_ID());
+    EXPECT_EQ(light_power, light.get_power());
+    EXPECT_EQ(light_radius, light.get_radius());
 
     // Test scene node created notification.
     Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
     EXPECT_EQ(1, changed_lights.end() - changed_lights.begin());
-    EXPECT_EQ(light_ID, *changed_lights.begin());
-    EXPECT_EQ(LightSources::Changes::Created, LightSources::get_changes(light_ID));
+    EXPECT_EQ(light.get_ID(), *changed_lights.begin());
+    EXPECT_EQ(LightSources::Changes::Created, light.get_changes());
 
     LightSources::deallocate();
 }
@@ -91,18 +91,18 @@ TEST_F(Scene_LightSource, create_directional_light) {
     const Math::RGB light_radiance(2.0f);
 
     LightSources::allocate(2u);
-    LightSources::UID light_ID = LightSources::create_directional_light(light_node_ID, light_radiance);
-    EXPECT_TRUE(LightSources::has(light_ID));
+    DirectionalLight light = LightSources::create_directional_light(light_node_ID, light_radiance);
+    EXPECT_TRUE(light.exists());
 
-    EXPECT_EQ(LightSources::Type::Directional, LightSources::get_type(light_ID));
-    EXPECT_EQ(light_node_ID, LightSources::get_node_ID(light_ID));
-    EXPECT_EQ(light_radiance, LightSources::get_directional_light_radiance(light_ID));
+    EXPECT_EQ(LightSources::Type::Directional, LightSources::get_type(light.get_ID()));
+    EXPECT_EQ(light_node_ID, light.get_node_ID());
+    EXPECT_EQ(light_radiance, light.get_radiance());
 
     // Test scene node created notification.
     Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
     EXPECT_EQ(1, changed_lights.end() - changed_lights.begin());
-    EXPECT_EQ(light_ID, *changed_lights.begin());
-    EXPECT_EQ(LightSources::Changes::Created, LightSources::get_changes(light_ID));
+    EXPECT_EQ(light.get_ID(), *changed_lights.begin());
+    EXPECT_EQ(LightSources::Changes::Created, light.get_changes());
 
     LightSources::deallocate();
 }

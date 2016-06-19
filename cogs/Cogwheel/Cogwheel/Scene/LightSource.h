@@ -22,8 +22,6 @@ namespace Scene {
 // ---------------------------------------------------------------------------
 // Container class for cogwheel light sources.
 // Future work
-// * Light source type 'easy to use' wrappers. (See SceneNode)
-// * Directional light.
 // * Environment map.
 // * Importance sampled environment map.
 // * Setters.
@@ -64,6 +62,7 @@ public:
     static inline float get_sphere_light_radius(LightSources::UID light_ID) { assert(get_type(light_ID) == Type::Sphere); return m_lights[light_ID].sphere.radius; }
 
     // Directional light.
+    static inline bool is_delta_directional_light(LightSources::UID light_ID) { assert(get_type(light_ID) == Type::Directional); return true; }
     static inline Math::RGB get_directional_light_radiance(LightSources::UID light_ID) { return m_lights[light_ID].color; }
 
     //-------------------------------------------------------------------------
@@ -111,6 +110,75 @@ private:
 
     static unsigned char* m_changes; // Bitmask of changes.
     static std::vector<UID> m_lights_changed;
+};
+
+// ---------------------------------------------------------------------------
+// The cogwheel sphere light wrapper.
+// ---------------------------------------------------------------------------
+class SphereLight final {
+public:
+    // -----------------------------------------------------------------------
+    // Constructors and destructors.
+    // -----------------------------------------------------------------------
+    SphereLight() : m_ID(LightSources::UID::invalid_UID()) {}
+    SphereLight(LightSources::UID id) : m_ID(id) { assert(get_type(id) == Type::Sphere); }
+
+    inline const LightSources::UID get_ID() const { return m_ID; }
+    inline bool exists() const { return LightSources::has(m_ID); }
+
+    inline bool operator==(SphereLight rhs) const { return m_ID == rhs.m_ID; }
+    inline bool operator!=(SphereLight rhs) const { return m_ID != rhs.m_ID; }
+
+    // -----------------------------------------------------------------------
+    // Getters and setters.
+    // -----------------------------------------------------------------------
+    inline SceneNodes::UID get_node_ID() const { return LightSources::get_node_ID(m_ID); }
+    inline bool is_delta_light() const { return LightSources::is_delta_sphere_light(m_ID); }
+    inline Math::RGB get_power() const { return LightSources::get_sphere_light_power(m_ID); }
+    inline float get_radius() const { return LightSources::get_sphere_light_radius(m_ID); }
+
+    //-------------------------------------------------------------------------
+    // Changes since last game loop tick.
+    //-------------------------------------------------------------------------
+    inline unsigned char get_changes() const { return LightSources::get_changes(m_ID); }
+    inline bool has_changes(unsigned char changes) const { return LightSources::has_changes(m_ID, changes); }
+
+private:
+    LightSources::UID m_ID;
+};
+
+// ---------------------------------------------------------------------------
+// The cogwheel directinoal light wrapper.
+// ---------------------------------------------------------------------------
+class DirectionalLight final {
+public:
+    // -----------------------------------------------------------------------
+    // Constructors and destructors.
+    // -----------------------------------------------------------------------
+    DirectionalLight() : m_ID(LightSources::UID::invalid_UID()) {}
+    DirectionalLight(LightSources::UID id) : m_ID(id) { assert(get_type(id) == Type::Directional); }
+
+    inline const LightSources::UID get_ID() const { return m_ID; }
+    inline bool exists() const { return LightSources::has(m_ID); }
+
+    inline bool operator==(DirectionalLight rhs) const { return m_ID == rhs.m_ID; }
+    inline bool operator!=(DirectionalLight rhs) const { return m_ID != rhs.m_ID; }
+
+    // -----------------------------------------------------------------------
+    // Getters and setters.
+    // -----------------------------------------------------------------------
+    inline SceneNodes::UID get_node_ID() const { return LightSources::get_node_ID(m_ID); }
+    inline bool is_delta_light() const { return LightSources::is_delta_directional_light(m_ID); }
+    inline Math::RGB get_radiance() const { return LightSources::get_directional_light_radiance(m_ID); }
+
+    //-------------------------------------------------------------------------
+    // Changes since last game loop tick.
+    //-------------------------------------------------------------------------
+    inline unsigned char get_changes() const { return LightSources::get_changes(m_ID); }
+    inline bool has_changes(unsigned char changes) const { return LightSources::has_changes(m_ID, changes); }
+
+private:
+    LightSources::UID m_ID;
 };
 
 } // NS Scene
