@@ -55,15 +55,11 @@ int main(int argc, char** argv) {
 
             DefaultShading material = DefaultShading(material_params);
 
-            // TODO Use hammersley RNG. See Unreal4 paper.
-            RNG::LinearCongruential rng;
-            rng.seed(294563u);
-
             Core::Array<double> specular_throughput = Core::Array<double>(sample_count);
             Core::Array<double> total_throughput = Core::Array<double>(sample_count);
             for (unsigned int s = 0; s < sample_count; ++s) {
-                float3 rng_sample = rng.sample3f();
-                
+
+                float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(sample_count));
                 BSDFSample sample = material.sample_all(wo, rng_sample);
                 if (is_PDF_valid(sample.PDF)) {
                     total_throughput[s] = sample.weight.x * sample.direction.z / sample.PDF;
