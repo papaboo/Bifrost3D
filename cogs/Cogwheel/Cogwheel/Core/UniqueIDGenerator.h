@@ -80,10 +80,10 @@ public:
             return *this;
         }
         inline ConstIterator operator++(int) { ConstIterator tmp(*this); operator++(); return tmp; }
-        inline bool operator==(const ConstIterator& rhs) { return m_id == rhs.m_id; }
-        inline bool operator!=(const ConstIterator& rhs) { return m_id != rhs.m_id; }
-        inline UID operator*() { return *m_id; }
-        inline UID operator->() { return *m_id; }
+        inline bool operator==(const ConstIterator& rhs) const { return m_id == rhs.m_id; }
+        inline bool operator!=(const ConstIterator& rhs) const { return m_id != rhs.m_id; }
+        inline UID operator*() const { return *m_id; }
+        inline UID operator->() const { return *m_id; }
     private:
         UID* m_id;
         const TypedUIDGenerator& m_UID_generator;
