@@ -22,7 +22,7 @@ namespace RNG {
 __inline_all__ float van_der_corput(unsigned int n, unsigned int scramble) {
 
     // Reverse bits of n.
-#if (defined(__CUDACC__) || defined(__CUDABE__))
+#if GPU_DEVICE
     n = __brev(n);
 #else
     n = (n << 16) | (n >> 16);
