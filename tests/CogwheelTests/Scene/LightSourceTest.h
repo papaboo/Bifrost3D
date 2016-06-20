@@ -60,17 +60,17 @@ TEST_F(Scene_LightSource, sentinel_node) {
 TEST_F(Scene_LightSource, create_sphere_light) {
     LightSources::allocate(2u);
 
-    SceneNodes::UID light_node_ID = SceneNodes::create("Light");
+    SceneNode light_node = SceneNodes::create("Light");
 
     const Math::RGB light_power(100.0f);
     const float light_radius = 2.0f;
 
     LightSources::allocate(2u);
-    SphereLight light = LightSources::create_sphere_light(light_node_ID, light_power, light_radius);
+    SphereLight light = LightSources::create_sphere_light(light_node.get_ID(), light_power, light_radius);
     EXPECT_TRUE(light.exists());
 
     EXPECT_EQ(LightSources::Type::Sphere, LightSources::get_type(light.get_ID()));
-    EXPECT_EQ(light_node_ID, light.get_node_ID());
+    EXPECT_EQ(light_node, light.get_node());
     EXPECT_EQ(light_power, light.get_power());
     EXPECT_EQ(light_radius, light.get_radius());
 
@@ -86,16 +86,16 @@ TEST_F(Scene_LightSource, create_sphere_light) {
 TEST_F(Scene_LightSource, create_directional_light) {
     LightSources::allocate(2u);
 
-    SceneNodes::UID light_node_ID = SceneNodes::create("Light");
+    SceneNode light_node = SceneNodes::create("Light");
 
     const Math::RGB light_radiance(2.0f);
 
     LightSources::allocate(2u);
-    DirectionalLight light = LightSources::create_directional_light(light_node_ID, light_radiance);
+    DirectionalLight light = LightSources::create_directional_light(light_node.get_ID(), light_radiance);
     EXPECT_TRUE(light.exists());
 
     EXPECT_EQ(LightSources::Type::Directional, LightSources::get_type(light.get_ID()));
-    EXPECT_EQ(light_node_ID, light.get_node_ID());
+    EXPECT_EQ(light_node, light.get_node());
     EXPECT_EQ(light_radiance, light.get_radiance());
 
     // Test scene node created notification.

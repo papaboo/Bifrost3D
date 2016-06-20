@@ -128,6 +128,16 @@ void LightSources::destroy(LightSources::UID light_ID) {
     }
 }
 
+bool LightSources::is_delta_light(LightSources::UID light_ID) {
+    switch (get_type(light_ID)) {
+    case Type::Sphere:
+        return is_delta_sphere_light(light_ID);
+    case Type::Directional:
+        return is_delta_directional_light(light_ID);
+    }
+    return false;
+}
+
 void LightSources::reset_change_notifications() {
     std::memset(m_changes, Changes::None, capacity());
     m_lights_changed.resize(0);

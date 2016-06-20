@@ -55,6 +55,7 @@ public:
 
     static inline SceneNodes::UID get_node_ID(LightSources::UID light_ID) { return m_lights[light_ID].node_ID; }
     static inline Type get_type(LightSources::UID light_ID) { return m_lights[light_ID].type; }
+    static bool is_delta_light(LightSources::UID light_ID);
 
     // Sphere light.
     static inline bool is_delta_sphere_light(LightSources::UID light_ID) { assert(get_type(light_ID) == Type::Sphere); return m_lights[light_ID].sphere.radius == 0.0f; }
@@ -132,7 +133,7 @@ public:
     // -----------------------------------------------------------------------
     // Getters and setters.
     // -----------------------------------------------------------------------
-    inline SceneNodes::UID get_node_ID() const { return LightSources::get_node_ID(m_ID); }
+    inline SceneNode get_node() const { return LightSources::get_node_ID(m_ID); }
     inline bool is_delta_light() const { return LightSources::is_delta_sphere_light(m_ID); }
     inline Math::RGB get_power() const { return LightSources::get_sphere_light_power(m_ID); }
     inline float get_radius() const { return LightSources::get_sphere_light_radius(m_ID); }
@@ -167,7 +168,7 @@ public:
     // -----------------------------------------------------------------------
     // Getters and setters.
     // -----------------------------------------------------------------------
-    inline SceneNodes::UID get_node_ID() const { return LightSources::get_node_ID(m_ID); }
+    inline SceneNode get_node() const { return LightSources::get_node_ID(m_ID); }
     inline bool is_delta_light() const { return LightSources::is_delta_directional_light(m_ID); }
     inline Math::RGB get_radiance() const { return LightSources::get_directional_light_radiance(m_ID); }
 
