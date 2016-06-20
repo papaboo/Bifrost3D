@@ -1,18 +1,12 @@
 * Directional light.
-** Direcetional light in OptiXRenderer.
-** Spread / diffusitivity, see the diffuse light paper
-* Hammersley and reverse halton RNG samplers.
+** Spread / diffusitivity / softness, see the diffuse light paper or pbrt for a parameter name.
 * Create scene abstraction.
 ** Add background colors and environment to scenes.
 ** Environment models.
 * Shading should be energy conserving. The current material isn't energy conserving at grazing angles when the roughness is low.
-** Poke Detlef
-*** Directional-hemispherical reflection
-*** Index sorting for vertex transform cache optimization.
-*** RGB macro in optixu/optixpp_namespace.h
 ** Investigate how Disney combines diffuse and specular layers
 *** Create DisneyBSDF dev project and just integrate over the damn thing!
-** Implement new energy conserving material or docuent findings and argue why we don't care (yet)
+** Implement new energy conserving material or document findings and argue why we don't care (yet)
 * Reduce TODOs.
 ** There are some in the MIS sampling.
 ** Precompute material parameters for DefaultShading.
@@ -47,6 +41,7 @@
 *** Debugging/error checking. Array management.
 
 libs
+* https://code.google.com/archive/p/vcacne/
 * Emscripten
 * LuaJit - OpenSource (Fallback to interpretted Lua if the target architecture isn't supported.)
 * Add ZLib and LibPNG.

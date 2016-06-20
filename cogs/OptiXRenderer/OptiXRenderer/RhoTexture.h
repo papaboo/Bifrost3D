@@ -12,8 +12,6 @@
 #include <optixu/optixpp_namespace.h>
 #undef RGB
 
-// TODO Can I forward declare TextureSampler?
-
 namespace OptiXRenderer {
 
 optix::TextureSampler default_shading_rho_texture(optix::Context& context);
