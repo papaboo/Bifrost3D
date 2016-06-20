@@ -122,7 +122,7 @@ public:
     // Constructors and destructors.
     // -----------------------------------------------------------------------
     SphereLight() : m_ID(LightSources::UID::invalid_UID()) {}
-    SphereLight(LightSources::UID id) : m_ID(id) { assert(get_type(id) == Type::Sphere); }
+    SphereLight(LightSources::UID id) : m_ID(id) { assert(LightSources::get_type(id) == LightSources::Type::Sphere); }
 
     inline const LightSources::UID get_ID() const { return m_ID; }
     inline bool exists() const { return LightSources::has(m_ID); }
@@ -157,7 +157,7 @@ public:
     // Constructors and destructors.
     // -----------------------------------------------------------------------
     DirectionalLight() : m_ID(LightSources::UID::invalid_UID()) {}
-    DirectionalLight(LightSources::UID id) : m_ID(id) { assert(get_type(id) == Type::Directional); }
+    DirectionalLight(LightSources::UID id) : m_ID(id) { assert(LightSources::get_type(id) == LightSources::Type::Directional); }
 
     inline const LightSources::UID get_ID() const { return m_ID; }
     inline bool exists() const { return LightSources::has(m_ID); }
