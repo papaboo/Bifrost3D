@@ -54,14 +54,13 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
     material_params.metallic = 0.0f;
     material_params.specularity = 0.02f;
     DefaultShading material = DefaultShading(material_params);
-    RNG::LinearCongruential rng;
-    rng.seed(256237u);
     
     for (int i = 0; i < 10; ++i) {
         const float3 wo = normalize(make_float3(float(i), 0.0f, 1.001f - float(i) * 0.1f));
         float ws[MAX_SAMPLES];
         for (unsigned int s = 0u; s < MAX_SAMPLES; ++s) {
-            BSDFSample sample = material.sample_all(wo, rng.sample3f());
+            float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(MAX_SAMPLES));
+            BSDFSample sample = material.sample_all(wo, rng_sample);
             if (is_PDF_valid(sample.PDF))
                 ws[s] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
             else
@@ -80,13 +79,12 @@ GTEST_TEST(DefaultShadingModel, Helmholtz_reciprocity) {
     const unsigned int MAX_SAMPLES = 128u;
 
     DefaultShading plastic_material = DefaultShading(plastic_parameters());
-    RNG::LinearCongruential rng;
-    rng.seed(256237u);
 
     for (int i = 0; i < 10; ++i) {
         const float3 wo = normalize(make_float3(float(i), 0.0f, 1.001f - float(i) * 0.1f));
         for (unsigned int s = 0u; s < MAX_SAMPLES; ++s) {
-            BSDFSample sample = plastic_material.sample_all(wo, rng.sample3f());
+            float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(MAX_SAMPLES));
+            BSDFSample sample = plastic_material.sample_all(wo, rng_sample);
             if (is_PDF_valid(sample.PDF)) {
                 // Re-evaluate contribution from both directions to avoid 
                 // floating point imprecission between sampling and evaluating.
@@ -106,11 +104,11 @@ static void default_shading_model_consistent_PDF_test(Shading::ShadingModels::De
     using namespace optix;
 
     const float3 wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
-    RNG::LinearCongruential rng;
-    rng.seed(256237u);
 
-    for (unsigned int i = 0u; i < 64; ++i) {
-        BSDFSample sample = material.sample_all(wo, rng.sample3f());
+    const unsigned int MAX_SAMPLES = 64;
+    for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
+        float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
+        BSDFSample sample = material.sample_all(wo, rng_sample);
         if (is_PDF_valid(sample.PDF)) {
             float PDF = material.PDF(wo, sample.direction);
             EXPECT_TRUE(almost_equal_eps(sample.PDF, PDF, 0.0001f));
@@ -190,7 +188,6 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
 
     const unsigned int MAX_SAMPLES = 2048 * 32;
     const float3 wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
-    RNG::LinearCongruential rng;
     
     Material material_params;
     material_params.base_tint = make_float3(0.5f, 0.5f, 0.5f);
@@ -199,11 +196,11 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
     material_params.specularity = 0.2f;
     DefaultShading material = DefaultShading(material_params);
 
-    rng.seed(256237u);
     double* ws = new double[MAX_SAMPLES];
     double* ws_squared = new double[MAX_SAMPLES];
     for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
-        BSDFSample sample = material.sample_one(wo, rng.sample3f());
+        float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
+        BSDFSample sample = material.sample_one(wo, rng_sample);
         if (is_PDF_valid(sample.PDF)) {
             ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
             ws_squared[i] = ws[i] * ws[i];
@@ -215,9 +212,9 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
     double sample_one_mean_squared = Cogwheel::Math::sort_and_pairwise_summation(ws_squared, ws_squared + MAX_SAMPLES) / double(MAX_SAMPLES);
     double sample_one_variance = sample_one_mean_squared - sample_one_mean * sample_one_mean;
 
-    rng.seed(256237u);
     for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
-        BSDFSample sample = material.sample_all(wo, rng.sample3f());
+        float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
+        BSDFSample sample = material.sample_all(wo, rng_sample);
         if (is_PDF_valid(sample.PDF)) {
             ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
             ws_squared[i] = ws[i] * ws[i];
