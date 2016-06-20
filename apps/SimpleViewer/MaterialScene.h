@@ -33,7 +33,13 @@ Scene::SceneNodes::UID create_material_scene(Scene::Cameras::UID camera_ID) {
         SceneNodes::set_global_transform(cam_node_ID, cam_transform);
     }
 
-    // TODO Add a directional light.
+    { // Add a directional light.
+        Math::Transform light_transform = Math::Transform(Math::Vector3f(20.0f, 20.0f, -20.0f));
+        light_transform.look_at(Vector3f::zero());
+        SceneNode light_node = SceneNodes::create("light", light_transform);
+        light_node.set_parent(root_node);
+        LightSources::create_directional_light(light_node.get_ID(), Math::RGB(3.0f, 2.9f, 2.5f));
+    }
 
     { // Create floor.
         Materials::Data black_tile_data;
