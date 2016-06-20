@@ -17,6 +17,30 @@ namespace OptiXRenderer {
 namespace RNG {
 
 //-----------------------------------------------------------------------------
+// Primes.
+// See https://primes.utm.edu/lists/small/1000.txt for more.
+//-----------------------------------------------------------------------------
+#if GPU_DEVICE
+__constant__ int primes[128] = 
+#else
+static const int primes[128] = 
+#endif
+    { 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 
+    31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 
+    73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 
+    127, 131, 137, 139, 149, 151, 157, 163, 167, 173,
+    179, 181, 191, 193, 197, 199, 211, 223, 227, 229,
+    233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 
+    283, 293, 307, 311, 313, 317, 331, 337, 347, 349,
+    353, 359, 367, 373, 379, 383, 389, 397, 401, 409,
+    419, 421, 431, 433, 439, 443, 449, 457, 461, 463,
+    467, 479, 487, 491, 499, 503, 509, 521, 523, 541,
+    547, 557, 563, 569, 571, 577, 587, 593, 599, 601,
+    607, 613, 617, 619, 631, 641, 643, 647, 653, 659,
+    661, 673, 677, 683, 691, 701, 709, 719,
+};
+
+//-----------------------------------------------------------------------------
 // RNG sampling utils.
 //-----------------------------------------------------------------------------
 __inline_all__ float van_der_corput(unsigned int n, unsigned int scramble) {
@@ -100,12 +124,61 @@ public:
     }
 
     __inline_all__ optix::float3 sample3f() {
-        return optix::make_float3(sample1f(), sample1f(), sample1f());
+        return optix::make_float3(sample2f(), sample1f());
     }
 
     __inline_all__ optix::float4 sample4f() {
-        return optix::make_float4(sample1f(), sample1f(), sample1f(), sample1f());
+        return optix::make_float4(sample2f(), sample2f());
     }
+};
+
+//-----------------------------------------------------------------------------
+// Reverse halton random number generator.
+// See Toshiya's smallppm for the reference implementation.
+//-----------------------------------------------------------------------------
+class ReverseHalton {
+public:
+
+    __inline_all__ void initialize(unsigned int index, int prime_index = 0) {
+        m_index = index;
+        m_prime_index = prime_index;
+    }
+
+    __inline_all__ float sample1f() {
+        // Reset m_prime_index if it points outside the primes array.
+        m_prime_index &= 0x7F;
+        return reverse_halton(m_prime_index++, m_index);
+    }
+
+    __inline_all__ optix::float2 sample2f() {
+        return optix::make_float2(sample1f(), sample1f());
+    }
+
+    __inline_all__ optix::float3 sample3f() {
+        return optix::make_float3(sample2f(), sample1f());
+    }
+    __inline_all__ optix::float4 sample4f() {
+        return optix::make_float4(sample2f(), sample2f());
+    }
+
+private:
+    __inline_all__ int reverse(const int i, const int p) const {
+        return i == 0 ? i : (p - i);
+    }
+
+    __inline_all__ float reverse_halton(const int p, int i) const {
+        const int prime = primes[p];
+        double h = 0.0, f = 1.0 / (double)prime, fct = f;
+        while (i > 0) {
+            h += reverse(i % prime, prime) * fct;
+            i /= prime;
+            fct *= f;
+        }
+        return (float)h;
+    }
+
+    int m_index;
+    int m_prime_index;
 };
 
 } // NS RNG
