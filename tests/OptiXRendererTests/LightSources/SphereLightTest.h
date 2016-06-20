@@ -54,19 +54,19 @@ GTEST_TEST(SphereLight, power_preservation_when_radius_changes) {
         float2 random_sample = RNG::sample02(i);
 
         LightSample sample0 = LightSources::sample_radiance(light_with_radius_0, shading_position, random_sample);
-        luminances_at_radius_0[i] = sample0.radiance.x * (dot(shading_normal, sample0.direction) / sample0.PDF);
+        luminances_at_radius_0[i] = sample0.radiance.x * (dot(shading_normal, sample0.direction_to_light) / sample0.PDF);
 
         LightSample sample1 = LightSources::sample_radiance(light_with_radius_1, shading_position, random_sample);
-        luminances_at_radius_1[i] = sample1.radiance.x * (dot(shading_normal, sample1.direction) / sample1.PDF);
+        luminances_at_radius_1[i] = sample1.radiance.x * (dot(shading_normal, sample1.direction_to_light) / sample1.PDF);
 
         LightSample sample2 = LightSources::sample_radiance(light_with_radius_2, shading_position, random_sample);
-        luminances_at_radius_2[i] = sample2.radiance.x * (dot(shading_normal, sample2.direction) / sample2.PDF);
+        luminances_at_radius_2[i] = sample2.radiance.x * (dot(shading_normal, sample2.direction_to_light) / sample2.PDF);
 
         LightSample sample5 = LightSources::sample_radiance(light_with_radius_5, shading_position, random_sample);
-        luminances_at_radius_5[i] = sample5.radiance.x * (dot(shading_normal, sample5.direction) / sample5.PDF);
+        luminances_at_radius_5[i] = sample5.radiance.x * (dot(shading_normal, sample5.direction_to_light) / sample5.PDF);
 
         LightSample sample9 = LightSources::sample_radiance(light_with_radius_9, shading_position, random_sample);
-        luminances_at_radius_9[i] = sample9.radiance.x * (dot(shading_normal, sample9.direction) / sample9.PDF);
+        luminances_at_radius_9[i] = sample9.radiance.x * (dot(shading_normal, sample9.direction_to_light) / sample9.PDF);
     }
 
     float luminance_at_radius_0 = Cogwheel::Math::sort_and_pairwise_summation(luminances_at_radius_0, luminances_at_radius_0 + MAX_SAMPLES) / float(MAX_SAMPLES);
@@ -112,7 +112,7 @@ GTEST_TEST(SphereLight, consistent_PDF) {
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             LightSample sample = LightSources::sample_radiance(light, position, RNG::sample02(i));
             if (is_PDF_valid(sample.PDF)) {
-                float PDF = LightSources::PDF(light, position, sample.direction);
+                float PDF = LightSources::PDF(light, position, sample.direction_to_light);
                 EXPECT_TRUE(almost_equal_eps(sample.PDF, PDF, 0.0001f));
             }
         }

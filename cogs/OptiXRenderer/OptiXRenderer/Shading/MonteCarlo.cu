@@ -7,7 +7,7 @@
 // ---------------------------------------------------------------------------
 
 #include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>
-#include <OptiXRenderer/Shading/LightSources/SphereLightImpl.h>
+#include <OptiXRenderer/Shading/LightSources/LightImpl.h>
 #include <OptiXRenderer/TBN.h>
 #include <OptiXRenderer/Types.h>
 
@@ -25,7 +25,7 @@ rtDeclareVariable(MonteCarloPRD, monte_carlo_PRD, rtPayload, );
 // Scene parameters.
 rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(float, g_scene_epsilon, , );
-rtBuffer<SphereLight, 1> g_lights;
+rtBuffer<Light, 1> g_lights;
 rtDeclareVariable(int, g_light_count, , );
 rtDeclareVariable(int, g_max_bounce_count, , );
 rtDeclareVariable(int, g_accumulations, , );
@@ -54,16 +54,16 @@ rtBuffer<float4, 2>  g_accumulation_buffer;
 // stores the combined response in the light source's radiance member.
 __inline_dev__ LightSample sample_single_light(const DefaultShading& material, const TBN& world_shading_tbn) {
     int light_index = min(g_light_count - 1, int(monte_carlo_PRD.rng.sample1f() * g_light_count));
-    const SphereLight& light = g_lights[light_index];
+    const Light& light = g_lights[light_index];
     LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_PRD.position, monte_carlo_PRD.rng.sample2f());
     light_sample.radiance *= g_light_count; // Scale up radiance to account for only sampling one light.
 
     // Inline the material response into the light sample's radiance.
-    const float3 shading_light_direction = world_shading_tbn * light_sample.direction;
+    const float3 shading_light_direction = world_shading_tbn * light_sample.direction_to_light;
     const float3 bsdf_response = material.evaluate(monte_carlo_PRD.direction, shading_light_direction);// TODO Extend material and BRDFs with methods for evaluating contribution and PDF at the same time.
     light_sample.radiance *= bsdf_response;
 
-    float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction);
+    float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction_to_light);
     light_sample.radiance *= abs(N_dot_L) / light_sample.PDF;
 
     // Apply MIS weights if the light isn't a delta function and if a new material ray will be spawned, i.e. it isn't the final bounce.
@@ -122,19 +122,19 @@ __inline_dev__ void closest_hit_not_MIS() {
     // Sample light sources.
     // TODO Use RIS light sampling here as well. But wait until I have a scene with multiple area light sources.
     for (int i = 0; i < g_light_count; ++i) {
-        const SphereLight& light = g_lights[i];
+        const Light& light = g_lights[i];
         LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_PRD.position, monte_carlo_PRD.rng.sample2f());
-        float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction);
+        float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction_to_light);
         light_sample.radiance *= abs(N_dot_L) / light_sample.PDF;
 
         // Inline the material response into the light sample's contribution.
-        const float3 shading_light_direction = world_shading_tbn * light_sample.direction;
+        const float3 shading_light_direction = world_shading_tbn * light_sample.direction_to_light;
         const float3 bsdf_response = material.evaluate(monte_carlo_PRD.direction, shading_light_direction);// TODO Extend material and BRDFs with methods for evaluating contribution and PDF at the same time.
         light_sample.radiance *= bsdf_response;
 
         if (light_sample.radiance.x > 0.0f || light_sample.radiance.y > 0.0f || light_sample.radiance.z > 0.0f) {
             ShadowPRD shadow_PRD = { light_sample.radiance };
-            Ray shadow_ray(monte_carlo_PRD.position, light_sample.direction, unsigned int(RayTypes::Shadow), g_scene_epsilon, light_sample.distance - g_scene_epsilon);
+            Ray shadow_ray(monte_carlo_PRD.position, light_sample.direction_to_light, unsigned int(RayTypes::Shadow), g_scene_epsilon, light_sample.distance - g_scene_epsilon);
             rtTrace(g_scene_root, shadow_ray, shadow_PRD);
 
             float3 radiance = monte_carlo_PRD.throughput * shadow_PRD.attenuation;
@@ -175,7 +175,7 @@ __inline_dev__ void closest_hit_MIS() {
 
         if (light_sample.radiance.x > 0.0f || light_sample.radiance.y > 0.0f || light_sample.radiance.z > 0.0f) {
             ShadowPRD shadow_PRD = { light_sample.radiance };
-            Ray shadow_ray(monte_carlo_PRD.position, light_sample.direction, unsigned int(RayTypes::Shadow), g_scene_epsilon, light_sample.distance - g_scene_epsilon);
+            Ray shadow_ray(monte_carlo_PRD.position, light_sample.direction_to_light, unsigned int(RayTypes::Shadow), g_scene_epsilon, light_sample.distance - g_scene_epsilon);
             rtTrace(g_scene_root, shadow_ray, shadow_PRD);
 
             float3 radiance = monte_carlo_PRD.throughput * shadow_PRD.attenuation;
@@ -221,7 +221,7 @@ RT_PROGRAM void shadow_any_hit() {
 RT_PROGRAM void light_closest_hit() {
 
     int light_index = __float_as_int(geometric_normal.x);
-    const SphereLight& light = g_lights[light_index];
+    const SphereLight& light = g_lights[light_index].sphere;
 
     float3 light_radiance = LightSources::evaluate(light, ray.origin, ray.direction);
 

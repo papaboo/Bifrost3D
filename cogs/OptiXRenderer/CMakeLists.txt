@@ -47,6 +47,8 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
   )
 
   set(SHADING_LIGHTSOURCES_SRC
+    OptiXRenderer/Shading/LightSources/DirectionalLightImpl.h
+    OptiXRenderer/Shading/LightSources/LightImpl.h
     OptiXRenderer/Shading/LightSources/LightSources.cu
     OptiXRenderer/Shading/LightSources/SphereLightImpl.h
   )

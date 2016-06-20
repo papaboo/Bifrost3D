@@ -78,7 +78,7 @@ struct ShadowPRD {
 struct __align__(16) LightSample {
     optix::float3 radiance;
     float PDF;
-    optix::float3 direction;
+    optix::float3 direction_to_light;
     float distance;
 
     __inline_all__ static LightSample none() {
@@ -87,11 +87,30 @@ struct __align__(16) LightSample {
     }
 };
 
-struct __align__(16) SphereLight {
-    unsigned int flags;
+namespace LightFlags {
+static const unsigned char None = 0u;
+static const unsigned char SphereLight = 1u << 0u;
+static const unsigned char DirectionalLight = 1u << 1u;
+};
+
+struct SphereLight {
     optix::float3 power;
     optix::float3 position;
     float radius;
+};
+
+struct DirectionalLight {
+    optix::float3 radiance;
+    optix::float3 direction;
+    float __padding;
+};
+
+struct __align__(16) Light {
+    unsigned int flags;
+    union {
+        SphereLight sphere;
+        DirectionalLight directional;
+    };
 };
 
 //----------------------------------------------------------------------------

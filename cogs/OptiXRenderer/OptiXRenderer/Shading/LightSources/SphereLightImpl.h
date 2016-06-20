@@ -42,9 +42,9 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix
     LightSample light_sample;
     if (sin_theta_squared < sphere_light_small_sin_theta_squared) {
         // If the subtended angle is too small, then sampling produces NaN's, so just fall back to a point light.
-        light_sample.direction = vector_to_light;
-        light_sample.distance = optix::length(light_sample.direction);
-        light_sample.direction /= light_sample.distance;
+        light_sample.direction_to_light = vector_to_light;
+        light_sample.distance = optix::length(light_sample.direction_to_light);
+        light_sample.direction_to_light /= light_sample.distance;
         light_sample.radiance = light.power / (4.0f * PIf * light_sample.distance * light_sample.distance);
         light_sample.distance -= 1.1f * light.radius; // Reduce distance by slightly more than the radius to avoid self intersections.
         light_sample.PDF = 1.0f;
@@ -57,12 +57,12 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix
         DirectionalSample cone_sample = Cone::sample(cos_theta, random_sample);
 
         const TBN tbn = TBN(optix::normalize(vector_to_light));
-        light_sample.direction = cone_sample.direction * tbn;
+        light_sample.direction_to_light = cone_sample.direction * tbn;
         light_sample.PDF = cone_sample.PDF;
-        light_sample.distance = Intersect::ray_sphere(position, light_sample.direction, light.position, light.radius);
+        light_sample.distance = Intersect::ray_sphere(position, light_sample.direction_to_light, light.position, light.radius);
         if (light_sample.distance <= 0.0f)
             // The ray missed the sphere, but since it was sampled to be inside the sphere, just assume that it hit at a grazing angle.
-            light_sample.distance = optix::dot(vector_to_light, light_sample.direction);
+            light_sample.distance = optix::dot(vector_to_light, light_sample.direction_to_light);
         
         // Compute radiance.
         float inv_divisor = 1.0f / (PIf * surface_area(light));

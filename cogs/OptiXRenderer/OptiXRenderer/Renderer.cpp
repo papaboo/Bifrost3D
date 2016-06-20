@@ -252,7 +252,7 @@ Renderer::Renderer()
 
     { // Light sources
         m_state->lights.sources = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, 0);
-        m_state->lights.sources->setElementSize(sizeof(SphereLight));
+        m_state->lights.sources->setElementSize(sizeof(Light));
         m_state->lights.count = 0;
         context["g_lights"]->set(m_state->lights.sources);
         context["g_light_count"]->setInt(m_state->lights.count);
@@ -548,7 +548,7 @@ void Renderer::handle_updates() {
                     std::memcpy(pixel_data, Images::get_pixels(image_ID), m_state->images[image_ID]->getElementSize() * Images::get_pixel_count(image_ID));
                     m_state->images[image_ID]->unmap();
                     OPTIX_VALIDATE(m_state->images[image_ID]);
-                } else if (Images::has_changes(image_ID, Images::Changes::Created)) {
+                } else if (Images::has_changes(image_ID, Images::Changes::PixelsUpdated)) {
                     // TODO Update buffer.
                     assert(!"Pixel update not implemented yet.\n");
                 }
@@ -644,21 +644,42 @@ void Renderer::handle_updates() {
     { // Light updates.
         if (!LightSources::get_changed_lights().is_empty()) {
             // Light creation helper method.
-            static auto light_creation = [](LightSources::UID light_ID, unsigned int light_index, SphereLight* device_lights,
+            static auto light_creation = [](LightSources::UID light_ID, unsigned int light_index, Light* device_lights,
                 int& highest_area_light_index_updated) {
-                SphereLight& light = device_lights[light_index];
 
-                SceneNodes::UID node_ID = LightSources::get_node_ID(light_ID);
-                Vector3f position = SceneNodes::get_global_transform(node_ID).translation;
-                memcpy(&light.position, &position, sizeof(light.position));
+                switch (LightSources::get_type(light_ID)) {
+                case LightSources::Type::Sphere: {
+                    Scene::SphereLight host_light = light_ID;
+                    Light& device_light = device_lights[light_index];
 
-                RGB power = LightSources::get_sphere_light_power(light_ID);
-                memcpy(&light.power, &power, sizeof(light.power));
+                    device_light.flags = LightFlags::SphereLight;
 
-                light.radius = LightSources::get_sphere_light_radius(light_ID);
+                    Vector3f position = host_light.get_node().get_global_transform().translation;
+                    memcpy(&device_light.sphere.position, &position, sizeof(device_light.sphere.position));
 
-                if (!LightSources::is_delta_sphere_light(light_ID))
-                    highest_area_light_index_updated = max(highest_area_light_index_updated, light_index);
+                    RGB power = host_light.get_power();
+                    memcpy(&device_light.sphere.power, &power, sizeof(device_light.sphere.power));
+
+                    device_light.sphere.radius = host_light.get_radius();
+
+                    if (!host_light.is_delta_light())
+                        highest_area_light_index_updated = max(highest_area_light_index_updated, light_index);
+                    break;
+                }
+                case LightSources::Type::Directional: {
+                    Scene::DirectionalLight host_light = light_ID;
+                    Light& device_light = device_lights[light_index];
+
+                    device_light.flags = LightFlags::DirectionalLight;
+
+                    Vector3f direction = host_light.get_node().get_global_transform().rotation.forward();
+                    memcpy(&device_light.directional.direction, &direction, sizeof(device_light.directional.direction));
+
+                    RGB radiance = host_light.get_radiance();
+                    memcpy(&device_light.directional.radiance, &radiance, sizeof(device_light.directional.radiance));
+                    break;
+                }
+                }
             };
 
             // Deferred area light geometry update helper. Keeps track of the highest delta light index updated.
@@ -671,7 +692,7 @@ void Renderer::handle_updates() {
                 m_state->lights.sources->setSize(LightSources::capacity());
 
                 // Resizing removes old data, so this as an opportunity to linearize the light data.
-                SphereLight* device_lights = (SphereLight*)m_state->lights.sources->map();
+                Light* device_lights = (Light*)m_state->lights.sources->map();
                 unsigned int light_index = 0;
                 for (LightSources::UID light_ID : LightSources::get_iterable()) {
                     m_state->lights.ID_to_index[light_ID] = light_index;
@@ -683,7 +704,7 @@ void Renderer::handle_updates() {
                 m_state->lights.count = light_index;
                 m_state->lights.sources->unmap();
             } else {
-                SphereLight* device_lights = (SphereLight*)m_state->lights.sources->map();
+                Light* device_lights = (Light*)m_state->lights.sources->map();
                 LightSources::ChangedIterator created_lights_begin = LightSources::get_changed_lights().begin();
                 while (created_lights_begin != LightSources::get_changed_lights().end() &&
                     LightSources::get_changes(*created_lights_begin) != LightSources::Changes::Created)
@@ -696,7 +717,7 @@ void Renderer::handle_updates() {
 
                     unsigned int light_index = m_state->lights.ID_to_index[light_ID];
 
-                    if (!LightSources::is_delta_sphere_light(light_ID))
+                    if (!LightSources::is_delta_light(light_ID))
                         highest_area_light_index_updated = max(highest_area_light_index_updated, light_index);
 
                     if (created_lights_begin != LightSources::get_changed_lights().end()) {
@@ -714,7 +735,7 @@ void Renderer::handle_updates() {
                         // Replace deleted light by light from the end of the array.
                         --m_state->lights.count;
                         if (light_index != m_state->lights.count) {
-                            memcpy(device_lights + light_index, device_lights + m_state->lights.count, sizeof(SphereLight));
+                            memcpy(device_lights + light_index, device_lights + m_state->lights.count, sizeof(Light));
 
                             // Rewire light ID and index maps.
                             m_state->lights.index_to_ID[light_index] = m_state->lights.index_to_ID[m_state->lights.count];

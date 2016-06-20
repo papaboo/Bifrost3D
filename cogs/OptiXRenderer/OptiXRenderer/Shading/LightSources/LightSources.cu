@@ -18,7 +18,7 @@ using namespace optix;
 
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
 
-rtBuffer<SphereLight, 1> g_lights;
+rtBuffer<Light, 1> g_lights;
 
 // Encode light index in geometric_normal.x
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
@@ -29,7 +29,7 @@ rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 //=============================================================================
 RT_PROGRAM void intersect(int primitive_index) {
 
-    const SphereLight& light = g_lights[primitive_index];
+    const SphereLight& light = g_lights[primitive_index].sphere;
 
     float t = Intersect::ray_sphere(ray, Sphere::make(light.position, light.radius));
     if (t > 0.0f && rtPotentialIntersection(t)) {
@@ -42,7 +42,7 @@ RT_PROGRAM void intersect(int primitive_index) {
 }
 
 RT_PROGRAM void bounds(int primitive_index, float result[6]) {
-    const SphereLight& light = g_lights[primitive_index];
+    const SphereLight& light = g_lights[primitive_index].sphere;
 
     optix::Aabb* aabb = (optix::Aabb*)result;
 
