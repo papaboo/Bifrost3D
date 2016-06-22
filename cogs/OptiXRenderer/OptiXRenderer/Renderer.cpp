@@ -57,7 +57,7 @@ struct Renderer::State {
     optix::Buffer accumulation_buffer;
     optix::Buffer output_buffer;
     unsigned int accumulations;
-    Math::Transform camera_transform;
+    Matrix4x4f camera_inverse_view_projection_matrix;
 
     GLuint backbuffer_gl_id;
 
@@ -373,7 +373,7 @@ Renderer::Renderer()
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         }
 
-        m_state->camera_transform = Math::Transform::identity();
+        m_state->camera_inverse_view_projection_matrix = Math::Matrix4x4f::identity();
     }
 
     { // Path tracing setup.
@@ -437,17 +437,17 @@ void Renderer::render() {
         Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
         Matrix4x4f inverse_view_projection_matrix = inverse_view_matrix * inverse_projection_matrix;
 
-        SceneNode camera_node = Cameras::get_node_ID(camera_ID);
-        Vector3f cam_pos = camera_node.get_global_transform().translation;
+        // Check if the camera transforms changed and if so, then upload the new ones and reset accumulation.
+        if (m_state->camera_inverse_view_projection_matrix != inverse_view_projection_matrix) {
+            m_state->camera_inverse_view_projection_matrix = inverse_view_projection_matrix;
 
-        context["g_inverted_view_projection_matrix"]->setMatrix4x4fv(false, inverse_view_projection_matrix.begin());
-        float4 camera_position = make_float4(cam_pos.x, cam_pos.y, cam_pos.z, 0.0f);
-        context["g_camera_position"]->setFloat(camera_position);
+            SceneNode camera_node = Cameras::get_node_ID(camera_ID);
+            Vector3f cam_pos = camera_node.get_global_transform().translation;
 
-        // Reset accumulations if camera transform has changed.
-        SceneNodes::UID camera_node_ID = Cameras::get_node_ID(camera_ID);
-        if (m_state->camera_transform != SceneNodes::get_global_transform(camera_node_ID)) {
-            m_state->camera_transform = SceneNodes::get_global_transform(camera_node_ID);
+            context["g_inverted_view_projection_matrix"]->setMatrix4x4fv(false, inverse_view_projection_matrix.begin());
+            float4 camera_position = make_float4(cam_pos.x, cam_pos.y, cam_pos.z, 0.0f);
+            context["g_camera_position"]->setFloat(camera_position);
+
             m_state->accumulations = 0u;
         }
     }
