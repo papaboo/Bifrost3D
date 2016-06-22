@@ -156,9 +156,10 @@ void initializer(Cogwheel::Core::Engine& engine) {
 
     engine.add_tick_cleanup_callback(scenenode_cleanup_callback, nullptr);
     
+    // TODO Scene and scene color should be set up by the test scenes themselves.
     Scenes::allocate(1u);
     SceneNodes::UID root_node_ID = SceneNodes::create("Root");
-    Scenes::UID scene_ID = Scenes::create("Model scene", root_node_ID, RGB(1, 0, 0)); // TODO Set scene root!
+    Scenes::UID scene_ID = Scenes::create("Model scene", root_node_ID, RGB(0.68f, 0.92f, 1.0f));
 
     // Create camera
     SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
@@ -235,6 +236,7 @@ void print_usage() {
 }
 
 void main(int argc, char** argv) {
+
     std::string command = g_scene = argc >= 2 ? std::string(argv[1]) : "";
     if (command.compare("-h") == 0 || command.compare("--help") == 0) {
         print_usage();
