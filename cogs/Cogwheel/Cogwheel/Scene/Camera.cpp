@@ -24,6 +24,7 @@ namespace Scene {
 Cameras::UIDGenerator Cameras::m_UID_generator = UIDGenerator(0u);
 
 SceneNodes::UID* Cameras::m_node_IDs = nullptr;
+Scenes::UID* Cameras::m_scene_IDs = nullptr;
 unsigned int* Cameras::m_render_indices = nullptr;
 Math::Matrix4x4f* Cameras::m_projection_matrices = nullptr;
 Math::Matrix4x4f* Cameras::m_inverse_projection_matrices = nullptr;
@@ -37,6 +38,7 @@ void Cameras::allocate(unsigned int capacity) {
     capacity = m_UID_generator.capacity();
 
     m_node_IDs = new SceneNodes::UID[capacity];
+    m_scene_IDs = new Scenes::UID[capacity];
     m_render_indices = new unsigned int[capacity];
     m_projection_matrices = new Math::Matrix4x4f[capacity];
     m_inverse_projection_matrices = new Math::Matrix4x4f[capacity];
@@ -44,6 +46,7 @@ void Cameras::allocate(unsigned int capacity) {
 
     // Allocate dummy camera at 0.
     m_node_IDs[0] = SceneNodes::UID::invalid_UID();
+    m_scene_IDs[0] = Scenes::UID::invalid_UID();
     m_render_indices[0] = 0u;
     m_projection_matrices[0] = Math::Matrix4x4f::zero();
     m_inverse_projection_matrices[0] = Math::Matrix4x4f::zero();
@@ -57,6 +60,7 @@ void Cameras::deallocate() {
     m_UID_generator = UIDGenerator(0u);
 
     delete[] m_node_IDs; m_node_IDs = nullptr;
+    delete[] m_scene_IDs; m_scene_IDs = nullptr;
     delete[] m_render_indices; m_render_indices = nullptr;
     delete[] m_projection_matrices; m_projection_matrices = nullptr;
     delete[] m_inverse_projection_matrices; m_inverse_projection_matrices = nullptr;
@@ -79,6 +83,7 @@ static inline T* resize_and_copy_array(T* old_array, unsigned int new_capacity, 
 
 void Cameras::reserve_camera_data(unsigned int new_capacity, unsigned int old_capacity) {
     assert(m_node_IDs != nullptr);
+    assert(m_scene_IDs != nullptr);
     assert(m_render_indices != nullptr);
     assert(m_projection_matrices != nullptr);
     assert(m_inverse_projection_matrices != nullptr);
@@ -87,6 +92,7 @@ void Cameras::reserve_camera_data(unsigned int new_capacity, unsigned int old_ca
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
 
     m_node_IDs = resize_and_copy_array(m_node_IDs, new_capacity, copyable_elements);
+    m_scene_IDs = resize_and_copy_array(m_scene_IDs, new_capacity, copyable_elements);
 
     m_render_indices = resize_and_copy_array(m_render_indices, new_capacity, copyable_elements);
     m_projection_matrices = resize_and_copy_array(m_projection_matrices, new_capacity, copyable_elements);
@@ -95,8 +101,9 @@ void Cameras::reserve_camera_data(unsigned int new_capacity, unsigned int old_ca
     m_viewports = resize_and_copy_array(m_viewports, new_capacity, copyable_elements);
 }
 
-Cameras::UID Cameras::create(SceneNodes::UID parent_ID, Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix) {
+Cameras::UID Cameras::create(SceneNodes::UID parent_ID, Scenes::UID scene, Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix) {
     assert(m_node_IDs != nullptr);
+    assert(m_scene_IDs != nullptr);
     assert(m_render_indices != nullptr);
     assert(m_projection_matrices != nullptr);
     assert(m_inverse_projection_matrices != nullptr);
@@ -109,6 +116,7 @@ Cameras::UID Cameras::create(SceneNodes::UID parent_ID, Math::Matrix4x4f project
         reserve_camera_data(m_UID_generator.capacity(), old_capacity);
 
     m_node_IDs[id] = parent_ID;
+    m_scene_IDs[id] = scene;
     m_render_indices[id] = 0u;
     m_projection_matrices[id] = projection_matrix;
     m_inverse_projection_matrices[id] = inverse_projection_matrix;

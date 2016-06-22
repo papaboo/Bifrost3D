@@ -18,7 +18,6 @@ Engine* Engine::m_instance = nullptr;
 
 Engine::Engine()
     : m_window(Window("Cogwheel", 640, 480))
-    , m_scene_root(Scene::SceneNodes::UID::invalid_UID())
     , m_mutating_callbacks(0)
     , m_non_mutating_callbacks(0)
     , m_tick_cleanup_callbacks(0)

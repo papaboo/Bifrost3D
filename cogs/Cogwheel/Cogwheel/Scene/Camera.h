@@ -12,6 +12,7 @@
 #include <Cogwheel/Math/Matrix.h>
 #include <Cogwheel/Math/Ray.h>
 #include <Cogwheel/Math/Rect.h>
+#include <Cogwheel/Scene/Scene.h>
 #include <Cogwheel/Scene/SceneNode.h>
 
 namespace Cogwheel {
@@ -22,6 +23,7 @@ namespace Scene {
 // Future work
 // * Iterators that iterates through the cameras in order of their render indices.
 // * Reference a backbuffer or render_target to allow cameras to render to windows and FBO's.
+// * Change flags.
 // ---------------------------------------------------------------------------
 class Cameras final {
 public:
@@ -37,7 +39,7 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(Cameras::UID cameraID) { return m_UID_generator.has(cameraID); }
 
-    static Cameras::UID create(SceneNodes::UID parent_ID, Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix);
+    static Cameras::UID create(SceneNodes::UID parent_ID, Scenes::UID scene, Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix);
 
     static UIDGenerator::ConstIterator begin() { return m_UID_generator.begin(); }
     static UIDGenerator::ConstIterator end() { return m_UID_generator.end(); }
@@ -45,6 +47,9 @@ public:
 
     static SceneNodes::UID get_node_ID(Cameras::UID camera_ID) { return m_node_IDs[camera_ID]; }
     static void set_node_ID(Cameras::UID camera_ID, SceneNodes::UID node_ID) { m_node_IDs[camera_ID] = node_ID; }
+
+    static Scenes::UID get_scene_ID(Cameras::UID camera_ID) { return m_scene_IDs[camera_ID]; }
+    static void set_scene_ID(Cameras::UID camera_ID, Scenes::UID scene_ID) { m_scene_IDs[camera_ID] = scene_ID; }
 
     static unsigned int get_render_index(Cameras::UID camera_ID) { return m_render_indices[camera_ID]; }
     static void set_render_index(Cameras::UID camera_ID, unsigned int index) { m_render_indices[camera_ID] = index; }
@@ -72,6 +77,7 @@ private:
     static UIDGenerator m_UID_generator;
 
     static SceneNodes::UID* m_node_IDs;
+    static Scenes::UID* m_scene_IDs;
     static unsigned int* m_render_indices;
     static Math::Matrix4x4f* m_projection_matrices;
     static Math::Matrix4x4f* m_inverse_projection_matrices;

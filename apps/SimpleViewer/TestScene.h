@@ -137,12 +137,10 @@ private:
     float m_existed_time;
 };
 
-Scene::SceneNodes::UID create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID) {
+void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneNode root_node) {
     using namespace Cogwheel::Assets;
     using namespace Cogwheel::Math;
     using namespace Cogwheel::Scene;
-
-    SceneNode root_node = SceneNodes::create("Root");
 
     { // Setup camera transform.
         SceneNodes::UID cam_node_ID = Cameras::get_node_ID(camera_ID);
@@ -237,12 +235,10 @@ Scene::SceneNodes::UID create_test_scene(Core::Engine& engine, Scene::Cameras::U
     Transform light_transform = Transform(light_position);
     SceneNodes::UID light_node_ID = SceneNodes::create("Light", light_transform);
     LightSources::UID light_ID = LightSources::create_sphere_light(light_node_ID, RGB(1000000.0f), 0.0f);
-    SceneNodes::set_parent(light_node_ID, engine.get_scene_root());
+    SceneNodes::set_parent(light_node_ID, root_node.get_ID());
 
     BlinkingLight* blinking_light = new BlinkingLight();
     engine.add_mutating_callback(BlinkingLight::blink_callback, blinking_light);
-
-    return root_node.get_ID();
 }
 
 #endif // _SIMPLEVIEWER_TEST_SCENE_H_

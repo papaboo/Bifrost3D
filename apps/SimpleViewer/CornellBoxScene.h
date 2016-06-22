@@ -18,12 +18,10 @@
 
 using namespace Cogwheel;
 
-Scene::SceneNodes::UID create_cornell_box_scene(Scene::Cameras::UID camera_ID) {
+void create_cornell_box_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_node) {
     using namespace Cogwheel::Assets;
     using namespace Cogwheel::Math;
     using namespace Cogwheel::Scene;
-
-    SceneNode root_node = SceneNodes::create("Root");
 
     Materials::Data white_material_data;
     white_material_data.base_tint = RGB(0.98f);
@@ -141,8 +139,6 @@ Scene::SceneNodes::UID create_cornell_box_scene(Scene::Cameras::UID camera_ID) {
         MeshModels::create(node.get_ID(), box_mesh_ID, copper_material_ID);
         node.set_parent(root_node);
     }
-
-    return root_node.get_ID();
 }
 
 #endif // _SIMPLEVIEWER_CORNELL_BOX_SCENE_H_

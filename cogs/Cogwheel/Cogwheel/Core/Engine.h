@@ -58,12 +58,6 @@ public:
     const Input::Mouse* const get_mouse() const { return m_mouse; }
 
     // -----------------------------------------------------------------------
-    // Scene root.
-    // -----------------------------------------------------------------------
-    inline void set_scene_root(Scene::SceneNodes::UID root_ID) { m_scene_root = root_ID; }
-    inline Scene::SceneNodes::UID get_scene_root() const { return m_scene_root; }
-
-    // -----------------------------------------------------------------------
     // Callbacks
     // -----------------------------------------------------------------------
     typedef void(*mutating_callback)(Engine& engine, void* callback_state);
@@ -90,7 +84,6 @@ private:
 
     Time m_time;
     Window m_window;
-    Scene::SceneNodes::UID m_scene_root;
     bool m_quit;
 
     // A closure wrapping a callback function and its state.

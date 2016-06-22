@@ -18,12 +18,10 @@
 
 using namespace Cogwheel;
 
-Scene::SceneNodes::UID create_material_scene(Scene::Cameras::UID camera_ID) {
+void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_node) {
     using namespace Cogwheel::Assets;
     using namespace Cogwheel::Math;
     using namespace Cogwheel::Scene;
-
-    SceneNode root_node = SceneNodes::create("Root");
 
     { // Setup camera transform.
         SceneNodes::UID cam_node_ID = Cameras::get_node_ID(camera_ID);
@@ -106,8 +104,6 @@ Scene::SceneNodes::UID create_material_scene(Scene::Cameras::UID camera_ID) {
             sphere_node.set_parent(root_node);
         }
     }
-
-    return root_node.get_ID();
 }
 
 #endif // _SIMPLEVIEWER_CORNELL_BOX_SCENE_H_

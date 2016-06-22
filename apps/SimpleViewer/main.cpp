@@ -9,6 +9,8 @@
 #include <Cogwheel/Input/Mouse.h>
 #include <Cogwheel/Scene/Camera.h>
 #include <Cogwheel/Scene/LightSource.h>
+#include <Cogwheel/Scene/Scene.h>
+#include <Cogwheel/Scene/SceneNode.h>
 
 #include <GLFWDriver.h>
 
@@ -137,6 +139,7 @@ static inline void scenenode_cleanup_callback(void* dummy) {
     Meshes::reset_change_notifications();
     MeshModels::reset_change_notifications();
     SceneNodes::reset_change_notifications();
+    // Scenes::reset_change_notifications();
     Textures::reset_change_notifications();
 }
 
@@ -153,6 +156,10 @@ void initializer(Cogwheel::Core::Engine& engine) {
 
     engine.add_tick_cleanup_callback(scenenode_cleanup_callback, nullptr);
     
+    Scenes::allocate(1u);
+    SceneNodes::UID root_node_ID = SceneNodes::create("Root");
+    Scenes::UID scene_ID = Scenes::create("Model scene", root_node_ID, RGB(1, 0, 0)); // TODO Set scene root!
+
     // Create camera
     SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
 
@@ -161,18 +168,19 @@ void initializer(Cogwheel::Core::Engine& engine) {
         perspective_matrix, inverse_perspective_matrix);
 
     Cameras::allocate(1u);
-    Cameras::UID cam_ID = Cameras::create(cam_node_ID, perspective_matrix, inverse_perspective_matrix);
+    Cameras::UID cam_ID = Cameras::create(cam_node_ID, scene_ID, perspective_matrix, inverse_perspective_matrix);
 
     // Load model
     bool load_model_from_file = false;
     if (g_scene.empty() || g_scene.compare("CornellBox") == 0)
-        engine.set_scene_root(create_cornell_box_scene(cam_ID));
+        create_cornell_box_scene(cam_ID, root_node_ID);
     else if (g_scene.compare("MaterialScene") == 0)
-        engine.set_scene_root(create_material_scene(cam_ID));
+        create_material_scene(cam_ID, root_node_ID);
     else if (g_scene.compare("TestScene") == 0)
-        engine.set_scene_root(create_test_scene(engine, cam_ID));
+        create_test_scene(engine, cam_ID, root_node_ID);
     else {
-        engine.set_scene_root(ObjLoader::load(g_scene, StbImageLoader::load));
+        SceneNodes::UID obj_root_ID = ObjLoader::load(g_scene, StbImageLoader::load);
+        SceneNodes::set_parent(obj_root_ID, root_node_ID);
         load_model_from_file = true;
     }
 
@@ -208,7 +216,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
         Transform light_transform = Transform(light_position);
         SceneNodes::UID light_node_ID = SceneNodes::create("Light", light_transform);
         LightSources::UID light_ID = LightSources::create_sphere_light(light_node_ID, RGB(1000000.0f), 0.0f);
-        SceneNodes::set_parent(light_node_ID, engine.get_scene_root());
+        SceneNodes::set_parent(light_node_ID, root_node_ID);
     }
 }
 
