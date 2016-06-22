@@ -21,6 +21,22 @@ namespace OptiXRenderer {
 namespace Shading {
 namespace ShadingModels {
 
+// ---------------------------------------------------------------------------
+// The default shading material.
+// Default shading consist of a diffuse base with a specular layer on top.
+// The diffuse and specular contribution is weighted by a fresnel term.
+// NOTE:
+//  The fresnel term will cause the material to emit more than 100% energy 
+//  at grazing angles when the material is very smooth. This is due to 
+//  the specular component contributing almost 100%, because Fresnel will 
+//  do little to reduce the contribution which is centered on the perfectly 
+//  reflected directions. Meanwhile, across the rest ofe the hemisphere, 
+//  the diffuse component will contribute by 1 - Fresnel, bringing the total 
+//  contribution above 100%. Worst case seems to be 197%.
+//  Possible solutions 
+//  * Investigating the Disney BRDF and check if they are energy conserving.
+//  * Remove diffuse contribution such that the summed contribution equals one.
+// ---------------------------------------------------------------------------
 class DefaultShading {
 private:
     const Material& m_material;

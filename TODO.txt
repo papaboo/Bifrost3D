@@ -1,12 +1,9 @@
-* Directional light.
-** Spread / diffusitivity / softness, see the diffuse light paper or pbrt for a parameter name.
 * Create scene abstraction.
-** Add background colors and environment to scenes.
 ** Environment models.
-* Shading should be energy conserving. The current material isn't energy conserving at grazing angles when the roughness is low.
-** Investigate how Disney combines diffuse and specular layers
-*** Create DisneyBSDF dev project and just integrate over the damn thing!
-** Implement new energy conserving material or document findings and argue why we don't care (yet)
+*** Compute latlong environment CDF.
+*** Add a 'stabler' CDF computation.
+*** Future work: Structuring the CDF as 'breath first' should improve the cache hit rate of the first couple of lookups when we do binary search or? Profile!
+* Mesh combiner.
 * Reduce TODOs.
 ** There are some in the MIS sampling.
 ** Precompute material parameters for DefaultShading.
@@ -36,9 +33,6 @@
 ** A scene node should know if it is in a scene and in which. Store the root scene ID pr node?
 ** A requirement for the asset manager to not simply add loaded nodes directly into the scene.
 * Serialize scene and models.
-* CUDA
-** helper methods.
-*** Debugging/error checking. Array management.
 
 libs
 * https://code.google.com/archive/p/vcacne/
