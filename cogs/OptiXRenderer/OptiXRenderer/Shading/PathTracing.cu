@@ -95,8 +95,9 @@ RT_PROGRAM void path_tracing() {
 //----------------------------------------------------------------------------
 
 rtDeclareVariable(MonteCarloPRD, monte_carlo_PRD, rtPayload, );
+rtDeclareVariable(float3, g_scene_background_color, , );
 RT_PROGRAM void miss() {
-    monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * make_float3(0.68f, 0.92f, 1.0f);
+    monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * g_scene_background_color;
     monte_carlo_PRD.throughput = make_float3(0.0f);
 }
 

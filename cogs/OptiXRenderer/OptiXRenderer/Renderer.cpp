@@ -452,6 +452,13 @@ void Renderer::render() {
         }
     }
 
+    if (m_state->accumulations == 0u) {
+        Cameras::UID camera_ID = *Cameras::begin();
+        Math::RGB bg_color = Scenes::get_background_color(Cameras::get_scene_ID(camera_ID));
+        float3 background_color = make_float3(bg_color.r, bg_color.g, bg_color.b);
+        context["g_scene_background_color"]->setFloat(background_color);
+    }
+
     context["g_accumulations"]->setInt(m_state->accumulations);
 
     context->launch(int(EntryPoints::PathTracing), m_state->screensize.x, m_state->screensize.y);
