@@ -53,6 +53,8 @@ SET(SCENE_SRCS
   Cogwheel/Scene/Camera.h
   Cogwheel/Scene/LightSource.cpp
   Cogwheel/Scene/LightSource.h
+  Cogwheel/Scene/Scene.h
+  Cogwheel/Scene/Scene.cpp
   Cogwheel/Scene/SceneNode.cpp
   Cogwheel/Scene/SceneNode.h
 )
