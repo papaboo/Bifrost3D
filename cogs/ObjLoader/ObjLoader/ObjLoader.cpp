@@ -76,7 +76,7 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
         if (!tiny_mat.diffuse_texname.empty()) {
             Images::UID image_ID = image_loader(directory + tiny_mat.diffuse_texname);
             if (channel_count(Images::get_pixel_format(image_ID)) != 4) {
-                Images::UID new_image_ID = ImageUtils::change_format(image_ID, PixelFormat::RGBA32); // TODO If someone really wants to use a floating point format, shouldn't we let them?
+                Images::UID new_image_ID = ImageUtils::change_format(image_ID, PixelFormat::RGBA32);
                 Images::destroy(image_ID);
                 image_ID = new_image_ID;
             }
