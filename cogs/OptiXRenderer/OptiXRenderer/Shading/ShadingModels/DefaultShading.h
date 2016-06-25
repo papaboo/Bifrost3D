@@ -34,6 +34,8 @@ namespace ShadingModels {
 //  the diffuse component will contribute by 1 - Fresnel, bringing the total 
 //  contribution above 100%. Worst case seems to be 197%.
 //  Possible solutions 
+//  * Investigate samples where f * cos_theta / pdf is above one.
+//    If all are one or below this should never be a problem.
 //  * Investigating the Disney BRDF and check if they are energy conserving.
 //  * Remove diffuse contribution such that the summed contribution equals one.
 // ---------------------------------------------------------------------------
@@ -42,12 +44,11 @@ private:
     const Material& m_material;
     optix::float3 m_base_tint;
 
-    // TODO Implement Unreal 4 spherical gaussian Fresnel as well.
+    // TODO Implement Unreal 4 spherical gaussian and correct Fresnel as well. Move to Fresnel.h
     __inline_all__ static float schlick_fresnel(float incident_specular, float abs_cos_theta) {
         return incident_specular + (1.0f - incident_specular) * pow(optix::fmaxf(0.0f, 1.0f - abs_cos_theta), 5.0f);
     }
 
-    // TODO Gamma parameter!
     // TODO Template with return type? Might be hell on the CPU.
     // TODO Move to utils.
     __inline_all__ static optix::float4 tex2D(unsigned int texture_ID, optix::float2 texcoord) {
