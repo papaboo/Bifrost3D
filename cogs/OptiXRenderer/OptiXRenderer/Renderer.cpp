@@ -74,7 +74,7 @@ struct Renderer::State {
     optix::Material default_material;
     optix::TextureSampler default_material_rho;
     optix::Buffer material_parameters;
-    unsigned int material_parameter_count; // TODO Rename to active_material_count.
+    unsigned int active_material_count;
 
     optix::Program triangle_intersection_program;
     optix::Program triangle_bounds_program;
@@ -339,8 +339,8 @@ Renderer::Renderer()
         m_state->triangle_intersection_program = context->createProgramFromPTXFile(trangle_intersection_ptx_path, "intersect");
         m_state->triangle_bounds_program = context->createProgramFromPTXFile(trangle_intersection_ptx_path, "bounds");
 
-        m_state->material_parameter_count = 0;
-        m_state->material_parameters = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, m_state->material_parameter_count);
+        m_state->active_material_count = 0;
+        m_state->material_parameters = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, m_state->active_material_count);
         m_state->material_parameters->setElementSize(sizeof(OptiXRenderer::Material));
         context["g_materials"]->set(m_state->material_parameters);
 
@@ -645,10 +645,10 @@ void Renderer::handle_updates() {
         };
 
         if (!Materials::get_changed_materials().is_empty()) {
-            if (m_state->material_parameter_count < Materials::capacity()) {
+            if (m_state->active_material_count < Materials::capacity()) {
                 // Buffer size changed. Re-upload all parameters.
-                m_state->material_parameter_count = Materials::capacity();
-                m_state->material_parameters->setSize(m_state->material_parameter_count);
+                m_state->active_material_count = Materials::capacity();
+                m_state->material_parameters->setSize(m_state->active_material_count);
 
                 OptiXRenderer::Material* device_materials = (OptiXRenderer::Material*)m_state->material_parameters->map();
                 upload_material(Materials::UID::invalid_UID(), device_materials, m_state->textures.data()); // Upload invalid material params as well.
