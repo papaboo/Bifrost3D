@@ -96,8 +96,17 @@ RT_PROGRAM void path_tracing() {
 
 rtDeclareVariable(MonteCarloPRD, monte_carlo_PRD, rtPayload, );
 rtDeclareVariable(float3, g_scene_background_color, , );
+rtDeclareVariable(unsigned int, g_scene_environment_map_ID, , );
+
 RT_PROGRAM void miss() {
-    monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * g_scene_background_color;
+    float3 environment_radiance;
+    if (g_scene_environment_map_ID != 0u) {
+        float2 uv = direction_to_latlong_texcoord(monte_carlo_PRD.direction);
+        environment_radiance = make_float3(rtTex2D<float4>(g_scene_environment_map_ID, uv.x, uv.y));
+    } else
+        environment_radiance = g_scene_background_color;
+
+    monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * environment_radiance;
     monte_carlo_PRD.throughput = make_float3(0.0f);
 }
 

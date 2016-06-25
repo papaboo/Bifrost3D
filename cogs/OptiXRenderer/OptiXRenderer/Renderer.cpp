@@ -61,6 +61,7 @@ struct Renderer::State {
 
     GLuint backbuffer_gl_id;
 
+    // Per scene members.
     optix::Group root_node;
     float scene_epsilon;
 
@@ -73,7 +74,7 @@ struct Renderer::State {
     optix::Material default_material;
     optix::TextureSampler default_material_rho;
     optix::Buffer material_parameters;
-    unsigned int material_parameter_count;
+    unsigned int material_parameter_count; // TODO Rename to active_material_count.
 
     optix::Program triangle_intersection_program;
     optix::Program triangle_bounds_program;
@@ -236,7 +237,7 @@ Renderer::Renderer()
 
     context["g_frame_number"]->setFloat(0.0f);
 
-    { // Setup root node
+    { // Setup scene
         optix::Acceleration root_acceleration = context->createAcceleration("Bvh", "Bvh");
         root_acceleration->setProperty("refit", "1");
 
@@ -247,7 +248,7 @@ Renderer::Renderer()
         context["g_scene_root"]->set(m_state->root_node);
         m_state->scene_epsilon = 0.0001f;
         context["g_scene_epsilon"]->setFloat(m_state->scene_epsilon);
-        context["g_max_bounce_count"]->setInt(4);
+        context["g_scene_environment_map_ID"]->setUint(0);
     }
 
     { // Light sources
@@ -381,6 +382,8 @@ Renderer::Renderer()
         context->setRayGenerationProgram(int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "path_tracing"));
         context->setExceptionProgram(int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "exceptions"));
         context->setMissProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(rgp_ptx_path, "miss"));
+
+        context["g_max_bounce_count"]->setInt(4);
     }
 
     { // Normal visualization setup.
@@ -454,9 +457,24 @@ void Renderer::render() {
 
     if (m_state->accumulations == 0u) {
         Cameras::UID camera_ID = *Cameras::begin();
-        Math::RGB bg_color = Scenes::get_background_color(Cameras::get_scene_ID(camera_ID));
+        Scenes::UID scene_ID = Cameras::get_scene_ID(camera_ID); // TODO Scene instead of scene uid.
+        Math::RGB bg_color = Scenes::get_background_color(scene_ID);
         float3 background_color = make_float3(bg_color.r, bg_color.g, bg_color.b);
         context["g_scene_background_color"]->setFloat(background_color);
+
+        // Setup the environment map. TODO Handle this via scene change flags or scene initialization instead.
+        Textures::UID environment_map_ID = Scenes::get_environment_map(scene_ID);
+        if (environment_map_ID != Textures::UID::invalid_UID()) {
+            // Only textures with four channels are supported.
+            Image image = Textures::get_image_ID(environment_map_ID);
+            if (channel_count(image.get_pixel_format()) == 4) { // TODO Support other formats as well, by converting the buffers to float4 and upload.
+                TextureSampler environment_sampler = m_state->textures[environment_map_ID];
+                context["g_scene_environment_map_ID"]->setUint(environment_sampler->getId());
+            } else {
+                printf("The OptiXRenderer only supports environments with 4 channels. '%s' has %u.\n", image.get_name().c_str(), channel_count(image.get_pixel_format()));
+                context["g_scene_environment_map_ID"]->setUint(m_state->textures[0]->getId()); // Error texture has four channels.
+            }
+        }
     }
 
     context["g_accumulations"]->setInt(m_state->accumulations);

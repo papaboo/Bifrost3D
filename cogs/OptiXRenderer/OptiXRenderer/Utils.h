@@ -94,6 +94,19 @@ __inline_all__ bool is_PDF_valid(float PDF) {
     return PDF > 0.000001f;
 }
 
+__inline_all__ optix::float2 direction_to_latlong_texcoord(const optix::float3& direction) {
+    float u = (atan2f(direction.x, direction.z) + PIf) * 0.5f / PIf;
+    float v = (asinf(direction.y) + M_PIf * 0.5f) / PIf;
+    return optix::make_float2(u, v);
+}
+
+__inline_all__ optix::float3 LatLongTexCoordsToDirection(const optix::float2& uv) {
+    float phi = uv.x * 2.0f * PIf;
+    float theta = uv.y * PIf;
+    float sin_theta = sinf(theta);
+    return optix::make_float3(sin_theta * sinf(phi), cosf(theta), sin_theta * cosf(phi));
+}
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_SHADING_UTILS_H_
