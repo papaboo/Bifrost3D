@@ -85,7 +85,7 @@ inline Polynomial polynomial_fit_2D(Vector2f* x_y_begin, Vector2f* x_y_end, int 
     
     // Perform gaussian elimination, i.e. turn the matrix into one in row echelon form.
     // TODO move the row with the largest absolute value value to the pivot positioning.
-    // This improves numerical stability, but is otherwise not needed.
+    //      This improves numerical stability, but is otherwise not needed.
     for (int i = 0; i < equation_count - 1; ++i)
         for (int k = i + 1; k < equation_count; ++k) {
             double t = B[k * B_width + i] / B[i * B_width + i];
