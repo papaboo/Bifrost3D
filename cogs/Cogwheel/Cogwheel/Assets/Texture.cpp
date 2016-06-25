@@ -156,7 +156,6 @@ Math::RGBA sample2D(Textures::UID texture_ID, Vector2f texcoord) {
             texcoord = Vector2f(texcoord.x * float(width), texcoord.y * float(height)) - 0.5f;
             Vector2i lower_left_coord = Vector2i(int(texcoord.x), int(texcoord.y));
             
-            // TODO Should capture texture and image in its scope.
             auto lookup_pixel = [](int pixelcoord_x, int pixelcoord_y, TextureND texture, Image image) {
                 if (texture.get_wrapmode_U() == WrapMode::Clamp)
                     pixelcoord_x = clamp(pixelcoord_x, 0, int(image.get_width()));
@@ -166,13 +165,11 @@ Math::RGBA sample2D(Textures::UID texture_ID, Vector2f texcoord) {
                 if (texture.get_wrapmode_V() == WrapMode::Clamp)
                     pixelcoord_y = clamp(pixelcoord_y, 0, int(image.get_height()));
                 else // WrapMode::Repeat
-                    // TODO Do I need to handle negative texcoord differently?
-                    pixelcoord_y = pixelcoord_y% image.get_height();
+                    pixelcoord_y = pixelcoord_y % image.get_height();
 
                 return image.get_pixel(Vector2ui(pixelcoord_x, pixelcoord_y));
             };
 
-            // TODO What happens when the texcoords are negative?
             float u_lerp = abs(texcoord.x - float(lower_left_coord.x));
             RGBA lower_texel = lerp(lookup_pixel(lower_left_coord.x, lower_left_coord.y, texture, image),
                                     lookup_pixel(lower_left_coord.x+1, lower_left_coord.y, texture, image), 
