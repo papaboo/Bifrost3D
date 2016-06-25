@@ -100,7 +100,7 @@ public:
 private:
     static void reserve_image_data(unsigned int new_capacity, unsigned int old_capacity);
 
-    // TODO All of this can be stored in a single int.
+    // NOTE All of this but the ID can be stored in a single int.
     struct Sampler {
         Images::UID image_ID;
         Type type;
