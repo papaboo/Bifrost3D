@@ -25,6 +25,10 @@ namespace Scene {
 // * Change flags and iterator. Wait until we have multiscene support.
 // * Do we need to store SceneS::UIDs of the owning scene in the scene nodes?
 //   Wait until we have multi scene support to add it.
+// * IBL generation using a GGX kernel and 
+//   http://http.developer.nvidia.com/GPUGems3/gpugems3_ch20.html.
+//   * Can also be used by the path tracer to reduce noise from 
+//     environment sampling in the first frames.
 // ---------------------------------------------------------------------------
 class Scenes final {
 public:
