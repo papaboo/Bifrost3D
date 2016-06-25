@@ -9,7 +9,7 @@
 #ifndef _COGWHEEL_SCENE_SCENE_ROOT_H_
 #define _COGWHEEL_SCENE_SCENE_ROOT_H_
 
-#include <Cogwheel/Assets/Image.h>
+#include <Cogwheel/Assets/Texture.h>
 #include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Math/Color.h>
@@ -41,7 +41,7 @@ public:
     static bool has(Scenes::UID scene_ID) { return m_UID_generator.has(scene_ID); }
 
     static Scenes::UID create(const std::string& name, SceneNodes::UID root, Math::RGB background_color);
-    static Scenes::UID create(const std::string& name, SceneNodes::UID root, Assets::Images::UID environment_map, Assets::Images::UID environment_cdf = Assets::Images::UID::invalid_UID());
+    static Scenes::UID create(const std::string& name, SceneNodes::UID root, Assets::Textures::UID environment_map);
     // static void destroy(Scenes::UID scene_ID);
 
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
@@ -51,8 +51,7 @@ public:
     static inline std::string get_name(Scenes::UID scene_ID) { return m_scenes[scene_ID].name; }
     static inline SceneNodes::UID get_root_node(Scenes::UID scene_ID) { return m_scenes[scene_ID].root_node; }
     static inline Math::RGB get_background_color(Scenes::UID scene_ID) { return m_scenes[scene_ID].background_color; }
-    static inline Assets::Images::UID get_environment_map(Scenes::UID scene_ID) { return m_scenes[scene_ID].environment_map; }
-    static inline Assets::Images::UID get_environment_cdf(Scenes::UID scene_ID) { return m_scenes[scene_ID].environment_cdf; }
+    static inline Assets::Textures::UID get_environment_map(Scenes::UID scene_ID) { return m_scenes[scene_ID].environment_map; }
 
 private:
 
@@ -64,8 +63,7 @@ private:
         std::string name;
         SceneNodes::UID root_node;
         Math::RGB background_color;
-        Assets::Images::UID environment_map;
-        Assets::Images::UID environment_cdf;
+        Assets::Textures::UID environment_map;
     };
 
     static Scene* m_scenes;

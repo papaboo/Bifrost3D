@@ -29,8 +29,7 @@ void Scenes::allocate(unsigned int capacity) {
     m_scenes[0].name = "Dummy Scene";
     m_scenes[0].root_node = SceneNodes::UID::invalid_UID();
     m_scenes[0].background_color = Math::RGB::black();
-    m_scenes[0].environment_map = Assets::Images::UID::invalid_UID();
-    m_scenes[0].environment_cdf = Assets::Images::UID::invalid_UID();
+    m_scenes[0].environment_map = Assets::Textures::UID::invalid_UID();
 }
 
 void Scenes::deallocate() {
@@ -75,13 +74,12 @@ Scenes::UID Scenes::create(const std::string& name, SceneNodes::UID root, Math::
     m_scenes[id].name = name;
     m_scenes[id].root_node = root;
     m_scenes[id].background_color = background_color;
-    m_scenes[id].environment_map = Assets::Images::UID::invalid_UID();
-    m_scenes[id].environment_cdf = Assets::Images::UID::invalid_UID();
+    m_scenes[id].environment_map = Assets::Textures::UID::invalid_UID();
 
     return id;
 }
 
-Scenes::UID Scenes::create(const std::string& name, SceneNodes::UID root, Assets::Images::UID environment_map, Assets::Images::UID environment_cdf) {
+Scenes::UID Scenes::create(const std::string& name, SceneNodes::UID root, Assets::Textures::UID environment_map) {
     assert(m_scenes != nullptr);
 
     unsigned int old_capacity = m_UID_generator.capacity();
@@ -94,7 +92,6 @@ Scenes::UID Scenes::create(const std::string& name, SceneNodes::UID root, Assets
     m_scenes[id].root_node = root;
     m_scenes[id].background_color = Math::RGB::black();
     m_scenes[id].environment_map = environment_map;
-    m_scenes[id].environment_cdf = environment_cdf;
 
     return id;
 }
