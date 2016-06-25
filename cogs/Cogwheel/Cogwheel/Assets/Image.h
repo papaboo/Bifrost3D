@@ -202,6 +202,8 @@ namespace ImageUtils {
 
 Images::UID change_format(Images::UID image_ID, PixelFormat new_format);
 
+void fill_mipmap_chain(Images::UID image_ID);
+
 } // NS ImageUtils
 
 } // NS Assets

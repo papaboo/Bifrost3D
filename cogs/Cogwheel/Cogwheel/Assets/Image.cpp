@@ -123,7 +123,9 @@ Images::UID Images::create(const std::string& name, PixelFormat format, float ga
     m_metainfo[id].height = size.y;
     m_metainfo[id].depth = size.z;
     m_metainfo[id].mipmap_count = mipmap_count;
-    unsigned int pixel_count = size.x * size.y * size.z;
+    unsigned int pixel_count = 0u;
+    while (mipmap_count--)
+        pixel_count += Images::get_width(id, mipmap_count) * Images::get_height(id, mipmap_count) * Images::get_depth(id, mipmap_count);
     m_pixels[id] = allocate_pixels(format, pixel_count);
     m_changes[id] = Changes::Created;
 
@@ -141,7 +143,7 @@ void Images::destroy(Images::UID image_ID) {
     }
 }
 
-static RGBA get_gammaed_pixel(Images::UID image_ID, unsigned int index, int mipmap_level) {
+static RGBA get_gammaed_pixel(Images::UID image_ID, unsigned int index) {
     Images::PixelData pixels = Images::get_pixels(image_ID);
     switch (Images::get_pixel_format(image_ID)) {
     case PixelFormat::RGB24: {
@@ -167,34 +169,56 @@ static RGBA get_gammaed_pixel(Images::UID image_ID, unsigned int index, int mipm
 }
 
 RGBA Images::get_pixel(Images::UID image_ID, unsigned int index, int mipmap_level) {
-    RGBA gammaed_color = get_gammaed_pixel(image_ID, index, mipmap_level);
+    assert(index < Images::get_width(image_ID, mipmap_level));
+
+    while (mipmap_level)
+        index += Images::get_width(image_ID, --mipmap_level);
+    RGBA gammaed_color = get_gammaed_pixel(image_ID, index);
     return gammacorrect(gammaed_color, Images::get_gamma(image_ID));
 }
 
 RGBA Images::get_pixel(Images::UID image_ID, Vector2ui index, int mipmap_level) {
-    const MetaInfo& info = m_metainfo[image_ID];
-    const unsigned int pixel_index = index.x + info.width * index.y;
-    return get_pixel(image_ID, pixel_index, mipmap_level);
+    assert(index.x < Images::get_width(image_ID, mipmap_level));
+    assert(index.y < Images::get_height(image_ID, mipmap_level));
+
+    Image image = image_ID;
+    unsigned int pixel_index = index.x + image.get_width(mipmap_level) * index.y;
+    while (mipmap_level) {
+        --mipmap_level;
+        pixel_index += image.get_width(mipmap_level) * image.get_height(mipmap_level);
+    }
+    RGBA gammaed_color = get_gammaed_pixel(image_ID, pixel_index);
+    return gammacorrect(gammaed_color, Images::get_gamma(image_ID));
 }
 
 RGBA Images::get_pixel(Images::UID image_ID, Vector3ui index, int mipmap_level) {
-    const MetaInfo& info = m_metainfo[image_ID];
-    const unsigned int pixel_index = index.x + info.width * (index.y + info.height * index.z);
-    return get_pixel(image_ID, pixel_index, mipmap_level);
+    assert(index.x < Images::get_width(image_ID, mipmap_level));
+    assert(index.y < Images::get_height(image_ID, mipmap_level));
+    assert(index.z < Images::get_depth(image_ID, mipmap_level));
+
+    Image image = image_ID;
+    unsigned int pixel_index = index.x + image.get_width(mipmap_level) * (index.y + image.get_height(mipmap_level) * index.z);
+    while (mipmap_level) {
+        --mipmap_level;
+        pixel_index += image.get_width(mipmap_level) * image.get_height(mipmap_level) * image.get_depth(mipmap_level);
+    }
+    RGBA gammaed_color = get_gammaed_pixel(image_ID, pixel_index);
+    return gammacorrect(gammaed_color, Images::get_gamma(image_ID));
 }
 
-void Images::set_pixel(Images::UID image_ID, RGBA color, unsigned int index, int mipmap_level) {
+static void set_linear_pixel(Images::UID image_ID, RGBA color, unsigned int index) {
     color = gammacorrect(color, 1.0f / Images::get_gamma(image_ID));
-    switch (m_metainfo[image_ID].pixel_format) {
+    Images::PixelData pixels = Images::get_pixels(image_ID);
+    switch (Images::get_pixel_format(image_ID)) {
     case PixelFormat::RGB24: {
-        unsigned char* pixel = ((unsigned char*)m_pixels[image_ID]) + index * 3;
+        unsigned char* pixel = ((unsigned char*)pixels) + index * 3;
         pixel[0] = unsigned char(clamp(color.r * 255.0f, 0.0f, 255.0f));
         pixel[1] = unsigned char(clamp(color.g * 255.0f, 0.0f, 255.0f));
         pixel[2] = unsigned char(clamp(color.b * 255.0f, 0.0f, 255.0f));
         break;
     }
     case PixelFormat::RGBA32: {
-        unsigned char* pixel = ((unsigned char*)m_pixels[image_ID]) + index * 4;
+        unsigned char* pixel = ((unsigned char*)pixels) + index * 4;
         pixel[0] = unsigned char(clamp(color.r * 255.0f, 0.0f, 255.0f));
         pixel[1] = unsigned char(clamp(color.g * 255.0f, 0.0f, 255.0f));
         pixel[2] = unsigned char(clamp(color.b * 255.0f, 0.0f, 255.0f));
@@ -202,14 +226,14 @@ void Images::set_pixel(Images::UID image_ID, RGBA color, unsigned int index, int
         break;
     }
     case PixelFormat::RGB_Float: {
-        float* pixel = ((float*)m_pixels[image_ID]) + index * 3;
+        float* pixel = ((float*)pixels) + index * 3;
         pixel[0] = color.r;
         pixel[1] = color.g;
         pixel[2] = color.b;
         break;
     }
     case PixelFormat::RGBA_Float: {
-        float* pixel = ((float*)m_pixels[image_ID]) + index * 4;
+        float* pixel = ((float*)pixels) + index * 4;
         pixel[0] = color.r;
         pixel[1] = color.g;
         pixel[2] = color.b;
@@ -219,35 +243,46 @@ void Images::set_pixel(Images::UID image_ID, RGBA color, unsigned int index, int
     case PixelFormat::Unknown:
         ;
     }
+}
 
+void Images::set_pixel(Images::UID image_ID, RGBA color, unsigned int index, int mipmap_level) {
+    assert(index < Images::get_width(image_ID, mipmap_level));
+
+    Image image = image_ID;
+    unsigned int width = image.get_width();
+    while (mipmap_level)
+        index += image.get_width(--mipmap_level);
+    set_linear_pixel(image_ID, color, index);
     flag_as_changed(image_ID, Changes::PixelsUpdated);
 }
 
 void Images::set_pixel(Images::UID image_ID, RGBA color, Vector2ui index, int mipmap_level) {
-    const MetaInfo& info = m_metainfo[image_ID];
-#if _DEBUG
-    if (index.x >= info.width || index.y >= info.height) {
-        printf("Pixel index [%u, %u] is outside the bounds [%u, %u]\n", index.x, index.y, info.width, info.height);
-        index.x = min(index.x, info.width - 1u);
-        index.y = min(index.y, info.height - 1u);
+    assert(index.x < Images::get_width(image_ID, mipmap_level));
+    assert(index.y < Images::get_height(image_ID, mipmap_level));
+
+    Image image = image_ID;
+    unsigned int pixel_index = index.x + image.get_width(mipmap_level) * index.y;
+    while (mipmap_level) {
+        --mipmap_level;
+        pixel_index += image.get_width(mipmap_level) * image.get_height(mipmap_level);
     }
-#endif
-    const unsigned int pixel_index = index.x + info.width * index.y;
-    set_pixel(image_ID, color, pixel_index, mipmap_level);
+    set_linear_pixel(image_ID, color, pixel_index);
+    flag_as_changed(image_ID, Changes::PixelsUpdated);
 }
 
 void Images::set_pixel(Images::UID image_ID, RGBA color, Vector3ui index, int mipmap_level) {
-    const MetaInfo& info = m_metainfo[image_ID];
-#if _DEBUG
-    if (index.x >= info.width || index.y >= info.height) {
-        printf("Pixel index [%u, %u, %u] is outside the bounds [%u, %u, %u]\n", index.x, index.y, index.z, info.width, info.height, info.depth);
-        index.x = min(index.x, info.width - 1u);
-        index.y = min(index.y, info.height - 1u);
-        index.z = min(index.z, info.depth - 1u);
+    assert(index.x < Images::get_width(image_ID, mipmap_level));
+    assert(index.y < Images::get_height(image_ID, mipmap_level));
+    assert(index.z < Images::get_depth(image_ID, mipmap_level));
+
+    Image image = image_ID;
+    unsigned int pixel_index = index.x + image.get_width(mipmap_level) * (index.y + image.get_height(mipmap_level) * index.z);
+    while (mipmap_level) {
+        --mipmap_level;
+        pixel_index += image.get_width(mipmap_level) * image.get_height(mipmap_level) * image.get_depth(mipmap_level);
     }
-#endif
-    const unsigned int pixel_index = index.x + info.width * (index.y + info.height * index.z);
-    set_pixel(image_ID, color, pixel_index, mipmap_level);
+    set_linear_pixel(image_ID, color, pixel_index);
+    flag_as_changed(image_ID, Changes::PixelsUpdated);
 }
 
 void Images::flag_as_changed(Images::UID image_ID, unsigned int change) {
@@ -285,6 +320,63 @@ Images::UID change_format(Images::UID image_ID, PixelFormat new_format) {
     }
 
     return new_image_ID;
+}
+
+void fill_mipmap_chain(Images::UID image_ID) {
+    // Future work: Optimize for the most used data formats.
+    Image image = image_ID;
+    for (unsigned int m = 0; m < image.get_mipmap_count() - 1; ++m) {
+        for (unsigned int y = 0; y + 1 < image.get_height(m); y += 2) {
+            for (unsigned int x = 0; x + 1 < image.get_width(m); x += 2) {
+
+                RGBA lower_left = image.get_pixel(Math::Vector2ui(x, y), m);
+                RGBA lower_right = image.get_pixel(Math::Vector2ui(x + 1, y), m);
+                RGBA upper_left = image.get_pixel(Math::Vector2ui(x, y + 1), m);
+                RGBA upper_right = image.get_pixel(Math::Vector2ui(x + 1, y + 1), m);
+
+                RGB new_rgb = (lower_left.rgb() + lower_right.rgb() + upper_left.rgb() + upper_right.rgb()) * 0.25f;
+                float new_alpha = (lower_left.a + lower_right.a + upper_left.a + upper_right.a) * 0.25f;
+                image.set_pixel(RGBA(new_rgb, new_alpha), Math::Vector2ui(x / 2, y / 2), m + 1);
+            }
+
+            // If uneven number of columns, then add the last column into the last column of the next mipmap level.
+            if (image.get_width(m) & 0x1) {
+                RGBA left = image.get_pixel(Math::Vector2ui(image.get_width(m + 1) - 1, y / 2), m + 1);
+                RGBA lower_right = image.get_pixel(Math::Vector2ui(image.get_width(m) - 1, y), m);
+                RGBA upper_right = image.get_pixel(Math::Vector2ui(image.get_width(m) - 1, y + 1), m);
+                RGB rgb = (left.rgb() * 4.0f + lower_right.rgb() + upper_right.rgb()) / 6.0f;
+                float alpha = (left.a * 4.0f + lower_right.a + upper_right.a) / 6.0f;
+                image.set_pixel(RGBA(rgb, alpha), Math::Vector2ui((image.get_width(m + 1) - 1), y / 2), m + 1);
+            }
+        }
+
+        // If uneven number of rows, then add the last row into the last row of the next mipmap level.
+        if (image.get_height(m) & 0x1) {
+            bool uneven_column_count = image.get_width(m) & 0x1;
+            unsigned int regular_columns = image.get_width(m) - (uneven_column_count ? 3u : 0u);
+            for (unsigned int x = 0; x < regular_columns; x += 2) {
+                RGBA lower = image.get_pixel(Math::Vector2ui(x / 2, image.get_height(m + 1) - 1), m + 1);
+                RGBA upper_left = image.get_pixel(Math::Vector2ui(x, image.get_height(m) - 1), m);
+                RGBA upper_right = image.get_pixel(Math::Vector2ui(x + 1, image.get_height(m) - 1), m);
+                RGB rgb = (lower.rgb() * 4.0f + upper_left.rgb() + upper_right.rgb()) / 6.0f;
+                float alpha = (lower.a * 4.0f + upper_left.a + upper_right.a) / 6.0f;
+                image.set_pixel(RGBA(rgb, alpha), Math::Vector2ui(x / 2, (image.get_height(m + 1) - 1)), m + 1);
+            }
+
+            // If both the row and column count are uneven, then we still need to blend 3 edge pixels into the next mipmap pixel
+            if (uneven_column_count) {
+                RGBA lower = image.get_pixel(Math::Vector2ui(image.get_width(m + 1) - 1, image.get_height(m + 1) - 1), m + 1);
+                RGBA upper_left = image.get_pixel(Math::Vector2ui(image.get_width(m) - 3, image.get_height(m) - 1), m);
+                RGBA upper_middle = image.get_pixel(Math::Vector2ui(image.get_width(m) - 2, image.get_height(m) - 1), m);
+                RGBA upper_right = image.get_pixel(Math::Vector2ui(image.get_width(m) - 1, image.get_height(m) - 1), m);
+                // printf("upper %s\n", upper.to_string().c_str());
+                // printf("lower %s\n", lower.to_string().c_str());
+                RGB rgb = (lower.rgb() * 6.0f + upper_left.rgb() + upper_middle.rgb() + upper_right.rgb()) / 9.0f;
+                float alpha = (lower.a * 6.0f + upper_left.a + upper_middle.a + upper_right.a) / 9.0f;
+                image.set_pixel(RGBA(rgb, alpha), Math::Vector2ui(image.get_width(m + 1) - 1, image.get_height(m + 1) - 1), m + 1);
+            }
+        }
+    }
 }
 
 } // NS ImageUtils

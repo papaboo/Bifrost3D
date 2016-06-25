@@ -44,30 +44,30 @@ TEST_F(Assets_Images, sentinel_material) {
     Images::UID sentinel_ID = Images::UID::invalid_UID();
 
     EXPECT_FALSE(Images::has(sentinel_ID));
-    EXPECT_EQ(Images::get_pixel_format(sentinel_ID), PixelFormat::Unknown);
-    EXPECT_EQ(Images::get_mipmap_count(sentinel_ID), 0u);
-    EXPECT_EQ(Images::get_width(sentinel_ID), 1u);
-    EXPECT_EQ(Images::get_height(sentinel_ID), 1u);
-    EXPECT_EQ(Images::get_depth(sentinel_ID), 1u);
-    EXPECT_EQ(Images::get_pixels(sentinel_ID), nullptr);
+    EXPECT_EQ(PixelFormat::Unknown, Images::get_pixel_format(sentinel_ID));
+    EXPECT_EQ(0u, Images::get_mipmap_count(sentinel_ID));
+    EXPECT_EQ(1u, Images::get_width(sentinel_ID));
+    EXPECT_EQ(1u, Images::get_height(sentinel_ID));
+    EXPECT_EQ(1u, Images::get_depth(sentinel_ID));
+    EXPECT_EQ(nullptr, Images::get_pixels(sentinel_ID));
 }
 
 TEST_F(Assets_Images, create) {
     Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1,2,3));
 
     EXPECT_TRUE(Images::has(image_ID));
-    EXPECT_EQ(Images::get_pixel_format(image_ID), PixelFormat::RGBA32);
-    EXPECT_EQ(Images::get_gamma(image_ID), 2.2f);
-    EXPECT_EQ(Images::get_mipmap_count(image_ID), 1u);
-    EXPECT_EQ(Images::get_width(image_ID), 1u);
-    EXPECT_EQ(Images::get_height(image_ID), 2u);
-    EXPECT_EQ(Images::get_depth(image_ID), 3u);
-    EXPECT_NE(Images::get_pixels(image_ID), nullptr);
+    EXPECT_EQ(PixelFormat::RGBA32, Images::get_pixel_format(image_ID));
+    EXPECT_EQ(2.2f, Images::get_gamma(image_ID));
+    EXPECT_EQ(1u, Images::get_mipmap_count(image_ID));
+    EXPECT_EQ(1u, Images::get_width(image_ID));
+    EXPECT_EQ(2u, Images::get_height(image_ID));
+    EXPECT_EQ(3u, Images::get_depth(image_ID));
+    EXPECT_NE(nullptr, Images::get_pixels(image_ID));
 
     // Test image created notification.
     Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
-    EXPECT_EQ(changed_images.end() - changed_images.begin(), 1);
-    EXPECT_EQ(*changed_images.begin(), image_ID);
+    EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
+    EXPECT_EQ(image_ID, *changed_images.begin());
     EXPECT_TRUE(Images::has_changes(image_ID, Images::Changes::Created));
     EXPECT_FALSE(Images::has_changes(image_ID, Images::Changes::PixelsUpdated));
 }
@@ -83,8 +83,8 @@ TEST_F(Assets_Images, destroy) {
 
     // Test image destroyed notification.
     Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
-    EXPECT_EQ(changed_images.end() - changed_images.begin(), 1);
-    EXPECT_EQ(*changed_images.begin(), image_ID);
+    EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
+    EXPECT_EQ(image_ID, *changed_images.begin());
     EXPECT_TRUE(Images::has_changes(image_ID, Images::Changes::Destroyed));
 }
 
@@ -96,7 +96,7 @@ TEST_F(Assets_Images, create_and_destroy_notifications) {
 
     { // Test image create notifications.
         Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
-        EXPECT_EQ(changed_images.end() - changed_images.begin(), 2);
+        EXPECT_EQ(2u, changed_images.end() - changed_images.begin());
 
         bool image0_created = false;
         bool image1_created = false;
@@ -123,7 +123,7 @@ TEST_F(Assets_Images, create_and_destroy_notifications) {
         EXPECT_FALSE(Images::has(image_ID0));
 
         Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
-        EXPECT_EQ(changed_images.end() - changed_images.begin(), 1);
+        EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
 
         bool image0_destroyed = false;
         bool other_events = false;
@@ -158,14 +158,14 @@ TEST_F(Assets_Images, create_and_change) {
 
     // Test that creating and changing an image creates a single change.
     Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
-    EXPECT_EQ(changed_images.end() - changed_images.begin(), 1);
-    EXPECT_EQ(*changed_images.begin(), image_ID);
+    EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
+    EXPECT_EQ(image_ID, *changed_images.begin());
     EXPECT_TRUE(Images::has_changes(image_ID, Images::Changes::Created));
     EXPECT_TRUE(Images::has_changes(image_ID, Images::Changes::PixelsUpdated));
 }
 
 TEST_F(Assets_Images, pixel_updates) {
-    Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA_Float, 2.2f, Math::Vector2ui(3, 2));
+    Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA_Float, 2.2f, Math::Vector2ui(3, 2), 2);
 
     Images::set_pixel(image_ID, Math::RGBA(1, 2, 3, 1), Math::Vector2ui(0, 0));
     Images::set_pixel(image_ID, Math::RGBA(4, 5, 6, 1), Math::Vector2ui(1, 0));
@@ -173,40 +173,71 @@ TEST_F(Assets_Images, pixel_updates) {
     Images::set_pixel(image_ID, Math::RGBA(11, 12, 13, 1), Math::Vector2ui(0, 1));
     Images::set_pixel(image_ID, Math::RGBA(14, 15, 16, 1), Math::Vector2ui(1, 1));
     Images::set_pixel(image_ID, Math::RGBA(17, 18, 19, 1), Math::Vector2ui(2, 1));
+    Images::set_pixel(image_ID, Math::RGBA(20, 21, 22, 1), Math::Vector2ui(0, 0), 1);
 
     // Test that editing multiple pixels create a single change.
     Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
-    EXPECT_EQ(changed_images.end() - changed_images.begin(), 1);
+    EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
 
     // Test that the pixels have the correct colors.
-    EXPECT_RGBA_EQ(Images::get_pixel(image_ID, Math::Vector2ui(0, 0)), Math::RGBA(1, 2, 3, 1));
-    EXPECT_RGBA_EQ(Images::get_pixel(image_ID, Math::Vector2ui(1, 0)), Math::RGBA(4, 5, 6, 1));
-    EXPECT_RGBA_EQ(Images::get_pixel(image_ID, Math::Vector2ui(2, 0)), Math::RGBA(7, 8, 9, 1));
-    EXPECT_RGBA_EQ(Images::get_pixel(image_ID, Math::Vector2ui(0, 1)), Math::RGBA(11, 12, 13, 1));
-    EXPECT_RGBA_EQ(Images::get_pixel(image_ID, Math::Vector2ui(1, 1)), Math::RGBA(14, 15, 16, 1));
-    EXPECT_RGBA_EQ(Images::get_pixel(image_ID, Math::Vector2ui(2, 1)), Math::RGBA(17, 18, 19, 1));
+    EXPECT_RGBA_EQ(Math::RGBA(1, 2, 3, 1), Images::get_pixel(image_ID, Math::Vector2ui(0, 0)));
+    EXPECT_RGBA_EQ(Math::RGBA(4, 5, 6, 1), Images::get_pixel(image_ID, Math::Vector2ui(1, 0)));
+    EXPECT_RGBA_EQ(Math::RGBA(7, 8, 9, 1), Images::get_pixel(image_ID, Math::Vector2ui(2, 0)));
+    EXPECT_RGBA_EQ(Math::RGBA(11, 12, 13, 1), Images::get_pixel(image_ID, Math::Vector2ui(0, 1)));
+    EXPECT_RGBA_EQ(Math::RGBA(14, 15, 16, 1), Images::get_pixel(image_ID, Math::Vector2ui(1, 1)));
+    EXPECT_RGBA_EQ(Math::RGBA(17, 18, 19, 1), Images::get_pixel(image_ID, Math::Vector2ui(2, 1)));
+    EXPECT_RGBA_EQ(Math::RGBA(20, 21, 22, 1), Images::get_pixel(image_ID, Math::Vector2ui(0, 0), 1));
 }
 
 TEST_F(Assets_Images, mipmap_size) {
     unsigned int mipmap_count = 4u;
     Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(8, 6), mipmap_count);
 
-    EXPECT_EQ(Images::get_mipmap_count(image_ID), mipmap_count);
+    EXPECT_EQ(mipmap_count, Images::get_mipmap_count(image_ID));
 
-    EXPECT_EQ(Images::get_width(image_ID, 0), 8u);
-    EXPECT_EQ(Images::get_width(image_ID, 1), 4u);
-    EXPECT_EQ(Images::get_width(image_ID, 2), 2u);
-    EXPECT_EQ(Images::get_width(image_ID, 3), 1u);
+    EXPECT_EQ(8u, Images::get_width(image_ID, 0));
+    EXPECT_EQ(4u, Images::get_width(image_ID, 1));
+    EXPECT_EQ(2u, Images::get_width(image_ID, 2));
+    EXPECT_EQ(1u, Images::get_width(image_ID, 3));
 
-    EXPECT_EQ(Images::get_height(image_ID, 0), 6u);
-    EXPECT_EQ(Images::get_height(image_ID, 1), 3u);
-    EXPECT_EQ(Images::get_height(image_ID, 2), 1u);
-    EXPECT_EQ(Images::get_height(image_ID, 3), 1u);
+    EXPECT_EQ(6u, Images::get_height(image_ID, 0));
+    EXPECT_EQ(3u, Images::get_height(image_ID, 1));
+    EXPECT_EQ(1u, Images::get_height(image_ID, 2));
+    EXPECT_EQ(1u, Images::get_height(image_ID, 3));
 
-    EXPECT_EQ(Images::get_depth(image_ID, 0), 1u);
-    EXPECT_EQ(Images::get_depth(image_ID, 1), 1u);
-    EXPECT_EQ(Images::get_depth(image_ID, 2), 1u);
-    EXPECT_EQ(Images::get_depth(image_ID, 3), 1u);
+    EXPECT_EQ(1u, Images::get_depth(image_ID, 0));
+    EXPECT_EQ(1u, Images::get_depth(image_ID, 1));
+    EXPECT_EQ(1u, Images::get_depth(image_ID, 2));
+    EXPECT_EQ(1u, Images::get_depth(image_ID, 3));
+}
+
+TEST_F(Assets_Images, fill_mipmaps) {
+    using namespace Cogwheel::Math;
+
+    unsigned int width = 7, height = 5, mipmap_count = 3u;
+    Image image = Images::create("Test image", PixelFormat::RGBA_Float, 1.0f, Vector2ui(width, height), mipmap_count);
+
+    EXPECT_EQ(7u, image.get_width(0));
+    EXPECT_EQ(3u, image.get_width(1));
+    EXPECT_EQ(1u, image.get_width(2));
+
+    EXPECT_EQ(5u, image.get_height(0));
+    EXPECT_EQ(2u, image.get_height(1));
+    EXPECT_EQ(1u, image.get_height(2));
+
+    for (unsigned int y = 0; y < height; ++y)
+        for (unsigned int x = 0; x < width; ++x)
+            image.set_pixel(RGBA(float(x), float(y), 0.0f, 1.0f), Vector2i(x, y));
+
+    ImageUtils::fill_mipmap_chain(image.get_ID());
+
+    EXPECT_RGBA_EQ(RGBA(0.5f, 0.5f, 0.0f, 1.0f), image.get_pixel(Vector2i(0, 0), 1));
+    EXPECT_RGBA_EQ(RGBA(2.5f, 0.5f, 0.0f, 1.0f), image.get_pixel(Vector2i(1, 0), 1));
+    EXPECT_RGBA_EQ(RGBA(5.0f, 0.5f, 0.0f, 1.0f), image.get_pixel(Vector2i(2, 0), 1));
+    EXPECT_RGBA_EQ(RGBA(0.5f, 3.0f, 0.0f, 1.0f), image.get_pixel(Vector2i(0, 1), 1));
+    EXPECT_RGBA_EQ(RGBA(2.5f, 3.0f, 0.0f, 1.0f), image.get_pixel(Vector2i(1, 1), 1));
+    EXPECT_RGBA_EQ(RGBA(5.0f, 3.0f, 0.0f, 1.0f), image.get_pixel(Vector2i(2, 1), 1));
+    // EXPECT_RGBA_EQ(RGBA(3.0f, 2.0f, 0.0f, 1.0f), image.get_pixel(Vector2i(0, 0), 2)); // NOTE The curent mipmap chain fill can tend to scew the result if textures are non-power-of-two.
 }
 
 } // NS Assets
