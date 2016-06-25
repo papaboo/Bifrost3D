@@ -22,6 +22,7 @@ namespace Scene {
 // The scene root contains the root scene node and scene specific properties,
 // such as the background color or environment map.
 // Future work
+// * Environment projection modes: infinite sphere, camera X m above the earth, cube, sphere, ...
 // * Change flags and iterator. Wait until we have multiscene support.
 // * Do we need to store SceneS::UIDs of the owning scene in the scene nodes?
 //   Wait until we have multi scene support to add it.
