@@ -168,7 +168,7 @@ static RGBA get_gammaed_pixel(Images::UID image_ID, unsigned int index) {
     return RGBA::red();
 }
 
-RGBA Images::get_pixel(Images::UID image_ID, unsigned int index, int mipmap_level) {
+RGBA Images::get_pixel(Images::UID image_ID, unsigned int index, unsigned int mipmap_level) {
     assert(index < Images::get_width(image_ID, mipmap_level));
 
     while (mipmap_level)
@@ -177,7 +177,7 @@ RGBA Images::get_pixel(Images::UID image_ID, unsigned int index, int mipmap_leve
     return gammacorrect(gammaed_color, Images::get_gamma(image_ID));
 }
 
-RGBA Images::get_pixel(Images::UID image_ID, Vector2ui index, int mipmap_level) {
+RGBA Images::get_pixel(Images::UID image_ID, Vector2ui index, unsigned int mipmap_level) {
     assert(index.x < Images::get_width(image_ID, mipmap_level));
     assert(index.y < Images::get_height(image_ID, mipmap_level));
 
@@ -191,7 +191,7 @@ RGBA Images::get_pixel(Images::UID image_ID, Vector2ui index, int mipmap_level) 
     return gammacorrect(gammaed_color, Images::get_gamma(image_ID));
 }
 
-RGBA Images::get_pixel(Images::UID image_ID, Vector3ui index, int mipmap_level) {
+RGBA Images::get_pixel(Images::UID image_ID, Vector3ui index, unsigned int mipmap_level) {
     assert(index.x < Images::get_width(image_ID, mipmap_level));
     assert(index.y < Images::get_height(image_ID, mipmap_level));
     assert(index.z < Images::get_depth(image_ID, mipmap_level));
@@ -245,7 +245,7 @@ static void set_linear_pixel(Images::UID image_ID, RGBA color, unsigned int inde
     }
 }
 
-void Images::set_pixel(Images::UID image_ID, RGBA color, unsigned int index, int mipmap_level) {
+void Images::set_pixel(Images::UID image_ID, RGBA color, unsigned int index, unsigned int mipmap_level) {
     assert(index < Images::get_width(image_ID, mipmap_level));
 
     Image image = image_ID;
@@ -256,7 +256,7 @@ void Images::set_pixel(Images::UID image_ID, RGBA color, unsigned int index, int
     flag_as_changed(image_ID, Changes::PixelsUpdated);
 }
 
-void Images::set_pixel(Images::UID image_ID, RGBA color, Vector2ui index, int mipmap_level) {
+void Images::set_pixel(Images::UID image_ID, RGBA color, Vector2ui index, unsigned int mipmap_level) {
     assert(index.x < Images::get_width(image_ID, mipmap_level));
     assert(index.y < Images::get_height(image_ID, mipmap_level));
 
@@ -270,7 +270,7 @@ void Images::set_pixel(Images::UID image_ID, RGBA color, Vector2ui index, int mi
     flag_as_changed(image_ID, Changes::PixelsUpdated);
 }
 
-void Images::set_pixel(Images::UID image_ID, RGBA color, Vector3ui index, int mipmap_level) {
+void Images::set_pixel(Images::UID image_ID, RGBA color, Vector3ui index, unsigned int mipmap_level) {
     assert(index.x < Images::get_width(image_ID, mipmap_level));
     assert(index.y < Images::get_height(image_ID, mipmap_level));
     assert(index.z < Images::get_depth(image_ID, mipmap_level));
