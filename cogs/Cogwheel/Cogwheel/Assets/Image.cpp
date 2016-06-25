@@ -311,13 +311,16 @@ Images::UID change_format(Images::UID image_ID, PixelFormat new_format) {
     Images::UID new_image_ID = Images::create(image.get_name(), new_format, image.get_gamma(), size, mipmap_count);
 
     // TODO Specialize for most common formats.
-    for (unsigned int m = 0; m < mipmap_count; ++m) {
-        unsigned int pixel_count = image.get_pixel_count(m);
-        for (unsigned int p = 0; p < pixel_count; ++p) {
-            RGBA pixel = image.get_pixel(p, m);
-            Images::set_pixel(new_image_ID, pixel, p, m);
-        }
-    }
+    // TODO Create a function that takes a lambda and applies it (in parallel) to all pixels and use that.
+    for (unsigned int m = 0; m < mipmap_count; ++m)
+        for (unsigned int z = 0; z < image.get_depth(m); ++z)
+            for (unsigned int y = 0; y < image.get_height(m); ++y)
+                #pragma omp parallel for schedule(dynamic, 16)
+                for (int x = 0; x < int(image.get_width(m)); ++x) {
+                    Math::Vector3ui index = Math::Vector3ui(x, y, z);
+                    RGBA pixel = image.get_pixel(index, m);
+                    Images::set_pixel(new_image_ID, pixel, index, m);
+                }
 
     return new_image_ID;
 }
