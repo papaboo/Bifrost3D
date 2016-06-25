@@ -17,8 +17,6 @@ namespace StbImageLoader {
 // -----------------------------------------------------------------------
 // Loads an image file.
 // Basic support for png, exr, jpg and more.
-// Future work
-// * HDR support.
 // -----------------------------------------------------------------------
 Cogwheel::Assets::Images::UID load(const std::string& filename);
 
