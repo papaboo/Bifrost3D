@@ -29,6 +29,7 @@ using namespace Cogwheel::Math;
 using namespace Cogwheel::Scene;
 
 static std::string g_scene;
+static std::string g_environment;
 static float g_scene_size;
 
 class Navigation final {
@@ -155,12 +156,36 @@ void initializer(Cogwheel::Core::Engine& engine) {
     Textures::allocate(8u);
 
     engine.add_tick_cleanup_callback(scenenode_cleanup_callback, nullptr);
-    
+
+    /*
+    // Debug env map.
+    unsigned int width = 16, height = 8;
+    Image image = Images::create("latlong", PixelFormat::RGBA_Float, 1.0f, Math::Vector2ui(width, height));
+    float* pixels = (float*)image.get_pixels();
+    for (unsigned int y = 0; y < height; ++y) {
+    for (unsigned int x = 0; x < width; ++x) {
+    float* pixel = pixels + (x + y * width) * 4;
+    pixel[0] = x / float(width - 1); pixel[1] = y / float(height - 1); pixel[2] = 0.5f; pixel[3] = 1.0f;
+    }
+    }
+    */
+
     // TODO Scene and scene color should be set up by the test scenes themselves.
     Scenes::allocate(1u);
     SceneNodes::UID root_node_ID = SceneNodes::create("Root");
-    Scenes::UID scene_ID = Scenes::create("Model scene", root_node_ID, RGB(0.68f, 0.92f, 1.0f));
-
+    Scenes::UID scene_ID = Scenes::UID::invalid_UID();
+    if (!g_environment.empty()) {
+        Image image = StbImageLoader::load(g_environment);
+        if (channel_count(image.get_pixel_format()) != 4) {
+            Image new_image = ImageUtils::change_format(image.get_ID(), PixelFormat::RGBA_Float);
+            Images::destroy(image.get_ID());
+            image = new_image;
+        }
+        Textures::UID env_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear);
+        scene_ID = Scenes::create("Model scene", root_node_ID, env_ID);
+    } else
+        scene_ID = Scenes::create("Model scene", root_node_ID, RGB(0.68f, 0.92f, 1.0f));
+    
     // Create camera
     SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
 
@@ -231,7 +256,8 @@ void print_usage() {
     char* usage =
         "usage simpleviewer:\n"
         "  -h | --help: Show command line usage for simpleviewer.\n"
-        "  -s | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'MaterialScene' and 'TestScene', which loads the corresponding builtin scenes.\n";
+        "  -s | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'MaterialScene' and 'TestScene', which loads the corresponding builtin scenes.\n"
+        "  -e | --environment <image>: Loads the specified image for the environment.\n";
     printf("%s", usage);
 }
 
@@ -242,8 +268,17 @@ void main(int argc, char** argv) {
         print_usage();
         return;
     }  
-    
-    g_scene = argc >= 3 ? std::string(argv[2]) : "";
+
+    // Parse command line arguments.
+    int argument = 1;
+    while (argument < argc) {
+        if (strcmp(argv[argument], "--scene") == 0 || strcmp(argv[argument], "-s") == 0)
+            g_scene = std::string(argv[++argument]);
+        else if (strcmp(argv[argument], "--environment") == 0 || strcmp(argv[argument], "-e") == 0)
+            g_environment = std::string(argv[++argument]);
+        ++argument;
+    }
+
     if (g_scene.empty())
         printf("SimpleViewer will display the Cornell Box scene.\n");
 
