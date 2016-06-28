@@ -1,11 +1,17 @@
-* Create scene abstraction.
-** Environment models.
-*** Compute latlong environment CDF.
-*** Add a 'stabler' CDF computation.
-*** Future work: Structuring the CDF as 'breath first' should improve the cache hit rate of the first couple of lookups when we do binary search or? Profile!
+* Environment models.
+** Compute latlong environment CDF.
+** Future work: Structuring the CDF as 'breath first' should improve the cache hit rate of the first couple of lookups when we do binary search or? Profile!
 * Mesh combiner.
+** Combiner.
+*** Combine if the materials are similar.
+*** Should it just collapse a whole subgraph or should we explicitly pick a material and choose a transform+name for the new node?
+*** What should we name the new nodes?
+*** What should their transforms be?
+** Forsyth index sorting. Lets see if it speeds up OptiX rendering. https://code.google.com/archive/p/vcacne/
+** What about vertex sorting? Base it on a morton curve, order of appearance in the index array or 'clustered index array position'.
 * Reduce TODOs.
 ** There are some in the MIS sampling.
+** Meshcombine the floor in the material scene.
 ** Precompute material parameters for DefaultShading.
 ** Etc
 * Bump mapping
@@ -14,6 +20,7 @@
 ** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
 * Materials revisited.
+** Is sRGB / gamma correctly handled? The X-Wing looks really dark in environments.
 ** Add Burley and Oren-Nayar BRDF. Burley should exclude the fresnel term, as that is part of the overall combiner.
 ** Use perfectly specular BRDFs for tiny roughness values.
 *** Adapt MIS to handle specular surfaces.
@@ -30,14 +37,12 @@
 ** Render to offscreen buffer.
 * Multiple scenes.
 ** Only nodes in a certain scene should be rendered.
-** A scene node should know if it is in a scene and in which. Store the root scene ID pr node?
-** A requirement for the asset manager to not simply add loaded nodes directly into the scene.
+** Should a scene node know if it is in a scene and in which? Store the root scene ID pr node?
 * Serialize scene and models.
 
 libs
-* https://code.google.com/archive/p/vcacne/
 * Emscripten
 * LuaJit - OpenSource (Fallback to interpretted Lua if the target architecture isn't supported.)
+* OpenEXR + ZLib or TinyEXR.
 * Add ZLib and LibPNG.
 ** Generalize CMake source download function / macro. Found in GLFW.
-* OpenEXR.
