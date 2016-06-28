@@ -22,8 +22,7 @@ namespace Scene {
 // ---------------------------------------------------------------------------
 // Container class for cogwheel light sources.
 // Future work
-// * Environment map.
-// * Importance sampled environment map.
+// * Should environment map be added here?
 // * Setters.
 // ---------------------------------------------------------------------------
 class LightSources final {
@@ -114,7 +113,7 @@ private:
 };
 
 // ---------------------------------------------------------------------------
-// The cogwheel sphere light wrapper.
+// Cogwheel sphere light wrapper.
 // ---------------------------------------------------------------------------
 class SphereLight final {
 public:
@@ -149,7 +148,7 @@ private:
 };
 
 // ---------------------------------------------------------------------------
-// The cogwheel directinoal light wrapper.
+// Cogwheel directional light wrapper.
 // ---------------------------------------------------------------------------
 class DirectionalLight final {
 public:
