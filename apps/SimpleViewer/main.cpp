@@ -30,6 +30,7 @@ using namespace Cogwheel::Scene;
 
 static std::string g_scene;
 static std::string g_environment;
+static RGB g_environment_color = RGB(0.68f, 0.92f, 1.0f);
 static float g_scene_size;
 
 class Navigation final {
@@ -157,19 +158,6 @@ void initializer(Cogwheel::Core::Engine& engine) {
 
     engine.add_tick_cleanup_callback(scenenode_cleanup_callback, nullptr);
 
-    /*
-    // Debug env map.
-    unsigned int width = 16, height = 8;
-    Image image = Images::create("latlong", PixelFormat::RGBA_Float, 1.0f, Math::Vector2ui(width, height));
-    float* pixels = (float*)image.get_pixels();
-    for (unsigned int y = 0; y < height; ++y) {
-    for (unsigned int x = 0; x < width; ++x) {
-    float* pixel = pixels + (x + y * width) * 4;
-    pixel[0] = x / float(width - 1); pixel[1] = y / float(height - 1); pixel[2] = 0.5f; pixel[3] = 1.0f;
-    }
-    }
-    */
-
     // TODO Scene and scene color should be set up by the test scenes themselves.
     Scenes::allocate(1u);
     SceneNodes::UID root_node_ID = SceneNodes::create("Root");
@@ -184,7 +172,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
         Textures::UID env_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear);
         scene_ID = Scenes::create("Model scene", root_node_ID, env_ID);
     } else
-        scene_ID = Scenes::create("Model scene", root_node_ID, RGB(0.68f, 0.92f, 1.0f));
+        scene_ID = Scenes::create("Model scene", root_node_ID, g_environment_color);
     
     // Create camera
     SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
@@ -257,8 +245,26 @@ void print_usage() {
         "usage simpleviewer:\n"
         "  -h | --help: Show command line usage for simpleviewer.\n"
         "  -s | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'MaterialScene' and 'TestScene', which loads the corresponding builtin scenes.\n"
-        "  -e | --environment <image>: Loads the specified image for the environment.\n";
+        "  -e | --environment-map <image>: Loads the specified image for the environment.\n"
+        "  -c | --environment-color <RGB>: Sets the background color to the specified value.\n";
     printf("%s", usage);
+}
+
+// String representation is assumed to be "[r, g, b]".
+RGB parse_RGB(const std::string& rgb_str) {
+    const char* red_begin = rgb_str.c_str() + 1; // Skip [
+    char* channel_end;
+    RGB result = RGB::black();
+
+    result.r = strtof(red_begin, &channel_end);
+
+    char* g_begin = channel_end + 1; // Skip ,
+    result.g = strtof(g_begin, &channel_end);
+
+    char* b_begin = channel_end + 1; // Skip ,
+    result.b = strtof(b_begin, &channel_end);
+
+    return result;
 }
 
 void main(int argc, char** argv) {
@@ -274,8 +280,12 @@ void main(int argc, char** argv) {
     while (argument < argc) {
         if (strcmp(argv[argument], "--scene") == 0 || strcmp(argv[argument], "-s") == 0)
             g_scene = std::string(argv[++argument]);
-        else if (strcmp(argv[argument], "--environment") == 0 || strcmp(argv[argument], "-e") == 0)
+        else if (strcmp(argv[argument], "--environment-map") == 0 || strcmp(argv[argument], "-e") == 0)
             g_environment = std::string(argv[++argument]);
+        else if (strcmp(argv[argument], "--environment-color") == 0 || strcmp(argv[argument], "-c") == 0)
+            g_environment_color = parse_RGB(std::string(argv[++argument]));
+        else
+            printf("Unknown argument: '%s'\n", argv[argument]);
         ++argument;
     }
 
