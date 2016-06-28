@@ -6,17 +6,17 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include <Cogwheel/Scene/Scene.h>
+#include <Cogwheel/Scene/SceneRoot.h>
 
 #include <assert.h>
 
 namespace Cogwheel {
 namespace Scene {
 
-Scenes::UIDGenerator Scenes::m_UID_generator = UIDGenerator(0u);
-Scenes::Scene* Scenes::m_scenes = nullptr;
+SceneRoots::UIDGenerator SceneRoots::m_UID_generator = UIDGenerator(0u);
+SceneRoots::Scene* SceneRoots::m_scenes = nullptr;
 
-void Scenes::allocate(unsigned int capacity) {
+void SceneRoots::allocate(unsigned int capacity) {
     if (is_allocated())
         return;
 
@@ -32,7 +32,7 @@ void Scenes::allocate(unsigned int capacity) {
     m_scenes[0].environment_map = Assets::Textures::UID::invalid_UID();
 }
 
-void Scenes::deallocate() {
+void SceneRoots::deallocate() {
     if (!is_allocated())
         return;
 
@@ -40,7 +40,7 @@ void Scenes::deallocate() {
     delete[] m_scenes; m_scenes = nullptr;
 }
 
-void Scenes::reserve(unsigned int new_capacity) {
+void SceneRoots::reserve(unsigned int new_capacity) {
     unsigned int old_capacity = capacity();
     m_UID_generator.reserve(new_capacity);
     reserve_scene_data(m_UID_generator.capacity(), old_capacity);
@@ -54,7 +54,7 @@ static inline T* resize_and_copy_array(T* old_array, unsigned int new_capacity, 
     return new_array;
 }
 
-void Scenes::reserve_scene_data(unsigned int new_capacity, unsigned int old_capacity) {
+void SceneRoots::reserve_scene_data(unsigned int new_capacity, unsigned int old_capacity) {
     assert(m_scenes != nullptr);
 
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
@@ -62,7 +62,7 @@ void Scenes::reserve_scene_data(unsigned int new_capacity, unsigned int old_capa
     m_scenes = resize_and_copy_array(m_scenes, new_capacity, copyable_elements);
 }
 
-Scenes::UID Scenes::create(const std::string& name, SceneNodes::UID root, Math::RGB background_color) {
+SceneRoots::UID SceneRoots::create(const std::string& name, SceneNodes::UID root, Math::RGB background_color) {
     assert(m_scenes != nullptr);
 
     unsigned int old_capacity = m_UID_generator.capacity();
@@ -79,7 +79,7 @@ Scenes::UID Scenes::create(const std::string& name, SceneNodes::UID root, Math::
     return id;
 }
 
-Scenes::UID Scenes::create(const std::string& name, SceneNodes::UID root, Assets::Textures::UID environment_map) {
+SceneRoots::UID SceneRoots::create(const std::string& name, SceneNodes::UID root, Assets::Textures::UID environment_map) {
     assert(m_scenes != nullptr);
 
     unsigned int old_capacity = m_UID_generator.capacity();

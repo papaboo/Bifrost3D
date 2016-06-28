@@ -53,10 +53,10 @@ SET(SCENE_SRCS
   Cogwheel/Scene/Camera.h
   Cogwheel/Scene/LightSource.cpp
   Cogwheel/Scene/LightSource.h
-  Cogwheel/Scene/Scene.h
-  Cogwheel/Scene/Scene.cpp
   Cogwheel/Scene/SceneNode.cpp
   Cogwheel/Scene/SceneNode.h
+  Cogwheel/Scene/SceneRoot.cpp
+  Cogwheel/Scene/SceneRoot.h
 )
 
 add_library(Gogwheel ${ASSETS_SRCS} ${CORE_SRCS} ${INPUT_SRCS} ${MATH_SRCS} ${SCENE_SRCS})

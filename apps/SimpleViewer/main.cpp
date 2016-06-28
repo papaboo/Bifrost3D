@@ -9,8 +9,8 @@
 #include <Cogwheel/Input/Mouse.h>
 #include <Cogwheel/Scene/Camera.h>
 #include <Cogwheel/Scene/LightSource.h>
-#include <Cogwheel/Scene/Scene.h>
 #include <Cogwheel/Scene/SceneNode.h>
+#include <Cogwheel/Scene/SceneRoot.h>
 
 #include <GLFWDriver.h>
 
@@ -159,9 +159,9 @@ void initializer(Cogwheel::Core::Engine& engine) {
     engine.add_tick_cleanup_callback(scenenode_cleanup_callback, nullptr);
 
     // TODO Scene and scene color should be set up by the test scenes themselves.
-    Scenes::allocate(1u);
+    SceneRoots::allocate(1u);
     SceneNodes::UID root_node_ID = SceneNodes::create("Root");
-    Scenes::UID scene_ID = Scenes::UID::invalid_UID();
+    SceneRoots::UID scene_ID = SceneRoots::UID::invalid_UID();
     if (!g_environment.empty()) {
         Image image = StbImageLoader::load(g_environment);
         if (channel_count(image.get_pixel_format()) != 4) {
@@ -170,9 +170,9 @@ void initializer(Cogwheel::Core::Engine& engine) {
             image = new_image;
         }
         Textures::UID env_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear);
-        scene_ID = Scenes::create("Model scene", root_node_ID, env_ID);
+        scene_ID = SceneRoots::create("Model scene", root_node_ID, env_ID);
     } else
-        scene_ID = Scenes::create("Model scene", root_node_ID, g_environment_color);
+        scene_ID = SceneRoots::create("Model scene", root_node_ID, g_environment_color);
     
     // Create camera
     SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");

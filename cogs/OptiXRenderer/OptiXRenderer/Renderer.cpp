@@ -457,17 +457,17 @@ void Renderer::render() {
 
     if (m_state->accumulations == 0u) {
         Cameras::UID camera_ID = *Cameras::begin();
-        Scenes::UID scene_ID = Cameras::get_scene_ID(camera_ID); // TODO Scene instead of scene uid.
-        Math::RGB bg_color = Scenes::get_background_color(scene_ID);
+        SceneRoot scene = Cameras::get_scene_ID(camera_ID);
+        Math::RGB bg_color = scene.get_background_color();
         float3 background_color = make_float3(bg_color.r, bg_color.g, bg_color.b);
         context["g_scene_background_color"]->setFloat(background_color);
 
         // Setup the environment map. TODO Handle this via scene change flags or scene initialization instead.
-        Textures::UID environment_map_ID = Scenes::get_environment_map(scene_ID);
+        Textures::UID environment_map_ID = scene.get_environment_map();
         if (environment_map_ID != Textures::UID::invalid_UID()) {
             // Only textures with four channels are supported.
             Image image = Textures::get_image_ID(environment_map_ID);
-            if (channel_count(image.get_pixel_format()) == 4) { // TODO Support other formats as well, by converting the buffers to float4 and upload.
+            if (channel_count(image.get_pixel_format()) == 4) { // TODO Support other formats as well by converting the buffers to float4 and upload.
                 TextureSampler environment_sampler = m_state->textures[environment_map_ID];
                 context["g_scene_environment_map_ID"]->setUint(environment_sampler->getId());
             } else {
