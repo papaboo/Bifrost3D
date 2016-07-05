@@ -100,7 +100,7 @@ __inline_all__ optix::float2 direction_to_latlong_texcoord(const optix::float3& 
     return optix::make_float2(u, v);
 }
 
-__inline_all__ optix::float3 LatLongTexCoordsToDirection(const optix::float2& uv) {
+__inline_all__ optix::float3 latlong_texcoord_to_direction(const optix::float2& uv) {
     float phi = uv.x * 2.0f * PIf;
     float theta = uv.y * PIf;
     float sin_theta = sinf(theta);
