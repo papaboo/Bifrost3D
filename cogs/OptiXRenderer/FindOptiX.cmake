@@ -12,8 +12,8 @@ ENDMACRO(set_boolean)
 
 # First locate the OptiX search path.
 set(OPTIX_WINDOWS_SEARCH_PATHS
-  "C:/ProgramData/NVIDIA Corporation/OptiX SDK 3.9.0"
-  "C:/Program Files/NVIDIA Corporation/OptiX SDK 3.9.0"
+  "C:/ProgramData/NVIDIA Corporation/OptiX SDK 3.9.1"
+  "C:/Program Files/NVIDIA Corporation/OptiX SDK 3.9.1"
   "C:/ProgramData/NVIDIA Corporation/OptiX SDK 3.8.0"
   "C:/Program Files/NVIDIA Corporation/OptiX SDK 3.8.0")
 

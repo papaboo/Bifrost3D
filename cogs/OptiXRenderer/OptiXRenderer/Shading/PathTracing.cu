@@ -6,6 +6,7 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
+#include <OptiXRenderer/Shading/LightSources/EnvironmentLightImpl.h>
 #include <OptiXRenderer/Types.h>
 #include <OptiXRenderer/Utils.h>
 
@@ -57,6 +58,7 @@ RT_PROGRAM void path_tracing() {
     MonteCarloPRD prd;
     prd.radiance = make_float3(0.0f);
     prd.rng.seed(RNG::hash(index) ^ __brev(g_accumulations));
+    // prd.rng.seed(__brev(g_accumulations)); // Uniform seed.
     prd.throughput = make_float3(1.0f);
     prd.bounces = 0;
     prd.bsdf_MIS_PDF = 0.0f;
@@ -94,19 +96,34 @@ RT_PROGRAM void path_tracing() {
 // Miss program for monte carlo rays.
 //----------------------------------------------------------------------------
 
+rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(MonteCarloPRD, monte_carlo_PRD, rtPayload, );
 rtDeclareVariable(float3, g_scene_background_color, , );
-rtDeclareVariable(unsigned int, g_scene_environment_map_ID, , );
+rtDeclareVariable(EnvironmentLight, g_scene_environment_light, , ); // TODO Fetch from the end of the light source buffer and check type.
 
 RT_PROGRAM void miss() {
     float3 environment_radiance;
-    if (g_scene_environment_map_ID != 0u) {
-        float2 uv = direction_to_latlong_texcoord(monte_carlo_PRD.direction);
-        environment_radiance = make_float3(rtTex2D<float4>(g_scene_environment_map_ID, uv.x, uv.y));
+    unsigned int environment_map_ID = g_scene_environment_light.environment_map_ID;
+    if (environment_map_ID != 0u) {
+        environment_radiance = LightSources::evaluate(g_scene_environment_light, ray.origin, ray.direction);
+
+        bool next_event_estimated = monte_carlo_PRD.bounces != 0; // Was next event estimated at previous intersection.
+        bool apply_MIS = monte_carlo_PRD.bsdf_MIS_PDF > 0.0f;
+        if (apply_MIS) {
+            // Calculate MIS weight and scale the radiance by it.
+            const float light_PDF = LightSources::PDF(g_scene_environment_light, ray.origin, ray.direction);
+            float mis_weight = is_PDF_valid(light_PDF) ? RNG::power_heuristic(monte_carlo_PRD.bsdf_MIS_PDF, light_PDF) : 0.0f;
+            environment_radiance *= mis_weight;
+        } else if (next_event_estimated)
+            // Previous bounce used next even estimation, but did not calculate MIS, so don't apply light contribution.
+            // TODO Could this be handled by setting bsdf_MIS_PDF to 0 instead? Wait until we have a specular BRDF implementation.
+            environment_radiance = make_float3(0.0f);
     } else
         environment_radiance = g_scene_background_color;
 
-    monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * environment_radiance;
+    float3 scaled_radiance = monte_carlo_PRD.throughput * environment_radiance;
+    monte_carlo_PRD.radiance += clamp_light_contribution_by_pdf(scaled_radiance, monte_carlo_PRD.clamped_path_PDF, g_accumulations);
+
     monte_carlo_PRD.throughput = make_float3(0.0f);
 }
 

@@ -237,8 +237,8 @@ RT_PROGRAM void light_closest_hit() {
         // TODO Could this be handled by setting bsdf_MIS_PDF to 0 instead? Wait until we have a specular BRDF implementation.
         light_radiance = make_float3(0.0f);
 
-    float3 radiance = monte_carlo_PRD.throughput * light_radiance;
-    monte_carlo_PRD.radiance += clamp_light_contribution_by_pdf(radiance, monte_carlo_PRD.clamped_path_PDF, g_accumulations);
+    float3 scaled_radiance = monte_carlo_PRD.throughput * light_radiance;
+    monte_carlo_PRD.radiance += clamp_light_contribution_by_pdf(scaled_radiance, monte_carlo_PRD.clamped_path_PDF, g_accumulations);
 
     monte_carlo_PRD.throughput = make_float3(0.0f);
 }

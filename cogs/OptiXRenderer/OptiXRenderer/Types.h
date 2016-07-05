@@ -87,10 +87,11 @@ struct __align__(16) LightSample {
     }
 };
 
-namespace LightFlags {
-static const unsigned char None = 0u;
-static const unsigned char SphereLight = 1u << 0u;
-static const unsigned char DirectionalLight = 1u << 1u;
+enum class LightTypes { // TODO Make bytesized. Or bitesized?
+    None = 0u,
+    Sphere,
+    Directional,
+    Environment
 };
 
 struct SphereLight {
@@ -105,12 +106,22 @@ struct DirectionalLight {
     float __padding;
 };
 
+struct EnvironmentLight {
+    int width;
+    int height;
+    int environment_map_ID;
+    int marginal_CDF_ID;
+    int conditional_CDF_ID;
+    int per_pixel_PDF_ID;
+};
+
 struct __align__(16) Light {
-    unsigned int flags;
     union {
         SphereLight sphere;
         DirectionalLight directional;
+        EnvironmentLight environment;
     };
+    LightTypes type; // Store as uint and extend with general light flags, such as shadowcasting.
 };
 
 //----------------------------------------------------------------------------

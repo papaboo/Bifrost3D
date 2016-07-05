@@ -1,17 +1,25 @@
 * Environment models.
-** Compute latlong environment CDF.
+** Stub with crappy uniform CDF's in case anything goes wrong.
+** Test with a black 8x4 map (0 CDF). In that case just ignore the environment, return LALALA error and opt out.
+** Test with a map with a black row / column and make sure that the CDF actually gets computed.
+** Test with sphere in 1x1 env map.
+** Test TestScene and see how environments like adding and removing light sources.
+** Fix environment map TODO's.
+** Test cases??? I can't really sample the environment host side. Unless I hack the whole thing together and sample Cogwheel textures on the host using Textures::UID instead of optix texture ID's.
 ** Future work: Structuring the CDF as 'breath first' should improve the cache hit rate of the first couple of lookups when we do binary search or? Profile!
+** Future work: Sample the environment based on cos_theta between the environment sample direction and the normal to sample more optimally compared to the total contribution of the environment. This can be achieved easily when sampling by reestimating the CDF values by cos_theta between their direction and the normal. Would it also be possible to estimate the per pixel PDF without traversing the whole acceleration structure? And how expensive is it?
 * Mesh combiner.
 ** Combiner.
 *** Combine if the materials are similar.
 *** Should it just collapse a whole subgraph or should we explicitly pick a material and choose a transform+name for the new node?
-*** What should we name the new nodes?
-*** What should their transforms be?
+*** What should we name the new nodes? Base it on the material name?
+*** What should their transforms be? Identity?
 ** Forsyth index sorting. Lets see if it speeds up OptiX rendering. https://code.google.com/archive/p/vcacne/
 ** What about vertex sorting? Base it on a morton curve, order of appearance in the index array or 'clustered index array position'.
+* Build prepare bat-file.
 * Reduce TODOs.
 ** There are some in the MIS sampling.
-** Precompute material parameters for DefaultShading.
+** Precompute material parameters for DefaultShading and profile.
 ** Etc
 * Bump mapping
 ** Utility function for computing tangents and normals on bump mapped surfaces. Possibly splitting the mesh.
@@ -20,6 +28,7 @@
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
 * Materials revisited.
 ** Is sRGB / gamma correctly handled? The X-Wing looks really dark in environments.
+** Rough transmitting surfaces.
 ** Add Burley and Oren-Nayar BRDF. Burley should exclude the fresnel term, as that is part of the overall combiner.
 ** Use perfectly specular BRDFs for tiny roughness values.
 *** Adapt MIS to handle specular surfaces.

@@ -10,47 +10,56 @@
 #define _OPTIXRENDERER_LIGHT_IMPLEMENTATION_H_
 
 #include <OptiXRenderer/Shading/LightSources/DirectionalLightImpl.h>
+#include <OptiXRenderer/Shading/LightSources/EnvironmentLightImpl.h>
 #include <OptiXRenderer/Shading/LightSources/SphereLightImpl.h>
 
 namespace OptiXRenderer {
 namespace LightSources {
 
-__inline_all__ bool is_delta_light(const Light& light, const optix::float3& position) {
-    switch (light.flags) {
-    case LightFlags::SphereLight:
+__inline_dev__ bool is_delta_light(const Light& light, const optix::float3& position) {
+    switch (light.type) {
+    case LightTypes::Sphere:
         return is_delta_light(light.sphere, position);
-    case LightFlags::DirectionalLight:
+    case LightTypes::Directional:
         return is_delta_light(light.directional, position);
+    case LightTypes::Environment:
+        return is_delta_light(light.environment, position);
     }
     return false;
 }
 
-__inline_all__ LightSample sample_radiance(const Light& light, const optix::float3& position, optix::float2 random_sample) {
-    switch (light.flags) {
-    case LightFlags::SphereLight:
+__inline_dev__ LightSample sample_radiance(const Light& light, const optix::float3& position, optix::float2 random_sample) {
+    switch (light.type) {
+    case LightTypes::Sphere:
         return sample_radiance(light.sphere, position, random_sample);
-    case LightFlags::DirectionalLight:
+    case LightTypes::Directional:
         return sample_radiance(light.directional, position, random_sample);
+    case LightTypes::Environment:
+        return sample_radiance(light.environment, position, random_sample);
     }
     return LightSample::none();
 }
 
-__inline_all__ float PDF(const Light& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
-    switch (light.flags) {
-    case LightFlags::SphereLight:
+__inline_dev__ float PDF(const Light& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
+    switch (light.type) {
+    case LightTypes::Sphere:
         return PDF(light.sphere, lit_position, direction_to_light);
-    case LightFlags::DirectionalLight:
+    case LightTypes::Directional:
         return PDF(light.directional, lit_position, direction_to_light);
+    case LightTypes::Environment:
+        return PDF(light.environment, lit_position, direction_to_light);
     }
     return 0.0f;
 }
 
-__inline_all__ optix::float3 evaluate(const Light& light, const optix::float3& position, const optix::float3& direction_to_light) {
-    switch (light.flags) {
-    case LightFlags::SphereLight:
+__inline_dev__ optix::float3 evaluate(const Light& light, const optix::float3& position, const optix::float3& direction_to_light) {
+    switch (light.type) {
+    case LightTypes::Sphere:
         return evaluate(light.sphere, position, direction_to_light);
-    case LightFlags::DirectionalLight:
+    case LightTypes::Directional:
         return evaluate(light.directional, position, direction_to_light);
+    case LightTypes::Environment:
+        return evaluate(light.environment, position, direction_to_light);
     }
     return optix::make_float3(0.0f);
 }

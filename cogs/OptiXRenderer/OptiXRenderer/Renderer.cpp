@@ -32,6 +32,8 @@
 #include <assert.h>
 #include <vector>
 
+#include <StbImageWriter/StbImageWriter.h>
+
 using namespace Cogwheel;
 using namespace Cogwheel::Assets;
 using namespace Cogwheel::Core;
@@ -45,9 +47,30 @@ using namespace optix;
 #else
 #define OPTIX_VALIDATE(o)
 #endif
-// #define ENABLE_OPTIX_PRINT
+// #define ENABLE_OPTIX_DEBUG
 
 namespace OptiXRenderer {
+
+struct Environment {
+    TextureND map;
+    optix::TextureSampler marginal_CDF;
+    optix::TextureSampler conditional_CDF;
+    optix::TextureSampler per_pixel_PDF;
+
+    EnvironmentLight to_light_source(optix::TextureSampler* texture_cache) {
+        EnvironmentLight light;
+        Image image = map.get_image_ID();
+        light.width = image.get_width();
+        light.height = image.get_height();
+        light.environment_map_ID = texture_cache[map.get_ID()]->getId();
+        light.marginal_CDF_ID = marginal_CDF->getId();
+        light.conditional_CDF_ID = conditional_CDF->getId();
+        light.per_pixel_PDF_ID = per_pixel_PDF->getId();
+        return light;
+    }
+
+    bool is_valid() { return map != Textures::UID::invalid_UID(); }
+};
 
 struct Renderer::State {
     uint2 screensize;
@@ -64,6 +87,7 @@ struct Renderer::State {
     // Per scene members.
     optix::Group root_node;
     float scene_epsilon;
+    Environment environment;
 
     std::vector<optix::Transform> transforms = std::vector<optix::Transform>(0);
     std::vector<optix::Geometry> meshes = std::vector<optix::Geometry>(0);
@@ -208,6 +232,161 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
 }
 
 //----------------------------------------------------------------------------
+// Environment map CDF calculation. Returns true if the CDF is successfully 
+// computed, otherwise false.
+// The CDF is ill-defined if fx the input image is completely black 
+// or contains negative values.
+//----------------------------------------------------------------------------
+bool compute_environment_CDFs(Image environment, optix::Context& context, 
+                              optix::Buffer& marginal_CDF, optix::Buffer& conditional_CDF, optix::Buffer& per_pixel_PDF) {
+
+    unsigned int width = environment.get_width();
+    unsigned int height = environment.get_height();
+
+    // Perform computations in double precision to maintain some precision.
+    double* marginal_CDFd = new double[height + 1];
+    double* conditional_CDFd = new double[(width + 1) * height];
+    per_pixel_PDF = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, width, height);
+    float* per_pixel_PDF_data = static_cast<float*>(per_pixel_PDF->map());
+
+    // TODO Perform CDF reduction and normalization directly on the GPU.
+    // TODO Verify that conditional CDF sampling will be in the same row in the array, i.e that the cache behaviour is sensible.
+
+    // Compute conditional CDF.
+    #pragma omp parallel for schedule(dynamic, 16)
+    for (int y = 0; y < int(height); ++y) {
+        // PBRT p. 728. Account for the non-uniform surface area of the pixels, e.g. the higher density near the poles.
+        float sin_theta = sinf(PIf * float(y + 0.5f) / float(height)); 
+        
+        double* conditional_CDF_row = conditional_CDFd + y * (width + 1);
+        float* per_pixel_PDF_row = per_pixel_PDF_data + y * width;
+        conditional_CDF_row[0] = 0.0;
+        for (unsigned int x = 0; x < width; ++x) {
+            RGB pixel = environment.get_pixel(Vector2ui(x, y)).rgb();
+            // Pixel importance is scaled by sin_theta to avoid oversampling at the poles. See PBRT v2 page 727.
+            float pixel_importance = (pixel.r + pixel.g + pixel.b) * sin_theta; // TODO Use luminance instead? Perhaps define a global importance(RGB / float3) function and use it here and for BRDF sampling.
+            conditional_CDF_row[x + 1] = conditional_CDF_row[x] + pixel_importance;
+            // Precompute the PDF of the subtended solid angle of each pixel. The PDF must be scaled by 1 / sin_theta before use. See PBRT v2 page 728.
+            per_pixel_PDF_row[x] = pixel_importance / (2.0f * PIf * PIf); // TODO Blur a bit to account for linear interpolation.
+        }
+    }
+
+    // Compute marginal CDF.
+    marginal_CDFd[0] = 0.0;
+    for (unsigned int y = 0; y < height; ++y)
+        marginal_CDFd[y + 1] = marginal_CDFd[y] + conditional_CDFd[(y + 1) * (width + 1) - 1];
+
+    // Integral of the environment map.
+    float environment_integral = float(marginal_CDFd[height] / (width * height));
+
+    if (environment_integral < 0.00001f)
+        return false;
+
+    // Normalize marginal CDF.
+    for (unsigned int y = 1; y < height; ++y)
+        marginal_CDFd[y] /= marginal_CDFd[height];
+    marginal_CDFd[height] = 1.0;
+
+    // Normalize conditional CDF.
+    #pragma omp parallel for schedule(dynamic, 16)
+    for (int y = 0; y < int(height); ++y) {
+        double* conditional_CDF_row = conditional_CDFd + y * (width + 1);
+        for (unsigned int x = 1; x < width; ++x)
+            conditional_CDF_row[x] /= conditional_CDF_row[width];
+        conditional_CDF_row[width] = 1.0f;
+    }
+
+    { // Upload data to OptiX buffers.
+        // Marginal CDF.
+        marginal_CDF = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, height + 1);
+        float* marginal_CDF_data = static_cast<float*>(marginal_CDF->map());
+        for (unsigned int y = 0; y < height + 1; ++y)
+            marginal_CDF_data[y] = float(marginal_CDFd[y]);
+        marginal_CDF->unmap();
+
+        // Conditional CDF.
+        conditional_CDF = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, width + 1, height);
+        float* conditional_CDF_data = static_cast<float*>(conditional_CDF->map());
+        for (unsigned int i = 0; i < (width + 1) * height; ++i)
+            conditional_CDF_data[i] = float(conditional_CDFd[i]);
+        conditional_CDF->unmap();
+    
+        // Precalculate the PDF and store it in an array for fast lookup.
+        // TODO Test if it is just as fast to just compute it on the fly from the CDF tables.
+        for (unsigned int i = 0; i < width * height; ++i)
+            per_pixel_PDF_data[i] /= environment_integral;
+        per_pixel_PDF->unmap();
+    }
+
+    delete[] marginal_CDFd;
+    delete[] conditional_CDFd;
+
+    return true;
+}
+
+//----------------------------------------------------------------------------
+// Creates an environment representation from an environment map.
+// This includes constructing the environment map CDFs and per pixel PDF.
+// In case the CDF's cannot be constructed the environment returned will 
+// contain invalid values, e.g. invalud UID and nullptrs.
+//----------------------------------------------------------------------------
+Environment create_environment(TextureND environment_map, optix::Context& context) {
+
+    optix::Buffer marginal_CDF, conditional_CDF, per_pixel_PDF;
+    bool success = compute_environment_CDFs(environment_map.get_image_ID(), context, marginal_CDF, conditional_CDF, per_pixel_PDF);
+    if (!success) {
+        Environment env = { Textures::UID::invalid_UID(), nullptr, nullptr, nullptr };
+        return env;
+    }
+
+    Environment environment;
+    environment.map = environment_map;
+
+    { // Marginal CDF sampler.
+        TextureSampler& texture = environment.marginal_CDF = context->createTextureSampler();
+        texture->setWrapMode(0, RT_WRAP_CLAMP_TO_EDGE);
+        texture->setIndexingMode(RT_TEXTURE_INDEX_ARRAY_INDEX);
+        texture->setReadMode(RT_TEXTURE_READ_ELEMENT_TYPE); // Data is already in floating point format, so no need to normalize it.
+        texture->setMaxAnisotropy(0.0f);
+        texture->setMipLevelCount(1u);
+        texture->setFilteringModes(RT_FILTER_NEAREST, RT_FILTER_NEAREST, RT_FILTER_NONE);
+        texture->setArraySize(1u);
+        texture->setBuffer(0u, 0u, marginal_CDF);
+        OPTIX_VALIDATE(texture);
+    }
+
+    { // Conditional CDF sampler.
+        TextureSampler& texture = environment.conditional_CDF = context->createTextureSampler();
+        texture->setWrapMode(0, RT_WRAP_CLAMP_TO_EDGE);
+        texture->setWrapMode(1, RT_WRAP_CLAMP_TO_EDGE);
+        texture->setIndexingMode(RT_TEXTURE_INDEX_ARRAY_INDEX);
+        texture->setReadMode(RT_TEXTURE_READ_ELEMENT_TYPE); // Data is already in floating point format, so no need to normalize it.
+        texture->setMaxAnisotropy(0.0f);
+        texture->setMipLevelCount(1u);
+        texture->setFilteringModes(RT_FILTER_NEAREST, RT_FILTER_NEAREST, RT_FILTER_NONE);
+        texture->setArraySize(1u);
+        texture->setBuffer(0u, 0u, conditional_CDF);
+        OPTIX_VALIDATE(texture);
+    }
+
+    { // Per pixel PDF sampler.
+        TextureSampler& texture = environment.per_pixel_PDF = context->createTextureSampler();
+        texture->setWrapMode(0, RT_WRAP_CLAMP_TO_EDGE);
+        texture->setWrapMode(1, RT_WRAP_CLAMP_TO_EDGE);
+        texture->setIndexingMode(RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
+        texture->setReadMode(RT_TEXTURE_READ_ELEMENT_TYPE); // Data is already in floating point format, so no need to normalize it.
+        texture->setMaxAnisotropy(0.0f);
+        texture->setMipLevelCount(1u);
+        texture->setFilteringModes(RT_FILTER_NEAREST, RT_FILTER_NEAREST, RT_FILTER_NONE);
+        texture->setArraySize(1u);
+        texture->setBuffer(0u, 0u, conditional_CDF);
+        OPTIX_VALIDATE(texture);
+    }
+
+    return environment;
+}
+
+//----------------------------------------------------------------------------
 // Renderer implementation.
 //----------------------------------------------------------------------------
 
@@ -248,11 +427,12 @@ Renderer::Renderer()
         context["g_scene_root"]->set(m_state->root_node);
         m_state->scene_epsilon = 0.0001f;
         context["g_scene_epsilon"]->setFloat(m_state->scene_epsilon);
-        context["g_scene_environment_map_ID"]->setUint(0);
+        EnvironmentLight environment = {};
+        context["g_scene_environment_light"]->setUserData(sizeof(environment), &environment);
     }
 
     { // Light sources
-        m_state->lights.sources = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, 0);
+        m_state->lights.sources = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, 1);
         m_state->lights.sources->setElementSize(sizeof(Light));
         m_state->lights.count = 0;
         context["g_lights"]->set(m_state->lights.sources);
@@ -380,8 +560,10 @@ Renderer::Renderer()
     { // Path tracing setup.
         std::string rgp_ptx_path = get_ptx_path("PathTracing");
         context->setRayGenerationProgram(int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "path_tracing"));
-        context->setExceptionProgram(int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "exceptions"));
         context->setMissProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(rgp_ptx_path, "miss"));
+#ifdef ENABLE_OPTIX_DEBUG
+        context->setExceptionProgram(int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "exceptions"));
+#endif
 
         context["g_max_bounce_count"]->setInt(4);
     }
@@ -392,7 +574,7 @@ Renderer::Renderer()
         context->setMissProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "miss"));
     }
 
-#ifdef ENABLE_OPTIX_PRINT
+#ifdef ENABLE_OPTIX_DEBUG
     context->setPrintEnabled(true);
     context->setPrintLaunchIndex(m_state->screensize.x / 2, m_state->screensize.y / 2);
     context->setExceptionEnabled(RT_EXCEPTION_ALL, true);
@@ -464,22 +646,58 @@ void Renderer::render() {
 
         // Setup the environment map. TODO Handle this via scene change flags or scene initialization instead.
         Textures::UID environment_map_ID = scene.get_environment_map();
-        if (environment_map_ID != Textures::UID::invalid_UID()) {
+        if (environment_map_ID != Textures::UID::invalid_UID() && !m_state->environment.is_valid()) {
             // Only textures with four channels are supported.
             Image image = Textures::get_image_ID(environment_map_ID);
             if (channel_count(image.get_pixel_format()) == 4) { // TODO Support other formats as well by converting the buffers to float4 and upload.
-                TextureSampler environment_sampler = m_state->textures[environment_map_ID];
-                context["g_scene_environment_map_ID"]->setUint(environment_sampler->getId());
-            } else {
+                m_state->environment = create_environment(environment_map_ID, context);
+                if (m_state->environment.is_valid()) {
+                    EnvironmentLight light = m_state->environment.to_light_source(m_state->textures.data());
+                    context["g_scene_environment_light"]->setUserData(sizeof(light), &light);
+                    
+                    // Append environment light to the end of the light source buffer.
+                    // NOTE When multi scene support is added we cannot know if an environment light is available pr scene, 
+                    // so we do not know if the environment light is always valid.
+                    // This can be solved by making the environment light a proxy that points to the scene environment light, if available.
+                    // If not available, then reduce the lightcount by one CPU side before rendering the scene.
+                    // That way we should have minimal performance impact on the GPU code.
+#if _DEBUG
+                    RTsize light_source_capacity;
+                    m_state->lights.sources->getSize(light_source_capacity);
+                    assert(m_state->lights.count + 1 < light_source_capacity);
+#endif
+                    Light* device_lights = (Light*)m_state->lights.sources->map();
+                    Light& device_light = device_lights[m_state->lights.count++];
+                    device_light.type = LightTypes::Environment;
+                    device_light.environment = m_state->environment.to_light_source(m_state->textures.data());
+                    m_state->lights.sources->unmap();
+
+                    context["g_light_count"]->setInt(m_state->lights.count);
+                    printf("light count %u.\n", m_state->lights.count);
+                } else {
+                    // The environment could not be created, most likely because the environment is practically black, 
+                    // which causes the CDF calculation to fail.
+                    float3 black = make_float3(0.0f);
+                    context["g_scene_background_color"]->setFloat(black);
+                }
+            } else
                 printf("The OptiXRenderer only supports environments with 4 channels. '%s' has %u.\n", image.get_name().c_str(), channel_count(image.get_pixel_format()));
-                context["g_scene_environment_map_ID"]->setUint(m_state->textures[0]->getId()); // Error texture has four channels.
-            }
         }
     }
 
     context["g_accumulations"]->setInt(m_state->accumulations);
 
     context->launch(int(EntryPoints::PathTracing), m_state->screensize.x, m_state->screensize.y);
+
+    if (false && is_power_of_two(m_state->accumulations)) {
+        void* mapped_output_buffer = m_state->output_buffer->map();
+        Image output = Images::create("Output", PixelFormat::RGBA_Float, 1.0, Vector2ui(m_state->screensize.x, m_state->screensize.y));
+        memcpy(output.get_pixels(), mapped_output_buffer, sizeof(float) * 4 * m_state->screensize.x * m_state->screensize.y);
+        m_state->output_buffer->unmap();
+        std::ostringstream filename;
+        filename << "C:\\Users\\Asger\\Desktop\\env_result\\output_" << m_state->accumulations << ".png";
+        StbImageWriter::write(filename.str(), output);
+    }
 
     m_state->accumulations += 1u;
 
@@ -502,6 +720,7 @@ void Renderer::render() {
         glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGBA, m_state->screensize.x, m_state->screensize.y, NO_BORDER, GL_RGBA, GL_FLOAT, mapped_output_buffer);
         m_state->output_buffer->unmap();
 
+        // TODO Render as a single triangle. Also in SmallPT
         glBegin(GL_QUADS); {
 
             glTexCoord2f(0.0f, 1.0f);
@@ -677,7 +896,7 @@ void Renderer::handle_updates() {
                     Scene::SphereLight host_light = light_ID;
                     Light& device_light = device_lights[light_index];
 
-                    device_light.flags = LightFlags::SphereLight;
+                    device_light.type = LightTypes::Sphere;
 
                     Vector3f position = host_light.get_node().get_global_transform().translation;
                     memcpy(&device_light.sphere.position, &position, sizeof(device_light.sphere.position));
@@ -695,7 +914,7 @@ void Renderer::handle_updates() {
                     Scene::DirectionalLight host_light = light_ID;
                     Light& device_light = device_lights[light_index];
 
-                    device_light.flags = LightFlags::DirectionalLight;
+                    device_light.type = LightTypes::Directional;
 
                     Vector3f direction = host_light.get_node().get_global_transform().rotation.forward();
                     memcpy(&device_light.directional.direction, &direction, sizeof(device_light.directional.direction));
@@ -714,7 +933,7 @@ void Renderer::handle_updates() {
                 // Resize the light buffer to hold the new capacity.
                 m_state->lights.ID_to_index.resize(LightSources::capacity());
                 m_state->lights.index_to_ID.resize(LightSources::capacity());
-                m_state->lights.sources->setSize(LightSources::capacity());
+                m_state->lights.sources->setSize(LightSources::capacity() + 1); // + 1 to allow the environment light to be added at the end.
 
                 // Resizing removes old data, so this as an opportunity to linearize the light data.
                 Light* device_lights = (Light*)m_state->lights.sources->map();
@@ -726,9 +945,21 @@ void Renderer::handle_updates() {
                     light_creation(light_ID, light_index, device_lights, highest_area_light_index_updated);
                     ++light_index;
                 }
+
+                // Append the environment map, if valid, to the list of light sources.
+                if (m_state->environment.is_valid()) {
+                    Light& light = device_lights[light_index++];
+                    light.type = LightTypes::Sphere;
+                    light.environment = m_state->environment.to_light_source(m_state->textures.data());
+                }
+
                 m_state->lights.count = light_index;
                 m_state->lights.sources->unmap();
             } else {
+                // Skip the environment light proxy at the end of the light buffer.
+                if (m_state->environment.is_valid())
+                    m_state->lights.count -= 1;
+
                 Light* device_lights = (Light*)m_state->lights.sources->map();
                 LightSources::ChangedIterator created_lights_begin = LightSources::get_changed_lights().begin();
                 while (created_lights_begin != LightSources::get_changed_lights().end() &&
@@ -780,6 +1011,13 @@ void Renderer::handle_updates() {
                     m_state->lights.index_to_ID[light_index] = light_ID;
 
                     light_creation(light_ID, light_index, device_lights, highest_area_light_index_updated);
+                }
+
+                // Append the environment map, if valid, to the list of light sources.
+                if (m_state->environment.is_valid()) {
+                    Light& light = device_lights[m_state->lights.count++];
+                    light.type = LightTypes::Sphere;
+                    light.environment = m_state->environment.to_light_source(m_state->textures.data());
                 }
 
                 m_state->lights.sources->unmap();
