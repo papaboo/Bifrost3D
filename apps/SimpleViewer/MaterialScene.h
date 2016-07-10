@@ -40,31 +40,83 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
     }
 
     { // Create floor.
-        Materials::Data black_tile_data;
-        black_tile_data.base_tint = RGB(0.001f, 0.001f, 0.001f);
-        black_tile_data.base_roughness = 0.02f;
-        black_tile_data.specularity = 0.5f;
-        black_tile_data.metallic = 0.0f;
-        Materials::UID black_tile_material_ID = Materials::create("Black tile", black_tile_data);
+        const int tile_count_pr_side = 41;
+        const int vertices_pr_side = tile_count_pr_side + 1;
 
-        Materials::Data white_tile_data;
-        white_tile_data.base_tint = RGB(0.5f, 0.5f, 0.5f);
-        white_tile_data.base_roughness = 0.4f;
-        white_tile_data.specularity = 0.25f;
-        white_tile_data.metallic = 0.0f;
-        Materials::UID white_tile_material_ID = Materials::create("white tile", white_tile_data);
+        { // White tiles.
+            Transform transform = Transform(Vector3f(0.0f, -1.0f, 0.0f));
+            SceneNode node = SceneNodes::create("White tiles", transform);
+            int white_tile_count = tile_count_pr_side * tile_count_pr_side * 3;
+            int vertex_count = (tile_count_pr_side + 1) * (tile_count_pr_side + 1);
+            Meshes::UID tiles_mesh_ID = Meshes::create("White tiles", white_tile_count, vertex_count, MeshFlags::Position);
 
-        Meshes::UID plane_mesh_ID = MeshCreation::plane(1);
-        
-        // TODO Meshcombine tiles.
-        for (int x = 0; x < 41; ++x) {
-            for (int y = 0; y < 41; ++y) {
-                Transform tile_transform = Transform(Vector3f(x - 20.5f, -1.0f, y - 20.5f));
-                SceneNode tile_node = SceneNodes::create("Tile", tile_transform);
-                Materials::UID tile_material_ID = (x & 1) == (y & 1) ? white_tile_material_ID : black_tile_material_ID;
-                MeshModels::create(tile_node.get_ID(), plane_mesh_ID, tile_material_ID);
-                tile_node.set_parent(root_node);
-            }
+            Vector3f* positions = Meshes::get_positions(tiles_mesh_ID);
+            for (int y = 0; y < vertices_pr_side; ++y)
+                for (int x = 0; x < vertices_pr_side; ++x)
+                    positions[x + y * vertices_pr_side] = Vector3f(x - 20.0f, 0.0f, y - 20.0f);
+
+            Vector3ui* indices = Meshes::get_indices(tiles_mesh_ID);
+            for (int y = 0; y < tile_count_pr_side; ++y)
+                for (int x = 0; x < tile_count_pr_side; ++x) {
+                    if ((x & 1) != (y & 1))
+                        continue; // Ignore every other tile.
+
+                    unsigned int base_index = x + y * vertices_pr_side;
+                    *indices = Vector3ui(base_index, base_index + vertices_pr_side, base_index + 1);
+                    ++indices;
+                    *indices = Vector3ui(base_index + 1, base_index + vertices_pr_side, base_index + vertices_pr_side + 1);
+                    ++indices;
+                }
+
+            Meshes::compute_bounds(tiles_mesh_ID);
+
+            Materials::Data white_tile_data;
+            white_tile_data.base_tint = RGB(0.5f, 0.5f, 0.5f);
+            white_tile_data.base_roughness = 0.4f;
+            white_tile_data.specularity = 0.25f;
+            white_tile_data.metallic = 0.0f;
+            Materials::UID white_tile_material_ID = Materials::create("White tile", white_tile_data);
+
+            MeshModels::create(node.get_ID(), tiles_mesh_ID, white_tile_material_ID);
+            node.set_parent(root_node);
+        }
+
+        { // Black tiles.
+            Transform transform = Transform(Vector3f(0.0f, -1.0f, 0.0f));
+            SceneNode node = SceneNodes::create("Black tiles", transform);
+            int white_tile_count = tile_count_pr_side * tile_count_pr_side * 3;
+            int vertex_count = (tile_count_pr_side + 1) * (tile_count_pr_side + 1);
+            Meshes::UID tiles_mesh_ID = Meshes::create("Black tiles", white_tile_count, vertex_count, MeshFlags::Position);
+
+            Vector3f* positions = Meshes::get_positions(tiles_mesh_ID);
+            for (int y = 0; y < vertices_pr_side; ++y)
+                for (int x = 0; x < vertices_pr_side; ++x)
+                    positions[x + y * vertices_pr_side] = Vector3f(x - 20.0f, 0.0f, y - 20.0f);
+
+            Vector3ui* indices = Meshes::get_indices(tiles_mesh_ID);
+            for (int y = 0; y < tile_count_pr_side; ++y)
+                for (int x = 0; x < tile_count_pr_side; ++x) {
+                    if ((x & 1) == (y & 1))
+                        continue; // Ignore every other tile.
+
+                    unsigned int base_index = x + y * vertices_pr_side;
+                    *indices = Vector3ui(base_index, base_index + vertices_pr_side, base_index + 1);
+                    ++indices;
+                    *indices = Vector3ui(base_index + 1, base_index + vertices_pr_side, base_index + vertices_pr_side + 1);
+                    ++indices;
+                }
+
+            Meshes::compute_bounds(tiles_mesh_ID);
+
+            Materials::Data black_tile_data;
+            black_tile_data.base_tint = RGB(0.001f, 0.001f, 0.001f);
+            black_tile_data.base_roughness = 0.02f;
+            black_tile_data.specularity = 0.5f;
+            black_tile_data.metallic = 0.0f;
+            Materials::UID black_tile_material_ID = Materials::create("Black tile", black_tile_data);
+
+            MeshModels::create(node.get_ID(), tiles_mesh_ID, black_tile_material_ID);
+            node.set_parent(root_node);
         }
     }
 
@@ -106,4 +158,4 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
     }
 }
 
-#endif // _SIMPLEVIEWER_CORNELL_BOX_SCENE_H_
+#endif // _SIMPLEVIEWER_MATERIAL_SCENE_H_

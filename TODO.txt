@@ -11,7 +11,6 @@
 ** What about vertex sorting? Base it on a morton curve, order of appearance in the index array or 'clustered index array position'.
 * Reduce TODOs.
 ** There are some in the MIS sampling.
-** Meshcombine the floor in the material scene.
 ** Precompute material parameters for DefaultShading.
 ** Etc
 * Bump mapping
