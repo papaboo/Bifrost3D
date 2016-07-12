@@ -225,11 +225,12 @@ void initializer(Cogwheel::Core::Engine& engine) {
     }
 
     // Add a light source if none were added yet.
-    if (LightSources::begin() == LightSources::end() && load_model_from_file) {
-        Vector3f light_position = scene_bounds.center() + scene_bounds.size() * 10.0f;
-        Transform light_transform = Transform(light_position);
+    bool no_light_sources = LightSources::begin() == LightSources::end() && g_environment.empty();
+    if (no_light_sources && load_model_from_file) {
+        Quaternionf light_direction = Quaternionf::look_in(normalize(Vector3f(-0.1f, -10.0f, -0.1f)));
+        Transform light_transform = Transform(Vector3f::zero(), light_direction);
         SceneNodes::UID light_node_ID = SceneNodes::create("Light", light_transform);
-        LightSources::UID light_ID = LightSources::create_sphere_light(light_node_ID, RGB(1000000.0f), 0.0f);
+        LightSources::UID light_ID = LightSources::create_directional_light(light_node_ID, RGB(15.0f));
         SceneNodes::set_parent(light_node_ID, root_node_ID);
     }
 }
