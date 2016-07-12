@@ -1,5 +1,6 @@
 #include <CornellBoxScene.h>
 #include <MaterialScene.h>
+#include <SphereScene.h>
 #include <TestScene.h>
 
 #include <Cogwheel/Assets/Mesh.h>
@@ -190,6 +191,8 @@ void initializer(Cogwheel::Core::Engine& engine) {
         create_cornell_box_scene(cam_ID, root_node_ID);
     else if (g_scene.compare("MaterialScene") == 0)
         create_material_scene(cam_ID, root_node_ID);
+    else if (g_scene.compare("SphereScene") == 0)
+        create_sphere_scene(cam_ID, root_node_ID);
     else if (g_scene.compare("TestScene") == 0)
         create_test_scene(engine, cam_ID, root_node_ID);
     else {
@@ -245,7 +248,7 @@ void print_usage() {
     char* usage =
         "usage simpleviewer:\n"
         "  -h | --help: Show command line usage for simpleviewer.\n"
-        "  -s | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'MaterialScene' and 'TestScene', which loads the corresponding builtin scenes.\n"
+        "  -s | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'MaterialScene', 'SphereScene' and 'TestScene', which loads the corresponding builtin scenes.\n"
         "  -e | --environment-map <image>: Loads the specified image for the environment.\n"
         "  -c | --environment-color <RGB>: Sets the background color to the specified value.\n";
     printf("%s", usage);
