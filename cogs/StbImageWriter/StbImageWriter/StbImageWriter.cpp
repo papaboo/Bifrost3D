@@ -69,6 +69,10 @@ bool write(const std::string& path, Image image) {
         return false;
 
     FileType file_type = get_file_type(path);
+    if (file_type == FileType::Unknown) {
+        printf("StbImageWriter found unsupported file type. Path: '%s'\n", path.c_str());
+        return false;
+    }
     unsigned int width = image.get_width(), height = image.get_height();
     int channel_count = Cogwheel::Assets::channel_count(image.get_pixel_format());
 
@@ -102,20 +106,27 @@ bool write(const std::string& path, Image image) {
         data = char_data;
     }
 
+    bool did_succeed = false;
     switch (file_type) {
     case FileType::BMP:
-        return stbi_write_bmp(path.c_str(), width, height, channel_count, data) != 0;
+        did_succeed = stbi_write_bmp(path.c_str(), width, height, channel_count, data) != 0;
+        break;
     case FileType::HDR:
-        return stbi_write_hdr(path.c_str(), width, height, channel_count, static_cast<float*>(data)) != 0;
+        did_succeed = stbi_write_hdr(path.c_str(), width, height, channel_count, static_cast<float*>(data)) != 0;
+        break;
     case FileType::PNG:
-        return stbi_write_png(path.c_str(), width, height, channel_count, data, 0) != 0;
+        did_succeed = stbi_write_png(path.c_str(), width, height, channel_count, data, 0) != 0;
+        break;
     case FileType::TGA:
-        return stbi_write_tga(path.c_str(), width, height, channel_count, data) != 0;
+        did_succeed = stbi_write_tga(path.c_str(), width, height, channel_count, data) != 0;
+        break;
+    case FileType::Unknown: // Silence compiler warning.
+        break; // Cannot happen. Checked above.
     }
 
     delete[] data;
 
-    return false;
+    return did_succeed;
 }
 
 } // NS StbImageWriter
