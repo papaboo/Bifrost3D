@@ -249,9 +249,6 @@ bool compute_environment_CDFs(Image environment, optix::Context& context,
     per_pixel_PDF = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, width, height);
     float* per_pixel_PDF_data = static_cast<float*>(per_pixel_PDF->map());
 
-    // TODO Perform CDF reduction and normalization directly on the GPU.
-    // TODO Verify that conditional CDF sampling will be in the same row in the array, i.e that the cache behaviour is sensible.
-
     // Compute conditional CDF.
     #pragma omp parallel for schedule(dynamic, 16)
     for (int y = 0; y < int(height); ++y) {
@@ -267,7 +264,6 @@ bool compute_environment_CDFs(Image environment, optix::Context& context,
             // TODO Blur a bit to account for linear interpolation.
             float pixel_importance = (pixel.r + pixel.g + pixel.b) * sin_theta; // TODO Use luminance instead? Perhaps define a global importance(RGB / float3) function and use it here and for BRDF sampling.
             conditional_CDF_row[x + 1] = conditional_CDF_row[x] + pixel_importance;
-            // Precompute the PDF of the subtended solid angle of each pixel. The PDF must be scaled by 1 / sin_theta before use. See PBRT v2 page 728.
             per_pixel_PDF_row[x] = pixel_importance;
         }
     }
@@ -311,8 +307,8 @@ bool compute_environment_CDFs(Image environment, optix::Context& context,
         for (unsigned int i = 0; i < (width + 1) * height; ++i)
             conditional_CDF_data[i] = float(conditional_CDFd[i]);
         conditional_CDF->unmap();
-    
-        // Precalculate the PDF and store it in an array for fast lookup.
+
+        // Precompute the PDF of the subtended solid angle of each pixel. The PDF must be scaled by 1 / sin_theta before use. See PBRT v2 page 728.
         // TODO Test if it is just as fast to just compute it on the fly from the CDF tables.
         for (unsigned int i = 0; i < width * height; ++i)
             per_pixel_PDF_data[i] /= environment_integral;
