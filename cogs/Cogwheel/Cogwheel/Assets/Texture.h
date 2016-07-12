@@ -134,7 +134,7 @@ public:
     // -----------------------------------------------------------------------
     // Getters and setters.
     // -----------------------------------------------------------------------
-    inline Images::UID get_image_ID() { return Textures::get_image_ID(m_ID); }
+    inline Image get_image() { return Image(Textures::get_image_ID(m_ID)); }
     inline Textures::Type get_type() { return Textures::get_type(m_ID); }
     inline MagnificationFilter get_magnification_filter() { return Textures::get_magnification_filter(m_ID); }
     inline MinificationFilter get_minification_filter() { return Textures::get_minification_filter(m_ID); }

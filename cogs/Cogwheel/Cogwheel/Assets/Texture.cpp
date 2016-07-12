@@ -145,7 +145,7 @@ Math::RGBA sample2D(Textures::UID texture_ID, Vector2f texcoord) {
     }
 
     { // Get pixels.
-        Image image = texture.get_image_ID();
+        Image image = texture.get_image();
 
         if (texture.get_minification_filter() == MinificationFilter::None) {
             Vector2ui pixel_coord = Vector2ui(unsigned int(texcoord.x * image.get_width()),

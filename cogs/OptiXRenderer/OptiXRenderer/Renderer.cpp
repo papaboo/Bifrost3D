@@ -59,7 +59,7 @@ struct Environment {
 
     EnvironmentLight to_light_source(optix::TextureSampler* texture_cache) {
         EnvironmentLight light;
-        Image image = map.get_image_ID();
+        Image image = map.get_image();
         light.width = image.get_width();
         light.height = image.get_height();
         light.environment_map_ID = texture_cache[map.get_ID()]->getId();
@@ -264,10 +264,11 @@ bool compute_environment_CDFs(Image environment, optix::Context& context,
         for (unsigned int x = 0; x < width; ++x) {
             RGB pixel = environment.get_pixel(Vector2ui(x, y)).rgb();
             // Pixel importance is scaled by sin_theta to avoid oversampling at the poles. See PBRT v2 page 727.
+            // TODO Blur a bit to account for linear interpolation.
             float pixel_importance = (pixel.r + pixel.g + pixel.b) * sin_theta; // TODO Use luminance instead? Perhaps define a global importance(RGB / float3) function and use it here and for BRDF sampling.
             conditional_CDF_row[x + 1] = conditional_CDF_row[x] + pixel_importance;
             // Precompute the PDF of the subtended solid angle of each pixel. The PDF must be scaled by 1 / sin_theta before use. See PBRT v2 page 728.
-            per_pixel_PDF_row[x] = pixel_importance / (2.0f * PIf * PIf); // TODO Blur a bit to account for linear interpolation.
+            per_pixel_PDF_row[x] = pixel_importance;
         }
     }
 
@@ -277,7 +278,7 @@ bool compute_environment_CDFs(Image environment, optix::Context& context,
         marginal_CDFd[y + 1] = marginal_CDFd[y] + conditional_CDFd[(y + 1) * (width + 1) - 1];
 
     // Integral of the environment map.
-    float environment_integral = float(marginal_CDFd[height] / (width * height));
+    float environment_integral = float(marginal_CDFd[height] * (2.0f * PIf * PIf) / (width * height));
 
     if (environment_integral < 0.00001f)
         return false;
@@ -333,7 +334,7 @@ bool compute_environment_CDFs(Image environment, optix::Context& context,
 Environment create_environment(TextureND environment_map, optix::Context& context) {
 
     optix::Buffer marginal_CDF, conditional_CDF, per_pixel_PDF;
-    bool success = compute_environment_CDFs(environment_map.get_image_ID(), context, marginal_CDF, conditional_CDF, per_pixel_PDF);
+    bool success = compute_environment_CDFs(environment_map.get_image(), context, marginal_CDF, conditional_CDF, per_pixel_PDF);
     if (!success) {
         Environment env = { Textures::UID::invalid_UID(), nullptr, nullptr, nullptr };
         return env;
@@ -664,7 +665,7 @@ void Renderer::render() {
 #if _DEBUG
                     RTsize light_source_capacity;
                     m_state->lights.sources->getSize(light_source_capacity);
-                    assert(m_state->lights.count + 1 < light_source_capacity);
+                    assert(m_state->lights.count + 1 <= light_source_capacity);
 #endif
                     Light* device_lights = (Light*)m_state->lights.sources->map();
                     Light& device_light = device_lights[m_state->lights.count++];
@@ -673,7 +674,6 @@ void Renderer::render() {
                     m_state->lights.sources->unmap();
 
                     context["g_light_count"]->setInt(m_state->lights.count);
-                    printf("light count %u.\n", m_state->lights.count);
                 } else {
                     // The environment could not be created, most likely because the environment is practically black, 
                     // which causes the CDF calculation to fail.
