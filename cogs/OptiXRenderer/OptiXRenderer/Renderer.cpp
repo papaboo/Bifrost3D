@@ -32,8 +32,6 @@
 #include <assert.h>
 #include <vector>
 
-#include <StbImageWriter/StbImageWriter.h>
-
 using namespace Cogwheel;
 using namespace Cogwheel::Assets;
 using namespace Cogwheel::Core;
@@ -685,15 +683,17 @@ void Renderer::render() {
 
     context->launch(int(EntryPoints::PathTracing), m_state->screensize.x, m_state->screensize.y);
 
-    if (false && is_power_of_two(m_state->accumulations)) {
+    /*
+    if (is_power_of_two(m_state->accumulations)) {
         void* mapped_output_buffer = m_state->output_buffer->map();
         Image output = Images::create("Output", PixelFormat::RGBA_Float, 1.0, Vector2ui(m_state->screensize.x, m_state->screensize.y));
         memcpy(output.get_pixels(), mapped_output_buffer, sizeof(float) * 4 * m_state->screensize.x * m_state->screensize.y);
         m_state->output_buffer->unmap();
         std::ostringstream filename;
-        filename << "C:\\Users\\Asger\\Desktop\\env_result\\output_" << m_state->accumulations << ".png";
+        filename << "C:\\Users\\Asger\\Desktop\\output_" << m_state->accumulations << ".png";
         StbImageWriter::write(filename.str(), output);
     }
+    */
 
     m_state->accumulations += 1u;
 
