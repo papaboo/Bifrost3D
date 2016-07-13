@@ -20,14 +20,16 @@ __inline_dev__ bool is_delta_light(const EnvironmentLight& light, const optix::f
 }
 
 __inline_dev__ optix::float2 sample_CDFs_for_uv(const EnvironmentLight& light, optix::float2 random_sample) {
-    optix::float2 uv;
+    using namespace optix;
+
+    float2 uv;
     int conditional_row = 0;
     { // Binary search the marginal CDF for the sampled row.
         int lowerbound = 0;
         int upperbound = light.height; // The CDFs are one unit larger pr dimension than the environment image, hence no -1 is needed.
         while (lowerbound + 1 != upperbound) {
             int middlebound = (lowerbound + upperbound) / 2;
-            float cdf = optix::rtTex1D<float>(light.marginal_CDF_ID, middlebound);
+            float cdf = rtTex1D<float>(light.marginal_CDF_ID, middlebound);
             if (random_sample.y < cdf)
                 upperbound = middlebound;
             else
@@ -35,8 +37,11 @@ __inline_dev__ optix::float2 sample_CDFs_for_uv(const EnvironmentLight& light, o
         }
         conditional_row = lowerbound;
 
-        // Compute ux.y // TODO Jitter sample inside texel.
-        uv.y = (lowerbound + 0.5f) / float(light.height);
+        // Compute ux.y.
+        float cdf_at_lowerbound = rtTex1D<float>(light.marginal_CDF_ID, lowerbound);
+        float dv = random_sample.y - cdf_at_lowerbound;
+        dv /= rtTex1D<float>(light.marginal_CDF_ID, lowerbound + 1) - cdf_at_lowerbound;
+        uv.y = (lowerbound + dv) / float(light.height);
     }
 
     { // Binary search the row of the conditional CDF for the sampled texel.
@@ -44,22 +49,28 @@ __inline_dev__ optix::float2 sample_CDFs_for_uv(const EnvironmentLight& light, o
         int upperbound = light.width; // The CDFs are one unit larger pr dimension than the environment image, hence no -1 is needed.
         while (lowerbound + 1 != upperbound) {
             int middlebound = (lowerbound + upperbound) / 2;
-            float cdf = optix::rtTex2D<float>(light.conditional_CDF_ID, middlebound, conditional_row);
+            float cdf = rtTex2D<float>(light.conditional_CDF_ID, middlebound, conditional_row);
             if (random_sample.x < cdf)
                 upperbound = middlebound;
             else
                 lowerbound = middlebound;
         }
 
-        // Compute ux.x // TODO Jitter sample inside texel.
-        uv.x = (lowerbound + 0.5f) / float(light.width);
+        // Compute ux.x.
+        float cdf_at_lowerbound = rtTex2D<float>(light.conditional_CDF_ID, lowerbound, conditional_row);
+        float du = random_sample.x - cdf_at_lowerbound;
+        du /= rtTex2D<float>(light.conditional_CDF_ID, lowerbound + 1, conditional_row) - cdf_at_lowerbound;
+        uv.x = (lowerbound + du) / float(light.width);
     }
 
     return uv;
 }
 
+// For environment map monte carlo sampling see PBRT v2 chapter 14.6.5. 
 __inline_dev__ LightSample sample_radiance(const EnvironmentLight& light, const optix::float3& position, optix::float2 random_sample) {
     optix::float2 uv = sample_CDFs_for_uv(light, random_sample);
+    // uv.x = int(uv.x * light.width + 0.5f) / float(light.width);
+    // uv.y = int(uv.y * light.height + 0.5f) / float(light.height);
     LightSample sample;
     sample.direction_to_light = -latlong_texcoord_to_direction(uv);
     sample.distance = 1e30f;
@@ -72,6 +83,8 @@ __inline_dev__ LightSample sample_radiance(const EnvironmentLight& light, const 
 
 __inline_dev__ float PDF(const EnvironmentLight& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
     optix::float2 uv = direction_to_latlong_texcoord(direction_to_light);
+    // uv.x = int(uv.x * light.width + 0.5f) / float(light.width);
+    // uv.y = int(uv.y * light.height + 0.5f) / float(light.height);
     float sin_theta = sqrtf(1.0f - direction_to_light.y * direction_to_light.y);
     float PDF = optix::rtTex2D<float>(light.per_pixel_PDF_ID, uv.x, uv.y) / sin_theta;
     return sin_theta == 0.0f ? 0.0f : PDF;
