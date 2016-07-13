@@ -25,17 +25,17 @@ void create_sphere_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_no
     { // Setup camera transform.
         SceneNodes::UID cam_node_ID = Cameras::get_node_ID(camera_ID);
         Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
-        cam_transform.translation = Vector3f(0.0f, 0.0f, 4.0f);
-        cam_transform.look_at(Vector3f(0.0f, 0.0f, 0.0f));
+        cam_transform.translation = Vector3f(0.0f, 0.0f, -2.0f);
+        cam_transform.rotation = Quaternionf::identity();
         SceneNodes::set_global_transform(cam_node_ID, cam_transform);
     }
 
     { // Create sphere.
         Materials::Data material_data;
-        material_data.base_tint = RGB(1.0f, 0.766f, 0.336f);
+        material_data.base_tint = RGB(1.0f, 1.0f, 1.0f);
         material_data.base_roughness = 1.0f;
         material_data.specularity = 0.25f;
-        material_data.metallic = 1.0f;
+        material_data.metallic = 0.0f;
         Materials::UID material_ID = Materials::create("White material", material_data);
 
         Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(128, 64);
