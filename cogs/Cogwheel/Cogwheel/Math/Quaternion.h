@@ -74,8 +74,8 @@ public:
         Vector3<T> right = normalize(cross(up, direction));
         up = cross(direction, right);
 
-        float real = sqrt(T(1) + right.x + up.y + direction.z) * T(0.5);
-        float d = T(1) / (T(4) * real);
+        T real = sqrt(T(1) + right.x + up.y + direction.z) * T(0.5);
+        T d = T(1) / (T(4) * real);
         Vector3<T> imaginary = Vector3<T>(up.z - direction.y,
                                           direction.x - right.z,
                                           right.y - up.x) * d;
@@ -112,7 +112,7 @@ public:
 
     // Quaternion multiplication.
     inline Quaternion<T> operator*(const Quaternion<T>& rhs) const {
-        float real_part = w * rhs.w - dot(imaginary(), rhs.imaginary());
+        T real_part = w * rhs.w - dot(imaginary(), rhs.imaginary());
         Vector3<T> imaginary_part = cross(imaginary(), rhs.imaginary()) + rhs.imaginary() * w + imaginary() * rhs.w;
         return Quaternion(imaginary_part, real_part);
     }
