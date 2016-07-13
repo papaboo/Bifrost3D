@@ -1,4 +1,4 @@
-// SimpleViewer cornell box scene.
+// SimpleViewer material scene.
 // ---------------------------------------------------------------------------
 // Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
 //
