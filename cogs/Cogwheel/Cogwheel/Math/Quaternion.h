@@ -68,7 +68,7 @@ public:
         return Quaternion<T>(imaginary, real);
     }
 
-    // Create a quaternion that looks in direction and has the upvector up.
+    // Create a quaternion with forward pointing along direction and that has the upvector up.
     // http://www.gamedev.net/topic/613595-quaternion-lookrotationlookat-up/
     static inline Quaternion<T> look_in(Vector3<T> direction, Vector3<T> up = Vector3<T>::up()) {
         Vector3<T> right = normalize(cross(up, direction));
