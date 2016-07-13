@@ -1,21 +1,25 @@
 * Environment models.
-** Stub with crappy uniform CDF's in case anything goes wrong.
-** Test with a black 8x4 map (0 CDF). In that case just ignore the environment, return LALALA error and opt out.
-** Test with a map with a black row / column and make sure that the CDF actually gets computed.
+** Support for not importance sampled environment maps.
+** Completely smooth materials produce NaN's in environments.
+** Why is the sphere darker on one side than the other when lit by the env?
+** Test with a map with a black column and make sure that the CDF actually gets computed.
 ** Test with sphere in 1x1 env map.
 ** Test TestScene and see how environments like adding and removing light sources.
 ** Fix environment map TODO's.
 ** Test cases??? I can't really sample the environment host side. Unless I hack the whole thing together and sample Cogwheel textures on the host using Textures::UID instead of optix texture ID's.
 ** Future work: Structuring the CDF as 'breath first' should improve the cache hit rate of the first couple of lookups when we do binary search or? Profile!
 ** Future work: Sample the environment based on cos_theta between the environment sample direction and the normal to sample more optimally compared to the total contribution of the environment. This can be achieved easily when sampling by reestimating the CDF values by cos_theta between their direction and the normal. Would it also be possible to estimate the per pixel PDF without traversing the whole acceleration structure? And how expensive is it?
+**              Or can I do this by simply changing the distribution of the two random numbers before searching the CDF?
+** Future work: Create a 1D CDF instead of a 2D one? Would save a bit of memory as the CDF would then take up width * height + 1 instead of height + 1 + (width + 1) * height. Are there other pros? Cons? Try it out?
 * Mesh combiner.
 ** Combiner.
 *** Combine if the materials are similar.
 *** Should it just collapse a whole subgraph or should we explicitly pick a material and choose a transform+name for the new node?
-*** What should we name the new nodes? Base it on the material name?
-*** What should their transforms be? Identity?
+*** What should we name the new nodes? '%{material name}_combined'!
+*** What should their transforms be? Identity? Local identity!
 ** Forsyth index sorting. Lets see if it speeds up OptiX rendering. https://code.google.com/archive/p/vcacne/
 ** What about vertex sorting? Base it on a morton curve, order of appearance in the index array or 'clustered index array position'.
+* Quaternion::look_in doesn't work for some directions, fx (0,0,1). Fix by implementing the general mat3x3 to quaternion conversion. http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
 * Build prepare bat-file.
 * Reduce TODOs.
 ** There are some in the MIS sampling.
@@ -27,7 +31,7 @@
 ** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
 * Materials revisited.
-** Is sRGB / gamma correctly handled? The X-Wing looks really dark in environments.
+** Is sRGB / gamma correctly handled? The X-Wing looks really dark in environments. Or am I missing a multiplication by pi? Use the sphere scene with a pure diffuse material to test it.
 ** Rough transmitting surfaces.
 ** Add Burley and Oren-Nayar BRDF. Burley should exclude the fresnel term, as that is part of the overall combiner.
 ** Use perfectly specular BRDFs for tiny roughness values.
