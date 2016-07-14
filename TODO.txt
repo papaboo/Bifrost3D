@@ -1,12 +1,13 @@
 * Environment models.
-** Support for not importance sampled environment maps.
-** Completely smooth materials produce NaN's in environments.
+** Test that the binary search works.
+** Better PDF estimation that takes filtering into account.
 ** Why is the sphere darker on one side than the other when lit by the env?
-** Test with a map with a black column and make sure that the CDF actually gets computed.
+** Completely smooth materials produce NaN's in environments.
 ** Test with sphere in 1x1 env map.
 ** Test TestScene and see how environments like adding and removing light sources.
 ** Fix environment map TODO's.
 ** Test cases??? I can't really sample the environment host side. Unless I hack the whole thing together and sample Cogwheel textures on the host using Textures::UID instead of optix texture ID's.
+** Enable decision on importance sampling environment maps.
 ** Future work: Structuring the CDF as 'breath first' should improve the cache hit rate of the first couple of lookups when we do binary search or? Profile!
 ** Future work: Sample the environment based on cos_theta between the environment sample direction and the normal to sample more optimally compared to the total contribution of the environment. This can be achieved easily when sampling by reestimating the CDF values by cos_theta between their direction and the normal. Would it also be possible to estimate the per pixel PDF without traversing the whole acceleration structure? And how expensive is it?
 **              Or can I do this by simply changing the distribution of the two random numbers before searching the CDF?
