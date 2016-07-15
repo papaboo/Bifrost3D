@@ -207,7 +207,7 @@ public:
             specular_probability * BSDFs::GGX::PDF(ggx_alpha, wo, wi);
     }
 
-}; // NS DefaultShading
+};
 
 } // NS ShadingModels
 } // NS Shading
