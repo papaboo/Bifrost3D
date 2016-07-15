@@ -255,8 +255,8 @@ bool compute_environment_CDFs(Image environment, optix::Context& context,
     #pragma omp parallel for schedule(dynamic, 16)
     for (int y = 0; y < int(height); ++y) {
         // PBRT p. 728. Account for the non-uniform surface area of the pixels, e.g. the higher density near the poles.
-        float sin_theta = sinf(PIf * float(y + 0.5f) / float(height)); 
-        
+        float sin_theta = sinf(PIf * (y + 0.5f) / float(height)); 
+
         double* conditional_CDF_row = conditional_CDFd + y * (width + 1);
         float* per_pixel_PDF_row = per_pixel_PDF_data + y * width;
         conditional_CDF_row[0] = 0.0;
@@ -265,7 +265,6 @@ bool compute_environment_CDFs(Image environment, optix::Context& context,
             // Pixel importance is scaled by sin_theta to avoid oversampling at the poles. See PBRT v2 page 727.
             // TODO Blur a bit to account for linear interpolation.
             float pixel_importance = (pixel.r + pixel.g + pixel.b) * sin_theta; // TODO Use luminance instead? Perhaps define a global importance(RGB / float3) function and use it here and for BRDF sampling.
-            // float pixel_importance = sin_theta;
             conditional_CDF_row[x + 1] = conditional_CDF_row[x] + pixel_importance;
             per_pixel_PDF_row[x] = pixel_importance;
         }
@@ -323,7 +322,7 @@ bool compute_environment_CDFs(Image environment, optix::Context& context,
         per_pixel_PDF->unmap();
     }
 
-    /* {
+    if (false) {
         printf("Marginal CDF:\n");
         for (unsigned int y = 0; y < height + 1; ++y)
             printf("%.3f, ", marginal_CDFd[y]);
@@ -346,7 +345,7 @@ bool compute_environment_CDFs(Image environment, optix::Context& context,
         }
         printf("\n\n");
         per_pixel_PDF->unmap();
-    } */
+    }
 
     delete[] marginal_CDFd;
     delete[] conditional_CDFd;
@@ -413,7 +412,7 @@ Environment create_environment(TextureND environment_map, optix::Context& contex
         texture->setMipLevelCount(1u);
         texture->setFilteringModes(RT_FILTER_NEAREST, RT_FILTER_NEAREST, RT_FILTER_NONE);
         texture->setArraySize(1u);
-        texture->setBuffer(0u, 0u, conditional_CDF);
+        texture->setBuffer(0u, 0u, per_pixel_PDF);
         OPTIX_VALIDATE(texture);
     }
 
