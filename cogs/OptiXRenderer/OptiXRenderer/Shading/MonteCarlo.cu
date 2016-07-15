@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 
 #include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>
+#include <OptiXRenderer/Shading/ShadingModels/LambertShading.h>
 #include <OptiXRenderer/Shading/LightSources/LightImpl.h>
 #include <OptiXRenderer/TBN.h>
 #include <OptiXRenderer/Types.h>
@@ -117,7 +118,7 @@ __inline_dev__ void closest_hit_not_MIS() {
     monte_carlo_PRD.direction = world_shading_tbn * -ray.direction;
 
     const Material& material_parameter = g_materials[material_index];
-    DefaultShading material = DefaultShading(material_parameter, texcoord);
+    const DefaultShading material = DefaultShading(material_parameter, texcoord);
 
     // Sample light sources.
     // TODO Use RIS light sampling here as well. But wait until I have a scene with multiple area light sources.
@@ -233,7 +234,7 @@ RT_PROGRAM void light_closest_hit() {
         float mis_weight = is_PDF_valid(light_PDF) ? RNG::power_heuristic(monte_carlo_PRD.bsdf_MIS_PDF, light_PDF) : 0.0f;
         light_radiance *= mis_weight;
     } else if (next_event_estimated)
-        // Previous bounce used next even estimation, but did not calculate MIS, so don't apply light contribution.
+        // Previous bounce used next event estimation, but did not calculate MIS, so don't apply light contribution.
         // TODO Could this be handled by setting bsdf_MIS_PDF to 0 instead? Wait until we have a specular BRDF implementation.
         light_radiance = make_float3(0.0f);
 

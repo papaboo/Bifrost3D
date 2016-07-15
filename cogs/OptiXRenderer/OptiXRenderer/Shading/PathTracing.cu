@@ -117,7 +117,7 @@ RT_PROGRAM void miss() {
                 float mis_weight = is_PDF_valid(light_PDF) ? RNG::power_heuristic(monte_carlo_PRD.bsdf_MIS_PDF, light_PDF) : 0.0f;
                 environment_radiance *= mis_weight;
             } else if (next_event_estimated)
-                // Previous bounce used next even estimation, but did not calculate MIS, so don't apply light contribution.
+                // Previous bounce used next event estimation, but did not calculate MIS, so don't apply light contribution.
                 // TODO Could this be handled by setting bsdf_MIS_PDF to 0 instead? 
                 //      Wait until we have a specular BRDF implementation and
                 //      remember to test with next event estimation on and off.
