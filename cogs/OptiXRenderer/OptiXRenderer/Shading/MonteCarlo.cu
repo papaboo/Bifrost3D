@@ -56,6 +56,7 @@ rtBuffer<float4, 2>  g_accumulation_buffer;
 __inline_dev__ LightSample sample_single_light(const DefaultShading& material, const TBN& world_shading_tbn) {
     int light_index = min(g_light_count - 1, int(monte_carlo_PRD.rng.sample1f() * g_light_count));
     const Light& light = g_lights[light_index];
+    // TODO Test the validity of the light sample / PDF. When diffusitivity is introduced, then some light samples could result in insanely low or invalid PDFs.
     LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_PRD.position, monte_carlo_PRD.rng.sample2f());
     light_sample.radiance *= g_light_count; // Scale up radiance to account for only sampling one light.
 
@@ -72,7 +73,7 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
     bool apply_MIS = !delta_light && monte_carlo_PRD.bounces < g_max_bounce_count;
     if (apply_MIS) {
         float bsdf_PDF = material.PDF(monte_carlo_PRD.direction, shading_light_direction);
-        float mis_weight = RNG::power_heuristic(light_sample.PDF, bsdf_PDF); // TODO Check if the BSDF material PDF is valid. If it isn't we then disable MIS intirely? Or set contribution to black?
+        float mis_weight = RNG::power_heuristic(light_sample.PDF, bsdf_PDF);
 
         light_sample.radiance *= mis_weight;
     }
