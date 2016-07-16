@@ -12,6 +12,13 @@
 #define DOUBLE_PRECISION_ACCUMULATION_BUFFER 1
 // #define PATH_PDF_FIREFLY_FILTER 1
 
+// Validate macro. Will validate the optix object in debug mode.
+#ifdef _DEBUG
+#define OPTIX_VALIDATE(o) o->validate()
+#else
+#define OPTIX_VALIDATE(o)
+#endif
+
 #if (defined(__CUDACC__) || defined(__CUDABE__))
 #define GPU_DEVICE 1
 #endif

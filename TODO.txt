@@ -1,14 +1,7 @@
 * Environment models.
-** Test with sphere in 1x1 env map.
-** Test TestScene and see how environments like adding and removing light sources.
-** Fix environment map TODO's.
 ** Move environment creation into own file and create separate method for PDF and CDF computation.
-** Enable decision on importance sampling environment maps if they are tiny enough. < 64 * 32 pixels? Ideally the variance in the environment is taken into acount here as well, but I doubt that I can be bothered.
 ** Should sampled UV have 0.5 / size added as in PBRT? Check with tiny env and compare sampled vs non-sampled diffuse material.
-** Future work: Structuring the CDF as 'breath first' should improve the cache hit rate of the first couple of lookups when we do binary search or? Profile!
-** Future work: Sample the environment based on cos_theta between the environment sample direction and the normal to sample more optimally compared to the total contribution of the environment. This can be achieved easily when sampling by reestimating the CDF values by cos_theta between their direction and the normal. Would it also be possible to estimate the per pixel PDF without traversing the whole acceleration structure? And how expensive is it?
-**              Or can I do this by simply changing the distribution of the two random numbers before searching the CDF?
-** Future work: Create a 1D CDF instead of a 2D one? Would save a bit of memory as the CDF would then take up width * height + 1 instead of height + 1 + (width + 1) * height. Are there other pros? Cons? Try it out?
+* Reenable firefly clamping.
 * Mesh combiner.
 ** Combiner.
 *** Combine if the materials are similar.

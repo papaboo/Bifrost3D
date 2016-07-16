@@ -9,6 +9,7 @@
 #include <OptiXRenderer/Renderer.h>
 
 #include <OptiXRenderer/EncodedNormal.h>
+#include <OptiXRenderer/EnvironmentMap.h>
 #include <OptiXRenderer/Kernel.h>
 #include <OptiXRenderer/RhoTexture.h>
 #include <OptiXRenderer/Types.h>
@@ -39,40 +40,9 @@ using namespace Cogwheel::Math;
 using namespace Cogwheel::Scene;
 using namespace optix;
 
-// Validate macro. Will validate the optix object in debug mode.
-#ifdef _DEBUG
-#define OPTIX_VALIDATE(o) o->validate()
-#else
-#define OPTIX_VALIDATE(o)
-#endif
 // #define ENABLE_OPTIX_DEBUG
 
 namespace OptiXRenderer {
-
-struct Environment {
-    TextureND map;
-    optix::TextureSampler marginal_CDF;
-    optix::TextureSampler conditional_CDF;
-    optix::TextureSampler per_pixel_PDF;
-
-    bool next_event_estimation_possible() { return per_pixel_PDF != optix::TextureSampler(); } // TODO Autoconvert to bool.
-
-    EnvironmentLight to_light_source(optix::TextureSampler* texture_cache) {
-        EnvironmentLight light;
-        Image image = map.get_image();
-        light.width = image.get_width();
-        light.height = image.get_height();
-        light.environment_map_ID = texture_cache[map.get_ID()]->getId();
-        if (next_event_estimation_possible()) {
-            light.marginal_CDF_ID = marginal_CDF->getId();
-            light.conditional_CDF_ID = conditional_CDF->getId();
-            light.per_pixel_PDF_ID = per_pixel_PDF->getId();
-        } else
-            light.marginal_CDF_ID = light.conditional_CDF_ID = light.per_pixel_PDF_ID = RT_TEXTURE_ID_NULL;
-        return light;
-    }
-
-};
 
 struct Renderer::State {
     uint2 screensize;
@@ -89,7 +59,7 @@ struct Renderer::State {
     // Per scene members.
     optix::Group root_node;
     float scene_epsilon;
-    Environment environment;
+    EnvironmentMap environment;
 
     std::vector<optix::Transform> transforms = std::vector<optix::Transform>(0);
     std::vector<optix::Geometry> meshes = std::vector<optix::Geometry>(0);
@@ -231,232 +201,6 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
     }
 
     return optix_transform;
-}
-
-//----------------------------------------------------------------------------
-// Environment map CDF calculation. Returns true if the CDF is successfully 
-// computed, otherwise false.
-// The CDF is ill-defined if fx the input image is completely black 
-// or contains negative values.
-//----------------------------------------------------------------------------
-bool compute_environment_CDFs(TextureND environment_map, optix::Context& context,
-                              optix::Buffer& marginal_CDF, optix::Buffer& conditional_CDF, optix::Buffer& per_pixel_PDF) {
-
-    Image environment = environment_map.get_image();
-    unsigned int width = environment.get_width();
-    unsigned int height = environment.get_height();
-
-    // Perform computations in double precision to maintain some precision during summation.
-    double* marginal_CDFd = new double[height + 1];
-    double* conditional_CDFd = new double[(width + 1) * height];
-    per_pixel_PDF = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, width, height);
-    float* per_pixel_PDF_data = static_cast<float*>(per_pixel_PDF->map());
-
-    { // Compute pixel importance scaled by projected area of the pixel.
-        double* pixel_importance = conditional_CDFd; // Alias to increase readability.
-
-        #pragma omp parallel for schedule(dynamic, 16)
-        for (int y = 0; y < int(height); ++y) {
-            // PBRT p. 728. Account for the non-uniform surface area of the pixels, e.g. the higher density near the poles.
-            float sin_theta = sinf(PIf * (y + 0.5f) / float(height));
-
-            double* per_pixel_PDF_row = pixel_importance + y * width;
-            for (unsigned int x = 0; x < width; ++x) {
-                // TODO This can be specialized to floating point and unsigned char textures.
-                RGB pixel = environment.get_pixel(Vector2ui(x, y)).rgb();
-                per_pixel_PDF_row[x] = (pixel.r + pixel.g + pixel.b) * sin_theta; // TODO Use luminance instead? Perhaps define a global importance(RGB / float3) function and use it here and for BRDF sampling.
-            }
-        }
-
-        // If the texture is unfiltered, then the per pixel importance corrosponds to the PDF.
-        // If filtering is enabled, then we need to filter the PDF as well.
-        // Generally this doesn't change much in terms of convergence, but it helps us to 
-        // avoid artefacts in cases where a black pixel would have a PDF of 0,
-        // but due to filtering the pixel wouldn't actually be black.
-        if (environment_map.get_magnification_filter() == MagnificationFilter::None) {
-            #pragma omp parallel for schedule(dynamic, 16)
-            for (int p = 0; p < int(width * height); ++p)
-                per_pixel_PDF_data[p] = float(pixel_importance[p]);
-        } else {
-            #pragma omp parallel for schedule(dynamic, 16)
-            for (int y = 0; y < int(height); ++y) {
-                // Blur per pixel importance to account for linear interpolation.
-                // The pixel's own contribution is 20 / 32.
-                // Neighbours on the side contribute by 2 / 32.
-                // Neighbours in the corners contribute by 1 / 32.
-                // Weights have been estimated based on linear interpolation.
-                for (int x = 0; x < int(width); ++x) {
-                    float& pixel_PDF = per_pixel_PDF_data[x + y * width];
-                    pixel_PDF = float(pixel_importance[x + y * width]) * (20.0f / 32.0f);
-
-                    { // Add contribution from left column.
-                        int left_x = x - 1 < 0 ? (width - 1) : (x - 1); // Repeat mode.
-
-                        int lower_left_index = left_x + max(0, y - 1) * width;
-                        pixel_PDF += float(pixel_importance[lower_left_index]) * (1.0f / 32.0f);
-
-                        int middle_left_index = left_x + y * width;
-                        pixel_PDF += float(pixel_importance[middle_left_index]) * (2.0f / 32.0f);
-
-                        int upper_left_index = left_x + min(int(height) - 1, y + 1) * width;
-                        pixel_PDF += float(pixel_importance[upper_left_index]) * (1.0f / 32.0f);
-                    }
-
-                    { // Add contribution from right column.
-                        int right_x = x + 1 == width ? 0 : (x + 1); // Repeat mode.
-
-                        int lower_right_index = right_x + max(0, y - 1) * width;
-                        pixel_PDF += float(pixel_importance[lower_right_index]) * (1.0f / 32.0f);
-
-                        int middle_right_index = right_x + y * width;
-                        pixel_PDF += float(pixel_importance[middle_right_index]) * (2.0f / 32.0f);
-
-                        int upper_right_index = right_x + min(int(height) - 1, y + 1) * width;
-                        pixel_PDF += float(pixel_importance[upper_right_index]) * (1.0f / 32.0f);
-                    }
-
-                    { // Add contribution from middle column. Center was added above.
-                        int lower_middle_index = x + max(0, y - 1) * width;
-                        pixel_PDF += float(pixel_importance[lower_middle_index]) * (2.0f / 32.0f);
-
-                        int upper_middle_index = x + min(int(height) - 1, y + 1) * width;
-                        pixel_PDF += float(pixel_importance[upper_middle_index]) * (2.0f / 32.0f);
-                    }
-                }
-            }
-        }
-    }
-
-    // Compute CDFs.
-    // Compute conditional CDF.
-    #pragma omp parallel for schedule(dynamic, 16)
-    for (int y = 0; y < int(height); ++y) {
-        float* per_pixel_PDF_row = per_pixel_PDF_data + y * width;
-        double* conditional_CDF_row = conditional_CDFd + y * (width + 1);
-        conditional_CDF_row[0] = 0.0;
-        for (unsigned int x = 0; x < width; ++x)
-            conditional_CDF_row[x + 1] = conditional_CDF_row[x] + per_pixel_PDF_row[x];
-    }
-
-    // Compute marginal CDF.
-    marginal_CDFd[0] = 0.0;
-    for (unsigned int y = 0; y < height; ++y)
-        marginal_CDFd[y + 1] = marginal_CDFd[y] + conditional_CDFd[(y + 1) * (width + 1) - 1];
-
-    // Integral of the environment map.
-    float environment_integral = float(marginal_CDFd[height] / (width * height));
-
-    if (environment_integral < 0.00001f)
-        return false;
-
-    // Normalize marginal CDF.
-    for (unsigned int y = 1; y < height; ++y)
-        marginal_CDFd[y] /= marginal_CDFd[height];
-    marginal_CDFd[height] = 1.0;
-
-    // Normalize conditional CDF.
-    #pragma omp parallel for schedule(dynamic, 16)
-    for (int y = 0; y < int(height); ++y) {
-        double* conditional_CDF_row = conditional_CDFd + y * (width + 1);
-        if (conditional_CDF_row[width] > 0.0f)
-            for (unsigned int x = 1; x < width; ++x)
-                conditional_CDF_row[x] /= conditional_CDF_row[width];
-        // Last value should always be one. Even in rows with no contribution.
-        // This ensures that the binary search is well-defined and will never select the last element.
-        conditional_CDF_row[width] = 1.0f;
-    }
-
-    { // Upload data to OptiX buffers.
-        // Marginal CDF.
-        marginal_CDF = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, height + 1);
-        float* marginal_CDF_data = static_cast<float*>(marginal_CDF->map());
-        for (unsigned int y = 0; y < height + 1; ++y)
-            marginal_CDF_data[y] = float(marginal_CDFd[y]);
-        marginal_CDF->unmap();
-
-        // Conditional CDF.
-        conditional_CDF = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, width + 1, height);
-        float* conditional_CDF_data = static_cast<float*>(conditional_CDF->map());
-        #pragma omp parallel for schedule(dynamic, 16)
-        for (int i = 0; i < int((width + 1) * height); ++i)
-            conditional_CDF_data[i] = float(conditional_CDFd[i]);
-        conditional_CDF->unmap();
-
-        // Precompute the PDF of the subtended solid angle of each pixel. The PDF must be scaled by 1 / sin_theta before use. See PBRT v2 page 728.
-        float PDF_normalization_term = 1.0f / (environment_integral * 2.0f * PIf * PIf);
-        #pragma omp parallel for schedule(dynamic, 16)
-        for (int i = 0; i < int(width * height); ++i)
-            per_pixel_PDF_data[i] *= PDF_normalization_term;
-        per_pixel_PDF->unmap();
-    }
-
-    delete[] marginal_CDFd;
-    delete[] conditional_CDFd;
-
-    return true;
-}
-
-//----------------------------------------------------------------------------
-// Creates an environment representation from an environment map.
-// This includes constructing the environment map CDFs and per pixel PDF.
-// In case the CDF's cannot be constructed the environment returned will 
-// contain invalid values, e.g. invalud UID and nullptrs.
-// For environment monte carlo sampling see PBRT v2 chapter 14.6.5. 
-//----------------------------------------------------------------------------
-Environment create_environment(TextureND environment_map, optix::Context& context) {
-
-    optix::Buffer marginal_CDF, conditional_CDF, per_pixel_PDF;
-    bool success = compute_environment_CDFs(environment_map, context, marginal_CDF, conditional_CDF, per_pixel_PDF);
-    if (!success) {
-        Environment env = { environment_map.get_ID(), nullptr, nullptr, nullptr };
-        return env;
-    }
-
-    Environment environment;
-    environment.map = environment_map;
-
-    { // Marginal CDF sampler.
-        TextureSampler& texture = environment.marginal_CDF = context->createTextureSampler();
-        texture->setWrapMode(0, RT_WRAP_CLAMP_TO_EDGE);
-        texture->setIndexingMode(RT_TEXTURE_INDEX_ARRAY_INDEX);
-        texture->setReadMode(RT_TEXTURE_READ_ELEMENT_TYPE); // Data is already in floating point format, so no need to normalize it.
-        texture->setMaxAnisotropy(0.0f);
-        texture->setMipLevelCount(1u);
-        texture->setFilteringModes(RT_FILTER_NEAREST, RT_FILTER_NEAREST, RT_FILTER_NONE);
-        texture->setArraySize(1u);
-        texture->setBuffer(0u, 0u, marginal_CDF);
-        OPTIX_VALIDATE(texture);
-    }
-
-    { // Conditional CDF sampler.
-        TextureSampler& texture = environment.conditional_CDF = context->createTextureSampler();
-        texture->setWrapMode(0, RT_WRAP_CLAMP_TO_EDGE);
-        texture->setWrapMode(1, RT_WRAP_CLAMP_TO_EDGE);
-        texture->setIndexingMode(RT_TEXTURE_INDEX_ARRAY_INDEX);
-        texture->setReadMode(RT_TEXTURE_READ_ELEMENT_TYPE); // Data is already in floating point format, so no need to normalize it.
-        texture->setMaxAnisotropy(0.0f);
-        texture->setMipLevelCount(1u);
-        texture->setFilteringModes(RT_FILTER_NEAREST, RT_FILTER_NEAREST, RT_FILTER_NONE);
-        texture->setArraySize(1u);
-        texture->setBuffer(0u, 0u, conditional_CDF);
-        OPTIX_VALIDATE(texture);
-    }
-
-    { // Per pixel PDF sampler.
-        TextureSampler& texture = environment.per_pixel_PDF = context->createTextureSampler();
-        texture->setWrapMode(0, RT_WRAP_CLAMP_TO_EDGE);
-        texture->setWrapMode(1, RT_WRAP_CLAMP_TO_EDGE);
-        texture->setIndexingMode(RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
-        texture->setReadMode(RT_TEXTURE_READ_ELEMENT_TYPE); // Data is already in floating point format, so no need to normalize it.
-        texture->setMaxAnisotropy(0.0f);
-        texture->setMipLevelCount(1u);
-        texture->setFilteringModes(RT_FILTER_NEAREST, RT_FILTER_NEAREST, RT_FILTER_NONE);
-        texture->setArraySize(1u);
-        texture->setBuffer(0u, 0u, per_pixel_PDF);
-        OPTIX_VALIDATE(texture);
-    }
-
-    return environment;
 }
 
 //----------------------------------------------------------------------------
@@ -790,7 +534,6 @@ void Renderer::render() {
         glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGBA, m_state->screensize.x, m_state->screensize.y, NO_BORDER, GL_RGBA, GL_FLOAT, mapped_output_buffer);
         m_state->output_buffer->unmap();
 
-        // TODO Render as a single triangle. Also in SmallPT
         glBegin(GL_QUADS); {
 
             glTexCoord2f(0.0f, 1.0f);
@@ -1072,6 +815,7 @@ void Renderer::handle_updates() {
                     }
                 }
 
+                // If there are still lights that needs to be created, then append them to the list.
                 for (LightSources::UID light_ID : Iterable<LightSources::ChangedIterator>(created_lights_begin, LightSources::get_changed_lights().end())) {
                     if (LightSources::get_changes(light_ID) != LightSources::Changes::Created)
                         continue;

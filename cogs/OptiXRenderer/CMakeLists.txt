@@ -19,6 +19,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
   set(ROOT_SRC
     OptiXRenderer/Defines.h
     OptiXRenderer/Distributions.h
+    OptiXRenderer/EnvironmentMap.h
     OptiXRenderer/EncodedNormal.h
     OptiXRenderer/Intersect.h
     OptiXRenderer/Kernel.h
