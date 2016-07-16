@@ -239,35 +239,103 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
 // The CDF is ill-defined if fx the input image is completely black 
 // or contains negative values.
 //----------------------------------------------------------------------------
-bool compute_environment_CDFs(Image environment, optix::Context& context, 
+bool compute_environment_CDFs(TextureND environment_map, optix::Context& context,
                               optix::Buffer& marginal_CDF, optix::Buffer& conditional_CDF, optix::Buffer& per_pixel_PDF) {
 
+    Image environment = environment_map.get_image();
     unsigned int width = environment.get_width();
     unsigned int height = environment.get_height();
 
-    // Perform computations in double precision to maintain some precision.
+    // Perform computations in double precision to maintain some precision during summation.
     double* marginal_CDFd = new double[height + 1];
     double* conditional_CDFd = new double[(width + 1) * height];
     per_pixel_PDF = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, width, height);
     float* per_pixel_PDF_data = static_cast<float*>(per_pixel_PDF->map());
 
+    { // Compute pixel importance scaled by projected area of the pixel.
+        double* pixel_importance = conditional_CDFd; // Alias to increase readability.
+
+        #pragma omp parallel for schedule(dynamic, 16)
+        for (int y = 0; y < int(height); ++y) {
+            // PBRT p. 728. Account for the non-uniform surface area of the pixels, e.g. the higher density near the poles.
+            float sin_theta = sinf(PIf * (y + 0.5f) / float(height));
+
+            double* per_pixel_PDF_row = pixel_importance + y * width;
+            for (unsigned int x = 0; x < width; ++x) {
+                // TODO This can be specialized to floating point and unsigned char textures.
+                RGB pixel = environment.get_pixel(Vector2ui(x, y)).rgb();
+                per_pixel_PDF_row[x] = (pixel.r + pixel.g + pixel.b) * sin_theta; // TODO Use luminance instead? Perhaps define a global importance(RGB / float3) function and use it here and for BRDF sampling.
+            }
+        }
+
+        // If the texture is unfiltered, then the per pixel importance corrosponds to the PDF.
+        // If filtering is enabled, then we need to filter the PDF as well.
+        // Generally this doesn't change much in terms of convergence, but it helps us to 
+        // avoid artefacts in cases where a black pixel would have a PDF of 0,
+        // but due to filtering the pixel wouldn't actually be black.
+        if (environment_map.get_magnification_filter() == MagnificationFilter::None) {
+            #pragma omp parallel for schedule(dynamic, 16)
+            for (int p = 0; p < int(width * height); ++p)
+                per_pixel_PDF_data[p] = float(pixel_importance[p]);
+        } else {
+            #pragma omp parallel for schedule(dynamic, 16)
+            for (int y = 0; y < int(height); ++y) {
+                // Blur per pixel importance to account for linear interpolation.
+                // The pixel's own contribution is 20 / 32.
+                // Neighbours on the side contribute by 2 / 32.
+                // Neighbours in the corners contribute by 1 / 32.
+                // Weights have been estimated based on linear interpolation.
+                for (int x = 0; x < int(width); ++x) {
+                    float& pixel_PDF = per_pixel_PDF_data[x + y * width];
+                    pixel_PDF = float(pixel_importance[x + y * width]) * (20.0f / 32.0f);
+
+                    { // Add contribution from left column.
+                        int left_x = x - 1 < 0 ? (width - 1) : (x - 1); // Repeat mode.
+
+                        int lower_left_index = left_x + max(0, y - 1) * width;
+                        pixel_PDF += float(pixel_importance[lower_left_index]) * (1.0f / 32.0f);
+
+                        int middle_left_index = left_x + y * width;
+                        pixel_PDF += float(pixel_importance[middle_left_index]) * (2.0f / 32.0f);
+
+                        int upper_left_index = left_x + min(int(height) - 1, y + 1) * width;
+                        pixel_PDF += float(pixel_importance[upper_left_index]) * (1.0f / 32.0f);
+                    }
+
+                    { // Add contribution from right column.
+                        int right_x = x + 1 == width ? 0 : (x + 1); // Repeat mode.
+
+                        int lower_right_index = right_x + max(0, y - 1) * width;
+                        pixel_PDF += float(pixel_importance[lower_right_index]) * (1.0f / 32.0f);
+
+                        int middle_right_index = right_x + y * width;
+                        pixel_PDF += float(pixel_importance[middle_right_index]) * (2.0f / 32.0f);
+
+                        int upper_right_index = right_x + min(int(height) - 1, y + 1) * width;
+                        pixel_PDF += float(pixel_importance[upper_right_index]) * (1.0f / 32.0f);
+                    }
+
+                    { // Add contribution from middle column. Center was added above.
+                        int lower_middle_index = x + max(0, y - 1) * width;
+                        pixel_PDF += float(pixel_importance[lower_middle_index]) * (2.0f / 32.0f);
+
+                        int upper_middle_index = x + min(int(height) - 1, y + 1) * width;
+                        pixel_PDF += float(pixel_importance[upper_middle_index]) * (2.0f / 32.0f);
+                    }
+                }
+            }
+        }
+    }
+
+    // Compute CDFs.
     // Compute conditional CDF.
     #pragma omp parallel for schedule(dynamic, 16)
     for (int y = 0; y < int(height); ++y) {
-        // PBRT p. 728. Account for the non-uniform surface area of the pixels, e.g. the higher density near the poles.
-        float sin_theta = sinf(PIf * (y + 0.5f) / float(height)); 
-
-        double* conditional_CDF_row = conditional_CDFd + y * (width + 1);
         float* per_pixel_PDF_row = per_pixel_PDF_data + y * width;
+        double* conditional_CDF_row = conditional_CDFd + y * (width + 1);
         conditional_CDF_row[0] = 0.0;
-        for (unsigned int x = 0; x < width; ++x) {
-            RGB pixel = environment.get_pixel(Vector2ui(x, y)).rgb();
-            // Pixel importance is scaled by sin_theta to avoid oversampling at the poles. See PBRT v2 page 727.
-            // TODO Blur a bit to account for linear interpolation.
-            float pixel_importance = (pixel.r + pixel.g + pixel.b) * sin_theta; // TODO Use luminance instead? Perhaps define a global importance(RGB / float3) function and use it here and for BRDF sampling.
-            conditional_CDF_row[x + 1] = conditional_CDF_row[x] + pixel_importance;
-            per_pixel_PDF_row[x] = pixel_importance;
-        }
+        for (unsigned int x = 0; x < width; ++x)
+            conditional_CDF_row[x + 1] = conditional_CDF_row[x] + per_pixel_PDF_row[x];
     }
 
     // Compute marginal CDF.
@@ -294,7 +362,7 @@ bool compute_environment_CDFs(Image environment, optix::Context& context,
             for (unsigned int x = 1; x < width; ++x)
                 conditional_CDF_row[x] /= conditional_CDF_row[width];
         // Last value should always be one. Even in rows with no contribution.
-        // This ensures that the binary search is well defined and will never select the last element.
+        // This ensures that the binary search is well-defined and will never select the last element.
         conditional_CDF_row[width] = 1.0f;
     }
 
@@ -322,31 +390,6 @@ bool compute_environment_CDFs(Image environment, optix::Context& context,
         per_pixel_PDF->unmap();
     }
 
-    if (false) {
-        printf("Marginal CDF:\n");
-        for (unsigned int y = 0; y < height + 1; ++y)
-            printf("%.3f, ", marginal_CDFd[y]);
-        printf("\n\n");
-
-        printf("Conditional CDF:\n");
-        for (unsigned int y = 0; y < height; ++y) {
-            for (unsigned int x = 0; x < width + 1; ++x)
-                printf("%.3f, ", conditional_CDFd[x + y * (width + 1)]);
-            printf("\n");
-        }
-        printf("\n\n");
-
-        float* per_pixel_PDF_data = static_cast<float*>(per_pixel_PDF->map());
-        printf("PDF:\n");
-        for (unsigned int y = 0; y < height; ++y) {
-            for (unsigned int x = 0; x < width; ++x)
-                printf("%.3f, ", per_pixel_PDF_data[x + y * width]);
-            printf("\n");
-        }
-        printf("\n\n");
-        per_pixel_PDF->unmap();
-    }
-
     delete[] marginal_CDFd;
     delete[] conditional_CDFd;
 
@@ -362,11 +405,8 @@ bool compute_environment_CDFs(Image environment, optix::Context& context,
 //----------------------------------------------------------------------------
 Environment create_environment(TextureND environment_map, optix::Context& context) {
 
-    // Environment env = { environment_map.get_ID(), nullptr, nullptr, nullptr };
-    // return env;
-
     optix::Buffer marginal_CDF, conditional_CDF, per_pixel_PDF;
-    bool success = compute_environment_CDFs(environment_map.get_image(), context, marginal_CDF, conditional_CDF, per_pixel_PDF);
+    bool success = compute_environment_CDFs(environment_map, context, marginal_CDF, conditional_CDF, per_pixel_PDF);
     if (!success) {
         Environment env = { environment_map.get_ID(), nullptr, nullptr, nullptr };
         return env;
