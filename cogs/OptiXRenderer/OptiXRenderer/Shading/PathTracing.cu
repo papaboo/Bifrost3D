@@ -108,13 +108,13 @@ RT_PROGRAM void miss() {
         environment_radiance = LightSources::evaluate(g_scene_environment_light, ray.origin, ray.direction);
         
         bool next_event_estimatable = g_scene_environment_light.per_pixel_PDF_ID != RT_TEXTURE_ID_NULL;
-        if (next_event_estimatable) {
+        if (next_event_estimatable) { // TODO Is it possible to merge this into one of the other if's?
             bool next_event_estimated = monte_carlo_PRD.bounces != 0; // Was next event estimated at previous intersection.
             bool apply_MIS = monte_carlo_PRD.bsdf_MIS_PDF > 0.0f;
             if (apply_MIS) {
                 // Calculate MIS weight and scale the radiance by it.
                 const float light_PDF = LightSources::PDF(g_scene_environment_light, ray.origin, ray.direction);
-                float mis_weight = is_PDF_valid(light_PDF) ? RNG::power_heuristic(monte_carlo_PRD.bsdf_MIS_PDF, light_PDF) : 0.0f;
+                float mis_weight = RNG::power_heuristic(monte_carlo_PRD.bsdf_MIS_PDF, light_PDF);
                 environment_radiance *= mis_weight;
             } else if (next_event_estimated)
                 // Previous bounce used next event estimation, but did not calculate MIS, so don't apply light contribution.
