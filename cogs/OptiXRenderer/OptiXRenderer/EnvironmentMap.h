@@ -23,6 +23,8 @@ namespace OptiXRenderer {
 // Environment mapping representation.
 // Contains the environment texture and the corrosponding CDFs and PDF buffers.
 // Future work:
+// * Specialize pixel importance computation to images with float or 
+//   unsigned char components and move it to it's own translation unit.
 // * Structuring the CDF as 'breath first' should improve the cache hit rate 
 //   of the first couple of lookups when we do binary search or? Profile!
 // * Create a kd-tree'ish structure instead of the current CDFs.

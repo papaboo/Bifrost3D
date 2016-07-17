@@ -1,5 +1,4 @@
 * Environment models.
-** Move environment creation into own file and create separate method for PDF and CDF computation.
 ** Should sampled UV have 0.5 / size added as in PBRT? Check with tiny env and compare sampled vs non-sampled diffuse material.
 * Reenable firefly clamping.
 * Mesh combiner.
