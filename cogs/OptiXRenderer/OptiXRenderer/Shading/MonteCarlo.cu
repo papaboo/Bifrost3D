@@ -128,6 +128,8 @@ __inline_dev__ void closest_hit_not_MIS() {
         LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_PRD.position, monte_carlo_PRD.rng.sample2f());
         float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction_to_light);
         light_sample.radiance *= abs(N_dot_L) / light_sample.PDF;
+        if (!is_PDF_valid(light_sample.PDF))
+            light_sample.radiance = make_float3(0.0f);
 
         // Inline the material response into the light sample's contribution.
         const float3 shading_light_direction = world_shading_tbn * light_sample.direction_to_light;
