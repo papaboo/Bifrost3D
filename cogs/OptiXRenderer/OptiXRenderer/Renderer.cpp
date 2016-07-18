@@ -427,7 +427,7 @@ void Renderer::render() {
         m_state->output_buffer->setSize(window.get_width(), window.get_height());
         m_state->screensize = make_uint2(window.get_width(), window.get_height());
         m_state->accumulations = 0u;
-#ifdef ENABLE_OPTIX_PRINT
+#ifdef ENABLE_OPTIX_DEBUG
         context->setPrintLaunchIndex(window.get_width() / 2, window.get_height() / 2);
 #endif
     }
