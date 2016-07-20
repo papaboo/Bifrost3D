@@ -44,7 +44,7 @@ TEST_F(Math_Quaternion, matrix_representation) {
     for (int i = 0; i < N; ++i) {
         // Construct a 'random' quaternion.
         float angle = (i * 360.0f) / N;
-        Vector3f axis = i % 2 ? Vector3f::up() : Vector3f::zero();
+        Vector3f axis = i % 2 ? Vector3f::up() : -Vector3f::up();
         axis += i % 4 ? Vector3f::forward() : Vector3f::zero();
         axis += i % 8 ? Vector3f::right() : Vector3f::zero();
         
@@ -57,8 +57,35 @@ TEST_F(Math_Quaternion, matrix_representation) {
         // Compare transformations of vectors.
         for (Vector3f v : { Vector3f::forward(), Vector3f::right(), Vector3f::up() }) {
             EXPECT_PRED3(compare_vector, q0 * v, m * v, 20);
-            EXPECT_PRED3(compare_vector, q1 * v, m * v, 30); // Apparently toQuaternion has bigger precision issues than toMatrix3x3.
+            EXPECT_PRED3(compare_vector, q1 * v, m * v, 30);
         }
+    }
+}
+
+TEST_F(Math_Quaternion, look_in) {
+    // Test N number of quaternions.
+    const int N = 10;
+    for (int i = 0; i < N; ++i) {
+        // Construct a 'random' direction.
+        // TODO Use all axis and 50% axis interpolations? Except 100% up and down. Should test all interesting configurations, branches and edgecases.
+        // TODO Use an rng instead.
+        float angle = (i * 360.0f) / N;
+        Vector3f axis = i % 2 ? Vector3f::up() : -Vector3f::up();
+        axis += i % 4 ? Vector3f::forward() : Vector3f::zero();
+        axis += i % 8 ? Vector3f::right() : Vector3f::zero();
+
+        Quaternionf q_dir = Quaternionf::from_angle_axis(degrees_to_radians(angle), normalize(axis));
+
+        Vector3f direction = q_dir.forward();
+        Quaterniond qd = Quaterniond::look_in(Vector3d(direction), Vector3d::up());
+        Quaternionf q = Quaterniond(qd);
+
+        // Quaternion generated from look_in should point in the same general direction as the used direction.
+        EXPECT_PRED3(compare_vector, q.forward(), direction, 17);
+        // Local 'up' should not point downwards.
+        EXPECT_LT(0.0f, q.up().y);
+        // Local 'right' should be located in the xz-plane.
+        EXPECT_LT(abs(q.right().y), 0.00000005f);
     }
 }
 

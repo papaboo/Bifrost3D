@@ -12,6 +12,7 @@
 #include <Cogwheel/Math/Constants.h>
 #include <Cogwheel/Math/Utils.h>
 #include <Cogwheel/Math/Vector.h>
+#include <Cogwheel/Math/Matrix.h> // No no no no REMOVE!
 
 #include <algorithm>
 #include <cstring>
@@ -45,13 +46,17 @@ public:
     T z;
     T w;
 
-    // Constructor. Assumes that the parameters will create a normalized quaternion. Otherwise the user should normalized after construction.
+    // Constructor. Assumes that the parameters will create a normalized quaternion. Otherwise the user should normalize after construction.
     Quaternion(T x, T y, T z, T w)
         : x(x), y(y), z(z), w(w) { }
 
     // Constructs a quaternion from real and imaginary components.
     Quaternion(Vector3<T> v, T w)
         : x(v.x), y(v.y), z(v.z), w(w){}
+
+    // Cast constructor.
+    template <typename U>
+    Quaternion(const Quaternion<U>& v) : x(T(v.x)), y(T(v.y)), z(T(v.z)), w(T(v.w)) { }
 
     // The identity quaternion.
     static inline Quaternion<T> identity() {
@@ -69,18 +74,43 @@ public:
     }
 
     // Create a quaternion with forward pointing along direction and that has the upvector up.
-    // http://www.gamedev.net/topic/613595-quaternion-lookrotationlookat-up/
+    // See the quaternion constructor in pbrt v3: Quaternion::ToTransform().
     static inline Quaternion<T> look_in(Vector3<T> direction, Vector3<T> up = Vector3<T>::up()) {
         Vector3<T> right = normalize(cross(up, direction));
         up = cross(direction, right);
 
-        T real = sqrt(T(1) + right.x + up.y + direction.z) * T(0.5);
-        T d = T(1) / (T(4) * real);
-        Vector3<T> imaginary = Vector3<T>(up.z - direction.y,
-                                          direction.x - right.z,
-                                          right.y - up.x) * d;
+        // Compute the trace of the matrix
+        T trace = right.x + up.y + direction.z;
 
-        return Quaternion<T>(imaginary, real);
+        if (trace > T(0)) {
+            // Compute w from matrix trace, then xyz
+            // 4w^2 = m[0][0] + m[1][1] + m[2][2] + m[3][3] (but m[3][3] == 1)
+            T s = std::sqrt(trace + T(1.0));
+            T real = s * T(0.5);
+            s = 0.5f / s;
+            Vector3<T> imaginary = Vector3<T>(up.z - direction.y,
+                                              direction.x - right.z,
+                                              right.y - up.x) * s;
+            return Quaternion<T>(imaginary, real);
+        } else {
+            Vector3<T> m[] = { right, up, direction };
+
+            // Compute largest of x, y or z, then remaining components.
+            const int next[3] = { 1, 2, 0 };
+            int i = 0;
+            if (m[1][1] > m[0][0]) i = 1;
+            if (m[2][2] > m[i][i]) i = 2;
+            int j = next[i];
+            int k = next[j];
+            T s = std::sqrt((m[i][i] - (m[j][j] + m[k][k])) + T(1.0));
+            Vector3<T> imaginary;
+            imaginary[i] = s * T(0.5);
+            if (s != T(0)) s = T(0.5) / s;
+            T real = (m[j][k] - m[k][j]) * s;
+            imaginary[j] = (m[i][j] + m[j][i]) * s;
+            imaginary[k] = (m[i][k] + m[k][i]) * s;
+            return Quaternion<T>(imaginary, real);
+        }
     }
 
     //*****************************************************************************
