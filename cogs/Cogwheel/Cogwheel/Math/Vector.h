@@ -33,7 +33,7 @@ public:
     explicit Vector2(T s) : x(s), y(s) { }
     Vector2(T x, T y) : x(x), y(y) { }
     template <typename U>
-    Vector2(const Vector2<U>& v) : x(v.x), y(v.y) { }
+    Vector2(const Vector2<U>& v) : x(T(v.x)), y(T(v.y)) { }
 
     static inline Vector2<T> zero() { return Vector2<T>(0, 0); }
     static inline Vector2<T> one() { return Vector2<T>(1, 1); }
@@ -108,7 +108,7 @@ public:
     explicit Vector4(T s) : x(s), y(s), z(s), w(s) { }
     Vector4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) { }
     template <typename U>
-    Vector4(const Vector4<U>& v) : x(v.x), y(v.y), z(v.z), w(v.w) { }
+    Vector4(const Vector4<U>& v) : x(T(v.x)), y(T(v.y)), z(T(v.z)), w(T(v.w)) { }
 
     static inline Vector4<T> zero() { return Vector4<T>(0, 0, 0, 0); }
     static inline Vector4<T> one() { return Vector4<T>(1, 1, 1, 1); }
