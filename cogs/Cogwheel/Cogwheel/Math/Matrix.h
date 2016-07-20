@@ -18,6 +18,9 @@
 namespace Cogwheel {
 namespace Math {
 
+//----------------------------------------------------------------------------
+// Row major matrix representation.
+//----------------------------------------------------------------------------
 template <typename Row, typename Column>
 struct Matrix final {
 public:
