@@ -32,7 +32,7 @@ static const unsigned char AllBuffers = Position | Normal | Texcoords;
 // * Verify that creating and destroying meshes don't leak!
 //----------------------------------------------------------------------------
 struct Mesh final {
-    unsigned int indices_count;
+    unsigned int index_count;
     unsigned int vertex_count;
     
     Math::Vector3ui* indices;
@@ -41,17 +41,17 @@ struct Mesh final {
     Math::Vector2f* texcoords;
 
     Mesh()
-        : indices_count(0u)
+        : index_count(0u)
         , vertex_count(0u)
         , indices(nullptr)
         , positions(nullptr)
         , normals(nullptr)
         , texcoords(nullptr) { }
 
-    Mesh(unsigned int indices_count, unsigned int vertex_count, unsigned char buffer_bitmask = MeshFlags::AllBuffers)
-        : indices_count(indices_count)
+    Mesh(unsigned int index_count, unsigned int vertex_count, unsigned char buffer_bitmask = MeshFlags::AllBuffers)
+        : index_count(index_count)
         , vertex_count(vertex_count)
-        , indices(new Math::Vector3ui[indices_count])
+        , indices(new Math::Vector3ui[index_count])
         , positions((buffer_bitmask & MeshFlags::Position) ? new Math::Vector3f[vertex_count] : nullptr)
         , normals((buffer_bitmask & MeshFlags::Normal) ? new Math::Vector3f[vertex_count] : nullptr)
         , texcoords((buffer_bitmask & MeshFlags::Texcoords) ? new Math::Vector2f[vertex_count] : nullptr) {
@@ -72,7 +72,7 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(Meshes::UID mesh_ID) { return m_UID_generator.has(mesh_ID); }
 
-    static Meshes::UID create(const std::string& name, unsigned int indices_count, unsigned int vertex_count, unsigned char buffer_bitmask = MeshFlags::AllBuffers);
+    static Meshes::UID create(const std::string& name, unsigned int index_count, unsigned int vertex_count, unsigned char buffer_bitmask = MeshFlags::AllBuffers);
     static void destroy(Meshes::UID mesh_ID);
 
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
@@ -83,7 +83,7 @@ public:
     static inline void set_name(Meshes::UID mesh_ID, const std::string& name) { m_names[mesh_ID] = name; }
 
     static inline Mesh& get_mesh(Meshes::UID mesh_ID) { return m_meshes[mesh_ID]; }
-    static inline unsigned int get_indices_count(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].indices_count; }
+    static inline unsigned int get_index_count(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].index_count; }
     static inline Math::Vector3ui* get_indices(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].indices; }
     static inline unsigned int get_vertex_count(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].vertex_count; }
     static inline Math::Vector3f* get_positions(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].positions; }

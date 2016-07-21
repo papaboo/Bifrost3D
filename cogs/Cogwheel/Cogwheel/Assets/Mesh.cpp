@@ -93,7 +93,7 @@ void Meshes::reserve(unsigned int new_capacity) {
     reserve_mesh_data(m_UID_generator.capacity(), old_capacity);
 }
 
-Meshes::UID Meshes::create(const std::string& name, unsigned int indices_count, unsigned int vertex_count, unsigned char buffer_bitmask) {
+Meshes::UID Meshes::create(const std::string& name, unsigned int index_count, unsigned int vertex_count, unsigned char buffer_bitmask) {
     assert(m_meshes != nullptr);
     assert(m_names != nullptr);
     assert(m_bounds != nullptr);
@@ -108,7 +108,7 @@ Meshes::UID Meshes::create(const std::string& name, unsigned int indices_count, 
         m_meshes_changed.push_back(id);
 
     m_names[id] = name;
-    m_meshes[id] = Mesh(indices_count, vertex_count, buffer_bitmask);
+    m_meshes[id] = Mesh(index_count, vertex_count, buffer_bitmask);
     m_bounds[id] = AABB(Vector3f(-1e30f, -1e30f, -1e30f), Vector3f(1e30f, 1e30f, 1e30f));
     m_changes[id] = Changes::Created;
 

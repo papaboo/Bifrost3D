@@ -24,9 +24,9 @@ Meshes::UID plane(unsigned int quads_pr_edge) {
     unsigned int size = quads_pr_edge + 1;
     unsigned int vertex_count = size * size;
     unsigned int quad_count = quads_pr_edge * quads_pr_edge;
-    unsigned int indices_count = quad_count * 2;
+    unsigned int index_count = quad_count * 2;
     
-    Meshes::UID mesh_ID = Meshes::create("Plane", indices_count, vertex_count);
+    Meshes::UID mesh_ID = Meshes::create("Plane", index_count, vertex_count);
     Mesh& mesh = Meshes::get_mesh(mesh_ID);
 
     // Vertex attributes.
@@ -64,11 +64,11 @@ Meshes::UID cube(unsigned int quads_pr_edge) {
     float scale = 1.0f / quads_pr_edge;
     float halfsize = 0.5f; // verts_pr_edge * 0.5f;
     unsigned int quad_count = quads_pr_edge * quads_pr_edge * sides;
-    unsigned int indices_count = quad_count * 2;
+    unsigned int index_count = quad_count * 2;
     unsigned int verts_pr_side = verts_pr_edge * verts_pr_edge;
     unsigned int vertex_count = verts_pr_side * sides;
 
-    Meshes::UID mesh_ID = Meshes::create("Cube", indices_count, vertex_count);
+    Meshes::UID mesh_ID = Meshes::create("Cube", index_count, vertex_count);
     Mesh& mesh = Meshes::get_mesh(mesh_ID);
 
     // Create the vertices.
@@ -145,12 +145,12 @@ Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_qua
     unsigned int lid_vertex_count = circumference_quads + 1;
     unsigned int side_vertex_count = (vertical_quads + 1) * circumference_quads;
     unsigned int vertex_count = 2 * lid_vertex_count + side_vertex_count;
-    unsigned int lid_indices_count = circumference_quads;
-    unsigned int side_indices_count = 2 * vertical_quads * circumference_quads;
-    unsigned int indices_count = 2 * lid_indices_count + side_indices_count;
+    unsigned int lid_index_count = circumference_quads;
+    unsigned int side_index_count = 2 * vertical_quads * circumference_quads;
+    unsigned int index_count = 2 * lid_index_count + side_index_count;
     float radius = 0.5f;
 
-    Meshes::UID mesh_ID = Meshes::create("Cylinder", indices_count, vertex_count);
+    Meshes::UID mesh_ID = Meshes::create("Cylinder", index_count, vertex_count);
     Mesh& mesh = Meshes::get_mesh(mesh_ID);
 
     // Vertex layout is
@@ -215,21 +215,21 @@ Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_qua
 
     { // Indices
         // Top
-        for (unsigned int i = 0; i < lid_indices_count; ++i)
+        for (unsigned int i = 0; i < lid_index_count; ++i)
             mesh.indices[i] = Vector3ui(0, i + 1, i + 2);
-        mesh.indices[lid_indices_count - 1].z = 1;
+        mesh.indices[lid_index_count - 1].z = 1;
         
         // Bottom
-        for (unsigned int i = 0; i < lid_indices_count; ++i)
-            mesh.indices[i + lid_indices_count] = Vector3ui(0, i + 2, i + 1) + lid_vertex_count;
-        mesh.indices[2 * lid_indices_count - 1].y = 1 + lid_vertex_count;
+        for (unsigned int i = 0; i < lid_index_count; ++i)
+            mesh.indices[i + lid_index_count] = Vector3ui(0, i + 2, i + 1) + lid_vertex_count;
+        mesh.indices[2 * lid_index_count - 1].y = 1 + lid_vertex_count;
 
         // Side
         Vector3f* side_positions = mesh.positions + 2 * lid_vertex_count;
         unsigned int side_vertex_offset = 2 * lid_vertex_count;
         for (unsigned int i = 0; i < vertical_quads; ++i) {
             for (unsigned int j = 0; j < circumference_quads; ++j) {
-                unsigned int side_index = 2 * lid_indices_count + 2 * (i * circumference_quads + j);
+                unsigned int side_index = 2 * lid_index_count + 2 * (i * circumference_quads + j);
                 
                 unsigned int i0 = i * circumference_quads + j;
                 unsigned int i1 = (i + 1) * circumference_quads + j;
@@ -264,10 +264,10 @@ Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_
     unsigned int longitude_size = longitude_quads + 1;
     unsigned int vertex_count = latitude_size * longitude_size;
     unsigned int quad_count = latitude_quads * longitude_quads;
-    unsigned int indices_count = quad_count * 2;
+    unsigned int index_count = quad_count * 2;
     float radius = 0.5f;
 
-    Meshes::UID mesh_ID = Meshes::create("RevolvedSphere", indices_count, vertex_count);
+    Meshes::UID mesh_ID = Meshes::create("RevolvedSphere", index_count, vertex_count);
     Mesh& mesh = Meshes::get_mesh(mesh_ID);
 
     { // Vertex attributes.
