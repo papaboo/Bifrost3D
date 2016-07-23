@@ -117,9 +117,15 @@ Meshes::UID Meshes::create(const std::string& name, unsigned int index_count, un
 
 void Meshes::destroy(Meshes::UID mesh_ID) {
     if (m_UID_generator.erase(mesh_ID)) {
+
+        Mesh& mesh = m_meshes[mesh_ID];
+        delete[] mesh.indices;
+        delete[] mesh.positions;
+        delete[] mesh.normals;
+        delete[] mesh.texcoords;
+
         if (m_changes[mesh_ID] == Changes::None)
             m_meshes_changed.push_back(mesh_ID);
-
         m_changes[mesh_ID] |= Changes::Destroyed;
     }
 }
@@ -128,9 +134,8 @@ AABB Meshes::compute_bounds(Meshes::UID mesh_ID) {
     Mesh& mesh = get_mesh(mesh_ID);
 
     AABB bounds = AABB(mesh.positions[0], mesh.positions[0]);
-    for (Vector3f* position_itr = mesh.positions + 1; position_itr < (mesh.positions + mesh.vertex_count); ++position_itr) {
+    for (Vector3f* position_itr = mesh.positions + 1; position_itr < (mesh.positions + mesh.vertex_count); ++position_itr)
         bounds.grow_to_contain(*position_itr);
-    }
 
     m_bounds[mesh_ID] = bounds;
     return bounds;
@@ -140,6 +145,60 @@ void Meshes::reset_change_notifications() {
     std::memset(m_changes, Changes::None, capacity());
     m_meshes_changed.resize(0);
 }
+
+//-----------------------------------------------------------------------------
+// Mesh utils.
+//-----------------------------------------------------------------------------
+
+namespace MeshUtils {
+
+    Meshes::UID combine(Meshes::UID mesh0_ID, Math::Transform transform0,
+                        Meshes::UID mesh1_ID, Math::Transform transform1) {
+        Mesh mesh0 = Meshes::get_mesh(mesh0_ID);
+        Mesh mesh1 = Meshes::get_mesh(mesh1_ID);
+
+        int index_count = mesh0.index_count + mesh1.index_count;
+        int vertex_count = mesh0.vertex_count + mesh1.vertex_count;
+        unsigned char mesh_flags = (mesh0.positions != nullptr) && (mesh1.positions != nullptr) ? MeshFlags::Position : MeshFlags::None;
+        mesh_flags |= (mesh0.normals != nullptr) && (mesh1.normals != nullptr) ? MeshFlags::Normal : MeshFlags::None;
+        mesh_flags |= (mesh0.texcoords != nullptr) && (mesh1.texcoords != nullptr) ? MeshFlags::Texcoords : MeshFlags::None;
+
+        Meshes::UID result_ID = Meshes::create("Combined mesh", index_count, vertex_count, mesh_flags);
+        Mesh result_mesh = Meshes::get_mesh(result_ID);
+
+        { // Copy indices.
+            memcpy(result_mesh.indices, mesh0.indices, sizeof(*mesh0.indices) * mesh0.index_count);
+            for (unsigned int i = 0; i < mesh1.index_count; ++i)
+                result_mesh.indices[i + mesh0.index_count] = mesh1.indices[i] + mesh0.vertex_count;
+        }
+
+        { // Copy positions.
+            Vector3f* positions = result_mesh.positions;
+            for (unsigned int v = 0; v < mesh0.vertex_count; ++v)
+                *(positions++) = transform0 * mesh0.positions[v];
+            for (unsigned int v = 0; v < mesh1.vertex_count; ++v)
+                *(positions++) = transform1 * mesh1.positions[v];
+        }
+
+        if (mesh_flags & MeshFlags::Normal) {
+            Vector3f* normals = result_mesh.normals;
+            for (unsigned int v = 0; v < mesh0.vertex_count; ++v)
+                *(normals++) = transform0.rotation * mesh0.normals[v];
+            for (unsigned int v = 0; v < mesh1.vertex_count; ++v)
+                *(normals++) = transform1.rotation * mesh1.normals[v];
+        }
+
+        if (mesh_flags & MeshFlags::Texcoords) {
+            memcpy(result_mesh.texcoords, mesh0.texcoords, sizeof(*mesh0.texcoords) * mesh0.vertex_count);
+            memcpy(result_mesh.texcoords + mesh0.vertex_count, mesh1.texcoords, sizeof(*mesh1.texcoords) * mesh1.vertex_count);
+        }
+
+        Meshes::compute_bounds(result_ID); // TODO Just approximate based on bounding boxes.
+
+        return result_ID;
+    }
+
+} // NS MeshUtils
 
 } // NS Assets
 } // NS Cogwheel

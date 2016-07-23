@@ -12,6 +12,7 @@
 #include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Math/AABB.h>
+#include <Cogwheel/Math/Transform.h>
 #include <Cogwheel/Math/Vector.h>
 
 #include <vector>
@@ -20,6 +21,7 @@ namespace Cogwheel {
 namespace Assets {
 
 namespace MeshFlags {
+static const unsigned char None       = 0u;
 static const unsigned char Position   = 1u << 0u;
 static const unsigned char Normal     = 1u << 1u;
 static const unsigned char Texcoords  = 1u << 2u;
@@ -127,6 +129,31 @@ private:
     static unsigned char* m_changes; // Bitmask of changes.
     static std::vector<UID> m_meshes_changed;
 };
+
+//----------------------------------------------------------------------------
+// Mesh utils
+//----------------------------------------------------------------------------
+namespace MeshUtils {
+
+    // Future work
+    // * Take N meshes and transforms as arguments.
+    // * Combine flags: Should we combine meshes with and without normals or texcoords.
+    //                  What is a good default normal? Combining will result in face normals turning into smooth normals.
+    Meshes::UID combine(Meshes::UID mesh0_ID, Math::Transform transform0,
+                        Meshes::UID mesh1_ID, Math::Transform transform1);
+
+    inline Meshes::UID combine_and_destroy(Meshes::UID mesh0_ID, Math::Transform transform0,
+                                           Meshes::UID mesh1_ID, Math::Transform transform1) {
+        Meshes::UID combined_ID = combine(mesh0_ID, transform0, mesh1_ID, transform1);
+        if (combined_ID != Meshes::UID::invalid_UID()) {
+            // TODO What if both meshes are the same? Can/should you destroy the same mesh multiple times? There is a test case specifying that you can delete meshes multiple times no?
+            Meshes::destroy(mesh0_ID);
+            Meshes::destroy(mesh1_ID);
+        }
+        return combined_ID;
+    }
+
+} // NS MeshUtils
 
 } // NS Assets
 } // NS Cogwheel
