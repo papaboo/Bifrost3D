@@ -120,24 +120,6 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
         }
     }
 
-    if (false) { // Combined mesh.
-        Materials::Data material_data;
-        material_data.base_tint = RGB(0.02f, 0.27f, 0.33f);
-        material_data.base_roughness = 1.0f;
-        material_data.specularity = 0.25f;
-        material_data.metallic = 0.0f;
-        Materials::UID material_ID = Materials::create("material", material_data);
-
-        Meshes::UID cube_mesh_ID = MeshCreation::cube(1);
-
-        Meshes::UID merged_mesh_ID = MeshUtils::combine_and_destroy(cube_mesh_ID, Transform::identity(), cube_mesh_ID, Transform(Vector3f(0.5f), Quaternionf::from_angle_axis(Math::PI<float>() * 0.25f, Vector3f::up())));
-
-        Transform merged_transform = Transform(Vector3f(0.0f, -0.25f, -2.0f), Quaternionf::identity(), 1.5f);
-        SceneNode merged_node = SceneNodes::create("Cube", merged_transform);
-        MeshModels::create(merged_node.get_ID(), merged_mesh_ID, material_ID);
-        merged_node.set_parent(root_node);
-    }
-
     { // Create material models.
         Materials::Data material0_data;
         material0_data.base_tint = RGB(0.02f, 0.27f, 0.33f);
