@@ -134,7 +134,12 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
         material1_data.metallic = 1.0f;
 
         Meshes::UID cube_mesh_ID = MeshCreation::cube(1);
+        Transform cube_transform = Transform(Vector3f(0.0f, -0.25f, 0.0f), Quaternionf::identity(), 1.5f);
         Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(32, 16);
+        Transform sphere_transform = Transform(Vector3f(0.0f, 1.0f, 0.0f), Quaternionf::identity(), 1.5f);
+
+        // Mesh combine models.
+        Meshes::UID mesh_ID = MeshUtils::combine_and_destroy(cube_mesh_ID, cube_transform, sphere_mesh_ID, sphere_transform);
 
         for (int m = 0; m < 9; ++m) {
             float lerp_t = m / 8.0f;
@@ -145,15 +150,10 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
             material_data.metallic = lerp(material0_data.metallic, material1_data.metallic, lerp_t);;
             Materials::UID material_ID = Materials::create("Lerped material", material_data);
 
-            Transform cube_transform = Transform(Vector3f(float(m * 2 - 8), -0.25f, 0.0f), Quaternionf::identity(), 1.5f);
-            SceneNode cube_node = SceneNodes::create("Cube", cube_transform);
-            MeshModels::create(cube_node.get_ID(), cube_mesh_ID, material_ID);
-            cube_node.set_parent(root_node);
-
-            Transform sphere_transform = Transform(Vector3f(float(m * 2 - 8), 1.0f, 0.0f), Quaternionf::identity(), 1.5f);
-            SceneNode sphere_node = SceneNodes::create("Sphere", sphere_transform);
-            MeshModels::create(sphere_node.get_ID(), sphere_mesh_ID, material_ID);
-            sphere_node.set_parent(root_node);
+            Transform transform = Transform(Vector3f(float(m * 2 - 8), 0.0, 0.0f));
+            SceneNode node = SceneNodes::create("Model", transform);
+            MeshModels::create(node.get_ID(), mesh_ID, material_ID);
+            node.set_parent(root_node);
         }
     }
 }
