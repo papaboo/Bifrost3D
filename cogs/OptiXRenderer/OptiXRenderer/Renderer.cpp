@@ -137,32 +137,33 @@ static inline optix::Geometry load_mesh(optix::Context& context, Meshes::UID mes
                                         optix::Program intersection_program, optix::Program bounds_program) {
     optix::Geometry optix_mesh = context->createGeometry();
     
-    const Mesh& mesh = Meshes::get_mesh(mesh_ID);
+    Mesh mesh = mesh_ID;
 
     optix_mesh->setIntersectionProgram(intersection_program);
     optix_mesh->setBoundingBoxProgram(bounds_program);
 
-    optix::Buffer index_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT3, mesh.index_count, mesh.indices);
+    optix::Buffer index_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT3, mesh.get_index_count(), mesh.get_indices());
     optix_mesh["index_buffer"]->setBuffer(index_buffer);
-    optix_mesh->setPrimitiveCount(mesh.index_count);
+    optix_mesh->setPrimitiveCount(mesh.get_index_count());
 
     // Vertex attributes
-    optix::Buffer position_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, mesh.vertex_count, mesh.positions);
+    unsigned int vertex_count = mesh.get_vertex_count();
+    optix::Buffer position_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, vertex_count, mesh.get_positions());
     optix_mesh["position_buffer"]->setBuffer(position_buffer);
 
-    RTsize normal_count = mesh.normals ? mesh.vertex_count : 0;
+    RTsize normal_count = mesh.get_normals() ? vertex_count : 0;
     optix::Buffer normal_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, normal_count);
     normal_buffer->setElementSize(sizeof(EncodedNormal));
     EncodedNormal* mapped_normals = (EncodedNormal*)normal_buffer->map();
     for (RTsize i = 0; i < normal_count; ++i) {
-        Vector3f normal = mesh.normals[i];
+        Vector3f normal = mesh.get_normals()[i];
         mapped_normals[i] = EncodedNormal(normal.x, normal.y, normal.z);
     }
     normal_buffer->unmap();
     optix_mesh["normal_buffer"]->setBuffer(normal_buffer);
 
-    RTsize texcoord_count = mesh.texcoords ? mesh.vertex_count : 0;
-    optix::Buffer texcoord_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, texcoord_count, mesh.texcoords);
+    RTsize texcoord_count = mesh.get_texcoords() ? vertex_count : 0;
+    optix::Buffer texcoord_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, texcoord_count, mesh.get_texcoords());
     optix_mesh["texcoord_buffer"]->setBuffer(texcoord_buffer);
 
     OPTIX_VALIDATE(optix_mesh);

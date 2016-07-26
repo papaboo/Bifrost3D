@@ -6,6 +6,7 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
+#include <Cogwheel/Math/AABB.h>
 #include <Cogwheel/Math/Color.h>
 
 #include <gtest/gtest.h>
@@ -18,7 +19,6 @@ static bool equal_rgb(Cogwheel::Math::RGB lhs, Cogwheel::Math::RGB rhs) {
         && Cogwheel::Math::almost_equal(lhs.g, rhs.g)
         && Cogwheel::Math::almost_equal(lhs.b, rhs.b);
 }
-
 #define EXPECT_RGB_EQ(expected, actual) EXPECT_PRED2(equal_rgb, expected, actual)
 
 static bool equal_rgba(Cogwheel::Math::RGBA lhs, Cogwheel::Math::RGBA rhs) {
@@ -27,7 +27,11 @@ static bool equal_rgba(Cogwheel::Math::RGBA lhs, Cogwheel::Math::RGBA rhs) {
         && Cogwheel::Math::almost_equal(lhs.b, rhs.b)
         && Cogwheel::Math::almost_equal(lhs.a, rhs.a);
 }
-
 #define EXPECT_RGBA_EQ(expected, actual) EXPECT_PRED2(equal_rgba, expected, actual)
+
+static bool invalid_AABB(Cogwheel::Math::AABB v) {
+    return v.maximum.x < v.minimum.x || v.maximum.y < v.minimum.y || v.maximum.z < v.minimum.z;
+}
+#define EXPECT_INVALID_AABB(val) EXPECT_PRED1(invalid_AABB, val)
 
 #endif // _COGWHEEL_TESTS_EXPECTS_H_

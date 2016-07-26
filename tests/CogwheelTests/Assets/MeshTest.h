@@ -45,48 +45,52 @@ TEST_F(Assets_Mesh, sentinel_mesh) {
     Meshes::UID sentinel_ID = Meshes::UID::invalid_UID();
 
     EXPECT_FALSE(Meshes::has(sentinel_ID));
-    EXPECT_EQ(Meshes::get_mesh(sentinel_ID).index_count, 0);
-    EXPECT_EQ(Meshes::get_mesh(sentinel_ID).indices, nullptr);
-    EXPECT_EQ(Meshes::get_mesh(sentinel_ID).vertex_count, 0u);
-    EXPECT_EQ(Meshes::get_mesh(sentinel_ID).positions, nullptr);
-    EXPECT_EQ(Meshes::get_mesh(sentinel_ID).normals, nullptr);
-    EXPECT_EQ(Meshes::get_mesh(sentinel_ID).texcoords, nullptr);
+    EXPECT_EQ(0u, Meshes::get_index_count(sentinel_ID));
+    EXPECT_EQ(nullptr, Meshes::get_indices(sentinel_ID));
+    EXPECT_EQ(0u, Meshes::get_vertex_count(sentinel_ID));
+    EXPECT_EQ(nullptr, Meshes::get_positions(sentinel_ID));
+    EXPECT_EQ(nullptr, Meshes::get_normals(sentinel_ID));
+    EXPECT_EQ(nullptr, Meshes::get_texcoords(sentinel_ID));
+    Math::AABB bounds = Meshes::get_bounds(sentinel_ID);
+    EXPECT_TRUE(isnan(bounds.minimum.x) && isnan(bounds.minimum.y) && isnan(bounds.minimum.z) &&
+                isnan(bounds.maximum.x) && isnan(bounds.maximum.y) && isnan(bounds.maximum.z));
 }
 
 TEST_F(Assets_Mesh, create) {
     Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
 
     EXPECT_TRUE(Meshes::has(mesh_ID));
-    EXPECT_EQ(Meshes::get_mesh(mesh_ID).index_count, 32);
-    EXPECT_NE(Meshes::get_mesh(mesh_ID).indices, nullptr);
-    EXPECT_EQ(Meshes::get_mesh(mesh_ID).vertex_count, 16u);
-    EXPECT_NE(Meshes::get_mesh(mesh_ID).positions, nullptr);
-    EXPECT_NE(Meshes::get_mesh(mesh_ID).normals, nullptr);
-    EXPECT_NE(Meshes::get_mesh(mesh_ID).texcoords, nullptr);
+    EXPECT_EQ(32u, Meshes::get_index_count(mesh_ID));
+    EXPECT_NE(nullptr, Meshes::get_indices(mesh_ID));
+    EXPECT_EQ(16u, Meshes::get_vertex_count(mesh_ID));
+    EXPECT_NE(nullptr, Meshes::get_positions(mesh_ID));
+    EXPECT_NE(nullptr, Meshes::get_normals(mesh_ID));
+    EXPECT_NE(nullptr, Meshes::get_texcoords(mesh_ID));
+    EXPECT_INVALID_AABB(Meshes::get_bounds(mesh_ID));
 
     // Test mesh created notification.
     Core::Iterable<Meshes::ChangedIterator> changed_meshes = Meshes::get_changed_meshes();
-    EXPECT_EQ(changed_meshes.end() - changed_meshes.begin(), 1);
-    EXPECT_EQ(*changed_meshes.begin(), mesh_ID);
-    EXPECT_EQ(Meshes::get_changes(mesh_ID), Meshes::Changes::Created);
+    EXPECT_EQ(1, changed_meshes.end() - changed_meshes.begin());
+    EXPECT_EQ(mesh_ID, *changed_meshes.begin());
+    EXPECT_EQ(Meshes::Changes::Created, Meshes::get_changes(mesh_ID));
 }
 
 TEST_F(Assets_Mesh, create_only_positions) {
     Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u, MeshFlags::Position);
 
     EXPECT_TRUE(Meshes::has(mesh_ID));
-    EXPECT_EQ(Meshes::get_mesh(mesh_ID).index_count, 32);
-    EXPECT_NE(Meshes::get_mesh(mesh_ID).indices, nullptr);
-    EXPECT_EQ(Meshes::get_mesh(mesh_ID).vertex_count, 16u);
-    EXPECT_NE(Meshes::get_mesh(mesh_ID).positions, nullptr);
-    EXPECT_EQ(Meshes::get_mesh(mesh_ID).normals, nullptr);
-    EXPECT_EQ(Meshes::get_mesh(mesh_ID).texcoords, nullptr);
+    EXPECT_EQ(32u, Meshes::get_index_count(mesh_ID));
+    EXPECT_NE(nullptr, Meshes::get_indices(mesh_ID));
+    EXPECT_EQ(16u, Meshes::get_vertex_count(mesh_ID));
+    EXPECT_NE(nullptr, Meshes::get_positions(mesh_ID));
+    EXPECT_EQ(nullptr, Meshes::get_normals(mesh_ID));
+    EXPECT_EQ(nullptr, Meshes::get_texcoords(mesh_ID));
 
     // Test mesh created notification.
     Core::Iterable<Meshes::ChangedIterator> changed_meshes = Meshes::get_changed_meshes();
-    EXPECT_EQ(changed_meshes.end() - changed_meshes.begin(), 1);
-    EXPECT_EQ(*changed_meshes.begin(), mesh_ID);
-    EXPECT_EQ(Meshes::get_changes(mesh_ID), Meshes::Changes::Created);
+    EXPECT_EQ(1, changed_meshes.end() - changed_meshes.begin());
+    EXPECT_EQ(mesh_ID, *changed_meshes.begin());
+    EXPECT_EQ(Meshes::Changes::Created, Meshes::get_changes(mesh_ID));
 }
 
 TEST_F(Assets_Mesh, destroy) {
@@ -100,9 +104,9 @@ TEST_F(Assets_Mesh, destroy) {
 
     // Test mesh destroyed notification.
     Core::Iterable<Meshes::ChangedIterator> changed_meshes = Meshes::get_changed_meshes();
-    EXPECT_EQ(changed_meshes.end() - changed_meshes.begin(), 1);
-    EXPECT_EQ(*changed_meshes.begin(), mesh_ID);
-    EXPECT_EQ(Meshes::get_changes(mesh_ID), Meshes::Changes::Destroyed);
+    EXPECT_EQ(1, changed_meshes.end() - changed_meshes.begin());
+    EXPECT_EQ(mesh_ID, *changed_meshes.begin());
+    EXPECT_EQ(Meshes::Changes::Destroyed, Meshes::get_changes(mesh_ID));
 }
 
 TEST_F(Assets_Mesh, create_and_destroy_notifications) {
@@ -113,7 +117,7 @@ TEST_F(Assets_Mesh, create_and_destroy_notifications) {
 
     { // Test mesh create notifications.
         Core::Iterable<Meshes::ChangedIterator> changed_meshes = Meshes::get_changed_meshes();
-        EXPECT_EQ(changed_meshes.end() - changed_meshes.begin(), 2);
+        EXPECT_EQ(2u, changed_meshes.end() - changed_meshes.begin());
 
         bool mesh0_created = false;
         bool mesh1_created = false;
@@ -140,7 +144,7 @@ TEST_F(Assets_Mesh, create_and_destroy_notifications) {
         EXPECT_FALSE(Meshes::has(mesh_ID0));
 
         Core::Iterable<Meshes::ChangedIterator> changed_meshes = Meshes::get_changed_meshes();
-        EXPECT_EQ(changed_meshes.end() - changed_meshes.begin(), 1);
+        EXPECT_EQ(1, changed_meshes.end() - changed_meshes.begin());
 
         bool mesh0_destroyed = false;
         bool other_changes = false;

@@ -24,73 +24,46 @@ namespace MeshFlags {
 static const unsigned char None       = 0u;
 static const unsigned char Position   = 1u << 0u;
 static const unsigned char Normal     = 1u << 1u;
-static const unsigned char Texcoords  = 1u << 2u;
-static const unsigned char AllBuffers = Position | Normal | Texcoords;
+static const unsigned char Texcoord  = 1u << 2u;
+static const unsigned char AllBuffers = Position | Normal | Texcoord;
 }
 
 //----------------------------------------------------------------------------
-// Container for the buffers that make up a mesh, such as positions and normals.
+// Container for mesh properties and their bufers.
 // Future work:
 // * Verify that creating and destroying meshes don't leak!
+// * Array access functions should probably map the data as read- or writable.
 //----------------------------------------------------------------------------
-struct Mesh final {
-    unsigned int index_count;
-    unsigned int vertex_count;
-    
-    Math::Vector3ui* indices;
-    Math::Vector3f* positions;
-    Math::Vector3f* normals;
-    Math::Vector2f* texcoords;
-
-    Mesh()
-        : index_count(0u)
-        , vertex_count(0u)
-        , indices(nullptr)
-        , positions(nullptr)
-        , normals(nullptr)
-        , texcoords(nullptr) { }
-
-    Mesh(unsigned int index_count, unsigned int vertex_count, unsigned char buffer_bitmask = MeshFlags::AllBuffers)
-        : index_count(index_count)
-        , vertex_count(vertex_count)
-        , indices(new Math::Vector3ui[index_count])
-        , positions((buffer_bitmask & MeshFlags::Position) ? new Math::Vector3f[vertex_count] : nullptr)
-        , normals((buffer_bitmask & MeshFlags::Normal) ? new Math::Vector3f[vertex_count] : nullptr)
-        , texcoords((buffer_bitmask & MeshFlags::Texcoords) ? new Math::Vector2f[vertex_count] : nullptr) {
-    }
-};
-
 class Meshes final {
 public:
     typedef Core::TypedUIDGenerator<Meshes> UIDGenerator;
     typedef UIDGenerator::UID UID;
     typedef UIDGenerator::ConstIterator ConstUIDIterator;
 
-    static bool is_allocated() { return m_meshes != nullptr; }
+    static inline bool is_allocated() { return m_buffers != nullptr; }
     static void allocate(unsigned int capacity);
     static void deallocate();
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(Meshes::UID mesh_ID) { return m_UID_generator.has(mesh_ID); }
+    static inline bool has(Meshes::UID mesh_ID) { return m_UID_generator.has(mesh_ID); }
 
     static Meshes::UID create(const std::string& name, unsigned int index_count, unsigned int vertex_count, unsigned char buffer_bitmask = MeshFlags::AllBuffers);
     static void destroy(Meshes::UID mesh_ID);
 
-    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
-    static ConstUIDIterator end() { return m_UID_generator.end(); }
-    static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
+    static inline ConstUIDIterator begin() { return m_UID_generator.begin(); }
+    static inline ConstUIDIterator end() { return m_UID_generator.end(); }
+    static inline Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
 
     static inline std::string get_name(Meshes::UID mesh_ID) { return m_names[mesh_ID]; }
     static inline void set_name(Meshes::UID mesh_ID, const std::string& name) { m_names[mesh_ID] = name; }
 
-    static inline Mesh& get_mesh(Meshes::UID mesh_ID) { return m_meshes[mesh_ID]; }
-    static inline unsigned int get_index_count(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].index_count; }
-    static inline Math::Vector3ui* get_indices(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].indices; }
-    static inline unsigned int get_vertex_count(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].vertex_count; }
-    static inline Math::Vector3f* get_positions(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].positions; }
-    static inline Math::Vector3f* get_normals(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].normals; }
-    static inline Math::Vector2f* get_texcoords(Meshes::UID mesh_ID) { return m_meshes[mesh_ID].texcoords; }
+    static inline unsigned int get_index_count(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].index_count; }
+    static inline Math::Vector3ui* get_indices(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].indices; }
+    static inline unsigned int get_vertex_count(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].vertex_count; }
+    static inline Math::Vector3f* get_positions(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].positions; }
+    static inline Math::Vector3f* get_normals(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].normals; }
+    static inline Math::Vector2f* get_texcoords(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].texcoords; }
     static inline Math::AABB get_bounds(Meshes::UID mesh_ID) { return m_bounds[mesh_ID]; }
     static inline void set_bounds(Meshes::UID mesh_ID, Math::AABB bounds) { m_bounds[mesh_ID] = bounds; }
     static Math::AABB compute_bounds(Meshes::UID mesh_ID);
@@ -111,7 +84,7 @@ public:
     }
 
     typedef std::vector<UID>::iterator ChangedIterator;
-    static Core::Iterable<ChangedIterator> get_changed_meshes() {
+    static inline Core::Iterable<ChangedIterator> get_changed_meshes() {
         return Core::Iterable<ChangedIterator>(m_meshes_changed.begin(), m_meshes_changed.end());
     }
 
@@ -120,14 +93,64 @@ public:
 private:
     static void reserve_mesh_data(unsigned int new_capacity, unsigned int old_capacity);
 
+    struct Buffers {
+        unsigned int index_count;
+        unsigned int vertex_count;
+
+        Math::Vector3ui* indices;
+        Math::Vector3f* positions;
+        Math::Vector3f* normals;
+        Math::Vector2f* texcoords;
+    };
+
     static UIDGenerator m_UID_generator;
     static std::string* m_names;
 
-    static Mesh* m_meshes;
+    static Buffers* m_buffers;
     static Math::AABB* m_bounds;
 
     static unsigned char* m_changes; // Bitmask of changes.
     static std::vector<UID> m_meshes_changed;
+};
+
+// ---------------------------------------------------------------------------
+// Mesh UID wrapper.
+// ---------------------------------------------------------------------------
+class Mesh final {
+public:
+    // -----------------------------------------------------------------------
+    // Class management.
+    // -----------------------------------------------------------------------
+    Mesh() : m_ID(Meshes::UID::invalid_UID()) {}
+    Mesh(Meshes::UID id) : m_ID(id) {}
+
+    inline const Meshes::UID get_ID() const { return m_ID; }
+    inline bool exists() const { return Meshes::has(m_ID); }
+
+    inline bool operator==(Mesh rhs) const { return m_ID == rhs.m_ID; }
+    inline bool operator!=(Mesh rhs) const { return m_ID != rhs.m_ID; }
+
+    // -----------------------------------------------------------------------
+    // Getters and setters.
+    // -----------------------------------------------------------------------
+    inline std::string get_name() const { return Meshes::get_name(m_ID); }
+    inline void set_name(const std::string& name) { Meshes::set_name(m_ID, name); }
+    inline unsigned int get_index_count() { return Meshes::get_index_count(m_ID); }
+    inline Math::Vector3ui* get_indices() { return Meshes::get_indices(m_ID); }
+    inline unsigned int get_vertex_count() { return Meshes::get_vertex_count(m_ID); }
+    inline Math::Vector3f* get_positions() { return Meshes::get_positions(m_ID); }
+    inline Math::Vector3f* get_normals() { return Meshes::get_normals(m_ID); }
+    inline Math::Vector2f* get_texcoords() { return Meshes::get_texcoords(m_ID); }
+    inline Math::AABB get_bounds() { return Meshes::get_bounds(m_ID); }
+    inline void set_bounds(Math::AABB bounds) { Meshes::set_bounds(m_ID, bounds); }
+
+    inline Math::AABB compute_bounds() { return Meshes::compute_bounds(m_ID); }
+
+    inline unsigned char get_changes() { return Meshes::get_changes(m_ID); }
+    inline bool has_changes(unsigned char change_bitmask) { return Meshes::has_changes(m_ID, change_bitmask); }
+
+private:
+    const Meshes::UID m_ID;
 };
 
 //----------------------------------------------------------------------------

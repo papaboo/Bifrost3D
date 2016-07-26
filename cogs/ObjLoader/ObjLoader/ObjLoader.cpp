@@ -103,21 +103,21 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
             if (tiny_mesh.normals.size() > 0)
                 mesh_flags |= MeshFlags::Normal;
             if (tiny_mesh.texcoords.size() > 0)
-                mesh_flags |= MeshFlags::Texcoords;
+                mesh_flags |= MeshFlags::Texcoord;
 
             unsigned int triangle_count = unsigned int(tiny_mesh.indices.size() / 3u);
             unsigned int vertex_count = unsigned int(tiny_mesh.positions.size() / 3u);
             mesh_ID = Meshes::create(shapes[i].name, triangle_count, vertex_count, mesh_flags);
 
-            Mesh& cogwheel_mesh = Meshes::get_mesh(mesh_ID);
-            memcpy(cogwheel_mesh.indices, tiny_mesh.indices.data(), tiny_mesh.indices.size() * sizeof(unsigned int));
-            memcpy(cogwheel_mesh.positions, tiny_mesh.positions.data(), tiny_mesh.positions.size() * sizeof(float));
-            if (cogwheel_mesh.normals)
-                memcpy(cogwheel_mesh.normals, tiny_mesh.normals.data(), tiny_mesh.normals.size() * sizeof(float));
-            if (cogwheel_mesh.texcoords)
-                memcpy(cogwheel_mesh.texcoords, tiny_mesh.texcoords.data(), tiny_mesh.texcoords.size() * sizeof(float));
+            Mesh cogwheel_mesh = mesh_ID;
+            memcpy(cogwheel_mesh.get_indices(), tiny_mesh.indices.data(), tiny_mesh.indices.size() * sizeof(unsigned int));
+            memcpy(cogwheel_mesh.get_positions(), tiny_mesh.positions.data(), tiny_mesh.positions.size() * sizeof(float));
+            if (cogwheel_mesh.get_normals())
+                memcpy(cogwheel_mesh.get_normals(), tiny_mesh.normals.data(), tiny_mesh.normals.size() * sizeof(float));
+            if (cogwheel_mesh.get_texcoords())
+                memcpy(cogwheel_mesh.get_texcoords(), tiny_mesh.texcoords.data(), tiny_mesh.texcoords.size() * sizeof(float));
 
-            Meshes::compute_bounds(mesh_ID);
+            cogwheel_mesh.compute_bounds();
         }
 
         SceneNodes::UID node_ID = SceneNodes::create(shapes[i].name);

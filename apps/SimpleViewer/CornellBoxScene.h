@@ -127,9 +127,9 @@ void create_cornell_box_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode ro
     { // Create big box.
         Meshes::UID box_mesh_ID = MeshCreation::cube(1);
 
-        Mesh& mesh = Meshes::get_mesh(box_mesh_ID);
-        for (unsigned int v = 0; v < mesh.vertex_count; ++v) {
-            mesh.positions[v].y *= 2.0f;
+        Vector3f* positions = Meshes::get_positions(box_mesh_ID);
+        for (unsigned int v = 0; v < Meshes::get_vertex_count(box_mesh_ID); ++v) {
+            positions[v].y *= 2.0f;
         }
 
         Transform transform = Transform(Vector3f(-0.2f, -0.2f, 0.2f),

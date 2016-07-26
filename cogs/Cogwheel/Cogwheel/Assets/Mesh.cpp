@@ -9,6 +9,7 @@
 #include <Cogwheel/Assets/Mesh.h>
 
 #include <assert.h>
+#include <cmath>
 
 using namespace Cogwheel::Math;
 
@@ -17,7 +18,7 @@ namespace Assets {
 
 Meshes::UIDGenerator Meshes::m_UID_generator = UIDGenerator(0u);
 std::string* Meshes::m_names = nullptr;
-Mesh* Meshes::m_meshes = nullptr;
+Meshes::Buffers* Meshes::m_buffers = nullptr;
 AABB* Meshes::m_bounds = nullptr;
 
 unsigned char* Meshes::m_changes = nullptr;
@@ -31,7 +32,7 @@ void Meshes::allocate(unsigned int capacity) {
     capacity = m_UID_generator.capacity();
 
     m_names = new std::string[capacity];
-    m_meshes = new Mesh[capacity];
+    m_buffers = new Buffers[capacity];
     m_bounds = new AABB[capacity];
     m_changes = new unsigned char[capacity];
     std::memset(m_changes, Changes::None, capacity);
@@ -40,22 +41,24 @@ void Meshes::allocate(unsigned int capacity) {
 
     // Allocate dummy element at 0.
     m_names[0] = "Dummy Node";
-    m_meshes[0] = Mesh();
-    m_bounds[0] = AABB(Vector3f(1e30f, 1e30f, 1e30f), Vector3f(-1e30f, -1e30f, -1e30f));
+    Buffers buffers = {};
+    m_buffers[0] = buffers;
+    m_bounds[0] = AABB(Vector3f(nanf("")), Vector3f(nanf("")));
 }
 
 void Meshes::deallocate() {
     if (!is_allocated())
         return;
 
-    delete[] m_names; m_names = nullptr;
-    for (Mesh& mesh : Core::Iterable<Mesh*>(m_meshes, m_meshes + capacity())) {
-        delete[] mesh.indices;
-        delete[] mesh.positions;
-        delete[] mesh.normals;
-        delete[] mesh.texcoords;
+    for (UID id : m_UID_generator) {
+        Buffers& buffers = m_buffers[id];
+        delete[] buffers.indices;
+        delete[] buffers.positions;
+        delete[] buffers.normals;
+        delete[] buffers.texcoords;
     }
-    delete[] m_meshes; m_meshes = nullptr;
+    delete[] m_names; m_names = nullptr;
+    delete[] m_buffers; m_buffers = nullptr;
     delete[] m_bounds; m_bounds = nullptr;
     delete[] m_changes; m_changes = nullptr;
 
@@ -74,16 +77,16 @@ static inline T* resize_and_copy_array(T* old_array, unsigned int new_capacity, 
 
 void Meshes::reserve_mesh_data(unsigned int new_capacity, unsigned int old_capacity) {
     assert(m_names != nullptr);
-    assert(m_meshes != nullptr);
+    assert(m_buffers != nullptr);
     assert(m_bounds != nullptr);
 
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
     m_names = resize_and_copy_array(m_names, new_capacity, copyable_elements);
-    m_meshes = resize_and_copy_array(m_meshes, new_capacity, copyable_elements);
+    m_buffers = resize_and_copy_array(m_buffers, new_capacity, copyable_elements);
     m_bounds = resize_and_copy_array(m_bounds, new_capacity, copyable_elements);
     m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
     if (copyable_elements < new_capacity)
-        // We need to zero the new change masks.
+        // We need to zero the new change masks, because creating meshes depends on no changes being flagged.
         std::memset(m_changes + copyable_elements, Changes::None, new_capacity - copyable_elements);
 }
 
@@ -94,7 +97,7 @@ void Meshes::reserve(unsigned int new_capacity) {
 }
 
 Meshes::UID Meshes::create(const std::string& name, unsigned int index_count, unsigned int vertex_count, unsigned char buffer_bitmask) {
-    assert(m_meshes != nullptr);
+    assert(m_buffers != nullptr);
     assert(m_names != nullptr);
     assert(m_bounds != nullptr);
 
@@ -108,8 +111,13 @@ Meshes::UID Meshes::create(const std::string& name, unsigned int index_count, un
         m_meshes_changed.push_back(id);
 
     m_names[id] = name;
-    m_meshes[id] = Mesh(index_count, vertex_count, buffer_bitmask);
-    m_bounds[id] = AABB(Vector3f(-1e30f, -1e30f, -1e30f), Vector3f(1e30f, 1e30f, 1e30f));
+    m_buffers[id].index_count = index_count;
+    m_buffers[id].indices = new Math::Vector3ui[index_count];
+    m_buffers[id].vertex_count = vertex_count;
+    m_buffers[id].positions = (buffer_bitmask & MeshFlags::Position) ? new Math::Vector3f[vertex_count] : nullptr;
+    m_buffers[id].normals = (buffer_bitmask & MeshFlags::Normal) ? new Math::Vector3f[vertex_count] : nullptr;
+    m_buffers[id].texcoords = (buffer_bitmask & MeshFlags::Texcoord) ? new Math::Vector2f[vertex_count] : nullptr;
+    m_bounds[id] = AABB::invalid();
     m_changes[id] = Changes::Created;
 
     return id;
@@ -118,11 +126,11 @@ Meshes::UID Meshes::create(const std::string& name, unsigned int index_count, un
 void Meshes::destroy(Meshes::UID mesh_ID) {
     if (m_UID_generator.erase(mesh_ID)) {
 
-        Mesh& mesh = m_meshes[mesh_ID];
-        delete[] mesh.indices;
-        delete[] mesh.positions;
-        delete[] mesh.normals;
-        delete[] mesh.texcoords;
+        Buffers& buffers = m_buffers[mesh_ID];
+        delete[] buffers.indices;
+        delete[] buffers.positions;
+        delete[] buffers.normals;
+        delete[] buffers.texcoords;
 
         if (m_changes[mesh_ID] == Changes::None)
             m_meshes_changed.push_back(mesh_ID);
@@ -131,10 +139,10 @@ void Meshes::destroy(Meshes::UID mesh_ID) {
 }
 
 AABB Meshes::compute_bounds(Meshes::UID mesh_ID) {
-    Mesh& mesh = get_mesh(mesh_ID);
+    Buffers& buffers = m_buffers[mesh_ID];
 
-    AABB bounds = AABB(mesh.positions[0], mesh.positions[0]);
-    for (Vector3f* position_itr = mesh.positions + 1; position_itr < (mesh.positions + mesh.vertex_count); ++position_itr)
+    AABB bounds = AABB(buffers.positions[0], buffers.positions[0]);
+    for (Vector3f* position_itr = buffers.positions + 1; position_itr < (buffers.positions + buffers.vertex_count); ++position_itr)
         bounds.grow_to_contain(*position_itr);
 
     m_bounds[mesh_ID] = bounds;
@@ -154,43 +162,43 @@ namespace MeshUtils {
 
     Meshes::UID combine(Meshes::UID mesh0_ID, Math::Transform transform0,
                         Meshes::UID mesh1_ID, Math::Transform transform1) {
-        Mesh mesh0 = Meshes::get_mesh(mesh0_ID);
-        Mesh mesh1 = Meshes::get_mesh(mesh1_ID);
+        Mesh mesh0 = mesh0_ID;
+        Mesh mesh1 = mesh1_ID;
 
-        int index_count = mesh0.index_count + mesh1.index_count;
-        int vertex_count = mesh0.vertex_count + mesh1.vertex_count;
-        unsigned char mesh_flags = (mesh0.positions != nullptr) && (mesh1.positions != nullptr) ? MeshFlags::Position : MeshFlags::None;
-        mesh_flags |= (mesh0.normals != nullptr) && (mesh1.normals != nullptr) ? MeshFlags::Normal : MeshFlags::None;
-        mesh_flags |= (mesh0.texcoords != nullptr) && (mesh1.texcoords != nullptr) ? MeshFlags::Texcoords : MeshFlags::None;
+        int index_count = mesh0.get_index_count() + mesh1.get_index_count();
+        int vertex_count = mesh0.get_vertex_count() + mesh1.get_vertex_count();
+        unsigned char mesh_flags = (mesh0.get_positions() != nullptr) && (mesh1.get_positions() != nullptr) ? MeshFlags::Position : MeshFlags::None;
+        mesh_flags |= (mesh0.get_normals() != nullptr) && (mesh1.get_normals() != nullptr) ? MeshFlags::Normal : MeshFlags::None;
+        mesh_flags |= (mesh0.get_texcoords() != nullptr) && (mesh1.get_texcoords() != nullptr) ? MeshFlags::Texcoord : MeshFlags::None;
 
         Meshes::UID result_ID = Meshes::create("Combined mesh", index_count, vertex_count, mesh_flags);
-        Mesh result_mesh = Meshes::get_mesh(result_ID);
+        Mesh result_mesh = result_ID;
 
         { // Copy indices.
-            memcpy(result_mesh.indices, mesh0.indices, sizeof(*mesh0.indices) * mesh0.index_count);
-            for (unsigned int i = 0; i < mesh1.index_count; ++i)
-                result_mesh.indices[i + mesh0.index_count] = mesh1.indices[i] + mesh0.vertex_count;
+            memcpy(result_mesh.get_indices(), mesh0.get_indices(), sizeof(*mesh0.get_indices()) * mesh0.get_index_count());
+            for (unsigned int i = 0; i < mesh1.get_index_count(); ++i) // TODO Iterator
+                result_mesh.get_indices()[i + mesh0.get_index_count()] = mesh1.get_indices()[i] + mesh0.get_vertex_count();
         }
 
         { // Copy positions.
-            Vector3f* positions = result_mesh.positions;
-            for (unsigned int v = 0; v < mesh0.vertex_count; ++v)
-                *(positions++) = transform0 * mesh0.positions[v];
-            for (unsigned int v = 0; v < mesh1.vertex_count; ++v)
-                *(positions++) = transform1 * mesh1.positions[v];
+            Vector3f* positions = result_mesh.get_positions();
+            for (unsigned int v = 0; v < mesh0.get_vertex_count(); ++v)
+                *(positions++) = transform0 * mesh0.get_positions()[v];
+            for (unsigned int v = 0; v < mesh1.get_vertex_count(); ++v)
+                *(positions++) = transform1 * mesh1.get_positions()[v];
         }
 
         if (mesh_flags & MeshFlags::Normal) {
-            Vector3f* normals = result_mesh.normals;
-            for (unsigned int v = 0; v < mesh0.vertex_count; ++v)
-                *(normals++) = transform0.rotation * mesh0.normals[v];
-            for (unsigned int v = 0; v < mesh1.vertex_count; ++v)
-                *(normals++) = transform1.rotation * mesh1.normals[v];
+            Vector3f* normals = result_mesh.get_normals();
+            for (unsigned int v = 0; v < mesh0.get_vertex_count(); ++v)
+                *(normals++) = transform0.rotation * mesh0.get_normals()[v];
+            for (unsigned int v = 0; v < mesh1.get_vertex_count(); ++v)
+                *(normals++) = transform1.rotation * mesh1.get_normals()[v];
         }
 
-        if (mesh_flags & MeshFlags::Texcoords) {
-            memcpy(result_mesh.texcoords, mesh0.texcoords, sizeof(*mesh0.texcoords) * mesh0.vertex_count);
-            memcpy(result_mesh.texcoords + mesh0.vertex_count, mesh1.texcoords, sizeof(*mesh1.texcoords) * mesh1.vertex_count);
+        if (mesh_flags & MeshFlags::Texcoord) {
+            memcpy(result_mesh.get_texcoords(), mesh0.get_texcoords(), sizeof(*mesh0.get_texcoords()) * mesh0.get_vertex_count());
+            memcpy(result_mesh.get_texcoords() + mesh0.get_vertex_count(), mesh1.get_texcoords(), sizeof(*mesh1.get_texcoords()) * mesh1.get_vertex_count());
         }
 
         Meshes::compute_bounds(result_ID); // TODO Just approximate based on bounding boxes.
