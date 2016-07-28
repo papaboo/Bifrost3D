@@ -111,7 +111,7 @@ public:
         if (m_model_ID != MeshModels::UID::invalid_UID()) {
             float delta_time = engine.get_time().get_smooth_delta_time();
             m_existed_time += delta_time;
-            SceneNode cube_node = MeshModels::get_model(m_model_ID).scene_node_ID;
+            SceneNode cube_node = MeshModels::get_scene_node_ID(m_model_ID);
             Math::Transform transform = cube_node.get_global_transform();
             transform.translation += transform.rotation.forward() * 3.0f * delta_time;
             cube_node.set_global_transform(transform);

@@ -172,14 +172,15 @@ static inline optix::Geometry load_mesh(optix::Context& context, Meshes::UID mes
 }
 
 static inline optix::Transform load_model(optix::Context& context, MeshModel model, optix::Geometry* meshes, optix::Material optix_material) {
-    optix::Geometry optix_mesh = meshes[model.mesh_ID];
+    Mesh mesh = model.get_mesh();
+    optix::Geometry optix_mesh = meshes[mesh.get_ID()];
 
     assert(optix_mesh);
 
     optix::GeometryInstance optix_model = context->createGeometryInstance(optix_mesh, &optix_material, &optix_material + 1);
-    optix_model["material_index"]->setInt(model.material_ID.get_ID());
-    unsigned char mesh_flags = Meshes::get_normals(model.mesh_ID) != nullptr ? MeshFlags::Normals : MeshFlags::None;
-    mesh_flags |= Meshes::get_texcoords(model.mesh_ID) != nullptr ? MeshFlags::Texcoords : MeshFlags::None;
+    optix_model["material_index"]->setInt(model.get_material().get_ID());
+    unsigned char mesh_flags = mesh.get_normals() != nullptr ? MeshFlags::Normals : MeshFlags::None;
+    mesh_flags |= mesh.get_texcoords() != nullptr ? MeshFlags::Texcoords : MeshFlags::None;
     optix_model["mesh_flags"]->setInt(mesh_flags);
     OPTIX_VALIDATE(optix_model);
 
@@ -194,7 +195,7 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
 
     optix::Transform optix_transform = context->createTransform();
     {
-        Math::Transform transform = SceneNodes::get_global_transform(model.scene_node_ID);
+        Math::Transform transform = model.get_scene_node().get_global_transform();
         Math::Transform inverse_transform = invert(transform);
         optix_transform->setMatrix(false, to_matrix4x4(transform).begin(), to_matrix4x4(inverse_transform).begin());
         optix_transform->setChild(geometry_group);
@@ -889,28 +890,27 @@ void Renderer::handle_updates() {
         // TODO Properly handle reused model ID's. Is it faster to reuse the rt components then it is to destroy and recreate them? Perhaps even keep a list of 'ready to use' components?
 
         bool models_changed = false;
-        for (MeshModels::UID model_ID : MeshModels::get_changed_models()) {
-            MeshModel model = MeshModels::get_model(model_ID);
+        for (MeshModel model : MeshModels::get_changed_models()) {
+            unsigned int scene_node_index = model.get_scene_node().get_ID();
 
-            if (MeshModels::get_changes(model_ID) == MeshModels::Changes::Destroyed) {
-                if (m_state->transforms[model.scene_node_ID]) {
-                    optix::Transform optixTransform = m_state->transforms[model.scene_node_ID];
+            if (model.get_changes() == MeshModels::Changes::Destroyed) {
+                if (m_state->transforms[scene_node_index]) {
+                    optix::Transform optixTransform = m_state->transforms[scene_node_index];
                     m_state->root_node->removeChild(optixTransform);
                     optixTransform->destroy();
-                    m_state->transforms[model.scene_node_ID] = NULL;
+                    m_state->transforms[scene_node_index] = NULL;
 
                     models_changed = true;
                 }
             }
 
-            if (MeshModels::get_changes(model_ID) == MeshModels::Changes::Created) {
-                MeshModel model = MeshModels::get_model(model_ID);
+            if (model.get_changes() == MeshModels::Changes::Created) {
                 optix::Transform transform = load_model(context, model, m_state->meshes.data(), m_state->default_material);
                 m_state->root_node->addChild(transform);
 
-                if (m_state->transforms.size() <= model.scene_node_ID)
+                if (m_state->transforms.size() <= scene_node_index)
                     m_state->transforms.resize(SceneNodes::capacity());
-                m_state->transforms[model.scene_node_ID] = transform;
+                m_state->transforms[scene_node_index] = transform;
 
                 models_changed = true;
             }

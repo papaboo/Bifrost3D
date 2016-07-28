@@ -20,12 +20,6 @@
 namespace Cogwheel {
 namespace Assets {
 
-struct MeshModel final {
-    Scene::SceneNodes::UID scene_node_ID;
-    Assets::Meshes::UID mesh_ID;
-    Assets::Materials::UID material_ID;
-};
-
 //----------------------------------------------------------------------------
 // A mesh model contains the mesh and material IDs and combines them with 
 // the scene node ID.
@@ -53,9 +47,6 @@ public:
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
     static ConstUIDIterator end() { return m_UID_generator.end(); }
     static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
-
-    static inline MeshModel get_model(MeshModels::UID model_ID) { return m_models[model_ID]; }
-    static inline void set_model(MeshModels::UID model_ID, MeshModel model) { m_models[model_ID] = model; }
 
     static inline Scene::SceneNodes::UID get_scene_node_ID(MeshModels::UID model_ID) { return m_models[model_ID].scene_node_ID; }
     static inline Assets::Meshes::UID get_mesh_ID(MeshModels::UID model_ID) { return m_models[model_ID].mesh_ID; }
@@ -86,10 +77,47 @@ public:
 private:
     static void reserve_model_data(unsigned int new_capacity, unsigned int old_capacity);
 
+    struct Model final {
+        Scene::SceneNodes::UID scene_node_ID;
+        Assets::Meshes::UID mesh_ID;
+        Assets::Materials::UID material_ID;
+    };
+
     static UIDGenerator m_UID_generator;
-    static MeshModel* m_models;
+    static Model* m_models;
     static unsigned char* m_changes; // Bitmask of changes. Could be reduced to 2 bits pr model.
     static std::vector<UID> m_models_changed;
+};
+
+// ---------------------------------------------------------------------------
+// MeshModel UID wrapper.
+// ---------------------------------------------------------------------------
+class MeshModel final {
+public:
+    // -----------------------------------------------------------------------
+    // Class management.
+    // -----------------------------------------------------------------------
+    MeshModel() : m_ID(MeshModels::UID::invalid_UID()) {}
+    MeshModel(MeshModels::UID id) : m_ID(id) {}
+
+    inline const MeshModels::UID get_ID() const { return m_ID; }
+    inline bool exists() const { return MeshModels::has(m_ID); }
+
+    inline bool operator==(MeshModel rhs) const { return m_ID == rhs.m_ID; }
+    inline bool operator!=(MeshModel rhs) const { return m_ID != rhs.m_ID; }
+
+    // -----------------------------------------------------------------------
+    // Getters.
+    // -----------------------------------------------------------------------
+    inline Scene::SceneNode get_scene_node() { return MeshModels::get_scene_node_ID(m_ID); }
+    inline Assets::Mesh get_mesh() { return MeshModels::get_mesh_ID(m_ID); }
+    inline Assets::Material get_material() { return MeshModels::get_material_ID(m_ID); }
+
+    inline unsigned char get_changes() { return MeshModels::get_changes(m_ID); }
+    inline bool has_changes(unsigned char change_bitmask) { return MeshModels::has_changes(m_ID, change_bitmask); }
+
+private:
+    const MeshModels::UID m_ID;
 };
 
 } // NS Assets

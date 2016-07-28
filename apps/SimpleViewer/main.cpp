@@ -362,10 +362,9 @@ void initializer(Cogwheel::Core::Engine& engine) {
 
     // Rough approximation of the scene bounds using bounding spheres.
     AABB scene_bounds = AABB::invalid();
-    for (MeshModels::UID model_ID : MeshModels::get_iterable()) {
-        MeshModel model = MeshModels::get_model(model_ID);
-        AABB mesh_aabb = Meshes::get_bounds(model.mesh_ID);
-        Transform transform = SceneNodes::get_global_transform(model.scene_node_ID);
+    for (MeshModel model : MeshModels::get_iterable()) {
+        AABB mesh_aabb = model.get_mesh().get_bounds();
+        Transform transform = model.get_scene_node().get_global_transform();
         Vector3f bounding_sphere_center = transform * mesh_aabb.center();
         float bounding_sphere_radius = magnitude(mesh_aabb.size()) * 0.5f;
         AABB global_mesh_aabb = AABB(bounding_sphere_center - bounding_sphere_radius, bounding_sphere_center + bounding_sphere_radius);

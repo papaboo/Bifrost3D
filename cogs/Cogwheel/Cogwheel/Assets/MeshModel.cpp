@@ -14,7 +14,7 @@ namespace Cogwheel {
 namespace Assets {
 
 MeshModels::UIDGenerator MeshModels::m_UID_generator = UIDGenerator(0u);
-MeshModel* MeshModels::m_models = nullptr;
+MeshModels::Model* MeshModels::m_models = nullptr;
 unsigned char* MeshModels::m_changes = nullptr;
 std::vector<MeshModels::UID> MeshModels::m_models_changed = std::vector<MeshModels::UID>(0);
 
@@ -25,7 +25,7 @@ void MeshModels::allocate(unsigned int capacity) {
     m_UID_generator = UIDGenerator(capacity);
     capacity = m_UID_generator.capacity();
 
-    m_models = new MeshModel[capacity];
+    m_models = new Model[capacity];
     m_changes = new unsigned char[capacity];
     std::memset(m_changes, Changes::None, capacity);
     

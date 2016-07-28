@@ -1,5 +1,4 @@
 * Mesh combiner.
-** MeshModel wrapper. Same as everywhere else.
 ** Forsyth index sorting. Lets see if it speeds up OptiX rendering. https://code.google.com/archive/p/vcacne/
 ** What about vertex sorting? Base it on a morton curve, order of appearance in the index array or 'clustered index array position'.
 * Rename UID::get_ID to get_index. 
