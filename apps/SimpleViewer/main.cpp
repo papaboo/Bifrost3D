@@ -135,6 +135,164 @@ private:
     float m_aspect_ratio;
 };
 
+// Merges all nodes in the scene sharing the same material and destroys all other nodes.
+// Future work
+// * Only combine meshes within some max distance of each other, fx the diameter of their bounds.
+//   This avoids their bounding boxes containing mostly empty space and messing up ray tracing, 
+//   which would be the case if two models on opposite sides of the scene where to be combined.
+//   Profile if it makes a difference or if OptiX doesn't care.
+void mesh_combine_whole_scene(SceneNodes::UID scene_root) {
+
+    // Asserts of properties used when combining UIDs and mesh flags in one uint key.
+    assert(MeshModels::UID::MAX_IDS <= 0xFFFFFF);
+    assert(MeshFlags::Position <= 0xFF);
+    assert(MeshFlags::Normal <= 0xFF);
+    assert(MeshFlags::Texcoord <= 0xFF);
+    
+    std::vector<bool> used_meshes = std::vector<bool>(Meshes::capacity());
+    for (Meshes::UID mesh_ID : Meshes::get_iterable())
+        used_meshes[mesh_ID] = false;
+
+    struct OrderedModel {
+        unsigned int key;
+        MeshModels::UID model_ID;
+
+        inline bool operator<(OrderedModel lhs) const { return key < lhs.key; }
+    };
+
+    // Sort models based on material ID and mesh flags.
+    std::vector<OrderedModel> ordered_models = std::vector<OrderedModel>();
+    ordered_models.reserve(MeshModels::capacity());
+    for (MeshModels::UID model_ID : MeshModels::get_iterable()) {
+        unsigned int key = MeshModels::get_material_ID(model_ID).get_ID() << 8u;
+
+        // Least significant bits in key consist of mesh flags.
+        Mesh mesh = MeshModels::get_mesh_ID(model_ID);
+        key |= mesh.get_positions() ? MeshFlags::Position : MeshFlags::None;
+        key |= mesh.get_normals() ? MeshFlags::Normal : MeshFlags::None;
+        key |= mesh.get_texcoords() ? MeshFlags::Texcoord : MeshFlags::None;
+
+        OrderedModel model = { key, model_ID };
+        ordered_models.push_back(model);
+    }
+
+    std::sort(ordered_models.begin(), ordered_models.end());
+
+    { // Loop through models, merging all models in a segment with same material and flags.
+        auto segment_begin = ordered_models.begin();
+        for (auto itr = ordered_models.begin(); itr < ordered_models.end(); ++itr) {
+            bool next_material_found = itr->key != segment_begin->key;
+            bool last_model = (itr + 1) == ordered_models.end();
+            if (next_material_found || last_model) {
+                auto segment_end = itr;
+                if (last_model)
+                    ++segment_end;
+                // Combine the meshes in the segment if there are more than one.
+                auto model_count = segment_end - segment_begin;
+                if (model_count == 1) {
+                    Meshes::UID mesh_ID = MeshModels::get_mesh_ID(segment_begin->model_ID);
+                    used_meshes[mesh_ID] = true;
+                }
+
+                if (model_count > 1) {
+                    Material material = MeshModels::get_material_ID(segment_begin->model_ID);
+
+                    // Create new scene node to hold the combined model.
+                    SceneNode node0 = MeshModels::get_scene_node_ID(segment_begin->model_ID);
+                    Transform transform = node0.get_global_transform();
+                    SceneNode node = SceneNodes::create(material.get_name() + "_combined", transform);
+                    node.set_parent(scene_root);
+
+                    // Gather meshes.
+                    struct TransformedMesh {
+                        Transform transform;
+                        Meshes::UID mesh_ID;
+                    };
+
+                    unsigned int index_count = 0u;
+                    unsigned int vertex_count = 0u;
+                    std::vector<TransformedMesh> transformed_meshes = std::vector<TransformedMesh>();
+                    for (auto model = segment_begin; model < segment_end; ++model) {
+                        Mesh mesh = MeshModels::get_mesh_ID(model->model_ID);
+                        index_count += mesh.get_index_count();
+                        vertex_count += mesh.get_vertex_count();
+                        SceneNode node = MeshModels::get_scene_node_ID(model->model_ID);
+                        TransformedMesh meshie = { node.get_global_transform(), mesh.get_ID() };
+                        transformed_meshes.push_back(meshie);
+                    }
+
+                    // { // Combine meshes. Move to MeshUtils and add texcoord and normal support.
+                        Mesh mesh0 = transformed_meshes[0].mesh_ID;
+                        unsigned int mesh_flags = segment_begin->key; // The mesh flags are contained in the key.
+
+                        Mesh merged_mesh = Mesh(Meshes::create(material.get_name() + "_combined_mesh", index_count, vertex_count, mesh_flags));
+
+                        { // Combine indices.
+                            Vector3ui* indices = merged_mesh.get_indices();
+                            unsigned int index_offset = 0u;
+                            for (TransformedMesh transformed_mesh : transformed_meshes) {
+                                Mesh mesh = transformed_mesh.mesh_ID;
+                                for (unsigned int i = 0; i < mesh.get_index_count(); ++i) // TODO Iterator
+                                    *(indices++) = mesh.get_indices()[i] + index_offset;
+                                index_offset += mesh.get_vertex_count();
+                            }
+                        }
+
+                        if (mesh_flags & MeshFlags::Position) {
+                            Vector3f* positions = merged_mesh.get_positions();
+                            for (TransformedMesh transformed_mesh : transformed_meshes) {
+                                Mesh mesh = transformed_mesh.mesh_ID;
+                                for (unsigned int v = 0; v < mesh.get_vertex_count(); ++v)
+                                    *(positions++) = transformed_mesh.transform * mesh.get_positions()[v];
+                            }
+                        }
+
+                        if (mesh_flags & MeshFlags::Normal) {
+                            Vector3f* normals = merged_mesh.get_normals();
+                            for (TransformedMesh transformed_mesh : transformed_meshes) {
+                                Mesh mesh = transformed_mesh.mesh_ID;
+                                for (unsigned int v = 0; v < mesh.get_vertex_count(); ++v)
+                                    *(normals++) = transformed_mesh.transform.rotation * mesh.get_normals()[v];
+                            }
+                        }
+
+                        if (mesh_flags & MeshFlags::Texcoord) {
+                            Vector2f* texcoords = merged_mesh.get_texcoords();
+                            for (TransformedMesh transformed_mesh : transformed_meshes) {
+                                Mesh mesh = transformed_mesh.mesh_ID;
+                                for (unsigned int v = 0; v < mesh.get_vertex_count(); ++v)
+                                    *(texcoords++) = mesh.get_texcoords()[v];
+                            }
+                        }
+
+                        merged_mesh.compute_bounds();
+                    // }
+
+                    // Create new model.
+                    MeshModels::UID merged_model = MeshModels::create(node.get_ID(), merged_mesh.get_ID(), material.get_ID());
+                    if (merged_mesh.get_ID().get_ID() < used_meshes.size())
+                        used_meshes[merged_model] = true;
+                }
+
+                segment_begin = itr;
+            }
+        }
+    }
+
+    // Destroy old models and scene nodes.
+    // TODO Delete parents as well.
+    for (OrderedModel model : ordered_models) {
+        SceneNodes::destroy(MeshModels::get_scene_node_ID(model.model_ID));
+        MeshModels::destroy(model.model_ID);
+    }
+
+    // Destroy meshes that are no longer used.
+    // NOTE Reference counting on the mesh UIDs would be really handy here.
+    for (Meshes::UID mesh_ID : Meshes::get_iterable())
+        if (mesh_ID.get_ID() < used_meshes.size() && used_meshes[mesh_ID] == false)
+            Meshes::destroy(mesh_ID);
+}
+
 static inline void scenenode_cleanup_callback(void* dummy) {
     Images::reset_change_notifications();
     LightSources::reset_change_notifications();
@@ -198,6 +356,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
     else {
         SceneNodes::UID obj_root_ID = ObjLoader::load(g_scene, StbImageLoader::load);
         SceneNodes::set_parent(obj_root_ID, root_node_ID);
+        mesh_combine_whole_scene(root_node_ID);
         load_model_from_file = true;
     }
 

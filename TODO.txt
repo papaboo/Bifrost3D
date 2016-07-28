@@ -1,16 +1,12 @@
-* Environment models.
-** Should sampled UV have 0.5 / size added as in PBRT? Check with tiny env and compare sampled vs non-sampled diffuse material.
-* Reenable firefly clamping.
 * Mesh combiner.
-** Combiner.
-*** Combine if the materials are similar.
-*** Should it just collapse a whole subgraph or should we explicitly pick a material and choose a transform+name for the new node?
-*** What should we name the new nodes? '%{material name}_combined'!
-*** What should their transforms be? Identity? Local identity!
+** MeshModel wrapper. Same as everywhere else.
 ** Forsyth index sorting. Lets see if it speeds up OptiX rendering. https://code.google.com/archive/p/vcacne/
 ** What about vertex sorting? Base it on a morton curve, order of appearance in the index array or 'clustered index array position'.
-* Quaternion::look_in doesn't work for some directions, fx (0,0,1). Fix by implementing the general mat3x3 to quaternion conversion. http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
+* Rename UID::get_ID to get_index. 
 * Build prepare bat-file.
+* Reenable firefly clamping.
+** Light contribution clamping should be done on the sampled light radiance, not the radiance scaled by the BRDF.
+* Stl loader.
 * Reduce TODOs.
 ** There are some in the MIS sampling.
 ** Precompute material parameters for DefaultShading and profile.
