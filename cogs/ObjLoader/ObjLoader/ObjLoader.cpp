@@ -112,9 +112,9 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
             Mesh cogwheel_mesh = mesh_ID;
             memcpy(cogwheel_mesh.get_indices(), tiny_mesh.indices.data(), tiny_mesh.indices.size() * sizeof(unsigned int));
             memcpy(cogwheel_mesh.get_positions(), tiny_mesh.positions.data(), tiny_mesh.positions.size() * sizeof(float));
-            if (cogwheel_mesh.get_normals())
+            if (mesh_flags & MeshFlags::Normal)
                 memcpy(cogwheel_mesh.get_normals(), tiny_mesh.normals.data(), tiny_mesh.normals.size() * sizeof(float));
-            if (cogwheel_mesh.get_texcoords())
+            if (mesh_flags & MeshFlags::Texcoord)
                 memcpy(cogwheel_mesh.get_texcoords(), tiny_mesh.texcoords.data(), tiny_mesh.texcoords.size() * sizeof(float));
 
             cogwheel_mesh.compute_bounds();
