@@ -279,18 +279,21 @@ void mesh_combine_whole_scene(SceneNodes::UID scene_root) {
         }
     }
 
-    // Destroy old models and scene nodes.
-    // TODO Delete parents as well.
-    for (OrderedModel model : ordered_models) {
-        SceneNodes::destroy(MeshModels::get_scene_node_ID(model.model_ID));
-        MeshModels::destroy(model.model_ID);
-    }
-
     // Destroy meshes that are no longer used.
     // NOTE Reference counting on the mesh UIDs would be really handy here.
     for (Meshes::UID mesh_ID : Meshes::get_iterable())
         if (mesh_ID.get_ID() < used_meshes.size() && used_meshes[mesh_ID] == false)
             Meshes::destroy(mesh_ID);
+
+    // Destroy old models and scene nodes that no longer connect to a mesh.
+    // TODO Delete parents as well.
+    for (OrderedModel ordered_model : ordered_models) {
+        MeshModel model = ordered_model.model_ID;
+        if (!model.get_mesh().exists()) {
+            SceneNodes::destroy(model.get_scene_node().get_ID());
+            MeshModels::destroy(model.get_ID());
+        }
+    }
 }
 
 static inline void scenenode_cleanup_callback(void* dummy) {
@@ -317,7 +320,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
 
     engine.add_tick_cleanup_callback(scenenode_cleanup_callback, nullptr);
 
-    // TODO Scene and scene color should be set up by the test scenes themselves.
+    // Setup scene.
     SceneRoots::allocate(1u);
     SceneNodes::UID root_node_ID = SceneNodes::create("Root");
     SceneRoots::UID scene_ID = SceneRoots::UID::invalid_UID();
@@ -380,7 +383,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
 
     if (load_model_from_file) {
         Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
-        cam_transform.translation = scene_bounds.center() + scene_bounds.size() * 1.0f;
+        cam_transform.translation = scene_bounds.center() + scene_bounds.size() * 0.004f;
         cam_transform.look_at(scene_bounds.center());
         SceneNodes::set_global_transform(cam_node_ID, cam_transform);
     }
