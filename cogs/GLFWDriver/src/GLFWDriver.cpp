@@ -105,8 +105,15 @@ void run(on_launch_callback on_launch, on_window_created_callback on_window_crea
 
         glfwSwapBuffers(window);
 
-        if (engine.is_quit_requested())
+        if (engine.is_quit_requested()) {
             glfwSetWindowShouldClose(window, GL_TRUE);
+            break;
+        }
+
+        if (engine_window.has_changes(Cogwheel::Core::Window::Changes::Resized))
+            glfwSetWindowSize(window, engine_window.get_width(), engine_window.get_height());
+        if (engine_window.has_changes(Cogwheel::Core::Window::Changes::Renamed))
+            glfwSetWindowTitle(window, engine_window.get_name().c_str());
     }
 
     // Cleanup.

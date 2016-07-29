@@ -24,7 +24,6 @@ Engine::Engine()
     , m_quit(false)
     , m_keyboard(nullptr)
     , m_mouse(nullptr) {
-    
     m_instance = this;
 }
     
@@ -50,7 +49,9 @@ void Engine::add_tick_cleanup_callback(tick_cleanup_callback callback, void* cal
 
 void Engine::do_tick(double delta_time) {
     m_time.tick(delta_time);
-    
+
+    m_window.reset_change_notifications();
+
     for (Closure<mutating_callback> mutating_callback : m_mutating_callbacks)
         mutating_callback.callback(*this, mutating_callback.data);
 
