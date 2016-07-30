@@ -1,6 +1,3 @@
-* Mesh combiner.
-** Forsyth index sorting. Lets see if it speeds up OptiX rendering. https://code.google.com/archive/p/vcacne/
-** What about vertex sorting? Base it on a morton curve, order of appearance in the index array or 'clustered index array position'.
 * Rename UID::get_ID to get_index. 
 * Build prepare bat-file.
 * Reenable firefly clamping.
@@ -18,7 +15,7 @@
 * Materials revisited.
 ** Is sRGB / gamma correctly handled? The X-Wing looks really dark in environments. Or am I missing a multiplication by pi? Use the sphere scene with a pure diffuse material to test it.
 ** Rough transmitting surfaces.
-** Add Burley and Oren-Nayar BRDF. Burley should exclude the fresnel term, as that is part of the overall combiner.
+** Add Burley and Oren-Nayar BRDF. Burley could (potentially) exclude the fresnel term, as that is part of the overall combiner.
 ** Use perfectly specular BRDFs for tiny roughness values.
 *** Adapt MIS to handle specular surfaces.
 ** Add coat.

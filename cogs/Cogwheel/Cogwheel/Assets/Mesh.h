@@ -32,7 +32,8 @@ static const unsigned char AllBuffers = Position | Normal | Texcoord;
 // Container for mesh properties and their bufers.
 // Future work:
 // * Verify that creating and destroying meshes don't leak!
-// * Array access functions should probably map the data as read- or writable.
+// * Array access functions should probably map the data as read- or writable
+//   and set appropiate change flags.
 //----------------------------------------------------------------------------
 class Meshes final {
 public:
@@ -154,14 +155,15 @@ private:
 };
 
 //----------------------------------------------------------------------------
-// Mesh utils
+// Mesh utilities.
+// Future work:
+// * Forsyth index sorting. https://code.google.com/archive/p/vcacne/
+// * What about vertex sorting ? Base it on a morton curve or order of appearance in the index array.
 //----------------------------------------------------------------------------
 namespace MeshUtils {
 
     // Future work
     // * Take N meshes and transforms as arguments.
-    // * Combine flags: Should we combine meshes with and without normals or texcoords.
-    //                  What is a good default normal? Combining will result in face normals turning into smooth normals.
     Meshes::UID combine(Meshes::UID mesh0_ID, Math::Transform transform0,
                         Meshes::UID mesh1_ID, Math::Transform transform1);
 
@@ -169,7 +171,6 @@ namespace MeshUtils {
                                            Meshes::UID mesh1_ID, Math::Transform transform1) {
         Meshes::UID combined_ID = combine(mesh0_ID, transform0, mesh1_ID, transform1);
         if (combined_ID != Meshes::UID::invalid_UID()) {
-            // TODO What if both meshes are the same? Can/should you destroy the same mesh multiple times? There is a test case specifying that you can delete meshes multiple times no?
             Meshes::destroy(mesh0_ID);
             Meshes::destroy(mesh1_ID);
         }
