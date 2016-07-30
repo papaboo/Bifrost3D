@@ -182,7 +182,7 @@ void mesh_combine_whole_scene(SceneNodes::UID scene_root) {
     std::vector<OrderedModel> ordered_models = std::vector<OrderedModel>();
     ordered_models.reserve(MeshModels::capacity());
     for (MeshModels::UID model_ID : MeshModels::get_iterable()) {
-        unsigned int key = MeshModels::get_material_ID(model_ID).get_ID() << 8u;
+        unsigned int key = MeshModels::get_material_ID(model_ID).get_index() << 8u;
 
         // Least significant bits in key consist of mesh flags.
         Mesh mesh = MeshModels::get_mesh_ID(model_ID);
@@ -288,7 +288,7 @@ void mesh_combine_whole_scene(SceneNodes::UID scene_root) {
 
                     // Create new model.
                     MeshModels::UID merged_model = MeshModels::create(node.get_ID(), merged_mesh.get_ID(), material.get_ID());
-                    if (merged_mesh.get_ID().get_ID() < used_meshes.size())
+                    if (merged_mesh.get_ID().get_index() < used_meshes.size())
                         used_meshes[merged_model] = true;
                 }
 
@@ -300,7 +300,7 @@ void mesh_combine_whole_scene(SceneNodes::UID scene_root) {
     // Destroy meshes that are no longer used.
     // NOTE Reference counting on the mesh UIDs would be really handy here.
     for (Meshes::UID mesh_ID : Meshes::get_iterable())
-        if (mesh_ID.get_ID() < used_meshes.size() && used_meshes[mesh_ID] == false)
+        if (mesh_ID.get_index() < used_meshes.size() && used_meshes[mesh_ID] == false)
             Meshes::destroy(mesh_ID);
 
     // Destroy old models and scene nodes that no longer connect to a mesh.

@@ -42,7 +42,7 @@ public:
 
         UID(unsigned int id, unsigned int incarnation) : m_ID_incarnation((incarnation << 24u) | id) {}
 
-        inline void set_ID(unsigned int id) { m_ID_incarnation = (m_ID_incarnation & 0xFF000000) | id; }
+        inline void set_index(unsigned int id) { m_ID_incarnation = (m_ID_incarnation & 0xFF000000) | id; }
         inline unsigned int get_incarnation_count() const { return m_ID_incarnation >> 24u; }
         inline void increment_incarnation() { m_ID_incarnation += 0x01000000; }
 
@@ -54,10 +54,10 @@ public:
         static inline UID invalid_UID() { return UID(0u, 0u); }
 
         // The ID.
-        inline unsigned int get_ID() const { return m_ID_incarnation & MAX_IDS; }
+        inline unsigned int get_index() const { return m_ID_incarnation & MAX_IDS; }
 
         // Implicit conversion to unsigned int is a shorthand way of accessing the ID.
-        inline operator unsigned int() const { return get_ID(); }
+        inline operator unsigned int() const { return get_index(); }
 
         // Equality operator.
         inline bool operator==(const UID& rhs) const {

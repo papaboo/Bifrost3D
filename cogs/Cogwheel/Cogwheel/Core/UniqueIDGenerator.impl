@@ -55,8 +55,8 @@ typename TypedUIDGenerator<T>::UID TypedUIDGenerator<T>::generate() {
 
     unsigned int index = m_next_index;
     UID& id = m_IDs[index];
-    m_next_index = id.get_ID();
-    id.set_ID(index);
+    m_next_index = id.get_index();
+    id.set_index(index);
 
     return id;
 }
@@ -64,12 +64,12 @@ typename TypedUIDGenerator<T>::UID TypedUIDGenerator<T>::generate() {
 template <typename T>
 bool TypedUIDGenerator<T>::erase(UID id) {
     if (has(id)) {
-        m_IDs[m_last_index].set_ID(id.get_ID());
-        m_last_index = id.get_ID();
+        m_IDs[m_last_index].set_index(id.get_index());
+        m_last_index = id.get_index();
 
         // Invalidate the old ID
         m_IDs[id].increment_incarnation();
-        m_IDs[id].set_ID(0);
+        m_IDs[id].set_index(0);
 
         return true;
     }
@@ -79,10 +79,10 @@ bool TypedUIDGenerator<T>::erase(UID id) {
 
 template <typename T>
 bool TypedUIDGenerator<T>::has(const UID id) const {
-    // assert(id.get_ID() < m_capacity);
+    // assert(id.get_index() < m_capacity);
 
     // If the ID equals it's own ID it is in use.
-    return id.get_ID() < m_capacity && m_IDs[id.get_ID()] == id;
+    return id.get_index() < m_capacity && m_IDs[id.get_index()] == id;
 }
 
 template <typename T>
@@ -98,7 +98,7 @@ void TypedUIDGenerator<T>::reserve(unsigned int new_capacity) {
     m_IDs = newIDs;
     
     // Rewire the pointers to the next free ID.
-    m_IDs[m_next_index].set_ID(m_capacity);
+    m_IDs[m_next_index].set_index(m_capacity);
     for (unsigned int i = m_capacity; i < new_capacity; ++i)
         m_IDs[i] = UID(i + 1, 0u);
 
@@ -114,7 +114,7 @@ std::string TypedUIDGenerator<T>::to_string() {
         out << "[";
         if (i == m_next_index) out << "NEXT ";
         if (i == m_last_index) out << "LAST ";
-        out << "id: " << m_IDs[i].get_ID() << ", incarnation: " << m_IDs[i].get_incarnation_count() << "]";
+        out << "id: " << m_IDs[i].get_index() << ", incarnation: " << m_IDs[i].get_incarnation_count() << "]";
         if (i + 1 < m_capacity)
             out << ", ";
     }
