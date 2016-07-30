@@ -135,6 +135,24 @@ private:
     float m_aspect_ratio;
 };
 
+static inline void update_FPS(Engine& engine, void* state) {
+    static const int COUNT = 8;
+    static float delta_times[COUNT] = { 1e30f, 1e30f, 1e30f, 1e30f, 1e30f, 1e30f, 1e30f, 1e30f };
+    static int next_index = 0;
+
+    delta_times[next_index] = engine.get_time().get_raw_delta_time();
+    next_index = (next_index + 1) % COUNT;
+
+    float summed_deltas = 0.0f;
+    for (int i = 0; i < COUNT; ++i)
+        summed_deltas += delta_times[i];
+    float fps = COUNT / summed_deltas;
+
+    std::ostringstream title;
+    title << "SimpleViewer - FPS " << fps;
+    engine.get_window().set_name(title.str().c_str());
+}
+
 // Merges all nodes in the scene sharing the same material and destroys all other nodes.
 // Future work
 // * Only combine meshes within some max distance of each other, fx the diameter of their bounds.
@@ -380,6 +398,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
     engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
     CameraHandler* camera_handler = new CameraHandler(cam_ID, engine.get_window().get_aspect_ratio());
     engine.add_mutating_callback(CameraHandler::handle_callback, camera_handler);
+    engine.add_mutating_callback(update_FPS, nullptr);
 
     if (load_model_from_file) {
         Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
