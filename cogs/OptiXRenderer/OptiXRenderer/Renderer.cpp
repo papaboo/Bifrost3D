@@ -487,7 +487,7 @@ void Renderer::render() {
 #endif
                     Light* device_lights = (Light*)m_state->lights.sources->map();
                     Light& device_light = device_lights[m_state->lights.count++];
-                    device_light.type = LightTypes::Environment;
+                    device_light.flags = Light::Environment;
                     device_light.environment = m_state->environment.to_light_source(m_state->textures.data());
                     m_state->lights.sources->unmap();
 
@@ -711,7 +711,7 @@ void Renderer::handle_updates() {
                     Scene::SphereLight host_light = light_ID;
                     Light& device_light = device_lights[light_index];
 
-                    device_light.type = LightTypes::Sphere;
+                    device_light.flags = Light::Sphere;
 
                     Vector3f position = host_light.get_node().get_global_transform().translation;
                     memcpy(&device_light.sphere.position, &position, sizeof(device_light.sphere.position));
@@ -729,7 +729,7 @@ void Renderer::handle_updates() {
                     Scene::DirectionalLight host_light = light_ID;
                     Light& device_light = device_lights[light_index];
 
-                    device_light.type = LightTypes::Directional;
+                    device_light.flags = Light::Directional;
 
                     Vector3f direction = host_light.get_node().get_global_transform().rotation.forward();
                     memcpy(&device_light.directional.direction, &direction, sizeof(device_light.directional.direction));
@@ -764,7 +764,7 @@ void Renderer::handle_updates() {
                 // Append the environment map, if valid, to the list of light sources.
                 if (m_state->environment.next_event_estimation_possible()) {
                     Light& light = device_lights[m_state->lights.count++];
-                    light.type = LightTypes::Environment;
+                    light.flags = Light::Environment;
                     light.environment = m_state->environment.to_light_source(m_state->textures.data());
                 }
 
@@ -832,7 +832,7 @@ void Renderer::handle_updates() {
                 // Append the environment map, if valid, to the list of light sources.
                 if (m_state->environment.next_event_estimation_possible()) {
                     Light& light = device_lights[m_state->lights.count++];
-                    light.type = LightTypes::Environment;
+                    light.flags = Light::Environment;
                     light.environment = m_state->environment.to_light_source(m_state->textures.data());
                 }
 

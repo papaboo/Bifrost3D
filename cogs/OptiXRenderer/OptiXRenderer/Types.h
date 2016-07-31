@@ -87,13 +87,6 @@ struct __align__(16) LightSample {
     }
 };
 
-enum class LightTypes { // TODO Make bytesized. Or bitesized?
-    None = 0u,
-    Sphere,
-    Directional,
-    Environment
-};
-
 struct SphereLight {
     optix::float3 power;
     optix::float3 position;
@@ -116,12 +109,23 @@ struct EnvironmentLight {
 };
 
 struct __align__(16) Light {
+    enum Flags {
+        None = 0u,
+        Sphere = 1u,
+        Directional = 2u,
+        Environment = 3u,
+        TypeMask = 3u
+    };
+
     union {
         SphereLight sphere;
         DirectionalLight directional;
         EnvironmentLight environment;
     };
-    LightTypes type; // Store as uint and extend with general light flags, such as shadowcasting.
+
+    unsigned int flags;
+    __inline_all__ unsigned int get_type() const { return flags & TypeMask; }
+    __inline_all__ bool is_type(Flags light_type) { return get_type() == light_type; }
 };
 
 //----------------------------------------------------------------------------

@@ -17,48 +17,48 @@ namespace OptiXRenderer {
 namespace LightSources {
 
 __inline_dev__ bool is_delta_light(const Light& light, const optix::float3& position) {
-    switch (light.type) {
-    case LightTypes::Sphere:
+    switch (light.get_type()) {
+    case Light::Sphere:
         return is_delta_light(light.sphere, position);
-    case LightTypes::Directional:
+    case Light::Directional:
         return is_delta_light(light.directional, position);
-    case LightTypes::Environment:
+    case Light::Environment:
         return is_delta_light(light.environment, position);
     }
     return false;
 }
 
 __inline_dev__ LightSample sample_radiance(const Light& light, const optix::float3& position, optix::float2 random_sample) {
-    switch (light.type) {
-    case LightTypes::Sphere:
+    switch (light.get_type()) {
+    case Light::Sphere:
         return sample_radiance(light.sphere, position, random_sample);
-    case LightTypes::Directional:
+    case Light::Directional:
         return sample_radiance(light.directional, position, random_sample);
-    case LightTypes::Environment:
+    case Light::Environment:
         return sample_radiance(light.environment, position, random_sample);
     }
     return LightSample::none();
 }
 
 __inline_dev__ float PDF(const Light& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
-    switch (light.type) {
-    case LightTypes::Sphere:
+    switch (light.get_type()) {
+    case Light::Sphere:
         return PDF(light.sphere, lit_position, direction_to_light);
-    case LightTypes::Directional:
+    case Light::Directional:
         return PDF(light.directional, lit_position, direction_to_light);
-    case LightTypes::Environment:
+    case Light::Environment:
         return PDF(light.environment, lit_position, direction_to_light);
     }
     return 0.0f;
 }
 
 __inline_dev__ optix::float3 evaluate(const Light& light, const optix::float3& position, const optix::float3& direction_to_light) {
-    switch (light.type) {
-    case LightTypes::Sphere:
+    switch (light.get_type()) {
+    case Light::Sphere:
         return evaluate(light.sphere, position, direction_to_light);
-    case LightTypes::Directional:
+    case Light::Directional:
         return evaluate(light.directional, position, direction_to_light);
-    case LightTypes::Environment:
+    case Light::Environment:
         return evaluate(light.environment, position, direction_to_light);
     }
     return optix::make_float3(0.0f);
