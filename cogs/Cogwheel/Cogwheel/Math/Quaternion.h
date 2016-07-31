@@ -159,19 +159,19 @@ public:
     // The forward vector of the rotation.
     // The same as rotating Vector3::forward() by the quaternion.
     inline Vector3<T> forward() const {
-        return *this * Vector3f::forward();
+        return *this * Vector3<T>::forward();
     }
 
     // The up vector of the rotation.
     // The same as rotating Vector3::up() by the quaternion.
     inline Vector3<T> up() const {
-        return *this * Vector3f::up();
+        return *this * Vector3<T>::up();
     }
 
     // The right vector of the rotation.
     // The same as rotating Vector3::right() by the quaternion.
     inline Vector3<T> right() const {
-        return *this * Vector3f::right();
+        return *this * Vector3<T>::right();
     }
 
     // To string.
