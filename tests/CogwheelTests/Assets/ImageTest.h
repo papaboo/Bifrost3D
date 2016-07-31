@@ -53,12 +53,12 @@ TEST_F(Assets_Images, sentinel_material) {
 }
 
 TEST_F(Assets_Images, create) {
-    Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1,2,3));
+    Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1,2,3), 2);
 
     EXPECT_TRUE(Images::has(image_ID));
     EXPECT_EQ(PixelFormat::RGBA32, Images::get_pixel_format(image_ID));
     EXPECT_EQ(2.2f, Images::get_gamma(image_ID));
-    EXPECT_EQ(1u, Images::get_mipmap_count(image_ID));
+    EXPECT_EQ(2u, Images::get_mipmap_count(image_ID));
     EXPECT_EQ(1u, Images::get_width(image_ID));
     EXPECT_EQ(2u, Images::get_height(image_ID));
     EXPECT_EQ(3u, Images::get_depth(image_ID));
