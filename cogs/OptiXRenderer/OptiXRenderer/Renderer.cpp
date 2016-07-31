@@ -862,30 +862,6 @@ void Renderer::handle_updates() {
         }
     }
 
-    { // Transform updates.
-        // We're only interested in changes in the transforms that are connected to renderables, such as meshes.
-        bool important_transform_changed = false; 
-        for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
-            if (!SceneNodes::has_changes(node_ID, SceneNodes::Changes::Transform) )
-                continue;
-
-            if (node_ID < m_state->transforms.size()) { // TODO(avh) Assert instead. This should always be true. Possibly move the transform update down past the model updates though as they are the ones that creates the transforms.
-                optix::Transform optixTransform = m_state->transforms[node_ID];
-                if (optixTransform) {
-                    Math::Transform transform = SceneNodes::get_global_transform(node_ID);
-                    Math::Transform inverse_transform = invert(transform);
-                    optixTransform->setMatrix(false, to_matrix4x4(transform).begin(), to_matrix4x4(inverse_transform).begin());
-                    important_transform_changed = true;
-                }
-            }
-        }
-
-        if (important_transform_changed) {
-            m_state->root_node->getAcceleration()->markDirty();
-            m_state->accumulations = 0u;
-        }
-    }
-
     { // Model updates.
         // TODO Properly handle reused model ID's. Is it faster to reuse the rt components then it is to destroy and recreate them? Perhaps even keep a list of 'ready to use' components?
 
@@ -917,6 +893,29 @@ void Renderer::handle_updates() {
         }
 
         if (models_changed) {
+            m_state->root_node->getAcceleration()->markDirty();
+            m_state->accumulations = 0u;
+        }
+    }
+
+    { // Transform updates.
+        // We're only interested in changes in the transforms that are connected to renderables, such as meshes.
+        bool important_transform_changed = false;
+        for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
+            if (!SceneNodes::has_changes(node_ID, SceneNodes::Changes::Transform))
+                continue;
+
+            assert(node_ID < m_state->transforms.size());
+            optix::Transform optixTransform = m_state->transforms[node_ID];
+            if (optixTransform) {
+                Math::Transform transform = SceneNodes::get_global_transform(node_ID);
+                Math::Transform inverse_transform = invert(transform);
+                optixTransform->setMatrix(false, to_matrix4x4(transform).begin(), to_matrix4x4(inverse_transform).begin());
+                important_transform_changed = true;
+            }
+        }
+
+        if (important_transform_changed) {
             m_state->root_node->getAcceleration()->markDirty();
             m_state->accumulations = 0u;
         }
