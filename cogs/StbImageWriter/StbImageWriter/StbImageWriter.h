@@ -17,7 +17,7 @@ namespace StbImageWriter {
 // -----------------------------------------------------------------------
 // Writes an image file.
 // Basic support for png, hdr, bmp and tga file formats.
-// TODO
+// Future work
 // * Return an actual error about why a file could not be written.
 // -----------------------------------------------------------------------
 bool write(const std::string& filename, Cogwheel::Assets::Image image);
