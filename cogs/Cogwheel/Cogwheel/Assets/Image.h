@@ -48,6 +48,8 @@ inline int channel_count(PixelFormat format) {
 // Images are index from the lower left corner to the top right one.
 // E.g. (0, 0) is in the lower left corner.
 // Future work:
+// * A for_each that applies a lambda to all pixels. Maybe specialize it 
+//   for floats and bytes and profile if that speeds up anything.
 // * set_pixels.
 // * set_pixels_rect.
 // * Cubemap support.

@@ -314,8 +314,6 @@ Images::UID change_format(Images::UID image_ID, PixelFormat new_format) {
     Vector3ui size = Vector3ui(image.get_width(), image.get_height(), image.get_depth());
     Images::UID new_image_ID = Images::create(image.get_name(), new_format, image.get_gamma(), size, mipmap_count);
 
-    // TODO Specialize for most common formats.
-    // TODO Create a function that takes a lambda and applies it (in parallel) to all pixels and use that.
     for (unsigned int m = 0; m < mipmap_count; ++m)
         for (unsigned int z = 0; z < image.get_depth(m); ++z)
             for (unsigned int y = 0; y < image.get_height(m); ++y)
