@@ -9,6 +9,8 @@
 #ifndef _OPTIXRENDERER_RENDERER_H_
 #define _OPTIXRENDERER_RENDERER_H_
 
+#include <Cogwheel\Scene\SceneRoot.h>
+
 //----------------------------------------------------------------------------
 // Forward declarations.
 //----------------------------------------------------------------------------
@@ -47,9 +49,8 @@ public:
 
     inline bool could_initialize() const { return m_device_ids.optix >= 0;  }
 
-    // TODO Should be per scene root.
-    float get_scene_epsilon() const;
-    void set_scene_epsilon(float scene_epsilon);
+    float get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const;
+    void set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon);
 
     void render();
 

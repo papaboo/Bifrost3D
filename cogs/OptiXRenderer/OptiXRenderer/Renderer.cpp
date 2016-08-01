@@ -403,11 +403,11 @@ Renderer::Renderer()
     context->compile();
 }
 
-float Renderer::get_scene_epsilon() const {
+float Renderer::get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const {
     return m_state->scene_epsilon;
 }
 
-void Renderer::set_scene_epsilon(float scene_epsilon) {
+void Renderer::set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon) {
     m_state->context["g_scene_epsilon"]->setFloat(m_state->scene_epsilon);
     m_state->scene_epsilon = scene_epsilon;
 }
