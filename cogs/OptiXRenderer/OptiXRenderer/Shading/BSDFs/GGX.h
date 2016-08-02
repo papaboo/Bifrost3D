@@ -39,7 +39,7 @@ __inline_all__ float square(float v) {
 }
 
 __inline_all__ float D(float alpha, const optix::float3& halfway) {
-    // TODO Do we need this check here? Can we move it further out?
+    // TODO Do we need this check here? Can we move it further out? Wait until we have a rough transmitting material.
     if (halfway.z < 0.0f)
         return 0.0f;
 
@@ -47,7 +47,7 @@ __inline_all__ float D(float alpha, const optix::float3& halfway) {
     float cos_theta_sqrd = halfway.z * halfway.z;
     float tan_theta_sqrd = optix::fmaxf(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
     float cos_theta_cubed = cos_theta_sqrd * cos_theta_sqrd;
-    return (alpha_sqrd / PIf) / (cos_theta_cubed * square(alpha_sqrd + tan_theta_sqrd)); // TODO Combine divisions into a single one.
+    return alpha_sqrd/ (PIf * cos_theta_cubed * square(alpha_sqrd + tan_theta_sqrd));
 }
 
 // TODO This isn't the smith or schlick geometric term. Which is it?
