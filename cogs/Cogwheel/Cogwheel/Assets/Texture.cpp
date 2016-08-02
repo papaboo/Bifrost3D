@@ -129,19 +129,23 @@ void Textures::reset_change_notifications() {
 
 Math::RGBA sample2D(Textures::UID texture_ID, Vector2f texcoord) {
     TextureND texture = texture_ID;
-    
-    // TODO Does it make sense handling the wrapping out here when linear interpolation has to handle it pr lookup as well?
-    //      Maybe, since I can guarantee´that the texcoord won't be negative then
+
     { // Modify tex coord based on wrap mode.
         if (texture.get_wrapmode_U() == WrapMode::Clamp)
             texcoord.x = clamp(texcoord.x, 0.0f, nearly_one);
-        else // WrapMode::Repeat
+        else { // WrapMode::Repeat
             texcoord.x -= (int)texcoord.x;
+            if (texcoord.x < -0.0f)
+                texcoord.x += 1.0f;
+        }
 
         if (texture.get_wrapmode_V() == WrapMode::Clamp)
             texcoord.y = clamp(texcoord.y, 0.0f, nearly_one);
-        else // WrapMode::Repeat
+        else { // WrapMode::Repeat
             texcoord.y -= (int)texcoord.y;
+            if (texcoord.y < -0.0f)
+                texcoord.y += 1.0f;
+        }
     }
 
     { // Get pixels.
@@ -153,7 +157,7 @@ Math::RGBA sample2D(Textures::UID texture_ID, Vector2f texcoord) {
             return image.get_pixel(pixel_coord);
         } else { // MinificationFilter::Linear
             unsigned int width = image.get_width(), height = image.get_height();
-            texcoord = Vector2f(texcoord.x * float(width), texcoord.y * float(height)) - 0.5f;
+            texcoord = Vector2f((texcoord.x + 1.0f) * float(width), (texcoord.y + 1.0f) * float(height)) - 0.5f;
             Vector2i lower_left_coord = Vector2i(int(texcoord.x), int(texcoord.y));
             
             auto lookup_pixel = [](int pixelcoord_x, int pixelcoord_y, TextureND texture, Image image) {

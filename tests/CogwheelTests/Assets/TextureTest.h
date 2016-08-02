@@ -146,11 +146,11 @@ TEST_F(Assets_Textures, sample2D) {
 
     Images::allocate(1u);
 
-    Image image = Images::create("Test", PixelFormat::RGBA_Float, 1.0f, Vector2ui(2, 2));
-    image.set_pixel(RGBA(0, 0, 0, 1), Vector2ui(0, 0));
-    image.set_pixel(RGBA(0, 1, 0, 1), Vector2ui(0, 1));
-    image.set_pixel(RGBA(1, 0, 0, 1), Vector2ui(1, 0));
-    image.set_pixel(RGBA(1, 1, 0, 1), Vector2ui(1, 1));
+    unsigned int size = 4;
+    Image image = Images::create("Test", PixelFormat::RGBA_Float, 1.0f, Vector2ui(size));
+    for (unsigned int y = 0; y < size; ++y)
+        for (unsigned int x = 0; x < size; ++x)
+            image.set_pixel(RGBA(x / float(size), y / float(size), 0, 1), Vector2ui(x, y));
 
     { // Test with no filter and clamp.
         Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::None, MinificationFilter::None, WrapMode::Clamp, WrapMode::Clamp);
@@ -162,46 +162,63 @@ TEST_F(Assets_Textures, sample2D) {
 
         { // Sample upper right corner.
             RGBA color = sample2D(texture_ID, Vector2f(1, 1));
-            EXPECT_RGBA_EQ(RGBA(1, 1, 0, 1), color);
+            EXPECT_RGBA_EQ(RGBA(0.75f, 0.75f, 0, 1), color);
         }
 
         { // Sample outside upper left corner.
             RGBA color = sample2D(texture_ID, Vector2f(-2, 2));
-            EXPECT_RGBA_EQ(RGBA(0, 1, 0, 1), color);
+            EXPECT_RGBA_EQ(RGBA(0, 0.75f, 0, 1), color);
         }
 
         { // Sample outside lower right corner.
             RGBA color = sample2D(texture_ID, Vector2f(2, -2));
-            EXPECT_RGBA_EQ(RGBA(1, 0, 0, 1), color);
+            EXPECT_RGBA_EQ(RGBA(0.75f, 0, 0, 1), color);
         }
     }
 
+    { // No filter and repeat.
+        // Test that pixel borders are where they are expected to beby sampling around (2, 2).
+        Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::None, MinificationFilter::None, WrapMode::Repeat, WrapMode::Repeat);
+
+        RGBA color = sample2D(texture_ID, Vector2f(0.49f, 0.49f));
+        EXPECT_RGBA_EQ(RGBA(0.25f, 0.25f, 0, 1), color);
+
+        color = sample2D(texture_ID, Vector2f(0.49f, 0.51f));
+        EXPECT_RGBA_EQ(RGBA(0.25f, 0.5f, 0, 1), color);
+
+        color = sample2D(texture_ID, Vector2f(0.51f, 0.49f));
+        EXPECT_RGBA_EQ(RGBA(0.5f, 0.25f, 0, 1), color);
+
+        color = sample2D(texture_ID, Vector2f(0.51f, 0.51f));
+        EXPECT_RGBA_EQ(RGBA(0.5f, 0.5f, 0, 1), color);
+    }
+
     { // Test with linear filtering and repeat wrap mode.
-        Textures::UID texture_ID = Textures::create2D(image.get_ID());
+        Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Repeat);
 
         { // Sample lower left corner.
-            RGBA color = sample2D(texture_ID, Vector2f(0.25f, 0.25f));
+            RGBA color = sample2D(texture_ID, Vector2f(0.125f, 0.125f));
             EXPECT_RGBA_EQ(RGBA(0, 0, 0, 1), color);
 
-            color = sample2D(texture_ID, Vector2f(0.25f, 1.25f));
+            color = sample2D(texture_ID, Vector2f(0.125f, 1.125f));
             EXPECT_RGBA_EQ(RGBA(0, 0, 0, 1), color);
 
-            color = sample2D(texture_ID, Vector2f(0.25f, -0.75f));
+            color = sample2D(texture_ID, Vector2f(0.125f, -0.875f));
             EXPECT_RGBA_EQ(RGBA(0, 0, 0, 1), color);
 
-            color = sample2D(texture_ID, Vector2f(0.25f, -0.95f));
-            EXPECT_RGBA_EQ(RGBA(0, 0.4f, 0, 1), color);
+            color = sample2D(texture_ID, Vector2f(0.125f, -0.9375f));
+            EXPECT_RGBA_EQ(RGBA(0, 0.1875f, 0, 1), color);
         }
 
         { // Sample upper left corner.
-            RGBA color = sample2D(texture_ID, Vector2f(0.25f, 0.75f));
-            EXPECT_RGBA_EQ(RGBA(0, 1, 0, 1), color);
+            RGBA color = sample2D(texture_ID, Vector2f(0.125f, 0.875f));
+            EXPECT_RGBA_EQ(RGBA(0, 0.75f, 0, 1), color);
 
-            color = sample2D(texture_ID, Vector2f(0.25f, -0.25f));
-            EXPECT_RGBA_EQ(RGBA(0, 1, 0, 1), color);
+            color = sample2D(texture_ID, Vector2f(0.125f, -0.125f));
+            EXPECT_RGBA_EQ(RGBA(0, 0.75f, 0, 1), color);
 
-            color = sample2D(texture_ID, Vector2f(0.40f, -0.25f));
-            EXPECT_RGBA_EQ(RGBA(0.3f, 1, 0, 1), color);
+            color = sample2D(texture_ID, Vector2f(0.3125f, -0.125f));
+            EXPECT_RGBA_EQ(RGBA(0.1875f, 0.75f, 0, 1), color);
         }
     }
 
