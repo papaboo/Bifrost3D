@@ -607,10 +607,8 @@ void Renderer::handle_updates() {
                     std::memcpy(pixel_data, Images::get_pixels(image_ID), m_state->images[image_ID]->getElementSize() * Images::get_pixel_count(image_ID));
                     m_state->images[image_ID]->unmap();
                     OPTIX_VALIDATE(m_state->images[image_ID]);
-                } else if (Images::has_changes(image_ID, Images::Changes::PixelsUpdated)) {
-                    // TODO Update buffer.
+                } else if (Images::has_changes(image_ID, Images::Changes::PixelsUpdated))
                     assert(!"Pixel update not implemented yet.\n");
-                }
             }
         }
     }
