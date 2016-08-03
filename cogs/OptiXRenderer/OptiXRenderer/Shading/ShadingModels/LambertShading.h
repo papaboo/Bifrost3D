@@ -21,29 +21,14 @@ namespace ShadingModels {
 // ---------------------------------------------------------------------------
 class LambertShading {
 private:
-    const Material& m_material;
     optix::float3 m_base_tint;
-
-    // TODO Template with return type? Might be hell on the CPU.
-    // TODO Move to utils.
-    __inline_all__ static optix::float4 tex2D(unsigned int texture_ID, optix::float2 texcoord) {
-#if GPU_DEVICE
-        optix::float4 texel = optix::rtTex2D<optix::float4>(texture_ID, texcoord.x, texcoord.y);
-        return texel;
-#else
-        return optix::make_float4(1.0f);
-#endif
-    }
 
 public:
 
     __inline_all__ LambertShading(const Material& material)
-        : m_material(material)
-        , m_base_tint(material.base_tint) { }
+        : m_base_tint(material.base_tint) { }
 
-    __inline_all__ LambertShading(const Material& material, optix::float2 texcoord)
-        : m_material(material)
-    {
+    __inline_all__ LambertShading(const Material& material, optix::float2 texcoord) {
         m_base_tint = material.base_tint;
         if (material.base_tint_texture_ID)
             m_base_tint *= make_float3(tex2D(material.base_tint_texture_ID, texcoord));

@@ -49,17 +49,6 @@ private:
         return incident_specular + (1.0f - incident_specular) * pow(optix::fmaxf(0.0f, 1.0f - abs_cos_theta), 5.0f);
     }
 
-    // TODO Template with return type? Might be hell on the CPU.
-    // TODO Move to utils.
-    __inline_all__ static optix::float4 tex2D(unsigned int texture_ID, optix::float2 texcoord) {
-#if GPU_DEVICE
-        optix::float4 texel = optix::rtTex2D<optix::float4>(texture_ID, texcoord.x, texcoord.y);
-        return texel;
-#else
-        return optix::make_float4(1.0f);
-#endif
-    }
-
     // Compute BSDF sampling probabilities based on their tinted weight.
     __inline_all__ static float compute_specular_probability(optix::float3 base_tint, optix::float3 specular_tint, float roughness, float specularity, float abs_cos_theta) {
         float diffuse_weight = sum(base_tint);

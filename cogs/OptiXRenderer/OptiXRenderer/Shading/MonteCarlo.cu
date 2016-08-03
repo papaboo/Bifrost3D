@@ -7,7 +7,6 @@
 // ---------------------------------------------------------------------------
 
 #include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>
-#include <OptiXRenderer/Shading/ShadingModels/LambertShading.h>
 #include <OptiXRenderer/Shading/LightSources/LightImpl.h>
 #include <OptiXRenderer/TBN.h>
 #include <OptiXRenderer/Types.h>
