@@ -114,22 +114,23 @@ Images::UID Images::create(const std::string& name, PixelFormat format, float ga
     if (m_changes[id] == Changes::None)
         m_images_changed.push_back(id);
 
-    m_metainfo[id].name = name;
-    m_metainfo[id].pixel_format = format;
-    m_metainfo[id].gamma = gamma;
-    m_metainfo[id].width = size.x;
-    m_metainfo[id].height = size.y;
-    m_metainfo[id].depth = size.z;
+    MetaInfo& metainfo = m_metainfo[id];
+    metainfo.name = name;
+    metainfo.pixel_format = format;
+    metainfo.gamma = gamma;
+    metainfo.width = size.x;
+    metainfo.height = size.y;
+    metainfo.depth = size.z;
     unsigned int total_pixel_count = 0u;
     unsigned int mip_count = 0u;
-    while (m_metainfo[id].mipmap_count != mipmap_count) {
+    while (mip_count != mipmap_count) {
         unsigned int mip_pixel_count = Images::get_width(id, mip_count) * Images::get_height(id, mip_count) * Images::get_depth(id, mip_count);
         total_pixel_count += mip_pixel_count;
         ++mip_count;
         if (mip_pixel_count == 1u)
             break;
     }
-    m_metainfo[id].mipmap_count = mip_count;
+    metainfo.mipmap_count = mip_count;
     m_pixels[id] = allocate_pixels(format, total_pixel_count);
     m_changes[id] = Changes::Created;
 
