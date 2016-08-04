@@ -34,17 +34,17 @@ namespace ShadingModels {
 //  the diffuse component will contribute by 1 - Fresnel, bringing the total 
 //  contribution above 100%. Worst case seems to be 197%.
 //  Possible solutions 
-//  * Investigate samples where f * cos_theta / pdf is above one.
-//    If all are one or below this should never be a problem.
 //  * Investigating the Disney BRDF and check if they are energy conserving.
-//  * Remove diffuse contribution such that the summed contribution equals one.
+//  * Subtract the specular rho from the diffuse contribution 
+//    such that the summed contribution equals one or less.
+//    The specular rho is currently a tecture though, 
+//    which sorts of hampers this solution.
 // ---------------------------------------------------------------------------
 class DefaultShading {
 private:
     const Material& m_material;
     optix::float3 m_base_tint;
 
-    // TODO Implement Unreal 4 spherical gaussian and correct Fresnel as well. Move to Fresnel.h
     __inline_all__ static float schlick_fresnel(float incident_specular, float abs_cos_theta) {
         return incident_specular + (1.0f - incident_specular) * pow(optix::fmaxf(0.0f, 1.0f - abs_cos_theta), 5.0f);
     }
