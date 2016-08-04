@@ -37,10 +37,15 @@ __inline_all__ float roughness_from_alpha(float alpha) {
 
 // TODO This isn't the smith or schlick geometric term. Which is it?
 __inline_all__ float G1(float alpha, const optix::float3& w, const optix::float3& halfway) {
-    // Check if the w vector projected onto the halfway vector is in the same hemisphere as the halfway vector and the normal, otherwise the response is black.
-    // TODO We know that this is always the case when sampling, so ignore the checks. What about evaluation? It's not guaranteed, but it would be silly evaluate incompatible directions.
+#if _DEBUG
+    // Check if the w vector projected onto the halfway vector is in the same hemisphere as the halfway vector and the normal, otherwise something went horribly horribly wrong and we're leaking light.
     if (optix::dot(w, halfway) * w.z <= 0.0f)
-        return 0.0f;
+#if GPU_DEVICE
+        rtThrow(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
+#else
+        throw "OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION";
+#endif
+#endif
 
     float alpha_sqrd = alpha * alpha;
     float cos_theta_sqrd = w.z * w.z;
@@ -63,13 +68,9 @@ __inline_all__ float evaluate(float alpha, const optix::float3& wo, const optix:
     return (D * F * G) / (4.0f * wo.z * wi.z);
 }
 
-__inline_all__ optix::float3 evaluate(const optix::float3& tint, float alpha, const optix::float3& wo, const optix::float3& wi, const optix::float3& halfway) {
-    return tint * evaluate(alpha, wo, wi, halfway);
-}
-
 __inline_all__ optix::float3 evaluate(const optix::float3& tint, float alpha, const optix::float3& wo, const optix::float3& wi) {
     const optix::float3 halfway = optix::normalize(wi + wo);
-    return evaluate(tint, alpha, wo, wi, halfway);
+    return tint * evaluate(alpha, wo, wi, halfway);
 }
 
 __inline_all__ BSDFSample sample(const optix::float3& tint, float alpha, const optix::float3& wo, optix::float2 random_sample) {
