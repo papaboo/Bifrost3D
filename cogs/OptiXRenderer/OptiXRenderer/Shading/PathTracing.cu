@@ -99,7 +99,7 @@ RT_PROGRAM void path_tracing() {
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(MonteCarloPRD, monte_carlo_PRD, rtPayload, );
 rtDeclareVariable(float3, g_scene_background_color, , );
-rtDeclareVariable(EnvironmentLight, g_scene_environment_light, , ); // TODO Fetch from the end of the light source buffer and check type.
+rtDeclareVariable(EnvironmentLight, g_scene_environment_light, , );
 
 RT_PROGRAM void miss() {
     float3 environment_radiance;
@@ -107,8 +107,9 @@ RT_PROGRAM void miss() {
     if (environment_map_ID) {
         environment_radiance = LightSources::evaluate(g_scene_environment_light, ray.origin, ray.direction);
         
+        // NOTE We can get rid of all these branches by just scaling the (mis) weight. Requires a lot of retesting though. :)
         bool next_event_estimatable = g_scene_environment_light.per_pixel_PDF_ID != RT_TEXTURE_ID_NULL;
-        if (next_event_estimatable) { // TODO Is it possible to merge this into one of the other if's?
+        if (next_event_estimatable) {
             bool next_event_estimated = monte_carlo_PRD.bounces != 0; // Was next event estimated at previous intersection.
             bool apply_MIS = monte_carlo_PRD.bsdf_MIS_PDF > 0.0f;
             if (apply_MIS) {
