@@ -55,7 +55,6 @@ rtBuffer<float4, 2>  g_accumulation_buffer;
 __inline_dev__ LightSample sample_single_light(const DefaultShading& material, const TBN& world_shading_tbn) {
     int light_index = min(g_light_count - 1, int(monte_carlo_PRD.rng.sample1f() * g_light_count));
     const Light& light = g_lights[light_index];
-    // TODO Test the validity of the light sample / PDF. When diffusitivity is introduced, then some light samples could result in insanely low or invalid PDFs.
     LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_PRD.position, monte_carlo_PRD.rng.sample2f());
     light_sample.radiance *= g_light_count; // Scale up radiance to account for only sampling one light.
 
@@ -106,7 +105,7 @@ __inline_dev__ LightSample reestimated_light_samples(const DefaultShading& mater
 // Closest hit integrators.
 //-----------------------------------------------------------------------------
 
-__inline_dev__ void closest_hit_not_MIS() {
+__inline_dev__ void closest_hit_without_MIS() {
     // const float3 world_geometric_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, geometric_normal));
     const float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
     const float3 forward_shading_normal = -dot(world_shading_normal, ray.direction) >= 0.0f ? world_shading_normal : -world_shading_normal;
@@ -121,7 +120,6 @@ __inline_dev__ void closest_hit_not_MIS() {
     const DefaultShading material = DefaultShading(material_parameter, texcoord);
 
     // Sample light sources.
-    // TODO Use RIS light sampling here as well. But wait until I have a scene with multiple area light sources.
     for (int i = 0; i < g_light_count; ++i) {
         const Light& light = g_lights[i];
         LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_PRD.position, monte_carlo_PRD.rng.sample2f());
@@ -201,7 +199,7 @@ __inline_dev__ void closest_hit_MIS() {
 
 RT_PROGRAM void closest_hit() {
     // if (g_launch_index.x * 2 < g_accumulation_buffer.size().x)
-    //     closest_hit_not_MIS();
+    //     closest_hit_without_MIS();
     // else
         closest_hit_MIS();
 }
