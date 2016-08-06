@@ -227,17 +227,17 @@ TEST_F(Assets_Images, fill_mipmaps) {
 
     for (unsigned int y = 0; y < height; ++y)
         for (unsigned int x = 0; x < width; ++x)
-            image.set_pixel(RGBA(float(x), float(y), 0.0f, 1.0f), Vector2i(x, y));
+            image.set_pixel(RGBA(float(x), float(y), 0.0f, 1.0f), Vector2ui(x, y));
 
     ImageUtils::fill_mipmap_chain(image.get_ID());
 
-    EXPECT_RGBA_EQ(RGBA(0.5f, 0.5f, 0.0f, 1.0f), image.get_pixel(Vector2i(0, 0), 1));
-    EXPECT_RGBA_EQ(RGBA(2.5f, 0.5f, 0.0f, 1.0f), image.get_pixel(Vector2i(1, 0), 1));
-    EXPECT_RGBA_EQ(RGBA(5.0f, 0.5f, 0.0f, 1.0f), image.get_pixel(Vector2i(2, 0), 1));
-    EXPECT_RGBA_EQ(RGBA(0.5f, 3.0f, 0.0f, 1.0f), image.get_pixel(Vector2i(0, 1), 1));
-    EXPECT_RGBA_EQ(RGBA(2.5f, 3.0f, 0.0f, 1.0f), image.get_pixel(Vector2i(1, 1), 1));
-    EXPECT_RGBA_EQ(RGBA(5.0f, 3.0f, 0.0f, 1.0f), image.get_pixel(Vector2i(2, 1), 1));
-    // EXPECT_RGBA_EQ(RGBA(3.0f, 2.0f, 0.0f, 1.0f), image.get_pixel(Vector2i(0, 0), 2)); // NOTE The curent mipmap chain fill can tend to scew the result if textures are non-power-of-two.
+    EXPECT_RGBA_EQ(RGBA(0.5f, 0.5f, 0.0f, 1.0f), image.get_pixel(Vector2ui(0, 0), 1));
+    EXPECT_RGBA_EQ(RGBA(2.5f, 0.5f, 0.0f, 1.0f), image.get_pixel(Vector2ui(1, 0), 1));
+    EXPECT_RGBA_EQ(RGBA(5.0f, 0.5f, 0.0f, 1.0f), image.get_pixel(Vector2ui(2, 0), 1));
+    EXPECT_RGBA_EQ(RGBA(0.5f, 3.0f, 0.0f, 1.0f), image.get_pixel(Vector2ui(0, 1), 1));
+    EXPECT_RGBA_EQ(RGBA(2.5f, 3.0f, 0.0f, 1.0f), image.get_pixel(Vector2ui(1, 1), 1));
+    EXPECT_RGBA_EQ(RGBA(5.0f, 3.0f, 0.0f, 1.0f), image.get_pixel(Vector2ui(2, 1), 1));
+    // EXPECT_RGBA_EQ(RGBA(3.0f, 2.0f, 0.0f, 1.0f), image.get_pixel(Vector2ui(0, 0), 2)); // NOTE The curent mipmap chain fill can tend to scew the result if textures are non-power-of-two.
 }
 
 } // NS Assets
