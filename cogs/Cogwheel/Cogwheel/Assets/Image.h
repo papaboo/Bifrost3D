@@ -98,7 +98,7 @@ public:
         return get_width(image_ID, mipmap_level) * get_height(image_ID, mipmap_level) * get_depth(image_ID, mipmap_level);
     }
     static inline PixelData get_pixels(Images::UID image_ID, int mipmap_level = 0) { return m_pixels[image_ID]; }
-    
+
     static Math::RGBA get_pixel(Images::UID image_ID, unsigned int index, unsigned int mipmap_level = 0);
     static Math::RGBA get_pixel(Images::UID image_ID, Math::Vector2ui index, unsigned int mipmap_level = 0);
     static Math::RGBA get_pixel(Images::UID image_ID, Math::Vector3ui index, unsigned int mipmap_level = 0);
@@ -116,7 +116,7 @@ public:
         static const unsigned char PixelsUpdated = 1u << 2u;
         static const unsigned char All = Created | Destroyed | PixelsUpdated;
     }; 
-    
+
     static inline unsigned char get_changes(Images::UID image_ID) { return m_changes[image_ID]; }
     static inline bool has_changes(Images::UID image_ID, unsigned char change_bitmask = Changes::All) {
         return (m_changes[image_ID] & change_bitmask) != Changes::None;
