@@ -44,7 +44,9 @@ public:
     ~Engine();
 
     inline Time& get_time() { return m_time; }
+    inline Time get_time() const { return m_time; }
     inline Window& get_window() { return m_window; }
+    inline const Window& get_window() const { return m_window; }
 
     inline void request_quit() { m_quit = true; }
     inline bool is_quit_requested() const { return m_quit; }
@@ -53,7 +55,7 @@ public:
     // Input
     // -----------------------------------------------------------------------
     void set_keyboard(const Input::Keyboard* const keyboard) { m_keyboard = keyboard; }
-    const Input::Keyboard* const get_keyboard() const { return m_keyboard; } // So .... you're saying it's const?
+    const Input::Keyboard* const get_keyboard() const { return m_keyboard; } // So .... you're saying it's const? TODO Return an immutable mouse and keyboard (Just wrap them in thin shells that only lets user query state.)
     void set_mouse(const Input::Mouse* const mouse) { m_mouse = mouse; }
     const Input::Mouse* const get_mouse() const { return m_mouse; }
 
