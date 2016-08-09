@@ -111,28 +111,34 @@ private:
 class CameraHandler final {
 public:
     CameraHandler(Cameras::UID camera_ID, float aspect_ratio)
-        : m_camera_ID(camera_ID), m_aspect_ratio(aspect_ratio) {
+        : m_camera_ID(camera_ID), m_aspect_ratio(aspect_ratio), m_FOV(PI<float>() / 4.0f) {
     }
 
-    void handle(Window& window) {
-        float window_aspect_ratio = window.get_aspect_ratio();
-        if (window_aspect_ratio != m_aspect_ratio) {
+    void handle(const Engine& engine) {
+
+        const Mouse* mouse = engine.get_mouse();
+        float new_FOV = m_FOV - mouse->get_scroll_delta() * engine.get_time().get_smooth_delta_time(); // TODO Non-linear increased / drecrease. Especially that it can become negative is an issue.
+
+        float window_aspect_ratio = engine.get_window().get_aspect_ratio();
+        if (window_aspect_ratio != m_aspect_ratio || new_FOV != m_FOV) {
             Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-            CameraUtils::compute_perspective_projection(0.1f, 100.0f, PI<float>() / 4.0f, window_aspect_ratio,
+            CameraUtils::compute_perspective_projection(0.1f, 100.0f, m_FOV, window_aspect_ratio,
                 perspective_matrix, inverse_perspective_matrix);
 
             Cameras::set_projection_matrices(m_camera_ID, perspective_matrix, inverse_perspective_matrix);
             m_aspect_ratio = window_aspect_ratio;
+            m_FOV = new_FOV;
         }
     }
 
     static inline void handle_callback(Engine& engine, void* state) {
-        static_cast<CameraHandler*>(state)->handle(engine.get_window());
+        static_cast<CameraHandler*>(state)->handle(engine);
     }
 
 private:
     Cameras::UID m_camera_ID;
     float m_aspect_ratio;
+    float m_FOV;
 };
 
 static inline void update_FPS(Engine& engine, void* state) {
