@@ -27,6 +27,9 @@ public:
     Iterable(Iterator begin, Iterator end)
         : m_begin(begin), m_end(end) {}
 
+    Iterable(Iterator begin, size_t element_count)
+        : m_begin(begin), m_end(begin + element_count) {}
+
     Iterator begin() { return m_begin; }
     Iterator end() { return m_end; }
 
