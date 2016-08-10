@@ -139,7 +139,9 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
         Transform sphere_transform = Transform(Vector3f(0.0f, 1.0f, 0.0f), Quaternionf::identity(), 1.5f);
 
         // Mesh combine models.
-        Meshes::UID mesh_ID = MeshUtils::combine_and_destroy(cube_mesh_ID, cube_transform, sphere_mesh_ID, sphere_transform);
+        Meshes::UID mesh_ID = MeshUtils::combine("MaterialMesh", cube_mesh_ID, cube_transform, sphere_mesh_ID, sphere_transform);
+        Meshes::destroy(cube_mesh_ID);
+        Meshes::destroy(sphere_mesh_ID);
 
         for (int m = 0; m < 9; ++m) {
             float lerp_t = m / 8.0f;

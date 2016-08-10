@@ -160,50 +160,72 @@ void Meshes::reset_change_notifications() {
 
 namespace MeshUtils {
 
-    Meshes::UID combine(Meshes::UID mesh0_ID, Math::Transform transform0,
-                        Meshes::UID mesh1_ID, Math::Transform transform1) {
-        Mesh mesh0 = mesh0_ID;
-        Mesh mesh1 = mesh1_ID;
+    Meshes::UID combine(const std::string& name, 
+                        const TransformedMesh* const meshes_begin, 
+                        const TransformedMesh* const meshes_end, 
+                        unsigned int mesh_flags) {
+        
+        auto meshes = Core::Iterable<const TransformedMesh* const>(meshes_begin, meshes_end);
 
-        int index_count = mesh0.get_index_count() + mesh1.get_index_count();
-        int vertex_count = mesh0.get_vertex_count() + mesh1.get_vertex_count();
-        unsigned char mesh_flags = (mesh0.get_positions() != nullptr) && (mesh1.get_positions() != nullptr) ? MeshFlags::Position : MeshFlags::None;
-        mesh_flags |= (mesh0.get_normals() != nullptr) && (mesh1.get_normals() != nullptr) ? MeshFlags::Normal : MeshFlags::None;
-        mesh_flags |= (mesh0.get_texcoords() != nullptr) && (mesh1.get_texcoords() != nullptr) ? MeshFlags::Texcoord : MeshFlags::None;
-
-        Meshes::UID result_ID = Meshes::create("Combined mesh", index_count, vertex_count, mesh_flags);
-        Mesh result_mesh = result_ID;
-
-        { // Copy indices.
-            memcpy(result_mesh.get_indices(), mesh0.get_indices(), sizeof(*mesh0.get_indices()) * mesh0.get_index_count());
-            for (unsigned int i = 0; i < mesh1.get_index_count(); ++i) // TODO Iterator
-                result_mesh.get_indices()[i + mesh0.get_index_count()] = mesh1.get_indices()[i] + mesh0.get_vertex_count();
+        unsigned int index_count = 0u;
+        unsigned int vertex_count = 0u;
+        for (TransformedMesh transformed_mesh : meshes) {
+            Mesh mesh = transformed_mesh.mesh_ID;
+            index_count += mesh.get_index_count();
+            vertex_count += mesh.get_vertex_count();
         }
 
-        { // Copy positions.
-            Vector3f* positions = result_mesh.get_positions();
-            for (unsigned int v = 0; v < mesh0.get_vertex_count(); ++v)
-                *(positions++) = transform0 * mesh0.get_positions()[v];
-            for (unsigned int v = 0; v < mesh1.get_vertex_count(); ++v)
-                *(positions++) = transform1 * mesh1.get_positions()[v];
+        // Determine meshflags if none are given.
+        if (mesh_flags == MeshFlags::None)
+            mesh_flags = MeshFlags::AllBuffers;
+            for (TransformedMesh transformed_mesh : meshes) {
+                Mesh mesh = transformed_mesh.mesh_ID;
+                mesh_flags &= mesh.get_mesh_flags();
+            }
+
+        Mesh merged_mesh = Mesh(Meshes::create(name, index_count, vertex_count, mesh_flags));
+
+        { // Always combine indices.
+            Vector3ui* indices = merged_mesh.get_indices();
+            unsigned int index_offset = 0u;
+            for (TransformedMesh transformed_mesh : meshes) {
+                Mesh mesh = transformed_mesh.mesh_ID;
+                for (Vector3ui index : mesh.get_index_iterator())
+                    *(indices++) = index + index_offset;
+                index_offset += mesh.get_vertex_count();
+            }
+        }
+
+        if (mesh_flags & MeshFlags::Position) {
+            Vector3f* positions = merged_mesh.get_positions();
+            for (TransformedMesh transformed_mesh : meshes) {
+                Mesh mesh = transformed_mesh.mesh_ID;
+                for (Vector3f position : mesh.get_position_iterator())
+                    *(positions++) = transformed_mesh.transform * position;
+            }
         }
 
         if (mesh_flags & MeshFlags::Normal) {
-            Vector3f* normals = result_mesh.get_normals();
-            for (unsigned int v = 0; v < mesh0.get_vertex_count(); ++v)
-                *(normals++) = transform0.rotation * mesh0.get_normals()[v];
-            for (unsigned int v = 0; v < mesh1.get_vertex_count(); ++v)
-                *(normals++) = transform1.rotation * mesh1.get_normals()[v];
+            Vector3f* normals = merged_mesh.get_normals();
+            for (TransformedMesh transformed_mesh : meshes) {
+                Mesh mesh = transformed_mesh.mesh_ID;
+                for (Vector3f normal : mesh.get_normal_iterator())
+                    *(normals++) = transformed_mesh.transform.rotation * normal;
+            }
         }
 
         if (mesh_flags & MeshFlags::Texcoord) {
-            memcpy(result_mesh.get_texcoords(), mesh0.get_texcoords(), sizeof(*mesh0.get_texcoords()) * mesh0.get_vertex_count());
-            memcpy(result_mesh.get_texcoords() + mesh0.get_vertex_count(), mesh1.get_texcoords(), sizeof(*mesh1.get_texcoords()) * mesh1.get_vertex_count());
+            Vector2f* texcoords = merged_mesh.get_texcoords();
+            for (TransformedMesh transformed_mesh : meshes) {
+                Mesh mesh = transformed_mesh.mesh_ID;
+                memcpy(texcoords, mesh.get_texcoords(), sizeof(Vector2f) * mesh.get_vertex_count());
+                texcoords += mesh.get_vertex_count();
+            }
         }
 
-        Meshes::compute_bounds(result_ID); // TODO Just approximate based on bounding boxes.
+        merged_mesh.compute_bounds();
 
-        return result_ID;
+        return merged_mesh.get_ID();
     }
 
 } // NS MeshUtils

@@ -138,14 +138,25 @@ public:
     inline void set_name(const std::string& name) { Meshes::set_name(m_ID, name); }
     inline unsigned int get_index_count() { return Meshes::get_index_count(m_ID); }
     inline Math::Vector3ui* get_indices() { return Meshes::get_indices(m_ID); }
+    inline Core::Iterable<Math::Vector3ui*> get_index_iterator() { return Core::Iterable<Math::Vector3ui*>(get_indices(), get_index_count()); }
     inline unsigned int get_vertex_count() { return Meshes::get_vertex_count(m_ID); }
     inline Math::Vector3f* get_positions() { return Meshes::get_positions(m_ID); }
+    inline Core::Iterable<Math::Vector3f*> get_position_iterator() { return Core::Iterable<Math::Vector3f*>(get_positions(), get_vertex_count()); }
     inline Math::Vector3f* get_normals() { return Meshes::get_normals(m_ID); }
+    inline Core::Iterable<Math::Vector3f*> get_normal_iterator() { return Core::Iterable<Math::Vector3f*>(get_normals(), get_vertex_count()); }
     inline Math::Vector2f* get_texcoords() { return Meshes::get_texcoords(m_ID); }
+    inline Core::Iterable<Math::Vector2f*> get_texcoord_iterator() { return Core::Iterable<Math::Vector2f*>(get_texcoords(), get_vertex_count()); }
     inline Math::AABB get_bounds() { return Meshes::get_bounds(m_ID); }
     inline void set_bounds(Math::AABB bounds) { Meshes::set_bounds(m_ID, bounds); }
 
     inline Math::AABB compute_bounds() { return Meshes::compute_bounds(m_ID); }
+
+    inline unsigned int get_mesh_flags() {
+        unsigned int mesh_flags = get_positions() ? MeshFlags::Position : MeshFlags::None;
+        mesh_flags |= get_normals() ? MeshFlags::Normal : MeshFlags::None;
+        mesh_flags |= get_texcoords() ? MeshFlags::Texcoord : MeshFlags::None;
+        return mesh_flags;
+    }
 
     inline unsigned char get_changes() { return Meshes::get_changes(m_ID); }
     inline bool has_changes(unsigned char change_bitmask) { return Meshes::has_changes(m_ID, change_bitmask); }
@@ -162,19 +173,23 @@ private:
 //----------------------------------------------------------------------------
 namespace MeshUtils {
 
-    // Future work
-    // * Take N meshes and transforms as arguments.
-    Meshes::UID combine(Meshes::UID mesh0_ID, Math::Transform transform0,
-                        Meshes::UID mesh1_ID, Math::Transform transform1);
+    struct TransformedMesh {
+        Meshes::UID mesh_ID;
+        Math::Transform transform;
+    };
 
-    inline Meshes::UID combine_and_destroy(Meshes::UID mesh0_ID, Math::Transform transform0,
-                                           Meshes::UID mesh1_ID, Math::Transform transform1) {
-        Meshes::UID combined_ID = combine(mesh0_ID, transform0, mesh1_ID, transform1);
-        if (combined_ID != Meshes::UID::invalid_UID()) {
-            Meshes::destroy(mesh0_ID);
-            Meshes::destroy(mesh1_ID);
-        }
-        return combined_ID;
+    Meshes::UID combine(const std::string& name, 
+                        const TransformedMesh* const meshes_begin, const TransformedMesh* const meshes_end, 
+                        unsigned int mesh_flags = MeshFlags::None);
+
+    inline Meshes::UID combine(const std::string& name, 
+                               Meshes::UID mesh0_ID, Math::Transform transform0,
+                               Meshes::UID mesh1_ID, Math::Transform transform1, 
+                               unsigned int mesh_flags = MeshFlags::None) {
+        TransformedMesh mesh0 = { mesh0_ID, transform0 };
+        TransformedMesh mesh1 = { mesh1_ID, transform1 };
+        TransformedMesh meshes[2] = { mesh0, mesh1 };
+        return combine(name, meshes, meshes + 2, mesh_flags);
     }
 
 } // NS MeshUtils

@@ -227,74 +227,21 @@ void mesh_combine_whole_scene(SceneNodes::UID scene_root) {
                     SceneNode node = SceneNodes::create(material.get_name() + "_combined", transform);
                     node.set_parent(scene_root);
 
-                    // Gather meshes.
-                    struct TransformedMesh {
-                        Transform transform;
-                        Meshes::UID mesh_ID;
-                    };
-
-                    unsigned int index_count = 0u;
-                    unsigned int vertex_count = 0u;
-                    std::vector<TransformedMesh> transformed_meshes = std::vector<TransformedMesh>();
+                    std::vector<MeshUtils::TransformedMesh> transformed_meshes = std::vector<MeshUtils::TransformedMesh>();
                     for (auto model = segment_begin; model < segment_end; ++model) {
-                        Mesh mesh = MeshModels::get_mesh_ID(model->model_ID);
-                        index_count += mesh.get_index_count();
-                        vertex_count += mesh.get_vertex_count();
+                        Meshes::UID mesh_ID = MeshModels::get_mesh_ID(model->model_ID);
                         SceneNode node = MeshModels::get_scene_node_ID(model->model_ID);
-                        TransformedMesh meshie = { node.get_global_transform(), mesh.get_ID() };
+                        MeshUtils::TransformedMesh meshie = { mesh_ID, node.get_global_transform() };
                         transformed_meshes.push_back(meshie);
                     }
 
-                    // { // Combine meshes. Move to MeshUtils and add texcoord and normal support.
-                        Mesh mesh0 = transformed_meshes[0].mesh_ID;
-                        unsigned int mesh_flags = segment_begin->key; // The mesh flags are contained in the key.
-
-                        Mesh merged_mesh = Mesh(Meshes::create(material.get_name() + "_combined_mesh", index_count, vertex_count, mesh_flags));
-
-                        { // Combine indices.
-                            Vector3ui* indices = merged_mesh.get_indices();
-                            unsigned int index_offset = 0u;
-                            for (TransformedMesh transformed_mesh : transformed_meshes) {
-                                Mesh mesh = transformed_mesh.mesh_ID;
-                                for (unsigned int i = 0; i < mesh.get_index_count(); ++i) // TODO Iterator
-                                    *(indices++) = mesh.get_indices()[i] + index_offset;
-                                index_offset += mesh.get_vertex_count();
-                            }
-                        }
-
-                        if (mesh_flags & MeshFlags::Position) {
-                            Vector3f* positions = merged_mesh.get_positions();
-                            for (TransformedMesh transformed_mesh : transformed_meshes) {
-                                Mesh mesh = transformed_mesh.mesh_ID;
-                                for (unsigned int v = 0; v < mesh.get_vertex_count(); ++v)
-                                    *(positions++) = transformed_mesh.transform * mesh.get_positions()[v];
-                            }
-                        }
-
-                        if (mesh_flags & MeshFlags::Normal) {
-                            Vector3f* normals = merged_mesh.get_normals();
-                            for (TransformedMesh transformed_mesh : transformed_meshes) {
-                                Mesh mesh = transformed_mesh.mesh_ID;
-                                for (unsigned int v = 0; v < mesh.get_vertex_count(); ++v)
-                                    *(normals++) = transformed_mesh.transform.rotation * mesh.get_normals()[v];
-                            }
-                        }
-
-                        if (mesh_flags & MeshFlags::Texcoord) {
-                            Vector2f* texcoords = merged_mesh.get_texcoords();
-                            for (TransformedMesh transformed_mesh : transformed_meshes) {
-                                Mesh mesh = transformed_mesh.mesh_ID;
-                                for (unsigned int v = 0; v < mesh.get_vertex_count(); ++v)
-                                    *(texcoords++) = mesh.get_texcoords()[v];
-                            }
-                        }
-
-                        merged_mesh.compute_bounds();
-                    // }
+                    std::string mesh_name = material.get_name() + "_combined_mesh";
+                    unsigned int mesh_flags = segment_begin->key; // The mesh flags are contained in the key.
+                    Meshes::UID merged_mesh_ID = MeshUtils::combine(mesh_name, transformed_meshes.data(), transformed_meshes.data() + transformed_meshes.size(), mesh_flags);
 
                     // Create new model.
-                    MeshModels::UID merged_model = MeshModels::create(node.get_ID(), merged_mesh.get_ID(), material.get_ID());
-                    if (merged_mesh.get_ID().get_index() < used_meshes.size())
+                    MeshModels::UID merged_model = MeshModels::create(node.get_ID(), merged_mesh_ID, material.get_ID());
+                    if (merged_mesh_ID.get_index() < used_meshes.size())
                         used_meshes[merged_model] = true;
                 }
 
@@ -408,7 +355,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
 
     if (load_model_from_file) {
         Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
-        cam_transform.translation = scene_bounds.center() + scene_bounds.size() * 0.004f;
+        cam_transform.translation = scene_bounds.center() + scene_bounds.size();
         cam_transform.look_at(scene_bounds.center());
         SceneNodes::set_global_transform(cam_node_ID, cam_transform);
     }
