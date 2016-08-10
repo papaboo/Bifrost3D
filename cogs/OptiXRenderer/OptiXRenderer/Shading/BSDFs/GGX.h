@@ -73,6 +73,36 @@ __inline_all__ optix::float3 evaluate(const optix::float3& tint, float alpha, co
     return tint * evaluate(alpha, wo, wi, halfway);
 }
 
+__inline_all__ float PDF(float alpha, const optix::float3& wo, const optix::float3& wi) {
+    const optix::float3 halfway = optix::normalize(wo + wi);
+
+#if _DEBUG
+    if (optix::dot(wo, halfway) < 0.0f || halfway.z < 0.0f)
+#if GPU_DEVICE
+        rtThrow(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
+#else
+        throw "OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION";
+#endif
+#endif
+
+    return Distributions::GGX::PDF(alpha, halfway.z) / (4.0f * optix::dot(wo, halfway));
+}
+
+__inline_all__ BSDFResponse evaluate_with_PDF(const optix::float3& tint, float alpha, const optix::float3& wo, const optix::float3& wi, const optix::float3& halfway) {
+    float G = GGX::G(alpha, wo, wi, halfway);
+    float D = Distributions::GGX::D(alpha, halfway.z);
+    float F = 1.0f; // No fresnel.
+    float f = (D * F * G) / (4.0f * wo.z * wi.z);
+    BSDFResponse res;
+    res.weight = tint * f;
+    res.PDF = (D * halfway.z) / (4.0f * optix::dot(wo, halfway));
+    return res;
+}
+
+__inline_all__ BSDFResponse evaluate_with_PDF(const optix::float3& tint, float alpha, const optix::float3& wo, const optix::float3& wi) {
+    return evaluate_with_PDF(tint, alpha, wo, wi, optix::normalize(wo + wi));
+}
+
 __inline_all__ BSDFSample sample(const optix::float3& tint, float alpha, const optix::float3& wo, optix::float2 random_sample) {
 
     BSDFSample bsdf_sample;
@@ -92,16 +122,6 @@ __inline_all__ BSDFSample sample(const optix::float3& tint, float alpha, const o
         bsdf_sample.weight = tint * ((D * F * G) / (4.0f * wo.z * wi.z));
     }
     return bsdf_sample;
-}
-
-__inline_all__ float PDF(float alpha, const optix::float3& wo, const optix::float3& wi) {
-    const optix::float3 halfway = optix::normalize(wo + wi);
-
-    // NOTE Do we need these checks? What happens when the BSDF is a BTDF and the last one fails?
-    if (optix::dot(wo, halfway) < 0.0f || halfway.z < 0.0f)
-        return 0.0f;
-
-    return Distributions::GGX::PDF(alpha, halfway.z) / (4.0f * optix::dot(wo, halfway));
 }
 
 } // NS GGX

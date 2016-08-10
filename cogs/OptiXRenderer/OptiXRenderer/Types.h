@@ -132,6 +132,17 @@ struct __align__(16) Light {
 // Material type and sampling structs.
 //----------------------------------------------------------------------------
 
+// NOTE the suboptimal alignment of 8 instead of 16 yields a tiny tiny performance benefit. I have no clue why.
+struct __align__(8) BSDFResponse {
+    optix::float3 weight;
+    float PDF;
+
+    __inline_all__ static BSDFResponse none() {
+        BSDFResponse evaluation = {};
+        return evaluation;
+    }
+};
+
 struct __align__(16) BSDFSample {
     optix::float3 weight;
     float PDF;

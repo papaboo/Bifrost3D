@@ -125,6 +125,30 @@ GTEST_TEST(DefaultShadingModel, consistent_PDF) {
     default_shading_model_consistent_PDF_test(plastic_material);
 }
 
+GTEST_TEST(DefaultShadingModel, evaluate_with_PDF) {
+    using namespace optix;
+    using namespace Shading::ShadingModels;
+
+    const unsigned int MAX_SAMPLES = 128u;
+    const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
+    Material plastic_params = plastic_parameters();
+
+    for (int a = 0; a < 11; ++a) {
+        plastic_params.base_roughness = lerp(0.2f, 1.0f, a / 10.0f);
+        DefaultShading plastic_material = DefaultShading(plastic_params);
+        for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
+            float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
+            BSDFSample sample = plastic_material.sample_all(wo, rng_sample);
+
+            if (is_PDF_valid(sample.PDF)) {
+                BSDFResponse response = plastic_material.evaluate_with_PDF(wo, sample.direction);
+                EXPECT_COLOR_EQ_EPS(plastic_material.evaluate(wo, sample.direction), response.weight, make_float3(0.000000001f));
+                EXPECT_FLOAT_EQ(plastic_material.PDF(wo, sample.direction), response.PDF);
+            }
+        }
+    }
+}
+
 GTEST_TEST(DefaultShadingModel, Fresnel) {
     using namespace Shading::ShadingModels;
     using namespace optix;

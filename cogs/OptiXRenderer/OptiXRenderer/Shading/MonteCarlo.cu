@@ -60,8 +60,8 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
 
     // Inline the material response into the light sample's radiance.
     const float3 shading_light_direction = world_shading_tbn * light_sample.direction_to_light;
-    const float3 bsdf_response = material.evaluate(monte_carlo_PRD.direction, shading_light_direction);// TODO Extend material and BRDFs with methods for evaluating contribution and PDF at the same time.
-    light_sample.radiance *= bsdf_response;
+    const BSDFResponse bsdf_response = material.evaluate_with_PDF(monte_carlo_PRD.direction, shading_light_direction);
+    light_sample.radiance *= bsdf_response.weight;
 
     float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction_to_light);
     light_sample.radiance *= abs(N_dot_L) / light_sample.PDF;
@@ -69,10 +69,8 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
     // Apply MIS weights if the light isn't a delta function and if a new material ray will be spawned, i.e. it isn't the final bounce.
     bool delta_light = LightSources::is_delta_light(light, monte_carlo_PRD.position);
     bool apply_MIS = !delta_light && monte_carlo_PRD.bounces < g_max_bounce_count;
-    if (apply_MIS) {
-        float bsdf_PDF = material.PDF(monte_carlo_PRD.direction, shading_light_direction);
-        float mis_weight = RNG::power_heuristic(light_sample.PDF, bsdf_PDF);
-
+    if (apply_MIS) { // TODO Try using math instead and profile using test scene.
+        float mis_weight = RNG::power_heuristic(light_sample.PDF, bsdf_response.PDF);
         light_sample.radiance *= mis_weight;
     }
 

@@ -29,17 +29,24 @@ __inline_all__ optix::float3 evaluate(const optix::float3& tint, const optix::fl
     return tint * RECIP_PIf;
 }
 
+__inline_all__ float PDF(const optix::float3& wo, const optix::float3& wi) {
+    return wi.z * RECIP_PIf;
+}
+
+__inline_all__ BSDFResponse evaluate_with_PDF(const optix::float3& tint, const optix::float3& wo, const optix::float3& wi) {
+    BSDFResponse response;
+    response.weight = evaluate(tint);
+    response.PDF = PDF(wo, wi);
+    return response;
+}
+
 __inline_all__ BSDFSample sample(const optix::float3& tint, optix::float2 random_sample) {
     Distributions::DirectionalSample cosine_sample = Distributions::Cosine::sample(random_sample);
     BSDFSample bsdf_sample;
     bsdf_sample.direction = cosine_sample.direction;
     bsdf_sample.PDF = cosine_sample.PDF;
-    bsdf_sample.weight = tint * RECIP_PIf;
+    bsdf_sample.weight = evaluate(tint);
     return bsdf_sample;
-}
-
-__inline_all__ float PDF(const optix::float3& wo, const optix::float3& wi) {
-    return wi.z * RECIP_PIf;
 }
 
 } // NS Lambert

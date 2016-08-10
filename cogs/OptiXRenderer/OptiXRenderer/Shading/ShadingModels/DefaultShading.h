@@ -96,10 +96,59 @@ public:
         float specularity = lerp(m_material.specularity, 1.0f, m_material.metallic);
         float fresnel = schlick_fresnel(specularity, dot(wo, halfway));
         float3 specular_tint = lerp(make_float3(1.0f), m_base_tint, m_material.metallic);
-        float alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
-        float3 specular = specular_tint * (fresnel * BSDFs::GGX::evaluate(alpha, wo, wi, halfway));
-        float3 diffuse = (1.0f - fresnel) * BSDFs::Lambert::evaluate(m_base_tint);
-        return diffuse + specular;
+        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
+        float3 specular = specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway);
+        float3 diffuse = BSDFs::Lambert::evaluate(m_base_tint);
+        return lerp(diffuse, specular, fresnel);
+    }
+
+    __inline_all__ float PDF(const optix::float3& wo, const optix::float3& wi) const {
+        using namespace optix;
+
+        const float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
+        const float3 specular_tint = lerp(make_float3(1.0f), m_base_tint, m_material.metallic);
+        float specularity = lerp(m_material.specularity, 1.0f, m_material.metallic);
+        float abs_cos_theta = abs(wo.z);
+
+        // Sample BSDFs based on the contribution of each BRDF.
+        float specular_probability = compute_specular_probability(m_base_tint, specular_tint, m_material.base_roughness, specularity, abs_cos_theta);
+
+        float base_PDF = BSDFs::Lambert::PDF(wo, wi);
+        float specular_PDF = BSDFs::GGX::PDF(ggx_alpha, wo, wi);
+        return lerp(base_PDF, specular_PDF, specular_probability);
+    }
+
+    __inline_all__ BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
+        using namespace optix;
+
+        bool is_same_hemisphere = wi.z * wo.z >= 0.00000001f;
+        if (!is_same_hemisphere)
+            return BSDFResponse::none();
+
+        // Flip directions if on the backside of the material.
+        if (wi.z < 0.0f) {
+            wi.z = -wi.z;
+            wo.z = -wo.z;
+        }
+
+        const float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
+        const float3 specular_tint = lerp(make_float3(1.0f), m_base_tint, m_material.metallic);
+        const float specularity = lerp(m_material.specularity, 1.0f, m_material.metallic);
+        const float abs_cos_theta = abs(wo.z);
+
+        BSDFResponse res;
+
+        const float3 halfway = normalize(wo + wi);
+        BSDFResponse specular_eval = BSDFs::GGX::evaluate_with_PDF(specular_tint, ggx_alpha, wo, wi, halfway);
+        BSDFResponse diffuse_eval = BSDFs::Lambert::evaluate_with_PDF(m_base_tint, wo, wi);
+
+        const float fresnel = schlick_fresnel(specularity, dot(wo, halfway));
+        res.weight = lerp(diffuse_eval.weight, specular_eval.weight, fresnel);
+
+        const float specular_probability = compute_specular_probability(m_base_tint, specular_tint, m_material.base_roughness, specularity, abs_cos_theta);
+        res.PDF = lerp(diffuse_eval.PDF, specular_eval.PDF, specular_probability);
+
+        return res;
     }
 
     __inline_all__ BSDFSample sample_one(const optix::float3& wo, const optix::float3& random_sample) const {
@@ -178,22 +227,6 @@ public:
         }
 
         return bsdf_sample;
-    }
-
-    __inline_all__ float PDF(const optix::float3& wo, const optix::float3& wi) const {
-        using namespace optix;
-
-        const float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_material.base_roughness);
-        const float3 specular_tint = lerp(make_float3(1.0f), m_base_tint, m_material.metallic);
-        float specularity = lerp(m_material.specularity, 1.0f, m_material.metallic);
-        float abs_cos_theta = abs(wo.z);
-
-        // Sample BSDFs based on the contribution of each BRDF.
-        float specular_probability = compute_specular_probability(m_base_tint, specular_tint, m_material.base_roughness, specularity, abs_cos_theta);
-        float base_probability = (1.0f - specular_probability);
-
-        return base_probability * BSDFs::Lambert::PDF(wo, wi) +
-            specular_probability * BSDFs::GGX::PDF(ggx_alpha, wo, wi);
     }
 
 };

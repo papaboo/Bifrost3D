@@ -21,17 +21,20 @@ inline bool almost_equal_eps(float lhs, float rhs, float eps) {
     return lhs < rhs + eps && lhs + eps > rhs;
 }
 
-inline bool equal_float3(optix::float3 lhs, optix::float3 rhs) {
-    return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+#define EXPECT_FLOAT_EQ_EPS(expected, actual, epsilon) EXPECT_PRED3(almost_equal_eps, expected, actual, epsilon)
+
+inline bool equal_float3_eps(optix::float3 lhs, optix::float3 rhs, optix::float3 epsilon) {
+    return abs(lhs.x - rhs.x) < epsilon.z && abs(lhs.y - rhs.y) < epsilon.y && abs(lhs.z - rhs.z) < epsilon.z;
 }
 
-#define EXPECT_FLOAT3_EQ(expected, actual) EXPECT_PRED2(equal_float3, expected, actual)
+#define EXPECT_COLOR_EQ_EPS(expected, actual, epsilon) EXPECT_PRED3(equal_float3_eps, expected, actual, epsilon)
 
-inline bool equal_normal(optix::float3 lhs, optix::float3 rhs, float epsilon) {
+// TODO Safely dot the normals and test how far apart they are.
+inline bool equal_normal_eps(optix::float3 lhs, optix::float3 rhs, float epsilon) {
     return abs(lhs.x - rhs.x) < epsilon && abs(lhs.y - rhs.y) < epsilon && abs(lhs.z - rhs.z) < epsilon;
 }
 
-#define EXPECT_NORMAL_EQ(expected, actual, epsilon) EXPECT_PRED3(equal_normal, expected, actual, epsilon)
+#define EXPECT_NORMAL_EQ(expected, actual, epsilon) EXPECT_PRED3(equal_normal_eps, expected, actual, epsilon)
 
 //-----------------------------------------------------------------------------
 // To string functions.

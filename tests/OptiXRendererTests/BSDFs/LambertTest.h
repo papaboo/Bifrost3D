@@ -31,9 +31,25 @@ GTEST_TEST(Lambert, power_conservation) {
         BSDFSample sample = Shading::BSDFs::Lambert::sample(tint, RNG::sample02(i));
         ws[i] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
     }
-    
+
     float average_w = Cogwheel::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
     EXPECT_TRUE(almost_equal_eps(average_w, 1.0f, 0.0001f));
+}
+
+GTEST_TEST(Lambert, evaluate_with_PDF) {
+    using namespace optix;
+
+    const unsigned int MAX_SAMPLES = 128;
+    const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
+    const float3 wo = normalize(make_float3(1, 1, 1));
+
+    for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
+        BSDFSample sample = Shading::BSDFs::Lambert::sample(tint, RNG::sample02(i));
+
+        BSDFResponse response = Shading::BSDFs::Lambert::evaluate_with_PDF(tint, wo, sample.direction);
+        EXPECT_NORMAL_EQ(sample.weight, response.weight, 0.000000001f);
+        EXPECT_FLOAT_EQ(sample.PDF, response.PDF);
+    }
 }
 
 } // NS OptiXRenderer
