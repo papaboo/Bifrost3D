@@ -672,7 +672,7 @@ void Renderer::handle_updates() {
             } else
                 device_material.base_tint_texture_ID = 0u;
             device_material.base_roughness = host_material.get_base_roughness();
-            device_material.specularity = host_material.get_specularity() * 0.08f; // See Physically-Based Shading at Disney bottom of page 8 for why we remap. TODO Consider moving this into Cogwheel or maybe even remove completely in favor of just letting GUI handle this.
+            device_material.specularity = host_material.get_specularity() * 0.08f; // See Physically-Based Shading at Disney bottom of page 8 for why we remap.
             device_material.metallic = host_material.get_metallic();
         };
 

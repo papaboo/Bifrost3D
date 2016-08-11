@@ -95,7 +95,7 @@ GTEST_TEST(SphereLight, consistent_PDF) {
     using namespace optix;
 
     const unsigned int MAX_SAMPLES = 128u;
-    const float3 position = make_float3(10.0f, 0.0f, 0.0f); // TODO vary.
+    const float3 position = make_float3(10.0f, 0.0f, 0.0f);
 
     SphereLight light;
     light.position = make_float3(0.0f, 10.0f, 0.0f);

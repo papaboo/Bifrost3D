@@ -109,7 +109,6 @@ void Materials::destroy(Materials::UID material_ID) {
         if (m_changes[material_ID] == Changes::None)
             m_materials_changed.push_back(material_ID);
         m_changes[material_ID] |= Changes::Destroyed;
-        // TODO If the material was created as well this frame, then remove the change notification entirely from the list of changed materials.
     }
 }
 

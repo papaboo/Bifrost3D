@@ -26,7 +26,7 @@ GTEST_TEST(GGX, power_conservation) {
 
     const unsigned int MAX_SAMPLES = 1024u;
     const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
-    const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f)); // TODO vary.
+    const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
     
     for (int a = 0; a < 10; ++a) {
         const float alpha = a / 10.0f;
@@ -50,7 +50,7 @@ GTEST_TEST(GGX, Helmholtz_reciprocity) {
 
     const unsigned int MAX_SAMPLES = 128u;
     const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
-    const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f)); // TODO vary.
+    const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
 
     for (int a = 0; a < 11; ++a) {
         const float alpha = lerp(0.2f, 1.0f, a / 10.0f);
@@ -71,7 +71,7 @@ GTEST_TEST(GGX, consistent_PDF) {
 
     const unsigned int MAX_SAMPLES = 128u;
     const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
-    const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f)); // TODO vary.
+    const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
 
     for (int a = 0; a < 11; ++a) {
         const float alpha = lerp(0.2f, 1.0f, a / 10.0f);
