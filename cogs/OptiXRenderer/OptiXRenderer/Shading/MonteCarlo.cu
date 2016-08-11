@@ -128,7 +128,7 @@ __inline_dev__ void closest_hit_without_MIS() {
 
         // Inline the material response into the light sample's contribution.
         const float3 shading_light_direction = world_shading_tbn * light_sample.direction_to_light;
-        const float3 bsdf_response = material.evaluate(monte_carlo_PRD.direction, shading_light_direction);// TODO Extend material and BRDFs with methods for evaluating contribution and PDF at the same time.
+        const float3 bsdf_response = material.evaluate(monte_carlo_PRD.direction, shading_light_direction);
         light_sample.radiance *= bsdf_response;
 
         if (light_sample.radiance.x > 0.0f || light_sample.radiance.y > 0.0f || light_sample.radiance.z > 0.0f) {
