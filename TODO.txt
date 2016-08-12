@@ -1,19 +1,12 @@
-* Reduce TODOs.
-** There are some in the MIS sampling.
-** Precompute material parameters for DefaultShading and profile.
-** Move GGX distribution to distributions. And test it?
-** GGX and default shading is full of TODO's.
-** Etc
-* Reenable firefly clamping.
-** Light contribution clamping should be done on the sampled light radiance, not the radiance scaled by the BRDF.
+* Define GGX geometric term.
+* Precompute DefaultShading parameters and profile.
 * Stl loader.
 * Bump mapping
-** Utility function for computing tangents and normals on bump mapped surfaces. Possibly splitting the mesh.
 ** Including 'fixing' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles.
 ** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
+** Utility function for computing tangents and normals on bump mapped surfaces. Possibly splitting the mesh.
 * Materials revisited.
-** Is sRGB / gamma correctly handled? The X-Wing looks really dark in environments. Or am I missing a multiplication by pi? Use the sphere scene with a pure diffuse material to test it.
 ** Rough transmitting surfaces.
 ** Add Burley and Oren-Nayar BRDF. Burley could (potentially) exclude the fresnel term, as that is part of the overall combiner.
 ** Use perfectly specular BRDFs for tiny roughness values.
@@ -38,5 +31,3 @@ libs
 * Emscripten
 * LuaJit - OpenSource (Fallback to interpretted Lua if the target architecture isn't supported.)
 * OpenEXR + ZLib or TinyEXR.
-* Add ZLib and LibPNG.
-** Generalize CMake source download function / macro. Found in GLFW.

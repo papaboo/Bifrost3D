@@ -10,7 +10,7 @@
 #define _OPTIXRENDERER_SHADING_DEFINES_H_
 
 #define DOUBLE_PRECISION_ACCUMULATION_BUFFER 1
-// #define PATH_PDF_FIREFLY_FILTER 1
+#define PATH_PDF_FIREFLY_FILTER 1
 
 // Validate macro. Will validate the optix object in debug mode.
 #ifdef _DEBUG

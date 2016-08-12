@@ -127,8 +127,8 @@ RT_PROGRAM void miss() {
     } else
         environment_radiance = g_scene_background_color;
 
-    float3 scaled_radiance = monte_carlo_PRD.throughput * environment_radiance;
-    monte_carlo_PRD.radiance += clamp_light_contribution_by_pdf(scaled_radiance, monte_carlo_PRD.clamped_path_PDF, g_accumulations);
+    float3 scaled_radiance = clamp_light_contribution_by_path_PDF(environment_radiance, monte_carlo_PRD.clamped_path_PDF, g_accumulations);
+    monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * scaled_radiance;
 
     monte_carlo_PRD.throughput = make_float3(0.0f);
 }
