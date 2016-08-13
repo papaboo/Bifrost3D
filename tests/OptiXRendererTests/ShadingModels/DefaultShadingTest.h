@@ -44,7 +44,7 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
     using namespace optix;
 
     const unsigned int MAX_SAMPLES = 4096u;
-    
+
     // A nearly white material to stress test power_conservation.
     // We do not use a completely white material, as monte carlo sampling and 
     // floating point errors makes it impossible to guarantee white or less.
@@ -54,7 +54,7 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
     material_params.metallic = 0.0f;
     material_params.specularity = 0.02f;
     DefaultShading material = DefaultShading(material_params);
-    
+
     for (int i = 0; i < 10; ++i) {
         const float3 wo = normalize(make_float3(float(i), 0.0f, 1.001f - float(i) * 0.1f));
         float ws[MAX_SAMPLES];
@@ -92,9 +92,9 @@ GTEST_TEST(DefaultShadingModel, Helmholtz_reciprocity) {
                 float3 f0 = plastic_material.evaluate(wo, sample.direction);
                 float3 f1 = plastic_material.evaluate(sample.direction, wo);
 
-                EXPECT_TRUE(almost_equal_eps(f0.x, f1.x, 0.0001f));
-                EXPECT_TRUE(almost_equal_eps(f0.y, f1.y, 0.0001f));
-                EXPECT_TRUE(almost_equal_eps(f0.z, f1.z, 0.0001f));
+                EXPECT_FLOAT_EQ_PCT(f0.x, f1.x, 0.000013f);
+                EXPECT_FLOAT_EQ_PCT(f0.y, f1.y, 0.000013f);
+                EXPECT_FLOAT_EQ_PCT(f0.z, f1.z, 0.000013f);
             }
         }
     }
@@ -212,7 +212,7 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
 
     const unsigned int MAX_SAMPLES = 2048 * 32;
     const float3 wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
-    
+
     Material material_params;
     material_params.base_tint = make_float3(0.5f, 0.5f, 0.5f);
     material_params.base_roughness = 0.9f;
