@@ -21,9 +21,6 @@ namespace BSDFs {
 // Sources:
 // * Walter et al 07.
 // * https://github.com/tunabrain/tungsten/blob/master/src/core/bsdfs/Microfacet.hpp
-// Future work
-// * Reference equations in Walter07 and implement different G terms.
-// * Create an optimized version where some expressions have been cancelled out.
 //----------------------------------------------------------------------------
 namespace GGX {
 
@@ -35,7 +32,7 @@ __inline_all__ float roughness_from_alpha(float alpha) {
     return sqrt(alpha);
 }
 
-// TODO This isn't the smith or schlick geometric term. Which is it?
+// Smith G1 term. Equation 34 in Walter et al 07.
 __inline_all__ float G1(float alpha, const optix::float3& w, const optix::float3& halfway) {
 #if _DEBUG
     // Check if the w vector projected onto the halfway vector is in the same hemisphere as the halfway vector and the normal, otherwise something went horribly horribly wrong and we're leaking light.
@@ -53,8 +50,24 @@ __inline_all__ float G1(float alpha, const optix::float3& w, const optix::float3
     return 2.0f / (1.0f + sqrt(1.0f + alpha_sqrd * tan_theta_sqrd));
 }
 
-__inline_all__ float G(float alpha, const optix::float3& wo, const optix::float3& wi, const optix::float3& halfway) {
+__inline_all__ float smith_G(float alpha, const optix::float3& wo, const optix::float3& wi, const optix::float3& halfway) {
     return G1(alpha, wo, halfway) * G1(alpha, wi, halfway);
+}
+
+// Heitz 14, equation 72.
+__inline_all__ float height_correlated_smith_delta(float alpha, const optix::float3& w, const optix::float3& halfway) {
+    float cos_theta_sqrd = w.z * w.z;
+    float tan_theta_sqrd = optix::fmaxf(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
+    float a_sqrd = 1.0f / (alpha * alpha * tan_theta_sqrd);
+    return (-1.0f + sqrt(1.0f + 1.0f / a_sqrd)) / 2.0f;
+}
+// Height correlated smith geometric term. Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Eric Heitz, 2014.
+// Equation 43. 
+// Naty Hofmann mentioned that the geometric term should be 1 / (1 + delta + delta), 
+// but that breaks energy conservation eer so slightly.
+__inline_all__ float height_correlated_smith_G(float alpha, const optix::float3& wo, const optix::float3& wi, const optix::float3& halfway) {
+    // return 1.0f / (1.0f + (height_correlated_smith_delta(alpha, wo, halfway) + height_correlated_smith_delta(alpha, wi, halfway)));
+    return 1.0f / (1.0f + height_correlated_smith_delta(alpha, wo, halfway)) * 1.0f / (1.0f + height_correlated_smith_delta(alpha, wi, halfway));
 }
 
 //----------------------------------------------------------------------------
@@ -62,7 +75,7 @@ __inline_all__ float G(float alpha, const optix::float3& wo, const optix::float3
 //----------------------------------------------------------------------------
 
 __inline_all__ float evaluate(float alpha, const optix::float3& wo, const optix::float3& wi, const optix::float3& halfway) {
-    float G = GGX::G(alpha, wo, wi, halfway);
+    float G = height_correlated_smith_G(alpha, wo, wi, halfway);
     float D = Distributions::GGX::D(alpha, halfway.z);
     float F = 1.0f; // No fresnel.
     return (D * F * G) / (4.0f * wo.z * wi.z);
@@ -89,7 +102,7 @@ __inline_all__ float PDF(float alpha, const optix::float3& wo, const optix::floa
 }
 
 __inline_all__ BSDFResponse evaluate_with_PDF(const optix::float3& tint, float alpha, const optix::float3& wo, const optix::float3& wi, const optix::float3& halfway) {
-    float G = GGX::G(alpha, wo, wi, halfway);
+    float G = height_correlated_smith_G(alpha, wo, wi, halfway);
     float D = Distributions::GGX::D(alpha, halfway.z);
     float F = 1.0f; // No fresnel.
     float f = (D * F * G) / (4.0f * wo.z * wi.z);
@@ -116,7 +129,7 @@ __inline_all__ BSDFSample sample(const optix::float3& tint, float alpha, const o
 
     { // Evaluate using the already computed sample PDF, which is D * cos_theta.
         const optix::float3& wi = bsdf_sample.direction; // alias for readability.
-        float G = GGX::G(alpha, wo, wi, halfway_sample.direction);
+        float G = height_correlated_smith_G(alpha, wo, wi, halfway_sample.direction);
         float D = halfway_sample.PDF / halfway_sample.direction.z;
         float F = 1.0f;
         bsdf_sample.weight = tint * ((D * F * G) / (4.0f * wo.z * wi.z));
