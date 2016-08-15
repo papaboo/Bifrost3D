@@ -45,6 +45,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
   set(SHADING_BSDFS_SRC
     OptiXRenderer/Shading/BSDFs/Lambert.h
     OptiXRenderer/Shading/BSDFs/GGX.h
+    OptiXRenderer/Shading/BSDFs/OrenNayar.h
   )
 
   set(SHADING_LIGHTSOURCES_SRC

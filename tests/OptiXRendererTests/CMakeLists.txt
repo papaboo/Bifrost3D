@@ -19,6 +19,7 @@ set(SRCS
 set(BSDFS_SRCS
   BSDFs/GGXTest.h
   BSDFs/LambertTest.h
+  BSDFs/OrenNayarTest.h
 )
 
 set(LIGHTSOURCES_SRCS

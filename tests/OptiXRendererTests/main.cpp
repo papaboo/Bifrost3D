@@ -10,6 +10,7 @@
 
 #include <BSDFs/GGXTest.h>
 #include <BSDFs/LambertTest.h>
+#include <BSDFs/OrenNayarTest.h>
 
 #include <LightSources/SphereLightTest.h>
 
