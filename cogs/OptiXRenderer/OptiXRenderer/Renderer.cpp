@@ -441,7 +441,7 @@ void Renderer::render() {
         Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
         Matrix4x4f inverse_view_projection_matrix = inverse_view_matrix * inverse_projection_matrix;
 
-        // Check if the camera transforms changed and if so, then upload the new ones and reset accumulation.
+        // Check if the camera transforms changed and, if so, upload the new ones and reset accumulation.
         if (m_state->camera_inverse_view_projection_matrix != inverse_view_projection_matrix) {
             m_state->camera_inverse_view_projection_matrix = inverse_view_projection_matrix;
 
@@ -494,11 +494,10 @@ void Renderer::render() {
                     context["g_light_count"]->setInt(m_state->lights.count);
                 }
             } else
-                printf("The OptiXRenderer only supports environments with 4 channels. '%s' has %u.\n", image.get_name().c_str(), channel_count(image.get_pixel_format()));
+                printf("OptiXRenderer only supports environments with 4 channels. '%s' has %u.\n", image.get_name().c_str(), channel_count(image.get_pixel_format()));
         }
     }
 
-    // m_state->accumulations = 0u;
     context["g_accumulations"]->setInt(m_state->accumulations);
 
     context->launch(int(EntryPoints::PathTracing), m_state->screensize.x, m_state->screensize.y);
