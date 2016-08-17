@@ -35,7 +35,7 @@ public:
     }
 
     __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
-        return BSDFs::Lambert::evaluate(m_base_tint);
+        return BSDFs::Lambert::evaluate(m_base_tint, wo, wi);
     }
 
     __inline_all__ float PDF(const optix::float3& wo, const optix::float3& wi) const {
@@ -44,10 +44,6 @@ public:
 
     __inline_all__ BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
         return BSDFs::Lambert::evaluate_with_PDF(m_base_tint, wo, wi);
-    }
-
-    __inline_all__ BSDFSample sample_one(const optix::float3& wo, const optix::float3& random_sample) const {
-        return BSDFs::Lambert::sample(m_base_tint, make_float2(random_sample));
     }
 
     __inline_all__ BSDFSample sample_all(const optix::float3& wo, const optix::float3& random_sample) const {
