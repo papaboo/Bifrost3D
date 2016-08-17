@@ -17,6 +17,7 @@ set(SRCS
 )
 
 set(BSDFS_SRCS
+  BSDFs/BurleyTest.h
   BSDFs/GGXTest.h
   BSDFs/LambertTest.h
   BSDFs/OrenNayarTest.h
