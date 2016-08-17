@@ -28,11 +28,11 @@ GTEST_TEST(OrenNayar, power_conservation) {
     const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
     const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
     
-    for (int a = 0; a < 10; ++a) {
-        const float alpha = a / 10.0f;
+    for (int r = 0; r < 10; ++r) {
+        const float roughness = r / 10.0f;
         float ws[MAX_SAMPLES];
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
-            BSDFSample sample = Shading::BSDFs::OrenNayar::sample(tint, alpha, wo, RNG::sample02(i));
+            BSDFSample sample = Shading::BSDFs::OrenNayar::sample(tint, roughness, wo, RNG::sample02(i));
 
             if (is_PDF_valid(sample.PDF))
                 ws[i] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
@@ -52,14 +52,13 @@ GTEST_TEST(OrenNayar, Helmholtz_reciprocity) {
     const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
     const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
 
-    for (int a = 0; a < 11; ++a) {
-        const float alpha = lerp(0.2f, 1.0f, a / 10.0f);
+    for (int r = 0; r < 11; ++r) {
+        const float roughness = lerp(0.2f, 1.0f, r / 10.0f);
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
-            BSDFSample sample = Shading::BSDFs::OrenNayar::sample(tint, alpha, wo, RNG::sample02(i));
+            BSDFSample sample = Shading::BSDFs::OrenNayar::sample(tint, roughness, wo, RNG::sample02(i));
 
             if (is_PDF_valid(sample.PDF)) {
-                float3 f = Shading::BSDFs::OrenNayar::evaluate(tint, alpha, sample.direction, wo);
-
+                float3 f = Shading::BSDFs::OrenNayar::evaluate(tint, roughness, sample.direction, wo);
                 EXPECT_COLOR_EQ_EPS(sample.weight, f, make_float3(0.0001f));
             }
         }
@@ -73,12 +72,12 @@ GTEST_TEST(OrenNayar, consistent_PDF) {
     const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
     const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
 
-    for (int a = 0; a < 11; ++a) {
-        const float alpha = lerp(0.2f, 1.0f, a / 10.0f);
+    for (int r = 0; r < 11; ++r) {
+        const float roughness = lerp(0.2f, 1.0f, r / 10.0f);
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
-            BSDFSample sample = Shading::BSDFs::OrenNayar::sample(tint, alpha, wo, RNG::sample02(i));
+            BSDFSample sample = Shading::BSDFs::OrenNayar::sample(tint, roughness, wo, RNG::sample02(i));
             if (is_PDF_valid(sample.PDF)) {
-                float PDF = Shading::BSDFs::OrenNayar::PDF(alpha, wo, sample.direction);
+                float PDF = Shading::BSDFs::OrenNayar::PDF(roughness, wo, sample.direction);
                 EXPECT_FLOAT_EQ_EPS(sample.PDF, PDF, 0.0001f);
             }
         }
@@ -92,15 +91,15 @@ GTEST_TEST(OrenNayar, evaluate_with_PDF) {
     const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
     const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
 
-    for (int a = 0; a < 11; ++a) {
-        const float alpha = lerp(0.2f, 1.0f, a / 10.0f);
+    for (int r = 0; r < 11; ++r) {
+        const float roughness = lerp(0.2f, 1.0f, r / 10.0f);
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
-            BSDFSample sample = Shading::BSDFs::OrenNayar::sample(tint, alpha, wo, RNG::sample02(i));
+            BSDFSample sample = Shading::BSDFs::OrenNayar::sample(tint, roughness, wo, RNG::sample02(i));
 
             if (is_PDF_valid(sample.PDF)) {
-                BSDFResponse response = Shading::BSDFs::OrenNayar::evaluate_with_PDF(tint, alpha, wo, sample.direction);
-                EXPECT_COLOR_EQ_EPS(Shading::BSDFs::OrenNayar::evaluate(tint, alpha, wo, sample.direction), response.weight, make_float3(0.000000001f));
-                EXPECT_FLOAT_EQ(Shading::BSDFs::OrenNayar::PDF(alpha, wo, sample.direction), response.PDF);
+                BSDFResponse response = Shading::BSDFs::OrenNayar::evaluate_with_PDF(tint, roughness, wo, sample.direction);
+                EXPECT_COLOR_EQ_EPS(Shading::BSDFs::OrenNayar::evaluate(tint, roughness, wo, sample.direction), response.weight, make_float3(0.000000001f));
+                EXPECT_FLOAT_EQ(Shading::BSDFs::OrenNayar::PDF(roughness, wo, sample.direction), response.PDF);
             }
         }
     }
