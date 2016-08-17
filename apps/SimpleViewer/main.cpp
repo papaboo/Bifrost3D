@@ -112,17 +112,22 @@ class CameraHandler final {
 public:
     CameraHandler(Cameras::UID camera_ID, float aspect_ratio)
         : m_camera_ID(camera_ID), m_aspect_ratio(aspect_ratio), m_FOV(PI<float>() / 4.0f) {
+        Matrix4x4f perspective_matrix, inverse_perspective_matrix;
+        CameraUtils::compute_perspective_projection(0.1f, 100.0f, m_FOV, m_aspect_ratio,
+            perspective_matrix, inverse_perspective_matrix);
+
+        Cameras::set_projection_matrices(m_camera_ID, perspective_matrix, inverse_perspective_matrix);
     }
 
     void handle(const Engine& engine) {
 
         const Mouse* mouse = engine.get_mouse();
-        float new_FOV = m_FOV - mouse->get_scroll_delta() * engine.get_time().get_smooth_delta_time(); // TODO Non-linear increased / drecrease. Especially that it can become negative is an issue.
+        float new_FOV = m_FOV - mouse->get_scroll_delta() * engine.get_time().get_smooth_delta_time(); // TODO Non-linear increased / decrease. Especially that it can become negative is an issue.
 
         float window_aspect_ratio = engine.get_window().get_aspect_ratio();
         if (window_aspect_ratio != m_aspect_ratio || new_FOV != m_FOV) {
             Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-            CameraUtils::compute_perspective_projection(0.1f, 100.0f, m_FOV, window_aspect_ratio,
+            CameraUtils::compute_perspective_projection(0.1f, 100.0f, m_FOV, m_aspect_ratio,
                 perspective_matrix, inverse_perspective_matrix);
 
             Cameras::set_projection_matrices(m_camera_ID, perspective_matrix, inverse_perspective_matrix);
@@ -309,13 +314,10 @@ void initializer(Cogwheel::Core::Engine& engine) {
     
     // Create camera
     SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
-
-    Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-    CameraUtils::compute_perspective_projection(0.1f, 100.0f, PI<float>() / 4.0f, engine.get_window().get_aspect_ratio(),
-        perspective_matrix, inverse_perspective_matrix);
-
     Cameras::allocate(1u);
-    Cameras::UID cam_ID = Cameras::create(cam_node_ID, scene_ID, perspective_matrix, inverse_perspective_matrix);
+    Cameras::UID cam_ID = Cameras::create(cam_node_ID, scene_ID, Matrix4x4f::identity(), Matrix4x4f::identity()); // Matrices will be set up by the CameraHandler.
+    CameraHandler* camera_handler = new CameraHandler(cam_ID, engine.get_window().get_aspect_ratio());
+    engine.add_mutating_callback(CameraHandler::handle_callback, camera_handler);
 
     // Load model
     bool load_model_from_file = false;
@@ -349,8 +351,6 @@ void initializer(Cogwheel::Core::Engine& engine) {
     float camera_velocity = g_scene_size * 0.1f;
     Navigation* camera_navigation = new Navigation(cam_node_ID, camera_velocity);
     engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
-    CameraHandler* camera_handler = new CameraHandler(cam_ID, engine.get_window().get_aspect_ratio());
-    engine.add_mutating_callback(CameraHandler::handle_callback, camera_handler);
     engine.add_mutating_callback(update_FPS, nullptr);
 
     if (load_model_from_file) {
