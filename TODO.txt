@@ -1,5 +1,5 @@
-* Define GGX geometric term.
-* Precompute DefaultShading parameters and profile.
+* Add Burley and Oren-Nayar BRDF.
+** Compute rho for DefaultMaterial using OrenNayar and Burley. What is the max?
 * Stl loader.
 * Bump mapping
 ** Including 'fixing' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles.
@@ -8,9 +8,10 @@
 ** Utility function for computing tangents and normals on bump mapped surfaces. Possibly splitting the mesh.
 * Materials revisited.
 ** Rough transmitting surfaces.
-** Add Burley and Oren-Nayar BRDF. Burley could (potentially) exclude the fresnel term, as that is part of the overall combiner.
 ** Use perfectly specular BRDFs for tiny roughness values.
 *** Adapt MIS to handle specular surfaces.
+** GGX: Stochastically sampled diffuse term with sampling probability based on geometric term.
+** Use Fresnel between 0.6 and 0.8 for metals. Just leave diffuse on to simulate multiple scattering, but perhaps the tint should be raised to some power (3?), to simulate multiple intersections.
 ** Add coat.
 * GL Renderer
 ** Half4 backbuffer in OptiXRenderer

@@ -53,10 +53,11 @@ __inline_all__ static void compute_tangents(const optix::float3& normal,
 }
 
 __inline_all__ optix::float3 clamp_light_contribution_by_path_PDF(const optix::float3& radiance, float path_PDF, int accumulations) {
-#if PATH_PDF_FIREFLY_FILTER 
+#if PATH_PDF_FIREFLY_FILTER
     float contribution = optix::luminance(radiance);
     float max_contribution = (1.0f / (1.0f - path_PDF)) - 1.0f;
-    max_contribution += accumulations + 1;
+    max_contribution *= (accumulations + 1);
+    max_contribution += 1.0f;
     return radiance * fminf(max_contribution / contribution, 1.0f);
 #else
     return radiance;
