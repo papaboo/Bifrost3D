@@ -63,13 +63,15 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
 
     // Apply MIS weights if the light isn't a delta function and if a new material ray will be spawned, i.e. it isn't the final bounce.
     const float3 shading_light_direction = world_shading_tbn * light_sample.direction_to_light;
-    const BSDFResponse bsdf_response = material.evaluate_with_PDF(monte_carlo_PRD.direction, shading_light_direction);
+    BSDFResponse bsdf_response = material.evaluate_with_PDF(monte_carlo_PRD.direction, shading_light_direction);
     bool delta_light = LightSources::is_delta_light(light, monte_carlo_PRD.position);
     bool apply_MIS = !delta_light && monte_carlo_PRD.bounces < g_max_bounce_count;
     if (apply_MIS) { // TODO Try using math instead and profile using test scene.
         float mis_weight = RNG::power_heuristic(light_sample.PDF, bsdf_response.PDF);
         light_sample.radiance *= mis_weight;
-    }
+    } else
+        // BIAS Nearly specular materials and delta lights will lead to insane fireflies, so we clamp them here.
+        bsdf_response.weight = fminf(bsdf_response.weight, make_float3(32.0f));
 
     light_sample.radiance = clamp_light_contribution_by_path_PDF(light_sample.radiance, monte_carlo_PRD.clamped_path_PDF, g_accumulations);
 
@@ -172,7 +174,7 @@ __inline_dev__ void closest_hit_MIS() {
 
     // Sample a light source.
     if (g_light_count != 0) {
-        const LightSample light_sample = reestimated_light_samples(material, world_shading_tbn, 4);
+        const LightSample light_sample = reestimated_light_samples(material, world_shading_tbn, 3);
 
         if (light_sample.radiance.x > 0.0f || light_sample.radiance.y > 0.0f || light_sample.radiance.z > 0.0f) {
             ShadowPRD shadow_PRD = { light_sample.radiance };
