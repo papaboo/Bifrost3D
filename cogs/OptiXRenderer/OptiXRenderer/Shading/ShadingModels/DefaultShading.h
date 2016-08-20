@@ -45,8 +45,13 @@ private:
     const Material& m_material;
     optix::float3 m_base_tint;
 
+    __inline_all__ static float pow5(float x) {
+        float xx = x * x;
+        return xx * xx * x;
+    }
+
     __inline_all__ static float schlick_fresnel(float incident_specular, float abs_cos_theta) {
-        return incident_specular + (1.0f - incident_specular) * pow(optix::fmaxf(0.0f, 1.0f - abs_cos_theta), 5.0f);
+        return incident_specular + (1.0f - incident_specular) * pow5(optix::fmaxf(0.0f, 1.0f - abs_cos_theta));
     }
 
     // Compute BSDF sampling probabilities based on their tinted weight.
