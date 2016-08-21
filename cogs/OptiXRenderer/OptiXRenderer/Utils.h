@@ -101,6 +101,11 @@ __inline_all__ bool is_PDF_valid(float PDF) {
     return PDF > 0.000001f;
 }
 
+__inline_all__ static float pow5(float x) {
+    float xx = x * x;
+    return xx * xx * x;
+}
+
 __inline_all__ optix::float2 direction_to_latlong_texcoord(const optix::float3& direction) {
     float u = (atan2f(direction.x, direction.z) + PIf) * 0.5f / PIf;
     float v = (asinf(direction.y) + M_PIf * 0.5f) / PIf;

@@ -11,6 +11,7 @@
 
 #include <OptiXRenderer/Distributions.h>
 #include <OptiXRenderer/Types.h>
+#include <OptiXRenderer/Utils.h>
 
 namespace OptiXRenderer {
 namespace Shading {
@@ -29,9 +30,8 @@ namespace Burley {
 using namespace optix;
 
 __inline_all__ static float schlick_fresnel(float abs_cos_theta) {
-    float m = clamp(1.0f - abs_cos_theta, 0.0f, 1.0f);
-    float m2 = m * m;
-    return m * m2 * m2; // pow(m, 5)
+    float m = fmaxf(1.0f - abs_cos_theta, 0.0f);
+    return pow5(m);
 }
 
 __inline_all__ float evaluate(float roughness, const float3& wo, const float3& wi, const float3& halfway) {
@@ -40,7 +40,7 @@ __inline_all__ float evaluate(float roughness, const float3& wo, const float3& w
     float fresnel_wo = schlick_fresnel(wo.z);
     float fresnel_wi = schlick_fresnel(wi.z);
     float normalizer = 1.0f / lerp(0.969371021f, 1.04337633f, roughness); // Burley isn't energy conserving, so we normalize by a 'good enough' constant here.
-    return lerp(1.0f, fd90, fresnel_wo) * lerp(1.0f, fd90, fresnel_wi) * RECIP_PIf *normalizer;
+    return lerp(1.0f, fd90, fresnel_wo) * lerp(1.0f, fd90, fresnel_wi) * RECIP_PIf * normalizer;
 }
 
 __inline_all__ float3 evaluate(const float3& tint, float roughness, const float3& wo, const float3& wi, const float3& halfway) {
