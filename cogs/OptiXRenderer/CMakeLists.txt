@@ -99,6 +99,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
 
   target_link_libraries(${LIBRARY_NAME}
     Gogwheel
+    StbImageWriter
     ${CUDA_LIBRARIES}
     ${OPENGL_LIBRARIES}
     ${OPTIX_LIBRARIES}

@@ -28,6 +28,8 @@
 #include <optixu/optixpp_namespace.h>
 #include <optixu/optixu_math_namespace.h>
 
+#include <StbImageWriter/StbImageWriter.h>
+
 #include <GL/gl.h>
 
 #include <assert.h>
@@ -479,7 +481,7 @@ void Renderer::render() {
                     // so we do not know if the environment light is always valid.
                     // This can be solved by making the environment light a proxy that points to the scene environment light, if available.
                     // If not available, then reduce the lightcount by one CPU side before rendering the scene.
-                    // That way we should have minimal performance impact on the GPU code.
+                    // That way we should have minimal performance impact GPU side.
 #if _DEBUG
                     RTsize light_source_capacity;
                     m_state->lights.sources->getSize(light_source_capacity);
@@ -509,7 +511,7 @@ void Renderer::render() {
         memcpy(output.get_pixels(), mapped_output_buffer, sizeof(float) * 4 * m_state->screensize.x * m_state->screensize.y);
         m_state->output_buffer->unmap();
         std::ostringstream filename;
-        filename << "C:\\Users\\Asger\\Desktop\\output_" << m_state->accumulations << ".png";
+        filename << "C:\\Users\\Asger\\Desktop\\image_" << m_state->accumulations << ".png";
         StbImageWriter::write(filename.str(), output);
     }
     */
