@@ -169,7 +169,8 @@ private:
 // Mesh utilities.
 // Future work:
 // * Forsyth index sorting. https://code.google.com/archive/p/vcacne/
-// * What about vertex sorting ? Base it on a morton curve or order of appearance in the index array.
+// * What about vertex sorting? Base it on a morton curve or order of appearance in the index array.
+// * Utility function for computing tangents and normals on bump mapped surfaces. Possibly splitting the mesh.
 //----------------------------------------------------------------------------
 namespace MeshUtils {
 
