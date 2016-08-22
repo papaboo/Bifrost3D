@@ -1,13 +1,14 @@
-* Add Burley and Oren-Nayar BRDF.
-** Compute rho for DefaultMaterial using OrenNayar and Burley. What is the max?
 * Stl loader.
 * Bump mapping
 ** Including 'fixing' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles.
 ** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
-** Utility function for computing tangents and normals on bump mapped surfaces. Possibly splitting the mesh.
 * Materials revisited.
-** Rough transmitting surfaces.
+** BTDF
+*** Transparency roughness.
+*** IOR (or compute from transparency)
+*** Partial coverage.
+*** All transparency properties should be stored in the same texture. (If it's bound, then the material is probably transparent. Otherwise not.)
 ** Use perfectly specular BRDFs for tiny roughness values.
 *** Adapt MIS to handle specular surfaces.
 ** GGX: Stochastically sampled diffuse term with sampling probability based on geometric term.
