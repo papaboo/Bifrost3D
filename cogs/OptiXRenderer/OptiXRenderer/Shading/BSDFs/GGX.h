@@ -74,6 +74,9 @@ __inline_all__ float height_correlated_smith_G(float alpha, const float3& wo, co
 
 //----------------------------------------------------------------------------
 // GGX BSDF, Walter et al 07.
+// Future work
+// * Reduce argument directions cos(angle)s: VoN, LoN, HoN and VoH.
+//   Should use fever registers.
 //----------------------------------------------------------------------------
 
 __inline_all__ float evaluate(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
@@ -83,14 +86,11 @@ __inline_all__ float evaluate(float alpha, const float3& wo, const float3& wi, c
     return (D * F * G) / (4.0f * wo.z * wi.z);
 }
 
-__inline_all__ float3 evaluate(const float3& tint, float alpha, const float3& wo, const float3& wi) {
-    const float3 halfway = normalize(wi + wo);
+__inline_all__ float3 evaluate(const float3& tint, float alpha, const float3& wo, const float3& wi, const float3& halfway) {
     return tint * evaluate(alpha, wo, wi, halfway);
 }
 
-__inline_all__ float PDF(float alpha, const float3& wo, const float3& wi) {
-    const float3 halfway = normalize(wo + wi);
-
+__inline_all__ float PDF(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
 #if _DEBUG
     if (dot(wo, halfway) < 0.0f || halfway.z < 0.0f)
 #if GPU_DEVICE

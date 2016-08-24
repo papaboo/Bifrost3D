@@ -58,7 +58,7 @@ GTEST_TEST(GGX, Helmholtz_reciprocity) {
             BSDFSample sample = Shading::BSDFs::GGX::sample(tint, alpha, wo, RNG::sample02(i));
 
             if (is_PDF_valid(sample.PDF)) {
-                float3 f = Shading::BSDFs::GGX::evaluate(tint, alpha, sample.direction, wo);
+                float3 f = Shading::BSDFs::GGX::evaluate(tint, alpha, sample.direction, wo, normalize(sample.direction + wo));
 
                 EXPECT_COLOR_EQ_EPS(sample.weight, f, make_float3(0.0001f));
             }
@@ -78,7 +78,8 @@ GTEST_TEST(GGX, consistent_PDF) {
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = Shading::BSDFs::GGX::sample(tint, alpha, wo, RNG::sample02(i));
             if (is_PDF_valid(sample.PDF)) {
-                float PDF = Shading::BSDFs::GGX::PDF(alpha, wo, sample.direction);
+                float3 wi = sample.direction;
+                float PDF = Shading::BSDFs::GGX::PDF(alpha, wo, wi, normalize(wo + wi));
                 EXPECT_FLOAT_EQ_EPS(sample.PDF, PDF, 0.0001f);
             }
         }
@@ -98,9 +99,11 @@ GTEST_TEST(GGX, evaluate_with_PDF) {
             BSDFSample sample = Shading::BSDFs::GGX::sample(tint, alpha, wo, RNG::sample02(i));
 
             if (is_PDF_valid(sample.PDF)) {
-                BSDFResponse response = Shading::BSDFs::GGX::evaluate_with_PDF(tint, alpha, wo, sample.direction);
-                EXPECT_COLOR_EQ_EPS(Shading::BSDFs::GGX::evaluate(tint, alpha, wo, sample.direction), response.weight, make_float3(0.000000001f));
-                EXPECT_FLOAT_EQ(Shading::BSDFs::GGX::PDF(alpha, wo, sample.direction), response.PDF);
+                float3 wi = sample.direction;
+                float3 halfway = normalize(wo + wi);
+                BSDFResponse response = Shading::BSDFs::GGX::evaluate_with_PDF(tint, alpha, wo, wi, halfway);
+                EXPECT_COLOR_EQ_EPS(Shading::BSDFs::GGX::evaluate(tint, alpha, wo, wi, halfway), response.weight, make_float3(0.000000001f));
+                EXPECT_FLOAT_EQ(Shading::BSDFs::GGX::PDF(alpha, wo, wi, halfway), response.PDF);
             }
         }
     }
@@ -115,17 +118,17 @@ GTEST_TEST(GGX, minimal_alpha) {
     const float3 incident_w = make_float3(0.0f, 0.0f, 1.0f);
     const float3 grazing_w = normalize(make_float3(0.0f, 1.0f, 0.001f));
 
-    float3 f = Shading::BSDFs::GGX::evaluate(tint, 0.00000000001f, incident_w, incident_w);
+    float3 f = Shading::BSDFs::GGX::evaluate(tint, 0.00000000001f, incident_w, incident_w, normalize(incident_w + incident_w));
     EXPECT_FALSE(isnan(f.x));
 
-    f = Shading::BSDFs::GGX::evaluate(tint, alpha, grazing_w, incident_w);
+    f = Shading::BSDFs::GGX::evaluate(tint, alpha, grazing_w, incident_w, normalize(grazing_w + incident_w));
     EXPECT_FALSE(isnan(f.x));
 
-    f = Shading::BSDFs::GGX::evaluate(tint, alpha, grazing_w, grazing_w);
+    f = Shading::BSDFs::GGX::evaluate(tint, alpha, grazing_w, grazing_w, normalize(grazing_w + grazing_w));
     EXPECT_FALSE(isnan(f.x));
 
     const float3 grazing_wi = make_float3(grazing_w.x, -grazing_w.y, grazing_w.z);
-    f = Shading::BSDFs::GGX::evaluate(tint, 0.00000000001f, grazing_w, grazing_wi);
+    f = Shading::BSDFs::GGX::evaluate(tint, 0.00000000001f, grazing_w, grazing_wi, normalize(grazing_w + grazing_wi));
     EXPECT_FALSE(isnan(f.x));
 }
 

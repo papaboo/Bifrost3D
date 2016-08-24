@@ -114,7 +114,7 @@ public:
         float specular_probability = compute_specular_probability(m_base_tint, specular_tint, m_material.base_roughness, specularity, abs_cos_theta);
 
         float base_PDF = BSDFs::OrenNayar::PDF(m_material.base_roughness, wo, wi);
-        float specular_PDF = BSDFs::GGX::PDF(ggx_alpha, wo, wi);
+        float specular_PDF = BSDFs::GGX::PDF(ggx_alpha, wo, wi, normalize(wo + wi));
         return lerp(base_PDF, specular_PDF, specular_probability);
     }
 
@@ -216,14 +216,16 @@ public:
             bsdf_sample.weight *= fresnel;
 
             // Evaluate diffuse layer as well.
-            bsdf_sample.weight += (1.0f - fresnel) * BSDFs::OrenNayar::evaluate(m_base_tint, m_material.base_roughness, wo, bsdf_sample.direction);
-            bsdf_sample.PDF += (1.0f - specular_probability) * BSDFs::OrenNayar::PDF(m_material.base_roughness, wo, bsdf_sample.direction);
+            BSDFResponse diffuse_response = BSDFs::OrenNayar::evaluate_with_PDF(m_base_tint, m_material.base_roughness, wo, bsdf_sample.direction);
+            bsdf_sample.weight += (1.0f - fresnel) * diffuse_response.weight;
+            bsdf_sample.PDF += (1.0f - specular_probability) * diffuse_response.PDF;
         } else {
             bsdf_sample.weight *= (1.0f - fresnel);
 
             // Evaluate specular layer as well.
-            bsdf_sample.weight += fresnel * BSDFs::GGX::evaluate(specular_tint, ggx_alpha, wo, bsdf_sample.direction);
-            bsdf_sample.PDF += specular_probability * BSDFs::GGX::PDF(ggx_alpha, wo, bsdf_sample.direction);
+            BSDFResponse glossy_response = BSDFs::GGX::evaluate_with_PDF(specular_tint, ggx_alpha, wo, bsdf_sample.direction, halfway);
+            bsdf_sample.weight += fresnel * glossy_response.weight;
+            bsdf_sample.PDF += specular_probability * glossy_response.PDF;
         }
 
         return bsdf_sample;
