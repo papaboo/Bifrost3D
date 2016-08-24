@@ -34,6 +34,8 @@ public:
         float base_roughness;
         float specularity;
         float metallic;
+        float coverage;
+        float transmission;
     };
 
     static bool is_allocated() { return m_materials != nullptr; }
@@ -64,6 +66,12 @@ public:
     static void set_specularity(Materials::UID material_ID, float incident_specularity);
     static inline float get_metallic(Materials::UID material_ID) { return m_materials[material_ID].metallic; }
     static void set_metallic(Materials::UID material_ID, float metallic);
+
+    // Transparency getters and setters.
+    static inline float get_coverage(Materials::UID material_ID) { return m_materials[material_ID].coverage; }
+    static void set_coverage(Materials::UID material_ID, float coverage);
+    static inline float get_transmission(Materials::UID material_ID) { return m_materials[material_ID].transmission; }
+    static void set_transmission(Materials::UID material_ID, float transmission);
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -134,6 +142,11 @@ public:
     inline void set_specularity(float specularity) { Materials::set_specularity(m_ID, specularity); }
     inline float get_metallic() { return Materials::get_metallic(m_ID); }
     inline void set_metallic(float metallic) { Materials::set_metallic(m_ID, metallic); }
+
+    inline float get_coverage() { return Materials::get_coverage(m_ID); }
+    inline void set_coverage(float coverage);
+    inline float get_transmission() { return Materials::get_transmission(m_ID); }
+    inline void set_transmission(float transmission);
 
     inline unsigned char get_changes() { return Materials::get_changes(m_ID); }
     inline bool has_changes(unsigned char change_bitmask) { return Materials::has_changes(m_ID, change_bitmask); }

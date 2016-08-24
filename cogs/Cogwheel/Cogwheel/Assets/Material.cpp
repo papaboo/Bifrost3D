@@ -38,6 +38,7 @@ void Materials::allocate(unsigned int capacity) {
     // Allocate dummy element at 0.
     m_names[0] = "Dummy Material";
     Data dummy_data = {};
+    dummy_data.coverage = 1.0f;
     dummy_data.base_tint = Math::RGB::red();
     m_materials[0] = dummy_data;
 }
@@ -134,6 +135,16 @@ void Materials::set_specularity(Materials::UID material_ID, float incident_specu
 
 void Materials::set_metallic(Materials::UID material_ID, float metallic) {
     m_materials[material_ID].metallic = metallic;
+    flag_as_updated(material_ID);
+}
+
+void Materials::set_coverage(Materials::UID material_ID, float coverage) {
+    m_materials[material_ID].coverage = coverage;
+    flag_as_updated(material_ID);
+}
+
+void Materials::set_transmission(Materials::UID material_ID, float transmission) {
+    m_materials[material_ID].transmission = transmission;
     flag_as_updated(material_ID);
 }
 

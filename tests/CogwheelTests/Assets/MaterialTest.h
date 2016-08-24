@@ -49,6 +49,8 @@ TEST_F(Assets_Material, sentinel_material) {
     EXPECT_EQ(Materials::get_base_roughness(sentinel_ID), 0.0f);
     EXPECT_EQ(Materials::get_metallic(sentinel_ID), 0.0f);
     EXPECT_EQ(Materials::get_specularity(sentinel_ID), 0.0f);
+    EXPECT_EQ(Materials::get_coverage(sentinel_ID), 1.0f);
+    EXPECT_EQ(Materials::get_transmission(sentinel_ID), 0.0f);
 }
 
 TEST_F(Assets_Material, create) {
@@ -57,6 +59,8 @@ TEST_F(Assets_Material, create) {
     data.base_roughness = 0.5f;
     data.metallic = 1.0f;
     data.specularity = 0.04f;
+    data.coverage = 0.25f;
+    data.transmission = 0.5f;
     Materials::UID material_ID = Materials::create("TestMaterial", data);
 
     EXPECT_TRUE(Materials::has(material_ID));
@@ -64,6 +68,8 @@ TEST_F(Assets_Material, create) {
     EXPECT_EQ(Materials::get_base_roughness(material_ID), 0.5f);
     EXPECT_EQ(Materials::get_metallic(material_ID), 1.0f);
     EXPECT_EQ(Materials::get_specularity(material_ID), 0.04f);
+    EXPECT_EQ(Materials::get_coverage(material_ID), 0.25f);
+    EXPECT_EQ(Materials::get_transmission(material_ID), 0.5f);
 
     // Test material created notification.
     Core::Iterable<Materials::ChangedIterator> changed_materials = Materials::get_changed_materials();
@@ -91,11 +97,7 @@ TEST_F(Assets_Material, destroy) {
 }
 
 TEST_F(Assets_Material, create_and_change) {
-    Materials::Data data;
-    data.base_tint = Math::RGB::red();
-    data.base_roughness = 0.5f;
-    data.metallic = 1.0f;
-    data.specularity = 0.04f;
+    Materials::Data data = {};
     Material material = Materials::create("TestMaterial", data);
 
     Math::RGB new_tint = Math::RGB::green();
