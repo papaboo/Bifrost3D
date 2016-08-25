@@ -1,8 +1,7 @@
 * BTDF
 ** IOR (or compute from transparency)
 ** All transparency properties should be stored in the same texture. (If it's bound, then the material is probably transparent. Otherwise not.)
-* Rename PRD to Payload.
-* Bug: Camera aspect isn't updated correct when switchign to fullscreen mode.
+* Bug: Camera aspect isn't updated correct when switching to fullscreen mode.
 * Normals revisited
 ** Bump mapping (Pending GL Renderer to verify winding order)
 *** Filter bumpmap mipmaps using Toksvig05, SGGX or AGAA NDF construction.

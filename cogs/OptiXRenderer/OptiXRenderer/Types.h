@@ -50,10 +50,10 @@ struct __align__(16) Sphere {
 };
 
 //----------------------------------------------------------------------------
-// Per ray data.
+// Ray payloads.
 //----------------------------------------------------------------------------
 
-struct __align__(16) MonteCarloPRD {
+struct __align__(16) MonteCarloPayload {
     optix::float3 radiance;
     RNG::LinearCongruential rng;
     optix::float3 throughput;
@@ -67,7 +67,7 @@ struct __align__(16) MonteCarloPRD {
     float clamped_path_PDF; // The same as the path PDF, but the PDF's are clamped to 1 before being applied.
 };
 
-struct ShadowPRD {
+struct ShadowPayload {
     optix::float3 attenuation;
 };
 

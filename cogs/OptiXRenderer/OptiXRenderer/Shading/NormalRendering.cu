@@ -15,11 +15,11 @@
 using namespace OptiXRenderer;
 using namespace optix;
 
-struct NormalVisualizationPRD {
+struct NormalVisualizationPayload {
     float4 color;
 };
 
-rtDeclareVariable(NormalVisualizationPRD, normal_visualization_PRD, rtPayload, );
+rtDeclareVariable(NormalVisualizationPayload, normal_visualization_payload, rtPayload, );
 
 rtDeclareVariable(uint2, g_launch_index, rtLaunchIndex, );
 rtDeclareVariable(rtObject, g_scene_root, , );
@@ -39,14 +39,14 @@ RT_PROGRAM void ray_generation() {
     float3 direction = project_ray_direction(viewport_pos, origin, g_inverted_view_projection_matrix);
     Ray ray(origin, direction, unsigned int(RayTypes::NormalVisualization), 0.0f);
 
-    NormalVisualizationPRD prd;
-    rtTrace(g_scene_root, ray, prd);
+    NormalVisualizationPayload payload;
+    rtTrace(g_scene_root, ray, payload);
 
     // Simple gamma correction.
     const float inv_screen_gamma = 1.0f / 2.2f;
-    prd.color = gammacorrect(prd.color, inv_screen_gamma);
+    payload.color = gammacorrect(payload.color, inv_screen_gamma);
 
-    g_output_buffer[g_launch_index] = prd.color;
+    g_output_buffer[g_launch_index] = payload.color;
 }
 
 //----------------------------------------------------------------------------
@@ -62,14 +62,14 @@ RT_PROGRAM void closest_hit() {
     const float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
     float D_dot_N = -dot(ray.direction, world_shading_normal);
     if (D_dot_N < 0.0f)
-        normal_visualization_PRD.color = make_float4(0.25f - 0.75f * D_dot_N, 0.0f, 0.0f, 1.0);
+        normal_visualization_payload.color = make_float4(0.25f - 0.75f * D_dot_N, 0.0f, 0.0f, 1.0);
     else
-        normal_visualization_PRD.color = make_float4(0.0f, 0.25f + 0.75f * D_dot_N, 0.0f, 1.0);
+        normal_visualization_payload.color = make_float4(0.0f, 0.25f + 0.75f * D_dot_N, 0.0f, 1.0);
 }
 
 //----------------------------------------------------------------------------
 // Miss program for normal visualization.
 //----------------------------------------------------------------------------
 RT_PROGRAM void miss() {
-    normal_visualization_PRD.color = make_float4(ray.direction * 0.2f + 0.2f, 1.0);
+    normal_visualization_payload.color = make_float4(ray.direction * 0.2f + 0.2f, 1.0);
 }

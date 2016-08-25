@@ -55,35 +55,35 @@ RT_PROGRAM void path_tracing() {
 
     unsigned int index = g_launch_index.y * g_accumulation_buffer.size().x + g_launch_index.x;
 
-    MonteCarloPRD prd;
-    prd.radiance = make_float3(0.0f);
-    prd.rng.seed(RNG::hash(index) ^ __brev(g_accumulations));
-    // prd.rng.seed(__brev(g_accumulations)); // Uniform seed.
-    prd.throughput = make_float3(1.0f);
-    prd.bounces = 0;
-    prd.bsdf_MIS_PDF = 0.0f;
-    prd.clamped_path_PDF = prd.path_PDF = 1.0f;
+    MonteCarloPayload payload;
+    payload.radiance = make_float3(0.0f);
+    payload.rng.seed(RNG::hash(index) ^ __brev(g_accumulations));
+    // payload.rng.seed(__brev(g_accumulations)); // Uniform seed.
+    payload.throughput = make_float3(1.0f);
+    payload.bounces = 0;
+    payload.bsdf_MIS_PDF = 0.0f;
+    payload.clamped_path_PDF = payload.path_PDF = 1.0f;
 
     // Generate rays.
-    float2 screen_pos_offset = prd.rng.sample2f(); // Always advance the rng by two samples, even if we ignore them.
+    float2 screen_pos_offset = payload.rng.sample2f(); // Always advance the rng by two samples, even if we ignore them.
     float2 screen_pos = make_float2(g_launch_index) + (g_accumulations == 0 ? make_float2(0.5f) : screen_pos_offset);
     float2 viewport_pos = make_float2(screen_pos.x / float(g_accumulation_buffer.size().x), screen_pos.y / float(g_accumulation_buffer.size().y));
-    prd.position = make_float3(g_camera_position);
-    prd.direction = project_ray_direction(viewport_pos, prd.position, g_inverted_view_projection_matrix);
+    payload.position = make_float3(g_camera_position);
+    payload.direction = project_ray_direction(viewport_pos, payload.position, g_inverted_view_projection_matrix);
 
     do {
-        Ray ray(prd.position, prd.direction, unsigned int(RayTypes::MonteCarlo), g_scene_epsilon);
-        rtTrace(g_scene_root, ray, prd);
-    } while (prd.bounces < g_max_bounce_count && !is_black(prd.throughput));
+        Ray ray(payload.position, payload.direction, unsigned int(RayTypes::MonteCarlo), g_scene_epsilon);
+        rtTrace(g_scene_root, ray, payload);
+    } while (payload.bounces < g_max_bounce_count && !is_black(payload.throughput));
 
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
     double3 prev_radiance = make_double3(g_accumulation_buffer[g_launch_index].x, g_accumulation_buffer[g_launch_index].y, g_accumulation_buffer[g_launch_index].z);
-    double3 accumulated_radiance_d = lerp_double(prev_radiance, make_double3(prd.radiance.x, prd.radiance.y, prd.radiance.z), 1.0 / (g_accumulations + 1.0));
+    double3 accumulated_radiance_d = lerp_double(prev_radiance, make_double3(payload.radiance.x, payload.radiance.y, payload.radiance.z), 1.0 / (g_accumulations + 1.0));
     g_accumulation_buffer[g_launch_index] = make_double4(accumulated_radiance_d.x, accumulated_radiance_d.y, accumulated_radiance_d.z, 1.0f);
     float3 accumulated_radiance = make_float3(accumulated_radiance_d.x, accumulated_radiance_d.y, accumulated_radiance_d.z);
 #else
     float3 prev_radiance = make_float3(g_accumulation_buffer[g_launch_index]);
-    float3 accumulated_radiance = lerp(prev_radiance, prd.radiance, 1.0f / (g_accumulations + 1.0f));
+    float3 accumulated_radiance = lerp(prev_radiance, payload.radiance, 1.0f / (g_accumulations + 1.0f));
     g_accumulation_buffer[g_launch_index] = make_float4(accumulated_radiance, 1.0f);
 #endif
 
@@ -97,7 +97,7 @@ RT_PROGRAM void path_tracing() {
 //----------------------------------------------------------------------------
 
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
-rtDeclareVariable(MonteCarloPRD, monte_carlo_PRD, rtPayload, );
+rtDeclareVariable(MonteCarloPayload, monte_carlo_payload, rtPayload, );
 rtDeclareVariable(float3, g_scene_background_color, , );
 rtDeclareVariable(EnvironmentLight, g_scene_environment_light, , );
 
@@ -110,12 +110,12 @@ RT_PROGRAM void miss() {
         // NOTE We can get rid of all these branches by just scaling the (mis) weight. Requires a lot of retesting though. :)
         bool next_event_estimatable = g_scene_environment_light.per_pixel_PDF_ID != RT_TEXTURE_ID_NULL;
         if (next_event_estimatable) {
-            bool next_event_estimated = monte_carlo_PRD.bounces != 0; // Was next event estimated at previous intersection.
-            bool apply_MIS = monte_carlo_PRD.bsdf_MIS_PDF > 0.0f;
+            bool next_event_estimated = monte_carlo_payload.bounces != 0; // Was next event estimated at previous intersection.
+            bool apply_MIS = monte_carlo_payload.bsdf_MIS_PDF > 0.0f;
             if (apply_MIS) {
                 // Calculate MIS weight and scale the radiance by it.
                 const float light_PDF = LightSources::PDF(g_scene_environment_light, ray.origin, ray.direction);
-                float mis_weight = RNG::power_heuristic(monte_carlo_PRD.bsdf_MIS_PDF, light_PDF);
+                float mis_weight = RNG::power_heuristic(monte_carlo_payload.bsdf_MIS_PDF, light_PDF);
                 environment_radiance *= mis_weight;
             } else if (next_event_estimated)
                 // Previous bounce used next event estimation, but did not calculate MIS, so don't apply light contribution.
@@ -127,10 +127,10 @@ RT_PROGRAM void miss() {
     } else
         environment_radiance = g_scene_background_color;
 
-    float3 scaled_radiance = clamp_light_contribution_by_path_PDF(environment_radiance, monte_carlo_PRD.clamped_path_PDF, g_accumulations);
-    monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * scaled_radiance;
+    float3 scaled_radiance = clamp_light_contribution_by_path_PDF(environment_radiance, monte_carlo_payload.clamped_path_PDF, g_accumulations);
+    monte_carlo_payload.radiance += monte_carlo_payload.throughput * scaled_radiance;
 
-    monte_carlo_PRD.throughput = make_float3(0.0f);
+    monte_carlo_payload.throughput = make_float3(0.0f);
 }
 
 //----------------------------------------------------------------------------

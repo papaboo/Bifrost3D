@@ -20,7 +20,7 @@ using namespace OptiXRenderer::Shading::ShadingModels;
 // Ray parameters.
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
-rtDeclareVariable(MonteCarloPRD, monte_carlo_PRD, rtPayload, );
+rtDeclareVariable(MonteCarloPayload, monte_carlo_payload, rtPayload, );
 
 // Scene parameters.
 rtDeclareVariable(rtObject, g_scene_root, , );
@@ -53,9 +53,9 @@ rtBuffer<float4, 2>  g_accumulation_buffer;
 // Sample a single light source, evaluates the material's response to the light and 
 // stores the combined response in the light source's radiance member.
 __inline_dev__ LightSample sample_single_light(const DefaultShading& material, const TBN& world_shading_tbn) {
-    int light_index = min(g_light_count - 1, int(monte_carlo_PRD.rng.sample1f() * g_light_count));
+    int light_index = min(g_light_count - 1, int(monte_carlo_payload.rng.sample1f() * g_light_count));
     const Light& light = g_lights[light_index];
-    LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_PRD.position, monte_carlo_PRD.rng.sample2f());
+    LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_payload.position, monte_carlo_payload.rng.sample2f());
     light_sample.radiance *= g_light_count; // Scale up radiance to account for only sampling one light.
 
     float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction_to_light);
@@ -63,9 +63,9 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
 
     // Apply MIS weights if the light isn't a delta function and if a new material ray will be spawned, i.e. it isn't the final bounce.
     const float3 shading_light_direction = world_shading_tbn * light_sample.direction_to_light;
-    BSDFResponse bsdf_response = material.evaluate_with_PDF(monte_carlo_PRD.direction, shading_light_direction);
-    bool delta_light = LightSources::is_delta_light(light, monte_carlo_PRD.position);
-    bool apply_MIS = !delta_light && monte_carlo_PRD.bounces < g_max_bounce_count;
+    BSDFResponse bsdf_response = material.evaluate_with_PDF(monte_carlo_payload.direction, shading_light_direction);
+    bool delta_light = LightSources::is_delta_light(light, monte_carlo_payload.position);
+    bool apply_MIS = !delta_light && monte_carlo_payload.bounces < g_max_bounce_count;
     if (apply_MIS) { // TODO Try using math instead and profile using test scene.
         float mis_weight = RNG::power_heuristic(light_sample.PDF, bsdf_response.PDF);
         light_sample.radiance *= mis_weight;
@@ -73,7 +73,7 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
         // BIAS Nearly specular materials and delta lights will lead to insane fireflies, so we clamp them here.
         bsdf_response.weight = fminf(bsdf_response.weight, make_float3(32.0f));
 
-    light_sample.radiance = clamp_light_contribution_by_path_PDF(light_sample.radiance, monte_carlo_PRD.clamped_path_PDF, g_accumulations);
+    light_sample.radiance = clamp_light_contribution_by_path_PDF(light_sample.radiance, monte_carlo_payload.clamped_path_PDF, g_accumulations);
 
     // Inline the material response into the light sample's radiance.
     light_sample.radiance *= bsdf_response.weight;
@@ -90,7 +90,7 @@ __inline_dev__ LightSample reestimated_light_samples(const DefaultShading& mater
         float light_weight = sum(light_sample.radiance);
         float new_light_weight = sum(new_light_sample.radiance);
         float new_light_probability = new_light_weight / (light_weight + new_light_weight);
-        if (monte_carlo_PRD.rng.sample1f() < new_light_probability) {
+        if (monte_carlo_payload.rng.sample1f() < new_light_probability) {
             light_sample = new_light_sample;
             light_sample.radiance /= new_light_probability;
         } else
@@ -114,9 +114,9 @@ __inline_dev__ void closest_hit_without_MIS() {
 
     const TBN world_shading_tbn = TBN(forward_shading_normal);
 
-    // Store intersection point and wo in PRD.
-    monte_carlo_PRD.position = ray.direction * t_hit + ray.origin;
-    monte_carlo_PRD.direction = world_shading_tbn * -ray.direction;
+    // Store intersection point and wo in payload.
+    monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
+    monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
 
     const Material& material_parameter = g_materials[material_index];
     const DefaultShading material = DefaultShading(material_parameter, texcoord);
@@ -124,38 +124,38 @@ __inline_dev__ void closest_hit_without_MIS() {
     // Sample light sources.
     for (int i = 0; i < g_light_count; ++i) {
         const Light& light = g_lights[i];
-        LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_PRD.position, monte_carlo_PRD.rng.sample2f());
+        LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_payload.position, monte_carlo_payload.rng.sample2f());
         float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction_to_light);
         light_sample.radiance *= abs(N_dot_L) / light_sample.PDF;
-        light_sample.radiance = clamp_light_contribution_by_path_PDF(light_sample.radiance, monte_carlo_PRD.clamped_path_PDF, g_accumulations);
+        light_sample.radiance = clamp_light_contribution_by_path_PDF(light_sample.radiance, monte_carlo_payload.clamped_path_PDF, g_accumulations);
         if (!is_PDF_valid(light_sample.PDF))
             light_sample.radiance = make_float3(0.0f);
 
         // Inline the material response into the light sample's contribution.
         const float3 shading_light_direction = world_shading_tbn * light_sample.direction_to_light;
-        const float3 bsdf_response = material.evaluate(monte_carlo_PRD.direction, shading_light_direction);
+        const float3 bsdf_response = material.evaluate(monte_carlo_payload.direction, shading_light_direction);
         light_sample.radiance *= bsdf_response;
 
         if (light_sample.radiance.x > 0.0f || light_sample.radiance.y > 0.0f || light_sample.radiance.z > 0.0f) {
-            ShadowPRD shadow_PRD = { light_sample.radiance };
-            Ray shadow_ray(monte_carlo_PRD.position, light_sample.direction_to_light, unsigned int(RayTypes::Shadow), g_scene_epsilon, light_sample.distance - g_scene_epsilon);
-            rtTrace(g_scene_root, shadow_ray, shadow_PRD);
+            ShadowPayload shadow_payload = { light_sample.radiance };
+            Ray shadow_ray(monte_carlo_payload.position, light_sample.direction_to_light, unsigned int(RayTypes::Shadow), g_scene_epsilon, light_sample.distance - g_scene_epsilon);
+            rtTrace(g_scene_root, shadow_ray, shadow_payload);
 
-            monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * shadow_PRD.attenuation;
+            monte_carlo_payload.radiance += monte_carlo_payload.throughput * shadow_payload.attenuation;
         }
     }
 
     // Sample BSDF.
-    BSDFSample bsdf_sample = material.sample_all(monte_carlo_PRD.direction, monte_carlo_PRD.rng.sample3f());
-    monte_carlo_PRD.direction = bsdf_sample.direction * world_shading_tbn;
-    monte_carlo_PRD.bsdf_MIS_PDF = 0.0f; // bsdf_sample.PDF;
-    monte_carlo_PRD.path_PDF *= bsdf_sample.PDF;
-    monte_carlo_PRD.clamped_path_PDF *= fminf(bsdf_sample.PDF, 1.0f);
+    BSDFSample bsdf_sample = material.sample_all(monte_carlo_payload.direction, monte_carlo_payload.rng.sample3f());
+    monte_carlo_payload.direction = bsdf_sample.direction * world_shading_tbn;
+    monte_carlo_payload.bsdf_MIS_PDF = 0.0f; // bsdf_sample.PDF;
+    monte_carlo_payload.path_PDF *= bsdf_sample.PDF;
+    monte_carlo_payload.clamped_path_PDF *= fminf(bsdf_sample.PDF, 1.0f);
     if (!is_PDF_valid(bsdf_sample.PDF))
-        monte_carlo_PRD.throughput = make_float3(0.0f);
+        monte_carlo_payload.throughput = make_float3(0.0f);
     else
-        monte_carlo_PRD.throughput *= bsdf_sample.weight * (abs(bsdf_sample.direction.z) / bsdf_sample.PDF); // f * ||cos(theta)|| / pdf
-    monte_carlo_PRD.bounces += 1u;
+        monte_carlo_payload.throughput *= bsdf_sample.weight * (abs(bsdf_sample.direction.z) / bsdf_sample.PDF); // f * ||cos(theta)|| / pdf
+    monte_carlo_payload.bounces += 1u;
 }
 
 __inline_dev__ void closest_hit_MIS() {
@@ -165,9 +165,9 @@ __inline_dev__ void closest_hit_MIS() {
 
     const TBN world_shading_tbn = TBN(forward_shading_normal);
 
-    // Store intersection point and wo in PRD.
-    monte_carlo_PRD.position = ray.direction * t_hit + ray.origin;
-    monte_carlo_PRD.direction = world_shading_tbn * -ray.direction;
+    // Store intersection point and wo in payload.
+    monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
+    monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
 
     const Material& material_parameter = g_materials[material_index];
     const DefaultShading material = DefaultShading(material_parameter, texcoord);
@@ -177,25 +177,25 @@ __inline_dev__ void closest_hit_MIS() {
         const LightSample light_sample = reestimated_light_samples(material, world_shading_tbn, 3);
 
         if (light_sample.radiance.x > 0.0f || light_sample.radiance.y > 0.0f || light_sample.radiance.z > 0.0f) {
-            ShadowPRD shadow_PRD = { light_sample.radiance };
-            Ray shadow_ray(monte_carlo_PRD.position, light_sample.direction_to_light, unsigned int(RayTypes::Shadow), g_scene_epsilon, light_sample.distance - g_scene_epsilon);
-            rtTrace(g_scene_root, shadow_ray, shadow_PRD);
+            ShadowPayload shadow_payload = { light_sample.radiance };
+            Ray shadow_ray(monte_carlo_payload.position, light_sample.direction_to_light, unsigned int(RayTypes::Shadow), g_scene_epsilon, light_sample.distance - g_scene_epsilon);
+            rtTrace(g_scene_root, shadow_ray, shadow_payload);
 
-            monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * shadow_PRD.attenuation;
+            monte_carlo_payload.radiance += monte_carlo_payload.throughput * shadow_payload.attenuation;
         }
     }
 
     // Sample BSDF.
-    BSDFSample bsdf_sample = material.sample_all(monte_carlo_PRD.direction, monte_carlo_PRD.rng.sample3f());
-    monte_carlo_PRD.direction = bsdf_sample.direction * world_shading_tbn;
-    monte_carlo_PRD.bsdf_MIS_PDF = bsdf_sample.PDF;
-    monte_carlo_PRD.path_PDF *= bsdf_sample.PDF;
-    monte_carlo_PRD.clamped_path_PDF *= fminf(bsdf_sample.PDF, 1.0f);
+    BSDFSample bsdf_sample = material.sample_all(monte_carlo_payload.direction, monte_carlo_payload.rng.sample3f());
+    monte_carlo_payload.direction = bsdf_sample.direction * world_shading_tbn;
+    monte_carlo_payload.bsdf_MIS_PDF = bsdf_sample.PDF;
+    monte_carlo_payload.path_PDF *= bsdf_sample.PDF;
+    monte_carlo_payload.clamped_path_PDF *= fminf(bsdf_sample.PDF, 1.0f);
     if (!is_PDF_valid(bsdf_sample.PDF))
-        monte_carlo_PRD.throughput = make_float3(0.0f);
+        monte_carlo_payload.throughput = make_float3(0.0f);
     else
-        monte_carlo_PRD.throughput *= bsdf_sample.weight * (abs(bsdf_sample.direction.z) / bsdf_sample.PDF); // f * ||cos(theta)|| / pdf
-    monte_carlo_PRD.bounces += 1u;
+        monte_carlo_payload.throughput *= bsdf_sample.weight * (abs(bsdf_sample.direction.z) / bsdf_sample.PDF); // f * ||cos(theta)|| / pdf
+    monte_carlo_payload.bounces += 1u;
 }
 
 RT_PROGRAM void closest_hit() {
@@ -208,7 +208,7 @@ RT_PROGRAM void closest_hit() {
 RT_PROGRAM void monte_carlo_any_hit() {
     // TODO Decide if this should update the path PDF. I suppose it should, since it is a path decision.
     const Material& material_parameter = g_materials[material_index];
-    if (monte_carlo_PRD.rng.sample1f() > material_parameter.coverage)
+    if (monte_carlo_payload.rng.sample1f() > material_parameter.coverage)
         rtIgnoreIntersection();
 }
 
@@ -216,12 +216,12 @@ RT_PROGRAM void monte_carlo_any_hit() {
 // Any hit program for monte carlo shadow rays.
 //----------------------------------------------------------------------------
 
-rtDeclareVariable(ShadowPRD, shadow_PRD, rtPayload, );
+rtDeclareVariable(ShadowPayload, shadow_payload, rtPayload, );
 
 RT_PROGRAM void shadow_any_hit() {
     const Material& material_parameter = g_materials[material_index];
-    shadow_PRD.attenuation *= 1.0f - material_parameter.coverage;
-    if (shadow_PRD.attenuation.x < 0.0000001f && shadow_PRD.attenuation.y < 0.0000001f && shadow_PRD.attenuation.z < 0.0000001f)
+    shadow_payload.attenuation *= 1.0f - material_parameter.coverage;
+    if (shadow_payload.attenuation.x < 0.0000001f && shadow_payload.attenuation.y < 0.0000001f && shadow_payload.attenuation.z < 0.0000001f)
         rtTerminateRay();
 }
 
@@ -236,20 +236,20 @@ RT_PROGRAM void light_closest_hit() {
 
     float3 light_radiance = LightSources::evaluate(light, ray.origin, ray.direction);
 
-    bool next_event_estimated = monte_carlo_PRD.bounces != 0; // Was next event estimated at previous intersection.
-    bool apply_MIS = monte_carlo_PRD.bsdf_MIS_PDF > 0.0f;
+    bool next_event_estimated = monte_carlo_payload.bounces != 0; // Was next event estimated at previous intersection.
+    bool apply_MIS = monte_carlo_payload.bsdf_MIS_PDF > 0.0f;
     if (apply_MIS) {
         // Calculate MIS weight and scale the radiance by it.
         const float light_PDF = LightSources::PDF(light, ray.origin, ray.direction);
-        float mis_weight = is_PDF_valid(light_PDF) ? RNG::power_heuristic(monte_carlo_PRD.bsdf_MIS_PDF, light_PDF) : 0.0f;
+        float mis_weight = is_PDF_valid(light_PDF) ? RNG::power_heuristic(monte_carlo_payload.bsdf_MIS_PDF, light_PDF) : 0.0f;
         light_radiance *= mis_weight;
     } else if (next_event_estimated)
         // Previous bounce used next event estimation, but did not calculate MIS, so don't apply light contribution.
         // TODO Could this be handled by setting bsdf_MIS_PDF to 0 instead? Wait until we have a specular BRDF implementation.
         light_radiance = make_float3(0.0f);
 
-    float3 scaled_radiance = clamp_light_contribution_by_path_PDF(light_radiance, monte_carlo_PRD.clamped_path_PDF, g_accumulations);
-    monte_carlo_PRD.radiance += monte_carlo_PRD.throughput * scaled_radiance;
+    float3 scaled_radiance = clamp_light_contribution_by_path_PDF(light_radiance, monte_carlo_payload.clamped_path_PDF, g_accumulations);
+    monte_carlo_payload.radiance += monte_carlo_payload.throughput * scaled_radiance;
 
-    monte_carlo_PRD.throughput = make_float3(0.0f);
+    monte_carlo_payload.throughput = make_float3(0.0f);
 }
