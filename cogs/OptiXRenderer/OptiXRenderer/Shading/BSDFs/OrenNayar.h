@@ -41,7 +41,6 @@ __inline_all__ State compute_state(float roughness) {
 }
 
 __inline_all__ float evaluate(float roughness, const float3& wo, const float3& wi) {
-    // Theta and phi
     float2 cos_theta = make_float2(abs(wi.z), abs(wo.z));
     const float sin_theta_sqrd = (1.0f - cos_theta.x * cos_theta.x) * (1.0f - cos_theta.y * cos_theta.y);
     float sin_theta = sqrt(fmaxf(0.0f, sin_theta_sqrd)); // AVH Hmm this is not sin_theta to the above cos_theta. Is it sin_theta to the halfwayvector? Must investigate!
