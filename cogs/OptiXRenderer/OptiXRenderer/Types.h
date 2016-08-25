@@ -161,7 +161,7 @@ struct __align__(16) Material {
     float base_roughness;
     float specularity;
     float metallic;
-    float __padding;
+    float coverage;
 };
 
 } // NS OptiXRenderer

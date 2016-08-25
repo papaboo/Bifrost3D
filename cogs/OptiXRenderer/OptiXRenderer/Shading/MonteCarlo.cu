@@ -205,6 +205,13 @@ RT_PROGRAM void closest_hit() {
         closest_hit_MIS();
 }
 
+RT_PROGRAM void monte_carlo_any_hit() {
+    // TODO Decide if this should update the path PDF. I suppose it should, since it is a path decision.
+    const Material& material_parameter = g_materials[material_index];
+    if (monte_carlo_PRD.rng.sample1f() > material_parameter.coverage)
+        rtIgnoreIntersection();
+}
+
 //----------------------------------------------------------------------------
 // Any hit program for monte carlo shadow rays.
 //----------------------------------------------------------------------------
@@ -212,8 +219,10 @@ RT_PROGRAM void closest_hit() {
 rtDeclareVariable(ShadowPRD, shadow_PRD, rtPayload, );
 
 RT_PROGRAM void shadow_any_hit() {
-    shadow_PRD.attenuation = make_float3(0.0f);
-    rtTerminateRay();
+    const Material& material_parameter = g_materials[material_index];
+    shadow_PRD.attenuation *= 1.0f - material_parameter.coverage;
+    if (shadow_PRD.attenuation.x < 0.0000001f && shadow_PRD.attenuation.y < 0.0000001f && shadow_PRD.attenuation.z < 0.0000001f)
+        rtTerminateRay();
 }
 
 //=============================================================================

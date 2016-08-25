@@ -329,6 +329,7 @@ Renderer::Renderer()
 
         std::string monte_carlo_ptx_path = get_ptx_path("MonteCarlo");
         m_state->default_material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
+        m_state->default_material->setAnyHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "monte_carlo_any_hit"));
         m_state->default_material->setAnyHitProgram(int(RayTypes::Shadow), context->createProgramFromPTXFile(monte_carlo_ptx_path, "shadow_any_hit"));
 
         std::string normal_vis_ptx_path = get_ptx_path("NormalRendering");
@@ -675,6 +676,7 @@ void Renderer::handle_updates() {
             device_material.base_roughness = host_material.get_base_roughness();
             device_material.specularity = host_material.get_specularity() * 0.08f; // See Physically-Based Shading at Disney bottom of page 8 for why we remap.
             device_material.metallic = host_material.get_metallic();
+            device_material.coverage = host_material.get_coverage();
         };
 
         if (!Materials::get_changed_materials().is_empty()) {
