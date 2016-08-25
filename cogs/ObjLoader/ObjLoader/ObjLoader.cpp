@@ -72,6 +72,8 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
         bool is_metallic = tiny_mat.illum == 3 || tiny_mat.illum == 5;
         material_data.metallic = is_metallic ? 1.0f : 0.0f;
         material_data.specularity = (tiny_mat.specular[0] + tiny_mat.specular[1] + tiny_mat.specular[2]) / 3.0f;
+        material_data.coverage = tiny_mat.dissolve;
+        material_data.transmission = 0.0f; // (tiny_mat.transmittance[0] + tiny_mat.transmittance[1] + tiny_mat.transmittance[2]) / 3.0f;
 
         if (!tiny_mat.diffuse_texname.empty()) {
             Images::UID image_ID = image_loader(directory + tiny_mat.diffuse_texname);
