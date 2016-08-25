@@ -70,11 +70,7 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
 
             Meshes::compute_bounds(tiles_mesh_ID);
 
-            Materials::Data white_tile_data;
-            white_tile_data.base_tint = RGB(0.5f, 0.5f, 0.5f);
-            white_tile_data.base_roughness = 0.4f;
-            white_tile_data.specularity = 0.25f;
-            white_tile_data.metallic = 0.0f;
+            Materials::Data white_tile_data = Materials::Data::create_dielectric(RGB(0.5f), 0.4f, 0.25f);
             Materials::UID white_tile_material_ID = Materials::create("White tile", white_tile_data);
 
             MeshModels::create(node.get_ID(), tiles_mesh_ID, white_tile_material_ID);
@@ -108,11 +104,7 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
 
             Meshes::compute_bounds(tiles_mesh_ID);
 
-            Materials::Data black_tile_data;
-            black_tile_data.base_tint = RGB(0.001f, 0.001f, 0.001f);
-            black_tile_data.base_roughness = 0.02f;
-            black_tile_data.specularity = 0.5f;
-            black_tile_data.metallic = 0.0f;
+            Materials::Data black_tile_data = Materials::Data::create_dielectric(RGB(0.001f), 0.02f, 0.5f);
             Materials::UID black_tile_material_ID = Materials::create("Black tile", black_tile_data);
 
             MeshModels::create(node.get_ID(), tiles_mesh_ID, black_tile_material_ID);
@@ -126,12 +118,14 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
         material0_data.base_roughness = 1.0f;
         material0_data.specularity = 0.25f;
         material0_data.metallic = 0.0f;
+        material0_data.coverage = 1.0f;
 
         Materials::Data material1_data;
         material1_data.base_tint = RGB(1.0f, 0.766f, 0.336f);
         material1_data.base_roughness = 0.02f;
         material1_data.specularity = 0.25f;
         material1_data.metallic = 1.0f;
+        material1_data.coverage = 1.0f;
 
         Meshes::UID cube_mesh_ID = MeshCreation::cube(1);
         Transform cube_transform = Transform(Vector3f(0.0f, -0.25f, 0.0f), Quaternionf::identity(), 1.5f);
@@ -147,9 +141,10 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
             float lerp_t = m / 8.0f;
             Materials::Data material_data;
             material_data.base_tint = lerp(material0_data.base_tint, material1_data.base_tint, lerp_t);
-            material_data.base_roughness = lerp(material0_data.base_roughness, material1_data.base_roughness, lerp_t);;
-            material_data.specularity = lerp(material0_data.specularity, material1_data.specularity, lerp_t);;
-            material_data.metallic = lerp(material0_data.metallic, material1_data.metallic, lerp_t);;
+            material_data.base_roughness = lerp(material0_data.base_roughness, material1_data.base_roughness, lerp_t);
+            material_data.specularity = lerp(material0_data.specularity, material1_data.specularity, lerp_t);
+            material_data.metallic = lerp(material0_data.metallic, material1_data.metallic, lerp_t);
+            material_data.coverage = lerp(material0_data.coverage, material1_data.coverage, lerp_t);
             Materials::UID material_ID = Materials::create("Lerped material", material_data);
 
             Transform transform = Transform(Vector3f(float(m * 2 - 8), 0.0, 0.0f));

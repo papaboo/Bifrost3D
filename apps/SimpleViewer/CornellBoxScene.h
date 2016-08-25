@@ -23,39 +23,19 @@ void create_cornell_box_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode ro
     using namespace Cogwheel::Math;
     using namespace Cogwheel::Scene;
 
-    Materials::Data white_material_data;
-    white_material_data.base_tint = RGB(0.98f);
-    white_material_data.base_roughness = 1.0f;
-    white_material_data.specularity = 0.25f;
-    white_material_data.metallic = 0.0f;
+    Materials::Data white_material_data = Materials::Data::create_dielectric(RGB(0.98f), 1.0f, 0.25f);
     Materials::UID white_material_ID = Materials::create("White", white_material_data);
 
-    Materials::Data red_material_data;
-    red_material_data.base_tint = RGB(0.98f, 0.02f, 0.02f);
-    red_material_data.base_roughness = 1.0f;
-    red_material_data.specularity = 0.25f;
-    red_material_data.metallic = 0.0f;
+    Materials::Data red_material_data = Materials::Data::create_dielectric(RGB(0.98f, 0.02f, 0.02f), 1.0f, 0.25f);
     Materials::UID red_material_ID = Materials::create("Red", red_material_data);
 
-    Materials::Data green_material_data;
-    green_material_data.base_tint = RGB(0.02f, 0.98f, 0.02f);
-    green_material_data.base_roughness = 1.0f;
-    green_material_data.specularity = 0.25f;
-    green_material_data.metallic = 0.0f;
+    Materials::Data green_material_data = Materials::Data::create_dielectric(RGB(0.02f, 0.98f, 0.02f), 1.0f, 0.25f);
     Materials::UID green_material_ID = Materials::create("Green", green_material_data);
 
-    Materials::Data iron_material_data;
-    iron_material_data.base_tint = RGB(0.56f, 0.57f, 0.58f);
-    iron_material_data.base_roughness = 0.4f;
-    iron_material_data.specularity = 0.0f;
-    iron_material_data.metallic = 1.0f;
+    Materials::Data iron_material_data = Materials::Data::create_metal(RGB(0.56f, 0.57f, 0.58f), 0.4f, 0.0f);
     Materials::UID iron_material_ID = Materials::create("Iron", iron_material_data);
 
-    Materials::Data copper_material_data;
-    copper_material_data.base_tint = RGB(0.8f, 0.4f, 0.3f);
-    copper_material_data.base_roughness = 0.02f;
-    copper_material_data.specularity = 0.0f;
-    copper_material_data.metallic = 1.0f;
+    Materials::Data copper_material_data = Materials::Data::create_metal(RGB(0.8f, 0.4f, 0.3f), 0.02f, 0.0f);
     Materials::UID copper_material_ID = Materials::create("Copper", copper_material_data);
 
     { // Set camera position

@@ -31,11 +31,30 @@ public:
     struct Data {
         Math::RGB base_tint;
         Textures::UID base_tint_texture_ID;
-        float base_roughness;
+        float base_roughness; // TODO Rename to roughness
         float specularity;
         float metallic;
         float coverage;
         float transmission;
+
+        static Data create_dielectric(Math::RGB base_tint, float base_roughness, float specularity) {
+            Data res = {};
+            res.base_tint = base_tint;
+            res.base_roughness = base_roughness;
+            res.specularity = specularity;
+            res.coverage = 1.0f;
+            return res;
+        }
+
+        static Data create_metal(Math::RGB base_tint, float base_roughness, float specularity) {
+            Data res = {};
+            res.base_tint = base_tint;
+            res.base_roughness = base_roughness;
+            res.specularity = specularity;
+            res.coverage = 1.0f;
+            res.metallic = 1.0f;
+            return res;
+        }
     };
 
     static bool is_allocated() { return m_materials != nullptr; }

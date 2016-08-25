@@ -31,11 +31,7 @@ void create_sphere_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_no
     }
 
     { // Create sphere.
-        Materials::Data material_data;
-        material_data.base_tint = RGB(1.0f, 1.0f, 1.0f);
-        material_data.base_roughness = 0.0f;
-        material_data.specularity = 0.25f;
-        material_data.metallic = 0.0f;
+        Materials::Data material_data = Materials::Data::create_dielectric(RGB(1.0f), 0.0f, 0.25);
         Materials::UID material_ID = Materials::create("White material", material_data);
 
         Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(1024, 512);
