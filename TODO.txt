@@ -1,14 +1,15 @@
-* Stl loader.
-* Bump mapping
-** Including 'fixing' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles.
+* BTDF
+** IOR (or compute from transparency)
+** All transparency properties should be stored in the same texture. (If it's bound, then the material is probably transparent. Otherwise not.)
+* Rename PRD to Payload.
+* Bug: Camera aspect isn't updated correct when switchign to fullscreen mode.
+* Normals revisited
+** Bump mapping (Pending GL Renderer to verify winding order)
+*** Filter bumpmap mipmaps using Toksvig05, SGGX or AGAA NDF construction.
+** 'Fix' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles. (Offset normal by -view_dir until the dot product is 0.)
 ** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
 * Materials revisited.
-** BTDF
-*** Transparency roughness.
-*** IOR (or compute from transparency)
-*** Partial coverage.
-*** All transparency properties should be stored in the same texture. (If it's bound, then the material is probably transparent. Otherwise not.)
 ** Use perfectly specular BRDFs for tiny roughness values.
 *** Adapt MIS to handle specular surfaces.
 ** GGX: Stochastically sampled diffuse term with sampling probability based on geometric term.
