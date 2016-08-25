@@ -45,8 +45,8 @@ TEST_F(Assets_Material, sentinel_material) {
     Materials::UID sentinel_ID = Materials::UID::invalid_UID();
 
     EXPECT_FALSE(Materials::has(sentinel_ID));
-    EXPECT_EQ(Materials::get_base_tint(sentinel_ID), Math::RGB::red());
-    EXPECT_EQ(Materials::get_base_roughness(sentinel_ID), 0.0f);
+    EXPECT_EQ(Materials::get_tint(sentinel_ID), Math::RGB::red());
+    EXPECT_EQ(Materials::get_roughness(sentinel_ID), 0.0f);
     EXPECT_EQ(Materials::get_metallic(sentinel_ID), 0.0f);
     EXPECT_EQ(Materials::get_specularity(sentinel_ID), 0.0f);
     EXPECT_EQ(Materials::get_coverage(sentinel_ID), 1.0f);
@@ -55,8 +55,8 @@ TEST_F(Assets_Material, sentinel_material) {
 
 TEST_F(Assets_Material, create) {
     Materials::Data data;
-    data.base_tint = Math::RGB::red();
-    data.base_roughness = 0.5f;
+    data.tint = Math::RGB::red();
+    data.roughness = 0.5f;
     data.metallic = 1.0f;
     data.specularity = 0.04f;
     data.coverage = 0.25f;
@@ -64,8 +64,8 @@ TEST_F(Assets_Material, create) {
     Materials::UID material_ID = Materials::create("TestMaterial", data);
 
     EXPECT_TRUE(Materials::has(material_ID));
-    EXPECT_EQ(Materials::get_base_tint(material_ID), Math::RGB::red());
-    EXPECT_EQ(Materials::get_base_roughness(material_ID), 0.5f);
+    EXPECT_EQ(Materials::get_tint(material_ID), Math::RGB::red());
+    EXPECT_EQ(Materials::get_roughness(material_ID), 0.5f);
     EXPECT_EQ(Materials::get_metallic(material_ID), 1.0f);
     EXPECT_EQ(Materials::get_specularity(material_ID), 0.04f);
     EXPECT_EQ(Materials::get_coverage(material_ID), 0.25f);
@@ -101,7 +101,7 @@ TEST_F(Assets_Material, create_and_change) {
     Material material = Materials::create("TestMaterial", data);
 
     Math::RGB new_tint = Math::RGB::green();
-    material.set_base_tint(new_tint);
+    material.set_tint(new_tint);
 
     // Test that creating and changing the material creates a single change.
     Core::Iterable<Materials::ChangedIterator> changed_materials = Materials::get_changed_materials();
@@ -184,14 +184,14 @@ TEST_F(Assets_Material, change_notifications) {
 
     Materials::reset_change_notifications();
 
-    { // Change base tint.
+    { // Change tint.
         Math::RGB new_tint = Math::RGB::red();
-        material.set_base_tint(new_tint);
+        material.set_tint(new_tint);
 
         // Test that only the material has changed.
         for (const Materials::UID material_ID : Materials::get_changed_materials()) {
             EXPECT_EQ(material_ID, material.get_ID());
-            EXPECT_EQ(Materials::get_base_tint(material_ID), new_tint);
+            EXPECT_EQ(Materials::get_tint(material_ID), new_tint);
             EXPECT_TRUE(Materials::has_changes(material_ID, Materials::Changes::Updated));
         }
     }
@@ -205,14 +205,14 @@ TEST_F(Assets_Material, change_notifications) {
         EXPECT_FALSE(material.has_changes(Materials::Changes::Updated));
     }
 
-    { // Change base roughness.
+    { // Change roughness.
         float new_roughness = 0.4f;
-        material.set_base_roughness(new_roughness);
+        material.set_roughness(new_roughness);
 
         // Test that only the material has changed.
         for (const Materials::UID material_ID : Materials::get_changed_materials()) {
             EXPECT_EQ(material_ID, material.get_ID());
-            EXPECT_EQ(Materials::get_base_roughness(material_ID), new_roughness);
+            EXPECT_EQ(Materials::get_roughness(material_ID), new_roughness);
             EXPECT_TRUE(Materials::has_changes(material_ID, Materials::Changes::Updated));
         }
     }

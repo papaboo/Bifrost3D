@@ -39,7 +39,7 @@ void Materials::allocate(unsigned int capacity) {
     m_names[0] = "Dummy Material";
     Data dummy_data = {};
     dummy_data.coverage = 1.0f;
-    dummy_data.base_tint = Math::RGB::red();
+    dummy_data.tint = Math::RGB::red();
     m_materials[0] = dummy_data;
 }
 
@@ -113,18 +113,18 @@ void Materials::destroy(Materials::UID material_ID) {
     }
 }
 
-void Materials::set_base_tint(Materials::UID material_ID, Math::RGB tint) {
-    m_materials[material_ID].base_tint = tint;
+void Materials::set_tint(Materials::UID material_ID, Math::RGB tint) {
+    m_materials[material_ID].tint = tint;
     flag_as_updated(material_ID);
 }
 
-void Materials::set_base_tint_texture_ID(Materials::UID material_ID, Textures::UID tint_texture_ID) {
-    m_materials[material_ID].base_tint_texture_ID = tint_texture_ID;
+void Materials::set_tint_texture_ID(Materials::UID material_ID, Textures::UID tint_texture_ID) {
+    m_materials[material_ID].tint_texture_ID = tint_texture_ID;
     flag_as_updated(material_ID);
 }
 
-void Materials::set_base_roughness(Materials::UID material_ID, float roughness) {
-    m_materials[material_ID].base_roughness = roughness;
+void Materials::set_roughness(Materials::UID material_ID, float roughness) {
+    m_materials[material_ID].roughness = roughness;
     flag_as_updated(material_ID);
 }
 

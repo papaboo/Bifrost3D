@@ -663,17 +663,17 @@ void Renderer::handle_updates() {
         static auto upload_material = [](Materials::UID material_ID, OptiXRenderer::Material* device_materials, optix::TextureSampler* samplers) {
             OptiXRenderer::Material& device_material = device_materials[material_ID];
             Assets::Material host_material = material_ID;
-            device_material.base_tint.x = host_material.get_base_tint().r;
-            device_material.base_tint.y = host_material.get_base_tint().g;
-            device_material.base_tint.z = host_material.get_base_tint().b;
-            if (host_material.get_base_tint_texture_ID() != Textures::UID::invalid_UID()) {
+            device_material.tint.x = host_material.get_tint().r;
+            device_material.tint.y = host_material.get_tint().g;
+            device_material.tint.z = host_material.get_tint().b;
+            if (host_material.get_tint_texture_ID() != Textures::UID::invalid_UID()) {
                 // Validate that the image has 4 channels! Otherwise OptiX goes boom boom.
-                Textures::UID texture_ID = host_material.get_base_tint_texture_ID();
+                Textures::UID texture_ID = host_material.get_tint_texture_ID();
                 assert(channel_count(Images::get_pixel_format(Textures::get_image_ID(texture_ID))) == 4);
-                device_material.base_tint_texture_ID = samplers[texture_ID]->getId();
+                device_material.tint_texture_ID = samplers[texture_ID]->getId();
             } else
-                device_material.base_tint_texture_ID = 0u;
-            device_material.base_roughness = host_material.get_base_roughness();
+                device_material.tint_texture_ID = 0u;
+            device_material.roughness = host_material.get_roughness();
             device_material.specularity = host_material.get_specularity() * 0.08f; // See Physically-Based Shading at Disney bottom of page 8 for why we remap.
             device_material.metallic = host_material.get_metallic();
             device_material.coverage = host_material.get_coverage();

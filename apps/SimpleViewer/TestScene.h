@@ -163,7 +163,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
         }
 
         Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 0.3f, 0.25f);
-        material_data.base_tint_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
+        material_data.tint_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
         Materials::UID material_ID = Materials::create("Floor", material_data);
 
         SceneNode plane_node = SceneNodes::create("Floor");

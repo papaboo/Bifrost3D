@@ -29,27 +29,27 @@ public:
     typedef UIDGenerator::ConstIterator ConstUIDIterator;
 
     struct Data {
-        Math::RGB base_tint;
-        Textures::UID base_tint_texture_ID;
-        float base_roughness; // TODO Rename to roughness
+        Math::RGB tint;
+        Textures::UID tint_texture_ID;
+        float roughness;
         float specularity;
         float metallic;
         float coverage;
         float transmission;
 
-        static Data create_dielectric(Math::RGB base_tint, float base_roughness, float specularity) {
+        static Data create_dielectric(Math::RGB tint, float roughness, float specularity) {
             Data res = {};
-            res.base_tint = base_tint;
-            res.base_roughness = base_roughness;
+            res.tint = tint;
+            res.roughness = roughness;
             res.specularity = specularity;
             res.coverage = 1.0f;
             return res;
         }
 
-        static Data create_metal(Math::RGB base_tint, float base_roughness, float specularity) {
+        static Data create_metal(Math::RGB tint, float roughness, float specularity) {
             Data res = {};
-            res.base_tint = base_tint;
-            res.base_roughness = base_roughness;
+            res.tint = tint;
+            res.roughness = roughness;
             res.specularity = specularity;
             res.coverage = 1.0f;
             res.metallic = 1.0f;
@@ -75,12 +75,12 @@ public:
     static inline std::string get_name(Materials::UID material_ID) { return m_names[material_ID]; }
     static inline void set_name(Materials::UID material_ID, const std::string& name) { m_names[material_ID] = name; }
 
-    static inline Math::RGB get_base_tint(Materials::UID material_ID) { return m_materials[material_ID].base_tint; }
-    static void set_base_tint(Materials::UID material_ID, Math::RGB tint);
-    static inline Textures::UID get_base_tint_texture_ID(Materials::UID material_ID) { return m_materials[material_ID].base_tint_texture_ID; }
-    static void set_base_tint_texture_ID(Materials::UID material_ID, Textures::UID tint_texture_ID);
-    static inline float get_base_roughness(Materials::UID material_ID) { return m_materials[material_ID].base_roughness; }
-    static void set_base_roughness(Materials::UID material_ID, float roughness);
+    static inline Math::RGB get_tint(Materials::UID material_ID) { return m_materials[material_ID].tint; }
+    static void set_tint(Materials::UID material_ID, Math::RGB tint);
+    static inline Textures::UID get_tint_texture_ID(Materials::UID material_ID) { return m_materials[material_ID].tint_texture_ID; }
+    static void set_tint_texture_ID(Materials::UID material_ID, Textures::UID tint_texture_ID);
+    static inline float get_roughness(Materials::UID material_ID) { return m_materials[material_ID].roughness; }
+    static void set_roughness(Materials::UID material_ID, float roughness);
     static inline float get_specularity(Materials::UID material_ID) { return m_materials[material_ID].specularity; }
     static void set_specularity(Materials::UID material_ID, float incident_specularity);
     static inline float get_metallic(Materials::UID material_ID) { return m_materials[material_ID].metallic; }
@@ -151,12 +151,12 @@ public:
     inline std::string get_name() const { return Materials::get_name(m_ID); }
     inline void set_name(const std::string& name) { Materials::set_name(m_ID, name); }
 
-    inline Math::RGB get_base_tint() { return Materials::get_base_tint(m_ID); }
-    inline void set_base_tint(Math::RGB tint) { Materials::set_base_tint(m_ID, tint); }
-    inline Textures::UID get_base_tint_texture_ID() { return Materials::get_base_tint_texture_ID(m_ID); }
-    inline void set_base_tint(Textures::UID tint_texture_ID) { Materials::set_base_tint_texture_ID(m_ID, tint_texture_ID); }
-    inline float get_base_roughness() { return Materials::get_base_roughness(m_ID); }
-    inline void set_base_roughness(float roughness) { Materials::set_base_roughness(m_ID, roughness); }
+    inline Math::RGB get_tint() { return Materials::get_tint(m_ID); }
+    inline void set_tint(Math::RGB tint) { Materials::set_tint(m_ID, tint); }
+    inline Textures::UID get_tint_texture_ID() { return Materials::get_tint_texture_ID(m_ID); }
+    inline void set_tint(Textures::UID tint_texture_ID) { Materials::set_tint_texture_ID(m_ID, tint_texture_ID); }
+    inline float get_roughness() { return Materials::get_roughness(m_ID); }
+    inline void set_roughness(float roughness) { Materials::set_roughness(m_ID, roughness); }
     inline float get_specularity() { return Materials::get_specularity(m_ID); }
     inline void set_specularity(float specularity) { Materials::set_specularity(m_ID, specularity); }
     inline float get_metallic() { return Materials::get_metallic(m_ID); }

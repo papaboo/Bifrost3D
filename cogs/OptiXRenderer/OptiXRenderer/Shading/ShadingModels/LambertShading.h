@@ -21,21 +21,21 @@ namespace ShadingModels {
 // ---------------------------------------------------------------------------
 class LambertShading {
 private:
-    optix::float3 m_base_tint;
+    optix::float3 m_tint;
 
 public:
 
     __inline_all__ LambertShading(const Material& material)
-        : m_base_tint(material.base_tint) { }
+        : m_tint(material.tint) { }
 
     __inline_all__ LambertShading(const Material& material, optix::float2 texcoord) {
-        m_base_tint = material.base_tint;
-        if (material.base_tint_texture_ID)
-            m_base_tint *= make_float3(tex2D(material.base_tint_texture_ID, texcoord));
+        m_tint = material.tint;
+        if (material.tint_texture_ID)
+            m_tint *= make_float3(tex2D(material.tint_texture_ID, texcoord));
     }
 
     __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
-        return BSDFs::Lambert::evaluate(m_base_tint, wo, wi);
+        return BSDFs::Lambert::evaluate(m_tint, wo, wi);
     }
 
     __inline_all__ float PDF(const optix::float3& wo, const optix::float3& wi) const {
@@ -43,11 +43,11 @@ public:
     }
 
     __inline_all__ BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
-        return BSDFs::Lambert::evaluate_with_PDF(m_base_tint, wo, wi);
+        return BSDFs::Lambert::evaluate_with_PDF(m_tint, wo, wi);
     }
 
     __inline_all__ BSDFSample sample_all(const optix::float3& wo, const optix::float3& random_sample) const {
-        return BSDFs::Lambert::sample(m_base_tint, make_float2(random_sample));
+        return BSDFs::Lambert::sample(m_tint, make_float2(random_sample));
     }
 
 }; // NS DefaultShading

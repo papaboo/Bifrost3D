@@ -114,15 +114,15 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
 
     { // Create material models.
         Materials::Data material0_data;
-        material0_data.base_tint = RGB(0.02f, 0.27f, 0.33f);
-        material0_data.base_roughness = 1.0f;
+        material0_data.tint = RGB(0.02f, 0.27f, 0.33f);
+        material0_data.roughness = 1.0f;
         material0_data.specularity = 0.25f;
         material0_data.metallic = 0.0f;
         material0_data.coverage = 1.0f;
 
         Materials::Data material1_data;
-        material1_data.base_tint = RGB(1.0f, 0.766f, 0.336f);
-        material1_data.base_roughness = 0.02f;
+        material1_data.tint = RGB(1.0f, 0.766f, 0.336f);
+        material1_data.roughness = 0.02f;
         material1_data.specularity = 0.25f;
         material1_data.metallic = 1.0f;
         material1_data.coverage = 1.0f;
@@ -140,8 +140,8 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
         for (int m = 0; m < 9; ++m) {
             float lerp_t = m / 8.0f;
             Materials::Data material_data;
-            material_data.base_tint = lerp(material0_data.base_tint, material1_data.base_tint, lerp_t);
-            material_data.base_roughness = lerp(material0_data.base_roughness, material1_data.base_roughness, lerp_t);
+            material_data.tint = lerp(material0_data.tint, material1_data.tint, lerp_t);
+            material_data.roughness = lerp(material0_data.roughness, material1_data.roughness, lerp_t);
             material_data.specularity = lerp(material0_data.specularity, material1_data.specularity, lerp_t);
             material_data.metallic = lerp(material0_data.metallic, material1_data.metallic, lerp_t);
             material_data.coverage = lerp(material0_data.coverage, material1_data.coverage, lerp_t);

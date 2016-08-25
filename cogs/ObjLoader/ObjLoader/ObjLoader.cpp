@@ -67,8 +67,8 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
         tinyobj::material_t tiny_mat = tiny_materials[i];
 
         Materials::Data material_data;
-        material_data.base_tint = Math::RGB(tiny_mat.diffuse[0], tiny_mat.diffuse[1], tiny_mat.diffuse[2]);
-        material_data.base_roughness = sqrt(sqrt(2.0f / (tiny_mat.shininess + 2.0f))); // Map from blinn shininess to material roughness.
+        material_data.tint = Math::RGB(tiny_mat.diffuse[0], tiny_mat.diffuse[1], tiny_mat.diffuse[2]);
+        material_data.roughness = sqrt(sqrt(2.0f / (tiny_mat.shininess + 2.0f))); // Map from blinn shininess to material roughness.
         bool is_metallic = tiny_mat.illum == 3 || tiny_mat.illum == 5;
         material_data.metallic = is_metallic ? 1.0f : 0.0f;
         material_data.specularity = (tiny_mat.specular[0] + tiny_mat.specular[1] + tiny_mat.specular[2]) / 3.0f;
@@ -82,9 +82,9 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
                 Images::destroy(image_ID);
                 image_ID = new_image_ID;
             }
-            material_data.base_tint_texture_ID = Textures::create2D(image_ID);
+            material_data.tint_texture_ID = Textures::create2D(image_ID);
         } else
-            material_data.base_tint_texture_ID = Textures::UID::invalid_UID();
+            material_data.tint_texture_ID = Textures::UID::invalid_UID();
 
         materials[unsigned int(i)] = Materials::create(tiny_mat.name, material_data);
     }

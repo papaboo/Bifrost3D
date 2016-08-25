@@ -23,8 +23,8 @@ namespace OptiXRenderer {
 
 Material gold_parameters() {
     Material gold_params;
-    gold_params.base_tint = optix::make_float3(1.0f, 0.766f, 0.336f);
-    gold_params.base_roughness = 0.02f;
+    gold_params.tint = optix::make_float3(1.0f, 0.766f, 0.336f);
+    gold_params.roughness = 0.02f;
     gold_params.metallic = 1.0f;
     gold_params.specularity = 0.02f; // Irrelevant when metallic is 1.
     return gold_params;
@@ -32,8 +32,8 @@ Material gold_parameters() {
 
 Material plastic_parameters() {
     Material plastic_params;
-    plastic_params.base_tint = optix::make_float3(0.02f, 0.27f, 0.33f);
-    plastic_params.base_roughness = 0.7f;
+    plastic_params.tint = optix::make_float3(0.02f, 0.27f, 0.33f);
+    plastic_params.roughness = 0.7f;
     plastic_params.metallic = 0.0f;
     plastic_params.specularity = 0.02f;
     return plastic_params;
@@ -49,8 +49,8 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
     // We do not use a completely white material, as monte carlo sampling and 
     // floating point errors makes it impossible to guarantee white or less.
     Material material_params;
-    material_params.base_tint = optix::make_float3(0.95f, 0.95f, 0.95f);
-    material_params.base_roughness = 0.7f;
+    material_params.tint = optix::make_float3(0.95f, 0.95f, 0.95f);
+    material_params.roughness = 0.7f;
     material_params.metallic = 0.0f;
     material_params.specularity = 0.02f;
     DefaultShading material = DefaultShading(material_params);
@@ -134,7 +134,7 @@ GTEST_TEST(DefaultShadingModel, evaluate_with_PDF) {
     Material plastic_params = plastic_parameters();
 
     for (int a = 0; a < 11; ++a) {
-        plastic_params.base_roughness = lerp(0.2f, 1.0f, a / 10.0f);
+        plastic_params.roughness = lerp(0.2f, 1.0f, a / 10.0f);
         DefaultShading plastic_material = DefaultShading(plastic_params);
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
@@ -155,8 +155,8 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
 
     { // Test that specular reflections on non-metals are white and incident reflections are diffuse.
         Material material_params;
-        material_params.base_tint = make_float3(1.0f, 0.0f, 0.0f);
-        material_params.base_roughness = 0.02f;
+        material_params.tint = make_float3(1.0f, 0.0f, 0.0f);
+        material_params.roughness = 0.02f;
         material_params.metallic = 0.0f;
         material_params.specularity = 0.0f; // Testing specularity. Physically-based fubar value.
         DefaultShading material = DefaultShading(material_params);
@@ -183,23 +183,23 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
         Material material_params = gold_parameters();
         DefaultShading material = DefaultShading(material_params);
 
-        { // Test that indicent reflectivity is base tint scaled.
+        { // Test that indicent reflectivity is tint scaled.
             float3 wo = make_float3(0.0f, 0.0f, 1.0f);
             float3 weight = material.evaluate(wo, wo);
-            float scale = material_params.base_tint.x / weight.x;
-            EXPECT_FLOAT_EQ(weight.x * scale, material_params.base_tint.x);
-            EXPECT_FLOAT_EQ(weight.y * scale, material_params.base_tint.y);
-            EXPECT_FLOAT_EQ(weight.z * scale, material_params.base_tint.z);
+            float scale = material_params.tint.x / weight.x;
+            EXPECT_FLOAT_EQ(weight.x * scale, material_params.tint.x);
+            EXPECT_FLOAT_EQ(weight.y * scale, material_params.tint.y);
+            EXPECT_FLOAT_EQ(weight.z * scale, material_params.tint.z);
         }
 
-        { // Test that grazing angle reflectivity is base tint scaled.
+        { // Test that grazing angle reflectivity is tint scaled.
             float3 wo = normalize(make_float3(0.0f, 1.0f, 0.001f));
             float3 wi = normalize(make_float3(0.0f, -1.0f, 0.001f));
             float3 weight = material.evaluate(wo, wi);
-            float scale = material_params.base_tint.x / weight.x;
-            EXPECT_FLOAT_EQ(weight.x * scale, material_params.base_tint.x);
-            EXPECT_FLOAT_EQ(weight.y * scale, material_params.base_tint.y);
-            EXPECT_FLOAT_EQ(weight.z * scale, material_params.base_tint.z);
+            float scale = material_params.tint.x / weight.x;
+            EXPECT_FLOAT_EQ(weight.x * scale, material_params.tint.x);
+            EXPECT_FLOAT_EQ(weight.y * scale, material_params.tint.y);
+            EXPECT_FLOAT_EQ(weight.z * scale, material_params.tint.z);
         }
     }
 }
@@ -214,8 +214,8 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
     const float3 wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
 
     Material material_params;
-    material_params.base_tint = make_float3(0.5f, 0.5f, 0.5f);
-    material_params.base_roughness = 0.9f;
+    material_params.tint = make_float3(0.5f, 0.5f, 0.5f);
+    material_params.roughness = 0.9f;
     material_params.metallic = 0.0f;
     material_params.specularity = 0.2f;
     DefaultShading material = DefaultShading(material_params);

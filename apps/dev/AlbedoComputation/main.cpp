@@ -41,12 +41,12 @@ int main(int argc, char** argv) {
     
     // Specular material.
     Material material_params;
-    material_params.base_tint = optix::make_float3(1.0f, 0.0f, 0.0f);
+    material_params.tint = optix::make_float3(1.0f, 0.0f, 0.0f);
     material_params.metallic = 0.0f;
     material_params.specularity = 0.0f;
 
     for (int y = 0; y < int(height); ++y) {
-        material_params.base_roughness = y / float(height - 1u);
+        material_params.roughness = y / float(height - 1u);
         #pragma omp parallel for
         for (int x = 0; x < int(width); ++x) {
 
@@ -104,8 +104,8 @@ int main(int argc, char** argv) {
             "static const optix::float2 default_shading_rho[] = {\n";
 
         for (int y = 0; y < int(height); ++y) {
-            float base_roughness = y / float(height - 1u);
-            out_header << "    // Roughness " << base_roughness << "\n";
+            float roughness = y / float(height - 1u);
+            out_header << "    // Roughness " << roughness << "\n";
             out_header << "    ";
             for (int x = 0; x < int(width); ++x) {
                 Math::RGB& rho = rho_image_pixels[x + y * width];
