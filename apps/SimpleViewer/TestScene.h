@@ -208,6 +208,29 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
         sphere_node.set_parent(root_node);
     }
 
+    { // Partial coverage copper box.
+        unsigned int width = 17, height = 17;
+        Images::UID image_ID = Images::create("Grid", PixelFormat::I8, 1.0f, Vector2ui(width, height));
+        unsigned char* pixels = (unsigned char*)Images::get_pixels(image_ID);
+        for (unsigned int y = 0; y < height; ++y) {
+            for (unsigned int x = 0; x < width; ++x) {
+                unsigned char* pixel = pixels + (x + y * width);
+                unsigned char intensity = ((x & 1) == 0 || (y & 1) == 0) ? 255 : 0;
+                pixel[0] = intensity;
+            }
+        }
+
+        Materials::Data material_data = Materials::Data::create_metal(RGB(0.8f, 0.4f, 0.3f), 0.02f, 0.0f);
+        material_data.coverage_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
+        Materials::UID material_ID = Materials::create("Copper", material_data);
+
+        Transform transform = Transform(Vector3f(3.0f, 0.5f, 0.0f));
+        SceneNode cube_node = SceneNodes::create("Swizz cube", transform);
+        Meshes::UID cube_mesh_ID = MeshCreation::cube(3);
+        MeshModels::create(cube_node.get_ID(), cube_mesh_ID, material_ID);
+        cube_node.set_parent(root_node);
+    }
+
     { // GUN!
         Cameras::UID cam_ID = *Cameras::begin();
         SceneNodes::UID cam_node_ID = Cameras::get_node_ID(cam_ID);
