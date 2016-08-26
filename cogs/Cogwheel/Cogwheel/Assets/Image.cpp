@@ -86,6 +86,8 @@ bool Images::has(Images::UID image_ID) {
 
 static inline Images::PixelData allocate_pixels(PixelFormat format, unsigned int pixel_count) {
     switch (format) {
+    case PixelFormat::I8:
+        return new unsigned char[pixel_count];
     case PixelFormat::RGB24:
         return new unsigned char[3 * pixel_count];
     case PixelFormat::RGBA32:
@@ -113,6 +115,10 @@ Images::UID Images::create(const std::string& name, PixelFormat format, float ga
 
     if (m_changes[id] == Changes::None)
         m_images_changed.push_back(id);
+
+    // Only apply gamma to images that store colors.
+    if (format == PixelFormat::I8)
+        gamma = 1.0f;
 
     MetaInfo& metainfo = m_metainfo[id];
     metainfo.name = name;
@@ -151,6 +157,11 @@ void Images::destroy(Images::UID image_ID) {
 static RGBA get_gammaed_pixel(Images::UID image_ID, unsigned int index) {
     Images::PixelData pixels = Images::get_pixels(image_ID);
     switch (Images::get_pixel_format(image_ID)) {
+    case PixelFormat::I8: {
+        unsigned char* pixel = ((unsigned char*)pixels) + index;
+        float intensity = pixel[0] / 255.0f;
+        return RGBA(intensity, intensity, intensity, intensity);
+    }
     case PixelFormat::RGB24: {
         unsigned char* pixel = ((unsigned char*)pixels) + index * 3;
         return RGBA(pixel[0] / 255.0f, pixel[1] / 255.0f, pixel[2] / 255.0f, 1.0f);
@@ -215,6 +226,11 @@ static void set_linear_pixel(Images::UID image_ID, RGBA color, unsigned int inde
     color = gammacorrect(color, 1.0f / Images::get_gamma(image_ID));
     Images::PixelData pixels = Images::get_pixels(image_ID);
     switch (Images::get_pixel_format(image_ID)) {
+    case PixelFormat::I8: {
+        unsigned char* pixel = ((unsigned char*)pixels) + index;
+        pixel[0] = unsigned char(clamp(color.r * 255.0f, 0.0f, 255.0f));
+        break;
+    }
     case PixelFormat::RGB24: {
         unsigned char* pixel = ((unsigned char*)pixels) + index * 3;
         pixel[0] = unsigned char(clamp(color.r * 255.0f, 0.0f, 255.0f));
@@ -329,10 +345,12 @@ Images::UID change_format(Images::UID image_ID, PixelFormat new_format) {
 }
 
 void fill_mipmap_chain(Images::UID image_ID) {
+    // assert that depth is 1, since 3D textures are not supported.
+
     // Future work: Optimize for the most used data formats.
     Image image = image_ID;
     for (unsigned int m = 0; m < image.get_mipmap_count() - 1; ++m) {
-        for (unsigned int y = 0; y + 1 < image.get_height(m); y += 2) {
+        for (unsigned int y = 0; y + 1 < image.get_height(m); y += 2) { // TODO Doesn't work with 1D textures does it?
             for (unsigned int x = 0; x + 1 < image.get_width(m); x += 2) {
 
                 RGBA lower_left = image.get_pixel(Math::Vector2ui(x, y), m);
@@ -375,8 +393,6 @@ void fill_mipmap_chain(Images::UID image_ID) {
                 RGBA upper_left = image.get_pixel(Math::Vector2ui(image.get_width(m) - 3, image.get_height(m) - 1), m);
                 RGBA upper_middle = image.get_pixel(Math::Vector2ui(image.get_width(m) - 2, image.get_height(m) - 1), m);
                 RGBA upper_right = image.get_pixel(Math::Vector2ui(image.get_width(m) - 1, image.get_height(m) - 1), m);
-                // printf("upper %s\n", upper.to_string().c_str());
-                // printf("lower %s\n", lower.to_string().c_str());
                 RGB rgb = (lower.rgb() * 6.0f + upper_left.rgb() + upper_middle.rgb() + upper_right.rgb()) / 9.0f;
                 float alpha = (lower.a * 6.0f + upper_left.a + upper_middle.a + upper_right.a) / 9.0f;
                 image.set_pixel(RGBA(rgb, alpha), Math::Vector2ui(image.get_width(m + 1) - 1, image.get_height(m + 1) - 1), m + 1);

@@ -23,6 +23,7 @@ namespace Assets {
 
 enum class PixelFormat {
     Unknown = 0,
+    I8,
     RGB24,
     RGBA32,
     RGB_Float,
@@ -37,6 +38,8 @@ inline int channel_count(PixelFormat format) {
     case PixelFormat::RGB24:
     case PixelFormat::RGB_Float:
         return 3;
+    case PixelFormat::I8:
+        return 1;
     case PixelFormat::Unknown:
     default:
         return 0;
