@@ -143,6 +143,11 @@ void Materials::set_coverage(Materials::UID material_ID, float coverage) {
     flag_as_updated(material_ID);
 }
 
+void Materials::set_coverage_texture_ID(Materials::UID material_ID, Textures::UID coverage_texture_ID) {
+    m_materials[material_ID].coverage_texture_ID = coverage_texture_ID;
+    flag_as_updated(material_ID);
+}
+
 void Materials::set_transmission(Materials::UID material_ID, float transmission) {
     m_materials[material_ID].transmission = transmission;
     flag_as_updated(material_ID);

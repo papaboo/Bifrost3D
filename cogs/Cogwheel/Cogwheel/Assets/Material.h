@@ -35,6 +35,7 @@ public:
         float specularity;
         float metallic;
         float coverage;
+        Textures::UID coverage_texture_ID;
         float transmission;
 
         static Data create_dielectric(Math::RGB tint, float roughness, float specularity) {
@@ -89,6 +90,8 @@ public:
     // Transparency getters and setters.
     static inline float get_coverage(Materials::UID material_ID) { return m_materials[material_ID].coverage; }
     static void set_coverage(Materials::UID material_ID, float coverage);
+    static inline Textures::UID get_coverage_texture_ID(Materials::UID material_ID) { return m_materials[material_ID].coverage_texture_ID; }
+    static void set_coverage_texture_ID(Materials::UID material_ID, Textures::UID coverage_texture_ID);
     static inline float get_transmission(Materials::UID material_ID) { return m_materials[material_ID].transmission; }
     static void set_transmission(Materials::UID material_ID, float transmission);
 
@@ -163,9 +166,11 @@ public:
     inline void set_metallic(float metallic) { Materials::set_metallic(m_ID, metallic); }
 
     inline float get_coverage() { return Materials::get_coverage(m_ID); }
-    inline void set_coverage(float coverage);
+    inline void set_coverage(float coverage) { Materials::set_coverage(m_ID, coverage); }
+    inline Textures::UID get_coverage_texture_ID() { return Materials::get_coverage_texture_ID(m_ID); }
+    void set_coverage_texture_ID(Textures::UID texture_ID) { Materials::set_coverage_texture_ID(m_ID, texture_ID); }
     inline float get_transmission() { return Materials::get_transmission(m_ID); }
-    inline void set_transmission(float transmission);
+    inline void set_transmission(float transmission) { Materials::set_coverage(m_ID, transmission); }
 
     inline unsigned char get_changes() { return Materials::get_changes(m_ID); }
     inline bool has_changes(unsigned char change_bitmask) { return Materials::has_changes(m_ID, change_bitmask); }
