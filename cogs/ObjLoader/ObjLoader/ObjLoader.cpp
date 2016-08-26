@@ -86,6 +86,17 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
         } else
             material_data.tint_texture_ID = Textures::UID::invalid_UID();
 
+        if (!tiny_mat.alpha_texname.empty()) {
+            Images::UID image_ID = image_loader(directory + tiny_mat.alpha_texname);
+            if (Images::get_pixel_format(image_ID) != PixelFormat::I8) {
+                Images::UID new_image_ID = ImageUtils::change_format(image_ID, PixelFormat::I8); // TODO Own change format. Intensity should come from the alpha channel if there is one, otherwise from red.
+                Images::destroy(image_ID);
+                image_ID = new_image_ID;
+            }
+            material_data.coverage_texture_ID = Textures::create2D(image_ID);
+        } else
+            material_data.coverage_texture_ID = Textures::UID::invalid_UID();
+
         materials[unsigned int(i)] = Materials::create(tiny_mat.name, material_data);
     }
 
