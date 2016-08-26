@@ -589,6 +589,8 @@ void Renderer::handle_updates() {
                 } else if (Images::has_changes(image_ID, Images::Changes::Created)) {
                     RTformat pixel_format = RT_FORMAT_UNKNOWN;
                     switch (Images::get_pixel_format(image_ID)) {
+                    case PixelFormat::I8:
+                        pixel_format = RT_FORMAT_UNSIGNED_BYTE; break;
                     case PixelFormat::RGB24:
                         pixel_format = RT_FORMAT_UNSIGNED_BYTE3; break;
                     case PixelFormat::RGBA32:
@@ -605,7 +607,7 @@ void Renderer::handle_updates() {
                     m_state->images[image_ID] = context->createBuffer(RT_BUFFER_INPUT, pixel_format,
                         Images::get_width(image_ID), Images::get_height(image_ID));
 
-                    uchar4* pixel_data = static_cast<uchar4*>(m_state->images[image_ID]->map());
+                    void* pixel_data = m_state->images[image_ID]->map();
                     std::memcpy(pixel_data, Images::get_pixels(image_ID), m_state->images[image_ID]->getElementSize() * Images::get_pixel_count(image_ID));
                     m_state->images[image_ID]->unmap();
                     OPTIX_VALIDATE(m_state->images[image_ID]);
@@ -677,6 +679,13 @@ void Renderer::handle_updates() {
             device_material.specularity = host_material.get_specularity() * 0.08f; // See Physically-Based Shading at Disney bottom of page 8 for why we remap.
             device_material.metallic = host_material.get_metallic();
             device_material.coverage = host_material.get_coverage();
+            if (host_material.get_coverage_texture_ID() != Textures::UID::invalid_UID()) {
+                // Validate that the image has 1 channel! Otherwise OptiX goes boom boom.
+                Textures::UID texture_ID = host_material.get_coverage_texture_ID();
+                assert(channel_count(Images::get_pixel_format(Textures::get_image_ID(texture_ID))) == 1);
+                device_material.coverage_texture_ID = samplers[texture_ID]->getId();
+            } else
+                device_material.coverage_texture_ID = 0u;
         };
 
         if (!Materials::get_changed_materials().is_empty()) {

@@ -64,14 +64,6 @@ __inline_all__ optix::float3 clamp_light_contribution_by_path_PDF(const optix::f
 #endif
 }
 
-__inline_all__ static optix::float4 tex2D(unsigned int texture_ID, optix::float2 texcoord) {
-#if GPU_DEVICE
-    return optix::rtTex2D<optix::float4>(texture_ID, texcoord.x, texcoord.y);
-#else
-    return optix::make_float4(1.0f);
-#endif
-}
-
 //-----------------------------------------------------------------------------
 // Math utils
 //-----------------------------------------------------------------------------

@@ -162,6 +162,7 @@ struct __align__(16) Material {
     float specularity;
     float metallic;
     float coverage;
+    unsigned int coverage_texture_ID;
 };
 
 } // NS OptiXRenderer

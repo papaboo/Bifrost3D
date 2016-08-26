@@ -71,12 +71,23 @@ public:
         : m_material(material)
         , m_tint(material.tint) { }
 
+#if GPU_DEVICE
     __inline_all__ DefaultShading(const Material& material, optix::float2 texcoord)
         : m_material(material)
     {
         m_tint = material.tint;
         if (material.tint_texture_ID)
-            m_tint *= make_float3(tex2D(material.tint_texture_ID, texcoord));
+            m_tint *= make_float3(optix::rtTex2D<optix::float4>(material.tint_texture_ID, texcoord.x, texcoord.y));
+    }
+#endif
+
+    __inline_all__ static float coverage(const Material& material, optix::float2 texcoord) {
+        float coverage = material.coverage;
+#if GPU_DEVICE
+        if (material.coverage_texture_ID)
+            coverage *= optix::rtTex2D<float>(material.coverage_texture_ID, texcoord.x, texcoord.y);
+#endif
+        return coverage;
     }
 
     __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {

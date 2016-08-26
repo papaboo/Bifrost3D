@@ -207,8 +207,8 @@ RT_PROGRAM void closest_hit() {
 
 RT_PROGRAM void monte_carlo_any_hit() {
     // TODO Decide if this should update the path PDF. I suppose it should, since it is a path decision.
-    const Material& material_parameter = g_materials[material_index];
-    if (monte_carlo_payload.rng.sample1f() > material_parameter.coverage)
+    float coverage = DefaultShading::coverage(g_materials[material_index], texcoord);
+    if (monte_carlo_payload.rng.sample1f() > coverage)
         rtIgnoreIntersection();
 }
 
@@ -219,8 +219,8 @@ RT_PROGRAM void monte_carlo_any_hit() {
 rtDeclareVariable(ShadowPayload, shadow_payload, rtPayload, );
 
 RT_PROGRAM void shadow_any_hit() {
-    const Material& material_parameter = g_materials[material_index];
-    shadow_payload.attenuation *= 1.0f - material_parameter.coverage;
+    float coverage = DefaultShading::coverage(g_materials[material_index], texcoord);
+    shadow_payload.attenuation *= 1.0f - coverage;
     if (shadow_payload.attenuation.x < 0.0000001f && shadow_payload.attenuation.y < 0.0000001f && shadow_payload.attenuation.z < 0.0000001f)
         rtTerminateRay();
 }
