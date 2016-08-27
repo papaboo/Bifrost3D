@@ -1,7 +1,9 @@
 * BTDF
-** IOR (or compute from transparency)
+** ObjLoader should grab alpha from color map, if it has an alpha channel and no alpha map is specified.
+*** And check any of the values are actually less than 1, otherwise just dicard the whole thing.
+** Transmission factor. Use IOR computed from specular.
 ** All transparency properties should be stored in the same texture. (If it's bound, then the material is probably transparent. Otherwise not.)
-* Bug: Camera aspect isn't updated correct when switching to fullscreen mode.
+* STL loader.
 * Normals revisited
 ** Bump mapping (Pending GL Renderer to verify winding order)
 *** Filter bumpmap mipmaps using Toksvig05, SGGX or AGAA NDF construction.
@@ -11,8 +13,8 @@
 * Materials revisited.
 ** Use perfectly specular BRDFs for tiny roughness values.
 *** Adapt MIS to handle specular surfaces.
-** GGX: Stochastically sampled diffuse term with sampling probability based on geometric term.
 ** Use Fresnel between 0.6 and 0.8 for metals. Just leave diffuse on to simulate multiple scattering, but perhaps the tint should be raised to some power (3?), to simulate multiple intersections.
+** GGX: Stochastically sampled diffuse term with sampling probability based on geometric term.
 ** Add coat.
 * GL Renderer
 ** Half4 backbuffer in OptiXRenderer

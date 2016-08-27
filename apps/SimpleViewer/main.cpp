@@ -127,7 +127,7 @@ public:
         float window_aspect_ratio = engine.get_window().get_aspect_ratio();
         if (window_aspect_ratio != m_aspect_ratio || new_FOV != m_FOV) {
             Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-            CameraUtils::compute_perspective_projection(0.1f, 100.0f, m_FOV, m_aspect_ratio,
+            CameraUtils::compute_perspective_projection(0.1f, 100.0f, new_FOV, window_aspect_ratio,
                 perspective_matrix, inverse_perspective_matrix);
 
             Cameras::set_projection_matrices(m_camera_ID, perspective_matrix, inverse_perspective_matrix);
