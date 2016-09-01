@@ -243,7 +243,7 @@ inline RGB gammacorrect(RGB color, float gamma) {
 }
 
 inline RGBA gammacorrect(RGBA color, float gamma) {
-    return RGBA(gammacorrect(color.rgb(), gamma));
+    return RGBA(gammacorrect(color.rgb(), gamma), color.a);
 }
 
 } // NS Math
