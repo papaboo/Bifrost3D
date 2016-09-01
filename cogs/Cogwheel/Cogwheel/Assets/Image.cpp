@@ -336,7 +336,7 @@ Images::UID change_format(Images::UID image_ID, PixelFormat new_format) {
             for (unsigned int y = 0; y < image.get_height(m); ++y)
                 #pragma omp parallel for schedule(dynamic, 16)
                 for (int x = 0; x < int(image.get_width(m)); ++x) {
-                    Math::Vector3ui index = Math::Vector3ui(x, y, z);
+                    Vector3ui index = Vector3ui(x, y, z);
                     RGBA pixel = image.get_pixel(index, m);
                     Images::set_pixel(new_image_ID, pixel, index, m);
                 }
@@ -353,24 +353,24 @@ void fill_mipmap_chain(Images::UID image_ID) {
         for (unsigned int y = 0; y + 1 < image.get_height(m); y += 2) { // TODO Doesn't work with 1D textures does it?
             for (unsigned int x = 0; x + 1 < image.get_width(m); x += 2) {
 
-                RGBA lower_left = image.get_pixel(Math::Vector2ui(x, y), m);
-                RGBA lower_right = image.get_pixel(Math::Vector2ui(x + 1, y), m);
-                RGBA upper_left = image.get_pixel(Math::Vector2ui(x, y + 1), m);
-                RGBA upper_right = image.get_pixel(Math::Vector2ui(x + 1, y + 1), m);
+                RGBA lower_left = image.get_pixel(Vector2ui(x, y), m);
+                RGBA lower_right = image.get_pixel(Vector2ui(x + 1, y), m);
+                RGBA upper_left = image.get_pixel(Vector2ui(x, y + 1), m);
+                RGBA upper_right = image.get_pixel(Vector2ui(x + 1, y + 1), m);
 
                 RGB new_rgb = (lower_left.rgb() + lower_right.rgb() + upper_left.rgb() + upper_right.rgb()) * 0.25f;
                 float new_alpha = (lower_left.a + lower_right.a + upper_left.a + upper_right.a) * 0.25f;
-                image.set_pixel(RGBA(new_rgb, new_alpha), Math::Vector2ui(x / 2, y / 2), m + 1);
+                image.set_pixel(RGBA(new_rgb, new_alpha), Vector2ui(x / 2, y / 2), m + 1);
             }
 
             // If uneven number of columns, then add the last column into the last column of the next mipmap level.
             if (image.get_width(m) & 0x1) {
-                RGBA left = image.get_pixel(Math::Vector2ui(image.get_width(m + 1) - 1, y / 2), m + 1);
-                RGBA lower_right = image.get_pixel(Math::Vector2ui(image.get_width(m) - 1, y), m);
-                RGBA upper_right = image.get_pixel(Math::Vector2ui(image.get_width(m) - 1, y + 1), m);
+                RGBA left = image.get_pixel(Vector2ui(image.get_width(m + 1) - 1, y / 2), m + 1);
+                RGBA lower_right = image.get_pixel(Vector2ui(image.get_width(m) - 1, y), m);
+                RGBA upper_right = image.get_pixel(Vector2ui(image.get_width(m) - 1, y + 1), m);
                 RGB rgb = (left.rgb() * 4.0f + lower_right.rgb() + upper_right.rgb()) / 6.0f;
                 float alpha = (left.a * 4.0f + lower_right.a + upper_right.a) / 6.0f;
-                image.set_pixel(RGBA(rgb, alpha), Math::Vector2ui((image.get_width(m + 1) - 1), y / 2), m + 1);
+                image.set_pixel(RGBA(rgb, alpha), Vector2ui((image.get_width(m + 1) - 1), y / 2), m + 1);
             }
         }
 
@@ -379,23 +379,23 @@ void fill_mipmap_chain(Images::UID image_ID) {
             bool uneven_column_count = image.get_width(m) & 0x1;
             unsigned int regular_columns = image.get_width(m) - (uneven_column_count ? 3u : 0u);
             for (unsigned int x = 0; x < regular_columns; x += 2) {
-                RGBA lower = image.get_pixel(Math::Vector2ui(x / 2, image.get_height(m + 1) - 1), m + 1);
-                RGBA upper_left = image.get_pixel(Math::Vector2ui(x, image.get_height(m) - 1), m);
-                RGBA upper_right = image.get_pixel(Math::Vector2ui(x + 1, image.get_height(m) - 1), m);
+                RGBA lower = image.get_pixel(Vector2ui(x / 2, image.get_height(m + 1) - 1), m + 1);
+                RGBA upper_left = image.get_pixel(Vector2ui(x, image.get_height(m) - 1), m);
+                RGBA upper_right = image.get_pixel(Vector2ui(x + 1, image.get_height(m) - 1), m);
                 RGB rgb = (lower.rgb() * 4.0f + upper_left.rgb() + upper_right.rgb()) / 6.0f;
                 float alpha = (lower.a * 4.0f + upper_left.a + upper_right.a) / 6.0f;
-                image.set_pixel(RGBA(rgb, alpha), Math::Vector2ui(x / 2, (image.get_height(m + 1) - 1)), m + 1);
+                image.set_pixel(RGBA(rgb, alpha), Vector2ui(x / 2, (image.get_height(m + 1) - 1)), m + 1);
             }
 
             // If both the row and column count are uneven, then we still need to blend 3 edge pixels into the next mipmap pixel
             if (uneven_column_count) {
-                RGBA lower = image.get_pixel(Math::Vector2ui(image.get_width(m + 1) - 1, image.get_height(m + 1) - 1), m + 1);
-                RGBA upper_left = image.get_pixel(Math::Vector2ui(image.get_width(m) - 3, image.get_height(m) - 1), m);
-                RGBA upper_middle = image.get_pixel(Math::Vector2ui(image.get_width(m) - 2, image.get_height(m) - 1), m);
-                RGBA upper_right = image.get_pixel(Math::Vector2ui(image.get_width(m) - 1, image.get_height(m) - 1), m);
+                RGBA lower = image.get_pixel(Vector2ui(image.get_width(m + 1) - 1, image.get_height(m + 1) - 1), m + 1);
+                RGBA upper_left = image.get_pixel(Vector2ui(image.get_width(m) - 3, image.get_height(m) - 1), m);
+                RGBA upper_middle = image.get_pixel(Vector2ui(image.get_width(m) - 2, image.get_height(m) - 1), m);
+                RGBA upper_right = image.get_pixel(Vector2ui(image.get_width(m) - 1, image.get_height(m) - 1), m);
                 RGB rgb = (lower.rgb() * 6.0f + upper_left.rgb() + upper_middle.rgb() + upper_right.rgb()) / 9.0f;
                 float alpha = (lower.a * 6.0f + upper_left.a + upper_middle.a + upper_right.a) / 9.0f;
-                image.set_pixel(RGBA(rgb, alpha), Math::Vector2ui(image.get_width(m + 1) - 1, image.get_height(m + 1) - 1), m + 1);
+                image.set_pixel(RGBA(rgb, alpha), Vector2ui(image.get_width(m + 1) - 1, image.get_height(m + 1) - 1), m + 1);
             }
         }
     }
