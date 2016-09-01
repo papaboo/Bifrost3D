@@ -1,8 +1,7 @@
 * BTDF
-** ObjLoader should grab alpha from color map, if it has an alpha channel and no alpha map is specified.
-*** And check any of the values are actually less than 1, otherwise just dicard the whole thing.
-** Transmission factor. Use IOR computed from specular.
-** All transparency properties should be stored in the same texture. (If it's bound, then the material is probably transparent. Otherwise not.)
+** Transmission factor.
+*** Use IOR computed from specularity.
+*** Or just change specularity to IOR. Would probably make it easier to keep track of the in and out IOR's as well.
 * STL loader.
 * Normals revisited
 ** Bump mapping (Pending GL Renderer to verify winding order)

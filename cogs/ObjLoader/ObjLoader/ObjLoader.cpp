@@ -75,17 +75,6 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
         material_data.coverage = tiny_mat.dissolve;
         material_data.transmission = 0.0f; // (tiny_mat.transmittance[0] + tiny_mat.transmittance[1] + tiny_mat.transmittance[2]) / 3.0f;
 
-        if (!tiny_mat.diffuse_texname.empty()) {
-            Images::UID image_ID = image_loader(directory + tiny_mat.diffuse_texname);
-            if (channel_count(Images::get_pixel_format(image_ID)) != 4) {
-                Images::UID new_image_ID = ImageUtils::change_format(image_ID, PixelFormat::RGBA32);
-                Images::destroy(image_ID);
-                image_ID = new_image_ID;
-            }
-            material_data.tint_texture_ID = Textures::create2D(image_ID);
-        } else
-            material_data.tint_texture_ID = Textures::UID::invalid_UID();
-
         if (!tiny_mat.alpha_texname.empty()) {
             Images::UID image_ID = image_loader(directory + tiny_mat.alpha_texname);
             if (Images::get_pixel_format(image_ID) != PixelFormat::I8) {
@@ -96,6 +85,40 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
             material_data.coverage_texture_ID = Textures::create2D(image_ID);
         } else
             material_data.coverage_texture_ID = Textures::UID::invalid_UID();
+
+        if (!tiny_mat.diffuse_texname.empty()) {
+            Images::UID image_ID = image_loader(directory + tiny_mat.diffuse_texname);
+
+            // Use diffuse alpha for coverage, if no explicit coverage texture has been set.
+            if (channel_count(Images::get_pixel_format(image_ID)) == 4 && material_data.coverage_texture_ID == Textures::UID::invalid_UID()) {
+                Image image = image_ID;
+                unsigned int mipmap_count = image.get_mipmap_count();
+                Math::Vector2ui size = Math::Vector2ui(image.get_width(), image.get_height());
+                Images::UID coverage_image_ID = Images::create(image.get_name(), PixelFormat::I8, image.get_gamma(), size, mipmap_count);
+
+                float min_coverage = 1.0f;
+                for (unsigned int m = 0; m < mipmap_count; ++m)
+                    for (unsigned int y = 0; y < image.get_height(m); ++y)
+                        for (int x = 0; x < int(image.get_width(m)); ++x) {
+                            Math::Vector2ui index = Math::Vector2ui(x, y);
+                            float coverage = image.get_pixel(index, m).a;
+                            min_coverage = fminf(min_coverage, coverage);
+                            Math::RGBA pixel = Math::RGBA(coverage, coverage, coverage, coverage);
+                            Images::set_pixel(coverage_image_ID, pixel, index, m);
+                        }
+
+                if (min_coverage < 1.0f)
+                    material_data.coverage_texture_ID = Textures::create2D(coverage_image_ID);
+            }
+
+            if (channel_count(Images::get_pixel_format(image_ID)) != 4) {
+                Images::UID new_image_ID = ImageUtils::change_format(image_ID, PixelFormat::RGBA32);
+                Images::destroy(image_ID);
+                image_ID = new_image_ID;
+            }
+            material_data.tint_texture_ID = Textures::create2D(image_ID);
+        } else
+            material_data.tint_texture_ID = Textures::UID::invalid_UID();
 
         materials[unsigned int(i)] = Materials::create(tiny_mat.name, material_data);
     }
