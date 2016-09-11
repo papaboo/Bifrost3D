@@ -72,6 +72,14 @@ __inline_all__ float average(const optix::float3& v) {
     return (v.x + v.y + v.z) / 3.0f;
 }
 
+__inline_all__ float heaviside(float v) {
+    return v >= 0.0f ? 1.0f : 0.0f;
+}
+
+__inline_all__ float sign(float v) {
+    return v >= 0.0f ? 1.0f : -1.0f;
+}
+
 __inline_all__ float sum(const optix::float3& v) {
     return v.x + v.y + v.z;
 }
