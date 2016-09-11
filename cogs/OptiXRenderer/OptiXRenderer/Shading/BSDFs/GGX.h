@@ -57,11 +57,19 @@ __inline_all__ float smith_G(float alpha, const float3& wo, const float3& wi, co
     return G1(alpha, wo, halfway) * G1(alpha, wi, halfway);
 }
 
+// Understanding the Masking - Shadowing Function in Microfacet - Based BRDFs, Heitz 14, equation 72.
+__inline_all__ float height_correlated_smith_delta(float alpha, const float3& w, const float3& halfway) {
+    float cos_theta_sqrd = w.z * w.z;
+    float tan_theta_sqrd = fmaxf(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
+    float a_sqrd = 1.0f / (alpha * alpha * tan_theta_sqrd);
+    return (-1.0f + sqrt(1.0f + 1.0f / a_sqrd)) / 2.0f;
+}
+
 // Height correlated smith geometric term.
 // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14, equation 99. 
 __inline_all__ float height_correlated_smith_G(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
-    // float numerator = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway)); // Used to zero contribution from backsides. In practice this can be avoided by the material using GGX instead of here.
-    return 1.0f / (1.0f + G1(alpha, wo, halfway) + G1(alpha, wi, halfway));
+    float numerator = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway)); // TODO Should be possible to set it to 1.0f. But in that case guard it by an exception in debug builds.
+    return numerator / (1.0f + height_correlated_smith_delta(alpha, wo, halfway) + height_correlated_smith_delta(alpha, wi, halfway));
 }
 
 //----------------------------------------------------------------------------
