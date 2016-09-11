@@ -26,22 +26,24 @@ GTEST_TEST(GGX, power_conservation) {
 
     const unsigned int MAX_SAMPLES = 1024u;
     const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
-    const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
-    
-    for (int a = 0; a < 10; ++a) {
-        const float alpha = a / 10.0f;
-        float ws[MAX_SAMPLES];
-        for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
-            BSDFSample sample = Shading::BSDFs::GGX::sample(tint, alpha, wo, RNG::sample02(i));
 
-            if (is_PDF_valid(sample.PDF))
-                ws[i] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
-            else
-                ws[i] = 0.0f;
+    for (int i = 0; i < 10; ++i) {
+        const float3 wo = normalize(make_float3(float(i), 0.0f, 1.001f - float(i) * 0.1f));
+        for (int a = 0; a < 10; ++a) {
+            const float alpha = a / 10.0f;
+            float ws[MAX_SAMPLES];
+            for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
+                BSDFSample sample = Shading::BSDFs::GGX::sample(tint, alpha, wo, RNG::sample02(i));
+
+                if (is_PDF_valid(sample.PDF))
+                    ws[i] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
+                else
+                    ws[i] = 0.0f;
+            }
+
+            float average_w = Cogwheel::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
+            EXPECT_LE(average_w, 1.0f);
         }
-
-        float average_w = Cogwheel::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
-        EXPECT_LE(average_w, 1.0f);
     }
 }
 
