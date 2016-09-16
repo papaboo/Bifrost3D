@@ -27,7 +27,7 @@ public:
     Window(const std::string& name, int width, int height)
         : m_name(name), m_width(width), m_height(height) { }
 
-    inline std::string get_name() const { return m_name; }
+    inline const std::string& get_name() const { return m_name; }
     inline void set_name(const std::string& name) {
         m_name = name;
         m_changes |= Changes::Renamed;
