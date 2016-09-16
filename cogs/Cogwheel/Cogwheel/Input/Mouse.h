@@ -21,7 +21,6 @@ namespace Input {
 // The mouse supports up to MAX_HALFTAP_COUNT half taps, presses and releases, 
 // pr frame. This can be used to implement such interactions as double tap 
 // for dash without worrying (too much) about the framerate.
-//
 //----------------------------------------------------------------------------
 class Mouse final {
 public:
