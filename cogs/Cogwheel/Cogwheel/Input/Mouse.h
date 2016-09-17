@@ -31,6 +31,7 @@ public:
         Right,
         Middle,
         Button4,
+        Button5,
         ButtonCount
     };
 
@@ -59,10 +60,11 @@ public:
     inline Math::Vector2i get_position() const { return m_position; }
     inline Math::Vector2i get_delta() const { return m_delta; }
 
-    inline void button_tapped(int buttonId, bool pressed) {
-        m_button_states[buttonId].is_pressed = pressed;
-        unsigned int halftaps = m_button_states[buttonId].halftaps;
-        m_button_states[buttonId].halftaps = (halftaps == MAX_HALFTAP_COUNT) ? (MAX_HALFTAP_COUNT - 1) : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
+    inline void button_tapped(Button button, bool pressed) {
+        int button_ID = int(button);
+        m_button_states[button_ID].is_pressed = pressed;
+        unsigned int halftaps = m_button_states[button_ID].halftaps;
+        m_button_states[button_ID].halftaps = (halftaps == MAX_HALFTAP_COUNT) ? (MAX_HALFTAP_COUNT - 1) : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
     }
 
     inline bool is_pressed(Button button) const { return m_button_states[(unsigned int)button].is_pressed; }

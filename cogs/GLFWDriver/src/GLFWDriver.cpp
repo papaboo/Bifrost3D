@@ -76,10 +76,10 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
         glfwSetCursorPosCallback(window, mouse_position_callback);
 
         static GLFWmousebuttonfun mouse_button_callback = [](GLFWwindow* window, int button, int action, int mods) {
-            if (action == GLFW_REPEAT || button > int(Mouse::Button::ButtonCount))
+            if (action == GLFW_REPEAT || button >= int(Mouse::Button::ButtonCount))
                 return;
 
-            g_mouse->button_tapped(button, action == GLFW_PRESS);
+            g_mouse->button_tapped(Mouse::Button(button), action == GLFW_PRESS);
         };
         glfwSetMouseButtonCallback(window, mouse_button_callback);
 
