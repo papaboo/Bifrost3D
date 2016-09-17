@@ -24,9 +24,9 @@ static Mouse* g_mouse = NULL;
 
 namespace GLFWDriver {
 
-void run(on_launch_callback on_launch, on_window_created_callback on_window_created) {
+int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
     if (!glfwInit())
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
 
     // TODO Splash screen. With possibility to print resource processing text.
 
@@ -39,7 +39,7 @@ void run(on_launch_callback on_launch, on_window_created_callback on_window_crea
 
     if (!window) {
         glfwTerminate();
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 
     GLFWwindowsizefun window_size_callback = [](GLFWwindow* window, int width, int height) {
@@ -51,7 +51,7 @@ void run(on_launch_callback on_launch, on_window_created_callback on_window_crea
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
-    on_window_created(engine_window);
+    on_window_created(engine, engine_window);
 
     { // Setup keyboard
         g_keyboard = new Keyboard();
@@ -122,6 +122,8 @@ void run(on_launch_callback on_launch, on_window_created_callback on_window_crea
 
     glfwDestroyWindow(window);
     glfwTerminate();
+
+    return 0;
 }
 
 } // NS GLFWDriver

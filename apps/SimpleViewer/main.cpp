@@ -1,3 +1,11 @@
+// SimpleViewer.
+// ---------------------------------------------------------------------------
+// Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
+//
+// This program is open source and distributed under the New BSD License. See
+// LICENSE.txt for more detail.
+// ---------------------------------------------------------------------------
+
 #include <CornellBoxScene.h>
 #include <MaterialScene.h>
 #include <SphereScene.h>
@@ -371,10 +379,10 @@ void initializer(Cogwheel::Core::Engine& engine) {
     }
 }
 
-void initialize_window(Cogwheel::Core::Window& window) {
+void initialize_window(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window) {
     OptiXRenderer::Renderer* renderer = new OptiXRenderer::Renderer();
     // renderer->set_scene_epsilon(g_scene_size * 0.00001f);
-    Engine::get_instance()->add_non_mutating_callback(OptiXRenderer::render_callback, renderer);
+    engine.add_non_mutating_callback(OptiXRenderer::render_callback, renderer);
 }
 
 void print_usage() {
@@ -404,12 +412,12 @@ RGB parse_RGB(const std::string& rgb_str) {
     return result;
 }
 
-void main(int argc, char** argv) {
+int main(int argc, char** argv) {
 
     std::string command = g_scene = argc >= 2 ? std::string(argv[1]) : "";
     if (command.compare("-h") == 0 || command.compare("--help") == 0) {
         print_usage();
-        return;
+        return 0;
     }  
 
     // Parse command line arguments.
@@ -429,5 +437,5 @@ void main(int argc, char** argv) {
     if (g_scene.empty())
         printf("SimpleViewer will display the Cornell Box scene.\n");
 
-    GLFWDriver::run(initializer, initialize_window);
+    return GLFWDriver::run(initializer, initialize_window);
 }

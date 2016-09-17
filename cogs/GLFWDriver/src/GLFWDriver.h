@@ -21,10 +21,10 @@ class Window;
 
 namespace GLFWDriver {
 
-typedef void (*on_launch_callback)(Cogwheel::Core::Engine& engine);
-typedef void (*on_window_created_callback)(Cogwheel::Core::Window& window);
+typedef void (*OnLaunchCallback)(Cogwheel::Core::Engine&);
+typedef void (*OnWindowCreatedCallback)(Cogwheel::Core::Engine&, Cogwheel::Core::Window&);
 
-void run(on_launch_callback on_launch, on_window_created_callback on_window_created);
+int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created);
 
 } // NS GLFWDriver
 
