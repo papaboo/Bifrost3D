@@ -45,37 +45,41 @@ LRESULT CALLBACK handle_messages(HWND window_handle, UINT message, WPARAM wParam
     return 0;
 }
 
-void handle_input(const MSG msg) {
-    switch (msg.message) {
+LRESULT handle_input(UINT message, WPARAM wParam, LPARAM lParam) {
+    switch (message) {
     case WM_MOUSEMOVE:
-        g_mouse->set_position(Vector2i(GET_X_LPARAM(msg.lParam), GET_Y_LPARAM(msg.lParam)));
+        g_mouse->set_position(Vector2i(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)));
         break;
     case WM_LBUTTONDOWN:
     case WM_LBUTTONUP:
-        g_mouse->button_tapped(Mouse::Button::Left, msg.message == WM_LBUTTONDOWN);
+        g_mouse->button_tapped(Mouse::Button::Left, message == WM_LBUTTONDOWN);
         break;
     case WM_RBUTTONDOWN:
     case WM_RBUTTONUP:
-        g_mouse->button_tapped(Mouse::Button::Right, msg.message == WM_RBUTTONDOWN);
+        g_mouse->button_tapped(Mouse::Button::Right, message == WM_RBUTTONDOWN);
         break;
     case WM_MBUTTONDOWN:
     case WM_MBUTTONUP:
-        g_mouse->button_tapped(Mouse::Button::Middle, msg.message == WM_MBUTTONDOWN);
+        g_mouse->button_tapped(Mouse::Button::Middle, message == WM_MBUTTONDOWN);
         break;
     case WM_XBUTTONDOWN:
     case WM_XBUTTONUP: {
-        Mouse::Button button = GET_XBUTTON_WPARAM(msg.wParam) == XBUTTON1 ? Mouse::Button::Button4 : Mouse::Button::Button5;
-        g_mouse->button_tapped(button, msg.message == WM_XBUTTONDOWN);
+        Mouse::Button button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? Mouse::Button::Button4 : Mouse::Button::Button5;
+        g_mouse->button_tapped(button, message == WM_XBUTTONDOWN);
         break;
     }
     case WM_MOUSEWHEEL:
-        g_mouse->add_scroll_delta(GET_WHEEL_DELTA_WPARAM(msg.wParam) / float(WHEEL_DELTA));
+        g_mouse->add_scroll_delta(GET_WHEEL_DELTA_WPARAM(wParam) / float(WHEEL_DELTA));
         break;
     case WM_KEYDOWN:
     case WM_KEYUP:
         // TODO
         break;
+    default:
+        return 1;
     }
+
+    return 0;
 }
 
 int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
@@ -122,16 +126,24 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
 
     on_window_created(*g_engine, engine_window);
 
+    // Setup keyboard.
     g_keyboard = new Keyboard();
     g_engine->set_keyboard(g_keyboard);
 
+    // Setup mouse.
     POINT p;
     GetCursorPos(&p);
     ScreenToClient(hwnd, &p);
     g_mouse = new Mouse(Vector2i(p.x, p.y));
     g_engine->set_mouse(g_mouse);
 
-    double previous_time = 0.0f; // TODO
+    // Setup timer.
+    LARGE_INTEGER freq;
+    QueryPerformanceFrequency(&freq);
+    double counter_hertz = 1.0 / freq.QuadPart;
+    LARGE_INTEGER performance_count;
+    QueryPerformanceCounter(&performance_count);
+    double previous_time = performance_count.QuadPart * counter_hertz;
 
     while (!g_engine->is_quit_requested()) {
         // Poll events.
@@ -140,7 +152,7 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
         MSG msg = {};
         while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
         {
-            handle_input(msg);
+            handle_input(msg.message, msg.wParam, msg.lParam);
 
             TranslateMessage(&msg);
             DispatchMessage(&msg);
@@ -149,7 +161,8 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
             break;
 
         // Poll and update time.
-        double current_time = 0.0;
+        QueryPerformanceCounter(&performance_count);
+        double current_time = performance_count.QuadPart * counter_hertz;
         float delta_time = float(current_time - previous_time);
         previous_time = current_time;
 
