@@ -159,7 +159,7 @@ public:
     inline void apply_to_children_recursively(F& function) { SceneNodes::apply_to_children_recursively<F>(m_ID, function); }
 
 private:
-    const SceneNodes::UID m_ID;
+    SceneNodes::UID m_ID;
 };
 
 // ---------------------------------------------------------------------------

@@ -109,6 +109,15 @@ Cameras::UID Cameras::create(SceneNodes::UID parent_ID, SceneRoots::UID scene, M
     assert(m_inverse_projection_matrices != nullptr);
     assert(m_viewports != nullptr);
 
+#if _DEBUG
+    // Assert that the parent node is part of the scene.
+    // TODO Alternatively just grab the scene root from the parent node.
+    SceneNode root_node = parent_ID;
+    while (root_node.get_parent().exists())
+        root_node = root_node.get_parent();
+    assert(root_node.get_ID() == SceneRoots::get_root_node(scene));
+#endif
+
     unsigned int old_capacity = m_UID_generator.capacity();
     UID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())

@@ -280,14 +280,14 @@ void mesh_combine_whole_scene(SceneNodes::UID scene_root) {
     }
 }
 
-static inline void scenenode_cleanup_callback(void* dummy) {
+static inline void miniheaps_cleanup_callback(void* dummy) {
     Images::reset_change_notifications();
     LightSources::reset_change_notifications();
     Materials::reset_change_notifications();
     Meshes::reset_change_notifications();
     MeshModels::reset_change_notifications();
     SceneNodes::reset_change_notifications();
-    // Scenes::reset_change_notifications();
+    // SceneRoots::reset_change_notifications();
     Textures::reset_change_notifications();
 }
 
@@ -302,7 +302,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
     SceneNodes::allocate(8u);
     Textures::allocate(8u);
 
-    engine.add_tick_cleanup_callback(scenenode_cleanup_callback, nullptr);
+    engine.add_tick_cleanup_callback(miniheaps_cleanup_callback, nullptr);
 
     // Setup scene.
     SceneRoots::allocate(1u);
@@ -322,6 +322,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
     
     // Create camera
     SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
+    SceneNodes::set_parent(cam_node_ID, root_node_ID);
     Cameras::allocate(1u);
     Cameras::UID cam_ID = Cameras::create(cam_node_ID, scene_ID, Matrix4x4f::identity(), Matrix4x4f::identity()); // Matrices will be set up by the CameraHandler.
     CameraHandler* camera_handler = new CameraHandler(cam_ID, engine.get_window().get_aspect_ratio());
