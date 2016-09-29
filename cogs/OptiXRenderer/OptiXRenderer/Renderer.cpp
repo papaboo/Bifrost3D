@@ -211,16 +211,16 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
 // Renderer implementation.
 //----------------------------------------------------------------------------
 
-Renderer::Renderer()
+Renderer::Renderer(const Cogwheel::Core::Window& window)
     : m_device_ids( {-1, -1} )
     , m_state(new State()) {
-    
+
     if (Context::getDeviceCount() == 0)
         return;
 
     m_state->context = Context::create();
     Context& context = m_state->context;
-        
+
     m_device_ids.optix = 0;
     context->setDevices(&m_device_ids.optix, &m_device_ids.optix + 1);
     int2 compute_capability;
@@ -352,7 +352,6 @@ Renderer::Renderer()
     }
 
     { // Screen buffers
-        const Window& window = Engine::get_instance()->get_window();
         m_state->screensize = make_uint2(window.get_width(), window.get_height());
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
         m_state->accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER, m_state->screensize.x, m_state->screensize.y);

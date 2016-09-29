@@ -380,7 +380,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
 }
 
 void initialize_window(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window) {
-    OptiXRenderer::Renderer* renderer = new OptiXRenderer::Renderer();
+    OptiXRenderer::Renderer* renderer = new OptiXRenderer::Renderer(window);
     // renderer->set_scene_epsilon(g_scene_size * 0.00001f);
     engine.add_non_mutating_callback(OptiXRenderer::render_callback, renderer);
 }

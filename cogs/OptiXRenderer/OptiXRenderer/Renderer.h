@@ -1,4 +1,4 @@
-// OptiX renderer manager.
+// OptiX renderer.
 // ---------------------------------------------------------------------------
 // Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
 //
@@ -17,6 +17,7 @@
 namespace Cogwheel {
 namespace Core {
 class Engine;
+class Window;
 }
 }
 
@@ -45,7 +46,7 @@ namespace OptiXRenderer {
 //----------------------------------------------------------------------------
 class Renderer final {
 public:
-    Renderer();
+    Renderer(const Cogwheel::Core::Window& window);
 
     inline bool could_initialize() const { return m_device_ids.optix >= 0;  }
 
@@ -55,6 +56,10 @@ public:
     void render();
 
 private:
+
+    // Delete copy constructors to avoid having multiple versions of the same renderer.
+    Renderer(Renderer& other) = delete;
+    Renderer& operator=(const Renderer& rhs) = delete;
 
     void handle_updates();
 
