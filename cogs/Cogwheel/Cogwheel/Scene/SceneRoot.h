@@ -47,7 +47,7 @@ public:
 
     static SceneRoots::UID create(const std::string& name, SceneNodes::UID root, Math::RGB background_color);
     static SceneRoots::UID create(const std::string& name, SceneNodes::UID root, Assets::Textures::UID environment_map);
-    // static void destroy(SceneRoots::UID scene_ID);
+    static void destroy(SceneRoots::UID scene_ID);
 
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
     static ConstUIDIterator end() { return m_UID_generator.end(); }

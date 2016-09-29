@@ -96,6 +96,13 @@ SceneRoots::UID SceneRoots::create(const std::string& name, SceneNodes::UID root
     return id;
 }
 
+void SceneRoots::destroy(SceneRoots::UID scene_ID) {
+    // We don't actually destroy anything when destroying a scene.
+    // The properties will get overwritten later when a scene is created in same the spot.
+    m_UID_generator.erase(scene_ID);
+    // if (m_UID_generator.erase(scene_ID))
+    //     flag_as_changed(scene_ID, Changes::Destroyed);
+}
 
 } // NS Scene
 } // NS Cogwheel
