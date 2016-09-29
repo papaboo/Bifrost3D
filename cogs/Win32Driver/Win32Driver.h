@@ -18,11 +18,13 @@ class Engine;
 class Window;
 }
 }
+struct HWND__;
+typedef HWND__* HWND;
 
 namespace Win32Driver {
 
 typedef void (*OnLaunchCallback)(Cogwheel::Core::Engine&);
-typedef void(*OnWindowCreatedCallback)(Cogwheel::Core::Engine&, Cogwheel::Core::Window&);
+typedef void(*OnWindowCreatedCallback)(Cogwheel::Core::Engine&, Cogwheel::Core::Window&, HWND&);
 
 int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created);
 

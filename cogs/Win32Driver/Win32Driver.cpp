@@ -124,7 +124,7 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
 
     ShowWindow(hwnd, SW_SHOWDEFAULT);
 
-    on_window_created(*g_engine, engine_window);
+    on_window_created(*g_engine, engine_window, hwnd);
 
     // Setup keyboard.
     g_keyboard = new Keyboard();
@@ -176,7 +176,7 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
             */
     }
 
-    return 0;
+    return S_OK;
 }
 
 } // NS Win32Driver
