@@ -32,6 +32,7 @@ set(SCENE_SRCS
   Scene/CameraTest.h
   Scene/LightSourceTest.h
   Scene/SceneNodeTest.h
+  Scene/SceneRootTest.h
   Scene/TransformTest.h
 )
 

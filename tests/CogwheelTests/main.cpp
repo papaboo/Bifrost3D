@@ -26,6 +26,7 @@
 #include <Scene/CameraTest.h>
 #include <Scene/LightSourceTest.h>
 #include <Scene/SceneNodeTest.h>
+#include <Scene/SceneRootTest.h>
 #include <Scene/TransformTest.h>
 
 int main(int argc, char** argv) {
