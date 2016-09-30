@@ -124,17 +124,9 @@ GTEST_TEST(Scene_SceneNode, create_and_destroy_notifications) {
         Core::Iterable<SceneNodes::ChangedIterator> changed_nodes = SceneNodes::get_changed_nodes();
         EXPECT_EQ(changed_nodes.end() - changed_nodes.begin(), 1);
 
-        bool node0_destroyed = false;
-        bool other_changes = false;
-        for (const SceneNodes::UID node_ID : changed_nodes) {
-            if (node_ID == node_ID0 && SceneNodes::get_changes(node_ID) == SceneNodes::Changes::Destroyed)
-                node0_destroyed = true;
-            else
-                other_changes = true;
-        }
-
+        SceneNode node = *changed_nodes.begin();
+        bool node0_destroyed = node.get_ID() == node_ID0 && node.get_changes() == SceneNodes::Changes::Destroyed;
         EXPECT_TRUE(node0_destroyed);
-        EXPECT_FALSE(other_changes);
     }
 
     SceneNodes::reset_change_notifications();
@@ -248,7 +240,7 @@ GTEST_TEST(Scene_SceneNode, creating_hierarchy) {
     SceneNodes::deallocate();
 }
 
-GTEST_TEST(Scene_SceneNode, grap_traversal) {
+GTEST_TEST(Scene_SceneNode, graph_traversal) {
     // Tests the following hierachy
     //      id3
     //    /  |  \
