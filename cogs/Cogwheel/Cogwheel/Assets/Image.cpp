@@ -149,7 +149,7 @@ void Images::destroy(Images::UID image_ID) {
         if (m_changes[image_ID] == Changes::None)
             m_images_changed.push_back(image_ID);
 
-        m_changes[image_ID] |= Changes::Destroyed;
+        m_changes[image_ID] = Changes::Destroyed;
     }
 }
 

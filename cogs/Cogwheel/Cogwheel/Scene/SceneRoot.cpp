@@ -118,8 +118,11 @@ SceneRoots::UID SceneRoots::create(const std::string& name, SceneNodes::UID root
 void SceneRoots::destroy(SceneRoots::UID scene_ID) {
     // We don't actually destroy anything when destroying a scene.
     // The properties will get overwritten later when a scene is created in same the spot.
-    if (m_UID_generator.erase(scene_ID))
-        flag_as_changed(scene_ID, Changes::Destroyed);
+    if (m_UID_generator.erase(scene_ID)) {
+        if (m_changes[scene_ID] == Changes::None)
+            m_scenes_changed.push_back(scene_ID);
+        m_changes[scene_ID] |= Changes::Destroyed;
+    }
 }
 
 void SceneRoots::set_background_color(SceneRoots::UID scene_ID, Math::RGB color) {
@@ -132,10 +135,10 @@ void SceneRoots::set_environment_map(SceneRoots::UID scene_ID, Assets::Textures:
     flag_as_changed(scene_ID, Changes::EnvironmentMap);
 }
 
-void SceneRoots::flag_as_changed(SceneRoots::UID node_ID, unsigned char change) {
-    if (m_changes[node_ID] == Changes::None)
-        m_scenes_changed.push_back(node_ID);
-    m_changes[node_ID] |= change;
+void SceneRoots::flag_as_changed(SceneRoots::UID scene_ID, unsigned char change) {
+    if (m_changes[scene_ID] == Changes::None)
+        m_scenes_changed.push_back(scene_ID);
+    m_changes[scene_ID] |= change;
 }
 
 void SceneRoots::reset_change_notifications() {

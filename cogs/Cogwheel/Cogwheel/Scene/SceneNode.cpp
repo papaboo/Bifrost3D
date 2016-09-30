@@ -130,8 +130,12 @@ SceneNodes::UID SceneNodes::create(const std::string& name, Math::Transform tran
 
 void SceneNodes::destroy(SceneNodes::UID node_ID) {
     // We don't actually destroy anything when destroying a node. The properties will get overwritten later when a node is created in same the spot.
-    if (m_UID_generator.erase(node_ID))
-        flag_as_changed(node_ID, Changes::Destroyed);
+    if (m_UID_generator.erase(node_ID)) {
+        if (m_changes[node_ID] == Changes::None)
+            m_nodes_changed.push_back(node_ID);
+        m_changes[node_ID] = Changes::Destroyed;
+    }
+
 }
 
 void SceneNodes::set_parent(SceneNodes::UID node_ID, const SceneNodes::UID parent_ID) {

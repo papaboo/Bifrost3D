@@ -113,7 +113,7 @@ void Textures::destroy(Textures::UID texture_ID) {
         if (m_changes[texture_ID] == Changes::None)
             m_textures_changed.push_back(texture_ID);
 
-        m_changes[texture_ID] |= Changes::Destroyed;
+        m_changes[texture_ID] = Changes::Destroyed;
     }
 }
 

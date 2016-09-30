@@ -123,7 +123,7 @@ void LightSources::destroy(LightSources::UID light_ID) {
         if (m_changes[light_ID] == Changes::None)
             m_lights_changed.push_back(light_ID);
 
-        m_changes[light_ID] |= Changes::Destroyed;
+        m_changes[light_ID] = Changes::Destroyed;
     }
 }
 

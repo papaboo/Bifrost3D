@@ -133,7 +133,7 @@ void Meshes::destroy(Meshes::UID mesh_ID) {
 
         if (m_changes[mesh_ID] == Changes::None)
             m_meshes_changed.push_back(mesh_ID);
-        m_changes[mesh_ID] |= Changes::Destroyed;
+        m_changes[mesh_ID] = Changes::Destroyed;
     }
 }
 

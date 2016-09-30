@@ -99,7 +99,7 @@ void MeshModels::destroy(MeshModels::UID model_ID) {
         if (changes == Changes::None)
             m_models_changed.push_back(model_ID);
 
-        changes |= Changes::Destroyed;
+        changes = Changes::Destroyed;
     }
 }
 
