@@ -85,8 +85,7 @@ void Meshes::reserve_mesh_data(unsigned int new_capacity, unsigned int old_capac
     m_buffers = resize_and_copy_array(m_buffers, new_capacity, copyable_elements);
     m_bounds = resize_and_copy_array(m_bounds, new_capacity, copyable_elements);
     m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
-    if (copyable_elements < new_capacity)
-        // We need to zero the new change masks, because creating meshes depends on no changes being flagged.
+    if (copyable_elements < new_capacity) // We need to zero the new change masks.
         std::memset(m_changes + copyable_elements, Changes::None, new_capacity - copyable_elements);
 }
 

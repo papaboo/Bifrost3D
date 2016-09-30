@@ -69,8 +69,7 @@ void Textures::reserve_image_data(unsigned int new_capacity, unsigned int old_ca
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
     m_samplers = resize_and_copy_array(m_samplers, new_capacity, copyable_elements);
     m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
-    if (copyable_elements < new_capacity)
-        // We need to zero the new change masks.
+    if (copyable_elements < new_capacity) // We need to zero the new change masks.
         std::memset(m_changes + copyable_elements, Changes::None, new_capacity - copyable_elements);
 }
 

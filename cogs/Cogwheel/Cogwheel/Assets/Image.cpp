@@ -69,8 +69,7 @@ void Images::reserve_image_data(unsigned int new_capacity, unsigned int old_capa
     m_metainfo = resize_and_copy_array(m_metainfo, new_capacity, copyable_elements);
     m_pixels = resize_and_copy_array(m_pixels, new_capacity, copyable_elements);
     m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
-    if (copyable_elements < new_capacity)
-        // We need to zero the new change masks.
+    if (copyable_elements < new_capacity) // We need to zero the new change masks.
         std::memset(m_changes + copyable_elements, Changes::None, new_capacity - copyable_elements);
 }
 

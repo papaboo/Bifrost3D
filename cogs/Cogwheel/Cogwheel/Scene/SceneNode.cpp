@@ -100,6 +100,8 @@ void SceneNodes::reserve_node_data(unsigned int new_capacity, unsigned int old_c
     m_global_transforms = resize_and_copy_array(m_global_transforms, new_capacity, copyable_elements);
 
     m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
+    if (copyable_elements < new_capacity) // We need to zero the new change masks.
+        std::memset(m_changes + copyable_elements, Changes::None, new_capacity - copyable_elements);
 }
 
 SceneNodes::UID SceneNodes::create(const std::string& name, Math::Transform transform) {

@@ -68,7 +68,8 @@ void SceneRoots::reserve_scene_data(unsigned int new_capacity, unsigned int old_
 
     m_scenes = resize_and_copy_array(m_scenes, new_capacity, copyable_elements);
     m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
-    if (copyable_elements < new_capacity)
+
+    if (copyable_elements < new_capacity) // We need to zero the new change masks.
         std::memset(m_changes + copyable_elements, Changes::None, new_capacity - copyable_elements);
 }
 

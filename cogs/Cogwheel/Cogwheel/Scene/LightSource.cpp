@@ -66,8 +66,7 @@ void LightSources::reserve_light_data(unsigned int new_capacity, unsigned int ol
 
     m_lights = resize_and_copy_array(m_lights, new_capacity, copyable_elements);
     m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
-    if (copyable_elements < new_capacity)
-        // We need to zero the new change masks.
+    if (copyable_elements < new_capacity) // We need to zero the new change masks.
         std::memset(m_changes + copyable_elements, Changes::None, new_capacity - copyable_elements);
 }
 
