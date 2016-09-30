@@ -49,7 +49,6 @@ public:
     static void set_node_ID(Cameras::UID camera_ID, SceneNodes::UID node_ID) { m_node_IDs[camera_ID] = node_ID; }
 
     static SceneRoots::UID get_scene_ID(Cameras::UID camera_ID) { return m_scene_IDs[camera_ID]; }
-    static void set_scene_ID(Cameras::UID camera_ID, SceneRoots::UID scene_ID) { m_scene_IDs[camera_ID] = scene_ID; }
 
     static unsigned int get_render_index(Cameras::UID camera_ID) { return m_render_indices[camera_ID]; }
     static void set_render_index(Cameras::UID camera_ID, unsigned int index) { m_render_indices[camera_ID] = index; }
