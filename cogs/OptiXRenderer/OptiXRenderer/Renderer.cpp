@@ -461,9 +461,9 @@ void Renderer::render() {
     if (m_state->accumulations == 0u) {
         Cameras::UID camera_ID = *Cameras::begin();
         SceneRoot scene = Cameras::get_scene_ID(camera_ID);
-        Math::RGB bg_color = scene.get_background_color();
-        float3 background_color = make_float3(bg_color.r, bg_color.g, bg_color.b);
-        context["g_scene_background_color"]->setFloat(background_color);
+        Math::RGB env_tint = scene.get_environment_tint();
+        float3 environment_tint = make_float3(env_tint.r, env_tint.g, env_tint.b);
+        context["g_scene_environment_tint"]->setFloat(environment_tint);
 
         // Setup the environment map. TODO Handle this via scene change flags or scene initialization instead.
         Textures::UID environment_map_ID = scene.get_environment_map();

@@ -20,7 +20,7 @@ namespace Scene {
 
 // ---------------------------------------------------------------------------
 // The scene root contains the root scene node and scene specific properties,
-// such as the background color or environment map.
+// such as the environment map and tint.
 // Future work
 // * Environment projection modes: infinite sphere, camera X m above the earth, cube, sphere, ...
 // * Change flags and iterator. Wait until we have multiscene support.
@@ -45,7 +45,7 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(SceneRoots::UID scene_ID) { return m_UID_generator.has(scene_ID); }
 
-    static SceneRoots::UID create(const std::string& name, SceneNodes::UID root, Math::RGB background_color);
+    static SceneRoots::UID create(const std::string& name, SceneNodes::UID root, Math::RGB environment_tint);
     static SceneRoots::UID create(const std::string& name, SceneNodes::UID root, Assets::Textures::UID environment_map);
     static void destroy(SceneRoots::UID scene_ID);
 
@@ -55,8 +55,8 @@ public:
 
     static inline std::string get_name(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].name; }
     static inline SceneNodes::UID get_root_node(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].root_node; }
-    static inline Math::RGB get_background_color(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].background_color; }
-    static void set_background_color(SceneRoots::UID scene_ID, Math::RGB color);
+    static inline Math::RGB get_environment_tint(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].environment_tint; }
+    static void set_environment_tint(SceneRoots::UID scene_ID, Math::RGB tint);
     static inline Assets::Textures::UID get_environment_map(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].environment_map; }
     static void set_environment_map(SceneRoots::UID scene_ID, Assets::Textures::UID environment_map);
 
@@ -67,9 +67,9 @@ public:
         static const unsigned char None = 0u;
         static const unsigned char Created = 1u << 0u;
         static const unsigned char Destroyed = 1u << 1u;
-        static const unsigned char BackgroundColor = 1u << 2u;
+        static const unsigned char EnvironmentTint = 1u << 2u;
         static const unsigned char EnvironmentMap = 1u << 3u;
-        static const unsigned char All = Created | Destroyed | BackgroundColor | EnvironmentMap;
+        static const unsigned char All = Created | Destroyed | EnvironmentTint | EnvironmentMap;
     };
 
     static inline unsigned char get_changes(SceneRoots::UID scene_ID) { return m_changes[scene_ID]; }
@@ -94,7 +94,7 @@ private:
     struct Scene {
         std::string name;
         SceneNodes::UID root_node;
-        Math::RGB background_color;
+        Math::RGB environment_tint;
         Assets::Textures::UID environment_map;
     };
 
@@ -126,8 +126,8 @@ public:
     // -----------------------------------------------------------------------
     inline std::string get_name() const { return SceneRoots::get_name(m_ID); }
     inline SceneNodes::UID get_root_node() const { return SceneRoots::get_root_node(m_ID); }
-    inline Math::RGB get_background_color() const { return SceneRoots::get_background_color(m_ID); }
-    inline void set_background_color(Math::RGB color) { SceneRoots::set_background_color(m_ID, color); }
+    inline Math::RGB get_environment_tint() const { return SceneRoots::get_environment_tint(m_ID); }
+    inline void set_environment_tint(Math::RGB tint) { SceneRoots::set_environment_tint(m_ID, tint); }
     inline Assets::Textures::UID get_environment_map() const { return SceneRoots::get_environment_map(m_ID); }
     inline void set_environment_map(Assets::Textures::UID environment_map) { SceneRoots::set_environment_map(m_ID, environment_map); }
 

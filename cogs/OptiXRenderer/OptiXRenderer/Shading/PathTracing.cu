@@ -98,14 +98,15 @@ RT_PROGRAM void path_tracing() {
 
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(MonteCarloPayload, monte_carlo_payload, rtPayload, );
-rtDeclareVariable(float3, g_scene_background_color, , );
+rtDeclareVariable(float3, g_scene_environment_tint, , );
 rtDeclareVariable(EnvironmentLight, g_scene_environment_light, , );
 
 RT_PROGRAM void miss() {
-    float3 environment_radiance;
+    float3 environment_radiance = g_scene_environment_tint;
+
     unsigned int environment_map_ID = g_scene_environment_light.environment_map_ID;
     if (environment_map_ID) {
-        environment_radiance = LightSources::evaluate(g_scene_environment_light, ray.origin, ray.direction);
+        environment_radiance *= LightSources::evaluate(g_scene_environment_light, ray.origin, ray.direction);
         
         // NOTE We can get rid of all these branches by just scaling the (mis) weight. Requires a lot of retesting though. :)
         bool next_event_estimatable = g_scene_environment_light.per_pixel_PDF_ID != RT_TEXTURE_ID_NULL;
@@ -124,8 +125,7 @@ RT_PROGRAM void miss() {
                 //      remember to test with next event estimation on and off.
                 environment_radiance = make_float3(0.0f);
         }
-    } else
-        environment_radiance = g_scene_background_color;
+    }
 
     float3 scaled_radiance = clamp_light_contribution_by_path_PDF(environment_radiance, monte_carlo_payload.clamped_path_PDF, g_accumulations);
     monte_carlo_payload.radiance += monte_carlo_payload.throughput * scaled_radiance;

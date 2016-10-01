@@ -38,7 +38,7 @@ GTEST_TEST(Scene_SceneRoot, sentinel_scene) {
 
     SceneRoot sentinel = SceneRoots::UID::invalid_UID();
 
-    EXPECT_EQ(Math::RGB::black(), sentinel.get_background_color());
+    EXPECT_EQ(Math::RGB::black(), sentinel.get_environment_tint());
     EXPECT_EQ(Assets::Textures::UID::invalid_UID(), sentinel.get_environment_map());
 
     SceneRoots::deallocate();
@@ -50,7 +50,7 @@ GTEST_TEST(Scene_SceneRoot, create) {
     EXPECT_TRUE(SceneRoots::has(scene_ID));
     
     EXPECT_EQ("Foo", SceneRoots::get_name(scene_ID));
-    EXPECT_EQ(Math::RGB::blue(), SceneRoots::get_background_color(scene_ID));
+    EXPECT_EQ(Math::RGB::blue(), SceneRoots::get_environment_tint(scene_ID));
     EXPECT_EQ(Assets::Textures::UID::invalid_UID(), SceneRoots::get_environment_map(scene_ID));
 
     // Test scene root created notification.
@@ -146,13 +146,13 @@ GTEST_TEST(Scene_SceneRoot, update_notifications) {
     SceneRoots::reset_change_notifications();
 
     { // Background color change notification.
-        scene.set_background_color(Math::RGB::green());
+        scene.set_environment_tint(Math::RGB::green());
 
         Core::Iterable<SceneRoots::ChangedIterator> changed_scenes = SceneRoots::get_changed_scenes();
         EXPECT_EQ(changed_scenes.end() - changed_scenes.begin(), 1);
 
         EXPECT_TRUE(scene.get_ID() == *changed_scenes.begin());
-        EXPECT_TRUE(scene.get_changes() == SceneRoots::Changes::BackgroundColor);
+        EXPECT_TRUE(scene.get_changes() == SceneRoots::Changes::EnvironmentTint);
     }
 
     SceneRoots::reset_change_notifications();

@@ -331,9 +331,9 @@ void Renderer::render() {
         // Clear the render target to the background color.
         Cameras::UID camera_ID = *Cameras::begin();
         SceneRoot scene = Cameras::get_scene_ID(camera_ID);
-        RGB bg_color = scene.get_background_color();
-        float background_color[] = { bg_color.r, bg_color.g, bg_color.b, 1.0f };
-        command_list->ClearRenderTargetView(rtv_handle, background_color, 0, nullptr);
+        RGB env_tint = scene.get_environment_tint();
+        float environment_tint[] = { env_tint.r, env_tint.g, env_tint.b, 1.0f };
+        command_list->ClearRenderTargetView(rtv_handle, environment_tint, 0, nullptr);
 
         // Transition the frame_index'th render target from the render target state to the present state. If the debug layer is enabled, you will receive a
         // warning if present is called on the render target when it's not in the present state.

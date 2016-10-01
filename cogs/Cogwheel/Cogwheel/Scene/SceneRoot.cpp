@@ -32,7 +32,7 @@ void SceneRoots::allocate(unsigned int capacity) {
     // Allocate dummy element at 0.
     m_scenes[0].name = "Dummy Scene";
     m_scenes[0].root_node = SceneNodes::UID::invalid_UID();
-    m_scenes[0].background_color = Math::RGB::black();
+    m_scenes[0].environment_tint = Math::RGB::black();
     m_scenes[0].environment_map = Assets::Textures::UID::invalid_UID();
 }
 
@@ -73,7 +73,7 @@ void SceneRoots::reserve_scene_data(unsigned int new_capacity, unsigned int old_
         std::memset(m_changes + copyable_elements, Changes::None, new_capacity - copyable_elements);
 }
 
-SceneRoots::UID SceneRoots::create(const std::string& name, SceneNodes::UID root, Math::RGB background_color) {
+SceneRoots::UID SceneRoots::create(const std::string& name, SceneNodes::UID root, Math::RGB environment_tint) {
     assert(m_scenes != nullptr);
 
     unsigned int old_capacity = m_UID_generator.capacity();
@@ -87,7 +87,7 @@ SceneRoots::UID SceneRoots::create(const std::string& name, SceneNodes::UID root
 
     m_scenes[id].name = name;
     m_scenes[id].root_node = root;
-    m_scenes[id].background_color = background_color;
+    m_scenes[id].environment_tint = environment_tint;
     m_scenes[id].environment_map = Assets::Textures::UID::invalid_UID();
     m_changes[id] = Changes::Created;
 
@@ -108,7 +108,7 @@ SceneRoots::UID SceneRoots::create(const std::string& name, SceneNodes::UID root
 
     m_scenes[id].name = name;
     m_scenes[id].root_node = root;
-    m_scenes[id].background_color = Math::RGB::white();
+    m_scenes[id].environment_tint = Math::RGB::white();
     m_scenes[id].environment_map = environment_map;
     m_changes[id] = Changes::Created;
 
@@ -125,9 +125,9 @@ void SceneRoots::destroy(SceneRoots::UID scene_ID) {
     }
 }
 
-void SceneRoots::set_background_color(SceneRoots::UID scene_ID, Math::RGB color) {
-    m_scenes[scene_ID].background_color = color;
-    flag_as_changed(scene_ID, Changes::BackgroundColor);
+void SceneRoots::set_environment_tint(SceneRoots::UID scene_ID, Math::RGB tint) {
+    m_scenes[scene_ID].environment_tint = tint;
+    flag_as_changed(scene_ID, Changes::EnvironmentTint);
 }
 
 void SceneRoots::set_environment_map(SceneRoots::UID scene_ID, Assets::Textures::UID environment_map) {
