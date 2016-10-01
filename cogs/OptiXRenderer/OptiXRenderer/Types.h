@@ -106,6 +106,11 @@ struct EnvironmentLight {
     int marginal_CDF_ID;
     int conditional_CDF_ID;
     int per_pixel_PDF_ID;
+
+    __inline_all__ static EnvironmentLight none() {
+        EnvironmentLight light = {};
+        return light;
+    }
 };
 
 struct __align__(16) Light {

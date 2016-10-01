@@ -458,48 +458,6 @@ void Renderer::render() {
         }
     }
 
-    if (m_state->accumulations == 0u) {
-        Cameras::UID camera_ID = *Cameras::begin();
-        SceneRoot scene = Cameras::get_scene_ID(camera_ID);
-        Math::RGB env_tint = scene.get_environment_tint();
-        float3 environment_tint = make_float3(env_tint.r, env_tint.g, env_tint.b);
-        context["g_scene_environment_tint"]->setFloat(environment_tint);
-
-        // Setup the environment map. TODO Handle this via scene change flags or scene initialization instead.
-        Textures::UID environment_map_ID = scene.get_environment_map();
-        if (environment_map_ID != m_state->environment.map.get_ID()) {
-            // Only textures with four channels are supported.
-            Image image = Textures::get_image_ID(environment_map_ID);
-            if (channel_count(image.get_pixel_format()) == 4) { // TODO Support other formats as well by converting the buffers to float4 and upload.
-                m_state->environment = create_environment(environment_map_ID, context);
-                EnvironmentLight light = m_state->environment.to_light_source(m_state->textures.data());
-                context["g_scene_environment_light"]->setUserData(sizeof(light), &light);
-
-                if (m_state->environment.next_event_estimation_possible()) {
-                    // Append environment light to the end of the light source buffer.
-                    // NOTE When multi-scene support is added we cannot know if an environment light is available pr scene, 
-                    // so we do not know if the environment light is always valid.
-                    // This can be solved by making the environment light a proxy that points to the scene environment light, if available.
-                    // If not available, then reduce the lightcount by one CPU side before rendering the scene.
-                    // That way we should have minimal performance impact GPU side.
-#if _DEBUG
-                    RTsize light_source_capacity;
-                    m_state->lights.sources->getSize(light_source_capacity);
-                    assert(m_state->lights.count + 1 <= light_source_capacity);
-#endif
-                    Light* device_lights = (Light*)m_state->lights.sources->map();
-                    Light& device_light = device_lights[m_state->lights.count++];
-                    device_light.flags = Light::Environment;
-                    device_light.environment = m_state->environment.to_light_source(m_state->textures.data());
-                    m_state->lights.sources->unmap();
-
-                    context["g_light_count"]->setInt(m_state->lights.count);
-                }
-            } else
-                printf("OptiXRenderer only supports environments with 4 channels. '%s' has %u.\n", image.get_name().c_str(), channel_count(image.get_pixel_format()));
-        }
-    }
-
     context["g_accumulations"]->setInt(m_state->accumulations);
 
     context->launch(int(EntryPoints::PathTracing), m_state->screensize.x, m_state->screensize.y);
@@ -561,13 +519,13 @@ void Renderer::handle_updates() {
     { // Mesh updates.
         for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
             if (Meshes::get_changes(mesh_ID) == Meshes::Changes::Destroyed) {
-                if (m_state->meshes[mesh_ID]) {
+                if (mesh_ID < m_state->meshes.size() && m_state->meshes[mesh_ID]) {
                     m_state->meshes[mesh_ID]->destroy();
                     m_state->meshes[mesh_ID] = NULL;
                 }
             }
 
-            if (Meshes::get_changes(mesh_ID) == Meshes::Changes::Created) {
+            if (Meshes::get_changes(mesh_ID) & Meshes::Changes::Created) {
                 if (m_state->meshes.size() <= mesh_ID)
                     m_state->meshes.resize(Meshes::capacity());
                 m_state->meshes[mesh_ID] = load_mesh(context, mesh_ID, m_state->triangle_intersection_program, m_state->triangle_bounds_program);
@@ -580,12 +538,12 @@ void Renderer::handle_updates() {
             m_state->images.resize(Images::capacity());
 
             for (Images::UID image_ID : Images::get_changed_images()) {
-                if (Images::has_changes(image_ID, Images::Changes::Destroyed)) {
-                    if (m_state->images[image_ID]) {
+                if (Images::get_changes(image_ID) == Images::Changes::Destroyed) {
+                    if (image_ID < m_state->images.size() && m_state->images[image_ID]) {
                         m_state->images[image_ID]->destroy();
                         m_state->images[image_ID] = NULL;
                     }
-                } else if (Images::has_changes(image_ID, Images::Changes::Created)) {
+                } else if (Images::get_changes(image_ID) & Images::Changes::Created) {
                     RTformat pixel_format = RT_FORMAT_UNKNOWN;
                     switch (Images::get_pixel_format(image_ID)) {
                     case PixelFormat::I8:
@@ -622,7 +580,7 @@ void Renderer::handle_updates() {
 
             for (Textures::UID texture_ID : Textures::get_changed_textures()) {
                 if (Textures::get_changes(texture_ID) == Textures::Changes::Destroyed) {
-                    if (m_state->textures[texture_ID]) {
+                    if (texture_ID < m_state->textures.size() && m_state->textures[texture_ID]) {
                         m_state->textures[texture_ID]->destroy();
                         m_state->textures[texture_ID] = NULL;
                     }
@@ -636,7 +594,7 @@ void Renderer::handle_updates() {
                     return RT_WRAP_REPEAT;
                 };
 
-                if (Textures::get_changes(texture_ID) == Textures::Changes::Created) {
+                if (Textures::get_changes(texture_ID) & Textures::Changes::Created) {
                     TextureSampler& texture = m_state->textures[texture_ID] = context->createTextureSampler();
                     texture->setWrapMode(0, convert_wrap_mode(Textures::get_wrapmode_U(texture_ID)));
                     texture->setWrapMode(1, convert_wrap_mode(Textures::get_wrapmode_V(texture_ID)));
@@ -879,7 +837,7 @@ void Renderer::handle_updates() {
             unsigned int scene_node_index = model.get_scene_node().get_ID();
 
             if (model.get_changes() == MeshModels::Changes::Destroyed) {
-                if (m_state->transforms[scene_node_index]) {
+                if (scene_node_index < m_state->transforms.size() && m_state->transforms[scene_node_index]) {
                     optix::Transform optixTransform = m_state->transforms[scene_node_index];
                     m_state->root_node->removeChild(optixTransform);
                     optixTransform->destroy();
@@ -889,7 +847,7 @@ void Renderer::handle_updates() {
                 }
             }
 
-            if (model.get_changes() == MeshModels::Changes::Created) {
+            if (model.get_changes() & MeshModels::Changes::Created) {
                 optix::Transform transform = load_model(context, model, m_state->meshes.data(), m_state->default_material);
                 m_state->root_node->addChild(transform);
 
@@ -927,6 +885,55 @@ void Renderer::handle_updates() {
         if (important_transform_changed) {
             m_state->root_node->getAcceleration()->markDirty();
             m_state->accumulations = 0u;
+        }
+    }
+
+    { // Scene root updates
+        // TODO Handle multiple scenes.
+        for (SceneRoot scene : SceneRoots::get_changed_scenes()) {
+            if (scene.has_changes(SceneRoots::Changes::EnvironmentTint | SceneRoots::Changes::Created)) {
+                Math::RGB env_tint = scene.get_environment_tint();
+                float3 environment_tint = make_float3(env_tint.r, env_tint.g, env_tint.b);
+                context["g_scene_environment_tint"]->setFloat(environment_tint);
+            }
+
+            if (scene.has_changes(SceneRoots::Changes::EnvironmentMap | SceneRoots::Changes::Created)) {
+                Textures::UID environment_map_ID = scene.get_environment_map();
+                if (environment_map_ID != m_state->environment.map.get_ID()) {
+                    Image image = Textures::get_image_ID(environment_map_ID);
+                    // Only textures with four channels are supported.
+                    if (channel_count(image.get_pixel_format()) == 4) { // TODO Support other formats as well by converting the buffers to float4 and upload.
+                        m_state->environment = create_environment(environment_map_ID, context);
+                        EnvironmentLight light = m_state->environment.to_light_source(m_state->textures.data());
+                        context["g_scene_environment_light"]->setUserData(sizeof(light), &light);
+
+                        if (m_state->environment.next_event_estimation_possible()) {
+                            // Append environment light to the end of the light source buffer.
+                            // NOTE When multi-scene support is added we cannot know if an environment light is available pr scene, 
+                            // so we do not know if the environment light is always valid.
+                            // This can be solved by making the environment light a proxy that points to the scene environment light, if available.
+                            // If not available, then reduce the lightcount by one CPU side before rendering the scene.
+                            // That way we should have minimal performance impact GPU side.
+#if _DEBUG
+                            RTsize light_source_capacity;
+                            m_state->lights.sources->getSize(light_source_capacity);
+                            assert(m_state->lights.count + 1 <= light_source_capacity);
+#endif
+                            Light* device_lights = (Light*)m_state->lights.sources->map();
+                            Light& device_light = device_lights[m_state->lights.count++];
+                            device_light.flags = Light::Environment;
+                            device_light.environment = m_state->environment.to_light_source(m_state->textures.data());
+                            m_state->lights.sources->unmap();
+
+                            context["g_light_count"]->setInt(m_state->lights.count);
+                        }
+                    } else {
+                        EnvironmentLight light = EnvironmentLight::none();
+                        context["g_scene_environment_light"]->setUserData(sizeof(light), &light);
+                        printf("OptiXRenderer only supports environments with 4 channels. '%s' has %u.\n", image.get_name().c_str(), channel_count(image.get_pixel_format()));
+                    }
+                }
+            }
         }
     }
 }
