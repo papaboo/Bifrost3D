@@ -287,25 +287,26 @@ static inline void miniheaps_cleanup_callback(void* dummy) {
     Meshes::reset_change_notifications();
     MeshModels::reset_change_notifications();
     SceneNodes::reset_change_notifications();
-    // SceneRoots::reset_change_notifications();
+    SceneRoots::reset_change_notifications();
     Textures::reset_change_notifications();
 }
 
 void initializer(Cogwheel::Core::Engine& engine) {
     engine.get_window().set_name("SimpleViewer");
 
+    Cameras::allocate(1u);
     Images::allocate(8u);
     LightSources::allocate(8u);
     Materials::allocate(8u);
     Meshes::allocate(8u);
     MeshModels::allocate(8u);
     SceneNodes::allocate(8u);
+    SceneRoots::allocate(1u);
     Textures::allocate(8u);
 
     engine.add_tick_cleanup_callback(miniheaps_cleanup_callback, nullptr);
 
     // Setup scene.
-    SceneRoots::allocate(1u);
     SceneNodes::UID root_node_ID = SceneNodes::create("Root");
     SceneRoots::UID scene_ID = SceneRoots::UID::invalid_UID();
     if (!g_environment.empty()) {
@@ -323,7 +324,6 @@ void initializer(Cogwheel::Core::Engine& engine) {
     // Create camera
     SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
     SceneNodes::set_parent(cam_node_ID, root_node_ID);
-    Cameras::allocate(1u);
     Cameras::UID cam_ID = Cameras::create(cam_node_ID, scene_ID, Matrix4x4f::identity(), Matrix4x4f::identity()); // Matrices will be set up by the CameraHandler.
     CameraHandler* camera_handler = new CameraHandler(cam_ID, engine.get_window().get_aspect_ratio());
     engine.add_mutating_callback(CameraHandler::handle_callback, camera_handler);
