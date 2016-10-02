@@ -321,7 +321,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
         scene_ID = SceneRoots::create("Model scene", root_node_ID, g_environment_color);
     
     // Create camera
-    Cameras::UID cam_ID = Cameras::create(scene_ID, Matrix4x4f::identity(), Matrix4x4f::identity()); // Matrices will be set up by the CameraHandler.
+    Cameras::UID cam_ID = Cameras::create("Camera", scene_ID, Matrix4x4f::identity(), Matrix4x4f::identity()); // Matrices will be set up by the CameraHandler.
     CameraHandler* camera_handler = new CameraHandler(cam_ID, engine.get_window().get_aspect_ratio());
     engine.add_mutating_callback(CameraHandler::handle_callback, camera_handler);
 

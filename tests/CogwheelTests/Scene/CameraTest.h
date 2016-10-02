@@ -90,10 +90,11 @@ TEST_F(Scene_Camera, create) {
                                                 perspective_matrix, inverse_perspective_matrix);
 
     Cameras::allocate(2u);
-    Cameras::UID cam_ID = Cameras::create(SceneRoots::UID::invalid_UID(),
+    Cameras::UID cam_ID = Cameras::create("Test cam", SceneRoots::UID::invalid_UID(),
                                           perspective_matrix, inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
     
+    EXPECT_EQ(Cameras::get_name(cam_ID), "Test cam");
     EXPECT_EQ(Cameras::get_render_index(cam_ID), 0u);
     EXPECT_EQ(Cameras::get_projection_matrix(cam_ID), perspective_matrix);
     EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_ID), inverse_perspective_matrix);
@@ -110,7 +111,7 @@ TEST_F(Scene_Camera, set_new_matrices) {
     CameraUtils::compute_perspective_projection(1, 1000, Math::PI<float>() / 4.0f, 8.0f / 6.0f,
         initial_perspective_matrix, initial_inverse_perspective_matrix);
 
-    Cameras::UID cam_ID = Cameras::create(SceneRoots::UID::invalid_UID(),
+    Cameras::UID cam_ID = Cameras::create("Test cam", SceneRoots::UID::invalid_UID(),
                                           initial_perspective_matrix, initial_inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
 
@@ -139,7 +140,7 @@ TEST_F(Scene_Camera, ray_projection) {
     CameraUtils::compute_perspective_projection(1, 1000, PI<float>() / 4.0f, 8.0f / 6.0f,
         initial_perspective_matrix, initial_inverse_perspective_matrix);
 
-    Cameras::UID cam_ID = Cameras::create(SceneRoots::UID::invalid_UID(),
+    Cameras::UID cam_ID = Cameras::create("Test cam", SceneRoots::UID::invalid_UID(),
                                           initial_perspective_matrix, initial_inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
 

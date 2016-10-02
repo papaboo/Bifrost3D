@@ -39,12 +39,16 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(Cameras::UID cameraID) { return m_UID_generator.has(cameraID); }
 
-    static Cameras::UID create(SceneRoots::UID scene, Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix, 
+    static Cameras::UID create(std::string name, SceneRoots::UID scene, 
+                               Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix, 
                                Math::Transform transform = Math::Transform::identity());
 
     static UIDGenerator::ConstIterator begin() { return m_UID_generator.begin(); }
     static UIDGenerator::ConstIterator end() { return m_UID_generator.end(); }
     static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
+
+    static inline std::string get_name(Cameras::UID camera_ID) { return m_names[camera_ID]; }
+    static inline void set_name(Cameras::UID camera_ID, const std::string& name) { m_names[camera_ID] = name; }
 
     static SceneRoots::UID get_scene_ID(Cameras::UID camera_ID) { return m_scene_IDs[camera_ID]; }
 
@@ -74,6 +78,7 @@ private:
 
     static UIDGenerator m_UID_generator;
 
+    static std::string* m_names;
     static SceneRoots::UID* m_scene_IDs;
     static Math::Transform* m_transforms;
     static Math::Matrix4x4f* m_projection_matrices;

@@ -23,6 +23,7 @@ namespace Scene {
 
 Cameras::UIDGenerator Cameras::m_UID_generator = UIDGenerator(0u);
 
+std::string* Cameras::m_names = nullptr;
 SceneRoots::UID* Cameras::m_scene_IDs = nullptr;
 unsigned int* Cameras::m_render_indices = nullptr;
 Transform* Cameras::m_transforms = nullptr;
@@ -37,14 +38,16 @@ void Cameras::allocate(unsigned int capacity) {
     m_UID_generator = UIDGenerator(capacity);
     capacity = m_UID_generator.capacity();
 
-    m_transforms = new Transform[capacity];
+    m_names = new std::string[capacity];
     m_scene_IDs = new SceneRoots::UID[capacity];
-    m_render_indices = new unsigned int[capacity];
+    m_transforms = new Transform[capacity];
     m_projection_matrices = new Matrix4x4f[capacity];
     m_inverse_projection_matrices = new Matrix4x4f[capacity];
+    m_render_indices = new unsigned int[capacity];
     m_viewports = new Rectf[capacity];
 
     // Allocate dummy camera at 0.
+    m_names[0] = "Dummy camera";
     m_transforms[0] = Transform::identity();
     m_scene_IDs[0] = SceneRoots::UID::invalid_UID();
     m_render_indices[0] = 0u;
@@ -59,11 +62,12 @@ void Cameras::deallocate() {
 
     m_UID_generator = UIDGenerator(0u);
 
+    delete[] m_names; m_names = nullptr;
     delete[] m_scene_IDs; m_scene_IDs = nullptr;
-    delete[] m_render_indices; m_render_indices = nullptr;
     delete[] m_transforms; m_transforms = nullptr;
     delete[] m_projection_matrices; m_projection_matrices = nullptr;
     delete[] m_inverse_projection_matrices; m_inverse_projection_matrices = nullptr;
+    delete[] m_render_indices; m_render_indices = nullptr;
     delete[] m_viewports; m_viewports = nullptr;
 }
 
@@ -82,26 +86,30 @@ static inline T* resize_and_copy_array(T* old_array, unsigned int new_capacity, 
 }
 
 void Cameras::reserve_camera_data(unsigned int new_capacity, unsigned int old_capacity) {
-    assert(m_transforms != nullptr);
     assert(m_scene_IDs != nullptr);
-    assert(m_render_indices != nullptr);
+    assert(m_transforms != nullptr);
     assert(m_projection_matrices != nullptr);
     assert(m_inverse_projection_matrices != nullptr);
+    assert(m_render_indices != nullptr);
     assert(m_viewports != nullptr);
 
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
 
+    m_names = resize_and_copy_array(m_names, new_capacity, copyable_elements);
+
     m_scene_IDs = resize_and_copy_array(m_scene_IDs, new_capacity, copyable_elements);
 
-    m_render_indices = resize_and_copy_array(m_render_indices, new_capacity, copyable_elements);
     m_transforms = resize_and_copy_array(m_transforms, new_capacity, copyable_elements);
     m_projection_matrices = resize_and_copy_array(m_projection_matrices, new_capacity, copyable_elements);
     m_inverse_projection_matrices = resize_and_copy_array(m_inverse_projection_matrices, new_capacity, copyable_elements);
 
+    m_render_indices = resize_and_copy_array(m_render_indices, new_capacity, copyable_elements);
     m_viewports = resize_and_copy_array(m_viewports, new_capacity, copyable_elements);
 }
 
-Cameras::UID Cameras::create(SceneRoots::UID scene, Matrix4x4f projection_matrix, Matrix4x4f inverse_projection_matrix, Transform transform) {
+Cameras::UID Cameras::create(std::string name, SceneRoots::UID scene, 
+                             Matrix4x4f projection_matrix, Matrix4x4f inverse_projection_matrix, Transform transform) {
+    assert(m_names != nullptr);
     assert(m_scene_IDs != nullptr);
     assert(m_render_indices != nullptr);
     assert(m_transforms != nullptr);
@@ -115,6 +123,7 @@ Cameras::UID Cameras::create(SceneRoots::UID scene, Matrix4x4f projection_matrix
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_camera_data(m_UID_generator.capacity(), old_capacity);
 
+    m_names[id] = name;
     m_scene_IDs[id] = scene;
     m_render_indices[id] = 0u;
     m_transforms[id] = transform;
