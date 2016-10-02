@@ -447,8 +447,7 @@ void Renderer::render() {
         if (m_state->camera_inverse_view_projection_matrix != inverse_view_projection_matrix) {
             m_state->camera_inverse_view_projection_matrix = inverse_view_projection_matrix;
 
-            SceneNode camera_node = Cameras::get_node_ID(camera_ID);
-            Vector3f cam_pos = camera_node.get_global_transform().translation;
+            Vector3f cam_pos = Cameras::get_transform(camera_ID).translation;
 
             context["g_inverted_view_projection_matrix"]->setMatrix4x4fv(false, inverse_view_projection_matrix.begin());
             float4 camera_position = make_float4(cam_pos.x, cam_pos.y, cam_pos.z, 0.0f);

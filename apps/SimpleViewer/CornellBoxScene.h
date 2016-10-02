@@ -39,10 +39,9 @@ void create_cornell_box_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode ro
     Materials::UID copper_material_ID = Materials::create("Copper", copper_material_data);
 
     { // Set camera position
-        SceneNodes::UID cam_node_ID = Cameras::get_node_ID(camera_ID);
-        Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
+        Transform cam_transform = Cameras::get_transform(camera_ID);
         cam_transform.translation = Vector3f(0, 0.0f, -1.5);
-        SceneNodes::set_global_transform(cam_node_ID, cam_transform);
+        Cameras::set_transform(camera_ID, cam_transform);
     }
 
     { // Add light source.

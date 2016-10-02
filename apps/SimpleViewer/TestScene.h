@@ -84,7 +84,7 @@ private:
 
 class BoxGun final {
 public:
-    BoxGun(Scene::SceneNodes::UID shooter_node_ID)
+    BoxGun(Scene::Cameras::UID shooter_node_ID)
         : m_shooter_node_ID(shooter_node_ID)
         , m_cube_mesh_ID(Assets::MeshCreation::cube(1))
         , m_model_ID(Assets::MeshModels::UID::invalid_UID())
@@ -100,7 +100,7 @@ public:
             return;
 
         if (engine.get_mouse()->was_released(Mouse::Button::Right) && m_model_ID == MeshModels::UID::invalid_UID()) {
-            Math::Transform transform = SceneNodes::get_global_transform(m_shooter_node_ID);
+            Math::Transform transform = Cameras::get_transform(m_shooter_node_ID);
             transform.scale = 0.1f;
             transform.translation -= transform.rotation.up() * transform.scale;
             SceneNodes::UID cube_node_ID = SceneNodes::create("Cube", transform);
@@ -130,7 +130,7 @@ public:
     }
 
 private:
-    Scene::SceneNodes::UID m_shooter_node_ID;
+    Scene::Cameras::UID m_shooter_node_ID;
     Assets::Meshes::UID m_cube_mesh_ID;
     Assets::MeshModels::UID m_model_ID;
 
@@ -143,10 +143,9 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
     using namespace Cogwheel::Scene;
 
     { // Setup camera transform.
-        SceneNodes::UID cam_node_ID = Cameras::get_node_ID(camera_ID);
-        Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
+        Transform cam_transform = Cameras::get_transform(camera_ID);
         cam_transform.translation = Vector3f(0, 1, -6);
-        SceneNodes::set_global_transform(cam_node_ID, cam_transform);
+        Cameras::set_transform(camera_ID, cam_transform);
     }
 
     { // Create floor.
@@ -233,8 +232,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
 
     { // GUN!
         Cameras::UID cam_ID = *Cameras::begin();
-        SceneNodes::UID cam_node_ID = Cameras::get_node_ID(cam_ID);
-        BoxGun* boxgun = new BoxGun(cam_node_ID);
+        BoxGun* boxgun = new BoxGun(cam_ID);
         engine.add_mutating_callback(BoxGun::update_callback, boxgun);
     }
 

@@ -45,8 +45,8 @@ static float g_scene_size;
 class Navigation final {
 public:
 
-    Navigation(SceneNodes::UID node_ID, float velocity) 
-        : m_node_ID(node_ID)
+    Navigation(Cameras::UID camera_ID, float velocity) 
+        : m_camera_ID(camera_ID)
         , m_vertical_rotation(0.0f) 
         , m_horizontal_rotation(0.0f)
         , m_velocity(velocity)
@@ -56,8 +56,7 @@ public:
         const Keyboard* keyboard = engine.get_keyboard();
         const Mouse* mouse = engine.get_mouse();
 
-        SceneNode node = m_node_ID;
-        Transform transform = node.get_global_transform();
+        Transform transform = Cameras::get_transform(m_camera_ID);
 
         { // Translation
             float strafing = 0.0f;
@@ -96,8 +95,8 @@ public:
             }
         }
 
-        if (transform != node.get_global_transform())
-            node.set_global_transform(transform);
+        if (transform != Cameras::get_transform(m_camera_ID))
+            Cameras::set_transform(m_camera_ID, transform);
 
         if (keyboard->was_pressed(Keyboard::Key::Space)) {
             float new_time_scale = engine.get_time().is_paused() ? 1.0f : 0.0f;
@@ -110,7 +109,7 @@ public:
     }
 
 private:
-    SceneNodes::UID m_node_ID;
+    Cameras::UID m_camera_ID;
     float m_vertical_rotation;
     float m_horizontal_rotation;
     float m_velocity;
@@ -322,9 +321,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
         scene_ID = SceneRoots::create("Model scene", root_node_ID, g_environment_color);
     
     // Create camera
-    SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
-    SceneNodes::set_parent(cam_node_ID, root_node_ID);
-    Cameras::UID cam_ID = Cameras::create(cam_node_ID, scene_ID, Matrix4x4f::identity(), Matrix4x4f::identity()); // Matrices will be set up by the CameraHandler.
+    Cameras::UID cam_ID = Cameras::create(scene_ID, Matrix4x4f::identity(), Matrix4x4f::identity()); // Matrices will be set up by the CameraHandler.
     CameraHandler* camera_handler = new CameraHandler(cam_ID, engine.get_window().get_aspect_ratio());
     engine.add_mutating_callback(CameraHandler::handle_callback, camera_handler);
 
@@ -358,15 +355,15 @@ void initializer(Cogwheel::Core::Engine& engine) {
     g_scene_size = magnitude(scene_bounds.size());
 
     float camera_velocity = g_scene_size * 0.1f;
-    Navigation* camera_navigation = new Navigation(cam_node_ID, camera_velocity);
+    Navigation* camera_navigation = new Navigation(cam_ID, camera_velocity);
     engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
     engine.add_mutating_callback(update_FPS, nullptr);
 
     if (load_model_from_file) {
-        Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
+        Transform cam_transform = Cameras::get_transform(cam_ID);
         cam_transform.translation = scene_bounds.center() + scene_bounds.size();
         cam_transform.look_at(scene_bounds.center());
-        SceneNodes::set_global_transform(cam_node_ID, cam_transform);
+        Cameras::set_transform(cam_ID, cam_transform);
     }
 
     // Add a light source if none were added yet.

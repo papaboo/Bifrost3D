@@ -12,7 +12,7 @@
 #include <Cogwheel/Math/Matrix.h>
 #include <Cogwheel/Math/Ray.h>
 #include <Cogwheel/Math/Rect.h>
-#include <Cogwheel/Scene/SceneNode.h>
+#include <Cogwheel/Math/Transform.h>
 #include <Cogwheel/Scene/SceneRoot.h>
 
 namespace Cogwheel {
@@ -31,7 +31,7 @@ public:
     typedef UIDGenerator::UID UID;
     typedef UIDGenerator::ConstIterator ConstUIDIterator;
 
-    static bool is_allocated() { return m_node_IDs != nullptr; }
+    static bool is_allocated() { return m_scene_IDs != nullptr; }
     static void allocate(unsigned int capacity);
     static void deallocate();
 
@@ -39,19 +39,19 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(Cameras::UID cameraID) { return m_UID_generator.has(cameraID); }
 
-    static Cameras::UID create(SceneNodes::UID parent_ID, SceneRoots::UID scene, Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix);
+    static Cameras::UID create(SceneRoots::UID scene, Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix, 
+                               Math::Transform transform = Math::Transform::identity());
 
     static UIDGenerator::ConstIterator begin() { return m_UID_generator.begin(); }
     static UIDGenerator::ConstIterator end() { return m_UID_generator.end(); }
     static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
 
-    static SceneNodes::UID get_node_ID(Cameras::UID camera_ID) { return m_node_IDs[camera_ID]; }
-    static void set_node_ID(Cameras::UID camera_ID, SceneNodes::UID node_ID) { m_node_IDs[camera_ID] = node_ID; }
-
     static SceneRoots::UID get_scene_ID(Cameras::UID camera_ID) { return m_scene_IDs[camera_ID]; }
 
-    static unsigned int get_render_index(Cameras::UID camera_ID) { return m_render_indices[camera_ID]; }
-    static void set_render_index(Cameras::UID camera_ID, unsigned int index) { m_render_indices[camera_ID] = index; }
+    static Math::Transform get_transform(Cameras::UID camera_ID) { return m_transforms[camera_ID]; }
+    static void set_transform(Cameras::UID camera_ID, Math::Transform transform) { m_transforms[camera_ID] = transform; }
+    static Math::Transform get_inverse_view_transform(Cameras::UID camera_ID) { return m_transforms[camera_ID]; }
+    static Math::Transform get_view_transform(Cameras::UID camera_ID) { return Math::invert(get_inverse_view_transform(camera_ID)); }
 
     static Math::Matrix4x4f get_projection_matrix(Cameras::UID camera_ID) { return m_projection_matrices[camera_ID]; }
     static Math::Matrix4x4f get_inverse_projection_matrix(Cameras::UID camera_ID) { return m_inverse_projection_matrices[camera_ID]; }
@@ -63,9 +63,8 @@ public:
         set_projection_matrices(camera_ID, projection_matrix, invert(projection_matrix));
     }
 
-    static Math::Transform get_inverse_view_transform(Cameras::UID camera_ID) { return SceneNodes::get_global_transform(m_node_IDs[camera_ID]); }
-    static Math::Transform get_view_transform(Cameras::UID camera_ID) { return Math::invert(get_inverse_view_transform(camera_ID)); }
-
+    static unsigned int get_render_index(Cameras::UID camera_ID) { return m_render_indices[camera_ID]; }
+    static void set_render_index(Cameras::UID camera_ID, unsigned int index) { m_render_indices[camera_ID] = index; }
     static Math::Rectf get_viewport(Cameras::UID camera_ID) { return m_viewports[camera_ID]; }
     static void set_viewport(Cameras::UID camera_ID, Math::Rectf projectionport) { m_viewports[camera_ID] = projectionport; }
 
@@ -75,11 +74,11 @@ private:
 
     static UIDGenerator m_UID_generator;
 
-    static SceneNodes::UID* m_node_IDs;
     static SceneRoots::UID* m_scene_IDs;
-    static unsigned int* m_render_indices;
+    static Math::Transform* m_transforms;
     static Math::Matrix4x4f* m_projection_matrices;
     static Math::Matrix4x4f* m_inverse_projection_matrices;
+    static unsigned int* m_render_indices;
     static Math::Rectf* m_viewports;
 };
 

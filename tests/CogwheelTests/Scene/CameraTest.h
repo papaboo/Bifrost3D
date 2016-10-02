@@ -76,7 +76,7 @@ TEST_F(Scene_Camera, sentinel_camera) {
 
     EXPECT_FALSE(Cameras::has(sentinel_ID));
 
-    EXPECT_EQ(Cameras::get_node_ID(sentinel_ID), SceneNodes::UID::invalid_UID());
+    EXPECT_EQ(Cameras::get_scene_ID(sentinel_ID), SceneRoots::UID::invalid_UID());
     EXPECT_EQ(Cameras::get_viewport(sentinel_ID), Math::Rectf(0.0f, 0.0f, 0.0f, 0.0f));
 
     Cameras::deallocate();
@@ -85,18 +85,15 @@ TEST_F(Scene_Camera, sentinel_camera) {
 TEST_F(Scene_Camera, create) {
     Cameras::allocate(2u);
 
-    SceneNodes::UID cam_node_ID = SceneNodes::create("Cam");
-
     Math::Matrix4x4f perspective_matrix, inverse_perspective_matrix;
     CameraUtils::compute_perspective_projection(1, 1000, Math::PI<float>() / 4.0f, 8.0f / 6.0f,
                                                 perspective_matrix, inverse_perspective_matrix);
 
     Cameras::allocate(2u);
-    Cameras::UID cam_ID = Cameras::create(cam_node_ID, SceneRoots::UID::invalid_UID(),
+    Cameras::UID cam_ID = Cameras::create(SceneRoots::UID::invalid_UID(),
                                           perspective_matrix, inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
     
-    EXPECT_EQ(Cameras::get_node_ID(cam_ID), cam_node_ID);
     EXPECT_EQ(Cameras::get_render_index(cam_ID), 0u);
     EXPECT_EQ(Cameras::get_projection_matrix(cam_ID), perspective_matrix);
     EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_ID), inverse_perspective_matrix);
@@ -108,14 +105,12 @@ TEST_F(Scene_Camera, create) {
 TEST_F(Scene_Camera, set_new_matrices) {
     Cameras::allocate(2u);
 
-    // Create initial camera and projection matrices.
-    SceneNodes::UID cam_node = SceneNodes::create("Cam");
-
+    // Create initial projection matrices.
     Math::Matrix4x4f initial_perspective_matrix, initial_inverse_perspective_matrix;
     CameraUtils::compute_perspective_projection(1, 1000, Math::PI<float>() / 4.0f, 8.0f / 6.0f,
         initial_perspective_matrix, initial_inverse_perspective_matrix);
 
-    Cameras::UID cam_ID = Cameras::create(cam_node, SceneRoots::UID::invalid_UID(),
+    Cameras::UID cam_ID = Cameras::create(SceneRoots::UID::invalid_UID(),
                                           initial_perspective_matrix, initial_inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
 
@@ -139,14 +134,12 @@ TEST_F(Scene_Camera, ray_projection) {
 
     Cameras::allocate(2u);
 
-    // Create initial camera and projection matrices.
-    SceneNode cam_node = SceneNodes::create("Cam");
-
+    // Create initial projection matrices.
     Matrix4x4f initial_perspective_matrix, initial_inverse_perspective_matrix;
     CameraUtils::compute_perspective_projection(1, 1000, PI<float>() / 4.0f, 8.0f / 6.0f,
         initial_perspective_matrix, initial_inverse_perspective_matrix);
 
-    Cameras::UID cam_ID = Cameras::create(cam_node.get_ID(), SceneRoots::UID::invalid_UID(),
+    Cameras::UID cam_ID = Cameras::create(SceneRoots::UID::invalid_UID(),
                                           initial_perspective_matrix, initial_inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
 
@@ -165,7 +158,7 @@ TEST_F(Scene_Camera, ray_projection) {
     { // Translation shouldn't change forward.
         Transform cam_transform = Transform::identity();
         cam_transform.translation = Vector3f(100, 10, -30);
-        cam_node.set_global_transform(cam_transform);
+        Cameras::set_transform(cam_ID, cam_transform);
 
         {
             Ray ray = CameraUtils::ray_from_viewport_point(cam_ID, Vector2f(0.5f, 0.5f));
@@ -183,7 +176,7 @@ TEST_F(Scene_Camera, ray_projection) {
     { // The rays direction and the transform applied to the forward direction should be similar after rotation.
         Transform cam_transform = Transform::identity();
         cam_transform.rotation = Quaternionf::from_angle_axis(degrees_to_radians(30.0f), normalize(Vector3f(1, 2, 3)));
-        cam_node.set_global_transform(cam_transform);
+        Cameras::set_transform(cam_ID, cam_transform);
 
         {
             Ray ray = CameraUtils::ray_from_viewport_point(cam_ID, Vector2f(0.5f, 0.5f));
@@ -202,7 +195,7 @@ TEST_F(Scene_Camera, ray_projection) {
         Transform cam_transform = Transform::identity();
         cam_transform.translation = Vector3f(100, 10, -30);
         cam_transform.rotation = Quaternionf::from_angle_axis(degrees_to_radians(30.0f), normalize(Vector3f(1, 2, 3)));
-        cam_node.set_global_transform(cam_transform);
+        Cameras::set_transform(cam_ID, cam_transform);
 
         {
             Ray ray = CameraUtils::ray_from_viewport_point(cam_ID, Vector2f(0.5f, 0.5f));

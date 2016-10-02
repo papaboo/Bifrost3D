@@ -24,11 +24,10 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
     using namespace Cogwheel::Scene;
 
     { // Setup camera transform.
-        SceneNodes::UID cam_node_ID = Cameras::get_node_ID(camera_ID);
-        Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
+        Transform cam_transform = Cameras::get_transform(camera_ID);
         cam_transform.translation = Vector3f(0, 3.0f, -17.0f);
         cam_transform.look_at(Vector3f(0, 1.0f, 0.0f));
-        SceneNodes::set_global_transform(cam_node_ID, cam_transform);
+        Cameras::set_transform(camera_ID, cam_transform);
     }
 
     { // Add a directional light.

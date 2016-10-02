@@ -23,12 +23,12 @@ namespace Scene {
 
 Cameras::UIDGenerator Cameras::m_UID_generator = UIDGenerator(0u);
 
-SceneNodes::UID* Cameras::m_node_IDs = nullptr;
 SceneRoots::UID* Cameras::m_scene_IDs = nullptr;
 unsigned int* Cameras::m_render_indices = nullptr;
-Math::Matrix4x4f* Cameras::m_projection_matrices = nullptr;
-Math::Matrix4x4f* Cameras::m_inverse_projection_matrices = nullptr;
-Math::Rectf* Cameras::m_viewports = nullptr;
+Transform* Cameras::m_transforms = nullptr;
+Matrix4x4f* Cameras::m_projection_matrices = nullptr;
+Matrix4x4f* Cameras::m_inverse_projection_matrices = nullptr;
+Rectf* Cameras::m_viewports = nullptr;
 
 void Cameras::allocate(unsigned int capacity) {
     if (is_allocated())
@@ -37,20 +37,20 @@ void Cameras::allocate(unsigned int capacity) {
     m_UID_generator = UIDGenerator(capacity);
     capacity = m_UID_generator.capacity();
 
-    m_node_IDs = new SceneNodes::UID[capacity];
+    m_transforms = new Transform[capacity];
     m_scene_IDs = new SceneRoots::UID[capacity];
     m_render_indices = new unsigned int[capacity];
-    m_projection_matrices = new Math::Matrix4x4f[capacity];
-    m_inverse_projection_matrices = new Math::Matrix4x4f[capacity];
-    m_viewports = new Math::Rectf[capacity];
+    m_projection_matrices = new Matrix4x4f[capacity];
+    m_inverse_projection_matrices = new Matrix4x4f[capacity];
+    m_viewports = new Rectf[capacity];
 
     // Allocate dummy camera at 0.
-    m_node_IDs[0] = SceneNodes::UID::invalid_UID();
+    m_transforms[0] = Transform::identity();
     m_scene_IDs[0] = SceneRoots::UID::invalid_UID();
     m_render_indices[0] = 0u;
-    m_projection_matrices[0] = Math::Matrix4x4f::zero();
-    m_inverse_projection_matrices[0] = Math::Matrix4x4f::zero();
-    m_viewports[0] = Math::Rectf(0,0,0,0);
+    m_projection_matrices[0] = Matrix4x4f::zero();
+    m_inverse_projection_matrices[0] = Matrix4x4f::zero();
+    m_viewports[0] = Rectf(0,0,0,0);
 }
 
 void Cameras::deallocate() {
@@ -59,9 +59,9 @@ void Cameras::deallocate() {
 
     m_UID_generator = UIDGenerator(0u);
 
-    delete[] m_node_IDs; m_node_IDs = nullptr;
     delete[] m_scene_IDs; m_scene_IDs = nullptr;
     delete[] m_render_indices; m_render_indices = nullptr;
+    delete[] m_transforms; m_transforms = nullptr;
     delete[] m_projection_matrices; m_projection_matrices = nullptr;
     delete[] m_inverse_projection_matrices; m_inverse_projection_matrices = nullptr;
     delete[] m_viewports; m_viewports = nullptr;
@@ -82,7 +82,7 @@ static inline T* resize_and_copy_array(T* old_array, unsigned int new_capacity, 
 }
 
 void Cameras::reserve_camera_data(unsigned int new_capacity, unsigned int old_capacity) {
-    assert(m_node_IDs != nullptr);
+    assert(m_transforms != nullptr);
     assert(m_scene_IDs != nullptr);
     assert(m_render_indices != nullptr);
     assert(m_projection_matrices != nullptr);
@@ -91,32 +91,23 @@ void Cameras::reserve_camera_data(unsigned int new_capacity, unsigned int old_ca
 
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
 
-    m_node_IDs = resize_and_copy_array(m_node_IDs, new_capacity, copyable_elements);
     m_scene_IDs = resize_and_copy_array(m_scene_IDs, new_capacity, copyable_elements);
 
     m_render_indices = resize_and_copy_array(m_render_indices, new_capacity, copyable_elements);
+    m_transforms = resize_and_copy_array(m_transforms, new_capacity, copyable_elements);
     m_projection_matrices = resize_and_copy_array(m_projection_matrices, new_capacity, copyable_elements);
     m_inverse_projection_matrices = resize_and_copy_array(m_inverse_projection_matrices, new_capacity, copyable_elements);
 
     m_viewports = resize_and_copy_array(m_viewports, new_capacity, copyable_elements);
 }
 
-Cameras::UID Cameras::create(SceneNodes::UID parent_ID, SceneRoots::UID scene, Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix) {
-    assert(m_node_IDs != nullptr);
+Cameras::UID Cameras::create(SceneRoots::UID scene, Matrix4x4f projection_matrix, Matrix4x4f inverse_projection_matrix, Transform transform) {
     assert(m_scene_IDs != nullptr);
     assert(m_render_indices != nullptr);
+    assert(m_transforms != nullptr);
     assert(m_projection_matrices != nullptr);
     assert(m_inverse_projection_matrices != nullptr);
     assert(m_viewports != nullptr);
-
-#if _DEBUG
-    // Assert that the parent node is part of the scene.
-    // TODO Alternatively just grab the scene root from the parent node.
-    SceneNode root_node = parent_ID;
-    while (root_node.get_parent().exists())
-        root_node = root_node.get_parent();
-    assert(root_node.get_ID() == SceneRoots::get_root_node(scene));
-#endif
 
     unsigned int old_capacity = m_UID_generator.capacity();
     UID id = m_UID_generator.generate();
@@ -124,12 +115,12 @@ Cameras::UID Cameras::create(SceneNodes::UID parent_ID, SceneRoots::UID scene, M
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_camera_data(m_UID_generator.capacity(), old_capacity);
 
-    m_node_IDs[id] = parent_ID;
     m_scene_IDs[id] = scene;
     m_render_indices[id] = 0u;
+    m_transforms[id] = transform;
     m_projection_matrices[id] = projection_matrix;
     m_inverse_projection_matrices[id] = inverse_projection_matrix;
-    m_viewports[id] = Math::Rectf(0, 0, 1, 1);
+    m_viewports[id] = Rectf(0, 0, 1, 1);
     return id;
 }
 
@@ -140,7 +131,7 @@ Cameras::UID Cameras::create(SceneNodes::UID parent_ID, SceneRoots::UID scene, M
 namespace CameraUtils {
 
 void compute_perspective_projection(float near_distance, float far_distance, float field_of_view_in_radians, float aspect_ratio,
-    Math::Matrix4x4f& projection_matrix, Math::Matrix4x4f& inverse_projection_matrix) {
+    Matrix4x4f& projection_matrix, Matrix4x4f& inverse_projection_matrix) {
 
     // http://www.3dcpptutorials.sk/index.php?id=2, which creates an OpenGL projection matrix (-Z forward)
     // Negated the third column to have +Z as forward, see Real-Time Rendering - Third Edition, page 95.
@@ -157,7 +148,7 @@ void compute_perspective_projection(float near_distance, float far_distance, flo
     // Yes you could just use inverse_projection_matrix = invert(projection_matrix) as this is by no means performance critical code.
     // But this wasn't done to speed up perspective camera creation. This was done for fun and to have a way to easily derive the inverse perspective matrix later given the perspective matrix.
     
-    const Math::Matrix4x4f& v = projection_matrix;
+    const Matrix4x4f& v = projection_matrix;
 
     inverse_projection_matrix[0][0] = v[1][1] * v[2][3];
     inverse_projection_matrix[0][1] = -0.0f;
@@ -194,8 +185,7 @@ Ray ray_from_viewport_point(Cameras::UID camera_ID, Vector2f viewport_point) {
     Vector4f projected_world_pos = inverse_view_projection_matrix * normalized_projected_pos;
     Vector3f ray_origin = Vector3f(projected_world_pos.x, projected_world_pos.y, projected_world_pos.z) / projected_world_pos.w;
     
-    SceneNode camera_node = Cameras::get_node_ID(camera_ID);
-    Vector3f camera_position = camera_node.get_global_transform().translation;
+    Vector3f camera_position = Cameras::get_transform(camera_ID).translation;
 
     return Ray(ray_origin, normalize(ray_origin - camera_position));
 }

@@ -23,11 +23,10 @@ void create_sphere_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_no
     using namespace Cogwheel::Scene;
 
     { // Setup camera transform.
-        SceneNodes::UID cam_node_ID = Cameras::get_node_ID(camera_ID);
-        Transform cam_transform = SceneNodes::get_global_transform(cam_node_ID);
+        Transform cam_transform = Cameras::get_transform(camera_ID);
         cam_transform.translation = Vector3f(0.0f, 0.0f, -2.0f);
         cam_transform.rotation = Quaternionf::identity();
-        SceneNodes::set_global_transform(cam_node_ID, cam_transform);
+        Cameras::set_transform(camera_ID, cam_transform);
     }
 
     { // Create sphere.
