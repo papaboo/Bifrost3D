@@ -26,7 +26,7 @@ namespace DX12Renderer {
 //----------------------------------------------------------------------------
 // DirectX 12 renderer.
 // TODO
-// * Move everything to a RendererImpl class.
+// * Draw models.
 // * Reimplement MiniEngine's CommandListManager and all dependencies.
 // * Debug layer define.
 // Future work:
@@ -55,15 +55,9 @@ private:
     Renderer(Renderer& other) = delete;
     Renderer& operator=(const Renderer& rhs) = delete;
 
-    void release_state();
-
-    void wait_for_previous_frame();
-
-    void handle_updates();
-
     // Pimpl the state to avoid exposing DirectX dependencies.
-    struct State;
-    State* m_state;
+    struct Implementation;
+    Implementation* m_impl;
 };
 
 static inline void render_callback(const Cogwheel::Core::Engine& engine, void* renderer) {
