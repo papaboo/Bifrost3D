@@ -15,11 +15,13 @@ add_executable(${PROJECT_NAME} ${SRCS})
 source_group("" FILES ${SRCS})
 
 target_link_libraries(${PROJECT_NAME}
+  DX12Renderer
   Gogwheel
   GLFWDriver
   ObjLoader
   OptiXRenderer
   StbImageLoader
+  Win32Driver
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

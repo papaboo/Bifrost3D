@@ -22,11 +22,13 @@
 #include <Cogwheel/Scene/SceneRoot.h>
 
 #include <GLFWDriver.h>
+#include <Win32Driver.h>
+
+#include <OptiXRenderer/Renderer.h>
+#include <DX12Renderer/Renderer.h>
 
 #include <ObjLoader/ObjLoader.h>
 #include <StbImageLoader/StbImageLoader.h>
-
-#include <OptiXRenderer/Renderer.h>
 
 #include <cstdio>
 #include <iostream>
@@ -377,10 +379,15 @@ void initializer(Cogwheel::Core::Engine& engine) {
     }
 }
 
-void initialize_window(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window) {
+void glfw_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window) {
     OptiXRenderer::Renderer* renderer = new OptiXRenderer::Renderer(window);
     // renderer->set_scene_epsilon(g_scene_size * 0.00001f);
     engine.add_non_mutating_callback(OptiXRenderer::render_callback, renderer);
+}
+
+void win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window, HWND& hwnd) {
+    DX12Renderer::Renderer* renderer = DX12Renderer::Renderer::initialize(hwnd, window);
+    engine.add_non_mutating_callback(DX12Renderer::render_callback, renderer);
 }
 
 void print_usage() {
@@ -435,5 +442,6 @@ int main(int argc, char** argv) {
     if (g_scene.empty())
         printf("SimpleViewer will display the Cornell Box scene.\n");
 
-    return GLFWDriver::run(initializer, initialize_window);
+    // return GLFWDriver::run(initializer, glfw_window_initialized);
+    return Win32Driver::run(initializer, win32_window_initialized);
 }
