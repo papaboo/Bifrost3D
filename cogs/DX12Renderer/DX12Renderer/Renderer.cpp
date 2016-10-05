@@ -42,19 +42,22 @@ struct Renderer::Implementation {
     ID3D12Device* m_device;
 
     ID3D12CommandQueue* render_queue;
-    IDXGISwapChain3* swap_chain;
-    int frame_index; // TODO Do I need to store that here? Can't I just propagate it around while rendering? NOTE Isn's so much a frame_index as a current_backbuffer_ID.
+    IDXGISwapChain3* m_swap_chain;
 
-    // TODO Combine all backbuffer 'stuff' into a struct.
-    ID3D12DescriptorHeap* backbuffer_descriptors;
-    std::vector<ID3D12Resource*> backbuffers;
-    std::vector<ID3D12CommandAllocator*> backbuffer_command_allocators;
+    ID3D12DescriptorHeap* m_backbuffer_descriptors;
+    struct Backbuffer {
+        ID3D12Resource* resource; // Can this be typed more explicitly?
+        ID3D12CommandAllocator* command_allocator;
+        ID3D12Fence* fence;
+        UINT64 fence_value;
+    };
+    std::vector<Backbuffer> m_backbuffers;
+    int m_active_backbuffer_index;
+    Backbuffer& active_backbuffer() { return m_backbuffers[m_active_backbuffer_index]; }
 
-    std::vector<ID3D12Fence*> fence;
-    std::vector<UINT64> fence_value; // this value is incremented each frame. Each fence has its own value.
-    HANDLE fence_event; // A handle to an event that occurs when our fence is unlocked/passed by the gpu.
+    HANDLE m_frame_rendered_event; // A handle to an event that occurs when our fence is unlocked/passed by the gpu.
 
-    ID3D12GraphicsCommandList* command_list;
+    ID3D12GraphicsCommandList* m_command_list;
 
     struct {
         unsigned int CBV_SRV_UAV_descriptor;
@@ -65,6 +68,7 @@ struct Renderer::Implementation {
     bool is_valid() { return m_device != nullptr; }
 
     Implementation(HWND& hwnd, const Cogwheel::Core::Window& window) {
+
         IDXGIFactory4* dxgi_factory; // TODO Release at the bottom?
         HRESULT hr = CreateDXGIFactory2(0, IID_PPV_ARGS(&dxgi_factory));
         if (FAILED(hr))
@@ -117,6 +121,8 @@ struct Renderer::Implementation {
         // We have a valid device. Time to initialize the renderer!
 
         const UINT backbuffer_count = 2;
+        m_backbuffers.resize(backbuffer_count);
+
         size_of.CBV_SRV_UAV_descriptor = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         size_of.sampler_descriptor = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
         size_of.RTV_descriptor = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -158,13 +164,13 @@ struct Renderer::Implementation {
                 return;
             }
             // Downcast the IDXGISwapChain to a IDXGISwapChain3. NOTE MiniEngine is perfectly happy with the swapchain1. TODO And copy their initialization code as itøs cleaner.
-            hr = swap_chain_interface->QueryInterface(__uuidof(IDXGISwapChain3), (void**)&swap_chain);
+            hr = swap_chain_interface->QueryInterface(__uuidof(IDXGISwapChain3), (void**)&m_swap_chain);
             if (FAILED(hr)) {
                 release_state();
                 return;
             }
 
-            frame_index = swap_chain->GetCurrentBackBufferIndex();
+            m_active_backbuffer_index = m_swap_chain->GetCurrentBackBufferIndex();
         }
 
         { // Create the backbuffer's render target views and their descriptor heap.
@@ -173,32 +179,30 @@ struct Renderer::Implementation {
             description.NumDescriptors = backbuffer_count;
             description.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
             description.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-            hr = m_device->CreateDescriptorHeap(&description, IID_PPV_ARGS(&backbuffer_descriptors));
+            hr = m_device->CreateDescriptorHeap(&description, IID_PPV_ARGS(&m_backbuffer_descriptors));
             if (FAILED(hr)) {
                 release_state();
                 return;
             }
 
             // Create a RTV for each backbuffer.
-            D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = backbuffer_descriptors->GetCPUDescriptorHandleForHeapStart();
-            backbuffers.resize(backbuffer_count);
+            D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = m_backbuffer_descriptors->GetCPUDescriptorHandleForHeapStart();
             for (int i = 0; i < backbuffer_count; ++i) {
-                hr = swap_chain->GetBuffer(i, IID_PPV_ARGS(&backbuffers[i]));
+                hr = m_swap_chain->GetBuffer(i, IID_PPV_ARGS(&m_backbuffers[i].resource));
                 if (FAILED(hr)) {
                     release_state();
                     return;
                 }
 
-                m_device->CreateRenderTargetView(backbuffers[i], nullptr, rtv_handle);
+                m_device->CreateRenderTargetView(m_backbuffers[i].resource, nullptr, rtv_handle);
 
                 rtv_handle.ptr += size_of.RTV_descriptor;
             }
         }
 
         { // Create the command allocators pr backbuffer.
-            backbuffer_command_allocators.resize(backbuffer_count);
             for (int i = 0; i < backbuffer_count; ++i) {
-                hr = m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&backbuffer_command_allocators[i]));
+                hr = m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_backbuffers[i].command_allocator));
                 if (FAILED(hr)) {
                     release_state();
                     return;
@@ -209,34 +213,31 @@ struct Renderer::Implementation {
         { // Create the command list.
             const UINT device_0 = 0;
             ID3D12PipelineState* initial_pipeline = nullptr;
-            hr = m_device->CreateCommandList(device_0, D3D12_COMMAND_LIST_TYPE_DIRECT, backbuffer_command_allocators[0],
-                initial_pipeline, IID_PPV_ARGS(&command_list));
+            hr = m_device->CreateCommandList(device_0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_backbuffers[0].command_allocator, // TODO Why do we only need one command list, but multiple allocators?
+                initial_pipeline, IID_PPV_ARGS(&m_command_list));
             if (FAILED(hr)) {
                 release_state();
                 return;
             }
-            command_list->Close(); // Close the command list, as we do not want to start recording yet.
+            m_command_list->Close(); // Close the command list, as we do not want to start recording yet.
         }
 
         { // Setup the fences for the backbuffers.
 
-            fence.resize(backbuffer_count);
-            fence_value.resize(backbuffer_count);
-
             // Create the fences and set their initial value.
             for (int i = 0; i < backbuffer_count; ++i) {
                 const unsigned int initial_value = 0;
-                hr = m_device->CreateFence(initial_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence[i]));
+                hr = m_device->CreateFence(initial_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_backbuffers[i].fence));
                 if (FAILED(hr)) {
                     release_state();
                     return;
                 }
-                fence_value[i] = initial_value;
+                m_backbuffers[i].fence_value = initial_value;
             }
 
-            // Create handle to a fence event.
-            fence_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-            if (fence_event == nullptr) {
+            // Create handle to a event that occurs when a frame has been rendered.
+            m_frame_rendered_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+            if (m_frame_rendered_event == nullptr) {
                 release_state();
                 return;
             }
@@ -251,27 +252,26 @@ struct Renderer::Implementation {
 
         // Wait for the gpu to finish all frames
         // TODO Only do this if the GPU has actually started rendering.
-        for (int i = 0; i < backbuffers.size(); ++i) {
-            frame_index = i;
+        for (int m_active_backbuffer_index = 0; m_active_backbuffer_index < m_backbuffers.size(); ++m_active_backbuffer_index) {
             wait_for_previous_frame();
         }
 
         // Get swapchain out of full screen before exiting.
         BOOL is_fullscreen_on = false;
-        swap_chain->GetFullscreenState(&is_fullscreen_on, NULL);
+        m_swap_chain->GetFullscreenState(&is_fullscreen_on, NULL);
         if (is_fullscreen_on)
-            swap_chain->SetFullscreenState(false, NULL);
+            m_swap_chain->SetFullscreenState(false, NULL);
 
         safe_release(&m_device);
-        safe_release(&swap_chain);
+        safe_release(&m_swap_chain);
         safe_release(&render_queue);
-        safe_release(&backbuffer_descriptors);
-        safe_release(&command_list);
+        safe_release(&m_backbuffer_descriptors);
+        safe_release(&m_command_list);
 
-        for (int i = 0; i < backbuffers.size(); ++i) {
-            safe_release(&backbuffers[i]);
-            safe_release(&backbuffer_command_allocators[i]);
-            safe_release(&fence[i]);
+        for (int i = 0; i < m_backbuffers.size(); ++i) {
+            safe_release(&m_backbuffers[i].resource);
+            safe_release(&m_backbuffers[i].command_allocator);
+            safe_release(&m_backbuffers[i].fence);
         }
     }
 
@@ -288,38 +288,40 @@ struct Renderer::Implementation {
 
         // We can only reset an allocator once the gpu is done with it.
         // Resetting an allocator frees the memory that the command list was stored in.
-        ID3D12CommandAllocator* command_allocator = backbuffer_command_allocators[frame_index];
+        ID3D12CommandAllocator* command_allocator = active_backbuffer().command_allocator;
         HRESULT hr = command_allocator->Reset();
         if (FAILED(hr))
             return release_state();
 
         // Reset the command list. Incidentally also sets it to record.
-        hr = command_list->Reset(command_allocator, NULL);
+        hr = m_command_list->Reset(command_allocator, NULL);
         if (FAILED(hr))
             return release_state();
 
         { // Record commands.
-            // Transition the 'frame_index' render target from the present state to the render target state so the command list draws to it starting from here.
-            command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(backbuffers[frame_index], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+            ID3D12Resource* backbuffer_resource = active_backbuffer().resource;
+
+            // Transition the 'm_active_backbuffer' render target from the present state to the render target state so the command list draws to it starting from here.
+            m_command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(backbuffer_resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
             // Here we get the handle to our current render target view so we can set it as the render target in the output merger stage of the pipeline.
-            CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(backbuffer_descriptors->GetCPUDescriptorHandleForHeapStart(), frame_index, size_of.RTV_descriptor);
+            CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(m_backbuffer_descriptors->GetCPUDescriptorHandleForHeapStart(), m_active_backbuffer_index, size_of.RTV_descriptor);
 
             // Set the render target for the output merger stage (the output of the pipeline).
-            command_list->OMSetRenderTargets(1, &rtv_handle, FALSE, nullptr);
+            m_command_list->OMSetRenderTargets(1, &rtv_handle, FALSE, nullptr);
 
             // Clear the render target to the background color.
             Cameras::UID camera_ID = *Cameras::begin();
             SceneRoot scene = Cameras::get_scene_ID(camera_ID);
             RGB env_tint = scene.get_environment_tint();
             float environment_tint[] = { env_tint.r, env_tint.g, env_tint.b, 1.0f };
-            command_list->ClearRenderTargetView(rtv_handle, environment_tint, 0, nullptr);
+            m_command_list->ClearRenderTargetView(rtv_handle, environment_tint, 0, nullptr);
 
-            // Transition the frame_index'th render target from the render target state to the present state. If the debug layer is enabled, you will receive a
+            // Transition the m_active_backbuffer_index'th render target from the render target state to the present state. If the debug layer is enabled, you will receive a
             // warning if present is called on the render target when it's not in the present state.
-            command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(backbuffers[frame_index], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+            m_command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(backbuffer_resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
-            hr = command_list->Close();
+            hr = m_command_list->Close();
             if (FAILED(hr))
                 return release_state();
         }
@@ -327,16 +329,16 @@ struct Renderer::Implementation {
         { // Render, i.e. playback command list.
 
             // Create an array of command lists and execute.
-            ID3D12CommandList* command_list_list[] = { command_list };
-            render_queue->ExecuteCommandLists(1, command_list_list);
+            ID3D12CommandList* command_lists[] = { m_command_list };
+            render_queue->ExecuteCommandLists(1, command_lists);
 
             // Signal the fence with the next fence value, so we can check if the fence has been reached.
-            hr = render_queue->Signal(fence[frame_index], fence_value[frame_index]);
+            hr = render_queue->Signal(active_backbuffer().fence, active_backbuffer().fence_value);
             if (FAILED(hr))
                 return release_state();
 
             // Present the current backbuffer.
-            hr = swap_chain->Present(0, 0);
+            hr = m_swap_chain->Present(0, 0);
             if (FAILED(hr))
                 return release_state();
         }
@@ -344,24 +346,24 @@ struct Renderer::Implementation {
 
     void wait_for_previous_frame() {
         // Swap the current backbuffer index so we draw on the correct buffer.
-        frame_index = swap_chain->GetCurrentBackBufferIndex();
+        m_active_backbuffer_index = m_swap_chain->GetCurrentBackBufferIndex();
 
         // If the current fence value is still less than 'fence_value', then we know the GPU has not finished executing
         // the command queue since it has not reached the 'commandQueue->Signal(fence, fenceValue)' command.
-        if (fence[frame_index]->GetCompletedValue() < fence_value[frame_index])
+        if (active_backbuffer().fence->GetCompletedValue() < active_backbuffer().fence_value)
         {
             // We have the fence create an event which is signaled once the fence's current value is 'fence_value'.
-            HRESULT hr = fence[frame_index]->SetEventOnCompletion(fence_value[frame_index], fence_event);
+            HRESULT hr = active_backbuffer().fence->SetEventOnCompletion(active_backbuffer().fence_value, m_frame_rendered_event);
             if (FAILED(hr))
                 return release_state();
 
             // We will wait until the fence has triggered the event that it's current value has reached "fenceValue". once it's value
             // has reached 'fence_value', we know the command queue has finished executing.
-            WaitForSingleObject(fence_event, INFINITE);
+            WaitForSingleObject(m_frame_rendered_event, INFINITE);
         }
 
         // increment fence value for next frame.
-        fence_value[frame_index]++;
+        active_backbuffer().fence_value++;
     }
 
     void handle_updates() {

@@ -26,9 +26,15 @@ namespace DX12Renderer {
 //----------------------------------------------------------------------------
 // DirectX 12 renderer.
 // TODO
+// * Draw triangle.
+// * Abstract Mesh and Material. Possible?
 // * Draw models.
+// * Install shader source / cso files.
 // * Reimplement MiniEngine's CommandListManager and all dependencies.
+// * Shader wrapper. Wrap the individual pipeline stages and the whole shader or just the whole shader?
 // * Debug layer define.
+// ** Compile shaders with debug flags and no optimizations
+// * Stochastic coverage.
 // Future work:
 // * Post processing.
 // ** Gamma correction.
