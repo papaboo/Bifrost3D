@@ -6,7 +6,7 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
 )
 
-# TODO Is it possible to inherit these from OptiXRenderer?
+# TODO Is it possible to inherit these from OptiXRenderer? Perhaps see target_include_directories
 find_package(CUDA 7.5)
 find_package(OptiX)
 
