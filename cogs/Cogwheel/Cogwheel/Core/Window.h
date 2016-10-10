@@ -64,7 +64,7 @@ public:
 private:
     std::string m_name;
     int m_width, m_height;
-    unsigned int m_changes;
+    unsigned char m_changes;
 };
 
 } // NS Core
