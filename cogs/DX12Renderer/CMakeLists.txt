@@ -9,8 +9,6 @@ set(CMAKE_MODULE_PATH
 find_package(DirectX12)
 
 if (DIRECTX_12_FOUND AND WIN32)
-  include_directories(. ${DIRECTX_12_INCLUDE_DIRS})
-
   set(ROOT_SRC
     DX12Renderer/Renderer.h
     DX12Renderer/Renderer.cpp
@@ -23,9 +21,14 @@ if (DIRECTX_12_FOUND AND WIN32)
 
   source_group("" FILES ${ROOT_SRC})
 
+  target_include_directories(${LIBRARY_NAME} 
+    PUBLIC . 
+    PRIVATE ${DIRECTX_12_INCLUDE_DIRS}
+  )
+
   target_link_libraries(${LIBRARY_NAME}
-    Gogwheel
-    ${DIRECTX_12_LIBRARIES}
+    PUBLIC Gogwheel
+    PRIVATE ${DIRECTX_12_LIBRARIES}
   )
 
   set_target_properties(${LIBRARY_NAME} PROPERTIES 
@@ -34,10 +37,10 @@ if (DIRECTX_12_FOUND AND WIN32)
   )
 else()
   if (NOT DIRECTX_12_FOUND)
-    message(WARNING "DirectX not found.")
+    message(WARNING "DirectX 12 not found.")
   endif()
   if (NOT WIN32)
-    message(WARNING "Only supported on windows.")
+    message(WARNING "DirectX 12 only supported on windows.")
   endif()
   message(WARNING "Disabling DX12Renderer.")
 endif()

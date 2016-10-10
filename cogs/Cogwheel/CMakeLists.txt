@@ -1,5 +1,3 @@
-include_directories(.)
-
 SET(ASSETS_SRCS 
   Cogwheel/Assets/Image.h
   Cogwheel/Assets/Image.cpp
@@ -66,6 +64,8 @@ SOURCE_GROUP("Core" FILES ${CORE_SRCS})
 SOURCE_GROUP("Input" FILES ${INPUT_SRCS})
 SOURCE_GROUP("Math" FILES ${MATH_SRCS})
 SOURCE_GROUP("Scene" FILES ${SCENE_SRCS})
+
+target_include_directories(Gogwheel PUBLIC .)
 
 set_target_properties(Gogwheel PROPERTIES 
   LINKER_LANGUAGE CXX

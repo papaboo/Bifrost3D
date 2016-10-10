@@ -14,8 +14,6 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
   install_file(${OPTIX_1_DLL})
   install_file(${OPTIX_U_1_DLL})
 
-  include_directories(. ${CUDA_INCLUDE_DIRS} ${OpenGL_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
-
   set(ROOT_SRC
     OptiXRenderer/Defines.h
     OptiXRenderer/Distributions.h
@@ -67,6 +65,8 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
   set(OPTIX_PTX_DIR ${CMAKE_BINARY_DIR}/${LIBRARY_NAME})
   add_definitions(-DOPTIXRENDERER_PTX_DIR="${OPTIX_PTX_DIR}") #TODO For distributing releases I need a better way of handling the path to the PTX.
 
+  INCLUDE_DIRECTORIES(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
+  # CUDA_INCLUDE_DIRECTORIES(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
   # Create custom commands and targets for each file.
   set(_OPTIONS "")
   CUDA_WRAP_SRCS( ${LIBRARY_NAME} PTX _GENERATED_FILES ${SHADING_SRC} ${SHADING_LIGHTSOURCES_SRC} OPTIONS ${_OPTIONS} )
@@ -97,12 +97,14 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
   source_group("Shading\\ShadingModels" FILES ${SHADING_SHADING_MODELS_SRC})
   source_group("Shading\\ptx" FILES ${_GENERATED_FILES}) # Add the ptx files to a source group.
 
+  target_include_directories(${LIBRARY_NAME}
+    PUBLIC . ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS}
+    PRIVATE ${OpenGL_INCLUDE_DIRS}
+)
+
   target_link_libraries(${LIBRARY_NAME}
-    Gogwheel
-    StbImageWriter
-    ${CUDA_LIBRARIES}
-    ${OPENGL_LIBRARIES}
-    ${OPTIX_LIBRARIES}
+    PUBLIC Gogwheel ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES}
+    PRIVATE StbImageWriter ${OPENGL_LIBRARIES}
   )
 
   set_target_properties(${LIBRARY_NAME} PROPERTIES 

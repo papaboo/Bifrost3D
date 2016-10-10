@@ -1,7 +1,5 @@
 set(PROJECT_NAME "SimpleViewer")
 
-include_directories(.)
-
 set(SRCS 
   CornellBoxScene.h
   main.cpp
@@ -13,6 +11,8 @@ set(SRCS
 add_executable(${PROJECT_NAME} ${SRCS})
 
 source_group("" FILES ${SRCS})
+
+target_include_directories(${PROJECT_NAME} PRIVATE .)
 
 target_link_libraries(${PROJECT_NAME}
   DX12Renderer

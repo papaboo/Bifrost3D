@@ -1,10 +1,10 @@
-include_directories(.)
-
 add_library(GLFWDriver GLFWDriver.h GLFWDriver.cpp)
 
-TARGET_LINK_LIBRARIES(GLFWDriver
-  Gogwheel
-  glfw
+target_include_directories(GLFWDriver PUBLIC .)
+
+target_link_libraries(GLFWDriver
+  PUBLIC Gogwheel
+  PRIVATE glfw
 )
 
 source_group("" FILES GLFWDriver.h GLFWDriver.cpp)

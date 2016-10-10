@@ -1,15 +1,5 @@
 set(PROJECT_NAME "OptiXRendererTests")
 
-# Add current path to CMake's module path, so we can use our own FindOptiX.cmake.
-set(CMAKE_MODULE_PATH
-  "${COGWHEEL_COGS_DIR}/OptiXRenderer"
-  ${CMAKE_MODULE_PATH}
-)
-
-# TODO Is it possible to inherit these from OptiXRenderer? Perhaps see target_include_directories
-find_package(CUDA 7.5)
-find_package(OptiX)
-
 set(SRCS 
   EncodedNormalTest.h
   main.cpp
@@ -33,14 +23,12 @@ set(SHADING_MODELS_SRCS
 
 add_executable(${PROJECT_NAME} ${SRCS} ${BSDFS_SRCS} ${LIGHTSOURCES_SRCS} ${SHADING_MODELS_SRCS})
 
-include_directories(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME} PRIVATE .)
 
 target_link_libraries(${PROJECT_NAME}
   gtest
   Gogwheel
   OptiXRenderer
-  ${CUDA_LIBRARIES}
-  ${OPTIX_LIBRARIES}
 )
 
 source_group("" FILES ${SRCS})

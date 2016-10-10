@@ -1,13 +1,13 @@
-include_directories(.)
-
 add_library(StbImageLoader 
   StbImageLoader/StbImageLoader.h
   StbImageLoader/StbImageLoader.cpp
   StbImageLoader/stb_image.h
 )
 
-TARGET_LINK_LIBRARIES(StbImageLoader
-  Gogwheel
+target_include_directories(StbImageLoader PUBLIC .)
+
+target_link_libraries(StbImageLoader
+  PUBLIC Gogwheel
 )
 
 source_group("StbImageLoader" FILES 

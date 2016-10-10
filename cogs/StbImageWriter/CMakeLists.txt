@@ -1,13 +1,13 @@
-include_directories(.)
-
 add_library(StbImageWriter 
   StbImageWriter/StbImageWriter.h
   StbImageWriter/StbImageWriter.cpp
   StbImageWriter/stb_image_write.h
 )
 
-TARGET_LINK_LIBRARIES(StbImageWriter
-  Gogwheel
+target_include_directories(StbImageWriter PUBLIC .)
+
+target_link_libraries(StbImageWriter
+  PUBLIC Gogwheel
 )
 
 source_group("StbImageWriter" FILES 

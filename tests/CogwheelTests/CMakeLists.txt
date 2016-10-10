@@ -37,13 +37,8 @@ set(SCENE_SRCS
 )
 
 add_executable(${PROJECT_NAME} ${SRCS} ${ASSETS_SRCS} ${CORE_SRCS} ${INPUT_SRCS} ${MATH_SRCS} ${SCENE_SRCS})
-
-include_directories(.)
-
-target_link_libraries(${PROJECT_NAME}
-  gtest
-  Gogwheel
-)
+target_include_directories(${PROJECT_NAME} PRIVATE .)
+target_link_libraries(${PROJECT_NAME} gtest Gogwheel)
 
 source_group("" FILES ${SRCS})
 source_group("Assets" FILES ${ASSETS_SRCS})
@@ -51,8 +46,6 @@ source_group("Core" FILES ${CORE_SRCS})
 source_group("Input" FILES ${INPUT_SRCS})
 source_group("Math" FILES ${MATH_SRCS})
 source_group("Scene" FILES ${SCENE_SRCS})
-
-# setup_gtest(${PROJECT_NAME})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
   FOLDER "Tests"
