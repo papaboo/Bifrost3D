@@ -24,7 +24,9 @@
 #include <GLFWDriver.h>
 #include <Win32Driver.h>
 
+#ifdef OPTIXRENDERER_FOUND
 #include <OptiXRenderer/Renderer.h>
+#endif
 #include <DX12Renderer/Renderer.h>
 
 #include <ObjLoader/ObjLoader.h>
@@ -379,11 +381,13 @@ void initializer(Cogwheel::Core::Engine& engine) {
     }
 }
 
+#ifdef OPTIXRENDERER_FOUND
 void glfw_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window) {
     OptiXRenderer::Renderer* renderer = new OptiXRenderer::Renderer(window);
     // renderer->set_scene_epsilon(g_scene_size * 0.00001f);
     engine.add_non_mutating_callback(OptiXRenderer::render_callback, renderer);
 }
+#endif
 
 void win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window, HWND& hwnd) {
     DX12Renderer::Renderer* renderer = DX12Renderer::Renderer::initialize(hwnd, window);
@@ -423,7 +427,7 @@ int main(int argc, char** argv) {
     if (command.compare("-h") == 0 || command.compare("--help") == 0) {
         print_usage();
         return 0;
-    }  
+    }
 
     // Parse command line arguments.
     int argument = 1;
