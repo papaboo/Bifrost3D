@@ -45,7 +45,7 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    static struct Changes {
+    struct Changes {
         static const unsigned char None = 0u;
         static const unsigned char Resized = 1u << 0u;
         static const unsigned char Renamed = 1u << 1u;
