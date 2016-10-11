@@ -10,7 +10,7 @@ find_package(CUDA 7.5)
 find_package(OpenGL)
 find_package(OptiX)
 
-if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32)
+if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
   install_file(${OPTIX_1_DLL})
   install_file(${OPTIX_U_1_DLL})
 
