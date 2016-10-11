@@ -1,37 +1,30 @@
-set(PROJECT_NAME "AlbedoComputation")
+if (TARGET OptiXRenderer)
 
-# Add current path to CMake's module path, so we can use our own FindOptiX.cmake.
-set(CMAKE_MODULE_PATH
-  "${COGWHEEL_COGS_DIR}/OptiXRenderer"
-  ${CMAKE_MODULE_PATH}
-)
+  set(PROJECT_NAME "AlbedoComputation")
 
-# TODO Is it possible to inherit these from OptiXRenderer?
-find_package(CUDA 7.5)
-find_package(OptiX)
+  set(SRCS 
+    main.cpp
+  )
 
-set(SRCS 
-  main.cpp
-)
+  add_executable(${PROJECT_NAME} ${SRCS})
 
-add_executable(${PROJECT_NAME} ${SRCS})
+  target_include_directories(${PROJECT_NAME} PRIVATE .)
 
-include_directories(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
+  target_link_libraries(${PROJECT_NAME}
+    Gogwheel
+    OptiXRenderer
+    StbImageWriter
+  )
 
-target_link_libraries(${PROJECT_NAME}
-  Gogwheel
-  OptiXRenderer
-  StbImageWriter
-  ${CUDA_LIBRARIES}
-  ${OPTIX_LIBRARIES}
-)
+  source_group("" FILES ${SRCS})
 
-source_group("" FILES ${SRCS})
+  set_target_properties(${PROJECT_NAME} PROPERTIES
+    FOLDER "Apps/Dev"
+  )
 
-set_target_properties(${PROJECT_NAME} PROPERTIES
-  FOLDER "Apps/Dev"
-)
-
-if (WIN32)
-  add_definitions(-DNOMINMAX) # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
+  if (WIN32)
+    add_definitions(-DNOMINMAX) # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
+  endif()
+else()
+  message(STATUS "OptiXRenderer not found. Skipping albedo computation development project.")
 endif()
