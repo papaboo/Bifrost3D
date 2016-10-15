@@ -21,12 +21,13 @@
 #include <Cogwheel/Scene/SceneNode.h>
 #include <Cogwheel/Scene/SceneRoot.h>
 
-#include <GLFWDriver.h>
-#include <Win32Driver.h>
 
 #ifdef OPTIXRENDERER_FOUND
+#include <GLFWDriver.h>
 #include <OptiXRenderer/Renderer.h>
 #endif
+
+#include <Win32Driver.h>
 #include <DX12Renderer/Renderer.h>
 
 #include <ObjLoader/ObjLoader.h>
@@ -157,7 +158,7 @@ private:
     float m_FOV;
 };
 
-static inline void update_FPS(Engine& engine, void* state) {
+static inline void update_FPS(Engine& engine, void*) {
     static const int COUNT = 8;
     static float delta_times[COUNT] = { 1e30f, 1e30f, 1e30f, 1e30f, 1e30f, 1e30f, 1e30f, 1e30f };
     static int next_index = 0;
@@ -240,8 +241,8 @@ void mesh_combine_whole_scene(SceneNodes::UID scene_root) {
                     // Create new scene node to hold the combined model.
                     SceneNode node0 = MeshModels::get_scene_node_ID(segment_begin->model_ID);
                     Transform transform = node0.get_global_transform();
-                    SceneNode node = SceneNodes::create(material.get_name() + "_combined", transform);
-                    node.set_parent(scene_root);
+                    SceneNode merged_node = SceneNodes::create(material.get_name() + "_combined", transform);
+                    merged_node.set_parent(scene_root);
 
                     std::vector<MeshUtils::TransformedMesh> transformed_meshes = std::vector<MeshUtils::TransformedMesh>();
                     for (auto model = segment_begin; model < segment_end; ++model) {
@@ -256,7 +257,7 @@ void mesh_combine_whole_scene(SceneNodes::UID scene_root) {
                     Meshes::UID merged_mesh_ID = MeshUtils::combine(mesh_name, transformed_meshes.data(), transformed_meshes.data() + transformed_meshes.size(), mesh_flags);
 
                     // Create new model.
-                    MeshModels::UID merged_model = MeshModels::create(node.get_ID(), merged_mesh_ID, material.get_ID());
+                    MeshModels::UID merged_model = MeshModels::create(merged_node.get_ID(), merged_mesh_ID, material.get_ID());
                     if (merged_mesh_ID.get_index() < used_meshes.size())
                         used_meshes[merged_model] = true;
                 }
@@ -283,7 +284,7 @@ void mesh_combine_whole_scene(SceneNodes::UID scene_root) {
     }
 }
 
-static inline void miniheaps_cleanup_callback(void* dummy) {
+static inline void miniheaps_cleanup_callback(void*) {
     Images::reset_change_notifications();
     LightSources::reset_change_notifications();
     Materials::reset_change_notifications();
