@@ -26,18 +26,18 @@ namespace DX12Renderer {
 //----------------------------------------------------------------------------
 // DirectX 12 renderer.
 // TODO
-// * Draw triangle.
-// * Abstract Mesh and Material. Possible?
+// * Use shaders in build dir.
+// * Shader wrapper. Wrap the individual pipeline stages and the whole material.
+// * Is FindDirectX needed in VS 2015?
+// * Abstract Mesh and Material. Possible? What is a material in DX12?
+// * SRGB backbuffer format, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB.
 // * Draw models.
-// * Install shader source / cso files.
 // * Reimplement MiniEngine's CommandListManager and all dependencies.
-// * Shader wrapper. Wrap the individual pipeline stages and the whole shader or just the whole shader?
 // * Debug layer define.
-// ** Compile shaders with debug flags and no optimizations
+// ** Compile shaders with debug flags and no optimizations. Load HLSL files instead of cso's.
 // * Stochastic coverage.
 // Future work:
 // * Post processing.
-// ** Gamma correction.
 // ** SSAO
 // ** Screen space reflections.
 // ** Temporal antialising.
@@ -51,7 +51,7 @@ public:
     static Renderer* initialize(HWND& hwnd, const Cogwheel::Core::Window& window);
     ~Renderer();
 
-    void render();
+    void render(const Cogwheel::Core::Engine& engine);
 
 private:
 
@@ -62,12 +62,12 @@ private:
     Renderer& operator=(const Renderer& rhs) = delete;
 
     // Pimpl the state to avoid exposing DirectX dependencies.
-    struct Implementation;
+    class Implementation;
     Implementation* m_impl;
 };
 
 static inline void render_callback(const Cogwheel::Core::Engine& engine, void* renderer) {
-    static_cast<Renderer*>(renderer)->render();
+    static_cast<Renderer*>(renderer)->render(engine);
 }
 
 } // NS DX12Renderer

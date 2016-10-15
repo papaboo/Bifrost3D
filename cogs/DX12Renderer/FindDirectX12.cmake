@@ -1,6 +1,5 @@
 # Find and setup DirectX 12.
 # Search in the default install locations.
-# TODO Cache these things.
 
 # List windows SDK versions.
 set(WINDOWS_SDK_VERSIONS "10.0.14393.0")
@@ -35,17 +34,19 @@ find_library(DIRECTX_12_LIB D3D12
 find_library(DXGI_LIB dxgi
              PATHS
              ${LIB_DIR}
-             DOC "The DirectX 12 library"
+             DOC "The DXGI library"
+)
+find_library(D3D_COMPILER_LIB D3DCompiler
+             PATHS
+             ${LIB_DIR}
+             DOC "The HLSL compiler library"
 )
 
-set(DIRECTX_12_LIBRARIES "${DIRECTX_12_LIB}" "${DXGI_LIB}")
-
-# TODO Copy dlls.
-# Use the ones in system32 for now.
+set(DIRECTX_12_LIBRARIES "${DIRECTX_12_LIB}" "${DXGI_LIB}" "${D3D_COMPILER_LIB}")
 
 # Handle the QUIETLY and REQUIRED arguments and set OPTIX_FOUND to TRUE if
 # all listed variables are set.
 include(${CMAKE_ROOT}/Modules/FindPackageHandleStandardArgs.cmake)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(DIRECTX_12 DEFAULT_MSG 
-                                  DIRECTX_12_LIB DXGI_LIB
+find_package_handle_standard_args(DIRECTX_12 DEFAULT_MSG 
+                                  DIRECTX_12_LIB DXGI_LIB D3D_COMPILER_LIB
                                   DIRECTX_12_INCLUDE_DIRS)

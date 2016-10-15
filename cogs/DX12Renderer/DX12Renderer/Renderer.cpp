@@ -10,10 +10,12 @@
 
 #define NOMINMAX
 #include <D3D12.h>
+#include <D3DCompiler.h>
 #include <dxgi1_4.h>
 #include "d3dx12.h"
 #undef RGB
 
+#include <Cogwheel/Core/Engine.h>
 #include <Cogwheel/Core/Window.h>
 #include <Cogwheel/Scene/Camera.h>
 #include <Cogwheel/Scene/SceneRoot.h>
@@ -22,6 +24,7 @@
 #include <cstdio>
 #include <vector>
 
+using namespace Cogwheel::Core;
 using namespace Cogwheel::Math;
 using namespace Cogwheel::Scene;
 
@@ -38,7 +41,8 @@ void safe_release(ResourcePtr* resource_ptr) {
 //----------------------------------------------------------------------------
 // DirectX 12 renderer implementation.
 //----------------------------------------------------------------------------
-struct Renderer::Implementation {
+class Renderer::Implementation {
+private:
     ID3D12Device* m_device;
 
     ID3D12CommandQueue* render_queue;
@@ -57,7 +61,7 @@ struct Renderer::Implementation {
 
     HANDLE m_frame_rendered_event; // A handle to an event that occurs when our fence is unlocked/passed by the gpu.
 
-    ID3D12GraphicsCommandList* m_command_list;
+    ID3D12GraphicsCommandList* m_command_list; // Can I query if this is recording? Otherwise wrap and make that available.
 
     struct {
         unsigned int CBV_SRV_UAV_descriptor;
@@ -65,11 +69,24 @@ struct Renderer::Implementation {
         unsigned int RTV_descriptor;
     } size_of;
 
+    struct {
+        ID3D12RootSignature* root_signature; // Defines the data that the/a shader will access. Used by multiple shaders / PSO's?
+        ID3D12PipelineState* pipeline_state_object;
+
+        // These need to be set every time the command list is reset? Then move them to render!
+        D3D12_VIEWPORT viewport; // area that output from rasterizer will be stretched to.
+        D3D12_RECT scissor_rect; // the area to draw in. pixels outside that area will not be drawn onto
+
+        ID3D12Resource* vertex_buffer; // a default buffer, perhaps make a typed buffer wrapper? At least wrap it somehow, since a 'resource' is very vague.
+        D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view; // NOTE Do we need one of these pr vertex buffer? If so group them or wrap the buffer in a view. Also, are views untyped in DX12?
+    } m_triangle;
+
+public:
     bool is_valid() { return m_device != nullptr; }
 
     Implementation(HWND& hwnd, const Cogwheel::Core::Window& window) {
 
-        IDXGIFactory4* dxgi_factory; // TODO Release at the bottom?
+        IDXGIFactory4* dxgi_factory;
         HRESULT hr = CreateDXGIFactory2(0, IID_PPV_ARGS(&dxgi_factory));
         if (FAILED(hr))
             return;
@@ -219,7 +236,7 @@ struct Renderer::Implementation {
                 release_state();
                 return;
             }
-            m_command_list->Close(); // Close the command list, as we do not want to start recording yet.
+            // m_command_list->Close(); // Close the command list, as we do not want to start recording yet.
         }
 
         { // Setup the fences for the backbuffers.
@@ -243,12 +260,19 @@ struct Renderer::Implementation {
             }
         }
 
-        dxgi_factory->Release();
+        // dxgi_factory->Release();
+
+        if (!initialize_triangle()) {
+            release_state();
+            return;
+        }
     }
 
     void release_state() {
         if (m_device == nullptr)
             return;
+
+        CloseHandle(m_frame_rendered_event);
 
         // Wait for the gpu to finish all frames
         // TODO Only do this if the GPU has actually started rendering.
@@ -275,7 +299,7 @@ struct Renderer::Implementation {
         }
     }
 
-    void render() {
+    void render(const Cogwheel::Core::Engine& engine) {
         if (Cameras::begin() == Cameras::end())
             return;
 
@@ -293,16 +317,19 @@ struct Renderer::Implementation {
         if (FAILED(hr))
             return release_state();
 
-        // Reset the command list. Incidentally also sets it to record.
-        hr = m_command_list->Reset(command_allocator, NULL);
-        if (FAILED(hr))
-            return release_state();
-
         { // Record commands.
+
+            // Reset the command list. Incidentally also sets it to record.
+            hr = m_command_list->Reset(command_allocator, nullptr);
+            if (FAILED(hr))
+                return release_state();
+
             ID3D12Resource* backbuffer_resource = active_backbuffer().resource;
 
             // Transition the 'm_active_backbuffer' render target from the present state to the render target state so the command list draws to it starting from here.
-            m_command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(backbuffer_resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+            CD3DX12_RESOURCE_BARRIER render_transition = CD3DX12_RESOURCE_BARRIER::Transition(
+                backbuffer_resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+            m_command_list->ResourceBarrier(1, &render_transition);
 
             // Here we get the handle to our current render target view so we can set it as the render target in the output merger stage of the pipeline.
             CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(m_backbuffer_descriptors->GetCPUDescriptorHandleForHeapStart(), m_active_backbuffer_index, size_of.RTV_descriptor);
@@ -317,9 +344,41 @@ struct Renderer::Implementation {
             float environment_tint[] = { env_tint.r, env_tint.g, env_tint.b, 1.0f };
             m_command_list->ClearRenderTargetView(rtv_handle, environment_tint, 0, nullptr);
 
-            // Transition the m_active_backbuffer_index'th render target from the render target state to the present state. If the debug layer is enabled, you will receive a
-            // warning if present is called on the render target when it's not in the present state.
-            m_command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(backbuffer_resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+            { // Setup viewport.
+                Cogwheel::Math::Rectf vp = Cameras::get_viewport(camera_ID);
+                vp.width *= engine.get_window().get_width();
+                vp.height *= engine.get_window().get_height();
+
+                // Fill out a scissor rect.
+                m_triangle.scissor_rect.left = LONG(vp.x);
+                m_triangle.scissor_rect.top = LONG(vp.y);
+                m_triangle.scissor_rect.right = LONG(vp.width);
+                m_triangle.scissor_rect.bottom = LONG(vp.height);
+
+                // Fill out the viewport.
+                m_triangle.viewport.TopLeftX = vp.x;
+                m_triangle.viewport.TopLeftY = vp.y;
+                m_triangle.viewport.Width = vp.width;
+                m_triangle.viewport.Height = vp.height;
+                m_triangle.viewport.MinDepth = 0.0f;
+                m_triangle.viewport.MaxDepth = 1.0f;
+
+                m_command_list->RSSetViewports(1, &m_triangle.viewport);
+                m_command_list->RSSetScissorRects(1, &m_triangle.scissor_rect);
+            }
+
+            { // Draw triangle.
+                m_command_list->SetPipelineState(m_triangle.pipeline_state_object);
+                m_command_list->SetGraphicsRootSignature(m_triangle.root_signature);
+                m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+                m_command_list->IASetVertexBuffers(0, 1, &m_triangle.vertex_buffer_view);
+                m_command_list->DrawInstanced(3, 1, 0, 0);
+            }
+
+            // Transition the activerender target from the render target state to the present state.
+            CD3DX12_RESOURCE_BARRIER present_transition = CD3DX12_RESOURCE_BARRIER::Transition(
+                backbuffer_resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+            m_command_list->ResourceBarrier(1, &present_transition);
 
             hr = m_command_list->Close();
             if (FAILED(hr))
@@ -369,6 +428,165 @@ struct Renderer::Implementation {
     void handle_updates() {
 
     }
+
+    bool initialize_triangle() {
+
+        { // create root signature
+
+            CD3DX12_ROOT_SIGNATURE_DESC root_signature_desc; // TODO Dont use this wrapper object.
+            root_signature_desc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+            ID3DBlob* signature;
+            HRESULT hr = D3D12SerializeRootSignature(&root_signature_desc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
+            if (FAILED(hr))
+                return false;
+
+            hr = m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_triangle.root_signature));
+            if (FAILED(hr))
+                return false;
+        }
+
+        D3D12_SHADER_BYTECODE vertex_shader_bytecode = {};
+        D3D12_SHADER_BYTECODE fragment_shader_bytecode = {};
+        { // create vertex and pixel shaders
+
+            ID3DBlob* error_messages = nullptr;
+
+            { // compile vertex shader
+                ID3DBlob* vertex_shader; // d3d blob for holding vertex shader bytecode
+                HRESULT hr = D3DCompileFromFile(L"Data/Shaders/VertexShader.hlsl",
+                    nullptr,
+                    nullptr,
+                    "main",
+                    "vs_5_0",
+                    D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+                    0,
+                    &vertex_shader,
+                    &error_messages);
+                if (FAILED(hr)) // File not found not handled? Path not found unhandled as well.
+                {
+                    if (error_messages != nullptr)
+                        printf("Vertex shader error: '%s'\n", (char*)error_messages->GetBufferPointer());
+                    return false;
+                }
+
+                // fill out a shader bytecode structure, which is basically just a pointer
+                // to the shader bytecode and the size of the shader bytecode
+                vertex_shader_bytecode.BytecodeLength = vertex_shader->GetBufferSize();
+                vertex_shader_bytecode.pShaderBytecode = vertex_shader->GetBufferPointer();
+            }
+
+            { // compile pixel shader
+                ID3DBlob* pixel_shader;
+                HRESULT hr = D3DCompileFromFile(L"Data/Shaders/FragmentShader.hlsl",
+                    nullptr,
+                    nullptr,
+                    "main",
+                    "ps_5_0",
+                    D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+                    0,
+                    &pixel_shader,
+                    &error_messages);
+                if (FAILED(hr)) {
+                    if (error_messages != nullptr)
+                        printf("Pixel shader error: '%s'\n", (char*)error_messages->GetBufferPointer());
+                    return false;
+                }
+
+                // fill out shader bytecode structure for pixel shader
+                fragment_shader_bytecode.BytecodeLength = pixel_shader->GetBufferSize();
+                fragment_shader_bytecode.pShaderBytecode = pixel_shader->GetBufferPointer();
+            }
+        }
+
+        { // Vertex input layout. TODO Define the ones that we care about once and store them in the state? Do we need anything other than position, normal and texcoords?
+
+            D3D12_INPUT_ELEMENT_DESC input_elements[] = {
+                { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+            };
+            D3D12_INPUT_LAYOUT_DESC input_layout_desc = { input_elements, 1 };
+
+            // Create a pipeline state object.
+            // We will need a couple of these PSO's for different kinds of configurations; blending x passes x input_layout(?)
+            D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_description = {};
+            pso_description.InputLayout = input_layout_desc;
+            pso_description.pRootSignature = m_triangle.root_signature;
+            pso_description.VS = vertex_shader_bytecode;
+            pso_description.PS = fragment_shader_bytecode;
+            pso_description.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+            pso_description.NumRenderTargets = 1;
+            pso_description.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM; // TODO add _SRGB, but the RTV itself doesn't support that format.
+            // NOTE SampleDesc must be the same as used by the swap chain.
+            pso_description.SampleDesc.Count = 1; // No multi sampling. TODO Create enum and add multisample support.
+            pso_description.SampleDesc.Quality = 0; // No quality? :)
+            pso_description.SampleMask = 0xffffffff; // Apparently 0xFFFFFFFF equals no multisampling.
+            pso_description.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+            pso_description.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+            HRESULT hr = m_device->CreateGraphicsPipelineState(&pso_description, IID_PPV_ARGS(&m_triangle.pipeline_state_object));
+            if (FAILED(hr))
+                return false;
+        }
+
+        { // Create vertex buffer. // TODO Positions instead of vertex_buffer
+            Vector3f vertex_buffer_data[] = {
+                { Vector3f(0.0f, 0.5f, 0.5f) },
+                { Vector3f(0.5f, -0.5f, 0.5f) },
+                { Vector3f(-0.5f, -0.5f, 0.5f) },
+            };
+            int vertex_buffer_size = sizeof(vertex_buffer_data);
+
+            // GPU vertex buffer.
+            m_device->CreateCommittedResource(
+                &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+                D3D12_HEAP_FLAG_NONE,
+                &CD3DX12_RESOURCE_DESC::Buffer(vertex_buffer_size),
+                D3D12_RESOURCE_STATE_COPY_DEST,
+                nullptr, // Null. Used for render targets and depth/stencil buffers.
+                IID_PPV_ARGS(&m_triangle.vertex_buffer));
+            m_triangle.vertex_buffer->SetName(L"Triangle vertex buffer");
+
+            // Upload buffer.
+            ID3D12Resource* vertex_upload_buffer;
+            m_device->CreateCommittedResource(
+                &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+                D3D12_HEAP_FLAG_NONE,
+                &CD3DX12_RESOURCE_DESC::Buffer(vertex_buffer_size),
+                D3D12_RESOURCE_STATE_GENERIC_READ, // Read buffer, i.e. upload buffer.
+                nullptr, // Null. Used for render targets and depth/stencil buffers.
+                IID_PPV_ARGS(&vertex_upload_buffer));
+            vertex_upload_buffer->SetName(L"Vertex upload buffer");
+
+            // Add vertex data to the upload buffer.
+            D3D12_SUBRESOURCE_DATA vertex_data = {};
+            vertex_data.pData = (void*)vertex_buffer_data;
+            vertex_data.RowPitch = vertex_buffer_size;
+            vertex_data.SlicePitch = vertex_buffer_size;
+
+            // Copy the data from the upload buffer to the default buffer.
+            UpdateSubresources(m_command_list, m_triangle.vertex_buffer, vertex_upload_buffer, 0, 0, 1, &vertex_data);
+
+            // Change the vertex buffer state from a copy destination to a vertex buffer.
+            m_command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_triangle.vertex_buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+
+            // Now we execute the command list to upload the initial assets (triangle data)
+            m_command_list->Close();
+            ID3D12CommandList* command_lists[] = { m_command_list };
+            render_queue->ExecuteCommandLists(1, command_lists);
+
+            // Increment the fence value now, otherwise the buffer might not be uploaded by the time we start drawing.
+            active_backbuffer().fence_value++;
+            HRESULT hr = render_queue->Signal(active_backbuffer().fence, active_backbuffer().fence_value);
+            if (FAILED(hr))
+                return false;
+
+            // Create a vertex buffer view for the triangle.
+            m_triangle.vertex_buffer_view.BufferLocation = m_triangle.vertex_buffer->GetGPUVirtualAddress();
+            m_triangle.vertex_buffer_view.StrideInBytes = sizeof(Vector3f); // TODO Make a typed view.
+            m_triangle.vertex_buffer_view.SizeInBytes = vertex_buffer_size;
+        }
+
+        return true;
+    }
 };
 
 //----------------------------------------------------------------------------
@@ -392,8 +610,8 @@ Renderer::~Renderer() {
     m_impl->release_state();
 }
 
-void Renderer::render() {
-    m_impl->render();
+void Renderer::render(const Cogwheel::Core::Engine& engine) {
+    m_impl->render(engine);
 }
 
 } // NS DX12Renderer
