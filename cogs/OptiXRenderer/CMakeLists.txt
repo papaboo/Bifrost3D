@@ -65,14 +65,14 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
   set(OPTIX_PTX_DIR ${CMAKE_BINARY_DIR}/${LIBRARY_NAME})
   add_definitions(-DOPTIXRENDERER_PTX_DIR="${OPTIX_PTX_DIR}") #TODO For distributing releases I need a better way of handling the path to the PTX.
 
-  INCLUDE_DIRECTORIES(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
-  # CUDA_INCLUDE_DIRECTORIES(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
+  include_directories(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
+  # cuda_include_directories(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
   # Create custom commands and targets for each file.
   set(_OPTIONS "")
-  CUDA_WRAP_SRCS( ${LIBRARY_NAME} PTX _GENERATED_FILES ${SHADING_SRC} ${SHADING_LIGHTSOURCES_SRC} OPTIONS ${_OPTIONS} )
+  cuda_wrap_srcs(${LIBRARY_NAME} PTX _GENERATED_FILES ${SHADING_SRC} ${SHADING_LIGHTSOURCES_SRC} OPTIONS ${_OPTIONS} )
 
   # Compute the file name of the intermedate link file used for separable compilation.
-  CUDA_COMPUTE_SEPARABLE_COMPILATION_OBJECT_FILE_NAME(LINK_FILE ${LIBRARY_NAME} "${${LIBRARY_NAME}_SEPARABLE_COMPILATION_OBJECTS}")
+  cuda_compute_separable_compilation_object_file_name(LINK_FILE ${LIBRARY_NAME} "${${LIBRARY_NAME}_SEPARABLE_COMPILATION_OBJECTS}")
 
   # Add the library.
   add_library(${LIBRARY_NAME} ${_cmake_options}
@@ -88,7 +88,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
   # Add a link phase for the separable compilation if it has been enabled.  If
   # it has been enabled then the ${LIBRARY_NAME}_SEPARABLE_COMPILATION_OBJECTS
   # variable will have been defined.
-  CUDA_LINK_SEPARABLE_COMPILATION_OBJECTS("${LINK_FILE}" ${LIBRARY_NAME} "${_OPTIONS}" "${${LIBRARY_NAME}_SEPARABLE_COMPILATION_OBJECTS}")
+  cuda_link_separable_compilation_objects("${LINK_FILE}" ${LIBRARY_NAME} "${_OPTIONS}" "${${LIBRARY_NAME}_SEPARABLE_COMPILATION_OBJECTS}")
   
   source_group("" FILES ${ROOT_SRC})
   source_group("Shading" FILES ${SHADING_SRC})
@@ -112,21 +112,20 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
     FOLDER "Cogs"
   )
 
-  if (WIN32)
+  if (WIN32) #TODO Add as library/target specific flags.
     add_definitions(-DNOMINMAX) # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
   endif()
 else()
   if (NOT CUDA_FOUND)
-    message(WARNING "CUDA not installed.")
+    message(WARNING "OptiXRenderer: CUDA not installed.")
   endif()
   if (NOT OpenGL_FOUND)
-    message(WARNING "OpenGL not found.")
+    message(WARNING "OptiXRenderer: OpenGL not found.")
   endif()
   if (NOT OPTIX_FOUND)
-    message(WARNING "OptiX not installed.")
+    message(WARNING "OptiXRenderer: OptiX not installed.")
   endif()
   if (NOT WIN32)
-    message(WARNING "Only supported on windows.")
+    message(WARNING "OptiXRenderer: Only supported on windows.")
   endif()
-  message(WARNING "Disabling OptiXRenderer.")
 endif()
