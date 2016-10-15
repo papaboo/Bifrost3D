@@ -18,11 +18,12 @@
 namespace Cogwheel {
 namespace Math {
 
-/**
-* A 3 dimensional affine transform.
-* The rotation is given by a quaternion, the position by a vector3 and the transform can be uniformly scaled.
-* Only uniform scaling is supported, which leaves out shearing and non-uniform scaling.
-*/
+//----------------------------------------------------------------------------
+// A 3 dimensional affine transform.
+// The rotation is given by a quaternion, the position by a vector3 
+// and the transform can be uniformly scaled, 
+// which leaves out shearing and non-uniform scaling.
+//----------------------------------------------------------------------------
 struct Transform final {
     //*****************************************************************************
     // Public members
