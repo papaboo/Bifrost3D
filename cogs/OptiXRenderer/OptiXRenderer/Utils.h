@@ -21,7 +21,6 @@ __inline_dev__ optix::float3 project_ray_direction(optix::float2 viewport_pos,
                                                    const optix::Matrix4x4& inverted_view_projection_matrix) {
     using namespace optix;
 
-    // Generate rays.
     float4 normalized_projected_pos = make_float4(viewport_pos.x * 2.0f - 1.0f,
                                                   viewport_pos.y * 2.0f - 1.0f,
                                                   -1.0f, 1.0f);
