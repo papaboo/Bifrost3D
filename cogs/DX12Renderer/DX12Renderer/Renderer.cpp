@@ -38,6 +38,34 @@ void safe_release(ResourcePtr* resource_ptr) {
     }
 }
 
+// TODO Handle cso files and errors related to files not found.
+D3D12_SHADER_BYTECODE compile_shader(const WCHAR* filename, const char* target) {
+    ID3DBlob* shader;
+    ID3DBlob* error_messages = nullptr;
+
+    HRESULT hr = D3DCompileFromFile(filename,
+        nullptr, // macroes
+        nullptr, // Include dirs. TODO Data/DX12Shaders
+        "main",
+        target,
+        D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+        0, // More flags. Unused.
+        &shader,
+        &error_messages);
+    if (FAILED(hr)) { // File not found not handled? Path not found unhandled as well.
+        if (error_messages != nullptr)
+            printf("Shader error: '%s'\n", (char*)error_messages->GetBufferPointer());
+        return { nullptr, 0 };
+    }
+
+    // fill out a shader bytecode structure, which is basically just a pointer
+    // to the shader bytecode and the size of the shader bytecode
+    D3D12_SHADER_BYTECODE shader_bytecode = {};
+    shader_bytecode.BytecodeLength = shader->GetBufferSize();
+    shader_bytecode.pShaderBytecode = shader->GetBufferPointer();
+    return shader_bytecode;
+}
+
 //----------------------------------------------------------------------------
 // DirectX 12 renderer implementation.
 //----------------------------------------------------------------------------
@@ -236,7 +264,7 @@ public:
                 release_state();
                 return;
             }
-            // m_command_list->Close(); // Close the command list, as we do not want to start recording yet.
+            // m_command_list->Close(); // TODO Close the command list, as we do not want to start recording yet.
         }
 
         { // Setup the fences for the backbuffers.
@@ -446,59 +474,6 @@ public:
                 return false;
         }
 
-        D3D12_SHADER_BYTECODE vertex_shader_bytecode = {};
-        D3D12_SHADER_BYTECODE fragment_shader_bytecode = {};
-        { // create vertex and pixel shaders
-
-            ID3DBlob* error_messages = nullptr;
-
-            { // compile vertex shader
-                ID3DBlob* vertex_shader; // d3d blob for holding vertex shader bytecode
-                HRESULT hr = D3DCompileFromFile(L"Data/Shaders/VertexShader.hlsl",
-                    nullptr,
-                    nullptr,
-                    "main",
-                    "vs_5_0",
-                    D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
-                    0,
-                    &vertex_shader,
-                    &error_messages);
-                if (FAILED(hr)) // File not found not handled? Path not found unhandled as well.
-                {
-                    if (error_messages != nullptr)
-                        printf("Vertex shader error: '%s'\n", (char*)error_messages->GetBufferPointer());
-                    return false;
-                }
-
-                // fill out a shader bytecode structure, which is basically just a pointer
-                // to the shader bytecode and the size of the shader bytecode
-                vertex_shader_bytecode.BytecodeLength = vertex_shader->GetBufferSize();
-                vertex_shader_bytecode.pShaderBytecode = vertex_shader->GetBufferPointer();
-            }
-
-            { // compile pixel shader
-                ID3DBlob* pixel_shader;
-                HRESULT hr = D3DCompileFromFile(L"Data/Shaders/FragmentShader.hlsl",
-                    nullptr,
-                    nullptr,
-                    "main",
-                    "ps_5_0",
-                    D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
-                    0,
-                    &pixel_shader,
-                    &error_messages);
-                if (FAILED(hr)) {
-                    if (error_messages != nullptr)
-                        printf("Pixel shader error: '%s'\n", (char*)error_messages->GetBufferPointer());
-                    return false;
-                }
-
-                // fill out shader bytecode structure for pixel shader
-                fragment_shader_bytecode.BytecodeLength = pixel_shader->GetBufferSize();
-                fragment_shader_bytecode.pShaderBytecode = pixel_shader->GetBufferPointer();
-            }
-        }
-
         { // Vertex input layout. TODO Define the ones that we care about once and store them in the state? Do we need anything other than position, normal and texcoords?
 
             D3D12_INPUT_ELEMENT_DESC input_elements[] = {
@@ -511,8 +486,8 @@ public:
             D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_description = {};
             pso_description.InputLayout = input_layout_desc;
             pso_description.pRootSignature = m_triangle.root_signature;
-            pso_description.VS = vertex_shader_bytecode;
-            pso_description.PS = fragment_shader_bytecode;
+            pso_description.VS = compile_shader(L"Data/Shaders/VertexShader.hlsl", "vs_5_0");
+            pso_description.PS = compile_shader(L"Data/Shaders/FragmentShader.hlsl", "ps_5_0");
             pso_description.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
             pso_description.NumRenderTargets = 1;
             pso_description.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM; // TODO add _SRGB, but the RTV itself doesn't support that format.
