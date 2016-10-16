@@ -5,6 +5,22 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
   endif()
 
+  function (create_project_VS_user_file PROJECT)
+    set(USER_FILENAME ${CMAKE_BINARY_DIR}/${PROJECT}/${PROJECT}.vcxproj.user)
+    set(TOOLS_VERSION \"12.0\")
+    if (MSVC14)
+      set(TOOLS_VERSION \"14.0\")
+    endif()
+    set(USER_CONFIG "<?xml version=\"1.0\" encoding=\"utf-8\"?>
+<Project ToolsVersion=${TOOLS_VERSION} xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">
+  <PropertyGroup>
+    <LocalDebuggerWorkingDirectory>$(OutputPath)</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+</Project>")
+    file(WRITE ${USER_FILENAME} ${USER_CONFIG})
+  endfunction()
+
   add_definitions(-WX) # Warnings as errors
   # add_definitions(-Wall)
   

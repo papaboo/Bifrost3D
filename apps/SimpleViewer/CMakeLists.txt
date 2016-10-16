@@ -31,3 +31,7 @@ endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES
   FOLDER "Apps"
 )
+
+if (MSVC)
+  create_project_VS_user_file(${PROJECT_NAME})
+endif()
