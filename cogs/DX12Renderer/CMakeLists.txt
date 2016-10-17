@@ -58,20 +58,17 @@ if (DIRECTX_12_FOUND AND WIN32)
   # Copy the shaders to the build directory.
   # TODO Is there a general concept of installation in CMake?
   # TODO Copy the cso files from release to bin output dir.
-  foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
-    set(DATA_PATH "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CONFIG}/Data")
-    file(MAKE_DIRECTORY ${DATA_PATH}/Shaders)
-    foreach (SHADER_PATH ${SHADER_SRC})
-      string(SUBSTRING ${SHADER_PATH} 13 -1 SHORT_SHADER_PATH)
-      set(SOURCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_PATH})
-      set(DESTINATION_FILE ${DATA_PATH}/${SHORT_SHADER_PATH})
+  set(DATA_PATH "${COGWHEEL_DATA_OUTPUT_DIRECTORY}/DX12Renderer/Shaders")
+  file(MAKE_DIRECTORY ${DATA_PATH})
+  foreach (SHADER_PATH ${SHADER_SRC})
+    set(SOURCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_PATH})
+    set(DESTINATION_FILE ${COGWHEEL_DATA_OUTPUT_DIRECTORY}/${SHADER_PATH})
 
-      add_custom_command(
-        OUTPUT ${DESTINATION_FILE}
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_FILE} ${DESTINATION_FILE}
-        MAIN_DEPENDENCY ${SOURCE_FILE})
-    endforeach()
-  endforeach ()
+    add_custom_command(
+      OUTPUT ${DESTINATION_FILE}
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_FILE} ${DESTINATION_FILE}
+      MAIN_DEPENDENCY ${SOURCE_FILE})
+  endforeach()
 else()
   if (NOT DIRECTX_12_FOUND)
     message(WARNING "DX12Renderer: DirectX 12 not found.")

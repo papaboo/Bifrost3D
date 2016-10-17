@@ -26,10 +26,8 @@ namespace DX12Renderer {
 //----------------------------------------------------------------------------
 // DirectX 12 renderer.
 // TODO
-// * Use shaders in build dir.
-// * Shader wrapper. Wrap the individual pipeline stages and the whole material.
 // * Is FindDirectX needed in VS 2015?
-// * Abstract Mesh and Material. Possible? What is a material in DX12?
+// * Abstract Mesh and Material. Possible? What is a material in DX12? PSO?
 // * SRGB backbuffer format, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB.
 // * Draw models.
 // * Reimplement MiniEngine's CommandListManager and all dependencies.
@@ -42,7 +40,6 @@ namespace DX12Renderer {
 // ** Screen space reflections.
 // ** Temporal antialising.
 // * IBL
-// * Shadows
 // * Area lights.
 // * Signed distance field traced shadows.
 //----------------------------------------------------------------------------

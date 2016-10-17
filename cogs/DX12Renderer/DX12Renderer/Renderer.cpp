@@ -39,13 +39,14 @@ void safe_release(ResourcePtr* resource_ptr) {
 }
 
 // TODO Handle cso files and errors related to files not found.
-D3D12_SHADER_BYTECODE compile_shader(const WCHAR* filename, const char* target) {
+inline D3D12_SHADER_BYTECODE compile_shader(std::wstring filename, const char* target) {
+    std::wstring qualified_filename = L"../Data/DX12Renderer/Shaders/" + filename;
+
     ID3DBlob* shader;
     ID3DBlob* error_messages = nullptr;
-
-    HRESULT hr = D3DCompileFromFile(filename,
+    HRESULT hr = D3DCompileFromFile(qualified_filename.c_str(),
         nullptr, // macroes
-        nullptr, // Include dirs. TODO Data/DX12Shaders
+        nullptr, // Include dirs. TODO "../Data/DX12Renderer/Shaders/"
         "main",
         target,
         D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
@@ -486,8 +487,8 @@ public:
             D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_description = {};
             pso_description.InputLayout = input_layout_desc;
             pso_description.pRootSignature = m_triangle.root_signature;
-            pso_description.VS = compile_shader(L"Data/Shaders/VertexShader.hlsl", "vs_5_0");
-            pso_description.PS = compile_shader(L"Data/Shaders/FragmentShader.hlsl", "ps_5_0");
+            pso_description.VS = compile_shader(L"VertexShader.hlsl", "vs_5_0");
+            pso_description.PS = compile_shader(L"FragmentShader.hlsl", "ps_5_0");
             pso_description.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
             pso_description.NumRenderTargets = 1;
             pso_description.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM; // TODO add _SRGB, but the RTV itself doesn't support that format.
