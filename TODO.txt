@@ -1,6 +1,9 @@
-* STL loader.
 * DX12 Renderer
-** Half4 backbuffer in OptiXRenderer
+** Render models.
+** Coverage (eeew ew ew ew)
+** Simple IBL and AO.
+* Half4 backbuffer in OptiXRenderer and render directly to a mapped DX/GL resource.
+* OptiX 4.0 / CUDA 8.0
 * Multiple cameras.
 ** G-Buffer pr camera.
 ** Compose when all cameras are done.
@@ -28,6 +31,7 @@
 * Multiple scenes.
 ** Only nodes in a certain scene should be rendered.
 ** Should a scene node know if it is in a scene and in which? Store the root scene ID pr node?
+* STL and PLY loader.
 * Serialize scene and models.
 
 libs
