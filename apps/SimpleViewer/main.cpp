@@ -447,6 +447,9 @@ int main(int argc, char** argv) {
     if (g_scene.empty())
         printf("SimpleViewer will display the Cornell Box scene.\n");
 
-    // return GLFWDriver::run(initializer, glfw_window_initialized);
+#ifdef OPTIXRENDERER_FOUND
+    return GLFWDriver::run(initializer, glfw_window_initialized);
+#else
     return Win32Driver::run(initializer, win32_window_initialized);
+#endif
 }
