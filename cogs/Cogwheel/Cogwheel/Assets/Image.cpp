@@ -153,6 +153,15 @@ void Images::destroy(Images::UID image_ID) {
     }
 }
 
+Images::PixelData Images::get_pixels(Images::UID image_ID, int mipmap_level) {
+    char* pixel_data = (char*)m_pixels[image_ID];
+    int bytes_pr_pixel = size_of(get_pixel_format(image_ID));
+    for (int l = 0; l < mipmap_level; ++l) {
+        pixel_data += get_pixel_count(image_ID, l) * bytes_pr_pixel;
+    }
+    return pixel_data;
+}
+
 static RGBA get_gammaed_pixel(Images::UID image_ID, unsigned int index) {
     Images::PixelData pixels = Images::get_pixels(image_ID);
     switch (Images::get_pixel_format(image_ID)) {

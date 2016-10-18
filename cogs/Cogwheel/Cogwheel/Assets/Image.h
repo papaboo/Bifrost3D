@@ -30,6 +30,19 @@ enum class PixelFormat {
     RGBA_Float,
 };
 
+inline int size_of(PixelFormat format) {
+    switch (format) {
+    case PixelFormat::RGBA32: return 4;
+    case PixelFormat::RGBA_Float: return 16;
+    case PixelFormat::RGB24: return 3;
+    case PixelFormat::RGB_Float: return 12;
+    case PixelFormat::I8: return 1;
+    case PixelFormat::Unknown:
+    default:
+        return 0;
+    }
+}
+
 inline int channel_count(PixelFormat format) {
     switch (format) {
     case PixelFormat::RGBA32:
@@ -48,7 +61,7 @@ inline int channel_count(PixelFormat format) {
 
 //----------------------------------------------------------------------------
 // Cogwheel image container.
-// Images are index from the lower left corner to the top right one.
+// Images are indexed from the lower left corner to the top right one.
 // E.g. (0, 0) is in the lower left corner.
 // Future work:
 // * A for_each that applies a lambda to all pixels. Maybe specialize it 
@@ -100,7 +113,8 @@ public:
     static inline unsigned int get_pixel_count(Images::UID image_ID, unsigned int mipmap_level = 0) {
         return get_width(image_ID, mipmap_level) * get_height(image_ID, mipmap_level) * get_depth(image_ID, mipmap_level);
     }
-    static inline PixelData get_pixels(Images::UID image_ID, int mipmap_level = 0) { return m_pixels[image_ID]; }
+    
+    static PixelData get_pixels(Images::UID image_ID, int mipmap_level = 0);
 
     static Math::RGBA get_pixel(Images::UID image_ID, unsigned int index, unsigned int mipmap_level = 0);
     static Math::RGBA get_pixel(Images::UID image_ID, Math::Vector2ui index, unsigned int mipmap_level = 0);
