@@ -81,7 +81,7 @@ Images::UID load(const std::string& path) {
 
     float image_gamma = is_HDR ? 1.0f : 2.2f;
     Images::UID image_ID = Images::create(path, pixel_format, image_gamma, Vector2ui(width, height));
-    void* pixel_data = Images::get_pixels(image_ID);
+    Images::PixelData pixel_data = Images::get_pixels(image_ID);
     memcpy(pixel_data, loaded_data, sizeof_format(pixel_format) * width * height);
 
     stbi_image_free(loaded_data);
