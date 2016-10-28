@@ -102,10 +102,6 @@ private:
         ID3D12RootSignature* root_signature; // Defines the data that the/a shader will access. Used by multiple shaders / PSO's?
         ID3D12PipelineState* pipeline_state_object;
 
-        // These need to be set every time the command list is reset? Then move them to render!
-        D3D12_VIEWPORT viewport; // area that output from rasterizer will be stretched to.
-        D3D12_RECT scissor_rect; // the area to draw in. pixels outside that area will not be drawn onto
-
         ID3D12Resource* vertex_buffer; // a default buffer, perhaps make a typed buffer wrapper? At least wrap it somehow, since a 'resource' is very vague.
         D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view; // NOTE Do we need one of these pr vertex buffer? If so group them or wrap the buffer in a view. Also, are views untyped in DX12?
     } m_triangle;
@@ -369,9 +365,8 @@ public:
             // Clear the render target to the background color.
             Cameras::UID camera_ID = *Cameras::begin();
             SceneRoot scene = Cameras::get_scene_ID(camera_ID);
-            RGB env_tint = scene.get_environment_tint();
-            float environment_tint[] = { env_tint.r, env_tint.g, env_tint.b, 1.0f };
-            m_command_list->ClearRenderTargetView(rtv_handle, environment_tint, 0, nullptr);
+            RGBA environment_tint = RGBA(scene.get_environment_tint(), 1.0f);
+            m_command_list->ClearRenderTargetView(rtv_handle, environment_tint.begin(), 0, nullptr);
 
             { // Setup viewport.
                 Cogwheel::Math::Rectf vp = Cameras::get_viewport(camera_ID);
@@ -379,21 +374,23 @@ public:
                 vp.height *= engine.get_window().get_height();
 
                 // Fill out a scissor rect.
-                m_triangle.scissor_rect.left = LONG(vp.x);
-                m_triangle.scissor_rect.top = LONG(vp.y);
-                m_triangle.scissor_rect.right = LONG(vp.width);
-                m_triangle.scissor_rect.bottom = LONG(vp.height);
+                D3D12_RECT scissor_rect;
+                scissor_rect.left = LONG(vp.x);
+                scissor_rect.top = LONG(vp.y);
+                scissor_rect.right = LONG(vp.width);
+                scissor_rect.bottom = LONG(vp.height);
 
                 // Fill out the viewport.
-                m_triangle.viewport.TopLeftX = vp.x;
-                m_triangle.viewport.TopLeftY = vp.y;
-                m_triangle.viewport.Width = vp.width;
-                m_triangle.viewport.Height = vp.height;
-                m_triangle.viewport.MinDepth = 0.0f;
-                m_triangle.viewport.MaxDepth = 1.0f;
+                D3D12_VIEWPORT viewport;
+                viewport.TopLeftX = vp.x;
+                viewport.TopLeftY = vp.y;
+                viewport.Width = vp.width;
+                viewport.Height = vp.height;
+                viewport.MinDepth = 0.0f;
+                viewport.MaxDepth = 1.0f;
 
-                m_command_list->RSSetViewports(1, &m_triangle.viewport);
-                m_command_list->RSSetScissorRects(1, &m_triangle.scissor_rect);
+                m_command_list->RSSetViewports(1, &viewport);
+                m_command_list->RSSetScissorRects(1, &scissor_rect);
             }
 
             { // Draw triangle.
