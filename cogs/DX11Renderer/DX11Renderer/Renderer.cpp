@@ -41,7 +41,7 @@ void safe_release(ResourcePtr* resource_ptr) {
 // TODO Handle cso files and errors related to files not found.
 // Specialize blob so I can return it by value?
 inline ID3DBlob* compile_shader(std::wstring filename, const char* target) {
-    std::wstring qualified_filename = L"../Data/DX12Renderer/Shaders/" + filename;
+    std::wstring qualified_filename = L"../Data/DX11Renderer/Shaders/" + filename;
 
     ID3DBlob* shader_bytecode;
     ID3DBlob* error_messages = nullptr;
@@ -77,12 +77,17 @@ private:
 
     struct {
         ID3D11Buffer* positions;
+        ID3D11Buffer* uniforms_buffer;
         ID3D11InputLayout* vertex_layout;
         ID3D10Blob* vertex_shader_buffer;
         ID3D10Blob* pixel_shader_buffer;
         ID3D11VertexShader* vertex_shader;
         ID3D11PixelShader* pixel_shader;
     } m_triangle;
+
+    struct Uniforms {
+        Vector4f offset;
+    };
 
 public:
     bool is_valid() { return m_device != nullptr; }
@@ -177,6 +182,17 @@ public:
             { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 };
 
         m_device->CreateInputLayout(&position_layout_desc, 1, UNPACK_BLOB_ARGS(m_triangle.vertex_shader_buffer), &m_triangle.vertex_layout);
+
+        { // Uniforms.
+            D3D11_BUFFER_DESC uniforms_desc = {};
+            uniforms_desc.Usage = D3D11_USAGE_DEFAULT;
+            uniforms_desc.ByteWidth = sizeof(Uniforms);
+            uniforms_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+            uniforms_desc.CPUAccessFlags = 0;
+            uniforms_desc.MiscFlags = 0;
+
+            HRESULT hr = m_device->CreateBuffer(&uniforms_desc, NULL, &m_triangle.uniforms_buffer);
+        }
     }
 
     void release_state() {
@@ -232,6 +248,14 @@ public:
             
             m_render_context->IASetInputLayout(m_triangle.vertex_layout);
             m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+            {
+                float t = (float)engine.get_time().get_total_time();
+                Uniforms uniforms;
+                uniforms.offset = Vector4f(0.25f * sinf(t), 0.25f * sinf(t * 0.74f + 0.13f), 0, 0);
+                m_render_context->UpdateSubresource(m_triangle.uniforms_buffer, 0, NULL, &uniforms, 0, 0);
+                m_render_context->VSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
+            }
             m_render_context->Draw(3, 0);
         }
 
