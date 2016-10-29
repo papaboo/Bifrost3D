@@ -36,6 +36,8 @@ void safe_release(ResourcePtr* resource_ptr) {
     }
 }
 
+#define UNPACK_BLOB_ARGS(blob) blob->GetBufferPointer(), blob->GetBufferSize()
+
 // TODO Handle cso files and errors related to files not found.
 // Specialize blob so I can return it by value?
 inline ID3DBlob* compile_shader(std::wstring filename, const char* target) {
@@ -143,17 +145,13 @@ public:
 
     void setup_triangle() {
         { // Compile shaders.
-            m_triangle.vertex_shader_buffer = compile_shader(L"VertexShader.hlsl", "vs_4_0"); // TODO Do I really need to store the buffer?
-            m_triangle.pixel_shader_buffer = compile_shader(L"FragmentShader.hlsl", "ps_4_0");
+            m_triangle.vertex_shader_buffer = compile_shader(L"VertexShader.hlsl", "vs_5_0");
+            m_triangle.pixel_shader_buffer = compile_shader(L"FragmentShader.hlsl", "ps_5_0");
             
             // Create the shader objects.
-            HRESULT hr = m_device->CreateVertexShader(m_triangle.vertex_shader_buffer->GetBufferPointer(), m_triangle.vertex_shader_buffer->GetBufferSize(), NULL, &m_triangle.vertex_shader);
-            hr = m_device->CreatePixelShader(m_triangle.pixel_shader_buffer->GetBufferPointer(), m_triangle.pixel_shader_buffer->GetBufferSize(), NULL, &m_triangle.pixel_shader);
+            HRESULT hr = m_device->CreateVertexShader(UNPACK_BLOB_ARGS(m_triangle.vertex_shader_buffer), NULL, &m_triangle.vertex_shader);
+            hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(m_triangle.pixel_shader_buffer), NULL, &m_triangle.pixel_shader);
         }
-
-        // Set vertex and pixel shaders. TODO Move to actual rendering.
-        m_render_context->VSSetShader(m_triangle.vertex_shader, 0, 0);
-        m_render_context->PSSetShader(m_triangle.pixel_shader, 0, 0);
 
         { // Setup position buffer.
             Vector3f positions[] = {
@@ -169,30 +167,16 @@ public:
             position_buffer_desc.CPUAccessFlags = 0;
             position_buffer_desc.MiscFlags = 0;
 
-            D3D11_SUBRESOURCE_DATA positions_buffer_data;
-            ZeroMemory(&positions_buffer_data, sizeof(positions_buffer_data)); // TODO needed? = {}
+            D3D11_SUBRESOURCE_DATA positions_buffer_data = {};
             positions_buffer_data.pSysMem = positions;
             HRESULT hr = m_device->CreateBuffer(&position_buffer_desc, &positions_buffer_data, &m_triangle.positions);
-
-            // Set the vertex buffer
-            UINT stride = sizeof(float) * 3;
-            UINT offset = 0;
-            m_render_context->IASetVertexBuffers(0, 1, &m_triangle.positions, &stride, &offset);
         }
 
         // Create the input layout
-        D3D11_INPUT_ELEMENT_DESC position_layout_desc[] = { // TODO No need for an array.
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        };
+        D3D11_INPUT_ELEMENT_DESC position_layout_desc =
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 };
 
-        m_device->CreateInputLayout(position_layout_desc, 1, m_triangle.vertex_shader_buffer->GetBufferPointer(),
-            m_triangle.vertex_shader_buffer->GetBufferSize(), &m_triangle.vertex_layout);
-
-        // Set the Input Layout
-        m_render_context->IASetInputLayout(m_triangle.vertex_layout);
-
-        // Set Primitive Topology
-        m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        m_device->CreateInputLayout(&position_layout_desc, 1, UNPACK_BLOB_ARGS(m_triangle.vertex_shader_buffer), &m_triangle.vertex_layout);
     }
 
     void release_state() {
@@ -237,8 +221,20 @@ public:
         m_render_context->ClearRenderTargetView(m_backbuffer_view, environment_tint.begin());
 
         { // Render triangle.
+            // Set vertex and pixel shaders.
+            m_render_context->VSSetShader(m_triangle.vertex_shader, 0, 0);
+            m_render_context->PSSetShader(m_triangle.pixel_shader, 0, 0);
+
+            // Set the vertex buffer
+            UINT stride = sizeof(float) * 3;
+            UINT offset = 0;
+            m_render_context->IASetVertexBuffers(0, 1, &m_triangle.positions, &stride, &offset);
+            
+            m_render_context->IASetInputLayout(m_triangle.vertex_layout);
+            m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             m_render_context->Draw(3, 0);
         }
+
         // Present the backbuffer.
         m_swap_chain->Present(0, 0);
     }
