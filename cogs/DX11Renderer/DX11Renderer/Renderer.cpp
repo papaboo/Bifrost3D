@@ -72,11 +72,16 @@ private:
 
     IDXGISwapChain* m_swap_chain;
 
-    ID3D11DeviceContext* m_render_context;
+    ID3D11DeviceContext* m_render_context; // Is this the same as the immediate context?
+
+    // Backbuffer members.
+    Vector2ui m_backbuffer_size;
     ID3D11RenderTargetView* m_backbuffer_view;
+    ID3D11Texture2D* m_depth_buffer;
+    ID3D11DepthStencilView* m_depth_view;
 
     struct {
-        ID3D11Buffer* positions;
+        ID3D11Buffer* positions_buffer;
         ID3D11Buffer* uniforms_buffer;
         ID3D11InputLayout* vertex_layout;
         ID3D10Blob* vertex_shader_buffer;
@@ -87,6 +92,7 @@ private:
 
     struct Uniforms {
         Vector4f offset;
+        RGBA color;
     };
 
 public:
@@ -136,14 +142,20 @@ public:
             gi_device->Release();
         }
 
-        // Create backBbuffer.
-        ID3D11Texture2D* backbuffer;
-        HRESULT hr = m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&backbuffer));
+        { // Setup backbuffer.
 
-        // Create and set render target.
-        hr = m_device->CreateRenderTargetView(backbuffer, nullptr, &m_backbuffer_view);
-        backbuffer->Release();
-        m_render_context->OMSetRenderTargets(1, &m_backbuffer_view, nullptr);
+            m_backbuffer_size = Vector2ui::zero();
+
+            // Get and set render target. // TODO How is resizing of the color buffer handled?
+            ID3D11Texture2D* backbuffer;
+            HRESULT hr = m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&backbuffer));
+            hr = m_device->CreateRenderTargetView(backbuffer, nullptr, &m_backbuffer_view);
+            backbuffer->Release();
+
+            // Depth buffer is initialized on demand when the output dimensions are known.
+            m_depth_buffer = nullptr;
+            m_depth_view = nullptr;
+        }
 
         setup_triangle();
     }
@@ -174,7 +186,7 @@ public:
 
             D3D11_SUBRESOURCE_DATA positions_buffer_data = {};
             positions_buffer_data.pSysMem = positions;
-            HRESULT hr = m_device->CreateBuffer(&position_buffer_desc, &positions_buffer_data, &m_triangle.positions);
+            HRESULT hr = m_device->CreateBuffer(&position_buffer_desc, &positions_buffer_data, &m_triangle.positions_buffer);
         }
 
         // Create the input layout
@@ -202,6 +214,10 @@ public:
         safe_release(&m_device);
         safe_release(&m_render_context);
         safe_release(&m_swap_chain);
+
+        safe_release(&m_backbuffer_view);
+        safe_release(&m_depth_buffer);
+        safe_release(&m_depth_view);
     }
 
     void render(const Cogwheel::Core::Engine& engine) {
@@ -216,11 +232,38 @@ public:
         handle_updates();
 
         Cameras::UID camera_ID = *Cameras::begin();
+        const Window& window = engine.get_window();
+
+        Vector2ui current_backbuffer_size = Vector2ui(window.get_width(), window.get_height());
+        if (m_backbuffer_size != current_backbuffer_size) {
+            if (m_depth_buffer) m_depth_buffer->Release();
+            if (m_depth_view) m_depth_view->Release();
+
+            D3D11_TEXTURE2D_DESC depth_desc;
+            depth_desc.Width = current_backbuffer_size.x;
+            depth_desc.Height = current_backbuffer_size.y;
+            depth_desc.MipLevels = 1;
+            depth_desc.ArraySize = 1;
+            depth_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT; // TODO DXGI_FORMAT_D32_FLOAT ?? Do I have to change the viewport min/max as well then?
+            depth_desc.SampleDesc.Count = 1;
+            depth_desc.SampleDesc.Quality = 0;
+            depth_desc.Usage = D3D11_USAGE_DEFAULT;
+            depth_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+            depth_desc.CPUAccessFlags = 0;
+            depth_desc.MiscFlags = 0;
+
+            HRESULT hr = m_device->CreateTexture2D(&depth_desc, NULL, &m_depth_buffer);
+            m_device->CreateDepthStencilView(m_depth_buffer, NULL, &m_depth_view);
+
+            m_render_context->OMSetRenderTargets(1, &m_backbuffer_view, m_depth_view);
+
+            m_backbuffer_size = current_backbuffer_size;
+        }
 
         { // Create and set the viewport.
             Cogwheel::Math::Rectf vp = Cameras::get_viewport(camera_ID);
-            vp.width *= engine.get_window().get_width();
-            vp.height *= engine.get_window().get_height();
+            vp.width *= window.get_width();
+            vp.height *= window.get_height();
 
             D3D11_VIEWPORT viewport;
             viewport.TopLeftX = 0;
@@ -235,6 +278,7 @@ public:
         SceneRoot scene = Cameras::get_scene_ID(camera_ID);
         RGBA environment_tint = RGBA(scene.get_environment_tint(), 1.0f);
         m_render_context->ClearRenderTargetView(m_backbuffer_view, environment_tint.begin());
+        m_render_context->ClearDepthStencilView(m_depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
         { // Render triangle.
             // Set vertex and pixel shaders.
@@ -244,7 +288,7 @@ public:
             // Set the vertex buffer
             UINT stride = sizeof(float) * 3;
             UINT offset = 0;
-            m_render_context->IASetVertexBuffers(0, 1, &m_triangle.positions, &stride, &offset);
+            m_render_context->IASetVertexBuffers(0, 1, &m_triangle.positions_buffer, &stride, &offset);
             
             m_render_context->IASetInputLayout(m_triangle.vertex_layout);
             m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -252,10 +296,25 @@ public:
             {
                 float t = (float)engine.get_time().get_total_time();
                 Uniforms uniforms;
-                uniforms.offset = Vector4f(0.25f * sinf(t), 0.25f * sinf(t * 0.74f + 0.13f), 0, 0);
+                uniforms.offset = Vector4f(0.25f * sinf(t), 0.25f * sinf(t * 0.74f + 0.13f), 0.1f * sinf(t), 0);
+                uniforms.color = RGBA::green();
                 m_render_context->UpdateSubresource(m_triangle.uniforms_buffer, 0, NULL, &uniforms, 0, 0);
                 m_render_context->VSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
+                m_render_context->PSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
             }
+
+            m_render_context->Draw(3, 0);
+
+            {
+                float t = (float)engine.get_time().get_total_time() + 2.0f;
+                Uniforms uniforms;
+                uniforms.offset = Vector4f(0.25f * sinf(t), 0.25f * sinf(t * 0.74f + 0.13f), 0.1f * sinf(t), 0);
+                uniforms.color = RGBA::blue();
+                m_render_context->UpdateSubresource(m_triangle.uniforms_buffer, 0, NULL, &uniforms, 0, 0);
+                m_render_context->VSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
+                m_render_context->PSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
+            }
+
             m_render_context->Draw(3, 0);
         }
 

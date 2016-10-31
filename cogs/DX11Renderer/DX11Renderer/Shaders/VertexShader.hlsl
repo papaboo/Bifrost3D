@@ -8,6 +8,7 @@
 
 cbuffer scene_variables { // TODO Set register index.
     float4 offset;
+    float4 color;
 };
 
 float4 main(float3 pos : POSITION) : SV_POSITION {

@@ -6,6 +6,11 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-float4 main() : SV_TARGET {
-    return float4(0.0f, 1.0f, 0.0f, 1.0f);
+cbuffer scene_variables { // TODO Set register index.
+    float4 offset;
+    float4 color;
+};
+
+float4 main() : SV_TARGET{
+    return color;
 }
