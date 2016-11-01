@@ -6,7 +6,7 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-cbuffer scene_variables { // TODO Set register index.
+cbuffer scene_variables  : register(b0) {
     float4 offset;
     float4 color;
 };
