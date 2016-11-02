@@ -9,6 +9,7 @@
 #ifndef _COGWHEEL_SCENE_CAMERA_H_
 #define _COGWHEEL_SCENE_CAMERA_H_
 
+#include <Cogwheel/Math/Conversions.h>
 #include <Cogwheel/Math/Matrix.h>
 #include <Cogwheel/Math/Ray.h>
 #include <Cogwheel/Math/Rect.h>
@@ -65,6 +66,13 @@ public:
     }
     static void set_projection_matrices(Cameras::UID camera_ID, Math::Matrix4x4f projection_matrix) {
         set_projection_matrices(camera_ID, projection_matrix, invert(projection_matrix));
+    }
+
+    static Math::Matrix4x4f get_view_projection_matrix(Cameras::UID camera_ID) {
+        return get_projection_matrix(camera_ID) * to_matrix4x4(get_view_transform(camera_ID));
+    }
+    static Math::Matrix4x4f get_inverse_view_projection_matrix(Cameras::UID camera_ID) {
+        return to_matrix4x4(get_inverse_view_transform(camera_ID)) * get_inverse_projection_matrix(camera_ID);
     }
 
     static unsigned int get_render_index(Cameras::UID camera_ID) { return m_render_indices[camera_ID]; }
