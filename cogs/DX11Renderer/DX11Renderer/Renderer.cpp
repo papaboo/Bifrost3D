@@ -91,6 +91,7 @@ private:
     } m_triangle;
 
     struct Uniforms {
+        Matrix4x4f mvp_matrix;
         Vector4f offset;
         RGBA color;
     };
@@ -296,6 +297,7 @@ public:
             {
                 float t = (float)engine.get_time().get_total_time();
                 Uniforms uniforms;
+                uniforms.mvp_matrix = Cameras::get_view_projection_matrix(camera_ID);
                 uniforms.offset = Vector4f(0.25f * sinf(t), 0.25f * sinf(t * 0.74f + 0.13f), 0.1f * sinf(t), 0);
                 uniforms.color = RGBA::green();
                 m_render_context->UpdateSubresource(m_triangle.uniforms_buffer, 0, NULL, &uniforms, 0, 0);
@@ -308,6 +310,7 @@ public:
             {
                 float t = (float)engine.get_time().get_total_time() + 2.0f;
                 Uniforms uniforms;
+                uniforms.mvp_matrix = Cameras::get_view_projection_matrix(camera_ID);
                 uniforms.offset = Vector4f(0.25f * sinf(t), 0.25f * sinf(t * 0.74f + 0.13f), 0.1f * sinf(t), 0);
                 uniforms.color = RGBA::blue();
                 m_render_context->UpdateSubresource(m_triangle.uniforms_buffer, 0, NULL, &uniforms, 0, 0);

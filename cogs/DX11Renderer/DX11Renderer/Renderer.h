@@ -26,7 +26,13 @@ namespace DX11Renderer {
 //----------------------------------------------------------------------------
 // DirectX 11 renderer.
 // TODO
-// * Everything
+// * Upload models.
+// * Render environment.
+// * Light sources.
+// * Materials.
+// ** Material properties buffer.
+// * SSAO + IBL.
+// * Create an mvp matrix array, compute model * view_proj on the GPU and index into this array.
 //----------------------------------------------------------------------------
 class Renderer final {
 public:

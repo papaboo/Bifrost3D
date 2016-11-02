@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 
 cbuffer scene_variables  : register(b0) {
+    matrix mvp_matrix;
     float4 offset;
     float4 color;
 };
