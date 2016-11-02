@@ -28,7 +28,7 @@
 #endif
 
 #include <Win32Driver.h>
-#include <DX12Renderer/Renderer.h>
+#include <DX11Renderer/Renderer.h>
 
 #include <ObjLoader/ObjLoader.h>
 #include <StbImageLoader/StbImageLoader.h>
@@ -391,8 +391,8 @@ void glfw_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Win
 #endif
 
 void win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window, HWND& hwnd) {
-    DX12Renderer::Renderer* renderer = DX12Renderer::Renderer::initialize(hwnd, window);
-    engine.add_non_mutating_callback(DX12Renderer::render_callback, renderer);
+    DX11Renderer::Renderer* renderer = DX11Renderer::Renderer::initialize(hwnd, window);
+    engine.add_non_mutating_callback(DX11Renderer::render_callback, renderer);
 }
 
 void print_usage() {
