@@ -439,11 +439,8 @@ void Renderer::render() {
     { // Upload camera parameters.
         Cameras::UID camera_ID = *Cameras::begin();
 
-        Matrix4x4f inverse_view_matrix = to_matrix4x4(Cameras::get_inverse_view_transform(camera_ID));
-        Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
-        Matrix4x4f inverse_view_projection_matrix = inverse_view_matrix * inverse_projection_matrix;
-
         // Check if the camera transforms changed and, if so, upload the new ones and reset accumulation.
+        Matrix4x4f inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
         if (m_state->camera_inverse_view_projection_matrix != inverse_view_projection_matrix) {
             m_state->camera_inverse_view_projection_matrix = inverse_view_projection_matrix;
 
