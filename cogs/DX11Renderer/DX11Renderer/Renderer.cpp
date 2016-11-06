@@ -7,12 +7,15 @@
 // ---------------------------------------------------------------------------
 
 #include <DX11Renderer/Renderer.h>
+#include <DX11Renderer/Types.h>
 
 #define NOMINMAX
 #include <D3D11.h>
 #include <D3DCompiler.h>
 #undef RGB
 
+#include <Cogwheel/Assets/Mesh.h>
+#include <Cogwheel/Assets/MeshModel.h>
 #include <Cogwheel/Core/Engine.h>
 #include <Cogwheel/Core/Window.h>
 #include <Cogwheel/Scene/Camera.h>
@@ -22,9 +25,11 @@
 #include <cstdio>
 #include <vector>
 
+using namespace Cogwheel::Assets;
 using namespace Cogwheel::Core;
 using namespace Cogwheel::Math;
 using namespace Cogwheel::Scene;
+using namespace std;
 
 namespace DX11Renderer {
 
@@ -79,6 +84,10 @@ private:
     ID3D11RenderTargetView* m_backbuffer_view;
     ID3D11Texture2D* m_depth_buffer;
     ID3D11DepthStencilView* m_depth_view;
+
+    vector<Transform> m_transforms = vector<Transform>(0);
+    vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
+    vector<Dx11Model> m_models = vector<Dx11Model>(0);
 
     struct {
         ID3D11Buffer* positions_buffer;
@@ -219,6 +228,11 @@ public:
         safe_release(&m_backbuffer_view);
         safe_release(&m_depth_buffer);
         safe_release(&m_depth_view);
+
+        for (Dx11Mesh mesh : m_meshes) {
+            safe_release(&mesh.indices);
+            safe_release(&mesh.positions);
+        }
     }
 
     void render(const Cogwheel::Core::Engine& engine) {
@@ -321,12 +335,148 @@ public:
             m_render_context->Draw(3, 0);
         }
 
+        { // Render models.
+            for (Dx11Model model : m_models) {
+                if (model.mesh_ID == 0)
+                    continue;
+
+                Dx11Mesh mesh = m_meshes[model.mesh_ID];
+
+                // Set vertex and pixel shaders.
+                m_render_context->VSSetShader(m_triangle.vertex_shader, 0, 0);
+                m_render_context->PSSetShader(m_triangle.pixel_shader, 0, 0);
+
+                m_render_context->IASetInputLayout(m_triangle.vertex_layout);
+                m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+                { // Set the buffers.
+                    if (mesh.index_count != 0)
+                        m_render_context->IASetIndexBuffer(mesh.indices, DXGI_FORMAT_R32_UINT, 0);
+
+                    UINT stride = sizeof(float) * 3;
+                    UINT offset = 0;
+                    m_render_context->IASetVertexBuffers(0, 1, &mesh.positions, &stride, &offset);
+                }
+
+                {
+                    static RGBA color[] = { RGBA::red(), RGBA::yellow(), RGBA::green(), RGBA::blue() };
+                    Uniforms uniforms;
+                    uniforms.mvp_matrix = Cameras::get_view_projection_matrix(camera_ID) * to_matrix4x4(m_transforms[model.transform_ID]);
+                    uniforms.offset = Vector4f::zero();
+                    uniforms.color = color[model.mesh_ID % 4];
+                    m_render_context->UpdateSubresource(m_triangle.uniforms_buffer, 0, NULL, &uniforms, 0, 0);
+                    m_render_context->VSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
+                    m_render_context->PSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
+                }
+
+                if (mesh.index_count != 0)
+                    m_render_context->DrawIndexed(mesh.index_count, 0, 0);
+                else
+                    m_render_context->Draw(mesh.vertex_count, 0);
+            }
+        }
+
         // Present the backbuffer.
         m_swap_chain->Present(0, 0);
     }
 
     void handle_updates() {
+        // TODO Handle updates in multiple command lists.
 
+        { // Mesh updates.
+            for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
+                if (Meshes::get_changes(mesh_ID) == Meshes::Changes::Destroyed) {
+                    if (mesh_ID < m_meshes.size() && m_meshes[mesh_ID].vertex_count != 0) {
+                        m_meshes[mesh_ID].index_count = m_meshes[mesh_ID].vertex_count = 0;
+                        safe_release(&m_meshes[mesh_ID].indices);
+                        safe_release(&m_meshes[mesh_ID].positions);
+                    }
+                }
+
+                if (Meshes::get_changes(mesh_ID) & Meshes::Changes::Created) {
+                    if (m_meshes.size() <= mesh_ID)
+                        m_meshes.resize(Meshes::capacity());
+
+                    Cogwheel::Assets::Mesh mesh = mesh_ID;
+                    Dx11Mesh dx_mesh;
+
+                    { // Upload indices.
+                        dx_mesh.index_count = mesh.get_index_count() * 3;
+
+                        D3D11_BUFFER_DESC indices_desc = {};
+                        indices_desc.Usage = D3D11_USAGE_DEFAULT;
+                        indices_desc.ByteWidth = sizeof(unsigned int) * dx_mesh.index_count;
+                        indices_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+                        indices_desc.CPUAccessFlags = 0;
+                        indices_desc.MiscFlags = 0;
+
+                        D3D11_SUBRESOURCE_DATA indices_data = {};
+                        indices_data.pSysMem = mesh.get_indices();
+                        HRESULT hr = m_device->CreateBuffer(&indices_desc, &indices_data, &dx_mesh.indices);
+                        if (FAILED(hr))
+                            printf("Could not upload '%s' index buffer.\n");
+                    }
+
+                    { // Upload positions.
+                        dx_mesh.vertex_count = mesh.get_vertex_count();
+
+                        D3D11_BUFFER_DESC position_desc = {};
+                        position_desc.Usage = D3D11_USAGE_DEFAULT;
+                        position_desc.ByteWidth = sizeof(Vector3f) * dx_mesh.vertex_count;
+                        position_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+                        position_desc.CPUAccessFlags = 0;
+                        position_desc.MiscFlags = 0;
+
+                        D3D11_SUBRESOURCE_DATA positions_data = {};
+                        positions_data.pSysMem = mesh.get_positions();
+                        HRESULT hr = m_device->CreateBuffer(&position_desc, &positions_data, &dx_mesh.positions);
+                        if (FAILED(hr))
+                            printf("Could not upload '%s' position buffer.\n");
+                    }
+
+                    m_meshes[mesh_ID] = dx_mesh;
+                }
+            }
+        }
+
+        { // Transform updates.
+            // TODO We're only interested in changes in the transforms that are connected to renderables, such as meshes.
+            bool important_transform_changed = false;
+            for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
+                if (SceneNodes::has_changes(node_ID, SceneNodes::Changes::Created | SceneNodes::Changes::Transform)) {
+
+                    if (m_transforms.size() <= node_ID)
+                        m_transforms.resize(SceneNodes::capacity());
+
+                    // NOTE Store the inverse excplicitly?
+                    m_transforms[node_ID] = SceneNodes::get_global_transform(node_ID);
+                }
+            }
+        }
+
+        { // Model updates
+            for (MeshModel model : MeshModels::get_changed_models()) {
+                unsigned int model_index = model.get_ID();
+
+                if (model.get_changes() == MeshModels::Changes::Destroyed) {
+                    if (model_index < m_models.size()) {
+                        m_models[model_index].material_ID = 0;
+                        m_models[model_index].mesh_ID = 0;
+                        m_models[model_index].transform_ID = 0;
+                    }
+                }
+
+                if (model.get_changes() & MeshModels::Changes::Created) {
+                    if (m_models.size() <= model_index)
+                        m_models.resize(MeshModels::capacity());
+
+                    // This info could actually just be memcopied from the datamodel to the rendermodel.
+                    m_models[model_index].material_ID = model.get_material().get_ID();
+                    m_models[model_index].mesh_ID = model.get_mesh().get_ID();
+                    m_models[model_index].transform_ID = model.get_scene_node().get_ID();
+                }
+            }
+        }
     }
 };
 

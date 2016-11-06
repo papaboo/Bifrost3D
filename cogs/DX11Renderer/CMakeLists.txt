@@ -12,6 +12,7 @@ if (DIRECTX_11_FOUND AND WIN32)
   set(ROOT_SRC
     DX11Renderer/Renderer.h
     DX11Renderer/Renderer.cpp
+    DX11Renderer/Types.h
   )
 
   set(VERTEX_SHADER_SRC
