@@ -9,9 +9,21 @@
 #ifndef _DX11RENDERER_RENDERER_TYPES_H_
 #define _DX11RENDERER_RENDERER_TYPES_H_
 
+#include <Cogwheel/Math/Color.h>
+
 struct ID3D11Buffer;
 
 namespace DX11Renderer {
+
+struct Dx11Material {
+    Cogwheel::Math::RGB tint;
+    unsigned int tint_texture_index;
+    float roughness;
+    float specularity;
+    float metallic;
+    float coverage;
+    unsigned int coverage_texture_index;
+};
 
 struct Dx11Mesh {
     unsigned int index_count;

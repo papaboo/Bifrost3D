@@ -14,6 +14,7 @@
 #include <D3DCompiler.h>
 #undef RGB
 
+#include <Cogwheel/Assets/Material.h>
 #include <Cogwheel/Assets/Mesh.h>
 #include <Cogwheel/Assets/MeshModel.h>
 #include <Cogwheel/Core/Engine.h>
@@ -85,12 +86,12 @@ private:
     ID3D11Texture2D* m_depth_buffer;
     ID3D11DepthStencilView* m_depth_view;
 
-    vector<Transform> m_transforms = vector<Transform>(0);
+    vector<Dx11Material> m_materials = vector<Dx11Material>(0);
     vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
     vector<Dx11Model> m_models = vector<Dx11Model>(0);
+    vector<Transform> m_transforms = vector<Transform>(0);
 
     struct {
-        ID3D11Buffer* positions_buffer;
         ID3D11Buffer* uniforms_buffer;
         ID3D11InputLayout* vertex_layout;
         ID3D10Blob* vertex_shader_buffer;
@@ -178,25 +179,6 @@ public:
             // Create the shader objects.
             HRESULT hr = m_device->CreateVertexShader(UNPACK_BLOB_ARGS(m_triangle.vertex_shader_buffer), NULL, &m_triangle.vertex_shader);
             hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(m_triangle.pixel_shader_buffer), NULL, &m_triangle.pixel_shader);
-        }
-
-        { // Setup position buffer.
-            Vector3f positions[] = {
-                Vector3f(0.0f, 0.5f, 0.5f),
-                Vector3f(0.5f, -0.5f, 0.5f),
-                Vector3f(-0.5f, -0.5f, 0.5f),
-            };
-
-            D3D11_BUFFER_DESC position_buffer_desc = {};
-            position_buffer_desc.Usage = D3D11_USAGE_DEFAULT;
-            position_buffer_desc.ByteWidth = sizeof(float) * 3 * 3;
-            position_buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-            position_buffer_desc.CPUAccessFlags = 0;
-            position_buffer_desc.MiscFlags = 0;
-
-            D3D11_SUBRESOURCE_DATA positions_buffer_data = {};
-            positions_buffer_data.pSysMem = positions;
-            HRESULT hr = m_device->CreateBuffer(&position_buffer_desc, &positions_buffer_data, &m_triangle.positions_buffer);
         }
 
         // Create the input layout
@@ -295,46 +277,6 @@ public:
         m_render_context->ClearRenderTargetView(m_backbuffer_view, environment_tint.begin());
         m_render_context->ClearDepthStencilView(m_depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-        { // Render triangle.
-            // Set vertex and pixel shaders.
-            m_render_context->VSSetShader(m_triangle.vertex_shader, 0, 0);
-            m_render_context->PSSetShader(m_triangle.pixel_shader, 0, 0);
-
-            // Set the vertex buffer
-            UINT stride = sizeof(float) * 3;
-            UINT offset = 0;
-            m_render_context->IASetVertexBuffers(0, 1, &m_triangle.positions_buffer, &stride, &offset);
-            
-            m_render_context->IASetInputLayout(m_triangle.vertex_layout);
-            m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-            {
-                float t = (float)engine.get_time().get_total_time();
-                Uniforms uniforms;
-                uniforms.mvp_matrix = Cameras::get_view_projection_matrix(camera_ID);
-                uniforms.offset = Vector4f(0.25f * sinf(t), 0.25f * sinf(t * 0.74f + 0.13f), 0.1f * sinf(t), 0);
-                uniforms.color = RGBA::green();
-                m_render_context->UpdateSubresource(m_triangle.uniforms_buffer, 0, NULL, &uniforms, 0, 0);
-                m_render_context->VSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
-                m_render_context->PSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
-            }
-
-            m_render_context->Draw(3, 0);
-
-            {
-                float t = (float)engine.get_time().get_total_time() + 2.0f;
-                Uniforms uniforms;
-                uniforms.mvp_matrix = Cameras::get_view_projection_matrix(camera_ID);
-                uniforms.offset = Vector4f(0.25f * sinf(t), 0.25f * sinf(t * 0.74f + 0.13f), 0.1f * sinf(t), 0);
-                uniforms.color = RGBA::blue();
-                m_render_context->UpdateSubresource(m_triangle.uniforms_buffer, 0, NULL, &uniforms, 0, 0);
-                m_render_context->VSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
-                m_render_context->PSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
-            }
-
-            m_render_context->Draw(3, 0);
-        }
-
         { // Render models.
             for (Dx11Model model : m_models) {
                 if (model.mesh_ID == 0)
@@ -359,11 +301,10 @@ public:
                 }
 
                 {
-                    static RGBA color[] = { RGBA::red(), RGBA::yellow(), RGBA::green(), RGBA::blue() };
                     Uniforms uniforms;
                     uniforms.mvp_matrix = Cameras::get_view_projection_matrix(camera_ID) * to_matrix4x4(m_transforms[model.transform_ID]);
                     uniforms.offset = Vector4f::zero();
-                    uniforms.color = color[model.mesh_ID % 4];
+                    uniforms.color = m_materials[model.material_ID].tint;
                     m_render_context->UpdateSubresource(m_triangle.uniforms_buffer, 0, NULL, &uniforms, 0, 0);
                     m_render_context->VSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
                     m_render_context->PSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
@@ -382,6 +323,27 @@ public:
 
     void handle_updates() {
         // TODO Handle updates in multiple command lists.
+
+        { // Material updates. // TODO Upload to one buffer, so we don't have to upload it per frame.
+            for (Material mat : Materials::get_changed_materials()) {
+                unsigned int material_index = mat.get_ID();
+
+                // Just ignore deleted materials. They shouldn't be referenced anyway.
+                if (mat.has_changes(Materials::Changes::Created || Materials::Changes::Updated)) {
+                    if (m_materials.size() <= material_index)
+                        m_materials.resize(MeshModels::capacity());
+
+                    Dx11Material& dx11_material = m_materials[material_index];
+                    dx11_material.tint = mat.get_tint();
+                    dx11_material.tint_texture_index = mat.get_tint_texture_ID();
+                    dx11_material.roughness = mat.get_roughness();
+                    dx11_material.specularity = mat.get_specularity() * 0.08f; // See Physically-Based Shading at Disney bottom of page 8 for why we remap.
+                    dx11_material.metallic = mat.get_metallic();
+                    dx11_material.coverage = mat.get_coverage();
+                    dx11_material.coverage_texture_index = mat.get_coverage_texture_ID();
+                }
+            }
+        }
 
         { // Mesh updates.
             for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
