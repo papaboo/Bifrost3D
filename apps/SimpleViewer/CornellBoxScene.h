@@ -64,28 +64,28 @@ void create_cornell_box_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode ro
         }
 
         { // Roof
-            Transform roof_transform = Transform(Vector3f(0.0f, 0.5f, 0.0f));
+            Transform roof_transform = Transform(Vector3f(0.0f, 0.5f, 0.0f), Quaternionf::from_angle_axis(Math::PI<float>(), Vector3f::forward()));
             SceneNode roof_node = SceneNodes::create("Roof", roof_transform);
             MeshModels::create(roof_node.get_ID(), plane_mesh_ID, white_material_ID);
             roof_node.set_parent(root_node);
         }
 
         { // Back
-            Transform back_transform = Transform(Vector3f(0.0f, 0.0f, 0.5f), Quaternionf::from_angle_axis(PI_half, Vector3f::right()));
+            Transform back_transform = Transform(Vector3f(0.0f, 0.0f, 0.5f), Quaternionf::from_angle_axis(-PI_half, Vector3f::right()));
             SceneNode back_node = SceneNodes::create("Back", back_transform);
             MeshModels::create(back_node.get_ID(), plane_mesh_ID, white_material_ID);
             back_node.set_parent(root_node);
         }
 
         { // Left
-            Transform left_transform = Transform(Vector3f(-0.5f, 0.0f, 0.0f), Quaternionf::from_angle_axis(PI_half, Vector3f::forward()));
+            Transform left_transform = Transform(Vector3f(-0.5f, 0.0f, 0.0f), Quaternionf::from_angle_axis(-PI_half, Vector3f::forward()));
             SceneNode left_node = SceneNodes::create("Left", left_transform);
             MeshModels::create(left_node.get_ID(), plane_mesh_ID, red_material_ID);
             left_node.set_parent(root_node);
         }
 
         { // Right
-            Transform right_transform = Transform(Vector3f(0.5f, 0.0f, 0.0f), Quaternionf::from_angle_axis(-PI_half, Vector3f::forward()));
+            Transform right_transform = Transform(Vector3f(0.5f, 0.0f, 0.0f), Quaternionf::from_angle_axis(PI_half, Vector3f::forward()));
             SceneNode right_node = SceneNodes::create("Right", right_transform);
             MeshModels::create(right_node.get_ID(), plane_mesh_ID, green_material_ID);
             right_node.set_parent(root_node);
