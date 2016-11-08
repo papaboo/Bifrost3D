@@ -131,26 +131,58 @@ public:
             swap_chain_desc.Windowed = TRUE;
             swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
-            // TODO Replace by explicit device enumeration and selecting of 'largest' device. Otherwise we risk selecting the integrated GPU.
-            D3D_FEATURE_LEVEL feature_level;
-            HRESULT hr = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0,
-                D3D11_SDK_VERSION, &swap_chain_desc, &m_swap_chain, &m_device, &feature_level, &m_render_context);
+            { // Find the best performing device (apparently the one with the most memory) and initialize that.
+                struct WeightedAdapter {
+                    int index, dedicated_memory;
+
+                    inline bool operator<(WeightedAdapter rhs) const {
+                        return rhs.dedicated_memory < dedicated_memory;
+                    }
+                };
+
+                m_device = nullptr;
+                IDXGIAdapter1* adapter = nullptr;
+
+                IDXGIFactory1* dxgi_factory;
+                HRESULT hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory));
+
+                std::vector<WeightedAdapter> sorted_adapters;
+                for (int adapter_index = 0; dxgi_factory->EnumAdapters1(adapter_index, &adapter) != DXGI_ERROR_NOT_FOUND; ++adapter_index) {
+                    DXGI_ADAPTER_DESC1 desc;
+                    adapter->GetDesc1(&desc);
+
+                    // Ignore software rendering adapters.
+                    if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+                        continue;
+
+                    WeightedAdapter e = { adapter_index, int(desc.DedicatedVideoMemory >> 20) };
+                    sorted_adapters.push_back(e);
+                }
+
+                std::sort(sorted_adapters.begin(), sorted_adapters.end());
+
+                for (WeightedAdapter a : sorted_adapters) {
+                    dxgi_factory->EnumAdapters1(a.index, &adapter);
+
+                    // TODO Use DX 11.1. See https://blogs.msdn.microsoft.com/chuckw/2014/02/05/anatomy-of-direct3d-11-create-device/
+                    D3D_FEATURE_LEVEL feature_level;
+                    HRESULT hr = D3D11CreateDeviceAndSwapChain(adapter, D3D_DRIVER_TYPE_UNKNOWN, nullptr, 0, nullptr, 0,
+                        D3D11_SDK_VERSION, &swap_chain_desc, &m_swap_chain, &m_device, &feature_level, &m_render_context);
+                    if (SUCCEEDED(hr)) {
+                        DXGI_ADAPTER_DESC adapter_description;
+                        adapter->GetDesc(&adapter_description);
+                        std::string readable_feature_level = feature_level == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "11.1";
+                        printf("DX11Renderer using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level.c_str());
+                        break;
+                    }
+                }
+                dxgi_factory->Release();
+            }
 
             if (m_device == nullptr) {
                 release_state();
                 return;
             }
-
-            IDXGIDevice* gi_device;
-            hr = m_device->QueryInterface(IID_PPV_ARGS(&gi_device));
-            IDXGIAdapter* adapter;
-            gi_device->GetAdapter(&adapter);
-            DXGI_ADAPTER_DESC adapter_description;
-            adapter->GetDesc(&adapter_description);
-            std::string readable_feature_level = feature_level == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "11.1";
-            printf("DX11Renderer using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level.c_str());
-            adapter->Release();
-            gi_device->Release();
         }
 
         { // Setup backbuffer.
