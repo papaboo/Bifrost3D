@@ -91,6 +91,8 @@ private:
     vector<Dx11Model> m_models = vector<Dx11Model>(0);
     vector<Transform> m_transforms = vector<Transform>(0);
 
+    ID3D11DepthStencilState* m_opaque_depth_state;
+
     struct {
         ID3D11Buffer* uniforms_buffer;
         ID3D11InputLayout* vertex_layout;
@@ -200,6 +202,12 @@ public:
             m_depth_view = nullptr;
         }
 
+        { // Setup opaque rendering.
+            D3D11_DEPTH_STENCIL_DESC depth_desc = {};
+            depth_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+            m_device->CreateDepthStencilState(&depth_desc, &m_opaque_depth_state);
+        }
+
         setup_triangle();
     }
 
@@ -242,6 +250,8 @@ public:
         safe_release(&m_backbuffer_view);
         safe_release(&m_depth_buffer);
         safe_release(&m_depth_view);
+
+        m_opaque_depth_state->Release();
 
         for (Dx11Mesh mesh : m_meshes) {
             safe_release(&mesh.indices);
@@ -303,6 +313,8 @@ public:
             viewport.MaxDepth = 1.0f;
             m_render_context->RSSetViewports(1, &viewport);
         }
+
+        m_render_context->OMSetDepthStencilState(m_opaque_depth_state, 0);
 
         SceneRoot scene = Cameras::get_scene_ID(camera_ID);
         RGBA environment_tint = RGBA(scene.get_environment_tint(), 1.0f);
