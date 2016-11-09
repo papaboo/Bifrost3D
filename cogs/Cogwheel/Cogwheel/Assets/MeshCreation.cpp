@@ -124,12 +124,12 @@ Meshes::UID cube(unsigned int quads_pr_edge) {
         for (unsigned int i = 0; i < quads_pr_edge; ++i)
             for (unsigned int j = 0; j < quads_pr_edge; ++j) {
                 *indices++ = Vector3ui(j + i * verts_pr_edge,
-                                       j + 1 + i * verts_pr_edge,
-                                       j + (i + 1) * verts_pr_edge) + side_offset;
+                                       j + (i + 1) * verts_pr_edge,
+                                       j + 1 + i * verts_pr_edge) + side_offset;
 
                 *indices++ = Vector3ui(j + 1 + i * verts_pr_edge,
-                                       j + 1 + (i + 1) * verts_pr_edge,
-                                       j + (i + 1) * verts_pr_edge) + side_offset;
+                                       j + (i + 1) * verts_pr_edge,
+                                       j + 1 + (i + 1) * verts_pr_edge) + side_offset;
             }
 
     mesh.set_bounds(AABB(Vector3f(-halfsize), Vector3f(halfsize)));
