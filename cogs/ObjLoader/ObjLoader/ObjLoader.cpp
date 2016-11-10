@@ -146,7 +146,7 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
             mesh_ID = Meshes::create(shapes[i].name, triangle_count, vertex_count, mesh_flags);
 
             Mesh cogwheel_mesh = mesh_ID;
-            memcpy(cogwheel_mesh.get_indices(), tiny_mesh.indices.data(), tiny_mesh.indices.size() * sizeof(unsigned int));
+            memcpy(cogwheel_mesh.get_primitives(), tiny_mesh.indices.data(), tiny_mesh.indices.size() * sizeof(unsigned int));
             memcpy(cogwheel_mesh.get_positions(), tiny_mesh.positions.data(), tiny_mesh.positions.size() * sizeof(float));
             if (mesh_flags & MeshFlags::Normal)
                 memcpy(cogwheel_mesh.get_normals(), tiny_mesh.normals.data(), tiny_mesh.normals.size() * sizeof(float));

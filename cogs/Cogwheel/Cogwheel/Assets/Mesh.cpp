@@ -52,7 +52,7 @@ void Meshes::deallocate() {
 
     for (UID id : m_UID_generator) {
         Buffers& buffers = m_buffers[id];
-        delete[] buffers.indices;
+        delete[] buffers.primitives;
         delete[] buffers.positions;
         delete[] buffers.normals;
         delete[] buffers.texcoords;
@@ -95,7 +95,7 @@ void Meshes::reserve(unsigned int new_capacity) {
     reserve_mesh_data(m_UID_generator.capacity(), old_capacity);
 }
 
-Meshes::UID Meshes::create(const std::string& name, unsigned int index_count, unsigned int vertex_count, unsigned char buffer_bitmask) {
+Meshes::UID Meshes::create(const std::string& name, unsigned int primitive_count, unsigned int vertex_count, unsigned char buffer_bitmask) {
     assert(m_buffers != nullptr);
     assert(m_names != nullptr);
     assert(m_bounds != nullptr);
@@ -110,8 +110,8 @@ Meshes::UID Meshes::create(const std::string& name, unsigned int index_count, un
         m_meshes_changed.push_back(id);
 
     m_names[id] = name;
-    m_buffers[id].index_count = index_count;
-    m_buffers[id].indices = new Math::Vector3ui[index_count];
+    m_buffers[id].primitive_count = primitive_count;
+    m_buffers[id].primitives = new Math::Vector3ui[primitive_count];
     m_buffers[id].vertex_count = vertex_count;
     m_buffers[id].positions = (buffer_bitmask & MeshFlags::Position) ? new Math::Vector3f[vertex_count] : nullptr;
     m_buffers[id].normals = (buffer_bitmask & MeshFlags::Normal) ? new Math::Vector3f[vertex_count] : nullptr;
@@ -126,7 +126,7 @@ void Meshes::destroy(Meshes::UID mesh_ID) {
     if (m_UID_generator.erase(mesh_ID)) {
 
         Buffers& buffers = m_buffers[mesh_ID];
-        delete[] buffers.indices;
+        delete[] buffers.primitives;
         delete[] buffers.positions;
         delete[] buffers.normals;
         delete[] buffers.texcoords;
@@ -166,11 +166,11 @@ namespace MeshUtils {
         
         auto meshes = Core::Iterable<const TransformedMesh* const>(meshes_begin, meshes_end);
 
-        unsigned int index_count = 0u;
+        unsigned int primitive_count = 0u;
         unsigned int vertex_count = 0u;
         for (TransformedMesh transformed_mesh : meshes) {
             Mesh mesh = transformed_mesh.mesh_ID;
-            index_count += mesh.get_index_count();
+            primitive_count += mesh.get_primitive_count();
             vertex_count += mesh.get_vertex_count();
         }
 
@@ -182,16 +182,16 @@ namespace MeshUtils {
                 mesh_flags &= mesh.get_mesh_flags();
             }
 
-        Mesh merged_mesh = Mesh(Meshes::create(name, index_count, vertex_count, mesh_flags));
+        Mesh merged_mesh = Mesh(Meshes::create(name, primitive_count, vertex_count, mesh_flags));
 
-        { // Always combine indices.
-            Vector3ui* indices = merged_mesh.get_indices();
-            unsigned int index_offset = 0u;
+        { // Always combine primitives.
+            Vector3ui* primitives = merged_mesh.get_primitives();
+            unsigned int primitive_offset = 0u;
             for (TransformedMesh transformed_mesh : meshes) {
                 Mesh mesh = transformed_mesh.mesh_ID;
-                for (Vector3ui index : mesh.get_index_iterator())
-                    *(indices++) = index + index_offset;
-                index_offset += mesh.get_vertex_count();
+                for (Vector3ui primitive : mesh.get_primitive_iterator())
+                    *(primitives++) = primitive + primitive_offset;
+                primitive_offset += mesh.get_vertex_count();
             }
         }
 

@@ -407,7 +407,7 @@ public:
                     Dx11Mesh dx_mesh;
 
                     { // Upload indices.
-                        dx_mesh.index_count = mesh.get_index_count() * 3;
+                        dx_mesh.index_count = mesh.get_primitive_count() * 3;
 
                         D3D11_BUFFER_DESC indices_desc = {};
                         indices_desc.Usage = D3D11_USAGE_DEFAULT;
@@ -417,7 +417,7 @@ public:
                         indices_desc.MiscFlags = 0;
 
                         D3D11_SUBRESOURCE_DATA indices_data = {};
-                        indices_data.pSysMem = mesh.get_indices();
+                        indices_data.pSysMem = mesh.get_primitives();
                         HRESULT hr = m_device->CreateBuffer(&indices_desc, &indices_data, &dx_mesh.indices);
                         if (FAILED(hr))
                             printf("Could not upload '%s' index buffer.\n");

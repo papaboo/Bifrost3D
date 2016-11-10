@@ -45,8 +45,8 @@ TEST_F(Assets_Mesh, sentinel_mesh) {
     Meshes::UID sentinel_ID = Meshes::UID::invalid_UID();
 
     EXPECT_FALSE(Meshes::has(sentinel_ID));
-    EXPECT_EQ(0u, Meshes::get_index_count(sentinel_ID));
-    EXPECT_EQ(nullptr, Meshes::get_indices(sentinel_ID));
+    EXPECT_EQ(0u, Meshes::get_primitive_count(sentinel_ID));
+    EXPECT_EQ(nullptr, Meshes::get_primitives(sentinel_ID));
     EXPECT_EQ(0u, Meshes::get_vertex_count(sentinel_ID));
     EXPECT_EQ(nullptr, Meshes::get_positions(sentinel_ID));
     EXPECT_EQ(nullptr, Meshes::get_normals(sentinel_ID));
@@ -60,8 +60,8 @@ TEST_F(Assets_Mesh, create) {
     Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
 
     EXPECT_TRUE(Meshes::has(mesh_ID));
-    EXPECT_EQ(32u, Meshes::get_index_count(mesh_ID));
-    EXPECT_NE(nullptr, Meshes::get_indices(mesh_ID));
+    EXPECT_EQ(32u, Meshes::get_primitive_count(mesh_ID));
+    EXPECT_NE(nullptr, Meshes::get_primitives(mesh_ID));
     EXPECT_EQ(16u, Meshes::get_vertex_count(mesh_ID));
     EXPECT_NE(nullptr, Meshes::get_positions(mesh_ID));
     EXPECT_NE(nullptr, Meshes::get_normals(mesh_ID));
@@ -79,8 +79,8 @@ TEST_F(Assets_Mesh, create_only_positions) {
     Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u, MeshFlags::Position);
 
     EXPECT_TRUE(Meshes::has(mesh_ID));
-    EXPECT_EQ(32u, Meshes::get_index_count(mesh_ID));
-    EXPECT_NE(nullptr, Meshes::get_indices(mesh_ID));
+    EXPECT_EQ(32u, Meshes::get_primitive_count(mesh_ID));
+    EXPECT_NE(nullptr, Meshes::get_primitives(mesh_ID));
     EXPECT_EQ(16u, Meshes::get_vertex_count(mesh_ID));
     EXPECT_NE(nullptr, Meshes::get_positions(mesh_ID));
     EXPECT_EQ(nullptr, Meshes::get_normals(mesh_ID));

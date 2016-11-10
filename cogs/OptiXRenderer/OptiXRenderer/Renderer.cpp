@@ -144,9 +144,9 @@ static inline optix::Geometry load_mesh(optix::Context& context, Meshes::UID mes
     optix_mesh->setIntersectionProgram(intersection_program);
     optix_mesh->setBoundingBoxProgram(bounds_program);
 
-    optix::Buffer index_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT3, mesh.get_index_count(), mesh.get_indices());
+    optix::Buffer index_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT3, mesh.get_primitive_count(), mesh.get_primitives());
     optix_mesh["index_buffer"]->setBuffer(index_buffer);
-    optix_mesh->setPrimitiveCount(mesh.get_index_count());
+    optix_mesh->setPrimitiveCount(mesh.get_primitive_count());
 
     // Vertex attributes
     unsigned int vertex_count = mesh.get_vertex_count();

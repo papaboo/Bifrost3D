@@ -54,17 +54,17 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
                 for (int x = 0; x < vertices_pr_side; ++x)
                     positions[x + y * vertices_pr_side] = Vector3f(x - 20.0f, 0.0f, y - 20.0f);
 
-            Vector3ui* indices = Meshes::get_indices(tiles_mesh_ID);
+            Vector3ui* primitives = Meshes::get_primitives(tiles_mesh_ID);
             for (int y = 0; y < tile_count_pr_side; ++y)
                 for (int x = 0; x < tile_count_pr_side; ++x) {
                     if ((x & 1) != (y & 1))
                         continue; // Ignore every other tile.
 
                     unsigned int base_index = x + y * vertices_pr_side;
-                    *indices = Vector3ui(base_index, base_index + vertices_pr_side, base_index + 1);
-                    ++indices;
-                    *indices = Vector3ui(base_index + 1, base_index + vertices_pr_side, base_index + vertices_pr_side + 1);
-                    ++indices;
+                    *primitives = Vector3ui(base_index, base_index + vertices_pr_side, base_index + 1);
+                    ++primitives;
+                    *primitives = Vector3ui(base_index + 1, base_index + vertices_pr_side, base_index + vertices_pr_side + 1);
+                    ++primitives;
                 }
 
             Meshes::compute_bounds(tiles_mesh_ID);
@@ -88,7 +88,7 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
                 for (int x = 0; x < vertices_pr_side; ++x)
                     positions[x + y * vertices_pr_side] = Vector3f(x - 20.0f, 0.0f, y - 20.0f);
 
-            Vector3ui* indices = Meshes::get_indices(tiles_mesh_ID);
+            Vector3ui* indices = Meshes::get_primitives(tiles_mesh_ID);
             for (int y = 0; y < tile_count_pr_side; ++y)
                 for (int x = 0; x < tile_count_pr_side; ++x) {
                     if ((x & 1) == (y & 1))

@@ -38,13 +38,13 @@ Meshes::UID plane(unsigned int quads_pr_edge) {
         }
     }
 
-    // Indices
+    // Primitives.
     for (unsigned int z = 0; z < quads_pr_edge; ++z) {
         for (unsigned int x = 0; x < quads_pr_edge; ++x) {
-            Vector3ui* indices = mesh.get_indices() + (z * quads_pr_edge + x) * 2;
+            Vector3ui* primitives = mesh.get_primitives() + (z * quads_pr_edge + x) * 2;
             unsigned int base_index = x + z * size;
-            indices[0] = Vector3ui(base_index, base_index + size, base_index + 1);
-            indices[1] = Vector3ui(base_index + 1, base_index + size, base_index + size + 1);
+            primitives[0] = Vector3ui(base_index, base_index + size, base_index + 1);
+            primitives[1] = Vector3ui(base_index + 1, base_index + size, base_index + size + 1);
         }
     }
 
@@ -119,15 +119,15 @@ Meshes::UID cube(unsigned int quads_pr_edge) {
             texcoords[i * verts_pr_edge + j + verts_pr_side * 5] = Vector2f(float(i), float(j)) * tc_normalizer;
 
     // Set indices.
-    Vector3ui* indices = mesh.get_indices();
+    Vector3ui* primitives = mesh.get_primitives();
     for (unsigned int side_offset = 0; side_offset < vertex_count; side_offset += verts_pr_side)
         for (unsigned int i = 0; i < quads_pr_edge; ++i)
             for (unsigned int j = 0; j < quads_pr_edge; ++j) {
-                *indices++ = Vector3ui(j + i * verts_pr_edge,
+                *primitives++ = Vector3ui(j + i * verts_pr_edge,
                                        j + (i + 1) * verts_pr_edge,
                                        j + 1 + i * verts_pr_edge) + side_offset;
 
-                *indices++ = Vector3ui(j + 1 + i * verts_pr_edge,
+                *primitives++ = Vector3ui(j + 1 + i * verts_pr_edge,
                                        j + (i + 1) * verts_pr_edge,
                                        j + 1 + (i + 1) * verts_pr_edge) + side_offset;
             }
@@ -154,7 +154,7 @@ Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_qua
     // Vertex layout is
     // [..TOP.. ..BOTTOM.. ..SIDE..]
 
-    { // Positions
+    { // Positions.
         Vector3f* positions = mesh.get_positions();
         // Create top positions.
         positions[0] = Vector3f(0.0f, radius, 0.0f);
@@ -180,8 +180,7 @@ Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_qua
         }
     }
 
-    { // Normals
-        // Get rid of the loop counter.
+    { // Normals.
         Vector3f* normal_iterator = mesh.get_normals();
         while (normal_iterator < mesh.get_normals() + lid_vertex_count) // Top
             *normal_iterator++ = Vector3f(0, 1, 0);
@@ -194,7 +193,7 @@ Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_qua
         }
     }
 
-    { // tex coords
+    { // Tex coords.
         Vector2f* texcoords = mesh.get_texcoords();
 
         // Top and bottom.
@@ -203,7 +202,7 @@ Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_qua
             texcoords[i] = Vector2f(position.x, position.z) + 0.5f;
         }
 
-        // Side
+        // Side.
         for (unsigned int i = 0; i < vertical_quads + 1; ++i) {
             float v = i / float(vertical_quads);
             for (unsigned int j = 0; j < circumference_quads; ++j) {
@@ -214,34 +213,33 @@ Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_qua
         }
     }
 
-    { // Indices
-        Vector3ui* indices = mesh.get_indices();
+    { // Primitives.
+        Vector3ui* primitives = mesh.get_primitives();
 
-        // Top
+        // Top.
         for (unsigned int i = 0; i < lid_index_count; ++i)
-            indices[i] = Vector3ui(0, i + 1, i + 2);
-        indices[lid_index_count - 1].z = 1;
-        
-        // Bottom
-        for (unsigned int i = 0; i < lid_index_count; ++i)
-            indices[i + lid_index_count] = Vector3ui(0, i + 2, i + 1) + lid_vertex_count;
-        indices[2 * lid_index_count - 1].y = 1 + lid_vertex_count;
+            primitives[i] = Vector3ui(0, i + 1, i + 2);
+        primitives[lid_index_count - 1].z = 1;
 
-        // Side
-        // Vector3f* side_positions = mesh.positions + 2 * lid_vertex_count;
+        // Bottom.
+        for (unsigned int i = 0; i < lid_index_count; ++i)
+            primitives[i + lid_index_count] = Vector3ui(0, i + 2, i + 1) + lid_vertex_count;
+        primitives[2 * lid_index_count - 1].y = 1 + lid_vertex_count;
+
+        // Side.
         unsigned int side_vertex_offset = 2 * lid_vertex_count;
         for (unsigned int i = 0; i < vertical_quads; ++i) {
             for (unsigned int j = 0; j < circumference_quads; ++j) {
                 unsigned int side_index = 2 * lid_index_count + 2 * (i * circumference_quads + j);
-                
+
                 unsigned int i0 = i * circumference_quads + j;
                 unsigned int i1 = (i + 1) * circumference_quads + j;
                 unsigned int j_plus_1 = (j + 1) < circumference_quads ? (j + 1) : 0; // Handle wrap around.
                 unsigned int i2 = i * circumference_quads + j_plus_1;
                 unsigned int i3 = (i + 1) * circumference_quads + j_plus_1;
-                
-                indices[side_index + 0] = Vector3ui(i0, i1, i3) + side_vertex_offset;
-                indices[side_index + 1] = Vector3ui(i0, i3, i2) + side_vertex_offset;
+
+                primitives[side_index + 0] = Vector3ui(i0, i1, i3) + side_vertex_offset;
+                primitives[side_index + 1] = Vector3ui(i0, i3, i2) + side_vertex_offset;
             }
         }
     }
@@ -295,13 +293,13 @@ Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_
         }
     }
 
-    { // Indices
+    { // Primitives.
         for (unsigned int y = 0; y < latitude_quads; ++y) {
             for (unsigned int x = 0; x < longitude_quads; ++x) {
-                Vector3ui* indices = mesh.get_indices() + (y * longitude_quads + x) * 2;
+                Vector3ui* primitives = mesh.get_primitives() + (y * longitude_quads + x) * 2;
                 unsigned int base_vertex_index = x + y * longitude_size;
-                indices[0] = Vector3ui(0, longitude_size, 1) + base_vertex_index;
-                indices[1] = Vector3ui(1, longitude_size, longitude_size + 1) + base_vertex_index;
+                primitives[0] = Vector3ui(0, longitude_size, 1) + base_vertex_index;
+                primitives[1] = Vector3ui(1, longitude_size, longitude_size + 1) + base_vertex_index;
             }
         }
     }

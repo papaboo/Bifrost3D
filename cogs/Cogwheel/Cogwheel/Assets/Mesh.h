@@ -49,7 +49,7 @@ public:
     static void reserve(unsigned int new_capacity);
     static inline bool has(Meshes::UID mesh_ID) { return m_UID_generator.has(mesh_ID); }
 
-    static Meshes::UID create(const std::string& name, unsigned int index_count, unsigned int vertex_count, unsigned char buffer_bitmask = MeshFlags::AllBuffers);
+    static Meshes::UID create(const std::string& name, unsigned int primitive_count, unsigned int vertex_count, unsigned char buffer_bitmask = MeshFlags::AllBuffers);
     static void destroy(Meshes::UID mesh_ID);
 
     static inline ConstUIDIterator begin() { return m_UID_generator.begin(); }
@@ -59,8 +59,8 @@ public:
     static inline std::string get_name(Meshes::UID mesh_ID) { return m_names[mesh_ID]; }
     static inline void set_name(Meshes::UID mesh_ID, const std::string& name) { m_names[mesh_ID] = name; }
 
-    static inline unsigned int get_index_count(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].index_count; }
-    static inline Math::Vector3ui* get_indices(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].indices; }
+    static inline unsigned int get_primitive_count(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].primitive_count; }
+    static inline Math::Vector3ui* get_primitives(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].primitives; }
     static inline unsigned int get_vertex_count(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].vertex_count; }
     static inline Math::Vector3f* get_positions(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].positions; }
     static inline Math::Vector3f* get_normals(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].normals; }
@@ -95,10 +95,10 @@ private:
     static void reserve_mesh_data(unsigned int new_capacity, unsigned int old_capacity);
 
     struct Buffers {
-        unsigned int index_count;
+        unsigned int primitive_count;
         unsigned int vertex_count;
 
-        Math::Vector3ui* indices;
+        Math::Vector3ui* primitives;
         Math::Vector3f* positions;
         Math::Vector3f* normals;
         Math::Vector2f* texcoords;
@@ -136,9 +136,9 @@ public:
     // -----------------------------------------------------------------------
     inline std::string get_name() const { return Meshes::get_name(m_ID); }
     inline void set_name(const std::string& name) { Meshes::set_name(m_ID, name); }
-    inline unsigned int get_index_count() { return Meshes::get_index_count(m_ID); }
-    inline Math::Vector3ui* get_indices() { return Meshes::get_indices(m_ID); }
-    inline Core::Iterable<Math::Vector3ui*> get_index_iterator() { return Core::Iterable<Math::Vector3ui*>(get_indices(), get_index_count()); }
+    inline unsigned int get_primitive_count() { return Meshes::get_primitive_count(m_ID); }
+    inline Math::Vector3ui* get_primitives() { return Meshes::get_primitives(m_ID); }
+    inline Core::Iterable<Math::Vector3ui*> get_primitive_iterator() { return Core::Iterable<Math::Vector3ui*>(get_primitives(), get_primitive_count()); }
     inline unsigned int get_vertex_count() { return Meshes::get_vertex_count(m_ID); }
     inline Math::Vector3f* get_positions() { return Meshes::get_positions(m_ID); }
     inline Core::Iterable<Math::Vector3f*> get_position_iterator() { return Core::Iterable<Math::Vector3f*>(get_positions(), get_vertex_count()); }
