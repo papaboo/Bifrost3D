@@ -38,6 +38,7 @@ public:
     // GLFW  http://www.glfw.org/docs/latest/group__keys.html#gac556b360f7f6fca4b70ba0aecf313fd4
     // SDL   http://www.libsdl.org/release/SDL-1.2.15/include/SDL_keysym.h
     enum class Key {
+        Invalid = 0,
         Space = 32,
         Apostrophe = 39,
         Comma = 44,
@@ -55,7 +56,7 @@ public:
 
         LeftBracket = 91,
         Backslash = 92,
-        RrightBracket = 93,
+        RightBracket = 93,
         GraveAccent = 96,
 
         // ??
