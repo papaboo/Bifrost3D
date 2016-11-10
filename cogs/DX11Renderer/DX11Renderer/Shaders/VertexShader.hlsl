@@ -8,11 +8,9 @@
 
 cbuffer scene_variables  : register(b0) {
     matrix mvp_matrix;
-    float4 offset;
     float4 color;
 };
 
 float4 main(float3 in_pos : POSITION) : SV_POSITION {
-    float4 pos = float4(in_pos + offset.xyz, 1.0f);
-    return mul(pos, mvp_matrix);
+    return mul(float4(in_pos, 1.0f), mvp_matrix);
 }

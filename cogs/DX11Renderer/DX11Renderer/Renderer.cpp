@@ -91,7 +91,9 @@ private:
     vector<Dx11Model> m_models = vector<Dx11Model>(0);
     vector<Transform> m_transforms = vector<Transform>(0);
 
-    ID3D11DepthStencilState* m_opaque_depth_state;
+    struct {
+        ID3D11DepthStencilState* depth_state;
+    } m_opaque;
 
     struct {
         ID3D11Buffer* uniforms_buffer;
@@ -104,7 +106,6 @@ private:
 
     struct Uniforms {
         Matrix4x4f mvp_matrix;
-        Vector4f offset;
         RGBA color;
     };
 
@@ -204,8 +205,8 @@ public:
 
         { // Setup opaque rendering.
             D3D11_DEPTH_STENCIL_DESC depth_desc = {};
-            depth_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-            m_device->CreateDepthStencilState(&depth_desc, &m_opaque_depth_state);
+            depth_desc = CD3D11_DEPTH_STENCIL_DESC();
+            m_device->CreateDepthStencilState(&depth_desc, &m_opaque.depth_state);
         }
 
         setup_triangle();
@@ -251,7 +252,7 @@ public:
         safe_release(&m_depth_buffer);
         safe_release(&m_depth_view);
 
-        m_opaque_depth_state->Release();
+        m_opaque.depth_state->Release();
 
         for (Dx11Mesh mesh : m_meshes) {
             safe_release(&mesh.indices);
@@ -263,7 +264,7 @@ public:
         if (Cameras::begin() == Cameras::end())
             return;
 
-        // ?? wait_for_previous_frame(); // Why isn't this needed?
+        // ?? wait_for_previous_frame();
 
         if (m_device == nullptr)
             return;
@@ -314,7 +315,7 @@ public:
             m_render_context->RSSetViewports(1, &viewport);
         }
 
-        m_render_context->OMSetDepthStencilState(m_opaque_depth_state, 0);
+        m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 0);
 
         SceneRoot scene = Cameras::get_scene_ID(camera_ID);
         RGBA environment_tint = RGBA(scene.get_environment_tint(), 1.0f);
@@ -347,7 +348,6 @@ public:
                 {
                     Uniforms uniforms;
                     uniforms.mvp_matrix = Cameras::get_view_projection_matrix(camera_ID) * to_matrix4x4(m_transforms[model.transform_ID]);
-                    uniforms.offset = Vector4f::zero();
                     uniforms.color = m_materials[model.material_ID].tint;
                     m_render_context->UpdateSubresource(m_triangle.uniforms_buffer, 0, NULL, &uniforms, 0, 0);
                     m_render_context->VSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
