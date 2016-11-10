@@ -45,6 +45,106 @@ LRESULT CALLBACK handle_messages(HWND window_handle, UINT message, WPARAM wParam
     return 0;
 }
 
+// Incredibly heavily inspired by GLFW's keyboard handling. See win32_window.c, translateKey() and referencing code.
+Keyboard::Key translate_key(WPARAM wParam, LPARAM lParam) {
+    using Key = Keyboard::Key;
+
+    static Key keymap[512] = {
+        // [0, 15]
+        Key::Invalid, Key::Escape, Key::Key1, Key::Key2, Key::Key3, Key::Key4, Key::Key5, Key::Key6, Key::Key7, Key::Key8, Key::Key9, Key::Key0, Key::Minus, Key::Equal, Key::Backspace, Key::Tab,
+        // [16, 31]
+        Key::Q, Key::W, Key::E, Key::R, Key::T, Key::Y, Key::U, Key::I, Key::O, Key::P, Key::LeftBracket, Key::RightBracket, Key::Enter, Key::LeftControl, Key::A, Key::S,
+        // [32, 47]
+        Key::D, Key::F, Key::G, Key::H, Key::J, Key::K, Key::L, Key::Semicolon, Key::Apostrophe, Key::GraveAccent, Key::LeftShift, Key::Backslash, Key::Z, Key::X, Key::C, Key::V,
+        // [48, 63]
+        Key::B, Key::N, Key::M, Key::Comma, Key::Period, Key::Slash, Key::RightShift, Key::KeypadMultiply, Key::LeftAlt, Key::Space, Key::CapsLock, Key::F1, Key::F2, Key::F3, Key::F4, Key::F5,
+        // [64, 79]
+        Key::F6, Key::F7, Key::F8, Key::F9, Key::F10, Key::Pause, Key::ScrollLock, Key::Keypad7, Key::Keypad8, Key::Keypad9, Key::KeypadSubtract, Key::Keypad4, Key::Keypad5, Key::Keypad6, Key::KeypadAdd, Key::Keypad1,
+        // [80, 95]
+        Key::Keypad2, Key::Keypad3, Key::Keypad0, Key::KeypadDecimal, Key::Invalid, Key::Invalid, Key::World2, Key::F11, Key::F12, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [96, 111]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::F13, Key::F14, Key::F15, Key::F16, Key::F17, Key::F18, Key::F19, Key::F20, Key::F21, Key::F22, Key::F23, Key::Invalid,
+        // [112, 127]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::F24, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [128, 143]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [144, 159]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [160, 175]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [176, 191]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [192, 207]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [208, 223]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [224, 239]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [240, 255]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [256, 271]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [272, 287]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::KeypadEnter, Key::RightControl, Key::Invalid, Key::Invalid,
+        // [288, 303]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [304, 319]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::KeypadDivide, Key::Invalid, Key::PrintScreen, Key::RightAlt, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [320, 335]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::NumLock, Key::Invalid, Key::Home, Key::Up, Key::PageUp, Key::Invalid, Key::Left, Key::Invalid, Key::Right, Key::Invalid, Key::End,
+        // [336, 351]
+        Key::Down, Key::PageDown, Key::Insert, Key::Delete, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::LeftSuper, Key::RightSuper, Key::Menu, Key::Invalid, Key::Invalid,
+        // [352, 367]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [368, 383]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [384, 399]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [400, 415]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [416, 431]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [432, 447]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [448, 463]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [464, 479]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [480, 495]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid,
+        // [496, 511]
+        Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid, Key::Invalid
+    };
+
+    if (wParam == VK_CONTROL)
+    {
+        // The CTRL keys require special handling, since Alt Gr actually sends two messages, a LeftControl and then RightAlt.
+        // We try to detect Alt Gr events by peeking ahead in the message queue.
+
+        // Is this an extended key (i.e. right key)?
+        if (lParam & 0x01000000)
+            return Key::RightControl;
+
+        DWORD time = GetMessageTime();
+        MSG next;
+        if (PeekMessageW(&next, nullptr, 0, 0, PM_NOREMOVE)) {
+            if (next.message == WM_KEYDOWN || next.message == WM_SYSKEYDOWN ||
+                next.message == WM_KEYUP || next.message == WM_SYSKEYUP) {
+                if (next.wParam == VK_MENU && (next.lParam & 0x01000000) &&
+                    next.time == time) {
+                    // Next message is a RightAlt message, which
+                    // means that this is not a proper LCTRL message
+                    return Key::Invalid;
+                }
+            }
+        }
+
+        return Key::LeftControl;
+    }
+
+    return keymap[HIWORD(lParam) & 0x1FF];
+}
+
 LRESULT handle_input(UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
     case WM_MOUSEMOVE:
@@ -72,9 +172,35 @@ LRESULT handle_input(UINT message, WPARAM wParam, LPARAM lParam) {
         g_mouse->add_scroll_delta(GET_WHEEL_DELTA_WPARAM(wParam) / float(WHEEL_DELTA));
         break;
     case WM_KEYDOWN:
-    case WM_KEYUP:
-        // TODO
+    case WM_SYSKEYDOWN: {
+        Keyboard::Key key = translate_key(wParam, lParam);
+        if (key != Keyboard::Key::Invalid)
+            if (g_keyboard->is_pressed(key))
+                g_keyboard->key_tapped(key, false);
+        g_keyboard->key_tapped(key, true);
         break;
+    }
+    case WM_KEYUP:
+    case WM_SYSKEYUP: {
+        Keyboard::Key key = translate_key(wParam, lParam);
+        if (key != Keyboard::Key::Invalid) {
+
+            if (wParam == VK_SHIFT) {
+                // Release both Shift keys on Shift up, as only one event
+                // is sent even if both keys are released.
+                if (g_keyboard->is_pressed(Keyboard::Key::LeftShift))
+                    g_keyboard->key_tapped(Keyboard::Key::LeftShift, false);
+                if (g_keyboard->is_pressed(Keyboard::Key::RightShift))
+                    g_keyboard->key_tapped(Keyboard::Key::RightShift, false);
+            } else
+                // If a released key wasn't pressed, then quickly press is.
+                // This also happens to be a wonderful fix to Print Screen not producing down events.
+                if (g_keyboard->is_released(key))
+                    g_keyboard->key_tapped(key, true);
+                g_keyboard->key_tapped(key, false);
+        }
+        break;
+    }
     default:
         return 1;
     }
