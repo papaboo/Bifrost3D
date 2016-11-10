@@ -21,7 +21,6 @@
 #include <Cogwheel/Scene/SceneNode.h>
 #include <Cogwheel/Scene/SceneRoot.h>
 
-
 #ifdef OPTIXRENDERER_FOUND
 #include <GLFWDriver.h>
 #include <OptiXRenderer/Renderer.h>
@@ -65,15 +64,15 @@ public:
 
         { // Translation
             float strafing = 0.0f;
-            if (keyboard->is_pressed(Keyboard::Key::D))
+            if (keyboard->is_pressed(Keyboard::Key::D) || keyboard->is_pressed(Keyboard::Key::Right))
                 strafing = 1.0f;
-            if (keyboard->is_pressed(Keyboard::Key::A))
+            if (keyboard->is_pressed(Keyboard::Key::A) || keyboard->is_pressed(Keyboard::Key::Left))
                 strafing -= 1.0f;
 
             float forward = 0.0f;
-            if (keyboard->is_pressed(Keyboard::Key::W))
+            if (keyboard->is_pressed(Keyboard::Key::W) || keyboard->is_pressed(Keyboard::Key::Up))
                 forward = 1.0f;
-            if (keyboard->is_pressed(Keyboard::Key::S))
+            if (keyboard->is_pressed(Keyboard::Key::S) || keyboard->is_pressed(Keyboard::Key::Down))
                 forward -= 1.0f;
 
             float velocity = m_velocity;
@@ -180,7 +179,7 @@ static inline void update_FPS(Engine& engine, void*) {
 // Future work
 // * Only combine meshes within some max distance of each other, fx the diameter of their bounds.
 //   This avoids their bounding boxes containing mostly empty space and messing up ray tracing, 
-//   which would be the case if two models on opposite sides of the scene where to be combined.
+//   which would be the case if two models on opposite sides of the scene were to be combined.
 //   Profile if it makes a difference or if OptiX doesn't care.
 void mesh_combine_whole_scene(SceneNodes::UID scene_root) {
 
