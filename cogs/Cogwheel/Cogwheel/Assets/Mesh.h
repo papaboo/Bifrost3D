@@ -138,7 +138,7 @@ public:
     inline void set_name(const std::string& name) { Meshes::set_name(m_ID, name); }
     inline unsigned int get_primitive_count() { return Meshes::get_primitive_count(m_ID); }
     inline Math::Vector3ui* get_primitives() { return Meshes::get_primitives(m_ID); }
-    inline Core::Iterable<Math::Vector3ui*> get_primitive_iterator() { return Core::Iterable<Math::Vector3ui*>(get_primitives(), get_primitive_count()); }
+    inline Core::Iterable<Math::Vector3ui*> get_primitive_iterable() { return Core::Iterable<Math::Vector3ui*>(get_primitives(), get_primitive_count()); }
     inline unsigned int get_vertex_count() { return Meshes::get_vertex_count(m_ID); }
     inline Math::Vector3f* get_positions() { return Meshes::get_positions(m_ID); }
     inline Core::Iterable<Math::Vector3f*> get_position_iterator() { return Core::Iterable<Math::Vector3f*>(get_positions(), get_vertex_count()); }
@@ -174,26 +174,43 @@ private:
 //----------------------------------------------------------------------------
 namespace MeshUtils {
 
-    struct TransformedMesh {
-        Meshes::UID mesh_ID;
-        Math::Transform transform;
-    };
+struct TransformedMesh {
+    Meshes::UID mesh_ID;
+    Math::Transform transform;
+};
 
-    Meshes::UID combine(const std::string& name, 
-                        const TransformedMesh* const meshes_begin, const TransformedMesh* const meshes_end, 
-                        unsigned int mesh_flags = MeshFlags::None);
+Meshes::UID combine(const std::string& name, 
+                    const TransformedMesh* const meshes_begin, const TransformedMesh* const meshes_end, 
+                    unsigned int mesh_flags = MeshFlags::None);
 
-    inline Meshes::UID combine(const std::string& name, 
-                               Meshes::UID mesh0_ID, Math::Transform transform0,
-                               Meshes::UID mesh1_ID, Math::Transform transform1, 
-                               unsigned int mesh_flags = MeshFlags::None) {
-        TransformedMesh mesh0 = { mesh0_ID, transform0 };
-        TransformedMesh mesh1 = { mesh1_ID, transform1 };
-        TransformedMesh meshes[2] = { mesh0, mesh1 };
-        return combine(name, meshes, meshes + 2, mesh_flags);
-    }
+inline Meshes::UID combine(const std::string& name, 
+                            Meshes::UID mesh0_ID, Math::Transform transform0,
+                            Meshes::UID mesh1_ID, Math::Transform transform1, 
+                            unsigned int mesh_flags = MeshFlags::None) {
+    TransformedMesh mesh0 = { mesh0_ID, transform0 };
+    TransformedMesh mesh1 = { mesh1_ID, transform1 };
+    TransformedMesh meshes[2] = { mesh0, mesh1 };
+    return combine(name, meshes, meshes + 2, mesh_flags);
+}
 
 } // NS MeshUtils
+
+//----------------------------------------------------------------------------
+// Utility tests for verifying the validity of a mesh.
+//----------------------------------------------------------------------------
+namespace MeshTests {
+
+// Tests that the normals corrospond to the winding order,
+// i.e. that the front face defined by the winding order 
+// is facing the same general direction as the normals.
+// TODO optional function that all invalid primitives are passed to.
+// Returns the number of primitives whose winding order did not corrospond to their vertex normals.
+unsigned int normals_correspond_to_winding_order(Meshes::UID mesh_ID);
+
+// TODO callback function that receives found degenerate primitives.
+unsigned int count_degenerate_primitives(Meshes::UID mesh_ID, float epsilon_squared = 0.000001f);
+
+} // NS MeshTests
 
 } // NS Assets
 } // NS Cogwheel

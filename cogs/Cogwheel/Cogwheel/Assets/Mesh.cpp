@@ -189,7 +189,7 @@ namespace MeshUtils {
             unsigned int primitive_offset = 0u;
             for (TransformedMesh transformed_mesh : meshes) {
                 Mesh mesh = transformed_mesh.mesh_ID;
-                for (Vector3ui primitive : mesh.get_primitive_iterator())
+                for (Vector3ui primitive : mesh.get_primitive_iterable())
                     *(primitives++) = primitive + primitive_offset;
                 primitive_offset += mesh.get_vertex_count();
             }
@@ -226,6 +226,68 @@ namespace MeshUtils {
 
         return merged_mesh.get_ID();
     }
+
+} // NS MeshUtils
+
+namespace MeshTests {
+
+unsigned int normals_correspond_to_winding_order(Meshes::UID mesh_ID) {
+    Mesh mesh = mesh_ID;
+    unsigned int failed_primitives = 0;
+
+    for (Vector3ui primitive : mesh.get_primitive_iterable()) {
+        Vector3f v0 = mesh.get_positions()[primitive.x];
+        Vector3f v1 = mesh.get_positions()[primitive.y];
+        Vector3f v2 = mesh.get_positions()[primitive.z];
+        Vector3f primitive_normal = cross(v1 - v0, v2 - v0); // Not normalized, as we only care about the sign of the dot product below.
+
+        bool primitive_failed = false;
+        Vector3f n0 = mesh.get_normals()[primitive.x];
+        if (dot(primitive_normal, n0) <= 0.0f) {
+            // error_callback(mesh_ID, primitive_index, primitive.x);
+            primitive_failed = true;
+        }
+
+        Vector3f n1 = mesh.get_normals()[primitive.y];
+        if (dot(primitive_normal, n1) <= 0.0f) {
+            // error_callback(mesh_ID, primitive_index, primitive.x);
+            primitive_failed = true;
+        }
+
+        Vector3f n2 = mesh.get_normals()[primitive.z];
+        if (dot(primitive_normal, n2) <= 0.0f) {
+            // error_callback(mesh_ID, primitive_index, primitive.x);
+            primitive_failed = true;
+        }
+
+        if (primitive_failed)
+            ++failed_primitives;
+    }
+
+    return failed_primitives;
+}
+
+unsigned int count_degenerate_primitives(Meshes::UID mesh_ID, float epsilon_squared) {
+    Mesh mesh = mesh_ID;
+    unsigned int degenerate_primitives = 0;
+
+    for (Vector3ui primitive : mesh.get_primitive_iterable()) {
+        bool degenerate_indices = primitive.x == primitive.y ||
+                                  primitive.x == primitive.z ||
+                                  primitive.y == primitive.z;
+        Vector3f p0 = mesh.get_positions()[primitive.x];
+        Vector3f p1 = mesh.get_positions()[primitive.y];
+        Vector3f p2 = mesh.get_positions()[primitive.z];
+        bool degenerate_positions = squared_magnitude(p0 - p1) < epsilon_squared ||
+                                    squared_magnitude(p0 - p2) < epsilon_squared ||
+                                    squared_magnitude(p1 - p2) < epsilon_squared;
+
+        if (degenerate_indices || degenerate_positions)
+            ++degenerate_primitives;
+    }
+
+    return degenerate_primitives;
+}
 
 } // NS MeshUtils
 
