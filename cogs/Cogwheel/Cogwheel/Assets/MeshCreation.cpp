@@ -218,13 +218,13 @@ Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_qua
 
         // Top.
         for (unsigned int i = 0; i < lid_index_count; ++i)
-            primitives[i] = Vector3ui(0, i + 1, i + 2);
-        primitives[lid_index_count - 1].z = 1;
+            primitives[i] = Vector3ui(0, i + 2, i + 1);
+        primitives[lid_index_count - 1].y = 1;
 
         // Bottom.
         for (unsigned int i = 0; i < lid_index_count; ++i)
-            primitives[i + lid_index_count] = Vector3ui(0, i + 2, i + 1) + lid_vertex_count;
-        primitives[2 * lid_index_count - 1].y = 1 + lid_vertex_count;
+            primitives[i + lid_index_count] = Vector3ui(0, i + 1, i + 2) + lid_vertex_count;
+        primitives[2 * lid_index_count - 1].z = 1 + lid_vertex_count;
 
         // Side.
         unsigned int side_vertex_offset = 2 * lid_vertex_count;
@@ -238,8 +238,8 @@ Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_qua
                 unsigned int i2 = i * circumference_quads + j_plus_1;
                 unsigned int i3 = (i + 1) * circumference_quads + j_plus_1;
 
-                primitives[side_index + 0] = Vector3ui(i0, i1, i3) + side_vertex_offset;
-                primitives[side_index + 1] = Vector3ui(i0, i3, i2) + side_vertex_offset;
+                primitives[side_index + 0] = Vector3ui(i0, i3, i1) + side_vertex_offset;
+                primitives[side_index + 1] = Vector3ui(i0, i2, i3) + side_vertex_offset;
             }
         }
     }
@@ -265,7 +265,7 @@ Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_
     unsigned int longitude_size = longitude_quads + 1;
     unsigned int vertex_count = latitude_size * longitude_size;
     unsigned int quad_count = latitude_quads * longitude_quads;
-    unsigned int index_count = quad_count * 2;
+    unsigned int index_count = (quad_count - longitude_quads) * 2;
     float radius = 0.5f;
 
     Mesh mesh = Meshes::create("RevolvedSphere", index_count, vertex_count);
@@ -294,12 +294,14 @@ Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_
     }
 
     { // Primitives.
+        Vector3ui* primitives = mesh.get_primitives();
         for (unsigned int y = 0; y < latitude_quads; ++y) {
             for (unsigned int x = 0; x < longitude_quads; ++x) {
-                Vector3ui* primitives = mesh.get_primitives() + (y * longitude_quads + x) * 2;
                 unsigned int base_vertex_index = x + y * longitude_size;
-                primitives[0] = Vector3ui(0, longitude_size, 1) + base_vertex_index;
-                primitives[1] = Vector3ui(1, longitude_size, longitude_size + 1) + base_vertex_index;
+                if (y != 0)
+                    *primitives++ = Vector3ui(0, 1, longitude_size) + base_vertex_index;
+                if (y != latitude_quads - 1)
+                    *primitives++ = Vector3ui(1, longitude_size + 1, longitude_size) + base_vertex_index;
             }
         }
     }

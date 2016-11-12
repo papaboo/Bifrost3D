@@ -10,6 +10,7 @@
 #define _COGWHEEL_ASSETS_MESH_TEST_H_
 
 #include <Cogwheel/Assets/Mesh.h>
+#include <Cogwheel/Assets/MeshCreation.h>
 
 #include <gtest/gtest.h>
 
@@ -168,6 +169,24 @@ TEST_F(Assets_Mesh, create_and_destroy_notifications) {
         EXPECT_FALSE(Meshes::has(mesh_ID0));
         EXPECT_TRUE(Meshes::get_changed_meshes().is_empty());
     }
+}
+
+TEST_F(Assets_Mesh, normals_correspond_to_winding_order) {
+    Meshes::UID plane_ID = MeshCreation::plane(3);
+    EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(plane_ID));
+    EXPECT_EQ(0, MeshTests::count_degenerate_primitives(plane_ID, 0.000001f));
+
+    Meshes::UID cube_ID = MeshCreation::cube(3);
+    EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(cube_ID));
+    EXPECT_EQ(0, MeshTests::count_degenerate_primitives(cube_ID, 0.000001f));
+
+    Meshes::UID cylinder_ID = MeshCreation::cylinder(3, 3);
+    EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(cylinder_ID));
+    EXPECT_EQ(0, MeshTests::count_degenerate_primitives(cylinder_ID, 0.000001f));
+
+    Meshes::UID revolved_sphere_ID = MeshCreation::revolved_sphere(3, 3);
+    EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(revolved_sphere_ID));
+    EXPECT_EQ(0, MeshTests::count_degenerate_primitives(revolved_sphere_ID, 0.000001f));
 }
 
 } // NS Assets

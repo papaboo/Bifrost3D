@@ -20,8 +20,6 @@ namespace Assets {
 // * Tex coord functions and pass them to the relevant mesh creators.
 // * Allow for non uniform scaling on creation, 
 //   since the transforms only support uniform scaling.
-// * Test winding order is correct in a renderer that supports 
-//   backface culling.
 //----------------------------------------------------------------------------
 namespace MeshCreation {
 
