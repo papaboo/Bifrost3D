@@ -119,7 +119,7 @@ public:
             backbuffer_desc.Height = window.get_height();
             backbuffer_desc.RefreshRate.Numerator = 60;
             backbuffer_desc.RefreshRate.Denominator = 1;
-            backbuffer_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // TODO sRGB
+            backbuffer_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
             backbuffer_desc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
             backbuffer_desc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 

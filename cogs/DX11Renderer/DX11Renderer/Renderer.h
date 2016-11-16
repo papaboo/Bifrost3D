@@ -31,6 +31,7 @@ namespace DX11Renderer {
 // * Light sources.
 // * Materials.
 // ** Material properties buffer.
+// ** Textures.
 // * SSAO + IBL.
 // * Create an mvp matrix array, compute model * view_proj on the GPU and index into this array.
 //----------------------------------------------------------------------------
