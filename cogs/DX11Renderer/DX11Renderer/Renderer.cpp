@@ -211,10 +211,14 @@ public:
             // Create the input layout
             D3D11_INPUT_ELEMENT_DESC input_layout_desc[] = {
                 { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-                // { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+                { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
             };
 
-            hr = m_device->CreateInputLayout(input_layout_desc, 1, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout);
+            hr = m_device->CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout);
+            if (FAILED(hr)) {
+                release_state();
+                return;
+            }
         }
 
         { // Setup opaque rendering.
@@ -346,22 +350,18 @@ public:
                         m_render_context->IASetIndexBuffer(mesh.indices, DXGI_FORMAT_R32_UINT, 0);
 
                     // TODO Preallocate this on the mesh.
-                    ID3D11Buffer* buffers[8];
-                    unsigned int strides[8];
-                    unsigned int offsets[8];
+                    ID3D11Buffer* buffers[3];
+                    unsigned int strides[3];
+                    unsigned int offsets[3];
                     
                     buffers[0] = mesh.positions;
                     strides[0] = sizeof(float) * 3;
                     offsets[0] = 0;
-                    unsigned int buffer_count = 1;
 
-                    /*
-                    if (mesh.normals != nullptr) {
-                        buffers[buffer_count] = mesh.normals;
-                        strides[buffer_count] = sizeof(float) * 3;
-                        offsets[buffer_count] = 0;
-                        ++buffer_count;
-                    }*/
+                    buffers[1] = mesh.normals;
+                    strides[1] = sizeof(float) * 3;
+                    offsets[1] = 0;
+                    unsigned int buffer_count = 2;
 
                     m_render_context->IASetVertexBuffers(0, buffer_count, buffers, strides, offsets);
                 }

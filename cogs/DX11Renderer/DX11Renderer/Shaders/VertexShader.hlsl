@@ -11,6 +11,14 @@ cbuffer scene_variables  : register(b0) {
     float4 color;
 };
 
-float4 main(float3 in_pos : POSITION) : SV_POSITION {
-    return mul(float4(in_pos, 1.0f), mvp_matrix);
+struct Output {
+    float4 position : SV_POSITION;
+    float4 normal : NORMAL;
+};
+
+Output main(float3 position : POSITION, float3 normal : NORMAL) {
+    Output output;
+    output.position = mul(float4(position, 1.0f), mvp_matrix);
+    output.normal = float4(normal * 0.5f + 0.5f, 1.0);
+    return output;
 }

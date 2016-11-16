@@ -11,6 +11,11 @@ cbuffer scene_variables  : register(b0) {
     float4 color;
 };
 
-float4 main() : SV_TARGET{
-    return color;
+struct PixelInput {
+    float4 position : SV_POSITION;
+    float4 normal : NORMAL;
+};
+
+float4 main(PixelInput input) : SV_TARGET{
+    return color * input.normal;
 }
