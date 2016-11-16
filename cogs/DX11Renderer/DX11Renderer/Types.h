@@ -30,6 +30,7 @@ struct Dx11Mesh {
     unsigned int vertex_count;
     ID3D11Buffer* indices; // What is the concrete implementation of this buffer? Do I really need to always use the interface?
     ID3D11Buffer* positions;
+    ID3D11Buffer* normals;
 };
 
 struct Dx11Model {

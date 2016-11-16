@@ -92,22 +92,21 @@ private:
     vector<Transform> m_transforms = vector<Transform>(0);
 
     struct {
-        ID3D11DepthStencilState* depth_state;
-    } m_opaque;
+        ID3D11InputLayout* input_layout;
+        ID3D11VertexShader* shader;
+    } m_vertex_shading;
 
     struct {
-        ID3D11Buffer* uniforms_buffer;
-        ID3D11InputLayout* vertex_layout;
-        ID3D10Blob* vertex_shader_buffer;
-        ID3D10Blob* pixel_shader_buffer;
-        ID3D11VertexShader* vertex_shader;
-        ID3D11PixelShader* pixel_shader;
-    } m_triangle;
+        ID3D11DepthStencilState* depth_state;
+        ID3D11PixelShader* shader;
+    } m_opaque;
 
+    // Catch-all uniforms.
     struct Uniforms {
         Matrix4x4f mvp_matrix;
         RGBA color;
     };
+    ID3D11Buffer* uniforms_buffer;
 
 public:
     bool is_valid() { return m_device != nullptr; }
@@ -203,32 +202,31 @@ public:
             m_depth_view = nullptr;
         }
 
+        { // Setup vertex processing.
+            ID3D10Blob* vertex_shader_blob = compile_shader(L"VertexShader.hlsl", "vs_5_0");
+
+            // Create the shader objects.
+            HRESULT hr = m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shading.shader);
+
+            // Create the input layout
+            D3D11_INPUT_ELEMENT_DESC input_layout_desc[] = {
+                { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+                // { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+            };
+
+            hr = m_device->CreateInputLayout(input_layout_desc, 1, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout);
+        }
+
         { // Setup opaque rendering.
             D3D11_DEPTH_STENCIL_DESC depth_desc = {};
             depth_desc = CD3D11_DEPTH_STENCIL_DESC();
             m_device->CreateDepthStencilState(&depth_desc, &m_opaque.depth_state);
+
+            ID3D10Blob* pixel_shader_buffer = compile_shader(L"FragmentShader.hlsl", "ps_5_0");
+            HRESULT hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_opaque.shader);
         }
 
-        setup_triangle();
-    }
-
-    void setup_triangle() {
-        { // Compile shaders.
-            m_triangle.vertex_shader_buffer = compile_shader(L"VertexShader.hlsl", "vs_5_0");
-            m_triangle.pixel_shader_buffer = compile_shader(L"FragmentShader.hlsl", "ps_5_0");
-            
-            // Create the shader objects.
-            HRESULT hr = m_device->CreateVertexShader(UNPACK_BLOB_ARGS(m_triangle.vertex_shader_buffer), NULL, &m_triangle.vertex_shader);
-            hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(m_triangle.pixel_shader_buffer), NULL, &m_triangle.pixel_shader);
-        }
-
-        // Create the input layout
-        D3D11_INPUT_ELEMENT_DESC position_layout_desc =
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 };
-
-        m_device->CreateInputLayout(&position_layout_desc, 1, UNPACK_BLOB_ARGS(m_triangle.vertex_shader_buffer), &m_triangle.vertex_layout);
-
-        { // Uniforms.
+        { // Catch-all uniforms.
             D3D11_BUFFER_DESC uniforms_desc = {};
             uniforms_desc.Usage = D3D11_USAGE_DEFAULT;
             uniforms_desc.ByteWidth = sizeof(Uniforms);
@@ -236,7 +234,7 @@ public:
             uniforms_desc.CPUAccessFlags = 0;
             uniforms_desc.MiscFlags = 0;
 
-            HRESULT hr = m_device->CreateBuffer(&uniforms_desc, NULL, &m_triangle.uniforms_buffer);
+            HRESULT hr = m_device->CreateBuffer(&uniforms_desc, NULL, &uniforms_buffer);
         }
     }
 
@@ -252,11 +250,18 @@ public:
         safe_release(&m_depth_buffer);
         safe_release(&m_depth_view);
 
+        m_vertex_shading.input_layout->Release();
+        m_vertex_shading.shader->Release();
+
         m_opaque.depth_state->Release();
+        m_opaque.shader->Release();
+
+        uniforms_buffer->Release();
 
         for (Dx11Mesh mesh : m_meshes) {
             safe_release(&mesh.indices);
             safe_release(&mesh.positions);
+            safe_release(&mesh.normals);
         }
     }
 
@@ -284,7 +289,7 @@ public:
             depth_desc.Height = current_backbuffer_size.y;
             depth_desc.MipLevels = 1;
             depth_desc.ArraySize = 1;
-            depth_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT; // TODO DXGI_FORMAT_D32_FLOAT ?? Do I have to change the viewport min/max as well then?
+            depth_desc.Format = DXGI_FORMAT_D32_FLOAT;
             depth_desc.SampleDesc.Count = 1;
             depth_desc.SampleDesc.Quality = 0;
             depth_desc.Usage = D3D11_USAGE_DEFAULT;
@@ -330,28 +335,44 @@ public:
                 Dx11Mesh mesh = m_meshes[model.mesh_ID];
 
                 // Set vertex and pixel shaders.
-                m_render_context->VSSetShader(m_triangle.vertex_shader, 0, 0);
-                m_render_context->PSSetShader(m_triangle.pixel_shader, 0, 0);
+                m_render_context->VSSetShader(m_vertex_shading.shader, 0, 0);
+                m_render_context->PSSetShader(m_opaque.shader, 0, 0);
 
-                m_render_context->IASetInputLayout(m_triangle.vertex_layout);
+                m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
                 m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
                 { // Set the buffers.
                     if (mesh.index_count != 0)
                         m_render_context->IASetIndexBuffer(mesh.indices, DXGI_FORMAT_R32_UINT, 0);
 
-                    UINT stride = sizeof(float) * 3;
-                    UINT offset = 0;
-                    m_render_context->IASetVertexBuffers(0, 1, &mesh.positions, &stride, &offset);
+                    // TODO Preallocate this on the mesh.
+                    ID3D11Buffer* buffers[8];
+                    unsigned int strides[8];
+                    unsigned int offsets[8];
+                    
+                    buffers[0] = mesh.positions;
+                    strides[0] = sizeof(float) * 3;
+                    offsets[0] = 0;
+                    unsigned int buffer_count = 1;
+
+                    /*
+                    if (mesh.normals != nullptr) {
+                        buffers[buffer_count] = mesh.normals;
+                        strides[buffer_count] = sizeof(float) * 3;
+                        offsets[buffer_count] = 0;
+                        ++buffer_count;
+                    }*/
+
+                    m_render_context->IASetVertexBuffers(0, buffer_count, buffers, strides, offsets);
                 }
 
                 {
                     Uniforms uniforms;
                     uniforms.mvp_matrix = Cameras::get_view_projection_matrix(camera_ID) * to_matrix4x4(m_transforms[model.transform_ID]);
                     uniforms.color = m_materials[model.material_ID].tint;
-                    m_render_context->UpdateSubresource(m_triangle.uniforms_buffer, 0, NULL, &uniforms, 0, 0);
-                    m_render_context->VSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
-                    m_render_context->PSSetConstantBuffers(0, 1, &m_triangle.uniforms_buffer);
+                    m_render_context->UpdateSubresource(uniforms_buffer, 0, NULL, &uniforms, 0, 0);
+                    m_render_context->VSSetConstantBuffers(0, 1, &uniforms_buffer);
+                    m_render_context->PSSetConstantBuffers(0, 1, &uniforms_buffer);
                 }
 
                 if (mesh.index_count != 0)
@@ -406,15 +427,16 @@ public:
                     Cogwheel::Assets::Mesh mesh = mesh_ID;
                     Dx11Mesh dx_mesh;
 
+                    bool should_decompress_indexed_buffers = mesh.get_primitive_count() != 0 && mesh.get_normals() == nullptr;
+                    bool compute_normals = mesh.get_normals() == nullptr;
+
                     { // Upload indices.
                         dx_mesh.index_count = mesh.get_primitive_count() * 3;
 
                         D3D11_BUFFER_DESC indices_desc = {};
                         indices_desc.Usage = D3D11_USAGE_DEFAULT;
                         indices_desc.ByteWidth = sizeof(unsigned int) * dx_mesh.index_count;
-                        indices_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-                        indices_desc.CPUAccessFlags = 0;
-                        indices_desc.MiscFlags = 0;
+                        indices_desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 
                         D3D11_SUBRESOURCE_DATA indices_data = {};
                         indices_data.pSysMem = mesh.get_primitives();
@@ -423,22 +445,47 @@ public:
                             printf("Could not upload '%s' index buffer.\n");
                     }
 
-                    { // Upload positions.
-                        dx_mesh.vertex_count = mesh.get_vertex_count();
+                    dx_mesh.vertex_count = mesh.get_vertex_count();
 
-                        D3D11_BUFFER_DESC position_desc = {};
-                        position_desc.Usage = D3D11_USAGE_DEFAULT;
-                        position_desc.ByteWidth = sizeof(Vector3f) * dx_mesh.vertex_count;
-                        position_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-                        position_desc.CPUAccessFlags = 0;
-                        position_desc.MiscFlags = 0;
+                    static auto decompress_indexed_buffer = [](Vector3ui* primitives, int primitive_count, Vector3f* elements) -> Vector3f* {
+                        Vector3f* decompressed_elements = new Vector3f[primitive_count * 3];
+                        Vector3f* decompressed_elements_itr = decompressed_elements;
+                        for (Vector3ui primitive : Iterable<Vector3ui*>(primitives, primitive_count)) {
+                            *decompressed_elements_itr++ = elements[primitive.x];
+                            *decompressed_elements_itr++ = elements[primitive.y];
+                            *decompressed_elements_itr++ = elements[primitive.z];
+                        }
+
+                        return decompressed_elements;
+                    };
+
+                    { // Upload positions.
+                        D3D11_BUFFER_DESC positions_desc = {};
+                        positions_desc.Usage = D3D11_USAGE_DEFAULT;
+                        positions_desc.ByteWidth = sizeof(Vector3f) * dx_mesh.vertex_count;
+                        positions_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
                         D3D11_SUBRESOURCE_DATA positions_data = {};
                         positions_data.pSysMem = mesh.get_positions();
-                        HRESULT hr = m_device->CreateBuffer(&position_desc, &positions_data, &dx_mesh.positions);
+                        HRESULT hr = m_device->CreateBuffer(&positions_desc, &positions_data, &dx_mesh.positions);
                         if (FAILED(hr))
                             printf("Could not upload '%s' position buffer.\n");
                     }
+
+                    if (mesh.get_normals() != nullptr) { // Upload normals.
+                        // TODO Encode as float2.
+                        D3D11_BUFFER_DESC normals_desc = {};
+                        normals_desc.Usage = D3D11_USAGE_DEFAULT;
+                        normals_desc.ByteWidth = sizeof(Vector3f) * dx_mesh.vertex_count;
+                        normals_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+                        D3D11_SUBRESOURCE_DATA normals_data = {};
+                        normals_data.pSysMem = mesh.get_normals();
+                        HRESULT hr = m_device->CreateBuffer(&normals_desc, &normals_data, &dx_mesh.normals);
+                        if (FAILED(hr))
+                            printf("Could not upload '%s' position buffer.\n");
+                    } else
+                        dx_mesh.normals = nullptr;
 
                     m_meshes[mesh_ID] = dx_mesh;
                 }
@@ -454,7 +501,6 @@ public:
                     if (m_transforms.size() <= node_ID)
                         m_transforms.resize(SceneNodes::capacity());
 
-                    // NOTE Store the inverse excplicitly?
                     m_transforms[node_ID] = SceneNodes::get_global_transform(node_ID);
                 }
             }
