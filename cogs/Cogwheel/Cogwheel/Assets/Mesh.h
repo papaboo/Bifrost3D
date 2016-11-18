@@ -141,11 +141,11 @@ public:
     inline Core::Iterable<Math::Vector3ui*> get_primitive_iterable() { return Core::Iterable<Math::Vector3ui*>(get_primitives(), get_primitive_count()); }
     inline unsigned int get_vertex_count() { return Meshes::get_vertex_count(m_ID); }
     inline Math::Vector3f* get_positions() { return Meshes::get_positions(m_ID); }
-    inline Core::Iterable<Math::Vector3f*> get_position_iterator() { return Core::Iterable<Math::Vector3f*>(get_positions(), get_vertex_count()); }
+    inline Core::Iterable<Math::Vector3f*> get_position_iterable() { return Core::Iterable<Math::Vector3f*>(get_positions(), get_vertex_count()); }
     inline Math::Vector3f* get_normals() { return Meshes::get_normals(m_ID); }
-    inline Core::Iterable<Math::Vector3f*> get_normal_iterator() { return Core::Iterable<Math::Vector3f*>(get_normals(), get_vertex_count()); }
+    inline Core::Iterable<Math::Vector3f*> get_normal_iterable() { return Core::Iterable<Math::Vector3f*>(get_normals(), get_vertex_count()); }
     inline Math::Vector2f* get_texcoords() { return Meshes::get_texcoords(m_ID); }
-    inline Core::Iterable<Math::Vector2f*> get_texcoord_iterator() { return Core::Iterable<Math::Vector2f*>(get_texcoords(), get_vertex_count()); }
+    inline Core::Iterable<Math::Vector2f*> get_texcoord_iterable() { return Core::Iterable<Math::Vector2f*>(get_texcoords(), get_vertex_count()); }
     inline Math::AABB get_bounds() { return Meshes::get_bounds(m_ID); }
     inline void set_bounds(Math::AABB bounds) { Meshes::set_bounds(m_ID, bounds); }
 

@@ -199,7 +199,7 @@ Meshes::UID combine(const std::string& name,
         Vector3f* positions = merged_mesh.get_positions();
         for (TransformedMesh transformed_mesh : meshes) {
             Mesh mesh = transformed_mesh.mesh_ID;
-            for (Vector3f position : mesh.get_position_iterator())
+            for (Vector3f position : mesh.get_position_iterable())
                 *(positions++) = transformed_mesh.transform * position;
         }
     }
@@ -208,7 +208,7 @@ Meshes::UID combine(const std::string& name,
         Vector3f* normals = merged_mesh.get_normals();
         for (TransformedMesh transformed_mesh : meshes) {
             Mesh mesh = transformed_mesh.mesh_ID;
-            for (Vector3f normal : mesh.get_normal_iterator())
+            for (Vector3f normal : mesh.get_normal_iterable())
                 *(normals++) = transformed_mesh.transform.rotation * normal;
         }
     }
