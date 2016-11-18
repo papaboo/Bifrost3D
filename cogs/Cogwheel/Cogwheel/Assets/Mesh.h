@@ -61,6 +61,9 @@ public:
 
     static inline unsigned int get_primitive_count(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].primitive_count; }
     static inline Math::Vector3ui* get_primitives(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].primitives; }
+    static inline unsigned int get_index_count(Meshes::UID mesh_ID) { return get_primitive_count(mesh_ID) * 3; }
+    static inline unsigned int* get_indices(Meshes::UID mesh_ID) { return (unsigned int*)(void*)get_primitives(mesh_ID); }
+
     static inline unsigned int get_vertex_count(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].vertex_count; }
     static inline Math::Vector3f* get_positions(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].positions; }
     static inline Math::Vector3f* get_normals(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].normals; }
@@ -138,6 +141,8 @@ public:
     inline void set_name(const std::string& name) { Meshes::set_name(m_ID, name); }
     inline unsigned int get_primitive_count() { return Meshes::get_primitive_count(m_ID); }
     inline Math::Vector3ui* get_primitives() { return Meshes::get_primitives(m_ID); }
+    inline unsigned int get_index_count() { return Meshes::get_index_count(m_ID); }
+    inline unsigned int* get_indices() { return Meshes::get_indices(m_ID); }
     inline Core::Iterable<Math::Vector3ui*> get_primitive_iterable() { return Core::Iterable<Math::Vector3ui*>(get_primitives(), get_primitive_count()); }
     inline unsigned int get_vertex_count() { return Meshes::get_vertex_count(m_ID); }
     inline Math::Vector3f* get_positions() { return Meshes::get_positions(m_ID); }
