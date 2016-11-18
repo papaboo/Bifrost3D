@@ -189,6 +189,41 @@ TEST_F(Assets_Mesh, normals_correspond_to_winding_order) {
     EXPECT_EQ(0, MeshTests::count_degenerate_primitives(revolved_sphere_ID, 0.000001f));
 }
 
+TEST_F(Assets_Mesh, expand_index_buffer) {
+    Mesh mesh = MeshCreation::cube(2);
+    unsigned int expanded_vertex_count = mesh.get_primitive_count() * 3;
+    Math::Vector3f* expanded_positions = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), mesh.get_positions());
+
+    for (unsigned int p = 0; p < mesh.get_primitive_count(); ++p) {
+        Math::Vector3ui face = mesh.get_primitives()[p];
+        for (int i = 0; i < 3; ++i) {
+            Math::Vector3f indexed_position = mesh.get_positions()[face[i]];
+            Math::Vector3f expanded_position = expanded_positions[p * 3 + i];
+            EXPECT_EQ(indexed_position, expanded_position);
+        }
+    }
+}
+
+TEST_F(Assets_Mesh, hard_normal_computation) {
+    using namespace Math;
+
+    // Test that the computed hard normals match the cubes normals, which are hard as well.
+    Mesh cube = MeshCreation::cube(2);
+    unsigned int expanded_vertex_count = cube.get_primitive_count() * 3;
+    Vector3f* positions = MeshUtils::expand_indexed_buffer(cube.get_primitives(), cube.get_primitive_count(), cube.get_positions());
+    Vector3f* hard_normals = new Vector3f[expanded_vertex_count];
+    MeshUtils::compute_hard_normals(positions, positions + expanded_vertex_count, hard_normals);
+
+    for (unsigned int p = 0; p < cube.get_primitive_count(); ++p) {
+        Math::Vector3ui face = cube.get_primitives()[p];
+        for (int i = 0; i < 3; ++i) {
+            Math::Vector3f cube_normal = cube.get_normals()[face[i]];
+            Math::Vector3f hard_normal = hard_normals[p * 3 + i];
+            EXPECT_NORMAL_EQ(cube_normal, hard_normal);
+        }
+    }
+}
+
 } // NS Assets
 } // NS Cogwheel
 

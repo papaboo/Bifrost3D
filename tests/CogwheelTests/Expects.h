@@ -34,4 +34,9 @@ static bool invalid_AABB(Cogwheel::Math::AABB v) {
 }
 #define EXPECT_INVALID_AABB(val) EXPECT_PRED1(invalid_AABB, val)
 
+static bool equal_normal(Cogwheel::Math::Vector3f lhs, Cogwheel::Math::Vector3f rhs) {
+    return dot(lhs, rhs) > 0.99999f;
+}
+#define EXPECT_NORMAL_EQ(expected, actual) EXPECT_PRED2(equal_normal, expected, actual)
+
 #endif // _COGWHEEL_TESTS_EXPECTS_H_

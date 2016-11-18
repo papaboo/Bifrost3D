@@ -159,73 +159,86 @@ void Meshes::reset_change_notifications() {
 
 namespace MeshUtils {
 
-    Meshes::UID combine(const std::string& name, 
-                        const TransformedMesh* const meshes_begin, 
-                        const TransformedMesh* const meshes_end, 
-                        unsigned int mesh_flags) {
-        
-        auto meshes = Core::Iterable<const TransformedMesh* const>(meshes_begin, meshes_end);
+Meshes::UID combine(const std::string& name,
+                    const TransformedMesh* const meshes_begin,
+                    const TransformedMesh* const meshes_end,
+                    unsigned int mesh_flags) {
 
-        unsigned int primitive_count = 0u;
-        unsigned int vertex_count = 0u;
+    auto meshes = Core::Iterable<const TransformedMesh* const>(meshes_begin, meshes_end);
+
+    unsigned int primitive_count = 0u;
+    unsigned int vertex_count = 0u;
+    for (TransformedMesh transformed_mesh : meshes) {
+        Mesh mesh = transformed_mesh.mesh_ID;
+        primitive_count += mesh.get_primitive_count();
+        vertex_count += mesh.get_vertex_count();
+    }
+
+    // Determine meshflags if none are given.
+    if (mesh_flags == MeshFlags::None)
+        mesh_flags = MeshFlags::AllBuffers;
+    for (TransformedMesh transformed_mesh : meshes) {
+        Mesh mesh = transformed_mesh.mesh_ID;
+        mesh_flags &= mesh.get_mesh_flags();
+    }
+
+    Mesh merged_mesh = Mesh(Meshes::create(name, primitive_count, vertex_count, mesh_flags));
+
+    { // Always combine primitives.
+        Vector3ui* primitives = merged_mesh.get_primitives();
+        unsigned int primitive_offset = 0u;
         for (TransformedMesh transformed_mesh : meshes) {
             Mesh mesh = transformed_mesh.mesh_ID;
-            primitive_count += mesh.get_primitive_count();
-            vertex_count += mesh.get_vertex_count();
+            for (Vector3ui primitive : mesh.get_primitive_iterable())
+                *(primitives++) = primitive + primitive_offset;
+            primitive_offset += mesh.get_vertex_count();
         }
-
-        // Determine meshflags if none are given.
-        if (mesh_flags == MeshFlags::None)
-            mesh_flags = MeshFlags::AllBuffers;
-            for (TransformedMesh transformed_mesh : meshes) {
-                Mesh mesh = transformed_mesh.mesh_ID;
-                mesh_flags &= mesh.get_mesh_flags();
-            }
-
-        Mesh merged_mesh = Mesh(Meshes::create(name, primitive_count, vertex_count, mesh_flags));
-
-        { // Always combine primitives.
-            Vector3ui* primitives = merged_mesh.get_primitives();
-            unsigned int primitive_offset = 0u;
-            for (TransformedMesh transformed_mesh : meshes) {
-                Mesh mesh = transformed_mesh.mesh_ID;
-                for (Vector3ui primitive : mesh.get_primitive_iterable())
-                    *(primitives++) = primitive + primitive_offset;
-                primitive_offset += mesh.get_vertex_count();
-            }
-        }
-
-        if (mesh_flags & MeshFlags::Position) {
-            Vector3f* positions = merged_mesh.get_positions();
-            for (TransformedMesh transformed_mesh : meshes) {
-                Mesh mesh = transformed_mesh.mesh_ID;
-                for (Vector3f position : mesh.get_position_iterator())
-                    *(positions++) = transformed_mesh.transform * position;
-            }
-        }
-
-        if (mesh_flags & MeshFlags::Normal) {
-            Vector3f* normals = merged_mesh.get_normals();
-            for (TransformedMesh transformed_mesh : meshes) {
-                Mesh mesh = transformed_mesh.mesh_ID;
-                for (Vector3f normal : mesh.get_normal_iterator())
-                    *(normals++) = transformed_mesh.transform.rotation * normal;
-            }
-        }
-
-        if (mesh_flags & MeshFlags::Texcoord) {
-            Vector2f* texcoords = merged_mesh.get_texcoords();
-            for (TransformedMesh transformed_mesh : meshes) {
-                Mesh mesh = transformed_mesh.mesh_ID;
-                memcpy(texcoords, mesh.get_texcoords(), sizeof(Vector2f) * mesh.get_vertex_count());
-                texcoords += mesh.get_vertex_count();
-            }
-        }
-
-        merged_mesh.compute_bounds();
-
-        return merged_mesh.get_ID();
     }
+
+    if (mesh_flags & MeshFlags::Position) {
+        Vector3f* positions = merged_mesh.get_positions();
+        for (TransformedMesh transformed_mesh : meshes) {
+            Mesh mesh = transformed_mesh.mesh_ID;
+            for (Vector3f position : mesh.get_position_iterator())
+                *(positions++) = transformed_mesh.transform * position;
+        }
+    }
+
+    if (mesh_flags & MeshFlags::Normal) {
+        Vector3f* normals = merged_mesh.get_normals();
+        for (TransformedMesh transformed_mesh : meshes) {
+            Mesh mesh = transformed_mesh.mesh_ID;
+            for (Vector3f normal : mesh.get_normal_iterator())
+                *(normals++) = transformed_mesh.transform.rotation * normal;
+        }
+    }
+
+    if (mesh_flags & MeshFlags::Texcoord) {
+        Vector2f* texcoords = merged_mesh.get_texcoords();
+        for (TransformedMesh transformed_mesh : meshes) {
+            Mesh mesh = transformed_mesh.mesh_ID;
+            memcpy(texcoords, mesh.get_texcoords(), sizeof(Vector2f) * mesh.get_vertex_count());
+            texcoords += mesh.get_vertex_count();
+        }
+    }
+
+    merged_mesh.compute_bounds();
+
+    return merged_mesh.get_ID();
+}
+
+void compute_hard_normals(Vector3f* positions_begin, Vector3f* positions_end, Vector3f* normals_begin) {
+    while (positions_begin < positions_end) {
+        Vector3f p0 = *positions_begin++;
+        Vector3f p1 = *positions_begin++;
+        Vector3f p2 = *positions_begin++;
+
+        Vector3f normal = normalize(cross(p1 - p0, p2 - p0));
+        *normals_begin++ = normal;
+        *normals_begin++ = normal;
+        *normals_begin++ = normal;
+    }
+}
 
 } // NS MeshUtils
 

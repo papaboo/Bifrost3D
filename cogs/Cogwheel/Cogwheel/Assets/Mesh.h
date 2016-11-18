@@ -174,6 +174,9 @@ private:
 //----------------------------------------------------------------------------
 namespace MeshUtils {
 
+//-------------------------------------------------------------------------
+// Mesh combine utilities.
+//-------------------------------------------------------------------------
 struct TransformedMesh {
     Meshes::UID mesh_ID;
     Math::Transform transform;
@@ -184,14 +187,39 @@ Meshes::UID combine(const std::string& name,
                     unsigned int mesh_flags = MeshFlags::None);
 
 inline Meshes::UID combine(const std::string& name, 
-                            Meshes::UID mesh0_ID, Math::Transform transform0,
-                            Meshes::UID mesh1_ID, Math::Transform transform1, 
-                            unsigned int mesh_flags = MeshFlags::None) {
+                           Meshes::UID mesh0_ID, Math::Transform transform0,
+                           Meshes::UID mesh1_ID, Math::Transform transform1, 
+                           unsigned int mesh_flags = MeshFlags::None) {
     TransformedMesh mesh0 = { mesh0_ID, transform0 };
     TransformedMesh mesh1 = { mesh1_ID, transform1 };
     TransformedMesh meshes[2] = { mesh0, mesh1 };
     return combine(name, meshes, meshes + 2, mesh_flags);
 }
+
+// Computes a list of hard normals from a list of triangle positions.
+// This function assumes that the positions are used to describe triangles.
+void compute_hard_normals(Math::Vector3f* positions_begin, Math::Vector3f* positions_end, Math::Vector3f* normals_begin);
+
+// Expands a buffer and a list of triangle vertex indices into a non-indexed buffer.
+// Useful for expanding meshes that uses indexing into a mesh that does not.
+template <typename RandomAccessIterator>
+void expand_indexed_buffer(Math::Vector3ui* primitives, int primitive_count, RandomAccessIterator buffer_itr, 
+                           RandomAccessIterator expanded_buffer_itr) {
+    for (Vector3ui primitive : Core::Iterable<Vector3ui*>(primitives, primitive_count)) {
+        *expanded_buffer_itr++ = buffer_itr[primitive.x];
+        *expanded_buffer_itr++ = buffer_itr[primitive.y];
+        *expanded_buffer_itr++ = buffer_itr[primitive.z];
+    }
+};
+
+// Expands a buffer and a list of triangle vertex indices into a non-indexed buffer.
+// Useful for expanding meshes that uses indexing into a mesh that does not.
+template <typename T>
+T* expand_indexed_buffer(Math::Vector3ui* primitives, int primitive_count, T* buffer) {
+    T* expanded_buffer = new T[primitive_count * 3];
+    expand_indexed_buffer(primitives, primitive_count, buffer, expanded_buffer);
+    return expanded_buffer;
+};
 
 } // NS MeshUtils
 
