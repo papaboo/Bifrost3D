@@ -1,7 +1,6 @@
-* Winding order test for created meshes.
 * DX11 Renderer
 ** Render models.
-*** Normals. Hard normals if no normals are given.
+*** Texcoords
 *** Lighting (diffuse material)
 *** Lambert + GGX material.
 ** Ortho camera.

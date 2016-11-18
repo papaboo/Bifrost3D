@@ -425,13 +425,15 @@ public:
                         m_meshes.resize(Meshes::capacity());
 
                     Cogwheel::Assets::Mesh mesh = mesh_ID;
-                    Dx11Mesh dx_mesh;
+                    Dx11Mesh dx_mesh = {};
 
-                    bool should_decompress_indexed_buffers = mesh.get_primitive_count() != 0 && mesh.get_normals() == nullptr;
-                    bool compute_normals = mesh.get_normals() == nullptr;
+                    // Expand the indexed buffers if an index buffer is used, but no normals are given.
+                    // In that case we need to compute hard normals per triangle and we can only do that on expanded buffers.
+                    // NOTE Alternatively look into storing the hard normals in a buffer and index into it based on the triangle ID?
+                    bool expand_indexed_buffers = mesh.get_primitive_count() != 0 && mesh.get_normals() == nullptr;
 
-                    { // Upload indices.
-                        dx_mesh.index_count = mesh.get_primitive_count() * 3;
+                    if (!expand_indexed_buffers) { // Upload indices.
+                        dx_mesh.index_count = mesh.get_index_count();
 
                         D3D11_BUFFER_DESC indices_desc = {};
                         indices_desc.Usage = D3D11_USAGE_DEFAULT;
@@ -446,18 +448,13 @@ public:
                     }
 
                     dx_mesh.vertex_count = mesh.get_vertex_count();
+                    Vector3f* positions = mesh.get_positions();
 
-                    static auto decompress_indexed_buffer = [](Vector3ui* primitives, int primitive_count, Vector3f* elements) -> Vector3f* {
-                        Vector3f* decompressed_elements = new Vector3f[primitive_count * 3];
-                        Vector3f* decompressed_elements_itr = decompressed_elements;
-                        for (Vector3ui primitive : Iterable<Vector3ui*>(primitives, primitive_count)) {
-                            *decompressed_elements_itr++ = elements[primitive.x];
-                            *decompressed_elements_itr++ = elements[primitive.y];
-                            *decompressed_elements_itr++ = elements[primitive.z];
-                        }
-
-                        return decompressed_elements;
-                    };
+                    if (expand_indexed_buffers) {
+                        // Expand the positions.
+                        dx_mesh.vertex_count = mesh.get_index_count();
+                        positions = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), mesh.get_positions());
+                    }
 
                     { // Upload positions.
                         D3D11_BUFFER_DESC positions_desc = {};
@@ -466,26 +463,40 @@ public:
                         positions_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
                         D3D11_SUBRESOURCE_DATA positions_data = {};
-                        positions_data.pSysMem = mesh.get_positions();
+                        positions_data.pSysMem = positions;
                         HRESULT hr = m_device->CreateBuffer(&positions_desc, &positions_data, &dx_mesh.positions);
                         if (FAILED(hr))
                             printf("Could not upload '%s' position buffer.\n");
                     }
 
-                    if (mesh.get_normals() != nullptr) { // Upload normals.
-                        // TODO Encode as float2.
+                    { // Upload normals. TODO Encode as float2.
+                        Vector3f* normals = mesh.get_normals();
+
+                        if (mesh.get_normals() == nullptr) {
+                            // Compute hard normals.
+                            normals = new Vector3f[dx_mesh.vertex_count];
+                            MeshUtils::compute_hard_normals(positions, positions + dx_mesh.vertex_count, normals);
+                        } else if (expand_indexed_buffers)
+                            positions = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), mesh.get_normals());
+
                         D3D11_BUFFER_DESC normals_desc = {};
                         normals_desc.Usage = D3D11_USAGE_DEFAULT;
                         normals_desc.ByteWidth = sizeof(Vector3f) * dx_mesh.vertex_count;
                         normals_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
                         D3D11_SUBRESOURCE_DATA normals_data = {};
-                        normals_data.pSysMem = mesh.get_normals();
+                        normals_data.pSysMem = normals;
                         HRESULT hr = m_device->CreateBuffer(&normals_desc, &normals_data, &dx_mesh.normals);
                         if (FAILED(hr))
                             printf("Could not upload '%s' position buffer.\n");
-                    } else
-                        dx_mesh.normals = nullptr;
+
+                        if (normals != mesh.get_normals())
+                            delete[] normals;
+                    }
+
+                    // Delete temporary positions from buffer expansion.
+                    if (positions != mesh.get_positions())
+                        delete[] positions;
 
                     m_meshes[mesh_ID] = dx_mesh;
                 }
