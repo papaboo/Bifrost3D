@@ -18,10 +18,14 @@ cbuffer scene_variables  : register(b0) {
 
 static const float PI = 3.14159265f;
 
-// TODO Helpful accessors.
 struct LightData {
     float4 type_power;
     float4 spatial_softness;
+
+    float type() { return type_power.x; }
+    float3 sphere_power() { return type_power.yzw; }
+    float3 sphere_position() { return spatial_softness.xyz; }
+    float sphere_radius() { return spatial_softness.w; }
 };
 
 struct LightSample {
@@ -31,24 +35,23 @@ struct LightSample {
     float distance;
 };
 
-LightSample sample_sphere_light(LightData light_data, float3 world_position) {
-    float radius = light_data.spatial_softness.w;
-    float3 direction_to_light = light_data.spatial_softness.xyz - world_position;
+LightSample sample_sphere_light(LightData light, float3 world_position) {
+    float3 direction_to_light = light.sphere_position() - world_position;
 
     LightSample light_sample;
     light_sample.direction_to_light = direction_to_light;
     light_sample.distance = length(light_sample.direction_to_light);
     light_sample.direction_to_light /= light_sample.distance;
-    light_sample.radiance = light_data.type_power.yzw / (4.0f * PI * light_sample.distance * light_sample.distance);
-    light_sample.distance -= radius; // Distance to light surface instead of light center.
-    light_sample.angle_subtended = radius / light_sample.distance;
+    light_sample.radiance = light.sphere_power() / (4.0f * PI * light_sample.distance * light_sample.distance);
+    light_sample.distance -= light.sphere_radius(); // Distance to light surface instead of light center.
+    light_sample.angle_subtended = light.sphere_radius() / light_sample.distance;
     light_sample.angle_subtended *= light_sample.angle_subtended;
     return light_sample;
 }
 
-LightSample sample_light(LightData light_data, float3 world_position) {
-    if (light_data.type_power.x == 1.0)
-        sample_sphere_light(light_data, world_position);
+LightSample sample_light(LightData light, float3 world_position) {
+    if (light.type() == 1.0)
+        sample_sphere_light(light, world_position);
 
     LightSample light_sample;
     return light_sample;
