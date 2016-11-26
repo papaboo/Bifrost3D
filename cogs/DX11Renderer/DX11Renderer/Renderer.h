@@ -27,8 +27,8 @@ namespace DX11Renderer {
 // DirectX 11 renderer.
 // TODO
 // * Upload models.
-// * Render environment.
 // * Light sources.
+// * Render environment.
 // * Materials.
 // ** Material properties buffer.
 // ** Textures.

@@ -6,6 +6,7 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
+#include <DX11Renderer/LightManager.h>
 #include <DX11Renderer/Renderer.h>
 #include <DX11Renderer/Types.h>
 
@@ -91,6 +92,8 @@ private:
     vector<Dx11Model> m_models = vector<Dx11Model>(0);
     vector<Transform> m_transforms = vector<Transform>(0);
 
+    LightManager m_lights;
+
     struct {
         ID3D11InputLayout* input_layout;
         ID3D11VertexShader* shader;
@@ -101,9 +104,10 @@ private:
         ID3D11PixelShader* shader;
     } m_opaque;
 
-    // Catch-all uniforms.
+    // Catch-all uniforms. Split into model/spatial and surface shading.
     struct Uniforms {
         Matrix4x4f mvp_matrix;
+        Matrix4x4f to_world_matrix; // TODO Store as 4x3 matrix instead. The last row is always [0,0,0,1]
         RGBA color;
     };
     ID3D11Buffer* uniforms_buffer;
@@ -188,7 +192,6 @@ public:
         }
 
         { // Setup backbuffer.
-
             m_backbuffer_size = Vector2ui::zero();
 
             // Get and set render target. // TODO How is resizing of the color buffer handled?
@@ -219,6 +222,10 @@ public:
                 release_state();
                 return;
             }
+        }
+
+        { // Setup light sources.
+            m_lights = LightManager(*m_device, LightSources::capacity());
         }
 
         { // Setup opaque rendering.
@@ -264,8 +271,9 @@ public:
 
         for (Dx11Mesh mesh : m_meshes) {
             safe_release(&mesh.indices);
-            safe_release(&mesh.positions);
-            safe_release(&mesh.normals);
+            safe_release(mesh.positions_address());
+            safe_release(mesh.normals_address());
+            safe_release(mesh.texcoords_address());
         }
     }
 
@@ -332,6 +340,9 @@ public:
         m_render_context->ClearDepthStencilView(m_depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
         { // Render models.
+            // Bind light buffer.
+            m_render_context->PSSetConstantBuffers(1, 1, m_lights.light_buffer_addr());
+
             for (Dx11Model model : m_models) {
                 if (model.mesh_ID == 0)
                     continue;
@@ -349,26 +360,13 @@ public:
                     if (mesh.index_count != 0)
                         m_render_context->IASetIndexBuffer(mesh.indices, DXGI_FORMAT_R32_UINT, 0);
 
-                    // TODO Preallocate this on the mesh.
-                    ID3D11Buffer* buffers[3];
-                    unsigned int strides[3];
-                    unsigned int offsets[3];
-                    
-                    buffers[0] = mesh.positions;
-                    strides[0] = sizeof(float) * 3;
-                    offsets[0] = 0;
-
-                    buffers[1] = mesh.normals;
-                    strides[1] = sizeof(float) * 3;
-                    offsets[1] = 0;
-                    unsigned int buffer_count = 2;
-
-                    m_render_context->IASetVertexBuffers(0, buffer_count, buffers, strides, offsets);
+                    m_render_context->IASetVertexBuffers(0, mesh.buffer_count, mesh.buffers, mesh.strides, mesh.offsets);
                 }
 
                 {
                     Uniforms uniforms;
                     uniforms.mvp_matrix = Cameras::get_view_projection_matrix(camera_ID) * to_matrix4x4(m_transforms[model.transform_ID]);
+                    uniforms.to_world_matrix = to_matrix4x4(m_transforms[model.transform_ID]);
                     uniforms.color = m_materials[model.material_ID].tint;
                     m_render_context->UpdateSubresource(uniforms_buffer, 0, NULL, &uniforms, 0, 0);
                     m_render_context->VSSetConstantBuffers(0, 1, &uniforms_buffer);
@@ -388,6 +386,8 @@ public:
 
     void handle_updates() {
         // TODO Handle updates in multiple command lists.
+
+        m_lights.handle_updates(*m_render_context);
 
         { // Material updates. // TODO Upload to one buffer, so we don't have to upload it per frame.
             for (Material mat : Materials::get_changed_materials()) {
@@ -416,7 +416,9 @@ public:
                     if (mesh_ID < m_meshes.size() && m_meshes[mesh_ID].vertex_count != 0) {
                         m_meshes[mesh_ID].index_count = m_meshes[mesh_ID].vertex_count = 0;
                         safe_release(&m_meshes[mesh_ID].indices);
-                        safe_release(&m_meshes[mesh_ID].positions);
+                        safe_release(m_meshes[mesh_ID].positions_address());
+                        safe_release(m_meshes[mesh_ID].normals_address());
+                        safe_release(m_meshes[mesh_ID].texcoords_address());
                     }
                 }
 
@@ -426,6 +428,13 @@ public:
 
                     Cogwheel::Assets::Mesh mesh = mesh_ID;
                     Dx11Mesh dx_mesh = {};
+
+                    { // Setup strides and offsets for the buffers. TODO Make this static??
+                        dx_mesh.strides[0] = sizeof(float) * 3;
+                        dx_mesh.offsets[0] = 0;
+                        dx_mesh.strides[1] = sizeof(float) * 3;
+                        dx_mesh.offsets[1] = 0;
+                    }
 
                     // Expand the indexed buffers if an index buffer is used, but no normals are given.
                     // In that case we need to compute hard normals per triangle and we can only do that on expanded buffers.
@@ -464,7 +473,7 @@ public:
 
                         D3D11_SUBRESOURCE_DATA positions_data = {};
                         positions_data.pSysMem = positions;
-                        HRESULT hr = m_device->CreateBuffer(&positions_desc, &positions_data, &dx_mesh.positions);
+                        HRESULT hr = m_device->CreateBuffer(&positions_desc, &positions_data, dx_mesh.positions_address());
                         if (FAILED(hr))
                             printf("Could not upload '%s' position buffer.\n");
                     }
@@ -477,7 +486,7 @@ public:
                             normals = new Vector3f[dx_mesh.vertex_count];
                             MeshUtils::compute_hard_normals(positions, positions + dx_mesh.vertex_count, normals);
                         } else if (expand_indexed_buffers)
-                            positions = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), mesh.get_normals());
+                            normals = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), mesh.get_normals());
 
                         D3D11_BUFFER_DESC normals_desc = {};
                         normals_desc.Usage = D3D11_USAGE_DEFAULT;
@@ -486,15 +495,16 @@ public:
 
                         D3D11_SUBRESOURCE_DATA normals_data = {};
                         normals_data.pSysMem = normals;
-                        HRESULT hr = m_device->CreateBuffer(&normals_desc, &normals_data, &dx_mesh.normals);
+                        HRESULT hr = m_device->CreateBuffer(&normals_desc, &normals_data, dx_mesh.normals_address());
                         if (FAILED(hr))
                             printf("Could not upload '%s' position buffer.\n");
 
                         if (normals != mesh.get_normals())
                             delete[] normals;
                     }
+                    dx_mesh.buffer_count = 2; // Positions and normals are always present.
 
-                    // Delete temporary positions from buffer expansion.
+                    // Delete temporary expanded positions.
                     if (positions != mesh.get_positions())
                         delete[] positions;
 
