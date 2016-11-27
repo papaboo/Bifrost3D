@@ -69,6 +69,7 @@ public:
     Vector3(T x, T y, T z) : x(x), y(y), z(z) { }
     template <typename U>
     explicit Vector3(const Vector3<U>& v) : x(T(v.x)), y(T(v.y)), z(T(v.z)) { }
+    Vector3(const Vector2<T> v, T z) : x(v.x), y(v.y), z(z) { }
 
     static inline Vector3<T> zero() { return Vector3(0, 0, 0); }
     static inline Vector3<T> one() { return Vector3(1, 1, 1); }
@@ -108,7 +109,9 @@ public:
     explicit Vector4(T s) : x(s), y(s), z(s), w(s) { }
     Vector4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) { }
     template <typename U>
-    Vector4(const Vector4<U>& v) : x(T(v.x)), y(T(v.y)), z(T(v.z)), w(T(v.w)) { }
+    Vector4(const Vector4<U> v) : x(T(v.x)), y(T(v.y)), z(T(v.z)), w(T(v.w)) { }
+    Vector4(const Vector2<T> v, T z, T w) : x(v.x), y(v.y), z(z), w(w) { }
+    Vector4(const Vector3<T> v, T w) : x(v.x), y(v.y), z(v.z), w(w) { }
 
     static inline Vector4<T> zero() { return Vector4<T>(0, 0, 0, 0); }
     static inline Vector4<T> one() { return Vector4<T>(1, 1, 1, 1); }
