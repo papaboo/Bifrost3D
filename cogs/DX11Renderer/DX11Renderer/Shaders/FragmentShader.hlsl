@@ -10,7 +10,7 @@
 
 cbuffer scene_variables  : register(b0) {
     float4x4 mvp_matrix;
-    float4x4 to_world_matrix;
+    float4x3 to_world_matrix;
     float4 color;
 };
 

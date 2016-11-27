@@ -107,7 +107,7 @@ private:
     // Catch-all uniforms. Split into model/spatial and surface shading.
     struct Uniforms {
         Matrix4x4f mvp_matrix;
-        Matrix4x4f to_world_matrix; // TODO Store as 4x3 matrix instead. The last row is always [0,0,0,1]
+        Matrix4x3f to_world_matrix;
         RGBA color;
     };
     ID3D11Buffer* uniforms_buffer;
@@ -366,7 +366,7 @@ public:
                 {
                     Uniforms uniforms;
                     uniforms.mvp_matrix = Cameras::get_view_projection_matrix(camera_ID) * to_matrix4x4(m_transforms[model.transform_ID]);
-                    uniforms.to_world_matrix = to_matrix4x4(m_transforms[model.transform_ID]);
+                    uniforms.to_world_matrix = to_matrix4x3(m_transforms[model.transform_ID]);
                     uniforms.color = m_materials[model.material_ID].tint;
                     m_render_context->UpdateSubresource(uniforms_buffer, 0, NULL, &uniforms, 0, 0);
                     m_render_context->VSSetConstantBuffers(0, 1, &uniforms_buffer);
