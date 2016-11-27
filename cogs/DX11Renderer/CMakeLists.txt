@@ -24,7 +24,11 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/Shaders/FragmentShader.hlsl
   )
   
-  set(SHADER_SRC ${VERTEX_SHADER_SRC} ${PIXEL_SHADER_SRC})
+  set(SHADER_INCLUDES
+    DX11Renderer/Shaders/LightSources.hlsl
+  )
+  
+  set(SHADER_SRC ${VERTEX_SHADER_SRC} ${PIXEL_SHADER_SRC} ${SHADER_INCLUDES})
 
   add_library(${LIBRARY_NAME}
     ${ROOT_SRC}
@@ -59,7 +63,7 @@ if (DIRECTX_11_FOUND AND WIN32)
 
   # Copy the shaders to the build directory.
   # TODO Is there a general concept of installation in CMake?
-  # TODO Copy the cso files from release to bin output dir.
+  # TODO Copy or compile the cso files from release to bin output dir.
   set(DATA_PATH "${COGWHEEL_DATA_OUTPUT_DIRECTORY}/DX11Renderer/Shaders")
   file(MAKE_DIRECTORY ${DATA_PATH})
   foreach (SHADER_PATH ${SHADER_SRC})

@@ -54,7 +54,7 @@ inline ID3DBlob* compile_shader(std::wstring filename, const char* target) {
     ID3DBlob* error_messages = nullptr;
     HRESULT hr = D3DCompileFromFile(qualified_filename.c_str(),
         nullptr, // macroes
-        nullptr, // Include dirs. TODO "../Data/DX12Renderer/Shaders/"
+        D3D_COMPILE_STANDARD_FILE_INCLUDE,
         "main",
         target,
         D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
