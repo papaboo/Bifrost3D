@@ -1,9 +1,8 @@
 * DX11 Renderer
 ** Render models.
-*** Texcoords
-*** Lighting (diffuse material)
+*** Texcoords (Do we need two vertex shaders or just one?)
+*** Textures.
 *** Lambert + GGX material.
-** Ortho camera.
 ** Coverage (eeew ew ew ew)
 ** Simple IBL and AO.
 * Half4 backbuffer in OptiXRenderer and render directly to a mapped DX/GL resource.
