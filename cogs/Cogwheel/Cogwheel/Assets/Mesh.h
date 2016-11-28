@@ -210,7 +210,7 @@ void compute_hard_normals(Math::Vector3f* positions_begin, Math::Vector3f* posit
 template <typename RandomAccessIterator>
 void expand_indexed_buffer(Math::Vector3ui* primitives, int primitive_count, RandomAccessIterator buffer_itr, 
                            RandomAccessIterator expanded_buffer_itr) {
-    for (Vector3ui primitive : Core::Iterable<Vector3ui*>(primitives, primitive_count)) {
+    for (Math::Vector3ui primitive : Core::Iterable<Math::Vector3ui*>(primitives, primitive_count)) {
         *expanded_buffer_itr++ = buffer_itr[primitive.x];
         *expanded_buffer_itr++ = buffer_itr[primitive.y];
         *expanded_buffer_itr++ = buffer_itr[primitive.z];
@@ -219,9 +219,11 @@ void expand_indexed_buffer(Math::Vector3ui* primitives, int primitive_count, Ran
 
 // Expands a buffer and a list of triangle vertex indices into a non-indexed buffer.
 // Useful for expanding meshes that uses indexing into a mesh that does not.
-template <typename T>
-T* expand_indexed_buffer(Math::Vector3ui* primitives, int primitive_count, T* buffer) {
-    T* expanded_buffer = new T[primitive_count * 3];
+template <typename RandomAccessIterator>
+typename std::iterator_traits<RandomAccessIterator>::value_type* 
+    expand_indexed_buffer(Math::Vector3ui* primitives, int primitive_count, RandomAccessIterator buffer) {
+
+    auto expanded_buffer = new std::iterator_traits<RandomAccessIterator>::value_type[primitive_count * 3];
     expand_indexed_buffer(primitives, primitive_count, buffer, expanded_buffer);
     return expanded_buffer;
 };
