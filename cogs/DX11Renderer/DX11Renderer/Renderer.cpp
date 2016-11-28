@@ -453,7 +453,7 @@ public:
                         indices_data.pSysMem = mesh.get_primitives();
                         HRESULT hr = m_device->CreateBuffer(&indices_desc, &indices_data, &dx_mesh.indices);
                         if (FAILED(hr))
-                            printf("Could not upload '%s' index buffer.\n");
+                            printf("Could not upload '%s' index buffer.\n", mesh.get_name().c_str());
                     }
 
                     dx_mesh.vertex_count = mesh.get_vertex_count();
@@ -475,7 +475,7 @@ public:
                         positions_data.pSysMem = positions;
                         HRESULT hr = m_device->CreateBuffer(&positions_desc, &positions_data, dx_mesh.positions_address());
                         if (FAILED(hr))
-                            printf("Could not upload '%s' position buffer.\n");
+                            printf("Could not upload '%s' position buffer.\n", mesh.get_name().c_str());
                     }
 
                     { // Upload normals. TODO Encode as float2.
@@ -497,7 +497,7 @@ public:
                         normals_data.pSysMem = normals;
                         HRESULT hr = m_device->CreateBuffer(&normals_desc, &normals_data, dx_mesh.normals_address());
                         if (FAILED(hr))
-                            printf("Could not upload '%s' position buffer.\n");
+                            printf("Could not upload '%s' position buffer.\n", mesh.get_name().c_str());
 
                         if (normals != mesh.get_normals())
                             delete[] normals;
