@@ -17,7 +17,7 @@ namespace Cogwheel {
 namespace Assets {
 namespace MeshCreation {
 
-Meshes::UID plane(unsigned int quads_pr_edge) {
+Meshes::UID plane(unsigned int quads_pr_edge, unsigned char buffer_bitmask) {
     if (quads_pr_edge == 0)
         return Meshes::UID::invalid_UID();
 
@@ -26,15 +26,17 @@ Meshes::UID plane(unsigned int quads_pr_edge) {
     unsigned int quad_count = quads_pr_edge * quads_pr_edge;
     unsigned int index_count = quad_count * 2;
     
-    Mesh mesh = Meshes::create("Plane", index_count, vertex_count);
+    Mesh mesh = Meshes::create("Plane", index_count, vertex_count, buffer_bitmask);
 
     // Vertex attributes.
     float tc_normalizer = 1.0f / quads_pr_edge;
     for (unsigned int z = 0; z < size; ++z) {
         for (unsigned int x = 0; x < size; ++x) {
             mesh.get_positions()[z * size + x] = Vector3f(x - quads_pr_edge * 0.5f, 0.0f, z - quads_pr_edge * 0.5f);
-            mesh.get_normals()[z * size + x] = Vector3f(0.0f, 1.0f, 0.0f);
-            mesh.get_texcoords()[z * size + x] = Vector2f(float(x), float(z)) * tc_normalizer;
+            if (mesh.get_normals() != nullptr)
+                mesh.get_normals()[z * size + x] = Vector3f(0.0f, 1.0f, 0.0f);
+            if (mesh.get_texcoords() != nullptr)
+                mesh.get_texcoords()[z * size + x] = Vector2f(float(x), float(z)) * tc_normalizer;
         }
     }
 
@@ -53,7 +55,7 @@ Meshes::UID plane(unsigned int quads_pr_edge) {
     return mesh.get_ID();
 }
 
-Meshes::UID cube(unsigned int quads_pr_edge) {
+Meshes::UID cube(unsigned int quads_pr_edge, unsigned char buffer_bitmask) {
     if (quads_pr_edge == 0)
         return Meshes::UID::invalid_UID();
 
@@ -67,7 +69,7 @@ Meshes::UID cube(unsigned int quads_pr_edge) {
     unsigned int verts_pr_side = verts_pr_edge * verts_pr_edge;
     unsigned int vertex_count = verts_pr_side * sides;
 
-    Mesh mesh = Meshes::create("Cube", index_count, vertex_count);
+    Mesh mesh = Meshes::create("Cube", index_count, vertex_count, buffer_bitmask);
 
     // Create the vertices.
     // [..TOP.. ..BOTTOM.. ..LEFT.. ..RIGHT.. ..FRONT.. ..BACK..]
@@ -91,32 +93,34 @@ Meshes::UID cube(unsigned int quads_pr_edge) {
         for (unsigned int j = 0; j < verts_pr_edge; ++j)
             *position_iterator++ = Vector3f(i * scale - halfsize, halfsize - j * scale, -halfsize);
 
-    // Create the normals.
-    Vector3f* normal_iterator = mesh.get_normals();
-    while (normal_iterator < mesh.get_normals() + verts_pr_side) // Top
-        *normal_iterator++ = Vector3f(0, 1, 0);
-    while (normal_iterator < mesh.get_normals() + verts_pr_side * 2) // Bottom
-        *normal_iterator++ = Vector3f(0, -1, 0);
-    while (normal_iterator < mesh.get_normals() + verts_pr_side * 3) // Left
-        *normal_iterator++ = Vector3f(-1, 0, 0);
-    while (normal_iterator < mesh.get_normals() + verts_pr_side * 4) // Right
-        *normal_iterator++ = Vector3f(1, 0, 0);
-    while (normal_iterator < mesh.get_normals() + verts_pr_side * 5) // Front
-        *normal_iterator++ = Vector3f(0, 0, 1);
-    while (normal_iterator < mesh.get_normals() + verts_pr_side * 6) // Back
-        *normal_iterator++ = Vector3f(0, 0, -1);
+    if (mesh.get_normals() != nullptr) {
+        Vector3f* normal_iterator = mesh.get_normals();
+        while (normal_iterator < mesh.get_normals() + verts_pr_side) // Top
+            *normal_iterator++ = Vector3f(0, 1, 0);
+        while (normal_iterator < mesh.get_normals() + verts_pr_side * 2) // Bottom
+            *normal_iterator++ = Vector3f(0, -1, 0);
+        while (normal_iterator < mesh.get_normals() + verts_pr_side * 3) // Left
+            *normal_iterator++ = Vector3f(-1, 0, 0);
+        while (normal_iterator < mesh.get_normals() + verts_pr_side * 4) // Right
+            *normal_iterator++ = Vector3f(1, 0, 0);
+        while (normal_iterator < mesh.get_normals() + verts_pr_side * 5) // Front
+            *normal_iterator++ = Vector3f(0, 0, 1);
+        while (normal_iterator < mesh.get_normals() + verts_pr_side * 6) // Back
+            *normal_iterator++ = Vector3f(0, 0, -1);
+    }
 
-    // Default texcoords.
-    Vector2f* texcoords = mesh.get_texcoords();
-    float tc_normalizer = 1.0f / quads_pr_edge;
-    for (unsigned int i = 0; i < verts_pr_edge; ++i)
-        for (unsigned int j = 0; j < verts_pr_edge; ++j)
-            texcoords[i * verts_pr_edge + j] = 
-            texcoords[i * verts_pr_edge + j + verts_pr_side] =
-            texcoords[i * verts_pr_edge + j + verts_pr_side * 2] =
-            texcoords[i * verts_pr_edge + j + verts_pr_side * 3] =
-            texcoords[i * verts_pr_edge + j + verts_pr_side * 4] =
-            texcoords[i * verts_pr_edge + j + verts_pr_side * 5] = Vector2f(float(i), float(j)) * tc_normalizer;
+    if (mesh.get_texcoords() != nullptr) {
+        Vector2f* texcoords = mesh.get_texcoords();
+        float tc_normalizer = 1.0f / quads_pr_edge;
+        for (unsigned int i = 0; i < verts_pr_edge; ++i)
+            for (unsigned int j = 0; j < verts_pr_edge; ++j)
+                texcoords[i * verts_pr_edge + j] =
+                texcoords[i * verts_pr_edge + j + verts_pr_side] =
+                texcoords[i * verts_pr_edge + j + verts_pr_side * 2] =
+                texcoords[i * verts_pr_edge + j + verts_pr_side * 3] =
+                texcoords[i * verts_pr_edge + j + verts_pr_side * 4] =
+                texcoords[i * verts_pr_edge + j + verts_pr_side * 5] = Vector2f(float(i), float(j)) * tc_normalizer;
+    }
 
     // Set indices.
     Vector3ui* primitives = mesh.get_primitives();
@@ -137,7 +141,7 @@ Meshes::UID cube(unsigned int quads_pr_edge) {
     return mesh.get_ID();
 }
 
-Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_quads) {
+Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_quads, unsigned char buffer_bitmask) {
     if (vertical_quads == 0 || circumference_quads == 0)
         return Meshes::UID::invalid_UID();
 
@@ -149,7 +153,7 @@ Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_qua
     unsigned int index_count = 2 * lid_index_count + side_index_count;
     float radius = 0.5f;
 
-    Mesh mesh = Meshes::create("Cylinder", index_count, vertex_count);
+    Mesh mesh = Meshes::create("Cylinder", index_count, vertex_count, buffer_bitmask);
 
     // Vertex layout is
     // [..TOP.. ..BOTTOM.. ..SIDE..]
@@ -180,7 +184,7 @@ Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_qua
         }
     }
 
-    { // Normals.
+    if (mesh.get_normals() != nullptr) {
         Vector3f* normal_iterator = mesh.get_normals();
         while (normal_iterator < mesh.get_normals() + lid_vertex_count) // Top
             *normal_iterator++ = Vector3f(0, 1, 0);
@@ -193,7 +197,7 @@ Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_qua
         }
     }
 
-    { // Tex coords.
+    if (mesh.get_texcoords() != nullptr) {
         Vector2f* texcoords = mesh.get_texcoords();
 
         // Top and bottom.
@@ -257,7 +261,7 @@ static Vector3f spherical_to_direction(float theta, float phi) {
     return Vector3f(x, y, z);
 }
 
-Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads) {
+Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads, unsigned char buffer_bitmask) {
     if (longitude_quads < 3 || latitude_quads < 2)
         return Meshes::UID::invalid_UID();
 
@@ -268,7 +272,7 @@ Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_
     unsigned int index_count = (quad_count - longitude_quads) * 2;
     float radius = 0.5f;
 
-    Mesh mesh = Meshes::create("RevolvedSphere", index_count, vertex_count);
+    Mesh mesh = Meshes::create("RevolvedSphere", index_count, vertex_count, buffer_bitmask);
 
     { // Vertex attributes.
         Vector3f* positions = mesh.get_positions();
@@ -279,10 +283,13 @@ Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_
         for (unsigned int y = 0; y < latitude_size; ++y) {
             for (unsigned int x = 0; x < longitude_size; ++x) {
                 unsigned int vertex_index = y * longitude_size + x;
-                Vector2f tc = texcoords[vertex_index] = Vector2f(float(x), float(y)) * tc_normalizer;
+                Vector2f tc = Vector2f(float(x), float(y)) * tc_normalizer;
+                if (texcoords)
+                    texcoords[vertex_index] = tc;
                 positions[vertex_index] = spherical_to_direction(tc.y * Math::PI<float>(),
-                                                                        tc.x * 2.0f * Math::PI<float>()) * radius;
-                normals[vertex_index] = normalize(positions[vertex_index]);
+                                                                 tc.x * 2.0f * Math::PI<float>()) * radius;
+                if (normals)
+                    normals[vertex_index] = normalize(positions[vertex_index]);
             }
         }
 
