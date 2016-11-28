@@ -22,7 +22,6 @@ namespace Scene {
 // ---------------------------------------------------------------------------
 // Container class for cogwheel light sources.
 // Future work
-// * Should environment map be added here?
 // * Setters.
 // ---------------------------------------------------------------------------
 class LightSources final {
