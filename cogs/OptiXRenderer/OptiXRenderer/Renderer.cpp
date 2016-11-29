@@ -669,10 +669,10 @@ void Renderer::handle_updates() {
             static auto light_creation = [](LightSources::UID light_ID, unsigned int light_index, Light* device_lights,
                 int& highest_area_light_index_updated) {
 
+                Light& device_light = device_lights[light_index];
                 switch (LightSources::get_type(light_ID)) {
                 case LightSources::Type::Sphere: {
                     Scene::SphereLight host_light = light_ID;
-                    Light& device_light = device_lights[light_index];
 
                     device_light.flags = Light::Sphere;
 
@@ -690,7 +690,6 @@ void Renderer::handle_updates() {
                 }
                 case LightSources::Type::Directional: {
                     Scene::DirectionalLight host_light = light_ID;
-                    Light& device_light = device_lights[light_index];
 
                     device_light.flags = Light::Directional;
 
@@ -775,6 +774,7 @@ void Renderer::handle_updates() {
                             m_state->lights.index_to_ID[light_index] = m_state->lights.index_to_ID[m_state->lights.count];
                             m_state->lights.ID_to_index[m_state->lights.index_to_ID[light_index]] = light_index;
 
+                            // TODO Shouldn't this be min? Or a check for delta first?
                             highest_area_light_index_updated = max(highest_area_light_index_updated, m_state->lights.count);
                         }
                     }
