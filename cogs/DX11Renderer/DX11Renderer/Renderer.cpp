@@ -95,6 +95,7 @@ private:
     LightManager m_lights;
 
     struct {
+        ID3D11Buffer* null_buffer;
         ID3D11InputLayout* input_layout;
         ID3D11VertexShader* shader;
     } m_vertex_shading;
@@ -222,6 +223,17 @@ public:
                 release_state();
                 return;
             }
+
+            // Create a default emptyish buffer.
+            D3D11_BUFFER_DESC empty_desc = {};
+            empty_desc.Usage = D3D11_USAGE_DEFAULT;
+            empty_desc.ByteWidth = sizeof(Vector4f);
+            empty_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+            Vector4f lval = Vector4f::zero();
+            D3D11_SUBRESOURCE_DATA empty_data = {};
+            empty_data.pSysMem = &lval;
+            m_device->CreateBuffer(&empty_desc, &empty_data, &m_vertex_shading.null_buffer);
         }
 
         { // Setup light sources.
@@ -384,6 +396,18 @@ public:
         m_swap_chain->Present(0, 0);
     }
 
+    template <typename T>
+    HRESULT upload_default_buffer(T* data, int element_count, D3D11_BIND_FLAG flags, ID3D11Buffer** buffer) {
+        D3D11_BUFFER_DESC desc = {};
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.ByteWidth = sizeof(T) * element_count;
+        desc.BindFlags = flags;
+
+        D3D11_SUBRESOURCE_DATA resource_data = {};
+        resource_data.pSysMem = data;
+        return m_device->CreateBuffer(&desc, &resource_data, buffer);
+    }
+
     void handle_updates() {
         // TODO Handle updates in multiple command lists.
 
@@ -444,14 +468,8 @@ public:
                     if (!expand_indexed_buffers) { // Upload indices.
                         dx_mesh.index_count = mesh.get_index_count();
 
-                        D3D11_BUFFER_DESC indices_desc = {};
-                        indices_desc.Usage = D3D11_USAGE_DEFAULT;
-                        indices_desc.ByteWidth = sizeof(unsigned int) * dx_mesh.index_count;
-                        indices_desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-
-                        D3D11_SUBRESOURCE_DATA indices_data = {};
-                        indices_data.pSysMem = mesh.get_primitives();
-                        HRESULT hr = m_device->CreateBuffer(&indices_desc, &indices_data, &dx_mesh.indices);
+                        HRESULT hr = upload_default_buffer(mesh.get_primitives(), dx_mesh.index_count / 3,
+                                                           D3D11_BIND_INDEX_BUFFER, &dx_mesh.indices);
                         if (FAILED(hr))
                             printf("Could not upload '%s' index buffer.\n", mesh.get_name().c_str());
                     }
@@ -466,14 +484,8 @@ public:
                     }
 
                     { // Upload positions.
-                        D3D11_BUFFER_DESC positions_desc = {};
-                        positions_desc.Usage = D3D11_USAGE_DEFAULT;
-                        positions_desc.ByteWidth = sizeof(Vector3f) * dx_mesh.vertex_count;
-                        positions_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-
-                        D3D11_SUBRESOURCE_DATA positions_data = {};
-                        positions_data.pSysMem = positions;
-                        HRESULT hr = m_device->CreateBuffer(&positions_desc, &positions_data, dx_mesh.positions_address());
+                        HRESULT hr = upload_default_buffer(positions, dx_mesh.vertex_count, D3D11_BIND_VERTEX_BUFFER, 
+                                                           dx_mesh.positions_address());
                         if (FAILED(hr))
                             printf("Could not upload '%s' position buffer.\n", mesh.get_name().c_str());
                     }
@@ -486,22 +498,35 @@ public:
                             normals = new Vector3f[dx_mesh.vertex_count];
                             MeshUtils::compute_hard_normals(positions, positions + dx_mesh.vertex_count, normals);
                         } else if (expand_indexed_buffers)
-                            normals = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), mesh.get_normals());
+                            normals = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), normals);
 
-                        D3D11_BUFFER_DESC normals_desc = {};
-                        normals_desc.Usage = D3D11_USAGE_DEFAULT;
-                        normals_desc.ByteWidth = sizeof(Vector3f) * dx_mesh.vertex_count;
-                        normals_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-
-                        D3D11_SUBRESOURCE_DATA normals_data = {};
-                        normals_data.pSysMem = normals;
-                        HRESULT hr = m_device->CreateBuffer(&normals_desc, &normals_data, dx_mesh.normals_address());
+                        HRESULT hr = upload_default_buffer(normals, dx_mesh.vertex_count, D3D11_BIND_VERTEX_BUFFER,
+                                                           dx_mesh.normals_address());
                         if (FAILED(hr))
-                            printf("Could not upload '%s' position buffer.\n", mesh.get_name().c_str());
+                            printf("Could not upload '%s' normal buffer.\n", mesh.get_name().c_str());
 
                         if (normals != mesh.get_normals())
                             delete[] normals;
                     }
+
+                    { // Upload texcoords if present, otherwise upload 'null buffer'.
+                        Vector2f* texcoords = mesh.get_texcoords();
+                        if (texcoords != nullptr) {
+
+                            if (expand_indexed_buffers)
+                                texcoords = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), texcoords);
+
+                            HRESULT hr = upload_default_buffer(texcoords, dx_mesh.vertex_count, D3D11_BIND_VERTEX_BUFFER,
+                                                               dx_mesh.texcoords_address());
+                            if (FAILED(hr))
+                                printf("Could not upload '%s' texcoord buffer.\n", mesh.get_name().c_str());
+
+                            if (texcoords != mesh.get_texcoords())
+                                delete[] texcoords;
+                        } else
+                            *dx_mesh.texcoords_address() = m_vertex_shading.null_buffer;
+                    }
+
                     dx_mesh.buffer_count = 2; // Positions and normals are always present.
 
                     // Delete temporary expanded positions.
