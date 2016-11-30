@@ -110,6 +110,7 @@ private:
         Matrix4x4f mvp_matrix;
         Matrix4x3f to_world_matrix;
         RGBA color;
+        Vector4i flags;
     };
     ID3D11Buffer* uniforms_buffer;
 
@@ -215,10 +216,11 @@ public:
             // Create the input layout
             D3D11_INPUT_ELEMENT_DESC input_layout_desc[] = {
                 { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-                { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+                { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+                { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 2, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
             };
 
-            hr = m_device->CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout);
+            hr = m_device->CreateInputLayout(input_layout_desc, 3, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout);
             if (FAILED(hr)) {
                 release_state();
                 return;
@@ -380,6 +382,7 @@ public:
                     uniforms.mvp_matrix = Cameras::get_view_projection_matrix(camera_ID) * to_matrix4x4(m_transforms[model.transform_ID]);
                     uniforms.to_world_matrix = to_matrix4x3(m_transforms[model.transform_ID]);
                     uniforms.color = m_materials[model.material_ID].tint;
+                    uniforms.flags.x = mesh.texcoords() != m_vertex_shading.null_buffer ? 1 : 0;
                     m_render_context->UpdateSubresource(uniforms_buffer, 0, NULL, &uniforms, 0, 0);
                     m_render_context->VSSetConstantBuffers(0, 1, &uniforms_buffer);
                     m_render_context->PSSetConstantBuffers(0, 1, &uniforms_buffer);
@@ -458,6 +461,8 @@ public:
                         dx_mesh.offsets[0] = 0;
                         dx_mesh.strides[1] = sizeof(float) * 3;
                         dx_mesh.offsets[1] = 0;
+                        dx_mesh.strides[2] = sizeof(float) * 2;
+                        dx_mesh.offsets[2] = 0;
                     }
 
                     // Expand the indexed buffers if an index buffer is used, but no normals are given.
@@ -527,7 +532,7 @@ public:
                             *dx_mesh.texcoords_address() = m_vertex_shading.null_buffer;
                     }
 
-                    dx_mesh.buffer_count = 2; // Positions and normals are always present.
+                    dx_mesh.buffer_count = 3; // Positions, normals and texcoords. NOTE We can get away with binding the null texcoord buffer once at the beginning of the rendering pass, as then a semi-valid buffer is always bound.
 
                     // Delete temporary expanded positions.
                     if (positions != mesh.get_positions())
@@ -568,7 +573,6 @@ public:
                     if (m_models.size() <= model_index)
                         m_models.resize(MeshModels::capacity());
 
-                    // This info could actually just be memcopied from the datamodel to the rendermodel.
                     m_models[model_index].material_ID = model.get_material().get_ID();
                     m_models[model_index].mesh_ID = model.get_mesh().get_ID();
                     m_models[model_index].transform_ID = model.get_scene_node().get_ID();

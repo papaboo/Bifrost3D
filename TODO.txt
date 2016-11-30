@@ -1,6 +1,5 @@
 * DX11 Renderer
 ** Render models.
-*** Texcoords (Do we need two vertex shaders or just one?)
 *** Textures.
 *** Lambert + GGX material.
 ** Coverage (eeew ew ew ew)
