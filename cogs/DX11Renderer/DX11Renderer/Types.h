@@ -26,10 +26,15 @@ struct Dx11Material {
     unsigned int coverage_texture_index;
 };
 
+struct Dx11Image {
+    ID3D11Texture2D* texture2D;
+    ID3D11ShaderResourceView* srv;
+};
+
 struct Dx11Mesh {
     unsigned int index_count;
     unsigned int vertex_count;
-    ID3D11Buffer* indices; // What is the concrete implementation of this buffer? Do I really need to always use the interface?
+    ID3D11Buffer* indices;
 
     ID3D11Buffer* buffers[3]; // [positions, normals, texcoords]
     unsigned int strides[3];

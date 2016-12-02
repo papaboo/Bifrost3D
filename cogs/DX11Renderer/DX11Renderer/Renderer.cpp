@@ -87,10 +87,12 @@ private:
     ID3D11Texture2D* m_depth_buffer;
     ID3D11DepthStencilView* m_depth_view;
 
+    // Cogwheel resources
     vector<Dx11Material> m_materials = vector<Dx11Material>(0);
     vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
     vector<Dx11Model> m_models = vector<Dx11Model>(0);
     vector<Transform> m_transforms = vector<Transform>(0);
+    vector<Dx11Image> m_images = vector<Dx11Image>(0);
 
     LightManager m_lights;
 
@@ -416,6 +418,83 @@ public:
 
         m_lights.handle_updates(*m_render_context);
 
+        { // Image updates.
+            if (!Images::get_changed_images().is_empty()) {
+                if (m_images.size() < Images::capacity())
+                    m_images.resize(Images::capacity());
+
+                static auto to_DX_format = [](PixelFormat format) -> DXGI_FORMAT {
+                    switch (format) {
+                    case PixelFormat::I8:
+                        return DXGI_FORMAT_R8_UNORM;
+                    case PixelFormat::RGB24:
+                        return DXGI_FORMAT_UNKNOWN;
+                        // return DXGI_FORMAT_R8G8B8_UNORM;
+                    case PixelFormat::RGBA32:
+                        return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+                    case PixelFormat::RGB_Float:
+                        return DXGI_FORMAT_R32G32B32_FLOAT;
+                    case PixelFormat::RGBA_Float:
+                        return DXGI_FORMAT_R32G32B32A32_FLOAT;
+                    case PixelFormat::Unknown:
+                    default:
+                        return DXGI_FORMAT_UNKNOWN;
+                    }
+                };
+
+                for (Images::UID image_ID : Images::get_changed_images()) {
+                    Dx11Image& dx_image = m_images[image_ID];
+
+                    if (Images::get_changes(image_ID) == Images::Changes::Destroyed &&
+                        dx_image.texture2D != nullptr) {
+                        safe_release(&dx_image.texture2D);
+                        safe_release(&dx_image.srv);
+                    
+                    } else if (Images::get_changes(image_ID) & Images::Changes::Created) {
+                        Image image = image_ID;
+                        D3D11_TEXTURE2D_DESC tex_desc = {};
+                        tex_desc.Width = image.get_width();
+                        tex_desc.Height = image.get_height();
+                        tex_desc.MipLevels = image.get_mipmap_count(); // Set to 0 to have DX generate the mipmaps.
+                        tex_desc.ArraySize = 1;
+                        tex_desc.Format = to_DX_format(image.get_pixel_format());
+                        tex_desc.SampleDesc.Count = 1;
+                        tex_desc.SampleDesc.Quality = 0;
+                        tex_desc.Usage = D3D11_USAGE_DEFAULT;
+                        tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+                        
+                        // TODO Handle RGB24 as DX does not support it.
+
+                        if (tex_desc.Format != DXGI_FORMAT_UNKNOWN) {
+                            D3D11_SUBRESOURCE_DATA resource_data;
+                            resource_data.pSysMem = image.get_pixels();
+                            resource_data.SysMemPitch = size_of(image.get_pixel_format()) *  image.get_width(); // TODO Use size of DX format instead, as we may have to change the image format in some cases.
+
+                            HRESULT hr = m_device->CreateTexture2D(&tex_desc, &resource_data, &dx_image.texture2D);
+                            if (FAILED(hr))
+                                printf("Could not create the texture '%s'.\n", image.get_name().c_str());
+
+                            D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+                            srv_desc.Format = tex_desc.Format;
+                            srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+                            srv_desc.Texture2D.MipLevels = tex_desc.MipLevels;
+                            srv_desc.Texture2D.MostDetailedMip = 0;
+                            hr = m_device->CreateShaderResourceView(dx_image.texture2D, &srv_desc, &dx_image.srv);
+                            if (FAILED(hr))
+                                printf("Could not create the texture shader resource view for '%s'.\n", image.get_name().c_str());
+                        }
+
+                    } else if (Images::has_changes(image_ID, Images::Changes::PixelsUpdated))
+                        assert(!"Pixel update not implemented yet.\n");
+                }
+            }
+
+        }
+
+        { // Texture/sampler updates.
+
+        }
+
         { // Material updates. // TODO Upload to one buffer, so we don't have to upload it per frame.
             for (Material mat : Materials::get_changed_materials()) {
                 unsigned int material_index = mat.get_ID();
@@ -423,7 +502,7 @@ public:
                 // Just ignore deleted materials. They shouldn't be referenced anyway.
                 if (mat.has_changes(Materials::Changes::Created || Materials::Changes::Updated)) {
                     if (m_materials.size() <= material_index)
-                        m_materials.resize(MeshModels::capacity());
+                        m_materials.resize(Materials::capacity());
 
                     Dx11Material& dx11_material = m_materials[material_index];
                     dx11_material.tint = mat.get_tint();
