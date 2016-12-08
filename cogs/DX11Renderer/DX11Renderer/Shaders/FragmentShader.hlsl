@@ -27,15 +27,19 @@ struct PixelInput {
     float2 texcoord : TEXCOORD;
 };
 
+Texture2D colorTex : register(t0);
+SamplerState  colorSampler : register(s0);
+
 float4 main(PixelInput input) : SV_TARGET{
     float3 normal = normalize(input.normal.xyz);
 
-    float3 f = flags.x == 1 ? input.texcoord.xyy : color.rgb;
+    float3 f = color.rgb * colorTex.Sample(colorSampler, input.texcoord).rgb;
 
     float3 radiance = float3(0.0, 0.0, 0.0);
     for (int l = 0; l < light_count.x; ++l) {
         LightSample light_sample = sample_light(light_data[l], input.world_pos.xyz);
         radiance += f * light_sample.radiance * max(0.0, dot(normal, light_sample.direction_to_light));
     }
+
     return float4(radiance, 1.0);
 }

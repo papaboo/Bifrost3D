@@ -16,6 +16,10 @@ struct ID3D11Buffer;
 
 namespace DX11Renderer {
 
+//----------------------------------------------------------------------------
+// Model structs.
+//----------------------------------------------------------------------------
+
 struct Dx11Material {
     Cogwheel::Math::RGB tint;
     unsigned int tint_texture_index;
@@ -29,6 +33,11 @@ struct Dx11Material {
 struct Dx11Image {
     ID3D11Texture2D* texture2D;
     ID3D11ShaderResourceView* srv;
+};
+
+struct Dx11Texture {
+    Dx11Image* image;
+    ID3D11SamplerState* sampler;
 };
 
 struct Dx11Mesh {
