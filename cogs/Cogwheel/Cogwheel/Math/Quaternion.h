@@ -12,7 +12,6 @@
 #include <Cogwheel/Math/Constants.h>
 #include <Cogwheel/Math/Utils.h>
 #include <Cogwheel/Math/Vector.h>
-#include <Cogwheel/Math/Matrix.h> // No no no no REMOVE!
 
 #include <algorithm>
 #include <cstring>
@@ -79,11 +78,11 @@ public:
         Vector3<T> right = normalize(cross(up, direction));
         up = cross(direction, right);
 
-        // Compute the trace of the matrix
+        // Compute the trace of the [right, up, dir] matrix.
         T trace = right.x + up.y + direction.z;
 
         if (trace > T(0)) {
-            // Compute w from matrix trace, then xyz
+            // Compute w from matrix trace, then xyz.
             // 4w^2 = m[0][0] + m[1][1] + m[2][2] + m[3][3] (but m[3][3] == 1)
             T s = std::sqrt(trace + T(1.0));
             T real = s * T(0.5);
