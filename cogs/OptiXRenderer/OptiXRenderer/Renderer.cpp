@@ -531,11 +531,12 @@ void Renderer::handle_updates() {
 
     { // Image updates.
         if (!Images::get_changed_images().is_empty()) {
-            m_state->images.resize(Images::capacity());
+            if (m_state->images.size() < Images::capacity())
+                m_state->images.resize(Images::capacity());
 
             for (Images::UID image_ID : Images::get_changed_images()) {
                 if (Images::get_changes(image_ID) == Images::Changes::Destroyed) {
-                    if (image_ID < m_state->images.size() && m_state->images[image_ID]) {
+                    if (m_state->images[image_ID]) {
                         m_state->images[image_ID]->destroy();
                         m_state->images[image_ID] = NULL;
                     }
