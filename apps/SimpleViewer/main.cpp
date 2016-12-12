@@ -121,10 +121,11 @@ private:
 
 class CameraHandler final {
 public:
-    CameraHandler(Cameras::UID camera_ID, float aspect_ratio)
-        : m_camera_ID(camera_ID), m_aspect_ratio(aspect_ratio), m_FOV(PI<float>() / 4.0f) {
+    CameraHandler(Cameras::UID camera_ID, float aspect_ratio, float near, float far)
+        : m_camera_ID(camera_ID), m_aspect_ratio(aspect_ratio), m_FOV(PI<float>() / 4.0f)
+        , m_near(near), m_far(far) {
         Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-        CameraUtils::compute_perspective_projection(0.1f, 100.0f, m_FOV, m_aspect_ratio,
+        CameraUtils::compute_perspective_projection(m_near, m_far, m_FOV, m_aspect_ratio,
             perspective_matrix, inverse_perspective_matrix);
 
         Cameras::set_projection_matrices(m_camera_ID, perspective_matrix, inverse_perspective_matrix);
@@ -138,13 +139,24 @@ public:
         float window_aspect_ratio = engine.get_window().get_aspect_ratio();
         if (window_aspect_ratio != m_aspect_ratio || new_FOV != m_FOV) {
             Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-            CameraUtils::compute_perspective_projection(0.1f, 100.0f, new_FOV, window_aspect_ratio,
+            CameraUtils::compute_perspective_projection(m_near, m_far, new_FOV, window_aspect_ratio,
                 perspective_matrix, inverse_perspective_matrix);
 
             Cameras::set_projection_matrices(m_camera_ID, perspective_matrix, inverse_perspective_matrix);
             m_aspect_ratio = window_aspect_ratio;
             m_FOV = new_FOV;
         }
+    }
+
+    void set_near_and_far(float near, float far) {
+        m_near = near;
+        m_far = far;
+
+        Matrix4x4f perspective_matrix, inverse_perspective_matrix;
+        CameraUtils::compute_perspective_projection(m_near, m_far, m_FOV, m_aspect_ratio,
+            perspective_matrix, inverse_perspective_matrix);
+
+        Cameras::set_projection_matrices(m_camera_ID, perspective_matrix, inverse_perspective_matrix);
     }
 
     static inline void handle_callback(Engine& engine, void* state) {
@@ -155,6 +167,7 @@ private:
     Cameras::UID m_camera_ID;
     float m_aspect_ratio;
     float m_FOV;
+    float m_near, m_far;
 };
 
 static inline void update_FPS(Engine& engine, void*) {
@@ -326,7 +339,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
     
     // Create camera
     Cameras::UID cam_ID = Cameras::create("Camera", scene_ID, Matrix4x4f::identity(), Matrix4x4f::identity()); // Matrices will be set up by the CameraHandler.
-    CameraHandler* camera_handler = new CameraHandler(cam_ID, engine.get_window().get_aspect_ratio());
+    CameraHandler* camera_handler = new CameraHandler(cam_ID, engine.get_window().get_aspect_ratio(), 0.1f, 100.0f);
     engine.add_mutating_callback(CameraHandler::handle_callback, camera_handler);
 
     // Load model
@@ -357,6 +370,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
         scene_bounds.grow_to_contain(global_mesh_aabb);
     }
     g_scene_size = magnitude(scene_bounds.size());
+    camera_handler->set_near_and_far(g_scene_size / 10000.0f, g_scene_size * 3.0f);
 
     float camera_velocity = g_scene_size * 0.1f;
     Navigation* camera_navigation = new Navigation(cam_ID, camera_velocity);
