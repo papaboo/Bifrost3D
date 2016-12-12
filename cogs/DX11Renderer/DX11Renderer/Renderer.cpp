@@ -24,7 +24,7 @@
 #include <Cogwheel/Scene/SceneRoot.h>
 
 #include <algorithm>
-#include <cstdio>
+#include <codecvt>
 #include <vector>
 
 using namespace Cogwheel::Assets;
