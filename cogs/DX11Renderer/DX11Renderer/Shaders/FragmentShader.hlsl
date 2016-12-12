@@ -33,7 +33,7 @@ SamplerState  colorSampler : register(s0);
 float4 main(PixelInput input) : SV_TARGET{
     float3 normal = normalize(input.normal.xyz);
 
-    float3 f = color.rgb * colorTex.Sample(colorSampler, input.texcoord).rgb;
+    float3 f = color.rgb * colorTex.Sample(colorSampler, input.texcoord).rgb / PI;
 
     float3 radiance = float3(0.0, 0.0, 0.0);
     for (int l = 0; l < light_count.x; ++l) {
