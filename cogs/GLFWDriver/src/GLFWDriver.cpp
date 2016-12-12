@@ -6,6 +6,30 @@
 // LICENSE.txt for more detail.
 // ----------------------------------------------------------------------------
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#undef RGB
+#include <string>
+
+std::string get_data_path() {
+    char exepath[512];
+    GetModuleFileName(nullptr, exepath, 512);
+    // Find the second last slash and terminate after by setting the next character to '0'.
+    char* last_char = exepath + strlen(exepath);
+    int slash_count = 0;
+    while (slash_count != 2) {
+        char c = *--last_char;
+        if (c == '/' || c == '\\')
+            ++slash_count;
+    }
+    *++last_char = 0;
+    return std::string(exepath) + "Data\\";
+}
+
+#endif
+
 #include <GLFWDriver.h>
 
 #include <glfw/glfw3.h>
@@ -31,7 +55,8 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
     // TODO Splash screen. With possibility to print resource processing text.
 
     // Create engine.
-    Engine engine;
+    std::string data_path = get_data_path();
+    Engine engine(data_path);
     on_launch(engine);
 
     Cogwheel::Core::Window& engine_window = engine.get_window();

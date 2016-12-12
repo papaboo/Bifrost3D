@@ -40,7 +40,7 @@ class Engine final {
 public:
     static inline Engine* get_instance() { return m_instance; }
 
-    Engine();
+    Engine(std::string& data_path);
     ~Engine();
 
     inline Time& get_time() { return m_time; }
@@ -70,6 +70,11 @@ public:
 
     typedef void(*tick_cleanup_callback)(void* callback_state);
     void add_tick_cleanup_callback(tick_cleanup_callback callback, void* callback_state);
+
+    // -----------------------------------------------------------------------
+    // Paths
+    // -----------------------------------------------------------------------
+    const std::string& data_path() { return m_data_path; }
 
     // -----------------------------------------------------------------------
     // Main loop
@@ -104,6 +109,7 @@ private:
     const Input::Keyboard* m_keyboard;
     const Input::Mouse* m_mouse;
 
+    const std::string m_data_path;
 };
 
 } // NS Core

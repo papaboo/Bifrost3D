@@ -46,13 +46,10 @@ void safe_release(ResourcePtr* resource_ptr) {
 #define UNPACK_BLOB_ARGS(blob) blob->GetBufferPointer(), blob->GetBufferSize()
 
 // TODO Handle cso files and errors related to files not found.
-// Specialize blob so I can return it by value?
 inline ID3DBlob* compile_shader(std::wstring filename, const char* target) {
-    std::wstring qualified_filename = L"../Data/DX11Renderer/Shaders/" + filename;
-
     ID3DBlob* shader_bytecode;
     ID3DBlob* error_messages = nullptr;
-    HRESULT hr = D3DCompileFromFile(qualified_filename.c_str(),
+    HRESULT hr = D3DCompileFromFile(filename.c_str(),
         nullptr, // macroes
         D3D_COMPILE_STANDARD_FILE_INCLUDE,
         "main",
@@ -101,8 +98,8 @@ private:
     vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
     vector<Dx11Model> m_models = vector<Dx11Model>(0);
     vector<Transform> m_transforms = vector<Transform>(0);
-    vector<Dx11Image> m_images = vector<Dx11Image>(0);
-    vector<Dx11Texture> m_textures = vector<Dx11Texture>(0);
+    vector<Dx11Image> m_images = vector<Dx11Image>(1);
+    vector<Dx11Texture> m_textures = vector<Dx11Texture>(1);
 
     LightManager m_lights;
 
@@ -125,6 +122,8 @@ private:
         Vector4i flags;
     };
     ID3D11Buffer* uniforms_buffer;
+
+    std::wstring m_shader_folder_path;
 
 public:
     bool is_valid() { return m_device != nullptr; }
@@ -205,6 +204,12 @@ public:
             }
         }
 
+        {
+            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+            std::wstring data_folder_path = converter.from_bytes(Engine::get_instance()->data_path());
+            m_shader_folder_path = data_folder_path + L"DX11Renderer\\Shaders\\";
+        }
+
         { // Setup backbuffer.
             m_backbuffer_size = Vector2ui::zero();
 
@@ -263,10 +268,14 @@ public:
 
             unsigned char white[4] = { 255, 255, 255, 255 };
             m_white_texture = create_color_texture(m_device, white);
+
+            // Initialize null image and texture.
+            m_images[0] = {};
+            m_textures[0] = {};
         }
 
         { // Setup vertex processing.
-            ID3D10Blob* vertex_shader_blob = compile_shader(L"VertexShader.hlsl", "vs_5_0");
+            ID3D10Blob* vertex_shader_blob = compile_shader(m_shader_folder_path + L"VertexShader.hlsl", "vs_5_0");
 
             // Create the shader objects.
             HRESULT hr = m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shading.shader);
@@ -305,7 +314,7 @@ public:
             depth_desc = CD3D11_DEPTH_STENCIL_DESC();
             m_device->CreateDepthStencilState(&depth_desc, &m_opaque.depth_state);
 
-            ID3D10Blob* pixel_shader_buffer = compile_shader(L"FragmentShader.hlsl", "ps_5_0");
+            ID3D10Blob* pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0");
             HRESULT hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_opaque.shader);
         }
 

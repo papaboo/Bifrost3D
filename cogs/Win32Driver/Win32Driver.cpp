@@ -212,8 +212,21 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
 
     HINSTANCE instance_handle = GetModuleHandle(0);
 
+    char exepath[512];
+    GetModuleFileName(nullptr, exepath, 512);
+    // Find the second last slash and terminate after by setting the next character to '0'.
+    char* last_char = exepath + strlen(exepath);
+    int slash_count = 0;
+    while (slash_count != 2) {
+        char c = *--last_char;
+        if (c == '/' || c == '\\')
+            ++slash_count;
+    }
+    *++last_char = 0;
+    std::string data_path = std::string(exepath) + "Data\\";
+
     // Create engine.
-    g_engine = new Engine();
+    g_engine = new Engine(data_path);
     on_launch(*g_engine);
 
     // Create window.

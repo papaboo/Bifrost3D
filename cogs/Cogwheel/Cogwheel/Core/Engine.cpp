@@ -16,14 +16,15 @@ namespace Core {
 
 Engine* Engine::m_instance = nullptr;
 
-Engine::Engine()
+Engine::Engine(std::string& data_path)
     : m_window(Window("Cogwheel", 640, 480))
     , m_mutating_callbacks(0)
     , m_non_mutating_callbacks(0)
     , m_tick_cleanup_callbacks(0)
     , m_quit(false)
     , m_keyboard(nullptr)
-    , m_mouse(nullptr) {
+    , m_mouse(nullptr) 
+    , m_data_path(data_path) {
     m_instance = this;
 }
     
