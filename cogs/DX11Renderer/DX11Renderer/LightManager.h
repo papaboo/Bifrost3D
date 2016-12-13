@@ -29,8 +29,7 @@ using namespace Cogwheel::Scene;
 // Collects the light sources into a tight array of active lights 
 // and maintains their GPU representation.
 // TODO
-// * Support an arbitrary light count.
-// * Perhaps using a float4 texture where the lights data is packed side by side.
+// * Support an arbitrary light count. (Maximum of what fits in a constant buffer would work)
 // * Support tiled forward rendering.
 //----------------------------------------------------------------------------
 class LightManager {
@@ -39,8 +38,6 @@ class LightManager {
 private:
     Array<unsigned int> m_ID_to_index;
     Array<LightSources::UID> m_index_to_ID;
-    // Array<Dx11Light> m_host_lights;
-    // unsigned int m_active_count;
 
     struct LightBuffer {
         int m_active_count;
