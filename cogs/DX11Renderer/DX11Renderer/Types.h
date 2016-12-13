@@ -12,7 +12,15 @@
 #include <Cogwheel/Math/Color.h>
 #include <Cogwheel/Math/Vector.h>
 
+//----------------------------------------------------------------------------
+// Forward declarations.
+//----------------------------------------------------------------------------
 struct ID3D11Buffer;
+struct ID3D11Device;
+struct ID3D11DeviceContext;
+struct ID3D11SamplerState;
+struct ID3D11ShaderResourceView;
+struct ID3D11Texture2D;
 
 namespace DX11Renderer {
 
@@ -102,6 +110,17 @@ struct Dx11Light{
     unsigned int get_type() const { return (Flags)(unsigned int)flags; }
     bool is_type(Flags light_type) { return get_type() == light_type; }
 };
+
+//----------------------------------------------------------------------------
+// Utils.
+//----------------------------------------------------------------------------
+template<typename ResourcePtr>
+void safe_release(ResourcePtr* resource_ptr) {
+    if (*resource_ptr) {
+        (*resource_ptr)->Release();
+        *resource_ptr = nullptr;
+    }
+}
 
 } // NS DX11Renderer
 

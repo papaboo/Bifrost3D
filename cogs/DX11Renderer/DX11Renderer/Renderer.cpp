@@ -8,6 +8,7 @@
 
 #include <DX11Renderer/LightManager.h>
 #include <DX11Renderer/Renderer.h>
+#include <DX11Renderer/TextureManager.h>
 #include <DX11Renderer/Types.h>
 
 #define NOMINMAX
@@ -35,14 +36,6 @@ using namespace std;
 
 namespace DX11Renderer {
 
-template<typename ResourcePtr>
-void safe_release(ResourcePtr* resource_ptr) {
-    if (*resource_ptr) {
-        (*resource_ptr)->Release();
-        *resource_ptr = nullptr;
-    }
-}
-
 #define UNPACK_BLOB_ARGS(blob) blob->GetBufferPointer(), blob->GetBufferSize()
 
 // TODO Handle cso files and errors related to files not found.
@@ -58,7 +51,7 @@ inline ID3DBlob* compile_shader(std::wstring filename, const char* target) {
         0, // More flags. Unused.
         &shader_bytecode,
         &error_messages);
-    if (FAILED(hr)) { // File not found not handled? Path not found unhandled as well.
+    if (FAILED(hr)) { // TODO File not found not handled? Path not found unhandled as well.
         if (error_messages != nullptr)
             printf("Shader error: '%s'\n", (char*)error_messages->GetBufferPointer());
         return nullptr;
@@ -84,24 +77,14 @@ private:
     ID3D11Texture2D* m_depth_buffer;
     ID3D11DepthStencilView* m_depth_view;
 
-    // Default textures.
-    struct DefaultTexture {
-        ID3D11Texture2D* texture2D;
-        ID3D11ShaderResourceView* srv;
-        ID3D11SamplerState* sampler;
-    };
-
-    DefaultTexture m_white_texture;
-
     // Cogwheel resources
     vector<Dx11Material> m_materials = vector<Dx11Material>(0);
     vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
     vector<Dx11Model> m_models = vector<Dx11Model>(0);
     vector<Transform> m_transforms = vector<Transform>(0);
-    vector<Dx11Image> m_images = vector<Dx11Image>(1);
-    vector<Dx11Texture> m_textures = vector<Dx11Texture>(1);
 
     LightManager m_lights;
+    TextureManager m_textures;
 
     struct {
         ID3D11Buffer* null_buffer;
@@ -224,54 +207,9 @@ public:
             m_depth_view = nullptr;
         }
 
-        { // Setup default textures.
-            static auto create_color_texture = [](ID3D11Device* device, unsigned char pixel[4]) -> DefaultTexture {
-                DefaultTexture tex;
-
-                D3D11_TEXTURE2D_DESC tex_desc = {};
-                tex_desc.Width = 1;
-                tex_desc.Height = 1;
-                tex_desc.MipLevels = 1;
-                tex_desc.ArraySize = 1;
-                tex_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-                tex_desc.SampleDesc.Count = 1;
-                tex_desc.SampleDesc.Quality = 0;
-                tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
-                tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-
-                D3D11_SUBRESOURCE_DATA resource_data;
-                resource_data.pSysMem = pixel;
-                resource_data.SysMemPitch = sizeof(unsigned char) * 4;
-
-                HRESULT hr = device->CreateTexture2D(&tex_desc, &resource_data, &tex.texture2D);
-
-                D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
-                srv_desc.Format = tex_desc.Format;
-                srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-                srv_desc.Texture2D.MipLevels = tex_desc.MipLevels;
-                srv_desc.Texture2D.MostDetailedMip = 0;
-                hr = device->CreateShaderResourceView(tex.texture2D, &srv_desc, &tex.srv);
-
-                D3D11_SAMPLER_DESC desc = {};
-                desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-                desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-                desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-                desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-                desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-                desc.MinLOD = 0;
-                desc.MaxLOD = D3D11_FLOAT32_MAX;
-
-                hr = device->CreateSamplerState(&desc, &tex.sampler);
-
-                return tex;
-            };
-
-            unsigned char white[4] = { 255, 255, 255, 255 };
-            m_white_texture = create_color_texture(m_device, white);
-
-            // Initialize null image and texture.
-            m_images[0] = {};
-            m_textures[0] = {};
+        { // Setup asset managers.
+            m_textures = TextureManager(*m_device);
+            m_lights = LightManager(*m_device, LightSources::capacity());
         }
 
         { // Setup vertex processing.
@@ -303,10 +241,6 @@ public:
             D3D11_SUBRESOURCE_DATA empty_data = {};
             empty_data.pSysMem = &lval;
             m_device->CreateBuffer(&empty_desc, &empty_data, &m_vertex_shading.null_buffer);
-        }
-
-        { // Setup light sources.
-            m_lights = LightManager(*m_device, LightSources::capacity());
         }
 
         { // Setup opaque rendering.
@@ -456,14 +390,14 @@ public:
                 }
 
                 {
-                    Dx11Texture colorTexture = m_textures[m_materials[model.material_ID].tint_texture_index];
+                    Dx11Texture colorTexture = m_textures.get_texture(m_materials[model.material_ID].tint_texture_index);
                     if (colorTexture.sampler != nullptr) {
                         m_render_context->PSSetShaderResources(0, 1, &colorTexture.image->srv);
                         m_render_context->PSSetSamplers(0, 1, &colorTexture.sampler);
                     } else {
                         // Use default white sampler for now. Alternatively just upload a 'bound or not' parameter.
-                        m_render_context->PSSetShaderResources(0, 1, &m_white_texture.srv);
-                        m_render_context->PSSetSamplers(0, 1, &m_white_texture.sampler);
+                        m_render_context->PSSetShaderResources(0, 1, &m_textures.white_texture().srv);
+                        m_render_context->PSSetSamplers(0, 1, &m_textures.white_texture().sampler);
                     }
                 }
 
@@ -491,147 +425,8 @@ public:
     }
 
     void handle_updates() {
-        // TODO Handle updates in multiple command lists.
-
         m_lights.handle_updates(*m_render_context);
-
-        { // Image updates.
-            if (!Images::get_changed_images().is_empty()) {
-                if (m_images.size() < Images::capacity())
-                    m_images.resize(Images::capacity());
-
-                static auto to_DX_format = [](PixelFormat format) -> DXGI_FORMAT {
-                    switch (format) {
-                    case PixelFormat::I8:
-                        return DXGI_FORMAT_R8_UNORM;
-                    case PixelFormat::RGB24:
-                        return DXGI_FORMAT_UNKNOWN;
-                        // return DXGI_FORMAT_R8G8B8_UNORM;
-                    case PixelFormat::RGBA32:
-                        return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-                    case PixelFormat::RGB_Float:
-                        return DXGI_FORMAT_R32G32B32_FLOAT;
-                    case PixelFormat::RGBA_Float:
-                        return DXGI_FORMAT_R32G32B32A32_FLOAT;
-                    case PixelFormat::Unknown:
-                    default:
-                        return DXGI_FORMAT_UNKNOWN;
-                    }
-                };
-
-                for (Images::UID image_ID : Images::get_changed_images()) {
-                    Dx11Image& dx_image = m_images[image_ID];
-
-                    if (Images::get_changes(image_ID) == Images::Changes::Destroyed &&
-                        dx_image.texture2D != nullptr) {
-                        safe_release(&dx_image.texture2D);
-                        safe_release(&dx_image.srv);
-                    
-                    } else if (Images::get_changes(image_ID) & Images::Changes::Created) {
-                        Image image = image_ID;
-                        D3D11_TEXTURE2D_DESC tex_desc = {};
-                        tex_desc.Width = image.get_width();
-                        tex_desc.Height = image.get_height();
-                        tex_desc.MipLevels = image.get_mipmap_count(); // Set to 0 to have DX generate the mipmaps.
-                        tex_desc.ArraySize = 1;
-                        tex_desc.Format = to_DX_format(image.get_pixel_format());
-                        tex_desc.SampleDesc.Count = 1;
-                        tex_desc.SampleDesc.Quality = 0;
-                        tex_desc.Usage = D3D11_USAGE_DEFAULT;
-                        tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-                        
-                        // TODO Handle RGB24 as DX does not support it.
-
-                        if (tex_desc.Format != DXGI_FORMAT_UNKNOWN) {
-                            D3D11_SUBRESOURCE_DATA resource_data;
-                            resource_data.pSysMem = image.get_pixels();
-                            resource_data.SysMemPitch = size_of(image.get_pixel_format()) *  image.get_width(); // TODO Use size of DX format instead, as we may have to change the image format in some cases.
-
-                            HRESULT hr = m_device->CreateTexture2D(&tex_desc, &resource_data, &dx_image.texture2D);
-                            if (FAILED(hr))
-                                printf("Could not create the texture '%s'.\n", image.get_name().c_str());
-
-                            D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
-                            srv_desc.Format = tex_desc.Format;
-                            srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-                            srv_desc.Texture2D.MipLevels = tex_desc.MipLevels;
-                            srv_desc.Texture2D.MostDetailedMip = 0;
-                            hr = m_device->CreateShaderResourceView(dx_image.texture2D, &srv_desc, &dx_image.srv);
-                            if (FAILED(hr))
-                                printf("Could not create the texture shader resource view for '%s'.\n", image.get_name().c_str());
-                        }
-
-                    } else if (Images::has_changes(image_ID, Images::Changes::PixelsUpdated))
-                        assert(!"Pixel update not implemented yet.\n");
-                }
-            }
-        }
-
-        { // Texture/sampler updates.
-            if (!Textures::get_changed_textures().is_empty()) {
-                if (m_textures.size() < Textures::capacity())
-                    m_textures.resize(Textures::capacity());
-
-                for (Textures::UID tex_ID : Textures::get_changed_textures()) {
-                    Dx11Texture& dx_tex = m_textures[tex_ID];
-
-                    if (Textures::get_changes(tex_ID) == Textures::Changes::Destroyed &&
-                        dx_tex.sampler != nullptr) {
-                        safe_release(&dx_tex.sampler);
-                    } else if (Textures::get_changes(tex_ID) & Textures::Changes::Created) {
-                        TextureND texture = tex_ID;
-
-                        static auto to_DX_filtermode = [](MagnificationFilter mag_filter, MinificationFilter min_filter) -> D3D11_FILTER {
-                            if (mag_filter == MagnificationFilter::None) {
-                                switch (min_filter) {
-                                case MinificationFilter::None:
-                                    return D3D11_FILTER_MIN_MAG_MIP_POINT;
-                                case MinificationFilter::Linear:
-                                    return D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT;
-                                case MinificationFilter::Trilinear:
-                                    return D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
-                                }
-                            } else { // mag_filter == MagnificationFilter::Linear
-                                switch (min_filter) {
-                                case MinificationFilter::None:
-                                    return D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
-                                case MinificationFilter::Linear:
-                                    return D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-                                case MinificationFilter::Trilinear:
-                                    return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-                                }
-                            }
-                            return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-                        };
-
-                        static auto to_DX_wrapmode = [](WrapMode wm) -> D3D11_TEXTURE_ADDRESS_MODE {
-                            switch (wm) {
-                            case WrapMode::Clamp:
-                                return D3D11_TEXTURE_ADDRESS_CLAMP;
-                            case WrapMode::Repeat:
-                                return D3D11_TEXTURE_ADDRESS_WRAP;
-                            }
-                            return D3D11_TEXTURE_ADDRESS_MIRROR;
-                        };
-                        
-                        D3D11_SAMPLER_DESC desc = {};
-                        desc.Filter = to_DX_filtermode(texture.get_magnification_filter(), texture.get_minification_filter());
-                        desc.AddressU = to_DX_wrapmode(texture.get_wrapmode_U());
-                        desc.AddressV = to_DX_wrapmode(texture.get_wrapmode_V());
-                        desc.AddressW = to_DX_wrapmode(texture.get_wrapmode_W());
-                        desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-                        desc.MinLOD = 0;
-                        desc.MaxLOD = D3D11_FLOAT32_MAX;
-
-                        HRESULT hr = m_device->CreateSamplerState(&desc, &dx_tex.sampler);
-                        if (FAILED(hr))
-                            printf("Could not create the sampler.\n");
-
-                        dx_tex.image = &m_images[texture.get_image().get_ID()];
-                    }
-                }
-            }
-        }
+        m_textures.handle_updates(*m_device, *m_render_context);
 
         { // Material updates. // TODO Upload to one buffer, so we don't have to upload it per frame.
             for (Material mat : Materials::get_changed_materials()) {

@@ -1,0 +1,215 @@
+// DirectX 11 texture manager.
+// ---------------------------------------------------------------------------
+// Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
+//
+// This program is open source and distributed under the New BSD License. See
+// LICENSE.txt for more detail.
+// ---------------------------------------------------------------------------
+
+#include <DX11Renderer/TextureManager.h>
+
+#include <Cogwheel/Assets/Image.h>
+#include <Cogwheel/Assets/Texture.h>
+
+#define NOMINMAX
+#include <D3D11.h>
+#undef RGB
+
+using namespace Cogwheel::Assets;
+
+namespace DX11Renderer {
+
+TextureManager::TextureManager(ID3D11Device& device) {
+    // Initialize null image and texture.
+    m_images.resize(Images::capacity());
+    m_textures.resize(Textures::capacity());
+    m_images[0] = {};
+    m_textures[0] = {};
+
+    // Create default textures.
+    static auto create_color_texture = [](ID3D11Device& device, unsigned char pixel[4]) -> DefaultTexture {
+        DefaultTexture tex;
+
+        D3D11_TEXTURE2D_DESC tex_desc = {};
+        tex_desc.Width = 1;
+        tex_desc.Height = 1;
+        tex_desc.MipLevels = 1;
+        tex_desc.ArraySize = 1;
+        tex_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+        tex_desc.SampleDesc.Count = 1;
+        tex_desc.SampleDesc.Quality = 0;
+        tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
+        tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+        D3D11_SUBRESOURCE_DATA resource_data;
+        resource_data.pSysMem = pixel;
+        resource_data.SysMemPitch = sizeof(unsigned char) * 4;
+
+        HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &tex.texture2D);
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+        srv_desc.Format = tex_desc.Format;
+        srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        srv_desc.Texture2D.MipLevels = tex_desc.MipLevels;
+        srv_desc.Texture2D.MostDetailedMip = 0;
+        hr = device.CreateShaderResourceView(tex.texture2D, &srv_desc, &tex.srv);
+
+        D3D11_SAMPLER_DESC desc = {};
+        desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+        desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+        desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+        desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+        desc.MinLOD = 0;
+        desc.MaxLOD = D3D11_FLOAT32_MAX;
+
+        hr = device.CreateSamplerState(&desc, &tex.sampler);
+
+        return tex;
+    };
+
+    unsigned char white[4] = { 255, 255, 255, 255 };
+    m_white_texture = create_color_texture(device, white);
+}
+
+void TextureManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& device_context) {
+    { // Image updates.
+        if (!Images::get_changed_images().is_empty()) {
+            if (m_images.size() < Images::capacity())
+                m_images.resize(Images::capacity());
+
+            static auto to_DX_format = [](PixelFormat format) -> DXGI_FORMAT {
+                switch (format) {
+                case PixelFormat::I8:
+                    return DXGI_FORMAT_R8_UNORM;
+                case PixelFormat::RGB24:
+                    return DXGI_FORMAT_UNKNOWN;
+                    // return DXGI_FORMAT_R8G8B8_UNORM;
+                case PixelFormat::RGBA32:
+                    return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+                case PixelFormat::RGB_Float:
+                    return DXGI_FORMAT_R32G32B32_FLOAT;
+                case PixelFormat::RGBA_Float:
+                    return DXGI_FORMAT_R32G32B32A32_FLOAT;
+                case PixelFormat::Unknown:
+                default:
+                    return DXGI_FORMAT_UNKNOWN;
+                }
+            };
+
+            for (Images::UID image_ID : Images::get_changed_images()) {
+                Dx11Image& dx_image = m_images[image_ID];
+
+                if (Images::get_changes(image_ID) == Images::Changes::Destroyed &&
+                    dx_image.texture2D != nullptr) {
+                    safe_release(&dx_image.texture2D);
+                    safe_release(&dx_image.srv);
+
+                } else if (Images::get_changes(image_ID) & Images::Changes::Created) {
+                    Image image = image_ID;
+                    D3D11_TEXTURE2D_DESC tex_desc = {};
+                    tex_desc.Width = image.get_width();
+                    tex_desc.Height = image.get_height();
+                    tex_desc.MipLevels = image.get_mipmap_count(); // Set to 0 to have DX generate the mipmaps.
+                    tex_desc.ArraySize = 1;
+                    tex_desc.Format = to_DX_format(image.get_pixel_format());
+                    tex_desc.SampleDesc.Count = 1;
+                    tex_desc.SampleDesc.Quality = 0;
+                    tex_desc.Usage = D3D11_USAGE_DEFAULT;
+                    tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+                    // TODO Handle RGB24 as DX does not support it.
+
+                    if (tex_desc.Format != DXGI_FORMAT_UNKNOWN) {
+                        D3D11_SUBRESOURCE_DATA resource_data;
+                        resource_data.pSysMem = image.get_pixels();
+                        resource_data.SysMemPitch = size_of(image.get_pixel_format()) *  image.get_width(); // TODO Use size of DX format instead, as we may have to change the image format in some cases.
+
+                        HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &dx_image.texture2D);
+                        if (FAILED(hr))
+                            printf("Could not create the texture '%s'.\n", image.get_name().c_str());
+
+                        D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+                        srv_desc.Format = tex_desc.Format;
+                        srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+                        srv_desc.Texture2D.MipLevels = tex_desc.MipLevels;
+                        srv_desc.Texture2D.MostDetailedMip = 0;
+                        hr = device.CreateShaderResourceView(dx_image.texture2D, &srv_desc, &dx_image.srv);
+                        if (FAILED(hr))
+                            printf("Could not create the texture shader resource view for '%s'.\n", image.get_name().c_str());
+                    }
+
+                } else if (Images::has_changes(image_ID, Images::Changes::PixelsUpdated))
+                    assert(!"Pixel update not implemented yet.\n");
+            }
+        }
+    }
+
+        { // Texture/sampler updates.
+            if (!Textures::get_changed_textures().is_empty()) {
+                if (m_textures.size() < Textures::capacity())
+                    m_textures.resize(Textures::capacity());
+
+                for (Textures::UID tex_ID : Textures::get_changed_textures()) {
+                    Dx11Texture& dx_tex = m_textures[tex_ID];
+
+                    if (Textures::get_changes(tex_ID) == Textures::Changes::Destroyed &&
+                        dx_tex.sampler != nullptr) {
+                        safe_release(&dx_tex.sampler);
+                    } else if (Textures::get_changes(tex_ID) & Textures::Changes::Created) {
+                        TextureND texture = tex_ID;
+
+                        static auto to_DX_filtermode = [](MagnificationFilter mag_filter, MinificationFilter min_filter) -> D3D11_FILTER {
+                            if (mag_filter == MagnificationFilter::None) {
+                                switch (min_filter) {
+                                case MinificationFilter::None:
+                                    return D3D11_FILTER_MIN_MAG_MIP_POINT;
+                                case MinificationFilter::Linear:
+                                    return D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT;
+                                case MinificationFilter::Trilinear:
+                                    return D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
+                                }
+                            } else { // mag_filter == MagnificationFilter::Linear
+                                switch (min_filter) {
+                                case MinificationFilter::None:
+                                    return D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
+                                case MinificationFilter::Linear:
+                                    return D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+                                case MinificationFilter::Trilinear:
+                                    return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+                                }
+                            }
+                            return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+                        };
+
+                        static auto to_DX_wrapmode = [](WrapMode wm) -> D3D11_TEXTURE_ADDRESS_MODE {
+                            switch (wm) {
+                            case WrapMode::Clamp:
+                                return D3D11_TEXTURE_ADDRESS_CLAMP;
+                            case WrapMode::Repeat:
+                                return D3D11_TEXTURE_ADDRESS_WRAP;
+                            }
+                            return D3D11_TEXTURE_ADDRESS_MIRROR;
+                        };
+
+                        D3D11_SAMPLER_DESC desc = {};
+                        desc.Filter = to_DX_filtermode(texture.get_magnification_filter(), texture.get_minification_filter());
+                        desc.AddressU = to_DX_wrapmode(texture.get_wrapmode_U());
+                        desc.AddressV = to_DX_wrapmode(texture.get_wrapmode_V());
+                        desc.AddressW = to_DX_wrapmode(texture.get_wrapmode_W());
+                        desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+                        desc.MinLOD = 0;
+                        desc.MaxLOD = D3D11_FLOAT32_MAX;
+
+                        HRESULT hr = device.CreateSamplerState(&desc, &dx_tex.sampler);
+                        if (FAILED(hr))
+                            printf("Could not create the sampler.\n");
+
+                        dx_tex.image = &m_images[texture.get_image().get_ID()];
+                    }
+                }
+            }
+        }
+}
+
+} // NS DX11Renderer
