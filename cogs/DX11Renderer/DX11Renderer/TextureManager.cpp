@@ -84,7 +84,6 @@ void TextureManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& d
                     return DXGI_FORMAT_R8_UNORM;
                 case PixelFormat::RGB24:
                     return DXGI_FORMAT_UNKNOWN;
-                    // return DXGI_FORMAT_R8G8B8_UNORM;
                 case PixelFormat::RGBA32:
                     return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
                 case PixelFormat::RGB_Float:
@@ -97,6 +96,33 @@ void TextureManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& d
                 }
             };
 
+            static auto dx_format_size = [](DXGI_FORMAT format) -> int {
+                switch (format) {
+                case DXGI_FORMAT_R8_UNORM:
+                    return 1;
+                case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+                    return 4;
+                case DXGI_FORMAT_R32G32B32_FLOAT:
+                    return 12;
+                case DXGI_FORMAT_R32G32B32A32_FLOAT:
+                    return 16;
+                default:
+                    return 0;
+                }
+            };
+
+            static auto rgb24_to_rgba32 = [](unsigned char* pixels, int pixel_count) -> unsigned char* {
+                unsigned char* new_pixels = new unsigned char[pixel_count * 4];
+                unsigned char* pixel_end = pixels + pixel_count * 3;
+                while (pixels < pixel_end) {
+                    *new_pixels++ = *pixels++;
+                    *new_pixels++ = *pixels++;
+                    *new_pixels++ = *pixels++;
+                    *new_pixels++ = 255;
+                }
+                return new_pixels - pixel_count * 4;;
+            };
+
             for (Images::UID image_ID : Images::get_changed_images()) {
                 Dx11Image& dx_image = m_images[image_ID];
 
@@ -106,6 +132,9 @@ void TextureManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& d
                     safe_release(&dx_image.srv);
 
                 } else if (Images::get_changes(image_ID) & Images::Changes::Created) {
+                    safe_release(&dx_image.texture2D);
+                    safe_release(&dx_image.srv);
+
                     Image image = image_ID;
                     D3D11_TEXTURE2D_DESC tex_desc = {};
                     tex_desc.Width = image.get_width();
@@ -118,13 +147,17 @@ void TextureManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& d
                     tex_desc.Usage = D3D11_USAGE_DEFAULT;
                     tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
-                    // TODO Handle RGB24 as DX does not support it.
+                    D3D11_SUBRESOURCE_DATA resource_data;
+                    resource_data.pSysMem = image.get_pixels();
+
+                    // RGB24 not supported. Instead convert it to RGBA32.
+                    if (image.get_pixel_format() == PixelFormat::RGB24) {
+                        tex_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+                        resource_data.pSysMem = rgb24_to_rgba32((unsigned char*)resource_data.pSysMem, image.get_pixel_count());
+                    }
 
                     if (tex_desc.Format != DXGI_FORMAT_UNKNOWN) {
-                        D3D11_SUBRESOURCE_DATA resource_data;
-                        resource_data.pSysMem = image.get_pixels();
-                        resource_data.SysMemPitch = size_of(image.get_pixel_format()) *  image.get_width(); // TODO Use size of DX format instead, as we may have to change the image format in some cases.
-
+                        resource_data.SysMemPitch = dx_format_size(tex_desc.Format) *  image.get_width();
                         HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &dx_image.texture2D);
                         if (FAILED(hr))
                             printf("Could not create the texture '%s'.\n", image.get_name().c_str());
@@ -136,8 +169,12 @@ void TextureManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& d
                         srv_desc.Texture2D.MostDetailedMip = 0;
                         hr = device.CreateShaderResourceView(dx_image.texture2D, &srv_desc, &dx_image.srv);
                         if (FAILED(hr))
-                            printf("Could not create the texture shader resource view for '%s'.\n", image.get_name().c_str());
+                            printf("Could not create the shader resource view for texture '%s'.\n", image.get_name().c_str());
                     }
+
+                    // Cleanup temporary pixel data.
+                    if (resource_data.pSysMem != image.get_pixels())
+                        delete[] resource_data.pSysMem;
 
                 } else if (Images::has_changes(image_ID, Images::Changes::PixelsUpdated))
                     assert(!"Pixel update not implemented yet.\n");

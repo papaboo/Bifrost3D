@@ -9,10 +9,6 @@
 #ifndef _DX11RENDERER_RENDERER_TEXTURE_MANAGER_H_
 #define _DX11RENDERER_RENDERER_TEXTURE_MANAGER_H_
 
-// #define NOMINMAX
-// #include <D3D11.h>
-// #undef RGB
-
 #include "Dx11Renderer/Types.h"
 
 #include <vector>
@@ -22,6 +18,9 @@ namespace DX11Renderer {
 //----------------------------------------------------------------------------
 // Texture manager.
 // Uploads and manages all images and textures.
+// TODO
+// * Mipmap support.
+// * Non SRGB texture support.
 //----------------------------------------------------------------------------
 class TextureManager {
 private:
