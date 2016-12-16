@@ -51,10 +51,13 @@ public:
 
     Navigation(Cameras::UID camera_ID, float velocity) 
         : m_camera_ID(camera_ID)
-        , m_vertical_rotation(0.0f) 
-        , m_horizontal_rotation(0.0f)
         , m_velocity(velocity)
-    { }
+    {
+        Transform transform = Cameras::get_transform(m_camera_ID);
+        Vector3f forward = transform.rotation.forward();
+        m_horizontal_rotation = std::asin(forward.y);
+        m_vertical_rotation = std::atan2(forward.x, forward.z);
+    }
 
     void navigate(Engine& engine) {
         const Keyboard* keyboard = engine.get_keyboard();
@@ -92,10 +95,10 @@ public:
                 m_vertical_rotation += degrees_to_radians(float(mouse->get_delta().x));
 
                 // Clamp horizontal rotation to -89 and 89 degrees to avoid turning the camera on it's head and the singularities of cross products at the poles.
-                m_horizontal_rotation += degrees_to_radians(float(mouse->get_delta().y));
+                m_horizontal_rotation -= degrees_to_radians(float(mouse->get_delta().y));
                 m_horizontal_rotation = clamp(m_horizontal_rotation, -PI<float>() * 0.49f, PI<float>() * 0.49f);
 
-                transform.rotation = Quaternionf::from_angle_axis(m_vertical_rotation, Vector3f::up()) * Quaternionf::from_angle_axis(m_horizontal_rotation, Vector3f::right());
+                transform.rotation = Quaternionf::from_angle_axis(m_vertical_rotation, Vector3f::up()) * Quaternionf::from_angle_axis(m_horizontal_rotation, -Vector3f::right());
             }
         }
 
@@ -372,11 +375,6 @@ void initializer(Cogwheel::Core::Engine& engine) {
     g_scene_size = magnitude(scene_bounds.size());
     camera_handler->set_near_and_far(g_scene_size / 10000.0f, g_scene_size * 3.0f);
 
-    float camera_velocity = g_scene_size * 0.1f;
-    Navigation* camera_navigation = new Navigation(cam_ID, camera_velocity);
-    engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
-    engine.add_mutating_callback(update_FPS, nullptr);
-
     if (load_model_from_file) {
         Transform cam_transform = Cameras::get_transform(cam_ID);
         cam_transform.translation = scene_bounds.center() + scene_bounds.size();
@@ -393,6 +391,11 @@ void initializer(Cogwheel::Core::Engine& engine) {
         LightSources::UID light_ID = LightSources::create_directional_light(light_node_ID, RGB(15.0f));
         SceneNodes::set_parent(light_node_ID, root_node_ID);
     }
+
+    float camera_velocity = g_scene_size * 0.1f;
+    Navigation* camera_navigation = new Navigation(cam_ID, camera_velocity);
+    engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
+    engine.add_mutating_callback(update_FPS, nullptr);
 }
 
 #ifdef OPTIXRENDERER_FOUND
