@@ -42,10 +42,10 @@ private:
     struct LightBuffer {
         int m_active_count;
         Vector3i _padding;
-        Dx11Light m_lights[12];
+        Dx11Light m_lights[MAX_LIGHTS];
     } m_data;
     ID3D11Buffer* m_lights_buffer;
-    
+
     inline void light_creation(LightSources::UID light_ID, unsigned int light_index, Dx11Light* gpu_lights) {
 
         Dx11Light& gpu_light = gpu_lights[light_index];
