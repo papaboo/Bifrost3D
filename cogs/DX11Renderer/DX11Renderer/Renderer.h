@@ -27,10 +27,8 @@ namespace DX11Renderer {
 // DirectX 11 renderer.
 // TODO
 // * Render environment.
-// * Materials.
-// ** Material properties buffer.
-// ** Textures.
 // * IBL.
+// * Material manager. Store all materials in one constant buffer and offset it when binding, so it starts at the active material. Dx 11.1 feature?
 // * Create an mvp matrix array, compute model * view_proj on the GPU and index into this array instead of uploading pr frame.
 //----------------------------------------------------------------------------
 class Renderer final {
