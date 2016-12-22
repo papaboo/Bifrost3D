@@ -68,7 +68,7 @@ __inline_all__ float height_correlated_smith_delta(float alpha, const float3& w,
 // Height correlated smith geometric term.
 // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14, equation 99. 
 __inline_all__ float height_correlated_smith_G(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
-    float numerator = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway)); // TODO Should be possible to set it to 1.0f. But in that case guard it by an exception in debug builds.
+    float numerator = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway)); // TODO Should always evaluate to 1.0f. But if we replace it by a constant then guard it by an exception that catches cases where it isn't 1.0f in debug builds.
     return numerator / (1.0f + height_correlated_smith_delta(alpha, wo, halfway) + height_correlated_smith_delta(alpha, wi, halfway));
 }
 
