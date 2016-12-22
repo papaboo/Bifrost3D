@@ -36,6 +36,7 @@ struct Dx11Material {
     float metallic;
     float coverage;
     unsigned int coverage_texture_index;
+    Cogwheel::Math::Vector3i __padding;
 };
 
 struct Dx11Image {

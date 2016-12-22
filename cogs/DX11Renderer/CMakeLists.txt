@@ -25,12 +25,19 @@ if (DIRECTX_11_FOUND AND WIN32)
   set(PIXEL_SHADER_SRC
     DX11Renderer/Shaders/FragmentShader.hlsl
   )
-  
+
   set(SHADER_INCLUDES
+    DX11Renderer/Shaders/DefaultShading.hlsl
     DX11Renderer/Shaders/LightSources.hlsl
+    DX11Renderer/Shaders/Utils.hlsl
   )
-  
-  set(SHADER_SRC ${VERTEX_SHADER_SRC} ${PIXEL_SHADER_SRC} ${SHADER_INCLUDES})
+
+  set(SHADER_BSDFS_INCLUDES
+    DX11Renderer/Shaders/BSDFs/Diffuse.hlsl
+    DX11Renderer/Shaders/BSDFs/GGX.hlsl
+  )
+
+  set(SHADER_SRC ${VERTEX_SHADER_SRC} ${PIXEL_SHADER_SRC} ${SHADER_INCLUDES} ${SHADER_BSDFS_INCLUDES})
 
   add_library(${LIBRARY_NAME}
     ${ROOT_SRC}
@@ -38,7 +45,8 @@ if (DIRECTX_11_FOUND AND WIN32)
   )
 
   source_group("" FILES ${ROOT_SRC})
-  source_group("Shaders" FILES ${SHADER_SRC})
+  source_group("Shaders\\BSDFs" FILES ${SHADER_BSDFS_INCLUDES})
+  source_group("Shaders" FILES ${VERTEX_SHADER_SRC} ${PIXEL_SHADER_SRC} ${SHADER_INCLUDES})
 
   target_include_directories(${LIBRARY_NAME} 
     PUBLIC . 
@@ -68,6 +76,7 @@ if (DIRECTX_11_FOUND AND WIN32)
   # TODO Copy or compile the cso files from release to bin output dir.
   set(DATA_PATH "${COGWHEEL_DATA_OUTPUT_DIRECTORY}/DX11Renderer/Shaders")
   file(MAKE_DIRECTORY ${DATA_PATH})
+  file(MAKE_DIRECTORY "${DATA_PATH}/BSDFs")
   foreach (SHADER_PATH ${SHADER_SRC})
     set(SOURCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_PATH})
     set(DESTINATION_FILE ${COGWHEEL_DATA_OUTPUT_DIRECTORY}/${SHADER_PATH})

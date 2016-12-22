@@ -97,12 +97,14 @@ private:
         ID3D11PixelShader* shader;
     } m_opaque;
 
+    // Constant buffer for a single material (single material for now!)
+    ID3D11Buffer* material_buffer;
+
     // Catch-all uniforms. Split into model/spatial and surface shading.
     struct Uniforms {
         Matrix4x4f mvp_matrix;
         Matrix4x3f to_world_matrix;
-        RGBA color;
-        Vector4i flags;
+        Vector4f camera_position;
     };
     ID3D11Buffer* uniforms_buffer;
 
@@ -252,6 +254,17 @@ public:
             HRESULT hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_opaque.shader);
         }
 
+        { // Material constant buffer.
+            D3D11_BUFFER_DESC uniforms_desc = {};
+            uniforms_desc.Usage = D3D11_USAGE_DEFAULT;
+            uniforms_desc.ByteWidth = sizeof(Dx11Material);
+            uniforms_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+            uniforms_desc.CPUAccessFlags = 0;
+            uniforms_desc.MiscFlags = 0;
+
+            HRESULT hr = m_device->CreateBuffer(&uniforms_desc, NULL, &material_buffer);
+        }
+
         { // Catch-all uniforms.
             D3D11_BUFFER_DESC uniforms_desc = {};
             uniforms_desc.Usage = D3D11_USAGE_DEFAULT;
@@ -358,18 +371,18 @@ public:
             // Bind light buffer.
             m_render_context->PSSetConstantBuffers(1, 1, m_lights.light_buffer_addr());
 
+            // Set vertex and pixel shaders.
+            m_render_context->VSSetShader(m_vertex_shading.shader, 0, 0);
+            m_render_context->PSSetShader(m_opaque.shader, 0, 0);
+
+            m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
+            m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
             for (Dx11Model model : m_models) {
                 if (model.mesh_ID == 0)
                     continue;
 
                 Dx11Mesh mesh = m_meshes[model.mesh_ID];
-
-                // Set vertex and pixel shaders.
-                m_render_context->VSSetShader(m_vertex_shading.shader, 0, 0);
-                m_render_context->PSSetShader(m_opaque.shader, 0, 0);
-
-                m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
-                m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
                 { // Set the buffers.
                     if (mesh.index_count != 0)
@@ -382,14 +395,18 @@ public:
                     Uniforms uniforms;
                     uniforms.mvp_matrix = Cameras::get_view_projection_matrix(camera_ID) * to_matrix4x4(m_transforms[model.transform_ID]);
                     uniforms.to_world_matrix = to_matrix4x3(m_transforms[model.transform_ID]);
-                    uniforms.color = m_materials[model.material_ID].tint;
-                    uniforms.flags.x = mesh.texcoords() != m_vertex_shading.null_buffer ? 1 : 0;
+                    uniforms.camera_position = Vector4f(Cameras::get_transform(camera_ID).translation, 1.0f);
                     m_render_context->UpdateSubresource(uniforms_buffer, 0, NULL, &uniforms, 0, 0);
                     m_render_context->VSSetConstantBuffers(0, 1, &uniforms_buffer);
                     m_render_context->PSSetConstantBuffers(0, 1, &uniforms_buffer);
                 }
 
-                {
+                { // Material parameters
+
+                    // Update constant buffer.
+                    m_render_context->UpdateSubresource(material_buffer, 0, NULL, &m_materials[model.material_ID], 0, 0);
+                    m_render_context->PSSetConstantBuffers(2, 1, &material_buffer);
+
                     Dx11Texture colorTexture = m_textures.get_texture(m_materials[model.material_ID].tint_texture_index);
                     if (colorTexture.sampler != nullptr) {
                         m_render_context->PSSetShaderResources(0, 1, &colorTexture.image->srv);
