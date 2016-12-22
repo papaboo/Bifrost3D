@@ -1,11 +1,11 @@
 * DX11 Renderer
-** Render models.
-*** Textures.
-*** Lambert + GGX material.
+** Release vertex buffers before creating new ones.
 ** Coverage (eeew ew ew ew)
+** Environment.
 ** Simple IBL and AO.
-* Half4 backbuffer in OptiXRenderer and render directly to a mapped DX/GL resource.
-* OptiX 4.0 / CUDA 8.0
+* Kill off TODOs
+* Half4 backbuffer in OptiXRenderer and render directly to a mapped DX resource.
+* OptiX 4.0
 * Verify that highest_area_light_index_updated in the OptiXRenderer behaves correctly.
 * Multiple cameras.
 ** G-Buffer pr camera.
