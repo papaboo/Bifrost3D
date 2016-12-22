@@ -37,8 +37,8 @@ namespace ShadingModels {
 //  * Investigating the Disney BRDF and check if they are energy conserving.
 //  * Subtract the specular rho from the diffuse contribution 
 //    such that the summed contribution equals one or less.
-//    The specular rho is currently a tecture though, 
-//    which sorts of hampers this solution.
+//    The specular rho is currently a GPU-only texture though, 
+//    which sort of hampers this solution.
 // ---------------------------------------------------------------------------
 class DefaultShading {
 private:
@@ -98,7 +98,7 @@ public:
             return make_float3(0.0f);
 
         // Flip directions if on the backside of the material.
-        if (wi.z < 0.0f) {
+        if (wo.z < 0.0f) {
             wi.z = -wi.z;
             wo.z = -wo.z;
         }
@@ -137,7 +137,7 @@ public:
             return BSDFResponse::none();
 
         // Flip directions if on the backside of the material.
-        if (wi.z < 0.0f) {
+        if (wo.z < 0.0f) {
             wi.z = -wi.z;
             wo.z = -wo.z;
         }
