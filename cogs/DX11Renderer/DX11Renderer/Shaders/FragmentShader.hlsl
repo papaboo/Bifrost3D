@@ -31,7 +31,7 @@ struct PixelInput {
     float2 texcoord : TEXCOORD;
 };
 
-float4 main(PixelInput input) : SV_TARGET{
+float4 main(PixelInput input) : SV_TARGET {
     float3 normal = normalize(input.normal.xyz);
     float3x3 world_to_shading_tbn = create_tbn(normal);
 
