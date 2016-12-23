@@ -29,6 +29,10 @@ float pow5(float x) {
     return xx * xx * x;
 }
 
+float schlick_fresnel(float abs_cos_theta) {
+    return pow5(1.0f - abs_cos_theta);
+}
+
 float schlick_fresnel(float incident_specular, float abs_cos_theta) {
     return incident_specular + (1.0f - incident_specular) * pow5(1.0f - abs_cos_theta);
 }

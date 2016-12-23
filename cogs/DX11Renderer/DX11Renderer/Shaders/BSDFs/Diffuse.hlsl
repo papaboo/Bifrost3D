@@ -11,6 +11,35 @@
 namespace BSDFs {
 
 //-----------------------------------------------------------------------------
+// Lambert.
+//-----------------------------------------------------------------------------
+
+namespace Lambert {
+
+float evaluate() {
+    return RECIP_PI;
+}
+
+} // NS Lambert
+
+//-----------------------------------------------------------------------------
+// Burley.
+//-----------------------------------------------------------------------------
+
+namespace Burley {
+
+float evaluate(float roughness, float3 wo, float3 wi, float3 halfway) {
+    float wi_dot_halfway = dot(wi, halfway);
+    float fd90 = 0.5f + 2.0f * wi_dot_halfway * wi_dot_halfway * roughness;
+    float fresnel_wo = schlick_fresnel(wo.z);
+    float fresnel_wi = schlick_fresnel(wi.z);
+    float normalizer = lerp(1.0f / 0.969371021f, 1.0f / 1.04337633f, roughness); // Burley isn't energy conserving, so we normalize by a 'good enough' constant here.
+    return lerp(1.0f, fd90, fresnel_wo) * lerp(1.0f, fd90, fresnel_wi) * RECIP_PI * normalizer;
+}
+
+} // NS Burley
+
+//-----------------------------------------------------------------------------
 // Oren Nayar.
 //-----------------------------------------------------------------------------
 
@@ -47,17 +76,5 @@ float evaluate_approx(float roughness, float wo_dot_n, float wi_dot_n, float wo_
 }
 
 } // NS OrenNayar
-
-//-----------------------------------------------------------------------------
-// Lambert.
-//-----------------------------------------------------------------------------
-
-namespace Lambert {
-
-float evaluate() {
-    return RECIP_PI;
-}
-
-} // NS Lambert
 
 } // NS BSDFs
