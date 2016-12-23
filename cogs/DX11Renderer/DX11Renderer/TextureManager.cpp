@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 
 #include <DX11Renderer/TextureManager.h>
+#include <DX11Renderer/Utils.h>
 
 #include <Cogwheel/Assets/Image.h>
 #include <Cogwheel/Assets/Texture.h>

@@ -25,6 +25,18 @@ struct ID3D11Texture2D;
 namespace DX11Renderer {
 
 //----------------------------------------------------------------------------
+// Storage.
+//----------------------------------------------------------------------------
+
+struct float3 {
+    float x; float y; float z;
+};
+
+struct float4 {
+    float x; float y; float z;  float w;
+};
+
+//----------------------------------------------------------------------------
 // Model structs.
 //----------------------------------------------------------------------------
 
@@ -36,7 +48,7 @@ struct Dx11Material {
     float metallic;
     float coverage;
     unsigned int coverage_texture_index;
-    Cogwheel::Math::Vector3i __padding;
+    float3 __padding;
 };
 
 struct Dx11Image {
@@ -77,10 +89,6 @@ struct Dx11Model {
 // Light source structs.
 //----------------------------------------------------------------------------
 
-struct float3 {
-    float x;  float y; float z;
-};
-
 struct Dx11SphereLight {
     float3 power;
     float3 position;
@@ -111,17 +119,6 @@ struct Dx11Light{
     unsigned int get_type() const { return (Flags)(unsigned int)flags; }
     bool is_type(Flags light_type) { return get_type() == light_type; }
 };
-
-//----------------------------------------------------------------------------
-// Utils.
-//----------------------------------------------------------------------------
-template<typename ResourcePtr>
-void safe_release(ResourcePtr* resource_ptr) {
-    if (*resource_ptr) {
-        (*resource_ptr)->Release();
-        *resource_ptr = nullptr;
-    }
-}
 
 } // NS DX11Renderer
 
