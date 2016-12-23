@@ -9,18 +9,18 @@
 #ifndef _DX11RENDERER_RENDERER_TYPES_H_
 #define _DX11RENDERER_RENDERER_TYPES_H_
 
-#include <Cogwheel/Math/Color.h>
-#include <Cogwheel/Math/Vector.h>
-
 //----------------------------------------------------------------------------
 // Forward declarations.
 //----------------------------------------------------------------------------
 struct ID3D11Buffer;
 struct ID3D11Device;
 struct ID3D11DeviceContext;
+struct ID3D11InputLayout;
+struct ID3D11PixelShader;
 struct ID3D11SamplerState;
 struct ID3D11ShaderResourceView;
 struct ID3D11Texture2D;
+struct ID3D11VertexShader;
 
 namespace DX11Renderer {
 
@@ -41,7 +41,7 @@ struct float4 {
 //----------------------------------------------------------------------------
 
 struct Dx11Material {
-    Cogwheel::Math::RGB tint;
+    float3 tint;
     unsigned int tint_texture_index;
     float roughness;
     float specularity;

@@ -428,7 +428,9 @@ public:
                         m_materials.resize(Materials::capacity());
 
                     Dx11Material& dx11_material = m_materials[material_index];
-                    dx11_material.tint = mat.get_tint();
+                    dx11_material.tint.x = mat.get_tint().r;
+                    dx11_material.tint.y = mat.get_tint().g;
+                    dx11_material.tint.z = mat.get_tint().b;
                     dx11_material.tint_texture_index = mat.get_tint_texture_ID();
                     dx11_material.roughness = mat.get_roughness();
                     dx11_material.specularity = mat.get_specularity() * 0.08f; // See Physically-Based Shading at Disney bottom of page 8 for why we remap.
