@@ -411,10 +411,6 @@ public:
                     if (colorTexture.sampler != nullptr) {
                         m_render_context->PSSetShaderResources(0, 1, &colorTexture.image->srv);
                         m_render_context->PSSetSamplers(0, 1, &colorTexture.sampler);
-                    } else {
-                        // Use default white sampler for now. Alternatively just upload a 'bound or not' parameter.
-                        m_render_context->PSSetShaderResources(0, 1, &m_textures.white_texture().srv);
-                        m_render_context->PSSetSamplers(0, 1, &m_textures.white_texture().sampler);
                     }
                 }
 
@@ -445,7 +441,7 @@ public:
         m_lights.handle_updates(*m_render_context);
         m_textures.handle_updates(*m_device, *m_render_context);
 
-        { // Material updates. // TODO Upload to one buffer, so we don't have to upload it per frame.
+        { // Material updates.
             for (Material mat : Materials::get_changed_materials()) {
                 unsigned int material_index = mat.get_ID();
 
@@ -468,8 +464,11 @@ public:
 
         { // Mesh updates.
             for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
-                if (Meshes::get_changes(mesh_ID) == Meshes::Changes::Destroyed) {
-                    if (mesh_ID < m_meshes.size() && m_meshes[mesh_ID].vertex_count != 0) {
+                if (m_meshes.size() <= mesh_ID)
+                    m_meshes.resize(Meshes::capacity());
+
+                if (Meshes::get_changes(mesh_ID) & (Meshes::Changes::Created | Meshes::Changes::Destroyed)) {
+                    if (m_meshes[mesh_ID].vertex_count != 0) {
                         m_meshes[mesh_ID].index_count = m_meshes[mesh_ID].vertex_count = 0;
                         safe_release(&m_meshes[mesh_ID].indices);
                         safe_release(m_meshes[mesh_ID].positions_address());
@@ -479,9 +478,6 @@ public:
                 }
 
                 if (Meshes::get_changes(mesh_ID) & Meshes::Changes::Created) {
-                    if (m_meshes.size() <= mesh_ID)
-                        m_meshes.resize(Meshes::capacity());
-
                     Cogwheel::Assets::Mesh mesh = mesh_ID;
                     Dx11Mesh dx_mesh = {};
 
@@ -495,7 +491,7 @@ public:
                     }
 
                     // Expand the indexed buffers if an index buffer is used, but no normals are given.
-                    // In that case we need to compute hard normals per triangle and we can only do that on expanded buffers.
+                    // In that case we need to compute hard normals per triangle and we can only store that for non-indexed buffers.
                     // NOTE Alternatively look into storing the hard normals in a buffer and index into it based on the triangle ID?
                     bool expand_indexed_buffers = mesh.get_primitive_count() != 0 && mesh.get_normals() == nullptr;
 
