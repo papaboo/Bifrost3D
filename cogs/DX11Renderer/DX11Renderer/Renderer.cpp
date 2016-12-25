@@ -178,7 +178,9 @@ public:
             // Get and set render target. // TODO How is resizing of the color buffer handled?
             ID3D11Texture2D* backbuffer;
             HRESULT hr = m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&backbuffer));
+            THROW_ON_FAILURE(hr);
             hr = m_device->CreateRenderTargetView(backbuffer, nullptr, &m_backbuffer_view);
+            THROW_ON_FAILURE(hr);
             backbuffer->Release();
 
             // Depth buffer is initialized on demand when the output dimensions are known.
@@ -196,6 +198,7 @@ public:
 
             // Create the shader objects.
             HRESULT hr = m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shading.shader);
+            THROW_ON_FAILURE(hr);
 
             // Create the input layout
             D3D11_INPUT_ELEMENT_DESC input_layout_desc[] = {
@@ -205,10 +208,7 @@ public:
             };
 
             hr = m_device->CreateInputLayout(input_layout_desc, 3, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout);
-            if (FAILED(hr)) {
-                release_state();
-                return;
-            }
+            THROW_ON_FAILURE(hr);
 
             // Create a default emptyish buffer.
             D3D11_BUFFER_DESC empty_desc = {};
@@ -229,6 +229,7 @@ public:
 
             ID3D10Blob* pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0");
             HRESULT hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_opaque.shader);
+            THROW_ON_FAILURE(hr);
         }
 
         { // Material constant buffer.
@@ -240,6 +241,7 @@ public:
             uniforms_desc.MiscFlags = 0;
 
             HRESULT hr = m_device->CreateBuffer(&uniforms_desc, NULL, &material_buffer);
+            THROW_ON_FAILURE(hr);
         }
 
         { // Catch-all uniforms.
@@ -251,6 +253,7 @@ public:
             uniforms_desc.MiscFlags = 0;
 
             HRESULT hr = m_device->CreateBuffer(&uniforms_desc, NULL, &uniforms_buffer);
+            THROW_ON_FAILURE(hr);
         }
     }
 

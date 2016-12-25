@@ -11,6 +11,8 @@
 
 #include <DX11Renderer/Types.h>
 
+#include <string>
+
 #define NOMINMAX
 // #include <D3D11.h>
 #include <D3DCompiler.h>
@@ -27,6 +29,25 @@ void safe_release(ResourcePtr* resource_ptr) {
         *resource_ptr = nullptr;
     }
 }
+
+inline void CHECK_HRESULT(HRESULT hr, const std::string& file, int line, bool should_throw) {
+    if (FAILED(hr)) {
+        std::string error = "[file:" + file +
+            " line:" + std::to_string(line) + "] DX 11";
+        switch (hr) {
+        case E_INVALIDARG:
+            error += " invalid arg.";
+            break;
+        default:
+            error += " unknown HRESULT code: " + std::to_string(hr);
+            break;
+        }
+        printf("%s\n", error.c_str());
+        throw std::exception(error.c_str());
+    }
+}
+
+#define THROW_ON_FAILURE(hr) CHECK_HRESULT(hr, __FILE__,__LINE__, true)
 
 // TODO Handle cso files and errors related to files not found.
 inline ID3DBlob* compile_shader(std::wstring filename, const char* target) {
