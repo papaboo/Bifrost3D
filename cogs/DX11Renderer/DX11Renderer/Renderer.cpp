@@ -236,26 +236,12 @@ public:
         }
 
         { // Material constant buffer.
-            D3D11_BUFFER_DESC uniforms_desc = {};
-            uniforms_desc.Usage = D3D11_USAGE_DEFAULT;
-            uniforms_desc.ByteWidth = sizeof(Dx11Material);
-            uniforms_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-            uniforms_desc.CPUAccessFlags = 0;
-            uniforms_desc.MiscFlags = 0;
-
-            HRESULT hr = m_device->CreateBuffer(&uniforms_desc, NULL, &material_buffer);
+            HRESULT hr = create_constant_buffer(*m_device, sizeof(Dx11Material), &material_buffer);
             THROW_ON_FAILURE(hr);
         }
 
         { // Catch-all uniforms.
-            D3D11_BUFFER_DESC uniforms_desc = {};
-            uniforms_desc.Usage = D3D11_USAGE_DEFAULT;
-            uniforms_desc.ByteWidth = sizeof(Uniforms);
-            uniforms_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-            uniforms_desc.CPUAccessFlags = 0;
-            uniforms_desc.MiscFlags = 0;
-
-            HRESULT hr = m_device->CreateBuffer(&uniforms_desc, NULL, &uniforms_buffer);
+            HRESULT hr = create_constant_buffer(*m_device, sizeof(Uniforms), &uniforms_buffer);
             THROW_ON_FAILURE(hr);
         }
     }
