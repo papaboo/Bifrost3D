@@ -1,12 +1,16 @@
 * DX11 Renderer
-** Release vertex buffers before creating new ones.
-** Coverage (eeew ew ew ew)
-** Environment.
 ** Simple IBL and AO.
+** Coverage (eeew ew ew ew)
+** Update window title.
 * Kill off TODOs
-* Half4 backbuffer in OptiXRenderer and render directly to a mapped DX resource.
-* OptiX 4.0
-* Verify that highest_area_light_index_updated in the OptiXRenderer behaves correctly.
+* Multiple cameras.
+** G-Buffer pr camera.
+** Compose when all cameras are done.
+* OptiXRenderer
+** Copy ptx files to data folder and load from data folder at runtime.
+** Half4 backbuffer in OptiXRenderer and render directly to a mapped DX resource.
+** OptiX 4.0
+** Verify that highest_area_light_index_updated in the OptiXRenderer behaves correctly.
 * Multiple cameras.
 ** G-Buffer pr camera.
 ** Compose when all cameras are done.
@@ -14,6 +18,7 @@
 ** Grab backbuffer on the CPU.
 *** Request to composer or through the camera, not renderers
 *** Expose certain backbuffer state pr camera/viewport in a renderer interface. Fx iteration_count, is_continuous_renderer and so on. Members that can be used to evaluate the 'doneness' of a backbuffer.
+**** Investigate and potentially use C++ async concepts for this.
 ** Render to offscreen buffer.
 * BTDF
 ** Transmission factor.
