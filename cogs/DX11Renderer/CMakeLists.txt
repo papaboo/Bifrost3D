@@ -23,6 +23,7 @@ if (DIRECTX_11_FOUND AND WIN32)
 
   set(SHADER_SRC
     DX11Renderer/Shaders/DefaultShading.hlsl
+    DX11Renderer/Shaders/EnvironmentMap.hlsl
     DX11Renderer/Shaders/FragmentShader.hlsl
     DX11Renderer/Shaders/LightSources.hlsl
     DX11Renderer/Shaders/Utils.hlsl
@@ -34,12 +35,7 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/Shaders/BSDFs/GGX.hlsl
   )
 
-  set(SHADER_POSTPROCESS_SRC
-    DX11Renderer/Shaders/PostProcess/VertexShader.hlsl
-    DX11Renderer/Shaders/PostProcess/EnvironmentMap.hlsl
-  )
-
-  set(ALL_SHADER_SRC ${SHADER_SRC} ${SHADER_BSDFS_SRC} ${SHADER_POSTPROCESS_SRC})
+  set(ALL_SHADER_SRC ${SHADER_SRC} ${SHADER_BSDFS_SRC})
 
   add_library(${LIBRARY_NAME}
     ${ROOT_SRC}
@@ -49,7 +45,6 @@ if (DIRECTX_11_FOUND AND WIN32)
   source_group("" FILES ${ROOT_SRC})
   source_group("Shaders" FILES ${SHADER_SRC})
   source_group("Shaders\\BSDFs" FILES ${SHADER_BSDFS_SRC})
-  source_group("Shaders\\PostProcess" FILES ${SHADER_POSTPROCESS_SRC})
 
   target_include_directories(${LIBRARY_NAME} 
     PUBLIC . 

@@ -50,13 +50,13 @@ inline void CHECK_HRESULT(HRESULT hr, const std::string& file, int line, bool sh
 #define THROW_ON_FAILURE(hr) CHECK_HRESULT(hr, __FILE__,__LINE__, true)
 
 // TODO Handle cso files and errors related to files not found.
-inline ID3DBlob* compile_shader(std::wstring filename, const char* target) {
+inline ID3DBlob* compile_shader(const std::wstring& filename, const char* target, const char* entry_point = "main") {
     ID3DBlob* shader_bytecode;
     ID3DBlob* error_messages = nullptr;
     HRESULT hr = D3DCompileFromFile(filename.c_str(),
         nullptr, // macroes
         D3D_COMPILE_STANDARD_FILE_INCLUDE,
-        "main",
+        entry_point,
         target,
         D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
         0, // More flags. Unused.

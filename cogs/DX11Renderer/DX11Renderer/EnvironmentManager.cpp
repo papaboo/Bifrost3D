@@ -26,11 +26,11 @@ struct Constants {
 EnvironmentManager::EnvironmentManager(ID3D11Device& device, const std::wstring& shader_folder_path, TextureManager* textures)
     : m_textures(textures) {
 
-    ID3D10Blob* vertex_shader_blob = compile_shader(shader_folder_path + L"PostProcess\\VertexShader.hlsl", "vs_5_0");
+    ID3D10Blob* vertex_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "vs_5_0", "main_vs");
     HRESULT hr = device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shader);
     THROW_ON_FAILURE(hr);
 
-    ID3D10Blob* pixel_shader_blob = compile_shader(shader_folder_path + L"PostProcess\\EnvironmentMap.hlsl", "ps_5_0");
+    ID3D10Blob* pixel_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "ps_5_0", "main_ps");
     hr = device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), NULL, &m_pixel_shader);
     THROW_ON_FAILURE(hr);
 
