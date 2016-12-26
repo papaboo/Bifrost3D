@@ -14,7 +14,7 @@
 #include <string>
 
 #define NOMINMAX
-// #include <D3D11.h>
+#include <D3D11.h>
 #include <D3DCompiler.h>
 #undef RGB
 
@@ -69,6 +69,17 @@ inline ID3DBlob* compile_shader(std::wstring filename, const char* target) {
     }
 
     return shader_bytecode;
+}
+
+inline HRESULT create_constant_buffer(ID3D11Device& device, int byte_width, ID3D11Buffer** constant_buffer) {
+    D3D11_BUFFER_DESC uniforms_desc = {};
+    uniforms_desc.Usage = D3D11_USAGE_DEFAULT;
+    uniforms_desc.ByteWidth = byte_width;
+    uniforms_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    uniforms_desc.CPUAccessFlags = 0;
+    uniforms_desc.MiscFlags = 0;
+
+    return device.CreateBuffer(&uniforms_desc, NULL, constant_buffer);
 }
 
 } // NS DX11Renderer

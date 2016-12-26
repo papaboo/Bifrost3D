@@ -6,6 +6,7 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
+#include <DX11Renderer/EnvironmentManager.h>
 #include <DX11Renderer/LightManager.h>
 #include <DX11Renderer/Renderer.h>
 #include <DX11Renderer/TextureManager.h>
@@ -62,6 +63,7 @@ private:
 
     LightManager m_lights;
     TextureManager m_textures;
+    EnvironmentManager m_environments;
 
     struct {
         ID3D11Buffer* null_buffer;
@@ -191,6 +193,7 @@ public:
         { // Setup asset managers.
             m_textures = TextureManager(*m_device);
             m_lights = LightManager(*m_device, LightSources::capacity());
+            m_environments = EnvironmentManager(*m_device, m_shader_folder_path, &m_textures);
         }
 
         { // Setup vertex processing.
@@ -342,10 +345,20 @@ public:
 
         m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 0);
 
-        SceneRoot scene = Cameras::get_scene_ID(camera_ID);
-        RGBA environment_tint = RGBA(scene.get_environment_tint(), 1.0f);
-        m_render_context->ClearRenderTargetView(m_backbuffer_view, environment_tint.begin());
         m_render_context->ClearDepthStencilView(m_depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+        { // Render environment.
+            SceneRoot scene = Cameras::get_scene_ID(camera_ID);
+            Matrix4x4f inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
+            Vector3f cp = Cameras::get_transform(camera_ID).translation;
+            float4 cam_position = { cp.x, cp.y, cp.z, 1.0f };
+
+            bool env_rendered = m_environments.render(*m_render_context, inverse_view_projection_matrix, cam_position, scene.get_ID());
+            if (!env_rendered) {
+                RGBA environment_tint = RGBA(scene.get_environment_tint(), 1.0f);
+                m_render_context->ClearRenderTargetView(m_backbuffer_view, environment_tint.begin());
+            }
+        }
 
         { // Render models.
             // Bind light buffer.
@@ -420,6 +433,7 @@ public:
     void handle_updates() {
         m_lights.handle_updates(*m_render_context);
         m_textures.handle_updates(*m_device, *m_render_context);
+        m_environments.handle_updates(*m_device, *m_render_context);
 
         { // Material updates.
             for (Material mat : Materials::get_changed_materials()) {

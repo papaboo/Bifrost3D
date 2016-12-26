@@ -10,43 +10,46 @@ find_package(DirectX11)
 
 if (DIRECTX_11_FOUND AND WIN32)
   set(ROOT_SRC
+    DX11Renderer/EnvironmentManager.h
+    DX11Renderer/EnvironmentManager.cpp
     DX11Renderer/LightManager.h
     DX11Renderer/Renderer.h
     DX11Renderer/Renderer.cpp
     DX11Renderer/TextureManager.h
     DX11Renderer/TextureManager.cpp
     DX11Renderer/Types.h
+    DX11Renderer/Utils.h
   )
 
-  set(VERTEX_SHADER_SRC
+  set(SHADER_SRC
+    DX11Renderer/Shaders/DefaultShading.hlsl
+    DX11Renderer/Shaders/FragmentShader.hlsl
+    DX11Renderer/Shaders/LightSources.hlsl
+    DX11Renderer/Shaders/Utils.hlsl
     DX11Renderer/Shaders/VertexShader.hlsl
   )
 
-  set(PIXEL_SHADER_SRC
-    DX11Renderer/Shaders/FragmentShader.hlsl
-  )
-
-  set(SHADER_INCLUDES
-    DX11Renderer/Shaders/DefaultShading.hlsl
-    DX11Renderer/Shaders/LightSources.hlsl
-    DX11Renderer/Shaders/Utils.hlsl
-  )
-
-  set(SHADER_BSDFS_INCLUDES
+  set(SHADER_BSDFS_SRC
     DX11Renderer/Shaders/BSDFs/Diffuse.hlsl
     DX11Renderer/Shaders/BSDFs/GGX.hlsl
   )
 
-  set(SHADER_SRC ${VERTEX_SHADER_SRC} ${PIXEL_SHADER_SRC} ${SHADER_INCLUDES} ${SHADER_BSDFS_INCLUDES})
+  set(SHADER_POSTPROCESS_SRC
+    DX11Renderer/Shaders/PostProcess/VertexShader.hlsl
+    DX11Renderer/Shaders/PostProcess/EnvironmentMap.hlsl
+  )
+
+  set(ALL_SHADER_SRC ${SHADER_SRC} ${SHADER_BSDFS_SRC} ${SHADER_POSTPROCESS_SRC})
 
   add_library(${LIBRARY_NAME}
     ${ROOT_SRC}
-    ${SHADER_SRC}
+    ${ALL_SHADER_SRC}
   )
 
   source_group("" FILES ${ROOT_SRC})
-  source_group("Shaders\\BSDFs" FILES ${SHADER_BSDFS_INCLUDES})
-  source_group("Shaders" FILES ${VERTEX_SHADER_SRC} ${PIXEL_SHADER_SRC} ${SHADER_INCLUDES})
+  source_group("Shaders" FILES ${SHADER_SRC})
+  source_group("Shaders\\BSDFs" FILES ${SHADER_BSDFS_SRC})
+  source_group("Shaders\\PostProcess" FILES ${SHADER_POSTPROCESS_SRC})
 
   target_include_directories(${LIBRARY_NAME} 
     PUBLIC . 
@@ -63,21 +66,19 @@ if (DIRECTX_11_FOUND AND WIN32)
     FOLDER "Cogs"
   )
 
-  set_source_files_properties(
-    ${VERTEX_SHADER_SRC} PROPERTIES VS_SHADER_TYPE Vertex VS_SHADER_MODEL 5.0 VS_SHADER_ENTRYPOINT main
-  )
+  # set_source_files_properties(
+  #   ${VERTEX_SHADER_SRC} PROPERTIES VS_SHADER_TYPE Vertex VS_SHADER_MODEL 5.0 VS_SHADER_ENTRYPOINT main
+  # )
 
-  set_source_files_properties(
-    ${PIXEL_SHADER_SRC} PROPERTIES VS_SHADER_TYPE Pixel VS_SHADER_MODEL 5.0 VS_SHADER_ENTRYPOINT main
-  )
+  # set_source_files_properties(
+  #   ${PIXEL_SHADER_SRC} PROPERTIES VS_SHADER_TYPE Pixel VS_SHADER_MODEL 5.0 VS_SHADER_ENTRYPOINT main
+  # )
 
   # Copy the shaders to the build directory.
   # TODO Is there a general concept of installation in CMake?
   # TODO Copy or compile the cso files from release to bin output dir.
   set(DATA_PATH "${COGWHEEL_DATA_OUTPUT_DIRECTORY}/DX11Renderer/Shaders")
-  file(MAKE_DIRECTORY ${DATA_PATH})
-  file(MAKE_DIRECTORY "${DATA_PATH}/BSDFs")
-  foreach (SHADER_PATH ${SHADER_SRC})
+  foreach (SHADER_PATH ${ALL_SHADER_SRC})
     set(SOURCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_PATH})
     set(DESTINATION_FILE ${COGWHEEL_DATA_OUTPUT_DIRECTORY}/${SHADER_PATH})
 

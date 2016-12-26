@@ -20,23 +20,6 @@ static const float RECIP_PI = 0.31830988618379067153776752674503f;
 // Utility functions.
 // ---------------------------------------------------------------------------
 
-float heaviside(float v) {
-    return v >= 0.0f ? 1.0f : 0.0f;
-}
-
-float pow5(float x) {
-    float xx = x * x;
-    return xx * xx * x;
-}
-
-float schlick_fresnel(float abs_cos_theta) {
-    return pow5(1.0f - abs_cos_theta);
-}
-
-float schlick_fresnel(float incident_specular, float abs_cos_theta) {
-    return incident_specular + (1.0f - incident_specular) * pow5(1.0f - abs_cos_theta);
-}
-
 float3x3 create_tbn(float3 normal) {
     float3 a0;
     if (abs(normal.x) < abs(normal.y)) {
@@ -55,6 +38,33 @@ float3x3 create_tbn(float3 normal) {
     tbn[1] = bitangent;
     tbn[2] = normal;
     return tbn;
+}
+
+//-----------------------------------------------------------------------------
+// Math utils
+//-----------------------------------------------------------------------------
+
+float heaviside(float v) {
+    return v >= 0.0f ? 1.0f : 0.0f;
+}
+
+float pow5(float x) {
+    float xx = x * x;
+    return xx * xx * x;
+}
+
+float schlick_fresnel(float abs_cos_theta) {
+    return pow5(1.0f - abs_cos_theta);
+}
+
+float schlick_fresnel(float incident_specular, float abs_cos_theta) {
+    return incident_specular + (1.0f - incident_specular) * pow5(1.0f - abs_cos_theta);
+}
+
+float2 direction_to_latlong_texcoord(float3 direction) {
+    float u = (atan2(direction.x, direction.z) + PI) * 0.5f * RECIP_PI; // TODO Turn into a MADD instruction.
+    float v = (asin(direction.y) + PI * 0.5f) * RECIP_PI;
+    return float2(u, v);
 }
 
 #endif // _DX11_RENDERER_SHADERS_UTILS_H_
