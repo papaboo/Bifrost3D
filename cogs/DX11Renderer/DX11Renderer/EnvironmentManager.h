@@ -37,8 +37,6 @@ private:
     std::vector<Environment> m_envs = std::vector<Environment>(0);
 
     ID3D11VertexShader* m_vertex_shader;
-    ID3D11InputLayout* m_input_layout;
-    ID3D11Buffer* m_position_buffer; // TODO Positions can actually be derived from the vertex index instead.
     ID3D11PixelShader* m_pixel_shader;
 
     ID3D11Buffer* m_constant_buffer; // TODO Use the buffer with the scene constants.
