@@ -23,7 +23,7 @@ struct Constants {
     float4 tint;
 };
 
-EnvironmentManager::EnvironmentManager(ID3D11Device& device, const std::wstring& shader_folder_path, TextureManager* textures)
+EnvironmentManager::EnvironmentManager(ID3D11Device& device, const std::wstring& shader_folder_path, TextureManager& textures)
     : m_textures(textures) {
 
     ID3D10Blob* vertex_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "vs_5_0", "main_vs");
@@ -36,6 +36,12 @@ EnvironmentManager::EnvironmentManager(ID3D11Device& device, const std::wstring&
 
     hr = create_constant_buffer(device, sizeof(Constants), &m_constant_buffer);
     THROW_ON_FAILURE(hr);
+}
+
+EnvironmentManager::~EnvironmentManager() {
+    safe_release(&m_vertex_shader);
+    safe_release(&m_pixel_shader);
+    safe_release(&m_constant_buffer);
 }
 
 bool EnvironmentManager::render(ID3D11DeviceContext& render_context, Matrix4x4f inverse_vp_matrix, float4 camera_position, int environment_ID) {
@@ -52,7 +58,7 @@ bool EnvironmentManager::render(ID3D11DeviceContext& render_context, Matrix4x4f 
         render_context.UpdateSubresource(m_constant_buffer, 0, NULL, &constants, 0, 0);
         render_context.PSSetConstantBuffers(0, 1, &m_constant_buffer);
 
-        Dx11Texture envTexture = m_textures->get_texture(env.map_ID);
+        Dx11Texture envTexture = m_textures.get_texture(env.map_ID);
         render_context.PSSetShaderResources(0, 1, &envTexture.image->srv);
         render_context.PSSetSamplers(0, 1, &envTexture.sampler);
 

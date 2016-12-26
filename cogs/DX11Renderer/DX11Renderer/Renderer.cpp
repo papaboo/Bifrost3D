@@ -63,7 +63,7 @@ private:
 
     LightManager m_lights;
     TextureManager m_textures;
-    EnvironmentManager m_environments;
+    EnvironmentManager* m_environments;
 
     struct {
         ID3D11Buffer* null_buffer;
@@ -193,7 +193,7 @@ public:
         { // Setup asset managers.
             m_textures = TextureManager(*m_device);
             m_lights = LightManager(*m_device, LightSources::capacity());
-            m_environments = EnvironmentManager(*m_device, m_shader_folder_path, &m_textures);
+            m_environments = new EnvironmentManager(*m_device, m_shader_folder_path, m_textures);
         }
 
         { // Setup vertex processing.
@@ -339,7 +339,7 @@ public:
             Vector3f cp = Cameras::get_transform(camera_ID).translation;
             float4 cam_position = { cp.x, cp.y, cp.z, 1.0f };
 
-            bool env_rendered = m_environments.render(*m_render_context, inverse_view_projection_matrix, cam_position, scene.get_ID());
+            bool env_rendered = m_environments->render(*m_render_context, inverse_view_projection_matrix, cam_position, scene.get_ID());
             if (!env_rendered) {
                 RGBA environment_tint = RGBA(scene.get_environment_tint(), 1.0f);
                 m_render_context->ClearRenderTargetView(m_backbuffer_view, environment_tint.begin());
@@ -419,7 +419,7 @@ public:
     void handle_updates() {
         m_lights.handle_updates(*m_render_context);
         m_textures.handle_updates(*m_device, *m_render_context);
-        m_environments.handle_updates(*m_device, *m_render_context);
+        m_environments->handle_updates(*m_device, *m_render_context);
 
         { // Material updates.
             for (Material mat : Materials::get_changed_materials()) {

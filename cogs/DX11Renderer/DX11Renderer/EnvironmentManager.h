@@ -33,7 +33,7 @@ private:
         float4 tint;
     };
 
-    TextureManager* m_textures;
+    TextureManager& m_textures;
     std::vector<Environment> m_envs = std::vector<Environment>(0);
 
     ID3D11VertexShader* m_vertex_shader;
@@ -43,14 +43,17 @@ private:
     
 public:
 
-    EnvironmentManager() { }
-    EnvironmentManager(ID3D11Device& device, const std::wstring& shader_folder_path, TextureManager* textures);
-    ~EnvironmentManager() {} // TODO Release resources.
+    EnvironmentManager(ID3D11Device& device, const std::wstring& shader_folder_path, TextureManager& textures);
+    ~EnvironmentManager();
 
     // Render an environment to the active backbuffer.
     bool render(ID3D11DeviceContext& render_context, Cogwheel::Math::Matrix4x4f inverse_vp_matrix, float4 camera_position, int environment_ID);
 
     void handle_updates(ID3D11Device& device, ID3D11DeviceContext& device_context);
+
+private:
+    EnvironmentManager(EnvironmentManager& other) = delete;
+    EnvironmentManager& operator=(EnvironmentManager& rhs) = delete;
 };
 
 } // NS DX11Renderer
