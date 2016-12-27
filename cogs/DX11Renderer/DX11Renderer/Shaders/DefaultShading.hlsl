@@ -43,15 +43,15 @@ struct DefaultShading {
         }
 
         float3 tint = m_tint;
-        if (m_tint_texture_index != 0) 
+        if (m_tint_texture_index != 0)
             tint *= colorTex.Sample(colorSampler, texcoord).rgb;
         float3 halfway = normalize(wo + wi);
         float specularity = lerp(m_specularity, 1.0f, m_metallic);
         float fresnel = schlick_fresnel(specularity, dot(wo, halfway));
-        float3 specular_tint = lerp(float3(1.0f, 1.0f, 1.0f), m_tint, m_metallic);
+        float3 specular_tint = lerp(float3(1.0f, 1.0f, 1.0f), tint, m_metallic);
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
         float3 specular = specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway);
-        float3 diffuse = m_tint * BSDFs::Burley::evaluate(m_roughness, wo, wi, halfway);
+        float3 diffuse = tint * BSDFs::Burley::evaluate(m_roughness, wo, wi, halfway);
         return lerp(diffuse, specular, fresnel);
     }
 
