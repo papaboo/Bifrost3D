@@ -136,6 +136,7 @@ Images::UID Images::create(const std::string& name, PixelFormat format, float ga
             break;
     }
     metainfo.mipmap_count = mip_count;
+    metainfo.is_mipmapable = false;
     m_pixels[id] = allocate_pixels(format, total_pixel_count);
     m_changes[id] = Changes::Created;
 
@@ -151,6 +152,21 @@ void Images::destroy(Images::UID image_ID) {
 
         m_changes[image_ID] = Changes::Destroyed;
     }
+}
+
+void Images::set_mipmapable(Images::UID image_ID, bool value) { 
+    // Only set as mipmapable if no mipmaps exist.
+    value &= m_metainfo[image_ID].mipmap_count == 1;
+
+    if (m_metainfo[image_ID].is_mipmapable == value)
+        return;
+
+    m_metainfo[image_ID].is_mipmapable = value;
+
+    if (m_changes[image_ID] == Changes::None)
+        m_images_changed.push_back(image_ID);
+
+    m_changes[image_ID] |= Changes::Mipmapable;
 }
 
 Images::PixelData Images::get_pixels(Images::UID image_ID, int mipmap_level) {
@@ -349,6 +365,7 @@ Images::UID change_format(Images::UID image_ID, PixelFormat new_format) {
                     Images::set_pixel(new_image_ID, pixel, index, m);
                 }
 
+    Images::set_mipmapable(new_image_ID, image.is_mipmapable());
     return new_image_ID;
 }
 

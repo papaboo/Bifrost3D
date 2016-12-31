@@ -94,6 +94,7 @@ public:
     static Images::UID create(const std::string& name, PixelFormat format, float gamma, unsigned int width, unsigned int mipmap_count = 1) {
         return create(name, format, gamma, Math::Vector3ui(width, 1u, 1u), mipmap_count);
     }
+
     static void destroy(Images::UID image_ID);
 
     static inline ConstUIDIterator begin() { return m_UID_generator.begin(); }
@@ -113,7 +114,11 @@ public:
     static inline unsigned int get_pixel_count(Images::UID image_ID, unsigned int mipmap_level = 0) {
         return get_width(image_ID, mipmap_level) * get_height(image_ID, mipmap_level) * get_depth(image_ID, mipmap_level);
     }
-    
+
+    // Returns true if mipmaps can be auto generated for the texture.
+    static inline bool is_mipmapable(Images::UID image_ID) { return m_metainfo[image_ID].is_mipmapable; }
+    static void set_mipmapable(Images::UID image_ID, bool value);
+
     static PixelData get_pixels(Images::UID image_ID, int mipmap_level = 0);
 
     static Math::RGBA get_pixel(Images::UID image_ID, unsigned int index, unsigned int mipmap_level = 0);
@@ -131,7 +136,8 @@ public:
         static const unsigned char Created = 1u << 0u;
         static const unsigned char Destroyed = 1u << 1u;
         static const unsigned char PixelsUpdated = 1u << 2u;
-        static const unsigned char All = Created | Destroyed | PixelsUpdated;
+        static const unsigned char Mipmapable = 1u << 3u;
+        static const unsigned char All = Created | Destroyed | PixelsUpdated | Mipmapable;
     }; 
 
     static inline unsigned char get_changes(Images::UID image_ID) { return m_changes[image_ID]; }
@@ -159,6 +165,7 @@ private:
         unsigned int mipmap_count;
         PixelFormat pixel_format;
         float gamma;
+        bool is_mipmapable;
     };
 
     static UIDGenerator m_UID_generator;
@@ -193,6 +200,8 @@ public:
 
     inline PixelFormat get_pixel_format() { return Images::get_pixel_format(m_ID); }
     inline float get_gamma() { return Images::get_gamma(m_ID); }
+    inline bool is_mipmapable() { return Images::is_mipmapable(m_ID); }
+    inline void set_mipmapable(bool value) { Images::set_mipmapable(m_ID, value); }
     inline unsigned int get_mipmap_count() { return Images::get_mipmap_count(m_ID); }
     inline unsigned int get_width(unsigned int mipmap_level = 0) { return Images::get_width(m_ID, mipmap_level); }
     inline unsigned int get_height(unsigned int mipmap_level = 0) { return Images::get_height(m_ID, mipmap_level); }

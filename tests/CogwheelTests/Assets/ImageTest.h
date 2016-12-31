@@ -240,6 +240,33 @@ TEST_F(Assets_Images, fill_mipmaps) {
     // EXPECT_RGBA_EQ(RGBA(3.0f, 2.0f, 0.0f, 1.0f), image.get_pixel(Vector2ui(0, 0), 2)); // NOTE The curent mipmap chain fill can tend to scew the result if textures are non-power-of-two.
 }
 
+TEST_F(Assets_Images, mipmapable_events) {
+
+    unsigned int width = 2, height = 2;
+    Image image = Images::create("Test image", PixelFormat::RGBA_Float, 1.0f, Math::Vector2ui(width, height));
+    EXPECT_FALSE(image.is_mipmapable());
+
+    Images::reset_change_notifications();
+
+    { // Test mipmapable change event.
+        image.set_mipmapable(true);
+        Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
+        EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
+        Image changed_image = *changed_images.begin();
+        EXPECT_EQ(changed_image, image);
+        EXPECT_EQ(Images::Changes::Mipmapable, changed_image.get_changes());
+    }
+
+    { // Test that destroying an image removes the mipmapable change event.
+        Images::destroy(image.get_ID());
+        Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
+        EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
+        Image destroyed_image = *changed_images.begin();
+        EXPECT_EQ(destroyed_image, image);
+        EXPECT_EQ(Images::Changes::Destroyed, destroyed_image.get_changes());
+    }
+}
+
 } // NS Assets
 } // NS Cogwheel
 
