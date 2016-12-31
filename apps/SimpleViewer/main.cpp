@@ -335,6 +335,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
             Images::destroy(image.get_ID());
             image = new_image;
         }
+        image.set_mipmapable(true);
         Textures::UID env_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
         scene_ID = SceneRoots::create("Model scene", root_node_ID, env_ID);
     } else
