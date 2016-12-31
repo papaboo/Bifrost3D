@@ -107,7 +107,7 @@ __inline_all__ static float pow5(float x) {
 
 __inline_all__ optix::float2 direction_to_latlong_texcoord(const optix::float3& direction) {
     float u = (atan2f(direction.x, direction.z) + PIf) * 0.5f / PIf;
-    float v = (asinf(direction.y) + M_PIf * 0.5f) / PIf;
+    float v = (asinf(direction.y) + PIf * 0.5f) / PIf;
     return optix::make_float2(u, v);
 }
 
