@@ -310,9 +310,9 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
         /* TODO
         if (engine_window.has_changes(Cogwheel::Core::Window::Changes::Resized))
             glfwSetWindowSize(window, engine_window.get_width(), engine_window.get_height());
-        if (engine_window.has_changes(Cogwheel::Core::Window::Changes::Renamed))
-            glfwSetWindowTitle(window, engine_window.get_name().c_str());
             */
+        if (engine_window.has_changes(Cogwheel::Core::Window::Changes::Renamed))
+            SetWindowText(hwnd, engine_window.get_name().c_str());
     }
 
     return S_OK;
