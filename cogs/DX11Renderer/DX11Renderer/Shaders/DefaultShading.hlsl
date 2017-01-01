@@ -14,8 +14,8 @@
 // Samplers.
 //-----------------------------------------------------------------------------
 
-Texture2D colorTex : register(t0);
-SamplerState colorSampler : register(s0);
+Texture2D colorTex : register(t1);
+SamplerState colorSampler : register(s1);
 
 //-----------------------------------------------------------------------------
 // Default shading.

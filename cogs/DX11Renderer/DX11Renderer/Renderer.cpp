@@ -388,8 +388,8 @@ public:
 
                     Dx11Texture colorTexture = m_textures.get_texture(m_materials[model.material_ID].tint_texture_index);
                     if (colorTexture.sampler != nullptr) {
-                        m_render_context->PSSetShaderResources(0, 1, &colorTexture.image->srv);
-                        m_render_context->PSSetSamplers(0, 1, &colorTexture.sampler);
+                        m_render_context->PSSetShaderResources(1, 1, &colorTexture.image->srv);
+                        m_render_context->PSSetSamplers(1, 1, &colorTexture.sampler);
                     }
                 }
 
