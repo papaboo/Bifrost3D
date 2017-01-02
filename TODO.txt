@@ -1,7 +1,8 @@
 * DX11 Renderer
-** Simple IBL and AO.
+** AO.
+** Fix seams in the environment
+** Win32: Core window size should reflect the backbuffer size, not the total window size. See getFullWindowSize in glfw. And also resize!
 ** Coverage (eeew ew ew ew)
-** Update window title.
 * Kill off TODOs
 * Multiple cameras.
 ** G-Buffer pr camera.

@@ -11,8 +11,11 @@
 #include "Utils.hlsl"
 
 //-----------------------------------------------------------------------------
-// Samplers.
+// Textures.
 //-----------------------------------------------------------------------------
+
+Texture2D environmentTex : register(t0);
+SamplerState environmentSampler : register(s0);
 
 Texture2D colorTex : register(t1);
 SamplerState colorSampler : register(s1);
@@ -55,5 +58,31 @@ struct DefaultShading {
         return lerp(diffuse, specular, fresnel);
     }
 
+    // This is a horrible hack, just to get some approximate IBL in.
+    // In order to do this right, the material model needs to be fleshed out and rho for GGX needs to be approximated.
+    // TODO Take the current LOD and pixel density into account before choosing sample LOD.
+    // See http://casual-effects.blogspot.dk/2011/08/plausible-environment-lighting-in-two.html 
+    // for how to derive the LOD level for cubemaps.
+    float3 IBL(float3 normal, float3 wi, float2 texcoord) {
+        float3 tint = m_tint;
+        if (m_tint_texture_index != 0)
+            tint *= colorTex.Sample(colorSampler, texcoord).rgb;
+
+        float abs_cos_theta = abs(dot(wi, normal));
+
+        float specularity = lerp(m_specularity, 1.0f, m_metallic);
+        float fresnel = schlick_fresnel(specularity, pow(abs_cos_theta, 0.25f)); // Ugh, that fresnel approximation again.
+
+        float width, height, mip_count;
+        environmentTex.GetDimensions(0, width, height, mip_count);
+
+        float2 diffuse_tc = direction_to_latlong_texcoord(normal);
+        float3 diffuse = tint * environmentTex.SampleLevel(environmentSampler, diffuse_tc, mip_count - 3).rgb;
+
+        float2 specular_tc = direction_to_latlong_texcoord(wi);
+        float3 specular = tint * environmentTex.SampleLevel(environmentSampler, specular_tc, (mip_count - 3) * m_roughness * m_roughness).rgb;
+
+        return lerp(diffuse, specular, fresnel);
+    }
 };
 

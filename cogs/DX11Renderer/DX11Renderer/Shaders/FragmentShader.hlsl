@@ -36,9 +36,11 @@ float4 main(PixelInput input) : SV_TARGET {
     float3x3 world_to_shading_tbn = create_tbn(normal);
 
     float3 wo = camera_position.xyz - input.world_position.xyz;
-    wo = normalize(mul(world_to_shading_tbn, wo));
+    float3 wi = -reflect(normalize(wo), normal);
 
-    float3 radiance = float3(0.0, 0.0, 0.0);
+    float3 radiance = material.IBL(normal, wi, input.texcoord);
+
+    wo = normalize(mul(world_to_shading_tbn, wo));
     for (int l = 0; l < light_count.x; ++l) {
         LightSample light_sample = sample_light(light_data[l], input.world_position.xyz);
         float3 wi = mul(world_to_shading_tbn, light_sample.direction_to_light);

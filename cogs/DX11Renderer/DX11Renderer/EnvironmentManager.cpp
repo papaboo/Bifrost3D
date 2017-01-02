@@ -66,7 +66,13 @@ bool EnvironmentManager::render(ID3D11DeviceContext& render_context, Matrix4x4f 
 
         return true;
     }
-    return false;
+    else {
+        // Bind white environment instead.
+        render_context.PSSetShaderResources(0, 1, &m_textures.white_texture().srv);
+        render_context.PSSetSamplers(0, 1, &m_textures.white_texture().sampler);
+
+        return false;
+    }
 }
 
 void EnvironmentManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& device_context) {
