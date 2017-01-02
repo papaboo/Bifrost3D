@@ -64,5 +64,5 @@ float4 main_ps(PixelInput input) : SV_TARGET {
     // TODO We can perform most of this projection in the vertex shader and then simply interpolate the result.
     float3 view_dir = project_ray_direction(viewport_pos, camera_position.xyz, inverted_view_projection_matrix);
     float2 tc = direction_to_latlong_texcoord(view_dir);
-    return float4(tint.rgb * envTex.Sample(envSampler, tc).rgb, 1);
+    return float4(tint.rgb * envTex.SampleLevel(envSampler, tc, 0).rgb, 1);
 }
