@@ -62,8 +62,8 @@ float schlick_fresnel(float incident_specular, float abs_cos_theta) {
 }
 
 float2 direction_to_latlong_texcoord(float3 direction) {
-    float u = (atan2(direction.x, direction.z) + PI) * 0.5f * RECIP_PI; // TODO Turn into a MADD instruction.
-    float v = (asin(direction.y) + PI * 0.5f) * RECIP_PI;
+    float u = atan2(direction.x, direction.z) * 0.5f * RECIP_PI + 0.5f;
+    float v = asin(direction.y) * RECIP_PI + 0.5f;
     return float2(u, v);
 }
 
