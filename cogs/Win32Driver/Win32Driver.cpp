@@ -32,9 +32,13 @@ Mouse* g_mouse = NULL;
 // Windows message handler callback.
 LRESULT CALLBACK handle_messages(HWND window_handle, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
-    case WM_SIZE:
-        g_engine->get_window().resize(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+    case WM_SIZE: {
+        int width = GET_X_LPARAM(lParam); 
+        int height = GET_Y_LPARAM(lParam);
+        if (g_engine->get_window().get_width() != width || g_engine->get_window().get_height() != height)
+            g_engine->get_window().resize(width, height);
         break;
+    }
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
@@ -208,6 +212,25 @@ LRESULT handle_input(UINT message, WPARAM wParam, LPARAM lParam) {
     return 0;
 }
 
+Vector2i compute_full_window_size(int backbuffer_width, int backbuffer_height) {
+    DWORD window_ex_style = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
+    
+    DWORD window_style = 0;
+    { // Window style
+        window_style = WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
+
+        // Window is decorated.
+        window_style |= WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+
+        // Window is resizable.
+        window_style |= WS_MAXIMIZEBOX | WS_SIZEBOX;
+    }
+
+    RECT rect = { 0, 0, backbuffer_width, backbuffer_height };
+    AdjustWindowRectEx(&rect, window_style, false, window_ex_style);
+    return Vector2i(rect.right - rect.left, rect.bottom - rect.top);
+}
+
 int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
 
     HINSTANCE instance_handle = GetModuleHandle(0);
@@ -245,12 +268,14 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
     wc.lpszClassName = "main_window";
     RegisterClassEx(&wc);
 
+    Vector2i full_window_size = compute_full_window_size(engine_window.get_width(), engine_window.get_height());
+
     // Create the window and its handle.
     HWND hwnd = CreateWindowEx(WS_EX_LEFT,
         "main_window", window_title,
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, // (x, y) position of the window
-        engine_window.get_width(), engine_window.get_height(),
+        full_window_size.x, full_window_size.y,
         NULL, // Parent window
         NULL, // Menu handle
         instance_handle,
