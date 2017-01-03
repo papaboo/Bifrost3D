@@ -295,11 +295,11 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
     g_engine->set_keyboard(g_keyboard);
 
     // Setup mouse.
-    POINT p;
-    GetCursorPos(&p);
-    ScreenToClient(hwnd, &p);
-    g_mouse = new Mouse(Vector2i(p.x, p.y));
-    g_engine->set_mouse(g_mouse);
+        POINT p;
+        GetCursorPos(&p);
+        ScreenToClient(hwnd, &p);
+        g_mouse = new Mouse(Vector2i(p.x, p.y));
+        g_engine->set_mouse(g_mouse);
 
     // Setup timer.
     LARGE_INTEGER freq;
@@ -332,10 +332,13 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
 
         g_engine->do_tick(delta_time);
 
-        /* TODO
-        if (engine_window.has_changes(Cogwheel::Core::Window::Changes::Resized))
-            glfwSetWindowSize(window, engine_window.get_width(), engine_window.get_height());
-            */
+        if (engine_window.has_changes(Cogwheel::Core::Window::Changes::Resized)) {
+            Vector2i full_window_size = compute_full_window_size(engine_window.get_width(), engine_window.get_height());
+            SetWindowPos(hwnd, HWND_TOP,
+                         0, 0, full_window_size.x, full_window_size.y,
+                         SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+        }
+
         if (engine_window.has_changes(Cogwheel::Core::Window::Changes::Renamed))
             SetWindowText(hwnd, engine_window.get_name().c_str());
     }
