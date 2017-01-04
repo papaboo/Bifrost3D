@@ -58,7 +58,8 @@ private:
     // Cogwheel resources
     vector<Dx11Material> m_materials = vector<Dx11Material>(0);
     vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
-    vector<Dx11Model> m_models = vector<Dx11Model>(0);
+    vector<int> m_model_index = vector<int>(0); // The models index in the sorted models array.
+    vector<Dx11Model> m_sorted_models = vector<Dx11Model>(0);
     vector<Transform> m_transforms = vector<Transform>(0);
 
     LightManager m_lights;
@@ -357,7 +358,7 @@ public:
             m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
             m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-            for (Dx11Model model : m_models) {
+            for (Dx11Model model : m_sorted_models) {
                 if (model.mesh_ID == 0)
                     continue;
 
@@ -414,6 +415,28 @@ public:
         D3D11_SUBRESOURCE_DATA resource_data = {};
         resource_data.pSysMem = data;
         return m_device->CreateBuffer(&desc, &resource_data, buffer);
+    }
+
+    // Sorts the models to be sorted.
+    // The new position/index of the model is stored in model_index.
+    // Incidently also compacts the list of models by removing any deleted models.
+    void sort_and_compact_models(vector<Dx11Model>& models_to_be_sorted, vector<int>& model_index) {
+
+        std::sort(models_to_be_sorted.begin(), models_to_be_sorted.end(), 
+            [](Dx11Model lhs, Dx11Model rhs) -> bool {
+                return lhs.properties < rhs.properties;
+        });
+
+        // Compact models by resizing, such that all destroyed models are after the end of the list.
+        int compacted_size = (int)models_to_be_sorted.size();
+        while (models_to_be_sorted[compacted_size - 1].properties == Dx11Model::Properties::Destroyed)
+            --compacted_size;
+        models_to_be_sorted.resize(compacted_size);
+
+        // Register the models new position.
+        #pragma omp parallel for schedule(dynamic, 16)
+        for (int i = 0; i < models_to_be_sorted.size(); ++i)
+            model_index[models_to_be_sorted[i].model_ID] = i;
     }
 
     void handle_updates() {
@@ -565,25 +588,46 @@ public:
         }
 
         { // Model updates
-            for (MeshModel model : MeshModels::get_changed_models()) {
-                unsigned int model_index = model.get_ID();
+            if (!MeshModels::get_changed_models().is_empty()) {
+                if (m_sorted_models.size() <= MeshModels::capacity()) {
+                    m_sorted_models.reserve(MeshModels::capacity());
+                    int old_size = (int)m_model_index.size();
+                    m_model_index.resize(MeshModels::capacity());
+                    std::fill(m_model_index.begin() + old_size, m_model_index.end(), 0);
+                }
 
-                if (model.get_changes() == MeshModels::Changes::Destroyed) {
-                    if (model_index < m_models.size()) {
-                        m_models[model_index].material_ID = 0;
-                        m_models[model_index].mesh_ID = 0;
-                        m_models[model_index].transform_ID = 0;
+                for (MeshModel model : MeshModels::get_changed_models()) {
+                    unsigned int model_index = m_model_index[model.get_ID()];
+
+                    if (model.get_changes() == MeshModels::Changes::Destroyed) {
+                        m_sorted_models[model_index].model_ID = 0;
+                        m_sorted_models[model_index].material_ID = 0;
+                        m_sorted_models[model_index].mesh_ID = 0;
+                        m_sorted_models[model_index].transform_ID = 0;
+                        m_sorted_models[model_index].properties = Dx11Model::Properties::Destroyed;
+
+                        m_model_index[model.get_ID()] = 0;
+                    }
+
+                    if (model.get_changes() & MeshModels::Changes::Created) {
+                        Dx11Model dx_model;
+                        dx_model.model_ID = model.get_ID();
+                        dx_model.material_ID = model.get_material().get_ID();
+                        dx_model.mesh_ID = model.get_mesh().get_ID();
+                        dx_model.transform_ID = model.get_scene_node().get_ID();
+
+                        bool is_transparent = model.get_material().get_coverage_texture_ID() != Textures::UID::invalid_UID();
+                        dx_model.properties = is_transparent ? Dx11Model::Properties::Transparent : Dx11Model::Properties::None;
+
+                        if (model_index == 0) {
+                            m_model_index[model.get_ID()] = (int)m_sorted_models.size();
+                            m_sorted_models.push_back(dx_model);
+                        } else
+                            m_sorted_models[model_index] = dx_model;
                     }
                 }
 
-                if (model.get_changes() & MeshModels::Changes::Created) {
-                    if (m_models.size() <= model_index)
-                        m_models.resize(MeshModels::capacity());
-
-                    m_models[model_index].material_ID = model.get_material().get_ID();
-                    m_models[model_index].mesh_ID = model.get_mesh().get_ID();
-                    m_models[model_index].transform_ID = model.get_scene_node().get_ID();
-                }
+                sort_and_compact_models(m_sorted_models, m_model_index);
             }
         }
     }

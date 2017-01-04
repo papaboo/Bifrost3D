@@ -84,9 +84,18 @@ struct Dx11Mesh {
 };
 
 struct Dx11Model {
+    struct Properties {
+        static const unsigned int None = 0u;
+        static const unsigned int Cutout = 1u << 0u;
+        static const unsigned int Transparent = 1u << 1u;
+        static const unsigned int Destroyed = 1u << 31u;
+    };
+
+    unsigned int model_ID;
     unsigned int mesh_ID;
     unsigned int transform_ID;
     unsigned int material_ID;
+    unsigned int properties; // NOTE If I really really really wanted to keep this 16 byte aligned (which is nice), then I could store properties in upper 8 bits of the IDs.
 };
 
 //----------------------------------------------------------------------------
