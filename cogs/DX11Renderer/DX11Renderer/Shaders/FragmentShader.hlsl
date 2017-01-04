@@ -32,6 +32,11 @@ struct PixelInput {
 };
 
 float4 main(PixelInput input) : SV_TARGET {
+    // NOTE There may be a performance cost associated with having a potential discard, so we should probably have a separate pixel shader for cutouts.
+    float coverage = material.coverage(input.texcoord);
+    if (coverage < 0.33f)
+        discard;
+
     float3 normal = normalize(input.normal.xyz);
     float3x3 world_to_shading_tbn = create_tbn(normal);
 

@@ -392,6 +392,12 @@ public:
                         m_render_context->PSSetShaderResources(1, 1, &colorTexture.image->srv);
                         m_render_context->PSSetSamplers(1, 1, &colorTexture.sampler);
                     }
+
+                    Dx11Texture coverateTexture = m_textures.get_texture(m_materials[model.material_ID].coverage_texture_index);
+                    if (coverateTexture.sampler != nullptr) {
+                        m_render_context->PSSetShaderResources(2, 1, &coverateTexture.image->srv);
+                        m_render_context->PSSetSamplers(2, 1, &coverateTexture.sampler);
+                    }
                 }
 
                 if (mesh.index_count != 0)

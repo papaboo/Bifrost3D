@@ -82,7 +82,7 @@ void TextureManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& d
             static auto to_DX_format = [](PixelFormat format) -> DXGI_FORMAT {
                 switch (format) {
                 case PixelFormat::I8:
-                    return DXGI_FORMAT_R8_UNORM;
+                    return DXGI_FORMAT_A8_UNORM;
                 case PixelFormat::RGB24:
                     return DXGI_FORMAT_UNKNOWN;
                 case PixelFormat::RGBA32:
@@ -99,7 +99,7 @@ void TextureManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& d
 
             static auto dx_format_size = [](DXGI_FORMAT format) -> int {
                 switch (format) {
-                case DXGI_FORMAT_R8_UNORM:
+                case DXGI_FORMAT_A8_UNORM:
                     return 1;
                 case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
                     return 4;

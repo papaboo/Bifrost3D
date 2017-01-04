@@ -20,6 +20,9 @@ SamplerState environmentSampler : register(s0);
 Texture2D colorTex : register(t1);
 SamplerState colorSampler : register(s1);
 
+Texture2D coverageTex : register(t2);
+SamplerState coverageSampler : register(s2);
+
 //-----------------------------------------------------------------------------
 // Default shading.
 //-----------------------------------------------------------------------------
@@ -33,6 +36,13 @@ struct DefaultShading {
     float m_coverage;
     unsigned int m_coverage_texture_index;
     int3 __padding;
+
+    float coverage(float2 texcoord) {
+        float c = m_coverage;
+        if (m_coverage_texture_index != 0)
+            c *= coverageTex.Sample(coverageSampler, texcoord).a;
+        return c;
+    }
 
     float3 evaluate(float3 wo, float3 wi, float2 texcoord) {
         bool is_same_hemisphere = wi.z * wo.z >= 0.00000001f;
