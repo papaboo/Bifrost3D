@@ -28,7 +28,7 @@ std::string get_data_path() {
     return std::string(exepath) + "Data\\";
 }
 
-#endif
+#endif // _WIN32
 
 #include <GLFWDriver.h>
 
