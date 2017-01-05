@@ -291,26 +291,42 @@ public:
 
         Vector2ui current_backbuffer_size = Vector2ui(window.get_width(), window.get_height());
         if (m_backbuffer_size != current_backbuffer_size) {
-            if (m_depth_buffer) m_depth_buffer->Release();
-            if (m_depth_view) m_depth_view->Release();
+            
+            { // Setup new backbuffer.
+                m_render_context->OMSetRenderTargets(0, 0, 0);
+                if (m_backbuffer_view) m_backbuffer_view->Release();
 
-            D3D11_TEXTURE2D_DESC depth_desc;
-            depth_desc.Width = current_backbuffer_size.x;
-            depth_desc.Height = current_backbuffer_size.y;
-            depth_desc.MipLevels = 1;
-            depth_desc.ArraySize = 1;
-            depth_desc.Format = DXGI_FORMAT_D32_FLOAT;
-            depth_desc.SampleDesc.Count = 1;
-            depth_desc.SampleDesc.Quality = 0;
-            depth_desc.Usage = D3D11_USAGE_DEFAULT;
-            depth_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-            depth_desc.CPUAccessFlags = 0;
-            depth_desc.MiscFlags = 0;
+                HRESULT hr = m_swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
+                THROW_ON_FAILURE(hr);
 
-            HRESULT hr = m_device->CreateTexture2D(&depth_desc, NULL, &m_depth_buffer);
-            m_device->CreateDepthStencilView(m_depth_buffer, NULL, &m_depth_view);
+                ID3D11Texture2D* backbuffer;
+                hr = m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&backbuffer));
+                THROW_ON_FAILURE(hr);
+                hr = m_device->CreateRenderTargetView(backbuffer, nullptr, &m_backbuffer_view);
+                THROW_ON_FAILURE(hr);
+                backbuffer->Release();
+            }
 
-            m_render_context->OMSetRenderTargets(1, &m_backbuffer_view, m_depth_view);
+            { // Setup new depth buffer.
+                if (m_depth_buffer) m_depth_buffer->Release();
+                if (m_depth_view) m_depth_view->Release();
+
+                D3D11_TEXTURE2D_DESC depth_desc;
+                depth_desc.Width = current_backbuffer_size.x;
+                depth_desc.Height = current_backbuffer_size.y;
+                depth_desc.MipLevels = 1;
+                depth_desc.ArraySize = 1;
+                depth_desc.Format = DXGI_FORMAT_D32_FLOAT;
+                depth_desc.SampleDesc.Count = 1;
+                depth_desc.SampleDesc.Quality = 0;
+                depth_desc.Usage = D3D11_USAGE_DEFAULT;
+                depth_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+                depth_desc.CPUAccessFlags = 0;
+                depth_desc.MiscFlags = 0;
+
+                HRESULT hr = m_device->CreateTexture2D(&depth_desc, NULL, &m_depth_buffer);
+                m_device->CreateDepthStencilView(m_depth_buffer, NULL, &m_depth_view);
+            }
 
             m_backbuffer_size = current_backbuffer_size;
         }
@@ -330,8 +346,8 @@ public:
             m_render_context->RSSetViewports(1, &viewport);
         }
 
+        m_render_context->OMSetRenderTargets(1, &m_backbuffer_view, m_depth_view);
         m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 0);
-
         m_render_context->ClearDepthStencilView(m_depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
         { // Render environment.
