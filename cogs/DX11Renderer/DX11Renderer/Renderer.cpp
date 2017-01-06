@@ -58,9 +58,11 @@ private:
     // Cogwheel resources
     vector<Dx11Material> m_materials = vector<Dx11Material>(0);
     vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
+    vector<Transform> m_transforms = vector<Transform>(0);
+
     vector<int> m_model_index = vector<int>(0); // The models index in the sorted models array.
     vector<Dx11Model> m_sorted_models = vector<Dx11Model>(0);
-    vector<Transform> m_transforms = vector<Transform>(0);
+    int m_first_transparent_index = 0;
 
     LightManager m_lights;
     TextureManager m_textures;
@@ -73,9 +75,15 @@ private:
     } m_vertex_shading;
 
     struct {
+        ID3D11RasterizerState* raster_state;
         ID3D11DepthStencilState* depth_state;
         ID3D11PixelShader* shader;
     } m_opaque;
+
+    struct {
+        int m_first_model_index = 0;
+        ID3D11RasterizerState* raster_state;
+    } m_cutout;
 
     // Constant buffer for a single material (single material for now!)
     ID3D11Buffer* material_buffer;
@@ -191,7 +199,12 @@ public:
             m_depth_view = nullptr;
         }
 
-        { // Setup asset managers.
+        { // Setup asset managing.
+            Dx11Model dummy_model = { 0, 0, 0, 0, 0 };
+            m_sorted_models.push_back(dummy_model);
+            m_model_index.resize(1);
+            m_model_index[0] = 0;
+
             m_textures = TextureManager(*m_device);
             m_lights = LightManager(*m_device, LightSources::capacity());
             m_environments = new EnvironmentManager(*m_device, m_shader_folder_path, m_textures);
@@ -227,12 +240,23 @@ public:
         }
 
         { // Setup opaque rendering.
-            D3D11_DEPTH_STENCIL_DESC depth_desc = {};
-            depth_desc = CD3D11_DEPTH_STENCIL_DESC();
-            m_device->CreateDepthStencilState(&depth_desc, &m_opaque.depth_state);
+            CD3D11_RASTERIZER_DESC opaque_raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
+            HRESULT hr = m_device->CreateRasterizerState(&opaque_raster_state, &m_opaque.raster_state);
+            THROW_ON_FAILURE(hr);
+
+            D3D11_DEPTH_STENCIL_DESC depth_desc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
+            hr = m_device->CreateDepthStencilState(&depth_desc, &m_opaque.depth_state);
+            THROW_ON_FAILURE(hr);
 
             ID3D10Blob* pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0");
-            HRESULT hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_opaque.shader);
+            hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_opaque.shader);
+            THROW_ON_FAILURE(hr);
+        }
+
+        { // Cutout rendering. Reuses some of the opaque state.
+            CD3D11_RASTERIZER_DESC twosided_raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
+            twosided_raster_state.CullMode = D3D11_CULL_NONE;
+            HRESULT hr = m_device->CreateRasterizerState(&twosided_raster_state, &m_cutout.raster_state);
             THROW_ON_FAILURE(hr);
         }
 
@@ -293,6 +317,8 @@ public:
         if (m_backbuffer_size != current_backbuffer_size) {
             
             { // Setup new backbuffer.
+                // https://msdn.microsoft.com/en-us/library/windows/desktop/bb205075(v=vs.85).aspx#Handling_Window_Resizing
+
                 m_render_context->OMSetRenderTargets(0, 0, 0);
                 if (m_backbuffer_view) m_backbuffer_view->Release();
 
@@ -374,10 +400,16 @@ public:
             m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
             m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-            for (Dx11Model model : m_sorted_models) {
-                if (model.mesh_ID == 0)
-                    continue;
+            m_render_context->RSSetState(m_opaque.raster_state);
 
+            for (int i = 1; i < m_sorted_models.size(); ++i) {
+
+                // Setup cutout and transparent states.
+                if (i == m_cutout.m_first_model_index)
+                    m_render_context->RSSetState(m_cutout.raster_state);
+
+                Dx11Model model = m_sorted_models[i];
+                assert(model.model_ID != 0);
                 Dx11Mesh mesh = m_meshes[model.mesh_ID];
 
                 { // Set the buffers.
@@ -439,26 +471,45 @@ public:
         return m_device->CreateBuffer(&desc, &resource_data, buffer);
     }
 
-    // Sorts the models to be sorted.
+    // Sort the models in the order [dummy, opaque, cutout, transparent, destroyed].
     // The new position/index of the model is stored in model_index.
     // Incidently also compacts the list of models by removing any deleted models.
     void sort_and_compact_models(vector<Dx11Model>& models_to_be_sorted, vector<int>& model_index) {
 
-        std::sort(models_to_be_sorted.begin(), models_to_be_sorted.end(), 
+        // The models to be sorted starts at index 1, because the first model is a dummy model.
+        std::sort(models_to_be_sorted.begin() + 1, models_to_be_sorted.end(), 
             [](Dx11Model lhs, Dx11Model rhs) -> bool {
                 return lhs.properties < rhs.properties;
         });
 
-        // Compact models by resizing, such that all destroyed models are after the end of the list.
-        int compacted_size = (int)models_to_be_sorted.size();
-        while (models_to_be_sorted[compacted_size - 1].properties == Dx11Model::Properties::Destroyed)
-            --compacted_size;
-        models_to_be_sorted.resize(compacted_size);
+        { // Register the models new position and find the transition between model buckets.
+            int sorted_models_end = m_cutout.m_first_model_index = m_first_transparent_index =
+                (int)models_to_be_sorted.size();
 
-        // Register the models new position.
-        #pragma omp parallel for schedule(dynamic, 16)
-        for (int i = 0; i < models_to_be_sorted.size(); ++i)
-            model_index[models_to_be_sorted[i].model_ID] = i;
+            #pragma omp parallel for
+            for (int i = 1; i < models_to_be_sorted.size(); ++i) {
+                Dx11Model& model = models_to_be_sorted[i];
+                model_index[model.model_ID] = i;
+
+                Dx11Model& prevModel = models_to_be_sorted[i-1];
+                if (prevModel.properties != model.properties) {
+                    if (!prevModel.is_cutout() && model.is_cutout())
+                        m_cutout.m_first_model_index = i;
+                    if (!prevModel.is_transparent() && model.is_transparent())
+                        m_first_transparent_index = i;
+                    if (!prevModel.is_destroyed() && model.is_destroyed())
+                        sorted_models_end = i;
+                }
+            }
+
+            // Correct indices in case no bucket transition was found.
+            if (m_first_transparent_index > sorted_models_end)
+                m_first_transparent_index = sorted_models_end;
+            if (m_cutout.m_first_model_index > m_first_transparent_index)
+                m_cutout.m_first_model_index = m_first_transparent_index;
+
+            models_to_be_sorted.resize(sorted_models_end);
+        }
     }
 
     void handle_updates() {
@@ -639,7 +690,7 @@ public:
                         dx_model.transform_ID = model.get_scene_node().get_ID();
 
                         bool is_transparent = model.get_material().get_coverage_texture_ID() != Textures::UID::invalid_UID();
-                        dx_model.properties = is_transparent ? Dx11Model::Properties::Transparent : Dx11Model::Properties::None;
+                        dx_model.properties = is_transparent ? Dx11Model::Properties::Cutout: Dx11Model::Properties::None;
 
                         if (model_index == 0) {
                             m_model_index[model.get_ID()] = (int)m_sorted_models.size();
