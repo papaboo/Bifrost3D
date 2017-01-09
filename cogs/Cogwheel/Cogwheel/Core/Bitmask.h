@@ -55,6 +55,11 @@ public:
     bool operator==(Bitmask v) const { return v.m_mask == m_mask; }
     bool operator!=(E v) const { return T(v) != m_mask; }
     bool operator!=(Bitmask v) const { return v.m_mask != m_mask; }
+
+    // -----------------------------------------------------------------------
+    // Raw data access.
+    // -----------------------------------------------------------------------
+    T raw() { return m_mask; }
 };
 
 } // NS Core

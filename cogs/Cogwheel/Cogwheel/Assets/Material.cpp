@@ -112,7 +112,7 @@ void Materials::destroy(Materials::UID material_ID) {
     }
 }
 
-void Materials::set_flags(Materials::UID material_ID, unsigned char flags) {
+void Materials::set_flags(Materials::UID material_ID, Flags flags) {
     m_materials[material_ID].flags = flags;
     flag_as_updated(material_ID);
 }

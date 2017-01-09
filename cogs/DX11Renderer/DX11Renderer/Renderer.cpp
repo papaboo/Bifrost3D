@@ -719,7 +719,7 @@ public:
 
                         Material mat = model.get_material();
                         bool is_transparent = mat.get_coverage_texture_ID() != Textures::UID::invalid_UID() || mat.get_coverage() < 1.0f;
-                        bool is_cutout = (mat.get_flags() & MaterialFlags::Cutout) == MaterialFlags::Cutout;
+                        bool is_cutout = mat.get_flags().is_set(Materials::Flag::Cutout);
                         unsigned int transparent_type = is_cutout ? Dx11Model::Properties::Cutout : Dx11Model::Properties::Transparent;
                         dx_model.properties = is_transparent ? transparent_type : Dx11Model::Properties::None;
 
