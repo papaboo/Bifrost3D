@@ -18,7 +18,7 @@ namespace Assets {
 Materials::UIDGenerator Materials::m_UID_generator = UIDGenerator(0u);
 std::string* Materials::m_names = nullptr;
 Materials::Data* Materials::m_materials = nullptr;
-unsigned char* Materials::m_changes = nullptr;
+Materials::Changes* Materials::m_changes = nullptr;
 std::vector<Materials::UID> Materials::m_materials_changed = std::vector<Materials::UID>(0);
 
 void Materials::allocate(unsigned int capacity) {
@@ -30,8 +30,8 @@ void Materials::allocate(unsigned int capacity) {
 
     m_names = new std::string[capacity];
     m_materials = new Data[capacity];
-    m_changes = new unsigned char[capacity];
-    std::memset(m_changes, Changes::None, capacity);
+    m_changes = new Changes[capacity];
+    std::memset(m_changes, (int)Change::None, capacity);
 
     m_materials_changed.reserve(capacity / 4);
 
@@ -72,7 +72,7 @@ void Materials::reserve_material_data(unsigned int new_capacity, unsigned int ol
     m_materials = resize_and_copy_array(m_materials, new_capacity, copyable_elements);
     m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
     if (copyable_elements < new_capacity) // We need to zero the new change masks.
-        std::memset(m_changes + copyable_elements, Changes::None, new_capacity - copyable_elements);
+        std::memset(m_changes + copyable_elements, (int)Change::None, new_capacity - copyable_elements);
 }
 
 void Materials::reserve(unsigned int new_capacity) {
@@ -94,21 +94,21 @@ Materials::UID Materials::create(const std::string& name, const Data& data) {
 
     // Push the material to the list of changed materials, if this is the first change.
     // (If a material at the same position has been created an deleted in the same frame, then this check would fail.)
-    if (m_changes[id] == Changes::None)
+    if (m_changes[id] == Change::None)
         m_materials_changed.push_back(id);
 
     m_names[id] = name;
     m_materials[id] = data;
-    m_changes[id] = Changes::Created;
+    m_changes[id] = Change::Created;
 
     return id;
 }
 
 void Materials::destroy(Materials::UID material_ID) {
     if (m_UID_generator.erase(material_ID)) {
-        if (m_changes[material_ID] == Changes::None)
+        if (m_changes[material_ID] == Change::None)
             m_materials_changed.push_back(material_ID);
-        m_changes[material_ID] = Changes::Destroyed;
+        m_changes[material_ID] = Change::Destroyed;
     }
 }
 
@@ -158,15 +158,15 @@ void Materials::set_transmission(Materials::UID material_ID, float transmission)
 }
 
 void Materials::flag_as_updated(Materials::UID material_ID) {
-    if (m_changes[material_ID] == Changes::None)
+    if (m_changes[material_ID] == Change::None)
         m_materials_changed.push_back(material_ID);
-    m_changes[material_ID] |= Changes::Updated;
+    m_changes[material_ID] |= Change::Updated;
 }
 
 void Materials::reset_change_notifications() {
     // NOTE We could use some heuristic here to choose between looping over 
     // the notifications and only resetting the changed materials instead of resetting all.
-    std::memset(m_changes, Changes::None, capacity());
+    std::memset(m_changes, (int)Change::None, capacity());
     m_materials_changed.resize(0);
 }
 

@@ -550,7 +550,7 @@ public:
                 unsigned int material_index = mat.get_ID();
 
                 // Just ignore deleted materials. They shouldn't be referenced anyway.
-                if (mat.has_changes(Materials::Changes::Created || Materials::Changes::Updated)) {
+                if (!mat.get_changes().is_set(Materials::Change::Destroyed)) {
                     if (m_materials.size() <= material_index)
                         m_materials.resize(Materials::capacity());
 

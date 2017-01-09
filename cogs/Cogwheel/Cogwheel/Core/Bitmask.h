@@ -46,6 +46,7 @@ public:
     bool none_set() const { return m_mask == T(0); }
     bool not_set(E v) const { return ((T)v & m_mask) == T(0); }
     bool some_set(E v) const { return ((T)v & m_mask) != T(0); }
+    bool some_set(E v1, E v2) const { return ((T(v1) | T(v2)) & m_mask) != T(0); }
     bool is_set(E v) const { return ((T)v & m_mask) == T(v); }
 
     // -----------------------------------------------------------------------

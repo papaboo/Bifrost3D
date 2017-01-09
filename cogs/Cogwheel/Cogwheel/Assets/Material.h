@@ -109,18 +109,16 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    struct Changes {
-        static const unsigned char None = 0u;
-        static const unsigned char Created = 1u << 0u;
-        static const unsigned char Destroyed = 1u << 1u;
-        static const unsigned char Updated = 1u << 2u;
-        static const unsigned char All = Created | Destroyed | Updated;
+    enum class Change : unsigned char {
+        None = 0,
+        Created = 1,
+        Destroyed = 2,
+        Updated = 3,
+        All = Created | Destroyed | Updated
     };
+    typedef Core::Bitmask<Change> Changes;
 
-    static inline unsigned char get_changes(Materials::UID material_ID) { return m_changes[material_ID]; }
-    static inline bool has_changes(Materials::UID material_ID, unsigned char change_bitmask = Changes::All) {
-        return (m_changes[material_ID] & change_bitmask) != Changes::None;
-    }
+    static inline Changes get_changes(Materials::UID material_ID) { return m_changes[material_ID]; }
 
     typedef std::vector<UID>::iterator ChangedIterator;
     static inline Core::Iterable<ChangedIterator> get_changed_materials() {
@@ -138,7 +136,7 @@ private:
 
     static std::string* m_names;
     static Data* m_materials;
-    static unsigned char* m_changes; // Bitmask of changes. Could be reduced to 4 bits pr material.
+    static Changes* m_changes;
     static std::vector<UID> m_materials_changed;
 };
 
@@ -186,8 +184,7 @@ public:
     inline float get_transmission() { return Materials::get_transmission(m_ID); }
     inline void set_transmission(float transmission) { Materials::set_coverage(m_ID, transmission); }
 
-    inline unsigned char get_changes() { return Materials::get_changes(m_ID); }
-    inline bool has_changes(unsigned char change_bitmask) { return Materials::has_changes(m_ID, change_bitmask); }
+    inline Materials::Changes get_changes() { return Materials::get_changes(m_ID); }
 
 private:
     const Materials::UID m_ID;

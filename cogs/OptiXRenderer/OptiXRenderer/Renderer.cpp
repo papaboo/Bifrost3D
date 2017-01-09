@@ -657,7 +657,7 @@ void Renderer::handle_updates() {
                 // Update new and changed materials. Just ignore destroyed ones.
                 OptiXRenderer::Material* device_materials = (OptiXRenderer::Material*)m_state->material_parameters->map();
                 for (Materials::UID material_ID : Materials::get_changed_materials())
-                    if (!Materials::has_changes(material_ID, Materials::Changes::Destroyed))
+                    if (!Materials::get_changes(material_ID).is_set(Materials::Change::Destroyed))
                         upload_material(material_ID, device_materials, m_state->textures.data());
                 m_state->material_parameters->unmap();
             }
