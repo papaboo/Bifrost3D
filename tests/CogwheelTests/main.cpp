@@ -15,6 +15,7 @@
 #include <Assets/TextureTest.h>
 
 #include <Core/ArrayTest.h>
+#include <Core/BitmaskTest.h>
 #include <Core/UniqueIDGeneratorTest.h>
 
 #include <Input/KeyboardTest.h>

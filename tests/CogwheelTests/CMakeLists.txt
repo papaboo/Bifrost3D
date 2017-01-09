@@ -15,6 +15,7 @@ set(ASSETS_SRCS
 
 set(CORE_SRCS
   Core/ArrayTest.h
+  Core/BitmaskTest.h
   Core/UniqueIDGeneratorTest.h
 )
 
