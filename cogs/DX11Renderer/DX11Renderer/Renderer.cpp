@@ -62,7 +62,6 @@ private:
 
     vector<int> m_model_index = vector<int>(0); // The models index in the sorted models array.
     vector<Dx11Model> m_sorted_models = vector<Dx11Model>(0);
-    int m_first_transparent_index = 0;
 
     LightManager m_lights;
     TextureManager m_textures;
@@ -81,9 +80,14 @@ private:
     } m_opaque;
 
     struct {
-        int m_first_model_index = 0;
+        int first_model_index = 0;
         ID3D11RasterizerState* raster_state;
     } m_cutout;
+
+    struct {
+        int first_model_index = 0;
+        ID3D11BlendState* blend_state;
+    } m_transparent;
 
     // Constant buffer for a single material (single material for now!)
     ID3D11Buffer* material_buffer;
@@ -253,10 +257,30 @@ public:
             THROW_ON_FAILURE(hr);
         }
 
-        { // Cutout rendering. Reuses some of the opaque state.
+        { // Setup cutout rendering. Reuses some of the opaque state.
             CD3D11_RASTERIZER_DESC twosided_raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
             twosided_raster_state.CullMode = D3D11_CULL_NONE;
             HRESULT hr = m_device->CreateRasterizerState(&twosided_raster_state, &m_cutout.raster_state);
+            THROW_ON_FAILURE(hr);
+        }
+
+        { // Setup transparent rendering.
+
+            D3D11_BLEND_DESC blend_desc;
+            blend_desc.AlphaToCoverageEnable = false;
+            blend_desc.IndependentBlendEnable = false;
+
+            D3D11_RENDER_TARGET_BLEND_DESC& rt_blend_desc = blend_desc.RenderTarget[0];
+            rt_blend_desc.BlendEnable = true;
+            rt_blend_desc.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+            rt_blend_desc.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+            rt_blend_desc.BlendOp = D3D11_BLEND_OP_ADD;
+            rt_blend_desc.SrcBlendAlpha = D3D11_BLEND_ONE;
+            rt_blend_desc.DestBlendAlpha = D3D11_BLEND_ONE;
+            rt_blend_desc.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+            rt_blend_desc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+            HRESULT hr = m_device->CreateBlendState(&blend_desc, &m_transparent.blend_state);
             THROW_ON_FAILURE(hr);
         }
 
@@ -376,6 +400,10 @@ public:
         m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 0);
         m_render_context->ClearDepthStencilView(m_depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
+        // Opaque
+        m_render_context->OMSetBlendState(0, 0, 0xffffffff);
+        m_render_context->RSSetState(m_opaque.raster_state);
+
         { // Render environment.
             SceneRoot scene = Cameras::get_scene_ID(camera_ID);
             Matrix4x4f inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
@@ -400,13 +428,13 @@ public:
             m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
             m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-            m_render_context->RSSetState(m_opaque.raster_state);
-
             for (int i = 1; i < m_sorted_models.size(); ++i) {
 
                 // Setup cutout and transparent states.
-                if (i == m_cutout.m_first_model_index)
+                if (i == m_cutout.first_model_index || i == m_transparent.first_model_index)
                     m_render_context->RSSetState(m_cutout.raster_state);
+                if (i == m_transparent.first_model_index)
+                    m_render_context->OMSetBlendState(m_transparent.blend_state, 0, 0xffffffff);
 
                 Dx11Model model = m_sorted_models[i];
                 assert(model.model_ID != 0);
@@ -483,7 +511,7 @@ public:
         });
 
         { // Register the models new position and find the transition between model buckets.
-            int sorted_models_end = m_cutout.m_first_model_index = m_first_transparent_index =
+            int sorted_models_end = m_cutout.first_model_index = m_transparent.first_model_index =
                 (int)models_to_be_sorted.size();
 
             #pragma omp parallel for
@@ -494,19 +522,19 @@ public:
                 Dx11Model& prevModel = models_to_be_sorted[i-1];
                 if (prevModel.properties != model.properties) {
                     if (!prevModel.is_cutout() && model.is_cutout())
-                        m_cutout.m_first_model_index = i;
+                        m_cutout.first_model_index = i;
                     if (!prevModel.is_transparent() && model.is_transparent())
-                        m_first_transparent_index = i;
+                        m_transparent.first_model_index = i;
                     if (!prevModel.is_destroyed() && model.is_destroyed())
                         sorted_models_end = i;
                 }
             }
 
             // Correct indices in case no bucket transition was found.
-            if (m_first_transparent_index > sorted_models_end)
-                m_first_transparent_index = sorted_models_end;
-            if (m_cutout.m_first_model_index > m_first_transparent_index)
-                m_cutout.m_first_model_index = m_first_transparent_index;
+            if (m_transparent.first_model_index > sorted_models_end)
+                m_transparent.first_model_index = sorted_models_end;
+            if (m_cutout.first_model_index > m_transparent.first_model_index)
+                m_cutout.first_model_index = m_transparent.first_model_index;
 
             models_to_be_sorted.resize(sorted_models_end);
         }
@@ -689,8 +717,11 @@ public:
                         dx_model.mesh_ID = model.get_mesh().get_ID();
                         dx_model.transform_ID = model.get_scene_node().get_ID();
 
-                        bool is_transparent = model.get_material().get_coverage_texture_ID() != Textures::UID::invalid_UID();
-                        dx_model.properties = is_transparent ? Dx11Model::Properties::Cutout: Dx11Model::Properties::None;
+                        Material mat = model.get_material();
+                        bool is_transparent = mat.get_coverage_texture_ID() != Textures::UID::invalid_UID() || mat.get_coverage() < 1.0f;
+                        bool is_cutout = (mat.get_flags() & MaterialFlags::Cutout) == MaterialFlags::Cutout;
+                        unsigned int transparent_type = is_cutout ? Dx11Model::Properties::Cutout : Dx11Model::Properties::Transparent;
+                        dx_model.properties = is_transparent ? transparent_type : Dx11Model::Properties::None;
 
                         if (model_index == 0) {
                             m_model_index[model.get_ID()] = (int)m_sorted_models.size();

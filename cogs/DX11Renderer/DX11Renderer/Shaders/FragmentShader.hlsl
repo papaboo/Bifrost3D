@@ -53,5 +53,5 @@ float4 main(PixelInput input) : SV_TARGET {
         radiance += f * light_sample.radiance * abs(wi.z);
     }
 
-    return float4(radiance, 1.0);
+    return float4(radiance, coverage);
 }
