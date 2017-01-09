@@ -19,6 +19,11 @@
 namespace Cogwheel {
 namespace Assets {
 
+namespace MaterialFlags {
+static const unsigned char None = 0u;
+static const unsigned char Cutout = 1u << 0u;
+}
+
 // ---------------------------------------------------------------------------
 // Cogwheel material properties container.
 // ---------------------------------------------------------------------------
@@ -37,6 +42,7 @@ public:
         float coverage;
         Textures::UID coverage_texture_ID;
         float transmission;
+        unsigned char flags;
 
         static Data create_dielectric(Math::RGB tint, float roughness, float specularity) {
             Data res = {};
@@ -75,6 +81,9 @@ public:
 
     static inline std::string get_name(Materials::UID material_ID) { return m_names[material_ID]; }
     static inline void set_name(Materials::UID material_ID, const std::string& name) { m_names[material_ID] = name; }
+
+    static inline unsigned char get_flags(Materials::UID material_ID) { return m_materials[material_ID].flags; }
+    static void set_flags(Materials::UID material_ID, unsigned char flags);
 
     static inline Math::RGB get_tint(Materials::UID material_ID) { return m_materials[material_ID].tint; }
     static void set_tint(Materials::UID material_ID, Math::RGB tint);
@@ -154,6 +163,9 @@ public:
     inline std::string get_name() const { return Materials::get_name(m_ID); }
     inline void set_name(const std::string& name) { Materials::set_name(m_ID, name); }
 
+    inline unsigned char get_flags() { return Materials::get_flags(m_ID); }
+    inline void set_flags(unsigned char flags) { Materials::set_flags(m_ID, flags); }
+    
     inline Math::RGB get_tint() { return Materials::get_tint(m_ID); }
     inline void set_tint(Math::RGB tint) { Materials::set_tint(m_ID, tint); }
     inline Textures::UID get_tint_texture_ID() { return Materials::get_tint_texture_ID(m_ID); }

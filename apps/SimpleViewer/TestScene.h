@@ -221,6 +221,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
 
         Materials::Data material_data = Materials::Data::create_metal(RGB(0.8f, 0.4f, 0.3f), 0.02f, 0.0f);
         material_data.coverage_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
+        material_data.flags = MaterialFlags::Cutout;
         Materials::UID material_ID = Materials::create("Copper", material_data);
 
         Transform transform = Transform(Vector3f(3.0f, 0.5f, 0.0f));
