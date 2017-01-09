@@ -42,7 +42,7 @@ private:
 public:
 
     // -----------------------------------------------------------------------
-    // Constructors and destrcutor
+    // Constructors and destructor
     // -----------------------------------------------------------------------
     Array()
         : m_size(0), m_data(nullptr) {
