@@ -9,6 +9,7 @@
 #ifndef _COGWHEEL_ASSETS_IMAGE_H_
 #define _COGWHEEL_ASSETS_IMAGE_H_
 
+#include <Cogwheel/Core/Bitmask.h>
 #include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Math/Color.h>
@@ -131,19 +132,17 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    struct Changes {
-        static const unsigned char None = 0u;
-        static const unsigned char Created = 1u << 0u;
-        static const unsigned char Destroyed = 1u << 1u;
-        static const unsigned char PixelsUpdated = 1u << 2u;
-        static const unsigned char Mipmapable = 1u << 3u;
-        static const unsigned char All = Created | Destroyed | PixelsUpdated | Mipmapable;
+    enum class Change : unsigned char {
+        None = 0,
+        Created = 1,
+        Destroyed = 2,
+        PixelsUpdated = 4,
+        Mipmapable = 8,
+        All = Created | Destroyed | PixelsUpdated | Mipmapable
     }; 
+    typedef Core::Bitmask<Change> Changes;
 
-    static inline unsigned char get_changes(Images::UID image_ID) { return m_changes[image_ID]; }
-    static inline bool has_changes(Images::UID image_ID, unsigned char change_bitmask = Changes::All) {
-        return (m_changes[image_ID] & change_bitmask) != Changes::None;
-    }
+    static inline Changes get_changes(Images::UID image_ID) { return m_changes[image_ID]; }
 
     typedef std::vector<UID>::iterator ChangedIterator;
     static Core::Iterable<ChangedIterator> get_changed_images() {
@@ -155,7 +154,7 @@ public:
 private:
     static void reserve_image_data(unsigned int new_capacity, unsigned int old_capacity);
 
-    static void flag_as_changed(Images::UID image_ID, unsigned int change);
+    static void flag_as_changed(Images::UID image_ID, Change change);
 
     struct MetaInfo {
         std::string name;
@@ -171,7 +170,7 @@ private:
     static UIDGenerator m_UID_generator;
     static MetaInfo* m_metainfo;
     static PixelData* m_pixels;
-    static unsigned char* m_changes; // Bitmask of changes.
+    static Changes* m_changes;
     static std::vector<UID> m_images_changed;
 };
 
@@ -219,8 +218,7 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    inline unsigned char get_changes() { return Images::get_changes(m_ID); }
-    inline bool has_changes(unsigned char change_bitmask = Images::Changes::All) { return Images::has_changes(m_ID, change_bitmask); }
+    inline Images::Changes get_changes() { return Images::get_changes(m_ID); }
 
 private:
     Images::UID m_ID;

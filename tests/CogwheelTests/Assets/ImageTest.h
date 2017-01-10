@@ -68,8 +68,8 @@ TEST_F(Assets_Images, create) {
     Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
     EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
     EXPECT_EQ(image_ID, *changed_images.begin());
-    EXPECT_TRUE(Images::has_changes(image_ID, Images::Changes::Created));
-    EXPECT_FALSE(Images::has_changes(image_ID, Images::Changes::PixelsUpdated));
+    EXPECT_TRUE(Images::get_changes(image_ID).is_set(Images::Change::Created));
+    EXPECT_FALSE(Images::get_changes(image_ID).is_set(Images::Change::PixelsUpdated));
 }
 
 TEST_F(Assets_Images, destroy) {
@@ -85,7 +85,7 @@ TEST_F(Assets_Images, destroy) {
     Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
     EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
     EXPECT_EQ(image_ID, *changed_images.begin());
-    EXPECT_TRUE(Images::has_changes(image_ID, Images::Changes::Destroyed));
+    EXPECT_EQ(Images::Change::Destroyed, Images::get_changes(image_ID));
 }
 
 TEST_F(Assets_Images, create_and_destroy_notifications) {
@@ -95,6 +95,9 @@ TEST_F(Assets_Images, create_and_destroy_notifications) {
     EXPECT_TRUE(Images::has(image_ID1));
 
     { // Test image create notifications.
+        EXPECT_EQ(Images::Change::Created, Images::get_changes(image_ID0));
+        EXPECT_EQ(Images::Change::Created, Images::get_changes(image_ID1));
+        
         Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
         EXPECT_EQ(2u, changed_images.end() - changed_images.begin());
 
@@ -102,7 +105,7 @@ TEST_F(Assets_Images, create_and_destroy_notifications) {
         bool image1_created = false;
         bool other_events = false;
         for (const Images::UID image_ID : changed_images) {
-            bool image_created = Images::get_changes(image_ID) == Images::Changes::Created;
+            bool image_created = Images::get_changes(image_ID) == Images::Change::Created;
             if (image_ID == image_ID0 && image_created)
                 image0_created = true;
             else if (image_ID == image_ID1 && image_created)
@@ -128,7 +131,7 @@ TEST_F(Assets_Images, create_and_destroy_notifications) {
         bool image0_destroyed = false;
         bool other_events = false;
         for (const Images::UID image_ID : changed_images) {
-            if (image_ID == image_ID0 && Images::get_changes(image_ID) == Images::Changes::Destroyed)
+            if (image_ID == image_ID0 && Images::get_changes(image_ID) == Images::Change::Destroyed)
                 image0_destroyed = true;
             else
                 other_events = true;
@@ -136,8 +139,8 @@ TEST_F(Assets_Images, create_and_destroy_notifications) {
 
         EXPECT_TRUE(image0_destroyed);
         EXPECT_FALSE(other_events);
-        EXPECT_TRUE(Images::has_changes(image_ID0, Images::Changes::Destroyed));
-        EXPECT_FALSE(Images::has_changes(image_ID1, Images::Changes::Destroyed));
+        EXPECT_EQ(Images::Change::Destroyed, Images::get_changes(image_ID0));
+        EXPECT_FALSE(Images::get_changes(image_ID1).is_set(Images::Change::Destroyed));
     }
 
     Images::reset_change_notifications();
@@ -160,8 +163,8 @@ TEST_F(Assets_Images, create_and_change) {
     Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
     EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
     EXPECT_EQ(image_ID, *changed_images.begin());
-    EXPECT_TRUE(Images::has_changes(image_ID, Images::Changes::Created));
-    EXPECT_TRUE(Images::has_changes(image_ID, Images::Changes::PixelsUpdated));
+    EXPECT_TRUE(Images::get_changes(image_ID).is_set(Images::Change::Created));
+    EXPECT_TRUE(Images::get_changes(image_ID).is_set(Images::Change::PixelsUpdated));
 }
 
 TEST_F(Assets_Images, pixel_updates) {
@@ -254,7 +257,7 @@ TEST_F(Assets_Images, mipmapable_events) {
         EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
         Image changed_image = *changed_images.begin();
         EXPECT_EQ(changed_image, image);
-        EXPECT_EQ(Images::Changes::Mipmapable, changed_image.get_changes());
+        EXPECT_EQ(Images::Change::Mipmapable, changed_image.get_changes());
     }
 
     { // Test that destroying an image removes the mipmapable change event.
@@ -263,7 +266,7 @@ TEST_F(Assets_Images, mipmapable_events) {
         EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
         Image destroyed_image = *changed_images.begin();
         EXPECT_EQ(destroyed_image, image);
-        EXPECT_EQ(Images::Changes::Destroyed, destroyed_image.get_changes());
+        EXPECT_EQ(Images::Change::Destroyed, destroyed_image.get_changes());
     }
 }
 

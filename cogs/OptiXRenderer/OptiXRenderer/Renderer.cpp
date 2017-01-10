@@ -535,12 +535,12 @@ void Renderer::handle_updates() {
                 m_state->images.resize(Images::capacity());
 
             for (Images::UID image_ID : Images::get_changed_images()) {
-                if (Images::get_changes(image_ID) == Images::Changes::Destroyed) {
+                if (Images::get_changes(image_ID) == Images::Change::Destroyed) {
                     if (m_state->images[image_ID]) {
                         m_state->images[image_ID]->destroy();
                         m_state->images[image_ID] = NULL;
                     }
-                } else if (Images::get_changes(image_ID) & Images::Changes::Created) {
+                } else if (Images::get_changes(image_ID).is_set(Images::Change::Created)) {
                     RTformat pixel_format = RT_FORMAT_UNKNOWN;
                     switch (Images::get_pixel_format(image_ID)) {
                     case PixelFormat::I8:
@@ -565,7 +565,7 @@ void Renderer::handle_updates() {
                     std::memcpy(pixel_data, Images::get_pixels(image_ID), m_state->images[image_ID]->getElementSize() * Images::get_pixel_count(image_ID));
                     m_state->images[image_ID]->unmap();
                     OPTIX_VALIDATE(m_state->images[image_ID]);
-                } else if (Images::has_changes(image_ID, Images::Changes::PixelsUpdated))
+                } else if (Images::get_changes(image_ID).is_set(Images::Change::PixelsUpdated))
                     assert(!"Pixel update not implemented yet.\n");
             }
         }

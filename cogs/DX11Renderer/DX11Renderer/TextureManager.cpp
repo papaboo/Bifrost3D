@@ -127,12 +127,12 @@ void TextureManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& d
             for (Images::UID image_ID : Images::get_changed_images()) {
                 Dx11Image& dx_image = m_images[image_ID];
 
-                if (Images::get_changes(image_ID) == Images::Changes::Destroyed &&
+                if (Images::get_changes(image_ID) == Images::Change::Destroyed &&
                     dx_image.texture2D != nullptr) {
                     safe_release(&dx_image.texture2D);
                     safe_release(&dx_image.srv);
 
-                } else if (Images::get_changes(image_ID) & Images::Changes::Created) {
+                } else if (Images::get_changes(image_ID).is_set(Images::Change::Created)) {
                     safe_release(&dx_image.texture2D);
                     safe_release(&dx_image.srv);
 
@@ -196,7 +196,7 @@ void TextureManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& d
                     if (resource_data.pSysMem != image.get_pixels())
                         delete[] resource_data.pSysMem;
 
-                } else if (Images::has_changes(image_ID, Images::Changes::PixelsUpdated))
+                } else if (Images::get_changes(image_ID).is_set(Images::Change::PixelsUpdated))
                     assert(!"Pixel update not implemented yet.\n");
             }
         }

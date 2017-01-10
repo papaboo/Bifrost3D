@@ -21,7 +21,8 @@ template <typename E>
 struct Bitmask final {
 public:
     typedef typename std::underlying_type<E>::type T;
-    
+    typedef E Flags;
+
 private:
     T m_mask;
 
@@ -44,10 +45,11 @@ public:
     // Accessors.
     // -----------------------------------------------------------------------
     bool none_set() const { return m_mask == T(0); }
-    bool not_set(E v) const { return ((T)v & m_mask) == T(0); }
-    bool some_set(E v) const { return ((T)v & m_mask) != T(0); }
-    bool some_set(E v1, E v2) const { return ((T(v1) | T(v2)) & m_mask) != T(0); }
-    bool is_set(E v) const { return ((T)v & m_mask) == T(v); }
+    bool not_set(E v) const { return (T(v) & m_mask) == T(0); }
+    bool all_set(E v1, E v2) const { T v = (T(v1) | T(v2);  return v & m_mask) == v; }
+    bool is_set(E v) const { return (T(v) & m_mask) != T(0); }
+    bool any_set(E v) const { return (T(v) & m_mask) != T(0); }
+    bool any_set(E v1, E v2) const { return ((T(v1) | T(v2)) & m_mask) != T(0); }
 
     // -----------------------------------------------------------------------
     // Comparisons.
@@ -62,6 +64,14 @@ public:
     // -----------------------------------------------------------------------
     T raw() { return m_mask; }
 };
+
+// -----------------------------------------------------------------------
+// Comparisons.
+// -----------------------------------------------------------------------
+template <typename E>
+inline bool operator==(E lhs, Bitmask<E> rhs) { return rhs == lhs; }
+template <typename E>
+inline bool operator!=(E lhs, Bitmask<E> rhs) { return rhs != lhs; }
 
 } // NS Core
 } // NS Cogwheel
