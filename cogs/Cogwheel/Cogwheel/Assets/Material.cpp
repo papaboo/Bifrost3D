@@ -31,7 +31,7 @@ void Materials::allocate(unsigned int capacity) {
     m_names = new std::string[capacity];
     m_materials = new Data[capacity];
     m_changes = new Changes[capacity];
-    std::memset(m_changes, (int)Change::None, capacity);
+    std::memset(m_changes, (int)Change::None, capacity * sizeof(Change));
 
     m_materials_changed.reserve(capacity / 4);
 
@@ -72,7 +72,7 @@ void Materials::reserve_material_data(unsigned int new_capacity, unsigned int ol
     m_materials = resize_and_copy_array(m_materials, new_capacity, copyable_elements);
     m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
     if (copyable_elements < new_capacity) // We need to zero the new change masks.
-        std::memset(m_changes + copyable_elements, (int)Change::None, new_capacity - copyable_elements);
+        std::memset(m_changes + copyable_elements, (int)Change::None, (new_capacity - copyable_elements) * sizeof(Change));
 }
 
 void Materials::reserve(unsigned int new_capacity) {
@@ -166,7 +166,7 @@ void Materials::flag_as_updated(Materials::UID material_ID) {
 void Materials::reset_change_notifications() {
     // NOTE We could use some heuristic here to choose between looping over 
     // the notifications and only resetting the changed materials instead of resetting all.
-    std::memset(m_changes, (int)Change::None, capacity());
+    std::memset(m_changes, (int)Change::None, capacity() * sizeof(Change));
     m_materials_changed.resize(0);
 }
 
