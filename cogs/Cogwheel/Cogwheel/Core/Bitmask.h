@@ -33,6 +33,7 @@ public:
     // -----------------------------------------------------------------------
     Bitmask() { }
     Bitmask(E v) : m_mask(T(v)) { }
+    Bitmask(T mask) : m_mask(mask) { }
 
     // -----------------------------------------------------------------------
     // Modifiers.
@@ -40,6 +41,14 @@ public:
     Bitmask<E>& operator=(E v) { m_mask = T(v); return *this; }
     Bitmask<E>& operator&=(E v) { m_mask &= T(v); return *this; }
     Bitmask<E>& operator|=(E v) { m_mask |= T(v); return *this; }
+    Bitmask<E>& operator^=(E v) { m_mask ^= T(v); return *this; }
+
+    // -----------------------------------------------------------------------
+    // Bit operations.
+    // -----------------------------------------------------------------------
+    Bitmask<E> operator&(E v) const { return Bitmask(m_mask & T(v)); }
+    Bitmask<E> operator|(E v) const { return Bitmask(m_mask | T(v)); }
+    Bitmask<E> operator^(E v) const { return Bitmask(m_mask ^ T(v)); }
 
     // -----------------------------------------------------------------------
     // Accessors.
@@ -64,6 +73,11 @@ public:
     // -----------------------------------------------------------------------
     T raw() { return m_mask; }
 };
+
+// -----------------------------------------------------------------------
+// Bit operations.
+// -----------------------------------------------------------------------
+
 
 // -----------------------------------------------------------------------
 // Comparisons.
