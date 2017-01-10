@@ -113,7 +113,7 @@ public:
         None = 0,
         Created = 1,
         Destroyed = 2,
-        Updated = 3,
+        Updated = 4,
         All = Created | Destroyed | Updated
     };
     typedef Core::Bitmask<Change> Changes;
