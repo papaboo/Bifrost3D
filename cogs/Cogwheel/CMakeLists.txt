@@ -16,6 +16,7 @@ SET(ASSETS_SRCS
 SET(CORE_SRCS 
   Cogwheel/Core/Array.h
   Cogwheel/Core/Bitmask.h
+  Cogwheel/Core/ChangeSet.h
   Cogwheel/Core/Engine.h
   Cogwheel/Core/Engine.cpp
   Cogwheel/Core/Iterable.h
