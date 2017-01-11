@@ -10,6 +10,7 @@
 #define _COGWHEEL_ASSETS_MATERIAL_H_
 
 #include <Cogwheel/Assets/Texture.h>
+#include <Cogwheel/Core/Bitmask.h>
 #include <Cogwheel/Core/ChangeSet.h>
 #include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
