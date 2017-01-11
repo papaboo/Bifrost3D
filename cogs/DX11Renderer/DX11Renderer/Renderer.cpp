@@ -573,7 +573,7 @@ public:
                 if (m_meshes.size() <= mesh_ID)
                     m_meshes.resize(Meshes::capacity());
 
-                if (Meshes::get_changes(mesh_ID) & (Meshes::Changes::Created | Meshes::Changes::Destroyed)) {
+                if (Meshes::get_changes(mesh_ID).any_set(Meshes::Change::Created, Meshes::Change::Destroyed)) {
                     if (m_meshes[mesh_ID].vertex_count != 0) {
                         m_meshes[mesh_ID].index_count = m_meshes[mesh_ID].vertex_count = 0;
                         safe_release(&m_meshes[mesh_ID].indices);
@@ -583,7 +583,7 @@ public:
                     }
                 }
 
-                if (Meshes::get_changes(mesh_ID) & Meshes::Changes::Created) {
+                if (Meshes::get_changes(mesh_ID).is_set(Meshes::Change::Created)) {
                     Cogwheel::Assets::Mesh mesh = mesh_ID;
                     Dx11Mesh dx_mesh = {};
 

@@ -9,13 +9,13 @@
 #ifndef _COGWHEEL_ASSETS_MESH_H_
 #define _COGWHEEL_ASSETS_MESH_H_
 
+#include <Cogwheel/Core/Bitmask.h>
+#include <Cogwheel/Core/ChangeSet.h>
 #include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Math/AABB.h>
 #include <Cogwheel/Math/Transform.h>
 #include <Cogwheel/Math/Vector.h>
-
-#include <vector>
 
 namespace Cogwheel {
 namespace Assets {
@@ -75,24 +75,20 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    struct Changes {
-        static const unsigned char None = 0u;
-        static const unsigned char Created = 1u << 0u;
-        static const unsigned char Destroyed = 1u << 1u;
-        static const unsigned char All = Created | Destroyed;
+    enum class Change : unsigned char {
+        None = 0u,
+        Created = 1u << 0u,
+        Destroyed = 1u << 1u,
+        All = Created | Destroyed,
     };
+    typedef Core::Bitmask<Change> Changes;
 
-    static inline unsigned char get_changes(Meshes::UID mesh_ID) { return m_changes[mesh_ID]; }
-    static inline bool has_changes(Meshes::UID mesh_ID, unsigned char change_bitmask = Changes::All) {
-        return (m_changes[mesh_ID] & change_bitmask) != Changes::None;
-    }
+    static inline Changes get_changes(Meshes::UID mesh_ID) { return m_changes.get_changes(mesh_ID); }
 
     typedef std::vector<UID>::iterator ChangedIterator;
-    static inline Core::Iterable<ChangedIterator> get_changed_meshes() {
-        return Core::Iterable<ChangedIterator>(m_meshes_changed.begin(), m_meshes_changed.end());
-    }
+    static inline Core::Iterable<ChangedIterator> get_changed_meshes() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications();
+    static void reset_change_notifications() { m_changes.reset_change_notifications(); }
 
 private:
     static void reserve_mesh_data(unsigned int new_capacity, unsigned int old_capacity);
@@ -113,8 +109,7 @@ private:
     static Buffers* m_buffers;
     static Math::AABB* m_bounds;
 
-    static unsigned char* m_changes; // Bitmask of changes.
-    static std::vector<UID> m_meshes_changed;
+    static Core::ChangeSet<Changes, UID> m_changes;
 };
 
 // ---------------------------------------------------------------------------
@@ -163,8 +158,7 @@ public:
         return mesh_flags;
     }
 
-    inline unsigned char get_changes() { return Meshes::get_changes(m_ID); }
-    inline bool has_changes(unsigned char change_bitmask) { return Meshes::has_changes(m_ID, change_bitmask); }
+    inline Meshes::Changes get_changes() { return Meshes::get_changes(m_ID); }
 
 private:
     const Meshes::UID m_ID;

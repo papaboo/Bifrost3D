@@ -73,7 +73,7 @@ TEST_F(Assets_Mesh, create) {
     Core::Iterable<Meshes::ChangedIterator> changed_meshes = Meshes::get_changed_meshes();
     EXPECT_EQ(1, changed_meshes.end() - changed_meshes.begin());
     EXPECT_EQ(mesh_ID, *changed_meshes.begin());
-    EXPECT_EQ(Meshes::Changes::Created, Meshes::get_changes(mesh_ID));
+    EXPECT_EQ(Meshes::Change::Created, Meshes::get_changes(mesh_ID));
 }
 
 TEST_F(Assets_Mesh, create_only_positions) {
@@ -91,7 +91,7 @@ TEST_F(Assets_Mesh, create_only_positions) {
     Core::Iterable<Meshes::ChangedIterator> changed_meshes = Meshes::get_changed_meshes();
     EXPECT_EQ(1, changed_meshes.end() - changed_meshes.begin());
     EXPECT_EQ(mesh_ID, *changed_meshes.begin());
-    EXPECT_EQ(Meshes::Changes::Created, Meshes::get_changes(mesh_ID));
+    EXPECT_EQ(Meshes::Change::Created, Meshes::get_changes(mesh_ID));
 }
 
 TEST_F(Assets_Mesh, destroy) {
@@ -107,7 +107,7 @@ TEST_F(Assets_Mesh, destroy) {
     Core::Iterable<Meshes::ChangedIterator> changed_meshes = Meshes::get_changed_meshes();
     EXPECT_EQ(1, changed_meshes.end() - changed_meshes.begin());
     EXPECT_EQ(mesh_ID, *changed_meshes.begin());
-    EXPECT_EQ(Meshes::Changes::Destroyed, Meshes::get_changes(mesh_ID));
+    EXPECT_EQ(Meshes::Change::Destroyed, Meshes::get_changes(mesh_ID));
 }
 
 TEST_F(Assets_Mesh, create_and_destroy_notifications) {
@@ -124,7 +124,7 @@ TEST_F(Assets_Mesh, create_and_destroy_notifications) {
         bool mesh1_created = false;
         bool other_changes = false;
         for (const Meshes::UID mesh_ID : changed_meshes) {
-            bool mesh_created = Meshes::get_changes(mesh_ID) == Meshes::Changes::Created;
+            bool mesh_created = Meshes::get_changes(mesh_ID) == Meshes::Change::Created;
             if (mesh_ID == mesh_ID0 && mesh_created)
                 mesh0_created = true;
             else if (mesh_ID == mesh_ID1 && mesh_created)
@@ -150,7 +150,7 @@ TEST_F(Assets_Mesh, create_and_destroy_notifications) {
         bool mesh0_destroyed = false;
         bool other_changes = false;
         for (const Meshes::UID mesh_ID : changed_meshes) {
-            if (mesh_ID == mesh_ID0 && Meshes::get_changes(mesh_ID) == Meshes::Changes::Destroyed)
+            if (mesh_ID == mesh_ID0 && Meshes::get_changes(mesh_ID) == Meshes::Change::Destroyed)
                 mesh0_destroyed = true;
             else
                 other_changes = true;

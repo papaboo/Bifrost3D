@@ -514,14 +514,14 @@ void Renderer::handle_updates() {
 
     { // Mesh updates.
         for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
-            if (Meshes::get_changes(mesh_ID) == Meshes::Changes::Destroyed) {
+            if (Meshes::get_changes(mesh_ID) == Meshes::Change::Destroyed) {
                 if (mesh_ID < m_state->meshes.size() && m_state->meshes[mesh_ID]) {
                     m_state->meshes[mesh_ID]->destroy();
                     m_state->meshes[mesh_ID] = NULL;
                 }
             }
 
-            if (Meshes::get_changes(mesh_ID) & Meshes::Changes::Created) {
+            if (Meshes::get_changes(mesh_ID).is_set(Meshes::Change::Created)) {
                 if (m_state->meshes.size() <= mesh_ID)
                     m_state->meshes.resize(Meshes::capacity());
                 m_state->meshes[mesh_ID] = load_mesh(context, mesh_ID, m_state->triangle_intersection_program, m_state->triangle_bounds_program);
