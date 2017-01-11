@@ -9,15 +9,13 @@
 #ifndef _COGWHEEL_ASSETS_IMAGE_H_
 #define _COGWHEEL_ASSETS_IMAGE_H_
 
-#include <Cogwheel/Core/Bitmask.h>
-#include <Cogwheel/Core/Iterable.h>
+#include <Cogwheel/Core/ChangeSet.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Math/Color.h>
 #include <Cogwheel/Math/Utils.h>
 #include <Cogwheel/Math/Vector.h>
 
 #include <string>
-#include <vector>
 
 namespace Cogwheel {
 namespace Assets {
@@ -142,19 +140,17 @@ public:
     }; 
     typedef Core::Bitmask<Change> Changes;
 
-    static inline Changes get_changes(Images::UID image_ID) { return m_changes[image_ID]; }
+    static inline Changes get_changes(Images::UID image_ID) { return m_changes.get_changes(image_ID); }
 
     typedef std::vector<UID>::iterator ChangedIterator;
-    static Core::Iterable<ChangedIterator> get_changed_images() {
-        return Core::Iterable<ChangedIterator>(m_images_changed.begin(), m_images_changed.end());
-    }
+    static Core::Iterable<ChangedIterator> get_changed_images() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications();
+    static void reset_change_notifications() { m_changes.reset_change_notifications(); }
 
 private:
     static void reserve_image_data(unsigned int new_capacity, unsigned int old_capacity);
 
-    static void flag_as_changed(Images::UID image_ID, Change change);
+    static void flag_as_changed(Images::UID image_ID, Change change); // TODO Remove
 
     struct MetaInfo {
         std::string name;
@@ -170,8 +166,7 @@ private:
     static UIDGenerator m_UID_generator;
     static MetaInfo* m_metainfo;
     static PixelData* m_pixels;
-    static Changes* m_changes;
-    static std::vector<UID> m_images_changed;
+    static Core::ChangeSet<Change, UID> m_changes;
 };
 
 // ---------------------------------------------------------------------------

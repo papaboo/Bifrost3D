@@ -18,8 +18,7 @@ namespace Assets {
 Images::UIDGenerator Images::m_UID_generator = UIDGenerator(0u);
 Images::MetaInfo* Images::m_metainfo = nullptr;
 Images::PixelData* Images::m_pixels = nullptr;
-Images::Changes* Images::m_changes = nullptr;
-std::vector<Images::UID> Images::m_images_changed = std::vector<Images::UID>(0);
+Core::ChangeSet<Images::Change, Images::UID> Images::m_changes = Core::ChangeSet<Images::Change, Images::UID>(0);
 
 void Images::allocate(unsigned int capacity) {
     if (is_allocated())
@@ -30,10 +29,7 @@ void Images::allocate(unsigned int capacity) {
 
     m_metainfo = new MetaInfo[capacity];
     m_pixels = new PixelData[capacity];
-    m_changes = new Changes[capacity];
-    std::memset(m_changes, (int)Change::None, capacity * sizeof(Change));
-
-    m_images_changed.reserve(capacity / 4);
+    m_changes = Core::ChangeSet<Change, UID>(capacity);
 
     // Allocate dummy element at 0.
     MetaInfo info = { "Dummy image", 0u, 0u, 0u, 0u, PixelFormat::Unknown };
@@ -48,8 +44,7 @@ void Images::deallocate() {
     m_UID_generator = UIDGenerator(0u);
     delete[] m_metainfo; m_metainfo = nullptr;
     delete[] m_pixels; m_pixels = nullptr;
-    delete[] m_changes; m_changes = nullptr;
-    m_images_changed.resize(0); m_images_changed.shrink_to_fit();
+    m_changes.resize(0);
 }
 
 template <typename T>
@@ -63,14 +58,11 @@ static inline T* resize_and_copy_array(T* old_array, unsigned int new_capacity, 
 void Images::reserve_image_data(unsigned int new_capacity, unsigned int old_capacity) {
     assert(m_metainfo != nullptr);
     assert(m_pixels != nullptr);
-    assert(m_changes != nullptr);
 
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
     m_metainfo = resize_and_copy_array(m_metainfo, new_capacity, copyable_elements);
     m_pixels = resize_and_copy_array(m_pixels, new_capacity, copyable_elements);
-    m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
-    if (copyable_elements < new_capacity) // We need to zero the new change masks.
-        std::memset(m_changes + copyable_elements, (int)Change::None, (new_capacity - copyable_elements) * sizeof(Change));
+    m_changes.resize(new_capacity);
 }
 
 void Images::reserve(unsigned int new_capacity) {
@@ -80,7 +72,7 @@ void Images::reserve(unsigned int new_capacity) {
 }
 
 bool Images::has(Images::UID image_ID) {
-    return m_UID_generator.has(image_ID) && m_changes[image_ID] != Change::Destroyed;
+    return m_UID_generator.has(image_ID) && m_changes.get_changes(image_ID) != Change::Destroyed;
 }
 
 static inline Images::PixelData allocate_pixels(PixelFormat format, unsigned int pixel_count) {
@@ -104,16 +96,12 @@ static inline Images::PixelData allocate_pixels(PixelFormat format, unsigned int
 Images::UID Images::create(const std::string& name, PixelFormat format, float gamma, Vector3ui size, unsigned int mipmap_count) {
     assert(m_metainfo != nullptr);
     assert(m_pixels != nullptr);
-    assert(m_changes != nullptr);
 
     unsigned int old_capacity = m_UID_generator.capacity();
     UID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_image_data(m_UID_generator.capacity(), old_capacity);
-
-    if (m_changes[id] == Change::None)
-        m_images_changed.push_back(id);
 
     // Only apply gamma to images that store colors.
     if (format == PixelFormat::I8)
@@ -138,7 +126,7 @@ Images::UID Images::create(const std::string& name, PixelFormat format, float ga
     metainfo.mipmap_count = mip_count;
     metainfo.is_mipmapable = false;
     m_pixels[id] = allocate_pixels(format, total_pixel_count);
-    m_changes[id] = Change::Created;
+    m_changes.set_change(id, Change::Created);
 
     return id;
 }
@@ -146,11 +134,7 @@ Images::UID Images::create(const std::string& name, PixelFormat format, float ga
 void Images::destroy(Images::UID image_ID) {
     if (m_UID_generator.erase(image_ID)) {
         delete[] m_pixels[image_ID];
-
-        if (m_changes[image_ID] == Change::None)
-            m_images_changed.push_back(image_ID);
-
-        m_changes[image_ID] = Change::Destroyed;
+        m_changes.set_change(image_ID, Change::Destroyed);
     }
 }
 
@@ -328,15 +312,7 @@ void Images::set_pixel(Images::UID image_ID, RGBA color, Vector3ui index, unsign
 }
 
 void Images::flag_as_changed(Images::UID image_ID, Change change) {
-    if (m_changes[image_ID] == Change::None)
-        m_images_changed.push_back(image_ID);
-
-    m_changes[image_ID] |= change;
-}
-
-void Images::reset_change_notifications() {
-    std::memset(m_changes, (int)Change::None, capacity() * sizeof(Change));
-    m_images_changed.resize(0);
+    m_changes.add_change(image_ID, change);
 }
 
 
