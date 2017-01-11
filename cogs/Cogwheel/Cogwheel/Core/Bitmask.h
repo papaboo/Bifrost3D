@@ -47,8 +47,11 @@ public:
     // Bit operations.
     // -----------------------------------------------------------------------
     Bitmask<E> operator&(E v) const { return Bitmask(m_mask & T(v)); }
+    Bitmask<E> operator&(Bitmask v) const { return Bitmask(m_mask & v.m_mask); }
     Bitmask<E> operator|(E v) const { return Bitmask(m_mask | T(v)); }
+    Bitmask<E> operator|(Bitmask v) const { return Bitmask(m_mask | v.m_mask); }
     Bitmask<E> operator^(E v) const { return Bitmask(m_mask ^ T(v)); }
+    Bitmask<E> operator^(Bitmask v) const { return Bitmask(m_mask ^ v.m_mask); }
 
     // -----------------------------------------------------------------------
     // Accessors.

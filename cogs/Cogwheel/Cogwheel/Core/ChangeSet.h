@@ -9,7 +9,6 @@
 #ifndef _COGWHEEL_CORE_CHANGE_SET_H_
 #define _COGWHEEL_CORE_CHANGE_SET_H_
 
-#include <Cogwheel/Core/Bitmask.h>
 #include <Cogwheel/Core/Iterable.h>
 
 #include <vector>
@@ -20,10 +19,9 @@ namespace Core {
 // ---------------------------------------------------------------------------
 // List changes for cogwheel resources.
 // ---------------------------------------------------------------------------
-template <typename E, typename UID>
+template <typename Bitmask, typename UID>
 struct ChangeSet final {
 public:
-    typedef Bitmask<E> Bitmask;
     typedef typename std::vector<UID>::iterator AssetIterator;
 
 private:
@@ -55,8 +53,8 @@ public:
             m_resources_changed.push_back(id);
         m_changes[id] = change;
     }
-    
-    inline void add_change(UID id, E change) { set_change(id, m_changes[id] | change); }
+
+    inline void add_change(UID id, Bitmask change) { set_change(id, m_changes[id] | change); }
 
     inline Bitmask get_changes(UID id) { return m_changes[id]; }
 

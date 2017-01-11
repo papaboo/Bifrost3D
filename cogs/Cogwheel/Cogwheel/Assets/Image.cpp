@@ -18,7 +18,7 @@ namespace Assets {
 Images::UIDGenerator Images::m_UID_generator = UIDGenerator(0u);
 Images::MetaInfo* Images::m_metainfo = nullptr;
 Images::PixelData* Images::m_pixels = nullptr;
-Core::ChangeSet<Images::Change, Images::UID> Images::m_changes = Core::ChangeSet<Images::Change, Images::UID>(0);
+Core::ChangeSet<Images::Changes, Images::UID> Images::m_changes = Core::ChangeSet<Images::Changes, Images::UID>(0);
 
 void Images::allocate(unsigned int capacity) {
     if (is_allocated())
@@ -29,7 +29,7 @@ void Images::allocate(unsigned int capacity) {
 
     m_metainfo = new MetaInfo[capacity];
     m_pixels = new PixelData[capacity];
-    m_changes = Core::ChangeSet<Change, UID>(capacity);
+    m_changes = Core::ChangeSet<Changes, UID>(capacity);
 
     // Allocate dummy element at 0.
     MetaInfo info = { "Dummy image", 0u, 0u, 0u, 0u, PixelFormat::Unknown };

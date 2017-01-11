@@ -9,6 +9,7 @@
 #ifndef _COGWHEEL_ASSETS_IMAGE_H_
 #define _COGWHEEL_ASSETS_IMAGE_H_
 
+#include <Cogwheel/Core/Bitmask.h>
 #include <Cogwheel/Core/ChangeSet.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Math/Color.h>
@@ -166,7 +167,7 @@ private:
     static UIDGenerator m_UID_generator;
     static MetaInfo* m_metainfo;
     static PixelData* m_pixels;
-    static Core::ChangeSet<Change, UID> m_changes;
+    static Core::ChangeSet<Changes, UID> m_changes;
 };
 
 // ---------------------------------------------------------------------------
