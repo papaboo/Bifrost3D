@@ -147,7 +147,7 @@ void Images::set_mipmapable(Images::UID image_ID, bool value) {
 
     m_metainfo[image_ID].is_mipmapable = value;
 
-    flag_as_changed(image_ID, Change::Mipmapable);
+    m_changes.add_change(image_ID, Change::Mipmapable);
 }
 
 Images::PixelData Images::get_pixels(Images::UID image_ID, int mipmap_level) {
@@ -279,7 +279,7 @@ void Images::set_pixel(Images::UID image_ID, RGBA color, unsigned int index, uns
     while (mipmap_level)
         index += image.get_width(--mipmap_level);
     set_linear_pixel(image_ID, color, index);
-    flag_as_changed(image_ID, Change::PixelsUpdated);
+    m_changes.add_change(image_ID, Change::PixelsUpdated);
 }
 
 void Images::set_pixel(Images::UID image_ID, RGBA color, Vector2ui index, unsigned int mipmap_level) {
@@ -293,7 +293,7 @@ void Images::set_pixel(Images::UID image_ID, RGBA color, Vector2ui index, unsign
         pixel_index += image.get_width(mipmap_level) * image.get_height(mipmap_level);
     }
     set_linear_pixel(image_ID, color, pixel_index);
-    flag_as_changed(image_ID, Change::PixelsUpdated);
+    m_changes.add_change(image_ID, Change::PixelsUpdated);
 }
 
 void Images::set_pixel(Images::UID image_ID, RGBA color, Vector3ui index, unsigned int mipmap_level) {
@@ -308,11 +308,7 @@ void Images::set_pixel(Images::UID image_ID, RGBA color, Vector3ui index, unsign
         pixel_index += image.get_width(mipmap_level) * image.get_height(mipmap_level) * image.get_depth(mipmap_level);
     }
     set_linear_pixel(image_ID, color, pixel_index);
-    flag_as_changed(image_ID, Change::PixelsUpdated);
-}
-
-void Images::flag_as_changed(Images::UID image_ID, Change change) {
-    m_changes.add_change(image_ID, change);
+    m_changes.add_change(image_ID, Change::PixelsUpdated);
 }
 
 

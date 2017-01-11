@@ -151,8 +151,6 @@ public:
 private:
     static void reserve_image_data(unsigned int new_capacity, unsigned int old_capacity);
 
-    static void flag_as_changed(Images::UID image_ID, Change change); // TODO Remove
-
     struct MetaInfo {
         std::string name;
         unsigned int width;
