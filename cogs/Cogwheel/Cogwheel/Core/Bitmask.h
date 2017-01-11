@@ -90,4 +90,4 @@ inline bool operator!=(E lhs, Bitmask<E> rhs) { return rhs != lhs; }
 } // NS Core
 } // NS Cogwheel
 
-#endif // _COGWHEEL_CORE_ARRAY_H_
+#endif // _COGWHEEL_CORE_BITMASK_H_
