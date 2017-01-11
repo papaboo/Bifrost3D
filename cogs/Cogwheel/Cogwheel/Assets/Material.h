@@ -10,12 +10,10 @@
 #define _COGWHEEL_ASSETS_MATERIAL_H_
 
 #include <Cogwheel/Assets/Texture.h>
-#include <Cogwheel/Core/Bitmask.h>
+#include <Cogwheel/Core/ChangeSet.h>
 #include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Math/Color.h>
-
-#include <vector>
 
 namespace Cogwheel {
 namespace Assets {
@@ -118,14 +116,12 @@ public:
     };
     typedef Core::Bitmask<Change> Changes;
 
-    static inline Changes get_changes(Materials::UID material_ID) { return m_changes[material_ID]; }
+    static inline Changes get_changes(Materials::UID material_ID) { return m_changes.get_changes(material_ID); }
 
     typedef std::vector<UID>::iterator ChangedIterator;
-    static inline Core::Iterable<ChangedIterator> get_changed_materials() {
-        return Core::Iterable<ChangedIterator>(m_materials_changed.begin(), m_materials_changed.end());
-    }
+    static Core::Iterable<ChangedIterator> get_changed_materials() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications();
+    static void reset_change_notifications() { m_changes.reset_change_notifications(); }
 
 private:
     static void reserve_material_data(unsigned int new_capacity, unsigned int old_capacity);
@@ -136,8 +132,7 @@ private:
 
     static std::string* m_names;
     static Data* m_materials;
-    static Changes* m_changes;
-    static std::vector<UID> m_materials_changed;
+    static Core::ChangeSet<Changes, UID> m_changes;
 };
 
 // ---------------------------------------------------------------------------

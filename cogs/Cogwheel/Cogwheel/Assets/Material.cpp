@@ -18,8 +18,7 @@ namespace Assets {
 Materials::UIDGenerator Materials::m_UID_generator = UIDGenerator(0u);
 std::string* Materials::m_names = nullptr;
 Materials::Data* Materials::m_materials = nullptr;
-Materials::Changes* Materials::m_changes = nullptr;
-std::vector<Materials::UID> Materials::m_materials_changed = std::vector<Materials::UID>(0);
+Core::ChangeSet<Materials::Changes, Materials::UID> Materials::m_changes = Core::ChangeSet<Materials::Changes, Materials::UID>(0);
 
 void Materials::allocate(unsigned int capacity) {
     if (is_allocated())
@@ -30,10 +29,7 @@ void Materials::allocate(unsigned int capacity) {
 
     m_names = new std::string[capacity];
     m_materials = new Data[capacity];
-    m_changes = new Changes[capacity];
-    std::memset(m_changes, (int)Change::None, capacity * sizeof(Change));
-
-    m_materials_changed.reserve(capacity / 4);
+    m_changes = Core::ChangeSet<Changes, UID>(capacity);
 
     // Allocate dummy element at 0.
     m_names[0] = "Dummy Material";
@@ -50,9 +46,8 @@ void Materials::deallocate() {
     m_UID_generator = UIDGenerator(0u);
     delete[] m_names; m_names = nullptr;
     delete[] m_materials; m_materials = nullptr;
-    delete[] m_changes; m_changes = nullptr;
 
-    m_materials_changed.resize(0); m_materials_changed.shrink_to_fit();
+    m_changes.resize(0);
 }
 
 template <typename T>
@@ -70,9 +65,7 @@ void Materials::reserve_material_data(unsigned int new_capacity, unsigned int ol
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
     m_names = resize_and_copy_array(m_names, new_capacity, copyable_elements);
     m_materials = resize_and_copy_array(m_materials, new_capacity, copyable_elements);
-    m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
-    if (copyable_elements < new_capacity) // We need to zero the new change masks.
-        std::memset(m_changes + copyable_elements, (int)Change::None, (new_capacity - copyable_elements) * sizeof(Change));
+    m_changes.resize(new_capacity);
 }
 
 void Materials::reserve(unsigned int new_capacity) {
@@ -84,7 +77,6 @@ void Materials::reserve(unsigned int new_capacity) {
 Materials::UID Materials::create(const std::string& name, const Data& data) {
     assert(m_names != nullptr);
     assert(m_materials != nullptr);
-    assert(m_changes != nullptr);
 
     unsigned int old_capacity = m_UID_generator.capacity();
     UID id = m_UID_generator.generate();
@@ -92,23 +84,16 @@ Materials::UID Materials::create(const std::string& name, const Data& data) {
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_material_data(m_UID_generator.capacity(), old_capacity);
 
-    // Push the material to the list of changed materials, if this is the first change.
-    // (If a material at the same position has been created an deleted in the same frame, then this check would fail.)
-    if (m_changes[id] == Change::None)
-        m_materials_changed.push_back(id);
-
     m_names[id] = name;
     m_materials[id] = data;
-    m_changes[id] = Change::Created;
+    m_changes.set_change(id, Change::Created);
 
     return id;
 }
 
 void Materials::destroy(Materials::UID material_ID) {
     if (m_UID_generator.erase(material_ID)) {
-        if (m_changes[material_ID] == Change::None)
-            m_materials_changed.push_back(material_ID);
-        m_changes[material_ID] = Change::Destroyed;
+        m_changes.set_change(material_ID, Change::Destroyed);
     }
 }
 
@@ -158,16 +143,7 @@ void Materials::set_transmission(Materials::UID material_ID, float transmission)
 }
 
 void Materials::flag_as_updated(Materials::UID material_ID) {
-    if (m_changes[material_ID] == Change::None)
-        m_materials_changed.push_back(material_ID);
-    m_changes[material_ID] |= Change::Updated;
-}
-
-void Materials::reset_change_notifications() {
-    // NOTE We could use some heuristic here to choose between looping over 
-    // the notifications and only resetting the changed materials instead of resetting all.
-    std::memset(m_changes, (int)Change::None, capacity() * sizeof(Change));
-    m_materials_changed.resize(0);
+    m_changes.add_change(material_ID, Change::Updated);
 }
 
 } // NS Assets
