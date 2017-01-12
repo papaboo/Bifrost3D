@@ -92,9 +92,8 @@ Materials::UID Materials::create(const std::string& name, const Data& data) {
 }
 
 void Materials::destroy(Materials::UID material_ID) {
-    if (m_UID_generator.erase(material_ID)) {
+    if (m_UID_generator.erase(material_ID))
         m_changes.set_change(material_ID, Change::Destroyed);
-    }
 }
 
 void Materials::set_flags(Materials::UID material_ID, Flags flags) {
