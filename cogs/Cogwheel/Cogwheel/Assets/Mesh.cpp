@@ -21,7 +21,7 @@ std::string* Meshes::m_names = nullptr;
 Meshes::Buffers* Meshes::m_buffers = nullptr;
 AABB* Meshes::m_bounds = nullptr;
 
-Core::ChangeSet<Meshes::Changes, Meshes::UID> Meshes::m_changes = Core::ChangeSet<Meshes::Changes, Meshes::UID>(0);
+Core::ChangeSet<Meshes::Changes, Meshes::UID> Meshes::m_changes;
 
 void Meshes::allocate(unsigned int capacity) {
     if (is_allocated())

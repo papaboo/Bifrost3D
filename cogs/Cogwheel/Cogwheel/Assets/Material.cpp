@@ -18,7 +18,7 @@ namespace Assets {
 Materials::UIDGenerator Materials::m_UID_generator = UIDGenerator(0u);
 std::string* Materials::m_names = nullptr;
 Materials::Data* Materials::m_materials = nullptr;
-Core::ChangeSet<Materials::Changes, Materials::UID> Materials::m_changes = Core::ChangeSet<Materials::Changes, Materials::UID>(0);
+Core::ChangeSet<Materials::Changes, Materials::UID> Materials::m_changes;
 
 void Materials::allocate(unsigned int capacity) {
     if (is_allocated())
