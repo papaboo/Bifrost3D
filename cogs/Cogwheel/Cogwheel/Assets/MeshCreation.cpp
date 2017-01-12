@@ -17,7 +17,7 @@ namespace Cogwheel {
 namespace Assets {
 namespace MeshCreation {
 
-Meshes::UID plane(unsigned int quads_pr_edge, unsigned char buffer_bitmask) {
+Meshes::UID plane(unsigned int quads_pr_edge, MeshFlags buffer_bitmask) {
     if (quads_pr_edge == 0)
         return Meshes::UID::invalid_UID();
 
@@ -55,7 +55,7 @@ Meshes::UID plane(unsigned int quads_pr_edge, unsigned char buffer_bitmask) {
     return mesh.get_ID();
 }
 
-Meshes::UID cube(unsigned int quads_pr_edge, unsigned char buffer_bitmask) {
+Meshes::UID cube(unsigned int quads_pr_edge, MeshFlags buffer_bitmask) {
     if (quads_pr_edge == 0)
         return Meshes::UID::invalid_UID();
 
@@ -141,7 +141,7 @@ Meshes::UID cube(unsigned int quads_pr_edge, unsigned char buffer_bitmask) {
     return mesh.get_ID();
 }
 
-Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_quads, unsigned char buffer_bitmask) {
+Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_quads, MeshFlags buffer_bitmask) {
     if (vertical_quads == 0 || circumference_quads == 0)
         return Meshes::UID::invalid_UID();
 
@@ -261,7 +261,7 @@ static Vector3f spherical_to_direction(float theta, float phi) {
     return Vector3f(x, y, z);
 }
 
-Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads, unsigned char buffer_bitmask) {
+Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads, MeshFlags buffer_bitmask) {
     if (longitude_quads < 3 || latitude_quads < 2)
         return Meshes::UID::invalid_UID();
 

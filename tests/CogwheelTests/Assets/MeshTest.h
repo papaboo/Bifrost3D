@@ -77,7 +77,7 @@ TEST_F(Assets_Mesh, create) {
 }
 
 TEST_F(Assets_Mesh, create_only_positions) {
-    Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u, MeshFlags::Position);
+    Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u, MeshFlag::Position);
 
     EXPECT_TRUE(Meshes::has(mesh_ID));
     EXPECT_EQ(32u, Meshes::get_primitive_count(mesh_ID));

@@ -201,9 +201,9 @@ void mesh_combine_whole_scene(SceneNodes::UID scene_root) {
 
     // Asserts of properties used when combining UIDs and mesh flags in one uint key.
     assert(MeshModels::UID::MAX_IDS <= 0xFFFFFF);
-    assert(MeshFlags::Position <= 0xFF);
-    assert(MeshFlags::Normal <= 0xFF);
-    assert(MeshFlags::Texcoord <= 0xFF);
+    assert((int)MeshFlag::Position <= 0xFF);
+    assert((int)MeshFlag::Normal <= 0xFF);
+    assert((int)MeshFlag::Texcoord <= 0xFF);
     
     std::vector<bool> used_meshes = std::vector<bool>(Meshes::capacity());
     for (Meshes::UID mesh_ID : Meshes::get_iterable())
@@ -224,9 +224,9 @@ void mesh_combine_whole_scene(SceneNodes::UID scene_root) {
 
         // Least significant bits in key consist of mesh flags.
         Mesh mesh = MeshModels::get_mesh_ID(model_ID);
-        key |= mesh.get_positions() ? MeshFlags::Position : MeshFlags::None;
-        key |= mesh.get_normals() ? MeshFlags::Normal : MeshFlags::None;
-        key |= mesh.get_texcoords() ? MeshFlags::Texcoord : MeshFlags::None;
+        key |= int(mesh.get_positions() ? MeshFlag::Position : MeshFlag::None);
+        key |= int(mesh.get_normals() ? MeshFlag::Normal : MeshFlag::None);
+        key |= int(mesh.get_texcoords() ? MeshFlag::Texcoord : MeshFlag::None);
 
         OrderedModel model = { key, model_ID };
         ordered_models.push_back(model);

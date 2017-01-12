@@ -20,13 +20,14 @@
 namespace Cogwheel {
 namespace Assets {
 
-namespace MeshFlags {
-static const unsigned char None       = 0u;
-static const unsigned char Position   = 1u << 0u;
-static const unsigned char Normal     = 1u << 1u;
-static const unsigned char Texcoord   = 1u << 2u;
-static const unsigned char AllBuffers = Position | Normal | Texcoord;
-}
+enum class MeshFlag : unsigned char {
+    None       = 0u,
+    Position   = 1u << 0u,
+    Normal     = 1u << 1u,
+    Texcoord   = 1u << 2u,
+    AllBuffers = Position | Normal | Texcoord
+};
+typedef Core::Bitmask<MeshFlag> MeshFlags;
 
 //----------------------------------------------------------------------------
 // Container for mesh properties and their bufers.
@@ -49,7 +50,7 @@ public:
     static void reserve(unsigned int new_capacity);
     static inline bool has(Meshes::UID mesh_ID) { return m_UID_generator.has(mesh_ID); }
 
-    static Meshes::UID create(const std::string& name, unsigned int primitive_count, unsigned int vertex_count, unsigned char buffer_bitmask = MeshFlags::AllBuffers);
+    static Meshes::UID create(const std::string& name, unsigned int primitive_count, unsigned int vertex_count, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
     static void destroy(Meshes::UID mesh_ID);
 
     static inline ConstUIDIterator begin() { return m_UID_generator.begin(); }
@@ -151,10 +152,10 @@ public:
 
     inline Math::AABB compute_bounds() { return Meshes::compute_bounds(m_ID); }
 
-    inline unsigned int get_mesh_flags() {
-        unsigned int mesh_flags = get_positions() ? MeshFlags::Position : MeshFlags::None;
-        mesh_flags |= get_normals() ? MeshFlags::Normal : MeshFlags::None;
-        mesh_flags |= get_texcoords() ? MeshFlags::Texcoord : MeshFlags::None;
+    inline MeshFlags get_flags() {
+        MeshFlags mesh_flags = get_positions() ? MeshFlag::Position : MeshFlag::None;
+        mesh_flags |= get_normals() ? MeshFlag::Normal : MeshFlag::None;
+        mesh_flags |= get_texcoords() ? MeshFlag::Texcoord : MeshFlag::None;
         return mesh_flags;
     }
 
@@ -183,16 +184,16 @@ struct TransformedMesh {
 
 Meshes::UID combine(const std::string& name, 
                     const TransformedMesh* const meshes_begin, const TransformedMesh* const meshes_end, 
-                    unsigned int mesh_flags = MeshFlags::None);
+                    MeshFlags flags = MeshFlag::AllBuffers);
 
 inline Meshes::UID combine(const std::string& name, 
                            Meshes::UID mesh0_ID, Math::Transform transform0,
                            Meshes::UID mesh1_ID, Math::Transform transform1, 
-                           unsigned int mesh_flags = MeshFlags::None) {
+                           MeshFlags flags = MeshFlag::None) {
     TransformedMesh mesh0 = { mesh0_ID, transform0 };
     TransformedMesh mesh1 = { mesh1_ID, transform1 };
     TransformedMesh meshes[2] = { mesh0, mesh1 };
-    return combine(name, meshes, meshes + 2, mesh_flags);
+    return combine(name, meshes, meshes + 2, flags);
 }
 
 // Computes a list of hard normals from a list of triangle positions.

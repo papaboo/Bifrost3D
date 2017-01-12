@@ -88,7 +88,7 @@ void Meshes::reserve(unsigned int new_capacity) {
     reserve_mesh_data(m_UID_generator.capacity(), old_capacity);
 }
 
-Meshes::UID Meshes::create(const std::string& name, unsigned int primitive_count, unsigned int vertex_count, unsigned char buffer_bitmask) {
+Meshes::UID Meshes::create(const std::string& name, unsigned int primitive_count, unsigned int vertex_count, MeshFlags buffer_bitmask) {
     assert(m_buffers != nullptr);
     assert(m_names != nullptr);
     assert(m_bounds != nullptr);
@@ -103,9 +103,9 @@ Meshes::UID Meshes::create(const std::string& name, unsigned int primitive_count
     m_buffers[id].primitive_count = primitive_count;
     m_buffers[id].primitives = new Math::Vector3ui[primitive_count];
     m_buffers[id].vertex_count = vertex_count;
-    m_buffers[id].positions = (buffer_bitmask & MeshFlags::Position) ? new Math::Vector3f[vertex_count] : nullptr;
-    m_buffers[id].normals = (buffer_bitmask & MeshFlags::Normal) ? new Math::Vector3f[vertex_count] : nullptr;
-    m_buffers[id].texcoords = (buffer_bitmask & MeshFlags::Texcoord) ? new Math::Vector2f[vertex_count] : nullptr;
+    m_buffers[id].positions = (buffer_bitmask & MeshFlag::Position) ? new Math::Vector3f[vertex_count] : nullptr;
+    m_buffers[id].normals = (buffer_bitmask & MeshFlag::Normal) ? new Math::Vector3f[vertex_count] : nullptr;
+    m_buffers[id].texcoords = (buffer_bitmask & MeshFlag::Texcoord) ? new Math::Vector2f[vertex_count] : nullptr;
     m_bounds[id] = AABB::invalid();
     m_changes.set_change(id, Change::Created);
 
@@ -145,7 +145,7 @@ namespace MeshUtils {
 Meshes::UID combine(const std::string& name,
                     const TransformedMesh* const meshes_begin,
                     const TransformedMesh* const meshes_end,
-                    unsigned int mesh_flags) {
+                    MeshFlags flags) {
 
     auto meshes = Core::Iterable<const TransformedMesh* const>(meshes_begin, meshes_end);
 
@@ -157,15 +157,13 @@ Meshes::UID combine(const std::string& name,
         vertex_count += mesh.get_vertex_count();
     }
 
-    // Determine meshflags if none are given.
-    if (mesh_flags == MeshFlags::None)
-        mesh_flags = MeshFlags::AllBuffers;
+    // Determine shared buffers.
     for (TransformedMesh transformed_mesh : meshes) {
         Mesh mesh = transformed_mesh.mesh_ID;
-        mesh_flags &= mesh.get_mesh_flags();
+        flags &= mesh.get_flags();
     }
 
-    Mesh merged_mesh = Mesh(Meshes::create(name, primitive_count, vertex_count, mesh_flags));
+    Mesh merged_mesh = Mesh(Meshes::create(name, primitive_count, vertex_count, flags));
 
     { // Always combine primitives.
         Vector3ui* primitives = merged_mesh.get_primitives();
@@ -178,7 +176,7 @@ Meshes::UID combine(const std::string& name,
         }
     }
 
-    if (mesh_flags & MeshFlags::Position) {
+    if (flags & MeshFlag::Position) {
         Vector3f* positions = merged_mesh.get_positions();
         for (TransformedMesh transformed_mesh : meshes) {
             Mesh mesh = transformed_mesh.mesh_ID;
@@ -187,7 +185,7 @@ Meshes::UID combine(const std::string& name,
         }
     }
 
-    if (mesh_flags & MeshFlags::Normal) {
+    if (flags & MeshFlag::Normal) {
         Vector3f* normals = merged_mesh.get_normals();
         for (TransformedMesh transformed_mesh : meshes) {
             Mesh mesh = transformed_mesh.mesh_ID;
@@ -196,7 +194,7 @@ Meshes::UID combine(const std::string& name,
         }
     }
 
-    if (mesh_flags & MeshFlags::Texcoord) {
+    if (flags & MeshFlag::Texcoord) {
         Vector2f* texcoords = merged_mesh.get_texcoords();
         for (TransformedMesh transformed_mesh : meshes) {
             Mesh mesh = transformed_mesh.mesh_ID;

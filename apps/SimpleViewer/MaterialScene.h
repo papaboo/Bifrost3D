@@ -47,7 +47,7 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
             SceneNode node = SceneNodes::create("White tiles", transform);
             int white_tile_count = tile_count_pr_side * tile_count_pr_side * 3;
             int vertex_count = (tile_count_pr_side + 1) * (tile_count_pr_side + 1);
-            Meshes::UID tiles_mesh_ID = Meshes::create("White tiles", white_tile_count, vertex_count, MeshFlags::Position);
+            Meshes::UID tiles_mesh_ID = Meshes::create("White tiles", white_tile_count, vertex_count, MeshFlag::Position);
 
             Vector3f* positions = Meshes::get_positions(tiles_mesh_ID);
             for (int y = 0; y < vertices_pr_side; ++y)
@@ -81,7 +81,7 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
             SceneNode node = SceneNodes::create("Black tiles", transform);
             int white_tile_count = tile_count_pr_side * tile_count_pr_side * 3;
             int vertex_count = (tile_count_pr_side + 1) * (tile_count_pr_side + 1);
-            Meshes::UID tiles_mesh_ID = Meshes::create("Black tiles", white_tile_count, vertex_count, MeshFlags::Position);
+            Meshes::UID tiles_mesh_ID = Meshes::create("Black tiles", white_tile_count, vertex_count, MeshFlag::Position);
 
             Vector3f* positions = Meshes::get_positions(tiles_mesh_ID);
             for (int y = 0; y < vertices_pr_side; ++y)

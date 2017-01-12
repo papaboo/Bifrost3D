@@ -521,7 +521,7 @@ void Renderer::handle_updates() {
                 }
             }
 
-            if (Meshes::get_changes(mesh_ID).is_set(Meshes::Change::Created)) {
+            if (Meshes::get_changes(mesh_ID) & Meshes::Change::Created) {
                 if (m_state->meshes.size() <= mesh_ID)
                     m_state->meshes.resize(Meshes::capacity());
                 m_state->meshes[mesh_ID] = load_mesh(context, mesh_ID, m_state->triangle_intersection_program, m_state->triangle_bounds_program);

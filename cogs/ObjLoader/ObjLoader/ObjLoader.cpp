@@ -135,11 +135,11 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
             assert((tiny_mesh.normals.size() % 3) == 0); // Assert that normals are three dimensional.
             assert((tiny_mesh.texcoords.size() % 2) == 0); // Assert that texcoords are two dimensional.
 
-            unsigned char mesh_flags = MeshFlags::Position;
+            MeshFlags mesh_flags = MeshFlag::Position;
             if (tiny_mesh.normals.size() > 0)
-                mesh_flags |= MeshFlags::Normal;
+                mesh_flags |= MeshFlag::Normal;
             if (tiny_mesh.texcoords.size() > 0)
-                mesh_flags |= MeshFlags::Texcoord;
+                mesh_flags |= MeshFlag::Texcoord;
 
             unsigned int triangle_count = unsigned int(tiny_mesh.indices.size() / 3u);
             unsigned int vertex_count = unsigned int(tiny_mesh.positions.size() / 3u);
@@ -148,9 +148,9 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
             Mesh cogwheel_mesh = mesh_ID;
             memcpy(cogwheel_mesh.get_primitives(), tiny_mesh.indices.data(), tiny_mesh.indices.size() * sizeof(unsigned int));
             memcpy(cogwheel_mesh.get_positions(), tiny_mesh.positions.data(), tiny_mesh.positions.size() * sizeof(float));
-            if (mesh_flags & MeshFlags::Normal)
+            if (mesh_flags & MeshFlag::Normal)
                 memcpy(cogwheel_mesh.get_normals(), tiny_mesh.normals.data(), tiny_mesh.normals.size() * sizeof(float));
-            if (mesh_flags & MeshFlags::Texcoord)
+            if (mesh_flags & MeshFlag::Texcoord)
                 memcpy(cogwheel_mesh.get_texcoords(), tiny_mesh.texcoords.data(), tiny_mesh.texcoords.size() * sizeof(float));
 
             cogwheel_mesh.compute_bounds();
