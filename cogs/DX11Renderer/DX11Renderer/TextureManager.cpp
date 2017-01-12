@@ -210,10 +210,10 @@ void TextureManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& d
                 for (Textures::UID tex_ID : Textures::get_changed_textures()) {
                     Dx11Texture& dx_tex = m_textures[tex_ID];
 
-                    if (Textures::get_changes(tex_ID) == Textures::Changes::Destroyed &&
+                    if (Textures::get_changes(tex_ID) == Textures::Change::Destroyed &&
                         dx_tex.sampler != nullptr) {
                         safe_release(&dx_tex.sampler);
-                    } else if (Textures::get_changes(tex_ID) & Textures::Changes::Created) {
+                    } else if (Textures::get_changes(tex_ID) & Textures::Change::Created) {
                         TextureND texture = tex_ID;
 
                         static auto to_DX_filtermode = [](MagnificationFilter mag_filter, MinificationFilter min_filter) -> D3D11_FILTER {

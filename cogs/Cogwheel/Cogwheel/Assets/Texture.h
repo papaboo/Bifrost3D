@@ -10,10 +10,10 @@
 #define _COGWHEEL_ASSETS_TEXTURE_H_
 
 #include <Cogwheel/Assets/Image.h>
+#include <Cogwheel/Core/Bitmask.h>
+#include <Cogwheel/Core/ChangeSet.h>
 #include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
-
-#include <vector>
 
 namespace Cogwheel {
 namespace Assets {
@@ -58,7 +58,7 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(Textures::UID texture_ID);
+    static bool has(Textures::UID texture_ID) { return m_UID_generator.has(texture_ID); }
 
     static Textures::UID create2D(Images::UID, MagnificationFilter magnification_filter = MagnificationFilter::Linear, MinificationFilter minification_filter = MinificationFilter::Linear, WrapMode wrapmode_U = WrapMode::Repeat, WrapMode wrapmode_V = WrapMode::Repeat);
     static void destroy(Textures::UID texture_ID);
@@ -78,24 +78,20 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    struct Changes {
-        static const unsigned char None = 0u;
-        static const unsigned char Created = 1u << 0u;
-        static const unsigned char Destroyed = 1u << 1u;
-        static const unsigned char All = Created | Destroyed;
+    enum class Change : unsigned char {
+        None      = 0u,
+        Created   = 1u << 0u,
+        Destroyed = 1u << 1u,
+        All       = Created | Destroyed
     }; 
+    typedef Core::Bitmask<Change> Changes;
     
-    static inline unsigned char get_changes(Textures::UID texture_ID) { return m_changes[texture_ID]; }
-    static inline bool has_changes(Textures::UID texture_ID, unsigned char change_bitmask = Changes::All) {
-        return (m_changes[texture_ID] & change_bitmask) != Changes::None;
-    }
+    static inline Changes get_changes(Textures::UID texture_ID) { return m_changes.get_changes(texture_ID); }
 
     typedef std::vector<UID>::iterator ChangedIterator;
-    static Core::Iterable<ChangedIterator> get_changed_textures() {
-        return Core::Iterable<ChangedIterator>(m_textures_changed.begin(), m_textures_changed.end());
-    }
+    static Core::Iterable<ChangedIterator> get_changed_textures() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications();
+    static void reset_change_notifications() { m_changes.reset_change_notifications(); }
 
 private:
     static void reserve_image_data(unsigned int new_capacity, unsigned int old_capacity);
@@ -113,8 +109,7 @@ private:
 
     static UIDGenerator m_UID_generator;
     static Sampler* m_samplers;
-    static unsigned char* m_changes; // Bitmask of changes.
-    static std::vector<UID> m_textures_changed;
+    static Core::ChangeSet<Changes, UID> m_changes;
 };
 
 class TextureND {
@@ -146,7 +141,6 @@ public:
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
     inline unsigned char get_changes() { return Textures::get_changes(m_ID); }
-    inline bool has_changes(unsigned char change_bitmask = Textures::Changes::All) { return Textures::has_changes(m_ID, change_bitmask); }
 
 private:
     Textures::UID m_ID;

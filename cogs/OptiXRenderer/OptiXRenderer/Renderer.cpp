@@ -576,7 +576,7 @@ void Renderer::handle_updates() {
             m_state->textures.resize(Textures::capacity());
 
             for (Textures::UID texture_ID : Textures::get_changed_textures()) {
-                if (Textures::get_changes(texture_ID) == Textures::Changes::Destroyed) {
+                if (Textures::get_changes(texture_ID) == Textures::Change::Destroyed) {
                     if (texture_ID < m_state->textures.size() && m_state->textures[texture_ID]) {
                         m_state->textures[texture_ID]->destroy();
                         m_state->textures[texture_ID] = NULL;
@@ -591,7 +591,7 @@ void Renderer::handle_updates() {
                     return RT_WRAP_REPEAT;
                 };
 
-                if (Textures::get_changes(texture_ID) & Textures::Changes::Created) {
+                if (Textures::get_changes(texture_ID) & Textures::Change::Created) {
                     TextureSampler& texture = m_state->textures[texture_ID] = context->createTextureSampler();
                     texture->setWrapMode(0, convert_wrap_mode(Textures::get_wrapmode_U(texture_ID)));
                     texture->setWrapMode(1, convert_wrap_mode(Textures::get_wrapmode_V(texture_ID)));

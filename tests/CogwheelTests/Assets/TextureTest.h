@@ -59,7 +59,7 @@ TEST_F(Assets_Textures, create) {
     Core::Iterable<Textures::ChangedIterator> changed_textures = Textures::get_changed_textures();
     EXPECT_EQ(changed_textures.end() - changed_textures.begin(), 1);
     EXPECT_EQ(*changed_textures.begin(), texture_ID);
-    EXPECT_EQ(Textures::get_changes(texture_ID), Textures::Changes::Created);
+    EXPECT_EQ(Textures::get_changes(texture_ID), Textures::Change::Created);
 
     Images::deallocate();
 }
@@ -77,7 +77,7 @@ TEST_F(Assets_Textures, destroy) {
     Core::Iterable<Textures::ChangedIterator> changed_textures = Textures::get_changed_textures();
     EXPECT_EQ(changed_textures.end() - changed_textures.begin(), 1);
     EXPECT_EQ(*changed_textures.begin(), texture_ID);
-    EXPECT_EQ(Textures::get_changes(texture_ID), Textures::Changes::Destroyed);
+    EXPECT_EQ(Textures::get_changes(texture_ID), Textures::Change::Destroyed);
 }
 
 TEST_F(Assets_Textures, create_and_destroy_notifications) {
@@ -94,7 +94,7 @@ TEST_F(Assets_Textures, create_and_destroy_notifications) {
         bool texture1_created = false;
         bool other_event = false;
         for (const Textures::UID texture_ID : changed_textures) {
-            bool texture_created = Textures::get_changes(texture_ID) == Textures::Changes::Created;
+            bool texture_created = Textures::get_changes(texture_ID) == Textures::Change::Created;
             if (texture_ID == texture_ID0 && texture_created)
                 texture0_created = true;
             else if (texture_ID == texture_ID1 && texture_created)
@@ -120,7 +120,7 @@ TEST_F(Assets_Textures, create_and_destroy_notifications) {
         bool texture0_destroyed = false;
         bool other_change = false;
         for (const Textures::UID texture_ID : changed_textures) {
-            if (texture_ID == texture_ID0 && Textures::get_changes(texture_ID) == Textures::Changes::Destroyed)
+            if (texture_ID == texture_ID0 && Textures::get_changes(texture_ID) == Textures::Change::Destroyed)
                 texture0_destroyed = true;
             else
                 other_change = true;
