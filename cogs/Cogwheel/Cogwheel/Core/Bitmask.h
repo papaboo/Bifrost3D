@@ -38,43 +38,47 @@ public:
     // -----------------------------------------------------------------------
     // Modifiers.
     // -----------------------------------------------------------------------
-    Bitmask<E>& operator=(E v) { m_mask = T(v); return *this; }
-    Bitmask<E>& operator&=(E v) { m_mask &= T(v); return *this; }
-    Bitmask<E>& operator|=(E v) { m_mask |= T(v); return *this; }
-    Bitmask<E>& operator^=(E v) { m_mask ^= T(v); return *this; }
+    inline Bitmask<E>& operator=(E v) { m_mask = T(v); return *this; }
+    inline Bitmask<E>& operator&=(E v) { m_mask &= T(v); return *this; }
+    inline Bitmask<E>& operator&=(Bitmask v) { m_mask &= v.m_mask; return *this; }
+    inline Bitmask<E>& operator|=(E v) { m_mask |= T(v); return *this; }
+    inline Bitmask<E>& operator|=(Bitmask v) { m_mask |= v.m_mask; return *this; }
+    inline Bitmask<E>& operator^=(E v) { m_mask ^= T(v); return *this; }
+    inline Bitmask<E>& operator^=(Bitmask v) { m_mask ^= v.m_mask; return *this; }
 
     // -----------------------------------------------------------------------
     // Bit operations.
     // -----------------------------------------------------------------------
-    Bitmask<E> operator&(E v) const { return Bitmask(m_mask & T(v)); }
-    Bitmask<E> operator&(Bitmask v) const { return Bitmask(m_mask & v.m_mask); }
-    Bitmask<E> operator|(E v) const { return Bitmask(m_mask | T(v)); }
-    Bitmask<E> operator|(Bitmask v) const { return Bitmask(m_mask | v.m_mask); }
-    Bitmask<E> operator^(E v) const { return Bitmask(m_mask ^ T(v)); }
-    Bitmask<E> operator^(Bitmask v) const { return Bitmask(m_mask ^ v.m_mask); }
+    inline Bitmask<E> operator&(E v) const { return Bitmask(m_mask & T(v)); }
+    inline Bitmask<E> operator&(Bitmask v) const { return Bitmask(m_mask & v.m_mask); }
+    inline Bitmask<E> operator|(E v) const { return Bitmask(m_mask | T(v)); }
+    inline Bitmask<E> operator|(Bitmask v) const { return Bitmask(m_mask | v.m_mask); }
+    inline Bitmask<E> operator^(E v) const { return Bitmask(m_mask ^ T(v)); }
+    inline Bitmask<E> operator^(Bitmask v) const { return Bitmask(m_mask ^ v.m_mask); }
 
     // -----------------------------------------------------------------------
     // Accessors.
     // -----------------------------------------------------------------------
-    bool none_set() const { return m_mask == T(0); }
-    bool not_set(E v) const { return (T(v) & m_mask) == T(0); }
-    bool all_set(E v1, E v2) const { T v = (T(v1) | T(v2);  return v & m_mask) == v; }
-    bool is_set(E v) const { return (T(v) & m_mask) != T(0); }
-    bool any_set(E v) const { return (T(v) & m_mask) != T(0); }
-    bool any_set(E v1, E v2) const { return ((T(v1) | T(v2)) & m_mask) != T(0); }
+    inline bool none_set() const { return m_mask == T(0); }
+    inline bool not_set(E v) const { return (T(v) & m_mask) == T(0); }
+    inline bool all_set(E v1, E v2) const { T v = (T(v1) | T(v2);  return v & m_mask) == v; }
+    inline bool is_set(E v) const { return (T(v) & m_mask) != T(0); }
+    inline bool any_set(E v) const { return (T(v) & m_mask) != T(0); }
+    inline bool any_set(E v1, E v2) const { return ((T(v1) | T(v2)) & m_mask) != T(0); }
 
     // -----------------------------------------------------------------------
     // Comparisons.
     // -----------------------------------------------------------------------
-    bool operator==(E v) const { return T(v) == m_mask; }
-    bool operator==(Bitmask v) const { return v.m_mask == m_mask; }
-    bool operator!=(E v) const { return T(v) != m_mask; }
-    bool operator!=(Bitmask v) const { return v.m_mask != m_mask; }
+    inline bool operator==(E v) const { return T(v) == m_mask; }
+    inline bool operator==(Bitmask v) const { return v.m_mask == m_mask; }
+    inline bool operator!=(E v) const { return T(v) != m_mask; }
+    inline bool operator!=(Bitmask v) const { return v.m_mask != m_mask; }
+    inline operator bool() const { return m_mask != T(0); }
 
     // -----------------------------------------------------------------------
     // Raw data access.
     // -----------------------------------------------------------------------
-    T raw() { return m_mask; }
+    inline T raw() { return m_mask; }
 };
 
 // -----------------------------------------------------------------------
