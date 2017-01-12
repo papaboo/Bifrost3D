@@ -30,6 +30,12 @@ private:
     int m_size;
 
 public:
+
+    ChangeSet() {
+        m_size = 0;
+        m_changes = nullptr;
+    }
+
     ChangeSet(unsigned int size) {
         m_size = size;
         m_changes = new Bitmask[m_size];
@@ -65,7 +71,7 @@ public:
     inline void reset_change_notifications() {
         // NOTE We could use some heuristic here to choose between looping over 
         // the notifications and only resetting the changed materials instead of resetting all.
-        std::memset(m_changes, 0, m_resources_changed.capacity() * sizeof(Bitmask));
+        std::memset(m_changes, 0, m_size * sizeof(Bitmask));
         m_resources_changed.resize(0);
     }
 
