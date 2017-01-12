@@ -15,8 +15,7 @@ namespace Assets {
 
 MeshModels::UIDGenerator MeshModels::m_UID_generator = UIDGenerator(0u);
 MeshModels::Model* MeshModels::m_models = nullptr;
-unsigned char* MeshModels::m_changes = nullptr;
-std::vector<MeshModels::UID> MeshModels::m_models_changed = std::vector<MeshModels::UID>(0);
+Core::ChangeSet<MeshModels::Changes, MeshModels::UID> MeshModels::m_changes;
 
 void MeshModels::allocate(unsigned int capacity) {
     if (is_allocated())
@@ -26,10 +25,7 @@ void MeshModels::allocate(unsigned int capacity) {
     capacity = m_UID_generator.capacity();
 
     m_models = new Model[capacity];
-    m_changes = new unsigned char[capacity];
-    std::memset(m_changes, Changes::None, capacity);
-    
-    m_models_changed.reserve(capacity / 4);
+    m_changes = Core::ChangeSet<Changes, UID>(capacity);
 
     // Allocate dummy element at 0.
     m_models[0] = { Scene::SceneNodes::UID::invalid_UID(), Assets::Meshes::UID::invalid_UID() };
@@ -41,8 +37,7 @@ void MeshModels::deallocate() {
 
     m_UID_generator = UIDGenerator(0u);
     delete[] m_models; m_models = nullptr;
-    delete[] m_changes; m_changes = nullptr;
-    m_models_changed.resize(0); m_models_changed.shrink_to_fit();
+    m_changes.resize(0);
 }
 
 template <typename T>
@@ -55,23 +50,16 @@ static inline T* resize_and_copy_array(T* old_array, unsigned int new_capacity, 
 
 void MeshModels::reserve_model_data(unsigned int new_capacity, unsigned int old_capacity) {
     assert(m_models != nullptr);
-    assert(m_changes != nullptr);
 
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
     m_models = resize_and_copy_array(m_models, new_capacity, copyable_elements);
-    m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
-    if (copyable_elements < new_capacity) // We need to zero the new change masks.
-        std::memset(m_changes + copyable_elements, Changes::None, new_capacity - copyable_elements);
+    m_changes.resize(new_capacity);
 }
 
 void MeshModels::reserve(unsigned int new_capacity) {
     unsigned int old_capacity = capacity();
     m_UID_generator.reserve(new_capacity);
     reserve_model_data(m_UID_generator.capacity(), old_capacity);
-}
-
-bool MeshModels::has(MeshModels::UID model_ID) { 
-    return m_UID_generator.has(model_ID) && !(m_changes[model_ID] & Changes::Destroyed);
 }
 
 MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Assets::Meshes::UID mesh_ID, Assets::Materials::UID material_ID) {
@@ -83,33 +71,15 @@ MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Assets:
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_model_data(m_UID_generator.capacity(), old_capacity);
 
-    if (m_changes[id] == Changes::None)
-        m_models_changed.push_back(id);
-
     m_models[id] = { scene_node_ID, mesh_ID, material_ID };
-    m_changes[id] = Changes::Created;
+    m_changes.set_change(id, Change::Created);
 
     return id;
 }
 
 void MeshModels::destroy(MeshModels::UID model_ID) {
-    if (m_UID_generator.has(model_ID)) {
-        unsigned char& changes = m_changes[model_ID];
-        
-        if (changes == Changes::None)
-            m_models_changed.push_back(model_ID);
-
-        changes = Changes::Destroyed;
-    }
-}
-
-void MeshModels::reset_change_notifications() {
-    for (UID model_ID : m_models_changed)
-        if (has_changes(model_ID, Changes::Destroyed))
-            m_UID_generator.erase(model_ID);
-
-    std::memset(m_changes, Changes::None, capacity());
-    m_models_changed.resize(0);
+    if (m_UID_generator.erase(model_ID))
+        m_changes.set_change(model_ID, Change::Destroyed);
 }
 
 } // NS Assets

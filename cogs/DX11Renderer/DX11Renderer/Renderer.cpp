@@ -700,7 +700,7 @@ public:
                 for (MeshModel model : MeshModels::get_changed_models()) {
                     unsigned int model_index = m_model_index[model.get_ID()];
 
-                    if (model.get_changes() == MeshModels::Changes::Destroyed) {
+                    if (model.get_changes() == MeshModels::Change::Destroyed) {
                         m_sorted_models[model_index].model_ID = 0;
                         m_sorted_models[model_index].material_ID = 0;
                         m_sorted_models[model_index].mesh_ID = 0;
@@ -710,7 +710,7 @@ public:
                         m_model_index[model.get_ID()] = 0;
                     }
 
-                    if (model.get_changes() & MeshModels::Changes::Created) {
+                    if (model.get_changes() & MeshModels::Change::Created) {
                         Dx11Model dx_model;
                         dx_model.model_ID = model.get_ID();
                         dx_model.material_ID = model.get_material().get_ID();

@@ -69,7 +69,7 @@ TEST_F(Assets_MeshModels, create) {
     Core::Iterable<MeshModels::ChangedIterator> changed_models = MeshModels::get_changed_models();
     EXPECT_EQ(changed_models.end() - changed_models.begin(), 1);
     EXPECT_EQ(*changed_models.begin(), model_ID);
-    EXPECT_EQ(MeshModels::get_changes(model_ID), MeshModels::Changes::Created);
+    EXPECT_EQ(MeshModels::get_changes(model_ID), MeshModels::Change::Created);
 
     Meshes::deallocate();
     Scene::SceneNodes::deallocate();
@@ -88,7 +88,7 @@ TEST_F(Assets_MeshModels, destroy) {
     Core::Iterable<MeshModels::ChangedIterator> changed_models = MeshModels::get_changed_models();
     EXPECT_EQ(changed_models.end() - changed_models.begin(), 1);
     EXPECT_EQ(*changed_models.begin(), model_ID);
-    EXPECT_EQ(MeshModels::get_changes(model_ID), MeshModels::Changes::Destroyed);
+    EXPECT_EQ(MeshModels::get_changes(model_ID), MeshModels::Change::Destroyed);
 }
 
 TEST_F(Assets_MeshModels, create_and_destroy_notifications) {
@@ -104,9 +104,9 @@ TEST_F(Assets_MeshModels, create_and_destroy_notifications) {
         bool model0_created = false;
         bool model1_created = false;
         for (const MeshModels::UID model_ID : changed_models) {
-            if (model_ID == model_ID0 && MeshModels::get_changes(model_ID) == MeshModels::Changes::Created)
+            if (model_ID == model_ID0 && MeshModels::get_changes(model_ID) == MeshModels::Change::Created)
                 model0_created = true;
-            if (model_ID == model_ID1 && MeshModels::get_changes(model_ID) == MeshModels::Changes::Created)
+            if (model_ID == model_ID1 && MeshModels::get_changes(model_ID) == MeshModels::Change::Created)
                 model1_created = true;
         }
 
@@ -126,7 +126,7 @@ TEST_F(Assets_MeshModels, create_and_destroy_notifications) {
         bool model0_destroyed = false;
         bool other_change = false;
         for (const MeshModels::UID model_ID : changed_models) {
-            if (model_ID == model_ID0 && MeshModels::get_changes(model_ID) == MeshModels::Changes::Destroyed)
+            if (model_ID == model_ID0 && MeshModels::get_changes(model_ID) == MeshModels::Change::Destroyed)
                 model0_destroyed = true;
             else
                 other_change = true;

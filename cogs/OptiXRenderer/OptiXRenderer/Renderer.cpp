@@ -833,7 +833,7 @@ void Renderer::handle_updates() {
         for (MeshModel model : MeshModels::get_changed_models()) {
             unsigned int scene_node_index = model.get_scene_node().get_ID();
 
-            if (model.get_changes() == MeshModels::Changes::Destroyed) {
+            if (model.get_changes() == MeshModels::Change::Destroyed) {
                 if (scene_node_index < m_state->transforms.size() && m_state->transforms[scene_node_index]) {
                     optix::Transform optixTransform = m_state->transforms[scene_node_index];
                     m_state->root_node->removeChild(optixTransform);
@@ -844,7 +844,7 @@ void Renderer::handle_updates() {
                 }
             }
 
-            if (model.get_changes() & MeshModels::Changes::Created) {
+            if (model.get_changes() & MeshModels::Change::Created) {
                 optix::Transform transform = load_model(context, model, m_state->meshes.data(), m_state->default_material);
                 m_state->root_node->addChild(transform);
 

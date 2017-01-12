@@ -11,11 +11,11 @@
 
 #include <Cogwheel/Assets/Mesh.h>
 #include <Cogwheel/Assets/Material.h>
+#include <Cogwheel/Core/Bitmask.h>
+#include <Cogwheel/Core/ChangeSet.h>
 #include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Scene/SceneNode.h>
-
-#include <vector>
 
 namespace Cogwheel {
 namespace Assets {
@@ -39,7 +39,7 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(MeshModels::UID model_ID);
+    static bool has(MeshModels::UID model_ID) { return m_UID_generator.has(model_ID); }
 
     static MeshModels::UID create(Scene::SceneNodes::UID scene_node_ID, Assets::Meshes::UID mesh_ID, Assets::Materials::UID material_ID);
     static void destroy(MeshModels::UID model_ID);
@@ -55,24 +55,20 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    struct Changes {
-        static const unsigned char None = 0u;
-        static const unsigned char Created = 1u << 0u;
-        static const unsigned char Destroyed = 1u << 1u;
-        static const unsigned char All = Created | Destroyed;
+    enum class Change : unsigned char {
+        None = 0u,
+        Created = 1u << 0u,
+        Destroyed = 1u << 1u,
+        All = Created | Destroyed
     }; 
-    
-    static inline unsigned char get_changes(MeshModels::UID model_ID) { return m_changes[model_ID]; }
-    static inline bool has_changes(MeshModels::UID model_ID, unsigned char change_bitmask = Changes::All) {
-        return (m_changes[model_ID] & change_bitmask) != Changes::None;
-    }
+    typedef Core::Bitmask<Change> Changes;
+
+    static inline Changes get_changes(MeshModels::UID model_ID) { return m_changes.get_changes(model_ID); }
 
     typedef std::vector<UID>::iterator ChangedIterator;
-    static Core::Iterable<ChangedIterator> get_changed_models() {
-        return Core::Iterable<ChangedIterator>(m_models_changed.begin(), m_models_changed.end());
-    }
+    static Core::Iterable<ChangedIterator> get_changed_models() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications();
+    static void reset_change_notifications() { m_changes.reset_change_notifications(); }
 
 private:
     static void reserve_model_data(unsigned int new_capacity, unsigned int old_capacity);
@@ -85,8 +81,7 @@ private:
 
     static UIDGenerator m_UID_generator;
     static Model* m_models;
-    static unsigned char* m_changes; // Bitmask of changes. Could be reduced to 2 bits pr model.
-    static std::vector<UID> m_models_changed;
+    static Core::ChangeSet<Changes, UID> m_changes;
 };
 
 // ---------------------------------------------------------------------------
@@ -113,8 +108,7 @@ public:
     inline Assets::Mesh get_mesh() { return MeshModels::get_mesh_ID(m_ID); }
     inline Assets::Material get_material() { return MeshModels::get_material_ID(m_ID); }
 
-    inline unsigned char get_changes() { return MeshModels::get_changes(m_ID); }
-    inline bool has_changes(unsigned char change_bitmask) { return MeshModels::has_changes(m_ID, change_bitmask); }
+    inline MeshModels::Changes get_changes() { return MeshModels::get_changes(m_ID); }
 
 private:
     const MeshModels::UID m_ID;
