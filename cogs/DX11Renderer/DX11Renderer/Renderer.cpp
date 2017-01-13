@@ -675,7 +675,7 @@ public:
         }
 
         { // Transform updates.
-            // TODO We're only interested in changes in the transforms that are connected to renderables, such as meshes.
+            // TODO We're only interested in changes to the transforms that are connected to renderables, such as meshes.
             bool important_transform_changed = false;
             for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
                 if (SceneNodes::get_changes(node_ID).any_set(SceneNodes::Change::Created, SceneNodes::Change::Transform)) {

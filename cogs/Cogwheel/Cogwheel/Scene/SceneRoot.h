@@ -10,6 +10,8 @@
 #define _COGWHEEL_SCENE_SCENE_ROOT_H_
 
 #include <Cogwheel/Assets/Texture.h>
+#include <Cogwheel/Core/Bitmask.h>
+#include <Cogwheel/Core/ChangeSet.h>
 #include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Math/Color.h>
@@ -63,31 +65,25 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    struct Changes {
-        static const unsigned char None = 0u;
-        static const unsigned char Created = 1u << 0u;
-        static const unsigned char Destroyed = 1u << 1u;
-        static const unsigned char EnvironmentTint = 1u << 2u;
-        static const unsigned char EnvironmentMap = 1u << 3u;
-        static const unsigned char All = Created | Destroyed | EnvironmentTint | EnvironmentMap;
+    enum class Change : unsigned char {
+        None            = 0u,
+        Created         = 1u << 0u,
+        Destroyed       = 1u << 1u,
+        EnvironmentTint = 1u << 2u,
+        EnvironmentMap  = 1u << 3u,
+        All = Created | Destroyed | EnvironmentTint | EnvironmentMap
     };
+    typedef Core::Bitmask<Change> Changes;
 
-    static inline unsigned char get_changes(SceneRoots::UID scene_ID) { return m_changes[scene_ID]; }
-    static inline bool has_changes(SceneRoots::UID scene_ID, unsigned char change_bitmask = Changes::All) {
-        return (m_changes[scene_ID] & change_bitmask) != Changes::None;
-    }
+    static inline Changes get_changes(SceneRoots::UID scene_ID) { return m_changes.get_changes(scene_ID); }
 
     typedef std::vector<UID>::iterator ChangedIterator;
-    static Core::Iterable<ChangedIterator> get_changed_scenes() {
-        return Core::Iterable<ChangedIterator>(m_scenes_changed.begin(), m_scenes_changed.end());
-    }
+    static Core::Iterable<ChangedIterator> get_changed_scenes() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications();
+    static void reset_change_notifications() { m_changes.reset_change_notifications(); }
 private:
 
     static void reserve_scene_data(unsigned int new_capacity, unsigned int old_capacity);
-
-    static void flag_as_changed(SceneRoots::UID node_ID, unsigned char change);
 
     static UIDGenerator m_UID_generator;
 
@@ -100,8 +96,7 @@ private:
 
     static Scene* m_scenes;
 
-    static unsigned char* m_changes; // Bitmask of changes.
-    static std::vector<UID> m_scenes_changed;
+    static Core::ChangeSet<Changes, UID> m_changes;
 };
 
 // ---------------------------------------------------------------------------
@@ -134,8 +129,7 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    inline unsigned char get_changes() const { return SceneRoots::get_changes(m_ID); }
-    inline bool has_changes(unsigned char changes) const { return SceneRoots::has_changes(m_ID, changes); }
+    inline SceneRoots::Changes get_changes() const { return SceneRoots::get_changes(m_ID); }
 
 private:
     SceneRoots::UID m_ID;

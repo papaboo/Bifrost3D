@@ -886,15 +886,14 @@ void Renderer::handle_updates() {
     }
 
     { // Scene root updates
-        // TODO Handle multiple scenes.
         for (SceneRoot scene : SceneRoots::get_changed_scenes()) {
-            if (scene.has_changes(SceneRoots::Changes::EnvironmentTint | SceneRoots::Changes::Created)) {
+            if (scene.get_changes().any_set(SceneRoots::Change::EnvironmentTint, SceneRoots::Change::Created)) {
                 Math::RGB env_tint = scene.get_environment_tint();
                 float3 environment_tint = make_float3(env_tint.r, env_tint.g, env_tint.b);
                 context["g_scene_environment_tint"]->setFloat(environment_tint);
             }
 
-            if (scene.has_changes(SceneRoots::Changes::EnvironmentMap | SceneRoots::Changes::Created)) {
+            if (scene.get_changes().any_set(SceneRoots::Change::EnvironmentMap, SceneRoots::Change::Created)) {
                 Textures::UID environment_map_ID = scene.get_environment_map();
                 if (environment_map_ID != m_state->environment.map.get_ID()) {
                     Image image = Textures::get_image_ID(environment_map_ID);

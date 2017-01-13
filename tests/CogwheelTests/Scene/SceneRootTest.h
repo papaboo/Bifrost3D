@@ -57,7 +57,7 @@ GTEST_TEST(Scene_SceneRoot, create) {
     Core::Iterable<SceneRoots::ChangedIterator> changed_scenes = SceneRoots::get_changed_scenes();
     EXPECT_EQ(1, changed_scenes.end() - changed_scenes.begin());
     EXPECT_EQ(scene_ID, *changed_scenes.begin());
-    EXPECT_EQ(SceneRoots::Changes::Created, SceneRoots::get_changes(scene_ID));
+    EXPECT_EQ(SceneRoots::Change::Created, SceneRoots::get_changes(scene_ID));
 
     SceneRoots::deallocate();
 }
@@ -76,7 +76,7 @@ GTEST_TEST(Scene_SceneRoot, destroy) {
     Core::Iterable<SceneRoots::ChangedIterator> changed_scenes = SceneRoots::get_changed_scenes();
     EXPECT_EQ(1, changed_scenes.end() - changed_scenes.begin());
     EXPECT_EQ(scene.get_ID(), *changed_scenes.begin());
-    EXPECT_EQ(SceneRoots::Changes::Destroyed, scene.get_changes());
+    EXPECT_EQ(SceneRoots::Change::Destroyed, scene.get_changes());
 
     SceneRoots::deallocate();
 }
@@ -97,7 +97,7 @@ GTEST_TEST(Scene_SceneRoot, create_and_destroy_notifications) {
         bool scene1_created = false;
         bool other_changes = false;
         for (const SceneRoots::UID scene_ID : changed_scenes) {
-            bool scene_created = SceneRoots::get_changes(scene_ID) == SceneRoots::Changes::Created;
+            bool scene_created = SceneRoots::get_changes(scene_ID) == SceneRoots::Change::Created;
             if (scene_ID == scene_ID0 && scene_created)
                 scene0_created = true;
             else if (scene_ID == scene_ID1 && scene_created)
@@ -121,7 +121,7 @@ GTEST_TEST(Scene_SceneRoot, create_and_destroy_notifications) {
         EXPECT_EQ(changed_scenes.end() - changed_scenes.begin(), 1);
 
         SceneRoot changed_scene = *changed_scenes.begin();
-        bool scene0_destroyed = changed_scene.get_ID() == scene_ID0 && changed_scene.get_changes() == SceneRoots::Changes::Destroyed;
+        bool scene0_destroyed = changed_scene.get_ID() == scene_ID0 && changed_scene.get_changes() == SceneRoots::Change::Destroyed;
         EXPECT_TRUE(scene0_destroyed);
     }
 
@@ -152,7 +152,7 @@ GTEST_TEST(Scene_SceneRoot, update_notifications) {
         EXPECT_EQ(changed_scenes.end() - changed_scenes.begin(), 1);
 
         EXPECT_TRUE(scene.get_ID() == *changed_scenes.begin());
-        EXPECT_TRUE(scene.get_changes() == SceneRoots::Changes::EnvironmentTint);
+        EXPECT_TRUE(scene.get_changes() == SceneRoots::Change::EnvironmentTint);
     }
 
     SceneRoots::reset_change_notifications();
@@ -168,7 +168,7 @@ GTEST_TEST(Scene_SceneRoot, update_notifications) {
         EXPECT_EQ(changed_scenes.end() - changed_scenes.begin(), 1);
 
         EXPECT_TRUE(scene.get_ID() == *changed_scenes.begin());
-        EXPECT_TRUE(scene.get_changes() == SceneRoots::Changes::EnvironmentMap);
+        EXPECT_TRUE(scene.get_changes() == SceneRoots::Change::EnvironmentMap);
 
         Assets::Textures::deallocate();
     }

@@ -15,8 +15,7 @@ namespace Scene {
 
 SceneRoots::UIDGenerator SceneRoots::m_UID_generator = UIDGenerator(0u);
 SceneRoots::Scene* SceneRoots::m_scenes = nullptr;
-unsigned char* SceneRoots::m_changes = nullptr;
-std::vector<SceneRoots::UID> SceneRoots::m_scenes_changed = std::vector<SceneRoots::UID>(0);;
+Core::ChangeSet<SceneRoots::Changes, SceneRoots::UID> SceneRoots::m_changes;
 
 void SceneRoots::allocate(unsigned int capacity) {
     if (is_allocated())
@@ -26,8 +25,7 @@ void SceneRoots::allocate(unsigned int capacity) {
     capacity = m_UID_generator.capacity();
 
     m_scenes = new Scene[capacity];
-    m_changes = new unsigned char[capacity];
-    std::memset(m_changes, Changes::None, capacity);
+    m_changes = Core::ChangeSet<Changes, UID>(capacity);
 
     // Allocate dummy element at 0.
     m_scenes[0].name = "Dummy Scene";
@@ -43,8 +41,7 @@ void SceneRoots::deallocate() {
     m_UID_generator = UIDGenerator(0u);
     delete[] m_scenes; m_scenes = nullptr;
 
-    delete[] m_changes; m_changes = nullptr;
-    m_scenes_changed.resize(0); m_scenes_changed.shrink_to_fit();
+    m_changes.resize(0);
 }
 
 void SceneRoots::reserve(unsigned int new_capacity) {
@@ -67,10 +64,7 @@ void SceneRoots::reserve_scene_data(unsigned int new_capacity, unsigned int old_
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
 
     m_scenes = resize_and_copy_array(m_scenes, new_capacity, copyable_elements);
-    m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
-
-    if (copyable_elements < new_capacity) // We need to zero the new change masks.
-        std::memset(m_changes + copyable_elements, Changes::None, new_capacity - copyable_elements);
+    m_changes.resize(new_capacity);
 }
 
 SceneRoots::UID SceneRoots::create(const std::string& name, SceneNodes::UID root, Math::RGB environment_tint) {
@@ -82,14 +76,11 @@ SceneRoots::UID SceneRoots::create(const std::string& name, SceneNodes::UID root
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_scene_data(m_UID_generator.capacity(), old_capacity);
 
-    if (m_changes[id] == Changes::None)
-        m_scenes_changed.push_back(id);
-
     m_scenes[id].name = name;
     m_scenes[id].root_node = root;
     m_scenes[id].environment_tint = environment_tint;
     m_scenes[id].environment_map = Assets::Textures::UID::invalid_UID();
-    m_changes[id] = Changes::Created;
+    m_changes.set_change(id, Change::Created);
 
     return id;
 }
@@ -103,14 +94,11 @@ SceneRoots::UID SceneRoots::create(const std::string& name, SceneNodes::UID root
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_scene_data(m_UID_generator.capacity(), old_capacity);
 
-    if (m_changes[id] == Changes::None)
-        m_scenes_changed.push_back(id);
-
     m_scenes[id].name = name;
     m_scenes[id].root_node = root;
     m_scenes[id].environment_tint = Math::RGB::white();
     m_scenes[id].environment_map = environment_map;
-    m_changes[id] = Changes::Created;
+    m_changes.set_change(id, Change::Created);
 
     return id;
 }
@@ -118,32 +106,18 @@ SceneRoots::UID SceneRoots::create(const std::string& name, SceneNodes::UID root
 void SceneRoots::destroy(SceneRoots::UID scene_ID) {
     // We don't actually destroy anything when destroying a scene.
     // The properties will get overwritten later when a scene is created in same the spot.
-    if (m_UID_generator.erase(scene_ID)) {
-        if (m_changes[scene_ID] == Changes::None)
-            m_scenes_changed.push_back(scene_ID);
-        m_changes[scene_ID] |= Changes::Destroyed;
-    }
+    if (m_UID_generator.erase(scene_ID))
+        m_changes.set_change(scene_ID, Change::Destroyed);
 }
 
 void SceneRoots::set_environment_tint(SceneRoots::UID scene_ID, Math::RGB tint) {
     m_scenes[scene_ID].environment_tint = tint;
-    flag_as_changed(scene_ID, Changes::EnvironmentTint);
+    m_changes.add_change(scene_ID, Change::EnvironmentTint);
 }
 
 void SceneRoots::set_environment_map(SceneRoots::UID scene_ID, Assets::Textures::UID environment_map) {
     m_scenes[scene_ID].environment_map = environment_map;
-    flag_as_changed(scene_ID, Changes::EnvironmentMap);
-}
-
-void SceneRoots::flag_as_changed(SceneRoots::UID scene_ID, unsigned char change) {
-    if (m_changes[scene_ID] == Changes::None)
-        m_scenes_changed.push_back(scene_ID);
-    m_changes[scene_ID] |= change;
-}
-
-void SceneRoots::reset_change_notifications() {
-    std::memset(m_changes, Changes::None, capacity());
-    m_scenes_changed.resize(0);
+    m_changes.add_change(scene_ID, Change::EnvironmentMap);
 }
 
 } // NS Scene
