@@ -258,7 +258,7 @@ TEST_F(Scene_Transform, Transform_changed_notification) {
         bool other_changes = false;
 
         for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
-            bool transform_changed = SceneNodes::get_changes(node_ID) == SceneNodes::Changes::Transform;
+            bool transform_changed = SceneNodes::get_changes(node_ID) == SceneNodes::Change::Transform;
             if (node_ID == n0.get_ID() && transform_changed)
                 n0_changed = true;
             else if (node_ID == n2.get_ID() && transform_changed)
@@ -277,9 +277,9 @@ TEST_F(Scene_Transform, Transform_changed_notification) {
 
     { // Test that after clearing the change notifications no nodes are flagged as changed.
         EXPECT_TRUE(SceneNodes::get_changed_nodes().is_empty());
-        EXPECT_EQ(SceneNodes::get_changes(n0.get_ID()), SceneNodes::Changes::None);
-        EXPECT_EQ(SceneNodes::get_changes(n1.get_ID()), SceneNodes::Changes::None);
-        EXPECT_EQ(SceneNodes::get_changes(n2.get_ID()), SceneNodes::Changes::None);
+        EXPECT_EQ(SceneNodes::get_changes(n0.get_ID()), SceneNodes::Change::None);
+        EXPECT_EQ(SceneNodes::get_changes(n1.get_ID()), SceneNodes::Change::None);
+        EXPECT_EQ(SceneNodes::get_changes(n2.get_ID()), SceneNodes::Change::None);
     }
 
     { // Test that transform changes are propagated downwards.
@@ -294,7 +294,7 @@ TEST_F(Scene_Transform, Transform_changed_notification) {
         bool n2_changed = false;
 
         for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
-            bool transform_changed = SceneNodes::get_changes(node_ID) == SceneNodes::Changes::Transform;
+            bool transform_changed = SceneNodes::get_changes(node_ID) == SceneNodes::Change::Transform;
             if (node_ID == n0.get_ID() && transform_changed)
                 n0_changed = true;
             if (node_ID == n1.get_ID() && transform_changed)

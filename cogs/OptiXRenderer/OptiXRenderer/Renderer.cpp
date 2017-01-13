@@ -866,7 +866,7 @@ void Renderer::handle_updates() {
         // We're only interested in changes in the transforms that are connected to renderables, such as meshes.
         bool important_transform_changed = false;
         for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
-            if (!SceneNodes::has_changes(node_ID, SceneNodes::Changes::Transform))
+            if (SceneNodes::get_changes(node_ID).not_set(SceneNodes::Change::Transform))
                 continue;
 
             assert(node_ID < m_state->transforms.size());

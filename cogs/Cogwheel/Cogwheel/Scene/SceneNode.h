@@ -9,11 +9,11 @@
 #ifndef _COGWHEEL_SCENE_SCENE_NODE_H_
 #define _COGWHEEL_SCENE_SCENE_NODE_H_
 
+#include <Cogwheel/Core/Bitmask.h>
+#include <Cogwheel/Core/ChangeSet.h>
 #include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Math/Transform.h>
-
-#include <vector>
 
 namespace Cogwheel {
 namespace Scene {
@@ -22,10 +22,9 @@ namespace Scene {
 // Container class for the cogwheel scene node.
 // Future work
 // * A parent changed event: (node_id, old_parent_id). Is this actually needed by anything when transforms are global?
-// * Allocate all (or most) internal arrays in one big chunk.
 // * Change the sibling/children layout, so sibling IDs or perhaps siblings are always allocated next too each other?
-//  * Requires an extra indirection though, since node ID's won't match the node positions anymore.
-//  * Could be done (incrementally?) when all mutations in a tick are done.
+//   * Requires an extra indirection though, since node ID's won't match the node positions anymore.
+//   * Could be done (incrementally?) when all mutations in a tick are done.
 // * The change notification count is going to explode when setting up or tearing down a scene. 
 //   We should implement a better solution for these cases.
 //   Perhaps a great big 'a lot has changed, rebuild everything and ignore the notifications' flag?
@@ -73,30 +72,24 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    struct Changes {
-        static const unsigned char None = 0u;
-        static const unsigned char Created = 1u << 0u;
-        static const unsigned char Destroyed = 1u << 1u;
-        static const unsigned char Transform = 1u << 2u;
-        static const unsigned char All = Created | Destroyed | Transform;
+    enum class Change {
+        None      = 0u,
+        Created   = 1u << 0u,
+        Destroyed = 1u << 1u,
+        Transform = 1u << 2u,
+        All = Created | Destroyed | Transform
     };
+    typedef Core::Bitmask<Change> Changes;
 
-    static inline unsigned char get_changes(SceneNodes::UID node_ID) { return m_changes[node_ID]; }
-    static inline bool has_changes(SceneNodes::UID node_ID, unsigned char change_bitmask = Changes::All) {
-        return (m_changes[node_ID] & change_bitmask) != Changes::None;
-    }
+    static inline Changes get_changes(SceneNodes::UID node_ID) { return m_changes.get_changes(node_ID); }
 
     typedef std::vector<UID>::iterator ChangedIterator;
-    static Core::Iterable<ChangedIterator> get_changed_nodes() {
-        return Core::Iterable<ChangedIterator>(m_nodes_changed.begin(), m_nodes_changed.end());
-    }
+    static Core::Iterable<ChangedIterator> get_changed_nodes() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications();
+    static void reset_change_notifications() { return m_changes.reset_change_notifications(); }
 
 private:
     static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);
-
-    static void flag_as_changed(SceneNodes::UID material_ID, unsigned char change);
 
     static UIDGenerator m_UID_generator;
     static std::string* m_names;
@@ -107,8 +100,7 @@ private:
 
     static Math::Transform* m_global_transforms;
 
-    static unsigned char* m_changes; // Bitmask of changes.
-    static std::vector<UID> m_nodes_changed;
+    static Core::ChangeSet<Changes, UID> m_changes;
 };
 
 // ---------------------------------------------------------------------------
@@ -147,8 +139,7 @@ public:
     inline Math::Transform get_global_transform() const { return SceneNodes::get_global_transform(m_ID); }
     inline void set_global_transform(Math::Transform transform) { SceneNodes::set_global_transform(m_ID, transform); }
 
-    inline unsigned char get_changes() const { return SceneNodes::get_changes(m_ID); }
-    inline bool has_changes(unsigned char changes) const { return SceneNodes::has_changes(m_ID, changes); }
+    inline SceneNodes::Changes get_changes() const { return SceneNodes::get_changes(m_ID); }
 
     // -----------------------------------------------------------------------
     // Applies a function recursively.

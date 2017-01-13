@@ -55,13 +55,13 @@ GTEST_TEST(Scene_SceneNode, create) {
     SceneNodes::UID node_ID = SceneNodes::create("Foo");
     EXPECT_TRUE(SceneNodes::has(node_ID));
     
-    EXPECT_EQ(SceneNodes::get_name(node_ID), "Foo");
+    EXPECT_EQ("Foo", SceneNodes::get_name(node_ID));
 
     // Test scene node created notification.
     Core::Iterable<SceneNodes::ChangedIterator> changed_nodes = SceneNodes::get_changed_nodes();
-    EXPECT_EQ(changed_nodes.end() - changed_nodes.begin(), 1);
-    EXPECT_EQ(*changed_nodes.begin(), node_ID);
-    EXPECT_EQ(SceneNodes::get_changes(node_ID), SceneNodes::Changes::Created);
+    EXPECT_EQ(1, changed_nodes.end() - changed_nodes.begin());
+    EXPECT_EQ(node_ID, *changed_nodes.begin());
+    EXPECT_EQ(SceneNodes::Change::Created, SceneNodes::get_changes(node_ID));
 
     SceneNodes::deallocate();
 }
@@ -78,9 +78,9 @@ GTEST_TEST(Scene_SceneNode, destroy) {
 
     // Test scene node destroyed notification.
     Core::Iterable<SceneNodes::ChangedIterator> changed_nodes = SceneNodes::get_changed_nodes();
-    EXPECT_EQ(changed_nodes.end() - changed_nodes.begin(), 1);
-    EXPECT_EQ(*changed_nodes.begin(), node_ID);
-    EXPECT_EQ(SceneNodes::get_changes(node_ID), SceneNodes::Changes::Destroyed);
+    EXPECT_EQ(1, changed_nodes.end() - changed_nodes.begin());
+    EXPECT_EQ(node_ID, *changed_nodes.begin());
+    EXPECT_EQ(SceneNodes::Change::Destroyed, SceneNodes::get_changes(node_ID));
 
     SceneNodes::deallocate();
 }
@@ -95,13 +95,13 @@ GTEST_TEST(Scene_SceneNode, create_and_destroy_notifications) {
 
     { // Test scene node create notifications.
         Core::Iterable<SceneNodes::ChangedIterator> changed_nodes = SceneNodes::get_changed_nodes();
-        EXPECT_EQ(changed_nodes.end() - changed_nodes.begin(), 2);
+        EXPECT_EQ(2, changed_nodes.end() - changed_nodes.begin());
 
         bool node0_created = false;
         bool node1_created = false;
         bool other_changes = false;
         for (const SceneNodes::UID node_ID : changed_nodes) {
-            bool node_created = SceneNodes::get_changes(node_ID) == SceneNodes::Changes::Created;
+            bool node_created = SceneNodes::get_changes(node_ID) == SceneNodes::Change::Created;
             if (node_ID == node_ID0 && node_created)
                 node0_created = true;
             else if (node_ID == node_ID1 && node_created)
@@ -122,10 +122,10 @@ GTEST_TEST(Scene_SceneNode, create_and_destroy_notifications) {
         EXPECT_FALSE(SceneNodes::has(node_ID0));
 
         Core::Iterable<SceneNodes::ChangedIterator> changed_nodes = SceneNodes::get_changed_nodes();
-        EXPECT_EQ(changed_nodes.end() - changed_nodes.begin(), 1);
+        EXPECT_EQ(1, changed_nodes.end() - changed_nodes.begin());
 
         SceneNode node = *changed_nodes.begin();
-        bool node0_destroyed = node.get_ID() == node_ID0 && node.get_changes() == SceneNodes::Changes::Destroyed;
+        bool node0_destroyed = node.get_ID() == node_ID0 && node.get_changes() == SceneNodes::Change::Destroyed;
         EXPECT_TRUE(node0_destroyed);
     }
 
@@ -153,15 +153,15 @@ GTEST_TEST(Scene_SceneNode, parenting) {
     // Set n0 to the parent and check the parent-child relationship.
     n1.set_parent(n0);
     EXPECT_TRUE(n1.get_parent().exists());
-    EXPECT_EQ(n1.get_parent(), n0);
-    EXPECT_EQ(n0.get_children().size(), 1u);
+    EXPECT_EQ(n0, n1.get_parent());
+    EXPECT_EQ(1u, n0.get_children().size());
     EXPECT_TRUE(n0.has_child(n1));
 
     // Set n2 to the parent and check the parent-child relationship.
     n1.set_parent(n2);
     EXPECT_TRUE(n1.get_parent().exists());
-    EXPECT_EQ(n1.get_parent(), n2);
-    EXPECT_EQ(n2.get_children().size(), 1u);
+    EXPECT_EQ(n2, n1.get_parent());
+    EXPECT_EQ(1u, n2.get_children().size());
     EXPECT_TRUE(n2.has_child(n1));
     // ... also check that n0 no longer has any children.
     EXPECT_EQ(0u, n0.get_children().size());
@@ -200,17 +200,17 @@ GTEST_TEST(Scene_SceneNode, creating_hierarchy) {
     n5.set_parent(n4);
     n1.set_parent(n6);
 
-    EXPECT_EQ(n0.get_parent(), n3);
+    EXPECT_EQ(n3, n0.get_parent());
     EXPECT_TRUE(n3.has_child(n0));
-    EXPECT_EQ(n4.get_parent(), n3);
+    EXPECT_EQ(n3, n4.get_parent());
     EXPECT_TRUE(n3.has_child(n4));
-    EXPECT_EQ(n6.get_parent(), n3);
+    EXPECT_EQ(n3, n6.get_parent());
     EXPECT_TRUE(n3.has_child(n6));
-    EXPECT_EQ(n2.get_parent(), n4);
+    EXPECT_EQ(n4, n2.get_parent());
     EXPECT_TRUE(n4.has_child(n2));
-    EXPECT_EQ(n5.get_parent(), n4);
+    EXPECT_EQ(n4, n5.get_parent());
     EXPECT_TRUE(n4.has_child(n5));
-    EXPECT_EQ(n1.get_parent(), n6);
+    EXPECT_EQ(n6, n1.get_parent());
     EXPECT_TRUE(n6.has_child(n1));
 
     // Now parent id4 below id0, just for fun and profit.
@@ -224,17 +224,17 @@ GTEST_TEST(Scene_SceneNode, creating_hierarchy) {
     n4.set_parent(n0);
 
     EXPECT_FALSE(n3.get_parent().exists());
-    EXPECT_EQ(n0.get_parent(), n3);
+    EXPECT_EQ(n3, n0.get_parent());
     EXPECT_TRUE(n3.has_child(n0));
-    EXPECT_EQ(n6.get_parent(), n3);
+    EXPECT_EQ(n3, n6.get_parent());
     EXPECT_TRUE(n3.has_child(n6));
-    EXPECT_EQ(n4.get_parent(), n0);
+    EXPECT_EQ(n0, n4.get_parent());
     EXPECT_TRUE(n0.has_child(n4));
-    EXPECT_EQ(n1.get_parent(), n6);
+    EXPECT_EQ(n6, n1.get_parent());
     EXPECT_TRUE(n6.has_child(n1));
-    EXPECT_EQ(n2.get_parent(), n4);
+    EXPECT_EQ(n4, n2.get_parent());
     EXPECT_TRUE(n4.has_child(n2));
-    EXPECT_EQ(n5.get_parent(), n4);
+    EXPECT_EQ(n4, n5.get_parent());
     EXPECT_TRUE(n4.has_child(n5));
 
     SceneNodes::deallocate();
@@ -269,46 +269,46 @@ GTEST_TEST(Scene_SceneNode, graph_traversal) {
     n2.apply_to_children_recursively([&](SceneNodes::UID id) {
         ++visits[id];
     });
-    EXPECT_EQ(visits[n0.get_ID()], 0u);
-    EXPECT_EQ(visits[n1.get_ID()], 0u);
-    EXPECT_EQ(visits[n2.get_ID()], 0u);
-    EXPECT_EQ(visits[n3.get_ID()], 0u);
-    EXPECT_EQ(visits[n4.get_ID()], 0u);
-    EXPECT_EQ(visits[n5.get_ID()], 0u);
-    EXPECT_EQ(visits[n6.get_ID()], 0u);
+    EXPECT_EQ(0u, visits[n0.get_ID()]);
+    EXPECT_EQ(0u, visits[n1.get_ID()]);
+    EXPECT_EQ(0u, visits[n2.get_ID()]);
+    EXPECT_EQ(0u, visits[n3.get_ID()]);
+    EXPECT_EQ(0u, visits[n4.get_ID()]);
+    EXPECT_EQ(0u, visits[n5.get_ID()]);
+    EXPECT_EQ(0u, visits[n6.get_ID()]);
 
     n4.apply_recursively([&](SceneNodes::UID id) {
         ++visits[id];
     });
-    EXPECT_EQ(visits[n0.get_ID()], 0u);
-    EXPECT_EQ(visits[n1.get_ID()], 0u);
-    EXPECT_EQ(visits[n2.get_ID()], 1u);
-    EXPECT_EQ(visits[n3.get_ID()], 0u);
-    EXPECT_EQ(visits[n4.get_ID()], 1u);
-    EXPECT_EQ(visits[n5.get_ID()], 1u);
-    EXPECT_EQ(visits[n6.get_ID()], 0u);
+    EXPECT_EQ(0u, visits[n0.get_ID()]);
+    EXPECT_EQ(0u, visits[n1.get_ID()]);
+    EXPECT_EQ(1u, visits[n2.get_ID()]);
+    EXPECT_EQ(0u, visits[n3.get_ID()]);
+    EXPECT_EQ(1u, visits[n4.get_ID()]);
+    EXPECT_EQ(1u, visits[n5.get_ID()]);
+    EXPECT_EQ(0u, visits[n6.get_ID()]);
 
     n6.apply_to_children_recursively([&](SceneNodes::UID id) {
         ++visits[id];
     });
-    EXPECT_EQ(visits[n0.get_ID()], 0u);
-    EXPECT_EQ(visits[n1.get_ID()], 1u);
-    EXPECT_EQ(visits[n2.get_ID()], 1u);
-    EXPECT_EQ(visits[n3.get_ID()], 0u);
-    EXPECT_EQ(visits[n4.get_ID()], 1u);
-    EXPECT_EQ(visits[n5.get_ID()], 1u);
-    EXPECT_EQ(visits[n6.get_ID()], 0u);
+    EXPECT_EQ(0u, visits[n0.get_ID()]);
+    EXPECT_EQ(1u, visits[n1.get_ID()]);
+    EXPECT_EQ(1u, visits[n2.get_ID()]);
+    EXPECT_EQ(0u, visits[n3.get_ID()]);
+    EXPECT_EQ(1u, visits[n4.get_ID()]);
+    EXPECT_EQ(1u, visits[n5.get_ID()]);
+    EXPECT_EQ(0u, visits[n6.get_ID()]);
 
     n3.apply_recursively([&](SceneNodes::UID id) {
         ++visits[id];
     });
-    EXPECT_EQ(visits[n0.get_ID()], 1u);
-    EXPECT_EQ(visits[n1.get_ID()], 2u);
-    EXPECT_EQ(visits[n2.get_ID()], 2u);
-    EXPECT_EQ(visits[n3.get_ID()], 1u);
-    EXPECT_EQ(visits[n4.get_ID()], 2u);
-    EXPECT_EQ(visits[n5.get_ID()], 2u);
-    EXPECT_EQ(visits[n6.get_ID()], 1u);
+    EXPECT_EQ(1u, visits[n0.get_ID()]);
+    EXPECT_EQ(2u, visits[n1.get_ID()]);
+    EXPECT_EQ(2u, visits[n2.get_ID()]);
+    EXPECT_EQ(1u, visits[n3.get_ID()]);
+    EXPECT_EQ(2u, visits[n4.get_ID()]);
+    EXPECT_EQ(2u, visits[n5.get_ID()]);
+    EXPECT_EQ(1u, visits[n6.get_ID()]);
 
     SceneNodes::deallocate();
 }
