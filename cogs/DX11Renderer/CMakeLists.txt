@@ -52,7 +52,7 @@ if (DIRECTX_11_FOUND AND WIN32)
   )
 
   target_link_libraries(${LIBRARY_NAME}
-    PUBLIC Gogwheel
+    PUBLIC Cogwheel
     PRIVATE ${DIRECTX_11_LIBRARIES}
   )
 

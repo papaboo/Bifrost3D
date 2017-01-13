@@ -3,7 +3,7 @@ add_library(GLFWDriver GLFWDriver.h GLFWDriver.cpp)
 target_include_directories(GLFWDriver PUBLIC .)
 
 target_link_libraries(GLFWDriver
-  PUBLIC Gogwheel
+  PUBLIC Cogwheel
   PRIVATE glfw
 )
 

@@ -7,7 +7,7 @@ add_library(StbImageLoader
 target_include_directories(StbImageLoader PUBLIC .)
 
 target_link_libraries(StbImageLoader
-  PUBLIC Gogwheel
+  PUBLIC Cogwheel
 )
 
 source_group("StbImageLoader" FILES 

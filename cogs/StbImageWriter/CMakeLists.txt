@@ -7,7 +7,7 @@ add_library(StbImageWriter
 target_include_directories(StbImageWriter PUBLIC .)
 
 target_link_libraries(StbImageWriter
-  PUBLIC Gogwheel
+  PUBLIC Cogwheel
 )
 
 source_group("StbImageWriter" FILES 

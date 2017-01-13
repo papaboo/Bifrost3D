@@ -39,7 +39,7 @@ set(SCENE_SRCS
 
 add_executable(${PROJECT_NAME} ${SRCS} ${ASSETS_SRCS} ${CORE_SRCS} ${INPUT_SRCS} ${MATH_SRCS} ${SCENE_SRCS})
 target_include_directories(${PROJECT_NAME} PRIVATE .)
-target_link_libraries(${PROJECT_NAME} gtest Gogwheel)
+target_link_libraries(${PROJECT_NAME} gtest Cogwheel)
 
 source_group("" FILES ${SRCS})
 source_group("Assets" FILES ${ASSETS_SRCS})

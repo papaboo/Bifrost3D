@@ -29,7 +29,7 @@ if (TARGET OptiXRenderer)
 
   target_link_libraries(${PROJECT_NAME}
     gtest
-    Gogwheel
+    Cogwheel
     OptiXRenderer
   )
 

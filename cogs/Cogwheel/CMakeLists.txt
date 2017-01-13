@@ -59,7 +59,7 @@ SET(SCENE_SRCS
   Cogwheel/Scene/SceneRoot.h
 )
 
-add_library(Gogwheel ${ASSETS_SRCS} ${CORE_SRCS} ${INPUT_SRCS} ${MATH_SRCS} ${SCENE_SRCS})
+add_library(Cogwheel ${ASSETS_SRCS} ${CORE_SRCS} ${INPUT_SRCS} ${MATH_SRCS} ${SCENE_SRCS})
 
 SOURCE_GROUP("Assets" FILES ${ASSETS_SRCS})
 SOURCE_GROUP("Core" FILES ${CORE_SRCS})
@@ -67,9 +67,9 @@ SOURCE_GROUP("Input" FILES ${INPUT_SRCS})
 SOURCE_GROUP("Math" FILES ${MATH_SRCS})
 SOURCE_GROUP("Scene" FILES ${SCENE_SRCS})
 
-target_include_directories(Gogwheel PUBLIC .)
+target_include_directories(Cogwheel PUBLIC .)
 
-set_target_properties(Gogwheel PROPERTIES 
+set_target_properties(Cogwheel PROPERTIES 
   LINKER_LANGUAGE CXX
   FOLDER "Cogs"
   COMPILE_FLAGS "-W3"

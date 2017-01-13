@@ -16,7 +16,7 @@ find_package(OpenGL REQUIRED)
 include_directories(${OpenGL_INCLUDE_DIRS})
 
 target_link_libraries(${PROJECT_NAME}
-  Gogwheel
+  Cogwheel
   glfw
   ${OPENGL_LIBRARIES}
 )

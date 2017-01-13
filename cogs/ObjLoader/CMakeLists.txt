@@ -6,7 +6,7 @@ add_library(ObjLoader
 
 target_include_directories(ObjLoader PUBLIC .)
 
-target_link_libraries(ObjLoader PUBLIC Gogwheel)
+target_link_libraries(ObjLoader PUBLIC Cogwheel)
 
 source_group("ObjLoader" FILES 
   ObjLoader/ObjLoader.h
