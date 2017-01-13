@@ -30,7 +30,7 @@ public:
     typedef UIDGenerator::UID UID;
     typedef UIDGenerator::ConstIterator ConstUIDIterator;
 
-    enum class Type {
+    enum class Type : unsigned char {
         Sphere,
         Directional
     };
@@ -67,7 +67,7 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    enum class Change {
+    enum class Change : unsigned char {
         None = 0u,
         Created = 1u << 0u,
         Destroyed = 1u << 1u,

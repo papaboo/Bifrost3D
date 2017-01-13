@@ -72,7 +72,7 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    enum class Change {
+    enum class Change : unsigned char {
         None      = 0u,
         Created   = 1u << 0u,
         Destroyed = 1u << 1u,
