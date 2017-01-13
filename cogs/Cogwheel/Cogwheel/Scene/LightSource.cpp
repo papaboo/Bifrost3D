@@ -15,8 +15,7 @@ LightSources::UIDGenerator LightSources::m_UID_generator = UIDGenerator(0u);
 
 LightSources::Light* LightSources::m_lights = nullptr;
 
-unsigned char* LightSources::m_changes = nullptr;
-std::vector<LightSources::UID> LightSources::m_lights_changed = std::vector<LightSources::UID>(0);
+Core::ChangeSet<LightSources::Changes, LightSources::UID> LightSources::m_changes;
 
 void LightSources::allocate(unsigned int capacity) {
     if (is_allocated())
@@ -27,9 +26,7 @@ void LightSources::allocate(unsigned int capacity) {
 
     m_lights = new Light[capacity];
 
-    m_changes = new unsigned char[capacity];
-    std::memset(m_changes, Changes::None, capacity);
-    m_lights_changed.reserve(capacity / 4);
+    m_changes = Core::ChangeSet<Changes, UID>(capacity);
 
     // Allocate dummy element at 0.
     m_lights[0].node_ID = SceneNodes::UID::invalid_UID();
@@ -45,9 +42,7 @@ void LightSources::deallocate() {
     m_UID_generator = UIDGenerator(0u);
 
     delete[] m_lights; m_lights = nullptr;
-    delete[] m_changes; m_changes = nullptr;
-
-    m_lights_changed.resize(0); m_lights_changed.shrink_to_fit();
+    m_changes.resize(0);
 }
 
 template <typename T>
@@ -60,14 +55,11 @@ static inline T* resize_and_copy_array(T* old_array, unsigned int new_capacity, 
 
 void LightSources::reserve_light_data(unsigned int new_capacity, unsigned int old_capacity) {
     assert(m_lights != nullptr);
-    assert(m_changes != nullptr);
 
     const unsigned int copyable_elements = new_capacity < old_capacity ? new_capacity : old_capacity;
 
     m_lights = resize_and_copy_array(m_lights, new_capacity, copyable_elements);
-    m_changes = resize_and_copy_array(m_changes, new_capacity, copyable_elements);
-    if (copyable_elements < new_capacity) // We need to zero the new change masks.
-        std::memset(m_changes + copyable_elements, Changes::None, new_capacity - copyable_elements);
+    m_changes.resize(new_capacity);
 }
 
 void LightSources::reserve(unsigned int new_capacity) {
@@ -85,14 +77,11 @@ LightSources::UID LightSources::create_sphere_light(SceneNodes::UID node_ID, Mat
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_light_data(m_UID_generator.capacity(), old_capacity);
 
-    if (m_changes[id] == Changes::None)
-        m_lights_changed.push_back(id);
-
     m_lights[id].node_ID = node_ID;
     m_lights[id].type = LightSources::Type::Sphere;
     m_lights[id].color = power;
     m_lights[id].sphere.radius = radius;
-    m_changes[id] = Changes::Created;
+    m_changes.set_change(id, Change::Created);
 
     return id;
 }
@@ -106,25 +95,19 @@ LightSources::UID LightSources::create_directional_light(SceneNodes::UID node_ID
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_light_data(m_UID_generator.capacity(), old_capacity);
 
-    if (m_changes[id] == Changes::None)
-        m_lights_changed.push_back(id);
-
     m_lights[id].node_ID = node_ID;
     m_lights[id].type = LightSources::Type::Directional;
     m_lights[id].color = radiance;
-    m_changes[id] = Changes::Created;
+    m_changes.set_change(id, Change::Created);
 
     return id;
 }
 
 void LightSources::destroy(LightSources::UID light_ID) {
-    // We don't actually destroy anything when destroying a light. The properties will get overwritten later when a node is created in same the spot.
-    if (m_UID_generator.erase(light_ID)) {
-        if (m_changes[light_ID] == Changes::None)
-            m_lights_changed.push_back(light_ID);
-
-        m_changes[light_ID] = Changes::Destroyed;
-    }
+    // We don't actually destroy anything when destroying a light. 
+    // The properties will get overwritten later when a node is created in same the spot.
+    if (m_UID_generator.erase(light_ID)) 
+        m_changes.set_change(light_ID, Change::Destroyed);
 }
 
 bool LightSources::is_delta_light(LightSources::UID light_ID) {
@@ -135,11 +118,6 @@ bool LightSources::is_delta_light(LightSources::UID light_ID) {
         return is_delta_directional_light(light_ID);
     }
     return false;
-}
-
-void LightSources::reset_change_notifications() {
-    std::memset(m_changes, Changes::None, capacity());
-    m_lights_changed.resize(0);
 }
 
 } // NS Scene

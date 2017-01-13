@@ -78,7 +78,7 @@ TEST_F(Scene_LightSource, create_sphere_light) {
     Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
     EXPECT_EQ(1, changed_lights.end() - changed_lights.begin());
     EXPECT_EQ(light.get_ID(), *changed_lights.begin());
-    EXPECT_EQ(LightSources::Changes::Created, light.get_changes());
+    EXPECT_EQ(LightSources::Change::Created, light.get_changes());
 
     LightSources::deallocate();
 }
@@ -102,7 +102,7 @@ TEST_F(Scene_LightSource, create_directional_light) {
     Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
     EXPECT_EQ(1, changed_lights.end() - changed_lights.begin());
     EXPECT_EQ(light.get_ID(), *changed_lights.begin());
-    EXPECT_EQ(LightSources::Changes::Created, light.get_changes());
+    EXPECT_EQ(LightSources::Change::Created, light.get_changes());
 
     LightSources::deallocate();
 }
@@ -121,9 +121,9 @@ TEST_F(Scene_LightSource, destroy) {
 
     // Test scene node destroyed notification.
     Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
-    EXPECT_EQ(changed_lights.end() - changed_lights.begin(), 1);
-    EXPECT_EQ(*changed_lights.begin(), light_ID);
-    EXPECT_EQ(LightSources::get_changes(light_ID), LightSources::Changes::Destroyed);
+    EXPECT_EQ(1, changed_lights.end() - changed_lights.begin());
+    EXPECT_EQ(light_ID, *changed_lights.begin());
+    EXPECT_EQ(LightSources::Change::Destroyed, LightSources::get_changes(light_ID));
 
     LightSources::deallocate();
 }
@@ -146,7 +146,7 @@ TEST_F(Scene_LightSource, create_and_destroy_notifications) {
         bool node1_created = false;
         bool other_changes = false;
         for (const LightSources::UID light_ID : changed_lights) {
-            bool light_created = LightSources::get_changes(light_ID) == LightSources::Changes::Created;
+            bool light_created = LightSources::get_changes(light_ID) == LightSources::Change::Created;
             if (light_ID == light_ID0 && light_created)
                 node0_created = true;
             else if (light_ID == light_ID1 && light_created)
@@ -172,7 +172,7 @@ TEST_F(Scene_LightSource, create_and_destroy_notifications) {
         bool node0_destroyed = false;
         bool other_changes = false;
         for (const LightSources::UID light_ID : changed_lights) {
-            if (light_ID == light_ID0 && LightSources::get_changes(light_ID) == LightSources::Changes::Destroyed)
+            if (light_ID == light_ID0 && LightSources::get_changes(light_ID) == LightSources::Change::Destroyed)
                 node0_destroyed = true;
             else
                 other_changes = true;

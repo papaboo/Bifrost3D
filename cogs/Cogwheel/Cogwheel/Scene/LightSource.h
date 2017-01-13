@@ -9,12 +9,12 @@
 #ifndef _COGWHEEL_SCENE_LIGHT_SOURCE_H_
 #define _COGWHEEL_SCENE_LIGHT_SOURCE_H_
 
+#include <Cogwheel/Core/Bitmask.h>
+#include <Cogwheel/Core/ChangeSet.h>
 #include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 #include <Cogwheel/Math/Color.h>
 #include <Cogwheel/Scene/SceneNode.h>
-
-#include <vector>
 
 namespace Cogwheel {
 namespace Scene {
@@ -67,24 +67,20 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    struct Changes {
-        static const unsigned char None = 0u;
-        static const unsigned char Created = 1u << 0u;
-        static const unsigned char Destroyed = 1u << 1u;
-        static const unsigned char All = Created | Destroyed;
+    enum class Change {
+        None = 0u,
+        Created = 1u << 0u,
+        Destroyed = 1u << 1u,
+        All = Created | Destroyed
     };
+    typedef Core::Bitmask<Change> Changes;
 
-    static inline unsigned char get_changes(LightSources::UID light_ID) { return m_changes[light_ID]; }
-    static inline bool has_changes(LightSources::UID light_ID, unsigned char change_bitmask = Changes::All) {
-        return (m_changes[light_ID] & change_bitmask) != Changes::None;
-    }
+    static inline Changes get_changes(LightSources::UID light_ID) { return m_changes.get_changes(light_ID); }
 
     typedef std::vector<UID>::iterator ChangedIterator;
-    static Core::Iterable<ChangedIterator> get_changed_lights() {
-        return Core::Iterable<ChangedIterator>(m_lights_changed.begin(), m_lights_changed.end());
-    }
+    static Core::Iterable<ChangedIterator> get_changed_lights() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications();
+    static void reset_change_notifications() { m_changes.reset_change_notifications(); }
 
 private:
     static void reserve_light_data(unsigned int new_capacity, unsigned int old_capacity);
@@ -107,8 +103,7 @@ private:
 
     static Light* m_lights;
 
-    static unsigned char* m_changes; // Bitmask of changes.
-    static std::vector<UID> m_lights_changed;
+    static Core::ChangeSet<Changes, UID> m_changes;
 };
 
 // ---------------------------------------------------------------------------
@@ -139,8 +134,7 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    inline unsigned char get_changes() const { return LightSources::get_changes(m_ID); }
-    inline bool has_changes(unsigned char changes) const { return LightSources::has_changes(m_ID, changes); }
+    inline LightSources::Changes get_changes() const { return LightSources::get_changes(m_ID); }
 
 private:
     LightSources::UID m_ID;
@@ -173,8 +167,7 @@ public:
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
-    inline unsigned char get_changes() const { return LightSources::get_changes(m_ID); }
-    inline bool has_changes(unsigned char changes) const { return LightSources::has_changes(m_ID, changes); }
+    inline LightSources::Changes get_changes() const { return LightSources::get_changes(m_ID); }
 
 private:
     LightSources::UID m_ID;

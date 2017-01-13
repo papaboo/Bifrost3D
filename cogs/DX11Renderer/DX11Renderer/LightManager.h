@@ -134,12 +134,12 @@ public:
                 Dx11Light* gpu_lights = m_data.m_lights;
                 LightSources::ChangedIterator created_lights_begin = LightSources::get_changed_lights().begin();
                 while (created_lights_begin != LightSources::get_changed_lights().end() &&
-                    LightSources::get_changes(*created_lights_begin) != LightSources::Changes::Created)
+                    LightSources::get_changes(*created_lights_begin).not_set(LightSources::Change::Created))
                     ++created_lights_begin;
 
                 // Process destroyed 
                 for (LightSources::UID light_ID : LightSources::get_changed_lights()) {
-                    if (LightSources::get_changes(light_ID) != LightSources::Changes::Destroyed)
+                    if (LightSources::get_changes(light_ID) != LightSources::Change::Destroyed)
                         continue;
 
                     unsigned int light_index = m_ID_to_index[light_ID];
@@ -153,7 +153,7 @@ public:
 
                         // Find next created light.
                         while (created_lights_begin != LightSources::get_changed_lights().end() &&
-                            LightSources::get_changes(*created_lights_begin) != LightSources::Changes::Created)
+                            LightSources::get_changes(*created_lights_begin).not_set(LightSources::Change::Created))
                             ++created_lights_begin;
                     } else {
                         // Replace deleted light by light from the end of the array.
@@ -170,7 +170,7 @@ public:
 
                 // If there are still lights that needs to be created, then append them to the list.
                 for (LightSources::UID light_ID : Iterable<LightSources::ChangedIterator>(created_lights_begin, LightSources::get_changed_lights().end())) {
-                    if (LightSources::get_changes(light_ID) != LightSources::Changes::Created)
+                    if (LightSources::get_changes(light_ID).not_set(LightSources::Change::Created))
                         continue;
 
                     unsigned int light_index = m_data.m_active_count++;
