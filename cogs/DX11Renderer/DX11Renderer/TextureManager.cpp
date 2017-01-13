@@ -202,71 +202,71 @@ void TextureManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& d
         }
     }
 
-        { // Texture/sampler updates.
-            if (!Textures::get_changed_textures().is_empty()) {
-                if (m_textures.size() < Textures::capacity())
-                    m_textures.resize(Textures::capacity());
+    { // Texture/sampler updates.
+        if (!Textures::get_changed_textures().is_empty()) {
+            if (m_textures.size() < Textures::capacity())
+                m_textures.resize(Textures::capacity());
 
-                for (Textures::UID tex_ID : Textures::get_changed_textures()) {
-                    Dx11Texture& dx_tex = m_textures[tex_ID];
+            for (Textures::UID tex_ID : Textures::get_changed_textures()) {
+                Dx11Texture& dx_tex = m_textures[tex_ID];
 
-                    if (Textures::get_changes(tex_ID) == Textures::Change::Destroyed &&
-                        dx_tex.sampler != nullptr) {
-                        safe_release(&dx_tex.sampler);
-                    } else if (Textures::get_changes(tex_ID) & Textures::Change::Created) {
-                        TextureND texture = tex_ID;
+                if (Textures::get_changes(tex_ID) == Textures::Change::Destroyed &&
+                    dx_tex.sampler != nullptr) {
+                    safe_release(&dx_tex.sampler);
+                } else if (Textures::get_changes(tex_ID) & Textures::Change::Created) {
+                    TextureND texture = tex_ID;
 
-                        static auto to_DX_filtermode = [](MagnificationFilter mag_filter, MinificationFilter min_filter) -> D3D11_FILTER {
-                            if (mag_filter == MagnificationFilter::None) {
-                                switch (min_filter) {
-                                case MinificationFilter::None:
-                                    return D3D11_FILTER_MIN_MAG_MIP_POINT;
-                                case MinificationFilter::Linear:
-                                    return D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT;
-                                case MinificationFilter::Trilinear:
-                                    return D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
-                                }
-                            } else { // mag_filter == MagnificationFilter::Linear
-                                switch (min_filter) {
-                                case MinificationFilter::None:
-                                    return D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
-                                case MinificationFilter::Linear:
-                                    return D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-                                case MinificationFilter::Trilinear:
-                                    return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-                                }
+                    static auto to_DX_filtermode = [](MagnificationFilter mag_filter, MinificationFilter min_filter) -> D3D11_FILTER {
+                        if (mag_filter == MagnificationFilter::None) {
+                            switch (min_filter) {
+                            case MinificationFilter::None:
+                                return D3D11_FILTER_MIN_MAG_MIP_POINT;
+                            case MinificationFilter::Linear:
+                                return D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT;
+                            case MinificationFilter::Trilinear:
+                                return D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
                             }
-                            return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-                        };
-
-                        static auto to_DX_wrapmode = [](WrapMode wm) -> D3D11_TEXTURE_ADDRESS_MODE {
-                            switch (wm) {
-                            case WrapMode::Clamp:
-                                return D3D11_TEXTURE_ADDRESS_CLAMP;
-                            case WrapMode::Repeat:
-                                return D3D11_TEXTURE_ADDRESS_WRAP;
+                        } else { // mag_filter == MagnificationFilter::Linear
+                            switch (min_filter) {
+                            case MinificationFilter::None:
+                                return D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
+                            case MinificationFilter::Linear:
+                                return D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+                            case MinificationFilter::Trilinear:
+                                return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
                             }
-                            return D3D11_TEXTURE_ADDRESS_MIRROR;
-                        };
+                        }
+                        return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+                    };
 
-                        D3D11_SAMPLER_DESC desc = {};
-                        desc.Filter = to_DX_filtermode(texture.get_magnification_filter(), texture.get_minification_filter());
-                        desc.AddressU = to_DX_wrapmode(texture.get_wrapmode_U());
-                        desc.AddressV = to_DX_wrapmode(texture.get_wrapmode_V());
-                        desc.AddressW = to_DX_wrapmode(texture.get_wrapmode_W());
-                        desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-                        desc.MinLOD = 0;
-                        desc.MaxLOD = D3D11_FLOAT32_MAX;
+                    static auto to_DX_wrapmode = [](WrapMode wm) -> D3D11_TEXTURE_ADDRESS_MODE {
+                        switch (wm) {
+                        case WrapMode::Clamp:
+                            return D3D11_TEXTURE_ADDRESS_CLAMP;
+                        case WrapMode::Repeat:
+                            return D3D11_TEXTURE_ADDRESS_WRAP;
+                        }
+                        return D3D11_TEXTURE_ADDRESS_MIRROR;
+                    };
 
-                        HRESULT hr = device.CreateSamplerState(&desc, &dx_tex.sampler);
-                        if (FAILED(hr))
-                            printf("Could not create the sampler.\n");
+                    D3D11_SAMPLER_DESC desc = {};
+                    desc.Filter = to_DX_filtermode(texture.get_magnification_filter(), texture.get_minification_filter());
+                    desc.AddressU = to_DX_wrapmode(texture.get_wrapmode_U());
+                    desc.AddressV = to_DX_wrapmode(texture.get_wrapmode_V());
+                    desc.AddressW = to_DX_wrapmode(texture.get_wrapmode_W());
+                    desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+                    desc.MinLOD = 0;
+                    desc.MaxLOD = D3D11_FLOAT32_MAX;
 
-                        dx_tex.image = &m_images[texture.get_image().get_ID()];
-                    }
+                    HRESULT hr = device.CreateSamplerState(&desc, &dx_tex.sampler);
+                    if (FAILED(hr))
+                        printf("Could not create the sampler.\n");
+
+                    dx_tex.image = &m_images[texture.get_image().get_ID()];
                 }
             }
         }
+    }
 }
 
 } // NS DX11Renderer
