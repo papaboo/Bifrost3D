@@ -20,6 +20,14 @@ namespace Cogwheel {
 namespace Assets {
 
 // ---------------------------------------------------------------------------
+// Cogwheel material flags.
+// ---------------------------------------------------------------------------
+enum class MaterialFlag : unsigned char {
+    None = 0u,
+    Cutout = 1u
+};
+
+// ---------------------------------------------------------------------------
 // Cogwheel material properties container.
 // ---------------------------------------------------------------------------
 class Materials final {
@@ -28,11 +36,7 @@ public:
     typedef UIDGenerator::UID UID;
     typedef UIDGenerator::ConstIterator ConstUIDIterator;
 
-    enum class Flag : unsigned char {
-        None = 0u,
-        Cutout = 1u
-    };
-    typedef Core::Bitmask<Flag> Flags;
+    typedef Core::Bitmask<MaterialFlag> Flags;
 
     struct Data {
         Math::RGB tint;

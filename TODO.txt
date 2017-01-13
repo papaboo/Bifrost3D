@@ -1,8 +1,9 @@
 * DX11 Renderer
+** Coverage
+*** Split pixel shader into opaque, cutout and transparent.
+*** Transparent models are (incrementally) re-sorted every frame.
+*** Disable Z write when rendering transparents.
 ** AO.
-** Fix seams in the environment
-** Win32: Core window size should reflect the backbuffer size, not the total window size. See getFullWindowSize in glfw. And also resize!
-** Coverage (eeew ew ew ew)
 * Kill off TODOs
 * Multiple cameras.
 ** G-Buffer pr camera.
@@ -12,9 +13,6 @@
 ** Half4 backbuffer in OptiXRenderer and render directly to a mapped DX resource.
 ** OptiX 4.0
 ** Verify that highest_area_light_index_updated in the OptiXRenderer behaves correctly.
-* Multiple cameras.
-** G-Buffer pr camera.
-** Compose when all cameras are done.
 * Screenshot
 ** Grab backbuffer on the CPU.
 *** Request to composer or through the camera, not renderers
@@ -40,7 +38,7 @@
 * Multiple scenes.
 ** Only nodes in a certain scene should be rendered.
 ** Should a scene node know if it is in a scene and in which? Store the root scene ID pr node?
-* STL and PLY loader.
+* 3DS, STL and PLY loader.
 * Serialize scene and models.
 
 libs
