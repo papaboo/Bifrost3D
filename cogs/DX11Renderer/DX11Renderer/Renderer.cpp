@@ -87,6 +87,8 @@ private:
     struct {
         int first_model_index = 0;
         ID3D11BlendState* blend_state;
+        ID3D11DepthStencilState* depth_state;
+        ID3D11PixelShader* shader;
     } m_transparent;
 
     // Constant buffer for a single material (single material for now!)
@@ -249,10 +251,11 @@ public:
             THROW_ON_FAILURE(hr);
 
             D3D11_DEPTH_STENCIL_DESC depth_desc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
+            depth_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
             hr = m_device->CreateDepthStencilState(&depth_desc, &m_opaque.depth_state);
             THROW_ON_FAILURE(hr);
 
-            ID3D10Blob* pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0");
+            ID3D10Blob* pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "opaque");
             hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_opaque.shader);
             THROW_ON_FAILURE(hr);
         }
@@ -282,6 +285,15 @@ public:
 
             HRESULT hr = m_device->CreateBlendState(&blend_desc, &m_transparent.blend_state);
             THROW_ON_FAILURE(hr);
+
+            D3D11_DEPTH_STENCIL_DESC depth_desc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
+            depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+            hr = m_device->CreateDepthStencilState(&depth_desc, &m_transparent.depth_state);
+            THROW_ON_FAILURE(hr);
+
+            ID3D10Blob* pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "transparent");
+            hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_transparent.shader);
+            THROW_ON_FAILURE(hr);
         }
 
         { // Material constant buffer.
@@ -310,8 +322,15 @@ public:
         m_vertex_shading.input_layout->Release();
         m_vertex_shading.shader->Release();
 
+        m_opaque.raster_state->Release();
         m_opaque.depth_state->Release();
         m_opaque.shader->Release();
+
+        m_cutout.raster_state->Release();
+
+        m_transparent.blend_state->Release();
+        m_transparent.depth_state->Release();
+        m_transparent.shader->Release();
 
         uniforms_buffer->Release();
 
@@ -400,8 +419,9 @@ public:
         m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 0);
         m_render_context->ClearDepthStencilView(m_depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-        // Opaque
+        // Opaque state setup.
         m_render_context->OMSetBlendState(0, 0, 0xffffffff);
+        m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 1);
         m_render_context->RSSetState(m_opaque.raster_state);
 
         { // Render environment.
@@ -433,8 +453,11 @@ public:
                 // Setup cutout and transparent states.
                 if (i == m_cutout.first_model_index || i == m_transparent.first_model_index)
                     m_render_context->RSSetState(m_cutout.raster_state);
-                if (i == m_transparent.first_model_index)
+                if (i == m_transparent.first_model_index) {
                     m_render_context->OMSetBlendState(m_transparent.blend_state, 0, 0xffffffff);
+                    m_render_context->OMSetDepthStencilState(m_transparent.depth_state, 1);
+                    m_render_context->PSSetShader(m_transparent.shader, 0, 0);
+                }
 
                 Dx11Model model = m_sorted_models[i];
                 assert(model.model_ID != 0);

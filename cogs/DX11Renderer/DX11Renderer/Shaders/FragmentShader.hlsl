@@ -31,12 +31,7 @@ struct PixelInput {
     float2 texcoord : TEXCOORD;
 };
 
-float4 main(PixelInput input) : SV_TARGET {
-    // NOTE There may be a performance cost associated with having a potential discard, so we should probably have a separate pixel shader for cutouts.
-    float coverage = material.coverage(input.texcoord);
-    if (coverage < 0.33f)
-        discard;
-
+float3 integration(PixelInput input) {
     float3 normal = normalize(input.normal.xyz);
     float3x3 world_to_shading_tbn = create_tbn(normal);
 
@@ -53,5 +48,20 @@ float4 main(PixelInput input) : SV_TARGET {
         radiance += f * light_sample.radiance * abs(wi.z);
     }
 
-    return float4(radiance, coverage);
+    return radiance;
+}
+
+float4 opaque(PixelInput input) : SV_TARGET{
+    // NOTE There may be a performance cost associated with having a potential discard, so we should probably have a separate pixel shader for cutouts.
+    float coverage = material.coverage(input.texcoord);
+    if (coverage < 0.33f)
+        discard;
+
+    return float4(integration(input), 1.0f);
+}
+
+float4 transparent(PixelInput input) : SV_TARGET{
+    // NOTE There may be a performance cost associated with having a potential discard, so we should probably have a separate pixel shader for cutouts.
+    float coverage = material.coverage(input.texcoord);
+    return float4(integration(input), coverage);
 }
