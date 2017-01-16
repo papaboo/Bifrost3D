@@ -27,6 +27,8 @@ namespace DX11Renderer {
 // DirectX 11 renderer.
 // TODO
 // * DirectX 11.1 context.
+// * SSAO
+// * HDR backbuffer.
 // * Proper IBL. Scale the IBL lookup by the diffuse and glossy rho. 
 //   Requires actually approximating the glossy rho first (and maybe Burley rho as well.)
 // * Material manager. Store all materials in one constant buffer and offset it when binding, 
