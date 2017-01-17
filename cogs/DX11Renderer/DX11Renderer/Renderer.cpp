@@ -84,11 +84,17 @@ private:
         ID3D11RasterizerState* raster_state;
     } m_cutout;
 
-    struct {
+    struct Transparent {
+        struct SortedModel {
+            float distance;
+            int model_index;
+        };
+
         int first_model_index = 0;
         ID3D11BlendState* blend_state;
         ID3D11DepthStencilState* depth_state;
         ID3D11PixelShader* shader;
+        std::vector<SortedModel> sorted_models_pool; // List of sorted transparent models. Created as a pool to minimize runtime memory allocation.
     } m_transparent;
 
     // Constant buffer for a single material (single material for now!)
@@ -342,6 +348,51 @@ public:
         }
     }
 
+    void render_model(ID3D11DeviceContext* context, Dx11Model model, Cameras::UID camera_ID) {
+        Dx11Mesh mesh = m_meshes[model.mesh_ID];
+
+        { // Set the buffers.
+            if (mesh.index_count != 0)
+                context->IASetIndexBuffer(mesh.indices, DXGI_FORMAT_R32_UINT, 0);
+
+            context->IASetVertexBuffers(0, mesh.buffer_count, mesh.buffers, mesh.strides, mesh.offsets);
+        }
+
+        {
+            Uniforms uniforms;
+            uniforms.mvp_matrix = Cameras::get_view_projection_matrix(camera_ID) * to_matrix4x4(m_transforms[model.transform_ID]);
+            uniforms.to_world_matrix = to_matrix4x3(m_transforms[model.transform_ID]);
+            uniforms.camera_position = Vector4f(Cameras::get_transform(camera_ID).translation, 1.0f);
+            context->UpdateSubresource(uniforms_buffer, 0, NULL, &uniforms, 0, 0);
+            context->VSSetConstantBuffers(0, 1, &uniforms_buffer);
+            context->PSSetConstantBuffers(0, 1, &uniforms_buffer);
+        }
+
+        { // Material parameters
+
+          // Update constant buffer.
+            context->UpdateSubresource(material_buffer, 0, NULL, &m_materials[model.material_ID], 0, 0);
+            context->PSSetConstantBuffers(2, 1, &material_buffer);
+
+            Dx11Texture colorTexture = m_textures.get_texture(m_materials[model.material_ID].tint_texture_index);
+            if (colorTexture.sampler != nullptr) {
+                context->PSSetShaderResources(1, 1, &colorTexture.image->srv);
+                context->PSSetSamplers(1, 1, &colorTexture.sampler);
+            }
+
+            Dx11Texture coverateTexture = m_textures.get_texture(m_materials[model.material_ID].coverage_texture_index);
+            if (coverateTexture.sampler != nullptr) {
+                context->PSSetShaderResources(2, 1, &coverateTexture.image->srv);
+                context->PSSetSamplers(2, 1, &coverateTexture.sampler);
+            }
+        }
+
+        if (mesh.index_count != 0)
+            context->DrawIndexed(mesh.index_count, 0, 0);
+        else
+            context->Draw(mesh.vertex_count, 0);
+    } 
+    
     void render(const Cogwheel::Core::Engine& engine) {
         if (Cameras::begin() == Cameras::end())
             return;
@@ -438,6 +489,9 @@ public:
         }
 
         { // Render models.
+            // TODO Isn't it just as fast to upload the model_view matrix and apply the projection matrix in the shader? 
+            //      We need the world position anyway.
+
             // Bind light buffer.
             m_render_context->PSSetConstantBuffers(1, 1, m_lights.light_buffer_addr());
 
@@ -448,61 +502,57 @@ public:
             m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
             m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-            for (int i = 1; i < m_sorted_models.size(); ++i) {
+            for (int i = 1; i < m_transparent.first_model_index; ++i) {
 
-                // Setup cutout and transparent states.
-                if (i == m_cutout.first_model_index || i == m_transparent.first_model_index)
+                // Setup twosided raster state for cutout materials.
+                if (i == m_cutout.first_model_index)
                     m_render_context->RSSetState(m_cutout.raster_state);
-                if (i == m_transparent.first_model_index) {
-                    m_render_context->OMSetBlendState(m_transparent.blend_state, 0, 0xffffffff);
-                    m_render_context->OMSetDepthStencilState(m_transparent.depth_state, 1);
-                    m_render_context->PSSetShader(m_transparent.shader, 0, 0);
-                }
 
                 Dx11Model model = m_sorted_models[i];
                 assert(model.model_ID != 0);
-                Dx11Mesh mesh = m_meshes[model.mesh_ID];
+                render_model(m_render_context, model, camera_ID);
+            }
 
-                { // Set the buffers.
-                    if (mesh.index_count != 0)
-                        m_render_context->IASetIndexBuffer(mesh.indices, DXGI_FORMAT_R32_UINT, 0);
+            { // Render transparent models
 
-                    m_render_context->IASetVertexBuffers(0, mesh.buffer_count, mesh.buffers, mesh.strides, mesh.offsets);
-                }
+                // Apply used cutout state if not already applied.
+                bool no_cutouts_present = m_cutout.first_model_index > m_transparent.first_model_index;
+                if (no_cutouts_present)
+                    m_render_context->RSSetState(m_cutout.raster_state);
 
-                {
-                    Uniforms uniforms;
-                    uniforms.mvp_matrix = Cameras::get_view_projection_matrix(camera_ID) * to_matrix4x4(m_transforms[model.transform_ID]);
-                    uniforms.to_world_matrix = to_matrix4x3(m_transforms[model.transform_ID]);
-                    uniforms.camera_position = Vector4f(Cameras::get_transform(camera_ID).translation, 1.0f);
-                    m_render_context->UpdateSubresource(uniforms_buffer, 0, NULL, &uniforms, 0, 0);
-                    m_render_context->VSSetConstantBuffers(0, 1, &uniforms_buffer);
-                    m_render_context->PSSetConstantBuffers(0, 1, &uniforms_buffer);
-                }
+                // Set transparent state.
+                m_render_context->OMSetBlendState(m_transparent.blend_state, 0, 0xffffffff);
+                m_render_context->OMSetDepthStencilState(m_transparent.depth_state, 1);
+                m_render_context->PSSetShader(m_transparent.shader, 0, 0);
 
-                { // Material parameters
+                int transparent_model_count = int(m_sorted_models.size()) - m_transparent.first_model_index;
+                auto transparent_models = m_transparent.sorted_models_pool; // Alias the pool.
+                transparent_models.resize(transparent_model_count);
 
-                    // Update constant buffer.
-                    m_render_context->UpdateSubresource(material_buffer, 0, NULL, &m_materials[model.material_ID], 0, 0);
-                    m_render_context->PSSetConstantBuffers(2, 1, &material_buffer);
-
-                    Dx11Texture colorTexture = m_textures.get_texture(m_materials[model.material_ID].tint_texture_index);
-                    if (colorTexture.sampler != nullptr) {
-                        m_render_context->PSSetShaderResources(1, 1, &colorTexture.image->srv);
-                        m_render_context->PSSetSamplers(1, 1, &colorTexture.sampler);
+                { // Sort transparent models. TODO in a separate thread that is waited on when we get to the transparent render index.
+                    Vector3f cam_pos = Cameras::get_transform(camera_ID).translation;
+                    for (int i = 0; i < transparent_model_count; ++i) {
+                        // Calculate the distance to point halfway between the models center and side of the bounding box.
+                        int model_index = i + m_transparent.first_model_index;
+                        Dx11Mesh& mesh = m_meshes[m_sorted_models[model_index].mesh_ID];
+                        Transform transform = m_transforms[m_sorted_models[model_index].transform_ID];
+                        Cogwheel::Math::AABB bounds = { Vector3f(mesh.bounds.min.x, mesh.bounds.min.y, mesh.bounds.min.z),
+                                                        Vector3f(mesh.bounds.max.x, mesh.bounds.max.y, mesh.bounds.max.z) };
+                        float distance_to_cam = alpha_sort_value(cam_pos, transform, bounds);
+                        transparent_models[i] = { distance_to_cam, model_index};
                     }
 
-                    Dx11Texture coverateTexture = m_textures.get_texture(m_materials[model.material_ID].coverage_texture_index);
-                    if (coverateTexture.sampler != nullptr) {
-                        m_render_context->PSSetShaderResources(2, 1, &coverateTexture.image->srv);
-                        m_render_context->PSSetSamplers(2, 1, &coverateTexture.sampler);
-                    }
+                    std::sort(transparent_models.begin(), transparent_models.end(), 
+                        [](Transparent::SortedModel lhs, Transparent::SortedModel rhs) -> bool {
+                            return lhs.distance < rhs.distance;
+                    });
                 }
 
-                if (mesh.index_count != 0)
-                    m_render_context->DrawIndexed(mesh.index_count, 0, 0);
-                else
-                    m_render_context->Draw(mesh.vertex_count, 0);
+                for (auto transparent_model : transparent_models) {
+                    Dx11Model model = m_sorted_models[transparent_model.model_index];
+                    assert(model.model_ID != 0);
+                    render_model(m_render_context, model, camera_ID);
+                }
             }
         }
 
@@ -525,6 +575,7 @@ public:
     // Sort the models in the order [dummy, opaque, cutout, transparent, destroyed].
     // The new position/index of the model is stored in model_index.
     // Incidently also compacts the list of models by removing any deleted models.
+    // TODO Move down to where models are updated.
     void sort_and_compact_models(vector<Dx11Model>& models_to_be_sorted, vector<int>& model_index) {
 
         // The models to be sorted starts at index 1, because the first model is a dummy model.
@@ -609,6 +660,9 @@ public:
                 if (Meshes::get_changes(mesh_ID).is_set(Meshes::Change::Created)) {
                     Cogwheel::Assets::Mesh mesh = mesh_ID;
                     Dx11Mesh dx_mesh = {};
+
+                    Cogwheel::Math::AABB bounds = mesh.get_bounds();
+                    dx_mesh.bounds = { make_float3(bounds.minimum), make_float3(bounds.maximum) };
 
                     { // Setup strides and offsets for the buffers. TODO Make this static??
                         dx_mesh.strides[0] = sizeof(float) * 3;

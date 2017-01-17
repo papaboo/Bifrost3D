@@ -1,9 +1,3 @@
-* DX11 Renderer
-** Coverage
-*** Split pixel shader into opaque, cutout and transparent.
-*** Transparent models are (incrementally) re-sorted every frame.
-*** Disable Z write when rendering transparents.
-** AO.
 * Kill off TODOs
 * Multiple cameras.
 ** G-Buffer pr camera.

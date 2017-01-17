@@ -11,6 +11,12 @@
 
 #include <DX11Renderer/Types.h>
 
+#include <Cogwheel/Math/AABB.h>
+#include <Cogwheel/Math/Ray.h>
+#include <Cogwheel/Math/Transform.h>
+#include <Cogwheel/Math/Vector.h>
+#include <Cogwheel/Math/Utils.h>
+
 #include <string>
 
 #define NOMINMAX
@@ -80,6 +86,19 @@ inline HRESULT create_constant_buffer(ID3D11Device& device, int byte_width, ID3D
     uniforms_desc.MiscFlags = 0;
 
     return device.CreateBuffer(&uniforms_desc, NULL, constant_buffer);
+}
+
+inline float3 make_float3(Cogwheel::Math::Vector3f v) {
+    float3 r = { v.x, v.y, v.z};
+    return r;
+}
+
+inline float alpha_sort_value(Cogwheel::Math::Vector3f camera_pos, Cogwheel::Math::Transform transform, Cogwheel::Math::AABB bounds) {
+    using namespace Cogwheel;
+    using namespace Cogwheel::Math;
+
+    Vector3f center = transform.inverse() * bounds.center();
+    return squared_magnitude(camera_pos - center);
 }
 
 } // NS DX11Renderer

@@ -40,6 +40,11 @@ struct float4 {
     float x; float y; float z;  float w;
 };
 
+struct AABB {
+    float3 min;
+    float3 max;
+};
+
 //----------------------------------------------------------------------------
 // Model structs.
 //----------------------------------------------------------------------------
@@ -74,6 +79,8 @@ struct Dx11Mesh {
     unsigned int strides[3];
     unsigned int offsets[3];
     int buffer_count;
+
+    AABB bounds;
 
     ID3D11Buffer* positions() { return buffers[0]; }
     ID3D11Buffer** positions_address() { return buffers; }
