@@ -29,7 +29,7 @@ namespace DX11Renderer {
 //----------------------------------------------------------------------------
 
 struct float2 {
-    float x; float y; float z;
+    float x; float y;
 };
 
 struct float3 {
@@ -76,8 +76,6 @@ struct Dx11Mesh {
     ID3D11Buffer* indices;
 
     ID3D11Buffer* buffers[3]; // [positions, normals, texcoords]
-    unsigned int strides[3];
-    unsigned int offsets[3];
     int buffer_count;
 
     AABB bounds;

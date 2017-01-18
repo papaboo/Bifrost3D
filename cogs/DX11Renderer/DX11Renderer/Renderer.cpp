@@ -355,7 +355,12 @@ public:
             if (mesh.index_count != 0)
                 context->IASetIndexBuffer(mesh.indices, DXGI_FORMAT_R32_UINT, 0);
 
-            context->IASetVertexBuffers(0, mesh.buffer_count, mesh.buffers, mesh.strides, mesh.offsets);
+            // Setup strides and offsets for the buffers.
+            // Layout is [positions, normals, texcoords].
+            static unsigned int strides[3] = { sizeof(float3), sizeof(float3), sizeof(float2) };
+            static unsigned int offsets[3] = { 0, 0, 0 };
+            
+            context->IASetVertexBuffers(0, mesh.buffer_count, mesh.buffers, strides, offsets);
         }
 
         {
@@ -663,15 +668,6 @@ public:
 
                     Cogwheel::Math::AABB bounds = mesh.get_bounds();
                     dx_mesh.bounds = { make_float3(bounds.minimum), make_float3(bounds.maximum) };
-
-                    { // Setup strides and offsets for the buffers. TODO Make this static??
-                        dx_mesh.strides[0] = sizeof(float) * 3;
-                        dx_mesh.offsets[0] = 0;
-                        dx_mesh.strides[1] = sizeof(float) * 3;
-                        dx_mesh.offsets[1] = 0;
-                        dx_mesh.strides[2] = sizeof(float) * 2;
-                        dx_mesh.offsets[2] = 0;
-                    }
 
                     // Expand the indexed buffers if an index buffer is used, but no normals are given.
                     // In that case we need to compute hard normals per triangle and we can only store that for non-indexed buffers.
