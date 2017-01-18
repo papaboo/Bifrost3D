@@ -46,6 +46,7 @@ using namespace optix;
 
 namespace OptiXRenderer {
 
+// TODO Add all methods on the state to avoid writting m_state-> whenever I want to access a member.
 struct Renderer::State {
     uint2 screensize;
     optix::Context context;
@@ -88,8 +89,8 @@ struct Renderer::State {
     } lights;
 };
 
-static inline std::string get_ptx_path(std::string shader_filename) {
-    return std::string(OPTIXRENDERER_PTX_DIR) + "/OptiXRenderer_generated_" + shader_filename + ".cu.ptx";
+static inline std::string get_ptx_path(const std::string& shader_prefix, const std::string& shader_filename) {
+    return shader_prefix + shader_filename + ".cu.ptx";
 }
 
 //----------------------------------------------------------------------------
@@ -237,6 +238,8 @@ Renderer::Renderer(const Cogwheel::Core::Window& window)
 
     context["g_frame_number"]->setFloat(0.0f);
 
+    std::string shader_prefix = Engine::get_instance()->data_path() + "OptiXRenderer\\ptx\\OptiXRenderer_generated_";
+
     { // Setup scene
         optix::Acceleration root_acceleration = context->createAcceleration("Bvh", "Bvh");
         root_acceleration->setProperty("refit", "1");
@@ -261,7 +264,7 @@ Renderer::Renderer(const Cogwheel::Core::Window& window)
         
         // Analytical area light geometry.
         m_state->lights.area_lights_geometry = context->createGeometry();
-        std::string light_intersection_ptx_path = get_ptx_path("LightSources");
+        std::string light_intersection_ptx_path = get_ptx_path(shader_prefix, "LightSources");
         m_state->lights.area_lights_geometry->setIntersectionProgram(context->createProgramFromPTXFile(light_intersection_ptx_path, "intersect"));
         m_state->lights.area_lights_geometry->setBoundingBoxProgram(context->createProgramFromPTXFile(light_intersection_ptx_path, "bounds"));
         m_state->lights.area_lights_geometry->setPrimitiveCount(0u);
@@ -269,9 +272,9 @@ Renderer::Renderer(const Cogwheel::Core::Window& window)
 
         // Analytical area light material.
         optix::Material material = context->createMaterial();
-        std::string monte_carlo_ptx_path = get_ptx_path("MonteCarlo");
+        std::string monte_carlo_ptx_path = get_ptx_path(shader_prefix, "MonteCarlo");
         material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "light_closest_hit"));
-        std::string normal_vis_ptx_path = get_ptx_path("NormalRendering");
+        std::string normal_vis_ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
         material->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
         OPTIX_VALIDATE(material);
 
@@ -327,17 +330,17 @@ Renderer::Renderer(const Cogwheel::Core::Window& window)
     { // Setup default material.
         m_state->default_material = context->createMaterial();
 
-        std::string monte_carlo_ptx_path = get_ptx_path("MonteCarlo");
+        std::string monte_carlo_ptx_path = get_ptx_path(shader_prefix, "MonteCarlo");
         m_state->default_material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
         m_state->default_material->setAnyHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "monte_carlo_any_hit"));
         m_state->default_material->setAnyHitProgram(int(RayTypes::Shadow), context->createProgramFromPTXFile(monte_carlo_ptx_path, "shadow_any_hit"));
 
-        std::string normal_vis_ptx_path = get_ptx_path("NormalRendering");
+        std::string normal_vis_ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
         m_state->default_material->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
 
         OPTIX_VALIDATE(m_state->default_material);
 
-        std::string trangle_intersection_ptx_path = get_ptx_path("IntersectTriangle");
+        std::string trangle_intersection_ptx_path = get_ptx_path(shader_prefix, "IntersectTriangle");
         m_state->triangle_intersection_program = context->createProgramFromPTXFile(trangle_intersection_ptx_path, "intersect");
         m_state->triangle_bounds_program = context->createProgramFromPTXFile(trangle_intersection_ptx_path, "bounds");
 
@@ -379,7 +382,7 @@ Renderer::Renderer(const Cogwheel::Core::Window& window)
     }
 
     { // Path tracing setup.
-        std::string rgp_ptx_path = get_ptx_path("PathTracing");
+        std::string rgp_ptx_path = get_ptx_path(shader_prefix, "PathTracing");
         context->setRayGenerationProgram(int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "path_tracing"));
         context->setMissProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(rgp_ptx_path, "miss"));
 #ifdef ENABLE_OPTIX_DEBUG
@@ -390,7 +393,7 @@ Renderer::Renderer(const Cogwheel::Core::Window& window)
     }
 
     { // Normal visualization setup.
-        std::string ptx_path = get_ptx_path("NormalRendering");
+        std::string ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
         context->setRayGenerationProgram(int(EntryPoints::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "ray_generation"));
         context->setMissProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "miss"));
     }
