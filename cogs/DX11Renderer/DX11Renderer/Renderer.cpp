@@ -577,48 +577,6 @@ public:
         return m_device->CreateBuffer(&desc, &resource_data, buffer);
     }
 
-    // Sort the models in the order [dummy, opaque, cutout, transparent, destroyed].
-    // The new position/index of the model is stored in model_index.
-    // Incidently also compacts the list of models by removing any deleted models.
-    // TODO Move down to where models are updated.
-    void sort_and_compact_models(vector<Dx11Model>& models_to_be_sorted, vector<int>& model_index) {
-
-        // The models to be sorted starts at index 1, because the first model is a dummy model.
-        std::sort(models_to_be_sorted.begin() + 1, models_to_be_sorted.end(), 
-            [](Dx11Model lhs, Dx11Model rhs) -> bool {
-                return lhs.properties < rhs.properties;
-        });
-
-        { // Register the models new position and find the transition between model buckets.
-            int sorted_models_end = m_cutout.first_model_index = m_transparent.first_model_index =
-                (int)models_to_be_sorted.size();
-
-            #pragma omp parallel for
-            for (int i = 1; i < models_to_be_sorted.size(); ++i) {
-                Dx11Model& model = models_to_be_sorted[i];
-                model_index[model.model_ID] = i;
-
-                Dx11Model& prevModel = models_to_be_sorted[i-1];
-                if (prevModel.properties != model.properties) {
-                    if (!prevModel.is_cutout() && model.is_cutout())
-                        m_cutout.first_model_index = i;
-                    if (!prevModel.is_transparent() && model.is_transparent())
-                        m_transparent.first_model_index = i;
-                    if (!prevModel.is_destroyed() && model.is_destroyed())
-                        sorted_models_end = i;
-                }
-            }
-
-            // Correct indices in case no bucket transition was found.
-            if (m_transparent.first_model_index > sorted_models_end)
-                m_transparent.first_model_index = sorted_models_end;
-            if (m_cutout.first_model_index > m_transparent.first_model_index)
-                m_cutout.first_model_index = m_transparent.first_model_index;
-
-            models_to_be_sorted.resize(sorted_models_end);
-        }
-    }
-
     void handle_updates() {
         m_lights.handle_updates(*m_render_context);
         m_textures.handle_updates(*m_device, *m_render_context);
@@ -748,8 +706,6 @@ public:
         }
 
         { // Transform updates.
-            // TODO We're only interested in changes to the transforms that are connected to renderables, such as meshes.
-            bool important_transform_changed = false;
             for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
                 if (SceneNodes::get_changes(node_ID).any_set(SceneNodes::Change::Created, SceneNodes::Change::Transform)) {
 
@@ -804,7 +760,46 @@ public:
                     }
                 }
 
-                sort_and_compact_models(m_sorted_models, m_model_index);
+                // Sort the models in the order [dummy, opaque, cutout, transparent, destroyed].
+                // The new position/index of the model is stored in model_index.
+                // Incidently also compacts the list of models by removing any deleted models.
+                {
+
+                    // The models to be sorted starts at index 1, because the first model is a dummy model.
+                    std::sort(m_sorted_models.begin() + 1, m_sorted_models.end(),
+                        [](Dx11Model lhs, Dx11Model rhs) -> bool {
+                        return lhs.properties < rhs.properties;
+                    });
+
+                    { // Register the models new position and find the transition between model buckets.
+                        int sorted_models_end = m_cutout.first_model_index = m_transparent.first_model_index =
+                            (int)m_sorted_models.size();
+
+                        #pragma omp parallel for
+                        for (int i = 1; i < m_sorted_models.size(); ++i) {
+                            Dx11Model& model = m_sorted_models[i];
+                            m_model_index[model.model_ID] = i;
+
+                            Dx11Model& prevModel = m_sorted_models[i - 1];
+                            if (prevModel.properties != model.properties) {
+                                if (!prevModel.is_cutout() && model.is_cutout())
+                                    m_cutout.first_model_index = i;
+                                if (!prevModel.is_transparent() && model.is_transparent())
+                                    m_transparent.first_model_index = i;
+                                if (!prevModel.is_destroyed() && model.is_destroyed())
+                                    sorted_models_end = i;
+                            }
+                        }
+
+                        // Correct indices in case no bucket transition was found.
+                        if (m_transparent.first_model_index > sorted_models_end)
+                            m_transparent.first_model_index = sorted_models_end;
+                        if (m_cutout.first_model_index > m_transparent.first_model_index)
+                            m_cutout.first_model_index = m_transparent.first_model_index;
+
+                        m_sorted_models.resize(sorted_models_end);
+                    }
+                }
             }
         }
     }
