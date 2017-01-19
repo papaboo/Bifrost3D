@@ -34,6 +34,7 @@
 
 #include <cstdio>
 #include <iostream>
+#include <io.h>
 
 using namespace Cogwheel::Assets;
 using namespace Cogwheel::Core;
@@ -191,12 +192,38 @@ static inline void update_FPS(Engine& engine, void*) {
     engine.get_window().set_name(title.str().c_str());
 }
 
+Images::UID load_image(const std::string& path) {
+    const int read_only_flag = 4;
+    if (_access(path.c_str(), read_only_flag) >= 0)
+        return StbImageLoader::load(path);
+    std::string new_path = path;
+
+    // Test tga.
+    new_path[path.size() - 3] = 't'; new_path[path.size() - 2] = 'g'; new_path[path.size() - 1] = 'a';
+    if (_access(new_path.c_str(), read_only_flag) >= 0)
+        return StbImageLoader::load(new_path);
+
+    // Test png.
+    new_path[path.size() - 3] = 'p'; new_path[path.size() - 2] = 'n'; new_path[path.size() - 1] = 'g';
+    if (_access(new_path.c_str(), read_only_flag) >= 0)
+        return StbImageLoader::load(new_path);
+
+    // Test jpg.
+    new_path[path.size() - 3] = 'j'; new_path[path.size() - 2] = 'p'; new_path[path.size() - 1] = 'g';
+    if (_access(new_path.c_str(), read_only_flag) >= 0)
+        return StbImageLoader::load(new_path);
+
+    // No dice. Report error and return an invalid ID.
+    printf("No image found at ''\n", path.c_str());
+    return Images::UID::invalid_UID();
+}
+
 // Merges all nodes in the scene sharing the same material and destroys all other nodes.
 // Future work
-// * Only combine meshes within some max distance of each other, fx the diameter of their bounds.
+// * Only combine meshes within some max distance to each other, fx the diameter of their bounds.
 //   This avoids their bounding boxes containing mostly empty space and messing up ray tracing, 
 //   which would be the case if two models on opposite sides of the scene were to be combined.
-//   Profile if it makes a difference or if OptiX doesn't care.
+//   It also avoids combining leafs on a tree acros the entire scene.
 void mesh_combine_whole_scene(SceneNodes::UID scene_root) {
 
     // Asserts of properties used when combining UIDs and mesh flags in one uint key.
@@ -357,7 +384,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
     else if (g_scene.compare("TestScene") == 0)
         create_test_scene(engine, cam_ID, root_node_ID);
     else {
-        SceneNodes::UID obj_root_ID = ObjLoader::load(g_scene, StbImageLoader::load);
+        SceneNodes::UID obj_root_ID = ObjLoader::load(g_scene, load_image);
         SceneNodes::set_parent(obj_root_ID, root_node_ID);
         mesh_combine_whole_scene(root_node_ID);
         load_model_from_file = true;
