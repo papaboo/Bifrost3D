@@ -9,11 +9,8 @@
 #ifndef _DX11RENDERER_RENDERER_LIGHT_MANAGER_H_
 #define _DX11RENDERER_RENDERER_LIGHT_MANAGER_H_
 
-#define NOMINMAX
-#include <D3D11.h>
-#undef RGB
-
 #include "Dx11Renderer/Types.h"
+#include "Dx11Renderer/Utils.h"
 
 #include "Cogwheel/Core/Array.h"
 #include "Cogwheel/Scene/LightSource.h"
@@ -99,6 +96,10 @@ public:
         uniforms_desc.MiscFlags = 0;
 
         HRESULT hr = device.CreateBuffer(&uniforms_desc, NULL, &m_lights_buffer);
+    }
+
+    void release() {
+        safe_release(&m_lights_buffer);
     }
 
     inline ID3D11Buffer* light_buffer() {

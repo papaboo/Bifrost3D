@@ -73,6 +73,21 @@ TextureManager::TextureManager(ID3D11Device& device) {
     m_white_texture = create_color_texture(device, white);
 }
 
+void TextureManager::release() {
+    printf("bye bye tex man\n");
+    safe_release(&m_white_texture.sampler);
+    safe_release(&m_white_texture.srv);
+    safe_release(&m_white_texture.texture2D);
+
+    for (Dx11Image image : m_images) {
+        safe_release(&image.srv);
+        safe_release(&image.texture2D);
+    }
+
+    for (Dx11Texture tex : m_textures)
+        safe_release(&tex.sampler);
+}
+
 void TextureManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& device_context) {
     { // Image updates.
         if (!Images::get_changed_images().is_empty()) {

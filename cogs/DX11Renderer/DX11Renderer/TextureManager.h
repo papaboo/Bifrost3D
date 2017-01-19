@@ -40,6 +40,7 @@ public:
 
     TextureManager() {}
     TextureManager(ID3D11Device& device);
+    void release();
 
     inline const DefaultTexture& white_texture() { return m_white_texture; }
 

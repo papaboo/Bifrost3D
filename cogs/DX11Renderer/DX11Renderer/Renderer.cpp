@@ -325,20 +325,22 @@ public:
         safe_release(&m_depth_buffer);
         safe_release(&m_depth_view);
 
-        m_vertex_shading.input_layout->Release();
-        m_vertex_shading.shader->Release();
+        safe_release(&m_vertex_shading.input_layout);
+        safe_release(&m_vertex_shading.null_buffer);
+        safe_release(&m_vertex_shading.shader);
 
-        m_opaque.raster_state->Release();
-        m_opaque.depth_state->Release();
-        m_opaque.shader->Release();
+        safe_release(&m_opaque.depth_state);
+        safe_release(&m_opaque.raster_state);
+        safe_release(&m_opaque.shader);
 
-        m_cutout.raster_state->Release();
+        safe_release(&m_cutout.raster_state);
 
-        m_transparent.blend_state->Release();
-        m_transparent.depth_state->Release();
-        m_transparent.shader->Release();
+        safe_release(&m_transparent.blend_state);
+        safe_release(&m_transparent.depth_state);
+        safe_release(&m_transparent.shader);
 
-        uniforms_buffer->Release();
+        safe_release(&uniforms_buffer);
+        safe_release(&material_buffer);
 
         for (Dx11Mesh mesh : m_meshes) {
             safe_release(&mesh.indices);
@@ -346,6 +348,10 @@ public:
             safe_release(mesh.normals_address());
             safe_release(mesh.texcoords_address());
         }
+        
+        m_textures.release();
+        m_lights.release();
+        delete m_environments;
     }
 
     void render_model(ID3D11DeviceContext* context, Dx11Model model, Cameras::UID camera_ID) {
