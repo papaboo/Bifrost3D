@@ -198,7 +198,7 @@ public:
         { // Setup backbuffer.
             m_backbuffer_size = Vector2ui::zero();
 
-            // Get and set render target. // TODO How is resizing of the color buffer handled?
+            // Get and set render target.
             ID3D11Texture2D* backbuffer;
             HRESULT hr = m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&backbuffer));
             THROW_ON_FAILURE(hr);

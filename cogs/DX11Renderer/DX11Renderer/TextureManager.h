@@ -18,8 +18,7 @@ namespace DX11Renderer {
 //----------------------------------------------------------------------------
 // Texture manager.
 // Uploads and manages all images and textures.
-// TODO
-// * Mipmap support.
+// Future work:
 // * Non SRGB texture support.
 //----------------------------------------------------------------------------
 class TextureManager {
