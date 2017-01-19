@@ -12,10 +12,6 @@
 #include <Cogwheel/Assets/Image.h>
 #include <Cogwheel/Assets/Texture.h>
 
-#define NOMINMAX
-#include <D3D11.h>
-#undef RGB
-
 using namespace Cogwheel::Assets;
 
 namespace DX11Renderer {

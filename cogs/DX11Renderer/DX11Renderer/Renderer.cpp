@@ -14,7 +14,7 @@
 #include <DX11Renderer/Utils.h>
 
 #define NOMINMAX
-#include <D3D11.h>
+#include <D3D11_1.h>
 #include <D3DCompiler.h>
 #undef RGB
 
@@ -43,11 +43,9 @@ namespace DX11Renderer {
 //----------------------------------------------------------------------------
 class Renderer::Implementation {
 private:
-    ID3D11Device* m_device;
-
+    ID3D11Device1* m_device;
+    ID3D11DeviceContext1* m_render_context; // Is this the same as the immediate context?
     IDXGISwapChain* m_swap_chain;
-
-    ID3D11DeviceContext* m_render_context; // Is this the same as the immediate context?
 
     // Backbuffer members.
     Vector2ui m_backbuffer_size;
@@ -168,16 +166,27 @@ public:
                 for (WeightedAdapter a : sorted_adapters) {
                     dxgi_factory->EnumAdapters1(a.index, &adapter);
 
-                    // TODO Use DX 11.1. See https://blogs.msdn.microsoft.com/chuckw/2014/02/05/anatomy-of-direct3d-11-create-device/
+                    D3D_FEATURE_LEVEL feature_level_requested = D3D_FEATURE_LEVEL_11_1;
+
+                    ID3D11Device* device;
                     D3D_FEATURE_LEVEL feature_level;
-                    HRESULT hr = D3D11CreateDeviceAndSwapChain(adapter, D3D_DRIVER_TYPE_UNKNOWN, nullptr, 0, nullptr, 0,
-                        D3D11_SDK_VERSION, &swap_chain_desc, &m_swap_chain, &m_device, &feature_level, &m_render_context);
+                    ID3D11DeviceContext* render_context;
+                    hr = D3D11CreateDeviceAndSwapChain(adapter, D3D_DRIVER_TYPE_UNKNOWN, nullptr, 0, &feature_level_requested, 1,
+                        D3D11_SDK_VERSION, &swap_chain_desc, &m_swap_chain, &device, &feature_level, &render_context);
                     if (SUCCEEDED(hr)) {
-                        DXGI_ADAPTER_DESC adapter_description;
-                        adapter->GetDesc(&adapter_description);
-                        std::string readable_feature_level = feature_level == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "11.1";
-                        printf("DX11Renderer using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level.c_str());
-                        break;
+
+                        HRESULT device_hr = device->QueryInterface(IID_PPV_ARGS(&m_device));
+                        device->Release();
+                        HRESULT render_context_hr = render_context->QueryInterface(IID_PPV_ARGS(&m_render_context));
+                        render_context->Release();
+                        if (SUCCEEDED(device_hr) && SUCCEEDED(render_context_hr)) {
+
+                            DXGI_ADAPTER_DESC adapter_description;
+                            adapter->GetDesc(&adapter_description);
+                            std::string readable_feature_level = feature_level == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "11.1";
+                            printf("DX11Renderer using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level.c_str());
+                            break;
+                        }
                     }
                 }
                 dxgi_factory->Release();

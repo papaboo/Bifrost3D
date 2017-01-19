@@ -20,7 +20,7 @@
 #include <string>
 
 #define NOMINMAX
-#include <D3D11.h>
+#include <D3D11_1.h>
 #include <D3DCompiler.h>
 #undef RGB
 
