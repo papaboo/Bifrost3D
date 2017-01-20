@@ -58,7 +58,7 @@ private:
     vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
     vector<Transform> m_transforms = vector<Transform>(0);
 
-    vector<int> m_model_index = vector<int>(0); // The models index in the sorted models array.
+    vector<int> m_model_indices = vector<int>(0); // The models index in the sorted models array.
     vector<Dx11Model> m_sorted_models = vector<Dx11Model>(0);
 
     LightManager m_lights;
@@ -223,8 +223,8 @@ public:
         { // Setup asset managing.
             Dx11Model dummy_model = { 0, 0, 0, 0, 0 };
             m_sorted_models.push_back(dummy_model);
-            m_model_index.resize(1);
-            m_model_index[0] = 0;
+            m_model_indices.resize(1);
+            m_model_indices[0] = 0;
 
             m_textures = TextureManager(*m_device);
             m_lights = LightManager(*m_device, LightSources::capacity());
@@ -736,13 +736,13 @@ public:
             if (!MeshModels::get_changed_models().is_empty()) {
                 if (m_sorted_models.size() <= MeshModels::capacity()) {
                     m_sorted_models.reserve(MeshModels::capacity());
-                    int old_size = (int)m_model_index.size();
-                    m_model_index.resize(MeshModels::capacity());
-                    std::fill(m_model_index.begin() + old_size, m_model_index.end(), 0);
+                    int old_size = (int)m_model_indices.size();
+                    m_model_indices.resize(MeshModels::capacity());
+                    std::fill(m_model_indices.begin() + old_size, m_model_indices.end(), 0);
                 }
 
                 for (MeshModel model : MeshModels::get_changed_models()) {
-                    unsigned int model_index = m_model_index[model.get_ID()];
+                    unsigned int model_index = m_model_indices[model.get_ID()];
 
                     if (model.get_changes() == MeshModels::Change::Destroyed) {
                         m_sorted_models[model_index].model_ID = 0;
@@ -751,7 +751,7 @@ public:
                         m_sorted_models[model_index].transform_ID = 0;
                         m_sorted_models[model_index].properties = Dx11Model::Properties::Destroyed;
 
-                        m_model_index[model.get_ID()] = 0;
+                        m_model_indices[model.get_ID()] = 0;
                     }
 
                     if (model.get_changes() & MeshModels::Change::Created) {
@@ -768,7 +768,7 @@ public:
                         dx_model.properties = is_transparent ? transparent_type : Dx11Model::Properties::None;
 
                         if (model_index == 0) {
-                            m_model_index[model.get_ID()] = (int)m_sorted_models.size();
+                            m_model_indices[model.get_ID()] = (int)m_sorted_models.size();
                             m_sorted_models.push_back(dx_model);
                         } else
                             m_sorted_models[model_index] = dx_model;
@@ -793,7 +793,7 @@ public:
                         #pragma omp parallel for
                         for (int i = 1; i < m_sorted_models.size(); ++i) {
                             Dx11Model& model = m_sorted_models[i];
-                            m_model_index[model.model_ID] = i;
+                            m_model_indices[model.model_ID] = i;
 
                             Dx11Model& prevModel = m_sorted_models[i - 1];
                             if (prevModel.properties != model.properties) {
