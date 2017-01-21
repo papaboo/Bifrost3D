@@ -26,14 +26,15 @@ namespace DX11Renderer {
 //----------------------------------------------------------------------------
 // DirectX 11 renderer.
 // TODO
+// * DX 11.1
+//   * Material manager. Store all materials in one constant buffer and offset it when binding, 
+//     so it starts at the active material.
+//   * Create an mvp matrix constant buffer, compute model * view_proj on the GPU 
+//     and index into this array instead of uploading pr frame.
 // * SSAO
 // * HDR backbuffer.
 // * Proper IBL. Scale the IBL lookup by the diffuse and glossy rho. 
 //   Requires actually approximating the glossy rho first (and maybe Burley rho as well.)
-// * Material manager. Store all materials in one constant buffer and offset it when binding, 
-//   so it starts at the active material.
-// * Create an mvp matrix constant buffer, compute model * view_proj on the GPU 
-//   and index into this array instead of uploading pr frame.
 //----------------------------------------------------------------------------
 class Renderer final {
 public:

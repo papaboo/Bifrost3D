@@ -43,8 +43,8 @@ namespace DX11Renderer {
 //----------------------------------------------------------------------------
 class Renderer::Implementation {
 private:
-    ID3D11Device1* m_device;
-    ID3D11DeviceContext1* m_render_context; // Is this the same as the immediate context?
+    ID3D11Device* m_device;
+    ID3D11DeviceContext* m_render_context; // Is this the same as the immediate context?
     IDXGISwapChain* m_swap_chain;
 
     // Backbuffer members.
@@ -61,9 +61,9 @@ private:
     vector<int> m_model_indices = vector<int>(0); // The models index in the sorted models array.
     vector<Dx11Model> m_sorted_models = vector<Dx11Model>(0);
 
+    EnvironmentManager* m_environments;
     LightManager m_lights;
     TextureManager m_textures;
-    EnvironmentManager* m_environments;
 
     struct {
         ID3D11Buffer* null_buffer;
@@ -166,27 +166,17 @@ public:
                 for (WeightedAdapter a : sorted_adapters) {
                     dxgi_factory->EnumAdapters1(a.index, &adapter);
 
-                    D3D_FEATURE_LEVEL feature_level_requested = D3D_FEATURE_LEVEL_11_1;
+                    D3D_FEATURE_LEVEL feature_level_requested = D3D_FEATURE_LEVEL_11_0;
 
-                    ID3D11Device* device;
                     D3D_FEATURE_LEVEL feature_level;
-                    ID3D11DeviceContext* render_context;
                     hr = D3D11CreateDeviceAndSwapChain(adapter, D3D_DRIVER_TYPE_UNKNOWN, nullptr, 0, &feature_level_requested, 1,
-                        D3D11_SDK_VERSION, &swap_chain_desc, &m_swap_chain, &device, &feature_level, &render_context);
+                        D3D11_SDK_VERSION, &swap_chain_desc, &m_swap_chain, &m_device, &feature_level, &m_render_context);
                     if (SUCCEEDED(hr)) {
-
-                        HRESULT device_hr = device->QueryInterface(IID_PPV_ARGS(&m_device));
-                        device->Release();
-                        HRESULT render_context_hr = render_context->QueryInterface(IID_PPV_ARGS(&m_render_context));
-                        render_context->Release();
-                        if (SUCCEEDED(device_hr) && SUCCEEDED(render_context_hr)) {
-
-                            DXGI_ADAPTER_DESC adapter_description;
-                            adapter->GetDesc(&adapter_description);
-                            std::string readable_feature_level = feature_level == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "11.1";
-                            printf("DX11Renderer using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level.c_str());
-                            break;
-                        }
+                        DXGI_ADAPTER_DESC adapter_description;
+                        adapter->GetDesc(&adapter_description);
+                        std::string readable_feature_level = feature_level == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "11.1";
+                        printf("DX11Renderer using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level.c_str());
+                        break;
                     }
                 }
                 dxgi_factory->Release();
@@ -226,9 +216,9 @@ public:
             m_model_indices.resize(1);
             m_model_indices[0] = 0;
 
-            m_textures = TextureManager(*m_device);
-            m_lights = LightManager(*m_device, LightSources::capacity());
             m_environments = new EnvironmentManager(*m_device, m_shader_folder_path, m_textures);
+            m_lights = LightManager(*m_device, LightSources::capacity());
+            m_textures = TextureManager(*m_device);
         }
 
         { // Setup vertex processing.
@@ -358,9 +348,9 @@ public:
             safe_release(mesh.texcoords_address());
         }
         
-        m_textures.release();
-        m_lights.release();
         delete m_environments;
+        m_lights.release();
+        m_textures.release();
     }
 
     void render_model(ID3D11DeviceContext* context, Dx11Model model, Cameras::UID camera_ID) {
@@ -593,9 +583,9 @@ public:
     }
 
     void handle_updates() {
+        m_environments->handle_updates(*m_device, *m_render_context);
         m_lights.handle_updates(*m_render_context);
         m_textures.handle_updates(*m_device, *m_render_context);
-        m_environments->handle_updates(*m_device, *m_render_context);
 
         { // Material updates.
             for (Material mat : Materials::get_changed_materials()) {
@@ -709,7 +699,7 @@ public:
                             *dx_mesh.texcoords_address() = m_vertex_shading.null_buffer;
                     }
 
-                    dx_mesh.buffer_count = 3; // Positions, normals and texcoords. NOTE We can get away with binding the null texcoord buffer once at the beginning of the rendering pass, as then a semi-valid buffer is always bound.
+                    dx_mesh.buffer_count = 3; // Positions, normals and texcoords. TODO We can get away with binding the null texcoord buffer once at the beginning of the rendering pass, as then a semi-valid buffer is always bound.
 
                     // Delete temporary expanded positions.
                     if (positions != mesh.get_positions())
@@ -779,6 +769,8 @@ public:
                 // The new position/index of the model is stored in model_index.
                 // Incidently also compacts the list of models by removing any deleted models.
                 {
+                    // TODO Sort by material ID as well and use the info while rendering.
+                    // If the material hasn't changed then don't rebind it or the textures.
 
                     // The models to be sorted starts at index 1, because the first model is a dummy model.
                     std::sort(m_sorted_models.begin() + 1, m_sorted_models.end(),
