@@ -18,7 +18,7 @@ endforeach()
 # Find dlls, libs and include dirs.
 
 # Include directory.
-find_path(DIRECTX_11_INCLUDE_DIRS d3d11.h
+find_path(DIRECTX_11_INCLUDE_DIRS d3d11_1.h
           PATHS
           ${INCLUDE_DIR}
           DOC "The directories to include DirectX 11 headers from"
