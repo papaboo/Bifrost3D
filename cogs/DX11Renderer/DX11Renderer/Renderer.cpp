@@ -98,13 +98,17 @@ private:
     // Constant buffer for a single material (single material for now!)
     ID3D11Buffer* material_buffer;
 
-    // Catch-all uniforms. Split into model/spatial and surface shading.
-    struct Uniforms {
-        Matrix4x4f mvp_matrix;
-        Matrix4x3f to_world_matrix;
+    // Scene constants
+    struct SceneConstants {
+        Matrix4x4f view_projection_matrix;
         Vector4f camera_position;
+        Vector4f environment_tint; // .w component is 1 if an environment tex is bound, otherwise 0.
+        Vector4f __pad2;
+        Vector4f __pad3;
     };
-    ID3D11Buffer* uniforms_buffer;
+    ID3D11Buffer* m_scene_buffer;
+
+    ID3D11Buffer* m_transform_buffer;
 
     std::wstring m_shader_folder_path;
 
@@ -301,13 +305,18 @@ public:
             THROW_ON_FAILURE(hr);
         }
 
-        { // Material constant buffer.
-            HRESULT hr = create_constant_buffer(*m_device, sizeof(Dx11Material), &material_buffer);
+        { // Scene constant buffer
+            HRESULT hr = create_constant_buffer(*m_device, sizeof(SceneConstants), &m_scene_buffer);
             THROW_ON_FAILURE(hr);
         }
 
-        { // Catch-all uniforms.
-            HRESULT hr = create_constant_buffer(*m_device, sizeof(Uniforms), &uniforms_buffer);
+        { // Transform constant buffer.
+            HRESULT hr = create_constant_buffer(*m_device, sizeof(Matrix4x4f), &m_transform_buffer);
+            THROW_ON_FAILURE(hr);
+        }
+
+        { // Material constant buffer.
+            HRESULT hr = create_constant_buffer(*m_device, sizeof(Dx11Material), &material_buffer);
             THROW_ON_FAILURE(hr);
         }
     }
@@ -338,7 +347,7 @@ public:
         safe_release(&m_transparent.depth_state);
         safe_release(&m_transparent.shader);
 
-        safe_release(&uniforms_buffer);
+        safe_release(&m_scene_buffer);
         safe_release(&material_buffer);
 
         for (Dx11Mesh mesh : m_meshes) {
@@ -368,21 +377,17 @@ public:
             context->IASetVertexBuffers(0, mesh.buffer_count, mesh.buffers, strides, offsets);
         }
 
-        {
-            Uniforms uniforms;
-            uniforms.mvp_matrix = Cameras::get_view_projection_matrix(camera_ID) * to_matrix4x4(m_transforms[model.transform_ID]);
-            uniforms.to_world_matrix = to_matrix4x3(m_transforms[model.transform_ID]);
-            uniforms.camera_position = Vector4f(Cameras::get_transform(camera_ID).translation, 1.0f);
-            context->UpdateSubresource(uniforms_buffer, 0, NULL, &uniforms, 0, 0);
-            context->VSSetConstantBuffers(0, 1, &uniforms_buffer);
-            context->PSSetConstantBuffers(0, 1, &uniforms_buffer);
+        { // Upload world transform.
+            Matrix4x4f to_world_matrix = to_matrix4x4(m_transforms[model.transform_ID]);
+            context->UpdateSubresource(m_transform_buffer, 0, NULL, &to_world_matrix, 0, 0);
+            context->VSSetConstantBuffers(2, 1, &m_transform_buffer);
         }
 
         { // Material parameters
 
           // Update constant buffer.
             context->UpdateSubresource(material_buffer, 0, NULL, &m_materials[model.material_ID], 0, 0);
-            context->PSSetConstantBuffers(2, 1, &material_buffer);
+            context->PSSetConstantBuffers(3, 1, &material_buffer);
 
             Dx11Texture colorTexture = m_textures.get_texture(m_materials[model.material_ID].tint_texture_index);
             if (colorTexture.sampler != nullptr) {
@@ -485,8 +490,9 @@ public:
         m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 1);
         m_render_context->RSSetState(m_opaque.raster_state);
 
+        SceneRoot scene = Cameras::get_scene_ID(camera_ID);
+
         { // Render environment.
-            SceneRoot scene = Cameras::get_scene_ID(camera_ID);
             Matrix4x4f inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
             Vector3f cp = Cameras::get_transform(camera_ID).translation;
             float4 cam_position = { cp.x, cp.y, cp.z, 1.0f };
@@ -499,8 +505,18 @@ public:
         }
 
         { // Render models.
-            // TODO Isn't it just as fast to upload the model_view matrix and apply the projection matrix in the shader? 
-            //      We need the world position anyway.
+
+            { // TODO Use as part of the env as well.
+                SceneConstants scene_vars;
+                scene_vars.view_projection_matrix = Cameras::get_view_projection_matrix(camera_ID);
+                scene_vars.camera_position = Vector4f(Cameras::get_transform(camera_ID).translation, 1.0f);
+                RGB env_tint = scene.get_environment_tint();
+                float valid_env_map = scene.get_environment_map() == Textures::UID::invalid_UID() ? 0.0f : 1.0f;
+                scene_vars.environment_tint = { env_tint.r, env_tint.g, env_tint.b, valid_env_map };
+                m_render_context->UpdateSubresource(m_scene_buffer, 0, NULL, &scene_vars, 0, 0);
+                m_render_context->VSSetConstantBuffers(0, 1, &m_scene_buffer);
+                m_render_context->PSSetConstantBuffers(0, 1, &m_scene_buffer);
+            }
 
             // Bind light buffer.
             m_render_context->PSSetConstantBuffers(1, 1, m_lights.light_buffer_addr());

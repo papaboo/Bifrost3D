@@ -1,4 +1,4 @@
-// Simple vertex shader.
+// Model vertex shader.
 // ---------------------------------------------------------------------------
 // Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
 //
@@ -6,10 +6,14 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-cbuffer scene_variables  : register(b0) {
-    float4x4 mvp_matrix;
-    float4x3 to_world_matrix;
+cbuffer scene_variables : register(b0) {
+    float4x4 view_projection_matrix;
     float4 camera_position;
+    float4 environment_tint; // .w component is 1 if an environment tex is bound, otherwise 0.
+};
+
+cbuffer transform : register(b2) {
+    float4x3 to_world_matrix;
 };
 
 struct Output {
@@ -21,8 +25,8 @@ struct Output {
 
 Output main(float3 position : POSITION, float3 normal : NORMAL, float2 texcoord : TEXCOORD) {
     Output output;
-    output.position = mul(float4(position, 1.0f), mvp_matrix);
     output.world_position.xyz = mul(float4(position, 1.0f), to_world_matrix);
+    output.position = mul(float4(output.world_position.xyz, 1.0f), view_projection_matrix);
     output.normal.xyz = mul(normal, to_world_matrix);
     output.texcoord = texcoord;
     return output;
