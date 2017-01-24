@@ -22,7 +22,7 @@ class TextureManager;
 //----------------------------------------------------------------------------
 // Environment manager.
 // Uploads and manages all images and textures.
-// TODO
+// Future work
 // * Upload convoluted environment mipmap-chain.
 //----------------------------------------------------------------------------
 class EnvironmentManager {

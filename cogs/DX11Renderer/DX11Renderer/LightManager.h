@@ -25,7 +25,7 @@ using namespace Cogwheel::Scene;
 // Light manager.
 // Collects the light sources into a tight array of active lights 
 // and maintains their GPU representation.
-// TODO
+// Future work.
 // * Support an arbitrary light count. (Maximum of what fits in a constant buffer would work)
 // * Support tiled forward rendering.
 //----------------------------------------------------------------------------
