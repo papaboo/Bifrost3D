@@ -103,8 +103,7 @@ private:
         Matrix4x4f view_projection_matrix;
         Vector4f camera_position;
         Vector4f environment_tint; // .w component is 1 if an environment tex is bound, otherwise 0.
-        Vector4f __pad2;
-        Vector4f __pad3;
+        Matrix4x4f inverse_view_projection_matrix;
     };
     ID3D11Buffer* m_scene_buffer;
 
@@ -481,6 +480,8 @@ public:
             m_render_context->RSSetViewports(1, &viewport);
         }
 
+        m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
         m_render_context->OMSetRenderTargets(1, &m_backbuffer_view, m_depth_view);
         m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 0);
         m_render_context->ClearDepthStencilView(m_depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
@@ -491,42 +492,30 @@ public:
         m_render_context->RSSetState(m_opaque.raster_state);
 
         SceneRoot scene = Cameras::get_scene_ID(camera_ID);
-
-        { // Render environment.
-            Matrix4x4f inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
-            Vector3f cp = Cameras::get_transform(camera_ID).translation;
-            float4 cam_position = { cp.x, cp.y, cp.z, 1.0f };
-
-            bool env_rendered = m_environments->render(*m_render_context, inverse_view_projection_matrix, cam_position, scene.get_ID());
-            if (!env_rendered) {
-                RGBA environment_tint = RGBA(scene.get_environment_tint(), 1.0f);
-                m_render_context->ClearRenderTargetView(m_backbuffer_view, environment_tint.begin());
-            }
+        { // Setup scene constants.
+            SceneConstants scene_vars;
+            scene_vars.view_projection_matrix = Cameras::get_view_projection_matrix(camera_ID);
+            scene_vars.camera_position = Vector4f(Cameras::get_transform(camera_ID).translation, 1.0f);
+            RGB env_tint = scene.get_environment_tint();
+            float valid_env_map = scene.get_environment_map() == Textures::UID::invalid_UID() ? 0.0f : 1.0f;
+            scene_vars.environment_tint = { env_tint.r, env_tint.g, env_tint.b, valid_env_map };
+            scene_vars.inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
+            m_render_context->UpdateSubresource(m_scene_buffer, 0, NULL, &scene_vars, 0, 0);
+            m_render_context->VSSetConstantBuffers(0, 1, &m_scene_buffer);
+            m_render_context->PSSetConstantBuffers(0, 1, &m_scene_buffer);
         }
 
-        { // Render models.
+        m_environments->render(*m_render_context, scene.get_ID());
 
-            { // TODO Use as part of the env as well.
-                SceneConstants scene_vars;
-                scene_vars.view_projection_matrix = Cameras::get_view_projection_matrix(camera_ID);
-                scene_vars.camera_position = Vector4f(Cameras::get_transform(camera_ID).translation, 1.0f);
-                RGB env_tint = scene.get_environment_tint();
-                float valid_env_map = scene.get_environment_map() == Textures::UID::invalid_UID() ? 0.0f : 1.0f;
-                scene_vars.environment_tint = { env_tint.r, env_tint.g, env_tint.b, valid_env_map };
-                m_render_context->UpdateSubresource(m_scene_buffer, 0, NULL, &scene_vars, 0, 0);
-                m_render_context->VSSetConstantBuffers(0, 1, &m_scene_buffer);
-                m_render_context->PSSetConstantBuffers(0, 1, &m_scene_buffer);
-            }
+        { // Render models.
 
             // Bind light buffer.
             m_render_context->PSSetConstantBuffers(1, 1, m_lights.light_buffer_addr());
 
             // Set vertex and pixel shaders.
             m_render_context->VSSetShader(m_vertex_shading.shader, 0, 0);
-            m_render_context->PSSetShader(m_opaque.shader, 0, 0);
-
             m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
-            m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            m_render_context->PSSetShader(m_opaque.shader, 0, 0);
 
             for (int i = 1; i < m_transparent.first_model_index; ++i) {
 

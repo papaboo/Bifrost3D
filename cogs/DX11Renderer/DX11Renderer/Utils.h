@@ -9,6 +9,7 @@
 #ifndef _DX11RENDERER_RENDERER_UTILS_H_
 #define _DX11RENDERER_RENDERER_UTILS_H_
 
+#include <DX11Renderer/Defines.h>
 #include <DX11Renderer/Types.h>
 
 #include <Cogwheel/Math/AABB.h>
@@ -54,6 +55,9 @@ inline void CHECK_HRESULT(HRESULT hr, const std::string& file, int line, bool sh
 }
 
 #define THROW_ON_FAILURE(hr) CHECK_HRESULT(hr, __FILE__,__LINE__, true)
+
+// Copied from assert.h to have an assert that is enabled in release builds as well.
+#define always_assert(_Expression) (void)( (!!(_Expression)) || (_wassert(_CRT_WIDE(#_Expression), _CRT_WIDE(__FILE__), __LINE__), 0) )
 
 // TODO Handle cso files and errors related to files not found.
 inline ID3DBlob* compile_shader(const std::wstring& filename, const char* target, const char* entry_point = "main") {

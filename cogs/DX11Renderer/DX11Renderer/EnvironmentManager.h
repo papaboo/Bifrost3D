@@ -38,8 +38,6 @@ private:
 
     ID3D11VertexShader* m_vertex_shader;
     ID3D11PixelShader* m_pixel_shader;
-
-    ID3D11Buffer* m_constant_buffer; // TODO Use the buffer with the scene constants.
     
 public:
 
@@ -47,7 +45,7 @@ public:
     ~EnvironmentManager();
 
     // Render an environment to the active backbuffer.
-    bool render(ID3D11DeviceContext& render_context, Cogwheel::Math::Matrix4x4f inverse_vp_matrix, float4 camera_position, int environment_ID);
+    bool render(ID3D11DeviceContext& render_context, int environment_ID);
 
     void handle_updates(ID3D11Device& device, ID3D11DeviceContext& device_context);
 

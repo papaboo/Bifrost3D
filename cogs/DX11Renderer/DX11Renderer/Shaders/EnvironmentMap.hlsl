@@ -1,10 +1,10 @@
 // Environment map shader.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 
 #include "Utils.hlsl"
 
@@ -21,48 +21,50 @@ float3 project_ray_direction(float2 viewport_pos,
     return normalize(ray_origin - camera_position);
 }
 
-// ---------------------------------------------------------------------------
-// Vertex shader.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+// Scene constants.
+// ------------------------------------------------------------------------------------------------
 
-struct VertexOutput {
+cbuffer scene_variables : register(b0) {
+    float4x4 view_projection_matrix;
+    float4 camera_position;
+    float4 environment_tint; // .w component is 1 if an environment tex is bound, otherwise 0.
+    float4x4 inverted_view_projection_matrix;
+};
+
+// ------------------------------------------------------------------------------------------------
+// Vertex shader.
+// ------------------------------------------------------------------------------------------------
+
+struct Varyings {
     float4 position : SV_POSITION;
     float2 texcoord : TEXCOORD;
 };
 
-VertexOutput main_vs(uint vertex_ID : SV_VertexID) {
-    VertexOutput output;
+Varyings main_vs(uint vertex_ID : SV_VertexID) {
+    Varyings output;
     // Draw triangle: {-1, -3}, { -1, 1 }, { 3, 1 }
     output.position.x = vertex_ID == 2 ? 3 : -1;
     output.position.y = vertex_ID == 0 ? -3 : 1;
-    output.position.zw = float2(0.99999, 1.0f);
-    output.texcoord = output.position.xy * 0.5 + 0.5; // TODO Can I just get the screen position from some built-in instead?
+    output.position.zw = float2(1.0f, 1.0f);
+    output.texcoord = output.position.xy;
     return output;
 }
 
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Pixel shader.
-// ---------------------------------------------------------------------------
-
-struct PixelInput {
-    float4 position : SV_POSITION;
-    float2 texcoord : TEXCOORD;
-};
-
-// TODO These can be bound as part of the overall scene variables.
-cbuffer scene_variables  : register(b0) {
-    float4x4 inverted_view_projection_matrix;
-    float4 camera_position;
-    float4 tint;
-};
+// NOTE We can move the view_dir calculation to the vertex shader, as long as we make sure that 
+//      the per pixel view_dir is interpolated over a plane in front of the camera. 
+//      If the view dir is normalized in the vertex shader linear interpolation will 
+//      give the wrong result.
+// ------------------------------------------------------------------------------------------------
 
 Texture2D envTex : register(t0);
 SamplerState envSampler : register(s0);
 
-float4 main_ps(PixelInput input) : SV_TARGET {
-    float2 viewport_pos = input.texcoord * 2 - 1;
-    // TODO We can perform most of this projection in the vertex shader and then simply interpolate the result.
+float4 main_ps(Varyings input) : SV_TARGET {
+    float2 viewport_pos = input.texcoord;
     float3 view_dir = project_ray_direction(viewport_pos, camera_position.xyz, inverted_view_projection_matrix);
     float2 tc = direction_to_latlong_texcoord(view_dir);
-    return float4(tint.rgb * envTex.SampleLevel(envSampler, tc, 0).rgb, 1);
+    return float4(environment_tint.rgb * envTex.SampleLevel(envSampler, tc, 0).rgb, 1);
 }

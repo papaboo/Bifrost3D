@@ -10,6 +10,7 @@ find_package(DirectX11)
 
 if (DIRECTX_11_FOUND AND WIN32)
   set(ROOT_SRC
+    DX11Renderer/Defines.h
     DX11Renderer/EnvironmentManager.h
     DX11Renderer/EnvironmentManager.cpp
     DX11Renderer/LightManager.h

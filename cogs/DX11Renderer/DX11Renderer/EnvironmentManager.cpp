@@ -17,12 +17,6 @@ using namespace Cogwheel::Scene;
 
 namespace DX11Renderer {
 
-struct Constants {
-    Matrix4x4f inverse_vp_matrix;
-    float4 camera_position;
-    float4 tint;
-};
-
 EnvironmentManager::EnvironmentManager(ID3D11Device& device, const std::wstring& shader_folder_path, TextureManager& textures)
     : m_textures(textures) {
 
@@ -33,30 +27,37 @@ EnvironmentManager::EnvironmentManager(ID3D11Device& device, const std::wstring&
     ID3D10Blob* pixel_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "ps_5_0", "main_ps");
     hr = device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), NULL, &m_pixel_shader);
     THROW_ON_FAILURE(hr);
-
-    hr = create_constant_buffer(device, sizeof(Constants), &m_constant_buffer);
-    THROW_ON_FAILURE(hr);
 }
 
 EnvironmentManager::~EnvironmentManager() {
     safe_release(&m_vertex_shader);
     safe_release(&m_pixel_shader);
-    safe_release(&m_constant_buffer);
 }
 
-bool EnvironmentManager::render(ID3D11DeviceContext& render_context, Matrix4x4f inverse_vp_matrix, float4 camera_position, int environment_ID) {
+bool EnvironmentManager::render(ID3D11DeviceContext& render_context, int environment_ID) {
+
+#if CHECK_IMPLICIT_STATE
+    // Check that the screen space triangle will be rendered correctly.
+    D3D11_PRIMITIVE_TOPOLOGY topology;
+    render_context.IAGetPrimitiveTopology(&topology);
+    always_assert(topology == D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    // Check that the environment can be rendered on top of the far plane.
+    ID3D11DepthStencilState* depth_state;
+    unsigned int unused;
+    render_context.OMGetDepthStencilState(&depth_state, &unused);
+    D3D11_DEPTH_STENCIL_DESC depth_desc;
+    depth_state->GetDesc(&depth_desc);
+    always_assert(depth_desc.DepthFunc == D3D11_COMPARISON_LESS_EQUAL || depth_desc.DepthFunc == D3D11_COMPARISON_NEVER);
+#endif
 
     Environment& env = m_envs[environment_ID];
     if (env.map_ID != 0) {
         // Set vertex and pixel shaders.
         render_context.VSSetShader(m_vertex_shader, 0, 0);
-        render_context.IASetInputLayout(nullptr); // TODO Needed? Not on NVIDIA, but in general?
-        render_context.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // TODO Assume that this is the case.
+        // render_context.IASetInputLayout(nullptr); // TODO Needed? Not on NVIDIA, but in general?
 
         render_context.PSSetShader(m_pixel_shader, 0, 0);
-        Constants constants = { inverse_vp_matrix, camera_position, env.tint };
-        render_context.UpdateSubresource(m_constant_buffer, 0, NULL, &constants, 0, 0);
-        render_context.PSSetConstantBuffers(0, 1, &m_constant_buffer);
 
         Dx11Texture envTexture = m_textures.get_texture(env.map_ID);
         render_context.PSSetShaderResources(0, 1, &envTexture.image->srv);
@@ -65,11 +66,16 @@ bool EnvironmentManager::render(ID3D11DeviceContext& render_context, Matrix4x4f 
         render_context.Draw(3, 0);
 
         return true;
-    }
-    else {
+    } else {
         // Bind white environment instead.
         render_context.PSSetShaderResources(0, 1, &m_textures.white_texture().srv);
         render_context.PSSetSamplers(0, 1, &m_textures.white_texture().sampler);
+
+        ID3D11RenderTargetView* backbuffer;
+        ID3D11DepthStencilView* depth;
+        render_context.OMGetRenderTargets(1, &backbuffer, &depth);
+
+        render_context.ClearRenderTargetView(backbuffer, &env.tint.x);
 
         return false;
     }
