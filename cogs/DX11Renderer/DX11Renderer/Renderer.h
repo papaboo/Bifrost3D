@@ -25,7 +25,7 @@ namespace DX11Renderer {
 
 //----------------------------------------------------------------------------
 // DirectX 11 renderer.
-// TODO
+// Future work
 // * DX 11.1
 //   * Material manager. Store all materials in one constant buffer and offset it when binding, 
 //     so it starts at the active material.
