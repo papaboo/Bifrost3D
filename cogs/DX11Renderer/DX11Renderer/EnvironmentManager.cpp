@@ -55,8 +55,6 @@ bool EnvironmentManager::render(ID3D11DeviceContext& render_context, int environ
     if (env.map_ID != 0) {
         // Set vertex and pixel shaders.
         render_context.VSSetShader(m_vertex_shader, 0, 0);
-        // render_context.IASetInputLayout(nullptr); // TODO Needed? Not on NVIDIA, but in general?
-
         render_context.PSSetShader(m_pixel_shader, 0, 0);
 
         Dx11Texture envTexture = m_textures.get_texture(env.map_ID);
