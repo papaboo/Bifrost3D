@@ -9,7 +9,7 @@
 #include "DefaultShading.hlsl"
 #include "LightSources.hlsl"
 
-cbuffer scene_variables  : register(b0) {
+cbuffer scene_variables : register(b0) {
     float4x4 view_projection_matrix;
     float4 camera_position;
     float4 environment_tint; // .w component is 1 if an environment tex is bound, otherwise 0.
