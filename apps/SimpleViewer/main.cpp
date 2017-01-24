@@ -214,7 +214,7 @@ Images::UID load_image(const std::string& path) {
         return StbImageLoader::load(new_path);
 
     // No dice. Report error and return an invalid ID.
-    printf("No image found at ''\n", path.c_str());
+    printf("No image found at '%s'\n", path.c_str());
     return Images::UID::invalid_UID();
 }
 
@@ -442,10 +442,13 @@ void win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Wi
 void print_usage() {
     char* usage =
         "usage simpleviewer:\n"
-        "  -h | --help: Show command line usage for simpleviewer.\n"
-        "  -s | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'MaterialScene', 'SphereScene' and 'TestScene', which loads the corresponding builtin scenes.\n"
-        "  -e | --environment-map <image>: Loads the specified image for the environment.\n"
-        "  -c | --environment-color <RGB>: Sets the background color to the specified value.\n";
+        "  -h  | --help: Show command line usage for simpleviewer.\n"
+        "  -s  | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'MaterialScene', 'SphereScene' and 'TestScene', which loads the corresponding builtin scenes.\n"
+#ifdef OPTIXRENDERER_FOUND
+        "  -pt | --path-tracing: Enables path tracing.\n"
+#endif
+        "  -e  | --environment-map <image>: Loads the specified image for the environment.\n"
+        "  -c  | --environment-color <RGB>: Sets the background color to the specified value.\n";
     printf("%s", usage);
 }
 
@@ -475,6 +478,9 @@ int main(int argc, char** argv) {
     }
 
     // Parse command line arguments.
+#ifdef OPTIXRENDERER_FOUND
+    bool launch_optix = false;
+#endif
     int argument = 1;
     while (argument < argc) {
         if (strcmp(argv[argument], "--scene") == 0 || strcmp(argv[argument], "-s") == 0)
@@ -483,6 +489,10 @@ int main(int argc, char** argv) {
             g_environment = std::string(argv[++argument]);
         else if (strcmp(argv[argument], "--environment-color") == 0 || strcmp(argv[argument], "-c") == 0)
             g_environment_color = parse_RGB(std::string(argv[++argument]));
+#ifdef OPTIXRENDERER_FOUND
+        else if (strcmp(argv[argument], "--path-tracing") == 0 || strcmp(argv[argument], "-pt") == 0)
+            launch_optix = true;
+#endif
         else
             printf("Unknown argument: '%s'\n", argv[argument]);
         ++argument;
@@ -492,8 +502,8 @@ int main(int argc, char** argv) {
         printf("SimpleViewer will display the Cornell Box scene.\n");
 
 #ifdef OPTIXRENDERER_FOUND
-    return GLFWDriver::run(initializer, glfw_window_initialized);
-#else
-    return Win32Driver::run(initializer, win32_window_initialized);
+    if (launch_optix)
+        return GLFWDriver::run(initializer, glfw_window_initialized);
 #endif
+    return Win32Driver::run(initializer, win32_window_initialized);
 }
