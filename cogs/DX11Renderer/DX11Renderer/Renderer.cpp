@@ -517,6 +517,10 @@ public:
             m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
             m_render_context->PSSetShader(m_opaque.shader, 0, 0);
 
+            unsigned int stride = sizeof(float2);
+            unsigned int offset = 0;
+            m_render_context->IASetVertexBuffers(2, 1, &m_vertex_shading.null_buffer, &stride, &offset);
+
             for (int i = 1; i < m_transparent.first_model_index; ++i) {
 
                 // Setup twosided raster state for cutout materials.
@@ -704,7 +708,8 @@ public:
                             *dx_mesh.texcoords_address() = m_vertex_shading.null_buffer;
                     }
 
-                    dx_mesh.buffer_count = 3; // Positions, normals and texcoords. TODO We can get away with binding the null texcoord buffer once at the beginning of the rendering pass, as then a semi-valid buffer is always bound.
+                    bool has_texcoords = mesh.get_texcoords() != nullptr;
+                    dx_mesh.buffer_count = has_texcoords ? 3 : 2;
 
                     // Delete temporary expanded positions.
                     if (positions != mesh.get_positions())
