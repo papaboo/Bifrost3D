@@ -779,9 +779,6 @@ public:
                 // The new position/index of the model is stored in model_index.
                 // Incidently also compacts the list of models by removing any deleted models.
                 {
-                    // TODO Sort by material ID as well and use the info while rendering.
-                    // If the material hasn't changed then don't rebind it or the textures.
-
                     // The models to be sorted starts at index 1, because the first model is a dummy model.
                     std::sort(m_sorted_models.begin() + 1, m_sorted_models.end(),
                         [](Dx11Model lhs, Dx11Model rhs) -> bool {

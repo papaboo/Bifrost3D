@@ -59,7 +59,6 @@ inline void CHECK_HRESULT(HRESULT hr, const std::string& file, int line, bool sh
 // Copied from assert.h to have an assert that is enabled in release builds as well.
 #define always_assert(_Expression) (void)( (!!(_Expression)) || (_wassert(_CRT_WIDE(#_Expression), _CRT_WIDE(__FILE__), __LINE__), 0) )
 
-// TODO Handle cso files and errors related to files not found.
 inline ID3DBlob* compile_shader(const std::wstring& filename, const char* target, const char* entry_point = "main") {
     ID3DBlob* shader_bytecode;
     ID3DBlob* error_messages = nullptr;
