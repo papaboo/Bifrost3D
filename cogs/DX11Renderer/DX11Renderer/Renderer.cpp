@@ -243,14 +243,15 @@ public:
 
             // Create a default emptyish buffer.
             D3D11_BUFFER_DESC empty_desc = {};
-            empty_desc.Usage = D3D11_USAGE_DEFAULT;
+            empty_desc.Usage = D3D11_USAGE_IMMUTABLE;
             empty_desc.ByteWidth = sizeof(Vector4f);
             empty_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
             Vector4f lval = Vector4f::zero();
             D3D11_SUBRESOURCE_DATA empty_data = {};
             empty_data.pSysMem = &lval;
-            m_device->CreateBuffer(&empty_desc, &empty_data, &m_vertex_shading.null_buffer);
+            hr = m_device->CreateBuffer(&empty_desc, &empty_data, &m_vertex_shading.null_buffer);
+            THROW_ON_FAILURE(hr);
         }
 
         { // Setup opaque rendering.
@@ -671,7 +672,7 @@ public:
                             printf("Could not upload '%s' position buffer.\n", mesh.get_name().c_str());
                     }
 
-                    { // Upload normals. TODO Encode as float2.
+                    { // Upload normals.
                         Vector3f* normals = mesh.get_normals();
 
                         if (mesh.get_normals() == nullptr) {

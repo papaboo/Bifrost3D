@@ -71,9 +71,15 @@ inline ID3DBlob* compile_shader(const std::wstring& filename, const char* target
         0, // More flags. Unused.
         &shader_bytecode,
         &error_messages);
-    if (FAILED(hr)) { // TODO File not found not handled? Path not found unhandled as well.
-        if (error_messages != nullptr)
+    if (FAILED(hr)) {
+        if (hr == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
+            printf("The system cannot find the file specified: '%s'\n", filename.c_str());
+        else if (hr == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND))
+            printf("The system cannot find the path specified: '%s'\n", filename.c_str());
+        else if (error_messages != nullptr)
             printf("Shader error: '%s'\n", (char*)error_messages->GetBufferPointer());
+        else 
+            printf("Unknown error occured when trying to load: '%s'\n", filename.c_str());
         return nullptr;
     }
 
