@@ -7,7 +7,9 @@
 // ---------------------------------------------------------------------------
 
 #include <Cogwheel/Assets/MeshCreation.h>
+#include <Cogwheel/Core/Array.h>
 #include <Cogwheel/Math/Constants.h>
+#include <Cogwheel/Math/Matrix.h>
 #include <Cogwheel/Math/Vector.h>
 #include <Cogwheel/Math/Utils.h>
 
@@ -41,16 +43,17 @@ Meshes::UID plane(unsigned int quads_pr_edge, MeshFlags buffer_bitmask) {
     }
 
     // Primitives.
+    Vector3ui* primitives = mesh.get_primitives();
     for (unsigned int z = 0; z < quads_pr_edge; ++z) {
         for (unsigned int x = 0; x < quads_pr_edge; ++x) {
-            Vector3ui* primitives = mesh.get_primitives() + (z * quads_pr_edge + x) * 2;
             unsigned int base_index = x + z * size;
-            primitives[0] = Vector3ui(base_index, base_index + size, base_index + 1);
-            primitives[1] = Vector3ui(base_index + 1, base_index + size, base_index + size + 1);
+            *primitives++ = Vector3ui(base_index, base_index + size, base_index + 1);
+            *primitives++ = Vector3ui(base_index + 1, base_index + size, base_index + size + 1);
         }
     }
 
-    mesh.compute_bounds();
+    Vector3f extends = Vector3f(0.5f, 0.0f, 0.5f);
+    mesh.set_bounds(AABB(-extends, extends));
 
     return mesh.get_ID();
 }
@@ -314,6 +317,74 @@ Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_
     }
 
     mesh.set_bounds(AABB(Vector3f(-radius), Vector3f(radius)));
+
+    return mesh.get_ID();
+}
+
+Meshes::UID torus(unsigned int revolution_quads, unsigned int circumference_quads, float minor_radius, MeshFlags buffer_bitmask) {
+    if (revolution_quads == 0 || circumference_quads == 0)
+        return Meshes::UID::invalid_UID();
+
+    unsigned int revolution_vertex_count = (revolution_quads + 1);
+    unsigned int circumference_vertex_count = (circumference_quads + 1);
+    unsigned int vertex_count = (revolution_quads + 1) * (circumference_quads + 1);
+    unsigned int index_count = 2 * revolution_quads * circumference_quads;
+    float major_radius = 0.5f;
+
+    Mesh mesh = Meshes::create("Ring", index_count, vertex_count, buffer_bitmask);
+
+    // Precompute local normal directions.
+    Core::Array<Vector3f> local_normal_dirs(circumference_vertex_count);
+    for (unsigned int x = 0; x < circumference_vertex_count-1; ++x) {
+        float minor_radians = x / float(circumference_quads) * 2.0f * Math::PI<float>();
+        local_normal_dirs[x] = Vector3f(cos(minor_radians), 0.0, sin(minor_radians));
+    }
+    local_normal_dirs[circumference_vertex_count - 1] = local_normal_dirs[0];
+
+    // Vertex attributes.
+    Vector2f tc_normalizer = Vector2f(1.0f / circumference_quads, 1.0f / revolution_quads);
+    for (unsigned int z = 0; z < revolution_vertex_count; ++z) {
+        // Create local coordinate system on the ring.
+        float major_radians = z / float(revolution_quads) * 2.0f * Math::PI<float>();
+        Vector3f center = Vector3f(cos(major_radians) * major_radius, 0.0, sin(major_radians) * major_radius);
+        if (z == 0 || z == revolution_vertex_count - 1)
+            center = Vector3f(major_radius, 0.0, 0.0f);
+
+        Vector3f outward = normalize(center);
+        Vector3f up = Vector3f::up();
+        Vector3f tangent = cross(outward, up);
+        Matrix3x3f local_coords = { outward, tangent, up };
+
+        for (unsigned int x = 0; x < circumference_vertex_count; ++x) {
+            unsigned int vertex_index = z * circumference_vertex_count + x;
+
+            Vector3f normal_dir = local_normal_dirs[x] * local_coords;
+
+            if (mesh.get_normals() != nullptr)
+                mesh.get_normals()[vertex_index] = normal_dir;
+
+            Vector3f offset = normal_dir * minor_radius;
+            mesh.get_positions()[vertex_index] = center + offset;
+
+            if (mesh.get_texcoords() != nullptr)
+                mesh.get_texcoords()[vertex_index] = Vector2f(float(x), float(z)) * tc_normalizer;
+        }
+    }
+
+    // Create primitives.
+    Vector3ui* primitives = mesh.get_primitives();
+    for (unsigned int z = 0; z < revolution_quads; ++z) {
+        for (unsigned int x = 0; x < circumference_quads; ++x) {
+            unsigned int base_index = x + z * circumference_vertex_count;
+            unsigned int next_base_index = base_index + circumference_vertex_count;
+            *primitives++ = Vector3ui(base_index, next_base_index, base_index + 1);
+            *primitives++ = Vector3ui(base_index + 1, next_base_index, next_base_index + 1);
+        }
+    }
+
+    // Set bounds.
+    Vector3f max_corner = Vector3f(major_radius + minor_radius, minor_radius, major_radius + minor_radius);
+    mesh.set_bounds(AABB(-max_corner, max_corner));
 
     return mesh.get_ID();
 }
