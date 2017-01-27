@@ -12,6 +12,7 @@ References
 * DirectX11
     * [Direct3D 11 Programming Guide](https://msdn.microsoft.com/en-us/library/windows/desktop/ff476345(v=vs.85).aspx)
     * [Direct3D 11 Tutorial](https://www.braynzarsoft.net/viewtutorial/q16390-braynzar-soft-directx-11-tutorials)
+    * [Low-Overhead Rendering with Direct3D](https://developer.nvidia.com/sites/default/files/akamai/gameworks/events/gdc14/GDC_14_Efficient%20Work%20Submission%20in%20Direct3D.pdf)
 * Path tracing
     * [Eric Heitz papers](https://eheitzresearch.wordpress.com/research/)
     * [Toshiya Hachisuka](http://www.ci.i.u-tokyo.ac.jp/~hachisuka/)
