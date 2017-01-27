@@ -32,6 +32,7 @@ namespace DX11Renderer {
 //   * Create a model to world matrix constant buffer.
 // * SSAO
 // * HDR backbuffer.
+// * Frustum culling.
 // * Proper IBL. Scale the IBL lookup by the diffuse and glossy rho. 
 //   Requires actually approximating the glossy rho first (and maybe Burley rho as well.)
 // * Sort models by material ID as well and use the info while rendering.
