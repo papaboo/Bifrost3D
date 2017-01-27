@@ -80,7 +80,7 @@ struct Ray {
 
 enum class BSDF { Diffuse, Specular, Glass };
 
-struct Sphere { // TODO Align to float4?
+struct Sphere {
     double radius;
     Vector3d position;
     RGB emission, color;
