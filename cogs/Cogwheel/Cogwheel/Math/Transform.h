@@ -62,8 +62,8 @@ struct Transform final {
     }
 
     // Shorthand overloaded multiplication operator for applying the transform to a vector.
-    inline Vector3f operator*(Vector3f v) const {
-        return apply(v);
+    inline Vector3f operator*(Vector3f rhs) const {
+        return apply(rhs);
     }
 
     // Apply the transform to another transform.
@@ -71,8 +71,8 @@ struct Transform final {
         return Transform(this->apply(t.translation), rotation * t.rotation, scale * t.scale);
     }
     // Shorthand overloaded multiplication operator for applying the transform to another transform.
-    inline Transform operator*(Transform v) const {
-        return apply(v);
+    inline Transform operator*(Transform rhs) const {
+        return apply(rhs);
     }
 
     // Rotate transform to look at the target.
@@ -87,7 +87,7 @@ struct Transform final {
         return out.str();
     }
 
-    inline Transform inverse() {
+    inline Transform inverse() const {
         float s = 1.0f / scale;
         Quaternionf r = inverse_unit(rotation);
         Vector3f t = (r * translation) * -s;
