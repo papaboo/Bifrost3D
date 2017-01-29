@@ -63,6 +63,7 @@ public:
     static void set_local_transform(SceneNodes::UID node_ID, Math::Transform transform);
     static Math::Transform get_global_transform(SceneNodes::UID node_ID) { return m_global_transforms[node_ID];}
     static void set_global_transform(SceneNodes::UID node_ID, Math::Transform transform);
+    static void apply_delta_transform(SceneNodes::UID node_ID, Math::Transform delta_transform);
 
     template<typename F>
     static void apply_recursively(SceneNodes::UID node_ID, F& function);

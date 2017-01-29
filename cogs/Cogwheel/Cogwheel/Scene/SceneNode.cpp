@@ -218,7 +218,7 @@ void SceneNodes::set_global_transform(SceneNodes::UID node_ID, Math::Transform t
     assert(m_global_transforms != nullptr);
 
     if (node_ID == UID::invalid_UID()) return;
-    
+
     Math::Transform delta_transform = Math::Transform::delta(m_global_transforms[node_ID], transform);
     m_global_transforms[node_ID] = transform;
     m_changes.add_change(node_ID, Change::Transform);
@@ -226,6 +226,21 @@ void SceneNodes::set_global_transform(SceneNodes::UID node_ID, Math::Transform t
     // Update global transforms of all children.
     apply_to_children_recursively(node_ID, [=](SceneNodes::UID child_ID) {
         m_global_transforms[child_ID] = delta_transform * m_global_transforms[child_ID];
+        m_changes.add_change(child_ID, Change::Transform);
+    });
+}
+
+void SceneNodes::apply_delta_transform(SceneNodes::UID node_ID, Math::Transform delta_transform) {
+    assert(m_global_transforms != nullptr);
+
+    if (node_ID == UID::invalid_UID()) return;
+
+    m_global_transforms[node_ID] = m_global_transforms[node_ID] * delta_transform;
+    m_changes.add_change(node_ID, Change::Transform);
+
+    // Update global transforms of all children.
+    apply_to_children_recursively(node_ID, [=](SceneNodes::UID child_ID) {
+        m_global_transforms[child_ID] = m_global_transforms[child_ID] * delta_transform;
         m_changes.add_change(child_ID, Change::Transform);
     });
 }
