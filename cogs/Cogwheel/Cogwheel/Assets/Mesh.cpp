@@ -221,6 +221,26 @@ void compute_hard_normals(Vector3f* positions_begin, Vector3f* positions_end, Ve
     }
 }
 
+void compute_normals(Vector3ui* primitives_begin, Vector3ui* primitives_end,
+                     Vector3f* normals_begin, Vector3f* normals_end, Vector3f* positions_begin) {
+    std::fill(normals_begin, normals_end, Vector3f::zero());
+
+    while (primitives_begin < primitives_end) {
+        Vector3ui primitive = *primitives_begin++;
+
+        Vector3f p0 = positions_begin[primitive.x];
+        Vector3f p1 = positions_begin[primitive.y];
+        Vector3f p2 = positions_begin[primitive.z];
+
+        Vector3f normal = cross(p1 - p0, p2 - p0);
+        normals_begin[primitive.x] += normal;
+        normals_begin[primitive.y] += normal;
+        normals_begin[primitive.z] += normal;
+    }
+
+    std::for_each(normals_begin, normals_end, [](Vector3f& n) { n = normalize(n); });
+}
+
 } // NS MeshUtils
 
 namespace MeshTests {
