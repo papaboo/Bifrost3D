@@ -68,7 +68,7 @@ struct Transform final {
 
     // Apply the transform to another transform.
     inline Transform apply(Transform t) const {
-        return Transform(this->apply(t.translation), rotation * t.rotation, scale * t.scale);
+        return Transform(this->apply(t.translation), normalize(rotation * t.rotation), scale * t.scale);
     }
     // Shorthand overloaded multiplication operator for applying the transform to another transform.
     inline Transform operator*(Transform rhs) const {
