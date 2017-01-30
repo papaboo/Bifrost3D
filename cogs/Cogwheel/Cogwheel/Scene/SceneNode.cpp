@@ -10,6 +10,8 @@
 
 #include <assert.h>
 
+using namespace Cogwheel::Math;
+
 namespace Cogwheel {
 namespace Scene {
 
@@ -20,7 +22,7 @@ SceneNodes::UID* SceneNodes::m_parent_IDs = nullptr;
 SceneNodes::UID* SceneNodes::m_sibling_IDs = nullptr;
 SceneNodes::UID* SceneNodes::m_first_child_IDs = nullptr;
 
-Math::Transform* SceneNodes::m_global_transforms = nullptr;
+Transform* SceneNodes::m_global_transforms = nullptr;
 
 Core::ChangeSet<SceneNodes::Changes, SceneNodes::UID> SceneNodes::m_changes;
 
@@ -37,14 +39,14 @@ void SceneNodes::allocate(unsigned int capacity) {
     m_sibling_IDs = new SceneNodes::UID[capacity];
     m_first_child_IDs = new SceneNodes::UID[capacity];
 
-    m_global_transforms = new Math::Transform[capacity];
+    m_global_transforms = new Transform[capacity];
 
     m_changes = Core::ChangeSet<Changes, UID>(capacity);
 
     // Allocate dummy element at 0.
     m_names[0] = "Dummy Node";
     m_parent_IDs[0] = m_first_child_IDs[0] = m_sibling_IDs[0] = UID::invalid_UID();
-    m_global_transforms[0] = Math::Transform::identity();
+    m_global_transforms[0] = Transform::identity();
 }
 
 void SceneNodes::deallocate() {
@@ -97,7 +99,7 @@ void SceneNodes::reserve_node_data(unsigned int new_capacity, unsigned int old_c
     m_changes.resize(new_capacity);
 }
 
-SceneNodes::UID SceneNodes::create(const std::string& name, Math::Transform transform) {
+SceneNodes::UID SceneNodes::create(const std::string& name, Transform transform) {
     assert(m_first_child_IDs != nullptr);
     assert(m_global_transforms != nullptr);
     assert(m_names != nullptr);
@@ -194,14 +196,14 @@ std::vector<SceneNode> SceneNode::get_children() const {
     return children;
 }
 
-Math::Transform SceneNodes::get_local_transform(SceneNodes::UID node_ID) {
+Transform SceneNodes::get_local_transform(SceneNodes::UID node_ID) {
     UID parent_ID = m_parent_IDs[node_ID];
-    const Math::Transform parent_transform = m_global_transforms[parent_ID];
-    const Math::Transform transform = m_global_transforms[node_ID];
-    return Math::Transform::delta(parent_transform, transform);
+    const Transform parent_transform = m_global_transforms[parent_ID];
+    const Transform transform = m_global_transforms[node_ID];
+    return Transform::delta(parent_transform, transform);
 }
 
-void SceneNodes::set_local_transform(SceneNodes::UID node_ID, Math::Transform transform) {
+void SceneNodes::set_local_transform(SceneNodes::UID node_ID, Transform transform) {
     assert(m_global_transforms != nullptr);
     assert(m_parent_IDs != nullptr);
 
@@ -209,38 +211,38 @@ void SceneNodes::set_local_transform(SceneNodes::UID node_ID, Math::Transform tr
 
     // Update global transform.
     UID parent_ID = m_parent_IDs[node_ID];
-    Math::Transform parent_transform = m_global_transforms[parent_ID];
-    Math::Transform new_global_transform = parent_transform * transform;
-    set_global_transform(node_ID, new_global_transform);
+    Transform parent_transform = m_global_transforms[parent_ID];
+    Transform new_global_transform = parent_transform * transform;
+    unsafe_set_global_transform(node_ID, new_global_transform);
 }
 
-void SceneNodes::set_global_transform(SceneNodes::UID node_ID, Math::Transform transform) {
+void SceneNodes::set_global_transform(SceneNodes::UID node_ID, Transform transform) {
     assert(m_global_transforms != nullptr);
 
     if (node_ID == UID::invalid_UID()) return;
 
-    Math::Transform delta_transform = Math::Transform::delta(m_global_transforms[node_ID], transform);
-    m_global_transforms[node_ID] = transform;
-    m_changes.add_change(node_ID, Change::Transform);
-
-    // Update global transforms of all children.
-    apply_to_children_recursively(node_ID, [=](SceneNodes::UID child_ID) {
-        m_global_transforms[child_ID] = delta_transform * m_global_transforms[child_ID];
-        m_changes.add_change(child_ID, Change::Transform);
-    });
+    unsafe_set_global_transform(node_ID, transform);
 }
 
-void SceneNodes::apply_delta_transform(SceneNodes::UID node_ID, Math::Transform delta_transform) {
+void SceneNodes::apply_delta_transform(SceneNodes::UID node_ID, Transform delta_transform) {
     assert(m_global_transforms != nullptr);
 
     if (node_ID == UID::invalid_UID()) return;
 
-    m_global_transforms[node_ID] = m_global_transforms[node_ID] * delta_transform;
+    Transform new_global_transform = m_global_transforms[node_ID] * delta_transform;
+    unsafe_set_global_transform(node_ID, new_global_transform);
+}
+
+void SceneNodes::unsafe_set_global_transform(SceneNodes::UID node_ID, Transform new_transform) {
+    Transform old_transform = m_global_transforms[node_ID];
+    Transform delta_transform = Transform::delta(new_transform, old_transform);
+    m_global_transforms[node_ID] = new_transform;
     m_changes.add_change(node_ID, Change::Transform);
 
     // Update global transforms of all children.
     apply_to_children_recursively(node_ID, [=](SceneNodes::UID child_ID) {
-        m_global_transforms[child_ID] = m_global_transforms[child_ID] * delta_transform;
+        Transform delta_transform = Transform::delta(old_transform, m_global_transforms[child_ID]);
+        m_global_transforms[child_ID] = new_transform * delta_transform;
         m_changes.add_change(child_ID, Change::Transform);
     });
 }

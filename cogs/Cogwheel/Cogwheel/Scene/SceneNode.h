@@ -91,6 +91,8 @@ public:
 
 private:
     static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);
+    static void SceneNodes::unsafe_set_global_transform(SceneNodes::UID node_ID, Math::Transform transform);
+
 
     static UIDGenerator m_UID_generator;
     static std::string* m_names;
@@ -139,6 +141,7 @@ public:
     inline void set_local_transform(Math::Transform transform) { SceneNodes::set_local_transform(m_ID, transform); }
     inline Math::Transform get_global_transform() const { return SceneNodes::get_global_transform(m_ID); }
     inline void set_global_transform(Math::Transform transform) { SceneNodes::set_global_transform(m_ID, transform); }
+    inline void apply_delta_transform(Math::Transform transform) { SceneNodes::apply_delta_transform(m_ID, transform); }
 
     inline SceneNodes::Changes get_changes() const { return SceneNodes::get_changes(m_ID); }
 
