@@ -115,13 +115,18 @@ TEST_F(Scene_Transform, preserve_local_transform_on_parent_transformation) {
     SceneNode n0 = SceneNodes::create("n0");
     SceneNode n1 = SceneNodes::create("n1");
 
-    Transform n1_local_trans = Transform(Vector3f(1, 2, 3), Quaternionf::from_angle_axis(degrees_to_radians(-45.0f), Vector3f::up()));
-    n1.set_global_transform(n1_local_trans);
-
+    n0.set_global_transform(Transform(Vector3f(1, 1, 1)));
     n1.set_parent(n0);
 
-    n0.set_global_transform(Transform(Vector3f(4, 2, 0), Quaternionf::from_angle_axis(degrees_to_radians(30.0f), Vector3f::forward())));
+    Transform n1_local_trans = Transform(Vector3f(1, 2, 3), Quaternionf::from_angle_axis(degrees_to_radians(-45.0f), Vector3f::up()));
+    n1.set_local_transform(n1_local_trans);
 
+    EXPECT_PRED2(compare_transforms, n1_local_trans, n1.get_local_transform());
+
+    n0.set_global_transform(Transform(Vector3f(4, 2, 0), Quaternionf::from_angle_axis(degrees_to_radians(30.0f), Vector3f::forward())));
+    EXPECT_PRED2(compare_transforms, n1_local_trans, n1.get_local_transform());
+
+    n0.apply_delta_transform(Transform(Vector3f(1, 3, 1), Quaternionf::from_angle_axis(degrees_to_radians(-45.0f), Vector3f::right())));
     EXPECT_PRED2(compare_transforms, n1_local_trans, n1.get_local_transform());
 }
 
