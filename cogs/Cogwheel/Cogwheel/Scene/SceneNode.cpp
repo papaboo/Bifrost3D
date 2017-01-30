@@ -240,8 +240,9 @@ void SceneNodes::unsafe_set_global_transform(SceneNodes::UID node_ID, Transform 
     m_changes.add_change(node_ID, Change::Transform);
 
     // Update global transforms of all children.
+    Transform inverse_old_transform = old_transform.inverse();
     apply_to_children_recursively(node_ID, [=](SceneNodes::UID child_ID) {
-        Transform delta_transform = Transform::delta(old_transform, m_global_transforms[child_ID]);
+        Transform delta_transform = inverse_old_transform * m_global_transforms[child_ID]; // Inlined Transform::delta(); to ensure that old_transform isn't inverted on every application.
         m_global_transforms[child_ID] = new_transform * delta_transform;
         m_changes.add_change(child_ID, Change::Transform);
     });
