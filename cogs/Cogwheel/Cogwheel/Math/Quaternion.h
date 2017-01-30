@@ -140,10 +140,16 @@ public:
     inline T real() const { return w; }
 
     // Quaternion multiplication.
-    inline Quaternion<T> operator*(const Quaternion<T>& rhs) const {
+    inline Quaternion<T> operator*(Quaternion<T> rhs) const {
         T real_part = w * rhs.w - dot(imaginary(), rhs.imaginary());
         Vector3<T> imaginary_part = cross(imaginary(), rhs.imaginary()) + rhs.imaginary() * w + imaginary() * rhs.w;
         return Quaternion(imaginary_part, real_part);
+    }
+    inline Quaternion<T>& operator*=(Quaternion<T> rhs) {
+        Quaternion<T> r = *this * rhs;
+        x = r.x; y = r.y; z = r.z;
+        w = r.w;
+        return *this;
     }
 
     // Multiplying a vector by a quaternion, e.g. rotating it.
