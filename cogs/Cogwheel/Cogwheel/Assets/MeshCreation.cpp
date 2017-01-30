@@ -377,8 +377,8 @@ Meshes::UID torus(unsigned int revolution_quads, unsigned int circumference_quad
         for (unsigned int x = 0; x < circumference_quads; ++x) {
             unsigned int base_index = x + z * circumference_vertex_count;
             unsigned int next_base_index = base_index + circumference_vertex_count;
-            *primitives++ = Vector3ui(base_index, next_base_index, base_index + 1);
-            *primitives++ = Vector3ui(base_index + 1, next_base_index, next_base_index + 1);
+            *primitives++ = Vector3ui(base_index, base_index + 1, next_base_index);
+            *primitives++ = Vector3ui(base_index + 1, next_base_index + 1, next_base_index);
         }
     }
 
