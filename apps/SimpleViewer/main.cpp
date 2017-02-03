@@ -471,7 +471,7 @@ RGB parse_RGB(const std::string& rgb_str) {
 
 int main(int argc, char** argv) {
 
-    std::string command = g_scene = argc >= 2 ? std::string(argv[1]) : "";
+    std::string command = argc >= 2 ? std::string(argv[1]) : "";
     if (command.compare("-h") == 0 || command.compare("--help") == 0) {
         print_usage();
         return 0;
