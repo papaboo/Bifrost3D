@@ -31,7 +31,7 @@ Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_qua
 
 Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
-Meshes::UID torus(unsigned int vertical_quads, unsigned int circumference_quads, float circumference_radius, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
+Meshes::UID torus(unsigned int revolution_quads, unsigned int circumference_quads, float minor_radius, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
 } // NS MeshCreation
 } // NS Assets
