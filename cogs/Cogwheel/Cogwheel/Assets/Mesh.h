@@ -189,7 +189,7 @@ Meshes::UID combine(const std::string& name,
 inline Meshes::UID combine(const std::string& name, 
                            Meshes::UID mesh0_ID, Math::Transform transform0,
                            Meshes::UID mesh1_ID, Math::Transform transform1, 
-                           MeshFlags flags = MeshFlag::None) {
+                           MeshFlags flags = MeshFlag::AllBuffers) {
     TransformedMesh mesh0 = { mesh0_ID, transform0 };
     TransformedMesh mesh1 = { mesh1_ID, transform1 };
     TransformedMesh meshes[2] = { mesh0, mesh1 };
