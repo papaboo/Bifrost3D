@@ -204,6 +204,7 @@ void compute_hard_normals(Math::Vector3f* positions_begin, Math::Vector3f* posit
 // This function assumes that the positions are used to describe triangles.
 void compute_normals(Math::Vector3ui* primitives_begin, Math::Vector3ui* primitives_end,
                      Math::Vector3f* normals_begin, Math::Vector3f* normals_end, Math::Vector3f* positions_begin);
+void compute_normals(Meshes::UID mesh_ID);
 
 // Expands a buffer and a list of triangle vertex indices into a non-indexed buffer.
 // Useful for expanding meshes that uses indexing into a mesh that does not.

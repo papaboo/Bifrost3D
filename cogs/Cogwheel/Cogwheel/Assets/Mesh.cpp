@@ -241,6 +241,13 @@ void compute_normals(Vector3ui* primitives_begin, Vector3ui* primitives_end,
     std::for_each(normals_begin, normals_end, [](Vector3f& n) { n = normalize(n); });
 }
 
+void compute_normals(Meshes::UID mesh_ID) {
+    Mesh mesh = mesh_ID;
+    compute_normals(mesh.get_primitives(), mesh.get_primitives() + mesh.get_primitive_count(),
+                    mesh.get_normals(), mesh.get_normals() + mesh.get_vertex_count(),
+                    mesh.get_positions());
+}
+
 } // NS MeshUtils
 
 namespace MeshTests {
