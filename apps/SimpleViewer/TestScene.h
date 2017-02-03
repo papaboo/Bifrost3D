@@ -31,9 +31,9 @@ public:
 
     void rotate(Core::Engine& engine) {
         if (!engine.get_time().is_paused()) {
-            Math::Transform transform = Scene::SceneNodes::get_local_transform(m_node_ID);
-            transform.rotation = Math::Quaternionf::from_angle_axis(float(engine.get_time().get_total_time()) * 0.1f, Math::Vector3f::up());
-            Scene::SceneNodes::set_local_transform(m_node_ID, transform);
+            Math::Quaternionf rotation = Math::Quaternionf::from_angle_axis(float(engine.get_time().get_smooth_delta_time()) * 0.3f, Math::Vector3f::right());
+            Math::Transform delta_transform = Math::Transform(Math::Vector3f::zero(), rotation);
+            Scene::SceneNodes::apply_delta_transform(m_node_ID, delta_transform);
         }
     }
 
@@ -165,24 +165,58 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
         material_data.tint_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
         Materials::UID material_ID = Materials::create("Floor", material_data);
 
-        SceneNode plane_node = SceneNodes::create("Floor");
+        SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0, -0.0005f, 0)));
         Meshes::UID plane_mesh_ID = MeshCreation::plane(10);
         MeshModels::create(plane_node.get_ID(), plane_mesh_ID, material_ID);
         plane_node.set_parent(root_node);
     }
 
-    { // Create rotating box. TODO Replace by those three cool spinning rings later.
+    { // Create rotating rings.
         Materials::Data material_data = Materials::Data::create_metal(RGB(1.0f, 0.766f, 0.336f), 0.02f, 0.0f);
         Materials::UID material_ID = Materials::create("Gold", material_data);
 
-        Transform transform = Transform(Vector3f(0.0f, 0.5f, 0.0f));
-        SceneNode cube_node = SceneNodes::create("Rotating cube", transform);
-        Meshes::UID cube_mesh_ID = MeshCreation::cube(3);
-        MeshModels::create(cube_node.get_ID(), cube_mesh_ID, material_ID);
-        cube_node.set_parent(root_node);
+        unsigned int torus_detail = 64;
+        float minor_radius = 0.02f;
+        Mesh cube_mesh = MeshCreation::torus(torus_detail, torus_detail, minor_radius, { MeshFlag::Position, MeshFlag::Normal });
 
-        LocalRotator* simple_rotator = new LocalRotator(cube_node.get_ID());
-        engine.add_mutating_callback(LocalRotator::rotate_callback, simple_rotator);
+        { // Ringify
+            Vector3f* positions = cube_mesh.get_positions();
+            Vector3f* normals = cube_mesh.get_normals();
+            for (unsigned int i = 0; i < cube_mesh.get_vertex_count(); ++i) {
+                Vector3f ring_center = positions[i] - normals[i] * minor_radius;
+                Vector3f dir = normalize(ring_center);
+                Vector3f tangent = cross(dir, Vector3f::up());
+                positions[i] += Vector3f::up() * dot(Vector3f::up(), normals[i]) * 2.5f * minor_radius;
+                positions[i] -= dir * (1.0f - abs(dot(dir, normals[i]))) * 0.5f * minor_radius;
+            }
+            MeshUtils::compute_normals(cube_mesh.get_ID());
+            
+            // Fix normals at the discontinuity where the ring mesh starts and ends.
+            Vector3f* end_normals = normals + cube_mesh.get_vertex_count() - torus_detail - 2;
+            for (unsigned int v = 0; v < torus_detail + 1; ++v) {
+                Vector3f begin_normal = normals[v];
+                Vector3f end_normal = end_normals[v];
+                normals[v] = end_normals[v] = normalize(begin_normal + end_normal);
+            }
+        }
+
+        // Create the rings.
+        float scale = 1.0f - minor_radius * 2.0f;
+        SceneNode parent_node = root_node;
+        for (int i = 0; i < 3; ++i) {
+            Quaternionf local_rot = Quaternionf::from_angle_axis(0.5f * Math::PI<float>(), Vector3f::right()) *
+                                    Quaternionf::from_angle_axis(0.5f * Math::PI<float>(), Vector3f::forward());
+            Transform transform = parent_node.get_global_transform() * Transform(Vector3f::zero(), local_rot, scale);
+            transform.translation = Vector3f(0, 0.5f, 0);
+
+            SceneNode cube_node = SceneNodes::create("Rotating ring", transform);
+            MeshModels::create(cube_node.get_ID(), cube_mesh.get_ID(), material_ID);
+            cube_node.set_parent(parent_node);
+            parent_node = cube_node;
+
+            LocalRotator* simple_rotator = new LocalRotator(cube_node.get_ID());
+            engine.add_mutating_callback(LocalRotator::rotate_callback, simple_rotator);
+        }
     }
 
     { // Destroyable cylinder. TODO Implement destruction of the mesh, model and scene node.
@@ -207,7 +241,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
         sphere_node.set_parent(root_node);
     }
 
-    { // Partial coverage copper box.
+    { // Partial coverage copper torus.
         unsigned int width = 17, height = 17;
         Images::UID image_ID = Images::create("Grid", PixelFormat::I8, 1.0f, Vector2ui(width, height));
         unsigned char* pixels = (unsigned char*)Images::get_pixels(image_ID);
@@ -224,9 +258,9 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
         material_data.flags = MaterialFlag::Cutout;
         Materials::UID material_ID = Materials::create("Copper", material_data);
 
-        Transform transform = Transform(Vector3f(3.0f, 0.5f, 0.0f));
-        SceneNode cube_node = SceneNodes::create("Swizz cube", transform);
-        Meshes::UID cube_mesh_ID = MeshCreation::cube(3);
+        Transform transform = Transform(Vector3f(3.0f, 0.35f, 0.0f), Quaternionf::identity(), 0.5f);
+        SceneNode cube_node = SceneNodes::create("Swizz torus", transform);
+        Meshes::UID cube_mesh_ID = MeshCreation::torus(64, 64, 0.7f);
         MeshModels::create(cube_node.get_ID(), cube_mesh_ID, material_ID);
         cube_node.set_parent(root_node);
     }
