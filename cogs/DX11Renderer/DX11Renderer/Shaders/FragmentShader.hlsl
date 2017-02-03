@@ -12,7 +12,7 @@
 cbuffer scene_variables : register(b0) {
     float4x4 view_projection_matrix;
     float4 camera_position;
-    float4 environment_tint; // .w component is 1 if an environment tex is bound, otherwise 0.
+    float4 environment_tint; // .w component is 0 if an environment tex is not bound, otherwise positive.
 };
 
 cbuffer lights : register(b1) {
