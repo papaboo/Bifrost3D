@@ -13,8 +13,8 @@
 // Forward declarations.
 //----------------------------------------------------------------------------
 struct ID3D11Buffer;
-struct ID3D11Device;
-struct ID3D11DeviceContext;
+struct ID3D11Device1;
+struct ID3D11DeviceContext1;
 struct ID3D11InputLayout;
 struct ID3D11PixelShader;
 struct ID3D11SamplerState;
@@ -58,6 +58,10 @@ struct Dx11Material {
     float coverage;
     unsigned int coverage_texture_index;
     float3 __padding;
+
+    // Takes up 3 constants. In order to use in a dynamic constant buffer it needs to be 16 constants big, so pad pad pad.
+    // TODO I really don't need this CPU side, as long as I align the buffers GPU side.
+    float4 __paddington[13]; // Wasting space for the good of us all.
 };
 
 struct Dx11Image {

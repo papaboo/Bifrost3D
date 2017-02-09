@@ -8,6 +8,7 @@
 
 #include <DX11Renderer/EnvironmentManager.h>
 #include <DX11Renderer/LightManager.h>
+#include <DX11Renderer/MaterialManager.h>
 #include <DX11Renderer/Renderer.h>
 #include <DX11Renderer/TextureManager.h>
 #include <DX11Renderer/Types.h>
@@ -43,9 +44,9 @@ namespace DX11Renderer {
 //----------------------------------------------------------------------------
 class Renderer::Implementation {
 private:
-    ID3D11Device* m_device;
-    ID3D11DeviceContext* m_render_context;
-    IDXGISwapChain* m_swap_chain;
+    ID3D11Device1* m_device;
+    ID3D11DeviceContext1* m_render_context;
+    IDXGISwapChain1* m_swap_chain;
 
     // Backbuffer members.
     Vector2ui m_backbuffer_size;
@@ -54,7 +55,6 @@ private:
     ID3D11DepthStencilView* m_depth_view;
 
     // Cogwheel resources
-    vector<Dx11Material> m_materials = vector<Dx11Material>(0);
     vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
     vector<Transform> m_transforms = vector<Transform>(0);
 
@@ -63,6 +63,7 @@ private:
 
     EnvironmentManager* m_environments;
     LightManager m_lights;
+    MaterialManager m_materials;
     TextureManager m_textures;
 
     struct {
@@ -94,9 +95,6 @@ private:
         ID3D11PixelShader* shader;
         std::vector<SortedModel> sorted_models_pool; // List of sorted transparent models. Created as a pool to minimize runtime memory allocation.
     } m_transparent;
-
-    // Constant buffer for a single material (single material for now!)
-    ID3D11Buffer* material_buffer;
 
     // Scene constants
     struct SceneConstants {
@@ -145,14 +143,15 @@ public:
                     }
                 };
 
-                m_device = nullptr;
+                ID3D11Device* device = nullptr;
+                ID3D11DeviceContext* render_context = nullptr;
                 IDXGIAdapter1* adapter = nullptr;
 
-                IDXGIFactory1* dxgi_factory;
-                HRESULT hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory));
+                IDXGIFactory1* dxgi_factory1;
+                HRESULT hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory1));
 
                 std::vector<WeightedAdapter> sorted_adapters;
-                for (int adapter_index = 0; dxgi_factory->EnumAdapters1(adapter_index, &adapter) != DXGI_ERROR_NOT_FOUND; ++adapter_index) {
+                for (int adapter_index = 0; dxgi_factory1->EnumAdapters1(adapter_index, &adapter) != DXGI_ERROR_NOT_FOUND; ++adapter_index) {
                     DXGI_ADAPTER_DESC1 desc;
                     adapter->GetDesc1(&desc);
 
@@ -167,13 +166,15 @@ public:
                 std::sort(sorted_adapters.begin(), sorted_adapters.end());
 
                 for (WeightedAdapter a : sorted_adapters) {
-                    dxgi_factory->EnumAdapters1(a.index, &adapter);
+                    dxgi_factory1->EnumAdapters1(a.index, &adapter);
 
+                    UINT create_device_flags = 0;
                     D3D_FEATURE_LEVEL feature_level_requested = D3D_FEATURE_LEVEL_11_0;
 
                     D3D_FEATURE_LEVEL feature_level;
-                    hr = D3D11CreateDeviceAndSwapChain(adapter, D3D_DRIVER_TYPE_UNKNOWN, nullptr, 0, &feature_level_requested, 1,
-                        D3D11_SDK_VERSION, &swap_chain_desc, &m_swap_chain, &m_device, &feature_level, &m_render_context);
+                    hr = D3D11CreateDevice(adapter, D3D_DRIVER_TYPE_UNKNOWN, nullptr, create_device_flags, &feature_level_requested, 1,
+                        D3D11_SDK_VERSION, &device, &feature_level, &render_context);
+
                     if (SUCCEEDED(hr)) {
                         DXGI_ADAPTER_DESC adapter_description;
                         adapter->GetDesc(&adapter_description);
@@ -182,12 +183,60 @@ public:
                         break;
                     }
                 }
-                dxgi_factory->Release();
-            }
+                dxgi_factory1->Release();
 
-            if (m_device == nullptr) {
-                release_state();
-                return;
+                if (device == nullptr) {
+                    release_state();
+                    return;
+                }
+
+                // Get the device's dxgi factory.
+                IDXGIFactory2* dxgi_factory2 = nullptr;
+                {
+                    IDXGIDevice* dxgi_device = nullptr;
+                    hr = device->QueryInterface(IID_PPV_ARGS(&dxgi_device));
+                    THROW_ON_FAILURE(hr);
+
+                    // NOTE Can I use the original adapter for this?
+                    IDXGIAdapter* adapter = nullptr;
+                    hr = dxgi_device->GetAdapter(&adapter);
+                    dxgi_device->Release();
+                    THROW_ON_FAILURE(hr);
+
+                    IDXGIFactory1* dxgi_factory = nullptr;
+                    hr = adapter->GetParent(IID_PPV_ARGS(&dxgi_factory));
+                    adapter->Release();
+                    THROW_ON_FAILURE(hr);
+
+                    hr = dxgi_factory->QueryInterface(IID_PPV_ARGS(&dxgi_factory2));
+                    dxgi_factory->Release();
+                    THROW_ON_FAILURE(hr);
+                }
+
+                // Create swap chain
+                if (dxgi_factory2) {
+
+                    hr = device->QueryInterface(IID_PPV_ARGS(&m_device));
+                    THROW_ON_FAILURE(hr);
+
+                    hr = render_context->QueryInterface(IID_PPV_ARGS(&m_render_context));
+                    THROW_ON_FAILURE(hr);
+
+                    DXGI_SWAP_CHAIN_DESC1 swap_chain_desc1 = {};
+                    swap_chain_desc1.Width = window.get_width();
+                    swap_chain_desc1.Height = window.get_height();
+                    swap_chain_desc1.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+                    swap_chain_desc1.SampleDesc.Count = 1;
+                    swap_chain_desc1.SampleDesc.Quality = 0;
+                    swap_chain_desc1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+                    swap_chain_desc1.BufferCount = 1;
+                    swap_chain_desc1.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+
+                    hr = dxgi_factory2->CreateSwapChainForHwnd(m_device, hwnd, &swap_chain_desc1, nullptr, nullptr, &m_swap_chain);
+                    THROW_ON_FAILURE(hr);
+                
+                    dxgi_factory2->Release();
+                }
             }
         }
 
@@ -221,6 +270,7 @@ public:
 
             m_environments = new EnvironmentManager(*m_device, m_shader_folder_path, m_textures);
             m_lights = LightManager(*m_device, LightSources::capacity());
+            m_materials = MaterialManager(*m_device, *m_render_context);
             m_textures = TextureManager(*m_device);
         }
 
@@ -314,11 +364,6 @@ public:
             HRESULT hr = create_constant_buffer(*m_device, sizeof(Matrix4x4f), &m_transform_buffer);
             THROW_ON_FAILURE(hr);
         }
-
-        { // Material constant buffer.
-            HRESULT hr = create_constant_buffer(*m_device, sizeof(Dx11Material), &material_buffer);
-            THROW_ON_FAILURE(hr);
-        }
     }
 
     void release_state() {
@@ -348,7 +393,6 @@ public:
         safe_release(&m_transparent.shader);
 
         safe_release(&m_scene_buffer);
-        safe_release(&material_buffer);
 
         for (Dx11Mesh mesh : m_meshes) {
             safe_release(&mesh.indices);
@@ -362,7 +406,7 @@ public:
         m_textures.release();
     }
 
-    void render_model(ID3D11DeviceContext* context, Dx11Model model, Cameras::UID camera_ID) {
+    void render_model(ID3D11DeviceContext1* context, Dx11Model model, Cameras::UID camera_ID) {
         Dx11Mesh mesh = m_meshes[model.mesh_ID];
 
         { // Set the buffers.
@@ -385,17 +429,19 @@ public:
 
         { // Material parameters
 
-          // Update constant buffer.
-            context->UpdateSubresource(material_buffer, 0, NULL, &m_materials[model.material_ID], 0, 0);
-            context->PSSetConstantBuffers(3, 1, &material_buffer);
+            // Set material constant buffer.
+            unsigned int material_begin = model.material_ID * sizeof(Dx11Material) / 16;
+            unsigned int material_size = sizeof(Dx11Material) / 16;
+            context->PSSetConstantBuffers1(3, 1, m_materials.get_constant_buffer_addr(), &material_begin, &material_size);
 
-            Dx11Texture colorTexture = m_textures.get_texture(m_materials[model.material_ID].tint_texture_index);
+            Dx11Material& material = m_materials.get_material(model.material_ID);
+            Dx11Texture colorTexture = m_textures.get_texture(material.tint_texture_index);
             if (colorTexture.sampler != nullptr) {
                 context->PSSetShaderResources(1, 1, &colorTexture.image->srv);
                 context->PSSetSamplers(1, 1, &colorTexture.sampler);
             }
 
-            Dx11Texture coverateTexture = m_textures.get_texture(m_materials[model.material_ID].coverage_texture_index);
+            Dx11Texture coverateTexture = m_textures.get_texture(material.coverage_texture_index);
             if (coverateTexture.sampler != nullptr) {
                 context->PSSetShaderResources(2, 1, &coverateTexture.image->srv);
                 context->PSSetSamplers(2, 1, &coverateTexture.sampler);
@@ -592,32 +638,10 @@ public:
     }
 
     void handle_updates() {
-        m_environments->handle_updates(*m_device, *m_render_context);
+        m_environments->handle_updates();
         m_lights.handle_updates(*m_render_context);
+        m_materials.handle_updates(*m_render_context);
         m_textures.handle_updates(*m_device, *m_render_context);
-
-        { // Material updates.
-            for (Material mat : Materials::get_changed_materials()) {
-                unsigned int material_index = mat.get_ID();
-
-                // Just ignore deleted materials. They shouldn't be referenced anyway.
-                if (!mat.get_changes().is_set(Materials::Change::Destroyed)) {
-                    if (m_materials.size() <= material_index)
-                        m_materials.resize(Materials::capacity());
-
-                    Dx11Material& dx11_material = m_materials[material_index];
-                    dx11_material.tint.x = mat.get_tint().r;
-                    dx11_material.tint.y = mat.get_tint().g;
-                    dx11_material.tint.z = mat.get_tint().b;
-                    dx11_material.tint_texture_index = mat.get_tint_texture_ID();
-                    dx11_material.roughness = mat.get_roughness();
-                    dx11_material.specularity = mat.get_specularity() * 0.08f; // See Physically-Based Shading at Disney bottom of page 8 for why we remap.
-                    dx11_material.metallic = mat.get_metallic();
-                    dx11_material.coverage = mat.get_coverage();
-                    dx11_material.coverage_texture_index = mat.get_coverage_texture_ID();
-                }
-            }
-        }
 
         { // Mesh updates.
             for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {

@@ -82,7 +82,7 @@ public:
         m_lights_buffer = nullptr;
     }
 
-    LightManager(ID3D11Device& device, unsigned int initial_capacity) {
+    LightManager(ID3D11Device1& device, unsigned int initial_capacity) {
         initial_capacity = initial_capacity;
         m_ID_to_index = Array<unsigned int>(initial_capacity);
         m_index_to_ID = Array<LightSources::UID>(initial_capacity);
@@ -110,7 +110,7 @@ public:
         return &m_lights_buffer;
     }
 
-    void handle_updates(ID3D11DeviceContext& device_context) {
+    void handle_updates(ID3D11DeviceContext1& device_context) {
         if (!LightSources::get_changed_lights().is_empty()) {
             if (m_ID_to_index.size() < LightSources::capacity()) {
                 // Resize the light buffer to hold the new capacity.

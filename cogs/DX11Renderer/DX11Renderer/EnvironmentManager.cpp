@@ -17,7 +17,7 @@ using namespace Cogwheel::Scene;
 
 namespace DX11Renderer {
 
-EnvironmentManager::EnvironmentManager(ID3D11Device& device, const std::wstring& shader_folder_path, TextureManager& textures)
+EnvironmentManager::EnvironmentManager(ID3D11Device1& device, const std::wstring& shader_folder_path, TextureManager& textures)
     : m_textures(textures) {
 
     ID3D10Blob* vertex_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "vs_5_0", "main_vs");
@@ -34,7 +34,7 @@ EnvironmentManager::~EnvironmentManager() {
     safe_release(&m_pixel_shader);
 }
 
-bool EnvironmentManager::render(ID3D11DeviceContext& render_context, int environment_ID) {
+bool EnvironmentManager::render(ID3D11DeviceContext1& render_context, int environment_ID) {
 
 #if CHECK_IMPLICIT_STATE
     // Check that the screen space triangle will be rendered correctly.
@@ -79,7 +79,7 @@ bool EnvironmentManager::render(ID3D11DeviceContext& render_context, int environ
     }
 }
 
-void EnvironmentManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& device_context) {
+void EnvironmentManager::handle_updates() {
     if (!SceneRoots::get_changed_scenes().is_empty()) {
         if (m_envs.size() < SceneRoots::capacity())
             m_envs.resize(SceneRoots::capacity());

@@ -14,6 +14,8 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/EnvironmentManager.h
     DX11Renderer/EnvironmentManager.cpp
     DX11Renderer/LightManager.h
+    DX11Renderer/MaterialManager.h
+    DX11Renderer/MaterialManager.cpp
     DX11Renderer/Renderer.h
     DX11Renderer/Renderer.cpp
     DX11Renderer/TextureManager.h

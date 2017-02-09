@@ -16,7 +16,7 @@ using namespace Cogwheel::Assets;
 
 namespace DX11Renderer {
 
-TextureManager::TextureManager(ID3D11Device& device) {
+TextureManager::TextureManager(ID3D11Device1& device) {
     // Initialize null image and texture.
     m_images.resize(Images::capacity());
     m_textures.resize(Textures::capacity());
@@ -24,7 +24,7 @@ TextureManager::TextureManager(ID3D11Device& device) {
     m_textures[0] = {};
 
     // Create default textures.
-    static auto create_color_texture = [](ID3D11Device& device, unsigned char pixel[4]) -> DefaultTexture {
+    static auto create_color_texture = [](ID3D11Device1& device, unsigned char pixel[4]) -> DefaultTexture {
         DefaultTexture tex;
 
         D3D11_TEXTURE2D_DESC tex_desc = {};
@@ -84,7 +84,7 @@ void TextureManager::release() {
         safe_release(&tex.sampler);
 }
 
-void TextureManager::handle_updates(ID3D11Device& device, ID3D11DeviceContext& device_context) {
+void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& device_context) {
     { // Image updates.
         if (!Images::get_changed_images().is_empty()) {
             if (m_images.size() < Images::capacity())

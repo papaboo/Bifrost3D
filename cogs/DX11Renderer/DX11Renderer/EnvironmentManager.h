@@ -41,13 +41,13 @@ private:
     
 public:
 
-    EnvironmentManager(ID3D11Device& device, const std::wstring& shader_folder_path, TextureManager& textures);
+    EnvironmentManager(ID3D11Device1& device, const std::wstring& shader_folder_path, TextureManager& textures);
     ~EnvironmentManager();
 
     // Render an environment to the active backbuffer.
-    bool render(ID3D11DeviceContext& render_context, int environment_ID);
+    bool render(ID3D11DeviceContext1& render_context, int environment_ID);
 
-    void handle_updates(ID3D11Device& device, ID3D11DeviceContext& device_context);
+    void handle_updates();
 
 private:
     EnvironmentManager(EnvironmentManager& other) = delete;

@@ -73,20 +73,20 @@ inline ID3DBlob* compile_shader(const std::wstring& filename, const char* target
         &error_messages);
     if (FAILED(hr)) {
         if (hr == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
-            printf("The system cannot find the file specified: '%s'\n", filename.c_str());
+            printf("The system cannot find the file specified: '%ws'\n", filename.c_str());
         else if (hr == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND))
-            printf("The system cannot find the path specified: '%s'\n", filename.c_str());
+            printf("The system cannot find the path specified: '%ws'\n", filename.c_str());
         else if (error_messages != nullptr)
             printf("Shader error: '%s'\n", (char*)error_messages->GetBufferPointer());
         else 
-            printf("Unknown error occured when trying to load: '%s'\n", filename.c_str());
+            printf("Unknown error occured when trying to load: '%ws'\n", filename.c_str());
         return nullptr;
     }
 
     return shader_bytecode;
 }
 
-inline HRESULT create_constant_buffer(ID3D11Device& device, int byte_width, ID3D11Buffer** constant_buffer) {
+inline HRESULT create_constant_buffer(ID3D11Device1& device, int byte_width, ID3D11Buffer** constant_buffer) {
     D3D11_BUFFER_DESC uniforms_desc = {};
     uniforms_desc.Usage = D3D11_USAGE_DEFAULT;
     uniforms_desc.ByteWidth = byte_width;
