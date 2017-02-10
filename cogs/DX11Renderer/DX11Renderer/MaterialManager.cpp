@@ -36,7 +36,7 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& de
     m_materials.resize(128);
     m_materials[0] = invalid_mat;
 
-    create_constant_buffer(device, sizeof(Dx11Material) * 128, &m_constant_buffer);
+    create_constant_buffer(device, CONSTANT_BUFFER_ALIGNMENT * 128, &m_constant_buffer);
     D3D11_BOX box;
     box.left = 0; box.right = sizeof(Dx11Material);
     box.front = box.top = 0;
@@ -59,7 +59,7 @@ void MaterialManager::handle_updates(ID3D11DeviceContext1& device_context) {
             m_materials[material_index] = dx_mat;
 
             D3D11_BOX box;
-            box.left = material_index * sizeof(Dx11Material); box.right = box.left + sizeof(Dx11Material);
+            box.left = material_index * CONSTANT_BUFFER_ALIGNMENT; box.right = box.left + sizeof(Dx11Material);
             box.front = box.top = 0;
             box.back = box.bottom = 1;
             device_context.UpdateSubresource1(m_constant_buffer, 0, &box, &dx_mat, sizeof(Dx11Material), sizeof(Dx11Material), D3D11_COPY_NO_OVERWRITE);
