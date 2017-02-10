@@ -115,25 +115,6 @@ public:
     Implementation(HWND& hwnd, const Cogwheel::Core::Window& window) {
         { // Create device and swapchain.
 
-            DXGI_MODE_DESC backbuffer_desc;
-            backbuffer_desc.Width = window.get_width();
-            backbuffer_desc.Height = window.get_height();
-            backbuffer_desc.RefreshRate.Numerator = 60;
-            backbuffer_desc.RefreshRate.Denominator = 1;
-            backbuffer_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-            backbuffer_desc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-            backbuffer_desc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-
-            DXGI_SWAP_CHAIN_DESC swap_chain_desc = {};
-            swap_chain_desc.BufferDesc = backbuffer_desc;
-            swap_chain_desc.SampleDesc.Count = 1;
-            swap_chain_desc.SampleDesc.Quality = 0;
-            swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-            swap_chain_desc.BufferCount = 1;
-            swap_chain_desc.OutputWindow = hwnd;
-            swap_chain_desc.Windowed = TRUE;
-            swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-
             { // Find the best performing device (apparently the one with the most memory) and initialize that.
                 struct WeightedAdapter {
                     int index, dedicated_memory;
@@ -143,8 +124,6 @@ public:
                     }
                 };
 
-                ID3D11Device* device = nullptr;
-                ID3D11DeviceContext* render_context = nullptr;
                 IDXGIAdapter1* adapter = nullptr;
 
                 IDXGIFactory1* dxgi_factory1;
@@ -165,6 +144,9 @@ public:
 
                 std::sort(sorted_adapters.begin(), sorted_adapters.end());
 
+                // Then create the device and render context.
+                ID3D11Device* device = nullptr;
+                ID3D11DeviceContext* render_context = nullptr;
                 for (WeightedAdapter a : sorted_adapters) {
                     dxgi_factory1->EnumAdapters1(a.index, &adapter);
 
@@ -190,9 +172,13 @@ public:
                     return;
                 }
 
-                // Get the device's dxgi factory.
-                IDXGIFactory2* dxgi_factory2 = nullptr;
-                {
+                hr = device->QueryInterface(IID_PPV_ARGS(&m_device));
+                THROW_ON_FAILURE(hr);
+
+                hr = render_context->QueryInterface(IID_PPV_ARGS(&m_render_context));
+                THROW_ON_FAILURE(hr);
+
+                { // Get the device's dxgi factory and create the swap chain.
                     IDXGIDevice* dxgi_device = nullptr;
                     hr = device->QueryInterface(IID_PPV_ARGS(&dxgi_device));
                     THROW_ON_FAILURE(hr);
@@ -208,20 +194,12 @@ public:
                     adapter->Release();
                     THROW_ON_FAILURE(hr);
 
+                    IDXGIFactory2* dxgi_factory2 = nullptr;
                     hr = dxgi_factory->QueryInterface(IID_PPV_ARGS(&dxgi_factory2));
                     dxgi_factory->Release();
                     THROW_ON_FAILURE(hr);
-                }
 
-                // Create swap chain
-                if (dxgi_factory2) {
-
-                    hr = device->QueryInterface(IID_PPV_ARGS(&m_device));
-                    THROW_ON_FAILURE(hr);
-
-                    hr = render_context->QueryInterface(IID_PPV_ARGS(&m_render_context));
-                    THROW_ON_FAILURE(hr);
-
+                    // Create swap chain
                     DXGI_SWAP_CHAIN_DESC1 swap_chain_desc1 = {};
                     swap_chain_desc1.Width = window.get_width();
                     swap_chain_desc1.Height = window.get_height();
@@ -234,7 +212,7 @@ public:
 
                     hr = dxgi_factory2->CreateSwapChainForHwnd(m_device, hwnd, &swap_chain_desc1, nullptr, nullptr, &m_swap_chain);
                     THROW_ON_FAILURE(hr);
-                
+
                     dxgi_factory2->Release();
                 }
             }
