@@ -29,40 +29,28 @@ inline Dx11Material make_dx11material(Material mat) {
     return dx11_material;
 }
 
-MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& device_context) {
+MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& context) {
     // Default material.
     Dx11Material invalid_mat = make_dx11material(Materials::UID::invalid_UID());
 
     m_materials.resize(128);
     m_materials[0] = invalid_mat;
 
-    create_constant_buffer(device, CONSTANT_BUFFER_ALIGNMENT * 128, &m_constant_buffer);
-    D3D11_BOX box;
-    box.left = 0; box.right = sizeof(Dx11Material);
-    box.front = box.top = 0;
-    box.back = box.bottom = 1;
-    device_context.UpdateSubresource1(m_constant_buffer, 0, &box, &invalid_mat, sizeof(Dx11Material), sizeof(Dx11Material), D3D11_COPY_NO_OVERWRITE);
+    m_constant_array = ConstantBufferArray<Dx11Material>(&device, 128);
+
+    m_constant_array.set(&context, invalid_mat, 0, D3D11_COPY_DISCARD);
 }
     
-MaterialManager::~MaterialManager() {
-    safe_release(&m_constant_buffer);
-}
-
-void MaterialManager::handle_updates(ID3D11DeviceContext1& device_context) {
+void MaterialManager::handle_updates(ID3D11DeviceContext1& context) {
     for (Material mat : Materials::get_changed_materials()) {
         // Just ignore deleted materials. They shouldn't be referenced anyway.
         if (!mat.get_changes().is_set(Materials::Change::Destroyed)) {
-            unsigned int material_index = mat.get_ID();
 
             Dx11Material dx_mat = make_dx11material(mat);
 
+            unsigned int material_index = mat.get_ID();
             m_materials[material_index] = dx_mat;
-
-            D3D11_BOX box;
-            box.left = material_index * CONSTANT_BUFFER_ALIGNMENT; box.right = box.left + sizeof(Dx11Material);
-            box.front = box.top = 0;
-            box.back = box.bottom = 1;
-            device_context.UpdateSubresource1(m_constant_buffer, 0, &box, &dx_mat, sizeof(Dx11Material), sizeof(Dx11Material), D3D11_COPY_NO_OVERWRITE);
+            m_constant_array.set(&context, dx_mat, material_index);
         }
     }
 }

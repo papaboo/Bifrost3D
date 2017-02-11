@@ -10,6 +10,7 @@ find_package(DirectX11)
 
 if (DIRECTX_11_FOUND AND WIN32)
   set(ROOT_SRC
+    DX11Renderer/ConstantBufferArray.h
     DX11Renderer/Defines.h
     DX11Renderer/EnvironmentManager.h
     DX11Renderer/EnvironmentManager.cpp
@@ -20,6 +21,8 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/Renderer.cpp
     DX11Renderer/TextureManager.h
     DX11Renderer/TextureManager.cpp
+    # DX11Renderer/TransformManager.h
+    # DX11Renderer/TransformManager.cpp
     DX11Renderer/Types.h
     DX11Renderer/Utils.h
   )

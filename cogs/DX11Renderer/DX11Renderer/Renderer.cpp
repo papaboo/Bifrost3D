@@ -407,10 +407,8 @@ public:
 
         { // Material parameters
 
-            // Set material constant buffer.
-            unsigned int material_begin = model.material_ID * CONSTANT_BUFFER_ALIGNMENT / 16;
-            unsigned int material_size = CONSTANT_BUFFER_ALIGNMENT / 16;
-            context->PSSetConstantBuffers1(3, 1, m_materials.get_constant_buffer_addr(), &material_begin, &material_size);
+            // Bind material constant buffer.
+            m_materials.bind_material(*context, 3, model.material_ID);
 
             Dx11Material& material = m_materials.get_material(model.material_ID);
             Dx11Texture colorTexture = m_textures.get_texture(material.tint_texture_index);
