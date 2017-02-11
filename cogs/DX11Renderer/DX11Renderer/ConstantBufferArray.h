@@ -57,10 +57,10 @@ public:
         context->UpdateSubresource1(m_constant_buffer, 0, &box, &element, sizeof(T), sizeof(T), copy_flags);
     }
 
-    inline void VS_set(ID3D11DeviceContext1* context, unsigned int start_slot, unsigned int element_index) {
+    inline void VS_set(ID3D11DeviceContext1* context, unsigned int slot, unsigned int element_index) {
         unsigned int begin = element_index * CONSTANT_BUFFER_ALIGNMENT / 16;
         unsigned int size = CONSTANT_BUFFER_ALIGNMENT / 16;
-        context->VSSetConstantBuffers1(start_slot, 1, &m_constant_buffer, &begin, &size);
+        context->VSSetConstantBuffers1(slot, 1, &m_constant_buffer, &begin, &size);
     }
 
     inline void PS_set(ID3D11DeviceContext1* context, unsigned int slot, unsigned int element_index) {

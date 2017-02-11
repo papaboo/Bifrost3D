@@ -11,6 +11,7 @@
 #include <DX11Renderer/MaterialManager.h>
 #include <DX11Renderer/Renderer.h>
 #include <DX11Renderer/TextureManager.h>
+#include <DX11Renderer/TransformManager.h>
 #include <DX11Renderer/Types.h>
 #include <DX11Renderer/Utils.h>
 
@@ -55,7 +56,6 @@ private:
 
     // Cogwheel resources
     vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
-    vector<Transform> m_transforms = vector<Transform>(0);
 
     vector<int> m_model_indices = vector<int>(0); // The models index in the sorted models array.
     vector<Dx11Model> m_sorted_models = vector<Dx11Model>(0);
@@ -64,6 +64,7 @@ private:
     LightManager m_lights;
     MaterialManager m_materials;
     TextureManager m_textures;
+    TransformManager m_transforms;
 
     struct {
         ID3D11Buffer* null_buffer;
@@ -249,6 +250,7 @@ public:
             m_lights = LightManager(*m_device, LightSources::capacity());
             m_materials = MaterialManager(*m_device, *m_render_context);
             m_textures = TextureManager(*m_device);
+            m_transforms = TransformManager(*m_device, *m_render_context);
         }
 
         { // Setup vertex processing.
@@ -398,10 +400,8 @@ public:
             context->IASetVertexBuffers(0, mesh.buffer_count, mesh.buffers, strides, offsets);
         }
 
-        { // Upload world transform.
-            Matrix4x4f to_world_matrix = to_matrix4x4(m_transforms[model.transform_ID]);
-            context->UpdateSubresource(m_transform_buffer, 0, NULL, &to_world_matrix, 0, 0);
-            context->VSSetConstantBuffers(2, 1, &m_transform_buffer);
+        { // Bind world transform.
+            m_transforms.bind_transform(*context, 2, model.transform_ID);
         }
 
         { // Material parameters
@@ -575,7 +575,7 @@ public:
                         // Calculate the distance to point halfway between the models center and side of the bounding box.
                         int model_index = i + m_transparent.first_model_index;
                         Dx11Mesh& mesh = m_meshes[m_sorted_models[model_index].mesh_ID];
-                        Transform transform = m_transforms[m_sorted_models[model_index].transform_ID];
+                        Transform transform = m_transforms.get_transform(m_sorted_models[model_index].transform_ID);
                         Cogwheel::Math::AABB bounds = { Vector3f(mesh.bounds.min.x, mesh.bounds.min.y, mesh.bounds.min.z),
                                                         Vector3f(mesh.bounds.max.x, mesh.bounds.max.y, mesh.bounds.max.z) };
                         float distance_to_cam = alpha_sort_value(cam_pos, transform, bounds);
@@ -617,6 +617,7 @@ public:
         m_lights.handle_updates(*m_render_context);
         m_materials.handle_updates(*m_render_context);
         m_textures.handle_updates(*m_device, *m_render_context);
+        m_transforms.handle_updates(*m_render_context);
 
         { // Mesh updates.
             for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
@@ -715,18 +716,6 @@ public:
                         delete[] positions;
 
                     m_meshes[mesh_ID] = dx_mesh;
-                }
-            }
-        }
-
-        { // Transform updates.
-            for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
-                if (SceneNodes::get_changes(node_ID).any_set(SceneNodes::Change::Created, SceneNodes::Change::Transform)) {
-
-                    if (m_transforms.size() <= node_ID)
-                        m_transforms.resize(SceneNodes::capacity());
-
-                    m_transforms[node_ID] = SceneNodes::get_global_transform(node_ID);
                 }
             }
         }
