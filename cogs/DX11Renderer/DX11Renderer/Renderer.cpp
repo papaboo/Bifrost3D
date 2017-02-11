@@ -19,7 +19,6 @@
 #include <D3DCompiler.h>
 #undef RGB
 
-#include <Cogwheel/Assets/Material.h>
 #include <Cogwheel/Assets/Mesh.h>
 #include <Cogwheel/Assets/MeshModel.h>
 #include <Cogwheel/Core/Engine.h>
