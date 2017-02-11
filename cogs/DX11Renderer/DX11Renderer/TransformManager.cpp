@@ -18,7 +18,7 @@ using namespace Cogwheel::Scene;
 namespace DX11Renderer {
 
 TransformManager::TransformManager(ID3D11Device1& device, ID3D11DeviceContext1& context) {
-    unsigned int transform_count = 128;
+    unsigned int transform_count = 512;
 
     m_transforms.resize(transform_count);
     m_transforms[0] = Transform::identity();
