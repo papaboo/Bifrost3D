@@ -2,9 +2,7 @@ if (TARGET OptiXRenderer)
 
   set(PROJECT_NAME "AlbedoComputation")
 
-  set(SRCS 
-    main.cpp
-  )
+  set(SRCS main.cpp)
 
   add_executable(${PROJECT_NAME} ${SRCS})
 
@@ -23,7 +21,10 @@ if (TARGET OptiXRenderer)
   )
 
   if (WIN32)
-    add_definitions(-DNOMINMAX) # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
+    target_compile_definitions(${PROJECT_NAME} PRIVATE 
+      NOMINMAX # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
+      COGWHEEL_SHADING_DIR="${COGWHEEL_COGS_DIR}/Cogwheel/Cogwheel/Assets/Shading/"
+    )
   endif()
 else()
   message(STATUS "OptiXRenderer not found. Skipping albedo computation development project.")
