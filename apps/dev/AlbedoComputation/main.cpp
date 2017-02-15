@@ -27,7 +27,7 @@ using namespace OptiXRenderer;
 using namespace OptiXRenderer::Shading::BSDFs;
 using namespace OptiXRenderer::Shading::ShadingModels;
 
-typedef BSDFSample(*SampleRoughBSDF)(const float3& tint, float alpha, const float3& wo, float2 random_sample);
+typedef BSDFSample(*SampleRoughBSDF)(const float3& tint, float roughness, const float3& wo, float2 random_sample);
 
 double estimate_rho(float3 wo, float roughness, unsigned int sample_count, SampleRoughBSDF sample_rough_BSDF) {
 
@@ -35,7 +35,6 @@ double estimate_rho(float3 wo, float roughness, unsigned int sample_count, Sampl
 
     Core::Array<double> throughput = Core::Array<double>(sample_count);
     for (unsigned int s = 0; s < sample_count; ++s) {
-
         float2 rng_sample = RNG::sample02(s);
         BSDFSample sample = sample_rough_BSDF(tint, roughness, wo, rng_sample);
         if (is_PDF_valid(sample.PDF))
@@ -55,12 +54,9 @@ Image estimate_rho(unsigned int width, unsigned int height, unsigned int sample_
         float roughness = fmaxf(0.000001f, y / float(height - 1u));
         #pragma omp parallel for
         for (int x = 0; x < int(width); ++x) {
-
             float NdotV = fmaxf(x / float(width - 1u), 0.00001f);
             float3 wo = make_float3(sqrt(1.0f - NdotV * NdotV), 0.0f, NdotV);
-
             double rho = estimate_rho(wo, roughness, sample_count, sample_rough_BSDF);
-
             rho_image_pixels[x + y * width] = Math::RGB(float(rho));
         }
     }
@@ -193,7 +189,7 @@ int main(int argc, char** argv) {
                 for (unsigned int s = 0; s < sample_count; ++s) {
 
                     float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(sample_count));
-                    BSDFSample sample = material.sample_one(wo, rng_sample);
+                    BSDFSample sample = material.sample_all(wo, rng_sample);
                     if (is_PDF_valid(sample.PDF)) {
                         total_throughput[s] = sample.weight.x * sample.direction.z / sample.PDF;
                         specular_throughput[s] = sample.weight.y * sample.direction.z / sample.PDF;
@@ -220,28 +216,48 @@ int main(int argc, char** argv) {
 
         // Store.
         StbImageWriter::write(output_dir + "BurleyRho.png", rho);
-        output_brdf<1>(rho, output_dir + "BurleyRho.h", "burley",
-            "Directional-hemispherical reflectance for Burley.");
+        output_brdf<1>(rho, output_dir + "BurleyRho.h", "burley", "Directional-hemispherical reflectance for Burley.");
     }
-    
+
     { // Compute OrenNayar rho.
 
         Image rho = estimate_rho(width, height, sample_count, OrenNayar::sample);
 
         // Store.
         StbImageWriter::write(output_dir + "OrenNayarRho.png", rho);
-        output_brdf<1>(rho, output_dir + "OrenNayarRho.h", "oren_nayar",
-            "Directional-hemispherical reflectance for OrenNayar.");
+        output_brdf<1>(rho, output_dir + "OrenNayarRho.h", "oren_nayar", "Directional-hemispherical reflectance for OrenNayar.");
     }
 
     { // Compute GGX rho.
 
-        Image rho = estimate_rho(width, height, sample_count, GGX::sample);
+        static auto sample_ggx = [](const float3& tint, float roughness, const float3& wo, float2 random_sample) -> BSDFSample {
+            float alpha = GGX::alpha_from_roughness(roughness);
+            return GGX::sample(tint, alpha, wo, random_sample);
+        };
+
+        Image rho = estimate_rho(width, height, sample_count, sample_ggx);
 
         // Store.
         StbImageWriter::write(output_dir + "GGXRho.png", rho);
-        output_brdf<1>(rho, output_dir + "GGXRho.h", "GGX",
-            "Directional-hemispherical reflectance for GGX.");
+        output_brdf<1>(rho, output_dir + "GGXRho.h", "GGX", "Directional-hemispherical reflectance for GGX.");
+    }
+
+    { // Compute GGX with fresnel rho.
+
+        static auto sample_ggx_with_fresnel = [](const float3& tint, float roughness, const float3& wo, float2 random_sample) -> BSDFSample {
+            float alpha = GGX::alpha_from_roughness(roughness);
+            BSDFSample sample = GGX::sample(tint, alpha, wo, random_sample);
+            float3 halfway = normalize(wo + sample.direction);
+            sample.weight *= schlick_fresnel(0.0f, dot(wo, halfway));
+            return sample;
+        };
+
+        Image rho = estimate_rho(width, height, sample_count, sample_ggx_with_fresnel);
+
+        // Store.
+        StbImageWriter::write(output_dir + "GGXWithFresnelRho.png", rho);
+        output_brdf<1>(rho, output_dir + "GGXWithFresnelRho.h", "GGX_with_fresnel",
+            "Directional-hemispherical reflectance for GGX with fresnel factor.");
     }
 
     return 0;
