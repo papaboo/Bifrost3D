@@ -59,6 +59,12 @@ __inline_all__ float smith_G(float alpha, const float3& wo, const float3& wi, co
 
 // Understanding the Masking - Shadowing Function in Microfacet - Based BRDFs, Heitz 14, equation 72.
 __inline_all__ float height_correlated_smith_delta(float alpha, const float3& w, const float3& halfway) {
+    // NOTE At grazing angles the masking function is going to return very low values. 
+    //      This is generally not a problem, unless alpha is low as well, 
+    //      meaning that the in and out vectors will always be at grazing angles 
+    //      and therefore the masking is consistently underestimated. 
+    //      We could fix this be adding a very specific scaling for this one case.
+    //      Check the GGX Rho computation for validity.
     float cos_theta_sqrd = w.z * w.z;
     float tan_theta_sqrd = fmaxf(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
     float a_sqrd = 1.0f / (alpha * alpha * tan_theta_sqrd);
