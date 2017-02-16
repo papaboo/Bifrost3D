@@ -64,7 +64,7 @@ struct DefaultShading {
         float3 specular_tint = lerp(float3(1.0f, 1.0f, 1.0f), tint, m_metallic);
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
         float3 specular = specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway);
-        float3 diffuse = tint * BSDFs::Burley::evaluate(m_roughness, wo, wi, halfway);
+        float3 diffuse = tint * BSDFs::Lambert::evaluate();
         return lerp(diffuse, specular, fresnel);
     }
 
