@@ -54,7 +54,7 @@ Image estimate_rho(unsigned int width, unsigned int height, unsigned int sample_
         float roughness = fmaxf(0.000001f, y / float(height - 1u));
         #pragma omp parallel for
         for (int x = 0; x < int(width); ++x) {
-            float NdotV = fmaxf(x / float(width - 1u), 0.00001f);
+            float NdotV = (x + 0.5f) / float(width);
             float3 wo = make_float3(sqrt(1.0f - NdotV * NdotV), 0.0f, NdotV);
             double rho = estimate_rho(wo, roughness, sample_count, sample_rough_BSDF);
             rho_image_pixels[x + y * width] = Math::RGB(float(rho));
@@ -145,13 +145,12 @@ void output_brdf(Image image, const std::string& filename, const std::string& da
 }
 
 int main(int argc, char** argv) {
-
     printf("Albedo Computation\n");
 
     std::string output_dir = argc >= 2? argv[1] : std::string(COGWHEEL_SHADING_DIR);
     printf("output_dir: %s\n", output_dir.c_str());
 
-    const unsigned int width = 64, height = 64, sample_count = 4096;
+    const unsigned int width = 128, height = 128, sample_count = 4096;
 
     Images::allocate(1);
 
@@ -179,7 +178,7 @@ int main(int argc, char** argv) {
             #pragma omp parallel for
             for (int x = 0; x < int(width); ++x) {
 
-                float NdotV = fmaxf(x / float(width - 1u), 0.00001f);
+                float NdotV = (x + 0.5f) / float(width);
                 float3 wo = make_float3(sqrt(1.0f - NdotV * NdotV), 0.0f, NdotV);
 
                 DefaultShading material = DefaultShading(material_params);
