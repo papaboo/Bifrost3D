@@ -17,6 +17,7 @@ namespace Cogwheel {
 namespace Assets {
 namespace Shading {
 
+const unsigned int burley_sample_count = 4096u;
 const unsigned int burley_angle_sample_count = 128u;
 const unsigned int burley_roughness_sample_count = 128u;
 
@@ -278,6 +279,12 @@ static const float burley_rho[] = {
     // Roughness 1
     1.48557f, 1.47098f, 1.45662f, 1.4425f, 1.42862f, 1.41497f, 1.40157f, 1.38842f, 1.37551f, 1.36285f, 1.35044f, 1.33829f, 1.32638f, 1.31473f, 1.30333f, 1.29219f, 1.2813f, 1.27066f, 1.26027f, 1.25013f, 1.24024f, 1.2306f, 1.2212f, 1.21205f, 1.20315f, 1.19449f, 1.18606f, 1.17787f, 1.16992f, 1.1622f, 1.15471f, 1.14744f, 1.1404f, 1.13358f, 1.12698f, 1.12059f, 1.11441f, 1.10844f, 1.10268f, 1.09711f, 1.09175f, 1.08657f, 1.08159f, 1.07679f, 1.07218f, 1.06774f, 1.06348f, 1.05938f, 1.05546f, 1.0517f, 1.04809f, 1.04465f, 1.04135f, 1.0382f, 1.03519f, 1.03233f, 1.02959f, 1.02699f, 1.02452f, 1.02217f, 1.01994f, 1.01783f, 1.01582f, 1.01393f, 1.01214f, 1.01045f, 1.00886f, 1.00737f, 1.00596f, 1.00464f, 1.0034f, 1.00225f, 1.00117f, 1.00016f, 0.999224f, 0.998355f, 0.997549f, 0.996805f, 0.996119f, 0.995488f, 0.994909f, 0.99438f, 0.993899f, 0.993461f, 0.993066f, 0.99271f, 0.992392f, 0.992109f, 0.991858f, 0.991638f, 0.991447f, 0.991283f, 0.991143f, 0.991027f, 0.990931f, 0.990856f, 0.990799f, 0.990758f, 0.990733f, 0.990721f, 0.990723f, 0.990735f, 0.990758f, 0.99079f, 0.990831f, 0.990878f, 0.990933f, 0.990993f, 0.991058f, 0.991127f, 0.9912f, 0.991277f, 0.991355f, 0.991437f, 0.99152f, 0.991604f, 0.99169f, 0.991777f, 0.991864f, 0.991952f, 0.99204f, 0.992129f, 0.992217f, 0.992306f, 0.992395f, 0.992483f, 0.992572f, 0.992661f, 
 };
+
+inline float sample_burley_rho(float wo_dot_normal, float roughness) {
+    int wo_dot_normal_index = int(wo_dot_normal * burley_angle_sample_count - 0.5f); 
+    int roughness_index = int(roughness * (burley_roughness_sample_count - 1)); 
+    return burley_rho[wo_dot_normal_index + roughness_index * burley_angle_sample_count]; 
+}
 
 } // NS Shading
 } // NS Assets

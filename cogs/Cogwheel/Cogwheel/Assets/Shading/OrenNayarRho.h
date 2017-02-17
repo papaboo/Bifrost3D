@@ -17,6 +17,7 @@ namespace Cogwheel {
 namespace Assets {
 namespace Shading {
 
+const unsigned int oren_nayar_sample_count = 4096u;
 const unsigned int oren_nayar_angle_sample_count = 128u;
 const unsigned int oren_nayar_roughness_sample_count = 128u;
 
@@ -278,6 +279,12 @@ static const float oren_nayar_rho[] = {
     // Roughness 1
     0.847521f, 0.834734f, 0.830322f, 0.827436f, 0.825799f, 0.824527f, 0.823582f, 0.822609f, 0.821413f, 0.820172f, 0.819075f, 0.817975f, 0.816805f, 0.815629f, 0.814439f, 0.813246f, 0.812044f, 0.810838f, 0.809628f, 0.808406f, 0.807185f, 0.805933f, 0.804679f, 0.803414f, 0.802137f, 0.800844f, 0.799549f, 0.798247f, 0.796944f, 0.795633f, 0.794311f, 0.792988f, 0.791657f, 0.790322f, 0.788982f, 0.787633f, 0.786279f, 0.784921f, 0.783556f, 0.782186f, 0.780805f, 0.779419f, 0.778029f, 0.776636f, 0.775237f, 0.773834f, 0.772426f, 0.771013f, 0.769599f, 0.768179f, 0.766755f, 0.765324f, 0.763891f, 0.762452f, 0.761012f, 0.759568f, 0.75812f, 0.756669f, 0.755216f, 0.753759f, 0.752298f, 0.750834f, 0.749366f, 0.747897f, 0.746424f, 0.74495f, 0.743472f, 0.741992f, 0.740509f, 0.739023f, 0.737535f, 0.736044f, 0.734551f, 0.733056f, 0.731558f, 0.730058f, 0.728555f, 0.72705f, 0.725542f, 0.724033f, 0.722521f, 0.721006f, 0.719488f, 0.717968f, 0.716445f, 0.714919f, 0.71339f, 0.711858f, 0.710323f, 0.708784f, 0.707241f, 0.705694f, 0.704143f, 0.702587f, 0.701027f, 0.699461f, 0.69789f, 0.696312f, 0.694728f, 0.693137f, 0.691537f, 0.689929f, 0.688312f, 0.686684f, 0.685045f, 0.683393f, 0.681727f, 0.680046f, 0.678348f, 0.676631f, 0.674893f, 0.673131f, 0.671342f, 0.669522f, 0.667668f, 0.665773f, 0.663833f, 0.661839f, 0.659781f, 0.657647f, 0.655422f, 0.653082f, 0.650598f, 0.647922f, 0.644979f, 0.641635f, 0.637593f, 0.631827f, 
 };
+
+inline float sample_oren_nayar_rho(float wo_dot_normal, float roughness) {
+    int wo_dot_normal_index = int(wo_dot_normal * oren_nayar_angle_sample_count - 0.5f); 
+    int roughness_index = int(roughness * (oren_nayar_roughness_sample_count - 1)); 
+    return oren_nayar_rho[wo_dot_normal_index + roughness_index * oren_nayar_angle_sample_count]; 
+}
 
 } // NS Shading
 } // NS Assets

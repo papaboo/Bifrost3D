@@ -17,6 +17,7 @@ namespace Cogwheel {
 namespace Assets {
 namespace Shading {
 
+const unsigned int GGX_sample_count = 4096u;
 const unsigned int GGX_angle_sample_count = 128u;
 const unsigned int GGX_roughness_sample_count = 128u;
 
@@ -278,6 +279,12 @@ static const float GGX_rho[] = {
     // Roughness 1
     0.982789f, 0.952836f, 0.923039f, 0.893445f, 0.873157f, 0.857679f, 0.84236f, 0.828162f, 0.815022f, 0.802211f, 0.789516f, 0.776823f, 0.76433f, 0.752647f, 0.741108f, 0.730534f, 0.720659f, 0.711206f, 0.701764f, 0.69262f, 0.68348f, 0.674646f, 0.666117f, 0.658038f, 0.65006f, 0.642329f, 0.634995f, 0.628005f, 0.621138f, 0.614378f, 0.607725f, 0.601349f, 0.595024f, 0.58876f, 0.582679f, 0.576732f, 0.570907f, 0.565296f, 0.559792f, 0.554333f, 0.549012f, 0.543832f, 0.538671f, 0.533683f, 0.528724f, 0.52386f, 0.519154f, 0.514583f, 0.510215f, 0.505936f, 0.501698f, 0.49761f, 0.493549f, 0.48954f, 0.485554f, 0.481636f, 0.4778f, 0.474061f, 0.47037f, 0.466722f, 0.463121f, 0.45958f, 0.456013f, 0.452452f, 0.448949f, 0.445544f, 0.44225f, 0.439063f, 0.435957f, 0.432907f, 0.429918f, 0.426928f, 0.423984f, 0.42104f, 0.418145f, 0.415286f, 0.412513f, 0.409748f, 0.406976f, 0.404218f, 0.401511f, 0.398852f, 0.396232f, 0.393657f, 0.391144f, 0.388703f, 0.386289f, 0.383932f, 0.38161f, 0.37927f, 0.376919f, 0.374606f, 0.37233f, 0.370115f, 0.367891f, 0.365639f, 0.363431f, 0.361296f, 0.359196f, 0.357165f, 0.355156f, 0.353182f, 0.35124f, 0.349263f, 0.347254f, 0.345311f, 0.343407f, 0.341462f, 0.339534f, 0.337658f, 0.335828f, 0.334065f, 0.332346f, 0.330646f, 0.328891f, 0.327165f, 0.325443f, 0.32373f, 0.321998f, 0.320252f, 0.318581f, 0.31696f, 0.315423f, 0.313894f, 0.312335f, 0.31078f, 0.309261f, 0.307748f, 
 };
+
+inline float sample_GGX_rho(float wo_dot_normal, float roughness) {
+    int wo_dot_normal_index = int(wo_dot_normal * GGX_angle_sample_count - 0.5f); 
+    int roughness_index = int(roughness * (GGX_roughness_sample_count - 1)); 
+    return GGX_rho[wo_dot_normal_index + roughness_index * GGX_angle_sample_count]; 
+}
 
 } // NS Shading
 } // NS Assets
