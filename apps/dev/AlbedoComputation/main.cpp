@@ -74,9 +74,18 @@ std::string format_float(float v) {
     return out.str();
 }
 
+std::string get_rho_type(int dimensions) {
+    std::ostringstream out;
+    if (dimensions == 1)
+        out << "float";
+    else
+        out << "Vector" << dimensions << "f";
+    return out.str();
+}
+
 template <int ElementDimensions>
-void output_brdf(Image image, const std::string& filename, const std::string& data_name, const std::string& description) {
-    
+void output_brdf(Image image, int sample_count, const std::string& filename, const std::string& data_name, const std::string& description) {
+
     unsigned int width = image.get_width();
     unsigned int height = image.get_height();
     Math::RGB* image_pixels = (Math::RGB*)image.get_pixels();
@@ -84,6 +93,8 @@ void output_brdf(Image image, const std::string& filename, const std::string& da
     std::string ifdef_name = data_name;
     for (int s = 0; s < ifdef_name.length(); ++s)
         ifdef_name[s] = toupper(ifdef_name[s]);
+
+    std::string rho_type = get_rho_type(ElementDimensions);
 
     std::ofstream out_header(filename);
     out_header <<
@@ -107,14 +118,12 @@ void output_brdf(Image image, const std::string& filename, const std::string& da
         "namespace Shading {\n"
         "\n";
     if (ElementDimensions > 1)
-        out_header << "using namespace Cogwheel::Math;\n\n";
-    out_header << "const unsigned int " << data_name << "_angle_sample_count = " << width << "u;\n"
+        out_header << "using Cogwheel::Math::" << rho_type << ";\n\n";
+    out_header << "const unsigned int " << data_name << "_sample_count = " << sample_count << "u;\n"
+        "const unsigned int " << data_name << "_angle_sample_count = " << width << "u;\n"
         "const unsigned int " << data_name << "_roughness_sample_count = " << height << "u;\n"
-        "\n";
-    if (ElementDimensions == 1)
-        out_header << "static const float " << data_name << "_rho[] = {\n";
-    else
-        out_header << "static const Vector" << ElementDimensions << "f " << data_name << "_rho[] = {\n";
+        "\n"
+        "static const " << rho_type << " " << data_name << "_rho[] = {\n";
 
     for (int y = 0; y < int(height); ++y) {
         float roughness = y / float(height - 1u);
@@ -134,6 +143,12 @@ void output_brdf(Image image, const std::string& filename, const std::string& da
 
     out_header <<
         "};\n"
+        "\n"
+        "inline " << rho_type << " sample_" << data_name << "_rho(float wo_dot_normal, float roughness) {\n"
+        "    int wo_dot_normal_index = int(wo_dot_normal * " << data_name << "_angle_sample_count - 0.5f); \n"
+        "    int roughness_index = int(roughness * (" << data_name << "_roughness_sample_count - 1)); \n"
+        "    return " << data_name << "_rho[wo_dot_normal_index + roughness_index * " << data_name << "_angle_sample_count]; \n"
+        "}\n"
         "\n"
         "} // NS Shading\n"
         "} // NS Assets\n"
@@ -205,7 +220,7 @@ int main(int argc, char** argv) {
 
         // Store.
         StbImageWriter::write(output_dir + "DefaultShadingRho.png", rho);
-        output_brdf<2>(rho, output_dir + "DefaultShadingRho.h", "default_shading",
+        output_brdf<2>(rho, sample_count, output_dir + "DefaultShadingRho.h", "default_shading",
             "Directional-hemispherical reflectance for default shaded material.");
     }
 
@@ -215,7 +230,7 @@ int main(int argc, char** argv) {
 
         // Store.
         StbImageWriter::write(output_dir + "BurleyRho.png", rho);
-        output_brdf<1>(rho, output_dir + "BurleyRho.h", "burley", "Directional-hemispherical reflectance for Burley.");
+        output_brdf<1>(rho, sample_count, output_dir + "BurleyRho.h", "burley", "Directional-hemispherical reflectance for Burley.");
     }
 
     { // Compute OrenNayar rho.
@@ -224,7 +239,7 @@ int main(int argc, char** argv) {
 
         // Store.
         StbImageWriter::write(output_dir + "OrenNayarRho.png", rho);
-        output_brdf<1>(rho, output_dir + "OrenNayarRho.h", "oren_nayar", "Directional-hemispherical reflectance for OrenNayar.");
+        output_brdf<1>(rho, sample_count, output_dir + "OrenNayarRho.h", "oren_nayar", "Directional-hemispherical reflectance for OrenNayar.");
     }
 
     { // Compute GGX rho.
@@ -238,7 +253,7 @@ int main(int argc, char** argv) {
 
         // Store.
         StbImageWriter::write(output_dir + "GGXRho.png", rho);
-        output_brdf<1>(rho, output_dir + "GGXRho.h", "GGX", "Directional-hemispherical reflectance for GGX.");
+        output_brdf<1>(rho, sample_count, output_dir + "GGXRho.h", "GGX", "Directional-hemispherical reflectance for GGX.");
     }
 
     { // Compute GGX with fresnel rho.
@@ -255,7 +270,7 @@ int main(int argc, char** argv) {
 
         // Store.
         StbImageWriter::write(output_dir + "GGXWithFresnelRho.png", rho);
-        output_brdf<1>(rho, output_dir + "GGXWithFresnelRho.h", "GGX_with_fresnel",
+        output_brdf<1>(rho, sample_count, output_dir + "GGXWithFresnelRho.h", "GGX_with_fresnel",
             "Directional-hemispherical reflectance for GGX with fresnel factor.");
     }
 
