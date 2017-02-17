@@ -25,13 +25,13 @@ using namespace Cogwheel;
 
 class LocalRotator final {
 public:
-    LocalRotator(Scene::SceneNodes::UID node_ID)
-        : m_node_ID(node_ID) {
+    LocalRotator(Scene::SceneNodes::UID node_ID, float rotation_stength)
+        : m_node_ID(node_ID), m_rotation_stength(rotation_stength){
     }
 
     void rotate(Core::Engine& engine) {
         if (!engine.get_time().is_paused()) {
-            Math::Quaternionf rotation = Math::Quaternionf::from_angle_axis(float(engine.get_time().get_smooth_delta_time()) * 0.3f, Math::Vector3f::right());
+            Math::Quaternionf rotation = Math::Quaternionf::from_angle_axis(float(engine.get_time().get_smooth_delta_time()) * m_rotation_stength, Math::Vector3f::right());
             Math::Transform delta_transform = Math::Transform(Math::Vector3f::zero(), rotation);
             Scene::SceneNodes::apply_delta_transform(m_node_ID, delta_transform);
         }
@@ -43,6 +43,7 @@ public:
 
 private:
     Scene::SceneNodes::UID m_node_ID;
+    float m_rotation_stength;
 };
 
 class BlinkingLight final {
@@ -214,7 +215,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
             cube_node.set_parent(parent_node);
             parent_node = cube_node;
 
-            LocalRotator* simple_rotator = new LocalRotator(cube_node.get_ID());
+            LocalRotator* simple_rotator = new LocalRotator(cube_node.get_ID(), i * 0.31415f * 0.5f + 0.2f);
             engine.add_mutating_callback(LocalRotator::rotate_callback, simple_rotator);
         }
     }
@@ -253,10 +254,10 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
             }
         }
 
-        Materials::Data material_data = Materials::Data::create_metal(RGB(0.8f, 0.4f, 0.3f), 0.02f, 0.0f);
+        Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.005f, 0.01f, 0.25f), 0.05f, 0.5f);
         material_data.coverage_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
         material_data.flags = MaterialFlag::Cutout;
-        Materials::UID material_ID = Materials::create("Copper", material_data);
+        Materials::UID material_ID = Materials::create("Plastic", material_data);
 
         Transform transform = Transform(Vector3f(3.0f, 0.35f, 0.0f), Quaternionf::identity(), 0.5f);
         SceneNode cube_node = SceneNodes::create("Swizz torus", transform);
