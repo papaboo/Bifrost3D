@@ -15,10 +15,15 @@ SET(ASSETS_SRCS
 
 SET(ASSETS_SHADING_SRCS 
   Cogwheel/Assets/Shading/BurleyRho.h
+  Cogwheel/Assets/Shading/BurleyRho.png
   Cogwheel/Assets/Shading/DefaultShadingRho.h
+  Cogwheel/Assets/Shading/DefaultShadingRho.png
   Cogwheel/Assets/Shading/GGXRho.h
+  Cogwheel/Assets/Shading/GGXRho.png
   Cogwheel/Assets/Shading/GGXWithFresnelRho.h
+  Cogwheel/Assets/Shading/GGXWithFresnelRho.png
   Cogwheel/Assets/Shading/OrenNayarRho.h
+  Cogwheel/Assets/Shading/OrenNayarRho.png
 )
 
 SET(CORE_SRCS 
