@@ -380,7 +380,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
     else if (g_scene.compare("MaterialScene") == 0)
         create_material_scene(cam_ID, root_node_ID);
     else if (g_scene.compare("SphereScene") == 0)
-        create_sphere_scene(cam_ID, root_node_ID);
+        create_sphere_scene(cam_ID, scene_ID);
     else if (g_scene.compare("TestScene") == 0)
         create_test_scene(engine, cam_ID, root_node_ID);
     else {

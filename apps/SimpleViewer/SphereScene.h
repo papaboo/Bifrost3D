@@ -14,13 +14,20 @@
 #include <Cogwheel/Assets/MeshModel.h>
 #include <Cogwheel/Scene/Camera.h>
 #include <Cogwheel/Scene/SceneNode.h>
+#include <Cogwheel/Scene/SceneRoot.h>
 
 using namespace Cogwheel;
 
-void create_sphere_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_node) {
+void create_sphere_scene(Scene::Cameras::UID camera_ID, Scene::SceneRoots::UID scene_ID) {
     using namespace Cogwheel::Assets;
     using namespace Cogwheel::Math;
     using namespace Cogwheel::Scene;
+
+    SceneRoot scene = scene_ID;
+    if (!Textures::has(scene.get_environment_map()))
+        scene.set_environment_tint(RGB(0.5f));
+
+    SceneNode root_node = SceneRoots::get_root_node(scene_ID);
 
     { // Setup camera transform.
         Transform cam_transform = Cameras::get_transform(camera_ID);
