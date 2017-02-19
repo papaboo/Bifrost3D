@@ -221,7 +221,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
     }
 
     { // Destroyable cylinder. TODO Implement destruction of the mesh, model and scene node.
-        Materials::Data material_data = Materials::Data::create_metal(RGB(0.56f, 0.57f, 0.58f), 0.4f, 0.0f);
+        Materials::Data material_data = Materials::Data::create_metal(RGB(0.56f, 0.57f, 0.58f), 0.4f, 0.75f);
         Materials::UID material_ID = Materials::create("Iron", material_data);
 
         Transform transform = Transform(Vector3f(-1.5f, 0.5f, 0.0f));

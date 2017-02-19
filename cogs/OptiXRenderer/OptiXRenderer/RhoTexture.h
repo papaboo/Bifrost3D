@@ -14,7 +14,7 @@
 
 namespace OptiXRenderer {
 
-optix::TextureSampler default_shading_rho_texture(optix::Context& context);
+optix::TextureSampler ggx_with_fresnel_rho_texture(optix::Context& context);
 
 } // NS OptiXRenderer
 

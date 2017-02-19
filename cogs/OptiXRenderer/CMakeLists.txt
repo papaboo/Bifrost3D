@@ -57,7 +57,6 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
 
   set(SHADING_SHADING_MODELS_SRC
     OptiXRenderer/Shading/ShadingModels/DefaultShading.h
-    OptiXRenderer/Shading/ShadingModels/DefaultShadingRho.h
     OptiXRenderer/Shading/ShadingModels/LambertShading.h
   )
 

@@ -23,6 +23,9 @@ SamplerState color_sampler : register(s1);
 Texture2D coverage_tex : register(t2);
 SamplerState coverage_sampler : register(s2);
 
+Texture2D ggx_with_fresnel_rho_tex : register(t7);
+SamplerState ggx_with_fresnel_rho_sampler : register(s7);
+
 //-----------------------------------------------------------------------------
 // Default shading.
 //-----------------------------------------------------------------------------
@@ -36,6 +39,18 @@ struct DefaultShading {
     float m_coverage;
     unsigned int m_coverage_texture_index;
     int3 __padding;
+
+    float compute_specularity(float specularity, float metalness) {
+        float dielectric_specularity = specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.
+        float metal_specularity = specularity * 0.2f + 0.6f;
+        return lerp(dielectric_specularity, metal_specularity, metalness);
+    }
+
+    float compute_specular_rho(float specularity, float abs_cos_theta, float roughness) {
+        float base_specular_rho = ggx_with_fresnel_rho_tex.Sample(ggx_with_fresnel_rho_sampler, float2(abs_cos_theta, roughness)).r;
+        float full_specular_rho = 1.0f; // TODO This is wrong. GGX doesn't have a rho of one. Try to use the actual GGX rho instead.
+        return lerp(base_specular_rho, full_specular_rho, specularity);
+    }
 
     float coverage(float2 texcoord) {
         float c = m_coverage;
@@ -58,14 +73,17 @@ struct DefaultShading {
         float3 tint = m_tint;
         if (m_tint_texture_index != 0)
             tint *= color_tex.Sample(color_sampler, texcoord).rgb;
+
+        float specularity = compute_specularity(m_specularity, m_metallic);
+        float3 specular_tint = lerp(float3(1.0f, 1.0f, 1.0f), m_tint, m_metallic);
+        float3 diffuse_tint = tint * (1.0f - compute_specular_rho(specularity, wo.z, m_roughness));
+
         float3 halfway = normalize(wo + wi);
-        float specularity = lerp(m_specularity, 1.0f, m_metallic);
-        float fresnel = schlick_fresnel(specularity, dot(wo, halfway));
-        float3 specular_tint = lerp(float3(1.0f, 1.0f, 1.0f), tint, m_metallic);
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
+        float fresnel = schlick_fresnel(specularity, dot(wo, halfway));
         float3 specular = specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway);
-        float3 diffuse = tint * BSDFs::Lambert::evaluate();
-        return lerp(diffuse, specular, fresnel);
+        float3 diffuse = diffuse_tint * BSDFs::Lambert::evaluate();
+        return diffuse + specular * fresnel;
     }
 
     // This is a horrible hack, just to get some approximate IBL in.
@@ -78,21 +96,22 @@ struct DefaultShading {
         if (m_tint_texture_index != 0)
             tint *= color_tex.Sample(color_sampler, texcoord).rgb;
 
+        float specularity = compute_specularity(m_specularity, m_metallic);
         float abs_cos_theta = abs(dot(wi, normal));
-
-        float specularity = lerp(m_specularity, 1.0f, m_metallic);
-        float fresnel = schlick_fresnel(specularity, pow(abs_cos_theta, 0.25f)); // Ugh, that fresnel approximation again.
+        float specular_rho = compute_specular_rho(specularity, abs_cos_theta, m_roughness);
+        float3 specular_tint = lerp(float3(1.0f, 1.0f, 1.0f), tint, m_metallic);
+        float3 diffuse_tint = tint * (1.0f - specular_rho);
 
         float width, height, mip_count;
         environment_tex.GetDimensions(0, width, height, mip_count);
 
         float2 diffuse_tc = direction_to_latlong_texcoord(normal);
-        float3 diffuse = tint * environment_tex.SampleLevel(environment_sampler, diffuse_tc, mip_count - 3).rgb;
+        float3 diffuse = diffuse_tint * environment_tex.SampleLevel(environment_sampler, diffuse_tc, mip_count - 3).rgb;
 
         float2 specular_tc = direction_to_latlong_texcoord(wi);
-        float3 specular = tint * environment_tex.SampleLevel(environment_sampler, specular_tc, (mip_count - 3) * m_roughness * m_roughness).rgb;
+        float3 specular = specular_tint * environment_tex.SampleLevel(environment_sampler, specular_tc, (mip_count - 3) * m_roughness * m_roughness).rgb;
 
-        return lerp(diffuse, specular, fresnel);
+        return diffuse + specular * specular_rho;
     }
 };
 

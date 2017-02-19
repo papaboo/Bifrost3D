@@ -122,7 +122,7 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
         Materials::Data material1_data = {};
         material1_data.tint = RGB(1.0f, 0.766f, 0.336f);
         material1_data.roughness = 0.02f;
-        material1_data.specularity = 0.25f;
+        material1_data.specularity = 1.0f;
         material1_data.metallic = 1.0f;
         material1_data.coverage = 1.0f;
 

@@ -71,7 +71,7 @@ struct Renderer::State {
     std::vector<optix::TextureSampler> textures = std::vector<optix::TextureSampler>(0);
 
     optix::Material default_material;
-    optix::TextureSampler default_material_rho;
+    optix::TextureSampler ggx_with_fresnel_rho;
     optix::Buffer material_parameters;
     unsigned int active_material_count;
 
@@ -350,8 +350,8 @@ Renderer::Renderer(const Cogwheel::Core::Window& window)
         context["g_materials"]->set(m_state->material_parameters);
 
         // Upload directional-hemispherical reflectance texture.
-        m_state->default_material_rho = default_shading_rho_texture(context);
-        context["default_shading_rho_texture_ID"]->setUint(m_state->default_material_rho->getId());
+        m_state->ggx_with_fresnel_rho = ggx_with_fresnel_rho_texture(context);
+        context["ggx_with_fresnel_rho_texture_ID"]->setUint(m_state->ggx_with_fresnel_rho->getId());
     }
 
     { // Screen buffers
@@ -633,7 +633,7 @@ void Renderer::handle_updates() {
             } else
                 device_material.tint_texture_ID = 0u;
             device_material.roughness = host_material.get_roughness();
-            device_material.specularity = host_material.get_specularity() * 0.08f; // See Physically-Based Shading at Disney bottom of page 8 for why we remap.
+            device_material.specularity = host_material.get_specularity();
             device_material.metallic = host_material.get_metallic();
             device_material.coverage = host_material.get_coverage();
             if (host_material.get_coverage_texture_ID() != Textures::UID::invalid_UID()) {

@@ -10,6 +10,7 @@
 #include "Dx11Renderer/Utils.h"
 
 #include <Cogwheel/Assets/Material.h>
+#include <Cogwheel/Assets/Shading/GGXWithFresnelRho.h>
 
 using namespace Cogwheel::Assets;
 
@@ -22,7 +23,7 @@ inline Dx11Material make_dx11material(Material mat) {
     dx11_material.tint.z = mat.get_tint().b;
     dx11_material.tint_texture_index = mat.get_tint_texture_ID();
     dx11_material.roughness = mat.get_roughness();
-    dx11_material.specularity = mat.get_specularity() * 0.08f; // See Physically-Based Shading at Disney bottom of page 8 for why we remap.
+    dx11_material.specularity = mat.get_specularity();
     dx11_material.metallic = mat.get_metallic();
     dx11_material.coverage = mat.get_coverage();
     dx11_material.coverage_texture_index = mat.get_coverage_texture_ID();
@@ -30,6 +31,49 @@ inline Dx11Material make_dx11material(Material mat) {
 }
 
 MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& context) {
+
+    { // Setup GGX with fresnel texture.
+        using namespace Cogwheel::Assets::Shading;
+
+        D3D11_TEXTURE2D_DESC tex_desc = {};
+        tex_desc.Width = GGX_with_fresnel_angle_sample_count;
+        tex_desc.Height = GGX_with_fresnel_roughness_sample_count;
+        tex_desc.MipLevels = 1;
+        tex_desc.ArraySize = 1;
+        tex_desc.Format = DXGI_FORMAT_R32_FLOAT;
+        tex_desc.SampleDesc.Count = 1;
+        tex_desc.SampleDesc.Quality = 0;
+        tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
+        tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+        D3D11_SUBRESOURCE_DATA resource_data;
+        resource_data.pSysMem = GGX_with_fresnel_rho;
+        resource_data.SysMemPitch = sizeof(float) * tex_desc.Width;
+
+        HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &m_GGX_with_fresnel_texture);
+        THROW_ON_FAILURE(hr);
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+        srv_desc.Format = tex_desc.Format;
+        srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        srv_desc.Texture2D.MipLevels = tex_desc.MipLevels;
+        srv_desc.Texture2D.MostDetailedMip = 0;
+        hr = device.CreateShaderResourceView(m_GGX_with_fresnel_texture, &srv_desc, &m_GGX_with_fresnel_srv);
+        THROW_ON_FAILURE(hr);
+
+        D3D11_SAMPLER_DESC desc = {};
+        desc.Filter = D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
+        desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+        desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+        desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+        desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+        desc.MinLOD = 0;
+        desc.MaxLOD = D3D11_FLOAT32_MAX;
+
+        hr = device.CreateSamplerState(&desc, &m_GGX_with_fresnel_sampler);
+        THROW_ON_FAILURE(hr);
+    }
+
     // Default material.
     Dx11Material invalid_mat = make_dx11material(Materials::UID::invalid_UID());
 

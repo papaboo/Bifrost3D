@@ -8,22 +8,23 @@
 
 #include <OptiXRenderer/RhoTexture.h>
 
-#include <OptiXRenderer/Shading/ShadingModels/DefaultShadingRho.h>
+#include <Cogwheel/Assets/Shading/GGXWithFresnelRho.h>
 
+using namespace Cogwheel::Assets::Shading;
 using namespace optix;
 
 namespace OptiXRenderer {
 
-TextureSampler default_shading_rho_texture(Context& context) {
+TextureSampler ggx_with_fresnel_rho_texture(Context& context) {
     // Create buffer.
-    unsigned int width = default_shading_angle_sample_count;
-    unsigned int height = default_shading_roughness_sample_count;
-    Buffer default_material_rho_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, width, height);
+    unsigned int width = GGX_with_fresnel_angle_sample_count;
+    unsigned int height = GGX_with_fresnel_roughness_sample_count;
+    Buffer rho_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, width, height);
 
-    float2* rho_data = static_cast<float2*>(default_material_rho_buffer->map());
-    memcpy(rho_data, default_shading_rho, width * height * sizeof(float2));
-    default_material_rho_buffer->unmap();
-    // default_material_rho_buffer->validate();
+    float* rho_data = static_cast<float*>(rho_buffer->map());
+    memcpy(rho_data, GGX_with_fresnel_rho, width * height * sizeof(float));
+    rho_buffer->unmap();
+    // ggx_with_fresnel_rho_buffer->validate();
 
     // ... and wrap it in a texture sampler.
     TextureSampler& rho_texture = context->createTextureSampler();
@@ -36,7 +37,7 @@ TextureSampler default_shading_rho_texture(Context& context) {
     rho_texture->setMipLevelCount(1u);
     rho_texture->setFilteringModes(RT_FILTER_NEAREST, RT_FILTER_LINEAR, RT_FILTER_NONE);
     rho_texture->setArraySize(1u);
-    rho_texture->setBuffer(0u, 0u, default_material_rho_buffer);
+    rho_texture->setBuffer(0u, 0u, rho_buffer);
     // rho_texture->validate()
 
     return rho_texture;
