@@ -39,6 +39,13 @@
 #    endif
 #endif
 
+#if GPU_DEVICE
+#define THROW(e) rtThrow(e)
+#else
+#define THROW(e) throw e
+#endif
+
+
 // Constants.
 #define PIf 3.14159265358979323846f
 #define RECIP_PIf 0.31830988618379067153776752674503f
