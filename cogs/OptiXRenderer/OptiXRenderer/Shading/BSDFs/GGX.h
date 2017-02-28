@@ -53,8 +53,8 @@ __inline_all__ float lambda(float alpha, float cos_theta) {
     return (-1.0f + sqrt(1.0f + 1.0f / a_sqrd)) / 2.0f;
 }
 
-__inline_all__ float masking(float alpha, const float3& wo) {
-    return 1.0f / (1.0f + lambda(alpha, wo.z));
+__inline_all__ float masking(float alpha, float cos_theta) {
+    return 1.0f / (1.0f + lambda(alpha, cos_theta));
 }
 
 // Height correlated smith geometric term. Equation 98. 
@@ -97,11 +97,7 @@ __inline_all__ float3 evaluate(const float3& tint, float alpha, const float3& wo
 __inline_all__ float PDF(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
 #if _DEBUG
     if (dot(wo, halfway) < 0.0f || halfway.z < 0.0f)
-#if GPU_DEVICE
-        rtThrow(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
-#else
-        throw "OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION";
-#endif
+        THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
 #endif
 
     return Distributions::GGX::PDF(alpha, halfway.z) / (4.0f * dot(wo, halfway));
