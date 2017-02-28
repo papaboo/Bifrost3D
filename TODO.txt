@@ -1,34 +1,35 @@
-* Kill off TODOs
+* Rho
+** GGX: Sample visible normals
+* VS compiler flags. /debug:fastlink in VS2015 and fast float operations. Tests should use precise.
+* The IBL in the Rungholt scene at 3Shape is very dark in DX11 renderer. Check gamma and backbuffer precision.
+** Texture / image VS debugging helpers.
+* OptiXRenderer
+** Check in integrator or material that the rays are always on the right side? I can see through the rings when a ring behind rotates by one in front.
+** Verify that highest_area_light_index_updated in the OptiXRenderer behaves correctly.
+** Half4 backbuffer in OptiXRenderer and render directly to a mapped DX resource.
+** Logarithmic data upload: (frame_ID >> 3) + 1 == 1. Do we gain any performance from it?
+** Filtering
+* Revisit environment map (2D image) importance sampling. Try the new approach where pixels can be looked up almost immediatly.
+* Materials revisited.
+** Add coat.
 * Multiple cameras.
 ** G-Buffer pr camera.
 ** Compose when all cameras are done.
-* OptiXRenderer
-** Copy ptx files to data folder and load from data folder at runtime.
-** Half4 backbuffer in OptiXRenderer and render directly to a mapped DX resource.
-** OptiX 4.0
-** Verify that highest_area_light_index_updated in the OptiXRenderer behaves correctly.
 * Screenshot
 ** Grab backbuffer on the CPU.
 *** Request to composer or through the camera, not renderers
 *** Expose certain backbuffer state pr camera/viewport in a renderer interface. Fx iteration_count, is_continuous_renderer and so on. Members that can be used to evaluate the 'doneness' of a backbuffer.
 **** Investigate and potentially use C++ async concepts for this.
 ** Render to offscreen buffer.
-* BTDF
-** Transmission factor.
-*** Use IOR computed from specularity.
-*** Or just change specularity to IOR. Would probably make it easier to keep track of the in and out IOR's as well.
 * Normals revisited
-** Bump mapping (Pending GL Renderer to verify winding order)
+** Bump mapping
 *** Filter bumpmap mipmaps using Toksvig05, SGGX or AGAA NDF construction.
 ** 'Fix' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles. (Offset normal by -view_dir until the dot product is 0.)
 ** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
-* Materials revisited.
-** Use perfectly specular BRDFs for tiny roughness values.
-*** Adapt MIS to handle specular surfaces.
-** Use Fresnel between 0.6 and 0.8 for metals. Just leave diffuse on to simulate multiple scattering, but perhaps the tint should be raised to some power (2?), to simulate multiple intersections.
-** GGX: Stochastically sampled diffuse term with sampling probability based on geometric term.
-** Add coat.
+* BTDF
+** Transmission factor.
+*** Use IOR computed from specularity.
 * Multiple scenes.
 ** Only nodes in a certain scene should be rendered.
 ** Should a scene node know if it is in a scene and in which? Store the root scene ID pr node?
