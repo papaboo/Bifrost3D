@@ -122,6 +122,32 @@ __inline_all__ optix::float3 latlong_texcoord_to_direction(const optix::float2& 
     return optix::make_float3(sin_theta * sinf(phi), cosf(theta), sin_theta * cosf(phi));
 }
 
+//-----------------------------------------------------------------------------
+// Trigonometri utils
+//-----------------------------------------------------------------------------
+
+__inline_all__ float cos_theta(optix::float3 w) { return w.z; }
+__inline_all__ float cos2_theta(optix::float3 w) { return w.z * w.z; }
+__inline_all__ float abs_cos_theta(optix::float3 w) { return abs(w.z); }
+
+__inline_all__ float sin2_theta(optix::float3 w) { return fmaxf(0.0f, 1.0f - cos2_theta(w)); }
+__inline_all__ float sin_theta(optix::float3 w) { return sqrt(sin2_theta(w)); }
+
+__inline_all__ float tan_theta(optix::float3 w) { return sin_theta(w) / cos_theta(w); }
+__inline_all__ float tan2_theta(optix::float3 w) { return sin2_theta(w) / cos2_theta(w); }
+
+__inline_all__ float cos_phi(optix::float3 w) {
+    float sin_theta_ = sin_theta(w);
+    return (sin_theta_ == 0) ? 1.0f : optix::clamp(w.x / sin_theta_, -1.0f, 1.0f);
+}
+__inline_all__ float cos2_phi(optix::float3 w) { return cos_phi(w) * cos_phi(w); }
+
+__inline_all__ float sin_phi(optix::float3 w) {
+    float sin_theta_ = sin_theta(w);
+    return (sin_theta_ == 0) ? 0.0f : optix::clamp(w.y / sin_theta_, -1.0f, 1.0f);
+}
+__inline_all__ float sin2_phi(optix::float3 w) { return sin_phi(w) * sin_phi(w); }
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_SHADING_UTILS_H_
