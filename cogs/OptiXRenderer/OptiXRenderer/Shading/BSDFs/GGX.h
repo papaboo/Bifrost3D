@@ -37,39 +37,18 @@ __inline_all__ float roughness_from_alpha(float alpha) {
 }
 
 // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14.
-namespace Heitz {
-
-// Equation 72.
-__inline_all__ float lambda(float alpha, float cos_theta) {
-    // NOTE At grazing angles the lambda function is going to return very low values. 
-    //      This is generally not a problem, unless alpha is low as well, 
-    //      meaning that the in and out vectors will always be at grazing angles 
-    //      and therefore the masking is consistently underestimated. 
-    //      We could fix this be adding a very specific scaling for this one case.
-    //      Check the GGX Rho computation for validity.
-    float cos_theta_sqrd = cos_theta * cos_theta;
-    float tan_theta_sqrd = fmaxf(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
-    float a_sqrd = 1.0f / (alpha * alpha * tan_theta_sqrd);
-    return (-1.0f + sqrt(1.0f + 1.0f / a_sqrd)) / 2.0f;
-}
-
-__inline_all__ float masking(float alpha, float cos_theta) {
-    return 1.0f / (1.0f + lambda(alpha, cos_theta));
-}
-
-// Height correlated smith geometric term. Equation 98. 
+// Separable smith geometric term. Equation 98. 
 __inline_all__ float separable_smith_G(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
     float headysided = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway)); // TODO Should always evaluate to 1.0f. But if we replace it by a constant then guard it by an exception that catches cases where it isn't 1.0f in debug builds.
-    return headysided / ((1.0f + lambda(alpha, wo.z) * (1.0f + lambda(alpha, wi.z))));
+    return headysided / ((1.0f + Distributions::VNDF_GGX::lambda(alpha, wo.z) * (1.0f + Distributions::VNDF_GGX::lambda(alpha, wi.z))));
 }
 
+// Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14.
 // Height correlated smith geometric term. Equation 99. 
 __inline_all__ float height_correlated_smith_G(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
     float headysided = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway)); // TODO Should always evaluate to 1.0f. But if we replace it by a constant then guard it by an exception that catches cases where it isn't 1.0f in debug builds.
-    return headysided / (1.0f + lambda(alpha, wo.z) + lambda(alpha, wi.z));
+    return headysided / (1.0f + Distributions::VNDF_GGX::lambda(alpha, wo.z) + Distributions::VNDF_GGX::lambda(alpha, wi.z));
 }
-
-} // NS Heitz
 
 //----------------------------------------------------------------------------
 // GGX BSDF, Walter et al 07.
@@ -84,7 +63,7 @@ __inline_all__ float height_correlated_smith_G(float alpha, const float3& wo, co
 //----------------------------------------------------------------------------
 
 __inline_all__ float evaluate(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
-    float G = Heitz::height_correlated_smith_G(alpha, wo, wi, halfway);
+    float G = height_correlated_smith_G(alpha, wo, wi, halfway);
     float D = Distributions::GGX::D(alpha, halfway.z);
     float F = 1.0f; // No fresnel.
     return (D * F * G) / (4.0f * wo.z * wi.z);
@@ -104,7 +83,7 @@ __inline_all__ float PDF(float alpha, const float3& wo, const float3& wi, const 
 }
 
 __inline_all__ BSDFResponse evaluate_with_PDF(const float3& tint, float alpha, const float3& wo, const float3& wi, const float3& halfway) {
-    float G = Heitz::height_correlated_smith_G(alpha, wo, wi, halfway);
+    float G = height_correlated_smith_G(alpha, wo, wi, halfway);
     float D = Distributions::GGX::D(alpha, halfway.z);
     float F = 1.0f; // No fresnel.
     float f = (D * F * G) / (4.0f * wo.z * wi.z);
@@ -127,7 +106,7 @@ __inline_all__ BSDFSample sample(const float3& tint, float alpha, const float3& 
 
     { // Evaluate using the already computed sample PDF, which is D * cos_theta.
         const float3& wi = bsdf_sample.direction; // alias for readability.
-        float G = Heitz::height_correlated_smith_G(alpha, wo, wi, halfway_sample.direction);
+        float G = height_correlated_smith_G(alpha, wo, wi, halfway_sample.direction);
         float D = halfway_sample.PDF / halfway_sample.direction.z;
         float F = 1.0f;
         bsdf_sample.weight = tint * ((D * F * G) / (4.0f * wo.z * wi.z));

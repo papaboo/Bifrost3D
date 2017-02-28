@@ -10,6 +10,7 @@
 #define _OPTIXRENDERER_DISTRIBUTIONS_H_
 
 #include <OptiXRenderer/Defines.h>
+#include <OptiXRenderer/Utils.h>
 
 #include <optixu/optixu_math_namespace.h>
 
@@ -101,6 +102,114 @@ namespace GGX {
     }
 
 } // NS GGX
+
+//=================================================================================================
+// Sampling of the visible normal distribution function for GGX.
+// Importance Sampling Microfacet-Based BSDFs with the Distribution of Visible Normals, Heitz 14.
+// Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14.
+//=================================================================================================
+namespace VNDF_GGX {
+    // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Equation 72.
+    __inline_all__ float lambda(float alpha, float cos_theta) {
+        // NOTE At grazing angles the lambda function is going to return very low values. 
+        //      This is generally not a problem, unless alpha is low as well, 
+        //      meaning that the in and out vectors will always be at grazing angles 
+        //      and therefore the masking is consistently underestimated. 
+        //      We could fix this be adding a very specific scaling for this one case.
+        //      Check the GGX Rho computation for validity.
+        float cos_theta_sqrd = cos_theta * cos_theta;
+        float tan_theta_sqrd = fmaxf(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
+        float a_sqrd = 1.0f / (alpha * alpha * tan_theta_sqrd);
+        return (-1.0f + sqrt(1.0f + 1.0f / a_sqrd)) / 2.0f;
+    }
+
+    __inline_all__ float masking(float alpha, float cos_theta) {
+        return 1.0f / (1.0f + lambda(alpha, cos_theta));
+    }
+
+    // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, supplemental 1, page 19.
+    __inline_all__ optix::float2 sample11(float cos_theta, optix::float2 random_sample) {
+        using namespace optix;
+
+        float cos_theta_sqrd = cos_theta * cos_theta;
+        // Special case (normal incidence)
+        if (cos_theta_sqrd > 0.99999f) {
+            float r = sqrt(random_sample.x / (1 - random_sample.x));
+            float phi = 6.28318530718f * random_sample.y;
+            return make_float2(r * cos(phi), r * sin(phi));
+        }
+
+        float U1 = random_sample.x;
+        float U2 = random_sample.y;
+
+        // GGX masking term with alpha of 1.0.
+        float tan_theta_sqrd = fmaxf(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
+        float tan_theta = sqrt(tan_theta_sqrd);
+        float a = 1.0f / tan_theta;
+        float G1 = 2.0f / (1.0f + sqrt(1.0f + 1.0f / (a*a)));
+
+        // Sample slope_x
+        float A = 2.0f * U1 / G1 - 1.0f;
+        float tmp = 1.0f / (A * A - 1.0f);
+        float B = tan_theta;
+        float D = sqrt(B * B * tmp * tmp - (A * A - B * B) * tmp);
+        float slope_x_1 = B * tmp - D;
+        float slope_x_2 = B * tmp + D;
+        float2 slope;
+        slope.x = (A < 0.0f || slope_x_2 > 1.0f / tan_theta) ? slope_x_1 : slope_x_2;
+
+        // Sample slope_y
+        // TODO Simplifiable??
+        float S;
+        if (U2 > 0.5f) {
+            S = 1.0f;
+            U2 = 2.0f * (U2 - 0.5f);
+        } else {
+            S = -1.0f;
+            U2 = 2.0f * (0.5f - U2);
+        }
+
+        float z = (U2*(U2*(U2*0.27385f - 0.73369f) + 0.46341f)) / (U2*(U2*(U2*0.093073f + 0.309420f) - 1.0f) + 0.597999f);
+        slope.y = S * z * sqrt(1.0f + slope.x * slope.x);
+        return slope;
+    }
+
+    // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, supplemental 1, page 4.
+    __inline_all__ optix::float3 sample_halfway(float alpha, optix::float3 wo, optix::float2 random_sample) {
+        using namespace optix;
+
+        // Stretch wo
+        float3 stretched_wo = normalize(make_float3(alpha * wo.x, alpha * wo.y, wo.z));
+
+        // Sample P22_{wo}(x_slope, y_slope, 1, 1)
+        float2 slope = sample11(stretched_wo.z, random_sample);
+
+        // Rotate
+        float _cos_phi = cos_phi(stretched_wo);
+        float _sin_phi = sin_phi(stretched_wo);
+        float tmp = _cos_phi * slope.x - _sin_phi * slope.y;
+        slope.y = _sin_phi * slope.x + _cos_phi * slope.y;
+        slope.x = tmp;
+
+        // Unstretch and compute normal.
+        return normalize(make_float3(-slope.x * alpha, -slope.y * alpha, 1.0f));
+    }
+
+    // Importance Sampling Microfacet-Based BSDFs with the Distribution of Visible Normals, equation 2
+    __inline_all__ float PDF(float alpha, optix::float3 wo, optix::float3 halfway) {
+        float G1 = masking(alpha, wo.z);
+        float D = Distributions::GGX::D(alpha, abs(halfway.z));
+        return G1 * abs(optix::dot(wo, halfway)) * D / abs(wo.z); // TODO wo.z should always be positive, otherwise throw an exception in debug builds.
+    }
+
+    __inline_all__ Distributions::DirectionalSample sample(float alpha, optix::float3 wo, optix::float2 random_sample) {
+        Distributions::DirectionalSample sample;
+        sample.direction = sample_halfway(alpha, wo, random_sample);;
+        sample.PDF = PDF(alpha, wo, sample.direction);
+        return sample;
+    }
+
+} // NS VNDF_GGX
 
 } // NS Distributions
 } // NS OptiXRenderer
