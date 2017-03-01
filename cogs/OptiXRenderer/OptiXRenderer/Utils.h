@@ -100,6 +100,16 @@ __inline_all__ bool is_PDF_valid(float PDF) {
     return PDF > 0.000001f;
 }
 
+// Insert a 0 bit in between each of the 16 low bits of v.
+__inline_all__ unsigned int part_by_1(unsigned int v) {
+    v &= 0x0000ffff;                  // x = ---- ---- ---- ---- fedc ba98 7654 3210
+    v = (v ^ (v << 8)) & 0x00ff00ff; // x = ---- ---- fedc ba98 ---- ---- 7654 3210
+    v = (v ^ (v << 4)) & 0x0f0f0f0f; // x = ---- fedc ---- ba98 ---- 7654 ---- 3210
+    v = (v ^ (v << 2)) & 0x33333333; // x = --fe --dc --ba --98 --76 --54 --32 --10
+    v = (v ^ (v << 1)) & 0x55555555; // x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
+    return v;
+}
+
 __inline_all__ static float pow5(float x) {
     float xx = x * x;
     return xx * xx * x;
