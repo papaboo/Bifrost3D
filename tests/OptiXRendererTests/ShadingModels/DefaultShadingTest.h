@@ -213,7 +213,7 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
 
     // Test that sample_all_BSDFs has lower variance than sample_one_BSDF and that they converge to the same result'ish.
 
-    const unsigned int MAX_SAMPLES = 2048 * 32;
+    const unsigned int MAX_SAMPLES = 8196;
     const float3 wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
 
     Material material_params;
