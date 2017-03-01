@@ -115,6 +115,56 @@ __inline_all__ BSDFSample sample(const float3& tint, float alpha, const float3& 
 }
 
 } // NS GGX
+
+namespace GGXWithVNDF {
+
+using namespace optix;
+
+__inline_all__ float alpha_from_roughness(float roughness) {
+    return GGX::alpha_from_roughness(roughness);
+}
+
+__inline_all__ float evaluate(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
+    return GGX::evaluate(alpha, wo, wi, halfway);
+}
+
+__inline_all__ float3 evaluate(const float3& tint, float alpha, const float3& wo, const float3& wi, const float3& halfway) {
+    return tint * evaluate(alpha, wo, wi, halfway);
+}
+
+__inline_all__ float PDF(float alpha, const float3& wo, const float3& halfway) {
+#if _DEBUG
+    if (dot(wo, halfway) < 0.0f || halfway.z < 0.0f)
+        THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
+#endif
+
+    return Distributions::VNDF_GGX::PDF(alpha, wo, halfway) / (4.0f * dot(wo, halfway));
+}
+
+__inline_all__ BSDFResponse evaluate_with_PDF(const float3& tint, float alpha, const float3& wo, const float3& wi, const float3& halfway) {
+    // TODO Optimize!
+    BSDFResponse res;
+    res.weight = evaluate(tint, alpha, wo, wi, halfway);
+    res.PDF = PDF(alpha, wo, halfway);
+    return res;
+}
+
+__inline_all__ BSDFSample sample(const float3& tint, float alpha, const float3& wo, float2 random_sample) {
+
+    BSDFSample bsdf_sample;
+
+    Distributions::DirectionalSample halfway_sample = Distributions::VNDF_GGX::sample(alpha, wo, random_sample);
+    bsdf_sample.direction = reflect(-wo, halfway_sample.direction);
+    bool discardSample = halfway_sample.PDF < 0.00001f || bsdf_sample.direction.z < 0.00001f; // Discard samples if the pdf is too low (precision issues) or if the new direction points into the surface (energy loss).
+    if (discardSample) return BSDFSample::none();
+
+    bsdf_sample.PDF = halfway_sample.PDF / (4.0f * dot(wo, halfway_sample.direction));
+    bsdf_sample.weight = evaluate(tint, alpha, wo, bsdf_sample.direction, halfway_sample.direction); // TODO This is really inefficient.
+    return bsdf_sample;
+}
+
+} // NS GGXWithVNDF
+
 } // NS BSDFs
 } // NS Shading
 } // NS OptiXRenderer
