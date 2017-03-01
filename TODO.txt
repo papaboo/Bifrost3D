@@ -1,13 +1,10 @@
-* Rho
-** GGX: Sample visible normals
 * VS compiler flags. /debug:fastlink in VS2015 and fast float operations. Tests should use precise.
 * The IBL in the Rungholt scene at 3Shape is very dark in DX11 renderer. Check gamma and backbuffer precision.
 ** Texture / image VS debugging helpers.
 * OptiXRenderer
-** Check in integrator or material that the rays are always on the right side? I can see through the rings when a ring behind rotates by one in front.
 ** Verify that highest_area_light_index_updated in the OptiXRenderer behaves correctly.
 ** Half4 backbuffer in OptiXRenderer and render directly to a mapped DX resource.
-** Logarithmic data upload: (frame_ID >> 3) + 1 == 1. Do we gain any performance from it?
+** Logarithmic data upload: bitcount((frame_ID >> 3) + 1) == 1. Do we gain any performance from it?
 ** Filtering
 * Revisit environment map (2D image) importance sampling. Try the new approach where pixels can be looked up almost immediatly.
 * Materials revisited.
