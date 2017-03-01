@@ -197,9 +197,14 @@ namespace VNDF_GGX {
 
     // Importance Sampling Microfacet-Based BSDFs with the Distribution of Visible Normals, equation 2
     __inline_all__ float PDF(float alpha, optix::float3 wo, optix::float3 halfway) {
+#if _DEBUG
+        if (wo.z < 0.0f)
+            THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
+#endif
+
         float G1 = masking(alpha, wo.z);
         float D = Distributions::GGX::D(alpha, abs(halfway.z));
-        return G1 * abs(optix::dot(wo, halfway)) * D / abs(wo.z); // TODO wo.z should always be positive, otherwise throw an exception in debug builds.
+        return G1 * abs(optix::dot(wo, halfway)) * D / wo.z;
     }
 
     __inline_all__ Distributions::DirectionalSample sample(float alpha, optix::float3 wo, optix::float2 random_sample) {

@@ -39,15 +39,23 @@ __inline_all__ float roughness_from_alpha(float alpha) {
 // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14.
 // Separable smith geometric term. Equation 98. 
 __inline_all__ float separable_smith_G(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
-    float headysided = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway)); // TODO Should always evaluate to 1.0f. But if we replace it by a constant then guard it by an exception that catches cases where it isn't 1.0f in debug builds.
-    return headysided / ((1.0f + Distributions::VNDF_GGX::lambda(alpha, wo.z) * (1.0f + Distributions::VNDF_GGX::lambda(alpha, wi.z))));
+#if _DEBUG
+    float heavisided = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway));
+    if (heavisided != 1.0f)
+        THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
+#endif
+    return 1.0f / ((1.0f + Distributions::VNDF_GGX::lambda(alpha, wo.z) * (1.0f + Distributions::VNDF_GGX::lambda(alpha, wi.z))));
 }
 
 // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14.
 // Height correlated smith geometric term. Equation 99. 
 __inline_all__ float height_correlated_smith_G(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
-    float headysided = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway)); // TODO Should always evaluate to 1.0f. But if we replace it by a constant then guard it by an exception that catches cases where it isn't 1.0f in debug builds.
-    return headysided / (1.0f + Distributions::VNDF_GGX::lambda(alpha, wo.z) + Distributions::VNDF_GGX::lambda(alpha, wi.z));
+#if _DEBUG
+    float heavisided = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway));
+    if (heavisided != 1.0f)
+        THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
+#endif
+    return 1.0f / (1.0f + Distributions::VNDF_GGX::lambda(alpha, wo.z) + Distributions::VNDF_GGX::lambda(alpha, wi.z));
 }
 
 //----------------------------------------------------------------------------
