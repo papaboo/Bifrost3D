@@ -150,25 +150,35 @@ __inline_all__ float PDF(float alpha, const float3& wo, const float3& halfway) {
 }
 
 __inline_all__ BSDFResponse evaluate_with_PDF(const float3& tint, float alpha, const float3& wo, const float3& wi, const float3& halfway) {
-    // TODO Optimize!
+    float lambda_wo = Distributions::VNDF_GGX::lambda(alpha, wo.z);
+    float lambda_wi = Distributions::VNDF_GGX::lambda(alpha, wi.z);
+
+    float G1 = 1.0f / (1.0f + lambda_wo);
+    float G2 = 1.0f / (1.0f + lambda_wo + lambda_wi); // height_correlated_smith_G
+
+    float D_over_4 = Distributions::GGX::D(alpha, halfway.z) / 4.0f;
+
+    float F = 1.0f; // No fresnel.
+    float f = (D_over_4 * F * G2) / (wo.z * wi.z);
+
     BSDFResponse res;
-    res.weight = evaluate(tint, alpha, wo, wi, halfway);
-    res.PDF = PDF(alpha, wo, halfway);
+    res.weight = tint * f;
+    res.PDF = G1 * D_over_4 / wo.z;
     return res;
 }
 
 __inline_all__ BSDFSample sample(const float3& tint, float alpha, const float3& wo, float2 random_sample) {
-
     BSDFSample bsdf_sample;
 
-    Distributions::DirectionalSample halfway_sample = Distributions::VNDF_GGX::sample(alpha, wo, random_sample);
-    bsdf_sample.direction = reflect(-wo, halfway_sample.direction);
-    bool discardSample = halfway_sample.PDF < 0.00001f || bsdf_sample.direction.z < 0.00001f; // Discard samples if the pdf is too low (precision issues) or if the new direction points into the surface (energy loss).
-    if (discardSample) return BSDFSample::none();
+    float3 halfway = Distributions::VNDF_GGX::sample_halfway(alpha, wo, random_sample);
+    bsdf_sample.direction = reflect(-wo, halfway);
 
-    bsdf_sample.PDF = halfway_sample.PDF / (4.0f * dot(wo, halfway_sample.direction));
-    bsdf_sample.weight = evaluate(tint, alpha, wo, bsdf_sample.direction, halfway_sample.direction); // TODO This is really inefficient.
-    return bsdf_sample;
+    BSDFResponse response = evaluate_with_PDF(tint, alpha, wo, bsdf_sample.direction, halfway);
+    bsdf_sample.PDF = response.PDF;
+    bsdf_sample.weight = response.weight;
+
+    bool discardSample = bsdf_sample.PDF < 0.00001f || bsdf_sample.direction.z < 0.00001f; // Discard samples if the pdf is too low (precision issues) or if the new direction points into the surface (energy loss).
+    return discardSample ? BSDFSample::none() : bsdf_sample;
 }
 
 } // NS GGXWithVNDF
