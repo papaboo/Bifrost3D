@@ -29,8 +29,6 @@ namespace DX11Renderer {
 // * SSAO
 // * HDR backbuffer.
 // * Frustum culling.
-// * Proper IBL. Scale the IBL lookup by the diffuse and glossy rho. 
-//   Requires actually approximating the glossy rho first (and maybe Burley rho as well.)
 // * Sort models by material ID as well and use the info while rendering.
 //   If the material hasn't changed then don't rebind it or the textures.
 //----------------------------------------------------------------------------
