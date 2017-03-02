@@ -21,13 +21,15 @@ if(MSVC)
     file(WRITE ${USER_FILENAME} ${USER_CONFIG})
   endfunction()
 
+  # Setup warnings
+
   add_definitions(-WX) # Warnings as errors
   # add_definitions(-Wall)
-  
+
   add_definitions(-D_SCL_SECURE_NO_WARNINGS) # VS should not warn about 'unsafe' calls to std::_Copy_impl
-  
+
   add_definitions(-wd4514) # Unreferenced inline function has been removed.
-  
+
   add_definitions(-wd4625) # copy constructor was implicitly defined as deleted
   add_definitions(-wd4626) # assignment operator was implicitly defined as deleted
 
