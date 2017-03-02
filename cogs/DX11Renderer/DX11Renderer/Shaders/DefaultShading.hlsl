@@ -109,7 +109,7 @@ struct DefaultShading {
         float3 diffuse = diffuse_tint * environment_tex.SampleLevel(environment_sampler, diffuse_tc, mip_count - 3).rgb;
 
         float2 specular_tc = direction_to_latlong_texcoord(wi);
-        float3 specular = specular_tint * environment_tex.SampleLevel(environment_sampler, specular_tc, (mip_count - 3) * m_roughness * m_roughness).rgb;
+        float3 specular = specular_tint * environment_tex.SampleLevel(environment_sampler, specular_tc, (mip_count - 3) * m_roughness).rgb;
 
         return diffuse + specular * specular_rho;
     }
