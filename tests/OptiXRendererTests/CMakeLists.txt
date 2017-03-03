@@ -43,7 +43,9 @@ if (TARGET OptiXRenderer)
   )
 
   if (WIN32)
-    add_definitions(-DNOMINMAX) # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
+    target_compile_definitions(${PROJECT_NAME} PRIVATE 
+      NOMINMAX # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
+    )
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Od") # The default is /O2, but that has less precise floating point arithmetic.
   endif()
 else()
