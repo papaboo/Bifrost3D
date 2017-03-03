@@ -36,13 +36,13 @@ if (NOT EXISTS ${GLFW_LIBS_DIR}/CMakeLists.txt)
     # Unzip the source
     message(STATUS "Unzipping glfw-3.1.2.zip")
     execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${GLFW_ZIP_DEST}" WORKING_DIRECTORY "${GLFW_COG_DIR}/lib" )
-    
+
     # Delete the zip file
     message(STATUS "Deleting glfw-3.1.2.zip")
     file(REMOVE "${GLFW_ZIP_DEST}")
   endif()
-endif()  
-  
+endif()
+
 if (EXISTS ${GLFW_LIBS_DIR}/CMakeLists.txt)
   # Disable default GLFW options
   option(GLFW_BUILD_EXAMPLES "Build the GLFW example programs" OFF)
@@ -52,14 +52,12 @@ if (EXISTS ${GLFW_LIBS_DIR}/CMakeLists.txt)
 
   # Add GLFW lib
   add_subdirectory(${GLFW_LIBS_DIR})
-  include_directories("${GLFW_LIBS_DIR}/include")
-  
+
   # Move GLFW source into Libs folder
   set_target_properties(glfw PROPERTIES
                         FOLDER "Libs")
 
   # Add the GLFW driver project
   subdirs(${GLFW_COG_DIR}/src)
-  include_directories(${GLFW_COG_DIR}/src)
 
 endif()

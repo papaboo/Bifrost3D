@@ -1,6 +1,9 @@
 add_library(GLFWDriver GLFWDriver.h GLFWDriver.cpp)
 
-target_include_directories(GLFWDriver PUBLIC .)
+target_include_directories(GLFWDriver
+  PUBLIC .
+  PRIVATE "${GLFW_LIBS_DIR}/include"
+)
 
 target_link_libraries(GLFWDriver
   PUBLIC Cogwheel
