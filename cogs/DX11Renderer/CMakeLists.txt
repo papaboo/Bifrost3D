@@ -67,6 +67,8 @@ if (DIRECTX_11_FOUND AND WIN32)
     FOLDER "Cogs"
   )
 
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fp:fast")
+
   # set_source_files_properties(
   #   ${VERTEX_SHADER_SRC} PROPERTIES VS_SHADER_TYPE Vertex VS_SHADER_MODEL 5.0 VS_SHADER_ENTRYPOINT main
   # )

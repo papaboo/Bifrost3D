@@ -88,3 +88,5 @@ set_target_properties(Cogwheel PROPERTIES
   FOLDER "Cogs"
   COMPILE_FLAGS "-W3"
 )
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fp:fast")
