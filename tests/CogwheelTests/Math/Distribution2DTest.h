@@ -17,7 +17,7 @@ namespace Cogwheel {
 namespace Math {
 
 GTEST_TEST(Math_Distribution2D, single_value_function) {
-    float v = 1.0f;
+    double v = 1.0;
 
     Distribution2D<float> distribution = Distribution2D<float>(&v, 1, 1);
 
@@ -39,11 +39,17 @@ GTEST_TEST(Math_Distribution2D, constant_function) {
     EXPECT_EQ(Vector2i(0, 1), distribution.samplei(Vector2f(0.0f, 1.0f)));
     EXPECT_EQ(Vector2i(1, 1), distribution.samplei(Vector2f(1.0f, 1.0f)));
 
-    // Sample centers.
+    // Sample indices at centers.
     EXPECT_EQ(Vector2i(0, 0), distribution.samplei(Vector2f(0.25f, 0.25f)));
     EXPECT_EQ(Vector2i(1, 0), distribution.samplei(Vector2f(0.75f, 0.25f)));
     EXPECT_EQ(Vector2i(0, 1), distribution.samplei(Vector2f(0.25f, 0.75f)));
     EXPECT_EQ(Vector2i(1, 1), distribution.samplei(Vector2f(0.75f, 0.75f)));
+
+    // Sample floats at centers.
+    EXPECT_EQ(Vector2f(0.5f, 0.5f), distribution.samplef(Vector2f(0.25f, 0.25f)));
+    EXPECT_EQ(Vector2f(1.5f, 0.5f), distribution.samplef(Vector2f(0.75f, 0.25f)));
+    EXPECT_EQ(Vector2f(0.5f, 1.5f), distribution.samplef(Vector2f(0.25f, 0.75f)));
+    EXPECT_EQ(Vector2f(1.5f, 1.5f), distribution.samplef(Vector2f(0.75f, 0.75f)));
 }
 
 } // NS Math

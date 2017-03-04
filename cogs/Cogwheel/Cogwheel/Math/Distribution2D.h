@@ -16,6 +16,10 @@ namespace Math {
 
 // ------------------------------------------------------------------------------------------------
 // A discretized 2D distribution.
+// Future work.
+// * PDF
+// * OpenMP and SSE/AVX
+// * Templated copy constructor to down convert the CDF precision. (Compute in double, store in float)
 // ------------------------------------------------------------------------------------------------
 template <typename T>
 struct Distribution2D final {
@@ -59,28 +63,44 @@ public:
     // Sampling.
     //*********************************************************************************************
 
-    Vector2i samplei(Vector2f random_sample) const {
-        static auto binary_search = [](float random_sample, T* CDF, int element_count) -> int {
-            int lowerbound = 0;
-            int upperbound = element_count;
-            while (lowerbound + 1 != upperbound) {
-                int middlebound = (lowerbound + upperbound) / 2;
-                T cdf = CDF[middlebound];
-                if (random_sample < cdf)
-                    upperbound = middlebound;
-                else
-                    lowerbound = middlebound;
-            }
-            return lowerbound;
-        };
+private:
+    static int binary_search (float random_sample, T* CDF, int element_count) {
+        int lowerbound = 0;
+        int upperbound = element_count;
+        while (lowerbound + 1 != upperbound) {
+            int middlebound = (lowerbound + upperbound) / 2;
+            T cdf = CDF[middlebound];
+            if (random_sample < cdf)
+                upperbound = middlebound;
+            else
+                lowerbound = middlebound;
+        }
+        return lowerbound;
+    }
 
+public:
+
+    Vector2i samplei(Vector2f random_sample) const {
         int y = binary_search(random_sample.y, m_marginal_CDF, m_height);
         int x = binary_search(random_sample.x, m_conditional_CDF + y * (m_width + 1), m_width);
 
         return Vector2i(x, y);
     }
 
-    // TODO samplef and PDF
+    Vector2f samplef(Vector2f random_sample) const {
+        int y = binary_search(random_sample.y, m_marginal_CDF, m_height);
+        float cdf_at_y = m_marginal_CDF[y];
+        float dy = (random_sample.y - cdf_at_y) / (m_marginal_CDF[y + 1] - cdf_at_y); // Inverse lerp.
+
+        T* conditional_CDF_row = m_conditional_CDF + y * (m_width + 1);
+        int x = binary_search(random_sample.x, conditional_CDF_row, m_width);
+        float cdf_at_x = conditional_CDF_row[x];
+        float dx = (random_sample.x - cdf_at_x) / (conditional_CDF_row[x + 1] - cdf_at_x); // Inverse lerp.
+
+        return Vector2f(x + dx, y + dy);
+    }
+
+    // TODO PDF
 
     //*********************************************************************************************
     // CDF construction.
@@ -96,7 +116,7 @@ public:
             T* conditional_CDF_row = conditional_CDF + y * (width + 1);
             conditional_CDF_row[0] = T(0.0);
             for (int x = 0; x < width; ++x)
-                conditional_CDF_row[x + 1] = conditional_CDF_row[x] + function_row[x];
+                conditional_CDF_row[x + 1] = conditional_CDF_row[x] + T(function_row[x]);
         }
 
         // Compute marginal CDF.
