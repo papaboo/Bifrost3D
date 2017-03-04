@@ -24,6 +24,7 @@ set(INPUT_SRCS
 )
 
 set(MATH_SRCS
+  Math/Distribution2DTest.h
   Math/MatrixTest.h
   Math/QuaternionTest.h
   Math/TransformTest.h

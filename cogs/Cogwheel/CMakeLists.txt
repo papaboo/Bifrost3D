@@ -49,6 +49,7 @@ SET(MATH_SRCS
   Cogwheel/Math/Color.h
   Cogwheel/Math/Conversions.h
   Cogwheel/Math/Constants.h
+  Cogwheel/Math/Distribution2D.h
   Cogwheel/Math/Math.h
   Cogwheel/Math/Matrix.h
   Cogwheel/Math/Polynomial.h

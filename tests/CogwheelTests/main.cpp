@@ -20,6 +20,7 @@
 
 #include <Input/KeyboardTest.h>
 
+#include <Math/Distribution2DTest.h>
 #include <Math/MatrixTest.h>
 #include <Math/QuaternionTest.h>
 #include <Math/TransformTest.h>
@@ -30,6 +31,8 @@
 #include <Scene/SceneRootTest.h>
 #include <Scene/TransformTest.h>
 
+// NOTE
+// To run a subset of test cases use a filter, e.g '--gtest_filter=*Distribution2D*'.
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
