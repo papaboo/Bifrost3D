@@ -19,7 +19,7 @@ namespace Cogwheel {
 namespace Math {
 
 //*****************************************************************************
-// Helper methods
+// Floating point precision helpers.
 //*****************************************************************************
 
 inline int compute_ulps(float a, float b) {
@@ -45,6 +45,30 @@ inline int compute_ulps(float a, float b) {
 inline bool almost_equal(float a, float b, unsigned short max_ulps = 4) {
     return compute_ulps(a, b) <= max_ulps;
 }
+
+// Returns the previous floating point number.
+// TODO Make const expr
+inline float previous_float(float v) {
+    int vi;
+    memcpy(&vi, &v, sizeof(int));
+    --vi;
+    memcpy(&v, &vi, sizeof(int));
+    return v;
+}
+
+// Returns the next floating point number.
+// TODO Make const expr
+inline float next_float(float v) {
+    int vi;
+    memcpy(&vi, &v, sizeof(int));
+    ++vi;
+    memcpy(&v, &vi, sizeof(int));
+    return v;
+}
+
+//*****************************************************************************
+// General helper methods.
+//*****************************************************************************
 
 inline unsigned int ceil_divide(unsigned int a, unsigned int b) {
     return (a / b) + ((a % b) > 0);
