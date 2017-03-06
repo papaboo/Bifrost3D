@@ -11,6 +11,8 @@
 
 #include <Cogwheel/Math/Vector.h>
 
+#include <assert.h>
+
 namespace Cogwheel {
 namespace Math {
 
@@ -31,14 +33,32 @@ struct Distribution2D final {
 
 public:
 
+    // --------------------------------------------------------------------------------------------
+    // A single sample of the distribution.
+    // --------------------------------------------------------------------------------------------
+    struct Sample {
+        Vector2f index;
+        float PDF;
+    };
+
     //*********************************************************************************************
     // Constructors and destructors.
     //*********************************************************************************************
     template <typename U>
     Distribution2D(U* function, int width, int height)
-        : m_width(width), m_height(height),
-        m_marginal_CDF(new T[m_height + 1]), m_conditional_CDF(new T[(m_width + 1) * m_height]) {
+        : m_width(width), m_height(height)
+        , m_marginal_CDF(new T[m_height + 1]), m_conditional_CDF(new T[(m_width + 1) * m_height]) {
         m_integral = compute_CDFs(function, m_width, m_height, m_marginal_CDF, m_conditional_CDF);
+    }
+
+    template <typename U>
+    Distribution2D(Distribution2D<U> other)
+        : m_width(other.width), m_height(other.height), m_integral(other.m_integral)
+        , m_marginal_CDF(new T[m_height + 1]), m_conditional_CDF(new T[(m_width + 1) * m_height]) {
+        for (int i = 0; i < m_height + 1; ++i)
+            m_marginal_CDF[i] = T(other.m_marginal_CDF[i]);
+        for (int i = 0; i < (m_width + 1) * m_height; ++i)
+            m_conditional_CDF[i] = T(other.m_conditional_CDF[i]);
     }
 
     ~Distribution2D() {
@@ -80,14 +100,25 @@ private:
 
 public:
 
-    Vector2i samplei(Vector2f random_sample) const {
+    Sample sample_discretized(Vector2f random_sample) const {
+        assert(0.0f <= random_sample.x && random_sample.x < 1.0f);
+        assert(0.0f <= random_sample.y && random_sample.y < 1.0f);
+
         int y = binary_search(random_sample.y, m_marginal_CDF, m_height);
+        T* conditional_CDF_row = m_conditional_CDF + y * (m_width + 1);
         int x = binary_search(random_sample.x, m_conditional_CDF + y * (m_width + 1), m_width);
 
-        return Vector2i(x, y);
+        T marginal_PDF = m_marginal_CDF[y + 1] - m_marginal_CDF[y];
+        T conditional_PDF = conditional_CDF_row[x + 1] - conditional_CDF_row[x];
+        T PDF = marginal_PDF * conditional_PDF;
+
+        return { Vector2f(float(x), float(y)), float(PDF) };
     }
 
-    Vector2f samplef(Vector2f random_sample) const {
+    Sample sample_continuous(Vector2f random_sample) const {
+        assert(0.0f <= random_sample.x && random_sample.x < 1.0f);
+        assert(0.0f <= random_sample.y && random_sample.y < 1.0f);
+
         int y = binary_search(random_sample.y, m_marginal_CDF, m_height);
         float cdf_at_y = m_marginal_CDF[y];
         float dy = (random_sample.y - cdf_at_y) / (m_marginal_CDF[y + 1] - cdf_at_y); // Inverse lerp.
@@ -97,10 +128,12 @@ public:
         float cdf_at_x = conditional_CDF_row[x];
         float dx = (random_sample.x - cdf_at_x) / (conditional_CDF_row[x + 1] - cdf_at_x); // Inverse lerp.
 
-        return Vector2f(x + dx, y + dy);
-    }
+        T marginal_PDF = m_marginal_CDF[y + 1] - m_marginal_CDF[y];
+        T conditional_PDF = conditional_CDF_row[x + 1] - conditional_CDF_row[x];
+        T PDF = marginal_PDF * conditional_PDF;
 
-    // TODO PDF
+        return{ Vector2f(x + dx, y + dy), float(PDF) };
+    }
 
     //*********************************************************************************************
     // CDF construction.
