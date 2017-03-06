@@ -110,6 +110,10 @@ __inline_all__ unsigned int part_by_1(unsigned int v) {
     return v;
 }
 
+__inline_all__ unsigned int morton_encode(unsigned int x, unsigned int y) {
+    return part_by_1(y) | (part_by_1(x) << 1);
+}
+
 __inline_all__ static float pow5(float x) {
     float xx = x * x;
     return xx * xx * x;
