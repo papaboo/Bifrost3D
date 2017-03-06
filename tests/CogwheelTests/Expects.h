@@ -39,4 +39,9 @@ static bool equal_normal(Cogwheel::Math::Vector3f lhs, Cogwheel::Math::Vector3f 
 }
 #define EXPECT_NORMAL_EQ(expected, actual) EXPECT_PRED2(equal_normal, expected, actual)
 
+static bool equal_Vector2f(Cogwheel::Math::Vector2f lhs, Cogwheel::Math::Vector2f rhs) {
+    return Cogwheel::Math::almost_equal(lhs.x, rhs.x) && Cogwheel::Math::almost_equal(lhs.y, rhs.y);
+}
+#define EXPECT_VECTOR2F_EQ(expected, actual) EXPECT_PRED2(equal_Vector2f, expected, actual)
+
 #endif // _COGWHEEL_TESTS_EXPECTS_H_
