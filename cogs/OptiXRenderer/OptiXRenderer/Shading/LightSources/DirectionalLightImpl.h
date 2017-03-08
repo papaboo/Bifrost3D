@@ -14,11 +14,11 @@
 namespace OptiXRenderer {
 namespace LightSources {
 
-__inline_all__ bool is_delta_light(const DirectionalLight& light, const optix::float3& position) {
+__inline_all__ bool is_delta_light(const DirectionalLight& light) {
     return true;
 }
 
-__inline_all__ LightSample sample_radiance(const DirectionalLight& light, const optix::float3& position, optix::float2 random_sample) {
+__inline_all__ LightSample sample_radiance(const DirectionalLight& light, optix::float2 random_sample) {
     LightSample sample;
     sample.radiance = light.radiance;
     sample.PDF = 1.0f;
@@ -27,12 +27,12 @@ __inline_all__ LightSample sample_radiance(const DirectionalLight& light, const 
     return sample;
 }
 
-__inline_all__ float PDF(const DirectionalLight& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
+__inline_all__ float PDF(const DirectionalLight& light, const optix::float3& direction_to_light) {
     return 0.0f;
 }
 
-__inline_all__ optix::float3 evaluate(const DirectionalLight& light, const optix::float3& position, const optix::float3& direction_to_light) {
-    return light.radiance;
+__inline_all__ optix::float3 evaluate(const DirectionalLight& light, const optix::float3& direction_to_light) {
+    return optix::make_float3(0.0f, 0.0f, 0.0f);
 }
 
 } // NS LightSources

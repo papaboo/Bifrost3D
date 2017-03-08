@@ -21,9 +21,9 @@ __inline_dev__ bool is_delta_light(const Light& light, const optix::float3& posi
     case Light::Sphere:
         return is_delta_light(light.sphere, position);
     case Light::Directional:
-        return is_delta_light(light.directional, position);
+        return is_delta_light(light.directional);
     case Light::Environment:
-        return is_delta_light(light.environment, position);
+        return is_delta_light(light.environment);
     }
     return false;
 }
@@ -33,9 +33,9 @@ __inline_dev__ LightSample sample_radiance(const Light& light, const optix::floa
     case Light::Sphere:
         return sample_radiance(light.sphere, position, random_sample);
     case Light::Directional:
-        return sample_radiance(light.directional, position, random_sample);
+        return sample_radiance(light.directional, random_sample);
     case Light::Environment:
-        return sample_radiance(light.environment, position, random_sample);
+        return sample_radiance(light.environment, random_sample);
     }
     return LightSample::none();
 }
@@ -45,9 +45,9 @@ __inline_dev__ float PDF(const Light& light, const optix::float3& lit_position, 
     case Light::Sphere:
         return PDF(light.sphere, lit_position, direction_to_light);
     case Light::Directional:
-        return PDF(light.directional, lit_position, direction_to_light);
+        return PDF(light.directional, direction_to_light);
     case Light::Environment:
-        return PDF(light.environment, lit_position, direction_to_light);
+        return PDF(light.environment, direction_to_light);
     }
     return 0.0f;
 }
@@ -57,9 +57,9 @@ __inline_dev__ optix::float3 evaluate(const Light& light, const optix::float3& p
     case Light::Sphere:
         return evaluate(light.sphere, position, direction_to_light);
     case Light::Directional:
-        return evaluate(light.directional, position, direction_to_light);
+        return evaluate(light.directional, direction_to_light);
     case Light::Environment:
-        return evaluate(light.environment, position, direction_to_light);
+        return evaluate(light.environment, direction_to_light);
     }
     return optix::make_float3(0.0f);
 }

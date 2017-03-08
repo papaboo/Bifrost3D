@@ -15,7 +15,7 @@
 namespace OptiXRenderer {
 namespace LightSources {
 
-__inline_dev__ bool is_delta_light(const EnvironmentLight& light, const optix::float3& position) {
+__inline_dev__ bool is_delta_light(const EnvironmentLight& light) {
     return false;
 }
 
@@ -67,7 +67,7 @@ __inline_dev__ optix::float2 sample_CDFs_for_uv(const EnvironmentLight& light, o
 }
 
 // For environment map monte carlo sampling see PBRT v2 chapter 14.6.5. 
-__inline_dev__ LightSample sample_radiance(const EnvironmentLight& light, const optix::float3& position, optix::float2 random_sample) {
+__inline_dev__ LightSample sample_radiance(const EnvironmentLight& light, optix::float2 random_sample) {
     optix::float2 uv = sample_CDFs_for_uv(light, random_sample);
     LightSample sample;
     sample.direction_to_light = -latlong_texcoord_to_direction(uv);
@@ -79,14 +79,14 @@ __inline_dev__ LightSample sample_radiance(const EnvironmentLight& light, const 
     return sample;
 }
 
-__inline_dev__ float PDF(const EnvironmentLight& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
+__inline_dev__ float PDF(const EnvironmentLight& light, const optix::float3& direction_to_light) {
     optix::float2 uv = direction_to_latlong_texcoord(direction_to_light);
     float sin_theta = sqrtf(1.0f - direction_to_light.y * direction_to_light.y);
     float PDF = optix::rtTex2D<float>(light.per_pixel_PDF_ID, uv.x, uv.y) / sin_theta;
     return sin_theta == 0.0f ? 0.0f : PDF;
 }
 
-__inline_dev__ optix::float3 evaluate(const EnvironmentLight& light, const optix::float3& position, const optix::float3& direction_to_light) {
+__inline_dev__ optix::float3 evaluate(const EnvironmentLight& light, const optix::float3& direction_to_light) {
     optix::float2 uv = direction_to_latlong_texcoord(direction_to_light);
     return optix::make_float3(optix::rtTex2D<optix::float4>(light.environment_map_ID, uv.x, uv.y));
 }
