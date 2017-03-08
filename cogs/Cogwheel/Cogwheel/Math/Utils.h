@@ -47,7 +47,6 @@ inline bool almost_equal(float a, float b, unsigned short max_ulps = 4) {
 }
 
 // Returns the previous floating point number.
-// TODO Make const expr
 inline float previous_float(float v) {
     int vi;
     memcpy(&vi, &v, sizeof(int));
@@ -57,7 +56,6 @@ inline float previous_float(float v) {
 }
 
 // Returns the next floating point number.
-// TODO Make const expr
 inline float next_float(float v) {
     int vi;
     memcpy(&vi, &v, sizeof(int));
