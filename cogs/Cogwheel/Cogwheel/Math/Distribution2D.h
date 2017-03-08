@@ -19,9 +19,7 @@ namespace Math {
 // ------------------------------------------------------------------------------------------------
 // A discretized 2D distribution.
 // Future work.
-// * PDF
-// * OpenMP and SSE/AVX
-// * Templated copy constructor to down convert the CDF precision. (Compute in double, store in float)
+// * SSE/AVX
 // ------------------------------------------------------------------------------------------------
 template <typename T>
 struct Distribution2D final {
@@ -141,9 +139,9 @@ public:
 
     template <typename U>
     static T compute_CDFs(U* function, int width, int height, T* marginal_CDF, T* conditional_CDF) {
-        
+
         // Compute conditional CDF.
-        // #pragma omp parallel for schedule(dynamic, 16)
+        #pragma omp parallel for schedule(dynamic, 16)
         for (int y = 0; y < height; ++y) {
             U* function_row = function + y * width;
             T* conditional_CDF_row = conditional_CDF + y * (width + 1);
@@ -166,7 +164,7 @@ public:
         marginal_CDF[height] = 1.0;
 
         // Normalize conditional CDF.
-        // #pragma omp parallel for schedule(dynamic, 16)
+        #pragma omp parallel for schedule(dynamic, 16)
         for (int y = 0; y < height; ++y) {
             T* conditional_CDF_row = conditional_CDF + y * (width + 1);
             if (conditional_CDF_row[width] > 0.0f)
