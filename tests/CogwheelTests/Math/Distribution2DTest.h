@@ -10,6 +10,7 @@
 #define _COGWHEEL_MATH_DISTRIBUTION2D_TEST_H_
 
 #include <Cogwheel/Math/Distribution2D.h>
+#include <Cogwheel/Math/RNG.h>
 
 #include <gtest/gtest.h>
 
@@ -100,6 +101,34 @@ GTEST_TEST(Math_Distribution2D, interesting_function) {
     random = Vector2f(nearly_one, nearly_one);
     EXPECT_VECTOR2F_EQ(Vector2f(3.0f, 3.0f), distribution.sample_continuous(random).index);
     EXPECT_FLOAT_EQ(0.24f, distribution.sample_continuous(random).PDF);
+}
+
+GTEST_TEST(Math_Distribution2D, sample_function) {
+    int vs[] = { 0, 5, 0, 2,
+                 2, 3, 0, 4,
+                 4, 5, 6, 3,
+                 5, 2, 4, 1};
+
+    Distribution2D<float> distribution = Distribution2D<float>(vs, 4, 4);
+
+    // Sample distribution.
+    float sampled_vs[] = { 0, 0, 0, 0,
+                           0, 0, 0, 0,
+                           0, 0, 0, 0,
+                           0, 0, 0, 0 };
+    for (int i = 0; i < 4096 * 2; ++i) {
+        Distribution2D<float>::Sample sample = distribution.sample_discretized(RNG::sample02(i));
+        int index = int(sample.index.x + sample.index.y * distribution.get_width());
+        EXPECT_LT(index, 16);
+        ++sampled_vs[index];
+    }
+
+    // Scale sampled function, vased on value at index 10.
+    float scale = vs[10] / sampled_vs[10];
+    for (int i = 0; i < 16; ++i) {
+        sampled_vs[i] *= scale;
+        EXPECT_NEAR(vs[i], sampled_vs[i], 0.02f);
+    }
 }
 
 } // NS Math
