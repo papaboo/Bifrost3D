@@ -107,7 +107,7 @@ RT_PROGRAM void miss() {
 
     unsigned int environment_map_ID = g_scene_environment_light.environment_map_ID;
     if (environment_map_ID) {
-        environment_radiance *= LightSources::evaluate(g_scene_environment_light, ray.origin, ray.direction);
+        environment_radiance *= LightSources::evaluate(g_scene_environment_light, ray.direction);
         
         // NOTE We can get rid of all these branches by just scaling the (mis) weight. Requires a lot of retesting though. :)
         bool next_event_estimatable = g_scene_environment_light.per_pixel_PDF_ID != RT_TEXTURE_ID_NULL;
@@ -116,7 +116,7 @@ RT_PROGRAM void miss() {
             bool apply_MIS = monte_carlo_payload.bsdf_MIS_PDF > 0.0f;
             if (apply_MIS) {
                 // Calculate MIS weight and scale the radiance by it.
-                const float light_PDF = LightSources::PDF(g_scene_environment_light, ray.origin, ray.direction);
+                const float light_PDF = LightSources::PDF(g_scene_environment_light, ray.direction);
                 float mis_weight = RNG::power_heuristic(monte_carlo_payload.bsdf_MIS_PDF, light_PDF);
                 environment_radiance *= mis_weight;
             } else if (next_event_estimated)
