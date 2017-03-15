@@ -136,12 +136,12 @@ Math::RGBA sample2D(Textures::UID texture_ID, Vector2f texcoord) {
             
             auto lookup_pixel = [](int pixelcoord_x, int pixelcoord_y, TextureND texture, Image image) {
                 if (texture.get_wrapmode_U() == WrapMode::Clamp)
-                    pixelcoord_x = clamp(pixelcoord_x, 0, int(image.get_width()));
+                    pixelcoord_x = clamp(pixelcoord_x, 0, int(image.get_width()-1));
                 else // WrapMode::Repeat
                     pixelcoord_x = pixelcoord_x % image.get_width();
 
                 if (texture.get_wrapmode_V() == WrapMode::Clamp)
-                    pixelcoord_y = clamp(pixelcoord_y, 0, int(image.get_height()));
+                    pixelcoord_y = clamp(pixelcoord_y, 0, int(image.get_height()-1));
                 else // WrapMode::Repeat
                     pixelcoord_y = pixelcoord_y % image.get_height();
 
