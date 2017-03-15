@@ -10,6 +10,7 @@
 #define _COGWHEEL_MATH_UTILS_H_
 
 #include <Cogwheel/Math/Constants.h>
+#include <Cogwheel/Math/Vector.h>
 
 #include <algorithm>
 #include <cmath>
@@ -62,6 +63,23 @@ inline float next_float(float v) {
     ++vi;
     memcpy(&v, &vi, sizeof(int));
     return v;
+}
+
+//*****************************************************************************
+// Trigonometry.
+//*****************************************************************************
+
+inline Vector2f direction_to_latlong_texcoord(Vector3f direction) {
+    float u = (atan2f(direction.x, direction.z) + PI<float>()) * 0.5f / PI<float>();
+    float v = (asinf(direction.y) + PI<float>() * 0.5f) / PI<float>();
+    return Vector2f(u, v);
+}
+
+inline Vector3f latlong_texcoord_to_direction(Vector2f uv) {
+    float phi = uv.x * 2.0f * PI<float>();
+    float theta = uv.y * PI<float>();
+    float sin_theta = sinf(theta);
+    return Vector3f(sin_theta * sinf(phi), cosf(theta), sin_theta * cosf(phi));
 }
 
 //*****************************************************************************
