@@ -20,6 +20,7 @@
 
 #include <Input/KeyboardTest.h>
 
+#include <Math/Distribution1DTest.h>
 #include <Math/Distribution2DTest.h>
 #include <Math/MatrixTest.h>
 #include <Math/QuaternionTest.h>
