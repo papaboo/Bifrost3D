@@ -108,7 +108,7 @@ bool compute_environment_CDFs(Cogwheel::Assets::TextureND environment_map, optix
             }
         }
 
-        // If the texture is unfiltered, then the per pixel importance corrosponds to the PDF.
+        // If the texture is unfiltered, then the per pixel importance corresponds to the PDF.
         // If filtering is enabled, then we need to filter the PDF as well.
         // Generally this doesn't change much in terms of convergence, but it helps us to 
         // avoid artefacts in cases where a black pixel would have a PDF of 0,
