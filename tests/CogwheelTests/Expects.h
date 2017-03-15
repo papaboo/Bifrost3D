@@ -44,4 +44,9 @@ static bool equal_Vector2f(Cogwheel::Math::Vector2f lhs, Cogwheel::Math::Vector2
 }
 #define EXPECT_VECTOR2F_EQ(expected, actual) EXPECT_PRED2(equal_Vector2f, expected, actual)
 
+static bool float_in_range(float min, float max, float actual) {
+    return min <= actual && actual <= max;
+}
+#define EXPECT_FLOAT_IN_RANGE(min, max, actual) EXPECT_PRED3(float_in_range, min, max, actual)
+
 #endif // _COGWHEEL_TESTS_EXPECTS_H_
