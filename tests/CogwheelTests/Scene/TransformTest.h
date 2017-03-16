@@ -88,7 +88,7 @@ TEST_F(Scene_Transform, hierarchical_rotation) {
     bar.set_global_transform(Transform::identity());
 
     EXPECT_EQ(foo.get_global_transform().rotation, rotation);
-    EXPECT_EQ(bar.get_local_transform().rotation, conjugate(rotation));
+    EXPECT_QUAT_F_EQ(bar.get_local_transform().rotation, conjugate(rotation));
     EXPECT_EQ(bar.get_global_transform().rotation, Quaternionf::identity());
 }
 

@@ -8,6 +8,7 @@
 
 #include <Cogwheel/Math/AABB.h>
 #include <Cogwheel/Math/Color.h>
+#include <Cogwheel/Math/Quaternion.h>
 
 #include <gtest/gtest.h>
 
@@ -48,5 +49,11 @@ static bool float_in_range(float min, float max, float actual) {
     return min <= actual && actual <= max;
 }
 #define EXPECT_FLOAT_IN_RANGE(min, max, actual) EXPECT_PRED3(float_in_range, min, max, actual)
+
+template <typename T>
+static bool equal_quaternion(Cogwheel::Math::Quaternion<T> expected, Cogwheel::Math::Quaternion<T> actual) {
+    return Cogwheel::Math::almost_equal(expected, actual);
+}
+#define EXPECT_QUAT_F_EQ(expected, actual) EXPECT_PRED2(equal_quaternion<float>, expected, actual)
 
 #endif // _COGWHEEL_TESTS_EXPECTS_H_
