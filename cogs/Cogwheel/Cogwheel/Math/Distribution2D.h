@@ -152,6 +152,14 @@ public:
         return { Vector2f(float(x + dx) / m_width, float(y + dy) / m_height), float(PDF) };
     }
 
+    float PDF_discrete(Vector2i i) const {
+        return evaluate(i) / (m_integral * m_width * m_height);
+    }
+
+    float PDF_continuous(Vector2f u) const {
+        return evaluate(u) / m_integral;
+    }
+
     //*********************************************************************************************
     // CDF construction.
     //*********************************************************************************************

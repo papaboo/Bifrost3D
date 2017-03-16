@@ -65,8 +65,21 @@ public:
     inline int get_element_count() const { return m_element_count; }
     inline T get_integral() const { return m_integral; }
 
-    inline const T* const get_CDF() { return m_CDF; }
-    inline int get_CDF_size() { return m_element_count + 1; }
+    inline const T* const get_CDF() const { return m_CDF; }
+    inline int get_CDF_size() const { return m_element_count + 1; }
+
+    //*********************************************************************************************
+    // Evaluate.
+    //*********************************************************************************************
+
+    T evaluate(int i) const {
+        return (m_CDF[i + 1] - m_CDF[i]) * m_element_count * m_integral;
+    }
+
+    T evaluate(float u) const {
+        int i = int(u * m_element_count);
+        return evaluate(i);
+    }
 
     //*********************************************************************************************
     // Sampling.
@@ -89,15 +102,6 @@ private:
 
 public:
 
-    T evaluate(int i) {
-        return (m_CDF[i + 1] - m_CDF[i]) * m_element_count * m_integral;
-    }
-
-    T evaluate(float u) {
-        int i = int(u * m_element_count);
-        return evaluate(i);
-    }
-
     Sample<int> sample_discrete(float random_sample) const {
         assert(0.0f <= random_sample && random_sample < 1.0f);
 
@@ -116,6 +120,14 @@ public:
         T PDF = (m_CDF[i + 1] - m_CDF[i]) * m_element_count;
 
         return { float(i + di) / m_element_count, float(PDF) };
+    }
+
+    float PDF_discrete(int i) const {
+        return evaluate(i) / (m_integral * m_element_count);
+    }
+
+    float PDF_continuous(float u) const {
+        return evaluate(u) / m_integral;
     }
 
     //*********************************************************************************************

@@ -89,7 +89,21 @@ GTEST_TEST(Math_Distribution2D, non_constant_function) {
     EXPECT_FLOAT_EQ(f[3] / integral, distribution.sample_continuous(random).PDF);
 }
 
-GTEST_TEST(Math_Distribution2D, sample_continuous) {
+GTEST_TEST(Math_Distribution2D, consistent_PDF) {
+    float f[] = { 0, 5, 0, 3,
+                  2, 1, 1, 4 };
+    const Distribution2D<float> distribution = Distribution2D<float>(f, 4, 2);
+
+    for (int i = 0; i < 32; ++i) {
+        auto samplef = distribution.sample_continuous(RNG::sample02(i));
+        EXPECT_FLOAT_EQ(samplef.PDF, distribution.PDF_continuous(samplef.index));
+
+        auto samplei = distribution.sample_discrete(RNG::sample02(i));
+        EXPECT_FLOAT_EQ(samplei.PDF, distribution.PDF_discrete(samplei.index));
+    }
+}
+
+GTEST_TEST(Math_Distribution2D, reconstruct_continuous_function) {
     float f[] = { 0, 5, 0, 3,
                   2, 1, 1, 4 };
     int width = 4, height = 2, element_count = width * height;
@@ -115,7 +129,7 @@ GTEST_TEST(Math_Distribution2D, sample_continuous) {
     }
 }
 
-GTEST_TEST(Math_Distribution2D, sample_discrete) {
+GTEST_TEST(Math_Distribution2D, reconstruct_distrete_function) {
     float f[] = { 0, 5, 0, 3,
                   2, 1, 1, 4 };
     int width = 4, height = 2, element_count = width * height;

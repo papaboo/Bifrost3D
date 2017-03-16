@@ -18,9 +18,8 @@ namespace Cogwheel {
 namespace Math {
 
 GTEST_TEST(Math_Distribution1D, single_value_function) {
-    double v = 1.0;
-
-    Distribution1D<float> distribution = Distribution1D<float>(&v, 1);
+    double f = 1.0;
+    const Distribution1D<float> distribution = Distribution1D<float>(&f, 1);
 
     EXPECT_FLOAT_EQ(0, distribution.sample_continuous(0.0f).index);
     EXPECT_FLOAT_EQ(1.0f, distribution.sample_continuous(0.0f).PDF);
@@ -34,7 +33,7 @@ GTEST_TEST(Math_Distribution1D, constant_function) {
     float f[] = { 2, 2, 2 };
     int element_count = 3;
 
-    Distribution1D<float> distribution = Distribution1D<float>(f, element_count);
+    const Distribution1D<float> distribution = Distribution1D<float>(f, element_count);
 
     for (int i = 0; i < 5; ++i) {
         float random_sample = i / 5.0f;
@@ -53,7 +52,7 @@ GTEST_TEST(Math_Distribution1D, non_constant_function) {
     float f[] = { 0, 5, 0, 2, 3 };
     int element_count = 5;
 
-    Distribution1D<float> distribution = Distribution1D<float>(f, element_count);
+    const Distribution1D<float> distribution = Distribution1D<float>(f, element_count);
     float integral = distribution.get_integral();
 
     // Evaluate the function.
@@ -91,11 +90,24 @@ GTEST_TEST(Math_Distribution1D, non_constant_function) {
     }
 }
 
-GTEST_TEST(Math_Distribution1D, sample_continuous) {
+GTEST_TEST(Math_Distribution1D, consistent_PDF) {
+    float f[] = { 0, 5, 0, 8, 3 };
+    const Distribution1D<float> distribution = Distribution1D<float>(f, 5);
+
+    for (int i = 0; i < 32; ++i) {
+        auto samplef = distribution.sample_continuous(RNG::van_der_corput(i, 59205));
+        EXPECT_FLOAT_EQ(samplef.PDF, distribution.PDF_continuous(samplef.index));
+
+        auto samplei = distribution.sample_discrete(RNG::van_der_corput(i, 59205));
+        EXPECT_FLOAT_EQ(samplei.PDF, distribution.PDF_discrete(samplei.index));
+    }
+}
+
+GTEST_TEST(Math_Distribution1D, reconstruct_continuous_function) {
     float f[] = { 0, 5, 0, 8, 3 };
     int element_count = 5;
 
-    Distribution1D<float> distribution = Distribution1D<float>(f, element_count);
+    const Distribution1D<float> distribution = Distribution1D<float>(f, element_count);
     float integral = distribution.get_integral();
 
     const int ITERATION_COUNT = 8192;
@@ -113,11 +125,11 @@ GTEST_TEST(Math_Distribution1D, sample_continuous) {
     }
 }
 
-GTEST_TEST(Math_Distribution1D, sample_discrete) {
+GTEST_TEST(Math_Distribution1D, reconstruct_distrete_function) {
     float f[] = { 0, 5, 0, 8, 3 };
     int element_count = 5;
 
-    Distribution1D<float> distribution = Distribution1D<float>(f, element_count);
+    const Distribution1D<float> distribution = Distribution1D<float>(f, element_count);
     float integral = distribution.get_integral();
 
     const int ITERATION_COUNT = 8192;
