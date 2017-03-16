@@ -125,7 +125,7 @@ GTEST_TEST(Math_Distribution1D, reconstruct_continuous_function) {
     }
 }
 
-GTEST_TEST(Math_Distribution1D, reconstruct_distrete_function) {
+GTEST_TEST(Math_Distribution1D, reconstruct_discrete_function) {
     float f[] = { 0, 5, 0, 8, 3 };
     int element_count = 5;
 
