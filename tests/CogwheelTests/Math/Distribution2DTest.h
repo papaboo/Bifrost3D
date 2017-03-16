@@ -9,6 +9,7 @@
 #ifndef _COGWHEEL_MATH_DISTRIBUTION2D_TEST_H_
 #define _COGWHEEL_MATH_DISTRIBUTION2D_TEST_H_
 
+#include <Cogwheel/Math/Distribution1D.h>
 #include <Cogwheel/Math/Distribution2D.h>
 #include <Cogwheel/Math/RNG.h>
 
@@ -129,7 +130,7 @@ GTEST_TEST(Math_Distribution2D, reconstruct_continuous_function) {
     }
 }
 
-GTEST_TEST(Math_Distribution2D, reconstruct_distrete_function) {
+GTEST_TEST(Math_Distribution2D, reconstruct_discrete_function) {
     float f[] = { 0, 5, 0, 3,
                   2, 1, 1, 4 };
     int width = 4, height = 2, element_count = width * height;
@@ -151,6 +152,55 @@ GTEST_TEST(Math_Distribution2D, reconstruct_distrete_function) {
     for (int e = 0; e < element_count; ++e) {
         f_sampled[e] /= ITERATION_COUNT;
         EXPECT_FLOAT_EQ(f[e], f_sampled[e]);
+    }
+}
+
+GTEST_TEST(Math_Distribution2D, distribution1D_equality) {
+    float f[] = { 0, 5, 0, 8, 3 };
+    int element_count = 5;
+
+    const Distribution1D<float> distribution_1D = Distribution1D<float>(f, element_count);
+    float integral_1D = distribution_1D.get_integral();
+
+    const Distribution2D<float> vertical_distribution = Distribution2D<float>(f, 1, element_count);
+    const Distribution2D<float> horizontal_distribution = Distribution2D<float>(f, element_count, 1);
+    EXPECT_FLOAT_EQ(integral_1D, vertical_distribution.get_integral());
+    EXPECT_FLOAT_EQ(integral_1D, horizontal_distribution.get_integral());
+
+    for (int i = 0; i < 32; ++i) {
+        float rn = RNG::van_der_corput(i, 59305u);
+
+        { // Discrete samples
+            auto sample_1D = distribution_1D.sample_discrete(rn);
+            auto vertical_sample = vertical_distribution.sample_discrete(Vector2f(0.5f, rn));
+            auto horizontal_sample = horizontal_distribution.sample_discrete(Vector2f(rn, 0.5f));
+
+            EXPECT_EQ(sample_1D.index, vertical_sample.index.y);
+            EXPECT_EQ(sample_1D.index, horizontal_sample.index.x);
+
+            EXPECT_EQ(sample_1D.PDF, vertical_sample.PDF);
+            EXPECT_EQ(sample_1D.PDF, horizontal_sample.PDF);
+            
+            float f_1D = distribution_1D.evaluate(sample_1D.index);
+            EXPECT_EQ(f_1D, vertical_distribution.evaluate(vertical_sample.index));
+            EXPECT_EQ(f_1D, horizontal_distribution.evaluate(horizontal_sample.index));
+        }
+
+        { // Continuous samples
+            auto sample_1D = distribution_1D.sample_continuous(rn);
+            auto vertical_sample = vertical_distribution.sample_continuous(Vector2f(0.5f, rn));
+            auto horizontal_sample = horizontal_distribution.sample_continuous(Vector2f(rn, 0.5f));
+
+            EXPECT_EQ(sample_1D.index, vertical_sample.index.y);
+            EXPECT_EQ(sample_1D.index, horizontal_sample.index.x);
+
+            EXPECT_EQ(sample_1D.PDF, vertical_sample.PDF);
+            EXPECT_EQ(sample_1D.PDF, horizontal_sample.PDF);
+
+            float f_1D = distribution_1D.evaluate(sample_1D.index);
+            EXPECT_EQ(f_1D, vertical_distribution.evaluate(vertical_sample.index));
+            EXPECT_EQ(f_1D, horizontal_distribution.evaluate(horizontal_sample.index));
+        }
     }
 }
 
