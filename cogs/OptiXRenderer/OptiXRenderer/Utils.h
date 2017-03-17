@@ -133,7 +133,7 @@ __inline_all__ optix::float3 latlong_texcoord_to_direction(const optix::float2& 
     float phi = uv.x * 2.0f * PIf;
     float theta = uv.y * PIf;
     float sin_theta = sinf(theta);
-    return optix::make_float3(sin_theta * sinf(phi), cosf(theta), sin_theta * cosf(phi));
+    return -optix::make_float3(sin_theta * sinf(phi), cosf(theta), sin_theta * cosf(phi));
 }
 
 //-----------------------------------------------------------------------------

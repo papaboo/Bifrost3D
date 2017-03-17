@@ -79,7 +79,7 @@ inline Vector3f latlong_texcoord_to_direction(Vector2f uv) {
     float phi = uv.x * 2.0f * PI<float>();
     float theta = uv.y * PI<float>();
     float sin_theta = sinf(theta);
-    return Vector3f(sin_theta * sinf(phi), cosf(theta), sin_theta * cosf(phi));
+    return -Vector3f(sin_theta * sinf(phi), cosf(theta), sin_theta * cosf(phi));
 }
 
 //*****************************************************************************

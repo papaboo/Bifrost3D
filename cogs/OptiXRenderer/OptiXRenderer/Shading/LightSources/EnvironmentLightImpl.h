@@ -70,7 +70,7 @@ __inline_dev__ optix::float2 sample_CDFs_for_uv(const EnvironmentLight& light, o
 __inline_dev__ LightSample sample_radiance(const EnvironmentLight& light, optix::float2 random_sample) {
     optix::float2 uv = sample_CDFs_for_uv(light, random_sample);
     LightSample sample;
-    sample.direction_to_light = -latlong_texcoord_to_direction(uv);
+    sample.direction_to_light = latlong_texcoord_to_direction(uv);
     sample.distance = 1e30f;
     sample.radiance = optix::make_float3(optix::rtTex2D<optix::float4>(light.environment_map_ID, uv.x, uv.y));
     float sin_theta = sqrtf(1.0f - sample.direction_to_light.y * sample.direction_to_light.y);
