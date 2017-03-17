@@ -34,10 +34,10 @@ public:
     // --------------------------------------------------------------------------------------------
     // A single sample from  the distribution.
     // --------------------------------------------------------------------------------------------
-    template <typename T>
+    template <typename I>
     struct Sample {
-        Vector2<T> index;
-        float PDF;
+        Vector2<I> index;
+        T PDF;
     };
 
     //*********************************************************************************************
@@ -129,7 +129,7 @@ public:
         T conditional_PDF = conditional_CDF_row[x + 1] - conditional_CDF_row[x];
         T PDF = marginal_PDF * conditional_PDF;
 
-        return { Vector2i(x, y), float(PDF) };
+        return { Vector2i(x, y), PDF };
     }
 
     Sample<float> sample_continuous(Vector2f random_sample) const {
@@ -149,14 +149,14 @@ public:
         T conditional_PDF = conditional_CDF_row[x + 1] - conditional_CDF_row[x];
         T PDF = marginal_PDF * conditional_PDF * m_width * m_height;
 
-        return { Vector2f(float(x + dx) / m_width, float(y + dy) / m_height), float(PDF) };
+        return { Vector2f(float(x + dx) / m_width, float(y + dy) / m_height), PDF };
     }
 
-    float PDF_discrete(Vector2i i) const {
+    T PDF_discrete(Vector2i i) const {
         return evaluate(i) / (m_integral * m_width * m_height);
     }
 
-    float PDF_continuous(Vector2f u) const {
+    T PDF_continuous(Vector2f u) const {
         return evaluate(u) / m_integral;
     }
 

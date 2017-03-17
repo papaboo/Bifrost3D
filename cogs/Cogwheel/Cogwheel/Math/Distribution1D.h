@@ -31,10 +31,10 @@ public:
     // --------------------------------------------------------------------------------------------
     // A single sample from  the distribution.
     // --------------------------------------------------------------------------------------------
-    template <typename T>
+    template <typename I>
     struct Sample {
-        T index;
-        float PDF;
+        I index;
+        T PDF;
     };
 
     //*********************************************************************************************
@@ -119,14 +119,14 @@ public:
 
         T PDF = (m_CDF[i + 1] - m_CDF[i]) * m_element_count;
 
-        return { float(i + di) / m_element_count, float(PDF) };
+        return { float(i + di) / m_element_count, PDF };
     }
 
-    float PDF_discrete(int i) const {
+    T PDF_discrete(int i) const {
         return evaluate(i) / (m_integral * m_element_count);
     }
 
-    float PDF_continuous(float u) const {
+    T PDF_continuous(float u) const {
         return evaluate(u) / m_integral;
     }
 
