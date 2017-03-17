@@ -22,6 +22,11 @@ static bool equal_rgb(Cogwheel::Math::RGB lhs, Cogwheel::Math::RGB rhs) {
 }
 #define EXPECT_RGB_EQ(expected, actual) EXPECT_PRED2(equal_rgb, expected, actual)
 
+static bool equal_rgb_eps(Cogwheel::Math::RGB lhs, Cogwheel::Math::RGB rhs, float eps) {
+    return abs(lhs.r - rhs.r) < eps && abs(lhs.g - rhs.g) < eps && abs(lhs.b - rhs.b) < eps;
+}
+#define EXPECT_RGB_EQ_EPS(expected, actual, eps) EXPECT_PRED3(equal_rgb_eps, expected, actual, eps)
+
 static bool equal_rgba(Cogwheel::Math::RGBA lhs, Cogwheel::Math::RGBA rhs) {
     return Cogwheel::Math::almost_equal(lhs.r, rhs.r)
         && Cogwheel::Math::almost_equal(lhs.g, rhs.g)

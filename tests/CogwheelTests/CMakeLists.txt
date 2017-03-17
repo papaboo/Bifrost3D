@@ -7,6 +7,7 @@ set(SRCS
 
 set(ASSETS_SRCS
   Assets/ImageTest.h
+  Assets/LatLongDistributionTest.h
   Assets/MaterialTest.h
   Assets/MeshModelTest.h
   Assets/MeshTest.h
