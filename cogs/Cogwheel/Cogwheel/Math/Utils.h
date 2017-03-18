@@ -70,7 +70,7 @@ inline float next_float(float v) {
 //*****************************************************************************
 
 inline Vector2f direction_to_latlong_texcoord(Vector3f direction) {
-    float u = (atan2f(direction.x, direction.z) + PI<float>()) * 0.5f / PI<float>();
+    float u = (atan2f(direction.z, direction.x) + PI<float>()) * 0.5f / PI<float>();
     float v = (asinf(direction.y) + PI<float>() * 0.5f) / PI<float>();
     return Vector2f(u, v);
 }
@@ -79,7 +79,7 @@ inline Vector3f latlong_texcoord_to_direction(Vector2f uv) {
     float phi = uv.x * 2.0f * PI<float>();
     float theta = uv.y * PI<float>();
     float sin_theta = sinf(theta);
-    return -Vector3f(sin_theta * sinf(phi), cosf(theta), sin_theta * cosf(phi));
+    return -Vector3f(sin_theta * cosf(phi), cosf(theta), sin_theta * sinf(phi));
 }
 
 //*****************************************************************************
