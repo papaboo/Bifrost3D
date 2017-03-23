@@ -45,8 +45,8 @@ TEST_F(Assets_LatLongDistribution, consistent_PDF_and_evaluate) {
 
     for (int i = 0; i < 32; ++i) {
         auto sample = distribution.sample(Math::RNG::sample02(i));
-        EXPECT_FLOAT_EQ(sample.PDF, distribution.PDF(sample.Direction_to_light));
-        EXPECT_RGB_EQ_EPS(sample.Radiance, distribution.evaluate(sample.Direction_to_light), 0.000001f);
+        EXPECT_FLOAT_EQ(sample.PDF, distribution.PDF(sample.direction_to_light));
+        EXPECT_RGB_EQ_EPS(sample.radiance, distribution.evaluate(sample.direction_to_light), 0.000001f);
     }
 }
 
@@ -67,7 +67,7 @@ TEST_F(Assets_LatLongDistribution, diffuse_integrates_to_white) {
         for (int i = 0; i < MAX_SAMPLES; ++i) {
             LightSample sample = distribution.sample(Math::RNG::sample02(i));
             if (sample.PDF != 0.0f)
-                radiance[i] = sample.Radiance.r / Math::PI<float>() * Math::max(0.0f, sample.Direction_to_light.z) / sample.PDF;
+                radiance[i] = sample.radiance.r / Math::PI<float>() * Math::max(0.0f, sample.direction_to_light.z) / sample.PDF;
             else
                 radiance[i] = 0.0f;
         }
@@ -79,7 +79,7 @@ TEST_F(Assets_LatLongDistribution, diffuse_integrates_to_white) {
         for (int i = 0; i < MAX_SAMPLES; ++i) {
             LightSample sample = distribution.sample(Math::RNG::sample02(i));
             if (sample.PDF != 0.0f)
-                radiance[i] = sample.Radiance.r / Math::PI<float>() * Math::max(0.0f, sample.Direction_to_light.y) / sample.PDF;
+                radiance[i] = sample.radiance.r / Math::PI<float>() * Math::max(0.0f, sample.direction_to_light.y) / sample.PDF;
             else
                 radiance[i] = 0.0f;
         }

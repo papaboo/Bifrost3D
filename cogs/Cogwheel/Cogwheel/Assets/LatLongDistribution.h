@@ -19,10 +19,10 @@ namespace Assets {
 // A single sample from a light source.
 // ------------------------------------------------------------------------------------------------
 struct LightSample {
-    Math::RGB Radiance;
+    Math::RGB radiance;
     float PDF;
-    Math::Vector3f Direction_to_light;
-    float Distance;
+    Math::Vector3f direction_to_light;
+    float distance;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -66,10 +66,10 @@ public:
         auto CDF_sample = m_distribution.sample_continuous(random_sample);
 
         LightSample sample;
-        sample.Direction_to_light = Math::latlong_texcoord_to_direction(CDF_sample.index);
-        sample.Distance = 1e30f;
-        sample.Radiance = sample2D(m_latlong.get_ID(), CDF_sample.index).rgb();
-        float sin_theta = abs(sqrtf(1.0f - sample.Direction_to_light.y * sample.Direction_to_light.y));
+        sample.direction_to_light = Math::latlong_texcoord_to_direction(CDF_sample.index);
+        sample.distance = 1e30f;
+        sample.radiance = sample2D(m_latlong.get_ID(), CDF_sample.index).rgb();
+        float sin_theta = abs(sqrtf(1.0f - sample.direction_to_light.y * sample.direction_to_light.y));
         float PDF = float(CDF_sample.PDF) / (2.0f * Math::PI<float>() * Math::PI<float>() * sin_theta);
         sample.PDF = sin_theta == 0.0f ? 0.0f : PDF;
         return sample;
