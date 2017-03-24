@@ -9,7 +9,7 @@
 #include <gtest/gtest.h>
 
 #include <Assets/ImageTest.h>
-#include <Assets/LatLongDistributionTest.h>
+#include <Assets/InfiniteAreaLightTest.h>
 #include <Assets/MaterialTest.h>
 #include <Assets/MeshTest.h>
 #include <Assets/MeshModelTest.h>

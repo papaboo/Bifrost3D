@@ -1,4 +1,4 @@
-// Cogwheel latitude-longtitude distribution.
+// Cogwheel infinite area light.
 // ---------------------------------------------------------------------------
 // Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
 //
@@ -6,8 +6,8 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#ifndef _COGWHEEL_ASSETS_LAT_LONG_DISTRIBUTION_H_
-#define _COGWHEEL_ASSETS_LAT_LONG_DISTRIBUTION_H_
+#ifndef _COGWHEEL_ASSETS_INFINITE_AREA_LIGHT_H_
+#define _COGWHEEL_ASSETS_INFINITE_AREA_LIGHT_H_
 
 #include <Cogwheel/Assets/Texture.h>
 #include <Cogwheel/Math/Distribution2D.h>
@@ -26,11 +26,9 @@ struct LightSample {
 };
 
 // ------------------------------------------------------------------------------------------------
-// A latitude-longitude texture distribution.
-// Future work
-// * Specialized compute_PDF to floating point and unsigned char textures.
+// Samplable, textured infinite area light.
 // ------------------------------------------------------------------------------------------------
-class LatLongDistribution {
+class InfiniteAreaLight {
 private:
     mutable TextureND m_latlong;
     Math::Distribution2D<double> m_distribution;
@@ -40,7 +38,7 @@ public:
     //*********************************************************************************************
     // Constructor.
     //*********************************************************************************************
-    LatLongDistribution(Textures::UID latlong_ID)
+    InfiniteAreaLight(Textures::UID latlong_ID)
         : m_latlong(latlong_ID)
         , m_distribution(compute_PDF(m_latlong), m_latlong.get_image().get_width(), m_latlong.get_image().get_height()) {
     }
@@ -175,4 +173,4 @@ public:
 } // NS Assets
 } // NS Cogwheel
 
-#endif // _COGWHEEL_ASSETS_LAT_LONG_DISTRIBUTION_H_
+#endif // _COGWHEEL_ASSETS_INFINITE_AREA_LIGHT_H_

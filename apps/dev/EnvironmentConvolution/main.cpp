@@ -6,7 +6,7 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include <Cogwheel/Assets/LatLongDistribution.h>
+#include <Cogwheel/Assets/InfiniteAreaLight.h>
 #include <Cogwheel/Math/Quaternion.h>
 #include <Cogwheel/Math/RNG.h>
 
@@ -139,9 +139,9 @@ int main(int argc, char** argv) {
     Image image = StbImageLoader::load(std::string(argv[1]));
 
     Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
-    LatLongDistribution* infinite_area_light = nullptr;
+    InfiniteAreaLight* infinite_area_light = nullptr;
     if (options.sample_method != SampleMethod::BSDF)
-        infinite_area_light = new LatLongDistribution(texture_ID);
+        infinite_area_light = new InfiniteAreaLight(texture_ID);
 
     Image output = Images::create("Convoluted image", PixelFormat::RGB24, 2.2f, Vector2ui(image.get_width(), image.get_height())); // TODO Wrong gamma
 
