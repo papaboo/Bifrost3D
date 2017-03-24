@@ -58,6 +58,21 @@ inline Sample sample(float alpha, Vector2f random_sample) {
 
 } // NS GGX
 
+// Computes the power heuristic of pdf1 and pdf2.
+// It is assumed that pdf1 is always valid, i.e. not NaN.
+// pdf2 is allowed to be NaN, but generally try to avoid it. :)
+inline float power_heuristic(float pdf1, float pdf2) {
+    pdf1 *= pdf1;
+    pdf2 *= pdf2;
+    float result = pdf1 / (pdf1 + pdf2);
+    // This is where floating point math gets tricky!
+    // If the mis weight is NaN then it can be caused by three things.
+    // 1. pdf1 is so insanely high that pdf1 * pdf1 = infinity. In that case we end up with inf / (inf + pdf2^2) and return 1, unless pdf2 was larger than pdf1, i.e. 'more infinite :p', then we return 0.
+    // 2. Conversely pdf2 can also be so insanely high that pdf2 * pdf2 = infinity. This is handled analogously to above.
+    // 3. pdf2 can also be NaN. In this case the power heuristic is ill-defined and we return 0.
+    return !isnan(result) ? result : (pdf1 > pdf2 ? 1.0f : 0.0f);
+}
+
 enum class SampleMethod {
     MIS, Light, BSDF
 };
@@ -125,7 +140,7 @@ int main(int argc, char** argv) {
 
     Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
     LatLongDistribution* infinite_area_light = nullptr;
-    if (options.sample_method == SampleMethod::Light)
+    if (options.sample_method != SampleMethod::BSDF)
         infinite_area_light = new LatLongDistribution(texture_ID);
 
     Image output = Images::create("Convoluted image", PixelFormat::RGB24, 2.2f, Vector2ui(image.get_width(), image.get_height())); // TODO Wrong gamma
@@ -146,14 +161,47 @@ int main(int argc, char** argv) {
             RGB radiance = RGB::black();
             
             switch (options.sample_method) {
-            case SampleMethod::MIS:
-                // TODO MIS.
+            case SampleMethod::MIS: {
+                int bsdf_samples = SAMPLE_COUNT / 2;
+                int light_samples = SAMPLE_COUNT - bsdf_samples;
+
+                for (int s = 0; s < light_samples; ++s) {
+                    LightSample sample = infinite_area_light->sample(RNG::sample02(s));
+                    if (sample.PDF < 0.000000001f)
+                        continue;
+
+                    Vector3f local_direction = inverse_unit(up_rotation) * sample.direction_to_light;
+                    float ggx_f = GGX::D(alpha, local_direction.z);
+                    if (isnan(ggx_f))
+                        continue;
+
+                    float cos_theta = fmaxf(local_direction.z, 0.0f);
+                    float mis_weight = power_heuristic(sample.PDF, GGX::PDF(alpha, local_direction.z));
+                    radiance += sample.radiance * (mis_weight * ggx_f * cos_theta / sample.PDF);
+                }
+
+                for (int s = 0; s < bsdf_samples; ++s) {
+                    GGX::Sample sample = GGX::sample(alpha, RNG::sample02(s));
+                    if (sample.PDF < 0.000000001f)
+                        continue;
+                    
+                    sample.direction = up_rotation * sample.direction;
+                    float mis_weight = power_heuristic(sample.PDF, infinite_area_light->PDF(sample.direction));
+                    radiance += infinite_area_light->evaluate(sample.direction) * mis_weight;
+                }
+
+                // Account for the samples being split evenly between BSDF and light.
+                radiance *= 2.0f;
+
                 break;
+            }
             case SampleMethod::Light:
                 for (int s = 0; s < SAMPLE_COUNT; ++s) {
                     LightSample sample = infinite_area_light->sample(RNG::sample02(s));
                     Vector3f local_direction = inverse_unit(up_rotation) * sample.direction_to_light;
                     float ggx_f = GGX::D(alpha, local_direction.z);
+                    if (isnan(ggx_f))
+                        continue;
                     float cos_theta = fmaxf(local_direction.z, 0.0f);
                     radiance += sample.radiance * ggx_f * cos_theta / sample.PDF;
                 }
@@ -173,13 +221,7 @@ int main(int argc, char** argv) {
             output.set_pixel(RGBA(radiance), Vector2ui(x, y));
         }
 
-    // TODO Remove!
-    if (options.sample_method == SampleMethod::BSDF)
-        StbImageWriter::write("C:/Users/asger/Desktop/output_BSDF.png", output);
-    else if (options.sample_method == SampleMethod::Light)
-        StbImageWriter::write("C:/Users/asger/Desktop/output_light.png", output);
-    else
-        StbImageWriter::write("C:/Users/asger/Desktop/output_MIS.png", output);
+    StbImageWriter::write("C:/Users/asger/Desktop/output.png", output);
 
     return 0;
 }
