@@ -13,6 +13,9 @@
 #include <StbImageLoader/StbImageLoader.h>
 #include <StbImageWriter/StbImageWriter.h>
 
+#include <omp.h>
+
+#include <atomic>
 #include <fstream>
 
 using namespace Cogwheel;
@@ -145,82 +148,91 @@ int main(int argc, char** argv) {
 
     Image output = Images::create("Convoluted image", PixelFormat::RGB24, 2.2f, Vector2ui(image.get_width(), image.get_height())); // TODO Wrong gamma
 
+    std::atomic_int finished_pixel_count = std::atomic_int();
+
     float alpha = 0.5f;
     #pragma omp parallel for schedule(dynamic, 16)
-    for (int y = 0; y < int(image.get_height()); ++y)
-        for (unsigned int x = 0; x < image.get_width(); ++x) {
+    for (int i = 0; i < int(image.get_pixel_count()); ++i) {
 
-            Vector2f up_uv = Vector2f((x + 0.5f) / image.get_width(), (y + 0.5f) / image.get_height());
-            Vector3f up_vector = latlong_texcoord_to_direction(up_uv);
-            Quaternionf up_rotation = Quaternionf::look_in(up_vector);
+        int x = i % image.get_width();
+        int y = i / image.get_width();
 
-            // TODO We can precompute the unrotated GGX samples and the area_light samples. Does that speed anything up? Will there be correlation artefacts?
-            //      Perhaps just draw samplecount * 16 and reuse different permutations of them.
-            // TODO What is faster for rotation? A matrix or quaternion?
-            const int SAMPLE_COUNT = 256;
-            RGB radiance = RGB::black();
+        Vector2f up_uv = Vector2f((x + 0.5f) / image.get_width(), (y + 0.5f) / image.get_height());
+        Vector3f up_vector = latlong_texcoord_to_direction(up_uv);
+        Quaternionf up_rotation = Quaternionf::look_in(up_vector);
+
+        // TODO We can precompute the unrotated GGX samples and the area_light samples. Does that speed anything up? Will there be correlation artefacts?
+        //      Perhaps just draw samplecount * 16 and reuse different permutations of them.
+        // TODO What is faster for rotation? A matrix or quaternion?
+        const int SAMPLE_COUNT = 256;
+        RGB radiance = RGB::black();
             
-            switch (options.sample_method) {
-            case SampleMethod::MIS: {
-                int bsdf_samples = SAMPLE_COUNT / 2;
-                int light_samples = SAMPLE_COUNT - bsdf_samples;
+        switch (options.sample_method) {
+        case SampleMethod::MIS: {
+            int bsdf_samples = SAMPLE_COUNT / 2;
+            int light_samples = SAMPLE_COUNT - bsdf_samples;
 
-                for (int s = 0; s < light_samples; ++s) {
-                    LightSample sample = infinite_area_light->sample(RNG::sample02(s));
-                    if (sample.PDF < 0.000000001f)
-                        continue;
+            for (int s = 0; s < light_samples; ++s) {
+                LightSample sample = infinite_area_light->sample(RNG::sample02(s));
+                if (sample.PDF < 0.000000001f)
+                    continue;
 
-                    Vector3f local_direction = inverse_unit(up_rotation) * sample.direction_to_light;
-                    float ggx_f = GGX::D(alpha, local_direction.z);
-                    if (isnan(ggx_f))
-                        continue;
+                Vector3f local_direction = inverse_unit(up_rotation) * sample.direction_to_light;
+                float ggx_f = GGX::D(alpha, local_direction.z);
+                if (isnan(ggx_f))
+                    continue;
 
-                    float cos_theta = fmaxf(local_direction.z, 0.0f);
-                    float mis_weight = power_heuristic(sample.PDF, GGX::PDF(alpha, local_direction.z));
-                    radiance += sample.radiance * (mis_weight * ggx_f * cos_theta / sample.PDF);
-                }
+                float cos_theta = fmaxf(local_direction.z, 0.0f);
+                float mis_weight = power_heuristic(sample.PDF, GGX::PDF(alpha, local_direction.z));
+                radiance += sample.radiance * (mis_weight * ggx_f * cos_theta / sample.PDF);
+            }
 
-                for (int s = 0; s < bsdf_samples; ++s) {
-                    GGX::Sample sample = GGX::sample(alpha, RNG::sample02(s));
-                    if (sample.PDF < 0.000000001f)
-                        continue;
+            for (int s = 0; s < bsdf_samples; ++s) {
+                GGX::Sample sample = GGX::sample(alpha, RNG::sample02(s));
+                if (sample.PDF < 0.000000001f)
+                    continue;
                     
-                    sample.direction = up_rotation * sample.direction;
-                    float mis_weight = power_heuristic(sample.PDF, infinite_area_light->PDF(sample.direction));
-                    radiance += infinite_area_light->evaluate(sample.direction) * mis_weight;
-                }
-
-                // Account for the samples being split evenly between BSDF and light.
-                radiance *= 2.0f;
-
-                break;
-            }
-            case SampleMethod::Light:
-                for (int s = 0; s < SAMPLE_COUNT; ++s) {
-                    LightSample sample = infinite_area_light->sample(RNG::sample02(s));
-                    Vector3f local_direction = inverse_unit(up_rotation) * sample.direction_to_light;
-                    float ggx_f = GGX::D(alpha, local_direction.z);
-                    if (isnan(ggx_f))
-                        continue;
-                    float cos_theta = fmaxf(local_direction.z, 0.0f);
-                    radiance += sample.radiance * ggx_f * cos_theta / sample.PDF;
-                }
-                break;
-            case SampleMethod::BSDF:
-                for (int s = 0; s < SAMPLE_COUNT; ++s) {
-                    GGX::Sample sample = GGX::sample(alpha, RNG::sample02(s));
-                    sample.direction = up_rotation * sample.direction;
-                    Vector2f sample_uv = direction_to_latlong_texcoord(sample.direction);
-                    radiance += sample2D(texture_ID, sample_uv).rgb();
-                }
-                break;
+                sample.direction = up_rotation * sample.direction;
+                float mis_weight = power_heuristic(sample.PDF, infinite_area_light->PDF(sample.direction));
+                radiance += infinite_area_light->evaluate(sample.direction) * mis_weight;
             }
 
-            radiance /= SAMPLE_COUNT;
+            // Account for the samples being split evenly between BSDF and light.
+            radiance *= 2.0f;
 
-            output.set_pixel(RGBA(radiance), Vector2ui(x, y));
+            break;
+        }
+        case SampleMethod::Light:
+            for (int s = 0; s < SAMPLE_COUNT; ++s) {
+                LightSample sample = infinite_area_light->sample(RNG::sample02(s));
+                Vector3f local_direction = inverse_unit(up_rotation) * sample.direction_to_light;
+                float ggx_f = GGX::D(alpha, local_direction.z);
+                if (isnan(ggx_f))
+                    continue;
+                float cos_theta = fmaxf(local_direction.z, 0.0f);
+                radiance += sample.radiance * ggx_f * cos_theta / sample.PDF;
+            }
+            break;
+        case SampleMethod::BSDF:
+            for (int s = 0; s < SAMPLE_COUNT; ++s) {
+                GGX::Sample sample = GGX::sample(alpha, RNG::sample02(s));
+                sample.direction = up_rotation * sample.direction;
+                Vector2f sample_uv = direction_to_latlong_texcoord(sample.direction);
+                radiance += sample2D(texture_ID, sample_uv).rgb();
+            }
+            break;
         }
 
+        radiance /= SAMPLE_COUNT;
+
+        output.set_pixel(RGBA(radiance), Vector2ui(x, y));
+
+        ++finished_pixel_count;
+        if (omp_get_thread_num() == 0)
+            printf("\rProgress: %.2f%", 100.0f * float(finished_pixel_count) / image.get_pixel_count());
+    }
+
+    printf("\rProgress: 100.00%\n");
     StbImageWriter::write("C:/Users/asger/Desktop/output.png", output);
 
     return 0;
