@@ -11,8 +11,7 @@
 
 #include <OptiXRenderer/Types.h>
 
-#include <Cogwheel/Assets/Image.h>
-#include <Cogwheel/Assets/Texture.h>
+#include <Cogwheel/Assets/InfiniteAreaLight.h>
 #include <Cogwheel/Math/Color.h>
 
 #include <optixu/optixpp_namespace.h>
@@ -23,8 +22,6 @@ namespace OptiXRenderer {
 // Environment mapping representation.
 // Contains the environment texture and the corrosponding CDFs and PDF buffers.
 // Future work:
-// * Specialize pixel importance computation to images with float or 
-//   unsigned char components and move it to it's own translation unit.
 // * Structuring the CDF as 'breath first' should improve the cache hit rate 
 //   of the first couple of lookups when we do binary search or? Profile!
 // * Create a kd-tree'ish structure instead of the current CDFs.
@@ -61,7 +58,6 @@ struct EnvironmentMap {
             light.marginal_CDF_ID = light.conditional_CDF_ID = light.per_pixel_PDF_ID = RT_TEXTURE_ID_NULL;
         return light;
     }
-
 };
 
 //----------------------------------------------------------------------------
@@ -86,124 +82,17 @@ bool compute_environment_CDFs(Cogwheel::Assets::TextureND environment_map, optix
     if ((width * height) < (64 * 32))
         return false;
 
+    per_pixel_PDF = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, width, height);
+    float* per_pixel_PDF_data = static_cast<float*>(per_pixel_PDF->map());
+    Cogwheel::Assets::InfiniteAreaLight::compute_PDF(environment_map.get_ID(), per_pixel_PDF_data);
+
     // Perform computations in double precision to maintain some precision during summation.
     double* marginal_CDFd = new double[height + 1];
     double* conditional_CDFd = new double[(width + 1) * height];
-    per_pixel_PDF = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, width, height);
-    float* per_pixel_PDF_data = static_cast<float*>(per_pixel_PDF->map());
-
-    { // Compute pixel importance scaled by projected area of the pixel.
-        double* pixel_importance = conditional_CDFd; // Alias to increase readability.
-
-        #pragma omp parallel for schedule(dynamic, 16)
-        for (int y = 0; y < int(height); ++y) {
-            // PBRT p. 728. Account for the non-uniform surface area of the pixels, e.g. the higher density near the poles.
-            float sin_theta = sinf(PIf * (y + 0.5f) / float(height));
-
-            double* per_pixel_PDF_row = pixel_importance + y * width;
-            for (unsigned int x = 0; x < width; ++x) {
-                // TODO This can be specialized to floating point and unsigned char textures.
-                RGB pixel = environment.get_pixel(Vector2ui(x, y)).rgb();
-                per_pixel_PDF_row[x] = (pixel.r + pixel.g + pixel.b) * sin_theta; // TODO Use luminance instead? Perhaps define a global importance(RGB / float3) function and use it here and for BRDF sampling.
-            }
-        }
-
-        // If the texture is unfiltered, then the per pixel importance corresponds to the PDF.
-        // If filtering is enabled, then we need to filter the PDF as well.
-        // Generally this doesn't change much in terms of convergence, but it helps us to 
-        // avoid artefacts in cases where a black pixel would have a PDF of 0,
-        // but due to filtering the pixel wouldn't actually be black.
-        if (environment_map.get_magnification_filter() == Assets::MagnificationFilter::None) {
-            #pragma omp parallel for schedule(dynamic, 16)
-            for (int p = 0; p < int(width * height); ++p)
-                per_pixel_PDF_data[p] = float(pixel_importance[p]);
-        } else {
-            #pragma omp parallel for schedule(dynamic, 16)
-            for (int y = 0; y < int(height); ++y) {
-                // Blur per pixel importance to account for linear interpolation.
-                // The pixel's own contribution is 20 / 32.
-                // Neighbours on the side contribute by 2 / 32.
-                // Neighbours in the corners contribute by 1 / 32.
-                // Weights have been estimated based on linear interpolation.
-                for (int x = 0; x < int(width); ++x) {
-                    float& pixel_PDF = per_pixel_PDF_data[x + y * width];
-                    pixel_PDF = float(pixel_importance[x + y * width]) * (20.0f / 32.0f);
-
-                    { // Add contribution from left column.
-                        int left_x = x - 1 < 0 ? (width - 1) : (x - 1); // Repeat mode.
-
-                        int lower_left_index = left_x + max(0, y - 1) * width;
-                        pixel_PDF += float(pixel_importance[lower_left_index]) * (1.0f / 32.0f);
-
-                        int middle_left_index = left_x + y * width;
-                        pixel_PDF += float(pixel_importance[middle_left_index]) * (2.0f / 32.0f);
-
-                        int upper_left_index = left_x + min(int(height) - 1, y + 1) * width;
-                        pixel_PDF += float(pixel_importance[upper_left_index]) * (1.0f / 32.0f);
-                    }
-
-                    { // Add contribution from right column.
-                        int right_x = x + 1 == width ? 0 : (x + 1); // Repeat mode.
-
-                        int lower_right_index = right_x + max(0, y - 1) * width;
-                        pixel_PDF += float(pixel_importance[lower_right_index]) * (1.0f / 32.0f);
-
-                        int middle_right_index = right_x + y * width;
-                        pixel_PDF += float(pixel_importance[middle_right_index]) * (2.0f / 32.0f);
-
-                        int upper_right_index = right_x + min(int(height) - 1, y + 1) * width;
-                        pixel_PDF += float(pixel_importance[upper_right_index]) * (1.0f / 32.0f);
-                    }
-
-                    { // Add contribution from middle column. Center was added above.
-                        int lower_middle_index = x + max(0, y - 1) * width;
-                        pixel_PDF += float(pixel_importance[lower_middle_index]) * (2.0f / 32.0f);
-
-                        int upper_middle_index = x + min(int(height) - 1, y + 1) * width;
-                        pixel_PDF += float(pixel_importance[upper_middle_index]) * (2.0f / 32.0f);
-                    }
-                }
-            }
-        }
-    }
-
-    // Compute conditional CDF.
-    #pragma omp parallel for schedule(dynamic, 16)
-    for (int y = 0; y < int(height); ++y) {
-        float* per_pixel_PDF_row = per_pixel_PDF_data + y * width;
-        double* conditional_CDF_row = conditional_CDFd + y * (width + 1);
-        conditional_CDF_row[0] = 0.0;
-        for (unsigned int x = 0; x < width; ++x)
-            conditional_CDF_row[x + 1] = conditional_CDF_row[x] + per_pixel_PDF_row[x];
-    }
-
-    // Compute marginal CDF.
-    marginal_CDFd[0] = 0.0;
-    for (unsigned int y = 0; y < height; ++y)
-        marginal_CDFd[y + 1] = marginal_CDFd[y] + conditional_CDFd[(y + 1) * (width + 1) - 1];
-
-    // Integral of the environment map.
-    float environment_integral = float(marginal_CDFd[height] / (width * height));
-
+    float environment_integral = float(Cogwheel::Math::Distribution2D<double>::compute_CDFs(per_pixel_PDF_data, width, height, 
+                                                                                            marginal_CDFd, conditional_CDFd));
     if (environment_integral < 0.00001f)
         return false;
-
-    // Normalize marginal CDF.
-    for (unsigned int y = 1; y < height; ++y)
-        marginal_CDFd[y] /= marginal_CDFd[height];
-    marginal_CDFd[height] = 1.0;
-
-    // Normalize conditional CDF.
-    #pragma omp parallel for schedule(dynamic, 16)
-    for (int y = 0; y < int(height); ++y) {
-        double* conditional_CDF_row = conditional_CDFd + y * (width + 1);
-        if (conditional_CDF_row[width] > 0.0f)
-            for (unsigned int x = 1; x < width; ++x)
-                conditional_CDF_row[x] /= conditional_CDF_row[width];
-        // Last value should always be one. Even in rows with no contribution.
-        // This ensures that the binary search is well-defined and will never select the last element.
-        conditional_CDF_row[width] = 1.0f;
-    }
 
     { // Upload data to OptiX buffers.
         // Marginal CDF.
