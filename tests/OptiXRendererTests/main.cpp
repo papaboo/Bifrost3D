@@ -17,7 +17,7 @@
 
 #include <ShadingModels/DefaultShadingTest.h>
 
-#include <EncodedNormalTest.h>
+#include <MiscTest.h>
 
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);

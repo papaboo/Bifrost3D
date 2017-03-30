@@ -3,8 +3,8 @@ if (TARGET OptiXRenderer)
   set(PROJECT_NAME "OptiXRendererTests")
 
   set(SRCS 
-    EncodedNormalTest.h
     main.cpp
+    MiscTest.h
     Utils.h
   )
 
