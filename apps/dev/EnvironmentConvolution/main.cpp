@@ -95,6 +95,8 @@ struct Options {
                 options.sample_method = SampleMethod::Light;
             else if (strcmp(argv[argument], "--bsdf-sampling") == 0 || strcmp(argv[argument], "-b") == 0)
                 options.sample_method = SampleMethod::BSDF;
+            else if (strcmp(argv[argument], "--sample-count") == 0 || strcmp(argv[argument], "-s") == 0)
+                options.sample_count = atoi(argv[++argument]);
         }
 
         return options;
@@ -148,8 +150,12 @@ int main(int argc, char** argv) {
 
     Image output = Images::create("Convoluted image", PixelFormat::RGB24, 2.2f, Vector2ui(image.get_width(), image.get_height())); // TODO Wrong gamma
 
-    std::atomic_int finished_pixel_count = std::atomic_int();
+    std::vector<LightSample> light_samples = std::vector<LightSample>(options.sample_count);
+    light_samples.resize(options.sample_count);
+    for (int s = 0; s < light_samples.size(); ++s)
+        light_samples[s] = infinite_area_light->sample(RNG::sample02(s));
 
+    std::atomic_int finished_pixel_count = std::atomic_int();
     float alpha = 0.5f;
     #pragma omp parallel for schedule(dynamic, 16)
     for (int i = 0; i < int(image.get_pixel_count()); ++i) {
@@ -161,19 +167,18 @@ int main(int argc, char** argv) {
         Vector3f up_vector = latlong_texcoord_to_direction(up_uv);
         Quaternionf up_rotation = Quaternionf::look_in(up_vector);
 
-        // TODO We can precompute the unrotated GGX samples and the area_light samples. Does that speed anything up? Will there be correlation artefacts?
-        //      Perhaps just draw samplecount * 16 and reuse different permutations of them.
+        // TODO We can precompute the unrotated GGX samples.
+        // TODO Perhaps just draw samplecount * 16 light samples and reuse different permutations of them.
         // TODO What is faster for rotation? A matrix or quaternion?
-        const int SAMPLE_COUNT = 256;
         RGB radiance = RGB::black();
             
         switch (options.sample_method) {
         case SampleMethod::MIS: {
-            int bsdf_samples = SAMPLE_COUNT / 2;
-            int light_samples = SAMPLE_COUNT - bsdf_samples;
+            int bsdf_sample_count = options.sample_count / 2;
+            int light_sample_count = options.sample_count - bsdf_sample_count;
 
-            for (int s = 0; s < light_samples; ++s) {
-                LightSample sample = infinite_area_light->sample(RNG::sample02(s));
+            for (int s = 0; s < light_sample_count; ++s) {
+                LightSample sample = light_samples[s];
                 if (sample.PDF < 0.000000001f)
                     continue;
 
@@ -187,7 +192,7 @@ int main(int argc, char** argv) {
                 radiance += sample.radiance * (mis_weight * ggx_f * cos_theta / sample.PDF);
             }
 
-            for (int s = 0; s < bsdf_samples; ++s) {
+            for (int s = 0; s < bsdf_sample_count; ++s) {
                 GGX::Sample sample = GGX::sample(alpha, RNG::sample02(s));
                 if (sample.PDF < 0.000000001f)
                     continue;
@@ -203,18 +208,22 @@ int main(int argc, char** argv) {
             break;
         }
         case SampleMethod::Light:
-            for (int s = 0; s < SAMPLE_COUNT; ++s) {
-                LightSample sample = infinite_area_light->sample(RNG::sample02(s));
+            for (int s = 0; s < options.sample_count; ++s) {
+                LightSample sample = light_samples[s];
+                if (sample.PDF < 0.000000001f)
+                    continue;
+
                 Vector3f local_direction = inverse_unit(up_rotation) * sample.direction_to_light;
                 float ggx_f = GGX::D(alpha, local_direction.z);
                 if (isnan(ggx_f))
                     continue;
+
                 float cos_theta = fmaxf(local_direction.z, 0.0f);
                 radiance += sample.radiance * ggx_f * cos_theta / sample.PDF;
             }
             break;
         case SampleMethod::BSDF:
-            for (int s = 0; s < SAMPLE_COUNT; ++s) {
+            for (int s = 0; s < options.sample_count; ++s) {
                 GGX::Sample sample = GGX::sample(alpha, RNG::sample02(s));
                 sample.direction = up_rotation * sample.direction;
                 Vector2f sample_uv = direction_to_latlong_texcoord(sample.direction);
@@ -223,7 +232,7 @@ int main(int argc, char** argv) {
             break;
         }
 
-        radiance /= SAMPLE_COUNT;
+        radiance /= float(options.sample_count);
 
         output.set_pixel(RGBA(radiance), Vector2ui(x, y));
 
