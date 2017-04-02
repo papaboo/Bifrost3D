@@ -22,7 +22,7 @@ namespace Math {
 // * SSE/AVX
 // ------------------------------------------------------------------------------------------------
 template <typename T>
-struct Distribution2D final {
+class Distribution2D final {
 
     const int m_width, m_height;
     T m_integral;
@@ -32,7 +32,7 @@ struct Distribution2D final {
 public:
 
     // --------------------------------------------------------------------------------------------
-    // A single sample from  the distribution.
+    // A single sample from the distribution.
     // --------------------------------------------------------------------------------------------
     template <typename I>
     struct Sample {

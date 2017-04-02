@@ -29,7 +29,7 @@ struct Distribution1D final {
 public:
 
     // --------------------------------------------------------------------------------------------
-    // A single sample from  the distribution.
+    // A single sample from the distribution.
     // --------------------------------------------------------------------------------------------
     template <typename I>
     struct Sample {
