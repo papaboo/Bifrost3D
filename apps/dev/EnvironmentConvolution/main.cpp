@@ -148,14 +148,16 @@ int main(int argc, char** argv) {
     if (options.sample_method != SampleMethod::BSDF)
         infinite_area_light = new InfiniteAreaLight(texture_ID);
 
-    Image output = Images::create("Convoluted image", PixelFormat::RGB24, 2.2f, Vector2ui(image.get_width(), image.get_height())); // TODO Wrong gamma
+    // TODO Use float format and 1.0 gamma
+    Image output = Images::create("Convoluted image", PixelFormat::RGB24, 2.2f, Vector2ui(image.get_width(), image.get_height()));
 
     std::vector<LightSample> light_samples = std::vector<LightSample>(options.sample_count);
     light_samples.resize(options.sample_count);
     for (int s = 0; s < light_samples.size(); ++s)
         light_samples[s] = infinite_area_light->sample(RNG::sample02(s));
 
-    std::atomic_int finished_pixel_count = std::atomic_int();
+    std::atomic_int finished_pixel_count;
+    finished_pixel_count.store(0);
     for (int r = 0; r < 11; ++r) {
         float roughness = r / 10.0f;
         float alpha = fmaxf(0.00000000001f, roughness * roughness);
@@ -172,7 +174,6 @@ int main(int argc, char** argv) {
 
             // TODO We can precompute the unrotated GGX samples.
             // TODO Perhaps just draw samplecount * 16 light samples and reuse different permutations of them.
-            // TODO What is faster for rotation? A matrix or quaternion?
             RGB radiance = RGB::black();
 
             switch (options.sample_method) {
@@ -241,7 +242,7 @@ int main(int argc, char** argv) {
 
             ++finished_pixel_count;
             if (omp_get_thread_num() == 0)
-                printf("\rProgress: %.2f%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * 11.0f));
+                printf("\rProgress: %.2f%%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * 11.0f));
         }
 
         std::ostringstream output_file;
@@ -249,7 +250,7 @@ int main(int argc, char** argv) {
         StbImageWriter::write(output_file.str(), output);
     }
 
-    printf("\rProgress: 100.00%\n");
+    printf("\rProgress: 100.00%%\n");
 
     return 0;
 }
