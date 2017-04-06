@@ -30,8 +30,8 @@ FileType get_file_type(const std::string& path) {
     if (path[path.size() - 4] != '.')
         return FileType::Unknown;
 
-    char typeFirstLetter = path[path.size() - 3];
-    switch (typeFirstLetter) {
+    char type_first_letter = path[path.size() - 3];
+    switch (type_first_letter) {
     case 'b':
     case 'B':
         return FileType::BMP;
@@ -92,7 +92,7 @@ bool write(const std::string& path, Image image) {
         data = float_data;
     } else {
         unsigned char* char_data = new unsigned char[width * height * channel_count];
-        float gamma = 1.0f / image.get_gamma();
+        float gamma = 1.0f / 2.2f;
         for (unsigned int y = 0; y < height; ++y)
             for (unsigned int x = 0; x < width; ++x) {
                 int data_index = x + (height - 1 - y) * width;
