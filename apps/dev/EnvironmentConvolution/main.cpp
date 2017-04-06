@@ -145,22 +145,27 @@ int main(int argc, char** argv) {
 
     Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
     InfiniteAreaLight* infinite_area_light = nullptr;
-    if (options.sample_method != SampleMethod::BSDF)
+    std::vector<LightSample> light_samples = std::vector<LightSample>();
+    if (options.sample_method != SampleMethod::BSDF) {
         infinite_area_light = new InfiniteAreaLight(texture_ID);
+        light_samples.resize(options.sample_count * 8);
+        for (int s = 0; s < light_samples.size(); ++s)
+            light_samples[s] = infinite_area_light->sample(RNG::sample02(s));
+    }
 
-    // TODO Use float format and 1.0 gamma
-    Image output = Images::create("Convoluted image", PixelFormat::RGB24, 2.2f, Vector2ui(image.get_width(), image.get_height()));
-
-    std::vector<LightSample> light_samples = std::vector<LightSample>(options.sample_count);
-    light_samples.resize(options.sample_count);
-    for (int s = 0; s < light_samples.size(); ++s)
-        light_samples[s] = infinite_area_light->sample(RNG::sample02(s));
+    Image output = Images::create("Convoluted image", PixelFormat::RGB_Float, 1.0f, Vector2ui(image.get_width(), image.get_height()));
 
     std::atomic_int finished_pixel_count;
     finished_pixel_count.store(0);
     for (int r = 0; r < 11; ++r) {
         float roughness = r / 10.0f;
         float alpha = fmaxf(0.00000000001f, roughness * roughness);
+
+        std::vector<GGX::Sample> ggx_samples = std::vector<GGX::Sample>(options.sample_count);
+        ggx_samples.resize(options.sample_count);
+        #pragma omp parallel for schedule(dynamic, 16)
+        for (int s = 0; s < ggx_samples.size(); ++s)
+            ggx_samples[s] = GGX::sample(alpha, RNG::sample02(s));
 
         #pragma omp parallel for schedule(dynamic, 16)
         for (int i = 0; i < int(image.get_pixel_count()); ++i) {
@@ -172,8 +177,6 @@ int main(int argc, char** argv) {
             Vector3f up_vector = latlong_texcoord_to_direction(up_uv);
             Quaternionf up_rotation = Quaternionf::look_in(up_vector);
 
-            // TODO We can precompute the unrotated GGX samples.
-            // TODO Perhaps just draw samplecount * 16 light samples and reuse different permutations of them.
             RGB radiance = RGB::black();
 
             switch (options.sample_method) {
@@ -182,7 +185,7 @@ int main(int argc, char** argv) {
                 int light_sample_count = options.sample_count - bsdf_sample_count;
 
                 for (int s = 0; s < light_sample_count; ++s) {
-                    LightSample sample = light_samples[s];
+                    LightSample sample = light_samples[(s + RNG::hash(i)) % light_samples.size()];
                     if (sample.PDF < 0.000000001f)
                         continue;
 
@@ -228,9 +231,8 @@ int main(int argc, char** argv) {
                 break;
             case SampleMethod::BSDF:
                 for (int s = 0; s < options.sample_count; ++s) {
-                    GGX::Sample sample = GGX::sample(alpha, RNG::sample02(s));
-                    sample.direction = up_rotation * sample.direction;
-                    Vector2f sample_uv = direction_to_latlong_texcoord(sample.direction);
+                    const GGX::Sample& sample = ggx_samples[s];
+                    Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
                     radiance += sample2D(texture_ID, sample_uv).rgb();
                 }
                 break;
