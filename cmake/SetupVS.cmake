@@ -21,6 +21,8 @@ if(MSVC)
     file(WRITE ${USER_FILENAME} ${USER_CONFIG})
   endfunction()
 
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX2")
+
   # Setup warnings
 
   add_definitions(-WX) # Warnings as errors
