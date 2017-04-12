@@ -12,6 +12,7 @@
 
 #include <StbImageLoader/StbImageLoader.h>
 #include <StbImageWriter/StbImageWriter.h>
+#include <TinyExr/TinyExr.h>
 
 #include <omp.h>
 
@@ -27,7 +28,7 @@ using namespace Cogwheel::Math;
 //==============================================================================
 namespace GGX {
 
-struct Sample{
+struct Sample {
     Vector3f direction;
     float PDF;
 };
@@ -133,6 +134,19 @@ int main(int argc, char** argv) {
         return 0;
     }
 
+    std::string image_file = std::string(argv[1]);
+
+    std::string file_extension = std::string(image_file, image_file.length() - 4);
+    // Check if the file format is supported.
+    if (!(file_extension.compare(".bmp") == 0 ||
+        file_extension.compare(".exr") == 0 ||
+        file_extension.compare(".hdr") == 0 ||
+        file_extension.compare(".png") == 0 ||
+        file_extension.compare(".tga") == 0)) {
+        printf("Unsupported file format: %s\nSupported formats are: bmp, exr, hdr, png and tga.\n", file_extension.c_str());
+        return 2;
+    }
+
     Options options = Options::parse(argc, argv);
 
     printf("Convolute '%s'\n", argv[1]);
@@ -141,7 +155,16 @@ int main(int argc, char** argv) {
     Images::allocate(1);
     Textures::allocate(1);
 
-    Image image = StbImageLoader::load(std::string(argv[1]));
+    Image image;
+    if (file_extension.compare(".exr") == 0)
+        image = TinyExr::load(std::string(argv[1]));
+    else
+        image = StbImageLoader::load(std::string(argv[1]));
+
+    if (!image.exists()) {
+        printf("Could not load image: %s\n", image_file.c_str());
+        return 1;
+    }
 
     Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
     InfiniteAreaLight* infinite_area_light = nullptr;
@@ -247,9 +270,18 @@ int main(int argc, char** argv) {
                 printf("\rProgress: %.2f%%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * 11.0f));
         }
 
-        std::ostringstream output_file;
-        output_file << "C:/Users/asger/Desktop/roughness_" << roughness << ".png";
-        StbImageWriter::write(output_file.str(), output);
+        { // Output convoluted image.
+            size_t dot_pos = image_file.find_last_of('.');
+            std::string file_sans_extension = std::string(image_file, 0, dot_pos);
+            std::string extension = std::string(image_file, dot_pos);
+            std::ostringstream output_file;
+            output_file << file_sans_extension << "_roughness_" << roughness << extension;
+            if (extension.compare(".exr") == 0)
+                TinyExr::store(output.get_ID(), output_file.str());
+            else
+                // TODO Flip parameter order.
+                StbImageWriter::write(output_file.str(), output.get_ID());
+        }
     }
 
     printf("\rProgress: 100.00%%\n");

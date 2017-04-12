@@ -10,6 +10,7 @@ target_link_libraries(${PROJECT_NAME}
   Cogwheel
   StbImageLoader
   StbImageWriter
+  TinyExr
 )
 
 source_group("" FILES ${SRCS})
