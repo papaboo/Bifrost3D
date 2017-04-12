@@ -53,7 +53,7 @@ TEST_F(Assets_Images, sentinel_material) {
 }
 
 TEST_F(Assets_Images, create) {
-    Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1,2,3), 2);
+    Images::UID image_ID = Images::create3D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1,2,3), 2);
 
     EXPECT_TRUE(Images::has(image_ID));
     EXPECT_EQ(PixelFormat::RGBA32, Images::get_pixel_format(image_ID));
@@ -73,7 +73,7 @@ TEST_F(Assets_Images, create) {
 }
 
 TEST_F(Assets_Images, destroy) {
-    Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1, 2, 3));
+    Images::UID image_ID = Images::create3D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1, 2, 3));
     EXPECT_TRUE(Images::has(image_ID));
 
     Images::reset_change_notifications();
@@ -89,8 +89,8 @@ TEST_F(Assets_Images, destroy) {
 }
 
 TEST_F(Assets_Images, create_and_destroy_notifications) {
-    Images::UID image_ID0 = Images::create("Test image 0", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1, 2, 3));
-    Images::UID image_ID1 = Images::create("Test image 1", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(3, 2, 1));
+    Images::UID image_ID0 = Images::create3D("Test image 0", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1, 2, 3));
+    Images::UID image_ID1 = Images::create3D("Test image 1", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(3, 2, 1));
     EXPECT_TRUE(Images::has(image_ID0));
     EXPECT_TRUE(Images::has(image_ID1));
 
@@ -155,7 +155,7 @@ TEST_F(Assets_Images, create_and_destroy_notifications) {
 }
 
 TEST_F(Assets_Images, create_and_change) {
-    Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1, 2, 3));
+    Images::UID image_ID = Images::create3D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1, 2, 3));
 
     Images::set_pixel(image_ID, Math::RGBA::yellow(), Math::Vector2ui(0,1));
 
@@ -168,7 +168,7 @@ TEST_F(Assets_Images, create_and_change) {
 }
 
 TEST_F(Assets_Images, pixel_updates) {
-    Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA_Float, 2.2f, Math::Vector2ui(3, 2), 2);
+    Images::UID image_ID = Images::create2D("Test image", PixelFormat::RGBA_Float, 2.2f, Math::Vector2ui(3, 2), 2);
 
     Images::set_pixel(image_ID, Math::RGBA(1, 2, 3, 1), Math::Vector2ui(0, 0));
     Images::set_pixel(image_ID, Math::RGBA(4, 5, 6, 1), Math::Vector2ui(1, 0));
@@ -194,7 +194,7 @@ TEST_F(Assets_Images, pixel_updates) {
 
 TEST_F(Assets_Images, mipmap_size) {
     unsigned int mipmap_count = 4u;
-    Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(8, 6), mipmap_count);
+    Images::UID image_ID = Images::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(8, 6), mipmap_count);
 
     EXPECT_EQ(mipmap_count, Images::get_mipmap_count(image_ID));
 
@@ -218,7 +218,7 @@ TEST_F(Assets_Images, fill_mipmaps) {
     using namespace Cogwheel::Math;
 
     unsigned int width = 7, height = 5, mipmap_count = 3u;
-    Image image = Images::create("Test image", PixelFormat::RGBA_Float, 1.0f, Vector2ui(width, height), mipmap_count);
+    Image image = Images::create2D("Test image", PixelFormat::RGBA_Float, 1.0f, Vector2ui(width, height), mipmap_count);
 
     EXPECT_EQ(7u, image.get_width(0));
     EXPECT_EQ(3u, image.get_width(1));
@@ -246,7 +246,7 @@ TEST_F(Assets_Images, fill_mipmaps) {
 TEST_F(Assets_Images, mipmapable_events) {
 
     unsigned int width = 2, height = 2;
-    Image image = Images::create("Test image", PixelFormat::RGBA_Float, 1.0f, Math::Vector2ui(width, height));
+    Image image = Images::create2D("Test image", PixelFormat::RGBA_Float, 1.0f, Math::Vector2ui(width, height));
     EXPECT_FALSE(image.is_mipmapable());
 
     Images::reset_change_notifications();

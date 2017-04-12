@@ -32,7 +32,7 @@ protected:
 };
 
 TEST_F(Assets_InfiniteAreaLight, consistent_PDF_and_evaluate) {
-    Image image = Images::create("Noisy", PixelFormat::I8, 2.2f, Math::Vector2ui(4, 4));
+    Image image = Images::create2D("Noisy", PixelFormat::I8, 2.2f, Math::Vector2ui(4, 4));
     
     unsigned char f[] = { 0, 5, 0, 3, 1, 2, 1, 4, 3, 7, 5, 1, 9, 4, 1, 1 };
     
@@ -51,7 +51,7 @@ TEST_F(Assets_InfiniteAreaLight, consistent_PDF_and_evaluate) {
 }
 
 TEST_F(Assets_InfiniteAreaLight, diffuse_integrates_to_white) {
-    Image image = Images::create("White", PixelFormat::I8, 2.2f, Math::Vector2ui(512, 256));
+    Image image = Images::create2D("White", PixelFormat::I8, 2.2f, Math::Vector2ui(512, 256));
 
     unsigned char* pixels = (unsigned char*)image.get_pixels();
     std::fill(pixels, pixels + image.get_pixel_count(), 255);

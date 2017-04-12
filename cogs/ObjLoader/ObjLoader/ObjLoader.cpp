@@ -94,7 +94,7 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
                 Image image = image_ID;
                 unsigned int mipmap_count = image.get_mipmap_count();
                 Math::Vector2ui size = Math::Vector2ui(image.get_width(), image.get_height());
-                Images::UID coverage_image_ID = Images::create(image.get_name(), PixelFormat::I8, image.get_gamma(), size, mipmap_count);
+                Images::UID coverage_image_ID = Images::create2D(image.get_name(), PixelFormat::I8, image.get_gamma(), size, mipmap_count);
 
                 float min_coverage = 1.0f;
                 for (unsigned int m = 0; m < mipmap_count; ++m)

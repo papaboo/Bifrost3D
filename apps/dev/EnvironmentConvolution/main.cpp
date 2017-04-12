@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
             light_samples[s] = infinite_area_light->sample(RNG::sample02(s));
     }
 
-    Image output = Images::create("Convoluted image", PixelFormat::RGB_Float, 1.0f, Vector2ui(image.get_width(), image.get_height()));
+    Image output = Images::create2D("Convoluted image", PixelFormat::RGB_Float, 1.0f, Vector2ui(image.get_width(), image.get_height()));
 
     std::atomic_int finished_pixel_count;
     finished_pixel_count.store(0);

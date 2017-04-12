@@ -87,12 +87,12 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(Images::UID image_ID);
 
-    static Images::UID create(const std::string& name, PixelFormat format, float gamma, Math::Vector3ui size, unsigned int mipmap_count = 1);
-    static Images::UID create(const std::string& name, PixelFormat format, float gamma, Math::Vector2ui size, unsigned int mipmap_count = 1) {
-        return create(name, format, gamma, Math::Vector3ui(size.x, size.y, 1u), mipmap_count);
+    static Images::UID create3D(const std::string& name, PixelFormat format, float gamma, Math::Vector3ui size, unsigned int mipmap_count = 1);
+    static Images::UID create2D(const std::string& name, PixelFormat format, float gamma, Math::Vector2ui size, unsigned int mipmap_count = 1) {
+        return create3D(name, format, gamma, Math::Vector3ui(size.x, size.y, 1u), mipmap_count);
     }
-    static Images::UID create(const std::string& name, PixelFormat format, float gamma, unsigned int width, unsigned int mipmap_count = 1) {
-        return create(name, format, gamma, Math::Vector3ui(width, 1u, 1u), mipmap_count);
+    static Images::UID create1D(const std::string& name, PixelFormat format, float gamma, unsigned int width, unsigned int mipmap_count = 1) {
+        return create3D(name, format, gamma, Math::Vector3ui(width, 1u, 1u), mipmap_count);
     }
 
     static void destroy(Images::UID image_ID);

@@ -152,7 +152,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
     { // Create floor.
         // A checker pattern texture would be really nice on the floor.
         unsigned int width = 16, height = 16;
-        Images::UID image_ID = Images::create("Checker", PixelFormat::RGBA32, 2.2f, Vector2ui(width, height));
+        Images::UID image_ID = Images::create2D("Checker", PixelFormat::RGBA32, 2.2f, Vector2ui(width, height));
         unsigned char* pixels = (unsigned char*)Images::get_pixels(image_ID);
         for (unsigned int y = 0; y < height; ++y) {
             for (unsigned int x = 0; x < width; ++x) {
@@ -244,7 +244,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
 
     { // Partial coverage copper torus.
         unsigned int width = 17, height = 17;
-        Images::UID image_ID = Images::create("Grid", PixelFormat::I8, 1.0f, Vector2ui(width, height));
+        Images::UID image_ID = Images::create2D("Grid", PixelFormat::I8, 1.0f, Vector2ui(width, height));
         unsigned char* pixels = (unsigned char*)Images::get_pixels(image_ID);
         for (unsigned int y = 0; y < height; ++y) {
             for (unsigned int x = 0; x < width; ++x) {

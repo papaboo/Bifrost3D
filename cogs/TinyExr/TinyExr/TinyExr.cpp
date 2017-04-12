@@ -26,7 +26,7 @@ Result load_verbose(const std::string& filename, Cogwheel::Assets::Images::UID& 
     Result res = (Result)LoadEXR(&rgba, &width, &height, filename.c_str(), &error_msg);
 
     float image_gamma = 1.0f;
-    image_ID = Images::create(filename, PixelFormat::RGBA_Float, image_gamma, Vector2ui(width, height));
+    image_ID = Images::create2D(filename, PixelFormat::RGBA_Float, image_gamma, Vector2ui(width, height));
     Images::PixelData pixel_data = Images::get_pixels(image_ID);
     memcpy(pixel_data, rgba, sizeof(float) * 4 * width * height);
 

@@ -80,7 +80,7 @@ Images::UID load(const std::string& path) {
         return Images::UID::invalid_UID();
 
     float image_gamma = is_HDR ? 1.0f : 2.2f;
-    Images::UID image_ID = Images::create(path, pixel_format, image_gamma, Vector2ui(width, height));
+    Images::UID image_ID = Images::create2D(path, pixel_format, image_gamma, Vector2ui(width, height));
     Images::PixelData pixel_data = Images::get_pixels(image_ID);
     memcpy(pixel_data, loaded_data, sizeof_format(pixel_format) * width * height);
 

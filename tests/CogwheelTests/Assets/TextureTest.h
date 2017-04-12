@@ -49,7 +49,7 @@ TEST_F(Assets_Textures, sentinel_mesh) {
 
 TEST_F(Assets_Textures, create) {
     Images::allocate(1u);
-    Images::UID image_ID = Images::create("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(3, 3));
+    Images::UID image_ID = Images::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(3, 3));
     Textures::UID texture_ID = Textures::create2D(image_ID);
 
     EXPECT_TRUE(Textures::has(texture_ID));
@@ -147,7 +147,7 @@ TEST_F(Assets_Textures, sample2D) {
     Images::allocate(1u);
 
     unsigned int size = 4;
-    Image image = Images::create("Test", PixelFormat::RGBA_Float, 1.0f, Vector2ui(size));
+    Image image = Images::create2D("Test", PixelFormat::RGBA_Float, 1.0f, Vector2ui(size));
     for (unsigned int y = 0; y < size; ++y)
         for (unsigned int x = 0; x < size; ++x)
             image.set_pixel(RGBA(x / float(size), y / float(size), 0, 1), Vector2ui(x, y));
