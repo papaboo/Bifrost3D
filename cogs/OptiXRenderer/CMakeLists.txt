@@ -111,8 +111,10 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
     FOLDER "Cogs"
   )
 
-  if (WIN32) #TODO Add as library/target specific flags.
-    add_definitions(-DNOMINMAX) # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
+  if (WIN32)
+    target_compile_definitions(${LIBRARY_NAME} PRIVATE 
+      NOMINMAX # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
+    )
   endif()
 else()
   if (NOT CUDA_FOUND)
