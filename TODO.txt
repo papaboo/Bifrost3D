@@ -1,34 +1,17 @@
-* Texture / image VS debugging helpers. Can I do the same for UIDs?
-* Compare old and new rng seed in cornell box. 1-32 frames. Send to ESI and Prashant.
-* Revisit environment map (2D image) importance sampling. Try the new approach where pixels can be looked up almost immediatly.
-** Cogwheel Distribution2D.
-** Test cases
-*** Test with different templates.
-** EnvironmentMapDistribution:
-*** Distribution2D with the sinus terms.
-*** Filter per pixel importance with neighbouring pixel importances
-** Environment map convolution application.
-*** Material sampling, light sampling and MIS support.
-** Integrate into OptiXRenderer.
-** Cogwheel Distribution2D lookup table.
-*** A cell is {ushort Begin, ushort End, float PDF}. 64bit aligned.
-*** Compare with Distribution2D results.
-** SSE / AVX optimizations.
-
 BACKLOG:
 * OptiXRenderer
-** Better prime for seeding. One with less correlation.
 ** Verify that highest_area_light_index_updated in the OptiXRenderer behaves correctly.
 ** Half4 backbuffer in OptiXRenderer and render directly to a mapped DX resource.
-** Logarithmic data upload: bitcount((frame_ID >> 3) + 1) == 1. Do we gain any performance from it?
-** Filtering
+** Presampled infinite environment, 32k or 65k samples.
+*** Remember to renormalize the sample PDFs after drawing them. Should change things ever so slightly.
+** Filtering.
+*** Mitchell filter on the output buffer.
+*** Filter neighbouring light samples.
+* Pre convoluted IBL in DX renderer.
 * Materials revisited.
 ** Add coat.
 * VS compiler flags /debug:fastlink in VS2015. Use /GL (Enable link-time code generation), /LTCG (Use Link Time Code Generation) and /INCREMENTAL:NO (Disable Incremental Linking)
-  # if (MSVC14)
-  #   message("/debug:fastlink")
-  #   set(CMAKE_CXX_FLAGS_DEBUG /debug:fastlink CACHE INTERNAL "" FORCE) # https://blogs.msdn.microsoft.com/vcblog/2015/10/16/debugfastlink-for-vs2015-update-1/
-  # endif()
+** Perhaps create macros for setting up executables and libraries.
 * Multiple cameras.
 ** G-Buffer pr camera.
 ** Compose when all cameras are done.
@@ -56,4 +39,3 @@ BACKLOG:
 libs
 * Emscripten
 * LuaJit - OpenSource (Fallback to interpretted Lua if the target architecture isn't supported.)
-* OpenEXR + ZLib or TinyEXR.
