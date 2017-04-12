@@ -1,9 +1,7 @@
 if(MSVC)
+  # Add OpenMP to Viual Studio compiler flags
   find_package(OpenMP REQUIRED)
-  if (OPENMP_FOUND)
-    # Add OpenMP to Viual Studio compiler flags
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-  endif()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
   function (create_project_VS_user_file PROJECT)
     set(USER_FILENAME ${CMAKE_BINARY_DIR}/${PROJECT}/${PROJECT}.vcxproj.user)
