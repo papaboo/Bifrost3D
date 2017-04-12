@@ -63,7 +63,7 @@ ChannelType get_channel_type(PixelFormat format) {
     }
 }
 
-bool write(const std::string& path, Image image) {
+bool write(Image image, const std::string& path) {
 
     if (image.get_depth() != 1)
         return false;

@@ -279,8 +279,7 @@ int main(int argc, char** argv) {
             if (extension.compare(".exr") == 0)
                 TinyExr::store(output.get_ID(), output_file.str());
             else
-                // TODO Flip parameter order.
-                StbImageWriter::write(output_file.str(), output.get_ID());
+                StbImageWriter::write(output, output_file.str());
         }
     }
 

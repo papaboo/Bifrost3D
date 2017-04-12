@@ -20,10 +20,10 @@ namespace StbImageWriter {
 // Future work
 // * Return an actual error about why a file could not be written.
 // -----------------------------------------------------------------------
-bool write(const std::string& filename, Cogwheel::Assets::Image image);
+bool write(Cogwheel::Assets::Image image, const std::string& filename);
 
-inline bool write(const std::string& filename, Cogwheel::Assets::Images::UID imageID) {
-    return write(filename, Cogwheel::Assets::Image(imageID));
+inline bool write(Cogwheel::Assets::Images::UID imageID, const std::string& filename) {
+    return write(Cogwheel::Assets::Image(imageID), filename);
 }
 
 } // NS StbImageWriter
