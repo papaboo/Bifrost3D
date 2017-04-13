@@ -47,7 +47,7 @@ double estimate_rho(float3 wo, float roughness, unsigned int sample_count, Sampl
 }
 
 Image estimate_rho(unsigned int width, unsigned int height, unsigned int sample_count, SampleRoughBSDF sample_rough_BSDF) {
-    Image rho_image = Images::create("rho", PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
+    Image rho_image = Images::create2D("rho", PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
     Math::RGB* rho_image_pixels = (Math::RGB*)rho_image.get_pixels();
     
     for (int y = 0; y < int(height); ++y) {
@@ -185,7 +185,7 @@ int main(int argc, char** argv) {
         material_params.metallic = 0.0f;
         material_params.specularity = 0.0f;
 
-        Image rho = Images::create("rho", PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
+        Image rho = Images::create2D("rho", PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
         Math::RGB* rho_pixels = (Math::RGB*)rho.get_pixels();
 
         for (int y = 0; y < int(height); ++y) {
@@ -219,7 +219,7 @@ int main(int argc, char** argv) {
         }
 
         // Store.
-        StbImageWriter::write(output_dir + "DefaultShadingRho.png", rho);
+        StbImageWriter::write(rho, output_dir + "DefaultShadingRho.png");
         output_brdf<2>(rho, sample_count, output_dir + "DefaultShadingRho.h", "default_shading",
             "Directional-hemispherical reflectance for default shaded material.");
     }
@@ -229,7 +229,7 @@ int main(int argc, char** argv) {
         Image rho = estimate_rho(width, height, sample_count, Burley::sample);
 
         // Store.
-        StbImageWriter::write(output_dir + "BurleyRho.png", rho);
+        StbImageWriter::write(rho, output_dir + "BurleyRho.png");
         output_brdf<1>(rho, sample_count, output_dir + "BurleyRho.h", "burley", "Directional-hemispherical reflectance for Burley.");
     }
 
@@ -238,7 +238,7 @@ int main(int argc, char** argv) {
         Image rho = estimate_rho(width, height, sample_count, OrenNayar::sample);
 
         // Store.
-        StbImageWriter::write(output_dir + "OrenNayarRho.png", rho);
+        StbImageWriter::write(rho, output_dir + "OrenNayarRho.png");
         output_brdf<1>(rho, sample_count, output_dir + "OrenNayarRho.h", "oren_nayar", "Directional-hemispherical reflectance for OrenNayar.");
     }
 
@@ -252,7 +252,7 @@ int main(int argc, char** argv) {
         Image rho = estimate_rho(width, height, sample_count, sample_ggx);
 
         // Store.
-        StbImageWriter::write(output_dir + "GGXRho.png", rho);
+        StbImageWriter::write(rho, output_dir + "GGXRho.png");
         output_brdf<1>(rho, sample_count, output_dir + "GGXRho.h", "GGX", "Directional-hemispherical reflectance for GGX.");
     }
 
@@ -269,7 +269,7 @@ int main(int argc, char** argv) {
         Image rho = estimate_rho(width, height, sample_count, sample_ggx_with_fresnel);
 
         // Store.
-        StbImageWriter::write(output_dir + "GGXWithFresnelRho.png", rho);
+        StbImageWriter::write(rho, output_dir + "GGXWithFresnelRho.png");
         output_brdf<1>(rho, sample_count, output_dir + "GGXWithFresnelRho.h", "GGX_with_fresnel",
             "Directional-hemispherical reflectance for GGX with fresnel factor.");
     }
