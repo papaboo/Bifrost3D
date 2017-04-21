@@ -154,8 +154,9 @@ public:
 
     // Multiplying a vector by a quaternion, e.g. rotating it.
     inline Vector3<T> operator*(Vector3<T> rhs) const {
-        Vector3<T> uv = cross(imaginary(), rhs);
-        Vector3<T> uuv = cross(imaginary(), uv);
+        Vector3<T> img = imaginary();
+        Vector3<T> uv = cross(img, rhs);
+        Vector3<T> uuv = cross(img, uv);
 
         Vector3<T> half_res = (uv * w) + uuv;
         return rhs + half_res * T(2);
