@@ -225,9 +225,8 @@ public:
         }
     }
 
-    void release_state() {
-        if (m_device == nullptr)
-            return;
+    ~Implementation() {
+        safe_release(&m_render_context);
 
         safe_release(&m_vertex_shading.input_layout);
         safe_release(&m_vertex_shading.null_buffer);
@@ -619,7 +618,6 @@ Renderer::Renderer(ID3D11Device1* device) {
 }
 
 Renderer::~Renderer() {
-    m_impl->release_state(); // TODO Release state in desctructor.
     delete m_impl;
 }
 
