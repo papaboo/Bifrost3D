@@ -170,6 +170,8 @@ public:
         safe_release(&m_depth_view);
 
         // TODO Delete all render backends and their scene representations.
+        for (IRenderer* r : m_renderers)
+            delete r;
     }
 
     bool is_valid() const {
