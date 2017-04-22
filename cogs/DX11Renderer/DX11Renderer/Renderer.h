@@ -9,40 +9,33 @@
 #ifndef _DX11RENDERER_RENDERER_H_
 #define _DX11RENDERER_RENDERER_H_
 
-//----------------------------------------------------------------------------
-// Forward declarations.
-//----------------------------------------------------------------------------
-namespace Cogwheel {
-namespace Core {
-class Engine;
-class Window;
-}
-}
-struct HWND__;
-typedef HWND__* HWND;
+#include <Dx11Renderer/Compositor.h>
 
 namespace DX11Renderer {
 
 //----------------------------------------------------------------------------
 // DirectX 11 renderer.
 // Future work
+// * Device should be a reference instead of a pointer.
 // * SSAO
 // * HDR backbuffer.
 // * Frustum culling.
 // * Sort models by material ID as well and use the info while rendering.
 //   If the material hasn't changed then don't rebind it or the textures.
 //----------------------------------------------------------------------------
-class Renderer final {
+class Renderer final : public IRenderer {
 public:
-    static Renderer* initialize(HWND& hwnd, const Cogwheel::Core::Window& window);
+    static IRenderer* initialize(ID3D11Device1* device);
     ~Renderer();
 
-    void render(const Cogwheel::Core::Engine& engine);
+    void handle_updates();
+
+    void render(Cogwheel::Scene::Cameras::UID camera_ID);
 
 private:
 
-    Renderer(HWND& hwnd, const Cogwheel::Core::Window& window);
-    
+    Renderer(ID3D11Device1* device);
+
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Renderer(Renderer& other) = delete;
     Renderer& operator=(const Renderer& rhs) = delete;
@@ -51,10 +44,6 @@ private:
     class Implementation;
     Implementation* m_impl;
 };
-
-static inline void render_callback(const Cogwheel::Core::Engine& engine, void* renderer) {
-    static_cast<Renderer*>(renderer)->render(engine);
-}
 
 } // NS DX11Renderer
 

@@ -46,13 +46,6 @@ class Renderer::Implementation {
 private:
     ID3D11Device1* m_device;
     ID3D11DeviceContext1* m_render_context;
-    IDXGISwapChain1* m_swap_chain;
-
-    // Backbuffer members.
-    Vector2ui m_backbuffer_size;
-    ID3D11RenderTargetView* m_backbuffer_view;
-    ID3D11Texture2D* m_depth_buffer;
-    ID3D11DepthStencilView* m_depth_view;
 
     // Cogwheel resources
     vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
@@ -112,132 +105,15 @@ private:
 public:
     bool is_valid() { return m_device != nullptr; }
 
-    Implementation(HWND& hwnd, const Cogwheel::Core::Window& window) {
-        { // Create device and swapchain.
+    Implementation(ID3D11Device1* device) {
 
-            { // Find the best performing device (apparently the one with the most memory) and initialize that.
-                struct WeightedAdapter {
-                    int index, dedicated_memory;
-
-                    inline bool operator<(WeightedAdapter rhs) const {
-                        return rhs.dedicated_memory < dedicated_memory;
-                    }
-                };
-
-                IDXGIAdapter1* adapter = nullptr;
-
-                IDXGIFactory1* dxgi_factory1;
-                HRESULT hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory1));
-
-                std::vector<WeightedAdapter> sorted_adapters;
-                for (int adapter_index = 0; dxgi_factory1->EnumAdapters1(adapter_index, &adapter) != DXGI_ERROR_NOT_FOUND; ++adapter_index) {
-                    DXGI_ADAPTER_DESC1 desc;
-                    adapter->GetDesc1(&desc);
-
-                    // Ignore software rendering adapters.
-                    if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-                        continue;
-
-                    WeightedAdapter e = { adapter_index, int(desc.DedicatedVideoMemory >> 20) };
-                    sorted_adapters.push_back(e);
-                }
-
-                std::sort(sorted_adapters.begin(), sorted_adapters.end());
-
-                // Then create the device and render context.
-                ID3D11Device* device = nullptr;
-                ID3D11DeviceContext* render_context = nullptr;
-                for (WeightedAdapter a : sorted_adapters) {
-                    dxgi_factory1->EnumAdapters1(a.index, &adapter);
-
-                    UINT create_device_flags = 0;
-                    D3D_FEATURE_LEVEL feature_level_requested = D3D_FEATURE_LEVEL_11_0;
-
-                    D3D_FEATURE_LEVEL feature_level;
-                    hr = D3D11CreateDevice(adapter, D3D_DRIVER_TYPE_UNKNOWN, nullptr, create_device_flags, &feature_level_requested, 1,
-                        D3D11_SDK_VERSION, &device, &feature_level, &render_context);
-
-                    if (SUCCEEDED(hr)) {
-                        DXGI_ADAPTER_DESC adapter_description;
-                        adapter->GetDesc(&adapter_description);
-                        std::string readable_feature_level = feature_level == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "11.1";
-                        printf("DX11Renderer using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level.c_str());
-                        break;
-                    }
-                }
-                dxgi_factory1->Release();
-
-                if (device == nullptr) {
-                    release_state();
-                    return;
-                }
-
-                hr = device->QueryInterface(IID_PPV_ARGS(&m_device));
-                THROW_ON_FAILURE(hr);
-
-                hr = render_context->QueryInterface(IID_PPV_ARGS(&m_render_context));
-                THROW_ON_FAILURE(hr);
-
-                { // Get the device's dxgi factory and create the swap chain.
-                    IDXGIDevice* dxgi_device = nullptr;
-                    hr = device->QueryInterface(IID_PPV_ARGS(&dxgi_device));
-                    THROW_ON_FAILURE(hr);
-
-                    // NOTE Can I use the original adapter for this?
-                    IDXGIAdapter* adapter = nullptr;
-                    hr = dxgi_device->GetAdapter(&adapter);
-                    dxgi_device->Release();
-                    THROW_ON_FAILURE(hr);
-
-                    IDXGIFactory1* dxgi_factory = nullptr;
-                    hr = adapter->GetParent(IID_PPV_ARGS(&dxgi_factory));
-                    adapter->Release();
-                    THROW_ON_FAILURE(hr);
-
-                    IDXGIFactory2* dxgi_factory2 = nullptr;
-                    hr = dxgi_factory->QueryInterface(IID_PPV_ARGS(&dxgi_factory2));
-                    dxgi_factory->Release();
-                    THROW_ON_FAILURE(hr);
-
-                    // Create swap chain
-                    DXGI_SWAP_CHAIN_DESC1 swap_chain_desc1 = {};
-                    swap_chain_desc1.Width = window.get_width();
-                    swap_chain_desc1.Height = window.get_height();
-                    swap_chain_desc1.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-                    swap_chain_desc1.SampleDesc.Count = 1;
-                    swap_chain_desc1.SampleDesc.Quality = 0;
-                    swap_chain_desc1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-                    swap_chain_desc1.BufferCount = 1;
-                    swap_chain_desc1.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-
-                    hr = dxgi_factory2->CreateSwapChainForHwnd(m_device, hwnd, &swap_chain_desc1, nullptr, nullptr, &m_swap_chain);
-                    THROW_ON_FAILURE(hr);
-
-                    dxgi_factory2->Release();
-                }
-            }
-        }
+        m_device = device;
+        device->GetImmediateContext1(&m_render_context);
 
         {
             std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
             std::wstring data_folder_path = converter.from_bytes(Engine::get_instance()->data_path());
             m_shader_folder_path = data_folder_path + L"DX11Renderer\\Shaders\\";
-        }
-
-        { // Setup backbuffer.
-            m_backbuffer_size = Vector2ui::zero();
-
-            // Get and set render target.
-            ID3D11Texture2D* backbuffer;
-            HRESULT hr = m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&backbuffer));
-            THROW_ON_FAILURE(hr);
-            hr = m_device->CreateRenderTargetView(backbuffer, nullptr, &m_backbuffer_view);
-            THROW_ON_FAILURE(hr);
-            backbuffer->Release();
-
-            // Depth buffer is initialized on demand when the output dimensions are known.
-            m_depth_buffer = nullptr;
-            m_depth_view = nullptr;
         }
 
         { // Setup asset managing.
@@ -353,14 +229,6 @@ public:
         if (m_device == nullptr)
             return;
 
-        safe_release(&m_device);
-        safe_release(&m_render_context);
-        safe_release(&m_swap_chain);
-
-        safe_release(&m_backbuffer_view);
-        safe_release(&m_depth_buffer);
-        safe_release(&m_depth_view);
-
         safe_release(&m_vertex_shading.input_layout);
         safe_release(&m_vertex_shading.null_buffer);
         safe_release(&m_vertex_shading.shader);
@@ -433,84 +301,9 @@ public:
             context->Draw(mesh.vertex_count, 0);
     } 
     
-    void render(const Cogwheel::Core::Engine& engine) {
-        if (Cameras::begin() == Cameras::end())
-            return;
-
-        // ?? wait_for_previous_frame();
-
-        if (m_device == nullptr)
-            return;
-
-        handle_updates();
-
-        Cameras::UID camera_ID = *Cameras::begin();
-        const Window& window = engine.get_window();
-
-        Vector2ui current_backbuffer_size = Vector2ui(window.get_width(), window.get_height());
-        if (m_backbuffer_size != current_backbuffer_size) {
-            
-            { // Setup new backbuffer.
-                // https://msdn.microsoft.com/en-us/library/windows/desktop/bb205075(v=vs.85).aspx#Handling_Window_Resizing
-
-                m_render_context->OMSetRenderTargets(0, 0, 0);
-                if (m_backbuffer_view) m_backbuffer_view->Release();
-
-                HRESULT hr = m_swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
-                THROW_ON_FAILURE(hr);
-
-                ID3D11Texture2D* backbuffer;
-                hr = m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&backbuffer));
-                THROW_ON_FAILURE(hr);
-                hr = m_device->CreateRenderTargetView(backbuffer, nullptr, &m_backbuffer_view);
-                THROW_ON_FAILURE(hr);
-                backbuffer->Release();
-            }
-
-            { // Setup new depth buffer.
-                if (m_depth_buffer) m_depth_buffer->Release();
-                if (m_depth_view) m_depth_view->Release();
-
-                D3D11_TEXTURE2D_DESC depth_desc;
-                depth_desc.Width = current_backbuffer_size.x;
-                depth_desc.Height = current_backbuffer_size.y;
-                depth_desc.MipLevels = 1;
-                depth_desc.ArraySize = 1;
-                depth_desc.Format = DXGI_FORMAT_D32_FLOAT;
-                depth_desc.SampleDesc.Count = 1;
-                depth_desc.SampleDesc.Quality = 0;
-                depth_desc.Usage = D3D11_USAGE_DEFAULT;
-                depth_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-                depth_desc.CPUAccessFlags = 0;
-                depth_desc.MiscFlags = 0;
-
-                HRESULT hr = m_device->CreateTexture2D(&depth_desc, NULL, &m_depth_buffer);
-                m_device->CreateDepthStencilView(m_depth_buffer, NULL, &m_depth_view);
-            }
-
-            m_backbuffer_size = current_backbuffer_size;
-        }
-
-        { // Create and set the viewport.
-            Cogwheel::Math::Rectf vp = Cameras::get_viewport(camera_ID);
-            vp.width *= window.get_width();
-            vp.height *= window.get_height();
-
-            D3D11_VIEWPORT viewport;
-            viewport.TopLeftX = 0;
-            viewport.TopLeftY = 0;
-            viewport.Width = vp.width;
-            viewport.Height = vp.height;
-            viewport.MinDepth = 0.0f;
-            viewport.MaxDepth = 1.0f;
-            m_render_context->RSSetViewports(1, &viewport);
-        }
-
+    void render(const Cogwheel::Scene::Cameras::UID camera_ID) {
         m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-        m_render_context->OMSetRenderTargets(1, &m_backbuffer_view, m_depth_view);
         m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 0);
-        m_render_context->ClearDepthStencilView(m_depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
         // Opaque state setup.
         m_render_context->OMSetBlendState(0, 0, 0xffffffff);
@@ -599,9 +392,6 @@ public:
                 }
             }
         }
-
-        // Present the backbuffer.
-        m_swap_chain->Present(0, 0);
     }
 
     template <typename T>
@@ -814,8 +604,8 @@ public:
 //----------------------------------------------------------------------------
 // DirectX 11 renderer.
 //----------------------------------------------------------------------------
-Renderer* Renderer::initialize(HWND& hwnd, const Cogwheel::Core::Window& window) {
-    Renderer* r = new Renderer(hwnd, window);
+IRenderer* Renderer::initialize(ID3D11Device1* device) {
+    Renderer* r = new Renderer(device);
     if (r->m_impl->is_valid())
         return r;
     else {
@@ -824,16 +614,21 @@ Renderer* Renderer::initialize(HWND& hwnd, const Cogwheel::Core::Window& window)
     }
 }
 
-Renderer::Renderer(HWND& hwnd, const Cogwheel::Core::Window& window) {
-    m_impl = new Implementation(hwnd, window);
+Renderer::Renderer(ID3D11Device1* device) {
+    m_impl = new Implementation(device);
 }
 
 Renderer::~Renderer() {
-    m_impl->release_state();
+    m_impl->release_state(); // TODO Release state in desctructor.
+    delete m_impl;
 }
 
-void Renderer::render(const Cogwheel::Core::Engine& engine) {
-    m_impl->render(engine);
+void Renderer::handle_updates() {
+    m_impl->handle_updates();
+}
+
+void Renderer::render(const Cogwheel::Scene::Cameras::UID camera_ID) {
+    m_impl->render(camera_ID);
 }
 
 } // NS DX11Renderer
