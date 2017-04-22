@@ -47,6 +47,7 @@ static std::string g_scene;
 static std::string g_environment;
 static RGB g_environment_color = RGB(0.68f, 0.92f, 1.0f);
 static float g_scene_size;
+static DX11Renderer::Compositor* compositor = nullptr;
 
 class Navigation final {
 public:
@@ -437,7 +438,7 @@ void glfw_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Win
 
 void win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window, HWND& hwnd) {
     using namespace DX11Renderer;
-    Compositor* compositor = Compositor::initialize(hwnd, window, Renderer::initialize);
+    compositor = Compositor::initialize(hwnd, window, Renderer::initialize);
     engine.add_non_mutating_callback(render_callback, compositor);
 }
 
@@ -507,5 +508,10 @@ int main(int argc, char** argv) {
     if (launch_optix)
         return GLFWDriver::run(initializer, glfw_window_initialized);
 #endif
-    return Win32Driver::run(initializer, win32_window_initialized);
+
+    int error_code = Win32Driver::run(initializer, win32_window_initialized);
+
+    delete compositor;
+
+    return error_code;
 }
