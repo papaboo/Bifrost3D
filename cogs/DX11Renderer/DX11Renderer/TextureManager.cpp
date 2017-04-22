@@ -73,7 +73,6 @@ TextureManager::TextureManager(ID3D11Device1& device) {
 }
 
 void TextureManager::release() {
-    printf("bye bye tex man\n");
     safe_release(&m_white_texture.sampler);
     safe_release(&m_white_texture.srv);
     safe_release(&m_white_texture.texture2D);
