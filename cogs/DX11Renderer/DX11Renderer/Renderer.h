@@ -25,7 +25,7 @@ namespace DX11Renderer {
 //----------------------------------------------------------------------------
 class Renderer final : public IRenderer {
 public:
-    static IRenderer* initialize(ID3D11Device1* device);
+    static IRenderer* initialize(ID3D11Device1* device, int width_hint, int height_hint);
     ~Renderer();
 
     void handle_updates();
@@ -34,7 +34,7 @@ public:
 
 private:
 
-    Renderer(ID3D11Device1* device);
+    Renderer(ID3D11Device1* device, int width_hint, int height_hint);
 
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Renderer(Renderer& other) = delete;

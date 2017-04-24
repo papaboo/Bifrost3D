@@ -105,7 +105,7 @@ private:
 public:
     bool is_valid() { return m_device != nullptr; }
 
-    Implementation(ID3D11Device1* device) {
+    Implementation(ID3D11Device1* device, int width_hint, int height_hint) {
 
         m_device = device;
         device->GetImmediateContext1(&m_render_context);
@@ -603,8 +603,8 @@ public:
 //----------------------------------------------------------------------------
 // DirectX 11 renderer.
 //----------------------------------------------------------------------------
-IRenderer* Renderer::initialize(ID3D11Device1* device) {
-    Renderer* r = new Renderer(device);
+IRenderer* Renderer::initialize(ID3D11Device1* device, int width_hint, int height_hint) {
+    Renderer* r = new Renderer(device, width_hint, height_hint);
     if (r->m_impl->is_valid())
         return r;
     else {
@@ -613,8 +613,8 @@ IRenderer* Renderer::initialize(ID3D11Device1* device) {
     }
 }
 
-Renderer::Renderer(ID3D11Device1* device) {
-    m_impl = new Implementation(device);
+Renderer::Renderer(ID3D11Device1* device, int width_hint, int height_hint) {
+    m_impl = new Implementation(device, width_hint, height_hint);
 }
 
 Renderer::~Renderer() {
