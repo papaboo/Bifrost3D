@@ -212,7 +212,17 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
 // Renderer implementation.
 //----------------------------------------------------------------------------
 
-Renderer::Renderer(const Cogwheel::Core::Window& window)
+Renderer* Renderer::initialize(int width_hint, int height_hint) {
+    Renderer* r = new Renderer(width_hint, height_hint);
+    if (r->is_valid())
+        return r;
+    else {
+        delete r;
+        return nullptr;
+    }
+}
+
+Renderer::Renderer(int width_hint, int height_hint)
     : m_device_ids( {-1, -1} )
     , m_state(new State()) {
 
@@ -355,7 +365,7 @@ Renderer::Renderer(const Cogwheel::Core::Window& window)
     }
 
     { // Screen buffers
-        m_state->screensize = make_uint2(window.get_width(), window.get_height());
+        m_state->screensize = make_uint2(width_hint, height_hint);
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
         m_state->accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER, m_state->screensize.x, m_state->screensize.y);
         m_state->accumulation_buffer->setElementSize(sizeof(double) * 4);
@@ -417,12 +427,15 @@ void Renderer::set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID,
     m_state->scene_epsilon = scene_epsilon;
 }
 
-void Renderer::render() {
-
+void Renderer::update_and_render() {
     if (Cameras::begin() == Cameras::end())
         return;
 
     handle_updates();
+    render(*Cameras::begin());
+}
+
+void Renderer::render(Cogwheel::Scene::Cameras::UID camera_ID) {
 
     Context& context = m_state->context;
 
@@ -440,8 +453,6 @@ void Renderer::render() {
     }
 
     { // Upload camera parameters.
-        Cameras::UID camera_ID = *Cameras::begin();
-
         // Check if the camera transforms changed and, if so, upload the new ones and reset accumulation.
         Matrix4x4f inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
         if (m_state->camera_inverse_view_projection_matrix != inverse_view_projection_matrix) {

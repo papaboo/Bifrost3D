@@ -9,6 +9,7 @@
 #ifndef _OPTIXRENDERER_RENDERER_H_
 #define _OPTIXRENDERER_RENDERER_H_
 
+#include <Cogwheel\Scene\Camera.h>
 #include <Cogwheel\Scene\SceneRoot.h>
 
 //----------------------------------------------------------------------------
@@ -30,13 +31,6 @@ namespace OptiXRenderer {
 // Future work
 // * Cache acceleration structures for meshes not in the scene, but still active.
 //   Test if it speeds up the bullet creation of my boxgun!
-// * Create Initialization method that only returns a valid pointer in case 
-//   a Renderer could be created. Should take a GL (ES) Context and 
-//   possibly a device ID begin/end iterator. But how to uniquely enumerate devices?
-// * Several backbuffer modes: VBO, data transfer over the CPU, .. more? PBO?
-//   See OptiX samples SampleScene.cpp.
-// * ImageComposer that composes images pr camera from several renderers, 
-//   probably requires an IRenderer interface.
 // * Tone mapping and gamma correction as part of the image composer.
 // * Logarithmic upload of the accumulated image.
 // * Have path tracer stop per bounce, filter and display the result.
@@ -46,22 +40,25 @@ namespace OptiXRenderer {
 //----------------------------------------------------------------------------
 class Renderer final {
 public:
-    Renderer(const Cogwheel::Core::Window& window);
+    static Renderer* initialize(int width_hint, int height_hint);
 
-    inline bool could_initialize() const { return m_device_ids.optix >= 0;  }
+    inline bool is_valid() const { return m_device_ids.optix >= 0;  }
 
     float get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const;
     void set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon);
 
-    void render();
+    void handle_updates();
+    void render(Cogwheel::Scene::Cameras::UID camera_ID);
+
+    void update_and_render();
 
 private:
+
+    Renderer(int width_hint, int height_hint);
 
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Renderer(Renderer& other) = delete;
     Renderer& operator=(const Renderer& rhs) = delete;
-
-    void handle_updates();
 
     // Pimpl the state to avoid exposing OptiX headers.
     struct State;
@@ -74,7 +71,7 @@ private:
 };
 
 static inline void render_callback(const Cogwheel::Core::Engine& engine, void* renderer) {
-    static_cast<Renderer*>(renderer)->render();
+    static_cast<Renderer*>(renderer)->update_and_render();
 }
 
 } // NS OptiXRenderer

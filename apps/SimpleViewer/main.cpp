@@ -430,7 +430,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
 
 #ifdef OPTIXRENDERER_FOUND
 void glfw_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window) {
-    OptiXRenderer::Renderer* renderer = new OptiXRenderer::Renderer(window);
+    OptiXRenderer::Renderer* renderer = OptiXRenderer::Renderer::initialize(window.get_width(), window.get_height());
     // renderer->set_scene_epsilon(g_scene_size * 0.00001f);
     engine.add_non_mutating_callback(OptiXRenderer::render_callback, renderer);
 }
