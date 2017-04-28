@@ -9,7 +9,7 @@ if (TARGET DX11Renderer AND TARGET OptiXRenderer)
 
   add_library(${LIBRARY_NAME} ${SRCS})
 
-  target_include_directories(${LIBRARY_NAME} PRIVATE .)
+  target_include_directories(${LIBRARY_NAME} PUBLIC .)
 
   target_link_libraries(${LIBRARY_NAME} PRIVATE
     DX11Renderer
