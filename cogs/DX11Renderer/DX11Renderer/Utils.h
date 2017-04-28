@@ -54,7 +54,7 @@ inline void CHECK_HRESULT(HRESULT hr, const std::string& file, int line, bool sh
     }
 }
 
-#define THROW_ON_FAILURE(hr) CHECK_HRESULT(hr, __FILE__,__LINE__, true)
+#define THROW_ON_FAILURE(hr) ::DX11Renderer::CHECK_HRESULT(hr, __FILE__,__LINE__, true)
 
 // Copied from assert.h to have an assert that is enabled in release builds as well.
 #define always_assert(_Expression) (void)( (!!(_Expression)) || (_wassert(_CRT_WIDE(#_Expression), _CRT_WIDE(__FILE__), __LINE__), 0) )
@@ -73,13 +73,13 @@ inline ID3DBlob* compile_shader(const std::wstring& filename, const char* target
         &error_messages);
     if (FAILED(hr)) {
         if (hr == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
-            printf("The system cannot find the file specified: '%ws'\n", filename.c_str());
+            printf("The system cannot find the file specified: '%ws'.\n", filename.c_str());
         else if (hr == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND))
-            printf("The system cannot find the path specified: '%ws'\n", filename.c_str());
+            printf("The system cannot find the path specified: '%ws'.\n", filename.c_str());
         else if (error_messages != nullptr)
-            printf("Shader error: '%s'\n", (char*)error_messages->GetBufferPointer());
+            printf("Shader error: '%s'.\n", (char*)error_messages->GetBufferPointer());
         else 
-            printf("Unknown error occured when trying to load: '%ws'\n", filename.c_str());
+            printf("Unknown error occured when trying to load: '%ws'.\n", filename.c_str());
         return nullptr;
     }
 
@@ -94,7 +94,7 @@ inline HRESULT create_constant_buffer(ID3D11Device1& device, int byte_width, ID3
     uniforms_desc.CPUAccessFlags = 0;
     uniforms_desc.MiscFlags = 0;
 
-    return device.CreateBuffer(&uniforms_desc, NULL, constant_buffer);
+    return device.CreateBuffer(&uniforms_desc, nullptr, constant_buffer);
 }
 
 inline float3 make_float3(Cogwheel::Math::Vector3f v) {
