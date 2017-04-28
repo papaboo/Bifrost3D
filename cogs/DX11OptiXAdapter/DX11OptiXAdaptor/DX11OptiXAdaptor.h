@@ -18,7 +18,7 @@ namespace DX11OptiXAdaptor {
 //-------------------------------------------------------------------------------------------------
 class DX11OptiXAdaptor final : public DX11Renderer::IRenderer {
 public:
-    static DX11Renderer::IRenderer* initialize(ID3D11Device1* device);
+    static DX11Renderer::IRenderer* initialize(ID3D11Device1* device, int width_hint, int height_hint);
     ~DX11OptiXAdaptor();
 
     void handle_updates();
@@ -27,7 +27,7 @@ public:
 
 private:
 
-    DX11OptiXAdaptor(ID3D11Device1* device);
+    DX11OptiXAdaptor(ID3D11Device1* device, int width_hint, int height_hint);
 
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     DX11OptiXAdaptor(DX11OptiXAdaptor& other) = delete;
