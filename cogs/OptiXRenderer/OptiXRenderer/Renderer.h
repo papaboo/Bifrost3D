@@ -22,6 +22,16 @@ class Window;
 }
 }
 
+namespace optix {
+template<class T> class Handle;
+class BufferObj;
+typedef Handle<BufferObj> Buffer;
+class ContextObj;
+typedef Handle<ContextObj> Context;
+}
+
+struct ID3D11Resource;
+
 namespace OptiXRenderer {
 
 //----------------------------------------------------------------------------
@@ -40,9 +50,9 @@ namespace OptiXRenderer {
 //----------------------------------------------------------------------------
 class Renderer final {
 public:
-    static Renderer* initialize(int width_hint, int height_hint);
+    static Renderer* initialize(int cuda_device_ID, int width_hint, int height_hint);
 
-    inline bool is_valid() const { return m_device_ids.optix >= 0;  }
+    inline bool is_valid() const { return m_device_IDs.optix >= 0;  }
 
     float get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const;
     void set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon);
@@ -50,11 +60,15 @@ public:
     void handle_updates();
     void render(Cogwheel::Scene::Cameras::UID camera_ID);
 
+    void render(Cogwheel::Scene::Cameras::UID camera_ID, optix::Buffer buffer, int width, int height);
+
     void update_and_render();
+
+    optix::Context& get_context();
 
 private:
 
-    Renderer(int width_hint, int height_hint);
+    Renderer(int cuda_device_ID, int width_hint, int height_hint);
 
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Renderer(Renderer& other) = delete;
@@ -67,7 +81,7 @@ private:
     struct {
         int optix;
         int cuda;
-    } m_device_ids;
+    } m_device_IDs;
 };
 
 static inline void render_callback(const Cogwheel::Core::Engine& engine, void* renderer) {

@@ -212,8 +212,8 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
 // Renderer implementation.
 //----------------------------------------------------------------------------
 
-Renderer* Renderer::initialize(int width_hint, int height_hint) {
-    Renderer* r = new Renderer(width_hint, height_hint);
+Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hint) {
+    Renderer* r = new Renderer(cuda_device_ID, width_hint, height_hint);
     if (r->is_valid())
         return r;
     else {
@@ -222,8 +222,8 @@ Renderer* Renderer::initialize(int width_hint, int height_hint) {
     }
 }
 
-Renderer::Renderer(int width_hint, int height_hint)
-    : m_device_ids( {-1, -1} )
+Renderer::Renderer(int cuda_device_ID, int width_hint, int height_hint)
+    : m_device_IDs( {-1, -1} )
     , m_state(new State()) {
 
     if (Context::getDeviceCount() == 0)
@@ -232,13 +232,14 @@ Renderer::Renderer(int width_hint, int height_hint)
     m_state->context = Context::create();
     Context& context = m_state->context;
 
-    m_device_ids.optix = 0;
-    context->setDevices(&m_device_ids.optix, &m_device_ids.optix + 1);
+    // TODO Use cuda_device_ID
+    m_device_IDs.optix = 0;
+    context->setDevices(&m_device_IDs.optix, &m_device_IDs.optix + 1);
     int2 compute_capability;
-    context->getDeviceAttribute(m_device_ids.optix, RT_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY, sizeof(compute_capability), &compute_capability);
-    printf("OptiXRenderer using device %u: '%s' with compute capability %u.%u.\n", m_device_ids.optix, context->getDeviceName(m_device_ids.optix).c_str(), compute_capability.x, compute_capability.y);
+    context->getDeviceAttribute(m_device_IDs.optix, RT_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY, sizeof(compute_capability), &compute_capability);
+    printf("OptiXRenderer using device %u: '%s' with compute capability %u.%u.\n", m_device_IDs.optix, context->getDeviceName(m_device_IDs.optix).c_str(), compute_capability.x, compute_capability.y);
 
-    context->getDeviceAttribute(m_device_ids.optix, RT_DEVICE_ATTRIBUTE_CUDA_DEVICE_ORDINAL, sizeof(m_device_ids.cuda), &m_device_ids.cuda);
+    context->getDeviceAttribute(m_device_IDs.optix, RT_DEVICE_ATTRIBUTE_CUDA_DEVICE_ORDINAL, sizeof(m_device_IDs.cuda), &m_device_IDs.cuda);
 
     context->setRayTypeCount(int(RayTypes::Count));
     context->setEntryPointCount(int(EntryPoints::Count));
@@ -425,6 +426,43 @@ float Renderer::get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID
 void Renderer::set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon) {
     m_state->context["g_scene_epsilon"]->setFloat(m_state->scene_epsilon);
     m_state->scene_epsilon = scene_epsilon;
+}
+
+void Renderer::render(Cogwheel::Scene::Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
+    m_state->context["g_output_buffer"]->set(buffer);
+
+    Context& context = m_state->context;
+
+    // Resized screen buffers if necessary.
+    const uint2 current_screensize = make_uint2(width, height);
+    if (current_screensize != m_state->screensize) {
+        m_state->accumulation_buffer->setSize(width, height);
+        m_state->screensize = make_uint2(width, height);
+        m_state->accumulations = 0u;
+#ifdef ENABLE_OPTIX_DEBUG
+        context->setPrintLaunchIndex(width / 2, height / 2);
+#endif
+    }
+
+    { // Upload camera parameters.
+        // Check if the camera transforms changed and, if so, upload the new ones and reset accumulation.
+        Matrix4x4f inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
+        if (m_state->camera_inverse_view_projection_matrix != inverse_view_projection_matrix) {
+            m_state->camera_inverse_view_projection_matrix = inverse_view_projection_matrix;
+
+            Vector3f cam_pos = Cameras::get_transform(camera_ID).translation;
+
+            context["g_inverted_view_projection_matrix"]->setMatrix4x4fv(false, inverse_view_projection_matrix.begin());
+            float4 camera_position = make_float4(cam_pos.x, cam_pos.y, cam_pos.z, 0.0f);
+            context["g_camera_position"]->setFloat(camera_position);
+
+            m_state->accumulations = 0u;
+        }
+    }
+
+    context["g_accumulations"]->setInt(m_state->accumulations);
+    context->launch(int(EntryPoints::PathTracing), m_state->screensize.x, m_state->screensize.y);
+    m_state->accumulations += 1u;
 }
 
 void Renderer::update_and_render() {
@@ -946,6 +984,10 @@ void Renderer::handle_updates() {
             }
         }
     }
+}
+
+optix::Context& Renderer::get_context() {
+    return m_state->context;
 }
 
 } // NS OptiXRenderer
