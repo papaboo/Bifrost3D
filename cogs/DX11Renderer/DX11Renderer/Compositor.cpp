@@ -90,7 +90,7 @@ public:
                 DXGI_ADAPTER_DESC adapter_description;
                 adapter->GetDesc(&adapter_description);
                 std::string readable_feature_level = feature_level == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "11.1";
-                printf("DX11Renderer using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level.c_str());
+                printf("DirectX 11 composer using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level.c_str());
                 break;
             }
         }
