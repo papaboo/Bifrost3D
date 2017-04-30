@@ -200,7 +200,7 @@ public:
             desc.Usage = D3D11_USAGE_DEFAULT;
             desc.StructureByteStride = sizeof(float) * 4;
             desc.ByteWidth = m_render_target.capacity * sizeof(float) * 4;
-            desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+            desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
             desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
             desc.MiscFlags = 0;
 
