@@ -58,11 +58,8 @@ public:
     void set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon);
 
     void handle_updates();
-    void render(Cogwheel::Scene::Cameras::UID camera_ID);
 
     void render(Cogwheel::Scene::Cameras::UID camera_ID, optix::Buffer buffer, int width, int height);
-
-    void update_and_render();
 
     optix::Context& get_context();
 
@@ -83,10 +80,6 @@ private:
         int cuda;
     } m_device_IDs;
 };
-
-static inline void render_callback(const Cogwheel::Core::Engine& engine, void* renderer) {
-    static_cast<Renderer*>(renderer)->update_and_render();
-}
 
 } // NS OptiXRenderer
 

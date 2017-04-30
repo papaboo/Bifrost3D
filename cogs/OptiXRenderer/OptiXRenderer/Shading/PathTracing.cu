@@ -88,9 +88,7 @@ RT_PROGRAM void path_tracing() {
     g_accumulation_buffer[g_launch_index] = make_float4(accumulated_radiance, 1.0f);
 #endif
 
-    // Apply simple gamma correction to the output.
-    const float inv_screen_gamma = 1.0f / 2.2f;
-    g_output_buffer[g_launch_index] = make_float4(gammacorrect(accumulated_radiance, inv_screen_gamma), 1.0f);
+    g_output_buffer[g_launch_index] = make_float4(accumulated_radiance, 1.0f);
 }
 
 //----------------------------------------------------------------------------

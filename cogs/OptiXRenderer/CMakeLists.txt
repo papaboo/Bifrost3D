@@ -7,10 +7,9 @@ set(CMAKE_MODULE_PATH
 )
 
 find_package(CUDA 7.5)
-find_package(OpenGL)
 find_package(OptiX)
 
-if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
+if (CUDA_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
   install_file(${OPTIX_1_DLL})
   install_file(${OPTIX_U_1_DLL})
 
@@ -88,7 +87,7 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
   # it has been enabled then the ${LIBRARY_NAME}_SEPARABLE_COMPILATION_OBJECTS
   # variable will have been defined.
   cuda_link_separable_compilation_objects("${LINK_FILE}" ${LIBRARY_NAME} "${_OPTIONS}" "${${LIBRARY_NAME}_SEPARABLE_COMPILATION_OBJECTS}")
-  
+
   source_group("" FILES ${ROOT_SRC})
   source_group("Shading" FILES ${SHADING_SRC})
   source_group("Shading\\BSDFs" FILES ${SHADING_BSDFS_SRC})
@@ -98,12 +97,11 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
 
   target_include_directories(${LIBRARY_NAME}
     PUBLIC . ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS}
-    PRIVATE ${OpenGL_INCLUDE_DIRS}
 )
 
   target_link_libraries(${LIBRARY_NAME}
     PUBLIC Cogwheel ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES}
-    PRIVATE StbImageWriter ${OPENGL_LIBRARIES}
+    PRIVATE StbImageWriter
   )
 
   set_target_properties(${LIBRARY_NAME} PROPERTIES 
@@ -119,9 +117,6 @@ if (CUDA_FOUND AND OpenGL_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
 else()
   if (NOT CUDA_FOUND)
     message(WARNING "OptiXRenderer: CUDA not installed.")
-  endif()
-  if (NOT OpenGL_FOUND)
-    message(WARNING "OptiXRenderer: OpenGL not found.")
   endif()
   if (NOT OPTIX_FOUND)
     message(WARNING "OptiXRenderer: OptiX not installed.")

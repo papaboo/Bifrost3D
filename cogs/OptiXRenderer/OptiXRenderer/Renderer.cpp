@@ -30,8 +30,6 @@
 
 #include <StbImageWriter/StbImageWriter.h>
 
-#include <GL/gl.h>
-
 #include <assert.h>
 #include <vector>
 
@@ -56,8 +54,6 @@ struct Renderer::State {
     optix::Buffer output_buffer;
     unsigned int accumulations;
     Matrix4x4f camera_inverse_view_projection_matrix;
-
-    GLuint backbuffer_gl_id;
 
     // Per scene members.
     optix::Group root_node;
@@ -378,17 +374,6 @@ Renderer::Renderer(int cuda_device_ID, int width_hint, int height_hint)
         m_state->output_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, m_state->screensize.x, m_state->screensize.y);
         context["g_output_buffer"]->set(m_state->output_buffer);
 
-        { // Setup back buffer texture used for copying data to OpenGL
-            glEnable(GL_TEXTURE_2D);
-            glGenTextures(1, &m_state->backbuffer_gl_id);
-            glBindTexture(GL_TEXTURE_2D, m_state->backbuffer_gl_id);
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // TODO Needed here or when rendering? Also, since the elements are larger than char, half4, should it stil be 1?
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        }
-
         m_state->camera_inverse_view_projection_matrix = Math::Matrix4x4f::identity();
     }
 
@@ -463,102 +448,18 @@ void Renderer::render(Cogwheel::Scene::Cameras::UID camera_ID, optix::Buffer buf
     context["g_accumulations"]->setInt(m_state->accumulations);
     context->launch(int(EntryPoints::PathTracing), m_state->screensize.x, m_state->screensize.y);
     m_state->accumulations += 1u;
-}
-
-void Renderer::update_and_render() {
-    if (Cameras::begin() == Cameras::end())
-        return;
-
-    handle_updates();
-    render(*Cameras::begin());
-}
-
-void Renderer::render(Cogwheel::Scene::Cameras::UID camera_ID) {
-
-    Context& context = m_state->context;
-
-    const Window& window = Engine::get_instance()->get_window();
-    const uint2 current_screensize = make_uint2(window.get_width(), window.get_height());
-    if (current_screensize != m_state->screensize) {
-        // Screen buffers should be resized.
-        m_state->accumulation_buffer->setSize(window.get_width(), window.get_height());
-        m_state->output_buffer->setSize(window.get_width(), window.get_height());
-        m_state->screensize = make_uint2(window.get_width(), window.get_height());
-        m_state->accumulations = 0u;
-#ifdef ENABLE_OPTIX_DEBUG
-        context->setPrintLaunchIndex(window.get_width() / 2, window.get_height() / 2);
-#endif
-    }
-
-    { // Upload camera parameters.
-        // Check if the camera transforms changed and, if so, upload the new ones and reset accumulation.
-        Matrix4x4f inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
-        if (m_state->camera_inverse_view_projection_matrix != inverse_view_projection_matrix) {
-            m_state->camera_inverse_view_projection_matrix = inverse_view_projection_matrix;
-
-            Vector3f cam_pos = Cameras::get_transform(camera_ID).translation;
-
-            context["g_inverted_view_projection_matrix"]->setMatrix4x4fv(false, inverse_view_projection_matrix.begin());
-            float4 camera_position = make_float4(cam_pos.x, cam_pos.y, cam_pos.z, 0.0f);
-            context["g_camera_position"]->setFloat(camera_position);
-
-            m_state->accumulations = 0u;
-        }
-    }
-
-    context["g_accumulations"]->setInt(m_state->accumulations);
-
-    context->launch(int(EntryPoints::PathTracing), m_state->screensize.x, m_state->screensize.y);
 
     /*
-    if (is_power_of_two(m_state->accumulations)) {
-        void* mapped_output_buffer = m_state->output_buffer->map();
-        Image output = Images::create("Output", PixelFormat::RGBA_Float, 1.0, Vector2ui(m_state->screensize.x, m_state->screensize.y));
-        memcpy(output.get_pixels(), mapped_output_buffer, sizeof(float) * 4 * m_state->screensize.x * m_state->screensize.y);
-        m_state->output_buffer->unmap();
-        std::ostringstream filename;
-        filename << "C:\\Users\\Asger\\Desktop\\image_" << m_state->accumulations << ".png";
-        StbImageWriter::write(filename.str(), output);
+    if (is_power_of_two(m_state->accumulations - 1)) {
+    void* mapped_output_buffer = m_state->output_buffer->map();
+    Image output = Images::create("Output", PixelFormat::RGBA_Float, 1.0, Vector2ui(m_state->screensize.x, m_state->screensize.y));
+    memcpy(output.get_pixels(), mapped_output_buffer, sizeof(float) * 4 * m_state->screensize.x * m_state->screensize.y);
+    m_state->output_buffer->unmap();
+    std::ostringstream filename;
+    filename << "C:\\Users\\Asger\\Desktop\\image_" << (m_state->accumulations - 1) << ".png";
+    StbImageWriter::write(filename.str(), output);
     }
     */
-
-    m_state->accumulations += 1u;
-
-    { // Update the backbuffer.
-        glViewport(0, 0, m_state->screensize.x, m_state->screensize.y);
-
-        { // Setup matrices. I really don't need to do this every frame, since they never change.
-            glMatrixMode(GL_PROJECTION);
-            glLoadIdentity();
-            glOrtho(-1, 1, -1.f, 1.f, 1.f, -1.f);
-
-            glMatrixMode(GL_MODELVIEW);
-            glLoadIdentity();
-        }
-
-        float4* mapped_output_buffer = (float4*)m_state->output_buffer->map();
-        glBindTexture(GL_TEXTURE_2D, m_state->backbuffer_gl_id);
-        const GLint BASE_IMAGE_LEVEL = 0;
-        const GLint NO_BORDER = 0;
-        glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGBA, m_state->screensize.x, m_state->screensize.y, NO_BORDER, GL_RGBA, GL_FLOAT, mapped_output_buffer);
-        m_state->output_buffer->unmap();
-
-        glBegin(GL_QUADS); {
-
-            glTexCoord2f(0.0f, 1.0f);
-            glVertex3f(-1.0f, 1.0f, 0.f);
-
-            glTexCoord2f(1.0f, 1.0f);
-            glVertex3f(1.0f, 1.0f, 0.f);
-
-            glTexCoord2f(1.0f, 0.0f);
-            glVertex3f(1.0f, -1.0f, 0.f);
-
-            glTexCoord2f(0.0f, 0.0f);
-            glVertex3f(-1.0f, -1.0f, 0.f);
-
-        } glEnd();
-    }
 }
 
 void Renderer::handle_updates() {
