@@ -14,6 +14,8 @@
 #include <cuda_runtime.h>
 #include <cuda_d3d11_interop.h>
 
+#include <optixu/optixpp_namespace.h>
+
 #define NOMINMAX
 #include <D3D11_1.h>
 #include <D3DCompiler.h>
@@ -28,7 +30,10 @@ class DX11OptiXAdaptor::Implementation {
     struct { // Buffer
         ID3D11Buffer* dx_buffer;
         ID3D11ShaderResourceView* dx_SRV;
-        int size;
+        optix::Buffer optix_buffer;
+        int capacity;
+        int width;
+        int height;
     } m_render_target;
 
     ID3D11Buffer* m_constant_buffer;
@@ -44,7 +49,7 @@ public:
 
         device->GetImmediateContext1(&m_render_context);
 
-        int cuda_device = 0;
+        int cuda_device = -1;
         { // Get CUDA device from DX11 context.
             IDXGIDevice* dxgi_device = nullptr;
             HRESULT hr = device->QueryInterface(IID_PPV_ARGS(&dxgi_device));
@@ -60,7 +65,7 @@ public:
             adapter->Release();
 
             // Create OptiX Renderer on device.
-            // m_optix_renderer = OptiXRenderer::Renderer::initialize(cuda_device, width_hint, height_hint);
+            m_optix_renderer = OptiXRenderer::Renderer::initialize(cuda_device, width_hint, height_hint);
         }
 
         {
@@ -69,8 +74,12 @@ public:
         }
 
         {
+            m_render_target.capacity = 0;
+            m_render_target.width = 0;
+            m_render_target.height = 0;
             m_render_target.dx_buffer = nullptr;
             m_render_target.dx_SRV = nullptr;
+            m_render_target.optix_buffer = nullptr;
             resize_render_target(width_hint, height_hint);
         }
 
@@ -96,7 +105,7 @@ public:
                 "    int2 viewport_size;\n"
                 "    int2 _padding;\n" // TODO Needed??
                 "};\n"
-                "struct Varyings {\n"
+                "struct Varyings {\n" // TODO Pass texcoord directly as argument to main_ps instead.
                 "   float4 position : SV_POSITION;\n"
                 "   float2 texcoord : TEXCOORD;\n"
                 "};\n"
@@ -143,7 +152,10 @@ public:
         DX11Renderer::safe_release(&m_render_target.dx_SRV);
         DX11Renderer::safe_release(&m_constant_buffer);
 
-        // delete m_optix_renderer;
+        if (m_render_target.optix_buffer)
+            m_render_target.optix_buffer->unregisterD3D11Buffer();
+
+        delete m_optix_renderer;
         m_device = nullptr;
     }
 
@@ -152,16 +164,17 @@ public:
     }
 
     void handle_updates() {
-        // m_optix_renderer->handle_updates();
+        m_optix_renderer->handle_updates();
     }
 
     void render(Cogwheel::Scene::Cameras::UID camera_ID) {
         // if (m_render_target.size < width * height)
         //     resize_buffer(width, height);
 
-        // m_optix_renderer->render(camera_ID, buffer, widht, height);
+        m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, m_render_target.width, m_render_target.height);
 
         // TODO We should probably set the OMSetDepthStencilState and RSSetState.
+        // TODO Try storing everything in a command list and execute that instead.
 
         m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         m_render_context->OMSetBlendState(0, 0, 0xffffffff);
@@ -176,46 +189,62 @@ public:
     }
 
     void resize_render_target(int width, int height) {
-        DX11Renderer::safe_release(&m_render_target.dx_buffer);
-        DX11Renderer::safe_release(&m_render_target.dx_SRV);
+
+        if (m_render_target.capacity < width * height) {
+            DX11Renderer::safe_release(&m_render_target.dx_buffer);
+            DX11Renderer::safe_release(&m_render_target.dx_SRV);
+
+            m_render_target.capacity = width * height;
+
+            D3D11_BUFFER_DESC desc = {};
+            desc.Usage = D3D11_USAGE_DEFAULT;
+            desc.StructureByteStride = sizeof(float) * 4;
+            desc.ByteWidth = m_render_target.capacity * sizeof(float) * 4;
+            desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+            desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+            desc.MiscFlags = 0;
+
+            float* tmp_data = new float[width * height * 4];
+            for (int i = 0; i < width * height; ++i) {
+                tmp_data[4 * i + 0] = 1.0F - float(i) / (width * height);
+                tmp_data[4 * i + 1] = float(i) / (width * height);
+                tmp_data[4 * i + 2] = 0.0f;
+                tmp_data[4 * i + 3] = 1.0f;
+            }
+
+            D3D11_SUBRESOURCE_DATA tmmp_data = {};
+            tmmp_data.pSysMem = tmp_data;
+
+            HRESULT hr = m_device->CreateBuffer(&desc, &tmmp_data, &m_render_target.dx_buffer);
+            THROW_ON_FAILURE(hr);
+
+            delete[] tmp_data;
+
+            D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+            srv_desc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+            srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+            srv_desc.Buffer.NumElements = m_render_target.capacity;
+
+            hr = m_device->CreateShaderResourceView(m_render_target.dx_buffer, &srv_desc, &m_render_target.dx_SRV);
+            THROW_ON_FAILURE(hr);
         
-        m_render_target.size = width * height;
+            // Register the buffer with OptiX
+            optix::Context optix_context = m_optix_renderer->get_context();
+            if (m_render_target.optix_buffer)
+                m_render_target.optix_buffer->unregisterD3D11Buffer();
+            m_render_target.optix_buffer = optix_context->createBufferFromD3D11Resource(RT_BUFFER_OUTPUT, m_render_target.dx_buffer);
 
-        D3D11_BUFFER_DESC desc = {};
-        desc.Usage = D3D11_USAGE_DEFAULT;
-        desc.StructureByteStride = sizeof(float) * 4;
-        desc.ByteWidth = m_render_target.size * sizeof(float) * 4;
-        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        desc.CPUAccessFlags = 0;
-        desc.MiscFlags = 0;
-
-        float* tmp_data = new float[width * height * 4];
-        for (int i = 0; i < width * height; ++i) {
-            tmp_data[4 * i + 0] = 1.0F - float(i) / (width * height);
-            tmp_data[4 * i + 1] = float(i) / (width * height);
-            tmp_data[4 * i + 2] = 0.0f;
-            tmp_data[4 * i + 3] = 1.0f;
+            assert(m_render_target.optix_buffer->getD3D11Resource() == m_render_target.dx_buffer);
         }
 
-        D3D11_SUBRESOURCE_DATA tmmp_data = {};
-        tmmp_data.pSysMem = tmp_data;
+        if (m_render_target.width != width || m_render_target.height != height) {
+            m_render_target.width = width;
+            m_render_target.height = height;
 
-        HRESULT hr = m_device->CreateBuffer(&desc, &tmmp_data, &m_render_target.dx_buffer);
-        THROW_ON_FAILURE(hr);
+            m_render_target.optix_buffer->setSize(width, height);
+            m_render_target.optix_buffer->setFormat(RT_FORMAT_FLOAT4);
 
-        delete[] tmp_data;
-
-        D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-        srv_desc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-        srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-        srv_desc.Buffer.NumElements = m_render_target.size;
-
-        hr = m_device->CreateShaderResourceView(m_render_target.dx_buffer, &srv_desc, &m_render_target.dx_SRV);
-        THROW_ON_FAILURE(hr);
-
-        // TODO Register the buffer with OptiX
-
-        { // Update the constant buffer to reflect the new dimensions.
+            // Update the constant buffer to reflect the new dimensions.
             int constant_data[4] = { width, height, 0, 0 };
             m_render_context->UpdateSubresource(m_constant_buffer, 0, NULL, &constant_data, 0, 0);
         }
