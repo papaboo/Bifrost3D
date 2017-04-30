@@ -23,9 +23,9 @@ target_link_libraries(${PROJECT_NAME}
   Win32Driver
 )
 
-if (TARGET OptiXRenderer)
-  add_definitions(-DOPTIXRENDERER_FOUND)
-  target_link_libraries(${PROJECT_NAME} OptiXRenderer)
+if (TARGET DX11OptiXAdaptor)
+  add_definitions(-DOPTIX_FOUND)
+  target_link_libraries(${PROJECT_NAME} DX11OptiXAdaptor)
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

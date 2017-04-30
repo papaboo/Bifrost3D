@@ -21,9 +21,8 @@
 #include <Cogwheel/Scene/SceneNode.h>
 #include <Cogwheel/Scene/SceneRoot.h>
 
-#ifdef OPTIXRENDERER_FOUND
-#include <GLFWDriver.h>
-#include <OptiXRenderer/Renderer.h>
+#ifdef OPTIX_FOUND
+#include <DX11OptiXAdaptor/DX11OptiXAdaptor.h>
 #endif
 
 #include <Win32Driver.h>
@@ -428,17 +427,13 @@ void initializer(Cogwheel::Core::Engine& engine) {
     engine.add_mutating_callback(update_FPS, nullptr);
 }
 
-#ifdef OPTIXRENDERER_FOUND
-void glfw_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window) {
-    OptiXRenderer::Renderer* renderer = OptiXRenderer::Renderer::initialize(window.get_width(), window.get_height());
-    // renderer->set_scene_epsilon(g_scene_size * 0.00001f);
-    engine.add_non_mutating_callback(OptiXRenderer::render_callback, renderer);
-}
-#endif
-
 void win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window, HWND& hwnd) {
     using namespace DX11Renderer;
+#ifdef OPTIX_FOUND
+    compositor = Compositor::initialize(hwnd, window, DX11OptiXAdaptor::DX11OptiXAdaptor::initialize);
+#else
     compositor = Compositor::initialize(hwnd, window, Renderer::initialize);
+#endif
     engine.add_non_mutating_callback(render_callback, compositor);
 }
 
@@ -447,7 +442,7 @@ void print_usage() {
         "usage simpleviewer:\n"
         "  -h  | --help: Show command line usage for simpleviewer.\n"
         "  -s  | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'MaterialScene', 'SphereScene' and 'TestScene', which loads the corresponding builtin scenes.\n"
-#ifdef OPTIXRENDERER_FOUND
+#ifdef OPTIX_FOUND
         "  -pt | --path-tracing: Enables path tracing.\n"
 #endif
         "  -e  | --environment-map <image>: Loads the specified image for the environment.\n"
@@ -481,7 +476,7 @@ int main(int argc, char** argv) {
     }
 
     // Parse command line arguments.
-#ifdef OPTIXRENDERER_FOUND
+#ifdef OPTIX_FOUND
     bool launch_optix = false;
 #endif
     int argument = 1;
@@ -492,7 +487,7 @@ int main(int argc, char** argv) {
             g_environment = std::string(argv[++argument]);
         else if (strcmp(argv[argument], "--environment-color") == 0 || strcmp(argv[argument], "-c") == 0)
             g_environment_color = parse_RGB(std::string(argv[++argument]));
-#ifdef OPTIXRENDERER_FOUND
+#ifdef OPTIX_FOUND
         else if (strcmp(argv[argument], "--path-tracing") == 0 || strcmp(argv[argument], "-pt") == 0)
             launch_optix = true;
 #endif
@@ -503,11 +498,6 @@ int main(int argc, char** argv) {
 
     if (g_scene.empty())
         printf("SimpleViewer will display the Cornell Box scene.\n");
-
-#ifdef OPTIXRENDERER_FOUND
-    if (launch_optix)
-        return GLFWDriver::run(initializer, glfw_window_initialized);
-#endif
 
     int error_code = Win32Driver::run(initializer, win32_window_initialized);
 
