@@ -299,14 +299,13 @@ public:
         else
             context->Draw(mesh.vertex_count, 0);
     } 
-    
+
     void render(const Cogwheel::Scene::Cameras::UID camera_ID) {
         m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 0);
 
         // Opaque state setup.
         m_render_context->OMSetBlendState(0, 0, 0xffffffff);
-        m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 1);
+        m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 0);
         m_render_context->RSSetState(m_opaque.raster_state);
 
         SceneRoot scene = Cameras::get_scene_ID(camera_ID);
@@ -358,7 +357,7 @@ public:
 
                 // Set transparent state.
                 m_render_context->OMSetBlendState(m_transparent.blend_state, 0, 0xffffffff);
-                m_render_context->OMSetDepthStencilState(m_transparent.depth_state, 1);
+                m_render_context->OMSetDepthStencilState(m_transparent.depth_state, 0);
                 m_render_context->PSSetShader(m_transparent.shader, 0, 0);
 
                 int transparent_model_count = int(m_sorted_models.size()) - m_transparent.first_model_index;
