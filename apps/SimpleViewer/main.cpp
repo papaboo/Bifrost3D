@@ -47,6 +47,9 @@ static std::string g_environment;
 static RGB g_environment_color = RGB(0.68f, 0.92f, 1.0f);
 static float g_scene_size;
 static DX11Renderer::Compositor* compositor = nullptr;
+#ifdef OPTIX_FOUND
+bool launch_optix = false;
+#endif
 
 class Navigation final {
 public:
@@ -430,10 +433,11 @@ void initializer(Cogwheel::Core::Engine& engine) {
 void win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window, HWND& hwnd) {
     using namespace DX11Renderer;
 #ifdef OPTIX_FOUND
-    compositor = Compositor::initialize(hwnd, window, DX11OptiXAdaptor::DX11OptiXAdaptor::initialize);
-#else
-    compositor = Compositor::initialize(hwnd, window, Renderer::initialize);
+    if( launch_optix)
+        compositor = Compositor::initialize(hwnd, window, DX11OptiXAdaptor::DX11OptiXAdaptor::initialize);
+    else
 #endif
+        compositor = Compositor::initialize(hwnd, window, Renderer::initialize);
     engine.add_non_mutating_callback(render_callback, compositor);
 }
 
@@ -477,7 +481,7 @@ int main(int argc, char** argv) {
 
     // Parse command line arguments.
 #ifdef OPTIX_FOUND
-    bool launch_optix = false;
+    launch_optix = false;
 #endif
     int argument = 1;
     while (argument < argc) {
