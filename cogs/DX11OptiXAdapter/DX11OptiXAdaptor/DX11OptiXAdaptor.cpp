@@ -103,7 +103,6 @@ public:
                 "StructuredBuffer<float4> pixels : register(t0);\n"
                 "cbuffer constants : register(b0) {\n"
                 "    int2 viewport_size;\n"
-                "    int2 _padding;\n" // TODO Needed??
                 "};\n"
                 "struct Varyings {\n" // TODO Pass texcoord directly as argument to main_ps instead.
                 "   float4 position : SV_POSITION;\n"
@@ -204,21 +203,8 @@ public:
             desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
             desc.MiscFlags = 0;
 
-            float* tmp_data = new float[width * height * 4];
-            for (int i = 0; i < width * height; ++i) {
-                tmp_data[4 * i + 0] = 1.0F - float(i) / (width * height);
-                tmp_data[4 * i + 1] = float(i) / (width * height);
-                tmp_data[4 * i + 2] = 0.0f;
-                tmp_data[4 * i + 3] = 1.0f;
-            }
-
-            D3D11_SUBRESOURCE_DATA tmmp_data = {};
-            tmmp_data.pSysMem = tmp_data;
-
-            HRESULT hr = m_device->CreateBuffer(&desc, &tmmp_data, &m_render_target.dx_buffer);
+            HRESULT hr = m_device->CreateBuffer(&desc, nullptr, &m_render_target.dx_buffer);
             THROW_ON_FAILURE(hr);
-
-            delete[] tmp_data;
 
             D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
             srv_desc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
