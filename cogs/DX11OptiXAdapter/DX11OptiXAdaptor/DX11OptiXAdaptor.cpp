@@ -74,29 +74,19 @@ public:
         }
 
         {
-            m_render_target.capacity = 0;
-            m_render_target.width = 0;
-            m_render_target.height = 0;
-            m_render_target.dx_buffer = nullptr;
-            m_render_target.dx_SRV = nullptr;
-            m_render_target.optix_buffer = nullptr;
+            m_render_target = {};
             resize_render_target(width_hint, height_hint);
         }
 
         { // Init shaders.
             const char* vertex_src =
-                "struct Varyings {\n"
-                "   float4 position : SV_POSITION;\n"
-                "   float2 texcoord : TEXCOORD;\n"
-                "};\n"
-                "Varyings main_vs(uint vertex_ID : SV_VertexID) {\n"
-                "   Varyings output;\n"
+                "float4 main_vs(uint vertex_ID : SV_VertexID) : SV_POSITION {\n"
+                "   float4 position;\n"
                 "   // Draw triangle: {-1, -3}, { -1, 1 }, { 3, 1 }\n"
-                "   output.position.x = vertex_ID == 2 ? 3 : -1;\n"
-                "   output.position.y = vertex_ID == 0 ? -3 : 1;\n"
-                "   output.position.zw = float2(0.5f, 1.0f);\n"
-                "   output.texcoord = output.position.xy;\n"
-                "   return output;\n"
+                "   position.x = vertex_ID == 2 ? 3 : -1;\n"
+                "   position.y = vertex_ID == 0 ? -3 : 1;\n"
+                "   position.zw = float2(0.5f, 1.0f);\n"
+                "   return position;\n"
                 "}\n";
 
             const char* pixel_src =
@@ -104,14 +94,8 @@ public:
                 "cbuffer constants : register(b0) {\n"
                 "    int2 viewport_size;\n"
                 "};\n"
-                "struct Varyings {\n" // TODO Pass texcoord directly as argument to main_ps instead.
-                "   float4 position : SV_POSITION;\n"
-                "   float2 texcoord : TEXCOORD;\n"
-                "};\n"
-                "float4 main_ps(Varyings input) : SV_TARGET {\n"
-                "   float2 tc = input.texcoord  * 0.5 + 0.5;\n"
-                "   int2 buffer_index = tc * viewport_size;\n"
-                "   return pixels[buffer_index.x + buffer_index.y * viewport_size.x];\n"
+                "float4 main_ps(float4 pixel_pos : SV_POSITION) : SV_TARGET {\n"
+                "   return pixels[int(pixel_pos.x) + int(viewport_size.y - pixel_pos.y) * viewport_size.x];\n"
                 "}\n";
 
             static auto compile_shader = [](const char* const shader_src, const char* const target, const char* const entry_point) -> ID3DBlob* {
@@ -166,14 +150,11 @@ public:
         m_optix_renderer->handle_updates();
     }
 
-    void render(Cogwheel::Scene::Cameras::UID camera_ID) {
-        // if (m_render_target.size < width * height)
-        //     resize_buffer(width, height);
+    void render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
+        if (m_render_target.width != width || m_render_target.height != height)
+            resize_render_target(width, height);
 
         m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, m_render_target.width, m_render_target.height);
-
-        // TODO We should probably set the OMSetDepthStencilState and RSSetState.
-        // TODO Try storing everything in a command list and execute that instead.
 
         m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         m_render_context->OMSetBlendState(0, 0, 0xffffffff);
@@ -223,7 +204,7 @@ public:
             assert(m_render_target.optix_buffer->getD3D11Resource() == m_render_target.dx_buffer);
         }
 
-        if (m_render_target.width != width || m_render_target.height != height) {
+        { // Resize buffer and update DX constant buffer.
             m_render_target.width = width;
             m_render_target.height = height;
 
@@ -259,8 +240,8 @@ void DX11OptiXAdaptor::handle_updates() {
     m_impl->handle_updates();
 }
 
-void DX11OptiXAdaptor::render(Cogwheel::Scene::Cameras::UID camera_ID) {
-    m_impl->render(camera_ID);
+void DX11OptiXAdaptor::render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
+    m_impl->render(camera_ID, width, height);
 }
 
 } // NS DX11OptiXAdaptor

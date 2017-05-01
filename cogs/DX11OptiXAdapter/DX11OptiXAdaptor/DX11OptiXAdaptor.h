@@ -15,6 +15,9 @@ namespace DX11OptiXAdaptor {
 
 //-------------------------------------------------------------------------------------------------
 // Adaptor for the OptiX renderer that allows it to render to a DX11 buffer.
+// Future work:
+// * We should probably set the OMSetDepthStencilState and RSSetState before rendering.
+// * Try storing everything in a command list and execute that instead.
 //-------------------------------------------------------------------------------------------------
 class DX11OptiXAdaptor final : public DX11Renderer::IRenderer {
 public:
@@ -23,7 +26,7 @@ public:
 
     void handle_updates();
 
-    void render(Cogwheel::Scene::Cameras::UID camera_ID);
+    void render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height);
 
 private:
 

@@ -10,6 +10,7 @@
 #define _DX11RENDERER_COMPOSITOR_H_
 
 #include <Cogwheel/Scene/Camera.h>
+#include <Cogwheel/Math/Rect.h>
 
 //-------------------------------------------------------------------------------------------------
 // Forward declarations.
@@ -35,7 +36,7 @@ class IRenderer {
 public:
     virtual ~IRenderer() {}
     virtual void handle_updates() = 0;
-    virtual void render(Cogwheel::Scene::Cameras::UID camera_ID) = 0; // TODO Pass in pixel coord rect.
+    virtual void render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) = 0;
 };
 
 typedef IRenderer*(*RendererCreator)(ID3D11Device1*, int width_hint, int height_hint);

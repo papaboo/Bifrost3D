@@ -249,22 +249,23 @@ public:
 
         for (Cameras::UID camera_ID : Cameras::get_iterable()) {
 
-            { // Create and set the viewport.
-                Cogwheel::Math::Rectf vp = Cameras::get_viewport(camera_ID);
-                vp.width *= m_window.get_width();
-                vp.height *= m_window.get_height();
+            Rectf viewport = Cameras::get_viewport(camera_ID);
+            viewport.x *= m_window.get_width();
+            viewport.width *= m_window.get_width();
+            viewport.y *= m_window.get_height();
+            viewport.height *= m_window.get_height();
 
-                D3D11_VIEWPORT viewport;
-                viewport.TopLeftX = 0;
-                viewport.TopLeftY = 0;
-                viewport.Width = vp.width;
-                viewport.Height = vp.height;
-                viewport.MinDepth = 0.0f;
-                viewport.MaxDepth = 1.0f;
-                m_render_context->RSSetViewports(1, &viewport);
-            }
-
-            m_active_renderer->render(camera_ID);
+            // Create and set the viewport.
+            D3D11_VIEWPORT dx_viewport;
+            dx_viewport.TopLeftX = viewport.x;
+            dx_viewport.TopLeftY = viewport.y;
+            dx_viewport.Width = viewport.width;
+            dx_viewport.Height = viewport.height;
+            dx_viewport.MinDepth = 0.0f;
+            dx_viewport.MaxDepth = 1.0f;
+            m_render_context->RSSetViewports(1, &dx_viewport);
+            
+            m_active_renderer->render(camera_ID, int(ceilf(viewport.width)), int(ceilf(viewport.height)));
         }
 
         // Present the backbuffer.

@@ -300,7 +300,7 @@ public:
             context->Draw(mesh.vertex_count, 0);
     } 
 
-    void render(const Cogwheel::Scene::Cameras::UID camera_ID) {
+    void render(const Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
         m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         // Opaque state setup.
@@ -624,8 +624,8 @@ void Renderer::handle_updates() {
     m_impl->handle_updates();
 }
 
-void Renderer::render(const Cogwheel::Scene::Cameras::UID camera_ID) {
-    m_impl->render(camera_ID);
+void Renderer::render(const Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
+    m_impl->render(camera_ID, width, height);
 }
 
 } // NS DX11Renderer
