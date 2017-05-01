@@ -138,7 +138,7 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
 
         for (int m = 0; m < 9; ++m) {
             float lerp_t = m / 8.0f;
-            Materials::Data material_data;
+            Materials::Data material_data = {};
             material_data.tint = lerp(material0_data.tint, material1_data.tint, lerp_t);
             material_data.roughness = lerp(material0_data.roughness, material1_data.roughness, lerp_t);
             material_data.specularity = lerp(material0_data.specularity, material1_data.specularity, lerp_t);
