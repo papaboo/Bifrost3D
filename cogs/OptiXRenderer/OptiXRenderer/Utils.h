@@ -63,6 +63,16 @@ __inline_all__ optix::float3 clamp_light_contribution_by_path_PDF(const optix::f
 #endif
 }
 
+#if (defined(__CUDACC__) || defined(__CUDABE__))
+__inline_dev__ optix::float4 half_to_float(const optix::ushort4& xyzw) {
+    return optix::make_float4(__half2float(xyzw.x), __half2float(xyzw.y), __half2float(xyzw.z), __half2float(xyzw.w));
+}
+
+__inline_dev__ optix::ushort4 float_to_half(const optix::float4& xyzw) {
+    return optix::make_ushort4(__float2half_rn(xyzw.x), __float2half_rn(xyzw.y), __float2half_rn(xyzw.z), __float2half_rn(xyzw.w));
+}
+#endif
+
 //-----------------------------------------------------------------------------
 // Math utils
 //-----------------------------------------------------------------------------
