@@ -27,7 +27,7 @@ rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(float4, g_camera_position, , );
 rtDeclareVariable(Matrix4x4, g_inverted_view_projection_matrix, , );
 
-rtBuffer<float4, 2>  g_output_buffer;
+rtBuffer<ushort4, 2>  g_output_buffer;
 
 //----------------------------------------------------------------------------
 // Ray generation program for visualizing normals.
@@ -46,7 +46,7 @@ RT_PROGRAM void ray_generation() {
     const float inv_screen_gamma = 1.0f / 2.2f;
     payload.color = gammacorrect(payload.color, inv_screen_gamma);
 
-    g_output_buffer[g_launch_index] = payload.color;
+    g_output_buffer[g_launch_index] = float_to_half(payload.color);
 }
 
 //----------------------------------------------------------------------------
