@@ -90,7 +90,7 @@ public:
                 "}\n";
 
             const char* pixel_src =
-                "StructuredBuffer<float4> pixels : register(t0);\n"
+                "StructuredBuffer<half4> pixels : register(t0);\n"
                 "cbuffer constants : register(b0) {\n"
                 "    int2 viewport_size;\n"
                 "};\n"
@@ -178,8 +178,8 @@ public:
 
             D3D11_BUFFER_DESC desc = {};
             desc.Usage = D3D11_USAGE_DEFAULT;
-            desc.StructureByteStride = sizeof(float) * 4;
-            desc.ByteWidth = m_render_target.capacity * sizeof(float) * 4;
+            desc.StructureByteStride = sizeof(short) * 4;
+            desc.ByteWidth = m_render_target.capacity * sizeof(short) * 4;
             desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
             desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
             desc.MiscFlags = 0;
@@ -188,7 +188,7 @@ public:
             THROW_ON_FAILURE(hr);
 
             D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-            srv_desc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+            srv_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
             srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
             srv_desc.Buffer.NumElements = m_render_target.capacity;
 
@@ -209,7 +209,7 @@ public:
             m_render_target.height = height;
 
             m_render_target.optix_buffer->setSize(width, height);
-            m_render_target.optix_buffer->setFormat(RT_FORMAT_FLOAT4);
+            m_render_target.optix_buffer->setFormat(RT_FORMAT_HALF4);
 
             // Update the constant buffer to reflect the new dimensions.
             int constant_data[4] = { width, height, 0, 0 };

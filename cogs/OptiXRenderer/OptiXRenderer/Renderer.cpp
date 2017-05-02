@@ -44,14 +44,12 @@ using namespace optix;
 
 namespace OptiXRenderer {
 
-// TODO Add all methods on the state to avoid writting m_state-> whenever I want to access a member.
 struct Renderer::State {
     uint2 screensize;
     optix::Context context;
 
     // Per camera members.
     optix::Buffer accumulation_buffer;
-    optix::Buffer output_buffer;
     unsigned int accumulations;
     Matrix4x4f camera_inverse_view_projection_matrix;
 
@@ -371,9 +369,6 @@ Renderer::Renderer(int cuda_device_ID, int width_hint, int height_hint)
 #endif
         context["g_accumulation_buffer"]->set(m_state->accumulation_buffer);
 
-        m_state->output_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, m_state->screensize.x, m_state->screensize.y);
-        context["g_output_buffer"]->set(m_state->output_buffer);
-
         m_state->camera_inverse_view_projection_matrix = Math::Matrix4x4f::identity();
     }
 
@@ -401,7 +396,6 @@ Renderer::Renderer(int cuda_device_ID, int width_hint, int height_hint)
 #endif
 
     OPTIX_VALIDATE(context);
-    context->compile();
 }
 
 float Renderer::get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const {

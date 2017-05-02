@@ -19,7 +19,7 @@ using namespace optix;
 rtDeclareVariable(uint2, g_launch_index, rtLaunchIndex, );
 
 rtDeclareVariable(int, g_accumulations, , );
-rtBuffer<float4, 2>  g_output_buffer;
+rtBuffer<ushort4, 2>  g_output_buffer;
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
 rtBuffer<double4, 2>  g_accumulation_buffer;
 #else
@@ -88,7 +88,7 @@ RT_PROGRAM void path_tracing() {
     g_accumulation_buffer[g_launch_index] = make_float4(accumulated_radiance, 1.0f);
 #endif
 
-    g_output_buffer[g_launch_index] = make_float4(accumulated_radiance, 1.0f);
+    g_output_buffer[g_launch_index] = float_to_half(make_float4(accumulated_radiance, 1.0f));
 }
 
 //----------------------------------------------------------------------------
