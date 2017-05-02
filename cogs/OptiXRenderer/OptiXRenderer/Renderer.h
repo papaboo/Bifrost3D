@@ -52,8 +52,6 @@ class Renderer final {
 public:
     static Renderer* initialize(int cuda_device_ID, int width_hint, int height_hint);
 
-    inline bool is_valid() const { return m_device_IDs.optix >= 0;  }
-
     float get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const;
     void set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon);
 
@@ -72,13 +70,8 @@ private:
     Renderer& operator=(const Renderer& rhs) = delete;
 
     // Pimpl the state to avoid exposing OptiX headers.
-    struct State;
-    State* m_state;
-
-    struct {
-        int optix;
-        int cuda;
-    } m_device_IDs;
+    struct Implementation;
+    Implementation* m_impl;
 };
 
 } // NS OptiXRenderer
