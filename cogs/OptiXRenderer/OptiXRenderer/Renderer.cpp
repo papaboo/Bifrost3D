@@ -795,8 +795,8 @@ struct Renderer::Implementation {
                                 // That way we should have minimal performance impact GPU side.
 #if _DEBUG
                                 RTsize light_source_capacity;
-                                m_state->lights.sources->getSize(light_source_capacity);
-                                assert(m_state->lights.count + 1 <= light_source_capacity);
+                                lights.sources->getSize(light_source_capacity);
+                                assert(lights.count + 1 <= light_source_capacity);
 #endif
                                 Light* device_lights = (Light*)lights.sources->map();
                                 Light& device_light = device_lights[lights.count++];
