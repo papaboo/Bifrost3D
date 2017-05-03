@@ -28,6 +28,8 @@ public:
     static IRenderer* initialize(ID3D11Device1* device, int width_hint, int height_hint);
     ~Renderer();
 
+    Cogwheel::Core::Renderers::UID get_ID() const { return m_renderer_ID; }
+
     void handle_updates();
 
     void render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height);
@@ -39,6 +41,8 @@ private:
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Renderer(Renderer& other) = delete;
     Renderer& operator=(const Renderer& rhs) = delete;
+
+    Cogwheel::Core::Renderers::UID m_renderer_ID;
 
     // Pimpl the state to avoid exposing DirectX dependencies.
     class Implementation;

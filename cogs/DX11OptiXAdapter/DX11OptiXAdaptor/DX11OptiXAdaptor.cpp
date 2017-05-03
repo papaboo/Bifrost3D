@@ -230,6 +230,7 @@ DX11Renderer::IRenderer* DX11OptiXAdaptor::initialize(ID3D11Device1* device, int
 
 DX11OptiXAdaptor::DX11OptiXAdaptor(ID3D11Device1* device, int width_hint, int height_hint) {
     m_impl = new Implementation(device, width_hint, height_hint);
+    m_renderer_ID = m_impl->is_valid() ? Cogwheel::Core::Renderers::create("OptiXRenderer") : Cogwheel::Core::Renderers::UID::invalid_UID();
 }
 
 DX11OptiXAdaptor::~DX11OptiXAdaptor() {

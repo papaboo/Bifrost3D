@@ -614,6 +614,7 @@ IRenderer* Renderer::initialize(ID3D11Device1* device, int width_hint, int heigh
 
 Renderer::Renderer(ID3D11Device1* device, int width_hint, int height_hint) {
     m_impl = new Implementation(device, width_hint, height_hint);
+    m_renderer_ID = m_impl->is_valid() ? Renderers::create("DX11Renderer") : Renderers::UID::invalid_UID();
 }
 
 Renderer::~Renderer() {

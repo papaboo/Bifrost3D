@@ -9,8 +9,9 @@
 #ifndef _DX11RENDERER_COMPOSITOR_H_
 #define _DX11RENDERER_COMPOSITOR_H_
 
+#include <Cogwheel/Core/Renderer.h>
+#include <Cogwheel/Core/Window.h>
 #include <Cogwheel/Scene/Camera.h>
-#include <Cogwheel/Math/Rect.h>
 
 //-------------------------------------------------------------------------------------------------
 // Forward declarations.
@@ -35,6 +36,7 @@ namespace DX11Renderer {
 class IRenderer {
 public:
     virtual ~IRenderer() {}
+    virtual Cogwheel::Core::Renderers::UID get_ID() const = 0;
     virtual void handle_updates() = 0;
     virtual void render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) = 0;
 };
@@ -44,17 +46,19 @@ typedef IRenderer*(*RendererCreator)(ID3D11Device1*, int width_hint, int height_
 //-------------------------------------------------------------------------------------------------
 // DirectX 11 compositor.
 // Composits the rendered images from various cameras attached to the window.
-// TODO:
-// * The render backends should have a UID data model representation,
-//   such that the cameras can safely reference them.
 //-------------------------------------------------------------------------------------------------
 class Compositor final {
 public:
-    static Compositor* initialize(HWND& hwnd, const Cogwheel::Core::Window& window, RendererCreator renderer_creator);
+
+    struct Initialization {
+        Compositor* compositor;
+        Cogwheel::Core::Renderers::UID renderer_ID;
+    };
+    static Initialization initialize(HWND& hwnd, const Cogwheel::Core::Window& window, RendererCreator renderer_creator);
     ~Compositor();
 
-    IRenderer* attach_renderer(RendererCreator renderer_creator);
-    void set_active_renderer(IRenderer* renderer); // TODO Remove and let the cameras pick their renderer.
+    Cogwheel::Core::Renderers::UID attach_renderer(RendererCreator renderer_creator);
+    void set_active_renderer(Cogwheel::Core::Renderers::UID); // TODO Remove and let the cameras pick their renderer.
 
     void render();
 

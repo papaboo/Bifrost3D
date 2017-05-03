@@ -21,13 +21,12 @@
 #include <Cogwheel/Scene/SceneNode.h>
 #include <Cogwheel/Scene/SceneRoot.h>
 
-#ifdef OPTIX_FOUND
-#include <DX11OptiXAdaptor/DX11OptiXAdaptor.h>
-#endif
-
 #include <Win32Driver.h>
 #include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/Renderer.h>
+#ifdef OPTIX_FOUND
+#include <DX11OptiXAdaptor/DX11OptiXAdaptor.h>
+#endif
 
 #include <ObjLoader/ObjLoader.h>
 #include <StbImageLoader/StbImageLoader.h>
@@ -350,6 +349,7 @@ void initializer(Cogwheel::Core::Engine& engine) {
     Materials::allocate(8u);
     Meshes::allocate(8u);
     MeshModels::allocate(8u);
+    Renderers::allocate(2u);
     SceneNodes::allocate(8u);
     SceneRoots::allocate(1u);
     Textures::allocate(8u);
@@ -432,12 +432,14 @@ void initializer(Cogwheel::Core::Engine& engine) {
 
 void win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window, HWND& hwnd) {
     using namespace DX11Renderer;
+
+    compositor = Compositor::initialize(hwnd, window, Renderer::initialize).compositor;
 #ifdef OPTIX_FOUND
-    if( launch_optix)
-        compositor = Compositor::initialize(hwnd, window, DX11OptiXAdaptor::DX11OptiXAdaptor::initialize);
-    else
+    Renderers::UID optix_renderer_ID = compositor->attach_renderer(DX11OptiXAdaptor::DX11OptiXAdaptor::initialize);
+    if (launch_optix)
+        compositor->set_active_renderer(optix_renderer_ID);
 #endif
-        compositor = Compositor::initialize(hwnd, window, Renderer::initialize);
+
     engine.add_non_mutating_callback(render_callback, compositor);
 }
 

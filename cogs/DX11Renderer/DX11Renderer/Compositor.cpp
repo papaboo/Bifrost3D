@@ -178,15 +178,21 @@ public:
         return m_device != nullptr;
     }
 
-    IRenderer* attach_renderer(RendererCreator renderer_creator) {
+    Renderers::UID attach_renderer(RendererCreator renderer_creator) {
         IRenderer* renderer = renderer_creator(m_device, m_window.get_width(), m_window.get_height());
-        if (renderer != nullptr)
-            m_renderers.push_back(renderer);
-        return renderer;
+        if (renderer == nullptr)
+            return Renderers::UID::invalid_UID();
+
+        if (m_renderers.size() < Renderers::capacity())
+            m_renderers.resize(Renderers::capacity());
+
+        Renderers::UID renderer_ID = renderer->get_ID();
+        m_renderers[renderer_ID] = renderer;
+        return renderer_ID;
     }
 
-    void set_active_renderer(IRenderer* renderer) {
-        m_active_renderer = renderer;
+    void set_active_renderer(Renderers::UID renderer_ID) {
+        m_active_renderer = m_renderers[renderer_ID];
     }
 
     void render() {
@@ -276,22 +282,22 @@ public:
 //----------------------------------------------------------------------------
 // DirectX 11 compositor.
 //----------------------------------------------------------------------------
-Compositor* Compositor::initialize(HWND& hwnd, const Cogwheel::Core::Window& window, RendererCreator renderer_creator) {
+Compositor::Initialization Compositor::initialize(HWND& hwnd, const Cogwheel::Core::Window& window, RendererCreator renderer_creator) {
     Compositor* c = new Compositor(hwnd, window);
     if (!c->m_impl->is_valid()) {
         delete c;
-        return nullptr;
+        return { nullptr, Renderers::UID::invalid_UID() };
     }
     
-    IRenderer* first_renderer = c->attach_renderer(renderer_creator);
-    if (first_renderer == nullptr) {
+    Renderers::UID renderer_ID = c->attach_renderer(renderer_creator);
+    if (renderer_ID == Renderers::UID::invalid_UID()) {
         delete c;
-        return nullptr;
+        return { nullptr, Renderers::UID::invalid_UID() };
     }
 
-    c->set_active_renderer(first_renderer);
+    c->set_active_renderer(renderer_ID);
 
-    return c;
+    return { c, renderer_ID };
 }
 
 Compositor::Compositor(HWND& hwnd, const Cogwheel::Core::Window& window) {
@@ -302,12 +308,12 @@ Compositor::~Compositor() {
     delete m_impl;
 }
 
-IRenderer* Compositor::attach_renderer(RendererCreator renderer_creator) {
+Renderers::UID Compositor::attach_renderer(RendererCreator renderer_creator) {
     return m_impl->attach_renderer(renderer_creator);
 }
 
-void Compositor::set_active_renderer(IRenderer* renderer) {
-    m_impl->set_active_renderer(renderer);
+void Compositor::set_active_renderer(Renderers::UID renderer_ID) {
+    m_impl->set_active_renderer(renderer_ID);
 }
 
 void Compositor::render() {
