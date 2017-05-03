@@ -9,6 +9,7 @@
 #ifndef _COGWHEEL_CORE_RENDERER_H_
 #define _COGWHEEL_CORE_RENDERER_H_
 
+#include <Cogwheel/Core/Iterable.h>
 #include <Cogwheel/Core/UniqueIDGenerator.h>
 
 #include <string>
@@ -31,6 +32,12 @@ public:
     static bool has(Renderers::UID renderer_ID) { return m_UID_generator.has(renderer_ID); }
 
     static Renderers::UID create(const std::string& name);
+
+    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
+    static ConstUIDIterator end() { return m_UID_generator.end(); }
+    static Iterable<ConstUIDIterator> get_iterable() { return Iterable<ConstUIDIterator>(begin(), end()); }
+
+    static std::string get_name(Renderers::UID renderer_ID) { return m_names[renderer_ID]; }
 
 private:
 
