@@ -34,6 +34,8 @@ SET(CORE_SRCS
   Cogwheel/Core/Engine.h
   Cogwheel/Core/Engine.cpp
   Cogwheel/Core/Iterable.h
+  Cogwheel/Core/Renderer.h
+  Cogwheel/Core/Renderer.cpp
   Cogwheel/Core/Time.h
   Cogwheel/Core/UniqueIDGenerator.h
   Cogwheel/Core/UniqueIDGenerator.impl
