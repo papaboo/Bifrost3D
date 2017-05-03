@@ -38,7 +38,7 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(Cameras::UID cameraID) { return m_UID_generator.has(cameraID); }
+    static bool has(Cameras::UID camera_ID) { return m_UID_generator.has(camera_ID); }
 
     static Cameras::UID create(std::string name, SceneRoots::UID scene, 
                                Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix, 
