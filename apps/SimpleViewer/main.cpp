@@ -47,7 +47,8 @@ static RGB g_environment_color = RGB(0.68f, 0.92f, 1.0f);
 static float g_scene_size;
 static DX11Renderer::Compositor* compositor = nullptr;
 #ifdef OPTIX_FOUND
-bool launch_optix = false;
+bool optix_enabled = true;
+bool rasterizer_enabled = true;
 #endif
 
 class Navigation final {
@@ -459,15 +460,18 @@ void initializer(Cogwheel::Core::Engine& engine) {
 void win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window, HWND& hwnd) {
     using namespace DX11Renderer;
 
-    auto initializer = Compositor::initialize(hwnd, window, Renderer::initialize);
-    compositor = initializer.compositor;
-    Renderers::UID default_renderer = initializer.renderer_ID;
 #ifdef OPTIX_FOUND
-    Renderers::UID optix_renderer_ID = compositor->attach_renderer(DX11OptiXAdaptor::DX11OptiXAdaptor::initialize);
-    if (launch_optix)
-        default_renderer = optix_renderer_ID;
+    if (rasterizer_enabled) {
+        compositor = Compositor::initialize(hwnd, window, Renderer::initialize).compositor;
+        if (optix_enabled)
+            compositor->attach_renderer(DX11OptiXAdaptor::DX11OptiXAdaptor::initialize);
+    } else
+        compositor = Compositor::initialize(hwnd, window, DX11OptiXAdaptor::DX11OptiXAdaptor::initialize).compositor;
+#else
+    compositor = Compositor::initialize(hwnd, window, Renderer::initialize).compositor;
 #endif
 
+    Renderers::UID default_renderer = *Renderers::begin();
     for (auto camera_ID : Cameras::get_iterable())
         Cameras::set_renderer_ID(camera_ID, default_renderer);
 
@@ -480,7 +484,8 @@ void print_usage() {
         "  -h  | --help: Show command line usage for simpleviewer.\n"
         "  -s  | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'MaterialScene', 'SphereScene' and 'TestScene', which loads the corresponding builtin scenes.\n"
 #ifdef OPTIX_FOUND
-        "  -pt | --path-tracing: Enables path tracing.\n"
+        "  -p | --path-tracing-only: Launches with the path tracer as the only avaliable renderer.\n"
+        "  -r | --rasterizer-only: Launches with the rasterizer as the only avaliable renderer.\n"
 #endif
         "  -e  | --environment-map <image>: Loads the specified image for the environment.\n"
         "  -c  | --environment-color <RGB>: Sets the background color to the specified value.\n";
@@ -513,9 +518,6 @@ int main(int argc, char** argv) {
     }
 
     // Parse command line arguments.
-#ifdef OPTIX_FOUND
-    launch_optix = false;
-#endif
     int argument = 1;
     while (argument < argc) {
         if (strcmp(argv[argument], "--scene") == 0 || strcmp(argv[argument], "-s") == 0)
@@ -525,8 +527,13 @@ int main(int argc, char** argv) {
         else if (strcmp(argv[argument], "--environment-color") == 0 || strcmp(argv[argument], "-c") == 0)
             g_environment_color = parse_RGB(std::string(argv[++argument]));
 #ifdef OPTIX_FOUND
-        else if (strcmp(argv[argument], "--path-tracing") == 0 || strcmp(argv[argument], "-pt") == 0)
-            launch_optix = true;
+        else if (strcmp(argv[argument], "--path-tracing-only") == 0 || strcmp(argv[argument], "-p") == 0) {
+            optix_enabled = true;
+            rasterizer_enabled = false;
+        } else if (strcmp(argv[argument], "--rasterizer-only") == 0 || strcmp(argv[argument], "-r") == 0) {
+            optix_enabled = false;
+            rasterizer_enabled = true;
+        }
 #endif
         else
             printf("Unknown argument: '%s'\n", argv[argument]);
