@@ -112,6 +112,13 @@ public:
 
     inline ConstIterator end() const { return ConstIterator(m_IDs + m_capacity, *this); }
 
+    inline ConstIterator get_iterator(UID id) const {
+        if (has(id))
+            return ConstIterator(m_IDs + id.get_index(), *this);
+        else
+            return end();
+    }
+
     // Debug! std::string to_string();
 
 private:
