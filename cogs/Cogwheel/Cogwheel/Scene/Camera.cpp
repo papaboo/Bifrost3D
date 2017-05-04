@@ -112,7 +112,7 @@ void Cameras::reserve_camera_data(unsigned int new_capacity, unsigned int old_ca
     m_renderer_IDs = resize_and_copy_array(m_renderer_IDs, new_capacity, copyable_elements);
 }
 
-Cameras::UID Cameras::create(std::string name, SceneRoots::UID scene, 
+Cameras::UID Cameras::create(const std::string& name, SceneRoots::UID scene, 
                              Matrix4x4f projection_matrix, Matrix4x4f inverse_projection_matrix, 
                              Core::Renderers::UID renderer_ID) {
     assert(m_names != nullptr);
