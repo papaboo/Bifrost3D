@@ -58,7 +58,6 @@ public:
     ~Compositor();
 
     Cogwheel::Core::Renderers::UID attach_renderer(RendererCreator renderer_creator);
-    void set_active_renderer(Cogwheel::Core::Renderers::UID); // TODO Remove and let the cameras pick their renderer.
 
     void render();
 

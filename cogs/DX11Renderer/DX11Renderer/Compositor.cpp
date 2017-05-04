@@ -28,7 +28,6 @@ class Compositor::Implementation {
 private:
     const Window& m_window;
     std::vector<IRenderer*> m_renderers;
-    IRenderer* m_active_renderer;
 
     ID3D11Device1* m_device;
     ID3D11DeviceContext1* m_render_context;
@@ -169,7 +168,6 @@ public:
         safe_release(&m_depth_buffer);
         safe_release(&m_depth_view);
 
-        // TODO Delete all render backends and their scene representations.
         for (IRenderer* r : m_renderers)
             delete r;
     }
@@ -189,10 +187,6 @@ public:
         Renderers::UID renderer_ID = renderer->get_ID();
         m_renderers[renderer_ID] = renderer;
         return renderer_ID;
-    }
-
-    void set_active_renderer(Renderers::UID renderer_ID) {
-        m_active_renderer = m_renderers[renderer_ID];
     }
 
     void render() {
@@ -248,11 +242,15 @@ public:
             m_backbuffer_size = current_backbuffer_size;
         }
 
-        m_active_renderer->handle_updates();
+        // Tell all renderers to update.
+        for (IRenderer* renderer : m_renderers)
+            if (renderer)
+                renderer->handle_updates();
 
         m_render_context->OMSetRenderTargets(1, &m_backbuffer_view, m_depth_view);
         m_render_context->ClearDepthStencilView(m_depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
+        // Render.
         for (Cameras::UID camera_ID : Cameras::get_iterable()) {
 
             Rectf viewport = Cameras::get_viewport(camera_ID);
@@ -271,7 +269,8 @@ public:
             dx_viewport.MaxDepth = 1.0f;
             m_render_context->RSSetViewports(1, &dx_viewport);
             
-            m_active_renderer->render(camera_ID, int(ceilf(viewport.width)), int(ceilf(viewport.height)));
+            Renderers::UID renderer = Cameras::get_renderer_ID(camera_ID);
+            m_renderers[renderer]->render(camera_ID, int(ceilf(viewport.width)), int(ceilf(viewport.height)));
         }
 
         // Present the backbuffer.
@@ -295,8 +294,6 @@ Compositor::Initialization Compositor::initialize(HWND& hwnd, const Cogwheel::Co
         return { nullptr, Renderers::UID::invalid_UID() };
     }
 
-    c->set_active_renderer(renderer_ID);
-
     return { c, renderer_ID };
 }
 
@@ -310,10 +307,6 @@ Compositor::~Compositor() {
 
 Renderers::UID Compositor::attach_renderer(RendererCreator renderer_creator) {
     return m_impl->attach_renderer(renderer_creator);
-}
-
-void Compositor::set_active_renderer(Renderers::UID renderer_ID) {
-    m_impl->set_active_renderer(renderer_ID);
 }
 
 void Compositor::render() {

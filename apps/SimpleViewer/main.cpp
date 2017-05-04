@@ -177,6 +177,30 @@ private:
     float m_near, m_far;
 };
 
+class RenderSwapper final {
+public:
+    RenderSwapper(Cameras::UID camera_ID)
+        : m_camera_ID(camera_ID) { }
+
+    void handle(const Engine& engine) {
+        const Keyboard* keyboard = engine.get_keyboard();
+
+        if (keyboard->was_released(Keyboard::Key::P)) {
+            Renderers::ConstUIDIterator renderer_itr = Renderers::get_iterator(Cameras::get_renderer_ID(m_camera_ID));
+            ++renderer_itr;
+            Renderers::ConstUIDIterator new_renderer_itr = (renderer_itr == Renderers::end()) ? Renderers::begin() : renderer_itr;
+            Cameras::set_renderer_ID(m_camera_ID, *new_renderer_itr);
+        }
+    }
+
+    static inline void handle_callback(Engine& engine, void* state) {
+        static_cast<RenderSwapper*>(state)->handle(engine);
+    }
+
+private:
+    Cameras::UID m_camera_ID;
+};
+
 static inline void update_FPS(Engine& engine, void*) {
     static const int COUNT = 8;
     static float delta_times[COUNT] = { 1e30f, 1e30f, 1e30f, 1e30f, 1e30f, 1e30f, 1e30f, 1e30f };
@@ -427,18 +451,25 @@ void initializer(Cogwheel::Core::Engine& engine) {
     float camera_velocity = g_scene_size * 0.1f;
     Navigation* camera_navigation = new Navigation(cam_ID, camera_velocity);
     engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
+    RenderSwapper* render_swapper = new RenderSwapper(cam_ID);
+    engine.add_mutating_callback(RenderSwapper::handle_callback, render_swapper);
     engine.add_mutating_callback(update_FPS, nullptr);
 }
 
 void win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window, HWND& hwnd) {
     using namespace DX11Renderer;
 
-    compositor = Compositor::initialize(hwnd, window, Renderer::initialize).compositor;
+    auto initializer = Compositor::initialize(hwnd, window, Renderer::initialize);
+    compositor = initializer.compositor;
+    Renderers::UID default_renderer = initializer.renderer_ID;
 #ifdef OPTIX_FOUND
     Renderers::UID optix_renderer_ID = compositor->attach_renderer(DX11OptiXAdaptor::DX11OptiXAdaptor::initialize);
     if (launch_optix)
-        compositor->set_active_renderer(optix_renderer_ID);
+        default_renderer = optix_renderer_ID;
 #endif
+
+    for (auto camera_ID : Cameras::get_iterable())
+        Cameras::set_renderer_ID(camera_ID, default_renderer);
 
     engine.add_non_mutating_callback(render_callback, compositor);
 }
