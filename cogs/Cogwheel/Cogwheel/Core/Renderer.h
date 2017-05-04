@@ -32,9 +32,11 @@ public:
     static bool has(Renderers::UID renderer_ID) { return m_UID_generator.has(renderer_ID); }
 
     static Renderers::UID create(const std::string& name);
+    static void destroy(Renderers::UID renderer_ID);
 
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
     static ConstUIDIterator end() { return m_UID_generator.end(); }
+    static UIDGenerator::ConstIterator get_iterator(Renderers::UID renderer_ID) { return m_UID_generator.get_iterator(renderer_ID); }
     static Iterable<ConstUIDIterator> get_iterable() { return Iterable<ConstUIDIterator>(begin(), end()); }
 
     static std::string get_name(Renderers::UID renderer_ID) { return m_names[renderer_ID]; }

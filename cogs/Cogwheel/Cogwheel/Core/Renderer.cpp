@@ -55,5 +55,9 @@ Renderers::UID Renderers::create(const std::string& name) {
     return id;
 }
 
+void Renderers::destroy(Renderers::UID renderer_ID) {
+    m_UID_generator.erase(renderer_ID);
+}
+
 } // NS Core
 } // NS Cogwheel
