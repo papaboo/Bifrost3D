@@ -157,7 +157,7 @@ public:
         m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, m_render_target.width, m_render_target.height);
 
         m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        m_render_context->OMSetBlendState(0, 0, 0xffffffff);
+        m_render_context->OMSetBlendState(nullptr, nullptr, 0xffffffff);
 
         m_render_context->VSSetShader(m_vertex_shader, 0, 0);
         m_render_context->PSSetShader(m_pixel_shader, 0, 0);
@@ -234,6 +234,7 @@ DX11OptiXAdaptor::DX11OptiXAdaptor(ID3D11Device1* device, int width_hint, int he
 }
 
 DX11OptiXAdaptor::~DX11OptiXAdaptor() {
+    Cogwheel::Core::Renderers::destroy(m_renderer_ID);
     delete m_impl;
 }
 

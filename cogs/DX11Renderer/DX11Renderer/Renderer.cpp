@@ -618,6 +618,7 @@ Renderer::Renderer(ID3D11Device1* device, int width_hint, int height_hint) {
 }
 
 Renderer::~Renderer() {
+    Cogwheel::Core::Renderers::destroy(m_renderer_ID);
     delete m_impl;
 }
 
