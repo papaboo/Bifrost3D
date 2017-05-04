@@ -30,6 +30,7 @@ Transform* Cameras::m_transforms = nullptr;
 Matrix4x4f* Cameras::m_projection_matrices = nullptr;
 Matrix4x4f* Cameras::m_inverse_projection_matrices = nullptr;
 Rectf* Cameras::m_viewports = nullptr;
+Core::Renderers::UID* Cameras::m_renderer_IDs = nullptr;
 
 void Cameras::allocate(unsigned int capacity) {
     if (is_allocated())
@@ -45,6 +46,7 @@ void Cameras::allocate(unsigned int capacity) {
     m_inverse_projection_matrices = new Matrix4x4f[capacity];
     m_render_indices = new unsigned int[capacity];
     m_viewports = new Rectf[capacity];
+    m_renderer_IDs = new Core::Renderers::UID[capacity];
 
     // Allocate dummy camera at 0.
     m_names[0] = "Dummy camera";
@@ -54,6 +56,7 @@ void Cameras::allocate(unsigned int capacity) {
     m_projection_matrices[0] = Matrix4x4f::zero();
     m_inverse_projection_matrices[0] = Matrix4x4f::zero();
     m_viewports[0] = Rectf(0,0,0,0);
+    m_renderer_IDs[0] = Core::Renderers::UID::invalid_UID();
 }
 
 void Cameras::deallocate() {
@@ -69,6 +72,7 @@ void Cameras::deallocate() {
     delete[] m_inverse_projection_matrices; m_inverse_projection_matrices = nullptr;
     delete[] m_render_indices; m_render_indices = nullptr;
     delete[] m_viewports; m_viewports = nullptr;
+    delete[] m_renderer_IDs; m_renderer_IDs = nullptr;
 }
 
 void Cameras::reserve(unsigned int new_capacity) {
@@ -105,10 +109,12 @@ void Cameras::reserve_camera_data(unsigned int new_capacity, unsigned int old_ca
 
     m_render_indices = resize_and_copy_array(m_render_indices, new_capacity, copyable_elements);
     m_viewports = resize_and_copy_array(m_viewports, new_capacity, copyable_elements);
+    m_renderer_IDs = resize_and_copy_array(m_renderer_IDs, new_capacity, copyable_elements);
 }
 
 Cameras::UID Cameras::create(std::string name, SceneRoots::UID scene, 
-                             Matrix4x4f projection_matrix, Matrix4x4f inverse_projection_matrix, Transform transform) {
+                             Matrix4x4f projection_matrix, Matrix4x4f inverse_projection_matrix, 
+                             Core::Renderers::UID renderer_ID) {
     assert(m_names != nullptr);
     assert(m_scene_IDs != nullptr);
     assert(m_render_indices != nullptr);
@@ -126,10 +132,11 @@ Cameras::UID Cameras::create(std::string name, SceneRoots::UID scene,
     m_names[id] = name;
     m_scene_IDs[id] = scene;
     m_render_indices[id] = 0u;
-    m_transforms[id] = transform;
+    m_transforms[id] = Math::Transform::identity();
     m_projection_matrices[id] = projection_matrix;
     m_inverse_projection_matrices[id] = inverse_projection_matrix;
     m_viewports[id] = Rectf(0, 0, 1, 1);
+    m_renderer_IDs[id] = Core::Renderers::has(renderer_ID) ? renderer_ID : *Core::Renderers::begin();
     return id;
 }
 

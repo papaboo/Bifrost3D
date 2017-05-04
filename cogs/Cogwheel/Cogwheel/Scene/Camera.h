@@ -9,6 +9,7 @@
 #ifndef _COGWHEEL_SCENE_CAMERA_H_
 #define _COGWHEEL_SCENE_CAMERA_H_
 
+#include <Cogwheel/Core/Renderer.h>
 #include <Cogwheel/Math/Conversions.h>
 #include <Cogwheel/Math/Matrix.h>
 #include <Cogwheel/Math/Ray.h>
@@ -41,8 +42,8 @@ public:
     static bool has(Cameras::UID camera_ID) { return m_UID_generator.has(camera_ID); }
 
     static Cameras::UID create(std::string name, SceneRoots::UID scene, 
-                               Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix, 
-                               Math::Transform transform = Math::Transform::identity());
+                               Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix,
+                               Core::Renderers::UID renderer_ID = Core::Renderers::UID::invalid_UID());
 
     static UIDGenerator::ConstIterator begin() { return m_UID_generator.begin(); }
     static UIDGenerator::ConstIterator end() { return m_UID_generator.end(); }
@@ -52,6 +53,9 @@ public:
     static inline void set_name(Cameras::UID camera_ID, const std::string& name) { m_names[camera_ID] = name; }
 
     static SceneRoots::UID get_scene_ID(Cameras::UID camera_ID) { return m_scene_IDs[camera_ID]; }
+
+    static Core::Renderers::UID get_renderer_ID(Cameras::UID camera_ID) { return m_renderer_IDs[camera_ID]; }
+    static void set_renderer_ID(Cameras::UID camera_ID, Core::Renderers::UID renderer_ID) { m_renderer_IDs[camera_ID] = renderer_ID; }
 
     static Math::Transform get_transform(Cameras::UID camera_ID) { return m_transforms[camera_ID]; }
     static void set_transform(Cameras::UID camera_ID, Math::Transform transform) { m_transforms[camera_ID] = transform; }
@@ -93,6 +97,7 @@ private:
     static Math::Matrix4x4f* m_inverse_projection_matrices;
     static unsigned int* m_render_indices;
     static Math::Rectf* m_viewports;
+    static Core::Renderers::UID* m_renderer_IDs;
 };
 
 namespace CameraUtils {
