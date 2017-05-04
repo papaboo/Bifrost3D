@@ -1,26 +1,26 @@
 BACKLOG:
+* DX11Renderer's transparency sorting is bugged. Seems to depend on uninitialized memory / AVX.
+** Test by making the spheres in the material test scene semi opaque.
 * OptiXRenderer
 ** Verify that highest_area_light_index_updated in the OptiXRenderer behaves correctly.
-** Half4 backbuffer in OptiXRenderer and render directly to a mapped DX resource.
-** Presampled infinite environment, 32k or 65k samples.
-*** Remember to renormalize the sample PDFs after drawing them. Should change things ever so slightly.
+** Presampled infinite environment, 32k or 16k samples.
+*** Remember to renormalize the sample PDFs after drawing them.
 ** Filtering.
 *** Mitchell filter on the output buffer.
 *** Filter neighbouring light samples.
+* Convolute environment window and render envs.
 * Pre convoluted IBL in DX renderer.
 * Materials revisited.
 ** Add coat.
 * VS compiler flags /debug:fastlink in VS2015. Use /GL (Enable link-time code generation), /LTCG (Use Link Time Code Generation) and /INCREMENTAL:NO (Disable Incremental Linking)
 ** Perhaps create macros for setting up executables and libraries.
 * Multiple cameras.
-** G-Buffer pr camera.
-** Compose when all cameras are done.
 * Screenshot
-** Grab backbuffer on the CPU.
-*** Request to composer or through the camera, not renderers
+** Render to offscreen buffer.
+** Grab backbuffer on the CPU. (when the image is converged)
+*** Request to composer or through the camera.
 *** Expose certain backbuffer state pr camera/viewport in a renderer interface. Fx iteration_count, is_continuous_renderer and so on. Members that can be used to evaluate the 'doneness' of a backbuffer.
 **** Investigate and potentially use C++ async concepts for this.
-** Render to offscreen buffer.
 * Normals revisited
 ** Bump mapping
 *** Filter bumpmap mipmaps using Toksvig05, SGGX or AGAA NDF construction.
@@ -37,5 +37,7 @@ BACKLOG:
 * Serialize scene and models.
 
 libs
+* RtAudio wrapper - https://github.com/thestk/rtaudio
 * Emscripten
 * LuaJit - OpenSource (Fallback to interpretted Lua if the target architecture isn't supported.)
+* ARGH! Command line passing tool - https://github.com/adishavit/argh
