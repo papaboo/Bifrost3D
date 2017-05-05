@@ -50,30 +50,18 @@ namespace OptiXRenderer {
 
 static inline size_t size_of(RTformat format) {
     switch (format) {
-    case RT_FORMAT_FLOAT:
-        return sizeof(float);
-    case RT_FORMAT_FLOAT2:
-        return sizeof(float2);
-    case RT_FORMAT_FLOAT3:
-        return sizeof(float3);
-    case RT_FORMAT_FLOAT4:
-        return sizeof(float4);
-    case RT_FORMAT_INT:
-        return sizeof(int);
-    case RT_FORMAT_INT2:
-        return sizeof(int2);
-    case RT_FORMAT_INT3:
-        return sizeof(int3);
-    case RT_FORMAT_INT4:
-        return sizeof(int4);
-    case RT_FORMAT_UNSIGNED_INT:
-        return sizeof(unsigned int);
-    case RT_FORMAT_UNSIGNED_INT2:
-        return sizeof(uint2);
-    case RT_FORMAT_UNSIGNED_INT3:
-        return sizeof(uint3);
-    case RT_FORMAT_UNSIGNED_INT4:
-        return sizeof(uint4);
+    case RT_FORMAT_FLOAT: return sizeof(float);
+    case RT_FORMAT_FLOAT2: return sizeof(float2);
+    case RT_FORMAT_FLOAT3: return sizeof(float3);
+    case RT_FORMAT_FLOAT4: return sizeof(float4);
+    case RT_FORMAT_INT: return sizeof(int);
+    case RT_FORMAT_INT2: return sizeof(int2);
+    case RT_FORMAT_INT3: return sizeof(int3);
+    case RT_FORMAT_INT4: return sizeof(int4);
+    case RT_FORMAT_UNSIGNED_INT: return sizeof(unsigned int);
+    case RT_FORMAT_UNSIGNED_INT2: return sizeof(uint2);
+    case RT_FORMAT_UNSIGNED_INT3: return sizeof(uint3);
+    case RT_FORMAT_UNSIGNED_INT4: return sizeof(uint4);
     default:
         printf("ERROR: OptiXRenderer::Renderer::size_of does not support format: %u\n", (unsigned int)format);
         return 0;
@@ -658,8 +646,7 @@ struct Renderer::Implementation {
                                 lights.index_to_ID[light_index] = lights.index_to_ID[lights.count];
                                 lights.ID_to_index[lights.index_to_ID[light_index]] = light_index;
 
-                                // TODO Shouldn't this be min? Or a check for delta first?
-                                highest_area_light_index_updated = max(highest_area_light_index_updated, lights.count);
+                                highest_area_light_index_updated = min(highest_area_light_index_updated, int(lights.count));
                             }
                         }
                     }
