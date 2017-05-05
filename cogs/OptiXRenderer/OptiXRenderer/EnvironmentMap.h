@@ -20,7 +20,7 @@ namespace OptiXRenderer {
 
 //-----------------------------------------------------------------------------
 // Environment mapping representation.
-// Contains the environment texture and the corrosponding CDFs and PDF buffers.
+// Contains the environment texture and the corresponding CDFs and PDF buffers.
 // Future work:
 // * Structuring the CDF as 'breath first' should improve the cache hit rate 
 //   of the first couple of lookups when we do binary search or? Profile!
