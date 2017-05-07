@@ -12,6 +12,8 @@
 #include <Cogwheel/Assets/Texture.h>
 #include <Cogwheel/Math/Distribution2D.h>
 
+#include <memory>
+
 namespace Cogwheel {
 namespace Assets {
 
@@ -40,8 +42,12 @@ public:
     //*********************************************************************************************
     InfiniteAreaLight(Textures::UID latlong_ID)
         : m_latlong(latlong_ID)
-        , m_distribution(compute_PDF(m_latlong), m_latlong.get_image().get_width(), m_latlong.get_image().get_height()) {
-    }
+        , m_distribution(std::unique_ptr<float[]>(compute_PDF(m_latlong)).get(), 
+                         m_latlong.get_image().get_width(), m_latlong.get_image().get_height()) { }
+
+    InfiniteAreaLight(Textures::UID latlong_ID, float* latlong_PDF)
+        : m_latlong(latlong_ID)
+        , m_distribution(latlong_PDF, m_latlong.get_image().get_width(), m_latlong.get_image().get_height()) { }
 
     //*********************************************************************************************
     // Evaluate.
@@ -59,6 +65,8 @@ public:
     //*********************************************************************************************
     // Sampling.
     //*********************************************************************************************
+
+    double image_integral() const { return m_distribution.get_integral(); }
 
     LightSample sample(Math::Vector2f random_sample) const {
         auto CDF_sample = m_distribution.sample_continuous(random_sample);
@@ -92,7 +100,7 @@ public:
 
     // Computes the array of per pixel PDFs for an infinite area light. 
     // The importance is based on the average radiance of a pixel.
-    // The PDF input must contain room for at least pixelcount floats.
+    // The PDF input must contain room for at least as many elements as there are pixels.
     static void compute_PDF(TextureND latlong, float* PDF_result) {
         Image image = latlong.get_image();
         int width = image.get_width(), height = image.get_height();
