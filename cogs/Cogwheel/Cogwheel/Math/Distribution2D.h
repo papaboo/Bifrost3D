@@ -18,8 +18,6 @@ namespace Math {
 
 // ------------------------------------------------------------------------------------------------
 // A 2D distribution of a discretized function.
-// Future work.
-// * SSE/AVX
 // ------------------------------------------------------------------------------------------------
 template <typename T>
 class Distribution2D final {
