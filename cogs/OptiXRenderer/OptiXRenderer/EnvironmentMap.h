@@ -39,23 +39,30 @@ namespace OptiXRenderer {
 //-----------------------------------------------------------------------------
 struct EnvironmentMap {
     Cogwheel::Assets::TextureND map;
+    optix::TextureSampler color_texture;
     optix::TextureSampler marginal_CDF;
     optix::TextureSampler conditional_CDF;
     optix::TextureSampler per_pixel_PDF;
 
-    bool next_event_estimation_possible() { return per_pixel_PDF != optix::TextureSampler(); }
+    bool next_event_estimation_possible() const { return per_pixel_PDF != optix::TextureSampler(); }
 
-    EnvironmentLight to_light_source(optix::TextureSampler* texture_cache) {
-        EnvironmentLight light;
-        light.width = map.get_image().get_width();
-        light.height = map.get_image().get_height();
-        light.environment_map_ID = texture_cache[map.get_ID()]->getId();
+    Cogwheel::Assets::Textures::UID get_environment_map_ID() const { return map.get_ID(); }
+
+    Light get_light() {
+        EnvironmentLight env_light;
+        env_light.width = map.get_image().get_width();
+        env_light.height = map.get_image().get_height();
+        env_light.environment_map_ID = color_texture->getId();
         if (next_event_estimation_possible()) {
-            light.marginal_CDF_ID = marginal_CDF->getId();
-            light.conditional_CDF_ID = conditional_CDF->getId();
-            light.per_pixel_PDF_ID = per_pixel_PDF->getId();
+            env_light.marginal_CDF_ID = marginal_CDF->getId();
+            env_light.conditional_CDF_ID = conditional_CDF->getId();
+            env_light.per_pixel_PDF_ID = per_pixel_PDF->getId();
         } else
-            light.marginal_CDF_ID = light.conditional_CDF_ID = light.per_pixel_PDF_ID = RT_TEXTURE_ID_NULL;
+            env_light.marginal_CDF_ID = env_light.conditional_CDF_ID = env_light.per_pixel_PDF_ID = RT_TEXTURE_ID_NULL;
+
+        Light light;
+        light.flags = Light::Environment;
+        light.environment = env_light;
         return light;
     }
 };
@@ -131,17 +138,18 @@ bool compute_environment_CDFs(Cogwheel::Assets::TextureND environment_map, optix
 // contain invalid values, e.g. invalud UID and nullptrs.
 // For environment monte carlo sampling see PBRT v2 chapter 14.6.5.
 //----------------------------------------------------------------------------
-EnvironmentMap create_environment(Cogwheel::Assets::TextureND environment_map, optix::Context& context) {
+EnvironmentMap create_environment(optix::Context& context, Cogwheel::Assets::TextureND environment_map, optix::TextureSampler* texture_cache) {
 
     optix::Buffer marginal_CDF, conditional_CDF, per_pixel_PDF;
     bool success = compute_environment_CDFs(environment_map, context, marginal_CDF, conditional_CDF, per_pixel_PDF);
     if (!success) {
-        EnvironmentMap env = { environment_map.get_ID(), nullptr, nullptr, nullptr };
+        EnvironmentMap env = { environment_map.get_ID(), texture_cache[environment_map.get_ID()], nullptr, nullptr, nullptr };
         return env;
     }
 
     EnvironmentMap environment;
     environment.map = environment_map;
+    environment.color_texture = texture_cache[environment_map.get_ID()];
 
     { // Marginal CDF sampler.
         optix::TextureSampler& texture = environment.marginal_CDF = context->createTextureSampler();

@@ -596,11 +596,8 @@ struct Renderer::Implementation {
                     }
 
                     // Append the environment map, if valid, to the list of light sources.
-                    if (environment.next_event_estimation_possible()) {
-                        Light& light = device_lights[lights.count++];
-                        light.flags = Light::Environment;
-                        light.environment = environment.to_light_source(textures.data());
-                    }
+                    if (environment.next_event_estimation_possible())
+                        device_lights[lights.count++] = environment.get_light();
 
                     lights.count = light_index;
                     lights.sources->unmap();
@@ -664,11 +661,8 @@ struct Renderer::Implementation {
                     }
 
                     // Append the environment map, if valid, to the list of light sources.
-                    if (environment.next_event_estimation_possible()) {
-                        Light& light = device_lights[lights.count++];
-                        light.flags = Light::Environment;
-                        light.environment = environment.to_light_source(textures.data());
-                    }
+                    if (environment.next_event_estimation_possible())
+                        device_lights[lights.count++] = environment.get_light();
 
                     lights.sources->unmap();
                 }
@@ -765,12 +759,12 @@ struct Renderer::Implementation {
 
                 if (scene.get_changes().any_set(SceneRoots::Change::EnvironmentMap, SceneRoots::Change::Created)) {
                     Textures::UID environment_map_ID = scene.get_environment_map();
-                    if (environment_map_ID != environment.map.get_ID()) {
+                    if (environment_map_ID != environment.get_environment_map_ID()) {
                         Image image = Textures::get_image_ID(environment_map_ID);
                         // Only textures with four channels are supported.
                         if (channel_count(image.get_pixel_format()) == 4) { // TODO Support other formats as well by converting the buffers to float4 and upload.
-                            environment = create_environment(environment_map_ID, context);
-                            EnvironmentLight light = environment.to_light_source(textures.data());
+                            environment = create_environment(context, environment_map_ID, textures.data());
+                            EnvironmentLight light = environment.get_light().environment;
                             context["g_scene_environment_light"]->setUserData(sizeof(light), &light);
 
                             if (environment.next_event_estimation_possible()) {
@@ -786,9 +780,7 @@ struct Renderer::Implementation {
                                 assert(lights.count + 1 <= light_source_capacity);
 #endif
                                 Light* device_lights = (Light*)lights.sources->map();
-                                Light& device_light = device_lights[lights.count++];
-                                device_light.flags = Light::Environment;
-                                device_light.environment = environment.to_light_source(textures.data());
+                                device_lights[lights.count++] = environment.get_light();
                                 lights.sources->unmap();
 
                                 context["g_light_count"]->setInt(lights.count);
