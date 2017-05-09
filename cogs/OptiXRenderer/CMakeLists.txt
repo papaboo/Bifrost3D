@@ -21,6 +21,8 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
     OptiXRenderer/Intersect.h
     OptiXRenderer/Kernel.h
     OptiXRenderer/Kernel.cu
+    OptiXRenderer/PresampledEnvironmentMap.h
+    OptiXRenderer/PresampledEnvironmentMap.cpp
     OptiXRenderer/RNG.h
     OptiXRenderer/Renderer.h
     OptiXRenderer/Renderer.cpp
@@ -51,6 +53,7 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
     OptiXRenderer/Shading/LightSources/EnvironmentLightImpl.h
     OptiXRenderer/Shading/LightSources/LightImpl.h
     OptiXRenderer/Shading/LightSources/LightSources.cu
+    OptiXRenderer/Shading/LightSources/PresampledEnvironmentLightImpl.h
     OptiXRenderer/Shading/LightSources/SphereLightImpl.h
   )
 

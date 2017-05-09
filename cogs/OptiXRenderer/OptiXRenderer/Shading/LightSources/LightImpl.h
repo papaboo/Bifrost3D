@@ -11,6 +11,7 @@
 
 #include <OptiXRenderer/Shading/LightSources/DirectionalLightImpl.h>
 #include <OptiXRenderer/Shading/LightSources/EnvironmentLightImpl.h>
+#include <OptiXRenderer/Shading/LightSources/PresampledEnvironmentLightImpl.h>
 #include <OptiXRenderer/Shading/LightSources/SphereLightImpl.h>
 
 namespace OptiXRenderer {
@@ -24,6 +25,8 @@ __inline_dev__ bool is_delta_light(const Light& light, const optix::float3& posi
         return is_delta_light(light.directional);
     case Light::Environment:
         return is_delta_light(light.environment);
+    case Light::PresampledEnvironment:
+        return is_delta_light(light.presampled_environment);
     }
     return false;
 }
@@ -36,6 +39,8 @@ __inline_dev__ LightSample sample_radiance(const Light& light, const optix::floa
         return sample_radiance(light.directional, random_sample);
     case Light::Environment:
         return sample_radiance(light.environment, random_sample);
+    case Light::PresampledEnvironment:
+        return sample_radiance(light.presampled_environment, random_sample);
     }
     return LightSample::none();
 }
@@ -48,6 +53,8 @@ __inline_dev__ float PDF(const Light& light, const optix::float3& lit_position, 
         return PDF(light.directional, direction_to_light);
     case Light::Environment:
         return PDF(light.environment, direction_to_light);
+    case Light::PresampledEnvironment:
+        return PDF(light.presampled_environment, direction_to_light);
     }
     return 0.0f;
 }
@@ -60,6 +67,8 @@ __inline_dev__ optix::float3 evaluate(const Light& light, const optix::float3& p
         return evaluate(light.directional, direction_to_light);
     case Light::Environment:
         return evaluate(light.environment, direction_to_light);
+    case Light::PresampledEnvironment:
+        return evaluate(light.presampled_environment, direction_to_light);
     }
     return optix::make_float3(0.0f);
 }

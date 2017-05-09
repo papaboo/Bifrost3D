@@ -10,6 +10,7 @@
 
 #include <OptiXRenderer/EncodedNormal.h>
 #include <OptiXRenderer/EnvironmentMap.h>
+#include <OptiXRenderer/PresampledEnvironmentMap.h>
 #include <OptiXRenderer/Kernel.h>
 #include <OptiXRenderer/RhoTexture.h>
 #include <OptiXRenderer/Types.h>
@@ -169,7 +170,11 @@ struct Renderer::Implementation {
     // Per scene members.
     optix::Group root_node;
     float scene_epsilon;
+#if PRESAMPLE_ENVIRONMENT_MAP
+    PresampledEnvironmentMap environment;
+#else
     EnvironmentMap environment;
+#endif
 
     std::vector<optix::Transform> transforms = std::vector<optix::Transform>(0);
     std::vector<optix::Geometry> meshes = std::vector<optix::Geometry>(0);
@@ -373,7 +378,7 @@ struct Renderer::Implementation {
 
 #ifdef ENABLE_OPTIX_DEBUG
         context->setPrintEnabled(true);
-        context->setPrintLaunchIndex(m_state->screensize.x / 2, m_state->screensize.y / 2);
+        context->setPrintLaunchIndex(screensize.x / 2, screensize.y / 2);
         context->setExceptionEnabled(RT_EXCEPTION_ALL, true);
 #endif
 
@@ -763,8 +768,13 @@ struct Renderer::Implementation {
                         Image image = Textures::get_image_ID(environment_map_ID);
                         // Only textures with four channels are supported.
                         if (channel_count(image.get_pixel_format()) == 4) { // TODO Support other formats as well by converting the buffers to float4 and upload.
+#if PRESAMPLE_ENVIRONMENT_MAP
+                            environment = PresampledEnvironmentMap(context, environment_map_ID, textures.data());
+                            PresampledEnvironmentLight light = environment.get_light().presampled_environment;
+#else
                             environment = create_environment(context, environment_map_ID, textures.data());
                             EnvironmentLight light = environment.get_light().environment;
+#endif
                             context["g_scene_environment_light"]->setUserData(sizeof(light), &light);
 
                             if (environment.next_event_estimation_possible()) {

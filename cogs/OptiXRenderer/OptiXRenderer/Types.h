@@ -113,19 +113,33 @@ struct EnvironmentLight {
     }
 };
 
+struct PresampledEnvironmentLight {
+    int environment_map_ID; // Texture ID.
+    int per_pixel_PDF_ID; // Texture ID.
+    int samples_ID; // Buffer ID.
+    int sample_count; // TODO Not really needed or? Query the buffer for it.
+
+    __inline_all__ static PresampledEnvironmentLight none() {
+        PresampledEnvironmentLight light = {};
+        return light;
+    }
+};
+
 struct __align__(16) Light {
     enum Flags {
         None = 0u,
         Sphere = 1u,
         Directional = 2u,
         Environment = 3u,
-        TypeMask = 3u
+        PresampledEnvironment = 4u,
+        TypeMask = 7u
     };
 
     union {
         SphereLight sphere;
         DirectionalLight directional;
         EnvironmentLight environment;
+        PresampledEnvironmentLight presampled_environment;
     };
 
     unsigned int flags;

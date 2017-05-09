@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 
 #include <OptiXRenderer/Shading/LightSources/EnvironmentLightImpl.h>
+#include <OptiXRenderer/Shading/LightSources/PresampledEnvironmentLightImpl.h>
 #include <OptiXRenderer/Types.h>
 #include <OptiXRenderer/Utils.h>
 
@@ -98,7 +99,11 @@ RT_PROGRAM void path_tracing() {
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(MonteCarloPayload, monte_carlo_payload, rtPayload, );
 rtDeclareVariable(float3, g_scene_environment_tint, , );
+#if PRESAMPLE_ENVIRONMENT_MAP
+rtDeclareVariable(PresampledEnvironmentLight, g_scene_environment_light, , );
+#else
 rtDeclareVariable(EnvironmentLight, g_scene_environment_light, , );
+#endif
 
 RT_PROGRAM void miss() {
     float3 environment_radiance = g_scene_environment_tint;
