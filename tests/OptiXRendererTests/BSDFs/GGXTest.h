@@ -11,6 +11,7 @@
 
 #include <Utils.h>
 
+#include <Cogwheel/Math/Statistics.h>
 #include <Cogwheel/Math/Utils.h>
 
 #include <OptiXRenderer/RNG.h>
@@ -140,49 +141,36 @@ GTEST_TEST(GGX, sampling_variance) {
 
     // Test that sampling GGX with the visible normal distribution has lower variance than Walter's sampling.
 
-    const unsigned int MAX_SAMPLES = 8196;
+    const int MAX_SAMPLES = 8196;
     const float3 wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
 
     const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
     const float ggx_alpha = 0.1f;
 
-    double* ws = new double[MAX_SAMPLES];
-    double* ws_squared = new double[MAX_SAMPLES];
-
     for (float ggx_alpha = 0.1f; ggx_alpha < 1.0f; ggx_alpha += 0.2f) {
-        for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
+        // Original GGX sample strategy.
+        auto original_GGX = Cogwheel::Math::Statistics(0, MAX_SAMPLES, [&](int i) -> float {
             BSDFSample sample = GGX::sample(tint, ggx_alpha, wo, RNG::sample02(i));
-            if (is_PDF_valid(sample.PDF)) {
-                ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
-                ws_squared[i] = ws[i] * ws[i];
-            } else
-                ws_squared[i] = ws[i] = 0.0f;
-        }
+            if (is_PDF_valid(sample.PDF))
+                return sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
+            else
+                return 0.0f;
+        });
 
-        double GGX_mean = Cogwheel::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / double(MAX_SAMPLES);
-        double GGX_mean_squared = Cogwheel::Math::sort_and_pairwise_summation(ws_squared, ws_squared + MAX_SAMPLES) / double(MAX_SAMPLES);
-        double GGX_variance = GGX_mean_squared - GGX_mean * GGX_mean;
-
-        for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
+        // Heitz et al GGX sampling strategy.
+        auto GGX_with_VNDF = Cogwheel::Math::Statistics(0, MAX_SAMPLES, [&](int i) -> float {
             BSDFSample sample = GGXWithVNDF::sample(tint, ggx_alpha, wo, RNG::sample02(i));
             if (is_PDF_valid(sample.PDF)) {
-                ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
-                EXPECT_LT(ws[i], 1.0f);
-                ws_squared[i] = ws[i] * ws[i];
+                float w = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
+                EXPECT_LT(w, 1.0f);
+                return w;
             } else
-                ws_squared[i] = ws[i] = 0.0f;
-        }
+                return 0.0f;
+        });
 
-        double GGX_with_VNDF_mean = Cogwheel::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / double(MAX_SAMPLES);
-        double GGX_with_VNDF_mean_squared = Cogwheel::Math::sort_and_pairwise_summation(ws_squared, ws_squared + MAX_SAMPLES) / double(MAX_SAMPLES);
-        double GGX_with_VNDF_variance = GGX_with_VNDF_mean_squared - GGX_with_VNDF_mean * GGX_with_VNDF_mean;
-
-        EXPECT_TRUE(almost_equal_eps(float(GGX_mean), float(GGX_with_VNDF_mean), 0.001f));
-        EXPECT_LT(GGX_with_VNDF_variance, GGX_variance);
+        EXPECT_TRUE(almost_equal_eps(float(original_GGX.mean), float(GGX_with_VNDF.mean), 0.001f));
+        EXPECT_LT(GGX_with_VNDF.variance, original_GGX.variance);
     }
-
-    delete[] ws;
-    delete[] ws_squared;
 }
 
 } // NS OptiXRenderer
