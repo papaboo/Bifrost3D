@@ -61,6 +61,7 @@ SET(MATH_SRCS
   Cogwheel/Math/Ray.h
   Cogwheel/Math/Rect.h
   Cogwheel/Math/RNG.h
+  Cogwheel/Math/Statistics.h
   Cogwheel/Math/Transform.h
   Cogwheel/Math/Utils.h
   Cogwheel/Math/Vector.h
