@@ -49,7 +49,7 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, Assets::Tex
     }
 
     { // Draw light samples.
-        sample_count = sample_count <= 0 ? 8192 : sample_count; // TODO next pow and base on texture size. Minimally 1024 samples.
+        sample_count = sample_count <= 0 ? 8192 : Math::next_power_of_two(sample_count);
 
         m_samples = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, sample_count);
         m_samples->setElementSize(sizeof(LightSample));
@@ -64,8 +64,6 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, Assets::Tex
         }
         m_samples->unmap();
         OPTIX_VALIDATE(m_samples);
-
-        // TODO Renormalize the samples? Or just draw enough that the PDF is close to one?
     }
 
     // Fill the presampled light.
