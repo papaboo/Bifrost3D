@@ -365,7 +365,7 @@ static inline void miniheaps_cleanup_callback(void*) {
     Textures::reset_change_notifications();
 }
 
-void initializer(Cogwheel::Core::Engine& engine) {
+int initializer(Cogwheel::Core::Engine& engine) {
     engine.get_window().set_name("SimpleViewer");
 
     Cameras::allocate(1u);
@@ -455,9 +455,11 @@ void initializer(Cogwheel::Core::Engine& engine) {
     RenderSwapper* render_swapper = new RenderSwapper(cam_ID);
     engine.add_mutating_callback(RenderSwapper::handle_callback, render_swapper);
     engine.add_mutating_callback(update_FPS, nullptr);
+
+    return 0;
 }
 
-void win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window, HWND& hwnd) {
+int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window, HWND& hwnd) {
     using namespace DX11Renderer;
 
 #ifdef OPTIX_FOUND
@@ -476,6 +478,8 @@ void win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Wi
         Cameras::set_renderer_ID(camera_ID, default_renderer);
 
     engine.add_non_mutating_callback(render_callback, compositor);
+
+    return 0;
 }
 
 void print_usage() {

@@ -250,7 +250,11 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
 
     // Create engine.
     g_engine = new Engine(data_path);
-    on_launch(*g_engine);
+    if (on_launch) {
+        int error_code = on_launch(*g_engine);
+        if (error_code != S_OK)
+            return error_code;
+    }
 
     // Create window.
     Cogwheel::Core::Window& engine_window = g_engine->get_window();
@@ -288,18 +292,22 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
 
     ShowWindow(hwnd, SW_SHOWDEFAULT);
 
-    on_window_created(*g_engine, engine_window, hwnd);
+    if (on_window_created) {
+        int error_code = on_window_created(*g_engine, engine_window, hwnd);
+        if (error_code != S_OK)
+            return error_code;
+    }
 
     // Setup keyboard.
     g_keyboard = new Keyboard();
     g_engine->set_keyboard(g_keyboard);
 
     // Setup mouse.
-        POINT p;
-        GetCursorPos(&p);
-        ScreenToClient(hwnd, &p);
-        g_mouse = new Mouse(Vector2i(p.x, p.y));
-        g_engine->set_mouse(g_mouse);
+    POINT p;
+    GetCursorPos(&p);
+    ScreenToClient(hwnd, &p);
+    g_mouse = new Mouse(Vector2i(p.x, p.y));
+    g_engine->set_mouse(g_mouse);
 
     // Setup timer.
     LARGE_INTEGER freq;
@@ -342,6 +350,9 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
         if (engine_window.has_changes(Cogwheel::Core::Window::Changes::Renamed))
             SetWindowText(hwnd, engine_window.get_name().c_str());
     }
+
+    delete g_mouse;
+    delete g_keyboard;
 
     return S_OK;
 }
