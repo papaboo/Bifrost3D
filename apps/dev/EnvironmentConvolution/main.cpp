@@ -108,9 +108,10 @@ void output_convoluted_image(std::string original_image_file, Image image, float
 struct Options {
     SampleMethod sample_method;
     int sample_count;
+    bool headless;
 
     static Options parse(int argc, char** argv) {
-        Options options = { SampleMethod::BSDF, 256 };
+        Options options = { SampleMethod::BSDF, 256, false };
 
         // Skip the first two arguments, the application name and image path.
         for (int argument = 2; argument < argc; ++argument) {
@@ -122,6 +123,8 @@ struct Options {
                 options.sample_method = SampleMethod::BSDF;
             else if (strcmp(argv[argument], "--sample-count") == 0 || strcmp(argv[argument], "-s") == 0)
                 options.sample_count = atoi(argv[++argument]);
+            else if (strcmp(argv[argument], "--headless") == 0)
+                options.headless = true;
         }
 
         return options;
@@ -332,24 +335,31 @@ void initialize(Engine& engine) {
                 printf("\rProgress: %.2f%%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * 11.0f));
         }
 
-        // TOODO only output images if headless.
-        output_convoluted_image(g_image_file, g_convoluted_images[r], roughness);
+        if (g_options.headless)
+            output_convoluted_image(g_image_file, g_convoluted_images[r], roughness);
     }
 
     printf("\rProgress: 100.00%%\n");
 
     // Hook up update callback.
-    engine.add_non_mutating_callback(update, nullptr);
+    if (!g_options.headless)
+        engine.add_non_mutating_callback(update, nullptr);
 }
 
 void print_usage() {
     char* usage =
         "usage EnvironmentConvolution <path/to/environment.ext>:\n"
         "  -h | --help: Show command line usage for EnvironmentConvolution.\n"
-        "  -s | --sample-count. The number of samples pr pixel.\n"
-        "  -m | --mis-sampling. Combine light and bsdf samples by multiple importance sampling.\n"
-        "  -l | --light-sampling. Draw samples from the environment.\n"
-        "  -b | --bsdf-sampling. Draw samples from the GGX distribution.\n";
+        "  -s | --sample-count: The number of samples pr pixel.\n"
+        "  -m | --mis-sampling: Combine light and bsdf samples by multiple importance sampling.\n"
+        "  -l | --light-sampling: Draw samples from the environment.\n"
+        "  -b | --bsdf-sampling: Draw samples from the GGX distribution.\n"
+        "     | --headless: Launch without a window and instead output the convoluted images.\n"
+        "\n"
+        "Keys:\n"
+        "  p: Output the images.\n"
+        "  Left arrow: View a sharper image.\n"
+        "  Right arrow: View a blurrier image.\n";
     printf("%s", usage);
 }
 
@@ -379,5 +389,9 @@ int main(int argc, char** argv) {
     printf("Convolute '%s'\n", argv[1]);
     printf("  %s\n", g_options.to_string().c_str());
 
-    GLFWDriver::run(initialize, nullptr);
+    if (g_options.headless) {
+        Engine* engine = new Engine("");
+        initialize(*engine);
+    } else
+        GLFWDriver::run(initialize, nullptr);
 }
