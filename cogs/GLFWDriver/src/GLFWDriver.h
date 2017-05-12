@@ -21,8 +21,8 @@ class Window;
 
 namespace GLFWDriver {
 
-typedef void (*OnLaunchCallback)(Cogwheel::Core::Engine&);
-typedef void (*OnWindowCreatedCallback)(Cogwheel::Core::Engine&, Cogwheel::Core::Window&);
+typedef int (*OnLaunchCallback)(Cogwheel::Core::Engine&);
+typedef int (*OnWindowCreatedCallback)(Cogwheel::Core::Engine&, Cogwheel::Core::Window&);
 
 int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created);
 

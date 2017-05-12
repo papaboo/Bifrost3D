@@ -57,8 +57,11 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
     // Create engine.
     std::string data_path = get_data_path();
     Engine engine(data_path);
-    if (on_launch != nullptr)
-        on_launch(engine);
+    if (on_launch != nullptr) {
+        int error_code = on_launch(engine);
+        if (error_code != 0)
+            return error_code;
+    }
 
     Cogwheel::Core::Window& engine_window = engine.get_window();
     GLFWwindow* window = glfwCreateWindow(engine_window.get_width(), engine_window.get_height(), engine_window.get_name().c_str(), NULL, NULL);
@@ -77,75 +80,79 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
+    int error_code = 0;
     if (on_window_created != nullptr)
-        on_window_created(engine, engine_window);
+        error_code = on_window_created(engine, engine_window);
 
-    { // Setup keyboard
-        g_keyboard = new Keyboard();
-        engine.set_keyboard(g_keyboard);
-        GLFWkeyfun keyboard_callback = [](GLFWwindow* window, int key, int scancode, int action, int mods) {
-            if (action == GLFW_REPEAT)
-                return;
-            g_keyboard->key_tapped(Keyboard::Key(key), action == GLFW_PRESS);
-        };
-        glfwSetKeyCallback(window, keyboard_callback);
-    }
+    if (error_code == 0) {
 
-    { // Setup mouse
-        double mouse_pos_x, mouse_pos_y;
-        glfwGetCursorPos(window, &mouse_pos_x, &mouse_pos_y);
-        g_mouse = new Mouse(Vector2i(int(mouse_pos_x), int(mouse_pos_y)));
-        engine.set_mouse(g_mouse);
-        
-        static GLFWcursorposfun mouse_position_callback = [](GLFWwindow* window, double x, double y) {
-            g_mouse->set_position(Vector2i(int(x), int(y)));
-        };
-        glfwSetCursorPosCallback(window, mouse_position_callback);
-
-        static GLFWmousebuttonfun mouse_button_callback = [](GLFWwindow* window, int button, int action, int mods) {
-            if (action == GLFW_REPEAT || button >= int(Mouse::Button::ButtonCount))
-                return;
-
-            g_mouse->button_tapped(Mouse::Button(button), action == GLFW_PRESS);
-        };
-        glfwSetMouseButtonCallback(window, mouse_button_callback);
-
-        static GLFWscrollfun mouse_scroll_callback = [](GLFWwindow* window, double horizontalScroll, double verticalScroll) {
-            g_mouse->add_scroll_delta(float(verticalScroll));
-        };
-        glfwSetScrollCallback(window, mouse_scroll_callback);
-    }
-
-    double previous_time = glfwGetTime();
-
-    while (!glfwWindowShouldClose(window)) {
-        g_keyboard->per_frame_reset();
-        g_mouse->per_frame_reset();
-        glfwPollEvents();
-
-        // Poll and update time.
-        double current_time = glfwGetTime();
-        float delta_time = float(current_time - previous_time);
-        previous_time = current_time;
-            
-        engine.do_tick(delta_time);
-
-        glfwSwapBuffers(window);
-
-        if (engine.is_quit_requested()) {
-            glfwSetWindowShouldClose(window, GL_TRUE);
-            break;
+        { // Setup keyboard
+            g_keyboard = new Keyboard();
+            engine.set_keyboard(g_keyboard);
+            GLFWkeyfun keyboard_callback = [](GLFWwindow* window, int key, int scancode, int action, int mods) {
+                if (action == GLFW_REPEAT)
+                    return;
+                g_keyboard->key_tapped(Keyboard::Key(key), action == GLFW_PRESS);
+            };
+            glfwSetKeyCallback(window, keyboard_callback);
         }
 
-        if (engine_window.has_changes(Cogwheel::Core::Window::Changes::Resized))
-            glfwSetWindowSize(window, engine_window.get_width(), engine_window.get_height());
-        if (engine_window.has_changes(Cogwheel::Core::Window::Changes::Renamed))
-            glfwSetWindowTitle(window, engine_window.get_name().c_str());
-    }
+        { // Setup mouse
+            double mouse_pos_x, mouse_pos_y;
+            glfwGetCursorPos(window, &mouse_pos_x, &mouse_pos_y);
+            g_mouse = new Mouse(Vector2i(int(mouse_pos_x), int(mouse_pos_y)));
+            engine.set_mouse(g_mouse);
 
-    // Cleanup.
-    delete g_keyboard;
-    delete g_mouse;
+            static GLFWcursorposfun mouse_position_callback = [](GLFWwindow* window, double x, double y) {
+                g_mouse->set_position(Vector2i(int(x), int(y)));
+            };
+            glfwSetCursorPosCallback(window, mouse_position_callback);
+
+            static GLFWmousebuttonfun mouse_button_callback = [](GLFWwindow* window, int button, int action, int mods) {
+                if (action == GLFW_REPEAT || button >= int(Mouse::Button::ButtonCount))
+                    return;
+
+                g_mouse->button_tapped(Mouse::Button(button), action == GLFW_PRESS);
+            };
+            glfwSetMouseButtonCallback(window, mouse_button_callback);
+
+            static GLFWscrollfun mouse_scroll_callback = [](GLFWwindow* window, double horizontalScroll, double verticalScroll) {
+                g_mouse->add_scroll_delta(float(verticalScroll));
+            };
+            glfwSetScrollCallback(window, mouse_scroll_callback);
+        }
+
+        double previous_time = glfwGetTime();
+
+        while (!glfwWindowShouldClose(window)) {
+            g_keyboard->per_frame_reset();
+            g_mouse->per_frame_reset();
+            glfwPollEvents();
+
+            // Poll and update time.
+            double current_time = glfwGetTime();
+            float delta_time = float(current_time - previous_time);
+            previous_time = current_time;
+
+            engine.do_tick(delta_time);
+
+            glfwSwapBuffers(window);
+
+            if (engine.is_quit_requested()) {
+                glfwSetWindowShouldClose(window, GL_TRUE);
+                break;
+            }
+
+            if (engine_window.has_changes(Cogwheel::Core::Window::Changes::Resized))
+                glfwSetWindowSize(window, engine_window.get_width(), engine_window.get_height());
+            if (engine_window.has_changes(Cogwheel::Core::Window::Changes::Renamed))
+                glfwSetWindowTitle(window, engine_window.get_name().c_str());
+        }
+
+        // Cleanup.
+        delete g_keyboard;
+        delete g_mouse;
+    }
 
     glfwDestroyWindow(window);
     glfwTerminate();

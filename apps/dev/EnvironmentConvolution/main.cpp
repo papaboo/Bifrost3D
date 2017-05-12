@@ -214,7 +214,7 @@ void update(const Engine& engine, void* none) {
     }
 }
 
-void initialize(Engine& engine) {
+int initialize(Engine& engine) {
     engine.get_window().set_name("Environment convolution");
 
     Images::allocate(1);
@@ -229,7 +229,7 @@ void initialize(Engine& engine) {
 
     if (!image.exists()) {
         printf("Could not load image: %s\n", g_image_file.c_str());
-        exit(1);
+        return 1;
     }
 
     Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
@@ -344,6 +344,8 @@ void initialize(Engine& engine) {
     // Hook up update callback.
     if (!g_options.headless)
         engine.add_non_mutating_callback(update, nullptr);
+
+    return 0;
 }
 
 void print_usage() {
