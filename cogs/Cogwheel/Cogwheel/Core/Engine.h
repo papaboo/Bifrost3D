@@ -40,7 +40,7 @@ class Engine final {
 public:
     static inline Engine* get_instance() { return m_instance; }
 
-    Engine(std::string& data_path);
+    Engine(const std::string& data_path);
     ~Engine();
 
     inline Time& get_time() { return m_time; }

@@ -16,7 +16,7 @@ namespace Core {
 
 Engine* Engine::m_instance = nullptr;
 
-Engine::Engine(std::string& data_path)
+Engine::Engine(const std::string& data_path)
     : m_window(Window("Cogwheel", 640, 480))
     , m_mutating_callbacks(0)
     , m_non_mutating_callbacks(0)
