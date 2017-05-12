@@ -57,7 +57,8 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
     // Create engine.
     std::string data_path = get_data_path();
     Engine engine(data_path);
-    on_launch(engine);
+    if (on_launch != nullptr)
+        on_launch(engine);
 
     Cogwheel::Core::Window& engine_window = engine.get_window();
     GLFWwindow* window = glfwCreateWindow(engine_window.get_width(), engine_window.get_height(), engine_window.get_name().c_str(), NULL, NULL);
@@ -76,7 +77,8 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
-    on_window_created(engine, engine_window);
+    if (on_window_created != nullptr)
+        on_window_created(engine, engine_window);
 
     { // Setup keyboard
         g_keyboard = new Keyboard();
