@@ -14,8 +14,6 @@ target_include_directories(${PROJECT_NAME}
   PRIVATE "${GLFW_LIBS_DIR}/include" ${OpenGL_INCLUDE_DIRS}
 )
 
-include_directories(${OpenGL_INCLUDE_DIRS})
-
 target_link_libraries(${PROJECT_NAME}
   Cogwheel
   glfw

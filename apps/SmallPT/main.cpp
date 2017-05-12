@@ -87,10 +87,10 @@ void main(int argc, char** argv) {
     smallpt::Ray camera(Vector3d(50, 52, 295.6), normalize(Vector3d(0, -0.042612, -1))); // cam pos, dir
     gRestartAccumulation = true;
     int accumulations = 0;
-    GLuint texID; {
+    GLuint tex_ID; {
         glEnable(GL_TEXTURE_2D);
-        glGenTextures(1, &texID);
-        glBindTexture(GL_TEXTURE_2D, texID);
+        glGenTextures(1, &tex_ID);
+        glBindTexture(GL_TEXTURE_2D, tex_ID);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
@@ -134,7 +134,7 @@ void main(int argc, char** argv) {
             // Divide by four to get the first 8 frames.
             int INTERACTIVE_FRAMES = 3;
             if (accumulations < INTERACTIVE_FRAMES || is_power_of_two_or_zero(accumulations - INTERACTIVE_FRAMES)) {
-                glBindTexture(GL_TEXTURE_2D, texID);
+                glBindTexture(GL_TEXTURE_2D, tex_ID);
                 const GLint BASE_IMAGE_LEVEL = 0;
                 const GLint NO_BORDER = 0;
                 glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGB, gWindowWidth, gWindowHeight, NO_BORDER, GL_RGB, GL_FLOAT, gBackbuffer);
