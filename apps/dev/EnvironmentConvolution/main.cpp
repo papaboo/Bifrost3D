@@ -246,6 +246,8 @@ int initialize(Engine& engine) {
     finished_pixel_count.store(0);
     for (int r = 0; r < g_convoluted_images.size(); ++r) {
         g_convoluted_images[r] = Images::create2D("Convoluted image", PixelFormat::RGB_Float, 1.0f, Vector2ui(image.get_width(), image.get_height()));
+        RGB* pixels = (RGB*)g_convoluted_images[r].get_pixels();
+
         float roughness = r / (g_convoluted_images.size() - 1.0f);
         float alpha = fmaxf(0.00000000001f, roughness * roughness * roughness);
 
@@ -328,7 +330,7 @@ int initialize(Engine& engine) {
 
             radiance /= float(g_options.sample_count);
 
-            g_convoluted_images[r].set_pixel(RGBA(radiance), Vector2ui(x, y)); // TODO map the underlying array instead.
+            pixels[x + y * image.get_width()] = radiance;
 
             ++finished_pixel_count;
             if (omp_get_thread_num() == 0)
