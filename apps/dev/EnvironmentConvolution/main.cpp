@@ -111,7 +111,7 @@ struct Options {
     bool headless;
 
     static Options parse(int argc, char** argv) {
-        Options options = { SampleMethod::BSDF, 256, false };
+        Options options = { SampleMethod::MIS, 256, false };
 
         // Skip the first two arguments, the application name and image path.
         for (int argument = 2; argument < argc; ++argument) {
@@ -252,7 +252,7 @@ int initialize(Engine& engine) {
         float alpha = fmaxf(0.00000000001f, roughness * roughness * roughness);
 
         std::vector<GGX::Sample> ggx_samples = std::vector<GGX::Sample>(g_options.sample_count);
-        ggx_samples.resize(g_options.sample_count);
+        ggx_samples.resize(g_options.sample_count * 8);
         #pragma omp parallel for schedule(dynamic, 16)
         for (int s = 0; s < ggx_samples.size(); ++s)
             ggx_samples[s] = GGX::sample(alpha, RNG::sample02(s));
@@ -275,7 +275,7 @@ int initialize(Engine& engine) {
                 int light_sample_count = g_options.sample_count - bsdf_sample_count;
 
                 for (int s = 0; s < light_sample_count; ++s) {
-                    LightSample sample = light_samples[(s + RNG::hash(i)) % light_samples.size()];
+                    const LightSample& sample = light_samples[(s + RNG::hash(i)) % light_samples.size()];
                     if (sample.PDF < 0.000000001f)
                         continue;
 
@@ -290,7 +290,7 @@ int initialize(Engine& engine) {
                 }
 
                 for (int s = 0; s < bsdf_sample_count; ++s) {
-                    GGX::Sample sample = GGX::sample(alpha, RNG::sample02(s));
+                    GGX::Sample sample = ggx_samples[(s + RNG::hash(i + 1013904223)) % ggx_samples.size()];
                     if (sample.PDF < 0.000000001f)
                         continue;
 
@@ -306,7 +306,7 @@ int initialize(Engine& engine) {
             }
             case SampleMethod::Light:
                 for (int s = 0; s < g_options.sample_count; ++s) {
-                    LightSample sample = light_samples[(s + RNG::hash(i)) % light_samples.size()];
+                    const LightSample& sample = light_samples[(s + RNG::hash(i)) % light_samples.size()];
                     if (sample.PDF < 0.000000001f)
                         continue;
 
@@ -321,7 +321,7 @@ int initialize(Engine& engine) {
                 break;
             case SampleMethod::BSDF:
                 for (int s = 0; s < g_options.sample_count; ++s) {
-                    const GGX::Sample& sample = ggx_samples[s];
+                    const GGX::Sample& sample = ggx_samples[(s + RNG::hash(i + 1013904223)) % ggx_samples.size()];
                     Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
                     radiance += sample2D(texture_ID, sample_uv).rgb();
                 }
