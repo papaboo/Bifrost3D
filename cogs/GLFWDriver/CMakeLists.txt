@@ -51,13 +51,30 @@ if (EXISTS ${GLFW_LIBS_DIR}/CMakeLists.txt)
   option(GLFW_INSTALL "Generate installation target" OFF)
 
   # Add GLFW lib
-  add_subdirectory(${GLFW_LIBS_DIR})
+  add_subdirectory(${GLFW_LIBS_DIR} ${CMAKE_BINARY_DIR}/glfw)
 
   # Move GLFW source into Libs folder
   set_target_properties(glfw PROPERTIES
                         FOLDER "Libs")
 
   # Add the GLFW driver project
-  subdirs(${GLFW_COG_DIR}/src)
+  add_library(GLFWDriver GLFWDriver.h GLFWDriver.cpp)
+
+  target_include_directories(GLFWDriver
+    PUBLIC .
+    PRIVATE "${GLFW_LIBS_DIR}/include"
+  )
+
+  target_link_libraries(GLFWDriver
+    PUBLIC Cogwheel
+    PRIVATE glfw
+  )
+
+  source_group("GLFWDriver" FILES GLFWDriver.h GLFWDriver.cpp)
+
+  set_target_properties(GLFWDriver PROPERTIES 
+    LINKER_LANGUAGE CXX
+    FOLDER "Cogs"
+  )
 
 endif()
