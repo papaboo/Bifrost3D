@@ -1,15 +1,14 @@
 BACKLOG:
-* DX11Renderer's transparency sorting is bugged. Seems to depend on uninitialized memory / AVX.
-** Test by making the spheres in the material test scene semi opaque.
-* OptiXRenderer
-** Verify that highest_area_light_index_updated in the OptiXRenderer behaves correctly.
-** Presampled infinite environment, 32k or 16k samples.
-*** Remember to renormalize the sample PDFs after drawing them.
-** Filtering.
-*** Mitchell filter on the output buffer.
-*** Filter neighbouring light samples.
-* Convolute environment window and render envs.
 * Pre convoluted IBL in DX renderer.
+** Map the mipmap levels. Shade them red to see if it works.
+** Convolute to kingdom come.
+* OptiXRenderer filtering.
+** Reconstruction filters
+*** Pr pixel.
+*** Linear.
+*** Mitchell.
+** Filter neighbouring light samples before reconstruction.
+*** Needs ray differentials.
 * Materials revisited.
 ** Add coat.
 * VS compiler flags /debug:fastlink in VS2015. Use /GL (Enable link-time code generation), /LTCG (Use Link Time Code Generation) and /INCREMENTAL:NO (Disable Incremental Linking)
