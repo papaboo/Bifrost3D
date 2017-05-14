@@ -26,19 +26,6 @@ class TextureManager;
 // * Upload convoluted environment mipmap-chain.
 //----------------------------------------------------------------------------
 class EnvironmentManager {
-private:
-
-    struct Environment {
-        int map_ID;
-        float4 tint;
-    };
-
-    TextureManager& m_textures;
-    std::vector<Environment> m_envs = std::vector<Environment>(0);
-
-    ID3D11VertexShader* m_vertex_shader;
-    ID3D11PixelShader* m_pixel_shader;
-    
 public:
 
     EnvironmentManager(ID3D11Device1& device, const std::wstring& shader_folder_path, TextureManager& textures);
@@ -52,6 +39,18 @@ public:
 private:
     EnvironmentManager(EnvironmentManager& other) = delete;
     EnvironmentManager& operator=(EnvironmentManager& rhs) = delete;
+
+    struct Environment {
+        int map_ID;
+        float4 tint;
+    };
+
+    TextureManager& m_textures;
+    std::vector<Environment> m_envs = std::vector<Environment>(0);
+
+    ID3D11VertexShader* m_vertex_shader;
+    ID3D11PixelShader* m_pixel_shader;
+
 };
 
 } // NS DX11Renderer
