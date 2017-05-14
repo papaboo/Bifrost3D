@@ -74,21 +74,6 @@ inline Sample sample(float alpha, Vector2f random_sample) {
 
 } // NS GGX
 
-// Computes the power heuristic of pdf1 and pdf2.
-// It is assumed that pdf1 is always valid, i.e. not NaN.
-// pdf2 is allowed to be NaN, but generally try to avoid it. :)
-inline float power_heuristic(float pdf1, float pdf2) {
-    pdf1 *= pdf1;
-    pdf2 *= pdf2;
-    float result = pdf1 / (pdf1 + pdf2);
-    // This is where floating point math gets tricky!
-    // If the mis weight is NaN then it can be caused by three things.
-    // 1. pdf1 is so insanely high that pdf1 * pdf1 = infinity. In that case we end up with inf / (inf + pdf2^2) and return 1, unless pdf2 was larger than pdf1, i.e. 'more infinite :p', then we return 0.
-    // 2. Conversely pdf2 can also be so insanely high that pdf2 * pdf2 = infinity. This is handled analogously to above.
-    // 3. pdf2 can also be NaN. In this case the power heuristic is ill-defined and we return 0.
-    return !isnan(result) ? result : (pdf1 > pdf2 ? 1.0f : 0.0f);
-}
-
 enum class SampleMethod {
     MIS, Light, BSDF
 };
@@ -285,7 +270,7 @@ int initialize(Engine& engine) {
                         continue;
 
                     float cos_theta = fmaxf(local_direction.z, 0.0f);
-                    float mis_weight = power_heuristic(sample.PDF, GGX::PDF(alpha, local_direction.z));
+                    float mis_weight = RNG::power_heuristic(sample.PDF, GGX::PDF(alpha, local_direction.z));
                     radiance += sample.radiance * (mis_weight * ggx_f * cos_theta / sample.PDF);
                 }
 
@@ -295,7 +280,7 @@ int initialize(Engine& engine) {
                         continue;
 
                     sample.direction = normalize(up_rotation * sample.direction);
-                    float mis_weight = power_heuristic(sample.PDF, infinite_area_light->PDF(sample.direction));
+                    float mis_weight = RNG::power_heuristic(sample.PDF, infinite_area_light->PDF(sample.direction));
                     radiance += infinite_area_light->evaluate(sample.direction) * mis_weight;
                 }
 
