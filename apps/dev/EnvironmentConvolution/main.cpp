@@ -227,6 +227,8 @@ int initialize(Engine& engine) {
             light_samples[s] = infinite_area_light->sample(RNG::sample02(s));
     }
 
+    printf("\rProgress: %.2f%%", 0.0f);
+
     std::atomic_int finished_pixel_count;
     finished_pixel_count.store(0);
     for (int r = 0; r < g_convoluted_images.size(); ++r) {
@@ -319,7 +321,7 @@ int initialize(Engine& engine) {
 
             ++finished_pixel_count;
             if (omp_get_thread_num() == 0)
-                printf("\rProgress: %.2f%%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * 11.0f));
+                printf("\rProgress: %.2f%%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * g_convoluted_images.size()));
         }
 
         if (g_options.headless)
