@@ -25,10 +25,14 @@ Result load_verbose(const std::string& filename, Cogwheel::Assets::Images::UID& 
     const char* error_msg=  nullptr;
     Result res = (Result)LoadEXR(&rgba, &width, &height, filename.c_str(), &error_msg);
 
-    float image_gamma = 1.0f;
-    image_ID = Images::create2D(filename, PixelFormat::RGBA_Float, image_gamma, Vector2ui(width, height));
-    Images::PixelData pixel_data = Images::get_pixels(image_ID);
-    memcpy(pixel_data, rgba, sizeof(float) * 4 * width * height);
+    if (res == Result::Success) {
+        float image_gamma = 1.0f;
+        image_ID = Images::create2D(filename, PixelFormat::RGBA_Float, image_gamma, Vector2ui(width, height));
+        Images::PixelData pixel_data = Images::get_pixels(image_ID);
+        memcpy(pixel_data, rgba, sizeof(float) * 4 * width * height);
+    }
+    else
+        image_ID = Images::UID::invalid_UID();
 
     delete[] rgba;
 
