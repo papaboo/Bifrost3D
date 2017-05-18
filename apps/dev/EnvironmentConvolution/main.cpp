@@ -11,6 +11,7 @@
 #include <Cogwheel/Core/Window.h>
 #include <Cogwheel/Input/Keyboard.h>
 #include <Cogwheel/Math/Quaternion.h>
+#include <Cogwheel/Math/Distributions.h>
 #include <Cogwheel/Math/RNG.h>
 
 #include <GLFWDriver.h>
@@ -34,45 +35,7 @@ using namespace Cogwheel::Assets;
 using namespace Cogwheel::Core;
 using namespace Cogwheel::Input;
 using namespace Cogwheel::Math;
-
-//==============================================================================
-// GGX distribution.
-//==============================================================================
-namespace GGX {
-
-struct Sample {
-    Vector3f direction;
-    float PDF;
-};
-
-inline float D(float alpha, float abs_cos_theta) {
-    float alpha_sqrd = alpha * alpha;
-    float cos_theta_sqrd = abs_cos_theta * abs_cos_theta;
-    float tan_theta_sqrd = fmaxf(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
-    float cos_theta_cubed = cos_theta_sqrd * cos_theta_sqrd;
-    float foo = alpha_sqrd + tan_theta_sqrd; // No idea what to call this.
-    return alpha_sqrd / (PI<float>() * cos_theta_cubed * foo * foo);
-}
-
-inline float PDF(float alpha, float abs_cos_theta) {
-    return D(alpha, abs_cos_theta) * abs_cos_theta;
-}
-
-inline Sample sample(float alpha, Vector2f random_sample) {
-    float phi = random_sample.y * (2.0f * PI<float>());
-
-    float tan_theta_sqrd = alpha * alpha * random_sample.x / (1.0f - random_sample.x);
-    float cos_theta = 1.0f / sqrt(1.0f + tan_theta_sqrd);
-
-    float r = sqrt(fmaxf(1.0f - cos_theta * cos_theta, 0.0f));
-
-    Sample res;
-    res.direction = Vector3f(cos(phi) * r, sin(phi) * r, cos_theta);
-    res.PDF = PDF(alpha, cos_theta); // We have to be able to inline this to reuse some temporaries.
-    return res;
-}
-
-} // NS GGX
+using namespace Cogwheel::Math::Distributions;
 
 enum class SampleMethod {
     MIS, Light, BSDF
@@ -238,7 +201,7 @@ int initialize(Engine& engine) {
         float roughness = r / (g_convoluted_images.size() - 1.0f);
         float alpha = fmaxf(0.00000000001f, roughness * roughness * roughness);
 
-        std::vector<GGX::Sample> ggx_samples = std::vector<GGX::Sample>(g_options.sample_count);
+        std::vector<GGX::Sample> ggx_samples = std::vector<GGX::Sample>();
         ggx_samples.resize(g_options.sample_count * 8);
         #pragma omp parallel for schedule(dynamic, 16)
         for (int s = 0; s < ggx_samples.size(); ++s)
