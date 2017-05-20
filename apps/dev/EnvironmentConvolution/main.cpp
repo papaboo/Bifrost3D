@@ -186,6 +186,7 @@ int initialize(Engine& engine) {
     if (g_options.sample_method != SampleMethod::BSDF) {
         infinite_area_light = new InfiniteAreaLight(texture_ID);
         light_samples.resize(g_options.sample_count * 8);
+        #pragma omp parallel for schedule(dynamic, 16)
         for (int s = 0; s < light_samples.size(); ++s)
             light_samples[s] = infinite_area_light->sample(RNG::sample02(s));
     }
