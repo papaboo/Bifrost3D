@@ -54,7 +54,6 @@ inline Sample sample(float alpha, Vector2f random_sample) {
 
 } // NS GGX
 
-
 } // NS Distributions
 } // NS Math
 } // NS Cogwheel
