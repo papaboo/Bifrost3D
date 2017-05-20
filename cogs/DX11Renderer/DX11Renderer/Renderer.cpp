@@ -405,7 +405,7 @@ public:
     }
 
     void handle_updates() {
-        m_environments->handle_updates();
+        m_environments->handle_updates(*m_device, *m_render_context);
         m_lights.handle_updates(*m_render_context);
         m_materials.handle_updates(*m_render_context);
         m_textures.handle_updates(*m_device, *m_render_context);
