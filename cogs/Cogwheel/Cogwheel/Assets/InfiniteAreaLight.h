@@ -50,6 +50,14 @@ public:
         , m_distribution(latlong_PDF, m_latlong.get_image().get_width(), m_latlong.get_image().get_height()) { }
 
     //*********************************************************************************************
+    // Getters.
+    //*********************************************************************************************
+    inline Textures::UID get_texture_ID() { return m_latlong.get_ID(); }
+    inline Images::UID get_image_ID() { return m_latlong.get_image().get_ID(); }
+    inline unsigned int get_width() { return m_latlong.get_image().get_width(); }
+    inline unsigned int get_height() { return m_latlong.get_image().get_height(); }
+
+    //*********************************************************************************************
     // Evaluate.
     //*********************************************************************************************
 
