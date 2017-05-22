@@ -22,6 +22,8 @@ class TextureManager;
 //-------------------------------------------------------------------------------------------------
 // Environment manager.
 // Convolutes and uploads environments.
+// Future work:
+// * Convolute on the GPU.
 //-------------------------------------------------------------------------------------------------
 class EnvironmentManager {
 public:
