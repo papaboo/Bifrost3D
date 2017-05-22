@@ -1,10 +1,10 @@
 // Cogwheel scene root.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Copyright (C) 2015, Cogwheel. See AUTHORS.txt for authors
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
-// ---------------------------------------------------------------------------
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+// ------------------------------------------------------------------------------------------------
 
 #ifndef _COGWHEEL_SCENE_SCENE_ROOT_H_
 #define _COGWHEEL_SCENE_SCENE_ROOT_H_
@@ -20,7 +20,7 @@
 namespace Cogwheel {
 namespace Scene {
 
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // The scene root contains the root scene node and scene specific properties,
 // such as the environment map and tint.
 // Future work
@@ -31,8 +31,8 @@ namespace Scene {
 // * IBL generation using a GGX kernel and 
 //   http://http.developer.nvidia.com/GPUGems3/gpugems3_ch20.html.
 //   * Can also be used by the path tracer to reduce noise from 
-//     environment sampling in the first frames.
-// ---------------------------------------------------------------------------
+//     environment sampling in the first frames, but how would that work with MIS and weighting?
+// ------------------------------------------------------------------------------------------------
 class SceneRoots final {
 public:
     typedef Core::TypedUIDGenerator<SceneRoots> UIDGenerator;
@@ -47,8 +47,10 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(SceneRoots::UID scene_ID) { return m_UID_generator.has(scene_ID); }
 
-    static SceneRoots::UID create(const std::string& name, SceneNodes::UID root, Math::RGB environment_tint);
-    static SceneRoots::UID create(const std::string& name, SceneNodes::UID root, Assets::Textures::UID environment_map);
+    static SceneRoots::UID create(const std::string& name, SceneNodes::UID root, Assets::Textures::UID environment_map, Math::RGB environment_tint = Math::RGB::white());
+    static SceneRoots::UID create(const std::string& name, SceneNodes::UID root, Math::RGB environment_tint) {
+        return create(name, root, Assets::Textures::UID::invalid_UID(), environment_tint);
+    }
     static void destroy(SceneRoots::UID scene_ID);
 
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
@@ -62,9 +64,9 @@ public:
     static inline Assets::Textures::UID get_environment_map(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].environment_map; }
     static void set_environment_map(SceneRoots::UID scene_ID, Assets::Textures::UID environment_map);
 
-    //-------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     // Changes since last game loop tick.
-    //-------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     enum class Change : unsigned char {
         None            = 0u,
         Created         = 1u << 0u,
@@ -99,14 +101,14 @@ private:
     static Core::ChangeSet<Changes, UID> m_changes;
 };
 
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Cogwheel scene wrapper.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 class SceneRoot final {
 public:
-    // -----------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------
     // Constructors and destructors.
-    // -----------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------
     SceneRoot() : m_ID(SceneRoots::UID::invalid_UID()) {}
     SceneRoot(SceneRoots::UID id) : m_ID(id) {}
 
@@ -116,9 +118,9 @@ public:
     inline bool operator==(SceneRoot rhs) const { return m_ID == rhs.m_ID; }
     inline bool operator!=(SceneRoot rhs) const { return m_ID != rhs.m_ID; }
 
-    // -----------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     // Getters and setters.
-    // -----------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     inline std::string get_name() const { return SceneRoots::get_name(m_ID); }
     inline SceneNodes::UID get_root_node() const { return SceneRoots::get_root_node(m_ID); }
     inline Math::RGB get_environment_tint() const { return SceneRoots::get_environment_tint(m_ID); }
@@ -126,9 +128,9 @@ public:
     inline Assets::Textures::UID get_environment_map() const { return SceneRoots::get_environment_map(m_ID); }
     inline void set_environment_map(Assets::Textures::UID environment_map) { SceneRoots::set_environment_map(m_ID, environment_map); }
 
-    //-------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     // Changes since last game loop tick.
-    //-------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     inline SceneRoots::Changes get_changes() const { return SceneRoots::get_changes(m_ID); }
 
 private:
