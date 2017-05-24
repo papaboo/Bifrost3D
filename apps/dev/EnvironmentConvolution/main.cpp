@@ -38,7 +38,7 @@ using namespace Cogwheel::Math;
 using namespace Cogwheel::Math::Distributions;
 
 enum class SampleMethod {
-    MIS, Light, BSDF
+    MIS, Light, BSDF, Recursive
 };
 
 void output_convoluted_image(std::string original_image_file, Image image, float roughness) {
@@ -69,6 +69,8 @@ struct Options {
                 options.sample_method = SampleMethod::Light;
             else if (strcmp(argv[argument], "--bsdf-sampling") == 0 || strcmp(argv[argument], "-b") == 0)
                 options.sample_method = SampleMethod::BSDF;
+            else if (strcmp(argv[argument], "--recursive-sampling") == 0 || strcmp(argv[argument], "-r") == 0)
+                options.sample_method = SampleMethod::Recursive;
             else if (strcmp(argv[argument], "--sample-count") == 0 || strcmp(argv[argument], "-s") == 0)
                 options.sample_count = atoi(argv[++argument]);
             else if (strcmp(argv[argument], "--headless") == 0)
@@ -84,6 +86,7 @@ struct Options {
         case SampleMethod::MIS: out << "MIS sampling, "; break;
         case SampleMethod::Light: out << "Light sampling, "; break;
         case SampleMethod::BSDF: out << "BSDF sampling, "; break;
+        case SampleMethod::Recursive: out << "Recursive sampling, "; break;
         }
         out << sample_count << " samples pr pixel.";
         return out.str();
@@ -196,11 +199,38 @@ int initialize(Engine& engine) {
     std::atomic_int finished_pixel_count;
     finished_pixel_count.store(0);
     for (int r = 0; r < g_convoluted_images.size(); ++r) {
-        g_convoluted_images[r] = Images::create2D("Convoluted image", PixelFormat::RGB_Float, 1.0f, Vector2ui(image.get_width(), image.get_height()));
+        int width = image.get_width(), height = image.get_height();
+
+        g_convoluted_images[r] = Images::create2D("Convoluted image", PixelFormat::RGB_Float, 1.0f, Vector2ui(width, height));
         RGB* pixels = (RGB*)g_convoluted_images[r].get_pixels();
 
+        // No convolution needed when roughness is 0.
+        if (r == 0) {
+            #pragma omp parallel for schedule(dynamic, 16)
+            for (int i = 0; i < int(image.get_pixel_count()); ++i) {
+
+                int x = i % width;
+                int y = i / width;
+
+                pixels[x + y * width] = image.get_pixel(Vector2ui(x, y)).rgb();
+
+                ++finished_pixel_count;
+                if (omp_get_thread_num() == 0)
+                    printf("\rProgress: %.2f%%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * g_convoluted_images.size()));
+            }
+            continue;
+        }
+
         float roughness = r / (g_convoluted_images.size() - 1.0f);
-        float alpha = fmaxf(0.00000000001f, roughness * roughness * roughness);
+        float alpha = roughness * roughness;
+
+        Textures::UID previous_roughness_tex_ID = Textures::UID::invalid_UID();
+        if (g_options.sample_method == SampleMethod::Recursive) {
+            previous_roughness_tex_ID = Textures::create2D(g_convoluted_images[r-1].get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
+            float prev_roughness = (r - 1.0f) / (g_convoluted_images.size() - 1.0f);
+            float prev_alpha = prev_roughness * prev_roughness;
+            alpha = sqrt(alpha * alpha - prev_alpha * prev_alpha);
+        }
 
         std::vector<GGX::Sample> ggx_samples = std::vector<GGX::Sample>();
         ggx_samples.resize(g_options.sample_count * 8);
@@ -211,10 +241,10 @@ int initialize(Engine& engine) {
         #pragma omp parallel for schedule(dynamic, 16)
         for (int i = 0; i < int(image.get_pixel_count()); ++i) {
 
-            int x = i % image.get_width();
-            int y = i / image.get_width();
+            int x = i % width;
+            int y = i / width;
 
-            Vector2f up_uv = Vector2f((x + 0.5f) / image.get_width(), (y + 0.5f) / image.get_height());
+            Vector2f up_uv = Vector2f((x + 0.5f) / width, (y + 0.5f) / height);
             Vector3f up_vector = latlong_texcoord_to_direction(up_uv);
             Quaternionf up_rotation = Quaternionf::look_in(up_vector);
 
@@ -277,16 +307,25 @@ int initialize(Engine& engine) {
                     radiance += sample2D(texture_ID, sample_uv).rgb();
                 }
                 break;
+            case SampleMethod::Recursive:
+                for (int s = 0; s < g_options.sample_count; ++s) {
+                    const GGX::Sample& sample = ggx_samples[(s + RNG::hash(i + 1013904223)) % ggx_samples.size()];
+                    Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
+                    radiance += sample2D(previous_roughness_tex_ID, sample_uv).rgb();
+                }
+                break;
             }
 
             radiance /= float(g_options.sample_count);
 
-            pixels[x + y * image.get_width()] = radiance;
+            pixels[x + y * width] = radiance;
 
             ++finished_pixel_count;
             if (omp_get_thread_num() == 0)
                 printf("\rProgress: %.2f%%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * g_convoluted_images.size()));
         }
+
+        Textures::destroy(previous_roughness_tex_ID);
 
         if (g_options.headless)
             output_convoluted_image(g_image_file, g_convoluted_images[r], roughness);
@@ -309,6 +348,7 @@ void print_usage() {
         "  -m | --mis-sampling: Combine light and bsdf samples by multiple importance sampling.\n"
         "  -l | --light-sampling: Draw samples from the environment.\n"
         "  -b | --bsdf-sampling: Draw samples from the GGX distribution.\n"
+        "  -r | --recursive-sampling: Convolute based on the previous convoluted image.\n"
         "     | --headless: Launch without a window and instead output the convoluted images.\n"
         "\n"
         "Keys:\n"
