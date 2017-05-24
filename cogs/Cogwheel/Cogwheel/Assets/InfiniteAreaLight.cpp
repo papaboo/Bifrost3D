@@ -113,9 +113,6 @@ void Convolute(const InfiniteAreaLight& light, IBLConvolution* begin, IBLConvolu
     using namespace Cogwheel::Math;
     using namespace Cogwheel::Math::Distributions;
 
-    // int bsdf_sample_count = 64;
-    // int light_sample_count = 64;
-
     int max_sample_count = 0;
     for (IBLConvolution* itr = begin; itr != end; ++itr)
         max_sample_count = max(max_sample_count, itr->sample_count);
@@ -131,7 +128,18 @@ void Convolute(const InfiniteAreaLight& light, IBLConvolution* begin, IBLConvolu
 
         int width = begin->Width, height = begin->Height;
         float roughness = begin->Roughness;
-        float alpha = fmaxf(0.00000000001f, roughness * roughness * roughness);
+        float alpha = roughness * roughness;
+
+        // Handle nearly specular case.
+        if (alpha < 0.00000000001f) {
+            Image img = light.get_image_ID();
+            #pragma omp parallel for schedule(dynamic, 16)
+            for (int i = 0; i < width * height; ++i) {
+                int x = i % width, y = i / width;
+                begin->Pixels[x + y * width] = img.get_pixel(Vector2ui(x, y)).rgb();
+            }
+            continue;
+        }
 
         std::vector<GGX::Sample> ggx_samples = std::vector<GGX::Sample>();
         ggx_samples.resize(begin->sample_count * 4);
