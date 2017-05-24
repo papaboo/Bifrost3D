@@ -146,7 +146,7 @@ private:
     Textures::UID m_ID;
 };
 
-Math::RGBA sample2D(Textures::UID texture_ID, Math::Vector2f texcoord);
+Math::RGBA sample2D(Textures::UID texture_ID, Math::Vector2f texcoord, int mipmap_level = 0);
 
 } // NS Assets
 } // NS Cogwheel

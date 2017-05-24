@@ -101,7 +101,7 @@ void Textures::destroy(Textures::UID texture_ID) {
 // Sampling functions.
 //-----------------------------------------------------------------------------
 
-Math::RGBA sample2D(Textures::UID texture_ID, Vector2f texcoord) {
+Math::RGBA sample2D(Textures::UID texture_ID, Vector2f texcoord, int mipmap_level) {
     TextureND texture = texture_ID;
 
     { // Modify tex coord based on wrap mode.
@@ -126,11 +126,11 @@ Math::RGBA sample2D(Textures::UID texture_ID, Vector2f texcoord) {
         Image image = texture.get_image();
 
         if (texture.get_minification_filter() == MinificationFilter::None) {
-            Vector2ui pixel_coord = Vector2ui(unsigned int(texcoord.x * image.get_width()),
-                                              unsigned int(texcoord.y * image.get_height()));
+            Vector2ui pixel_coord = Vector2ui(unsigned int(texcoord.x * image.get_width(mipmap_level)),
+                                              unsigned int(texcoord.y * image.get_height(mipmap_level)));
             return image.get_pixel(pixel_coord);
         } else { // MinificationFilter::Linear
-            unsigned int width = image.get_width(), height = image.get_height();
+            unsigned int width = image.get_width(mipmap_level), height = image.get_height(mipmap_level);
             texcoord = Vector2f(texcoord.x * float(width), texcoord.y * float(height)) - 0.5f;
             Vector2i lower_left_coord = Vector2i(int(texcoord.x), int(texcoord.y));
             float u_lerp = texcoord.x - float(lower_left_coord.x);
@@ -138,26 +138,28 @@ Math::RGBA sample2D(Textures::UID texture_ID, Vector2f texcoord) {
             float v_lerp = texcoord.y - float(lower_left_coord.y);
             if (v_lerp < 0.0f) v_lerp += 1.0f;
 
-            auto lookup_pixel = [](int pixelcoord_x, int pixelcoord_y, TextureND texture, Image image) {
+            auto lookup_pixel = [](int pixelcoord_x, int pixelcoord_y, int mipmap_level, TextureND texture, Image image) {
+                int width = image.get_width(mipmap_level);
                 if (texture.get_wrapmode_U() == WrapMode::Clamp)
-                    pixelcoord_x = clamp(pixelcoord_x, 0, int(image.get_width()-1));
+                    pixelcoord_x = clamp(pixelcoord_x, 0, width - 1);
                 else // WrapMode::Repeat
-                    pixelcoord_x = (pixelcoord_x + image.get_width()) % image.get_width();
+                    pixelcoord_x = (pixelcoord_x + width) % width;
 
+                int height = image.get_height(mipmap_level);
                 if (texture.get_wrapmode_V() == WrapMode::Clamp)
-                    pixelcoord_y = clamp(pixelcoord_y, 0, int(image.get_height()-1));
+                    pixelcoord_y = clamp(pixelcoord_y, 0, height - 1);
                 else // WrapMode::Repeat
-                    pixelcoord_y = (pixelcoord_y + image.get_height()) % image.get_height();
+                    pixelcoord_y = (pixelcoord_y + height) % height;
 
-                return image.get_pixel(Vector2ui(pixelcoord_x, pixelcoord_y));
+                return image.get_pixel(Vector2ui(pixelcoord_x, pixelcoord_y), mipmap_level);
             };
 
-            RGBA lower_texel = lerp(lookup_pixel(lower_left_coord.x, lower_left_coord.y, texture, image),
-                                    lookup_pixel(lower_left_coord.x+1, lower_left_coord.y, texture, image), 
+            RGBA lower_texel = lerp(lookup_pixel(lower_left_coord.x, lower_left_coord.y, mipmap_level, texture, image),
+                                    lookup_pixel(lower_left_coord.x + 1, lower_left_coord.y, mipmap_level, texture, image),
                                     u_lerp);
 
-            RGBA upper_texel = lerp(lookup_pixel(lower_left_coord.x, lower_left_coord.y+1, texture, image),
-                                    lookup_pixel(lower_left_coord.x+1, lower_left_coord.y+1, texture, image),
+            RGBA upper_texel = lerp(lookup_pixel(lower_left_coord.x, lower_left_coord.y + 1, mipmap_level, texture, image),
+                                    lookup_pixel(lower_left_coord.x + 1, lower_left_coord.y + 1, mipmap_level, texture, image),
                                     u_lerp);
 
             return lerp(lower_texel, upper_texel, v_lerp);
