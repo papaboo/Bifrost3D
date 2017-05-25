@@ -97,7 +97,7 @@ std::string g_image_file;
 Options g_options;
 std::array<Image, 11> g_convoluted_images;
 
-void update(const Engine& engine, void* none) {
+void update(Engine& engine, void* none) {
     // Initialize render texture
     static GLuint tex_ID = 0u;
     if (tex_ID == 0u) {
@@ -123,6 +123,13 @@ void update(const Engine& engine, void* none) {
     if (keyboard->was_released(Keyboard::Key::Right))
         ++image_index;
     image_index = clamp(image_index, 0, int(g_convoluted_images.size() - 1));
+
+    if (image_index != uploaded_image_index) {
+        float roughness = image_index / (g_convoluted_images.size() - 1.0f);
+        std::ostringstream title;
+        title << "Environment convolution - Roughness " << roughness;
+        engine.get_window().set_name(title.str().c_str());
+    }
 
     { // Update the backbuffer.
         const Window& window = engine.get_window();
@@ -244,6 +251,9 @@ int initialize(Engine& engine) {
             int x = i % width;
             int y = i / width;
 
+            int bsdf_index_offset = RNG::hash(i);
+            int light_index_offset = bsdf_index_offset;
+
             Vector2f up_uv = Vector2f((x + 0.5f) / width, (y + 0.5f) / height);
             Vector3f up_vector = latlong_texcoord_to_direction(up_uv);
             Quaternionf up_rotation = Quaternionf::look_in(up_vector);
@@ -256,7 +266,7 @@ int initialize(Engine& engine) {
                 int light_sample_count = g_options.sample_count - bsdf_sample_count;
 
                 for (int s = 0; s < light_sample_count; ++s) {
-                    const LightSample& sample = light_samples[(s + RNG::hash(i)) % light_samples.size()];
+                    const LightSample& sample = light_samples[(s + light_index_offset) % light_samples.size()];
                     if (sample.PDF < 0.000000001f)
                         continue;
 
@@ -271,7 +281,7 @@ int initialize(Engine& engine) {
                 }
 
                 for (int s = 0; s < bsdf_sample_count; ++s) {
-                    GGX::Sample sample = ggx_samples[(s + RNG::hash(i + 1013904223)) % ggx_samples.size()];
+                    GGX::Sample sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
                     if (sample.PDF < 0.000000001f)
                         continue;
 
@@ -287,7 +297,7 @@ int initialize(Engine& engine) {
             }
             case SampleMethod::Light:
                 for (int s = 0; s < g_options.sample_count; ++s) {
-                    const LightSample& sample = light_samples[(s + RNG::hash(i)) % light_samples.size()];
+                    const LightSample& sample = light_samples[(s + light_index_offset) % light_samples.size()];
                     if (sample.PDF < 0.000000001f)
                         continue;
 
@@ -302,14 +312,14 @@ int initialize(Engine& engine) {
                 break;
             case SampleMethod::BSDF:
                 for (int s = 0; s < g_options.sample_count; ++s) {
-                    const GGX::Sample& sample = ggx_samples[(s + RNG::hash(i + 1013904223)) % ggx_samples.size()];
+                    const GGX::Sample& sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
                     Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
                     radiance += sample2D(texture_ID, sample_uv).rgb();
                 }
                 break;
             case SampleMethod::Recursive:
                 for (int s = 0; s < g_options.sample_count; ++s) {
-                    const GGX::Sample& sample = ggx_samples[(s + RNG::hash(i + 1013904223)) % ggx_samples.size()];
+                    const GGX::Sample& sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
                     Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
                     radiance += sample2D(previous_roughness_tex_ID, sample_uv).rgb();
                 }
@@ -335,7 +345,7 @@ int initialize(Engine& engine) {
 
     // Hook up update callback.
     if (!g_options.headless)
-        engine.add_non_mutating_callback(update, nullptr);
+        engine.add_mutating_callback(update, nullptr);
 
     return 0;
 }
