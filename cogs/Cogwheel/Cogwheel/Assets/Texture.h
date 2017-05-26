@@ -1,10 +1,10 @@
 // Cogwheel texture.
-// ---------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------
 // Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
-// ---------------------------------------------------------------------------
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+//---------------------------------------------------------------------------------------------
 
 #ifndef _COGWHEEL_ASSETS_TEXTURE_H_
 #define _COGWHEEL_ASSETS_TEXTURE_H_
@@ -34,11 +34,11 @@ enum class MinificationFilter {
     Trilinear
 };
 
-//----------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 // Cogwheel texture container.
 // Future work:
 // * Cubemap support.
-//----------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 class Textures final {
 public:
 
@@ -75,9 +75,9 @@ public:
     static inline WrapMode get_wrapmode_V(Textures::UID texture_ID) { return m_samplers[texture_ID].wrapmode_V; }
     static inline WrapMode get_wrapmode_W(Textures::UID texture_ID) { return m_samplers[texture_ID].wrapmode_W; }
 
-    //-------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     // Changes since last game loop tick.
-    //-------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     enum class Change : unsigned char {
         None      = 0u,
         Created   = 1u << 0u,
@@ -112,11 +112,14 @@ private:
     static Core::ChangeSet<Changes, UID> m_changes;
 };
 
+//-------------------------------------------------------------------------------------------------
+// N dimensional Textures::UID wrapper
+//-------------------------------------------------------------------------------------------------
 class TextureND {
 public:
-    // -----------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     // Constructors and destructors.
-    // -----------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     TextureND() : m_ID(Textures::UID::invalid_UID()) {}
     TextureND(Textures::UID id) : m_ID(id) {}
 
@@ -126,9 +129,9 @@ public:
     inline bool operator==(TextureND rhs) const { return m_ID == rhs.m_ID; }
     inline bool operator!=(TextureND rhs) const { return m_ID != rhs.m_ID; }
 
-    // -----------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     // Getters and setters.
-    // -----------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     inline Image get_image() { return Image(Textures::get_image_ID(m_ID)); }
     inline Textures::Type get_type() { return Textures::get_type(m_ID); }
     inline MagnificationFilter get_magnification_filter() { return Textures::get_magnification_filter(m_ID); }
@@ -137,15 +140,18 @@ public:
     inline WrapMode get_wrapmode_V() { return Textures::get_wrapmode_V(m_ID); }
     inline WrapMode get_wrapmode_W() { return Textures::get_wrapmode_W(m_ID); }
 
-    //-------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     // Changes since last game loop tick.
-    //-------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     inline unsigned char get_changes() { return Textures::get_changes(m_ID); }
 
 private:
     Textures::UID m_ID;
 };
 
+//-------------------------------------------------------------------------------------------------
+// Texture sampling
+//-------------------------------------------------------------------------------------------------
 Math::RGBA sample2D(Textures::UID texture_ID, Math::Vector2f texcoord, int mipmap_level = 0);
 
 } // NS Assets
