@@ -159,7 +159,7 @@ Images::PixelData Images::get_pixels(Images::UID image_ID, int mipmap_level) {
     return pixel_data;
 }
 
-static RGBA get_gammaed_pixel(Images::UID image_ID, unsigned int index) {
+static RGBA get_nonlinear_pixel(Images::UID image_ID, unsigned int index) {
     Images::PixelData pixels = Images::get_pixels(image_ID);
     switch (Images::get_pixel_format(image_ID)) {
     case PixelFormat::I8: {
@@ -194,8 +194,8 @@ RGBA Images::get_pixel(Images::UID image_ID, unsigned int index, unsigned int mi
 
     while (mipmap_level)
         index += Images::get_width(image_ID, --mipmap_level);
-    RGBA gammaed_color = get_gammaed_pixel(image_ID, index);
-    return gammacorrect(gammaed_color, Images::get_gamma(image_ID));
+    RGBA nonlinear_pixel = get_nonlinear_pixel(image_ID, index);
+    return gammacorrect(nonlinear_pixel, Images::get_gamma(image_ID));
 }
 
 RGBA Images::get_pixel(Images::UID image_ID, Vector2ui index, unsigned int mipmap_level) {
@@ -208,8 +208,8 @@ RGBA Images::get_pixel(Images::UID image_ID, Vector2ui index, unsigned int mipma
         --mipmap_level;
         pixel_index += image.get_width(mipmap_level) * image.get_height(mipmap_level);
     }
-    RGBA gammaed_color = get_gammaed_pixel(image_ID, pixel_index);
-    return gammacorrect(gammaed_color, Images::get_gamma(image_ID));
+    RGBA nonlinear_pixel = get_nonlinear_pixel(image_ID, pixel_index);
+    return gammacorrect(nonlinear_pixel, Images::get_gamma(image_ID));
 }
 
 RGBA Images::get_pixel(Images::UID image_ID, Vector3ui index, unsigned int mipmap_level) {
@@ -223,8 +223,8 @@ RGBA Images::get_pixel(Images::UID image_ID, Vector3ui index, unsigned int mipma
         --mipmap_level;
         pixel_index += image.get_width(mipmap_level) * image.get_height(mipmap_level) * image.get_depth(mipmap_level);
     }
-    RGBA gammaed_color = get_gammaed_pixel(image_ID, pixel_index);
-    return gammacorrect(gammaed_color, Images::get_gamma(image_ID));
+    RGBA nonlinear_pixel = get_nonlinear_pixel(image_ID, pixel_index);
+    return gammacorrect(nonlinear_pixel, Images::get_gamma(image_ID));
 }
 
 static void set_linear_pixel(Images::UID image_ID, RGBA color, unsigned int index) {
