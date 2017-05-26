@@ -111,7 +111,7 @@ public:
     inline MeshModels::Changes get_changes() { return MeshModels::get_changes(m_ID); }
 
 private:
-    const MeshModels::UID m_ID;
+    MeshModels::UID m_ID;
 };
 
 } // NS Assets
