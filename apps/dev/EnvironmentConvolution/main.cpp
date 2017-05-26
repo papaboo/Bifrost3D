@@ -321,8 +321,11 @@ int initialize(Engine& engine) {
                 for (int s = 0; s < g_options.sample_count; ++s) {
                     const GGX::Sample& sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
                     Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
-                    radiance += sample2D(previous_roughness_tex_ID, sample_uv).rgb();
+                    RGB r = sample2D(previous_roughness_tex_ID, sample_uv).rgb();
+                    radiance += gammacorrect(r, 1.0f / 2.2f); // HACK Accumulate in gamma space to reduce fireflies.
                 }
+                // Convert back to linear color space.
+                radiance = gammacorrect(radiance / float(g_options.sample_count), 2.2f) * float(g_options.sample_count);
                 break;
             }
 
