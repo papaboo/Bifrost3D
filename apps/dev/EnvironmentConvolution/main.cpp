@@ -44,7 +44,9 @@ enum class SampleMethod {
 void output_convoluted_image(std::string original_image_file, Image image, float roughness) {
     size_t dot_pos = original_image_file.find_last_of('.');
     std::string file_sans_extension = std::string(original_image_file, 0, dot_pos);
-    std::string extension = std::string(original_image_file, dot_pos);
+    std::string extension = std::string(original_image_file, dot_pos); 
+    if (extension.compare(".jpg") == 0)
+        extension = ".bmp";
     std::ostringstream output_file;
     output_file << file_sans_extension << "_roughness_" << roughness << extension;
     if (extension.compare(".exr") == 0)
@@ -386,6 +388,7 @@ int main(int argc, char** argv) {
     if (!(file_extension.compare(".bmp") == 0 ||
         file_extension.compare(".exr") == 0 ||
         file_extension.compare(".hdr") == 0 ||
+        file_extension.compare(".jpg") == 0 || // Unofficial support. Can't save as jpg.
         file_extension.compare(".png") == 0 ||
         file_extension.compare(".tga") == 0)) {
         printf("Unsupported file format: %s\nSupported formats are: bmp, exr, hdr, png and tga.\n", file_extension.c_str());
