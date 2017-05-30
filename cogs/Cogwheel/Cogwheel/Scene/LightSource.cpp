@@ -71,6 +71,9 @@ void LightSources::reserve(unsigned int new_capacity) {
 LightSources::UID LightSources::create_sphere_light(SceneNodes::UID node_ID, Math::RGB power, float radius) {
     assert(m_lights != nullptr);
 
+    if (!SceneNodes::has(node_ID))
+        return LightSources::UID::invalid_UID();
+
     unsigned int old_capacity = m_UID_generator.capacity();
     UID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())
@@ -88,6 +91,9 @@ LightSources::UID LightSources::create_sphere_light(SceneNodes::UID node_ID, Mat
 
 LightSources::UID LightSources::create_directional_light(SceneNodes::UID node_ID, Math::RGB radiance) {
     assert(m_lights != nullptr);
+
+    if (!SceneNodes::has(node_ID))
+        return LightSources::UID::invalid_UID();
 
     unsigned int old_capacity = m_UID_generator.capacity();
     UID id = m_UID_generator.generate();

@@ -20,8 +20,10 @@ protected:
     // Per-test set-up and tear-down logic.
     virtual void SetUp() {
         Textures::allocate(8u);
+        Images::allocate(1u);
     }
     virtual void TearDown() {
+        Images::deallocate();
         Textures::deallocate();
     }
 };
@@ -48,7 +50,6 @@ TEST_F(Assets_Textures, sentinel_mesh) {
 }
 
 TEST_F(Assets_Textures, create) {
-    Images::allocate(1u);
     Images::UID image_ID = Images::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(3, 3));
     Textures::UID texture_ID = Textures::create2D(image_ID);
 
@@ -60,12 +61,12 @@ TEST_F(Assets_Textures, create) {
     EXPECT_EQ(changed_textures.end() - changed_textures.begin(), 1);
     EXPECT_EQ(*changed_textures.begin(), texture_ID);
     EXPECT_EQ(Textures::get_changes(texture_ID), Textures::Change::Created);
-
-    Images::deallocate();
 }
 
 TEST_F(Assets_Textures, destroy) {
-    Textures::UID texture_ID = Textures::create2D(Images::UID::invalid_UID());
+    Images::UID image_ID = Images::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(1, 1));
+
+    Textures::UID texture_ID = Textures::create2D(image_ID);
     EXPECT_TRUE(Textures::has(texture_ID));
 
     Textures::reset_change_notifications();
@@ -81,8 +82,10 @@ TEST_F(Assets_Textures, destroy) {
 }
 
 TEST_F(Assets_Textures, create_and_destroy_notifications) {
-    Textures::UID texture_ID0 = Textures::create2D(Images::UID::invalid_UID());
-    Textures::UID texture_ID1 = Textures::create2D(Images::UID::invalid_UID());
+    Images::UID image_ID = Images::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(1, 1));
+
+    Textures::UID texture_ID0 = Textures::create2D(image_ID);
+    Textures::UID texture_ID1 = Textures::create2D(image_ID);
     EXPECT_TRUE(Textures::has(texture_ID0));
     EXPECT_TRUE(Textures::has(texture_ID1));
 
@@ -143,8 +146,6 @@ TEST_F(Assets_Textures, create_and_destroy_notifications) {
 
 TEST_F(Assets_Textures, sample2D) {
     using namespace Cogwheel::Math;
-
-    Images::allocate(1u);
 
     unsigned int size = 4;
     Image image = Images::create2D("Test", PixelFormat::RGBA_Float, 1.0f, Vector2ui(size));
@@ -221,8 +222,6 @@ TEST_F(Assets_Textures, sample2D) {
             EXPECT_RGBA_EQ(RGBA(0.1875f, 0.75f, 0, 1), color);
         }
     }
-
-    Images::deallocate();
 }
 
 } // NS Assets

@@ -41,7 +41,7 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(Cameras::UID camera_ID) { return m_UID_generator.has(camera_ID); }
 
-    static Cameras::UID create(const std::string& name, SceneRoots::UID scene, 
+    static Cameras::UID create(const std::string& name, SceneRoots::UID scene_ID,
                                Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix,
                                Core::Renderers::UID renderer_ID = Core::Renderers::UID::invalid_UID());
 

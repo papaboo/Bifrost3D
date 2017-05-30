@@ -74,6 +74,9 @@ void Textures::reserve(unsigned int new_capacity) {
 Textures::UID Textures::create2D(Images::UID image_ID, MagnificationFilter magnification_filter, MinificationFilter minification_filter, WrapMode wrapmode_U, WrapMode wrapmode_V) {
     assert(m_samplers != nullptr);
 
+    if (!Images::has(image_ID))
+        return Textures::UID::invalid_UID();
+
     unsigned int old_capacity = m_UID_generator.capacity();
     UID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())

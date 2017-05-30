@@ -21,10 +21,12 @@ class Scene_Camera : public ::testing::Test {
 protected:
     // Per-test set-up and tear-down logic.
     virtual void SetUp() {
-        SceneNodes::allocate(8u);
+        SceneRoots::allocate(1u);
+        Cameras::allocate(1u);
     }
     virtual void TearDown() {
-        SceneNodes::deallocate();
+        Cameras::deallocate();
+        SceneRoots::deallocate();
     }
 
     static bool compare_matrix4x4f(Math::Matrix4x4f lhs, Math::Matrix4x4f rhs, unsigned short max_ulps) {
@@ -37,6 +39,8 @@ protected:
 };
 
 TEST_F(Scene_Camera, resizing) {
+    Cameras::deallocate();
+
     Cameras::allocate(8u);
     EXPECT_GE(Cameras::capacity(), 8u);
 
@@ -70,48 +74,41 @@ TEST_F(Scene_Camera, perspective_matrices) {
 }
 
 TEST_F(Scene_Camera, sentinel_camera) {
-    Cameras::allocate(2u);
-    
+
     Cameras::UID sentinel_ID = Cameras::UID::invalid_UID();
 
     EXPECT_FALSE(Cameras::has(sentinel_ID));
 
     EXPECT_EQ(Cameras::get_scene_ID(sentinel_ID), SceneRoots::UID::invalid_UID());
     EXPECT_EQ(Cameras::get_viewport(sentinel_ID), Math::Rectf(0.0f, 0.0f, 0.0f, 0.0f));
-
-    Cameras::deallocate();
 }
 
 TEST_F(Scene_Camera, create) {
-    Cameras::allocate(2u);
 
     Math::Matrix4x4f perspective_matrix, inverse_perspective_matrix;
     CameraUtils::compute_perspective_projection(1, 1000, Math::PI<float>() / 4.0f, 8.0f / 6.0f,
                                                 perspective_matrix, inverse_perspective_matrix);
 
-    Cameras::allocate(2u);
-    Cameras::UID cam_ID = Cameras::create("Test cam", SceneRoots::UID::invalid_UID(),
+    SceneRoots::UID scene_ID = SceneRoots::create("Root", SceneNodes::UID::invalid_UID(), Math::RGB::white());
+    Cameras::UID cam_ID = Cameras::create("Test cam", scene_ID,
                                           perspective_matrix, inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
-    
+
     EXPECT_EQ(Cameras::get_name(cam_ID), "Test cam");
     EXPECT_EQ(Cameras::get_render_index(cam_ID), 0u);
     EXPECT_EQ(Cameras::get_projection_matrix(cam_ID), perspective_matrix);
     EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_ID), inverse_perspective_matrix);
     EXPECT_EQ(Cameras::get_viewport(cam_ID), Math::Rectf(0.0f, 0.0f, 1.0f, 1.0f));
-
-    Cameras::deallocate();
 }
 
 TEST_F(Scene_Camera, set_new_matrices) {
-    Cameras::allocate(2u);
-
     // Create initial projection matrices.
     Math::Matrix4x4f initial_perspective_matrix, initial_inverse_perspective_matrix;
     CameraUtils::compute_perspective_projection(1, 1000, Math::PI<float>() / 4.0f, 8.0f / 6.0f,
         initial_perspective_matrix, initial_inverse_perspective_matrix);
 
-    Cameras::UID cam_ID = Cameras::create("Test cam", SceneRoots::UID::invalid_UID(),
+    SceneRoots::UID scene_ID = SceneRoots::create("Root", SceneNodes::UID::invalid_UID(), Math::RGB::white());
+    Cameras::UID cam_ID = Cameras::create("Test cam", scene_ID,
                                           initial_perspective_matrix, initial_inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
 
@@ -126,21 +123,18 @@ TEST_F(Scene_Camera, set_new_matrices) {
     Cameras::set_projection_matrices(cam_ID, new_perspective_matrix, new_inverse_perspective_matrix);
     EXPECT_EQ(Cameras::get_projection_matrix(cam_ID), new_perspective_matrix);
     EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_ID), new_inverse_perspective_matrix);
-
-    Cameras::deallocate();
 }
 
 TEST_F(Scene_Camera, ray_projection) {
     using namespace Cogwheel::Math;
-
-    Cameras::allocate(2u);
 
     // Create initial projection matrices.
     Matrix4x4f initial_perspective_matrix, initial_inverse_perspective_matrix;
     CameraUtils::compute_perspective_projection(1, 1000, PI<float>() / 4.0f, 8.0f / 6.0f,
         initial_perspective_matrix, initial_inverse_perspective_matrix);
 
-    Cameras::UID cam_ID = Cameras::create("Test cam", SceneRoots::UID::invalid_UID(),
+    SceneRoots::UID scene_ID = SceneRoots::create("Root", SceneNodes::UID::invalid_UID(), RGB::white());
+    Cameras::UID cam_ID = Cameras::create("Test cam", scene_ID,
                                           initial_perspective_matrix, initial_inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
 
@@ -210,8 +204,6 @@ TEST_F(Scene_Camera, ray_projection) {
             EXPECT_GT(cos_angle_between_rays, maximally_allowed_cos_angle);
         }
     }
-
-    Cameras::deallocate();
 }
 
 } // NS Scene

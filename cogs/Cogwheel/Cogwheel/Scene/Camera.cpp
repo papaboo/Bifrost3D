@@ -112,7 +112,7 @@ void Cameras::reserve_camera_data(unsigned int new_capacity, unsigned int old_ca
     m_renderer_IDs = resize_and_copy_array(m_renderer_IDs, new_capacity, copyable_elements);
 }
 
-Cameras::UID Cameras::create(const std::string& name, SceneRoots::UID scene, 
+Cameras::UID Cameras::create(const std::string& name, SceneRoots::UID scene_ID, 
                              Matrix4x4f projection_matrix, Matrix4x4f inverse_projection_matrix, 
                              Core::Renderers::UID renderer_ID) {
     assert(m_names != nullptr);
@@ -123,6 +123,9 @@ Cameras::UID Cameras::create(const std::string& name, SceneRoots::UID scene,
     assert(m_inverse_projection_matrices != nullptr);
     assert(m_viewports != nullptr);
 
+    if (!SceneRoots::has(scene_ID))
+        return Cameras::UID::invalid_UID();
+
     unsigned int old_capacity = m_UID_generator.capacity();
     UID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())
@@ -130,7 +133,7 @@ Cameras::UID Cameras::create(const std::string& name, SceneRoots::UID scene,
         reserve_camera_data(m_UID_generator.capacity(), old_capacity);
 
     m_names[id] = name;
-    m_scene_IDs[id] = scene;
+    m_scene_IDs[id] = scene_ID;
     m_render_indices[id] = 0u;
     m_transforms[id] = Math::Transform::identity();
     m_projection_matrices[id] = projection_matrix;
