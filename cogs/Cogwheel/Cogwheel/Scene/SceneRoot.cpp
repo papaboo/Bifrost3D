@@ -28,7 +28,6 @@ void SceneRoots::allocate(unsigned int capacity) {
     m_changes = Core::ChangeSet<Changes, UID>(capacity);
 
     // Allocate dummy element at 0.
-    m_scenes[0].name = "Dummy Scene";
     m_scenes[0].root_node = SceneNodes::UID::invalid_UID();
     m_scenes[0].environment_tint = Math::RGB::black();
     m_scenes[0].environment_map = Assets::Textures::UID::invalid_UID();
@@ -67,7 +66,7 @@ void SceneRoots::reserve_scene_data(unsigned int new_capacity, unsigned int old_
     m_changes.resize(new_capacity);
 }
 
-SceneRoots::UID SceneRoots::create(const std::string& name, SceneNodes::UID root, Assets::Textures::UID environment_map, Math::RGB environment_tint) {
+SceneRoots::UID SceneRoots::create(const std::string& name, Assets::Textures::UID environment_map, Math::RGB environment_tint) {
     assert(m_scenes != nullptr);
 
     unsigned int old_capacity = m_UID_generator.capacity();
@@ -76,8 +75,7 @@ SceneRoots::UID SceneRoots::create(const std::string& name, SceneNodes::UID root
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_scene_data(m_UID_generator.capacity(), old_capacity);
 
-    m_scenes[id].name = name;
-    m_scenes[id].root_node = root;
+    m_scenes[id].root_node = SceneNodes::create(name);
     m_scenes[id].environment_tint = environment_tint;
     m_scenes[id].environment_map = environment_map;
     m_changes.set_change(id, Change::Created);

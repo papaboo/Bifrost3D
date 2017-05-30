@@ -382,7 +382,6 @@ int initializer(Cogwheel::Core::Engine& engine) {
     engine.add_tick_cleanup_callback(miniheaps_cleanup_callback, nullptr);
 
     // Setup scene.
-    SceneNodes::UID root_node_ID = SceneNodes::create("Root");
     SceneRoots::UID scene_ID = SceneRoots::UID::invalid_UID();
     if (!g_environment.empty()) {
         Image image = StbImageLoader::load(g_environment);
@@ -393,10 +392,11 @@ int initializer(Cogwheel::Core::Engine& engine) {
         }
         image.set_mipmapable(true);
         Textures::UID env_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
-        scene_ID = SceneRoots::create("Model scene", root_node_ID, env_ID);
+        scene_ID = SceneRoots::create("Model scene", env_ID);
     } else
-        scene_ID = SceneRoots::create("Model scene", root_node_ID, g_environment_color);
-    
+        scene_ID = SceneRoots::create("Model scene", g_environment_color);
+    SceneNodes::UID root_node_ID = SceneRoots::get_root_node(scene_ID);
+
     // Create camera
     Cameras::UID cam_ID = Cameras::create("Camera", scene_ID, Matrix4x4f::identity(), Matrix4x4f::identity()); // Matrices will be set up by the CameraHandler.
     CameraHandler* camera_handler = new CameraHandler(cam_ID, engine.get_window().get_aspect_ratio(), 0.1f, 100.0f);

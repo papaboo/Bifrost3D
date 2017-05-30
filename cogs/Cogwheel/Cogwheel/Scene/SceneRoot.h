@@ -47,9 +47,9 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(SceneRoots::UID scene_ID) { return m_UID_generator.has(scene_ID); }
 
-    static SceneRoots::UID create(const std::string& name, SceneNodes::UID root, Assets::Textures::UID environment_map, Math::RGB environment_tint = Math::RGB::white());
-    static SceneRoots::UID create(const std::string& name, SceneNodes::UID root, Math::RGB environment_tint) {
-        return create(name, root, Assets::Textures::UID::invalid_UID(), environment_tint);
+    static SceneRoots::UID create(const std::string& name, Assets::Textures::UID environment_map, Math::RGB environment_tint = Math::RGB::white());
+    static SceneRoots::UID create(const std::string& name, Math::RGB environment_tint) {
+        return create(name, Assets::Textures::UID::invalid_UID(), environment_tint);
     }
     static void destroy(SceneRoots::UID scene_ID);
 
@@ -57,7 +57,7 @@ public:
     static ConstUIDIterator end() { return m_UID_generator.end(); }
     static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
 
-    static inline std::string get_name(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].name; }
+    static inline std::string get_name(SceneRoots::UID scene_ID) { return SceneNodes::get_name(m_scenes[scene_ID].root_node); }
     static inline SceneNodes::UID get_root_node(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].root_node; }
     static inline Math::RGB get_environment_tint(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].environment_tint; }
     static void set_environment_tint(SceneRoots::UID scene_ID, Math::RGB tint);
@@ -90,7 +90,6 @@ private:
     static UIDGenerator m_UID_generator;
 
     struct Scene {
-        std::string name;
         SceneNodes::UID root_node;
         Math::RGB environment_tint;
         Assets::Textures::UID environment_map;

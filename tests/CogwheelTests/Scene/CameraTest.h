@@ -21,12 +21,14 @@ class Scene_Camera : public ::testing::Test {
 protected:
     // Per-test set-up and tear-down logic.
     virtual void SetUp() {
+        SceneNodes::allocate(1u);
         SceneRoots::allocate(1u);
         Cameras::allocate(1u);
     }
     virtual void TearDown() {
         Cameras::deallocate();
         SceneRoots::deallocate();
+        SceneNodes::deallocate();
     }
 
     static bool compare_matrix4x4f(Math::Matrix4x4f lhs, Math::Matrix4x4f rhs, unsigned short max_ulps) {
@@ -89,7 +91,7 @@ TEST_F(Scene_Camera, create) {
     CameraUtils::compute_perspective_projection(1, 1000, Math::PI<float>() / 4.0f, 8.0f / 6.0f,
                                                 perspective_matrix, inverse_perspective_matrix);
 
-    SceneRoots::UID scene_ID = SceneRoots::create("Root", SceneNodes::UID::invalid_UID(), Math::RGB::white());
+    SceneRoots::UID scene_ID = SceneRoots::create("Root", Math::RGB::white());
     Cameras::UID cam_ID = Cameras::create("Test cam", scene_ID,
                                           perspective_matrix, inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
@@ -107,7 +109,7 @@ TEST_F(Scene_Camera, set_new_matrices) {
     CameraUtils::compute_perspective_projection(1, 1000, Math::PI<float>() / 4.0f, 8.0f / 6.0f,
         initial_perspective_matrix, initial_inverse_perspective_matrix);
 
-    SceneRoots::UID scene_ID = SceneRoots::create("Root", SceneNodes::UID::invalid_UID(), Math::RGB::white());
+    SceneRoots::UID scene_ID = SceneRoots::create("Root", Math::RGB::white());
     Cameras::UID cam_ID = Cameras::create("Test cam", scene_ID,
                                           initial_perspective_matrix, initial_inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
@@ -133,7 +135,7 @@ TEST_F(Scene_Camera, ray_projection) {
     CameraUtils::compute_perspective_projection(1, 1000, PI<float>() / 4.0f, 8.0f / 6.0f,
         initial_perspective_matrix, initial_inverse_perspective_matrix);
 
-    SceneRoots::UID scene_ID = SceneRoots::create("Root", SceneNodes::UID::invalid_UID(), RGB::white());
+    SceneRoots::UID scene_ID = SceneRoots::create("Root", RGB::white());
     Cameras::UID cam_ID = Cameras::create("Test cam", scene_ID,
                                           initial_perspective_matrix, initial_inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));

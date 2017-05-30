@@ -45,8 +45,10 @@ GTEST_TEST(Scene_SceneRoot, sentinel_scene) {
 }
 
 GTEST_TEST(Scene_SceneRoot, create) {
-    SceneRoots::allocate(2u);
-    SceneRoots::UID scene_ID = SceneRoots::create("Foo", SceneNodes::UID::invalid_UID(), Math::RGB::blue());
+    SceneNodes::allocate(1u);
+    SceneRoots::allocate(1u);
+    
+    SceneRoots::UID scene_ID = SceneRoots::create("Foo", Math::RGB::blue());
     EXPECT_TRUE(SceneRoots::has(scene_ID));
     
     EXPECT_EQ("Foo", SceneRoots::get_name(scene_ID));
@@ -60,11 +62,13 @@ GTEST_TEST(Scene_SceneRoot, create) {
     EXPECT_EQ(SceneRoots::Change::Created, SceneRoots::get_changes(scene_ID));
 
     SceneRoots::deallocate();
+    SceneNodes::deallocate();
 }
 
 GTEST_TEST(Scene_SceneRoot, destroy) {
-    SceneRoots::allocate(2u);
-    SceneRoot scene = SceneRoots::create("Foo", SceneNodes::UID::invalid_UID(), Math::RGB::blue());
+    SceneNodes::allocate(1u);
+    SceneRoots::allocate(1u);
+    SceneRoot scene = SceneRoots::create("Foo", Math::RGB::blue());
     EXPECT_TRUE(scene.exists());
 
     SceneRoots::reset_change_notifications();
@@ -79,13 +83,15 @@ GTEST_TEST(Scene_SceneRoot, destroy) {
     EXPECT_EQ(SceneRoots::Change::Destroyed, scene.get_changes());
 
     SceneRoots::deallocate();
+    SceneNodes::deallocate();
 }
 
 GTEST_TEST(Scene_SceneRoot, create_and_destroy_notifications) {
-    SceneRoots::allocate(8u);
+    SceneNodes::allocate(2u);
+    SceneRoots::allocate(2u);
 
-    SceneRoots::UID scene_ID0 = SceneRoots::create("Foo", SceneNodes::UID::invalid_UID(), Math::RGB::blue());
-    SceneRoots::UID scene_ID1 = SceneRoots::create("Bar", SceneNodes::UID::invalid_UID(), Math::RGB::blue());
+    SceneRoots::UID scene_ID0 = SceneRoots::create("Foo", Math::RGB::blue());
+    SceneRoots::UID scene_ID1 = SceneRoots::create("Bar", Math::RGB::blue());
     EXPECT_TRUE(SceneRoots::has(scene_ID0));
     EXPECT_TRUE(SceneRoots::has(scene_ID1));
 
@@ -136,12 +142,14 @@ GTEST_TEST(Scene_SceneRoot, create_and_destroy_notifications) {
     }
 
     SceneRoots::deallocate();
+    SceneNodes::deallocate();
 }
 
 GTEST_TEST(Scene_SceneRoot, update_notifications) {
-    SceneRoots::allocate(8u);
+    SceneNodes::allocate(1u);
+    SceneRoots::allocate(1u);
 
-    SceneRoot scene = SceneRoots::create("Foo", SceneNodes::UID::invalid_UID(), Math::RGB::blue());
+    SceneRoot scene = SceneRoots::create("Foo", Math::RGB::blue());
     
     SceneRoots::reset_change_notifications();
 
@@ -174,6 +182,7 @@ GTEST_TEST(Scene_SceneRoot, update_notifications) {
     }
 
     SceneRoots::deallocate();
+    SceneNodes::deallocate();
 }
 
 } // NS Scene
