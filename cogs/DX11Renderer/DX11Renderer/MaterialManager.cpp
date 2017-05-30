@@ -52,7 +52,7 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
 
         D3D11_SUBRESOURCE_DATA resource_data;
         resource_data.pSysMem = rho;
-        resource_data.SysMemPitch = dx_format_size(tex_desc.Format) * tex_desc.Width;
+        resource_data.SysMemPitch = sizeof_dx_format(tex_desc.Format) * tex_desc.Width;
 
         HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &m_GGX_with_fresnel_rho_texture);
         THROW_ON_FAILURE(hr);

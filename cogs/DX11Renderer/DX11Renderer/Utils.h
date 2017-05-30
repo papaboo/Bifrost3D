@@ -59,11 +59,14 @@ inline void CHECK_HRESULT(HRESULT hr, const std::string& file, int line, bool sh
 // Copied from assert.h to have an assert that is enabled in release builds as well.
 #define always_assert(_Expression) (void)( (!!(_Expression)) || (_wassert(_CRT_WIDE(#_Expression), _CRT_WIDE(__FILE__), __LINE__), 0) )
 
-inline int dx_format_size(DXGI_FORMAT format) {
+inline int sizeof_dx_format(DXGI_FORMAT format) {
     switch (format) {
     case DXGI_FORMAT_A8_UNORM:
         return 1;
+    case DXGI_FORMAT_R16_UNORM:
+        return 2;
     case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+    case DXGI_FORMAT_R16G16_UNORM:
         return 4;
     case DXGI_FORMAT_R32G32B32_FLOAT:
         return 12;

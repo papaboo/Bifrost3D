@@ -140,7 +140,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         convolutions[m].Width = env_width >> m;
                         convolutions[m].Height = env_height >> m;
                         convolutions[m].Roughness = m / (mipmap_count - 1.0f);
-                        convolutions[m].sample_count = 8 << (2 * m); // 16 << m;
+                        convolutions[m].sample_count = next_power_of_two(unsigned int (256 * convolutions[m].Roughness));
                         convolutions[m].Pixels = next_pixels;
                         next_pixels += convolutions[m].Width * convolutions[m].Height;
                     }
@@ -167,7 +167,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                     for (unsigned int m = 0; m < tex_desc.MipLevels; ++m) {
                         int width = tex_desc.Width >> m, height = tex_desc.Height >> m;
 
-                        tex_data[m].SysMemPitch = dx_format_size(tex_desc.Format) * width;
+                        tex_data[m].SysMemPitch = sizeof_dx_format(tex_desc.Format) * width;
                         tex_data[m].SysMemSlicePitch = tex_data[m].SysMemPitch * height;
                         tex_data[m].pSysMem = next_pixels;
                         next_pixels += width * height;

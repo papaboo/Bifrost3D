@@ -156,7 +156,7 @@ void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1&
                     }
 
                     if (tex_desc.Format != DXGI_FORMAT_UNKNOWN) {
-                        resource_data.SysMemPitch = dx_format_size(tex_desc.Format) *  image.get_width();
+                        resource_data.SysMemPitch = sizeof_dx_format(tex_desc.Format) *  image.get_width();
 
                         bool generate_mipmaps = image.is_mipmapable();
 
