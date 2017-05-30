@@ -48,6 +48,7 @@ public:
     static inline Scene::SceneNodes::UID get_scene_node_ID(MeshModels::UID model_ID) { return m_models[model_ID].scene_node_ID; }
     static inline Assets::Meshes::UID get_mesh_ID(MeshModels::UID model_ID) { return m_models[model_ID].mesh_ID; }
     static inline Assets::Materials::UID get_material_ID(MeshModels::UID model_ID) { return m_models[model_ID].material_ID; }
+    static void set_material_ID(MeshModels::UID model_ID, Assets::Materials::UID material_ID);
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -56,7 +57,8 @@ public:
         None = 0u,
         Created = 1u << 0u,
         Destroyed = 1u << 1u,
-        All = Created | Destroyed
+        Material = 1u << 4u,
+        All = Created | Destroyed | Material
     }; 
     typedef Core::Bitmask<Change> Changes;
 
@@ -101,11 +103,12 @@ public:
     // -----------------------------------------------------------------------
     // Getters.
     // -----------------------------------------------------------------------
-    inline Scene::SceneNode get_scene_node() { return MeshModels::get_scene_node_ID(m_ID); }
-    inline Assets::Mesh get_mesh() { return MeshModels::get_mesh_ID(m_ID); }
-    inline Assets::Material get_material() { return MeshModels::get_material_ID(m_ID); }
+    inline Scene::SceneNode get_scene_node() const { return MeshModels::get_scene_node_ID(m_ID); }
+    inline Assets::Mesh get_mesh() const { return MeshModels::get_mesh_ID(m_ID); }
+    inline Assets::Material get_material() const { return MeshModels::get_material_ID(m_ID); }
+    inline void set_material_ID(Assets::Materials::UID material_ID) { MeshModels::set_material_ID(m_ID, material_ID); }
 
-    inline MeshModels::Changes get_changes() { return MeshModels::get_changes(m_ID); }
+    inline MeshModels::Changes get_changes() const { return MeshModels::get_changes(m_ID); }
 
 private:
     MeshModels::UID m_ID;

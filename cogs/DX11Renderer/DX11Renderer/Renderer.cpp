@@ -552,7 +552,8 @@ public:
                             m_sorted_models.push_back(dx_model);
                         } else
                             m_sorted_models[model_index] = dx_model;
-                    }
+                    } else if (model.get_changes() & MeshModels::Change::Material)
+                        m_sorted_models[model_index].material_ID = model.get_material().get_ID();
                 }
 
                 // Sort the models in the order [dummy, opaque, cutout, transparent, destroyed].

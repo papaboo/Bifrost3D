@@ -85,5 +85,13 @@ void MeshModels::destroy(MeshModels::UID model_ID) {
         m_changes.set_change(model_ID, Change::Destroyed);
 }
 
+void MeshModels::set_material_ID(MeshModels::UID model_ID, Assets::Materials::UID material_ID) {
+    assert(has(model_ID));
+    assert(Assets::Materials::has(material_ID));
+
+    m_models[model_ID].material_ID = material_ID;
+    m_changes.add_change(model_ID, Change::Material);
+}
+
 } // NS Assets
 } // NS Cogwheel

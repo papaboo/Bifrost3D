@@ -704,7 +704,7 @@ struct Renderer::Implementation {
 
                 if (model.get_changes() == MeshModels::Change::Destroyed) {
                     if (scene_node_index < transforms.size() && transforms[scene_node_index]) {
-                        optix::Transform optixTransform = transforms[scene_node_index];
+                        optix::Transform& optixTransform = transforms[scene_node_index];
                         root_node->removeChild(optixTransform);
                         optixTransform->destroy();
                         transforms[scene_node_index] = NULL;
@@ -722,6 +722,12 @@ struct Renderer::Implementation {
                     transforms[scene_node_index] = transform;
 
                     models_changed = true;
+                } else if (model.get_changes() & MeshModels::Change::Material) {
+                    optix::Transform& optixTransform = transforms[scene_node_index];
+                    optix::GeometryGroup geometry_group = optixTransform->getChild<optix::GeometryGroup>();
+                    optix::GeometryInstance optix_model = geometry_group->getChild(0);
+                    optix_model["material_index"]->setInt(model.get_material().get_ID());
+                    accumulations = 0u;
                 }
             }
 
