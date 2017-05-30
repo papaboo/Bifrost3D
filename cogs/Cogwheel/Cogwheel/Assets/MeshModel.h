@@ -23,9 +23,6 @@ namespace Assets {
 //----------------------------------------------------------------------------
 // A mesh model contains the mesh and material IDs and combines them with 
 // the scene node ID.
-// When a MeshModel ID is destroyed, it is still possible to access it's values 
-// until clear_change_notifications has been called, usually at the 
-// end of the game loop.
 //----------------------------------------------------------------------------
 class MeshModels final {
 public:
