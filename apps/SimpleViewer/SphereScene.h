@@ -42,13 +42,13 @@ void create_sphere_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sc
             Materials::UID* m_mat_IDs = new Materials::UID[5];
         public:
             MaterialSwapper(Scene::SceneRoots::UID scene_ID) {
-                Materials::Data white_mat_data = Materials::Data::create_dielectric(RGB(1.0f), 0.0f, 0.25);
-                m_mat_IDs[0] = Materials::create("White", white_mat_data);
-
                 Materials::Data plastic_mat_data = Materials::Data::create_dielectric(RGB(0.005f, 0.01f, 0.25f), 0.05f, 0.5f);
-                m_mat_IDs[1] = Materials::create("Plastic", plastic_mat_data);
+                m_mat_IDs[0] = Materials::create("Plastic", plastic_mat_data);
 
-                Materials::Data rubber_mat_data = Materials::Data::create_dielectric(RGB(0.005f, 0.005f, 0.005f), 0.75f, 0.5f);
+                Materials::Data white_mat_data = Materials::Data::create_dielectric(RGB(1.0f), 0.0f, 0.25);
+                m_mat_IDs[1] = Materials::create("White", white_mat_data);
+
+                Materials::Data rubber_mat_data = Materials::Data::create_dielectric(RGB(1.0f), 0.95f, 0.5f);
                 m_mat_IDs[2] = Materials::create("Rubber", rubber_mat_data);
 
                 Materials::Data gold_mat_data = Materials::Data::create_metal(RGB(1.0f, 0.766f, 0.336f), 0.02f, 0.0f);
@@ -64,7 +64,7 @@ void create_sphere_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sc
                     Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(1024, 512);
 
                     SceneNode node = SceneNodes::create("Sphere");
-                    m_model = MeshModels::create(node.get_ID(), sphere_mesh_ID, m_mat_IDs[1]);
+                    m_model = MeshModels::create(node.get_ID(), sphere_mesh_ID, m_mat_IDs[0]);
 
                     SceneNode root_node = SceneRoots::get_root_node(scene_ID);
                     node.set_parent(root_node);
