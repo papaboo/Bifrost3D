@@ -72,11 +72,7 @@ void create_sphere_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sc
             }
 
             void update_material(int id) {
-                SceneNode node = m_model.get_scene_node();
-                Mesh mesh = m_model.get_mesh();
-
-                MeshModels::destroy(m_model.get_ID());
-                m_model = MeshModels::create(node.get_ID(), mesh.get_ID(), m_mat_IDs[id]);
+                m_model.set_material_ID(m_mat_IDs[id]);
             }
 
             void update(Core::Engine& engine) {
