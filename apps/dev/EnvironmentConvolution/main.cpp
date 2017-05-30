@@ -238,7 +238,7 @@ int initialize(Engine& engine) {
             previous_roughness_tex_ID = Textures::create2D(g_convoluted_images[r-1].get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
             float prev_roughness = (r - 1.0f) / (g_convoluted_images.size() - 1.0f);
             float prev_alpha = prev_roughness * prev_roughness;
-            alpha = sqrt(alpha * alpha - prev_alpha * prev_alpha);
+            alpha *= 1.0f - prev_alpha;
         }
 
         std::vector<GGX::Sample> ggx_samples = std::vector<GGX::Sample>();
