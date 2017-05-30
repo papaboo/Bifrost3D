@@ -32,7 +32,7 @@ inline Dx11Material make_dx11material(Material mat) {
 
 MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& context) {
 
-    { // Setup GGX with fresnel texture.
+    { // Setup GGX with fresnel rho texture.
         using namespace Cogwheel::Assets::Shading;
 
         D3D11_TEXTURE2D_DESC tex_desc = {};
@@ -40,27 +40,35 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         tex_desc.Height = GGX_with_fresnel_roughness_sample_count;
         tex_desc.MipLevels = 1;
         tex_desc.ArraySize = 1;
-        tex_desc.Format = DXGI_FORMAT_R32_FLOAT;
+        tex_desc.Format = DXGI_FORMAT_R16_UNORM;
         tex_desc.SampleDesc.Count = 1;
         tex_desc.SampleDesc.Quality = 0;
         tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
         tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
-        D3D11_SUBRESOURCE_DATA resource_data;
-        resource_data.pSysMem = GGX_with_fresnel_rho;
-        resource_data.SysMemPitch = sizeof(float) * tex_desc.Width;
+        unsigned short* rho = new unsigned short[tex_desc.Width * tex_desc.Height];
+        for (unsigned int i = 0; i < tex_desc.Width * tex_desc.Height; ++i)
+            rho[i] = unsigned short(GGX_with_fresnel_rho[i] * 65536);
 
-        HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &m_GGX_with_fresnel_texture);
+        D3D11_SUBRESOURCE_DATA resource_data;
+        resource_data.pSysMem = rho;
+        resource_data.SysMemPitch = dx_format_size(tex_desc.Format) * tex_desc.Width;
+
+        HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &m_GGX_with_fresnel_rho_texture);
         THROW_ON_FAILURE(hr);
+
+        delete[] rho;
 
         D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
         srv_desc.Format = tex_desc.Format;
         srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         srv_desc.Texture2D.MipLevels = tex_desc.MipLevels;
         srv_desc.Texture2D.MostDetailedMip = 0;
-        hr = device.CreateShaderResourceView(m_GGX_with_fresnel_texture, &srv_desc, &m_GGX_with_fresnel_srv);
+        hr = device.CreateShaderResourceView(m_GGX_with_fresnel_rho_texture, &srv_desc, &m_GGX_with_fresnel_rho_srv);
         THROW_ON_FAILURE(hr);
+    }
 
+    { // Rho sampler
         D3D11_SAMPLER_DESC desc = {};
         desc.Filter = D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
         desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -70,7 +78,7 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         desc.MinLOD = 0;
         desc.MaxLOD = D3D11_FLOAT32_MAX;
 
-        hr = device.CreateSamplerState(&desc, &m_GGX_with_fresnel_sampler);
+        HRESULT hr = device.CreateSamplerState(&desc, &m_rho_sampler);
         THROW_ON_FAILURE(hr);
     }
 
@@ -84,7 +92,14 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
 
     m_constant_array.set(&context, invalid_mat, 0, D3D11_COPY_DISCARD);
 }
-    
+
+MaterialManager::~MaterialManager() {
+    safe_release(&m_GGX_with_fresnel_rho_texture);
+    safe_release(&m_GGX_with_fresnel_rho_srv);
+
+    safe_release(&m_rho_sampler);
+}
+
 void MaterialManager::handle_updates(ID3D11DeviceContext1& context) {
     for (Material mat : Materials::get_changed_materials()) {
         // Just ignore deleted materials. They shouldn't be referenced anyway.

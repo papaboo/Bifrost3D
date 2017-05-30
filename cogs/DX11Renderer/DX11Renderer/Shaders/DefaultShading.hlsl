@@ -23,8 +23,8 @@ SamplerState color_sampler : register(s1);
 Texture2D coverage_tex : register(t2);
 SamplerState coverage_sampler : register(s2);
 
-Texture2D ggx_with_fresnel_rho_tex : register(t7);
-SamplerState ggx_with_fresnel_rho_sampler : register(s7);
+Texture2D ggx_with_fresnel_rho_tex : register(t15);
+SamplerState ggx_with_fresnel_rho_sampler : register(s15);
 
 //-----------------------------------------------------------------------------
 // Default shading.

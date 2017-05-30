@@ -25,38 +25,25 @@ namespace DX11Renderer {
 //   to the constant buffer in a compute shader. Is that possible?
 //----------------------------------------------------------------------------
 class MaterialManager {
-private:
-
-    ID3D11Texture2D* m_GGX_with_fresnel_texture;
-    ID3D11ShaderResourceView* m_GGX_with_fresnel_srv;
-    ID3D11SamplerState* m_GGX_with_fresnel_sampler;
-
-    std::vector<Dx11Material> m_materials;
-
-    ConstantBufferArray<Dx11Material> m_constant_array;
-    
 public:
 
     MaterialManager() : m_constant_array() {}
     MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& context);
-    MaterialManager(MaterialManager&& other) {
-        m_GGX_with_fresnel_texture = std::move(other.m_GGX_with_fresnel_texture); other.m_GGX_with_fresnel_texture = nullptr;
-        m_GGX_with_fresnel_srv = std::move(other.m_GGX_with_fresnel_srv); other.m_GGX_with_fresnel_srv = nullptr;
-        m_GGX_with_fresnel_sampler = std::move(other.m_GGX_with_fresnel_sampler); other.m_GGX_with_fresnel_sampler = nullptr;
-        m_materials = std::move(other.m_materials);
-        m_constant_array = std::move(other.m_constant_array);
-    }
+
     MaterialManager& operator=(MaterialManager&& rhs) {
-        m_GGX_with_fresnel_texture = std::move(rhs.m_GGX_with_fresnel_texture); rhs.m_GGX_with_fresnel_texture = nullptr;
-        m_GGX_with_fresnel_srv = std::move(rhs.m_GGX_with_fresnel_srv); rhs.m_GGX_with_fresnel_srv = nullptr;
-        m_GGX_with_fresnel_sampler = std::move(rhs.m_GGX_with_fresnel_sampler); rhs.m_GGX_with_fresnel_sampler = nullptr;
+        m_GGX_with_fresnel_rho_texture = std::move(rhs.m_GGX_with_fresnel_rho_texture); rhs.m_GGX_with_fresnel_rho_texture = nullptr;
+        m_GGX_with_fresnel_rho_srv = std::move(rhs.m_GGX_with_fresnel_rho_srv); rhs.m_GGX_with_fresnel_rho_srv = nullptr;
+
+        m_rho_sampler = std::move(rhs.m_rho_sampler); rhs.m_rho_sampler = nullptr;
         m_constant_array = std::move(rhs.m_constant_array);
         m_materials = std::move(rhs.m_materials);
         return *this;
     }
 
-    ID3D11ShaderResourceView** get_GGX_with_fresnel_srv_addr() { return &m_GGX_with_fresnel_srv; }
-    ID3D11SamplerState** get_GGX_with_fresnel_sampler_addr() { return &m_GGX_with_fresnel_sampler; }
+    ~MaterialManager();
+
+    ID3D11ShaderResourceView** get_GGX_with_fresnel_rho_srv_addr() { return &m_GGX_with_fresnel_rho_srv; }
+    ID3D11SamplerState** get_rho_sampler_addr() { return &m_rho_sampler; }
 
     inline Dx11Material& get_material(unsigned int material_index) { return m_materials[material_index]; }
     inline ID3D11Buffer** get_constant_buffer_addr() { return &(m_constant_array.m_constant_buffer); }
@@ -66,7 +53,17 @@ public:
 
 private:
     MaterialManager(MaterialManager& other) = delete;
+    MaterialManager(MaterialManager&& other) = delete;
     MaterialManager& operator=(MaterialManager& rhs) = delete;
+
+    ID3D11Texture2D* m_GGX_with_fresnel_rho_texture;
+    ID3D11ShaderResourceView* m_GGX_with_fresnel_rho_srv;
+
+    ID3D11SamplerState* m_rho_sampler;
+
+    std::vector<Dx11Material> m_materials;
+
+    ConstantBufferArray<Dx11Material> m_constant_array;
 };
 
 } // NS DX11Renderer
