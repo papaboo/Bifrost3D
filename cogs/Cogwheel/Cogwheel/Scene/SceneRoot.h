@@ -9,6 +9,7 @@
 #ifndef _COGWHEEL_SCENE_SCENE_ROOT_H_
 #define _COGWHEEL_SCENE_SCENE_ROOT_H_
 
+#include <Cogwheel/Assets/InfiniteAreaLight.h>
 #include <Cogwheel/Assets/Texture.h>
 #include <Cogwheel/Core/Bitmask.h>
 #include <Cogwheel/Core/ChangeSet.h>
@@ -25,7 +26,6 @@ namespace Scene {
 // such as the environment map and tint.
 // Future work
 // * Environment projection modes: infinite sphere, camera X m above the earth, cube, sphere, ...
-// * Change flags and iterator. Wait until we have multiscene support.
 // * Do we need to store SceneRoots::UIDs of the owning scene in the scene nodes?
 //   Wait until we have multi scene support to add it.
 // * IBL generation using a GGX kernel and 
@@ -61,7 +61,11 @@ public:
     static inline SceneNodes::UID get_root_node(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].root_node; }
     static inline Math::RGB get_environment_tint(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].environment_tint; }
     static void set_environment_tint(SceneRoots::UID scene_ID, Math::RGB tint);
-    static inline Assets::Textures::UID get_environment_map(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].environment_map; }
+    static inline Assets::InfiniteAreaLight* get_environment_light(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].environment_light; }
+    static inline Assets::Textures::UID get_environment_map(SceneRoots::UID scene_ID) { 
+        auto environment_light = m_scenes[scene_ID].environment_light;
+        return environment_light == nullptr ? Assets::Textures::UID::invalid_UID() : environment_light->get_texture_ID();
+    }
     static void set_environment_map(SceneRoots::UID scene_ID, Assets::Textures::UID environment_map);
 
     //---------------------------------------------------------------------------------------------
@@ -92,7 +96,7 @@ private:
     struct Scene {
         SceneNodes::UID root_node;
         Math::RGB environment_tint;
-        Assets::Textures::UID environment_map;
+        Assets::InfiniteAreaLight* environment_light;
     };
 
     static Scene* m_scenes;
@@ -126,6 +130,7 @@ public:
     inline void set_environment_tint(Math::RGB tint) { SceneRoots::set_environment_tint(m_ID, tint); }
     inline Assets::Textures::UID get_environment_map() const { return SceneRoots::get_environment_map(m_ID); }
     inline void set_environment_map(Assets::Textures::UID environment_map) { SceneRoots::set_environment_map(m_ID, environment_map); }
+    inline Assets::InfiniteAreaLight* get_environment_light() { return SceneRoots::get_environment_light(m_ID); }
 
     //---------------------------------------------------------------------------------------------
     // Changes since last game loop tick.
