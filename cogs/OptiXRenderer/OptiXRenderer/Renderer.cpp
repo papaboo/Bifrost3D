@@ -775,7 +775,7 @@ struct Renderer::Implementation {
                         // Only textures with four channels are supported.
                         if (channel_count(image.get_pixel_format()) == 4) { // TODO Support other formats as well by converting the buffers to float4 and upload.
 #if PRESAMPLE_ENVIRONMENT_MAP
-                            environment = PresampledEnvironmentMap(context, environment_map_ID, textures.data());
+                            environment = PresampledEnvironmentMap(context, *scene.get_environment_light(), textures.data());
                             PresampledEnvironmentLight light = environment.get_light().presampled_environment;
 #else
                             environment = EnvironmentMap(context, environment_map_ID, textures.data());

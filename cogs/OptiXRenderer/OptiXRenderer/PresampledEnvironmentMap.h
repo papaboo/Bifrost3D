@@ -15,6 +15,15 @@
 
 #include <optixu/optixpp_namespace.h>
 
+//-------------------------------------------------------------------------------------------------
+// Forward declarations.
+//-------------------------------------------------------------------------------------------------
+namespace Cogwheel {
+namespace Assets {
+    class InfiniteAreaLight;
+}
+}
+
 namespace OptiXRenderer {
 
 //-------------------------------------------------------------------------------------------------
@@ -23,12 +32,13 @@ namespace OptiXRenderer {
 //-------------------------------------------------------------------------------------------------
 class PresampledEnvironmentMap final {
 public:
-    //-------------------------------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     // Constructors and destructor.
-    //-------------------------------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     PresampledEnvironmentMap()
         : m_per_pixel_PDF(nullptr), m_samples(nullptr) {}
-    PresampledEnvironmentMap(optix::Context& context, Cogwheel::Assets::Textures::UID environment_map_ID, optix::TextureSampler* texture_cache, int sample_count = 0);
+    PresampledEnvironmentMap(optix::Context& context, Cogwheel::Assets::InfiniteAreaLight& light, 
+                             optix::TextureSampler* texture_cache, int sample_count = 0);
     
     PresampledEnvironmentMap(PresampledEnvironmentMap&& other) {
         m_environment_map_ID = other.m_environment_map_ID;
@@ -47,9 +57,9 @@ public:
 
     ~PresampledEnvironmentMap();
 
-    //-------------------------------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     // Getters.
-    //-------------------------------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     Light get_light() const {
         Light light;
         light.flags = Light::PresampledEnvironment;

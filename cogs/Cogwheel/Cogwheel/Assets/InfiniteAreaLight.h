@@ -29,6 +29,9 @@ struct LightSample {
 
 // ------------------------------------------------------------------------------------------------
 // Samplable, textured infinite area light.
+// Future work:
+// * Store the distribution CDFs with floating point support, which should be enough.
+// * Perhaps add it to Scene::LightSources.
 // ------------------------------------------------------------------------------------------------
 class InfiniteAreaLight {
 private:
@@ -56,6 +59,8 @@ public:
     inline Images::UID get_image_ID() const { return m_latlong.get_image().get_ID(); }
     inline unsigned int get_width() const { return m_latlong.get_image().get_width(); }
     inline unsigned int get_height() const { return m_latlong.get_image().get_height(); }
+    inline const double* const get_image_marginal_CDF() const { return m_distribution.get_marginal_CDF(); }
+    inline const double* const get_image_conditional_CDF() const { return m_distribution.get_conditional_CDF(); }
 
     //*********************************************************************************************
     // Evaluate.
@@ -100,6 +105,7 @@ public:
     //*********************************************************************************************
     // Static utility functions.
     //*********************************************************************************************
+
     static float* compute_PDF(TextureND latlong) {
         float* PDF = new float[latlong.get_image().get_pixel_count()];
         compute_PDF(latlong, PDF);
@@ -110,7 +116,6 @@ public:
     // The importance is based on the average radiance of a pixel.
     // The PDF input must contain room for at least as many elements as there are pixels.
     static void compute_PDF(TextureND latlong, float* PDF_result);
-
 };
 
 // ------------------------------------------------------------------------------------------------

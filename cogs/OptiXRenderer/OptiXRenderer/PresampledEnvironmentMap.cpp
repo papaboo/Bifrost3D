@@ -16,18 +16,30 @@ using namespace optix;
 
 namespace OptiXRenderer {
 
-PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, Assets::Textures::UID environment_map_ID, 
+PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, Assets::InfiniteAreaLight& light, 
                                                    TextureSampler* texture_cache, int sample_count) {
     
-    Assets::TextureND environment_map = environment_map_ID;
-    int width = environment_map.get_image().get_width();
-    int height = environment_map.get_image().get_height();
-    Assets::InfiniteAreaLight light = Assets::InfiniteAreaLight(environment_map_ID);
+    Assets::Textures::UID environment_map_ID = light.get_texture_ID();
 
     { // Per pixel PDF sampler.
+        int width = light.get_width();
+        int height = light.get_height();
+
         optix::Buffer per_pixel_PDF_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, width, height);
         float* per_pixel_PDF_data = static_cast<float*>(per_pixel_PDF_buffer->map());
-        Cogwheel::Assets::InfiniteAreaLight::compute_PDF(environment_map_ID, per_pixel_PDF_data);
+
+        float scale = width * height *(float)light.image_integral();
+        for (int y = 0; y < height; ++y) {
+            float marginal_PDF = float(light.get_image_marginal_CDF()[y + 1] - light.get_image_marginal_CDF()[y]);
+            
+            float previous_conditional = 0.0f;
+            for (int x = 0; x < width; ++x) {
+                const double* const conditional_CDF_offset = light.get_image_conditional_CDF() + x + y * (width + 1);
+                float conditional_PDF = float(conditional_CDF_offset[1] - conditional_CDF_offset[0]);
+                
+                per_pixel_PDF_data[x + y * width] = marginal_PDF * conditional_PDF * scale;
+            }
+        }
 
         float PDF_normalization_term = 1.0f / (float(light.image_integral()) * 2.0f * PIf * PIf);
         #pragma omp parallel for schedule(dynamic, 16)
