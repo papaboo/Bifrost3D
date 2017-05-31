@@ -116,12 +116,10 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
 
             if (env.texture_ID != 0) {
 
-                TextureND tex = scene.get_environment_map();
-                Image img = tex.get_image();
-                InfiniteAreaLight light = InfiniteAreaLight(tex.get_ID());
+                InfiniteAreaLight& light = *scene.get_environment_light();
 
-                int env_width = max(img.get_width(), 256u);
-                int env_height = max(img.get_height(), 128u);
+                int env_width = max(light.get_width(), 256u);
+                int env_height = max(light.get_height(), 128u);
 
                 // Compute mipmap count.
                 int mipmap_count = 0;
