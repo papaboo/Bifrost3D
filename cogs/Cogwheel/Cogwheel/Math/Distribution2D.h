@@ -49,13 +49,13 @@ public:
     }
 
     template <typename U>
-    Distribution2D(Distribution2D<U> other)
-        : m_width(other.width), m_height(other.height), m_integral(other.m_integral)
+    Distribution2D(Distribution2D<U>& other)
+        : m_width(other.get_width()), m_height(other.get_height()), m_integral(T(other.get_integral()))
         , m_marginal_CDF(new T[m_height + 1]), m_conditional_CDF(new T[(m_width + 1) * m_height]) {
         for (int i = 0; i < m_height + 1; ++i)
-            m_marginal_CDF[i] = T(other.m_marginal_CDF[i]);
+            m_marginal_CDF[i] = T(other.get_marginal_CDF()[i]);
         for (int i = 0; i < (m_width + 1) * m_height; ++i)
-            m_conditional_CDF[i] = T(other.m_conditional_CDF[i]);
+            m_conditional_CDF[i] = T(other.get_conditional_CDF()[i]);
     }
 
     ~Distribution2D() {
