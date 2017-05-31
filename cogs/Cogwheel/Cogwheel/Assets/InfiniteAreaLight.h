@@ -30,13 +30,12 @@ struct LightSample {
 // ------------------------------------------------------------------------------------------------
 // Samplable, textured infinite area light.
 // Future work:
-// * Store the distribution CDFs with floating point support, which should be enough.
 // * Perhaps add it to Scene::LightSources.
 // ------------------------------------------------------------------------------------------------
 class InfiniteAreaLight {
 private:
     mutable TextureND m_latlong;
-    Math::Distribution2D<double> m_distribution;
+    const Math::Distribution2D<float> m_distribution;
 
 public:
 
@@ -45,12 +44,12 @@ public:
     //*********************************************************************************************
     InfiniteAreaLight(Textures::UID latlong_ID)
         : m_latlong(latlong_ID)
-        , m_distribution(std::unique_ptr<float[]>(compute_PDF(m_latlong)).get(), 
-                         m_latlong.get_image().get_width(), m_latlong.get_image().get_height()) { }
+        , m_distribution(Math::Distribution2D<double>(std::unique_ptr<float[]>(compute_PDF(m_latlong)).get(),
+                                                      m_latlong.get_image().get_width(), m_latlong.get_image().get_height())) { }
 
     InfiniteAreaLight(Textures::UID latlong_ID, float* latlong_PDF)
         : m_latlong(latlong_ID)
-        , m_distribution(latlong_PDF, m_latlong.get_image().get_width(), m_latlong.get_image().get_height()) { }
+        , m_distribution(Math::Distribution2D<double>(latlong_PDF, m_latlong.get_image().get_width(), m_latlong.get_image().get_height())) { }
 
     //*********************************************************************************************
     // Getters.
@@ -59,8 +58,8 @@ public:
     inline Images::UID get_image_ID() const { return m_latlong.get_image().get_ID(); }
     inline unsigned int get_width() const { return m_latlong.get_image().get_width(); }
     inline unsigned int get_height() const { return m_latlong.get_image().get_height(); }
-    inline const double* const get_image_marginal_CDF() const { return m_distribution.get_marginal_CDF(); }
-    inline const double* const get_image_conditional_CDF() const { return m_distribution.get_conditional_CDF(); }
+    inline const float* const get_image_marginal_CDF() const { return m_distribution.get_marginal_CDF(); }
+    inline const float* const get_image_conditional_CDF() const { return m_distribution.get_conditional_CDF(); }
 
     //*********************************************************************************************
     // Evaluate.
@@ -79,7 +78,7 @@ public:
     // Sampling.
     //*********************************************************************************************
 
-    double image_integral() const { return m_distribution.get_integral(); }
+    float image_integral() const { return m_distribution.get_integral(); }
 
     LightSample sample(Math::Vector2f random_sample) const {
         auto CDF_sample = m_distribution.sample_continuous(random_sample);

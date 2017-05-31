@@ -28,14 +28,13 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, Assets::Inf
         optix::Buffer per_pixel_PDF_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, width, height);
         float* per_pixel_PDF_data = static_cast<float*>(per_pixel_PDF_buffer->map());
 
-        float scale = width * height *(float)light.image_integral();
+        float scale = width * height * light.image_integral();
         for (int y = 0; y < height; ++y) {
-            float marginal_PDF = float(light.get_image_marginal_CDF()[y + 1] - light.get_image_marginal_CDF()[y]);
+            float marginal_PDF = light.get_image_marginal_CDF()[y + 1] - light.get_image_marginal_CDF()[y];
             
-            float previous_conditional = 0.0f;
             for (int x = 0; x < width; ++x) {
-                const double* const conditional_CDF_offset = light.get_image_conditional_CDF() + x + y * (width + 1);
-                float conditional_PDF = float(conditional_CDF_offset[1] - conditional_CDF_offset[0]);
+                const float* const conditional_CDF_offset = light.get_image_conditional_CDF() + x + y * (width + 1);
+                float conditional_PDF = conditional_CDF_offset[1] - conditional_CDF_offset[0];
                 
                 per_pixel_PDF_data[x + y * width] = marginal_PDF * conditional_PDF * scale;
             }
