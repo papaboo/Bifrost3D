@@ -16,8 +16,6 @@ namespace Math {
 
 // ------------------------------------------------------------------------------------------------
 // A 1D distribution of a discretized function.
-// Future work.
-// * SSE/AVX
 // ------------------------------------------------------------------------------------------------
 template <typename T>
 struct Distribution1D final {
@@ -73,12 +71,11 @@ public:
     //*********************************************************************************************
 
     T evaluate(int i) const {
-        return (m_CDF[i + 1] - m_CDF[i]) * m_element_count * m_integral;
+        return PDF_discrete(i) * m_element_count * m_integral;
     }
 
     T evaluate(float u) const {
-        int i = int(u * m_element_count);
-        return evaluate(i);
+        return evaluate(int(u * m_element_count));
     }
 
     //*********************************************************************************************
@@ -123,11 +120,11 @@ public:
     }
 
     T PDF_discrete(int i) const {
-        return evaluate(i) / (m_integral * m_element_count);
+        return m_CDF[i + 1] - m_CDF[i];
     }
 
     T PDF_continuous(float u) const {
-        return evaluate(u) / m_integral;
+        return PDF_discrete(int(u * m_element_count)) * m_element_count;
     }
 
     //*********************************************************************************************

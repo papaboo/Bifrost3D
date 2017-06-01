@@ -82,11 +82,7 @@ public:
     //*********************************************************************************************
 
     T evaluate(Vector2i index) const {
-        T marginal_PDF = m_marginal_CDF[index.y + 1] - m_marginal_CDF[index.y];
-        T* conditional_CDF_row = m_conditional_CDF + index.y * (m_width + 1);
-        T conditional_PDF = conditional_CDF_row[index.x + 1] - conditional_CDF_row[index.x];
-        T PDF = marginal_PDF * conditional_PDF * m_width * m_height;
-        return PDF * m_integral;
+        return PDF_discrete(index) * m_width * m_height * m_integral;
     }
 
     T evaluate(Vector2f uv) const {
@@ -150,12 +146,16 @@ public:
         return { Vector2f(float(x + dx) / m_width, float(y + dy) / m_height), PDF };
     }
 
-    T PDF_discrete(Vector2i i) const {
-        return evaluate(i) / (m_integral * m_width * m_height);
+    T PDF_discrete(Vector2i index) const {
+        T marginal_PDF = m_marginal_CDF[index.y + 1] - m_marginal_CDF[index.y];
+        T* conditional_CDF_row = m_conditional_CDF + index.y * (m_width + 1);
+        T conditional_PDF = conditional_CDF_row[index.x + 1] - conditional_CDF_row[index.x];
+        return marginal_PDF * conditional_PDF;
     }
 
-    T PDF_continuous(Vector2f u) const {
-        return evaluate(u) / m_integral;
+    T PDF_continuous(Vector2f uv) const {
+        Vector2i index = { int(uv.x * m_width), int(uv.y * m_height) };
+        return PDF_discrete(index) * m_width * m_height;
     }
 
     //*********************************************************************************************
