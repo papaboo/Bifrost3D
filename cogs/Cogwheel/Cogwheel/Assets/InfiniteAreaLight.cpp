@@ -132,11 +132,11 @@ void Convolute(const InfiniteAreaLight& light, IBLConvolution* begin, IBLConvolu
 
         // Handle nearly specular case.
         if (alpha < 0.00000000001f) {
-            Image img = light.get_image_ID();
+            Textures::UID env_map_ID = light.get_texture_ID();
             #pragma omp parallel for schedule(dynamic, 16)
             for (int i = 0; i < width * height; ++i) {
                 int x = i % width, y = i / width;
-                begin->Pixels[x + y * width] = img.get_pixel(Vector2ui(x, y)).rgb();
+                begin->Pixels[x + y * width] = sample2D(env_map_ID, Vector2f((x + 0.5f) / width, (y + 0.5f) / height)).rgb();
             }
             continue;
         }
