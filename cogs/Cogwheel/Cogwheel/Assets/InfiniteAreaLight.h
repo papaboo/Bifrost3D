@@ -42,7 +42,7 @@ public:
     //*********************************************************************************************
     // Constructor.
     //*********************************************************************************************
-    InfiniteAreaLight(Textures::UID latlong_ID)
+    explicit InfiniteAreaLight(Textures::UID latlong_ID)
         : m_latlong(latlong_ID)
         , m_distribution(Math::Distribution2D<double>(std::unique_ptr<float[]>(compute_PDF(m_latlong)).get(),
                                                       m_latlong.get_image().get_width(), m_latlong.get_image().get_height())) { }
