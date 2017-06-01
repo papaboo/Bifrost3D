@@ -16,9 +16,9 @@ using namespace optix;
 
 namespace OptiXRenderer {
 
-PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, Assets::InfiniteAreaLight& light, 
+PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Assets::InfiniteAreaLight& light, 
                                                    TextureSampler* texture_cache, int sample_count) {
-    
+
     Assets::Textures::UID environment_map_ID = light.get_texture_ID();
 
     { // Per pixel PDF sampler.
@@ -28,22 +28,20 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, Assets::Inf
         optix::Buffer per_pixel_PDF_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, width, height);
         float* per_pixel_PDF_data = static_cast<float*>(per_pixel_PDF_buffer->map());
 
-        float scale = width * height * light.image_integral();
+        float PDF_image_scaling = width * height * light.image_integral();
+        float PDF_normalization_term = 1.0f / (float(light.image_integral()) * 2.0f * PIf * PIf);
+        float PDF_scale = PDF_image_scaling * PDF_normalization_term;
+        #pragma omp parallel for schedule(dynamic, 16)
         for (int y = 0; y < height; ++y) {
             float marginal_PDF = light.get_image_marginal_CDF()[y + 1] - light.get_image_marginal_CDF()[y];
-            
+
             for (int x = 0; x < width; ++x) {
                 const float* const conditional_CDF_offset = light.get_image_conditional_CDF() + x + y * (width + 1);
                 float conditional_PDF = conditional_CDF_offset[1] - conditional_CDF_offset[0];
-                
-                per_pixel_PDF_data[x + y * width] = marginal_PDF * conditional_PDF * scale;
+
+                per_pixel_PDF_data[x + y * width] = marginal_PDF * conditional_PDF * PDF_scale;
             }
         }
-
-        float PDF_normalization_term = 1.0f / (float(light.image_integral()) * 2.0f * PIf * PIf);
-        #pragma omp parallel for schedule(dynamic, 16)
-        for (int i = 0; i < int(width * height); ++i)
-            per_pixel_PDF_data[i] *= PDF_normalization_term;
         per_pixel_PDF_buffer->unmap();
 
         m_per_pixel_PDF = context->createTextureSampler();

@@ -37,16 +37,9 @@ public:
     //---------------------------------------------------------------------------------------------
     PresampledEnvironmentMap()
         : m_per_pixel_PDF(nullptr), m_samples(nullptr) {}
-    PresampledEnvironmentMap(optix::Context& context, Cogwheel::Assets::InfiniteAreaLight& light, 
+    PresampledEnvironmentMap(optix::Context& context, const Cogwheel::Assets::InfiniteAreaLight& light, 
                              optix::TextureSampler* texture_cache, int sample_count = 0);
-    
-    PresampledEnvironmentMap(PresampledEnvironmentMap&& other) {
-        m_environment_map_ID = other.m_environment_map_ID;
-        m_per_pixel_PDF = other.m_per_pixel_PDF; other.m_per_pixel_PDF = nullptr;
-        m_samples = other.m_samples; other.m_samples = nullptr;
-        m_light = other.m_light;
-    }
-    
+
     PresampledEnvironmentMap& operator=(PresampledEnvironmentMap&& rhs) {
         m_environment_map_ID = rhs.m_environment_map_ID;
         m_per_pixel_PDF = rhs.m_per_pixel_PDF; rhs.m_per_pixel_PDF = nullptr;
@@ -73,8 +66,9 @@ public:
 
 private:
     PresampledEnvironmentMap(PresampledEnvironmentMap& other) = delete;
+    PresampledEnvironmentMap(PresampledEnvironmentMap&& other) = delete;
     PresampledEnvironmentMap& operator=(PresampledEnvironmentMap& rhs) = delete;
-    
+
     Cogwheel::Assets::Textures::UID m_environment_map_ID;
 
     optix::TextureSampler m_per_pixel_PDF;
