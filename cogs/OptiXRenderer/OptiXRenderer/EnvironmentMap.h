@@ -15,6 +15,15 @@
 
 #include <optixu/optixpp_namespace.h>
 
+//-------------------------------------------------------------------------------------------------
+// Forward declarations.
+//-------------------------------------------------------------------------------------------------
+namespace Cogwheel {
+namespace Assets {
+class InfiniteAreaLight;
+}
+}
+
 namespace OptiXRenderer {
 
 //-------------------------------------------------------------------------------------------------
@@ -26,28 +35,22 @@ namespace OptiXRenderer {
 // Future work:
 // * Structuring the CDF as 'breath first' should improve the cache hit rate of the first couple 
 //   of lookups when we do binary search or? Profile!
-// * Create a kd-tree'ish structure instead of the current CDFs. Then instead of using a 
+// * Create an implicit kd-tree'ish structure instead of the current CDFs. Then instead of using a 
 //   single float to update lower or higher, store four children pr node, so we can load 
 //   a uint4 during traversal.This should make better use of the bandwidth.
 // * Sample the environment based on cos_theta between the environment sample direction and 
 //   the normal to sample more optimally compared to the total contribution of the environment. 
 //-------------------------------------------------------------------------------------------------
-struct EnvironmentMap {
+class EnvironmentMap final {
+public:
     //---------------------------------------------------------------------------------------------
     // Constructors and destructor.
     //---------------------------------------------------------------------------------------------
     EnvironmentMap()
         : m_environment_map_ID(Cogwheel::Assets::Textures::UID::invalid_UID())
         , color_texture(nullptr), marginal_CDF(nullptr), conditional_CDF(nullptr), per_pixel_PDF(nullptr) { }
-    EnvironmentMap(optix::Context& context, Cogwheel::Assets::Textures::UID environment_map, optix::TextureSampler* texture_cache);
 
-    EnvironmentMap(EnvironmentMap&& other) {
-        m_environment_map_ID = other.m_environment_map_ID;
-        color_texture = other.color_texture; other.color_texture = nullptr;
-        marginal_CDF = other.marginal_CDF; other.marginal_CDF = nullptr;
-        conditional_CDF = other.conditional_CDF; other.conditional_CDF = nullptr;
-        per_pixel_PDF = other.per_pixel_PDF; other.per_pixel_PDF = nullptr;
-    }
+    EnvironmentMap(optix::Context& context, const Cogwheel::Assets::InfiniteAreaLight& light, optix::TextureSampler* texture_cache);
 
     EnvironmentMap& operator=(EnvironmentMap&& rhs) {
         m_environment_map_ID = rhs.m_environment_map_ID;
@@ -88,6 +91,7 @@ struct EnvironmentMap {
 
 private:
     EnvironmentMap(EnvironmentMap& other) = delete;
+    EnvironmentMap(EnvironmentMap&& other) = delete;
     EnvironmentMap& operator=(EnvironmentMap& rhs) = delete;
 
     Cogwheel::Assets::Textures::UID m_environment_map_ID;

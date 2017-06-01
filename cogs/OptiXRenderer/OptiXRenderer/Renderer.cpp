@@ -778,7 +778,7 @@ struct Renderer::Implementation {
                             environment = PresampledEnvironmentMap(context, *scene.get_environment_light(), textures.data());
                             PresampledEnvironmentLight light = environment.get_light().presampled_environment;
 #else
-                            environment = EnvironmentMap(context, environment_map_ID, textures.data());
+                            environment = EnvironmentMap(context, *scene.get_environment_light(), textures.data());
                             EnvironmentLight light = environment.get_light().environment;
 #endif
                             context["g_scene_environment_light"]->setUserData(sizeof(light), &light);
