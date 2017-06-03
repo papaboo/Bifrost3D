@@ -9,6 +9,8 @@
 #ifndef _DX11RENDERER_RENDERER_TYPES_H_
 #define _DX11RENDERER_RENDERER_TYPES_H_
 
+#include <Cogwheel/Math/half.h>
+
 //----------------------------------------------------------------------------
 // Forward declarations.
 //----------------------------------------------------------------------------
@@ -46,6 +48,24 @@ struct float4 {
 struct AABB {
     float3 min;
     float3 max;
+};
+
+struct R11G11B10_Float {
+    unsigned int raw;
+
+    R11G11B10_Float() : raw(0) {}
+
+    R11G11B10_Float(float r, float g, float b) {
+        // Pack RGB into R11G11B10. All three channels have a 5 bit exponent and no sign bit.
+        // This fits perfectly with the half format, that also have a 5 bit exponent.
+        // The solution therefore is to convert the float to half and then using bitmasks 
+        // to extract the 5 bit exponent and the first 5/6 bits of the mantissa.
+        // The memory layout is confusingly [B10, G11, R11]. Go figure.
+        unsigned int blue = (half_float::half(b).raw() & 0x7FE0) << 17;
+        unsigned int green = (half_float::half(g).raw() & 0x7FF0) << 7;
+        unsigned int red = (half_float::half(r).raw() & 0x7FF0) >> 4;
+        raw = red | green | blue;
+    }
 };
 
 //----------------------------------------------------------------------------
