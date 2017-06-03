@@ -56,6 +56,7 @@ SET(MATH_SRCS
   Cogwheel/Math/Distribution1D.h
   Cogwheel/Math/Distribution2D.h
   Cogwheel/Math/Distributions.h
+  Cogwheel/Math/half.h
   Cogwheel/Math/Math.h
   Cogwheel/Math/Matrix.h
   Cogwheel/Math/Polynomial.h
