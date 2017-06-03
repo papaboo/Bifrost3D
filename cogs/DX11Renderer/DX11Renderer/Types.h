@@ -9,6 +9,8 @@
 #ifndef _DX11RENDERER_RENDERER_TYPES_H_
 #define _DX11RENDERER_RENDERER_TYPES_H_
 
+#include <Cogwheel/Math/half.h>
+
 //----------------------------------------------------------------------------
 // Forward declarations.
 //----------------------------------------------------------------------------
@@ -46,6 +48,19 @@ struct float4 {
 struct AABB {
     float3 min;
     float3 max;
+};
+
+struct R11G11B10_Float {
+    unsigned int raw;
+
+    R11G11B10_Float() : raw(0) {}
+
+    R11G11B10_Float(float r, float g, float b) {
+        unsigned int blue = (half_float::half(b).raw() & 0x7FE0) << 17;
+        unsigned int green = (half_float::half(g).raw() & 0x7FF0) << 7;
+        unsigned int red = (half_float::half(r).raw() & 0x7FF0) >> 4;
+        raw = red | green | blue;
+    }
 };
 
 //----------------------------------------------------------------------------

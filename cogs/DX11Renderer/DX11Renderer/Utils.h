@@ -67,6 +67,7 @@ inline int sizeof_dx_format(DXGI_FORMAT format) {
         return 2;
     case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
     case DXGI_FORMAT_R16G16_UNORM:
+    case DXGI_FORMAT_R11G11B10_FLOAT:
         return 4;
     case DXGI_FORMAT_R32G32B32_FLOAT:
         return 12;
