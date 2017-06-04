@@ -128,12 +128,12 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                     total_pixel_count += (env_width >> mipmap_count) * (env_height >> mipmap_count);
                     ++mipmap_count;
                 }
-                RGB* pixel_data = new RGB[total_pixel_count];
+                R11G11B10_Float* pixel_data = new R11G11B10_Float[total_pixel_count];
 
                 { // Compute mipmap pixels.
                     using namespace InfiniteAreaLightUtils;
-                    RGB* next_pixels = pixel_data;
-                    IBLConvolution* convolutions = new IBLConvolution[mipmap_count];
+                    R11G11B10_Float* next_pixels = pixel_data;
+                    IBLConvolution<R11G11B10_Float>* convolutions = new IBLConvolution<R11G11B10_Float>[mipmap_count];
                     for (int m = 0; m < mipmap_count; ++m) {
                         convolutions[m].Width = env_width >> m;
                         convolutions[m].Height = env_height >> m;
@@ -143,7 +143,8 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         next_pixels += convolutions[m].Width * convolutions[m].Height;
                     }
 
-                    Convolute(light, convolutions, convolutions + mipmap_count);
+                    Convolute(light, convolutions, convolutions + mipmap_count, 
+                              [](RGB c) -> R11G11B10_Float { return R11G11B10_Float(c.r, c.g, c.b); });
 
                     delete[] convolutions;
                 }
@@ -162,22 +163,15 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
 
                     D3D11_SUBRESOURCE_DATA* tex_data = new D3D11_SUBRESOURCE_DATA[tex_desc.MipLevels];
 
-                    R11G11B10_Float* compressed_pixels = new R11G11B10_Float[total_pixel_count];
-
-                    RGB* next_rgb_pixels = pixel_data;
-                    R11G11B10_Float* next_compressed_pixels = compressed_pixels;
+                    R11G11B10_Float* next_rgb_pixels = pixel_data;
                     for (unsigned int m = 0; m < tex_desc.MipLevels; ++m) {
                         int width = tex_desc.Width >> m, height = tex_desc.Height >> m;
 
                         tex_data[m].SysMemPitch = sizeof_dx_format(tex_desc.Format) * width;
                         tex_data[m].SysMemSlicePitch = tex_data[m].SysMemPitch * height;
-                        tex_data[m].pSysMem = next_compressed_pixels;
+                        tex_data[m].pSysMem = next_rgb_pixels;
 
-                        RGB* rgb_pixels_end = next_rgb_pixels + width * height;
-                        while (next_rgb_pixels < rgb_pixels_end) {
-                            RGB p = *next_rgb_pixels++;
-                            *next_compressed_pixels++ = R11G11B10_Float(p.r, p.g, p.b);
-                        }
+                        next_rgb_pixels += width * height;
                     }
 
                     HRESULT hr = device.CreateTexture2D(&tex_desc, tex_data, &env.texture2D);
@@ -190,8 +184,6 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                     srv_desc.Texture2D.MostDetailedMip = 0;
                     hr = device.CreateShaderResourceView(env.texture2D, &srv_desc, &env.srv);
                     THROW_ON_FAILURE(hr);
-
-                    delete[] compressed_pixels;
                 }
 
                 delete[] pixel_data;

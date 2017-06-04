@@ -114,7 +114,7 @@ public:
     // Computes the array of per pixel PDFs for an infinite area light. 
     // The importance is based on the average radiance of a pixel.
     // The PDF input must contain room for at least as many elements as there are pixels.
-    static void compute_PDF(TextureND latlong, float* PDF_result);
+    static inline void compute_PDF(TextureND latlong, float* PDF_result);
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -123,18 +123,26 @@ public:
 
 namespace InfiniteAreaLightUtils {
 
+template <typename T>
 struct IBLConvolution {
-    Cogwheel::Math::RGB* Pixels;
+    T* Pixels;
     int Width;
     int Height;
     float Roughness;
     int sample_count;
 };
 
-void Convolute(const InfiniteAreaLight& light, IBLConvolution* begin, IBLConvolution* end);
+template <typename T, typename F>
+inline void Convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, IBLConvolution<T>* end, F color_conversion);
+
+inline void Convolute(const InfiniteAreaLight& light, IBLConvolution<Math::RGB>* begin, IBLConvolution<Math::RGB>* end) {
+    Convolute(light, begin, end, [](Math::RGB c) -> Math::RGB { return c; });
+}
 
 } // NS InfiniteAreaLightUtils
 } // NS Assets
 } // NS Cogwheel
+
+#include <Cogwheel/Assets/InfiniteAreaLight.inl>
 
 #endif // _COGWHEEL_ASSETS_INFINITE_AREA_LIGHT_H_

@@ -18,7 +18,7 @@ namespace Assets {
 // ------------------------------------------------------------------------------------------------
 // Samplable, textured infinite area light.
 // ------------------------------------------------------------------------------------------------
-void InfiniteAreaLight::compute_PDF(TextureND latlong, float* PDF_result) {
+inline void InfiniteAreaLight::compute_PDF(TextureND latlong, float* PDF_result) {
     Image image = latlong.get_image();
     int width = image.get_width(), height = image.get_height();
 
@@ -108,13 +108,14 @@ void InfiniteAreaLight::compute_PDF(TextureND latlong, float* PDF_result) {
 
 namespace InfiniteAreaLightUtils {
 
-void Convolute(const InfiniteAreaLight& light, IBLConvolution* begin, IBLConvolution* end) {
+template <typename T, typename F>
+inline void Convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, IBLConvolution<T>* end, F color_conversion) {
 
     using namespace Cogwheel::Math;
     using namespace Cogwheel::Math::Distributions;
 
     int max_sample_count = 0;
-    for (IBLConvolution* itr = begin; itr != end; ++itr)
+    for (IBLConvolution<T>* itr = begin; itr != end; ++itr)
         max_sample_count = max(max_sample_count, itr->sample_count);
 
     // Precompute light samples.
@@ -136,7 +137,7 @@ void Convolute(const InfiniteAreaLight& light, IBLConvolution* begin, IBLConvolu
             #pragma omp parallel for schedule(dynamic, 16)
             for (int i = 0; i < width * height; ++i) {
                 int x = i % width, y = i / width;
-                begin->Pixels[x + y * width] = sample2D(env_map_ID, Vector2f((x + 0.5f) / width, (y + 0.5f) / height)).rgb();
+                begin->Pixels[x + y * width] = color_conversion(sample2D(env_map_ID, Vector2f((x + 0.5f) / width, (y + 0.5f) / height)).rgb());
             }
             continue;
         }
@@ -188,7 +189,7 @@ void Convolute(const InfiniteAreaLight& light, IBLConvolution* begin, IBLConvolu
 
             // Account for the samples being split evenly between BSDF and light.
             radiance *= 2.0f;
-            begin->Pixels[x + y * width] = radiance / float(begin->sample_count);
+            begin->Pixels[x + y * width] = color_conversion(radiance / float(begin->sample_count));
         }
     }
 }
