@@ -163,15 +163,15 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
 
                     D3D11_SUBRESOURCE_DATA* tex_data = new D3D11_SUBRESOURCE_DATA[tex_desc.MipLevels];
 
-                    R11G11B10_Float* next_rgb_pixels = pixel_data;
+                    R11G11B10_Float* next_pixels = pixel_data;
                     for (unsigned int m = 0; m < tex_desc.MipLevels; ++m) {
                         int width = tex_desc.Width >> m, height = tex_desc.Height >> m;
 
                         tex_data[m].SysMemPitch = sizeof_dx_format(tex_desc.Format) * width;
                         tex_data[m].SysMemSlicePitch = tex_data[m].SysMemPitch * height;
-                        tex_data[m].pSysMem = next_rgb_pixels;
+                        tex_data[m].pSysMem = next_pixels;
 
-                        next_rgb_pixels += width * height;
+                        next_pixels += width * height;
                     }
 
                     HRESULT hr = device.CreateTexture2D(&tex_desc, tex_data, &env.texture2D);
