@@ -318,11 +318,11 @@ void Images::set_pixel(Images::UID image_ID, RGBA color, Vector3ui index, unsign
 
 namespace ImageUtils {
 
-Images::UID change_format(Images::UID image_ID, PixelFormat new_format) {
+Images::UID change_format(Images::UID image_ID, PixelFormat new_format, float new_gamma) {
     Image image = image_ID;
     unsigned int mipmap_count = image.get_mipmap_count();
     Vector3ui size = Vector3ui(image.get_width(), image.get_height(), image.get_depth());
-    Images::UID new_image_ID = Images::create3D(image.get_name(), new_format, image.get_gamma(), size, mipmap_count);
+    Images::UID new_image_ID = Images::create3D(image.get_name(), new_format, new_gamma, size, mipmap_count);
 
     for (unsigned int m = 0; m < mipmap_count; ++m)
         for (unsigned int z = 0; z < image.get_depth(m); ++z)

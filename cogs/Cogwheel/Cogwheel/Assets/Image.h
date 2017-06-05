@@ -220,7 +220,11 @@ private:
 
 namespace ImageUtils {
 
-Images::UID change_format(Images::UID image_ID, PixelFormat new_format);
+Images::UID change_format(Images::UID image_ID, PixelFormat new_format, float new_gamma);
+
+inline Images::UID change_format(Images::UID image_ID, PixelFormat new_format) {
+    return change_format(image_ID, new_format, Images::get_gamma(image_ID));
+}
 
 void fill_mipmap_chain(Images::UID image_ID);
 
