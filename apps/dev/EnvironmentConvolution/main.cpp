@@ -151,7 +151,12 @@ void update(Engine& engine, void* none) {
             const GLint BASE_IMAGE_LEVEL = 0;
             const GLint NO_BORDER = 0;
             Image image = g_convoluted_images[image_index];
-            glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGB, image.get_width(), image.get_height(), NO_BORDER, GL_RGB, GL_FLOAT, image.get_pixels());
+            RGB* pixels = (RGB*)image.get_pixels();
+            RGB* gamma_corrected_pixels = new RGB[image.get_pixel_count()];
+            #pragma omp parallel for schedule(dynamic, 16)
+            for (int i = 0; i < (int)image.get_pixel_count(); ++i)
+                gamma_corrected_pixels[i] = gammacorrect(pixels[i], 1.0f / 2.2f);
+            glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGB, image.get_width(), image.get_height(), NO_BORDER, GL_RGB, GL_FLOAT, gamma_corrected_pixels);
             uploaded_image_index = image_index;
         }
 
@@ -238,6 +243,7 @@ int initialize(Engine& engine) {
             previous_roughness_tex_ID = Textures::create2D(g_convoluted_images[r-1].get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
             float prev_roughness = (r - 1.0f) / (g_convoluted_images.size() - 1.0f);
             float prev_alpha = prev_roughness * prev_roughness;
+            // ("roughness: %.3f (%.3f), alpha: %.3f (%.3f), recursive alpha: %.5f\n", roughness, prev_roughness, alpha, prev_alpha, alpha * (1.0f - prev_alpha));
             alpha *= 1.0f - prev_alpha;
         }
 
