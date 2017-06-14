@@ -29,10 +29,17 @@ EnvironmentManager::EnvironmentManager(ID3D11Device1& device, const std::wstring
     ID3D10Blob* vertex_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "vs_5_0", "main_vs");
     HRESULT hr = device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shader);
     THROW_ON_FAILURE(hr);
+    safe_release(&vertex_shader_blob);
 
     ID3D10Blob* pixel_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "ps_5_0", "main_ps");
     hr = device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), NULL, &m_pixel_shader);
     THROW_ON_FAILURE(hr);
+    safe_release(&pixel_shader_blob);
+
+    ID3D10Blob* convolution_shader_blob = compile_shader(shader_folder_path + L"IBLConvolution.hlsl", "cs_5_0", "convolute");
+    hr = device.CreateComputeShader(UNPACK_BLOB_ARGS(convolution_shader_blob), NULL, &m_convolution_shader);
+    THROW_ON_FAILURE(hr);
+    safe_release(&convolution_shader_blob);
 
     D3D11_SAMPLER_DESC sampler_desc = {};
     sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -50,6 +57,7 @@ EnvironmentManager::EnvironmentManager(ID3D11Device1& device, const std::wstring
 EnvironmentManager::~EnvironmentManager() {
     safe_release(&m_vertex_shader);
     safe_release(&m_pixel_shader);
+    safe_release(&m_convolution_shader);
     safe_release(&m_sampler);
     for (Environment env : m_envs) {
         safe_release(&env.srv);
@@ -128,65 +136,166 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                     total_pixel_count += (env_width >> mipmap_count) * (env_height >> mipmap_count);
                     ++mipmap_count;
                 }
-                R11G11B10_Float* pixel_data = new R11G11B10_Float[total_pixel_count];
 
-                { // Compute mipmap pixels.
-                    using namespace InfiniteAreaLightUtils;
-                    R11G11B10_Float* next_pixels = pixel_data;
-                    IBLConvolution<R11G11B10_Float>* convolutions = new IBLConvolution<R11G11B10_Float>[mipmap_count];
-                    for (int m = 0; m < mipmap_count; ++m) {
-                        convolutions[m].Width = env_width >> m;
-                        convolutions[m].Height = env_height >> m;
-                        convolutions[m].Roughness = m / (mipmap_count - 1.0f);
-                        convolutions[m].sample_count = next_power_of_two(unsigned int (256 * convolutions[m].Roughness));
-                        convolutions[m].Pixels = next_pixels;
-                        next_pixels += convolutions[m].Width * convolutions[m].Height;
+                bool monte_carlo_estimation = false;
+                if (monte_carlo_estimation)
+                {
+                    R11G11B10_Float* pixel_data = new R11G11B10_Float[total_pixel_count];
+
+                    { // Compute mipmap pixels.
+                        using namespace InfiniteAreaLightUtils;
+                        R11G11B10_Float* next_pixels = pixel_data;
+                        IBLConvolution<R11G11B10_Float>* convolutions = new IBLConvolution<R11G11B10_Float>[mipmap_count];
+                        for (int m = 0; m < mipmap_count; ++m) {
+                            convolutions[m].Width = env_width >> m;
+                            convolutions[m].Height = env_height >> m;
+                            convolutions[m].Roughness = m / (mipmap_count - 1.0f);
+                            convolutions[m].sample_count = next_power_of_two(unsigned int(256 * convolutions[m].Roughness));
+                            convolutions[m].Pixels = next_pixels;
+                            next_pixels += convolutions[m].Width * convolutions[m].Height;
+                        }
+
+                        Convolute(light, convolutions, convolutions + mipmap_count,
+                            [](RGB c) -> R11G11B10_Float { return R11G11B10_Float(c.r, c.g, c.b); });
+
+                        delete[] convolutions;
                     }
 
-                    Convolute(light, convolutions, convolutions + mipmap_count, 
-                              [](RGB c) -> R11G11B10_Float { return R11G11B10_Float(c.r, c.g, c.b); });
+                    { // Generate texture and srv.
+                        D3D11_TEXTURE2D_DESC tex_desc = {};
+                        tex_desc.Width = env_width;
+                        tex_desc.Height = env_height;
+                        tex_desc.MipLevels = mipmap_count;
+                        tex_desc.ArraySize = 1;
+                        tex_desc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
+                        tex_desc.SampleDesc.Count = 1;
+                        tex_desc.SampleDesc.Quality = 0;
+                        tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
+                        tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
-                    delete[] convolutions;
-                }
+                        D3D11_SUBRESOURCE_DATA* tex_data = new D3D11_SUBRESOURCE_DATA[tex_desc.MipLevels];
 
-                { // Generate texture and srv.
-                    D3D11_TEXTURE2D_DESC tex_desc = {};
-                    tex_desc.Width = env_width;
-                    tex_desc.Height = env_height;
-                    tex_desc.MipLevels = mipmap_count;
-                    tex_desc.ArraySize = 1;
-                    tex_desc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
-                    tex_desc.SampleDesc.Count = 1;
-                    tex_desc.SampleDesc.Quality = 0;
-                    tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
-                    tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+                        R11G11B10_Float* next_pixels = pixel_data;
+                        for (unsigned int m = 0; m < tex_desc.MipLevels; ++m) {
+                            int width = tex_desc.Width >> m, height = tex_desc.Height >> m;
 
-                    D3D11_SUBRESOURCE_DATA* tex_data = new D3D11_SUBRESOURCE_DATA[tex_desc.MipLevels];
+                            tex_data[m].SysMemPitch = sizeof_dx_format(tex_desc.Format) * width;
+                            tex_data[m].SysMemSlicePitch = tex_data[m].SysMemPitch * height;
+                            tex_data[m].pSysMem = next_pixels;
 
-                    R11G11B10_Float* next_pixels = pixel_data;
-                    for (unsigned int m = 0; m < tex_desc.MipLevels; ++m) {
-                        int width = tex_desc.Width >> m, height = tex_desc.Height >> m;
+                            next_pixels += width * height;
+                        }
 
-                        tex_data[m].SysMemPitch = sizeof_dx_format(tex_desc.Format) * width;
-                        tex_data[m].SysMemSlicePitch = tex_data[m].SysMemPitch * height;
-                        tex_data[m].pSysMem = next_pixels;
-
-                        next_pixels += width * height;
+                        HRESULT hr = device.CreateTexture2D(&tex_desc, tex_data, &env.texture2D);
+                        THROW_ON_FAILURE(hr);
                     }
 
-                    HRESULT hr = device.CreateTexture2D(&tex_desc, tex_data, &env.texture2D);
-                    THROW_ON_FAILURE(hr);
+                    delete[] pixel_data;
+                } else {
+                    // GPU recursive convolution.
 
-                    D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
-                    srv_desc.Format = tex_desc.Format;
-                    srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-                    srv_desc.Texture2D.MipLevels = tex_desc.MipLevels;
-                    srv_desc.Texture2D.MostDetailedMip = 0;
-                    hr = device.CreateShaderResourceView(env.texture2D, &srv_desc, &env.srv);
-                    THROW_ON_FAILURE(hr);
+                    { // Create texture and upload specular base map.
+
+                        D3D11_TEXTURE2D_DESC tex_desc = {};
+                        tex_desc.Width = env_width;
+                        tex_desc.Height = env_height;
+                        tex_desc.MipLevels = mipmap_count;
+                        tex_desc.ArraySize = 1;
+                        tex_desc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
+                        tex_desc.SampleDesc.Count = 1;
+                        tex_desc.SampleDesc.Quality = 0;
+                        tex_desc.Usage = D3D11_USAGE_DEFAULT;
+                        tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+
+                        HRESULT hr = device.CreateTexture2D(&tex_desc, nullptr, &env.texture2D);
+                        THROW_ON_FAILURE(hr);
+
+                        R11G11B10_Float* pixels = new R11G11B10_Float[env_width* env_height];
+                        #pragma omp parallel for schedule(dynamic, 16)
+                        for (int i = 0; i < env_width * env_height; ++i) {
+                            int x = i % env_width, y = i / env_width;
+                            Vector2f uv = Vector2f((x + 0.5f) / env_width, (y + 0.5f) / env_height);
+                            RGB c = sample2D(light.get_texture_ID(), uv).rgb();
+                            pixels[x + y * env_width] = R11G11B10_Float(c.r, c.g, c.b);
+                        }
+
+                        device_context.UpdateSubresource(env.texture2D, 0, nullptr, pixels, sizeof(R11G11B10_Float) * env_width, 0);
+                        delete[] pixels;
+                    }
+
+                    { // Recursive IBL mip level convolution.
+
+                        // Constant buffer.
+                        struct ConvolutionConstants {
+                            unsigned int mip_count;
+                            unsigned int base_width;
+                            unsigned int base_height;
+                            unsigned int max_sample_count;
+                        };
+
+                        ConvolutionConstants constants = { mipmap_count, env_width, env_height, 512u };
+                        ID3D11Buffer* constant_buffer;
+                        HRESULT hr = create_constant_buffer(device, constants, &constant_buffer);
+                        THROW_ON_FAILURE(hr);
+
+                        // Create UAVs for the mip levels.
+                        ID3D11UnorderedAccessView** mip_level_UAVs = new ID3D11UnorderedAccessView*[mipmap_count - 1];
+
+                        for (int m = 1; m < mipmap_count; ++m) {
+                            D3D11_UNORDERED_ACCESS_VIEW_DESC mip_level_UAV_desc = {};
+                            mip_level_UAV_desc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
+                            mip_level_UAV_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+                            mip_level_UAV_desc.Texture2D.MipSlice = m;
+
+                            ID3D11UnorderedAccessView** mip_level_UAV = mip_level_UAVs + m - 1;
+                            HRESULT hr = device.CreateUnorderedAccessView(env.texture2D, &mip_level_UAV_desc, mip_level_UAV);
+                            THROW_ON_FAILURE(hr);
+                        }
+
+                        D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+                        srv_desc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
+                        srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+                        srv_desc.Texture2D.MipLevels = 1;
+                        srv_desc.Texture2D.MostDetailedMip = 0;
+                        ID3D11ShaderResourceView* env_SRV;
+                        hr = device.CreateShaderResourceView(env.texture2D, &srv_desc, &env_SRV);
+                        THROW_ON_FAILURE(hr);
+
+                        // Launch kernels
+                        device_context.CSSetShader(m_convolution_shader, nullptr, 0);
+                        device_context.CSSetConstantBuffers(0, 1, &constant_buffer);
+                        device_context.CSSetShaderResources(0, 1, &env_SRV);
+                        device_context.CSSetSamplers(0, 1, &m_sampler);
+                        for (int m = 1; m < mipmap_count; ++m) {
+                            device_context.CSSetUnorderedAccessViews(0, 1, mip_level_UAVs + m - 1, nullptr);
+                            int width = env_width >> m, height = env_height >> m;
+                            device_context.Dispatch(ceil_divide(width, 16), ceil_divide(height, 16), 1);
+                        }
+
+                        // Unbind resource UAVs so they can be released and the texture can be used as input.
+                        ID3D11ShaderResourceView* null_srv = nullptr;
+                        device_context.CSSetShaderResources(0, 1, &null_srv);
+                        ID3D11UnorderedAccessView* null_UAV = nullptr;
+                        device_context.CSSetUnorderedAccessViews(0, 1, &null_UAV, nullptr);
+                        ID3D11Buffer* null_buffer = nullptr;
+                        device_context.CSSetConstantBuffers(0, 1, &null_buffer);
+
+                        // Release UAV for mip levels.
+                        safe_release(&env_SRV);
+                        safe_release(&constant_buffer);
+                        for (int m = 1; m < mipmap_count; ++m)
+                            safe_release(mip_level_UAVs + m - 1);
+                        delete[] mip_level_UAVs;
+                    }
                 }
 
-                delete[] pixel_data;
+                D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+                srv_desc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
+                srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+                srv_desc.Texture2D.MipLevels = mipmap_count;
+                srv_desc.Texture2D.MostDetailedMip = 0;
+                HRESULT hr = device.CreateShaderResourceView(env.texture2D, &srv_desc, &env.srv);
+                THROW_ON_FAILURE(hr);
             }
         }
     }

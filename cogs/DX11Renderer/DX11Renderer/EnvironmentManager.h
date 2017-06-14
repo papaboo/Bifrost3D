@@ -53,6 +53,7 @@ private:
 
     ID3D11VertexShader* m_vertex_shader;
     ID3D11PixelShader* m_pixel_shader;
+    ID3D11ComputeShader* m_convolution_shader;
 };
 
 } // NS DX11Renderer
