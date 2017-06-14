@@ -24,6 +24,21 @@ namespace GGX {
         return alpha_sqrd / (PI * cos_theta_cubed * foo * foo);
     }
 
+    // Samples the GGX distribution and returns a direction and PDF.
+    float4 sample(float alpha, float2 random_sample) {
+        float phi = random_sample.y * (2.0f * PI);
+
+        float tan_theta_sqrd = alpha * alpha * random_sample.x / (1.0f - random_sample.x);
+        float cos_theta = 1.0f / sqrt(1.0f + tan_theta_sqrd);
+
+        float r = sqrt(max(1.0f - cos_theta * cos_theta, 0.0f));
+
+        float4 res;
+        res.xyz = float3(cos(phi) * r, sin(phi) * r, cos_theta);
+        res.w = D(alpha, cos_theta) * cos_theta; // We have to be able to inline this to reuse some temporaries.
+        return res;
+    }
+
     // Understanding the Masking - Shadowing Function in Microfacet - Based BRDFs, Heitz 14, equation 72.
     float height_correlated_smith_delta(float alpha, float3 w, float3 halfway) {
         float cos_theta_sqrd = w.z * w.z;
