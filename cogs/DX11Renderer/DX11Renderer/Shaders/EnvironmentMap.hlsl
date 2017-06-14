@@ -59,12 +59,12 @@ Varyings main_vs(uint vertex_ID : SV_VertexID) {
 //      give the wrong result.
 // ------------------------------------------------------------------------------------------------
 
-Texture2D envTex : register(t0);
-SamplerState envSampler : register(s0);
+Texture2D env_tex : register(t0);
+SamplerState env_sampler : register(s0);
 
 float4 main_ps(Varyings input) : SV_TARGET {
     float2 viewport_pos = input.texcoord;
     float3 view_dir = project_ray_direction(viewport_pos, camera_position.xyz, inverted_view_projection_matrix);
     float2 tc = direction_to_latlong_texcoord(view_dir);
-    return float4(environment_tint.rgb * envTex.SampleLevel(envSampler, tc, 0).rgb, 1);
+    return float4(environment_tint.rgb * env_tex.SampleLevel(env_sampler, tc, 0).rgb, 1);
 }
