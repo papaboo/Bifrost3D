@@ -116,6 +116,20 @@ inline HRESULT create_constant_buffer(ID3D11Device1& device, int byte_width, ID3
     return device.CreateBuffer(&uniforms_desc, nullptr, constant_buffer);
 }
 
+template <typename T>
+inline HRESULT create_constant_buffer(ID3D11Device1& device, T& data, ID3D11Buffer** constant_buffer) {
+    D3D11_BUFFER_DESC uniforms_desc = {};
+    uniforms_desc.Usage = D3D11_USAGE_IMMUTABLE;
+    uniforms_desc.ByteWidth = sizeof(T);
+    uniforms_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    uniforms_desc.CPUAccessFlags = 0;
+    uniforms_desc.MiscFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA resource_data = {};
+    resource_data.pSysMem = &data;
+    return device.CreateBuffer(&uniforms_desc, &resource_data, constant_buffer);
+}
+
 inline float3 make_float3(Cogwheel::Math::Vector3f v) {
     float3 r = { v.x, v.y, v.z};
     return r;
