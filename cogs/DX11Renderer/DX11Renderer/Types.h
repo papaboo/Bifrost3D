@@ -15,6 +15,7 @@
 // Forward declarations.
 //----------------------------------------------------------------------------
 struct ID3D11Buffer;
+struct ID3D11ComputeShader;
 struct ID3D11Device1;
 struct ID3D11DeviceContext1;
 struct ID3D11InputLayout;
