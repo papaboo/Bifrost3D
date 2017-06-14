@@ -67,4 +67,11 @@ float2 direction_to_latlong_texcoord(float3 direction) {
     return float2(u, v);
 }
 
+float3 latlong_texcoord_to_direction(float2 uv) {
+    float phi = uv.x * 2.0f * PI;
+    float theta = uv.y * PI;
+    float sin_theta = sin(theta);
+    return -float3(sin_theta * cos(phi), cos(theta), sin_theta * sin(phi));
+}
+
 #endif // _DX11_RENDERER_SHADERS_UTILS_H_
