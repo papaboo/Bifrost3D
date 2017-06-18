@@ -182,6 +182,30 @@ void update(Engine& engine, void* none) {
 int initialize(Engine& engine) {
     engine.get_window().set_name("Environment convolution");
 
+    /*
+    int iterations = 21;
+    for (int r = 0; r < iterations; ++r) {
+        float roughness = r / (iterations - 1.0f);
+        float alpha = roughness * roughness;
+
+        std::vector<GGX::Sample> ggx_samples = std::vector<GGX::Sample>();
+        ggx_samples.resize(4096);
+        #pragma omp parallel for schedule(dynamic, 16)
+        for (int s = 0; s < ggx_samples.size(); ++s)
+            ggx_samples[s] = GGX::sample(alpha, RNG::sample02(s));
+
+        std::sort(ggx_samples.begin(), ggx_samples.end(), [](GGX::Sample lhs, GGX::Sample rhs) -> bool { return lhs.direction.z < rhs.direction.z; });
+        printf("Roughness: %f, alpha: %f, cos mean angle: %f, mean angle: %f\n", roughness, alpha, ggx_samples[2048].direction.z, acosf(ggx_samples[2048].direction.z));
+
+        if (r > 0) {
+            float prev_roughness = (r-1) / (iterations - 1.0f);
+            float prev_alpha = prev_roughness * prev_roughness;
+            printf("  prev: roughness: %f, alpha: %f, recursive alpha: %.5f\n", prev_roughness, prev_alpha, alpha * (1.0f - prev_alpha));
+        }
+    }
+
+    return -1;
+    */
     Images::allocate(1);
     Textures::allocate(1);
 
@@ -278,13 +302,12 @@ int initialize(Engine& engine) {
                     if (sample.PDF < 0.000000001f)
                         continue;
 
-                    Vector3f local_direction = normalize(inverse_unit(up_rotation) * sample.direction_to_light);
-                    float ggx_f = GGX::D(alpha, local_direction.z);
+                    float cos_theta = fmaxf(dot(sample.direction_to_light, up_vector), 0.0f);
+                    float ggx_f = GGX::D(alpha, cos_theta);
                     if (isnan(ggx_f))
                         continue;
 
-                    float cos_theta = fmaxf(local_direction.z, 0.0f);
-                    float mis_weight = RNG::power_heuristic(sample.PDF, GGX::PDF(alpha, local_direction.z));
+                    float mis_weight = RNG::power_heuristic(sample.PDF, GGX::PDF(alpha, cos_theta));
                     radiance += sample.radiance * (mis_weight * ggx_f * cos_theta / sample.PDF);
                 }
 
@@ -309,12 +332,11 @@ int initialize(Engine& engine) {
                     if (sample.PDF < 0.000000001f)
                         continue;
 
-                    Vector3f local_direction = inverse_unit(up_rotation) * sample.direction_to_light;
-                    float ggx_f = GGX::D(alpha, local_direction.z);
+                    float cos_theta = fmaxf(dot(sample.direction_to_light, up_vector), 0.0f);
+                    float ggx_f = GGX::D(alpha, cos_theta);
                     if (isnan(ggx_f))
                         continue;
 
-                    float cos_theta = fmaxf(local_direction.z, 0.0f);
                     radiance += sample.radiance * ggx_f * cos_theta / sample.PDF;
                 }
                 break;

@@ -166,13 +166,13 @@ inline void Convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, 
                 if (sample.PDF < 0.000000001f)
                     continue;
 
-                Vector3f local_direction = normalize(inverse_unit(up_rotation) * sample.direction_to_light);
-                float ggx_f = GGX::D(alpha, local_direction.z);
+                float cos_theta = fmaxf(dot(sample.direction_to_light, up_vector), 0.0f);
+                float ggx_f = GGX::D(alpha, cos_theta);
+                float ggx_PDF = ggx_f * cos_theta; // Inlined GGX::PDF(alpha, cos_theta);
                 if (isnan(ggx_f))
                     continue;
 
-                float cos_theta = fmaxf(local_direction.z, 0.0f);
-                float mis_weight = RNG::power_heuristic(sample.PDF, GGX::PDF(alpha, local_direction.z));
+                float mis_weight = RNG::power_heuristic(sample.PDF, ggx_PDF);
                 radiance += sample.radiance * (mis_weight * ggx_f * cos_theta / sample.PDF);
             }
 
