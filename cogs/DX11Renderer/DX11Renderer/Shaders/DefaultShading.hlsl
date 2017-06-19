@@ -86,8 +86,7 @@ struct DefaultShading {
         return diffuse + specular * fresnel;
     }
 
-    // This is a horrible hack, just to get some approximate IBL in.
-    // In order to do this right, the material model needs to be fleshed out and rho for GGX needs to be approximated.
+    // Apply the shading model to the IBL.
     // TODO Take the current LOD and pixel density into account before choosing sample LOD.
     //      See http://casual-effects.blogspot.dk/2011/08/plausible-environment-lighting-in-two.html 
     //      for how to derive the LOD level for cubemaps.
