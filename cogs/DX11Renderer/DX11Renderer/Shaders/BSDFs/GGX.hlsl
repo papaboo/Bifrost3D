@@ -39,6 +39,10 @@ namespace GGX {
         return res;
     }
 
+    float PDF(float alpha, float abs_cos_theta) {
+        return D(alpha, abs_cos_theta) * abs_cos_theta;
+    }
+
     // Understanding the Masking - Shadowing Function in Microfacet - Based BRDFs, Heitz 14, equation 72.
     float height_correlated_smith_delta(float alpha, float3 w, float3 halfway) {
         float cos_theta_sqrd = w.z * w.z;
