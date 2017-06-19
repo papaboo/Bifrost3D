@@ -155,7 +155,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                             next_pixels += convolutions[m].Width * convolutions[m].Height;
                         }
 
-                        Convolute(light, convolutions, convolutions + mipmap_count,
+                        convolute(light, convolutions, convolutions + mipmap_count,
                             [](RGB c) -> R11G11B10_Float { return R11G11B10_Float(c.r, c.g, c.b); });
 
                         delete[] convolutions;

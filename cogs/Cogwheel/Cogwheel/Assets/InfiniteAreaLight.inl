@@ -109,7 +109,7 @@ inline void InfiniteAreaLight::compute_PDF(TextureND latlong, float* PDF_result)
 namespace InfiniteAreaLightUtils {
 
 template <typename T, typename F>
-inline void Convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, IBLConvolution<T>* end, F color_conversion) {
+void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, IBLConvolution<T>* end, F color_conversion) {
 
     using namespace Cogwheel::Math;
     using namespace Cogwheel::Math::Distributions;

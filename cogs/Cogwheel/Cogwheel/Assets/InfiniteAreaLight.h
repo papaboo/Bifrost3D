@@ -133,10 +133,10 @@ struct IBLConvolution {
 };
 
 template <typename T, typename F>
-inline void Convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, IBLConvolution<T>* end, F color_conversion);
+inline void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, IBLConvolution<T>* end, F color_conversion);
 
-inline void Convolute(const InfiniteAreaLight& light, IBLConvolution<Math::RGB>* begin, IBLConvolution<Math::RGB>* end) {
-    Convolute(light, begin, end, [](Math::RGB c) -> Math::RGB { return c; });
+inline void convolute(const InfiniteAreaLight& light, IBLConvolution<Math::RGB>* begin, IBLConvolution<Math::RGB>* end) {
+    convolute(light, begin, end, [](Math::RGB c) -> Math::RGB { return c; });
 }
 
 } // NS InfiniteAreaLightUtils
