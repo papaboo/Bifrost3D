@@ -209,7 +209,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                             PDF_tex_desc.Format = DXGI_FORMAT_R32_FLOAT;
                             PDF_tex_desc.SampleDesc.Count = 1;
                             PDF_tex_desc.SampleDesc.Quality = 0;
-                            PDF_tex_desc.Usage = D3D11_USAGE_DEFAULT;
+                            PDF_tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
                             PDF_tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
                             // TODO Move to infinite area light. Let loose the hounds and cry havok, this is a partial computation solution.
