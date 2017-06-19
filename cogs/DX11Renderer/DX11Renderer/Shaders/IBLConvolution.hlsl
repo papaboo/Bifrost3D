@@ -116,7 +116,6 @@ void MIS_convolute(uint3 thread_ID : SV_DispatchThreadID) {
     float2 up_uv = float2((thread_ID.x + 0.5f) / mip_width,
                           (thread_ID.y + 0.5f) / mip_height);
     float3 up_vector = latlong_texcoord_to_direction(up_uv);
-    float3x3 up_TBN = create_tbn(up_vector);
 
     // Compute roughness and alpha from current miplevel and max miplevel.
     uint size_factor = base_width / mip_width;
@@ -142,7 +141,7 @@ void MIS_convolute(uint3 thread_ID : SV_DispatchThreadID) {
     }
 
     uint2 rng_scramble = reversebits(thread_ID.xy);
-    float3x3 inverse_up_TBN = transpose(up_TBN);
+    float3x3 inverse_up_TBN = transpose(create_tbn(up_vector));
     for (unsigned int s = 0; s < half_sample_count; ++s) {
         float4 bsdf_sample = BSDFs::GGX::sample(alpha, RNG::sample02(s, rng_scramble));
         if (!(bsdf_sample.w > 0.000000001f)) // NaN resilient check.
@@ -150,7 +149,8 @@ void MIS_convolute(uint3 thread_ID : SV_DispatchThreadID) {
 
         bsdf_sample.xyz = normalize(mul(inverse_up_TBN, bsdf_sample.xyz));
         float2 bsdf_sample_uv = direction_to_latlong_texcoord(bsdf_sample.xyz);
-        float environment_PDF = per_pixel_PDF.SampleLevel(env_sampler, bsdf_sample_uv, 0).r;
+        float sin_theta = abs(sqrt(1.0f - bsdf_sample.y * bsdf_sample.y));
+        float environment_PDF = per_pixel_PDF.SampleLevel(env_sampler, bsdf_sample_uv, 0).r * sin_theta;
         float mis_weight = RNG::power_heuristic(bsdf_sample.w, environment_PDF);
         radiance += environment_map.SampleLevel(env_sampler, bsdf_sample_uv, 0).rgb * mis_weight;
     }
