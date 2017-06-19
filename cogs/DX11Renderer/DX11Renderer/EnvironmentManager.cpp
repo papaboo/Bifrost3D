@@ -36,7 +36,7 @@ EnvironmentManager::EnvironmentManager(ID3D11Device1& device, const std::wstring
     THROW_ON_FAILURE(hr);
     safe_release(&pixel_shader_blob);
 
-    ID3D10Blob* convolution_shader_blob = compile_shader(shader_folder_path + L"IBLConvolution.hlsl", "cs_5_0", "convolute");
+    ID3D10Blob* convolution_shader_blob = compile_shader(shader_folder_path + L"IBLConvolution.hlsl", "cs_5_0", "MIS_convolute");
     hr = device.CreateComputeShader(UNPACK_BLOB_ARGS(convolution_shader_blob), NULL, &m_convolution_shader);
     THROW_ON_FAILURE(hr);
     safe_release(&convolution_shader_blob);
@@ -192,9 +192,93 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
 
                     delete[] pixel_data;
                 } else {
-                    // GPU recursive convolution.
+                    // GPU convolution.
 
-                    { // Create texture and upload specular base map.
+                    // Create and upload light samples and PDF for MIS.
+                    ID3D11Texture2D* per_pixel_PDF_texture = nullptr;
+                    ID3D11ShaderResourceView* per_pixel_PDF_SRV = nullptr;
+                    ID3D11Buffer* light_samples_buffer = nullptr;
+                    ID3D11ShaderResourceView* light_samples_SRV = nullptr;
+                    {
+                        { // Per pixel PDF.
+                            D3D11_TEXTURE2D_DESC PDF_tex_desc = {};
+                            PDF_tex_desc.Width = env_width;
+                            PDF_tex_desc.Height = env_height;
+                            PDF_tex_desc.MipLevels = 1;
+                            PDF_tex_desc.ArraySize = 1;
+                            PDF_tex_desc.Format = DXGI_FORMAT_R32_FLOAT;
+                            PDF_tex_desc.SampleDesc.Count = 1;
+                            PDF_tex_desc.SampleDesc.Quality = 0;
+                            PDF_tex_desc.Usage = D3D11_USAGE_DEFAULT;
+                            PDF_tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+                            // TODO Move to infinite area light. Let loose the hounds and cry havok, this is a partial computation solution.
+                            float* per_pixel_PDF_data = new float[env_width * env_height];
+                            float PDF_image_scaling = env_width * env_height * light.image_integral();
+                            float PDF_normalization_term = 1.0f / (float(light.image_integral()) * 2.0f * PI<float>() * PI<float>());
+                            float PDF_scale = PDF_image_scaling * PDF_normalization_term;
+                            #pragma omp parallel for schedule(dynamic, 16)
+                            for (int y = 0; y < env_height; ++y) {
+                                float marginal_PDF = light.get_image_marginal_CDF()[y + 1] - light.get_image_marginal_CDF()[y];
+
+                                for (int x = 0; x < env_width; ++x) {
+                                    const float* const conditional_CDF_offset = light.get_image_conditional_CDF() + x + y * (env_width + 1);
+                                    float conditional_PDF = conditional_CDF_offset[1] - conditional_CDF_offset[0];
+
+                                    per_pixel_PDF_data[x + y * env_width] = marginal_PDF * conditional_PDF * PDF_scale;
+                                }
+                            }
+
+                            D3D11_SUBRESOURCE_DATA per_pixel_PDF_resource_data = {};
+                            per_pixel_PDF_resource_data.pSysMem = per_pixel_PDF_data;
+                            per_pixel_PDF_resource_data.SysMemPitch = sizeof(float) * env_width;
+
+                            HRESULT hr = device.CreateTexture2D(&PDF_tex_desc, &per_pixel_PDF_resource_data, &per_pixel_PDF_texture);
+                            THROW_ON_FAILURE(hr);
+
+                            D3D11_SHADER_RESOURCE_VIEW_DESC per_pixel_PDF_SRV_desc;
+                            per_pixel_PDF_SRV_desc.Format = DXGI_FORMAT_R32_FLOAT;
+                            per_pixel_PDF_SRV_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+                            per_pixel_PDF_SRV_desc.Texture2D.MipLevels = 1;
+                            per_pixel_PDF_SRV_desc.Texture2D.MostDetailedMip = 0;
+                            hr = device.CreateShaderResourceView(per_pixel_PDF_texture, &per_pixel_PDF_SRV_desc, &per_pixel_PDF_SRV);
+                            THROW_ON_FAILURE(hr);
+                        }
+
+                        { // Light samples.
+                            const unsigned int light_sample_count = 2048;
+
+                            D3D11_BUFFER_DESC sample_buffer_desc = {};
+                            sample_buffer_desc.Usage = D3D11_USAGE_IMMUTABLE;
+                            sample_buffer_desc.ByteWidth = sizeof(LightSample) * light_sample_count;
+                            sample_buffer_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+                            sample_buffer_desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+                            sample_buffer_desc.StructureByteStride = sizeof(LightSample);
+
+                            LightSample* light_samples = new LightSample[light_sample_count];
+                            #pragma omp parallel for schedule(dynamic, 16)
+                            for (int i = 0; i < light_sample_count; ++i)
+                                light_samples[i] = light.sample(RNG::sample02(i));
+
+                            D3D11_SUBRESOURCE_DATA sample_resource_data = {};
+                            sample_resource_data.pSysMem = light_samples;
+                            sample_resource_data.SysMemPitch = sizeof(LightSample) * light_sample_count;
+                            HRESULT hr = device.CreateBuffer(&sample_buffer_desc, &sample_resource_data, &light_samples_buffer);
+                            THROW_ON_FAILURE(hr);
+
+                            delete[] light_samples;
+
+                            D3D11_SHADER_RESOURCE_VIEW_DESC light_samples_SRV_desc = {};
+                            light_samples_SRV_desc.Format = DXGI_FORMAT_UNKNOWN;
+                            light_samples_SRV_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+                            light_samples_SRV_desc.Buffer.ElementOffset = 0;
+                            light_samples_SRV_desc.Buffer.ElementWidth = light_sample_count; // TODO Use .NumElements instead
+                            hr = device.CreateShaderResourceView(light_samples_buffer, &light_samples_SRV_desc, &light_samples_SRV);
+                            THROW_ON_FAILURE(hr);
+                        }
+                    }
+
+                    { // Create environment texture and upload specular base map.
 
                         D3D11_TEXTURE2D_DESC tex_desc = {};
                         tex_desc.Width = env_width;
@@ -233,7 +317,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                             unsigned int max_sample_count;
                         };
 
-                        ConvolutionConstants constants = { mipmap_count, env_width, env_height, 512u };
+                        ConvolutionConstants constants = { (unsigned int)mipmap_count, (unsigned int)env_width, (unsigned int)env_height, 512u };
                         ID3D11Buffer* constant_buffer;
                         HRESULT hr = create_constant_buffer(device, constants, &constant_buffer);
                         THROW_ON_FAILURE(hr);
@@ -261,10 +345,11 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         hr = device.CreateShaderResourceView(env.texture2D, &srv_desc, &env_SRV);
                         THROW_ON_FAILURE(hr);
 
-                        // Launch kernels
+                        // Launch kernels.
                         device_context.CSSetShader(m_convolution_shader, nullptr, 0);
                         device_context.CSSetConstantBuffers(0, 1, &constant_buffer);
-                        device_context.CSSetShaderResources(0, 1, &env_SRV);
+                        ID3D11ShaderResourceView* SRVs[] = { env_SRV, per_pixel_PDF_SRV, light_samples_SRV };
+                        device_context.CSSetShaderResources(0, 3, SRVs);
                         device_context.CSSetSamplers(0, 1, &m_sampler);
                         for (int m = 1; m < mipmap_count; ++m) {
                             device_context.CSSetUnorderedAccessViews(0, 1, mip_level_UAVs + m - 1, nullptr);
@@ -272,20 +357,26 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                             device_context.Dispatch(ceil_divide(width, 16), ceil_divide(height, 16), 1);
                         }
 
-                        // Unbind resource UAVs so they can be released and the texture can be used as input.
-                        ID3D11ShaderResourceView* null_srv = nullptr;
-                        device_context.CSSetShaderResources(0, 1, &null_srv);
-                        ID3D11UnorderedAccessView* null_UAV = nullptr;
-                        device_context.CSSetUnorderedAccessViews(0, 1, &null_UAV, nullptr);
-                        ID3D11Buffer* null_buffer = nullptr;
-                        device_context.CSSetConstantBuffers(0, 1, &null_buffer);
+                        { // Cleanup.
+                            // Unbind resource UAVs so they can be released and the texture can be used as input.
+                            ID3D11ShaderResourceView* null_SRVs[] = { nullptr, nullptr, nullptr };
+                            device_context.CSSetShaderResources(0, 3, null_SRVs);
+                            ID3D11UnorderedAccessView* null_UAV = nullptr;
+                            device_context.CSSetUnorderedAccessViews(0, 1, &null_UAV, nullptr);
+                            ID3D11Buffer* null_buffer = nullptr;
+                            device_context.CSSetConstantBuffers(0, 1, &null_buffer);
 
-                        // Release UAV for mip levels.
-                        safe_release(&env_SRV);
-                        safe_release(&constant_buffer);
-                        for (int m = 1; m < mipmap_count; ++m)
-                            safe_release(mip_level_UAVs + m - 1);
-                        delete[] mip_level_UAVs;
+                            // Release UAV for mip levels.
+                            safe_release(&env_SRV);
+                            safe_release(&constant_buffer);
+                            safe_release(&per_pixel_PDF_texture);
+                            safe_release(&per_pixel_PDF_SRV);
+                            safe_release(&light_samples_buffer);
+                            safe_release(&light_samples_SRV);
+                            for (int m = 1; m < mipmap_count; ++m)
+                                safe_release(mip_level_UAVs + m - 1);
+                            delete[] mip_level_UAVs;
+                        }
                     }
                 }
 
