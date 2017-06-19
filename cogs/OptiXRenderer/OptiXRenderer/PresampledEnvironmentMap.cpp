@@ -62,14 +62,14 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Asset
 
         m_samples = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, sample_count);
         m_samples->setElementSize(sizeof(LightSample));
-        LightSample* m_samples_data = static_cast<LightSample*>(m_samples->map());
+        LightSample* samples_data = static_cast<LightSample*>(m_samples->map());
         #pragma omp parallel for schedule(dynamic, 16)
         for (int i = 0; i < sample_count; ++i) {
             Assets::LightSample sample = light.sample(Math::RNG::sample02(i));
-            m_samples_data[i].radiance = { sample.radiance.r, sample.radiance.g, sample.radiance.b };
-            m_samples_data[i].PDF = sample.PDF;
-            m_samples_data[i].direction_to_light = { sample.direction_to_light.x, sample.direction_to_light.y, sample.direction_to_light.z };
-            m_samples_data[i].distance = sample.distance;
+            samples_data[i].radiance = { sample.radiance.r, sample.radiance.g, sample.radiance.b };
+            samples_data[i].PDF = sample.PDF;
+            samples_data[i].direction_to_light = { sample.direction_to_light.x, sample.direction_to_light.y, sample.direction_to_light.z };
+            samples_data[i].distance = sample.distance;
         }
         m_samples->unmap();
         OPTIX_VALIDATE(m_samples);
