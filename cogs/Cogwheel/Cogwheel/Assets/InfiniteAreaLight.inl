@@ -8,6 +8,7 @@
 
 #include <Cogwheel/Assets/InfiniteAreaLight.h>
 
+#include <Cogwheel/Math/Constants.h>
 #include <Cogwheel/Math/Distributions.h>
 #include <Cogwheel/Math/Quaternion.h>
 #include <Cogwheel/Math/RNG.h>
@@ -109,7 +110,7 @@ inline void InfiniteAreaLight::compute_PDF(TextureND latlong, float* PDF_result)
 namespace InfiniteAreaLightUtils {
 
 template <typename T, typename F>
-void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, IBLConvolution<T>* end, F color_conversion) {
+inline void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, IBLConvolution<T>* end, F color_conversion) {
 
     using namespace Cogwheel::Math;
     using namespace Cogwheel::Math::Distributions;
@@ -190,6 +191,25 @@ void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, IBLConv
             // Account for the samples being split evenly between BSDF and light.
             radiance *= 2.0f;
             begin->Pixels[x + y * width] = color_conversion(radiance / float(begin->sample_count));
+        }
+    }
+}
+
+inline void reconstruct_solid_angle_PDF_sans_sin_theta(const InfiniteAreaLight& light, float* per_pixel_PDF) {
+    int width = light.get_width(), height = light.get_height();
+
+    float PDF_image_scaling = width * height * light.image_integral();
+    float PDF_normalization_term = 1.0f / (float(light.image_integral()) * 2.0f * Math::PI<float>() * Math::PI<float>());
+    float PDF_scale = PDF_image_scaling * PDF_normalization_term;
+    #pragma omp parallel for schedule(dynamic, 16)
+    for (int y = 0; y < height; ++y) {
+        float marginal_PDF = light.get_image_marginal_CDF()[y + 1] - light.get_image_marginal_CDF()[y];
+
+        for (int x = 0; x < width; ++x) {
+            const float* const conditional_CDF_offset = light.get_image_conditional_CDF() + x + y * (width + 1);
+            float conditional_PDF = conditional_CDF_offset[1] - conditional_CDF_offset[0];
+
+            per_pixel_PDF[x + y * width] = marginal_PDF * conditional_PDF * PDF_scale;
         }
     }
 }

@@ -68,23 +68,7 @@ EnvironmentMap::EnvironmentMap(optix::Context& context, const Assets::InfiniteAr
     { // Per pixel PDF sampler.
         optix::Buffer per_pixel_PDF_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, width, height);
         float* per_pixel_PDF_data = static_cast<float*>(per_pixel_PDF_buffer->map());
-
-        // Compute PDF from CDF and apply most of the infinite area light normalization.
-        // The remaining normalization by sin_theta is done when the specific sampling direction is known.
-        float PDF_image_scaling = width * height * light.image_integral();
-        float PDF_normalization_term = 1.0f / (float(light.image_integral()) * 2.0f * PIf * PIf);
-        float PDF_scale = PDF_image_scaling * PDF_normalization_term;
-        #pragma omp parallel for schedule(dynamic, 16)
-        for (int y = 0; y < height; ++y) {
-            float marginal_PDF = light.get_image_marginal_CDF()[y + 1] - light.get_image_marginal_CDF()[y];
-
-            for (int x = 0; x < width; ++x) {
-                const float* const conditional_CDF_offset = light.get_image_conditional_CDF() + x + y * (width + 1);
-                float conditional_PDF = conditional_CDF_offset[1] - conditional_CDF_offset[0];
-
-                per_pixel_PDF_data[x + y * width] = marginal_PDF * conditional_PDF * PDF_scale;
-            }
-        }
+        Assets::InfiniteAreaLightUtils::reconstruct_solid_angle_PDF_sans_sin_theta(light, per_pixel_PDF_data);
         per_pixel_PDF_buffer->unmap();
 
         optix::TextureSampler& texture = per_pixel_PDF = context->createTextureSampler();

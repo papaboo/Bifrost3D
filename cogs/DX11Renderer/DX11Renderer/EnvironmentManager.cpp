@@ -212,22 +212,8 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                             PDF_tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
                             PDF_tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
-                            // TODO Move to infinite area light. Let loose the hounds and cry havok, this is a partial computation solution.
                             float* per_pixel_PDF_data = new float[env_width * env_height];
-                            float PDF_image_scaling = env_width * env_height * light.image_integral();
-                            float PDF_normalization_term = 1.0f / (float(light.image_integral()) * 2.0f * PI<float>() * PI<float>());
-                            float PDF_scale = PDF_image_scaling * PDF_normalization_term;
-                            #pragma omp parallel for schedule(dynamic, 16)
-                            for (int y = 0; y < env_height; ++y) {
-                                float marginal_PDF = light.get_image_marginal_CDF()[y + 1] - light.get_image_marginal_CDF()[y];
-
-                                for (int x = 0; x < env_width; ++x) {
-                                    const float* const conditional_CDF_offset = light.get_image_conditional_CDF() + x + y * (env_width + 1);
-                                    float conditional_PDF = conditional_CDF_offset[1] - conditional_CDF_offset[0];
-
-                                    per_pixel_PDF_data[x + y * env_width] = marginal_PDF * conditional_PDF * PDF_scale;
-                                }
-                            }
+                            InfiniteAreaLightUtils::reconstruct_solid_angle_PDF_sans_sin_theta(light, per_pixel_PDF_data);
 
                             D3D11_SUBRESOURCE_DATA per_pixel_PDF_resource_data = {};
                             per_pixel_PDF_resource_data.pSysMem = per_pixel_PDF_data;
@@ -235,6 +221,8 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
 
                             HRESULT hr = device.CreateTexture2D(&PDF_tex_desc, &per_pixel_PDF_resource_data, &per_pixel_PDF_texture);
                             THROW_ON_FAILURE(hr);
+
+                            delete[] per_pixel_PDF_data;
 
                             D3D11_SHADER_RESOURCE_VIEW_DESC per_pixel_PDF_SRV_desc;
                             per_pixel_PDF_SRV_desc.Format = DXGI_FORMAT_R32_FLOAT;

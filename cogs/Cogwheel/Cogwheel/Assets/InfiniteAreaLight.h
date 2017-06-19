@@ -105,7 +105,7 @@ public:
     // Static utility functions.
     //*********************************************************************************************
 
-    static float* compute_PDF(TextureND latlong) {
+    static inline float* compute_PDF(TextureND latlong) {
         float* PDF = new float[latlong.get_image().get_pixel_count()];
         compute_PDF(latlong, PDF);
         return PDF;
@@ -138,6 +138,10 @@ inline void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, 
 inline void convolute(const InfiniteAreaLight& light, IBLConvolution<Math::RGB>* begin, IBLConvolution<Math::RGB>* end) {
     convolute(light, begin, end, [](Math::RGB c) -> Math::RGB { return c; });
 }
+
+// Reconstructs the solid angle per pixel PDF from the CDFs.
+// WARNING: The PDF has not been scaled by sin_theta. This can only be done when the final sample direction is known.
+inline void reconstruct_solid_angle_PDF_sans_sin_theta(const InfiniteAreaLight& light, float* per_pixel_PDF);
 
 } // NS InfiniteAreaLightUtils
 } // NS Assets
