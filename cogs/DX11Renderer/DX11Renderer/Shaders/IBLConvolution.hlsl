@@ -43,11 +43,17 @@ namespace RNG {
     }
 }
 
+float rougness_from_miplevel(uint base_width, uint mip_width, float rcp_mipmap_count) {
+    uint size_factor = base_width / mip_width;
+    uint mip_index = firstbithigh(size_factor);
+    return mip_index * rcp_mipmap_count;
+}
+
 cbuffer constants : register(b0) {
-    uint mipmap_count;
-    uint base_width;
-    uint base_height;
-    uint max_sample_count;
+    float c_rcp_mipmap_count;
+    uint c_base_width;
+    uint c_base_height;
+    uint c_max_sample_count;
 };
 
 Texture2D environment_map : register(t0);
@@ -73,22 +79,20 @@ void GGX_convolute(uint3 thread_ID : SV_DispatchThreadID) {
     float3x3 up_rotation = create_inverse_TBN(up_vector);
 
     // Compute roughness and alpha from current miplevel and max miplevel.
-    uint size_factor = base_width / mip_width;
-    uint mip_index = firstbithigh(size_factor);
-    float roughness = mip_index / (float)mipmap_count;
+    float roughness = rougness_from_miplevel(c_base_width, mip_width, c_rcp_mipmap_count);
     float alpha = BSDFs::GGX::alpha_from_roughness(roughness);
 
     // Convolute.
     uint2 rng_scramble = reversebits(thread_ID.xy);
     float3 radiance = float3(0.0, 0.0, 0.0);
-    for (unsigned int i = 0; i < max_sample_count; ++i) {
+    for (unsigned int i = 0; i < c_max_sample_count; ++i) {
         float2 sample_uv = RNG::sample02(i, rng_scramble);
         float4 ggx_sample = BSDFs::GGX::sample(alpha, sample_uv);
         float2 bsdf_sample_uv = direction_to_latlong_texcoord(mul(up_rotation, ggx_sample.xyz));
         radiance += environment_map.SampleLevel(env_sampler, bsdf_sample_uv, 0).rgb;
     }
 
-    target_mip_level[thread_ID.xy] = radiance / max_sample_count;
+    target_mip_level[thread_ID.xy] = radiance / c_max_sample_count;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -118,13 +122,11 @@ void MIS_convolute(uint3 thread_ID : SV_DispatchThreadID) {
     float3 up_vector = latlong_texcoord_to_direction(up_uv);
 
     // Compute roughness and alpha from current miplevel and max miplevel.
-    uint size_factor = base_width / mip_width;
-    uint mip_index = firstbithigh(size_factor);
-    float roughness = mip_index / (float)mipmap_count;
+    float roughness = rougness_from_miplevel(c_base_width, mip_width, c_rcp_mipmap_count);
     float alpha = BSDFs::GGX::alpha_from_roughness(roughness);
 
     // Convolute.
-    unsigned int half_sample_count = max_sample_count / 2;
+    unsigned int half_sample_count = c_max_sample_count / 2;
     float3 radiance = float3(0.0, 0.0, 0.0);
 
     for (unsigned int l = 0; l < half_sample_count; ++l) {

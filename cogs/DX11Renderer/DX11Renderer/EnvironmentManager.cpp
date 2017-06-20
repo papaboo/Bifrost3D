@@ -299,13 +299,13 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
 
                         // Constant buffer.
                         struct ConvolutionConstants {
-                            unsigned int mip_count;
+                            float rcp_mip_count;
                             unsigned int base_width;
                             unsigned int base_height;
                             unsigned int max_sample_count;
                         };
 
-                        ConvolutionConstants constants = { (unsigned int)mipmap_count, (unsigned int)env_width, (unsigned int)env_height, 512u };
+                        ConvolutionConstants constants = { 1.0f / (float)mipmap_count, (unsigned int)env_width, (unsigned int)env_height, 512u };
                         ID3D11Buffer* constant_buffer;
                         HRESULT hr = create_constant_buffer(device, constants, &constant_buffer);
                         THROW_ON_FAILURE(hr);
