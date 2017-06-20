@@ -20,7 +20,7 @@ static const float RECIP_PI = 0.31830988618379067153776752674503f;
 // Utility functions.
 // ---------------------------------------------------------------------------
 
-float3x3 create_tbn(float3 normal) {
+float3x3 create_TBN(float3 normal) {
     float3 a0;
     if (abs(normal.x) < abs(normal.y)) {
         const float zup = abs(normal.z) < abs(normal.x) ? 0.0f : 1.0f;
@@ -38,6 +38,10 @@ float3x3 create_tbn(float3 normal) {
     tbn[1] = bitangent;
     tbn[2] = normal;
     return tbn;
+}
+
+float3x3 create_inverse_TBN(float3 normal) {
+    return transpose(create_TBN(normal));
 }
 
 //-----------------------------------------------------------------------------

@@ -70,7 +70,7 @@ void GGX_convolute(uint3 thread_ID : SV_DispatchThreadID) {
     float2 up_uv = float2((thread_ID.x + 0.5f) / mip_width, 
                           (thread_ID.y + 0.5f) / mip_height);
     float3 up_vector = latlong_texcoord_to_direction(up_uv);
-    float3x3 inverse_up_rotation = transpose(create_tbn(up_vector)); // TODO create_inverse_TBN
+    float3x3 up_rotation = create_inverse_TBN(up_vector);
 
     // Compute roughness and alpha from current miplevel and max miplevel.
     uint size_factor = base_width / mip_width;
@@ -84,7 +84,7 @@ void GGX_convolute(uint3 thread_ID : SV_DispatchThreadID) {
     for (unsigned int i = 0; i < max_sample_count; ++i) {
         float2 sample_uv = RNG::sample02(i, rng_scramble);
         float4 ggx_sample = BSDFs::GGX::sample(alpha, sample_uv);
-        float2 bsdf_sample_uv = direction_to_latlong_texcoord(mul(inverse_up_rotation, ggx_sample.xyz));
+        float2 bsdf_sample_uv = direction_to_latlong_texcoord(mul(up_rotation, ggx_sample.xyz));
         radiance += environment_map.SampleLevel(env_sampler, bsdf_sample_uv, 0).rgb;
     }
 
@@ -141,13 +141,13 @@ void MIS_convolute(uint3 thread_ID : SV_DispatchThreadID) {
     }
 
     uint2 rng_scramble = reversebits(thread_ID.xy);
-    float3x3 inverse_up_TBN = transpose(create_tbn(up_vector));
+    float3x3 up_TBN = create_inverse_TBN(up_vector);
     for (unsigned int s = 0; s < half_sample_count; ++s) {
         float4 bsdf_sample = BSDFs::GGX::sample(alpha, RNG::sample02(s, rng_scramble));
         if (!(bsdf_sample.w > 0.000000001f)) // NaN resilient check.
             continue;
 
-        bsdf_sample.xyz = normalize(mul(inverse_up_TBN, bsdf_sample.xyz));
+        bsdf_sample.xyz = normalize(mul(up_TBN, bsdf_sample.xyz));
         float2 bsdf_sample_uv = direction_to_latlong_texcoord(bsdf_sample.xyz);
         float sin_theta = abs(sqrt(1.0f - bsdf_sample.y * bsdf_sample.y));
         float environment_PDF = per_pixel_PDF.SampleLevel(env_sampler, bsdf_sample_uv, 0).r * sin_theta;

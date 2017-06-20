@@ -33,17 +33,17 @@ struct PixelInput {
 
 float3 integration(PixelInput input) {
     float3 normal = normalize(input.normal.xyz);
-    float3x3 world_to_shading_tbn = create_tbn(normal);
+    float3x3 world_to_shading_TBN = create_TBN(normal);
 
     float3 wo = camera_position.xyz - input.world_position.xyz;
     float3 wi = -reflect(normalize(wo), normal);
 
     float3 radiance = environment_tint.rgb * material.IBL(normal, wi, input.texcoord);
 
-    wo = normalize(mul(world_to_shading_tbn, wo));
+    wo = normalize(mul(world_to_shading_TBN, wo));
     for (int l = 0; l < light_count.x; ++l) {
         LightSample light_sample = sample_light(light_data[l], input.world_position.xyz);
-        float3 wi = mul(world_to_shading_tbn, light_sample.direction_to_light);
+        float3 wi = mul(world_to_shading_TBN, light_sample.direction_to_light);
         float3 f = material.evaluate(wo, wi, input.texcoord);
         radiance += f * light_sample.radiance * abs(wi.z);
     }
