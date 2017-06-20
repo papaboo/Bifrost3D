@@ -27,6 +27,17 @@ namespace RNG {
         return float2(van_der_corput(n, scramble.x), sobol2(n, scramble.y));
     }
 
+    // Robert Jenkins hash function.
+    // https://gist.github.com/badboy/6267743
+    uint hash(uint a) {
+        a = (a + 0x7ed55d16) + (a << 12);
+        a = (a ^ 0xc761c23c) ^ (a >> 19);
+        a = (a + 0x165667b1) + (a << 5);
+        a = (a + 0xd3a2646c) ^ (a << 9);
+        a = (a + 0xfd7046c5) + (a << 3);
+        return (a ^ 0xb55a4f09) ^ (a >> 16);
+    }
+
     // Computes the power heuristic of pdf1 and pdf2.
     // It is assumed that pdf1 is always valid, i.e. not NaN.
     // pdf2 is allowed to be NaN, but generally try to avoid it. :)
@@ -129,8 +140,11 @@ void MIS_convolute(uint3 thread_ID : SV_DispatchThreadID) {
     unsigned int half_sample_count = c_max_sample_count / 2;
     float3 radiance = float3(0.0, 0.0, 0.0);
 
+    uint light_sample_count, light_sample_stride;
+    light_samples.GetDimensions(light_sample_count, light_sample_stride);
+    uint light_index_offset = RNG::hash(thread_ID.x + thread_ID.y * mip_width);
     for (unsigned int l = 0; l < half_sample_count; ++l) {
-        LightSample light_sample = light_samples[l]; // TODO Offset by hash.
+        LightSample light_sample = light_samples[(l + light_index_offset) % light_sample_count];
 
         float cos_theta = max(dot(light_sample.direction_to_light, up_vector), 0.0f);
         float ggx_f = BSDFs::GGX::D(alpha, cos_theta);

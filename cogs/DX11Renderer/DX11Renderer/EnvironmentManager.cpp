@@ -260,7 +260,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                             light_samples_SRV_desc.Format = DXGI_FORMAT_UNKNOWN;
                             light_samples_SRV_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
                             light_samples_SRV_desc.Buffer.ElementOffset = 0;
-                            light_samples_SRV_desc.Buffer.ElementWidth = light_sample_count; // TODO Use .NumElements instead
+                            light_samples_SRV_desc.Buffer.NumElements = light_sample_count;
                             hr = device.CreateShaderResourceView(light_samples_buffer, &light_samples_SRV_desc, &light_samples_SRV);
                             THROW_ON_FAILURE(hr);
                         }
@@ -295,7 +295,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         delete[] pixels;
                     }
 
-                    { // Recursive IBL mip level convolution.
+                    { // IBL mip level convolution.
 
                         // Constant buffer.
                         struct ConvolutionConstants {
@@ -305,7 +305,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                             unsigned int max_sample_count;
                         };
 
-                        ConvolutionConstants constants = { 1.0f / (float)mipmap_count, (unsigned int)env_width, (unsigned int)env_height, 512u };
+                        ConvolutionConstants constants = { 1.0f / (float)mipmap_count, (unsigned int)env_width, (unsigned int)env_height, 1024u };
                         ID3D11Buffer* constant_buffer;
                         HRESULT hr = create_constant_buffer(device, constants, &constant_buffer);
                         THROW_ON_FAILURE(hr);
