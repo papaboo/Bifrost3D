@@ -1,16 +1,28 @@
 BACKLOG:
-* Pre convoluted IBL in DX renderer.
-** Map the mipmap levels. Shade them red to see if it works.
-** Convolute to kingdom come.
+* Typedeffed forward declared DX11 resource smart pointer. Get rid of those explicit releases. Use unique_ptr? Is it thin enough? COM Ptr?
+** Use in EnvironmentManager.
+* 64 bit oct encoded normals in the data model.
+** 32 bit in DX11Renderer. Dump them in vertex position.w?
+* Check for memleaks.
+* Importance sample improvement? Gold material in SphereScene has a bunch of checker artefacts, possibly from the BSDF sampling or MIS weighting. The material is practically specular though.
+** Pr pixel debug with pixel indication?
+** Gold, which is a specular metal, has a specular weight of 0.6, so it's (supposedly) 40% diffuse.
 * OptiXRenderer filtering.
 ** Reconstruction filters
 *** Pr pixel.
 *** Linear.
 *** Mitchell.
 ** Filter neighbouring light samples before reconstruction.
+*** Screen space photon mapping approach with MIS weights, then add a (recursive?) bilateral blur for everything not yet filtered.
 *** Needs ray differentials.
-* Materials revisited.
-** Add coat.
+* IBL rho intensity.
+** Specularity increase is too strong.
+** Metals are too bright at grazing angles.
+** Perhaps computing The relation between GGX tint and rho would help figure out how much light scatters to the diffuse layer and how much the specular metal layers will reflect?
+* Add coat.
+** http://jcgt.org/published/0003/04/03/paper-lowres.pdf
+** https://www.youtube.com/watch?v=4nKb9hRYbPA
+** Or just add a GGX layer on top with an iridescence parameter (red and blue fresnel offset relative to green.)
 * VS compiler flags /debug:fastlink in VS2015. Use /GL (Enable link-time code generation), /LTCG (Use Link Time Code Generation) and /INCREMENTAL:NO (Disable Incremental Linking)
 ** Perhaps create macros for setting up executables and libraries.
 * Multiple cameras.
@@ -21,11 +33,12 @@ BACKLOG:
 *** Expose certain backbuffer state pr camera/viewport in a renderer interface. Fx iteration_count, is_continuous_renderer and so on. Members that can be used to evaluate the 'doneness' of a backbuffer.
 **** Investigate and potentially use C++ async concepts for this.
 * Normals revisited
+** Encode in 32 bit in DX11 http://jcgt.org/published/0003/02/01/paper.pdf
+** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
+*** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
 ** Bump mapping
 *** Filter bumpmap mipmaps using Toksvig05, SGGX or AGAA NDF construction.
 ** 'Fix' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles. (Offset normal by -view_dir until the dot product is 0.)
-** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
-*** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
 * BTDF
 ** Transmission factor.
 *** Use IOR computed from specularity.
