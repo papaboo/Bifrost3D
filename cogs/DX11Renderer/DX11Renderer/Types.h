@@ -11,9 +11,14 @@
 
 #include <Cogwheel/Math/half.h>
 
+#include <DX11Renderer/UniqueResourcePtr.h>
+
 //----------------------------------------------------------------------------
 // Forward declarations.
 //----------------------------------------------------------------------------
+struct ID3D10Blob;
+typedef ID3D10Blob ID3DBlob;
+typedef DX11Renderer::UniqueResourcePtr<ID3DBlob> UID3DBlob;
 struct ID3D11Buffer;
 struct ID3D11ComputeShader;
 struct ID3D11Device1;

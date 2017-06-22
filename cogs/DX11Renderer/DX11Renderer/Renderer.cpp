@@ -134,7 +134,7 @@ public:
         }
 
         { // Setup vertex processing.
-            ID3D10Blob* vertex_shader_blob = compile_shader(m_shader_folder_path + L"VertexShader.hlsl", "vs_5_0");
+            UID3DBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"VertexShader.hlsl", "vs_5_0");
 
             // Create the shader objects.
             HRESULT hr = m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shading.shader);
@@ -173,7 +173,7 @@ public:
             hr = m_device->CreateDepthStencilState(&depth_desc, &m_opaque.depth_state);
             THROW_ON_FAILURE(hr);
 
-            ID3D10Blob* pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "opaque");
+            UID3DBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "opaque");
             hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_opaque.shader);
             THROW_ON_FAILURE(hr);
         }
@@ -209,7 +209,7 @@ public:
             hr = m_device->CreateDepthStencilState(&depth_desc, &m_transparent.depth_state);
             THROW_ON_FAILURE(hr);
 
-            ID3D10Blob* pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "transparent");
+            UID3DBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "transparent");
             hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_transparent.shader);
             THROW_ON_FAILURE(hr);
         }

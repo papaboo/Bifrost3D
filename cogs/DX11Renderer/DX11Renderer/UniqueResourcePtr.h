@@ -15,6 +15,8 @@ namespace DX11Renderer {
 // A unique pointer for DirectX 11 resources.
 // The pointer is used when there will only ever be a single, unique owner of the resource.
 // For shared ownership use Microsoft::WRL::ComPtr.
+// Future work:
+// * Resource interface casts.
 // ------------------------------------------------------------------------------------------------
 template <typename T>
 class UniqueResourcePtr {
@@ -24,7 +26,7 @@ public:
     // --------------------------------------------------------------------------------------------
     // Constructors and destructor.
     // --------------------------------------------------------------------------------------------
-    UniqueResourcePtr(T* res)
+    UniqueResourcePtr(T* res = nullptr)
         : resource(res) { }
 
     UniqueResourcePtr(UniqueResourcePtr&& other)
@@ -53,7 +55,10 @@ public:
     inline T* operator->() { return resource; }
     inline const T* const operator->() const { return resource; }
 
-    inline T* detach() const { T* tmp = resource; resource = nullptr; return tmp; }
+    inline T** operator&() { return &resource; }
+    inline const T** const operator&() const { return &resource; }
+
+    inline T* detach() { T* tmp = resource; resource = nullptr; return tmp; }
     inline unsigned int release() { resource->Release(); resource = nullptr; }
 
 private:
