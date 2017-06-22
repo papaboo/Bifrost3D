@@ -26,6 +26,7 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/TransformManager.h
     DX11Renderer/TransformManager.cpp
     DX11Renderer/Types.h
+    DX11Renderer/UniqueResourcePtr.h
     DX11Renderer/Utils.h
   )
 
