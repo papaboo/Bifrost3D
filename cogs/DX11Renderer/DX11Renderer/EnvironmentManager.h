@@ -27,7 +27,6 @@ class EnvironmentManager {
 public:
 
     EnvironmentManager(ID3D11Device1& device, const std::wstring& shader_folder_path, TextureManager& textures);
-    ~EnvironmentManager();
 
     // Render an environment to the active backbuffer.
     bool render(ID3D11DeviceContext1& render_context, int environment_ID);
@@ -41,17 +40,17 @@ private:
     struct Environment {
         float4 tint;
         int texture_ID;
-        ID3D11Texture2D* texture2D;
-        ID3D11ShaderResourceView* srv;
+        UID3D11Texture2D texture2D;
+        UID3D11ShaderResourceView srv;
     };
 
     TextureManager& m_textures;
     std::vector<Environment> m_envs = std::vector<Environment>(0);
-    ID3D11SamplerState* m_sampler;
+    UID3D11SamplerState m_sampler;
 
-    ID3D11VertexShader* m_vertex_shader;
-    ID3D11PixelShader* m_pixel_shader;
-    ID3D11ComputeShader* m_convolution_shader;
+    UID3D11VertexShader m_vertex_shader;
+    UID3D11PixelShader m_pixel_shader;
+    UID3D11ComputeShader m_convolution_shader;
 };
 
 } // NS DX11Renderer

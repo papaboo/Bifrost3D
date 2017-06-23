@@ -51,17 +51,6 @@ EnvironmentManager::EnvironmentManager(ID3D11Device1& device, const std::wstring
     THROW_ON_FAILURE(hr);
 }
 
-EnvironmentManager::~EnvironmentManager() {
-    safe_release(&m_vertex_shader);
-    safe_release(&m_pixel_shader);
-    safe_release(&m_convolution_shader);
-    safe_release(&m_sampler);
-    for (Environment env : m_envs) {
-        safe_release(&env.srv);
-        safe_release(&env.texture2D);
-    }
-}
-
 bool EnvironmentManager::render(ID3D11DeviceContext1& render_context, int environment_ID) {
 
 #if CHECK_IMPLICIT_STATE
@@ -192,10 +181,10 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                     // GPU convolution.
 
                     // Create and upload light samples and PDF for MIS.
-                    ID3D11Texture2D* per_pixel_PDF_texture = nullptr;
-                    ID3D11ShaderResourceView* per_pixel_PDF_SRV = nullptr;
-                    ID3D11Buffer* light_samples_buffer = nullptr;
-                    ID3D11ShaderResourceView* light_samples_SRV = nullptr;
+                    UID3D11Texture2D per_pixel_PDF_texture = nullptr;
+                    UID3D11ShaderResourceView per_pixel_PDF_SRV = nullptr;
+                    UID3D11Buffer light_samples_buffer = nullptr;
+					UID3D11ShaderResourceView light_samples_SRV = nullptr; // TODO Does the SRV keep the resource alive?
                     {
                         { // Per pixel PDF.
                             D3D11_TEXTURE2D_DESC PDF_tex_desc = {};
@@ -303,21 +292,20 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         };
 
                         ConvolutionConstants constants = { 1.0f / (float)mipmap_count, (unsigned int)env_width, (unsigned int)env_height, 1024u };
-                        ID3D11Buffer* constant_buffer;
+						UID3D11Buffer constant_buffer;
                         HRESULT hr = create_constant_buffer(device, constants, &constant_buffer);
                         THROW_ON_FAILURE(hr);
 
                         // Create UAVs for the mip levels.
-                        ID3D11UnorderedAccessView** mip_level_UAVs = new ID3D11UnorderedAccessView*[mipmap_count - 1];
+                        UID3D11UnorderedAccessView* mip_level_UAVs = new UID3D11UnorderedAccessView[mipmap_count - 1];
 
-                        for (int m = 1; m < mipmap_count; ++m) {
-                            D3D11_UNORDERED_ACCESS_VIEW_DESC mip_level_UAV_desc = {};
-                            mip_level_UAV_desc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
-                            mip_level_UAV_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
-                            mip_level_UAV_desc.Texture2D.MipSlice = m;
+						for (int m = 1; m < mipmap_count; ++m) {
+							D3D11_UNORDERED_ACCESS_VIEW_DESC mip_level_UAV_desc = {};
+							mip_level_UAV_desc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
+							mip_level_UAV_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+							mip_level_UAV_desc.Texture2D.MipSlice = m;
 
-                            ID3D11UnorderedAccessView** mip_level_UAV = mip_level_UAVs + m - 1;
-                            HRESULT hr = device.CreateUnorderedAccessView(env.texture2D, &mip_level_UAV_desc, mip_level_UAV);
+                            HRESULT hr = device.CreateUnorderedAccessView(env.texture2D, &mip_level_UAV_desc, &mip_level_UAVs[m - 1]);
                             THROW_ON_FAILURE(hr);
                         }
 
@@ -326,7 +314,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
                         srv_desc.Texture2D.MipLevels = 1;
                         srv_desc.Texture2D.MostDetailedMip = 0;
-                        ID3D11ShaderResourceView* env_SRV;
+                        UID3D11ShaderResourceView env_SRV;
                         hr = device.CreateShaderResourceView(env.texture2D, &srv_desc, &env_SRV);
                         THROW_ON_FAILURE(hr);
 
@@ -337,13 +325,13 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         device_context.CSSetShaderResources(0, 3, SRVs);
                         device_context.CSSetSamplers(0, 1, &m_sampler);
                         for (int m = 1; m < mipmap_count; ++m) {
-                            device_context.CSSetUnorderedAccessViews(0, 1, mip_level_UAVs + m - 1, nullptr);
+                            device_context.CSSetUnorderedAccessViews(0, 1, &mip_level_UAVs[m - 1], nullptr);
                             int width = env_width >> m, height = env_height >> m;
                             device_context.Dispatch(ceil_divide(width, 16), ceil_divide(height, 16), 1);
                         }
 
                         { // Cleanup.
-                            // Unbind resource UAVs so they can be released and the texture can be used as input.
+                            // Unbind resource UAVs and other resources, so they can be released and the texture can be used as input.
                             ID3D11ShaderResourceView* null_SRVs[] = { nullptr, nullptr, nullptr };
                             device_context.CSSetShaderResources(0, 3, null_SRVs);
                             ID3D11UnorderedAccessView* null_UAV = nullptr;
@@ -352,14 +340,6 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                             device_context.CSSetConstantBuffers(0, 1, &null_buffer);
 
                             // Release UAV for mip levels.
-                            safe_release(&env_SRV);
-                            safe_release(&constant_buffer);
-                            safe_release(&per_pixel_PDF_texture);
-                            safe_release(&per_pixel_PDF_SRV);
-                            safe_release(&light_samples_buffer);
-                            safe_release(&light_samples_SRV);
-                            for (int m = 1; m < mipmap_count; ++m)
-                                safe_release(mip_level_UAVs + m - 1);
                             delete[] mip_level_UAVs;
                         }
                     }
