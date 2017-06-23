@@ -1,10 +1,10 @@
 // DirectX 11 renderer host types.
-// ---------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 // Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
-// ---------------------------------------------------------------------------
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+//-------------------------------------------------------------------------------------------------
 
 #ifndef _DX11RENDERER_RENDERER_TYPES_H_
 #define _DX11RENDERER_RENDERER_TYPES_H_
@@ -13,12 +13,11 @@
 
 #include <DX11Renderer/UniqueResourcePtr.h>
 
-//----------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 // Forward declarations.
-//----------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 struct ID3D10Blob;
-typedef ID3D10Blob ID3DBlob;
-typedef DX11Renderer::UniqueResourcePtr<ID3DBlob> UID3DBlob;
+using ID3DBlob = ID3D10Blob;
 struct ID3D11Buffer;
 struct ID3D11ComputeShader;
 struct ID3D11Device1;
@@ -29,12 +28,30 @@ struct ID3D11SamplerState;
 struct ID3D11ShaderResourceView;
 struct ID3D11Texture2D;
 struct ID3D11VertexShader;
+struct ID3D11UnorderedAccessView;
 
 namespace DX11Renderer {
 
-//----------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+// Alias unique resource pointers
+//-------------------------------------------------------------------------------------------------
+using UID3DBlob = DX11Renderer::UniqueResourcePtr<ID3DBlob>;
+using UID3D11Buffer = DX11Renderer::UniqueResourcePtr<ID3D11Buffer>;
+using UID3D11ComputeShader = DX11Renderer::UniqueResourcePtr<ID3D11ComputeShader>;
+using UID3D11Device1 = DX11Renderer::UniqueResourcePtr<ID3D11Device1>;
+using UID3D11DeviceContext1 = DX11Renderer::UniqueResourcePtr<ID3D11DeviceContext1>;
+using UID3D11InputLayout = DX11Renderer::UniqueResourcePtr<ID3D11InputLayout>;
+using UID3D11PixelShader = DX11Renderer::UniqueResourcePtr<ID3D11PixelShader>;
+using UID3D11SamplerState = DX11Renderer::UniqueResourcePtr<ID3D11SamplerState>;
+using UID3D11ShaderResourceView = DX11Renderer::UniqueResourcePtr<ID3D11ShaderResourceView>;
+using UID3D11Texture2D = DX11Renderer::UniqueResourcePtr<ID3D11Texture2D>;
+using UID3D11VertexShader = DX11Renderer::UniqueResourcePtr<ID3D11VertexShader>;
+using UID3D11UnorderedAccessView = DX11Renderer::UniqueResourcePtr<ID3D11UnorderedAccessView>;
+
+
+//-------------------------------------------------------------------------------------------------
 // Storage.
-//----------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 
 #define CONSTANT_ELEMENT_SIZE 16
 #define CONSTANT_BUFFER_ALIGNMENT 256
@@ -74,9 +91,9 @@ struct R11G11B10_Float {
     }
 };
 
-//----------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 // Model structs.
-//----------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 
 struct Dx11Material {
     float3 tint;
@@ -137,9 +154,9 @@ struct Dx11Model {
     bool is_destroyed() { return (properties & Properties::Destroyed) == Properties::Destroyed; }
 };
 
-//----------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 // Light source structs.
-//----------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 
 struct Dx11SphereLight {
     float3 power;
