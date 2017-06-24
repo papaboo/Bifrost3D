@@ -33,7 +33,8 @@ public:
         : resource(other.detach()) { }
 
     UniqueResourcePtr& operator=(UniqueResourcePtr&& rhs) {
-        resource = rhs.detach;
+        if (resource) resource->Release();
+        resource = rhs.detach();
         return *this;
     }
 
@@ -58,12 +59,20 @@ public:
     inline T** operator&() { return &resource; }
     inline const T** const operator&() const { return &resource; }
 
+    // --------------------------------------------------------------------------------------------
+    // Resource management.
+    // --------------------------------------------------------------------------------------------
+
     inline T* detach() { T* tmp = resource; resource = nullptr; return tmp; }
     inline unsigned int release() { resource->Release(); resource = nullptr; }
+    inline void swap(UniqueResourcePtr<T>& other) {
+        T* tmp = other.resource;
+        other.resource = resource;
+        resource = tmp;
+    }
 
 private:
 
-    // NOTE If these are ever implemented (which I hope they're not) they should transfer ownership.
     UniqueResourcePtr(UniqueResourcePtr& other) = delete;
     UniqueResourcePtr& operator=(UniqueResourcePtr& rhs) = delete;
 };
