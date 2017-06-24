@@ -28,9 +28,8 @@ private:
 
     // Default textures.
     struct DefaultTexture {
-        ID3D11Texture2D* texture2D;
-        ID3D11ShaderResourceView* srv;
-        ID3D11SamplerState* sampler;
+        UID3D11ShaderResourceView srv;
+        UID3D11SamplerState sampler;
     };
 
     DefaultTexture m_white_texture;
@@ -39,7 +38,6 @@ public:
 
     TextureManager() {}
     TextureManager(ID3D11Device1& device);
-    void release();
 
     inline const DefaultTexture& white_texture() { return m_white_texture; }
 

@@ -252,7 +252,6 @@ public:
         }
 
         delete m_environments;
-        m_textures.release();
     }
 
     void render_model(ID3D11DeviceContext1* context, Dx11Model model, Cameras::UID camera_ID) {
@@ -280,16 +279,16 @@ public:
             m_materials.bind_material(*context, 3, model.material_ID);
 
             Dx11Material& material = m_materials.get_material(model.material_ID);
-            Dx11Texture colorTexture = m_textures.get_texture(material.tint_texture_index);
-            if (colorTexture.sampler != nullptr) {
-                context->PSSetShaderResources(1, 1, &colorTexture.image->srv);
-                context->PSSetSamplers(1, 1, &colorTexture.sampler);
+            Dx11Texture& color_texture = m_textures.get_texture(material.tint_texture_index);
+            if (color_texture.sampler != nullptr) {
+                context->PSSetShaderResources(1, 1, &color_texture.image->srv);
+                context->PSSetSamplers(1, 1, &color_texture.sampler);
             }
 
-            Dx11Texture coverateTexture = m_textures.get_texture(material.coverage_texture_index);
-            if (coverateTexture.sampler != nullptr) {
-                context->PSSetShaderResources(2, 1, &coverateTexture.image->srv);
-                context->PSSetSamplers(2, 1, &coverateTexture.sampler);
+            Dx11Texture& coverage_texture = m_textures.get_texture(material.coverage_texture_index);
+            if (coverage_texture.sampler != nullptr) {
+                context->PSSetShaderResources(2, 1, &coverage_texture.image->srv);
+                context->PSSetSamplers(2, 1, &coverage_texture.sampler);
             }
         }
 

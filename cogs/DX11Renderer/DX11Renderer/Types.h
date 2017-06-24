@@ -35,6 +35,7 @@ namespace DX11Renderer {
 //-------------------------------------------------------------------------------------------------
 // Alias unique resource pointers
 //-------------------------------------------------------------------------------------------------
+
 using UID3DBlob = DX11Renderer::UniqueResourcePtr<ID3DBlob>;
 using UID3D11Buffer = DX11Renderer::UniqueResourcePtr<ID3D11Buffer>;
 using UID3D11ComputeShader = DX11Renderer::UniqueResourcePtr<ID3D11ComputeShader>;
@@ -107,13 +108,12 @@ struct Dx11Material {
 };
 
 struct Dx11Image {
-    ID3D11Texture2D* texture2D;
-    ID3D11ShaderResourceView* srv;
+    UID3D11ShaderResourceView srv;
 };
 
 struct Dx11Texture {
     Dx11Image* image;
-    ID3D11SamplerState* sampler;
+    UID3D11SamplerState sampler;
 };
 
 struct Dx11Mesh {
