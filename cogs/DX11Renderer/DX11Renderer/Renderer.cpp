@@ -250,9 +250,8 @@ public:
             safe_release(mesh.normals_address());
             safe_release(mesh.texcoords_address());
         }
-        
+
         delete m_environments;
-        m_lights.release();
         m_textures.release();
     }
 

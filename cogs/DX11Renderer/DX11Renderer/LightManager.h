@@ -41,7 +41,7 @@ private:
         Vector3i _padding;
         Dx11Light m_lights[MAX_LIGHTS];
     } m_data;
-    ID3D11Buffer* m_lights_buffer;
+    UID3D11Buffer m_lights_buffer;
 
     inline void light_creation(LightSources::UID light_ID, unsigned int light_index, Dx11Light* gpu_lights) {
 
@@ -96,14 +96,6 @@ public:
         uniforms_desc.MiscFlags = 0;
 
         HRESULT hr = device.CreateBuffer(&uniforms_desc, NULL, &m_lights_buffer);
-    }
-
-    void release() {
-        safe_release(&m_lights_buffer);
-    }
-
-    inline ID3D11Buffer* light_buffer() {
-        return m_lights_buffer;
     }
 
     inline ID3D11Buffer** light_buffer_addr() {
