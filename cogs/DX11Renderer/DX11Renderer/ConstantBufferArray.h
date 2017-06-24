@@ -26,7 +26,7 @@ template<typename T>
 class ConstantBufferArray {
 public:
 
-    ID3D11Buffer* m_constant_buffer;
+    UID3D11Buffer m_constant_buffer;
 
     ConstantBufferArray() : m_constant_buffer(nullptr) { }
 
@@ -37,16 +37,10 @@ public:
 
     ConstantBufferArray(ConstantBufferArray&& other)
         : m_constant_buffer(other.m_constant_buffer) {
-        other.m_constant_buffer = nullptr;
     }
     ConstantBufferArray& operator=(ConstantBufferArray&& rhs) {
-        m_constant_buffer = rhs.m_constant_buffer;
-        rhs.m_constant_buffer = nullptr;
+        m_constant_buffer = std::move(rhs.m_constant_buffer);
         return *this;
-    }
-
-    ~ConstantBufferArray() {
-        safe_release(&m_constant_buffer);
     }
 
     inline void set(ID3D11DeviceContext1* context, const T& element, unsigned int index, D3D11_COPY_FLAGS copy_flags = D3D11_COPY_NO_OVERWRITE) {

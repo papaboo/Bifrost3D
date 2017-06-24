@@ -54,7 +54,8 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         resource_data.pSysMem = rho;
         resource_data.SysMemPitch = sizeof_dx_format(tex_desc.Format) * tex_desc.Width;
 
-        HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &m_GGX_with_fresnel_rho_texture);
+        UID3D11Texture2D GGX_with_fresnel_rho_texture;
+        HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &GGX_with_fresnel_rho_texture);
         THROW_ON_FAILURE(hr);
 
         delete[] rho;
@@ -64,7 +65,7 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         srv_desc.Texture2D.MipLevels = tex_desc.MipLevels;
         srv_desc.Texture2D.MostDetailedMip = 0;
-        hr = device.CreateShaderResourceView(m_GGX_with_fresnel_rho_texture, &srv_desc, &m_GGX_with_fresnel_rho_srv);
+        hr = device.CreateShaderResourceView(GGX_with_fresnel_rho_texture, &srv_desc, &m_GGX_with_fresnel_rho_srv);
         THROW_ON_FAILURE(hr);
     }
 
@@ -91,13 +92,6 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
     m_constant_array = ConstantBufferArray<Dx11Material>(&device, 128);
 
     m_constant_array.set(&context, invalid_mat, 0, D3D11_COPY_DISCARD);
-}
-
-MaterialManager::~MaterialManager() {
-    safe_release(&m_GGX_with_fresnel_rho_texture);
-    safe_release(&m_GGX_with_fresnel_rho_srv);
-
-    safe_release(&m_rho_sampler);
 }
 
 void MaterialManager::handle_updates(ID3D11DeviceContext1& context) {

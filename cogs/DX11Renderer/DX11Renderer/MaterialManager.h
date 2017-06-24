@@ -31,16 +31,13 @@ public:
     MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& context);
 
     MaterialManager& operator=(MaterialManager&& rhs) {
-        m_GGX_with_fresnel_rho_texture = std::move(rhs.m_GGX_with_fresnel_rho_texture); rhs.m_GGX_with_fresnel_rho_texture = nullptr;
-        m_GGX_with_fresnel_rho_srv = std::move(rhs.m_GGX_with_fresnel_rho_srv); rhs.m_GGX_with_fresnel_rho_srv = nullptr;
+        m_GGX_with_fresnel_rho_srv = std::move(rhs.m_GGX_with_fresnel_rho_srv);
 
-        m_rho_sampler = std::move(rhs.m_rho_sampler); rhs.m_rho_sampler = nullptr;
+        m_rho_sampler = std::move(rhs.m_rho_sampler);;
         m_constant_array = std::move(rhs.m_constant_array);
         m_materials = std::move(rhs.m_materials);
         return *this;
     }
-
-    ~MaterialManager();
 
     ID3D11ShaderResourceView** get_GGX_with_fresnel_rho_srv_addr() { return &m_GGX_with_fresnel_rho_srv; }
     ID3D11SamplerState** get_rho_sampler_addr() { return &m_rho_sampler; }
@@ -56,10 +53,8 @@ private:
     MaterialManager(MaterialManager&& other) = delete;
     MaterialManager& operator=(MaterialManager& rhs) = delete;
 
-    ID3D11Texture2D* m_GGX_with_fresnel_rho_texture;
-    ID3D11ShaderResourceView* m_GGX_with_fresnel_rho_srv;
-
-    ID3D11SamplerState* m_rho_sampler;
+    UID3D11ShaderResourceView m_GGX_with_fresnel_rho_srv;
+    UID3D11SamplerState m_rho_sampler;
 
     std::vector<Dx11Material> m_materials;
 
