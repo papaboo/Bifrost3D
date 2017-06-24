@@ -57,24 +57,40 @@ public:
     inline const T* const operator->() const { return resource; }
 
     inline T** operator&() { return &resource; }
-    inline const T** const operator&() const { return &resource; }
+    inline T* const * operator&() const { return &resource; }
 
     // --------------------------------------------------------------------------------------------
     // Resource management.
     // --------------------------------------------------------------------------------------------
 
     inline T* detach() { T* tmp = resource; resource = nullptr; return tmp; }
-    inline unsigned int release() { resource->Release(); resource = nullptr; }
+    inline unsigned int release() { 
+        if (resource == nullptr) return 0u;
+        unsigned int res = resource->Release(); resource = nullptr; return res;
+    }
     inline void swap(UniqueResourcePtr<T>& other) {
         T* tmp = other.resource;
         other.resource = resource;
         resource = tmp;
     }
 
-private:
+#if _MSC_VER <= 1800 // VS2013 or less.
+    // VS2013's move constructors aren't as fully developed as VS2015 and upwards,
+    // so it needs the copy constructors to be defined unfortunately.
+    UniqueResourcePtr(UniqueResourcePtr& other)
+        : resource(other.detach()) { }
 
+    UniqueResourcePtr& operator=(UniqueResourcePtr& rhs) {
+        if (resource) resource->Release();
+        resource = rhs.detach();
+        return *this;
+    }
+#else
+private:
     UniqueResourcePtr(UniqueResourcePtr& other) = delete;
     UniqueResourcePtr& operator=(UniqueResourcePtr& rhs) = delete;
+#endif
+
 };
 
 } // NS DX11Renderer
