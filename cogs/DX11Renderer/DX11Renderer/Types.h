@@ -16,14 +16,19 @@
 //-------------------------------------------------------------------------------------------------
 // Forward declarations.
 //-------------------------------------------------------------------------------------------------
+struct ID3D11BlendState;
 struct ID3D10Blob;
 using ID3DBlob = ID3D10Blob;
 struct ID3D11Buffer;
 struct ID3D11ComputeShader;
+struct ID3D11DepthStencilState;
+struct ID3D11DepthStencilView;
 struct ID3D11Device1;
 struct ID3D11DeviceContext1;
 struct ID3D11InputLayout;
 struct ID3D11PixelShader;
+struct ID3D11RasterizerState;
+struct ID3D11RenderTargetView;
 struct ID3D11SamplerState;
 struct ID3D11ShaderResourceView;
 struct ID3D11Texture2D;
@@ -36,13 +41,18 @@ namespace DX11Renderer {
 // Alias unique resource pointers
 //-------------------------------------------------------------------------------------------------
 
+using UID3D11BlendState = DX11Renderer::UniqueResourcePtr<ID3D11BlendState>;
 using UID3DBlob = DX11Renderer::UniqueResourcePtr<ID3DBlob>;
 using UID3D11Buffer = DX11Renderer::UniqueResourcePtr<ID3D11Buffer>;
 using UID3D11ComputeShader = DX11Renderer::UniqueResourcePtr<ID3D11ComputeShader>;
+using UID3D11DepthStencilState = DX11Renderer::UniqueResourcePtr<ID3D11DepthStencilState>;
+using UID3D11DepthStencilView = DX11Renderer::UniqueResourcePtr<ID3D11DepthStencilView>;
 using UID3D11Device1 = DX11Renderer::UniqueResourcePtr<ID3D11Device1>;
 using UID3D11DeviceContext1 = DX11Renderer::UniqueResourcePtr<ID3D11DeviceContext1>;
 using UID3D11InputLayout = DX11Renderer::UniqueResourcePtr<ID3D11InputLayout>;
 using UID3D11PixelShader = DX11Renderer::UniqueResourcePtr<ID3D11PixelShader>;
+using UID3D11RasterizerState = DX11Renderer::UniqueResourcePtr<ID3D11RasterizerState>;
+using UID3D11RenderTargetView = DX11Renderer::UniqueResourcePtr<ID3D11RenderTargetView>;
 using UID3D11SamplerState = DX11Renderer::UniqueResourcePtr<ID3D11SamplerState>;
 using UID3D11ShaderResourceView = DX11Renderer::UniqueResourcePtr<ID3D11ShaderResourceView>;
 using UID3D11Texture2D = DX11Renderer::UniqueResourcePtr<ID3D11Texture2D>;
