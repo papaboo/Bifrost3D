@@ -44,7 +44,7 @@ namespace DX11Renderer {
 //----------------------------------------------------------------------------
 class Renderer::Implementation {
 private:
-    ID3D11Device1* m_device;
+    ID3D11Device1& m_device;
     OID3D11DeviceContext1 m_render_context;
 
     // Cogwheel resources
@@ -103,12 +103,10 @@ private:
     std::wstring m_shader_folder_path;
 
 public:
-    bool is_valid() { return m_device != nullptr; }
+    Implementation(ID3D11Device1& device, int width_hint, int height_hint) 
+        : m_device(device) {
 
-    Implementation(ID3D11Device1* device, int width_hint, int height_hint) {
-
-        m_device = device;
-        device->GetImmediateContext1(&m_render_context);
+        device.GetImmediateContext1(&m_render_context);
 
         {
             std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
@@ -122,22 +120,22 @@ public:
             m_model_indices.resize(1);
             m_model_indices[0] = 0;
 
-            m_environments = new EnvironmentManager(*m_device, m_shader_folder_path, m_textures);
-            m_lights = LightManager(*m_device, LightSources::capacity());
+            m_environments = new EnvironmentManager(m_device, m_shader_folder_path, m_textures);
+            m_lights = LightManager(m_device, LightSources::capacity());
 
-            m_materials = MaterialManager(*m_device, *m_render_context);
+            m_materials = MaterialManager(m_device, *m_render_context);
             m_render_context->PSSetShaderResources(15, 1, m_materials.get_GGX_with_fresnel_rho_srv_addr());
             m_render_context->PSSetSamplers(15, 1, m_materials.get_rho_sampler_addr());
 
-            m_textures = TextureManager(*m_device);
-            m_transforms = TransformManager(*m_device, *m_render_context);
+            m_textures = TextureManager(m_device);
+            m_transforms = TransformManager(m_device, *m_render_context);
         }
 
         { // Setup vertex processing.
             UID3DBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"VertexShader.hlsl", "vs_5_0");
 
             // Create the shader objects.
-            HRESULT hr = m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shading.shader);
+            HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shading.shader);
             THROW_ON_FAILURE(hr);
 
             // Create the input layout
@@ -147,7 +145,7 @@ public:
                 { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 2, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
             };
 
-            hr = m_device->CreateInputLayout(input_layout_desc, 3, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout);
+            hr = m_device.CreateInputLayout(input_layout_desc, 3, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout);
             THROW_ON_FAILURE(hr);
 
             // Create a default emptyish buffer.
@@ -159,29 +157,29 @@ public:
             Vector4f lval = Vector4f::zero();
             D3D11_SUBRESOURCE_DATA empty_data = {};
             empty_data.pSysMem = &lval;
-            hr = m_device->CreateBuffer(&empty_desc, &empty_data, &m_vertex_shading.null_buffer);
+            hr = m_device.CreateBuffer(&empty_desc, &empty_data, &m_vertex_shading.null_buffer);
             THROW_ON_FAILURE(hr);
         }
 
         { // Setup opaque rendering.
             CD3D11_RASTERIZER_DESC opaque_raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
-            HRESULT hr = m_device->CreateRasterizerState(&opaque_raster_state, &m_opaque.raster_state);
+            HRESULT hr = m_device.CreateRasterizerState(&opaque_raster_state, &m_opaque.raster_state);
             THROW_ON_FAILURE(hr);
 
             D3D11_DEPTH_STENCIL_DESC depth_desc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
             depth_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-            hr = m_device->CreateDepthStencilState(&depth_desc, &m_opaque.depth_state);
+            hr = m_device.CreateDepthStencilState(&depth_desc, &m_opaque.depth_state);
             THROW_ON_FAILURE(hr);
 
             UID3DBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "opaque");
-            hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_opaque.shader);
+            hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_opaque.shader);
             THROW_ON_FAILURE(hr);
         }
 
         { // Setup cutout rendering. Reuses some of the opaque state.
             CD3D11_RASTERIZER_DESC twosided_raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
             twosided_raster_state.CullMode = D3D11_CULL_NONE;
-            HRESULT hr = m_device->CreateRasterizerState(&twosided_raster_state, &m_cutout.raster_state);
+            HRESULT hr = m_device.CreateRasterizerState(&twosided_raster_state, &m_cutout.raster_state);
             THROW_ON_FAILURE(hr);
         }
 
@@ -201,26 +199,26 @@ public:
             rt_blend_desc.BlendOpAlpha = D3D11_BLEND_OP_ADD;
             rt_blend_desc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-            HRESULT hr = m_device->CreateBlendState(&blend_desc, &m_transparent.blend_state);
+            HRESULT hr = m_device.CreateBlendState(&blend_desc, &m_transparent.blend_state);
             THROW_ON_FAILURE(hr);
 
             D3D11_DEPTH_STENCIL_DESC depth_desc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
             depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-            hr = m_device->CreateDepthStencilState(&depth_desc, &m_transparent.depth_state);
+            hr = m_device.CreateDepthStencilState(&depth_desc, &m_transparent.depth_state);
             THROW_ON_FAILURE(hr);
 
             UID3DBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "transparent");
-            hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_transparent.shader);
+            hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_transparent.shader);
             THROW_ON_FAILURE(hr);
         }
 
         { // Scene constant buffer
-            HRESULT hr = create_constant_buffer(*m_device, sizeof(SceneConstants), &m_scene_buffer);
+            HRESULT hr = create_constant_buffer(m_device, sizeof(SceneConstants), &m_scene_buffer);
             THROW_ON_FAILURE(hr);
         }
 
         { // Transform constant buffer.
-            HRESULT hr = create_constant_buffer(*m_device, sizeof(Matrix4x4f), &m_transform_buffer);
+            HRESULT hr = create_constant_buffer(m_device, sizeof(Matrix4x4f), &m_transform_buffer);
             THROW_ON_FAILURE(hr);
         }
     }
@@ -381,14 +379,14 @@ public:
 
         D3D11_SUBRESOURCE_DATA resource_data = {};
         resource_data.pSysMem = data;
-        return m_device->CreateBuffer(&desc, &resource_data, buffer);
+        return m_device.CreateBuffer(&desc, &resource_data, buffer);
     }
 
     void handle_updates() {
-        m_environments->handle_updates(*m_device, *m_render_context);
+        m_environments->handle_updates(m_device, *m_render_context);
         m_lights.handle_updates(*m_render_context);
         m_materials.handle_updates(*m_render_context);
-        m_textures.handle_updates(*m_device, *m_render_context);
+        m_textures.handle_updates(m_device, *m_render_context);
         m_transforms.handle_updates(*m_render_context);
 
         { // Mesh updates.
@@ -583,19 +581,13 @@ public:
 //----------------------------------------------------------------------------
 // DirectX 11 renderer.
 //----------------------------------------------------------------------------
-IRenderer* Renderer::initialize(ID3D11Device1* device, int width_hint, int height_hint) {
-    Renderer* r = new Renderer(device, width_hint, height_hint);
-    if (r->m_impl->is_valid())
-        return r;
-    else {
-        delete r;
-        return nullptr;
-    }
+IRenderer* Renderer::initialize(ID3D11Device1& device, int width_hint, int height_hint) {
+    return new Renderer(device, width_hint, height_hint);
 }
 
-Renderer::Renderer(ID3D11Device1* device, int width_hint, int height_hint) {
+Renderer::Renderer(ID3D11Device1& device, int width_hint, int height_hint) {
     m_impl = new Implementation(device, width_hint, height_hint);
-    m_renderer_ID = m_impl->is_valid() ? Renderers::create("DX11Renderer") : Renderers::UID::invalid_UID();
+    m_renderer_ID = Renderers::create("DX11Renderer");
 }
 
 Renderer::~Renderer() {

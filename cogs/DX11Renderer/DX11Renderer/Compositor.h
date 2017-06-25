@@ -41,7 +41,7 @@ public:
     virtual void render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) = 0;
 };
 
-typedef IRenderer*(*RendererCreator)(ID3D11Device1*, int width_hint, int height_hint);
+typedef IRenderer*(*RendererCreator)(ID3D11Device1&, int width_hint, int height_hint);
 
 //-------------------------------------------------------------------------------------------------
 // DirectX 11 compositor.

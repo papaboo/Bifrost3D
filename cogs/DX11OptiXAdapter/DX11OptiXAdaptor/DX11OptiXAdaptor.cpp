@@ -24,7 +24,7 @@
 namespace DX11OptiXAdaptor {
 
 class DX11OptiXAdaptor::Implementation {
-    ID3D11Device1* m_device;
+    ID3D11Device1& m_device;
     ID3D11DeviceContext1* m_render_context;
 
     struct { // Buffer
@@ -44,15 +44,15 @@ class DX11OptiXAdaptor::Implementation {
 
 public:
 
-    Implementation(ID3D11Device1* device, int width_hint, int height_hint)
+    Implementation(ID3D11Device1& device, int width_hint, int height_hint)
         : m_device(device) {
 
-        device->GetImmediateContext1(&m_render_context);
+        device.GetImmediateContext1(&m_render_context);
 
         int cuda_device = -1;
         { // Get CUDA device from DX11 context.
             IDXGIDevice* dxgi_device = nullptr;
-            HRESULT hr = device->QueryInterface(IID_PPV_ARGS(&dxgi_device));
+            HRESULT hr = device.QueryInterface(IID_PPV_ARGS(&dxgi_device));
             THROW_ON_FAILURE(hr);
 
             IDXGIAdapter* adapter = nullptr;
@@ -69,7 +69,7 @@ public:
         }
 
         {
-            HRESULT hr = DX11Renderer::create_constant_buffer(*m_device, sizeof(float) * 4, &m_constant_buffer);
+            HRESULT hr = DX11Renderer::create_constant_buffer(m_device, sizeof(float) * 4, &m_constant_buffer);
             THROW_ON_FAILURE(hr);
         }
 
@@ -121,12 +121,14 @@ public:
             };
 
             ID3DBlob* vertex_shader_bytecode = compile_shader(vertex_src, "vs_5_0", "main_vs");
-            HRESULT hr = m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_bytecode), NULL, &m_vertex_shader);
+            HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_bytecode), NULL, &m_vertex_shader);
             THROW_ON_FAILURE(hr);
+            vertex_shader_bytecode->Release();
 
             ID3DBlob* pixel_shader_bytecode = compile_shader(pixel_src, "ps_5_0", "main_ps");
-            hr = m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_bytecode), NULL, &m_pixel_shader);
+            hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_bytecode), NULL, &m_pixel_shader);
             THROW_ON_FAILURE(hr);
+            pixel_shader_bytecode->Release();
         }
     }
 
@@ -139,11 +141,6 @@ public:
             m_render_target.optix_buffer->unregisterD3D11Buffer();
 
         delete m_optix_renderer;
-        m_device = nullptr;
-    }
-
-    bool is_valid() const {
-        return true;
     }
 
     void handle_updates() {
@@ -184,7 +181,7 @@ public:
             desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
             desc.MiscFlags = 0;
 
-            HRESULT hr = m_device->CreateBuffer(&desc, nullptr, &m_render_target.dx_buffer);
+            HRESULT hr = m_device.CreateBuffer(&desc, nullptr, &m_render_target.dx_buffer);
             THROW_ON_FAILURE(hr);
 
             D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
@@ -192,7 +189,7 @@ public:
             srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
             srv_desc.Buffer.NumElements = m_render_target.capacity;
 
-            hr = m_device->CreateShaderResourceView(m_render_target.dx_buffer, &srv_desc, &m_render_target.dx_SRV);
+            hr = m_device.CreateShaderResourceView(m_render_target.dx_buffer, &srv_desc, &m_render_target.dx_SRV);
             THROW_ON_FAILURE(hr);
         
             // Register the buffer with OptiX
@@ -218,19 +215,13 @@ public:
     }
 };
 
-DX11Renderer::IRenderer* DX11OptiXAdaptor::initialize(ID3D11Device1* device, int width_hint, int height_hint) {
-    DX11OptiXAdaptor* r = new DX11OptiXAdaptor(device, width_hint, height_hint);
-    if (r->m_impl->is_valid())
-        return r;
-    else {
-        delete r;
-        return nullptr;
-    }
+DX11Renderer::IRenderer* DX11OptiXAdaptor::initialize(ID3D11Device1& device, int width_hint, int height_hint) {
+    return new DX11OptiXAdaptor(device, width_hint, height_hint);
 }
 
-DX11OptiXAdaptor::DX11OptiXAdaptor(ID3D11Device1* device, int width_hint, int height_hint) {
+DX11OptiXAdaptor::DX11OptiXAdaptor(ID3D11Device1& device, int width_hint, int height_hint) {
     m_impl = new Implementation(device, width_hint, height_hint);
-    m_renderer_ID = m_impl->is_valid() ? Cogwheel::Core::Renderers::create("OptiXRenderer") : Cogwheel::Core::Renderers::UID::invalid_UID();
+    m_renderer_ID = Cogwheel::Core::Renderers::create("OptiXRenderer");
 }
 
 DX11OptiXAdaptor::~DX11OptiXAdaptor() {

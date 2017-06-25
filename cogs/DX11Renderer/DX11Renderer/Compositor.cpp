@@ -171,7 +171,7 @@ public:
     }
 
     Renderers::UID attach_renderer(RendererCreator renderer_creator) {
-        IRenderer* renderer = renderer_creator(m_device, m_window.get_width(), m_window.get_height());
+        IRenderer* renderer = renderer_creator(*m_device, m_window.get_width(), m_window.get_height());
         if (renderer == nullptr)
             return Renderers::UID::invalid_UID();
 
