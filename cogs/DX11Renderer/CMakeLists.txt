@@ -19,6 +19,7 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/LightManager.h
     DX11Renderer/MaterialManager.h
     DX11Renderer/MaterialManager.cpp
+    DX11Renderer/OwnedResourcePtr.h
     DX11Renderer/Renderer.h
     DX11Renderer/Renderer.cpp
     DX11Renderer/TextureManager.h
@@ -26,7 +27,6 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/TransformManager.h
     DX11Renderer/TransformManager.cpp
     DX11Renderer/Types.h
-    DX11Renderer/UniqueResourcePtr.h
     DX11Renderer/Utils.h
   )
 

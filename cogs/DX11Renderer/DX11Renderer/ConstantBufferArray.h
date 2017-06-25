@@ -26,7 +26,7 @@ template<typename T>
 class ConstantBufferArray {
 public:
 
-    UID3D11Buffer m_constant_buffer;
+    OID3D11Buffer m_constant_buffer;
 
     ConstantBufferArray() : m_constant_buffer(nullptr) { }
 

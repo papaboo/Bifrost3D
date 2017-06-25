@@ -40,7 +40,7 @@ TextureManager::TextureManager(ID3D11Device1& device) {
         resource_data.pSysMem = pixel;
         resource_data.SysMemPitch = sizeof(unsigned char) * 4;
 
-        UID3D11Texture2D texture;
+        OID3D11Texture2D texture;
         HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &texture);
         THROW_ON_FAILURE(hr);
 
@@ -142,7 +142,7 @@ void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1&
 
                         bool generate_mipmaps = image.is_mipmapable();
 
-                        UID3D11Texture2D texture;
+                        OID3D11Texture2D texture;
                         HRESULT hr;
                         if (generate_mipmaps) {
                             // Additional mipmap generation settings.

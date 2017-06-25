@@ -53,8 +53,8 @@ private:
     MaterialManager(MaterialManager&& other) = delete;
     MaterialManager& operator=(MaterialManager& rhs) = delete;
 
-    UID3D11ShaderResourceView m_GGX_with_fresnel_rho_srv;
-    UID3D11SamplerState m_rho_sampler;
+    OID3D11ShaderResourceView m_GGX_with_fresnel_rho_srv;
+    OID3D11SamplerState m_rho_sampler;
 
     std::vector<Dx11Material> m_materials;
 

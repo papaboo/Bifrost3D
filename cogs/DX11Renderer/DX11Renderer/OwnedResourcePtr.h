@@ -1,4 +1,4 @@
-// DirectX 11 renderer unique resource ptr.
+// DirectX 11 renderer owned resource ptr.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
 //
@@ -6,39 +6,39 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _DX11RENDERER_RENDERER_UNIQUE_RESOURCE_PTR_H_
-#define _DX11RENDERER_RENDERER_UNIQUE_RESOURCE_PTR_H_
+#ifndef _DX11RENDERER_RENDERER_OWNED_RESOURCE_PTR_H_
+#define _DX11RENDERER_RENDERER_OWNED_RESOURCE_PTR_H_
 
 namespace DX11Renderer {
 
 // ------------------------------------------------------------------------------------------------
-// A unique pointer for DirectX 11 resources.
+// An owned pointer for DirectX 11 resources.
 // The pointer is used when there will only ever be a single, unique owner of the resource.
 // For shared ownership use Microsoft::WRL::ComPtr.
 // Future work:
 // * Resource interface casts.
 // ------------------------------------------------------------------------------------------------
 template <typename T>
-class UniqueResourcePtr {
+class OwnedResourcePtr {
 public:
     T* resource;
 
     // --------------------------------------------------------------------------------------------
     // Constructors and destructor.
     // --------------------------------------------------------------------------------------------
-    UniqueResourcePtr(T* res = nullptr)
+    OwnedResourcePtr(T* res = nullptr)
         : resource(res) { }
 
-    UniqueResourcePtr(UniqueResourcePtr&& other)
+    OwnedResourcePtr(OwnedResourcePtr&& other)
         : resource(other.detach()) { }
 
-    UniqueResourcePtr& operator=(UniqueResourcePtr&& rhs) {
+    OwnedResourcePtr& operator=(OwnedResourcePtr&& rhs) {
         if (resource) resource->Release();
         resource = rhs.detach();
         return *this;
     }
 
-    ~UniqueResourcePtr() {
+    ~OwnedResourcePtr() {
         if (resource != nullptr) {
             resource->Release();
             resource = nullptr;
@@ -68,7 +68,7 @@ public:
         if (resource == nullptr) return 0u;
         unsigned int res = resource->Release(); resource = nullptr; return res;
     }
-    inline void swap(UniqueResourcePtr<T>& other) {
+    inline void swap(OwnedResourcePtr<T>& other) {
         T* tmp = other.resource;
         other.resource = resource;
         resource = tmp;
@@ -77,22 +77,22 @@ public:
 #if _MSC_VER <= 1800 // VS2013 or less.
     // VS2013's move constructors aren't as fully developed as VS2015 and upwards,
     // so it needs the copy constructors to be defined unfortunately.
-    UniqueResourcePtr(UniqueResourcePtr& other)
+    OwnedResourcePtr(OwnedResourcePtr& other)
         : resource(other.detach()) { }
 
-    UniqueResourcePtr& operator=(UniqueResourcePtr& rhs) {
+    OwnedResourcePtr& operator=(OwnedResourcePtr& rhs) {
         if (resource) resource->Release();
         resource = rhs.detach();
         return *this;
     }
 #else
 private:
-    UniqueResourcePtr(UniqueResourcePtr& other) = delete;
-    UniqueResourcePtr& operator=(UniqueResourcePtr& rhs) = delete;
+    OwnedResourcePtr(OwnedResourcePtr& other) = delete;
+    OwnedResourcePtr& operator=(OwnedResourcePtr& rhs) = delete;
 #endif
 
 };
 
 } // NS DX11Renderer
 
-#endif // _DX11RENDERER_RENDERER_UNIQUE_RESOURCE_PTR_H_
+#endif // _DX11RENDERER_RENDERER_OWNED_RESOURCE_PTR_H_

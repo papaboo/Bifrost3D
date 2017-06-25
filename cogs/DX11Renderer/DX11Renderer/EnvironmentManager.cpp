@@ -181,10 +181,10 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                     // GPU convolution.
 
                     // Create and upload light samples and PDF for MIS.
-                    UID3D11Texture2D per_pixel_PDF_texture = nullptr;
-                    UID3D11ShaderResourceView per_pixel_PDF_SRV = nullptr;
-                    UID3D11Buffer light_samples_buffer = nullptr;
-					UID3D11ShaderResourceView light_samples_SRV = nullptr; // TODO Does the SRV keep the resource alive?
+                    OID3D11Texture2D per_pixel_PDF_texture = nullptr;
+                    OID3D11ShaderResourceView per_pixel_PDF_SRV = nullptr;
+                    OID3D11Buffer light_samples_buffer = nullptr;
+                    OID3D11ShaderResourceView light_samples_SRV = nullptr;
                     {
                         { // Per pixel PDF.
                             D3D11_TEXTURE2D_DESC PDF_tex_desc = {};
@@ -292,18 +292,18 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         };
 
                         ConvolutionConstants constants = { 1.0f / (float)mipmap_count, (unsigned int)env_width, (unsigned int)env_height, 1024u };
-						UID3D11Buffer constant_buffer;
+                        OID3D11Buffer constant_buffer;
                         HRESULT hr = create_constant_buffer(device, constants, &constant_buffer);
                         THROW_ON_FAILURE(hr);
 
                         // Create UAVs for the mip levels.
-                        UID3D11UnorderedAccessView* mip_level_UAVs = new UID3D11UnorderedAccessView[mipmap_count - 1];
+                        OID3D11UnorderedAccessView* mip_level_UAVs = new OID3D11UnorderedAccessView[mipmap_count - 1];
 
-						for (int m = 1; m < mipmap_count; ++m) {
-							D3D11_UNORDERED_ACCESS_VIEW_DESC mip_level_UAV_desc = {};
-							mip_level_UAV_desc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
-							mip_level_UAV_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
-							mip_level_UAV_desc.Texture2D.MipSlice = m;
+                        for (int m = 1; m < mipmap_count; ++m) {
+                            D3D11_UNORDERED_ACCESS_VIEW_DESC mip_level_UAV_desc = {};
+                            mip_level_UAV_desc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
+                            mip_level_UAV_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+                            mip_level_UAV_desc.Texture2D.MipSlice = m;
 
                             HRESULT hr = device.CreateUnorderedAccessView(env.texture2D, &mip_level_UAV_desc, &mip_level_UAVs[m - 1]);
                             THROW_ON_FAILURE(hr);
@@ -314,7 +314,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
                         srv_desc.Texture2D.MipLevels = 1;
                         srv_desc.Texture2D.MostDetailedMip = 0;
-                        UID3D11ShaderResourceView env_SRV;
+                        OID3D11ShaderResourceView env_SRV;
                         hr = device.CreateShaderResourceView(env.texture2D, &srv_desc, &env_SRV);
                         THROW_ON_FAILURE(hr);
 

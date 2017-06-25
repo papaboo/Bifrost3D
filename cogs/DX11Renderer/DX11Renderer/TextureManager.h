@@ -28,8 +28,8 @@ private:
 
     // Default textures.
     struct DefaultTexture {
-        UID3D11ShaderResourceView srv;
-        UID3D11SamplerState sampler;
+        OID3D11ShaderResourceView srv;
+        OID3D11SamplerState sampler;
     };
 
     DefaultTexture m_white_texture;
