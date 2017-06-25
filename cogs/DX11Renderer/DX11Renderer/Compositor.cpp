@@ -21,6 +21,8 @@ using namespace Cogwheel::Scene;
 
 namespace DX11Renderer {
 
+using OIDXGISwapChain1 = DX11Renderer::OwnedResourcePtr<IDXGISwapChain1>;
+
 //-------------------------------------------------------------------------------------------------
 // DirectX 11 compositor implementation.
 //-------------------------------------------------------------------------------------------------
@@ -29,15 +31,15 @@ private:
     const Window& m_window;
     std::vector<IRenderer*> m_renderers;
 
-    ID3D11Device1* m_device;
-    ID3D11DeviceContext1* m_render_context;
-    IDXGISwapChain1* m_swap_chain;
+    OID3D11Device1 m_device;
+    OID3D11DeviceContext1 m_render_context;
+    OIDXGISwapChain1 m_swap_chain;
 
     // Backbuffer members.
     Vector2ui m_backbuffer_size;
-    ID3D11RenderTargetView* m_backbuffer_view;
-    ID3D11Texture2D* m_depth_buffer;
-    ID3D11DepthStencilView* m_depth_view;
+    OID3D11RenderTargetView m_backbuffer_view;
+    OID3D11Texture2D m_depth_buffer;
+    OID3D11DepthStencilView m_depth_view;
 
 public:
     Implementation(HWND& hwnd, const Window& window)
@@ -160,20 +162,12 @@ public:
     }
 
     ~Implementation() {
-        safe_release(&m_device);
-        safe_release(&m_render_context);
-        safe_release(&m_swap_chain);
-
-        safe_release(&m_backbuffer_view);
-        safe_release(&m_depth_buffer);
-        safe_release(&m_depth_view);
-
         for (IRenderer* r : m_renderers)
             delete r;
     }
 
     bool is_valid() const {
-        return m_device != nullptr;
+        return m_device.resource != nullptr;
     }
 
     Renderers::UID attach_renderer(RendererCreator renderer_creator) {

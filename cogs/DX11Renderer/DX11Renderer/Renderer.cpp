@@ -45,7 +45,7 @@ namespace DX11Renderer {
 class Renderer::Implementation {
 private:
     ID3D11Device1* m_device;
-    ID3D11DeviceContext1* m_render_context;
+    OID3D11DeviceContext1 m_render_context;
 
     // Cogwheel resources
     vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
@@ -60,20 +60,20 @@ private:
     TransformManager m_transforms;
 
     struct {
-        ID3D11Buffer* null_buffer;
-        ID3D11InputLayout* input_layout;
-        ID3D11VertexShader* shader;
+        OID3D11Buffer null_buffer;
+        OID3D11InputLayout input_layout;
+        OID3D11VertexShader shader;
     } m_vertex_shading;
 
     struct {
-        ID3D11RasterizerState* raster_state;
-        ID3D11DepthStencilState* depth_state;
-        ID3D11PixelShader* shader;
+        OID3D11RasterizerState raster_state;
+        OID3D11DepthStencilState depth_state;
+        OID3D11PixelShader shader;
     } m_opaque;
 
     struct {
         int first_model_index = 0;
-        ID3D11RasterizerState* raster_state;
+        OID3D11RasterizerState raster_state;
     } m_cutout;
 
     struct Transparent {
@@ -83,9 +83,9 @@ private:
         };
 
         int first_model_index = 0;
-        ID3D11BlendState* blend_state;
-        ID3D11DepthStencilState* depth_state;
-        ID3D11PixelShader* shader;
+        OID3D11BlendState blend_state;
+        OID3D11DepthStencilState depth_state;
+        OID3D11PixelShader shader;
         std::vector<SortedModel> sorted_models_pool; // List of sorted transparent models. Created as a pool to minimize runtime memory allocation.
     } m_transparent;
 
@@ -96,9 +96,9 @@ private:
         Vector4f environment_tint; // .w component is 0 if an environment tex is not bound, otherwise positive.
         Matrix4x4f inverse_view_projection_matrix;
     };
-    ID3D11Buffer* m_scene_buffer;
+    OID3D11Buffer m_scene_buffer;
 
-    ID3D11Buffer* m_transform_buffer;
+    OID3D11Buffer m_transform_buffer;
 
     std::wstring m_shader_folder_path;
 
@@ -226,24 +226,6 @@ public:
     }
 
     ~Implementation() {
-        safe_release(&m_render_context);
-
-        safe_release(&m_vertex_shading.input_layout);
-        safe_release(&m_vertex_shading.null_buffer);
-        safe_release(&m_vertex_shading.shader);
-
-        safe_release(&m_opaque.depth_state);
-        safe_release(&m_opaque.raster_state);
-        safe_release(&m_opaque.shader);
-
-        safe_release(&m_cutout.raster_state);
-
-        safe_release(&m_transparent.blend_state);
-        safe_release(&m_transparent.depth_state);
-        safe_release(&m_transparent.shader);
-
-        safe_release(&m_scene_buffer);
-
         for (Dx11Mesh mesh : m_meshes) {
             safe_release(&mesh.indices);
             safe_release(mesh.positions_address());
