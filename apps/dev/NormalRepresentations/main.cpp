@@ -21,7 +21,6 @@ using namespace Cogwheel::Math;
 typedef Vector2<unsigned short> Vector2us;
 typedef Vector2<short> Vector2s;
 
-// TODO Move to utils? Or use built-in signf?
 inline float sign(float v) { return v >= 0.0f ? +1.0f : -1.0f; }
 inline Vector2f sign(Vector2f v) { return Vector2f(sign(v.x), sign(v.y)); }
 
@@ -37,7 +36,7 @@ struct Oct32u {
         // Reflect the folds of the lower hemisphere over the diagonals.
         Vector2f p2 = (n.z <= 0.0) ? ((Vector2f(1.0f) - Vector2f(abs(p.y), abs(p.x))) * sign(p)) : p;
 
-        // Fixed point encoding. Clamp is pointless.
+        // Fixed point encoding. TODO Current clamp is pointless.
         Oct32u res = { Vector2us(clamp<unsigned short>(unsigned short(p2.x * 32767.5f + 32767.5f), 0u, 65535u),
                                  clamp<unsigned short>(unsigned short(p2.y * 32767.5f + 32767.5f), 0u, 65535u)) };
         return res;
@@ -74,8 +73,7 @@ struct Oct32s {
     }
 
     Vector3f decode() const {
-        Vector2f p2 = Vector2f(encoding.x / float(SHRT_MAX),
-                               encoding.y / float(SHRT_MAX));
+        Vector2f p2 = Vector2f(encoding) / float(SHRT_MAX);
         Vector3f n = Vector3f(p2, 1.0f - abs(p2.x) - abs(p2.y));
         if (n.z < 0.0f) {
             float tmp_x = (1.0f - abs(n.y)) * sign(n.x);
@@ -89,25 +87,7 @@ struct Oct32s {
 int main(int argc, char** argv) {
     printf("Unit vector representation tests\n");
 
-    /*
-    {
-        printf("Seed 2\n");
-        Vector3d normal = normalize((Vector3d)Distributions::Sphere::Sample(RNG::sample02(2)));
-        Vector3d decoded_normal = (Vector3d)Oct32u::encode((Vector3f)normal).decode();
-        double dist = magnitude(normal - decoded_normal);
-        printf("  dist: %f\n\n\n", dist);
-    }
-
-    {
-        printf("Seed 3\n");
-        Vector3d normal = normalize((Vector3d)Distributions::Sphere::Sample(RNG::sample02(3)));
-        Vector3d decoded_normal = (Vector3d)Oct32u::encode((Vector3f)normal).decode();
-        double dist = magnitude(normal - decoded_normal);
-        printf("  dist: %f\n", dist);
-    }
-    */
-
-    Statistics stats = Statistics(0, 10000, [](int i) -> double {
+    Statistics stats = Statistics(0, 1000000, [](int i) -> double {
         Vector3d normal = normalize((Vector3d)Distributions::Sphere::Sample(RNG::sample02(i)));
         Vector3d decoded_normal = (Vector3d)Oct32u::encode((Vector3f)normal).decode();
         return magnitude(normal - decoded_normal);
@@ -119,7 +99,7 @@ int main(int argc, char** argv) {
     printf("  Max: %f\n", stats.maximum);
     printf("  Variance: %f\n", stats.variance);
 
-    stats = Statistics(0, 10000, [](int i) -> double {
+    stats = Statistics(0, 1000000, [](int i) -> double {
         Vector3d normal = normalize((Vector3d)Distributions::Sphere::Sample(RNG::sample02(i)));
         Vector3d decoded_normal = (Vector3d)Oct32s::encode((Vector3f)normal).decode();
         if (magnitude(normal - decoded_normal) > 0.1f)
