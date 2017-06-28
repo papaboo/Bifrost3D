@@ -16,10 +16,12 @@ namespace Math {
 
 //-------------------------------------------------------------------------------------------------
 // Statistics of a list of values.
-// Contains the mean value and the variance.
+// Contains the minimum, maximum, mean and the variance.
 // See https://en.wikipedia.org/wiki/Moment_(mathematics) for a list of other interesting values.
 //-------------------------------------------------------------------------------------------------
 struct Statistics final {
+    float minimum;
+    float maximum;
     float mean;
     float variance;
 
@@ -27,12 +29,17 @@ struct Statistics final {
     Statistics(RandomAccessItr first, RandomAccessItr last, UnaryPredicate predicate) {
         size_t count = last - first;
 
+        minimum = 1e30f;
+        maximum = -1e30f;
+
         double* means = new double[count];
         double* means_sqrd = new double[count];
         while (first != last) {
-            float mean = float(predicate(first));
-            *means = mean;
-            *means_sqrd = mean * mean;
+            float val = float(predicate(first));
+            minimum = std::min(minimum, val);
+            maximum = std::max(maximum, val);
+            *means = val;
+            *means_sqrd = val* val;
             ++first; ++means; ++means_sqrd;
         }
         means -= count; means_sqrd -= count;
