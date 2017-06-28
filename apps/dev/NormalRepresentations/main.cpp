@@ -34,7 +34,7 @@ struct Oct32u {
         Vector2f p = Vector2f(n.x, n.y) / (abs(n.x) + abs(n.y) + abs(n.z));
         
         // Reflect the folds of the lower hemisphere over the diagonals.
-        Vector2f p2 = (n.z <= 0.0) ? ((Vector2f(1.0f) - Vector2f(abs(p.y), abs(p.x))) * sign(p)) : p;
+        Vector2f p2 = n.z < 0 ? (Vector2f(1.0f) - Vector2f(abs(p.y), abs(p.x))) * sign(p) : p;
 
         // Fixed point encoding. TODO Current clamp is pointless.
         Oct32u res = { Vector2us(clamp<unsigned short>(unsigned short(p2.x * 32767.5f + 32767.5f), 0u, 65535u),
@@ -64,7 +64,7 @@ struct Oct32s {
         Vector2f p = Vector2f(n.x, n.y) / (abs(n.x) + abs(n.y) + abs(n.z));
 
         // Reflect the folds of the lower hemisphere over the diagonals.
-        Vector2f p2 = (n.z <= 0.0) ? ((Vector2f(1.0f) - Vector2f(abs(p.y), abs(p.x))) * sign(p)) : p;
+        Vector2f p2 = n.z < 0 ? (Vector2f(1.0f) - Vector2f(abs(p.y), abs(p.x))) * sign(p) : p;
 
         // Fixed point encoding.
         Oct32s res = { Vector2s(clamp<int>(int(p2.x * SHRT_MAX), SHRT_MIN, SHRT_MAX),
@@ -99,7 +99,7 @@ struct Oct32s_dx11 {
         Vector2f p = Vector2f(n.x, n.y) / (abs(n.x) + abs(n.y) + abs(n.z));
 
         // Reflect the folds of the lower hemisphere over the diagonals.
-        Vector2f p2 = (n.z <= 0.0) ? ((Vector2f(1.0f) - Vector2f(abs(p.y), abs(p.x))) * sign(p)) : p;
+        Vector2f p2 = n.z < 0 ? (Vector2f(1.0f) - Vector2f(abs(p.y), abs(p.x))) * sign(p) : p;
 
         // Fixed point encoding.
         Oct32s_dx11 res = { Vector2s(short(clamp(p2.x, -1.0f, 1.0f) * SHRT_MAX + (p2.x < 0 ? -0.5f : 0.5f)),
