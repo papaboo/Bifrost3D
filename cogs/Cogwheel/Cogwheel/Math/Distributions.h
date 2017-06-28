@@ -9,6 +9,7 @@
 #ifndef _COGWHEEL_MATH_DISTRIBUTIONS_H_
 #define _COGWHEEL_MATH_DISTRIBUTIONS_H_
 
+#include <Cogwheel/Math/Constants.h>
 #include <Cogwheel/Math/Vector.h>
 
 namespace Cogwheel {
@@ -53,6 +54,24 @@ inline Sample sample(float alpha, Vector2f random_sample) {
 }
 
 } // NS GGX
+
+
+//=================================================================================================
+// Uniform sphere distribution.
+//=================================================================================================
+namespace Sphere {
+
+inline float PDF() { return 0.5f / PI<float>(); }
+
+inline Vector3f Sample(Vector2f random_sample) {
+    float z = 1.0f - 2.0f * random_sample.x;
+    float r = sqrt(std::max(0.0f, 1.0f - z * z));
+    float phi = 2.0f * PI<float>() * random_sample.y;
+    return Vector3f(r * cos(phi), r * sin(phi), z);
+}
+
+} // NS Sphere
+
 
 } // NS Distributions
 } // NS Math
