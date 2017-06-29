@@ -20,9 +20,25 @@ using namespace Cogwheel::Math;
 
 typedef Vector2<unsigned short> Vector2us;
 typedef Vector2<short> Vector2s;
+typedef Vector3<char> Vector3sb;
 
 inline float sign(float v) { return v >= 0.0f ? +1.0f : -1.0f; }
 inline Vector2f sign(Vector2f v) { return Vector2f(sign(v.x), sign(v.y)); }
+
+struct XYZ24 {
+    Vector3sb encoding;
+
+    static XYZ24 encode(Vector3f n) {
+        XYZ24 res = { Vector3sb(char(clamp(n.x, -1.0f, 1.0f) * 127.0f + (n.x < 0 ? -0.5f : 0.5f)),
+                                char(clamp(n.y, -1.0f, 1.0f) * 127.0f + (n.y < 0 ? -0.5f : 0.5f)),
+                                char(clamp(n.z, -1.0f, 1.0f) * 127.0f + (n.z < 0 ? -0.5f : 0.5f))) };
+        return res;
+    }
+
+    Vector3f decode() const {
+        return normalize(Vector3f(encoding.x / 127.0f, encoding.y / 127.0f, encoding.z / 127.0f));
+    }
+};
 
 struct Oct32u {
 
@@ -162,7 +178,7 @@ void test_encoding(const std::string& name, EncodeDecode encode_decode) {
         return magnitude(normal - decoded_normal);
     });
 
-    printf("Stats %s:\n", name.c_str());
+    printf("\nStats %s:\n", name.c_str());
     printf("  Min: %f\n", stats.minimum);
     printf("  Mean: %f\n", stats.mean);
     printf("  Max: %f\n", stats.maximum);
@@ -172,6 +188,7 @@ void test_encoding(const std::string& name, EncodeDecode encode_decode) {
 int main(int argc, char** argv) {
     printf("Unit vector representation tests\n");
 
+    test_encoding("XYZ24", [](Vector3f normal) { return XYZ24::encode(normal).decode(); });
     test_encoding("Oct32u", [](Vector3f normal) { return Oct32u::encode(normal).decode(); });
     test_encoding("Oct32s", [](Vector3f normal) { return Oct32s::encode(normal).decode(); });
     test_encoding("Oct32s_dx11", [](Vector3f normal) { return Oct32s_dx11::encode(normal).decode(); });
