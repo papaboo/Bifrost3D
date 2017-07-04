@@ -376,6 +376,9 @@ struct Renderer::Implementation {
 #endif
             context["g_accumulation_buffer"]->set(accumulation_buffer);
 
+            // Temporary output buffer to ensure a valid context.
+            context["g_output_buffer"]->set(context->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_SHORT4, 1, 1));
+
             camera_inverse_view_projection_matrix = Math::Matrix4x4f::identity();
         }
 
