@@ -224,13 +224,55 @@ struct Renderer::Implementation {
 
         accumulations = 0u;
 
-        context["g_frame_number"]->setFloat(0.0f);
-
         std::string shader_prefix = Engine::get_instance()->data_path() + "OptiXRenderer\\ptx\\OptiXRenderer_generated_";
 
         auto get_ptx_path = [](const std::string& shader_prefix, const std::string& shader_filename) -> std::string {
             return shader_prefix + shader_filename + ".cu.ptx";
         };
+
+        { // Path tracing setup.
+            std::string rgp_ptx_path = get_ptx_path(shader_prefix, "PathTracing");
+            context->setRayGenerationProgram(int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "path_tracing"));
+            context->setMissProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(rgp_ptx_path, "miss"));
+#ifdef ENABLE_OPTIX_DEBUG
+            context->setExceptionProgram(int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "exceptions"));
+#endif
+
+            context["g_max_bounce_count"]->setInt(4);
+        }
+
+        { // Normal visualization setup.
+            std::string ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
+            context->setRayGenerationProgram(int(EntryPoints::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "ray_generation"));
+            context->setMissProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "miss"));
+        }
+
+        { // Setup default material.
+            default_material = context->createMaterial();
+
+            std::string monte_carlo_ptx_path = get_ptx_path(shader_prefix, "MonteCarlo");
+            default_material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
+            default_material->setAnyHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "monte_carlo_any_hit"));
+            default_material->setAnyHitProgram(int(RayTypes::Shadow), context->createProgramFromPTXFile(monte_carlo_ptx_path, "shadow_any_hit"));
+
+            std::string normal_vis_ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
+            default_material->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
+
+            OPTIX_VALIDATE(default_material);
+
+            std::string trangle_intersection_ptx_path = get_ptx_path(shader_prefix, "IntersectTriangle");
+            triangle_intersection_program = context->createProgramFromPTXFile(trangle_intersection_ptx_path, "intersect");
+            triangle_bounds_program = context->createProgramFromPTXFile(trangle_intersection_ptx_path, "bounds");
+
+            active_material_count = 0;
+            material_parameters = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, active_material_count);
+            material_parameters->setElementSize(sizeof(OptiXRenderer::Material));
+            context["g_materials"]->set(material_parameters);
+
+            // Upload directional-hemispherical reflectance texture.
+            ggx_with_fresnel_rho = ggx_with_fresnel_rho_texture(context);
+            context["ggx_with_fresnel_rho_texture_ID"]->setInt(ggx_with_fresnel_rho->getId());
+        }
 
         { // Setup scene
             optix::Acceleration root_acceleration = context->createAcceleration("Bvh", "Bvh");
@@ -243,8 +285,13 @@ struct Renderer::Implementation {
             context["g_scene_root"]->set(root_node);
             scene_epsilon = 0.0001f;
             context["g_scene_epsilon"]->setFloat(scene_epsilon);
+#if PRESAMPLE_ENVIRONMENT_MAP
+            PresampledEnvironmentLight environment = {};
+            context["g_scene_environment_light"]->setUserData(sizeof(PresampledEnvironmentLight), &environment);
+#else
             EnvironmentLight environment = {};
             context["g_scene_environment_light"]->setUserData(sizeof(environment), &environment);
+#endif
         }
 
         { // Light sources
@@ -319,33 +366,6 @@ struct Renderer::Implementation {
             }
         }
 
-        { // Setup default material.
-            default_material = context->createMaterial();
-
-            std::string monte_carlo_ptx_path = get_ptx_path(shader_prefix, "MonteCarlo");
-            default_material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
-            default_material->setAnyHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "monte_carlo_any_hit"));
-            default_material->setAnyHitProgram(int(RayTypes::Shadow), context->createProgramFromPTXFile(monte_carlo_ptx_path, "shadow_any_hit"));
-
-            std::string normal_vis_ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
-            default_material->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
-
-            OPTIX_VALIDATE(default_material);
-
-            std::string trangle_intersection_ptx_path = get_ptx_path(shader_prefix, "IntersectTriangle");
-            triangle_intersection_program = context->createProgramFromPTXFile(trangle_intersection_ptx_path, "intersect");
-            triangle_bounds_program = context->createProgramFromPTXFile(trangle_intersection_ptx_path, "bounds");
-
-            active_material_count = 0;
-            material_parameters = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, active_material_count);
-            material_parameters->setElementSize(sizeof(OptiXRenderer::Material));
-            context["g_materials"]->set(material_parameters);
-
-            // Upload directional-hemispherical reflectance texture.
-            ggx_with_fresnel_rho = ggx_with_fresnel_rho_texture(context);
-            context["ggx_with_fresnel_rho_texture_ID"]->setUint(ggx_with_fresnel_rho->getId());
-        }
-
         { // Screen buffers
             screensize = make_uint2(width_hint, height_hint);
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
@@ -357,23 +377,6 @@ struct Renderer::Implementation {
             context["g_accumulation_buffer"]->set(accumulation_buffer);
 
             camera_inverse_view_projection_matrix = Math::Matrix4x4f::identity();
-        }
-
-        { // Path tracing setup.
-            std::string rgp_ptx_path = get_ptx_path(shader_prefix, "PathTracing");
-            context->setRayGenerationProgram(int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "path_tracing"));
-            context->setMissProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(rgp_ptx_path, "miss"));
-#ifdef ENABLE_OPTIX_DEBUG
-            context->setExceptionProgram(int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "exceptions"));
-#endif
-
-            context["g_max_bounce_count"]->setInt(4);
-        }
-
-        { // Normal visualization setup.
-            std::string ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
-            context->setRayGenerationProgram(int(EntryPoints::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "ray_generation"));
-            context->setMissProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "miss"));
         }
 
 #ifdef ENABLE_OPTIX_DEBUG
@@ -504,7 +507,7 @@ struct Renderer::Implementation {
                     assert(channel_count(Images::get_pixel_format(Textures::get_image_ID(texture_ID))) == 4);
                     device_material.tint_texture_ID = samplers[texture_ID]->getId();
                 } else
-                    device_material.tint_texture_ID = 0u;
+                    device_material.tint_texture_ID = 0;
                 device_material.roughness = host_material.get_roughness();
                 device_material.specularity = host_material.get_specularity();
                 device_material.metallic = host_material.get_metallic();
@@ -515,7 +518,7 @@ struct Renderer::Implementation {
                     assert(channel_count(Images::get_pixel_format(Textures::get_image_ID(texture_ID))) == 1);
                     device_material.coverage_texture_ID = samplers[texture_ID]->getId();
                 } else
-                    device_material.coverage_texture_ID = 0u;
+                    device_material.coverage_texture_ID = 0;
             };
 
             if (!Materials::get_changed_materials().is_empty()) {

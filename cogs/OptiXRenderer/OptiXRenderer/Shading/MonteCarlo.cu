@@ -42,10 +42,6 @@ rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 rtDeclareVariable(float2, texcoord, attribute texcoord, );
 
-// Variables used for split screen debugging.
-rtDeclareVariable(uint2, g_launch_index, rtLaunchIndex, );
-rtBuffer<float4, 2>  g_accumulation_buffer;
-
 //-----------------------------------------------------------------------------
 // Light sampling.
 //-----------------------------------------------------------------------------
@@ -199,10 +195,7 @@ __inline_dev__ void closest_hit_MIS() {
 }
 
 RT_PROGRAM void closest_hit() {
-    // if (g_launch_index.x * 2 < g_accumulation_buffer.size().x)
-    //     closest_hit_without_MIS();
-    // else
-        closest_hit_MIS();
+    closest_hit_MIS();
 }
 
 RT_PROGRAM void monte_carlo_any_hit() {

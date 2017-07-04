@@ -14,7 +14,7 @@
 #include <OptiXRenderer/Utils.h>
 
 #if GPU_DEVICE
-rtDeclareVariable(unsigned int, ggx_with_fresnel_rho_texture_ID, , );
+rtDeclareVariable(int, ggx_with_fresnel_rho_texture_ID, , );
 #else
 #include <Cogwheel/Assets/Shading/GGXWithFresnelRho.h>
 #endif
