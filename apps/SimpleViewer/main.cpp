@@ -418,6 +418,11 @@ int initializer(Cogwheel::Core::Engine& engine) {
         load_model_from_file = true;
     }
 
+    if (SceneNodes::get_children_IDs(root_node_ID).size() == 0u) {
+        printf("Error: No objects in scene.\n");
+        return -1;
+    }
+
     // Rough approximation of the scene bounds using bounding spheres.
     AABB scene_bounds = AABB::invalid();
     for (MeshModel model : MeshModels::get_iterable()) {
