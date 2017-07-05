@@ -13,9 +13,19 @@
 // #define PATH_PDF_FIREFLY_FILTER 1
 #define PRESAMPLE_ENVIRONMENT_MAP 1
 
+template <typename T>
+void validate_resource(T resource, char* file, int line) {
+    try {
+        resource->validate();
+    } catch (optix::Exception e) {
+        printf("Invalid resource in file %s, line %u:\n %s\n", file, line, e.getErrorString().c_str());
+        throw e;
+    }
+}
+
 // Validate macro. Will validate the optix object in debug mode.
 #ifdef _DEBUG
-#define OPTIX_VALIDATE(o) o->validate()
+#define OPTIX_VALIDATE(o) validate_resource(o, __FILE__,__LINE__)
 #else
 #define OPTIX_VALIDATE(o)
 #endif
