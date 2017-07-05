@@ -37,7 +37,7 @@ void safe_release(ResourcePtr* resource_ptr) {
     }
 }
 
-inline void CHECK_HRESULT(HRESULT hr, const std::string& file, int line, bool should_throw) {
+inline void CHECK_HRESULT(HRESULT hr, const std::string& file, int line) {
     if (FAILED(hr)) {
         std::string error = "[file:" + file +
             " line:" + std::to_string(line) + "] DX 11";
@@ -54,9 +54,9 @@ inline void CHECK_HRESULT(HRESULT hr, const std::string& file, int line, bool sh
     }
 }
 
-#define THROW_ON_FAILURE(hr) ::DX11Renderer::CHECK_HRESULT(hr, __FILE__,__LINE__, true)
+#define THROW_ON_FAILURE(hr) ::DX11Renderer::CHECK_HRESULT(hr, __FILE__,__LINE__)
 
-// Copied from assert.h to have an assert that is enabled in release builds as well.
+// Copied from VS' assert.h to have an assert that is enabled in release builds as well.
 #define always_assert(_Expression) (void)( (!!(_Expression)) || (_wassert(_CRT_WIDE(#_Expression), _CRT_WIDE(__FILE__), __LINE__), 0) )
 
 inline int sizeof_dx_format(DXGI_FORMAT format) {
