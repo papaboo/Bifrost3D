@@ -124,6 +124,42 @@ struct OctahedralUnit32 {
     }
 };
 
+//-------------------------------------------------------------------------------------------------
+// Encodes a normal by storing the sign of the z component in the second most significant bit 
+// of the y component. The reason why this works is because the second most significant bit, 
+// which is the most significant bit of the exponent, is only ever set when the absolute value of 
+// a floating point number is larger than two, which is never the case for normals.
+//-------------------------------------------------------------------------------------------------
+class ReconstructZ64 {
+private:
+    float x;
+    int y_bitmask_z_sign_y; // Contains the bitmask of the y component and the sign of z encoded in second most significant bit.
+
+public:
+    
+    static ReconstructZ64 encode(Vector3f n) {
+        ReconstructZ64 res;
+        res.x = n.x;
+        memcpy(&res.y_bitmask_z_sign_y, &n.y, sizeof(float));
+        res.y_bitmask_z_sign_y |= n.z < 0.0f ? 0 : (1 << 30);
+        return res;
+    }
+
+    // Decodes the normal and returns the original normal.
+    // Has a max error of approximately 1/2222.
+    Vector3f decode() const {
+        Vector3f res;
+        res.x = x;
+        int sign = y_bitmask_z_sign_y & (1 << 30);
+        int y_bitmask = y_bitmask_z_sign_y & ~(1 << 30);
+        memcpy(&res.y, &y_bitmask, sizeof(float));
+        res.z = sqrt(max(1.0f - res.x * res.x - res.y * res.y, 0.0f));
+        res.z *= sign == 0 ? -1.0f : 1.0f;
+        return res;
+    }
+};
+
+
 typedef Vector3f (*EncodeDecode)(Vector3f);
 
 void test_encoding(const std::string& name, EncodeDecode encode_decode) {
@@ -147,6 +183,7 @@ int main(int argc, char** argv) {
 
     test_encoding("XYZ24", [](Vector3f normal) { return XYZ24::encode(normal).decode(); });
     test_encoding("XYZ32", [](Vector3f normal) { return XYZ32::encode(normal).decode(); });
+    test_encoding("ReconstructZ", [](Vector3f normal) { return ReconstructZ64::encode(normal).decode(); });
     test_encoding("Oct32s", [](Vector3f normal) { return OctahedralUnit32::encode(normal).decode(); });
     test_encoding("Oct32s precise", [](Vector3f normal) { return OctahedralUnit32::encode_precise(normal).decode(); });
 }
