@@ -127,10 +127,10 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
     optix_model["mesh_flags"]->setInt(mesh_flags);
     OPTIX_VALIDATE(optix_model);
 
-    optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
-    // acceleration->setProperty("index_buffer_name", "index_buffer");
-    // acceleration->setProperty("vertex_buffer_name", "geometry_buffer");
-    // acceleration->setProperty("vertex_buffer_stride", "4");
+    optix::Acceleration acceleration = context->createAcceleration("Trbvh", "Bvh");
+    acceleration->setProperty("index_buffer_name", "index_buffer");
+    acceleration->setProperty("vertex_buffer_name", "geometry_buffer");
+    acceleration->setProperty("vertex_buffer_stride", "16");
     OPTIX_VALIDATE(acceleration);
 
     optix::GeometryGroup geometry_group = context->createGeometryGroup(&optix_model, &optix_model + 1);
