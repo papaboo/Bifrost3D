@@ -18,10 +18,10 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
     OptiXRenderer/Distributions.h
     OptiXRenderer/EnvironmentMap.h
     OptiXRenderer/EnvironmentMap.cpp
-    OptiXRenderer/EncodedNormal.h
     OptiXRenderer/Intersect.h
     OptiXRenderer/Kernel.h
     OptiXRenderer/Kernel.cu
+    OptiXRenderer/OctahedralUnit.h
     OptiXRenderer/PresampledEnvironmentMap.h
     OptiXRenderer/PresampledEnvironmentMap.cpp
     OptiXRenderer/RNG.h

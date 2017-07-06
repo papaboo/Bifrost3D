@@ -8,8 +8,8 @@
 
 #include <OptiXRenderer/Renderer.h>
 
-#include <OptiXRenderer/EncodedNormal.h>
 #include <OptiXRenderer/EnvironmentMap.h>
+#include <OptiXRenderer/OctahedralUnit.h>
 #include <OptiXRenderer/PresampledEnvironmentMap.h>
 #include <OptiXRenderer/Kernel.h>
 #include <OptiXRenderer/RhoTexture.h>
@@ -90,20 +90,20 @@ static inline optix::Geometry load_mesh(optix::Context& context, Meshes::UID mes
     optix_mesh->setPrimitiveCount(mesh.get_primitive_count());
 
     // Vertex attributes
-    unsigned int vertex_count = mesh.get_vertex_count();
-    optix::Buffer position_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, vertex_count, mesh.get_positions());
-    optix_mesh["position_buffer"]->setBuffer(position_buffer);
-
-    RTsize normal_count = mesh.get_normals() ? vertex_count : 0;
-    optix::Buffer normal_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, normal_count);
-    normal_buffer->setElementSize(sizeof(EncodedNormal));
-    EncodedNormal* mapped_normals = (EncodedNormal*)normal_buffer->map();
-    for (RTsize i = 0; i < normal_count; ++i) {
-        Vector3f normal = mesh.get_normals()[i];
-        mapped_normals[i] = EncodedNormal(normal.x, normal.y, normal.z);
+    RTsize vertex_count = mesh.get_vertex_count();
+    optix::Buffer geometry_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, vertex_count);
+    geometry_buffer->setElementSize(sizeof(VertexGeometry));
+    VertexGeometry* mapped_geometry = (VertexGeometry*)geometry_buffer->map();
+    for (RTsize i = 0; i < vertex_count; ++i) {
+        Vector3f position = mesh.get_positions()[i];
+        mapped_geometry[i].position = optix::make_float3(position.x, position.y, position.z);
+        if (mesh.get_normals() != nullptr) {
+            Vector3f normal = mesh.get_normals()[i];
+            mapped_geometry[i].normal = OctahedralUnit32::encode_precise(normal.x, normal.y, normal.z);
+        }
     }
-    normal_buffer->unmap();
-    optix_mesh["normal_buffer"]->setBuffer(normal_buffer);
+    geometry_buffer->unmap();
+    optix_mesh["geometry_buffer"]->setBuffer(geometry_buffer);
 
     RTsize texcoord_count = mesh.get_texcoords() ? vertex_count : 0;
     optix::Buffer texcoord_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, texcoord_count, mesh.get_texcoords());
@@ -128,8 +128,9 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
     OPTIX_VALIDATE(optix_model);
 
     optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
-    acceleration->setProperty("index_buffer_name", "index_buffer");
-    acceleration->setProperty("vertex_buffer_name", "position_buffer");
+    // acceleration->setProperty("index_buffer_name", "index_buffer");
+    // acceleration->setProperty("vertex_buffer_name", "geometry_buffer");
+    // acceleration->setProperty("vertex_buffer_stride", "4");
     OPTIX_VALIDATE(acceleration);
 
     optix::GeometryGroup geometry_group = context->createGeometryGroup(&optix_model, &optix_model + 1);
@@ -849,7 +850,7 @@ struct Renderer::Implementation {
     }
 
     context["g_accumulations"]->setInt(accumulations);
-    context->launch(int(EntryPoints::PathTracing), screensize.x, screensize.y);
+        context->launch(int(EntryPoints::PathTracing), screensize.x, screensize.y);
     accumulations += 1u;
 
     /*

@@ -8,7 +8,6 @@
 // Inspired by the OptiX samples.
 // ---------------------------------------------------------------------------
 
-#include <OptiXRenderer/EncodedNormal.h>
 #include <OptiXRenderer/Types.h>
 
 #include <optix.h>
@@ -22,8 +21,7 @@ rtDeclareVariable(Ray, ray, rtCurrentRay, );
 
 rtDeclareVariable(int, mesh_flags, , );
 rtBuffer<uint3> index_buffer;
-rtBuffer<float3> position_buffer;
-rtBuffer<EncodedNormal> normal_buffer;
+rtBuffer<VertexGeometry> geometry_buffer;
 rtBuffer<float2> texcoord_buffer;
 
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, ); 
@@ -38,22 +36,22 @@ rtDeclareVariable(float2, texcoord, attribute texcoord, );
 RT_PROGRAM void intersect(int primitive_index) {
     const uint3 vertex_index = index_buffer[primitive_index];
 
-    const float3 p0 = position_buffer[vertex_index.x];
-    const float3 p1 = position_buffer[vertex_index.y];
-    const float3 p2 = position_buffer[vertex_index.z];
+    const VertexGeometry g0 = geometry_buffer[vertex_index.x];
+    const VertexGeometry g1 = geometry_buffer[vertex_index.y];
+    const VertexGeometry g2 = geometry_buffer[vertex_index.z];
 
     // Intersect ray with triangle.
     float3 geo_normal;
     float t, beta, gamma;
-    if (intersect_triangle(ray, p0, p1, p2, geo_normal, t, beta, gamma)) {
+    if (intersect_triangle(ray, g0.position, g1.position, g2.position, geo_normal, t, beta, gamma)) {
         if (rtPotentialIntersection(t)) {
 
             geometric_normal = normalize(geo_normal);
 
             if (mesh_flags & MeshFlags::Normals) {
-                const float3 n0 = normal_buffer[vertex_index.x].decode();
-                const float3 n1 = normal_buffer[vertex_index.y].decode();
-                const float3 n2 = normal_buffer[vertex_index.z].decode();
+                const float3 n0 = g0.normal.decode_unnormalized();
+                const float3 n1 = g1.normal.decode_unnormalized();
+                const float3 n2 = g2.normal.decode_unnormalized();
                 shading_normal = normalize(n1*beta + n2*gamma + n0*(1.0f - beta - gamma));
             } else
                 shading_normal = geometric_normal;
@@ -74,9 +72,9 @@ RT_PROGRAM void intersect(int primitive_index) {
 RT_PROGRAM void bounds(int primitive_index, float result[6]) {
     const uint3 vertex_index = index_buffer[primitive_index];
 
-    const float3 v0 = position_buffer[vertex_index.x];
-    const float3 v1 = position_buffer[vertex_index.y];
-    const float3 v2 = position_buffer[vertex_index.z];
+    const float3 v0 = geometry_buffer[vertex_index.x].position;
+    const float3 v1 = geometry_buffer[vertex_index.y].position;
+    const float3 v2 = geometry_buffer[vertex_index.z].position;
 
     Aabb* aabb = (Aabb*)result;
 

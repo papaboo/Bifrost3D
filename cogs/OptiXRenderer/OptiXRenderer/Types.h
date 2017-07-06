@@ -10,6 +10,7 @@
 #define _OPTIXRENDERER_TYPES_H_
 
 #include <OptiXRenderer/Defines.h>
+#include <OptiXRenderer/OctahedralUnit.h>
 #include <OptiXRenderer/RNG.h>
 
 #include <optixu/optixu_math_namespace.h>
@@ -47,6 +48,11 @@ struct __align__(16) Sphere {
         Sphere s = { center, radius };
         return s;
     }
+};
+
+struct __align__(16) VertexGeometry{
+    optix::float3 position;
+    OctahedralUnit32 normal;
 };
 
 //----------------------------------------------------------------------------

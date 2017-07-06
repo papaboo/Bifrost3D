@@ -11,7 +11,7 @@
 
 #include <Utils.h>
 
-#include <OptiXRenderer/EncodedNormal.h>
+#include <OptiXRenderer/OctahedralUnit.h>
 #include <OptiXRenderer/RNG.h>
 
 #include <gtest/gtest.h>
@@ -25,9 +25,9 @@ GTEST_TEST(EncodedNormal, encode_z_sign) {
                 if (x == 0 && y == 0 && z == 0)
                     continue;
                 optix::float3 normal = optix::normalize(optix::make_float3(float(x), float(y), float(z)));
-                EncodedNormal encoded_normal = EncodedNormal(normal.x, normal.y, normal.z);
+                OctahedralUnit32 encoded_normal = OctahedralUnit32::encode_precise(normal.x, normal.y, normal.z);
                 optix::float3 decoded_normal = encoded_normal.decode();
-                EXPECT_NORMAL_EQ(normal, decoded_normal, 0.00046f);
+                EXPECT_NORMAL_EQ(normal, decoded_normal, 0.00012f);
             }
 }
 
