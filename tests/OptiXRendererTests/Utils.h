@@ -36,9 +36,12 @@ inline bool equal_float3_eps(optix::float3 lhs, optix::float3 rhs, optix::float3
 
 #define EXPECT_COLOR_EQ_EPS(expected, actual, epsilon) EXPECT_PRED3(equal_float3_eps, expected, actual, epsilon)
 
-// TODO Safely dot the normals and test how far apart they are.
-inline bool equal_normal_eps(optix::float3 lhs, optix::float3 rhs, float epsilon) {
-    return abs(lhs.x - rhs.x) < epsilon && abs(lhs.y - rhs.y) < epsilon && abs(lhs.z - rhs.z) < epsilon;
+inline bool equal_normal_eps(optix::float3 lhs, optix::float3 rhs, double epsilon) {
+    using namespace optix;
+
+    double3 delta = { double(lhs.x) - double(rhs.x), double(lhs.y) - double(rhs.y), double(lhs.z) - double(rhs.z) };
+    double length_squared = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
+    return length_squared < epsilon * epsilon;
 }
 
 #define EXPECT_NORMAL_EQ(expected, actual, epsilon) EXPECT_PRED3(equal_normal_eps, expected, actual, epsilon)
