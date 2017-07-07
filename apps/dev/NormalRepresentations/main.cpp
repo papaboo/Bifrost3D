@@ -8,6 +8,7 @@
 // -----------------------------------------------------------------------------------------------
 
 #include <Cogwheel/Math/Distributions.h>
+#include <Cogwheel/Math/Half.h>
 #include <Cogwheel/Math/RNG.h>
 #include <Cogwheel/Math/Statistics.h>
 #include <Cogwheel/Math/Vector.h>
@@ -21,6 +22,7 @@ using namespace Cogwheel::Math;
 using Vector2s = Vector2<short>;
 using Vector3sb = Vector3<char>;
 using Vector3s = Vector3<short>;
+using Vector3h = Vector3<half>;
 
 inline float sign(float v) { return v >= 0.0f ? +1.0f : -1.0f; }
 inline Vector2f sign(Vector2f v) { return Vector2f(sign(v.x), sign(v.y)); }
@@ -86,6 +88,17 @@ struct OctahedralUnit32 {
         if (n.z < 0.0f) {
             float tmp_x = (1.0f - abs(n.y)) * sign(n.x);
             n.y = (1.0f - abs(n.x)) * sign(n.y);
+            n.x = tmp_x;
+        }
+        return normalize(n);
+    }
+
+    Vector3f fast_decode() const {
+        Vector2f p2 = Vector2f(encoding);
+        Vector3f n = Vector3f(p2, SHRT_MAX - abs(p2.x) - abs(p2.y));
+        if (n.z < 0.0f) {
+            float tmp_x = (SHRT_MAX - abs(n.y)) * sign(n.x);
+            n.y = (SHRT_MAX - abs(n.x)) * sign(n.y);
             n.x = tmp_x;
         }
         return normalize(n);
@@ -183,7 +196,9 @@ int main(int argc, char** argv) {
 
     test_encoding("XYZ24", [](Vector3f normal) { return XYZ24::encode(normal).decode(); });
     test_encoding("XYZ32", [](Vector3f normal) { return XYZ32::encode(normal).decode(); });
+    test_encoding("Half3", [](Vector3f normal) { return Vector3f(Vector3h(normal)); });
     test_encoding("ReconstructZ", [](Vector3f normal) { return ReconstructZ64::encode(normal).decode(); });
     test_encoding("Oct32s", [](Vector3f normal) { return OctahedralUnit32::encode(normal).decode(); });
+    test_encoding("Oct32s fast_decode", [](Vector3f normal) { return OctahedralUnit32::encode(normal).fast_decode(); });
     test_encoding("Oct32s precise", [](Vector3f normal) { return OctahedralUnit32::encode_precise(normal).decode(); });
 }
