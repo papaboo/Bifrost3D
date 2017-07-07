@@ -3068,4 +3068,6 @@ namespace std
 	#undef HALF_POP_WARNINGS
 #endif
 
+using namespace half_float;
+
 #endif
