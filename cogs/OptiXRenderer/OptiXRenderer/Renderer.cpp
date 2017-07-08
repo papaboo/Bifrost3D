@@ -215,7 +215,10 @@ struct Renderer::Implementation {
         context->setDevices(&device_IDs.optix, &device_IDs.optix + 1);
         int2 compute_capability;
         context->getDeviceAttribute(device_IDs.optix, RT_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY, sizeof(compute_capability), &compute_capability);
-        printf("OptiXRenderer using device %u: '%s' with compute capability %u.%u.\n", device_IDs.optix, context->getDeviceName(device_IDs.optix).c_str(), compute_capability.x, compute_capability.y);
+        int optix_major = OPTIX_VERSION / 1000, optix_minor = (OPTIX_VERSION % 1000) / 10, optix_micro = OPTIX_VERSION % 10;
+        printf("OptiX %u.%u.%u renderer using device %u: '%s' with compute capability %u.%u.\n", 
+            optix_major, optix_minor, optix_micro, 
+            device_IDs.optix, context->getDeviceName(device_IDs.optix).c_str(), compute_capability.x, compute_capability.y);
 
         context->getDeviceAttribute(device_IDs.optix, RT_DEVICE_ATTRIBUTE_CUDA_DEVICE_ORDINAL, sizeof(device_IDs.cuda), &device_IDs.cuda);
 
@@ -869,11 +872,16 @@ struct Renderer::Implementation {
 };
 
 Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hint) {
-    Renderer* r = new Renderer(cuda_device_ID, width_hint, height_hint);
-    if (r->m_impl->is_valid())
-        return r;
-    else {
-        delete r;
+    try {
+        Renderer* r = new Renderer(cuda_device_ID, width_hint, height_hint);
+        if (r->m_impl->is_valid())
+            return r;
+        else {
+            delete r;
+            return nullptr;
+        }
+    } catch (optix::Exception e) {
+        printf("OptiXRenderer failed to initialize:\n%s\n", e.getErrorString().c_str());
         return nullptr;
     }
 }
