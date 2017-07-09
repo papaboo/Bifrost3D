@@ -70,7 +70,7 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
   include_directories(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
   # TODO cuda_include_directories(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
   # Create custom commands and targets for each file.
-  set(_OPTIONS "")
+  set(_OPTIONS "-arch sm_30")
   cuda_wrap_srcs(${LIBRARY_NAME} PTX _GENERATED_FILES ${SHADING_SRC} ${SHADING_LIGHTSOURCES_SRC} OPTIONS ${_OPTIONS} )
 
   # Compute the file name of the intermedate link file used for separable compilation.
