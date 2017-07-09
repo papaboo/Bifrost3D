@@ -226,6 +226,7 @@ inline bool almost_equal(Vector4<T> lhs, Vector4<T> rhs, unsigned short max_ulps
 typedef Vector2<double> Vector2d;
 typedef Vector2<float> Vector2f;
 typedef Vector2<int> Vector2i;
+typedef Vector2<short> Vector2s;
 typedef Vector2<unsigned int> Vector2ui;
 typedef Vector3<double> Vector3d;
 typedef Vector3<float> Vector3f;
