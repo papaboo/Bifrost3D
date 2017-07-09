@@ -83,17 +83,6 @@ struct OctahedralUnit32 {
     }
 
     Vector3f decode() const {
-        Vector2f p2 = Vector2f(encoding) / float(SHRT_MAX);
-        Vector3f n = Vector3f(p2, 1.0f - abs(p2.x) - abs(p2.y));
-        if (n.z < 0.0f) {
-            float tmp_x = (1.0f - abs(n.y)) * sign(n.x);
-            n.y = (1.0f - abs(n.x)) * sign(n.y);
-            n.x = tmp_x;
-        }
-        return normalize(n);
-    }
-
-    Vector3f fast_decode() const {
         Vector2f p2 = Vector2f(encoding);
         Vector3f n = Vector3f(p2, SHRT_MAX - abs(p2.x) - abs(p2.y));
         if (n.z < 0.0f) {
@@ -134,6 +123,78 @@ struct OctahedralUnit32 {
         best_oct_tester(upper_right);
 
         return best_representation;
+    }
+};
+
+//-------------------------------------------------------------------------------------------------
+// Encodes a unit vector using an octahedral representation and directx 11's fixed point encoding.
+// See A Survey of Efficient Representations for Independent Unit Vectors, McGuire et al., 2014 for how to encode.
+// See https://msdn.microsoft.com/en-us/library/windows/desktop/dd607323(v=vs.85).aspx#fixed_point_integer_conversion for how to convert a float to a fixed point snorm.
+//-------------------------------------------------------------------------------------------------
+struct OctahedralUnit64 {
+
+    Vector2i encoding;
+
+    static OctahedralUnit64 encode(Vector3f n) {
+
+        // Project the sphere onto the octahedron, and then onto the xy plane.
+        Vector2f p = Vector2f(n.x, n.y) / (abs(n.x) + abs(n.y) + abs(n.z));
+
+        // Reflect the folds of the lower hemisphere over the diagonals.
+        Vector2f p2 = n.z < 0 ? (Vector2f(1.0f) - Vector2f(abs(p.y), abs(p.x))) * sign(p) : p;
+
+        // Fixed point encoding.
+        OctahedralUnit64 res = { Vector2i(int(clamp(p2.x, -1.0f, 1.0f) * INT_MAX + (p2.x < 0 ? -0.5f : 0.5f)),
+            int(clamp(p2.y, -1.0f, 1.0f) * INT_MAX + (p2.y < 0 ? -0.5f : 0.5f))) };
+        return res;
+    }
+
+    Vector3f decode() const {
+        Vector2f p2 = Vector2f(encoding);
+        Vector3f n = Vector3f(p2, INT_MAX - abs(p2.x) - abs(p2.y));
+        if (n.z < 0.0f) {
+            float tmp_x = (INT_MAX - abs(n.y)) * sign(n.x);
+            n.y = (INT_MAX - abs(n.x)) * sign(n.y);
+            n.x = tmp_x;
+        }
+        return normalize(n);
+    }
+
+    static OctahedralUnit64 encode_precise(Vector3f n) {
+        // Project the sphere onto the octahedron, and then onto the xy plane.
+        Vector2f p = Vector2f(n.x, n.y) / (abs(n.x) + abs(n.y) + abs(n.z));
+
+        // Reflect the folds of the lower hemisphere over the diagonals.
+        Vector2f p2 = n.z < 0 ? (Vector2f(1.0f) - Vector2f(abs(p.y), abs(p.x))) * sign(p) : p;
+
+        // Fixed point encoding.
+        OctahedralUnit64 floored_oct = { Vector2i(int(floor(clamp(p2.x, -1.0f, 1.0f) * INT_MAX)),
+                                                  int(floor(clamp(p2.y, -1.0f, 1.0f) * INT_MAX))) };
+
+        OctahedralUnit64 best_representation = floored_oct;
+        float lowest_sqrd_mag = squared_magnitude(best_representation.decode() - n);
+
+        auto best_oct_tester = [&](OctahedralUnit64 new_oct) {
+            float m = squared_magnitude(new_oct.decode() - n);
+            if (m < lowest_sqrd_mag) {
+                best_representation = new_oct;
+                lowest_sqrd_mag = m;
+            }
+        };
+
+        OctahedralUnit64 upper_left = { floored_oct.encoding + Vector2i(0, 1) };
+        best_oct_tester(upper_left);
+        OctahedralUnit64 lower_right = { floored_oct.encoding + Vector2i(1, 0) };
+        best_oct_tester(lower_right);
+        OctahedralUnit64 upper_right = { floored_oct.encoding + Vector2i(1, 1) };
+        best_oct_tester(upper_right);
+
+        return best_representation;
+    }
+
+    OctahedralUnit32 to_octahedral_unit_32() const {
+        OctahedralUnit32 res = { Vector2s(encoding.x >> 16, encoding.y >> 16) };
+        return res;
     }
 };
 
@@ -198,7 +259,9 @@ int main(int argc, char** argv) {
     test_encoding("XYZ32", [](Vector3f normal) { return XYZ32::encode(normal).decode(); });
     test_encoding("Half3", [](Vector3f normal) { return Vector3f(Vector3h(normal)); });
     test_encoding("ReconstructZ", [](Vector3f normal) { return ReconstructZ64::encode(normal).decode(); });
-    test_encoding("Oct32s", [](Vector3f normal) { return OctahedralUnit32::encode(normal).decode(); });
-    test_encoding("Oct32s fast_decode", [](Vector3f normal) { return OctahedralUnit32::encode(normal).fast_decode(); });
-    test_encoding("Oct32s precise", [](Vector3f normal) { return OctahedralUnit32::encode_precise(normal).decode(); });
+    test_encoding("Oct32", [](Vector3f normal) { return OctahedralUnit32::encode(normal).decode(); });
+    test_encoding("Oct32 precise", [](Vector3f normal) { return OctahedralUnit32::encode_precise(normal).decode(); });
+    test_encoding("Oct64", [](Vector3f normal) { return OctahedralUnit64::encode(normal).decode(); });
+    test_encoding("Oct64 precise", [](Vector3f normal) { return OctahedralUnit64::encode_precise(normal).decode(); });
+    test_encoding("Oct64 -> Oct32", [](Vector3f normal) { return OctahedralUnit64::encode_precise(normal).to_octahedral_unit_32().decode(); });
 }
