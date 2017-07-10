@@ -9,7 +9,7 @@
 #include <OptiXRenderer/Renderer.h>
 
 #include <OptiXRenderer/EnvironmentMap.h>
-#include <OptiXRenderer/OctahedralUnit.h>
+#include <OptiXRenderer/OctahedralNormal.h>
 #include <OptiXRenderer/PresampledEnvironmentMap.h>
 #include <OptiXRenderer/Kernel.h>
 #include <OptiXRenderer/RhoTexture.h>
@@ -99,7 +99,8 @@ static inline optix::Geometry load_mesh(optix::Context& context, Meshes::UID mes
         mapped_geometry[i].position = optix::make_float3(position.x, position.y, position.z);
         if (mesh.get_normals() != nullptr) {
             Vector3f normal = mesh.get_normals()[i];
-            mapped_geometry[i].normal = OctahedralUnit32::encode_precise(normal.x, normal.y, normal.z);
+            Math::OctahedralNormal encoded_normal = Math::OctahedralNormal::encode_precise(normal.x, normal.y, normal.z);
+            mapped_geometry[i].normal = { optix::make_short2(encoded_normal.encoding.x, encoded_normal.encoding.y) };
         }
     }
     geometry_buffer->unmap();

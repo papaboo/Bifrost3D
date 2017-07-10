@@ -11,23 +11,32 @@
 
 #include <Utils.h>
 
-#include <OptiXRenderer/OctahedralUnit.h>
-#include <OptiXRenderer/RNG.h>
+#include <Cogwheel/Math/OctahedralNormal.h>
+#include <OptiXRenderer/OctahedralNormal.h>
 
 #include <gtest/gtest.h>
 
 namespace OptiXRenderer {
 
-GTEST_TEST(EncodedNormal, encode_z_sign) {
+GTEST_TEST(OctahedralNormal, equality_with_cogwheel_implementation) {
+    using namespace Cogwheel;
+
     for (int x = -10; x < 11; ++x)
         for (int y = -10; y < 11; ++y)
             for (int z = -10; z < 11; ++z) {
                 if (x == 0 && y == 0 && z == 0)
                     continue;
+                
                 optix::float3 normal = optix::normalize(optix::make_float3(float(x), float(y), float(z)));
-                OctahedralUnit32 encoded_normal = OctahedralUnit32::encode_precise(normal.x, normal.y, normal.z);
-                optix::float3 decoded_normal = encoded_normal.decode();
-                EXPECT_NORMAL_EQ(normal, decoded_normal, 0.00012f);
+                Math::OctahedralNormal cogwheel_encoded_normal = Math::OctahedralNormal::encode_precise(normal.x, normal.y, normal.z);
+                Math::Vector3f cogwheel_decoded_normal = cogwheel_encoded_normal.decode();
+
+                OctahedralNormal optix_encoded_normal = { cogwheel_encoded_normal.encoding.x, cogwheel_encoded_normal.encoding.y };
+                optix::float3 optix_decoded_normal = optix::normalize(optix_encoded_normal.decode_unnormalized());
+
+                EXPECT_FLOAT_EQ(cogwheel_decoded_normal.x, optix_decoded_normal.x);
+                EXPECT_FLOAT_EQ(cogwheel_decoded_normal.y, optix_decoded_normal.y);
+                EXPECT_FLOAT_EQ(cogwheel_decoded_normal.z, optix_decoded_normal.z);
             }
 }
 
