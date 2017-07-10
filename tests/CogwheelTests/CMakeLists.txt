@@ -28,6 +28,7 @@ set(MATH_SRCS
   Math/Distribution1DTest.h
   Math/Distribution2DTest.h
   Math/MatrixTest.h
+  Math/OctahedralNormalTest.h
   Math/QuaternionTest.h
   Math/TransformTest.h
 )

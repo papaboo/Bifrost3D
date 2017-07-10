@@ -24,6 +24,7 @@
 #include <Math/Distribution1DTest.h>
 #include <Math/Distribution2DTest.h>
 #include <Math/MatrixTest.h>
+#include <Math/OctahedralNormalTest.h>
 #include <Math/QuaternionTest.h>
 #include <Math/TransformTest.h>
 
