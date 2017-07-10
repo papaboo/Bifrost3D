@@ -45,6 +45,10 @@ public:
         return res;
     }
 
+    static OctahedralNormal encode(float x, float y, float z) {
+        return encode(Vector3f(x, y, z));
+    }
+
     static OctahedralNormal encode_precise(Vector3f n) {
         // Project the sphere onto the octahedron, and then onto the xy plane.
         Vector2f p = Vector2f(n.x, n.y) / (abs(n.x) + abs(n.y) + abs(n.z));
@@ -75,6 +79,10 @@ public:
         best_oct_tester(upper_right);
 
         return best_representation;
+    }
+
+    static OctahedralNormal encode_precise(float x, float y, float z) {
+        return encode_precise(Vector3f(x, y, z));
     }
 
     Vector3f decode() const {
