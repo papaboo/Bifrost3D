@@ -219,7 +219,7 @@ TEST_F(Assets_Mesh, hard_normal_computation) {
         for (int i = 0; i < 3; ++i) {
             Math::Vector3f cube_normal = cube.get_normals()[face[i]];
             Math::Vector3f hard_normal = hard_normals[p * 3 + i];
-            EXPECT_NORMAL_EQ(cube_normal, hard_normal);
+            EXPECT_NORMAL_EQ(cube_normal, hard_normal, 0.000001);
         }
     }
 }

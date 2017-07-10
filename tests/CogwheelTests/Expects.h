@@ -40,10 +40,13 @@ static bool invalid_AABB(Cogwheel::Math::AABB v) {
 }
 #define EXPECT_INVALID_AABB(val) EXPECT_PRED1(invalid_AABB, val)
 
-static bool equal_normal(Cogwheel::Math::Vector3f lhs, Cogwheel::Math::Vector3f rhs) {
-    return dot(lhs, rhs) > 0.99999f;
+inline bool equal_normal_eps(Cogwheel::Math::Vector3f lhs, Cogwheel::Math::Vector3f rhs, double epsilon) {
+    Cogwheel::Math::Vector3d delta = { double(lhs.x) - double(rhs.x), double(lhs.y) - double(rhs.y), double(lhs.z) - double(rhs.z) };
+    double length_squared = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
+    return length_squared < epsilon * epsilon;
 }
-#define EXPECT_NORMAL_EQ(expected, actual) EXPECT_PRED2(equal_normal, expected, actual)
+
+#define EXPECT_NORMAL_EQ(expected, actual, epsilon) EXPECT_PRED3(equal_normal_eps, expected, actual, epsilon)
 
 static bool equal_Vector2f(Cogwheel::Math::Vector2f lhs, Cogwheel::Math::Vector2f rhs) {
     return Cogwheel::Math::almost_equal(lhs.x, rhs.x) && Cogwheel::Math::almost_equal(lhs.y, rhs.y);
