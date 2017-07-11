@@ -182,7 +182,7 @@ void test_encoding(const std::string& name, EncodeDecode encode_decode) {
     printf("  Min: %f\n", stats.minimum);
     printf("  Mean: %f\n", stats.mean);
     printf("  Max: %f\n", stats.maximum);
-    printf("  Std dev: %f\n", sqrt(stats.variance));
+    printf("  Std dev: %f\n", stats.standard_deviation());
 }
 
 int main(int argc, char** argv) {
