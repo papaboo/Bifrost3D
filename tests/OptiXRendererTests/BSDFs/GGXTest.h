@@ -169,7 +169,7 @@ GTEST_TEST(GGX, sampling_variance) {
         });
 
         EXPECT_TRUE(almost_equal_eps(float(original_GGX.mean), float(GGX_with_VNDF.mean), 0.001f));
-        EXPECT_LT(GGX_with_VNDF.variance, original_GGX.variance);
+        EXPECT_LT(GGX_with_VNDF.variance(), original_GGX.variance());
     }
 }
 

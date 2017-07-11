@@ -23,17 +23,21 @@ struct Statistics final {
     float minimum;
     float maximum;
     float mean;
-    float variance;
+    float m2;
+    size_t sample_count;
 
+    //---------------------------------------------------------------------------------------------
+    // Constructors
+    //---------------------------------------------------------------------------------------------
     template <typename RandomAccessItr, class UnaryPredicate>
     Statistics(RandomAccessItr first, RandomAccessItr last, UnaryPredicate predicate) {
-        size_t count = last - first;
+        sample_count = last - first;
 
         minimum = 1e30f;
         maximum = -1e30f;
 
-        double* means = new double[count];
-        double* means_sqrd = new double[count];
+        double* means = new double[sample_count];
+        double* means_sqrd = new double[sample_count];
         while (first != last) {
             float val = float(predicate(first));
             minimum = std::min(minimum, val);
@@ -42,10 +46,10 @@ struct Statistics final {
             *means_sqrd = val* val;
             ++first; ++means; ++means_sqrd;
         }
-        means -= count; means_sqrd -= count;
+        means -= sample_count; means_sqrd -= sample_count;
 
-        mean = float(sort_and_pairwise_summation(means, means + count) / count);
-        variance = float(sort_and_pairwise_summation(means_sqrd, means_sqrd + count) / count - mean * mean);
+        mean = float(sort_and_pairwise_summation(means, means + sample_count) / sample_count);
+        m2 = float(sort_and_pairwise_summation(means_sqrd, means_sqrd + sample_count) / sample_count);
 
         delete[] means;
         delete[] means_sqrd;
@@ -55,6 +59,24 @@ struct Statistics final {
     Statistics(RandomAccessItr first, RandomAccessItr last)
         : Statistics(first, last, [](RandomAccessItr v) -> float { return float(*v); }) { }
 
+    //---------------------------------------------------------------------------------------------
+    // Getters
+    //---------------------------------------------------------------------------------------------
+    inline float variance() const { return m2 - mean * mean; }
+    inline float standard_deviation() const { return sqrt(variance()); }
+
+    //---------------------------------------------------------------------------------------------
+    // Operations.
+    //---------------------------------------------------------------------------------------------
+    void merge_with(Statistics other) {
+        minimum = std::min(minimum, other.minimum);
+        maximum = std::max(maximum, other.maximum);
+        
+        size_t total_sample_count = sample_count + other.sample_count;
+        mean = (mean * sample_count + other.mean * other.sample_count) / total_sample_count;
+        m2 = (m2 * sample_count + other.m2 * other.sample_count) / total_sample_count;
+        sample_count = total_sample_count;
+    }
 };
 
 } // NS Math
