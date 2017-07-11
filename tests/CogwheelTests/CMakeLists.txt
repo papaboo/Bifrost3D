@@ -30,6 +30,7 @@ set(MATH_SRCS
   Math/MatrixTest.h
   Math/OctahedralNormalTest.h
   Math/QuaternionTest.h
+  Math/StatisticsTest.h
   Math/TransformTest.h
 )
 

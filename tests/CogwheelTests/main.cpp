@@ -26,6 +26,7 @@
 #include <Math/MatrixTest.h>
 #include <Math/OctahedralNormalTest.h>
 #include <Math/QuaternionTest.h>
+#include <Math/StatisticsTest.h>
 #include <Math/TransformTest.h>
 
 #include <Scene/CameraTest.h>
