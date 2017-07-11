@@ -123,7 +123,7 @@ struct PresampledEnvironmentLight {
     int environment_map_ID; // Texture ID.
     int per_pixel_PDF_ID; // Texture ID.
     int samples_ID; // Buffer ID.
-    int sample_count; // TODO Not really needed or? Query the buffer for it.
+    int sample_count;
 
     __inline_all__ static PresampledEnvironmentLight none() {
         PresampledEnvironmentLight light = {};
