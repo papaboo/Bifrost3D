@@ -33,22 +33,17 @@ __inline_dev__ optix::float3 project_ray_direction(optix::float2 viewport_pos,
 }
 
 // Computes a tangent and bitangent that together with the normal creates an orthonormal bases.
-// Consider using TBN to wrap the tangents.
+// Building an Orthonormal Basis, Revisited, Duff et al.
+// http://jcgt.org/published/0006/01/01/paper.pdf
 __inline_all__ static void compute_tangents(const optix::float3& normal,
                                             optix::float3& tangent, optix::float3& bitangent) {
     using namespace optix;
 
-    float3 a0;
-    if (abs(normal.x) < abs(normal.y)) {
-        const float zup = abs(normal.z) < abs(normal.x) ? 0.0f : 1.0f;
-        a0 = make_float3(zup, 0.0f, 1.0f - zup);
-    } else {
-        const float zup = (abs(normal.z) < abs(normal.y)) ? 0.0f : 1.0f;
-        a0 = make_float3(0.0f, zup, 1.0f - zup);
-    }
-
-    bitangent = normalize(cross(normal, a0));
-    tangent = normalize(cross(bitangent, normal));
+    float sign = copysignf(1.0f, normal.z);
+    const float a = -1.0f / (sign + normal.z);
+    const float b = normal.x * normal.y * a;
+    tangent = { 1.0f + sign * normal.x * normal.x * a, sign * b, -sign * normal.x };
+    bitangent = { b, sign + normal.y * normal.y * a, -normal.y };
 }
 
 __inline_all__ optix::float3 clamp_light_contribution_by_path_PDF(const optix::float3& radiance, float path_PDF, int accumulations) {
