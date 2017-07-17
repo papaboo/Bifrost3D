@@ -85,8 +85,8 @@ bool EnvironmentManager::render(ID3D11DeviceContext1& render_context, int enviro
         render_context.PSSetShaderResources(0, 1, &m_textures.white_texture().srv);
         render_context.PSSetSamplers(0, 1, &m_textures.white_texture().sampler);
 
-        ID3D11RenderTargetView* backbuffer;
-        ID3D11DepthStencilView* depth;
+        OID3D11RenderTargetView backbuffer;
+        OID3D11DepthStencilView depth;
         render_context.OMGetRenderTargets(1, &backbuffer, &depth);
 
         render_context.ClearRenderTargetView(backbuffer, &env.tint.x);
