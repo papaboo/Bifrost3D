@@ -24,6 +24,7 @@
 #include <Cogwheel/Assets/MeshModel.h>
 #include <Cogwheel/Core/Engine.h>
 #include <Cogwheel/Core/Window.h>
+#include <Cogwheel/Math/OctahedralNormal.h>
 #include <Cogwheel/Scene/Camera.h>
 #include <Cogwheel/Scene/SceneRoot.h>
 
@@ -140,12 +141,11 @@ public:
 
             // Create the input layout
             D3D11_INPUT_ELEMENT_DESC input_layout_desc[] = {
-                { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-                { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-                { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 2, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+                { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+                { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
             };
 
-            hr = m_device.CreateInputLayout(input_layout_desc, 3, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout);
+            hr = m_device.CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout);
             THROW_ON_FAILURE(hr);
 
             // Create a default emptyish buffer.
@@ -226,8 +226,7 @@ public:
     ~Implementation() {
         for (Dx11Mesh mesh : m_meshes) {
             safe_release(&mesh.indices);
-            safe_release(mesh.positions_address());
-            safe_release(mesh.normals_address());
+            safe_release(mesh.geometry_address());
             safe_release(mesh.texcoords_address());
         }
 
@@ -242,10 +241,10 @@ public:
                 context->IASetIndexBuffer(mesh.indices, DXGI_FORMAT_R32_UINT, 0);
 
             // Setup strides and offsets for the buffers.
-            // Layout is [positions, normals, texcoords].
-            static unsigned int strides[3] = { sizeof(float3), sizeof(float3), sizeof(float2) };
-            static unsigned int offsets[3] = { 0, 0, 0 };
-            
+            // Layout is [geometry, texcoords].
+            static unsigned int strides[2] = { sizeof(float4), sizeof(float2) };
+            static unsigned int offsets[2] = { 0, 0 };
+
             context->IASetVertexBuffers(0, mesh.buffer_count, mesh.buffers, strides, offsets);
         }
 
@@ -398,8 +397,7 @@ public:
                     if (m_meshes[mesh_ID].vertex_count != 0) {
                         m_meshes[mesh_ID].index_count = m_meshes[mesh_ID].vertex_count = 0;
                         safe_release(&m_meshes[mesh_ID].indices);
-                        safe_release(m_meshes[mesh_ID].positions_address());
-                        safe_release(m_meshes[mesh_ID].normals_address());
+                        safe_release(m_meshes[mesh_ID].geometry_address());
                         safe_release(m_meshes[mesh_ID].texcoords_address());
                     }
                 }
@@ -434,31 +432,47 @@ public:
                         positions = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), mesh.get_positions());
                     }
 
-                    { // Upload positions.
-                        HRESULT hr = upload_default_buffer(positions, dx_mesh.vertex_count, D3D11_BIND_VERTEX_BUFFER, 
-                                                           dx_mesh.positions_address());
-                        if (FAILED(hr))
-                            printf("Could not upload '%s' position buffer.\n", mesh.get_name().c_str());
-                    }
+                    { // Upload geometry.
+                        auto create_vertex_geometry = [](Vector3f p, Vector3f n) -> Dx11VertexGeometry {
+                            float3 dx_p = { p.x, p.y, p.z };
+                            OctahedralNormal encoded_normal = OctahedralNormal::encode_precise(n);
+                            int2 dx_normal = { encoded_normal.encoding.x, encoded_normal.encoding.y };
+                            unsigned int packed_dx_normal = (dx_normal.x - SHRT_MIN) | ((dx_normal.y - SHRT_MIN) << 16);
+                            Dx11VertexGeometry geometry = { dx_p, packed_dx_normal };
+                            return geometry;
+                        };
 
-                    { // Upload normals.
                         Vector3f* normals = mesh.get_normals();
 
-                        if (mesh.get_normals() == nullptr) {
-                            // Compute hard normals.
-                            normals = new Vector3f[dx_mesh.vertex_count];
-                            MeshUtils::compute_hard_normals(positions, positions + dx_mesh.vertex_count, normals);
-                        } else if (expand_indexed_buffers)
-                            normals = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), normals);
+                        Dx11VertexGeometry* geometry = new Dx11VertexGeometry[dx_mesh.vertex_count];
+                        if (normals == nullptr) {
+                            // Compute hard normals. Positions have already been expanded if there is an index buffer.
+                            #pragma omp parallel for
+                            for (int i = 0; i < int(dx_mesh.vertex_count); i += 3) {
+                                Vector3f p0 = positions[i], p1 = positions[i + 1], p2 = positions[i+2];
+                                Vector3f normal = normalize(cross(p1 - p0, p2 - p0));
+                                geometry[i] = create_vertex_geometry(p0, normal);
+                                geometry[i+1] = create_vertex_geometry(p1, normal);
+                                geometry[i+2] = create_vertex_geometry(p2, normal);
+                            }
+                        } else {
+                            // Copy position and normal.
+                            #pragma omp parallel for
+                            for (int i = 0; i < int(dx_mesh.vertex_count); ++i)
+                                geometry[i] = create_vertex_geometry(positions[i], normals[i]);
+                        }
 
-                        HRESULT hr = upload_default_buffer(normals, dx_mesh.vertex_count, D3D11_BIND_VERTEX_BUFFER,
-                                                           dx_mesh.normals_address());
+                        HRESULT hr = upload_default_buffer(geometry, dx_mesh.vertex_count, D3D11_BIND_VERTEX_BUFFER,
+                            dx_mesh.geometry_address());
                         if (FAILED(hr))
-                            printf("Could not upload '%s' normal buffer.\n", mesh.get_name().c_str());
+                            printf("Could not upload %s's geometry buffer.\n", mesh.get_name().c_str());
 
-                        if (normals != mesh.get_normals())
-                            delete[] normals;
+                        delete[] geometry;
                     }
+
+                    // Delete temporary expanded positions.
+                    if (positions != mesh.get_positions())
+                        delete[] positions;
 
                     { // Upload texcoords if present, otherwise upload 'null buffer'.
                         Vector2f* texcoords = mesh.get_texcoords();
@@ -470,7 +484,7 @@ public:
                             HRESULT hr = upload_default_buffer(texcoords, dx_mesh.vertex_count, D3D11_BIND_VERTEX_BUFFER,
                                                                dx_mesh.texcoords_address());
                             if (FAILED(hr))
-                                printf("Could not upload '%s' texcoord buffer.\n", mesh.get_name().c_str());
+                                printf("Could not upload %s's texcoord buffer.\n", mesh.get_name().c_str());
 
                             if (texcoords != mesh.get_texcoords())
                                 delete[] texcoords;
@@ -479,11 +493,7 @@ public:
                     }
 
                     bool has_texcoords = mesh.get_texcoords() != nullptr;
-                    dx_mesh.buffer_count = has_texcoords ? 3 : 2;
-
-                    // Delete temporary expanded positions.
-                    if (positions != mesh.get_positions())
-                        delete[] positions;
+                    dx_mesh.buffer_count = has_texcoords ? 2 : 1;
 
                     m_meshes[mesh_ID] = dx_mesh;
                 }

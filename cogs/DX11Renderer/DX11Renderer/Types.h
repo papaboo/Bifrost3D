@@ -67,6 +67,10 @@ using OID3D11UnorderedAccessView = DX11Renderer::OwnedResourcePtr<ID3D11Unordere
 #define CONSTANT_ELEMENT_SIZE 16
 #define CONSTANT_BUFFER_ALIGNMENT 256
 
+struct int2 {
+    int x; int y;
+};
+
 struct float2 {
     float x; float y;
 };
@@ -126,22 +130,25 @@ struct Dx11Texture {
     OID3D11SamplerState sampler;
 };
 
+struct Dx11VertexGeometry {
+    float3 position;
+    unsigned int encoded_normal;
+};
+
 struct Dx11Mesh {
     unsigned int index_count;
     unsigned int vertex_count;
     ID3D11Buffer* indices;
 
-    ID3D11Buffer* buffers[3]; // [positions, normals, texcoords]
+    ID3D11Buffer* buffers[2]; // [geometry, texcoords]
     int buffer_count;
 
     AABB bounds;
 
-    ID3D11Buffer* positions() { return buffers[0]; }
-    ID3D11Buffer** positions_address() { return buffers; }
-    ID3D11Buffer* normals() { return buffers[1]; }
-    ID3D11Buffer** normals_address() { return buffers + 1; }
-    ID3D11Buffer* texcoords() { return buffers[2]; }
-    ID3D11Buffer** texcoords_address() { return buffers + 2; }
+    ID3D11Buffer* geometry() { return buffers[0]; }
+    ID3D11Buffer** geometry_address() { return buffers + 0; }
+    ID3D11Buffer* texcoords() { return buffers[1]; }
+    ID3D11Buffer** texcoords_address() { return buffers + 1; }
 };
 
 struct Dx11Model {
