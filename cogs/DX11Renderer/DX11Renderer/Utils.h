@@ -45,6 +45,9 @@ inline void CHECK_HRESULT(HRESULT hr, const std::string& file, int line) {
         case E_INVALIDARG:
             error += " invalid arg.";
             break;
+        case DXGI_ERROR_INVALID_CALL:
+            error += " DXGI error invalid call.";
+            break;
         default:
             error += " unknown HRESULT code: " + std::to_string(hr);
             break;
