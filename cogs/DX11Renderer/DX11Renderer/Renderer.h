@@ -17,6 +17,11 @@ namespace DX11Renderer {
 // DirectX 11 renderer.
 // Future work
 // * SSAO
+// * SSR
+// ** An Adaptive Acceleration Structure for Screen-space Ray Tracing, http://jankautz.com/publications/AcceleratedSSRT_HPG15.pdf
+// ** Screen Space Reflections in Killing Floor 2, https://sakibsaikia.github.io/graphics/2016/12/25/Screen-Space-Reflection-in-Killing-Floor-2.html
+// ** Real-Time Global Illumination using Precomputed Light Field Probes, http://graphics.cs.williams.edu/papers/LightFieldI3D17/McGuire2017LightField.pdf
+// ** Reprojection reflections, http://bitsquid.blogspot.dk/2017/06/reprojecting-reflections_22.html
 // * HDR backbuffer.
 // * Frustum culling.
 // * Sort models by material ID as well and use the info while rendering.
