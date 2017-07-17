@@ -166,8 +166,8 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
         material_data.tint_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
         Materials::UID material_ID = Materials::create("Floor", material_data);
 
-        SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0, -0.0005f, 0)));
-        Meshes::UID plane_mesh_ID = MeshCreation::plane(10);
+        SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0, -0.0005f, 0), Quaternionf::identity(), 10));
+        Meshes::UID plane_mesh_ID = MeshCreation::plane(1, { MeshFlag::Position, MeshFlag::Texcoord });
         MeshModels::create(plane_node.get_ID(), plane_mesh_ID, material_ID);
         plane_node.set_parent(root_node);
     }
@@ -178,22 +178,22 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
 
         unsigned int torus_detail = 64;
         float minor_radius = 0.02f;
-        Mesh cube_mesh = MeshCreation::torus(torus_detail, torus_detail, minor_radius, { MeshFlag::Position, MeshFlag::Normal });
+        Mesh ring_mesh = MeshCreation::torus(torus_detail, torus_detail, minor_radius, { MeshFlag::Position, MeshFlag::Normal });
 
         { // Ringify
-            Vector3f* positions = cube_mesh.get_positions();
-            Vector3f* normals = cube_mesh.get_normals();
-            for (unsigned int i = 0; i < cube_mesh.get_vertex_count(); ++i) {
+            Vector3f* positions = ring_mesh.get_positions();
+            Vector3f* normals = ring_mesh.get_normals();
+            for (unsigned int i = 0; i < ring_mesh.get_vertex_count(); ++i) {
                 Vector3f ring_center = positions[i] - normals[i] * minor_radius;
                 Vector3f dir = normalize(ring_center);
                 Vector3f tangent = cross(dir, Vector3f::up());
                 positions[i] += Vector3f::up() * dot(Vector3f::up(), normals[i]) * 2.5f * minor_radius;
                 positions[i] -= dir * (1.0f - abs(dot(dir, normals[i]))) * 0.5f * minor_radius;
             }
-            MeshUtils::compute_normals(cube_mesh.get_ID());
+            MeshUtils::compute_normals(ring_mesh.get_ID());
             
             // Fix normals at the discontinuity where the ring mesh starts and ends.
-            Vector3f* end_normals = normals + cube_mesh.get_vertex_count() - torus_detail - 2;
+            Vector3f* end_normals = normals + ring_mesh.get_vertex_count() - torus_detail - 2;
             for (unsigned int v = 0; v < torus_detail + 1; ++v) {
                 Vector3f begin_normal = normals[v];
                 Vector3f end_normal = end_normals[v];
@@ -210,12 +210,12 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
             Transform transform = parent_node.get_global_transform() * Transform(Vector3f::zero(), local_rot, scale);
             transform.translation = Vector3f(0, 0.5f, 0);
 
-            SceneNode cube_node = SceneNodes::create("Rotating ring", transform);
-            MeshModels::create(cube_node.get_ID(), cube_mesh.get_ID(), material_ID);
-            cube_node.set_parent(parent_node);
-            parent_node = cube_node;
+            SceneNode ring_node = SceneNodes::create("Rotating ring", transform);
+            MeshModels::create(ring_node.get_ID(), ring_mesh.get_ID(), material_ID);
+            ring_node.set_parent(parent_node);
+            parent_node = ring_node;
 
-            LocalRotator* simple_rotator = new LocalRotator(cube_node.get_ID(), i * 0.31415f * 0.5f + 0.2f);
+            LocalRotator* simple_rotator = new LocalRotator(ring_node.get_ID(), i * 0.31415f * 0.5f + 0.2f);
             engine.add_mutating_callback(LocalRotator::rotate_callback, simple_rotator);
         }
     }
@@ -226,7 +226,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
 
         Transform transform = Transform(Vector3f(-1.5f, 0.5f, 0.0f));
         SceneNode cylinder_node = SceneNodes::create("Destroyed Cylinder", transform);
-        Meshes::UID cylinder_mesh_ID = MeshCreation::cylinder(4, 16);
+        Meshes::UID cylinder_mesh_ID = MeshCreation::cylinder(4, 16, { MeshFlag::Position, MeshFlag::Normal });
         MeshModels::create(cylinder_node.get_ID(), cylinder_mesh_ID, material_ID);
         cylinder_node.set_parent(root_node);
     }
@@ -237,7 +237,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
 
         Transform transform = Transform(Vector3f(1.5f, 0.5f, 0.0f));
         SceneNode sphere_node = SceneNodes::create("Sphere", transform);
-        Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(32, 16);
+        Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(128, 64, { MeshFlag::Position, MeshFlag::Normal });
         MeshModels::create(sphere_node.get_ID(), sphere_mesh_ID, material_ID);
         sphere_node.set_parent(root_node);
     }
@@ -260,10 +260,10 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
         Materials::UID material_ID = Materials::create("Plastic", material_data);
 
         Transform transform = Transform(Vector3f(3.0f, 0.35f, 0.0f), Quaternionf::identity(), 0.5f);
-        SceneNode cube_node = SceneNodes::create("Swizz torus", transform);
-        Meshes::UID cube_mesh_ID = MeshCreation::torus(64, 64, 0.7f);
-        MeshModels::create(cube_node.get_ID(), cube_mesh_ID, material_ID);
-        cube_node.set_parent(root_node);
+        SceneNode torus_node = SceneNodes::create("Swizz torus", transform);
+        Meshes::UID torus_mesh_ID = MeshCreation::torus(64, 64, 0.7f, { MeshFlag::Position, MeshFlag::Normal });
+        MeshModels::create(torus_node.get_ID(), torus_mesh_ID, material_ID);
+        torus_node.set_parent(root_node);
     }
 
     { // GUN!
