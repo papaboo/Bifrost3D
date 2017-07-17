@@ -117,14 +117,9 @@ public:
             dxgi_device->Release();
             THROW_ON_FAILURE(hr);
 
-            IDXGIFactory1* dxgi_factory = nullptr;
-            hr = adapter->GetParent(IID_PPV_ARGS(&dxgi_factory));
-            adapter->Release();
-            THROW_ON_FAILURE(hr);
-
             IDXGIFactory2* dxgi_factory2 = nullptr;
-            hr = dxgi_factory->QueryInterface(IID_PPV_ARGS(&dxgi_factory2));
-            dxgi_factory->Release();
+            hr = adapter->GetParent(IID_PPV_ARGS(&dxgi_factory2));
+            adapter->Release();
             THROW_ON_FAILURE(hr);
 
             // Create swap chain
@@ -147,15 +142,8 @@ public:
         { // Setup backbuffer.
             m_backbuffer_size = Vector2ui::zero();
 
-            // Get and set render target.
-            ID3D11Texture2D* backbuffer;
-            HRESULT hr = m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&backbuffer));
-            THROW_ON_FAILURE(hr);
-            hr = m_device->CreateRenderTargetView(backbuffer, nullptr, &m_backbuffer_view);
-            THROW_ON_FAILURE(hr);
-            backbuffer->Release();
-
-            // Depth buffer is initialized on demand when the output dimensions are known.
+            // Back- and depth buffer is initialized on demand when the output dimensions are known.
+            m_backbuffer_view = nullptr;
             m_depth_buffer = nullptr;
             m_depth_view = nullptr;
         }
