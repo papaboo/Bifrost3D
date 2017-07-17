@@ -11,15 +11,17 @@
 // ------------------------------------------------------------------------------------------------
 float sign(float v) { return v >= 0.0f ? +1.0f : -1.0f; }
 
-float3 decode_octahedral_normal(unsigned int encoded_normal) {
+float3 decode_octahedral_normal(int packed_encoded_normal) {
     const int SHRT_MAX = 32767;
     const int SHRT_MIN = -32768;
 
-    int encoding_x = int(encoded_normal & 0xFFFF) + SHRT_MIN;
-    int encoding_y = int((encoded_normal >> 16) & 0xFFFF) + SHRT_MIN;
+    // Unpack the 2 shorts representing the encoded normal. 
+    // The sign is implecitly handled for the 16 most significant bits, but needs to be explicitly handled for the least ones.
+    int encoding_x = (packed_encoded_normal & 0xFFFF) + SHRT_MIN;
+    int encoding_y = packed_encoded_normal >> 16;
 
     float2 p2 = float2(encoding_x, encoding_y);
-    float3 n = float3(encoding_x, encoding_y, SHRT_MAX - abs(p2.x) - abs(p2.y));
+    float3 n = float3(p2, SHRT_MAX - abs(p2.x) - abs(p2.y));
     if (n.z < 0.0f) {
         float tmp_x = (SHRT_MAX - abs(n.y)) * sign(n.x);
         n.y = (SHRT_MAX - abs(n.x)) * sign(n.y);
@@ -53,7 +55,7 @@ Output main(float4 geometry : GEOMETRY, float2 texcoord : TEXCOORD) {
     Output output;
     output.world_position.xyz = mul(float4(geometry.xyz, 1.0f), to_world_matrix);
     output.position = mul(float4(output.world_position.xyz, 1.0f), view_projection_matrix);
-    output.normal.xyz = mul(decode_octahedral_normal(asuint(geometry.w)), to_world_matrix);
+    output.normal.xyz = mul(decode_octahedral_normal(asint(geometry.w)), to_world_matrix);
     output.texcoord = texcoord;
     return output;
 }

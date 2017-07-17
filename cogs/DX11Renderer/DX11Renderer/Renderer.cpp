@@ -437,7 +437,7 @@ public:
                             float3 dx_p = { p.x, p.y, p.z };
                             OctahedralNormal encoded_normal = OctahedralNormal::encode_precise(n);
                             int2 dx_normal = { encoded_normal.encoding.x, encoded_normal.encoding.y };
-                            unsigned int packed_dx_normal = (dx_normal.x - SHRT_MIN) | ((dx_normal.y - SHRT_MIN) << 16);
+                            int packed_dx_normal = (dx_normal.x - SHRT_MIN) | (dx_normal.y << 16);
                             Dx11VertexGeometry geometry = { dx_p, packed_dx_normal };
                             return geometry;
                         };

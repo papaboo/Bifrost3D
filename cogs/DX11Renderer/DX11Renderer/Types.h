@@ -132,7 +132,7 @@ struct Dx11Texture {
 
 struct Dx11VertexGeometry {
     float3 position;
-    unsigned int encoded_normal;
+    int encoded_normal;
 };
 
 struct Dx11Mesh {
