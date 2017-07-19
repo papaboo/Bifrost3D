@@ -257,7 +257,6 @@ struct Renderer::Implementation {
 
             std::string monte_carlo_ptx_path = get_ptx_path(shader_prefix, "MonteCarlo");
             default_material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
-            default_material->setAnyHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "monte_carlo_any_hit"));
             default_material->setAnyHitProgram(int(RayTypes::Shadow), context->createProgramFromPTXFile(monte_carlo_ptx_path, "shadow_any_hit"));
 
             std::string normal_vis_ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
@@ -837,40 +836,44 @@ struct Renderer::Implementation {
 #endif
         }
 
-    { // Upload camera parameters.
-        // Check if the camera transforms changed and, if so, upload the new ones and reset accumulation.
-        Matrix4x4f inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
-        if (camera_inverse_view_projection_matrix != inverse_view_projection_matrix) {
-            camera_inverse_view_projection_matrix = inverse_view_projection_matrix;
+        { // Upload camera parameters.
+            // Check if the camera transforms changed and, if so, upload the new ones and reset accumulation.
+            Matrix4x4f inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
+            if (camera_inverse_view_projection_matrix != inverse_view_projection_matrix) {
+                camera_inverse_view_projection_matrix = inverse_view_projection_matrix;
 
-            Vector3f cam_pos = Cameras::get_transform(camera_ID).translation;
+                Vector3f cam_pos = Cameras::get_transform(camera_ID).translation;
 
-            context["g_inverted_view_projection_matrix"]->setMatrix4x4fv(false, inverse_view_projection_matrix.begin());
-            float4 camera_position = make_float4(cam_pos.x, cam_pos.y, cam_pos.z, 0.0f);
-            context["g_camera_position"]->setFloat(camera_position);
+                context["g_inverted_view_projection_matrix"]->setMatrix4x4fv(false, inverse_view_projection_matrix.begin());
+                float4 camera_position = make_float4(cam_pos.x, cam_pos.y, cam_pos.z, 0.0f);
+                context["g_camera_position"]->setFloat(camera_position);
 
-            accumulations = 0u;
+                accumulations = 0u;
+            }
         }
-    }
 
-    context["g_accumulations"]->setInt(accumulations);
+        context["g_accumulations"]->setInt(accumulations);
         context->launch(int(EntryPoints::PathTracing), screensize.x, screensize.y);
-    accumulations += 1u;
+        accumulations += 1u;
 
-    /*
-    if (is_power_of_two(accumulations - 1)) {
-    void* mapped_output_buffer = output_buffer->map();
-    Image output = Images::create("Output", PixelFormat::RGBA_Float, 1.0, Vector2ui(screensize.x, screensize.y));
-    memcpy(output.get_pixels(), mapped_output_buffer, sizeof(float) * 4 * screensize.x * screensize.y);
-    output_buffer->unmap();
-    std::ostringstream filename;
-    filename << "C:\\Users\\Asger\\Desktop\\image_" << (accumulations - 1) << ".png";
-    StbImageWriter::write(filename.str(), output);
-    }
-    */
+        /*
+        if (is_power_of_two(accumulations - 1)) {
+        void* mapped_output_buffer = output_buffer->map();
+        Image output = Images::create("Output", PixelFormat::RGBA_Float, 1.0, Vector2ui(screensize.x, screensize.y));
+        memcpy(output.get_pixels(), mapped_output_buffer, sizeof(float) * 4 * screensize.x * screensize.y);
+        output_buffer->unmap();
+        std::ostringstream filename;
+        filename << "C:\\Users\\Asger\\Desktop\\image_" << (accumulations - 1) << ".png";
+        StbImageWriter::write(filename.str(), output);
+        }
+        */
     }
 
 };
+
+// ------------------------------------------------------------------------------------------------
+// Renderer
+// ------------------------------------------------------------------------------------------------
 
 Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hint) {
     try {

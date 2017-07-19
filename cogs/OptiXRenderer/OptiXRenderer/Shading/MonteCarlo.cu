@@ -161,12 +161,18 @@ __inline_dev__ void closest_hit_MIS() {
 
     const TBN world_shading_tbn = TBN(forward_shading_normal);
 
+    const Material& material_parameter = g_materials[material_index];
+    const DefaultShading material = DefaultShading(material_parameter, texcoord);
+
+    float coverage = DefaultShading::coverage(material_parameter, texcoord);
+    if (monte_carlo_payload.rng.sample1f() > coverage) {
+        monte_carlo_payload.position = ray.direction * (t_hit + g_scene_epsilon) + ray.origin;
+        return;
+    }
+
     // Store intersection point and wo in payload.
     monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
     monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
-
-    const Material& material_parameter = g_materials[material_index];
-    const DefaultShading material = DefaultShading(material_parameter, texcoord);
 
     // Sample a light source.
     if (g_light_count != 0) {
@@ -196,13 +202,6 @@ __inline_dev__ void closest_hit_MIS() {
 
 RT_PROGRAM void closest_hit() {
     closest_hit_MIS();
-}
-
-RT_PROGRAM void monte_carlo_any_hit() {
-    // TODO Decide if this should update the path PDF. I suppose it should, since it is a path decision.
-    float coverage = DefaultShading::coverage(g_materials[material_index], texcoord);
-    if (monte_carlo_payload.rng.sample1f() > coverage)
-        rtIgnoreIntersection();
 }
 
 //----------------------------------------------------------------------------
