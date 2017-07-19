@@ -261,7 +261,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
 
         Transform transform = Transform(Vector3f(3.0f, 0.35f, 0.0f), Quaternionf::identity(), 0.5f);
         SceneNode torus_node = SceneNodes::create("Swizz torus", transform);
-        Meshes::UID torus_mesh_ID = MeshCreation::torus(64, 64, 0.7f, { MeshFlag::Position, MeshFlag::Normal });
+        Meshes::UID torus_mesh_ID = MeshCreation::torus(64, 64, 0.7f);
         MeshModels::create(torus_node.get_ID(), torus_mesh_ID, material_ID);
         torus_node.set_parent(root_node);
     }
