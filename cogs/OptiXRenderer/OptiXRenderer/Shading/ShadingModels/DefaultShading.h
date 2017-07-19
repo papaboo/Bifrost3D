@@ -33,6 +33,8 @@ namespace ShadingModels {
 // * Perfectly specular metals' diffuse tint should be 0.
 // * Reintroduce the Helmholtz reciprocity.
 //   Basically the diffuse tint should depend on rho from both wo.z and wi.z.
+// * All materials are white at grazing angles, even metals.
+//   http://bitsquid.blogspot.dk/2017/07/validating-materials-and-lights-in.html
 // ---------------------------------------------------------------------------
 class DefaultShading {
 private:
@@ -87,6 +89,8 @@ public:
 #endif
         return coverage;
     }
+
+    __inline_all__ float coverage(optix::float2 texcoord) const { return coverage(m_material, texcoord); }
 
     __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
         using namespace optix;

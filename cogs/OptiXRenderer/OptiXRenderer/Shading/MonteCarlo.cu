@@ -164,7 +164,7 @@ __inline_dev__ void closest_hit_MIS() {
     const Material& material_parameter = g_materials[material_index];
     const DefaultShading material = DefaultShading(material_parameter, texcoord);
 
-    float coverage = DefaultShading::coverage(material_parameter, texcoord);
+    float coverage = material.coverage(texcoord);
     if (monte_carlo_payload.rng.sample1f() > coverage) {
         monte_carlo_payload.position = ray.direction * (t_hit + g_scene_epsilon) + ray.origin;
         return;
