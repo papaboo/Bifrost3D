@@ -496,7 +496,7 @@ void print_usage() {
         "  -r | --rasterizer-only: Launches with the rasterizer as the only avaliable renderer.\n"
 #endif
         "  -e  | --environment-map <image>: Loads the specified image for the environment.\n"
-        "  -c  | --environment-color <RGB>: Sets the background color to the specified value.\n";
+        "  -c  | --environment-color [R,G,B]: Sets the background color to the specified value.\n";
     printf("%s", usage);
 }
 
