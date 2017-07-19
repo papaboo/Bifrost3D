@@ -1,10 +1,10 @@
 // OptiX random number generators.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
-// ---------------------------------------------------------------------------
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+// ------------------------------------------------------------------------------------------------
 
 #ifndef _OPTIXRENDERER_RNG_H_
 #define _OPTIXRENDERER_RNG_H_
@@ -16,10 +16,10 @@
 namespace OptiXRenderer {
 namespace RNG {
 
-//-----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Primes.
 // See https://primes.utm.edu/lists/small/1000.txt for more.
-//-----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 #if GPU_DEVICE
 __constant__ int primes[128] = 
 #else
@@ -40,9 +40,9 @@ static const int primes[128] =
     661, 673, 677, 683, 691, 701, 709, 719,
 };
 
-//-----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // RNG sampling utils.
-//-----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 __inline_all__ float van_der_corput(unsigned int n, unsigned int scramble) {
 
     // Reverse bits of n.
@@ -103,10 +103,10 @@ __inline_all__ float balance_heuristic(float pdf1, float pdf2) {
     return pdf1 / (pdf1 + pdf2);
 }
 
-//-----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Linear congruential random number generator.
-//-----------------------------------------------------------------------------
-class LinearCongruential {
+// ------------------------------------------------------------------------------------------------
+struct LinearCongruential {
 private:
     static const unsigned int multiplier = 1664525u;
     static const unsigned int increment = 1013904223u;
@@ -128,25 +128,35 @@ public:
         return float(sample1ui()) * inv_max;
     }
 
-    __inline_all__ optix::float2 sample2f() {
-        return optix::make_float2(sample1f(), sample1f());
-    }
-
-    __inline_all__ optix::float3 sample3f() {
-        return optix::make_float3(sample2f(), sample1f());
-    }
-
-    __inline_all__ optix::float4 sample4f() {
-        return optix::make_float4(sample2f(), sample2f());
-    }
+    __inline_all__ optix::float2 sample2f() { return optix::make_float2(sample1f(), sample1f()); }
+    __inline_all__ optix::float3 sample3f() { return optix::make_float3(sample2f(), sample1f()); }
+    __inline_all__ optix::float4 sample4f() { return optix::make_float4(sample2f(), sample2f()); }
 };
 
-//-----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+// Tiny Van Der Corput RNG wrapper. Will wrap around pretty quickly.
+// ------------------------------------------------------------------------------------------------
+struct VanDerCorput {
+    unsigned int m_state;
+
+    __inline_all__ void initialize(unsigned int scramble) { m_state = scramble << 8; }
+
+    __inline_all__ float sample1f() {
+        float res = van_der_corput(m_state & 0xFF, m_state);
+        ++m_state;
+        return res;
+    }
+
+    __inline_all__ optix::float2 sample2f() { return optix::make_float2(sample1f(), sample1f()); }
+    __inline_all__ optix::float3 sample3f() { return optix::make_float3(sample2f(), sample1f()); }
+    __inline_all__ optix::float4 sample4f() { return optix::make_float4(sample2f(), sample2f()); }
+};
+
+// ------------------------------------------------------------------------------------------------
 // Reverse halton random number generator.
 // See Toshiya's smallppm for the reference implementation.
-//-----------------------------------------------------------------------------
-class ReverseHalton {
-public:
+// ------------------------------------------------------------------------------------------------
+struct ReverseHalton {
 
     __inline_all__ void initialize(unsigned int index, int prime_index = 0) {
         m_index = index;
@@ -159,16 +169,9 @@ public:
         return reverse_halton(m_prime_index++, m_index);
     }
 
-    __inline_all__ optix::float2 sample2f() {
-        return optix::make_float2(sample1f(), sample1f());
-    }
-
-    __inline_all__ optix::float3 sample3f() {
-        return optix::make_float3(sample2f(), sample1f());
-    }
-    __inline_all__ optix::float4 sample4f() {
-        return optix::make_float4(sample2f(), sample2f());
-    }
+    __inline_all__ optix::float2 sample2f() { return optix::make_float2(sample1f(), sample1f()); }
+    __inline_all__ optix::float3 sample3f() { return optix::make_float3(sample2f(), sample1f()); }
+    __inline_all__ optix::float4 sample4f() { return optix::make_float4(sample2f(), sample2f()); }
 
 private:
     __inline_all__ int reverse(const int i, const int p) const {
