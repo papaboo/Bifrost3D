@@ -129,7 +129,7 @@ RT_PROGRAM void closest_hit() {
 
         if (light_sample.radiance.x > 0.0f || light_sample.radiance.y > 0.0f || light_sample.radiance.z > 0.0f) {
             ShadowPayload shadow_payload = { light_sample.radiance };
-            Ray shadow_ray(monte_carlo_payload.position, light_sample.direction_to_light, unsigned int(RayTypes::Shadow), g_scene_epsilon, light_sample.distance - g_scene_epsilon);
+            Ray shadow_ray(monte_carlo_payload.position, light_sample.direction_to_light, RayTypes::Shadow, g_scene_epsilon, light_sample.distance - g_scene_epsilon);
             rtTrace(g_scene_root, shadow_ray, shadow_payload);
 
             monte_carlo_payload.radiance += monte_carlo_payload.throughput * shadow_payload.attenuation;

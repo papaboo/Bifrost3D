@@ -75,7 +75,7 @@ RT_PROGRAM void path_tracing() {
     payload.direction = project_ray_direction(viewport_pos, payload.position, g_inverted_view_projection_matrix);
 
     do {
-        Ray ray(payload.position, payload.direction, unsigned int(RayTypes::MonteCarlo), g_scene_epsilon);
+        Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene_epsilon);
         rtTrace(g_scene_root, ray, payload);
     } while (payload.bounces < g_max_bounce_count && !is_black(payload.throughput));
 

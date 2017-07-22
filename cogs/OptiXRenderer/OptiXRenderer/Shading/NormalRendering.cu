@@ -37,7 +37,7 @@ RT_PROGRAM void ray_generation() {
     float2 viewport_pos = make_float2(g_launch_index.x / float(g_output_buffer.size().x), g_launch_index.y / float(g_output_buffer.size().y));
     float3 origin = make_float3(g_camera_position);
     float3 direction = project_ray_direction(viewport_pos, origin, g_inverted_view_projection_matrix);
-    Ray ray(origin, direction, unsigned int(RayTypes::NormalVisualization), 0.0f);
+    Ray ray(origin, direction, RayTypes::NormalVisualization, 0.0f);
 
     NormalVisualizationPayload payload;
     rtTrace(g_scene_root, ray, payload);

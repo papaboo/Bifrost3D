@@ -17,17 +17,17 @@
 
 namespace OptiXRenderer {
 
-enum class RayTypes {
-    MonteCarlo = 0,
-    NormalVisualization,
-    Shadow,
-    Count
+struct RayTypes {
+    static const unsigned int MonteCarlo = 0;
+    static const unsigned int NormalVisualization = 1;
+    static const unsigned int Shadow = 2;
+    static const unsigned int Count = 3;
 };
 
-enum class EntryPoints {
-    PathTracing = 0,
-    NormalVisualization,
-    Count
+struct EntryPoints {
+    static const unsigned int PathTracing = 0;
+    static const unsigned int NormalVisualization = 1;
+    static const unsigned int Count = 2;
 };
 
 namespace MeshFlags {
