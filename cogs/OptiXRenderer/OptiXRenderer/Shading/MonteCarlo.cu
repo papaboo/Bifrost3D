@@ -100,61 +100,10 @@ __inline_dev__ LightSample reestimated_light_samples(const DefaultShading& mater
 }
 
 //-----------------------------------------------------------------------------
-// Closest hit integrators.
+// Closest hit integrator.
 //-----------------------------------------------------------------------------
 
-__inline_dev__ void closest_hit_without_MIS() {
-    // const float3 world_geometric_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, geometric_normal));
-    const float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
-    const float3 forward_shading_normal = -dot(world_shading_normal, ray.direction) >= 0.0f ? world_shading_normal : -world_shading_normal;
-
-    const TBN world_shading_tbn = TBN(forward_shading_normal);
-
-    // Store intersection point and wo in payload.
-    monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
-    monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
-
-    const Material& material_parameter = g_materials[material_index];
-    const DefaultShading material = DefaultShading(material_parameter, texcoord);
-
-    // Sample light sources.
-    for (int i = 0; i < g_light_count; ++i) {
-        const Light& light = g_lights[i];
-        LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_payload.position, monte_carlo_payload.rng.sample2f());
-        float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction_to_light);
-        light_sample.radiance *= abs(N_dot_L) / light_sample.PDF;
-        light_sample.radiance = clamp_light_contribution_by_path_PDF(light_sample.radiance, monte_carlo_payload.clamped_path_PDF, g_accumulations);
-        if (!is_PDF_valid(light_sample.PDF))
-            light_sample.radiance = make_float3(0.0f);
-
-        // Inline the material response into the light sample's contribution.
-        const float3 shading_light_direction = world_shading_tbn * light_sample.direction_to_light;
-        const float3 bsdf_response = material.evaluate(monte_carlo_payload.direction, shading_light_direction);
-        light_sample.radiance *= bsdf_response;
-
-        if (light_sample.radiance.x > 0.0f || light_sample.radiance.y > 0.0f || light_sample.radiance.z > 0.0f) {
-            ShadowPayload shadow_payload = { light_sample.radiance };
-            Ray shadow_ray(monte_carlo_payload.position, light_sample.direction_to_light, unsigned int(RayTypes::Shadow), g_scene_epsilon, light_sample.distance - g_scene_epsilon);
-            rtTrace(g_scene_root, shadow_ray, shadow_payload);
-
-            monte_carlo_payload.radiance += monte_carlo_payload.throughput * shadow_payload.attenuation;
-        }
-    }
-
-    // Sample BSDF.
-    BSDFSample bsdf_sample = material.sample_all(monte_carlo_payload.direction, monte_carlo_payload.rng.sample3f());
-    monte_carlo_payload.direction = bsdf_sample.direction * world_shading_tbn;
-    monte_carlo_payload.bsdf_MIS_PDF = 0.0f; // bsdf_sample.PDF;
-    monte_carlo_payload.path_PDF *= bsdf_sample.PDF;
-    monte_carlo_payload.clamped_path_PDF *= fminf(bsdf_sample.PDF, 1.0f);
-    if (!is_PDF_valid(bsdf_sample.PDF))
-        monte_carlo_payload.throughput = make_float3(0.0f);
-    else
-        monte_carlo_payload.throughput *= bsdf_sample.weight * (abs(bsdf_sample.direction.z) / bsdf_sample.PDF); // f * ||cos(theta)|| / pdf
-    monte_carlo_payload.bounces += 1u;
-}
-
-__inline_dev__ void closest_hit_MIS() {
+RT_PROGRAM void closest_hit() {
     // const float3 world_geometric_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, geometric_normal));
     const float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
     const float3 forward_shading_normal = -dot(world_shading_normal, ray.direction) >= 0.0f ? world_shading_normal : -world_shading_normal;
@@ -198,10 +147,6 @@ __inline_dev__ void closest_hit_MIS() {
     else
         monte_carlo_payload.throughput *= bsdf_sample.weight * (abs(bsdf_sample.direction.z) / bsdf_sample.PDF); // f * ||cos(theta)|| / pdf
     monte_carlo_payload.bounces += 1u;
-}
-
-RT_PROGRAM void closest_hit() {
-    closest_hit_MIS();
 }
 
 //----------------------------------------------------------------------------

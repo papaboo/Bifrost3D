@@ -223,8 +223,8 @@ struct Renderer::Implementation {
 
         context->getDeviceAttribute(device_IDs.optix, RT_DEVICE_ATTRIBUTE_CUDA_DEVICE_ORDINAL, sizeof(device_IDs.cuda), &device_IDs.cuda);
 
-        context->setRayTypeCount(int(RayTypes::Count));
-        context->setEntryPointCount(int(EntryPoints::Count));
+        context->setRayTypeCount(unsigned int(RayTypes::Count));
+        context->setEntryPointCount(unsigned int(EntryPoints::Count));
         context->setStackSize(1280);
 
         accumulations = 0u;
@@ -237,10 +237,10 @@ struct Renderer::Implementation {
 
         { // Path tracing setup.
             std::string rgp_ptx_path = get_ptx_path(shader_prefix, "PathTracing");
-            context->setRayGenerationProgram(int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "path_tracing"));
-            context->setMissProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(rgp_ptx_path, "miss"));
+            context->setRayGenerationProgram(unsigned int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "path_tracing"));
+            context->setMissProgram(unsigned int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(rgp_ptx_path, "miss"));
 #ifdef ENABLE_OPTIX_DEBUG
-            context->setExceptionProgram(int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "exceptions"));
+            context->setExceptionProgram(unsigned int(EntryPoints::PathTracing), context->createProgramFromPTXFile(rgp_ptx_path, "exceptions"));
 #endif
 
             context["g_max_bounce_count"]->setInt(4);
@@ -248,19 +248,19 @@ struct Renderer::Implementation {
 
         { // Normal visualization setup.
             std::string ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
-            context->setRayGenerationProgram(int(EntryPoints::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "ray_generation"));
-            context->setMissProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "miss"));
+            context->setRayGenerationProgram(unsigned int(EntryPoints::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "ray_generation"));
+            context->setMissProgram(unsigned int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(ptx_path, "miss"));
         }
 
         { // Setup default material.
             default_material = context->createMaterial();
 
             std::string monte_carlo_ptx_path = get_ptx_path(shader_prefix, "MonteCarlo");
-            default_material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
-            default_material->setAnyHitProgram(int(RayTypes::Shadow), context->createProgramFromPTXFile(monte_carlo_ptx_path, "shadow_any_hit"));
+            default_material->setClosestHitProgram(unsigned int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
+            default_material->setAnyHitProgram(unsigned int(RayTypes::Shadow), context->createProgramFromPTXFile(monte_carlo_ptx_path, "shadow_any_hit"));
 
             std::string normal_vis_ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
-            default_material->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
+            default_material->setClosestHitProgram(unsigned int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
 
             OPTIX_VALIDATE(default_material);
 
@@ -316,9 +316,9 @@ struct Renderer::Implementation {
             // Analytical area light material.
             optix::Material material = context->createMaterial();
             std::string monte_carlo_ptx_path = get_ptx_path(shader_prefix, "MonteCarlo");
-            material->setClosestHitProgram(int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "light_closest_hit"));
+            material->setClosestHitProgram(unsigned int(RayTypes::MonteCarlo), context->createProgramFromPTXFile(monte_carlo_ptx_path, "light_closest_hit"));
             std::string normal_vis_ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
-            material->setClosestHitProgram(int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
+            material->setClosestHitProgram(unsigned int(RayTypes::NormalVisualization), context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
             OPTIX_VALIDATE(material);
 
             optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
@@ -853,7 +853,7 @@ struct Renderer::Implementation {
         }
 
         context["g_accumulations"]->setInt(accumulations);
-        context->launch(int(EntryPoints::PathTracing), screensize.x, screensize.y);
+        context->launch(unsigned int(EntryPoints::PathTracing), screensize.x, screensize.y);
         accumulations += 1u;
 
         /*
