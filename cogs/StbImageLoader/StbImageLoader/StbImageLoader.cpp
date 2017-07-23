@@ -32,6 +32,8 @@ static PixelFormat resolve_format(int channels, bool is_HDR) {
         }
     } else {
         switch (channels) {
+        case 1:
+            return PixelFormat::I8;
         case 3:
             return PixelFormat::RGB24;
         case 4:
@@ -76,8 +78,10 @@ Images::UID load(const std::string& path) {
     }
 
     PixelFormat pixel_format = resolve_format(channel_count, is_HDR);
-    if (pixel_format == PixelFormat::Unknown)
+    if (pixel_format == PixelFormat::Unknown) {
+        printf("StbImageLoader::load(%s) failed with error: 'Could not resolve format'\n", path.c_str());
         return Images::UID::invalid_UID();
+    }
 
     float image_gamma = is_HDR ? 1.0f : 2.2f;
     Images::UID image_ID = Images::create2D(path, pixel_format, image_gamma, Vector2ui(width, height));
