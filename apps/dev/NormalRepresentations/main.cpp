@@ -172,7 +172,7 @@ typedef Vector3f (*EncodeDecode)(Vector3f);
 void test_encoding(const std::string& name, EncodeDecode encode_decode) {
     const int sample_count = 100000;
 
-    Statistics stats = Statistics(0, sample_count, [=](int i) -> double {
+    Statistics<double> stats = Statistics<double>(0, sample_count, [=](int i) -> double {
         Vector3d normal = normalize((Vector3d)Distributions::Sphere::Sample(RNG::sample02(i)));
         Vector3d decoded_normal = (Vector3d)encode_decode((Vector3f)normal);
         return magnitude(normal - decoded_normal);
