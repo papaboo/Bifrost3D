@@ -36,6 +36,7 @@ static PixelFormat resolve_format(int channels, bool is_HDR) {
             return PixelFormat::I8;
         case 3:
             return PixelFormat::RGB24;
+        case 2: // [intensity, alpha]. Data is expanded when copied to the datamodel.
         case 4:
             return PixelFormat::RGBA32;
         }
@@ -86,7 +87,17 @@ Images::UID load(const std::string& path) {
     float image_gamma = is_HDR ? 1.0f : 2.2f;
     Images::UID image_ID = Images::create2D(path, pixel_format, image_gamma, Vector2ui(width, height));
     Images::PixelData pixel_data = Images::get_pixels(image_ID);
-    memcpy(pixel_data, loaded_data, sizeof_format(pixel_format) * width * height);
+    if (channel_count == 2) {
+        unsigned char* pixel_data_uc4 = (unsigned char*)pixel_data;
+        unsigned char* loaded_data_uc2 = (unsigned char*)loaded_data;
+        for (int i = 0; i < width * height; ++i) {
+            pixel_data_uc4[4 * i] = loaded_data_uc2[2 * i];
+            pixel_data_uc4[4 * i + 1] = loaded_data_uc2[2 * i];
+            pixel_data_uc4[4 * i + 2] = loaded_data_uc2[2 * i];
+            pixel_data_uc4[4 * i + 3] = loaded_data_uc2[2 * i + 1];
+        }
+    } else
+        memcpy(pixel_data, loaded_data, sizeof_format(pixel_format) * width * height);
 
     stbi_image_free(loaded_data);
 
