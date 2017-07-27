@@ -66,59 +66,67 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
     for (size_t i = 0; i < tiny_materials.size(); ++i) {
         tinyobj::material_t tiny_mat = tiny_materials[i];
 
-        Materials::Data material_data;
+        Materials::Data material_data = {};
+        material_data.flags = MaterialFlag::None;
         material_data.tint = Math::RGB(tiny_mat.diffuse[0], tiny_mat.diffuse[1], tiny_mat.diffuse[2]);
+        material_data.tint_texture_ID = Textures::UID::invalid_UID();
         material_data.roughness = sqrt(sqrt(2.0f / (tiny_mat.shininess + 2.0f))); // Map from blinn shininess to material roughness.
         bool is_metallic = tiny_mat.illum == 3 || tiny_mat.illum == 5;
         material_data.metallic = is_metallic ? 1.0f : 0.0f;
         material_data.specularity = (tiny_mat.specular[0] + tiny_mat.specular[1] + tiny_mat.specular[2]) / 3.0f;
         material_data.coverage = tiny_mat.dissolve;
+        material_data.coverage_texture_ID = Textures::UID::invalid_UID();
         material_data.transmission = 0.0f; // (tiny_mat.transmittance[0] + tiny_mat.transmittance[1] + tiny_mat.transmittance[2]) / 3.0f;
 
         if (!tiny_mat.alpha_texname.empty()) {
             Images::UID image_ID = image_loader(directory + tiny_mat.alpha_texname);
-            if (Images::get_pixel_format(image_ID) != PixelFormat::I8) {
-                Images::UID new_image_ID = ImageUtils::change_format(image_ID, PixelFormat::I8); // TODO Own change format. Intensity should come from the alpha channel if there is one, otherwise from red.
-                Images::destroy(image_ID);
-                image_ID = new_image_ID;
+            if (image_ID == Images::UID::invalid_UID())
+                printf("ObjLoader::load error: Could not load image at '%s'.\n", (directory + tiny_mat.alpha_texname).c_str());
+            else {
+                if (Images::get_pixel_format(image_ID) != PixelFormat::I8) {
+                    Images::UID new_image_ID = ImageUtils::change_format(image_ID, PixelFormat::I8); // TODO Own change format. Intensity should come from the alpha channel if there is one, otherwise from red.
+                    Images::destroy(image_ID);
+                    image_ID = new_image_ID;
+                }
+                material_data.coverage_texture_ID = Textures::create2D(image_ID);
             }
-            material_data.coverage_texture_ID = Textures::create2D(image_ID);
-        } else
-            material_data.coverage_texture_ID = Textures::UID::invalid_UID();
+        }
 
         if (!tiny_mat.diffuse_texname.empty()) {
             Images::UID image_ID = image_loader(directory + tiny_mat.diffuse_texname);
+            if (image_ID == Images::UID::invalid_UID())
+                printf("ObjLoader::load error: Could not load image at '%s'.\n", (directory + tiny_mat.alpha_texname).c_str());
+            else {
+                // Use diffuse alpha for coverage, if no explicit coverage texture has been set.
+                if (channel_count(Images::get_pixel_format(image_ID)) == 4 && material_data.coverage_texture_ID == Textures::UID::invalid_UID()) {
+                    Image image = image_ID;
+                    unsigned int mipmap_count = image.get_mipmap_count();
+                    Math::Vector2ui size = Math::Vector2ui(image.get_width(), image.get_height());
+                    Images::UID coverage_image_ID = Images::create2D(image.get_name(), PixelFormat::I8, image.get_gamma(), size, mipmap_count);
 
-            // Use diffuse alpha for coverage, if no explicit coverage texture has been set.
-            if (channel_count(Images::get_pixel_format(image_ID)) == 4 && material_data.coverage_texture_ID == Textures::UID::invalid_UID()) {
-                Image image = image_ID;
-                unsigned int mipmap_count = image.get_mipmap_count();
-                Math::Vector2ui size = Math::Vector2ui(image.get_width(), image.get_height());
-                Images::UID coverage_image_ID = Images::create2D(image.get_name(), PixelFormat::I8, image.get_gamma(), size, mipmap_count);
+                    float min_coverage = 1.0f;
+                    for (unsigned int m = 0; m < mipmap_count; ++m)
+                        for (unsigned int y = 0; y < image.get_height(m); ++y)
+                            for (int x = 0; x < int(image.get_width(m)); ++x) {
+                                Math::Vector2ui index = Math::Vector2ui(x, y);
+                                float coverage = image.get_pixel(index, m).a;
+                                min_coverage = fminf(min_coverage, coverage);
+                                Math::RGBA pixel = Math::RGBA(coverage, coverage, coverage, coverage);
+                                Images::set_pixel(coverage_image_ID, pixel, index, m);
+                            }
 
-                float min_coverage = 1.0f;
-                for (unsigned int m = 0; m < mipmap_count; ++m)
-                    for (unsigned int y = 0; y < image.get_height(m); ++y)
-                        for (int x = 0; x < int(image.get_width(m)); ++x) {
-                            Math::Vector2ui index = Math::Vector2ui(x, y);
-                            float coverage = image.get_pixel(index, m).a;
-                            min_coverage = fminf(min_coverage, coverage);
-                            Math::RGBA pixel = Math::RGBA(coverage, coverage, coverage, coverage);
-                            Images::set_pixel(coverage_image_ID, pixel, index, m);
-                        }
+                    if (min_coverage < 1.0f)
+                        material_data.coverage_texture_ID = Textures::create2D(coverage_image_ID);
+                }
 
-                if (min_coverage < 1.0f)
-                    material_data.coverage_texture_ID = Textures::create2D(coverage_image_ID);
+                if (channel_count(Images::get_pixel_format(image_ID)) != 4) {
+                    Images::UID new_image_ID = ImageUtils::change_format(image_ID, PixelFormat::RGBA32);
+                    Images::destroy(image_ID);
+                    image_ID = new_image_ID;
+                }
+                material_data.tint_texture_ID = Textures::create2D(image_ID);
             }
-
-            if (channel_count(Images::get_pixel_format(image_ID)) != 4) {
-                Images::UID new_image_ID = ImageUtils::change_format(image_ID, PixelFormat::RGBA32);
-                Images::destroy(image_ID);
-                image_ID = new_image_ID;
-            }
-            material_data.tint_texture_ID = Textures::create2D(image_ID);
-        } else
-            material_data.tint_texture_ID = Textures::UID::invalid_UID();
+        }
 
         materials[unsigned int(i)] = Materials::create(tiny_mat.name, material_data);
     }
@@ -143,6 +151,9 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
 
             unsigned int triangle_count = unsigned int(tiny_mesh.indices.size() / 3u);
             unsigned int vertex_count = unsigned int(tiny_mesh.positions.size() / 3u);
+            assert(tiny_mesh.normals.size() == 0 || tiny_mesh.normals.size() == vertex_count * 3);
+            assert(tiny_mesh.texcoords.size() == 0 || tiny_mesh.texcoords.size() == vertex_count * 2);
+
             mesh_ID = Meshes::create(shapes[i].name, triangle_count, vertex_count, mesh_flags);
 
             Mesh cogwheel_mesh = mesh_ID;
