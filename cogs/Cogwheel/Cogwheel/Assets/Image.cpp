@@ -96,6 +96,7 @@ static inline Images::PixelData allocate_pixels(PixelFormat format, unsigned int
 Images::UID Images::create3D(const std::string& name, PixelFormat format, float gamma, Vector3ui size, unsigned int mipmap_count) {
     assert(m_metainfo != nullptr);
     assert(m_pixels != nullptr);
+    assert(mipmap_count > 0u);
 
     unsigned int old_capacity = m_UID_generator.capacity();
     UID id = m_UID_generator.generate();
