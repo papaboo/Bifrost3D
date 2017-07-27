@@ -149,7 +149,7 @@ GTEST_TEST(GGX, sampling_variance) {
 
     for (float ggx_alpha = 0.1f; ggx_alpha < 1.0f; ggx_alpha += 0.2f) {
         // Original GGX sample strategy.
-        auto original_GGX = Cogwheel::Math::Statistics(0, MAX_SAMPLES, [&](int i) -> float {
+        auto original_GGX = Cogwheel::Math::Statistics<double>(0, MAX_SAMPLES, [&](int i) -> float {
             BSDFSample sample = GGX::sample(tint, ggx_alpha, wo, RNG::sample02(i));
             if (is_PDF_valid(sample.PDF))
                 return sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
@@ -158,7 +158,7 @@ GTEST_TEST(GGX, sampling_variance) {
         });
 
         // Heitz et al GGX sampling strategy.
-        auto GGX_with_VNDF = Cogwheel::Math::Statistics(0, MAX_SAMPLES, [&](int i) -> float {
+        auto GGX_with_VNDF = Cogwheel::Math::Statistics<double>(0, MAX_SAMPLES, [&](int i) -> float {
             BSDFSample sample = GGXWithVNDF::sample(tint, ggx_alpha, wo, RNG::sample02(i));
             if (is_PDF_valid(sample.PDF)) {
                 float w = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
