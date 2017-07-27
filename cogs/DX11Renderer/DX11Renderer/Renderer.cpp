@@ -99,8 +99,6 @@ private:
     };
     OID3D11Buffer m_scene_buffer;
 
-    OID3D11Buffer m_transform_buffer;
-
     std::wstring m_shader_folder_path;
 
 public:
@@ -217,10 +215,6 @@ public:
             THROW_ON_FAILURE(hr);
         }
 
-        { // Transform constant buffer.
-            HRESULT hr = create_constant_buffer(m_device, sizeof(Matrix4x4f), &m_transform_buffer);
-            THROW_ON_FAILURE(hr);
-        }
     }
 
     ~Implementation() {
