@@ -9,6 +9,7 @@
 #ifndef _COGWHEEL_CORE_ARRAY_H_
 #define _COGWHEEL_CORE_ARRAY_H_
 
+#include <assert.h>
 #include <initializer_list>
 
 namespace Cogwheel {
@@ -107,8 +108,8 @@ public:
     // -----------------------------------------------------------------------
     // Element access
     // -----------------------------------------------------------------------
-    inline T& operator[](size_type i) { return m_data[i]; }
-    inline const T& operator[](size_type i) const { return m_data[i]; }
+    inline T& operator[](size_type i) { assert(i < m_size); return m_data[i]; }
+    inline const T& operator[](size_type i) const { assert(i < m_size); return m_data[i]; }
     inline T* data() { return m_data; }
     inline const T* data() const { return m_data; }
 
