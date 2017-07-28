@@ -25,11 +25,12 @@ namespace DX11Renderer {
 // ------------------------------------------------------------------------------------------------
 template<typename T>
 class ConstantBufferArray {
-public: // TODO Members should be private
+private:
 
     OID3D11Buffer m_constant_buffer;
     unsigned int m_element_count;
 
+public:
     ConstantBufferArray() : m_constant_buffer(nullptr), m_element_count(0u) { }
 
     ConstantBufferArray(ID3D11Device1& device, unsigned int element_count)
@@ -66,6 +67,7 @@ public: // TODO Members should be private
         return element_count;
     }
 
+    inline ID3D11Buffer** get_buffer_addr() { return &m_constant_buffer; }
     inline unsigned int get_element_count() const { return m_element_count; }
 
     inline void set(ID3D11DeviceContext1* context, const T& element, unsigned int index, D3D11_COPY_FLAGS copy_flags = D3D11_COPY_NO_OVERWRITE) {

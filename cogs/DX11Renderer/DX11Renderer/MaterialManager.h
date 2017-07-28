@@ -43,7 +43,7 @@ public:
     ID3D11SamplerState** get_rho_sampler_addr() { return &m_rho_sampler; }
 
     inline Dx11Material& get_material(unsigned int material_index) { return m_materials[material_index]; }
-    inline ID3D11Buffer** get_constant_buffer_addr() { return &(m_constant_array.m_constant_buffer); }
+    inline ID3D11Buffer** get_constant_buffer_addr() { return m_constant_array.get_buffer_addr(); }
     inline void bind_material(ID3D11DeviceContext1& context, unsigned int slot, unsigned int material_index) { m_constant_array.PS_set(&context, slot, material_index); }
 
     void handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& context);

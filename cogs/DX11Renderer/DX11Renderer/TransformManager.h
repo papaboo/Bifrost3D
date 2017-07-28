@@ -47,7 +47,7 @@ public:
     }
     
     inline Cogwheel::Math::Transform& get_transform(unsigned int transform_index) { return m_transforms[transform_index]; }
-    inline ID3D11Buffer** get_constant_buffer_addr() { return &(m_constant_array.m_constant_buffer); }
+    inline ID3D11Buffer** get_constant_buffer_addr() { return m_constant_array.get_buffer_addr(); }
     inline void bind_transform(ID3D11DeviceContext1& context, unsigned int slot, unsigned int transform_index) { m_constant_array.VS_set(&context, slot, transform_index); }
 
     void handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& context);
