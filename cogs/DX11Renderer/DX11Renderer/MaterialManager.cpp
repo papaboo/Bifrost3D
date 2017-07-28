@@ -83,27 +83,39 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         THROW_ON_FAILURE(hr);
     }
 
-    // Default material.
-    Dx11Material invalid_mat = make_dx11material(Materials::UID::invalid_UID());
+    m_materials.resize(1);
+    m_constant_array = ConstantBufferArray<Dx11Material>();
 
-    m_materials.resize(128);
-    m_materials[0] = invalid_mat;
-
-    m_constant_array = ConstantBufferArray<Dx11Material>(&device, 128);
-
-    m_constant_array.set(&context, invalid_mat, 0, D3D11_COPY_DISCARD);
+    m_materials[0] = make_dx11material(Materials::UID::invalid_UID());
 }
 
-void MaterialManager::handle_updates(ID3D11DeviceContext1& context) {
-    for (Material mat : Materials::get_changed_materials()) {
-        // Just ignore deleted materials. They shouldn't be referenced anyway.
-        if (!mat.get_changes().is_set(Materials::Change::Destroyed)) {
+void MaterialManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& context) {
+    // Resize buffers if needed.
+    if (m_materials.size() < Materials::capacity()) {
+        m_materials.resize(Materials::capacity());
+        m_constant_array = ConstantBufferArray<Dx11Material>(device, Materials::capacity());
+        
+        Dx11Material invalid_mat = make_dx11material(Materials::UID::invalid_UID());
+        m_constant_array.set(&context, invalid_mat, 0);
+        for (Material mat : Materials::get_iterable()) {
+            unsigned int material_index = mat.get_ID();
+            // always_assert(material_index < m_constant_array.get_element_count());
 
             Dx11Material dx_mat = make_dx11material(mat);
-
-            unsigned int material_index = mat.get_ID();
             m_materials[material_index] = dx_mat;
             m_constant_array.set(&context, dx_mat, material_index);
+        }
+    } else {
+        for (Material mat : Materials::get_changed_materials()) {
+            // Just ignore deleted materials. They shouldn't be referenced anyway.
+            if (!mat.get_changes().is_set(Materials::Change::Destroyed)) {
+                unsigned int material_index = mat.get_ID();
+                // always_assert(material_index < m_constant_array.get_element_count());
+
+                Dx11Material dx_mat = make_dx11material(mat);
+                m_materials[material_index] = dx_mat;
+                m_constant_array.set(&context, dx_mat, material_index);
+            }
         }
     }
 }

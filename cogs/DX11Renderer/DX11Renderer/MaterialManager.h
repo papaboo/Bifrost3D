@@ -46,7 +46,7 @@ public:
     inline ID3D11Buffer** get_constant_buffer_addr() { return &(m_constant_array.m_constant_buffer); }
     inline void bind_material(ID3D11DeviceContext1& context, unsigned int slot, unsigned int material_index) { m_constant_array.PS_set(&context, slot, material_index); }
 
-    void handle_updates(ID3D11DeviceContext1& context);
+    void handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& context);
 
 private:
     MaterialManager(MaterialManager& other) = delete;
