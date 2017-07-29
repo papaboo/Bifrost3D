@@ -39,14 +39,14 @@ public:
 
     ConstantBufferArray(ID3D11Device1& device, unsigned int element_count)
         : m_element_count(element_count) {
-        // static_assert(sizeof(T) <= CONSTANT_BUFFER_ALIGNMENT);
-        // TODO Check max constant buffer size.
-        create_constant_buffer(device, element_count * get_element_stride(), &m_constant_buffer);
+        static_assert(sizeof(T) <= CONSTANT_BUFFER_ALIGNMENT, "ConstantBufferArray only supports templated types T of size 256 bytes or less.");
+        HRESULT hr = create_constant_buffer(device, element_count * get_element_stride(), &m_constant_buffer);
+        THROW_ON_FAILURE(hr);
     }
 
     ConstantBufferArray(ID3D11Device1& device, T* elements, unsigned int element_count) 
         : m_element_count(element_count) {
-        // TODO Check max constant buffer size.
+        static_assert(sizeof(T) <= CONSTANT_BUFFER_ALIGNMENT, "ConstantBufferArray only supports templated types T of size 256 bytes or less.");
 
         D3D11_BUFFER_DESC desc = {};
         desc.Usage = D3D11_USAGE_DEFAULT;
@@ -62,9 +62,11 @@ public:
         D3D11_SUBRESOURCE_DATA resource_data = {};
         resource_data.pSysMem = data;
 
-        device.CreateBuffer(&desc, &resource_data, &m_constant_buffer);
+        HRESULT hr = device.CreateBuffer(&desc, &resource_data, &m_constant_buffer);
 
         delete[] data;
+
+        THROW_ON_FAILURE(hr);
     }
 
     ConstantBufferArray(ConstantBufferArray&& other)

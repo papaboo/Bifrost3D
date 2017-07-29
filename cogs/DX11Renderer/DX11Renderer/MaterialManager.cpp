@@ -99,8 +99,6 @@ void MaterialManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1
             // Just ignore deleted materials. They shouldn't be referenced anyway.
             if (!mat.get_changes().is_set(Materials::Change::Destroyed)) {
                 unsigned int material_index = mat.get_ID();
-                // always_assert(material_index < m_constant_array.get_element_count());
-
                 m_materials[material_index] = make_dx11material(mat);
             }
 
@@ -112,7 +110,6 @@ void MaterialManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1
             // Just ignore deleted materials. They shouldn't be referenced anyway.
             if (!mat.get_changes().is_set(Materials::Change::Destroyed)) {
                 unsigned int material_index = mat.get_ID();
-                // always_assert(material_index < m_constant_array.get_element_count());
 
                 Dx11Material dx_mat = make_dx11material(mat);
                 m_materials[material_index] = dx_mat;
