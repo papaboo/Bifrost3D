@@ -52,6 +52,7 @@ GTEST_TEST(Math_Statistics, merging) {
     EXPECT_FLOAT_EQ(11.0f, float(stats.m2));
     EXPECT_FLOAT_EQ(2.0f, float(stats.variance()));
 }
+
 } // NS Math
 } // NS Cogwheel
 
