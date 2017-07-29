@@ -31,13 +31,40 @@ private:
     unsigned int m_element_count;
 
 public:
+
+    // --------------------------------------------------------------------------------------------
+    // Constructors and assignments
+    // --------------------------------------------------------------------------------------------
     ConstantBufferArray() : m_constant_buffer(nullptr), m_element_count(0u) { }
 
     ConstantBufferArray(ID3D11Device1& device, unsigned int element_count)
         : m_element_count(element_count) {
         // static_assert(sizeof(T) <= CONSTANT_BUFFER_ALIGNMENT);
         // TODO Check max constant buffer size.
-        create_constant_buffer(device, CONSTANT_BUFFER_ALIGNMENT * element_count, &m_constant_buffer);
+        create_constant_buffer(device, element_count * get_element_stride(), &m_constant_buffer);
+    }
+
+    ConstantBufferArray(ID3D11Device1& device, T* elements, unsigned int element_count) 
+        : m_element_count(element_count) {
+        // TODO Check max constant buffer size.
+
+        D3D11_BUFFER_DESC desc = {};
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.ByteWidth = element_count * get_element_stride();
+        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = 0;
+
+        unsigned char* data = new unsigned char[desc.ByteWidth];
+        for (unsigned int i = 0; i < element_count; ++i)
+            memcpy(data + i * get_element_stride(), elements + i, sizeof(T));
+
+        D3D11_SUBRESOURCE_DATA resource_data = {};
+        resource_data.pSysMem = data;
+
+        device.CreateBuffer(&desc, &resource_data, &m_constant_buffer);
+
+        delete[] data;
     }
 
     ConstantBufferArray(ConstantBufferArray&& other)
@@ -50,44 +77,36 @@ public:
         return *this;
     }
 
-    inline unsigned int resize(ID3D11Device1& device, ID3D11DeviceContext1& context, unsigned int element_count) {
-        // TODO Check max constant buffer size.
-        // TODO Can this be done without a context?
-        OID3D11Buffer new_constant_buffer;
-        create_constant_buffer(device, CONSTANT_BUFFER_ALIGNMENT * element_count, &new_constant_buffer);
-
-        D3D11_BOX box;
-        box.left = 0; box.right = m_element_count * sizeof(T);
-        box.front = box.top = 0;
-        box.back = box.bottom = 1;
-        context.CopySubresourceRegion1(new_constant_buffer, 0, 0, 0, 0, m_constant_buffer, 0, &box, D3D11_COPY_NO_OVERWRITE);
-
-        m_constant_buffer = new_constant_buffer;
-        m_element_count = element_count;
-        return element_count;
-    }
-
+    // --------------------------------------------------------------------------------------------
+    // Getters and setter.
+    // --------------------------------------------------------------------------------------------
+    
     inline ID3D11Buffer** get_buffer_addr() { return &m_constant_buffer; }
     inline unsigned int get_element_count() const { return m_element_count; }
+    inline unsigned int get_element_stride() const { return CONSTANT_BUFFER_ALIGNMENT; }
 
     inline void set(ID3D11DeviceContext1* context, const T& element, unsigned int index, D3D11_COPY_FLAGS copy_flags = D3D11_COPY_NO_OVERWRITE) {
         assert(index < m_element_count);
         D3D11_BOX box;
-        box.left = index * CONSTANT_BUFFER_ALIGNMENT; box.right = box.left + sizeof(T);
+        box.left = index * get_element_stride(); box.right = box.left + sizeof(T);
         box.front = box.top = 0;
         box.back = box.bottom = 1;
         context->UpdateSubresource1(m_constant_buffer, 0, &box, &element, sizeof(T), sizeof(T), copy_flags);
     }
 
+    // --------------------------------------------------------------------------------------------
+    // Shader constant buffer setters.
+    // --------------------------------------------------------------------------------------------
+
     inline void VS_set(ID3D11DeviceContext1* context, unsigned int slot, unsigned int element_index) {
-        unsigned int begin = element_index * CONSTANT_BUFFER_ALIGNMENT / 16;
-        unsigned int size = CONSTANT_BUFFER_ALIGNMENT / 16;
+        unsigned int begin = element_index * get_element_stride() / 16;
+        unsigned int size = get_element_stride() / 16;
         context->VSSetConstantBuffers1(slot, 1, &m_constant_buffer, &begin, &size);
     }
 
     inline void PS_set(ID3D11DeviceContext1* context, unsigned int slot, unsigned int element_index) {
-        unsigned int begin = element_index * CONSTANT_BUFFER_ALIGNMENT / 16;
-        unsigned int size = CONSTANT_BUFFER_ALIGNMENT / 16;
+        unsigned int begin = element_index * get_element_stride() / 16;
+        unsigned int size = get_element_stride() / 16;
         context->PSSetConstantBuffers1(slot, 1, &m_constant_buffer, &begin, &size);
     }
 };
