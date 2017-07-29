@@ -51,7 +51,11 @@ inline bool almost_equal(float a, float b, unsigned short max_ulps = 4) {
 inline float previous_float(float v) {
     int vi;
     memcpy(&vi, &v, sizeof(int));
+    if (vi < 0)
+        vi = int(0x80000000) - vi;
     --vi;
+    if (vi < 0)
+        vi = int(0x80000000) - vi;
     memcpy(&v, &vi, sizeof(int));
     return v;
 }
@@ -60,7 +64,11 @@ inline float previous_float(float v) {
 inline float next_float(float v) {
     int vi;
     memcpy(&vi, &v, sizeof(int));
+    if (vi < 0)
+        vi = int(0x80000000) - vi;
     ++vi;
+    if (vi < 0)
+        vi = int(0x80000000) - vi;
     memcpy(&v, &vi, sizeof(int));
     return v;
 }

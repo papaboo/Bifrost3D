@@ -32,6 +32,7 @@ set(MATH_SRCS
   Math/QuaternionTest.h
   Math/StatisticsTest.h
   Math/TransformTest.h
+  Math/UtilsTest.h
 )
 
 set(SCENE_SRCS

@@ -28,6 +28,7 @@
 #include <Math/QuaternionTest.h>
 #include <Math/StatisticsTest.h>
 #include <Math/TransformTest.h>
+#include <Math/UtilsTest.h>
 
 #include <Scene/CameraTest.h>
 #include <Scene/LightSourceTest.h>
