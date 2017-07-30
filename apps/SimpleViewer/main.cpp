@@ -412,6 +412,7 @@ int initializer(Cogwheel::Core::Engine& engine) {
     else if (g_scene.compare("TestScene") == 0)
         create_test_scene(engine, cam_ID, root_node_ID);
     else {
+        printf("Loading scene: '%s'\n", g_scene.c_str());
         SceneNodes::UID obj_root_ID = ObjLoader::load(g_scene, load_image);
         SceneNodes::set_parent(obj_root_ID, root_node_ID);
         mesh_combine_whole_scene(root_node_ID);
