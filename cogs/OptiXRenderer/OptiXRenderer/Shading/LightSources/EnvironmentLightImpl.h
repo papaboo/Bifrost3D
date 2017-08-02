@@ -68,6 +68,8 @@ __inline_dev__ optix::float2 sample_CDFs_for_uv(const EnvironmentLight& light, o
 
 // For environment map monte carlo sampling see PBRT v2 chapter 14.6.5. 
 __inline_dev__ LightSample sample_radiance(const EnvironmentLight& light, optix::float2 random_sample) {
+    if (light.per_pixel_PDF_ID == 0) return LightSample::none();
+
     optix::float2 uv = sample_CDFs_for_uv(light, random_sample);
     LightSample sample;
     sample.direction_to_light = latlong_texcoord_to_direction(uv);
@@ -80,6 +82,8 @@ __inline_dev__ LightSample sample_radiance(const EnvironmentLight& light, optix:
 }
 
 __inline_dev__ float PDF(const EnvironmentLight& light, const optix::float3& direction_to_light) {
+    if (light.per_pixel_PDF_ID == 0) return 0.0f;
+
     optix::float2 uv = direction_to_latlong_texcoord(direction_to_light);
     float sin_theta = sqrtf(1.0f - direction_to_light.y * direction_to_light.y);
     float PDF = optix::rtTex2D<float>(light.per_pixel_PDF_ID, uv.x, uv.y) / sin_theta;

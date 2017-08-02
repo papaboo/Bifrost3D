@@ -113,23 +113,16 @@ RT_PROGRAM void miss() {
     if (environment_map_ID) {
         environment_radiance *= LightSources::evaluate(g_scene_environment_light, ray.direction);
         
-        // NOTE We can get rid of all these branches by just scaling the (mis) weight. Requires a lot of retesting though. :)
-        bool next_event_estimatable = g_scene_environment_light.per_pixel_PDF_ID != RT_TEXTURE_ID_NULL;
-        if (next_event_estimatable) {
-            bool next_event_estimated = monte_carlo_payload.bounces != 0; // Was next event estimated at previous intersection.
-            bool apply_MIS = monte_carlo_payload.bsdf_MIS_PDF > 0.0f;
-            if (apply_MIS) {
-                // Calculate MIS weight and scale the radiance by it.
-                const float light_PDF = LightSources::PDF(g_scene_environment_light, ray.direction);
-                float mis_weight = RNG::power_heuristic(monte_carlo_payload.bsdf_MIS_PDF, light_PDF);
-                environment_radiance *= mis_weight;
-            } else if (next_event_estimated)
-                // Previous bounce used next event estimation, but did not calculate MIS, so don't apply light contribution.
-                // TODO Could this be handled by setting bsdf_MIS_PDF to 0 instead? 
-                //      Wait until we have a specular BRDF implementation and
-                //      remember to test with next event estimation on and off.
-                environment_radiance = make_float3(0.0f);
-        }
+        bool next_event_estimated = monte_carlo_payload.bounces != 0; // Was next event estimated at previous intersection.
+        bool apply_MIS = monte_carlo_payload.bsdf_MIS_PDF > 0.0f;
+        if (apply_MIS) {
+            // Calculate MIS weight and scale the radiance by it.
+            const float light_PDF = LightSources::PDF(g_scene_environment_light, ray.direction);
+            float mis_weight = RNG::power_heuristic(monte_carlo_payload.bsdf_MIS_PDF, light_PDF);
+            environment_radiance *= mis_weight;
+        } else if (next_event_estimated)
+            // Previous bounce used next event estimation, but did not calculate MIS, so don't apply light contribution.
+            environment_radiance = make_float3(0.0f);
     }
 
     float3 scaled_radiance = clamp_light_contribution_by_path_PDF(environment_radiance, monte_carlo_payload.clamped_path_PDF, g_accumulations);
