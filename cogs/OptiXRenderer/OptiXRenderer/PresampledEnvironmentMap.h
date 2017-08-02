@@ -60,7 +60,8 @@ public:
         return light;
     }
 
-    inline bool next_event_estimation_possible() { return m_per_pixel_PDF != optix::TextureSampler(); }
+    // Next event estimation is disabled if sample count is 1. The only sample in the buffer is going to be an invalid one.
+    inline bool next_event_estimation_possible() { return m_light.sample_count > 1; }
 
     Cogwheel::Assets::Textures::UID get_environment_map_ID() const { return m_environment_map_ID; }
 
