@@ -56,6 +56,11 @@ GTEST_TEST(PowerHeuristic, invariants) {
     // The power heuristic should handle values that squared become infinity.
     EXPECT_EQ(0.0f, RNG::power_heuristic(1.0f, almost_inf));
     EXPECT_EQ(1.0f, RNG::power_heuristic(almost_inf, 1.0f));
+
+    // Zero should be a valid first parameter and always return zero.
+    EXPECT_EQ(0.0f, RNG::power_heuristic(0.0f, 0.0f));
+    EXPECT_EQ(0.0f, RNG::power_heuristic(0.0f, 1.0f));
+    EXPECT_EQ(0.0f, RNG::power_heuristic(0.0f, almost_inf));
 }
 
 } // NS OptiXRenderer
