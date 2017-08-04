@@ -78,6 +78,7 @@ __inline_dev__ optix::float3 evaluate_intersection(const LightType& light, const
                                                   float bsdf_PDF, bool next_event_estimated) {
     optix::float3 radiance = evaluate(light, position, ray.direction);
 
+#if ENABLE_NEXT_EVENT_ESTIMATION
     bool apply_MIS = bsdf_PDF > 0.0f;
     if (apply_MIS) {
         // Calculate MIS weight and scale the radiance by it.
@@ -87,6 +88,7 @@ __inline_dev__ optix::float3 evaluate_intersection(const LightType& light, const
     } else if (next_event_estimated)
         // Previous bounce used next event estimation, but did not calculate MIS, so don't apply light contribution.
         radiance = make_float3(0.0f);
+#endif // ENABLE_NEXT_EVENT_ESTIMATION
 
     return radiance;
 }

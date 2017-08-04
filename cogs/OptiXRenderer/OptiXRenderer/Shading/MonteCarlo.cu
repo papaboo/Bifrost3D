@@ -123,6 +123,7 @@ RT_PROGRAM void closest_hit() {
     monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
     monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
 
+#if ENABLE_NEXT_EVENT_ESTIMATION
     // Sample a light source.
     if (g_light_count != 0) {
         const LightSample light_sample = reestimated_light_samples(material, world_shading_tbn, 3);
@@ -135,6 +136,7 @@ RT_PROGRAM void closest_hit() {
             monte_carlo_payload.radiance += monte_carlo_payload.throughput * shadow_payload.attenuation;
         }
     }
+#endif // ENABLE_NEXT_EVENT_ESTIMATION
 
     // Sample BSDF.
     BSDFSample bsdf_sample = material.sample_all(monte_carlo_payload.direction, monte_carlo_payload.rng.sample3f());

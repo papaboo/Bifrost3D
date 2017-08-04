@@ -12,6 +12,9 @@
 #define DOUBLE_PRECISION_ACCUMULATION_BUFFER 1
 // #define PATH_PDF_FIREFLY_FILTER 1
 #define PRESAMPLE_ENVIRONMENT_MAP 1
+// When disabling next event estimation to compare images, remember to increase the bounce count by one. 
+// Otherwise the longest paths will be missing from the image.
+#define ENABLE_NEXT_EVENT_ESTIMATION 1
 
 template <typename T>
 void validate_resource(T resource, char* file, int line) {
