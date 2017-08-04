@@ -6,8 +6,7 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include <OptiXRenderer/Shading/LightSources/EnvironmentLightImpl.h>
-#include <OptiXRenderer/Shading/LightSources/PresampledEnvironmentLightImpl.h>
+#include <OptiXRenderer/Shading/LightSources/LightImpl.h>
 #include <OptiXRenderer/Types.h>
 #include <OptiXRenderer/Utils.h>
 
@@ -111,18 +110,9 @@ RT_PROGRAM void miss() {
 
     unsigned int environment_map_ID = g_scene_environment_light.environment_map_ID;
     if (environment_map_ID) {
-        environment_radiance *= LightSources::evaluate(g_scene_environment_light, ray.direction);
-        
         bool next_event_estimated = monte_carlo_payload.bounces != 0; // Was next event estimated at previous intersection.
-        bool apply_MIS = monte_carlo_payload.bsdf_MIS_PDF > 0.0f;
-        if (apply_MIS) {
-            // Calculate MIS weight and scale the radiance by it.
-            const float light_PDF = LightSources::PDF(g_scene_environment_light, ray.direction);
-            float mis_weight = RNG::power_heuristic(monte_carlo_payload.bsdf_MIS_PDF, light_PDF);
-            environment_radiance *= mis_weight;
-        } else if (next_event_estimated)
-            // Previous bounce used next event estimation, but did not calculate MIS, so don't apply light contribution.
-            environment_radiance = make_float3(0.0f);
+        environment_radiance *= LightSources::evaluate_intersection(g_scene_environment_light, ray.origin, ray.direction, 
+                                                                    monte_carlo_payload.bsdf_MIS_PDF, next_event_estimated);
     }
 
     float3 scaled_radiance = clamp_light_contribution_by_path_PDF(environment_radiance, monte_carlo_payload.clamped_path_PDF, g_accumulations);

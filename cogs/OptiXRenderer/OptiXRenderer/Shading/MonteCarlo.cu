@@ -171,19 +171,9 @@ RT_PROGRAM void light_closest_hit() {
     int light_index = __float_as_int(geometric_normal.x);
     const SphereLight& light = g_lights[light_index].sphere;
 
-    float3 light_radiance = LightSources::evaluate(light, ray.origin, ray.direction);
-
     bool next_event_estimated = monte_carlo_payload.bounces != 0; // Was next event estimated at previous intersection.
-    bool apply_MIS = monte_carlo_payload.bsdf_MIS_PDF > 0.0f;
-    if (apply_MIS) {
-        // Calculate MIS weight and scale the radiance by it.
-        const float light_PDF = LightSources::PDF(light, ray.origin, ray.direction);
-        float mis_weight = is_PDF_valid(light_PDF) ? RNG::power_heuristic(monte_carlo_payload.bsdf_MIS_PDF, light_PDF) : 0.0f;
-        light_radiance *= mis_weight;
-    } else if (next_event_estimated)
-        // Previous bounce used next event estimation, but did not calculate MIS, so don't apply light contribution.
-        // TODO Could this be handled by setting bsdf_MIS_PDF to 0 instead? Wait until we have a specular BRDF implementation.
-        light_radiance = make_float3(0.0f);
+    float3 light_radiance = LightSources::evaluate_intersection(light, ray.origin, ray.direction, 
+                                                                monte_carlo_payload.bsdf_MIS_PDF, next_event_estimated);
 
     float3 scaled_radiance = clamp_light_contribution_by_path_PDF(light_radiance, monte_carlo_payload.clamped_path_PDF, g_accumulations);
     monte_carlo_payload.radiance += monte_carlo_payload.throughput * scaled_radiance;
