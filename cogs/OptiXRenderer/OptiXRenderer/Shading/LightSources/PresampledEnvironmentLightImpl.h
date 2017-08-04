@@ -36,6 +36,22 @@ __inline_dev__ optix::float3 evaluate(const PresampledEnvironmentLight& light, c
     return optix::make_float3(optix::rtTex2D<optix::float4>(light.environment_map_ID, uv.x, uv.y));
 }
 
+// ------------------------------------------------------------------------------------------------
+// Functions with generalized parameters.
+// ------------------------------------------------------------------------------------------------
+
+__inline_dev__ LightSample sample_radiance(const PresampledEnvironmentLight& light, const optix::float3& lit_position, optix::float2 random_sample) {
+    return sample_radiance(light, random_sample);
+}
+
+__inline_dev__ float PDF(const PresampledEnvironmentLight& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
+    return PDF(light, direction_to_light);
+}
+
+__inline_dev__ optix::float3 evaluate(const PresampledEnvironmentLight& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
+    return evaluate(light, direction_to_light);
+}
+
 } // NS LightSources
 } // NS OptiXRenderer
 
