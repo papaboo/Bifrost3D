@@ -78,14 +78,13 @@ __inline_dev__ optix::float3 evaluate_intersection(const LightType& light, const
                                                   float bsdf_PDF, bool next_event_estimated) {
     optix::float3 radiance = evaluate(light, position, ray.direction);
 
-    // bool next_event_estimated = monte_carlo_payload.bounces != 0; // Was next event estimated at previous intersection.
-    bool apply_MIS = monte_carlo_payload.bsdf_MIS_PDF > 0.0f;
+    bool apply_MIS = bsdf_PDF > 0.0f;
     if (apply_MIS) {
         // Calculate MIS weight and scale the radiance by it.
         float light_PDF = PDF(light, position, ray.direction);
         float mis_weight = RNG::power_heuristic(bsdf_PDF, light_PDF);
         radiance *= mis_weight;
-    } else if (next_event_estimated) // TODO This should superseed the MIS condition.
+    } else if (next_event_estimated)
         // Previous bounce used next event estimation, but did not calculate MIS, so don't apply light contribution.
         radiance = make_float3(0.0f);
 
