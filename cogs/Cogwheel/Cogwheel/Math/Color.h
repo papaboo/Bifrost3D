@@ -234,6 +234,10 @@ public:
     }
 };
 
+//*****************************************************************************
+// Free functions.
+//*****************************************************************************
+
 inline RGBA lerp(RGBA a, RGBA b, float t) {
     return RGBA(a.rgb() + (b.rgb() - a.rgb()) * t, a.a + (b.a - a.a) * t);
 }
@@ -246,17 +250,34 @@ inline RGBA gammacorrect(RGBA color, float gamma) {
     return RGBA(gammacorrect(color.rgb(), gamma), color.a);
 }
 
+inline float luma(RGB color) {
+    return 0.3f * color.r + 0.59f * color.g + 0.11f * color.b;
+}
+
 } // NS Math
 } // NS Cogwheel
 
-// Convenience function that appends an RGBA's string representation to an ostream.
+// ------------------------------------------------------------------------------------------------
+// Convenience functions that appends a color's string representation to an ostream.
+// ------------------------------------------------------------------------------------------------
 inline std::ostream& operator<<(std::ostream& s, Cogwheel::Math::RGB v){
     return s << v.to_string();
 }
 
-// Convenience function that appends an RGBA's string representation to an ostream.
 inline std::ostream& operator<<(std::ostream& s, Cogwheel::Math::RGBA v){
     return s << v.to_string();
+}
+
+// ------------------------------------------------------------------------------------------------
+// Math operator overloading.
+// ------------------------------------------------------------------------------------------------
+
+inline Cogwheel::Math::RGB operator+(float lhs, Cogwheel::Math::RGB rhs) {
+    return rhs + lhs;
+}
+
+inline Cogwheel::Math::RGB operator*(float lhs, Cogwheel::Math::RGB rhs) {
+    return rhs * lhs;
 }
 
 #endif // _COGWHEEL_MATH_COLOR_H_
