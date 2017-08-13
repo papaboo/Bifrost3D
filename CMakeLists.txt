@@ -54,6 +54,7 @@ include_cog("Cogwheel")
   include_cog("OptiXRenderer")
 include_cog("DX11OptiXAdapter") # Depends on OptiXRenderer and DX11Renderer
 include_cog("GLFWDriver")
+include_cog("ImageOperations")
 include_cog("ObjLoader")
 include_cog("StbImageLoader")
 include_cog("StbImageWriter")
