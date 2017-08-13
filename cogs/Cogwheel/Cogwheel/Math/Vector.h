@@ -239,22 +239,56 @@ typedef Vector4<int> Vector4i;
 } // NS Math
 } // NS Cogwheel
 
-// Convenience function that appends a vector's string representation to an ostream.
+// ------------------------------------------------------------------------------------------------
+// Convenience functions that appends a vector's string representation to an ostream.
+// ------------------------------------------------------------------------------------------------
 template<class T>
 inline std::ostream& operator<<(std::ostream& s, Cogwheel::Math::Vector2<T> v){
     return s << v.to_string();
 }
 
-// Convenience function that appends a vector's string representation to an ostream.
 template<class T>
 inline std::ostream& operator<<(std::ostream& s, Cogwheel::Math::Vector3<T> v){
     return s << v.to_string();
 }
 
-// Convenience function that appends a vector's string representation to an ostream.
 template<class T>
 inline std::ostream& operator<<(std::ostream& s, Cogwheel::Math::Vector4<T> v){
     return s << v.to_string();
+}
+
+// ------------------------------------------------------------------------------------------------
+// Math operator overloading.
+// ------------------------------------------------------------------------------------------------
+
+template<class T>
+inline Cogwheel::Math::Vector2<T> operator+(float lhs, Cogwheel::Math::Vector2<T> rhs) {
+    return rhs + lhs;
+}
+
+template<class T>
+inline Cogwheel::Math::Vector3<T> operator+(float lhs, Cogwheel::Math::Vector3<T> rhs) {
+    return rhs + lhs;
+}
+
+template<class T>
+inline Cogwheel::Math::Vector4<T> operator+(float lhs, Cogwheel::Math::Vector4<T> rhs) {
+    return rhs + lhs;
+}
+
+template<class T>
+inline Cogwheel::Math::Vector2<T> operator*(float lhs, Cogwheel::Math::Vector2<T> rhs) {
+    return rhs * lhs;
+}
+
+template<class T>
+inline Cogwheel::Math::Vector3<T> operator*(float lhs, Cogwheel::Math::Vector3<T> rhs) {
+    return rhs * lhs;
+}
+
+template<class T>
+inline Cogwheel::Math::Vector4<T> operator*(float lhs, Cogwheel::Math::Vector4<T> rhs) {
+    return rhs * lhs;
 }
 
 #endif // _COGWHEEL_MATH_VECTOR_H_
