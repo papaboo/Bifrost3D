@@ -55,6 +55,11 @@ void update(Engine& engine, void* none) {
         ++image_index;
     image_index = clamp(image_index, 0, int(g_images.size() - 1));
 
+    if (uploaded_image_index != image_index) {
+        std::string title = "Komodo - " + g_images[image_index].get_name();
+        engine.get_window().set_name(title);
+    }
+
     { // Update the backbuffer.
         const Window& window = engine.get_window();
         glViewport(0, 0, window.get_width(), window.get_height());
@@ -75,7 +80,7 @@ void update(Engine& engine, void* none) {
             Image image = g_images[image_index];
             int width = image.get_width(), height = image.get_height();
             RGB* gamma_corrected_pixels = new RGB[image.get_pixel_count()];
-            // #pragma omp parallel for schedule(dynamic, 16)
+            #pragma omp parallel for schedule(dynamic, 16)
             for (int i = 0; i < (int)image.get_pixel_count(); ++i) {
                 int x = i % width, y = i / width;
                 gamma_corrected_pixels[i] = gammacorrect(image.get_pixel(Vector2ui(x, y)).rgb(), 1.0f / 2.2f);
