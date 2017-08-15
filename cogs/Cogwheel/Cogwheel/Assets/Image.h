@@ -228,6 +228,14 @@ inline Images::UID change_format(Images::UID image_ID, PixelFormat new_format) {
 
 void fill_mipmap_chain(Images::UID image_ID);
 
+void compute_summed_area_table(Images::UID image_ID, Math::RGBA* sat_result);
+
+inline Math::RGBA* compute_summed_area_table(Images::UID image_ID) {
+    Math::RGBA* sat = new Math::RGBA[Images::get_width(image_ID) * Images::get_height(image_ID)];
+    compute_summed_area_table(image_ID, sat);
+    return sat;
+}
+
 } // NS ImageUtils
 
 } // NS Assets

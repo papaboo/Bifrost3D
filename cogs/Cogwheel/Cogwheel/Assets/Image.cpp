@@ -396,6 +396,35 @@ void fill_mipmap_chain(Images::UID image_ID) {
     }
 }
 
+void compute_summed_area_table(Images::UID image_ID, RGBA* sat_result) {
+    Image img = image_ID;
+    unsigned int width = img.get_width(), height = img.get_height();
+
+    // Initialize high precision buffer.
+    Vector4d* sat = new Vector4d[width * height];
+
+    auto RGBA_to_vector4d = [](RGBA rgba) -> Vector4d { return Vector4d(rgba.r, rgba.g, rgba.b, rgba.a); };
+
+    // Fill the lower row and left column.
+    sat[0] = RGBA_to_vector4d(img.get_pixel(Vector2ui(0, 0)));
+    for (unsigned int x = 1; x < width; ++x)
+        sat[x] = RGBA_to_vector4d(img.get_pixel(Vector2ui(x, 0))) + sat[x-1];
+    for (unsigned int y = 1; y < height; ++y)
+        sat[y * width] = RGBA_to_vector4d(img.get_pixel(Vector2ui(0, y))) + sat[(y - 1)  * width];
+
+    for (unsigned int y = 1; y < height; ++y)
+        for (unsigned int x = 1; x < width; ++x) {
+            Vector4d pixel = RGBA_to_vector4d(img.get_pixel(Vector2ui(x, y)));
+            sat[x + y * width] = pixel + sat[x + (y - 1)  * width] + sat[(x - 1) + y  * width] - sat[(x - 1) + (y - 1)  * width];
+        }
+
+    for (unsigned int y = 0; y < height; ++y)
+        for (unsigned int x = 0; x < width; ++x) {
+            Vector4d v = sat[x + y * width];
+            sat_result[x + y * width] = { float(v.x), float(v.y), float(v.z), float(v.w) };
+        }
+}
+
 } // NS ImageUtils
 
 } // NS Assets

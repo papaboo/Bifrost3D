@@ -214,6 +214,37 @@ TEST_F(Assets_Images, mipmap_size) {
     EXPECT_EQ(1u, Images::get_depth(image_ID, 3));
 }
 
+TEST_F(Assets_Images, mipmapable_events) {
+
+    unsigned int width = 2, height = 2;
+    Image image = Images::create2D("Test image", PixelFormat::RGBA_Float, 1.0f, Math::Vector2ui(width, height));
+    EXPECT_FALSE(image.is_mipmapable());
+
+    Images::reset_change_notifications();
+
+    { // Test mipmapable change event.
+        image.set_mipmapable(true);
+        Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
+        EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
+        Image changed_image = *changed_images.begin();
+        EXPECT_EQ(changed_image, image);
+        EXPECT_EQ(Images::Change::Mipmapable, changed_image.get_changes());
+    }
+
+    { // Test that destroying an image removes the mipmapable change event.
+        Images::destroy(image.get_ID());
+        Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
+        EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
+        Image destroyed_image = *changed_images.begin();
+        EXPECT_EQ(destroyed_image, image);
+        EXPECT_EQ(Images::Change::Destroyed, destroyed_image.get_changes());
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+// Image utils tests.
+// ------------------------------------------------------------------------------------------------
+
 TEST_F(Assets_Images, fill_mipmaps) {
     using namespace Cogwheel::Math;
 
@@ -243,31 +274,37 @@ TEST_F(Assets_Images, fill_mipmaps) {
     // EXPECT_RGBA_EQ(RGBA(3.0f, 2.0f, 0.0f, 1.0f), image.get_pixel(Vector2ui(0, 0), 2)); // NOTE The curent mipmap chain fill can tend to scew the result if textures are non-power-of-two.
 }
 
-TEST_F(Assets_Images, mipmapable_events) {
+TEST_F(Assets_Images, summed_area_table_from_image) {
+    using namespace Cogwheel::Math;
 
-    unsigned int width = 2, height = 2;
-    Image image = Images::create2D("Test image", PixelFormat::RGBA_Float, 1.0f, Math::Vector2ui(width, height));
-    EXPECT_FALSE(image.is_mipmapable());
+    unsigned int width = 5, height = 3;
+    Image image = Images::create2D("Test image", PixelFormat::RGBA_Float, 1.0f, Vector2ui(width, height));
 
-    Images::reset_change_notifications();
+    // Fill image
+    // [0, -1, 0, 0], [1, -1, 0, 0], [2, -1, 0, 0], [3, -1, 0, 0], [4, -1, 0, 0]
+    // [0, 0, 0, -1], [1, 0, 1, -1], [2, 0, 8, -1], [3, 0, 27, -1], [4, 0, 64, -1]
+    // [0, 0, 0, -2], [1, 0, 8, -2], [2, 0, 64, -2], [3, 0, 216, -2], [4, 0, 512, -2]
+    for (unsigned int y = 0; y < height; ++y)
+        for (unsigned int x = 0; x < width; ++x)
+            image.set_pixel(RGBA(float(x), float(y) - 1, float(x * x * x * y * y * y), -float(y)), Vector2ui(x, y));
 
-    { // Test mipmapable change event.
-        image.set_mipmapable(true);
-        Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
-        EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
-        Image changed_image = *changed_images.begin();
-        EXPECT_EQ(changed_image, image);
-        EXPECT_EQ(Images::Change::Mipmapable, changed_image.get_changes());
-    }
+    RGBA* sat = ImageUtils::compute_summed_area_table(image.get_ID());
 
-    { // Test that destroying an image removes the mipmapable change event.
-        Images::destroy(image.get_ID());
-        Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
-        EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
-        Image destroyed_image = *changed_images.begin();
-        EXPECT_EQ(destroyed_image, image);
-        EXPECT_EQ(Images::Change::Destroyed, destroyed_image.get_changes());
-    }
+    // Verify that each entry in the sat is the sum of all the pixels above and to the left of that entry, inclusive.
+    for (unsigned int y = 0; y < height; ++y)
+        for (unsigned int x = 0; x < width; ++x) {
+            RGBA sat_value = sat[x + y * width];
+
+            RGBA upper_left_sum = RGBA(0.0f, 0.0f, 0.0f, 0.0f);
+            for (unsigned int yy = 0; yy <= y; ++yy)
+                for (unsigned int xx = 0; xx <= x; ++xx) {
+                    RGBA p = image.get_pixel(Vector2ui(xx, yy));
+                    upper_left_sum.rgb() += p.rgb();
+                    upper_left_sum.a += p.a;
+                }
+
+            EXPECT_RGBA_EQ(upper_left_sum, sat_value);
+        }
 }
 
 } // NS Assets
