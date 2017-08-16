@@ -401,6 +401,7 @@ void compute_summed_area_table(Images::UID image_ID, RGBA* sat_result) {
     unsigned int width = img.get_width(), height = img.get_height();
 
     // Initialize high precision buffer.
+    // TODO Instead of preallocating a huge Vector4d array, two rows (current and previous) would do.
     Vector4d* sat = new Vector4d[width * height];
 
     auto RGBA_to_vector4d = [](RGBA rgba) -> Vector4d { return Vector4d(rgba.r, rgba.g, rgba.b, rgba.a); };
@@ -423,6 +424,8 @@ void compute_summed_area_table(Images::UID image_ID, RGBA* sat_result) {
             Vector4d v = sat[x + y * width];
             sat_result[x + y * width] = { float(v.x), float(v.y), float(v.z), float(v.w) };
         }
+
+    delete[] sat;
 }
 
 } // NS ImageUtils
