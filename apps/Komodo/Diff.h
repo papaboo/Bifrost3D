@@ -84,7 +84,7 @@ public:
             break;
         }
         case Algorithm::SSIM: {
-            float ssim = ImageOperations::Diff::ssim(reference, target, diff_image);
+            float ssim = ImageOperations::Diff::ssim(reference, target, 11, diff_image);
             printf("  ssim: %f - higher is better.\n", ssim);
             break;
         }
