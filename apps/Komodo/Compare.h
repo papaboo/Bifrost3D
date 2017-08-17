@@ -93,6 +93,7 @@ public:
         }
         case Algorithm::SSIM: {
             float ssim = ImageOperations::Diff::ssim(reference, target, 11, diff_image);
+            ssim = Cogwheel::Math::max(0.0f, ssim); // Clamp in case ssim becomes negative due to imprecision.
             printf("  1.0f - ssim: %f - lower is better.\n", 1.0f - ssim);
             break;
         }
