@@ -2,7 +2,7 @@ set(PROJECT_NAME "Komodo")
 
 find_package(OpenGL REQUIRED)
 
-set(SRCS main.cpp Diff.h Utils.h)
+set(SRCS main.cpp Compare.h Utils.h)
 
 add_executable(${PROJECT_NAME} ${SRCS})
 

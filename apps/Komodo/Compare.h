@@ -1,4 +1,4 @@
-// Komodo image diffing.
+// Komodo image comparison.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2015, Cogwheel. See AUTHORS.txt for authors
 //
@@ -6,8 +6,8 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _KOMODO_DIFF_H_
-#define _KOMODO_DIFF_H_
+#ifndef _KOMODO_COMPARE_H_
+#define _KOMODO_COMPARE_H_
 
 #include <Utils.h>
 
@@ -17,12 +17,30 @@
 
 using namespace Cogwheel::Assets;
 
-class Diff {
+class Compare {
 public:
 
-    enum class Algorithm { SSIM, RMS, Mean };
+    enum class Algorithm { SSIM, RMS };
+
+    static void print_usage() {
+        char* usage =
+            "usage Komodo Image Comparison:\n"
+            "  -h | --help: Show command line usage for Komodo Image Comparison.\n"
+            "     | --ssim: Compare using Structured Similiarity Index.\n"
+            "     | --rms: Compare using root mean square.\n"
+            "     | --reference <path>: Path to the reference image.\n"
+            "     | --target <path>: Path to the target image.\n"
+            "     | --diff <path>: Path to store the diff image in.\n";
+
+        printf("%s", usage);
+    }
 
     static std::vector<Image> apply(std::vector<char*> args) {
+
+        if (args.size() == 0 || std::string(args[0]).compare("-h") == 0 || std::string(args[0]).compare("--help") == 0) {
+            print_usage();
+            return std::vector<Image>();
+        }
 
         Algorithm algorithm = Algorithm::SSIM;
         std::string reference_path;
@@ -41,8 +59,6 @@ public:
                 algorithm = Algorithm::SSIM;
             else if (arg.compare("--rms") == 0)
                 algorithm = Algorithm::RMS;
-            else if (arg.compare("--mean") == 0)
-                algorithm = Algorithm::Mean;
             else
                 printf("Unknown argument: %s\n", args[i]);
         }
@@ -63,21 +79,13 @@ public:
         } else
             images.push_back(target);
 
-        Image diff_image = Image();
-        if (!diff_path.empty()) {
-            diff_image = Images::create2D(diff_path, reference.get_pixel_format(), reference.get_gamma(),
-                                          Cogwheel::Math::Vector2ui(reference.get_width(), reference.get_height()));
-            images.push_back(diff_image);
-        }
+        Image diff_image = Images::create2D(diff_path, reference.get_pixel_format(), reference.get_gamma(),
+                                            Cogwheel::Math::Vector2ui(reference.get_width(), reference.get_height()));
+        images.push_back(diff_image);
 
-        printf("Diff '%s' with '%s'\n", reference_path.c_str(), target_path.c_str());
+        printf("Compare '%s' with '%s'\n", reference_path.c_str(), target_path.c_str());
 
         switch (algorithm) {
-        case Algorithm::Mean: {
-            float mean = ImageOperations::Diff::mean(reference, target, diff_image);
-            printf("  mean: %f - lower is better.\n", mean);
-            break;
-        }
         case Algorithm::RMS: {
             float rms = ImageOperations::Diff::rms(reference, target, diff_image);
             printf("  RMS: %f - lower is better.\n", rms);
@@ -85,14 +93,17 @@ public:
         }
         case Algorithm::SSIM: {
             float ssim = ImageOperations::Diff::ssim(reference, target, 11, diff_image);
-            printf("  ssim: %f - higher is better.\n", ssim);
+            printf("  1.0f - ssim: %f - lower is better.\n", 1.0f - ssim);
             break;
         }
         }
+
+        // if (!diff_path.empty())
+        //     ; // TODO Store image.
 
         return images;
     }
 
 };
 
-#endif // _KOMODO_DIFF_H_
+#endif // _KOMODO_COMPARE_H_

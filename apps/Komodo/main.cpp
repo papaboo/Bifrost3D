@@ -6,7 +6,7 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#include <Diff.h>
+#include <Compare.h>
 
 #include <Cogwheel/Core/Engine.h>
 #include <Cogwheel/Input/Keyboard.h>
@@ -17,8 +17,6 @@
 #include <windows.h>
 #include <GL/gl.h>
 #undef RGB
-
-#include <ImageOperations/Diff.h>
 
 #include <omp.h>
 
@@ -117,8 +115,10 @@ int initialize(Engine& engine) {
     std::string operation_name = g_args[0];
     g_args.erase(g_args.begin());
 
-    if (std::string(operation_name).compare("--diff") == 0)
-        g_images = Diff::apply(g_args);
+    if (std::string(operation_name).compare("--compare") == 0)
+        g_images = Compare::apply(g_args);
+    else
+        printf("Unrecognized argument: '%s'\n", operation_name.c_str());
 
     if (g_images.empty()) {
         // Create a default red and white image.
@@ -142,7 +142,13 @@ int initialize(Engine& engine) {
 }
 
 void print_usage() {
-    printf("TODO\n");
+    char* usage =
+        "usage Komodo Image Tool:\n"
+        "  -h | --help: Show command line usage for Komodo.\n"
+        "  -l | --headless: Launch without opening a window.\n"
+        "     | --compare: Perform image comparisons.\n";
+
+    printf("%s", usage);
 }
 
 int main(int argc, char** argv) {
