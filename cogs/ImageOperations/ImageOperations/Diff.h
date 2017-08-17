@@ -24,6 +24,7 @@ float mean(Image reference, Image target, Image diff = Image()) {
 
     assert(reference.get_width() > 0u && reference.get_height() > 0u);
     assert(reference.get_width() == target.get_width() && reference.get_height() == target.get_height());
+    assert(!diff.exists() || reference.get_width() == diff.get_width() && reference.get_height() == diff.get_height());
 
     double mean = 0.0f;
     for (unsigned int y = 0; y < reference.get_height(); ++y) {
@@ -48,21 +49,22 @@ float rms(Image reference, Image target, Image diff = Image()) {
 
     assert(reference.get_width() > 0u && reference.get_height() > 0u);
     assert(reference.get_width() == target.get_width() && reference.get_height() == target.get_height());
+    assert(!diff.exists() || reference.get_width() == diff.get_width() && reference.get_height() == diff.get_height());
 
-    double mean = 0.0f;
+    double mean_squared = 0.0f;
     for (unsigned int y = 0; y < reference.get_height(); ++y) {
         for (unsigned int x = 0; x < reference.get_width(); ++x) {
             RGB a = reference.get_pixel(Vector2ui(x, y)).rgb();
             RGB b = target.get_pixel(Vector2ui(x, y)).rgb();
             RGB error = RGB(abs(a.r - b.r), abs(a.g - b.g), abs(a.b - b.b));
             float l1 = luma(error);
-            mean += l1 * l1;
+            mean_squared += l1 * l1;
             if (diff.exists())
-                diff.set_pixel(RGBA(gammacorrect(error, 2.0f)), Vector2ui(x, y));
+                diff.set_pixel(RGBA(error), Vector2ui(x, y));
         }
     }
 
-    return float(mean / (reference.get_pixel_count() * 3.0));
+    return sqrt(float(mean_squared / reference.get_pixel_count()));
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -145,7 +147,7 @@ float ssim(Image reference_image, Image target_image, int bandwidth, Image diff_
 
     assert(reference_image.get_width() > 0u && reference_image.get_height() > 0u);
     assert(reference_image.get_width() == target_image.get_width() && reference_image.get_height() == target_image.get_height());
-    assert(reference_image.get_width() == diff_image.get_width() && reference_image.get_height() == diff_image.get_height());
+    assert(!diff_image.exists() || reference_image.get_width() == diff_image.get_width() && reference_image.get_height() == diff_image.get_height());
 
     unsigned int width = reference_image.get_width(), height = reference_image.get_height();
 
