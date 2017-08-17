@@ -18,31 +18,6 @@ using namespace Cogwheel::Assets;
 using namespace Cogwheel::Math;
 
 // ------------------------------------------------------------------------------------------------
-// Mean (taxicab / L1) image diff.
-// ------------------------------------------------------------------------------------------------
-float mean(Image reference, Image target, Image diff = Image()) {
-
-    assert(reference.get_width() > 0u && reference.get_height() > 0u);
-    assert(reference.get_width() == target.get_width() && reference.get_height() == target.get_height());
-    assert(!diff.exists() || reference.get_width() == diff.get_width() && reference.get_height() == diff.get_height());
-
-    double mean = 0.0f;
-    for (unsigned int y = 0; y < reference.get_height(); ++y) {
-        for (unsigned int x = 0; x < reference.get_width(); ++x) {
-            RGB a = reference.get_pixel(Vector2ui(x, y)).rgb();
-            RGB b = target.get_pixel(Vector2ui(x, y)).rgb();
-            RGB d = RGB(abs(a.r - b.r), abs(a.g - b.g), abs(a.b - b.b));
-            float l1 = luma(d);
-            mean += l1;
-            if (diff.exists())
-                diff.set_pixel(RGBA(d), Vector2ui(x, y));
-        }
-    }
-
-    return float(mean / reference.get_pixel_count());
-}
-
-// ------------------------------------------------------------------------------------------------
 // Root mean square image diff.
 // ------------------------------------------------------------------------------------------------
 float rms(Image reference, Image target, Image diff = Image()) {
