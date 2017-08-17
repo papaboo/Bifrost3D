@@ -1,4 +1,4 @@
-// Test Cogwheel textures.
+// Helper expect definitions.
 // ---------------------------------------------------------------------------
 // Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
 //
