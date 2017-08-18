@@ -55,60 +55,45 @@ float ssim(Image reference_image, Image target_image) {
 
     auto RGB_to_vector3d = [](RGB rgb) -> Vector3d { return Vector3d(rgb.r, rgb.g, rgb.b); };
 
-    // Compute the mean and store all the pixel values in floats for faster lookup. Algorithm (2)
-    RGB* reference = new RGB[width * height];
-    RGB* target = new RGB[width * height];
+    // Compute the mean, mean squared and joined mean. Combination of Algorithm (2), (4) and (11).
     Vector3d reference_mean = {};
     Vector3d target_mean = {};
+
+    Vector3d reference_mean_squared = {};
+    Vector3d target_mean_squared = {};
+
+    Vector3d joined_mean = {};
     for (unsigned int y = 0; y < height; ++y) {
         for (unsigned int x = 0; x < width; ++x) {
-            *reference = reference_image.get_pixel(Vector2ui(x, y)).rgb();
-            *target = target_image.get_pixel(Vector2ui(x, y)).rgb();
+            Vector3d reference = RGB_to_vector3d(reference_image.get_pixel(Vector2ui(x, y)).rgb());
+            Vector3d target = RGB_to_vector3d(target_image.get_pixel(Vector2ui(x, y)).rgb());
 
-            reference_mean += RGB_to_vector3d(*reference);
-            target_mean += RGB_to_vector3d(*target);
+            reference_mean += reference;
+            target_mean += target;
 
-            ++reference;
-            ++target;
+            reference_mean_squared += reference * reference;
+            target_mean_squared += target * target;
+
+            joined_mean += reference * target;
         }
     }
+    // Normalize
     reference_mean /= width * height;
     target_mean /= width * height;
-
-    // Reset the RGB arrays.
-    reference -= width * height;
-    target -= width * height;
-
-    // Compute the standard deviation and covariance of the image. Algorithm (4) and (11).
-    Vector3d reference_std_dev = {};
-    Vector3d target_std_dev = {};
-    Vector3d covariance = {};
-    for (unsigned int y = 0; y < height; ++y)
-        for (unsigned int x = 0; x < width; ++x) {
-            Vector3d ref_d = RGB_to_vector3d(reference[x + y * width]) - reference_mean;
-            reference_std_dev += { ref_d.x * ref_d.x, ref_d.y * ref_d.y, ref_d.z * ref_d.z };
-
-            Vector3d tar_d = RGB_to_vector3d(target[x + y * width]) - target_mean;
-            target_std_dev += { tar_d.x * tar_d.x, tar_d.y * tar_d.y, tar_d.z * tar_d.z };
-
-            covariance += {ref_d.x * tar_d.x, ref_d.y * tar_d.y, ref_d.z * tar_d.z };
-        }
-    reference_std_dev /= width * height;
-    reference_std_dev = { sqrt(reference_std_dev.x), sqrt(reference_std_dev.y), sqrt(reference_std_dev.z) };
-
-    target_std_dev /= width * height;
-    target_std_dev = { sqrt(target_std_dev.x), sqrt(target_std_dev.y), sqrt(target_std_dev.z) };
-
-    covariance /= width * height;
-
-    delete[] reference;
-    delete[] target;
+    reference_mean_squared /= width * height;
+    target_mean_squared /= width * height;
+    joined_mean /= width * height;
+    
+    // Compute standard deviation and covariance.
+    Vector3d reference_variance = reference_mean_squared - reference_mean * reference_mean;
+    Vector3d target_variance = target_mean_squared - target_mean * target_mean;
+    Vector3d covariance = joined_mean - reference_mean * target_mean;
 
     // Compute SSIM, algorithm (13)
     double C1 = 0.000001, C2 = 0.0000001;
 
     Vector3d ssim = (2 * reference_mean * target_mean + C1) * (2 * covariance + C2) /
-        ((reference_mean * reference_mean + target_mean * target_mean + C1) * (reference_std_dev * reference_std_dev + target_std_dev * target_std_dev + C2));
+        ((reference_mean * reference_mean + target_mean * target_mean + C1) * (reference_variance + target_variance+ C2));
     RGB ssim_rgb = { float(ssim.x), float(ssim.y), float(ssim.z) };
 
     return luma(ssim_rgb);
