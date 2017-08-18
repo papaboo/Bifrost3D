@@ -1,4 +1,4 @@
-// Test diff operations.
+// Test Compare operations.
 // ---------------------------------------------------------------------------
 // Copyright (C) 2015-2017, Cogwheel. See AUTHORS.txt for authors
 //
@@ -6,20 +6,20 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#ifndef _IMAGE_OPERATIONS_DIFF_TEST_H_
-#define _IMAGE_OPERATIONS_DIFF_TEST_H_
+#ifndef _IMAGE_OPERATIONS_COMPARE_TEST_H_
+#define _IMAGE_OPERATIONS_COMPARE_TEST_H_
 
-#include <ImageOperations/Diff.h>
+#include <ImageOperations/Compare.h>
 #include <Expects.h>
 
 namespace ImageOperations {
-namespace Diff {
+namespace Compare {
 
-class Assets_Images : public ::testing::Test {
+class ImageOperations_Compare : public ::testing::Test {
 protected:
     // Per-test set-up and tear-down logic.
     virtual void SetUp() {
-        Cogwheel::Assets::Images::allocate(8u);
+        Cogwheel::Assets::Images::allocate(2u);
     }
     virtual void TearDown() {
         Cogwheel::Assets::Images::deallocate();
@@ -36,14 +36,14 @@ inline Image create_image(int width, int height) {
     return img;
 }
 
-TEST_F(Assets_Images, RMS_identity) {
+TEST_F(ImageOperations_Compare, RMS_identity) {
     int width = 4, height = 4;
     Image img = create_image(width, height);
 
     EXPECT_EQ(0.0f, rms(img, img));
 }
 
-TEST_F(Assets_Images, RMS) {
+TEST_F(ImageOperations_Compare, RMS) {
     int width = 4, height = 4;
 
     Image img1 = create_image(width, height);
@@ -63,7 +63,7 @@ TEST_F(Assets_Images, RMS) {
     EXPECT_EQ(expected_rms, rms(img1, img2));
 }
 
-TEST_F(Assets_Images, SSIM) {
+TEST_F(ImageOperations_Compare, SSIM) {
     int width = 4, height = 4;
     Image img1 = create_image(width, height);
     Image img2 = create_image(width, height);
@@ -92,7 +92,7 @@ TEST_F(Assets_Images, SSIM) {
     EXPECT_LT(ssim_3, ssim_2);
 }
 
-TEST_F(Assets_Images, SSIM_with_bandwidth_identity) {
+TEST_F(ImageOperations_Compare, SSIM_with_bandwidth_identity) {
     int width = 4, height = 4;
     Image img1 = create_image(width, height);
     Image img2 = create_image(width, height);
@@ -121,7 +121,7 @@ TEST_F(Assets_Images, SSIM_with_bandwidth_identity) {
     EXPECT_LT(ssim_3, ssim_2);
 }
 
-} // NS Diff
+} // NS Compare
 } // NS ImageOperations
 
-#endif // _IMAGE_OPERATIONS_DIFF_TEST_H_
+#endif // _IMAGE_OPERATIONS_COMPARE_TEST_H_

@@ -11,7 +11,7 @@
 
 #include <Utils.h>
 
-#include <ImageOperations/Diff.h>
+#include <ImageOperations/Compare.h>
 
 #include <vector>
 
@@ -87,12 +87,12 @@ public:
 
         switch (algorithm) {
         case Algorithm::RMS: {
-            float rms = ImageOperations::Diff::rms(reference, target, diff_image);
+            float rms = ImageOperations::Compare::rms(reference, target, diff_image);
             printf("  RMS: %f - lower is better.\n", rms);
             break;
         }
         case Algorithm::SSIM: {
-            float ssim = ImageOperations::Diff::ssim(reference, target, 11, diff_image);
+            float ssim = ImageOperations::Compare::ssim(reference, target, 11, diff_image);
             ssim = Cogwheel::Math::max(0.0f, ssim); // Clamp in case ssim becomes negative due to imprecision.
             printf("  1.0f - ssim: %f - lower is better.\n", 1.0f - ssim);
             break;

@@ -1,4 +1,4 @@
-// Image differentiation operations.
+// Image comparison operations.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
 //
@@ -6,13 +6,13 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _IMAGE_OPERATIONS_DIFF_H_
-#define _IMAGE_OPERATIONS_DIFF_H_
+#ifndef _IMAGE_OPERATIONS_COMPARE_H_
+#define _IMAGE_OPERATIONS_COMPARE_H_
 
 #include <Cogwheel/Assets/Image.h>
 
 namespace ImageOperations {
-namespace Diff {
+namespace Compare {
 
 using namespace Cogwheel::Assets;
 using namespace Cogwheel::Math;
@@ -201,7 +201,7 @@ float ssim(Image reference_image, Image target_image, int bandwidth, Image diff_
     return float(ssim);
 }
 
-} // NS Diff
+} // NS Compare
 } // NS ImageOperations
 
-#endif // _IMAGE_OPERATIONS_DIFF_H_
+#endif // _IMAGE_OPERATIONS_COMPARE_H_

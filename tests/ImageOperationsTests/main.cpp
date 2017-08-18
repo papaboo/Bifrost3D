@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-#include <DiffTest.h>
+#include <CompareTest.h>
 
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);

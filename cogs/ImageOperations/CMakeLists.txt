@@ -11,13 +11,13 @@ target_link_libraries(ImageOperations INTERFACE Cogwheel)
 # This should've been what target_sources does, but instead it adds the headers to each solution that links with the library.
 
 # target_sources(ImageOperations INTERFACE
-#   ${CMAKE_CURRENT_SOURCE_DIR}/ImageOperations/Diff.h
+#   ${CMAKE_CURRENT_SOURCE_DIR}/ImageOperations/Compare.h
 # )
 
-add_custom_target(ImageOperationsIDE SOURCES ImageOperations/Diff.h)
+add_custom_target(ImageOperationsIDE SOURCES ImageOperations/Compare.h)
 
 source_group("ImageOperations" FILES 
-  ImageOperations/Diff.h
+  ImageOperations/Compare.h
 )
 
 set_target_properties(ImageOperationsIDE PROPERTIES 
