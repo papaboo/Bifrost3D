@@ -116,6 +116,10 @@ TEST_F(ImageOperations_Compare, SSIM_with_bandwidth_identity) {
     img2.set_pixel(pixel_0_1, Vector2ui(0, 1));
     float ssim_3 = ssim(img1, img2, 1);
 
+    printf("ssim_1 %f\n", ssim_1);
+    printf("ssim_2 %f\n", ssim_2);
+    printf("ssim_3 %f\n", ssim_3);
+
     EXPECT_LT(ssim_1, 1.0f);
     EXPECT_LT(ssim_2, ssim_1);
     EXPECT_LT(ssim_3, ssim_2);
