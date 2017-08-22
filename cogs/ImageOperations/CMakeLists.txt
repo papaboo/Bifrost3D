@@ -23,4 +23,5 @@ source_group("ImageOperations" FILES
 set_target_properties(ImageOperationsIDE PROPERTIES 
   FOLDER "Cogs"
   PROJECT_LABEL "ImageOperations"
+  LINKER_LANGUAGE CXX
 )
