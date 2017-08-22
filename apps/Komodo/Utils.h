@@ -12,6 +12,7 @@
 #include <Cogwheel/Assets/Image.h>
 
 #include <StbImageLoader/StbImageLoader.h>
+#include <StbImageWriter/StbImageWriter.h>
 #include <TinyExr/TinyExr.h>
 
 #include <io.h>
@@ -67,6 +68,14 @@ inline Cogwheel::Assets::Image load_image(const std::string& path) {
     // No dice. Report error and return an invalid ID.
     printf("No image found at '%s'\n", path.c_str());
     return Cogwheel::Assets::Image();
+}
+
+inline void store_image(Cogwheel::Assets::Image image, const std::string& path) {
+    std::string file_extension = std::string(path, path.length() - 3);
+    if (file_extension.compare("exr") == 0)
+        TinyExr::store(image.get_ID(), path);
+    else
+        StbImageWriter::write(image.get_ID(), path);
 }
 
 #endif // _KOMODO_UTILS_H_

@@ -30,7 +30,7 @@ public:
             "     | --rms: Compare using root mean square.\n"
             "     | --reference <path>: Path to the reference image.\n"
             "     | --target <path>: Path to the target image.\n"
-            "     | --diff <path>: Path to store the diff image in.\n";
+            "     | --diff <path>: Path to store the diff image to.\n";
 
         printf("%s", usage);
     }
@@ -99,8 +99,8 @@ public:
         }
         }
 
-        // if (!diff_path.empty())
-        //     ; // TODO Store image.
+        if (!diff_path.empty())
+            store_image(diff_image, diff_path);
 
         return images;
     }
