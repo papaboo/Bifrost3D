@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include <CompareTest.h>
+#include <StatisticsTest.h>
 
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);

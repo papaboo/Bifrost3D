@@ -4,6 +4,7 @@ set(SRCS
   CompareTest.h
   Expects.h
   main.cpp
+  StatisticsTest.h
 )
 
 add_executable(${PROJECT_NAME} ${SRCS})
