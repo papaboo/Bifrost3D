@@ -107,7 +107,7 @@ float ssim(Image reference_image, Image target_image) {
     Vector3d covariance = image_stats.covariance();
 
     // Compute SSIM, algorithm (13)
-    double C1 = 0.000001, C2 = 0.0000001;
+    double C1 = 0.01, C2 = 0.03;
 
     Vector3d ssim = (2 * reference_mean * target_mean + C1) * (2 * covariance + C2) /
         ((reference_mean * reference_mean + target_mean * target_mean + C1) * (reference_variance + target_variance+ C2));
@@ -152,8 +152,7 @@ float ssim(Image reference_image, Image target_image, int bandwidth, Image diff_
         Statistics image_stats = {};
         for (int y = y_start; y < y_end; ++y)
             for (int x = x_start; x < x_end; ++x)
-                image_stats.add(reference_image.get_pixel(Vector2ui(x, y)).rgb(),
-                                target_image.get_pixel(Vector2ui(x, y)).rgb());
+                image_stats.add(reference[x + y * width], target[x + y * width]);
 
         Vector3d reference_mean = image_stats.reference_mean();
         Vector3d reference_variance = image_stats.reference_variance();
@@ -162,7 +161,7 @@ float ssim(Image reference_image, Image target_image, int bandwidth, Image diff_
         Vector3d covariance = image_stats.covariance();
 
         // Compute SSIM, algorithm (13)
-        double C1 = 0.000001, C2 = 0.0000001;
+        double C1 = 0.01, C2 = 0.03;
 
         Vector3d ssim_i = (2 * reference_mean * target_mean + C1) * (2 * covariance + C2) /
             ((reference_mean * reference_mean + target_mean * target_mean + C1) * (reference_variance + target_variance + C2));
