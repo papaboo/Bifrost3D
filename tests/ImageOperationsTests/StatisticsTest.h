@@ -53,6 +53,33 @@ GTEST_TEST(ImageOperations_Statistics, Stats) {
     EXPECT_RGB_EQ(RGB(float(covariance)), to_rgb(stats.covariance()));
 }
 
+GTEST_TEST(ImageOperations_Statistics, Weighting) {
+    Statistics verbose_stats = {};
+    verbose_stats.add(RGB(2), RGB(3));
+    verbose_stats.add(RGB(5), RGB(4));
+    verbose_stats.add(RGB(5), RGB(4));
+
+    Statistics weighted_stats = {};
+    weighted_stats.add(RGB(2), RGB(3));
+    weighted_stats.add(RGB(5), RGB(4), 2);
+
+    EXPECT_RGB_EQ(to_rgb(verbose_stats.reference_mean()), to_rgb(weighted_stats.reference_mean()));
+    EXPECT_RGB_EQ(to_rgb(verbose_stats.reference_variance()), to_rgb(weighted_stats.reference_variance()));
+    EXPECT_RGB_EQ(to_rgb(verbose_stats.target_mean()), to_rgb(weighted_stats.target_mean()));
+    EXPECT_RGB_EQ(to_rgb(verbose_stats.target_variance()), to_rgb(weighted_stats.target_variance()));
+    EXPECT_RGB_EQ(to_rgb(verbose_stats.covariance()), to_rgb(weighted_stats.covariance()));
+
+    Statistics low_weighted_stats = {};
+    low_weighted_stats.add(RGB(2), RGB(3), 0.5);
+    low_weighted_stats.add(RGB(5), RGB(4), 1);
+
+    EXPECT_RGB_EQ(to_rgb(verbose_stats.reference_mean()), to_rgb(low_weighted_stats.reference_mean()));
+    EXPECT_RGB_EQ(to_rgb(verbose_stats.reference_variance()), to_rgb(low_weighted_stats.reference_variance()));
+    EXPECT_RGB_EQ(to_rgb(verbose_stats.target_mean()), to_rgb(low_weighted_stats.target_mean()));
+    EXPECT_RGB_EQ(to_rgb(verbose_stats.target_variance()), to_rgb(low_weighted_stats.target_variance()));
+    EXPECT_RGB_EQ(to_rgb(verbose_stats.covariance()), to_rgb(low_weighted_stats.covariance()));
+}
+
 } // NS Compare
 } // NS ImageOperations
 
