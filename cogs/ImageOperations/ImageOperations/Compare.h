@@ -68,16 +68,16 @@ public:
         auto RGB_to_vector3d = [](RGB rgb) -> Vector3d { return Vector3d(rgb.r, rgb.g, rgb.b); };
 
         Vector3d reference = RGB_to_vector3d(reference_sample);
-        summed_reference += reference;
-        summed_reference_squared += reference * reference;
+        summed_reference += weight * reference;
+        summed_reference_squared += weight * reference * reference;
 
         Vector3d target = RGB_to_vector3d(target_sample);
-        summed_target += target;
-        summed_target_squared += target * target;
+        summed_target += weight * target;
+        summed_target_squared += weight * target * target;
 
-        summed_joint_expectation += reference * target;
+        summed_joint_expectation += weight * reference * target;
 
-        summed_weight += weight; // TODO use weight
+        summed_weight += weight;
     }
 };
 
@@ -109,7 +109,7 @@ float ssim(Image reference_image, Image target_image) {
     // Compute SSIM, algorithm (13)
     double C1 = 0.01, C2 = 0.03;
 
-    Vector3d ssim = (2 * reference_mean * target_mean + C1) * (2 * covariance + C2) /
+    Vector3d ssim = (2.0 * reference_mean * target_mean + C1) * (2.0 * covariance + C2) /
         ((reference_mean * reference_mean + target_mean * target_mean + C1) * (reference_variance + target_variance+ C2));
     RGB ssim_rgb = { float(ssim.x), float(ssim.y), float(ssim.z) };
 
@@ -120,7 +120,7 @@ float ssim(Image reference_image, Image target_image) {
 // Structural similarity index (SSIM).
 // http://www.cns.nyu.edu/pub/lcv/wang03-reprint.pdf
 // ------------------------------------------------------------------------------------------------
-float ssim(Image reference_image, Image target_image, int bandwidth, Image diff_image = Image()) {
+float mssim(Image reference_image, Image target_image, int bandwidth, Image diff_image = Image()) {
 
     assert(reference_image.get_width() > 0u && reference_image.get_height() > 0u);
     assert(reference_image.get_width() == target_image.get_width() && reference_image.get_height() == target_image.get_height());
@@ -138,8 +138,7 @@ float ssim(Image reference_image, Image target_image, int bandwidth, Image diff_
         }
 
     // Loop over all pixels and compute their SSIM values inside the kernel bandwidth.
-    double ssim = 0.0;
-    // #pragma omp parallel for // TODO But requires atomic ssim updates.
+    double mssim = 0.0;
     for (int i = 0; i < int(width * height); ++i) {
         int xx = i % width, yy = i / width;
 
@@ -151,8 +150,12 @@ float ssim(Image reference_image, Image target_image, int bandwidth, Image diff_
 
         Statistics image_stats = {};
         for (int y = y_start; y < y_end; ++y)
-            for (int x = x_start; x < x_end; ++x)
-                image_stats.add(reference[x + y * width], target[x + y * width]);
+            for (int x = x_start; x < x_end; ++x) {
+                float distance_squared = squared_magnitude(Vector2f(float(x - xx), float(y - yy)) / float(bandwidth));
+                float weight_variance = 1.5f * 1.5f;
+                float weight = exp(distance_squared / (2.0f * weight_variance)) / sqrtf(2.0f * PI<float>() * weight_variance);
+                image_stats.add(reference[x + y * width], target[x + y * width], weight);
+            }
 
         Vector3d reference_mean = image_stats.reference_mean();
         Vector3d reference_variance = image_stats.reference_variance();
@@ -163,21 +166,21 @@ float ssim(Image reference_image, Image target_image, int bandwidth, Image diff_
         // Compute SSIM, algorithm (13)
         double C1 = 0.01, C2 = 0.03;
 
-        Vector3d ssim_i = (2 * reference_mean * target_mean + C1) * (2 * covariance + C2) /
+        Vector3d ssim = (2.0 * reference_mean * target_mean + C1) * (2.0 * covariance + C2) /
             ((reference_mean * reference_mean + target_mean * target_mean + C1) * (reference_variance + target_variance + C2));
-        RGB ssim_rgb = { float(ssim_i.x), float(ssim_i.y), float(ssim_i.z) };
+        RGB ssim_rgb = { float(ssim.x), float(ssim.y), float(ssim.z) };
 
-        ssim += luma(ssim_rgb);
+        mssim += luma(ssim_rgb);
 
         if (diff_image.exists())
             diff_image.set_pixel(RGBA(1.0f - ssim_rgb.r, 1.0f - ssim_rgb.g, 1.0f - ssim_rgb.b, 1.0f), Vector2ui(xx, yy));
     }
-    ssim /= width * height;
+    mssim /= width * height;
 
     delete[] reference;
     delete[] target;
     
-    return float(ssim);
+    return float(mssim);
 }
 
 } // NS Compare

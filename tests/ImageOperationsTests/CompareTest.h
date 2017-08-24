@@ -92,11 +92,11 @@ TEST_F(ImageOperations_Compare, SSIM) {
     EXPECT_LT(ssim_3, ssim_2);
 }
 
-TEST_F(ImageOperations_Compare, SSIM_with_bandwidth_identity) {
+TEST_F(ImageOperations_Compare, MSSIM) {
     int width = 4, height = 4;
     Image img1 = create_image(width, height);
     Image img2 = create_image(width, height);
-    EXPECT_EQ(1.0f, ssim(img1, img2, 1));
+    EXPECT_EQ(1.0f, mssim(img1, img2, 1));
 
     // Verifying SSIM basically amounts to reimplementing the algorithm, 
     // so instead of verifying it, we test that it behaves as expected.
@@ -104,21 +104,21 @@ TEST_F(ImageOperations_Compare, SSIM_with_bandwidth_identity) {
     RGBA pixel_1_2 = img2.get_pixel(Vector2ui(1, 2));
     pixel_1_2.rgb() += RGB(1.0f);
     img2.set_pixel(pixel_1_2, Vector2ui(1, 2));
-    float ssim_1 = ssim(img1, img2, 1);
+    float mssim_1 = mssim(img1, img2, 1);
 
     RGBA pixel_3_1 = img2.get_pixel(Vector2ui(3, 1));
     pixel_3_1.rgb() += RGB(-1.0f);
     img2.set_pixel(pixel_3_1, Vector2ui(3, 1));
-    float ssim_2 = ssim(img1, img2, 1);
+    float mssim_2 = mssim(img1, img2, 1);
 
     RGBA pixel_0_1 = img2.get_pixel(Vector2ui(0, 1));
     pixel_0_1.rgb() += RGB(2.0f);
     img2.set_pixel(pixel_0_1, Vector2ui(0, 1));
-    float ssim_3 = ssim(img1, img2, 1);
+    float mssim_3 = mssim(img1, img2, 1);
 
-    EXPECT_LT(ssim_1, 1.0f);
-    EXPECT_LT(ssim_2, ssim_1);
-    EXPECT_LT(ssim_3, ssim_2);
+    EXPECT_LT(mssim_1, 1.0f);
+    EXPECT_LT(mssim_2, mssim_1);
+    EXPECT_LT(mssim_3, mssim_2);
 }
 
 } // NS Compare
