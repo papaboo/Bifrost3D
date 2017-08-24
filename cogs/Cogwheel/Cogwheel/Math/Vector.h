@@ -262,32 +262,32 @@ inline std::ostream& operator<<(std::ostream& s, Cogwheel::Math::Vector4<T> v){
 // ------------------------------------------------------------------------------------------------
 
 template<class T>
-inline Cogwheel::Math::Vector2<T> operator+(float lhs, Cogwheel::Math::Vector2<T> rhs) {
+inline Cogwheel::Math::Vector2<T> operator+(T lhs, Cogwheel::Math::Vector2<T> rhs) {
     return rhs + lhs;
 }
 
 template<class T>
-inline Cogwheel::Math::Vector3<T> operator+(float lhs, Cogwheel::Math::Vector3<T> rhs) {
+inline Cogwheel::Math::Vector3<T> operator+(T lhs, Cogwheel::Math::Vector3<T> rhs) {
     return rhs + lhs;
 }
 
 template<class T>
-inline Cogwheel::Math::Vector4<T> operator+(float lhs, Cogwheel::Math::Vector4<T> rhs) {
+inline Cogwheel::Math::Vector4<T> operator+(T lhs, Cogwheel::Math::Vector4<T> rhs) {
     return rhs + lhs;
 }
 
 template<class T>
-inline Cogwheel::Math::Vector2<T> operator*(float lhs, Cogwheel::Math::Vector2<T> rhs) {
+inline Cogwheel::Math::Vector2<T> operator*(T lhs, Cogwheel::Math::Vector2<T> rhs) {
     return rhs * lhs;
 }
 
 template<class T>
-inline Cogwheel::Math::Vector3<T> operator*(float lhs, Cogwheel::Math::Vector3<T> rhs) {
+inline Cogwheel::Math::Vector3<T> operator*(T lhs, Cogwheel::Math::Vector3<T> rhs) {
     return rhs * lhs;
 }
 
 template<class T>
-inline Cogwheel::Math::Vector4<T> operator*(float lhs, Cogwheel::Math::Vector4<T> rhs) {
+inline Cogwheel::Math::Vector4<T> operator*(T lhs, Cogwheel::Math::Vector4<T> rhs) {
     return rhs * lhs;
 }
 
