@@ -1,19 +1,43 @@
 BACKLOG:
-* OptiXRenderer: Investigate ray misses. Try a simpler scene than TestScene. Intersection count. White outer ring, blue and red inner.
+* CUDA 8.0 / DirectX / OptiX interop chain
+** D3D_DRIVER_TYPE_HARDWARE. Needed? Check if alrady set.
+** Steps:
+*** Try to map the surface in CUDA.
+*** Write to it from the CPU / CUDA
+*** Wrap it in an OptiX buffer.
+*** ...
+*** Champaign!
 
-* https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf
-* OptiXRenderer filtering.
-** Reconstruction filters
-*** Pr pixel.
-*** Linear.
-*** Mitchell.
+* Try a new new seeding strategy with a nice screen space seed distribution.
+** Perhaps write a small dev app to test various seeds and their first N random numbers?
+** Can Sobol / sample02 be used? Perhaps { sobol(x), INT_MAX / y }?
+** Ideally it would also have a good distribution if the we compare every second pixel instead of direct neighbours.
+
+* Light and BSDF samples in PRD
+** How do we handle coverage penetrations? Set BSDF weight to 1 and light radiance to 0, effectively negating the effects.
+*** Add seperate float on PRD for coverage PDF. We can't inline it in the BSDF PDF because that would affect MIS.
+*** And leave the MIS BSDF PDF alone, as the sample, from a MIS perspective, is still from the original surface.
+*** Setup scene with transparent and masked planes blocking a light to test it.
+** How do we handle direct light hits? Add emission to the monte carlo PRD.
+*** Zero the BSDF sample.
+** Add emission, RGB + diffusitivity
+
+* Reconstruction filters
+** Albedo generator?
+** Pr pixel.
+** Linear.
+** Mitchell.
 ** Filter neighbouring light samples before reconstruction.
 *** Screen space photon mapping approach with MIS weights, then add a (recursive?) bilateral blur for everything not yet filtered.
-*** Needs ray differentials.
-* CUDA 8.0 / DirectX / OptiX interop chain
+** Autoencoder approach. Offline first.
+*** Output 64 test images.
+*** Depth, RGB, light sample, BSDF sample, normal, pixel offset, material ID and PDF and length of next sample.
+*** Speed up training by train on 5x5 patches and then make it hierachically ourselves?
+
 * Material improvements
-** Metal specular color should go to white at grazing angles.
-** Importance sample improvement? Gold material in SphereScene has a bunch of checker artefacts, possibly from the BSDF sampling or MIS weighting. The material is practically specular though.
+** Metal specular tint should go to white at grazing angles.
+** A Spherical Cap Preserving Parameterization for Spherical Distributions
+** Importance sample improvement?
 *** Pr pixel debug with pixel indication?
 *** Gold, which is a specular metal, has a specular weight of 0.6, so it's (supposedly) 40% diffuse.
 ** IBL rho intensity.
@@ -46,7 +70,7 @@ BACKLOG:
 ** Only nodes in a certain scene should be rendered.
 ** Should a scene node know if it is in a scene and in which? Store the root scene ID pr node?
 * 3DS, STL and PLY loader.
-* Serialize scene and models.
+* Serialize scene and models, perhaps just build GLFT importer and exporter at first. https://github.com/KhronosGroup/glTF
 
 libs
 * RtAudio wrapper - https://github.com/thestk/rtaudio
@@ -54,3 +78,4 @@ libs
 * LuaJit - OpenSource (Fallback to interpretted Lua if the target architecture isn't supported.)
 * ARGH! Command line passing tool - https://github.com/adishavit/argh
 * MXNet for deep learning. Or just use cuDNN and ignore the abstractions.
+* CUDA launch config - https://github.com/jaredhoberock/cuda_launch_config
