@@ -299,9 +299,9 @@ unsigned int count_degenerate_primitives(Meshes::UID mesh_ID, float epsilon_squa
         Vector3f p0 = mesh.get_positions()[primitive.x];
         Vector3f p1 = mesh.get_positions()[primitive.y];
         Vector3f p2 = mesh.get_positions()[primitive.z];
-        bool degenerate_positions = squared_magnitude(p0 - p1) < epsilon_squared ||
-                                    squared_magnitude(p0 - p2) < epsilon_squared ||
-                                    squared_magnitude(p1 - p2) < epsilon_squared;
+        bool degenerate_positions = magnitude_squared(p0 - p1) < epsilon_squared ||
+                                    magnitude_squared(p0 - p2) < epsilon_squared ||
+                                    magnitude_squared(p1 - p2) < epsilon_squared;
 
         if (degenerate_indices || degenerate_positions)
             ++degenerate_primitives;

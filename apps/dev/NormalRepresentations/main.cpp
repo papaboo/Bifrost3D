@@ -105,10 +105,10 @@ struct OctahedralUnit64 {
                                                   int(floor(clamp(p2.y, -1.0f, 1.0f) * INT_MAX))) };
 
         OctahedralUnit64 best_representation = floored_oct;
-        float lowest_sqrd_mag = squared_magnitude(best_representation.decode() - n);
+        float lowest_sqrd_mag = magnitude_squared(best_representation.decode() - n);
 
         auto best_oct_tester = [&](OctahedralUnit64 new_oct) {
-            float m = squared_magnitude(new_oct.decode() - n);
+            float m = magnitude_squared(new_oct.decode() - n);
             if (m < lowest_sqrd_mag) {
                 best_representation = new_oct;
                 lowest_sqrd_mag = m;

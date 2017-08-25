@@ -144,7 +144,7 @@ inline T dot(Vector<T> lhs, Vector<T> rhs) {
 // Compute the squared magnitude of the input vector.
 // Useful when comparing the relative size between vectors, where the exact magnitude isn't needed.
 template<template<typename> class Vector, typename T>
-inline T squared_magnitude(Vector<T> v) {
+inline T magnitude_squared(Vector<T> v) {
     return dot(v, v);
 }
 

@@ -139,11 +139,10 @@ inline float3 make_float3(Cogwheel::Math::Vector3f v) {
 }
 
 inline float alpha_sort_value(Cogwheel::Math::Vector3f camera_pos, Cogwheel::Math::Transform transform, Cogwheel::Math::AABB bounds) {
-    using namespace Cogwheel;
     using namespace Cogwheel::Math;
 
     Vector3f center = transform.inverse() * bounds.center();
-    return squared_magnitude(camera_pos - center);
+    return magnitude_squared(camera_pos - center);
 }
 
 } // NS DX11Renderer

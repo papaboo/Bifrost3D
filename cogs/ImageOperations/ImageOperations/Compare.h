@@ -151,7 +151,7 @@ float mssim(Image reference_image, Image target_image, int bandwidth, Image diff
         Statistics image_stats = {};
         for (int y = y_start; y < y_end; ++y)
             for (int x = x_start; x < x_end; ++x) {
-                float distance_squared = squared_magnitude(Vector2f(float(x - xx), float(y - yy)) / float(bandwidth));
+                float distance_squared = magnitude_squared(Vector2f(float(x - xx), float(y - yy)) / float(bandwidth));
                 float weight_variance = 1.5f * 1.5f;
                 float weight = exp(distance_squared / (2.0f * weight_variance)) / sqrtf(2.0f * PI<float>() * weight_variance);
                 image_stats.add(reference[x + y * width], target[x + y * width], weight);
