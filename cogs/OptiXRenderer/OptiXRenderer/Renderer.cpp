@@ -211,7 +211,7 @@ struct Renderer::Implementation {
 
         context = Context::create();
 
-        // TODO Use cuda_device_ID
+        // TODO Use cuda_device_ID to select device.
         device_IDs.optix = 0;
         context->setDevices(&device_IDs.optix, &device_IDs.optix + 1);
         int2 compute_capability;
@@ -225,7 +225,7 @@ struct Renderer::Implementation {
 
         context->setRayTypeCount(RayTypes::Count);
         context->setEntryPointCount(EntryPoints::Count);
-        context->setStackSize(1280);
+        context->setStackSize(1024);
 
         accumulations = 0u;
 
@@ -279,7 +279,7 @@ struct Renderer::Implementation {
         }
 
         { // Setup scene
-            optix::Acceleration root_acceleration = context->createAcceleration("Bvh", "Bvh");
+            optix::Acceleration root_acceleration = context->createAcceleration("Trbvh", "Bvh");
             root_acceleration->setProperty("refit", "1");
 
             root_node = context->createGroup();
@@ -390,6 +390,9 @@ struct Renderer::Implementation {
         context->setPrintEnabled(true);
         context->setPrintLaunchIndex(screensize.x / 2, screensize.y / 2);
         context->setExceptionEnabled(RT_EXCEPTION_ALL, true);
+#else
+        context->setPrintEnabled(false);
+        context->setExceptionEnabled(RT_EXCEPTION_ALL, false);
 #endif
 
         OPTIX_VALIDATE(context);
