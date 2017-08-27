@@ -9,6 +9,7 @@
 #include <DX11OptiXAdaptor/DX11OptiXAdaptor.h>
 #include <DX11Renderer/Renderer.h>
 #include <DX11Renderer/Utils.h>
+#include <OptiXRenderer/Defines.h>
 #include <OptiXRenderer/Renderer.h>
 
 #include <cuda_runtime.h>
@@ -23,14 +24,26 @@
 
 namespace DX11OptiXAdaptor {
 
+inline void throw_on_failure(cudaError_t error, const std::string& file, int line) {
+    if (error != cudaSuccess) {
+        std::string message = "[file:" + file + " line:" + std::to_string(line) + 
+            "] CUDA errror: " + std::string(cudaGetErrorString(error));
+        printf("%s.\n", message.c_str());
+        throw std::exception(message.c_str(), error);
+    }
+}
+
+#define THROW_ON_CUDA_FAILURE(error) ::DX11OptiXAdaptor::throw_on_failure(error, __FILE__,__LINE__)
+
 class DX11OptiXAdaptor::Implementation {
+    int m_cuda_device_ID = -1;
     ID3D11Device1& m_device;
     ID3D11DeviceContext1* m_render_context;
 
-    struct { // Buffer
-        ID3D11Buffer* dx_buffer;
+    struct {
         ID3D11ShaderResourceView* dx_SRV;
         optix::Buffer optix_buffer;
+        cudaGraphicsResource* cuda_buffer;
         int capacity;
         int width;
         int height;
@@ -49,7 +62,6 @@ public:
 
         device.GetImmediateContext1(&m_render_context);
 
-        int cuda_device = -1;
         { // Get CUDA device from DX11 context.
             IDXGIDevice* dxgi_device = nullptr;
             HRESULT hr = device.QueryInterface(IID_PPV_ARGS(&dxgi_device));
@@ -60,12 +72,12 @@ public:
             THROW_ON_FAILURE(hr); 
             dxgi_device->Release();
 
-            cudaError_t error = cudaD3D11GetDevice(&cuda_device, adapter);
-            // TODO Throw on CUDA error
+            cudaError_t error = cudaD3D11GetDevice(&m_cuda_device_ID, adapter);
+            THROW_ON_CUDA_FAILURE(error);
             adapter->Release();
 
             // Create OptiX Renderer on device.
-            m_optix_renderer = OptiXRenderer::Renderer::initialize(cuda_device, width_hint, height_hint);
+            m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, width_hint, height_hint);
         }
 
         {
@@ -133,12 +145,11 @@ public:
     }
 
     ~Implementation() {
-        DX11Renderer::safe_release(&m_render_target.dx_buffer);
+        m_render_target.optix_buffer = nullptr;
+        THROW_ON_CUDA_FAILURE(cudaGraphicsUnregisterResource(m_render_target.cuda_buffer));
         DX11Renderer::safe_release(&m_render_target.dx_SRV);
-        DX11Renderer::safe_release(&m_constant_buffer);
 
-        if (m_render_target.optix_buffer)
-            m_render_target.optix_buffer->unregisterD3D11Buffer();
+        DX11Renderer::safe_release(&m_constant_buffer);
 
         delete m_optix_renderer;
     }
@@ -151,24 +162,39 @@ public:
         if (m_render_target.width != width || m_render_target.height != height)
             resize_render_target(width, height);
 
-        m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, m_render_target.width, m_render_target.height);
+        { // Render to render target.
+            cudaError_t error = cudaGraphicsMapResources(1, &m_render_target.cuda_buffer); // Done before rendering?
+            THROW_ON_CUDA_FAILURE(error);
+            ushort4* pixels;
+            size_t byte_count;
+            error = cudaGraphicsResourceGetMappedPointer((void**)&pixels, &byte_count, m_render_target.cuda_buffer);
+            THROW_ON_CUDA_FAILURE(error);
 
-        m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        m_render_context->OMSetBlendState(nullptr, nullptr, 0xffffffff);
+            OPTIX_VALIDATE(m_optix_renderer->get_context());
+            OPTIX_VALIDATE(m_render_target.optix_buffer);
+            m_render_target.optix_buffer->setDevicePointer(m_cuda_device_ID, (CUdeviceptr)pixels);
+            m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, m_render_target.width, m_render_target.height);
 
-        m_render_context->VSSetShader(m_vertex_shader, 0, 0);
-        m_render_context->PSSetShader(m_pixel_shader, 0, 0);
+            THROW_ON_CUDA_FAILURE(cudaGraphicsUnmapResources(1, &m_render_target.cuda_buffer));
+        }
 
-        m_render_context->PSSetConstantBuffers(0, 1, &m_constant_buffer);
-        m_render_context->PSSetShaderResources(0, 1, &m_render_target.dx_SRV);
+        { // Render to back buffer.
+            m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            m_render_context->OMSetBlendState(nullptr, nullptr, 0xffffffff);
 
-        m_render_context->Draw(3, 0);
+            m_render_context->VSSetShader(m_vertex_shader, 0, 0);
+            m_render_context->PSSetShader(m_pixel_shader, 0, 0);
+
+            m_render_context->PSSetConstantBuffers(0, 1, &m_constant_buffer);
+            m_render_context->PSSetShaderResources(0, 1, &m_render_target.dx_SRV);
+
+            m_render_context->Draw(3, 0);
+        }
     }
 
     void resize_render_target(int width, int height) {
 
         if (m_render_target.capacity < width * height) {
-            DX11Renderer::safe_release(&m_render_target.dx_buffer);
             DX11Renderer::safe_release(&m_render_target.dx_SRV);
 
             m_render_target.capacity = width * height;
@@ -181,7 +207,8 @@ public:
             desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
             desc.MiscFlags = 0;
 
-            HRESULT hr = m_device.CreateBuffer(&desc, nullptr, &m_render_target.dx_buffer);
+            ID3D11Buffer* dx_buffer;
+            HRESULT hr = m_device.CreateBuffer(&desc, nullptr, &dx_buffer);
             THROW_ON_FAILURE(hr);
 
             D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
@@ -189,29 +216,30 @@ public:
             srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
             srv_desc.Buffer.NumElements = m_render_target.capacity;
 
-            hr = m_device.CreateShaderResourceView(m_render_target.dx_buffer, &srv_desc, &m_render_target.dx_SRV);
+            hr = m_device.CreateShaderResourceView(dx_buffer, &srv_desc, &m_render_target.dx_SRV);
             THROW_ON_FAILURE(hr);
-        
-            // Register the buffer with OptiX
-            optix::Context optix_context = m_optix_renderer->get_context();
-            if (m_render_target.optix_buffer)
-                m_render_target.optix_buffer->unregisterD3D11Buffer();
-            m_render_target.optix_buffer = optix_context->createBufferFromD3D11Resource(RT_BUFFER_OUTPUT, m_render_target.dx_buffer);
 
-            assert(m_render_target.optix_buffer->getD3D11Resource() == m_render_target.dx_buffer);
+            // Register the buffer with CUDA.
+            if (m_render_target.cuda_buffer != nullptr)
+                THROW_ON_CUDA_FAILURE(cudaGraphicsUnregisterResource(m_render_target.cuda_buffer));
+            cudaError_t error = cudaGraphicsD3D11RegisterResource(&m_render_target.cuda_buffer, dx_buffer,
+                                                                  cudaGraphicsRegisterFlagsNone);
+            THROW_ON_CUDA_FAILURE(error);
+            cudaGraphicsResourceSetMapFlags(m_render_target.cuda_buffer, cudaGraphicsMapFlagsWriteDiscard);
+            dx_buffer->Release();
         }
 
-        { // Resize buffer and update DX constant buffer.
-            m_render_target.width = width;
-            m_render_target.height = height;
+        // Create optix buffer.
+        optix::Context optix_context = m_optix_renderer->get_context();
+        m_render_target.optix_buffer = optix_context->createBufferForCUDA(RT_BUFFER_OUTPUT, RT_FORMAT_HALF4, width, height);
+        // m_render_target.optix_buffer = optix_context->createBufferForCUDA(RT_BUFFER_INPUT_OUTPUT | RT_BUFFER_GPU_LOCAL, RT_FORMAT_HALF4, width, height);
 
-            m_render_target.optix_buffer->setSize(width, height);
-            m_render_target.optix_buffer->setFormat(RT_FORMAT_HALF4);
+        // Update the constant buffer to reflect the new dimensions.
+        int constant_data[4] = { width, height, 0, 0 };
+        m_render_context->UpdateSubresource(m_constant_buffer, 0, NULL, &constant_data, 0, 0);
 
-            // Update the constant buffer to reflect the new dimensions.
-            int constant_data[4] = { width, height, 0, 0 };
-            m_render_context->UpdateSubresource(m_constant_buffer, 0, NULL, &constant_data, 0, 0);
-        }
+        m_render_target.width = width;
+        m_render_target.height = height;
     }
 };
 
