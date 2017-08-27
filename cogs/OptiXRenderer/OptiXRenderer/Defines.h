@@ -17,7 +17,7 @@
 #define ENABLE_NEXT_EVENT_ESTIMATION 1
 
 template <typename T>
-void validate_resource(T resource, char* file, int line) {
+void validate_optix_resource(T resource, char* file, int line) {
     try {
         resource->validate();
     } catch (optix::Exception e) {
@@ -28,7 +28,7 @@ void validate_resource(T resource, char* file, int line) {
 
 // Validate macro. Will validate the optix object in debug mode.
 #ifdef _DEBUG
-#define OPTIX_VALIDATE(o) validate_resource(o, __FILE__,__LINE__)
+#define OPTIX_VALIDATE(o) validate_optix_resource(o, __FILE__,__LINE__)
 #else
 #define OPTIX_VALIDATE(o)
 #endif
