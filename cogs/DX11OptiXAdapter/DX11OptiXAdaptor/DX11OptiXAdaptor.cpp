@@ -230,9 +230,12 @@ public:
         }
 
         // Create optix buffer.
+        // See https://devtalk.nvidia.com/default/topic/946870/optix/optix-4-and-cuda-interop-new-limitation-with-input-output-buffers/
+        // for why the buffer is GPU_LOCAL instead of OUTPUT.
+        // A GPU local buffer will obviously not work with multiple GPUs.
         optix::Context optix_context = m_optix_renderer->get_context();
-        m_render_target.optix_buffer = optix_context->createBufferForCUDA(RT_BUFFER_OUTPUT, RT_FORMAT_HALF4, width, height);
-        // m_render_target.optix_buffer = optix_context->createBufferForCUDA(RT_BUFFER_INPUT_OUTPUT | RT_BUFFER_GPU_LOCAL, RT_FORMAT_HALF4, width, height);
+        assert(optix_context->getEnabledDeviceCount() == 1);
+        m_render_target.optix_buffer = optix_context->createBufferForCUDA(RT_BUFFER_INPUT_OUTPUT | RT_BUFFER_GPU_LOCAL, RT_FORMAT_HALF4, width, height);
 
         // Update the constant buffer to reflect the new dimensions.
         int constant_data[4] = { width, height, 0, 0 };
