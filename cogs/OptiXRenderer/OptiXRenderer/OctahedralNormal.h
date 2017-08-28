@@ -26,10 +26,10 @@ struct __align__(4) OctahedralNormal {
 
     __inline_all__ optix::float3 decode_unnormalized() const {
         optix::float2 p2 = optix::make_float2(encoding.x, encoding.y);
-        optix::float3 n = optix::make_float3(p2, SHRT_MAX - abs(p2.x) - abs(p2.y));
+        optix::float3 n = optix::make_float3(p2, SHRT_MAX - fabsf(p2.x) - fabsf(p2.y));
         if (n.z < 0.0f) {
-            float tmp_x = (SHRT_MAX - abs(n.y)) * sign(n.x);
-            n.y = (SHRT_MAX - abs(n.x)) * sign(n.y);
+            float tmp_x = (SHRT_MAX - fabsf(n.y)) * sign(n.x);
+            n.y = (SHRT_MAX - fabsf(n.x)) * sign(n.y);
             n.x = tmp_x;
         }
         return n;

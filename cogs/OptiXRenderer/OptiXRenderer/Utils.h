@@ -14,6 +14,8 @@
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_matrix_namespace.h>
 
+#include <cmath>
+
 namespace OptiXRenderer {
 
 __inline_dev__ optix::float3 project_ray_direction(optix::float2 viewport_pos, 
