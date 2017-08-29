@@ -1,7 +1,5 @@
 BACKLOG:
-* Why is backface culling not disabled on leafs in San Miguel.
-** Are leafs rendered as cutouts or transparent? 
-** If transparent then try to autodetect cutout on texture load. Or as a post process (probably better)
+* SimpleViewer: Try to detect cutouts and autoset the property.
 
 * Try a new new seeding strategy with a nice screen space seed distribution.
 ** Perhaps write a small dev app to test various seeds and their first N random numbers?

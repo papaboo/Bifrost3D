@@ -322,7 +322,7 @@ public:
             { // Render transparent models
 
                 // Apply used cutout state if not already applied.
-                bool no_cutouts_present = m_cutout.first_model_index > m_transparent.first_model_index;
+                bool no_cutouts_present = m_cutout.first_model_index >= m_transparent.first_model_index;
                 if (no_cutouts_present)
                     m_render_context->RSSetState(m_cutout.raster_state);
 
