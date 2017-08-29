@@ -172,7 +172,7 @@ public:
 
             OPTIX_VALIDATE(m_optix_renderer->get_context());
             OPTIX_VALIDATE(m_render_target.optix_buffer);
-            m_render_target.optix_buffer->setDevicePointer(m_cuda_device_ID, (CUdeviceptr)pixels);
+            m_render_target.optix_buffer->setDevicePointer(m_cuda_device_ID, pixels);
             m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, m_render_target.width, m_render_target.height);
 
             THROW_ON_CUDA_FAILURE(cudaGraphicsUnmapResources(1, &m_render_target.cuda_buffer));

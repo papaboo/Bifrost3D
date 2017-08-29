@@ -6,10 +6,14 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
 )
 
-find_package(CUDA 7.5)
+if (MSVC12)
+    find_package(CUDA 7.5)
+else(MSVC14)
+    find_package(CUDA 8.0)
+endif()
 find_package(OptiX)
 
-if (CUDA_FOUND AND OPTIX_FOUND AND WIN32 AND MSVC12)
+if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
   install_file(${OPTIX_1_DLL})
   install_file(${OPTIX_U_1_DLL})
 

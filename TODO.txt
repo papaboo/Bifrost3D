@@ -1,26 +1,23 @@
 BACKLOG:
-* CUDA 8.0 / DirectX / OptiX interop chain
-** D3D_DRIVER_TYPE_HARDWARE. Needed? Check if alrady set.
-** Steps:
-*** Try to map the surface in CUDA.
-*** Write to it from the CPU / CUDA
-*** Wrap it in an OptiX buffer.
-*** ...
-*** Champaign!
+* Why is backface culling not disabled on leafs in San Miguel.
+** Are leafs rendered as cutouts or transparent? 
+** If transparent then try to autodetect cutout on texture load. Or as a post process (probably better)
 
 * Try a new new seeding strategy with a nice screen space seed distribution.
 ** Perhaps write a small dev app to test various seeds and their first N random numbers?
+*** Std dev of the pixel seeds and the pixel+neighbour seeds? As low as possible.
 ** Can Sobol / sample02 be used? Perhaps { sobol(x), INT_MAX / y }?
 ** Ideally it would also have a good distribution if the we compare every second pixel instead of direct neighbours.
+** Parallel for that abstracts { local_init, body, local finish} using OpenMP?
 
 * Light and BSDF samples in PRD
+** Add emission, RGB + diffusitivity
 ** How do we handle coverage penetrations? Set BSDF weight to 1 and light radiance to 0, effectively negating the effects.
 *** Add seperate float on PRD for coverage PDF. We can't inline it in the BSDF PDF because that would affect MIS.
 *** And leave the MIS BSDF PDF alone, as the sample, from a MIS perspective, is still from the original surface.
 *** Setup scene with transparent and masked planes blocking a light to test it.
 ** How do we handle direct light hits? Add emission to the monte carlo PRD.
 *** Zero the BSDF sample.
-** Add emission, RGB + diffusitivity
 
 * Reconstruction filters
 ** Albedo generator?

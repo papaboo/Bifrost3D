@@ -216,7 +216,7 @@ struct Renderer::Implementation {
         context->setDevices(&device_IDs.optix, &device_IDs.optix + 1);
         int2 compute_capability;
         context->getDeviceAttribute(device_IDs.optix, RT_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY, sizeof(compute_capability), &compute_capability);
-        int optix_major = OPTIX_VERSION / 1000, optix_minor = (OPTIX_VERSION % 1000) / 10, optix_micro = OPTIX_VERSION % 10;
+        int optix_major = OPTIX_VERSION / 10000, optix_minor = (OPTIX_VERSION % 10000) / 100, optix_micro = OPTIX_VERSION % 100;
         printf("OptiX %u.%u.%u renderer using device %u: '%s' with compute capability %u.%u.\n", 
             optix_major, optix_minor, optix_micro, 
             device_IDs.optix, context->getDeviceName(device_IDs.optix).c_str(), compute_capability.x, compute_capability.y);
@@ -225,7 +225,7 @@ struct Renderer::Implementation {
 
         context->setRayTypeCount(RayTypes::Count);
         context->setEntryPointCount(EntryPoints::Count);
-        context->setStackSize(1024);
+        context->setStackSize(1280);
 
         accumulations = 0u;
 
