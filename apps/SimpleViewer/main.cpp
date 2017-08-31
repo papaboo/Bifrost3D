@@ -354,6 +354,54 @@ void mesh_combine_whole_scene(SceneNodes::UID scene_root) {
     }
 }
 
+void detect_and_flag_cutout_materials() {
+    // A cutout is a black / white alpha mask. In order to allow for textures with 'soft edges' to be flagged as cut outs 
+    // (because transparency is a pain) we allow soft borders.
+    // These are detected by grouping pixels in 2x2 groups. If a single pixel in that group is non-grey, then the group is considered a cutout.
+
+    enum State : unsigned char { Unprocessed, Cutout, Transparent};
+
+    std::vector<State> image_states = std::vector<State>();
+    image_states.resize(Images::capacity());
+    memset(image_states.data(), Unprocessed, image_states.capacity());
+
+    for (MeshModel model : MeshModels::get_iterable()) {
+        Material material = model.get_material();
+        if (material.get_coverage_texture_ID() != Textures::UID::invalid_UID()) {
+            Image coverage_img = Textures::get_image_ID(material.get_coverage_texture_ID());
+            assert(coverage_img.get_pixel_format() == PixelFormat::I8);
+
+            State& image_state = image_states[coverage_img.get_ID()];
+            if (image_state == Unprocessed)
+            {
+                int width = coverage_img.get_width(), height = coverage_img.get_height();
+                unsigned char* pixels = (unsigned char*)coverage_img.get_pixels();
+
+                auto is_cutout_opacity = [](unsigned char intensity) -> bool { return intensity < 2 || 253 < intensity; };
+
+                image_state = Cutout;
+                for (int y = 0; y < height - 1; ++y)
+                    for (int x = 0; x < width - 1; ++x) {
+                        unsigned char intensity = pixels[x + y * width];
+                        if (!is_cutout_opacity(intensity)) {
+                            // Intensity is not black / white.
+                            // Check if the pixel is part of a border or if its part of a larger 'greyish blob'.
+
+                            bool cutout_border = is_cutout_opacity(pixels[(x + 1) + y * width])
+                                || is_cutout_opacity(pixels[x + (y + 1) * width])
+                                || is_cutout_opacity(pixels[(x + 1) + (y + 1) * width]);
+                            if (!cutout_border)
+                                image_state = Transparent;
+                        }
+                    }
+            }
+
+            if (image_state == Cutout)
+                material.set_flags(MaterialFlag::Cutout);
+        }
+    }
+}
+
 static inline void miniheaps_cleanup_callback(void*) {
     Images::reset_change_notifications();
     LightSources::reset_change_notifications();
@@ -415,7 +463,8 @@ int initializer(Cogwheel::Core::Engine& engine) {
         printf("Loading scene: '%s'\n", g_scene.c_str());
         SceneNodes::UID obj_root_ID = ObjLoader::load(g_scene, load_image);
         SceneNodes::set_parent(obj_root_ID, root_node_ID);
-        mesh_combine_whole_scene(root_node_ID);
+        // mesh_combine_whole_scene(root_node_ID);
+        detect_and_flag_cutout_materials();
         load_model_from_file = true;
     }
 

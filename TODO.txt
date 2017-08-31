@@ -1,11 +1,7 @@
 BACKLOG:
-* SimpleViewer: Try to detect cutouts and autoset the property.
-
 * Try a new new seeding strategy with a nice screen space seed distribution.
-** Perhaps write a small dev app to test various seeds and their first N random numbers?
-*** Std dev of the pixel seeds and the pixel+neighbour seeds? As low as possible.
+** Test RMS of expected random sample distance: 1 / sample count.
 ** Can Sobol / sample02 be used? Perhaps { sobol(x), INT_MAX / y }?
-** Ideally it would also have a good distribution if the we compare every second pixel instead of direct neighbours.
 ** Parallel for that abstracts { local_init, body, local finish} using OpenMP?
 
 * Light and BSDF samples in PRD
