@@ -49,20 +49,6 @@ FileType get_file_type(const std::string& path) {
     }
 }
 
-ChannelType get_channel_type(PixelFormat format) {
-    switch (format) {
-    case PixelFormat::RGB24:
-    case PixelFormat::RGBA32:
-        return ChannelType::Char;
-    case PixelFormat::RGB_Float:
-    case PixelFormat::RGBA_Float:
-        return ChannelType::Float;
-    case PixelFormat::Unknown:
-    default:
-        return ChannelType::Unknown;
-    }
-}
-
 bool write(Image image, const std::string& path) {
 
     if (image.get_depth() != 1)
