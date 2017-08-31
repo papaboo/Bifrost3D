@@ -46,6 +46,8 @@ static PixelFormat resolve_format(int channels, bool is_HDR) {
 
 unsigned int sizeof_format(PixelFormat format) {
     switch (format) {
+    case Cogwheel::Assets::PixelFormat::I8:
+        return sizeof(unsigned char);
     case Cogwheel::Assets::PixelFormat::RGB24:
         return sizeof(unsigned char) * 3;
     case Cogwheel::Assets::PixelFormat::RGBA32:
