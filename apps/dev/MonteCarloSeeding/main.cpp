@@ -15,6 +15,9 @@
 using namespace Cogwheel::Math;
 using namespace std;
 
+// ------------------------------------------------------------------------------------------------
+// Linear congruential random number generator.
+// ------------------------------------------------------------------------------------------------
 unsigned int reverse_bits(unsigned int n) {
     // Reverse bits of n.
     n = (n << 16) | (n >> 16);
@@ -23,6 +26,20 @@ unsigned int reverse_bits(unsigned int n) {
     n = ((n & 0x33333333) << 2) | ((n & 0xcccccccc) >> 2);
     n = ((n & 0x55555555) << 1) | ((n & 0xaaaaaaaa) >> 1);
     return n;
+}
+
+// Insert a 0 bit in between each of the 16 low bits of v.
+unsigned int part_by_1(unsigned int v) {
+    v &= 0x0000ffff;                  // x = ---- ---- ---- ---- fedc ba98 7654 3210
+    v = (v ^ (v << 8)) & 0x00ff00ff; // x = ---- ---- fedc ba98 ---- ---- 7654 3210
+    v = (v ^ (v << 4)) & 0x0f0f0f0f; // x = ---- fedc ---- ba98 ---- 7654 ---- 3210
+    v = (v ^ (v << 2)) & 0x33333333; // x = --fe --dc --ba --98 --76 --54 --32 --10
+    v = (v ^ (v << 1)) & 0x55555555; // x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
+    return v;
+}
+
+unsigned int morton_encode(unsigned int x, unsigned int y) {
+    return part_by_1(y) | (part_by_1(x) << 1);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -52,7 +69,7 @@ public:
 };
 
 template <typename Sampler>
-void test_sampler(int width, int height, int sample_count, const Sampler& sampler) {
+void test_sampler(const std::string& name, int width, int height, int sample_count, const Sampler& sampler) {
     vector<Statistics<double> > per_pixel_stats; per_pixel_stats.resize(width * height);
     vector<Statistics<double> > per_neighbourhood_stats; per_neighbourhood_stats.resize(width * height);
 
@@ -102,10 +119,12 @@ void test_sampler(int width, int height, int sample_count, const Sampler& sample
 
     // Merge all stats
     auto pixel_stats = Statistics<double>::merge(per_pixel_stats.begin(), per_pixel_stats.end());
-    printf("Pixel RMS: %f\n", pixel_stats.rms());
-
     auto neighbourhood_stats = Statistics<double>::merge(per_neighbourhood_stats.begin(), per_neighbourhood_stats.end());
-    printf("Neighbour RMS: %f\n", neighbourhood_stats.rms());
+
+    // Output
+    printf("%s:\n", name.c_str());
+    printf("  Pixel RMS: %f\n", pixel_stats.rms());
+    printf("  Neighbour RMS: %f\n", neighbourhood_stats.rms());
 }
 
 int main(int argc, char** argv) {
@@ -113,6 +132,7 @@ int main(int argc, char** argv) {
 
     int width = 128, height = 128, sample_count = 7;
 
+    // Sampling initialized by jenkins hash.
     auto hash_sampler = [width](int x, int y, int sample_count) -> vector<float> {
         vector<float> samples; samples.resize(sample_count);
         int hash = RNG::hash(x + y * width);
@@ -123,6 +143,30 @@ int main(int argc, char** argv) {
         }
         return samples;
     };
+    test_sampler("Jenkins hash", width, height, sample_count, hash_sampler);
 
-    test_sampler(width, height, sample_count, hash_sampler);
+    // Uniform sampling
+    auto uniform_sampler = [width](int x, int y, int sample_count) -> vector<float> {
+        vector<float> samples; samples.resize(sample_count);
+        LinearCongruential rng;
+        for (int s = 0; s < sample_count; ++s) {
+            rng.seed(reverse_bits(s));
+            samples[s] = rng.sample1f();
+        }
+        return samples;
+    };
+    test_sampler("Uniform", width, height, sample_count, uniform_sampler);
+
+    // Morton encoding seed
+    auto morton_sampler = [width](int x, int y, int sample_count) -> vector<float> {
+        vector<float> samples; samples.resize(sample_count);
+        LinearCongruential rng;
+        for (int s = 0; s < sample_count; ++s) {
+            unsigned int encoded_index = reverse_bits(morton_encode(x, y));
+            rng.seed((encoded_index ^ (encoded_index >> 16)) ^ (1013904223 * s));
+            samples[s] = rng.sample1f();
+        }
+        return samples;
+    };
+    test_sampler("Morton encoding", width, height, sample_count, morton_sampler);
 }
