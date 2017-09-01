@@ -30,6 +30,9 @@ struct Statistics final {
     //---------------------------------------------------------------------------------------------
     // Constructors
     //---------------------------------------------------------------------------------------------
+    Statistics()
+        : minimum(T(-1e30)), maximum(T(1e30)), mean(0), m2(0), sample_count(0) {}
+
     template <typename RandomAccessItr, class UnaryPredicate>
     Statistics(RandomAccessItr first, RandomAccessItr last, UnaryPredicate predicate) {
         sample_count = last - first;
@@ -63,8 +66,9 @@ struct Statistics final {
     //---------------------------------------------------------------------------------------------
     // Getters
     //---------------------------------------------------------------------------------------------
+    inline T rms() const { return (T)sqrt(m2); }
     inline T variance() const { return m2 - mean * mean; }
-    inline T standard_deviation() const { return sqrt(variance()); }
+    inline T standard_deviation() const { return (T)sqrt(variance()); }
 
     //---------------------------------------------------------------------------------------------
     // Operations.
@@ -87,6 +91,14 @@ struct Statistics final {
         mean = (mean * sample_count + other.mean * other.sample_count) / total_sample_count;
         m2 = (m2 * sample_count + other.m2 * other.sample_count) / total_sample_count;
         sample_count = total_sample_count;
+    }
+
+    template <typename RandomAccessItr>
+    static Statistics merge(RandomAccessItr first, RandomAccessItr last) {
+        Statistics res = *first;
+        while (++first < last)
+            res.merge_with(*first);
+        return res;
     }
 };
 
