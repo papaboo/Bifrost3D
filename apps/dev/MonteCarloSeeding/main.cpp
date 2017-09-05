@@ -157,11 +157,11 @@ unsigned int reverse_bits(unsigned int n) {
 
 // Insert a 0 bit in between each of the 16 low bits of v.
 unsigned int part_by_1(unsigned int v) {
-    v &= 0x0000ffff;                  // x = ---- ---- ---- ---- fedc ba98 7654 3210
-    v = (v ^ (v << 8)) & 0x00ff00ff; // x = ---- ---- fedc ba98 ---- ---- 7654 3210
-    v = (v ^ (v << 4)) & 0x0f0f0f0f; // x = ---- fedc ---- ba98 ---- 7654 ---- 3210
-    v = (v ^ (v << 2)) & 0x33333333; // x = --fe --dc --ba --98 --76 --54 --32 --10
-    v = (v ^ (v << 1)) & 0x55555555; // x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
+    v &= 0x0000ffff;                 // v = ---- ---- ---- ---- fedc ba98 7654 3210
+    v = (v ^ (v << 8)) & 0x00ff00ff; // v = ---- ---- fedc ba98 ---- ---- 7654 3210
+    v = (v ^ (v << 4)) & 0x0f0f0f0f; // v = ---- fedc ---- ba98 ---- 7654 ---- 3210
+    v = (v ^ (v << 2)) & 0x33333333; // v = --fe --dc --ba --98 --76 --54 --32 --10
+    v = (v ^ (v << 1)) & 0x55555555; // v = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
     return v;
 }
 
@@ -174,13 +174,13 @@ unsigned int morton_encode(unsigned int x, unsigned int y) {
 // ------------------------------------------------------------------------------------------------
 struct LinearCongruential {
 private:
+    unsigned int m_state;
+
+public:
     static const unsigned int multiplier = 1664525u;
     static const unsigned int increment = 1013904223u;
     static const unsigned int max = 0xFFFFFFFFu; // uint32 max.
 
-    unsigned int m_state;
-
-public:
     void seed(unsigned int seed) { m_state = seed; }
     unsigned int get_seed() const { return m_state; }
 
@@ -245,6 +245,16 @@ SeederStatistics seeder_statistics(int width, int height, int sample_count, cons
             vector<float> pixel_errors = compute_error(pixel_samples);
             per_pixel_stats[pixel_index] = Statistics<double>(pixel_errors.begin(), pixel_errors.end());
 
+            // Print pixel samples.
+            //if (x < 3 && y < 3) {
+            //    printf("[%u, %u]: ", x, y);
+            //    for (float sample : pixel_samples)
+            //        printf("%f, ", sample);
+            //    printf("\n");
+            //    if (sample_count > 1)
+            //        printf("  Stats:\n    Mean: %f\n    RMS: %f\n", per_pixel_stats[pixel_index].mean, per_pixel_stats[pixel_index].rms());
+            //}
+
             // Compute error for neighbourhood around pixel. TODO togglable wrap around mode.
             pixel_samples.reserve(5 * sample_count);
             for (float s : sampler((x > 0 ? x : width) - 1, y, sample_count))
@@ -257,6 +267,14 @@ SeederStatistics seeder_statistics(int width, int height, int sample_count, cons
                 pixel_samples.push_back(s);
             vector<float> neighbour_errors = compute_error(pixel_samples);
             per_neighbourhood_stats[pixel_index] = Statistics<double>(neighbour_errors.begin(), neighbour_errors.end());
+
+            // Print neighbour samples and statistics.
+            //if (x < 3 && y < 3) {
+            //    printf("[%u, %u]\n  ", x, y);
+            //    for (float sample : pixel_samples)
+            //        printf("%f, ", sample);
+            //    printf("\n  Stats:\n    Mean: %f\n    RMS: %f\n", per_neighbourhood_stats[pixel_index].mean, per_neighbourhood_stats[pixel_index].rms());
+            //}
         }
 
     // Merge all stats
@@ -276,10 +294,48 @@ void test_seeder(const std::string& name, int width, int height, int sample_coun
     printf("  Neighbour RMS: %f\n", statistics.neighbourhood_stats.rms());
 }
 
+template <typename Seeder>
+void test_seeder_x4(const std::string& name, int width, int height, int sample_count, const Seeder& seeder) {
+    auto statistics = seeder_statistics(width, height, sample_count, seeder);
+    
+    auto seeder1 = [seeder](unsigned int x, unsigned int y, int sample) -> unsigned int {
+        LinearCongruential rng; rng.seed(seeder(x, y, sample));
+        return rng.sample1ui();
+    };
+    auto statistics1 = seeder_statistics(width, height, sample_count, seeder1);
+    statistics.pixel_stats.merge_with(statistics1.pixel_stats);
+    statistics.neighbourhood_stats.merge_with(statistics1.neighbourhood_stats);
+
+    auto seeder2 = [seeder](unsigned int x, unsigned int y, int sample) -> unsigned int {
+        LinearCongruential rng; rng.seed(seeder(x, y, sample));
+        rng.sample1ui();
+        return rng.sample1ui();
+    };
+    auto statistics2 = seeder_statistics(width, height, sample_count, seeder2);
+    statistics.pixel_stats.merge_with(statistics2.pixel_stats);
+    statistics.neighbourhood_stats.merge_with(statistics2.neighbourhood_stats);
+
+    auto seeder3 = [seeder](unsigned int x, unsigned int y, int sample) -> unsigned int {
+        LinearCongruential rng; rng.seed(seeder(x, y, sample));
+        rng.sample1ui();
+        rng.sample1ui();
+        return rng.sample1ui();
+    };
+    auto statistics3 = seeder_statistics(width, height, sample_count, seeder3);
+    statistics.pixel_stats.merge_with(statistics3.pixel_stats);
+    statistics.neighbourhood_stats.merge_with(statistics3.neighbourhood_stats);
+
+
+    // Output
+    printf("%s with 4 dimensions:\n", name.c_str());
+    printf("  Pixel RMS: %f\n", statistics.pixel_stats.rms());
+    printf("  Neighbour RMS: %f\n", statistics.neighbourhood_stats.rms());
+}
+
 int main(int argc, char** argv) {
     printf("Monte carlo seeding strategies\n");
 
-    int width = 128, height = 128, sample_count = 7;
+    int width = 130, height = 130, sample_count = 5;
 
     // Sampling initialized by jenkins hash.
     auto hash_seeder = [width](int x, int y, int sample) -> unsigned int {
@@ -300,8 +356,38 @@ int main(int argc, char** argv) {
     };
     test_seeder("Morton encoding", width, height, sample_count, morton_seeder);
 
+    // Sobol encoding seed
+    auto sobol_seeder = [width](int x, int y, int sample) -> unsigned int {
+        auto sobol2 = [](unsigned int n, unsigned int scramble) -> unsigned int {
+            for (unsigned int v = 1u << 31u; n != 0; n >>= 1u, v ^= v >> 1u)
+                if (n & 0x1) scramble ^= v;
+            return scramble;
+        };
 
-    // TODO Inline sampling in function. Lambda should just be the seed.
-    // TODO Sobol
+        unsigned int encoded_index = reverse_bits(morton_encode(sobol2(x, 0u), y));
+        return (encoded_index ^ (encoded_index >> 16)) + reverse_bits(sample);
+    };
+    test_seeder("Sobol encoding", width, height, sample_count, sobol_seeder);
+
+    // Follows the pattern.
+    // 0.0 | 0.4 | 0.8 | 0.2 | 0.6 | 0.0
+    // 0.2 | 0.6 | 0.0 | 0.4 | 0.8 | 0.2
+    // 0.4 | 0.8 | 0.2 | 0.6 | 0.0 | 0.4
+    // Suboptimal for anything outside the 3x3 cross and quickly breaks down.
+    auto optimal3x3 = [](unsigned int x, unsigned int y, int sample) -> unsigned int {
+        unsigned int seed = x * 1717986918 + y * 858993459;
+        // seed ^= seed >> 16;
+        // seed ^= seed >> 8;
+        seed = (seed - LinearCongruential::increment) / LinearCongruential::multiplier;
+        // seed ^= (seed - LinearCongruential::increment) / LinearCongruential::multiplier;
+        // seed ^= (seed - LinearCongruential::increment) / LinearCongruential::multiplier;
+        // seed ^= (seed - LinearCongruential::increment) / LinearCongruential::multiplier;
+        return seed ^ reverse_bits(sample);
+    };
+    test_seeder("Optimial3x3 encoding", width, height, sample_count, optimal3x3);
+    test_seeder_x4("Optimial3x3 encoding", width, height, sample_count, optimal3x3);
+
     // TODO reverse(morton_encode(x, * prime, y * prime)). Find best primes
+    // TODO Try to test the seeds directly instead of the first sample.
+    //      Or test the first 4 dimensions (individually)
 }
