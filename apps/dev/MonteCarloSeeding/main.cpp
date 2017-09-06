@@ -245,16 +245,6 @@ SeederStatistics seeder_statistics(int width, int height, int sample_count, cons
             vector<float> pixel_errors = compute_error(pixel_samples);
             per_pixel_stats[pixel_index] = Statistics<double>(pixel_errors.begin(), pixel_errors.end());
 
-            // Print pixel samples.
-            //if (x < 3 && y < 3) {
-            //    printf("[%u, %u]: ", x, y);
-            //    for (float sample : pixel_samples)
-            //        printf("%f, ", sample);
-            //    printf("\n");
-            //    if (sample_count > 1)
-            //        printf("  Stats:\n    Mean: %f\n    RMS: %f\n", per_pixel_stats[pixel_index].mean, per_pixel_stats[pixel_index].rms());
-            //}
-
             // Compute error for neighbourhood around pixel. TODO togglable wrap around mode.
             pixel_samples.reserve(5 * sample_count);
             for (float s : sampler((x > 0 ? x : width) - 1, y, sample_count))
@@ -267,14 +257,6 @@ SeederStatistics seeder_statistics(int width, int height, int sample_count, cons
                 pixel_samples.push_back(s);
             vector<float> neighbour_errors = compute_error(pixel_samples);
             per_neighbourhood_stats[pixel_index] = Statistics<double>(neighbour_errors.begin(), neighbour_errors.end());
-
-            // Print neighbour samples and statistics.
-            //if (x < 3 && y < 3) {
-            //    printf("[%u, %u]\n  ", x, y);
-            //    for (float sample : pixel_samples)
-            //        printf("%f, ", sample);
-            //    printf("\n  Stats:\n    Mean: %f\n    RMS: %f\n", per_neighbourhood_stats[pixel_index].mean, per_neighbourhood_stats[pixel_index].rms());
-            //}
         }
 
     // Merge all stats
@@ -295,39 +277,24 @@ void test_seeder(const std::string& name, int width, int height, int sample_coun
 }
 
 template <typename Seeder>
-void test_seeder_x4(const std::string& name, int width, int height, int sample_count, const Seeder& seeder) {
+void test_seeder_in_dimensions(const std::string& name, int width, int height, int sample_count, int dimension_count, const Seeder& seeder) {
     auto statistics = seeder_statistics(width, height, sample_count, seeder);
     
-    auto seeder1 = [seeder](unsigned int x, unsigned int y, int sample) -> unsigned int {
-        LinearCongruential rng; rng.seed(seeder(x, y, sample));
-        return rng.sample1ui();
-    };
-    auto statistics1 = seeder_statistics(width, height, sample_count, seeder1);
-    statistics.pixel_stats.merge_with(statistics1.pixel_stats);
-    statistics.neighbourhood_stats.merge_with(statistics1.neighbourhood_stats);
+    for (int i = 1; i < dimension_count; ++i) {
+        auto seeder1 = [seeder, i](unsigned int x, unsigned int y, int sample) -> unsigned int {
+            LinearCongruential rng; rng.seed(seeder(x, y, sample));
+            for (int d = 0; d < i; ++d)
+                rng.sample1ui();
+            return rng.get_seed();
+        };
 
-    auto seeder2 = [seeder](unsigned int x, unsigned int y, int sample) -> unsigned int {
-        LinearCongruential rng; rng.seed(seeder(x, y, sample));
-        rng.sample1ui();
-        return rng.sample1ui();
-    };
-    auto statistics2 = seeder_statistics(width, height, sample_count, seeder2);
-    statistics.pixel_stats.merge_with(statistics2.pixel_stats);
-    statistics.neighbourhood_stats.merge_with(statistics2.neighbourhood_stats);
-
-    auto seeder3 = [seeder](unsigned int x, unsigned int y, int sample) -> unsigned int {
-        LinearCongruential rng; rng.seed(seeder(x, y, sample));
-        rng.sample1ui();
-        rng.sample1ui();
-        return rng.sample1ui();
-    };
-    auto statistics3 = seeder_statistics(width, height, sample_count, seeder3);
-    statistics.pixel_stats.merge_with(statistics3.pixel_stats);
-    statistics.neighbourhood_stats.merge_with(statistics3.neighbourhood_stats);
-
+        auto local_stats = seeder_statistics(width, height, sample_count, seeder1);
+        statistics.pixel_stats.merge_with(local_stats.pixel_stats);
+        statistics.neighbourhood_stats.merge_with(local_stats.neighbourhood_stats);
+    }
 
     // Output
-    printf("%s with 4 dimensions:\n", name.c_str());
+    printf("%s with %u dimensions:\n", name.c_str(), dimension_count);
     printf("  Pixel RMS: %f\n", statistics.pixel_stats.rms());
     printf("  Neighbour RMS: %f\n", statistics.neighbourhood_stats.rms());
 }
@@ -385,9 +352,10 @@ int main(int argc, char** argv) {
         return seed ^ reverse_bits(sample);
     };
     test_seeder("Optimial3x3 encoding", width, height, sample_count, optimal3x3);
-    test_seeder_x4("Optimial3x3 encoding", width, height, sample_count, optimal3x3);
+    test_seeder_in_dimensions("Optimial3x3 encoding", width, height, sample_count, 4, optimal3x3);
 
     // TODO reverse(morton_encode(x, * prime, y * prime)). Find best primes
-    // TODO Try to test the seeds directly instead of the first sample.
+    // TODO Try to test the seeds directly instead of the first sample. Fx by testing the number of different bits, e.g popcount(seed0 ^ seed1)
     //      Or test the first 4 dimensions (individually)
+    // Voxel block hash (x, y, dimension) -> dimensional seed
 }
