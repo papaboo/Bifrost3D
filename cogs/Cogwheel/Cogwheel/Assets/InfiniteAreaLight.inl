@@ -163,7 +163,7 @@ inline void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, 
 
             int light_sample_count = begin->sample_count / 2;
             for (int s = 0; s < begin->sample_count / 2; ++s) {
-                const LightSample& sample = light_samples[(s + RNG::hash(i)) % light_samples.size()];
+                const LightSample& sample = light_samples[(s + RNG::jenkins_hash(i)) % light_samples.size()];
                 if (sample.PDF < 0.000000001f)
                     continue;
 
@@ -179,7 +179,7 @@ inline void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, 
 
             int bsdf_sample_count = begin->sample_count - light_sample_count;
             for (int s = 0; s < bsdf_sample_count; ++s) {
-                GGX::Sample sample = ggx_samples[(s + RNG::hash(i + 1013904223)) % ggx_samples.size()];
+                GGX::Sample sample = ggx_samples[(s + RNG::jenkins_hash(i + 1013904223)) % ggx_samples.size()];
                 if (sample.PDF < 0.000000001f)
                     continue;
 

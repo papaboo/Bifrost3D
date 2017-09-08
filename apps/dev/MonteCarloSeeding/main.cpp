@@ -277,9 +277,9 @@ void test_seeder(const std::string& name, int width, int height, int sample_coun
 }
 
 template <typename Seeder>
-void test_seeder_in_dimensions(const std::string& name, int width, int height, int sample_count, int dimension_count, const Seeder& seeder) {
+SeederStatistics seeder_statistics(int width, int height, int sample_count, int dimension_count, const Seeder& seeder) {
     auto statistics = seeder_statistics(width, height, sample_count, seeder);
-    
+
     for (int i = 1; i < dimension_count; ++i) {
         auto seeder1 = [seeder, i](unsigned int x, unsigned int y, int sample) -> unsigned int {
             LinearCongruential rng; rng.seed(seeder(x, y, sample));
@@ -293,22 +293,76 @@ void test_seeder_in_dimensions(const std::string& name, int width, int height, i
         statistics.neighbourhood_stats.merge_with(local_stats.neighbourhood_stats);
     }
 
+    return statistics;
+}
+
+template <typename Seeder>
+void test_seeder_in_dimensions(const std::string& name, int width, int height, int sample_count, int dimension_count, const Seeder& seeder) {
+    auto statistics = seeder_statistics(width, height, sample_count, dimension_count, seeder);
+
     // Output
     printf("%s with %u dimensions:\n", name.c_str(), dimension_count);
     printf("  Pixel RMS: %f\n", statistics.pixel_stats.rms());
     printf("  Neighbour RMS: %f\n", statistics.neighbourhood_stats.rms());
 }
 
+// Distribute a set of ints inside a cube rotated by 45 degrees placed in a grid.
+// Fx for radius 1 the pattern looks like this.
+// | - | 1 | - |
+// | 0 | 2 | 4 |
+// | - | 3 | - |
+void build_rombe_pattern(int radius) {
+    auto print_grid = [](std::vector<int> grid, int grid_size) {
+        for (int y = 0; y < grid_size; ++y) {
+            printf("|");
+            for (int x = 0; x < grid_size; ++x) {
+                int v = grid[x + y * grid_size];
+                if (v < 10)
+                    printf("  %u |", v);
+                else
+                    printf(" %u |", v);
+            }
+            printf("\n");
+        }
+    };
+
+    int grid_size = radius * 2 + 1;
+    int cell_count = grid_size * grid_size;
+
+    int internal_cell_count = radius * 2 + 1;
+    for (int r = 0; r < radius; ++r)
+        internal_cell_count += 2 * (r * 2 + 1);
+
+    vector<int> grid; grid.resize(cell_count);
+    std::vector<int> value_occurence; value_occurence.resize(internal_cell_count);
+    for (int my = 0; my < grid_size; ++my)
+        for (int mx = 0; mx < grid_size; ++mx) {
+            // Clear value occurences.
+            for (int i = 0; i< grid_size; ++my)
+
+            // Fill grid
+            for (int y = 0; y < grid_size; ++y)
+                for (int x = 0; x < grid_size; ++x)
+                    grid[x + y * grid_size] = (x * mx + y * my) % internal_cell_count;
+
+            // Check validity.
+
+            print_grid(grid, grid_size);
+            printf("\n");
+        }
+}
+
 int main(int argc, char** argv) {
     printf("Monte carlo seeding strategies\n");
 
-    int width = 130, height = 130, sample_count = 5;
+    int width = 128, height = 128, sample_count = 5;
 
     // Sampling initialized by jenkins hash.
-    auto hash_seeder = [width](int x, int y, int sample) -> unsigned int {
-        return RNG::hash(x + y * width) + reverse_bits(sample);
+    auto jenkins_hash = [width](int x, int y, int sample) -> unsigned int {
+        return RNG::jenkins_hash(x + y * width) + reverse_bits(sample);
     };
-    test_seeder("Jenkins hash", width, height, sample_count, hash_seeder);
+    test_seeder("Jenkins hash", width, height, sample_count, jenkins_hash);
+    test_seeder_in_dimensions("Jenkins hash", width, height, sample_count, 4, jenkins_hash);
 
     // Uniform sampling
     auto uniform_seeder = [width](int x, int y, int sample) -> unsigned int {
@@ -343,19 +397,50 @@ int main(int argc, char** argv) {
     // Suboptimal for anything outside the 3x3 cross and quickly breaks down.
     auto optimal3x3 = [](unsigned int x, unsigned int y, int sample) -> unsigned int {
         unsigned int seed = x * 1717986918 + y * 858993459;
-        // seed ^= seed >> 16;
-        // seed ^= seed >> 8;
         seed = (seed - LinearCongruential::increment) / LinearCongruential::multiplier;
-        // seed ^= (seed - LinearCongruential::increment) / LinearCongruential::multiplier;
-        // seed ^= (seed - LinearCongruential::increment) / LinearCongruential::multiplier;
-        // seed ^= (seed - LinearCongruential::increment) / LinearCongruential::multiplier;
         return seed ^ reverse_bits(sample);
     };
     test_seeder("Optimial3x3 encoding", width, height, sample_count, optimal3x3);
     test_seeder_in_dimensions("Optimial3x3 encoding", width, height, sample_count, 4, optimal3x3);
 
-    // TODO reverse(morton_encode(x, * prime, y * prime)). Find best primes
-    // TODO Try to test the seeds directly instead of the first sample. Fx by testing the number of different bits, e.g popcount(seed0 ^ seed1)
-    //      Or test the first 4 dimensions (individually)
-    // Voxel block hash (x, y, dimension) -> dimensional seed
+    // Teschner et al, 2013
+    auto teschner_hash = [](unsigned int x, unsigned int y, int sample) -> unsigned int {
+        return reverse_bits(RNG::teschner_hash(x, y) ^ sample);
+    };
+    test_seeder("Teschner hash", width, height, sample_count, teschner_hash);
+    test_seeder_in_dimensions("Teschner hash", width, height, sample_count, 4, teschner_hash);
+
+    // build_rombe_pattern(1);
+
+
+    /* { // Find primes that gives the lowest RMS pr dimension of the seeder: reverse(morton_encode(x, * prime, y * prime)).
+        int prime_x = 1, prime_y = 1;
+        float lowest_RMS = 1e30f;
+        for (int py = 0; py < prime_count; ++py) {
+            for (int px = 0; px < prime_count; ++px) {
+                auto prime_seeder = [px, py](unsigned int x, unsigned int y, int sample) -> unsigned int {
+                    unsigned int encoded_index = reverse_bits(morton_encode(x * primes[px], y * primes[py]));
+                    return (encoded_index ^ (encoded_index >> 16)) + reverse_bits(sample);
+                };
+
+                int dimension_count = 5;
+                auto statistics = seeder_statistics(width, height, sample_count, dimension_count, prime_seeder);
+
+                if (statistics.neighbourhood_stats.rms() < lowest_RMS) {
+                    prime_x = primes[px];
+                    prime_y = primes[py];
+                    lowest_RMS = float(statistics.neighbourhood_stats.rms());
+                }
+            }
+            printf("  %f percent: prime x: %u, prime y: %u, rms: %f\n", float(py + 1) / prime_count * 100.0f, prime_x, prime_y, lowest_RMS);
+        }
+
+        printf("Best primes: (%u, %u)\n", prime_x, prime_y);
+        auto prime_seeder = [prime_x, prime_y](unsigned int x, unsigned int y, int sample) -> unsigned int {
+            unsigned int encoded_index = reverse_bits(morton_encode(x * prime_x, y * prime_y));
+            return (encoded_index ^ (encoded_index >> 16)) + reverse_bits(sample);
+        };
+        test_seeder("Prime detection", width, height, sample_count, prime_seeder);
+        test_seeder_in_dimensions("Prime detection", width, height, sample_count, 5, prime_seeder);
+    } */
 }

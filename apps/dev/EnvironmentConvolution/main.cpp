@@ -283,7 +283,7 @@ int initialize(Engine& engine) {
             int x = i % width;
             int y = i / width;
 
-            int bsdf_index_offset = RNG::hash(i);
+            int bsdf_index_offset = RNG::jenkins_hash(i);
             int light_index_offset = bsdf_index_offset;
 
             Vector2f up_uv = Vector2f((x + 0.5f) / width, (y + 0.5f) / height);
