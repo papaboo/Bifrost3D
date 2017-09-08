@@ -72,16 +72,10 @@ __inline_all__ optix::float2 sample02(unsigned int n, optix::uint2 scramble = op
     return optix::make_float2(van_der_corput(n, scramble.x), sobol2(n, scramble.y));
 }
 
-// Robert Jenkins hash function.
-// https://gist.github.com/badboy/6267743
-__inline_all__ unsigned int hash(unsigned int a) {
-    a = (a + 0x7ed55d16) + (a << 12);
-    a = (a ^ 0xc761c23c) ^ (a >> 19);
-    a = (a + 0x165667b1) + (a << 5);
-    a = (a + 0xd3a2646c) ^ (a << 9);
-    a = (a + 0xfd7046c5) + (a << 3);
-    a = (a ^ 0xb55a4f09) ^ (a >> 16);
-    return a;
+// Optimized Spatial Hashing for Collision Detection of Deformable Objects.
+// Teschner et al, 2013
+__inline_all__ unsigned int teschner_hash(unsigned int x, unsigned int y) {
+    return (x * 73856093) ^ (y * 19349669);
 }
 
 // Computes the power heuristic of pdf1 and pdf2.
