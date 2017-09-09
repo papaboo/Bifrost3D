@@ -311,6 +311,8 @@ void test_seeder_in_dimensions(const std::string& name, int width, int height, i
 // | - | 1 | - |
 // | 0 | 2 | 4 |
 // | - | 3 | - |
+// So far the valid patterns are only valid for the specific rombe that is tested and not when the rombe is moved along x or y.
+// A more general approach could fix this.
 void build_rombe_pattern(int radius) {
     auto print_grid = [](std::vector<int> grid, int grid_size) {
         for (int y = 0; y < grid_size; ++y) {
@@ -338,17 +340,31 @@ void build_rombe_pattern(int radius) {
     for (int my = 0; my < grid_size; ++my)
         for (int mx = 0; mx < grid_size; ++mx) {
             // Clear value occurences.
-            for (int i = 0; i< grid_size; ++my)
+            for (int i = 0; i < grid_size; ++i)
+                value_occurence[i] = 0;
 
             // Fill grid
             for (int y = 0; y < grid_size; ++y)
-                for (int x = 0; x < grid_size; ++x)
-                    grid[x + y * grid_size] = (x * mx + y * my) % internal_cell_count;
+                for (int x = 0; x < grid_size; ++x) {
+                    int value = (x * mx + y * my) % internal_cell_count;
+                    grid[x + y * grid_size] = value;
+
+                    // If the distance as x + y from the center is less than or equal to the radius, then the cell is part of the pattern.
+                    int distance = abs(x - radius) + abs(y - radius);
+                    if (distance <= radius)
+                        value_occurence[value] += 1;
+                }
 
             // Check validity.
+            bool pattern_valid = true;
+            for (int i = 0; i < grid_size; ++i)
+                pattern_valid &= value_occurence[i] == 1;
 
-            print_grid(grid, grid_size);
-            printf("\n");
+            if (pattern_valid) {
+                printf("mx %u, my %u, is valid: %s\n", mx, my, pattern_valid ? "true" : "false");
+                print_grid(grid, grid_size);
+                printf("\n");
+            }
         }
 }
 
@@ -410,37 +426,5 @@ int main(int argc, char** argv) {
     test_seeder("Teschner hash", width, height, sample_count, teschner_hash);
     test_seeder_in_dimensions("Teschner hash", width, height, sample_count, 4, teschner_hash);
 
-    // build_rombe_pattern(1);
-
-
-    /* { // Find primes that gives the lowest RMS pr dimension of the seeder: reverse(morton_encode(x, * prime, y * prime)).
-        int prime_x = 1, prime_y = 1;
-        float lowest_RMS = 1e30f;
-        for (int py = 0; py < prime_count; ++py) {
-            for (int px = 0; px < prime_count; ++px) {
-                auto prime_seeder = [px, py](unsigned int x, unsigned int y, int sample) -> unsigned int {
-                    unsigned int encoded_index = reverse_bits(morton_encode(x * primes[px], y * primes[py]));
-                    return (encoded_index ^ (encoded_index >> 16)) + reverse_bits(sample);
-                };
-
-                int dimension_count = 5;
-                auto statistics = seeder_statistics(width, height, sample_count, dimension_count, prime_seeder);
-
-                if (statistics.neighbourhood_stats.rms() < lowest_RMS) {
-                    prime_x = primes[px];
-                    prime_y = primes[py];
-                    lowest_RMS = float(statistics.neighbourhood_stats.rms());
-                }
-            }
-            printf("  %f percent: prime x: %u, prime y: %u, rms: %f\n", float(py + 1) / prime_count * 100.0f, prime_x, prime_y, lowest_RMS);
-        }
-
-        printf("Best primes: (%u, %u)\n", prime_x, prime_y);
-        auto prime_seeder = [prime_x, prime_y](unsigned int x, unsigned int y, int sample) -> unsigned int {
-            unsigned int encoded_index = reverse_bits(morton_encode(x * prime_x, y * prime_y));
-            return (encoded_index ^ (encoded_index >> 16)) + reverse_bits(sample);
-        };
-        test_seeder("Prime detection", width, height, sample_count, prime_seeder);
-        test_seeder_in_dimensions("Prime detection", width, height, sample_count, 5, prime_seeder);
-    } */
+    build_rombe_pattern(3);
 }
