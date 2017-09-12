@@ -27,15 +27,10 @@ namespace RNG {
         return float2(van_der_corput(n, scramble.x), sobol2(n, scramble.y));
     }
 
-    // Robert Jenkins hash function.
-    // https://gist.github.com/badboy/6267743
-    uint hash(uint a) {
-        a = (a + 0x7ed55d16) + (a << 12);
-        a = (a ^ 0xc761c23c) ^ (a >> 19);
-        a = (a + 0x165667b1) + (a << 5);
-        a = (a + 0xd3a2646c) ^ (a << 9);
-        a = (a + 0xfd7046c5) + (a << 3);
-        return (a ^ 0xb55a4f09) ^ (a >> 16);
+    // Optimized Spatial Hashing for Collision Detection of Deformable Objects.
+    // Teschner et al, 2013
+    unsigned int teschner_hash(unsigned int x, unsigned int y) {
+        return (x * 73856093) ^ (y * 19349669);
     }
 
     // Computes the power heuristic of pdf1 and pdf2.
@@ -142,7 +137,7 @@ void MIS_convolute(uint3 thread_ID : SV_DispatchThreadID) {
 
     uint light_sample_count, light_sample_stride;
     light_samples.GetDimensions(light_sample_count, light_sample_stride);
-    uint light_index_offset = RNG::hash(thread_ID.x + thread_ID.y * mip_width);
+    uint light_index_offset = RNG::teschner_hash(thread_ID.x, thread_ID.y);
     for (unsigned int l = 0; l < half_sample_count; ++l) {
         LightSample light_sample = light_samples[(l + light_index_offset) % light_sample_count];
 
