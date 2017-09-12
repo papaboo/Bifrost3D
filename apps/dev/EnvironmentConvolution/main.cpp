@@ -283,8 +283,8 @@ int initialize(Engine& engine) {
             int x = i % width;
             int y = i / width;
 
-            int bsdf_index_offset = RNG::jenkins_hash(i);
-            int light_index_offset = bsdf_index_offset;
+            int bsdf_index_offset = RNG::teschner_hash(x, y) ^ 83492791;
+            int light_index_offset = bsdf_index_offset ^ 83492791;
 
             Vector2f up_uv = Vector2f((x + 0.5f) / width, (y + 0.5f) / height);
             Vector3f up_vector = latlong_texcoord_to_direction(up_uv);
