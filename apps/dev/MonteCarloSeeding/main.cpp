@@ -143,17 +143,8 @@ static const int primes[1230] =
     9901, 9907, 9923, 9929, 9931, 9941, 9949, 9967, 9973, 10007 };
 
 // ------------------------------------------------------------------------------------------------
-// Linear congruential random number generator.
+// Morton encoding
 // ------------------------------------------------------------------------------------------------
-unsigned int reverse_bits(unsigned int n) {
-    // Reverse bits of n.
-    n = (n << 16) | (n >> 16);
-    n = ((n & 0x00ff00ff) << 8) | ((n & 0xff00ff00) >> 8);
-    n = ((n & 0x0f0f0f0f) << 4) | ((n & 0xf0f0f0f0) >> 4);
-    n = ((n & 0x33333333) << 2) | ((n & 0xcccccccc) >> 2);
-    n = ((n & 0x55555555) << 1) | ((n & 0xaaaaaaaa) >> 1);
-    return n;
-}
 
 // Insert a 0 bit in between each of the 16 low bits of v.
 unsigned int part_by_1(unsigned int v) {
@@ -420,11 +411,18 @@ int main(int argc, char** argv) {
     test_seeder_in_dimensions("Optimial3x3 encoding", width, height, sample_count, 4, optimal3x3);
 
     // Teschner et al, 2013
-    auto teschner_hash = [](unsigned int x, unsigned int y, int sample) -> unsigned int {
+    auto teschner_2D_hash = [](unsigned int x, unsigned int y, int sample) -> unsigned int {
         return reverse_bits(RNG::teschner_hash(x, y) ^ sample);
     };
-    test_seeder("Teschner hash", width, height, sample_count, teschner_hash);
-    test_seeder_in_dimensions("Teschner hash", width, height, sample_count, 4, teschner_hash);
+    test_seeder("Teschner 2D hash", width, height, sample_count, teschner_2D_hash);
+    test_seeder_in_dimensions("Teschner 2D hash", width, height, sample_count, 4, teschner_2D_hash);
 
-    build_rombe_pattern(3);
+    // Teschner et al, 2013
+    auto teschner_3D_hash = [](unsigned int x, unsigned int y, int sample) -> unsigned int {
+        return reverse_bits(RNG::teschner_hash(x, y, sample));
+    };
+    test_seeder("Teschner 3D hash", width, height, sample_count, teschner_3D_hash);
+    test_seeder_in_dimensions("Teschner 3D hash", width, height, sample_count, 4, teschner_3D_hash);
+
+    // build_rombe_pattern(3);
 }
