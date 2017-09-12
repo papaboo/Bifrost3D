@@ -57,6 +57,7 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Asset
 
     { // Draw light samples.
         sample_count = sample_count <= 0 ? 8192 : Math::next_power_of_two(sample_count);
+        int exponent = (int)log2(sample_count);
         if (disable_importance_sampling)
             sample_count = 1;
 
@@ -68,7 +69,11 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Asset
         } else {
             #pragma omp parallel for schedule(dynamic, 16)
             for (int i = 0; i < sample_count; ++i) {
-                Assets::LightSample sample = light.sample(Math::RNG::sample02(i));
+                // RNG::sample02 is correlated with the seeding strategy in the path tracer (hash ^ brev(accumulation).
+                // To avoid this, and keep the drawing the nicely distributed samples that sample02 gives us,
+                // we change the order in which the samples are drawn by reversing the bit pattern.
+                int s = Math::reverse_bits(i) >> (32 - exponent);
+                Assets::LightSample sample = light.sample(Math::RNG::sample02(s));
                 samples_data[i].radiance = { sample.radiance.r, sample.radiance.g, sample.radiance.b };
                 samples_data[i].PDF = sample.PDF;
                 samples_data[i].direction_to_light = { sample.direction_to_light.x, sample.direction_to_light.y, sample.direction_to_light.z };
