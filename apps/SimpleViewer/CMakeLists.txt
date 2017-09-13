@@ -4,6 +4,7 @@ set(SRCS
   CornellBoxScene.h
   main.cpp
   MaterialScene.h
+  OpacityScene.h
   SphereScene.h
   TestScene.h
 )

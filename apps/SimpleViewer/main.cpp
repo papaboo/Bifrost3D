@@ -8,6 +8,7 @@
 
 #include <CornellBoxScene.h>
 #include <MaterialScene.h>
+#include <OpacityScene.h>
 #include <SphereScene.h>
 #include <TestScene.h>
 
@@ -457,6 +458,8 @@ int initializer(Cogwheel::Core::Engine& engine) {
         create_material_scene(cam_ID, root_node_ID);
     else if (g_scene.compare("SphereScene") == 0)
         create_sphere_scene(engine, cam_ID, scene_ID);
+    else if (g_scene.compare("OpacityScene") == 0)
+        create_opacity_scene(engine, cam_ID, root_node_ID);
     else if (g_scene.compare("TestScene") == 0)
         create_test_scene(engine, cam_ID, root_node_ID);
     else {
