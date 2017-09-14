@@ -48,7 +48,7 @@ double estimate_rho(float3 wo, float roughness, unsigned int sample_count, Sampl
 
 Image estimate_rho(unsigned int width, unsigned int height, unsigned int sample_count, SampleRoughBSDF sample_rough_BSDF) {
     Image rho_image = Images::create2D("rho", PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
-    Math::RGB* rho_image_pixels = (Math::RGB*)rho_image.get_pixels();
+    Math::RGB* rho_image_pixels = rho_image.get_pixels<Math::RGB>();
     
     for (int y = 0; y < int(height); ++y) {
         float roughness = fmaxf(0.000001f, y / float(height - 1u));
@@ -88,7 +88,7 @@ void output_brdf(Image image, int sample_count, const std::string& filename, con
 
     unsigned int width = image.get_width();
     unsigned int height = image.get_height();
-    Math::RGB* image_pixels = (Math::RGB*)image.get_pixels();
+    Math::RGB* image_pixels = image.get_pixels<Math::RGB>();
 
     std::string ifdef_name = data_name;
     for (int s = 0; s < ifdef_name.length(); ++s)
@@ -186,7 +186,7 @@ int main(int argc, char** argv) {
         material_params.specularity = 0.0f;
 
         Image rho = Images::create2D("rho", PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
-        Math::RGB* rho_pixels = (Math::RGB*)rho.get_pixels();
+        Math::RGB* rho_pixels = rho.get_pixels<Math::RGB>();
 
         for (int y = 0; y < int(height); ++y) {
             material_params.roughness = y / float(height - 1u);

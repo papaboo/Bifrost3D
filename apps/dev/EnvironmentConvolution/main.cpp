@@ -151,7 +151,7 @@ void update(Engine& engine, void* none) {
             const GLint BASE_IMAGE_LEVEL = 0;
             const GLint NO_BORDER = 0;
             Image image = g_convoluted_images[image_index];
-            RGB* pixels = (RGB*)image.get_pixels();
+            RGB* pixels = image.get_pixels<RGB>();
             RGB* gamma_corrected_pixels = new RGB[image.get_pixel_count()];
             #pragma omp parallel for schedule(dynamic, 16)
             for (int i = 0; i < (int)image.get_pixel_count(); ++i)
@@ -240,7 +240,7 @@ int initialize(Engine& engine) {
         int width = image.get_width(), height = image.get_height();
 
         g_convoluted_images[r] = Images::create2D("Convoluted image", PixelFormat::RGB_Float, 1.0f, Vector2ui(width, height));
-        RGB* pixels = (RGB*)g_convoluted_images[r].get_pixels();
+        RGB* pixels = g_convoluted_images[r].get_pixels<RGB>();
 
         // No convolution needed when roughness is 0.
         if (r == 0) {

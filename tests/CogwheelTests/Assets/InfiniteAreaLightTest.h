@@ -36,7 +36,7 @@ TEST_F(Assets_InfiniteAreaLight, consistent_PDF_and_evaluate) {
     
     unsigned char f[] = { 0, 5, 0, 3, 1, 2, 1, 4, 3, 7, 5, 1, 9, 4, 1, 1 };
     
-    unsigned char* pixels = (unsigned char*)image.get_pixels();
+    unsigned char* pixels = image.get_pixels<unsigned char>();
     std::memcpy(pixels, f, image.get_pixel_count());
 
     Textures::UID latlong_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
@@ -53,7 +53,7 @@ TEST_F(Assets_InfiniteAreaLight, consistent_PDF_and_evaluate) {
 TEST_F(Assets_InfiniteAreaLight, diffuse_integrates_to_white) {
     Image image = Images::create2D("White", PixelFormat::I8, 2.2f, Math::Vector2ui(512, 256));
 
-    unsigned char* pixels = (unsigned char*)image.get_pixels();
+    unsigned char* pixels = image.get_pixels<unsigned char>();
     std::fill(pixels, pixels + image.get_pixel_count(), 255);
 
     Textures::UID latlong_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);

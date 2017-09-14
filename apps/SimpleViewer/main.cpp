@@ -376,7 +376,7 @@ void detect_and_flag_cutout_materials() {
             if (image_state == Unprocessed)
             {
                 int width = coverage_img.get_width(), height = coverage_img.get_height();
-                unsigned char* pixels = (unsigned char*)coverage_img.get_pixels();
+                unsigned char* pixels = coverage_img.get_pixels<unsigned char>();
 
                 auto is_cutout_opacity = [](unsigned char intensity) -> bool { return intensity < 2 || 253 < intensity; };
 
