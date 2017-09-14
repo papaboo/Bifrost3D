@@ -55,7 +55,7 @@ RT_PROGRAM void path_tracing() {
 
     MonteCarloPayload payload;
     payload.radiance = make_float3(0.0f);
-    payload.rng.seed(__brev(RNG::teschner_hash(g_launch_index.x, g_launch_index.y) ^ g_accumulations));
+    payload.rng.seed(__brev(RNG::teschner_hash(g_launch_index.x, g_launch_index.y) ^ 83492791 ^ g_accumulations));
     // payload.rng.seed(__brev(g_accumulations)); // Uniform seed.
     payload.throughput = make_float3(1.0f);
     payload.bounces = 0;
