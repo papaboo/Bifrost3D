@@ -94,8 +94,6 @@ __inline_dev__ LightSample reestimated_light_samples(const DefaultShading& mater
     }
     light_sample.radiance /= samples;
 
-    // NOTE If we want to use the accumlated path PDF later for filtering or firefly removal, then it's possible that we'd get better results by adjusting the PDF instead of just the total contribution.
-
     return light_sample;
 }
 
