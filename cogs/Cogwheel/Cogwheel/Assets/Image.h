@@ -120,6 +120,11 @@ public:
     static void set_mipmapable(Images::UID image_ID, bool value);
 
     static PixelData get_pixels(Images::UID image_ID, int mipmap_level = 0);
+    template <typename T>
+    static T* get_pixels(Images::UID image_ID, int mipmap_level = 0) {
+        assert(sizeof(T) == size_of(get_pixel_format(image_ID)));
+        return (T*)get_pixels(image_ID, mipmap_level);
+    }
 
     static Math::RGBA get_pixel(Images::UID image_ID, unsigned int index, unsigned int mipmap_level = 0);
     static Math::RGBA get_pixel(Images::UID image_ID, Math::Vector2ui index, unsigned int mipmap_level = 0);
@@ -200,7 +205,10 @@ public:
     inline unsigned int get_height(unsigned int mipmap_level = 0) { return Images::get_height(m_ID, mipmap_level); }
     inline unsigned int get_depth(unsigned int mipmap_level = 0) { return Images::get_depth(m_ID, mipmap_level); }
     inline unsigned int get_pixel_count(unsigned int mipmap_level = 0) { return Images::get_pixel_count(m_ID, mipmap_level); }
+
     inline Images::PixelData get_pixels(unsigned int mipmap_level = 0) { return Images::get_pixels(m_ID, mipmap_level); }
+    template <typename T>
+    inline T* get_pixels(int mipmap_level = 0) { return Images::get_pixels<T>(m_ID, mipmap_level); }
 
     inline Math::RGBA get_pixel(unsigned int index, unsigned int mipmap_level = 0) { return Images::get_pixel(m_ID, index, mipmap_level); }
     inline Math::RGBA get_pixel(Math::Vector2ui index, unsigned int mipmap_level = 0) { return Images::get_pixel(m_ID, index, mipmap_level); }
