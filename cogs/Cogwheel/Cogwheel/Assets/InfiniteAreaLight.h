@@ -96,6 +96,7 @@ public:
     float PDF(Math::Vector3f direction_to_light) const {
         float sin_theta = abs(sqrtf(1.0f - direction_to_light.y * direction_to_light.y));
         Math::Vector2f uv = Math::direction_to_latlong_texcoord(direction_to_light);
+        uv.y = Math::min(uv.y, Math::nearly_one);
         float distribution_PDF = float(m_distribution.PDF_continuous(uv));
         float PDF = distribution_PDF / (2.0f * Math::PI<float>() * Math::PI<float>() * sin_theta);
         return sin_theta == 0.0f ? 0.0f : PDF;
