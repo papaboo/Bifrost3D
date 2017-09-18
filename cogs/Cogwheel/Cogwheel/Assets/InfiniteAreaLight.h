@@ -71,6 +71,7 @@ public:
 
     Math::RGB evaluate(Math::Vector3f direction_to_light) const {
         Math::Vector2f uv = Math::direction_to_latlong_texcoord(direction_to_light);
+        uv.y = Math::min(uv.y, Math::nearly_one);
         return evaluate(uv);
     }
 
