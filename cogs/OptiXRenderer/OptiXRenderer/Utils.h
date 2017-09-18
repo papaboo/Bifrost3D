@@ -48,18 +48,6 @@ __inline_all__ static void compute_tangents(const optix::float3& normal,
     bitangent = { b, sign + normal.y * normal.y * a, -normal.y };
 }
 
-__inline_all__ optix::float3 clamp_light_contribution_by_path_PDF(const optix::float3& radiance, float path_PDF, int accumulations) {
-#if PATH_PDF_FIREFLY_FILTER
-    float contribution = optix::luminance(radiance);
-    float max_contribution = (1.0f / (1.0f - path_PDF)) - 1.0f;
-    max_contribution *= (accumulations + 1);
-    max_contribution += 1.0f;
-    return radiance * fminf(max_contribution / contribution, 1.0f);
-#else
-    return radiance;
-#endif
-}
-
 #if (defined(__CUDACC__) || defined(__CUDABE__))
 __inline_dev__ optix::float4 half_to_float(const optix::ushort4& xyzw) {
     return optix::make_float4(__half2float(xyzw.x), __half2float(xyzw.y), __half2float(xyzw.z), __half2float(xyzw.w));

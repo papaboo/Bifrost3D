@@ -10,7 +10,6 @@
 #define _OPTIXRENDERER_SHADING_DEFINES_H_
 
 #define DOUBLE_PRECISION_ACCUMULATION_BUFFER 1
-// #define PATH_PDF_FIREFLY_FILTER 1
 #define PRESAMPLE_ENVIRONMENT_MAP 1
 // When disabling next event estimation to compare images, remember to increase the bounce count by one. 
 // Otherwise the longest paths will be missing from the image.

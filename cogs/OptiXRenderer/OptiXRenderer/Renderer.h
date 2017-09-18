@@ -41,10 +41,11 @@ namespace OptiXRenderer {
 // Future work
 // * Cache acceleration structures for meshes not in the scene, but still active.
 //   Test if it speeds up the bullet creation of my boxgun!
-// * Tone mapping and gamma correction as part of the image composer.
-// * Logarithmic upload of the accumulated image.
 // * Have path tracer stop per bounce, filter and display the result.
 //   Should be good for interactivity and convergence. :)
+// * Clamp fireflies at vertices in a ray path. The current path PDF or 
+//   ray differentials should be able to tell us if a connection with
+//   a high intensity light source is a firefly.
 // * Add a genesis event when rendering the very very very first frame. Can also 
 //   be used if the renderer 'falls behind' and it's faster to simply reinitialize
 //----------------------------------------------------------------------------

@@ -59,7 +59,6 @@ RT_PROGRAM void path_tracing() {
     payload.throughput = make_float3(1.0f);
     payload.bounces = 0;
     payload.bsdf_MIS_PDF = 0.0f;
-    payload.clamped_path_PDF = 1.0f;
 
     // Generate rays.
     float2 screen_pos_offset = payload.rng.sample2f(); // Always advance the rng by two samples, even if we ignore them.
@@ -110,8 +109,7 @@ RT_PROGRAM void miss() {
                                                                     monte_carlo_payload.bsdf_MIS_PDF, next_event_estimated);
     }
 
-    float3 scaled_radiance = clamp_light_contribution_by_path_PDF(environment_radiance, monte_carlo_payload.clamped_path_PDF, g_accumulations);
-    monte_carlo_payload.radiance += monte_carlo_payload.throughput * scaled_radiance;
+    monte_carlo_payload.radiance += monte_carlo_payload.throughput * environment_radiance;
 
     monte_carlo_payload.throughput = make_float3(0.0f);
 }

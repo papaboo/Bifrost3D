@@ -69,8 +69,6 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
         // BIAS Nearly specular materials and delta lights will lead to insane fireflies, so we clamp them here.
         bsdf_response.weight = fminf(bsdf_response.weight, make_float3(32.0f));
 
-    light_sample.radiance = clamp_light_contribution_by_path_PDF(light_sample.radiance, monte_carlo_payload.clamped_path_PDF, g_accumulations);
-
     // Inline the material response into the light sample's radiance.
     light_sample.radiance *= bsdf_response.weight;
 
@@ -140,7 +138,6 @@ RT_PROGRAM void closest_hit() {
     BSDFSample bsdf_sample = material.sample_all(monte_carlo_payload.direction, monte_carlo_payload.rng.sample3f());
     monte_carlo_payload.direction = bsdf_sample.direction * world_shading_tbn;
     monte_carlo_payload.bsdf_MIS_PDF = bsdf_sample.PDF;
-    monte_carlo_payload.clamped_path_PDF *= fminf(bsdf_sample.PDF, 1.0f);
     if (!is_PDF_valid(bsdf_sample.PDF))
         monte_carlo_payload.throughput = make_float3(0.0f);
     else
@@ -174,8 +171,7 @@ RT_PROGRAM void light_closest_hit() {
     float3 light_radiance = LightSources::evaluate_intersection(light, ray.origin, ray.direction, 
                                                                 monte_carlo_payload.bsdf_MIS_PDF, next_event_estimated);
 
-    float3 scaled_radiance = clamp_light_contribution_by_path_PDF(light_radiance, monte_carlo_payload.clamped_path_PDF, g_accumulations);
-    monte_carlo_payload.radiance += monte_carlo_payload.throughput * scaled_radiance;
+    monte_carlo_payload.radiance += monte_carlo_payload.throughput * light_radiance;
 
     monte_carlo_payload.throughput = make_float3(0.0f);
 }
