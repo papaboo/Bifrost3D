@@ -140,7 +140,6 @@ RT_PROGRAM void closest_hit() {
     BSDFSample bsdf_sample = material.sample_all(monte_carlo_payload.direction, monte_carlo_payload.rng.sample3f());
     monte_carlo_payload.direction = bsdf_sample.direction * world_shading_tbn;
     monte_carlo_payload.bsdf_MIS_PDF = bsdf_sample.PDF;
-    monte_carlo_payload.path_PDF *= bsdf_sample.PDF;
     monte_carlo_payload.clamped_path_PDF *= fminf(bsdf_sample.PDF, 1.0f);
     if (!is_PDF_valid(bsdf_sample.PDF))
         monte_carlo_payload.throughput = make_float3(0.0f);

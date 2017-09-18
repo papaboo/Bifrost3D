@@ -56,28 +56,6 @@ struct __align__(16) VertexGeometry {
 };
 
 //----------------------------------------------------------------------------
-// Ray payloads.
-//----------------------------------------------------------------------------
-
-struct __align__(16) MonteCarloPayload {
-    optix::float3 radiance;
-    RNG::LinearCongruential rng;
-    optix::float3 throughput;
-    unsigned int bounces;
-
-    optix::float3 position;
-    float bsdf_MIS_PDF; // If negative, then it indicates that MIS should not be used.
-    optix::float3 direction;
-    float path_PDF;
-
-    float clamped_path_PDF; // The same as the path PDF, but the PDF's are clamped to 1 before being applied.
-};
-
-struct ShadowPayload {
-    optix::float3 attenuation;
-};
-
-//----------------------------------------------------------------------------
 // Light source structs.
 //----------------------------------------------------------------------------
 
@@ -188,6 +166,26 @@ struct __align__(16) Material {
     float metallic;
     float coverage;
     int coverage_texture_ID;
+};
+
+//----------------------------------------------------------------------------
+// Ray payloads.
+//----------------------------------------------------------------------------
+
+struct __align__(16) MonteCarloPayload {
+    optix::float3 radiance;
+    RNG::LinearCongruential rng;
+    optix::float3 throughput;
+    unsigned int bounces;
+
+    optix::float3 position;
+    float bsdf_MIS_PDF; // If negative, then it indicates that MIS should not be used.
+    optix::float3 direction;
+    float clamped_path_PDF; // The same as the path PDF, but the PDF's are clamped to 1 before being applied.
+};
+
+struct ShadowPayload {
+    optix::float3 attenuation;
 };
 
 } // NS OptiXRenderer

@@ -56,11 +56,10 @@ RT_PROGRAM void path_tracing() {
     MonteCarloPayload payload;
     payload.radiance = make_float3(0.0f);
     payload.rng.seed(__brev(RNG::teschner_hash(g_launch_index.x, g_launch_index.y) ^ 83492791 ^ g_accumulations));
-    // payload.rng.seed(__brev(g_accumulations)); // Uniform seed.
     payload.throughput = make_float3(1.0f);
     payload.bounces = 0;
     payload.bsdf_MIS_PDF = 0.0f;
-    payload.clamped_path_PDF = payload.path_PDF = 1.0f;
+    payload.clamped_path_PDF = 1.0f;
 
     // Generate rays.
     float2 screen_pos_offset = payload.rng.sample2f(); // Always advance the rng by two samples, even if we ignore them.
