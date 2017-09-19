@@ -30,8 +30,6 @@ class ContextObj;
 typedef Handle<ContextObj> Context;
 }
 
-struct ID3D11Resource;
-
 namespace OptiXRenderer {
 
 //----------------------------------------------------------------------------
