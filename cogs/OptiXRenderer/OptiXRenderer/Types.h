@@ -30,10 +30,10 @@ struct EntryPoints {
     static const unsigned int Count = 2;
 };
 
-namespace MeshFlags {
-static const unsigned char None = 0u;
-static const unsigned char Normals = 1u << 0u;
-static const unsigned char Texcoords = 1u << 1u;
+struct MeshFlags {
+    static const unsigned char None = 0u;
+    static const unsigned char Normals = 1u << 0u;
+    static const unsigned char Texcoords = 1u << 1u;
 };
 
 //----------------------------------------------------------------------------
