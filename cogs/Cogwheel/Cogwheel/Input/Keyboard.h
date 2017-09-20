@@ -135,6 +135,11 @@ public:
         m_key_states[(unsigned int)key].halftaps = (halftaps == MAX_HALFTAP_COUNT) ? (MAX_HALFTAP_COUNT-1) : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
     }
 
+    inline bool is_modifiers_pressed() const {
+        return is_pressed(Key::LeftShift) || is_pressed(Key::LeftControl) || is_pressed(Key::LeftAlt) || is_pressed(Key::LeftSuper)
+            || is_pressed(Key::RightShift) || is_pressed(Key::RightControl) || is_pressed(Key::RightAlt) || is_pressed(Key::RightSuper);
+    }
+
     inline void per_frame_reset() {
         for (KeyState& state : m_key_states)
             state.halftaps = 0u;
