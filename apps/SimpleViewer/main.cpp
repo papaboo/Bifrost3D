@@ -27,6 +27,7 @@
 #include <DX11Renderer/Renderer.h>
 #ifdef OPTIX_FOUND
 #include <DX11OptiXAdaptor/DX11OptiXAdaptor.h>
+#include <OptiXRenderer/Renderer.h>
 #endif
 
 #include <ObjLoader/ObjLoader.h>
@@ -187,7 +188,7 @@ public:
     void handle(const Engine& engine) {
         const Keyboard* keyboard = engine.get_keyboard();
 
-        if (keyboard->was_released(Keyboard::Key::P)) {
+        if (keyboard->was_released(Keyboard::Key::P) && !keyboard->is_modifiers_pressed()) {
             Renderers::ConstUIDIterator renderer_itr = Renderers::get_iterator(Cameras::get_renderer_ID(m_camera_ID));
             ++renderer_itr;
             Renderers::ConstUIDIterator new_renderer_itr = (renderer_itr == Renderers::end()) ? Renderers::begin() : renderer_itr;
@@ -520,12 +521,45 @@ int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Win
     using namespace DX11Renderer;
 
 #ifdef OPTIX_FOUND
+    class OptiXBackendSwitcher {
+    public:
+        OptiXBackendSwitcher(OptiXRenderer::Renderer* renderer)
+            : m_renderer(renderer) { }
+
+        void handle(const Engine& engine) {
+            const Keyboard* keyboard = engine.get_keyboard();
+
+            bool shift_pressed = keyboard->is_pressed(Keyboard::Key::LeftShift) || keyboard->is_pressed(Keyboard::Key::RightShift);
+            if (keyboard->was_released(Keyboard::Key::P) && shift_pressed) {
+                int backend_index = (int)m_renderer->get_backend();
+                int new_backend_index = (backend_index + 1) % 2;
+                m_renderer->set_backend((OptiXRenderer::Backend)new_backend_index);
+            }
+        }
+
+        static inline void handle_callback(Engine& engine, void* state) {
+            static_cast<OptiXBackendSwitcher*>(state)->handle(engine);
+        }
+
+    private:
+        OptiXRenderer::Renderer* m_renderer;
+    };
+
+    DX11OptiXAdaptor::DX11OptiXAdaptor* optix_adaptor;
     if (rasterizer_enabled) {
         compositor = Compositor::initialize(hwnd, window, Renderer::initialize).compositor;
         if (optix_enabled)
-            compositor->attach_renderer(DX11OptiXAdaptor::DX11OptiXAdaptor::initialize);
-    } else
-        compositor = Compositor::initialize(hwnd, window, DX11OptiXAdaptor::DX11OptiXAdaptor::initialize).compositor;
+            optix_adaptor = (DX11OptiXAdaptor::DX11OptiXAdaptor*)compositor->attach_renderer(DX11OptiXAdaptor::DX11OptiXAdaptor::initialize);
+    } else {
+        auto initilization = Compositor::initialize(hwnd, window, DX11OptiXAdaptor::DX11OptiXAdaptor::initialize);
+        compositor = initilization.compositor;
+        optix_adaptor = (DX11OptiXAdaptor::DX11OptiXAdaptor*)initilization.renderer;
+    }
+
+    if (optix_adaptor != nullptr) {
+        OptiXBackendSwitcher* backend_switcher = new OptiXBackendSwitcher(optix_adaptor->get_renderer());
+        engine.add_mutating_callback(OptiXBackendSwitcher::handle_callback, backend_switcher);
+    }
 #else
     compositor = Compositor::initialize(hwnd, window, Renderer::initialize).compositor;
 #endif
