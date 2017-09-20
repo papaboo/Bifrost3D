@@ -36,6 +36,7 @@ inline void throw_on_failure(cudaError_t error, const std::string& file, int lin
 #define THROW_ON_CUDA_FAILURE(error) ::DX11OptiXAdaptor::throw_on_failure(error, __FILE__,__LINE__)
 
 class DX11OptiXAdaptor::Implementation {
+public:
     int m_cuda_device_ID = -1;
     ID3D11Device1& m_device;
     ID3D11DeviceContext1* m_render_context;
@@ -54,8 +55,6 @@ class DX11OptiXAdaptor::Implementation {
     ID3D11PixelShader* m_pixel_shader;
 
     OptiXRenderer::Renderer* m_optix_renderer;
-
-public:
 
     Implementation(ID3D11Device1& device, int width_hint, int height_hint)
         : m_device(device) {
@@ -258,6 +257,14 @@ DX11OptiXAdaptor::DX11OptiXAdaptor(ID3D11Device1& device, int width_hint, int he
 DX11OptiXAdaptor::~DX11OptiXAdaptor() {
     Cogwheel::Core::Renderers::destroy(m_renderer_ID);
     delete m_impl;
+}
+
+OptiXRenderer::Renderer* DX11OptiXAdaptor::get_renderer() {
+    return m_impl->m_optix_renderer;
+}
+
+OptiXRenderer::Renderer* DX11OptiXAdaptor::get_renderer() const {
+    return m_impl->m_optix_renderer;
 }
 
 void DX11OptiXAdaptor::handle_updates() {

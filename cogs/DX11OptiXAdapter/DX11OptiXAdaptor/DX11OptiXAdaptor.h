@@ -11,6 +11,13 @@
 
 #include <Dx11Renderer/Compositor.h>
 
+//-------------------------------------------------------------------------------------------------
+// Forward declarations.
+//-------------------------------------------------------------------------------------------------
+namespace OptiXRenderer {
+class Renderer;
+}
+
 namespace DX11OptiXAdaptor {
 
 //-------------------------------------------------------------------------------------------------
@@ -25,6 +32,8 @@ public:
     ~DX11OptiXAdaptor();
 
     Cogwheel::Core::Renderers::UID get_ID() const { return m_renderer_ID; }
+    OptiXRenderer::Renderer* get_renderer();
+    OptiXRenderer::Renderer* get_renderer() const;
 
     void handle_updates();
 
