@@ -168,6 +168,7 @@ struct Renderer::Implementation {
     optix::Buffer accumulation_buffer;
     unsigned int accumulations;
     Matrix4x4f camera_inverse_view_projection_matrix;
+    Backend backend;
 
     // Per scene members.
     optix::Group root_node;
@@ -202,7 +203,8 @@ struct Renderer::Implementation {
         optix::Geometry area_lights_geometry;
     } lights;
 
-    Implementation(int cuda_device_ID, int width_hint, int height_hint) {
+    Implementation(int cuda_device_ID, int width_hint, int height_hint)
+    : backend(Backend::PathTracing) {
 
         device_IDs = { -1, -1 };
         
@@ -856,7 +858,10 @@ struct Renderer::Implementation {
         }
 
         context["g_accumulations"]->setInt(accumulations);
-        context->launch(EntryPoints::PathTracing, screensize.x, screensize.y);
+        if (backend == Backend::PathTracing)
+            context->launch(EntryPoints::PathTracing, screensize.x, screensize.y);
+        else
+            context->launch(EntryPoints::NormalVisualization, screensize.x, screensize.y);
         accumulations += 1u;
 
         /*
@@ -905,6 +910,15 @@ float Renderer::get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID
 void Renderer::set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon) {
     m_impl->context["g_scene_epsilon"]->setFloat(m_impl->scene_epsilon);
     m_impl->scene_epsilon = scene_epsilon;
+}
+
+Backend Renderer::get_backend() const {
+    return m_impl->backend;
+}
+
+void Renderer::set_backend(Backend backend) {
+    m_impl->backend = backend;
+    m_impl->accumulations = 0;
 }
 
 void Renderer::handle_updates() {

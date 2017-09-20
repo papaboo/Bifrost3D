@@ -32,6 +32,11 @@ typedef Handle<ContextObj> Context;
 
 namespace OptiXRenderer {
 
+enum class Backend {
+    PathTracing,
+    NormalVisualization
+};
+
 //----------------------------------------------------------------------------
 // OptiX renderer.
 // Supports several different rendering modes; Normal visualization and 
@@ -53,6 +58,9 @@ public:
 
     float get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const;
     void set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon);
+
+    Backend get_backend() const;
+    void set_backend(Backend backend);
 
     void handle_updates();
 
