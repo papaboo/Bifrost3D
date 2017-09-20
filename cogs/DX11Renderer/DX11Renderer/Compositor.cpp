@@ -158,17 +158,17 @@ public:
         return m_device.resource != nullptr;
     }
 
-    Renderers::UID attach_renderer(RendererCreator renderer_creator) {
+    IRenderer* attach_renderer(RendererCreator renderer_creator) {
         IRenderer* renderer = renderer_creator(*m_device, m_window.get_width(), m_window.get_height());
         if (renderer == nullptr)
-            return Renderers::UID::invalid_UID();
+            return nullptr;
 
         if (m_renderers.size() < Renderers::capacity())
             m_renderers.resize(Renderers::capacity());
 
         Renderers::UID renderer_ID = renderer->get_ID();
         m_renderers[renderer_ID] = renderer;
-        return renderer_ID;
+        return renderer;
     }
 
     void render() {
@@ -267,16 +267,16 @@ Compositor::Initialization Compositor::initialize(HWND& hwnd, const Cogwheel::Co
     Compositor* c = new Compositor(hwnd, window);
     if (!c->m_impl->is_valid()) {
         delete c;
-        return { nullptr, Renderers::UID::invalid_UID() };
+        return { nullptr, nullptr };
     }
     
-    Renderers::UID renderer_ID = c->attach_renderer(renderer_creator);
-    if (renderer_ID == Renderers::UID::invalid_UID()) {
+    IRenderer* renderer = c->attach_renderer(renderer_creator);
+    if (renderer == nullptr) {
         delete c;
-        return { nullptr, Renderers::UID::invalid_UID() };
+        return { nullptr, nullptr };
     }
 
-    return { c, renderer_ID };
+    return { c, renderer };
 }
 
 Compositor::Compositor(HWND& hwnd, const Cogwheel::Core::Window& window) {
@@ -287,7 +287,7 @@ Compositor::~Compositor() {
     delete m_impl;
 }
 
-Renderers::UID Compositor::attach_renderer(RendererCreator renderer_creator) {
+IRenderer* Compositor::attach_renderer(RendererCreator renderer_creator) {
     return m_impl->attach_renderer(renderer_creator);
 }
 

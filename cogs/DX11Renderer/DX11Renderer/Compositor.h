@@ -52,12 +52,12 @@ public:
 
     struct Initialization {
         Compositor* compositor;
-        Cogwheel::Core::Renderers::UID renderer_ID;
+        IRenderer* renderer;
     };
     static Initialization initialize(HWND& hwnd, const Cogwheel::Core::Window& window, RendererCreator renderer_creator);
     ~Compositor();
 
-    Cogwheel::Core::Renderers::UID attach_renderer(RendererCreator renderer_creator);
+    IRenderer* attach_renderer(RendererCreator renderer_creator);
 
     void render();
 
