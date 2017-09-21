@@ -42,10 +42,6 @@ RT_PROGRAM void ray_generation() {
     NormalVisualizationPayload payload;
     rtTrace(g_scene_root, ray, payload);
 
-    // Simple gamma correction.
-    const float inv_screen_gamma = 1.0f / 2.2f;
-    payload.color = gammacorrect(payload.color, inv_screen_gamma);
-
     g_output_buffer[g_launch_index] = float_to_half(payload.color);
 }
 

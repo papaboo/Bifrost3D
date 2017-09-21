@@ -78,19 +78,6 @@ __inline_all__ float sum(const optix::float3& v) {
     return v.x + v.y + v.z;
 }
 
-__inline_all__ optix::float3 gammacorrect(const optix::float3& color, float gamma) {
-    return optix::make_float3(pow(color.x, gamma),
-                              pow(color.y, gamma),
-                              pow(color.z, gamma));
-}
-
-__inline_all__ optix::float4 gammacorrect(const optix::float4& color, float gamma) {
-    return optix::make_float4(pow(color.x, gamma),
-                              pow(color.y, gamma),
-                              pow(color.z, gamma),
-                              color.w);
-}
-
 __inline_all__ bool is_PDF_valid(float PDF) {
     return PDF > 0.000001f;
 }
