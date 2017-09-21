@@ -26,7 +26,7 @@
 #include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/Renderer.h>
 #ifdef OPTIX_FOUND
-#include <DX11OptiXAdaptor/DX11OptiXAdaptor.h>
+#include <DX11OptiXAdaptor/Adaptor.h>
 #include <OptiXRenderer/Renderer.h>
 #endif
 
@@ -545,15 +545,15 @@ int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Win
         OptiXRenderer::Renderer* m_renderer;
     };
 
-    DX11OptiXAdaptor::DX11OptiXAdaptor* optix_adaptor;
+    DX11OptiXAdaptor::Adaptor* optix_adaptor;
     if (rasterizer_enabled) {
         compositor = Compositor::initialize(hwnd, window, Renderer::initialize).compositor;
         if (optix_enabled)
-            optix_adaptor = (DX11OptiXAdaptor::DX11OptiXAdaptor*)compositor->attach_renderer(DX11OptiXAdaptor::DX11OptiXAdaptor::initialize);
+            optix_adaptor = (DX11OptiXAdaptor::Adaptor*)compositor->attach_renderer(DX11OptiXAdaptor::Adaptor::initialize);
     } else {
-        auto initilization = Compositor::initialize(hwnd, window, DX11OptiXAdaptor::DX11OptiXAdaptor::initialize);
+        auto initilization = Compositor::initialize(hwnd, window, DX11OptiXAdaptor::Adaptor::initialize);
         compositor = initilization.compositor;
-        optix_adaptor = (DX11OptiXAdaptor::DX11OptiXAdaptor*)initilization.renderer;
+        optix_adaptor = (DX11OptiXAdaptor::Adaptor*)initilization.renderer;
     }
 
     if (optix_adaptor != nullptr) {

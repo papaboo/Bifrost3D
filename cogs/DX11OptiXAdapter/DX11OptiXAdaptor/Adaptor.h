@@ -26,10 +26,10 @@ namespace DX11OptiXAdaptor {
 // * We should probably set the OMSetDepthStencilState and RSSetState before rendering.
 // * Try storing everything in a command list and execute that instead.
 //-------------------------------------------------------------------------------------------------
-class DX11OptiXAdaptor final : public DX11Renderer::IRenderer {
+class Adaptor final : public DX11Renderer::IRenderer {
 public:
     static DX11Renderer::IRenderer* initialize(ID3D11Device1& device, int width_hint, int height_hint);
-    ~DX11OptiXAdaptor();
+    ~Adaptor();
 
     Cogwheel::Core::Renderers::UID get_ID() const { return m_renderer_ID; }
     OptiXRenderer::Renderer* get_renderer();
@@ -41,11 +41,11 @@ public:
 
 private:
 
-    DX11OptiXAdaptor(ID3D11Device1& device, int width_hint, int height_hint);
+    Adaptor(ID3D11Device1& device, int width_hint, int height_hint);
 
     // Delete copy constructors to avoid having multiple versions of the same renderer.
-    DX11OptiXAdaptor(DX11OptiXAdaptor& other) = delete;
-    DX11OptiXAdaptor& operator=(const DX11OptiXAdaptor& rhs) = delete;
+    Adaptor(Adaptor& other) = delete;
+    Adaptor& operator=(const Adaptor& rhs) = delete;
 
     Cogwheel::Core::Renderers::UID m_renderer_ID;
 

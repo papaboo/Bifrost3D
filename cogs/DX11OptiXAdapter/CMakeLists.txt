@@ -3,8 +3,8 @@ if (TARGET DX11Renderer AND TARGET OptiXRenderer)
   set(LIBRARY_NAME "DX11OptiXAdaptor")
 
   set(SRCS 
-    DX11OptiXAdaptor/DX11OptiXAdaptor.h 
-    DX11OptiXAdaptor/DX11OptiXAdaptor.cpp
+    DX11OptiXAdaptor/Adaptor.h 
+    DX11OptiXAdaptor/Adaptor.cpp
   )
 
   add_library(${LIBRARY_NAME} ${SRCS})

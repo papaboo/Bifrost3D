@@ -6,7 +6,7 @@
 // See LICENSE.txt for more detail.
 //-------------------------------------------------------------------------------------------------
 
-#include <DX11OptiXAdaptor/DX11OptiXAdaptor.h>
+#include <DX11OptiXAdaptor/Adaptor.h>
 #include <DX11Renderer/Renderer.h>
 #include <DX11Renderer/Utils.h>
 #include <OptiXRenderer/Defines.h>
@@ -35,7 +35,7 @@ inline void throw_on_failure(cudaError_t error, const std::string& file, int lin
 
 #define THROW_ON_CUDA_FAILURE(error) ::DX11OptiXAdaptor::throw_on_failure(error, __FILE__,__LINE__)
 
-class DX11OptiXAdaptor::Implementation {
+class Adaptor::Implementation {
 public:
     int m_cuda_device_ID = -1;
     ID3D11Device1& m_device;
@@ -245,33 +245,33 @@ public:
     }
 };
 
-DX11Renderer::IRenderer* DX11OptiXAdaptor::initialize(ID3D11Device1& device, int width_hint, int height_hint) {
-    return new DX11OptiXAdaptor(device, width_hint, height_hint);
+DX11Renderer::IRenderer* Adaptor::initialize(ID3D11Device1& device, int width_hint, int height_hint) {
+    return new Adaptor(device, width_hint, height_hint);
 }
 
-DX11OptiXAdaptor::DX11OptiXAdaptor(ID3D11Device1& device, int width_hint, int height_hint) {
+Adaptor::Adaptor(ID3D11Device1& device, int width_hint, int height_hint) {
     m_impl = new Implementation(device, width_hint, height_hint);
     m_renderer_ID = Cogwheel::Core::Renderers::create("OptiXRenderer");
 }
 
-DX11OptiXAdaptor::~DX11OptiXAdaptor() {
+Adaptor::~Adaptor() {
     Cogwheel::Core::Renderers::destroy(m_renderer_ID);
     delete m_impl;
 }
 
-OptiXRenderer::Renderer* DX11OptiXAdaptor::get_renderer() {
+OptiXRenderer::Renderer* Adaptor::get_renderer() {
     return m_impl->m_optix_renderer;
 }
 
-OptiXRenderer::Renderer* DX11OptiXAdaptor::get_renderer() const {
+OptiXRenderer::Renderer* Adaptor::get_renderer() const {
     return m_impl->m_optix_renderer;
 }
 
-void DX11OptiXAdaptor::handle_updates() {
+void Adaptor::handle_updates() {
     m_impl->handle_updates();
 }
 
-void DX11OptiXAdaptor::render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
+void Adaptor::render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
     m_impl->render(camera_ID, width, height);
 }
 
