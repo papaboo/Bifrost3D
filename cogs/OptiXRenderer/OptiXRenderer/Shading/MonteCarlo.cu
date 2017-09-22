@@ -48,8 +48,8 @@ rtDeclareVariable(float2, texcoord, attribute texcoord, );
 
 // Sample a single light source, evaluates the material's response to the light and 
 // stores the combined response in the light source's radiance member.
-__inline_dev__ LightSample sample_single_light(const DefaultShading& material, const TBN& world_shading_tbn) {
-    int light_index = min(g_light_count - 1, int(monte_carlo_payload.rng.sample1f() * g_light_count));
+__inline_dev__ LightSample sample_single_light(const DefaultShading& material, const TBN& world_shading_tbn, float light_index_w) {
+    int light_index = min(g_light_count - 1, int(light_index_w * g_light_count));
     const Light& light = g_lights[light_index];
     LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_payload.position, monte_carlo_payload.rng.sample2f());
     light_sample.radiance *= g_light_count; // Scale up radiance to account for only sampling one light.
@@ -78,9 +78,12 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
 // Take multiple light samples and from that set pick one based on the contribution of the light scaled by the material.
 // Basic Resampled importance sampling: http://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=1662&context=etd.
 __inline_dev__ LightSample reestimated_light_samples(const DefaultShading& material, const TBN& world_shading_tbn, int samples) {
-    LightSample light_sample = sample_single_light(material, world_shading_tbn);
+    float light_sample_w = monte_carlo_payload.rng.sample1f();
+    LightSample light_sample = sample_single_light(material, world_shading_tbn, light_sample_w);
     for (int s = 1; s < samples; ++s) {
-        LightSample new_light_sample = sample_single_light(material, world_shading_tbn);
+        light_sample_w += 1.0f / samples;
+        if (light_sample_w > 1.0f) light_sample_w -= 1.0f;
+        LightSample new_light_sample = sample_single_light(material, world_shading_tbn, light_sample_w);
         float light_weight = sum(light_sample.radiance);
         float new_light_weight = sum(new_light_sample.radiance);
         float new_light_probability = new_light_weight / (light_weight + new_light_weight);
