@@ -102,9 +102,8 @@ __inline_dev__ LightSample reestimated_light_samples(const DefaultShading& mater
 RT_PROGRAM void closest_hit() {
     // const float3 world_geometric_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, geometric_normal));
     const float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
-    const float3 forward_shading_normal = -dot(world_shading_normal, ray.direction) >= 0.0f ? world_shading_normal : -world_shading_normal;
-
-    const TBN world_shading_tbn = TBN(forward_shading_normal);
+    monte_carlo_payload.shading_normal = -dot(world_shading_normal, ray.direction) >= 0.0f ? world_shading_normal : -world_shading_normal;
+    const TBN world_shading_tbn = TBN(monte_carlo_payload.shading_normal);
 
     const Material& material_parameter = g_materials[material_index];
     const DefaultShading material = DefaultShading(material_parameter, texcoord);
@@ -172,6 +171,6 @@ RT_PROGRAM void light_closest_hit() {
                                                                 monte_carlo_payload.bsdf_MIS_PDF, next_event_estimated);
 
     monte_carlo_payload.radiance += monte_carlo_payload.throughput * light_radiance;
-
     monte_carlo_payload.throughput = make_float3(0.0f);
+    monte_carlo_payload.shading_normal = -ray.direction;
 }

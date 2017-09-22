@@ -19,9 +19,8 @@ namespace OptiXRenderer {
 
 struct RayTypes {
     static const unsigned int MonteCarlo = 0;
-    static const unsigned int NormalVisualization = 1;
-    static const unsigned int Shadow = 2;
-    static const unsigned int Count = 3;
+    static const unsigned int Shadow = 1;
+    static const unsigned int Count = 2;
 };
 
 struct EntryPoints {
@@ -166,6 +165,7 @@ struct __align__(16) Material {
     float metallic;
     float coverage;
     int coverage_texture_ID;
+    optix::int3 __padding;
 };
 
 //----------------------------------------------------------------------------
@@ -181,6 +181,10 @@ struct __align__(16) MonteCarloPayload {
     optix::float3 position;
     float bsdf_MIS_PDF; // If negative, then it indicates that MIS should not be used.
     optix::float3 direction;
+    int __padding0;
+
+    optix::float3 shading_normal;
+    int __padding1;
 };
 
 struct ShadowPayload {

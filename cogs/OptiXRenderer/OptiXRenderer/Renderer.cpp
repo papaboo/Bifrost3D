@@ -227,7 +227,7 @@ struct Renderer::Implementation {
 
         context->setRayTypeCount(RayTypes::Count);
         context->setEntryPointCount(EntryPoints::Count);
-        context->setStackSize(1280);
+        context->setStackSize(1400);
 
         accumulations = 0u;
 
@@ -251,7 +251,6 @@ struct Renderer::Implementation {
         { // Normal visualization setup.
             std::string ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
             context->setRayGenerationProgram(EntryPoints::NormalVisualization, context->createProgramFromPTXFile(ptx_path, "ray_generation"));
-            context->setMissProgram(RayTypes::NormalVisualization, context->createProgramFromPTXFile(ptx_path, "miss"));
         }
 
         { // Setup default material.
@@ -260,9 +259,6 @@ struct Renderer::Implementation {
             std::string monte_carlo_ptx_path = get_ptx_path(shader_prefix, "MonteCarlo");
             default_material->setClosestHitProgram(RayTypes::MonteCarlo, context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
             default_material->setAnyHitProgram(RayTypes::Shadow, context->createProgramFromPTXFile(monte_carlo_ptx_path, "shadow_any_hit"));
-
-            std::string normal_vis_ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
-            default_material->setClosestHitProgram(RayTypes::NormalVisualization, context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
 
             OPTIX_VALIDATE(default_material);
 
@@ -319,8 +315,6 @@ struct Renderer::Implementation {
             optix::Material material = context->createMaterial();
             std::string monte_carlo_ptx_path = get_ptx_path(shader_prefix, "MonteCarlo");
             material->setClosestHitProgram(RayTypes::MonteCarlo, context->createProgramFromPTXFile(monte_carlo_ptx_path, "light_closest_hit"));
-            std::string normal_vis_ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
-            material->setClosestHitProgram(RayTypes::NormalVisualization, context->createProgramFromPTXFile(normal_vis_ptx_path, "closest_hit"));
             OPTIX_VALIDATE(material);
 
             optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");

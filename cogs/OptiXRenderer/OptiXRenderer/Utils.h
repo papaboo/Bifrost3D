@@ -78,6 +78,14 @@ __inline_all__ float sum(const optix::float3& v) {
     return v.x + v.y + v.z;
 }
 
+__inline_all__ optix::double3 lerp_double(const optix::double3& a, const optix::double3& b, const double t) {
+    return optix::make_double3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
+}
+
+__inline_all__ bool is_black(const optix::float3 color) {
+    return color.x <= 0.0f && color.y <= 0.0f && color.z <= 0.0f;
+}
+
 __inline_all__ bool is_PDF_valid(float PDF) {
     return PDF > 0.000001f;
 }

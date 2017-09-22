@@ -34,14 +34,6 @@ rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(float, g_scene_epsilon, , );
 rtDeclareVariable(int, g_max_bounce_count, , );
 
-__inline_dev__ bool is_black(const optix::float3 color) {
-    return color.x <= 0.0f && color.y <= 0.0f && color.z <= 0.0f;
-}
-
-__inline_dev__ inline optix::double3 lerp_double(const optix::double3& a, const optix::double3& b, const double t) {
-    return optix::make_double3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
-}
-
 //----------------------------------------------------------------------------
 // Ray generation program
 //----------------------------------------------------------------------------
@@ -59,6 +51,7 @@ RT_PROGRAM void path_tracing() {
     payload.throughput = make_float3(1.0f);
     payload.bounces = 0;
     payload.bsdf_MIS_PDF = 0.0f;
+    payload.shading_normal = make_float3(0.0f);
 
     // Generate rays.
     float2 screen_pos_offset = payload.rng.sample2f(); // Always advance the rng by two samples, even if we ignore them.
@@ -110,8 +103,8 @@ RT_PROGRAM void miss() {
     }
 
     monte_carlo_payload.radiance += monte_carlo_payload.throughput * environment_radiance;
-
     monte_carlo_payload.throughput = make_float3(0.0f);
+    monte_carlo_payload.shading_normal = -ray.direction;
 }
 
 //----------------------------------------------------------------------------
