@@ -10,6 +10,7 @@
 #define _OPTIXRENDERER_SHADING_UTILS_H_
 
 #include <OptiXRenderer/Defines.h>
+#include <OptiXRenderer/Types.h>
 
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_matrix_namespace.h>
@@ -34,6 +35,31 @@ __inline_dev__ optix::float3 project_ray_direction(optix::float2 viewport_pos,
     return normalize(ray_origin - camera_position);
 }
 
+#if GPU_DEVICE
+__inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, int image_width, int image_height,
+                                                                int accumulation_count, 
+                                                                const optix::float3& camera_position,
+                                                                const optix::Matrix4x4& inverted_view_projection_matrix) {
+    using namespace optix;
+
+    MonteCarloPayload payload;
+    payload.radiance = make_float3(0.0f);
+    payload.rng.seed(__brev(RNG::teschner_hash(x, y) ^ 83492791 ^ accumulation_count));
+    payload.throughput = make_float3(1.0f);
+    payload.bounces = 0;
+    payload.bsdf_MIS_PDF = 0.0f;
+    payload.shading_normal = make_float3(0.0f);
+
+    // Generate rays.
+    float2 screen_pos_offset = payload.rng.sample2f(); // Always advance the rng by two samples, even if we ignore them.
+    float2 screen_pos = make_float2(x, y) + (accumulation_count == 0 ? make_float2(0.5f) : screen_pos_offset);
+    float2 viewport_pos = make_float2(screen_pos.x / float(image_width), screen_pos.y / float(image_height));
+    payload.position = camera_position;
+    payload.direction = project_ray_direction(viewport_pos, payload.position, inverted_view_projection_matrix);
+    return payload;
+}
+#endif 
+
 // Computes a tangent and bitangent that together with the normal creates an orthonormal bases.
 // Building an Orthonormal Basis, Revisited, Duff et al.
 // http://jcgt.org/published/0006/01/01/paper.pdf
@@ -48,7 +74,7 @@ __inline_all__ static void compute_tangents(const optix::float3& normal,
     bitangent = { b, sign + normal.y * normal.y * a, -normal.y };
 }
 
-#if (defined(__CUDACC__) || defined(__CUDABE__))
+#if GPU_DEVICE
 __inline_dev__ optix::float4 half_to_float(const optix::ushort4& xyzw) {
     return optix::make_float4(__half2float(xyzw.x), __half2float(xyzw.y), __half2float(xyzw.z), __half2float(xyzw.w));
 }

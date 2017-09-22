@@ -45,20 +45,9 @@ RT_PROGRAM void path_tracing() {
         g_accumulation_buffer[g_launch_index] = make_float4(0.0f);
 #endif
 
-    MonteCarloPayload payload;
-    payload.radiance = make_float3(0.0f);
-    payload.rng.seed(__brev(RNG::teschner_hash(g_launch_index.x, g_launch_index.y) ^ 83492791 ^ g_accumulations));
-    payload.throughput = make_float3(1.0f);
-    payload.bounces = 0;
-    payload.bsdf_MIS_PDF = 0.0f;
-    payload.shading_normal = make_float3(0.0f);
-
-    // Generate rays.
-    float2 screen_pos_offset = payload.rng.sample2f(); // Always advance the rng by two samples, even if we ignore them.
-    float2 screen_pos = make_float2(g_launch_index) + (g_accumulations == 0 ? make_float2(0.5f) : screen_pos_offset);
-    float2 viewport_pos = make_float2(screen_pos.x / float(g_accumulation_buffer.size().x), screen_pos.y / float(g_accumulation_buffer.size().y));
-    payload.position = make_float3(g_camera_position);
-    payload.direction = project_ray_direction(viewport_pos, payload.position, g_inverted_view_projection_matrix);
+    MonteCarloPayload payload = initialize_monte_carlo_payload(g_launch_index.x, g_launch_index.y,
+        g_accumulation_buffer.size().x, g_accumulation_buffer.size().y, g_accumulations,
+        make_float3(g_camera_position), g_inverted_view_projection_matrix);
 
     do {
         Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene_epsilon);
