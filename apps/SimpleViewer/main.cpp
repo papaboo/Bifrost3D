@@ -532,7 +532,7 @@ int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Win
             bool shift_pressed = keyboard->is_pressed(Keyboard::Key::LeftShift) || keyboard->is_pressed(Keyboard::Key::RightShift);
             if (keyboard->was_released(Keyboard::Key::P) && shift_pressed) {
                 int backend_index = (int)m_renderer->get_backend();
-                int new_backend_index = (backend_index + 1) % 2;
+                int new_backend_index = (backend_index + 1) % 3;
                 m_renderer->set_backend((OptiXRenderer::Backend)new_backend_index);
             }
         }
