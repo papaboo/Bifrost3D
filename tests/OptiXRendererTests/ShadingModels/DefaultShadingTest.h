@@ -211,7 +211,7 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
     using namespace Shading::ShadingModels;
     using namespace optix;
 
-    // Test that sample_all_BSDFs has lower variance than sample_one_BSDF and that they converge to the same result'ish.
+    // Test that sample_all has lower variance than sample_one and that they converge to the same result'ish.
 
     const unsigned int MAX_SAMPLES = 8196;
     const float3 wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
