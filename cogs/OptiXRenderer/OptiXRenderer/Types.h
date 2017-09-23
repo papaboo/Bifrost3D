@@ -25,8 +25,9 @@ struct RayTypes {
 
 struct EntryPoints {
     static const unsigned int PathTracing = 0;
-    static const unsigned int NormalVisualization = 1;
-    static const unsigned int Count = 2;
+    static const unsigned int Albedo = 1;
+    static const unsigned int Normal = 2;
+    static const unsigned int Count = 3;
 };
 
 struct MeshFlags {
@@ -184,7 +185,7 @@ struct __align__(16) MonteCarloPayload {
     int __padding0;
 
     optix::float3 shading_normal;
-    int __padding1;
+    int material_index;
 };
 
 struct ShadowPayload {

@@ -117,6 +117,8 @@ RT_PROGRAM void closest_hit() {
         return;
     }
 
+    monte_carlo_payload.material_index = material_index;
+
     // Store intersection point and wo in payload.
     monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
     monte_carlo_payload.direction = world_shading_tbn * -ray.direction;

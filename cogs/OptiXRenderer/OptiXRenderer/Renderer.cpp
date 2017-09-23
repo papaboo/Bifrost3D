@@ -248,9 +248,14 @@ struct Renderer::Implementation {
             context["g_max_bounce_count"]->setInt(4);
         }
 
+        { // Albedo visualization setup.
+            std::string ptx_path = get_ptx_path(shader_prefix, "AlbedoRendering");
+            context->setRayGenerationProgram(EntryPoints::Albedo, context->createProgramFromPTXFile(ptx_path, "ray_generation"));
+        }
+
         { // Normal visualization setup.
             std::string ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
-            context->setRayGenerationProgram(EntryPoints::NormalVisualization, context->createProgramFromPTXFile(ptx_path, "ray_generation"));
+            context->setRayGenerationProgram(EntryPoints::Normal, context->createProgramFromPTXFile(ptx_path, "ray_generation"));
         }
 
         { // Setup default material.
@@ -854,8 +859,10 @@ struct Renderer::Implementation {
         context["g_accumulations"]->setInt(accumulations);
         if (backend == Backend::PathTracing)
             context->launch(EntryPoints::PathTracing, screensize.x, screensize.y);
+        else if (backend == Backend::AlbedoVisualization)
+            context->launch(EntryPoints::Albedo, screensize.x, screensize.y);
         else
-            context->launch(EntryPoints::NormalVisualization, screensize.x, screensize.y);
+            context->launch(EntryPoints::Normal, screensize.x, screensize.y);
         accumulations += 1u;
 
         /*

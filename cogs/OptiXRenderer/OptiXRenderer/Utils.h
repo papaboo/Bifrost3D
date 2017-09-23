@@ -49,6 +49,7 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     payload.bounces = 0;
     payload.bsdf_MIS_PDF = 0.0f;
     payload.shading_normal = make_float3(0.0f);
+    payload.material_index = 0;
 
     // Generate rays.
     float2 screen_pos_offset = payload.rng.sample2f(); // Always advance the rng by two samples, even if we ignore them.
