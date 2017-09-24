@@ -186,6 +186,9 @@ struct __align__(16) MonteCarloPayload {
 
     optix::float3 shading_normal;
     int material_index;
+
+    optix::float2 texcoord;
+    optix::float2 __padding1;
 };
 
 struct ShadowPayload {

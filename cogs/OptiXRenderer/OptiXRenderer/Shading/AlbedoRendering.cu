@@ -6,6 +6,7 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
+#include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>
 #include <OptiXRenderer/Types.h>
 #include <OptiXRenderer/Utils.h>
 
@@ -36,6 +37,8 @@ rtBuffer<double4, 2>  g_accumulation_buffer;
 rtBuffer<float4, 2>  g_accumulation_buffer;
 #endif
 
+rtBuffer<Material, 1> g_materials;
+
 //----------------------------------------------------------------------------
 // Ray generation program for visualizing normals.
 //----------------------------------------------------------------------------
@@ -60,6 +63,13 @@ RT_PROGRAM void ray_generation() {
     } while (payload.material_index == 0 && !is_black(payload.throughput));
 
     payload.radiance = payload.throughput;
+    bool valid_material = payload.material_index != 0;
+    if (g_launch_index.x < g_accumulation_buffer.size().x / 2 && valid_material) {
+        using namespace Shading::ShadingModels;
+        const Material& material_parameter = g_materials[payload.material_index];
+        const DefaultShading material = DefaultShading(material_parameter, payload.texcoord);
+        payload.radiance = material.IBL(last_ray_direction, payload.shading_normal, 0); // TODO Use a white IBL.
+    }
 
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
     double3 prev_radiance = make_double3(g_accumulation_buffer[g_launch_index].x, g_accumulation_buffer[g_launch_index].y, g_accumulation_buffer[g_launch_index].z);

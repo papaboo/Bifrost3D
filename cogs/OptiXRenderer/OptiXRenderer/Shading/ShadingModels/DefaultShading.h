@@ -253,6 +253,29 @@ public:
 
         return bsdf_sample;
     }
+
+    // Apply the shading model to the IBL.
+    __inline_dev__ optix::float3 IBL(optix::float3 wi, optix::float3 normal, int ibl_texture) const {
+        using namespace optix;
+
+        float specularity = compute_specularity(m_material.specularity, m_material.metallic);
+        float abs_cos_theta = abs(dot(wi, normal));
+        float specular_rho = compute_specular_rho(specularity, abs_cos_theta, m_material.roughness);
+        float3 specular_tint = lerp(make_float3(1.0f, 1.0f, 1.0f), m_tint, m_material.metallic) * specular_rho;
+        float3 diffuse_tint = m_tint * (1.0f - specular_rho);
+
+        // float width, height, mip_count;
+        // environment_tex.GetDimensions(0, width, height, mip_count);
+
+        float2 diffuse_tc = direction_to_latlong_texcoord(normal);
+        float3 diffuse = diffuse_tint; // *environment_tex.SampleLevel(environment_sampler, diffuse_tc, mip_count).rgb;
+
+        float2 specular_tc = direction_to_latlong_texcoord(wi);
+        float3 specular = specular_tint; // *environment_tex.SampleLevel(environment_sampler, specular_tc, mip_count * m_roughness).rgb;
+
+        return diffuse + specular;
+    }
+
 };
 
 } // NS ShadingModels

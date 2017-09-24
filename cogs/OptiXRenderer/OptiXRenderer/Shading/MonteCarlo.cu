@@ -117,7 +117,9 @@ RT_PROGRAM void closest_hit() {
         return;
     }
 
-    monte_carlo_payload.material_index = material_index;
+    // Store geometry varyings.
+    monte_carlo_payload.material_index = material_index; // Store material index after coverage check, since the material isn't actually used unless the coverage check succeeded.
+    monte_carlo_payload.texcoord = texcoord;
 
     // Store intersection point and wo in payload.
     monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
