@@ -9,6 +9,7 @@
 #include <OptiXRenderer/Renderer.h>
 
 #include <OptiXRenderer/EnvironmentMap.h>
+#include <OptiXRenderer/IBackend.h>
 #include <OptiXRenderer/OctahedralNormal.h>
 #include <OptiXRenderer/PresampledEnvironmentMap.h>
 #include <OptiXRenderer/Kernel.h>
@@ -32,6 +33,7 @@
 #include <StbImageWriter/StbImageWriter.h>
 
 #include <assert.h>
+#include <memory>
 #include <vector>
 
 using namespace Cogwheel;
@@ -169,6 +171,7 @@ struct Renderer::Implementation {
     unsigned int accumulations;
     Matrix4x4f camera_inverse_view_projection_matrix;
     Backend backend;
+    std::unique_ptr<IBackend> backend_impl;
 
     // Per scene members.
     optix::Group root_node;
@@ -204,7 +207,7 @@ struct Renderer::Implementation {
     } lights;
 
     Implementation(int cuda_device_ID, int width_hint, int height_hint)
-    : backend(Backend::PathTracing) {
+    : backend(Backend::PathTracing), backend_impl(new SimpleBackend(EntryPoints::PathTracing)) {
 
         device_IDs = { -1, -1 };
         
@@ -833,6 +836,7 @@ struct Renderer::Implementation {
         const uint2 current_screensize = make_uint2(width, height);
         if (current_screensize != screensize) {
             accumulation_buffer->setSize(width, height);
+            backend_impl->resize_backbuffers(width, height);
             screensize = make_uint2(width, height);
             accumulations = 0u;
 #ifdef ENABLE_OPTIX_DEBUG
@@ -857,12 +861,7 @@ struct Renderer::Implementation {
         }
 
         context["g_accumulations"]->setInt(accumulations);
-        if (backend == Backend::PathTracing)
-            context->launch(EntryPoints::PathTracing, screensize.x, screensize.y);
-        else if (backend == Backend::AlbedoVisualization)
-            context->launch(EntryPoints::Albedo, screensize.x, screensize.y);
-        else
-            context->launch(EntryPoints::Normal, screensize.x, screensize.y);
+        backend_impl->render(context, screensize.x, screensize.y);
         accumulations += 1u;
 
         /*
@@ -919,6 +918,17 @@ Backend Renderer::get_backend() const {
 
 void Renderer::set_backend(Backend backend) {
     m_impl->backend = backend;
+    switch (backend) {
+    case Backend::PathTracing:
+        m_impl->backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::PathTracing));
+        break;
+    case Backend::AlbedoVisualization:
+        m_impl->backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Albedo));
+        break;
+    case Backend::NormalVisualization:
+        m_impl->backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Normal));
+        break;
+    }
     m_impl->accumulations = 0;
 }
 

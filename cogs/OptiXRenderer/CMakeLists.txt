@@ -22,6 +22,7 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
     OptiXRenderer/Distributions.h
     OptiXRenderer/EnvironmentMap.h
     OptiXRenderer/EnvironmentMap.cpp
+    OptiXRenderer/IBackend.h
     OptiXRenderer/Intersect.h
     OptiXRenderer/Kernel.h
     OptiXRenderer/Kernel.cu
