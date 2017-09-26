@@ -15,12 +15,6 @@
 using namespace OptiXRenderer;
 using namespace optix;
 
-struct NormalVisualizationPayload {
-    float4 color;
-};
-
-rtDeclareVariable(NormalVisualizationPayload, normal_visualization_payload, rtPayload, );
-
 rtDeclareVariable(uint2, g_launch_index, rtLaunchIndex, );
 rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(float, g_scene_epsilon, , );
