@@ -22,6 +22,8 @@
 #include <D3DCompiler.h>
 #undef RGB
 
+// #define DISABLE_INTEROP 1
+
 namespace DX11OptiXAdaptor {
 
 inline void throw_on_failure(cudaError_t error, const std::string& file, int line) {
@@ -145,7 +147,9 @@ public:
 
     ~Implementation() {
         m_render_target.optix_buffer = nullptr;
+#ifndef DISABLE_INTEROP
         THROW_ON_CUDA_FAILURE(cudaGraphicsUnregisterResource(m_render_target.cuda_buffer));
+#endif
         DX11Renderer::safe_release(&m_render_target.dx_SRV);
 
         DX11Renderer::safe_release(&m_constant_buffer);
@@ -161,6 +165,17 @@ public:
         if (m_render_target.width != width || m_render_target.height != height)
             resize_render_target(width, height);
 
+#ifdef DISABLE_INTEROP
+        { // Render and copy to backbuffer.
+            m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, m_render_target.width, m_render_target.height);
+
+            void* cpu_buffer = m_render_target.optix_buffer->map();
+            ID3D11Resource* dx_buffer = nullptr;
+            m_render_target.dx_SRV->GetResource(&dx_buffer);
+            m_render_context->UpdateSubresource(dx_buffer, 0, NULL, cpu_buffer, 0, 0);
+            m_render_target.optix_buffer->unmap();
+        }
+#else
         { // Render to render target.
             cudaError_t error = cudaGraphicsMapResources(1, &m_render_target.cuda_buffer); // Done before rendering?
             THROW_ON_CUDA_FAILURE(error);
@@ -176,6 +191,7 @@ public:
 
             THROW_ON_CUDA_FAILURE(cudaGraphicsUnmapResources(1, &m_render_target.cuda_buffer));
         }
+#endif
 
         { // Render to back buffer.
             m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -203,7 +219,7 @@ public:
             desc.StructureByteStride = sizeof(short) * 4;
             desc.ByteWidth = m_render_target.capacity * sizeof(short) * 4;
             desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-            desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+            // desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
             desc.MiscFlags = 0;
 
             ID3D11Buffer* dx_buffer;
@@ -218,6 +234,7 @@ public:
             hr = m_device.CreateShaderResourceView(dx_buffer, &srv_desc, &m_render_target.dx_SRV);
             THROW_ON_FAILURE(hr);
 
+#ifndef DISABLE_INTEROP
             // Register the buffer with CUDA.
             if (m_render_target.cuda_buffer != nullptr)
                 THROW_ON_CUDA_FAILURE(cudaGraphicsUnregisterResource(m_render_target.cuda_buffer));
@@ -226,6 +243,7 @@ public:
             THROW_ON_CUDA_FAILURE(error);
             cudaGraphicsResourceSetMapFlags(m_render_target.cuda_buffer, cudaGraphicsMapFlagsWriteDiscard);
             dx_buffer->Release();
+#endif
         }
 
         // Create optix buffer.
@@ -234,7 +252,11 @@ public:
         // A GPU local buffer will obviously not work with multiple GPUs.
         optix::Context optix_context = m_optix_renderer->get_context();
         assert(optix_context->getEnabledDeviceCount() == 1);
+#ifndef DISABLE_INTEROP
         m_render_target.optix_buffer = optix_context->createBufferForCUDA(RT_BUFFER_INPUT_OUTPUT | RT_BUFFER_GPU_LOCAL, RT_FORMAT_HALF4, width, height);
+#else
+        m_render_target.optix_buffer = optix_context->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_HALF4, width, height);
+#endif
 
         // Update the constant buffer to reflect the new dimensions.
         int constant_data[4] = { width, height, 0, 0 };
