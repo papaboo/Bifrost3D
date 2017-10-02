@@ -1,4 +1,4 @@
-// Simple OptiX path ray generation programs, such as path tracing, normal and albedo visualization
+// Simple OptiX ray generation programs, such as path tracing, normal and albedo visualization
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
 //
