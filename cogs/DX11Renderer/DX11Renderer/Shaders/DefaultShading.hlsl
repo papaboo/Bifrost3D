@@ -98,7 +98,7 @@ struct DefaultShading {
         float specularity = compute_specularity(m_specularity, m_metallic);
         float abs_cos_theta = abs(dot(wi, normal));
         float specular_rho = compute_specular_rho(specularity, abs_cos_theta, m_roughness);
-        float3 specular_tint = lerp(float3(1.0f, 1.0f, 1.0f), tint, m_metallic);
+        float3 specular_tint = lerp(float3(1.0f, 1.0f, 1.0f), tint, m_metallic) * specular_rho;
         float3 diffuse_tint = tint * (1.0f - specular_rho);
 
         float width, height, mip_count;
@@ -110,7 +110,7 @@ struct DefaultShading {
         float2 specular_tc = direction_to_latlong_texcoord(wi);
         float3 specular = specular_tint * environment_tex.SampleLevel(environment_sampler, specular_tc, mip_count * m_roughness).rgb;
 
-        return diffuse + specular * specular_rho;
+        return diffuse + specular;
     }
 };
 
