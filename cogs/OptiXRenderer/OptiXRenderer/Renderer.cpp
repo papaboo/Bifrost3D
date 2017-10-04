@@ -109,7 +109,9 @@ static inline optix::Geometry load_mesh(optix::Context& context, Meshes::UID mes
     optix_mesh["geometry_buffer"]->setBuffer(geometry_buffer);
 
     RTsize texcoord_count = mesh.get_texcoords() ? vertex_count : 0;
-    optix::Buffer texcoord_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, texcoord_count, mesh.get_texcoords());
+    optix::Buffer texcoord_buffer = texcoord_count != 0 ? 
+        create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, texcoord_count, mesh.get_texcoords()) :
+        context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, 1);
     optix_mesh["texcoord_buffer"]->setBuffer(texcoord_buffer);
 
     OPTIX_VALIDATE(optix_mesh);
@@ -241,8 +243,8 @@ struct Renderer::Implementation {
         };
 
         { // Path tracing setup.
-            std::string rgp_ptx_path = get_ptx_path(shader_prefix, "PathTracing");
-            context->setRayGenerationProgram(EntryPoints::PathTracing, context->createProgramFromPTXFile(rgp_ptx_path, "path_tracing"));
+            std::string rgp_ptx_path = get_ptx_path(shader_prefix, "SimpleRGPs");
+            context->setRayGenerationProgram(EntryPoints::PathTracing, context->createProgramFromPTXFile(rgp_ptx_path, "path_tracing_RPG"));
             context->setMissProgram(RayTypes::MonteCarlo, context->createProgramFromPTXFile(rgp_ptx_path, "miss"));
 #ifdef ENABLE_OPTIX_DEBUG
             context->setExceptionProgram(EntryPoints::PathTracing, context->createProgramFromPTXFile(rgp_ptx_path, "exceptions"));
@@ -252,13 +254,13 @@ struct Renderer::Implementation {
         }
 
         { // Albedo visualization setup.
-            std::string ptx_path = get_ptx_path(shader_prefix, "AlbedoRendering");
-            context->setRayGenerationProgram(EntryPoints::Albedo, context->createProgramFromPTXFile(ptx_path, "ray_generation"));
+            std::string ptx_path = get_ptx_path(shader_prefix, "SimpleRGPs");
+            context->setRayGenerationProgram(EntryPoints::Albedo, context->createProgramFromPTXFile(ptx_path, "albedo_RPG"));
         }
 
         { // Normal visualization setup.
-            std::string ptx_path = get_ptx_path(shader_prefix, "NormalRendering");
-            context->setRayGenerationProgram(EntryPoints::Normal, context->createProgramFromPTXFile(ptx_path, "ray_generation"));
+            std::string ptx_path = get_ptx_path(shader_prefix, "SimpleRGPs");
+            context->setRayGenerationProgram(EntryPoints::Normal, context->createProgramFromPTXFile(ptx_path, "normals_RPG"));
         }
 
         { // Setup default material.
