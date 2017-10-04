@@ -20,12 +20,8 @@ using namespace optix;
 rtDeclareVariable(uint2, g_launch_index, rtLaunchIndex, );
 
 rtDeclareVariable(int, g_accumulations, , );
-rtBuffer<ushort4, 2>  g_output_buffer;
-#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
-rtBuffer<double4, 2>  g_accumulation_buffer;
-#else
-rtBuffer<float4, 2>  g_accumulation_buffer;
-#endif
+rtDeclareVariable(int, g_accumulation_buffer_ID, , );
+rtDeclareVariable(int, g_output_buffer_ID, , );
 
 rtDeclareVariable(float4, g_camera_position, , );
 rtDeclareVariable(Matrix4x4, g_inverted_view_projection_matrix, , );
@@ -37,31 +33,38 @@ rtDeclareVariable(int, g_max_bounce_count, , );
 
 template <typename Evaluator>
 __inline_dev__ void accumulate(Evaluator evaluator) {
-    if (g_accumulations == 0)
-#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
-        g_accumulation_buffer[g_launch_index] = make_double4(0.0, 0.0, 0.0, 0.0);
-#else
-        g_accumulation_buffer[g_launch_index] = make_float4(0.0f);
-#endif
+    size_t2 screen_size = rtBufferId<ushort4, 2>(g_output_buffer_ID).size();
 
     MonteCarloPayload payload = initialize_monte_carlo_payload(g_launch_index.x, g_launch_index.y,
-        g_accumulation_buffer.size().x, g_accumulation_buffer.size().y, g_accumulations,
+        screen_size.x, screen_size.y, g_accumulations,
         make_float3(g_camera_position), g_inverted_view_projection_matrix);
 
-    float3 color = evaluator(payload);
+    float3 radiance = evaluator(payload);
 
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
-    double3 prev_radiance = make_double3(g_accumulation_buffer[g_launch_index].x, g_accumulation_buffer[g_launch_index].y, g_accumulation_buffer[g_launch_index].z);
-    double3 accumulated_radiance_d = lerp_double(prev_radiance, make_double3(color.x, color.y, color.z), 1.0 / (g_accumulations + 1.0));
-    g_accumulation_buffer[g_launch_index] = make_double4(accumulated_radiance_d.x, accumulated_radiance_d.y, accumulated_radiance_d.z, 1.0f);
+    rtBufferId<double4, 2> accumulation_buffer = rtBufferId<double4, 2>(g_accumulation_buffer_ID);
+    double3 accumulated_radiance_d;
+    if (g_accumulations != 0) {
+        double3 prev_radiance = make_double3(accumulation_buffer[g_launch_index].x, accumulation_buffer[g_launch_index].y, accumulation_buffer[g_launch_index].z);
+        accumulated_radiance_d = lerp_double(prev_radiance, make_double3(radiance.x, radiance.y, radiance.z), 1.0 / (g_accumulations + 1.0));
+    } else
+        accumulated_radiance_d = make_double3(radiance.x, radiance.y, radiance.z);
+    accumulation_buffer[g_launch_index] = make_double4(accumulated_radiance_d.x, accumulated_radiance_d.y, accumulated_radiance_d.z, 1.0f);
     float3 accumulated_radiance = make_float3(accumulated_radiance_d.x, accumulated_radiance_d.y, accumulated_radiance_d.z);
 #else
-    float3 prev_radiance = make_float3(g_accumulation_buffer[g_launch_index]);
-    float3 accumulated_radiance = lerp(prev_radiance, color, 1.0f / (g_accumulations + 1.0f));
-    g_accumulation_buffer[g_launch_index] = make_float4(accumulated_radiance, 1.0f);
+    rtBufferId<float4, 2> accumulation_buffer = rtBufferId<float4, 2>(g_accumulation_buffer_ID);
+    float3 accumulated_radiance;
+    if (g_accumulations != 0) {
+        float3 prev_radiance = make_float3(accumulation_buffer[g_launch_index]);
+        accumulated_radiance = lerp(prev_radiance, radiance, 1.0f / (g_accumulations + 1.0f));
+    }
+    else
+        accumulated_radiance = radiance;
+    accumulation_buffer[g_launch_index] = make_float4(accumulated_radiance, 1.0f);
 #endif
 
-    g_output_buffer[g_launch_index] = float_to_half(make_float4(accumulated_radiance, 1.0f));
+    rtBufferId<ushort4, 2> output_buffer = rtBufferId<ushort4, 2>(g_output_buffer_ID);
+    output_buffer[g_launch_index] = float_to_half(make_float4(accumulated_radiance, 1.0f));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -116,8 +119,9 @@ RT_PROGRAM void albedo_RPG() {
             rtTrace(g_scene_root, ray, payload);
         } while (payload.material_index == 0 && !is_black(payload.throughput));
 
+        size_t2 screen_size = rtBufferId<ushort4, 2>(g_output_buffer_ID).size();
         bool valid_material = payload.material_index != 0;
-        if (g_launch_index.x < g_accumulation_buffer.size().x / 2 && valid_material) {
+        if (g_launch_index.x < screen_size.x / 2 && valid_material) {
             using namespace Shading::ShadingModels;
             const Material& material_parameter = g_materials[payload.material_index];
             const DefaultShading material = DefaultShading(material_parameter, payload.texcoord);
@@ -160,10 +164,4 @@ RT_PROGRAM void miss() {
 //-------------------------------------------------------------------------------------------------
 RT_PROGRAM void exceptions() {
     rtPrintExceptionDetails();
-
-#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
-    g_accumulation_buffer[g_launch_index] = make_double4(100000, 0, 0, 1.0);
-#else
-    g_accumulation_buffer[g_launch_index] = make_float4(100000, 0, 0, 1.0f);
-#endif
 }
