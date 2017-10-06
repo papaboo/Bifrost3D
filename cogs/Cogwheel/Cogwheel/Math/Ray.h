@@ -42,6 +42,10 @@ public:
         return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
+    inline Vector3f position_at(float t) const {
+        return origin + direction * t;
+    }
+
     inline std::string to_string() const {
         std::ostringstream out;
         out << "[origin: " << origin << ", direction: " << direction << "]";
