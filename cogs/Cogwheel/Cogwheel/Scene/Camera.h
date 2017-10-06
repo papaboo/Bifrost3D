@@ -107,6 +107,8 @@ void compute_perspective_projection(float near_distance, float far_distance, flo
 
 // Future work: compute_orthographic_projection
 
+// Generates a ray in worldspace shot from the point in the viewport of the referenced camera.
+// The viewport point is in normalized coordinates [0, 1]^2.
 Math::Ray ray_from_viewport_point(Cameras::UID camera_ID, Math::Vector2f viewport_point);
 
 } // NS CameraUtils
