@@ -58,9 +58,11 @@ SET(MATH_SRCS
   Cogwheel/Math/Distribution2D.h
   Cogwheel/Math/Distributions.h
   Cogwheel/Math/half.h
+  Cogwheel/Math/Intersect.h
   Cogwheel/Math/Math.h
   Cogwheel/Math/Matrix.h
   Cogwheel/Math/OctahedralNormal.h
+  Cogwheel/Math/Plane.h
   Cogwheel/Math/Polynomial.h
   Cogwheel/Math/Quaternion.h
   Cogwheel/Math/Ray.h

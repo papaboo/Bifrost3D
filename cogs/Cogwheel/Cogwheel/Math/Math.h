@@ -16,6 +16,7 @@
 #include <Cogwheel/Math/Half.h>
 #include <Cogwheel/Math/Matrix.h>
 #include <Cogwheel/Math/OctahedralNormal.h>
+#include <Cogwheel/Math/Plane.h>
 #include <Cogwheel/Math/Quaternion.h>
 #include <Cogwheel/Math/Ray.h>
 #include <Cogwheel/Math/Rect.h>
