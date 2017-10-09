@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 
 #include <OptiXRenderer/RhoTexture.h>
+#include <OptiXRenderer/Defines.h>
 
 #include <Cogwheel/Assets/Shading/GGXWithFresnelRho.h>
 
@@ -24,7 +25,7 @@ TextureSampler ggx_with_fresnel_rho_texture(Context& context) {
     float* rho_data = static_cast<float*>(rho_buffer->map());
     memcpy(rho_data, GGX_with_fresnel_rho, width * height * sizeof(float));
     rho_buffer->unmap();
-    // ggx_with_fresnel_rho_buffer->validate();
+    OPTIX_VALIDATE(ggx_with_fresnel_rho_buffer);
 
     // ... and wrap it in a texture sampler.
     TextureSampler& rho_texture = context->createTextureSampler();
@@ -38,7 +39,7 @@ TextureSampler ggx_with_fresnel_rho_texture(Context& context) {
     rho_texture->setFilteringModes(RT_FILTER_NEAREST, RT_FILTER_LINEAR, RT_FILTER_NONE);
     rho_texture->setArraySize(1u);
     rho_texture->setBuffer(0u, 0u, rho_buffer);
-    // rho_texture->validate()
+    OPTIX_VALIDATE(rho_texture->validate());
 
     return rho_texture;
 }
