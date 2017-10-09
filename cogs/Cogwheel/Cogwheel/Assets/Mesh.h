@@ -240,7 +240,7 @@ namespace MeshTests {
 // i.e. that the front face defined by the winding order 
 // is facing the same general direction as the normals.
 // TODO optional function that all invalid primitives are passed to.
-// Returns the number of primitives whose winding order did not corrospond to their vertex normals.
+// Returns the number of primitives whose winding order did not correspond to their vertex normals.
 unsigned int normals_correspond_to_winding_order(Meshes::UID mesh_ID);
 
 // TODO callback function that receives found degenerate primitives.
