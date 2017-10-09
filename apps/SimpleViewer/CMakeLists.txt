@@ -7,6 +7,7 @@ set(SRCS
   OpacityScene.h
   SphereScene.h
   TestScene.h
+  VeachScene.h
 )
 
 add_executable(${PROJECT_NAME} ${SRCS})

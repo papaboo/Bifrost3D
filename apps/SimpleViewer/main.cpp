@@ -11,6 +11,7 @@
 #include <OpacityScene.h>
 #include <SphereScene.h>
 #include <TestScene.h>
+#include <VeachScene.h>
 
 #include <Cogwheel/Assets/Mesh.h>
 #include <Cogwheel/Assets/MeshModel.h>
@@ -463,6 +464,8 @@ int initializer(Cogwheel::Core::Engine& engine) {
         create_opacity_scene(engine, cam_ID, root_node_ID);
     else if (g_scene.compare("TestScene") == 0)
         create_test_scene(engine, cam_ID, root_node_ID);
+    else if (g_scene.compare("VeachScene") == 0)
+        create_veach_scene(engine, cam_ID, scene_ID);
     else {
         printf("Loading scene: '%s'\n", g_scene.c_str());
         SceneNodes::UID obj_root_ID = ObjLoader::load(g_scene, load_image);
@@ -577,7 +580,7 @@ void print_usage() {
     char* usage =
         "usage simpleviewer:\n"
         "  -h  | --help: Show command line usage for simpleviewer.\n"
-        "  -s  | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'MaterialScene', 'SphereScene' and 'TestScene', which loads the corresponding builtin scenes.\n"
+        "  -s  | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'MaterialScene', 'SphereScene', 'TestScene' and 'VeachScene', which loads the corresponding builtin scenes.\n"
 #ifdef OPTIX_FOUND
         "  -p | --path-tracing-only: Launches with the path tracer as the only avaliable renderer.\n"
         "  -r | --rasterizer-only: Launches with the rasterizer as the only avaliable renderer.\n"
