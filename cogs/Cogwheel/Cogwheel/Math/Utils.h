@@ -141,6 +141,11 @@ inline float radians_to_degress(float radians) {
     return radians * (180.0f / PI<float>());
 }
 
+template <typename T>
+inline Vector3<T> reflect(Vector3<T> incident, Vector3<T> normal) {
+    return incident - normal * dot(normal, incident) * T(2);
+}
+
 inline unsigned int reverse_bits(unsigned int n) {
     // Reverse bits of n.
     n = (n << 16) | (n >> 16);
