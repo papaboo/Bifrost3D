@@ -55,7 +55,6 @@ private:
     vector<Dx11Model> m_sorted_models = vector<Dx11Model>(0);
 
     EnvironmentManager* m_environments;
-    LightManager m_lights;
     MaterialManager m_materials;
     TextureManager m_textures;
     TransformManager m_transforms;
@@ -99,6 +98,13 @@ private:
     };
     OID3D11Buffer m_scene_buffer;
 
+    // Lights
+    struct {
+        LightManager manager;
+        OID3D11VertexShader vertex_shader;
+        OID3D11PixelShader pixel_shader;
+    } m_lights;
+
     std::wstring m_shader_folder_path;
 
 public:
@@ -120,7 +126,6 @@ public:
             m_model_indices[0] = 0;
 
             m_environments = new EnvironmentManager(m_device, m_shader_folder_path, m_textures);
-            m_lights = LightManager(m_device, LightSources::capacity());
 
             m_materials = MaterialManager(m_device, *m_render_context);
             m_render_context->PSSetShaderResources(15, 1, m_materials.get_GGX_with_fresnel_rho_srv_addr());
@@ -215,6 +220,17 @@ public:
             THROW_ON_FAILURE(hr);
         }
 
+        { // Setup lights
+            m_lights.manager = LightManager(m_device, LightSources::capacity());
+
+            // Sphere light visualization shaders.
+            UID3DBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "vs_5_0", "vs");
+            HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_lights.vertex_shader);
+            THROW_ON_FAILURE(hr);
+            UID3DBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "ps_5_0", "ps");
+            hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), NULL, &m_lights.pixel_shader);
+            THROW_ON_FAILURE(hr);
+        }
     }
 
     ~Implementation() {
@@ -272,7 +288,8 @@ public:
     } 
 
     void render(const Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
-        m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        // TODO Replace by assert
+        m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // NOTE This should already be the case as we finish a frame by rendering models or post process effects.
 
         // Opaque state setup.
         m_render_context->OMSetBlendState(0, 0, 0xffffffff);
@@ -292,18 +309,30 @@ public:
             m_render_context->PSSetConstantBuffers(0, 1, &m_scene_buffer);
         }
 
-        m_environments->render(*m_render_context, scene.get_ID());
+        { // Render lights.
+            m_environments->render(*m_render_context, scene.get_ID());
+
+            // Bind light buffer.
+            m_render_context->VSSetConstantBuffers(1, 1, m_lights.manager.light_buffer_addr());
+            m_render_context->PSSetConstantBuffers(1, 1, m_lights.manager.light_buffer_addr());
+
+            { // Render sphere lights.
+                m_render_context->VSSetShader(m_lights.vertex_shader, 0, 0);
+                m_render_context->PSSetShader(m_lights.pixel_shader, 0, 0);
+
+                m_render_context->Draw(m_lights.manager.active_light_count() * 6, 0);
+            }
+        }
 
         { // Render models.
 
-            // Bind light buffer.
-            m_render_context->PSSetConstantBuffers(1, 1, m_lights.light_buffer_addr());
 
             // Set vertex and pixel shaders.
             m_render_context->VSSetShader(m_vertex_shading.shader, 0, 0);
             m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
             m_render_context->PSSetShader(m_opaque.shader, 0, 0);
 
+            // Set null buffer as default texcoord buffer.
             unsigned int stride = sizeof(float2);
             unsigned int offset = 0;
             m_render_context->IASetVertexBuffers(2, 1, &m_vertex_shading.null_buffer, &stride, &offset);
@@ -377,7 +406,7 @@ public:
 
     void handle_updates() {
         m_environments->handle_updates(m_device, *m_render_context);
-        m_lights.handle_updates(*m_render_context);
+        m_lights.manager.handle_updates(*m_render_context);
         m_materials.handle_updates(m_device, *m_render_context);
         m_textures.handle_updates(m_device, *m_render_context);
         m_transforms.handle_updates(m_device, *m_render_context);

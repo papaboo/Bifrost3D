@@ -37,9 +37,9 @@ private:
     Array<LightSources::UID> m_index_to_ID;
 
     struct LightBuffer {
-        int m_active_count;
+        int active_count;
         Vector3i _padding;
-        Dx11Light m_lights[MAX_LIGHTS];
+        Dx11Light lights[MAX_LIGHTS];
     } m_data;
     OID3D11Buffer m_lights_buffer;
 
@@ -78,7 +78,7 @@ private:
 
 public:
     LightManager() {
-        m_data.m_active_count = 0u;
+        m_data.active_count = 0u;
         m_lights_buffer = nullptr;
     }
 
@@ -86,7 +86,7 @@ public:
         initial_capacity = initial_capacity;
         m_ID_to_index = Array<unsigned int>(initial_capacity);
         m_index_to_ID = Array<LightSources::UID>(initial_capacity);
-        m_data.m_active_count = 0u;
+        m_data.active_count = 0u;
 
         D3D11_BUFFER_DESC uniforms_desc = {};
         uniforms_desc.Usage = D3D11_USAGE_DEFAULT;
@@ -98,9 +98,8 @@ public:
         HRESULT hr = device.CreateBuffer(&uniforms_desc, NULL, &m_lights_buffer);
     }
 
-    inline ID3D11Buffer** light_buffer_addr() {
-        return &m_lights_buffer;
-    }
+    inline int active_light_count() const { return m_data.active_count; }
+    inline ID3D11Buffer** light_buffer_addr() { return &m_lights_buffer; }
 
     void handle_updates(ID3D11DeviceContext1& device_context) {
         if (!LightSources::get_changed_lights().is_empty()) {
@@ -111,7 +110,7 @@ public:
                 m_index_to_ID.resize(new_capacity);
 
                 // Resizing removes old data, so this as an opportunity to linearize the light data.
-                Dx11Light* gpu_lights = m_data.m_lights;
+                Dx11Light* gpu_lights = m_data.lights;
                 unsigned int light_index = 0;
                 for (LightSources::UID light_ID : LightSources::get_iterable()) {
                     m_ID_to_index[light_ID] = light_index;
@@ -121,10 +120,10 @@ public:
                     ++light_index;
                 }
 
-                m_data.m_active_count = light_index;
+                m_data.active_count = light_index;
             } else {
 
-                Dx11Light* gpu_lights = m_data.m_lights;
+                Dx11Light* gpu_lights = m_data.lights;
                 LightSources::ChangedIterator created_lights_begin = LightSources::get_changed_lights().begin();
                 while (created_lights_begin != LightSources::get_changed_lights().end() &&
                     LightSources::get_changes(*created_lights_begin).not_set(LightSources::Change::Created))
@@ -150,12 +149,12 @@ public:
                             ++created_lights_begin;
                     } else {
                         // Replace deleted light by light from the end of the array.
-                        --m_data.m_active_count;
-                        if (light_index != m_data.m_active_count) {
-                            memcpy(gpu_lights + light_index, gpu_lights + m_data.m_active_count, sizeof(Dx11Light));
+                        --m_data.active_count;
+                        if (light_index != m_data.active_count) {
+                            memcpy(gpu_lights + light_index, gpu_lights + m_data.active_count, sizeof(Dx11Light));
 
                             // Rewire light ID and index maps.
-                            m_index_to_ID[light_index] = m_index_to_ID[m_data.m_active_count];
+                            m_index_to_ID[light_index] = m_index_to_ID[m_data.active_count];
                             m_ID_to_index[m_index_to_ID[light_index]] = light_index;
                         }
                     }
@@ -166,7 +165,7 @@ public:
                     if (LightSources::get_changes(light_ID).not_set(LightSources::Change::Created))
                         continue;
 
-                    unsigned int light_index = m_data.m_active_count++;
+                    unsigned int light_index = m_data.active_count++;
                     m_ID_to_index[light_ID] = light_index;
                     m_index_to_ID[light_index] = light_ID;
 

@@ -12,6 +12,11 @@
 // Light sources data.
 //-----------------------------------------------------------------------------
 
+namespace LightType {
+    static const float Sphere = 1.0f;
+    static const float Directional = 2.0f;
+}
+
 struct LightData {
     float4 type_power;
     float4 spatial_softness;
