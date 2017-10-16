@@ -42,7 +42,7 @@ namespace DX11Renderer {
 //-------------------------------------------------------------------------------------------------
 
 using OID3D11BlendState = DX11Renderer::OwnedResourcePtr<ID3D11BlendState>;
-using UID3DBlob = DX11Renderer::OwnedResourcePtr<ID3DBlob>;
+using OID3DBlob = DX11Renderer::OwnedResourcePtr<ID3DBlob>;
 using OID3D11Buffer = DX11Renderer::OwnedResourcePtr<ID3D11Buffer>;
 using OID3D11ComputeShader = DX11Renderer::OwnedResourcePtr<ID3D11ComputeShader>;
 using OID3D11DepthStencilState = DX11Renderer::OwnedResourcePtr<ID3D11DepthStencilState>;

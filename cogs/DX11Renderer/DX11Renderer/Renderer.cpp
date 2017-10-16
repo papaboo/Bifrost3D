@@ -136,7 +136,7 @@ public:
         }
 
         { // Setup vertex processing.
-            UID3DBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"VertexShader.hlsl", "vs_5_0");
+            OID3DBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"VertexShader.hlsl", "vs_5_0");
 
             // Create the shader objects.
             HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shading.shader);
@@ -174,7 +174,7 @@ public:
             hr = m_device.CreateDepthStencilState(&depth_desc, &m_opaque.depth_state);
             THROW_ON_FAILURE(hr);
 
-            UID3DBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "opaque");
+            OID3DBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "opaque");
             hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_opaque.shader);
             THROW_ON_FAILURE(hr);
         }
@@ -210,7 +210,7 @@ public:
             hr = m_device.CreateDepthStencilState(&depth_desc, &m_transparent.depth_state);
             THROW_ON_FAILURE(hr);
 
-            UID3DBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "transparent");
+            OID3DBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "transparent");
             hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_transparent.shader);
             THROW_ON_FAILURE(hr);
         }
@@ -224,10 +224,10 @@ public:
             m_lights.manager = LightManager(m_device, LightSources::capacity());
 
             // Sphere light visualization shaders.
-            UID3DBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "vs_5_0", "vs");
+            OID3DBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "vs_5_0", "vs");
             HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_lights.vertex_shader);
             THROW_ON_FAILURE(hr);
-            UID3DBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "ps_5_0", "ps");
+            OID3DBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "ps_5_0", "ps");
             hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), NULL, &m_lights.pixel_shader);
             THROW_ON_FAILURE(hr);
         }

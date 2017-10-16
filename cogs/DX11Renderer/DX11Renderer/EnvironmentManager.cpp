@@ -26,15 +26,15 @@ namespace DX11Renderer {
 EnvironmentManager::EnvironmentManager(ID3D11Device1& device, const std::wstring& shader_folder_path, TextureManager& textures)
     : m_textures(textures) {
 
-    UID3DBlob vertex_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "vs_5_0", "main_vs");
+    OID3DBlob vertex_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "vs_5_0", "main_vs");
     HRESULT hr = device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shader);
     THROW_ON_FAILURE(hr);
 
-    UID3DBlob pixel_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "ps_5_0", "main_ps");
+    OID3DBlob pixel_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "ps_5_0", "main_ps");
     hr = device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), NULL, &m_pixel_shader);
     THROW_ON_FAILURE(hr);
 
-    UID3DBlob convolution_shader_blob = compile_shader(shader_folder_path + L"IBLConvolution.hlsl", "cs_5_0", "MIS_convolute");
+    OID3DBlob convolution_shader_blob = compile_shader(shader_folder_path + L"IBLConvolution.hlsl", "cs_5_0", "MIS_convolute");
     hr = device.CreateComputeShader(UNPACK_BLOB_ARGS(convolution_shader_blob), NULL, &m_convolution_shader);
     THROW_ON_FAILURE(hr);
 
