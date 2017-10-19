@@ -20,7 +20,7 @@ namespace LightSources {
 __device__ static const float sphere_light_small_sin_theta_squared = 1e-5f;
 
 __inline_all__ float surface_area(const SphereLight& light) {
-    return 4.0f * M_PIf * light.radius * light.radius;
+    return 4.0f * PIf * light.radius * light.radius;
 }
 
 // Returns true if the sphere light should be interpreted as a delta light / point light.
