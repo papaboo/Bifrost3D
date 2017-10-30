@@ -36,7 +36,7 @@ TextureSampler ggx_with_fresnel_rho_texture(Context& context) {
     rho_texture->setReadMode(RT_TEXTURE_READ_ELEMENT_TYPE);
     rho_texture->setMaxAnisotropy(1.0f);
     rho_texture->setMipLevelCount(1u);
-    rho_texture->setFilteringModes(RT_FILTER_NEAREST, RT_FILTER_LINEAR, RT_FILTER_NONE);
+    rho_texture->setFilteringModes(RT_FILTER_LINEAR, RT_FILTER_LINEAR, RT_FILTER_NONE);
     rho_texture->setArraySize(1u);
     rho_texture->setBuffer(0u, 0u, rho_buffer);
     OPTIX_VALIDATE(rho_texture);
