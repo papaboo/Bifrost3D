@@ -191,7 +191,6 @@ struct Renderer::Implementation {
     std::vector<optix::TextureSampler> textures = std::vector<optix::TextureSampler>(0);
 
     optix::Material default_material;
-    optix::TextureSampler ggx_with_fresnel_rho;
     optix::Buffer material_parameters;
     unsigned int active_material_count;
 
@@ -282,8 +281,7 @@ struct Renderer::Implementation {
             context["g_materials"]->set(material_parameters);
 
             // Upload directional-hemispherical reflectance texture.
-            ggx_with_fresnel_rho = ggx_with_fresnel_rho_texture(context);
-            context["ggx_with_fresnel_rho_texture_ID"]->setInt(ggx_with_fresnel_rho->getId());
+            context["ggx_with_fresnel_rho_texture"]->setTextureSampler(ggx_with_fresnel_rho_texture(context));
         }
 
         { // Setup scene

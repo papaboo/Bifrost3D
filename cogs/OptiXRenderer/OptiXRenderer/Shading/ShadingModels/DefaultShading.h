@@ -14,7 +14,7 @@
 #include <OptiXRenderer/Utils.h>
 
 #if GPU_DEVICE
-rtDeclareVariable(int, ggx_with_fresnel_rho_texture_ID, , );
+rtTextureSampler<float, 2> ggx_with_fresnel_rho_texture;
 #else
 #include <Cogwheel/Assets/Shading/GGXWithFresnelRho.h>
 #endif
@@ -49,7 +49,7 @@ private:
 
     __inline_all__ static float compute_specular_rho(float specularity, float abs_cos_theta, float roughness) {
 #if GPU_DEVICE
-        float base_specular_rho = optix::rtTex2D<float>(ggx_with_fresnel_rho_texture_ID, abs_cos_theta, roughness);
+        float base_specular_rho = tex2D(ggx_with_fresnel_rho_texture, abs_cos_theta, roughness);
 #else
         float base_specular_rho = Cogwheel::Assets::Shading::sample_GGX_with_fresnel_rho(abs_cos_theta, roughness);
 #endif
