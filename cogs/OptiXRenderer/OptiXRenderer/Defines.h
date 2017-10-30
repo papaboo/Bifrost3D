@@ -61,6 +61,7 @@ void validate_optix_resource(T resource, char* file, int line) {
 
 // Constants.
 #define PIf 3.14159265358979323846f
+#define TWO_PIf 6.283185307f
 #define RECIP_PIf 0.31830988618379067153776752674503f
 
 // Error messages.
