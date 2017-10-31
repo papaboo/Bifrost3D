@@ -105,6 +105,10 @@ __inline_all__ float sum(const optix::float3& v) {
     return v.x + v.y + v.z;
 }
 
+__inline_all__ float length_squared(const optix::float3& v) {
+    return optix::dot(v, v);
+}
+
 __inline_all__ optix::double3 lerp_double(const optix::double3& a, const optix::double3& b, const double t) {
     return optix::make_double3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
 }
@@ -129,6 +133,10 @@ __inline_all__ unsigned int part_by_1(unsigned int v) {
 
 __inline_all__ unsigned int morton_encode(unsigned int x, unsigned int y) {
     return part_by_1(y) | (part_by_1(x) << 1);
+}
+
+__inline_all__ static float pow2(float x) {
+    return x * x;
 }
 
 __inline_all__ static float pow5(float x) {
