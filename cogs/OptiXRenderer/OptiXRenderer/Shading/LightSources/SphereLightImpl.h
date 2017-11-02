@@ -50,11 +50,9 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix
         light_sample.PDF = 1.0f;
     } else {
         // Sample the cone and project the sample onto the sphere.
-        using namespace Distributions;
-
         float cos_theta = sqrtf(1.0f - sin_theta_squared);
         
-        DirectionalSample cone_sample = Cone::sample(cos_theta, random_sample);
+        auto cone_sample = Distributions::Cone::sample(cos_theta, random_sample);
 
         const TBN tbn = TBN(optix::normalize(vector_to_light));
         light_sample.direction_to_light = cone_sample.direction * tbn;
@@ -87,9 +85,13 @@ __inline_all__ float PDF(const SphereLight& light, const optix::float3& lit_posi
     }
 }
 
-__inline_all__ optix::float3 evaluate(const SphereLight& light, const optix::float3& position, const optix::float3& direction) {
+__inline_all__ optix::float3 evaluate(const SphereLight& light, const optix::float3& position) {
     float inv_divisor = 1.0f / (is_delta_light(light, position) ? (4.0f * PIf) : (PIf * surface_area(light)));
     return light.power * inv_divisor;
+}
+
+__inline_all__ optix::float3 evaluate(const SphereLight& light, const optix::float3& position, const optix::float3& direction) {
+    return evaluate(light, position);
 }
 
 } // NS LightSources
