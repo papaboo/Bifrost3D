@@ -40,6 +40,16 @@ struct MeshFlags {
 // Base types.
 //----------------------------------------------------------------------------
 
+struct __align__(16) Cone {
+    optix::float3 direction;
+    float cos_theta;
+
+    __inline_all__ static Cone make(optix::float3 direction, float cos_theta) {
+        Cone c = { direction, cos_theta };
+        return c;
+    }
+};
+
 struct __align__(16) Sphere {
     optix::float3 center;
     float radius;
