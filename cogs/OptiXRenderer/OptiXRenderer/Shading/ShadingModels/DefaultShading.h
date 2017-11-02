@@ -35,6 +35,7 @@ namespace ShadingModels {
 //   Basically the diffuse tint should depend on rho from both wo.z and wi.z.
 // * All materials are white at grazing angles, even metals.
 //   http://bitsquid.blogspot.dk/2017/07/validating-materials-and-lights-in.html
+//   This will make it harder to precompute rho for metals.
 // ---------------------------------------------------------------------------
 class DefaultShading {
 private:
