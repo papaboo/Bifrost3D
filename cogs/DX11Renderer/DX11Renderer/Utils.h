@@ -72,12 +72,15 @@ inline int sizeof_dx_format(DXGI_FORMAT format) {
     case DXGI_FORMAT_R16G16_UNORM:
     case DXGI_FORMAT_R11G11B10_FLOAT:
         return 4;
+    case DXGI_FORMAT_R16G16B16A16_SNORM:
+    case DXGI_FORMAT_R16G16B16A16_UNORM:
+        return 8;
     case DXGI_FORMAT_R32G32B32_FLOAT:
         return 12;
     case DXGI_FORMAT_R32G32B32A32_FLOAT:
         return 16;
     default:
-        return 0;
+        throw std::exception("Unknown DXGI_FORMAT");
     }
 };
 
