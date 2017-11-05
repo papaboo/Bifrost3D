@@ -1,24 +1,49 @@
 // Hlsl utilities.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
-// ---------------------------------------------------------------------------
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+// ------------------------------------------------------------------------------------------------
 
 #ifndef _DX11_RENDERER_SHADERS_UTILS_H_
 #define _DX11_RENDERER_SHADERS_UTILS_H_
 
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Constants.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 
 static const float PI = 3.14159265358979323846f;
+static const float TWO_PI = 6.283185307f;
 static const float RECIP_PI = 0.31830988618379067153776752674503f;
 
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+// Types.
+// ------------------------------------------------------------------------------------------------
+
+struct Cone {
+    float3 direction;
+    float cos_theta;
+
+    static Cone make(float3 direction, float cos_theta) {
+        Cone cone = { direction, cos_theta };
+        return cone;
+    }
+};
+
+struct Sphere {
+    float3 position;
+    float radius;
+
+    static Sphere make(float3 position, float radius) {
+        Sphere sphere = { position, radius };
+        return sphere;
+    }
+};
+
+// ------------------------------------------------------------------------------------------------
 // Utility functions.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 
 // Computes a tangent and bitangent that together with the normal creates an orthonormal bases.
 // Building an Orthonormal Basis, Revisited, Duff et al.
@@ -41,17 +66,25 @@ float3x3 create_inverse_TBN(float3 normal) {
     return transpose(create_TBN(normal));
 }
 
-//-----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Math utils
-//-----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 
 float heaviside(float v) {
     return v >= 0.0f ? 1.0f : 0.0f;
 }
 
+float pow2(float x) {
+    return x * x;
+}
+
 float pow5(float x) {
     float xx = x * x;
     return xx * xx * x;
+}
+
+float length_squared(float3 v) {
+    return dot(v, v);
 }
 
 float schlick_fresnel(float abs_cos_theta) {
