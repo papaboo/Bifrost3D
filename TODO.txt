@@ -1,39 +1,45 @@
 BACKLOG:
-* Try a new new seeding strategy with a nice screen space seed distribution.
-** Test RMS of expected random sample distance: 1 / sample count.
-** Can Sobol / sample02 be used? Perhaps { sobol(x), INT_MAX / y }?
-** Parallel for that abstracts { local_init, body, local finish} using OpenMP?
+* A Spherical Cap Preserving Parameterization for Spherical Distributions
+** Unit tests!
+*** Pivot transform.
+*** GGX with point light vs sampled.
+*** Just output until we have decent border values.
+*** Lambert with point light vs sampled.
+*** Default shading with point light.
+** Try to fit GGX or the default material myself.
+*** Store the pivot directly in the GGX SPTD texture.
+*** Scale the GGX brdf scale by 1 / 4 PI in the texture instead of in the shader?
+*** Fit lambert
+*** Test image gradients.
+** DefaultShadingSPTD that wraps default shading and adds SPTD evaluation.
+** Adjust BRDF texture lookups to avoid the outer half pixel padding.
+** Adjust spherelight depth in fragment shader.
+** Reduce the memory footprint per pixel of the dx11 GGX SPTD fit texture.
+** Optional: Use it for importance sampling, but is it easy to add when the material uses joint sampling?
+*** Return the joint sample SPDT from the material? Both GGX and Lambert can produce an SPDT.
+** Optional: See if we can't hack elongated highlights in. Possible parameters: difference in cos_theta between wo and wi, roughness, basis, pivot, ...
 
-* Light and BSDF samples in PRD
-** Add emission, RGB + diffusitivity
-** How do we handle coverage penetrations? Set BSDF weight to 1 and light radiance to 0, effectively negating the effects.
-*** Add seperate float on PRD for coverage PDF. We can't inline it in the BSDF PDF because that would affect MIS.
-*** And leave the MIS BSDF PDF alone, as the sample, from a MIS perspective, is still from the original surface.
-*** Setup scene with transparent and masked planes blocking a light to test it.
-** How do we handle direct light hits? Add emission to the monte carlo PRD.
-*** Zero the BSDF sample.
-
-* Reconstruction filters
-** Albedo generator?
-** Pr pixel.
-** Linear.
-** Mitchell.
-** Filter neighbouring light samples before reconstruction.
-*** Screen space photon mapping approach with MIS weights, then add a (recursive?) bilateral blur for everything not yet filtered.
-** Autoencoder approach. Offline first.
-*** Output 64 test images.
-*** Depth, RGB, light sample, BSDF sample, normal, pixel offset, material ID and PDF and length of next sample.
-*** Speed up training by train on 5x5 patches and then make it hierachically ourselves?
+* Backends
+** Filter neighbouring light samples before reconstruction - Screen space photon mapping approach with MIS weights / Path filtering.
+*** Output buffers
+**** Material ID, texcoord, position, normal, ray dir, weight, light sample, indirect sample 
+**** Define for toggling between compressed and full precision buffers.
+**** Compressed directions.
+**** Compressed radiance sample: half3 radiance, half PDF, 32bit encoded direction, float distance := 16 byte aligned.
+*** Output screen space sample based on path/BSDF PDF.
+**** Perhaps select a vertex if the BSDF PDF is less than 1 / PI or maybe even a bit more. Then vertices are selected roughly proportional to how 'diffuse' they are.
+**** Trace ray footprint by assuming the ray is a cone. Then use Distributions::Cone::CosTheta(float angle) to compute the angle of each new cone after an intersection and use that for the density estimation kernel bandwidth.
+** Mitchell filter
+** Pass BSDF and light sample to the path tracing RGP and let it handle accumulated radiance.
 
 * Material improvements
+** Support roughness texture (alpha in diffuse texture)
 ** Metal specular tint should go to white at grazing angles.
-** A Spherical Cap Preserving Parameterization for Spherical Distributions
 ** Importance sample improvement?
-*** Pr pixel debug with pixel indication?
 *** Gold, which is a specular metal, has a specular weight of 0.6, so it's (supposedly) 40% diffuse.
-** IBL rho intensity.
-*** Specularity increase is too strong.
-*** Metals are too bright at grazing angles.
+*** The black rubber ball in TestScene produces a lot of nearly black samples. Must be from GGX?
+** Rho approximation.
+*** GGX contribution seems too strong. Materials are too bright.
 *** Perhaps computing the relation between GGX tint and rho would help figure out how much light scatters to the diffuse layer and how much the specular metal layers will reflect?
 ** Add coat.
 *** http://jcgt.org/published/0003/04/03/paper-lowres.pdf
@@ -62,11 +68,11 @@ BACKLOG:
 ** Should a scene node know if it is in a scene and in which? Store the root scene ID pr node?
 * 3DS, STL and PLY loader.
 * Serialize scene and models, perhaps just build GLFT importer and exporter at first. https://github.com/KhronosGroup/glTF
+** https://github.com/syoyo/tinygltf
 
 libs
 * RtAudio wrapper - https://github.com/thestk/rtaudio
 * Emscripten
 * LuaJit - OpenSource (Fallback to interpretted Lua if the target architecture isn't supported.)
-* ARGH! Command line passing tool - https://github.com/adishavit/argh
-* MXNet for deep learning. Or just use cuDNN and ignore the abstractions.
+* MXNet or TensorFlow for deep learning. Use CuDNN directly for inference.
 * CUDA launch config - https://github.com/jaredhoberock/cuda_launch_config
