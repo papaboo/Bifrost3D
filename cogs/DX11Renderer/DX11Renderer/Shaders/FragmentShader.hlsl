@@ -93,15 +93,11 @@ float3 integration(PixelInput input) {
             float3 diffuse_tint, specular_tint;
             material.evaluate_tints(wo, wi, input.texcoord, diffuse_tint, specular_tint);
 
-            // Evaluate GGX
-            float specular_f = /* sptd_specular.brdf_scale * */ SPTD::evaluate_sphere_light(sptd_specular.pivot, local_sphere) / (4.0f * PI);
-            float3 specular_contribution = specular_tint * l * specular_f;
-            
-            // Evaluate diffuse
-            float diffuse_f = /* sptd_diffuse.brdf_scale * */ SPTD::evaluate_sphere_light(sptd_diffuse.pivot, local_sphere) / (4.0f * PI);
-            float3 diffuse_contribution = diffuse_tint * l * diffuse_f;
+            // Evaluate BRDF. TODO Use brdf_scale?
+            float specular_f = specular_tint *SPTD::evaluate_sphere_light(sptd_specular.pivot, local_sphere) / (4.0f * PI);
+            float diffuse_f = diffuse_tint *SPTD::evaluate_sphere_light(sptd_diffuse.pivot, local_sphere) / (4.0f * PI);
 
-            radiance += specular_contribution + diffuse_contribution;
+            radiance += (diffuse_f + specular_f) * l;
 
         } else {
             // Apply regular delta lights
