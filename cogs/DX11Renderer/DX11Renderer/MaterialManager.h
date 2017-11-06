@@ -32,6 +32,7 @@ public:
 
     MaterialManager& operator=(MaterialManager&& rhs) {
         m_GGX_with_fresnel_rho_srv = std::move(rhs.m_GGX_with_fresnel_rho_srv);
+        m_GGX_SPTD_fit_srv = std::move(rhs.m_GGX_SPTD_fit_srv);
 
         m_rho_sampler = std::move(rhs.m_rho_sampler);;
         m_constant_array = std::move(rhs.m_constant_array);
@@ -40,6 +41,7 @@ public:
     }
 
     ID3D11ShaderResourceView** get_GGX_with_fresnel_rho_srv_addr() { return &m_GGX_with_fresnel_rho_srv; }
+    ID3D11ShaderResourceView** get_GGX_SPTD_fit_srv_addr() { return &m_GGX_SPTD_fit_srv; }
     ID3D11SamplerState** get_rho_sampler_addr() { return &m_rho_sampler; }
 
     inline Dx11Material& get_material(unsigned int material_index) { return m_materials[material_index]; }
@@ -54,6 +56,7 @@ private:
     MaterialManager& operator=(MaterialManager& rhs) = delete;
 
     OID3D11ShaderResourceView m_GGX_with_fresnel_rho_srv;
+    OID3D11ShaderResourceView m_GGX_SPTD_fit_srv;
     OID3D11SamplerState m_rho_sampler;
 
     std::vector<Dx11Material> m_materials;

@@ -11,6 +11,7 @@
 
 #include <Cogwheel/Assets/Material.h>
 #include <Cogwheel/Assets/Shading/GGXWithFresnelRho.h>
+#include <Cogwheel/Assets/Shading/GGXSPTDFit.h>
 
 using namespace Cogwheel::Assets;
 
@@ -31,10 +32,9 @@ inline Dx11Material make_dx11material(Material mat) {
 }
 
 MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& context) {
+    using namespace Cogwheel::Assets::Shading;
 
     { // Setup GGX with fresnel rho texture.
-        using namespace Cogwheel::Assets::Shading;
-
         D3D11_TEXTURE2D_DESC tex_desc = {};
         tex_desc.Width = GGX_with_fresnel_angle_sample_count;
         tex_desc.Height = GGX_with_fresnel_roughness_sample_count;
@@ -48,7 +48,7 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
 
         unsigned short* rho = new unsigned short[tex_desc.Width * tex_desc.Height];
         for (unsigned int i = 0; i < tex_desc.Width * tex_desc.Height; ++i)
-            rho[i] = unsigned short(GGX_with_fresnel_rho[i] * 65536);
+            rho[i] = unsigned short(GGX_with_fresnel_rho[i] * 65535);
 
         D3D11_SUBRESOURCE_DATA resource_data;
         resource_data.pSysMem = rho;
@@ -69,7 +69,36 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         THROW_ON_FAILURE(hr);
     }
 
-    { // Rho sampler
+    { // Setup GGX with fresnel rho texture.
+        D3D11_TEXTURE2D_DESC tex_desc = {};
+        tex_desc.Width = GGX_SPDT_fit_angular_sample_count;
+        tex_desc.Height = GGX_SPDT_fit_roughness_sample_count;
+        tex_desc.MipLevels = 1;
+        tex_desc.ArraySize = 1;
+        tex_desc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT; // TODO use R11G11B10. Either if there is a format, otherwise pack it. Or use 64 bit. Just reduce it instead of wasting space. And potentially inline it in the stored array.
+        tex_desc.SampleDesc.Count = 1;
+        tex_desc.SampleDesc.Quality = 0;
+        tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
+        tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+        D3D11_SUBRESOURCE_DATA resource_data;
+        resource_data.pSysMem = GGX_SPDT_fit;
+        resource_data.SysMemPitch = sizeof_dx_format(tex_desc.Format) * tex_desc.Width;
+
+        OID3D11Texture2D GGX_SPTD_fit_texture;
+        HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &GGX_SPTD_fit_texture);
+        THROW_ON_FAILURE(hr);
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+        srv_desc.Format = tex_desc.Format;
+        srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        srv_desc.Texture2D.MipLevels = tex_desc.MipLevels;
+        srv_desc.Texture2D.MostDetailedMip = 0;
+        hr = device.CreateShaderResourceView(GGX_SPTD_fit_texture, &srv_desc, &m_GGX_SPTD_fit_srv);
+        THROW_ON_FAILURE(hr);
+    }
+
+    { // 2D precomputation sampler.
         D3D11_SAMPLER_DESC desc = {};
         desc.Filter = D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
         desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
