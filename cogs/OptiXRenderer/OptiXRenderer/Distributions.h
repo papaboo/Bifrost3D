@@ -233,7 +233,7 @@ namespace SPTD {
         return make_float2(x, y) / qf;
     }
 
-    // Equation 2 in SPDT, Heitz et al. 17.
+    // Equation 2 in SPDT, Dupuy et al. 17.
     __inline_all__ float3 pivot_transform(const float3& r, const float3& pivot) {
         float3 numerator = (dot(r, pivot) - 1.0f) * (r - pivot) - cross(r - pivot, cross(r, pivot));
         float denominator = pow2(dot(r, pivot) - 1.0f) + length_squared(cross(r, pivot));
@@ -278,7 +278,7 @@ namespace SPTD {
         float2 dir_xf = s * normalize(dir1_xf + dir2_xf);
 
         return OptiXRenderer::Cone::make(dir_xf.x * pivot_dir + dir_xf.y * pivot_ortho_dir,
-            dot(dir_xf, dir1_xf));
+                                         dot(dir_xf, dir1_xf));
     }
 
     __inline_all__ float solidangle(const OptiXRenderer::Cone& c) { return TWO_PIf - TWO_PIf * c.cos_theta; }
@@ -302,6 +302,19 @@ namespace SPTD {
             return smoothstep(0.0f, 1.0f, x) * (TWO_PIf - TWO_PIf * fmaxf(c1.cos_theta, c2.cos_theta));
         }
     }
+
+    __inline_all__ float evaluate_sphere_light(const float3& pivot, const Sphere& sphere) {
+
+        // compute the spherical cap produced by the sphere
+        float sin_theta_sqrd = clamp(sphere.radius * sphere.radius / dot(sphere.center, sphere.center), 0.0f, 1.0f);
+        OptiXRenderer::Cone sphere_cap = OptiXRenderer::Cone::make(normalize(sphere.center), sqrt(1.0f - sin_theta_sqrd));
+
+        // integrate
+        OptiXRenderer::Cone light_cone = pivot_transform(sphere_cap, pivot);
+        OptiXRenderer::Cone hemisphere_cone = pivot_transform(OptiXRenderer::Cone::make(make_float3(0.0f, 0.0f, 1.0f), 0.0f), pivot);
+        return solidangle_of_union(light_cone, hemisphere_cone);
+    }
+
 } // NS SPTD
 
 } // NS Distributions
