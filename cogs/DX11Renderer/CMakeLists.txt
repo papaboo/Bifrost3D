@@ -37,6 +37,7 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/Shaders/LightSources.hlsl
     DX11Renderer/Shaders/IBLConvolution.hlsl
     DX11Renderer/Shaders/SphereLight.hlsl
+    DX11Renderer/Shaders/SPTD.hlsl
     DX11Renderer/Shaders/Utils.hlsl
     DX11Renderer/Shaders/VertexShader.hlsl
   )
