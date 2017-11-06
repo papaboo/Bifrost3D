@@ -59,7 +59,37 @@ struct DefaultShading {
         return c;
     }
 
+    float roughness() { return m_roughness; }
+
+    void evaluate_tints(float3 wo, float3 wi, float2 texcoord, 
+                        out float3 diffuse_tint, out float3 specular_tint) {
+        bool is_same_hemisphere = wi.z * wo.z >= 0.00000001f;
+        if (!is_same_hemisphere) {
+            diffuse_tint = specular_tint = float3(0.0f, 0.0f, 0.0f);
+            return;
+        }
+
+        // Flip directions if on the backside of the material.
+        if (wo.z < 0.0f) {
+            wi.z = -wi.z;
+            wo.z = -wo.z;
+        }
+
+        float3 tint = m_tint;
+        if (m_tint_texture_index != 0)
+            tint *= color_tex.Sample(color_sampler, texcoord).rgb;
+
+        float specularity = compute_specularity(m_specularity, m_metallic);
+
+        diffuse_tint = tint * (1.0f - compute_specular_rho(specularity, wo.z, m_roughness));
+
+        float3 halfway = normalize(wo + wi);
+        float fresnel = schlick_fresnel(specularity, dot(wo, halfway));
+        specular_tint = fresnel * lerp(float3(1.0f, 1.0f, 1.0f), m_tint, m_metallic);
+    }
+
     float3 evaluate(float3 wo, float3 wi, float2 texcoord) {
+        // TODO Use evaluate_tints.
         bool is_same_hemisphere = wi.z * wo.z >= 0.00000001f;
         if (!is_same_hemisphere)
             return float3(0.0f, 0.0f, 0.0f);
