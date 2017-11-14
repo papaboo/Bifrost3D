@@ -17,21 +17,22 @@ using namespace optix;
 
 namespace OptiXRenderer {
 
-float4 ggx_sptd_fit(float cos_theta, float ggx_alpha) {
-    auto params = Cogwheel::Assets::Shading::ggx_sptd_fit(cos_theta, ggx_alpha);
-    return make_float4(params.x, params.y, params.z, params.w);
+float4 GGX_SPTD_fit_lookup(float cos_theta, float ggx_alpha) {
+    auto params = Cogwheel::Assets::Shading::GGX_SPTD_fit_lookup(cos_theta, ggx_alpha);
+    return make_float4(params.x, params.y, params.z, params.z);
 }
 
-TextureSampler ggx_sptd_fit_texture(Context& context) {
+TextureSampler GGX_SPTD_fit_texture(Context& context) {
     using namespace Cogwheel::Assets::Shading;
 
     // Create buffer.
-    unsigned int width = GGX_SPDT_fit_angular_sample_count;
-    unsigned int height = GGX_SPDT_fit_roughness_sample_count;
+    unsigned int width = GGX_SPTD_fit_angular_sample_count;
+    unsigned int height = GGX_SPTD_fit_roughness_sample_count;
     Buffer buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT4, width, height);
 
     float4* data = static_cast<float4*>(buffer->map());
-    memcpy(data, GGX_SPDT_fit, width * height * sizeof(float4));
+    for (unsigned int i = 0; i < width * height; ++i)
+        data[i] = make_float4(GGX_SPTD_fit[i].x, GGX_SPTD_fit[i].y, GGX_SPTD_fit[i].z, GGX_SPTD_fit[i].z);
     buffer->unmap();
     OPTIX_VALIDATE(buffer);
 

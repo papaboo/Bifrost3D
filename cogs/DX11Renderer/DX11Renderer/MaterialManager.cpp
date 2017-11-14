@@ -71,18 +71,18 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
 
     { // Setup GGX with fresnel rho texture.
         D3D11_TEXTURE2D_DESC tex_desc = {};
-        tex_desc.Width = GGX_SPDT_fit_angular_sample_count;
-        tex_desc.Height = GGX_SPDT_fit_roughness_sample_count;
+        tex_desc.Width = GGX_SPTD_fit_angular_sample_count;
+        tex_desc.Height = GGX_SPTD_fit_roughness_sample_count;
         tex_desc.MipLevels = 1;
         tex_desc.ArraySize = 1;
-        tex_desc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT; // TODO use R11G11B10. Either if there is a format, otherwise pack it. Or use 64 bit. Just reduce it instead of wasting space. And potentially inline it in the stored array.
+        tex_desc.Format = DXGI_FORMAT_R32G32B32_FLOAT; // TODO Use a threechannelled fixed point format. Alternatively store theta and radius along with two rho parameters.
         tex_desc.SampleDesc.Count = 1;
         tex_desc.SampleDesc.Quality = 0;
         tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
         tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
         D3D11_SUBRESOURCE_DATA resource_data;
-        resource_data.pSysMem = GGX_SPDT_fit;
+        resource_data.pSysMem = GGX_SPTD_fit;
         resource_data.SysMemPitch = sizeof_dx_format(tex_desc.Format) * tex_desc.Width;
 
         OID3D11Texture2D GGX_SPTD_fit_texture;

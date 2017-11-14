@@ -14,9 +14,9 @@
 
 namespace OptiXRenderer {
 
-optix::float4 ggx_sptd_fit(float cos_theta, float ggx_alpha);
+optix::float4 GGX_SPTD_fit_lookup(float cos_theta, float ggx_alpha);
 
-optix::TextureSampler ggx_sptd_fit_texture(optix::Context& context);
+optix::TextureSampler GGX_SPTD_fit_texture(optix::Context& context);
 
 } // NS OptiXRenderer
 
