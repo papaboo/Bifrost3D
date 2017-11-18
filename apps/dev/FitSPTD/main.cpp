@@ -15,7 +15,7 @@
 #include <string>
 
 // number of samples used to compute the error during fitting
-const int sample_count = 64;
+const int sample_count = 32;
 
 struct DirectionAndRho {
     float3 direction;
