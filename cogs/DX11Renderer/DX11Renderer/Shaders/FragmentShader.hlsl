@@ -54,7 +54,19 @@ BRDFPivotTransform sptd_ggx_pivot(float roughness, float3 wo) {
 }
 
 BRDFPivotTransform sptd_lambert_pivot(float3 wo) {
-    return sptd_ggx_pivot(1.0f, wo);
+    BRDFPivotTransform res;
+    res.brdf_scale = 1.0f;
+    float pivot_norm = 0.369589f;
+    float pivot_theta = 0.0f;
+    float3 pivot = pivot_norm * float3(sin(pivot_theta), 0, cos(pivot_theta));
+
+    // Convert the pivot from local / wo space to tangent space. TODO Use TBN or perhaps inline. Isn't there some faster way to move the vector than create the matrix explicitly?
+    float3x3 basis;
+    basis[0] = wo.z < 0.999f ? normalize(wo - float3(0, 0, wo.z)) : float3(1, 0, 0);
+    basis[1] = cross(float3(0, 0, 1), basis[0]);
+    basis[2] = float3(0, 0, 1);
+    res.pivot = mul(pivot, basis);
+    return res;
 }
 
 struct PixelInput {
@@ -94,8 +106,8 @@ float3 integration(PixelInput input) {
             material.evaluate_tints(wo, wi, input.texcoord, diffuse_tint, specular_tint);
 
             // Evaluate BRDF. TODO Use brdf_scale?
-            float specular_f = specular_tint *SPTD::evaluate_sphere_light(sptd_specular.pivot, local_sphere) / (4.0f * PI);
-            float diffuse_f = diffuse_tint *SPTD::evaluate_sphere_light(sptd_diffuse.pivot, local_sphere) / (4.0f * PI);
+            float specular_f = specular_tint * SPTD::evaluate_sphere_light(sptd_specular.pivot, local_sphere) / (4.0f * PI);
+            float diffuse_f = diffuse_tint * SPTD::evaluate_sphere_light(sptd_diffuse.pivot, local_sphere) / (4.0f * PI);
 
             radiance += (diffuse_f + specular_f) * l;
 
