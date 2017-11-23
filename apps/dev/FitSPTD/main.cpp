@@ -11,6 +11,7 @@
 #include <StbImageWriter/StbImageWriter.h>
 
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -54,6 +55,7 @@ DirectionAndRho compute_average_sample(BRDF brdf, const float3& wo, float alpha)
 template <typename BRDF>
 float compute_error(const Pivot& pivot, BRDF brdf, const float3& wo, float alpha) {
     double error = 0.0;
+    int valid_sample_count = 0;
 
     for (int j = 0; j < sample_count; ++j)
         for (int i = 0; i < sample_count; ++i) {
@@ -73,16 +75,22 @@ float compute_error(const Pivot& pivot, BRDF brdf, const float3& wo, float alpha
 
             { // importance sample LTC
                 const float3 wi = pivot.sample(U1, U2);
-                error += error_from_wi(wi);
+                if (wi.z >= 0.0f) {
+                    error += error_from_wi(wi);
+                    ++valid_sample_count;
+                }
             }
 
             { // importance sample BRDF
                 const float3 wi = brdf.sample(wo, alpha, U1, U2);
-                error += error_from_wi(wi);
+                if (wi.z >= 0.0f) {
+                    error += error_from_wi(wi);
+                    ++valid_sample_count;
+                }
             }
         }
 
-    return (float)error / (float)(sample_count * sample_count);
+    return float(error / valid_sample_count);
 }
 
 template <typename BRDF>
@@ -91,12 +99,12 @@ struct PivotFitter {
     PivotFitter(Pivot& pivot, BRDF brdf, const float3& wo, float alpha)
         : pivot(pivot), brdf(brdf), wo(wo), alpha(alpha) { }
 
-    void update(const float * params) {
-        pivot.theta = clamp(params[1], -1.5707f, 0.0f);
+    void update(const float* params) {
         pivot.distance = clamp(params[0], 0.001f, 0.999f);
+        pivot.theta = clamp(params[1], -1.5707f, 0.0f);
     }
 
-    float operator()(const float * params) {
+    float operator()(const float* params) {
         update(params);
         return compute_error(pivot, brdf, wo, alpha);
     }
@@ -247,6 +255,28 @@ void output_fit_image(Pivot* pivots, unsigned int width, unsigned int height, co
     Images::destroy(image_ID);
 }
 
+template <typename BRDF>
+void output_errors(const Pivot* const pivots, BRDF brdf, int width, int height, const std::string& distribution_name) {
+    // TODO Image gradient errors.
+
+    double error = 0.0;
+    for (int i = 0; i < width * height; ++i) {
+        int a = i % width, t = i / width;
+
+        float theta = fminf(1.57f, t / float(height - 1) * 1.57079f);
+        const float3 wo = make_float3(sinf(theta), 0, cosf(theta));
+
+        float roughness = a / float(width - 1);
+        float alpha = fmaxf(roughness * roughness, 0.001f); // OptiXRenderer::Shading::BSDFs::GGX::alpha_from_roughness(roughness); // TODO The minimal alpha should be reduced, but that leads to bad fits on nearly specular surfaces.
+
+        const Pivot& pivot = pivots[a + t * width];
+
+        error += compute_error(pivot, brdf, wo, alpha);
+    }
+
+    std::cout << distribution_name << " error: " << error / (width * height) << std::endl;
+}
+
 int main(int argc, char* argv[]) {
     printf("SPTD fitting\n");
 
@@ -261,13 +291,16 @@ int main(int argc, char* argv[]) {
     // allocate data
     Pivot* pivots = new Pivot[size*size];
 
-    // fit
-    BRDF::GGX brdf;
-    fit_pivot(pivots, size, brdf);
+    { // GGX
+        BRDF::GGX brdf;
+        fit_pivot(pivots, size, brdf);
 
-    output_fit_header(pivots, size, size, output_dir + "GGXSPTDFit.h", "GGX",
-        "GGX fit for spherical pivot transformed distributions.");
-    output_fit_image(pivots, size, size, output_dir + "GGXSPTDFit.png");
+        output_fit_header(pivots, size, size, output_dir + "GGXSPTDFit.h", "GGX",
+            "GGX fit for spherical pivot transformed distributions.");
+        output_fit_image(pivots, size, size, output_dir + "GGXSPTDFit.png");
+
+        output_errors(pivots, brdf, size, size, "GGX");
+    }
 
     // delete data
     delete[] pivots;
