@@ -23,6 +23,7 @@ SET(ASSETS_SHADING_SRCS
   Cogwheel/Assets/Shading/GGXRho.h
   Cogwheel/Assets/Shading/GGXRho.png
   Cogwheel/Assets/Shading/GGXSPTDFit.h
+  Cogwheel/Assets/Shading/GGXSPTDFit.png
   Cogwheel/Assets/Shading/GGXWithFresnelRho.h
   Cogwheel/Assets/Shading/GGXWithFresnelRho.png
   Cogwheel/Assets/Shading/OrenNayarRho.h
