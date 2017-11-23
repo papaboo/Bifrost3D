@@ -19,8 +19,8 @@ namespace Parallel {
 
 template <typename LocalState>
 void for_range(int begin, int end, std::function<LocalState()> local_init, 
-                std::function<void(int, LocalState&)> body, 
-                std::function<void(LocalState)> local_finally) {
+               std::function<void(int, LocalState&)> body, 
+               std::function<void(LocalState)> local_finally) {
 #pragma omp parallel
     {
         auto local_state = local_init();
