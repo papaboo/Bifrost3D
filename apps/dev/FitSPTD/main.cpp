@@ -69,7 +69,7 @@ float compute_error(const Pivot& pivot, BRDF brdf, const float3& wo, float alpha
                 float eval_brdf = brdf.eval(wo, wi, alpha, pdf_brdf);
                 float eval_pivot = pivot.eval(wi);
                 float pdf_pivot = eval_pivot / pivot.amplitude;
-                double error = fabsf(eval_brdf - eval_pivot);
+                double error = eval_brdf - eval_pivot;
                 return error * error / (pdf_pivot + pdf_brdf);
             };
 
@@ -99,12 +99,18 @@ struct PivotFitter {
     PivotFitter(Pivot& pivot, BRDF brdf, const float3& wo, float alpha)
         : pivot(pivot), brdf(brdf), wo(wo), alpha(alpha) { }
 
-    void update(const float* params) {
+    void update(float* params) {
         pivot.distance = clamp(params[0], 0.001f, 0.999f);
         pivot.theta = clamp(params[1], -1.5707f, 0.0f);
+
+        // Mirror around the borders of the domain.
+        float distance_diff = pivot.distance - params[0];
+        pivot.distance = params[0] += 1.1f * distance_diff;
+        float theta_diff = pivot.theta - params[1];
+        pivot.theta = params[1] += 1.1f * theta_diff;
     }
 
-    float operator()(const float* params) {
+    float operator()(float* params) {
         update(params);
         return compute_error(pivot, brdf, wo, alpha);
     }
@@ -125,7 +131,7 @@ void fit(Pivot& pivot, BRDF brdf, const float3& wo, float alpha, float epsilon =
     float result_fit[2];
 
     PivotFitter<BRDF> fitter(pivot, brdf, wo, alpha);
-    float error = NelderMead<2>(result_fit, start_fit, epsilon, 1e-5f, 100, fitter);
+    float error = NelderMead<2>(result_fit, start_fit, epsilon, 1e-5f, 200, fitter);
 
     // Update pivot with best fitting values
     fitter.update(result_fit);
