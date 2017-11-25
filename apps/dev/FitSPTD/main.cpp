@@ -144,7 +144,7 @@ void fit_pivot(Pivot* pivots, const int size, BRDF brdf) {
     // Loop over theta and alpha.
     #pragma omp parallel for
     for (int i = 0; i < size * size; ++i) {
-        int a = i % size, t = i / size;
+        int t = i % size, a = i / size;
 
         float theta = fminf(1.57f, t / float(size - 1) * 1.57079f);
         const float3 wo = make_float3(sinf(theta), 0, cosf(theta));
@@ -154,7 +154,7 @@ void fit_pivot(Pivot* pivots, const int size, BRDF brdf) {
         auto average_sample = compute_average_sample(brdf, wo, alpha);
 
         // init
-        Pivot& pivot = pivots[a + t * size];
+        Pivot& pivot = pivots[t + a * size];
         pivot.distance = 0.5f + 0.49f * (1.0f - alpha);
         pivot.theta = acos(average_sample.direction.z) * sign(average_sample.direction.x);
         pivot.amplitude = average_sample.rho;
@@ -213,10 +213,8 @@ void output_fit_header(Pivot* pivots, unsigned int width, unsigned int height, c
         "static const Vector3f " << data_name << "_SPTD_fit[] = {\n";
 
     for (int y = 0; y < int(height); ++y) {
-        // float roughness = y / float(height - 1u); // TODO Reverse order to match albedo
-        // out_header << "    // Roughness " << roughness << "\n";
-        float theta = fminf(1.57f, y / float(height - 1) * 1.57079f);
-        out_header << "    // Theta: " << theta << ", cos_theta: " << cosf(theta) << "\n";
+        float roughness = y / float(height - 1u); // TODO Reverse order to match albedo
+        out_header << "    // Roughness " << roughness << "\n";
         out_header << "    ";
         for (int x = 0; x < int(width); ++x) {
             Pivot& fit = pivots[x + y * width];
@@ -233,7 +231,7 @@ void output_fit_header(Pivot* pivots, unsigned int width, unsigned int height, c
         "    int ui = int(u * " << data_name << "_SPTD_fit_roughness_sample_count);\n"
         "    float v = 2.0f * acosf(cos_theta) / 3.14159f;\n"
         "    int vi = int(v * " << data_name << "_SPTD_fit_angular_sample_count);\n"
-        "    return " << data_name << "_SPTD_fit[ui + vi * " << data_name << "_SPTD_fit_roughness_sample_count];\n"
+        "    return " << data_name << "_SPTD_fit[vi + ui * " << data_name << "_SPTD_fit_angular_sample_count];\n"
         "}\n"
         "\n"
         "} // NS Shading\n"
@@ -267,7 +265,7 @@ void output_errors(const Pivot* const pivots, BRDF brdf, int width, int height, 
 
     double error = 0.0;
     for (int i = 0; i < width * height; ++i) {
-        int a = i % width, t = i / width;
+        int t = i % width, a = i / width;
 
         float theta = fminf(1.57f, t / float(height - 1) * 1.57079f);
         const float3 wo = make_float3(sinf(theta), 0, cosf(theta));
@@ -275,7 +273,7 @@ void output_errors(const Pivot* const pivots, BRDF brdf, int width, int height, 
         float roughness = a / float(width - 1);
         float alpha = fmaxf(roughness * roughness, 0.001f); // OptiXRenderer::Shading::BSDFs::GGX::alpha_from_roughness(roughness); // TODO The minimal alpha should be reduced, but that leads to bad fits on nearly specular surfaces.
 
-        const Pivot& pivot = pivots[a + t * width];
+        const Pivot& pivot = pivots[t + a * width];
 
         error += compute_error(pivot, brdf, wo, alpha);
     }
