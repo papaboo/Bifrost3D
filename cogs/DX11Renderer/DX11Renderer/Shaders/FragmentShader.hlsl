@@ -35,7 +35,8 @@ struct BRDFPivotTransform {
 };
 
 BRDFPivotTransform sptd_ggx_pivot(float roughness, float3 wo) {
-    float2 sptd_ggx_fit_uv = float2(2.0f * acos(wo.z) / PI, roughness);
+    // float2 sptd_ggx_fit_uv = float2(2.0f * acos(wo.z) / PI, roughness);
+    float2 sptd_ggx_fit_uv = float2(abs(wo.z), roughness);
     float4 pivot_params = sptd_ggx_fit_tex.Sample(sptd_ggx_fit_sampler, sptd_ggx_fit_uv);
 
     BRDFPivotTransform res;

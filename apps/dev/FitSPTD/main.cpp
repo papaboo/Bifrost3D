@@ -146,7 +146,9 @@ void fit_pivot(Pivot* pivots, const int size, BRDF brdf) {
     for (int i = 0; i < size * size; ++i) {
         int t = i % size, a = i / size;
 
-        float theta = fminf(1.57f, t / float(size - 1) * 1.57079f);
+        float cos_theta = t / float(size - 1);
+        float theta = fminf(1.57f, acosf(cos_theta));
+        // std::cout << "cos_theta: " << cos_theta << ", theta: " << theta << ", cos(theta): " << cosf(theta) << std::endl;
         const float3 wo = make_float3(sinf(theta), 0, cosf(theta));
 
         float roughness = a / float(size - 1);
@@ -260,14 +262,13 @@ void output_fit_image(Pivot* pivots, unsigned int width, unsigned int height, co
 }
 
 template <typename BRDF>
-void output_errors(const Pivot* const pivots, BRDF brdf, int width, int height, const std::string& distribution_name) {
-    // TODO Image gradient errors.
-
+void output_error(const Pivot* const pivots, BRDF brdf, int width, int height, const std::string& distribution_name) {
     double error = 0.0;
     for (int i = 0; i < width * height; ++i) {
         int t = i % width, a = i / width;
 
-        float theta = fminf(1.57f, t / float(height - 1) * 1.57079f);
+        float cos_theta = t / float(height - 1);
+        float theta = fminf(1.57f, acosf(cos_theta));
         const float3 wo = make_float3(sinf(theta), 0, cosf(theta));
 
         float roughness = a / float(width - 1);
@@ -279,6 +280,40 @@ void output_errors(const Pivot* const pivots, BRDF brdf, int width, int height, 
     }
 
     std::cout << distribution_name << " error: " << error / (width * height) << std::endl;
+}
+
+template <typename BRDF>
+void output_gradient_error(const Pivot* const pivots, BRDF brdf, int width, int height, const std::string& distribution_name) {
+
+    float3 mins = { 1e30f, 1e30f, 1e30f };
+    float3 maxs = { -1e30f, -1e30f, -1e30f };
+    for (int i = 0; i < width * height; ++i) {
+        const Pivot& pivot = pivots[i];
+        mins = { fminf(mins.x, pivot.distance), fminf(mins.y, pivot.theta), fminf(mins.z, cosf(pivot.theta)) };
+        maxs = { fmaxf(maxs.x, pivot.distance), fmaxf(maxs.y, pivot.theta), fmaxf(maxs.z, cosf(pivot.theta)) };
+    }
+    float3 range = maxs - mins;
+
+    double3 error = { 0.0, 0.0, 0.0 };
+    for (int i = 0; i < width * height; ++i) {
+        int x = i % width, y = i / width;
+        const Pivot& pivot = pivots[x + y * width];
+
+        // Computes the normalized root mean square error.
+        auto add_pivot_error = [&](Pivot prev_pivot) {
+            error.x += pow2((pivot.distance - prev_pivot.distance) / range.x);
+            error.y += pow2((pivot.theta - prev_pivot.theta) / range.y);
+            error.z += pow2((cosf(pivot.theta) - cosf(prev_pivot.theta)) / range.z);
+        };
+
+        if (x > 0)
+            add_pivot_error(pivots[x - 1 + y * width]);
+
+        if (y > 0)
+            add_pivot_error(pivots[x + (y - 1) * width]);
+    }
+
+    std::cout << distribution_name << " gradient error: distance: " << error.x / (width * height) << ", theta: " << error.y / (width * height) << ", cos_theta: " << error.z / (width * height) << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -303,7 +338,8 @@ int main(int argc, char* argv[]) {
             "GGX fit for spherical pivot transformed distributions.");
         output_fit_image(pivots, size, size, output_dir + "GGXSPTDFit.png");
 
-        output_errors(pivots, brdf, size, size, "GGX");
+        output_error(pivots, brdf, size, size, "GGX");
+        output_gradient_error(pivots, brdf, size, size, "GGX");
     }
 
     // delete data
