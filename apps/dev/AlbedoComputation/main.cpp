@@ -1,10 +1,10 @@
 // Albedo or directional-hemispherical reflectance computation.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
-// ---------------------------------------------------------------------------
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+// ------------------------------------------------------------------------------------------------
 
 #include <OptiXRenderer/Shading/BSDFs/Burley.h>
 #include <OptiXRenderer/Shading/BSDFs/GGX.h>
@@ -54,8 +54,8 @@ Image estimate_rho(unsigned int width, unsigned int height, unsigned int sample_
         float roughness = fmaxf(0.000001f, y / float(height - 1u));
         #pragma omp parallel for
         for (int x = 0; x < int(width); ++x) {
-            float NdotV = (x + 0.5f) / float(width);
-            float3 wo = make_float3(sqrt(1.0f - NdotV * NdotV), 0.0f, NdotV);
+            float cos_theta = (x + 0.5f) / float(width);
+            float3 wo = make_float3(sqrt(1.0f - cos_theta * cos_theta), 0.0f, cos_theta);
             double rho = estimate_rho(wo, roughness, sample_count, sample_rough_BSDF);
             rho_image_pixels[x + y * width] = Math::RGB(float(rho));
         }
@@ -193,8 +193,8 @@ int main(int argc, char** argv) {
             #pragma omp parallel for
             for (int x = 0; x < int(width); ++x) {
 
-                float NdotV = (x + 0.5f) / float(width);
-                float3 wo = make_float3(sqrt(1.0f - NdotV * NdotV), 0.0f, NdotV);
+                float cos_theta = (x + 0.5f) / float(width);
+                float3 wo = make_float3(sqrt(1.0f - cos_theta * cos_theta), 0.0f, cos_theta);
 
                 DefaultShading material = DefaultShading(material_params);
 
