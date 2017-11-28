@@ -80,7 +80,7 @@ public:
         for (WeightedAdapter a : sorted_adapters) {
             dxgi_factory1->EnumAdapters1(a.index, &adapter);
 
-            UINT create_device_flags = 0;
+            UINT create_device_flags = 0; // D3D11_CREATE_DEVICE_DEBUG;
             D3D_FEATURE_LEVEL feature_level_requested = D3D_FEATURE_LEVEL_11_0;
 
             D3D_FEATURE_LEVEL feature_level;
