@@ -104,6 +104,11 @@ inline T lerp(const T a, const T b, const float t) {
     return a + (b - a) * t;
 }
 
+template <typename T, typename U>
+inline T inverse_lerp(const T a, const T b, const U v) {
+    return (v - a) / (b - a);
+}
+
 template <typename T>
 inline T min(const T a, const T b) {
     return a < b ? a : b;
