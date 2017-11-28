@@ -69,25 +69,32 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         THROW_ON_FAILURE(hr);
     }
 
-    { // Setup GGX with fresnel rho texture.
+    { // Setup GGX SPTD fit texture.
         D3D11_TEXTURE2D_DESC tex_desc = {};
         tex_desc.Width = GGX_SPTD_fit_angular_sample_count;
         tex_desc.Height = GGX_SPTD_fit_roughness_sample_count;
         tex_desc.MipLevels = 1;
         tex_desc.ArraySize = 1;
-        tex_desc.Format = DXGI_FORMAT_R32G32B32_FLOAT; // TODO Use a threechannelled fixed point format. Alternatively store theta and radius along with two rho parameters.
+        tex_desc.Format = DXGI_FORMAT_R10G10B10A2_UNORM; // TODO Use a threechannelled fixed point format. Alternatively store theta and radius along with two rho parameters.
+        // tex_desc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
         tex_desc.SampleDesc.Count = 1;
         tex_desc.SampleDesc.Quality = 0;
         tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
         tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
+        R10G10B10A2_Unorm* pivots = new R10G10B10A2_Unorm[tex_desc.Width * tex_desc.Height];
+        for (unsigned int i = 0; i < tex_desc.Width * tex_desc.Height; ++i)
+            pivots[i] = R10G10B10A2_Unorm(GGX_SPTD_fit[i].x, cosf(GGX_SPTD_fit[i].y), GGX_SPTD_fit[i].z);
+
         D3D11_SUBRESOURCE_DATA resource_data;
-        resource_data.pSysMem = GGX_SPTD_fit;
+        resource_data.pSysMem = pivots;
         resource_data.SysMemPitch = sizeof_dx_format(tex_desc.Format) * tex_desc.Width;
 
         OID3D11Texture2D GGX_SPTD_fit_texture;
         HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &GGX_SPTD_fit_texture);
         THROW_ON_FAILURE(hr);
+
+        delete[] pivots;
 
         D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
         srv_desc.Format = tex_desc.Format;

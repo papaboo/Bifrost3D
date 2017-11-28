@@ -88,6 +88,11 @@ struct AABB {
     float3 max;
 };
 
+//-------------------------------------------------------------------------------------------------
+// Format conversion.
+// See https://github.com/apitrace/dxsdk/blob/master/Include/d3dx_dxgiformatconvert.inl
+//-------------------------------------------------------------------------------------------------
+
 struct R11G11B10_Float {
     unsigned int raw;
 
@@ -103,6 +108,19 @@ struct R11G11B10_Float {
         unsigned int green = (half_float::half(g).raw() & 0x7FF0) << 7;
         unsigned int red = (half_float::half(r).raw() & 0x7FF0) >> 4;
         raw = red | green | blue;
+    }
+};
+
+struct R10G10B10A2_Unorm {
+    unsigned int raw;
+
+    R10G10B10A2_Unorm() : raw(0) {}
+
+    R10G10B10A2_Unorm(float r, float g, float b, float a = 1.0f) {
+        static auto saturate = [](float v) -> float { return fmaxf(0.0f, fminf(v, 1.0f)); };
+        static auto to_10bit = [](float v) -> unsigned int { return int(saturate(v) * 1023 + 0.5f); };
+        static auto to_4bit = [](float v) -> unsigned int { return int(saturate(v) * 3 + 0.5f); };
+        raw = to_10bit(r) | to_10bit(g) << 10 | to_10bit(b) << 20 | to_4bit(a) << 30;
     }
 };
 

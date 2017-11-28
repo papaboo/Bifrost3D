@@ -42,10 +42,11 @@ BRDFPivotTransform sptd_ggx_pivot(float roughness, float3 wo) {
     BRDFPivotTransform res;
     res.brdf_scale = pivot_params.w;
     float pivot_norm = pivot_params.x;
-    float pivot_theta = pivot_params.y;
-    float3 pivot = pivot_norm * float3(sin(pivot_theta), 0, cos(pivot_theta));
+    float pivot_cos_theta = pivot_params.y;
+    float pivot_sin_theta = -sqrt(1.0f - pivot_cos_theta * pivot_cos_theta);
+    float3 pivot = pivot_norm * float3(pivot_sin_theta, 0, pivot_cos_theta);
 
-    // Convert the pivot from local / wo space to tangent space. TODO Use TBN or perhaps inline. Isn't there some faster way to move the vector than create the matrix explicitly?
+    // Convert the pivot from local / wo space to tangent space. TODO Isn't there some faster way to move the vector than create the matrix explicitly?
     float3x3 basis;
     basis[0] = wo.z < 0.999f ? normalize(wo - float3(0, 0, wo.z)) : float3(1, 0, 0);
     basis[1] = cross(float3(0, 0, 1), basis[0]);
@@ -94,6 +95,7 @@ float3 integration(PixelInput input) {
 
     for (int l = 0; l < light_count.x; ++l) {
         LightData light = light_data[l];
+
         bool is_sphere_light = light.type() == LightType::Sphere && light.sphere_radius() > 0.0f;
         if (is_sphere_light) {
             // Sphere light in local space
@@ -107,8 +109,8 @@ float3 integration(PixelInput input) {
             material.evaluate_tints(wo, wi, input.texcoord, diffuse_tint, specular_tint);
 
             // Evaluate BRDF. TODO Use brdf_scale?
-            float specular_f = specular_tint * SPTD::evaluate_sphere_light(sptd_specular.pivot, local_sphere) / (4.0f * PI);
-            float diffuse_f = diffuse_tint * SPTD::evaluate_sphere_light(sptd_diffuse.pivot, local_sphere) / (4.0f * PI);
+            float3 specular_f = specular_tint * SPTD::evaluate_sphere_light(sptd_specular.pivot, local_sphere) / (4.0f * PI);
+            float3 diffuse_f = diffuse_tint * SPTD::evaluate_sphere_light(sptd_diffuse.pivot, local_sphere) / (4.0f * PI);
 
             radiance += (diffuse_f + specular_f) * l;
 
