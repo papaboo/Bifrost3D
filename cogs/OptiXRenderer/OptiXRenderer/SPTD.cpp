@@ -6,7 +6,7 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#include <OptiXRenderer/SPTDFit.h>
+#include <OptiXRenderer/SPTD.h>
 #include <OptiXRenderer/Defines.h>
 
 #include <optixu/optixu_math_namespace.h>
@@ -16,13 +16,14 @@
 using namespace optix;
 
 namespace OptiXRenderer {
+namespace SPTD {
 
-float4 GGX_SPTD_fit_lookup(float cos_theta, float ggx_alpha) {
-    auto params = Cogwheel::Assets::Shading::GGX_SPTD_fit_lookup(cos_theta, ggx_alpha);
+float4 GGX_fit_lookup(float cos_theta, float roughness) {
+    auto params = Cogwheel::Assets::Shading::GGX_SPTD_fit_lookup(cos_theta, roughness);
     return make_float4(params.x, params.y, params.z, params.z);
 }
 
-TextureSampler GGX_SPTD_fit_texture(Context& context) {
+TextureSampler GGX_fit_texture(Context& context) {
     using namespace Cogwheel::Assets::Shading;
 
     // Create buffer.
@@ -53,4 +54,5 @@ TextureSampler GGX_SPTD_fit_texture(Context& context) {
     return texture;
 }
 
+} // NS SPTD
 } // NS OptiXRenderer

@@ -34,8 +34,8 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
     OptiXRenderer/Renderer.cpp
     OptiXRenderer/RhoTexture.h
     OptiXRenderer/RhoTexture.cpp
-    OptiXRenderer/SPTDFit.h
-    OptiXRenderer/SPTDFit.cpp
+    OptiXRenderer/SPTD.h
+    OptiXRenderer/SPTD.cpp
     OptiXRenderer/TBN.h
     OptiXRenderer/Types.h
     OptiXRenderer/Utils.h
