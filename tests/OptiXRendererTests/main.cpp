@@ -18,7 +18,10 @@
 #include <ShadingModels/DefaultShadingTest.h>
 
 #include <MiscTest.h>
+#include <SPTDTest.h>
 
+// NOTE
+// To run a subset of test cases use a filter, e.g '--gtest_filter=*BSDFs*'.
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
