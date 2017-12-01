@@ -548,7 +548,7 @@ int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Win
         OptiXRenderer::Renderer* m_renderer;
     };
 
-    DX11OptiXAdaptor::Adaptor* optix_adaptor;
+    DX11OptiXAdaptor::Adaptor* optix_adaptor = nullptr;
     if (rasterizer_enabled) {
         compositor = Compositor::initialize(hwnd, window, Renderer::initialize).compositor;
         if (optix_enabled)
