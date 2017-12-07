@@ -1,4 +1,4 @@
-// Fits for spherical pivot transformed distributions.
+// A Spherical Cap Preserving Parameterization for Spherical Distributions
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2017, Cogwheel. See AUTHORS.txt for authors
 //
@@ -10,13 +10,105 @@
 #define _OPTIXRENDERER_SPTD_FIT_H_
 
 #include <OptiXRenderer/Utils.h>
-#include <OptiXRenderer/Distributions.h>
 
 #include <optixu/optixpp_namespace.h>
 #undef RGB
 
 namespace OptiXRenderer {
 namespace SPTD {
+using namespace optix;
+
+__inline_all__ float2 pivot_transform(float2 r, float pivot) {
+    float2 tmp1 = make_float2(r.x - pivot, r.y);
+    float2 tmp2 = pivot * r - make_float2(1, 0);
+    float x = dot(tmp1, tmp2);
+    float y = tmp1.y * tmp2.x - tmp1.x * tmp2.y;
+    float qf = dot(tmp2, tmp2);
+
+    return make_float2(x, y) / qf;
+}
+
+// Equation 2 in SPDT, Dupuy et al. 17.
+__inline_all__ float3 pivot_transform(const float3& r, const float3& pivot) {
+    float3 numerator = (dot(r, pivot) - 1.0f) * (r - pivot) - cross(r - pivot, cross(r, pivot));
+    float denominator = pow2(dot(r, pivot) - 1.0f) + length_squared(cross(r, pivot));
+    return numerator / denominator;
+}
+
+__inline_all__ OptiXRenderer::Cone pivot_transform(const OptiXRenderer::Cone& cone, const float3& pivot) {
+    // extract pivot length and direction
+    float pivot_mag = length(pivot);
+    // special case: the pivot is at the origin
+    if (pivot_mag < 0.001f)
+        return OptiXRenderer::Cone::make(-cone.direction, cone.cos_theta);
+    float3 pivot_dir = pivot / pivot_mag;
+
+    // 2D cap dir
+    float cos_phi = dot(cone.direction, pivot_dir);
+    float sin_phi = sqrt(1.0f - cos_phi * cos_phi);
+
+    // 2D basis = (pivotDir, PivotOrthogonalDirection)
+    float3 pivot_ortho_dir;
+    if (abs(cos_phi) < 0.9999f)
+        pivot_ortho_dir = (cone.direction - cos_phi * pivot_dir) / sin_phi;
+    else
+        pivot_ortho_dir = make_float3(0, 0, 0);
+
+    // compute cap 2D end points
+    float sin_theta_sqrd = sqrt(1.0f - cone.cos_theta * cone.cos_theta);
+    float a1 = cos_phi * cone.cos_theta;
+    float a2 = sin_phi * sin_theta_sqrd;
+    float a3 = sin_phi * cone.cos_theta;
+    float a4 = cos_phi * sin_theta_sqrd;
+    float2 dir1 = make_float2(a1 + a2, a3 - a4);
+    float2 dir2 = make_float2(a1 - a2, a3 + a4);
+
+    // project in 2D
+    float2 dir1_xf = pivot_transform(dir1, pivot_mag);
+    float2 dir2_xf = pivot_transform(dir2, pivot_mag);
+
+    // compute the cap 2D direction
+    float area = dir1_xf.x * dir2_xf.y - dir1_xf.y * dir2_xf.x;
+    float s = area > 0.0f ? 1.0f : -1.0f;
+    float2 dir_xf = s * normalize(dir1_xf + dir2_xf);
+
+    return OptiXRenderer::Cone::make(dir_xf.x * pivot_dir + dir_xf.y * pivot_ortho_dir,
+        dot(dir_xf, dir1_xf));
+}
+
+__inline_all__ float solidangle(const OptiXRenderer::Cone& c) { return TWO_PIf - TWO_PIf * c.cos_theta; }
+
+// Based on Oat and Sander's 2007 technique in Ambient aperture lighting.
+__inline_all__ float solidangle_of_union(const OptiXRenderer::Cone& c1, const OptiXRenderer::Cone& c2) {
+    float r1 = acos(c1.cos_theta);
+    float r2 = acos(c2.cos_theta);
+    float rd = acos(dot(c1.direction, c2.direction));
+
+    if (rd <= fmaxf(r1, r2) - fminf(r1, r2))
+        // One cap is completely inside the other
+        return TWO_PIf - TWO_PIf * fmaxf(c1.cos_theta, c2.cos_theta);
+    else if (rd >= r1 + r2)
+        // No intersection exists
+        return 0.0f;
+    else {
+        float diff = abs(r1 - r2);
+        float den = r1 + r2 - diff;
+        float x = 1.0f - clamp((rd - diff) / den, 0.0f, 1.0f); // TODO smoothstep clamps, so clamping here shouldn't be needed.
+        return smoothstep(0.0f, 1.0f, x) * (TWO_PIf - TWO_PIf * fmaxf(c1.cos_theta, c2.cos_theta));
+    }
+}
+
+__inline_all__ float evaluate_sphere_light(const float3& pivot, const Sphere& sphere) {
+
+    // compute the spherical cap produced by the sphere
+    float sin_theta_sqrd = clamp(sphere.radius * sphere.radius / dot(sphere.center, sphere.center), 0.0f, 1.0f);
+    OptiXRenderer::Cone sphere_cap = OptiXRenderer::Cone::make(normalize(sphere.center), sqrt(1.0f - sin_theta_sqrd));
+
+    // integrate
+    OptiXRenderer::Cone light_cone = pivot_transform(sphere_cap, pivot);
+    OptiXRenderer::Cone hemisphere_cone = pivot_transform(OptiXRenderer::Cone::make(make_float3(0.0f, 0.0f, 1.0f), 0.0f), pivot);
+    return solidangle_of_union(light_cone, hemisphere_cone);
+}
 
 // ------------------------------------------------------------------------------------------------
 // Fitted Spherical pivot.
@@ -49,7 +141,7 @@ struct Pivot {
         const float sphere_theta = acosf(-1.0f + 2.0f * U1);
         const float sphere_phi = 2.0f * 3.14159f * U2;
         const optix::float3 sphere_sample = optix::make_float3(sinf(sphere_theta) * cosf(sphere_phi), sinf(sphere_theta) * sinf(sphere_phi), -cosf(sphere_theta));
-        return OptiXRenderer::Distributions::SPTD::pivot_transform(sphere_sample, position());
+        return pivot_transform(sphere_sample, position());
     }
 
     /*

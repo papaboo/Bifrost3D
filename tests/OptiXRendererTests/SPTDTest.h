@@ -45,7 +45,7 @@ GTEST_TEST(SPTD, pivet_transform) {
             if (p_x == 2 && p_y == 2 && p_z == 2) return;
 
             float3 p = normalize(make_float3(p_x - 2.0f, p_y - 2.0f, p_z - 2.0f));
-            float3 pp = Distributions::SPTD::pivot_transform(p, rp);
+            float3 pp = SPTD::pivot_transform(p, rp);
 
             float3 p2rp = normalize(rp - p);
             float3 rp2pp = normalize(pp - rp);
@@ -64,7 +64,7 @@ GTEST_TEST(SPTD, pivet_transform_identity) {
 
         cubic_for(3, 3, 3, [=](int p_x, int p_y, int p_z) {
             float3 p = make_float3(p_x - 1.0f, p_y - 1.0f, p_z - 1.0f);
-            float3 pp = Distributions::SPTD::pivot_transform(Distributions::SPTD::pivot_transform(p, rp), rp);
+            float3 pp = SPTD::pivot_transform(SPTD::pivot_transform(p, rp), rp);
             EXPECT_FLOAT3_EQ_EPS(p, pp, make_float3(0.000001f));
         });
     });
