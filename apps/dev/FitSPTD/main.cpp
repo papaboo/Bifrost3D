@@ -5,15 +5,17 @@
 
 #include "Brdf.h"
 #include "NelderMead.h"
-#include "Pivot.h"
 
 #include <Cogwheel/Assets/Image.h>
+#include <OptiXRenderer/SPTD.h>
 #include <StbImageWriter/StbImageWriter.h>
 
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
+
+using namespace OptiXRenderer::SPTD;
 
 // number of samples used to compute the error during fitting
 const int sample_count = 32;
