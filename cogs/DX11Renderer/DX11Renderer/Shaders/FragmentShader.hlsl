@@ -95,6 +95,7 @@ float3 integration(PixelInput input) {
 
     for (int l = 0; l < light_count.x; ++l) {
         LightData light = light_data[l];
+        LightSample light_sample = sample_light(light_data[l], input.world_position.xyz);
 
         bool is_sphere_light = light.type() == LightType::Sphere && light.sphere_radius() > 0.0f;
         if (is_sphere_light) {
@@ -104,19 +105,34 @@ float3 integration(PixelInput input) {
 
             float3 l = light.sphere_power() / (PI * sphere_surface_area(light.sphere_radius()));
 
-            float3 wi = normalize(local_sphere.position);
+            float3 wi = normalize(local_sphere.position); // TODO Reuse computation from light_sample / else branch
             float3 diffuse_tint, specular_tint;
             material.evaluate_tints(wo, wi, input.texcoord, diffuse_tint, specular_tint);
 
-            // Evaluate BRDF. TODO Use brdf_scale?
-            float3 specular_f = specular_tint * SPTD::evaluate_sphere_light(sptd_specular.pivot, local_sphere) / (4.0f * PI);
-            float3 diffuse_f = diffuse_tint * SPTD::evaluate_sphere_light(sptd_diffuse.pivot, local_sphere) / (4.0f * PI);
+            // Evaluate GGX/microfacet.
+            float3 specular_f = specular_tint * SPTD::evaluate_sphere_light(sptd_specular.pivot, local_sphere) / (4.0f * PI) * l;
+            // float3 diffuse_f = diffuse_tint * BSDFs::Lambert::evaluate() * light_sample.radiance * abs(wi.z);
 
-            radiance += (diffuse_f + specular_f) * l;
+            // Evaluate Lambert. // TODO Optimize by not recomputing the light sphere cap and perhaps approximate the union solidangle and centroid.
+            float3 diffuse_f;
+            {
+                // compute the spherical cap produced by the sphere
+                float sin_theta_sqrd = clamp(local_sphere.radius * local_sphere.radius / dot(local_sphere.position, local_sphere.position), 0.0f, 1.0f);
+                Cone light_sphere_cap = Cone::make(normalize(local_sphere.position), sqrt(1.0f - sin_theta_sqrd));
+                Cone hemisphere_sphere_cap = Cone::make(float3(0.0f, 0.0f, 1.0f), 0.0f);
+
+                // TODO Combine solidangle and centroid.
+                float solidangle_of_light = SPTD::solidangle(light_sphere_cap);
+                float solidangle_of_union = SPTD::solidangle_of_union(hemisphere_sphere_cap, light_sphere_cap);
+                float light_radiance_scale = solidangle_of_union / solidangle_of_light;
+                float3 centroid_of_union = SPTD::centroid_of_union(hemisphere_sphere_cap, light_sphere_cap);
+                diffuse_f = diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_of_union.z) * light_sample.radiance * light_radiance_scale;
+            }
+
+            radiance += (diffuse_f + specular_f);
 
         } else {
             // Apply regular delta lights
-            LightSample light_sample = sample_light(light_data[l], input.world_position.xyz);
             float3 wi = mul(world_to_shading_TBN, light_sample.direction_to_light);
             float3 f = material.evaluate(wo, wi, input.texcoord);
             radiance += f * light_sample.radiance * abs(wi.z);

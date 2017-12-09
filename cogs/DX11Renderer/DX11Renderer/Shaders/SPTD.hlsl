@@ -93,6 +93,22 @@ namespace SPTD {
         }
     }
 
+    // The centroid of the intersection of the two cones.
+    // See Ambient aperture lighting, 2007, section 3.3.
+    float3 centroid_of_union(Cone c1, Cone c2) {
+        float r1 = acos(c1.cos_theta);
+        float r2 = acos(c2.cos_theta);
+        float d = acos(dot(c1.direction, c2.direction));
+
+        if (d <= max(r1, r2) - min(r1, r2))
+            // One cap is completely inside the other
+            return c1.cos_theta > c2.cos_theta ? c1.direction : c2.direction;
+        else {
+            float w = (r2 - r1 + d) / (2.0f * d);
+            return normalize(lerp(c2.direction, c1.direction, saturate(w)));
+        }
+    }
+
     float evaluate_sphere_light(float3 pivot, Sphere sphere) {
 
         // compute the spherical cap produced by the sphere
