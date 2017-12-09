@@ -68,8 +68,10 @@ void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sce
     Vector3f light_mean_position;
     { // Create lights.
 
-      // Compute light positions.
         const int light_count = 4;
+        const RGB light_colors[] = { RGB(1, 1, 0.1f), RGB(0.55f, 1.0f, 0.55f), RGB(0.55f, 0.55f, 1.0f), RGB(1.0f, 0.6f, 0.5f) };
+        
+        // Compute light positions.
         Vector3f light_positions[light_count];
         for (int i = 0; i < light_count; ++i) {
             Ray ray_to_light = CameraUtils::ray_from_viewport_point(camera_ID, Vector2f(0.2f + 0.2f * i, 0.9f));
@@ -86,7 +88,7 @@ void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sce
         for (int i = light_count - 1; i >= 0; --i) {
             Transform light_transform = Transform(light_positions[i]);
             SceneNode light_node = SceneNodes::create("Light", light_transform);
-            LightSources::UID light_ID = LightSources::create_sphere_light(light_node.get_ID(), RGB(10.0f), light_radius);
+            LightSources::UID light_ID = LightSources::create_sphere_light(light_node.get_ID(), light_colors[i] * 10, light_radius);
             light_node.set_parent(scene.get_root_node());
             light_radius *= 0.333f;
         }
