@@ -90,8 +90,8 @@ float3 integration(PixelInput input) {
     wo = normalize(mul(world_to_shading_TBN, wo));
 
     // Compute GGX SPTD params
-    BRDFPivotTransform sptd_specular = sptd_ggx_pivot(material.roughness(), wo);
-    BRDFPivotTransform sptd_diffuse = sptd_lambert_pivot(wo);
+    BRDFPivotTransform ggx_sptd = sptd_ggx_pivot(material.roughness(), wo);
+    Cone ggx_sptd_cap = SPTD::pivot_transform(Cone::make(float3(0.0f, 0.0f, 1.0f), 0.0f), ggx_sptd.pivot);
 
     for (int l = 0; l < light_count.x; ++l) {
         LightData light = light_data[l];
@@ -102,32 +102,29 @@ float3 integration(PixelInput input) {
             // Sphere light in local space
             float3 sphere_position = mul(world_to_shading_TBN, light.sphere_position() - input.world_position.xyz);
             Sphere local_sphere = Sphere::make(sphere_position, light.sphere_radius());
-            float sin_theta_sqrd = clamp(local_sphere.radius * local_sphere.radius / dot(local_sphere.position, local_sphere.position), 0.0f, 1.0f);
-            Cone light_sphere_cap = Cone::make(normalize(local_sphere.position), sqrt(1.0f - sin_theta_sqrd));
+            Cone light_sphere_cap = SPTD::sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
 
             Cone hemisphere_sphere_cap = Cone::make(float3(0.0f, 0.0f, 1.0f), 0.0f);
+            
             float3 centroid_of_union = SPTD::centroid_of_union(hemisphere_sphere_cap, light_sphere_cap);
-
-            float3 l = light.sphere_power() / (PI * sphere_surface_area(light.sphere_radius()));
 
             float3 diffuse_tint, specular_tint;
             material.evaluate_tints(wo, centroid_of_union, input.texcoord, diffuse_tint, specular_tint);
 
-            // Evaluate GGX/microfacet.
-            float3 specular_f = specular_tint * SPTD::evaluate_sphere_light(sptd_specular.pivot, local_sphere) / (4.0f * PI) * l;
-            // float3 diffuse_f = diffuse_tint * BSDFs::Lambert::evaluate() * light_sample.radiance * abs(wi.z);
+            { // Evaluate GGX/microfacet.
+                Cone ggx_light_sphere_cap = SPTD::pivot_transform(light_sphere_cap, ggx_sptd.pivot);
+                float light_solidangle = SPTD::solidangle_of_union(ggx_light_sphere_cap, ggx_sptd_cap);
+                float3 l = light.sphere_power() / (PI * sphere_surface_area(light.sphere_radius()));
+                radiance += specular_tint * light_solidangle / (4.0f * PI) * l;
+            }
 
-            // Evaluate Lambert. // TODO Optimize by not recomputing the light sphere cap and perhaps approximate the union solidangle and centroid.
-            float3 diffuse_f;
-            {
-                // TODO Combine solidangle and centroid.
+            { // Evaluate Lambert. // TODO Optimize by not recomputing the light sphere cap and perhaps approximate the union solidangle and centroid.
+                // TODO Combine solidangle and centroid calculations.
                 float solidangle_of_light = SPTD::solidangle(light_sphere_cap);
                 float solidangle_of_union = SPTD::solidangle_of_union(hemisphere_sphere_cap, light_sphere_cap);
                 float light_radiance_scale = solidangle_of_union / solidangle_of_light;
-                diffuse_f = diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_of_union.z) * light_sample.radiance * light_radiance_scale;
+                radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_of_union.z) * light_sample.radiance * light_radiance_scale;
             }
-
-            radiance += (diffuse_f + specular_f);
 
         } else {
             // Apply regular delta lights

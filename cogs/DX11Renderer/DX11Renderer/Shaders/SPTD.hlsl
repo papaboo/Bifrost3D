@@ -93,6 +93,12 @@ namespace SPTD {
         }
     }
 
+    // Map a sphere to the spherical cap at origo.
+    Cone sphere_to_sphere_cap(float3 position, float radius) {
+        float sin_theta_sqrd = clamp(radius * radius / dot(position, position), 0.0f, 1.0f);
+        return Cone::make(normalize(position), sqrt(1.0f - sin_theta_sqrd));
+    }
+
     // The centroid of the intersection of the two cones.
     // See Ambient aperture lighting, 2007, section 3.3.
     float3 centroid_of_union(Cone c1, Cone c2) {
@@ -107,18 +113,6 @@ namespace SPTD {
             float w = (r2 - r1 + d) / (2.0f * d);
             return normalize(lerp(c2.direction, c1.direction, saturate(w)));
         }
-    }
-
-    float evaluate_sphere_light(float3 pivot, Sphere sphere) {
-
-        // compute the spherical cap produced by the sphere
-        float sin_theta_sqrd = clamp(sphere.radius * sphere.radius / dot(sphere.position, sphere.position), 0.0f, 1.0f);
-        Cone sphere_cap = Cone::make(normalize(sphere.position), sqrt(1.0f - sin_theta_sqrd));
-
-        // integrate
-        Cone light_cone = pivot_transform(sphere_cap, pivot);
-        Cone hemisphere_cone = pivot_transform(Cone::make(float3(0.0f, 0.0f, 1.0f), 0.0f), pivot);
-        return solidangle_of_union(light_cone, hemisphere_cone);
     }
 }
 
