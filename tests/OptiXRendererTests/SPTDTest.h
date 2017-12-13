@@ -125,7 +125,7 @@ GTEST_TEST(SPTD, ggx_fitting_error) {
     float roughness[] = { 1.0f / 64.0f, 1.0f / 16.0f, 0.25f, 0.9f };
     float cos_thetas[] = { 0.1f, 0.5f, 0.9f };
 
-    // Errors gotten from by printing the errors from a visually pleasent fit.
+    // Errors gotten by printing the errors from a visually pleasent fit.
     float errors[] = { 503744480.0f, 4054393.0f, 732875.375f, 876561.125f,
                        8177.700684f, 3523.881104f, 3427.58374f, 27.771591f,
                        13.444297f, 0.696338f, 0.124728f, 0.039955f };
@@ -145,6 +145,76 @@ GTEST_TEST(SPTD, ggx_fitting_error) {
             //     cos_theta, roughness[r], pivot.amplitude, pivot.distance, pivot.theta, error);
             EXPECT_LE(error, errors[t + r * 3] * 1.0001f);
         }
+}
+
+// Diffuse area light approximation based on Ambient Aparture Lighting, 2007
+GTEST_TEST(SPTD, spherical_cap_union) {
+    using namespace optix;
+
+    Cone hemisphere_sphere_cap = Cone::make(make_float3(0.0f, 0.0f, 1.0f), 0.0f);
+
+    { // Test that a light right above the surface (zenith) has an unchanged centroid and solidangle.
+        SphereLight light;
+        light.power = { 2, 2, 2 };
+        light.position = { 0, 0, 1 };
+        light.radius = 0.5f;
+
+        // Test solidangle.
+        Cone light_sphere_cap = SPTD::sphere_to_sphere_cap(light.position, light.radius);
+        float light_solidangle = SPTD::solidangle(light_sphere_cap);
+        EXPECT_EQ(light_solidangle, SPTD::solidangle_of_union(light_sphere_cap, hemisphere_sphere_cap));
+        EXPECT_EQ(light_solidangle, SPTD::solidangle_of_union(hemisphere_sphere_cap, light_sphere_cap));
+
+        // Test centroid.
+        float3 centroid = SPTD::centroid_of_union(light_sphere_cap, hemisphere_sphere_cap);
+        EXPECT_NORMAL_EQ(light_sphere_cap.direction, SPTD::centroid_of_union(light_sphere_cap, hemisphere_sphere_cap), 0.00001);
+    }
+
+    { // Test that a light at 45 degrees from zenith has an unchanged centroid and solidangle.
+        SphereLight light;
+        light.power = { 2, 2, 2 };
+        light.position = normalize(make_float3(1, 0, 1));
+        light.radius = 0.5f;
+
+        // Test solidangle.
+        Cone light_sphere_cap = SPTD::sphere_to_sphere_cap(light.position, light.radius);
+        float light_solidangle = SPTD::solidangle(light_sphere_cap);
+        EXPECT_EQ(light_solidangle, SPTD::solidangle_of_union(light_sphere_cap, hemisphere_sphere_cap));
+        EXPECT_EQ(light_solidangle, SPTD::solidangle_of_union(hemisphere_sphere_cap, light_sphere_cap));
+
+        // Test centroid.
+        float3 centroid = SPTD::centroid_of_union(light_sphere_cap, hemisphere_sphere_cap);
+        EXPECT_NORMAL_EQ(light_sphere_cap.direction, SPTD::centroid_of_union(light_sphere_cap, hemisphere_sphere_cap), 0.00001);
+    }
+
+    { // Test that a light at the horizon has half the solidangle and the centroid is in the center of the visible half.
+        SphereLight light;
+        light.power = { 2, 2, 2 };
+        light.position = normalize(make_float3(1, 0, 0));
+        light.radius = 0.5f;
+
+        // Test solidangle.
+        Cone light_sphere_cap = SPTD::sphere_to_sphere_cap(light.position, light.radius);
+        float light_half_solidangle = 0.5f * SPTD::solidangle(light_sphere_cap);
+        EXPECT_EQ(light_half_solidangle, SPTD::solidangle_of_union(light_sphere_cap, hemisphere_sphere_cap));
+        EXPECT_EQ(light_half_solidangle, SPTD::solidangle_of_union(hemisphere_sphere_cap, light_sphere_cap));
+
+        // Test centroid.
+        // float3 centroid = SPTD::centroid_of_union(light_sphere_cap, hemisphere_sphere_cap);
+        // EXPECT_NORMAL_EQ(light_sphere_cap.direction, SPTD::centroid_of_union(light_sphere_cap, hemisphere_sphere_cap), 0.00001);
+    }
+}
+
+// GGX sphere light approximation using SPTD.
+GTEST_TEST(SPTD, ggx_sphere_light_approximation) {
+    using namespace optix;
+
+    SphereLight light;
+    light.position = make_float3(100.0f, 20.0f, 100.0f);
+    light.power = make_float3(1000000.0f, 1000000.0f, 1000000.0f);
+    light.radius = 5.0f;
+
+    // float3 
 }
 
 } // NS OptiXRenderer

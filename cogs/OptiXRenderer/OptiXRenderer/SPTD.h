@@ -35,7 +35,7 @@ __inline_all__ float3 pivot_transform(const float3& r, const float3& pivot) {
     return numerator / denominator;
 }
 
-__inline_all__ OptiXRenderer::Cone pivot_transform(const OptiXRenderer::Cone& cone, const float3& pivot) {
+__inline_all__ OptiXRenderer::Cone pivot_transform(const Cone& cone, const float3& pivot) {
     // extract pivot length and direction
     float pivot_mag = length(pivot);
     // special case: the pivot is at the origin
@@ -76,16 +76,16 @@ __inline_all__ OptiXRenderer::Cone pivot_transform(const OptiXRenderer::Cone& co
         dot(dir_xf, dir1_xf));
 }
 
-__inline_all__ float solidangle(const OptiXRenderer::Cone& c) { return TWO_PIf - TWO_PIf * c.cos_theta; }
+__inline_all__ float solidangle(const Cone& c) { return TWO_PIf - TWO_PIf * c.cos_theta; }
 
 // Based on Oat and Sander's 2007 technique in Ambient aperture lighting.
-__inline_all__ float solidangle_of_union(const OptiXRenderer::Cone& c1, const OptiXRenderer::Cone& c2) {
+__inline_all__ float solidangle_of_union(const Cone& c1, const Cone& c2) {
     float r1 = acos(c1.cos_theta);
     float r2 = acos(c2.cos_theta);
     float rd = acos(dot(c1.direction, c2.direction));
 
     if (rd <= fmaxf(r1, r2) - fminf(r1, r2))
-        // One cap is completely inside the other
+        // One cone is completely inside the other
         return TWO_PIf - TWO_PIf * fmaxf(c1.cos_theta, c2.cos_theta);
     else if (rd >= r1 + r2)
         // No intersection exists
@@ -98,15 +98,37 @@ __inline_all__ float solidangle_of_union(const OptiXRenderer::Cone& c1, const Op
     }
 }
 
+// Map a sphere to the spherical cap at origo.
+__inline_all__ Cone sphere_to_sphere_cap(const float3& position, float radius) {
+    float sin_theta_sqrd = clamp(radius * radius / dot(position, position), 0.0f, 1.0f);
+    return Cone::make(normalize(position), sqrt(1.0f - sin_theta_sqrd));
+}
+
+// The centroid of the intersection of the two cones.
+// See Ambient aperture lighting, 2007, section 3.3.
+__inline_all__ float3 centroid_of_union(const Cone& c1, const Cone& c2) {
+    float r1 = acos(c1.cos_theta);
+    float r2 = acos(c2.cos_theta);
+    float d = acos(dot(c1.direction, c2.direction));
+    
+    if (d <= fmaxf(r1, r2) - fminf(r1, r2))
+        // One cone is completely inside the other
+        return c1.cos_theta > c2.cos_theta ? c1.direction : c2.direction;
+    else {
+        float w = (r2 - r1 + d) / (2.0f * d);
+        return normalize(lerp(c2.direction, c1.direction, clamp(w, 0.0f, 1.0f)));
+    }
+}
+
 __inline_all__ float evaluate_sphere_light(const float3& pivot, const Sphere& sphere) {
 
     // compute the spherical cap produced by the sphere
     float sin_theta_sqrd = clamp(sphere.radius * sphere.radius / dot(sphere.center, sphere.center), 0.0f, 1.0f);
-    OptiXRenderer::Cone sphere_cap = OptiXRenderer::Cone::make(normalize(sphere.center), sqrt(1.0f - sin_theta_sqrd));
+    Cone sphere_cap = Cone::make(normalize(sphere.center), sqrt(1.0f - sin_theta_sqrd));
 
     // integrate
-    OptiXRenderer::Cone light_cone = pivot_transform(sphere_cap, pivot);
-    OptiXRenderer::Cone hemisphere_cone = pivot_transform(OptiXRenderer::Cone::make(make_float3(0.0f, 0.0f, 1.0f), 0.0f), pivot);
+    Cone light_cone = pivot_transform(sphere_cap, pivot);
+    Cone hemisphere_cone = pivot_transform(Cone::make(make_float3(0.0f, 0.0f, 1.0f), 0.0f), pivot);
     return solidangle_of_union(light_cone, hemisphere_cone);
 }
 
