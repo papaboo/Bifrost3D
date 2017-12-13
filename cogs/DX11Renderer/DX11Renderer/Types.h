@@ -71,6 +71,10 @@ struct int2 {
     int x; int y;
 };
 
+struct int4 {
+    int x; int y; int z; int w;
+};
+
 struct float2 {
     float x; float y;
 };

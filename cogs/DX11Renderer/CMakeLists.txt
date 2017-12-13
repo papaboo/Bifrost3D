@@ -20,6 +20,7 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/MaterialManager.h
     DX11Renderer/MaterialManager.cpp
     DX11Renderer/OwnedResourcePtr.h
+    DX11Renderer/PrefixSum.h
     DX11Renderer/Renderer.h
     DX11Renderer/Renderer.cpp
     DX11Renderer/TextureManager.h
@@ -30,7 +31,7 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/Utils.h
   )
 
-  set(SHADER_SRC
+  set(SHADERS_SRC
     DX11Renderer/Shaders/DefaultShading.hlsl
     DX11Renderer/Shaders/EnvironmentMap.hlsl
     DX11Renderer/Shaders/FragmentShader.hlsl
@@ -42,12 +43,16 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/Shaders/VertexShader.hlsl
   )
 
-  set(SHADER_BSDFS_SRC
+  set(SHADERS_BSDFS_SRC
     DX11Renderer/Shaders/BSDFs/Diffuse.hlsl
     DX11Renderer/Shaders/BSDFs/GGX.hlsl
   )
 
-  set(ALL_SHADER_SRC ${SHADER_SRC} ${SHADER_BSDFS_SRC})
+  set(SHADERS_COMPUTE_SRC
+    DX11Renderer/Shaders/Compute/PrefixSum.hlsl
+  )
+
+  set(ALL_SHADER_SRC ${SHADERS_SRC} ${SHADERS_BSDFS_SRC} ${SHADERS_COMPUTE_SRC})
 
   add_library(${LIBRARY_NAME}
     ${ROOT_SRC}
@@ -55,8 +60,9 @@ if (DIRECTX_11_FOUND AND WIN32)
   )
 
   source_group("" FILES ${ROOT_SRC})
-  source_group("Shaders" FILES ${SHADER_SRC})
-  source_group("Shaders\\BSDFs" FILES ${SHADER_BSDFS_SRC})
+  source_group("Shaders" FILES ${SHADERS_SRC})
+  source_group("Shaders\\BSDFs" FILES ${SHADERS_BSDFS_SRC})
+  source_group("Shaders\\Compute" FILES ${SHADERS_COMPUTE_SRC})
 
   target_include_directories(${LIBRARY_NAME} 
     PUBLIC . 
