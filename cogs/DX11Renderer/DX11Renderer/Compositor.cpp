@@ -23,6 +23,62 @@ namespace DX11Renderer {
 
 using OIDXGISwapChain1 = DX11Renderer::OwnedResourcePtr<IDXGISwapChain1>;
 
+OID3D11Device1 create_performant_device1() {
+    // Find the best performing device (apparently the one with the most memory) and initialize that.
+    struct WeightedAdapter {
+        int index, dedicated_memory;
+
+        inline bool operator<(WeightedAdapter rhs) const {
+            return rhs.dedicated_memory < dedicated_memory;
+        }
+    };
+
+    IDXGIFactory1* dxgi_factory1;
+    HRESULT hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory1));
+
+    IDXGIAdapter1* adapter = nullptr;
+    std::vector<WeightedAdapter> sorted_adapters;
+    for (int adapter_index = 0; dxgi_factory1->EnumAdapters1(adapter_index, &adapter) != DXGI_ERROR_NOT_FOUND; ++adapter_index) {
+        DXGI_ADAPTER_DESC1 desc;
+        adapter->GetDesc1(&desc);
+
+        // Ignore software rendering adapters.
+        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+            continue;
+
+        WeightedAdapter e = { adapter_index, int(desc.DedicatedVideoMemory >> 20) };
+        sorted_adapters.push_back(e);
+    }
+
+    std::sort(sorted_adapters.begin(), sorted_adapters.end());
+
+    // Then create the device and render context.
+    ID3D11Device* device = nullptr;
+    ID3D11DeviceContext* render_context = nullptr;
+    for (WeightedAdapter a : sorted_adapters) {
+        dxgi_factory1->EnumAdapters1(a.index, &adapter);
+
+        UINT create_device_flags = 0; // D3D11_CREATE_DEVICE_DEBUG;
+        D3D_FEATURE_LEVEL feature_level_requested = D3D_FEATURE_LEVEL_11_0;
+
+        D3D_FEATURE_LEVEL feature_level;
+        hr = D3D11CreateDevice(adapter, D3D_DRIVER_TYPE_UNKNOWN, nullptr, create_device_flags, &feature_level_requested, 1,
+            D3D11_SDK_VERSION, &device, &feature_level, &render_context);
+
+        if (SUCCEEDED(hr))
+            break;
+    }
+    dxgi_factory1->Release();
+
+    if (device == nullptr)
+        return nullptr;
+
+    OID3D11Device1 device1;
+    hr = device->QueryInterface(IID_PPV_ARGS(&device1));
+    THROW_ON_FAILURE(hr);
+    return device1;
+}
+
 //-------------------------------------------------------------------------------------------------
 // DirectX 11 compositor implementation.
 //-------------------------------------------------------------------------------------------------
@@ -45,70 +101,12 @@ public:
     Implementation(HWND& hwnd, const Window& window)
         : m_window(window) {
 
-        // Find the best performing device (apparently the one with the most memory) and initialize that.
-        struct WeightedAdapter {
-            int index, dedicated_memory;
-
-            inline bool operator<(WeightedAdapter rhs) const {
-                return rhs.dedicated_memory < dedicated_memory;
-            }
-        };
-
-        IDXGIAdapter1* adapter = nullptr;
-
-        IDXGIFactory1* dxgi_factory1;
-        HRESULT hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory1));
-
-        std::vector<WeightedAdapter> sorted_adapters;
-        for (int adapter_index = 0; dxgi_factory1->EnumAdapters1(adapter_index, &adapter) != DXGI_ERROR_NOT_FOUND; ++adapter_index) {
-            DXGI_ADAPTER_DESC1 desc;
-            adapter->GetDesc1(&desc);
-
-            // Ignore software rendering adapters.
-            if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-                continue;
-
-            WeightedAdapter e = { adapter_index, int(desc.DedicatedVideoMemory >> 20) };
-            sorted_adapters.push_back(e);
-        }
-
-        std::sort(sorted_adapters.begin(), sorted_adapters.end());
-
-        // Then create the device and render context.
-        ID3D11Device* device = nullptr;
-        ID3D11DeviceContext* render_context = nullptr;
-        for (WeightedAdapter a : sorted_adapters) {
-            dxgi_factory1->EnumAdapters1(a.index, &adapter);
-
-            UINT create_device_flags = 0; // D3D11_CREATE_DEVICE_DEBUG;
-            D3D_FEATURE_LEVEL feature_level_requested = D3D_FEATURE_LEVEL_11_0;
-
-            D3D_FEATURE_LEVEL feature_level;
-            hr = D3D11CreateDevice(adapter, D3D_DRIVER_TYPE_UNKNOWN, nullptr, create_device_flags, &feature_level_requested, 1,
-                D3D11_SDK_VERSION, &device, &feature_level, &render_context);
-
-            if (SUCCEEDED(hr)) {
-                DXGI_ADAPTER_DESC adapter_description;
-                adapter->GetDesc(&adapter_description);
-                std::string readable_feature_level = feature_level == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "11.1";
-                printf("DirectX 11 composer using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level.c_str());
-                break;
-            }
-        }
-        dxgi_factory1->Release();
-
-        if (device == nullptr)
-            return;
-
-        hr = device->QueryInterface(IID_PPV_ARGS(&m_device));
-        THROW_ON_FAILURE(hr);
-
-        hr = render_context->QueryInterface(IID_PPV_ARGS(&m_render_context));
-        THROW_ON_FAILURE(hr);
+        m_device = create_performant_device1();
+        m_device->GetImmediateContext1(&m_render_context);
 
         { // Get the device's dxgi factory and create the swap chain.
             IDXGIDevice* dxgi_device = nullptr;
-            hr = device->QueryInterface(IID_PPV_ARGS(&dxgi_device));
+            HRESULT hr = m_device->QueryInterface(IID_PPV_ARGS(&dxgi_device));
             THROW_ON_FAILURE(hr);
 
             // NOTE Can I use the original adapter for this?
@@ -116,6 +114,11 @@ public:
             hr = dxgi_device->GetAdapter(&adapter);
             dxgi_device->Release();
             THROW_ON_FAILURE(hr);
+
+            DXGI_ADAPTER_DESC adapter_description;
+            adapter->GetDesc(&adapter_description);
+            std::string readable_feature_level = m_device->GetFeatureLevel() == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "11.1";
+            printf("DirectX 11 composer using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level.c_str());
 
             IDXGIFactory2* dxgi_factory2 = nullptr;
             hr = adapter->GetParent(IID_PPV_ARGS(&dxgi_factory2));

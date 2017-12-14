@@ -44,6 +44,13 @@ public:
 typedef IRenderer*(*RendererCreator)(ID3D11Device1&, int width_hint, int height_hint);
 
 //-------------------------------------------------------------------------------------------------
+// Utility function to create a 'performant' DX11 device.
+//-------------------------------------------------------------------------------------------------
+template <typename T> class OwnedResourcePtr;
+using OID3D11Device1 = DX11Renderer::OwnedResourcePtr<ID3D11Device1>;
+OID3D11Device1 create_performant_device1();
+
+//-------------------------------------------------------------------------------------------------
 // DirectX 11 compositor.
 // Composits the rendered images from various cameras attached to the window.
 //-------------------------------------------------------------------------------------------------
