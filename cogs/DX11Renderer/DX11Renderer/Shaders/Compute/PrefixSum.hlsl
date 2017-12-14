@@ -34,11 +34,11 @@ unsigned int ceil_divide(unsigned int a, unsigned int b) {
 // Ensure that the last of the threads point to the last of the elements in the buffer.
 // This will result in the first threads having negative indices and therefore loading zeroed values.
 int compute_global_index(int global_thread_ID, uint element_count) {
-    int scaled_element_count_1 = ceil_divide(element_count, element_interval);
-    int group_count = ceil_divide(scaled_element_count_1, GROUP_SIZE);
+    int scaled_element_count = ceil_divide(element_count, element_interval);
+    int group_count = ceil_divide(scaled_element_count, GROUP_SIZE);
     int threads_launched = group_count * GROUP_SIZE;
     int element_padding = element_interval * (threads_launched - 1) - (element_count - 1);
-    return element_interval * global_thread_ID.x - element_padding;
+    return element_interval * global_thread_ID - element_padding;
 }
 
 // ------------------------------------------------------------------------------------------------
