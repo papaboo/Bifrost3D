@@ -56,8 +56,7 @@ void reduce(uint3 local_thread_ID : SV_GroupThreadID, uint3 global_thread_ID : S
     shared_memory[local_thread_ID.x] = input_buffer[global_index];
     GroupMemoryBarrierWithGroupSync();
 
-    for (int d = 0; d < LOG2_GROUP_SIZE; ++d) {
-        int step_size = (int)pow(2, d); // TODO Replace by multiplication by 2
+    for (int step_size = 1; step_size < GROUP_SIZE; step_size <<= 1) {
         int src_index = 2 * local_thread_ID.x * step_size + step_size - 1;
         int dst_index = src_index + step_size;
         if (dst_index < GROUP_SIZE)
@@ -90,8 +89,7 @@ void downsweep(uint3 local_thread_ID : SV_GroupThreadID, uint3 global_thread_ID 
     shared_memory[local_thread_ID.x] = input_buffer[global_index];
     GroupMemoryBarrierWithGroupSync();
 
-    for (int d = LOG2_GROUP_SIZE - 1; d >= 0; --d) {
-        int step_size = (int)pow(2, d); // TODO Replace by division by 2
+    for (int step_size = (int)pow(2, LOG2_GROUP_SIZE - 1); step_size > 0; step_size >>= 1) {
         int low_index = 2 * local_thread_ID.x * step_size + step_size - 1;
         int high_index = low_index + step_size;
         if (high_index < GROUP_SIZE) {
