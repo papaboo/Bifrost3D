@@ -33,10 +33,7 @@ unsigned int ceil_divide(unsigned int a, unsigned int b) {
 
 // Ensure that the last of the threads point to the last of the elements in the buffer.
 // This will result in the first threads having negative indices and therefore loading zeroed values.
-int compute_global_index(int global_thread_ID) {
-    uint element_count, element_size;
-    input_buffer.GetDimensions(element_count, element_size);
-
+int compute_global_index(int global_thread_ID, uint element_count) {
     int scaled_element_count_1 = ceil_divide(element_count, element_interval);
     int group_count = ceil_divide(scaled_element_count_1, GROUP_SIZE);
     int threads_launched = group_count * GROUP_SIZE;
@@ -50,7 +47,10 @@ int compute_global_index(int global_thread_ID) {
 
 [numthreads(GROUP_SIZE, 1, 1)]
 void reduce(uint3 local_thread_ID : SV_GroupThreadID, uint3 global_thread_ID : SV_DispatchThreadID) {
-    int global_index = compute_global_index(global_thread_ID.x);
+    uint element_count, element_size;
+    input_buffer.GetDimensions(element_count, element_size);
+
+    int global_index = compute_global_index(global_thread_ID.x, element_count);
 
     // TODO do first reduction in place
     shared_memory[local_thread_ID.x] = input_buffer[global_index];
@@ -68,28 +68,23 @@ void reduce(uint3 local_thread_ID : SV_GroupThreadID, uint3 global_thread_ID : S
 }
 
 // ------------------------------------------------------------------------------------------------
-// Clear the last element.
-// TODO Can be inlined in downsweep and toggled from the constant buffer.
-// ------------------------------------------------------------------------------------------------
-[numthreads(1, 1, 1)]
-void clear_last_element() {
-    uint element_count, element_size;
-    input_buffer.GetDimensions(element_count, element_size);
-    input_buffer[element_count - 1] = 0u;
-}
-
-// ------------------------------------------------------------------------------------------------
 // Down-sweep, algorithm 2.
 // ------------------------------------------------------------------------------------------------
 [numthreads(GROUP_SIZE, 1, 1)]
 void downsweep(uint3 local_thread_ID : SV_GroupThreadID, uint3 global_thread_ID : SV_DispatchThreadID) {
-    int global_index = compute_global_index(global_thread_ID.x);
-    
+    uint element_count, element_size;
+    input_buffer.GetDimensions(element_count, element_size);
+
+    int global_index = compute_global_index(global_thread_ID.x, element_count);
+
     // TODO do first reduction in place
-    shared_memory[local_thread_ID.x] = input_buffer[global_index];
+    uint value = input_buffer[global_index];
+    bool zero_entry = zero_last_entry && global_index == element_count - 1;
+    shared_memory[local_thread_ID.x] = zero_entry ? 0u : value;
+
     GroupMemoryBarrierWithGroupSync();
 
-    for (int step_size = (int)pow(2, LOG2_GROUP_SIZE - 1); step_size > 0; step_size >>= 1) {
+    for (int step_size = (int)pow(2, LOG2_GROUP_SIZE- 1); step_size > 0; step_size /= 2) {
         int low_index = 2 * local_thread_ID.x * step_size + step_size - 1;
         int high_index = low_index + step_size;
         if (high_index < GROUP_SIZE) {

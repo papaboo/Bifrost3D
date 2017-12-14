@@ -34,16 +34,16 @@ public:
         OID3DBlob reduce_shader_blob = compile_shader(shader_folder_path + L"Compute\\PrefixSum.hlsl", "cs_5_0", "reduce");
         THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_shader_blob), NULL, &m_reduce_shader));
 
-        OID3DBlob clear_shader_blob = compile_shader(shader_folder_path + L"Compute\\PrefixSum.hlsl", "cs_5_0", "clear_last_element");
-        THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(clear_shader_blob), NULL, &m_clear_shader));
-
         OID3DBlob downsweep_shader_blob = compile_shader(shader_folder_path + L"Compute\\PrefixSum.hlsl", "cs_5_0", "downsweep");
         THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(downsweep_shader_blob), NULL, &m_downsweep_shader));
 
-        int4 outer_constants = { 1, 1, 1, 0 };
+        int4 outer_constants = { 1, 0, 0, 0 };
         THROW_ON_FAILURE(create_constant_buffer(device, outer_constants, &m_outer_constants));
 
-        int4 inner_constants = { int(GROUP_SIZE), 0, 1, 0 };
+        int4 outer_single_iteration_constants = { 1, 1, 0, 0 };
+        THROW_ON_FAILURE(create_constant_buffer(device, outer_single_iteration_constants, &m_outer_single_iteration_constants));
+
+        int4 inner_constants = { int(GROUP_SIZE), 1, 1, 0 };
         THROW_ON_FAILURE(create_constant_buffer(device, inner_constants, &m_inner_constants));
     }
 
@@ -105,19 +105,18 @@ public:
     void apply(ID3D11DeviceContext1& context, ID3D11UnorderedAccessView* buffer_UAV, unsigned int element_count = 0xFFFFFFFF) { 
         context.CSSetUnorderedAccessViews(0, 1, &buffer_UAV, nullptr);
 
+        bool run_two_iterations = element_count > GROUP_SIZE;
+        OID3D11Buffer& outer_constants = run_two_iterations ? m_outer_constants : m_outer_single_iteration_constants;
+
         // Reduce
         context.CSSetShader(m_reduce_shader, nullptr, 0);
-        context.CSSetConstantBuffers(0, 1, &m_outer_constants);
+        context.CSSetConstantBuffers(0, 1, &outer_constants);
         context.Dispatch(ceil_divide(element_count, GROUP_SIZE), 1u, 1u);
 
         // Reduce and downsweep part two if needed.
-        if (element_count > GROUP_SIZE) {
+        if (run_two_iterations) {
             // Inner reduction
             context.CSSetConstantBuffers(0, 1, &m_inner_constants);
-            context.Dispatch(1u, 1u, 1u);
-
-            // Clear the last element. TODO Built into the downsweep shader
-            context.CSSetShader(m_clear_shader, nullptr, 0);
             context.Dispatch(1u, 1u, 1u);
 
             // Inner downsweep
@@ -129,10 +128,6 @@ public:
             context.Dispatch(ceil_divide(element_count, GROUP_SIZE), 1u, 1u);
 
         } else {
-            // Clear the last element. TODO Built into the downsweep shader
-            context.CSSetShader(m_clear_shader, nullptr, 0);
-            context.Dispatch(1u, 1u, 1u);
-
             // Downsweep
             context.CSSetShader(m_downsweep_shader, nullptr, 0);
             context.Dispatch(ceil_divide(element_count, GROUP_SIZE), 1u, 1u);
@@ -145,10 +140,10 @@ public:
 
 private:
     OID3D11ComputeShader m_reduce_shader;
-    OID3D11ComputeShader m_clear_shader;
     OID3D11ComputeShader m_downsweep_shader;
 
     OID3D11Buffer m_outer_constants;
+    OID3D11Buffer m_outer_single_iteration_constants;
     OID3D11Buffer m_inner_constants;
 };
 
