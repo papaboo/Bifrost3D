@@ -132,7 +132,7 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
     optix_model["mesh_flags"]->setInt(mesh_flags);
     OPTIX_VALIDATE(optix_model);
 
-    optix::Acceleration acceleration = context->createAcceleration("Trbvh", "Bvh");
+    optix::Acceleration acceleration = context->createAcceleration("Sbvh", "Bvh"); // TODO Use Trbvh when it's stable.
     acceleration->setProperty("index_buffer_name", "index_buffer");
     acceleration->setProperty("vertex_buffer_name", "geometry_buffer");
     acceleration->setProperty("vertex_buffer_stride", "16");
