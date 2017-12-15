@@ -105,20 +105,36 @@ float3 integration(PixelInput input) {
             Cone light_sphere_cap = SPTD::sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
 
             Cone hemisphere_sphere_cap = Cone::make(float3(0.0f, 0.0f, 1.0f), 0.0f);
-            
             float3 centroid_of_union = SPTD::centroid_of_union(hemisphere_sphere_cap, light_sphere_cap);
 
             float3 diffuse_tint, specular_tint;
             material.evaluate_tints(wo, centroid_of_union, input.texcoord, diffuse_tint, specular_tint);
 
             { // Evaluate GGX/microfacet.
+                { // Stretch highlight based on roughness and cos_theta.
+                    // The stretching is performed by warping the lights sphere cap in local space along the view vector and its tangent.
+                    float stretch_scale = 1.0 + 32.0 * material.roughness() * material.roughness() * (1.0f - sqrt(abs(wo.z)));
+                    float3 perfect_reflection = float3(-wo.x, -wo.y, wo.z);
+                    float2 delta_reflection = light_sphere_cap.direction.xy - perfect_reflection.xy;
+
+                    // Project the delta reflection on to wo, which is itself projected down on the plane defined by the normal.
+                    float2 wo_bitangent = wo.xy / length(wo.xy);
+                    float2 wo_tangent = float2(-wo_bitangent.y, wo_bitangent.x);
+                    float2 delta_x = wo_bitangent * dot(delta_reflection, wo_bitangent);
+                    float2 delta_y = wo_tangent * dot(delta_reflection, wo_tangent);
+
+                    // Warp the direction by compressing it horizontally and stretching it vertically.
+                    light_sphere_cap.direction.xy = perfect_reflection + delta_x / stretch_scale + delta_y * stretch_scale;
+                    light_sphere_cap.direction = normalize(light_sphere_cap.direction);
+                }
+
                 Cone ggx_light_sphere_cap = SPTD::pivot_transform(light_sphere_cap, ggx_sptd.pivot);
                 float light_solidangle = SPTD::solidangle_of_union(ggx_light_sphere_cap, ggx_sptd_cap);
                 float3 l = light.sphere_power() / (PI * sphere_surface_area(light.sphere_radius()));
                 radiance += specular_tint * light_solidangle / (4.0f * PI) * l;
             }
 
-            { // Evaluate Lambert. // TODO Optimize by not recomputing the light sphere cap and perhaps approximate the union solidangle and centroid.
+            { // Evaluate Lambert. // TODO Optimize by perhaps approximating the union solidangle and centroid.
                 // TODO Combine solidangle and centroid calculations.
                 float solidangle_of_light = SPTD::solidangle(light_sphere_cap);
                 float solidangle_of_union = SPTD::solidangle_of_union(hemisphere_sphere_cap, light_sphere_cap);
