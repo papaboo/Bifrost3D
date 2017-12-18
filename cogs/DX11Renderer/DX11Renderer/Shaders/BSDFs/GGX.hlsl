@@ -47,8 +47,8 @@ namespace GGX {
     float height_correlated_smith_delta(float alpha, float3 w, float3 halfway) {
         float cos_theta_sqrd = w.z * w.z;
         float tan_theta_sqrd = max(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
-        float a_sqrd = 1.0f / (alpha * alpha * tan_theta_sqrd);
-        return (-1.0f + sqrt(1.0f + 1.0f / a_sqrd)) / 2.0f;
+        float recip_a_sqrd = alpha * alpha * tan_theta_sqrd;
+        return 0.5 * (-1.0f + sqrt(1.0f + recip_a_sqrd));
     }
 
     // Height correlated smith geometric term.

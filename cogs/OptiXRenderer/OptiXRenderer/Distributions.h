@@ -120,8 +120,8 @@ namespace VNDF_GGX {
         //      Check the GGX Rho computation for validity.
         float cos_theta_sqrd = cos_theta * cos_theta;
         float tan_theta_sqrd = fmaxf(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
-        float a_sqrd = 1.0f / (alpha * alpha * tan_theta_sqrd);
-        return (-1.0f + sqrt(1.0f + 1.0f / a_sqrd)) / 2.0f;
+        float recip_a_sqrd = alpha * alpha * tan_theta_sqrd;
+        return 0.5f * (-1.0f + sqrt(1.0f + recip_a_sqrd));
     }
 
     __inline_all__ float masking(float alpha, float cos_theta) {
