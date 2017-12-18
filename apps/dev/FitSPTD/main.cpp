@@ -146,19 +146,19 @@ void fit_pivot(Pivot* pivots, const int size, BRDF brdf) {
     // Loop over theta and alpha.
     #pragma omp parallel for
     for (int i = 0; i < size * size; ++i) {
-        int t = i % size, a = i / size;
+        int t = i % size, r = i / size;
 
         float cos_theta = t / float(size - 1);
         float theta = fminf(1.57f, acosf(cos_theta));
         // std::cout << "cos_theta: " << cos_theta << ", theta: " << theta << ", cos(theta): " << cosf(theta) << std::endl;
         const float3 wo = make_float3(sinf(theta), 0, cosf(theta));
 
-        float roughness = a / float(size - 1);
+        float roughness = r / float(size - 1);
         float alpha = fmaxf(roughness * roughness, 0.001f); // OptiXRenderer::Shading::BSDFs::GGX::alpha_from_roughness(roughness); // TODO The minimal alpha should be reduced, but that leads to bad fits on nearly specular surfaces.
         auto average_sample = compute_average_sample(brdf, wo, alpha);
 
         // init
-        Pivot& pivot = pivots[t + a * size];
+        Pivot& pivot = pivots[t + r * size];
         pivot.distance = 0.5f + 0.49f * (1.0f - alpha);
         pivot.theta = acos(average_sample.direction.z) * sign(average_sample.direction.x);
         pivot.amplitude = average_sample.rho;
