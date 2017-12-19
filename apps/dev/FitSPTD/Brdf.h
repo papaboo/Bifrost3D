@@ -12,6 +12,8 @@
 #include <OptiXrenderer/Shading/BSDFs/GGX.h>
 #include <OptiXRenderer/Utils.h>
 
+#include <cstdio>
+
 using namespace optix;
 using namespace OptiXRenderer;
 
@@ -48,14 +50,14 @@ public:
         }
 
         float3 halfway = normalize(wo + wi);
-        auto f = OptiXRenderer::Shading::BSDFs::GGXWithVNDF::evaluate_with_PDF(make_float3(1,1,1), alpha, wo, wi, halfway);
+        auto f = Shading::BSDFs::GGXWithVNDF::evaluate_with_PDF(make_float3(1,1,1), alpha, wo, wi, halfway);
         pdf = f.PDF;
         return f.weight.x * wi.z; // eval scaled by cos theta
     }
 
     float3 sample(const float3& wo, float alpha, float U1, float U2) const {
 
-        auto sample = OptiXRenderer::Shading::BSDFs::GGXWithVNDF::sample(make_float3(1.0f, 1.0f, 1.0f), alpha, wo, make_float2(U1, U2));
+        auto sample = Shading::BSDFs::GGXWithVNDF::sample(make_float3(1.0f, 1.0f, 1.0f), alpha, wo, make_float2(U1, U2));
         return sample.direction;
     }
 };
@@ -69,30 +71,18 @@ public:
             return 0;
         }
 
-        // masking
-        const float a_V = 1.0f / alpha / tanf(acosf(wo.z));
-        const float LambdaV = (wo.z < 1.0f) ? 0.5f * (-1.0f + sqrtf(1.0f + 1.0f / a_V / a_V)) : 0.0f;
-
-        // shadowing
-        float G2;
-        if (wi.z <= 0.0f)
-            G2 = 0;
-        else {
-            const float a_L = 1.0f / alpha / tanf(acosf(wi.z));
-            const float LambdaL = (wi.z < 1.0f) ? 0.5f * (-1.0f + sqrtf(1.0f + 1.0f / a_L / a_L)) : 0.0f;
-            G2 = 1.0f / (1.0f + LambdaV + LambdaL);
-        }
+        const float3 H = normalize(wo + wi);
+        float G2 = wi.z <= 0.0f ? 0.0f : Shading::BSDFs::GGX::height_correlated_smith_G(alpha, wo, wi, H);
 
         // D
-        const float3 H = normalize(wo + wi);
         const float slopex = H.x / H.z;
         const float slopey = H.y / H.z;
-        float D = 1.0f / (1.0f + (slopex*slopex + slopey*slopey) / alpha / alpha);
+        float D = 1.0f / (1.0f + (slopex*slopex + slopey*slopey) / (alpha * alpha));
         D = D * D;
         D = D / (PIf * alpha * alpha * H.z*H.z*H.z*H.z);
 
-        pdf = fabsf(D * H.z / 4.0f / dot(wo, H));
-        return D * G2 / 4.0f / wo.z;
+        pdf = fabsf(D * H.z / (4.0f * dot(wo, H)));
+        return D * G2 / (4.0f * wo.z);
     }
 
     float3 sample(const float3& wo, float alpha, float U1, float U2) const {
