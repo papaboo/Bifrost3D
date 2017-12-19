@@ -164,7 +164,7 @@ void fit_pivot(Pivot* pivots, const int size, BRDF brdf) {
         pivot.amplitude = average_sample.rho;
 
         // Fit
-        float epsilon = 0.025f;
+        float epsilon = 0.05f;
         fit(pivot, brdf, wo, alpha, epsilon);
 
         // std::cout << "  [cos_theta: " << V.z << ", roughness: " << roughness << "]: Pivot: [theta: " << pivot.theta << ", distance: " << pivot.distance << ", rho: " << pivot.amplitude << "]" << std::endl;
