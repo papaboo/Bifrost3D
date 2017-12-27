@@ -68,6 +68,9 @@ public:
 
     void render();
 
+    bool uses_v_sync() const;
+    void set_v_sync(bool use_v_sync);
+
 private:
 
     Compositor(HWND& hwnd, const Cogwheel::Core::Window& window);

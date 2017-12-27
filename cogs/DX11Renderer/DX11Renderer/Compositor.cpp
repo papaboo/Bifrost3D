@@ -90,6 +90,7 @@ private:
     OID3D11Device1 m_device;
     OID3D11DeviceContext1 m_render_context;
     OIDXGISwapChain1 m_swap_chain;
+    unsigned int m_sync_interval = 1;
 
     // Backbuffer members.
     Vector2ui m_backbuffer_size;
@@ -178,8 +179,6 @@ public:
         if (Cameras::begin() == Cameras::end())
             return;
 
-        // ?? wait_for_previous_frame();
-
         if (m_device == nullptr)
             return;
 
@@ -259,8 +258,11 @@ public:
         }
 
         // Present the backbuffer.
-        m_swap_chain->Present(0, 0);
+        m_swap_chain->Present(m_sync_interval, 0);
     }
+
+    bool uses_v_sync() const { return m_sync_interval != 0; }
+    void set_v_sync(bool use_v_sync) { m_sync_interval = unsigned int(use_v_sync); }
 };
 
 //----------------------------------------------------------------------------
@@ -294,8 +296,8 @@ IRenderer* Compositor::attach_renderer(RendererCreator renderer_creator) {
     return m_impl->attach_renderer(renderer_creator);
 }
 
-void Compositor::render() {
-    m_impl->render();
-}
+void Compositor::render() { m_impl->render(); }
+bool Compositor::uses_v_sync() const { return m_impl->uses_v_sync(); }
+void Compositor::set_v_sync(bool use_v_sync) { m_impl->set_v_sync(use_v_sync); }
 
 } // NS DX11Renderer
