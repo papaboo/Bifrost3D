@@ -317,20 +317,20 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
     QueryPerformanceCounter(&performance_count);
     double previous_time = performance_count.QuadPart * counter_hertz;
 
-    while (!g_engine->is_quit_requested()) {
+    bool running = true;
+    while (running && !g_engine->is_quit_requested()) {
         // Poll events.
         g_keyboard->per_frame_reset();
         g_mouse->per_frame_reset();
         MSG msg = {};
-        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-        {
-            handle_input(msg.message, msg.wParam, msg.lParam);
+        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT)
+                running = false;
 
+            handle_input(msg.message, msg.wParam, msg.lParam);
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
-        if (msg.message == WM_QUIT)
-            break;
 
         // Poll and update time.
         QueryPerformanceCounter(&performance_count);
