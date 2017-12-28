@@ -49,7 +49,6 @@ int compute_global_index(int global_thread_ID, uint element_count) {
 void reduce(uint3 local_thread_ID : SV_GroupThreadID, uint3 global_thread_ID : SV_DispatchThreadID) {
     uint element_count, element_size;
     input_buffer.GetDimensions(element_count, element_size);
-
     int global_index = compute_global_index(global_thread_ID.x, element_count);
 
     // TODO do first reduction in place
@@ -74,14 +73,12 @@ void reduce(uint3 local_thread_ID : SV_GroupThreadID, uint3 global_thread_ID : S
 void downsweep(uint3 local_thread_ID : SV_GroupThreadID, uint3 global_thread_ID : SV_DispatchThreadID) {
     uint element_count, element_size;
     input_buffer.GetDimensions(element_count, element_size);
-
     int global_index = compute_global_index(global_thread_ID.x, element_count);
 
     // TODO do first reduction in place
     uint value = input_buffer[global_index];
     bool zero_entry = zero_last_entry && global_index == element_count - 1;
     shared_memory[local_thread_ID.x] = zero_entry ? 0u : value;
-
     GroupMemoryBarrierWithGroupSync();
 
     for (int step_size = (int)pow(2, LOG2_GROUP_SIZE- 1); step_size > 0; step_size /= 2) {
