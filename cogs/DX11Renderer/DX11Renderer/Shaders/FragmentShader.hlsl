@@ -45,26 +45,10 @@ BRDFPivotTransform sptd_ggx_pivot(float roughness, float3 wo) {
     float pivot_sin_theta = -sqrt(1.0f - pivot_cos_theta * pivot_cos_theta);
     float3 pivot = pivot_norm * float3(pivot_sin_theta, 0, pivot_cos_theta);
 
-    // Convert the pivot from local / wo space to tangent space. TODO Isn't there some faster way to move the vector than create the matrix explicitly?
+    // Convert the pivot from local / wo space to tangent space. TODO Inline. Row[1] seems to have no effect
     float3x3 basis;
     basis[0] = wo.z < 0.999f ? normalize(wo - float3(0, 0, wo.z)) : float3(1, 0, 0);
     basis[1] = cross(float3(0, 0, 1), basis[0]); // Has no effect. Looks like the whole thing can be inlined to use basis[0] and basis[2].z
-    basis[2] = float3(0, 0, 1);
-    res.pivot = mul(pivot, basis);
-    return res;
-}
-
-BRDFPivotTransform sptd_lambert_pivot(float3 wo) {
-    BRDFPivotTransform res;
-    res.brdf_scale = 1.0f;
-    float pivot_norm = 0.369589f;
-    float pivot_theta = 0.0f;
-    float3 pivot = pivot_norm * float3(sin(pivot_theta), 0, cos(pivot_theta));
-
-    // Convert the pivot from local / wo space to tangent space. TODO Use TBN or perhaps inline. Isn't there some faster way to move the vector than create the matrix explicitly?
-    float3x3 basis;
-    basis[0] = wo.z < 0.999f ? normalize(wo - float3(0, 0, wo.z)) : float3(1, 0, 0);
-    basis[1] = cross(float3(0, 0, 1), basis[0]);
     basis[2] = float3(0, 0, 1);
     res.pivot = mul(pivot, basis);
     return res;
