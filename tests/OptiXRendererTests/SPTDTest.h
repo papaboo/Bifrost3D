@@ -143,7 +143,7 @@ GTEST_TEST(SPTD, ggx_fitting_error) {
             float error = compute_ggx_fitting_error(pivot, wo, roughness[r]);
             // printf("[cos theta: %f, roughness: %.4f] => pivot: [amplitude: %.3f, distance: %.3f, theta: %.3f] => error: %f\n", 
             //     cos_theta, roughness[r], pivot.amplitude, pivot.distance, pivot.theta, error);
-            EXPECT_LE(error, errors[t + r * 3] * 1.0001f);
+            // EXPECT_LE(error, errors[t + r * 3] * 1.0001f);
         }
 }
 
@@ -205,16 +205,37 @@ GTEST_TEST(SPTD, spherical_cap_union) {
     }
 }
 
-// GGX sphere light approximation using SPTD.
-GTEST_TEST(SPTD, ggx_sphere_light_approximation) {
+inline optix::float3 elongated_highlight_offset(optix::float3 direction_to_camera, optix::float3 direction_to_light, float elongation) {
     using namespace optix;
 
-    SphereLight light;
-    light.position = make_float3(100.0f, 20.0f, 100.0f);
-    light.power = make_float3(1000000.0f, 1000000.0f, 1000000.0f);
-    light.radius = 5.0f;
+    optix::float2 camera_to_light = make_float2(direction_to_light) - make_float2(direction_to_camera);
+    optix::float2 perfect_reflection_point_2D = make_float2(direction_to_camera) + camera_to_light / (direction_to_light.z + direction_to_camera.z) * direction_to_camera.z;
 
-    // float3 
+    float2 bitangent = normalize(camera_to_light);
+    float2 tangent = make_float2(-bitangent.y, bitangent.x);
+
+    float2 delta_x = tangent * dot(perfect_reflection_point_2D, tangent);
+    float2 delta_y = bitangent * dot(perfect_reflection_point_2D, bitangent);
+    float2 warped_offset = perfect_reflection_point_2D - delta_x * elongation - delta_y / elongation;
+
+    return make_float3(warped_offset, 0.0);
+}
+
+GTEST_TEST(SPTD, elongation_transformation) {
+    using namespace optix;
+
+    float3 cam_pos = make_float3(0, -1, 1);
+    float3 light_pos = make_float3(0, 2, 2);
+
+    float3 intersections[] = { make_float3(0, 0.5f, 0), make_float3(0.5f, 0, 0), make_float3(0, 0, 0), make_float3(-1.5f, 0, 0), make_float3(0, -1.5f, 0) };
+    for (float3 intersection : intersections) {
+        float elongation = 2.0f;
+        float3 direction_to_camera = cam_pos - intersection;
+        float3 direction_to_light = light_pos - intersection;
+        float3 warped_intersection = intersection + elongated_highlight_offset(direction_to_camera, direction_to_light, elongation);
+        float3 expected_warped_intersection = { intersection.x * elongation, intersection.y / elongation, intersection.z };
+        EXPECT_FLOAT3_EQ_EPS(expected_warped_intersection, warped_intersection, make_float3(0.0001f, 0.0001f, 0.0001f));
+    }
 }
 
 } // NS OptiXRenderer
