@@ -108,10 +108,6 @@ float3 integration(PixelInput input) {
     float3x3 world_to_shading_TBN = create_TBN(normal);
     wo = normalize(mul(world_to_shading_TBN, wo));
 
-    // Compute GGX SPTD params
-    BRDFPivotTransform ggx_sptd = sptd_ggx_pivot(material.roughness(), wo);
-    Cone ggx_sptd_cap = SPTD::pivot_transform(Cone::make(float3(0.0f, 0.0f, 1.0f), 0.0f), ggx_sptd.pivot);
-
     for (int l = 0; l < light_count.x; ++l) {
         LightData light = light_data[l];
         LightSample light_sample = sample_light(light_data[l], input.world_position.xyz);
@@ -129,8 +125,7 @@ float3 integration(PixelInput input) {
             float3 diffuse_tint, specular_tint;
             material.evaluate_tints(wo, centroid_of_union, input.texcoord, diffuse_tint, specular_tint);
 
-            { // Evaluate Lambert. // TODO Optimize by perhaps approximating the union solidangle and centroid.
-              // TODO Combine solidangle and centroid calculations.
+            { // Evaluate Lambert.
                 float solidangle_of_light = SPTD::solidangle(light_sphere_cap);
                 float solidangle_of_union = SPTD::solidangle_of_union(hemisphere_sphere_cap, light_sphere_cap);
                 float light_radiance_scale = solidangle_of_union / solidangle_of_light;
@@ -139,11 +134,10 @@ float3 integration(PixelInput input) {
 
             { // Evaluate GGX/microfacet.
                 // Stretch highlight based on roughness and cos_theta.
-                // TODO Use centroid for evaluation instead of light_sphere_cap.direction
                 float3 direction_to_camera = wo * length(_wo);
-                float3 direction_to_light = light_sphere_cap.direction * length(sphere_position);
+                float3 direction_to_light = centroid_of_union * length(sphere_position); // light_sphere_cap.direction * length(sphere_position);
                 float3 halfway = normalize(wo + centroid_of_union);
-                float elongation = 1.0 + 4.0 * material.roughness() * (1.0f - sqrt(abs(wo.z)));
+                float elongation = 1.0 + 4.0 * material.roughness() * (1.0f - dot(wo, halfway));
                 float3 intersection_offset = elongated_highlight_offset(direction_to_camera, direction_to_light, elongation);
                 light_sphere_cap.direction = normalize(direction_to_light - intersection_offset);
 
