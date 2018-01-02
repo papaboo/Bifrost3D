@@ -74,7 +74,7 @@ namespace SPTD {
     float solidangle(Cone c) { return TWO_PI - TWO_PI * c.cos_theta; }
 
     // Based on Oat and Sander's 2007 technique in Ambient aperture lighting.
-    float solidangle_of_union(Cone c1, Cone c2) {
+    float solidangle_of_intersection(Cone c1, Cone c2) {
         float r1 = acos(c1.cos_theta);
         float r2 = acos(c2.cos_theta);
         float rd = acos(dot(c1.direction, c2.direction));
@@ -101,7 +101,7 @@ namespace SPTD {
 
     // The centroid of the intersection of the two cones.
     // See Ambient aperture lighting, 2007, section 3.3.
-    float3 centroid_of_union(Cone c1, Cone c2) {
+    float3 centroid_of_intersection(Cone c1, Cone c2) {
         float r1 = acos(c1.cos_theta);
         float r2 = acos(c2.cos_theta);
         float d = acos(dot(c1.direction, c2.direction));

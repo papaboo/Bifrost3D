@@ -80,7 +80,6 @@ float3 integration(PixelInput input) {
 
     // Apply IBL
     float3 wo = camera_position.xyz - input.world_position.xyz;
-    float3 _wo = camera_position.xyz - input.world_position.xyz;
     float3 wi = -reflect(normalize(wo), normal);
     float3 radiance = environment_tint.rgb * material.IBL(normal, wi, input.texcoord);
 
@@ -99,33 +98,34 @@ float3 integration(PixelInput input) {
             Cone light_sphere_cap = SPTD::sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
 
             Cone hemisphere_sphere_cap = Cone::make(float3(0.0f, 0.0f, 1.0f), 0.0f);
-            float3 centroid_of_union = SPTD::centroid_of_union(hemisphere_sphere_cap, light_sphere_cap);
+            float3 centroid_of_cones = SPTD::centroid_of_intersection(hemisphere_sphere_cap, light_sphere_cap);
 
             float3 diffuse_tint, specular_tint;
-            material.evaluate_tints(wo, centroid_of_union, input.texcoord, diffuse_tint, specular_tint);
+            material.evaluate_tints(wo, centroid_of_cones, input.texcoord, diffuse_tint, specular_tint);
 
             { // Evaluate Lambert.
                 float solidangle_of_light = SPTD::solidangle(light_sphere_cap);
-                float solidangle_of_union = SPTD::solidangle_of_union(hemisphere_sphere_cap, light_sphere_cap);
-                float light_radiance_scale = solidangle_of_union / solidangle_of_light;
-                radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_of_union.z) * light_sample.radiance * light_radiance_scale;
+                float solidangle_of_intersection = SPTD::solidangle_of_intersection(hemisphere_sphere_cap, light_sphere_cap);
+                float light_radiance_scale = solidangle_of_intersection / solidangle_of_light;
+                radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_of_cones.z) * light_sample.radiance * light_radiance_scale;
             }
 
             { // Evaluate GGX/microfacet.
                 // Stretch highlight based on roughness and cos_theta.
-                float3 direction_to_camera = wo * length(_wo);
-                float3 direction_to_light = centroid_of_union * length(sphere_position); // light_sphere_cap.direction * length(sphere_position);
-                float3 halfway = normalize(wo + centroid_of_union);
+                float3 direction_to_camera = wo * length(camera_position.xyz - input.world_position.xyz);
+                float3 direction_to_light = centroid_of_cones * length(sphere_position); // light_sphere_cap.direction * length(sphere_position);
+                float3 halfway = normalize(wo + centroid_of_cones);
                 float elongation = 1.0 + 4.0 * material.roughness() * (1.0f - dot(wo, halfway));
                 float3 intersection_offset = elongated_highlight_offset(direction_to_camera, direction_to_light, elongation);
                 light_sphere_cap.direction = normalize(direction_to_light - intersection_offset);
-
                 float3 adjusted_wo = normalize(direction_to_camera - intersection_offset);
+
+                // NOTE If performance is a concern then the SPTD cap for the hemisphere could be precomputed and stored along with the pivot.
                 BRDFPivotTransform adjusted_ggx_sptd = sptd_ggx_pivot(material.roughness(), adjusted_wo);
                 Cone adjusted_ggx_sptd_cap = SPTD::pivot_transform(Cone::make(float3(0.0f, 0.0f, 1.0f), 0.0f), adjusted_ggx_sptd.pivot);
 
                 Cone ggx_light_sphere_cap = SPTD::pivot_transform(light_sphere_cap, adjusted_ggx_sptd.pivot);
-                float light_solidangle = SPTD::solidangle_of_union(ggx_light_sphere_cap, adjusted_ggx_sptd_cap);
+                float light_solidangle = SPTD::solidangle_of_intersection(ggx_light_sphere_cap, adjusted_ggx_sptd_cap);
                 float3 l = light.sphere_power() / (PI * sphere_surface_area(light.sphere_radius()));
                 radiance += specular_tint * light_solidangle / (4.0f * PI) * l;
             }
