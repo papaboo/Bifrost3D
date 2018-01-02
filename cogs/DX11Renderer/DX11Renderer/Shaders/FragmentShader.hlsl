@@ -54,17 +54,12 @@ BRDFPivotTransform sptd_ggx_pivot(float roughness, float3 wo) {
     return res;
 }
 
-float3 find_reflection_point(float3 p0, float3 p1) {
-    float3 v = p1 - p0;
-    float3 m = p0 + v / (abs(p1.z) + abs(p0.z)) * abs(p0.z); // TODO Only needed as long as the direction to light and camera can be on opposite sides.
-    return float3(m.x, m.y, 0.0f);
-}
-
 float3 elongated_highlight_offset(float3 direction_to_camera, float3 direction_to_light, float elongation) {
-    float3 perfect_reflection_point = find_reflection_point(direction_to_camera, direction_to_light); // TODO inline to reuse camera_to_light.
-    float2 perfect_reflection_point_2D = perfect_reflection_point.xy;
+    float2 camera_to_light = direction_to_light.xy - direction_to_camera.xy;
+    float t = abs(direction_to_camera.z) / (abs(direction_to_light.z) + abs(direction_to_camera.z)); // NOTE Only needed as long as the direction to light and camera can be on opposite sides.
+    float2 perfect_reflection_point_2D = direction_to_camera.xy + camera_to_light * t;
 
-    float2 bitangent = normalize(direction_to_light.xy - direction_to_camera.xy);
+    float2 bitangent = normalize(camera_to_light);
     float2 tangent = float2(-bitangent.y, bitangent.x);
 
     float2 delta_x = tangent * dot(perfect_reflection_point_2D, tangent);
