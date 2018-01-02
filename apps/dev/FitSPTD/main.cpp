@@ -114,6 +114,13 @@ struct PivotFitter {
 
     float operator()(float* params) {
         update(params);
+
+        // NOTE Ideally we'd assign a higher weight to errors where the distance and theta are outside the valid domain, 
+        // but in practice that yields less diserable results than simply mirroring vertices around the domain border.
+        // float distance_offset = params[0] - pivot.distance;
+        // float theta_offset = params[1] - pivot.theta;
+        // float error_scale = 1.0f + 32.0f * (distance_offset * distance_offset + theta_offset * theta_offset);
+
         return compute_error(pivot, brdf, wo, alpha);
     }
 
