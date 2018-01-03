@@ -54,8 +54,8 @@ SET(INPUT_SRCS
 SET(MATH_SRCS 
   Cogwheel/Math/AABB.h
   Cogwheel/Math/Color.h
-  Cogwheel/Math/Conversions.h
   Cogwheel/Math/Constants.h
+  Cogwheel/Math/Conversions.h
   Cogwheel/Math/Distribution1D.h
   Cogwheel/Math/Distribution2D.h
   Cogwheel/Math/Distributions.h
@@ -63,6 +63,7 @@ SET(MATH_SRCS
   Cogwheel/Math/Intersect.h
   Cogwheel/Math/Math.h
   Cogwheel/Math/Matrix.h
+  Cogwheel/Math/NelderMead.h
   Cogwheel/Math/OctahedralNormal.h
   Cogwheel/Math/Plane.h
   Cogwheel/Math/Polynomial.h

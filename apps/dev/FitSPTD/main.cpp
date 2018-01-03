@@ -4,9 +4,9 @@
 // ------------------------------------------------------------------------------------------------
 
 #include "Brdf.h"
-#include "NelderMead.h"
 
 #include <Cogwheel/Assets/Image.h>
+#include <Cogwheel/Math/NelderMead.h>
 #include <OptiXRenderer/SPTD.h>
 #include <StbImageWriter/StbImageWriter.h>
 
@@ -140,7 +140,7 @@ void fit(Pivot& pivot, BRDF brdf, const float3& wo, float alpha, float epsilon =
     float result_fit[2];
 
     PivotFitter<BRDF> fitter(pivot, brdf, wo, alpha);
-    float error = nelder_mead<2>(result_fit, start_fit, epsilon, 1e-5f, 200, fitter);
+    float error = Cogwheel::Math::nelder_mead<2>(result_fit, start_fit, epsilon, 1e-5f, 200, fitter);
 
     // Update pivot with best fitting values
     fitter.update(result_fit);

@@ -2,7 +2,7 @@ if (TARGET OptiXRenderer)
 
   set(PROJECT_NAME "FitSPTD")
 
-  set(SRCS Brdf.h main.cpp NelderMead.h)
+  set(SRCS Brdf.h main.cpp)
 
   add_executable(${PROJECT_NAME} ${SRCS})
 

@@ -1,20 +1,25 @@
 // Nelder-Mead-, inverse simplex-, amoebe optimization.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _FIT_SPTD_NELDER_MEAD_H_
-#define _FIT_SPTD_NELDER_MEAD_H_
+#ifndef _COGWHEEL_MATH_NELDER_MEAD_H_
+#define _COGWHEEL_MATH_NELDER_MEAD_H_
 
+namespace Cogwheel {
+namespace Math {
+
+// ------------------------------------------------------------------------------------------------
 // Downhill simplex solver:
 // http://en.wikipedia.org/wiki/Nelder%E2%80%93Mead_method#One_possible_variation_of_the_NM_algorithm
 // using the termination criterion from Numerical Recipes in C++ (3rd Ed.)
+// ------------------------------------------------------------------------------------------------
 template<int DIM, typename Function>
 float nelder_mead(float* pmin, const float* start, float delta, float tolerance, int max_iterations, Function objective_function) {
 
     // Standard coefficients from wiki page.
-    const float reflect  = 1.0f;
-    const float expand   = 2.0f;
+    const float reflect = 1.0f;
+    const float expand = 2.0f;
     const float contract = 0.5f;
-    const float shrink   = 0.5f;
+    const float shrink = 0.5f;
 
     typedef float Point[DIM];
     const int NB_POINTS = DIM + 1;
@@ -33,7 +38,7 @@ float nelder_mead(float* pmin, const float* start, float delta, float tolerance,
         for (int i = 0; i < DIM; ++i)
             r[i] += v[i];
     };
-    
+
     Point s[NB_POINTS];
     float f[NB_POINTS];
 
@@ -58,7 +63,8 @@ float nelder_mead(float* pmin, const float* start, float delta, float tolerance,
             if (f[i] > f[hi]) {
                 nh = hi;
                 hi = i;
-            } else if (f[i] > f[nh])
+            }
+            else if (f[i] > f[nh])
                 nh = i;
         }
 
@@ -131,4 +137,7 @@ float nelder_mead(float* pmin, const float* start, float delta, float tolerance,
     return f[lo];
 }
 
-#endif // _FIT_SPTD_NELDER_MEAD_H_
+} // NS Math
+} // NS Cogwheel
+
+#endif // _COGWHEEL_MATH_NELDER_MEAD_H_
