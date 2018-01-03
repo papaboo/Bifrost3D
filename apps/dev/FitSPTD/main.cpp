@@ -140,7 +140,7 @@ void fit(Pivot& pivot, BRDF brdf, const float3& wo, float alpha, float epsilon =
     float result_fit[2];
 
     PivotFitter<BRDF> fitter(pivot, brdf, wo, alpha);
-    float error = NelderMead<2>(result_fit, start_fit, epsilon, 1e-5f, 200, fitter);
+    float error = nelder_mead<2>(result_fit, start_fit, epsilon, 1e-5f, 200, fitter);
 
     // Update pivot with best fitting values
     fitter.update(result_fit);
@@ -343,8 +343,7 @@ int main(int argc, char* argv[]) {
         BRDF::GGX brdf;
         fit_pivot(pivots, size, brdf);
 
-        output_fit_header(pivots, size, size, output_dir + "GGXSPTDFit.h", "GGX",
-            "GGX fit for spherical pivot transformed distributions.");
+        output_fit_header(pivots, size, size, output_dir + "GGXSPTDFit.h", "GGX", "GGX fit for spherical pivot transformed distributions.");
         output_fit_image(pivots, size, size, output_dir + "GGXSPTDFit.png");
 
         output_error(pivots, brdf, size, size, "GGX");
