@@ -76,6 +76,12 @@ __inline_all__ OptiXRenderer::Cone pivot_transform(const Cone& cone, const float
         dot(dir_xf, dir1_xf));
 }
 
+// Map a sphere to the spherical cap at origo.
+__inline_all__ Cone sphere_to_sphere_cap(const float3& position, float radius) {
+    float sin_theta_sqrd = clamp(radius * radius / dot(position, position), 0.0f, 1.0f);
+    return Cone::make(normalize(position), sqrt(1.0f - sin_theta_sqrd));
+}
+
 __inline_all__ float solidangle(const Cone& c) { return TWO_PIf - TWO_PIf * c.cos_theta; }
 
 // Based on Oat and Sander's 2007 technique in Ambient aperture lighting.
@@ -93,15 +99,9 @@ __inline_all__ float solidangle_of_union(const Cone& c1, const Cone& c2) {
     else {
         float diff = abs(r1 - r2);
         float den = r1 + r2 - diff;
-        float x = 1.0f - clamp((rd - diff) / den, 0.0f, 1.0f); // TODO smoothstep clamps, so clamping here shouldn't be needed.
+        float x = 1.0f - (rd - diff) / den;
         return smoothstep(0.0f, 1.0f, x) * (TWO_PIf - TWO_PIf * fmaxf(c1.cos_theta, c2.cos_theta));
     }
-}
-
-// Map a sphere to the spherical cap at origo.
-__inline_all__ Cone sphere_to_sphere_cap(const float3& position, float radius) {
-    float sin_theta_sqrd = clamp(radius * radius / dot(position, position), 0.0f, 1.0f);
-    return Cone::make(normalize(position), sqrt(1.0f - sin_theta_sqrd));
 }
 
 // The centroid of the intersection of the two cones.
@@ -118,18 +118,6 @@ __inline_all__ float3 centroid_of_union(const Cone& c1, const Cone& c2) {
         float w = (r2 - r1 + d) / (2.0f * d);
         return normalize(lerp(c2.direction, c1.direction, clamp(w, 0.0f, 1.0f)));
     }
-}
-
-__inline_all__ float evaluate_sphere_light(const float3& pivot, const Sphere& sphere) {
-
-    // compute the spherical cap produced by the sphere
-    float sin_theta_sqrd = clamp(sphere.radius * sphere.radius / dot(sphere.center, sphere.center), 0.0f, 1.0f);
-    Cone sphere_cap = Cone::make(normalize(sphere.center), sqrt(1.0f - sin_theta_sqrd));
-
-    // integrate
-    Cone light_cone = pivot_transform(sphere_cap, pivot);
-    Cone hemisphere_cone = pivot_transform(Cone::make(make_float3(0.0f, 0.0f, 1.0f), 0.0f), pivot);
-    return solidangle_of_union(light_cone, hemisphere_cone);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -165,19 +153,6 @@ struct Pivot {
         const optix::float3 sphere_sample = optix::make_float3(sinf(sphere_theta) * cosf(sphere_phi), sinf(sphere_theta) * sinf(sphere_phi), -cosf(sphere_theta));
         return pivot_transform(sphere_sample, position());
     }
-
-    /*
-    float max_value() {
-        float res = 0.0f;
-        for (float U2 = 0.0f; U2 <= 1.0f; U2 += 0.05f)
-            for (float U1 = 0.0f; U1 <= 1.0f; U1 += 0.05f) {
-                float3 L = sample(U1, U2);
-                float value = eval(L) / amplitude;
-                res = std::max(value, res);
-            }
-        return res;
-    }
-    */
 };
 
 optix::float4 GGX_fit_lookup(float cos_theta, float ggx_alpha);
