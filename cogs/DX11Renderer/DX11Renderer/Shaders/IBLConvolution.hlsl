@@ -103,6 +103,8 @@ void GGX_convolute(uint3 thread_ID : SV_DispatchThreadID) {
 
 // ------------------------------------------------------------------------------------------------
 // Multiple importance sampling IBL convolution using precompuated light samples.
+// Future work:
+// * Second-Order Approximation for Variance Reduction in Multiple Importance Sampling, Lu et al., 2013.
 // ------------------------------------------------------------------------------------------------
 struct LightSample {
     float3 radiance;
