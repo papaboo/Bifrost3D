@@ -70,50 +70,6 @@ namespace SPTD {
         return Cone::make(dir_xf.x * pivot_dir + dir_xf.y * pivot_ortho_dir,
                           dot(dir_xf, dir1_xf));
     }
-
-    float solidangle(Cone c) { return TWO_PI - TWO_PI * c.cos_theta; }
-
-    // Based on Oat and Sander's 2007 technique in Ambient aperture lighting.
-    float solidangle_of_intersection(Cone c1, Cone c2) {
-        float r1 = acos(c1.cos_theta);
-        float r2 = acos(c2.cos_theta);
-        float rd = acos(dot(c1.direction, c2.direction));
-
-        if (rd <= max(r1, r2) - min(r1, r2)) // TODO replace by abs(r1 - r2)
-            // One cap is completely inside the other
-            return TWO_PI - TWO_PI * max(c1.cos_theta, c2.cos_theta);
-        else if (rd >= r1 + r2)
-            // No intersection exists
-            return 0.0f;
-        else {
-            float diff = abs(r1 - r2);
-            float den = r1 + r2 - diff;
-            float x = 1.0f - clamp((rd - diff) / den, 0.0f, 1.0f); // TODO smoothstep clamps, so clamping here shouldn't be needed.
-            return smoothstep(0.0f, 1.0f, x) * (TWO_PI - TWO_PI * max(c1.cos_theta, c2.cos_theta));
-        }
-    }
-
-    // Map a sphere to the spherical cap at origo.
-    Cone sphere_to_sphere_cap(float3 position, float radius) {
-        float sin_theta_sqrd = clamp(radius * radius / dot(position, position), 0.0f, 1.0f);
-        return Cone::make(normalize(position), sqrt(1.0f - sin_theta_sqrd));
-    }
-
-    // The centroid of the intersection of the two cones.
-    // See Ambient aperture lighting, 2007, section 3.3.
-    float3 centroid_of_intersection(Cone c1, Cone c2) {
-        float r1 = acos(c1.cos_theta);
-        float r2 = acos(c2.cos_theta);
-        float d = acos(dot(c1.direction, c2.direction));
-
-        if (d <= max(r1, r2) - min(r1, r2))
-            // One cap is completely inside the other
-            return c1.cos_theta > c2.cos_theta ? c1.direction : c2.direction;
-        else {
-            float w = (r2 - r1 + d) / (2.0f * d);
-            return normalize(lerp(c2.direction, c1.direction, saturate(w)));
-        }
-    }
 }
 
 #endif // _DX11_RENDERER_SHADERS_SPTD_H_
