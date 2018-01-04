@@ -1,6 +1,6 @@
 // Directional-hemispherical reflectance for Burley.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
