@@ -16,17 +16,18 @@ SET(ASSETS_SRCS
 )
 
 SET(ASSETS_SHADING_SRCS 
-  Cogwheel/Assets/Shading/BurleyRho.h
+  Cogwheel/Assets/Shading/BurleyRho.cpp
   Cogwheel/Assets/Shading/BurleyRho.png
-  Cogwheel/Assets/Shading/DefaultShadingRho.h
+  Cogwheel/Assets/Shading/DefaultShadingRho.cpp
   Cogwheel/Assets/Shading/DefaultShadingRho.png
-  Cogwheel/Assets/Shading/GGXRho.h
+  Cogwheel/Assets/Shading/Fittings.h
+  Cogwheel/Assets/Shading/GGXRho.cpp
   Cogwheel/Assets/Shading/GGXRho.png
-  Cogwheel/Assets/Shading/GGXSPTDFit.h
+  Cogwheel/Assets/Shading/GGXSPTDFit.cpp
   Cogwheel/Assets/Shading/GGXSPTDFit.png
-  Cogwheel/Assets/Shading/GGXWithFresnelRho.h
+  Cogwheel/Assets/Shading/GGXWithFresnelRho.cpp
   Cogwheel/Assets/Shading/GGXWithFresnelRho.png
-  Cogwheel/Assets/Shading/OrenNayarRho.h
+  Cogwheel/Assets/Shading/OrenNayarRho.cpp
   Cogwheel/Assets/Shading/OrenNayarRho.png
 )
 

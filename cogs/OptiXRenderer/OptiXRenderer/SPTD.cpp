@@ -11,7 +11,7 @@
 
 #include <optixu/optixu_math_namespace.h>
 
-#include <Cogwheel/Assets/Shading/GGXSPTDFit.h>
+#include <Cogwheel/Assets/Shading/Fittings.h>
 
 using namespace optix;
 

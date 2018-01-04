@@ -9,7 +9,7 @@
 #include <OptiXRenderer/RhoTexture.h>
 #include <OptiXRenderer/Defines.h>
 
-#include <Cogwheel/Assets/Shading/GGXWithFresnelRho.h>
+#include <Cogwheel/Assets/Shading/Fittings.h>
 
 using namespace Cogwheel::Assets::Shading;
 using namespace optix;
@@ -18,12 +18,12 @@ namespace OptiXRenderer {
 
 TextureSampler ggx_with_fresnel_rho_texture(Context& context) {
     // Create buffer.
-    unsigned int width = GGX_with_fresnel_angle_sample_count;
-    unsigned int height = GGX_with_fresnel_roughness_sample_count;
+    unsigned int width = Rho::GGX_with_fresnel_angle_sample_count;
+    unsigned int height = Rho::GGX_with_fresnel_roughness_sample_count;
     Buffer rho_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, width, height);
 
     float* rho_data = static_cast<float*>(rho_buffer->map());
-    memcpy(rho_data, GGX_with_fresnel_rho, width * height * sizeof(float));
+    memcpy(rho_data, Rho::GGX_with_fresnel, width * height * sizeof(float));
     rho_buffer->unmap();
     OPTIX_VALIDATE(rho_buffer);
 

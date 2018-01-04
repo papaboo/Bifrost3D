@@ -10,8 +10,7 @@
 #include "Dx11Renderer/Utils.h"
 
 #include <Cogwheel/Assets/Material.h>
-#include <Cogwheel/Assets/Shading/GGXWithFresnelRho.h>
-#include <Cogwheel/Assets/Shading/GGXSPTDFit.h>
+#include <Cogwheel/Assets/Shading/Fittings.h>
 
 using namespace Cogwheel::Assets;
 
@@ -36,8 +35,8 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
 
     { // Setup GGX with fresnel rho texture.
         D3D11_TEXTURE2D_DESC tex_desc = {};
-        tex_desc.Width = GGX_with_fresnel_angle_sample_count;
-        tex_desc.Height = GGX_with_fresnel_roughness_sample_count;
+        tex_desc.Width = Rho::GGX_with_fresnel_angle_sample_count;
+        tex_desc.Height = Rho::GGX_with_fresnel_roughness_sample_count;
         tex_desc.MipLevels = 1;
         tex_desc.ArraySize = 1;
         tex_desc.Format = DXGI_FORMAT_R16_UNORM;
@@ -48,7 +47,7 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
 
         unsigned short* rho = new unsigned short[tex_desc.Width * tex_desc.Height];
         for (unsigned int i = 0; i < tex_desc.Width * tex_desc.Height; ++i)
-            rho[i] = unsigned short(GGX_with_fresnel_rho[i] * 65535);
+            rho[i] = unsigned short(Rho::GGX_with_fresnel[i] * 65535);
 
         D3D11_SUBRESOURCE_DATA resource_data;
         resource_data.pSysMem = rho;
