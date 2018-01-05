@@ -43,33 +43,29 @@ public:
 
 class GGX2 {
 public:
-    float eval(const float3& wo, const float3& wi, float alpha, float& pdf) const {
-        if (wo.z <= 0) {
-            pdf = 0;
-            return 0;
-        }
+    BSDFResponse eval(const float3& wo, const float3& wi, float alpha, float& pdf) const {
+        if (wo.z <= 0)
+            return BSDFResponse::none();
 
         float3 halfway = normalize(wo + wi);
         auto f = Shading::BSDFs::GGXWithVNDF::evaluate_with_PDF(make_float3(1,1,1), alpha, wo, wi, halfway);
-        pdf = f.PDF;
-        return f.weight.x * wi.z; // eval scaled by cos theta
+        f.weight *= wi.z; // eval scaled by cos theta
+        return f;
     }
 
-    float3 sample(const float3& wo, float alpha, float U1, float U2) const {
-
-        auto sample = Shading::BSDFs::GGXWithVNDF::sample(make_float3(1.0f, 1.0f, 1.0f), alpha, wo, make_float2(U1, U2));
-        return sample.direction;
+    BSDFSample sample(const float3& wo, float alpha, float U1, float U2) const {
+        auto brdf_sample = Shading::BSDFs::GGXWithVNDF::sample(make_float3(1.0f, 1.0f, 1.0f), alpha, wo, make_float2(U1, U2));
+        brdf_sample.weight *= brdf_sample.direction.z; // eval scaled by cos theta
+        return brdf_sample;
     }
 };
 
 class GGX {
 public:
 
-    float eval(const float3& wo, const float3& wi, float alpha, float& pdf) const {
-        if (wo.z <= 0) {
-            pdf = 0;
-            return 0;
-        }
+    BSDFResponse eval(const float3& wo, const float3& wi, float alpha) const {
+        if (wo.z <= 0)
+            return BSDFResponse::none();
 
         const float3 H = normalize(wo + wi);
         float G2 = wi.z <= 0.0f ? 0.0f : Shading::BSDFs::GGX::height_correlated_smith_G(alpha, wo, wi, H);
@@ -81,17 +77,26 @@ public:
         D = D * D;
         D = D / (PIf * alpha * alpha * H.z*H.z*H.z*H.z);
 
-        pdf = fabsf(D * H.z / (4.0f * dot(wo, H)));
-        return D * G2 / (4.0f * wo.z);
+        float pdf = fabsf(D * H.z / (4.0f * dot(wo, H)));
+        float f = D * G2 / (4.0f * wo.z);
+        return { make_float3(f, f, f), pdf };
     }
 
-    float3 sample(const float3& wo, float alpha, float U1, float U2) const {
+    float3 sample_direction(const float3& wo, float alpha, float U1, float U2) const {
         const float phi = TWO_PIf * U1;
         const float r = alpha * sqrtf(U2 / (1.0f - U2));
         const float3 halfway = normalize(make_float3(r * cosf(phi), r * sinf(phi), 1.0f));
         return reflect(-wo, halfway);
     }
 
+    BSDFSample sample(const float3& wo, float alpha, float U1, float U2) const {
+        BSDFSample result;
+        result.direction = sample_direction(wo, alpha, U1, U2);
+        BSDFResponse response = eval(wo, result.direction, alpha);
+        result.weight = response.weight;
+        result.PDF = response.PDF;
+        return result;
+    }
 };
 
 } // NS BRDF

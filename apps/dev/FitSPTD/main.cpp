@@ -38,16 +38,13 @@ DirectionAndRho compute_average_sample(BRDF brdf, const float3& wo, float alpha)
             const float U2 = (j + 0.5f) / (float)sample_count;
 
             // sample
-            const float3 wi = brdf.sample(wo, alpha, U1, U2);
-
-            // eval
-            float pdf;
-            float eval = brdf.eval(wo, wi, alpha, pdf);
-
-            // accumulate
-            float weight = (pdf > 0) ? eval / pdf : 0.0f;
-            norm += weight;
-            summed_direction += weight * wi;
+            auto brdf_sample = brdf.sample(wo, alpha, U1, U2);
+            if (is_PDF_valid(brdf_sample.PDF)) {
+                // accumulate
+                float weight = (brdf_sample.PDF > 0) ? brdf_sample.weight.x / brdf_sample.PDF : 0.0f;
+                norm += weight;
+                summed_direction += weight * brdf_sample.direction;
+            }
         }
 
     return { normalize(summed_direction), norm / float(sample_count * sample_count) };
@@ -65,14 +62,14 @@ float compute_error(const Pivot& pivot, BRDF brdf, const float3& wo, float alpha
             const float U1 = (i + 0.5f) / (float)sample_count;
             const float U2 = (j + 0.5f) / (float)sample_count;
 
+            /*
             // error with MIS weight
             auto error_from_wi = [&](float3 wi) -> double {
-                float pdf_brdf;
-                float eval_brdf = brdf.eval(wo, wi, alpha, pdf_brdf);
+                auto brdf_response = brdf.eval(wo, wi, alpha);
                 float eval_pivot = pivot.eval(wi);
                 float pdf_pivot = eval_pivot / pivot.amplitude;
-                double error = eval_brdf - eval_pivot;
-                return error * error / (pdf_pivot + pdf_brdf);
+                double error = brdf_response.weight.x - eval_pivot;
+                return error * error / (pdf_pivot + brdf_response.PDF);
             };
 
             { // importance sample LTC
@@ -84,9 +81,36 @@ float compute_error(const Pivot& pivot, BRDF brdf, const float3& wo, float alpha
             }
 
             { // importance sample BRDF
-                const float3 wi = brdf.sample(wo, alpha, U1, U2);
+                const float3 wi = brdf.sample_direction(wo, alpha, U1, U2);
                 if (wi.z >= 0.0f) {
                     error += error_from_wi(wi);
+                    ++valid_sample_count;
+                }
+            }
+            */
+
+            // error with MIS weight
+            auto compute_error = [&](float3 sampled_wi, BSDFResponse brdf_response) -> double {
+                float eval_pivot = pivot.eval(sampled_wi);
+                float pdf_pivot = eval_pivot / pivot.amplitude;
+                double error = brdf_response.weight.x - eval_pivot;
+                return error * error / (pdf_pivot + brdf_response.PDF);
+            };
+
+            { // importance sample LTC
+                const float3 wi = pivot.sample(U1, U2);
+                if (wi.z >= 0.0f) {
+                    auto brdf_response = brdf.eval(wo, wi, alpha);
+                    error += compute_error(wi, brdf_response);
+                    ++valid_sample_count;
+                }
+            }
+
+            { // importance sample BRDF
+                auto brdf_sample = brdf.sample(wo, alpha, U1, U2);
+                if (is_PDF_valid(brdf_sample.PDF)) {
+                    BSDFResponse brdf_response = { brdf_sample.weight, brdf_sample.PDF };
+                    error += compute_error(brdf_sample.direction, brdf_response);
                     ++valid_sample_count;
                 }
             }
@@ -131,8 +155,7 @@ struct PivotFitter {
     float alpha;
 };
 
-// fit brute force
-// refine first guess by exploring parameter space
+// Fit using nelder-mead.
 template <typename BRDF>
 void fit(Pivot& pivot, BRDF brdf, const float3& wo, float alpha, float epsilon = 0.05f) {
 
@@ -329,7 +352,7 @@ int main(int argc, char* argv[]) {
     const int size = 64;
 
     // allocate data
-    Pivot* pivots = new Pivot[size*size];
+    Pivot* pivots = new Pivot[size * size];
 
     { // GGX
         BRDF::GGX brdf;
