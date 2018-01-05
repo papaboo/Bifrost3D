@@ -22,28 +22,35 @@ namespace BRDF {
 class Lambert {
 public:
 
-    float eval(const float3& wo, const float3& wi, float alpha, float& pdf) const {
-        if (wo.z <= 0) {
-            pdf = 0;
-            return 0;
-        }
-
-        pdf = wi.z * RECIP_PIf;
-        return wi.z * RECIP_PIf; // eval scaled by cos theta
+    BSDFResponse eval(const float3& wo, const float3& wi, float alpha) const {
+        if (wo.z <= 0)
+            return BSDFResponse::none();
+        
+        float pdf = wi.z * RECIP_PIf;
+        return{ make_float3(pdf, pdf, pdf), pdf };
     }
 
-    float3 sample(const float3& wo, float alpha, float U1, float U2) const {
+    float3 sample_direction(const float3& wo, float alpha, float U1, float U2) const {
         float phi = TWO_PIf * U1;
         float r2 = U2;
         float r = sqrt(1.0f - r2);
         float z = sqrt(r2);
         return make_float3(cos(phi) * r, sin(phi) * r, z);
     }
+
+    BSDFSample sample(const float3& wo, float alpha, float U1, float U2) const {
+        BSDFSample result;
+        result.direction = sample_direction(wo, alpha, U1, U2);
+        BSDFResponse response = eval(wo, result.direction, alpha);
+        result.weight = response.weight;
+        result.PDF = response.PDF;
+        return result;
+    }
 };
 
-class GGX2 {
+class GGX {
 public:
-    BSDFResponse eval(const float3& wo, const float3& wi, float alpha, float& pdf) const {
+    BSDFResponse eval(const float3& wo, const float3& wi, float alpha) const {
         if (wo.z <= 0)
             return BSDFResponse::none();
 
@@ -60,7 +67,7 @@ public:
     }
 };
 
-class GGX {
+class FastGGX {
 public:
 
     BSDFResponse eval(const float3& wo, const float3& wi, float alpha) const {
