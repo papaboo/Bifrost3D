@@ -114,7 +114,7 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         desc.MinLOD = 0;
         desc.MaxLOD = D3D11_FLOAT32_MAX;
 
-        HRESULT hr = device.CreateSamplerState(&desc, &m_rho_sampler);
+        HRESULT hr = device.CreateSamplerState(&desc, &m_precomputation2D_sampler);
         THROW_ON_FAILURE(hr);
     }
 

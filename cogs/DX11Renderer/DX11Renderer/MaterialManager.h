@@ -34,7 +34,7 @@ public:
         m_GGX_with_fresnel_rho_srv = std::move(rhs.m_GGX_with_fresnel_rho_srv);
         m_GGX_SPTD_fit_srv = std::move(rhs.m_GGX_SPTD_fit_srv);
 
-        m_rho_sampler = std::move(rhs.m_rho_sampler);;
+        m_precomputation2D_sampler = std::move(rhs.m_precomputation2D_sampler);;
         m_constant_array = std::move(rhs.m_constant_array);
         m_materials = std::move(rhs.m_materials);
         return *this;
@@ -42,7 +42,7 @@ public:
 
     ID3D11ShaderResourceView** get_GGX_with_fresnel_rho_srv_addr() { return &m_GGX_with_fresnel_rho_srv; }
     ID3D11ShaderResourceView** get_GGX_SPTD_fit_srv_addr() { return &m_GGX_SPTD_fit_srv; }
-    ID3D11SamplerState** get_rho_sampler_addr() { return &m_rho_sampler; }
+    ID3D11SamplerState** get_precomputation2D_sampler_addr() { return &m_precomputation2D_sampler; }
 
     inline Dx11Material& get_material(unsigned int material_index) { return m_materials[material_index]; }
     inline ID3D11Buffer** get_constant_buffer_addr() { return m_constant_array.get_buffer_addr(); }
@@ -57,7 +57,7 @@ private:
 
     OID3D11ShaderResourceView m_GGX_with_fresnel_rho_srv;
     OID3D11ShaderResourceView m_GGX_SPTD_fit_srv;
-    OID3D11SamplerState m_rho_sampler;
+    OID3D11SamplerState m_precomputation2D_sampler;
 
     std::vector<Dx11Material> m_materials;
 

@@ -130,8 +130,7 @@ public:
             m_materials = MaterialManager(m_device, *m_render_context);
             m_render_context->PSSetShaderResources(14, 1, m_materials.get_GGX_SPTD_fit_srv_addr());
             m_render_context->PSSetShaderResources(15, 1, m_materials.get_GGX_with_fresnel_rho_srv_addr());
-            m_render_context->PSSetSamplers(14, 1, m_materials.get_rho_sampler_addr());
-            m_render_context->PSSetSamplers(15, 1, m_materials.get_rho_sampler_addr());
+            m_render_context->PSSetSamplers(15, 1, m_materials.get_precomputation2D_sampler_addr());
 
             m_textures = TextureManager(m_device);
             m_transforms = TransformManager(m_device, *m_render_context);
@@ -327,7 +326,6 @@ public:
         }
 
         { // Render models.
-
 
             // Set vertex and pixel shaders.
             m_render_context->VSSetShader(m_vertex_shading.shader, 0, 0);

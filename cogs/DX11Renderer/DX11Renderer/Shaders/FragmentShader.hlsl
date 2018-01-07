@@ -25,9 +25,7 @@ cbuffer material : register(b3) {
     DefaultShading material;
 }
 
-// TODO Potentially move to default shading and use the other precomputation sampler.
 Texture2D sptd_ggx_fit_tex : register(t14);
-SamplerState sptd_ggx_fit_sampler : register(s14);
 
 struct BRDFPivotTransform {
     float3 pivot;
@@ -36,7 +34,7 @@ struct BRDFPivotTransform {
 
 BRDFPivotTransform sptd_ggx_pivot(float roughness, float3 wo) {
     float2 sptd_ggx_fit_uv = float2(abs(wo.z), roughness);
-    float4 pivot_params = sptd_ggx_fit_tex.Sample(sptd_ggx_fit_sampler, sptd_ggx_fit_uv);
+    float4 pivot_params = sptd_ggx_fit_tex.Sample(precomputation2D_sampler, sptd_ggx_fit_uv);
 
     BRDFPivotTransform res;
     res.brdf_scale = pivot_params.w;
@@ -117,7 +115,7 @@ float3 integration(PixelInput input) {
                 float3 halfway = normalize(wo + centroid_of_cones);
                 float elongation = 1.0; + 4.0 * material.roughness() * (1.0f - dot(wo, halfway));
                 float3 intersection_offset = elongated_highlight_offset(direction_to_camera, direction_to_light, elongation);
-                light_sphere_cap.direction = normalize(direction_to_light - intersection_offset);
+                light_sphere_cap.direction = normalize(direction_to_light - intersection_offset); // Here there be side-effects outside of the scope.
                 float3 adjusted_wo = normalize(direction_to_camera - intersection_offset);
 
                 // NOTE If performance is a concern then the SPTD cap for the hemisphere could be precomputed and stored along with the pivot.
