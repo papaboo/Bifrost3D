@@ -17,6 +17,7 @@ namespace DX11Renderer {
 // DirectX 11 renderer.
 // Future work
 // * SSAO
+// ** Bent normals use case https://80.lv/articles/ssrtgi-toughest-challenge-in-real-time-3d/
 // * SSR
 // ** An Adaptive Acceleration Structure for Screen-space Ray Tracing, http://jankautz.com/publications/AcceleratedSSRT_HPG15.pdf
 // ** Screen Space Reflections in Killing Floor 2, https://sakibsaikia.github.io/graphics/2016/12/25/Screen-Space-Reflection-in-Killing-Floor-2.html
