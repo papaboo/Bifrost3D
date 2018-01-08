@@ -6,6 +6,9 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
+#ifndef _DX11_RENDERER_SHADERS_DEFAULT_SHADING_H_
+#define _DX11_RENDERER_SHADERS_DEFAULT_SHADING_H_
+
 #include "BSDFs/Diffuse.hlsl"
 #include "BSDFs/GGX.hlsl"
 #include "Utils.hlsl"
@@ -144,3 +147,4 @@ struct DefaultShading {
     }
 };
 
+#endif // _DX11_RENDERER_SHADERS_DEFAULT_SHADING_H_
