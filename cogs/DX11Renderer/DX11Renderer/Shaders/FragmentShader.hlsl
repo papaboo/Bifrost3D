@@ -14,6 +14,7 @@ cbuffer scene_variables : register(b0) {
     float4x4 view_projection_matrix;
     float4 camera_position;
     float4 environment_tint; // .w component is 0 if an environment tex is not bound, otherwise positive.
+    float4x4 inverted_view_projection_matrix;
 };
 
 cbuffer lights : register(b1) {
@@ -51,11 +52,12 @@ float3 integration(PixelInput input) {
 
         bool is_sphere_light = light.type() == LightType::Sphere && light.sphere_radius() > 0.0f;
         if (is_sphere_light) {
+            // Apply SPTD area light approximation.
             float distance_to_camera = length(camera_position.xyz - input.world_position.xyz);
             radiance += SPTD::evaluate_sphere_light(light, material, input.texcoord, sptd_ggx_fit_tex,
                 input.world_position.xyz, world_to_shading_TBN, wo, distance_to_camera);
         } else {
-            // Apply regular delta lights
+            // Apply regular delta lights.
             float3 wi = mul(world_to_shading_TBN, light_sample.direction_to_light);
             float3 f = material.evaluate(wo, wi, input.texcoord);
             radiance += f * light_sample.radiance * abs(wi.z);
