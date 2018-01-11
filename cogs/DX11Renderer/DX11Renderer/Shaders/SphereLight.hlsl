@@ -16,6 +16,7 @@ cbuffer scene_variables : register(b0) {
     float4x4 view_projection_matrix;
     float4 camera_position;
     float4 environment_tint; // .w component is 1 if an environment tex is bound, otherwise 0.
+    float4x4 inverted_view_projection_matrix;
 };
 
 cbuffer lights : register(b1) {
@@ -29,8 +30,9 @@ cbuffer lights : register(b1) {
 
 struct Varyings {
     float4 position : SV_POSITION;
+    float4 world_position : WORLD_POSITION;
     float2 texcoord : TEXCOORD;
-    float3 radiance  : COLOR;
+    float3 radiance : COLOR;
 };
 
 Varyings vs(uint primitive_ID : SV_VertexID) {
@@ -54,11 +56,12 @@ Varyings vs(uint primitive_ID : SV_VertexID) {
     output.texcoord.y = (vertex_ID % 2 == 0) ? -1 : 1;
 
     // Compute position in world space and offset the vertices by the sphere radius along the tangent axis.
-    output.position.xyz = light.sphere_position();
-    float3x3 tangent_space = create_TBN(normalize(output.position.xyz - camera_position.xyz));
-    output.position.xyz += (output.texcoord.x * tangent_space[0] + output.texcoord.y * tangent_space[1]) * light.sphere_radius();
-    output.position.w = 1.0f;
-    output.position = mul(output.position, view_projection_matrix);
+    output.world_position.xyz = light.sphere_position();
+    float3x3 tangent_space = create_TBN(normalize(output.world_position.xyz - camera_position.xyz));
+    output.world_position.xyz += (output.texcoord.x * tangent_space[0] + output.texcoord.y * tangent_space[1]) * light.sphere_radius();
+    output.world_position.w = 1.0f;
+    output.position = mul(output.world_position, view_projection_matrix);
+    output.world_position.w = light.sphere_radius();
 
     output.radiance = evaluate(light, camera_position.xyz);
 
@@ -69,10 +72,24 @@ Varyings vs(uint primitive_ID : SV_VertexID) {
 // Pixel shader.
 // ------------------------------------------------------------------------------------------------
 
-float4 ps(Varyings input) : SV_TARGET{
+struct Pixel {
+    float4 color : SV_TARGET;
+    float depth : SV_DEPTH;
+};
+
+Pixel ps(Varyings input){
     if (dot(input.texcoord, input.texcoord) > 1.0f)
         discard;
 
-    // TODO Depth!
-    return float4(input.radiance, 1.0f);
+    Pixel pixel;
+    float3 to_camera = normalize(camera_position.xyz - input.world_position.xyz);
+    float sphere_radius = input.world_position.w;
+    float offset = sqrt(1.0f - dot(input.texcoord, input.texcoord)) * sphere_radius;
+    input.world_position.xyz += to_camera * offset;
+    input.world_position.w = 1.0f;
+    float4 projected_position = mul(input.world_position, view_projection_matrix);
+    pixel.depth = projected_position.z / projected_position.w;
+
+    pixel.color = float4(input.radiance, 1.0f);
+    return pixel;
 }
