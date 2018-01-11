@@ -5,6 +5,7 @@ set(SRCS
   main.cpp
   MaterialScene.h
   OpacityScene.h
+  SphereLightScene.h
   SphereScene.h
   TestScene.h
   VeachScene.h

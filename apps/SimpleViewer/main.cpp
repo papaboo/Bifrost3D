@@ -10,6 +10,7 @@
 #include <MaterialScene.h>
 #include <OpacityScene.h>
 #include <SphereScene.h>
+#include <SphereLightScene.h>
 #include <TestScene.h>
 #include <VeachScene.h>
 
@@ -458,10 +459,12 @@ int initializer(Cogwheel::Core::Engine& engine) {
         create_cornell_box_scene(cam_ID, root_node_ID);
     else if (g_scene.compare("MaterialScene") == 0)
         create_material_scene(cam_ID, root_node_ID);
-    else if (g_scene.compare("SphereScene") == 0)
-        create_sphere_scene(engine, cam_ID, scene_ID);
     else if (g_scene.compare("OpacityScene") == 0)
         create_opacity_scene(engine, cam_ID, root_node_ID);
+    else if (g_scene.compare("SphereScene") == 0)
+        create_sphere_scene(engine, cam_ID, scene_ID);
+    else if (g_scene.compare("SphereLightScene") == 0)
+        SphereLightScene::create(engine, cam_ID, root_node_ID);
     else if (g_scene.compare("TestScene") == 0)
         create_test_scene(engine, cam_ID, root_node_ID);
     else if (g_scene.compare("VeachScene") == 0)
@@ -580,7 +583,7 @@ void print_usage() {
     char* usage =
         "usage simpleviewer:\n"
         "  -h  | --help: Show command line usage for simpleviewer.\n"
-        "  -s  | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'MaterialScene', 'SphereScene', 'TestScene' and 'VeachScene', which loads the corresponding builtin scenes.\n"
+        "  -s  | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'MaterialScene', 'SphereScene', 'SphereLightScene', 'TestScene' and 'VeachScene', which loads the corresponding builtin scenes.\n"
 #ifdef OPTIX_FOUND
         "  -p | --path-tracing-only: Launches with the path tracer as the only avaliable renderer.\n"
         "  -r | --rasterizer-only: Launches with the rasterizer as the only avaliable renderer.\n"
