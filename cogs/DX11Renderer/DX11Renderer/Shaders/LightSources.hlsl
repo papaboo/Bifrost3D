@@ -73,7 +73,7 @@ float sphere_surface_area(float radius) {
 }
 
 float3 evaluate_sphere_light(LightData light, float3 world_position) {
-    float inv_divisor = 1.0f / (is_delta_sphere_light(light, world_position) ? (4.0f * PI) : (PI * sphere_surface_area(light.sphere_radius())));
+    float inv_divisor = rcp(is_delta_sphere_light(light, world_position) ? (4.0f * PI) : (PI * sphere_surface_area(light.sphere_radius())));
     return light.sphere_power() * inv_divisor;
 }
 
