@@ -63,7 +63,7 @@ Varyings vs(uint primitive_ID : SV_VertexID) {
     output.position = mul(output.world_position, view_projection_matrix);
     output.world_position.w = light.sphere_radius();
 
-    output.radiance = evaluate(light, camera_position.xyz);
+    output.radiance = evaluate_sphere_light(light, camera_position.xyz);
 
     return output;
 }
