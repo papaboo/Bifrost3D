@@ -101,6 +101,13 @@ __inline_all__ BSDFResponse evaluate_with_PDF(const float3& tint, float alpha, c
     return res;
 }
 
+__inline_all__ float3 approx_off_specular_peak(float alpha, const float3& wo) {
+    float3 reflection = make_float3(-wo.x, -wo.y, wo.z);
+    // reflection = lerp(make_float3(0, 0, 1), reflection, (1 - alpha) * (sqrt(1 - alpha) + alpha)); // UE4 implementation
+    reflection = lerp(reflection, make_float3(0, 0, 1), alpha);
+    return normalize(reflection);
+}
+
 __inline_all__ BSDFSample sample(const float3& tint, float alpha, const float3& wo, float2 random_sample) {
 
     BSDFSample bsdf_sample;

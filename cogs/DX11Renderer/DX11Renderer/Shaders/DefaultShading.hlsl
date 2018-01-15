@@ -105,10 +105,13 @@ struct DefaultShading {
     // TODO Take the current LOD and pixel density into account before choosing sample LOD.
     //      See http://casual-effects.blogspot.dk/2011/08/plausible-environment-lighting-in-two.html 
     //      for how to derive the LOD level for cubemaps.
-    float3 IBL(float3 normal, float3 wi, float2 texcoord) {
+    float3 IBL(float3 wo, float3 normal, float2 texcoord) {
         float3 tint = m_tint;
         if (m_tint_texture_index != 0)
             tint *= color_tex.Sample(color_sampler, texcoord).rgb;
+
+        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
+        float3 wi = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo, normal);
 
         float specularity = compute_specularity(m_specularity, m_metallic);
         float abs_cos_theta = abs(dot(wi, normal));

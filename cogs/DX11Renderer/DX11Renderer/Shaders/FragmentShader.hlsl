@@ -39,12 +39,11 @@ float3 integration(PixelInput input) {
     float3 normal = normalize(input.normal.xyz);
 
     // Apply IBL
-    float3 wo = camera_position.xyz - input.world_position.xyz;
-    float3 wi = -reflect(normalize(wo), normal);
-    float3 radiance = environment_tint.rgb * material.IBL(normal, wi, input.texcoord);
+    float3 wo = normalize(camera_position.xyz - input.world_position.xyz);
+    float3 radiance = environment_tint.rgb * material.IBL(wo, normal, input.texcoord);
 
     float3x3 world_to_shading_TBN = create_TBN(normal);
-    wo = normalize(mul(world_to_shading_TBN, wo));
+    wo = mul(world_to_shading_TBN, wo);
 
     for (int l = 0; l < light_count.x; ++l) {
         LightData light = light_data[l];

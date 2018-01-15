@@ -64,5 +64,20 @@ namespace GGX {
         float f = 1.0f; // No fresnel.
         return (d * f * g) / (4.0f * wo.z * wi.z);
     }
-}
-}
+
+    float3 approx_off_specular_peak(float alpha, float3 wo) {
+        float3 reflection = float3(-wo.x, -wo.y, wo.z);
+        // reflection = lerp(float3(0, 0, 1), reflection, (1 - alpha) * (sqrt(1 - alpha) + alpha)); // UE4 implementation
+        reflection = lerp(reflection, float3(0, 0, 1), alpha);
+        return normalize(reflection);
+    }
+
+    float3 approx_off_specular_peak(float alpha, float3 wo, float3 normal) {
+        float3 reflection = reflect(-wo, normal);
+        // reflection = lerp(normal, reflection, (1 - alpha) * (sqrt(1 - alpha) + alpha)); // UE4 implementation
+        reflection = lerp(reflection, normal, alpha);
+        return normalize(reflection);
+    }
+
+} // GGX
+} // BSDFs
