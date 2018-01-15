@@ -51,16 +51,24 @@ private:
     Scene::SceneNode m_light_node;
 };
 
-void create(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneNode root_node) {
+void create(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoots::UID scene_ID) {
     using namespace Cogwheel::Assets;
     using namespace Cogwheel::Math;
     using namespace Cogwheel::Scene;
+
+    SceneNode root_node = SceneRoots::get_root_node(scene_ID);
 
     { // Setup camera transform.
         Transform cam_transform = Cameras::get_transform(camera_ID);
         cam_transform.translation = Vector3f(0, 3.0f, -17.0f);
         cam_transform.look_at(Vector3f(0, 1.0f, 0.0f));
         Cameras::set_transform(camera_ID, cam_transform);
+    }
+
+    { // Remove environment light
+        SceneRoot scene = scene_ID;
+        if (!Textures::has(scene.get_environment_map()))
+            scene.set_environment_tint(RGB::black());
     }
 
     { // Add sphere lights.

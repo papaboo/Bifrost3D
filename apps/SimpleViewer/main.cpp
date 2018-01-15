@@ -464,7 +464,7 @@ int initializer(Cogwheel::Core::Engine& engine) {
     else if (g_scene.compare("SphereScene") == 0)
         create_sphere_scene(engine, cam_ID, scene_ID);
     else if (g_scene.compare("SphereLightScene") == 0)
-        SphereLightScene::create(engine, cam_ID, root_node_ID);
+        SphereLightScene::create(engine, cam_ID, scene_ID);
     else if (g_scene.compare("TestScene") == 0)
         create_test_scene(engine, cam_ID, root_node_ID);
     else if (g_scene.compare("VeachScene") == 0)
