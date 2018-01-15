@@ -10,6 +10,8 @@
 #include "LightSources.hlsl"
 #include "SPTD.hlsl"
 
+#define SPTD_AREA_LIGHTS 0
+
 cbuffer scene_variables : register(b0) {
     float4x4 view_projection_matrix;
     float4 camera_position;
@@ -27,6 +29,75 @@ cbuffer material : register(b3) {
 }
 
 Texture2D sptd_ggx_fit_tex : register(t14);
+
+// Most representativepoint material evaluation, heavily inspired by Real Shading in Unreal Engine 4.
+// For UE4 reference see the function AreaLightSpecular() in DeferredLightingCommon.usf. (15/1 -2018)
+float3 evaluate_most_representative_point(LightData light, DefaultShading material, float2 texcoord,
+                                          float3 world_position, float3x3 world_to_shading_TBN, float3 wo) {
+
+    // TODO Precompute all light independent variables, such as the off specular peak and potentially others.
+
+    // Sphere light in local space
+    float3 local_sphere_position = mul(world_to_shading_TBN, light.sphere_position() - world_position);
+    Sphere local_sphere = Sphere::make(local_sphere_position, light.sphere_radius());
+    Cone light_sphere_cap = sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
+
+    LightSample light_sample = sample_light(light, world_position); // TODO Only used for the radiance, so just replace by the radiance calculation.
+
+    Cone hemisphere_sphere_cap = Cone::make(float3(0.0f, 0.0f, 1.0f), 0.0f);
+    float3 centroid_of_cones = centroid_of_intersection(hemisphere_sphere_cap, light_sphere_cap);
+
+    // Approximation of GGX off-specular peak direction.
+    // TODO Handle min_light_roughness from UE4?? 
+    float ggx_alpha = BSDFs::GGX::alpha_from_roughness(material.roughness());
+    float3 peak_reflection = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo);
+
+    // Closest point on sphere to ray. Equation 11 in Real Shading in Unreal Engine 4, 2013.
+    // TODO Check at grazing angles. Should we switch to the centroid at those? Perhaps a weighted average with cos_theta as weight.
+    float3 closest_point_on_ray = dot(local_sphere_position, peak_reflection) * peak_reflection;
+    float3 center_to_ray = closest_point_on_ray - local_sphere_position;
+    float3 most_representative_point = local_sphere_position + center_to_ray * saturate(local_sphere.radius / length(center_to_ray)); // TODO Use rsqrt
+    float3 wi = normalize(most_representative_point);
+
+    float3 diffuse_tint, specular_tint;
+    material.evaluate_tints(wo, wi, texcoord, diffuse_tint, specular_tint);
+
+    float3 radiance = float3(0, 0, 0);
+    { // Evaluate Lambert.
+        float solidangle_of_light = solidangle(light_sphere_cap);
+        float visible_solidangle_of_light = solidangle_of_intersection(hemisphere_sphere_cap, light_sphere_cap);
+        float light_radiance_scale = visible_solidangle_of_light / solidangle_of_light;
+        radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_of_cones.z) * light_sample.radiance * light_radiance_scale;
+    }
+
+    { // Evaluate GGX/microfacet by finding the most representative point on the light source. 
+        bool delta_GGX_distribution = ggx_alpha < 0.0001;
+        if (delta_GGX_distribution) {
+            // Check if perfect reflection and the most representative point are aligned.
+            float3 perfect_wi = float3(-wo.x, -wo.y, wo.z);
+            float toggle = dot(perfect_wi, wi) > 0.99999 ? 1 : 0;
+            float inv_divisor = rcp(PI * sphere_surface_area(light.sphere_radius()));
+            float light_radiance = light.sphere_power() * inv_divisor;
+            radiance += specular_tint * light_radiance * toggle;
+        } else {
+            // Deprecated area light normalization term. Equation 10 and 14 in Real Shading in Unreal Engine 4, 2013.
+            // float adjusted_ggx_alpha = saturate(ggx_alpha + local_sphere.radius / (3 * length(local_sphere_position)));
+            // float area_light_normalization_term = pow2(ggx_alpha / adjusted_ggx_alpha);
+
+            float sin_theta_squared = pow2(local_sphere.radius) / dot(local_sphere_position, local_sphere_position);
+            float a2 = pow2(ggx_alpha);
+            float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (abs(wo.z) * 3.6 + 0.4));
+
+            // TODO Check if we get better results if we evaluate radiance as if it was a point light located at the most representative point.
+            // light_sample.radiance = light.sphere_power() / (4.0f * PI * light_sample.distance * light_sample.distance); // Use different distance
+
+            float3 halfway = normalize(wo + wi);
+            radiance += specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway) * abs(wi.z) * light_sample.radiance * area_light_normalization_term;
+        }
+    }
+
+    return radiance;
+}
 
 struct PixelInput {
     float4 position : SV_POSITION;
@@ -52,9 +123,13 @@ float3 integration(PixelInput input) {
         bool is_sphere_light = light.type() == LightType::Sphere && light.sphere_radius() > 0.0f;
         if (is_sphere_light) {
             // Apply SPTD area light approximation.
+#if SPTD_AREA_LIGHTS
             float distance_to_camera = length(camera_position.xyz - input.world_position.xyz);
             radiance += SPTD::evaluate_sphere_light(light, material, input.texcoord, sptd_ggx_fit_tex,
                 input.world_position.xyz, world_to_shading_TBN, wo, distance_to_camera);
+#else
+            radiance += evaluate_most_representative_point(light, material, input.texcoord, input.world_position.xyz, world_to_shading_TBN, wo);
+#endif
         } else {
             // Apply regular delta lights.
             float3 wi = mul(world_to_shading_TBN, light_sample.direction_to_light);
