@@ -126,14 +126,14 @@ float solidangle_of_intersection(Cone c1, Cone c2) {
     float r2 = acos(c2.cos_theta);
     float rd = acos(dot(c1.direction, c2.direction));
 
-    if (rd <= max(r1, r2) - min(r1, r2)) // TODO replace by abs(r1 - r2)
+    if (rd <= abs(r2 - r1))
         // One cap is completely inside the other
         return TWO_PI - TWO_PI * max(c1.cos_theta, c2.cos_theta);
     else if (rd >= r1 + r2)
         // No intersection exists
         return 0.0f;
     else {
-        float diff = abs(r1 - r2);
+        float diff = abs(r2 - r1);
         float den = r1 + r2 - diff;
         float x = 1.0f - (rd - diff) / den; // NOTE Clamped in the original code, but clamping was removed due to smoothstep itself clamping.
         return smoothstep(0.0f, 1.0f, x) * (TWO_PI - TWO_PI * max(c1.cos_theta, c2.cos_theta));
@@ -147,12 +147,49 @@ float3 centroid_of_intersection(Cone c1, Cone c2) {
     float r2 = acos(c2.cos_theta);
     float d = acos(dot(c1.direction, c2.direction));
 
-    if (d <= max(r1, r2) - min(r1, r2))
+    if (d <= abs(r2 - r1))
         // One cap is completely inside the other
         return c1.cos_theta > c2.cos_theta ? c1.direction : c2.direction;
     else {
         float w = (r2 - r1 + d) / (2.0f * d);
         return normalize(lerp(c2.direction, c1.direction, saturate(w)));
+    }
+}
+
+struct  CentroidAndSolidangle {
+    float3 centroid_direction;
+    float solidangle;
+};
+
+// Computes the centroid and solidangle of the intersection from the cone with the hemisphere.
+// Assumes that the cone has a maximum angle of 90 degrees (positive cos theta).
+CentroidAndSolidangle centroid_and_solidangle_on_hemisphere(Cone cone) {
+    const Cone hemipshere = { float3(0.0f, 0.0f, 1.0f), 0.0f };
+
+    float r1 = acos(cone.cos_theta);
+    float r2 = 1.57079637f;
+    float rd = acos(cone.direction.z);
+
+    if (rd <= r2 - r1) {
+        // One cone is completely inside the other
+        float3 centroid_direction = cone.cos_theta > hemipshere.cos_theta ? cone.direction : hemipshere.direction;
+        float solidangle = TWO_PI - TWO_PI * cone.cos_theta;
+        return Cone::make(centroid_direction, solidangle);
+    }
+    else {
+        float w = (r2 - r1 + rd) / (2.0f * rd);
+        float3 centroid_direction = normalize(lerp(hemipshere.direction, cone.direction, w));
+
+        if (rd >= r1 + r2)
+            // No intersection exists
+            return Cone::make(centroid_direction, 0.0f);
+        else {
+            float diff = r2 - r1;
+            float den = 2.0f * r1;
+            float x = 1.0f - (rd - diff) / den;
+            float solidangle = smoothstep(0.0f, 1.0f, x) * (TWO_PI - TWO_PI * cone.cos_theta);
+            return Cone::make(centroid_direction, solidangle);
+        }
     }
 }
 

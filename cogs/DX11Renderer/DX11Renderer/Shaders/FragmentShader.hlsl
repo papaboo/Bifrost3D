@@ -44,11 +44,7 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
 
     LightSample light_sample = sample_light(light, world_position); // TODO Only used for the radiance, so just replace by the radiance calculation.
 
-    Cone hemisphere_sphere_cap = Cone::make(float3(0.0f, 0.0f, 1.0f), 0.0f);
-    float3 centroid_of_cones = centroid_of_intersection(hemisphere_sphere_cap, light_sphere_cap);
-
     // Approximation of GGX off-specular peak direction.
-    // TODO Handle min_light_roughness from UE4?? 
     float ggx_alpha = BSDFs::GGX::alpha_from_roughness(material.roughness());
     float3 peak_reflection = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo);
 
@@ -65,17 +61,16 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
     float3 radiance = float3(0, 0, 0);
     { // Evaluate Lambert.
         float solidangle_of_light = solidangle(light_sphere_cap);
-        float visible_solidangle_of_light = solidangle_of_intersection(hemisphere_sphere_cap, light_sphere_cap);
-        float light_radiance_scale = visible_solidangle_of_light / solidangle_of_light;
-        radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_of_cones.z) * light_sample.radiance * light_radiance_scale;
+        CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
+        float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle_of_light;
+        radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_and_solidangle.centroid_direction.z) * light_sample.radiance * light_radiance_scale;
     }
 
     { // Evaluate GGX/microfacet by finding the most representative point on the light source. 
-        bool delta_GGX_distribution = ggx_alpha < 0.0001;
+        bool delta_GGX_distribution = ggx_alpha < 0.0005;
         if (delta_GGX_distribution) {
             // Check if perfect reflection and the most representative point are aligned.
-            float3 perfect_wi = float3(-wo.x, -wo.y, wo.z);
-            float toggle = dot(perfect_wi, wi) > 0.99999 ? 1 : 0;
+            float toggle = dot(peak_reflection, wi) > 0.99999 ? 1 : 0;
             float inv_divisor = rcp(PI * sphere_surface_area(light.sphere_radius()));
             float light_radiance = light.sphere_power() * inv_divisor;
             radiance += specular_tint * light_radiance * toggle;
@@ -87,9 +82,6 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
             float sin_theta_squared = pow2(local_sphere.radius) / dot(local_sphere_position, local_sphere_position);
             float a2 = pow2(ggx_alpha);
             float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (abs(wo.z) * 3.6 + 0.4));
-
-            // TODO Check if we get better results if we evaluate radiance as if it was a point light located at the most representative point.
-            // light_sample.radiance = light.sphere_power() / (4.0f * PI * light_sample.distance * light_sample.distance); // Use different distance
 
             float3 halfway = normalize(wo + wi);
             radiance += specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway) * abs(wi.z) * light_sample.radiance * area_light_normalization_term;

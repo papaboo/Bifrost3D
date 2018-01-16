@@ -238,6 +238,28 @@ GTEST_TEST(SPTD, elongation_transformation) {
     }
 }
 
+GTEST_TEST(SPTD, centroid_and_solidangle_on_hemisphere) {
+    using namespace optix;
+
+    Cone hemisphere = Cone::make(make_float3(0.0f, 0.0f, 1.0f), 0.0f);
+
+    int angle_count = 4;
+    for (int a = 0; a < angle_count; ++a) {
+        float angle = float(a) / angle_count;
+        cubic_for(5, 5, 5, [=](int p_x, int p_y, int p_z) {
+            if (p_x == 2 && p_y == 2 && p_z == 2) return;
+
+            float3 direction = normalize(make_float3(p_x - 2.0f, p_y - 2.0f, p_z - 2.0f));
+            if (direction.z == -1.0f) return;
+            Cone cone = { direction, angle };
+
+            auto centroid_and_solidangle = SPTD::centroid_and_solidangle_on_hemisphere(cone);
+            EXPECT_FLOAT3_EQ_EPS(SPTD::centroid_of_union(cone, hemisphere), centroid_and_solidangle.centroid, make_float3(0.000001f, 0.000001f, 0.000001f));
+            EXPECT_FLOAT_EQ_EPS(SPTD::solidangle_of_union(cone, hemisphere), centroid_and_solidangle.solidangle, 0.000001f);
+        });
+    }
+}
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_SPTD_TEST_H_
