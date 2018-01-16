@@ -66,13 +66,13 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
         radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_and_solidangle.centroid_direction.z) * light_sample.radiance * light_radiance_scale;
     }
 
-    { // Evaluate GGX/microfacet by finding the most representative point on the light source. 
+    { // Evaluate GGX/microfacet by finding the most representative point on the light source.
         bool delta_GGX_distribution = ggx_alpha < 0.0005;
         if (delta_GGX_distribution) {
-            // Check if perfect reflection and the most representative point are aligned.
-            float toggle = dot(peak_reflection, wi) > 0.99999 ? 1 : 0;
+            // Check if peak reflection and the most representative point are aligned.
+            float toggle = saturate(100000 * (dot(peak_reflection, wi) - 0.99999));
             float inv_divisor = rcp(PI * sphere_surface_area(light.sphere_radius()));
-            float light_radiance = light.sphere_power() * inv_divisor;
+            float3 light_radiance = light.sphere_power() * inv_divisor;
             radiance += specular_tint * light_radiance * toggle;
         } else {
             // Deprecated area light normalization term. Equation 10 and 14 in Real Shading in Unreal Engine 4, 2013.
