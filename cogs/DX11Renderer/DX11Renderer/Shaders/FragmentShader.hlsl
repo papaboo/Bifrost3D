@@ -42,7 +42,7 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
     Sphere local_sphere = Sphere::make(local_sphere_position, light.sphere_radius());
     Cone light_sphere_cap = sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
 
-    LightSample light_sample = sample_light(light, world_position); // TODO Only used for the radiance, so just replace by the radiance calculation.
+    float3 light_radiance = light.sphere_power() * rcp(4.0f * PI * dot(local_sphere_position, local_sphere_position));
 
     // Approximation of GGX off-specular peak direction.
     float ggx_alpha = BSDFs::GGX::alpha_from_roughness(material.roughness());
@@ -63,7 +63,7 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
         float solidangle_of_light = solidangle(light_sphere_cap);
         CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
         float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle_of_light;
-        radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_and_solidangle.centroid_direction.z) * light_sample.radiance * light_radiance_scale;
+        radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_and_solidangle.centroid_direction.z) * light_radiance * light_radiance_scale;
     }
 
     { // Evaluate GGX/microfacet by finding the most representative point on the light source.
@@ -84,7 +84,7 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
             float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (abs(wo.z) * 3.6 + 0.4));
 
             float3 halfway = normalize(wo + wi);
-            radiance += specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway) * abs(wi.z) * light_sample.radiance * area_light_normalization_term;
+            radiance += specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway) * abs(wi.z) * light_radiance * area_light_normalization_term;
         }
     }
 
