@@ -78,9 +78,7 @@ bool TypedUIDGenerator<T>::erase(UID id) {
 }
 
 template <typename T>
-bool TypedUIDGenerator<T>::has(const UID id) const {
-    // assert(id.get_index() < m_capacity);
-
+bool TypedUIDGenerator<T>::has(UID id) const {
     // If the ID equals it's own ID it is in use.
     return id.get_index() < m_capacity && m_IDs[id.get_index()] == id;
 }
