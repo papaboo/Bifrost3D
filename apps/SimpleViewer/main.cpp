@@ -589,7 +589,7 @@ void print_usage() {
         "  -r | --rasterizer-only: Launches with the rasterizer as the only avaliable renderer.\n"
 #endif
         "  -e  | --environment-map <image>: Loads the specified image for the environment.\n"
-        "  -c  | --environment-color [R,G,B]: Sets the background color to the specified value.\n";
+        "  -c  | --environment-tint [R,G,B]: Tint the environment by the specified value.\n";
     printf("%s", usage);
 }
 
@@ -625,7 +625,7 @@ int main(int argc, char** argv) {
             g_scene = std::string(argv[++argument]);
         else if (strcmp(argv[argument], "--environment-map") == 0 || strcmp(argv[argument], "-e") == 0)
             g_environment = std::string(argv[++argument]);
-        else if (strcmp(argv[argument], "--environment-color") == 0 || strcmp(argv[argument], "-c") == 0)
+        else if (strcmp(argv[argument], "--environment-tint") == 0 || strcmp(argv[argument], "-c") == 0)
             g_environment_color = parse_RGB(std::string(argv[++argument]));
 #ifdef OPTIX_FOUND
         else if (strcmp(argv[argument], "--path-tracing-only") == 0 || strcmp(argv[argument], "-p") == 0) {
