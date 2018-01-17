@@ -25,14 +25,14 @@ cbuffer lights : register(b1) {
 }
 
 cbuffer material : register(b3) {
-    DefaultShading material;
+    MaterialParams material_params;
 }
 
 Texture2D sptd_ggx_fit_tex : register(t14);
 
 // Most representativepoint material evaluation, heavily inspired by Real Shading in Unreal Engine 4.
 // For UE4 reference see the function AreaLightSpecular() in DeferredLightingCommon.usf. (15/1 -2018)
-float3 evaluate_most_representative_point(LightData light, DefaultShading material, float2 texcoord,
+float3 evaluate_most_representative_point(LightData light, DefaultShading material,
                                           float3 world_position, float3x3 world_to_shading_TBN, float3 wo) {
 
     // TODO Precompute all light independent variables, such as the off specular peak and potentially others.
@@ -56,7 +56,7 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
     float3 wi = normalize(most_representative_point);
 
     float3 diffuse_tint, specular_tint;
-    material.evaluate_tints(wo, wi, texcoord, diffuse_tint, specular_tint);
+    material.evaluate_tints(wo, wi, diffuse_tint, specular_tint);
 
     float3 radiance = float3(0, 0, 0);
     { // Evaluate Lambert.
@@ -102,11 +102,12 @@ float3 integration(PixelInput input) {
     float3 normal = normalize(input.normal.xyz);
 
     // Apply IBL
-    float3 wo = normalize(camera_position.xyz - input.world_position.xyz);
-    float3 radiance = environment_tint.rgb * material.IBL(wo, normal, input.texcoord);
-
+    float3 wo_world = normalize(camera_position.xyz - input.world_position.xyz);
     float3x3 world_to_shading_TBN = create_TBN(normal);
-    wo = mul(world_to_shading_TBN, wo);
+    float3 wo = mul(world_to_shading_TBN, wo_world);
+
+    DefaultShading default_shading = DefaultShading::from_constants(material_params, wo, input.texcoord);
+    float3 radiance = environment_tint.rgb * default_shading.IBL(wo_world, normal);
 
     for (int l = 0; l < light_count.x; ++l) {
         LightData light = light_data[l];
@@ -117,15 +118,15 @@ float3 integration(PixelInput input) {
             // Apply SPTD area light approximation.
 #if SPTD_AREA_LIGHTS
             float distance_to_camera = length(camera_position.xyz - input.world_position.xyz);
-            radiance += SPTD::evaluate_sphere_light(light, material, input.texcoord, sptd_ggx_fit_tex,
+            radiance += SPTD::evaluate_sphere_light(light, default_shading, sptd_ggx_fit_tex,
                 input.world_position.xyz, world_to_shading_TBN, wo, distance_to_camera);
 #else
-            radiance += evaluate_most_representative_point(light, material, input.texcoord, input.world_position.xyz, world_to_shading_TBN, wo);
+            radiance += evaluate_most_representative_point(light, default_shading, input.world_position.xyz, world_to_shading_TBN, wo);
 #endif
         } else {
             // Apply regular delta lights.
             float3 wi = mul(world_to_shading_TBN, light_sample.direction_to_light);
-            float3 f = material.evaluate(wo, wi, input.texcoord);
+            float3 f = default_shading.evaluate(wo, wi);
             radiance += f * light_sample.radiance * abs(wi.z);
         }
     }
@@ -135,7 +136,7 @@ float3 integration(PixelInput input) {
 
 float4 opaque(PixelInput input) : SV_TARGET{
     // NOTE There may be a performance cost associated with having a potential discard, so we should probably have a separate pixel shader for cutouts.
-    float coverage = material.coverage(input.texcoord);
+    float coverage = material_params.coverage(input.texcoord);
     if (coverage < 0.33f)
         discard;
 
@@ -143,6 +144,6 @@ float4 opaque(PixelInput input) : SV_TARGET{
 }
 
 float4 transparent(PixelInput input) : SV_TARGET{
-    float coverage = material.coverage(input.texcoord);
+    float coverage = material_params.coverage(input.texcoord);
     return float4(integration(input), coverage);
 }

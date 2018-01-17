@@ -119,7 +119,7 @@ float3 elongated_highlight_offset(float3 direction_to_camera, float3 direction_t
     return float3(warped_reflection_point, 0.0);
 }
 
-float3 evaluate_sphere_light(LightData light, DefaultShading material, float2 texcoord, Texture2D sptd_ggx_fit_tex, 
+float3 evaluate_sphere_light(LightData light, DefaultShading material, Texture2D sptd_ggx_fit_tex, 
                              float3 world_position, float3x3 world_to_shading_TBN, float3 wo, float distance_to_camera) {
     // Sphere light in local space
     float3 sphere_position = mul(world_to_shading_TBN, light.sphere_position() - world_position);
@@ -130,7 +130,7 @@ float3 evaluate_sphere_light(LightData light, DefaultShading material, float2 te
     float3 centroid_of_cones = centroid_of_intersection(hemisphere_sphere_cap, light_sphere_cap);
 
     float3 diffuse_tint, specular_tint;
-    material.evaluate_tints(wo, centroid_of_cones, texcoord, diffuse_tint, specular_tint);
+    material.evaluate_tints(wo, centroid_of_cones, diffuse_tint, specular_tint);
 
     float3 radiance = float3(0,0,0);
     { // Evaluate Lambert.
