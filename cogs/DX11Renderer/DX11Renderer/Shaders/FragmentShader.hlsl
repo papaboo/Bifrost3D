@@ -35,8 +35,6 @@ Texture2D sptd_ggx_fit_tex : register(t14);
 float3 evaluate_most_representative_point(LightData light, DefaultShading material,
                                           float3 world_position, float3x3 world_to_shading_TBN, float3 wo) {
 
-    // TODO Precompute all light independent variables, such as the off specular peak and potentially others.
-
     // Sphere light in local space
     float3 local_sphere_position = mul(world_to_shading_TBN, light.sphere_position() - world_position);
     Sphere local_sphere = Sphere::make(local_sphere_position, light.sphere_radius());
@@ -44,12 +42,9 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
 
     float3 light_radiance = light.sphere_power() * rcp(4.0f * PI * dot(local_sphere_position, local_sphere_position));
 
-    // Approximation of GGX off-specular peak direction.
-    float ggx_alpha = BSDFs::GGX::alpha_from_roughness(material.roughness());
-    float3 peak_reflection = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo);
-
     // Closest point on sphere to ray. Equation 11 in Real Shading in Unreal Engine 4, 2013.
     // TODO Check at grazing angles. Should we switch to the centroid at those? Perhaps a weighted average with cos_theta as weight.
+    float3 peak_reflection = material.m_off_specular_peak;
     float3 closest_point_on_ray = dot(local_sphere_position, peak_reflection) * peak_reflection;
     float3 center_to_ray = closest_point_on_ray - local_sphere_position;
     float3 most_representative_point = local_sphere_position + center_to_ray * saturate(local_sphere.radius / length(center_to_ray)); // TODO Use rsqrt
@@ -67,6 +62,7 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
     }
 
     { // Evaluate GGX/microfacet by finding the most representative point on the light source.
+        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(material.m_roughness);
         bool delta_GGX_distribution = ggx_alpha < 0.0005;
         if (delta_GGX_distribution) {
             // Check if peak reflection and the most representative point are aligned.
@@ -106,7 +102,7 @@ float3 integration(PixelInput input) {
     float3x3 world_to_shading_TBN = create_TBN(normal);
     float3 wo = mul(world_to_shading_TBN, wo_world);
 
-    DefaultShading default_shading = DefaultShading::from_constants(material_params, wo, input.texcoord);
+    const DefaultShading default_shading = DefaultShading::from_constants(material_params, wo, input.texcoord);
     float3 radiance = environment_tint.rgb * default_shading.IBL(wo_world, normal);
 
     for (int l = 0; l < light_count.x; ++l) {

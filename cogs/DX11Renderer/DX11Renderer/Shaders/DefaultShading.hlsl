@@ -50,7 +50,6 @@ struct MaterialParams {
 //-----------------------------------------------------------------------------
 // Default shading.
 //-----------------------------------------------------------------------------
-// TODO Make immutable by only exposing through accesors.
 struct DefaultShading {
     float3 m_diffuse_tint;
     float m_coverage;
@@ -109,12 +108,6 @@ struct DefaultShading {
 
         return shading;
     }
-
-    // --------------------------------------------------------------------------------------------
-    // Getters.
-    // --------------------------------------------------------------------------------------------
-    float coverage() { return m_coverage; }
-    float roughness() { return m_roughness; }
 
     // --------------------------------------------------------------------------------------------
     // Evaluate the material.
