@@ -62,14 +62,14 @@ struct DefaultShading {
     // Helpers
     // --------------------------------------------------------------------------------------------
     static float compute_specularity(float specularity, float metalness) {
-        float dielectric_specularity = specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.
-        float metal_specularity = specularity * 0.2f + 0.6f;
+        float dielectric_specularity = specularity * 0.08; // See Physically-Based Shading at Disney bottom of page 8.
+        float metal_specularity = specularity * 0.2 + 0.6;
         return lerp(dielectric_specularity, metal_specularity, metalness);
     }
 
     static float compute_specular_rho(float specularity, float abs_cos_theta, float roughness) {
         float base_specular_rho = ggx_with_fresnel_rho_tex.Sample(precomputation2D_sampler, float2(abs_cos_theta, roughness)).r;
-        float full_specular_rho = 1.0f; // TODO This is wrong. GGX doesn't have a rho of one. Try to use the actual GGX rho instead.
+        float full_specular_rho = 1.0; // TODO This is wrong. GGX doesn't have a rho of one. Try to use the actual GGX rho instead.
         return lerp(base_specular_rho, full_specular_rho, specularity);
     }
 
@@ -99,8 +99,8 @@ struct DefaultShading {
             tint *= color_tex.Sample(color_sampler, texcoord).rgb;
         float abs_cos_theta = abs(wo.z);
         float specular_rho = compute_specular_rho(shading.m_specularity, abs_cos_theta, shading.m_roughness);
-        shading.m_diffuse_tint = tint * (1.0f - specular_rho);
-        shading.m_specular_tint = lerp(float3(1.0f, 1.0f, 1.0f), tint, metallic);
+        shading.m_diffuse_tint = tint * (1.0 - specular_rho);
+        shading.m_specular_tint = lerp(float3(1.0, 1.0, 1.0), tint, metallic);
 
         // Off specular peak
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(shading.m_roughness);
@@ -126,12 +126,12 @@ struct DefaultShading {
     }
 
     float3 evaluate(float3 wo, float3 wi) {
-        bool is_same_hemisphere = wi.z * wo.z >= 0.00000001f;
+        bool is_same_hemisphere = wi.z * wo.z >= 0.0;
         if (!is_same_hemisphere)
-            return float3(0.0f, 0.0f, 0.0f);
+            return float3(0.0, 0.0, 0.0);
 
         // Flip directions if on the backside of the material.
-        if (wo.z < 0.0f) {
+        if (wo.z < 0.0) {
             wi.z = -wi.z;
             wo.z = -wo.z;
         }
