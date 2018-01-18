@@ -8,7 +8,6 @@
 
 #include "DefaultShading.hlsl"
 #include "LightSources.hlsl"
-#include "SPTD.hlsl"
 
 #define SPTD_AREA_LIGHTS 0
 
@@ -28,7 +27,10 @@ cbuffer material : register(b3) {
     MaterialParams material_params;
 }
 
+#if SPTD_AREA_LIGHTS
+#include "SPTD.hlsl"
 Texture2D sptd_ggx_fit_tex : register(t14);
+#endif
 
 // Most representativepoint material evaluation, heavily inspired by Real Shading in Unreal Engine 4.
 // For UE4 reference see the function AreaLightSpecular() in DeferredLightingCommon.usf. (15/1 -2018)
