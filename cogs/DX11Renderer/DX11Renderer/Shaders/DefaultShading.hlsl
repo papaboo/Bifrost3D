@@ -161,11 +161,10 @@ struct DefaultShading {
         float3 light_radiance = light.sphere_power() * rcp(4.0f * PI * dot(local_sphere_position, local_sphere_position));
 
         // Closest point on sphere to ray. Equation 11 in Real Shading in Unreal Engine 4, 2013.
-        // TODO Check at grazing angles. Should we switch to the centroid at those? Perhaps a weighted average with cos_theta as weight.
         float3 peak_reflection = off_specular_peak();
         float3 closest_point_on_ray = dot(local_sphere_position, peak_reflection) * peak_reflection;
         float3 center_to_ray = closest_point_on_ray - local_sphere_position;
-        float3 most_representative_point = local_sphere_position + center_to_ray * saturate(local_sphere.radius / length(center_to_ray)); // TODO Use rsqrt
+        float3 most_representative_point = local_sphere_position + center_to_ray * saturate(local_sphere.radius * reciprocal_length(center_to_ray));
         float3 wi = normalize(most_representative_point);
 
         float3 halfway = normalize(wo + wi);
@@ -190,9 +189,10 @@ struct DefaultShading {
                 // float adjusted_ggx_alpha = saturate(ggx_alpha + local_sphere.radius / (3 * length(local_sphere_position)));
                 // float area_light_normalization_term = pow2(ggx_alpha / adjusted_ggx_alpha);
 
-                float sin_theta_squared = pow2(local_sphere.radius) / dot(local_sphere_position, local_sphere_position);
+                // NOTE We could try fitting the constants and try cos_theta VS wo and local_sphere_position VS local_sphere_position.
+                float sin_theta_squared = pow2(local_sphere.radius) / dot(most_representative_point, most_representative_point);
                 float a2 = pow2(ggx_alpha);
-                float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (abs(wo.z) * 3.6 + 0.4));
+                float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta * 3.6 + 0.4));
 
                 radiance += specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway) * abs(wi.z) * light_radiance * area_light_normalization_term;
             }

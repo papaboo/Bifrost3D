@@ -87,6 +87,10 @@ float length_squared(float3 v) {
     return dot(v, v);
 }
 
+float reciprocal_length(float3 v) {
+    return rsqrt(length_squared(v));
+}
+
 float schlick_fresnel(float abs_cos_theta) {
     return pow5(1.0f - abs_cos_theta);
 }
