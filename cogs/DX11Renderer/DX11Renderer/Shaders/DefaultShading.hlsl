@@ -55,7 +55,7 @@ struct DefaultShading {
     float m_coverage;
     float3 m_specular_tint; // Without fresnel
     float m_specularity;
-    float3 m_off_specular_peak;
+    float3 m_off_specular_peak; // NOTE Computing this is trivial, so wasting 3 floats on storage may not be a good idea.
     float m_roughness;
 
     // --------------------------------------------------------------------------------------------
@@ -108,6 +108,14 @@ struct DefaultShading {
 
         return shading;
     }
+
+    // --------------------------------------------------------------------------------------------
+    // Getters
+    // --------------------------------------------------------------------------------------------
+    float coverage() { return m_coverage; }
+    float specularity() { return m_specularity; }
+    float3 off_specular_peak() { return m_off_specular_peak; }
+    float roughness() { return m_roughness; }
 
     // --------------------------------------------------------------------------------------------
     // Evaluate the material.

@@ -44,7 +44,7 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
 
     // Closest point on sphere to ray. Equation 11 in Real Shading in Unreal Engine 4, 2013.
     // TODO Check at grazing angles. Should we switch to the centroid at those? Perhaps a weighted average with cos_theta as weight.
-    float3 peak_reflection = material.m_off_specular_peak;
+    float3 peak_reflection = material.off_specular_peak();
     float3 closest_point_on_ray = dot(local_sphere_position, peak_reflection) * peak_reflection;
     float3 center_to_ray = closest_point_on_ray - local_sphere_position;
     float3 most_representative_point = local_sphere_position + center_to_ray * saturate(local_sphere.radius / length(center_to_ray)); // TODO Use rsqrt
@@ -62,7 +62,7 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
     }
 
     { // Evaluate GGX/microfacet by finding the most representative point on the light source.
-        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(material.m_roughness);
+        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(material.roughness());
         bool delta_GGX_distribution = ggx_alpha < 0.0005;
         if (delta_GGX_distribution) {
             // Check if peak reflection and the most representative point are aligned.
@@ -71,7 +71,7 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
             float3 light_radiance = light.sphere_power() * inv_divisor;
             radiance += specular_tint * light_radiance * toggle;
         } else {
-            // Deprecated area light normalization term. Equation 10 and 14 in Real Shading in Unreal Engine 4, 2013.
+            // Deprecated area light normalization term. Equation 10 and 14 in Real Shading in Unreal Engine 4, 2013. Included for completeness
             // float adjusted_ggx_alpha = saturate(ggx_alpha + local_sphere.radius / (3 * length(local_sphere_position)));
             // float area_light_normalization_term = pow2(ggx_alpha / adjusted_ggx_alpha);
 

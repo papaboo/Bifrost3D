@@ -146,13 +146,13 @@ float3 evaluate_sphere_light(LightData light, DefaultShading material, Texture2D
         float3 direction_to_camera = wo * distance_to_camera;
         float3 direction_to_light = centroid_of_cones * length(sphere_position); // light_sphere_cap.direction * length(sphere_position);
         float3 halfway = normalize(wo + centroid_of_cones);
-        float elongation = 1.0; +4.0 * material.m_roughness * (1.0f - dot(wo, halfway));
+        float elongation = 1.0; +4.0 * material.roughness() * (1.0f - dot(wo, halfway));
         float3 intersection_offset = elongated_highlight_offset(direction_to_camera, direction_to_light, elongation);
         light_sphere_cap.direction = normalize(direction_to_light - intersection_offset); // Here there be side-effects outside of the scope.
         float3 adjusted_wo = normalize(direction_to_camera - intersection_offset);
 
         // NOTE If performance is a concern then the SPTD cap for the hemisphere could be precomputed and stored along with the pivot.
-        BRDFPivotTransform adjusted_ggx_sptd = sptd_BRDF_pivot(sptd_ggx_fit_tex, material.m_roughness, adjusted_wo);
+        BRDFPivotTransform adjusted_ggx_sptd = sptd_BRDF_pivot(sptd_ggx_fit_tex, material.roughness(), adjusted_wo);
         Cone adjusted_ggx_sptd_cap = SPTD::pivot_transform(Cone::make(float3(0.0f, 0.0f, 1.0f), 0.0f), adjusted_ggx_sptd.pivot);
 
         Cone ggx_light_sphere_cap = SPTD::pivot_transform(light_sphere_cap, adjusted_ggx_sptd.pivot);
