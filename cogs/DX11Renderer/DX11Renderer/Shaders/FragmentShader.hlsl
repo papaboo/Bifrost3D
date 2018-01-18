@@ -9,8 +9,6 @@
 #include "DefaultShading.hlsl"
 #include "LightSources.hlsl"
 
-#define SPTD_AREA_LIGHTS 0
-
 cbuffer scene_variables : register(b0) {
     float4x4 view_projection_matrix;
     float4 camera_position;

@@ -68,6 +68,7 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         THROW_ON_FAILURE(hr);
     }
 
+    #if SPTD_AREA_LIGHTS
     { // Setup GGX SPTD fit texture.
         D3D11_TEXTURE2D_DESC tex_desc = {};
         tex_desc.Width = GGX_SPTD_fit_angular_sample_count;
@@ -75,7 +76,6 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         tex_desc.MipLevels = 1;
         tex_desc.ArraySize = 1;
         tex_desc.Format = DXGI_FORMAT_R10G10B10A2_UNORM; // TODO Use a threechannelled fixed point format. Alternatively store theta and radius along with two rho parameters.
-        // tex_desc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
         tex_desc.SampleDesc.Count = 1;
         tex_desc.SampleDesc.Quality = 0;
         tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
@@ -103,6 +103,9 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         hr = device.CreateShaderResourceView(GGX_SPTD_fit_texture, &srv_desc, &m_GGX_SPTD_fit_srv);
         THROW_ON_FAILURE(hr);
     }
+    #else
+        m_GGX_SPTD_fit_srv = nullptr;
+    #endif
 
     { // 2D precomputation sampler.
         D3D11_SAMPLER_DESC desc = {};

@@ -137,7 +137,7 @@ public:
         }
 
         { // Setup vertex processing.
-            OID3DBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"VertexShader.hlsl", "vs_5_0");
+            OID3DBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"VertexShader.hlsl", "vs_5_0", "main");
 
             // Create the shader objects.
             HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shading.shader);
@@ -165,6 +165,12 @@ public:
             THROW_ON_FAILURE(hr);
         }
 
+#if SPTD_AREA_LIGHTS
+        D3D_SHADER_MACRO fragment_macros[] = { "SPTD_AREA_LIGHTS",  "1", 0, 0 };
+#else 
+        D3D_SHADER_MACRO fragment_macros[] = { "SPTD_AREA_LIGHTS",  "0", 0, 0 };
+#endif
+
         { // Setup opaque rendering.
             CD3D11_RASTERIZER_DESC opaque_raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
             HRESULT hr = m_device.CreateRasterizerState(&opaque_raster_state, &m_opaque.raster_state);
@@ -175,7 +181,7 @@ public:
             hr = m_device.CreateDepthStencilState(&depth_desc, &m_opaque.depth_state);
             THROW_ON_FAILURE(hr);
 
-            OID3DBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "opaque");
+            OID3DBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "opaque", fragment_macros);
             hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_opaque.shader);
             THROW_ON_FAILURE(hr);
         }
@@ -211,7 +217,7 @@ public:
             hr = m_device.CreateDepthStencilState(&depth_desc, &m_transparent.depth_state);
             THROW_ON_FAILURE(hr);
 
-            OID3DBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "transparent");
+            OID3DBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "transparent", fragment_macros);
             hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_transparent.shader);
             THROW_ON_FAILURE(hr);
         }

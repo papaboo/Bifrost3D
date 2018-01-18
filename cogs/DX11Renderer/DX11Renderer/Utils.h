@@ -85,11 +85,12 @@ inline int sizeof_dx_format(DXGI_FORMAT format) {
     }
 };
 
-inline OID3DBlob compile_shader(const std::wstring& filename, const char* target, const char* entry_point = "main") {
+inline OID3DBlob compile_shader(const std::wstring& filename, const char* target, const char* entry_point,
+                                const D3D_SHADER_MACRO* macros = nullptr) {
     OID3DBlob shader_bytecode;
     OID3DBlob error_messages = nullptr;
     HRESULT hr = D3DCompileFromFile(filename.c_str(),
-        nullptr, // macroes
+        macros,
         D3D_COMPILE_STANDARD_FILE_INCLUDE,
         entry_point,
         target,
