@@ -59,14 +59,7 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
     material.evaluate_tints(cos_theta, diffuse_tint, specular_tint);
 
     float3 radiance = float3(0, 0, 0);
-    { // Evaluate Lambert.
-        float solidangle_of_light = solidangle(light_sphere_cap);
-        CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
-        float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle_of_light;
-        radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_and_solidangle.centroid_direction.z) * light_radiance * light_radiance_scale;
-    }
-
-    { // Evaluate GGX/microfacet by finding the most representative point on the light source.
+    { // Evaluate GGX.
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(material.roughness());
         bool delta_GGX_distribution = ggx_alpha < 0.0005;
         if (delta_GGX_distribution) {
@@ -86,6 +79,13 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
 
             radiance += specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway) * abs(wi.z) * light_radiance * area_light_normalization_term;
         }
+    }
+
+    { // Evaluate Lambert.
+        float solidangle_of_light = solidangle(light_sphere_cap);
+        CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
+        float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle_of_light;
+        radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_and_solidangle.centroid_direction.z) * light_radiance * light_radiance_scale;
     }
 
     return radiance;
