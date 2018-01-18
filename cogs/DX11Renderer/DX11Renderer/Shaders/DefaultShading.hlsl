@@ -11,6 +11,7 @@
 
 #include "BSDFs/Diffuse.hlsl"
 #include "BSDFs/GGX.hlsl"
+#include "LightSources.hlsl"
 #include "Utils.hlsl"
 
 //-----------------------------------------------------------------------------
@@ -118,7 +119,7 @@ struct DefaultShading {
     float roughness() { return m_roughness; }
 
     // --------------------------------------------------------------------------------------------
-    // Evaluate the material.
+    // Evaluations.
     // --------------------------------------------------------------------------------------------
     void evaluate_tints(float abs_cos_theta, out float3 diffuse_tint, out float3 specular_tint) {
         diffuse_tint = m_diffuse_tint;
@@ -148,11 +149,70 @@ struct DefaultShading {
         return diffuse + specular;
     }
 
+    // Most representativepoint material evaluation, heavily inspired by Real Shading in Unreal Engine 4.
+    // For UE4 reference see the function AreaLightSpecular() in DeferredLightingCommon.usf. (15/1 -2018)
+    float3 evaluate_area_light(LightData light, float3 world_position, float3 wo, float3x3 world_to_shading_TBN) {
+
+        // Sphere light in local space
+        float3 local_sphere_position = mul(world_to_shading_TBN, light.sphere_position() - world_position);
+        Sphere local_sphere = Sphere::make(local_sphere_position, light.sphere_radius());
+        Cone light_sphere_cap = sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
+
+        float3 light_radiance = light.sphere_power() * rcp(4.0f * PI * dot(local_sphere_position, local_sphere_position));
+
+        // Closest point on sphere to ray. Equation 11 in Real Shading in Unreal Engine 4, 2013.
+        // TODO Check at grazing angles. Should we switch to the centroid at those? Perhaps a weighted average with cos_theta as weight.
+        float3 peak_reflection = off_specular_peak();
+        float3 closest_point_on_ray = dot(local_sphere_position, peak_reflection) * peak_reflection;
+        float3 center_to_ray = closest_point_on_ray - local_sphere_position;
+        float3 most_representative_point = local_sphere_position + center_to_ray * saturate(local_sphere.radius / length(center_to_ray)); // TODO Use rsqrt
+        float3 wi = normalize(most_representative_point);
+
+        float3 halfway = normalize(wo + wi);
+        float cos_theta = dot(wo, halfway);
+
+        float3 diffuse_tint, specular_tint;
+        evaluate_tints(cos_theta, diffuse_tint, specular_tint);
+
+        float3 radiance = float3(0, 0, 0);
+        { // Evaluate GGX.
+            float ggx_alpha = BSDFs::GGX::alpha_from_roughness(roughness());
+            bool delta_GGX_distribution = ggx_alpha < 0.0005;
+            if (delta_GGX_distribution) {
+                // Check if peak reflection and the most representative point are aligned.
+                float toggle = saturate(100000 * (dot(peak_reflection, wi) - 0.99999));
+                float inv_divisor = rcp(PI * sphere_surface_area(light.sphere_radius()));
+                float3 light_radiance = light.sphere_power() * inv_divisor;
+                radiance += specular_tint * light_radiance * toggle;
+            }
+            else {
+                // Deprecated area light normalization term. Equation 10 and 14 in Real Shading in Unreal Engine 4, 2013. Included for completeness
+                // float adjusted_ggx_alpha = saturate(ggx_alpha + local_sphere.radius / (3 * length(local_sphere_position)));
+                // float area_light_normalization_term = pow2(ggx_alpha / adjusted_ggx_alpha);
+
+                float sin_theta_squared = pow2(local_sphere.radius) / dot(local_sphere_position, local_sphere_position);
+                float a2 = pow2(ggx_alpha);
+                float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (abs(wo.z) * 3.6 + 0.4));
+
+                radiance += specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway) * abs(wi.z) * light_radiance * area_light_normalization_term;
+            }
+        }
+
+        { // Evaluate Lambert.
+            float solidangle_of_light = solidangle(light_sphere_cap);
+            CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
+            float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle_of_light;
+            radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_and_solidangle.centroid_direction.z) * light_radiance * light_radiance_scale;
+        }
+
+        return radiance;
+    }
+
     // Apply the shading model to the IBL.
     // TODO Take the current LOD and pixel density into account before choosing sample LOD.
     //      See http://casual-effects.blogspot.dk/2011/08/plausible-environment-lighting-in-two.html 
     //      for how to derive the LOD level for cubemaps.
-    float3 IBL(float3 wo, float3 normal) {
+    float3 evaluate_IBL(float3 wo, float3 normal) {
         float width, height, mip_count;
         environment_tex.GetDimensions(0, width, height, mip_count);
 
