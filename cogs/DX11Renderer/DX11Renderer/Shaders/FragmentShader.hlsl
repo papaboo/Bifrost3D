@@ -52,8 +52,11 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
     float3 most_representative_point = local_sphere_position + center_to_ray * saturate(local_sphere.radius / length(center_to_ray)); // TODO Use rsqrt
     float3 wi = normalize(most_representative_point);
 
+    float3 halfway = normalize(wo + wi);
+    float cos_theta = dot(wo, halfway);
+
     float3 diffuse_tint, specular_tint;
-    material.evaluate_tints(wo, wi, diffuse_tint, specular_tint);
+    material.evaluate_tints(cos_theta, diffuse_tint, specular_tint);
 
     float3 radiance = float3(0, 0, 0);
     { // Evaluate Lambert.
@@ -81,7 +84,6 @@ float3 evaluate_most_representative_point(LightData light, DefaultShading materi
             float a2 = pow2(ggx_alpha);
             float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (abs(wo.z) * 3.6 + 0.4));
 
-            float3 halfway = normalize(wo + wi);
             radiance += specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway) * abs(wi.z) * light_radiance * area_light_normalization_term;
         }
     }

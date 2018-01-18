@@ -120,12 +120,15 @@ struct DefaultShading {
     // --------------------------------------------------------------------------------------------
     // Evaluate the material.
     // --------------------------------------------------------------------------------------------
-    bool evaluate_tints(float3 wo, float3 wi, out float3 diffuse_tint, out float3 specular_tint) {
+    void evaluate_tints(float abs_cos_theta, out float3 diffuse_tint, out float3 specular_tint) {
+        diffuse_tint = m_diffuse_tint;
+        specular_tint = m_specular_tint * schlick_fresnel(m_specularity, abs_cos_theta);
+    }
+
+    float3 evaluate(float3 wo, float3 wi) {
         bool is_same_hemisphere = wi.z * wo.z >= 0.00000001f;
-        if (!is_same_hemisphere) {
-            diffuse_tint = specular_tint = float3(0.0f, 0.0f, 0.0f);
-            return false;
-        }
+        if (!is_same_hemisphere)
+            return float3(0.0f, 0.0f, 0.0f);
 
         // Flip directions if on the backside of the material.
         if (wo.z < 0.0f) {
@@ -133,23 +136,14 @@ struct DefaultShading {
             wo.z = -wo.z;
         }
 
-        diffuse_tint = m_diffuse_tint;
-
         float3 halfway = normalize(wo + wi);
-        float fresnel = schlick_fresnel(m_specularity, dot(wo, halfway));
-        specular_tint = fresnel * m_specular_tint;
+        float cos_theta = dot(wo, halfway);
 
-        return true;
-    }
-
-    float3 evaluate(float3 wo, float3 wi) {
         float3 diffuse_tint, specular_tint;
-        if (!evaluate_tints(wo, wi, diffuse_tint, specular_tint))
-            return float3(0, 0, 0);
+        evaluate_tints(cos_theta, diffuse_tint, specular_tint);
 
         float3 diffuse = diffuse_tint * BSDFs::Lambert::evaluate();
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
-        float3 halfway = normalize(wo + wi);
         float3 specular = specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway);
         return diffuse + specular;
     }

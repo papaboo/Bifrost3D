@@ -127,10 +127,13 @@ float3 evaluate_sphere_light(LightData light, DefaultShading material, Texture2D
     Cone light_sphere_cap = sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
 
     Cone hemisphere_sphere_cap = Cone::make(float3(0.0f, 0.0f, 1.0f), 0.0f);
-    float3 centroid_of_cones = centroid_of_intersection(hemisphere_sphere_cap, light_sphere_cap);
+    float3 wi = centroid_of_intersection(hemisphere_sphere_cap, light_sphere_cap);
+
+    float3 halfway = normalize(wo + wi);
+    float cos_theta = dot(wo, halfway);
 
     float3 diffuse_tint, specular_tint;
-    material.evaluate_tints(wo, centroid_of_cones, diffuse_tint, specular_tint);
+    material.evaluate_tints(cos_theta, diffuse_tint, specular_tint);
 
     float3 radiance = float3(0,0,0);
     { // Evaluate Lambert.
@@ -138,14 +141,13 @@ float3 evaluate_sphere_light(LightData light, DefaultShading material, Texture2D
         float visible_solidangle_of_light = solidangle_of_intersection(hemisphere_sphere_cap, light_sphere_cap);
         float light_radiance_scale = visible_solidangle_of_light / solidangle_of_light;
         LightSample light_sample = sample_light(light, world_position);
-        radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_of_cones.z) * light_sample.radiance * light_radiance_scale;
+        radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(wi.z) * light_sample.radiance * light_radiance_scale;
     }
 
     { // Evaluate GGX/microfacet.
         // Stretch highlight based on roughness and cos_theta.
         float3 direction_to_camera = wo * distance_to_camera;
-        float3 direction_to_light = centroid_of_cones * length(sphere_position); // light_sphere_cap.direction * length(sphere_position);
-        float3 halfway = normalize(wo + centroid_of_cones);
+        float3 direction_to_light = wi * length(sphere_position); // light_sphere_cap.direction * length(sphere_position);
         float elongation = 1.0; +4.0 * material.roughness() * (1.0f - dot(wo, halfway));
         float3 intersection_offset = elongated_highlight_offset(direction_to_camera, direction_to_light, elongation);
         light_sphere_cap.direction = normalize(direction_to_light - intersection_offset); // Here there be side-effects outside of the scope.
