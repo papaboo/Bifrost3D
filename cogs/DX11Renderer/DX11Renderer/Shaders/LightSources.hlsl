@@ -6,6 +6,9 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
+#ifndef _DX11_RENDERER_SHADERS_LIGHTSOURCES_H_
+#define _DX11_RENDERER_SHADERS_LIGHTSOURCES_H_
+
 #include "Utils.hlsl"
 
 //-----------------------------------------------------------------------------
@@ -116,3 +119,5 @@ LightSample sample_light(LightData light, float3 world_position) {
 
     return LightSample::empty();
 }
+
+#endif // _DX11_RENDERER_SHADERS_LIGHTSOURCES_H_

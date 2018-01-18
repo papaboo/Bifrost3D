@@ -6,6 +6,9 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
+#ifndef _DX11_RENDERER_SHADERS_BSDFS_SPECULAR_H_
+#define _DX11_RENDERER_SHADERS_BSDFS_SPECULAR_H_
+
 #include "Utils.hlsl"
 
 namespace BSDFs {
@@ -81,3 +84,5 @@ namespace GGX {
 
 } // GGX
 } // BSDFs
+
+#endif // _DX11_RENDERER_SHADERS_BSDFS_SPECULAR_H_

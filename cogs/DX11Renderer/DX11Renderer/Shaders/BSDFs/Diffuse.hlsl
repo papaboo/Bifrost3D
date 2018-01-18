@@ -6,6 +6,9 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
+#ifndef _DX11_RENDERER_SHADERS_BSDFS_DIFFUSE_H_
+#define _DX11_RENDERER_SHADERS_BSDFS_DIFFUSE_H_
+
 #include "Utils.hlsl"
 
 namespace BSDFs {
@@ -78,3 +81,5 @@ float evaluate_approx(float roughness, float wo_dot_n, float wi_dot_n, float wo_
 } // NS OrenNayar
 
 } // NS BSDFs
+
+#endif // _DX11_RENDERER_SHADERS_BSDFS_DIFFUSE_H_
