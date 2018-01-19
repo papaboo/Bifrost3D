@@ -32,17 +32,15 @@ SamplerState precomputation2D_sampler : register(s15);
 
 struct MaterialParams {
     float3 m_tint;
-    unsigned int m_tint_texture_index;
+    unsigned int m_textures_bound;
     float m_roughness;
     float m_specularity;
     float m_metallic;
     float m_coverage;
-    unsigned int m_coverage_texture_index;
-    int3 __padding;
 
     float coverage(float2 texcoord) {
         float coverage = m_coverage;
-        if (m_coverage_texture_index != 0)
+        if (m_textures_bound & TextureBound::Coverage)
             coverage *= coverage_tex.Sample(coverage_sampler, texcoord).a;
         return coverage;
     }
@@ -82,7 +80,7 @@ struct DefaultShading {
 
         // Coverage
         shading.m_coverage = material_params.m_coverage;
-        if (material_params.m_coverage_texture_index != 0)
+        if (material_params.m_textures_bound & TextureBound::Coverage)
             shading.m_coverage *= coverage_tex.Sample(coverage_sampler, texcoord).a;
 
         // Roughness
@@ -96,7 +94,7 @@ struct DefaultShading {
 
         // Diffuse and specular tint
         float3 tint = material_params.m_tint;
-        if (material_params.m_tint_texture_index != 0)
+        if (material_params.m_textures_bound & TextureBound::Tint)
             tint *= color_tex.Sample(color_sampler, texcoord).rgb;
         float abs_cos_theta = abs(wo.z);
         float specular_rho = compute_specular_rho(shading.m_specularity, abs_cos_theta, shading.m_roughness);

@@ -132,15 +132,24 @@ struct R10G10B10A2_Unorm {
 // Model structs.
 //-------------------------------------------------------------------------------------------------
 
+struct TextureBound {
+    static const unsigned int None = 0;
+    static const unsigned int Tint = 1 << 0;
+    static const unsigned int Coverage = 1 << 1;
+};
+
 struct Dx11Material {
     float3 tint;
-    unsigned int tint_texture_index;
+    unsigned int textures_bound;
     float roughness;
     float specularity;
     float metallic;
     float coverage;
-    unsigned int coverage_texture_index;
-    float3 __padding;
+};
+
+struct Dx11MaterialTextures {
+    unsigned int tint_index;
+    unsigned int coverage_index;
 };
 
 struct Dx11Image {

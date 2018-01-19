@@ -37,6 +37,7 @@ public:
         m_precomputation2D_sampler = std::move(rhs.m_precomputation2D_sampler);;
         m_constant_array = std::move(rhs.m_constant_array);
         m_materials = std::move(rhs.m_materials);
+        m_material_textures = std::move(rhs.m_material_textures);
         return *this;
     }
 
@@ -45,6 +46,7 @@ public:
     ID3D11SamplerState** get_precomputation2D_sampler_addr() { return &m_precomputation2D_sampler; }
 
     inline Dx11Material& get_material(unsigned int material_index) { return m_materials[material_index]; }
+    inline Dx11MaterialTextures& get_material_textures(unsigned int material_index) { return m_material_textures[material_index]; }
     inline ID3D11Buffer** get_constant_buffer_addr() { return m_constant_array.get_buffer_addr(); }
     inline void bind_material(ID3D11DeviceContext1& context, unsigned int slot, unsigned int material_index) { m_constant_array.PS_set(&context, slot, material_index); }
 
@@ -60,6 +62,7 @@ private:
     OID3D11SamplerState m_precomputation2D_sampler;
 
     std::vector<Dx11Material> m_materials;
+    std::vector<Dx11MaterialTextures> m_material_textures;
 
     ConstantBufferArray<Dx11Material> m_constant_array;
 };

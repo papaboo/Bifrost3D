@@ -269,14 +269,14 @@ public:
             // Bind material constant buffer.
             m_materials.bind_material(*context, 3, model.material_ID);
 
-            Dx11Material& material = m_materials.get_material(model.material_ID);
-            Dx11Texture& color_texture = m_textures.get_texture(material.tint_texture_index);
+            Dx11MaterialTextures& material_textures = m_materials.get_material_textures(model.material_ID);
+            Dx11Texture& color_texture = m_textures.get_texture(material_textures.tint_index);
             if (color_texture.sampler != nullptr) {
                 context->PSSetShaderResources(1, 1, &color_texture.image->srv);
                 context->PSSetSamplers(1, 1, &color_texture.sampler);
             }
 
-            Dx11Texture& coverage_texture = m_textures.get_texture(material.coverage_texture_index);
+            Dx11Texture& coverage_texture = m_textures.get_texture(material_textures.coverage_index);
             if (coverage_texture.sampler != nullptr) {
                 context->PSSetShaderResources(2, 1, &coverage_texture.image->srv);
                 context->PSSetSamplers(2, 1, &coverage_texture.sampler);
