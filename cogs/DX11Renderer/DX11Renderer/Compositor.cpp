@@ -9,10 +9,6 @@
 #include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/Utils.h>
 
-#define NOMINMAX
-#include <D3D11_1.h>
-#undef RGB
-
 #include <Cogwheel/Core/Window.h>
 
 using namespace Cogwheel::Core;

@@ -15,11 +15,6 @@
 #include <DX11Renderer/Types.h>
 #include <DX11Renderer/Utils.h>
 
-#define NOMINMAX
-#include <D3D11_1.h>
-#include <D3DCompiler.h>
-#undef RGB
-
 #include <Cogwheel/Assets/Mesh.h>
 #include <Cogwheel/Assets/MeshModel.h>
 #include <Cogwheel/Core/Engine.h>
