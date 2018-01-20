@@ -153,16 +153,13 @@ struct DefaultShading {
 
         // Sphere light in local space
         float3 local_sphere_position = mul(world_to_shading_TBN, light.sphere_position() - world_position);
-        Sphere local_sphere = Sphere::make(local_sphere_position, light.sphere_radius());
-        Cone light_sphere_cap = sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
-
         float3 light_radiance = light.sphere_power() * rcp(4.0f * PI * dot(local_sphere_position, local_sphere_position));
 
         // Closest point on sphere to ray. Equation 11 in Real Shading in Unreal Engine 4, 2013.
         float3 peak_reflection = off_specular_peak();
         float3 closest_point_on_ray = dot(local_sphere_position, peak_reflection) * peak_reflection;
         float3 center_to_ray = closest_point_on_ray - local_sphere_position;
-        float3 most_representative_point = local_sphere_position + center_to_ray * saturate(local_sphere.radius * reciprocal_length(center_to_ray));
+        float3 most_representative_point = local_sphere_position + center_to_ray * saturate(light.sphere_radius() * reciprocal_length(center_to_ray));
         float3 wi = normalize(most_representative_point);
 
         float3 halfway = normalize(wo + wi);
@@ -184,11 +181,11 @@ struct DefaultShading {
             }
             else {
                 // Deprecated area light normalization term. Equation 10 and 14 in Real Shading in Unreal Engine 4, 2013. Included for completeness
-                // float adjusted_ggx_alpha = saturate(ggx_alpha + local_sphere.radius / (3 * length(local_sphere_position)));
+                // float adjusted_ggx_alpha = saturate(ggx_alpha + light.sphere_radius() / (3 * length(local_sphere_position)));
                 // float area_light_normalization_term = pow2(ggx_alpha / adjusted_ggx_alpha);
 
                 // NOTE We could try fitting the constants and try cos_theta VS wo and local_sphere_position VS local_sphere_position.
-                float sin_theta_squared = pow2(local_sphere.radius) / dot(most_representative_point, most_representative_point);
+                float sin_theta_squared = pow2(light.sphere_radius()) / dot(most_representative_point, most_representative_point);
                 float a2 = pow2(ggx_alpha);
                 float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta * 3.6 + 0.4));
 
@@ -197,6 +194,8 @@ struct DefaultShading {
         }
 
         { // Evaluate Lambert.
+            Sphere local_sphere = Sphere::make(local_sphere_position, light.sphere_radius());
+            Cone light_sphere_cap = sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
             float solidangle_of_light = solidangle(light_sphere_cap);
             CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
             float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle_of_light;
