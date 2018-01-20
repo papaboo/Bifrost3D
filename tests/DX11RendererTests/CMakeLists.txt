@@ -24,10 +24,8 @@ if (TARGET DX11Renderer)
     FOLDER "Tests"
   )
 
-  # target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX)
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Od") # The default is /O2, but that has less precise floating point arithmetic.
   target_compile_definitions(${PROJECT_NAME} PRIVATE 
-    # NOMINMAX # Disable this silly flag that just breaks so much code.
     DX11_SHADER_ROOT=L"${COGWHEEL_COGS_DIR}/DX11Renderer/DX11Renderer/Shaders/"
   )
 else()
