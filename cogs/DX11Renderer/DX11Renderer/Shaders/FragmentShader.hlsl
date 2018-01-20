@@ -37,16 +37,16 @@ struct PixelInput {
     float2 texcoord : TEXCOORD;
 };
 
-float3 integration(PixelInput input) {
-    float3 normal = normalize(input.normal.xyz);
+float3 integration(PixelInput input, bool is_front_face) {
+    float3 world_wo = normalize(camera_position.xyz - input.world_position.xyz);
+    float3 world_normal = normalize(input.normal.xyz) * (is_front_face ? 1.0 : -1.0);
 
     // Apply IBL
-    float3 world_wo = normalize(camera_position.xyz - input.world_position.xyz);
-    float3x3 world_to_shading_TBN = create_TBN(normal);
+    float3x3 world_to_shading_TBN = create_TBN(world_normal);
     float3 wo = mul(world_to_shading_TBN, world_wo);
 
     const DefaultShading default_shading = DefaultShading::from_constants(material_params, wo, input.texcoord);
-    float3 radiance = environment_tint.rgb * default_shading.evaluate_IBL(world_wo, normal);
+    float3 radiance = environment_tint.rgb * default_shading.evaluate_IBL(world_wo, world_normal);
 
     for (int l = 0; l < light_count.x; ++l) {
         LightData light = light_data[l];
@@ -73,16 +73,16 @@ float3 integration(PixelInput input) {
     return radiance;
 }
 
-float4 opaque(PixelInput input) : SV_TARGET{
+float4 opaque(PixelInput input, bool is_front_face : SV_IsFrontFace) : SV_TARGET{
     // NOTE There may be a performance cost associated with having a potential discard, so we should probably have a separate pixel shader for cutouts.
     float coverage = material_params.coverage(input.texcoord);
     if (coverage < 0.33f)
         discard;
 
-    return float4(integration(input), 1.0f);
+    return float4(integration(input, is_front_face), 1.0f);
 }
 
-float4 transparent(PixelInput input) : SV_TARGET{
+float4 transparent(PixelInput input, bool is_front_face : SV_IsFrontFace) : SV_TARGET{
     float coverage = material_params.coverage(input.texcoord);
-    return float4(integration(input), coverage);
+    return float4(integration(input, is_front_face), coverage);
 }
