@@ -123,8 +123,8 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                     ++mipmap_count;
                 }
 
-                bool monte_carlo_estimation = false;
-                if (monte_carlo_estimation)
+                bool cpu_estimation = false;
+                if (cpu_estimation)
                 {
                     R11G11B10_Float* pixel_data = new R11G11B10_Float[total_pixel_count];
 
@@ -285,13 +285,14 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
 
                         // Constant buffer.
                         struct ConvolutionConstants {
-                            float rcp_mip_count;
-                            unsigned int base_width;
-                            unsigned int base_height;
+                            float rcp_mipmap_count_minus_one; // 1.0 / (mipmap_count - 1)
+                            float rcp_smallest_width; // 1.0 / width of the smallest mipmap
                             unsigned int max_sample_count;
+                            float __padding;
                         };
 
-                        ConvolutionConstants constants = { 1.0f / (float)mipmap_count, (unsigned int)env_width, (unsigned int)env_height, 1024u };
+                        int smallest_width = env_width >> (mipmap_count - 1);
+                        ConvolutionConstants constants = { 1.0f / float(mipmap_count - 1), 1.0f / smallest_width, 1024u };
                         OID3D11Buffer constant_buffer;
                         HRESULT hr = create_constant_buffer(device, constants, &constant_buffer);
                         THROW_ON_FAILURE(hr);
@@ -324,6 +325,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         ID3D11ShaderResourceView* SRVs[] = { env_SRV, per_pixel_PDF_SRV, light_samples_SRV };
                         device_context.CSSetShaderResources(0, 3, SRVs);
                         device_context.CSSetSamplers(0, 1, &m_sampler);
+
                         for (int m = 1; m < mipmap_count; ++m) {
                             device_context.CSSetUnorderedAccessViews(0, 1, &mip_level_UAVs[m - 1], nullptr);
                             int width = env_width >> m, height = env_height >> m;

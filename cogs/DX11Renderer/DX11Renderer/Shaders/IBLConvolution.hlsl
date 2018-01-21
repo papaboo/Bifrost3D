@@ -49,17 +49,15 @@ namespace RNG {
     }
 }
 
-float rougness_from_miplevel(uint base_width, uint mip_width, float rcp_mipmap_count) {
-    uint size_factor = base_width / mip_width;
-    uint mip_index = firstbithigh(size_factor);
-    return mip_index * rcp_mipmap_count;
+float roughness_from_mip_width(uint mip_width, float rcp_smallest_width, float rcp_mipmap_count_minus_one) {
+    return 1.0 - log2(mip_width * rcp_smallest_width) * rcp_mipmap_count_minus_one;
 }
 
 cbuffer constants : register(b0) {
-    float c_rcp_mipmap_count;
-    uint c_base_width;
-    uint c_base_height;
+    float c_rcp_mipmap_count_minus_one; // 1.0 / (mipmap_count - 1)
+    float c_rcp_smallest_width; // 1.0 / width of the smallest mipmap
     uint c_max_sample_count;
+    float __padding;
 };
 
 Texture2D environment_map : register(t0);
@@ -85,7 +83,7 @@ void GGX_convolute(uint3 thread_ID : SV_DispatchThreadID) {
     float3x3 up_rotation = create_inverse_TBN(up_vector);
 
     // Compute roughness and alpha from current miplevel and max miplevel.
-    float roughness = rougness_from_miplevel(c_base_width, mip_width, c_rcp_mipmap_count);
+    float roughness = roughness_from_mip_width(mip_width, c_rcp_smallest_width, c_rcp_mipmap_count_minus_one);
     float alpha = BSDFs::GGX::alpha_from_roughness(roughness);
 
     // Convolute.
@@ -130,7 +128,7 @@ void MIS_convolute(uint3 thread_ID : SV_DispatchThreadID) {
     float3 up_vector = latlong_texcoord_to_direction(up_uv);
 
     // Compute roughness and alpha from current miplevel and max miplevel.
-    float roughness = rougness_from_miplevel(c_base_width, mip_width, c_rcp_mipmap_count);
+    float roughness = roughness_from_mip_width(mip_width, c_rcp_smallest_width, c_rcp_mipmap_count_minus_one);
     float alpha = BSDFs::GGX::alpha_from_roughness(roughness);
 
     // Convolute.
