@@ -1,25 +1,12 @@
 BACKLOG:
-* A Spherical Cap Preserving Parameterization for Spherical Distributions
-** Unit tests!
-*** Pivot transform.
-*** GGX with point light vs sampled.
-*** Just output until we have decent border values.
-*** Lambert with point light vs sampled.
-*** Default shading with point light.
-** Try to fit GGX or the default material myself.
-*** Store the pivot directly in the GGX SPTD texture.
-*** Scale the GGX brdf scale by 1 / 4 PI in the texture instead of in the shader?
-*** Fit lambert
-*** Test image gradients.
-** DefaultShadingSPTD that wraps default shading and adds SPTD evaluation.
-** Adjust BRDF texture lookups to avoid the outer half pixel padding.
-** Adjust spherelight depth in fragment shader.
-** Reduce the memory footprint per pixel of the dx11 GGX SPTD fit texture.
-** Optional: Use it for importance sampling, but is it easy to add when the material uses joint sampling?
-*** Return the joint sample SPDT from the material? Both GGX and Lambert can produce an SPDT.
-** Optional: See if we can't hack elongated highlights in. Possible parameters: difference in cos_theta between wo and wi, roughness, basis, pivot, ...
-
-* Backends
+* Tonemapping
+** HDR backbuffer
+** https://mynameismjp.wordpress.com/2010/04/30/a-closer-look-at-tone-mapping/
+** What does Unreal use?
+** Photomatix (local tonemapper)
+* FXAA
+* SSAO
+* OptiX (filtering) backends
 ** Filter neighbouring light samples before reconstruction - Screen space photon mapping approach with MIS weights / Path filtering.
 *** Output buffers
 **** Material ID, texcoord, position, normal, ray dir, weight, light sample, indirect sample 
@@ -31,7 +18,6 @@ BACKLOG:
 **** Trace ray footprint by assuming the ray is a cone. Then use Distributions::Cone::CosTheta(float angle) to compute the angle of each new cone after an intersection and use that for the density estimation kernel bandwidth.
 ** Mitchell filter
 ** Pass BSDF and light sample to the path tracing RGP and let it handle accumulated radiance.
-
 * Material improvements
 ** Support roughness texture (alpha in diffuse texture)
 ** Metal specular tint should go to white at grazing angles.
@@ -45,8 +31,6 @@ BACKLOG:
 *** http://jcgt.org/published/0003/04/03/paper-lowres.pdf
 *** https://www.youtube.com/watch?v=4nKb9hRYbPA
 *** Or just add a GGX layer on top with an iridescence parameter (red and blue fresnel offset relative to green.)
-* VS compiler flags /debug:fastlink in VS2015. Use /GL (Enable link-time code generation), /LTCG (Use Link Time Code Generation) and /INCREMENTAL:NO (Disable Incremental Linking)
-** Perhaps create cmake macros for setting up executables and libraries.
 * Multiple cameras.
 * Screenshot
 ** Render to offscreen buffer.
