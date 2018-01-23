@@ -90,7 +90,7 @@ private:
 
     // Backbuffer members.
     Vector2ui m_backbuffer_size;
-    OID3D11RenderTargetView m_backbuffer_view;
+    OID3D11RenderTargetView m_swap_chain_buffer_view;
     OID3D11Texture2D m_depth_buffer;
     OID3D11DepthStencilView m_depth_view;
 
@@ -114,8 +114,8 @@ public:
 
             DXGI_ADAPTER_DESC adapter_description;
             adapter->GetDesc(&adapter_description);
-            std::string readable_feature_level = m_device->GetFeatureLevel() == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "11.1";
-            printf("DirectX 11 composer using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level.c_str());
+            const char* readable_feature_level = m_device->GetFeatureLevel() == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "11.1";
+            printf("DirectX 11 composer using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level);
 
             IDXGIFactory2* dxgi_factory2 = nullptr;
             hr = adapter->GetParent(IID_PPV_ARGS(&dxgi_factory2));
@@ -143,7 +143,7 @@ public:
             m_backbuffer_size = Vector2ui::zero();
 
             // Back- and depth buffer is initialized on demand when the output dimensions are known.
-            m_backbuffer_view = nullptr;
+            m_swap_chain_buffer_view = nullptr;
             m_depth_buffer = nullptr;
             m_depth_view = nullptr;
         }
@@ -181,21 +181,21 @@ public:
         Vector2ui current_backbuffer_size = Vector2ui(m_window.get_width(), m_window.get_height());
         if (m_backbuffer_size != current_backbuffer_size) {
             
-            { // Setup new backbuffer.
+            { // Setup swap chain buffer.
                 // https://msdn.microsoft.com/en-us/library/windows/desktop/bb205075(v=vs.85).aspx#Handling_Window_Resizing
 
                 m_render_context->OMSetRenderTargets(0, 0, 0);
-                if (m_backbuffer_view) m_backbuffer_view->Release();
+                if (m_swap_chain_buffer_view) m_swap_chain_buffer_view->Release();
 
                 HRESULT hr = m_swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
                 THROW_ON_FAILURE(hr);
 
-                ID3D11Texture2D* backbuffer;
-                hr = m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&backbuffer));
+                ID3D11Texture2D* swap_chain_buffer;
+                hr = m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&swap_chain_buffer));
                 THROW_ON_FAILURE(hr);
-                hr = m_device->CreateRenderTargetView(backbuffer, nullptr, &m_backbuffer_view);
+                hr = m_device->CreateRenderTargetView(swap_chain_buffer, nullptr, &m_swap_chain_buffer_view);
                 THROW_ON_FAILURE(hr);
-                backbuffer->Release();
+                swap_chain_buffer->Release();
             }
 
             { // Setup new depth buffer.
@@ -215,8 +215,8 @@ public:
                 depth_desc.CPUAccessFlags = 0;
                 depth_desc.MiscFlags = 0;
 
-                HRESULT hr = m_device->CreateTexture2D(&depth_desc, NULL, &m_depth_buffer);
-                m_device->CreateDepthStencilView(m_depth_buffer, NULL, &m_depth_view);
+                HRESULT hr = m_device->CreateTexture2D(&depth_desc, nullptr, &m_depth_buffer);
+                m_device->CreateDepthStencilView(m_depth_buffer, nullptr, &m_depth_view);
             }
 
             m_backbuffer_size = current_backbuffer_size;
@@ -227,7 +227,7 @@ public:
             if (renderer)
                 renderer->handle_updates();
 
-        m_render_context->OMSetRenderTargets(1, &m_backbuffer_view, m_depth_view);
+        m_render_context->OMSetRenderTargets(1, &m_swap_chain_buffer_view, m_depth_view);
         m_render_context->ClearDepthStencilView(m_depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
         // Render.
