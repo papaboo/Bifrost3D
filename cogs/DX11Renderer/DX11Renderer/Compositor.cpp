@@ -91,7 +91,7 @@ private:
     // Backbuffer members.
     Vector2ui m_backbuffer_size;
     OID3D11RenderTargetView m_swap_chain_buffer_view;
-    OID3D11Texture2D m_depth_buffer;
+    OID3D11RenderTargetView m_backbuffer_view;
     OID3D11DepthStencilView m_depth_view;
 
 public:
@@ -144,7 +144,6 @@ public:
 
             // Back- and depth buffer is initialized on demand when the output dimensions are known.
             m_swap_chain_buffer_view = nullptr;
-            m_depth_buffer = nullptr;
             m_depth_view = nullptr;
         }
     }
@@ -199,7 +198,6 @@ public:
             }
 
             { // Setup new depth buffer.
-                if (m_depth_buffer) m_depth_buffer->Release();
                 if (m_depth_view) m_depth_view->Release();
 
                 D3D11_TEXTURE2D_DESC depth_desc;
@@ -215,8 +213,9 @@ public:
                 depth_desc.CPUAccessFlags = 0;
                 depth_desc.MiscFlags = 0;
 
-                HRESULT hr = m_device->CreateTexture2D(&depth_desc, nullptr, &m_depth_buffer);
-                m_device->CreateDepthStencilView(m_depth_buffer, nullptr, &m_depth_view);
+                OID3D11Texture2D depth_buffer;
+                HRESULT hr = m_device->CreateTexture2D(&depth_desc, nullptr, &depth_buffer);
+                m_device->CreateDepthStencilView(depth_buffer, nullptr, &m_depth_view);
             }
 
             m_backbuffer_size = current_backbuffer_size;
