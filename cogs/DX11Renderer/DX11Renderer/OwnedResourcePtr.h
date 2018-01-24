@@ -52,6 +52,7 @@ public:
     inline operator bool() const { return resource != nullptr; }
 
     inline operator T*() { return resource; }
+    inline operator T&() { return *resource; }
     inline T* get() { return resource; }
     inline T* operator->() { return resource; }
     inline const T* const operator->() const { return resource; }
