@@ -25,6 +25,8 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/Renderer.cpp
     DX11Renderer/TextureManager.h
     DX11Renderer/TextureManager.cpp
+    DX11Renderer/ToneMapper.h
+    DX11Renderer/ToneMapper.cpp
     DX11Renderer/TransformManager.h
     DX11Renderer/TransformManager.cpp
     DX11Renderer/Types.h
@@ -39,6 +41,7 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/Shaders/IBLConvolution.hlsl
     DX11Renderer/Shaders/SphereLight.hlsl
     DX11Renderer/Shaders/SPTD.hlsl
+    DX11Renderer/Shaders/ToneMapping.hlsl
     DX11Renderer/Shaders/Utils.hlsl
     DX11Renderer/Shaders/VertexShader.hlsl
   )

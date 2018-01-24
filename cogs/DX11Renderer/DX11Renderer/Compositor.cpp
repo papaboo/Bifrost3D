@@ -7,9 +7,14 @@
 //-------------------------------------------------------------------------------------------------
 
 #include <DX11Renderer/Compositor.h>
+#include <DX11Renderer/ToneMapper.h>
 #include <DX11Renderer/Utils.h>
 
+#include <Cogwheel/Core/Engine.h>
 #include <Cogwheel/Core/Window.h>
+
+#include <algorithm>
+#include <codecvt>
 
 using namespace Cogwheel::Core;
 using namespace Cogwheel::Math;
@@ -91,8 +96,11 @@ private:
     // Backbuffer members.
     Vector2ui m_backbuffer_size;
     OID3D11RenderTargetView m_swap_chain_buffer_view;
-    OID3D11RenderTargetView m_backbuffer_view;
+    OID3D11RenderTargetView m_backbuffer_RTV;
+    OID3D11ShaderResourceView m_backbuffer_SRV;
     OID3D11DepthStencilView m_depth_view;
+
+    ToneMapper tone_mapper;
 
 public:
     Implementation(HWND& hwnd, const Window& window)
@@ -144,7 +152,17 @@ public:
 
             // Back- and depth buffer is initialized on demand when the output dimensions are known.
             m_swap_chain_buffer_view = nullptr;
+            m_backbuffer_RTV = nullptr;
+            m_backbuffer_SRV = nullptr;
             m_depth_view = nullptr;
+        }
+
+        { // Setup tonemapper
+            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+            std::wstring data_folder_path = converter.from_bytes(Engine::get_instance()->data_path());
+            std::wstring shader_folder_path = data_folder_path + L"DX11Renderer\\Shaders\\";
+
+            tone_mapper = ToneMapper(m_device, shader_folder_path);
         }
     }
 
@@ -197,7 +215,30 @@ public:
                 swap_chain_buffer->Release();
             }
 
-            { // Setup new depth buffer.
+            { // Setup backbuffer.
+                if (m_backbuffer_RTV) m_backbuffer_RTV->Release();
+                if (m_backbuffer_SRV) m_backbuffer_SRV->Release();
+
+                D3D11_TEXTURE2D_DESC buffer_desc;
+                buffer_desc.Width = current_backbuffer_size.x;
+                buffer_desc.Height = current_backbuffer_size.y;
+                buffer_desc.MipLevels = 1;
+                buffer_desc.ArraySize = 1;
+                buffer_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+                buffer_desc.SampleDesc.Count = 1;
+                buffer_desc.SampleDesc.Quality = 0;
+                buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+                buffer_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+                buffer_desc.CPUAccessFlags = 0;
+                buffer_desc.MiscFlags = 0;
+
+                OID3D11Texture2D backbuffer;
+                HRESULT hr = m_device->CreateTexture2D(&buffer_desc, nullptr, &backbuffer);
+                m_device->CreateRenderTargetView(backbuffer, nullptr, &m_backbuffer_RTV);
+                m_device->CreateShaderResourceView(backbuffer, nullptr, &m_backbuffer_SRV);
+            }
+
+            { // Setup depth buffer.
                 if (m_depth_view) m_depth_view->Release();
 
                 D3D11_TEXTURE2D_DESC depth_desc;
@@ -226,7 +267,7 @@ public:
             if (renderer)
                 renderer->handle_updates();
 
-        m_render_context->OMSetRenderTargets(1, &m_swap_chain_buffer_view, m_depth_view);
+        m_render_context->OMSetRenderTargets(1, &m_backbuffer_RTV, m_depth_view);
         m_render_context->ClearDepthStencilView(m_depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
         // Render.
@@ -250,6 +291,11 @@ public:
             
             Renderers::UID renderer = Cameras::get_renderer_ID(camera_ID);
             m_renderers[renderer]->render(camera_ID, int(ceilf(viewport.width)), int(ceilf(viewport.height)));
+        }
+
+        { // Tonemap
+            m_render_context->OMSetRenderTargets(1, &m_swap_chain_buffer_view, nullptr);
+            tone_mapper.tonemap(m_render_context, m_backbuffer_SRV);
         }
 
         // Present the backbuffer.
