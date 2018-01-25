@@ -526,6 +526,24 @@ int initializer(Cogwheel::Core::Engine& engine) {
 int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window, HWND& hwnd) {
     using namespace DX11Renderer;
 
+    class ToneMappingSwitcher {
+    public:
+        ToneMappingSwitcher(DX11Renderer::Compositor* compositor)
+            : m_compositor(compositor) { }
+
+        void handle(const Engine& engine) {
+            if (engine.get_keyboard()->was_released(Keyboard::Key::T))
+                m_compositor->next_tone_mapping();
+        }
+
+        static inline void handle_callback(Engine& engine, void* state) {
+            static_cast<ToneMappingSwitcher*>(state)->handle(engine);
+        }
+
+    private:
+        DX11Renderer::Compositor* m_compositor;
+    };
+
 #ifdef OPTIX_FOUND
     class OptiXBackendSwitcher {
     public:
@@ -569,6 +587,9 @@ int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Win
 #else
     compositor = Compositor::initialize(hwnd, window, Renderer::initialize).compositor;
 #endif
+
+    ToneMappingSwitcher* tone_mapping_switcher = new ToneMappingSwitcher(compositor);
+    engine.add_mutating_callback(ToneMappingSwitcher::handle_callback, tone_mapping_switcher);
 
     Renderers::UID default_renderer = *Renderers::begin();
     for (auto camera_ID : Cameras::get_iterable())
