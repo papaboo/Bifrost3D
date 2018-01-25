@@ -1,10 +1,10 @@
 // DirectX 11 tone mapper.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
-// ---------------------------------------------------------------------------
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+// ------------------------------------------------------------------------------------------------
 
 #ifndef _DX11RENDERER_RENDERER_TONE_MAPPER_H_
 #define _DX11RENDERER_RENDERER_TONE_MAPPER_H_
@@ -13,29 +13,63 @@
 
 namespace DX11Renderer {
 
+// ------------------------------------------------------------------------------------------------
+// Tone mapping implementation with support for various tonemappers.
+// Sources:
+// * https://mynameismjp.wordpress.com/2010/04/30/a-closer-look-at-tone-mapping/
+// * http://perso.univ-lyon1.fr/jean-claude.iehl/Public/educ/GAMA/2007/gdc07/Post-Processing_Pipeline.pdf
+// ------------------------------------------------------------------------------------------------
+enum class ToneMapping { Linear, Simple, Reinhard, Filmic };
+
 class ToneMapper {
 public:
+
     ToneMapper();
     ToneMapper(ID3D11Device1& device, const std::wstring& shader_folder_path);
 
     ToneMapper& operator=(ToneMapper&& rhs) {
-        m_vertex_shader = std::move(rhs.m_vertex_shader);
-        m_pixel_shader = std::move(rhs.m_pixel_shader);
-        m_sampler = std::move(rhs.m_sampler);
+        m_tone_mapping = rhs.m_tone_mapping;
+
+        m_fullscreen_VS = std::move(rhs.m_fullscreen_VS);
+        m_log_luminance_PS = std::move(rhs.m_log_luminance_PS);
+        m_linear_tonemapping_PS = std::move(rhs.m_linear_tonemapping_PS);
+        m_simple_tonemapping_PS = std::move(rhs.m_simple_tonemapping_PS);
+        m_reinhard_tonemapping_PS = std::move(rhs.m_reinhard_tonemapping_PS);
+        m_filmic_tonemapping_PS = std::move(rhs.m_filmic_tonemapping_PS);
+
+        m_pixel_sampler = std::move(rhs.m_pixel_sampler);
+        m_log_luminance_RTV = std::move(rhs.m_log_luminance_RTV);
+        m_log_luminance_SRV = std::move(rhs.m_log_luminance_SRV);
+        m_log_luminance_sampler = std::move(rhs.m_log_luminance_sampler);
         return *this;
     }
 
+    ToneMapping get_tone_mapping() const { return m_tone_mapping; }
+    void set_tone_mapping(ToneMapping tone_mapping) { m_tone_mapping = tone_mapping; }
+
     // Tonemaps the pixels and stores them in the bound render target.
-    void tonemap(ID3D11DeviceContext1& render_context, ID3D11ShaderResourceView* pixel_SRV);
+    void tonemap(ID3D11DeviceContext1& context, ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, 
+                 int width, int height);
 
 private:
     ToneMapper(ToneMapper& other) = delete;
     ToneMapper(ToneMapper&& other) = delete;
     ToneMapper& operator=(ToneMapper& rhs) = delete;
 
-    OID3D11VertexShader m_vertex_shader;
-    OID3D11PixelShader m_pixel_shader;
-    OID3D11SamplerState m_sampler;
+    ToneMapping m_tone_mapping;
+
+    OID3D11VertexShader m_fullscreen_VS;
+    OID3D11PixelShader m_log_luminance_PS;
+    OID3D11PixelShader m_linear_tonemapping_PS;
+    OID3D11PixelShader m_simple_tonemapping_PS;
+    OID3D11PixelShader m_reinhard_tonemapping_PS;
+    OID3D11PixelShader m_filmic_tonemapping_PS;
+    OID3D11SamplerState m_pixel_sampler;
+
+    int m_width, m_height;
+    OID3D11RenderTargetView m_log_luminance_RTV;
+    OID3D11ShaderResourceView m_log_luminance_SRV;
+    OID3D11SamplerState m_log_luminance_sampler;
 };
 
 } // NS DX11Renderer

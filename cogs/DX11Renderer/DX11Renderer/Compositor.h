@@ -71,6 +71,8 @@ public:
     bool uses_v_sync() const;
     void set_v_sync(bool use_v_sync);
 
+    void next_tone_mapping(); // TODO Remove when tonemapping parameters have been moved to the camera.
+
 private:
 
     Compositor(HWND& hwnd, const Cogwheel::Core::Window& window);

@@ -93,6 +93,10 @@ float length_squared(float3 v) {
     return dot(v, v);
 }
 
+float luma(float3 color) {
+    return dot(color, float3(0.299f, 0.587f, 0.114f));
+}
+
 float reciprocal_length(float3 v) {
     return rsqrt(length_squared(v));
 }

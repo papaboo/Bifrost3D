@@ -100,7 +100,7 @@ private:
     OID3D11ShaderResourceView m_backbuffer_SRV;
     OID3D11DepthStencilView m_depth_view;
 
-    ToneMapper tone_mapper;
+    ToneMapper m_tone_mapper;
 
 public:
     Implementation(HWND& hwnd, const Window& window)
@@ -162,7 +162,7 @@ public:
             std::wstring data_folder_path = converter.from_bytes(Engine::get_instance()->data_path());
             std::wstring shader_folder_path = data_folder_path + L"DX11Renderer\\Shaders\\";
 
-            tone_mapper = ToneMapper(m_device, shader_folder_path);
+            m_tone_mapper = ToneMapper(m_device, shader_folder_path);
         }
     }
 
@@ -293,17 +293,18 @@ public:
             m_renderers[renderer]->render(camera_ID, int(ceilf(viewport.width)), int(ceilf(viewport.height)));
         }
 
-        { // Tonemap
-            m_render_context->OMSetRenderTargets(1, &m_swap_chain_buffer_view, nullptr);
-            tone_mapper.tonemap(m_render_context, m_backbuffer_SRV);
-        }
-
         // Present the backbuffer.
+        m_tone_mapper.tonemap(m_render_context, m_backbuffer_SRV, m_swap_chain_buffer_view, m_backbuffer_size.x, m_backbuffer_size.y);
         m_swap_chain->Present(m_sync_interval, 0);
     }
 
     bool uses_v_sync() const { return m_sync_interval != 0; }
     void set_v_sync(bool use_v_sync) { m_sync_interval = unsigned int(use_v_sync); }
+    void next_tone_mapping() { 
+        int tone_mapping_index = (int)m_tone_mapper.get_tone_mapping();
+        int next_tone_mapping_index = (tone_mapping_index + 1) % 4;
+        m_tone_mapper.set_tone_mapping((ToneMapping)next_tone_mapping_index);
+    }
 };
 
 //----------------------------------------------------------------------------
@@ -340,5 +341,6 @@ IRenderer* Compositor::attach_renderer(RendererCreator renderer_creator) {
 void Compositor::render() { m_impl->render(); }
 bool Compositor::uses_v_sync() const { return m_impl->uses_v_sync(); }
 void Compositor::set_v_sync(bool use_v_sync) { m_impl->set_v_sync(use_v_sync); }
+void Compositor::next_tone_mapping() { m_impl->next_tone_mapping(); }
 
 } // NS DX11Renderer
