@@ -32,10 +32,10 @@ public:
 
     PrefixSum(ID3D11Device1& device, const std::wstring& shader_folder_path) {
         OID3DBlob reduce_shader_blob = compile_shader(shader_folder_path + L"Compute\\PrefixSum.hlsl", "cs_5_0", "reduce");
-        THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_shader_blob), NULL, &m_reduce_shader));
+        THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_shader_blob), nullptr, &m_reduce_shader));
 
         OID3DBlob downsweep_shader_blob = compile_shader(shader_folder_path + L"Compute\\PrefixSum.hlsl", "cs_5_0", "downsweep");
-        THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(downsweep_shader_blob), NULL, &m_downsweep_shader));
+        THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(downsweep_shader_blob), nullptr, &m_downsweep_shader));
 
         int4 outer_constants = { 1, 0, 0, 0 };
         THROW_ON_FAILURE(create_constant_buffer(device, outer_constants, &m_outer_constants));

@@ -95,7 +95,7 @@ public:
         uniforms_desc.CPUAccessFlags = 0;
         uniforms_desc.MiscFlags = 0;
 
-        HRESULT hr = device.CreateBuffer(&uniforms_desc, NULL, &m_lights_buffer);
+        HRESULT hr = device.CreateBuffer(&uniforms_desc, nullptr, &m_lights_buffer);
     }
 
     inline int active_light_count() const { return m_data.active_count; }
@@ -173,7 +173,7 @@ public:
                 }
             }
 
-            device_context.UpdateSubresource(m_lights_buffer, 0, NULL, &m_data, 0, 0);
+            device_context.UpdateSubresource(m_lights_buffer, 0, nullptr, &m_data, 0, 0);
         }
     }
 };

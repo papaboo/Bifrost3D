@@ -135,7 +135,7 @@ public:
             OID3DBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"VertexShader.hlsl", "vs_5_0", "main");
 
             // Create the shader objects.
-            HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shading.shader);
+            HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shading.shader);
             THROW_ON_FAILURE(hr);
 
             // Create the input layout
@@ -177,7 +177,7 @@ public:
             THROW_ON_FAILURE(hr);
 
             OID3DBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "opaque", fragment_macros);
-            hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_opaque.shader);
+            hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), nullptr, &m_opaque.shader);
             THROW_ON_FAILURE(hr);
         }
 
@@ -213,7 +213,7 @@ public:
             THROW_ON_FAILURE(hr);
 
             OID3DBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "transparent", fragment_macros);
-            hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), NULL, &m_transparent.shader);
+            hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), nullptr, &m_transparent.shader);
             THROW_ON_FAILURE(hr);
         }
 
@@ -227,10 +227,10 @@ public:
 
             // Sphere light visualization shaders.
             OID3DBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "vs_5_0", "vs");
-            HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_lights.vertex_shader);
+            HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_lights.vertex_shader);
             THROW_ON_FAILURE(hr);
             OID3DBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "ps_5_0", "ps");
-            hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), NULL, &m_lights.pixel_shader);
+            hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_lights.pixel_shader);
             THROW_ON_FAILURE(hr);
         }
     }
@@ -306,7 +306,7 @@ public:
             RGB env_tint = scene.get_environment_tint();
             scene_vars.environment_tint = { env_tint.r, env_tint.g, env_tint.b, float(scene.get_environment_map().get_index()) };
             scene_vars.inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
-            m_render_context->UpdateSubresource(m_scene_buffer, 0, NULL, &scene_vars, 0, 0);
+            m_render_context->UpdateSubresource(m_scene_buffer, 0, nullptr, &scene_vars, 0, 0);
             m_render_context->VSSetConstantBuffers(0, 1, &m_scene_buffer);
             m_render_context->PSSetConstantBuffers(0, 1, &m_scene_buffer);
         }
