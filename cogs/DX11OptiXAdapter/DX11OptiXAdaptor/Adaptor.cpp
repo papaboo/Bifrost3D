@@ -134,12 +134,12 @@ public:
             };
 
             ID3DBlob* vertex_shader_bytecode = compile_shader(vertex_src, "vs_5_0", "main_vs");
-            HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_bytecode), NULL, &m_vertex_shader);
+            HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_bytecode), nullptr, &m_vertex_shader);
             THROW_ON_FAILURE(hr);
             vertex_shader_bytecode->Release();
 
             ID3DBlob* pixel_shader_bytecode = compile_shader(pixel_src, "ps_5_0", "main_ps");
-            hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_bytecode), NULL, &m_pixel_shader);
+            hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_bytecode), nullptr, &m_pixel_shader);
             THROW_ON_FAILURE(hr);
             pixel_shader_bytecode->Release();
         }
@@ -172,7 +172,7 @@ public:
             void* cpu_buffer = m_render_target.optix_buffer->map();
             ID3D11Resource* dx_buffer = nullptr;
             m_render_target.dx_SRV->GetResource(&dx_buffer);
-            m_render_context->UpdateSubresource(dx_buffer, 0, NULL, cpu_buffer, 0, 0);
+            m_render_context->UpdateSubresource(dx_buffer, 0, nullptr, cpu_buffer, 0, 0);
             m_render_target.optix_buffer->unmap();
         }
 #else
@@ -260,7 +260,7 @@ public:
 
         // Update the constant buffer to reflect the new dimensions.
         int constant_data[4] = { width, height, 0, 0 };
-        m_render_context->UpdateSubresource(m_constant_buffer, 0, NULL, &constant_data, 0, 0);
+        m_render_context->UpdateSubresource(m_constant_buffer, 0, nullptr, &constant_data, 0, 0);
 
         m_render_target.width = width;
         m_render_target.height = height;
