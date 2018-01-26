@@ -43,8 +43,8 @@ using Cogwheel::Input::Keyboard;
 using Cogwheel::Input::Mouse;
 using Cogwheel::Math::Vector2i;
 
-static Keyboard* g_keyboard = NULL;
-static Mouse* g_mouse = NULL;
+static Keyboard* g_keyboard = nullptr;
+static Mouse* g_mouse = nullptr;
 
 namespace GLFWDriver {
 
@@ -64,7 +64,7 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
     }
 
     Cogwheel::Core::Window& engine_window = engine.get_window();
-    GLFWwindow* window = glfwCreateWindow(engine_window.get_width(), engine_window.get_height(), engine_window.get_name().c_str(), NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(engine_window.get_width(), engine_window.get_height(), engine_window.get_name().c_str(), nullptr, nullptr);
 
     if (!window) {
         glfwTerminate();
