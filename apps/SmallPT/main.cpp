@@ -71,7 +71,7 @@ void main(int argc, char** argv) {
     if (!glfwInit())
         exit(EXIT_FAILURE);
 
-    GLFWwindow* window = glfwCreateWindow(256, 196, "smallpt", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(256, 196, "smallpt", nullptr, nullptr);
 
     if (!window) {
         glfwTerminate();
