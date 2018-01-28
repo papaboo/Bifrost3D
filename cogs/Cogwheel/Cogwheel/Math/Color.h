@@ -17,7 +17,6 @@ namespace Cogwheel {
 namespace Math {
 
 struct RGB final {
-public:
     typedef float value_type;
     static const int N = 3;
 
@@ -176,7 +175,6 @@ public:
 };
 
 struct RGBA final {
-public:
     typedef float value_type;
     static const int N = 4;
 
