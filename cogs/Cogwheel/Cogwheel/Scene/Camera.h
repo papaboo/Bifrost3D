@@ -1,10 +1,10 @@
 // Cogwheel scene camera.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Copyright (C) 2015, Cogwheel. See AUTHORS.txt for authors
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
-// ---------------------------------------------------------------------------
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+// ------------------------------------------------------------------------------------------------
 
 #ifndef _COGWHEEL_SCENE_CAMERA_H_
 #define _COGWHEEL_SCENE_CAMERA_H_
@@ -14,19 +14,20 @@
 #include <Cogwheel/Math/Matrix.h>
 #include <Cogwheel/Math/Ray.h>
 #include <Cogwheel/Math/Rect.h>
+#include <Cogwheel/Math/ToneMapping.h>
 #include <Cogwheel/Math/Transform.h>
 #include <Cogwheel/Scene/SceneRoot.h>
 
 namespace Cogwheel {
 namespace Scene {
 
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Container for cogwheel matrix cameras.
 // Future work
 // * Iterators that iterates through the cameras in order of their render indices.
 // * Reference a backbuffer or render_target to allow cameras to render to windows and FBO's.
 // * Change flags.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 class Cameras final {
 public:
     typedef Core::TypedUIDGenerator<Cameras> UIDGenerator;
@@ -84,6 +85,9 @@ public:
     static Math::Rectf get_viewport(Cameras::UID camera_ID) { return m_viewports[camera_ID]; }
     static void set_viewport(Cameras::UID camera_ID, Math::Rectf projectionport) { m_viewports[camera_ID] = projectionport; }
 
+    static void set_tone_mapping_parameters(Cameras::UID camera_ID, Math::ToneMapping::Parameters params) { m_tone_mapping_parameters[camera_ID] = params; }
+    static Math::ToneMapping::Parameters get_tone_mapping_parameters(Cameras::UID camera_ID) { return m_tone_mapping_parameters[camera_ID]; }
+
 private:
 
     static void reserve_camera_data(unsigned int new_capacity, unsigned int old_capacity);
@@ -98,6 +102,7 @@ private:
     static unsigned int* m_render_indices;
     static Math::Rectf* m_viewports;
     static Core::Renderers::UID* m_renderer_IDs;
+    static Math::ToneMapping::Parameters* m_tone_mapping_parameters;
 };
 
 namespace CameraUtils {
