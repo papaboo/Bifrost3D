@@ -408,7 +408,7 @@ struct Renderer::Implementation {
                 if (Meshes::get_changes(mesh_ID) == Meshes::Change::Destroyed) {
                     if (mesh_ID < meshes.size() && meshes[mesh_ID]) {
                         meshes[mesh_ID]->destroy();
-                        meshes[mesh_ID] = NULL;
+                        meshes[mesh_ID] = nullptr;
                     }
                 }
 
@@ -429,7 +429,7 @@ struct Renderer::Implementation {
                     if (Images::get_changes(image_ID) == Images::Change::Destroyed) {
                         if (images[image_ID]) {
                             images[image_ID]->destroy();
-                            images[image_ID] = NULL;
+                            images[image_ID] = nullptr;
                         }
                     } else if (Images::get_changes(image_ID).is_set(Images::Change::Created)) {
                         RTformat pixel_format = RT_FORMAT_UNKNOWN;
@@ -470,7 +470,7 @@ struct Renderer::Implementation {
                     if (Textures::get_changes(texture_ID) == Textures::Change::Destroyed) {
                         if (texture_ID < textures.size() && textures[texture_ID]) {
                             textures[texture_ID]->destroy();
-                            textures[texture_ID] = NULL;
+                            textures[texture_ID] = nullptr;
                         }
                     }
 
@@ -722,7 +722,7 @@ struct Renderer::Implementation {
                         optix::Transform& optixTransform = transforms[scene_node_index];
                         root_node->removeChild(optixTransform);
                         optixTransform->destroy();
-                        transforms[scene_node_index] = NULL;
+                        transforms[scene_node_index] = nullptr;
 
                         models_changed = true;
                     }
