@@ -33,10 +33,9 @@ Varyings fullscreen_vs(uint vertex_ID : SV_VertexID) {
 // ------------------------------------------------------------------------------------------------
 
 Texture2D pixels : register(t0);
-SamplerState pixel_sampler : register(s0);
 
 float4 log_luminance_ps(Varyings input) : SV_TARGET {
-    float3 pixel = pixels.SampleLevel(pixel_sampler, input.texcoord, 0).rgb;
+    float3 pixel = pixels[int2(input.position.xy)].rgb;
     float log_luminance = log(luma(pixel));
     return float4(max(log_luminance, 0.0001f), 1, 1, 1);
 }
@@ -107,11 +106,11 @@ float3 tonemap_luminance_filmic_ALU(float3 color) {
 // ------------------------------------------------------------------------------------------------
 
 float4 linear_tonemapping_ps(Varyings input) : SV_TARGET {
-    return pixels.SampleLevel(pixel_sampler, input.texcoord, 0);
+    return pixels[int2(input.position.xy)];
 }
 
 float4 simple_tonemapping_ps(Varyings input) : SV_TARGET {
-    float3 color = pixels.SampleLevel(pixel_sampler, input.texcoord, 0).rgb;
+    float3 color = pixels[int2(input.position.xy)].rgb;
     float luminance = luma(color);
     float tonemapped_luminance = luminance / (1 + luminance);
     return float4(color * (tonemapped_luminance / luminance), 1);
@@ -119,7 +118,7 @@ float4 simple_tonemapping_ps(Varyings input) : SV_TARGET {
 
 float4 reinhard_tonemapping_ps(Varyings input) : SV_TARGET {
     float average_luminance = get_average_luminance(input.texcoord);
-    float3 color = pixels.SampleLevel(pixel_sampler, input.texcoord, 0).rgb;
+    float3 color = pixels[int2(input.position.xy)].rgb;
     color = tonemap_reinhard(color, 1.0f, average_luminance, 9.0);
     return float4(color, 1);
 }
@@ -129,6 +128,6 @@ float4 filmic_tonemapping_ps(Varyings input) : SV_TARGET {
 
     float exposure = dynamic_exposure(average_luminance, 0.0);
 
-    float3 color = exposure * pixels.SampleLevel(pixel_sampler, input.texcoord, 0).rgb;
+    float3 color = exposure * pixels[int2(input.position.xy)].rgb;
     return float4(tonemap_luminance_filmic_ALU(color), 1.0);
 }

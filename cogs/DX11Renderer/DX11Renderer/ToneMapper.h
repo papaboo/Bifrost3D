@@ -35,7 +35,6 @@ public:
         m_reinhard_tonemapping_PS = std::move(rhs.m_reinhard_tonemapping_PS);
         m_filmic_tonemapping_PS = std::move(rhs.m_filmic_tonemapping_PS);
 
-        m_pixel_sampler = std::move(rhs.m_pixel_sampler);
         m_log_luminance_RTV = std::move(rhs.m_log_luminance_RTV);
         m_log_luminance_SRV = std::move(rhs.m_log_luminance_SRV);
         m_log_luminance_sampler = std::move(rhs.m_log_luminance_sampler);
@@ -58,7 +57,6 @@ private:
     OID3D11PixelShader m_simple_tonemapping_PS;
     OID3D11PixelShader m_reinhard_tonemapping_PS;
     OID3D11PixelShader m_filmic_tonemapping_PS;
-    OID3D11SamplerState m_pixel_sampler;
 
     int m_width, m_height;
     OID3D11RenderTargetView m_log_luminance_RTV;

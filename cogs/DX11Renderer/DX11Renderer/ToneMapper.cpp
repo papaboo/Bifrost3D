@@ -16,7 +16,6 @@ namespace DX11Renderer {
 ToneMapper::ToneMapper()
     : m_fullscreen_VS(nullptr), m_log_luminance_PS(nullptr)
     , m_linear_tonemapping_PS(nullptr), m_simple_tonemapping_PS(nullptr), m_reinhard_tonemapping_PS(nullptr), m_filmic_tonemapping_PS(nullptr)
-    , m_pixel_sampler(nullptr)
     , m_width(0), m_height(0), m_log_luminance_RTV(nullptr), m_log_luminance_SRV(nullptr), m_log_luminance_sampler(nullptr){ }
 
 ToneMapper::ToneMapper(ID3D11Device1& device, const std::wstring& shader_folder_path)
@@ -44,20 +43,6 @@ ToneMapper::ToneMapper(ID3D11Device1& device, const std::wstring& shader_folder_
         m_filmic_tonemapping_PS = create_pixel_shader("filmic_tonemapping_ps");
     }
 
-    { // Setup point sampler for pixels
-        D3D11_SAMPLER_DESC sampler_desc = {};
-        sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-        sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-        sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-        sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-        sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-        sampler_desc.MinLOD = 0;
-        sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
-
-        HRESULT hr = device.CreateSamplerState(&sampler_desc, &m_pixel_sampler);
-        THROW_ON_FAILURE(hr);
-    }
-
     { // Setup interpolation sampler for log average image.
         D3D11_SAMPLER_DESC sampler_desc = {};
         sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -79,7 +64,6 @@ void ToneMapper::tonemap(ID3D11DeviceContext1& context, ToneMapping::Parameters 
 
     // Setup general state, such as vertex shader and sampler.
     context.VSSetShader(m_fullscreen_VS, 0, 0);
-    context.PSSetSamplers(0, 1, &m_pixel_sampler);
 
     bool single_pass = parameters.mapping == ToneMapping::Operator::Linear || parameters.mapping == ToneMapping::Operator::Simple;
     if (single_pass) {
