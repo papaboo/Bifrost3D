@@ -37,7 +37,8 @@ SamplerState pixel_sampler : register(s0);
 
 float4 log_luminance_ps(Varyings input) : SV_TARGET {
     float3 pixel = pixels.SampleLevel(pixel_sampler, input.texcoord, 0).rgb;
-    return float4(log(luma(pixel)), 1, 1, 1);
+    float log_luminance = log(luma(pixel));
+    return float4(max(log_luminance, 0.0001f), 1, 1, 1);
 }
 
 // ------------------------------------------------------------------------------------------------
