@@ -206,6 +206,28 @@ private:
     Cameras::UID m_camera_ID;
 };
 
+class ToneMappingSwitcher {
+public:
+    ToneMappingSwitcher(Cameras::UID camera_ID)
+        : m_camera_ID(camera_ID) { }
+
+    void handle(const Engine& engine) {
+        if (engine.get_keyboard()->was_released(Keyboard::Key::T)) {
+            auto params = Cameras::get_tone_mapping_parameters(m_camera_ID);
+            int operater_index = (int)params.mapping;
+            params.mapping = ToneMapping::Operator((operater_index + 1) % 4);
+            Cameras::set_tone_mapping_parameters(m_camera_ID, params);
+        }
+    }
+
+    static inline void handle_callback(Engine& engine, void* state) {
+        static_cast<ToneMappingSwitcher*>(state)->handle(engine);
+    }
+
+private:
+    Cameras::UID m_camera_ID;
+};
+
 static inline void update_FPS(Engine& engine, void*) {
     static const int COUNT = 8;
     static float delta_times[COUNT] = { 1e30f, 1e30f, 1e30f, 1e30f, 1e30f, 1e30f, 1e30f, 1e30f };
@@ -518,6 +540,8 @@ int initializer(Cogwheel::Core::Engine& engine) {
     engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
     RenderSwapper* render_swapper = new RenderSwapper(cam_ID);
     engine.add_mutating_callback(RenderSwapper::handle_callback, render_swapper);
+    ToneMappingSwitcher* tone_mapping_switcher = new ToneMappingSwitcher(cam_ID);
+    engine.add_mutating_callback(ToneMappingSwitcher::handle_callback, tone_mapping_switcher);
     engine.add_mutating_callback(update_FPS, nullptr);
 
     return 0;
@@ -525,24 +549,6 @@ int initializer(Cogwheel::Core::Engine& engine) {
 
 int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window, HWND& hwnd) {
     using namespace DX11Renderer;
-
-    class ToneMappingSwitcher {
-    public:
-        ToneMappingSwitcher(DX11Renderer::Compositor* compositor)
-            : m_compositor(compositor) { }
-
-        void handle(const Engine& engine) {
-            if (engine.get_keyboard()->was_released(Keyboard::Key::T))
-                m_compositor->next_tone_mapping();
-        }
-
-        static inline void handle_callback(Engine& engine, void* state) {
-            static_cast<ToneMappingSwitcher*>(state)->handle(engine);
-        }
-
-    private:
-        DX11Renderer::Compositor* m_compositor;
-    };
 
 #ifdef OPTIX_FOUND
     class OptiXBackendSwitcher {
@@ -587,9 +593,6 @@ int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Win
 #else
     compositor = Compositor::initialize(hwnd, window, Renderer::initialize).compositor;
 #endif
-
-    ToneMappingSwitcher* tone_mapping_switcher = new ToneMappingSwitcher(compositor);
-    engine.add_mutating_callback(ToneMappingSwitcher::handle_callback, tone_mapping_switcher);
 
     Renderers::UID default_renderer = *Renderers::begin();
     for (auto camera_ID : Cameras::get_iterable())

@@ -294,17 +294,14 @@ public:
         }
 
         // Present the backbuffer.
-        m_tone_mapper.tonemap(m_render_context, m_backbuffer_SRV, m_swap_chain_buffer_view, m_backbuffer_size.x, m_backbuffer_size.y);
+        Cameras::UID camera_ID = *Cameras::get_iterable().begin();
+        auto tone_mapping_params = Cameras::get_tone_mapping_parameters(camera_ID);
+        m_tone_mapper.tonemap(m_render_context, tone_mapping_params, m_backbuffer_SRV, m_swap_chain_buffer_view, m_backbuffer_size.x, m_backbuffer_size.y);
         m_swap_chain->Present(m_sync_interval, 0);
     }
 
     bool uses_v_sync() const { return m_sync_interval != 0; }
     void set_v_sync(bool use_v_sync) { m_sync_interval = unsigned int(use_v_sync); }
-    void next_tone_mapping() { 
-        int tone_mapping_index = (int)m_tone_mapper.get_tone_mapping();
-        int next_tone_mapping_index = (tone_mapping_index + 1) % 4;
-        m_tone_mapper.set_tone_mapping((ToneMapping)next_tone_mapping_index);
-    }
 };
 
 //----------------------------------------------------------------------------
@@ -341,6 +338,5 @@ IRenderer* Compositor::attach_renderer(RendererCreator renderer_creator) {
 void Compositor::render() { m_impl->render(); }
 bool Compositor::uses_v_sync() const { return m_impl->uses_v_sync(); }
 void Compositor::set_v_sync(bool use_v_sync) { m_impl->set_v_sync(use_v_sync); }
-void Compositor::next_tone_mapping() { m_impl->next_tone_mapping(); }
 
 } // NS DX11Renderer

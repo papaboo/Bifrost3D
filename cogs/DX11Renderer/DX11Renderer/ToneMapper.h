@@ -9,6 +9,8 @@
 #ifndef _DX11RENDERER_RENDERER_TONE_MAPPER_H_
 #define _DX11RENDERER_RENDERER_TONE_MAPPER_H_
 
+#include <Cogwheel/Math/ToneMapping.h>
+
 #include <DX11Renderer/Types.h>
 
 namespace DX11Renderer {
@@ -19,8 +21,6 @@ namespace DX11Renderer {
 // * https://mynameismjp.wordpress.com/2010/04/30/a-closer-look-at-tone-mapping/
 // * http://perso.univ-lyon1.fr/jean-claude.iehl/Public/educ/GAMA/2007/gdc07/Post-Processing_Pipeline.pdf
 // ------------------------------------------------------------------------------------------------
-enum class ToneMapping { Linear, Simple, Reinhard, Filmic };
-
 class ToneMapper {
 public:
 
@@ -28,8 +28,6 @@ public:
     ToneMapper(ID3D11Device1& device, const std::wstring& shader_folder_path);
 
     ToneMapper& operator=(ToneMapper&& rhs) {
-        m_tone_mapping = rhs.m_tone_mapping;
-
         m_fullscreen_VS = std::move(rhs.m_fullscreen_VS);
         m_log_luminance_PS = std::move(rhs.m_log_luminance_PS);
         m_linear_tonemapping_PS = std::move(rhs.m_linear_tonemapping_PS);
@@ -44,19 +42,15 @@ public:
         return *this;
     }
 
-    ToneMapping get_tone_mapping() const { return m_tone_mapping; }
-    void set_tone_mapping(ToneMapping tone_mapping) { m_tone_mapping = tone_mapping; }
-
     // Tonemaps the pixels and stores them in the bound render target.
-    void tonemap(ID3D11DeviceContext1& context, ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, 
+    void tonemap(ID3D11DeviceContext1& context, Cogwheel::Math::ToneMapping::Parameters parameters,
+                 ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV,
                  int width, int height);
 
 private:
     ToneMapper(ToneMapper& other) = delete;
     ToneMapper(ToneMapper&& other) = delete;
     ToneMapper& operator=(ToneMapper& rhs) = delete;
-
-    ToneMapping m_tone_mapping;
 
     OID3D11VertexShader m_fullscreen_VS;
     OID3D11PixelShader m_log_luminance_PS;

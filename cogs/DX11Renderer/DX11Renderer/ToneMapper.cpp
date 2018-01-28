@@ -9,6 +9,8 @@
 #include <DX11Renderer/ToneMapper.h>
 #include <DX11Renderer/Utils.h>
 
+using namespace Cogwheel::Math;
+
 namespace DX11Renderer {
 
 ToneMapper::ToneMapper()
@@ -18,7 +20,7 @@ ToneMapper::ToneMapper()
     , m_width(0), m_height(0), m_log_luminance_RTV(nullptr), m_log_luminance_SRV(nullptr), m_log_luminance_sampler(nullptr){ }
 
 ToneMapper::ToneMapper(ID3D11Device1& device, const std::wstring& shader_folder_path)
-    : m_tone_mapping(ToneMapping::Linear), m_width(0), m_height(0), m_log_luminance_RTV(nullptr), m_log_luminance_SRV(nullptr) {
+    : m_width(0), m_height(0), m_log_luminance_RTV(nullptr), m_log_luminance_SRV(nullptr) {
 
     { // Setup shaders
         const std::wstring shader_filename = shader_folder_path + L"ToneMapping.hlsl";
@@ -71,19 +73,20 @@ ToneMapper::ToneMapper(ID3D11Device1& device, const std::wstring& shader_folder_
     }
 }
 
-void ToneMapper::tonemap(ID3D11DeviceContext1& context, ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, 
+void ToneMapper::tonemap(ID3D11DeviceContext1& context, ToneMapping::Parameters parameters, 
+                         ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, 
                          int width, int height) {
 
     // Setup general state, such as vertex shader and sampler.
     context.VSSetShader(m_fullscreen_VS, 0, 0);
     context.PSSetSamplers(0, 1, &m_pixel_sampler);
 
-    bool single_pass = m_tone_mapping == ToneMapping::Linear || m_tone_mapping == ToneMapping::Simple;
+    bool single_pass = parameters.mapping == ToneMapping::Operator::Linear || parameters.mapping == ToneMapping::Operator::Simple;
     if (single_pass) {
         context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
-        if (m_tone_mapping == ToneMapping::Linear)
+        if (parameters.mapping == ToneMapping::Operator::Linear)
             context.PSSetShader(m_linear_tonemapping_PS, 0, 0);
-        else
+        else // parameters.mapping == ToneMapping::Operator::Simple
             context.PSSetShader(m_simple_tonemapping_PS, 0, 0);
 
         ID3D11ShaderResourceView* srvs[2] = { pixel_SRV, m_log_luminance_SRV };
@@ -140,9 +143,9 @@ void ToneMapper::tonemap(ID3D11DeviceContext1& context, ID3D11ShaderResourceView
 
         { // Tonemap and render into backbuffer.
             context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
-            if (m_tone_mapping == ToneMapping::Reinhard)
+            if (parameters.mapping == ToneMapping::Operator::Reinhard)
                 context.PSSetShader(m_reinhard_tonemapping_PS, 0, 0);
-            else
+            else // parameters.mapping == ToneMapping::Operator::Filmic
                 context.PSSetShader(m_filmic_tonemapping_PS, 0, 0);
 
             ID3D11ShaderResourceView* srvs[2] = { pixel_SRV, m_log_luminance_SRV };
