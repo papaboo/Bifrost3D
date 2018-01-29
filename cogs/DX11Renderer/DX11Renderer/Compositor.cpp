@@ -13,9 +13,6 @@
 #include <Cogwheel/Core/Engine.h>
 #include <Cogwheel/Core/Window.h>
 
-#include <algorithm>
-#include <codecvt>
-
 using namespace Cogwheel::Core;
 using namespace Cogwheel::Math;
 using namespace Cogwheel::Scene;
@@ -86,6 +83,7 @@ OID3D11Device1 create_performant_device1() {
 class Compositor::Implementation {
 private:
     const Window& m_window;
+    const std::wstring m_data_folder_path;
     std::vector<IRenderer*> m_renderers;
 
     OID3D11Device1 m_device;
@@ -103,8 +101,8 @@ private:
     ToneMapper m_tone_mapper;
 
 public:
-    Implementation(HWND& hwnd, const Window& window)
-        : m_window(window) {
+    Implementation(HWND& hwnd, const Window& window, const std::wstring& data_folder_path)
+        : m_window(window), m_data_folder_path(data_folder_path) {
 
         m_device = create_performant_device1();
         m_device->GetImmediateContext1(&m_render_context);
@@ -158,10 +156,7 @@ public:
         }
 
         { // Setup tonemapper
-            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-            std::wstring data_folder_path = converter.from_bytes(Engine::get_instance()->data_path());
-            std::wstring shader_folder_path = data_folder_path + L"DX11Renderer\\Shaders\\";
-
+            std::wstring shader_folder_path = m_data_folder_path + L"DX11Renderer\\Shaders\\";
             m_tone_mapper = ToneMapper(m_device, shader_folder_path);
         }
     }
@@ -176,7 +171,7 @@ public:
     }
 
     IRenderer* attach_renderer(RendererCreator renderer_creator) {
-        IRenderer* renderer = renderer_creator(*m_device, m_window.get_width(), m_window.get_height());
+        IRenderer* renderer = renderer_creator(*m_device, m_window.get_width(), m_window.get_height(), m_data_folder_path);
         if (renderer == nullptr)
             return nullptr;
 
@@ -307,13 +302,16 @@ public:
 //----------------------------------------------------------------------------
 // DirectX 11 compositor.
 //----------------------------------------------------------------------------
-Compositor::Initialization Compositor::initialize(HWND& hwnd, const Cogwheel::Core::Window& window, RendererCreator renderer_creator) {
-    Compositor* c = new Compositor(hwnd, window);
+Compositor::Initialization Compositor::initialize(HWND& hwnd, const Cogwheel::Core::Window& window, 
+                                                  const std::wstring& data_folder_path, RendererCreator renderer_creator) {
+    assert(renderer_creator != nullptr);
+
+    Compositor* c = new Compositor(hwnd, window, data_folder_path);
     if (!c->m_impl->is_valid()) {
         delete c;
         return { nullptr, nullptr };
     }
-    
+
     IRenderer* renderer = c->attach_renderer(renderer_creator);
     if (renderer == nullptr) {
         delete c;
@@ -323,8 +321,8 @@ Compositor::Initialization Compositor::initialize(HWND& hwnd, const Cogwheel::Co
     return { c, renderer };
 }
 
-Compositor::Compositor(HWND& hwnd, const Cogwheel::Core::Window& window) {
-    m_impl = new Implementation(hwnd, window);
+Compositor::Compositor(HWND& hwnd, const Cogwheel::Core::Window& window, const std::wstring& data_folder_path) {
+    m_impl = new Implementation(hwnd, window, data_folder_path);
 }
 
 Compositor::~Compositor() {

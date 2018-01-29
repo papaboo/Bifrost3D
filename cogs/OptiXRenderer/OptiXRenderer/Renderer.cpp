@@ -207,7 +207,7 @@ struct Renderer::Implementation {
         optix::Geometry area_lights_geometry;
     } lights;
 
-    Implementation(int cuda_device_ID, int width_hint, int height_hint)
+    Implementation(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path)
     : backend(Backend::PathTracing), backend_impl(new SimpleBackend(EntryPoints::PathTracing)) {
 
         device_IDs = { -1, -1 };
@@ -235,8 +235,7 @@ struct Renderer::Implementation {
 
         accumulations = 0u;
 
-        std::string shader_prefix = Engine::get_instance()->data_path() + "OptiXRenderer\\ptx\\OptiXRenderer_generated_";
-
+        std::string shader_prefix = data_folder_path + "OptiXRenderer\\ptx\\OptiXRenderer_generated_";
         auto get_ptx_path = [](const std::string& shader_prefix, const std::string& shader_filename) -> std::string {
             return shader_prefix + shader_filename + ".cu.ptx";
         };
@@ -883,9 +882,9 @@ struct Renderer::Implementation {
 // Renderer
 // ------------------------------------------------------------------------------------------------
 
-Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hint) {
+Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path) {
     try {
-        Renderer* r = new Renderer(cuda_device_ID, width_hint, height_hint);
+        Renderer* r = new Renderer(cuda_device_ID, width_hint, height_hint, data_folder_path);
         if (r->m_impl->is_valid())
             return r;
         else {
@@ -898,8 +897,8 @@ Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hi
     }
 }
 
-Renderer::Renderer(int cuda_device_ID, int width_hint, int height_hint) 
-    : m_impl(new Implementation(cuda_device_ID, width_hint, height_hint)) {}
+Renderer::Renderer(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path)
+    : m_impl(new Implementation(cuda_device_ID, width_hint, height_hint, data_folder_path)) {}
 
 float Renderer::get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const {
     return m_impl->scene_epsilon;

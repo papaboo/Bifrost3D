@@ -35,6 +35,7 @@
 #include <ObjLoader/ObjLoader.h>
 #include <StbImageLoader/StbImageLoader.h>
 
+#include <codecvt>
 #include <cstdio>
 #include <iostream>
 #include <io.h>
@@ -550,6 +551,9 @@ int initializer(Cogwheel::Core::Engine& engine) {
 int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window, HWND& hwnd) {
     using namespace DX11Renderer;
 
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    std::wstring data_folder_path = converter.from_bytes(engine.data_path());
+
 #ifdef OPTIX_FOUND
     class OptiXBackendSwitcher {
     public:
@@ -577,11 +581,11 @@ int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Win
 
     DX11OptiXAdaptor::Adaptor* optix_adaptor = nullptr;
     if (rasterizer_enabled) {
-        compositor = Compositor::initialize(hwnd, window, Renderer::initialize).compositor;
+        compositor = Compositor::initialize(hwnd, window, data_folder_path, Renderer::initialize).compositor;
         if (optix_enabled)
             optix_adaptor = (DX11OptiXAdaptor::Adaptor*)compositor->attach_renderer(DX11OptiXAdaptor::Adaptor::initialize);
     } else {
-        auto initilization = Compositor::initialize(hwnd, window, DX11OptiXAdaptor::Adaptor::initialize);
+        auto initilization = Compositor::initialize(hwnd, window, data_folder_path, DX11OptiXAdaptor::Adaptor::initialize);
         compositor = initilization.compositor;
         optix_adaptor = (DX11OptiXAdaptor::Adaptor*)initilization.renderer;
     }
@@ -591,7 +595,7 @@ int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Win
         engine.add_mutating_callback(OptiXBackendSwitcher::handle_callback, backend_switcher);
     }
 #else
-    compositor = Compositor::initialize(hwnd, window, Renderer::initialize).compositor;
+    compositor = Compositor::initialize(hwnd, window, data_folder_path, Renderer::initialize).compositor;
 #endif
 
     Renderers::UID default_renderer = *Renderers::begin();

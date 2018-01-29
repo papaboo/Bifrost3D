@@ -22,6 +22,8 @@
 #include <D3DCompiler.h>
 #undef RGB
 
+#include <codecvt>
+
 // #define DISABLE_INTEROP 1
 
 namespace DX11OptiXAdaptor {
@@ -58,7 +60,7 @@ public:
 
     OptiXRenderer::Renderer* m_optix_renderer;
 
-    Implementation(ID3D11Device1& device, int width_hint, int height_hint)
+    Implementation(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path)
         : m_device(device) {
 
         device.GetImmediateContext1(&m_render_context);
@@ -78,7 +80,9 @@ public:
             adapter->Release();
 
             // Create OptiX Renderer on device.
-            m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, width_hint, height_hint);
+            std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+            std::string data_path = converter.to_bytes(data_folder_path);
+            m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, width_hint, height_hint, data_path);
         }
 
         {
@@ -267,12 +271,12 @@ public:
     }
 };
 
-DX11Renderer::IRenderer* Adaptor::initialize(ID3D11Device1& device, int width_hint, int height_hint) {
-    return new Adaptor(device, width_hint, height_hint);
+DX11Renderer::IRenderer* Adaptor::initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path) {
+    return new Adaptor(device, width_hint, height_hint, data_folder_path);
 }
 
-Adaptor::Adaptor(ID3D11Device1& device, int width_hint, int height_hint) {
-    m_impl = new Implementation(device, width_hint, height_hint);
+Adaptor::Adaptor(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path) {
+    m_impl = new Implementation(device, width_hint, height_hint, data_folder_path);
     m_renderer_ID = Cogwheel::Core::Renderers::create("OptiXRenderer");
 }
 

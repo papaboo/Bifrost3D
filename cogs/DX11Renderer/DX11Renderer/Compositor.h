@@ -41,7 +41,7 @@ public:
     virtual void render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) = 0;
 };
 
-typedef IRenderer*(*RendererCreator)(ID3D11Device1&, int width_hint, int height_hint);
+typedef IRenderer*(*RendererCreator)(ID3D11Device1&, int width_hint, int height_hint, const std::wstring& data_folder_path);
 
 //-------------------------------------------------------------------------------------------------
 // Utility function to create a 'performant' DX11 device.
@@ -61,7 +61,7 @@ public:
         Compositor* compositor;
         IRenderer* renderer;
     };
-    static Initialization initialize(HWND& hwnd, const Cogwheel::Core::Window& window, RendererCreator renderer_creator);
+    static Initialization initialize(HWND& hwnd, const Cogwheel::Core::Window& window, const std::wstring& data_folder_path, RendererCreator renderer_creator);
     ~Compositor();
 
     IRenderer* attach_renderer(RendererCreator renderer_creator);
@@ -71,11 +71,9 @@ public:
     bool uses_v_sync() const;
     void set_v_sync(bool use_v_sync);
 
-    void next_tone_mapping(); // TODO Remove when tonemapping parameters have been moved to the camera.
-
 private:
 
-    Compositor(HWND& hwnd, const Cogwheel::Core::Window& window);
+    Compositor(HWND& hwnd, const Cogwheel::Core::Window& window, const std::wstring& data_folder_path);
 
     // Delete copy constructors to avoid having multiple versions of the same Compositor.
     Compositor(Compositor& other) = delete;

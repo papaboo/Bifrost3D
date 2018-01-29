@@ -103,16 +103,10 @@ private:
     std::wstring m_shader_folder_path;
 
 public:
-    Implementation(ID3D11Device1& device, int width_hint, int height_hint) 
-        : m_device(device) {
+    Implementation(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path)
+        : m_device(device), m_shader_folder_path(data_folder_path + L"DX11Renderer\\Shaders\\"){
 
         device.GetImmediateContext1(&m_render_context);
-
-        {
-            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-            std::wstring data_folder_path = converter.from_bytes(Engine::get_instance()->data_path());
-            m_shader_folder_path = data_folder_path + L"DX11Renderer\\Shaders\\";
-        }
 
         { // Setup asset managing.
             Dx11Model dummy_model = { 0, 0, 0, 0, 0 };
@@ -615,12 +609,12 @@ public:
 //----------------------------------------------------------------------------
 // DirectX 11 renderer.
 //----------------------------------------------------------------------------
-IRenderer* Renderer::initialize(ID3D11Device1& device, int width_hint, int height_hint) {
-    return new Renderer(device, width_hint, height_hint);
+IRenderer* Renderer::initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path) {
+    return new Renderer(device, width_hint, height_hint, data_folder_path);
 }
 
-Renderer::Renderer(ID3D11Device1& device, int width_hint, int height_hint) {
-    m_impl = new Implementation(device, width_hint, height_hint);
+Renderer::Renderer(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path) {
+    m_impl = new Implementation(device, width_hint, height_hint, data_folder_path);
     m_renderer_ID = Renderers::create("DX11Renderer");
 }
 

@@ -31,7 +31,7 @@ namespace DX11Renderer {
 //----------------------------------------------------------------------------
 class Renderer final : public IRenderer {
 public:
-    static IRenderer* initialize(ID3D11Device1& device, int width_hint, int height_hint);
+    static IRenderer* initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path);
     ~Renderer();
 
     Cogwheel::Core::Renderers::UID get_ID() const { return m_renderer_ID; }
@@ -42,7 +42,7 @@ public:
 
 private:
 
-    Renderer(ID3D11Device1& device, int width_hint, int height_hint);
+    Renderer(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path);
 
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Renderer(Renderer& other) = delete;

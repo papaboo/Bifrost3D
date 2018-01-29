@@ -28,7 +28,7 @@ namespace DX11OptiXAdaptor {
 //-------------------------------------------------------------------------------------------------
 class Adaptor final : public DX11Renderer::IRenderer {
 public:
-    static DX11Renderer::IRenderer* initialize(ID3D11Device1& device, int width_hint, int height_hint);
+    static DX11Renderer::IRenderer* initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path);
     ~Adaptor();
 
     Cogwheel::Core::Renderers::UID get_ID() const { return m_renderer_ID; }
@@ -41,7 +41,7 @@ public:
 
 private:
 
-    Adaptor(ID3D11Device1& device, int width_hint, int height_hint);
+    Adaptor(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path);
 
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Adaptor(Adaptor& other) = delete;
