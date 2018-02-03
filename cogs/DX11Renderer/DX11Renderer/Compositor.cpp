@@ -121,7 +121,7 @@ public:
             DXGI_ADAPTER_DESC adapter_description;
             adapter->GetDesc(&adapter_description);
             const char* readable_feature_level = m_device->GetFeatureLevel() == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "11.1";
-            printf("DirectX 11 composer using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level);
+            printf("DirectX 11 compositor using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level);
 
             IDXGIFactory2* dxgi_factory2 = nullptr;
             hr = adapter->GetParent(IID_PPV_ARGS(&dxgi_factory2));
