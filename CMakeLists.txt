@@ -53,6 +53,7 @@ include_cog("Cogwheel")
   include_cog("DX11Renderer")
   include_cog("OptiXRenderer")
 include_cog("DX11OptiXAdapter") # Depends on OptiXRenderer and DX11Renderer
+include_cog("AntTweakBar")
 include_cog("GLFWDriver")
 include_cog("ImageOperations")
 include_cog("ObjLoader")
