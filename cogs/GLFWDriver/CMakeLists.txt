@@ -1,8 +1,6 @@
-set(GLFW_COG_DIR "${COGWHEEL_COGS_DIR}/GLFWDriver")
 set(GLFW_ZIP_URL "https://github.com/glfw/glfw/releases/download/3.2.1/glfw-3.2.1.zip")
-set(GLFW_ZIP_DEST "${COGWHEEL_LIBS_DIR}/glfw-3.2.1.zip")
-set(GLFW_SOURCE_CMAKE "${COGWHEEL_LIBS_DIR}/glfw-3.2.1.zip")
 set(GLFW_LIBS_DIR "${COGWHEEL_LIBS_DIR}/glfw-3.2.1")
+set(GLFW_ZIP_DEST "${GLFW_LIBS_DIR}.zip")
 
 # TODO Split into function that downloads, unzips and deletes.
 if (NOT EXISTS ${GLFW_LIBS_DIR}/CMakeLists.txt)
