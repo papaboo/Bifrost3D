@@ -1,16 +1,12 @@
 set(LIBRARY_NAME "OptiXRenderer")
 
-# Add current path to CMake's module path, so we can use our own FindOptiX.cmake.
-set(CMAKE_MODULE_PATH
-  "${COGWHEEL_COGS_DIR}/OptiXRenderer"
-  ${CMAKE_MODULE_PATH}
-)
-
 if (MSVC12)
-    find_package(CUDA 7.5)
-else(MSVC14)
-    find_package(CUDA 8.0)
+  find_package(CUDA 7.5)
+else (MSVC14)
+  find_package(CUDA 8.0)
 endif()
+
+set(CMAKE_MODULE_PATH "${COGWHEEL_COGS_DIR}/OptiXRenderer" ${CMAKE_MODULE_PATH})
 find_package(OptiX)
 
 if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
