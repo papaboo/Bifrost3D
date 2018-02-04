@@ -11,13 +11,16 @@
 
 #include <Utils.h>
 
+#include <Cogwheel/Input/Keyboard.h>
 #include <ImageOperations/Compare.h>
 
 #include <vector>
 
+#include <GL/gl.h>
+
 using namespace Cogwheel::Assets;
 
-class Compare {
+class Compare final {
 public:
 
     enum class Algorithm { SSIM, RMS };
@@ -105,6 +108,63 @@ public:
         return images;
     }
 
+    Compare(std::vector<char*> args) 
+        : m_images(apply(args)), m_selected_image_index(-1) {
+    
+        glEnable(GL_TEXTURE_2D);
+        glGenTextures(1, &m_tex_ID);
+        glBindTexture(GL_TEXTURE_2D, m_tex_ID);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    }
+
+    GLuint get_texture_ID() const { return m_tex_ID; }
+
+    void update(Cogwheel::Core::Engine& engine) {
+        using namespace Cogwheel::Input;
+        using namespace Cogwheel::Math;
+
+        const Keyboard* const keyboard = engine.get_keyboard();
+
+        int image_index = m_selected_image_index;
+        if (keyboard->was_released(Keyboard::Key::Left))
+            --image_index;
+        if (keyboard->was_released(Keyboard::Key::Right))
+            ++image_index;
+        image_index = Cogwheel::Math::clamp(image_index, 0, int(m_images.size() - 1));
+
+        // Early out in case nothing has changed.
+        if (m_selected_image_index == image_index)
+            return;
+
+        // Update window title.
+        std::string title = "Komodo - " + m_images[image_index].get_name();
+        engine.get_window().set_name(title);
+
+        glBindTexture(GL_TEXTURE_2D, m_tex_ID);
+        const GLint BASE_IMAGE_LEVEL = 0;
+        const GLint NO_BORDER = 0;
+        Image image = m_images[image_index];
+        int width = image.get_width(), height = image.get_height();
+        RGB* gamma_corrected_pixels = new RGB[image.get_pixel_count()];
+        #pragma omp parallel for schedule(dynamic, 16)
+        for (int i = 0; i < (int)image.get_pixel_count(); ++i) {
+            int x = i % width, y = i / width;
+            gamma_corrected_pixels[i] = gammacorrect(image.get_pixel(Vector2ui(x, y)).rgb(), 1.0f / 2.2f);
+        }
+        glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGB, width, height, NO_BORDER, GL_RGB, GL_FLOAT, gamma_corrected_pixels);
+
+        m_selected_image_index = image_index;
+    }
+
+private:
+    std::vector<Image> m_images;
+    int m_selected_image_index;
+
+    GLuint m_tex_ID = 0u;
 };
 
 #endif // _KOMODO_COMPARE_H_

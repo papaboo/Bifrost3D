@@ -78,4 +78,22 @@ inline void store_image(Cogwheel::Assets::Image image, const std::string& path) 
         StbImageWriter::write(image.get_ID(), path);
 }
 
+// Create a red and white error image.
+Cogwheel::Assets::Images::UID create_error_image() {
+    using namespace Cogwheel::Assets;
+
+    Image error_img = Images::create2D("No images loaded", PixelFormat::RGBA32, 2.2f, Cogwheel::Math::Vector2ui(16, 16));
+    unsigned char* pixels = (unsigned char*)error_img.get_pixels();
+    for (unsigned int y = 0; y < error_img.get_height(); ++y) {
+        for (unsigned int x = 0; x < error_img.get_width(); ++x) {
+            unsigned char* pixel = pixels + (x + y * error_img.get_width()) * 4u;
+            unsigned char intensity = ((x & 1) == (y & 1)) ? 2 : 255;
+            pixel[0] = 255u;
+            pixel[1] = pixel[2] = intensity;
+            pixel[3] = 255u;
+        }
+    }
+    return error_img.get_ID();
+}
+
 #endif // _KOMODO_UTILS_H_

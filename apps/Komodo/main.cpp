@@ -6,57 +6,28 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#include <Compare.h>
-
 #include <Cogwheel/Core/Engine.h>
-#include <Cogwheel/Input/Keyboard.h>
 
 #include <GLFWDriver.h>
+
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
 #include <GL/gl.h>
 #undef RGB
 
-#include <omp.h>
+#include <Compare.h>
 
-using namespace Cogwheel::Assets;
 using namespace Cogwheel::Core;
-using namespace Cogwheel::Input;
-using namespace Cogwheel::Math;
 
 // Global state
 std::vector<char*> g_args;
-std::vector<Cogwheel::Assets::Image> g_images;
+Compare* g_operation;
 
 void update(Engine& engine, void* none) {
-    // Initialize render texture
-    static GLuint tex_ID = 0u;
-    if (tex_ID == 0u) {
-        glEnable(GL_TEXTURE_2D);
-        glGenTextures(1, &tex_ID);
-        glBindTexture(GL_TEXTURE_2D, tex_ID);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    }
+    assert(g_operation != nullptr);
 
-    const Keyboard* const keyboard = engine.get_keyboard();
-
-    static int image_index = 0;
-    static int uploaded_image_index = -1;
-    if (keyboard->was_released(Keyboard::Key::Left))
-        --image_index;
-    if (keyboard->was_released(Keyboard::Key::Right))
-        ++image_index;
-    image_index = clamp(image_index, 0, int(g_images.size() - 1));
-
-    if (uploaded_image_index != image_index) {
-        std::string title = "Komodo - " + g_images[image_index].get_name();
-        engine.get_window().set_name(title);
-    }
+    g_operation->update(engine);
 
     { // Update the backbuffer.
         const Window& window = engine.get_window();
@@ -71,22 +42,7 @@ void update(Engine& engine, void* none) {
             glLoadIdentity();
         }
 
-        glBindTexture(GL_TEXTURE_2D, tex_ID);
-        if (uploaded_image_index != image_index) {
-            const GLint BASE_IMAGE_LEVEL = 0;
-            const GLint NO_BORDER = 0;
-            Image image = g_images[image_index];
-            int width = image.get_width(), height = image.get_height();
-            RGB* gamma_corrected_pixels = new RGB[image.get_pixel_count()];
-            #pragma omp parallel for schedule(dynamic, 16)
-            for (int i = 0; i < (int)image.get_pixel_count(); ++i) {
-                int x = i % width, y = i / width;
-                gamma_corrected_pixels[i] = gammacorrect(image.get_pixel(Vector2ui(x, y)).rgb(), 1.0f / 2.2f);
-            }
-            glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGB, width, height, NO_BORDER, GL_RGB, GL_FLOAT, gamma_corrected_pixels);
-            uploaded_image_index = image_index;
-        }
-
+        glBindTexture(GL_TEXTURE_2D, g_operation->get_texture_ID());
         glClear(GL_COLOR_BUFFER_BIT);
         glBegin(GL_QUADS); {
 
@@ -108,32 +64,21 @@ void update(Engine& engine, void* none) {
 
 int initialize(Engine& engine) {
     engine.get_window().set_name("Komodo");
+    return 0;
+}
+
+int window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window) {
 
     Images::allocate(3u);
-
 
     std::string operation_name = g_args[0];
     g_args.erase(g_args.begin());
 
     if (std::string(operation_name).compare("--compare") == 0)
-        g_images = Compare::apply(g_args);
-    else
+        g_operation = new Compare(g_args);
+    else {
+        g_operation = new Compare(g_args); // TODO Null operation
         printf("Unrecognized argument: '%s'\n", operation_name.c_str());
-
-    if (g_images.empty()) {
-        // Create a default red and white image.
-        Image error_img = Images::create2D("No images loaded", PixelFormat::RGBA32, 2.2f, Vector2ui(16,16));
-        unsigned char* pixels = (unsigned char*)error_img.get_pixels();
-        for (unsigned int y = 0; y < error_img.get_height(); ++y) {
-            for (unsigned int x = 0; x < error_img.get_width(); ++x) {
-                unsigned char* pixel = pixels + (x + y * error_img.get_width()) * 4u;
-                unsigned char intensity = ((x & 1) == (y & 1)) ? 2 : 255;
-                pixel[0] = 255u;
-                pixel[1] = pixel[2] = intensity;
-                pixel[3] = 255u;
-            }
-        }
-        g_images.push_back(error_img);
     }
 
     engine.add_mutating_callback(update, nullptr);
@@ -170,5 +115,5 @@ int main(int argc, char** argv) {
         Engine* engine = new Engine("Headless");
         initialize(*engine);
     } else
-        GLFWDriver::run(initialize, nullptr);
+        GLFWDriver::run(initialize, window_initialized);
 }
