@@ -16,13 +16,13 @@
 #include <GL/gl.h>
 #undef RGB
 
-#include <Compare.h>
+#include <Comparer.h>
 
 using namespace Cogwheel::Core;
 
 // Global state
 std::vector<char*> g_args;
-Compare* g_operation;
+Comparer* g_operation;
 
 void update(Engine& engine, void* none) {
     assert(g_operation != nullptr);
@@ -75,9 +75,9 @@ int window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& w
     g_args.erase(g_args.begin());
 
     if (std::string(operation_name).compare("--compare") == 0)
-        g_operation = new Compare(g_args);
+        g_operation = new Comparer(g_args);
     else {
-        g_operation = new Compare(g_args); // TODO Null operation
+        g_operation = new Comparer(g_args); // TODO Null operation
         printf("Unrecognized argument: '%s'\n", operation_name.c_str());
     }
 

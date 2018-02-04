@@ -6,8 +6,8 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _KOMODO_COMPARE_H_
-#define _KOMODO_COMPARE_H_
+#ifndef _KOMODO_COMPARER_H_
+#define _KOMODO_COMPARER_H_
 
 #include <Utils.h>
 
@@ -20,7 +20,7 @@
 
 using namespace Cogwheel::Assets;
 
-class Compare final {
+class Comparer final {
 public:
 
     enum class Algorithm { SSIM, RMS };
@@ -108,7 +108,7 @@ public:
         return images;
     }
 
-    Compare(std::vector<char*> args) 
+    Comparer(std::vector<char*> args) 
         : m_images(apply(args)), m_selected_image_index(-1) {
     
         glEnable(GL_TEXTURE_2D);
@@ -167,4 +167,4 @@ private:
     GLuint m_tex_ID = 0u;
 };
 
-#endif // _KOMODO_COMPARE_H_
+#endif // _KOMODO_COMPARER_H_
