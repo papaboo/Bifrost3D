@@ -70,14 +70,14 @@ public:
 
         Image reference = load_image(reference_path);
         if (!reference.exists()) {
-            printf("  error: Could not load reference '%s'\n", reference_path.c_str());
+            printf("  error: Could not load reference image '%s'\n", reference_path.c_str());
             return std::vector<Image>();
         } else
             images.push_back(reference);
 
         Image target = load_image(target_path);
         if (!target.exists()) {
-            printf("  error: Could not load target '%s'\n", target_path.c_str());
+            printf("  error: Could not load target image '%s'\n", target_path.c_str());
             return std::vector<Image>();
         } else
             images.push_back(target);
@@ -109,8 +109,12 @@ public:
     }
 
     Comparer(std::vector<char*> args, Cogwheel::Core::Engine& engine)
-        : m_images(apply(args)), m_selected_image_index(-1) {
-    
+        : m_selected_image_index(-1) {
+
+        m_images = apply(args);
+        if (m_images.size() == 0)
+            m_images.push_back(create_error_image());
+
         glEnable(GL_TEXTURE_2D);
         glGenTextures(1, &m_tex_ID);
         glBindTexture(GL_TEXTURE_2D, m_tex_ID);
