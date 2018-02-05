@@ -22,44 +22,16 @@ using namespace Cogwheel::Core;
 
 // Global state
 std::vector<char*> g_args;
-Comparer* g_operation;
+void* g_operation;
 
-void update(Engine& engine, void* none) {
-    assert(g_operation != nullptr);
+void print_usage() {
+    char* usage =
+        "usage Komodo Image Tool:\n"
+        "  -h | --help: Show command line usage for Komodo.\n"
+        "  -l | --headless: Launch without opening a window.\n"
+        "     | --compare: Perform image comparisons.\n";
 
-    g_operation->update(engine);
-
-    { // Update the backbuffer.
-        const Window& window = engine.get_window();
-        glViewport(0, 0, window.get_width(), window.get_height());
-
-        { // Setup matrices. I really don't need to do this every frame, since they never change.
-            glMatrixMode(GL_PROJECTION);
-            glLoadIdentity();
-            glOrtho(-1, 1, -1.f, 1.f, 1.f, -1.f);
-
-            glMatrixMode(GL_MODELVIEW);
-            glLoadIdentity();
-        }
-
-        glBindTexture(GL_TEXTURE_2D, g_operation->get_texture_ID());
-        glClear(GL_COLOR_BUFFER_BIT);
-        glBegin(GL_QUADS); {
-
-            glTexCoord2f(0.0f, 0.0f);
-            glVertex3f(-1.0f, -1.0f, 0.f);
-
-            glTexCoord2f(1.0f, 0.0f);
-            glVertex3f(1.0f, -1.0f, 0.f);
-
-            glTexCoord2f(1.0f, 1.0f);
-            glVertex3f(1.0f, 1.0f, 0.f);
-
-            glTexCoord2f(0.0f, 1.0f);
-            glVertex3f(-1.0f, 1.0f, 0.f);
-
-        } glEnd();
-    }
+    printf("%s", usage);
 }
 
 int initialize(Engine& engine) {
@@ -75,25 +47,14 @@ int window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& w
     g_args.erase(g_args.begin());
 
     if (std::string(operation_name).compare("--compare") == 0)
-        g_operation = new Comparer(g_args);
+        g_operation = new Comparer(g_args, engine);
     else {
-        g_operation = new Comparer(g_args); // TODO Null operation
         printf("Unrecognized argument: '%s'\n", operation_name.c_str());
+        print_usage();
+        return 1;
     }
 
-    engine.add_mutating_callback(update, nullptr);
-
     return 0;
-}
-
-void print_usage() {
-    char* usage =
-        "usage Komodo Image Tool:\n"
-        "  -h | --help: Show command line usage for Komodo.\n"
-        "  -l | --headless: Launch without opening a window.\n"
-        "     | --compare: Perform image comparisons.\n";
-
-    printf("%s", usage);
 }
 
 int main(int argc, char** argv) {
@@ -112,8 +73,9 @@ int main(int argc, char** argv) {
             g_args.push_back(argv[i]);
 
     if (headless) {
-        Engine* engine = new Engine("Headless");
+        Engine* engine = new Engine("");
         initialize(*engine);
+        window_initialized(*engine, engine->get_window());
     } else
         GLFWDriver::run(initialize, window_initialized);
 }

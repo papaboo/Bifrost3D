@@ -10,6 +10,7 @@
 #define _KOMODO_UTILS_H_
 
 #include <Cogwheel/Assets/Image.h>
+#include <Cogwheel/Core/Window.h>
 
 #include <StbImageLoader/StbImageLoader.h>
 #include <StbImageWriter/StbImageWriter.h>
@@ -94,6 +95,39 @@ Cogwheel::Assets::Images::UID create_error_image() {
         }
     }
     return error_img.get_ID();
+}
+
+void render_image(Cogwheel::Core::Window& window, GLuint texture_ID) {
+    { // Update the backbuffer.
+        glViewport(0, 0, window.get_width(), window.get_height());
+
+        { // Setup matrices. I really don't need to do this every frame, since they never change.
+            glMatrixMode(GL_PROJECTION);
+            glLoadIdentity();
+            glOrtho(-1, 1, -1.f, 1.f, 1.f, -1.f);
+
+            glMatrixMode(GL_MODELVIEW);
+            glLoadIdentity();
+        }
+
+        glBindTexture(GL_TEXTURE_2D, texture_ID);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glBegin(GL_QUADS); {
+
+            glTexCoord2f(0.0f, 0.0f);
+            glVertex3f(-1.0f, -1.0f, 0.f);
+
+            glTexCoord2f(1.0f, 0.0f);
+            glVertex3f(1.0f, -1.0f, 0.f);
+
+            glTexCoord2f(1.0f, 1.0f);
+            glVertex3f(1.0f, 1.0f, 0.f);
+
+            glTexCoord2f(0.0f, 1.0f);
+            glVertex3f(-1.0f, 1.0f, 0.f);
+
+        } glEnd();
+    }
 }
 
 #endif // _KOMODO_UTILS_H_
