@@ -10,13 +10,8 @@
 
 #include <GLFWDriver.h>
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-#include <GL/gl.h>
-#undef RGB
-
 #include <Comparer.h>
+#include <ToneMapper.h>
 
 using namespace Cogwheel::Core;
 
@@ -29,7 +24,8 @@ void print_usage() {
         "usage Komodo Image Tool:\n"
         "  -h | --help: Show command line usage for Komodo.\n"
         "  -l | --headless: Launch without opening a window.\n"
-        "     | --compare: Perform image comparisons.\n";
+        "     | --compare: Perform image comparisons.\n"
+        "     | --tone-map: Tonemap image.\n";
 
     printf("%s", usage);
 }
@@ -39,7 +35,7 @@ int initialize(Engine& engine) {
     return 0;
 }
 
-int window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window) {
+int window_initialized(Engine& engine, Window& window) {
 
     Images::allocate(3u);
 
@@ -48,6 +44,8 @@ int window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& w
 
     if (std::string(operation_name).compare("--compare") == 0)
         g_operation = new Comparer(g_args, engine);
+    else if (std::string(operation_name).compare("--tone-map") == 0)
+        g_operation = new ToneMapper(g_args, engine);
     else {
         printf("Unrecognized argument: '%s'\n", operation_name.c_str());
         print_usage();
