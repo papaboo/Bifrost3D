@@ -19,6 +19,12 @@
 #include <io.h>
 #include <string>
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include <GL/gl.h>
+#undef RGB
+
 inline bool validate_image_extension(const std::string& path) {
     std::string file_extension = std::string(path, path.length() - 4);
     if (!(file_extension.compare(".bmp") == 0 ||
@@ -80,7 +86,7 @@ inline void store_image(Cogwheel::Assets::Image image, const std::string& path) 
 }
 
 // Create a red and white error image.
-Cogwheel::Assets::Images::UID create_error_image() {
+inline Cogwheel::Assets::Images::UID create_error_image() {
     using namespace Cogwheel::Assets;
 
     Image error_img = Images::create2D("No images loaded", PixelFormat::RGBA32, 2.2f, Cogwheel::Math::Vector2ui(16, 16));
@@ -97,7 +103,7 @@ Cogwheel::Assets::Images::UID create_error_image() {
     return error_img.get_ID();
 }
 
-void render_image(Cogwheel::Core::Window& window, GLuint texture_ID) {
+inline void render_image(Cogwheel::Core::Window& window, GLuint texture_ID) {
     { // Update the backbuffer.
         glViewport(0, 0, window.get_width(), window.get_height());
 
