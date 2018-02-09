@@ -16,8 +16,6 @@
 
 #include <vector>
 
-#include <GL/gl.h>
-
 using namespace Cogwheel::Assets;
 
 class Comparer final {
@@ -26,7 +24,7 @@ public:
     enum class Algorithm { SSIM, RMS };
 
     static void print_usage() {
-        char* usage =
+        static char* usage =
             "usage Komodo Image Comparison:\n"
             "  -h | --help: Show command line usage for Komodo Image Comparison.\n"
             "     | --ssim: Compare using Structured Similiarity Index.\n"
@@ -70,14 +68,14 @@ public:
 
         Image reference = load_image(reference_path);
         if (!reference.exists()) {
-            printf("  error: Could not load reference image '%s'\n", reference_path.c_str());
+            printf("  error: Could not load reference image at '%s'\n", reference_path.c_str());
             return std::vector<Image>();
         } else
             images.push_back(reference);
 
         Image target = load_image(target_path);
         if (!target.exists()) {
-            printf("  error: Could not load target image '%s'\n", target_path.c_str());
+            printf("  error: Could not load target image at '%s'\n", target_path.c_str());
             return std::vector<Image>();
         } else
             images.push_back(target);
