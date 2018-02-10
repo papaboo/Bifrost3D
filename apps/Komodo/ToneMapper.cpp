@@ -11,6 +11,7 @@
 
 #include <Cogwheel/Core/Engine.h>
 #include <Cogwheel/Math/ToneMapping.h>
+#include <ImageOperations/Exposure.h>
 
 #include <AntTweakBar/AntTweakBar.h>
 
@@ -110,7 +111,13 @@ struct ToneMapper::Implementation final {
 
             TwAddVarCB(bar, "Exposure bias", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_exposure_bias, float), this, "step=0.1 group='Exposure'");
 
-            // TODO Button to compute exposure from image.
+            auto auto_exposure = [](void* client_data) {
+                ToneMapper::Implementation* data = (ToneMapper::Implementation*)client_data;
+                float average_log_luminance = ImageOperations::Exposure::average_log_luminance(data->m_input.get_ID());
+                data->m_exposure_bias = exp2(average_log_luminance);
+                data->m_upload_image = true;
+            };
+            TwAddButton(bar, "Auto adjust", auto_exposure, this, "group=Exposure");
         }
 
         { // Tone mapping
@@ -221,6 +228,8 @@ struct ToneMapper::Implementation final {
             const GLint BASE_IMAGE_LEVEL = 0;
             const GLint NO_BORDER = 0;
             glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGB, width, height, NO_BORDER, GL_RGB, GL_FLOAT, gamma_corrected_pixels);
+
+            m_upload_image = false;
         }
 
         render_image(engine.get_window(), m_tex_ID);
