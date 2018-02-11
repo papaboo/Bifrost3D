@@ -1,4 +1,4 @@
-// Komodo image tone mapper.
+// Komodo image tonemapper.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
 //
@@ -6,7 +6,7 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#include <ToneMapper.h>
+#include <Tonemapper.h>
 #include <Utils.h>
 
 #include <Cogwheel/Core/Engine.h>
@@ -19,7 +19,7 @@ using namespace Cogwheel::Assets;
 using namespace Cogwheel::Core;
 using namespace Cogwheel::Math;
 
-struct ToneMapper::Implementation final {
+struct Tonemapper::Implementation final {
 
     // --------------------------------------------------------------------------------------------
     // Members
@@ -90,12 +90,12 @@ struct ToneMapper::Implementation final {
 
 #define WRAP_ANT_PROPERTY(member_name, T) \
 [](const void* input_data, void* client_data) { \
-    ToneMapper::Implementation* data = (ToneMapper::Implementation*)client_data; \
+    Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data; \
     data->member_name = *(T*)input_data; \
     data->m_upload_image = true; \
 }, \
 [](void* value, void* client_data) { \
-    *static_cast<T*>(value) = static_cast<ToneMapper::Implementation*>(client_data)->member_name; \
+    *static_cast<T*>(value) = static_cast<Tonemapper::Implementation*>(client_data)->member_name; \
 }
 
     // --------------------------------------------------------------------------------------------
@@ -112,7 +112,7 @@ struct ToneMapper::Implementation final {
             TwAddVarCB(bar, "Exposure bias", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_exposure_bias, float), this, "step=0.1 group='Exposure'");
 
             auto auto_exposure = [](void* client_data) {
-                ToneMapper::Implementation* data = (ToneMapper::Implementation*)client_data;
+                Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
                 float average_log_luminance = ImageOperations::Exposure::average_log_luminance(data->m_input.get_ID());
                 data->m_exposure_bias = exp2(average_log_luminance);
                 data->m_upload_image = true;
@@ -127,7 +127,7 @@ struct ToneMapper::Implementation final {
             TwType AntOperatorEnum = TwDefineEnum("Operators", operators, 3);
 
             auto set_m_operator = [](const void* input_data, void* client_data) {
-                ToneMapper::Implementation* data = (ToneMapper::Implementation*)client_data;
+                Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
                 data->m_operator = *(Operator*)input_data;
                 data->m_upload_image = true;
 
@@ -138,7 +138,7 @@ struct ToneMapper::Implementation final {
                 TwDefine(show_uncharted2.c_str());
             };
             auto get_m_operator = [](void* value, void* client_data) {
-                *(Operator*)value = ((ToneMapper::Implementation*)client_data)->m_operator;
+                *(Operator*)value = ((Tonemapper::Implementation*)client_data)->m_operator;
             };
             TwAddVarCB(bar, "Operator", AntOperatorEnum, set_m_operator, get_m_operator, this, "group='Tonemapping'");
 
@@ -200,7 +200,7 @@ struct ToneMapper::Implementation final {
             m_gui = setup_gui();
         }
 
-        engine.add_mutating_callback(ToneMapper::Implementation::update, this);
+        engine.add_mutating_callback(Tonemapper::Implementation::update, this);
     }
 
     // --------------------------------------------------------------------------------------------
@@ -239,10 +239,10 @@ struct ToneMapper::Implementation final {
     }
 
     static void update(Engine& engine, void* tone_mapper) {
-        ((ToneMapper::Implementation*)tone_mapper)->update(engine);
+        ((Tonemapper::Implementation*)tone_mapper)->update(engine);
     }
 };
 
-ToneMapper::ToneMapper(std::vector<char*> args, Cogwheel::Core::Engine& engine) {
+Tonemapper::Tonemapper(std::vector<char*> args, Cogwheel::Core::Engine& engine) {
     m_impl = new Implementation(args, engine);
 }

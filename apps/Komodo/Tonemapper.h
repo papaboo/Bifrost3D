@@ -1,4 +1,4 @@
-// Komodo image tone mapper.
+// Komodo image tonemapper.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
 //
@@ -6,8 +6,8 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _KOMODO_TONE_MAPPER_H_
-#define _KOMODO_TONE_MAPPER_H_
+#ifndef _KOMODO_TONEMAPPER_H_
+#define _KOMODO_TONEMAPPER_H_
 
 #include <vector>
 
@@ -17,9 +17,9 @@ class Engine;
 }
 }
 
-class ToneMapper final {
+class Tonemapper final {
 public:
-    ToneMapper(std::vector<char*> args, Cogwheel::Core::Engine& engine);
+    Tonemapper(std::vector<char*> args, Cogwheel::Core::Engine& engine);
 
 private:
     // Pimpl the state to avoid exposing OptiX headers.
@@ -27,4 +27,4 @@ private:
     Implementation* m_impl;
 };
 
-#endif // _KOMODO_TONE_MAPPER_H_
+#endif // _KOMODO_TONEMAPPER_H_

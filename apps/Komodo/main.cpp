@@ -11,7 +11,7 @@
 #include <GLFWDriver.h>
 
 #include <Comparer.h>
-#include <ToneMapper.h>
+#include <Tonemapper.h>
 
 using namespace Cogwheel::Core;
 
@@ -45,7 +45,7 @@ int window_initialized(Engine& engine, Window& window) {
     if (std::string(operation_name).compare("--compare") == 0)
         g_operation = new Comparer(g_args, engine);
     else if (std::string(operation_name).compare("--tone-map") == 0)
-        g_operation = new ToneMapper(g_args, engine);
+        g_operation = new Tonemapper(g_args, engine);
     else {
         printf("Unrecognized argument: '%s'\n", operation_name.c_str());
         print_usage();
