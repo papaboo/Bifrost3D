@@ -15,7 +15,7 @@ namespace DX11Renderer {
 
 ToneMapper::ToneMapper()
     : m_fullscreen_VS(nullptr), m_log_luminance_PS(nullptr)
-    , m_linear_tonemapping_PS(nullptr), m_simple_tonemapping_PS(nullptr), m_reinhard_tonemapping_PS(nullptr), m_filmic_tonemapping_PS(nullptr)
+    , m_linear_tonemapping_PS(nullptr), m_reinhard_tonemapping_PS(nullptr), m_filmic_tonemapping_PS(nullptr)
     , m_width(0), m_height(0), m_log_luminance_RTV(nullptr), m_log_luminance_SRV(nullptr), m_log_luminance_sampler(nullptr){ }
 
 ToneMapper::ToneMapper(ID3D11Device1& device, const std::wstring& shader_folder_path)
@@ -38,7 +38,6 @@ ToneMapper::ToneMapper(ID3D11Device1& device, const std::wstring& shader_folder_
 
         m_log_luminance_PS = create_pixel_shader("log_luminance_ps");
         m_linear_tonemapping_PS = create_pixel_shader("linear_tonemapping_ps");
-        m_simple_tonemapping_PS = create_pixel_shader("simple_tonemapping_ps");
         m_reinhard_tonemapping_PS = create_pixel_shader("reinhard_tonemapping_ps");
         m_filmic_tonemapping_PS = create_pixel_shader("filmic_tonemapping_ps");
     }
@@ -65,13 +64,9 @@ void ToneMapper::tonemap(ID3D11DeviceContext1& context, ToneMapping::Parameters 
     // Setup general state, such as vertex shader and sampler.
     context.VSSetShader(m_fullscreen_VS, 0, 0);
 
-    bool single_pass = parameters.mapping == ToneMapping::Operator::Linear || parameters.mapping == ToneMapping::Operator::Simple;
-    if (single_pass) {
+    if (parameters.mapping == ToneMapping::Operator::Linear) {
         context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
-        if (parameters.mapping == ToneMapping::Operator::Linear)
-            context.PSSetShader(m_linear_tonemapping_PS, 0, 0);
-        else // parameters.mapping == ToneMapping::Operator::Simple
-            context.PSSetShader(m_simple_tonemapping_PS, 0, 0);
+        context.PSSetShader(m_linear_tonemapping_PS, 0, 0);
 
         ID3D11ShaderResourceView* srvs[2] = { pixel_SRV, m_log_luminance_SRV };
         context.PSSetShaderResources(0, 2, srvs);
