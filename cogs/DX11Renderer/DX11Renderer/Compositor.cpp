@@ -7,7 +7,7 @@
 //-------------------------------------------------------------------------------------------------
 
 #include <DX11Renderer/Compositor.h>
-#include <DX11Renderer/ToneMapper.h>
+#include <DX11Renderer/Tonemapper.h>
 #include <DX11Renderer/Utils.h>
 
 #include <Cogwheel/Core/Engine.h>
@@ -98,7 +98,7 @@ private:
     OID3D11ShaderResourceView m_backbuffer_SRV;
     OID3D11DepthStencilView m_depth_view;
 
-    ToneMapper m_tone_mapper;
+    Tonemapper m_tonemapper;
 
 public:
     Implementation(HWND& hwnd, const Window& window, const std::wstring& data_folder_path)
@@ -157,7 +157,7 @@ public:
 
         { // Setup tonemapper
             std::wstring shader_folder_path = m_data_folder_path + L"DX11Renderer\\Shaders\\";
-            m_tone_mapper = ToneMapper(m_device, shader_folder_path);
+            m_tonemapper = Tonemapper(m_device, shader_folder_path);
         }
     }
 
@@ -290,8 +290,8 @@ public:
 
         // Present the backbuffer.
         Cameras::UID camera_ID = *Cameras::get_iterable().begin();
-        auto tone_mapping_params = Cameras::get_tone_mapping_parameters(camera_ID);
-        m_tone_mapper.tonemap(m_render_context, tone_mapping_params, m_backbuffer_SRV, m_swap_chain_buffer_view, m_backbuffer_size.x, m_backbuffer_size.y);
+        auto tonemapping_params = Cameras::get_tonemapping_parameters(camera_ID);
+        m_tonemapper.tonemap(m_render_context, tonemapping_params, m_backbuffer_SRV, m_swap_chain_buffer_view, m_backbuffer_size.x, m_backbuffer_size.y);
         m_swap_chain->Present(m_sync_interval, 0);
     }
 

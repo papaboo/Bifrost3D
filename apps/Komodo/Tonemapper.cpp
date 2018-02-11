@@ -10,7 +10,7 @@
 #include <Utils.h>
 
 #include <Cogwheel/Core/Engine.h>
-#include <Cogwheel/Math/ToneMapping.h>
+#include <Cogwheel/Math/Tonemapping.h>
 #include <ImageOperations/Exposure.h>
 
 #include <AntTweakBar/AntTweakBar.h>
@@ -53,12 +53,12 @@ struct Tonemapper::Implementation final {
     // --------------------------------------------------------------------------------------------
     static void print_usage() {
         static char* usage =
-            "usage Komodo Tone Mapping:\n"
-            "  -h | --help: Show command line usage for Komodo Image Comparison.\n"
-            "     | --linear: No tone mapping.\n"
-            "     | --reinhard: Apply reinhard tone mapper.\n"
-            "     | --filmic: Apply filmic tone mapper.\n"
-            "     | --input <path>: Path to the image to be tone mapped.\n"
+            "usage Komodo Tonemapping:\n"
+            "  -h | --help: Show command line usage for Komodo Tonemapping.\n"
+            "     | --linear: No tonemapping.\n"
+            "     | --reinhard: Apply reinhard tonemapper.\n"
+            "     | --filmic: Apply filmic tonemapper.\n"
+            "     | --input <path>: Path to the image to be tonemapped.\n"
             "     | --output <path>: Path to where to store the final image.\n";
 
         printf("%s", usage);
@@ -120,7 +120,7 @@ struct Tonemapper::Implementation final {
             TwAddButton(bar, "Auto adjust", auto_exposure, this, "group=Exposure");
         }
 
-        { // Tone mapping
+        { // Tonemapping
             TwEnumVal operators[] = { { int(Operator::Linear), "Linear" },
                                       { int(Operator::Reinhard), "Reinhard" }, 
                                       { int(Operator::Uncharted2), "Uncharted2" } };
@@ -160,7 +160,7 @@ struct Tonemapper::Implementation final {
                 TwDefine("Tonemapper/Uncharted2 group='Tonemapping' label='Uncharted 2'");
             }
 
-            auto tonemapper = ToneMapping::Operator::Filmic;
+            auto tonemapper = Operator::Uncharted2;
             set_m_operator(&tonemapper, this);
         }
 
@@ -218,9 +218,9 @@ struct Tonemapper::Implementation final {
                 int x = i % width, y = i / width;
                 RGB adjusted_color = m_input.get_pixel(Vector2ui(x, y)).rgb() * exposure;
                 if (m_operator == Operator::Reinhard)
-                    adjusted_color = ToneMapping::reinhard(adjusted_color, m_reinhard_whitepoint * m_reinhard_whitepoint);
+                    adjusted_color = Tonemapping::reinhard(adjusted_color, m_reinhard_whitepoint * m_reinhard_whitepoint);
                 else if (m_operator == Operator::Uncharted2)
-                    adjusted_color = ToneMapping::uncharted2_tonemap_helper(adjusted_color, m_uncharted2_shoulder_strength, m_uncharted2_linear_strength, m_uncharted2_linear_angle, m_uncharted2_toe_strength, m_uncharted2_toe_numerator, m_uncharted2_toe_denominator, m_uncharted2_linear_white);
+                    adjusted_color = Tonemapping::uncharted2(adjusted_color, m_uncharted2_shoulder_strength, m_uncharted2_linear_strength, m_uncharted2_linear_angle, m_uncharted2_toe_strength, m_uncharted2_toe_numerator, m_uncharted2_toe_denominator, m_uncharted2_linear_white);
                 gamma_corrected_pixels[i] = gammacorrect(adjusted_color, 1.0f / 2.2f);
             }
 
@@ -238,8 +238,8 @@ struct Tonemapper::Implementation final {
         TwDraw();
     }
 
-    static void update(Engine& engine, void* tone_mapper) {
-        ((Tonemapper::Implementation*)tone_mapper)->update(engine);
+    static void update(Engine& engine, void* tonemapper) {
+        ((Tonemapper::Implementation*)tonemapper)->update(engine);
     }
 };
 

@@ -1,28 +1,28 @@
-// DirectX 11 tone mapper.
-// ---------------------------------------------------------------------------
+// DirectX 11 tonemapper.
+// ------------------------------------------------------------------------------------------------
 // Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
-// ---------------------------------------------------------------------------
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+// ------------------------------------------------------------------------------------------------
 
-#include <DX11Renderer/ToneMapper.h>
+#include <DX11Renderer/Tonemapper.h>
 #include <DX11Renderer/Utils.h>
 
 using namespace Cogwheel::Math;
 
 namespace DX11Renderer {
 
-ToneMapper::ToneMapper()
+Tonemapper::Tonemapper()
     : m_fullscreen_VS(nullptr), m_log_luminance_PS(nullptr)
     , m_linear_tonemapping_PS(nullptr), m_reinhard_tonemapping_PS(nullptr), m_filmic_tonemapping_PS(nullptr)
     , m_width(0), m_height(0), m_log_luminance_RTV(nullptr), m_log_luminance_SRV(nullptr), m_log_luminance_sampler(nullptr){ }
 
-ToneMapper::ToneMapper(ID3D11Device1& device, const std::wstring& shader_folder_path)
+Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_path)
     : m_width(0), m_height(0), m_log_luminance_RTV(nullptr), m_log_luminance_SRV(nullptr) {
 
     { // Setup shaders
-        const std::wstring shader_filename = shader_folder_path + L"ToneMapping.hlsl";
+        const std::wstring shader_filename = shader_folder_path + L"Tonemapping.hlsl";
 
         OID3DBlob vertex_shader_blob = compile_shader(shader_filename, "vs_5_0", "fullscreen_vs");
         HRESULT hr = device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_fullscreen_VS);
@@ -57,14 +57,14 @@ ToneMapper::ToneMapper(ID3D11Device1& device, const std::wstring& shader_folder_
     }
 }
 
-void ToneMapper::tonemap(ID3D11DeviceContext1& context, ToneMapping::Parameters parameters, 
+void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters parameters,
                          ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, 
                          int width, int height) {
 
     // Setup general state, such as vertex shader and sampler.
     context.VSSetShader(m_fullscreen_VS, 0, 0);
 
-    if (parameters.mapping == ToneMapping::Operator::Linear) {
+    if (parameters.mapping == Tonemapping::Operator::Linear) {
         context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
         context.PSSetShader(m_linear_tonemapping_PS, 0, 0);
 
@@ -122,9 +122,9 @@ void ToneMapper::tonemap(ID3D11DeviceContext1& context, ToneMapping::Parameters 
 
         { // Tonemap and render into backbuffer.
             context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
-            if (parameters.mapping == ToneMapping::Operator::Reinhard)
+            if (parameters.mapping == Tonemapping::Operator::Reinhard)
                 context.PSSetShader(m_reinhard_tonemapping_PS, 0, 0);
-            else // parameters.mapping == ToneMapping::Operator::Filmic
+            else // parameters.mapping == Tonemapping::Operator::Filmic
                 context.PSSetShader(m_filmic_tonemapping_PS, 0, 0);
 
             ID3D11ShaderResourceView* srvs[2] = { pixel_SRV, m_log_luminance_SRV };

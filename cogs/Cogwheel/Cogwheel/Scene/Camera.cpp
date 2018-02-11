@@ -31,7 +31,7 @@ Matrix4x4f* Cameras::m_projection_matrices = nullptr;
 Matrix4x4f* Cameras::m_inverse_projection_matrices = nullptr;
 Rectf* Cameras::m_viewports = nullptr;
 Core::Renderers::UID* Cameras::m_renderer_IDs = nullptr;
-Math::ToneMapping::Parameters* Cameras::m_tone_mapping_parameters = nullptr;
+Tonemapping::Parameters* Cameras::m_tonemapping_parameters = nullptr;
 
 void Cameras::allocate(unsigned int capacity) {
     if (is_allocated())
@@ -48,7 +48,7 @@ void Cameras::allocate(unsigned int capacity) {
     m_render_indices = new unsigned int[capacity];
     m_viewports = new Rectf[capacity];
     m_renderer_IDs = new Core::Renderers::UID[capacity];
-    m_tone_mapping_parameters = new Math::ToneMapping::Parameters[capacity];
+    m_tonemapping_parameters = new Tonemapping::Parameters[capacity];
 
     // Allocate dummy camera at 0.
     m_names[0] = "Dummy camera";
@@ -59,7 +59,7 @@ void Cameras::allocate(unsigned int capacity) {
     m_inverse_projection_matrices[0] = Matrix4x4f::zero();
     m_viewports[0] = Rectf(0,0,0,0);
     m_renderer_IDs[0] = Core::Renderers::UID::invalid_UID();
-    m_tone_mapping_parameters[0] = {};
+    m_tonemapping_parameters[0] = {};
 }
 
 void Cameras::deallocate() {
@@ -76,7 +76,7 @@ void Cameras::deallocate() {
     delete[] m_render_indices; m_render_indices = nullptr;
     delete[] m_viewports; m_viewports = nullptr;
     delete[] m_renderer_IDs; m_renderer_IDs = nullptr;
-    delete[] m_tone_mapping_parameters; m_tone_mapping_parameters = nullptr;
+    delete[] m_tonemapping_parameters; m_tonemapping_parameters = nullptr;
 }
 
 void Cameras::reserve(unsigned int new_capacity) {
@@ -114,7 +114,7 @@ void Cameras::reserve_camera_data(unsigned int new_capacity, unsigned int old_ca
     m_render_indices = resize_and_copy_array(m_render_indices, new_capacity, copyable_elements);
     m_viewports = resize_and_copy_array(m_viewports, new_capacity, copyable_elements);
     m_renderer_IDs = resize_and_copy_array(m_renderer_IDs, new_capacity, copyable_elements);
-    m_tone_mapping_parameters = resize_and_copy_array(m_tone_mapping_parameters, new_capacity, copyable_elements);
+    m_tonemapping_parameters = resize_and_copy_array(m_tonemapping_parameters, new_capacity, copyable_elements);
 }
 
 Cameras::UID Cameras::create(const std::string& name, SceneRoots::UID scene_ID, 
@@ -145,7 +145,7 @@ Cameras::UID Cameras::create(const std::string& name, SceneRoots::UID scene_ID,
     m_inverse_projection_matrices[id] = inverse_projection_matrix;
     m_viewports[id] = Rectf(0, 0, 1, 1);
     m_renderer_IDs[id] = Core::Renderers::has(renderer_ID) ? renderer_ID : *Core::Renderers::begin();
-    m_tone_mapping_parameters[id] = Math::ToneMapping::Parameters::default();
+    m_tonemapping_parameters[id] = Tonemapping::Parameters::default();
     return id;
 }
 

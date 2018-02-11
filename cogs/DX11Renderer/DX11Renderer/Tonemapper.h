@@ -1,4 +1,4 @@
-// DirectX 11 tone mapper.
+// DirectX 11 tonemapper.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
 //
@@ -6,28 +6,28 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _DX11RENDERER_RENDERER_TONE_MAPPER_H_
-#define _DX11RENDERER_RENDERER_TONE_MAPPER_H_
+#ifndef _DX11RENDERER_RENDERER_TONEMAPPER_H_
+#define _DX11RENDERER_RENDERER_TONEMAPPER_H_
 
-#include <Cogwheel/Math/ToneMapping.h>
+#include <Cogwheel/Math/Tonemapping.h>
 
 #include <DX11Renderer/Types.h>
 
 namespace DX11Renderer {
 
 // ------------------------------------------------------------------------------------------------
-// Tone mapping implementation with support for various tonemappers.
+// Tonemapping implementation with support for various tonemappers.
 // Sources:
 // * https://mynameismjp.wordpress.com/2010/04/30/a-closer-look-at-tone-mapping/
 // * http://perso.univ-lyon1.fr/jean-claude.iehl/Public/educ/GAMA/2007/gdc07/Post-Processing_Pipeline.pdf
 // ------------------------------------------------------------------------------------------------
-class ToneMapper {
+class Tonemapper {
 public:
 
-    ToneMapper();
-    ToneMapper(ID3D11Device1& device, const std::wstring& shader_folder_path);
+    Tonemapper();
+    Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_path);
 
-    ToneMapper& operator=(ToneMapper&& rhs) {
+    Tonemapper& operator=(Tonemapper&& rhs) {
         m_fullscreen_VS = std::move(rhs.m_fullscreen_VS);
         m_log_luminance_PS = std::move(rhs.m_log_luminance_PS);
         m_linear_tonemapping_PS = std::move(rhs.m_linear_tonemapping_PS);
@@ -41,14 +41,14 @@ public:
     }
 
     // Tonemaps the pixels and stores them in the bound render target.
-    void tonemap(ID3D11DeviceContext1& context, Cogwheel::Math::ToneMapping::Parameters parameters,
+    void tonemap(ID3D11DeviceContext1& context, Cogwheel::Math::Tonemapping::Parameters parameters,
                  ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV,
                  int width, int height);
 
 private:
-    ToneMapper(ToneMapper& other) = delete;
-    ToneMapper(ToneMapper&& other) = delete;
-    ToneMapper& operator=(ToneMapper& rhs) = delete;
+    Tonemapper(Tonemapper& other) = delete;
+    Tonemapper(Tonemapper&& other) = delete;
+    Tonemapper& operator=(Tonemapper& rhs) = delete;
 
     OID3D11VertexShader m_fullscreen_VS;
     OID3D11PixelShader m_log_luminance_PS;
@@ -64,4 +64,4 @@ private:
 
 } // NS DX11Renderer
 
-#endif // _DX11RENDERER_RENDERER_TONE_MAPPER_H_
+#endif // _DX11RENDERER_RENDERER_TONEMAPPER_H_

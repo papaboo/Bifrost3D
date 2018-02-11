@@ -14,7 +14,7 @@
 #include <Cogwheel/Math/Matrix.h>
 #include <Cogwheel/Math/Ray.h>
 #include <Cogwheel/Math/Rect.h>
-#include <Cogwheel/Math/ToneMapping.h>
+#include <Cogwheel/Math/Tonemapping.h>
 #include <Cogwheel/Math/Transform.h>
 #include <Cogwheel/Scene/SceneRoot.h>
 
@@ -85,8 +85,8 @@ public:
     static Math::Rectf get_viewport(Cameras::UID camera_ID) { return m_viewports[camera_ID]; }
     static void set_viewport(Cameras::UID camera_ID, Math::Rectf projectionport) { m_viewports[camera_ID] = projectionport; }
 
-    static void set_tone_mapping_parameters(Cameras::UID camera_ID, Math::ToneMapping::Parameters params) { m_tone_mapping_parameters[camera_ID] = params; }
-    static Math::ToneMapping::Parameters get_tone_mapping_parameters(Cameras::UID camera_ID) { return m_tone_mapping_parameters[camera_ID]; }
+    static void set_tonemapping_parameters(Cameras::UID camera_ID, Math::Tonemapping::Parameters params) { m_tonemapping_parameters[camera_ID] = params; }
+    static Math::Tonemapping::Parameters get_tonemapping_parameters(Cameras::UID camera_ID) { return m_tonemapping_parameters[camera_ID]; }
 
 private:
 
@@ -102,7 +102,7 @@ private:
     static unsigned int* m_render_indices;
     static Math::Rectf* m_viewports;
     static Core::Renderers::UID* m_renderer_IDs;
-    static Math::ToneMapping::Parameters* m_tone_mapping_parameters;
+    static Math::Tonemapping::Parameters* m_tonemapping_parameters;
 };
 
 namespace CameraUtils {

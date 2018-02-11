@@ -207,22 +207,22 @@ private:
     Cameras::UID m_camera_ID;
 };
 
-class ToneMappingSwitcher {
+class TonemappingSwitcher {
 public:
-    ToneMappingSwitcher(Cameras::UID camera_ID)
+    TonemappingSwitcher(Cameras::UID camera_ID)
         : m_camera_ID(camera_ID) { }
 
     void handle(const Engine& engine) {
         if (engine.get_keyboard()->was_released(Keyboard::Key::T)) {
-            auto params = Cameras::get_tone_mapping_parameters(m_camera_ID);
+            auto params = Cameras::get_tonemapping_parameters(m_camera_ID);
             int operater_index = (int)params.mapping;
-            params.mapping = ToneMapping::Operator((operater_index + 1) % 4);
-            Cameras::set_tone_mapping_parameters(m_camera_ID, params);
+            params.mapping = Tonemapping::Operator((operater_index + 1) % 3);
+            Cameras::set_tonemapping_parameters(m_camera_ID, params);
         }
     }
 
     static inline void handle_callback(Engine& engine, void* state) {
-        static_cast<ToneMappingSwitcher*>(state)->handle(engine);
+        static_cast<TonemappingSwitcher*>(state)->handle(engine);
     }
 
 private:
@@ -541,8 +541,8 @@ int initializer(Cogwheel::Core::Engine& engine) {
     engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
     RenderSwapper* render_swapper = new RenderSwapper(cam_ID);
     engine.add_mutating_callback(RenderSwapper::handle_callback, render_swapper);
-    ToneMappingSwitcher* tone_mapping_switcher = new ToneMappingSwitcher(cam_ID);
-    engine.add_mutating_callback(ToneMappingSwitcher::handle_callback, tone_mapping_switcher);
+    TonemappingSwitcher* tonemapping_switcher = new TonemappingSwitcher(cam_ID);
+    engine.add_mutating_callback(TonemappingSwitcher::handle_callback, tonemapping_switcher);
     engine.add_mutating_callback(update_FPS, nullptr);
 
     return 0;

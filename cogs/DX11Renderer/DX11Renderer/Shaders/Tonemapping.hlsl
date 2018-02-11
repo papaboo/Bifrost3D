@@ -1,4 +1,4 @@
-// Tone mapping shaders.
+// Tonemapping shaders.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
 //
@@ -107,13 +107,6 @@ float3 tonemap_luminance_filmic_ALU(float3 color) {
 
 float4 linear_tonemapping_ps(Varyings input) : SV_TARGET {
     return pixels[int2(input.position.xy)];
-}
-
-float4 simple_tonemapping_ps(Varyings input) : SV_TARGET {
-    float3 color = pixels[int2(input.position.xy)].rgb;
-    float luminance = luma(color);
-    float tonemapped_luminance = luminance / (1 + luminance);
-    return float4(color * (tonemapped_luminance / luminance), 1);
 }
 
 float4 reinhard_tonemapping_ps(Varyings input) : SV_TARGET {
