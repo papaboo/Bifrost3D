@@ -36,8 +36,8 @@ Texture2D pixels : register(t0);
 
 float4 log_luminance_ps(Varyings input) : SV_TARGET {
     float3 pixel = pixels[int2(input.position.xy)].rgb;
-    float log_luminance = log(luma(pixel));
-    return float4(max(log_luminance, 0.0001f), 1, 1, 1);
+    float log_luminance = log(max(luma(pixel), 0.0001f));
+    return float4(log_luminance, 1, 1, 1);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -48,26 +48,23 @@ Texture2D log_luminance_tex : register(t1);
 SamplerState log_luminance_sampler : register(s1);
 
 float get_average_luminance(float2 texcoord) {
-    // TODO the log average texture should be sampled at the level where the smallest dimension has size 2, 
-    // TODO Interpolate the average luminance across a couple of pixels and time.
     float width, height, mip_count;
     log_luminance_tex.GetDimensions(0, width, height, mip_count);
 
-    float log_luminance = log_luminance_tex.SampleLevel(log_luminance_sampler, texcoord, mip_count - 3).r;
+    float log_luminance = log_luminance_tex.SampleLevel(log_luminance_sampler, texcoord, mip_count).r;
     return exp(log_luminance);
 }
 
-// Determines the color based on local exposure
-float dynamic_exposure(float average_luminance, float threshold) {
-    // Use geometric mean        
-    average_luminance = max(average_luminance, 0.001f);
+float dynamic_linear_exposure(float average_luminance) {
+    float key_value = 0.5f; // De-gammaed 0.18, see Reinhard et al., 2002
+    return key_value / average_luminance;
+}
 
-    float key_value = 1.03f - (2.0f / (2 + log10(average_luminance + 1)));
-
-    float linear_exposure = (key_value / average_luminance);
-    float log_exposure = log2(max(linear_exposure, 0.0001f));
-
-    return exp2(log_exposure - threshold);
+// Compute linear exposure from the geometric mean. See MJP's tonemapping sample.
+// https://mynameismjp.wordpress.com/2010/04/30/a-closer-look-at-tone-mapping/
+float geometric_mean_linear_exposure(float average_luminance) {
+    float key_value = 1.03f - (2.0f / (2 + log2(average_luminance + 1)));
+    return key_value / average_luminance;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -83,23 +80,23 @@ float3 tonemap_reinhard(float3 color, float middlegrey, float average_luminance,
     return color * (tonemapped_luminance / luminance);
 }
 
-// The filmic curve ALU only tonemapper from John Hable's presentation.
-float3 tonemap_filmic_ALU(float3 color) {
-    color = max(0, color - 0.004f);
-    color = (color * (6.2f * color + 0.5f)) / (color * (6.2f * color + 1.7f) + 0.06f);
+float3 uncharted2_tonemap_helper(float3 color, float shoulder_strength, float linear_strength, float linear_angle, float toe_strength, float toe_numerator, float toe_denominator) {
+    float3 x = color;
+    float A = shoulder_strength;
+    float B = linear_strength;
+    float C = linear_angle;
+    float D = toe_strength;
+    float E = toe_numerator;
+    float F = toe_denominator;
+    return ((x*(x*A + C*B) + D*E) / (x*(x*A + B) + D*F)) - E / F;
+};
 
-    // result has 1/2.2 baked in
-    return pow(color, 2.2f);
+// Uncharted 2's filmic operator.
+float3 uncharted2(float3 color, float shoulder_strength, float linear_strength, float linear_angle, float toe_strength, float toe_numerator, float toe_denominator, float linear_white) {
+    return uncharted2_tonemap_helper(color, shoulder_strength, linear_strength, linear_angle, toe_strength, toe_numerator, toe_denominator) /
+        uncharted2_tonemap_helper(float3(linear_white, linear_white, linear_white), shoulder_strength, linear_strength, linear_angle, toe_strength, toe_numerator, toe_denominator);
 }
 
-// The filmic curve ALU only tonemapper from John Hable's presentation.
-float3 tonemap_luminance_filmic_ALU(float3 color) {
-    float luminance = luma(color);
-    luminance = max(0, luminance - 0.004f);
-    luminance = (luminance * (6.2f * luminance + 0.5f)) / (luminance * (6.2f * luminance + 1.7f) + 0.06f);
-    float tonemapped_luminance = pow(luminance, 2.2f); // result has 1/2.2 baked in.
-    return color * (tonemapped_luminance / luminance);
-}
 
 // ------------------------------------------------------------------------------------------------
 // Tonemapping pixel shaders.
@@ -110,17 +107,28 @@ float4 linear_tonemapping_ps(Varyings input) : SV_TARGET {
 }
 
 float4 reinhard_tonemapping_ps(Varyings input) : SV_TARGET {
+    // TODO Apply exposure here instead of as part of the reinhard operator.
     float average_luminance = get_average_luminance(input.texcoord);
     float3 color = pixels[int2(input.position.xy)].rgb;
-    color = tonemap_reinhard(color, 1.0f, average_luminance, 9.0);
+    color = tonemap_reinhard(color, 0.5f, average_luminance, 9.0);
     return float4(color, 1);
 }
 
 float4 filmic_tonemapping_ps(Varyings input) : SV_TARGET {
+    // Exposure
     float average_luminance = get_average_luminance(input.texcoord);
-
-    float exposure = dynamic_exposure(average_luminance, 0.0);
-
+    float exposure = dynamic_linear_exposure(average_luminance);
     float3 color = exposure * pixels[int2(input.position.xy)].rgb;
-    return float4(tonemap_luminance_filmic_ALU(color), 1.0);
+
+    // Tonemapping.
+    float shoulder_strength = 0.22f;
+    float linear_strength = 0.3f;
+    float linear_angle = 0.1f;
+    float toe_strength = 0.2f;
+    float toe_numerator = 0.01f;
+    float toe_denominator = 0.3f;
+    float linear_white = 11.2f; 
+    float3 tonemapped_color = uncharted2(color, shoulder_strength, linear_strength, linear_angle, toe_strength, toe_numerator, toe_denominator, linear_white);
+
+    return float4(tonemapped_color, 1.0);
 }
