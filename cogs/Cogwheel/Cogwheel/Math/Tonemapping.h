@@ -48,20 +48,19 @@ inline RGB reinhard(RGB color, float white_level_sqrd) {
 }
 
 // Uncharted 2's filmic operator.
-inline RGB uncharted2_tonemap_helper(RGB color, float shoulder_strength, float linear_strength, float linear_angle, float toe_strength, float toe_numerator, float toe_denominator) {
-    RGB x = color;
-    float A = shoulder_strength;
-    float B = linear_strength;
-    float C = linear_angle;
-    float D = toe_strength;
-    float E = toe_numerator;
-    float F = toe_denominator;
-    return ((x*(x*A + C*B) + D*E) / (x*(x*A + B) + D*F)) - E / F;
-}
-
-// Uncharted 2's filmic operator.
 inline RGB uncharted2(RGB color, float shoulder_strength, float linear_strength, float linear_angle, float toe_strength, float toe_numerator, float toe_denominator, float linear_white) {
-    return uncharted2_tonemap_helper(color, shoulder_strength, linear_strength, linear_angle, toe_strength, toe_numerator, toe_denominator) / 
+    auto uncharted2_tonemap_helper = [](RGB color, float shoulder_strength, float linear_strength, float linear_angle, float toe_strength, float toe_numerator, float toe_denominator) -> RGB {
+        RGB x = color;
+        float A = shoulder_strength;
+        float B = linear_strength;
+        float C = linear_angle;
+        float D = toe_strength;
+        float E = toe_numerator;
+        float F = toe_denominator;
+        return ((x*(x*A + C*B) + D*E) / (x*(x*A + B) + D*F)) - E / F;
+    };
+
+    return uncharted2_tonemap_helper(color, shoulder_strength, linear_strength, linear_angle, toe_strength, toe_numerator, toe_denominator) /
         uncharted2_tonemap_helper(RGB(linear_white), shoulder_strength, linear_strength, linear_angle, toe_strength, toe_numerator, toe_denominator);
 }
 
