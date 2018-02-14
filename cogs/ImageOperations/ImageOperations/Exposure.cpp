@@ -19,7 +19,7 @@ float average_log_luminance(Cogwheel::Assets::Images::UID image_ID) {
         for (int y = 0; y < height; ++y)
             for (int x = 0; x < width; ++x) {
                 auto pixel = image.get_pixel(Cogwheel::Math::Vector3ui(x, y, z)).rgb();
-                summed_log_luminance += fmaxf(0.0001f, log2(Cogwheel::Math::luma(pixel)));
+                summed_log_luminance += log2(fmaxf(Cogwheel::Math::luma(pixel), 0.0001f));
             }
 
 	return float(summed_log_luminance / (width * height * depth));
