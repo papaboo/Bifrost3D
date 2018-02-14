@@ -252,6 +252,11 @@ inline float luma(RGB color) {
     return 0.3f * color.r + 0.59f * color.g + 0.11f * color.b;
 }
 
+inline RGB saturate(RGB color) {
+    auto saturate = [](float v) { return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v); };
+    return RGB(saturate(color.r), saturate(color.g), saturate(color.b));
+}
+
 } // NS Math
 } // NS Cogwheel
 
