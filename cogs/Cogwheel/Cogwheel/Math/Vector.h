@@ -277,6 +277,21 @@ inline Cogwheel::Math::Vector4<T> operator+(T lhs, Cogwheel::Math::Vector4<T> rh
 }
 
 template<class T>
+inline Cogwheel::Math::Vector2<T> operator-(T lhs, Cogwheel::Math::Vector2<T> rhs) {
+    return Cogwheel::Math::Vector2<T>(lhs - rhs.x, lhs - rhs.y);
+}
+
+template<class T>
+inline Cogwheel::Math::Vector3<T> operator-(T lhs, Cogwheel::Math::Vector3<T> rhs) {
+    return Cogwheel::Math::Vector3<T>(lhs - rhs.x, lhs - rhs.y, lhs - rhs.z);
+}
+
+template<class T>
+inline Cogwheel::Math::Vector4<T> operator-(T lhs, Cogwheel::Math::Vector4<T> rhs) {
+    return Cogwheel::Math::Vector4<T>(lhs - rhs.x, lhs - rhs.y, lhs - rhs.z, lhs - rhs.w);
+}
+
+template<class T>
 inline Cogwheel::Math::Vector2<T> operator*(T lhs, Cogwheel::Math::Vector2<T> rhs) {
     return rhs * lhs;
 }
@@ -289,6 +304,21 @@ inline Cogwheel::Math::Vector3<T> operator*(T lhs, Cogwheel::Math::Vector3<T> rh
 template<class T>
 inline Cogwheel::Math::Vector4<T> operator*(T lhs, Cogwheel::Math::Vector4<T> rhs) {
     return rhs * lhs;
+}
+
+template<class T>
+inline Cogwheel::Math::Vector2<T> operator/(T lhs, Cogwheel::Math::Vector2<T> rhs) {
+    return Cogwheel::Math::Vector2<T>(lhs / rhs.x, lhs / rhs.y);
+}
+
+template<class T>
+inline Cogwheel::Math::Vector3<T> operator/(T lhs, Cogwheel::Math::Vector3<T> rhs) {
+    return Cogwheel::Math::Vector3<T>(lhs / rhs.x, lhs / rhs.y, lhs / rhs.z);
+}
+
+template<class T>
+inline Cogwheel::Math::Vector4<T> operator/(T lhs, Cogwheel::Math::Vector4<T> rhs) {
+    return Cogwheel::Math::Vector4<T>(lhs / rhs.x, lhs / rhs.y, lhs / rhs.z, lhs / rhs.w);
 }
 
 #endif // _COGWHEEL_MATH_VECTOR_H_
