@@ -24,7 +24,7 @@ struct Tonemapper::Implementation final {
     // --------------------------------------------------------------------------------------------
     // Members
     // --------------------------------------------------------------------------------------------
-    enum class Operator { Linear, Reinhard, Uncharted2 };
+    enum class Operator { Linear, Reinhard, FilmicAlu, Uncharted2, Unreal4 };
     Operator m_operator = Operator::Uncharted2;
     Image m_input;
     std::string m_output_path;
@@ -32,19 +32,27 @@ struct Tonemapper::Implementation final {
     GLuint m_tex_ID = 0u;
     bool m_upload_image = true;
 
-    // Exposure members
+    // Exposure members anda helpers
     float m_exposure_bias = 0.0f;
+    float key() { return exp2(m_exposure_bias); }
+    float luminance_scale() { return 0.5f / key(); }
     
     // Tonemapping members
     float m_reinhard_whitepoint = 1.0f;
 
-    float m_uncharted2_shoulder_strength = 0.15f;
-    float m_uncharted2_linear_strength = 0.5f;
+    float m_uncharted2_shoulder_strength = 0.22f;
+    float m_uncharted2_linear_strength = 0.3f;
     float m_uncharted2_linear_angle = 0.1f;
     float m_uncharted2_toe_strength = 0.2f;
-    float m_uncharted2_toe_numerator = 0.02f;
+    float m_uncharted2_toe_numerator = 0.01f;
     float m_uncharted2_toe_denominator = 0.3f;
     float m_uncharted2_linear_white = 11.2f;
+
+    float m_unreal4_slope = 0.91f;
+    float m_unreal4_toe = 0.53f;
+    float m_unreal4_shoulder = 0.23f;
+    float m_unreal4_black_clip = 0.0f;
+    float m_unreal4_white_clip = 0.035f;
 
     TwBar* m_gui = nullptr;
 
@@ -77,6 +85,8 @@ struct Tonemapper::Implementation final {
                 m_operator = Operator::Reinhard;
             else if (arg.compare("--uncharted2") == 0)
                 m_operator = Operator::Uncharted2;
+            else if (arg.compare("--unreal4") == 0)
+                m_operator = Operator::Unreal4;
             else if (arg.compare("--input") == 0)
                 input_path = args[++i];
             else if (arg.compare("--output") == 0)
@@ -95,7 +105,7 @@ struct Tonemapper::Implementation final {
     data->m_upload_image = true; \
 }, \
 [](void* value, void* client_data) { \
-    *static_cast<T*>(value) = static_cast<Tonemapper::Implementation*>(client_data)->member_name; \
+    *(T*)value = ((Tonemapper::Implementation*)client_data)->member_name; \
 }
 
     // --------------------------------------------------------------------------------------------
@@ -109,22 +119,44 @@ struct Tonemapper::Implementation final {
 
         { // Exposure mapping
 
-            TwAddVarCB(bar, "Exposure bias", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_exposure_bias, float), this, "step=0.1 group='Exposure'");
+            TwAddVarCB(bar, "Bias", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_exposure_bias, float), this, "step=0.1 group=Exposure");
+            TwAddVarCB(bar, "Key", TW_TYPE_FLOAT, nullptr, [](void* value, void* client_data) {
+                *(float*)value = ((Tonemapper::Implementation*)client_data)->key();
+            }, this, "step=0.001 group=Exposure");
+            TwAddVarCB(bar, "Luminance scale", TW_TYPE_FLOAT, nullptr, [](void* value, void* client_data) {
+                *(float*)value = ((Tonemapper::Implementation*)client_data)->luminance_scale();
+            }, this, "step=0.001 group=Exposure");
 
-            auto auto_exposure = [](void* client_data) {
+            auto reinhard_auto_exposure = [](void* client_data) {
                 Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
                 float average_log_luminance = ImageOperations::Exposure::average_log_luminance(data->m_input.get_ID());
-                data->m_exposure_bias = exp2(average_log_luminance);
+                data->m_exposure_bias = average_log_luminance;
                 data->m_upload_image = true;
             };
-            TwAddButton(bar, "Auto adjust", auto_exposure, this, "group=Exposure");
+            TwAddButton(bar, "Adjust by log-average", reinhard_auto_exposure, this, "group=Exposure");
+
+            auto auto_geometric_mean = [](void* client_data) {
+                Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
+                float average_log_luminance = ImageOperations::Exposure::average_log_luminance(data->m_input.get_ID());
+                float average_luminance = exp2(average_log_luminance);
+                average_luminance = max(average_luminance, 0.001f);
+                float key_value = 1.03f - (2.0f / (2 + log2(average_luminance + 1)));
+                float linear_exposure = (key_value / average_luminance);
+                float log_exposure = log2(max(linear_exposure, 0.0001f));
+                data->m_exposure_bias = log_exposure;
+
+                data->m_upload_image = true;
+            };
+            TwAddButton(bar, "Adjust by geometric mean", auto_geometric_mean, this, "group=Exposure");
         }
 
         { // Tonemapping
             TwEnumVal operators[] = { { int(Operator::Linear), "Linear" },
                                       { int(Operator::Reinhard), "Reinhard" }, 
-                                      { int(Operator::Uncharted2), "Uncharted2" } };
-            TwType AntOperatorEnum = TwDefineEnum("Operators", operators, 3);
+                                      { int(Operator::FilmicAlu), "FilmicAlu" },
+                                      { int(Operator::Uncharted2), "Uncharted2" },
+                                      { int(Operator::Unreal4), "Unreal4" } };
+            TwType AntOperatorEnum = TwDefineEnum("Operators", operators, 5);
 
             auto set_m_operator = [](const void* input_data, void* client_data) {
                 Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
@@ -136,6 +168,9 @@ struct Tonemapper::Implementation final {
 
                 auto show_uncharted2 = std::string("Tonemapper/Uncharted2 visible=") + (data->m_operator == Operator::Uncharted2 ? "true" : "false");
                 TwDefine(show_uncharted2.c_str());
+
+                auto show_unreal4 = std::string("Tonemapper/Unreal4 visible=") + (data->m_operator == Operator::Unreal4 ? "true" : "false");
+                TwDefine(show_unreal4.c_str());
             };
             auto get_m_operator = [](void* value, void* client_data) {
                 *(Operator*)value = ((Tonemapper::Implementation*)client_data)->m_operator;
@@ -158,6 +193,78 @@ struct Tonemapper::Implementation final {
                 TwAddVarCB(bar, "Linear white", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2_linear_white, float), this, "min=0 step=0.1 group=Uncharted2");
 
                 TwDefine("Tonemapper/Uncharted2 group='Tonemapping' label='Uncharted 2'");
+            }
+
+            { // Unreal 4 filmic
+                { // Presets
+                    enum class Presets { None, Default, Uncharted2, HP, ACES, Legacy };
+                    TwEnumVal ant_presets[] = { { int(Presets::None), "Select preset" },
+                                                { int(Presets::Default), "Default" },
+                                                { int(Presets::Uncharted2), "Uncharted2" },
+                                                { int(Presets::HP), "HP" },
+                                                { int(Presets::ACES), "ACES" },
+                                                { int(Presets::Legacy), "Legacy" } };
+                    TwType AntPresetsEnum = TwDefineEnum("Presets", ant_presets, 6);
+
+                    auto set_preset = [](const void* input_data, void* client_data) {
+                        Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
+                        Presets preset = *(Presets*)input_data;
+
+                        switch (preset) {
+                        case Presets::None:
+                            // Do nothing
+                            break;
+                        case Presets::Uncharted2:
+                            data->m_unreal4_slope = 0.63f;
+                            data->m_unreal4_toe = 0.55f;
+                            data->m_unreal4_shoulder = 0.47f;
+                            data->m_unreal4_black_clip = 0.0f;
+                            data->m_unreal4_white_clip = 0.01f;
+                            break;
+                        case Presets::HP:
+                            data->m_unreal4_slope = 0.65f;
+                            data->m_unreal4_toe = 0.63f;
+                            data->m_unreal4_shoulder = 0.45f;
+                            data->m_unreal4_black_clip = 0.0f;
+                            data->m_unreal4_white_clip = 0.0f;
+                            break;
+                        case Presets::ACES:
+                            data->m_unreal4_slope = 0.91f;
+                            data->m_unreal4_toe = 0.53f;
+                            data->m_unreal4_shoulder = 0.23f;
+                            data->m_unreal4_black_clip = 0.0f;
+                            data->m_unreal4_white_clip = 0.035f;
+                            break;
+                        case Presets::Legacy:
+                            data->m_unreal4_slope = 0.98f;
+                            data->m_unreal4_toe = 0.3f;
+                            data->m_unreal4_shoulder = 0.22f;
+                            data->m_unreal4_black_clip = 0.0f;
+                            data->m_unreal4_white_clip = 0.025f;
+                            break;
+                        case Presets::Default:
+                        default:
+                            data->m_unreal4_slope = 0.91f;
+                            data->m_unreal4_toe = 0.53f;
+                            data->m_unreal4_shoulder = 0.23f;
+                            data->m_unreal4_black_clip = 0.0f;
+                            data->m_unreal4_white_clip = 0.035f;
+                            break;
+                        }
+
+                        data->m_upload_image = true;
+                    };
+                    auto get_preset = [](void* value, void* client_data) { *(Presets*)value = Presets::None; };
+                    TwAddVarCB(bar, "Presets", AntPresetsEnum, set_preset, get_preset, this, "group='Unreal4'");
+                }
+
+                TwAddVarCB(bar, "Black clip", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4_black_clip, float), this, "step=0.1 group=Unreal4");
+                TwAddVarCB(bar, "Toe", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4_toe, float), this, "step=0.1 group=Unreal4");
+                TwAddVarCB(bar, "Slope", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4_slope, float), this, "step=0.1 group=Unreal4");
+                TwAddVarCB(bar, "Shoulder", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4_shoulder, float), this, "step=0.1 group=Unreal4");
+                TwAddVarCB(bar, "White clip", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4_white_clip, float), this, "step=0.1 group=Unreal4");
+
+                TwDefine("Tonemapper/Unreal4 group='Tonemapping'");
             }
 
             auto tonemapper = Operator::Uncharted2;
@@ -206,21 +313,34 @@ struct Tonemapper::Implementation final {
     // --------------------------------------------------------------------------------------------
     // Update.
     // --------------------------------------------------------------------------------------------
+
+    // The filmic curve ALU only tonemapper from John Hable's presentation.
+    RGB tonemap_filmic_ALU(RGB color) {
+        color = saturate(color - 0.004f);
+        color = (color * (6.2f * color + 0.5f)) / (color * (6.2f * color + 1.7f) + 0.06f);
+
+        // result has 1/2.2 baked in
+        return gammacorrect(color, 2.2f);
+    }
+
     void update(Engine& engine) {
 
         if (m_upload_image) {
-
-            float exposure = exp2f(m_exposure_bias);
+            float l_scale = luminance_scale();
             int width = m_input.get_width(), height = m_input.get_height();
             RGB* gamma_corrected_pixels = new RGB[m_input.get_pixel_count()];
             #pragma omp parallel for schedule(dynamic, 16)
             for (int i = 0; i < (int)m_input.get_pixel_count(); ++i) {
                 int x = i % width, y = i / width;
-                RGB adjusted_color = m_input.get_pixel(Vector2ui(x, y)).rgb() * exposure;
+                RGB adjusted_color = m_input.get_pixel(Vector2ui(x, y)).rgb() * l_scale;
                 if (m_operator == Operator::Reinhard)
                     adjusted_color = Tonemapping::reinhard(adjusted_color, m_reinhard_whitepoint * m_reinhard_whitepoint);
+                else if (m_operator == Operator::FilmicAlu)
+                    adjusted_color = tonemap_filmic_ALU(adjusted_color);
                 else if (m_operator == Operator::Uncharted2)
                     adjusted_color = Tonemapping::uncharted2(adjusted_color, m_uncharted2_shoulder_strength, m_uncharted2_linear_strength, m_uncharted2_linear_angle, m_uncharted2_toe_strength, m_uncharted2_toe_numerator, m_uncharted2_toe_denominator, m_uncharted2_linear_white);
+                else if (m_operator == Operator::Unreal4)
+                    adjusted_color = Tonemapping::unreal4(adjusted_color, m_unreal4_slope, m_unreal4_toe, m_unreal4_shoulder, m_unreal4_black_clip, m_unreal4_white_clip);
                 gamma_corrected_pixels[i] = gammacorrect(adjusted_color, 1.0f / 2.2f);
             }
 
