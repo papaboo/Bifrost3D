@@ -99,8 +99,8 @@ inline unsigned int ceil_divide(unsigned int a, unsigned int b) {
 }
 
 // Linear interpolation of arbitrary types that implement addition, subtraction and multiplication.
-template <typename T>
-inline T lerp(const T a, const T b, const float t) {
+template <typename T, typename U>
+inline T lerp(const T a, const T b, const U t) {
     return a + (b - a) * t;
 }
 
