@@ -97,6 +97,85 @@ float3 uncharted2(float3 color, float shoulder_strength, float linear_strength, 
         uncharted2_tonemap_helper(float3(linear_white, linear_white, linear_white), shoulder_strength, linear_strength, linear_angle, toe_strength, toe_numerator, toe_denominator);
 }
 
+// Bradford chromatic adaptation transforms between ACES white point (D60) and sRGB white point (D65)
+static const float3x3 D65_2_D60_CAT = {
+    1.01303f,    0.00610531f, -0.014971f,
+    0.00769823f, 0.998165f,   -0.00503203f,
+    -0.00284131f, 0.00468516f,  0.924507f,
+};
+
+static const float3x3 sRGB_2_XYZ_MAT = {
+    0.4124564f, 0.3575761f, 0.1804375f,
+    0.2126729f, 0.7151522f, 0.0721750f,
+    0.0193339f, 0.1191920f, 0.9503041f,
+};
+
+static const float3x3 XYZ_2_AP1_MAT = {
+    1.6410233797f, -0.3248032942f, -0.2364246952f,
+    -0.6636628587f,  1.6153315917f,  0.0167563477f,
+    0.0117218943f, -0.0082844420f,  0.9883948585f,
+};
+
+static const float3x3 AP1_2_XYZ_MAT = {
+    0.6624541811f, 0.1340042065f, 0.1561876870f,
+    0.2722287168f, 0.6740817658f, 0.0536895174f,
+    -0.0055746495f, 0.0040607335f, 1.0103391003f,
+};
+
+static const float3 AP1_RGB2Y = {
+    0.2722287168f, //AP1_2_XYZ_MAT[0][1],
+    0.6740817658f, //AP1_2_XYZ_MAT[1][1],
+    0.0536895174f, //AP1_2_XYZ_MAT[2][1]
+};
+
+inline float3 unreal4(float3 color, float slope = 0.91f, float toe = 0.53f, float shoulder = 0.23f, float black_clip = 0.0f, float white_clip = 0.035f) {
+
+    static const float3x3 sRGB_to_AP1 = mul(XYZ_2_AP1_MAT, mul(D65_2_D60_CAT, sRGB_2_XYZ_MAT));
+
+    // Use ACEScg primaries as working space
+    float3 working_color = mul(sRGB_to_AP1, color);
+    working_color = max(0.0, working_color);
+
+    // Pre desaturate
+    working_color = lerp(dot(working_color, AP1_RGB2Y), working_color, 0.96f);
+
+    const float toe_scale = 1.0f + black_clip - toe;
+    const float shoulder_scale = 1.0f + white_clip - shoulder;
+
+    const float in_match = 0.18f, out_match = 0.18f;
+
+    float toe_match;
+    if (toe > 0.8f)
+        // 0.18 will be on straight segment
+        toe_match = (1.0f - toe - out_match) / slope + log10(in_match);
+    else {
+        // 0.18 will be on toe segment
+
+        // Solve for toe_match such that input of InMatch gives output of OutMatch.
+        const float bt = (out_match + black_clip) / toe_scale - 1.0f;
+        toe_match = log10(in_match) - 0.5f * log((1.0f + bt) / (1.0f - bt)) * (toe_scale / slope);
+    }
+
+    float straight_match = (1.0f - toe) / slope - toe_match;
+    float shoulder_match = shoulder / slope - straight_match;
+
+    float3 log_color = log10(working_color);
+    float3 straight_color = (log_color + straight_match) * slope;
+
+    float3 toe_color = (-black_clip) + (2 * toe_scale) / (1 + exp((-2 * slope / toe_scale) * (log_color - toe_match)));
+    float3 shoulder_color = (1 + white_clip) - (2 * shoulder_scale) / (1 + exp((2 * slope / shoulder_scale) * (log_color - shoulder_match)));
+
+    float3 t = saturate((log_color - toe_match) / (shoulder_match - toe_match));
+    t = shoulder_match < toe_match ? 1.0f - t : t;
+    t = (3.0f - t * 2.0f) * t * t;
+    float3 tone_color = lerp(toe_color, shoulder_color, t);
+
+    // Post desaturate
+    tone_color = lerp(dot(tone_color, AP1_RGB2Y), tone_color, 0.93f);
+
+    // Returning positive AP1 values
+    return max(0.0, tone_color);
+}
 
 // ------------------------------------------------------------------------------------------------
 // Tonemapping pixel shaders.
@@ -114,10 +193,11 @@ float4 reinhard_tonemapping_ps(Varyings input) : SV_TARGET {
     return float4(color, 1);
 }
 
-float4 filmic_tonemapping_ps(Varyings input) : SV_TARGET {
+float4 uncharted2_tonemapping_ps(Varyings input) : SV_TARGET {
     // Exposure
     float average_luminance = get_average_luminance(input.texcoord);
-    float exposure = dynamic_linear_exposure(average_luminance);
+    float exposure = geometric_mean_linear_exposure(average_luminance);
+    exposure = clamp(exposure, 0.25, 4.0);
     float3 color = exposure * pixels[int2(input.position.xy)].rgb;
 
     // Tonemapping.
@@ -131,4 +211,15 @@ float4 filmic_tonemapping_ps(Varyings input) : SV_TARGET {
     float3 tonemapped_color = uncharted2(color, shoulder_strength, linear_strength, linear_angle, toe_strength, toe_numerator, toe_denominator, linear_white);
 
     return float4(tonemapped_color, 1.0);
+}
+
+float4 unreal4_tonemapping_ps(Varyings input) : SV_TARGET{
+    // Exposure
+    float average_luminance = get_average_luminance(input.texcoord);
+    float exposure = geometric_mean_linear_exposure(average_luminance);
+    exposure = clamp(exposure, 0.25, 4.0);
+    float3 color = exposure * pixels[int2(input.position.xy)].rgb;
+
+    // Tonemapping.
+    return float4(unreal4(color), 1.0);
 }

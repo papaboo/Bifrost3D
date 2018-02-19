@@ -216,7 +216,7 @@ public:
         if (engine.get_keyboard()->was_released(Keyboard::Key::T)) {
             auto params = Cameras::get_tonemapping_parameters(m_camera_ID);
             int operater_index = (int)params.mapping;
-            params.mapping = Tonemapping::Operator((operater_index + 1) % 3);
+            params.mapping = Tonemapping::Operator((operater_index + 1) % 4);
             Cameras::set_tonemapping_parameters(m_camera_ID, params);
         }
     }

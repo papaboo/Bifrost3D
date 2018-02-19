@@ -15,7 +15,7 @@ namespace DX11Renderer {
 
 Tonemapper::Tonemapper()
     : m_fullscreen_VS(nullptr), m_log_luminance_PS(nullptr)
-    , m_linear_tonemapping_PS(nullptr), m_reinhard_tonemapping_PS(nullptr), m_filmic_tonemapping_PS(nullptr)
+    , m_linear_tonemapping_PS(nullptr), m_reinhard_tonemapping_PS(nullptr), m_uncharted2_tonemapping_PS(nullptr), m_filmic_tonemapping_PS(nullptr)
     , m_width(0), m_height(0), m_log_luminance_RTV(nullptr), m_log_luminance_SRV(nullptr), m_log_luminance_sampler(nullptr){ }
 
 Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_path)
@@ -39,7 +39,8 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
         m_log_luminance_PS = create_pixel_shader("log_luminance_ps");
         m_linear_tonemapping_PS = create_pixel_shader("linear_tonemapping_ps");
         m_reinhard_tonemapping_PS = create_pixel_shader("reinhard_tonemapping_ps");
-        m_filmic_tonemapping_PS = create_pixel_shader("filmic_tonemapping_ps");
+        m_uncharted2_tonemapping_PS = create_pixel_shader("uncharted2_tonemapping_ps");
+        m_filmic_tonemapping_PS = create_pixel_shader("unreal4_tonemapping_ps");
     }
 
     { // Setup interpolation sampler for log average image.
@@ -124,6 +125,8 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
             context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
             if (parameters.mapping == Tonemapping::Operator::Reinhard)
                 context.PSSetShader(m_reinhard_tonemapping_PS, 0, 0);
+            else if (parameters.mapping == Tonemapping::Operator::Uncharted2)
+                context.PSSetShader(m_uncharted2_tonemapping_PS, 0, 0);
             else // parameters.mapping == Tonemapping::Operator::Filmic
                 context.PSSetShader(m_filmic_tonemapping_PS, 0, 0);
 
