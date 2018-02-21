@@ -76,39 +76,32 @@ inline RGB uncharted2(RGB color, float shoulder_strength, float linear_strength,
 // ------------------------------------------------------------------------------------------------
 
 // Bradford chromatic adaptation transforms between ACES white point (D60) and sRGB white point (D65)
-static const Matrix3x3f D65_2_D60_CAT = {
+static const Matrix3x3f D65_to_D60_cat = {
     1.01303f,    0.00610531f, -0.014971f,
     0.00769823f, 0.998165f,   -0.00503203f,
-    -0.00284131f, 0.00468516f,  0.924507f,
-};
+    -0.00284131f, 0.00468516f,  0.924507f };
 
-static const Matrix3x3f sRGB_2_XYZ_MAT = {
+// https://www.image-engineering.de/library/technotes/958-how-to-convert-between-srgb-and-ciexyz
+static const Matrix3x3f sRGB_to_XYZ_mat = {
     0.4124564f, 0.3575761f, 0.1804375f,
     0.2126729f, 0.7151522f, 0.0721750f,
-    0.0193339f, 0.1191920f, 0.9503041f,
-};
+    0.0193339f, 0.1191920f, 0.9503041f };
 
-static const Matrix3x3f XYZ_2_AP1_MAT = {
+static const Matrix3x3f XYZ_to_AP1_mat = {
     1.6410233797f, -0.3248032942f, -0.2364246952f,
     -0.6636628587f,  1.6153315917f,  0.0167563477f,
-    0.0117218943f, -0.0082844420f,  0.9883948585f,
-};
+    0.0117218943f, -0.0082844420f,  0.9883948585f };
 
-static const Matrix3x3f AP1_2_XYZ_MAT = {
+static const Matrix3x3f AP1_to_XYZ_mat = {
     0.6624541811f, 0.1340042065f, 0.1561876870f,
     0.2722287168f, 0.6740817658f, 0.0536895174f,
-    -0.0055746495f, 0.0040607335f, 1.0103391003f,
-};
+    -0.0055746495f, 0.0040607335f, 1.0103391003f };
 
-static const Vector3f AP1_RGB2Y = {
-    0.2722287168f, //AP1_2_XYZ_MAT[0][1],
-    0.6740817658f, //AP1_2_XYZ_MAT[1][1],
-    0.0536895174f, //AP1_2_XYZ_MAT[2][1]
-};
+static const Vector3f AP1_RGB2Y = AP1_to_XYZ_mat.get_row(1);
 
 inline RGB unreal4(RGB color, float slope = 0.91f, float toe = 0.53f, float shoulder = 0.23f, float black_clip = 0.0f, float white_clip = 0.035f) {
 
-    static const Matrix3x3f sRGB_to_AP1 = XYZ_2_AP1_MAT * D65_2_D60_CAT * sRGB_2_XYZ_MAT;
+    static const Matrix3x3f sRGB_to_AP1 = XYZ_to_AP1_mat * D65_to_D60_cat * sRGB_to_XYZ_mat;
 
     // Use ACEScg primaries as working space
     Vector3f working_color = sRGB_to_AP1 * Vector3f(color.r, color.g, color.b);
