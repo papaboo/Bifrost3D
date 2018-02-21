@@ -14,7 +14,10 @@
 namespace ImageOperations {
 namespace Exposure {
 
-float average_log_luminance(Cogwheel::Assets::Images::UID image_ID);
+float summed_log_luminance(Cogwheel::Assets::Images::UID image_ID);
+
+// Implements equation on in Reinhard et al, 2002, Photographic Tone Reproduction for Digital Images.
+float log_average_luminance(Cogwheel::Assets::Images::UID image_ID);
 
 } // NS Exposure
 } // NS ImageOperations

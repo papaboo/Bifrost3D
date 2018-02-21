@@ -25,7 +25,7 @@ struct Tonemapper::Implementation final {
     // Members
     // --------------------------------------------------------------------------------------------
     enum class Operator { Linear, Reinhard, FilmicAlu, Uncharted2, Unreal4 };
-    Operator m_operator = Operator::Uncharted2;
+    Operator m_operator = Operator::Unreal4;
     Image m_input;
     std::string m_output_path;
 
@@ -34,9 +34,9 @@ struct Tonemapper::Implementation final {
 
     // Exposure members anda helpers
     float m_exposure_bias = 0.0f;
-    float key() { return exp2(m_exposure_bias); }
-    float luminance_scale() { return 0.5f / key(); }
-    
+    float luminance_scale() { return exp2(m_exposure_bias); }
+    float scene_key() { return 0.5f / luminance_scale(); }
+
     // Tonemapping members
     float m_reinhard_whitepoint = 1.0f;
 
@@ -120,8 +120,8 @@ struct Tonemapper::Implementation final {
         { // Exposure mapping
 
             TwAddVarCB(bar, "Bias", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_exposure_bias, float), this, "step=0.1 group=Exposure");
-            TwAddVarCB(bar, "Key", TW_TYPE_FLOAT, nullptr, [](void* value, void* client_data) {
-                *(float*)value = ((Tonemapper::Implementation*)client_data)->key();
+            TwAddVarCB(bar, "Scene key", TW_TYPE_FLOAT, nullptr, [](void* value, void* client_data) {
+                *(float*)value = ((Tonemapper::Implementation*)client_data)->scene_key();
             }, this, "step=0.001 group=Exposure");
             TwAddVarCB(bar, "Luminance scale", TW_TYPE_FLOAT, nullptr, [](void* value, void* client_data) {
                 *(float*)value = ((Tonemapper::Implementation*)client_data)->luminance_scale();
@@ -129,19 +129,19 @@ struct Tonemapper::Implementation final {
 
             auto reinhard_auto_exposure = [](void* client_data) {
                 Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
-                float average_log_luminance = ImageOperations::Exposure::average_log_luminance(data->m_input.get_ID());
-                data->m_exposure_bias = average_log_luminance;
+                float scene_key = ImageOperations::Exposure::log_average_luminance(data->m_input.get_ID());
+                float exposure = 0.5f / scene_key;
+                data->m_exposure_bias = log2(exposure);
                 data->m_upload_image = true;
             };
             TwAddButton(bar, "Adjust by log-average", reinhard_auto_exposure, this, "group=Exposure");
 
             auto auto_geometric_mean = [](void* client_data) {
                 Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
-                float average_log_luminance = ImageOperations::Exposure::average_log_luminance(data->m_input.get_ID());
-                float average_luminance = exp2(average_log_luminance);
-                average_luminance = max(average_luminance, 0.001f);
-                float key_value = 1.03f - (2.0f / (2 + log2(average_luminance + 1)));
-                float linear_exposure = (key_value / average_luminance);
+                float log_average_luminance = ImageOperations::Exposure::log_average_luminance(data->m_input.get_ID());
+                log_average_luminance = max(log_average_luminance, 0.001f);
+                float key_value = 1.03f - (2.0f / (2 + log2(log_average_luminance + 1)));
+                float linear_exposure = (key_value / log_average_luminance);
                 float log_exposure = log2(max(linear_exposure, 0.0001f));
                 data->m_exposure_bias = log_exposure;
 
@@ -267,7 +267,7 @@ struct Tonemapper::Implementation final {
                 TwDefine("Tonemapper/Unreal4 group='Tonemapping'");
             }
 
-            auto tonemapper = Operator::Uncharted2;
+            auto tonemapper = Operator::Unreal4;
             set_m_operator(&tonemapper, this);
         }
 
