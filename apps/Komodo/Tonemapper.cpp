@@ -15,9 +15,13 @@
 
 #include <AntTweakBar/AntTweakBar.h>
 
+#include <array>
+
 using namespace Cogwheel::Assets;
 using namespace Cogwheel::Core;
 using namespace Cogwheel::Math;
+
+using Vector4uc = Vector4<unsigned char>;
 
 struct Tonemapper::Implementation final {
 
@@ -32,10 +36,24 @@ struct Tonemapper::Implementation final {
     GLuint m_tex_ID = 0u;
     bool m_upload_image = true;
 
-    // Exposure members anda helpers
+    // Exposure members and helpers
     float m_exposure_bias = 0.0f;
     float luminance_scale() { return exp2(m_exposure_bias); }
     float scene_key() { return 0.5f / luminance_scale(); }
+
+    struct {
+        const int size = 100;
+
+        float min_percentage = 0.8f;
+        float max_percentage = 0.95f;
+        float min_log_luminance = -8;
+        float max_log_luminance = 4;
+        std::array<unsigned int, 100> histogram;
+        bool visualize = false;
+        
+        GLuint texture_ID;
+        Vector4uc* texture_pixels;
+    } m_histogram;
 
     // Tonemapping members
     float m_reinhard_whitepoint = 1.0f;
@@ -53,8 +71,58 @@ struct Tonemapper::Implementation final {
     float m_unreal4_shoulder = 0.23f;
     float m_unreal4_black_clip = 0.0f;
     float m_unreal4_white_clip = 0.035f;
+    float m_unreal4_desaturate = 1.0f;
 
     TwBar* m_gui = nullptr;
+
+    // --------------------------------------------------------------------------------------------
+    // Histogram helpers
+    // --------------------------------------------------------------------------------------------
+
+    void compute_histogram_high_low_normalized_index(float& low_normalized_index, float& high_normalized_index) {
+        // Compute log luminance values from histogram.
+        int min_pixel_count = int(m_input.get_pixel_count() * m_histogram.min_percentage);
+        int max_pixel_count = int(m_input.get_pixel_count() * m_histogram.max_percentage);
+
+        int previous_pixel_count = 0;
+        for (int i = 0; i < m_histogram.histogram.size(); ++i) {
+            int current_pixel_count = previous_pixel_count + m_histogram.histogram[i];
+            // TODO check edge cases.
+            if (previous_pixel_count <= min_pixel_count && min_pixel_count < current_pixel_count)
+                low_normalized_index = i / float(m_histogram.histogram.size()); // TODO base on relative offset between previous and current.
+            if (previous_pixel_count <= max_pixel_count && max_pixel_count < current_pixel_count)
+                high_normalized_index = i / float(m_histogram.histogram.size()); // TODO base on relative offset between previous and current.
+
+            previous_pixel_count = current_pixel_count;
+        }
+    }
+
+    void fill_histogram_texture(std::array<unsigned int, 100>& histogram, Vector4uc* pixels) {
+        // Assumes there are size x size pixels
+        unsigned int max_value = 0;
+        for (unsigned int v : histogram)
+            max_value = max(v, max_value);
+
+        float low_normalized_index, high_normalized_index;
+        compute_histogram_high_low_normalized_index(low_normalized_index, high_normalized_index);
+        unsigned int low_index = unsigned int(floor(low_normalized_index * histogram.size()));
+        unsigned int high_index = unsigned int(ceil(high_normalized_index * histogram.size()));
+
+        unsigned int size = unsigned int(histogram.size());
+        for (unsigned int x = 0; x < size; ++x) {
+            unsigned int v = histogram[x];
+            float normalized_cutoff = v / float(max_value);
+            unsigned int cutoff = unsigned int(normalized_cutoff * size);
+
+            bool in_range = low_index <= x && x <= high_index;
+            Vector4uc background_color = { 64, 64, 64, 255 };
+            background_color.y += in_range ? background_color.y / 2 : 0;
+            Vector4uc column_color = { 128, 128, 128, 255 };
+            column_color.y += in_range ? column_color.y / 2 : 0;
+            for (unsigned int y = 0; y < size; ++y)
+                *pixels++ = y <= cutoff ? column_color : background_color;
+        }
+    }
 
     // --------------------------------------------------------------------------------------------
     // Print help message.
@@ -130,11 +198,11 @@ struct Tonemapper::Implementation final {
             auto reinhard_auto_exposure = [](void* client_data) {
                 Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
                 float scene_key = ImageOperations::Exposure::log_average_luminance(data->m_input.get_ID());
-                float exposure = 0.5f / scene_key;
-                data->m_exposure_bias = log2(exposure);
+                float linear_exposure = 0.5f / scene_key;
+                data->m_exposure_bias = log2(linear_exposure);
                 data->m_upload_image = true;
             };
-            TwAddButton(bar, "Adjust by log-average", reinhard_auto_exposure, this, "group=Exposure");
+            TwAddButton(bar, "Set from log-average", reinhard_auto_exposure, this, "group=Exposure");
 
             auto auto_geometric_mean = [](void* client_data) {
                 Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
@@ -142,12 +210,48 @@ struct Tonemapper::Implementation final {
                 log_average_luminance = max(log_average_luminance, 0.001f);
                 float key_value = 1.03f - (2.0f / (2 + log2(log_average_luminance + 1)));
                 float linear_exposure = (key_value / log_average_luminance);
-                float log_exposure = log2(max(linear_exposure, 0.0001f));
-                data->m_exposure_bias = log_exposure;
+                data->m_exposure_bias = log2(max(linear_exposure, 0.0001f));
 
                 data->m_upload_image = true;
             };
-            TwAddButton(bar, "Adjust by geometric mean", auto_geometric_mean, this, "group=Exposure");
+            TwAddButton(bar, "Set from geometric mean", auto_geometric_mean, this, "group=Exposure");
+
+            { // Histogram
+                m_histogram.texture_pixels = new Vector4uc[m_histogram.size * m_histogram.size];
+
+                auto histogram_auto_exposure = [](void* client_data) {
+                    Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
+
+                    std::fill(data->m_histogram.histogram.begin(), data->m_histogram.histogram.end(), 0u);
+                    ImageOperations::Exposure::log_luminance_histogram(data->m_input.get_ID(), data->m_histogram.min_log_luminance, data->m_histogram.max_log_luminance, 
+                                                                       data->m_histogram.histogram.begin(), data->m_histogram.histogram.end());
+
+                    // Compute log luminance values from histogram.
+                    int min_pixel_count = int(data->m_input.get_pixel_count() * data->m_histogram.min_percentage);
+                    int max_pixel_count = int(data->m_input.get_pixel_count() * data->m_histogram.max_percentage);
+
+                    float low_normalized_index, high_normalized_index;
+                    data->compute_histogram_high_low_normalized_index(low_normalized_index, high_normalized_index);
+                    float low_log_luminance = lerp(data->m_histogram.min_log_luminance, data->m_histogram.max_log_luminance, low_normalized_index);
+                    float high_log_luminance = lerp(data->m_histogram.min_log_luminance, data->m_histogram.max_log_luminance, high_normalized_index);
+
+                    // TODO Check how Unreal sets this.
+                    float target_log_luminance = (low_log_luminance + high_log_luminance) * 0.5f;
+                    float linear_exposure = 0.5f / exp2(target_log_luminance);
+                    data->m_exposure_bias = log2(linear_exposure);
+
+                    data->m_upload_image = true;
+                };
+                TwAddButton(bar, "Set from histogram", histogram_auto_exposure, this, "group=Histogram");
+
+                TwAddVarCB(bar, "Min percentage", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_histogram.min_percentage, float), this, "step=0.05 group=Histogram");
+                TwAddVarCB(bar, "Max percentage", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_histogram.max_percentage, float), this, "step=0.05 group=Histogram");
+                TwAddVarCB(bar, "Min log luminance", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_histogram.min_log_luminance, float), this, "step=0.1 group=Histogram");
+                TwAddVarCB(bar, "Max log luminance", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_histogram.max_log_luminance, float), this, "step=0.1 group=Histogram");
+                TwAddVarCB(bar, "Visualize", TW_TYPE_BOOLCPP, WRAP_ANT_PROPERTY(m_histogram.visualize, bool), this, "group=Histogram");
+
+                TwDefine("Tonemapper/Histogram group='Exposure'");
+            }
         }
 
         { // Tonemapping
@@ -220,6 +324,7 @@ struct Tonemapper::Implementation final {
                             data->m_unreal4_shoulder = 0.47f;
                             data->m_unreal4_black_clip = 0.0f;
                             data->m_unreal4_white_clip = 0.01f;
+                            data->m_unreal4_desaturate = 0.0f;
                             break;
                         case Presets::HP:
                             data->m_unreal4_slope = 0.65f;
@@ -227,6 +332,7 @@ struct Tonemapper::Implementation final {
                             data->m_unreal4_shoulder = 0.45f;
                             data->m_unreal4_black_clip = 0.0f;
                             data->m_unreal4_white_clip = 0.0f;
+                            data->m_unreal4_desaturate = 1.0f;
                             break;
                         case Presets::ACES:
                             data->m_unreal4_slope = 0.91f;
@@ -234,6 +340,7 @@ struct Tonemapper::Implementation final {
                             data->m_unreal4_shoulder = 0.23f;
                             data->m_unreal4_black_clip = 0.0f;
                             data->m_unreal4_white_clip = 0.035f;
+                            data->m_unreal4_desaturate = 1.0f;
                             break;
                         case Presets::Legacy:
                             data->m_unreal4_slope = 0.98f;
@@ -241,6 +348,7 @@ struct Tonemapper::Implementation final {
                             data->m_unreal4_shoulder = 0.22f;
                             data->m_unreal4_black_clip = 0.0f;
                             data->m_unreal4_white_clip = 0.025f;
+                            data->m_unreal4_desaturate = 1.0f;
                             break;
                         case Presets::Default:
                         default:
@@ -249,6 +357,7 @@ struct Tonemapper::Implementation final {
                             data->m_unreal4_shoulder = 0.23f;
                             data->m_unreal4_black_clip = 0.0f;
                             data->m_unreal4_white_clip = 0.035f;
+                            data->m_unreal4_desaturate = 1.0f;
                             break;
                         }
 
@@ -263,6 +372,7 @@ struct Tonemapper::Implementation final {
                 TwAddVarCB(bar, "Slope", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4_slope, float), this, "step=0.1 group=Unreal4");
                 TwAddVarCB(bar, "Shoulder", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4_shoulder, float), this, "step=0.1 group=Unreal4");
                 TwAddVarCB(bar, "White clip", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4_white_clip, float), this, "step=0.1 group=Unreal4");
+                TwAddVarCB(bar, "Desaturate", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4_desaturate, float), this, "step=0.1 group=Unreal4");
 
                 TwDefine("Tonemapper/Unreal4 group='Tonemapping'");
             }
@@ -279,16 +389,22 @@ struct Tonemapper::Implementation final {
     // --------------------------------------------------------------------------------------------
     Implementation(std::vector<char*> args, Cogwheel::Core::Engine& engine) {
 
-        // Create GL texture.
-        glEnable(GL_TEXTURE_2D);
-        glGenTextures(1, &m_tex_ID);
-        glBindTexture(GL_TEXTURE_2D, m_tex_ID);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        auto create_texture = []() -> GLuint {
+            GLuint tex_ID = 0;
+            glGenTextures(1, &tex_ID);
+            glBindTexture(GL_TEXTURE_2D, tex_ID);
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            return tex_ID;
+        };
 
+        glEnable(GL_TEXTURE_2D);
+        m_tex_ID = create_texture();
+        m_histogram.texture_ID = create_texture();
+        
         if (args.size() == 0 || std::string(args[0]).compare("-h") == 0 || std::string(args[0]).compare("--help") == 0)
             print_usage();
         else {
@@ -328,7 +444,7 @@ struct Tonemapper::Implementation final {
         if (m_upload_image) {
             float l_scale = luminance_scale();
             int width = m_input.get_width(), height = m_input.get_height();
-            RGB* gamma_corrected_pixels = new RGB[m_input.get_pixel_count()];
+            RGB* gamma_corrected_pixels = new RGB[m_input.get_pixel_count()]; // TODO Preallocate
             #pragma omp parallel for schedule(dynamic, 16)
             for (int i = 0; i < (int)m_input.get_pixel_count(); ++i) {
                 int x = i % width, y = i / width;
@@ -340,7 +456,7 @@ struct Tonemapper::Implementation final {
                 else if (m_operator == Operator::Uncharted2)
                     adjusted_color = Tonemapping::uncharted2(adjusted_color, m_uncharted2_shoulder_strength, m_uncharted2_linear_strength, m_uncharted2_linear_angle, m_uncharted2_toe_strength, m_uncharted2_toe_numerator, m_uncharted2_toe_denominator, m_uncharted2_linear_white);
                 else if (m_operator == Operator::Unreal4)
-                    adjusted_color = Tonemapping::unreal4(adjusted_color, m_unreal4_slope, m_unreal4_toe, m_unreal4_shoulder, m_unreal4_black_clip, m_unreal4_white_clip);
+                    adjusted_color = Tonemapping::unreal4(adjusted_color, m_unreal4_slope, m_unreal4_toe, m_unreal4_shoulder, m_unreal4_black_clip, m_unreal4_white_clip, m_unreal4_desaturate);
                 gamma_corrected_pixels[i] = gammacorrect(adjusted_color, 1.0f / 2.2f);
             }
 
@@ -353,6 +469,32 @@ struct Tonemapper::Implementation final {
         }
 
         render_image(engine.get_window(), m_tex_ID);
+
+        if (m_histogram.visualize) {
+
+            fill_histogram_texture(m_histogram.histogram, m_histogram.texture_pixels);
+
+            glBindTexture(GL_TEXTURE_2D, m_histogram.texture_ID);
+            const GLint BASE_IMAGE_LEVEL = 0;
+            const GLint NO_BORDER = 0;
+            glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGBA, m_histogram.size, m_histogram.size, NO_BORDER, GL_RGBA, GL_UNSIGNED_BYTE, m_histogram.texture_pixels);
+
+            glBegin(GL_QUADS); {
+
+                glTexCoord2f(0.0f, 0.0f);
+                glVertex3f(0.3f, 0.3f, 0.f);
+
+                glTexCoord2f(0.0f, 1.0f);
+                glVertex3f(0.9f, 0.3f, 0.f);
+
+                glTexCoord2f(1.0f, 1.0f);
+                glVertex3f(0.9f, 0.9f, 0.f);
+
+                glTexCoord2f(1.0f, 0.0f);
+                glVertex3f(0.3f, 0.9f, 0.f);
+
+            } glEnd();
+        }
 
         AntTweakBar::handle_input(engine);
         TwDraw();
