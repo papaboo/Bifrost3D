@@ -24,11 +24,11 @@ inline void log_luminance_histogram(Cogwheel::Assets::Images::UID image_ID, floa
                                     ForwardIterator begin, ForwardIterator end) {
     using namespace Cogwheel::Math;
 
-    unsigned int size = unsigned int(end - begin);
+    int size = unsigned int(end - begin);
     Cogwheel::Assets::Images::iterate_pixels(image_ID, [&](RGBA pixel) {
         float log_luminance = log2(fmaxf(luma(pixel.rgb()), 0.0001f));
         float normalized_index = inverse_lerp(min_log_luminance, max_log_luminance, log_luminance);
-        int index = clamp(unsigned int(normalized_index * size), 0u, size - 1u);
+        int index = clamp(int(normalized_index * size), 0, size - 1);
         ++begin[index];
     });
 }
