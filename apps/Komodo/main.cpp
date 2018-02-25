@@ -32,6 +32,7 @@ void print_usage() {
 
 int initialize(Engine& engine) {
     engine.get_window().set_name("Komodo");
+    engine.get_window().resize(1280, 960);
     return 0;
 }
 
