@@ -870,12 +870,11 @@ struct Renderer::Implementation {
                 pixels[i] = RGBA(float(mapped_output[i].x), float(mapped_output[i].y), float(mapped_output[i].z), 1.0f);
             accumulation_buffer->unmap();
             std::ostringstream filename;
-            filename << "C:\\Users\\Asger\\Desktop\\image_" << (accumulations - 1) << ".png";
+            filename << "C:\\Users\\Asger Hoedt\\Desktop\\image_" << (accumulations - 1) << ".hdr";
             StbImageWriter::write(output, filename.str());
         }
         */
     }
-
 };
 
 // ------------------------------------------------------------------------------------------------
