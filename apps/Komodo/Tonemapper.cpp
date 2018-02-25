@@ -50,7 +50,7 @@ struct Tonemapper::Implementation final {
         float max_log_luminance = 4;
         std::array<unsigned int, 100> histogram;
         bool visualize = false;
-        
+
         GLuint texture_ID;
         Vector4uc* texture_pixels;
     } m_histogram;
@@ -58,20 +58,24 @@ struct Tonemapper::Implementation final {
     // Tonemapping members
     float m_reinhard_whitepoint = 1.0f;
 
-    float m_uncharted2_shoulder_strength = 0.22f;
-    float m_uncharted2_linear_strength = 0.3f;
-    float m_uncharted2_linear_angle = 0.1f;
-    float m_uncharted2_toe_strength = 0.2f;
-    float m_uncharted2_toe_numerator = 0.01f;
-    float m_uncharted2_toe_denominator = 0.3f;
-    float m_uncharted2_linear_white = 11.2f;
+    struct {
+        float shoulder_strength = 0.22f;
+        float linear_strength = 0.3f;
+        float linear_angle = 0.1f;
+        float toe_strength = 0.2f;
+        float toe_numerator = 0.01f;
+        float toe_denominator = 0.3f;
+        float linear_white = 11.2f;
+    } m_uncharted2;
 
-    float m_unreal4_slope = 0.91f;
-    float m_unreal4_toe = 0.53f;
-    float m_unreal4_shoulder = 0.23f;
-    float m_unreal4_black_clip = 0.0f;
-    float m_unreal4_white_clip = 0.035f;
-    float m_unreal4_desaturate = 1.0f;
+    struct {
+        float slope = 0.91f;
+        float toe = 0.53f;
+        float shoulder = 0.23f;
+        float black_clip = 0.0f;
+        float white_clip = 0.035f;
+        float desaturate = 1.0f;
+    } m_unreal4;
 
     TwBar* m_gui = nullptr;
 
@@ -288,13 +292,13 @@ struct Tonemapper::Implementation final {
             }
 
             { // Uncharted 2 filmic
-                TwAddVarCB(bar, "Shoulder strength", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2_shoulder_strength, float), this, "min=0 step=0.1 group=Uncharted2");
-                TwAddVarCB(bar, "Linear strength", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2_linear_strength, float), this, "min=0 step=0.1 group=Uncharted2");
-                TwAddVarCB(bar, "Linear angle", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2_linear_angle, float), this, "min=0 step=0.1 group=Uncharted2");
-                TwAddVarCB(bar, "Toe strength", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2_toe_strength, float), this, "min=0 step=0.1 group=Uncharted2");
-                TwAddVarCB(bar, "Toe numerator", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2_toe_numerator, float), this, "min=0 step=0.1 group=Uncharted2");
-                TwAddVarCB(bar, "Toe denominator", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2_toe_denominator, float), this, "min=0 step=0.1 group=Uncharted2");
-                TwAddVarCB(bar, "Linear white", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2_linear_white, float), this, "min=0 step=0.1 group=Uncharted2");
+                TwAddVarCB(bar, "Shoulder strength", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.shoulder_strength, float), this, "min=0 step=0.1 group=Uncharted2");
+                TwAddVarCB(bar, "Linear strength", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.linear_strength, float), this, "min=0 step=0.1 group=Uncharted2");
+                TwAddVarCB(bar, "Linear angle", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.linear_angle, float), this, "min=0 step=0.1 group=Uncharted2");
+                TwAddVarCB(bar, "Toe strength", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.toe_strength, float), this, "min=0 step=0.1 group=Uncharted2");
+                TwAddVarCB(bar, "Toe numerator", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.toe_numerator, float), this, "min=0 step=0.1 group=Uncharted2");
+                TwAddVarCB(bar, "Toe denominator", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.toe_denominator, float), this, "min=0 step=0.1 group=Uncharted2");
+                TwAddVarCB(bar, "Linear white", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.linear_white, float), this, "min=0 step=0.1 group=Uncharted2");
 
                 TwDefine("Tonemapper/Uncharted2 group='Tonemapping' label='Uncharted 2'");
             }
@@ -319,45 +323,45 @@ struct Tonemapper::Implementation final {
                             // Do nothing
                             break;
                         case Presets::Uncharted2:
-                            data->m_unreal4_slope = 0.63f;
-                            data->m_unreal4_toe = 0.55f;
-                            data->m_unreal4_shoulder = 0.47f;
-                            data->m_unreal4_black_clip = 0.0f;
-                            data->m_unreal4_white_clip = 0.01f;
-                            data->m_unreal4_desaturate = 0.0f;
+                            data->m_unreal4.slope = 0.63f;
+                            data->m_unreal4.toe = 0.55f;
+                            data->m_unreal4.shoulder = 0.47f;
+                            data->m_unreal4.black_clip = 0.0f;
+                            data->m_unreal4.white_clip = 0.01f;
+                            data->m_unreal4.desaturate = 0.0f;
                             break;
                         case Presets::HP:
-                            data->m_unreal4_slope = 0.65f;
-                            data->m_unreal4_toe = 0.63f;
-                            data->m_unreal4_shoulder = 0.45f;
-                            data->m_unreal4_black_clip = 0.0f;
-                            data->m_unreal4_white_clip = 0.0f;
-                            data->m_unreal4_desaturate = 1.0f;
+                            data->m_unreal4.slope = 0.65f;
+                            data->m_unreal4.toe = 0.63f;
+                            data->m_unreal4.shoulder = 0.45f;
+                            data->m_unreal4.black_clip = 0.0f;
+                            data->m_unreal4.white_clip = 0.0f;
+                            data->m_unreal4.desaturate = 1.0f;
                             break;
                         case Presets::ACES:
-                            data->m_unreal4_slope = 0.91f;
-                            data->m_unreal4_toe = 0.53f;
-                            data->m_unreal4_shoulder = 0.23f;
-                            data->m_unreal4_black_clip = 0.0f;
-                            data->m_unreal4_white_clip = 0.035f;
-                            data->m_unreal4_desaturate = 1.0f;
+                            data->m_unreal4.slope = 0.91f;
+                            data->m_unreal4.toe = 0.53f;
+                            data->m_unreal4.shoulder = 0.23f;
+                            data->m_unreal4.black_clip = 0.0f;
+                            data->m_unreal4.white_clip = 0.035f;
+                            data->m_unreal4.desaturate = 1.0f;
                             break;
                         case Presets::Legacy:
-                            data->m_unreal4_slope = 0.98f;
-                            data->m_unreal4_toe = 0.3f;
-                            data->m_unreal4_shoulder = 0.22f;
-                            data->m_unreal4_black_clip = 0.0f;
-                            data->m_unreal4_white_clip = 0.025f;
-                            data->m_unreal4_desaturate = 1.0f;
+                            data->m_unreal4.slope = 0.98f;
+                            data->m_unreal4.toe = 0.3f;
+                            data->m_unreal4.shoulder = 0.22f;
+                            data->m_unreal4.black_clip = 0.0f;
+                            data->m_unreal4.white_clip = 0.025f;
+                            data->m_unreal4.desaturate = 1.0f;
                             break;
                         case Presets::Default:
                         default:
-                            data->m_unreal4_slope = 0.91f;
-                            data->m_unreal4_toe = 0.53f;
-                            data->m_unreal4_shoulder = 0.23f;
-                            data->m_unreal4_black_clip = 0.0f;
-                            data->m_unreal4_white_clip = 0.035f;
-                            data->m_unreal4_desaturate = 1.0f;
+                            data->m_unreal4.slope = 0.91f;
+                            data->m_unreal4.toe = 0.53f;
+                            data->m_unreal4.shoulder = 0.23f;
+                            data->m_unreal4.black_clip = 0.0f;
+                            data->m_unreal4.white_clip = 0.035f;
+                            data->m_unreal4.desaturate = 1.0f;
                             break;
                         }
 
@@ -367,12 +371,12 @@ struct Tonemapper::Implementation final {
                     TwAddVarCB(bar, "Presets", AntPresetsEnum, set_preset, get_preset, this, "group='Unreal4'");
                 }
 
-                TwAddVarCB(bar, "Black clip", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4_black_clip, float), this, "step=0.1 group=Unreal4");
-                TwAddVarCB(bar, "Toe", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4_toe, float), this, "step=0.1 group=Unreal4");
-                TwAddVarCB(bar, "Slope", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4_slope, float), this, "step=0.1 group=Unreal4");
-                TwAddVarCB(bar, "Shoulder", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4_shoulder, float), this, "step=0.1 group=Unreal4");
-                TwAddVarCB(bar, "White clip", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4_white_clip, float), this, "step=0.1 group=Unreal4");
-                TwAddVarCB(bar, "Desaturate", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4_desaturate, float), this, "step=0.1 group=Unreal4");
+                TwAddVarCB(bar, "Black clip", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4.black_clip, float), this, "step=0.1 group=Unreal4");
+                TwAddVarCB(bar, "Toe", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4.toe, float), this, "step=0.1 group=Unreal4");
+                TwAddVarCB(bar, "Slope", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4.slope, float), this, "step=0.1 group=Unreal4");
+                TwAddVarCB(bar, "Shoulder", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4.shoulder, float), this, "step=0.1 group=Unreal4");
+                TwAddVarCB(bar, "White clip", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4.white_clip, float), this, "step=0.1 group=Unreal4");
+                TwAddVarCB(bar, "Desaturate", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4.desaturate, float), this, "step=0.1 group=Unreal4");
 
                 TwDefine("Tonemapper/Unreal4 group='Tonemapping'");
             }
@@ -454,9 +458,9 @@ struct Tonemapper::Implementation final {
                 else if (m_operator == Operator::FilmicAlu)
                     adjusted_color = tonemap_filmic_ALU(adjusted_color);
                 else if (m_operator == Operator::Uncharted2)
-                    adjusted_color = Tonemapping::uncharted2(adjusted_color, m_uncharted2_shoulder_strength, m_uncharted2_linear_strength, m_uncharted2_linear_angle, m_uncharted2_toe_strength, m_uncharted2_toe_numerator, m_uncharted2_toe_denominator, m_uncharted2_linear_white);
+                    adjusted_color = Tonemapping::uncharted2(adjusted_color, m_uncharted2.shoulder_strength, m_uncharted2.linear_strength, m_uncharted2.linear_angle, m_uncharted2.toe_strength, m_uncharted2.toe_numerator, m_uncharted2.toe_denominator, m_uncharted2.linear_white);
                 else if (m_operator == Operator::Unreal4)
-                    adjusted_color = Tonemapping::unreal4(adjusted_color, m_unreal4_slope, m_unreal4_toe, m_unreal4_shoulder, m_unreal4_black_clip, m_unreal4_white_clip, m_unreal4_desaturate);
+                    adjusted_color = Tonemapping::unreal4(adjusted_color, m_unreal4.slope, m_unreal4.toe, m_unreal4.shoulder, m_unreal4.black_clip, m_unreal4.white_clip, m_unreal4.desaturate);
                 gamma_corrected_pixels[i] = gammacorrect(adjusted_color, 1.0f / 2.2f);
             }
 
