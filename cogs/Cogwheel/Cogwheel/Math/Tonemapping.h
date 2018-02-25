@@ -99,7 +99,7 @@ static const Matrix3x3f AP1_to_XYZ_mat = {
 
 static const Vector3f AP1_RGB2Y = AP1_to_XYZ_mat.get_row(1);
 
-inline RGB unreal4(RGB color, float slope = 0.91f, float toe = 0.53f, float shoulder = 0.23f, float black_clip = 0.0f, float white_clip = 0.035f) {
+inline RGB unreal4(RGB color, float slope = 0.91f, float toe = 0.53f, float shoulder = 0.23f, float black_clip = 0.0f, float white_clip = 0.035f, float desaturate = 1.0f) {
 
     static const Matrix3x3f sRGB_to_AP1 = XYZ_to_AP1_mat * D65_to_D60_cat * sRGB_to_XYZ_mat;
 
@@ -108,7 +108,8 @@ inline RGB unreal4(RGB color, float slope = 0.91f, float toe = 0.53f, float shou
     working_color = max(Vector3f::zero(), working_color);
 
     // Pre desaturate
-    working_color = lerp(Vector3f(dot(working_color, AP1_RGB2Y)), working_color, 0.96f);
+    float pre_desaturation = lerp(1.0f, 0.96f, desaturate);
+    working_color = lerp(Vector3f(dot(working_color, AP1_RGB2Y)), working_color, pre_desaturation);
 
     const float toe_scale = 1.0f + black_clip - toe;
     const float shoulder_scale = 1.0f + white_clip - shoulder;
@@ -133,9 +134,6 @@ inline RGB unreal4(RGB color, float slope = 0.91f, float toe = 0.53f, float shou
     Vector3f log_color = Vector3f(log10(working_color.x), log10(working_color.y), log10(working_color.z));
     Vector3f straight_color = (log_color + straight_match) * slope;
 
-    // Vector3f toe_color = (-black_clip) + (2 * toe_scale) / (1 + exp((-2 * slope / toe_scale) * (log_color - toe_match)));
-    // Vector3f shoulder_color = (1 + white_clip) - (2 * shoulder_scale) / (1 + exp((2 * slope / shoulder_scale) * (log_color - shoulder_match)));
-
     auto exp = [](Vector3f v) -> Vector3f { return Vector3f(expf(v.x), expf(v.y), expf(v.z)); };
 
     Vector3f toe_color = (-black_clip) + (2.0f * toe_scale) / (1.0f + exp((log_color - toe_match) * (-2 * slope / toe_scale)));
@@ -154,7 +152,8 @@ inline RGB unreal4(RGB color, float slope = 0.91f, float toe = 0.53f, float shou
     Vector3f tone_color = lerp(toe_color, shoulder_color, t);
 
     // Post desaturate
-    tone_color = lerp(Vector3f(dot(tone_color, AP1_RGB2Y)), tone_color, 0.93f);
+    float post_desaturation = lerp(1.0f, 0.93f, desaturate);
+    tone_color = lerp(Vector3f(dot(tone_color, AP1_RGB2Y)), tone_color, post_desaturation);
 
     // Returning positive AP1 values
     return RGB(fmaxf(0.0f, tone_color.x), fmaxf(0.0f, tone_color.y), fmaxf(0.0f, tone_color.z));
