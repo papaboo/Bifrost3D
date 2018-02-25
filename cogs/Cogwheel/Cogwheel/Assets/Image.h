@@ -133,6 +133,15 @@ public:
     static void set_pixel(Images::UID image_ID, Math::RGBA rgba, Math::Vector2ui index, unsigned int mipmap_level = 0);
     static void set_pixel(Images::UID image_ID, Math::RGBA rgba, Math::Vector3ui index, unsigned int mipmap_level = 0);
 
+    template <typename Operation>
+    static void iterate_pixels(Images::UID image_ID, Operation pixel_operation) {
+        int pixel_count = get_pixel_count(image_ID);
+        for (int i = 0; i < pixel_count; ++i) {
+            RGBA pixel = get_pixel(image_ID, i);
+            pixel_operation(pixel);
+        }
+    }
+
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
@@ -216,6 +225,9 @@ public:
     inline void set_pixel(Math::RGBA rgba, unsigned int index, unsigned int mipmap_level = 0) { Images::set_pixel(m_ID, rgba, index, mipmap_level); }
     inline void set_pixel(Math::RGBA rgba, Math::Vector2ui index, unsigned int mipmap_level = 0) { Images::set_pixel(m_ID, rgba, index, mipmap_level); }
     inline void set_pixel(Math::RGBA rgba, Math::Vector3ui index, unsigned int mipmap_level = 0) { Images::set_pixel(m_ID, rgba, index, mipmap_level); }
+
+    template <typename Operation>
+    inline void iterate_pixels(Operation pixel_operation) { Images::iterate_pixels(m_ID, pixel_operation); }
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.

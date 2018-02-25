@@ -191,7 +191,7 @@ static RGBA get_nonlinear_pixel(Images::UID image_ID, unsigned int index) {
 }
 
 RGBA Images::get_pixel(Images::UID image_ID, unsigned int index, unsigned int mipmap_level) {
-    assert(index < Images::get_width(image_ID, mipmap_level));
+    assert(index < Images::get_pixel_count(image_ID, mipmap_level));
 
     while (mipmap_level)
         index += Images::get_width(image_ID, --mipmap_level);
@@ -205,6 +205,7 @@ RGBA Images::get_pixel(Images::UID image_ID, Vector2ui index, unsigned int mipma
 
     Image image = image_ID;
     unsigned int pixel_index = index.x + image.get_width(mipmap_level) * index.y;
+
     while (mipmap_level) {
         --mipmap_level;
         pixel_index += image.get_width(mipmap_level) * image.get_height(mipmap_level);
