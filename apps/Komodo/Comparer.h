@@ -161,7 +161,8 @@ public:
             m_selected_image_index = image_index;
         }
 
-        render_image(engine.get_window(), m_tex_ID);
+        Image selected_image = m_images[m_selected_image_index];
+        render_image(engine.get_window(), m_tex_ID, selected_image.get_width(), selected_image.get_height());
     }
 
     static void update(Cogwheel::Core::Engine& engine, void* comparer) {

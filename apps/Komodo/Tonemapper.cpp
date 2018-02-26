@@ -472,7 +472,7 @@ struct Tonemapper::Implementation final {
             m_upload_image = false;
         }
 
-        render_image(engine.get_window(), m_tex_ID);
+        render_image(engine.get_window(), m_tex_ID, m_input.get_width(), m_input.get_height());
 
         if (m_histogram.visualize) {
 

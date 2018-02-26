@@ -103,37 +103,47 @@ inline Cogwheel::Assets::Images::UID create_error_image() {
     return error_img.get_ID();
 }
 
-inline void render_image(Cogwheel::Core::Window& window, GLuint texture_ID) {
-    { // Update the backbuffer.
-        glViewport(0, 0, window.get_width(), window.get_height());
+inline void render_image(Cogwheel::Core::Window& window, GLuint texture_ID, int image_width, int image_height) {
+    glViewport(0, 0, window.get_width(), window.get_height());
 
-        { // Setup matrices. I really don't need to do this every frame, since they never change.
-            glMatrixMode(GL_PROJECTION);
-            glLoadIdentity();
-            glOrtho(-1, 1, -1.f, 1.f, 1.f, -1.f);
+    { // Setup matrices. I really don't need to do this every frame, since they never change.
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(-1, 1, -1.f, 1.f, 1.f, -1.f);
 
-            glMatrixMode(GL_MODELVIEW);
-            glLoadIdentity();
-        }
-
-        glBindTexture(GL_TEXTURE_2D, texture_ID);
-        glClear(GL_COLOR_BUFFER_BIT);
-        glBegin(GL_QUADS); {
-
-            glTexCoord2f(0.0f, 0.0f);
-            glVertex3f(-1.0f, -1.0f, 0.f);
-
-            glTexCoord2f(1.0f, 0.0f);
-            glVertex3f(1.0f, -1.0f, 0.f);
-
-            glTexCoord2f(1.0f, 1.0f);
-            glVertex3f(1.0f, 1.0f, 0.f);
-
-            glTexCoord2f(0.0f, 1.0f);
-            glVertex3f(-1.0f, 1.0f, 0.f);
-
-        } glEnd();
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
     }
+
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    float window_aspect = window.get_width() / float(window.get_height());
+    float image_aspect = image_width / float(image_height);
+
+    float x_coord = 1.0f, y_coord = 1.0f;
+    if (window_aspect < image_aspect)
+        // Vertical margin
+        y_coord -= (image_aspect - window_aspect) / image_aspect;
+    else if (window_aspect > image_aspect)
+        // Horizontal margin
+        x_coord -= (window_aspect - image_aspect) / window_aspect;
+
+    glBindTexture(GL_TEXTURE_2D, texture_ID);
+    glBegin(GL_QUADS); {
+
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(-x_coord, -y_coord, 0.f);
+
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(x_coord, -y_coord, 0.f);
+
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex3f(x_coord, y_coord, 0.f);
+
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex3f(-x_coord, y_coord, 0.f);
+
+    } glEnd();
 }
 
 #endif // _KOMODO_UTILS_H_
