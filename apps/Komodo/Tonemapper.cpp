@@ -74,7 +74,6 @@ struct Tonemapper::Implementation final {
         float shoulder = 0.23f;
         float black_clip = 0.0f;
         float white_clip = 0.035f;
-        float desaturate = 1.0f;
     } m_unreal4;
 
     TwBar* m_gui = nullptr;
@@ -239,7 +238,7 @@ struct Tonemapper::Implementation final {
                     float low_log_luminance = lerp(data->m_histogram.min_log_luminance, data->m_histogram.max_log_luminance, low_normalized_index);
                     float high_log_luminance = lerp(data->m_histogram.min_log_luminance, data->m_histogram.max_log_luminance, high_normalized_index);
 
-                    // TODO Check how Unreal sets this.
+                    // TODO Weighted average of column luminance instead.
                     float target_log_luminance = (low_log_luminance + high_log_luminance) * 0.5f;
                     float linear_exposure = 0.5f / exp2(target_log_luminance);
                     data->m_exposure_bias = log2(linear_exposure);
@@ -255,6 +254,8 @@ struct Tonemapper::Implementation final {
                 TwAddVarCB(bar, "Visualize", TW_TYPE_BOOLCPP, WRAP_ANT_PROPERTY(m_histogram.visualize, bool), this, "group=Histogram");
 
                 TwDefine("Tonemapper/Histogram group='Exposure'");
+
+                histogram_auto_exposure(this);
             }
         }
 
@@ -328,7 +329,6 @@ struct Tonemapper::Implementation final {
                             data->m_unreal4.shoulder = 0.47f;
                             data->m_unreal4.black_clip = 0.0f;
                             data->m_unreal4.white_clip = 0.01f;
-                            data->m_unreal4.desaturate = 0.0f;
                             break;
                         case Presets::HP:
                             data->m_unreal4.slope = 0.65f;
@@ -336,7 +336,6 @@ struct Tonemapper::Implementation final {
                             data->m_unreal4.shoulder = 0.45f;
                             data->m_unreal4.black_clip = 0.0f;
                             data->m_unreal4.white_clip = 0.0f;
-                            data->m_unreal4.desaturate = 1.0f;
                             break;
                         case Presets::ACES:
                             data->m_unreal4.slope = 0.91f;
@@ -344,7 +343,6 @@ struct Tonemapper::Implementation final {
                             data->m_unreal4.shoulder = 0.23f;
                             data->m_unreal4.black_clip = 0.0f;
                             data->m_unreal4.white_clip = 0.035f;
-                            data->m_unreal4.desaturate = 1.0f;
                             break;
                         case Presets::Legacy:
                             data->m_unreal4.slope = 0.98f;
@@ -352,7 +350,6 @@ struct Tonemapper::Implementation final {
                             data->m_unreal4.shoulder = 0.22f;
                             data->m_unreal4.black_clip = 0.0f;
                             data->m_unreal4.white_clip = 0.025f;
-                            data->m_unreal4.desaturate = 1.0f;
                             break;
                         case Presets::Default:
                         default:
@@ -361,7 +358,6 @@ struct Tonemapper::Implementation final {
                             data->m_unreal4.shoulder = 0.23f;
                             data->m_unreal4.black_clip = 0.0f;
                             data->m_unreal4.white_clip = 0.035f;
-                            data->m_unreal4.desaturate = 1.0f;
                             break;
                         }
 
@@ -376,7 +372,6 @@ struct Tonemapper::Implementation final {
                 TwAddVarCB(bar, "Slope", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4.slope, float), this, "step=0.1 group=Unreal4");
                 TwAddVarCB(bar, "Shoulder", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4.shoulder, float), this, "step=0.1 group=Unreal4");
                 TwAddVarCB(bar, "White clip", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4.white_clip, float), this, "step=0.1 group=Unreal4");
-                TwAddVarCB(bar, "Desaturate", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4.desaturate, float), this, "step=0.1 group=Unreal4");
 
                 TwDefine("Tonemapper/Unreal4 group='Tonemapping'");
             }
@@ -460,7 +455,7 @@ struct Tonemapper::Implementation final {
                 else if (m_operator == Operator::Uncharted2)
                     adjusted_color = Tonemapping::uncharted2(adjusted_color, m_uncharted2.shoulder_strength, m_uncharted2.linear_strength, m_uncharted2.linear_angle, m_uncharted2.toe_strength, m_uncharted2.toe_numerator, m_uncharted2.toe_denominator, m_uncharted2.linear_white);
                 else if (m_operator == Operator::Unreal4)
-                    adjusted_color = Tonemapping::unreal4(adjusted_color, m_unreal4.slope, m_unreal4.toe, m_unreal4.shoulder, m_unreal4.black_clip, m_unreal4.white_clip, m_unreal4.desaturate);
+                    adjusted_color = Tonemapping::unreal4(adjusted_color, m_unreal4.slope, m_unreal4.toe, m_unreal4.shoulder, m_unreal4.black_clip, m_unreal4.white_clip);
                 gamma_corrected_pixels[i] = gammacorrect(adjusted_color, 1.0f / 2.2f);
             }
 
