@@ -31,6 +31,7 @@ struct Tonemapper::Implementation final {
     enum class Operator { Linear, Reinhard, FilmicAlu, Uncharted2, Unreal4 };
     Operator m_operator = Operator::Unreal4;
     Image m_input;
+    RGB* m_tonemapped_pixels;
     std::string m_output_path;
 
     GLuint m_tex_ID = 0u;
@@ -56,7 +57,7 @@ struct Tonemapper::Implementation final {
     } m_histogram;
 
     // Tonemapping members
-    float m_reinhard_whitepoint = 1.0f;
+    float m_reinhard_whitepoint = 3.0f;
 
     struct {
         float shoulder_strength = 0.22f;
@@ -135,8 +136,9 @@ struct Tonemapper::Implementation final {
             "usage Komodo Tonemapping:\n"
             "  -h | --help: Show command line usage for Komodo Tonemapping.\n"
             "     | --linear: No tonemapping.\n"
-            "     | --reinhard: Apply reinhard tonemapper.\n"
-            "     | --filmic: Apply filmic tonemapper.\n"
+            "     | --reinhard: Apply Reinhard tonemapper.\n"
+            "     | --uncharted2: Apply Uncharted 2 filmic tonemapper.\n"
+            "     | --unreal4: Apply Unreal Engine 4 filmic tonemapper.\n"
             "     | --input <path>: Path to the image to be tonemapped.\n"
             "     | --output <path>: Path to where to store the final image.\n";
 
@@ -379,6 +381,21 @@ struct Tonemapper::Implementation final {
             auto tonemapper = Operator::Unreal4;
             set_m_operator(&tonemapper, this);
         }
+        
+        // Save button.
+        if (m_output_path.size() != 0) {
+            auto save_image = [](void* client_data) {
+                // Tonemap and store the image
+                Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
+                Vector2ui size = { data->m_input.get_width(), data->m_input.get_height() };
+                Image output_image = Images::create2D("tonemapped_" + data->m_input.get_name(), PixelFormat::RGB_Float, 2.2f, size);
+                RGB* pixels = output_image.get_pixels<RGB>();
+                data->tonemap_image(data->m_input, pixels);
+                store_image(output_image, data->m_output_path);
+                Images::destroy(output_image.get_ID());
+            };
+            TwAddButton(bar, "Save", save_image, this, "");
+        }
 
         return bar;
     }
@@ -387,6 +404,8 @@ struct Tonemapper::Implementation final {
     // Constructor.
     // --------------------------------------------------------------------------------------------
     Implementation(std::vector<char*> args, Cogwheel::Core::Engine& engine) {
+
+        bool headless = engine.get_window().get_width() == 0 && engine.get_window().get_height() == 0;
 
         auto create_texture = []() -> GLuint {
             GLuint tex_ID = 0;
@@ -404,25 +423,36 @@ struct Tonemapper::Implementation final {
         m_tex_ID = create_texture();
         m_histogram.texture_ID = create_texture();
         
-        if (args.size() == 0 || std::string(args[0]).compare("-h") == 0 || std::string(args[0]).compare("--help") == 0)
+        if (args.size() == 0 || std::string(args[0]).compare("-h") == 0 || std::string(args[0]).compare("--help") == 0) {
             print_usage();
-        else {
-
-            // Parse arguments
-            std::string input_path = parse_arguments(args);
-
-            // Load input image
-            m_input = load_image(input_path);
-            if (!m_input.exists()) {
-                printf("  error: Could not load image at '%s'\n", input_path.c_str());
-                m_input = create_error_image();
-            }
-            engine.get_window().set_name("Komodo - " + m_input.get_name());
-
-            m_gui = setup_gui();
+            return;
         }
 
-        engine.add_mutating_callback(Tonemapper::Implementation::update, this);
+        // Parse arguments
+        std::string input_path = parse_arguments(args);
+
+        // Load input image
+        m_input = load_image(input_path);
+        if (!m_input.exists()) {
+            printf("  error: Could not load image at '%s'\n", input_path.c_str());
+            m_input = create_error_image();
+        }
+        engine.get_window().set_name("Komodo - " + m_input.get_name());
+
+        if (headless) {
+            if (m_output_path.size() != 0) {
+                // Tonemap and store the image
+                Vector2ui size = { m_input.get_width(), m_input.get_height() };
+                Image output_image = Images::create2D("tonemapped_" + m_input.get_name(), PixelFormat::RGB_Float, 2.2f, size);
+                RGB* pixels = output_image.get_pixels<RGB>();
+                tonemap_image(m_input, pixels);
+                store_image(output_image, m_output_path);
+            }
+        } else {
+            m_tonemapped_pixels = new RGB[m_input.get_pixel_count()];
+            m_gui = setup_gui();
+            engine.add_mutating_callback(Tonemapper::Implementation::update, this);
+        }
     }
 
     // --------------------------------------------------------------------------------------------
@@ -438,31 +468,37 @@ struct Tonemapper::Implementation final {
         return gammacorrect(color, 2.2f);
     }
 
+    void tonemap_image(Image image, RGB* output) {
+        float l_scale = luminance_scale();
+        int width = image.get_width(), height = image.get_height();
+
+        #pragma omp parallel for schedule(dynamic, 16)
+        for (int i = 0; i < (int)image.get_pixel_count(); ++i) {
+            int x = i % width, y = i / width;
+            RGB adjusted_color = image.get_pixel(Vector2ui(x, y)).rgb() * l_scale;
+            if (m_operator == Operator::Reinhard)
+                adjusted_color = Tonemapping::reinhard(adjusted_color, m_reinhard_whitepoint * m_reinhard_whitepoint);
+            else if (m_operator == Operator::FilmicAlu)
+                adjusted_color = tonemap_filmic_ALU(adjusted_color);
+            else if (m_operator == Operator::Uncharted2)
+                adjusted_color = Tonemapping::uncharted2(adjusted_color, m_uncharted2.shoulder_strength, m_uncharted2.linear_strength, m_uncharted2.linear_angle, m_uncharted2.toe_strength, m_uncharted2.toe_numerator, m_uncharted2.toe_denominator, m_uncharted2.linear_white);
+            else if (m_operator == Operator::Unreal4)
+                adjusted_color = Tonemapping::unreal4(adjusted_color, m_unreal4.slope, m_unreal4.toe, m_unreal4.shoulder, m_unreal4.black_clip, m_unreal4.white_clip);
+            output[i] = gammacorrect(adjusted_color, 1.0f / 2.2f);
+        }
+    }
+
     void update(Engine& engine) {
 
         if (m_upload_image) {
-            float l_scale = luminance_scale();
-            int width = m_input.get_width(), height = m_input.get_height();
-            RGB* gamma_corrected_pixels = new RGB[m_input.get_pixel_count()]; // TODO Preallocate
-            #pragma omp parallel for schedule(dynamic, 16)
-            for (int i = 0; i < (int)m_input.get_pixel_count(); ++i) {
-                int x = i % width, y = i / width;
-                RGB adjusted_color = m_input.get_pixel(Vector2ui(x, y)).rgb() * l_scale;
-                if (m_operator == Operator::Reinhard)
-                    adjusted_color = Tonemapping::reinhard(adjusted_color, m_reinhard_whitepoint * m_reinhard_whitepoint);
-                else if (m_operator == Operator::FilmicAlu)
-                    adjusted_color = tonemap_filmic_ALU(adjusted_color);
-                else if (m_operator == Operator::Uncharted2)
-                    adjusted_color = Tonemapping::uncharted2(adjusted_color, m_uncharted2.shoulder_strength, m_uncharted2.linear_strength, m_uncharted2.linear_angle, m_uncharted2.toe_strength, m_uncharted2.toe_numerator, m_uncharted2.toe_denominator, m_uncharted2.linear_white);
-                else if (m_operator == Operator::Unreal4)
-                    adjusted_color = Tonemapping::unreal4(adjusted_color, m_unreal4.slope, m_unreal4.toe, m_unreal4.shoulder, m_unreal4.black_clip, m_unreal4.white_clip);
-                gamma_corrected_pixels[i] = gammacorrect(adjusted_color, 1.0f / 2.2f);
-            }
+
+            tonemap_image(m_input, m_tonemapped_pixels);
 
             glBindTexture(GL_TEXTURE_2D, m_tex_ID);
+            int width = m_input.get_width(), height = m_input.get_height();
             const GLint BASE_IMAGE_LEVEL = 0;
             const GLint NO_BORDER = 0;
-            glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGB, width, height, NO_BORDER, GL_RGB, GL_FLOAT, gamma_corrected_pixels);
+            glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGB, width, height, NO_BORDER, GL_RGB, GL_FLOAT, m_tonemapped_pixels);
 
             m_upload_image = false;
         }

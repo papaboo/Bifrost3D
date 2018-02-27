@@ -74,6 +74,7 @@ int main(int argc, char** argv) {
     if (headless) {
         Engine* engine = new Engine("");
         initialize(*engine);
+        engine->get_window().resize(0, 0);
         window_initialized(*engine, engine->get_window());
     } else
         GLFWDriver::run(initialize, window_initialized);
