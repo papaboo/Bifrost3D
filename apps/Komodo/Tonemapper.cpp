@@ -113,6 +113,37 @@ struct Tonemapper::Implementation final {
         }
     }
 
+    static inline float compute_luminance_from_histogram_position(float normalized_index, float min_log_luminance, float max_log_luminance) {
+        return exp2(lerp(min_log_luminance, max_log_luminance, normalized_index));
+    }
+
+    // Unreal 4 PostProcessHistogramCommon.ush::ComputeAverageLuminaneWithoutOutlier
+    template <int histogram_size>
+    static inline float compute_average_luminance_without_outlier(std::array<unsigned int, histogram_size> histogram, float min_fraction_sum, float max_fraction_sum,
+                                                   float min_log_luminance, float max_log_luminance) {
+        Vector2f sum = Vector2f::zero();
+
+        for (int i = 0; i < histogram_size; ++i) {
+            float bucket_count = float(histogram[i]);
+
+            // remove outlier at lower end
+            float sub = min(bucket_count, min_fraction_sum);
+            bucket_count -= sub;
+            min_fraction_sum -= sub;
+            max_fraction_sum -= sub;
+
+            // remove outlier at upper end
+            bucket_count = min(bucket_count, max_fraction_sum);
+            max_fraction_sum -= bucket_count;
+
+            float luminance_at_bucket = compute_luminance_from_histogram_position(i / float(histogram_size), min_log_luminance, max_log_luminance);
+
+            sum += Vector2f(luminance_at_bucket * bucket_count, bucket_count);
+        }
+
+        return sum.x / max(0.0001f, sum.y);
+    }
+
     void fill_histogram_texture(std::array<unsigned int, 100>& histogram, Vector4uc* pixels) {
         // Assumes there are size x size pixels
         unsigned int max_value = 0;
@@ -238,23 +269,19 @@ struct Tonemapper::Implementation final {
 
                 auto histogram_auto_exposure = [](void* client_data) {
                     Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
+                    auto& histogram = data->m_histogram;
 
-                    std::fill(data->m_histogram.histogram.begin(), data->m_histogram.histogram.end(), 0u);
-                    ImageOperations::Exposure::log_luminance_histogram(data->m_input.get_ID(), data->m_histogram.min_log_luminance, data->m_histogram.max_log_luminance, 
-                                                                       data->m_histogram.histogram.begin(), data->m_histogram.histogram.end());
+                    std::fill(histogram.histogram.begin(), histogram.histogram.end(), 0u);
+                    ImageOperations::Exposure::log_luminance_histogram(data->m_input.get_ID(), histogram.min_log_luminance, histogram.max_log_luminance, 
+                                                                       histogram.histogram.begin(), histogram.histogram.end());
 
-                    // Compute log luminance values from histogram.
-                    int min_pixel_count = int(data->m_input.get_pixel_count() * data->m_histogram.min_percentage);
-                    int max_pixel_count = int(data->m_input.get_pixel_count() * data->m_histogram.max_percentage);
-
-                    float low_normalized_index, high_normalized_index;
-                    data->compute_histogram_high_low_normalized_index(low_normalized_index, high_normalized_index);
-                    float low_log_luminance = lerp(data->m_histogram.min_log_luminance, data->m_histogram.max_log_luminance, low_normalized_index);
-                    float high_log_luminance = lerp(data->m_histogram.min_log_luminance, data->m_histogram.max_log_luminance, high_normalized_index);
-
-                    // TODO Weighted average of column luminance instead.
-                    float target_log_luminance = (low_log_luminance + high_log_luminance) * 0.5f;
-                    float linear_exposure = 0.5f / exp2(target_log_luminance);
+                    // Compute linear exposure from histogram.
+                    float min_pixel_count = data->m_input.get_pixel_count() * histogram.min_percentage;
+                    float max_pixel_count = data->m_input.get_pixel_count() * histogram.max_percentage;
+                    float image_average_luminance = compute_average_luminance_without_outlier(histogram.histogram, min_pixel_count, max_pixel_count, 
+                                                                                              histogram.min_log_luminance, histogram.max_log_luminance);
+                    float linear_exposure = 1.0f / image_average_luminance;
+                    
                     data->m_exposure_bias = log2(linear_exposure);
 
                     data->m_upload_image = true;
