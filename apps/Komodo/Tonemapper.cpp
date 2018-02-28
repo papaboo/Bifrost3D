@@ -92,10 +92,15 @@ struct Tonemapper::Implementation final {
         for (int i = 0; i < m_histogram.histogram.size(); ++i) {
             int current_pixel_count = previous_pixel_count + m_histogram.histogram[i];
             // TODO check edge cases.
-            if (previous_pixel_count <= min_pixel_count && min_pixel_count < current_pixel_count)
-                low_normalized_index = i / float(m_histogram.histogram.size()); // TODO base on relative offset between previous and current.
-            if (previous_pixel_count <= max_pixel_count && max_pixel_count < current_pixel_count)
-                high_normalized_index = i / float(m_histogram.histogram.size()); // TODO base on relative offset between previous and current.
+            if (previous_pixel_count <= min_pixel_count && min_pixel_count <= current_pixel_count) {
+                float decimal_i = float(i) + inverse_lerp(float(previous_pixel_count), float(current_pixel_count), float(min_pixel_count));
+                low_normalized_index = decimal_i / float(m_histogram.histogram.size());
+            }
+            if (previous_pixel_count <= max_pixel_count && max_pixel_count <= current_pixel_count) {
+                float decimal_i = float(i) + inverse_lerp(float(previous_pixel_count), float(current_pixel_count), float(max_pixel_count));
+                high_normalized_index = decimal_i / float(m_histogram.histogram.size());
+                break;
+            }
 
             previous_pixel_count = current_pixel_count;
         }
