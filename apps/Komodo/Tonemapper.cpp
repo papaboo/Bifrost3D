@@ -89,15 +89,22 @@ struct Tonemapper::Implementation final {
         int max_pixel_count = int(m_input.get_pixel_count() * m_histogram.max_percentage);
 
         int previous_pixel_count = 0;
-        for (int i = 0; i < m_histogram.histogram.size(); ++i) {
-            int current_pixel_count = previous_pixel_count + m_histogram.histogram[i];
-            // TODO check edge cases.
+        int low_index = 0;
+        for (; low_index < m_histogram.histogram.size(); ++low_index) {
+            int current_pixel_count = previous_pixel_count + m_histogram.histogram[low_index];
             if (previous_pixel_count <= min_pixel_count && min_pixel_count <= current_pixel_count) {
-                float decimal_i = float(i) + inverse_lerp(float(previous_pixel_count), float(current_pixel_count), float(min_pixel_count));
+                float decimal_i = float(low_index) + inverse_lerp(float(previous_pixel_count), float(current_pixel_count), float(min_pixel_count));
                 low_normalized_index = decimal_i / float(m_histogram.histogram.size());
+                break;
             }
+
+            previous_pixel_count = current_pixel_count;
+        }
+
+        for (int high_index = low_index; high_index < m_histogram.histogram.size(); ++high_index) {
+            int current_pixel_count = previous_pixel_count + m_histogram.histogram[high_index];
             if (previous_pixel_count <= max_pixel_count && max_pixel_count <= current_pixel_count) {
-                float decimal_i = float(i) + inverse_lerp(float(previous_pixel_count), float(current_pixel_count), float(max_pixel_count));
+                float decimal_i = float(high_index) + inverse_lerp(float(previous_pixel_count), float(current_pixel_count), float(max_pixel_count));
                 high_normalized_index = decimal_i / float(m_histogram.histogram.size());
                 break;
             }
