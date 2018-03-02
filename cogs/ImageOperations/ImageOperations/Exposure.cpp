@@ -16,7 +16,7 @@ namespace Exposure {
 
 float summed_log_luminance(Images::UID image_ID) {
     double summed_log_luminance = 0.0;
-    Images::iterate_pixels(image_ID, [&](RGBA pixel) { summed_log_luminance += log2(fmaxf(luma(pixel.rgb()), 0.0001f)); });
+    Images::iterate_pixels(image_ID, [&](RGBA pixel) { summed_log_luminance += log2(fmaxf(luminance(pixel.rgb()), 0.0001f)); });
     return float(summed_log_luminance);
 }
 

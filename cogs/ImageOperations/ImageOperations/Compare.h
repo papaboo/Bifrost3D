@@ -32,7 +32,7 @@ float rms(Image reference, Image target, Image diff = Image()) {
             RGB a = reference.get_pixel(Vector2ui(x, y)).rgb();
             RGB b = target.get_pixel(Vector2ui(x, y)).rgb();
             RGB error = RGB(abs(a.r - b.r), abs(a.g - b.g), abs(a.b - b.b));
-            float l1 = luma(error);
+            float l1 = luminance(error);
             mean_squared += l1 * l1;
             if (diff.exists())
                 diff.set_pixel(RGBA(error), Vector2ui(x, y));
@@ -113,7 +113,7 @@ float ssim(Image reference_image, Image target_image) {
         ((reference_mean * reference_mean + target_mean * target_mean + C1) * (reference_variance + target_variance+ C2));
     RGB ssim_rgb = { float(ssim.x), float(ssim.y), float(ssim.z) };
 
-    return luma(ssim_rgb);
+    return luminance(ssim_rgb);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -170,7 +170,7 @@ float mssim(Image reference_image, Image target_image, int bandwidth, Image diff
             ((reference_mean * reference_mean + target_mean * target_mean + C1) * (reference_variance + target_variance + C2));
         RGB ssim_rgb = { float(ssim.x), float(ssim.y), float(ssim.z) };
 
-        mssim += luma(ssim_rgb);
+        mssim += luminance(ssim_rgb);
 
         if (diff_image.exists())
             diff_image.set_pixel(RGBA(1.0f - ssim_rgb.r, 1.0f - ssim_rgb.g, 1.0f - ssim_rgb.b, 1.0f), Vector2ui(xx, yy));

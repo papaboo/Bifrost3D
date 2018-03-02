@@ -36,7 +36,7 @@ Texture2D pixels : register(t0);
 
 float4 log_luminance_ps(Varyings input) : SV_TARGET {
     float3 pixel = pixels[int2(input.position.xy)].rgb;
-    float log_luminance = log(max(luma(pixel), 0.0001f));
+    float log_luminance = log(max(luminance(pixel), 0.0001f));
     return float4(log_luminance, 1, 1, 1);
 }
 
@@ -74,10 +74,10 @@ float geometric_mean_linear_exposure(float average_luminance) {
 // Advanced tonemapping operator
 // http://perso.univ-lyon1.fr/jean-claude.iehl/Public/educ/GAMA/2007/gdc07/Post-Processing_Pipeline.pdf
 float3 tonemap_reinhard(float3 color, float middlegrey, float average_luminance, float white_level_sqrd) {
-    float luminance = luma(color);
-    float scaled_luminance = luminance * middlegrey / average_luminance;
+    float color_luminance = luminance(color);
+    float scaled_luminance = color_luminance * middlegrey / average_luminance;
     float tonemapped_luminance = scaled_luminance * (1.0f + scaled_luminance / white_level_sqrd) / (1.0f + scaled_luminance);
-    return color * (tonemapped_luminance / luminance);
+    return color * (tonemapped_luminance / color_luminance);
 }
 
 float3 uncharted2_tonemap_helper(float3 color, float shoulder_strength, float linear_strength, float linear_angle, float toe_strength, float toe_numerator, float toe_denominator) {

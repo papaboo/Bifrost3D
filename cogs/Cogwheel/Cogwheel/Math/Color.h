@@ -248,8 +248,8 @@ inline RGBA gammacorrect(RGBA color, float gamma) {
     return RGBA(gammacorrect(color.rgb(), gamma), color.a);
 }
 
-inline float luma(RGB color) {
-    return 0.3f * color.r + 0.59f * color.g + 0.11f * color.b;
+inline float luminance(RGB color) {
+    return 0.2126f * color.r + 0.7152f * color.g + 0.0722f * color.b;
 }
 
 inline RGB saturate(RGB color) {

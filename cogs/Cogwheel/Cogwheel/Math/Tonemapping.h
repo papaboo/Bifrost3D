@@ -46,9 +46,9 @@ struct Parameters final {
 // ------------------------------------------------------------------------------------------------
 // http://perso.univ-lyon1.fr/jean-claude.iehl/Public/educ/GAMA/2007/gdc07/Post-Processing_Pipeline.pdf
 inline RGB reinhard(RGB color, float white_level_sqrd) {
-    float luminance = luma(color);
-    float tonemapped_luminance = luminance * (1.0f + luminance / white_level_sqrd) / (1.0f + luminance);
-    return color * (tonemapped_luminance / luminance);
+    float color_luminance = luminance(color);
+    float tonemapped_luminance = color_luminance * (1.0f + color_luminance / white_level_sqrd) / (1.0f + color_luminance);
+    return color * (tonemapped_luminance / color_luminance);
 }
 
 // ------------------------------------------------------------------------------------------------

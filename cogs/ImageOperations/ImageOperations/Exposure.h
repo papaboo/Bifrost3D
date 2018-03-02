@@ -16,7 +16,7 @@ namespace Exposure {
 
 float summed_log_luminance(Cogwheel::Assets::Images::UID image_ID);
 
-// Implements equation on in Reinhard et al, 2002, Photographic Tone Reproduction for Digital Images.
+// Implements equation (1) in Reinhard et al, 2002, Photographic Tone Reproduction for Digital Images.
 float log_average_luminance(Cogwheel::Assets::Images::UID image_ID);
 
 template <typename ForwardIterator>
@@ -26,7 +26,7 @@ inline void log_luminance_histogram(Cogwheel::Assets::Images::UID image_ID, floa
 
     int size = unsigned int(end - begin);
     Cogwheel::Assets::Images::iterate_pixels(image_ID, [&](RGBA pixel) {
-        float log_luminance = log2(fmaxf(luma(pixel.rgb()), 0.0001f));
+        float log_luminance = log2(fmaxf(luminance(pixel.rgb()), 0.0001f));
         float normalized_index = inverse_lerp(min_log_luminance, max_log_luminance, log_luminance);
         int index = clamp(int(normalized_index * size), 0, size - 1);
         ++begin[index];
