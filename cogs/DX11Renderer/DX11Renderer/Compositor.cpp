@@ -229,8 +229,11 @@ public:
 
                 OID3D11Texture2D backbuffer;
                 HRESULT hr = m_device->CreateTexture2D(&buffer_desc, nullptr, &backbuffer);
-                m_device->CreateRenderTargetView(backbuffer, nullptr, &m_backbuffer_RTV);
-                m_device->CreateShaderResourceView(backbuffer, nullptr, &m_backbuffer_SRV);
+                THROW_ON_FAILURE(hr);
+                hr = m_device->CreateRenderTargetView(backbuffer, nullptr, &m_backbuffer_RTV);
+                THROW_ON_FAILURE(hr);
+                hr = m_device->CreateShaderResourceView(backbuffer, nullptr, &m_backbuffer_SRV);
+                THROW_ON_FAILURE(hr);
             }
 
             { // Setup depth buffer.
