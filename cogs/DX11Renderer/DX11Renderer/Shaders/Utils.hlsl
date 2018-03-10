@@ -76,6 +76,10 @@ float3x3 create_inverse_TBN(float3 normal) {
 // Math utils
 // ------------------------------------------------------------------------------------------------
 
+unsigned int ceil_divide(unsigned int a, unsigned int b) {
+    return (a / b) + ((a % b) > 0);
+}
+
 float heaviside(float v) {
     return v >= 0.0f ? 1.0f : 0.0f;
 }
@@ -95,6 +99,10 @@ float length_squared(float3 v) {
 
 float luminance(float3 color) {
     return dot(color, float3(0.2126f, 0.7152f, 0.0722f));
+}
+
+inline float inverse_lerp(const float a, const float b, const float v) {
+    return (v - a) / (b - a);
 }
 
 float reciprocal_length(float3 v) {
