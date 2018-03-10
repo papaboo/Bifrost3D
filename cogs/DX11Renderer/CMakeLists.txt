@@ -53,6 +53,7 @@ if (DIRECTX_11_FOUND AND WIN32)
 
   set(SHADERS_COMPUTE_SRC
     DX11Renderer/Shaders/Compute/PrefixSum.hlsl
+    DX11Renderer/Shaders/Compute/ReduceExposureHistogram.hlsl
   )
 
   set(ALL_SHADER_SRC ${SHADERS_SRC} ${SHADERS_BSDFS_SRC} ${SHADERS_COMPUTE_SRC})

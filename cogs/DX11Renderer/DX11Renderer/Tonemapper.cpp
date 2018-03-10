@@ -139,4 +139,54 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
     }
 }
 
+// ------------------------------------------------------------------------------------------------
+// Exposure histogram
+// ------------------------------------------------------------------------------------------------
+ExposureHistogram::ExposureHistogram(ID3D11Device1& device, const std::wstring& shader_folder_path) {
+    // Create reduction shader.
+    OID3DBlob reduce_exposure_histogram_blob = compile_shader(shader_folder_path + std::wstring(L"Compute\\ReduceExposureHistogram.hlsl"), "cs_5_0", "reduce");
+    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_exposure_histogram_blob), nullptr, &m_histogram_reduction));
+
+    { // Create histogram
+        // OID3D11ShaderResourceView m_histogream_SRV;
+        D3D11_BUFFER_DESC buffer_desc = {};
+        buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+        buffer_desc.StructureByteStride = 0;
+        buffer_desc.ByteWidth = sizeof(unsigned int) * bin_count;
+        buffer_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+        buffer_desc.MiscFlags = 0;
+        buffer_desc.CPUAccessFlags = 0;
+
+        OID3D11Buffer histogram_buffer;
+        THROW_ON_FAILURE(device.CreateBuffer(&buffer_desc, nullptr, &histogram_buffer));
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+        srv_desc.Format = DXGI_FORMAT_R32_UINT;
+        srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+        srv_desc.Buffer.NumElements = bin_count;
+        THROW_ON_FAILURE(device.CreateShaderResourceView(histogram_buffer, &srv_desc, &m_histogram_SRV));
+
+        D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
+        uav_desc.Format = DXGI_FORMAT_R32_UINT;
+        uav_desc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+        uav_desc.Buffer.FirstElement = 0;
+        uav_desc.Buffer.NumElements = bin_count;
+        uav_desc.Buffer.Flags = 0;
+        THROW_ON_FAILURE(device.CreateUnorderedAccessView(histogram_buffer, &uav_desc, &m_histogram_UAV));
+    }
+}
+
+OID3D11ShaderResourceView& ExposureHistogram::reduce_histogram(ID3D11DeviceContext1& context, OID3D11Buffer& constants, 
+                                                               OID3D11ShaderResourceView& pixels, unsigned int image_width) {
+
+    context.CSSetShader(m_histogram_reduction, nullptr, 0u);
+    context.CSSetConstantBuffers(0, 1, &constants);
+    context.CSSetShaderResources(0, 1, &pixels);
+    context.CSSetUnorderedAccessViews(0, 1, &m_histogram_UAV, 0u);
+    unsigned int group_count_x = ceil_divide(image_width, group_width);
+    context.Dispatch(group_count_x, 1, 1);
+
+    return m_histogram_SRV;
+}
+
 } // NS DX11Renderer

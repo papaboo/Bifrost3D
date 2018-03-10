@@ -64,6 +64,40 @@ private:
     OID3D11SamplerState m_log_luminance_sampler;
 };
 
+// ------------------------------------------------------------------------------------------------
+// Functionality for computing a histogram from a list of pixels 
+// and dynamically determining the exposure of those pixels.
+// ------------------------------------------------------------------------------------------------
+class ExposureHistogram {
+public:
+    static const unsigned int bin_count = 64;
+    static const unsigned int group_width = 16u;
+    static const unsigned int group_height = 8u;
+    static const unsigned int group_size = group_width * group_height;
+
+    ExposureHistogram(ID3D11Device1& device, const std::wstring& shader_folder_path);
+
+    ExposureHistogram& operator=(ExposureHistogram&& rhs) {
+        m_histogram_reduction = std::move(rhs.m_histogram_reduction);
+        m_histogram_SRV = std::move(rhs.m_histogram_SRV);
+        m_histogram_UAV = std::move(rhs.m_histogram_UAV);
+        return *this;
+    }
+    OID3D11ShaderResourceView& reduce_histogram(ID3D11DeviceContext1& context, OID3D11Buffer& constants, 
+                                                OID3D11ShaderResourceView& pixels, unsigned int image_width);
+
+    // TODO Compute exposure
+
+private:
+    ExposureHistogram(ExposureHistogram& other) = delete;
+    ExposureHistogram(ExposureHistogram&& other) = delete;
+    ExposureHistogram& operator=(ExposureHistogram& rhs) = delete;
+
+    OID3D11ComputeShader m_histogram_reduction;
+    OID3D11ShaderResourceView m_histogram_SRV;
+    OID3D11UnorderedAccessView m_histogram_UAV;
+};
+
 } // NS DX11Renderer
 
 #endif // _DX11RENDERER_RENDERER_TONEMAPPER_H_
