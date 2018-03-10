@@ -94,7 +94,7 @@ public:
 
             context->CopyResource(staging_buffer, gpu_buffer);
             D3D11_MAPPED_SUBRESOURCE mapped_buffer = {};
-            hr = context->Map(staging_buffer, 0, D3D11_MAP_READ, 0, &mapped_buffer);
+            hr = context->Map(staging_buffer, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_NONE, &mapped_buffer);
             THROW_ON_FAILURE(hr);
 
             memcpy(begin, mapped_buffer.pData, sizeof(unsigned int) * element_count);
@@ -103,7 +103,7 @@ public:
     }
 
     void apply(ID3D11DeviceContext1& context, ID3D11UnorderedAccessView* buffer_UAV, unsigned int element_count = 0xFFFFFFFF) { 
-        context.CSSetUnorderedAccessViews(0, 1, &buffer_UAV, nullptr);
+        context.CSSetUnorderedAccessViews(0, 1, &buffer_UAV, 0u);
 
         bool run_two_iterations = element_count > GROUP_SIZE;
         OID3D11Buffer& outer_constants = run_two_iterations ? m_outer_constants : m_outer_single_iteration_constants;
