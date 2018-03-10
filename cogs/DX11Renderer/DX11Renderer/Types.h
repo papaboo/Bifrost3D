@@ -35,6 +35,15 @@ struct ID3D11Texture2D;
 struct ID3D11VertexShader;
 struct ID3D11UnorderedAccessView;
 
+//-------------------------------------------------------------------------------------------------
+// DX11 enum none flags.
+//-------------------------------------------------------------------------------------------------
+#define D3D11_BIND_NONE 0
+#define D3D11_CPU_ACCESS_NONE 0
+#define D3D11_MAP_FLAG_NONE 0
+#define D3D11_RESOURCE_MISC_NONE 0
+#define D3D11_USAGE_NONE 0
+
 namespace DX11Renderer {
 
 //-------------------------------------------------------------------------------------------------
