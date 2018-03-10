@@ -6,8 +6,8 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _DX11RENDERER_PREFIX_SUM_H_
-#define _DX11RENDERER_PREFIX_SUM_H_
+#ifndef _DX11RENDERER_PREFIX_SUM_TEST_H_
+#define _DX11RENDERER_PREFIX_SUM_TEST_H_
 
 #include <gtest/gtest.h>
 #include <Utils.h>
@@ -105,4 +105,4 @@ GTEST_TEST(PrefixSum, 873_random_elements) {
 
 } // NS DX11Renderer
 
-#endif // _DX11RENDERER_PREFIX_SUM_H_
+#endif // _DX11RENDERER_PREFIX_SUM_TEST_H_
