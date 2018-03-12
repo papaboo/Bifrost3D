@@ -21,7 +21,7 @@ namespace DX11Renderer {
 
 using OIDXGISwapChain1 = DX11Renderer::OwnedResourcePtr<IDXGISwapChain1>;
 
-OID3D11Device1 create_performant_device1() {
+OID3D11Device1 create_performant_device1(unsigned int create_device_flags) {
     // Find the best performing device (apparently the one with the most memory) and initialize that.
     struct WeightedAdapter {
         int index, dedicated_memory;
@@ -56,7 +56,6 @@ OID3D11Device1 create_performant_device1() {
     for (WeightedAdapter a : sorted_adapters) {
         dxgi_factory1->EnumAdapters1(a.index, &adapter);
 
-        UINT create_device_flags = 0; // D3D11_CREATE_DEVICE_DEBUG;
         D3D_FEATURE_LEVEL feature_level_requested = D3D_FEATURE_LEVEL_11_0;
 
         D3D_FEATURE_LEVEL feature_level;
@@ -76,6 +75,8 @@ OID3D11Device1 create_performant_device1() {
     THROW_ON_FAILURE(hr);
     return device1;
 }
+
+OID3D11Device1 create_performant_debug_device1() { return create_performant_device1(D3D11_CREATE_DEVICE_DEBUG); }
 
 //-------------------------------------------------------------------------------------------------
 // DirectX 11 compositor implementation.

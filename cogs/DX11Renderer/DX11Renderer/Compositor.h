@@ -26,6 +26,8 @@ struct HWND__;
 typedef HWND__* HWND;
 struct ID3D11Device1;
 
+#define D3D11_CREATE_DEVICE_NONE 0
+
 namespace DX11Renderer {
 
 //-------------------------------------------------------------------------------------------------
@@ -48,7 +50,8 @@ typedef IRenderer*(*RendererCreator)(ID3D11Device1&, int width_hint, int height_
 //-------------------------------------------------------------------------------------------------
 template <typename T> class OwnedResourcePtr;
 using OID3D11Device1 = DX11Renderer::OwnedResourcePtr<ID3D11Device1>;
-OID3D11Device1 create_performant_device1();
+OID3D11Device1 create_performant_device1(unsigned int create_device_flags = D3D11_CREATE_DEVICE_NONE);
+OID3D11Device1 create_performant_debug_device1();
 
 //-------------------------------------------------------------------------------------------------
 // DirectX 11 compositor.
