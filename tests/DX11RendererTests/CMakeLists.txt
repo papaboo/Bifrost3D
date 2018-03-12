@@ -3,6 +3,7 @@ if (TARGET DX11Renderer)
   set(PROJECT_NAME "DX11RendererTests")
 
   set(SRCS 
+    ExposureHistogramTest.h
     main.cpp
     PrefixSumTest.h
     Utils.h

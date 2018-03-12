@@ -86,9 +86,9 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
         pixels[i] = { g, g, g, half(1.0f) };
     }
     OID3D11ShaderResourceView pixel_SRV = create_texture(device, bin_count, 1, pixels);
-    
+
     ID3D11ShaderResourceView* histogram_SRV = histogram.reduce_histogram(*context, constant_buffer, pixel_SRV, bin_count);
-    
+
     ID3D11Resource* histogram_resource;
     histogram_SRV->GetResource(&histogram_resource);
     std::vector<unsigned int> cpu_histogram; cpu_histogram.resize(bin_count);

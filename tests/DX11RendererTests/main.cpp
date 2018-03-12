@@ -8,10 +8,11 @@
 
 #include <gtest/gtest.h>
 
+#include <ExposureHistogramTest.h>
 #include <PrefixSumTest.h>
 
 // NOTE
-// To run a subset of test cases use a filter, e.g '--gtest_filter=*BSDFs*'.
+// To run a subset of test cases use a filter, e.g '--gtest_filter=*ExposureHistogram*'.
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
