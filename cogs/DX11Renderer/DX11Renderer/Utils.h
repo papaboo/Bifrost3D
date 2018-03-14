@@ -141,6 +141,45 @@ inline HRESULT create_constant_buffer(ID3D11Device1& device, T& data, ID3D11Buff
     return device.CreateBuffer(&desc, &resource_data, constant_buffer);
 }
 
+inline void create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, int element_count, void* data,
+                                  OID3D11ShaderResourceView& buffer_SRV, OID3D11UnorderedAccessView& buffer_UAV) {
+    D3D11_BUFFER_DESC buffer_desc = {};
+    buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+    buffer_desc.StructureByteStride = 0;
+    buffer_desc.ByteWidth = sizeof_dx_format(format) * element_count;
+    buffer_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+    buffer_desc.MiscFlags = 0;
+    buffer_desc.CPUAccessFlags = 0;
+
+    OID3D11Buffer buffer;
+    if (data != nullptr) {
+        D3D11_SUBRESOURCE_DATA buffer_data = {};
+        buffer_data.pSysMem = data;
+        THROW_ON_FAILURE(device.CreateBuffer(&buffer_desc, &buffer_data, &buffer));
+    } else {
+        THROW_ON_FAILURE(device.CreateBuffer(&buffer_desc, nullptr, &buffer));
+    }
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+    srv_desc.Format = DXGI_FORMAT_R32_UINT;
+    srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+    srv_desc.Buffer.NumElements = element_count;
+    THROW_ON_FAILURE(device.CreateShaderResourceView(buffer, &srv_desc, &buffer_SRV));
+
+    D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
+    uav_desc.Format = DXGI_FORMAT_R32_UINT;
+    uav_desc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+    uav_desc.Buffer.FirstElement = 0;
+    uav_desc.Buffer.NumElements = element_count;
+    uav_desc.Buffer.Flags = 0;
+    THROW_ON_FAILURE(device.CreateUnorderedAccessView(buffer, &uav_desc, &buffer_UAV));
+};
+
+inline void create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, int element_count, 
+                                  OID3D11ShaderResourceView& buffer_SRV, OID3D11UnorderedAccessView& buffer_UAV) {
+    create_default_buffer(device, format, element_count, nullptr, buffer_SRV, buffer_UAV);
+}
+
 inline float3 make_float3(Cogwheel::Math::Vector3f v) {
     float3 r = { v.x, v.y, v.z};
     return r;
