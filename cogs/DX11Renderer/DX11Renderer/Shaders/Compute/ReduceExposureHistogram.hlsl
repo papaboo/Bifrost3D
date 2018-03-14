@@ -12,10 +12,11 @@
 #include "../Utils.hlsl"
 
 static const uint HISTOGRAM_SIZE = 64u;
+static const uint LOG2_HISTOGRAM_SIZE = log2(HISTOGRAM_SIZE);
 static const uint GROUP_WIDTH = 16u;
 static const uint GROUP_HEIGHT = 8u;
-static const uint GROUP_SIZE = GROUP_WIDTH * GROUP_HEIGHT;
-static const uint LOG2_GROUP_SIZE = log2(GROUP_SIZE);
+static const uint GROUP_THREAD_COUNT = GROUP_WIDTH * GROUP_HEIGHT;
+static const uint SHARED_ELEMENT_COUNT = GROUP_THREAD_COUNT * HISTOGRAM_SIZE;
 
 cbuffer constants : register(b0) {
     float min_log_luminance;
@@ -23,7 +24,7 @@ cbuffer constants : register(b0) {
     float2 __padding2;
 }
 
-groupshared uint shared_histograms[GROUP_SIZE * HISTOGRAM_SIZE]; // Set group size so this uses 32KB
+groupshared uint shared_histograms[SHARED_ELEMENT_COUNT];
 
 Texture2D pixels : register(t0);
 RWStructuredBuffer<uint> histogram_buffer : register(u0);
@@ -53,23 +54,31 @@ void reduce(uint3 local_thread_ID : SV_GroupThreadID, uint3 group_ID : SV_GroupI
     }
     GroupMemoryBarrierWithGroupSync();
 
-    // Output local histogram
-    // if (group_ID.x == 0 && linear_local_thread_ID == 9)
-    //     for (uint bin = 0; bin < HISTOGRAM_SIZE; ++bin)
-    //         histogram_buffer[bin] = shared_histograms[shared_histogram_offset + bin];
-
-    // Reduce the histogram in shared memory.
-    // TODO Use all threads to reduce the histograms initially and then do shared reduction afterwards.
+    /*
+    // General purpose shared memory histogram reduction.
     uint shared_histogram_bin = linear_local_thread_ID;
-    for (uint histogram_ID = 1; histogram_ID < GROUP_SIZE; ++histogram_ID) {
+    for (uint histogram_ID = 1; histogram_ID < GROUP_THREAD_COUNT; ++histogram_ID) {
         if (shared_histogram_bin < HISTOGRAM_SIZE)
             shared_histograms[shared_histogram_bin] += shared_histograms[histogram_ID * HISTOGRAM_SIZE + shared_histogram_bin];
     }
     GroupMemoryBarrierWithGroupSync();
+    */
 
-    // Output shared histogram
-    // if (group_ID.x == 0)
-    //     histogram_buffer[linear_local_thread_ID] = shared_histograms[linear_local_thread_ID];
+    // Reduce the histogram in shared memory by first having all threads reduce a single bin and then having the first HISTOGRAM_SIZE threads do the final reduction.
+    // Only works if the thread count modulo histogram size is zero.
+    for (uint histogram_bin_ID = linear_local_thread_ID + GROUP_THREAD_COUNT; 
+        histogram_bin_ID < SHARED_ELEMENT_COUNT; 
+        histogram_bin_ID += GROUP_THREAD_COUNT)
+        shared_histograms[linear_local_thread_ID] += shared_histograms[histogram_bin_ID];
+    GroupMemoryBarrierWithGroupSync();
+
+    uint shared_reduced_histograms = GROUP_THREAD_COUNT / HISTOGRAM_SIZE;
+    uint shared_histogram_bin = linear_local_thread_ID;
+    for (uint histogram_ID = 1; histogram_ID < shared_reduced_histograms; ++histogram_ID) {
+        if (shared_histogram_bin < HISTOGRAM_SIZE)
+            shared_histograms[shared_histogram_bin] += shared_histograms[histogram_ID * HISTOGRAM_SIZE + shared_histogram_bin];
+    }
+    GroupMemoryBarrierWithGroupSync();
 
     if (linear_local_thread_ID < HISTOGRAM_SIZE) {
         uint dummy;
