@@ -144,11 +144,10 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
 // ------------------------------------------------------------------------------------------------
 ExposureHistogram::ExposureHistogram(ID3D11Device1& device, const std::wstring& shader_folder_path) {
     // Create reduction shader.
-    OID3DBlob reduce_exposure_histogram_blob = compile_shader(shader_folder_path + std::wstring(L"Compute\\ReduceExposureHistogram.hlsl"), "cs_5_0", "reduce");
+    OID3DBlob reduce_exposure_histogram_blob = compile_shader(shader_folder_path + L"Compute\\ReduceExposureHistogram.hlsl", "cs_5_0", "reduce");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_exposure_histogram_blob), nullptr, &m_histogram_reduction));
 
     { // Create histogram
-        // OID3D11ShaderResourceView m_histogream_SRV;
         D3D11_BUFFER_DESC buffer_desc = {};
         buffer_desc.Usage = D3D11_USAGE_DEFAULT;
         buffer_desc.StructureByteStride = 0;
