@@ -104,7 +104,7 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
     OID3D11Resource histogram_resource;
     histogram_SRV->GetResource(&histogram_resource);
     std::vector<unsigned int> cpu_histogram; cpu_histogram.resize(bin_count);
-    readback_buffer(device, context, (ID3D11Buffer*)histogram_resource.get(), cpu_histogram.begin(), cpu_histogram.end());
+    Readback::buffer(device, context, (ID3D11Buffer*)histogram_resource.get(), cpu_histogram.begin(), cpu_histogram.end());
 
     for (int bin = 0; bin < cpu_histogram.size(); ++bin)
         EXPECT_EQ(cpu_histogram[bin], 1);
@@ -148,7 +148,7 @@ TEST_F(ExposureHistogramFixture, small_image) {
     OID3D11Resource histogram_resource;
     histogram_SRV->GetResource(&histogram_resource);
     std::vector<unsigned int> cpu_histogram; cpu_histogram.resize(bin_count);
-    readback_buffer(device, context, (ID3D11Buffer*)histogram_resource.get(), cpu_histogram.begin(), cpu_histogram.end());
+    Readback::buffer(device, context, (ID3D11Buffer*)histogram_resource.get(), cpu_histogram.begin(), cpu_histogram.end());
 
     EXPECT_EQ(cpu_histogram[0], 4 + width);
     for (int bin = 1; bin < cpu_histogram.size() - 1; ++bin)
@@ -192,13 +192,47 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
     context->Dispatch(1, 1, 1);
 
     std::vector<float> cpu_linear_exposure; cpu_linear_exposure.resize(1);
-    readback_buffer(device, context, linear_exposure_buffer, cpu_linear_exposure.begin(), cpu_linear_exposure.end());
+    Readback::buffer(device, context, linear_exposure_buffer, cpu_linear_exposure.begin(), cpu_linear_exposure.end());
     float linear_exposure = cpu_linear_exposure[0];
 
     float normalized_index = (min_percentage + max_percentage) * 0.5f;
     float reference_linear_exposure = compute_linear_exposure(normalized_index, min_log_luminance, max_log_luminance);
 
     EXPECT_FLOAT_EQ(linear_exposure, reference_linear_exposure);
+}
+
+TEST_F(ExposureHistogramFixture, exposure_from_constant_image) {
+    using namespace Cogwheel::Math;
+
+    auto device = create_performant_device1();
+    OID3D11DeviceContext1 context;
+    device->GetImmediateContext1(&context);
+
+    ExposureHistogram& histogram = ExposureHistogram(*device, DX11_SHADER_ROOT);
+
+    float min_log_luminance = -8;
+    float max_log_luminance = 4;
+    OID3D11Buffer constant_buffer = create_constant_buffer(device, min_log_luminance, max_log_luminance);
+
+    // Constant luminance image
+    const int width = 64;
+    const int height = 1;
+    const int pixel_count = width * height;
+    half4 pixels[pixel_count];
+    for (int i = 0; i < pixel_count; ++i) {
+        half g = half(0.5f);
+        pixels[i] = { g, g, g, half(1.0f) };
+    }
+    OID3D11ShaderResourceView pixel_SRV = create_texture_SRV(device, width, height, pixels);
+
+    OID3D11ShaderResourceView& linear_exposure_SRV = histogram.compute_average_exposure(*context, constant_buffer, pixel_SRV, width);
+
+    OID3D11Resource linear_exposure_resource;
+    linear_exposure_SRV->GetResource(&linear_exposure_resource);
+    float cpu_linear_exposure;
+    Readback::buffer(device, context, (ID3D11Buffer*)linear_exposure_resource.get(), &cpu_linear_exposure, &cpu_linear_exposure + 1);
+
+    printf("cpu_linear_exposure: %f\n", cpu_linear_exposure);
 }
 
 } // NS DX11Renderer
