@@ -81,7 +81,7 @@ void downsweep(uint3 local_thread_ID : SV_GroupThreadID, uint3 global_thread_ID 
     shared_memory[local_thread_ID.x] = zero_entry ? 0u : value;
     GroupMemoryBarrierWithGroupSync();
 
-    for (int step_size = (int)pow(2, LOG2_GROUP_SIZE- 1); step_size > 0; step_size /= 2) {
+    for (int step_size = (int)pow(2, LOG2_GROUP_SIZE- 1); step_size > 0; step_size >>= 1) {
         int low_index = 2 * local_thread_ID.x * step_size + step_size - 1;
         int high_index = low_index + step_size;
         if (high_index < GROUP_SIZE) {
