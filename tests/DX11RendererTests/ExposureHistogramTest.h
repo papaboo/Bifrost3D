@@ -225,7 +225,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_image) {
     }
     OID3D11ShaderResourceView pixel_SRV = create_texture_SRV(device, width, height, pixels);
 
-    OID3D11ShaderResourceView& linear_exposure_SRV = histogram.compute_average_exposure(*context, constant_buffer, pixel_SRV, width);
+    OID3D11ShaderResourceView& linear_exposure_SRV = histogram.compute_linear_exposure(*context, constant_buffer, pixel_SRV, width);
 
     OID3D11Resource linear_exposure_resource;
     linear_exposure_SRV->GetResource(&linear_exposure_resource);

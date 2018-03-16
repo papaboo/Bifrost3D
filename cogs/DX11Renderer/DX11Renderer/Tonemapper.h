@@ -43,10 +43,10 @@ public:
     }
 
     OID3D11ShaderResourceView& reduce_histogram(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
-        ID3D11ShaderResourceView* pixels, unsigned int image_width);
+                                                ID3D11ShaderResourceView* pixels, unsigned int image_width);
 
-    OID3D11ShaderResourceView& compute_average_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
-        ID3D11ShaderResourceView* pixels, unsigned int image_width);
+    OID3D11ShaderResourceView& compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+                                                       ID3D11ShaderResourceView* pixels, unsigned int image_width);
 
 private:
     ExposureHistogram(ExposureHistogram& other) = delete;

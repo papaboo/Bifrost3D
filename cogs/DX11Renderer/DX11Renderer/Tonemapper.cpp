@@ -46,8 +46,8 @@ OID3D11ShaderResourceView& ExposureHistogram::reduce_histogram(ID3D11DeviceConte
     return m_histogram_SRV;
 }
 
-OID3D11ShaderResourceView& ExposureHistogram::compute_average_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
-                                                                       ID3D11ShaderResourceView* pixels, unsigned int image_width) {
+OID3D11ShaderResourceView& ExposureHistogram::compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+                                                                      ID3D11ShaderResourceView* pixels, unsigned int image_width) {
     context.CSSetConstantBuffers(0, 1, &constants);
     context.CSSetShaderResources(0, 1, &pixels);
     ID3D11UnorderedAccessView* UAVs[2] = { m_histogram_UAV, m_linear_exposure_UAV };
