@@ -81,12 +81,19 @@ public:
         m_histogram_reduction = std::move(rhs.m_histogram_reduction);
         m_histogram_SRV = std::move(rhs.m_histogram_SRV);
         m_histogram_UAV = std::move(rhs.m_histogram_UAV);
+
+        m_linear_exposure_computation = std::move(rhs.m_linear_exposure_computation);
+        m_linear_exposure_SRV = std::move(rhs.m_linear_exposure_SRV);
+        m_linear_exposure_UAV = std::move(rhs.m_linear_exposure_UAV);
+
         return *this;
     }
+
     OID3D11ShaderResourceView& reduce_histogram(ID3D11DeviceContext1& context, OID3D11Buffer& constants, 
                                                 OID3D11ShaderResourceView& pixels, unsigned int image_width);
 
-    // TODO Compute exposure
+    OID3D11ShaderResourceView& compute_average_exposure(ID3D11DeviceContext1& context, OID3D11Buffer& constants,
+                                                        OID3D11ShaderResourceView& pixels, unsigned int image_width);
 
 private:
     ExposureHistogram(ExposureHistogram& other) = delete;
@@ -96,6 +103,10 @@ private:
     OID3D11ComputeShader m_histogram_reduction;
     OID3D11ShaderResourceView m_histogram_SRV;
     OID3D11UnorderedAccessView m_histogram_UAV;
+
+    OID3D11ComputeShader m_linear_exposure_computation;
+    OID3D11ShaderResourceView m_linear_exposure_SRV;
+    OID3D11UnorderedAccessView m_linear_exposure_UAV;
 };
 
 } // NS DX11Renderer

@@ -33,10 +33,24 @@ protected:
     struct ExposureHistogramConstants {
         float min_log_luminance;
         float max_log_luminance;
-        float2 __padding2;
+        float min_percentage;
+        float max_percentage;
     };
 
-    inline OID3D11ShaderResourceView create_texture(OID3D11Device1& device, unsigned int width, unsigned int height, half4* pixels) {
+    inline OID3D11Buffer create_constant_buffer(OID3D11Device1& device, float min_log_luminance, float max_log_luminance, float min_percentage = 0.8f, float max_percentage = 0.95f) {
+        OID3D11Buffer constant_buffer;
+        ExposureHistogramConstants constants = { min_log_luminance, max_log_luminance, min_percentage, max_percentage };
+        THROW_ON_FAILURE(DX11Renderer::create_constant_buffer(device, constants, &constant_buffer));
+        return constant_buffer;
+    }
+
+    inline float compute_linear_exposure(float normalized_index, float min_log_luminance, float max_log_luminance) {
+        float recip_exposure = exp2(Cogwheel::Math::lerp(min_log_luminance, max_log_luminance, normalized_index));
+        float scene_key = 1.0f;
+        return scene_key / recip_exposure;
+    }
+
+    inline OID3D11ShaderResourceView create_texture_SRV(OID3D11Device1& device, unsigned int width, unsigned int height, half4* pixels) {
         D3D11_TEXTURE2D_DESC tex_desc;
         tex_desc.Width = width;
         tex_desc.Height = height;
@@ -67,17 +81,15 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
     using namespace Cogwheel::Math;
 
     auto device = create_performant_device1();
-    ID3D11DeviceContext1* context;
+    OID3D11DeviceContext1 context;
     device->GetImmediateContext1(&context);
 
     ExposureHistogram& histogram = ExposureHistogram(*device, DX11_SHADER_ROOT);
     const unsigned int bin_count = ExposureHistogram::bin_count;
 
-    OID3D11Buffer constant_buffer;
     float min_log_luminance = -8;
     float max_log_luminance = 4;
-    ExposureHistogramConstants constants = { min_log_luminance, max_log_luminance, 0, 0 };
-    THROW_ON_FAILURE(create_constant_buffer(*device, constants, &constant_buffer));
+    OID3D11Buffer constant_buffer = create_constant_buffer(device, min_log_luminance, max_log_luminance);
 
     // Image with one element in each bucket.
     half4 pixels[bin_count];
@@ -85,14 +97,14 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
         half g = half(exp2(lerp(min_log_luminance, max_log_luminance, (i + 0.5f) / bin_count)));
         pixels[i] = { g, g, g, half(1.0f) };
     }
-    OID3D11ShaderResourceView pixel_SRV = create_texture(device, bin_count, 1, pixels);
+    OID3D11ShaderResourceView pixel_SRV = create_texture_SRV(device, bin_count, 1, pixels);
 
-    ID3D11ShaderResourceView* histogram_SRV = histogram.reduce_histogram(*context, constant_buffer, pixel_SRV, bin_count);
+    OID3D11ShaderResourceView& histogram_SRV = histogram.reduce_histogram(*context, constant_buffer, pixel_SRV, bin_count);
 
-    ID3D11Resource* histogram_resource;
+    OID3D11Resource histogram_resource;
     histogram_SRV->GetResource(&histogram_resource);
     std::vector<unsigned int> cpu_histogram; cpu_histogram.resize(bin_count);
-    readback_buffer(device, context, (ID3D11Buffer*)histogram_resource, cpu_histogram.begin(), cpu_histogram.end());
+    readback_buffer(device, context, (ID3D11Buffer*)histogram_resource.get(), cpu_histogram.begin(), cpu_histogram.end());
 
     for (int bin = 0; bin < cpu_histogram.size(); ++bin)
         EXPECT_EQ(cpu_histogram[bin], 1);
@@ -102,17 +114,15 @@ TEST_F(ExposureHistogramFixture, small_image) {
     using namespace Cogwheel::Math;
 
     auto device = create_performant_device1();
-    ID3D11DeviceContext1* context;
+    OID3D11DeviceContext1 context;
     device->GetImmediateContext1(&context);
 
     ExposureHistogram& histogram = ExposureHistogram(*device, DX11_SHADER_ROOT);
     const unsigned int bin_count = ExposureHistogram::bin_count;
 
-    OID3D11Buffer constant_buffer;
     float min_log_luminance = -8;
     float max_log_luminance = 4;
-    ExposureHistogramConstants constants = { min_log_luminance, max_log_luminance, 0, 0 };
-    THROW_ON_FAILURE(create_constant_buffer(*device, constants, &constant_buffer));
+    OID3D11Buffer constant_buffer = create_constant_buffer(device, min_log_luminance, max_log_luminance);
 
     // Image with 4 elements in each bucket and (4 + width) elements in the first and last bucket
     const int width = bin_count;
@@ -131,19 +141,64 @@ TEST_F(ExposureHistogramFixture, small_image) {
         float max_luminance = exp2(max_log_luminance) * 2.0f;
         pixels[x + 5 * width] = half4(Vector4f(max_luminance, max_luminance, max_luminance, 1.0f));
     }
-    OID3D11ShaderResourceView pixel_SRV = create_texture(device, width, height, pixels);
+    OID3D11ShaderResourceView pixel_SRV = create_texture_SRV(device, width, height, pixels);
 
-    ID3D11ShaderResourceView* histogram_SRV = histogram.reduce_histogram(*context, constant_buffer, pixel_SRV, width);
+    OID3D11ShaderResourceView& histogram_SRV = histogram.reduce_histogram(*context, constant_buffer, pixel_SRV, width);
 
-    ID3D11Resource* histogram_resource;
+    OID3D11Resource histogram_resource;
     histogram_SRV->GetResource(&histogram_resource);
     std::vector<unsigned int> cpu_histogram; cpu_histogram.resize(bin_count);
-    readback_buffer(device, context, (ID3D11Buffer*)histogram_resource, cpu_histogram.begin(), cpu_histogram.end());
+    readback_buffer(device, context, (ID3D11Buffer*)histogram_resource.get(), cpu_histogram.begin(), cpu_histogram.end());
 
     EXPECT_EQ(cpu_histogram[0], 4 + width);
     for (int bin = 1; bin < cpu_histogram.size() - 1; ++bin)
         EXPECT_EQ(cpu_histogram[bin], 4);
     EXPECT_EQ(cpu_histogram[cpu_histogram.size()-1], 4 + width);
+}
+
+TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
+    using namespace Cogwheel::Math;
+
+    auto device = create_performant_device1();
+    OID3D11DeviceContext1 context;
+    device->GetImmediateContext1(&context);
+
+    const unsigned int bin_count = ExposureHistogram::bin_count;
+
+    unsigned int histogram[bin_count];
+    for (int i = 0; i < bin_count; ++i)
+        histogram[i] = 1;
+
+    OID3D11UnorderedAccessView histogram_UAV;
+    create_default_buffer(device, DXGI_FORMAT_R32_UINT, bin_count, histogram, nullptr, &histogram_UAV);
+
+    OID3D11UnorderedAccessView linear_exposure_UAV;
+    OID3D11Buffer linear_exposure_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &linear_exposure_UAV);
+
+    OID3DBlob compute_exposure_blob = compile_shader(DX11_SHADER_ROOT + std::wstring(L"Compute\\ReduceExposureHistogram.hlsl"), "cs_5_0", "compute_exposure");
+    OID3D11ComputeShader compute_exposure_shader;
+    THROW_ON_FAILURE(device->CreateComputeShader(UNPACK_BLOB_ARGS(compute_exposure_blob), nullptr, &compute_exposure_shader));
+
+    float min_log_luminance = -8;
+    float max_log_luminance = 4;
+    float min_percentage = 0.8f;
+    float max_percentage = 0.95f;
+    OID3D11Buffer constant_buffer = create_constant_buffer(device, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
+
+    context->CSSetShader(compute_exposure_shader, nullptr, 0u);
+    context->CSSetConstantBuffers(0, 1, &constant_buffer);
+    ID3D11UnorderedAccessView* UAVs[2] = { histogram_UAV.get(), linear_exposure_UAV.get() };
+    context->CSSetUnorderedAccessViews(0, 2, UAVs, 0u);
+    context->Dispatch(1, 1, 1);
+
+    std::vector<float> cpu_linear_exposure; cpu_linear_exposure.resize(1);
+    readback_buffer(device, context, linear_exposure_buffer, cpu_linear_exposure.begin(), cpu_linear_exposure.end());
+    float linear_exposure = cpu_linear_exposure[0];
+
+    float normalized_index = (min_percentage + max_percentage) * 0.5f;
+    float reference_linear_exposure = compute_linear_exposure(normalized_index, min_log_luminance, max_log_luminance);
+
+    EXPECT_FLOAT_EQ(linear_exposure, reference_linear_exposure);
 }
 
 } // NS DX11Renderer

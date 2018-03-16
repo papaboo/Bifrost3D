@@ -21,9 +21,11 @@ static const uint SHARED_ELEMENT_COUNT = GROUP_THREAD_COUNT * HISTOGRAM_SIZE;
 cbuffer constants : register(b0) {
     float min_log_luminance;
     float max_log_luminance;
-    float2 __padding2;
+    float min_percentage;
+    float max_percentage;
 }
 
+// NOTE To reduce memory usage or increase thread count this could be stored as ushort2.
 groupshared uint shared_histograms[SHARED_ELEMENT_COUNT];
 
 Texture2D pixels : register(t0);
@@ -83,6 +85,74 @@ void reduce(uint3 local_thread_ID : SV_GroupThreadID, uint3 group_ID : SV_GroupI
     if (linear_local_thread_ID < HISTOGRAM_SIZE) {
         uint dummy;
         InterlockedAdd(histogram_buffer[linear_local_thread_ID], shared_histograms[linear_local_thread_ID], dummy);
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+// Compute exposure from the histogram.
+// ------------------------------------------------------------------------------------------------
+
+// Single element buffer.
+RWStructuredBuffer<float> linear_exposure_buffer : register(u1);
+
+groupshared float shared_histogram[HISTOGRAM_SIZE + 1];
+
+[numthreads(HISTOGRAM_SIZE, 1, 1)]
+void compute_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
+    int thread_ID = local_thread_ID.x;
+
+    shared_histogram[thread_ID] = histogram_buffer[thread_ID];
+    GroupMemoryBarrierWithGroupSync();
+
+    { // Compute prefix sum of the histogram in shared memory.
+
+        // Reduce
+        for (int step_size = 1; step_size < int(HISTOGRAM_SIZE); step_size <<= 1) {
+            int src_index = 2 * thread_ID * step_size + step_size - 1;
+            int dst_index = src_index + step_size;
+            if (dst_index < int(HISTOGRAM_SIZE))
+                shared_histogram[dst_index] += shared_histogram[src_index];
+            GroupMemoryBarrierWithGroupSync();
+        }
+
+        // Copy element count to last bin
+        if (thread_ID == 0)
+            shared_histogram[HISTOGRAM_SIZE] = shared_histogram[HISTOGRAM_SIZE - 1];
+        GroupMemoryBarrierWithGroupSync();
+
+        // Downsweep
+        for (int downsweep_step_size = int(pow(2, LOG2_HISTOGRAM_SIZE - 1)); downsweep_step_size > 0; downsweep_step_size >>= 1) {
+            int low_index = 2 * thread_ID * downsweep_step_size + downsweep_step_size - 1;
+            int high_index = low_index + downsweep_step_size;
+            if (high_index < int(HISTOGRAM_SIZE)) {
+                int t = shared_histogram[low_index];
+                shared_histogram[low_index] = shared_histogram[high_index];
+                shared_histogram[high_index] += t;
+            }
+            GroupMemoryBarrierWithGroupSync();
+        }
+
+        // Subtract max element
+        shared_histogram[thread_ID] -= shared_histogram[HISTOGRAM_SIZE];
+    }
+
+    // Adjust prefix sum to min and max boundary values.
+    // Clamp values above the max boundary and zero values outside of the min boundary.
+    float max_pixel_count = shared_histogram[HISTOGRAM_SIZE] * max_percentage;
+    float min_pixel_count = shared_histogram[HISTOGRAM_SIZE] * min_percentage;
+    shared_histogram[thread_ID] = min(shared_histogram[thread_ID], max_pixel_count) - min_pixel_count; // TODO Compute bin and next bin count per thread and avoid a sync.
+    GroupMemoryBarrierWithGroupSync();
+
+    // Find average.
+    float average_pixel_count = (max_pixel_count - min_pixel_count) * 0.5f;
+    float bin_prefix_sum = shared_histogram[thread_ID];
+    float next_bin_prefix_sum = shared_histogram[thread_ID + 1];
+
+    if (bin_prefix_sum < average_pixel_count && average_pixel_count <= next_bin_prefix_sum) {
+        float bin_index = thread_ID + inverse_lerp(bin_prefix_sum, next_bin_prefix_sum, average_pixel_count);
+        float normalized_index = bin_index / HISTOGRAM_SIZE;
+        float average_luminance = exp2(lerp(min_log_luminance, max_log_luminance, normalized_index));
+        linear_exposure_buffer[0] = 1.0f / average_luminance;
     }
 }
 
