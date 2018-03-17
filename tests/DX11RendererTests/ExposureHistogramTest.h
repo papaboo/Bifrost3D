@@ -30,16 +30,9 @@ protected:
 
     using half4 = Cogwheel::Math::Vector4<half>;
 
-    struct ExposureHistogramConstants {
-        float min_log_luminance;
-        float max_log_luminance;
-        float min_percentage;
-        float max_percentage;
-    };
-
     inline OID3D11Buffer create_constant_buffer(OID3D11Device1& device, float min_log_luminance, float max_log_luminance, float min_percentage = 0.8f, float max_percentage = 0.95f) {
         OID3D11Buffer constant_buffer;
-        ExposureHistogramConstants constants = { min_log_luminance, max_log_luminance, min_percentage, max_percentage };
+        Tonemapper::Constants constants = { min_log_luminance, max_log_luminance, min_percentage, max_percentage };
         THROW_ON_FAILURE(DX11Renderer::create_constant_buffer(device, constants, &constant_buffer));
         return constant_buffer;
     }
@@ -215,10 +208,10 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_image) {
     OID3D11Buffer constant_buffer = create_constant_buffer(device, min_log_luminance, max_log_luminance);
 
     // Constant luminance image
-    const int width = 64;
-    const int height = 1;
+    const int width = 640;
+    const int height = 480;
     const int pixel_count = width * height;
-    half4 pixels[pixel_count];
+    half4* pixels = new half4[pixel_count];
     for (int i = 0; i < pixel_count; ++i) {
         half g = half(0.5f);
         pixels[i] = { g, g, g, half(1.0f) };
@@ -233,6 +226,8 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_image) {
     Readback::buffer(device, context, (ID3D11Buffer*)linear_exposure_resource.get(), &cpu_linear_exposure, &cpu_linear_exposure + 1);
 
     printf("cpu_linear_exposure: %f\n", cpu_linear_exposure);
+
+    delete pixels;
 }
 
 } // NS DX11Renderer
