@@ -71,15 +71,6 @@ float geometric_mean_linear_exposure(float average_luminance) {
 // Tonemappers.
 // ------------------------------------------------------------------------------------------------
 
-// Advanced tonemapping operator
-// http://perso.univ-lyon1.fr/jean-claude.iehl/Public/educ/GAMA/2007/gdc07/Post-Processing_Pipeline.pdf
-float3 tonemap_reinhard(float3 color, float middlegrey, float average_luminance, float white_level_sqrd) {
-    float color_luminance = luminance(color);
-    float scaled_luminance = color_luminance * middlegrey / average_luminance;
-    float tonemapped_luminance = scaled_luminance * (1.0f + scaled_luminance / white_level_sqrd) / (1.0f + scaled_luminance);
-    return color * (tonemapped_luminance / color_luminance);
-}
-
 float3 uncharted2_tonemap_helper(float3 color, float shoulder_strength, float linear_strength, float linear_angle, float toe_strength, float toe_numerator, float toe_denominator) {
     float3 x = color;
     float A = shoulder_strength;
@@ -179,14 +170,6 @@ inline float3 unreal4(float3 color, float slope = 0.91f, float toe = 0.53f, floa
 
 float4 linear_tonemapping_ps(Varyings input) : SV_TARGET {
     return pixels[int2(input.position.xy)];
-}
-
-float4 reinhard_tonemapping_ps(Varyings input) : SV_TARGET {
-    // TODO Apply exposure here instead of as part of the reinhard operator.
-    float average_luminance = get_average_luminance(input.texcoord);
-    float3 color = pixels[int2(input.position.xy)].rgb;
-    color = tonemap_reinhard(color, 0.5f, average_luminance, 9.0);
-    return float4(color, 1);
 }
 
 float4 uncharted2_tonemapping_ps(Varyings input) : SV_TARGET {

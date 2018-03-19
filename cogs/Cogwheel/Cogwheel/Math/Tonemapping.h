@@ -17,7 +17,7 @@ namespace Cogwheel {
 namespace Math {
 namespace Tonemapping {
 
-enum class Operator { Linear, Filmic, Reinhard, Uncharted2 };
+enum class Operator { Linear, Filmic, Uncharted2 };
 
 struct Parameters final {
     Operator mapping;

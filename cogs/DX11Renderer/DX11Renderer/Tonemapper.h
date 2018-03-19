@@ -91,7 +91,6 @@ public:
         m_fullscreen_VS = std::move(rhs.m_fullscreen_VS);
         m_log_luminance_PS = std::move(rhs.m_log_luminance_PS);
         m_linear_tonemapping_PS = std::move(rhs.m_linear_tonemapping_PS);
-        m_reinhard_tonemapping_PS = std::move(rhs.m_reinhard_tonemapping_PS);
         m_uncharted2_tonemapping_PS = std::move(rhs.m_uncharted2_tonemapping_PS);
         m_filmic_tonemapping_PS = std::move(rhs.m_filmic_tonemapping_PS);
 
@@ -119,7 +118,6 @@ private:
     OID3D11VertexShader m_fullscreen_VS;
     OID3D11PixelShader m_log_luminance_PS;
     OID3D11PixelShader m_linear_tonemapping_PS;
-    OID3D11PixelShader m_reinhard_tonemapping_PS;
     OID3D11PixelShader m_uncharted2_tonemapping_PS;
     OID3D11PixelShader m_filmic_tonemapping_PS;
 
