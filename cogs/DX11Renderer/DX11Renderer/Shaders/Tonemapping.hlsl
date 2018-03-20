@@ -29,31 +29,12 @@ Varyings fullscreen_vs(uint vertex_ID : SV_VertexID) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Shader for extracting log luminance.
+// Tonemapping utilities.
 // ------------------------------------------------------------------------------------------------
 
 Texture2D pixels : register(t0);
 
-float4 log_luminance_ps(Varyings input) : SV_TARGET {
-    float3 pixel = pixels[int2(input.position.xy)].rgb;
-    float log_luminance = log(max(luminance(pixel), 0.0001f));
-    return float4(log_luminance, 1, 1, 1);
-}
-
-// ------------------------------------------------------------------------------------------------
-// Tonemapping utilities.
-// ------------------------------------------------------------------------------------------------
-
-Texture2D log_luminance_tex : register(t1);
-SamplerState log_luminance_sampler : register(s1);
-
-float get_average_luminance(float2 texcoord) {
-    float width, height, mip_count;
-    log_luminance_tex.GetDimensions(0, width, height, mip_count);
-
-    float log_luminance = log_luminance_tex.SampleLevel(log_luminance_sampler, texcoord, mip_count).r;
-    return exp(log_luminance);
-}
+Buffer<float> linear_exposure_buffer : register(t1);
 
 float dynamic_linear_exposure(float average_luminance) {
     float key_value = 0.5f; // De-gammaed 0.18, see Reinhard et al., 2002
@@ -169,15 +150,13 @@ inline float3 unreal4(float3 color, float slope = 0.91f, float toe = 0.53f, floa
 // ------------------------------------------------------------------------------------------------
 
 float4 linear_tonemapping_ps(Varyings input) : SV_TARGET {
-    return pixels[int2(input.position.xy)];
+    float linear_exposure = clamp(linear_exposure_buffer[0], 0.25, 4.0);
+    return pixels[int2(input.position.xy)] * linear_exposure;
 }
 
 float4 uncharted2_tonemapping_ps(Varyings input) : SV_TARGET {
-    // Exposure
-    float average_luminance = get_average_luminance(input.texcoord);
-    float exposure = geometric_mean_linear_exposure(average_luminance);
-    exposure = clamp(exposure, 0.25, 4.0);
-    float3 color = exposure * pixels[int2(input.position.xy)].rgb;
+    float linear_exposure = clamp(linear_exposure_buffer[0], 0.25, 4.0);
+    float3 color = linear_exposure * pixels[int2(input.position.xy)].rgb;
 
     // Tonemapping.
     float shoulder_strength = 0.22f;
@@ -193,11 +172,8 @@ float4 uncharted2_tonemapping_ps(Varyings input) : SV_TARGET {
 }
 
 float4 unreal4_tonemapping_ps(Varyings input) : SV_TARGET{
-    // Exposure
-    float average_luminance = get_average_luminance(input.texcoord);
-    float exposure = geometric_mean_linear_exposure(average_luminance);
-    exposure = clamp(exposure, 0.25, 4.0);
-    float3 color = exposure * pixels[int2(input.position.xy)].rgb;
+    float linear_exposure = clamp(linear_exposure_buffer[0], 0.25, 4.0);
+    float3 color = linear_exposure * pixels[int2(input.position.xy)].rgb;
 
     // Tonemapping.
     return float4(unreal4(color), 1.0);

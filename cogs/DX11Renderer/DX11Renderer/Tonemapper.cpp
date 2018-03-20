@@ -36,6 +36,9 @@ ExposureHistogram::ExposureHistogram(ID3D11Device1& device, const std::wstring& 
 OID3D11ShaderResourceView& ExposureHistogram::reduce_histogram(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
                                                                ID3D11ShaderResourceView* pixels, unsigned int image_width) {
 
+    const unsigned int zeros[4] = { 0u, 0u, 0u, 0u };
+    context.ClearUnorderedAccessViewUint(m_histogram_UAV, zeros);
+
     context.CSSetShader(m_histogram_reduction, nullptr, 0u);
     context.CSSetConstantBuffers(0, 1, &constants);
     context.CSSetShaderResources(0, 1, &pixels);
@@ -43,11 +46,17 @@ OID3D11ShaderResourceView& ExposureHistogram::reduce_histogram(ID3D11DeviceConte
     unsigned int group_count_x = ceil_divide(image_width, group_width);
     context.Dispatch(group_count_x, 1, 1);
 
+    ID3D11UnorderedAccessView* null_UAV[1] = { nullptr };
+    context.CSSetUnorderedAccessViews(0, 1, null_UAV, 0u);
+
     return m_histogram_SRV;
 }
 
 OID3D11ShaderResourceView& ExposureHistogram::compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
                                                                       ID3D11ShaderResourceView* pixels, unsigned int image_width) {
+    const unsigned int zeros[4] = { 0u, 0u, 0u, 0u };
+    context.ClearUnorderedAccessViewUint(m_histogram_UAV, zeros);
+
     context.CSSetConstantBuffers(0, 1, &constants);
     context.CSSetShaderResources(0, 1, &pixels);
     ID3D11UnorderedAccessView* UAVs[2] = { m_histogram_UAV, m_linear_exposure_UAV };
@@ -57,8 +66,12 @@ OID3D11ShaderResourceView& ExposureHistogram::compute_linear_exposure(ID3D11Devi
     unsigned int group_count_x = ceil_divide(image_width, group_width);
     context.Dispatch(group_count_x, 1, 1);
 
+    // TODO Use histogram SRV instead of UAV.
     context.CSSetShader(m_linear_exposure_computation, nullptr, 0u);
     context.Dispatch(1, 1, 1);
+
+    ID3D11UnorderedAccessView* null_UAVs[2] = { nullptr, nullptr };
+    context.CSSetUnorderedAccessViews(0, 2, null_UAVs, 0u);
 
     return m_linear_exposure_SRV;
 }
@@ -67,12 +80,10 @@ OID3D11ShaderResourceView& ExposureHistogram::compute_linear_exposure(ID3D11Devi
 // Tonemapper
 // ------------------------------------------------------------------------------------------------
 Tonemapper::Tonemapper()
-    : m_fullscreen_VS(nullptr), m_log_luminance_PS(nullptr)
-    , m_linear_tonemapping_PS(nullptr), m_uncharted2_tonemapping_PS(nullptr), m_filmic_tonemapping_PS(nullptr)
-    , m_width(0), m_height(0), m_log_luminance_RTV(nullptr), m_log_luminance_SRV(nullptr), m_log_luminance_sampler(nullptr){ }
+    : m_fullscreen_VS(nullptr)
+    , m_linear_tonemapping_PS(nullptr), m_uncharted2_tonemapping_PS(nullptr), m_filmic_tonemapping_PS(nullptr) { }
 
-Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_path)
-    : m_width(0), m_height(0), m_log_luminance_RTV(nullptr), m_log_luminance_SRV(nullptr) {
+Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_path) {
 
     m_host_constants.min_log_luminance = -8.0f;
     m_host_constants.max_log_luminance = 4.0f;
@@ -97,24 +108,9 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
             return pixel_shader;
         };
 
-        m_log_luminance_PS = create_pixel_shader("log_luminance_ps");
         m_linear_tonemapping_PS = create_pixel_shader("linear_tonemapping_ps");
         m_uncharted2_tonemapping_PS = create_pixel_shader("uncharted2_tonemapping_ps");
         m_filmic_tonemapping_PS = create_pixel_shader("unreal4_tonemapping_ps");
-    }
-
-    { // Setup interpolation sampler for log average image.
-        D3D11_SAMPLER_DESC sampler_desc = {};
-        sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-        sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-        sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-        sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-        sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-        sampler_desc.MinLOD = 0;
-        sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
-
-        HRESULT hr = device.CreateSamplerState(&sampler_desc, &m_log_luminance_sampler);
-        THROW_ON_FAILURE(hr);
     }
 }
 
@@ -122,78 +118,25 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
                          ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, 
                          int width, int height) {
 
-    // Setup general state, such as vertex shader and sampler.
-    context.VSSetShader(m_fullscreen_VS, 0, 0);
+    context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
 
-    if (parameters.mapping == Tonemapping::Operator::Linear) {
-        context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
-        context.PSSetShader(m_linear_tonemapping_PS, 0, 0);
+    // Compute exposure.
+    auto& linear_exposure_SRV = m_exposure_histogram.compute_linear_exposure(context, m_constants, pixel_SRV, width);
 
-        ID3D11ShaderResourceView* srvs[2] = { pixel_SRV, m_log_luminance_SRV };
+    { // Tonemap and render into backbuffer.
+        context.VSSetShader(m_fullscreen_VS, 0, 0);
+
+        if (parameters.mapping == Tonemapping::Operator::Linear)
+            context.PSSetShader(m_linear_tonemapping_PS, 0, 0);
+        else if (parameters.mapping == Tonemapping::Operator::Uncharted2)
+            context.PSSetShader(m_uncharted2_tonemapping_PS, 0, 0);
+        else // parameters.mapping == Tonemapping::Operator::Filmic
+            context.PSSetShader(m_filmic_tonemapping_PS, 0, 0);
+
+        ID3D11ShaderResourceView* srvs[2] = { pixel_SRV, linear_exposure_SRV };
         context.PSSetShaderResources(0, 2, srvs);
-        context.PSSetSamplers(1, 1, &m_log_luminance_sampler);
 
         context.Draw(3, 0);
-    
-    } else {
-
-        if (m_width != width || m_height != height) {
-            // Setup the log luminance backbuffer.
-            if (m_log_luminance_RTV) m_log_luminance_RTV->Release();
-            if (m_log_luminance_SRV) m_log_luminance_SRV->Release();
-
-            D3D11_TEXTURE2D_DESC buffer_desc;
-            buffer_desc.Width = width;
-            buffer_desc.Height = height;
-            buffer_desc.MipLevels = 0; // 0 Because we want DX11 to generate mipmaps for us.
-            buffer_desc.ArraySize = 1;
-            buffer_desc.Format = DXGI_FORMAT_R16_FLOAT;
-            buffer_desc.SampleDesc.Count = 1;
-            buffer_desc.SampleDesc.Quality = 0;
-            buffer_desc.Usage = D3D11_USAGE_DEFAULT;
-            buffer_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-            buffer_desc.CPUAccessFlags = 0;
-            buffer_desc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
-
-            using OID3D11Device = DX11Renderer::OwnedResourcePtr<ID3D11Device>;
-            OID3D11Device device;
-            context.GetDevice(&device);
-
-            OID3D11Texture2D backbuffer;
-            HRESULT hr = device->CreateTexture2D(&buffer_desc, nullptr, &backbuffer);
-            THROW_ON_FAILURE(hr);
-            hr = device->CreateRenderTargetView(backbuffer, nullptr, &m_log_luminance_RTV);
-            THROW_ON_FAILURE(hr);
-            hr = device->CreateShaderResourceView(backbuffer, nullptr, &m_log_luminance_SRV);
-            THROW_ON_FAILURE(hr);
-
-            m_width = width;
-            m_height = height;
-        }
-
-        { // Create log average texture.
-            context.OMSetRenderTargets(1, &m_log_luminance_RTV, nullptr);
-            context.PSSetShader(m_log_luminance_PS, 0, 0);
-            context.PSSetShaderResources(0, 1, &pixel_SRV);
-            context.Draw(3, 0);
-
-            context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr); // TODO Can I clear the rendertarget? Otherwise keep as is and remove the same setter below.
-            context.GenerateMips(m_log_luminance_SRV);
-        }
-
-        { // Tonemap and render into backbuffer.
-            context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
-            if (parameters.mapping == Tonemapping::Operator::Uncharted2)
-                context.PSSetShader(m_uncharted2_tonemapping_PS, 0, 0);
-            else // parameters.mapping == Tonemapping::Operator::Filmic
-                context.PSSetShader(m_filmic_tonemapping_PS, 0, 0);
-
-            ID3D11ShaderResourceView* srvs[2] = { pixel_SRV, m_log_luminance_SRV };
-            context.PSSetShaderResources(0, 2, srvs);
-            context.PSSetSamplers(1, 1, &m_log_luminance_sampler);
-
-            context.Draw(3, 0);
-        }
     }
 }
 

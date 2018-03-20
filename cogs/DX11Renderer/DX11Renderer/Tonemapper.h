@@ -89,14 +89,10 @@ public:
         m_exposure_histogram = std::move(rhs.m_exposure_histogram);
 
         m_fullscreen_VS = std::move(rhs.m_fullscreen_VS);
-        m_log_luminance_PS = std::move(rhs.m_log_luminance_PS);
         m_linear_tonemapping_PS = std::move(rhs.m_linear_tonemapping_PS);
         m_uncharted2_tonemapping_PS = std::move(rhs.m_uncharted2_tonemapping_PS);
         m_filmic_tonemapping_PS = std::move(rhs.m_filmic_tonemapping_PS);
 
-        m_log_luminance_RTV = std::move(rhs.m_log_luminance_RTV);
-        m_log_luminance_SRV = std::move(rhs.m_log_luminance_SRV);
-        m_log_luminance_sampler = std::move(rhs.m_log_luminance_sampler);
         return *this;
     }
 
@@ -116,15 +112,9 @@ private:
     ExposureHistogram m_exposure_histogram;
 
     OID3D11VertexShader m_fullscreen_VS;
-    OID3D11PixelShader m_log_luminance_PS;
     OID3D11PixelShader m_linear_tonemapping_PS;
     OID3D11PixelShader m_uncharted2_tonemapping_PS;
     OID3D11PixelShader m_filmic_tonemapping_PS;
-
-    int m_width, m_height;
-    OID3D11RenderTargetView m_log_luminance_RTV;
-    OID3D11ShaderResourceView m_log_luminance_SRV;
-    OID3D11SamplerState m_log_luminance_sampler;
 };
 
 } // NS DX11Renderer
