@@ -188,7 +188,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
     Readback::buffer(device, context, linear_exposure_buffer, cpu_linear_exposure.begin(), cpu_linear_exposure.end());
     float linear_exposure = cpu_linear_exposure[0];
 
-    float normalized_index = (min_percentage + max_percentage) * 0.5f;
+    float normalized_index = lerp(min_percentage, max_percentage, 0.75f);
     float reference_linear_exposure = compute_linear_exposure(normalized_index, min_log_luminance, max_log_luminance);
 
     EXPECT_FLOAT_EQ(linear_exposure, reference_linear_exposure);

@@ -144,14 +144,16 @@ void compute_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
     GroupMemoryBarrierWithGroupSync();
 
     // Find average.
-    float average_pixel_count = (max_pixel_count - min_pixel_count) * 0.5f;
+    // TODO Either do a weighted sum as in Unreal or an average of min and max luminance.
+    float average_pixel_count = (max_pixel_count - min_pixel_count) * 0.75f;
     float bin_prefix_sum = shared_histogram[thread_ID];
     float next_bin_prefix_sum = shared_histogram[thread_ID + 1];
 
     if (bin_prefix_sum < average_pixel_count && average_pixel_count <= next_bin_prefix_sum) {
         float bin_index = thread_ID + inverse_lerp(bin_prefix_sum, next_bin_prefix_sum, average_pixel_count);
         float normalized_index = bin_index / HISTOGRAM_SIZE;
-        float average_luminance = exp2(lerp(min_log_luminance, max_log_luminance, normalized_index));
+        float average_log_luminance = lerp(min_log_luminance, max_log_luminance, saturate(normalized_index));
+        float average_luminance = exp2(average_log_luminance);
         linear_exposure_buffer[0] = 1.0f / average_luminance;
     }
 }

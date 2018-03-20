@@ -46,8 +46,8 @@ OID3D11ShaderResourceView& ExposureHistogram::reduce_histogram(ID3D11DeviceConte
     unsigned int group_count_x = ceil_divide(image_width, group_width);
     context.Dispatch(group_count_x, 1, 1);
 
-    ID3D11UnorderedAccessView* null_UAV[1] = { nullptr };
-    context.CSSetUnorderedAccessViews(0, 1, null_UAV, 0u);
+    ID3D11UnorderedAccessView* null_UAV = nullptr ;
+    context.CSSetUnorderedAccessViews(0, 1, &null_UAV, 0u);
 
     return m_histogram_SRV;
 }
@@ -85,7 +85,7 @@ Tonemapper::Tonemapper()
 
 Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_path) {
 
-    m_host_constants.min_log_luminance = -8.0f;
+    m_host_constants.min_log_luminance = -4.0f;
     m_host_constants.max_log_luminance = 4.0f;
     m_host_constants.min_percentage = 0.7f;
     m_host_constants.max_percentage = 0.95f;

@@ -150,12 +150,12 @@ inline float3 unreal4(float3 color, float slope = 0.91f, float toe = 0.53f, floa
 // ------------------------------------------------------------------------------------------------
 
 float4 linear_tonemapping_ps(Varyings input) : SV_TARGET {
-    float linear_exposure = clamp(linear_exposure_buffer[0], 0.25, 4.0);
+    float linear_exposure = linear_exposure_buffer[0];
     return pixels[int2(input.position.xy)] * linear_exposure;
 }
 
 float4 uncharted2_tonemapping_ps(Varyings input) : SV_TARGET {
-    float linear_exposure = clamp(linear_exposure_buffer[0], 0.25, 4.0);
+    float linear_exposure = linear_exposure_buffer[0];
     float3 color = linear_exposure * pixels[int2(input.position.xy)].rgb;
 
     // Tonemapping.
@@ -172,7 +172,7 @@ float4 uncharted2_tonemapping_ps(Varyings input) : SV_TARGET {
 }
 
 float4 unreal4_tonemapping_ps(Varyings input) : SV_TARGET{
-    float linear_exposure = clamp(linear_exposure_buffer[0], 0.25, 4.0);
+    float linear_exposure = linear_exposure_buffer[0];
     float3 color = linear_exposure * pixels[int2(input.position.xy)].rgb;
 
     // Tonemapping.
