@@ -163,7 +163,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
         histogram[i] = 1;
 
     OID3D11UnorderedAccessView histogram_UAV;
-    create_default_buffer(device, DXGI_FORMAT_R32_UINT, bin_count, histogram, nullptr, &histogram_UAV);
+    create_default_buffer(device, DXGI_FORMAT_R32_UINT, histogram, bin_count, nullptr, &histogram_UAV);
 
     OID3D11UnorderedAccessView linear_exposure_UAV;
     OID3D11Buffer linear_exposure_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &linear_exposure_UAV);

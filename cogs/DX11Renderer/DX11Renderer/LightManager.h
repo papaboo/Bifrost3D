@@ -88,14 +88,7 @@ public:
         m_index_to_ID = Array<LightSources::UID>(initial_capacity);
         m_data.active_count = 0u;
 
-        D3D11_BUFFER_DESC uniforms_desc = {};
-        uniforms_desc.Usage = D3D11_USAGE_DEFAULT;
-        uniforms_desc.ByteWidth = sizeof(LightBuffer);
-        uniforms_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-        uniforms_desc.CPUAccessFlags = 0;
-        uniforms_desc.MiscFlags = 0;
-
-        HRESULT hr = device.CreateBuffer(&uniforms_desc, nullptr, &m_lights_buffer);
+        THROW_ON_FAILURE(create_constant_buffer(device, sizeof(LightBuffer), &m_lights_buffer));
     }
 
     inline int active_light_count() const { return m_data.active_count; }

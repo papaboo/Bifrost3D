@@ -50,56 +50,15 @@ public:
     void apply(ID3D11Device1& device, unsigned int* begin, unsigned int* end) {
         int element_count = int(end - begin);
 
-        OID3D11Buffer gpu_buffer;
-        OID3D11UnorderedAccessView buffer_UAV = nullptr;
-        {
-            D3D11_BUFFER_DESC buffer_desc = {};
-            buffer_desc.Usage = D3D11_USAGE_DEFAULT;
-            buffer_desc.StructureByteStride = 0;
-            buffer_desc.ByteWidth = sizeof(unsigned int) * element_count;
-            buffer_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
-            buffer_desc.MiscFlags = 0;
-            buffer_desc.CPUAccessFlags = 0;
-
-            D3D11_SUBRESOURCE_DATA gpu_data = {};
-            gpu_data.pSysMem = begin;
-            HRESULT hr = device.CreateBuffer(&buffer_desc, &gpu_data, &gpu_buffer);
-            THROW_ON_FAILURE(hr);
-
-            // Create UAV
-            D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-            uav_desc.Format = DXGI_FORMAT_R32_UINT;
-            uav_desc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
-            uav_desc.Buffer.FirstElement = 0;
-            uav_desc.Buffer.NumElements = element_count;
-            uav_desc.Buffer.Flags = 0;
-            hr = device.CreateUnorderedAccessView(gpu_buffer, &uav_desc, &buffer_UAV);
-            THROW_ON_FAILURE(hr);
-        }
+        OID3D11UnorderedAccessView buffer_UAV;
+        OID3D11Buffer gpu_buffer = create_default_buffer(device, DXGI_FORMAT_R32_UINT, begin, element_count, nullptr, &buffer_UAV);
 
         ID3D11DeviceContext1* context;
         device.GetImmediateContext1(&context);
 
         apply(*context, buffer_UAV, element_count);
 
-        { // Readback
-            D3D11_BUFFER_DESC staging_desc = {};
-            staging_desc.Usage = D3D11_USAGE_STAGING;
-            staging_desc.ByteWidth = sizeof(unsigned int) * element_count;
-            staging_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-
-            OID3D11Buffer staging_buffer;
-            HRESULT hr = device.CreateBuffer(&staging_desc, nullptr, &staging_buffer);
-            THROW_ON_FAILURE(hr);
-
-            context->CopyResource(staging_buffer, gpu_buffer);
-            D3D11_MAPPED_SUBRESOURCE mapped_buffer = {};
-            hr = context->Map(staging_buffer, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_NONE, &mapped_buffer);
-            THROW_ON_FAILURE(hr);
-
-            memcpy(begin, mapped_buffer.pData, sizeof(unsigned int) * element_count);
-            context->Unmap(staging_buffer, 0);
-        }
+        Readback::buffer(&device, context, gpu_buffer, begin, end);
     }
 
     void apply(ID3D11DeviceContext1& context, ID3D11UnorderedAccessView* buffer_UAV, unsigned int element_count = 0xFFFFFFFF) { 

@@ -141,7 +141,7 @@ inline HRESULT create_constant_buffer(ID3D11Device1& device, T& data, ID3D11Buff
     return device.CreateBuffer(&desc, &resource_data, constant_buffer);
 }
 
-inline OID3D11Buffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, int element_count, void* data,
+inline OID3D11Buffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, void* data, int element_count,
                                            ID3D11ShaderResourceView** buffer_SRV, ID3D11UnorderedAccessView** buffer_UAV) {
     D3D11_BUFFER_DESC buffer_desc = {};
     buffer_desc.Usage = D3D11_USAGE_DEFAULT;
@@ -182,8 +182,8 @@ inline OID3D11Buffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT fo
 };
 
 inline OID3D11Buffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, int element_count,
-                                  ID3D11ShaderResourceView** buffer_SRV, ID3D11UnorderedAccessView** buffer_UAV) {
-    return create_default_buffer(device, format, element_count, nullptr, buffer_SRV, buffer_UAV);
+                                           ID3D11ShaderResourceView** buffer_SRV, ID3D11UnorderedAccessView** buffer_UAV) {
+    return create_default_buffer(device, format, nullptr, element_count, buffer_SRV, buffer_UAV);
 }
 
 inline float3 make_float3(Cogwheel::Math::Vector3f v) {
