@@ -14,6 +14,61 @@ using namespace Cogwheel::Math;
 namespace DX11Renderer {
 
 // ------------------------------------------------------------------------------------------------
+// Log average luminance reduction.
+// ------------------------------------------------------------------------------------------------
+LogAverageLuminance::LogAverageLuminance()
+    : m_log_average_first_reduction(nullptr), m_log_average_second_reduction(nullptr), m_log_averages_SRV(nullptr), m_log_averages_UAV(nullptr)
+    , m_linear_exposure_computation(nullptr), m_linear_exposure_SRV(nullptr), m_linear_exposure_UAV(nullptr) {}
+
+LogAverageLuminance::LogAverageLuminance(ID3D11Device1& device, const std::wstring& shader_folder_path) {
+    // Create shaders.
+    OID3DBlob log_average_first_reduction_blob = compile_shader(shader_folder_path + L"Compute\\ReduceLogAverageLuminance.hlsl", "cs_5_0", "first_reduction");
+    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(log_average_first_reduction_blob), nullptr, &m_log_average_first_reduction));
+
+    OID3DBlob log_average_second_reduction_blob = compile_shader(shader_folder_path + L"Compute\\ReduceLogAverageLuminance.hlsl", "cs_5_0", "second_reduction");
+    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(log_average_second_reduction_blob), nullptr, &m_log_average_second_reduction));
+
+    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_folder_path + L"Compute\\ReduceLogAverageLuminance.hlsl", "cs_5_0", "compute_linear_exposure");
+    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_computation_blob), nullptr, &m_linear_exposure_computation));
+
+    // Create buffers
+    create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, max_groups_dispatched, &m_log_averages_SRV, &m_log_averages_UAV);
+    create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, &m_linear_exposure_SRV, &m_linear_exposure_UAV);
+}
+
+OID3D11ShaderResourceView& LogAverageLuminance::compute_log_average(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+                                                                    ID3D11ShaderResourceView* pixels, unsigned int image_width) {
+    return compute(context, constants, pixels, image_width, m_log_average_second_reduction);
+}
+
+OID3D11ShaderResourceView& LogAverageLuminance::compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+                                                                        ID3D11ShaderResourceView* pixels, unsigned int image_width) {
+    return compute(context, constants, pixels, image_width, m_linear_exposure_computation);
+}
+
+OID3D11ShaderResourceView& LogAverageLuminance::compute(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+    ID3D11ShaderResourceView* pixels, unsigned int image_width, OID3D11ComputeShader& second_reduction) {
+
+    context.CSSetConstantBuffers(0, 1, &constants);
+
+    context.CSSetUnorderedAccessViews(0, 1, &m_log_averages_UAV, 0u);
+    context.CSSetShaderResources(0, 1, &pixels);
+    context.CSSetShader(m_log_average_first_reduction, nullptr, 0u);
+    unsigned int group_count_x = ceil_divide(image_width, group_width);
+    context.Dispatch(min(group_count_x, max_groups_dispatched), 1, 1);
+
+    context.CSSetUnorderedAccessViews(0, 1, &m_linear_exposure_UAV, 0u);
+    context.CSSetShaderResources(0, 1, &m_log_averages_SRV);
+    context.CSSetShader(second_reduction, nullptr, 0u);
+    context.Dispatch(1, 1, 1);
+
+    ID3D11UnorderedAccessView* null_UAV = nullptr;
+    context.CSSetUnorderedAccessViews(0, 1, &null_UAV, 0u);
+
+    return m_linear_exposure_SRV;
+}
+
+// ------------------------------------------------------------------------------------------------
 // Exposure histogram
 // ------------------------------------------------------------------------------------------------
 ExposureHistogram::ExposureHistogram()
@@ -25,7 +80,7 @@ ExposureHistogram::ExposureHistogram(ID3D11Device1& device, const std::wstring& 
     OID3DBlob reduce_exposure_histogram_blob = compile_shader(shader_folder_path + L"Compute\\ReduceExposureHistogram.hlsl", "cs_5_0", "reduce");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_exposure_histogram_blob), nullptr, &m_histogram_reduction));
 
-    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_folder_path + L"Compute\\ReduceExposureHistogram.hlsl", "cs_5_0", "compute_exposure");
+    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_folder_path + L"Compute\\ReduceExposureHistogram.hlsl", "cs_5_0", "compute_linear_exposure");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_computation_blob), nullptr, &m_linear_exposure_computation));
 
     // Create buffers
@@ -91,6 +146,7 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
     m_host_constants.max_percentage = 0.95f;
     THROW_ON_FAILURE(create_constant_buffer(device, m_host_constants, &m_constants /*, D3D11_USAGE_DEFAULT*/));
 
+    m_log_average_luminance = LogAverageLuminance(device, shader_folder_path);
     m_exposure_histogram = ExposureHistogram(device, shader_folder_path);
 
     { // Setup shaders

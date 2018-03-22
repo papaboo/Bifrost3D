@@ -44,7 +44,7 @@ void reduce(uint3 local_thread_ID : SV_GroupThreadID, uint3 group_ID : SV_GroupI
     pixels.GetDimensions(width, height);
 
     // Reduce the histogram in local memory by letting the groups sweep the image horizontally in steps of size GROUP_HEIGHT.
-    uint2 pixel_coord = { local_thread_ID.x + group_ID.x * GROUP_WIDTH, local_thread_ID.y };
+    uint2 pixel_coord = global_thread_ID.xy;
     if (pixel_coord.x < width) {
         for (; pixel_coord.y < height; pixel_coord.y += GROUP_HEIGHT) {
             float3 pixel = pixels[pixel_coord].rgb;
@@ -98,7 +98,7 @@ RWStructuredBuffer<float> linear_exposure_buffer : register(u1);
 groupshared float shared_histogram[HISTOGRAM_SIZE + 1];
 
 [numthreads(HISTOGRAM_SIZE, 1, 1)]
-void compute_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
+void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
     int thread_ID = local_thread_ID.x;
 
     shared_histogram[thread_ID] = histogram_buffer[thread_ID];

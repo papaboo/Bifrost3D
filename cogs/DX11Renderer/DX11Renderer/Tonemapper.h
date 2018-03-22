@@ -16,6 +16,60 @@
 namespace DX11Renderer {
 
 // ------------------------------------------------------------------------------------------------
+// Functionality for computing the log average luminance of a list of pixels 
+// and dynamically determining the exposure of those pixels.
+// ------------------------------------------------------------------------------------------------
+class LogAverageLuminance {
+public:
+    static const unsigned int max_groups_dispatched = 128u;
+    static const unsigned int group_width = 8u;
+    static const unsigned int group_height = 16u;
+    static const unsigned int group_size = group_width * group_height;
+
+    LogAverageLuminance();
+
+    LogAverageLuminance(ID3D11Device1& device, const std::wstring& shader_folder_path);
+
+    LogAverageLuminance& operator=(LogAverageLuminance&& rhs) {
+
+        m_log_average_first_reduction = std::move(rhs.m_log_average_first_reduction);
+        m_log_average_second_reduction = std::move(rhs.m_log_average_second_reduction);
+        m_log_averages_SRV = std::move(rhs.m_log_averages_SRV);
+        m_log_averages_UAV = std::move(rhs.m_log_averages_UAV);
+
+        m_linear_exposure_computation = std::move(rhs.m_linear_exposure_computation);
+        m_linear_exposure_SRV = std::move(rhs.m_linear_exposure_SRV);
+        m_linear_exposure_UAV = std::move(rhs.m_linear_exposure_UAV);
+
+        return *this;
+    }
+
+    OID3D11ShaderResourceView& compute_log_average(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+                                                   ID3D11ShaderResourceView* pixels, unsigned int image_width);
+
+    OID3D11ShaderResourceView& compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+                                                       ID3D11ShaderResourceView* pixels, unsigned int image_width);
+
+private:
+    LogAverageLuminance(LogAverageLuminance& other) = delete;
+    LogAverageLuminance(LogAverageLuminance&& other) = delete;
+    LogAverageLuminance& operator=(LogAverageLuminance& rhs) = delete;
+
+    OID3D11ShaderResourceView& compute(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+                                      ID3D11ShaderResourceView* pixels, unsigned int image_width, 
+                                      OID3D11ComputeShader& second_reduction);
+
+    OID3D11ComputeShader m_log_average_first_reduction;
+    OID3D11ComputeShader m_log_average_second_reduction;
+    OID3D11ShaderResourceView m_log_averages_SRV;
+    OID3D11UnorderedAccessView m_log_averages_UAV;
+
+    OID3D11ComputeShader m_linear_exposure_computation;
+    OID3D11ShaderResourceView m_linear_exposure_SRV;
+    OID3D11UnorderedAccessView m_linear_exposure_UAV;
+};
+
+// ------------------------------------------------------------------------------------------------
 // Functionality for computing a histogram from a list of pixels 
 // and dynamically determining the exposure of those pixels.
 // ------------------------------------------------------------------------------------------------
@@ -86,6 +140,7 @@ public:
         m_host_constants = rhs.m_host_constants;
         m_constants = std::move(rhs.m_constants);
 
+        m_log_average_luminance = std::move(rhs.m_log_average_luminance);
         m_exposure_histogram = std::move(rhs.m_exposure_histogram);
 
         m_fullscreen_VS = std::move(rhs.m_fullscreen_VS);
@@ -109,6 +164,7 @@ private:
     Constants m_host_constants;
     OID3D11Buffer m_constants;
 
+    LogAverageLuminance m_log_average_luminance;
     ExposureHistogram m_exposure_histogram;
 
     OID3D11VertexShader m_fullscreen_VS;

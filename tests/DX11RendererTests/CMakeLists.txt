@@ -4,6 +4,7 @@ if (TARGET DX11Renderer)
 
   set(SRCS 
     ExposureHistogramTest.h
+    LogAverageLuminanceTest.h
     main.cpp
     PrefixSumTest.h
     Utils.h

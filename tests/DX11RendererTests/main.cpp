@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include <ExposureHistogramTest.h>
+#include <LogAverageLuminanceTest.h>
 #include <PrefixSumTest.h>
 
 // NOTE
