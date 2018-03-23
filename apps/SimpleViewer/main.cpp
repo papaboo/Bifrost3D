@@ -215,8 +215,8 @@ public:
     void handle(const Engine& engine) {
         if (engine.get_keyboard()->was_released(Keyboard::Key::T)) {
             auto params = Cameras::get_tonemapping_parameters(m_camera_ID);
-            int operater_index = (int)params.mapping;
-            params.mapping = Tonemapping::Operator((operater_index + 1) % 3);
+            int tonemapping_mode = (int)params.tonemapping.mode;
+            params.tonemapping.mode = Tonemapping::TonemappingMode((tonemapping_mode + 1) % 3);
             Cameras::set_tonemapping_parameters(m_camera_ID, params);
         }
     }

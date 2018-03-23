@@ -182,11 +182,11 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
     { // Tonemap and render into backbuffer.
         context.VSSetShader(m_fullscreen_VS, 0, 0);
 
-        if (parameters.mapping == Tonemapping::Operator::Linear)
+        if (parameters.tonemapping.mode == Tonemapping::TonemappingMode::Linear)
             context.PSSetShader(m_linear_tonemapping_PS, 0, 0);
-        else if (parameters.mapping == Tonemapping::Operator::Uncharted2)
+        else if (parameters.tonemapping.mode == Tonemapping::TonemappingMode::Uncharted2)
             context.PSSetShader(m_uncharted2_tonemapping_PS, 0, 0);
-        else // parameters.mapping == Tonemapping::Operator::Filmic
+        else // parameters.tonemapping.mode == Tonemapping::TonemappingMode::Filmic
             context.PSSetShader(m_filmic_tonemapping_PS, 0, 0);
 
         ID3D11ShaderResourceView* srvs[2] = { pixel_SRV, linear_exposure_SRV };

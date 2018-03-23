@@ -17,23 +17,36 @@ namespace Cogwheel {
 namespace Math {
 namespace Tonemapping {
 
-enum class Operator { Linear, Filmic, Uncharted2 };
+enum class TonemappingMode { Linear, Filmic, Uncharted2 };
+enum class ExposureMode { Fixed, LogAverage, Histogram };
 
 struct Parameters final {
-    Operator mapping;
-    float exposure;
-    RGB white_point;
+    struct {
+        ExposureMode mode;
+        float min_log_luminance;
+        float max_log_luminance;
+        float min_percentage;
+        float max_percentage;
+        float bias;
+    } exposure;
+
+    struct {
+        TonemappingMode mode;
+    } tonemapping;
 
     static Parameters default() {
         Parameters res;
-        res.mapping = Operator::Linear;
-        res.exposure = 0;
-        res.white_point = RGB::white();
+        res.exposure.mode = ExposureMode::LogAverage;
+        res.exposure.min_log_luminance = -4;
+        res.exposure.max_log_luminance = 4;
+        res.exposure.min_percentage = 0.7f;
+        res.exposure.max_percentage = 0.95f;
+        res.exposure.bias = 0;
+
+        res.tonemapping.mode = TonemappingMode::Uncharted2;
+
         return res;
     }
-
-    bool use_auto_exposure() { exposure = nanf(""); }
-    bool using_auto_exposure() const { return isnan(exposure); }
 };
 
 
