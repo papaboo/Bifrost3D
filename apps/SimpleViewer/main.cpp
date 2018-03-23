@@ -213,10 +213,44 @@ public:
         : m_camera_ID(camera_ID) { }
 
     void handle(const Engine& engine) {
-        if (engine.get_keyboard()->was_released(Keyboard::Key::T)) {
+        using namespace Cogwheel::Math::Tonemapping;
+
+        bool update_exposure = engine.get_keyboard()->was_released(Keyboard::Key::E);
+        bool update_tonemapping = engine.get_keyboard()->was_released(Keyboard::Key::T);
+
+        if (update_exposure || update_tonemapping) {
             auto params = Cameras::get_tonemapping_parameters(m_camera_ID);
-            int tonemapping_mode = (int)params.tonemapping.mode;
-            params.tonemapping.mode = Tonemapping::TonemappingMode((tonemapping_mode + 1) % 3);
+            if (update_exposure) {
+                int exposure_mode = (int)params.exposure.mode;
+                params.exposure.mode = ExposureMode((exposure_mode + 1) % int(ExposureMode::Count));
+            }
+
+            if (update_tonemapping) {
+                int tonemapping_mode = (int)params.tonemapping.mode;
+                params.tonemapping.mode = TonemappingMode((tonemapping_mode + 1) % int(TonemappingMode::Count));
+            }
+
+            switch (params.exposure.mode)
+            {
+            case ExposureMode::Fixed:
+                printf("Exposure: Fixed, "); break;
+            case ExposureMode::LogAverage:
+                printf("Exposure: Log-average, "); break;
+            case ExposureMode::Histogram:
+                printf("Exposure: Histogram, "); break;
+            }
+
+            switch (params.tonemapping.mode)
+            {
+            case TonemappingMode::Linear:
+                printf("Tonemapping: Linear\n"); break;
+            case TonemappingMode::Filmic:
+                printf("Tonemapping: Filmic\n"); break;
+            case TonemappingMode::Uncharted2:
+                printf("Tonemapping: Uncharted2\n"); break;
+            }
+
+
             Cameras::set_tonemapping_parameters(m_camera_ID, params);
         }
     }

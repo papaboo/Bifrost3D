@@ -17,8 +17,8 @@ namespace Cogwheel {
 namespace Math {
 namespace Tonemapping {
 
-enum class TonemappingMode { Linear, Filmic, Uncharted2 };
-enum class ExposureMode { Fixed, LogAverage, Histogram };
+enum class TonemappingMode { Linear, Filmic, Uncharted2, Count };
+enum class ExposureMode { Fixed, LogAverage, Histogram, Count };
 
 struct Parameters final {
     struct {
