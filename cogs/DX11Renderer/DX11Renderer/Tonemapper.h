@@ -38,26 +38,26 @@ public:
         m_log_averages_UAV = std::move(rhs.m_log_averages_UAV);
 
         m_linear_exposure_computation = std::move(rhs.m_linear_exposure_computation);
-        m_linear_exposure_SRV = std::move(rhs.m_linear_exposure_SRV);
-        m_linear_exposure_UAV = std::move(rhs.m_linear_exposure_UAV);
 
         return *this;
     }
 
-    OID3D11ShaderResourceView& compute_log_average(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
-                                                   ID3D11ShaderResourceView* pixels, unsigned int image_width);
+    void compute_log_average(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+                             ID3D11ShaderResourceView* pixels, unsigned int image_width,
+                             ID3D11UnorderedAccessView* log_average_UAV);
 
-    OID3D11ShaderResourceView& compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
-                                                       ID3D11ShaderResourceView* pixels, unsigned int image_width);
+    void compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+                                 ID3D11ShaderResourceView* pixels, unsigned int image_width,
+                                 ID3D11UnorderedAccessView* linear_exposure_UAV);
 
 private:
     LogAverageLuminance(LogAverageLuminance& other) = delete;
     LogAverageLuminance(LogAverageLuminance&& other) = delete;
     LogAverageLuminance& operator=(LogAverageLuminance& rhs) = delete;
 
-    OID3D11ShaderResourceView& compute(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
-                                      ID3D11ShaderResourceView* pixels, unsigned int image_width, 
-                                      OID3D11ComputeShader& second_reduction);
+    void compute(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+                 ID3D11ShaderResourceView* pixels, unsigned int image_width, 
+                 OID3D11ComputeShader& second_reduction, ID3D11UnorderedAccessView* output_UAV);
 
     OID3D11ComputeShader m_log_average_first_reduction;
     OID3D11ComputeShader m_log_average_second_reduction;
@@ -65,8 +65,6 @@ private:
     OID3D11UnorderedAccessView m_log_averages_UAV;
 
     OID3D11ComputeShader m_linear_exposure_computation;
-    OID3D11ShaderResourceView m_linear_exposure_SRV;
-    OID3D11UnorderedAccessView m_linear_exposure_UAV;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -90,8 +88,6 @@ public:
         m_histogram_UAV = std::move(rhs.m_histogram_UAV);
 
         m_linear_exposure_computation = std::move(rhs.m_linear_exposure_computation);
-        m_linear_exposure_SRV = std::move(rhs.m_linear_exposure_SRV);
-        m_linear_exposure_UAV = std::move(rhs.m_linear_exposure_UAV);
 
         return *this;
     }
@@ -99,8 +95,9 @@ public:
     OID3D11ShaderResourceView& reduce_histogram(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
                                                 ID3D11ShaderResourceView* pixels, unsigned int image_width);
 
-    OID3D11ShaderResourceView& compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
-                                                       ID3D11ShaderResourceView* pixels, unsigned int image_width);
+    void compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+                                 ID3D11ShaderResourceView* pixels, unsigned int image_width,
+                                 ID3D11UnorderedAccessView* linear_exposure_UAV);
 
 private:
     ExposureHistogram(ExposureHistogram& other) = delete;
@@ -112,8 +109,6 @@ private:
     OID3D11UnorderedAccessView m_histogram_UAV;
 
     OID3D11ComputeShader m_linear_exposure_computation;
-    OID3D11ShaderResourceView m_linear_exposure_SRV;
-    OID3D11UnorderedAccessView m_linear_exposure_UAV;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -142,6 +137,8 @@ public:
 
         m_log_average_luminance = std::move(rhs.m_log_average_luminance);
         m_exposure_histogram = std::move(rhs.m_exposure_histogram);
+        m_linear_exposure_SRV = std::move(rhs.m_linear_exposure_SRV);
+        m_linear_exposure_UAV = std::move(rhs.m_linear_exposure_UAV);
 
         m_fullscreen_VS = std::move(rhs.m_fullscreen_VS);
         m_linear_tonemapping_PS = std::move(rhs.m_linear_tonemapping_PS);
@@ -166,6 +163,9 @@ private:
 
     LogAverageLuminance m_log_average_luminance;
     ExposureHistogram m_exposure_histogram;
+    OID3D11Buffer m_linear_exposure;
+    OID3D11ShaderResourceView m_linear_exposure_SRV;
+    OID3D11UnorderedAccessView m_linear_exposure_UAV;
 
     OID3D11VertexShader m_fullscreen_VS;
     OID3D11PixelShader m_linear_tonemapping_PS;

@@ -86,12 +86,12 @@ TEST_F(LogAverageLuminanceFixture, tiny_image) {
     }
     OID3D11ShaderResourceView pixel_SRV = create_texture_SRV(device, pixel_count, 1, pixels);
 
-    OID3D11ShaderResourceView& log_average_SRV = log_average_exposure.compute_log_average(*context, constant_buffer, pixel_SRV, pixel_count);
+    OID3D11UnorderedAccessView log_average_UAV;
+    OID3D11Buffer log_average_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &log_average_UAV);
+    log_average_exposure.compute_log_average(*context, constant_buffer, pixel_SRV, pixel_count, log_average_UAV);
 
-    OID3D11Resource log_average_resource;
-    log_average_SRV->GetResource(&log_average_resource);
     float log_average_GPU;
-    Readback::buffer(device, context, (ID3D11Buffer*)log_average_resource.get(), &log_average_GPU, &log_average_GPU + 1);
+    Readback::buffer(device, context, log_average_buffer, &log_average_GPU, &log_average_GPU + 1);
 
     double log_average = 0.0;
     for (int i = 0; i < pixel_count; ++i)
@@ -127,12 +127,12 @@ TEST_F(LogAverageLuminanceFixture, large_image) {
 
     OID3D11ShaderResourceView pixel_SRV = create_texture_SRV(device, width, height, pixels);
 
-    OID3D11ShaderResourceView& log_average_SRV = log_average_exposure.compute_log_average(*context, constant_buffer, pixel_SRV, width);
+    OID3D11UnorderedAccessView log_average_UAV;
+    OID3D11Buffer log_average_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &log_average_UAV);
+    log_average_exposure.compute_log_average(*context, constant_buffer, pixel_SRV, width, log_average_UAV);
 
-    OID3D11Resource log_average_resource;
-    log_average_SRV->GetResource(&log_average_resource);
     float log_average_GPU;
-    Readback::buffer(device, context, (ID3D11Buffer*)log_average_resource.get(), &log_average_GPU, &log_average_GPU + 1);
+    Readback::buffer(device, context, log_average_buffer, &log_average_GPU, &log_average_GPU + 1);
 
     double log_average = 0.0;
     for (int i = 0; i < pixel_count; ++i)

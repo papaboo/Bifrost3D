@@ -218,12 +218,12 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_image) {
     }
     OID3D11ShaderResourceView pixel_SRV = create_texture_SRV(device, width, height, pixels);
 
-    OID3D11ShaderResourceView& linear_exposure_SRV = histogram.compute_linear_exposure(*context, constant_buffer, pixel_SRV, width);
+    OID3D11UnorderedAccessView linear_exposure_UAV;
+    OID3D11Buffer linear_exposure = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &linear_exposure_UAV);
+    histogram.compute_linear_exposure(*context, constant_buffer, pixel_SRV, width, linear_exposure_UAV);
 
-    OID3D11Resource linear_exposure_resource;
-    linear_exposure_SRV->GetResource(&linear_exposure_resource);
     float cpu_linear_exposure;
-    Readback::buffer(device, context, (ID3D11Buffer*)linear_exposure_resource.get(), &cpu_linear_exposure, &cpu_linear_exposure + 1);
+    Readback::buffer(device, context, linear_exposure, &cpu_linear_exposure, &cpu_linear_exposure + 1);
 
     printf("cpu_linear_exposure: %f\n", cpu_linear_exposure);
 

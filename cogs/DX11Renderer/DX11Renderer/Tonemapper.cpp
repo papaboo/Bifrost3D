@@ -18,7 +18,7 @@ namespace DX11Renderer {
 // ------------------------------------------------------------------------------------------------
 LogAverageLuminance::LogAverageLuminance()
     : m_log_average_first_reduction(nullptr), m_log_average_second_reduction(nullptr), m_log_averages_SRV(nullptr), m_log_averages_UAV(nullptr)
-    , m_linear_exposure_computation(nullptr), m_linear_exposure_SRV(nullptr), m_linear_exposure_UAV(nullptr) {}
+    , m_linear_exposure_computation(nullptr) {}
 
 LogAverageLuminance::LogAverageLuminance(ID3D11Device1& device, const std::wstring& shader_folder_path) {
     // Create shaders.
@@ -33,39 +33,39 @@ LogAverageLuminance::LogAverageLuminance(ID3D11Device1& device, const std::wstri
 
     // Create buffers
     create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, max_groups_dispatched, &m_log_averages_SRV, &m_log_averages_UAV);
-    create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, &m_linear_exposure_SRV, &m_linear_exposure_UAV);
+    // create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, &m_linear_exposure_SRV, &m_linear_exposure_UAV);
 }
 
-OID3D11ShaderResourceView& LogAverageLuminance::compute_log_average(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
-                                                                    ID3D11ShaderResourceView* pixels, unsigned int image_width) {
-    return compute(context, constants, pixels, image_width, m_log_average_second_reduction);
+void LogAverageLuminance::compute_log_average(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+                                              ID3D11ShaderResourceView* pixels, unsigned int image_width,
+                                              ID3D11UnorderedAccessView* log_average_UAV) {
+    compute(context, constants, pixels, image_width, m_log_average_second_reduction, log_average_UAV);
 }
 
-OID3D11ShaderResourceView& LogAverageLuminance::compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
-                                                                        ID3D11ShaderResourceView* pixels, unsigned int image_width) {
-    return compute(context, constants, pixels, image_width, m_linear_exposure_computation);
+void LogAverageLuminance::compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+                                                  ID3D11ShaderResourceView* pixels, unsigned int image_width,
+                                                  ID3D11UnorderedAccessView* linear_exposure_UAV) {
+    compute(context, constants, pixels, image_width, m_linear_exposure_computation, linear_exposure_UAV);
 }
 
-OID3D11ShaderResourceView& LogAverageLuminance::compute(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
-    ID3D11ShaderResourceView* pixels, unsigned int image_width, OID3D11ComputeShader& second_reduction) {
+void LogAverageLuminance::compute(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+                                  ID3D11ShaderResourceView* pixels, unsigned int image_width, OID3D11ComputeShader& second_reduction,
+                                  ID3D11UnorderedAccessView* output_UAV) {
 
     context.CSSetConstantBuffers(0, 1, &constants);
 
     context.CSSetUnorderedAccessViews(0, 1, &m_log_averages_UAV, 0u);
     context.CSSetShaderResources(0, 1, &pixels);
     context.CSSetShader(m_log_average_first_reduction, nullptr, 0u);
-    unsigned int group_count_x = ceil_divide(image_width, group_width);
-    context.Dispatch(min(group_count_x, max_groups_dispatched), 1, 1);
+    context.Dispatch(max_groups_dispatched, 1, 1); // Always dispatch max groups to ensure that unused elements in m_log_averages_UAV are cleared.
 
-    context.CSSetUnorderedAccessViews(0, 1, &m_linear_exposure_UAV, 0u);
+    context.CSSetUnorderedAccessViews(0, 1, &output_UAV, 0u);
     context.CSSetShaderResources(0, 1, &m_log_averages_SRV);
     context.CSSetShader(second_reduction, nullptr, 0u);
     context.Dispatch(1, 1, 1);
 
     ID3D11UnorderedAccessView* null_UAV = nullptr;
     context.CSSetUnorderedAccessViews(0, 1, &null_UAV, 0u);
-
-    return m_linear_exposure_SRV;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -73,7 +73,7 @@ OID3D11ShaderResourceView& LogAverageLuminance::compute(ID3D11DeviceContext1& co
 // ------------------------------------------------------------------------------------------------
 ExposureHistogram::ExposureHistogram()
     : m_histogram_reduction(nullptr), m_histogram_SRV(nullptr), m_histogram_UAV(nullptr)
-    , m_linear_exposure_computation(nullptr), m_linear_exposure_SRV(nullptr), m_linear_exposure_UAV(nullptr) { }
+    , m_linear_exposure_computation(nullptr) { }
 
 ExposureHistogram::ExposureHistogram(ID3D11Device1& device, const std::wstring& shader_folder_path) {
     // Create shaders.
@@ -85,7 +85,6 @@ ExposureHistogram::ExposureHistogram(ID3D11Device1& device, const std::wstring& 
 
     // Create buffers
     create_default_buffer(device, DXGI_FORMAT_R32_UINT, bin_count, &m_histogram_SRV, &m_histogram_UAV);
-    create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, &m_linear_exposure_SRV, &m_linear_exposure_UAV);
 }
 
 OID3D11ShaderResourceView& ExposureHistogram::reduce_histogram(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
@@ -107,14 +106,15 @@ OID3D11ShaderResourceView& ExposureHistogram::reduce_histogram(ID3D11DeviceConte
     return m_histogram_SRV;
 }
 
-OID3D11ShaderResourceView& ExposureHistogram::compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
-                                                                      ID3D11ShaderResourceView* pixels, unsigned int image_width) {
+void ExposureHistogram::compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+                                                ID3D11ShaderResourceView* pixels, unsigned int image_width,
+                                                ID3D11UnorderedAccessView* linear_exposure_UAV) {
     const unsigned int zeros[4] = { 0u, 0u, 0u, 0u };
     context.ClearUnorderedAccessViewUint(m_histogram_UAV, zeros);
 
     context.CSSetConstantBuffers(0, 1, &constants);
     context.CSSetShaderResources(0, 1, &pixels);
-    ID3D11UnorderedAccessView* UAVs[2] = { m_histogram_UAV, m_linear_exposure_UAV };
+    ID3D11UnorderedAccessView* UAVs[2] = { m_histogram_UAV, linear_exposure_UAV };
     context.CSSetUnorderedAccessViews(0, 2, UAVs, 0u);
 
     context.CSSetShader(m_histogram_reduction, nullptr, 0u);
@@ -127,8 +127,6 @@ OID3D11ShaderResourceView& ExposureHistogram::compute_linear_exposure(ID3D11Devi
 
     ID3D11UnorderedAccessView* null_UAVs[2] = { nullptr, nullptr };
     context.CSSetUnorderedAccessViews(0, 2, null_UAVs, 0u);
-
-    return m_linear_exposure_SRV;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -148,6 +146,7 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
 
     m_log_average_luminance = LogAverageLuminance(device, shader_folder_path);
     m_exposure_histogram = ExposureHistogram(device, shader_folder_path);
+    m_linear_exposure = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, &m_linear_exposure_SRV, &m_linear_exposure_UAV);
 
     { // Setup shaders
         const std::wstring shader_filename = shader_folder_path + L"Tonemapping.hlsl";
@@ -174,22 +173,32 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
                          ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, 
                          int width, int height) {
 
+    using namespace Cogwheel::Math::Tonemapping;
+
     context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
 
-    // Compute exposure.
-    auto& linear_exposure_SRV = m_exposure_histogram.compute_linear_exposure(context, m_constants, pixel_SRV, width);
+    if (parameters.exposure.mode == ExposureMode::Histogram)
+        m_exposure_histogram.compute_linear_exposure(context, m_constants, pixel_SRV, width, m_linear_exposure_UAV);
+    else // if (parameters.exposure.mode == ExposureMode::LogAverage)
+        m_log_average_luminance.compute_linear_exposure(context, m_constants, pixel_SRV, width, m_linear_exposure_UAV);
+    /*
+    else { // parameters.exposure.mode == ExposureMode::Fixed
+        float linear_exposure = 1.0f; // exp2(parameters.exposure.bias);
+        context.UpdateSubresource(m_linear_exposure, 0, nullptr, &linear_exposure, 0u, 0u);
+    }
+    */
 
     { // Tonemap and render into backbuffer.
         context.VSSetShader(m_fullscreen_VS, 0, 0);
 
-        if (parameters.tonemapping.mode == Tonemapping::TonemappingMode::Linear)
+        if (parameters.tonemapping.mode == TonemappingMode::Linear)
             context.PSSetShader(m_linear_tonemapping_PS, 0, 0);
-        else if (parameters.tonemapping.mode == Tonemapping::TonemappingMode::Uncharted2)
+        else if (parameters.tonemapping.mode == TonemappingMode::Uncharted2)
             context.PSSetShader(m_uncharted2_tonemapping_PS, 0, 0);
-        else // parameters.tonemapping.mode == Tonemapping::TonemappingMode::Filmic
+        else // parameters.tonemapping.mode == TonemappingMode::Filmic
             context.PSSetShader(m_filmic_tonemapping_PS, 0, 0);
 
-        ID3D11ShaderResourceView* srvs[2] = { pixel_SRV, linear_exposure_SRV };
+        ID3D11ShaderResourceView* srvs[2] = { pixel_SRV, m_linear_exposure_SRV };
         context.PSSetShaderResources(0, 2, srvs);
 
         context.Draw(3, 0);
