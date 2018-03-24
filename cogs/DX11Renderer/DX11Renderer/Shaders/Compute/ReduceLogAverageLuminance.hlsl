@@ -113,7 +113,7 @@ void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
     if (thread_ID == 0) {
         float average_log_luminance = shared_log_average[0];
         average_log_luminance = clamp(average_log_luminance, min_log_luminance, max_log_luminance);
-        linear_exposure_buffer[0] = geometric_mean_linear_exposure(exp2(average_log_luminance));
+        linear_exposure_buffer[0] = geometric_mean_linear_exposure(exp2(average_log_luminance)) * exp2(log_lumiance_bias);;
     }
 }
 

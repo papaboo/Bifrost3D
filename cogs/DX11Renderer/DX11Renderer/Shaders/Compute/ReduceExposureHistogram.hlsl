@@ -156,7 +156,7 @@ void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
         float normalized_index = bin_index / HISTOGRAM_SIZE;
         float average_log_luminance = lerp(min_log_luminance, max_log_luminance, saturate(normalized_index));
         float average_luminance = exp2(average_log_luminance);
-        linear_exposure_buffer[0] = 1.0f / average_luminance;
+        linear_exposure_buffer[0] = exp2(log_lumiance_bias) / average_luminance; // TODO Reduce to one exp2
     }
 }
 
