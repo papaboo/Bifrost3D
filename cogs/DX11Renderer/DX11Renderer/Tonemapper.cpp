@@ -100,7 +100,7 @@ OID3D11ShaderResourceView& ExposureHistogram::reduce_histogram(ID3D11DeviceConte
     unsigned int group_count_x = ceil_divide(image_width, group_width);
     context.Dispatch(group_count_x, 1, 1);
 
-    ID3D11UnorderedAccessView* null_UAV = nullptr ;
+    ID3D11UnorderedAccessView* null_UAV = nullptr;
     context.CSSetUnorderedAccessViews(0, 1, &null_UAV, 0u);
 
     return m_histogram_SRV;
@@ -142,11 +142,14 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
     m_host_constants.max_log_luminance = 4.0f;
     m_host_constants.min_percentage = 0.7f;
     m_host_constants.max_percentage = 0.95f;
+    m_host_constants.log_lumiance_bias = 0.0f;
     THROW_ON_FAILURE(create_constant_buffer(device, m_host_constants, &m_constants /*, D3D11_USAGE_DEFAULT*/));
 
+    create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, &m_linear_exposure_SRV, &m_linear_exposure_UAV);
     m_log_average_luminance = LogAverageLuminance(device, shader_folder_path);
     m_exposure_histogram = ExposureHistogram(device, shader_folder_path);
-    m_linear_exposure = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, &m_linear_exposure_SRV, &m_linear_exposure_UAV);
+    OID3DBlob linear_exposure_from_bias_blob = compile_shader(shader_folder_path + L"Tonemapping.hlsl", "cs_5_0", "linear_exposure_from_constant_bias");
+    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_from_bias_blob), nullptr, &m_linear_exposure_from_bias_shader));
 
     { // Setup shaders
         const std::wstring shader_filename = shader_folder_path + L"Tonemapping.hlsl";
@@ -179,14 +182,18 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
 
     if (parameters.exposure.mode == ExposureMode::Histogram)
         m_exposure_histogram.compute_linear_exposure(context, m_constants, pixel_SRV, width, m_linear_exposure_UAV);
-    else // if (parameters.exposure.mode == ExposureMode::LogAverage)
+    else if (parameters.exposure.mode == ExposureMode::LogAverage)
         m_log_average_luminance.compute_linear_exposure(context, m_constants, pixel_SRV, width, m_linear_exposure_UAV);
-    /*
     else { // parameters.exposure.mode == ExposureMode::Fixed
-        float linear_exposure = 1.0f; // exp2(parameters.exposure.bias);
-        context.UpdateSubresource(m_linear_exposure, 0, nullptr, &linear_exposure, 0u, 0u);
+        context.CSSetConstantBuffers(0, 1, &m_constants);
+
+        context.CSSetUnorderedAccessViews(0, 1, &m_linear_exposure_UAV, 0u);
+        context.CSSetShader(m_linear_exposure_from_bias_shader, nullptr, 0u);
+        context.Dispatch(1, 1, 1);
+
+        ID3D11UnorderedAccessView* null_UAV = nullptr;
+        context.CSSetUnorderedAccessViews(0, 1, &null_UAV, 0u);
     }
-    */
 
     { // Tonemap and render into backbuffer.
         context.VSSetShader(m_fullscreen_VS, 0, 0);

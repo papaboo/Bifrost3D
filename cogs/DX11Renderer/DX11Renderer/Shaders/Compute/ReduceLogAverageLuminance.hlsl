@@ -21,6 +21,8 @@ cbuffer constants : register(b0) {
     float max_log_luminance;
     float min_percentage;
     float max_percentage;
+    float log_lumiance_bias;
+    float3 __padding;
 }
 
 groupshared float shared_log_luminance[GROUP_THREAD_COUNT];

@@ -125,6 +125,8 @@ public:
         float max_log_luminance;
         float min_percentage;
         float max_percentage;
+        float log_lumiance_bias;
+        float3 __padding;
     };
 
     Tonemapper();
@@ -135,10 +137,11 @@ public:
         m_host_constants = rhs.m_host_constants;
         m_constants = std::move(rhs.m_constants);
 
-        m_log_average_luminance = std::move(rhs.m_log_average_luminance);
-        m_exposure_histogram = std::move(rhs.m_exposure_histogram);
         m_linear_exposure_SRV = std::move(rhs.m_linear_exposure_SRV);
         m_linear_exposure_UAV = std::move(rhs.m_linear_exposure_UAV);
+        m_log_average_luminance = std::move(rhs.m_log_average_luminance);
+        m_exposure_histogram = std::move(rhs.m_exposure_histogram);
+        m_linear_exposure_from_bias_shader = std::move(rhs.m_linear_exposure_from_bias_shader);
 
         m_fullscreen_VS = std::move(rhs.m_fullscreen_VS);
         m_linear_tonemapping_PS = std::move(rhs.m_linear_tonemapping_PS);
@@ -161,11 +164,11 @@ private:
     Constants m_host_constants;
     OID3D11Buffer m_constants;
 
-    LogAverageLuminance m_log_average_luminance;
-    ExposureHistogram m_exposure_histogram;
-    OID3D11Buffer m_linear_exposure;
     OID3D11ShaderResourceView m_linear_exposure_SRV;
     OID3D11UnorderedAccessView m_linear_exposure_UAV;
+    LogAverageLuminance m_log_average_luminance;
+    ExposureHistogram m_exposure_histogram;
+    OID3D11ComputeShader m_linear_exposure_from_bias_shader;
 
     OID3D11VertexShader m_fullscreen_VS;
     OID3D11PixelShader m_linear_tonemapping_PS;

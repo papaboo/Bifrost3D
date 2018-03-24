@@ -8,6 +8,27 @@
 
 #include "Utils.hlsl"
 
+cbuffer constants : register(b0) {
+    float min_log_luminance;
+    float max_log_luminance;
+    float min_percentage;
+    float max_percentage;
+    float log_lumiance_bias;
+    float3 __padding;
+}
+
+
+// ------------------------------------------------------------------------------------------------
+// Fixed exposure constant copying
+// ------------------------------------------------------------------------------------------------
+
+RWStructuredBuffer<float> linear_exposure_write_buffer : register(u0);
+
+[numthreads(1, 1, 1)]
+void linear_exposure_from_constant_bias() {
+    linear_exposure_write_buffer[0] = exp2(log_lumiance_bias);
+}
+
 // ------------------------------------------------------------------------------------------------
 // Vertex shader.
 // ------------------------------------------------------------------------------------------------
@@ -26,19 +47,6 @@ Varyings fullscreen_vs(uint vertex_ID : SV_VertexID) {
     output.texcoord = output.position.xy * 0.5 + 0.5;
     output.texcoord.y = 1.0f - output.texcoord.y;
     return output;
-}
-
-// ------------------------------------------------------------------------------------------------
-// Tonemapping utilities.
-// ------------------------------------------------------------------------------------------------
-
-Texture2D pixels : register(t0);
-
-Buffer<float> linear_exposure_buffer : register(t1);
-
-float dynamic_linear_exposure(float average_luminance) {
-    float key_value = 0.5f; // De-gammaed 0.18, see Reinhard et al., 2002
-    return key_value / average_luminance;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -141,6 +149,9 @@ inline float3 unreal4(float3 color, float slope = 0.91f, float toe = 0.53f, floa
 // ------------------------------------------------------------------------------------------------
 // Tonemapping pixel shaders.
 // ------------------------------------------------------------------------------------------------
+
+Texture2D pixels : register(t0);
+Buffer<float> linear_exposure_buffer : register(t1);
 
 float4 linear_tonemapping_ps(Varyings input) : SV_TARGET {
     float linear_exposure = linear_exposure_buffer[0];
