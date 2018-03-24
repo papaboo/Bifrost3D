@@ -95,7 +95,9 @@ void reduce(uint3 local_thread_ID : SV_GroupThreadID, uint3 group_ID : SV_GroupI
 // ------------------------------------------------------------------------------------------------
 
 // Single element buffer.
-RWStructuredBuffer<float> linear_exposure_buffer : register(u1);
+
+StructuredBuffer<uint> histogram_read_buffer : register(t0);
+RWStructuredBuffer<float> linear_exposure_buffer : register(u0);
 
 groupshared float shared_histogram[HISTOGRAM_SIZE + 1];
 
@@ -103,7 +105,7 @@ groupshared float shared_histogram[HISTOGRAM_SIZE + 1];
 void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
     int thread_ID = local_thread_ID.x;
 
-    shared_histogram[thread_ID] = histogram_buffer[thread_ID];
+    shared_histogram[thread_ID] = histogram_read_buffer[thread_ID];
     GroupMemoryBarrierWithGroupSync();
 
     { // Compute prefix sum of the histogram in shared memory.

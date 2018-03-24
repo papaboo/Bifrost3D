@@ -113,6 +113,23 @@ void ExposureHistogram::compute_linear_exposure(ID3D11DeviceContext1& context, I
     context.ClearUnorderedAccessViewUint(m_histogram_UAV, zeros);
 
     context.CSSetConstantBuffers(0, 1, &constants);
+
+    context.CSSetUnorderedAccessViews(0, 1, &m_histogram_UAV, 0u);
+    context.CSSetShaderResources(0, 1, &pixels);
+    context.CSSetShader(m_histogram_reduction, nullptr, 0u);
+    unsigned int group_count_x = ceil_divide(image_width, group_width);
+    context.Dispatch(group_count_x, 1, 1);
+
+    context.CSSetUnorderedAccessViews(0, 1, &linear_exposure_UAV, 0u);
+    context.CSSetShaderResources(0, 1, &m_histogram_SRV);
+    context.CSSetShader(m_linear_exposure_computation, nullptr, 0u);
+    context.Dispatch(1, 1, 1);
+
+    ID3D11UnorderedAccessView* null_UAV = nullptr;
+    context.CSSetUnorderedAccessViews(0, 1, &null_UAV, 0u);
+
+    /*
+    context.CSSetConstantBuffers(0, 1, &constants);
     context.CSSetShaderResources(0, 1, &pixels);
     ID3D11UnorderedAccessView* UAVs[2] = { m_histogram_UAV, linear_exposure_UAV };
     context.CSSetUnorderedAccessViews(0, 2, UAVs, 0u);
@@ -127,6 +144,7 @@ void ExposureHistogram::compute_linear_exposure(ID3D11DeviceContext1& context, I
 
     ID3D11UnorderedAccessView* null_UAVs[2] = { nullptr, nullptr };
     context.CSSetUnorderedAccessViews(0, 2, null_UAVs, 0u);
+    */
 }
 
 // ------------------------------------------------------------------------------------------------
