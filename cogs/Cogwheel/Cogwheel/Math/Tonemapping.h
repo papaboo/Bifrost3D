@@ -25,9 +25,9 @@ struct Parameters final {
         ExposureMode mode;
         float min_log_luminance;
         float max_log_luminance;
-        float min_percentage;
-        float max_percentage;
-        float bias;
+        float min_histogram_percentage;
+        float max_histogram_percentage;
+        float log_lumiance_bias;
     } exposure;
 
     struct {
@@ -39,9 +39,9 @@ struct Parameters final {
         res.exposure.mode = ExposureMode::LogAverage;
         res.exposure.min_log_luminance = -4;
         res.exposure.max_log_luminance = 4;
-        res.exposure.min_percentage = 0.7f;
-        res.exposure.max_percentage = 0.95f;
-        res.exposure.bias = 0;
+        res.exposure.min_histogram_percentage = 0.7f;
+        res.exposure.max_histogram_percentage = 0.95f;
+        res.exposure.log_lumiance_bias = 0;
 
         res.tonemapping.mode = TonemappingMode::Uncharted2;
 
