@@ -138,12 +138,12 @@ Tonemapper::Tonemapper()
 
 Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_path) {
 
-    m_host_constants.min_log_luminance = -4.0f;
-    m_host_constants.max_log_luminance = 4.0f;
-    m_host_constants.min_percentage = 0.7f;
-    m_host_constants.max_percentage = 0.95f;
-    m_host_constants.log_lumiance_bias = 0.0f;
-    THROW_ON_FAILURE(create_constant_buffer(device, m_host_constants, &m_constants /*, D3D11_USAGE_DEFAULT*/));
+    m_constants.min_log_luminance = -4.0f;
+    m_constants.max_log_luminance = 4.0f;
+    m_constants.min_histogram_percentage = 0.7f;
+    m_constants.max_histogram_percentage = 0.95f;
+    m_constants.log_lumiance_bias = 0.0f;
+    THROW_ON_FAILURE(create_constant_buffer(device, m_constants, &m_constant_buffer, D3D11_USAGE_DEFAULT));
 
     create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, &m_linear_exposure_SRV, &m_linear_exposure_UAV);
     m_log_average_luminance = LogAverageLuminance(device, shader_folder_path);
@@ -178,14 +178,25 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
 
     using namespace Cogwheel::Math::Tonemapping;
 
+    Constants constants;
+    constants.min_log_luminance = parameters.exposure.min_log_luminance;
+    constants.max_log_luminance = parameters.exposure.max_log_luminance;
+    constants.min_histogram_percentage = parameters.exposure.min_histogram_percentage;
+    constants.max_histogram_percentage = parameters.exposure.max_histogram_percentage;
+    constants.log_lumiance_bias = parameters.exposure.log_lumiance_bias;
+    if (memcmp(&m_constants, &constants, sizeof(Constants)) != 0) {
+        context.UpdateSubresource(m_constant_buffer, 0, nullptr, &constants, 0u, 0u);
+        m_constants = constants;
+    }
+
     context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
 
     if (parameters.exposure.mode == ExposureMode::Histogram)
-        m_exposure_histogram.compute_linear_exposure(context, m_constants, pixel_SRV, width, m_linear_exposure_UAV);
+        m_exposure_histogram.compute_linear_exposure(context, m_constant_buffer, pixel_SRV, width, m_linear_exposure_UAV);
     else if (parameters.exposure.mode == ExposureMode::LogAverage)
-        m_log_average_luminance.compute_linear_exposure(context, m_constants, pixel_SRV, width, m_linear_exposure_UAV);
+        m_log_average_luminance.compute_linear_exposure(context, m_constant_buffer, pixel_SRV, width, m_linear_exposure_UAV);
     else { // parameters.exposure.mode == ExposureMode::Fixed
-        context.CSSetConstantBuffers(0, 1, &m_constants);
+        context.CSSetConstantBuffers(0, 1, &m_constant_buffer);
 
         context.CSSetUnorderedAccessViews(0, 1, &m_linear_exposure_UAV, 0u);
         context.CSSetShader(m_linear_exposure_from_bias_shader, nullptr, 0u);

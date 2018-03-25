@@ -123,8 +123,8 @@ public:
     struct Constants {
         float min_log_luminance;
         float max_log_luminance;
-        float min_percentage;
-        float max_percentage;
+        float min_histogram_percentage;
+        float max_histogram_percentage;
         float log_lumiance_bias;
         float3 __padding;
     };
@@ -134,8 +134,8 @@ public:
 
     Tonemapper& operator=(Tonemapper&& rhs) {
 
-        m_host_constants = rhs.m_host_constants;
-        m_constants = std::move(rhs.m_constants);
+        m_constants = rhs.m_constants;
+        m_constant_buffer = std::move(rhs.m_constant_buffer);
 
         m_linear_exposure_SRV = std::move(rhs.m_linear_exposure_SRV);
         m_linear_exposure_UAV = std::move(rhs.m_linear_exposure_UAV);
@@ -161,8 +161,8 @@ private:
     Tonemapper(Tonemapper&& other) = delete;
     Tonemapper& operator=(Tonemapper& rhs) = delete;
 
-    Constants m_host_constants;
-    OID3D11Buffer m_constants;
+    Constants m_constants;
+    OID3D11Buffer m_constant_buffer;
 
     OID3D11ShaderResourceView m_linear_exposure_SRV;
     OID3D11UnorderedAccessView m_linear_exposure_UAV;
