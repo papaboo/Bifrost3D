@@ -32,7 +32,7 @@ protected:
 
     inline OID3D11Buffer create_constant_buffer(OID3D11Device1& device, float min_log_luminance, float max_log_luminance, float min_percentage = 0.8f, float max_percentage = 0.95f) {
         OID3D11Buffer constant_buffer;
-        Tonemapper::Constants constants = { min_log_luminance, max_log_luminance, min_percentage, max_percentage };
+        Tonemapper::Constants constants = { min_log_luminance, max_log_luminance, min_percentage, max_percentage, 0.0f };
         THROW_ON_FAILURE(DX11Renderer::create_constant_buffer(device, constants, &constant_buffer));
         return constant_buffer;
     }
