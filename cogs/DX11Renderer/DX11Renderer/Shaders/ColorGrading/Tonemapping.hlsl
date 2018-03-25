@@ -6,7 +6,7 @@
 // LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#include "Utils.hlsl"
+#include "../Utils.hlsl"
 
 cbuffer constants : register(b0) {
     float min_log_luminance;

@@ -21,19 +21,20 @@ LogAverageLuminance::LogAverageLuminance()
     , m_linear_exposure_computation(nullptr) {}
 
 LogAverageLuminance::LogAverageLuminance(ID3D11Device1& device, const std::wstring& shader_folder_path) {
+    const std::wstring shader_filename = shader_folder_path + L"ColorGrading/ReduceLogAverageLuminance.hlsl";
+
     // Create shaders.
-    OID3DBlob log_average_first_reduction_blob = compile_shader(shader_folder_path + L"Compute\\ReduceLogAverageLuminance.hlsl", "cs_5_0", "first_reduction");
+    OID3DBlob log_average_first_reduction_blob = compile_shader(shader_filename, "cs_5_0", "first_reduction");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(log_average_first_reduction_blob), nullptr, &m_log_average_first_reduction));
 
-    OID3DBlob log_average_second_reduction_blob = compile_shader(shader_folder_path + L"Compute\\ReduceLogAverageLuminance.hlsl", "cs_5_0", "second_reduction");
+    OID3DBlob log_average_second_reduction_blob = compile_shader(shader_filename, "cs_5_0", "second_reduction");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(log_average_second_reduction_blob), nullptr, &m_log_average_second_reduction));
 
-    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_folder_path + L"Compute\\ReduceLogAverageLuminance.hlsl", "cs_5_0", "compute_linear_exposure");
+    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "compute_linear_exposure");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_computation_blob), nullptr, &m_linear_exposure_computation));
 
     // Create buffers
     create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, max_groups_dispatched, &m_log_averages_SRV, &m_log_averages_UAV);
-    // create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, &m_linear_exposure_SRV, &m_linear_exposure_UAV);
 }
 
 void LogAverageLuminance::compute_log_average(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
@@ -76,11 +77,13 @@ ExposureHistogram::ExposureHistogram()
     , m_linear_exposure_computation(nullptr) { }
 
 ExposureHistogram::ExposureHistogram(ID3D11Device1& device, const std::wstring& shader_folder_path) {
+    const std::wstring shader_filename = shader_folder_path + L"ColorGrading/ReduceExposureHistogram.hlsl";
+
     // Create shaders.
-    OID3DBlob reduce_exposure_histogram_blob = compile_shader(shader_folder_path + L"Compute\\ReduceExposureHistogram.hlsl", "cs_5_0", "reduce");
+    OID3DBlob reduce_exposure_histogram_blob = compile_shader(shader_filename, "cs_5_0", "reduce");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_exposure_histogram_blob), nullptr, &m_histogram_reduction));
 
-    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_folder_path + L"Compute\\ReduceExposureHistogram.hlsl", "cs_5_0", "compute_linear_exposure");
+    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "compute_linear_exposure");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_computation_blob), nullptr, &m_linear_exposure_computation));
 
     // Create buffers
@@ -148,11 +151,12 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
     create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, &m_linear_exposure_SRV, &m_linear_exposure_UAV);
     m_log_average_luminance = LogAverageLuminance(device, shader_folder_path);
     m_exposure_histogram = ExposureHistogram(device, shader_folder_path);
-    OID3DBlob linear_exposure_from_bias_blob = compile_shader(shader_folder_path + L"Tonemapping.hlsl", "cs_5_0", "linear_exposure_from_constant_bias");
-    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_from_bias_blob), nullptr, &m_linear_exposure_from_bias_shader));
 
     { // Setup shaders
-        const std::wstring shader_filename = shader_folder_path + L"Tonemapping.hlsl";
+        const std::wstring shader_filename = shader_folder_path + L"ColorGrading/Tonemapping.hlsl";
+
+        OID3DBlob linear_exposure_from_bias_blob = compile_shader(shader_filename, "cs_5_0", "linear_exposure_from_constant_bias");
+        THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_from_bias_blob), nullptr, &m_linear_exposure_from_bias_shader));
 
         OID3DBlob vertex_shader_blob = compile_shader(shader_filename, "vs_5_0", "fullscreen_vs");
         HRESULT hr = device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_fullscreen_VS);

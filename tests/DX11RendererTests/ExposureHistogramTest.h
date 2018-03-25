@@ -162,13 +162,13 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
     for (int i = 0; i < bin_count; ++i)
         histogram[i] = 1;
 
-    OID3D11UnorderedAccessView histogram_UAV;
-    create_default_buffer(device, DXGI_FORMAT_R32_UINT, histogram, bin_count, nullptr, &histogram_UAV);
+    OID3D11ShaderResourceView histogram_SRV;
+    create_default_buffer(device, DXGI_FORMAT_R32_UINT, histogram, bin_count, &histogram_SRV, nullptr);
 
     OID3D11UnorderedAccessView linear_exposure_UAV;
     OID3D11Buffer linear_exposure_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &linear_exposure_UAV);
 
-    OID3DBlob compute_exposure_blob = compile_shader(DX11_SHADER_ROOT + std::wstring(L"Compute\\ReduceExposureHistogram.hlsl"), "cs_5_0", "compute_linear_exposure");
+    OID3DBlob compute_exposure_blob = compile_shader(DX11_SHADER_ROOT + std::wstring(L"ColorGrading\\ReduceExposureHistogram.hlsl"), "cs_5_0", "compute_linear_exposure");
     OID3D11ComputeShader compute_exposure_shader;
     THROW_ON_FAILURE(device->CreateComputeShader(UNPACK_BLOB_ARGS(compute_exposure_blob), nullptr, &compute_exposure_shader));
 
@@ -180,8 +180,8 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
 
     context->CSSetShader(compute_exposure_shader, nullptr, 0u);
     context->CSSetConstantBuffers(0, 1, &constant_buffer);
-    ID3D11UnorderedAccessView* UAVs[2] = { histogram_UAV.get(), linear_exposure_UAV.get() };
-    context->CSSetUnorderedAccessViews(0, 2, UAVs, 0u);
+    context->CSSetShaderResources(0, 1, &histogram_SRV);
+    context->CSSetUnorderedAccessViews(0, 1, &linear_exposure_UAV, 0u);
     context->Dispatch(1, 1, 1);
 
     std::vector<float> cpu_linear_exposure; cpu_linear_exposure.resize(1);
