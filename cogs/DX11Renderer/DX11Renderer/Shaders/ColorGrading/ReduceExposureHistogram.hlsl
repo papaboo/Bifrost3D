@@ -50,9 +50,9 @@ void reduce(uint3 local_thread_ID : SV_GroupThreadID, uint3 group_ID : SV_GroupI
     if (pixel_coord.x < width) {
         for (; pixel_coord.y < height; pixel_coord.y += GROUP_HEIGHT) {
             float3 pixel = pixels[pixel_coord].rgb;
-            float log_luminance = log2(max(luminance(pixel), 0.0001f));
+            float log_luminance = log2(max(luminance(pixel), 0.0001));
             float normalized_index = inverse_lerp(min_log_luminance, max_log_luminance, log_luminance);
-            int bin_index = clamp(int(normalized_index * HISTOGRAM_SIZE), 0, int(HISTOGRAM_SIZE) - 1);
+            int bin_index = clamp(int(normalized_index * HISTOGRAM_SIZE + 0.5), 0, int(HISTOGRAM_SIZE) - 1);
             ++shared_histograms[shared_histogram_offset + bin_index];
         }
     }
@@ -100,6 +100,7 @@ StructuredBuffer<uint> histogram_read_buffer : register(t0);
 RWStructuredBuffer<float> linear_exposure_buffer : register(u0);
 
 groupshared float shared_histogram[HISTOGRAM_SIZE + 1];
+groupshared float shared_weighted_luminance[HISTOGRAM_SIZE];
 
 [numthreads(HISTOGRAM_SIZE, 1, 1)]
 void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
@@ -144,21 +145,28 @@ void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
     // Clamp values above the max boundary and zero values outside of the min boundary.
     float max_pixel_count = shared_histogram[HISTOGRAM_SIZE] * max_percentage;
     float min_pixel_count = shared_histogram[HISTOGRAM_SIZE] * min_percentage;
-    shared_histogram[thread_ID] = min(shared_histogram[thread_ID], max_pixel_count) - min_pixel_count; // TODO Compute bin and next bin count per thread and avoid a sync.
+    shared_histogram[thread_ID] = max(0.0, min(shared_histogram[thread_ID], max_pixel_count) - min_pixel_count); // TODO Compute bin and next bin count per thread and avoid a sync.
     GroupMemoryBarrierWithGroupSync();
 
-    // Find average.
-    // TODO Either do a weighted sum as in Unreal or an average of min and max luminance.
-    float average_pixel_count = (max_pixel_count - min_pixel_count) * 0.75f;
-    float bin_prefix_sum = shared_histogram[thread_ID];
-    float next_bin_prefix_sum = shared_histogram[thread_ID + 1];
+    if (thread_ID == int(HISTOGRAM_SIZE - 1))
+        shared_histogram[HISTOGRAM_SIZE] = max_pixel_count - min_pixel_count;
 
-    if (bin_prefix_sum < average_pixel_count && average_pixel_count <= next_bin_prefix_sum) {
-        float bin_index = thread_ID + inverse_lerp(bin_prefix_sum, next_bin_prefix_sum, average_pixel_count);
-        float normalized_index = bin_index / HISTOGRAM_SIZE;
-        float average_log_luminance = lerp(min_log_luminance, max_log_luminance, saturate(normalized_index));
-        float average_luminance = exp2(average_log_luminance);
-        linear_exposure_buffer[0] = exp2(log_lumiance_bias) / average_luminance; // TODO Reduce to one exp2
+    float bin_count = shared_histogram[thread_ID + 1] - shared_histogram[thread_ID];
+    float normalized_index = (thread_ID + 0.5) / HISTOGRAM_SIZE;
+    float bin_log_luminance = lerp(min_log_luminance, max_log_luminance, normalized_index);
+    shared_weighted_luminance[thread_ID] = exp2(bin_log_luminance) * bin_count;
+    GroupMemoryBarrierWithGroupSync();
+
+    // Sum in shared memory
+    for (int offset = HISTOGRAM_SIZE >> 1; offset > 0; offset >>= 1) {
+        if (thread_ID < offset)
+            shared_weighted_luminance[thread_ID] += shared_weighted_luminance[thread_ID + offset];
+        GroupMemoryBarrierWithGroupSync();
+    }
+
+    if (thread_ID == 0) {
+        float average_luminance = shared_weighted_luminance[0] / (max_pixel_count - min_pixel_count);
+        linear_exposure_buffer[0] = exp2(log_lumiance_bias) / average_luminance;
     }
 }
 

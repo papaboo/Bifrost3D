@@ -37,10 +37,8 @@ protected:
         return constant_buffer;
     }
 
-    inline float compute_linear_exposure(float normalized_index, float min_log_luminance, float max_log_luminance) {
-        float recip_exposure = exp2(Cogwheel::Math::lerp(min_log_luminance, max_log_luminance, normalized_index));
-        float scene_key = 1.0f;
-        return scene_key / recip_exposure;
+    inline float compute_luminance_from_histogram_position(float normalized_index, float min_log_luminance, float max_log_luminance) {
+        return exp2(Cogwheel::Math::lerp(min_log_luminance, max_log_luminance, normalized_index));
     }
 
     inline OID3D11ShaderResourceView create_texture_SRV(OID3D11Device1& device, unsigned int width, unsigned int height, half4* pixels) {
@@ -67,6 +65,41 @@ protected:
         OID3D11ShaderResourceView texture_SRV;
         THROW_ON_FAILURE(device->CreateShaderResourceView(texture, nullptr, &texture_SRV));
         return texture_SRV;
+    }
+
+    // Unreal 4 PostProcessHistogramCommon.ush::ComputeAverageLuminaneWithoutOutlier
+    inline float compute_average_luminance_without_outlier(unsigned int* histogram_begin, unsigned int* histogram_end, 
+        float min_percentage, float max_percentage, float min_log_luminance, float max_log_luminance) {
+
+        int histogram_size = int(histogram_end - histogram_begin);
+
+        int pixel_count = 0;
+        for (int i = 0; i < histogram_size; ++i)
+            pixel_count += histogram_begin[i];
+
+        float min_pixel_count = pixel_count * min_percentage;
+        float max_pixel_count = pixel_count * max_percentage;
+
+        Cogwheel::Math::Vector2f sum = Cogwheel::Math::Vector2f::zero();
+        for (int i = 0; i < histogram_size; ++i) {
+            float bucket_count = float(histogram_begin[i]);
+
+            // remove outlier at lower end
+            float sub = fminf(bucket_count, min_pixel_count);
+            bucket_count -= sub;
+            min_pixel_count -= sub;
+            max_pixel_count -= sub;
+
+            // remove outlier at upper end
+            bucket_count = fminf(bucket_count, max_pixel_count);
+            max_pixel_count -= bucket_count;
+
+            float luminance_at_bucket = compute_luminance_from_histogram_position((i + 0.5f) / float(histogram_size), min_log_luminance, max_log_luminance);
+
+            sum += Cogwheel::Math::Vector2f(luminance_at_bucket * bucket_count, bucket_count);
+        }
+
+        return sum.x / fmaxf(0.0001f, sum.y);
     }
 };
 
@@ -100,7 +133,7 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
     Readback::buffer(device, context, (ID3D11Buffer*)histogram_resource.get(), cpu_histogram.begin(), cpu_histogram.end());
 
     for (int bin = 0; bin < cpu_histogram.size(); ++bin)
-        EXPECT_EQ(cpu_histogram[bin], 1);
+        EXPECT_EQ(1, cpu_histogram[bin]);
 }
 
 TEST_F(ExposureHistogramFixture, small_image) {
@@ -143,10 +176,10 @@ TEST_F(ExposureHistogramFixture, small_image) {
     std::vector<unsigned int> cpu_histogram; cpu_histogram.resize(bin_count);
     Readback::buffer(device, context, (ID3D11Buffer*)histogram_resource.get(), cpu_histogram.begin(), cpu_histogram.end());
 
-    EXPECT_EQ(cpu_histogram[0], 4 + width);
+    EXPECT_EQ(4 + width, cpu_histogram[0]);
     for (int bin = 1; bin < cpu_histogram.size() - 1; ++bin)
-        EXPECT_EQ(cpu_histogram[bin], 4);
-    EXPECT_EQ(cpu_histogram[cpu_histogram.size()-1], 4 + width);
+        EXPECT_EQ(4, cpu_histogram[bin]);
+    EXPECT_EQ(4 + width, cpu_histogram[cpu_histogram.size()-1]);
 }
 
 TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
@@ -184,50 +217,60 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
     context->CSSetUnorderedAccessViews(0, 1, &linear_exposure_UAV, 0u);
     context->Dispatch(1, 1, 1);
 
-    std::vector<float> cpu_linear_exposure; cpu_linear_exposure.resize(1);
-    Readback::buffer(device, context, linear_exposure_buffer, cpu_linear_exposure.begin(), cpu_linear_exposure.end());
-    float linear_exposure = cpu_linear_exposure[0];
+    float gpu_linear_exposure;
+    Readback::buffer(device, context, linear_exposure_buffer, &gpu_linear_exposure, &gpu_linear_exposure + 1);
 
-    float normalized_index = lerp(min_percentage, max_percentage, 0.75f);
-    float reference_linear_exposure = compute_linear_exposure(normalized_index, min_log_luminance, max_log_luminance);
+    float average_luminance = compute_average_luminance_without_outlier(histogram, histogram + bin_count, 
+        min_percentage, max_percentage, min_log_luminance, max_log_luminance);
+    float reference_linear_exposure = 1.0f / average_luminance;
 
-    EXPECT_FLOAT_EQ(linear_exposure, reference_linear_exposure);
+    EXPECT_FLOAT_EQ(reference_linear_exposure, gpu_linear_exposure);
 }
 
-TEST_F(ExposureHistogramFixture, exposure_from_constant_image) {
+TEST_F(ExposureHistogramFixture, exposure_from_histogram) {
     using namespace Cogwheel::Math;
 
     auto device = create_performant_device1();
     OID3D11DeviceContext1 context;
     device->GetImmediateContext1(&context);
 
-    ExposureHistogram& histogram = ExposureHistogram(*device, DX11_SHADER_ROOT);
+    const unsigned int bin_count = ExposureHistogram::bin_count;
+
+    unsigned int histogram[bin_count];
+    for (int i = 0; i < bin_count; ++i)
+        histogram[i] = i;
+    std::random_shuffle(histogram, histogram + bin_count);
+
+    OID3D11ShaderResourceView histogram_SRV;
+    create_default_buffer(device, DXGI_FORMAT_R32_UINT, histogram, bin_count, &histogram_SRV, nullptr);
+
+    OID3D11UnorderedAccessView linear_exposure_UAV;
+    OID3D11Buffer linear_exposure_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &linear_exposure_UAV);
+
+    OID3DBlob compute_exposure_blob = compile_shader(DX11_SHADER_ROOT + std::wstring(L"ColorGrading\\ReduceExposureHistogram.hlsl"), "cs_5_0", "compute_linear_exposure");
+    OID3D11ComputeShader compute_exposure_shader;
+    THROW_ON_FAILURE(device->CreateComputeShader(UNPACK_BLOB_ARGS(compute_exposure_blob), nullptr, &compute_exposure_shader));
 
     float min_log_luminance = -8;
     float max_log_luminance = 4;
-    OID3D11Buffer constant_buffer = create_constant_buffer(device, min_log_luminance, max_log_luminance);
+    float min_percentage = 0.8f;
+    float max_percentage = 0.95f;
+    OID3D11Buffer constant_buffer = create_constant_buffer(device, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
 
-    // Constant luminance image
-    const int width = 640;
-    const int height = 480;
-    const int pixel_count = width * height;
-    half4* pixels = new half4[pixel_count];
-    for (int i = 0; i < pixel_count; ++i) {
-        half g = half(0.5f);
-        pixels[i] = { g, g, g, half(1.0f) };
-    }
-    OID3D11ShaderResourceView pixel_SRV = create_texture_SRV(device, width, height, pixels);
+    context->CSSetShader(compute_exposure_shader, nullptr, 0u);
+    context->CSSetConstantBuffers(0, 1, &constant_buffer);
+    context->CSSetShaderResources(0, 1, &histogram_SRV);
+    context->CSSetUnorderedAccessViews(0, 1, &linear_exposure_UAV, 0u);
+    context->Dispatch(1, 1, 1);
 
-    OID3D11UnorderedAccessView linear_exposure_UAV;
-    OID3D11Buffer linear_exposure = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &linear_exposure_UAV);
-    histogram.compute_linear_exposure(*context, constant_buffer, pixel_SRV, width, linear_exposure_UAV);
+    float gpu_linear_exposure;
+    Readback::buffer(device, context, linear_exposure_buffer, &gpu_linear_exposure, &gpu_linear_exposure + 1);
 
-    float cpu_linear_exposure;
-    Readback::buffer(device, context, linear_exposure, &cpu_linear_exposure, &cpu_linear_exposure + 1);
+    float average_luminance = compute_average_luminance_without_outlier(histogram, histogram + bin_count,
+        min_percentage, max_percentage, min_log_luminance, max_log_luminance);
+    float reference_linear_exposure = 1.0f / average_luminance;
 
-    printf("cpu_linear_exposure: %f\n", cpu_linear_exposure);
-
-    delete pixels;
+    EXPECT_FLOAT_EQ(reference_linear_exposure, gpu_linear_exposure);
 }
 
 } // NS DX11Renderer
