@@ -78,10 +78,8 @@ RWStructuredBuffer<float> linear_exposure_buffer : register(u0);
 
 groupshared float shared_log_average[MAX_GROUPS_DISPATCHED];
 
-[numthreads(MAX_GROUPS_DISPATCHED, 1, 1)]
-void second_reduction(uint3 local_thread_ID : SV_GroupThreadID) {
-    uint thread_ID = local_thread_ID.x;
-
+void sum_shared_log_average(uint thread_ID) {
+    // Fetch data
     shared_log_average[thread_ID] = log_average_read_buffer[thread_ID];
     GroupMemoryBarrierWithGroupSync();
 
@@ -91,6 +89,13 @@ void second_reduction(uint3 local_thread_ID : SV_GroupThreadID) {
             shared_log_average[thread_ID] += shared_log_average[thread_ID + offset];
         GroupMemoryBarrierWithGroupSync();
     }
+}
+
+[numthreads(MAX_GROUPS_DISPATCHED, 1, 1)]
+void second_reduction(uint3 local_thread_ID : SV_GroupThreadID) {
+    uint thread_ID = local_thread_ID.x;
+
+    sum_shared_log_average(thread_ID);
 
     if (thread_ID == 0)
         linear_exposure_buffer[0] = shared_log_average[0];
@@ -100,20 +105,12 @@ void second_reduction(uint3 local_thread_ID : SV_GroupThreadID) {
 void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
     uint thread_ID = local_thread_ID.x;
 
-    shared_log_average[thread_ID] = log_average_read_buffer[thread_ID];
-    GroupMemoryBarrierWithGroupSync();
-
-    // Sum in shared memory
-    for (uint offset = MAX_GROUPS_DISPATCHED >> 1; offset > 0; offset >>= 1) {
-        if (thread_ID < offset)
-            shared_log_average[thread_ID] += shared_log_average[thread_ID + offset];
-        GroupMemoryBarrierWithGroupSync();
-    }
+    sum_shared_log_average(thread_ID);
 
     if (thread_ID == 0) {
         float average_log_luminance = shared_log_average[0];
         average_log_luminance = clamp(average_log_luminance, min_log_luminance, max_log_luminance);
-        linear_exposure_buffer[0] = geometric_mean_linear_exposure(exp2(average_log_luminance)) * exp2(log_lumiance_bias);;
+        linear_exposure_buffer[0] = geometric_mean_linear_exposure(exp2(average_log_luminance)) * exp2(log_lumiance_bias);
     }
 }
 
