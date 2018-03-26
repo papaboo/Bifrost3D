@@ -119,8 +119,8 @@ struct Tonemapper::Implementation final {
 
     // Unreal 4 PostProcessHistogramCommon.ush::ComputeAverageLuminaneWithoutOutlier
     template <int histogram_size>
-    static inline float compute_average_luminance_without_outlier(std::array<unsigned int, histogram_size> histogram, float min_fraction_sum, float max_fraction_sum,
-                                                   float min_log_luminance, float max_log_luminance) {
+    static inline float compute_average_luminance_without_outlier(std::array<unsigned int, histogram_size>& histogram, float min_fraction_sum, float max_fraction_sum,
+                                                                  float min_log_luminance, float max_log_luminance) {
         Vector2f sum = Vector2f::zero();
 
         for (int i = 0; i < histogram_size; ++i) {
@@ -136,7 +136,7 @@ struct Tonemapper::Implementation final {
             bucket_count = min(bucket_count, max_fraction_sum);
             max_fraction_sum -= bucket_count;
 
-            float luminance_at_bucket = compute_luminance_from_histogram_position(i / float(histogram_size), min_log_luminance, max_log_luminance);
+            float luminance_at_bucket = compute_luminance_from_histogram_position((i + 0.5f) / float(histogram_size), min_log_luminance, max_log_luminance);
 
             sum += Vector2f(luminance_at_bucket * bucket_count, bucket_count);
         }
