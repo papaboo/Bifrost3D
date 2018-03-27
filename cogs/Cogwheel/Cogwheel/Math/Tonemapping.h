@@ -28,6 +28,9 @@ struct Parameters final {
         float min_histogram_percentage;
         float max_histogram_percentage;
         float log_lumiance_bias;
+        bool eye_adaptation_enabled;
+        float eye_adaptation_brightness;
+        float eye_adaptation_darkness;
     } exposure;
 
     struct {
@@ -42,6 +45,9 @@ struct Parameters final {
         res.exposure.min_histogram_percentage = 0.7f;
         res.exposure.max_histogram_percentage = 0.95f;
         res.exposure.log_lumiance_bias = 0;
+        res.exposure.eye_adaptation_enabled = true;
+        res.exposure.eye_adaptation_brightness = 3.0f;
+        res.exposure.eye_adaptation_darkness = 1.0f;
 
         res.tonemapping.mode = TonemappingMode::Uncharted2;
 
