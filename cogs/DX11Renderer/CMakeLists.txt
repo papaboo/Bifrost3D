@@ -58,6 +58,7 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/Shaders/ColorGrading/ReduceExposureHistogram.hlsl
     DX11Renderer/Shaders/ColorGrading/ReduceLogAverageLuminance.hlsl
     DX11Renderer/Shaders/ColorGrading/Tonemapping.hlsl
+    DX11Renderer/Shaders/ColorGrading/Utils.hlsl
   )
 
   set(ALL_SHADER_SRC ${SHADERS_SRC} ${SHADERS_BSDFS_SRC} ${SHADERS_COMPUTE_SRC} ${SHADERS_COLORGRADING_SRC})

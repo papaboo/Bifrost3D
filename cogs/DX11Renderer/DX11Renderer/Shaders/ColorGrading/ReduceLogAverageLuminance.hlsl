@@ -9,21 +9,12 @@
 #ifndef _DX11_RENDERER_SHADERS_COMPUTE_REDUCE_LOG_AVERAGE_LUMINANCE_H_
 #define _DX11_RENDERER_SHADERS_COMPUTE_REDUCE_LOG_AVERAGE_LUMINANCE_H_
 
-#include "../Utils.hlsl"
+#include "Utils.hlsl"
 
 static const uint GROUP_WIDTH = 8u;
 static const uint GROUP_HEIGHT = 16u;
 static const uint GROUP_THREAD_COUNT = GROUP_WIDTH * GROUP_HEIGHT;
 static const uint MAX_GROUPS_DISPATCHED = 128u;
-
-cbuffer constants : register(b0) {
-    float min_log_luminance;
-    float max_log_luminance;
-    float min_percentage;
-    float max_percentage;
-    float log_lumiance_bias;
-    float3 __padding;
-}
 
 groupshared float shared_log_luminance[GROUP_THREAD_COUNT];
 
@@ -110,7 +101,8 @@ void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
     if (thread_ID == 0) {
         float average_log_luminance = shared_log_average[0];
         average_log_luminance = clamp(average_log_luminance, min_log_luminance, max_log_luminance);
-        linear_exposure_buffer[0] = geometric_mean_linear_exposure(exp2(average_log_luminance)) * exp2(log_lumiance_bias);
+        float linear_exposure = geometric_mean_linear_exposure(exp2(average_log_luminance)) * exp2(log_lumiance_bias);
+        linear_exposure_buffer[0] = eye_adaptation(linear_exposure_buffer[0], linear_exposure, 1 / 60.0);
     }
 }
 

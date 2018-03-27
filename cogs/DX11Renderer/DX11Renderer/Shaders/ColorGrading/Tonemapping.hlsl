@@ -6,17 +6,7 @@
 // LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#include "../Utils.hlsl"
-
-cbuffer constants : register(b0) {
-    float min_log_luminance;
-    float max_log_luminance;
-    float min_percentage;
-    float max_percentage;
-    float log_lumiance_bias;
-    float3 __padding;
-}
-
+#include "Utils.hlsl"
 
 // ------------------------------------------------------------------------------------------------
 // Fixed exposure constant copying
@@ -26,7 +16,7 @@ RWStructuredBuffer<float> linear_exposure_write_buffer : register(u0);
 
 [numthreads(1, 1, 1)]
 void linear_exposure_from_constant_bias() {
-    linear_exposure_write_buffer[0] = exp2(log_lumiance_bias);
+    linear_exposure_write_buffer[0] = eye_adaptation(linear_exposure_write_buffer[0], exp2(log_lumiance_bias), 1 / 60.0);
 }
 
 // ------------------------------------------------------------------------------------------------
