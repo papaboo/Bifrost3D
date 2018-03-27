@@ -143,9 +143,10 @@ void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
 
     // Adjust prefix sum to min and max boundary values.
     // Clamp values above the max boundary and zero values outside of the min boundary.
+    // NOTE Bin prefix and next bin prefix can be computed pr per thread and thereby avoid the sync below, but this seems to trigger a bug in the compiler/driver.
     float max_pixel_count = shared_histogram[HISTOGRAM_SIZE] * max_percentage;
     float min_pixel_count = shared_histogram[HISTOGRAM_SIZE] * min_percentage;
-    shared_histogram[thread_ID] = max(0.0, min(shared_histogram[thread_ID], max_pixel_count) - min_pixel_count); // TODO Compute bin and next bin count per thread and avoid a sync.
+    shared_histogram[thread_ID] = max(0.0, min(shared_histogram[thread_ID], max_pixel_count) - min_pixel_count);
     GroupMemoryBarrierWithGroupSync();
 
     if (thread_ID == int(HISTOGRAM_SIZE - 1))
