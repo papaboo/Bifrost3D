@@ -126,7 +126,9 @@ public:
         float min_histogram_percentage;
         float max_histogram_percentage;
         float log_lumiance_bias;
-        float3 __padding;
+        float eye_adaptation_brightness;
+        float eye_adaptation_darkness;
+        float __padding;
     };
 
     Tonemapper();
@@ -154,7 +156,7 @@ public:
     // Tonemaps the pixels and stores them in the bound render target.
     void tonemap(ID3D11DeviceContext1& context, Cogwheel::Math::Tonemapping::Parameters parameters,
                  ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV,
-                 int width, int height);
+                 int width);
 
 private:
     Tonemapper(Tonemapper& other) = delete;
