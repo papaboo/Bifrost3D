@@ -16,10 +16,6 @@ namespace DX11Renderer {
 // ------------------------------------------------------------------------------------------------
 // Log average luminance reduction.
 // ------------------------------------------------------------------------------------------------
-LogAverageLuminance::LogAverageLuminance()
-    : m_log_average_first_reduction(nullptr), m_log_average_second_reduction(nullptr), m_log_averages_SRV(nullptr), m_log_averages_UAV(nullptr)
-    , m_linear_exposure_computation(nullptr) {}
-
 LogAverageLuminance::LogAverageLuminance(ID3D11Device1& device, const std::wstring& shader_folder_path) {
     const std::wstring shader_filename = shader_folder_path + L"ColorGrading/ReduceLogAverageLuminance.hlsl";
 
@@ -72,10 +68,6 @@ void LogAverageLuminance::compute(ID3D11DeviceContext1& context, ID3D11Buffer* c
 // ------------------------------------------------------------------------------------------------
 // Exposure histogram
 // ------------------------------------------------------------------------------------------------
-ExposureHistogram::ExposureHistogram()
-    : m_histogram_reduction(nullptr), m_histogram_SRV(nullptr), m_histogram_UAV(nullptr)
-    , m_linear_exposure_computation(nullptr) { }
-
 ExposureHistogram::ExposureHistogram(ID3D11Device1& device, const std::wstring& shader_folder_path) {
     const std::wstring shader_filename = shader_folder_path + L"ColorGrading/ReduceExposureHistogram.hlsl";
 
@@ -135,10 +127,6 @@ void ExposureHistogram::compute_linear_exposure(ID3D11DeviceContext1& context, I
 // ------------------------------------------------------------------------------------------------
 // Tonemapper
 // ------------------------------------------------------------------------------------------------
-Tonemapper::Tonemapper()
-    : m_fullscreen_VS(nullptr)
-    , m_linear_tonemapping_PS(nullptr), m_uncharted2_tonemapping_PS(nullptr), m_filmic_tonemapping_PS(nullptr) { }
-
 Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_path) {
 
     THROW_ON_FAILURE(create_constant_buffer(device, sizeof(Constants), &m_constant_buffer));
