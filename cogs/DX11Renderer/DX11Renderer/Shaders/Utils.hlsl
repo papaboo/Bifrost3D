@@ -48,31 +48,6 @@ struct TextureBound {
 };
 
 // ------------------------------------------------------------------------------------------------
-// Utility functions.
-// ------------------------------------------------------------------------------------------------
-
-// Computes a tangent and bitangent that together with the normal creates an orthonormal bases.
-// Building an Orthonormal Basis, Revisited, Duff et al.
-// http://jcgt.org/published/0006/01/01/paper.pdf
-float3x3 create_TBN(float3 normal) {
-    float sign = normal.z < 0.0f ? -1.0f : 1.0f;
-    const float a = -1.0f / (sign + normal.z);
-    const float b = normal.x * normal.y * a;
-    float3 tangent = { 1.0f + sign * normal.x * normal.x * a, sign * b, -sign * normal.x };
-    float3 bitangent = { b, sign + normal.y * normal.y * a, -normal.y };
-
-    float3x3 tbn;
-    tbn[0] = tangent;
-    tbn[1] = bitangent;
-    tbn[2] = normal;
-    return tbn;
-}
-
-float3x3 create_inverse_TBN(float3 normal) {
-    return transpose(create_TBN(normal));
-}
-
-// ------------------------------------------------------------------------------------------------
 // Math utils
 // ------------------------------------------------------------------------------------------------
 
@@ -128,6 +103,31 @@ float3 latlong_texcoord_to_direction(float2 uv) {
     float theta = uv.y * PI;
     float sin_theta = sin(theta);
     return -float3(sin_theta * cos(phi), cos(theta), sin_theta * sin(phi));
+}
+
+// ------------------------------------------------------------------------------------------------
+// Utility functions.
+// ------------------------------------------------------------------------------------------------
+
+// Computes a tangent and bitangent that together with the normal creates an orthonormal bases.
+// Building an Orthonormal Basis, Revisited, Duff et al.
+// http://jcgt.org/published/0006/01/01/paper.pdf
+float3x3 create_TBN(float3 normal) {
+    float sign = normal.z < 0.0f ? -1.0f : 1.0f;
+    const float a = -1.0f / (sign + normal.z);
+    const float b = normal.x * normal.y * a;
+    float3 tangent = { 1.0f + sign * normal.x * normal.x * a, sign * b, -sign * normal.x };
+    float3 bitangent = { b, sign + normal.y * normal.y * a, -normal.y };
+
+    float3x3 tbn;
+    tbn[0] = tangent;
+    tbn[1] = bitangent;
+    tbn[2] = normal;
+    return tbn;
+}
+
+float3x3 create_inverse_TBN(float3 normal) {
+    return transpose(create_TBN(normal));
 }
 
 // ------------------------------------------------------------------------------------------------
