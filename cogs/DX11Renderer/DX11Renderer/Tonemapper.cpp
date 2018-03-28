@@ -141,14 +141,7 @@ Tonemapper::Tonemapper()
 
 Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_path) {
 
-    m_constants.min_log_luminance = -4.0f;
-    m_constants.max_log_luminance = 4.0f;
-    m_constants.min_histogram_percentage = 0.7f;
-    m_constants.max_histogram_percentage = 0.95f;
-    m_constants.log_lumiance_bias = 0.0f;
-    m_constants.eye_adaptation_brightness = 3.0f;
-    m_constants.eye_adaptation_darkness = 1.0f;
-    THROW_ON_FAILURE(create_constant_buffer(device, m_constants, &m_constant_buffer, D3D11_USAGE_DEFAULT));
+    THROW_ON_FAILURE(create_constant_buffer(device, sizeof(Constants), &m_constant_buffer));
 
     create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, &m_linear_exposure_SRV, &m_linear_exposure_UAV);
     m_log_average_luminance = LogAverageLuminance(device, shader_folder_path);
@@ -178,24 +171,25 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
     }
 }
 
-void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters parameters,
-                         ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, 
-                         int width) {
+void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters parameters, float delta_time,
+                         ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, int width) {
 
     using namespace Cogwheel::Math::Tonemapping;
 
-    Constants constants;
-    constants.min_log_luminance = parameters.exposure.min_log_luminance;
-    constants.max_log_luminance = parameters.exposure.max_log_luminance;
-    constants.min_histogram_percentage = parameters.exposure.min_histogram_percentage;
-    constants.max_histogram_percentage = parameters.exposure.max_histogram_percentage;
-    constants.log_lumiance_bias = parameters.exposure.log_lumiance_bias;
-    // TODO Handle eye_adaption_enabled by scaling adapation
-    constants.eye_adaptation_brightness = parameters.exposure.eye_adaptation_brightness;
-    constants.eye_adaptation_darkness = parameters.exposure.eye_adaptation_darkness;
-    if (memcmp(&m_constants, &constants, sizeof(Constants)) != 0) {
+    { // Upload constants
+        Constants constants;
+        constants.min_log_luminance = parameters.exposure.min_log_luminance;
+        constants.max_log_luminance = parameters.exposure.max_log_luminance;
+        constants.min_histogram_percentage = parameters.exposure.min_histogram_percentage;
+        constants.max_histogram_percentage = parameters.exposure.max_histogram_percentage;
+        constants.log_lumiance_bias = parameters.exposure.log_lumiance_bias;
+        if (parameters.exposure.eye_adaptation_enabled) {
+            constants.eye_adaptation_brightness = parameters.exposure.eye_adaptation_brightness;
+            constants.eye_adaptation_darkness = parameters.exposure.eye_adaptation_darkness;
+        } else
+            constants.eye_adaptation_brightness = constants.eye_adaptation_darkness = std::numeric_limits<float>::infinity();
+        constants.delta_time = delta_time;
         context.UpdateSubresource(m_constant_buffer, 0, nullptr, &constants, 0u, 0u);
-        m_constants = constants;
     }
 
     context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);

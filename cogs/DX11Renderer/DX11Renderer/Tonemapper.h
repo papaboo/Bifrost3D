@@ -128,7 +128,7 @@ public:
         float log_lumiance_bias;
         float eye_adaptation_brightness;
         float eye_adaptation_darkness;
-        float __padding;
+        float delta_time;
     };
 
     Tonemapper();
@@ -136,7 +136,6 @@ public:
 
     Tonemapper& operator=(Tonemapper&& rhs) {
 
-        m_constants = rhs.m_constants;
         m_constant_buffer = std::move(rhs.m_constant_buffer);
 
         m_linear_exposure_SRV = std::move(rhs.m_linear_exposure_SRV);
@@ -154,16 +153,14 @@ public:
     }
 
     // Tonemaps the pixels and stores them in the bound render target.
-    void tonemap(ID3D11DeviceContext1& context, Cogwheel::Math::Tonemapping::Parameters parameters,
-                 ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV,
-                 int width);
+    void tonemap(ID3D11DeviceContext1& context, Cogwheel::Math::Tonemapping::Parameters parameters, float delta_time,
+                 ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, int width);
 
 private:
     Tonemapper(Tonemapper& other) = delete;
     Tonemapper(Tonemapper&& other) = delete;
     Tonemapper& operator=(Tonemapper& rhs) = delete;
 
-    Constants m_constants;
     OID3D11Buffer m_constant_buffer;
 
     OID3D11ShaderResourceView m_linear_exposure_SRV;

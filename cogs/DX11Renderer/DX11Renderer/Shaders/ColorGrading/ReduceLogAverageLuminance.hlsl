@@ -102,7 +102,7 @@ void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
         float average_log_luminance = shared_log_average[0];
         average_log_luminance = clamp(average_log_luminance, min_log_luminance, max_log_luminance);
         float linear_exposure = geometric_mean_linear_exposure(exp2(average_log_luminance)) * exp2(log_lumiance_bias);
-        linear_exposure_buffer[0] = eye_adaptation(linear_exposure_buffer[0], linear_exposure, 1 / 60.0);
+        linear_exposure_buffer[0] = eye_adaptation(linear_exposure_buffer[0], linear_exposure);
     }
 }
 

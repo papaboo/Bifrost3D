@@ -16,7 +16,7 @@ RWStructuredBuffer<float> linear_exposure_write_buffer : register(u0);
 
 [numthreads(1, 1, 1)]
 void linear_exposure_from_constant_bias() {
-    linear_exposure_write_buffer[0] = eye_adaptation(linear_exposure_write_buffer[0], exp2(log_lumiance_bias), 1 / 60.0);
+    linear_exposure_write_buffer[0] = eye_adaptation(linear_exposure_write_buffer[0], exp2(log_lumiance_bias));
 }
 
 // ------------------------------------------------------------------------------------------------

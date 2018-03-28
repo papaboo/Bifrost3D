@@ -159,7 +159,7 @@ void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
     if (thread_ID == 0) {
         float average_luminance = shared_weighted_luminance[0] / (max_pixel_count - min_pixel_count);
         float linear_exposure = exp2(log_lumiance_bias) / average_luminance;
-        linear_exposure_buffer[0] = eye_adaptation(linear_exposure_buffer[0], linear_exposure, 1 / 60.0);
+        linear_exposure_buffer[0] = eye_adaptation(linear_exposure_buffer[0], linear_exposure);
     }
 }
 

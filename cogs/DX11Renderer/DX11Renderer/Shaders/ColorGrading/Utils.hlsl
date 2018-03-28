@@ -21,10 +21,10 @@ cbuffer constants : register(b0) {
     float log_lumiance_bias;
     float eye_adaptation_brightness;
     float eye_adaptation_darkness;
-    float __padding;
+    float delta_time;
 }
 
-float eye_adaptation(float current_exposure, float target_exposure, float delta_time) {
+float eye_adaptation(float current_exposure, float target_exposure) {
     float delta_exposure = target_exposure - current_exposure;
     float adaption_speed = (delta_exposure > 0.0) ? eye_adaptation_brightness : eye_adaptation_darkness;
     float factor = 1.0f - exp2(-delta_time * adaption_speed);
