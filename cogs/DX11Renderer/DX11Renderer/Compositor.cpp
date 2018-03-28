@@ -99,6 +99,8 @@ private:
     OID3D11ShaderResourceView m_backbuffer_SRV;
     OID3D11DepthStencilView m_depth_view;
 
+    double previous_tonemapping_time;
+    double counter_hertz;
     Tonemapper m_tonemapper;
 
 public:
@@ -157,6 +159,13 @@ public:
         }
 
         { // Setup tonemapper
+            { // Setup timer.
+                LARGE_INTEGER freq;
+                QueryPerformanceFrequency(&freq);
+                counter_hertz = 1.0 / freq.QuadPart;
+                previous_tonemapping_time = std::numeric_limits<double>::lowest(); // Ensures that the first delta_time is positive infinity, which in turn disables eye adaptation for the first frame.
+            }
+
             std::wstring shader_folder_path = m_data_folder_path + L"DX11Renderer\\Shaders\\";
             m_tonemapper = Tonemapper(m_device, shader_folder_path);
         }
@@ -292,10 +301,17 @@ public:
             m_renderers[renderer]->render(camera_ID, int(ceilf(viewport.width)), int(ceilf(viewport.height)));
         }
 
+        // Compute delta time for tone mapping.
+        LARGE_INTEGER performance_count;
+        QueryPerformanceCounter(&performance_count);
+        double current_time = performance_count.QuadPart * counter_hertz;
+        float delta_time = float(current_time - previous_tonemapping_time);
+        previous_tonemapping_time = current_time;
+
         // Present the backbuffer.
         Cameras::UID camera_ID = *Cameras::get_iterable().begin();
         auto tonemapping_params = Cameras::get_tonemapping_parameters(camera_ID);
-        m_tonemapper.tonemap(m_render_context, tonemapping_params, 1 / 60.0f, m_backbuffer_SRV, m_swap_chain_buffer_view, m_backbuffer_size.x);
+        m_tonemapper.tonemap(m_render_context, tonemapping_params, delta_time, m_backbuffer_SRV, m_swap_chain_buffer_view, m_backbuffer_size.x);
         m_swap_chain->Present(m_sync_interval, 0);
     }
 
