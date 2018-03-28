@@ -9,7 +9,35 @@
 #ifndef _DX11RENDERERTEST_UTILS_H_
 #define _DX11RENDERERTEST_UTILS_H_
 
+#include <DX11Renderer/Tonemapper.h>
 #include <DX11Renderer/Utils.h>
+
+// -------------------------------------------------------------------------------------------------
+// Typedefs.
+// -------------------------------------------------------------------------------------------------
+
+using half4 = Cogwheel::Math::Vector4<half>;
+
+// -------------------------------------------------------------------------------------------------
+// Utility functions
+// -------------------------------------------------------------------------------------------------
+
+inline DX11Renderer::OID3D11Buffer create_tonemapping_constants(DX11Renderer::OID3D11Device1& device, float min_log_luminance, float max_log_luminance, float min_histogram_percentage = 0.8f, float max_histogram_percentage = 0.95f) {
+
+    DX11Renderer::Tonemapper::Constants constants;
+    constants.min_log_luminance = min_log_luminance;
+    constants.max_log_luminance = max_log_luminance;
+    constants.min_histogram_percentage = min_histogram_percentage;
+    constants.max_histogram_percentage = max_histogram_percentage;
+    constants.log_lumiance_bias = 0.0f;
+    // Disable eye adaptation by setting adaptation to infinity.
+    constants.eye_adaptation_brightness = constants.eye_adaptation_darkness = std::numeric_limits<float>::infinity();
+    constants.delta_time = 1.0f / 60.0f;
+
+    DX11Renderer::OID3D11Buffer constant_buffer;
+    THROW_ON_FAILURE(DX11Renderer::create_constant_buffer(device, constants, &constant_buffer));
+    return constant_buffer;
+}
 
 // -------------------------------------------------------------------------------------------------
 // Comparison helpers.

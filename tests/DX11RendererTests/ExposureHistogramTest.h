@@ -28,19 +28,6 @@ namespace DX11Renderer {
 class ExposureHistogramFixture : public ::testing::Test {
 protected:
 
-    using half4 = Cogwheel::Math::Vector4<half>;
-
-    inline OID3D11Buffer create_constant_buffer(OID3D11Device1& device, float min_log_luminance, float max_log_luminance, float min_percentage = 0.8f, float max_percentage = 0.95f) {
-        OID3D11Buffer constant_buffer;
-        Tonemapper::Constants constants = { min_log_luminance, max_log_luminance, min_percentage, max_percentage, 0.0f };
-        THROW_ON_FAILURE(DX11Renderer::create_constant_buffer(device, constants, &constant_buffer));
-        return constant_buffer;
-    }
-
-    inline float compute_luminance_from_histogram_position(float normalized_index, float min_log_luminance, float max_log_luminance) {
-        return exp2(Cogwheel::Math::lerp(min_log_luminance, max_log_luminance, normalized_index));
-    }
-
     inline OID3D11ShaderResourceView create_texture_SRV(OID3D11Device1& device, unsigned int width, unsigned int height, half4* pixels) {
         D3D11_TEXTURE2D_DESC tex_desc;
         tex_desc.Width = width;
@@ -71,6 +58,10 @@ protected:
     inline float compute_average_luminance_without_outlier(unsigned int* histogram_begin, unsigned int* histogram_end, 
         float min_percentage, float max_percentage, float min_log_luminance, float max_log_luminance) {
 
+        auto compute_luminance_from_histogram_position = [=](float normalized_index) -> float {
+            return exp2(Cogwheel::Math::lerp(min_log_luminance, max_log_luminance, normalized_index));
+        };
+
         int histogram_size = int(histogram_end - histogram_begin);
 
         int pixel_count = 0;
@@ -94,7 +85,7 @@ protected:
             bucket_count = fminf(bucket_count, max_pixel_count);
             max_pixel_count -= bucket_count;
 
-            float luminance_at_bucket = compute_luminance_from_histogram_position((i + 0.5f) / float(histogram_size), min_log_luminance, max_log_luminance);
+            float luminance_at_bucket = compute_luminance_from_histogram_position((i + 0.5f) / float(histogram_size));
 
             sum += Cogwheel::Math::Vector2f(luminance_at_bucket * bucket_count, bucket_count);
         }
@@ -115,7 +106,7 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
 
     float min_log_luminance = -8;
     float max_log_luminance = 4;
-    OID3D11Buffer constant_buffer = create_constant_buffer(device, min_log_luminance, max_log_luminance);
+    OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance);
 
     // Image with one element in each bucket.
     half4 pixels[bin_count];
@@ -148,7 +139,7 @@ TEST_F(ExposureHistogramFixture, small_image) {
 
     float min_log_luminance = -8;
     float max_log_luminance = 4;
-    OID3D11Buffer constant_buffer = create_constant_buffer(device, min_log_luminance, max_log_luminance);
+    OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance);
 
     // Image with 4 elements in each bucket and (4 + width) elements in the first and last bucket
     const int width = bin_count;
@@ -209,7 +200,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
     float max_log_luminance = 4;
     float min_percentage = 0.8f;
     float max_percentage = 0.95f;
-    OID3D11Buffer constant_buffer = create_constant_buffer(device, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
+    OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
 
     context->CSSetShader(compute_exposure_shader, nullptr, 0u);
     context->CSSetConstantBuffers(0, 1, &constant_buffer);
@@ -255,7 +246,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_histogram) {
     float max_log_luminance = 4;
     float min_percentage = 0.8f;
     float max_percentage = 0.95f;
-    OID3D11Buffer constant_buffer = create_constant_buffer(device, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
+    OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
 
     context->CSSetShader(compute_exposure_shader, nullptr, 0u);
     context->CSSetConstantBuffers(0, 1, &constant_buffer);
