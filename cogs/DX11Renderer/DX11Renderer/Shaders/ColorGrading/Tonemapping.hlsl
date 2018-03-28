@@ -8,6 +8,8 @@
 
 #include "Utils.hlsl"
 
+namespace ColorGrading {
+
 // ------------------------------------------------------------------------------------------------
 // Fixed exposure constant copying
 // ------------------------------------------------------------------------------------------------
@@ -172,3 +174,5 @@ float4 unreal4_tonemapping_ps(Varyings input) : SV_TARGET{
     // Tonemapping.
     return float4(unreal4(color), 1.0);
 }
+
+} // NS ColorGrading

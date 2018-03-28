@@ -20,13 +20,13 @@ LogAverageLuminance::LogAverageLuminance(ID3D11Device1& device, const std::wstri
     const std::wstring shader_filename = shader_folder_path + L"ColorGrading/ReduceLogAverageLuminance.hlsl";
 
     // Create shaders.
-    OID3DBlob log_average_first_reduction_blob = compile_shader(shader_filename, "cs_5_0", "first_reduction");
+    OID3DBlob log_average_first_reduction_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::first_reduction");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(log_average_first_reduction_blob), nullptr, &m_log_average_first_reduction));
 
-    OID3DBlob log_average_second_reduction_blob = compile_shader(shader_filename, "cs_5_0", "second_reduction");
+    OID3DBlob log_average_second_reduction_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::second_reduction");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(log_average_second_reduction_blob), nullptr, &m_log_average_second_reduction));
 
-    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "compute_linear_exposure");
+    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::compute_linear_exposure");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_computation_blob), nullptr, &m_linear_exposure_computation));
 
     // Create buffers
@@ -72,10 +72,10 @@ ExposureHistogram::ExposureHistogram(ID3D11Device1& device, const std::wstring& 
     const std::wstring shader_filename = shader_folder_path + L"ColorGrading/ReduceExposureHistogram.hlsl";
 
     // Create shaders.
-    OID3DBlob reduce_exposure_histogram_blob = compile_shader(shader_filename, "cs_5_0", "reduce");
+    OID3DBlob reduce_exposure_histogram_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::reduce");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_exposure_histogram_blob), nullptr, &m_histogram_reduction));
 
-    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "compute_linear_exposure");
+    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::compute_linear_exposure");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_computation_blob), nullptr, &m_linear_exposure_computation));
 
     // Create buffers
@@ -138,10 +138,10 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
     { // Setup shaders
         const std::wstring shader_filename = shader_folder_path + L"ColorGrading/Tonemapping.hlsl";
 
-        OID3DBlob linear_exposure_from_bias_blob = compile_shader(shader_filename, "cs_5_0", "linear_exposure_from_constant_bias");
+        OID3DBlob linear_exposure_from_bias_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::linear_exposure_from_constant_bias");
         THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_from_bias_blob), nullptr, &m_linear_exposure_from_bias_shader));
 
-        OID3DBlob vertex_shader_blob = compile_shader(shader_filename, "vs_5_0", "fullscreen_vs");
+        OID3DBlob vertex_shader_blob = compile_shader(shader_filename, "vs_5_0", "ColorGrading::fullscreen_vs");
         HRESULT hr = device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_fullscreen_VS);
         THROW_ON_FAILURE(hr);
 
@@ -153,9 +153,9 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
             return pixel_shader;
         };
 
-        m_linear_tonemapping_PS = create_pixel_shader("linear_tonemapping_ps");
-        m_uncharted2_tonemapping_PS = create_pixel_shader("uncharted2_tonemapping_ps");
-        m_filmic_tonemapping_PS = create_pixel_shader("unreal4_tonemapping_ps");
+        m_linear_tonemapping_PS = create_pixel_shader("ColorGrading::linear_tonemapping_ps");
+        m_uncharted2_tonemapping_PS = create_pixel_shader("ColorGrading::uncharted2_tonemapping_ps");
+        m_filmic_tonemapping_PS = create_pixel_shader("ColorGrading::unreal4_tonemapping_ps");
     }
 }
 

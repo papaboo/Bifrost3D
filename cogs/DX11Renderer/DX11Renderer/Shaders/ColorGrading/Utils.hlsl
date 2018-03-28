@@ -11,7 +11,7 @@
 
 #include "../Utils.hlsl"
 
-// namespace ColorGrading {
+namespace ColorGrading {
 
 cbuffer constants : register(b0) {
     float min_log_luminance;
@@ -31,6 +31,6 @@ float eye_adaptation(float current_exposure, float target_exposure) {
     return current_exposure + delta_exposure * factor;
 }
 
-// } // ColorGrading
+} // NS ColorGrading
 
 #endif // _DX11_RENDERER_SHADERS_COLOR_GRADING_UTILS_H_

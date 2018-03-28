@@ -6,10 +6,9 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _DX11_RENDERER_SHADERS_COMPUTE_REDUCE_LOG_AVERAGE_LUMINANCE_H_
-#define _DX11_RENDERER_SHADERS_COMPUTE_REDUCE_LOG_AVERAGE_LUMINANCE_H_
-
 #include "Utils.hlsl"
+
+namespace ColorGrading {
 
 static const uint GROUP_WIDTH = 8u;
 static const uint GROUP_HEIGHT = 16u;
@@ -106,4 +105,4 @@ void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
     }
 }
 
-#endif // _DX11_RENDERER_SHADERS_COMPUTE_REDUCE_LOG_AVERAGE_LUMINANCE_H_
+} // NS ColorGrading

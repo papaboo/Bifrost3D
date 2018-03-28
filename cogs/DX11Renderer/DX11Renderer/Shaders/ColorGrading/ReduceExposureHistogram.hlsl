@@ -6,10 +6,9 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _DX11_RENDERER_SHADERS_COMPUTE_REDUCE_EXPOSURE_HISTOGRAM_H_
-#define _DX11_RENDERER_SHADERS_COMPUTE_REDUCE_EXPOSURE_HISTOGRAM_H_
-
 #include "Utils.hlsl"
+
+namespace ColorGrading {
 
 static const uint HISTOGRAM_SIZE = 64u;
 static const uint LOG2_HISTOGRAM_SIZE = log2(HISTOGRAM_SIZE);
@@ -163,4 +162,4 @@ void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
     }
 }
 
-#endif // _DX11_RENDERER_SHADERS_COMPUTE_REDUCE_EXPOSURE_HISTOGRAM_H_
+} // NS ColorGrading
