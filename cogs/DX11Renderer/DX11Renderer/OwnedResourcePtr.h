@@ -75,23 +75,9 @@ public:
         resource = tmp;
     }
 
-#if _MSC_VER <= 1800 // VS2013 or less.
-    // VS2013's move constructors aren't as fully developed as VS2015 and upwards,
-    // so it needs the copy constructors to be defined unfortunately.
-    OwnedResourcePtr(OwnedResourcePtr& other)
-        : resource(other.detach()) { }
-
-    OwnedResourcePtr& operator=(OwnedResourcePtr& rhs) {
-        if (resource) resource->Release();
-        resource = rhs.detach();
-        return *this;
-    }
-#else
 private:
     OwnedResourcePtr(OwnedResourcePtr& other) = delete;
     OwnedResourcePtr& operator=(OwnedResourcePtr& rhs) = delete;
-#endif
-
 };
 
 } // NS DX11Renderer
