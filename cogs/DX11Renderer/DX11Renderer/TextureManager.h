@@ -36,7 +36,7 @@ private:
 
 public:
 
-    TextureManager() {}
+    TextureManager() = default;
     TextureManager(ID3D11Device1& device);
 
     inline const DefaultTexture& white_texture() { return m_white_texture; }

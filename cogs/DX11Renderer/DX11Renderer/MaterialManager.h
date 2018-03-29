@@ -27,19 +27,10 @@ namespace DX11Renderer {
 class MaterialManager {
 public:
 
-    MaterialManager() : m_constant_array() {}
+    MaterialManager() = default;
     MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& context);
 
-    MaterialManager& operator=(MaterialManager&& rhs) {
-        m_GGX_with_fresnel_rho_srv = std::move(rhs.m_GGX_with_fresnel_rho_srv);
-        m_GGX_SPTD_fit_srv = std::move(rhs.m_GGX_SPTD_fit_srv);
-
-        m_precomputation2D_sampler = std::move(rhs.m_precomputation2D_sampler);;
-        m_constant_array = std::move(rhs.m_constant_array);
-        m_materials = std::move(rhs.m_materials);
-        m_material_textures = std::move(rhs.m_material_textures);
-        return *this;
-    }
+    MaterialManager& operator=(MaterialManager&& rhs) = default;
 
     ID3D11ShaderResourceView** get_GGX_with_fresnel_rho_srv_addr() { return &m_GGX_with_fresnel_rho_srv; }
     ID3D11ShaderResourceView** get_GGX_SPTD_fit_srv_addr() { return &m_GGX_SPTD_fit_srv; }

@@ -25,17 +25,12 @@ namespace DX11Renderer {
 // ------------------------------------------------------------------------------------------------
 template<typename T>
 class ConstantBufferArray {
-private:
-
-    OID3D11Buffer m_constant_buffer;
-    unsigned int m_element_count;
-
 public:
 
     // --------------------------------------------------------------------------------------------
     // Constructors and assignments
     // --------------------------------------------------------------------------------------------
-    ConstantBufferArray() : m_constant_buffer(nullptr), m_element_count(0u) { }
+    ConstantBufferArray() = default;
 
     ConstantBufferArray(ID3D11Device1& device, unsigned int element_count)
         : m_element_count(element_count) {
@@ -69,15 +64,9 @@ public:
         THROW_ON_FAILURE(hr);
     }
 
-    ConstantBufferArray(ConstantBufferArray&& other)
-        : m_constant_buffer(other.m_constant_buffer)
-        , m_element_count(rhs.m_element_count) { }
+    ConstantBufferArray(ConstantBufferArray&& other) = default;
 
-    ConstantBufferArray& operator=(ConstantBufferArray&& rhs) {
-        m_constant_buffer = std::move(rhs.m_constant_buffer);
-        m_element_count = rhs.m_element_count;
-        return *this;
-    }
+    ConstantBufferArray& operator=(ConstantBufferArray&& rhs) = default;
 
     // --------------------------------------------------------------------------------------------
     // Getters and setter.
@@ -111,6 +100,13 @@ public:
         unsigned int size = get_element_stride() / 16;
         context->PSSetConstantBuffers1(slot, 1, &m_constant_buffer, &begin, &size);
     }
+private:
+    ConstantBufferArray(ConstantBufferArray& other) = delete;
+    ConstantBufferArray& operator=(ConstantBufferArray& rhs) = delete;
+
+    OID3D11Buffer m_constant_buffer;
+    unsigned int m_element_count;
+
 };
 
 } // DX11Renderer

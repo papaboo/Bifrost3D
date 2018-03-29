@@ -34,17 +34,10 @@ private:
     
 public:
 
-    TransformManager() : m_constant_array() {}
+    TransformManager() = default;
     TransformManager(ID3D11Device1& device, ID3D11DeviceContext1& context);
-    TransformManager(TransformManager&& other) {
-        m_transforms = std::move(other.m_transforms);
-        m_constant_array = std::move(other.m_constant_array);
-    }
-    TransformManager& operator=(TransformManager&& rhs) {
-        m_constant_array = std::move(rhs.m_constant_array);
-        m_transforms = std::move(rhs.m_transforms);
-        return *this;
-    }
+    TransformManager(TransformManager&& other) = default;
+    TransformManager& operator=(TransformManager&& rhs) = default;
     
     inline Cogwheel::Math::Transform& get_transform(unsigned int transform_index) { return m_transforms[transform_index]; }
     inline ID3D11Buffer** get_constant_buffer_addr() { return m_constant_array.get_buffer_addr(); }
