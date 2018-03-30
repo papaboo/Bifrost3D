@@ -45,6 +45,9 @@ public:
     T z;
     T w;
 
+    // Default constructor.
+    Quaternion() = default;
+
     // Constructor. Assumes that the parameters will create a normalized quaternion. Otherwise the user should normalize after construction.
     Quaternion(T x, T y, T z, T w)
         : x(x), y(y), z(z), w(w) { }

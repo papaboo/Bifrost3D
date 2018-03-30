@@ -28,7 +28,7 @@ public:
     Vector3f origin;
     Vector3f direction;
 
-    Ray() { }
+    Ray() = default;
     Ray(Vector3f origin, Vector3f direction)
         : origin(origin), direction(direction) { }
 

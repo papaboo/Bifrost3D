@@ -31,7 +31,7 @@ public:
     T width;
     T height;
 
-    Rect() { }
+    Rect() = default;
     Rect(T x, T y, T width, T height)
         : x(x), y(y), width(width), height(height) { }
 

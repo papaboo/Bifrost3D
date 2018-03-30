@@ -33,7 +33,8 @@ struct Transform final {
     float scale;
 
     // Constructor.
-    Transform(Vector3f translation = Vector3f::zero(), Quaternionf rotation = Quaternionf::identity(), float scale = 1.0f)
+    Transform() = default;
+    Transform(Vector3f translation, Quaternionf rotation = Quaternionf::identity(), float scale = 1.0f)
         : rotation(rotation), translation(translation), scale(scale) { }
 
     static inline Transform identity() {

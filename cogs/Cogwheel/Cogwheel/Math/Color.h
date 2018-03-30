@@ -27,8 +27,7 @@ struct RGB final {
     float g;
     float b;
 
-    RGB()
-        : r(0.0f), g(0.0f), b(0.0f) { }
+    RGB() = default;
 
     RGB(float intensity)
         : r(intensity), g(intensity), b(intensity) {
@@ -186,8 +185,7 @@ struct RGBA final {
     float b;
     float a;
 
-    RGBA()
-        : r(0.0f), g(0.0f), b(0.0f), a(1.0f) { }
+    RGBA() = default;
 
     RGBA(float r, float g, float b, float a)
         : r(r), g(g), b(b), a(a) { }
