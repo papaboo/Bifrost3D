@@ -39,7 +39,7 @@ struct Parameters final {
 
     static Parameters default() {
         Parameters res;
-        res.exposure.mode = ExposureMode::LogAverage;
+        res.exposure.mode = ExposureMode::Histogram;
         res.exposure.min_log_luminance = -4;
         res.exposure.max_log_luminance = 4;
         res.exposure.min_histogram_percentage = 0.7f;
