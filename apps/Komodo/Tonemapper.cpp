@@ -255,9 +255,8 @@ struct Tonemapper::Implementation final {
             auto auto_geometric_mean = [](void* client_data) {
                 Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
                 float log_average_luminance = ImageOperations::Exposure::log_average_luminance(data->m_input.get_ID());
-                log_average_luminance = max(log_average_luminance, 0.001f);
                 float key_value = 1.03f - (2.0f / (2 + log2(log_average_luminance + 1)));
-                float linear_exposure = (key_value / log_average_luminance);
+                float linear_exposure = key_value / log_average_luminance;
                 data->m_exposure_bias = log2(max(linear_exposure, 0.0001f));
 
                 data->m_upload_image = true;
