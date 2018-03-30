@@ -165,10 +165,14 @@ void compute_perspective_projection(float near_distance, float far_distance, flo
     float b = (2.0f * far_distance * near_distance) / (near_distance - far_distance);
 
     projection_matrix[0][0] = f / aspect_ratio;
+    projection_matrix[0][1] = projection_matrix[0][2] = projection_matrix[0][3] = 0.0f;
     projection_matrix[1][1] = f;
+    projection_matrix[1][0] = projection_matrix[1][2] = projection_matrix[1][3] = 0.0f;
+    projection_matrix[2][0] = projection_matrix[2][1] = 0.0f;
     projection_matrix[2][2] = -a;
-    projection_matrix[3][2] = 1.0f;
     projection_matrix[2][3] = b;
+    projection_matrix[3][0] = projection_matrix[3][1] = projection_matrix[3][3] = 0.0f;
+    projection_matrix[3][2] = 1.0f;
 
     // Yes you could just use inverse_projection_matrix = invert(projection_matrix) as this is by no means performance critical code.
     // But this wasn't done to speed up perspective camera creation. This was done for fun and to have a way to easily derive the inverse perspective matrix later given the perspective matrix.

@@ -29,7 +29,7 @@ public:
     T x;
     T y;
 
-    Vector2() : x(0), y(0) { }
+    Vector2() = default;
     explicit Vector2(T s) : x(s), y(s) { }
     Vector2(T x, T y) : x(x), y(y) { }
     template <typename U>
@@ -64,7 +64,7 @@ public:
     T y;
     T z;
 
-    Vector3() : x(0), y(0), z(0) { }
+    Vector3() = default;
     explicit Vector3(T s) : x(s), y(s), z(s) { }
     Vector3(T x, T y, T z) : x(x), y(y), z(z) { }
     template <typename U>
@@ -105,7 +105,7 @@ public:
     T z;
     T w;
 
-    Vector4() : x(0), y(0), z(0), w(0) { }
+    Vector4() = default;
     explicit Vector4(T s) : x(s), y(s), z(s), w(s) { }
     Vector4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) { }
     template <typename U>
