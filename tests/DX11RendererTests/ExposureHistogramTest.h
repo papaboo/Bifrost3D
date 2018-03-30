@@ -192,7 +192,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
     OID3D11UnorderedAccessView linear_exposure_UAV;
     OID3D11Buffer linear_exposure_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &linear_exposure_UAV);
 
-    OID3DBlob compute_exposure_blob = compile_shader(DX11_SHADER_ROOT + std::wstring(L"ColorGrading\\ReduceExposureHistogram.hlsl"), "cs_5_0", "compute_linear_exposure");
+    OID3DBlob compute_exposure_blob = compile_shader(DX11_SHADER_ROOT + std::wstring(L"ColorGrading\\ReduceExposureHistogram.hlsl"), "cs_5_0", "ColorGrading::compute_linear_exposure");
     OID3D11ComputeShader compute_exposure_shader;
     THROW_ON_FAILURE(device->CreateComputeShader(UNPACK_BLOB_ARGS(compute_exposure_blob), nullptr, &compute_exposure_shader));
 
@@ -238,7 +238,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_histogram) {
     OID3D11UnorderedAccessView linear_exposure_UAV;
     OID3D11Buffer linear_exposure_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &linear_exposure_UAV);
 
-    OID3DBlob compute_exposure_blob = compile_shader(DX11_SHADER_ROOT + std::wstring(L"ColorGrading\\ReduceExposureHistogram.hlsl"), "cs_5_0", "compute_linear_exposure");
+    OID3DBlob compute_exposure_blob = compile_shader(DX11_SHADER_ROOT + std::wstring(L"ColorGrading\\ReduceExposureHistogram.hlsl"), "cs_5_0", "ColorGrading::compute_linear_exposure");
     OID3D11ComputeShader compute_exposure_shader;
     THROW_ON_FAILURE(device->CreateComputeShader(UNPACK_BLOB_ARGS(compute_exposure_blob), nullptr, &compute_exposure_shader));
 

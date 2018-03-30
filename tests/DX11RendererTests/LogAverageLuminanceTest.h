@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 #include <Utils.h>
 
+#include <Cogwheel/Math/Color.h>
 #include <Cogwheel/Math/Half.h>
 #include <Cogwheel/Math/Vector.h>
 #include <Cogwheel/Math/Utils.h>
@@ -53,20 +54,64 @@ protected:
         THROW_ON_FAILURE(device->CreateShaderResourceView(texture, nullptr, &texture_SRV));
         return texture_SRV;
     }
+
+    // Compute linear exposure from the geometric mean. See MJP's tonemapping sample.
+    // https://mynameismjp.wordpress.com/2010/04/30/a-closer-look-at-tone-mapping/
+    inline float geometric_mean_linear_exposure(float log_average_luminance) {
+        float key_value = 1.03f - (2.0f / (2 + log2(log_average_luminance + 1)));
+        return key_value / log_average_luminance;
+    }
+
+    inline void test_image(int width, int height, half4* pixels) {
+        auto device = create_performant_device1();
+        OID3D11DeviceContext1 context;
+        device->GetImmediateContext1(&context);
+
+        LogAverageLuminance& log_average_exposure = LogAverageLuminance(*device, DX11_SHADER_ROOT);
+
+        float min_log_luminance = -24;
+        float max_log_luminance = 24;
+        OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance);
+
+        OID3D11ShaderResourceView pixel_SRV = create_texture_SRV(device, width, height, pixels);
+
+        OID3D11UnorderedAccessView output_UAV;
+        OID3D11Buffer output_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &output_UAV);
+
+        float log_average_GPU = 0.0f;
+        { // Test log-average computation 
+            log_average_exposure.compute_log_average(*context, constant_buffer, pixel_SRV, width, output_UAV);
+
+            Readback::buffer(device, context, output_buffer, &log_average_GPU, &log_average_GPU + 1);
+
+            double log_average = 0.0;
+            for (int i = 0; i < width * height; ++i) {
+                auto pixel = Cogwheel::Math::RGB(pixels[i].x, pixels[i].y, pixels[i].z);
+                log_average += log2(fmaxf(Cogwheel::Math::luminance(pixel), 0.0001f));
+            }
+            log_average = exp2(log_average / (width * height));
+
+            EXPECT_FLOAT_EQ_PCT((float)log_average, log_average_GPU, 0.00001f);
+        }
+
+        { // Test linear exposure computation from log-average.
+            float linear_exposure = geometric_mean_linear_exposure(log_average_GPU);
+
+            // Upload CPU computed log average to avoid issues with eye adaptation and numerical precision
+            context->UpdateSubresource(output_buffer, 0, nullptr, &linear_exposure, 0u, 0u);
+
+            log_average_exposure.compute_linear_exposure(*context, constant_buffer, pixel_SRV, width, output_UAV);
+
+            float linear_exposure_GPU;
+            Readback::buffer(device, context, output_buffer, &linear_exposure_GPU, &linear_exposure_GPU + 1);
+
+            EXPECT_FLOAT_EQ_PCT(linear_exposure, linear_exposure_GPU, 0.00001f);
+        }
+    }
 };
 
 TEST_F(LogAverageLuminanceFixture, tiny_image) {
     using namespace Cogwheel::Math;
-
-    auto device = create_performant_device1();
-    OID3D11DeviceContext1 context;
-    device->GetImmediateContext1(&context);
-
-    LogAverageLuminance& log_average_exposure = LogAverageLuminance(*device, DX11_SHADER_ROOT);
-
-    float min_log_luminance = -8;
-    float max_log_luminance = 4;
-    OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance);
 
     // Image with one element in each bucket.
     const unsigned int pixel_count = 64;
@@ -75,39 +120,15 @@ TEST_F(LogAverageLuminanceFixture, tiny_image) {
         half g = half(float(i));
         pixels[i] = { g, g, g, half(1.0f) };
     }
-    OID3D11ShaderResourceView pixel_SRV = create_texture_SRV(device, pixel_count, 1, pixels);
 
-    OID3D11UnorderedAccessView log_average_UAV;
-    OID3D11Buffer log_average_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &log_average_UAV);
-    log_average_exposure.compute_log_average(*context, constant_buffer, pixel_SRV, pixel_count, log_average_UAV);
-
-    float log_average_GPU;
-    Readback::buffer(device, context, log_average_buffer, &log_average_GPU, &log_average_GPU + 1);
-
-    double log_average = 0.0;
-    for (int i = 0; i < pixel_count; ++i)
-        log_average += log2(fmaxf(pixels[i].x, 0.0001f));
-    log_average /= pixel_count;
-
-    EXPECT_FLOAT_EQ((float)log_average, log_average_GPU);
+    test_image(pixel_count, 1, pixels);
 }
 
 TEST_F(LogAverageLuminanceFixture, large_image) {
     using namespace Cogwheel::Math;
 
-    auto device = create_performant_device1();
-    OID3D11DeviceContext1 context;
-    device->GetImmediateContext1(&context);
-
-    LogAverageLuminance& log_average_exposure = LogAverageLuminance(*device, DX11_SHADER_ROOT);
-
-    float min_log_luminance = -8;
-    float max_log_luminance = 4;
-    OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance);
-
-    // Image with one element in each bucket.
     const unsigned int width = LogAverageLuminance::max_groups_dispatched * LogAverageLuminance::group_width + 17;
-    const unsigned int height = 13;
+    const unsigned int height = 21;
     const unsigned int pixel_count = width * height;
     half4* pixels = new half4[pixel_count];
     for (int i = 0; i < pixel_count; ++i) {
@@ -116,21 +137,22 @@ TEST_F(LogAverageLuminanceFixture, large_image) {
     }
     std::random_shuffle(pixels, pixels + pixel_count);
 
-    OID3D11ShaderResourceView pixel_SRV = create_texture_SRV(device, width, height, pixels);
+    test_image(width, height, pixels);
+}
 
-    OID3D11UnorderedAccessView log_average_UAV;
-    OID3D11Buffer log_average_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &log_average_UAV);
-    log_average_exposure.compute_log_average(*context, constant_buffer, pixel_SRV, width, log_average_UAV);
+TEST_F(LogAverageLuminanceFixture, black_image) {
+    using namespace Cogwheel::Math;
 
-    float log_average_GPU;
-    Readback::buffer(device, context, log_average_buffer, &log_average_GPU, &log_average_GPU + 1);
-
-    double log_average = 0.0;
+    const unsigned int width = LogAverageLuminance::max_groups_dispatched * LogAverageLuminance::group_width + 17;
+    const unsigned int height = 21;
+    const unsigned int pixel_count = width * height;
+    const half zero = half(0.0f);
+    half4* pixels = new half4[pixel_count];
     for (int i = 0; i < pixel_count; ++i)
-        log_average += log2(fmaxf(pixels[i].x, 0.0001f));
-    log_average /= pixel_count;
+        pixels[i] = { zero, zero, zero, half(1.0f) };
+    std::random_shuffle(pixels, pixels + pixel_count);
 
-    EXPECT_FLOAT_EQ((float)log_average, log_average_GPU);
+    test_image(width, height, pixels);
 }
 
 } // NS DX11Renderer
