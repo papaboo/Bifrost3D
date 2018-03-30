@@ -49,7 +49,7 @@ private:
                  OID3D11ComputeShader& second_reduction, ID3D11UnorderedAccessView* output_UAV);
 
     OID3D11ComputeShader m_log_average_first_reduction;
-    OID3D11ComputeShader m_log_average_second_reduction;
+    OID3D11ComputeShader m_log_average_computation;
     OID3D11ShaderResourceView m_log_averages_SRV;
     OID3D11UnorderedAccessView m_log_averages_UAV;
 

@@ -57,9 +57,9 @@ void first_reduction(uint3 local_thread_ID : SV_GroupThreadID, uint3 group_ID : 
 
 // Compute linear exposure from the geometric mean. See MJP's tonemapping sample.
 // https://mynameismjp.wordpress.com/2010/04/30/a-closer-look-at-tone-mapping/
-float geometric_mean_linear_exposure(float average_luminance) {
-    float key_value = 1.03f - (2.0f / (2 + log2(average_luminance + 1)));
-    return key_value / average_luminance;
+float geometric_mean_linear_exposure(float log_average_luminance) {
+    float key_value = 1.03f - (2.0f / (2 + log2(log_average_luminance + 1)));
+    return key_value / log_average_luminance;
 }
 
 // Single element buffer.
@@ -82,13 +82,13 @@ void sum_shared_log_average(uint thread_ID) {
 }
 
 [numthreads(MAX_GROUPS_DISPATCHED, 1, 1)]
-void second_reduction(uint3 local_thread_ID : SV_GroupThreadID) {
+void compute_log_average(uint3 local_thread_ID : SV_GroupThreadID) {
     uint thread_ID = local_thread_ID.x;
 
     sum_shared_log_average(thread_ID);
 
     if (thread_ID == 0)
-        linear_exposure_buffer[0] = shared_log_average[0];
+        linear_exposure_buffer[0] = exp2(shared_log_average[0]);
 }
 
 [numthreads(MAX_GROUPS_DISPATCHED, 1, 1)]
@@ -100,7 +100,8 @@ void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
     if (thread_ID == 0) {
         float average_log_luminance = shared_log_average[0];
         average_log_luminance = clamp(average_log_luminance, min_log_luminance, max_log_luminance);
-        float linear_exposure = geometric_mean_linear_exposure(exp2(average_log_luminance)) * exp2(log_lumiance_bias);
+        float log_average_luminance = exp2(average_log_luminance);
+        float linear_exposure = geometric_mean_linear_exposure(log_average_luminance) * exp2(log_lumiance_bias);
         linear_exposure_buffer[0] = eye_adaptation(linear_exposure_buffer[0], linear_exposure);
     }
 }

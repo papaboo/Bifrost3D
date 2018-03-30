@@ -23,8 +23,8 @@ LogAverageLuminance::LogAverageLuminance(ID3D11Device1& device, const std::wstri
     OID3DBlob log_average_first_reduction_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::first_reduction");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(log_average_first_reduction_blob), nullptr, &m_log_average_first_reduction));
 
-    OID3DBlob log_average_second_reduction_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::second_reduction");
-    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(log_average_second_reduction_blob), nullptr, &m_log_average_second_reduction));
+    OID3DBlob log_average_computation_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::compute_log_average");
+    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(log_average_computation_blob), nullptr, &m_log_average_computation));
 
     OID3DBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::compute_linear_exposure");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_computation_blob), nullptr, &m_linear_exposure_computation));
@@ -36,7 +36,7 @@ LogAverageLuminance::LogAverageLuminance(ID3D11Device1& device, const std::wstri
 void LogAverageLuminance::compute_log_average(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
                                               ID3D11ShaderResourceView* pixels, unsigned int image_width,
                                               ID3D11UnorderedAccessView* log_average_UAV) {
-    compute(context, constants, pixels, image_width, m_log_average_second_reduction, log_average_UAV);
+    compute(context, constants, pixels, image_width, m_log_average_computation, log_average_UAV);
 }
 
 void LogAverageLuminance::compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
