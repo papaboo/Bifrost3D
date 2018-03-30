@@ -58,7 +58,7 @@ protected:
     // Compute linear exposure from the geometric mean. See MJP's tonemapping sample.
     // https://mynameismjp.wordpress.com/2010/04/30/a-closer-look-at-tone-mapping/
     inline float geometric_mean_linear_exposure(float log_average_luminance) {
-        float key_value = 1.03f - (2.0f / (2 + log2(log_average_luminance + 1)));
+        float key_value = 1.03f - (2.0f / (2 + log10(log_average_luminance + 1)));
         return key_value / log_average_luminance;
     }
 
