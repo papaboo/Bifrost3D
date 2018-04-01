@@ -1,25 +1,33 @@
-BACKLOG:
-* Tonemapping
-** HDR backbuffer
-** https://mynameismjp.wordpress.com/2010/04/30/a-closer-look-at-tone-mapping/
-** What does Unreal use?
-** Photomatix (local tonemapper)
 * FXAA
+** Tonemapping should output srgb lumiance in alpha.
+** Togglable.
+** Upload parameters
+
+BACKLOG:
 * SSAO
+** Scale application by sin_theta_sqrd / solidangle of light_source to avoid applying AO to delta lights.
+* Film grain
+* Bloom
+
+* Screenshot
+** Request backbuffer through the composer. (when the image is converged)
+*** Request to composer or through the camera.
+*** Expose certain backbuffer state pr camera/viewport in a renderer interface. Fx iteration_count, is_continuous_renderer and so on. Members that can be used to evaluate the 'doneness' of a backbuffer.
+**** Investigate and potentially use C++ async concepts for this.
+*** Both HDR and LDR buffers. HDR buffers should not be tone mapped, color corrected or gamma corrected.
+** Render to offscreen buffer stored on the camera.
+*** Let it iterate for multiple frames to converge.
+** Render to window if a window is specified. Can a window and framebuffer can have separate viewports? And then what? Render with the highest resolution and downscale?
+
 * OptiX (filtering) backends
 ** Filter neighbouring light samples before reconstruction - Screen space photon mapping approach with MIS weights / Path filtering.
-*** Output buffers
-**** Material ID, texcoord, position, normal, ray dir, weight, light sample, indirect sample 
-**** Define for toggling between compressed and full precision buffers.
-**** Compressed directions.
-**** Compressed radiance sample: half3 radiance, half PDF, 32bit encoded direction, float distance := 16 byte aligned.
+*** Output buffers: Material ID, texcoord, position, normal, ray dir, weight, light sample, indirect sample. Define for compressing directions and use half/byte for some values.
 *** Output screen space sample based on path/BSDF PDF.
 **** Perhaps select a vertex if the BSDF PDF is less than 1 / PI or maybe even a bit more. Then vertices are selected roughly proportional to how 'diffuse' they are.
 **** Trace ray footprint by assuming the ray is a cone. Then use Distributions::Cone::CosTheta(float angle) to compute the angle of each new cone after an intersection and use that for the density estimation kernel bandwidth.
-** Mitchell filter
 ** Pass BSDF and light sample to the path tracing RGP and let it handle accumulated radiance.
+* GLFW 3.3 - Handle windows high DPI scaling.
 * Material improvements
-** Support roughness texture (alpha in diffuse texture)
 ** Metal specular tint should go to white at grazing angles.
 ** Importance sample improvement?
 *** Gold, which is a specular metal, has a specular weight of 0.6, so it's (supposedly) 40% diffuse.
@@ -32,12 +40,6 @@ BACKLOG:
 *** https://www.youtube.com/watch?v=4nKb9hRYbPA
 *** Or just add a GGX layer on top with an iridescence parameter (red and blue fresnel offset relative to green.)
 * Multiple cameras.
-* Screenshot
-** Render to offscreen buffer.
-** Grab backbuffer on the CPU. (when the image is converged)
-*** Request to composer or through the camera.
-*** Expose certain backbuffer state pr camera/viewport in a renderer interface. Fx iteration_count, is_continuous_renderer and so on. Members that can be used to evaluate the 'doneness' of a backbuffer.
-**** Investigate and potentially use C++ async concepts for this.
 * Normals revisited
 ** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
@@ -49,7 +51,8 @@ BACKLOG:
 *** Use IOR computed from specularity.
 * Multiple scenes.
 ** Only nodes in a certain scene should be rendered.
-** Should a scene node know if it is in a scene and in which? Store the root scene ID pr node?
+** Should a scene node know if it is in a scene and in which? Store the root scene ID pr node?'
+** When loading models/scenes, store them in scene 0, i.e. the invalid one.
 * 3DS, STL and PLY loader.
 * Serialize scene and models, perhaps just build GLFT importer and exporter at first. https://github.com/KhronosGroup/glTF
 ** https://github.com/syoyo/tinygltf
@@ -60,3 +63,4 @@ libs
 * LuaJit - OpenSource (Fallback to interpretted Lua if the target architecture isn't supported.)
 * MXNet or TensorFlow for deep learning. Use CuDNN directly for inference.
 * CUDA launch config - https://github.com/jaredhoberock/cuda_launch_config
+* Ceres solver
