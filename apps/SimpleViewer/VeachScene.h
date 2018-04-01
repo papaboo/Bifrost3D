@@ -65,7 +65,7 @@ void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sce
     }
 
     float light_distance;
-    Vector3f light_mean_position;
+    Vector3f light_mean_position = Vector3f::zero();
     { // Create lights.
 
         const int light_count = 4;
