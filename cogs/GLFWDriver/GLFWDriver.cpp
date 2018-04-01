@@ -59,8 +59,10 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
     Engine engine(data_path);
     if (on_launch != nullptr) {
         int error_code = on_launch(engine);
-        if (error_code != 0)
+        if (error_code != 0) {
+            glfwTerminate();
             return error_code;
+        }
     }
 
     Cogwheel::Core::Window& engine_window = engine.get_window();
@@ -89,12 +91,28 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
         { // Setup keyboard
             g_keyboard = new Keyboard();
             engine.set_keyboard(g_keyboard);
-            GLFWkeyfun keyboard_callback = [](GLFWwindow* window, int key, int scancode, int action, int mods) {
+            static GLFWkeyfun keyboard_callback = [](GLFWwindow* window, int key, int scancode, int action, int mods) {
                 if (action == GLFW_REPEAT)
                     return;
                 g_keyboard->key_tapped(Keyboard::Key(key), action == GLFW_PRESS);
+
+                if (action == GLFW_PRESS) {
+                    if (key == GLFW_KEY_BACKSPACE)
+                        g_keyboard->add_codepoint(8);
+                    else if (key == GLFW_KEY_TAB)
+                        g_keyboard->add_codepoint(9);
+                    else if (key == GLFW_KEY_ENTER)
+                        g_keyboard->add_codepoint(13);
+                    else if (key == GLFW_KEY_DELETE)
+                        g_keyboard->add_codepoint(127);
+                }
             };
             glfwSetKeyCallback(window, keyboard_callback);
+
+            static GLFWcharfun character_callback = [](GLFWwindow* window, unsigned int codepoint) {
+                g_keyboard->add_codepoint(codepoint);
+            };
+            glfwSetCharCallback(window, character_callback);
         }
 
         { // Setup mouse
@@ -111,7 +129,6 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
             static GLFWmousebuttonfun mouse_button_callback = [](GLFWwindow* window, int button, int action, int mods) {
                 if (action == GLFW_REPEAT || button >= int(Mouse::Button::ButtonCount))
                     return;
-
                 g_mouse->button_tapped(Mouse::Button(button), action == GLFW_PRESS);
             };
             glfwSetMouseButtonCallback(window, mouse_button_callback);

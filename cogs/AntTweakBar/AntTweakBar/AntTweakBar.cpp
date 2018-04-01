@@ -21,62 +21,6 @@ using namespace Cogwheel::Math;
 
 namespace AntTweakBar {
 
-int* create_keyboard_key_map() {
-    int* key_map = new int[int(Keyboard::Key::KeyCount)];
-    key_map[int(Keyboard::Key::Space)] = ' ';
-    key_map[int(Keyboard::Key::Apostrophe)] = '\'';
-    key_map[int(Keyboard::Key::Comma)] = ',';
-    key_map[int(Keyboard::Key::Minus)] = '-';
-    key_map[int(Keyboard::Key::Period)] = '.';
-    key_map[int(Keyboard::Key::Slash)] = '/';
-
-    for (int k = int(Keyboard::Key::Key0); k <= int(Keyboard::Key::Key9); ++k)
-        key_map[k] = '0' + k - int(Keyboard::Key::Key0);
-
-    key_map[int(Keyboard::Key::Semicolon)] = ';';
-    key_map[int(Keyboard::Key::Equal)] = '=';
-
-    for (int k = int(Keyboard::Key::A); k <= int(Keyboard::Key::Z); ++k)
-        key_map[k] = 'a' + k - int(Keyboard::Key::A);
-
-    key_map[int(Keyboard::Key::Semicolon)] = ';';
-    key_map[int(Keyboard::Key::LeftBracket)] = '[';
-    key_map[int(Keyboard::Key::Backslash)] = '\\';
-    key_map[int(Keyboard::Key::RightBracket)] = ']';
-    key_map[int(Keyboard::Key::GraveAccent)] = '`';
-
-    key_map[int(Keyboard::Key::Escape)] = TW_KEY_ESCAPE;
-    key_map[int(Keyboard::Key::Enter)] = TW_KEY_RETURN;
-    key_map[int(Keyboard::Key::Tab)] = TW_KEY_TAB;
-    key_map[int(Keyboard::Key::Backspace)] = TW_KEY_BACKSPACE;
-    key_map[int(Keyboard::Key::Insert)] = TW_KEY_INSERT;
-    key_map[int(Keyboard::Key::Delete)] = TW_KEY_DELETE;
-    key_map[int(Keyboard::Key::Right)] = TW_KEY_RIGHT;
-    key_map[int(Keyboard::Key::Left)] = TW_KEY_LEFT;
-    key_map[int(Keyboard::Key::Down)] = TW_KEY_DOWN;
-    key_map[int(Keyboard::Key::Up)] = TW_KEY_UP;
-    key_map[int(Keyboard::Key::PageUp)] = TW_KEY_PAGE_UP;
-    key_map[int(Keyboard::Key::PageDown)] = TW_KEY_PAGE_DOWN;
-    key_map[int(Keyboard::Key::Home)] = TW_KEY_HOME;
-    key_map[int(Keyboard::Key::End)] = TW_KEY_END;
-
-    for (int k = int(Keyboard::Key::F1); k <= int(Keyboard::Key::F15); ++k)
-        key_map[k] = TW_KEY_F1 + k - int(Keyboard::Key::F1);
-
-    for (int k = int(Keyboard::Key::Keypad0); k <= int(Keyboard::Key::Keypad9); ++k)
-        key_map[k] = '0' + k - int(Keyboard::Key::Keypad0);
-
-    key_map[int(Keyboard::Key::KeypadDecimal)] = '.';
-    key_map[int(Keyboard::Key::KeypadDivide)] = '/';
-    key_map[int(Keyboard::Key::KeypadMultiply)] = '*';
-    key_map[int(Keyboard::Key::KeypadSubtract)] = '-';
-    key_map[int(Keyboard::Key::KeypadAdd)] = '+';
-    key_map[int(Keyboard::Key::KeypadEnter)] = TW_KEY_RETURN;
-    key_map[int(Keyboard::Key::KeypadEqual)] = '=';
-
-    return key_map;
-}
-
 void handle_input(const Cogwheel::Core::Engine& engine) {
 
     // Handle window size.
@@ -107,12 +51,9 @@ void handle_input(const Cogwheel::Core::Engine& engine) {
     }
 
     { // Handle keyboard input.
-        static int* key_map = nullptr;
-        if (key_map == nullptr)
-            key_map = create_keyboard_key_map();
-
         const Keyboard* const keyboard = engine.get_keyboard();
 
+        // Modifiers.
         int modifiers = 0;
         if (keyboard->is_pressed(Keyboard::Key::LeftControl) || keyboard->is_pressed(Keyboard::Key::RightControl))
             modifiers |= TW_KMOD_CTRL;
@@ -121,14 +62,28 @@ void handle_input(const Cogwheel::Core::Engine& engine) {
         if (keyboard->is_pressed(Keyboard::Key::LeftShift) || keyboard->is_pressed(Keyboard::Key::RightShift))
             modifiers |= TW_KMOD_SHIFT;
 
-        for (int k = 0; k < int(Keyboard::Key::KeyCount); ++k)
-            if (keyboard->was_pressed(Keyboard::Key(k))) {
-                int key = key_map[k];
-                bool upper_case = int(Keyboard::Key::A) <= k && k <= int(Keyboard::Key::Z) && (modifiers & TW_KMOD_SHIFT) != 0;
-                if (upper_case)
-                    key += 'A' - 'a';
-                TwKeyPressed(key, modifiers);
-            }
+        // Function keys.
+        if (keyboard->was_released(Keyboard::Key::Pause))
+            TwKeyPressed(TW_KEY_PAUSE, modifiers);
+        else if (keyboard->was_released(Keyboard::Key::Escape))
+            TwKeyPressed(TW_KEY_ESCAPE, modifiers);
+        else if (keyboard->was_released(Keyboard::Key::Right))
+            TwKeyPressed(TW_KEY_RIGHT, modifiers);
+        else if (keyboard->was_released(Keyboard::Key::Left))
+            TwKeyPressed(TW_KEY_LEFT, modifiers);
+        else if (keyboard->was_released(Keyboard::Key::Down))
+            TwKeyPressed(TW_KEY_DOWN, modifiers);
+        else if (keyboard->was_released(Keyboard::Key::Up))
+            TwKeyPressed(TW_KEY_UP, modifiers);
+        else if (keyboard->was_released(Keyboard::Key::Home))
+            TwKeyPressed(TW_KEY_HOME, modifiers);
+        else if (keyboard->was_released(Keyboard::Key::End))
+            TwKeyPressed(TW_KEY_END, modifiers);
+
+        // Text.
+        const std::wstring& text = keyboard->get_text();
+        for (int i = 0; i < text.length(); ++i)
+            TwKeyPressed(text[i], modifiers);
     }
 }
 

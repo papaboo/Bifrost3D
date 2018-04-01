@@ -114,6 +114,7 @@ public:
             state.is_pressed = false;
             state.halftaps = 0u;
         }
+        m_text.reserve(32);
     }
 
     inline bool is_pressed(Key key) const { return m_key_states[(unsigned int)key].is_pressed; }
@@ -140,9 +141,16 @@ public:
             || is_pressed(Key::RightShift) || is_pressed(Key::RightControl) || is_pressed(Key::RightAlt) || is_pressed(Key::RightSuper);
     }
 
+    inline void add_codepoint(wchar_t codepoint) {
+        m_text.append(&codepoint, 1);
+    }
+
+    inline const std::wstring& get_text() const { return m_text; }
+
     inline void per_frame_reset() {
         for (KeyState& state : m_key_states)
             state.halftaps = 0u;
+        m_text.clear();
     }
 
 private:
@@ -154,6 +162,8 @@ private:
     };
 
     std::array<KeyState, (unsigned int)Key::KeyCount> m_key_states;
+
+    std::wstring m_text;
 };
 
 } // NS Input

@@ -201,8 +201,30 @@ LRESULT handle_input(UINT message, WPARAM wParam, LPARAM lParam) {
                 // This also happens to be a wonderful fix to Print Screen not producing down events.
                 if (g_keyboard->is_released(key))
                     g_keyboard->key_tapped(key, true);
-                g_keyboard->key_tapped(key, false);
+            g_keyboard->key_tapped(key, false);
         }
+        break;
+    }
+    case WM_CHAR:
+    case WM_SYSCHAR:
+    case WM_UNICHAR: {
+        if (message == WM_UNICHAR && wParam == UNICODE_NOCHAR)
+            // WM_UNICHAR is not sent by Windows, but is sent by some third-party input method engine
+            // Returning TRUE here announces support for this message
+            // See https://msdn.microsoft.com/en-us/library/windows/desktop/ms646288(v=vs.85).aspx
+            return 1;
+
+        unsigned int codepoint = unsigned int(wParam);
+
+        // Ignore function keys
+        const unsigned int BACKSPACE_CODE_POINT = 8;
+        const unsigned int TAB_CODE_POINT = 9;
+        const unsigned int RETURN_CODE_POINT = 13;
+        if ((codepoint < 32 && codepoint != BACKSPACE_CODE_POINT && codepoint != TAB_CODE_POINT && codepoint != RETURN_CODE_POINT)
+            || (codepoint > 127 && codepoint < 160))
+            return 1;
+
+        g_keyboard->add_codepoint(codepoint);
         break;
     }
     default:
