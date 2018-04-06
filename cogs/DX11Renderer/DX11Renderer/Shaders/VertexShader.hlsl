@@ -38,6 +38,7 @@ cbuffer scene_variables : register(b0) {
     float4x4 view_projection_matrix;
     float4 camera_position;
     float4 environment_tint; // .w component is 1 if an environment tex is bound, otherwise 0.
+    float4x4 inverted_view_projection_matrix;
 };
 
 cbuffer transform : register(b2) {
