@@ -13,10 +13,7 @@
 // ------------------------------------------------------------------------------------------------
 
 cbuffer scene_variables : register(b0) {
-    float4x4 view_projection_matrix;
-    float4 camera_position;
-    float4 environment_tint; // .w component is 1 if an environment tex is bound, otherwise 0.
-    float4x4 inverted_view_projection_matrix;
+    SceneVariables scene_vars;
 };
 
 cbuffer lights : register(b1) {
@@ -57,13 +54,13 @@ Varyings vs(uint primitive_ID : SV_VertexID) {
 
     // Compute position in world space and offset the vertices by the sphere radius along the tangent axis.
     output.world_position.xyz = light.sphere_position();
-    float3x3 tangent_space = create_TBN(normalize(output.world_position.xyz - camera_position.xyz));
+    float3x3 tangent_space = create_TBN(normalize(output.world_position.xyz - scene_vars.camera_position.xyz));
     output.world_position.xyz += (output.texcoord.x * tangent_space[0] + output.texcoord.y * tangent_space[1]) * light.sphere_radius();
     output.world_position.w = 1.0f;
-    output.position = mul(output.world_position, view_projection_matrix);
+    output.position = mul(output.world_position, scene_vars.view_projection_matrix);
     output.world_position.w = light.sphere_radius();
 
-    output.radiance = evaluate_sphere_light(light, camera_position.xyz);
+    output.radiance = evaluate_sphere_light(light, scene_vars.camera_position.xyz);
 
     return output;
 }
@@ -82,12 +79,12 @@ Pixel ps(Varyings input){
         discard;
 
     Pixel pixel;
-    float3 to_camera = normalize(camera_position.xyz - input.world_position.xyz);
+    float3 to_camera = normalize(scene_vars.camera_position.xyz - input.world_position.xyz);
     float sphere_radius = input.world_position.w;
     float offset = sqrt(1.0f - dot(input.texcoord, input.texcoord)) * sphere_radius;
     input.world_position.xyz += to_camera * offset;
     input.world_position.w = 1.0f;
-    float4 projected_position = mul(input.world_position, view_projection_matrix);
+    float4 projected_position = mul(input.world_position, scene_vars.view_projection_matrix);
     pixel.depth = projected_position.z / projected_position.w;
 
     pixel.color = float4(input.radiance, 1.0f);

@@ -26,10 +26,7 @@ float3 project_ray_direction(float2 viewport_pos,
 // ------------------------------------------------------------------------------------------------
 
 cbuffer scene_variables : register(b0) {
-    float4x4 view_projection_matrix;
-    float4 camera_position;
-    float4 environment_tint; // .w component is 1 if an environment tex is bound, otherwise 0.
-    float4x4 inverted_view_projection_matrix;
+    SceneVariables scene_vars;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -64,7 +61,7 @@ SamplerState env_sampler : register(s0);
 
 float4 main_ps(Varyings input) : SV_TARGET {
     float2 viewport_pos = input.texcoord;
-    float3 view_dir = project_ray_direction(viewport_pos, camera_position.xyz, inverted_view_projection_matrix);
+    float3 view_dir = project_ray_direction(viewport_pos, scene_vars.camera_position.xyz, scene_vars.inverted_view_projection_matrix);
     float2 tc = direction_to_latlong_texcoord(view_dir);
-    return float4(environment_tint.rgb * env_tex.SampleLevel(env_sampler, tc, 0).rgb, 1);
+    return float4(scene_vars.environment_tint.rgb * env_tex.SampleLevel(env_sampler, tc, 0).rgb, 1);
 }
