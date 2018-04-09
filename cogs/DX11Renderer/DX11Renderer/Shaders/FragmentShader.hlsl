@@ -75,10 +75,10 @@ float4 output_normals(PixelInput input, bool is_front_face : SV_IsFrontFace) : S
     if (coverage < 0.33f)
         discard;
 
-    // TODO Move to screen space
     float3 world_normal = normalize(input.normal.xyz) * (is_front_face ? 1.0 : -1.0);
+    float3 view_normal = mul(float4(world_normal, 0.0), scene_vars.world_to_view_matrix);
 
-    return float4(world_normal * 0.5 + 0.5, 1.0f);
+    return float4(view_normal * 0.5 + 0.5, 1.0f);
 }
 
 float4 opaque(PixelInput input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {

@@ -52,6 +52,7 @@ struct SceneVariables {
     float4 camera_position;
     float4 environment_tint; // .w component is 1 if an environment tex is bound, otherwise 0.
     float4x4 inverted_view_projection_matrix;
+    float4x3 world_to_view_matrix;
 };
 
 // ------------------------------------------------------------------------------------------------
