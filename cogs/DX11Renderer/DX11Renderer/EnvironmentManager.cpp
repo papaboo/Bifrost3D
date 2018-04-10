@@ -187,36 +187,13 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                     OID3D11ShaderResourceView light_samples_SRV = nullptr;
                     {
                         { // Per pixel PDF.
-                            D3D11_TEXTURE2D_DESC PDF_tex_desc = {};
-                            PDF_tex_desc.Width = light.get_width();
-                            PDF_tex_desc.Height = light.get_height();
-                            PDF_tex_desc.MipLevels = 1;
-                            PDF_tex_desc.ArraySize = 1;
-                            PDF_tex_desc.Format = DXGI_FORMAT_R32_FLOAT;
-                            PDF_tex_desc.SampleDesc.Count = 1;
-                            PDF_tex_desc.SampleDesc.Quality = 0;
-                            PDF_tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
-                            PDF_tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
                             float* per_pixel_PDF_data = new float[light.get_width() * light.get_height()];
                             InfiniteAreaLightUtils::reconstruct_solid_angle_PDF_sans_sin_theta(light, per_pixel_PDF_data);
 
-                            D3D11_SUBRESOURCE_DATA per_pixel_PDF_resource_data = {};
-                            per_pixel_PDF_resource_data.pSysMem = per_pixel_PDF_data;
-                            per_pixel_PDF_resource_data.SysMemPitch = sizeof(float) * light.get_width();
-
-                            HRESULT hr = device.CreateTexture2D(&PDF_tex_desc, &per_pixel_PDF_resource_data, &per_pixel_PDF_texture);
-                            THROW_ON_FAILURE(hr);
+                            create_texture_2D(device, DXGI_FORMAT_R32_FLOAT, per_pixel_PDF_data, light.get_width(), light.get_height(), D3D11_USAGE_IMMUTABLE, &per_pixel_PDF_SRV);
 
                             delete[] per_pixel_PDF_data;
-
-                            D3D11_SHADER_RESOURCE_VIEW_DESC per_pixel_PDF_SRV_desc;
-                            per_pixel_PDF_SRV_desc.Format = DXGI_FORMAT_R32_FLOAT;
-                            per_pixel_PDF_SRV_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-                            per_pixel_PDF_SRV_desc.Texture2D.MipLevels = 1;
-                            per_pixel_PDF_SRV_desc.Texture2D.MostDetailedMip = 0;
-                            hr = device.CreateShaderResourceView(per_pixel_PDF_texture, &per_pixel_PDF_SRV_desc, &per_pixel_PDF_SRV);
-                            THROW_ON_FAILURE(hr);
                         }
 
                         { // Light samples.
