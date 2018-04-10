@@ -41,74 +41,30 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
     using namespace Cogwheel::Assets::Shading;
 
     { // Setup GGX with fresnel rho texture.
-        D3D11_TEXTURE2D_DESC tex_desc = {};
-        tex_desc.Width = Rho::GGX_with_fresnel_angle_sample_count;
-        tex_desc.Height = Rho::GGX_with_fresnel_roughness_sample_count;
-        tex_desc.MipLevels = 1;
-        tex_desc.ArraySize = 1;
-        tex_desc.Format = DXGI_FORMAT_R16_UNORM;
-        tex_desc.SampleDesc.Count = 1;
-        tex_desc.SampleDesc.Quality = 0;
-        tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
-        tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        const unsigned int width = Rho::GGX_with_fresnel_angle_sample_count;
+        const unsigned int height = Rho::GGX_with_fresnel_roughness_sample_count;
 
-        unsigned short* rho = new unsigned short[tex_desc.Width * tex_desc.Height];
-        for (unsigned int i = 0; i < tex_desc.Width * tex_desc.Height; ++i)
+        unsigned short* rho = new unsigned short[width * height];
+        for (unsigned int i = 0; i < width * height; ++i)
             rho[i] = unsigned short(Rho::GGX_with_fresnel[i] * 65535);
 
-        D3D11_SUBRESOURCE_DATA resource_data;
-        resource_data.pSysMem = rho;
-        resource_data.SysMemPitch = sizeof_dx_format(tex_desc.Format) * tex_desc.Width;
-
-        OID3D11Texture2D GGX_with_fresnel_rho_texture;
-        HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &GGX_with_fresnel_rho_texture);
-        THROW_ON_FAILURE(hr);
+        create_texture_2D(device, DXGI_FORMAT_R16_UNORM, rho, width, height, D3D11_USAGE_IMMUTABLE, D3D11_BIND_NONE, &m_GGX_with_fresnel_rho_srv);
 
         delete[] rho;
-
-        D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
-        srv_desc.Format = tex_desc.Format;
-        srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        srv_desc.Texture2D.MipLevels = tex_desc.MipLevels;
-        srv_desc.Texture2D.MostDetailedMip = 0;
-        hr = device.CreateShaderResourceView(GGX_with_fresnel_rho_texture, &srv_desc, &m_GGX_with_fresnel_rho_srv);
-        THROW_ON_FAILURE(hr);
     }
 
     #if SPTD_AREA_LIGHTS
     { // Setup GGX SPTD fit texture.
-        D3D11_TEXTURE2D_DESC tex_desc = {};
-        tex_desc.Width = GGX_SPTD_fit_angular_sample_count;
-        tex_desc.Height = GGX_SPTD_fit_roughness_sample_count;
-        tex_desc.MipLevels = 1;
-        tex_desc.ArraySize = 1;
-        tex_desc.Format = DXGI_FORMAT_R10G10B10A2_UNORM; // TODO Use a threechannelled fixed point format. Alternatively store theta and radius along with two rho parameters.
-        tex_desc.SampleDesc.Count = 1;
-        tex_desc.SampleDesc.Quality = 0;
-        tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
-        tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        const unsigned int width = GGX_SPTD_fit_angular_sample_count;
+        const unsigned int height = GGX_SPTD_fit_roughness_sample_count;
 
-        R10G10B10A2_Unorm* pivots = new R10G10B10A2_Unorm[tex_desc.Width * tex_desc.Height];
-        for (unsigned int i = 0; i < tex_desc.Width * tex_desc.Height; ++i)
-            pivots[i] = R10G10B10A2_Unorm(GGX_SPTD_fit[i].x, cosf(GGX_SPTD_fit[i].y), GGX_SPTD_fit[i].z);
-
-        D3D11_SUBRESOURCE_DATA resource_data;
-        resource_data.pSysMem = pivots;
-        resource_data.SysMemPitch = sizeof_dx_format(tex_desc.Format) * tex_desc.Width;
-
-        OID3D11Texture2D GGX_SPTD_fit_texture;
-        HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &GGX_SPTD_fit_texture);
-        THROW_ON_FAILURE(hr);
+        R10G10B10A2_Unorm* pivots = new R10G10B10A2_Unorm[width * height];
+        for (unsigned int i = 0; i < width * height; ++i)
+            pivots[i] = R10G10B10A2_Unorm(GGX_SPTD_fit[i].x, cosf(GGX_SPTD_fit[i].y), GGX_SPTD_fit[i].z); 
+        
+        create_texture_2D(device, DXGI_FORMAT_R10G10B10A2_UNORM, pivots, width, height, D3D11_USAGE_IMMUTABLE, D3D11_BIND_NONE, &m_GGX_SPTD_fit_srv);
 
         delete[] pivots;
-
-        D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
-        srv_desc.Format = tex_desc.Format;
-        srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        srv_desc.Texture2D.MipLevels = tex_desc.MipLevels;
-        srv_desc.Texture2D.MostDetailedMip = 0;
-        hr = device.CreateShaderResourceView(GGX_SPTD_fit_texture, &srv_desc, &m_GGX_SPTD_fit_srv);
-        THROW_ON_FAILURE(hr);
     }
     #else
         m_GGX_SPTD_fit_srv = nullptr;
