@@ -48,7 +48,7 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         for (unsigned int i = 0; i < width * height; ++i)
             rho[i] = unsigned short(Rho::GGX_with_fresnel[i] * 65535);
 
-        create_texture_2D(device, DXGI_FORMAT_R16_UNORM, rho, width, height, D3D11_USAGE_IMMUTABLE, D3D11_BIND_NONE, &m_GGX_with_fresnel_rho_srv);
+        create_texture_2D(device, DXGI_FORMAT_R16_UNORM, rho, width, height, D3D11_USAGE_IMMUTABLE, &m_GGX_with_fresnel_rho_srv);
 
         delete[] rho;
     }
@@ -62,7 +62,7 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         for (unsigned int i = 0; i < width * height; ++i)
             pivots[i] = R10G10B10A2_Unorm(GGX_SPTD_fit[i].x, cosf(GGX_SPTD_fit[i].y), GGX_SPTD_fit[i].z); 
         
-        create_texture_2D(device, DXGI_FORMAT_R10G10B10A2_UNORM, pivots, width, height, D3D11_USAGE_IMMUTABLE, D3D11_BIND_NONE, &m_GGX_SPTD_fit_srv);
+        create_texture_2D(device, DXGI_FORMAT_R10G10B10A2_UNORM, pivots, width, height, D3D11_USAGE_IMMUTABLE, &m_GGX_SPTD_fit_srv);
 
         delete[] pivots;
     }
