@@ -52,7 +52,7 @@ float3 integration(PixelInput input, bool is_front_face) {
         if (is_sphere_light) {
             // Apply SPTD area light approximation.
 #if SPTD_AREA_LIGHTS
-            float distance_to_camera = length(camera_position.xyz - input.world_position.xyz);
+            float distance_to_camera = length(scene_vars.camera_position.xyz - input.world_position.xyz);
             radiance += SPTD::evaluate_sphere_light(light, default_shading, sptd_ggx_fit_tex,
                 input.world_position.xyz, world_to_shading_TBN, wo, distance_to_camera);
 #else
