@@ -89,7 +89,7 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
         pixels[i] = { g, g, g, half(1.0f) };
     }
     OID3D11ShaderResourceView pixel_SRV;
-    create_texture_2D(*device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, bin_count, 1, D3D11_BIND_NONE, &pixel_SRV, nullptr);
+    create_texture_2D(*device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, bin_count, 1, &pixel_SRV);
 
     OID3D11ShaderResourceView& histogram_SRV = histogram.reduce_histogram(*context, constant_buffer, pixel_SRV, bin_count);
 
@@ -134,7 +134,7 @@ TEST_F(ExposureHistogramFixture, small_image) {
         pixels[x + 5 * width] = half4(Vector4f(max_luminance, max_luminance, max_luminance, 1.0f));
     }
     OID3D11ShaderResourceView pixel_SRV;
-    create_texture_2D(*device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, D3D11_BIND_NONE, &pixel_SRV, nullptr);
+    create_texture_2D(*device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, &pixel_SRV);
 
     OID3D11ShaderResourceView& histogram_SRV = histogram.reduce_histogram(*context, constant_buffer, pixel_SRV, width);
 

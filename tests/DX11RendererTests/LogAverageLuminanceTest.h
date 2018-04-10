@@ -48,7 +48,7 @@ protected:
         OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance);
 
         OID3D11ShaderResourceView pixel_SRV;
-        create_texture_2D(*device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, D3D11_BIND_NONE, &pixel_SRV, nullptr);
+        create_texture_2D(*device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, &pixel_SRV);
 
         OID3D11UnorderedAccessView output_UAV;
         OID3D11Buffer output_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &output_UAV);
