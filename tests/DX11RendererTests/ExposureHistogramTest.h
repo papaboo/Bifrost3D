@@ -28,32 +28,6 @@ namespace DX11Renderer {
 class ExposureHistogramFixture : public ::testing::Test {
 protected:
 
-    inline OID3D11ShaderResourceView create_texture_SRV(OID3D11Device1& device, unsigned int width, unsigned int height, half4* pixels) {
-        D3D11_TEXTURE2D_DESC tex_desc;
-        tex_desc.Width = width;
-        tex_desc.Height = height;
-        tex_desc.MipLevels = 1;
-        tex_desc.ArraySize = 1;
-        tex_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-        tex_desc.SampleDesc.Count = 1;
-        tex_desc.SampleDesc.Quality = 0;
-        tex_desc.Usage = D3D11_USAGE_DEFAULT;
-        tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        tex_desc.CPUAccessFlags = 0;
-        tex_desc.MiscFlags = 0;
-
-        D3D11_SUBRESOURCE_DATA resource_data = {};
-        resource_data.SysMemPitch = sizeof_dx_format(tex_desc.Format) * width;
-        resource_data.SysMemSlicePitch = resource_data.SysMemPitch * height;
-        resource_data.pSysMem = pixels;
-
-        OID3D11Texture2D texture;
-        THROW_ON_FAILURE(device->CreateTexture2D(&tex_desc, &resource_data, &texture));
-        OID3D11ShaderResourceView texture_SRV;
-        THROW_ON_FAILURE(device->CreateShaderResourceView(texture, nullptr, &texture_SRV));
-        return texture_SRV;
-    }
-
     // Unreal 4 PostProcessHistogramCommon.ush::ComputeAverageLuminaneWithoutOutlier
     inline float compute_average_luminance_without_outlier(unsigned int* histogram_begin, unsigned int* histogram_end, 
         float min_percentage, float max_percentage, float min_log_luminance, float max_log_luminance) {
@@ -114,7 +88,8 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
         half g = half(exp2(lerp(min_log_luminance, max_log_luminance, (i + 0.5f) / bin_count)));
         pixels[i] = { g, g, g, half(1.0f) };
     }
-    OID3D11ShaderResourceView pixel_SRV = create_texture_SRV(device, bin_count, 1, pixels);
+    OID3D11ShaderResourceView pixel_SRV;
+    create_texture_2D(*device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, bin_count, 1, D3D11_BIND_NONE, &pixel_SRV, nullptr);
 
     OID3D11ShaderResourceView& histogram_SRV = histogram.reduce_histogram(*context, constant_buffer, pixel_SRV, bin_count);
 
@@ -158,7 +133,8 @@ TEST_F(ExposureHistogramFixture, small_image) {
         float max_luminance = exp2(max_log_luminance) * 2.0f;
         pixels[x + 5 * width] = half4(Vector4f(max_luminance, max_luminance, max_luminance, 1.0f));
     }
-    OID3D11ShaderResourceView pixel_SRV = create_texture_SRV(device, width, height, pixels);
+    OID3D11ShaderResourceView pixel_SRV;
+    create_texture_2D(*device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, D3D11_BIND_NONE, &pixel_SRV, nullptr);
 
     OID3D11ShaderResourceView& histogram_SRV = histogram.reduce_histogram(*context, constant_buffer, pixel_SRV, width);
 

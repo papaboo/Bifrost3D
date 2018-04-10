@@ -29,32 +29,6 @@ namespace DX11Renderer {
 class LogAverageLuminanceFixture : public ::testing::Test {
 protected:
 
-    inline OID3D11ShaderResourceView create_texture_SRV(OID3D11Device1& device, unsigned int width, unsigned int height, half4* pixels) {
-        D3D11_TEXTURE2D_DESC tex_desc;
-        tex_desc.Width = width;
-        tex_desc.Height = height;
-        tex_desc.MipLevels = 1;
-        tex_desc.ArraySize = 1;
-        tex_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-        tex_desc.SampleDesc.Count = 1;
-        tex_desc.SampleDesc.Quality = 0;
-        tex_desc.Usage = D3D11_USAGE_DEFAULT;
-        tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        tex_desc.CPUAccessFlags = 0;
-        tex_desc.MiscFlags = 0;
-
-        D3D11_SUBRESOURCE_DATA resource_data = {};
-        resource_data.SysMemPitch = sizeof_dx_format(tex_desc.Format) * width;
-        resource_data.SysMemSlicePitch = resource_data.SysMemPitch * height;
-        resource_data.pSysMem = pixels;
-
-        OID3D11Texture2D texture;
-        THROW_ON_FAILURE(device->CreateTexture2D(&tex_desc, &resource_data, &texture));
-        OID3D11ShaderResourceView texture_SRV;
-        THROW_ON_FAILURE(device->CreateShaderResourceView(texture, nullptr, &texture_SRV));
-        return texture_SRV;
-    }
-
     // Compute linear exposure from the geometric mean. See MJP's tonemapping sample.
     // https://mynameismjp.wordpress.com/2010/04/30/a-closer-look-at-tone-mapping/
     inline float geometric_mean_linear_exposure(float log_average_luminance) {
@@ -73,7 +47,8 @@ protected:
         float max_log_luminance = 24;
         OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance);
 
-        OID3D11ShaderResourceView pixel_SRV = create_texture_SRV(device, width, height, pixels);
+        OID3D11ShaderResourceView pixel_SRV;
+        create_texture_2D(*device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, D3D11_BIND_NONE, &pixel_SRV, nullptr);
 
         OID3D11UnorderedAccessView output_UAV;
         OID3D11Buffer output_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &output_UAV);
