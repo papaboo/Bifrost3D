@@ -44,7 +44,7 @@ inline DX11Renderer::OID3D11Buffer create_tonemapping_constants(DX11Renderer::OI
 // -------------------------------------------------------------------------------------------------
 
 inline bool almost_equal_eps(float lhs, float rhs, float eps) {
-    return lhs < rhs + eps && lhs + eps > rhs;
+    return abs(lhs - rhs) < eps;
 }
 
 #define EXPECT_FLOAT_EQ_EPS(expected, actual, epsilon) EXPECT_PRED3(almost_equal_eps, expected, actual, epsilon)
@@ -55,5 +55,16 @@ inline bool almost_equal_percentage(float lhs, float rhs, float percentage) {
 }
 
 #define EXPECT_FLOAT_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(almost_equal_percentage, expected, actual, percentage)
+
+static bool equal_vector3f(Cogwheel::Math::Vector3f lhs, Cogwheel::Math::Vector3f rhs) {
+    return Cogwheel::Math::almost_equal(lhs.x, rhs.x) && Cogwheel::Math::almost_equal(lhs.y, rhs.y) && Cogwheel::Math::almost_equal(lhs.z, rhs.z);
+}
+#define EXPECT_VECTOR3F_EQ(expected, actual) EXPECT_PRED2(equal_vector3f, expected, actual)
+
+static bool equal_Vector3f_pct(Cogwheel::Math::Vector3f expected, Cogwheel::Math::Vector3f actual, Cogwheel::Math::Vector3f pct) {
+    auto eps = expected * pct;
+    return abs(expected.x - actual.x) < eps.x && abs(expected.y - actual.y) < eps.y && abs(expected.z - actual.z) < eps.z;
+}
+#define EXPECT_VECTOR3F_EQ_PCT(expected, actual, pct) EXPECT_PRED3(equal_Vector3f_pct, expected, actual, pct)
 
 #endif // _DX11RENDERERTEST_UTILS_H_
