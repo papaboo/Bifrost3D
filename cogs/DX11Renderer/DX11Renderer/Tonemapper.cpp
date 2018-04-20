@@ -14,6 +14,130 @@ using namespace Cogwheel::Math;
 namespace DX11Renderer {
 
 // ------------------------------------------------------------------------------------------------
+// Dual Kawase Bloom.
+// ------------------------------------------------------------------------------------------------
+DualKawaseBloom::DualKawaseBloom(ID3D11Device1& device, const std::wstring& shader_folder_path) {
+
+    m_temp = {};
+
+    const std::wstring shader_filename = shader_folder_path + L"ColorGrading/Bloom.hlsl";
+
+    OID3DBlob m_extract_high_intensity_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::extract_high_intensity");
+    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(m_extract_high_intensity_blob), nullptr, &m_extract_high_intensity));
+
+    OID3DBlob downsample_pattern_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::dual_kawase_downsample");
+    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(downsample_pattern_blob), nullptr, &m_downsample_pattern));
+
+    OID3DBlob upsample_pattern_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::dual_kawase_upsample");
+    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(upsample_pattern_blob), nullptr, &m_upsample_pattern));
+
+    D3D11_SAMPLER_DESC sampler_desc = {};
+    sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    sampler_desc.MinLOD = 0;
+    sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
+
+    THROW_ON_FAILURE(device.CreateSamplerState(&sampler_desc, &m_bilinear_sampler));
+}
+
+OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, unsigned int half_passes, float intensity_cutoff) {
+    if (m_temp.width != image_width || m_temp.height != image_height) {
+        
+        // Release old resources
+        for (unsigned int m = 0; m < m_temp.mipmap_count; ++m) {
+            m_temp.SRVs[m].release();
+            m_temp.UAVs[m].release();
+        }
+        delete[] m_temp.SRVs;
+        delete[] m_temp.UAVs;
+
+        // Grab the device.
+        ID3D11Device* basic_device;
+        context.GetDevice(&basic_device);
+        OID3D11Device1 device;
+        THROW_ON_FAILURE(basic_device->QueryInterface(IID_PPV_ARGS(&device)));
+        basic_device->Release();
+
+        // Allocate new temporaries
+        m_temp.mipmap_count = 1;
+        while ((image_width >> m_temp.mipmap_count) > 0 || (image_height >> m_temp.mipmap_count) > 0)
+            ++m_temp.mipmap_count;
+
+        D3D11_TEXTURE2D_DESC tex_desc = {};
+        tex_desc.Width = image_width;
+        tex_desc.Height = image_height;
+        tex_desc.MipLevels = m_temp.mipmap_count;
+        tex_desc.ArraySize = 1;
+        tex_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+        tex_desc.SampleDesc.Count = 1;
+        tex_desc.SampleDesc.Quality = 0;
+        tex_desc.Usage = D3D11_USAGE_DEFAULT;
+        tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+
+        OID3D11Texture2D texture2D;
+        HRESULT hr = device->CreateTexture2D(&tex_desc, nullptr, &texture2D);
+        THROW_ON_FAILURE(hr);
+
+        // TODO Create views in two device calls.
+        m_temp.SRVs = new OID3D11ShaderResourceView[m_temp.mipmap_count];
+        m_temp.UAVs = new OID3D11UnorderedAccessView[m_temp.mipmap_count];
+
+        for (unsigned int m = 0; m < m_temp.mipmap_count; ++m) {
+            // SRV
+            D3D11_SHADER_RESOURCE_VIEW_DESC mip_level_SRV_desc;
+            mip_level_SRV_desc.Format = tex_desc.Format;
+            mip_level_SRV_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+            mip_level_SRV_desc.Texture2D.MipLevels = 1;
+            mip_level_SRV_desc.Texture2D.MostDetailedMip = m;
+            THROW_ON_FAILURE(device->CreateShaderResourceView(texture2D, &mip_level_SRV_desc, &m_temp.SRVs[m]));
+
+            // UAV
+            D3D11_UNORDERED_ACCESS_VIEW_DESC mip_level_UAV_desc = {};
+            mip_level_UAV_desc.Format = tex_desc.Format;
+            mip_level_UAV_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+            mip_level_UAV_desc.Texture2D.MipSlice = m;
+            THROW_ON_FAILURE(device->CreateUnorderedAccessView(texture2D, &mip_level_UAV_desc, &m_temp.UAVs[m]));
+        }
+
+        m_temp.width = image_width;
+        m_temp.height = image_height;
+    }
+
+    // Copy high intensity part of image. TODO Upload constant
+    context.CSSetShader(m_extract_high_intensity, nullptr, 0u);
+    context.CSSetSamplers(0, 1, &m_bilinear_sampler);
+    context.CSSetShaderResources(0, 1, &pixels);
+    context.CSSetUnorderedAccessViews(0, 1, &m_temp.UAVs[0], nullptr);
+    context.Dispatch(image_width, image_height, 1);
+
+    // Downsample
+    half_passes = min(half_passes, m_temp.mipmap_count-1);
+    context.CSSetShader(m_downsample_pattern, nullptr, 0u);
+    for (unsigned int p = 0; p < half_passes; ++p) {
+        auto* uav = &m_temp.UAVs[p + 1];
+        context.CSSetUnorderedAccessViews(0, 1, uav, nullptr);
+        auto* srv = &m_temp.SRVs[p];
+        context.CSSetShaderResources(0, 1, srv);
+        unsigned int group_count_x = image_width >> (p + 1), group_count_y = image_height >> (p + 1);
+        context.Dispatch(group_count_x, group_count_y, 1);
+    }
+
+    // Upsample
+    context.CSSetShader(m_upsample_pattern, nullptr, 0u);
+    for (unsigned int p = half_passes; p > 0; --p) {
+        context.CSSetUnorderedAccessViews(0, 1, &m_temp.UAVs[p - 1], nullptr);
+        context.CSSetShaderResources(0, 1, &m_temp.SRVs[p]);
+        unsigned int group_count_x = image_width >> (p - 1), group_count_y = image_height >> (p - 1);
+        context.Dispatch(group_count_x, group_count_y, 1);
+    }
+
+    return m_temp.SRVs[0];
+}
+
+// ------------------------------------------------------------------------------------------------
 // Log average luminance reduction.
 // ------------------------------------------------------------------------------------------------
 LogAverageLuminance::LogAverageLuminance(ID3D11Device1& device, const std::wstring& shader_folder_path) {

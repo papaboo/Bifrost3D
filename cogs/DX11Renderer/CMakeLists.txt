@@ -50,18 +50,19 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/Shaders/BSDFs/GGX.hlsl
   )
 
-  set(SHADERS_COMPUTE_SRC
-    DX11Renderer/Shaders/Compute/PrefixSum.hlsl
-  )
-
   set(SHADERS_COLORGRADING_SRC
+    DX11Renderer/Shaders/ColorGrading/Bloom.hlsl
     DX11Renderer/Shaders/ColorGrading/ReduceExposureHistogram.hlsl
     DX11Renderer/Shaders/ColorGrading/ReduceLogAverageLuminance.hlsl
     DX11Renderer/Shaders/ColorGrading/Tonemapping.hlsl
     DX11Renderer/Shaders/ColorGrading/Utils.hlsl
   )
 
-  set(ALL_SHADER_SRC ${SHADERS_SRC} ${SHADERS_BSDFS_SRC} ${SHADERS_COMPUTE_SRC} ${SHADERS_COLORGRADING_SRC})
+  set(SHADERS_COMPUTE_SRC
+    DX11Renderer/Shaders/Compute/PrefixSum.hlsl
+  )
+
+  set(ALL_SHADER_SRC ${SHADERS_SRC} ${SHADERS_BSDFS_SRC} ${SHADERS_COLORGRADING_SRC} ${SHADERS_COMPUTE_SRC})
 
   add_library(${LIBRARY_NAME}
     ${ROOT_SRC}
@@ -71,8 +72,8 @@ if (DIRECTX_11_FOUND AND WIN32)
   source_group("" FILES ${ROOT_SRC})
   source_group("Shaders" FILES ${SHADERS_SRC})
   source_group("Shaders\\BSDFs" FILES ${SHADERS_BSDFS_SRC})
-  source_group("Shaders\\Compute" FILES ${SHADERS_COMPUTE_SRC})
   source_group("Shaders\\ColorGrading" FILES ${SHADERS_COLORGRADING_SRC})
+  source_group("Shaders\\Compute" FILES ${SHADERS_COMPUTE_SRC})
 
   target_include_directories(${LIBRARY_NAME} 
     PUBLIC . 

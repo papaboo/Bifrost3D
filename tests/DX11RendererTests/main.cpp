@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include <BloomTest.h>
 #include <ExposureHistogramTest.h>
 #include <LogAverageLuminanceTest.h>
 #include <PrefixSumTest.h>

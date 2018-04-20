@@ -3,6 +3,7 @@ if (TARGET DX11Renderer)
   set(PROJECT_NAME "DX11RendererTests")
 
   set(SRCS 
+    BloomTest.h
     ExposureHistogramTest.h
     LogAverageLuminanceTest.h
     main.cpp

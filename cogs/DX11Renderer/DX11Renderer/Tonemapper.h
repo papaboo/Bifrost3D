@@ -16,6 +16,37 @@
 namespace DX11Renderer {
 
 // ------------------------------------------------------------------------------------------------
+// Dual Kawase Bloom.
+// https://community.arm.com/cfs-file/__key/communityserver-blogs-components-weblogfiles/00-00-00-26-50/siggraph2015_2D00_mmg_2D00_marius_2D00_notes.pdf
+// ------------------------------------------------------------------------------------------------
+class DualKawaseBloom {
+public:
+    DualKawaseBloom() = default;
+    DualKawaseBloom(DualKawaseBloom&& other) = default;
+    DualKawaseBloom(ID3D11Device1& device, const std::wstring& shader_folder_path);
+
+    DualKawaseBloom& operator=(DualKawaseBloom&& rhs) = default;
+
+    OID3D11ShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, unsigned int half_passes, float intensity_cutoff);
+
+private:
+    DualKawaseBloom(DualKawaseBloom& other) = delete;
+    DualKawaseBloom& operator=(DualKawaseBloom& rhs) = delete;
+
+    OID3D11SamplerState m_bilinear_sampler;
+
+    struct {
+        unsigned int width, height, mipmap_count;
+        OID3D11ShaderResourceView* SRVs;
+        OID3D11UnorderedAccessView* UAVs;
+    } m_temp;
+
+    OID3D11ComputeShader m_extract_high_intensity;
+    OID3D11ComputeShader m_downsample_pattern;
+    OID3D11ComputeShader m_upsample_pattern;
+};
+
+// ------------------------------------------------------------------------------------------------
 // Functionality for computing the log average luminance of a list of pixels 
 // and dynamically determining the exposure of those pixels.
 // ------------------------------------------------------------------------------------------------
