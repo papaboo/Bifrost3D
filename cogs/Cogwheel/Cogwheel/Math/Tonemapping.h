@@ -34,6 +34,10 @@ struct Parameters final {
     } exposure;
 
     struct {
+        float receiver_threshold;
+    } bloom;
+
+    struct {
         TonemappingMode mode;
     } tonemapping;
 
