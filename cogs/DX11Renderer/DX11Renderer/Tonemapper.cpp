@@ -99,7 +99,7 @@ OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context
     // Copy high intensity part of image. TODO Upload constant
     context.CSSetShader(m_extract_high_intensity, nullptr, 0u);
     context.CSSetShaderResources(0, 1, &pixels);
-    context.CSSetUnorderedAccessViews(0, 1, &m_temp.UAVs[0], nullptr);
+    context.CSSetUnorderedAccessViews(0, 1, &m_temp.UAVs[0], 0u);
     context.Dispatch(ceil_divide(image_width, group_size), ceil_divide(image_height, group_size), 1);
 
     // Downsample
@@ -107,7 +107,7 @@ OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context
     context.CSSetShader(m_downsample_pattern, nullptr, 0u);
     for (unsigned int p = 0; p < half_passes; ++p) {
         auto* uav = &m_temp.UAVs[p + 1];
-        context.CSSetUnorderedAccessViews(0, 1, uav, nullptr);
+        context.CSSetUnorderedAccessViews(0, 1, uav, 0u);
         auto* srv = &m_temp.SRVs[p];
         context.CSSetShaderResources(0, 1, srv);
         unsigned int thread_count_x = image_width >> (p + 1), thread_count_y = image_height >> (p + 1);
@@ -117,11 +117,14 @@ OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context
     // Upsample
     context.CSSetShader(m_upsample_pattern, nullptr, 0u);
     for (unsigned int p = half_passes; p > 0; --p) {
-        context.CSSetUnorderedAccessViews(0, 1, &m_temp.UAVs[p - 1], nullptr);
+        context.CSSetUnorderedAccessViews(0, 1, &m_temp.UAVs[p - 1], 0u);
         context.CSSetShaderResources(0, 1, &m_temp.SRVs[p]);
         unsigned int thread_count_x = image_width >> (p - 1), thread_count_y = image_height >> (p - 1);
         context.Dispatch(ceil_divide(thread_count_x, group_size), ceil_divide(thread_count_y, group_size), 1);
     }
+
+    ID3D11UnorderedAccessView* null_UAV = nullptr;
+    context.CSSetUnorderedAccessViews(0, 1, &null_UAV, 0u);
 
     return m_temp.SRVs[0];
 }
@@ -248,7 +251,9 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
     m_log_average_luminance = LogAverageLuminance(device, shader_folder_path);
     m_exposure_histogram = ExposureHistogram(device, shader_folder_path);
 
-    { // Setup shaders
+    m_bloom = DualKawaseBloom(device, shader_folder_path);
+
+    { // Setup tonemapping shaders
         const std::wstring shader_filename = shader_folder_path + L"ColorGrading/Tonemapping.hlsl";
 
         OID3DBlob linear_exposure_from_bias_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::linear_exposure_from_constant_bias");
@@ -311,7 +316,9 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
     }
 
     context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
+    context.PSSetConstantBuffers(0, 1, &m_constant_buffer);
     context.PSSetSamplers(0, 1, &m_bilinear_sampler); // TODO Get rid of when all shaders are compute.
+    context.CSSetConstantBuffers(0, 1, &m_constant_buffer);
     context.CSSetSamplers(0, 1, &m_bilinear_sampler);
 
     { // Determine exposure.
@@ -331,6 +338,11 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
         }
     }
 
+    // Bloom filter.
+    ID3D11ShaderResourceView* bloom_SRV = nullptr;
+    if (parameters.bloom.receiver_threshold < INFINITY)
+        bloom_SRV = m_bloom.filter(context, m_constant_buffer, m_bilinear_sampler, pixel_SRV, width, height, 3).get();
+
     { // Tonemap and render into backbuffer.
         context.VSSetShader(m_fullscreen_VS, 0, 0);
 
@@ -341,8 +353,8 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
         else // parameters.tonemapping.mode == TonemappingMode::Filmic
             context.PSSetShader(m_filmic_tonemapping_PS, 0, 0);
 
-        ID3D11ShaderResourceView* srvs[2] = { pixel_SRV, m_linear_exposure_SRV };
-        context.PSSetShaderResources(0, 2, srvs);
+        ID3D11ShaderResourceView* srvs[3] = { pixel_SRV, m_linear_exposure_SRV, bloom_SRV };
+        context.PSSetShaderResources(0, 3, srvs);
 
         context.Draw(3, 0);
     }

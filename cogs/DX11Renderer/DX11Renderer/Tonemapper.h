@@ -168,6 +168,8 @@ private:
     ExposureHistogram m_exposure_histogram;
     OID3D11ComputeShader m_linear_exposure_from_bias_shader;
 
+    DualKawaseBloom m_bloom;
+
     OID3D11VertexShader m_fullscreen_VS;
     OID3D11PixelShader m_linear_tonemapping_PS;
     OID3D11PixelShader m_uncharted2_tonemapping_PS;

@@ -142,17 +142,25 @@ inline float3 unreal4(float3 color, float slope = 0.91f, float toe = 0.53f, floa
 // Tonemapping pixel shaders.
 // ------------------------------------------------------------------------------------------------
 
+SamplerState bilinear_sampler : register(s0);
+
 Texture2D pixels : register(t0);
 Buffer<float> linear_exposure_buffer : register(t1);
+Texture2D bloom_texture : register(t2);
+
+float3 get_pixel_color(int2 pixel_index, float2 uv) {
+    float linear_exposure = linear_exposure_buffer[0];
+    float3 low_intensity_color = min(pixels[pixel_index].rgb, bloom_threshold);
+    float3 bloom_color = bloom_texture.SampleLevel(bilinear_sampler, uv, 0).rgb;
+    return linear_exposure * (low_intensity_color + bloom_color);
+}
 
 float4 linear_tonemapping_ps(Varyings input) : SV_TARGET {
-    float linear_exposure = linear_exposure_buffer[0];
-    return pixels[int2(input.position.xy)] * linear_exposure;
+    return float4(get_pixel_color(int2(input.position.xy), input.texcoord), 1.0f);
 }
 
 float4 uncharted2_tonemapping_ps(Varyings input) : SV_TARGET {
-    float linear_exposure = linear_exposure_buffer[0];
-    float3 color = linear_exposure * pixels[int2(input.position.xy)].rgb;
+    float3 color = get_pixel_color(int2(input.position.xy), input.texcoord);
 
     // Tonemapping.
     float shoulder_strength = 0.22f;
@@ -168,8 +176,7 @@ float4 uncharted2_tonemapping_ps(Varyings input) : SV_TARGET {
 }
 
 float4 unreal4_tonemapping_ps(Varyings input) : SV_TARGET{
-    float linear_exposure = linear_exposure_buffer[0];
-    float3 color = linear_exposure * pixels[int2(input.position.xy)].rgb;
+    float3 color = get_pixel_color(int2(input.position.xy), input.texcoord);
 
     // Tonemapping.
     return float4(unreal4(color), 1.0);
