@@ -26,7 +26,13 @@ namespace DX11Renderer {
 // ------------------------------------------------------------------------------------------------
 class Bloom : public ::testing::Test {
 protected:
-  
+    inline OID3D11Buffer create_constants(OID3D11Device1& device, float bloom_threshold) {
+        Tonemapper::Constants constants;
+        constants.bloom_threshold = bloom_threshold;
+        OID3D11Buffer constant_buffer;
+        THROW_ON_FAILURE(create_constant_buffer(device, constants, &constant_buffer));
+        return constant_buffer;
+    }
 };
 
 TEST_F(Bloom, dual_kawase_energy_conservation) {
@@ -53,9 +59,14 @@ TEST_F(Bloom, dual_kawase_energy_conservation) {
     OID3D11ShaderResourceView pixel_SRV;
     create_texture_2D(*device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, &pixel_SRV);
 
+    OID3D11Buffer constants = create_constants(device, 0.0f);
+    context->CSSetConstantBuffers(0, 1, &constants);
+    OID3D11SamplerState bilinear_sampler = create_bilinear_sampler(device);
+    context->CSSetSamplers(0, 1, &bilinear_sampler);
+
     // Blur
     DualKawaseBloom bloom = DualKawaseBloom(*device, DX11_SHADER_ROOT);
-    auto& filtered_SRV = bloom.filter(context, pixel_SRV, width, height, 1, 1.0f);
+    auto& filtered_SRV = bloom.filter(context, constants, bilinear_sampler, pixel_SRV, width, height, 1);
 
     ID3D11Resource* filtered_texture_2D;
     filtered_SRV->GetResource(&filtered_texture_2D);
@@ -109,10 +120,15 @@ TEST_F(Bloom, dual_kawase_mirroring) {
     OID3D11ShaderResourceView mirrored_pixel_SRV;
     create_texture_2D(*device, DXGI_FORMAT_R16G16B16A16_FLOAT, mirrored_pixels, width, height, &mirrored_pixel_SRV);
 
+    OID3D11Buffer constants = create_constants(device, 0.0f);
+    context->CSSetConstantBuffers(0, 1, &constants);
+    OID3D11SamplerState bilinear_sampler = create_bilinear_sampler(device);
+    context->CSSetSamplers(0, 1, &bilinear_sampler);
+
     // Blur
     DualKawaseBloom bloom = DualKawaseBloom(*device, DX11_SHADER_ROOT);
-    auto& filtered_SRV = bloom.filter(context, pixel_SRV, width, height, 4, 1.0f);
-    auto& filtered_mirrored_SRV = bloom.filter(context, mirrored_pixel_SRV, width, height, 4, 1.0f);
+    auto& filtered_SRV = bloom.filter(context, constants, bilinear_sampler, pixel_SRV, width, height, 4);
+    auto& filtered_mirrored_SRV = bloom.filter(context, constants, bilinear_sampler, mirrored_pixel_SRV, width, height, 4);
 
     // Readback textures.
     ID3D11Resource* filtered_tex2D;

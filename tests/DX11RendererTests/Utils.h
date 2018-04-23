@@ -32,11 +32,27 @@ inline DX11Renderer::OID3D11Buffer create_tonemapping_constants(DX11Renderer::OI
     constants.log_lumiance_bias = 0.0f;
     // Disable eye adaptation by setting adaptation to infinity.
     constants.eye_adaptation_brightness = constants.eye_adaptation_darkness = std::numeric_limits<float>::infinity();
+    constants.bloom_threshold = std::numeric_limits<float>::infinity();
     constants.delta_time = 1.0f / 60.0f;
 
     DX11Renderer::OID3D11Buffer constant_buffer;
     THROW_ON_FAILURE(DX11Renderer::create_constant_buffer(device, constants, &constant_buffer));
     return constant_buffer;
+}
+
+inline DX11Renderer::OID3D11SamplerState create_bilinear_sampler(DX11Renderer::OID3D11Device1& device) {
+    D3D11_SAMPLER_DESC sampler_desc = {};
+    sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    sampler_desc.MinLOD = 0;
+    sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
+
+    DX11Renderer::OID3D11SamplerState bilinear_sampler;
+    THROW_ON_FAILURE(device->CreateSamplerState(&sampler_desc, &bilinear_sampler));
+    return bilinear_sampler;
 }
 
 // -------------------------------------------------------------------------------------------------

@@ -27,13 +27,12 @@ public:
 
     DualKawaseBloom& operator=(DualKawaseBloom&& rhs) = default;
 
-    OID3D11ShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, unsigned int half_passes, float intensity_cutoff);
+    OID3D11ShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constant_buffer, ID3D11SamplerState& bilinear_sampler, 
+        ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, unsigned int half_passes);
 
 private:
     DualKawaseBloom(DualKawaseBloom& other) = delete;
     DualKawaseBloom& operator=(DualKawaseBloom& rhs) = delete;
-
-    OID3D11SamplerState m_bilinear_sampler;
 
     struct {
         unsigned int width, height, mipmap_count;
@@ -139,8 +138,9 @@ public:
         float log_lumiance_bias;
         float eye_adaptation_brightness;
         float eye_adaptation_darkness;
-        float delta_time;
         float bloom_threshold;
+        float delta_time;
+        float3 _padding;
     };
 
     Tonemapper() = default;
@@ -158,6 +158,7 @@ private:
     Tonemapper& operator=(Tonemapper& rhs) = delete;
 
     OID3D11Buffer m_constant_buffer;
+    OID3D11SamplerState m_bilinear_sampler;
 
     OID3D11ShaderResourceView m_linear_exposure_SRV;
     OID3D11UnorderedAccessView m_linear_exposure_UAV;

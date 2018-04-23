@@ -30,20 +30,10 @@ DualKawaseBloom::DualKawaseBloom(ID3D11Device1& device, const std::wstring& shad
 
     OID3DBlob upsample_pattern_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::dual_kawase_upsample");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(upsample_pattern_blob), nullptr, &m_upsample_pattern));
-
-    D3D11_SAMPLER_DESC sampler_desc = {};
-    sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-    sampler_desc.MinLOD = 0;
-    sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
-
-    THROW_ON_FAILURE(device.CreateSamplerState(&sampler_desc, &m_bilinear_sampler));
 }
 
-OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, unsigned int half_passes, float intensity_cutoff) {
+OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constant_buffer, ID3D11SamplerState& bilinear_sampler, 
+                                                   ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, unsigned int half_passes) {
     if (m_temp.width != image_width || m_temp.height != image_height) {
         
         // Release old resources
@@ -108,7 +98,6 @@ OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context
 
     // Copy high intensity part of image. TODO Upload constant
     context.CSSetShader(m_extract_high_intensity, nullptr, 0u);
-    context.CSSetSamplers(0, 1, &m_bilinear_sampler);
     context.CSSetShaderResources(0, 1, &pixels);
     context.CSSetUnorderedAccessViews(0, 1, &m_temp.UAVs[0], nullptr);
     context.Dispatch(image_width, image_height, 1);
@@ -281,6 +270,19 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
         m_uncharted2_tonemapping_PS = create_pixel_shader("ColorGrading::uncharted2_tonemapping_ps");
         m_filmic_tonemapping_PS = create_pixel_shader("ColorGrading::unreal4_tonemapping_ps");
     }
+
+    { // Bilinear sampler
+        D3D11_SAMPLER_DESC sampler_desc = {};
+        sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+        sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+        sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+        sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+        sampler_desc.MinLOD = 0;
+        sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
+
+        THROW_ON_FAILURE(device.CreateSamplerState(&sampler_desc, &m_bilinear_sampler));
+    }
 }
 
 void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters parameters, float delta_time,
@@ -309,6 +311,8 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
     }
 
     context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
+    context.PSSetSamplers(0, 1, &m_bilinear_sampler); // TODO Get rid of when all shaders are compute.
+    context.CSSetSamplers(0, 1, &m_bilinear_sampler);
 
     { // Determine exposure.
         if (parameters.exposure.mode == ExposureMode::Histogram)
