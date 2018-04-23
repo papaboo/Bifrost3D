@@ -284,7 +284,7 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
 }
 
 void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters parameters, float delta_time,
-                         ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, int width) {
+                         ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, int width, int height) {
 
     using namespace Cogwheel::Math::Tonemapping;
 
@@ -300,25 +300,31 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
             constants.eye_adaptation_darkness = parameters.exposure.eye_adaptation_darkness;
         } else
             constants.eye_adaptation_brightness = constants.eye_adaptation_darkness = std::numeric_limits<float>::infinity();
+
+        constants.bloom_threshold = parameters.bloom.receiver_threshold;
+
         constants.delta_time = delta_time;
+
         context.UpdateSubresource(m_constant_buffer, 0, nullptr, &constants, 0u, 0u);
     }
 
     context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
 
-    if (parameters.exposure.mode == ExposureMode::Histogram)
-        m_exposure_histogram.compute_linear_exposure(context, m_constant_buffer, pixel_SRV, width, m_linear_exposure_UAV);
-    else if (parameters.exposure.mode == ExposureMode::LogAverage)
-        m_log_average_luminance.compute_linear_exposure(context, m_constant_buffer, pixel_SRV, width, m_linear_exposure_UAV);
-    else { // parameters.exposure.mode == ExposureMode::Fixed
-        context.CSSetConstantBuffers(0, 1, &m_constant_buffer);
+    { // Determine exposure.
+        if (parameters.exposure.mode == ExposureMode::Histogram)
+            m_exposure_histogram.compute_linear_exposure(context, m_constant_buffer, pixel_SRV, width, m_linear_exposure_UAV);
+        else if (parameters.exposure.mode == ExposureMode::LogAverage)
+            m_log_average_luminance.compute_linear_exposure(context, m_constant_buffer, pixel_SRV, width, m_linear_exposure_UAV);
+        else { // parameters.exposure.mode == ExposureMode::Fixed
+            context.CSSetConstantBuffers(0, 1, &m_constant_buffer);
 
-        context.CSSetUnorderedAccessViews(0, 1, &m_linear_exposure_UAV, 0u);
-        context.CSSetShader(m_linear_exposure_from_bias_shader, nullptr, 0u);
-        context.Dispatch(1, 1, 1);
+            context.CSSetUnorderedAccessViews(0, 1, &m_linear_exposure_UAV, 0u);
+            context.CSSetShader(m_linear_exposure_from_bias_shader, nullptr, 0u);
+            context.Dispatch(1, 1, 1);
 
-        ID3D11UnorderedAccessView* null_UAV = nullptr;
-        context.CSSetUnorderedAccessViews(0, 1, &null_UAV, 0u);
+            ID3D11UnorderedAccessView* null_UAV = nullptr;
+            context.CSSetUnorderedAccessViews(0, 1, &null_UAV, 0u);
+        }
     }
 
     { // Tonemap and render into backbuffer.

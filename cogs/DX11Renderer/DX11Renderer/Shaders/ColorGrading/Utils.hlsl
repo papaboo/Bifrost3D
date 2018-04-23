@@ -21,6 +21,9 @@ cbuffer constants : register(b0) {
     float log_lumiance_bias;
     float eye_adaptation_brightness;
     float eye_adaptation_darkness;
+
+    float bloom_threshold;
+
     float delta_time;
 }
 

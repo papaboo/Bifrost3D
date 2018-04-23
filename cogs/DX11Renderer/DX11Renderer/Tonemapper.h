@@ -140,6 +140,7 @@ public:
         float eye_adaptation_brightness;
         float eye_adaptation_darkness;
         float delta_time;
+        float bloom_threshold;
     };
 
     Tonemapper() = default;
@@ -150,7 +151,7 @@ public:
 
     // Tonemaps the pixels and stores them in the bound render target.
     void tonemap(ID3D11DeviceContext1& context, Cogwheel::Math::Tonemapping::Parameters parameters, float delta_time,
-                 ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, int width);
+                 ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, int width, int height);
 
 private:
     Tonemapper(Tonemapper& other) = delete;
