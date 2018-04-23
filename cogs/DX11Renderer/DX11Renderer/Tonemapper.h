@@ -21,6 +21,8 @@ namespace DX11Renderer {
 // ------------------------------------------------------------------------------------------------
 class DualKawaseBloom {
 public:
+    static const unsigned int group_size = 32u;
+
     DualKawaseBloom() = default;
     DualKawaseBloom(DualKawaseBloom&& other) = default;
     DualKawaseBloom(ID3D11Device1& device, const std::wstring& shader_folder_path);

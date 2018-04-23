@@ -100,7 +100,7 @@ OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context
     context.CSSetShader(m_extract_high_intensity, nullptr, 0u);
     context.CSSetShaderResources(0, 1, &pixels);
     context.CSSetUnorderedAccessViews(0, 1, &m_temp.UAVs[0], nullptr);
-    context.Dispatch(image_width, image_height, 1);
+    context.Dispatch(ceil_divide(image_width, group_size), ceil_divide(image_height, group_size), 1);
 
     // Downsample
     half_passes = min(half_passes, m_temp.mipmap_count-1);
@@ -110,8 +110,8 @@ OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context
         context.CSSetUnorderedAccessViews(0, 1, uav, nullptr);
         auto* srv = &m_temp.SRVs[p];
         context.CSSetShaderResources(0, 1, srv);
-        unsigned int group_count_x = image_width >> (p + 1), group_count_y = image_height >> (p + 1);
-        context.Dispatch(group_count_x, group_count_y, 1);
+        unsigned int thread_count_x = image_width >> (p + 1), thread_count_y = image_height >> (p + 1);
+        context.Dispatch(ceil_divide(thread_count_x, group_size), ceil_divide(thread_count_y, group_size), 1);
     }
 
     // Upsample
@@ -119,8 +119,8 @@ OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context
     for (unsigned int p = half_passes; p > 0; --p) {
         context.CSSetUnorderedAccessViews(0, 1, &m_temp.UAVs[p - 1], nullptr);
         context.CSSetShaderResources(0, 1, &m_temp.SRVs[p]);
-        unsigned int group_count_x = image_width >> (p - 1), group_count_y = image_height >> (p - 1);
-        context.Dispatch(group_count_x, group_count_y, 1);
+        unsigned int thread_count_x = image_width >> (p - 1), thread_count_y = image_height >> (p - 1);
+        context.Dispatch(ceil_divide(thread_count_x, group_size), ceil_divide(thread_count_y, group_size), 1);
     }
 
     return m_temp.SRVs[0];
