@@ -21,7 +21,7 @@ RWTexture2D<float4> output_image : register(u0);
 
 [numthreads(32, 32, 1)]
 void extract_high_intensity(uint3 global_thread_ID : SV_DispatchThreadID) {
-    output_image[global_thread_ID.xy] = max(0.0, image[global_thread_ID.xy]);
+    output_image[global_thread_ID.xy] = max(0.0, image[global_thread_ID.xy] - bloom_threshold);
 }
 
 [numthreads(32, 32, 1)]
