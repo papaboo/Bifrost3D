@@ -53,6 +53,8 @@ struct Parameters final {
         res.exposure.eye_adaptation_brightness = 3.0f;
         res.exposure.eye_adaptation_darkness = 1.0f;
 
+        res.bloom.receiver_threshold = 1.0f;
+
         res.tonemapping.mode = TonemappingMode::Uncharted2;
 
         return res;
