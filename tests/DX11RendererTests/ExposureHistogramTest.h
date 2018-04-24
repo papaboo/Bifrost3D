@@ -81,6 +81,7 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
     float min_log_luminance = -8;
     float max_log_luminance = 4;
     OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance);
+    context->CSSetConstantBuffers(0, 1, &constant_buffer);
 
     // Image with one element in each bucket.
     half4 pixels[bin_count];
@@ -115,6 +116,7 @@ TEST_F(ExposureHistogramFixture, small_image) {
     float min_log_luminance = -8;
     float max_log_luminance = 4;
     OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance);
+    context->CSSetConstantBuffers(0, 1, &constant_buffer);
 
     // Image with 4 elements in each bucket and (4 + width) elements in the first and last bucket
     const int width = bin_count;

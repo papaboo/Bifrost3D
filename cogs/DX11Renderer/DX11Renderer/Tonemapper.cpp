@@ -32,8 +32,18 @@ DualKawaseBloom::DualKawaseBloom(ID3D11Device1& device, const std::wstring& shad
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(upsample_pattern_blob), nullptr, &m_upsample_pattern));
 }
 
-OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constant_buffer, ID3D11SamplerState& bilinear_sampler, 
+OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
                                                    ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, unsigned int half_passes) {
+#if CHECK_IMPLICIT_STATE
+    // Check that the constants and sampler are bound.
+    OID3D11Buffer bound_constants;
+    context.CSGetConstantBuffers(0, 1, &bound_constants);
+    always_assert(bound_constants.get() == &constants);
+    OID3D11SamplerState bound_sampler;
+    context.CSGetSamplers(0, 1, &bound_sampler);
+    always_assert(bound_sampler.get() == &bilinear_sampler);
+#endif
+
     if (m_temp.width != image_width || m_temp.height != image_height) {
         
         // Release old resources
@@ -164,8 +174,12 @@ void LogAverageLuminance::compute_linear_exposure(ID3D11DeviceContext1& context,
 void LogAverageLuminance::compute(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
                                   ID3D11ShaderResourceView* pixels, unsigned int image_width, OID3D11ComputeShader& second_reduction,
                                   ID3D11UnorderedAccessView* output_UAV) {
-
-    context.CSSetConstantBuffers(0, 1, &constants);
+#if CHECK_IMPLICIT_STATE
+    // Check that the constants and sampler are bound.
+    OID3D11Buffer bound_constants;
+    context.CSGetConstantBuffers(0, 1, &bound_constants);
+    always_assert(bound_constants.get() == constants);
+#endif
 
     context.CSSetUnorderedAccessViews(0, 1, &m_log_averages_UAV, 0u);
     context.CSSetShaderResources(0, 1, &pixels);
@@ -200,12 +214,17 @@ ExposureHistogram::ExposureHistogram(ID3D11Device1& device, const std::wstring& 
 
 OID3D11ShaderResourceView& ExposureHistogram::reduce_histogram(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
                                                                ID3D11ShaderResourceView* pixels, unsigned int image_width) {
+#if CHECK_IMPLICIT_STATE
+    // Check that the constants and sampler are bound.
+    OID3D11Buffer bound_constants;
+    context.CSGetConstantBuffers(0, 1, &bound_constants);
+    always_assert(bound_constants.get() == constants);
+#endif
 
     const unsigned int zeros[4] = { 0u, 0u, 0u, 0u };
     context.ClearUnorderedAccessViewUint(m_histogram_UAV, zeros);
 
     context.CSSetShader(m_histogram_reduction, nullptr, 0u);
-    context.CSSetConstantBuffers(0, 1, &constants);
     context.CSSetShaderResources(0, 1, &pixels);
     context.CSSetUnorderedAccessViews(0, 1, &m_histogram_UAV, 0u);
     unsigned int group_count_x = ceil_divide(image_width, group_width);
@@ -220,10 +239,15 @@ OID3D11ShaderResourceView& ExposureHistogram::reduce_histogram(ID3D11DeviceConte
 void ExposureHistogram::compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
                                                 ID3D11ShaderResourceView* pixels, unsigned int image_width,
                                                 ID3D11UnorderedAccessView* linear_exposure_UAV) {
+#if CHECK_IMPLICIT_STATE
+    // Check that the constants and sampler are bound.
+    OID3D11Buffer bound_constants;
+    context.CSGetConstantBuffers(0, 1, &bound_constants);
+    always_assert(bound_constants.get() == constants);
+#endif
+
     const unsigned int zeros[4] = { 0u, 0u, 0u, 0u };
     context.ClearUnorderedAccessViewUint(m_histogram_UAV, zeros);
-
-    context.CSSetConstantBuffers(0, 1, &constants);
 
     context.CSSetUnorderedAccessViews(0, 1, &m_histogram_UAV, 0u);
     context.CSSetShaderResources(0, 1, &pixels);
@@ -341,7 +365,7 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
     // Bloom filter.
     ID3D11ShaderResourceView* bloom_SRV = nullptr;
     if (parameters.bloom.receiver_threshold < INFINITY)
-        bloom_SRV = m_bloom.filter(context, m_constant_buffer, m_bilinear_sampler, pixel_SRV, width, height, 3).get();
+        bloom_SRV = m_bloom.filter(context, m_constant_buffer, m_bilinear_sampler, pixel_SRV, width, height, 1).get();
 
     { // Tonemap and render into backbuffer.
         context.VSSetShader(m_fullscreen_VS, 0, 0);

@@ -29,7 +29,7 @@ public:
 
     DualKawaseBloom& operator=(DualKawaseBloom&& rhs) = default;
 
-    OID3D11ShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constant_buffer, ID3D11SamplerState& bilinear_sampler, 
+    OID3D11ShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
         ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, unsigned int half_passes);
 
 private:
