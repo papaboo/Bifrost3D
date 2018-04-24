@@ -26,21 +26,38 @@ namespace DX11Renderer {
 // ------------------------------------------------------------------------------------------------
 class Bloom : public ::testing::Test {
 protected:
-    inline OID3D11Buffer create_constants(OID3D11Device1& device, float bloom_threshold) {
+    inline OID3D11Buffer create_and_bind_constants(OID3D11Device1& device, OID3D11DeviceContext1& context, float bloom_threshold) {
         Tonemapper::Constants constants;
         constants.bloom_threshold = bloom_threshold;
         OID3D11Buffer constant_buffer;
         THROW_ON_FAILURE(create_constant_buffer(device, constants, &constant_buffer));
+
+        context->CSSetConstantBuffers(0, 1, &constant_buffer);
+
         return constant_buffer;
     }
+
+    virtual void SetUp() {
+        m_device = create_performant_device1();
+        m_device->GetImmediateContext1(&m_context);
+
+        m_bilinear_sampler = create_bilinear_sampler(m_device);
+        m_context->CSSetSamplers(0, 1, &m_bilinear_sampler);
+    }
+
+    virtual void TearDown() {
+        m_device = nullptr;
+        m_context = nullptr;
+        m_bilinear_sampler = nullptr;
+    }
+
+    OID3D11Device1 m_device;
+    OID3D11DeviceContext1 m_context;
+    OID3D11SamplerState m_bilinear_sampler;
 };
 
 TEST_F(Bloom, dual_kawase_energy_conservation) {
     using namespace Cogwheel::Math;
-
-    auto device = create_performant_device1();
-    OID3D11DeviceContext1 context;
-    device->GetImmediateContext1(&context);
 
     // Create image.
     const int width = 64, height = 64;
@@ -57,21 +74,18 @@ TEST_F(Bloom, dual_kawase_energy_conservation) {
         pixels[i] = { half(color.r), half(color.g), half(color.b), half(1.0f) };
     }
     OID3D11ShaderResourceView pixel_SRV;
-    create_texture_2D(*device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, &pixel_SRV);
+    create_texture_2D(*m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, &pixel_SRV);
 
-    OID3D11Buffer constants = create_constants(device, 0.0f);
-    context->CSSetConstantBuffers(0, 1, &constants);
-    OID3D11SamplerState bilinear_sampler = create_bilinear_sampler(device);
-    context->CSSetSamplers(0, 1, &bilinear_sampler);
+    OID3D11Buffer constants = create_and_bind_constants(m_device, m_context, 0.0f);
 
     // Blur
-    DualKawaseBloom bloom = DualKawaseBloom(*device, DX11_SHADER_ROOT);
-    auto& filtered_SRV = bloom.filter(context, constants, bilinear_sampler, pixel_SRV, width, height, 1);
+    DualKawaseBloom bloom = DualKawaseBloom(*m_device, DX11_SHADER_ROOT);
+    auto& filtered_SRV = bloom.filter(m_context, constants, m_bilinear_sampler, pixel_SRV, width, height, 1);
 
     ID3D11Resource* filtered_texture_2D;
     filtered_SRV->GetResource(&filtered_texture_2D);
     half4 filtered_pixels[pixel_count];
-    Readback::texture2D(device, context, (ID3D11Texture2D*)filtered_texture_2D, filtered_pixels, filtered_pixels + pixel_count);
+    Readback::texture2D(m_device, m_context, (ID3D11Texture2D*)filtered_texture_2D, filtered_pixels, filtered_pixels + pixel_count);
     filtered_texture_2D->Release();
 
     Vector3d summed_pixels = Vector3d::zero();
@@ -86,10 +100,6 @@ TEST_F(Bloom, dual_kawase_energy_conservation) {
 
 TEST_F(Bloom, dual_kawase_mirroring) {
     using namespace Cogwheel::Math;
-
-    auto device = create_performant_device1();
-    OID3D11DeviceContext1 context;
-    device->GetImmediateContext1(&context);
 
     const int width = 64, height = 64;
     const int pixel_count = width * height;
@@ -107,7 +117,7 @@ TEST_F(Bloom, dual_kawase_mirroring) {
             pixels[i] = { half(color.r), half(color.g), half(color.b), half(1.0f) };
         }
     OID3D11ShaderResourceView pixel_SRV;
-    create_texture_2D(*device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, &pixel_SRV);
+    create_texture_2D(*m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, &pixel_SRV);
 
     // Create mirrored image.
     half4 mirrored_pixels[pixel_count];
@@ -118,29 +128,26 @@ TEST_F(Bloom, dual_kawase_mirroring) {
             mirrored_pixels[mirrored_i] = pixels[i];
         }
     OID3D11ShaderResourceView mirrored_pixel_SRV;
-    create_texture_2D(*device, DXGI_FORMAT_R16G16B16A16_FLOAT, mirrored_pixels, width, height, &mirrored_pixel_SRV);
+    create_texture_2D(*m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, mirrored_pixels, width, height, &mirrored_pixel_SRV);
 
-    OID3D11Buffer constants = create_constants(device, 0.0f);
-    context->CSSetConstantBuffers(0, 1, &constants);
-    OID3D11SamplerState bilinear_sampler = create_bilinear_sampler(device);
-    context->CSSetSamplers(0, 1, &bilinear_sampler);
+    OID3D11Buffer constants = create_and_bind_constants(m_device, m_context, 0.0f);
 
     // Blur
-    DualKawaseBloom bloom = DualKawaseBloom(*device, DX11_SHADER_ROOT);
-    auto& filtered_SRV = bloom.filter(context, constants, bilinear_sampler, pixel_SRV, width, height, 4);
-    auto& filtered_mirrored_SRV = bloom.filter(context, constants, bilinear_sampler, mirrored_pixel_SRV, width, height, 4);
+    DualKawaseBloom bloom = DualKawaseBloom(*m_device, DX11_SHADER_ROOT);
+    auto& filtered_SRV = bloom.filter(m_context, constants, m_bilinear_sampler, pixel_SRV, width, height, 4);
+    auto& filtered_mirrored_SRV = bloom.filter(m_context, constants, m_bilinear_sampler, mirrored_pixel_SRV, width, height, 4);
 
     // Readback textures.
     ID3D11Resource* filtered_tex2D;
     filtered_SRV->GetResource(&filtered_tex2D);
     half4 filtered_pixels[pixel_count];
-    Readback::texture2D(device, context, (ID3D11Texture2D*)filtered_tex2D, filtered_pixels, filtered_pixels + pixel_count);
+    Readback::texture2D(m_device, m_context, (ID3D11Texture2D*)filtered_tex2D, filtered_pixels, filtered_pixels + pixel_count);
     filtered_tex2D->Release();
 
     ID3D11Resource* filtered_mirrored_tex2D;
     filtered_SRV->GetResource(&filtered_mirrored_tex2D);
     half4 filtered_mirrored_pixels[pixel_count];
-    Readback::texture2D(device, context, (ID3D11Texture2D*)filtered_mirrored_tex2D, filtered_mirrored_pixels, filtered_mirrored_pixels + pixel_count);
+    Readback::texture2D(m_device, m_context, (ID3D11Texture2D*)filtered_mirrored_tex2D, filtered_mirrored_pixels, filtered_mirrored_pixels + pixel_count);
     filtered_mirrored_tex2D->Release();
 
     for (int y = 0; y < height; ++y)
