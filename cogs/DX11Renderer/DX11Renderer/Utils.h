@@ -18,6 +18,7 @@
 #include <Cogwheel/Math/Vector.h>
 #include <Cogwheel/Math/Utils.h>
 
+#include <assert.h>
 #include <string>
 
 #define NOMINMAX
