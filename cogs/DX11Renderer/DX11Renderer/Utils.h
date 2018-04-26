@@ -89,6 +89,15 @@ inline int sizeof_dx_format(DXGI_FORMAT format) {
     }
 };
 
+inline OID3D11Device1 get_device1(ID3D11DeviceContext1& context) {
+    ID3D11Device* basic_device;
+    context.GetDevice(&basic_device);
+    OID3D11Device1 device1;
+    THROW_ON_FAILURE(basic_device->QueryInterface(IID_PPV_ARGS(&device1)));
+    basic_device->Release();
+    return device1;
+}
+
 inline OID3DBlob compile_shader(const std::wstring& filename, const char* target, const char* entry_point,
                                 const D3D_SHADER_MACRO* macros = nullptr) {
     OID3DBlob shader_bytecode;
