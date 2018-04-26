@@ -37,7 +37,7 @@ void gaussian_horizontal_filter(uint3 global_thread_ID : SV_DispatchThreadID) {
         int2 index = global_thread_ID.xy + int2(x, 0);
         index.x = clamp(index.x, 0, width - 1);
 
-        sum += image[index].rgb * weight;
+        sum += max(0.0, image[index].rgb - bloom_threshold) * weight;
         total_weight += weight;
     }
 
@@ -76,7 +76,8 @@ void gaussian_vertical_filter(uint3 global_thread_ID : SV_DispatchThreadID) {
 
 [numthreads(32, 32, 1)]
 void extract_high_intensity(uint3 global_thread_ID : SV_DispatchThreadID) {
-    output_image[global_thread_ID.xy] = max(0.0, image[global_thread_ID.xy] - bloom_threshold);
+    float4 pixel = image[global_thread_ID.xy];
+    output_image[global_thread_ID.xy] = float4(max(0.0, pixel.rgb - bloom_threshold), pixel.a);
 }
 
 [numthreads(32, 32, 1)]

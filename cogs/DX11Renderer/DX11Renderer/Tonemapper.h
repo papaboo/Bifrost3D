@@ -43,9 +43,8 @@ private:
 
     IntermediateTexture m_ping, m_pong;
 
-    OID3D11ComputeShader m_extract_high_intensity;
-    OID3D11ComputeShader m_vertical_filter;
     OID3D11ComputeShader m_horizontal_filter;
+    OID3D11ComputeShader m_vertical_filter;
 };
 
 // ------------------------------------------------------------------------------------------------

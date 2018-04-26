@@ -23,14 +23,11 @@ GaussianBloom::GaussianBloom(ID3D11Device1& device, const std::wstring& shader_f
 
     const std::wstring shader_filename = shader_folder_path + L"ColorGrading/Bloom.hlsl";
 
-    OID3DBlob m_extract_high_intensity_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::extract_high_intensity");
-    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(m_extract_high_intensity_blob), nullptr, &m_extract_high_intensity));
+    OID3DBlob horizontal_filter_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::gaussian_horizontal_filter");
+    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(horizontal_filter_blob), nullptr, &m_horizontal_filter));
 
     OID3DBlob vertical_filter_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::gaussian_vertical_filter");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(vertical_filter_blob), nullptr, &m_vertical_filter));
-
-    OID3DBlob horizontal_filter_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::gaussian_horizontal_filter");
-    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(horizontal_filter_blob), nullptr, &m_horizontal_filter));
 }
 
 OID3D11ShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
@@ -92,16 +89,10 @@ OID3D11ShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, 
         allocate_texture(m_pong);
     }
 
-    // Copy high intensity part of image. TODO Upload constant
-    context.CSSetShader(m_extract_high_intensity, nullptr, 0u);
-    context.CSSetShaderResources(0, 1, &pixels);
-    context.CSSetUnorderedAccessViews(0, 1, &m_ping.UAV, 0u);
-    context.Dispatch(ceil_divide(image_width, group_size), ceil_divide(image_height, group_size), 1);
-
-    // Horizontal filter
+    // High intensity pass and horizontal filter.
     context.CSSetShader(m_horizontal_filter, nullptr, 0u);
     context.CSSetUnorderedAccessViews(0, 1, &m_pong.UAV, 0u);
-    context.CSSetShaderResources(0, 1, &m_ping.SRV);
+    context.CSSetShaderResources(0, 1, &pixels);
     context.Dispatch(ceil_divide(image_width, group_size), ceil_divide(image_height, group_size), 1);
 
     // Vertical filter

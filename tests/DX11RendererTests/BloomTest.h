@@ -242,7 +242,7 @@ TEST_F(Bloom, gaussian_energy_conservation) {
         summed_filtered_pixels += Vector3d(filtered_pixels[p].x, filtered_pixels[p].y, filtered_pixels[p].z);
     }
 
-    EXPECT_VECTOR3F_EQ_PCT((Vector3f)summed_pixels, (Vector3f)summed_filtered_pixels, Vector3f(0.0001f));
+    EXPECT_VECTOR3F_EQ_PCT((Vector3f)summed_pixels, (Vector3f)summed_filtered_pixels, Vector3f(0.0004f));
 }
 
 } // NS DX11Renderer
