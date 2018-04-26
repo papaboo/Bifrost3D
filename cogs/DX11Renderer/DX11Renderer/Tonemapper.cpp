@@ -14,6 +14,110 @@ using namespace Cogwheel::Math;
 namespace DX11Renderer {
 
 // ------------------------------------------------------------------------------------------------
+// Gaussian Bloom.
+// ------------------------------------------------------------------------------------------------
+GaussianBloom::GaussianBloom(ID3D11Device1& device, const std::wstring& shader_folder_path) {
+
+    m_ping = {};
+    m_pong = {};
+
+    const std::wstring shader_filename = shader_folder_path + L"ColorGrading/Bloom.hlsl";
+
+    OID3DBlob m_extract_high_intensity_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::extract_high_intensity");
+    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(m_extract_high_intensity_blob), nullptr, &m_extract_high_intensity));
+
+    OID3DBlob vertical_filter_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::gaussian_vertical_filter");
+    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(vertical_filter_blob), nullptr, &m_vertical_filter));
+
+    OID3DBlob horizontal_filter_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::gaussian_horizontal_filter");
+    THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(horizontal_filter_blob), nullptr, &m_horizontal_filter));
+}
+
+OID3D11ShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
+                                                 ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) {
+#if CHECK_IMPLICIT_STATE
+    // Check that the constants and sampler are bound.
+    OID3D11Buffer bound_constants;
+    context.CSGetConstantBuffers(0, 1, &bound_constants);
+    always_assert(bound_constants.get() == &constants);
+    OID3D11SamplerState bound_sampler;
+    context.CSGetSamplers(0, 1, &bound_sampler);
+    always_assert(bound_sampler.get() == &bilinear_sampler);
+#endif
+
+    if (m_ping.width != image_width || m_ping.height != image_height) {
+
+        // Release old resources
+        m_ping.SRV.release();
+        m_ping.UAV.release();
+        m_pong.SRV.release();
+        m_pong.UAV.release();
+
+        // Grab the device.
+        OID3D11Device1 device = get_device1(context);
+
+        auto allocate_texture = [&](IntermediateTexture& tex) {
+
+            D3D11_TEXTURE2D_DESC tex_desc = {};
+            tex_desc.Width = image_width;
+            tex_desc.Height = image_height;
+            tex_desc.MipLevels = 1;
+            tex_desc.ArraySize = 1;
+            tex_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+            tex_desc.SampleDesc.Count = 1;
+            tex_desc.SampleDesc.Quality = 0;
+            tex_desc.Usage = D3D11_USAGE_DEFAULT;
+            tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+
+            OID3D11Texture2D texture2D;
+            THROW_ON_FAILURE(device->CreateTexture2D(&tex_desc, nullptr, &texture2D));
+
+            // SRV
+            D3D11_SHADER_RESOURCE_VIEW_DESC mip_level_SRV_desc;
+            mip_level_SRV_desc.Format = tex_desc.Format;
+            mip_level_SRV_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+            mip_level_SRV_desc.Texture2D.MipLevels = 1;
+            mip_level_SRV_desc.Texture2D.MostDetailedMip = 0;
+            THROW_ON_FAILURE(device->CreateShaderResourceView(texture2D, &mip_level_SRV_desc, &tex.SRV));
+
+            // UAV
+            D3D11_UNORDERED_ACCESS_VIEW_DESC mip_level_UAV_desc = {};
+            mip_level_UAV_desc.Format = tex_desc.Format;
+            mip_level_UAV_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+            mip_level_UAV_desc.Texture2D.MipSlice = 0;
+            THROW_ON_FAILURE(device->CreateUnorderedAccessView(texture2D, &mip_level_UAV_desc, &tex.UAV));
+        };
+
+        allocate_texture(m_ping);
+        allocate_texture(m_pong);
+    }
+
+    // Copy high intensity part of image. TODO Upload constant
+    context.CSSetShader(m_extract_high_intensity, nullptr, 0u);
+    context.CSSetShaderResources(0, 1, &pixels);
+    context.CSSetUnorderedAccessViews(0, 1, &m_ping.UAV, 0u);
+    context.Dispatch(ceil_divide(image_width, group_size), ceil_divide(image_height, group_size), 1);
+
+    // Horizontal filter
+    context.CSSetShader(m_horizontal_filter, nullptr, 0u);
+    context.CSSetUnorderedAccessViews(0, 1, &m_pong.UAV, 0u);
+    context.CSSetShaderResources(0, 1, &m_ping.SRV);
+    context.Dispatch(ceil_divide(image_width, group_size), ceil_divide(image_height, group_size), 1);
+
+    // Vertical filter
+    context.CSSetShader(m_vertical_filter, nullptr, 0u);
+    context.CSSetUnorderedAccessViews(0, 1, &m_ping.UAV, 0u);
+    context.CSSetShaderResources(0, 1, &m_pong.SRV);
+    context.Dispatch(ceil_divide(image_width, group_size), ceil_divide(image_height, group_size), 1);
+
+    ID3D11UnorderedAccessView* null_UAV = nullptr;
+    context.CSSetUnorderedAccessViews(0, 1, &null_UAV, 0u);
+
+    return m_ping.SRV;
+}
+
+
+// ------------------------------------------------------------------------------------------------
 // Dual Kawase Bloom.
 // ------------------------------------------------------------------------------------------------
 DualKawaseBloom::DualKawaseBloom(ID3D11Device1& device, const std::wstring& shader_folder_path) {
@@ -54,12 +158,7 @@ OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context
         delete[] m_temp.SRVs;
         delete[] m_temp.UAVs;
 
-        // Grab the device.
-        ID3D11Device* basic_device;
-        context.GetDevice(&basic_device);
-        OID3D11Device1 device;
-        THROW_ON_FAILURE(basic_device->QueryInterface(IID_PPV_ARGS(&device)));
-        basic_device->Release();
+        OID3D11Device1 device = get_device1(context);
 
         // Allocate new temporaries
         m_temp.mipmap_count = 1;
@@ -78,8 +177,7 @@ OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context
         tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
 
         OID3D11Texture2D texture2D;
-        HRESULT hr = device->CreateTexture2D(&tex_desc, nullptr, &texture2D);
-        THROW_ON_FAILURE(hr);
+        THROW_ON_FAILURE(device->CreateTexture2D(&tex_desc, nullptr, &texture2D));
 
         // TODO Create views in two device calls.
         m_temp.SRVs = new OID3D11ShaderResourceView[m_temp.mipmap_count];
@@ -275,7 +373,7 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
     m_log_average_luminance = LogAverageLuminance(device, shader_folder_path);
     m_exposure_histogram = ExposureHistogram(device, shader_folder_path);
 
-    m_bloom = DualKawaseBloom(device, shader_folder_path);
+    m_bloom = GaussianBloom(device, shader_folder_path);
 
     { // Setup tonemapping shaders
         const std::wstring shader_filename = shader_folder_path + L"ColorGrading/Tonemapping.hlsl";
@@ -341,7 +439,7 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
 
     context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
     context.PSSetConstantBuffers(0, 1, &m_constant_buffer);
-    context.PSSetSamplers(0, 1, &m_bilinear_sampler); // TODO Get rid of when all shaders are compute.
+    context.PSSetSamplers(0, 1, &m_bilinear_sampler); // TODO Get rid of PS bindings when all shaders are compute.
     context.CSSetConstantBuffers(0, 1, &m_constant_buffer);
     context.CSSetSamplers(0, 1, &m_bilinear_sampler);
 
@@ -365,7 +463,7 @@ void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters 
     // Bloom filter.
     ID3D11ShaderResourceView* bloom_SRV = nullptr;
     if (parameters.bloom.receiver_threshold < INFINITY)
-        bloom_SRV = m_bloom.filter(context, m_constant_buffer, m_bilinear_sampler, pixel_SRV, width, height, 1).get();
+        bloom_SRV = m_bloom.filter(context, m_constant_buffer, m_bilinear_sampler, pixel_SRV, width, height).get();
 
     { // Tonemap and render into backbuffer.
         context.VSSetShader(m_fullscreen_VS, 0, 0);

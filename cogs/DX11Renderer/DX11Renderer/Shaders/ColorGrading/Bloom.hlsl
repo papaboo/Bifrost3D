@@ -10,14 +10,69 @@
 
 namespace ColorGrading {
 
+Texture2D image : register(t0);
+SamplerState image_sampler : register(s0);
+RWTexture2D<float4> output_image : register(u0);
+
+// ------------------------------------------------------------------------------------------------
+// Gaussian bloom.
+// A gaussian kernel requires 6 * std_dev - 1 lookups
+// ------------------------------------------------------------------------------------------------
+
+[numthreads(32, 32, 1)]
+void gaussian_horizontal_filter(uint3 global_thread_ID : SV_DispatchThreadID) {
+    float width, height;
+    output_image.GetDimensions(width, height);
+    
+    // Precompute
+    int half_extent = 11;
+    float std_dev = half_extent / 4.0;
+    float double_variance = 2.0 * std_dev * std_dev;
+
+    float total_weight = 0.0; // Precompute
+    float3 sum = 0.0;
+    for (int x = -half_extent; x <= half_extent; ++x) {
+        float weight = exp(-(x * x) / double_variance);
+
+        int2 index = global_thread_ID.xy + int2(x, 0);
+        index.x = clamp(index.x, 0, width - 1);
+
+        sum += image[index].rgb * weight;
+        total_weight += weight;
+    }
+
+    output_image[global_thread_ID.xy] = float4(sum / total_weight, 1.0);
+}
+
+[numthreads(32, 32, 1)]
+void gaussian_vertical_filter(uint3 global_thread_ID : SV_DispatchThreadID) {
+    float width, height;
+    output_image.GetDimensions(width, height);
+
+    // Precompute
+    int half_extent = 11;
+    float std_dev = half_extent / 4.0;
+    float double_variance = 2.0 * std_dev * std_dev;
+
+    float total_weight = 0.0; // Precompute
+    float3 sum = 0.0;
+    for (int y = -half_extent; y <= half_extent; ++y) {
+        float weight = exp(-(y * y) / double_variance);
+
+        int2 index = global_thread_ID.xy + int2(0, y);
+        index.y = clamp(index.y, 0, height - 1);
+
+        sum += image[index].rgb * weight;
+        total_weight += weight;
+    }
+
+    output_image[global_thread_ID.xy] = float4(sum / total_weight, 1.0);
+}
+
 // ------------------------------------------------------------------------------------------------
 // Dual kawase filtering
 // https://community.arm.com/cfs-file/__key/communityserver-blogs-components-weblogfiles/00-00-00-26-50/siggraph2015_2D00_mmg_2D00_marius_2D00_notes.pdf
 // ------------------------------------------------------------------------------------------------
-
-Texture2D image : register(t0);
-SamplerState image_sampler : register(s0);
-RWTexture2D<float4> output_image : register(u0);
 
 [numthreads(32, 32, 1)]
 void extract_high_intensity(uint3 global_thread_ID : SV_DispatchThreadID) {

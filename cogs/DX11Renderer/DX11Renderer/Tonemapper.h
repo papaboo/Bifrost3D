@@ -16,6 +16,39 @@
 namespace DX11Renderer {
 
 // ------------------------------------------------------------------------------------------------
+// Gaussian Bloom.
+// ------------------------------------------------------------------------------------------------
+class GaussianBloom {
+public:
+    static const unsigned int group_size = 32u;
+
+    GaussianBloom() = default;
+    GaussianBloom(GaussianBloom&& other) = default;
+    GaussianBloom(ID3D11Device1& device, const std::wstring& shader_folder_path);
+
+    GaussianBloom& operator=(GaussianBloom&& rhs) = default;
+
+    OID3D11ShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
+        ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height);
+
+private:
+    GaussianBloom(GaussianBloom& other) = delete;
+    GaussianBloom& operator=(GaussianBloom& rhs) = delete;
+
+    struct IntermediateTexture {
+        unsigned int width, height;
+        OID3D11ShaderResourceView SRV;
+        OID3D11UnorderedAccessView UAV;
+    };
+
+    IntermediateTexture m_ping, m_pong;
+
+    OID3D11ComputeShader m_extract_high_intensity;
+    OID3D11ComputeShader m_vertical_filter;
+    OID3D11ComputeShader m_horizontal_filter;
+};
+
+// ------------------------------------------------------------------------------------------------
 // Dual Kawase Bloom.
 // https://community.arm.com/cfs-file/__key/communityserver-blogs-components-weblogfiles/00-00-00-26-50/siggraph2015_2D00_mmg_2D00_marius_2D00_notes.pdf
 // ------------------------------------------------------------------------------------------------
@@ -168,7 +201,7 @@ private:
     ExposureHistogram m_exposure_histogram;
     OID3D11ComputeShader m_linear_exposure_from_bias_shader;
 
-    DualKawaseBloom m_bloom;
+    GaussianBloom m_bloom;
 
     OID3D11VertexShader m_fullscreen_VS;
     OID3D11PixelShader m_linear_tonemapping_PS;

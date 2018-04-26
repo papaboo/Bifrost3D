@@ -160,6 +160,91 @@ TEST_F(Bloom, dual_kawase_mirroring) {
         }
 }
 
+TEST_F(Bloom, dual_kawase_threshold) {
+    using namespace Cogwheel::Math;
+
+    // Create image.
+    const int width = 64, height = 64;
+    const int pixel_count = width * height;
+    half4 pixels[pixel_count];
+    for (int y = 0; y < height; ++y)
+        for (int x = 0; x < width; ++x) {
+            int i = x + y * width;
+            pixels[i] = { half(float(i)), half(float(x)), half(float(y * y)), half(1.0f) };
+        }
+    OID3D11ShaderResourceView pixel_SRV;
+    create_texture_2D(*m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, &pixel_SRV);
+
+    float bloom_threshold = 5.0f;
+    OID3D11Buffer constants = create_and_bind_constants(m_device, m_context, bloom_threshold);
+
+    // Blur with 0 passes to just get the high intensity values.
+    DualKawaseBloom bloom = DualKawaseBloom(*m_device, DX11_SHADER_ROOT);
+    auto& high_intensity_SRV = bloom.filter(m_context, constants, m_bilinear_sampler, pixel_SRV, width, height, 0);
+
+    ID3D11Resource* high_intensity_texture_2D;
+    high_intensity_SRV->GetResource(&high_intensity_texture_2D);
+    half4 high_intensity_pixels[pixel_count];
+    Readback::texture2D(m_device, m_context, (ID3D11Texture2D*)high_intensity_texture_2D, high_intensity_pixels, high_intensity_pixels + pixel_count);
+    high_intensity_texture_2D->Release();
+
+    for (int y = 0; y < height; ++y)
+        for (int x = 0; x < width; ++x) {
+            int i = x + y * width;
+            Vector4f cpu_high_intensity_pixel = { fminf(pixels[i][0] - bloom_threshold, 0.0f),
+                                                  fminf(pixels[i][1] - bloom_threshold, 0.0f),
+                                                  fminf(pixels[i][2] - bloom_threshold, 0.0f),
+                                                  fminf(pixels[i][3] - bloom_threshold, 0.0f) };
+            Vector4f gpu_high_intensity_pixel = high_intensity_pixels[i];
+            EXPECT_FLOAT_EQ(cpu_high_intensity_pixel[0], cpu_high_intensity_pixel[0]);
+            EXPECT_FLOAT_EQ(cpu_high_intensity_pixel[1], cpu_high_intensity_pixel[1]);
+            EXPECT_FLOAT_EQ(cpu_high_intensity_pixel[2], cpu_high_intensity_pixel[2]);
+            EXPECT_FLOAT_EQ(cpu_high_intensity_pixel[3], cpu_high_intensity_pixel[3]);
+        }
+}
+
+TEST_F(Bloom, gaussian_energy_conservation) {
+    using namespace Cogwheel::Math;
+
+    // Create image.
+    const int width = 64, height = 64;
+    const int pixel_count = width * height;
+    half4 pixels[pixel_count];
+    for (int y = 0; y < height; ++y)
+        for (int x = 0; x < width; ++x) {
+            int i = x + y * width;
+            RGB color = RGB::black();
+            if (x < width / 2)
+                color = (y < height / 2) ? RGB::red() : RGB::green();
+            else if (y < height / 2)
+                color = RGB::blue();
+            pixels[i] = { half(color.r), half(color.g), half(color.b), half(1.0f) };
+        }
+    OID3D11ShaderResourceView pixel_SRV;
+    create_texture_2D(*m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, &pixel_SRV);
+
+    OID3D11Buffer constants = create_and_bind_constants(m_device, m_context, 0.0f);
+
+    // Blur
+    GaussianBloom bloom = GaussianBloom(*m_device, DX11_SHADER_ROOT);
+    auto& filtered_SRV = bloom.filter(m_context, constants, m_bilinear_sampler, pixel_SRV, width, height);
+
+    ID3D11Resource* filtered_texture_2D;
+    filtered_SRV->GetResource(&filtered_texture_2D);
+    half4 filtered_pixels[pixel_count];
+    Readback::texture2D(m_device, m_context, (ID3D11Texture2D*)filtered_texture_2D, filtered_pixels, filtered_pixels + pixel_count);
+    filtered_texture_2D->Release();
+
+    Vector3d summed_pixels = Vector3d::zero();
+    Vector3d summed_filtered_pixels = Vector3d::zero();
+    for (int p = 0; p < pixel_count; ++p) {
+        summed_pixels += Vector3d(pixels[p].x, pixels[p].y, pixels[p].z);
+        summed_filtered_pixels += Vector3d(filtered_pixels[p].x, filtered_pixels[p].y, filtered_pixels[p].z);
+    }
+
+    EXPECT_VECTOR3F_EQ_PCT((Vector3f)summed_pixels, (Vector3f)summed_filtered_pixels, Vector3f(0.0001f));
+}
+
 } // NS DX11Renderer
 
 #endif // _DX11RENDERER_BLOOM_TEST_H_
