@@ -10,6 +10,8 @@ find_package(DirectX11)
 
 if (DIRECTX_11_FOUND AND WIN32)
   set(ROOT_SRC
+    DX11Renderer/CameraEffects.h
+    DX11Renderer/CameraEffects.cpp
     DX11Renderer/Compositor.h
     DX11Renderer/Compositor.cpp
     DX11Renderer/ConstantBufferArray.h
@@ -25,8 +27,6 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/Renderer.cpp
     DX11Renderer/TextureManager.h
     DX11Renderer/TextureManager.cpp
-    DX11Renderer/Tonemapper.h
-    DX11Renderer/Tonemapper.cpp
     DX11Renderer/TransformManager.h
     DX11Renderer/TransformManager.cpp
     DX11Renderer/Types.h
@@ -50,19 +50,19 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/Shaders/BSDFs/GGX.hlsl
   )
 
-  set(SHADERS_COLORGRADING_SRC
-    DX11Renderer/Shaders/ColorGrading/Bloom.hlsl
-    DX11Renderer/Shaders/ColorGrading/ReduceExposureHistogram.hlsl
-    DX11Renderer/Shaders/ColorGrading/ReduceLogAverageLuminance.hlsl
-    DX11Renderer/Shaders/ColorGrading/Tonemapping.hlsl
-    DX11Renderer/Shaders/ColorGrading/Utils.hlsl
+  set(SHADERS_CAMERAEFFECTS_SRC
+    DX11Renderer/Shaders/CameraEffects/Bloom.hlsl
+    DX11Renderer/Shaders/CameraEffects/ReduceExposureHistogram.hlsl
+    DX11Renderer/Shaders/CameraEffects/ReduceLogAverageLuminance.hlsl
+    DX11Renderer/Shaders/CameraEffects/Tonemapping.hlsl
+    DX11Renderer/Shaders/CameraEffects/Utils.hlsl
   )
 
   set(SHADERS_COMPUTE_SRC
     DX11Renderer/Shaders/Compute/PrefixSum.hlsl
   )
 
-  set(ALL_SHADER_SRC ${SHADERS_SRC} ${SHADERS_BSDFS_SRC} ${SHADERS_COLORGRADING_SRC} ${SHADERS_COMPUTE_SRC})
+  set(ALL_SHADER_SRC ${SHADERS_SRC} ${SHADERS_BSDFS_SRC} ${SHADERS_CAMERAEFFECTS_SRC} ${SHADERS_COMPUTE_SRC})
 
   add_library(${LIBRARY_NAME}
     ${ROOT_SRC}
@@ -72,7 +72,7 @@ if (DIRECTX_11_FOUND AND WIN32)
   source_group("" FILES ${ROOT_SRC})
   source_group("Shaders" FILES ${SHADERS_SRC})
   source_group("Shaders\\BSDFs" FILES ${SHADERS_BSDFS_SRC})
-  source_group("Shaders\\ColorGrading" FILES ${SHADERS_COLORGRADING_SRC})
+  source_group("Shaders\\CameraEffects" FILES ${SHADERS_CAMERAEFFECTS_SRC})
   source_group("Shaders\\Compute" FILES ${SHADERS_COMPUTE_SRC})
 
   target_include_directories(${LIBRARY_NAME} 

@@ -7,7 +7,7 @@
 //-------------------------------------------------------------------------------------------------
 
 #include <DX11Renderer/Compositor.h>
-#include <DX11Renderer/Tonemapper.h>
+#include <DX11Renderer/CameraEffects.h>
 #include <DX11Renderer/Utils.h>
 
 #include <Cogwheel/Core/Engine.h>
@@ -101,7 +101,7 @@ private:
 
     double previous_tonemapping_time;
     double counter_hertz;
-    Tonemapper m_tonemapper;
+    CameraEffects m_camera_effects;
 
 public:
     Implementation(HWND& hwnd, const Window& window, const std::wstring& data_folder_path)
@@ -167,7 +167,7 @@ public:
             }
 
             std::wstring shader_folder_path = m_data_folder_path + L"DX11Renderer\\Shaders\\";
-            m_tonemapper = Tonemapper(m_device, shader_folder_path);
+            m_camera_effects = CameraEffects(m_device, shader_folder_path);
         }
     }
 
@@ -311,7 +311,7 @@ public:
         // Present the backbuffer.
         Cameras::UID camera_ID = *Cameras::get_iterable().begin();
         auto tonemapping_params = Cameras::get_tonemapping_parameters(camera_ID);
-        m_tonemapper.tonemap(m_render_context, tonemapping_params, delta_time, m_backbuffer_SRV, m_swap_chain_buffer_view, m_backbuffer_size.x, m_backbuffer_size.y);
+        m_camera_effects.process(m_render_context, tonemapping_params, delta_time, m_backbuffer_SRV, m_swap_chain_buffer_view, m_backbuffer_size.x, m_backbuffer_size.y);
         m_swap_chain->Present(m_sync_interval, 0);
     }
 

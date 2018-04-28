@@ -8,7 +8,7 @@
 
 #include "Utils.hlsl"
 
-namespace ColorGrading {
+namespace CameraEffects {
 
 // ------------------------------------------------------------------------------------------------
 // Fixed exposure constant copying
@@ -182,4 +182,4 @@ float4 unreal4_tonemapping_ps(Varyings input) : SV_TARGET{
     return float4(unreal4(color), 1.0);
 }
 
-} // NS ColorGrading
+} // NS CameraEffects

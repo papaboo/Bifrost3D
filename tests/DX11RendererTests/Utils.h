@@ -9,7 +9,7 @@
 #ifndef _DX11RENDERERTEST_UTILS_H_
 #define _DX11RENDERERTEST_UTILS_H_
 
-#include <DX11Renderer/Tonemapper.h>
+#include <DX11Renderer/CameraEffects.h>
 #include <DX11Renderer/Utils.h>
 
 // -------------------------------------------------------------------------------------------------
@@ -22,9 +22,9 @@ using half4 = Cogwheel::Math::Vector4<half>;
 // Utility functions
 // -------------------------------------------------------------------------------------------------
 
-inline DX11Renderer::OID3D11Buffer create_tonemapping_constants(DX11Renderer::OID3D11Device1& device, float min_log_luminance, float max_log_luminance, float min_histogram_percentage = 0.8f, float max_histogram_percentage = 0.95f) {
+inline DX11Renderer::OID3D11Buffer create_camera_effects_constants(DX11Renderer::OID3D11Device1& device, float min_log_luminance, float max_log_luminance, float min_histogram_percentage = 0.8f, float max_histogram_percentage = 0.95f) {
 
-    DX11Renderer::Tonemapper::Constants constants;
+    DX11Renderer::CameraEffects::Constants constants;
     constants.min_log_luminance = min_log_luminance;
     constants.max_log_luminance = max_log_luminance;
     constants.min_histogram_percentage = min_histogram_percentage;

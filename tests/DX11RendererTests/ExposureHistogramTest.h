@@ -16,8 +16,8 @@
 #include <Cogwheel/Math/Vector.h>
 #include <Cogwheel/Math/Utils.h>
 
+#include <DX11Renderer/CameraEffects.h>
 #include <DX11Renderer/Compositor.h>
-#include <DX11Renderer/ToneMapper.h>
 #include <DX11Renderer/Utils.h>
 
 namespace DX11Renderer {
@@ -80,7 +80,7 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
 
     float min_log_luminance = -8;
     float max_log_luminance = 4;
-    OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance);
+    OID3D11Buffer constant_buffer = create_camera_effects_constants(device, min_log_luminance, max_log_luminance);
     context->CSSetConstantBuffers(0, 1, &constant_buffer);
 
     // Image with one element in each bucket.
@@ -115,7 +115,7 @@ TEST_F(ExposureHistogramFixture, small_image) {
 
     float min_log_luminance = -8;
     float max_log_luminance = 4;
-    OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance);
+    OID3D11Buffer constant_buffer = create_camera_effects_constants(device, min_log_luminance, max_log_luminance);
     context->CSSetConstantBuffers(0, 1, &constant_buffer);
 
     // Image with 4 elements in each bucket and (4 + width) elements in the first and last bucket
@@ -170,7 +170,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
     OID3D11UnorderedAccessView linear_exposure_UAV;
     OID3D11Buffer linear_exposure_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &linear_exposure_UAV);
 
-    OID3DBlob compute_exposure_blob = compile_shader(DX11_SHADER_ROOT + std::wstring(L"ColorGrading\\ReduceExposureHistogram.hlsl"), "cs_5_0", "ColorGrading::compute_linear_exposure");
+    OID3DBlob compute_exposure_blob = compile_shader(DX11_SHADER_ROOT + std::wstring(L"CameraEffects\\ReduceExposureHistogram.hlsl"), "cs_5_0", "CameraEffects::compute_linear_exposure");
     OID3D11ComputeShader compute_exposure_shader;
     THROW_ON_FAILURE(device->CreateComputeShader(UNPACK_BLOB_ARGS(compute_exposure_blob), nullptr, &compute_exposure_shader));
 
@@ -178,7 +178,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
     float max_log_luminance = 4;
     float min_percentage = 0.8f;
     float max_percentage = 0.95f;
-    OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
+    OID3D11Buffer constant_buffer = create_camera_effects_constants(device, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
 
     context->CSSetShader(compute_exposure_shader, nullptr, 0u);
     context->CSSetConstantBuffers(0, 1, &constant_buffer);
@@ -216,7 +216,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_histogram) {
     OID3D11UnorderedAccessView linear_exposure_UAV;
     OID3D11Buffer linear_exposure_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &linear_exposure_UAV);
 
-    OID3DBlob compute_exposure_blob = compile_shader(DX11_SHADER_ROOT + std::wstring(L"ColorGrading\\ReduceExposureHistogram.hlsl"), "cs_5_0", "ColorGrading::compute_linear_exposure");
+    OID3DBlob compute_exposure_blob = compile_shader(DX11_SHADER_ROOT + std::wstring(L"CameraEffects\\ReduceExposureHistogram.hlsl"), "cs_5_0", "CameraEffects::compute_linear_exposure");
     OID3D11ComputeShader compute_exposure_shader;
     THROW_ON_FAILURE(device->CreateComputeShader(UNPACK_BLOB_ARGS(compute_exposure_blob), nullptr, &compute_exposure_shader));
 
@@ -224,7 +224,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_histogram) {
     float max_log_luminance = 4;
     float min_percentage = 0.8f;
     float max_percentage = 0.95f;
-    OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
+    OID3D11Buffer constant_buffer = create_camera_effects_constants(device, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
 
     context->CSSetShader(compute_exposure_shader, nullptr, 0u);
     context->CSSetConstantBuffers(0, 1, &constant_buffer);

@@ -8,7 +8,7 @@
 
 #include "Utils.hlsl"
 
-namespace ColorGrading {
+namespace CameraEffects {
 
 static const uint HISTOGRAM_SIZE = 64u;
 static const uint LOG2_HISTOGRAM_SIZE = log2(HISTOGRAM_SIZE);
@@ -162,4 +162,4 @@ void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
     }
 }
 
-} // NS ColorGrading
+} // NS CameraEffects

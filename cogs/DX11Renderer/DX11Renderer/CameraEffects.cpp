@@ -1,4 +1,4 @@
-// DirectX 11 tonemapper.
+// DirectX 11 camera effects.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
 //
@@ -6,7 +6,7 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#include <DX11Renderer/Tonemapper.h>
+#include <DX11Renderer/CameraEffects.h>
 #include <DX11Renderer/Utils.h>
 
 using namespace Cogwheel::Math;
@@ -21,12 +21,12 @@ GaussianBloom::GaussianBloom(ID3D11Device1& device, const std::wstring& shader_f
     m_ping = {};
     m_pong = {};
 
-    const std::wstring shader_filename = shader_folder_path + L"ColorGrading/Bloom.hlsl";
+    const std::wstring shader_filename = shader_folder_path + L"CameraEffects/Bloom.hlsl";
 
-    OID3DBlob horizontal_filter_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::gaussian_horizontal_filter");
+    OID3DBlob horizontal_filter_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::gaussian_horizontal_filter");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(horizontal_filter_blob), nullptr, &m_horizontal_filter));
 
-    OID3DBlob vertical_filter_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::gaussian_vertical_filter");
+    OID3DBlob vertical_filter_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::gaussian_vertical_filter");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(vertical_filter_blob), nullptr, &m_vertical_filter));
 }
 
@@ -56,8 +56,8 @@ OID3D11ShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, 
         auto allocate_texture = [&](IntermediateTexture& tex) {
 
             D3D11_TEXTURE2D_DESC tex_desc = {};
-            tex_desc.Width = image_width;
-            tex_desc.Height = image_height;
+            tex_desc.Width = tex.width = image_width;
+            tex_desc.Height = tex.height = image_height;
             tex_desc.MipLevels = 1;
             tex_desc.ArraySize = 1;
             tex_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -115,15 +115,15 @@ DualKawaseBloom::DualKawaseBloom(ID3D11Device1& device, const std::wstring& shad
 
     m_temp = {};
 
-    const std::wstring shader_filename = shader_folder_path + L"ColorGrading/Bloom.hlsl";
+    const std::wstring shader_filename = shader_folder_path + L"CameraEffects/Bloom.hlsl";
 
-    OID3DBlob m_extract_high_intensity_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::extract_high_intensity");
+    OID3DBlob m_extract_high_intensity_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::extract_high_intensity");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(m_extract_high_intensity_blob), nullptr, &m_extract_high_intensity));
 
-    OID3DBlob downsample_pattern_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::dual_kawase_downsample");
+    OID3DBlob downsample_pattern_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::dual_kawase_downsample");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(downsample_pattern_blob), nullptr, &m_downsample_pattern));
 
-    OID3DBlob upsample_pattern_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::dual_kawase_upsample");
+    OID3DBlob upsample_pattern_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::dual_kawase_upsample");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(upsample_pattern_blob), nullptr, &m_upsample_pattern));
 }
 
@@ -232,16 +232,16 @@ OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context
 // Log average luminance reduction.
 // ------------------------------------------------------------------------------------------------
 LogAverageLuminance::LogAverageLuminance(ID3D11Device1& device, const std::wstring& shader_folder_path) {
-    const std::wstring shader_filename = shader_folder_path + L"ColorGrading/ReduceLogAverageLuminance.hlsl";
+    const std::wstring shader_filename = shader_folder_path + L"CameraEffects/ReduceLogAverageLuminance.hlsl";
 
     // Create shaders.
-    OID3DBlob log_average_first_reduction_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::first_reduction");
+    OID3DBlob log_average_first_reduction_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::first_reduction");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(log_average_first_reduction_blob), nullptr, &m_log_average_first_reduction));
 
-    OID3DBlob log_average_computation_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::compute_log_average");
+    OID3DBlob log_average_computation_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::compute_log_average");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(log_average_computation_blob), nullptr, &m_log_average_computation));
 
-    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::compute_linear_exposure");
+    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::compute_linear_exposure");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_computation_blob), nullptr, &m_linear_exposure_computation));
 
     // Create buffers
@@ -288,13 +288,13 @@ void LogAverageLuminance::compute(ID3D11DeviceContext1& context, ID3D11Buffer* c
 // Exposure histogram
 // ------------------------------------------------------------------------------------------------
 ExposureHistogram::ExposureHistogram(ID3D11Device1& device, const std::wstring& shader_folder_path) {
-    const std::wstring shader_filename = shader_folder_path + L"ColorGrading/ReduceExposureHistogram.hlsl";
+    const std::wstring shader_filename = shader_folder_path + L"CameraEffects/ReduceExposureHistogram.hlsl";
 
     // Create shaders.
-    OID3DBlob reduce_exposure_histogram_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::reduce");
+    OID3DBlob reduce_exposure_histogram_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::reduce");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_exposure_histogram_blob), nullptr, &m_histogram_reduction));
 
-    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::compute_linear_exposure");
+    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::compute_linear_exposure");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_computation_blob), nullptr, &m_linear_exposure_computation));
 
     // Create buffers
@@ -354,9 +354,9 @@ void ExposureHistogram::compute_linear_exposure(ID3D11DeviceContext1& context, I
 }
 
 // ------------------------------------------------------------------------------------------------
-// Tonemapper
+// Camera post processing
 // ------------------------------------------------------------------------------------------------
-Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_path) {
+CameraEffects::CameraEffects(ID3D11Device1& device, const std::wstring& shader_folder_path) {
 
     THROW_ON_FAILURE(create_constant_buffer(device, sizeof(Constants), &m_constant_buffer));
 
@@ -367,12 +367,12 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
     m_bloom = GaussianBloom(device, shader_folder_path);
 
     { // Setup tonemapping shaders
-        const std::wstring shader_filename = shader_folder_path + L"ColorGrading/Tonemapping.hlsl";
+        const std::wstring shader_filename = shader_folder_path + L"CameraEffects/Tonemapping.hlsl";
 
-        OID3DBlob linear_exposure_from_bias_blob = compile_shader(shader_filename, "cs_5_0", "ColorGrading::linear_exposure_from_constant_bias");
+        OID3DBlob linear_exposure_from_bias_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::linear_exposure_from_constant_bias");
         THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_from_bias_blob), nullptr, &m_linear_exposure_from_bias_shader));
 
-        OID3DBlob vertex_shader_blob = compile_shader(shader_filename, "vs_5_0", "ColorGrading::fullscreen_vs");
+        OID3DBlob vertex_shader_blob = compile_shader(shader_filename, "vs_5_0", "CameraEffects::fullscreen_vs");
         HRESULT hr = device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_fullscreen_VS);
         THROW_ON_FAILURE(hr);
 
@@ -384,9 +384,9 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
             return pixel_shader;
         };
 
-        m_linear_tonemapping_PS = create_pixel_shader("ColorGrading::linear_tonemapping_ps");
-        m_uncharted2_tonemapping_PS = create_pixel_shader("ColorGrading::uncharted2_tonemapping_ps");
-        m_filmic_tonemapping_PS = create_pixel_shader("ColorGrading::unreal4_tonemapping_ps");
+        m_linear_tonemapping_PS = create_pixel_shader("CameraEffects::linear_tonemapping_ps");
+        m_uncharted2_tonemapping_PS = create_pixel_shader("CameraEffects::uncharted2_tonemapping_ps");
+        m_filmic_tonemapping_PS = create_pixel_shader("CameraEffects::unreal4_tonemapping_ps");
     }
 
     { // Bilinear sampler
@@ -403,8 +403,8 @@ Tonemapper::Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_
     }
 }
 
-void Tonemapper::tonemap(ID3D11DeviceContext1& context, Tonemapping::Parameters parameters, float delta_time,
-                         ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, int width, int height) {
+void CameraEffects::process(ID3D11DeviceContext1& context, Tonemapping::Parameters parameters, float delta_time,
+                            ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, int width, int height) {
 
     using namespace Cogwheel::Math::Tonemapping;
 

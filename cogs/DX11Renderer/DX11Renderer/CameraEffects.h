@@ -1,4 +1,4 @@
-// DirectX 11 tonemapper.
+// DirectX 11 camera effects.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
 //
@@ -6,8 +6,8 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _DX11RENDERER_RENDERER_TONEMAPPER_H_
-#define _DX11RENDERER_RENDERER_TONEMAPPER_H_
+#ifndef _DX11RENDERER_RENDERER_CAMERA_EFFECTS_H_
+#define _DX11RENDERER_RENDERER_CAMERA_EFFECTS_H_
 
 #include <Cogwheel/Math/Tonemapping.h>
 
@@ -156,12 +156,12 @@ private:
 };
 
 // ------------------------------------------------------------------------------------------------
-// Tonemapping implementation with support for various tonemappers.
+// Camera post process effects with support for exposure, bloom, various tonemappers and other effects.
 // Sources:
 // * https://mynameismjp.wordpress.com/2010/04/30/a-closer-look-at-tone-mapping/
 // * http://perso.univ-lyon1.fr/jean-claude.iehl/Public/educ/GAMA/2007/gdc07/Post-Processing_Pipeline.pdf
 // ------------------------------------------------------------------------------------------------
-class Tonemapper {
+class CameraEffects {
 public:
 
     struct Constants {
@@ -177,19 +177,19 @@ public:
         float3 _padding;
     };
 
-    Tonemapper() = default;
-    Tonemapper(Tonemapper&& other) = default;
-    Tonemapper(ID3D11Device1& device, const std::wstring& shader_folder_path);
+    CameraEffects() = default;
+    CameraEffects(CameraEffects&& other) = default;
+    CameraEffects(ID3D11Device1& device, const std::wstring& shader_folder_path);
 
-    Tonemapper& operator=(Tonemapper&& rhs) = default;
+    CameraEffects& operator=(CameraEffects&& rhs) = default;
 
-    // Tonemaps the pixels and stores them in the bound render target.
-    void tonemap(ID3D11DeviceContext1& context, Cogwheel::Math::Tonemapping::Parameters parameters, float delta_time,
+    // Processes the pixels and stores them in the bound render target.
+    void process(ID3D11DeviceContext1& context, Cogwheel::Math::Tonemapping::Parameters parameters, float delta_time,
                  ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, int width, int height);
 
 private:
-    Tonemapper(Tonemapper& other) = delete;
-    Tonemapper& operator=(Tonemapper& rhs) = delete;
+    CameraEffects(CameraEffects& other) = delete;
+    CameraEffects& operator=(CameraEffects& rhs) = delete;
 
     OID3D11Buffer m_constant_buffer;
     OID3D11SamplerState m_bilinear_sampler;
@@ -210,4 +210,4 @@ private:
 
 } // NS DX11Renderer
 
-#endif // _DX11RENDERER_RENDERER_TONEMAPPER_H_
+#endif // _DX11RENDERER_RENDERER_CAMERA_EFFECTS_H_

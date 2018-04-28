@@ -1,4 +1,4 @@
-// Color grading hlsl utilities.
+// Camera effects hlsl utilities.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
 //
@@ -6,12 +6,12 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _DX11_RENDERER_SHADERS_COLOR_GRADING_UTILS_H_
-#define _DX11_RENDERER_SHADERS_COLOR_GRADING_UTILS_H_
+#ifndef _DX11_RENDERER_SHADERS_CAMERA_EFFECTS_UTILS_H_
+#define _DX11_RENDERER_SHADERS_CAMERA_EFFECTS_UTILS_H_
 
 #include "../Utils.hlsl"
 
-namespace ColorGrading {
+namespace CameraEffects {
 
 cbuffer constants : register(b0) {
     float min_log_luminance;
@@ -34,6 +34,6 @@ float eye_adaptation(float current_exposure, float target_exposure) {
     return current_exposure + delta_exposure * factor;
 }
 
-} // NS ColorGrading
+} // NS CameraEffects
 
-#endif // _DX11_RENDERER_SHADERS_COLOR_GRADING_UTILS_H_
+#endif // _DX11_RENDERER_SHADERS_CAMERA_EFFECTS_UTILS_H_

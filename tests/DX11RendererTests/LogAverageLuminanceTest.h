@@ -17,8 +17,8 @@
 #include <Cogwheel/Math/Vector.h>
 #include <Cogwheel/Math/Utils.h>
 
+#include <DX11Renderer/CameraEffects.h>
 #include <DX11Renderer/Compositor.h>
-#include <DX11Renderer/ToneMapper.h>
 #include <DX11Renderer/Utils.h>
 
 namespace DX11Renderer {
@@ -45,7 +45,7 @@ protected:
 
         float min_log_luminance = -24;
         float max_log_luminance = 24;
-        OID3D11Buffer constant_buffer = create_tonemapping_constants(device, min_log_luminance, max_log_luminance);
+        OID3D11Buffer constant_buffer = create_camera_effects_constants(device, min_log_luminance, max_log_luminance);
         context->CSSetConstantBuffers(0, 1, &constant_buffer);
 
         OID3D11ShaderResourceView pixel_SRV;

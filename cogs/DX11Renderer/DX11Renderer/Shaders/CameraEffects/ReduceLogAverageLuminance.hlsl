@@ -8,7 +8,7 @@
 
 #include "Utils.hlsl"
 
-namespace ColorGrading {
+namespace CameraEffects {
 
 static const uint GROUP_WIDTH = 8u;
 static const uint GROUP_HEIGHT = 16u;
@@ -106,4 +106,4 @@ void compute_linear_exposure(uint3 local_thread_ID : SV_GroupThreadID) {
     }
 }
 
-} // NS ColorGrading
+} // NS CameraEffects

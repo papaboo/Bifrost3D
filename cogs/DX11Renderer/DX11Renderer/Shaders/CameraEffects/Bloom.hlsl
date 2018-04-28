@@ -8,7 +8,7 @@
 
 #include "Utils.hlsl"
 
-namespace ColorGrading {
+namespace CameraEffects {
 
 Texture2D image : register(t0);
 SamplerState image_sampler : register(s0);
@@ -119,4 +119,4 @@ void dual_kawase_upsample(uint3 global_thread_ID : SV_DispatchThreadID) {
     output_image[global_thread_ID.xy] = sum / 12.0;
 }
 
-} // NS ColorGrading
+} // NS CameraEffects

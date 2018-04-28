@@ -15,8 +15,8 @@
 #include <Cogwheel/Math/Color.h>
 #include <Cogwheel/Math/Half.h>
 
+#include <DX11Renderer/CameraEffects.h>
 #include <DX11Renderer/Compositor.h>
-#include <DX11Renderer/ToneMapper.h>
 #include <DX11Renderer/Utils.h>
 
 namespace DX11Renderer {
@@ -47,7 +47,7 @@ protected:
     // Helpers
     // --------------------------------------------------------------------------------------------
     inline OID3D11Buffer create_and_bind_constants(OID3D11Device1& device, OID3D11DeviceContext1& context, float bloom_threshold) {
-        Tonemapper::Constants constants;
+        CameraEffects::Constants constants;
         constants.bloom_threshold = bloom_threshold;
         OID3D11Buffer constant_buffer;
         THROW_ON_FAILURE(create_constant_buffer(device, constants, &constant_buffer));
