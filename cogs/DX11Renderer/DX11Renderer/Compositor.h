@@ -49,9 +49,9 @@ typedef IRenderer*(*RendererCreator)(ID3D11Device1&, int width_hint, int height_
 // Utility function to create a 'performant' DX11 device.
 //-------------------------------------------------------------------------------------------------
 template <typename T> class OwnedResourcePtr;
-using OID3D11Device1 = DX11Renderer::OwnedResourcePtr<ID3D11Device1>;
-OID3D11Device1 create_performant_device1(unsigned int create_device_flags = D3D11_CREATE_DEVICE_NONE);
-OID3D11Device1 create_performant_debug_device1();
+using ODevice1 = DX11Renderer::OwnedResourcePtr<ID3D11Device1>;
+ODevice1 create_performant_device1(unsigned int create_device_flags = D3D11_CREATE_DEVICE_NONE);
+ODevice1 create_performant_debug_device1();
 
 //-------------------------------------------------------------------------------------------------
 // DirectX 11 compositor.

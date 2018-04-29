@@ -41,7 +41,7 @@ namespace DX11Renderer {
 class Renderer::Implementation {
 private:
     ID3D11Device1& m_device;
-    OID3D11DeviceContext1 m_render_context;
+    ODeviceContext1 m_render_context;
 
     // Cogwheel resources
     vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
@@ -55,20 +55,20 @@ private:
     TransformManager m_transforms;
 
     struct {
-        OID3D11Buffer null_buffer;
-        OID3D11InputLayout input_layout;
-        OID3D11VertexShader shader;
+        OBuffer null_buffer;
+        OInputLayout input_layout;
+        OVertexShader shader;
     } m_vertex_shading;
 
     struct {
-        OID3D11RasterizerState raster_state;
-        OID3D11DepthStencilState depth_state;
-        OID3D11PixelShader shader;
+        ORasterizerState raster_state;
+        ODepthStencilState depth_state;
+        OPixelShader shader;
     } m_opaque;
 
     struct {
         int first_model_index = 0;
-        OID3D11RasterizerState raster_state;
+        ORasterizerState raster_state;
     } m_cutout;
 
     struct Transparent {
@@ -78,9 +78,9 @@ private:
         };
 
         int first_model_index = 0;
-        OID3D11BlendState blend_state;
-        OID3D11DepthStencilState depth_state;
-        OID3D11PixelShader shader;
+        OBlendState blend_state;
+        ODepthStencilState depth_state;
+        OPixelShader shader;
         std::vector<SortedModel> sorted_models_pool; // List of sorted transparent models. Created as a pool to minimize runtime memory allocation.
     } m_transparent;
 
@@ -92,13 +92,13 @@ private:
         Matrix4x4f inverse_view_projection_matrix;
         Matrix4x3f world_to_view_matrix;
     };
-    OID3D11Buffer m_scene_buffer;
+    OBuffer m_scene_buffer;
 
     // Lights
     struct {
         LightManager manager;
-        OID3D11VertexShader vertex_shader;
-        OID3D11PixelShader pixel_shader;
+        OVertexShader vertex_shader;
+        OPixelShader pixel_shader;
     } m_lights;
 
     std::wstring m_shader_folder_path;
@@ -127,7 +127,7 @@ public:
         }
 
         { // Setup vertex processing.
-            OID3DBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"VertexShader.hlsl", "vs_5_0", "main");
+            OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"VertexShader.hlsl", "vs_5_0", "main");
 
             // Create the shader objects.
             HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shading.shader);
@@ -171,7 +171,7 @@ public:
             hr = m_device.CreateDepthStencilState(&depth_desc, &m_opaque.depth_state);
             THROW_ON_FAILURE(hr);
 
-            OID3DBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "opaque", fragment_macros);
+            OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "opaque", fragment_macros);
             hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_opaque.shader);
             THROW_ON_FAILURE(hr);
         }
@@ -207,7 +207,7 @@ public:
             hr = m_device.CreateDepthStencilState(&depth_desc, &m_transparent.depth_state);
             THROW_ON_FAILURE(hr);
 
-            OID3DBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "transparent", fragment_macros);
+            OBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "transparent", fragment_macros);
             hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), nullptr, &m_transparent.shader);
             THROW_ON_FAILURE(hr);
         }
@@ -221,10 +221,10 @@ public:
             m_lights.manager = LightManager(m_device, LightSources::capacity());
 
             // Sphere light visualization shaders.
-            OID3DBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "vs_5_0", "vs");
+            OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "vs_5_0", "vs");
             HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_lights.vertex_shader);
             THROW_ON_FAILURE(hr);
-            OID3DBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "ps_5_0", "ps");
+            OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "ps_5_0", "ps");
             hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_lights.pixel_shader);
             THROW_ON_FAILURE(hr);
         }

@@ -31,10 +31,10 @@ class PrefixSum {
 public:
 
     PrefixSum(ID3D11Device1& device, const std::wstring& shader_folder_path) {
-        OID3DBlob reduce_shader_blob = compile_shader(shader_folder_path + L"Compute\\PrefixSum.hlsl", "cs_5_0", "reduce");
+        OBlob reduce_shader_blob = compile_shader(shader_folder_path + L"Compute\\PrefixSum.hlsl", "cs_5_0", "reduce");
         THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_shader_blob), nullptr, &m_reduce_shader));
 
-        OID3DBlob downsweep_shader_blob = compile_shader(shader_folder_path + L"Compute\\PrefixSum.hlsl", "cs_5_0", "downsweep");
+        OBlob downsweep_shader_blob = compile_shader(shader_folder_path + L"Compute\\PrefixSum.hlsl", "cs_5_0", "downsweep");
         THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(downsweep_shader_blob), nullptr, &m_downsweep_shader));
 
         int4 outer_constants = { 1, 0, 0, 0 };
@@ -50,8 +50,8 @@ public:
     void apply(ID3D11Device1& device, unsigned int* begin, unsigned int* end) {
         int element_count = int(end - begin);
 
-        OID3D11UnorderedAccessView buffer_UAV;
-        OID3D11Buffer gpu_buffer = create_default_buffer(device, DXGI_FORMAT_R32_UINT, begin, element_count, nullptr, &buffer_UAV);
+        OUnorderedAccessView buffer_UAV;
+        OBuffer gpu_buffer = create_default_buffer(device, DXGI_FORMAT_R32_UINT, begin, element_count, nullptr, &buffer_UAV);
 
         ID3D11DeviceContext1* context;
         device.GetImmediateContext1(&context);
@@ -65,7 +65,7 @@ public:
         context.CSSetUnorderedAccessViews(0, 1, &buffer_UAV, 0u);
 
         bool run_two_iterations = element_count > GROUP_SIZE;
-        OID3D11Buffer& outer_constants = run_two_iterations ? m_outer_constants : m_outer_single_iteration_constants;
+        OBuffer& outer_constants = run_two_iterations ? m_outer_constants : m_outer_single_iteration_constants;
 
         // Reduce
         context.CSSetShader(m_reduce_shader, nullptr, 0);
@@ -98,12 +98,12 @@ public:
     }
 
 private:
-    OID3D11ComputeShader m_reduce_shader;
-    OID3D11ComputeShader m_downsweep_shader;
+    OComputeShader m_reduce_shader;
+    OComputeShader m_downsweep_shader;
 
-    OID3D11Buffer m_outer_constants;
-    OID3D11Buffer m_outer_single_iteration_constants;
-    OID3D11Buffer m_inner_constants;
+    OBuffer m_outer_constants;
+    OBuffer m_outer_single_iteration_constants;
+    OBuffer m_inner_constants;
 };
 
 } // NS DX11Renderer

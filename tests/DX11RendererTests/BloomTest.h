@@ -46,10 +46,10 @@ protected:
     // --------------------------------------------------------------------------------------------
     // Helpers
     // --------------------------------------------------------------------------------------------
-    inline OID3D11Buffer create_and_bind_constants(OID3D11Device1& device, OID3D11DeviceContext1& context, float bloom_threshold) {
+    inline OBuffer create_and_bind_constants(ODevice1& device, ODeviceContext1& context, float bloom_threshold) {
         CameraEffects::Constants constants;
         constants.bloom_threshold = bloom_threshold;
-        OID3D11Buffer constant_buffer;
+        OBuffer constant_buffer;
         THROW_ON_FAILURE(create_constant_buffer(device, constants, &constant_buffer));
 
         context->CSSetConstantBuffers(0, 1, &constant_buffer);
@@ -60,7 +60,7 @@ protected:
     // --------------------------------------------------------------------------------------------
     // Tests
     // --------------------------------------------------------------------------------------------
-    using BloomFilter = std::function<OID3D11ShaderResourceView&(ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height)>;
+    using BloomFilter = std::function<OShaderResourceView&(ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height)>;
 
     inline void test_energy_conservation(BloomFilter bloom_filter, Cogwheel::Math::Vector3f error_pct) {
         using namespace Cogwheel::Math;
@@ -79,10 +79,10 @@ protected:
                     color = RGB::blue();
                 pixels[i] = { half(color.r), half(color.g), half(color.b), half(1.0f) };
             }
-        OID3D11ShaderResourceView pixel_SRV;
+        OShaderResourceView pixel_SRV;
         create_texture_2D(*m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, &pixel_SRV);
 
-        OID3D11Buffer constants = create_and_bind_constants(m_device, m_context, 0.0f);
+        OBuffer constants = create_and_bind_constants(m_device, m_context, 0.0f);
 
         // Blur
         auto& filtered_SRV = bloom_filter(constants, pixel_SRV, width, height);
@@ -121,7 +121,7 @@ protected:
                     color = RGB::blue();
                 pixels[i] = { half(color.r), half(color.g), half(color.b), half(1.0f) };
             }
-        OID3D11ShaderResourceView pixel_SRV;
+        OShaderResourceView pixel_SRV;
         create_texture_2D(*m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, &pixel_SRV);
 
         // Create mirrored image.
@@ -132,10 +132,10 @@ protected:
                 int mirrored_i = (width - 1 - x) + (height - 1 - y) * width;
                 mirrored_pixels[mirrored_i] = pixels[i];
             }
-        OID3D11ShaderResourceView mirrored_pixel_SRV;
+        OShaderResourceView mirrored_pixel_SRV;
         create_texture_2D(*m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, mirrored_pixels, width, height, &mirrored_pixel_SRV);
 
-        OID3D11Buffer constants = create_and_bind_constants(m_device, m_context, 0.0f);
+        OBuffer constants = create_and_bind_constants(m_device, m_context, 0.0f);
 
         // Blur
         DualKawaseBloom bloom = DualKawaseBloom(*m_device, DX11_SHADER_ROOT);
@@ -177,11 +177,11 @@ protected:
                 int i = x + y * width;
                 pixels[i] = { half(float(i)), half(float(x)), half(float(y * y)), half(1.0f) };
             }
-        OID3D11ShaderResourceView pixel_SRV;
+        OShaderResourceView pixel_SRV;
         create_texture_2D(*m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, &pixel_SRV);
 
         float bloom_threshold = 5.0f;
-        OID3D11Buffer constants = create_and_bind_constants(m_device, m_context, bloom_threshold);
+        OBuffer constants = create_and_bind_constants(m_device, m_context, bloom_threshold);
 
         auto& high_intensity_SRV = bloom_filter(constants, pixel_SRV, width, height);
 
@@ -209,9 +209,9 @@ protected:
     // --------------------------------------------------------------------------------------------
     // Members
     // --------------------------------------------------------------------------------------------
-    OID3D11Device1 m_device;
-    OID3D11DeviceContext1 m_context;
-    OID3D11SamplerState m_bilinear_sampler;
+    ODevice1 m_device;
+    ODeviceContext1 m_context;
+    OSamplerState m_bilinear_sampler;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -220,7 +220,7 @@ protected:
 
 TEST_F(Bloom, dual_kawase_energy_conservation) {
     DualKawaseBloom bloom = DualKawaseBloom(*m_device, DX11_SHADER_ROOT);
-    auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OID3D11ShaderResourceView& {
+    auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OShaderResourceView& {
         return bloom.filter(m_context, constants, m_bilinear_sampler, pixels, image_width, image_height, 1);
     };
 
@@ -229,7 +229,7 @@ TEST_F(Bloom, dual_kawase_energy_conservation) {
 
 TEST_F(Bloom, dual_kawase_mirroring) {
     DualKawaseBloom bloom = DualKawaseBloom(*m_device, DX11_SHADER_ROOT);
-    auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OID3D11ShaderResourceView& {
+    auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OShaderResourceView& {
         return bloom.filter(m_context, constants, m_bilinear_sampler, pixels, image_width, image_height, 4);
     };
 
@@ -238,7 +238,7 @@ TEST_F(Bloom, dual_kawase_mirroring) {
 
 TEST_F(Bloom, dual_kawase_threshold) {
     DualKawaseBloom bloom = DualKawaseBloom(*m_device, DX11_SHADER_ROOT);
-    auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OID3D11ShaderResourceView& {
+    auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OShaderResourceView& {
         return bloom.filter(m_context, constants, m_bilinear_sampler, pixels, image_width, image_height, 0);
     };
 
@@ -251,7 +251,7 @@ TEST_F(Bloom, dual_kawase_threshold) {
 
 TEST_F(Bloom, gaussian_energy_conservation) {
     GaussianBloom bloom = GaussianBloom(*m_device, DX11_SHADER_ROOT);
-    auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OID3D11ShaderResourceView& {
+    auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OShaderResourceView& {
         return bloom.filter(m_context, constants, m_bilinear_sampler, pixels, image_width, image_height);
     };
 
@@ -260,7 +260,7 @@ TEST_F(Bloom, gaussian_energy_conservation) {
 
 TEST_F(Bloom, guassian_mirroring) {
     GaussianBloom bloom = GaussianBloom(*m_device, DX11_SHADER_ROOT);
-    auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OID3D11ShaderResourceView& {
+    auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OShaderResourceView& {
         return bloom.filter(m_context, constants, m_bilinear_sampler, pixels, image_width, image_height);
     };
 
@@ -269,7 +269,7 @@ TEST_F(Bloom, guassian_mirroring) {
 
 TEST_F(Bloom, gaussian_threshold) {
     GaussianBloom bloom = GaussianBloom(*m_device, DX11_SHADER_ROOT);
-    auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OID3D11ShaderResourceView& {
+    auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OShaderResourceView& {
         return bloom.filter(m_context, constants, m_bilinear_sampler, pixels, image_width, image_height);
     };
 

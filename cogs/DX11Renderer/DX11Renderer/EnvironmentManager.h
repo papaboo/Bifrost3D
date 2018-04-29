@@ -40,17 +40,17 @@ private:
     struct Environment {
         float4 tint;
         int texture_ID;
-        OID3D11Texture2D texture2D;
-        OID3D11ShaderResourceView srv;
+        OTexture2D texture2D;
+        OShaderResourceView srv;
     };
 
     TextureManager& m_textures;
     std::vector<Environment> m_envs = std::vector<Environment>(0);
-    OID3D11SamplerState m_sampler;
+    OSamplerState m_sampler;
 
-    OID3D11VertexShader m_vertex_shader;
-    OID3D11PixelShader m_pixel_shader;
-    OID3D11ComputeShader m_convolution_shader;
+    OVertexShader m_vertex_shader;
+    OPixelShader m_pixel_shader;
+    OComputeShader m_convolution_shader;
 };
 
 } // NS DX11Renderer

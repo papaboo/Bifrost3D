@@ -38,21 +38,21 @@ protected:
 
     inline void test_image(int width, int height, half4* pixels) {
         auto device = create_performant_device1();
-        OID3D11DeviceContext1 context;
+        ODeviceContext1 context;
         device->GetImmediateContext1(&context);
 
         LogAverageLuminance& log_average_exposure = LogAverageLuminance(*device, DX11_SHADER_ROOT);
 
         float min_log_luminance = -24;
         float max_log_luminance = 24;
-        OID3D11Buffer constant_buffer = create_camera_effects_constants(device, min_log_luminance, max_log_luminance);
+        OBuffer constant_buffer = create_camera_effects_constants(device, min_log_luminance, max_log_luminance);
         context->CSSetConstantBuffers(0, 1, &constant_buffer);
 
-        OID3D11ShaderResourceView pixel_SRV;
+        OShaderResourceView pixel_SRV;
         create_texture_2D(*device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, &pixel_SRV);
 
-        OID3D11UnorderedAccessView output_UAV;
-        OID3D11Buffer output_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &output_UAV);
+        OUnorderedAccessView output_UAV;
+        OBuffer output_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &output_UAV);
 
         float log_average_GPU = 0.0f;
         { // Test log-average computation 

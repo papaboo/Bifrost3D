@@ -48,9 +48,9 @@ private:
     MaterialManager(MaterialManager&& other) = delete;
     MaterialManager& operator=(MaterialManager& rhs) = delete;
 
-    OID3D11ShaderResourceView m_GGX_with_fresnel_rho_srv;
-    OID3D11ShaderResourceView m_GGX_SPTD_fit_srv;
-    OID3D11SamplerState m_precomputation2D_sampler;
+    OShaderResourceView m_GGX_with_fresnel_rho_srv;
+    OShaderResourceView m_GGX_SPTD_fit_srv;
+    OSamplerState m_precomputation2D_sampler;
 
     std::vector<Dx11Material> m_materials;
     std::vector<Dx11MaterialTextures> m_material_textures;

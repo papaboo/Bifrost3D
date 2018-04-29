@@ -104,7 +104,7 @@ private:
     ConstantBufferArray(ConstantBufferArray& other) = delete;
     ConstantBufferArray& operator=(ConstantBufferArray& rhs) = delete;
 
-    OID3D11Buffer m_constant_buffer;
+    OBuffer m_constant_buffer;
     unsigned int m_element_count;
 
 };

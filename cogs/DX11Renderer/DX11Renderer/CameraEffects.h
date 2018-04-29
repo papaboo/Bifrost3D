@@ -28,7 +28,7 @@ public:
 
     GaussianBloom& operator=(GaussianBloom&& rhs) = default;
 
-    OID3D11ShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
+    OShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
         ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height);
 
 private:
@@ -37,14 +37,14 @@ private:
 
     struct IntermediateTexture {
         unsigned int width, height;
-        OID3D11ShaderResourceView SRV;
-        OID3D11UnorderedAccessView UAV;
+        OShaderResourceView SRV;
+        OUnorderedAccessView UAV;
     };
 
     IntermediateTexture m_ping, m_pong;
 
-    OID3D11ComputeShader m_horizontal_filter;
-    OID3D11ComputeShader m_vertical_filter;
+    OComputeShader m_horizontal_filter;
+    OComputeShader m_vertical_filter;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -61,7 +61,7 @@ public:
 
     DualKawaseBloom& operator=(DualKawaseBloom&& rhs) = default;
 
-    OID3D11ShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
+    OShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
         ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, unsigned int half_passes);
 
 private:
@@ -70,13 +70,13 @@ private:
 
     struct {
         unsigned int width, height, mipmap_count;
-        OID3D11ShaderResourceView* SRVs;
-        OID3D11UnorderedAccessView* UAVs;
+        OShaderResourceView* SRVs;
+        OUnorderedAccessView* UAVs;
     } m_temp;
 
-    OID3D11ComputeShader m_extract_high_intensity;
-    OID3D11ComputeShader m_downsample_pattern;
-    OID3D11ComputeShader m_upsample_pattern;
+    OComputeShader m_extract_high_intensity;
+    OComputeShader m_downsample_pattern;
+    OComputeShader m_upsample_pattern;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -110,14 +110,14 @@ private:
 
     void compute(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
                  ID3D11ShaderResourceView* pixels, unsigned int image_width, 
-                 OID3D11ComputeShader& second_reduction, ID3D11UnorderedAccessView* output_UAV);
+                 OComputeShader& second_reduction, ID3D11UnorderedAccessView* output_UAV);
 
-    OID3D11ComputeShader m_log_average_first_reduction;
-    OID3D11ComputeShader m_log_average_computation;
-    OID3D11ShaderResourceView m_log_averages_SRV;
-    OID3D11UnorderedAccessView m_log_averages_UAV;
+    OComputeShader m_log_average_first_reduction;
+    OComputeShader m_log_average_computation;
+    OShaderResourceView m_log_averages_SRV;
+    OUnorderedAccessView m_log_averages_UAV;
 
-    OID3D11ComputeShader m_linear_exposure_computation;
+    OComputeShader m_linear_exposure_computation;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -137,7 +137,7 @@ public:
 
     ExposureHistogram& operator=(ExposureHistogram&& rhs) = default;
 
-    OID3D11ShaderResourceView& reduce_histogram(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+    OShaderResourceView& reduce_histogram(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
                                                 ID3D11ShaderResourceView* pixels, unsigned int image_width);
 
     void compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
@@ -148,11 +148,11 @@ private:
     ExposureHistogram(ExposureHistogram& other) = delete;
     ExposureHistogram& operator=(ExposureHistogram& rhs) = delete;
 
-    OID3D11ComputeShader m_histogram_reduction;
-    OID3D11ShaderResourceView m_histogram_SRV;
-    OID3D11UnorderedAccessView m_histogram_UAV;
+    OComputeShader m_histogram_reduction;
+    OShaderResourceView m_histogram_SRV;
+    OUnorderedAccessView m_histogram_UAV;
 
-    OID3D11ComputeShader m_linear_exposure_computation;
+    OComputeShader m_linear_exposure_computation;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -191,21 +191,21 @@ private:
     CameraEffects(CameraEffects& other) = delete;
     CameraEffects& operator=(CameraEffects& rhs) = delete;
 
-    OID3D11Buffer m_constant_buffer;
-    OID3D11SamplerState m_bilinear_sampler;
+    OBuffer m_constant_buffer;
+    OSamplerState m_bilinear_sampler;
 
-    OID3D11ShaderResourceView m_linear_exposure_SRV;
-    OID3D11UnorderedAccessView m_linear_exposure_UAV;
+    OShaderResourceView m_linear_exposure_SRV;
+    OUnorderedAccessView m_linear_exposure_UAV;
     LogAverageLuminance m_log_average_luminance;
     ExposureHistogram m_exposure_histogram;
-    OID3D11ComputeShader m_linear_exposure_from_bias_shader;
+    OComputeShader m_linear_exposure_from_bias_shader;
 
     GaussianBloom m_bloom;
 
-    OID3D11VertexShader m_fullscreen_VS;
-    OID3D11PixelShader m_linear_tonemapping_PS;
-    OID3D11PixelShader m_uncharted2_tonemapping_PS;
-    OID3D11PixelShader m_filmic_tonemapping_PS;
+    OVertexShader m_fullscreen_VS;
+    OPixelShader m_linear_tonemapping_PS;
+    OPixelShader m_uncharted2_tonemapping_PS;
+    OPixelShader m_filmic_tonemapping_PS;
 };
 
 } // NS DX11Renderer

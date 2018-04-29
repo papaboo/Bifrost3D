@@ -26,15 +26,15 @@ namespace DX11Renderer {
 EnvironmentManager::EnvironmentManager(ID3D11Device1& device, const std::wstring& shader_folder_path, TextureManager& textures)
     : m_textures(textures) {
 
-    OID3DBlob vertex_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "vs_5_0", "main_vs");
+    OBlob vertex_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "vs_5_0", "main_vs");
     HRESULT hr = device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shader);
     THROW_ON_FAILURE(hr);
 
-    OID3DBlob pixel_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "ps_5_0", "main_ps");
+    OBlob pixel_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "ps_5_0", "main_ps");
     hr = device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_pixel_shader);
     THROW_ON_FAILURE(hr);
 
-    OID3DBlob convolution_shader_blob = compile_shader(shader_folder_path + L"IBLConvolution.hlsl", "cs_5_0", "MIS_convolute");
+    OBlob convolution_shader_blob = compile_shader(shader_folder_path + L"IBLConvolution.hlsl", "cs_5_0", "MIS_convolute");
     hr = device.CreateComputeShader(UNPACK_BLOB_ARGS(convolution_shader_blob), nullptr, &m_convolution_shader);
     THROW_ON_FAILURE(hr);
 
@@ -85,8 +85,8 @@ bool EnvironmentManager::render(ID3D11DeviceContext1& render_context, int enviro
         render_context.PSSetShaderResources(0, 1, &m_textures.white_texture().srv);
         render_context.PSSetSamplers(0, 1, &m_textures.white_texture().sampler);
 
-        OID3D11RenderTargetView backbuffer;
-        OID3D11DepthStencilView depth;
+        ORenderTargetView backbuffer;
+        ODepthStencilView depth;
         render_context.OMGetRenderTargets(1, &backbuffer, &depth);
 
         render_context.ClearRenderTargetView(backbuffer, &env.tint.x);
@@ -181,10 +181,10 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                     // GPU convolution.
 
                     // Create and upload light samples and PDF for MIS.
-                    OID3D11Texture2D per_pixel_PDF_texture = nullptr;
-                    OID3D11ShaderResourceView per_pixel_PDF_SRV = nullptr;
-                    OID3D11Buffer light_samples_buffer = nullptr;
-                    OID3D11ShaderResourceView light_samples_SRV = nullptr;
+                    OTexture2D per_pixel_PDF_texture = nullptr;
+                    OShaderResourceView per_pixel_PDF_SRV = nullptr;
+                    OBuffer light_samples_buffer = nullptr;
+                    OShaderResourceView light_samples_SRV = nullptr;
                     {
                         { // Per pixel PDF.
 
@@ -270,12 +270,12 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
 
                         int smallest_width = env_width >> (mipmap_count - 1);
                         ConvolutionConstants constants = { 1.0f / float(mipmap_count - 1), 1.0f / smallest_width, 1024u };
-                        OID3D11Buffer constant_buffer;
+                        OBuffer constant_buffer;
                         HRESULT hr = create_constant_buffer(device, constants, &constant_buffer);
                         THROW_ON_FAILURE(hr);
 
                         // Create UAVs for the mip levels.
-                        OID3D11UnorderedAccessView* mip_level_UAVs = new OID3D11UnorderedAccessView[mipmap_count - 1];
+                        OUnorderedAccessView* mip_level_UAVs = new OUnorderedAccessView[mipmap_count - 1];
 
                         for (int m = 1; m < mipmap_count; ++m) {
                             D3D11_UNORDERED_ACCESS_VIEW_DESC mip_level_UAV_desc = {};
@@ -292,7 +292,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
                         srv_desc.Texture2D.MipLevels = 1;
                         srv_desc.Texture2D.MostDetailedMip = 0;
-                        OID3D11ShaderResourceView env_SRV;
+                        OShaderResourceView env_SRV;
                         hr = device.CreateShaderResourceView(env.texture2D, &srv_desc, &env_SRV);
                         THROW_ON_FAILURE(hr);
 

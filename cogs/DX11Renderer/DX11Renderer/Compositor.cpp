@@ -21,7 +21,7 @@ namespace DX11Renderer {
 
 using OIDXGISwapChain1 = DX11Renderer::OwnedResourcePtr<IDXGISwapChain1>;
 
-OID3D11Device1 create_performant_device1(unsigned int create_device_flags) {
+ODevice1 create_performant_device1(unsigned int create_device_flags) {
     // Find the best performing device (apparently the one with the most memory) and initialize that.
     struct WeightedAdapter {
         int index, dedicated_memory;
@@ -70,13 +70,13 @@ OID3D11Device1 create_performant_device1(unsigned int create_device_flags) {
     if (device == nullptr)
         return nullptr;
 
-    OID3D11Device1 device1;
+    ODevice1 device1;
     hr = device->QueryInterface(IID_PPV_ARGS(&device1));
     THROW_ON_FAILURE(hr);
     return device1;
 }
 
-OID3D11Device1 create_performant_debug_device1() { return create_performant_device1(D3D11_CREATE_DEVICE_DEBUG); }
+ODevice1 create_performant_debug_device1() { return create_performant_device1(D3D11_CREATE_DEVICE_DEBUG); }
 
 //-------------------------------------------------------------------------------------------------
 // DirectX 11 compositor implementation.
@@ -87,17 +87,17 @@ private:
     const std::wstring m_data_folder_path;
     std::vector<IRenderer*> m_renderers;
 
-    OID3D11Device1 m_device;
-    OID3D11DeviceContext1 m_render_context;
+    ODevice1 m_device;
+    ODeviceContext1 m_render_context;
     OIDXGISwapChain1 m_swap_chain;
     unsigned int m_sync_interval = 1;
 
     // Backbuffer members.
     Vector2ui m_backbuffer_size;
-    OID3D11RenderTargetView m_swap_chain_buffer_view;
-    OID3D11RenderTargetView m_backbuffer_RTV;
-    OID3D11ShaderResourceView m_backbuffer_SRV;
-    OID3D11DepthStencilView m_depth_view;
+    ORenderTargetView m_swap_chain_buffer_view;
+    ORenderTargetView m_backbuffer_RTV;
+    OShaderResourceView m_backbuffer_SRV;
+    ODepthStencilView m_depth_view;
 
     double previous_tonemapping_time;
     double counter_hertz;
@@ -237,7 +237,7 @@ public:
                 buffer_desc.CPUAccessFlags = 0;
                 buffer_desc.MiscFlags = 0;
 
-                OID3D11Texture2D backbuffer;
+                OTexture2D backbuffer;
                 HRESULT hr = m_device->CreateTexture2D(&buffer_desc, nullptr, &backbuffer);
                 THROW_ON_FAILURE(hr);
                 hr = m_device->CreateRenderTargetView(backbuffer, nullptr, &m_backbuffer_RTV);
@@ -262,7 +262,7 @@ public:
                 depth_desc.CPUAccessFlags = 0;
                 depth_desc.MiscFlags = 0;
 
-                OID3D11Texture2D depth_buffer;
+                OTexture2D depth_buffer;
                 HRESULT hr = m_device->CreateTexture2D(&depth_desc, nullptr, &depth_buffer);
                 m_device->CreateDepthStencilView(depth_buffer, nullptr, &m_depth_view);
             }

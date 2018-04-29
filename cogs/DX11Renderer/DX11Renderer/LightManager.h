@@ -41,7 +41,7 @@ private:
         Vector3i _padding;
         Dx11Light lights[MAX_LIGHTS];
     } m_data;
-    OID3D11Buffer m_lights_buffer;
+    OBuffer m_lights_buffer;
 
     inline void light_creation(LightSources::UID light_ID, unsigned int light_index, Dx11Light* gpu_lights) {
 

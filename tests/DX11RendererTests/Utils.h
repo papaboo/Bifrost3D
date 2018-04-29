@@ -22,7 +22,7 @@ using half4 = Cogwheel::Math::Vector4<half>;
 // Utility functions
 // -------------------------------------------------------------------------------------------------
 
-inline DX11Renderer::OID3D11Buffer create_camera_effects_constants(DX11Renderer::OID3D11Device1& device, float min_log_luminance, float max_log_luminance, float min_histogram_percentage = 0.8f, float max_histogram_percentage = 0.95f) {
+inline DX11Renderer::OBuffer create_camera_effects_constants(DX11Renderer::ODevice1& device, float min_log_luminance, float max_log_luminance, float min_histogram_percentage = 0.8f, float max_histogram_percentage = 0.95f) {
 
     DX11Renderer::CameraEffects::Constants constants;
     constants.min_log_luminance = min_log_luminance;
@@ -35,12 +35,12 @@ inline DX11Renderer::OID3D11Buffer create_camera_effects_constants(DX11Renderer:
     constants.bloom_threshold = std::numeric_limits<float>::infinity();
     constants.delta_time = 1.0f / 60.0f;
 
-    DX11Renderer::OID3D11Buffer constant_buffer;
+    DX11Renderer::OBuffer constant_buffer;
     THROW_ON_FAILURE(DX11Renderer::create_constant_buffer(device, constants, &constant_buffer));
     return constant_buffer;
 }
 
-inline DX11Renderer::OID3D11SamplerState create_bilinear_sampler(DX11Renderer::OID3D11Device1& device) {
+inline DX11Renderer::OSamplerState create_bilinear_sampler(DX11Renderer::ODevice1& device) {
     D3D11_SAMPLER_DESC sampler_desc = {};
     sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
     sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -50,7 +50,7 @@ inline DX11Renderer::OID3D11SamplerState create_bilinear_sampler(DX11Renderer::O
     sampler_desc.MinLOD = 0;
     sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
 
-    DX11Renderer::OID3D11SamplerState bilinear_sampler;
+    DX11Renderer::OSamplerState bilinear_sampler;
     THROW_ON_FAILURE(device->CreateSamplerState(&sampler_desc, &bilinear_sampler));
     return bilinear_sampler;
 }

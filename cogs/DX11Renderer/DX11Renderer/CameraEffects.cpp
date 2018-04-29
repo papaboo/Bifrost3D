@@ -23,21 +23,21 @@ GaussianBloom::GaussianBloom(ID3D11Device1& device, const std::wstring& shader_f
 
     const std::wstring shader_filename = shader_folder_path + L"CameraEffects/Bloom.hlsl";
 
-    OID3DBlob horizontal_filter_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::gaussian_horizontal_filter");
+    OBlob horizontal_filter_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::gaussian_horizontal_filter");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(horizontal_filter_blob), nullptr, &m_horizontal_filter));
 
-    OID3DBlob vertical_filter_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::gaussian_vertical_filter");
+    OBlob vertical_filter_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::gaussian_vertical_filter");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(vertical_filter_blob), nullptr, &m_vertical_filter));
 }
 
-OID3D11ShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
+OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
                                                  ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) {
 #if CHECK_IMPLICIT_STATE
     // Check that the constants and sampler are bound.
-    OID3D11Buffer bound_constants;
+    OBuffer bound_constants;
     context.CSGetConstantBuffers(0, 1, &bound_constants);
     always_assert(bound_constants.get() == &constants);
-    OID3D11SamplerState bound_sampler;
+    OSamplerState bound_sampler;
     context.CSGetSamplers(0, 1, &bound_sampler);
     always_assert(bound_sampler.get() == &bilinear_sampler);
 #endif
@@ -51,7 +51,7 @@ OID3D11ShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, 
         m_pong.UAV.release();
 
         // Grab the device.
-        OID3D11Device1 device = get_device1(context);
+        ODevice1 device = get_device1(context);
 
         auto allocate_texture = [&](IntermediateTexture& tex) {
 
@@ -66,7 +66,7 @@ OID3D11ShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, 
             tex_desc.Usage = D3D11_USAGE_DEFAULT;
             tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
 
-            OID3D11Texture2D texture2D;
+            OTexture2D texture2D;
             THROW_ON_FAILURE(device->CreateTexture2D(&tex_desc, nullptr, &texture2D));
 
             // SRV
@@ -117,24 +117,24 @@ DualKawaseBloom::DualKawaseBloom(ID3D11Device1& device, const std::wstring& shad
 
     const std::wstring shader_filename = shader_folder_path + L"CameraEffects/Bloom.hlsl";
 
-    OID3DBlob m_extract_high_intensity_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::extract_high_intensity");
+    OBlob m_extract_high_intensity_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::extract_high_intensity");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(m_extract_high_intensity_blob), nullptr, &m_extract_high_intensity));
 
-    OID3DBlob downsample_pattern_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::dual_kawase_downsample");
+    OBlob downsample_pattern_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::dual_kawase_downsample");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(downsample_pattern_blob), nullptr, &m_downsample_pattern));
 
-    OID3DBlob upsample_pattern_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::dual_kawase_upsample");
+    OBlob upsample_pattern_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::dual_kawase_upsample");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(upsample_pattern_blob), nullptr, &m_upsample_pattern));
 }
 
-OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
+OShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
                                                    ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, unsigned int half_passes) {
 #if CHECK_IMPLICIT_STATE
     // Check that the constants and sampler are bound.
-    OID3D11Buffer bound_constants;
+    OBuffer bound_constants;
     context.CSGetConstantBuffers(0, 1, &bound_constants);
     always_assert(bound_constants.get() == &constants);
-    OID3D11SamplerState bound_sampler;
+    OSamplerState bound_sampler;
     context.CSGetSamplers(0, 1, &bound_sampler);
     always_assert(bound_sampler.get() == &bilinear_sampler);
 #endif
@@ -149,7 +149,7 @@ OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context
         delete[] m_temp.SRVs;
         delete[] m_temp.UAVs;
 
-        OID3D11Device1 device = get_device1(context);
+        ODevice1 device = get_device1(context);
 
         // Allocate new temporaries
         m_temp.mipmap_count = 1;
@@ -167,12 +167,12 @@ OID3D11ShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context
         tex_desc.Usage = D3D11_USAGE_DEFAULT;
         tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
 
-        OID3D11Texture2D texture2D;
+        OTexture2D texture2D;
         THROW_ON_FAILURE(device->CreateTexture2D(&tex_desc, nullptr, &texture2D));
 
         // TODO Create views in two device calls.
-        m_temp.SRVs = new OID3D11ShaderResourceView[m_temp.mipmap_count];
-        m_temp.UAVs = new OID3D11UnorderedAccessView[m_temp.mipmap_count];
+        m_temp.SRVs = new OShaderResourceView[m_temp.mipmap_count];
+        m_temp.UAVs = new OUnorderedAccessView[m_temp.mipmap_count];
 
         for (unsigned int m = 0; m < m_temp.mipmap_count; ++m) {
             // SRV
@@ -235,13 +235,13 @@ LogAverageLuminance::LogAverageLuminance(ID3D11Device1& device, const std::wstri
     const std::wstring shader_filename = shader_folder_path + L"CameraEffects/ReduceLogAverageLuminance.hlsl";
 
     // Create shaders.
-    OID3DBlob log_average_first_reduction_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::first_reduction");
+    OBlob log_average_first_reduction_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::first_reduction");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(log_average_first_reduction_blob), nullptr, &m_log_average_first_reduction));
 
-    OID3DBlob log_average_computation_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::compute_log_average");
+    OBlob log_average_computation_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::compute_log_average");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(log_average_computation_blob), nullptr, &m_log_average_computation));
 
-    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::compute_linear_exposure");
+    OBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::compute_linear_exposure");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_computation_blob), nullptr, &m_linear_exposure_computation));
 
     // Create buffers
@@ -261,11 +261,11 @@ void LogAverageLuminance::compute_linear_exposure(ID3D11DeviceContext1& context,
 }
 
 void LogAverageLuminance::compute(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
-                                  ID3D11ShaderResourceView* pixels, unsigned int image_width, OID3D11ComputeShader& second_reduction,
+                                  ID3D11ShaderResourceView* pixels, unsigned int image_width, OComputeShader& second_reduction,
                                   ID3D11UnorderedAccessView* output_UAV) {
 #if CHECK_IMPLICIT_STATE
     // Check that the constants and sampler are bound.
-    OID3D11Buffer bound_constants;
+    OBuffer bound_constants;
     context.CSGetConstantBuffers(0, 1, &bound_constants);
     always_assert(bound_constants.get() == constants);
 #endif
@@ -291,21 +291,21 @@ ExposureHistogram::ExposureHistogram(ID3D11Device1& device, const std::wstring& 
     const std::wstring shader_filename = shader_folder_path + L"CameraEffects/ReduceExposureHistogram.hlsl";
 
     // Create shaders.
-    OID3DBlob reduce_exposure_histogram_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::reduce");
+    OBlob reduce_exposure_histogram_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::reduce");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_exposure_histogram_blob), nullptr, &m_histogram_reduction));
 
-    OID3DBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::compute_linear_exposure");
+    OBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::compute_linear_exposure");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_computation_blob), nullptr, &m_linear_exposure_computation));
 
     // Create buffers
     create_default_buffer(device, DXGI_FORMAT_R32_UINT, bin_count, &m_histogram_SRV, &m_histogram_UAV);
 }
 
-OID3D11ShaderResourceView& ExposureHistogram::reduce_histogram(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
+OShaderResourceView& ExposureHistogram::reduce_histogram(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
                                                                ID3D11ShaderResourceView* pixels, unsigned int image_width) {
 #if CHECK_IMPLICIT_STATE
     // Check that the constants and sampler are bound.
-    OID3D11Buffer bound_constants;
+    OBuffer bound_constants;
     context.CSGetConstantBuffers(0, 1, &bound_constants);
     always_assert(bound_constants.get() == constants);
 #endif
@@ -330,7 +330,7 @@ void ExposureHistogram::compute_linear_exposure(ID3D11DeviceContext1& context, I
                                                 ID3D11UnorderedAccessView* linear_exposure_UAV) {
 #if CHECK_IMPLICIT_STATE
     // Check that the constants and sampler are bound.
-    OID3D11Buffer bound_constants;
+    OBuffer bound_constants;
     context.CSGetConstantBuffers(0, 1, &bound_constants);
     always_assert(bound_constants.get() == constants);
 #endif
@@ -369,16 +369,16 @@ CameraEffects::CameraEffects(ID3D11Device1& device, const std::wstring& shader_f
     { // Setup tonemapping shaders
         const std::wstring shader_filename = shader_folder_path + L"CameraEffects/Tonemapping.hlsl";
 
-        OID3DBlob linear_exposure_from_bias_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::linear_exposure_from_constant_bias");
+        OBlob linear_exposure_from_bias_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::linear_exposure_from_constant_bias");
         THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_from_bias_blob), nullptr, &m_linear_exposure_from_bias_shader));
 
-        OID3DBlob vertex_shader_blob = compile_shader(shader_filename, "vs_5_0", "CameraEffects::fullscreen_vs");
+        OBlob vertex_shader_blob = compile_shader(shader_filename, "vs_5_0", "CameraEffects::fullscreen_vs");
         HRESULT hr = device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_fullscreen_VS);
         THROW_ON_FAILURE(hr);
 
-        auto create_pixel_shader = [&](const char* entry_point) -> OID3D11PixelShader {
-            OID3D11PixelShader pixel_shader;
-            OID3DBlob pixel_shader_blob = compile_shader(shader_filename, "ps_5_0", entry_point);
+        auto create_pixel_shader = [&](const char* entry_point) -> OPixelShader {
+            OPixelShader pixel_shader;
+            OBlob pixel_shader_blob = compile_shader(shader_filename, "ps_5_0", entry_point);
             HRESULT hr = device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &pixel_shader);
             THROW_ON_FAILURE(hr);
             return pixel_shader;

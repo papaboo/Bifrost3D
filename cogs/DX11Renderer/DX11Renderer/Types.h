@@ -51,24 +51,24 @@ namespace DX11Renderer {
 // Alias owned resource pointers
 //-------------------------------------------------------------------------------------------------
 
-using OID3D11BlendState = DX11Renderer::OwnedResourcePtr<ID3D11BlendState>;
-using OID3DBlob = DX11Renderer::OwnedResourcePtr<ID3DBlob>;
-using OID3D11Buffer = DX11Renderer::OwnedResourcePtr<ID3D11Buffer>;
-using OID3D11ComputeShader = DX11Renderer::OwnedResourcePtr<ID3D11ComputeShader>;
-using OID3D11DepthStencilState = DX11Renderer::OwnedResourcePtr<ID3D11DepthStencilState>;
-using OID3D11DepthStencilView = DX11Renderer::OwnedResourcePtr<ID3D11DepthStencilView>;
-using OID3D11Device1 = DX11Renderer::OwnedResourcePtr<ID3D11Device1>;
-using OID3D11DeviceContext1 = DX11Renderer::OwnedResourcePtr<ID3D11DeviceContext1>;
-using OID3D11InputLayout = DX11Renderer::OwnedResourcePtr<ID3D11InputLayout>;
-using OID3D11PixelShader = DX11Renderer::OwnedResourcePtr<ID3D11PixelShader>;
-using OID3D11RasterizerState = DX11Renderer::OwnedResourcePtr<ID3D11RasterizerState>;
-using OID3D11RenderTargetView = DX11Renderer::OwnedResourcePtr<ID3D11RenderTargetView>;
-using OID3D11Resource = DX11Renderer::OwnedResourcePtr<ID3D11Resource>;
-using OID3D11SamplerState = DX11Renderer::OwnedResourcePtr<ID3D11SamplerState>;
-using OID3D11ShaderResourceView = DX11Renderer::OwnedResourcePtr<ID3D11ShaderResourceView>;
-using OID3D11Texture2D = DX11Renderer::OwnedResourcePtr<ID3D11Texture2D>;
-using OID3D11VertexShader = DX11Renderer::OwnedResourcePtr<ID3D11VertexShader>;
-using OID3D11UnorderedAccessView = DX11Renderer::OwnedResourcePtr<ID3D11UnorderedAccessView>;
+using OBlendState = DX11Renderer::OwnedResourcePtr<ID3D11BlendState>;
+using OBlob = DX11Renderer::OwnedResourcePtr<ID3DBlob>;
+using OBuffer = DX11Renderer::OwnedResourcePtr<ID3D11Buffer>;
+using OComputeShader = DX11Renderer::OwnedResourcePtr<ID3D11ComputeShader>;
+using ODepthStencilState = DX11Renderer::OwnedResourcePtr<ID3D11DepthStencilState>;
+using ODepthStencilView = DX11Renderer::OwnedResourcePtr<ID3D11DepthStencilView>;
+using ODevice1 = DX11Renderer::OwnedResourcePtr<ID3D11Device1>;
+using ODeviceContext1 = DX11Renderer::OwnedResourcePtr<ID3D11DeviceContext1>;
+using OInputLayout = DX11Renderer::OwnedResourcePtr<ID3D11InputLayout>;
+using OPixelShader = DX11Renderer::OwnedResourcePtr<ID3D11PixelShader>;
+using ORasterizerState = DX11Renderer::OwnedResourcePtr<ID3D11RasterizerState>;
+using ORenderTargetView = DX11Renderer::OwnedResourcePtr<ID3D11RenderTargetView>;
+using OResource = DX11Renderer::OwnedResourcePtr<ID3D11Resource>;
+using OSamplerState = DX11Renderer::OwnedResourcePtr<ID3D11SamplerState>;
+using OShaderResourceView = DX11Renderer::OwnedResourcePtr<ID3D11ShaderResourceView>;
+using OTexture2D = DX11Renderer::OwnedResourcePtr<ID3D11Texture2D>;
+using OVertexShader = DX11Renderer::OwnedResourcePtr<ID3D11VertexShader>;
+using OUnorderedAccessView = DX11Renderer::OwnedResourcePtr<ID3D11UnorderedAccessView>;
 
 
 //-------------------------------------------------------------------------------------------------
@@ -164,12 +164,12 @@ struct Dx11MaterialTextures {
 };
 
 struct Dx11Image {
-    OID3D11ShaderResourceView srv;
+    OShaderResourceView srv;
 };
 
 struct Dx11Texture {
     Dx11Image* image;
-    OID3D11SamplerState sampler;
+    OSamplerState sampler;
 };
 
 struct Dx11VertexGeometry {
