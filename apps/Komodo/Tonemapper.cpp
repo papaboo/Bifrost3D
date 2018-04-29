@@ -10,7 +10,7 @@
 #include <Utils.h>
 
 #include <Cogwheel/Core/Engine.h>
-#include <Cogwheel/Math/Tonemapping.h>
+#include <Cogwheel/Math/CameraEffects.h>
 #include <ImageOperations/Exposure.h>
 
 #include <AntTweakBar/AntTweakBar.h>
@@ -515,13 +515,13 @@ struct Tonemapper::Implementation final {
             int x = i % width, y = i / width;
             RGB adjusted_color = image.get_pixel(Vector2ui(x, y)).rgb() * l_scale;
             if (m_operator == Operator::Reinhard)
-                adjusted_color = Tonemapping::reinhard(adjusted_color, m_reinhard_whitepoint * m_reinhard_whitepoint);
+                adjusted_color = CameraEffects::reinhard(adjusted_color, m_reinhard_whitepoint * m_reinhard_whitepoint);
             else if (m_operator == Operator::FilmicAlu)
                 adjusted_color = tonemap_filmic_ALU(adjusted_color);
             else if (m_operator == Operator::Uncharted2)
-                adjusted_color = Tonemapping::uncharted2(adjusted_color, m_uncharted2.shoulder_strength, m_uncharted2.linear_strength, m_uncharted2.linear_angle, m_uncharted2.toe_strength, m_uncharted2.toe_numerator, m_uncharted2.toe_denominator, m_uncharted2.linear_white);
+                adjusted_color = CameraEffects::uncharted2(adjusted_color, m_uncharted2.shoulder_strength, m_uncharted2.linear_strength, m_uncharted2.linear_angle, m_uncharted2.toe_strength, m_uncharted2.toe_numerator, m_uncharted2.toe_denominator, m_uncharted2.linear_white);
             else if (m_operator == Operator::Unreal4)
-                adjusted_color = Tonemapping::unreal4(adjusted_color, m_unreal4.slope, m_unreal4.toe, m_unreal4.shoulder, m_unreal4.black_clip, m_unreal4.white_clip);
+                adjusted_color = CameraEffects::unreal4(adjusted_color, m_unreal4.slope, m_unreal4.toe, m_unreal4.shoulder, m_unreal4.black_clip, m_unreal4.white_clip);
             output[i] = gammacorrect(adjusted_color, 1.0f / 2.2f);
         }
     }

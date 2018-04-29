@@ -403,25 +403,25 @@ CameraEffects::CameraEffects(ID3D11Device1& device, const std::wstring& shader_f
     }
 }
 
-void CameraEffects::process(ID3D11DeviceContext1& context, Tonemapping::Parameters parameters, float delta_time,
+void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::CameraEffects::Settings settings, float delta_time,
                             ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, int width, int height) {
 
-    using namespace Cogwheel::Math::Tonemapping;
+    using namespace Cogwheel::Math::CameraEffects;
 
     { // Upload constants
         Constants constants;
-        constants.min_log_luminance = parameters.exposure.min_log_luminance;
-        constants.max_log_luminance = parameters.exposure.max_log_luminance;
-        constants.min_histogram_percentage = parameters.exposure.min_histogram_percentage;
-        constants.max_histogram_percentage = parameters.exposure.max_histogram_percentage;
-        constants.log_lumiance_bias = parameters.exposure.log_lumiance_bias;
-        if (parameters.exposure.eye_adaptation_enabled) {
-            constants.eye_adaptation_brightness = parameters.exposure.eye_adaptation_brightness;
-            constants.eye_adaptation_darkness = parameters.exposure.eye_adaptation_darkness;
+        constants.min_log_luminance = settings.exposure.min_log_luminance;
+        constants.max_log_luminance = settings.exposure.max_log_luminance;
+        constants.min_histogram_percentage = settings.exposure.min_histogram_percentage;
+        constants.max_histogram_percentage = settings.exposure.max_histogram_percentage;
+        constants.log_lumiance_bias = settings.exposure.log_lumiance_bias;
+        if (settings.exposure.eye_adaptation_enabled) {
+            constants.eye_adaptation_brightness = settings.exposure.eye_adaptation_brightness;
+            constants.eye_adaptation_darkness = settings.exposure.eye_adaptation_darkness;
         } else
             constants.eye_adaptation_brightness = constants.eye_adaptation_darkness = std::numeric_limits<float>::infinity();
 
-        constants.bloom_threshold = parameters.bloom.receiver_threshold;
+        constants.bloom_threshold = settings.bloom.receiver_threshold;
 
         constants.delta_time = delta_time;
 
@@ -435,11 +435,11 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Tonemapping::Paramete
     context.CSSetSamplers(0, 1, &m_bilinear_sampler);
 
     { // Determine exposure.
-        if (parameters.exposure.mode == ExposureMode::Histogram)
+        if (settings.exposure.mode == ExposureMode::Histogram)
             m_exposure_histogram.compute_linear_exposure(context, m_constant_buffer, pixel_SRV, width, m_linear_exposure_UAV);
-        else if (parameters.exposure.mode == ExposureMode::LogAverage)
+        else if (settings.exposure.mode == ExposureMode::LogAverage)
             m_log_average_luminance.compute_linear_exposure(context, m_constant_buffer, pixel_SRV, width, m_linear_exposure_UAV);
-        else { // parameters.exposure.mode == ExposureMode::Fixed
+        else { // settings.exposure.mode == ExposureMode::Fixed
             context.CSSetConstantBuffers(0, 1, &m_constant_buffer);
 
             context.CSSetUnorderedAccessViews(0, 1, &m_linear_exposure_UAV, 0u);
@@ -453,17 +453,17 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Tonemapping::Paramete
 
     // Bloom filter.
     ID3D11ShaderResourceView* bloom_SRV = nullptr;
-    if (parameters.bloom.receiver_threshold < INFINITY)
+    if (settings.bloom.receiver_threshold < INFINITY)
         bloom_SRV = m_bloom.filter(context, m_constant_buffer, m_bilinear_sampler, pixel_SRV, width, height).get();
 
     { // Tonemap and render into backbuffer.
         context.VSSetShader(m_fullscreen_VS, 0, 0);
 
-        if (parameters.tonemapping.mode == TonemappingMode::Linear)
+        if (settings.tonemapping.mode == TonemappingMode::Linear)
             context.PSSetShader(m_linear_tonemapping_PS, 0, 0);
-        else if (parameters.tonemapping.mode == TonemappingMode::Uncharted2)
+        else if (settings.tonemapping.mode == TonemappingMode::Uncharted2)
             context.PSSetShader(m_uncharted2_tonemapping_PS, 0, 0);
-        else // parameters.tonemapping.mode == TonemappingMode::Filmic
+        else // settings.tonemapping.mode == TonemappingMode::Filmic
             context.PSSetShader(m_filmic_tonemapping_PS, 0, 0);
 
         ID3D11ShaderResourceView* srvs[3] = { pixel_SRV, m_linear_exposure_SRV, bloom_SRV };

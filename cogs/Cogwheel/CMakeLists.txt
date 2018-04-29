@@ -54,6 +54,7 @@ SET(INPUT_SRCS
 
 SET(MATH_SRCS 
   Cogwheel/Math/AABB.h
+  Cogwheel/Math/CameraEffects.h
   Cogwheel/Math/Color.h
   Cogwheel/Math/Constants.h
   Cogwheel/Math/Conversions.h
@@ -73,7 +74,6 @@ SET(MATH_SRCS
   Cogwheel/Math/Rect.h
   Cogwheel/Math/RNG.h
   Cogwheel/Math/Statistics.h
-  Cogwheel/Math/Tonemapping.h
   Cogwheel/Math/Transform.h
   Cogwheel/Math/Utils.h
   Cogwheel/Math/Vector.h

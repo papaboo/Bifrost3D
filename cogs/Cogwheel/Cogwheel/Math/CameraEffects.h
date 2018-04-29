@@ -1,4 +1,4 @@
-// Cogwheel tonemapping operators and parameters.
+// Cogwheel camera effects settings and operators.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
 //
@@ -6,8 +6,8 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _COGWHEEL_MATH_TONEMAPPING_H_
-#define _COGWHEEL_MATH_TONEMAPPING_H_
+#ifndef _COGWHEEL_MATH_CAMERA_EFFECTS_H_
+#define _COGWHEEL_MATH_CAMERA_EFFECTS_H_
 
 #include <Cogwheel/Math/Color.h>
 #include <Cogwheel/Math/Matrix.h>
@@ -15,12 +15,12 @@
 
 namespace Cogwheel {
 namespace Math {
-namespace Tonemapping {
+namespace CameraEffects {
 
 enum class TonemappingMode { Linear, Filmic, Uncharted2, Count };
 enum class ExposureMode { Fixed, LogAverage, Histogram, Count };
 
-struct Parameters final {
+struct Settings final {
     struct {
         ExposureMode mode;
         float min_log_luminance;
@@ -41,8 +41,8 @@ struct Parameters final {
         TonemappingMode mode;
     } tonemapping;
 
-    static Parameters default() {
-        Parameters res;
+    static Settings default() {
+        Settings res;
         res.exposure.mode = ExposureMode::Histogram;
         res.exposure.min_log_luminance = -4;
         res.exposure.max_log_luminance = 4;
@@ -53,7 +53,7 @@ struct Parameters final {
         res.exposure.eye_adaptation_brightness = 3.0f;
         res.exposure.eye_adaptation_darkness = 1.0f;
 
-        res.bloom.receiver_threshold = 1.0f;
+        res.bloom.receiver_threshold = 1.5f;
 
         res.tonemapping.mode = TonemappingMode::Uncharted2;
 
@@ -182,8 +182,8 @@ inline RGB unreal4(RGB color, float slope = 0.91f, float toe = 0.53f, float shou
     return RGB(fmaxf(0.0f, tone_color.x), fmaxf(0.0f, tone_color.y), fmaxf(0.0f, tone_color.z));
 }
 
-} // NS Tonemapping
+} // NS CameraEffects
 } // NS Math
 } // NS Cogwheel
 
-#endif // _COGWHEEL_MATH_TONEMAPPING_H_
+#endif // _COGWHEEL_MATH_CAMERA_EFFECTS_H_

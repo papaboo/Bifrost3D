@@ -9,7 +9,7 @@
 #ifndef _DX11RENDERER_RENDERER_CAMERA_EFFECTS_H_
 #define _DX11RENDERER_RENDERER_CAMERA_EFFECTS_H_
 
-#include <Cogwheel/Math/Tonemapping.h>
+#include <Cogwheel/Math/CameraEffects.h>
 
 #include <DX11Renderer/Types.h>
 
@@ -184,7 +184,7 @@ public:
     CameraEffects& operator=(CameraEffects&& rhs) = default;
 
     // Processes the pixels and stores them in the bound render target.
-    void process(ID3D11DeviceContext1& context, Cogwheel::Math::Tonemapping::Parameters parameters, float delta_time,
+    void process(ID3D11DeviceContext1& context, Cogwheel::Math::CameraEffects::Settings settings, float delta_time,
                  ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, int width, int height);
 
 private:

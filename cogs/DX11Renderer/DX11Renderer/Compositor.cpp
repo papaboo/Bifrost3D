@@ -310,8 +310,8 @@ public:
 
         // Present the backbuffer.
         Cameras::UID camera_ID = *Cameras::get_iterable().begin();
-        auto tonemapping_params = Cameras::get_tonemapping_parameters(camera_ID);
-        m_camera_effects.process(m_render_context, tonemapping_params, delta_time, m_backbuffer_SRV, m_swap_chain_buffer_view, m_backbuffer_size.x, m_backbuffer_size.y);
+        auto effects_settings = Cameras::get_effects_settings(camera_ID);
+        m_camera_effects.process(m_render_context, effects_settings, delta_time, m_backbuffer_SRV, m_swap_chain_buffer_view, m_backbuffer_size.x, m_backbuffer_size.y);
         m_swap_chain->Present(m_sync_interval, 0);
     }
 

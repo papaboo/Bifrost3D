@@ -10,11 +10,11 @@
 #define _COGWHEEL_SCENE_CAMERA_H_
 
 #include <Cogwheel/Core/Renderer.h>
+#include <Cogwheel/Math/CameraEffects.h>
 #include <Cogwheel/Math/Conversions.h>
 #include <Cogwheel/Math/Matrix.h>
 #include <Cogwheel/Math/Ray.h>
 #include <Cogwheel/Math/Rect.h>
-#include <Cogwheel/Math/Tonemapping.h>
 #include <Cogwheel/Math/Transform.h>
 #include <Cogwheel/Scene/SceneRoot.h>
 
@@ -85,8 +85,8 @@ public:
     static Math::Rectf get_viewport(Cameras::UID camera_ID) { return m_viewports[camera_ID]; }
     static void set_viewport(Cameras::UID camera_ID, Math::Rectf projectionport) { m_viewports[camera_ID] = projectionport; }
 
-    static void set_tonemapping_parameters(Cameras::UID camera_ID, Math::Tonemapping::Parameters params) { m_tonemapping_parameters[camera_ID] = params; }
-    static Math::Tonemapping::Parameters get_tonemapping_parameters(Cameras::UID camera_ID) { return m_tonemapping_parameters[camera_ID]; }
+    static void set_effects_settings(Cameras::UID camera_ID, Math::CameraEffects::Settings settings) { m_effects_settings[camera_ID] = settings; }
+    static Math::CameraEffects::Settings get_effects_settings(Cameras::UID camera_ID) { return m_effects_settings[camera_ID]; }
 
 private:
 
@@ -102,7 +102,7 @@ private:
     static unsigned int* m_render_indices;
     static Math::Rectf* m_viewports;
     static Core::Renderers::UID* m_renderer_IDs;
-    static Math::Tonemapping::Parameters* m_tonemapping_parameters;
+    static Math::CameraEffects::Settings* m_effects_settings;
 };
 
 namespace CameraUtils {

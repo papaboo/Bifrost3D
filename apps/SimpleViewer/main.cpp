@@ -213,24 +213,24 @@ public:
         : m_camera_ID(camera_ID) { }
 
     void handle(const Engine& engine) {
-        using namespace Cogwheel::Math::Tonemapping;
+        using namespace Cogwheel::Math::CameraEffects;
 
         bool update_exposure = engine.get_keyboard()->was_released(Keyboard::Key::E);
         bool update_tonemapping = engine.get_keyboard()->was_released(Keyboard::Key::T);
 
         if (update_exposure || update_tonemapping) {
-            auto params = Cameras::get_tonemapping_parameters(m_camera_ID);
+            auto settings = Cameras::get_effects_settings(m_camera_ID);
             if (update_exposure) {
-                int exposure_mode = (int)params.exposure.mode;
-                params.exposure.mode = ExposureMode((exposure_mode + 1) % int(ExposureMode::Count));
+                int exposure_mode = (int)settings.exposure.mode;
+                settings.exposure.mode = ExposureMode((exposure_mode + 1) % int(ExposureMode::Count));
             }
 
             if (update_tonemapping) {
-                int tonemapping_mode = (int)params.tonemapping.mode;
-                params.tonemapping.mode = TonemappingMode((tonemapping_mode + 1) % int(TonemappingMode::Count));
+                int tonemapping_mode = (int)settings.tonemapping.mode;
+                settings.tonemapping.mode = TonemappingMode((tonemapping_mode + 1) % int(TonemappingMode::Count));
             }
 
-            switch (params.exposure.mode)
+            switch (settings.exposure.mode)
             {
             case ExposureMode::Fixed:
                 printf("Exposure: Fixed, "); break;
@@ -240,7 +240,7 @@ public:
                 printf("Exposure: Histogram, "); break;
             }
 
-            switch (params.tonemapping.mode)
+            switch (settings.tonemapping.mode)
             {
             case TonemappingMode::Linear:
                 printf("Tonemapping: Linear\n"); break;
@@ -251,7 +251,7 @@ public:
             }
 
 
-            Cameras::set_tonemapping_parameters(m_camera_ID, params);
+            Cameras::set_effects_settings(m_camera_ID, settings);
         }
     }
 
