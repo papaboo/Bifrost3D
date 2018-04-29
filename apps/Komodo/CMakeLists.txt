@@ -2,7 +2,7 @@ set(PROJECT_NAME "Komodo")
 
 find_package(OpenGL REQUIRED)
 
-set(SRCS main.cpp Comparer.h Tonemapper.h Tonemapper.cpp Utils.h)
+set(SRCS main.cpp Comparer.h ColorGrader.h ColorGrader.cpp Utils.h)
 
 add_executable(${PROJECT_NAME} ${SRCS})
 

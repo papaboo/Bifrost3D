@@ -10,8 +10,8 @@
 
 #include <GLFWDriver.h>
 
+#include <ColorGrader.h>
 #include <Comparer.h>
-#include <Tonemapper.h>
 
 using namespace Cogwheel::Core;
 
@@ -24,8 +24,8 @@ void print_usage() {
         "usage Komodo Image Tool:\n"
         "  -h | --help: Show command line usage for Komodo.\n"
         "  -l | --headless: Launch without opening a window.\n"
-        "     | --compare: Perform image comparisons.\n"
-        "     | --tone-map: Tonemap image.\n";
+        "     | --color-grade: Color grade image.\n"
+        "     | --compare: Perform image comparisons.\n";
 
     printf("%s", usage);
 }
@@ -43,10 +43,10 @@ int window_initialized(Engine& engine, Window& window) {
     std::string operation_name = g_args[0];
     g_args.erase(g_args.begin());
 
-    if (std::string(operation_name).compare("--compare") == 0)
+    if (std::string(operation_name).compare("--color-grade") == 0)
+        g_operation = new ColorGrader(g_args, engine);
+    else if (std::string(operation_name).compare("--compare") == 0)
         g_operation = new Comparer(g_args, engine);
-    else if (std::string(operation_name).compare("--tone-map") == 0)
-        g_operation = new Tonemapper(g_args, engine);
     else {
         printf("Unrecognized argument: '%s'\n", operation_name.c_str());
         print_usage();

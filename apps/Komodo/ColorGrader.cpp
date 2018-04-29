@@ -1,4 +1,4 @@
-// Komodo image tonemapper.
+// Komodo image color grader.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
 //
@@ -6,7 +6,7 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#include <Tonemapper.h>
+#include <ColorGrader.h>
 #include <Utils.h>
 
 #include <Cogwheel/Core/Engine.h>
@@ -23,7 +23,7 @@ using namespace Cogwheel::Math;
 
 using Vector4uc = Vector4<unsigned char>;
 
-struct Tonemapper::Implementation final {
+struct ColorGrader::Implementation final {
 
     // --------------------------------------------------------------------------------------------
     // Members
@@ -216,12 +216,12 @@ struct Tonemapper::Implementation final {
 
 #define WRAP_ANT_PROPERTY(member_name, T) \
 [](const void* input_data, void* client_data) { \
-    Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data; \
+    ColorGrader::Implementation* data = (ColorGrader::Implementation*)client_data; \
     data->member_name = *(T*)input_data; \
     data->m_upload_image = true; \
 }, \
 [](void* value, void* client_data) { \
-    *(T*)value = ((Tonemapper::Implementation*)client_data)->member_name; \
+    *(T*)value = ((ColorGrader::Implementation*)client_data)->member_name; \
 }
 
     // --------------------------------------------------------------------------------------------
@@ -237,14 +237,14 @@ struct Tonemapper::Implementation final {
 
             TwAddVarCB(bar, "Bias", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_exposure_bias, float), this, "step=0.1 group=Exposure");
             TwAddVarCB(bar, "Scene key", TW_TYPE_FLOAT, nullptr, [](void* value, void* client_data) {
-                *(float*)value = ((Tonemapper::Implementation*)client_data)->scene_key();
+                *(float*)value = ((ColorGrader::Implementation*)client_data)->scene_key();
             }, this, "step=0.001 group=Exposure");
             TwAddVarCB(bar, "Luminance scale", TW_TYPE_FLOAT, nullptr, [](void* value, void* client_data) {
-                *(float*)value = ((Tonemapper::Implementation*)client_data)->luminance_scale();
+                *(float*)value = ((ColorGrader::Implementation*)client_data)->luminance_scale();
             }, this, "step=0.001 group=Exposure");
 
             auto reinhard_auto_exposure = [](void* client_data) {
-                Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
+                ColorGrader::Implementation* data = (ColorGrader::Implementation*)client_data;
                 float scene_key = ImageOperations::Exposure::log_average_luminance(data->m_input.get_ID());
                 float linear_exposure = 0.5f / scene_key;
                 data->m_exposure_bias = log2(linear_exposure);
@@ -253,7 +253,7 @@ struct Tonemapper::Implementation final {
             TwAddButton(bar, "Set from log-average", reinhard_auto_exposure, this, "group=Exposure");
 
             auto auto_geometric_mean = [](void* client_data) {
-                Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
+                ColorGrader::Implementation* data = (ColorGrader::Implementation*)client_data;
                 float log_average_luminance = ImageOperations::Exposure::log_average_luminance(data->m_input.get_ID());
                 float key_value = 1.03f - (2.0f / (2 + log10(log_average_luminance + 1)));
                 float linear_exposure = key_value / log_average_luminance;
@@ -267,7 +267,7 @@ struct Tonemapper::Implementation final {
                 m_histogram.texture_pixels = new Vector4uc[m_histogram.size * m_histogram.size];
 
                 auto histogram_auto_exposure = [](void* client_data) {
-                    Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
+                    ColorGrader::Implementation* data = (ColorGrader::Implementation*)client_data;
                     auto& histogram = data->m_histogram;
 
                     std::fill(histogram.histogram.begin(), histogram.histogram.end(), 0u);
@@ -308,7 +308,7 @@ struct Tonemapper::Implementation final {
             TwType AntOperatorEnum = TwDefineEnum("Operators", operators, 5);
 
             auto set_m_operator = [](const void* input_data, void* client_data) {
-                Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
+                ColorGrader::Implementation* data = (ColorGrader::Implementation*)client_data;
                 data->m_operator = *(Operator*)input_data;
                 data->m_upload_image = true;
 
@@ -322,7 +322,7 @@ struct Tonemapper::Implementation final {
                 TwDefine(show_unreal4.c_str());
             };
             auto get_m_operator = [](void* value, void* client_data) {
-                *(Operator*)value = ((Tonemapper::Implementation*)client_data)->m_operator;
+                *(Operator*)value = ((ColorGrader::Implementation*)client_data)->m_operator;
             };
             TwAddVarCB(bar, "Operator", AntOperatorEnum, set_m_operator, get_m_operator, this, "group='Tonemapping'");
 
@@ -356,7 +356,7 @@ struct Tonemapper::Implementation final {
                     TwType AntPresetsEnum = TwDefineEnum("Presets", ant_presets, 6);
 
                     auto set_preset = [](const void* input_data, void* client_data) {
-                        Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
+                        ColorGrader::Implementation* data = (ColorGrader::Implementation*)client_data;
                         Presets preset = *(Presets*)input_data;
 
                         switch (preset) {
@@ -424,7 +424,7 @@ struct Tonemapper::Implementation final {
         if (m_output_path.size() != 0) {
             auto save_image = [](void* client_data) {
                 // Tonemap and store the image
-                Tonemapper::Implementation* data = (Tonemapper::Implementation*)client_data;
+                ColorGrader::Implementation* data = (ColorGrader::Implementation*)client_data;
                 Vector2ui size = { data->m_input.get_width(), data->m_input.get_height() };
                 Image output_image = Images::create2D("tonemapped_" + data->m_input.get_name(), PixelFormat::RGB_Float, 2.2f, size);
                 RGB* pixels = output_image.get_pixels<RGB>();
@@ -489,7 +489,7 @@ struct Tonemapper::Implementation final {
         } else {
             m_tonemapped_pixels = new RGB[m_input.get_pixel_count()];
             m_gui = setup_gui();
-            engine.add_mutating_callback(Tonemapper::Implementation::update, this);
+            engine.add_mutating_callback(ColorGrader::Implementation::update, this);
         }
     }
 
@@ -573,11 +573,11 @@ struct Tonemapper::Implementation final {
         TwDraw();
     }
 
-    static void update(Engine& engine, void* tonemapper) {
-        ((Tonemapper::Implementation*)tonemapper)->update(engine);
+    static void update(Engine& engine, void* color_grader) {
+        ((ColorGrader::Implementation*)color_grader)->update(engine);
     }
 };
 
-Tonemapper::Tonemapper(std::vector<char*> args, Cogwheel::Core::Engine& engine) {
+ColorGrader::ColorGrader(std::vector<char*> args, Cogwheel::Core::Engine& engine) {
     m_impl = new Implementation(args, engine);
 }

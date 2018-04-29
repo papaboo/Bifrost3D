@@ -1,4 +1,4 @@
-// Komodo image tonemapper.
+// Komodo image color grader.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
 //
@@ -6,8 +6,8 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _KOMODO_TONEMAPPER_H_
-#define _KOMODO_TONEMAPPER_H_
+#ifndef _KOMODO_COLOR_GRADER_H_
+#define _KOMODO_COLOR_GRADER_H_
 
 #include <vector>
 
@@ -17,9 +17,9 @@ class Engine;
 }
 }
 
-class Tonemapper final {
+class ColorGrader final {
 public:
-    Tonemapper(std::vector<char*> args, Cogwheel::Core::Engine& engine);
+    ColorGrader(std::vector<char*> args, Cogwheel::Core::Engine& engine);
 
 private:
     // Pimpl the state to avoid exposing OptiX headers.
@@ -27,4 +27,4 @@ private:
     Implementation* m_impl;
 };
 
-#endif // _KOMODO_TONEMAPPER_H_
+#endif // _KOMODO_COLOR_GRADER_H_
