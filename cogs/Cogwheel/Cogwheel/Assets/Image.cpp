@@ -274,7 +274,7 @@ static void set_linear_pixel(Images::UID image_ID, RGBA color, unsigned int inde
 }
 
 void Images::set_pixel(Images::UID image_ID, RGBA color, unsigned int index, unsigned int mipmap_level) {
-    assert(index < Images::get_width(image_ID, mipmap_level));
+    assert(index < Images::get_pixel_count(image_ID, mipmap_level));
 
     Image image = image_ID;
     unsigned int width = image.get_width();
