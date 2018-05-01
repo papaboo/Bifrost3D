@@ -2,7 +2,6 @@ set(PROJECT_NAME "ImageOperationsTests")
 
 set(SRCS 
   CompareTest.h
-  Expects.h
   main.cpp
   StatisticsTest.h
 )

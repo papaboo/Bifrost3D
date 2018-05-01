@@ -10,7 +10,7 @@
 #define _IMAGE_OPERATIONS_COMPARE_TEST_H_
 
 #include <ImageOperations/Compare.h>
-#include <Expects.h>
+#include <../CogwheelTests/Expects.h>
 
 namespace ImageOperations {
 namespace Compare {
