@@ -25,7 +25,7 @@ inline bool float_in_range(float min, float max, float actual) {
 #define EXPECT_FLOAT_IN_RANGE(min, max, actual) EXPECT_PRED3(float_in_range, min, max, actual)
 
 inline bool almost_equal_eps(float lhs, float rhs, float eps) {
-    return abs(lhs - rhs) < eps;
+    return abs(lhs - rhs) <= eps;
 }
 #define EXPECT_FLOAT_EQ_EPS(expected, actual, epsilon) EXPECT_PRED3(almost_equal_eps, expected, actual, epsilon)
 
@@ -36,7 +36,7 @@ inline bool almost_equal_percentage(float lhs, float rhs, float percentage) {
 #define EXPECT_FLOAT_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(almost_equal_percentage, expected, actual, percentage)
 
 inline bool double_almost_equal_eps(double lhs, double rhs, double eps) {
-    return abs(lhs - rhs) < eps;
+    return abs(lhs - rhs) <= eps;
 }
 #define EXPECT_DOUBLE_EQ_EPS(expected, actual, epsilon) EXPECT_PRED3(double_almost_equal_eps, expected, actual, epsilon)
 
