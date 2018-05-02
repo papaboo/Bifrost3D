@@ -1,4 +1,5 @@
-add_library(ImageOperations 
+add_library(ImageOperations
+  ImageOperations/Blur.h
   ImageOperations/Compare.h
   ImageOperations/Exposure.h
   ImageOperations/Exposure.cpp
@@ -11,6 +12,7 @@ target_link_libraries(ImageOperations
 )
 
 source_group("ImageOperations" FILES 
+  ImageOperations/Blur.h
   ImageOperations/Compare.h
   ImageOperations/Exposure.h
   ImageOperations/Exposure.cpp
