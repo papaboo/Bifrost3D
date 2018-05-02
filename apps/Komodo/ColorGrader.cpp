@@ -428,7 +428,7 @@ struct ColorGrader::Implementation final {
                 Vector2ui size = { data->m_input.get_width(), data->m_input.get_height() };
                 Image output_image = Images::create2D("tonemapped_" + data->m_input.get_name(), PixelFormat::RGB_Float, 2.2f, size);
                 RGB* pixels = output_image.get_pixels<RGB>();
-                data->tonemap_image(data->m_input, pixels);
+                data->color_grade_image(data->m_input, pixels);
                 store_image(output_image, data->m_output_path);
                 Images::destroy(output_image.get_ID());
             };
@@ -443,24 +443,6 @@ struct ColorGrader::Implementation final {
     // --------------------------------------------------------------------------------------------
     Implementation(std::vector<char*> args, Cogwheel::Core::Engine& engine) {
 
-        bool headless = engine.get_window().get_width() == 0 && engine.get_window().get_height() == 0;
-
-        auto create_texture = []() -> GLuint {
-            GLuint tex_ID = 0;
-            glGenTextures(1, &tex_ID);
-            glBindTexture(GL_TEXTURE_2D, tex_ID);
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            return tex_ID;
-        };
-
-        glEnable(GL_TEXTURE_2D);
-        m_tex_ID = create_texture();
-        m_histogram.texture_ID = create_texture();
-        
         if (args.size() == 0 || std::string(args[0]).compare("-h") == 0 || std::string(args[0]).compare("--help") == 0) {
             print_usage();
             return;
@@ -477,16 +459,33 @@ struct ColorGrader::Implementation final {
         }
         engine.get_window().set_name("Komodo - " + m_input.get_name());
 
+        bool headless = engine.get_window().get_width() == 0 && engine.get_window().get_height() == 0;
         if (headless) {
             if (m_output_path.size() != 0) {
-                // Tonemap and store the image
+                // Color grade and store the image
                 Vector2ui size = { m_input.get_width(), m_input.get_height() };
                 Image output_image = Images::create2D("tonemapped_" + m_input.get_name(), PixelFormat::RGB_Float, 2.2f, size);
                 RGB* pixels = output_image.get_pixels<RGB>();
-                tonemap_image(m_input, pixels);
+                color_grade_image(m_input, pixels);
                 store_image(output_image, m_output_path);
             }
         } else {
+            auto create_texture = []() -> GLuint {
+                GLuint tex_ID = 0;
+                glGenTextures(1, &tex_ID);
+                glBindTexture(GL_TEXTURE_2D, tex_ID);
+                glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                return tex_ID;
+            };
+
+            glEnable(GL_TEXTURE_2D);
+            m_tex_ID = create_texture();
+            m_histogram.texture_ID = create_texture();
+
             m_tonemapped_pixels = new RGB[m_input.get_pixel_count()];
             m_gui = setup_gui();
             engine.add_mutating_callback(ColorGrader::Implementation::update, this);
@@ -506,7 +505,7 @@ struct ColorGrader::Implementation final {
         return gammacorrect(color, 2.2f);
     }
 
-    void tonemap_image(Image image, RGB* output) {
+    void color_grade_image(Image image, RGB* output) {
         float l_scale = luminance_scale();
         int width = image.get_width(), height = image.get_height();
 
@@ -530,7 +529,7 @@ struct ColorGrader::Implementation final {
 
         if (m_upload_image) {
 
-            tonemap_image(m_input, m_tonemapped_pixels);
+            color_grade_image(m_input, m_tonemapped_pixels);
 
             glBindTexture(GL_TEXTURE_2D, m_tex_ID);
             int width = m_input.get_width(), height = m_input.get_height();
