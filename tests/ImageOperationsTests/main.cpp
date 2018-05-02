@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include <BlurTest.h>
 #include <CompareTest.h>
 #include <StatisticsTest.h>
 

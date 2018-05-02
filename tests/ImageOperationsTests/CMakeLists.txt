@@ -1,6 +1,7 @@
 set(PROJECT_NAME "ImageOperationsTests")
 
 set(SRCS 
+  BlurTest.h
   CompareTest.h
   main.cpp
   StatisticsTest.h
