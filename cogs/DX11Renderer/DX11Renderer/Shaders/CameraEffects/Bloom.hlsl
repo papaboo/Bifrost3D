@@ -16,7 +16,6 @@ RWTexture2D<float4> output_image : register(u0);
 
 // ------------------------------------------------------------------------------------------------
 // Gaussian bloom.
-// A gaussian kernel requires 6 * std_dev - 1 lookups
 // ------------------------------------------------------------------------------------------------
 
 [numthreads(32, 32, 1)]
@@ -24,15 +23,10 @@ void gaussian_horizontal_filter(uint3 global_thread_ID : SV_DispatchThreadID) {
     float width, height;
     output_image.GetDimensions(width, height);
     
-    // Precompute
-    int half_extent = 11;
-    float std_dev = half_extent / 4.0;
-    float double_variance = 2.0 * std_dev * std_dev;
-
     float total_weight = 0.0; // Precompute
     float3 sum = 0.0;
-    for (int x = -half_extent; x <= half_extent; ++x) {
-        float weight = exp(-(x * x) / double_variance);
+    for (int x = -bloom_bandwidth; x <= bloom_bandwidth; ++x) {
+        float weight = exp(-(x * x) / bloom_2x_variance);
 
         int2 index = global_thread_ID.xy + int2(x, 0);
         index.x = clamp(index.x, 0, width - 1);
@@ -49,15 +43,10 @@ void gaussian_vertical_filter(uint3 global_thread_ID : SV_DispatchThreadID) {
     float width, height;
     output_image.GetDimensions(width, height);
 
-    // Precompute
-    int half_extent = 11;
-    float std_dev = half_extent / 4.0;
-    float double_variance = 2.0 * std_dev * std_dev;
-
     float total_weight = 0.0; // Precompute
     float3 sum = 0.0;
-    for (int y = -half_extent; y <= half_extent; ++y) {
-        float weight = exp(-(y * y) / double_variance);
+    for (int y = -bloom_bandwidth; y <= bloom_bandwidth; ++y) {
+        float weight = exp(-(y * y) / bloom_2x_variance);
 
         int2 index = global_thread_ID.xy + int2(0, y);
         index.y = clamp(index.y, 0, height - 1);

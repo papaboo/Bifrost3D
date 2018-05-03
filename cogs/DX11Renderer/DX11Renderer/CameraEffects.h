@@ -172,9 +172,13 @@ public:
         float log_lumiance_bias;
         float eye_adaptation_brightness;
         float eye_adaptation_darkness;
+
         float bloom_threshold;
+        int bloom_bandwidth;
+        float bloom_2x_variance;
+
         float delta_time;
-        float3 _padding;
+        float _padding;
     };
 
     CameraEffects() = default;

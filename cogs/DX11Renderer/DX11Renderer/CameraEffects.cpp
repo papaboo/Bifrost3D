@@ -422,6 +422,8 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
             constants.eye_adaptation_brightness = constants.eye_adaptation_darkness = std::numeric_limits<float>::infinity();
 
         constants.bloom_threshold = settings.bloom.receiver_threshold;
+        constants.bloom_bandwidth = int(settings.bloom.bandwidth * height);
+        constants.bloom_2x_variance = 2.0f * settings.bloom.variance(height);
 
         constants.delta_time = delta_time;
 
