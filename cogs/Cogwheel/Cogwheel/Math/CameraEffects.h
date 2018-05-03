@@ -35,6 +35,9 @@ struct Settings final {
 
     struct {
         float receiver_threshold;
+        float bandwidth; // Normalized bandwidth relative to the height of the image.
+        float std_dev(int height) { return (bandwidth * height)* 0.25f; }
+        float variance(int height) { return std_dev(height) * std_dev(height); }
     } bloom;
 
     struct {
@@ -54,6 +57,7 @@ struct Settings final {
         res.exposure.eye_adaptation_darkness = 1.0f;
 
         res.bloom.receiver_threshold = 1.5f;
+        res.bloom.bandwidth = 0.05f;
 
         res.tonemapping.mode = TonemappingMode::Uncharted2;
 
