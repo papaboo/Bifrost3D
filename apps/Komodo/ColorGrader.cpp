@@ -45,6 +45,7 @@ struct ColorGrader::Implementation final {
     float scene_key() { return 0.5f / luminance_scale(); }
 
     struct {
+        bool enabled = false;
         float threshold = 1.5f;
         float bandwidth = 0.05f;
     } m_bloom;
@@ -307,6 +308,7 @@ struct ColorGrader::Implementation final {
         }
 
         { // Bloom
+            TwAddVarCB(bar, "Enabled", TW_TYPE_BOOLCPP, WRAP_ANT_PROPERTY(m_bloom.enabled, bool), this, "group=Bloom");
             TwAddVarCB(bar, "Threshold", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_bloom.threshold, float), this, "step=0.1 group=Bloom");
             TwAddVarCB(bar, "Bandwidth", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_bloom.bandwidth, float), this, "step=0.01 group=Bloom");
         }
@@ -522,7 +524,7 @@ struct ColorGrader::Implementation final {
         int width = image.get_width(), height = image.get_height();
 
         static Image bloom_image = Images::UID::invalid_UID();
-        { // Bloom
+        if (m_bloom.enabled) { // Bloom
             static Image high_intensity_image = Images::UID::invalid_UID();
             if (!high_intensity_image.exists())
                 high_intensity_image = Images::create2D("high intensity", PixelFormat::RGB_Float, 1.0f, Vector2ui(width, height));
@@ -544,11 +546,12 @@ struct ColorGrader::Implementation final {
         }
 
         { // Tonemap
+            float bloom_threshold = m_bloom.enabled ? m_bloom.threshold : INFINITY;
             #pragma omp parallel for schedule(dynamic, 16)
             for (int i = 0; i < (int)image.get_pixel_count(); ++i) {
                 RGB pixel = image.get_pixel(i).rgb();
-                RGB bloom = bloom_image.get_pixel(i).rgb();
-                RGB adjusted_color = (RGB(min(pixel.r, m_bloom.threshold), min(pixel.g, m_bloom.threshold), min(pixel.b, m_bloom.threshold)) + bloom) * l_scale;
+                RGB bloom = m_bloom.enabled ? bloom_image.get_pixel(i).rgb() : RGB::black();
+                RGB adjusted_color = (RGB(min(pixel.r, bloom_threshold), min(pixel.g, bloom_threshold), min(pixel.b, bloom_threshold)) + bloom) * l_scale;
                 if (m_operator == Operator::Reinhard)
                     adjusted_color = CameraEffects::reinhard(adjusted_color, m_reinhard_whitepoint * m_reinhard_whitepoint);
                 else if (m_operator == Operator::FilmicAlu)
