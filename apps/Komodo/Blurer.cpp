@@ -139,6 +139,18 @@ struct Blurer::Implementation final {
 
         TwAddVarCB(bar, "Standard deviation", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_std_dev, float), this, "step=0.1 group=Guassian");
 
+        // Save button.
+        if (m_output_path.size() != 0) {
+            auto save_image = [](void* client_data) {
+                // Tonemap and store the image
+                Implementation* data = (Implementation*)client_data;
+                Vector2ui size = { data->m_input.get_width(), data->m_input.get_height() };
+                store_image(data->m_blurred_image, data->m_output_path);
+            };
+            TwAddButton(bar, "Save", save_image, this, "");
+        }
+
+
         return bar;
     }
 
