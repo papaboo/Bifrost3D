@@ -18,7 +18,7 @@ namespace Blur {
 // Guassian blur.
 // ------------------------------------------------------------------------------------------------
 
-void gaussian(Cogwheel::Assets::Images::UID image_ID, float std_dev, Cogwheel::Assets::Images::UID result_ID) {
+inline void gaussian(Cogwheel::Assets::Images::UID image_ID, float std_dev, Cogwheel::Assets::Images::UID result_ID) {
     using namespace Cogwheel::Assets;
     using namespace Cogwheel::Math;
 
@@ -88,7 +88,7 @@ void gaussian(Cogwheel::Assets::Images::UID image_ID, float std_dev, Cogwheel::A
     delete[] pong;
 }
 
-Cogwheel::Assets::Images::UID gaussian(Cogwheel::Assets::Images::UID image_ID, float std_dev) {
+inline Cogwheel::Assets::Images::UID gaussian(Cogwheel::Assets::Images::UID image_ID, float std_dev) {
     using namespace Cogwheel::Assets;
     using namespace Cogwheel::Math;
 
