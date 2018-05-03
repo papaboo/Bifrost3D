@@ -11,6 +11,7 @@
 
 #include <Cogwheel/Core/Engine.h>
 #include <Cogwheel/Math/CameraEffects.h>
+#include <ImageOperations/Blur.h>
 #include <ImageOperations/Exposure.h>
 
 #include <AntTweakBar/AntTweakBar.h>
@@ -20,6 +21,7 @@
 using namespace Cogwheel::Assets;
 using namespace Cogwheel::Core;
 using namespace Cogwheel::Math;
+using namespace ImageOperations;
 
 using Vector4uc = Vector4<unsigned char>;
 
@@ -41,6 +43,11 @@ struct ColorGrader::Implementation final {
     float m_exposure_bias = 0.0f;
     float luminance_scale() { return exp2(m_exposure_bias); }
     float scene_key() { return 0.5f / luminance_scale(); }
+
+    struct {
+        float threshold = 1.5f;
+        float bandwidth = 0.05f;
+    } m_bloom;
 
     struct {
         const int size = 100;
@@ -231,7 +238,7 @@ struct ColorGrader::Implementation final {
         TwInit(TW_OPENGL, nullptr);
         TwDefine("TW_HELP visible=false");  // Ant help bar is hidden.
 
-        TwBar* bar = TwNewBar("Tonemapper");
+        TwBar* bar = TwNewBar("ColorGrader");
 
         { // Exposure mapping
 
@@ -245,7 +252,7 @@ struct ColorGrader::Implementation final {
 
             auto reinhard_auto_exposure = [](void* client_data) {
                 ColorGrader::Implementation* data = (ColorGrader::Implementation*)client_data;
-                float scene_key = ImageOperations::Exposure::log_average_luminance(data->m_input.get_ID());
+                float scene_key = Exposure::log_average_luminance(data->m_input.get_ID());
                 float linear_exposure = 0.5f / scene_key;
                 data->m_exposure_bias = log2(linear_exposure);
                 data->m_upload_image = true;
@@ -254,7 +261,7 @@ struct ColorGrader::Implementation final {
 
             auto auto_geometric_mean = [](void* client_data) {
                 ColorGrader::Implementation* data = (ColorGrader::Implementation*)client_data;
-                float log_average_luminance = ImageOperations::Exposure::log_average_luminance(data->m_input.get_ID());
+                float log_average_luminance = Exposure::log_average_luminance(data->m_input.get_ID());
                 float key_value = 1.03f - (2.0f / (2 + log10(log_average_luminance + 1)));
                 float linear_exposure = key_value / log_average_luminance;
                 data->m_exposure_bias = log2(max(linear_exposure, 0.0001f));
@@ -271,7 +278,7 @@ struct ColorGrader::Implementation final {
                     auto& histogram = data->m_histogram;
 
                     std::fill(histogram.histogram.begin(), histogram.histogram.end(), 0u);
-                    ImageOperations::Exposure::log_luminance_histogram(data->m_input.get_ID(), histogram.min_log_luminance, histogram.max_log_luminance, 
+                    Exposure::log_luminance_histogram(data->m_input.get_ID(), histogram.min_log_luminance, histogram.max_log_luminance, 
                                                                        histogram.histogram.begin(), histogram.histogram.end());
 
                     // Compute linear exposure from histogram.
@@ -293,10 +300,15 @@ struct ColorGrader::Implementation final {
                 TwAddVarCB(bar, "Max log luminance", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_histogram.max_log_luminance, float), this, "step=0.1 group=Histogram");
                 TwAddVarCB(bar, "Visualize", TW_TYPE_BOOLCPP, WRAP_ANT_PROPERTY(m_histogram.visualize, bool), this, "group=Histogram");
 
-                TwDefine("Tonemapper/Histogram group='Exposure'");
+                TwDefine("ColorGrader/Histogram group='Exposure'");
 
                 histogram_auto_exposure(this);
             }
+        }
+
+        { // Bloom
+            TwAddVarCB(bar, "Threshold", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_bloom.threshold, float), this, "step=0.1 group=Bloom");
+            TwAddVarCB(bar, "Bandwidth", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_bloom.bandwidth, float), this, "step=0.01 group=Bloom");
         }
 
         { // Tonemapping
@@ -312,13 +324,13 @@ struct ColorGrader::Implementation final {
                 data->m_operator = *(Operator*)input_data;
                 data->m_upload_image = true;
 
-                auto show_reinhard = std::string("Tonemapper/Reinhard visible=") + (data->m_operator == Operator::Reinhard ? "true" : "false");
+                auto show_reinhard = std::string("ColorGrader/Reinhard visible=") + (data->m_operator == Operator::Reinhard ? "true" : "false");
                 TwDefine(show_reinhard.c_str());
 
-                auto show_uncharted2 = std::string("Tonemapper/Uncharted2 visible=") + (data->m_operator == Operator::Uncharted2 ? "true" : "false");
+                auto show_uncharted2 = std::string("ColorGrader/Uncharted2 visible=") + (data->m_operator == Operator::Uncharted2 ? "true" : "false");
                 TwDefine(show_uncharted2.c_str());
 
-                auto show_unreal4 = std::string("Tonemapper/Unreal4 visible=") + (data->m_operator == Operator::Unreal4 ? "true" : "false");
+                auto show_unreal4 = std::string("ColorGrader/Unreal4 visible=") + (data->m_operator == Operator::Unreal4 ? "true" : "false");
                 TwDefine(show_unreal4.c_str());
             };
             auto get_m_operator = [](void* value, void* client_data) {
@@ -329,7 +341,7 @@ struct ColorGrader::Implementation final {
             { // Reinhard
                 TwAddVarCB(bar, "White point", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_reinhard_whitepoint, float), this, "min=0 step=0.1 group='Reinhard'");
 
-                TwDefine("Tonemapper/Reinhard group='Tonemapping'");
+                TwDefine("ColorGrader/Reinhard group='Tonemapping'");
             }
 
             { // Uncharted 2 filmic
@@ -341,7 +353,7 @@ struct ColorGrader::Implementation final {
                 TwAddVarCB(bar, "Toe denominator", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.toe_denominator, float), this, "min=0 step=0.1 group=Uncharted2");
                 TwAddVarCB(bar, "Linear white", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.linear_white, float), this, "min=0 step=0.1 group=Uncharted2");
 
-                TwDefine("Tonemapper/Uncharted2 group='Tonemapping' label='Uncharted 2'");
+                TwDefine("ColorGrader/Uncharted2 group='Tonemapping' label='Uncharted 2'");
             }
 
             { // Unreal 4 filmic
@@ -413,7 +425,7 @@ struct ColorGrader::Implementation final {
                 TwAddVarCB(bar, "Shoulder", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4.shoulder, float), this, "step=0.1 group=Unreal4");
                 TwAddVarCB(bar, "White clip", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_unreal4.white_clip, float), this, "step=0.1 group=Unreal4");
 
-                TwDefine("Tonemapper/Unreal4 group='Tonemapping'");
+                TwDefine("ColorGrader/Unreal4 group='Tonemapping'");
             }
 
             auto tonemapper = Operator::Unreal4;
@@ -509,19 +521,44 @@ struct ColorGrader::Implementation final {
         float l_scale = luminance_scale();
         int width = image.get_width(), height = image.get_height();
 
-        #pragma omp parallel for schedule(dynamic, 16)
-        for (int i = 0; i < (int)image.get_pixel_count(); ++i) {
-            int x = i % width, y = i / width;
-            RGB adjusted_color = image.get_pixel(Vector2ui(x, y)).rgb() * l_scale;
-            if (m_operator == Operator::Reinhard)
-                adjusted_color = CameraEffects::reinhard(adjusted_color, m_reinhard_whitepoint * m_reinhard_whitepoint);
-            else if (m_operator == Operator::FilmicAlu)
-                adjusted_color = tonemap_filmic_ALU(adjusted_color);
-            else if (m_operator == Operator::Uncharted2)
-                adjusted_color = CameraEffects::uncharted2(adjusted_color, m_uncharted2.shoulder_strength, m_uncharted2.linear_strength, m_uncharted2.linear_angle, m_uncharted2.toe_strength, m_uncharted2.toe_numerator, m_uncharted2.toe_denominator, m_uncharted2.linear_white);
-            else if (m_operator == Operator::Unreal4)
-                adjusted_color = CameraEffects::unreal4(adjusted_color, m_unreal4.slope, m_unreal4.toe, m_unreal4.shoulder, m_unreal4.black_clip, m_unreal4.white_clip);
-            output[i] = gammacorrect(adjusted_color, 1.0f / 2.2f);
+        static Image bloom_image = Images::UID::invalid_UID();
+        { // Bloom
+            static Image high_intensity_image = Images::UID::invalid_UID();
+            if (!high_intensity_image.exists())
+                high_intensity_image = Images::create2D("high intensity", PixelFormat::RGB_Float, 1.0f, Vector2ui(width, height));
+
+            #pragma omp parallel for schedule(dynamic, 16)
+            for (int i = 0; i < (int)image.get_pixel_count(); ++i) {
+                RGBA pixel = image.get_pixel(i);
+                RGBA high_intensity_pixel = RGBA(max(pixel.r - m_bloom.threshold, 0.0f),
+                                                 max(pixel.g - m_bloom.threshold, 0.0f),
+                                                 max(pixel.b - m_bloom.threshold, 0.0f), pixel.a);
+                high_intensity_image.set_pixel(high_intensity_pixel, i);
+            }
+
+            if (!bloom_image.exists())
+                bloom_image = Images::create2D("high intensity", PixelFormat::RGB_Float, 1.0f, Vector2ui(width, height));
+            float pixel_bandwidth = image.get_height() * max(0.001f, m_bloom.bandwidth);
+            float std_dev = pixel_bandwidth / 4.0f;
+            Blur::gaussian(high_intensity_image.get_ID(), std_dev, bloom_image.get_ID());
+        }
+
+        { // Tonemap
+            #pragma omp parallel for schedule(dynamic, 16)
+            for (int i = 0; i < (int)image.get_pixel_count(); ++i) {
+                RGB pixel = image.get_pixel(i).rgb();
+                RGB bloom = bloom_image.get_pixel(i).rgb();
+                RGB adjusted_color = (RGB(min(pixel.r, m_bloom.threshold), min(pixel.g, m_bloom.threshold), min(pixel.b, m_bloom.threshold)) + bloom) * l_scale;
+                if (m_operator == Operator::Reinhard)
+                    adjusted_color = CameraEffects::reinhard(adjusted_color, m_reinhard_whitepoint * m_reinhard_whitepoint);
+                else if (m_operator == Operator::FilmicAlu)
+                    adjusted_color = tonemap_filmic_ALU(adjusted_color);
+                else if (m_operator == Operator::Uncharted2)
+                    adjusted_color = CameraEffects::uncharted2(adjusted_color, m_uncharted2.shoulder_strength, m_uncharted2.linear_strength, m_uncharted2.linear_angle, m_uncharted2.toe_strength, m_uncharted2.toe_numerator, m_uncharted2.toe_denominator, m_uncharted2.linear_white);
+                else if (m_operator == Operator::Unreal4)
+                    adjusted_color = CameraEffects::unreal4(adjusted_color, m_unreal4.slope, m_unreal4.toe, m_unreal4.shoulder, m_unreal4.black_clip, m_unreal4.white_clip);
+                output[i] = gammacorrect(adjusted_color, 1.0f / 2.2f);
+            }
         }
     }
 
