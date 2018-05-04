@@ -46,9 +46,12 @@ protected:
     // --------------------------------------------------------------------------------------------
     // Helpers
     // --------------------------------------------------------------------------------------------
-    inline OBuffer create_and_bind_constants(ODevice1& device, ODeviceContext1& context, float bloom_threshold) {
+    inline OBuffer create_and_bind_constants(ODevice1& device, ODeviceContext1& context, float bloom_threshold, int bandwidth = 11) {
         CameraEffects::Constants constants;
         constants.bloom_threshold = bloom_threshold;
+        constants.bloom_bandwidth = bandwidth;
+        float std_dev = constants.bloom_bandwidth * 0.25f;
+        constants.bloom_2x_variance = 2 * std_dev * std_dev;
         OBuffer constant_buffer;
         THROW_ON_FAILURE(create_constant_buffer(device, constants, &constant_buffer));
 
