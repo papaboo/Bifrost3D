@@ -60,24 +60,13 @@ struct LightSample {
 // Sphere light sampling.
 //-----------------------------------------------------------------------------
 
-static const float sphere_light_small_sin_theta_squared = 1e-5f;
-
-// Returns true if the sphere light should be interpreted as a delta light / point light.
-// Ideally this should only happen if the radius is zero, but due to floating point 
-// imprecission when sampling cones, we draw the line at very tiny subtended angles.
-bool is_delta_sphere_light(LightData light, float3 world_position) {
-    float3 vector_to_light = light.sphere_position() - world_position;
-    float sin_theta_squared = light.sphere_radius() * light.sphere_radius() / dot(vector_to_light, vector_to_light);
-    return sin_theta_squared < sphere_light_small_sin_theta_squared;
-}
-
 float sphere_surface_area(float radius) {
     return 4.0f * PI * radius * radius;
 }
 
 float3 evaluate_sphere_light(LightData light, float3 world_position) {
-    float inv_divisor = rcp(is_delta_sphere_light(light, world_position) ? (4.0f * PI) : (PI * sphere_surface_area(light.sphere_radius())));
-    return light.sphere_power() * inv_divisor;
+    float divisor = PI * sphere_surface_area(light.sphere_radius());
+    return light.sphere_power() * rcp(divisor);
 }
 
 LightSample sample_sphere_light(LightData light, float3 world_position) {
