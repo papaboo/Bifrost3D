@@ -421,7 +421,7 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
         } else
             constants.eye_adaptation_brightness = constants.eye_adaptation_darkness = std::numeric_limits<float>::infinity();
 
-        constants.bloom_threshold = settings.bloom.receiver_threshold;
+        constants.bloom_threshold = settings.bloom.threshold;
         constants.bloom_bandwidth = int(settings.bloom.bandwidth * height);
         constants.bloom_2x_variance = 2.0f * settings.bloom.variance(height);
 
@@ -455,7 +455,7 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
 
     // Bloom filter.
     ID3D11ShaderResourceView* bloom_SRV = nullptr;
-    if (settings.bloom.receiver_threshold < INFINITY)
+    if (settings.bloom.threshold < INFINITY)
         bloom_SRV = m_bloom.filter(context, m_constant_buffer, m_bilinear_sampler, pixel_SRV, width, height).get();
 
     { // Tonemap and render into backbuffer.
