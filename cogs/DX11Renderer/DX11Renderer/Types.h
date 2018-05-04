@@ -111,7 +111,7 @@ struct AABB {
 struct R11G11B10_Float {
     unsigned int raw;
 
-    R11G11B10_Float() : raw(0) {}
+    R11G11B10_Float() = default;
 
     R11G11B10_Float(float r, float g, float b) {
         // Pack RGB into R11G11B10. All three channels have a 5 bit exponent and no sign bit.
@@ -129,7 +129,7 @@ struct R11G11B10_Float {
 struct R10G10B10A2_Unorm {
     unsigned int raw;
 
-    R10G10B10A2_Unorm() : raw(0) {}
+    R10G10B10A2_Unorm() = default;
 
     R10G10B10A2_Unorm(float r, float g, float b, float a = 1.0f) {
         static auto saturate = [](float v) -> float { return fmaxf(0.0f, fminf(v, 1.0f)); };
