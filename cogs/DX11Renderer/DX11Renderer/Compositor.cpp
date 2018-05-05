@@ -99,8 +99,9 @@ private:
     OShaderResourceView m_backbuffer_SRV;
     ODepthStencilView m_depth_view;
 
-    double previous_tonemapping_time;
-    double counter_hertz;
+    // Camera effects
+    double m_counter_hertz;
+    double m_previous_effects_time;
     CameraEffects m_camera_effects;
 
 public:
@@ -162,8 +163,8 @@ public:
             { // Setup timer.
                 LARGE_INTEGER freq;
                 QueryPerformanceFrequency(&freq);
-                counter_hertz = 1.0 / freq.QuadPart;
-                previous_tonemapping_time = std::numeric_limits<double>::lowest(); // Ensures that the first delta_time is positive infinity, which in turn disables eye adaptation for the first frame.
+                m_counter_hertz = 1.0 / freq.QuadPart;
+                m_previous_effects_time = std::numeric_limits<double>::lowest(); // Ensures that the first delta_time is positive infinity, which in turn disables eye adaptation for the first frame.
             }
 
             std::wstring shader_folder_path = m_data_folder_path + L"DX11Renderer\\Shaders\\";
@@ -301,12 +302,12 @@ public:
             m_renderers[renderer]->render(camera_ID, int(ceilf(viewport.width)), int(ceilf(viewport.height)));
         }
 
-        // Compute delta time for tone mapping.
+        // Compute delta time for camera effects.
         LARGE_INTEGER performance_count;
         QueryPerformanceCounter(&performance_count);
-        double current_time = performance_count.QuadPart * counter_hertz;
-        float delta_time = float(current_time - previous_tonemapping_time);
-        previous_tonemapping_time = current_time;
+        double current_time = performance_count.QuadPart * m_counter_hertz;
+        float delta_time = float(current_time - m_previous_effects_time);
+        m_previous_effects_time = current_time;
 
         // Present the backbuffer.
         Cameras::UID camera_ID = *Cameras::get_iterable().begin();
