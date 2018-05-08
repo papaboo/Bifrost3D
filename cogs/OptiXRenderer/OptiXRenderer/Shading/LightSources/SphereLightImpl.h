@@ -17,7 +17,7 @@
 namespace OptiXRenderer {
 namespace LightSources {
 
-__device__ static const float sphere_light_small_sin_theta_squared = 1e-5f;
+__device__ static const float sphere_light_small_sin_theta_squared = 0.0f; // 1e-5f;
 
 __inline_all__ float surface_area(const SphereLight& light) {
     return 4.0f * PIf * light.radius * light.radius;
@@ -26,10 +26,14 @@ __inline_all__ float surface_area(const SphereLight& light) {
 // Returns true if the sphere light should be interpreted as a delta light / point light.
 // Ideally this should only happen if the radius is zero, but due to floating point 
 // imprecission when sampling cones, we draw the line at very tiny subtended angles.
+// TODO Rethinke this fix next time it's reproduced, as the fix caused the small light 
+//      in the veach scene to be too dim and not produce bloom.
+//      There are at least 3 'unguarded' sqrt functions when sampling cones, 
+//      where the input has a risc of becoming negative.
 __inline_all__ bool is_delta_light(const SphereLight& light, const optix::float3& position) {
     optix::float3 vector_to_light = light.position - position;
     float sin_theta_squared = light.radius * light.radius / optix::dot(vector_to_light, vector_to_light);
-    return sin_theta_squared < sphere_light_small_sin_theta_squared;
+    return sin_theta_squared <= sphere_light_small_sin_theta_squared;
 }
 
 __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix::float3& position, optix::float2 random_sample) {
@@ -40,7 +44,7 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix
     float sin_theta_squared = light.radius * light.radius / optix::dot(vector_to_light, vector_to_light);
 
     LightSample light_sample;
-    if (sin_theta_squared < sphere_light_small_sin_theta_squared) {
+    if (sin_theta_squared <= sphere_light_small_sin_theta_squared) {
         // If the subtended angle is too small, then sampling produces NaN's, so just fall back to a point light.
         light_sample.direction_to_light = vector_to_light;
         light_sample.distance = optix::length(light_sample.direction_to_light);
