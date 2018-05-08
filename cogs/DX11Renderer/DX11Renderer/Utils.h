@@ -18,7 +18,6 @@
 #include <Cogwheel/Math/Vector.h>
 #include <Cogwheel/Math/Utils.h>
 
-#include <assert.h>
 #include <string>
 
 #define NOMINMAX
@@ -60,8 +59,11 @@ inline void CHECK_HRESULT(HRESULT hr, const std::string& file, int line) {
 
 #define THROW_ON_FAILURE(hr) ::DX11Renderer::CHECK_HRESULT(hr, __FILE__,__LINE__)
 
-// Copied from VS' assert.h to have an assert that is enabled in release builds as well.
-#define always_assert(_Expression) (void)( (!!(_Expression)) || (_wassert(_CRT_WIDE(#_Expression), _CRT_WIDE(__FILE__), __LINE__), 0) )
+inline void _assert(const char* expression, const char* file, int line) {
+    fprintf(stderr, "Assertion failed: '%s', file '%s' line '%d'.\n", expression, file, line);
+    exit(1);
+}
+#define always_assert(EXPRESSION) ((EXPRESSION) ? (void)0 : _assert(#EXPRESSION, __FILE__, __LINE__))
 
 inline int sizeof_dx_format(DXGI_FORMAT format) {
     switch (format) {
