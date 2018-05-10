@@ -50,6 +50,65 @@ GTEST_TEST(Math_Utils, compute_ulps) {
     }
 }
 
+// ------------------------------------------------------------------------------------------------
+// Gaussian bilinear samples test.
+// ------------------------------------------------------------------------------------------------
+GTEST_TEST(Math_Utils, bilinear_gaussian_samples) {
+    static auto gaussian_filter = [](float* value, float std_dev, int bandwidth) -> float {
+        float double_variance = 2.0f * std_dev * std_dev;
+
+        float sum = 0.0f;
+        float total_weight = 0.0f;
+        for (int i = -bandwidth; i <= bandwidth; ++i) {
+            float weight = exp(-(i * i) / double_variance);
+
+            sum += *(value + i) * weight;
+            total_weight += weight;
+        }
+        return sum / total_weight;
+    };
+
+    static auto sampled_filter = [](float* value, Tap* guassian_samples, int sample_count) -> float {
+        float sum = 0.0f;
+        for (int s = sample_count-1; s >= 0; --s) {
+            int index = int(guassian_samples[s].offset);
+            float frac = guassian_samples[s].offset - index;
+
+            // left side
+            float lower_value = lerp(value[-index], value[-index - 1], frac);
+            float upper_value = lerp(value[index], value[index + 1], frac);
+            sum += (lower_value + upper_value) * guassian_samples[s].weight;
+        }
+
+        return sum;
+    };
+
+    float values[21] = { 0, 0, 0, 0, 0, 0, 0, 
+                         1, 1, 1, 1, 1, 1, 1, 
+                         0, 0, 0, 0, 0, 0, 0 };
+
+    const int bandwidth = 4;
+    const int sample_count = (bandwidth + 1) / 2;
+    Tap gaussian_samples[sample_count];
+    for (float std_dev : {0.1f, 0.5f, 1.0f}) {
+
+        fill_bilinear_gaussian_samples(std_dev, gaussian_samples, gaussian_samples + sample_count);
+
+        // Test that the samples' weight sum to 0.5, as they cover the one half of the bell curve.
+        float total_weight = 0.0;
+        for (int s = sample_count - 1; s >= 0; --s)
+            total_weight += gaussian_samples[s].weight;
+        EXPECT_FLOAT_EQ_PCT(0.5f, total_weight, 0.0000005f);
+
+        // Test that they filter similarly to a gaussian filter.
+        for (int i : {5, 7, 10}) {
+            float gaussian_filtered_value = gaussian_filter(values + i, std_dev, bandwidth);
+            float sampled_filtered_value = sampled_filter(values + i, gaussian_samples, sample_count);
+            EXPECT_FLOAT_EQ_PCT(gaussian_filtered_value, sampled_filtered_value, 0.0025f);
+        }
+    }
+}
+
 } // NS Math
 } // NS Cogwheel
 

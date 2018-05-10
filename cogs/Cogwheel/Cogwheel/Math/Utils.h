@@ -1,10 +1,10 @@
 // Cogwheel mathematical utilities.
-// ----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Copyright (C) 2015, Cogwheel. See AUTHORS.txt for authors
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
-// ----------------------------------------------------------------------------
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+// ------------------------------------------------------------------------------------------------
 
 #ifndef _COGWHEEL_MATH_UTILS_H_
 #define _COGWHEEL_MATH_UTILS_H_
@@ -19,9 +19,9 @@
 namespace Cogwheel {
 namespace Math {
 
-//*****************************************************************************
+// ------------------------------------------------------------------------------------------------
 // Floating point precision helpers.
-//*****************************************************************************
+// ------------------------------------------------------------------------------------------------
 
 inline int compute_ulps(float a, float b) {
     static_assert(sizeof(float) == sizeof(int), "Implementation needed for when float and int have different sizes.");
@@ -73,9 +73,9 @@ inline float next_float(float v) {
     return v;
 }
 
-//*****************************************************************************
+// ------------------------------------------------------------------------------------------------
 // Trigonometry.
-//*****************************************************************************
+// ------------------------------------------------------------------------------------------------
 
 inline Vector2f direction_to_latlong_texcoord(Vector3f direction) {
     float u = (atan2f(direction.z, direction.x) + PI<float>()) * 0.5f / PI<float>();
@@ -90,9 +90,9 @@ inline Vector3f latlong_texcoord_to_direction(Vector2f uv) {
     return -Vector3f(sin_theta * cosf(phi), cosf(theta), sin_theta * sinf(phi));
 }
 
-//*****************************************************************************
+// ------------------------------------------------------------------------------------------------
 // General helper methods.
-//*****************************************************************************
+// ------------------------------------------------------------------------------------------------
 
 inline unsigned int ceil_divide(unsigned int a, unsigned int b) {
     return (a / b) + ((a % b) > 0);
@@ -161,9 +161,9 @@ inline unsigned int reverse_bits(unsigned int n) {
     return n;
 }
 
-//-----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Stable pairwise summation.
-//-----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 
 // Inplace iterative pairwise summation.
 // Uses the input iterators to store the temporaries.
@@ -191,6 +191,46 @@ template <typename InputIterator>
 inline typename std::iterator_traits<InputIterator>::value_type sort_and_pairwise_summation(InputIterator begin, InputIterator end) {
     std::sort(begin, end);
     return pairwise_summation(begin, end);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Tap for a bilinearly sampled gaussian filter.
+// ------------------------------------------------------------------------------------------------
+
+struct Tap {
+    float offset; // Unnormalized offset. Normalize by size to get texture coordinates.
+    float weight;
+
+    float normalized_offset(int width) { return offset / width; }
+};
+
+// Fills the list of Taps with bilinearly sampled weighted taps corresponding to a gaussian filter.
+// See http://rastergrid.com/blog/2010/09/efficient-gaussian-blur-with-linear-sampling/
+// A good number of samples is between 2 * std_dev and 3 * std_dev.
+inline void fill_bilinear_gaussian_samples(float std_dev, Tap* samples_begin, Tap* samples_end) {
+    int sample_count = int(samples_end - samples_begin);
+    float double_variance = 2.0f * std_dev * std_dev;
+
+    float total_weight = 0.0f;
+    for (int s = 0; s < sample_count; ++s) {
+        int t1 = s * 2;
+        float w1 = exp(-(t1 * t1) / double_variance);
+        if (s == 0) w1 *= 0.5f;
+        int t2 = t1 + 1;
+        float w2 = exp(-(t2 * t2) / double_variance);
+
+        float weight = w1 + w2;
+        float offset = (t1 * w1 + t2 * w2) / weight;
+        if (isnan(offset)) offset = float(t1);
+
+        samples_begin[s] = { offset, weight };
+
+        total_weight += weight;
+    }
+    total_weight *= 2; // Double the total weight as it's only summed for the one half of the symetric bell curve.
+
+    for (int s = 0; s < sample_count; ++s)
+        samples_begin[s].weight /= total_weight;
 }
 
 } // NS Math
