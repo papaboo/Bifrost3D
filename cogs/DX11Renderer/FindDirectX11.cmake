@@ -2,7 +2,7 @@
 # Search in the default install locations.
 
 # List windows SDK versions.
-set(WINDOWS_SDK_VERSIONS "10.0.16299.0" "10.0.14393.0")
+set(WINDOWS_SDK_VERSIONS "10.0.17134.0" "10.0.16299.0")
 
 foreach (SDK_VERSION ${WINDOWS_SDK_VERSIONS})
   set(SDK_INCLUDE_DIR "C:/Program Files (x86)/Windows Kits/10/Include/${SDK_VERSION}")
