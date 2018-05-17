@@ -72,6 +72,7 @@ inline int sizeof_dx_format(DXGI_FORMAT format) {
     case DXGI_FORMAT_R16_UNORM:
         return 2;
     case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+    case DXGI_FORMAT_R16G16_FLOAT:
     case DXGI_FORMAT_R16G16_UNORM:
     case DXGI_FORMAT_R11G11B10_FLOAT:
     case DXGI_FORMAT_R10G10B10A2_UNORM:
@@ -81,6 +82,7 @@ inline int sizeof_dx_format(DXGI_FORMAT format) {
     case DXGI_FORMAT_R16G16B16A16_SNORM:
     case DXGI_FORMAT_R16G16B16A16_UNORM:
     case DXGI_FORMAT_R16G16B16A16_FLOAT:
+    case DXGI_FORMAT_R32G32_FLOAT:
         return 8;
     case DXGI_FORMAT_R32G32B32_FLOAT:
         return 12;
