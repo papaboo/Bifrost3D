@@ -43,6 +43,8 @@ private:
 
     struct {
         float std_dev;
+        int capacity;
+        OBuffer buffer;
         OShaderResourceView SRV;
     } m_gaussian_samples;
 

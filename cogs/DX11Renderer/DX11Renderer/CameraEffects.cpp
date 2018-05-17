@@ -28,6 +28,10 @@ GaussianBloom::GaussianBloom(ID3D11Device1& device, const std::wstring& shader_f
 
     OBlob vertical_filter_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::sampled_gaussian_vertical_filter");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(vertical_filter_blob), nullptr, &m_vertical_filter));
+
+    m_gaussian_samples.std_dev = std::numeric_limits<float>::infinity();
+    m_gaussian_samples.capacity = 64;
+    m_gaussian_samples.buffer = create_default_buffer(device, DXGI_FORMAT_R32G32_FLOAT, m_gaussian_samples.capacity, &m_gaussian_samples.SRV);
 }
 
 OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
@@ -46,17 +50,11 @@ OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11
     auto performance_marker = PerformanceMarker(context, L"Gaussian bloom");
 
     if (m_gaussian_samples.std_dev != std_dev) {
-        ODevice1 device = get_device1(context);
-
-        CameraEffects::Constants gpu_constants;
-        Readback::buffer(device, &context, &constants, &gpu_constants, &gpu_constants + 1);
-
-        float std_dev = sqrt(gpu_constants.bloom_2x_variance * 0.5f);
-        int sample_count = gpu_constants.bloom_bandwidth / 2;
+        int sample_count = m_gaussian_samples.capacity;
         Tap* taps = new Tap[sample_count];
         fill_bilinear_gaussian_samples(std_dev, taps, taps + sample_count);
 
-        create_default_buffer(device, DXGI_FORMAT_R32G32_FLOAT, (void*)taps, sample_count, &m_gaussian_samples.SRV, nullptr);
+        context.UpdateSubresource(m_gaussian_samples.buffer, 0, nullptr, taps, sizeof(taps) * sample_count, 0u);
 
         delete[] taps;
 
