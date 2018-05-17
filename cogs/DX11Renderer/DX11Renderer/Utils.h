@@ -52,7 +52,7 @@ inline void CHECK_HRESULT(HRESULT hr, const std::string& file, int line) {
             error += " unknown HRESULT code: " + std::to_string(hr);
             break;
         }
-        printf("%s\n", error.c_str());
+        fprintf(stderr, "%s\n", error.c_str());
         throw std::exception(error.c_str());
     }
 }
@@ -64,6 +64,28 @@ inline void _assert(const char* expression, const char* file, int line) {
     exit(1);
 }
 #define always_assert(EXPRESSION) ((EXPRESSION) ? (void)0 : _assert(#EXPRESSION, __FILE__, __LINE__))
+
+struct PerformanceMarker {
+    PerformanceMarker(ID3D11DeviceContext1& context, LPCWSTR event_name) {
+        context.QueryInterface(IID_PPV_ARGS(&m_perf));
+        m_perf->BeginEvent(event_name);
+    }
+
+    ~PerformanceMarker() {
+        end();
+    }
+
+    void end() {
+        if (m_perf != nullptr) {
+            m_perf->EndEvent();
+            m_perf->Release();
+            m_perf = nullptr;
+        }
+    }
+
+private:
+    ID3DUserDefinedAnnotation* m_perf;
+};
 
 inline int sizeof_dx_format(DXGI_FORMAT format) {
     switch (format) {
@@ -130,6 +152,22 @@ inline OBlob compile_shader(const std::wstring& filename, const char* target, co
     return shader_bytecode;
 }
 
+inline float3 make_float3(Cogwheel::Math::Vector3f v) {
+    float3 r = { v.x, v.y, v.z };
+    return r;
+}
+
+inline float alpha_sort_value(Cogwheel::Math::Vector3f camera_pos, Cogwheel::Math::Transform transform, Cogwheel::Math::AABB bounds) {
+    using namespace Cogwheel::Math;
+
+    Vector3f center = transform.inverse() * bounds.center();
+    return magnitude_squared(camera_pos - center);
+}
+
+
+// ------------------------------------------------------------------------------------------------
+// Resource creation
+// ------------------------------------------------------------------------------------------------
 inline HRESULT create_constant_buffer(ID3D11Device1& device, int byte_width, ID3D11Buffer** constant_buffer) {
     D3D11_BUFFER_DESC desc = {};
     desc.Usage = D3D11_USAGE_DEFAULT;
@@ -243,18 +281,6 @@ inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, v
 inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, unsigned int width, unsigned int height,
                                           ID3D11ShaderResourceView** texture_SRV, ID3D11UnorderedAccessView** texture_UAV = nullptr) {
     return create_texture_2D(device, format, nullptr, width, height, D3D11_USAGE_DEFAULT, texture_SRV, texture_UAV);
-}
-
-inline float3 make_float3(Cogwheel::Math::Vector3f v) {
-    float3 r = { v.x, v.y, v.z};
-    return r;
-}
-
-inline float alpha_sort_value(Cogwheel::Math::Vector3f camera_pos, Cogwheel::Math::Transform transform, Cogwheel::Math::AABB bounds) {
-    using namespace Cogwheel::Math;
-
-    Vector3f center = transform.inverse() * bounds.center();
-    return magnitude_squared(camera_pos - center);
 }
 
 // ------------------------------------------------------------------------------------------------

@@ -43,6 +43,8 @@ OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11
     // TODO Check std_dev.
 #endif
 
+    auto performance_marker = PerformanceMarker(context, L"Gaussian bloom");
+
     if (m_gaussian_samples.std_dev != std_dev) {
         ODevice1 device = get_device1(context);
 
@@ -158,6 +160,8 @@ OShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D
     context.CSGetSamplers(0, 1, &bound_sampler);
     always_assert(bound_sampler.get() == &bilinear_sampler);
 #endif
+
+    auto performance_marker = PerformanceMarker(context, L"Dual kawase bloom");
 
     if (m_temp.width != image_width || m_temp.height != image_height) {
         
@@ -290,6 +294,8 @@ void LogAverageLuminance::compute(ID3D11DeviceContext1& context, ID3D11Buffer* c
     always_assert(bound_constants.get() == constants);
 #endif
 
+    auto performance_marker = PerformanceMarker(context, L"Log average luminance");
+
     context.CSSetUnorderedAccessViews(0, 1, &m_log_averages_UAV, 0u);
     context.CSSetShaderResources(0, 1, &pixels);
     context.CSSetShader(m_log_average_first_reduction, nullptr, 0u);
@@ -354,6 +360,8 @@ void ExposureHistogram::compute_linear_exposure(ID3D11DeviceContext1& context, I
     context.CSGetConstantBuffers(0, 1, &bound_constants);
     always_assert(bound_constants.get() == constants);
 #endif
+
+    auto performance_marker = PerformanceMarker(context, L"Exposure from histogram");
 
     const unsigned int zeros[4] = { 0u, 0u, 0u, 0u };
     context.ClearUnorderedAccessViewUint(m_histogram_UAV, zeros);
@@ -427,6 +435,8 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
                             ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, int width, int height) {
 
     using namespace Cogwheel::Math::CameraEffects;
+
+    auto performance_marker = PerformanceMarker(context, L"Camera effects");
 
     { // Upload constants
         Constants constants;

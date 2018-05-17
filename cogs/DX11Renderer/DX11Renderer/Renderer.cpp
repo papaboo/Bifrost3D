@@ -308,6 +308,8 @@ public:
         }
 
         { // Render lights.
+            auto lights_marker = PerformanceMarker(*m_render_context, L"Lights");
+
             m_environments->render(*m_render_context, scene.get_ID());
 
             // Bind light buffer.
@@ -323,6 +325,7 @@ public:
         }
 
         { // Render models.
+            auto opaque_marker = PerformanceMarker(*m_render_context, L"Opaque geometry");
 
             // Set vertex and pixel shaders.
             m_render_context->VSSetShader(m_vertex_shading.shader, 0, 0);
@@ -345,7 +348,11 @@ public:
                 render_model(m_render_context, model, camera_ID);
             }
 
+            opaque_marker.end();
+
             { // Render transparent models
+
+                auto transparent_marker = PerformanceMarker(*m_render_context, L"Transparent geometry");
 
                 // Apply used cutout state if not already applied.
                 bool no_cutouts_present = m_cutout.first_model_index >= m_transparent.first_model_index;
