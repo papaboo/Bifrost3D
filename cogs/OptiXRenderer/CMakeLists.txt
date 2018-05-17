@@ -6,8 +6,8 @@ set(CMAKE_MODULE_PATH "${COGWHEEL_COGS_DIR}/OptiXRenderer" ${CMAKE_MODULE_PATH})
 find_package(OptiX)
 
 if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
-  install_file(${OPTIX_1_DLL})
-  install_file(${OPTIX_U_1_DLL})
+  install_file(${OPTIX_DLL})
+  install_file(${OPTIX_U_DLL})
 
   set(ROOT_SRC
     OptiXRenderer/Defines.h

@@ -11,6 +11,8 @@ ENDMACRO(set_boolean)
 
 # First locate the OptiX search path.
 set(OPTIX_WINDOWS_SEARCH_PATHS
+  "C:/ProgramData/NVIDIA Corporation/OptiX SDK 5.1.0"
+  "C:/Program Files/NVIDIA Corporation/OptiX SDK 5.1.0"
   "C:/ProgramData/NVIDIA Corporation/OptiX SDK 5.0.1"
   "C:/Program Files/NVIDIA Corporation/OptiX SDK 5.0.1"
   "C:/ProgramData/NVIDIA Corporation/OptiX SDK 4.1.1"
@@ -33,32 +35,36 @@ find_path(OPTIX_INCLUDE_DIRS optix.h
 )
 
 # Find libraries.
-find_library(OPTIX_1_LIB optix.1
+find_library(OPTIX_LIB optix.1 optix.51
              PATHS
              ${OPTIX_PATH}/lib64
              DOC "The main optix library"
 )
 
-find_library(OPTIX_U_1_LIB optixu.1
+find_library(OPTIX_U_LIB optixu.1
              PATHS
              ${OPTIX_PATH}/lib64
              DOC "The optix C++ namespace library"
 )
 
-set(OPTIX_LIBRARIES "${OPTIX_1_LIB}" "${OPTIX_U_1_LIB}")
+set(OPTIX_LIBRARIES "${OPTIX_LIB}" "${OPTIX_U_LIB}")
 
 # Find dlls
 if (EXISTS ${OPTIX_PATH}/bin64/optix.1.dll)
-  set(OPTIX_1_DLL "${OPTIX_PATH}/bin64/optix.1.dll")
+  set(OPTIX_DLL "${OPTIX_PATH}/bin64/optix.1.dll")
+endif()
+
+if (EXISTS ${OPTIX_PATH}/bin64/optix.51.dll)
+  set(OPTIX_DLL "${OPTIX_PATH}/bin64/optix.51.dll")
 endif()
 
 if (EXISTS ${OPTIX_PATH}/bin64/optixu.1.dll)
-  set(OPTIX_U_1_DLL "${OPTIX_PATH}/bin64/optixu.1.dll")
+  set(OPTIX_U_DLL "${OPTIX_PATH}/bin64/optixu.1.dll")
 endif()
 
-set(OPTIX_DLLS "${OPTIX_1_DLL}" "${OPTIX_U_1_DLL}")
+set(OPTIX_DLLS "${OPTIX_DLL}" "${OPTIX_U_DLL}")
 
 # Handle the QUIETLY and REQUIRED arguments and set OPTIX_FOUND to TRUE if
 # all listed variables are set.
 include(${CMAKE_ROOT}/Modules/FindPackageHandleStandardArgs.cmake)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(OPTIX DEFAULT_MSG OPTIX_1_LIB OPTIX_U_1_LIB OPTIX_1_DLL OPTIX_U_1_DLL OPTIX_INCLUDE_DIRS)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(OPTIX DEFAULT_MSG OPTIX_LIB OPTIX_U_LIB OPTIX_DLL OPTIX_U_DLL OPTIX_INCLUDE_DIRS)
