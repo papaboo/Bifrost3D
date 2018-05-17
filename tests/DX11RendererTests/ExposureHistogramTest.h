@@ -165,7 +165,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
         histogram[i] = 1;
 
     OShaderResourceView histogram_SRV;
-    create_default_buffer(device, DXGI_FORMAT_R32_UINT, histogram, bin_count, &histogram_SRV, nullptr);
+    create_default_buffer(device, DXGI_FORMAT_R32_UINT, histogram, bin_count, &histogram_SRV);
 
     OUnorderedAccessView linear_exposure_UAV;
     OBuffer linear_exposure_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &linear_exposure_UAV);
@@ -211,7 +211,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_histogram) {
     std::random_shuffle(histogram, histogram + bin_count);
 
     OShaderResourceView histogram_SRV;
-    create_default_buffer(device, DXGI_FORMAT_R32_UINT, histogram, bin_count, &histogram_SRV, nullptr);
+    create_default_buffer(device, DXGI_FORMAT_R32_UINT, histogram, bin_count, &histogram_SRV);
 
     OUnorderedAccessView linear_exposure_UAV;
     OBuffer linear_exposure_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &linear_exposure_UAV);

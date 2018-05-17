@@ -194,7 +194,7 @@ inline HRESULT create_constant_buffer(ID3D11Device1& device, T& data, ID3D11Buff
 }
 
 inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, void* data, int element_count,
-                                           ID3D11ShaderResourceView** buffer_SRV, ID3D11UnorderedAccessView** buffer_UAV) {
+                                           ID3D11ShaderResourceView** buffer_SRV, ID3D11UnorderedAccessView** buffer_UAV = nullptr) {
     D3D11_BUFFER_DESC buffer_desc = {};
     buffer_desc.Usage = D3D11_USAGE_DEFAULT;
     buffer_desc.StructureByteStride = sizeof_dx_format(format);
@@ -234,7 +234,7 @@ inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, 
 };
 
 inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, int element_count,
-                                           ID3D11ShaderResourceView** buffer_SRV, ID3D11UnorderedAccessView** buffer_UAV) {
+                                           ID3D11ShaderResourceView** buffer_SRV, ID3D11UnorderedAccessView** buffer_UAV = nullptr) {
     return create_default_buffer(device, format, nullptr, element_count, buffer_SRV, buffer_UAV);
 }
 
