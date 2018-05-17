@@ -31,7 +31,7 @@ GaussianBloom::GaussianBloom(ID3D11Device1& device, const std::wstring& shader_f
 
     m_gaussian_samples.std_dev = std::numeric_limits<float>::infinity();
     m_gaussian_samples.capacity = 64;
-    m_gaussian_samples.buffer = create_default_buffer(device, DXGI_FORMAT_R32G32_FLOAT, m_gaussian_samples.capacity, &m_gaussian_samples.SRV);
+    m_gaussian_samples.buffer = create_default_buffer(device, DXGI_FORMAT_R16G16_FLOAT, m_gaussian_samples.capacity, &m_gaussian_samples.SRV);
 }
 
 OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
@@ -54,8 +54,13 @@ OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11
         Tap* taps = new Tap[sample_count];
         fill_bilinear_gaussian_samples(std_dev, taps, taps + sample_count);
 
-        context.UpdateSubresource(m_gaussian_samples.buffer, 0, nullptr, taps, sizeof(taps) * sample_count, 0u);
+        half2* taps_h = new half2[sample_count];
+        for (int i = 0; i < sample_count; ++i)
+            taps_h[i] = { half(taps[i].offset), half(taps[i].weight) };
 
+        context.UpdateSubresource(m_gaussian_samples.buffer, 0u, nullptr, taps_h, sizeof(half2) * sample_count, 0u);
+
+        delete[] taps_h;
         delete[] taps;
 
         m_gaussian_samples.std_dev = std_dev;
