@@ -78,29 +78,32 @@ using OUnorderedAccessView = DX11Renderer::OwnedResourcePtr<ID3D11UnorderedAcces
 #define CONSTANT_ELEMENT_SIZE 16
 #define CONSTANT_BUFFER_ALIGNMENT 256
 
+struct half2 {
+    half x, y;
+};
+
 struct int2 {
-    int x; int y;
+    int x, y;
 };
 
 struct int4 {
-    int x; int y; int z; int w;
+    int x, y, z, w;
 };
 
 struct float2 {
-    float x; float y;
+    float x, y;
 };
 
 struct float3 {
-    float x; float y; float z;
+    float x, y, z;
 };
 
 struct float4 {
-    float x; float y; float z;  float w;
+    float x, y, z, w;
 };
 
 struct AABB {
-    float3 min;
-    float3 max;
+    float3 min, max;
 };
 
 //-------------------------------------------------------------------------------------------------
