@@ -23,15 +23,15 @@ GaussianBloom::GaussianBloom(ID3D11Device1& device, const std::wstring& shader_f
 
     const std::wstring shader_filename = shader_folder_path + L"CameraEffects/Bloom.hlsl";
 
-    OBlob horizontal_filter_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::gaussian_horizontal_filter");
+    OBlob horizontal_filter_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::sampled_gaussian_horizontal_filter");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(horizontal_filter_blob), nullptr, &m_horizontal_filter));
 
-    OBlob vertical_filter_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::gaussian_vertical_filter");
+    OBlob vertical_filter_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::sampled_gaussian_vertical_filter");
     THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(vertical_filter_blob), nullptr, &m_vertical_filter));
 }
 
 OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
-                                                 ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) {
+                                           ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, float std_dev) {
 #if CHECK_IMPLICIT_STATE
     // Check that the constants and sampler are bound.
     OBuffer bound_constants;
@@ -40,7 +40,26 @@ OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11
     OSamplerState bound_sampler;
     context.CSGetSamplers(0, 1, &bound_sampler);
     always_assert(bound_sampler.get() == &bilinear_sampler);
+    // TODO Check std_dev.
 #endif
+
+    if (m_gaussian_samples.std_dev != std_dev) {
+        ODevice1 device = get_device1(context);
+
+        CameraEffects::Constants gpu_constants;
+        Readback::buffer(device, &context, &constants, &gpu_constants, &gpu_constants + 1);
+
+        float std_dev = sqrt(gpu_constants.bloom_2x_variance * 0.5f);
+        int sample_count = gpu_constants.bloom_bandwidth / 2;
+        Tap* taps = new Tap[sample_count];
+        fill_bilinear_gaussian_samples(std_dev, taps, taps + sample_count);
+
+        create_default_buffer(device, DXGI_FORMAT_R32G32_FLOAT, (void*)taps, sample_count, &m_gaussian_samples.SRV, nullptr);
+
+        delete[] taps;
+
+        m_gaussian_samples.std_dev = std_dev;
+    }
 
     if (m_ping.width != image_width || m_ping.height != image_height) {
 
@@ -92,7 +111,8 @@ OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11
     // High intensity pass and horizontal filter.
     context.CSSetShader(m_horizontal_filter, nullptr, 0u);
     context.CSSetUnorderedAccessViews(0, 1, &m_pong.UAV, 0u);
-    context.CSSetShaderResources(0, 1, &pixels);
+    ID3D11ShaderResourceView* SRVs[] = { pixels, m_gaussian_samples.SRV };
+    context.CSSetShaderResources(0, 2, SRVs);
     context.Dispatch(ceil_divide(image_width, group_size), ceil_divide(image_height, group_size), 1);
 
     // Vertical filter
@@ -456,7 +476,7 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
     // Bloom filter.
     ID3D11ShaderResourceView* bloom_SRV = nullptr;
     if (settings.bloom.threshold < INFINITY)
-        bloom_SRV = m_bloom.filter(context, m_constant_buffer, m_bilinear_sampler, pixel_SRV, width, height).get();
+        bloom_SRV = m_bloom.filter(context, m_constant_buffer, m_bilinear_sampler, pixel_SRV, width, height, settings.bloom.std_dev(height)).get();
 
     { // Tonemap and render into backbuffer.
         context.VSSetShader(m_fullscreen_VS, 0, 0);

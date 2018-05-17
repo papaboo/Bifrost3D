@@ -18,44 +18,49 @@ RWTexture2D<float4> output_image : register(u0);
 // Gaussian bloom.
 // ------------------------------------------------------------------------------------------------
 
+Buffer<float2> bilinear_gaussian_samples : register (t1);
+
 [numthreads(32, 32, 1)]
-void gaussian_horizontal_filter(uint3 global_thread_ID : SV_DispatchThreadID) {
+void sampled_gaussian_horizontal_filter(uint3 global_thread_ID : SV_DispatchThreadID) {
     float width, height;
     output_image.GetDimensions(width, height);
-    
-    float total_weight = 0.0; // Precompute
+    float recip_width = 1.0 / width;
+
+    float2 uv = (global_thread_ID.xy + 0.5) / float2(width, height);
+
+    int sample_count = bloom_bandwidth / 2;
+
     float3 sum = 0.0;
-    for (int x = -bloom_bandwidth; x <= bloom_bandwidth; ++x) {
-        float weight = exp(-(x * x) / bloom_2x_variance);
-
-        int2 index = global_thread_ID.xy + int2(x, 0);
-        index.x = clamp(index.x, 0, width - 1);
-
-        sum += max(0.0, image[index].rgb - bloom_threshold) * weight;
-        total_weight += weight;
+    for (int y = 0; y < sample_count; ++y) {
+        float2 offset_weight = bilinear_gaussian_samples[y];
+        offset_weight.x *= recip_width;
+        float3 lower_sample = image.SampleLevel(image_sampler, uv + float2(-offset_weight.x, 0), 0).rgb;
+        float3 upper_sample = image.SampleLevel(image_sampler, uv + float2(offset_weight.x, 0), 0).rgb;
+        sum += (max(0, lower_sample - bloom_threshold) + max(0, upper_sample - bloom_threshold)) * offset_weight.y;
     }
 
-    output_image[global_thread_ID.xy] = float4(sum / total_weight, 1.0);
+    output_image[global_thread_ID.xy] = float4(sum, 1.0);
 }
 
 [numthreads(32, 32, 1)]
-void gaussian_vertical_filter(uint3 global_thread_ID : SV_DispatchThreadID) {
+void sampled_gaussian_vertical_filter(uint3 global_thread_ID : SV_DispatchThreadID) {
     float width, height;
     output_image.GetDimensions(width, height);
+    float recip_height = 1.0 / height;
 
-    float total_weight = 0.0; // Precompute
+    float2 uv = (global_thread_ID.xy + 0.5) / float2(width, height);
+
+    int sample_count = bloom_bandwidth / 2;
+
     float3 sum = 0.0;
-    for (int y = -bloom_bandwidth; y <= bloom_bandwidth; ++y) {
-        float weight = exp(-(y * y) / bloom_2x_variance);
-
-        int2 index = global_thread_ID.xy + int2(0, y);
-        index.y = clamp(index.y, 0, height - 1);
-
-        sum += image[index].rgb * weight;
-        total_weight += weight;
+    for (int y = 0; y < sample_count; ++y) {
+        float2 offset_weight = bilinear_gaussian_samples[y];
+        offset_weight.x *= recip_height;
+        sum += (image.SampleLevel(image_sampler, uv + float2(0, offset_weight.x), 0).rgb +
+                image.SampleLevel(image_sampler, uv + float2(0, -offset_weight.x), 0).rgb) * offset_weight.y;
     }
 
-    output_image[global_thread_ID.xy] = float4(sum / total_weight, 1.0);
+    output_image[global_thread_ID.xy] = float4(sum, 1.0);
 }
 
 // ------------------------------------------------------------------------------------------------

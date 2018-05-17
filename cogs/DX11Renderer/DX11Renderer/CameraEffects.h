@@ -29,7 +29,7 @@ public:
     GaussianBloom& operator=(GaussianBloom&& rhs) = default;
 
     OShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
-        ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height);
+                                ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, float std_dev);
 
 private:
     GaussianBloom(GaussianBloom& other) = delete;
@@ -40,6 +40,11 @@ private:
         OShaderResourceView SRV;
         OUnorderedAccessView UAV;
     };
+
+    struct {
+        float std_dev;
+        OShaderResourceView SRV;
+    } m_gaussian_samples;
 
     IntermediateTexture m_ping, m_pong;
 
@@ -62,7 +67,7 @@ public:
     DualKawaseBloom& operator=(DualKawaseBloom&& rhs) = default;
 
     OShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
-        ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, unsigned int half_passes);
+                                ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, unsigned int half_passes);
 
 private:
     DualKawaseBloom(DualKawaseBloom& other) = delete;
@@ -138,7 +143,7 @@ public:
     ExposureHistogram& operator=(ExposureHistogram&& rhs) = default;
 
     OShaderResourceView& reduce_histogram(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
-                                                ID3D11ShaderResourceView* pixels, unsigned int image_width);
+                                          ID3D11ShaderResourceView* pixels, unsigned int image_width);
 
     void compute_linear_exposure(ID3D11DeviceContext1& context, ID3D11Buffer* constants,
                                  ID3D11ShaderResourceView* pixels, unsigned int image_width,
