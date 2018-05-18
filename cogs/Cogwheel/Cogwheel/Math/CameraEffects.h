@@ -36,7 +36,7 @@ struct Settings final {
     struct {
         float threshold;
         float bandwidth; // Normalized bandwidth relative to the height of the image.
-        float std_dev(int height) { return (bandwidth * height)* 0.25f; }
+        float std_dev(int height) { return (bandwidth * height) * 0.25f; }
         float variance(int height) { return std_dev(height) * std_dev(height); }
     } bloom;
 
