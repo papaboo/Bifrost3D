@@ -29,7 +29,7 @@ public:
     GaussianBloom& operator=(GaussianBloom&& rhs) = default;
 
     OShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
-                                ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, float std_dev);
+                                ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, int bandwidth);
 
 private:
     GaussianBloom(GaussianBloom& other) = delete;
@@ -182,10 +182,9 @@ public:
 
         float bloom_threshold;
         int bloom_bandwidth;
-        float bloom_2x_variance;
 
         float delta_time;
-        float _padding;
+        float2 _padding;
     };
 
     CameraEffects() = default;
