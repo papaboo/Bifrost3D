@@ -48,18 +48,22 @@ OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11
 
     auto performance_marker = PerformanceMarker(context, L"Gaussian bloom");
 
-    if (bandwidth > m_gaussian_samples.capacity) {
+    int sample_count = ceil_divide(bandwidth, 2);
+    if (sample_count > m_gaussian_samples.capacity) {
         m_gaussian_samples.buffer.release();
         m_gaussian_samples.SRV.release();
 
-        m_gaussian_samples.capacity = next_power_of_two(bandwidth);
+        m_gaussian_samples.capacity = next_power_of_two(sample_count);
         ODevice1 device = get_device1(context);
         m_gaussian_samples.buffer = create_default_buffer(device, DXGI_FORMAT_R16G16_FLOAT, m_gaussian_samples.capacity, &m_gaussian_samples.SRV);
+
+        // Set std dev to infinity to indicate that the buffer needs updating.
+        m_gaussian_samples.std_dev = std::numeric_limits<float>::infinity();
     }
 
     float std_dev = bandwidth * 0.25f;
     if (m_gaussian_samples.std_dev != std_dev) {
-        int sample_count = m_gaussian_samples.capacity;
+        sample_count = m_gaussian_samples.capacity;
         Tap* taps = new Tap[sample_count];
         fill_bilinear_gaussian_samples(std_dev, taps, taps + sample_count);
 
