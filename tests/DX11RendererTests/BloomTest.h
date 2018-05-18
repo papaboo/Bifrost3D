@@ -74,11 +74,7 @@ protected:
         for (int y = 0; y < height; ++y)
             for (int x = 0; x < width; ++x) {
                 int i = x + y * width;
-                RGB color = RGB::black();
-                if (x < width / 2)
-                    color = (y < height / 2) ? RGB::red() : RGB::green();
-                else if (y < height / 2)
-                    color = RGB::blue();
+                RGB color = RGB::white();
                 pixels[i] = { half(color.r), half(color.g), half(color.b), half(1.0f) };
             }
         OShaderResourceView pixel_SRV;
@@ -259,7 +255,7 @@ TEST_F(Bloom, gaussian_energy_conservation) {
         return bloom.filter(m_context, constants, m_bilinear_sampler, pixels, image_width, image_height, m_bandwidth);
     };
 
-    test_energy_conservation(bloom_filter, Cogwheel::Math::Vector3f(0.0004f));
+    test_energy_conservation(bloom_filter, Cogwheel::Math::Vector3f(0.002f));
 }
 
 TEST_F(Bloom, guassian_mirroring) {
