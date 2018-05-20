@@ -225,26 +225,7 @@ public:
                 if (m_backbuffer_RTV) m_backbuffer_RTV->Release();
                 if (m_backbuffer_SRV) m_backbuffer_SRV->Release();
 
-                D3D11_TEXTURE2D_DESC buffer_desc;
-                buffer_desc.Width = current_backbuffer_size.x;
-                buffer_desc.Height = current_backbuffer_size.y;
-                buffer_desc.MipLevels = 1;
-                buffer_desc.ArraySize = 1;
-                buffer_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-                buffer_desc.SampleDesc.Count = 1;
-                buffer_desc.SampleDesc.Quality = 0;
-                buffer_desc.Usage = D3D11_USAGE_DEFAULT;
-                buffer_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-                buffer_desc.CPUAccessFlags = 0;
-                buffer_desc.MiscFlags = 0;
-
-                OTexture2D backbuffer;
-                HRESULT hr = m_device->CreateTexture2D(&buffer_desc, nullptr, &backbuffer);
-                THROW_ON_FAILURE(hr);
-                hr = m_device->CreateRenderTargetView(backbuffer, nullptr, &m_backbuffer_RTV);
-                THROW_ON_FAILURE(hr);
-                hr = m_device->CreateShaderResourceView(backbuffer, nullptr, &m_backbuffer_SRV);
-                THROW_ON_FAILURE(hr);
+                create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, current_backbuffer_size.x, current_backbuffer_size.y, &m_backbuffer_SRV, nullptr, &m_backbuffer_RTV);
             }
 
             { // Setup depth buffer.

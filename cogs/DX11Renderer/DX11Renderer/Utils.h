@@ -125,7 +125,7 @@ inline ODevice1 get_device1(ID3D11DeviceContext1& context) {
 }
 
 inline OBlob compile_shader(const std::wstring& filename, const char* target, const char* entry_point,
-                                const D3D_SHADER_MACRO* macros = nullptr) {
+                            const D3D_SHADER_MACRO* macros = nullptr) {
     OBlob shader_bytecode;
     OBlob error_messages = nullptr;
     HRESULT hr = D3DCompileFromFile(filename.c_str(),
@@ -194,7 +194,7 @@ inline HRESULT create_constant_buffer(ID3D11Device1& device, T& data, ID3D11Buff
 }
 
 inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, void* data, int element_count,
-                                           ID3D11ShaderResourceView** buffer_SRV, ID3D11UnorderedAccessView** buffer_UAV = nullptr) {
+                                     ID3D11ShaderResourceView** buffer_SRV, ID3D11UnorderedAccessView** buffer_UAV = nullptr) {
     D3D11_BUFFER_DESC buffer_desc = {};
     buffer_desc.Usage = D3D11_USAGE_DEFAULT;
     buffer_desc.StructureByteStride = sizeof_dx_format(format);
@@ -234,12 +234,12 @@ inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, 
 };
 
 inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, int element_count,
-                                           ID3D11ShaderResourceView** buffer_SRV, ID3D11UnorderedAccessView** buffer_UAV = nullptr) {
+                                     ID3D11ShaderResourceView** buffer_SRV, ID3D11UnorderedAccessView** buffer_UAV = nullptr) {
     return create_default_buffer(device, format, nullptr, element_count, buffer_SRV, buffer_UAV);
 }
 
 inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, void* pixels, unsigned int width, unsigned int height, D3D11_USAGE usage,
-                                          ID3D11ShaderResourceView** texture_SRV, ID3D11UnorderedAccessView** texture_UAV = nullptr) {
+                                    ID3D11ShaderResourceView** texture_SRV, ID3D11UnorderedAccessView** texture_UAV = nullptr, ID3D11RenderTargetView** texture_RTV = nullptr) {
     D3D11_TEXTURE2D_DESC tex_desc;
     tex_desc.Width = width;
     tex_desc.Height = height;
@@ -250,7 +250,8 @@ inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, v
     tex_desc.SampleDesc.Quality = 0;
     tex_desc.Usage = usage;
     tex_desc.BindFlags = (texture_SRV == nullptr ? D3D11_BIND_NONE : D3D11_BIND_SHADER_RESOURCE) |
-                         (texture_UAV == nullptr ? D3D11_BIND_NONE : D3D11_BIND_UNORDERED_ACCESS);
+                         (texture_UAV == nullptr ? D3D11_BIND_NONE : D3D11_BIND_UNORDERED_ACCESS) |
+                         (texture_RTV == nullptr ? D3D11_BIND_NONE : D3D11_BIND_RENDER_TARGET);
     tex_desc.CPUAccessFlags = 0;
     tex_desc.MiscFlags = 0;
 
@@ -269,18 +270,20 @@ inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, v
         THROW_ON_FAILURE(device.CreateShaderResourceView(texture, nullptr, texture_SRV));
     if (texture_UAV != nullptr)
         THROW_ON_FAILURE(device.CreateUnorderedAccessView(texture, nullptr, texture_UAV));
-    
+    if (texture_RTV != nullptr)
+        THROW_ON_FAILURE(device.CreateRenderTargetView(texture, nullptr, texture_RTV));
+
     return texture;
 };
 
 inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, void* pixels, unsigned int width, unsigned int height,
-                                          ID3D11ShaderResourceView** texture_SRV, ID3D11UnorderedAccessView** texture_UAV = nullptr) {
-    return create_texture_2D(device, format, pixels, width, height, D3D11_USAGE_DEFAULT, texture_SRV, texture_UAV);
+                                    ID3D11ShaderResourceView** texture_SRV, ID3D11UnorderedAccessView** texture_UAV = nullptr, ID3D11RenderTargetView** texture_RTV = nullptr) {
+    return create_texture_2D(device, format, pixels, width, height, D3D11_USAGE_DEFAULT, texture_SRV, texture_UAV, texture_RTV);
 }
 
 inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, unsigned int width, unsigned int height,
-                                          ID3D11ShaderResourceView** texture_SRV, ID3D11UnorderedAccessView** texture_UAV = nullptr) {
-    return create_texture_2D(device, format, nullptr, width, height, D3D11_USAGE_DEFAULT, texture_SRV, texture_UAV);
+                                    ID3D11ShaderResourceView** texture_SRV, ID3D11UnorderedAccessView** texture_UAV = nullptr, ID3D11RenderTargetView** texture_RTV = nullptr) {
+    return create_texture_2D(device, format, nullptr, width, height, D3D11_USAGE_DEFAULT, texture_SRV, texture_UAV, texture_RTV);
 }
 
 // ------------------------------------------------------------------------------------------------
