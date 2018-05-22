@@ -31,7 +31,7 @@ Output main(float4 geometry : GEOMETRY, float2 texcoord : TEXCOORD) {
     Output output;
     output.world_position.xyz = mul(float4(geometry.xyz, 1.0f), to_world_matrix);
     output.position = mul(float4(output.world_position.xyz, 1.0f), scene_vars.view_projection_matrix);
-    output.normal.xyz = mul(decode_octahedral_normal(asint(geometry.w)), to_world_matrix);
+    output.normal.xyz = mul(decode_octahedral_normal(asint(geometry.w)), to_world_matrix).xyz;
     output.texcoord = texcoord;
     return output;
 }
