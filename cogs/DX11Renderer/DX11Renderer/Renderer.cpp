@@ -240,7 +240,7 @@ public:
         delete m_environments;
     }
 
-    void render_model(ID3D11DeviceContext1* context, Dx11Model model, Cameras::UID camera_ID) {
+    void render_model(ID3D11DeviceContext1* context, Dx11Model model) {
         Dx11Mesh mesh = m_meshes[model.mesh_ID];
 
         { // Set the buffers.
@@ -345,7 +345,7 @@ public:
 
                 Dx11Model model = m_sorted_models[i];
                 assert(model.model_ID != 0);
-                render_model(m_render_context, model, camera_ID);
+                render_model(m_render_context, model);
             }
 
             opaque_marker.end();
@@ -390,7 +390,7 @@ public:
                 for (auto transparent_model : transparent_models) {
                     Dx11Model model = m_sorted_models[transparent_model.model_index];
                     assert(model.model_ID != 0);
-                    render_model(m_render_context, model, camera_ID);
+                    render_model(m_render_context, model);
                 }
             }
         }
