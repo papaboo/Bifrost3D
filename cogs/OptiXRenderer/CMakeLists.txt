@@ -1,6 +1,6 @@
 set(LIBRARY_NAME "OptiXRenderer")
 
-find_package(CUDA 8.0)
+find_package(CUDA 9.0)
 
 set(CMAKE_MODULE_PATH "${COGWHEEL_COGS_DIR}/OptiXRenderer" ${CMAKE_MODULE_PATH})
 find_package(OptiX)

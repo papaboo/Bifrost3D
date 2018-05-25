@@ -15,6 +15,8 @@
 
 #include <optixu/optixu_math_namespace.h>
 
+#include <cuda_fp16.h>
+
 namespace OptiXRenderer {
 
 struct RayTypes {

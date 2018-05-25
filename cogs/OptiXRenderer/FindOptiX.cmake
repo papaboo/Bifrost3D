@@ -14,9 +14,7 @@ set(OPTIX_WINDOWS_SEARCH_PATHS
   "C:/ProgramData/NVIDIA Corporation/OptiX SDK 5.1.0"
   "C:/Program Files/NVIDIA Corporation/OptiX SDK 5.1.0"
   "C:/ProgramData/NVIDIA Corporation/OptiX SDK 5.0.1"
-  "C:/Program Files/NVIDIA Corporation/OptiX SDK 5.0.1"
-  "C:/ProgramData/NVIDIA Corporation/OptiX SDK 4.1.1"
-  "C:/Program Files/NVIDIA Corporation/OptiX SDK 4.1.1")
+  "C:/Program Files/NVIDIA Corporation/OptiX SDK 5.0.1")
 
 foreach (SEARCH_PATH ${OPTIX_WINDOWS_SEARCH_PATHS})
   if (EXISTS ${SEARCH_PATH}/bin64/ AND EXISTS ${SEARCH_PATH}/include/ AND EXISTS ${SEARCH_PATH}/lib64/)

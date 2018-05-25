@@ -81,7 +81,8 @@ __inline_dev__ optix::float4 half_to_float(const optix::ushort4& xyzw) {
 }
 
 __inline_dev__ optix::ushort4 float_to_half(const optix::float4& xyzw) {
-    return optix::make_ushort4(__float2half_rn(xyzw.x), __float2half_rn(xyzw.y), __float2half_rn(xyzw.z), __float2half_rn(xyzw.w));
+    return optix::make_ushort4(((__half_raw)__float2half_rn(xyzw.x)).x, ((__half_raw)__float2half_rn(xyzw.y)).x,
+                               ((__half_raw)__float2half_rn(xyzw.z)).x, ((__half_raw)__float2half_rn(xyzw.w)).x);
 }
 #endif
 
