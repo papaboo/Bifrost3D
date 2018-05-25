@@ -55,6 +55,16 @@ private:
     TransformManager m_transforms;
 
     struct {
+        unsigned int width, height;
+        OShaderResourceView normal_SRV;
+        ORenderTargetView normal_RTV;
+
+        OVertexShader vertex_shader;
+        OInputLayout vertex_input_layout;
+        OPixelShader pixel_shader;
+    } m_g_buffer;
+
+    struct {
         OBuffer null_buffer;
         OInputLayout input_layout;
         OVertexShader shader;
@@ -124,6 +134,23 @@ public:
 
             m_textures = TextureManager(m_device);
             m_transforms = TransformManager(m_device, *m_render_context);
+        }
+
+        { // Setup g-buffer
+            OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "vs_5_0", "main_VS");
+            THROW_ON_FAILURE(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.vertex_shader));
+
+            // Create the input layout
+            D3D11_INPUT_ELEMENT_DESC input_layout_desc = { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 };
+            THROW_ON_FAILURE(m_device.CreateInputLayout(&input_layout_desc, 1, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.vertex_input_layout));
+
+            OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "ps_5_0", "main_PS");
+            THROW_ON_FAILURE(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.pixel_shader));
+
+            // G-buffer is initialized on demand when the output dimensions are known.
+            m_g_buffer.width = m_g_buffer.height = 0u;
+            m_g_buffer.normal_SRV = nullptr;
+            m_g_buffer.normal_RTV = nullptr;
         }
 
         { // Setup vertex processing.
@@ -240,6 +267,48 @@ public:
         delete m_environments;
     }
 
+    void fill_g_buffer() {
+
+        ORenderTargetView backbuffer_RTV;
+        ODepthStencilView depth_view;
+        m_render_context->OMGetRenderTargets(1, &backbuffer_RTV, &depth_view);
+
+        { // Setup state. Opaque render state should already have been set up. TODO Verify implicit state from opaque pass
+            // Render target views.
+            m_render_context->OMSetRenderTargets(1, &m_g_buffer.normal_RTV, depth_view);
+            float zero[4] = { 0, 0, 0, 0 };
+            m_render_context->ClearRenderTargetView(m_g_buffer.normal_RTV, zero);
+            m_render_context->ClearDepthStencilView(depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+            // Shaders
+            m_render_context->VSSetShader(m_g_buffer.vertex_shader, 0, 0);
+            m_render_context->IASetInputLayout(m_g_buffer.vertex_input_layout);
+            m_render_context->PSSetShader(m_g_buffer.pixel_shader, 0, 0);
+
+            // Set null buffer as default texcoord buffer.
+            unsigned int stride = sizeof(float2);
+            unsigned int offset = 0;
+            m_render_context->IASetVertexBuffers(2, 1, &m_vertex_shading.null_buffer, &stride, &offset);
+        }
+
+        // Render opaque objects.
+        for (int i = 1; i < m_cutout.first_model_index; ++i) {
+
+            // TODO loop until the first transparent model and update the raster state.
+            // Setup twosided raster state for cutout materials.
+            // if (i == m_cutout.first_model_index)
+            //     m_render_context->RSSetState(m_cutout.raster_state);
+
+            Dx11Model model = m_sorted_models[i];
+            assert(model.model_ID != 0);
+            render_model<true>(m_render_context, model);
+        }
+
+        // Reset state
+        m_render_context->OMSetRenderTargets(1, &backbuffer_RTV, depth_view);
+    }
+
+    template <bool geometry_only>
     void render_model(ID3D11DeviceContext1* context, Dx11Model model) {
         Dx11Mesh mesh = m_meshes[model.mesh_ID];
 
@@ -261,14 +330,17 @@ public:
 
         { // Material parameters
 
-            // Bind material constant buffer.
-            m_materials.bind_material(*context, 3, model.material_ID);
-
             Dx11MaterialTextures& material_textures = m_materials.get_material_textures(model.material_ID);
-            Dx11Texture& color_texture = m_textures.get_texture(material_textures.tint_index);
-            if (color_texture.sampler != nullptr) {
-                context->PSSetShaderResources(1, 1, &color_texture.image->srv);
-                context->PSSetSamplers(1, 1, &color_texture.sampler);
+
+            if (!geometry_only) {
+                // Bind material constant buffer.
+                m_materials.bind_material(*context, 3, model.material_ID);
+
+                Dx11Texture& color_texture = m_textures.get_texture(material_textures.tint_index);
+                if (color_texture.sampler != nullptr) {
+                    context->PSSetShaderResources(1, 1, &color_texture.image->srv);
+                    context->PSSetSamplers(1, 1, &color_texture.sampler);
+                }
             }
 
             Dx11Texture& coverage_texture = m_textures.get_texture(material_textures.coverage_index);
@@ -305,6 +377,26 @@ public:
             m_render_context->UpdateSubresource(m_scene_buffer, 0, nullptr, &scene_vars, 0, 0);
             m_render_context->VSSetConstantBuffers(0, 1, &m_scene_buffer);
             m_render_context->PSSetConstantBuffers(0, 1, &m_scene_buffer);
+        }
+
+        { // Render G-buffer
+            auto g_buffer_marker = PerformanceMarker(*m_render_context, L"G-buffer");
+
+            // Re-allocate buffers if the dimensions have changed.
+            if (m_g_buffer.width != width || m_g_buffer.height != height) {
+                if (m_g_buffer.normal_SRV) m_g_buffer.normal_SRV->Release();
+                if (m_g_buffer.normal_RTV) m_g_buffer.normal_RTV->Release();
+                create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_g_buffer.normal_SRV, nullptr, &m_g_buffer.normal_RTV);
+
+                m_g_buffer.width = width;
+                m_g_buffer.height = height;
+            }
+
+            fill_g_buffer();
+
+            // TODO Compute SSAO
+
+            m_render_context->PSSetShaderResources(13, 1, &m_g_buffer.normal_SRV);
         }
 
         { // Render lights.
@@ -345,7 +437,7 @@ public:
 
                 Dx11Model model = m_sorted_models[i];
                 assert(model.model_ID != 0);
-                render_model(m_render_context, model);
+                render_model<false>(m_render_context, model);
             }
 
             opaque_marker.end();
@@ -390,7 +482,7 @@ public:
                 for (auto transparent_model : transparent_models) {
                     Dx11Model model = m_sorted_models[transparent_model.model_index];
                     assert(model.model_ID != 0);
-                    render_model(m_render_context, model);
+                    render_model<false>(m_render_context, model);
                 }
             }
         }
