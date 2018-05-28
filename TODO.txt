@@ -1,14 +1,21 @@
-* FXAA
-** Tonemapping should output srgb lumiance in alpha.
-** Togglable.
-** Upload parameters
+* SSAO
+** SAO
+** Cutout support
+** Scale application by sin_theta_sqrd / solidangle of light_source to avoid applying AO to delta lights.
+** Store normals as octahedral normal. 16 or 32 bit?
+** Adjust depth bias from local depth-variance? Low variance => high bias
+** Use reverse Z for stabile Z
+*** https://mynameismjp.wordpress.com/2010/03/22/attack-of-the-depth-buffer/
+*** There's a depth format???
+** Adjust shrink hemisphere by dot(hard_normal, shading_normal)
+** Multiscale AO
+** Spherical gaussians (Sphaussian?) for AO (bent normal + std dev) multiplied by material sgaussian 
+** Use bent normal for diffuse env map lookup.
+** Blog post?
 
 BACKLOG:
-* SSAO
-** Scale application by sin_theta_sqrd / solidangle of light_source to avoid applying AO to delta lights.
+* OptiXrenderer: Create half4 { __half x, y, z, w; } and use in GPU code instead of ushort4.
 * Film grain
-* Bloom
-
 * Screenshot
 ** Request backbuffer through the composer. (when the image is converged)
 *** Request to composer or through the camera.
@@ -17,9 +24,9 @@ BACKLOG:
 *** Both HDR and LDR buffers. HDR buffers should not be tone mapped, color corrected or gamma corrected.
 ** Render to offscreen buffer stored on the camera.
 *** Let it iterate for multiple frames to converge.
-** Render to window if a window is specified. Can a window and framebuffer can have separate viewports? And then what? Render with the highest resolution and downscale?
-
+** Render to window if a window is specified. Can a window and framebuffer have separate viewports? And then what? Render with the highest resolution and downscale?
 * OptiX (filtering) backends
+** Try OptiX 5 AI denoiser
 ** Filter neighbouring light samples before reconstruction - Screen space photon mapping approach with MIS weights / Path filtering.
 *** Output buffers: Material ID, texcoord, position, normal, ray dir, weight, light sample, indirect sample. Define for compressing directions and use half/byte for some values.
 *** Output screen space sample based on path/BSDF PDF.
@@ -45,6 +52,7 @@ BACKLOG:
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
 ** Bump mapping
 *** Filter bumpmap mipmaps using Toksvig05, SGGX or AGAA NDF construction.
+*** Compute AO maps based on normal maps.
 ** 'Fix' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles. (Offset normal by -view_dir until the dot product is 0.)
 * BTDF
 ** Transmission factor.
@@ -61,6 +69,4 @@ libs
 * RtAudio wrapper - https://github.com/thestk/rtaudio
 * Emscripten
 * LuaJit - OpenSource (Fallback to interpretted Lua if the target architecture isn't supported.)
-* MXNet or TensorFlow for deep learning. Use CuDNN directly for inference.
-* CUDA launch config - https://github.com/jaredhoberock/cuda_launch_config
-* Ceres solver
+* Tiny-dnn / DirectML. Use CuDNN directly for inference.
