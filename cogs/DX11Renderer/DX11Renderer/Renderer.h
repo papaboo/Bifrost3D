@@ -38,7 +38,7 @@ public:
 
     void handle_updates();
 
-    void render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height);
+    void render(ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Cameras::UID camera_ID, int width, int height);
 
 private:
 

@@ -25,6 +25,13 @@ class Window;
 struct HWND__;
 typedef HWND__* HWND;
 struct ID3D11Device1;
+struct ID3D11RenderTargetView;
+
+namespace DX11Renderer {
+template <typename T> class OwnedResourcePtr;
+using ODevice1 = OwnedResourcePtr<ID3D11Device1>;
+using ORenderTargetView = OwnedResourcePtr<ID3D11RenderTargetView>;
+}
 
 #define D3D11_CREATE_DEVICE_NONE 0
 
@@ -40,7 +47,7 @@ public:
     virtual ~IRenderer() {}
     virtual Cogwheel::Core::Renderers::UID get_ID() const = 0;
     virtual void handle_updates() = 0;
-    virtual void render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) = 0;
+    virtual void render(ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) = 0;
 };
 
 typedef IRenderer*(*RendererCreator)(ID3D11Device1&, int width_hint, int height_hint, const std::wstring& data_folder_path);
@@ -48,8 +55,6 @@ typedef IRenderer*(*RendererCreator)(ID3D11Device1&, int width_hint, int height_
 //-------------------------------------------------------------------------------------------------
 // Utility function to create a 'performant' DX11 device.
 //-------------------------------------------------------------------------------------------------
-template <typename T> class OwnedResourcePtr;
-using ODevice1 = DX11Renderer::OwnedResourcePtr<ID3D11Device1>;
 ODevice1 create_performant_device1(unsigned int create_device_flags = D3D11_CREATE_DEVICE_NONE);
 ODevice1 create_performant_debug_device1();
 

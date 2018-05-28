@@ -56,6 +56,8 @@ private:
 
     struct {
         unsigned int width, height;
+        OShaderResourceView depth_SRV;
+        ODepthStencilView depth_view;
         OShaderResourceView normal_SRV;
         ORenderTargetView normal_RTV;
 
@@ -149,6 +151,8 @@ public:
 
             // G-buffer is initialized on demand when the output dimensions are known.
             m_g_buffer.width = m_g_buffer.height = 0u;
+            m_g_buffer.depth_SRV = nullptr;
+            m_g_buffer.depth_view = nullptr;
             m_g_buffer.normal_SRV = nullptr;
             m_g_buffer.normal_RTV = nullptr;
         }
@@ -268,17 +272,12 @@ public:
     }
 
     void fill_g_buffer() {
-
-        ORenderTargetView backbuffer_RTV;
-        ODepthStencilView depth_view;
-        m_render_context->OMGetRenderTargets(1, &backbuffer_RTV, &depth_view);
-
         { // Setup state. Opaque render state should already have been set up. TODO Verify implicit state from opaque pass
             // Render target views.
-            m_render_context->OMSetRenderTargets(1, &m_g_buffer.normal_RTV, depth_view);
+            m_render_context->OMSetRenderTargets(1, &m_g_buffer.normal_RTV, m_g_buffer.depth_view);
             float zero[4] = { 0, 0, 0, 0 };
             m_render_context->ClearRenderTargetView(m_g_buffer.normal_RTV, zero);
-            m_render_context->ClearDepthStencilView(depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+            m_render_context->ClearDepthStencilView(m_g_buffer.depth_view, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
             // Shaders
             m_render_context->VSSetShader(m_g_buffer.vertex_shader, 0, 0);
@@ -303,9 +302,6 @@ public:
             assert(model.model_ID != 0);
             render_model<true>(m_render_context, model);
         }
-
-        // Reset state
-        m_render_context->OMSetRenderTargets(1, &backbuffer_RTV, depth_view);
     }
 
     template <bool geometry_only>
@@ -356,7 +352,7 @@ public:
             context->Draw(mesh.vertex_count, 0);
     } 
 
-    void render(const Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
+    void render(ORenderTargetView& backbuffer_RTV, const Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
         // TODO Replace by assert
         m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // NOTE This should already be the case as we finish a frame by rendering models or post process effects.
 
@@ -384,9 +380,38 @@ public:
 
             // Re-allocate buffers if the dimensions have changed.
             if (m_g_buffer.width != width || m_g_buffer.height != height) {
-                if (m_g_buffer.normal_SRV) m_g_buffer.normal_SRV->Release();
-                if (m_g_buffer.normal_RTV) m_g_buffer.normal_RTV->Release();
-                create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_g_buffer.normal_SRV, nullptr, &m_g_buffer.normal_RTV);
+                { // Depth buffer
+                    if (m_g_buffer.depth_SRV) m_g_buffer.depth_SRV->Release();
+                    if (m_g_buffer.depth_view) m_g_buffer.depth_view->Release();
+
+                    D3D11_TEXTURE2D_DESC depth_desc;
+                    depth_desc.Width = width;
+                    depth_desc.Height = height;
+                    depth_desc.MipLevels = 1;
+                    depth_desc.ArraySize = 1;
+                    depth_desc.Format = DXGI_FORMAT_R32_TYPELESS; // DXGI_FORMAT_D32_FLOAT for depth view and DXGI_FORMAT_R32_FLOAT for SRV.
+                    depth_desc.SampleDesc.Count = 1;
+                    depth_desc.SampleDesc.Quality = 0;
+                    depth_desc.Usage = D3D11_USAGE_DEFAULT;
+                    depth_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+                    depth_desc.CPUAccessFlags = 0;
+                    depth_desc.MiscFlags = 0;
+
+                    OTexture2D depth_buffer;
+                    THROW_ON_FAILURE(m_device.CreateTexture2D(&depth_desc, nullptr, &depth_buffer));
+
+                    D3D11_DEPTH_STENCIL_VIEW_DESC depth_view_desc = CD3D11_DEPTH_STENCIL_VIEW_DESC(D3D11_DSV_DIMENSION_TEXTURE2D, DXGI_FORMAT_D32_FLOAT);
+                    THROW_ON_FAILURE(m_device.CreateDepthStencilView(depth_buffer, &depth_view_desc, &m_g_buffer.depth_view));
+                    
+                    D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURE2D, DXGI_FORMAT_R32_FLOAT);
+                    THROW_ON_FAILURE(m_device.CreateShaderResourceView(depth_buffer, &srv_desc, &m_g_buffer.depth_SRV));
+                }
+
+                { // Normal buffer
+                    if (m_g_buffer.normal_SRV) m_g_buffer.normal_SRV->Release();
+                    if (m_g_buffer.normal_RTV) m_g_buffer.normal_RTV->Release();
+                    create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_g_buffer.normal_SRV, nullptr, &m_g_buffer.normal_RTV);
+                }
 
                 m_g_buffer.width = width;
                 m_g_buffer.height = height;
@@ -395,9 +420,11 @@ public:
             fill_g_buffer();
 
             // TODO Compute SSAO
-
-            m_render_context->PSSetShaderResources(13, 1, &m_g_buffer.normal_SRV);
+            // Remember to unbind the depth SRV
         }
+
+        m_render_context->OMSetRenderTargets(1, &backbuffer_RTV, m_g_buffer.depth_view);
+        m_render_context->PSSetShaderResources(13, 1, &m_g_buffer.normal_SRV); // Debug
 
         { // Render lights.
             auto lights_marker = PerformanceMarker(*m_render_context, L"Lights");
@@ -728,8 +755,8 @@ void Renderer::handle_updates() {
     m_impl->handle_updates();
 }
 
-void Renderer::render(const Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
-    m_impl->render(camera_ID, width, height);
+void Renderer::render(ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
+    m_impl->render(backbuffer_RTV, camera_ID, width, height);
 }
 
 } // NS DX11Renderer

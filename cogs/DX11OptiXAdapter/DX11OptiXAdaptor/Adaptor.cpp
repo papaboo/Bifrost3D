@@ -165,7 +165,9 @@ public:
         m_optix_renderer->handle_updates();
     }
 
-    void render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
+    void render(DX11Renderer::ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
+        m_render_context->OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
+
         if (m_render_target.width != width || m_render_target.height != height)
             resize_render_target(width, height);
 
@@ -297,8 +299,8 @@ void Adaptor::handle_updates() {
     m_impl->handle_updates();
 }
 
-void Adaptor::render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
-    m_impl->render(camera_ID, width, height);
+void Adaptor::render(DX11Renderer::ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
+    m_impl->render(backbuffer_RTV, camera_ID, width, height);
 }
 
 } // NS DX11OptiXAdaptor

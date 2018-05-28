@@ -97,7 +97,6 @@ private:
     ORenderTargetView m_swap_chain_buffer_view;
     ORenderTargetView m_backbuffer_RTV;
     OShaderResourceView m_backbuffer_SRV;
-    ODepthStencilView m_depth_view;
 
     // Camera effects
     double m_counter_hertz;
@@ -152,11 +151,10 @@ public:
         { // Setup backbuffer.
             m_backbuffer_size = Vector2ui::zero();
 
-            // Back- and depth buffer is initialized on demand when the output dimensions are known.
+            // Backbuffer is initialized on demand when the output dimensions are known.
             m_swap_chain_buffer_view = nullptr;
             m_backbuffer_RTV = nullptr;
             m_backbuffer_SRV = nullptr;
-            m_depth_view = nullptr;
         }
 
         { // Setup tonemapper
@@ -228,27 +226,6 @@ public:
                 create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, current_backbuffer_size.x, current_backbuffer_size.y, &m_backbuffer_SRV, nullptr, &m_backbuffer_RTV);
             }
 
-            { // Setup depth buffer.
-                if (m_depth_view) m_depth_view->Release();
-
-                D3D11_TEXTURE2D_DESC depth_desc;
-                depth_desc.Width = current_backbuffer_size.x;
-                depth_desc.Height = current_backbuffer_size.y;
-                depth_desc.MipLevels = 1;
-                depth_desc.ArraySize = 1;
-                depth_desc.Format = DXGI_FORMAT_D32_FLOAT;
-                depth_desc.SampleDesc.Count = 1;
-                depth_desc.SampleDesc.Quality = 0;
-                depth_desc.Usage = D3D11_USAGE_DEFAULT;
-                depth_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-                depth_desc.CPUAccessFlags = 0;
-                depth_desc.MiscFlags = 0;
-
-                OTexture2D depth_buffer;
-                HRESULT hr = m_device->CreateTexture2D(&depth_desc, nullptr, &depth_buffer);
-                m_device->CreateDepthStencilView(depth_buffer, nullptr, &m_depth_view);
-            }
-
             m_backbuffer_size = current_backbuffer_size;
         }
 
@@ -256,9 +233,6 @@ public:
         for (IRenderer* renderer : m_renderers)
             if (renderer)
                 renderer->handle_updates();
-
-        m_render_context->OMSetRenderTargets(1, &m_backbuffer_RTV, m_depth_view);
-        m_render_context->ClearDepthStencilView(m_depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
         // Render.
         for (Cameras::UID camera_ID : Cameras::get_iterable()) {
@@ -279,8 +253,10 @@ public:
             dx_viewport.MaxDepth = 1.0f;
             m_render_context->RSSetViewports(1, &dx_viewport);
             
+            // NOTE: Perhaps render should return a reference to an SRV that we can just pass to the camera effects.
+            //       Then the renderer is responsible for everything and we need an SRV anyway for the post processing.
             Renderers::UID renderer = Cameras::get_renderer_ID(camera_ID);
-            m_renderers[renderer]->render(camera_ID, int(ceilf(viewport.width)), int(ceilf(viewport.height)));
+            m_renderers[renderer]->render(m_backbuffer_RTV, camera_ID, int(ceilf(viewport.width)), int(ceilf(viewport.height)));
         }
 
         // Compute delta time for camera effects.
