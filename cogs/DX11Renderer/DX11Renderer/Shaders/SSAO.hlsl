@@ -8,19 +8,6 @@
 
 #include "Utils.hlsl"
 
-float3 project_ray_direction(float2 viewport_pos,
-                             float3 camera_position,
-                             float4x4 inverted_view_projection_matrix) {
-
-    float4 projected_pos = float4(viewport_pos.x, viewport_pos.y, -1.0f, 1.0f);
-
-    float4 projected_world_pos = mul(projected_pos, inverted_view_projection_matrix);
-
-    float3 ray_origin = projected_world_pos.xyz / projected_world_pos.w;
-
-    return normalize(ray_origin - camera_position);
-}
-
 // ------------------------------------------------------------------------------------------------
 // Scene constants.
 // ------------------------------------------------------------------------------------------------
@@ -58,13 +45,24 @@ Texture2D depth_tex : register(t1);
 SamplerState point_sampler : register(s14);
 SamplerState bilinear_sampler : register(s15); // Always bound since it's generally useful to have a bilinear sampler
 
-float4 alchemy_ps(Varyings input) : SV_TARGET {
-    // float2 viewport_pos = input.texcoord;
-    // float3 view_dir = project_ray_direction(viewport_pos, scene_vars.camera_position.xyz, scene_vars.inverted_view_projection_matrix);
-    // float2 tc = direction_to_latlong_texcoord(view_dir);
-    // return float4(scene_vars.environment_tint.rgb * env_tex.SampleLevel(env_sampler, tc, 0).rgb, 1);
+// Convertion of depth to view-space position.
+// https://mynameismjp.wordpress.com/2009/03/10/reconstructing-position-from-depth/
+float3 position_from_depth(float z_over_w, float2 viewport_uv) {
+    // Get x/w and y/w from the viewport position
+    float x_over_w = viewport_uv.x * 2 - 1;
+    float y_over_w = (1 - viewport_uv.y) * 2 - 1;
+    float4 projected_position = float4(x_over_w, y_over_w, z_over_w, 1.0f);
+    // Transform by the inverse (view?) projection matrix
+    float4 projected_world_pos = mul(projected_position, scene_vars.inverted_view_projection_matrix); // TODO Use inverted_projection_matrix??
+    // Divide by w to get the view-space position
+    return projected_world_pos.xyz / projected_world_pos.w;
+}
 
+float4 alchemy_ps(Varyings input) : SV_TARGET {
     float depth = depth_tex.SampleLevel(point_sampler, input.texcoord, 0).r;
     float3 view_normal = normal_tex.SampleLevel(point_sampler, input.texcoord, 0).rgb;
-    return float4(view_normal * 0.5 + 0.5, 1);
+    // return float4(view_normal * 0.5 + 0.5, 1);
+
+    float3 position = position_from_depth(depth, input.texcoord);
+    return float4(abs(position), 1);
 }
