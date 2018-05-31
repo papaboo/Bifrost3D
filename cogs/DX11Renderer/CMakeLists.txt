@@ -25,6 +25,8 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/PrefixSum.h
     DX11Renderer/Renderer.h
     DX11Renderer/Renderer.cpp
+    DX11Renderer/SSAO.h
+    DX11Renderer/SSAO.cpp
     DX11Renderer/TextureManager.h
     DX11Renderer/TextureManager.cpp
     DX11Renderer/TransformManager.h
@@ -42,6 +44,7 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/Shaders/IBLConvolution.hlsl
     DX11Renderer/Shaders/SphereLight.hlsl
     DX11Renderer/Shaders/SPTD.hlsl
+    DX11Renderer/Shaders/SSAO.hlsl
     DX11Renderer/Shaders/Utils.hlsl
     DX11Renderer/Shaders/VertexShader.hlsl
   )
