@@ -10,6 +10,7 @@
 #include <DX11Renderer/LightManager.h>
 #include <DX11Renderer/MaterialManager.h>
 #include <DX11Renderer/Renderer.h>
+#include <DX11Renderer/SSAO.h>
 #include <DX11Renderer/TextureManager.h>
 #include <DX11Renderer/TransformManager.h>
 #include <DX11Renderer/Types.h>
@@ -53,6 +54,7 @@ private:
     MaterialManager m_materials;
     TextureManager m_textures;
     TransformManager m_transforms;
+    SSAO::AlchemyAO m_ssao;
 
     struct {
         unsigned int width, height;
@@ -102,6 +104,7 @@ private:
         Vector4f camera_position;
         Vector4f environment_tint; // .w component is 0 if an environment tex is not bound, otherwise positive.
         Matrix4x4f inverse_view_projection_matrix;
+        Matrix4x4f inverse_projection_matrix;
         Matrix4x3f world_to_view_matrix;
     };
     OBuffer m_scene_buffer;
@@ -156,6 +159,8 @@ public:
             m_g_buffer.normal_SRV = nullptr;
             m_g_buffer.normal_RTV = nullptr;
         }
+
+        m_ssao = SSAO::AlchemyAO(m_device, m_shader_folder_path);
 
         { // Setup vertex processing.
             OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"VertexShader.hlsl", "vs_5_0", "main");
@@ -369,6 +374,7 @@ public:
             RGB env_tint = scene.get_environment_tint();
             scene_vars.environment_tint = { env_tint.r, env_tint.g, env_tint.b, float(scene.get_environment_map().get_index()) };
             scene_vars.inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
+            scene_vars.inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
             scene_vars.world_to_view_matrix = to_matrix4x3(Cameras::get_view_transform(camera_ID));
             m_render_context->UpdateSubresource(m_scene_buffer, 0, nullptr, &scene_vars, 0, 0);
             m_render_context->VSSetConstantBuffers(0, 1, &m_scene_buffer);
@@ -418,13 +424,15 @@ public:
             }
 
             fill_g_buffer();
+        }
 
-            // TODO Compute SSAO
-            // Remember to unbind the depth SRV
+        ID3D11ShaderResourceView* ssao_SRV = nullptr;
+        { // Pre-render effects on G-buffer.
+            ssao_SRV = m_ssao.apply(m_render_context, m_g_buffer.normal_SRV, m_g_buffer.depth_SRV, m_g_buffer.width, m_g_buffer.height).get();
         }
 
         m_render_context->OMSetRenderTargets(1, &backbuffer_RTV, m_g_buffer.depth_view);
-        m_render_context->PSSetShaderResources(13, 1, &m_g_buffer.normal_SRV); // Debug
+        m_render_context->PSSetShaderResources(13, 1, &ssao_SRV);
 
         { // Render lights.
             auto lights_marker = PerformanceMarker(*m_render_context, L"Lights");

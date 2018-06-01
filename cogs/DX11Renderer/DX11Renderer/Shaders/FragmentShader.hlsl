@@ -22,10 +22,14 @@ cbuffer material : register(b3) {
     MaterialParams material_params;
 }
 
+Texture2D ssao_tex : register(t13);
+
 #if SPTD_AREA_LIGHTS
 #include "SPTD.hlsl"
 Texture2D sptd_ggx_fit_tex : register(t14);
 #endif
+
+// SamplerState bilinear_sampler : register(s15);
 
 struct PixelInput {
     float4 position : SV_POSITION;
@@ -34,7 +38,7 @@ struct PixelInput {
     float2 texcoord : TEXCOORD;
 };
 
-float3 integration(PixelInput input, bool is_front_face) {
+float3 integration(PixelInput input, bool is_front_face, float ambient_visibility) {
     float3 world_wo = normalize(scene_vars.camera_position.xyz - input.world_position.xyz);
     float3 world_normal = normalize(input.normal.xyz) * (is_front_face ? 1.0 : -1.0);
 
@@ -43,7 +47,7 @@ float3 integration(PixelInput input, bool is_front_face) {
     float3 wo = mul(world_to_shading_TBN, world_wo);
 
     const DefaultShading default_shading = DefaultShading::from_constants(material_params, wo, input.texcoord);
-    float3 radiance = scene_vars.environment_tint.rgb * default_shading.evaluate_IBL(world_wo, world_normal);
+    float3 radiance = ambient_visibility * scene_vars.environment_tint.rgb * default_shading.evaluate_IBL(world_wo, world_normal);
 
     for (int l = 0; l < light_count.x; ++l) {
         LightData light = light_data[l];
@@ -87,10 +91,18 @@ float4 opaque(PixelInput input, bool is_front_face : SV_IsFrontFace) : SV_TARGET
     if (coverage < 0.33f)
         discard;
 
-    return float4(integration(input, is_front_face), 1.0f);
+    float width, height;
+    ssao_tex.GetDimensions(width, height);
+
+    float2 uv = (input.position.xy) / float2(width, height); // TODO Upload inverse viewport size.
+    float ambient_visibility = ssao_tex.SampleLevel(precomputation2D_sampler, uv, 0).r;
+    // float3 ssao = ssao_tex.SampleLevel(bilinear_sampler, uv, 0).rgb;
+    // return float4(ssao, 1);
+
+    return float4(integration(input, is_front_face, ambient_visibility), 1.0f);
 }
 
 float4 transparent(PixelInput input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
     float coverage = material_params.coverage(input.texcoord);
-    return float4(integration(input, is_front_face), coverage);
+    return float4(integration(input, is_front_face, 1), coverage);
 }
