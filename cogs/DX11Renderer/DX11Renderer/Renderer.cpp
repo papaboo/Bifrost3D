@@ -104,6 +104,7 @@ private:
         Vector4f camera_position;
         Vector4f environment_tint; // .w component is 0 if an environment tex is not bound, otherwise positive.
         Matrix4x4f inverse_view_projection_matrix;
+        Matrix4x4f projection_matrix;
         Matrix4x4f inverse_projection_matrix;
         Matrix4x3f world_to_view_matrix;
     };
@@ -374,6 +375,7 @@ public:
             RGB env_tint = scene.get_environment_tint();
             scene_vars.environment_tint = { env_tint.r, env_tint.g, env_tint.b, float(scene.get_environment_map().get_index()) };
             scene_vars.inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
+            scene_vars.projection_matrix = Cameras::get_projection_matrix(camera_ID);
             scene_vars.inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
             scene_vars.world_to_view_matrix = to_matrix4x3(Cameras::get_view_transform(camera_ID));
             m_render_context->UpdateSubresource(m_scene_buffer, 0, nullptr, &scene_vars, 0, 0);
