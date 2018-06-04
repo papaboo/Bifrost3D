@@ -56,7 +56,7 @@ struct Settings final {
         res.exposure.eye_adaptation_brightness = 3.0f;
         res.exposure.eye_adaptation_darkness = 1.0f;
 
-        res.bloom.threshold = 1.5f;
+        res.bloom.threshold = INFINITY;
         res.bloom.bandwidth = 0.05f;
 
         res.tonemapping.mode = TonemappingMode::Uncharted2;
