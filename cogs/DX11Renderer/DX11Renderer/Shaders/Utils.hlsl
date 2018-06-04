@@ -61,48 +61,32 @@ struct SceneVariables {
 // Math utils
 // ------------------------------------------------------------------------------------------------
 
-unsigned int ceil_divide(unsigned int a, unsigned int b) {
-    return (a / b) + ((a % b) > 0);
-}
+unsigned int ceil_divide(unsigned int a, unsigned int b) { return (a / b) + ((a % b) > 0); }
 
-float heaviside(float v) {
-    return v >= 0.0f ? 1.0f : 0.0f;
-}
+float heaviside(float v) { return v >= 0.0f ? 1.0f : 0.0f; }
 
-float pow2(float x) {
-    return x * x;
-}
+float non_zero_sign(float v) { return v >= 0.0f ? +1.0f : -1.0f; }
+
+float pow2(float x) { return x * x; }
 
 float pow5(float x) {
     float xx = x * x;
     return xx * xx * x;
 }
 
-float length_squared(float3 v) {
-    return dot(v, v);
-}
+float length_squared(float3 v) { return dot(v, v); }
 
-float luminance(float3 color) {
-    return dot(color, float3(0.2126f, 0.7152f, 0.0722f));
-}
+float luminance(float3 color) { return dot(color, float3(0.2126f, 0.7152f, 0.0722f)); }
 
-inline float inverse_lerp(const float a, const float b, const float v) {
-    return (v - a) / (b - a);
-}
+inline float inverse_lerp(const float a, const float b, const float v) { return (v - a) / (b - a); }
 
-float reciprocal_length(float3 v) {
-    return rsqrt(length_squared(v));
-}
+float reciprocal_length(float3 v) { return rsqrt(length_squared(v)); }
 
-float schlick_fresnel(float abs_cos_theta) {
-    return pow5(1.0f - abs_cos_theta);
-}
+float schlick_fresnel(float abs_cos_theta) { return pow5(1.0f - abs_cos_theta); }
 
 float schlick_fresnel(float incident_specular, float abs_cos_theta) {
     return incident_specular + (1.0f - incident_specular) * pow5(1.0f - abs_cos_theta);
 }
-
-float sign(float v) { return v >= 0.0f ? +1.0f : -1.0f; }
 
 float2 direction_to_latlong_texcoord(float3 direction) {
     float u = (atan2(direction.z, direction.x) + PI) * 0.5f * RECIP_PI;
@@ -154,11 +138,26 @@ float3 decode_octahedral_normal(int packed_encoded_normal) {
     float2 p2 = float2(encoding_x, encoding_y);
     float3 n = float3(p2, SHRT_MAX - abs(p2.x) - abs(p2.y));
     if (n.z < 0.0f) {
-        float tmp_x = (SHRT_MAX - abs(n.y)) * sign(n.x);
-        n.y = (SHRT_MAX - abs(n.x)) * sign(n.y);
+        float tmp_x = (SHRT_MAX - abs(n.y)) * non_zero_sign(n.x);
+        n.y = (SHRT_MAX - abs(n.x)) * non_zero_sign(n.y);
         n.x = tmp_x;
     }
     return n;
+}
+
+float2 encode_octahedral_normal(float3 normal) {
+    float l1norm = abs(normal.x) + abs(normal.y) + abs(normal.z);
+    float2 result = normal.xy / l1norm;
+    if (normal.z < 0.0)
+        result = (1.0 - abs(result.yx)) * non_zero_sign(result.xy);
+    return result;
+}
+
+float3 decode_octahedral_normal(float2 encoded_normal) {
+    float3 n = float3(encoded_normal.xy, 1.0 - abs(encoded_normal.x) - abs(encoded_normal.y));
+    if (n.z < 0.0)
+        n.xy = (1.0 - abs(n.yx)) * non_zero_sign(n.xy);
+    return normalize(n);
 }
 
 // ------------------------------------------------------------------------------------------------

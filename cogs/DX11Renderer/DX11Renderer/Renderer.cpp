@@ -418,7 +418,7 @@ public:
                 { // Normal buffer
                     if (m_g_buffer.normal_SRV) m_g_buffer.normal_SRV->Release();
                     if (m_g_buffer.normal_RTV) m_g_buffer.normal_RTV->Release();
-                    create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_g_buffer.normal_SRV, nullptr, &m_g_buffer.normal_RTV);
+                    create_texture_2D(m_device, DXGI_FORMAT_R16G16_SNORM, width, height, &m_g_buffer.normal_SRV, nullptr, &m_g_buffer.normal_RTV);
                 }
 
                 m_g_buffer.width = width;

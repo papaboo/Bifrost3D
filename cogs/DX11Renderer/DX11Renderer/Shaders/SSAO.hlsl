@@ -98,7 +98,8 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     // Setup sampling
     uint rng_offset = RNG::teschner_hash(input.position.x, input.position.y);
 
-    float3 view_normal = normal_tex.SampleLevel(point_sampler, input.texcoord, 0).rgb;
+    float2 encoded_normal = normal_tex.SampleLevel(point_sampler, input.texcoord, 0).rg;
+    float3 view_normal = decode_octahedral_normal(encoded_normal);
     float depth = depth_tex.SampleLevel(point_sampler, input.texcoord, 0).r;
     float3 view_position = position_from_depth(depth, input.texcoord);
     // return float4(abs(position), 1);
