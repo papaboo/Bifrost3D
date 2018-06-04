@@ -61,12 +61,24 @@ float3 position_from_depth(float z_over_w, float2 viewport_uv) {
 
 // Transform view position to uv in screen space.
 float2 uv_from_view_position(float3 view_position) {
-    float4 _projected_view_pos = mul(view_position, scene_vars.projection_matrix);
+    float4 _projected_view_pos = mul(float4(view_position, 1), scene_vars.projection_matrix);
     float3 projected_view_pos = _projected_view_pos.xyz / _projected_view_pos.w;
 
     // Transform from normalized screen space to uv.
-    float2 uv = float2(projected_view_pos.x * 0.5 + 0.5, 1 - (projected_view_pos.y + 1) * 0.5);
-    return uv;
+    return float2(projected_view_pos.x * 0.5 + 0.5, 1 - (projected_view_pos.y + 1) * 0.5);
+}
+
+// Transform view position to u(v) in screen space.
+// Assumes that the projection_matrix is an actual projection matrix with 0'es in most entries.
+float u_coord_from_view_position(float3 view_position) {
+    // float x = dot(float4(view_position, 1), scene_vars.projection_matrix._m00_m10_m20_m30);
+    // float w = dot(float4(view_position, 1), scene_vars.projection_matrix._m03_m13_m23_m33);
+    float x = view_position.x * scene_vars.projection_matrix._m00;
+    float w = view_position.z * scene_vars.projection_matrix._m23;
+    float projected_view_pos_x = x / w;
+
+    // Transform from normalized screen space to uv.
+    return projected_view_pos_x * 0.5 + 0.5;
 }
 
 float2 uniform_disk_sampling(float2 sample_uv) {
@@ -77,7 +89,7 @@ float2 uniform_disk_sampling(float2 sample_uv) {
 
 float4 alchemy_ps(Varyings input) : SV_TARGET {
     // State. Should be in a constant buffer.
-    const int sample_count = 64;
+    const int sample_count = 16;
     const float world_radius = 0.5f;
     const float intensity_scale = 0.25;
     const float bias = 0.001f;
@@ -93,8 +105,8 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
 
     // Compute screen space radius.
     float3 border_view_position = view_position + float3(world_radius, 0, 0);
-    float2 border_uv = uv_from_view_position(border_view_position); // TODO We actually only need x.
-    float ss_radius = border_uv.x - input.texcoord.x;
+    float border_u = u_coord_from_view_position(border_view_position);
+    float ss_radius = border_u - input.texcoord.x;
 
     float occlusion = 0.0f;
     for (int i = 0; i < sample_count; ++i) {
