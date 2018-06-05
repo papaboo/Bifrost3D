@@ -149,7 +149,7 @@ struct DefaultShading {
 
     // Most representativepoint material evaluation, heavily inspired by Real Shading in Unreal Engine 4.
     // For UE4 reference see the function AreaLightSpecular() in DeferredLightingCommon.usf. (15/1 -2018)
-    float3 evaluate_area_light(LightData light, float3 world_position, float3 wo, float3x3 world_to_shading_TBN) {
+    float3 evaluate_area_light(LightData light, float3 world_position, float3 wo, float3x3 world_to_shading_TBN, float ambient_visibility) {
 
         // Sphere light in local space
         float3 local_sphere_position = mul(world_to_shading_TBN, light.sphere_position() - world_position);
@@ -193,16 +193,19 @@ struct DefaultShading {
             }
         }
 
-        { // Evaluate Lambert.
-            Sphere local_sphere = Sphere::make(local_sphere_position, light.sphere_radius());
-            Cone light_sphere_cap = sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
-            float solidangle_of_light = solidangle(light_sphere_cap);
-            CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
-            float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle_of_light;
-            radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_and_solidangle.centroid_direction.z) * light_radiance * light_radiance_scale;
-        }
+        // Evaluate Lambert.
+        Sphere local_sphere = Sphere::make(local_sphere_position, light.sphere_radius());
+        Cone light_sphere_cap = sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
+        float solidangle_of_light = solidangle(light_sphere_cap);
+        CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
+        float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle_of_light;
+        radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_and_solidangle.centroid_direction.z) * light_radiance * light_radiance_scale;
 
-        return radiance;
+        // Scale ambient visibility by subtended solid angle.
+        float solidangle_percentage = inverse_lerp(0, TWO_PI, centroid_and_solidangle.solidangle);
+        float scaled_ambient_visibility = lerp(1.0, ambient_visibility, solidangle_percentage);
+
+        return radiance * scaled_ambient_visibility;
     }
 
     // Apply the shading model to the IBL.

@@ -60,7 +60,7 @@ float3 integration(PixelInput input, bool is_front_face, float ambient_visibilit
             radiance += SPTD::evaluate_sphere_light(light, default_shading, sptd_ggx_fit_tex,
                 input.world_position.xyz, world_to_shading_TBN, wo, distance_to_camera);
 #else
-            radiance += default_shading.evaluate_area_light(light, input.world_position.xyz, wo, world_to_shading_TBN);
+            radiance += default_shading.evaluate_area_light(light, input.world_position.xyz, wo, world_to_shading_TBN, ambient_visibility);
 #endif
         } else {
             // Apply regular delta lights.
