@@ -37,5 +37,6 @@ Varyings main_VS(float4 geometry : GEOMETRY) {
 
 float4 main_PS(Varyings varyings) : SV_Target {
     float3 view_space_normal = normalize(varyings.normal_depth.xyz);
-    return float4(encode_octahedral_normal(view_space_normal), 0, 1);
+    // return float4(encode_octahedral_normal(view_space_normal), 0, 1);
+    return float4(view_space_normal, 1);
 }
