@@ -431,6 +431,8 @@ public:
 
         ID3D11ShaderResourceView* ssao_SRV = nullptr;
         { // Pre-render effects on G-buffer.
+            auto ssao_marker = PerformanceMarker(*m_render_context, L"SSAO");
+
             ssao_SRV = m_ssao.apply(m_render_context, m_g_buffer.normal_SRV, m_g_buffer.depth_SRV, m_g_buffer.width, m_g_buffer.height).get();
         }
 
