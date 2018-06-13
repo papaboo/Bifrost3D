@@ -24,10 +24,10 @@ namespace DX11Renderer {
 // ** Real-Time Global Illumination using Precomputed Light Field Probes, http://graphics.cs.williams.edu/papers/LightFieldI3D17/McGuire2017LightField.pdf
 // ** Reprojection reflections, http://bitsquid.blogspot.dk/2017/06/reprojecting-reflections_22.html
 // ** http://bitsquid.blogspot.dk/2017/08/notes-on-screen-space-hiz-tracing.html
-// * HDR backbuffer.
 // * Frustum culling.
 // * Sort models by material ID as well and use the info while rendering.
 //   If the material hasn't changed then don't rebind it or the textures.
+// * Switch swap chain to use the flip  model. https://blogs.msdn.microsoft.com/directx/2018/04/09/dxgi-flip-model/
 //----------------------------------------------------------------------------
 class Renderer final : public IRenderer {
 public:
