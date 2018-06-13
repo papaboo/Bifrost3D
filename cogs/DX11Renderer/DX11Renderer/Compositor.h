@@ -13,6 +13,8 @@
 #include <Cogwheel/Core/Window.h>
 #include <Cogwheel/Scene/Camera.h>
 
+#include <memory>
+
 //-------------------------------------------------------------------------------------------------
 // Forward declarations.
 //-------------------------------------------------------------------------------------------------
@@ -25,11 +27,13 @@ class Window;
 struct HWND__;
 typedef HWND__* HWND;
 struct ID3D11Device1;
+struct ID3D11DeviceContext1;
 struct ID3D11RenderTargetView;
 
 namespace DX11Renderer {
 template <typename T> class OwnedResourcePtr;
 using ODevice1 = OwnedResourcePtr<ID3D11Device1>;
+using ODeviceContext1 = DX11Renderer::OwnedResourcePtr<ID3D11DeviceContext1>;
 using ORenderTargetView = OwnedResourcePtr<ID3D11RenderTargetView>;
 }
 
@@ -50,7 +54,18 @@ public:
     virtual void render(ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) = 0;
 };
 
-typedef IRenderer*(*RendererCreator)(ID3D11Device1&, int width_hint, int height_hint, const std::wstring& data_folder_path);
+typedef IRenderer*(*RendererCreator)(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path);
+
+//-------------------------------------------------------------------------------------------------
+// GUI renderer interface.
+//-------------------------------------------------------------------------------------------------
+class IGuiRenderer {
+public:
+    virtual ~IGuiRenderer() {}
+    virtual void render(ODeviceContext1& context) = 0;
+};
+
+typedef IGuiRenderer*(*GuiRendererCreator)(ODevice1& device);
 
 //-------------------------------------------------------------------------------------------------
 // Utility function to create a 'performant' DX11 device.
@@ -65,17 +80,20 @@ ODevice1 create_performant_debug_device1();
 class Compositor final {
 public:
 
-    struct Initialization {
-        Compositor* compositor;
-        IRenderer* renderer;
-    };
-    static Initialization initialize(HWND& hwnd, const Cogwheel::Core::Window& window, const std::wstring& data_folder_path, RendererCreator renderer_creator);
+    static Compositor* initialize(HWND& hwnd, const Cogwheel::Core::Window& window, const std::wstring& data_folder_path);
     ~Compositor();
 
-    IRenderer* attach_renderer(RendererCreator renderer_creator);
+    // --------------------------------------------------------------------------------------------
+    // Renderers
+    // --------------------------------------------------------------------------------------------
 
+    std::unique_ptr<IRenderer>& add_renderer(RendererCreator renderer_creator);
+    std::unique_ptr<IGuiRenderer>& add_GUI_renderer(GuiRendererCreator renderer_creator);
     void render();
 
+    // --------------------------------------------------------------------------------------------
+    // Settings
+    // --------------------------------------------------------------------------------------------
     bool uses_v_sync() const;
     void set_v_sync(bool use_v_sync);
 

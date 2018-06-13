@@ -85,7 +85,8 @@ class Compositor::Implementation {
 private:
     const Window& m_window;
     const std::wstring m_data_folder_path;
-    std::vector<IRenderer*> m_renderers;
+    std::vector<std::unique_ptr<IRenderer>> m_renderers;
+    std::vector<std::unique_ptr<IGuiRenderer>> m_GUI_renderers;
 
     ODevice1 m_device;
     ODeviceContext1 m_render_context;
@@ -168,28 +169,40 @@ public:
             std::wstring shader_folder_path = m_data_folder_path + L"DX11Renderer\\Shaders\\";
             m_camera_effects = CameraEffects(m_device, shader_folder_path);
         }
-    }
 
-    ~Implementation() {
-        for (IRenderer* r : m_renderers)
-            delete r;
+        { // Initialize renderer containers. Initialize the 0'th index to null.
+            m_renderers.resize(1);
+            m_renderers[0] = std::unique_ptr<IRenderer>(nullptr);
+            m_GUI_renderers.resize(1);
+            m_GUI_renderers[0] = std::unique_ptr<IGuiRenderer>(nullptr);
+        }
     }
 
     bool is_valid() const {
         return m_device.resource != nullptr;
     }
 
-    IRenderer* attach_renderer(RendererCreator renderer_creator) {
+    std::unique_ptr<IRenderer>& add_renderer(RendererCreator renderer_creator) {
         IRenderer* renderer = renderer_creator(*m_device, m_window.get_width(), m_window.get_height(), m_data_folder_path);
         if (renderer == nullptr)
-            return nullptr;
+            return m_renderers[0];
 
         if (m_renderers.size() < Renderers::capacity())
             m_renderers.resize(Renderers::capacity());
 
         Renderers::UID renderer_ID = renderer->get_ID();
-        m_renderers[renderer_ID] = renderer;
-        return renderer;
+        m_renderers[renderer_ID] = std::unique_ptr<IRenderer>(renderer);
+        return m_renderers[renderer_ID];
+    }
+
+    std::unique_ptr<IGuiRenderer>& add_GUI_renderer(GuiRendererCreator renderer_creator) {
+        IGuiRenderer* renderer = renderer_creator(m_device);
+        if (renderer != nullptr) {
+            m_GUI_renderers.push_back(std::unique_ptr<IGuiRenderer>(renderer));
+            return m_GUI_renderers[m_GUI_renderers.size() - 1];
+        }
+        else
+            return m_GUI_renderers[0];;
     }
 
     void render() {
@@ -230,7 +243,7 @@ public:
         }
 
         // Tell all renderers to update.
-        for (IRenderer* renderer : m_renderers)
+        for (auto& renderer : m_renderers)
             if (renderer)
                 renderer->handle_updates();
 
@@ -266,10 +279,15 @@ public:
         float delta_time = float(current_time - m_previous_effects_time);
         m_previous_effects_time = current_time;
 
-        // Present the backbuffer.
+        // Post process the images with the camera effects.
         Cameras::UID camera_ID = *Cameras::get_iterable().begin();
         auto effects_settings = Cameras::get_effects_settings(camera_ID);
         m_camera_effects.process(m_render_context, effects_settings, delta_time, m_backbuffer_SRV, m_swap_chain_buffer_view, m_backbuffer_size.x, m_backbuffer_size.y);
+
+        // Post render calls, fx for GUI
+        for (int i = 1; i < m_GUI_renderers.size(); ++i)
+            m_GUI_renderers[i]->render(m_render_context);
+
         m_swap_chain->Present(m_sync_interval, 0);
     }
 
@@ -280,23 +298,15 @@ public:
 //----------------------------------------------------------------------------
 // DirectX 11 compositor.
 //----------------------------------------------------------------------------
-Compositor::Initialization Compositor::initialize(HWND& hwnd, const Cogwheel::Core::Window& window, 
-                                                  const std::wstring& data_folder_path, RendererCreator renderer_creator) {
-    assert(renderer_creator != nullptr);
-
+Compositor* Compositor::initialize(HWND& hwnd, const Cogwheel::Core::Window& window, 
+                                                  const std::wstring& data_folder_path) {
     Compositor* c = new Compositor(hwnd, window, data_folder_path);
     if (!c->m_impl->is_valid()) {
         delete c;
-        return { nullptr, nullptr };
+        return nullptr;
     }
 
-    IRenderer* renderer = c->attach_renderer(renderer_creator);
-    if (renderer == nullptr) {
-        delete c;
-        return { nullptr, nullptr };
-    }
-
-    return { c, renderer };
+    return c;
 }
 
 Compositor::Compositor(HWND& hwnd, const Cogwheel::Core::Window& window, const std::wstring& data_folder_path) {
@@ -307,11 +317,16 @@ Compositor::~Compositor() {
     delete m_impl;
 }
 
-IRenderer* Compositor::attach_renderer(RendererCreator renderer_creator) {
-    return m_impl->attach_renderer(renderer_creator);
+std::unique_ptr<IRenderer>& Compositor::add_renderer(RendererCreator renderer_creator) {
+    return m_impl->add_renderer(renderer_creator);
+}
+
+std::unique_ptr<IGuiRenderer>& Compositor::add_GUI_renderer(GuiRendererCreator renderer_creator) {
+    return m_impl->add_GUI_renderer(renderer_creator);
 }
 
 void Compositor::render() { m_impl->render(); }
+
 bool Compositor::uses_v_sync() const { return m_impl->uses_v_sync(); }
 void Compositor::set_v_sync(bool use_v_sync) { m_impl->set_v_sync(use_v_sync); }
 

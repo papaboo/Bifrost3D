@@ -588,6 +588,8 @@ int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Win
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     std::wstring data_folder_path = converter.from_bytes(engine.data_path());
 
+    compositor = Compositor::initialize(hwnd, window, data_folder_path);
+
 #ifdef OPTIX_FOUND
     class OptiXBackendSwitcher {
     public:
@@ -613,23 +615,19 @@ int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Win
         OptiXRenderer::Renderer* m_renderer;
     };
 
-    DX11OptiXAdaptor::Adaptor* optix_adaptor = nullptr;
-    if (rasterizer_enabled) {
-        compositor = Compositor::initialize(hwnd, window, data_folder_path, Renderer::initialize).compositor;
-        if (optix_enabled)
-            optix_adaptor = (DX11OptiXAdaptor::Adaptor*)compositor->attach_renderer(DX11OptiXAdaptor::Adaptor::initialize);
-    } else {
-        auto initilization = Compositor::initialize(hwnd, window, data_folder_path, DX11OptiXAdaptor::Adaptor::initialize);
-        compositor = initilization.compositor;
-        optix_adaptor = (DX11OptiXAdaptor::Adaptor*)initilization.renderer;
+    if (rasterizer_enabled)
+        compositor->add_renderer(Renderer::initialize);
+
+    if (optix_enabled) {
+        auto* optix_adaptor = (DX11OptiXAdaptor::Adaptor*)compositor->add_renderer(DX11OptiXAdaptor::Adaptor::initialize).get();
+        if (optix_adaptor != nullptr) {
+            OptiXBackendSwitcher* backend_switcher = new OptiXBackendSwitcher(optix_adaptor->get_renderer());
+            engine.add_mutating_callback(OptiXBackendSwitcher::handle_callback, backend_switcher);
+        }
     }
 
-    if (optix_adaptor != nullptr) {
-        OptiXBackendSwitcher* backend_switcher = new OptiXBackendSwitcher(optix_adaptor->get_renderer());
-        engine.add_mutating_callback(OptiXBackendSwitcher::handle_callback, backend_switcher);
-    }
 #else
-    compositor = Compositor::initialize(hwnd, window, data_folder_path, Renderer::initialize).compositor;
+    compositor->add_renderer(Renderer::initialize);
 #endif
 
     Renderers::UID default_renderer = *Renderers::begin();
