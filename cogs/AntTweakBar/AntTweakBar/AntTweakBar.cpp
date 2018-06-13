@@ -13,9 +13,6 @@
 #include <Cogwheel/Input/Mouse.h>
 #include <Cogwheel/Math/Vector.h>
 
-#include <AntTweakBar.h>
-
-using namespace Cogwheel::Core;
 using namespace Cogwheel::Input;
 using namespace Cogwheel::Math;
 

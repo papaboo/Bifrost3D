@@ -9,7 +9,7 @@
 #ifndef _COGWHEEL_ANT_TWEAK_BAR_H_
 #define _COGWHEEL_ANT_TWEAK_BAR_H_
 
-#include <AntTweakBar.h> // Convenience include of ant tweak bar fanctionality
+#include <AntTweakBar.h> // Convenience include of ant tweak bar functionality
 
 // ------------------------------------------------------------------------------------------------
 // Forward declerations
