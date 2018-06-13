@@ -231,17 +231,17 @@ struct DX11Renderer::Implementation {
 
         { // Render ImGui
 
-            D3D11_MAPPED_SUBRESOURCE vtx_resource, idx_resource;
-            THROW_ON_FAILURE(context->Map(m_vertex_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &vtx_resource));
-            THROW_ON_FAILURE(context->Map(m_index_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &idx_resource));
-            ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resource.pData;
-            ImDrawIdx* idx_dst = (ImDrawIdx*)idx_resource.pData;
+            D3D11_MAPPED_SUBRESOURCE vertex_resource, index_resource;
+            THROW_ON_FAILURE(context->Map(m_vertex_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &vertex_resource));
+            THROW_ON_FAILURE(context->Map(m_index_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &index_resource));
+            ImDrawVert* vertex_dest = (ImDrawVert*)vertex_resource.pData;
+            ImDrawIdx* index_dest = (ImDrawIdx*)index_resource.pData;
             for (int n = 0; n < draw_data->CmdListsCount; ++n) {
                 const ImDrawList* cmd_list = draw_data->CmdLists[n];
-                memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-                memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-                vtx_dst += cmd_list->VtxBuffer.Size;
-                idx_dst += cmd_list->IdxBuffer.Size;
+                memcpy(vertex_dest, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+                memcpy(index_dest, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+                vertex_dest += cmd_list->VtxBuffer.Size;
+                index_dest += cmd_list->IdxBuffer.Size;
             }
             context->Unmap(m_vertex_buffer, 0);
             context->Unmap(m_index_buffer, 0);
