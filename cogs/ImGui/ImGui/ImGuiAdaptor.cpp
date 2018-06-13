@@ -47,7 +47,7 @@ void ImGuiAdaptor ::new_frame(const Cogwheel::Core::Engine& engine) {
         io.MousePos = { float(mouse_pos.x), float(mouse_pos.y) };
 
         for (int k = 0; k < 5; ++k)
-            io.MouseDown[k] = mouse->was_pressed((Mouse::Button)k);
+            io.MouseDown[k] = mouse->is_pressed((Mouse::Button)k);
 
         /*
         static float mouse_wheel_pos = 0;
