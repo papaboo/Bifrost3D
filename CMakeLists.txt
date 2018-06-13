@@ -56,6 +56,7 @@ include_cog("DX11OptiXAdapter") # Depends on OptiXRenderer and DX11Renderer
 include_cog("AntTweakBar")
 include_cog("GLFWDriver")
 include_cog("ImageOperations")
+include_cog("Imgui") # Depends on DX11Renderer ... for now.
 include_cog("ObjLoader")
 include_cog("StbImageLoader")
 include_cog("StbImageWriter")
