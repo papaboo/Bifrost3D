@@ -261,49 +261,28 @@ struct DX11Renderer::Implementation {
             }
 
             // Backup DX state that will be modified to restore it afterwards (unfortunately this is very ugly looking and verbose. Close your eyes!)
-            struct BACKUP_DX11_STATE {
-                UINT                        ScissorRectsCount, ViewportsCount;
-                D3D11_RECT                  ScissorRects[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
-                D3D11_VIEWPORT              Viewports[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
-                ID3D11RasterizerState*      RS;
-                ID3D11BlendState*           BlendState;
-                FLOAT                       BlendFactor[4];
-                UINT                        SampleMask;
-                UINT                        StencilRef;
-                ID3D11DepthStencilState*    DepthStencilState;
-                ID3D11ShaderResourceView*   PSShaderResource;
-                ID3D11SamplerState*         PSSampler;
-                ID3D11PixelShader*          PS;
-                ID3D11VertexShader*         VS;
-                UINT                        PSInstancesCount, VSInstancesCount;
-                ID3D11ClassInstance*        PSInstances[256], *VSInstances[256];   // 256 is max according to PSSetShader documentation
-                D3D11_PRIMITIVE_TOPOLOGY    PrimitiveTopology;
-                ID3D11Buffer*               IndexBuffer, *VertexBuffer, *VSConstantBuffer;
-                UINT                        IndexBufferOffset, VertexBufferStride, VertexBufferOffset;
-                DXGI_FORMAT                 IndexBufferFormat;
-                ID3D11InputLayout*          InputLayout;
-            };
-            BACKUP_DX11_STATE old;
-            old.ScissorRectsCount = old.ViewportsCount = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-            context->RSGetScissorRects(&old.ScissorRectsCount, old.ScissorRects);
-            context->RSGetViewports(&old.ViewportsCount, old.Viewports);
-            context->RSGetState(&old.RS);
-            context->OMGetBlendState(&old.BlendState, old.BlendFactor, &old.SampleMask);
-            context->OMGetDepthStencilState(&old.DepthStencilState, &old.StencilRef);
-            context->PSGetShaderResources(0, 1, &old.PSShaderResource);
-            context->PSGetSamplers(0, 1, &old.PSSampler);
-            old.PSInstancesCount = old.VSInstancesCount = 256;
-            context->PSGetShader(&old.PS, old.PSInstances, &old.PSInstancesCount);
-            context->VSGetShader(&old.VS, old.VSInstances, &old.VSInstancesCount);
-            context->VSGetConstantBuffers(0, 1, &old.VSConstantBuffer);
-            context->IAGetPrimitiveTopology(&old.PrimitiveTopology);
-            context->IAGetIndexBuffer(&old.IndexBuffer, &old.IndexBufferFormat, &old.IndexBufferOffset);
-            context->IAGetVertexBuffers(0, 1, &old.VertexBuffer, &old.VertexBufferStride, &old.VertexBufferOffset);
-            context->IAGetInputLayout(&old.InputLayout);
+            struct DX11BackupState {
+                unsigned int             scissor_rect_count, viewport_count;
+                D3D11_RECT               scissor_rects[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
+                D3D11_VIEWPORT           viewports[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
+                ORasterizerState         rasterizer_state;
+                OBlendState              blend_state;
+                float                    blend_factor[4];
+                unsigned int             sample_mask;
+                unsigned int             stencil_ref;
+                ODepthStencilState       depth_stencil_state;
+                D3D11_PRIMITIVE_TOPOLOGY primitive_topology;
+            } old;
+            old.scissor_rect_count = old.viewport_count = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+            context->RSGetScissorRects(&old.scissor_rect_count, old.scissor_rects);
+            context->RSGetViewports(&old.viewport_count, old.viewports);
+            context->RSGetState(&old.rasterizer_state);
+            context->OMGetBlendState(&old.blend_state, old.blend_factor, &old.sample_mask);
+            context->OMGetDepthStencilState(&old.depth_stencil_state, &old.stencil_ref);
+            context->IAGetPrimitiveTopology(&old.primitive_topology);
 
             // Setup viewport
-            D3D11_VIEWPORT vp;
-            memset(&vp, 0, sizeof(D3D11_VIEWPORT));
+            D3D11_VIEWPORT vp = {};
             vp.Width = ImGui::GetIO().DisplaySize.x;
             vp.Height = ImGui::GetIO().DisplaySize.y;
             vp.MinDepth = 0.0f;
@@ -318,9 +297,9 @@ struct DX11Renderer::Implementation {
             context->IASetVertexBuffers(0, 1, &m_vertex_buffer, &stride, &offset);
             context->IASetIndexBuffer(m_index_buffer, sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT, 0);
             context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            context->VSSetShader(m_vertex_shader, NULL, 0);
+            context->VSSetShader(m_vertex_shader, nullptr, 0);
             context->VSSetConstantBuffers(0, 1, &m_projection_matrix);
-            context->PSSetShader(m_pixel_shader, NULL, 0);
+            context->PSSetShader(m_pixel_shader, nullptr, 0);
 
             // Setup render state
             const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
@@ -329,42 +308,32 @@ struct DX11Renderer::Implementation {
             context->RSSetState(m_rasterizer_state);
 
             // Render command lists
-            int vtx_offset = 0;
-            int idx_offset = 0;
+            int vertex_offset = 0;
+            int index_offset = 0;
             for (int n = 0; n < draw_data->CmdListsCount; ++n) {
                 const ImDrawList* cmd_list = draw_data->CmdLists[n];
                 for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; ++cmd_i) {
-                    const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-                    if (pcmd->UserCallback) {
-                        pcmd->UserCallback(cmd_list, pcmd);
+                    const ImDrawCmd* draw_cmd = &cmd_list->CmdBuffer[cmd_i];
+                    if (draw_cmd->UserCallback) {
+                        draw_cmd->UserCallback(cmd_list, draw_cmd);
                     } else {
-                        const D3D11_RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
-                        context->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&pcmd->TextureId);
+                        const D3D11_RECT r = { (LONG)draw_cmd->ClipRect.x, (LONG)draw_cmd->ClipRect.y, (LONG)draw_cmd->ClipRect.z, (LONG)draw_cmd->ClipRect.w };
+                        context->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&draw_cmd->TextureId);
                         context->RSSetScissorRects(1, &r);
-                        context->DrawIndexed(pcmd->ElemCount, idx_offset, vtx_offset);
+                        context->DrawIndexed(draw_cmd->ElemCount, index_offset, vertex_offset);
                     }
-                    idx_offset += pcmd->ElemCount;
+                    index_offset += draw_cmd->ElemCount;
                 }
-                vtx_offset += cmd_list->VtxBuffer.Size;
+                vertex_offset += cmd_list->VtxBuffer.Size;
             }
 
             // Restore modified DX state
-            context->RSSetScissorRects(old.ScissorRectsCount, old.ScissorRects);
-            context->RSSetViewports(old.ViewportsCount, old.Viewports);
-            context->RSSetState(old.RS); if (old.RS) old.RS->Release();
-            context->OMSetBlendState(old.BlendState, old.BlendFactor, old.SampleMask); if (old.BlendState) old.BlendState->Release();
-            context->OMSetDepthStencilState(old.DepthStencilState, old.StencilRef); if (old.DepthStencilState) old.DepthStencilState->Release();
-            context->PSSetShaderResources(0, 1, &old.PSShaderResource); if (old.PSShaderResource) old.PSShaderResource->Release();
-            context->PSSetSamplers(0, 1, &old.PSSampler); if (old.PSSampler) old.PSSampler->Release();
-            context->PSSetShader(old.PS, old.PSInstances, old.PSInstancesCount); if (old.PS) old.PS->Release();
-            for (UINT i = 0; i < old.PSInstancesCount; i++) if (old.PSInstances[i]) old.PSInstances[i]->Release();
-            context->VSSetShader(old.VS, old.VSInstances, old.VSInstancesCount); if (old.VS) old.VS->Release();
-            context->VSSetConstantBuffers(0, 1, &old.VSConstantBuffer); if (old.VSConstantBuffer) old.VSConstantBuffer->Release();
-            for (UINT i = 0; i < old.VSInstancesCount; i++) if (old.VSInstances[i]) old.VSInstances[i]->Release();
-            context->IASetPrimitiveTopology(old.PrimitiveTopology);
-            context->IASetIndexBuffer(old.IndexBuffer, old.IndexBufferFormat, old.IndexBufferOffset); if (old.IndexBuffer) old.IndexBuffer->Release();
-            context->IASetVertexBuffers(0, 1, &old.VertexBuffer, &old.VertexBufferStride, &old.VertexBufferOffset); if (old.VertexBuffer) old.VertexBuffer->Release();
-            context->IASetInputLayout(old.InputLayout); if (old.InputLayout) old.InputLayout->Release();
+            context->RSSetScissorRects(old.scissor_rect_count, old.scissor_rects);
+            context->RSSetViewports(old.viewport_count, old.viewports);
+            context->RSSetState(old.rasterizer_state);
+            context->OMSetBlendState(old.blend_state, old.blend_factor, old.sample_mask);
+            context->OMSetDepthStencilState(old.depth_stencil_state, old.stencil_ref);
+            context->IASetPrimitiveTopology(old.primitive_topology);
         }
     }
 };
