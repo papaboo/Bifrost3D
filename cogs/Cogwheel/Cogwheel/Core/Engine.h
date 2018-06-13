@@ -97,7 +97,7 @@ private:
     template <typename Function>
     struct Closure {
         Function callback;
-        void* data;
+        void* state;
     };
 
     // All engine callbacks.

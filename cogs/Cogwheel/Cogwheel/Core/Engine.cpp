@@ -54,13 +54,13 @@ void Engine::do_tick(double delta_time) {
     m_window.reset_change_notifications();
 
     for (Closure<mutating_callback> mutating_callback : m_mutating_callbacks)
-        mutating_callback.callback(*this, mutating_callback.data);
+        mutating_callback.callback(*this, mutating_callback.state);
 
     for (Closure<non_mutating_callback> non_mutating_callback : m_non_mutating_callbacks)
-        non_mutating_callback.callback(*this, non_mutating_callback.data);
+        non_mutating_callback.callback(*this, non_mutating_callback.state);
 
     for (Closure<tick_cleanup_callback> tick_cleanup_closure : m_tick_cleanup_callbacks)
-        tick_cleanup_closure.callback(tick_cleanup_closure.data);
+        tick_cleanup_closure.callback(tick_cleanup_closure.state);
 }
 
 } // NS Core
