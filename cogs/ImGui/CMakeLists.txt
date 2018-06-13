@@ -23,9 +23,9 @@ target_include_directories(ImGui PUBLIC .)
 
 target_link_libraries(ImGui PUBLIC Cogwheel PRIVATE DX11Renderer)
 
-SOURCE_GROUP("ImGui" FILES ${IMGUI_SRCS})
-SOURCE_GROUP("ImGui\\Src" FILES ${IMGUI_SRC_SRCS})
-SOURCE_GROUP("ImGui\\Renderer" FILES ${IMGUI_RENDERERS})
+source_group("ImGui" FILES ${IMGUI_SRCS})
+source_group("ImGui\\Src" FILES ${IMGUI_SRC_SRCS})
+source_group("ImGui\\Renderer" FILES ${IMGUI_RENDERERS})
 
 set_target_properties(ImGui PROPERTIES 
   LINKER_LANGUAGE CXX

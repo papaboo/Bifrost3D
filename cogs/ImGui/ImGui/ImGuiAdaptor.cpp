@@ -61,6 +61,14 @@ void ImGuiAdaptor ::new_frame(const Cogwheel::Core::Engine& engine) {
     }
 
     ImGui::NewFrame();
+
+    for (auto& frame : m_frames)
+        frame->layout_frame();
+}
+
+void ImGuiAdaptor::add_frame(ImGuiFrameCreator frame_creator) {
+    IImGuiFrame* frame = frame_creator();
+    m_frames.push_back(std::unique_ptr<IImGuiFrame>(frame));
 }
 
 } // NS ImGui

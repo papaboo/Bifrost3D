@@ -11,6 +11,9 @@
 
 #include <ImGui/Src/imgui.h> // Convenience include of ImGui functionality
 
+#include <memory>
+#include <vector>
+
 // ------------------------------------------------------------------------------------------------
 // Forward declerations
 // ------------------------------------------------------------------------------------------------
@@ -22,6 +25,12 @@ class Engine;
 
 namespace ImGui {
 
+class IImGuiFrame {
+public:
+    virtual void layout_frame() = 0;
+};
+
+typedef IImGuiFrame*(*ImGuiFrameCreator)();
 // ------------------------------------------------------------------------------------------------
 // Dear IMGUI adaptor for Cogwheel input.
 // Future work:
@@ -33,6 +42,11 @@ public:
     ImGuiAdaptor(const Cogwheel::Core::Engine& engine);
 
     void new_frame(const Cogwheel::Core::Engine& engine);
+
+    void add_frame(ImGuiFrameCreator frame_creator);
+
+private:
+    std::vector<std::unique_ptr<IImGuiFrame>> m_frames;
 };
 
 static inline void new_frame_callback(Cogwheel::Core::Engine& engine, void* adaptor) {
