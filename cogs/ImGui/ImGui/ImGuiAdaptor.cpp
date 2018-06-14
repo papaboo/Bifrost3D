@@ -22,9 +22,31 @@ ImGuiAdaptor::ImGuiAdaptor(const Cogwheel::Core::Engine& engine) {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io; // TODO Copied from examples. No idea what this is.
 
+    // io.ImeWindowHandle = hwnd;
+
     ImGui::StyleColorsDark();
 
-    // TODO Set io.keymap
+    io.KeyMap[ImGuiKey_Tab] = int(Keyboard::Key::Tab);
+    io.KeyMap[ImGuiKey_LeftArrow] = int(Keyboard::Key::Left);
+    io.KeyMap[ImGuiKey_RightArrow] = int(Keyboard::Key::Right);
+    io.KeyMap[ImGuiKey_UpArrow] = int(Keyboard::Key::Up);
+    io.KeyMap[ImGuiKey_DownArrow] = int(Keyboard::Key::Down);
+    io.KeyMap[ImGuiKey_PageUp] = int(Keyboard::Key::PageUp);
+    io.KeyMap[ImGuiKey_PageDown] = int(Keyboard::Key::PageDown);
+    io.KeyMap[ImGuiKey_Home] = int(Keyboard::Key::Home);
+    io.KeyMap[ImGuiKey_End] = int(Keyboard::Key::End);
+    io.KeyMap[ImGuiKey_Insert] = int(Keyboard::Key::Insert);
+    io.KeyMap[ImGuiKey_Delete] = int(Keyboard::Key::Delete);
+    io.KeyMap[ImGuiKey_Backspace] = int(Keyboard::Key::Backspace);
+    io.KeyMap[ImGuiKey_Space] = int(Keyboard::Key::Space);
+    io.KeyMap[ImGuiKey_Enter] = int(Keyboard::Key::Enter);
+    io.KeyMap[ImGuiKey_Escape] = int(Keyboard::Key::Escape);
+    io.KeyMap[ImGuiKey_A] = int(Keyboard::Key::A);
+    io.KeyMap[ImGuiKey_C] = int(Keyboard::Key::C);
+    io.KeyMap[ImGuiKey_V] = int(Keyboard::Key::V);
+    io.KeyMap[ImGuiKey_X] = int(Keyboard::Key::X);
+    io.KeyMap[ImGuiKey_Y] = int(Keyboard::Key::Y);
+    io.KeyMap[ImGuiKey_Z] = int(Keyboard::Key::Z);
 }
 
 void ImGuiAdaptor ::new_frame(const Cogwheel::Core::Engine& engine) {
@@ -49,15 +71,26 @@ void ImGuiAdaptor ::new_frame(const Cogwheel::Core::Engine& engine) {
         for (int k = 0; k < 5; ++k)
             io.MouseDown[k] = mouse->is_pressed((Mouse::Button)k);
 
-        /*
-        static float mouse_wheel_pos = 0;
-        mouse_wheel_pos += mouse->get_scroll_delta();
-        TwMouseWheel((int)mouse_wheel_pos);
-        */
+        io.MouseWheel += mouse->get_scroll_delta();
     }
 
-    { // TODO Handle keyboard
+    { // Handle keyboard
+        const Keyboard* const keyboard = engine.get_keyboard();
+        
+        // Modifiers
+        io.KeyCtrl = keyboard->is_pressed(Keyboard::Key::LeftControl) || keyboard->is_pressed(Keyboard::Key::RightControl);
+        io.KeyShift = keyboard->is_pressed(Keyboard::Key::LeftShift) || keyboard->is_pressed(Keyboard::Key::RightShift);
+        io.KeyAlt = keyboard->is_pressed(Keyboard::Key::LeftAlt) || keyboard->is_pressed(Keyboard::Key::RightAlt);
+        io.KeySuper = keyboard->is_pressed(Keyboard::Key::LeftSuper) || keyboard->is_pressed(Keyboard::Key::RightSuper);
 
+        // Keymapped keys
+        for (int k = 0; k < ImGuiKey_COUNT; ++k)
+            io.KeysDown[io.KeyMap[k]] = keyboard->is_pressed(Keyboard::Key(io.KeyMap[k]));
+
+        // Text.
+        const std::wstring& text = keyboard->get_text();
+        for (int i = 0; i < text.length(); ++i)
+            io.AddInputCharacter(text[i]);
     }
 
     ImGui::NewFrame();
