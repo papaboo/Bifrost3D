@@ -36,6 +36,7 @@ typedef IImGuiFrame*(*ImGuiFrameCreator)();
 // Future work:
 // * Disable keyboard and mouse events based on io.WantCaptureMouse and io.WantCaptureKeyboard.
 // * Load and set fonts.
+// * Support setting different mouse cursors images.
 // ------------------------------------------------------------------------------------------------
 class ImGuiAdaptor {
 public:
