@@ -11,19 +11,6 @@
 
 #include <DX11Renderer/Compositor.h>
 
-// ------------------------------------------------------------------------------------------------
-// Forward declarations.
-// ------------------------------------------------------------------------------------------------
-/*
-struct ID3D11Device1;
-struct ID3D11DeviceContext1;
-namespace DX11Renderer {
-template <typename T> class OwnedResourcePtr;
-using ODevice1 = DX11Renderer::OwnedResourcePtr<ID3D11Device1>;
-using ODeviceContext1 = DX11Renderer::OwnedResourcePtr<ID3D11DeviceContext1>;
-}
-*/
-
 namespace ImGui {
 namespace Renderers {
 
