@@ -196,6 +196,9 @@ struct DX11Renderer::Implementation {
     // --------------------------------------------------------------------------------------------
     void render(ODeviceContext1& context) {
 
+        if (ImGui::GetFrameCount() == 0)
+            return;
+
         ImGui::Render();
         ImDrawData* draw_data = ImGui::GetDrawData();
 
