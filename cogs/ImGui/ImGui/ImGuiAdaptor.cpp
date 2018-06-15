@@ -18,7 +18,9 @@ using namespace Cogwheel::Math;
 
 namespace ImGui {
 
-ImGuiAdaptor::ImGuiAdaptor(const Cogwheel::Core::Engine& engine) {
+ImGuiAdaptor::ImGuiAdaptor()
+    : m_enabled(true) {
+
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io; // TODO Copied from examples. No idea what this is.
 
@@ -50,9 +52,6 @@ ImGuiAdaptor::ImGuiAdaptor(const Cogwheel::Core::Engine& engine) {
 }
 
 void ImGuiAdaptor ::new_frame(const Cogwheel::Core::Engine& engine) {
-    if (ImGui::GetCurrentContext() == NULL)
-        return;
-
     ImGuiIO& io = ImGui::GetIO();
 
     // Handle window.
@@ -95,8 +94,9 @@ void ImGuiAdaptor ::new_frame(const Cogwheel::Core::Engine& engine) {
 
     ImGui::NewFrame();
 
-    for (auto& frame : m_frames)
-        frame->layout_frame();
+    if (m_enabled)
+        for (auto& frame : m_frames)
+            frame->layout_frame();
 }
 
 void ImGuiAdaptor::add_frame(ImGuiFrameCreator frame_creator) {

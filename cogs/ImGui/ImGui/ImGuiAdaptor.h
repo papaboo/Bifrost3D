@@ -40,14 +40,18 @@ typedef IImGuiFrame*(*ImGuiFrameCreator)();
 // ------------------------------------------------------------------------------------------------
 class ImGuiAdaptor {
 public:
-    ImGuiAdaptor(const Cogwheel::Core::Engine& engine);
+    ImGuiAdaptor();
 
     void new_frame(const Cogwheel::Core::Engine& engine);
 
     void add_frame(ImGuiFrameCreator frame_creator);
 
+    bool is_enabled() const { return m_enabled; }
+    void set_enabled(bool enabled) { m_enabled = enabled; }
+
 private:
     std::vector<std::unique_ptr<IImGuiFrame>> m_frames;
+    bool m_enabled;
 };
 
 static inline void new_frame_callback(Cogwheel::Core::Engine& engine, void* adaptor) {
