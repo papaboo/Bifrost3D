@@ -22,7 +22,7 @@ namespace Input {
 //
 // Future work
 // * 3 bits should be enough for halftaps. 
-//   Compress Keystate to 4 bits and store two states pr. 8 bit.
+//   Compress Keystate to 5 bits and store 6 states pr. 32 bit uint.
 // * Remap the key enumeration. GLFW's values are not tight and does in fact 
 //   have a ton of holes between them, which causes us to use more memory than
 //   necessary when allocating an array of length 'KeyCount'.
@@ -37,7 +37,7 @@ public:
     // ASCII http://www.asciitable.com/
     // GLFW  http://www.glfw.org/docs/latest/group__keys.html#gac556b360f7f6fca4b70ba0aecf313fd4
     // SDL   http://www.libsdl.org/release/SDL-1.2.15/include/SDL_keysym.h
-    enum class Key {
+    enum class Key : short {
         Invalid = 0,
         Space = 32,
         Apostrophe = 39,
@@ -111,29 +111,30 @@ public:
 
     Keyboard() {
         for (KeyState& state : m_key_states) {
+            state.is_consumed = false;
             state.is_pressed = false;
             state.halftaps = 0u;
         }
         m_text.reserve(32);
     }
 
-    inline bool is_pressed(Key key) const { return m_key_states[(unsigned int)key].is_pressed; }
+    inline bool is_pressed(Key key) const { return m_key_states[(short)key].is_pressed && !m_key_states[(short)key].is_consumed; }
     inline bool is_released(Key key) const { return !is_pressed(key); }
-    inline unsigned int halftaps(Key key) const { return m_key_states[(unsigned int)key].halftaps; }
+    inline unsigned int halftaps(Key key) const { return m_key_states[(short)key].halftaps; }
 
     inline bool was_pressed(Key key) const {
-        const KeyState state = m_key_states[(unsigned int)key];
-        return (state.is_pressed && state.halftaps == 1) || state.halftaps > 1;
+        const KeyState state = m_key_states[(short)key];
+        return ((state.is_pressed && state.halftaps == 1) || state.halftaps > 1) && !state.is_consumed;
     }
     inline bool was_released(Key key) const {
-        const KeyState state = m_key_states[(unsigned int)key];
-        return (!state.is_pressed && state.halftaps == 1) || state.halftaps > 1;
+        const KeyState state = m_key_states[(short)key];
+        return ((!state.is_pressed && state.halftaps == 1) || state.halftaps > 1) && !state.is_consumed;
     }
 
     inline void key_tapped(Key key, bool pressed) {
-        m_key_states[(unsigned int)key].is_pressed = pressed;
-        unsigned int halftaps = m_key_states[(unsigned int)key].halftaps;
-        m_key_states[(unsigned int)key].halftaps = (halftaps == MAX_HALFTAP_COUNT) ? (MAX_HALFTAP_COUNT-1) : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
+        m_key_states[(unsigned short)key].is_pressed = pressed;
+        unsigned int halftaps = m_key_states[(short)key].halftaps;
+        m_key_states[(unsigned short)key].halftaps = (halftaps == MAX_HALFTAP_COUNT) ? (MAX_HALFTAP_COUNT-1) : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
     }
 
     inline bool is_modifiers_pressed() const {
@@ -147,9 +148,19 @@ public:
 
     inline const std::wstring& get_text() const { return m_text; }
 
-    inline void per_frame_reset() {
+    inline bool is_consumed(Key key) const { return m_key_states[short(key)].is_consumed; }
+    inline void consume_button_event(Key key) { m_key_states[short(key)].is_consumed = true; }
+
+    inline void consume_all_button_events() {
         for (KeyState& state : m_key_states)
+            state.is_consumed = true;
+    }
+
+    inline void per_frame_reset() {
+        for (KeyState& state : m_key_states) {
+            state.is_consumed = false;
             state.halftaps = 0u;
+        }
         m_text.clear();
     }
 
@@ -157,8 +168,9 @@ private:
 
     // 8 bit struct containing state of a key; is it pressed or released and how many times was it pressed last frame.
     struct KeyState {
+        bool is_consumed : 1;
         bool is_pressed : 1;
-        unsigned char halftaps : 7;
+        unsigned char halftaps : 6;
     };
 
     std::array<KeyState, (unsigned int)Key::KeyCount> m_key_states;
