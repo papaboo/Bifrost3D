@@ -1,25 +1,29 @@
 set(PROJECT_NAME "SimpleViewer")
 
 set(SRCS 
-  CornellBoxScene.h
   main.cpp
-  MaterialScene.h
-  OpacityScene.h
-  SphereLightScene.h
-  SphereScene.h
-  TestScene.h
-  VeachScene.h
-)
+  )
 
 set(GUI_SRCS
   GUI/RenderingGUI.h
   GUI/RenderingGUI.cpp
 )
 
-add_executable(${PROJECT_NAME} ${SRCS} ${GUI_SRCS})
+set(SCENES_SRCS
+  Scenes/CornellBox.h
+  Scenes/Material.h
+  Scenes/Opacity.h
+  Scenes/SphereLight.h
+  Scenes/Sphere.h
+  Scenes/Test.h
+  Scenes/Veach.h
+)
+
+add_executable(${PROJECT_NAME} ${SRCS} ${GUI_SRCS} ${SCENES_SRCS})
 
 source_group("" FILES ${SRCS})
 source_group("GUI" FILES ${GUI_SRCS})
+source_group("Scenes" FILES ${SCENES_SRCS})
 
 target_include_directories(${PROJECT_NAME} PRIVATE .)
 

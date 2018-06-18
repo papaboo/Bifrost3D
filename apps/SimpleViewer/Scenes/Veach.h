@@ -22,6 +22,8 @@
 
 using namespace Cogwheel;
 
+namespace Scenes {
+
 void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoots::UID scene_ID) {
     using namespace Cogwheel::Assets;
     using namespace Cogwheel::Math;
@@ -149,5 +151,7 @@ void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sce
         }
     }
 }
+
+} // NS Scenes
 
 #endif // _SIMPLEVIEWER_VEACH_SCENE_H_

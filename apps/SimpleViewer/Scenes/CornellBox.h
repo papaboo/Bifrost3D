@@ -18,7 +18,9 @@
 
 using namespace Cogwheel;
 
-void create_cornell_box_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_node) {
+namespace Scenes {
+
+void create_cornell_box(Scene::Cameras::UID camera_ID, Scene::SceneNode root_node) {
     using namespace Cogwheel::Assets;
     using namespace Cogwheel::Math;
     using namespace Cogwheel::Scene;
@@ -95,9 +97,9 @@ void create_cornell_box_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode ro
     { // Create small box.
         Meshes::UID box_mesh_ID = MeshCreation::cube(1);
 
-        Transform transform = Transform(Vector3f(0.2f, -0.35f, -0.2f), 
-                                        Quaternionf::from_angle_axis(PI<float>() / 6.0f, Vector3f::up()),
-                                        0.3f);
+        Transform transform = Transform(Vector3f(0.2f, -0.35f, -0.2f),
+            Quaternionf::from_angle_axis(PI<float>() / 6.0f, Vector3f::up()),
+            0.3f);
         SceneNode node = SceneNodes::create("Small box", transform);
         MeshModels::create(node.get_ID(), box_mesh_ID, iron_material_ID);
         node.set_parent(root_node);
@@ -119,5 +121,7 @@ void create_cornell_box_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode ro
         node.set_parent(root_node);
     }
 }
+
+} // NS Scenes
 
 #endif // _SIMPLEVIEWER_CORNELL_BOX_SCENE_H_

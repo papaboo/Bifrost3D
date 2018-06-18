@@ -20,6 +20,8 @@
 
 using namespace Cogwheel;
 
+namespace Scenes {
+
 void create_opacity_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneNode root_node) {
     using namespace Cogwheel::Assets;
     using namespace Cogwheel::Math;
@@ -109,5 +111,7 @@ void create_opacity_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, S
         }
     }
 }
+
+} // NS Scenes
 
 #endif // _SIMPLEVIEWER_OPACITY_SCENE_H_

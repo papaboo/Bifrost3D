@@ -6,13 +6,13 @@
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include <CornellBoxScene.h>
-#include <MaterialScene.h>
-#include <OpacityScene.h>
-#include <SphereScene.h>
-#include <SphereLightScene.h>
-#include <TestScene.h>
-#include <VeachScene.h>
+#include <Scenes/CornellBox.h>
+#include <Scenes/Material.h>
+#include <Scenes/Opacity.h>
+#include <Scenes/Sphere.h>
+#include <Scenes/SphereLight.h>
+#include <Scenes/Test.h>
+#include <Scenes/Veach.h>
 
 #include <GUI/RenderingGUI.h>
 
@@ -522,19 +522,19 @@ int initialize_scene(Engine& engine) {
     // Load model
     bool load_model_from_file = false;
     if (g_scene.empty() || g_scene.compare("CornellBox") == 0)
-        create_cornell_box_scene(cam_ID, root_node_ID);
+        Scenes::create_cornell_box(cam_ID, root_node_ID);
     else if (g_scene.compare("MaterialScene") == 0)
-        create_material_scene(cam_ID, root_node_ID);
+        Scenes::create_material_scene(cam_ID, root_node_ID);
     else if (g_scene.compare("OpacityScene") == 0)
-        create_opacity_scene(engine, cam_ID, root_node_ID);
+        Scenes::create_opacity_scene(engine, cam_ID, root_node_ID);
     else if (g_scene.compare("SphereScene") == 0)
-        create_sphere_scene(engine, cam_ID, scene_ID);
+        Scenes::create_sphere_scene(engine, cam_ID, scene_ID);
     else if (g_scene.compare("SphereLightScene") == 0)
-        SphereLightScene::create(engine, cam_ID, scene_ID);
+        Scenes::SphereLightScene::create(engine, cam_ID, scene_ID);
     else if (g_scene.compare("TestScene") == 0)
-        create_test_scene(engine, cam_ID, root_node_ID);
+        Scenes::create_test_scene(engine, cam_ID, root_node_ID);
     else if (g_scene.compare("VeachScene") == 0)
-        create_veach_scene(engine, cam_ID, scene_ID);
+        Scenes::create_veach_scene(engine, cam_ID, scene_ID);
     else {
         printf("Loading scene: '%s'\n", g_scene.c_str());
         SceneNodes::UID obj_root_ID = ObjLoader::load(g_scene, load_image);

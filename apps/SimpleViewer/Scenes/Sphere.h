@@ -20,6 +20,8 @@
 
 using namespace Cogwheel;
 
+namespace Scenes {
+
 void create_sphere_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoots::UID scene_ID) {
     using namespace Cogwheel::Assets;
     using namespace Cogwheel::Math;
@@ -101,5 +103,7 @@ void create_sphere_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sc
     }
 
 }
+
+} // NS Scenes
 
 #endif // _SIMPLEVIEWER_SPHERE_SCENE_H_

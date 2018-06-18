@@ -23,6 +23,8 @@
 
 using namespace Cogwheel;
 
+namespace Scenes {
+
 class LocalRotator final {
 public:
     LocalRotator(Scene::SceneNodes::UID node_ID, float rotation_stength)
@@ -281,5 +283,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
     BlinkingLight* blinking_light = new BlinkingLight();
     engine.add_mutating_callback(BlinkingLight::blink_callback, blinking_light);
 }
+
+} // NS Scenes
 
 #endif // _SIMPLEVIEWER_TEST_SCENE_H_
