@@ -141,6 +141,43 @@ GTEST_TEST(Input_Keyboard, tap_overflow_handling) {
     }
 }
 
+GTEST_TEST(Input_Keyboard, consumed_keys) {
+    Keyboard keyboard = Keyboard();
+
+    EXPECT_FALSE(keyboard.is_consumed(Keyboard::Key::A));
+
+    keyboard.key_tapped(Keyboard::Key::A, true);
+    EXPECT_FALSE(keyboard.is_consumed(Keyboard::Key::A));
+    EXPECT_TRUE(keyboard.was_pressed(Keyboard::Key::A));
+    EXPECT_FALSE(keyboard.was_released(Keyboard::Key::A));
+    EXPECT_TRUE(keyboard.is_pressed(Keyboard::Key::A));
+
+    // Consuming a key clears its 'was' flags and shows it as being released, since logically either the pressed or the released state should be true.
+    keyboard.consume_button_event(Keyboard::Key::A);
+    EXPECT_TRUE(keyboard.is_consumed(Keyboard::Key::A));
+    EXPECT_FALSE(keyboard.was_pressed(Keyboard::Key::A));
+    EXPECT_FALSE(keyboard.was_released(Keyboard::Key::A));
+    EXPECT_FALSE(keyboard.is_pressed(Keyboard::Key::A));
+    EXPECT_TRUE(keyboard.is_released(Keyboard::Key::A));
+
+    // Resetting per frame clears the consumed flag.
+    keyboard.per_frame_reset();
+    EXPECT_FALSE(keyboard.is_consumed(Keyboard::Key::A));
+
+    keyboard.key_tapped(Keyboard::Key::A, false);
+    EXPECT_FALSE(keyboard.is_consumed(Keyboard::Key::A));
+    EXPECT_FALSE(keyboard.was_pressed(Keyboard::Key::A));
+    EXPECT_TRUE(keyboard.was_released(Keyboard::Key::A));
+    EXPECT_TRUE(keyboard.is_released(Keyboard::Key::A));
+
+    keyboard.consume_button_event(Keyboard::Key::A);
+    EXPECT_TRUE(keyboard.is_consumed(Keyboard::Key::A));
+    EXPECT_FALSE(keyboard.was_pressed(Keyboard::Key::A));
+    EXPECT_FALSE(keyboard.was_released(Keyboard::Key::A));
+    EXPECT_FALSE(keyboard.is_pressed(Keyboard::Key::A));
+    EXPECT_TRUE(keyboard.is_released(Keyboard::Key::A));
+}
+
 } // NS Input
 } // NS Cogwheel
 
