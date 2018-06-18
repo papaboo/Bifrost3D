@@ -61,9 +61,10 @@ void ImGuiAdaptor ::new_frame(const Cogwheel::Core::Engine& engine) {
 
     io.DeltaTime = engine.get_time().get_smooth_delta_time();
 
-    { // Handle mouse input.
-        const Mouse* const mouse = engine.get_mouse();
+    Mouse* mouse = (Mouse*)engine.get_mouse();
+    Keyboard* keyboard = (Keyboard*)engine.get_keyboard();
 
+    { // Handle mouse input.
         Vector2i mouse_pos = mouse->get_position();
         io.MousePos = { float(mouse_pos.x), float(mouse_pos.y) };
 
@@ -74,8 +75,6 @@ void ImGuiAdaptor ::new_frame(const Cogwheel::Core::Engine& engine) {
     }
 
     { // Handle keyboard
-        const Keyboard* const keyboard = engine.get_keyboard();
-        
         // Modifiers
         io.KeyCtrl = keyboard->is_pressed(Keyboard::Key::LeftControl) || keyboard->is_pressed(Keyboard::Key::RightControl);
         io.KeyShift = keyboard->is_pressed(Keyboard::Key::LeftShift) || keyboard->is_pressed(Keyboard::Key::RightShift);
@@ -97,6 +96,11 @@ void ImGuiAdaptor ::new_frame(const Cogwheel::Core::Engine& engine) {
     if (m_enabled)
         for (auto& frame : m_frames)
             frame->layout_frame();
+
+    if (io.WantCaptureMouse)
+        mouse->consume_all_button_events();
+    if (io.WantCaptureKeyboard)
+        keyboard->consume_all_button_events();
 }
 
 void ImGuiAdaptor::add_frame(ImGuiFrameCreator frame_creator) {
