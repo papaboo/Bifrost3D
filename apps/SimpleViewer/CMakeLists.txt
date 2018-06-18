@@ -11,15 +11,22 @@ set(SRCS
   VeachScene.h
 )
 
-add_executable(${PROJECT_NAME} ${SRCS})
+set(GUI_SRCS
+  GUI/RenderingGUI.h
+  GUI/RenderingGUI.cpp
+)
+
+add_executable(${PROJECT_NAME} ${SRCS} ${GUI_SRCS})
 
 source_group("" FILES ${SRCS})
+source_group("GUI" FILES ${GUI_SRCS})
 
 target_include_directories(${PROJECT_NAME} PRIVATE .)
 
 target_link_libraries(${PROJECT_NAME}
   DX11Renderer
   Cogwheel
+  ImGui
   ObjLoader
   StbImageLoader
   Win32Driver

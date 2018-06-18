@@ -14,6 +14,8 @@
 #include <TestScene.h>
 #include <VeachScene.h>
 
+#include <GUI/RenderingGUI.h>
+
 #include <Cogwheel/Assets/Mesh.h>
 #include <Cogwheel/Assets/MeshModel.h>
 #include <Cogwheel/Core/Engine.h>
@@ -23,6 +25,9 @@
 #include <Cogwheel/Scene/LightSource.h>
 #include <Cogwheel/Scene/SceneNode.h>
 #include <Cogwheel/Scene/SceneRoot.h>
+
+#include <ImGui/ImGUIAdaptor.h>
+#include <ImGui/Renderers/DX11Renderer.h>
 
 #include <Win32Driver.h>
 #include <DX11Renderer/Compositor.h>
@@ -474,7 +479,7 @@ static inline void miniheaps_cleanup_callback(void*) {
     Textures::reset_change_notifications();
 }
 
-int initializer(Cogwheel::Core::Engine& engine) {
+int initializer(Engine& engine) {
     engine.get_window().set_name("SimpleViewer");
 
     Cameras::allocate(1u);
@@ -490,6 +495,10 @@ int initializer(Cogwheel::Core::Engine& engine) {
 
     engine.add_tick_cleanup_callback(miniheaps_cleanup_callback, nullptr);
 
+    return 0;
+}
+
+int initialize_scene(Engine& engine) {
     // Setup scene.
     SceneRoots::UID scene_ID = SceneRoots::UID::invalid_UID();
     if (!g_environment.empty()) {
@@ -582,7 +591,7 @@ int initializer(Cogwheel::Core::Engine& engine) {
     return 0;
 }
 
-int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Window& window, HWND& hwnd) {
+int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
     using namespace DX11Renderer;
 
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
@@ -630,13 +639,33 @@ int win32_window_initialized(Cogwheel::Core::Engine& engine, Cogwheel::Core::Win
     compositor->add_renderer(Renderer::initialize);
 #endif
 
+    { // Setup GUI
+        auto* imgui = new ImGui::ImGuiAdaptor();
+        imgui->add_frame([]() -> ImGui::IImGuiFrame* { return new GUI::RenderingGUI(compositor, nullptr); });
+
+        auto imgui_callback = [](Engine& engine, void* imgui) {
+            auto* keyboard = engine.get_keyboard();
+            auto* imgui_adaptor = static_cast<ImGui::ImGuiAdaptor*>(imgui);
+
+            bool control_pressed = keyboard->is_pressed(Keyboard::Key::LeftControl) || keyboard->is_pressed(Keyboard::Key::RightControl);
+            bool g_was_released = keyboard->was_released(Keyboard::Key::G);
+            imgui_adaptor->set_enabled(imgui_adaptor->is_enabled() ^ (g_was_released && control_pressed));
+
+            imgui_adaptor->new_frame(engine);
+        };
+
+        // engine.add_mutating_callback(ImGui::new_frame_callback, imgui);
+        engine.add_mutating_callback(imgui_callback, imgui);
+        compositor->add_GUI_renderer([](ODevice1& device) -> IGuiRenderer* { return new ImGui::Renderers::DX11Renderer(device); });
+    }
+
     Renderers::UID default_renderer = *Renderers::begin();
     for (auto camera_ID : Cameras::get_iterable())
         Cameras::set_renderer_ID(camera_ID, default_renderer);
 
     engine.add_non_mutating_callback(render_callback, compositor);
 
-    return 0;
+    return initialize_scene(engine);
 }
 
 void print_usage() {
