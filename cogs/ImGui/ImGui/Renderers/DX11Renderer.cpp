@@ -180,7 +180,7 @@ struct DX11Renderer::Implementation {
             THROW_ON_FAILURE(m_device->CreateShaderResourceView(texture, &srv_desc, &m_font_SRV));
 
             // Store our identifier
-            io.Fonts->TexID = (void *)m_font_SRV; // TODO Needed for anything? Perhaps with multiple fonts?
+            io.Fonts->TexID = (void *)m_font_SRV; // NOTE Apparently needed to flag that a font is set/loaded.
         }
 
         { // Buffers are initialized on demand

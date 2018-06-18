@@ -22,7 +22,7 @@ ImGuiAdaptor::ImGuiAdaptor()
     : m_enabled(true) {
 
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io; // TODO Copied from examples. No idea what this is.
+    ImGuiIO& io = ImGui::GetIO();
 
     // io.ImeWindowHandle = hwnd;
 
