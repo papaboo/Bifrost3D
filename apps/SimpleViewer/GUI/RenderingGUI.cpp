@@ -21,20 +21,22 @@ namespace GUI {
 void RenderingGUI::layout_frame() {
     ImGui::Begin("Rendering");
 
-    ImGui::Text("Compositor");
-    if (ImGui::Button("Toggle V-sync")) {
-        bool is_v_sync_enabled = m_compositor->uses_v_sync();
-        m_compositor->set_v_sync(!is_v_sync_enabled);
+    if (ImGui::TreeNode("Compositor")) {
+        if (ImGui::Button("Toggle V-sync")) {
+            bool is_v_sync_enabled = m_compositor->uses_v_sync();
+            m_compositor->set_v_sync(!is_v_sync_enabled);
+        }
+
+        ImGui::TreePop();
     }
 
     ImGui::Separator();
 
-    { // Camera efects
+    if (ImGui::TreeNode("Camera effects")) {
+
         Cameras::UID camera_ID = *Cameras::get_iterable().begin();
         auto effects_settings = Cameras::get_effects_settings(camera_ID);
         bool has_changed = false;
-
-        ImGui::Text("Camera effects");
 
         if (ImGui::TreeNode("Bloom")) {
             has_changed |= ImGui::InputFloat("Threshold", &effects_settings.bloom.threshold, 0.0f, 0.0f);
@@ -54,7 +56,11 @@ void RenderingGUI::layout_frame() {
 
         if (has_changed)
             Cameras::set_effects_settings(camera_ID, effects_settings);
+
+        ImGui::TreePop();
     }
+
+    ImGui::Separator();
 
     if (m_renderer != nullptr) {
         if (ImGui::TreeNode("DirectX11")) {
