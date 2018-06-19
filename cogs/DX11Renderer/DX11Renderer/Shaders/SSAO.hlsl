@@ -113,16 +113,12 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     float occlusion = 0.0f;
     for (int i = 0; i < sample_count; ++i) {
         float2 rng_samples = RNG::sample02(i + rng_offset);
-        float2 uv_offset = uniform_disk_sampling(rng_samples);
-        float2 sample_uv = input.texcoord + uv_offset * ss_radius;
-        float2 clamped_sample_uv = saturate(sample_uv);
+        float2 uv_offset = uniform_disk_sampling(rng_samples) * ss_radius;
+        float2 sample_uv = input.texcoord + uv_offset;
 
-        float depth_i = depth_tex.SampleLevel(point_sampler, clamped_sample_uv, 0).r;
-        float3 view_position_i = position_from_depth(depth_i, clamped_sample_uv);
+        float depth_i = depth_tex.SampleLevel(point_sampler, sample_uv, 0).r;
+        float3 view_position_i = position_from_depth(depth_i, sample_uv);
         float3 v_i = view_position_i - view_position;
-        // Scale v_i to reflect a potential sample taken at the unclamped uv.
-        // This reduces artefacts around borders by 'unbiasing' the sample distribution.
-        v_i *= length(sample_uv) / length(clamped_sample_uv);
 
         // Equation 10
         occlusion += max(0, dot(v_i, view_normal) - depth * bias) / (dot(v_i, v_i) + 0.0001f);
