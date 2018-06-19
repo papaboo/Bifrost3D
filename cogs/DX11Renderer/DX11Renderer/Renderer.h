@@ -31,6 +31,17 @@ namespace DX11Renderer {
 //----------------------------------------------------------------------------
 class Renderer final : public IRenderer {
 public:
+
+    struct Settings {
+        bool ssao_enabled;
+
+        static Settings default() {
+            Settings settings;
+            settings.ssao_enabled = true;
+            return settings;
+        }
+    };
+
     static IRenderer* initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path);
     ~Renderer();
 
@@ -39,6 +50,9 @@ public:
     void handle_updates();
 
     void render(ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Cameras::UID camera_ID, int width, int height);
+
+    Settings get_settings() const;
+    void set_settings(Settings& settings);
 
 private:
 

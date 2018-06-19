@@ -44,6 +44,8 @@ private:
     ID3D11Device1& m_device;
     ODeviceContext1 m_render_context;
 
+    Settings m_settings;
+
     // Cogwheel resources
     vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
 
@@ -121,7 +123,7 @@ private:
 
 public:
     Implementation(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path)
-        : m_device(device), m_shader_folder_path(data_folder_path + L"DX11Renderer\\Shaders\\"){
+        : m_device(device), m_settings(Settings::default()), m_shader_folder_path(data_folder_path + L"DX11Renderer\\Shaders\\") {
 
         device.GetImmediateContext1(&m_render_context);
 
@@ -433,7 +435,11 @@ public:
         { // Pre-render effects on G-buffer.
             auto ssao_marker = PerformanceMarker(*m_render_context, L"SSAO");
 
-            ssao_SRV = m_ssao.apply(m_render_context, m_g_buffer.normal_SRV, m_g_buffer.depth_SRV, m_g_buffer.width, m_g_buffer.height).get();
+            if (m_settings.ssao_enabled)
+                ssao_SRV = m_ssao.apply(m_render_context, m_g_buffer.normal_SRV, m_g_buffer.depth_SRV, m_g_buffer.width, m_g_buffer.height).get();
+            else
+                // A really inefficient way to disable ssao. The application is still part of the material shaders.
+                ssao_SRV = m_ssao.apply_none(m_render_context, m_g_buffer.width, m_g_buffer.height).get();
         }
 
         m_render_context->OMSetRenderTargets(1, &backbuffer_RTV, m_g_buffer.depth_view);
@@ -745,6 +751,9 @@ public:
             }
         }
     }
+
+    Renderer::Settings get_settings() const { return m_settings; }
+    void set_settings(Settings& settings) { m_settings = settings; }
 };
 
 //----------------------------------------------------------------------------
@@ -771,5 +780,8 @@ void Renderer::handle_updates() {
 void Renderer::render(ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
     m_impl->render(backbuffer_RTV, camera_ID, width, height);
 }
+
+Renderer::Settings Renderer::get_settings() const { return m_impl->get_settings(); }
+void Renderer::set_settings(Settings& settings) { m_impl->set_settings(settings); }
 
 } // NS DX11Renderer
