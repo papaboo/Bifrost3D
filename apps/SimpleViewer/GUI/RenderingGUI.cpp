@@ -56,6 +56,20 @@ void RenderingGUI::layout_frame() {
             Cameras::set_effects_settings(camera_ID, effects_settings);
     }
 
+    if (m_renderer != nullptr) {
+        if (ImGui::TreeNode("DirectX11")) {
+            auto settings = m_renderer->get_settings();
+            bool has_changed = false;
+
+            has_changed |= ImGui::Checkbox("SSAO", &settings.ssao_enabled);
+
+            if (has_changed)
+                m_renderer->set_settings(settings);
+
+            ImGui::TreePop();
+        }
+    }
+
     ImGui::End();
 }
 

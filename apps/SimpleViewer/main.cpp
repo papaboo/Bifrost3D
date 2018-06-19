@@ -56,6 +56,8 @@ static std::string g_environment;
 static RGB g_environment_color = RGB(0.68f, 0.92f, 1.0f);
 static float g_scene_size;
 static DX11Renderer::Compositor* compositor = nullptr;
+static DX11Renderer::Renderer* dx11_renderer = nullptr;
+
 #ifdef OPTIX_FOUND
 bool optix_enabled = true;
 bool rasterizer_enabled = true;
@@ -625,7 +627,7 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
     };
 
     if (rasterizer_enabled)
-        compositor->add_renderer(Renderer::initialize);
+        dx11_renderer = (Renderer*)compositor->add_renderer(Renderer::initialize).get();
 
     if (optix_enabled) {
         auto* optix_adaptor = (DX11OptiXAdaptor::Adaptor*)compositor->add_renderer(DX11OptiXAdaptor::Adaptor::initialize).get();
@@ -641,7 +643,7 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
 
     { // Setup GUI
         auto* imgui = new ImGui::ImGuiAdaptor();
-        imgui->add_frame([]() -> ImGui::IImGuiFrame* { return new GUI::RenderingGUI(compositor, nullptr); });
+        imgui->add_frame([]() -> ImGui::IImGuiFrame* { return new GUI::RenderingGUI(compositor, dx11_renderer); });
 
         auto imgui_callback = [](Engine& engine, void* imgui) {
             auto* keyboard = engine.get_keyboard();
