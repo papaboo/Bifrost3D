@@ -65,5 +65,21 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
     return m_SSAO_SRV;
 }
 
+OShaderResourceView& AlchemyAO::apply_none(ID3D11DeviceContext1& context, int width, int height) {
+    if (m_width != width || m_height != height) {
+        // Resize backbuffer
+        ODevice1 device = get_device1(context);
+        create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_SSAO_SRV, nullptr, &m_SSAO_RTV);
+
+        m_width = width;
+        m_height = height;
+    }
+
+    float cleared_ssao[4] = { 1, 0, 0, 0 };
+    context.ClearView(m_SSAO_RTV, cleared_ssao, nullptr, 0);
+
+    return m_SSAO_SRV;
+}
+
 } // NS SSAO
 } // NS DX11Renderer

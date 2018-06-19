@@ -30,6 +30,8 @@ public:
 
     OShaderResourceView& apply(ID3D11DeviceContext1& context, OShaderResourceView& normals, OShaderResourceView& depth, int width, int height);
 
+    OShaderResourceView& apply_none(ID3D11DeviceContext1& context, int width, int height);
+
 private:
     OVertexShader m_vertex_shader;
     OPixelShader m_pixel_shader;
