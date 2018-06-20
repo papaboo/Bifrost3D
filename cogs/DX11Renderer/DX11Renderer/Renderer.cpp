@@ -136,12 +136,30 @@ public:
             m_environments = new EnvironmentManager(m_device, m_shader_folder_path, m_textures);
 
             m_materials = MaterialManager(m_device, *m_render_context);
-            m_render_context->PSSetShaderResources(14, 1, m_materials.get_GGX_SPTD_fit_srv_addr());
-            m_render_context->PSSetShaderResources(15, 1, m_materials.get_GGX_with_fresnel_rho_srv_addr());
-            m_render_context->PSSetSamplers(15, 1, m_materials.get_precomputation2D_sampler_addr());
-
             m_textures = TextureManager(m_device);
             m_transforms = TransformManager(m_device, *m_render_context);
+
+            // Setup static state.
+            m_render_context->PSSetShaderResources(14, 1, m_materials.get_GGX_SPTD_fit_srv_addr());
+            m_render_context->PSSetShaderResources(15, 1, m_materials.get_GGX_with_fresnel_rho_srv_addr());
+
+            D3D11_SAMPLER_DESC sampler_desc = {};
+            sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+            sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+            sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+            sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+            sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+            sampler_desc.MinLOD = 0;
+            sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
+            OSamplerState point_sampler;
+            THROW_ON_FAILURE(device.CreateSamplerState(&sampler_desc, &point_sampler));
+
+            sampler_desc.Filter = D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
+            OSamplerState linear_sampler;
+            THROW_ON_FAILURE(device.CreateSamplerState(&sampler_desc, &linear_sampler));
+
+            ID3D11SamplerState* samplers[2] = { point_sampler, linear_sampler };
+            m_render_context->PSSetSamplers(14, 2, samplers);
         }
 
         { // Setup g-buffer

@@ -70,20 +70,6 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         m_GGX_SPTD_fit_srv = nullptr;
     #endif
 
-    { // 2D precomputation sampler.
-        D3D11_SAMPLER_DESC desc = {};
-        desc.Filter = D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
-        desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-        desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-        desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-        desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-        desc.MinLOD = 0;
-        desc.MaxLOD = D3D11_FLOAT32_MAX;
-
-        HRESULT hr = device.CreateSamplerState(&desc, &m_precomputation2D_sampler);
-        THROW_ON_FAILURE(hr);
-    }
-
     m_materials.resize(1);
     m_material_textures.resize(1);
     m_constant_array = ConstantBufferArray<Dx11Material>();

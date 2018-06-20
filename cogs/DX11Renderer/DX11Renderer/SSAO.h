@@ -36,8 +36,6 @@ private:
     OVertexShader m_vertex_shader;
     OPixelShader m_pixel_shader;
 
-    OSamplerState m_point_sampler;
-
     int m_width, m_height;
     ORenderTargetView m_SSAO_RTV;
     OShaderResourceView m_SSAO_SRV;

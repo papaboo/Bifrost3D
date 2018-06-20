@@ -24,17 +24,6 @@ AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_pa
 
     OBlob pixel_shader_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "ps_5_0", "alchemy_ps");
     THROW_ON_FAILURE(device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_pixel_shader));
-
-    D3D11_SAMPLER_DESC sampler_desc = {};
-    sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-    sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-    sampler_desc.MinLOD = 0;
-    sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
-
-    THROW_ON_FAILURE(device.CreateSamplerState(&sampler_desc, &m_point_sampler));
 }
 
 OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderResourceView& normals, OShaderResourceView& depth, int width, int height) {
@@ -51,7 +40,6 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
     context.OMSetRenderTargets(1, &m_SSAO_RTV, nullptr);
     ID3D11ShaderResourceView* SRVs[2] = { normals, depth };
     context.PSSetShaderResources(0, 2, SRVs);
-    context.PSSetSamplers(14, 1, &m_point_sampler);
 
     // Compute SSAO.
     context.VSSetShader(m_vertex_shader, 0, 0);
