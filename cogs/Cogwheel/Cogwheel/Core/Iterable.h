@@ -30,10 +30,10 @@ public:
     Iterable(Iterator begin, size_t element_count)
         : m_begin(begin), m_end(begin + element_count) {}
 
-    Iterator begin() { return m_begin; }
-    Iterator end() { return m_end; }
+    Iterator begin() const { return m_begin; }
+    Iterator end() const { return m_end; }
 
-    bool is_empty() { return m_begin == m_end; }
+    bool is_empty() const { return m_begin == m_end; }
 
 private:
     Iterator m_begin;
