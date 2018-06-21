@@ -44,10 +44,12 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
         const int tile_count_pr_side = 41;
         const int vertices_pr_side = tile_count_pr_side + 1;
 
+        auto is_odd = [](int i) -> bool { return (i % 2) == 1; };
+
         { // White tiles.
             Transform transform = Transform(Vector3f(0.0f, -1.0f, 0.0f));
             SceneNode node = SceneNodes::create("White tiles", transform);
-            int white_tile_count = tile_count_pr_side * tile_count_pr_side * 3;
+            int white_tile_count = tile_count_pr_side * tile_count_pr_side + is_odd(tile_count_pr_side);
             int vertex_count = (tile_count_pr_side + 1) * (tile_count_pr_side + 1);
             Meshes::UID tiles_mesh_ID = Meshes::create("White tiles", white_tile_count, vertex_count, MeshFlag::Position);
 
@@ -81,7 +83,7 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
         { // Black tiles.
             Transform transform = Transform(Vector3f(0.0f, -1.0f, 0.0f));
             SceneNode node = SceneNodes::create("Black tiles", transform);
-            int white_tile_count = tile_count_pr_side * tile_count_pr_side * 3;
+            int white_tile_count = tile_count_pr_side * tile_count_pr_side - is_odd(tile_count_pr_side);
             int vertex_count = (tile_count_pr_side + 1) * (tile_count_pr_side + 1);
             Meshes::UID tiles_mesh_ID = Meshes::create("Black tiles", white_tile_count, vertex_count, MeshFlag::Position);
 
