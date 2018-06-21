@@ -29,8 +29,6 @@ Texture2D ssao_tex : register(t13);
 Texture2D sptd_ggx_fit_tex : register(t14);
 #endif
 
-// SamplerState bilinear_sampler : register(s15);
-
 struct PixelInput {
     float4 position : SV_POSITION;
     float4 world_position : WORLD_POSITION;
@@ -95,9 +93,7 @@ float4 opaque(PixelInput input, bool is_front_face : SV_IsFrontFace) : SV_TARGET
     ssao_tex.GetDimensions(width, height);
 
     float2 uv = (input.position.xy) / float2(width, height); // TODO Upload inverse viewport size.
-    float ambient_visibility = ssao_tex.SampleLevel(precomputation2D_sampler, uv, 0).r;
-    // float3 ssao = ssao_tex.SampleLevel(bilinear_sampler, uv, 0).rgb;
-    // return float4(ssao, 1);
+    float ambient_visibility = ssao_tex.SampleLevel(bilinear_sampler, uv, 0).r;
 
     return float4(integration(input, is_front_face, ambient_visibility), 1.0f);
 }

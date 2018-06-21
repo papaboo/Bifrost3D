@@ -43,8 +43,6 @@ Varyings main_vs(uint vertex_ID : SV_VertexID) {
 
 Texture2D normal_tex : register(t0);
 Texture2D depth_tex : register(t1);
-SamplerState point_sampler : register(s14);
-SamplerState bilinear_sampler : register(s15); // Always bound since it's generally useful to have a bilinear sampler
 
 // Transform depth to view-space position.
 // https://mynameismjp.wordpress.com/2009/03/10/reconstructing-position-from-depth/
@@ -122,7 +120,6 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
 
         // Equation 10
         occlusion += max(0, dot(v_i, view_normal) - depth * bias) / (dot(v_i, v_i) + 0.0001f);
-        // TODO Fade out based on length(uv_offset)??
     }
 
     float a = 1 - (2 * intensity_scale / sample_count) * occlusion;
