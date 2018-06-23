@@ -14,6 +14,36 @@
 namespace DX11Renderer {
 namespace SSAO {
 
+class BilateralBlur {
+public:
+    static const int max_passes = 3;
+
+    BilateralBlur() = default;
+    BilateralBlur(BilateralBlur&& other) = default;
+    BilateralBlur(BilateralBlur& other) = delete;
+    BilateralBlur(ID3D11Device1& device, const std::wstring& shader_folder_path);
+
+    BilateralBlur& operator=(BilateralBlur&& rhs) = default;
+    BilateralBlur& operator=(BilateralBlur& rhs) = delete;
+
+    OShaderResourceView& apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, int width, int height);
+
+private:
+    OVertexShader m_vertex_shader;
+    OPixelShader m_filter_shader;
+
+    struct Constants {
+        float pixel_offset;
+        float std_dev;
+        float2 _padding;
+    };
+    OBuffer m_constants[max_passes];
+
+    int m_width, m_height;
+    ORenderTargetView m_intermediate_RTV;
+    OShaderResourceView m_intermediate_SRV;
+};
+
 // ------------------------------------------------------------------------------------------------
 // The Alchemy screen-space ambient obscurance algorithm.
 // http://casual-effects.com/research/McGuire2011AlchemyAO/index.html
@@ -39,6 +69,8 @@ private:
     int m_width, m_height;
     ORenderTargetView m_SSAO_RTV;
     OShaderResourceView m_SSAO_SRV;
+
+    BilateralBlur m_filter;
 };
 
 } // NS SSAO

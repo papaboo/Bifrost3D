@@ -38,6 +38,44 @@ Varyings main_vs(uint vertex_ID : SV_VertexID) {
 }
 
 // ------------------------------------------------------------------------------------------------
+// Bilateral box blur.
+// ------------------------------------------------------------------------------------------------
+
+namespace BilateralBoxBlur {
+
+Texture2D ao_tex : register(t2);
+
+cbuffer constants : register(b1) {
+    float pixel_offset;
+    float std_dev;
+};
+
+float4 filter_ps(Varyings input) : SV_TARGET {
+    float width, height;
+    ao_tex.GetDimensions(width, height);
+
+    float2 uv_offset = pixel_offset * rcp(float2(width, height));
+    float2 uv = input.texcoord;
+    
+    float top_sample = ao_tex.SampleLevel(point_sampler, uv + float2(0, uv_offset.y), 0).r;
+    float left_sample = ao_tex.SampleLevel(point_sampler, uv - float2(uv_offset.x, 0), 0).r;
+    float center_sample = ao_tex.SampleLevel(point_sampler, input.texcoord, 0).r;
+    float right_sample = ao_tex.SampleLevel(point_sampler, uv + float2(uv_offset.x, 0), 0).r;
+    float bottom_sample = ao_tex.SampleLevel(point_sampler, uv - float2(0, uv_offset.y), 0).r;
+
+    float top_right_sample = ao_tex.SampleLevel(point_sampler, uv + uv_offset, 0).r;
+    float bottom_left_sample = ao_tex.SampleLevel(point_sampler, uv - uv_offset, 0).r;
+    float top_left_sample = ao_tex.SampleLevel(point_sampler, uv + float2(uv_offset.x, -uv_offset.y), 0).r;
+    float bottom_right_sample = ao_tex.SampleLevel(point_sampler, uv + float2(-uv_offset.x, uv_offset.y), 0).r;
+
+    float summed_ao = (center_sample + top_sample + left_sample + right_sample + bottom_sample +
+                       0.75 * (top_right_sample + bottom_left_sample + top_left_sample + bottom_right_sample)) / 8;
+    return float4(summed_ao, 0, 0, 0);
+}
+
+} // NS BilateralBoxBlur
+
+  // ------------------------------------------------------------------------------------------------
 // Alchemy pixel shader.
 // ------------------------------------------------------------------------------------------------
 
@@ -87,7 +125,7 @@ float2 uniform_disk_sampling(float2 sample_uv) {
 
 float4 alchemy_ps(Varyings input) : SV_TARGET {
     // State. Should be in a constant buffer.
-    const int sample_count = 16;
+    const int sample_count = 8;
     const float world_radius = 0.5f;
     const float intensity_scale = 0.25;
     const float bias = 0.001f;
@@ -125,5 +163,5 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     float a = 1 - (2 * intensity_scale / sample_count) * occlusion;
     a = pow(max(0.0, a), k);
 
-    return float4(a, 1- a, 0, 0);
+    return float4(a, 0, 0, 0);
 }
