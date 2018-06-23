@@ -73,6 +73,7 @@ unsigned int ceil_divide(unsigned int a, unsigned int b) { return (a / b) + ((a 
 float heaviside(float v) { return v >= 0.0f ? 1.0f : 0.0f; }
 
 float non_zero_sign(float v) { return v >= 0.0f ? +1.0f : -1.0f; }
+float2 non_zero_sign(float2 v) { return float2(non_zero_sign(v.x), non_zero_sign(v.y)); }
 
 float pow2(float x) { return x * x; }
 
