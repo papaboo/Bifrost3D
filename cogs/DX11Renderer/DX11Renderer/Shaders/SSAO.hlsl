@@ -43,34 +43,44 @@ Varyings main_vs(uint vertex_ID : SV_VertexID) {
 
 namespace BilateralBoxBlur {
 
+Texture2D normal_tex : register(t0);
+Texture2D depth_tex : register(t1);
 Texture2D ao_tex : register(t2);
 
 cbuffer constants : register(b1) {
     float pixel_offset;
-    float std_dev;
+    float uv_std_dev;
+    float normal_std_dev;
+    float depth_std_dev;
 };
+
+void sample_ao(float2 uv, inout float summed_ao, inout float ao_weight) {
+    summed_ao += ao_tex.SampleLevel(point_sampler, uv, 0).r;
+    ao_weight += 1.0f;
+}
 
 float4 filter_ps(Varyings input) : SV_TARGET {
     float width, height;
     ao_tex.GetDimensions(width, height);
 
-    float2 uv_offset = pixel_offset * rcp(float2(width, height));
     float2 uv = input.texcoord;
-    
-    float top_sample = ao_tex.SampleLevel(point_sampler, uv + float2(0, uv_offset.y), 0).r;
-    float left_sample = ao_tex.SampleLevel(point_sampler, uv - float2(uv_offset.x, 0), 0).r;
-    float center_sample = ao_tex.SampleLevel(point_sampler, input.texcoord, 0).r;
-    float right_sample = ao_tex.SampleLevel(point_sampler, uv + float2(uv_offset.x, 0), 0).r;
-    float bottom_sample = ao_tex.SampleLevel(point_sampler, uv - float2(0, uv_offset.y), 0).r;
+    float2 uv_offset = pixel_offset * rcp(float2(width, height));
 
-    float top_right_sample = ao_tex.SampleLevel(point_sampler, uv + uv_offset, 0).r;
-    float bottom_left_sample = ao_tex.SampleLevel(point_sampler, uv - uv_offset, 0).r;
-    float top_left_sample = ao_tex.SampleLevel(point_sampler, uv + float2(uv_offset.x, -uv_offset.y), 0).r;
-    float bottom_right_sample = ao_tex.SampleLevel(point_sampler, uv + float2(-uv_offset.x, uv_offset.y), 0).r;
+    float summed_ao = 0.0f;
+    float ao_weight = 0.0f;
 
-    float summed_ao = (center_sample + top_sample + left_sample + right_sample + bottom_sample +
-                       0.75 * (top_right_sample + bottom_left_sample + top_left_sample + bottom_right_sample)) / 8;
-    return float4(summed_ao, 0, 0, 0);
+    sample_ao(uv + float2(0, uv_offset.y), summed_ao, ao_weight);
+    sample_ao(uv - float2(uv_offset.x, 0), summed_ao, ao_weight);
+    sample_ao(uv, summed_ao, ao_weight);
+    sample_ao(uv + float2(uv_offset.x, 0), summed_ao, ao_weight);
+    sample_ao(uv - float2(0, uv_offset.y), summed_ao, ao_weight);
+
+    sample_ao(uv + uv_offset, summed_ao, ao_weight);
+    sample_ao(uv - uv_offset, summed_ao, ao_weight);
+    sample_ao(uv + float2(uv_offset.x, -uv_offset.y), summed_ao, ao_weight);
+    sample_ao(uv + float2(-uv_offset.x, uv_offset.y), summed_ao, ao_weight);;
+
+    return float4(summed_ao / ao_weight, 0, 0, 0);
 }
 
 } // NS BilateralBoxBlur
