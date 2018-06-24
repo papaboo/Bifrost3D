@@ -64,13 +64,33 @@ void RenderingGUI::layout_frame() {
 
     if (m_renderer != nullptr) {
         if (ImGui::TreeNode("DirectX11")) {
-            auto settings = m_renderer->get_settings();
-            bool has_changed = false;
+            using namespace DX11Renderer;
 
-            has_changed |= ImGui::Checkbox("SSAO", &settings.ssao_enabled);
+            { // Settings
+                auto settings = m_renderer->get_settings();
+                bool has_changed = false;
 
-            if (has_changed)
-                m_renderer->set_settings(settings);
+                has_changed |= ImGui::Checkbox("SSAO", &settings.ssao_enabled);
+
+                if (has_changed)
+                    m_renderer->set_settings(settings);
+            }
+
+            // Debug settings
+            if (ImGui::TreeNode("Debug")) {
+                auto settings = m_renderer->get_debug_settings();
+                bool has_changed = false;
+
+                const char* display_modes[] = { "Color", "Normals", "Depth", "Ambient occlusion" };
+                int current_display_mode = (int)settings.display_mode;
+                has_changed |= ImGui::Combo("Tonemapper", &current_display_mode, display_modes, IM_ARRAYSIZE(display_modes));
+                settings.display_mode = (Renderer::DebugSettings::DisplayMode)current_display_mode;
+
+                if (has_changed)
+                    m_renderer->set_debug_settings(settings);
+
+                ImGui::TreePop();
+            }
 
             ImGui::TreePop();
         }
