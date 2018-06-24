@@ -36,6 +36,7 @@ if (DIRECTX_11_FOUND AND WIN32)
   )
 
   set(SHADERS_SRC
+    DX11Renderer/Shaders/Debug.hlsl
     DX11Renderer/Shaders/DefaultShading.hlsl
     DX11Renderer/Shaders/EnvironmentMap.hlsl
     DX11Renderer/Shaders/FragmentShader.hlsl

@@ -45,6 +45,7 @@ private:
     ODeviceContext1 m_render_context;
 
     Settings m_settings;
+    DebugSettings m_debug_settings;
 
     // Cogwheel resources
     vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
@@ -118,6 +119,11 @@ private:
         OVertexShader vertex_shader;
         OPixelShader pixel_shader;
     } m_lights;
+
+    struct {
+        OVertexShader display_vertex_shader;
+        OPixelShader display_debug_pixel_shader;
+    } m_debug;
 
     std::wstring m_shader_folder_path;
 
@@ -284,6 +290,13 @@ public:
             OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "ps_5_0", "ps");
             hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_lights.pixel_shader);
             THROW_ON_FAILURE(hr);
+        }
+
+        { // Debug
+            OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"Debug.hlsl", "vs_5_0", "main_vs");
+            THROW_ON_FAILURE(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_debug.display_vertex_shader));
+            OBlob display_debug_blob = compile_shader(m_shader_folder_path + L"Debug.hlsl", "ps_5_0", "display_debug_ps");
+            THROW_ON_FAILURE(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(display_debug_blob), nullptr, &m_debug.display_debug_pixel_shader));
         }
     }
 
@@ -462,6 +475,29 @@ public:
 
         m_render_context->OMSetRenderTargets(1, &backbuffer_RTV, m_g_buffer.depth_view);
         m_render_context->PSSetShaderResources(13, 1, &ssao_SRV);
+
+        // Debug display g-buffer or AO
+        if (m_debug_settings.display_mode == DebugSettings::DisplayMode::Depth ||
+            m_debug_settings.display_mode == DebugSettings::DisplayMode::Normals ||
+            m_debug_settings.display_mode == DebugSettings::DisplayMode::AO) {
+
+            ID3D11ShaderResourceView* srvs[3] = { m_g_buffer.normal_SRV, m_g_buffer.depth_SRV, ssao_SRV };
+            m_render_context->PSSetShaderResources(0, 3, srvs);
+
+            int4 display_constants = { int(m_debug_settings.display_mode), 0, 0, 0 };
+            OBuffer display_constant_buffer;
+            create_constant_buffer(m_device, display_constants, &display_constant_buffer);
+
+            m_render_context->PSSetConstantBuffers(1, 1, &display_constant_buffer);
+            m_render_context->VSSetShader(m_debug.display_vertex_shader, 0, 0);
+            m_render_context->PSSetShader(m_debug.display_debug_pixel_shader, 0, 0);
+            m_render_context->Draw(3, 0);
+
+            display_constant_buffer.release();
+            m_render_context->PSSetConstantBuffers(1, 1, &display_constant_buffer);
+
+            return;
+        }
 
         { // Render lights.
             auto lights_marker = PerformanceMarker(*m_render_context, L"Lights");
@@ -772,6 +808,9 @@ public:
 
     Renderer::Settings get_settings() const { return m_settings; }
     void set_settings(Settings& settings) { m_settings = settings; }
+
+    Renderer::DebugSettings get_debug_settings() const { return m_debug_settings; }
+    void set_debug_settings(DebugSettings& settings) { m_debug_settings = settings; }
 };
 
 //----------------------------------------------------------------------------
@@ -801,5 +840,8 @@ void Renderer::render(ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Camera
 
 Renderer::Settings Renderer::get_settings() const { return m_impl->get_settings(); }
 void Renderer::set_settings(Settings& settings) { m_impl->set_settings(settings); }
+
+Renderer::DebugSettings Renderer::get_debug_settings() const { return m_impl->get_debug_settings(); }
+void Renderer::set_debug_settings(DebugSettings& settings) { m_impl->set_debug_settings(settings); }
 
 } // NS DX11Renderer

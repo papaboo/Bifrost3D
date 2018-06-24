@@ -42,6 +42,11 @@ public:
         }
     };
 
+    struct DebugSettings {
+        enum DisplayMode { Color, Normals, Depth, AO };
+        DisplayMode display_mode = DisplayMode::Color;
+    };
+
     static IRenderer* initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path);
     ~Renderer();
 
@@ -53,6 +58,9 @@ public:
 
     Settings get_settings() const;
     void set_settings(Settings& settings);
+
+    DebugSettings get_debug_settings() const;
+    void set_debug_settings(DebugSettings& settings);
 
 private:
 
