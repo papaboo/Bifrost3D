@@ -17,6 +17,8 @@ float van_der_corput(uint n, uint scramble) {
 }
 
 float sobol2(uint n, uint scramble) {
+#pragma warning (disable: 3557) // False positive warning that loop in sobol2 doesn't seem to do anything.
+
     for (uint v = 1u << 31u; n != 0; n >>= 1u, v ^= v >> 1u)
         if (n & 0x1)
             scramble ^= v;

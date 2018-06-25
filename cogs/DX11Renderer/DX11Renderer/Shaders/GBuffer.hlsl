@@ -29,7 +29,7 @@ Varyings main_VS(float4 geometry : GEOMETRY) {
     Varyings varyings;
     float3 world_position = mul(float4(geometry.xyz, 1.0f), to_world_matrix).xyz;
     varyings.position = mul(float4(world_position, 1.0f), scene_vars.view_projection_matrix);
-    float3 world_normal = mul(decode_octahedral_normal(asint(geometry.w)), to_world_matrix).xyz;
+    float3 world_normal = mul(float4(decode_octahedral_normal(asint(geometry.w)), 0.0), to_world_matrix);
     varyings.normal_depth.xyz = mul(float4(world_normal, 0), scene_vars.world_to_view_matrix);
     varyings.normal_depth.w = length(varyings.position);
     return varyings;

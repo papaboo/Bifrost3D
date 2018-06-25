@@ -8,6 +8,8 @@
 
 #include "Utils.hlsl"
 
+#pragma warning (disable: 3557) // Disable warning about single iteration loop being force unrolled.
+
 namespace CameraEffects {
 
 static const uint HISTOGRAM_SIZE = 64u;
@@ -47,16 +49,6 @@ void reduce(uint3 local_thread_ID : SV_GroupThreadID, uint3 group_ID : SV_GroupI
         }
     }
     GroupMemoryBarrierWithGroupSync();
-
-    /*
-    // General purpose shared memory histogram reduction.
-    uint shared_histogram_bin = linear_local_thread_ID;
-    for (uint histogram_ID = 1; histogram_ID < GROUP_THREAD_COUNT; ++histogram_ID) {
-        if (shared_histogram_bin < HISTOGRAM_SIZE)
-            shared_histograms[shared_histogram_bin] += shared_histograms[histogram_ID * HISTOGRAM_SIZE + shared_histogram_bin];
-    }
-    GroupMemoryBarrierWithGroupSync();
-    */
 
     // Reduce the histogram in shared memory by first having all threads reduce a single bin and then having the first HISTOGRAM_SIZE threads do the final reduction.
     // Only works if the thread count modulo histogram size is zero.

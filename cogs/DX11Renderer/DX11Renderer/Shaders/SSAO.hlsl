@@ -55,6 +55,7 @@ cbuffer constants : register(b1) {
 };
 
 void sample_ao(float2 uv, inout float summed_ao, inout float ao_weight) {
+    // float depth_weight = exp(-(i * i) / (2 * depth_std_dev * depth_std_dev);
     summed_ao += ao_tex.SampleLevel(point_sampler, uv, 0).r;
     ao_weight += 1.0f;
 }

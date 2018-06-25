@@ -31,8 +31,8 @@ Texture2D sptd_ggx_fit_tex : register(t14);
 
 struct PixelInput {
     float4 position : SV_POSITION;
-    float4 world_position : WORLD_POSITION;
-    float4 normal : NORMAL;
+    float3 world_position : WORLD_POSITION;
+    float3 normal : NORMAL;
     float2 texcoord : TEXCOORD;
 };
 

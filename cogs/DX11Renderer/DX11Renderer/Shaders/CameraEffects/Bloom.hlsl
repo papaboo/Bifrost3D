@@ -8,6 +8,8 @@
 
 #include "Utils.hlsl"
 
+#pragma warning (disable: 3556) // Disable warning about dividing by integers is slow. It's a constant!!
+
 namespace CameraEffects {
 
 Texture2D image : register(t0);
