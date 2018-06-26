@@ -93,6 +93,8 @@ public:
             state.is_consumed = true;
     }
 
+    inline void consume_scroll_delta() { m_scroll_delta = 0.0f; }
+
     inline void per_frame_reset() {
         m_delta = Math::Vector2i::zero();
 
