@@ -34,8 +34,7 @@ private:
 
     struct Constants {
         float pixel_offset;
-        float std_dev;
-        float2 _padding;
+        float3 _padding;
     };
     OBuffer m_constants[max_passes];
 
@@ -58,11 +57,12 @@ public:
     AlchemyAO& operator=(AlchemyAO&& rhs) = default;
     AlchemyAO& operator=(AlchemyAO& rhs) = delete;
 
-    OShaderResourceView& apply(ID3D11DeviceContext1& context, OShaderResourceView& normals, OShaderResourceView& depth, int width, int height);
+    OShaderResourceView& apply(ID3D11DeviceContext1& context, OShaderResourceView& normals, OShaderResourceView& depth, int width, int height, SsaoSettings settings);
 
     OShaderResourceView& apply_none(ID3D11DeviceContext1& context, int width, int height);
 
 private:
+    OBuffer m_constants;
     OVertexShader m_vertex_shader;
     OPixelShader m_pixel_shader;
 

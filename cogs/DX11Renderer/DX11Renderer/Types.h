@@ -106,6 +106,13 @@ struct AABB {
     float3 min, max;
 };
 
+struct SsaoSettings {
+    float world_radius = 0.5f;
+    float normal_std_dev = 0.03f;
+    float depth_std_dev = 0.5f;
+    float _padding;
+};
+
 //-------------------------------------------------------------------------------------------------
 // Format conversion.
 // See https://github.com/apitrace/dxsdk/blob/master/Include/d3dx_dxgiformatconvert.inl

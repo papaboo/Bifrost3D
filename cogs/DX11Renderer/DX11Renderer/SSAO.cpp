@@ -25,7 +25,7 @@ BilateralBlur::BilateralBlur(ID3D11Device1& device, const std::wstring& shader_f
     THROW_ON_FAILURE(device.CreatePixelShader(UNPACK_BLOB_ARGS(filter_blob), nullptr, &m_filter_shader));
 
     for (int i = 0; i < max_passes; ++i) {
-        Constants constants = { i * 2 + 1.0f, 1.0 };
+        Constants constants = { i * 2 + 1.0f };
         create_constant_buffer(device, constants, &m_constants[i]);
     }
 }
@@ -40,17 +40,25 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
         m_height = height;
     }
 
+    // Need to grab the normal and depth buffers before OMSetRenderTarget clears them.
+    ID3D11ShaderResourceView* srvs[2];
+    context.PSGetShaderResources(0, 2, srvs);
+
     context.VSSetShader(m_vertex_shader, 0, 0);
     context.PSSetShader(m_filter_shader, 0, 0);
     int i;
     for (i = 0; i < max_passes; ++i) {
         auto& rtv = (i % 2) == 0 ? m_intermediate_RTV : ao_RTV;
         context.OMSetRenderTargets(1, &rtv, nullptr);
+        context.PSSetShaderResources(0, 2, srvs);
         auto& srv = (i % 2) == 0 ? ao_SRV : m_intermediate_SRV;
         context.PSSetShaderResources(2, 1, &srv);
-        context.PSSetConstantBuffers(1, 1, &m_constants[max_passes - i - 1]);
+        context.PSSetConstantBuffers(2, 1, &m_constants[max_passes - i - 1]);
         context.Draw(3, 0);
     }
+
+    srvs[0]->Release();
+    srvs[1]->Release();
 
     return (i % 2) == 0 ? ao_SRV : m_intermediate_SRV;
 }
@@ -62,6 +70,8 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
 AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_path) 
     : m_width(0), m_height(0), m_SSAO_RTV(nullptr), m_SSAO_SRV(nullptr) {
 
+    create_constant_buffer(device, sizeof(SsaoSettings), &m_constants);
+
     OBlob vertex_shader_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "vs_5_0", "main_vs");
     THROW_ON_FAILURE(device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shader));
 
@@ -71,7 +81,7 @@ AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_pa
     m_filter = BilateralBlur(device, shader_folder_path);
 }
 
-OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderResourceView& normals, OShaderResourceView& depth, int width, int height) {
+OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderResourceView& normals, OShaderResourceView& depth, int width, int height, SsaoSettings settings) {
     if (m_width != width || m_height != height) {
         // Resize backbuffer
         ODevice1 device = get_device1(context);
@@ -80,6 +90,9 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
         m_width = width;
         m_height = height;
     }
+
+    context.UpdateSubresource(m_constants, 0, nullptr, &settings, 0u, 0u);
+    context.PSSetConstantBuffers(1, 1, &m_constants);
 
     // Setup state.
     context.OMSetRenderTargets(1, &m_SSAO_RTV, nullptr);

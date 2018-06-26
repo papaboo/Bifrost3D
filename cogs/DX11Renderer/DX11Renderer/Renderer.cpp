@@ -13,7 +13,6 @@
 #include <DX11Renderer/SSAO.h>
 #include <DX11Renderer/TextureManager.h>
 #include <DX11Renderer/TransformManager.h>
-#include <DX11Renderer/Types.h>
 #include <DX11Renderer/Utils.h>
 
 #include <Cogwheel/Assets/Mesh.h>
@@ -129,7 +128,7 @@ private:
 
 public:
     Implementation(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path)
-        : m_device(device), m_settings(Settings::default()), m_shader_folder_path(data_folder_path + L"DX11Renderer\\Shaders\\") {
+        : m_device(device), m_shader_folder_path(data_folder_path + L"DX11Renderer\\Shaders\\") {
 
         device.GetImmediateContext1(&m_render_context);
 
@@ -466,20 +465,19 @@ public:
         { // Pre-render effects on G-buffer.
             auto ssao_marker = PerformanceMarker(*m_render_context, L"SSAO");
 
-            if (m_settings.ssao_enabled)
-                ssao_SRV = m_ssao.apply(m_render_context, m_g_buffer.normal_SRV, m_g_buffer.depth_SRV, m_g_buffer.width, m_g_buffer.height).get();
+            if (m_settings.ssao.enabled)
+                ssao_SRV = m_ssao.apply(m_render_context, m_g_buffer.normal_SRV, m_g_buffer.depth_SRV, m_g_buffer.width, m_g_buffer.height, m_settings.ssao.settings).get();
             else
                 // A really inefficient way to disable ssao. The application is still part of the material shaders.
                 ssao_SRV = m_ssao.apply_none(m_render_context, m_g_buffer.width, m_g_buffer.height).get();
         }
 
-        m_render_context->OMSetRenderTargets(1, &backbuffer_RTV, m_g_buffer.depth_view);
-        m_render_context->PSSetShaderResources(13, 1, &ssao_SRV);
-
         // Debug display g-buffer or AO
         if (m_debug_settings.display_mode == DebugSettings::DisplayMode::Depth ||
             m_debug_settings.display_mode == DebugSettings::DisplayMode::Normals ||
             m_debug_settings.display_mode == DebugSettings::DisplayMode::AO) {
+
+            m_render_context->OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
 
             ID3D11ShaderResourceView* srvs[3] = { m_g_buffer.normal_SRV, m_g_buffer.depth_SRV, ssao_SRV };
             m_render_context->PSSetShaderResources(0, 3, srvs);
@@ -498,6 +496,9 @@ public:
 
             return;
         }
+
+        m_render_context->OMSetRenderTargets(1, &backbuffer_RTV, m_g_buffer.depth_view);
+        m_render_context->PSSetShaderResources(13, 1, &ssao_SRV);
 
         { // Render lights.
             auto lights_marker = PerformanceMarker(*m_render_context, L"Lights");

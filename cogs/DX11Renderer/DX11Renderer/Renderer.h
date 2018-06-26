@@ -10,6 +10,7 @@
 #define _DX11RENDERER_RENDERER_H_
 
 #include <Dx11Renderer/Compositor.h>
+#include <Dx11Renderer/Types.h>
 
 namespace DX11Renderer {
 
@@ -33,13 +34,10 @@ class Renderer final : public IRenderer {
 public:
 
     struct Settings {
-        bool ssao_enabled;
-
-        static Settings default() {
-            Settings settings;
-            settings.ssao_enabled = true;
-            return settings;
-        }
+        struct {
+            bool enabled = true;
+            SsaoSettings settings;
+        } ssao;
     };
 
     struct DebugSettings {

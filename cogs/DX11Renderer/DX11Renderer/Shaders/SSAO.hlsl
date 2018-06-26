@@ -17,6 +17,13 @@ cbuffer scene_variables : register(b0) {
     SceneVariables scene_vars;
 };
 
+cbuffer constants : register(b1) {
+    float world_radius;
+    float normal_std_dev;
+    float depth_std_dev;
+    float __padding;
+};
+
 // ------------------------------------------------------------------------------------------------
 // Vertex shader.
 // ------------------------------------------------------------------------------------------------
@@ -47,17 +54,21 @@ Texture2D normal_tex : register(t0);
 Texture2D depth_tex : register(t1);
 Texture2D ao_tex : register(t2);
 
-cbuffer constants : register(b1) {
+cbuffer per_filter_constants : register(b2) {
     float pixel_offset;
-    float uv_std_dev;
-    float normal_std_dev;
-    float depth_std_dev;
-};
+}
 
-void sample_ao(float2 uv, inout float summed_ao, inout float ao_weight) {
-    // float depth_weight = exp(-(i * i) / (2 * depth_std_dev * depth_std_dev);
-    summed_ao += ao_tex.SampleLevel(point_sampler, uv, 0).r;
-    ao_weight += 1.0f;
+void sample_ao(float2 uv, float depth, float3 normal, inout float summed_ao, inout float ao_weight) {
+    float sample_depth = depth_tex.SampleLevel(point_sampler, uv, 0).r;
+    float normalized_depth_delta = abs(depth - sample_depth) / depth;
+    float weight = exp(-pow2(normalized_depth_delta) / (2 * depth_std_dev * depth_std_dev));
+
+    float3 sample_normal = normal_tex.SampleLevel(point_sampler, uv, 0).xyz;
+    float cos_theta = dot(sample_normal, normal);
+    weight *= exp(-pow2(1.0f - cos_theta) / (2 * normal_std_dev * normal_std_dev));
+
+    summed_ao += weight * ao_tex.SampleLevel(point_sampler, uv, 0).r;
+    ao_weight += weight;
 }
 
 float4 filter_ps(Varyings input) : SV_TARGET {
@@ -65,21 +76,25 @@ float4 filter_ps(Varyings input) : SV_TARGET {
     ao_tex.GetDimensions(width, height);
 
     float2 uv = input.texcoord;
+    float3 view_normal = normal_tex.SampleLevel(point_sampler, uv, 0).xyz;
+    float depth = depth_tex.SampleLevel(point_sampler, uv, 0).r;
+
     float2 uv_offset = pixel_offset * rcp(float2(width, height));
 
     float summed_ao = 0.0f;
     float ao_weight = 0.0f;
 
-    sample_ao(uv + float2(0, uv_offset.y), summed_ao, ao_weight);
-    sample_ao(uv - float2(uv_offset.x, 0), summed_ao, ao_weight);
-    sample_ao(uv, summed_ao, ao_weight);
-    sample_ao(uv + float2(uv_offset.x, 0), summed_ao, ao_weight);
-    sample_ao(uv - float2(0, uv_offset.y), summed_ao, ao_weight);
+    // TODO Reorder for cache coherency
+    sample_ao(uv + float2(0, uv_offset.y), depth, view_normal, summed_ao, ao_weight);
+    sample_ao(uv - float2(uv_offset.x, 0), depth, view_normal, summed_ao, ao_weight);
+    sample_ao(uv, depth, view_normal, summed_ao, ao_weight);
+    sample_ao(uv + float2(uv_offset.x, 0), depth, view_normal, summed_ao, ao_weight);
+    sample_ao(uv - float2(0, uv_offset.y), depth, view_normal, summed_ao, ao_weight);
 
-    sample_ao(uv + uv_offset, summed_ao, ao_weight);
-    sample_ao(uv - uv_offset, summed_ao, ao_weight);
-    sample_ao(uv + float2(uv_offset.x, -uv_offset.y), summed_ao, ao_weight);
-    sample_ao(uv + float2(-uv_offset.x, uv_offset.y), summed_ao, ao_weight);;
+    sample_ao(uv + uv_offset, depth, view_normal, summed_ao, ao_weight);
+    sample_ao(uv - uv_offset, depth, view_normal, summed_ao, ao_weight);
+    sample_ao(uv + float2(uv_offset.x, -uv_offset.y), depth, view_normal, summed_ao, ao_weight);
+    sample_ao(uv + float2(-uv_offset.x, uv_offset.y), depth, view_normal, summed_ao, ao_weight);;
 
     return float4(summed_ao / ao_weight, 0, 0, 0);
 }
@@ -137,7 +152,6 @@ float2 uniform_disk_sampling(float2 sample_uv) {
 float4 alchemy_ps(Varyings input) : SV_TARGET {
     // State. Should be in a constant buffer.
     const int sample_count = 8;
-    const float world_radius = 0.5f;
     const float intensity_scale = 0.25;
     const float bias = 0.001f;
     const float k = 1.0;
@@ -147,7 +161,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
 
     // float2 encoded_normal = normal_tex.SampleLevel(point_sampler, input.texcoord, 0).rg;
     // float3 view_normal = decode_octahedral_normal(encoded_normal);
-    float3 view_normal = normal_tex.SampleLevel(point_sampler, input.texcoord, 0).rgb;
+    float3 view_normal = normal_tex.SampleLevel(point_sampler, input.texcoord, 0).xyz;
     float depth = depth_tex.SampleLevel(point_sampler, input.texcoord, 0).r;
     float3 view_position = position_from_depth(depth, input.texcoord);
     // return float4(abs(position), 1);
