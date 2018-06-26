@@ -97,8 +97,10 @@ void ImGuiAdaptor ::new_frame(const Cogwheel::Core::Engine& engine) {
         for (auto& frame : m_frames)
             frame->layout_frame();
 
-    if (io.WantCaptureMouse)
+    if (io.WantCaptureMouse) {
         mouse->consume_all_button_events();
+        mouse->consume_scroll_delta();
+    }
     if (io.WantCaptureKeyboard)
         keyboard->consume_all_button_events();
 }
