@@ -79,24 +79,32 @@ float4 filter_ps(Varyings input) : SV_TARGET {
     float3 view_normal = normal_tex.SampleLevel(point_sampler, uv, 0).xyz;
     float depth = depth_tex.SampleLevel(point_sampler, uv, 0).r;
 
+    float center_ao = 0.0f;
+    float center_weight = 0.0f;
+    sample_ao(uv, depth, view_normal, center_ao, center_weight); // TODO Can be inlined, just need to compute the weight, which should be pow2(exp(-0)) I guess.
+
     float2 uv_offset = pixel_offset * rcp(float2(width, height));
 
-    float summed_ao = 0.0f;
-    float ao_weight = 0.0f;
+    float border_ao = 0.0f;
+    float border_weight = 0.0f;
 
-    // TODO Reorder for cache coherency
-    sample_ao(uv + float2(0, uv_offset.y), depth, view_normal, summed_ao, ao_weight);
-    sample_ao(uv - float2(uv_offset.x, 0), depth, view_normal, summed_ao, ao_weight);
-    sample_ao(uv, depth, view_normal, summed_ao, ao_weight);
-    sample_ao(uv + float2(uv_offset.x, 0), depth, view_normal, summed_ao, ao_weight);
-    sample_ao(uv - float2(0, uv_offset.y), depth, view_normal, summed_ao, ao_weight);
+    sample_ao(uv + float2(-uv_offset.x,  uv_offset.y), depth, view_normal, border_ao, border_weight);
+    sample_ao(uv + float2(           0,  uv_offset.y), depth, view_normal, border_ao, border_weight);
+    sample_ao(uv + float2( uv_offset.x,  uv_offset.y), depth, view_normal, border_ao, border_weight);
+    sample_ao(uv + float2(-uv_offset.x,            0), depth, view_normal, border_ao, border_weight);
+    sample_ao(uv + float2( uv_offset.x,            0), depth, view_normal, border_ao, border_weight);
+    sample_ao(uv + float2(-uv_offset.x, -uv_offset.y), depth, view_normal, border_ao, border_weight);
+    sample_ao(uv + float2(           0, -uv_offset.y), depth, view_normal, border_ao, border_weight);
+    sample_ao(uv + float2( uv_offset.x, -uv_offset.y), depth, view_normal, border_ao, border_weight);
 
-    sample_ao(uv + uv_offset, depth, view_normal, summed_ao, ao_weight);
-    sample_ao(uv - uv_offset, depth, view_normal, summed_ao, ao_weight);
-    sample_ao(uv + float2(uv_offset.x, -uv_offset.y), depth, view_normal, summed_ao, ao_weight);
-    sample_ao(uv + float2(-uv_offset.x, uv_offset.y), depth, view_normal, summed_ao, ao_weight);;
+    // Ensure that we perform at least some filtering in areas with high frequency geometry.
+    if (border_weight < 2.0 * center_weight) {
+        float weight_scale = 2.0 * center_weight * rcp(border_weight);
+        border_ao *= weight_scale;
+        border_weight = 2.0 * center_weight;
+    }
 
-    return float4(summed_ao / ao_weight, 0, 0, 0);
+    return float4((center_ao + border_ao) / (center_weight + border_weight), 0, 0, 0);
 }
 
 } // NS BilateralBoxBlur
