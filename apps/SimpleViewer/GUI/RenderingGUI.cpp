@@ -70,7 +70,14 @@ void RenderingGUI::layout_frame() {
                 auto settings = m_renderer->get_settings();
                 bool has_changed = false;
 
-                has_changed |= ImGui::Checkbox("SSAO", &settings.ssao_enabled);
+                if (ImGui::TreeNode("SSAO")) {
+                    has_changed |= ImGui::Checkbox("SSAO", &settings.ssao.enabled);
+                    has_changed |= ImGui::InputFloat("World radius", &settings.ssao.settings.world_radius, 0.05f, 0.25f, "%.2f");
+                    settings.ssao.settings.world_radius = max(0.0f, settings.ssao.settings.world_radius);
+                    has_changed |= ImGui::InputFloat("Normal std dev", &settings.ssao.settings.normal_std_dev, 0.0f, 0.0f);
+                    has_changed |= ImGui::InputFloat("Depth std dev", &settings.ssao.settings.depth_std_dev, 0.0f, 0.0f);
+                    ImGui::TreePop();
+                }
 
                 if (has_changed)
                     m_renderer->set_settings(settings);
