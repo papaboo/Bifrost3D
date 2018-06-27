@@ -334,7 +334,7 @@ public:
         { // Setup state. Opaque render state should already have been set up. TODO Verify implicit state from opaque pass
             // Render target views.
             m_render_context->OMSetRenderTargets(1, &m_g_buffer.normal_RTV, m_g_buffer.depth_view);
-            float zero[4] = { 0, 0, 0, 0 };
+            float zero[4] = { 0, 0, -1, 0 };
             m_render_context->ClearRenderTargetView(m_g_buffer.normal_RTV, zero);
             m_render_context->ClearDepthStencilView(m_g_buffer.depth_view, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
