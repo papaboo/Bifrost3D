@@ -101,12 +101,17 @@ float4 filter_ps(Varyings input) : SV_TARGET {
     sample_ao(uv + float2(           0, -uv_offset.y), depth, view_normal, border_ao, border_weight);
     sample_ao(uv + float2( uv_offset.x, -uv_offset.y), depth, view_normal, border_ao, border_weight);
 
+    /*
     // Ensure that we perform at least some filtering in areas with high frequency geometry.
+    // TODO Produces artefacts in OpacityScene and MaterialScene, where edges get too dark/NaN.
     if (border_weight < 2.0 * center_weight) {
-        float weight_scale = border_weight * rcp(2.0 * center_weight);
+        // float weight_scale = border_weight * rcp(2.0 * center_weight);
+        float weight_scale = 2.0 * center_weight / border_weight;
         border_ao *= weight_scale;
-        border_weight = 2.0 * center_weight;
+        // border_weight = 2.0 * center_weight;
+        border_weight *= weight_scale;
     }
+    */
 
     return float4((center_ao + border_ao) / (center_weight + border_weight), 0, 0, 0);
 }
