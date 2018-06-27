@@ -103,7 +103,7 @@ float4 filter_ps(Varyings input) : SV_TARGET {
 
     // Ensure that we perform at least some filtering in areas with high frequency geometry.
     if (border_weight < 2.0 * center_weight) {
-        float weight_scale = 2.0 * center_weight * rcp(border_weight);
+        float weight_scale = border_weight * rcp(2.0 * center_weight);
         border_ao *= weight_scale;
         border_weight = 2.0 * center_weight;
     }
