@@ -72,21 +72,10 @@ float3 integration(PixelInput input, bool is_front_face, float ambient_visibilit
     return radiance;
 }
 
-float4 output_normals(PixelInput input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
-    float coverage = material_params.coverage(input.texcoord);
-    if (coverage < 0.33f)
-        discard;
-
-    float3 world_normal = normalize(input.normal.xyz) * (is_front_face ? 1.0 : -1.0);
-    float3 view_normal = mul(float4(world_normal, 0.0), scene_vars.world_to_view_matrix);
-
-    return float4(view_normal * 0.5 + 0.5, 1.0f);
-}
-
 float4 opaque(PixelInput input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
     // NOTE There may be a performance cost associated with having a potential discard, so we should probably have a separate pixel shader for cutouts.
-    float coverage = material_params.coverage(input.texcoord);
-    if (coverage < 0.33f)
+    float coverage = material_params.coverage(input.texcoord, coverage_tex, coverage_sampler);
+    if (coverage < CUTOFF)
         discard;
 
     float width, height;
@@ -99,6 +88,6 @@ float4 opaque(PixelInput input, bool is_front_face : SV_IsFrontFace) : SV_TARGET
 }
 
 float4 transparent(PixelInput input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
-    float coverage = material_params.coverage(input.texcoord);
+    float coverage = material_params.coverage(input.texcoord, coverage_tex, coverage_sampler);
     return float4(integration(input, is_front_face, 1), coverage);
 }

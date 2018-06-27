@@ -65,9 +65,13 @@ private:
         OShaderResourceView normal_SRV;
         ORenderTargetView normal_RTV;
 
-        OVertexShader vertex_shader;
-        OInputLayout vertex_input_layout;
-        OPixelShader pixel_shader;
+        OVertexShader opaque_vertex_shader;
+        OInputLayout opaque_vertex_input_layout;
+        OPixelShader opaque_pixel_shader;
+
+        OVertexShader cutout_vertex_shader;
+        OInputLayout cutout_vertex_input_layout;
+        OPixelShader cutout_pixel_shader;
     } m_g_buffer;
 
     struct {
@@ -168,15 +172,32 @@ public:
         }
 
         { // Setup g-buffer
-            OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "vs_5_0", "main_VS");
-            THROW_ON_FAILURE(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.vertex_shader));
+            { // Opaque shaders
+                OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "vs_5_0", "opaque_VS");
+                THROW_ON_FAILURE(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.opaque_vertex_shader));
 
-            // Create the input layout
-            D3D11_INPUT_ELEMENT_DESC input_layout_desc = { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 };
-            THROW_ON_FAILURE(m_device.CreateInputLayout(&input_layout_desc, 1, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.vertex_input_layout));
+                // Create the input layout
+                D3D11_INPUT_ELEMENT_DESC input_layout_desc = { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 };
+                THROW_ON_FAILURE(m_device.CreateInputLayout(&input_layout_desc, 1, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.opaque_vertex_input_layout));
 
-            OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "ps_5_0", "main_PS");
-            THROW_ON_FAILURE(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.pixel_shader));
+                OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "ps_5_0", "opaque_PS");
+                THROW_ON_FAILURE(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.opaque_pixel_shader));
+            }
+
+            { // Cutout shaders
+                OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "vs_5_0", "cutout_VS");
+                THROW_ON_FAILURE(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.cutout_vertex_shader));
+
+                // Create the input layout
+                D3D11_INPUT_ELEMENT_DESC input_layout_desc[] = {
+                    { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+                    { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+                };
+                THROW_ON_FAILURE(m_device.CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.cutout_vertex_input_layout));
+
+                OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "ps_5_0", "cutout_PS");
+                THROW_ON_FAILURE(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.cutout_pixel_shader));
+            }
 
             // G-buffer is initialized on demand when the output dimensions are known.
             m_g_buffer.width = m_g_buffer.height = 0u;
@@ -318,9 +339,9 @@ public:
             m_render_context->ClearDepthStencilView(m_g_buffer.depth_view, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
             // Shaders
-            m_render_context->VSSetShader(m_g_buffer.vertex_shader, 0, 0);
-            m_render_context->IASetInputLayout(m_g_buffer.vertex_input_layout);
-            m_render_context->PSSetShader(m_g_buffer.pixel_shader, 0, 0);
+            m_render_context->VSSetShader(m_g_buffer.opaque_vertex_shader, 0, 0);
+            m_render_context->IASetInputLayout(m_g_buffer.opaque_vertex_input_layout);
+            m_render_context->PSSetShader(m_g_buffer.opaque_pixel_shader, 0, 0);
 
             // Set null buffer as default texcoord buffer.
             unsigned int stride = sizeof(float2);
@@ -329,12 +350,14 @@ public:
         }
 
         // Render opaque objects.
-        for (int i = 1; i < m_cutout.first_model_index; ++i) {
-
-            // TODO loop until the first transparent model and update the raster state.
+        for (int i = 1; i < m_transparent.first_model_index; ++i) {
             // Setup twosided raster state for cutout materials.
-            // if (i == m_cutout.first_model_index)
-            //     m_render_context->RSSetState(m_cutout.raster_state);
+            if (i == m_cutout.first_model_index) {
+                m_render_context->RSSetState(m_cutout.raster_state);
+                m_render_context->VSSetShader(m_g_buffer.cutout_vertex_shader, 0, 0);
+                m_render_context->IASetInputLayout(m_g_buffer.cutout_vertex_input_layout);
+                m_render_context->PSSetShader(m_g_buffer.cutout_pixel_shader, 0, 0);
+            }
 
             Dx11Model model = m_sorted_models[i];
             assert(model.model_ID != 0);
@@ -364,12 +387,12 @@ public:
 
         { // Material parameters
 
+          // Bind material constant buffer.
+            m_materials.bind_material(*context, 3, model.material_ID);
+
             Dx11MaterialTextures& material_textures = m_materials.get_material_textures(model.material_ID);
 
             if (!geometry_only) {
-                // Bind material constant buffer.
-                m_materials.bind_material(*context, 3, model.material_ID);
-
                 Dx11Texture& color_texture = m_textures.get_texture(material_textures.tint_index);
                 if (color_texture.sampler != nullptr) {
                     context->PSSetShaderResources(1, 1, &color_texture.image->srv);

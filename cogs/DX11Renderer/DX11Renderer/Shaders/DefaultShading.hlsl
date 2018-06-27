@@ -29,22 +29,6 @@ SamplerState coverage_sampler : register(s2);
 
 Texture2D ggx_with_fresnel_rho_tex : register(t15);
 
-struct MaterialParams {
-    float3 m_tint;
-    unsigned int m_textures_bound;
-    float m_roughness;
-    float m_specularity;
-    float m_metallic;
-    float m_coverage;
-
-    float coverage(float2 texcoord) {
-        float coverage = m_coverage;
-        if (m_textures_bound & TextureBound::Coverage)
-            coverage *= coverage_tex.Sample(coverage_sampler, texcoord).a;
-        return coverage;
-    }
-};
-
 //-----------------------------------------------------------------------------
 // Default shading.
 //-----------------------------------------------------------------------------

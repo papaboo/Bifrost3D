@@ -23,6 +23,7 @@ SamplerState bilinear_sampler : register(s15);
 static const float PI = 3.14159265358979323846f;
 static const float TWO_PI = 6.283185307f;
 static const float RECIP_PI = 0.31830988618379067153776752674503f;
+static const float CUTOFF = 0.33f;
 
 // ------------------------------------------------------------------------------------------------
 // Types.
@@ -48,12 +49,6 @@ struct Sphere {
     }
 };
 
-struct TextureBound {
-    static const unsigned int None = 0;
-    static const unsigned int Tint = 1 << 0;
-    static const unsigned int Coverage = 1 << 1;
-};
-
 struct SceneVariables {
     float4x4 view_projection_matrix;
     float4 camera_position;
@@ -62,6 +57,28 @@ struct SceneVariables {
     float4x4 projection_matrix;
     float4x4 inverted_projection_matrix;
     float4x3 world_to_view_matrix;
+};
+
+struct TextureBound {
+    static const unsigned int None = 0;
+    static const unsigned int Tint = 1 << 0;
+    static const unsigned int Coverage = 1 << 1;
+};
+
+struct MaterialParams {
+    float3 m_tint;
+    unsigned int m_textures_bound;
+    float m_roughness;
+    float m_specularity;
+    float m_metallic;
+    float m_coverage;
+
+    float coverage(float2 texcoord, Texture2D coverage_tex, SamplerState coverage_sampler) {
+        float coverage = m_coverage;
+        if (m_textures_bound & TextureBound::Coverage)
+            coverage *= coverage_tex.Sample(coverage_sampler, texcoord).a;
+        return coverage;
+    }
 };
 
 // ------------------------------------------------------------------------------------------------
