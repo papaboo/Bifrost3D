@@ -79,6 +79,10 @@ float4 filter_ps(Varyings input) : SV_TARGET {
     float3 view_normal = normal_tex.SampleLevel(point_sampler, uv, 0).xyz;
     float depth = depth_tex.SampleLevel(point_sampler, uv, 0).r;
 
+    // No occlusion on the far plane.
+    if (depth == 1.0)
+        return float4(1, 0, 0, 0);
+
     float center_ao = 0.0f;
     float center_weight = 0.0f;
     sample_ao(uv, depth, view_normal, center_ao, center_weight); // TODO Can be inlined, just need to compute the weight, which should be pow2(exp(-0)) I guess.
@@ -167,12 +171,16 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     // Setup sampling
     uint rng_offset = RNG::teschner_hash(input.position.x, input.position.y);
 
+    float depth = depth_tex.SampleLevel(point_sampler, input.texcoord, 0).r;
+    
+    // No occlusion on the far plane.
+    if (depth == 1.0)
+        return float4(1, 0, 0, 0);
+
     // float2 encoded_normal = normal_tex.SampleLevel(point_sampler, input.texcoord, 0).rg;
     // float3 view_normal = decode_octahedral_normal(encoded_normal);
     float3 view_normal = normal_tex.SampleLevel(point_sampler, input.texcoord, 0).xyz;
-    float depth = depth_tex.SampleLevel(point_sampler, input.texcoord, 0).r;
     float3 view_position = position_from_depth(depth, input.texcoord);
-    // return float4(abs(position), 1);
 
     // Compute screen space radius.
     float3 border_view_position = view_position + float3(world_radius, 0, 0);
