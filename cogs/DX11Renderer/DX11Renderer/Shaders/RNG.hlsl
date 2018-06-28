@@ -59,7 +59,7 @@ uint teschner_hash(uint x, uint y) {
 
 // Hashes x and y ensuring maximal distance between consecutive xs and ys.
 // NOTE: Unless filtered afterwards it visually displays a ton of correlation.
-uint correlatevenly_distributed_2D_seeded_2D_seed(uint x, uint y) {
+uint evenly_distributed_2D_seed(uint x, uint y) {
     return reversebits(morton_encode(x, y));
 }
 
