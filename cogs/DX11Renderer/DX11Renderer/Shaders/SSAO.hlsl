@@ -167,10 +167,18 @@ float2 uniform_disk_sampling(float2 sample_uv) {
 
 // Returns a position for the tap on a unit disk.
 float2 tap_location(int sample_number, int sample_count, float spin_angle) {
-    const float spiral_turns = 7;
+    const float spiral_turns = 73856093;
     float alpha = float(sample_number + 0.5) / sample_count;
     float angle = alpha * (spiral_turns * TWO_PI) + spin_angle;
     return float2(cos(angle), sin(angle)) * alpha;
+}
+
+float2x2 generate_rotation_matrix(float angle) {
+    float cos_angle = cos(angle);
+    float sin_angle = sin(angle);
+    float2x2 mat = { cos_angle, -sin_angle,   // row 1
+                     sin_angle,  cos_angle }; // row 2
+    return mat;
 }
 
 float4 alchemy_ps(Varyings input) : SV_TARGET {
@@ -181,11 +189,8 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
 
     // Setup sampling
     uint rng_offset = RNG::evenly_distributed_2D_seed(input.position.x, input.position.y);
-
-    // Hash function used in the HPG12 SAO paper. Equation 8
-    // int2 screen_pos = input.position.xy;
-    // float sample_pattern_rotation_angle = ((3 * screen_pos.x) ^ (screen_pos.y + screen_pos.x * screen_pos.y)) * 10;
-    // float sample_pattern_rotation_angle = float((rng_offset >> 8) & 0xffffff) / float(1 << 24);
+    float sample_pattern_rotation_angle = float((rng_offset >> 8) & 0xffffff) / float(1 << 24) * TWO_PI;
+    float2x2 sample_pattern_rotation = generate_rotation_matrix(sample_pattern_rotation_angle);
 
     float depth = depth_tex.SampleLevel(point_sampler, input.texcoord, 0).r;
     
@@ -205,9 +210,8 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
 
     float occlusion = 0.0f;
     for (int i = 0; i < sample_count; ++i) {
-        float2 rng_samples = RNG::sample02(i + rng_offset);
-        float2 uv_offset = uniform_disk_sampling(rng_samples) * ss_radius;
-        // float2 uv_offset = tap_location(i, sample_count, sample_pattern_rotation_angle) * ss_radius;
+        float2 rng_samples = RNG::sample02(i);
+        float2 uv_offset = mul(uniform_disk_sampling(rng_samples) * ss_radius, sample_pattern_rotation);
 
         float2 sample_uv = input.texcoord + uv_offset;
 
