@@ -9,6 +9,20 @@
 #ifndef _DX11_RENDERER_SHADERS_RNG_H_
 #define _DX11_RENDERER_SHADERS_RNG_H_
 
+// Insert a 0 bit in between each of the 16 low bits of v.
+uint part_by_1(uint v) {
+    v &= 0x0000ffff;                 // v = ---- ---- ---- ---- fedc ba98 7654 3210
+    v = (v ^ (v << 8)) & 0x00ff00ff; // v = ---- ---- fedc ba98 ---- ---- 7654 3210
+    v = (v ^ (v << 4)) & 0x0f0f0f0f; // v = ---- fedc ---- ba98 ---- 7654 ---- 3210
+    v = (v ^ (v << 2)) & 0x33333333; // v = --fe --dc --ba --98 --76 --54 --32 --10
+    v = (v ^ (v << 1)) & 0x55555555; // v = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
+    return v;
+}
+
+uint morton_encode(uint x, uint y) {
+    return part_by_1(y) | (part_by_1(x) << 1);
+}
+
 namespace RNG {
 
 float van_der_corput(uint n, uint scramble) {
@@ -41,6 +55,12 @@ float lcg_sample(inout uint state) {
 // Teschner et al, 2013
 uint teschner_hash(uint x, uint y) {
     return (x * 73856093) ^ (y * 19349669);
+}
+
+// Hashes x and y ensuring maximal distance between consecutive xs and ys.
+// NOTE: Unless filtered afterwards it visually displays a ton of correlation.
+uint correlatevenly_distributed_2D_seeded_2D_seed(uint x, uint y) {
+    return reversebits(morton_encode(x, y));
 }
 
 // Computes the power heuristic of pdf1 and pdf2.

@@ -180,7 +180,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     const float k = 1.0;
 
     // Setup sampling
-    uint rng_offset = RNG::teschner_hash(input.position.x, input.position.y);
+    uint rng_offset = RNG::evenly_distributed_2D_seed(input.position.x, input.position.y);
 
     // Hash function used in the HPG12 SAO paper. Equation 8
     // int2 screen_pos = input.position.xy;
