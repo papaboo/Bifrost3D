@@ -103,9 +103,11 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
     context.VSSetShader(m_vertex_shader, 0, 0);
     context.PSSetShader(m_pixel_shader, 0, 0);
     context.Draw(3, 0);
-    
+
     // Filter
-    OShaderResourceView& ao_SRV = m_filter.apply(context, m_SSAO_RTV, m_SSAO_SRV, width, height);
+    OShaderResourceView& ao_SRV = settings.filtering_enabled ?
+        m_filter.apply(context, m_SSAO_RTV, m_SSAO_SRV, width, height) :
+        m_SSAO_SRV;
 
     // Unbind SSAO_RTV
     ID3D11RenderTargetView* null_RTV = nullptr;

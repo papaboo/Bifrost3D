@@ -110,7 +110,9 @@ struct SsaoSettings {
     float world_radius = 0.5f;
     float normal_std_dev = 0.03f;
     float depth_std_dev = 0.5f;
-    float _padding;
+    int sample_count = 8;
+    int filtering_enabled = 1;
+    float3 __padding;
 };
 
 //-------------------------------------------------------------------------------------------------

@@ -21,7 +21,9 @@ cbuffer constants : register(b1) {
     float world_radius;
     float normal_std_dev;
     float depth_std_dev;
-    float __padding;
+    int sample_count;
+    int filtering_enabled; // CPU side only
+    float3 __padding;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -163,15 +165,27 @@ float2 uniform_disk_sampling(float2 sample_uv) {
     return r * float2(cos(theta), sin(theta));
 }
 
+// Returns a position for the tap on a unit disk.
+float2 tap_location(int sample_number, int sample_count, float spin_angle) {
+    const float spiral_turns = 7;
+    float alpha = float(sample_number + 0.5) / sample_count;
+    float angle = alpha * (spiral_turns * TWO_PI) + spin_angle;
+    return float2(cos(angle), sin(angle)) * alpha;
+}
+
 float4 alchemy_ps(Varyings input) : SV_TARGET {
     // State. Should be in a constant buffer.
-    const int sample_count = 8;
     const float intensity_scale = 0.25;
     const float bias = 0.001f;
     const float k = 1.0;
 
     // Setup sampling
     uint rng_offset = RNG::teschner_hash(input.position.x, input.position.y);
+
+    // Hash function used in the HPG12 SAO paper. Equation 8
+    // int2 screen_pos = input.position.xy;
+    // float sample_pattern_rotation_angle = ((3 * screen_pos.x) ^ (screen_pos.y + screen_pos.x * screen_pos.y)) * 10;
+    // float sample_pattern_rotation_angle = float((rng_offset >> 8) & 0xffffff) / float(1 << 24);
 
     float depth = depth_tex.SampleLevel(point_sampler, input.texcoord, 0).r;
     
@@ -193,6 +207,8 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     for (int i = 0; i < sample_count; ++i) {
         float2 rng_samples = RNG::sample02(i + rng_offset);
         float2 uv_offset = uniform_disk_sampling(rng_samples) * ss_radius;
+        // float2 uv_offset = tap_location(i, sample_count, sample_pattern_rotation_angle) * ss_radius;
+
         float2 sample_uv = input.texcoord + uv_offset;
 
         float depth_i = depth_tex.SampleLevel(point_sampler, sample_uv, 0).r;
