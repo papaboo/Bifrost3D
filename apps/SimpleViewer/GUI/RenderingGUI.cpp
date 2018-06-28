@@ -74,6 +74,10 @@ void RenderingGUI::layout_frame() {
                     has_changed |= ImGui::Checkbox("SSAO", &settings.ssao.enabled);
                     has_changed |= ImGui::InputFloat("World radius", &settings.ssao.settings.world_radius, 0.05f, 0.25f, "%.2f");
                     settings.ssao.settings.world_radius = max(0.0f, settings.ssao.settings.world_radius);
+                    has_changed |= ImGui::InputInt("Sample count", &settings.ssao.settings.sample_count, 1, 5);
+                    bool filter_enabled = settings.ssao.settings.filtering_enabled ? true : false;
+                    has_changed |= ImGui::Checkbox("Enable filter", &filter_enabled);
+                    settings.ssao.settings.filtering_enabled = filter_enabled;
                     has_changed |= ImGui::InputFloat("Normal std dev", &settings.ssao.settings.normal_std_dev, 0.0f, 0.0f);
                     has_changed |= ImGui::InputFloat("Depth std dev", &settings.ssao.settings.depth_std_dev, 0.0f, 0.0f);
                     ImGui::TreePop();
