@@ -159,8 +159,8 @@ float u_coord_from_view_position(float3 view_position) {
     return projected_view_pos_x * 0.5 + 0.5;
 }
 
-float2 uniform_disk_sampling(float2 sample_uv) {
-    float r = sqrt(sample_uv.x);
+float2 cosine_disk_sampling(float2 sample_uv) {
+    float r = sample_uv.x;
     float theta = TWO_PI * sample_uv.y;
     return r * float2(cos(theta), sin(theta));
 }
@@ -211,7 +211,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     float occlusion = 0.0f;
     for (int i = 0; i < sample_count; ++i) {
         float2 rng_samples = RNG::sample02(i);
-        float2 uv_offset = mul(uniform_disk_sampling(rng_samples) * ss_radius, sample_pattern_rotation);
+        float2 uv_offset = mul(cosine_disk_sampling(rng_samples) * ss_radius, sample_pattern_rotation);
 
         float2 sample_uv = input.texcoord + uv_offset;
 
