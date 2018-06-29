@@ -49,6 +49,8 @@ private:
 // ------------------------------------------------------------------------------------------------
 class AlchemyAO {
 public:
+    static const unsigned int max_sample_count = 256;
+
     AlchemyAO() = default;
     AlchemyAO(AlchemyAO&& other) = default;
     AlchemyAO(AlchemyAO& other) = delete;
@@ -63,6 +65,7 @@ public:
 
 private:
     OBuffer m_constants;
+    OBuffer m_samples;
     OVertexShader m_vertex_shader;
     OPixelShader m_pixel_shader;
 

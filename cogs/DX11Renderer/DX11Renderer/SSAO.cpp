@@ -9,6 +9,8 @@
 #include <DX11Renderer/SSAO.h>
 #include <DX11Renderer/Utils.h>
 
+#include <Cogwheel/Math/RNG.h>
+
 namespace DX11Renderer {
 namespace SSAO {
 
@@ -70,7 +72,34 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
 AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_path) 
     : m_width(0), m_height(0), m_SSAO_RTV(nullptr), m_SSAO_SRV(nullptr) {
 
+    using namespace Cogwheel::Math;
+
     create_constant_buffer(device, sizeof(SsaoSettings), &m_constants);
+
+    { // Allocate samples.
+        static auto cosine_disk_sampling = [](Vector2f sample_uv) -> Vector2f {
+            float r = sample_uv.x;
+            float theta = 2.0f * PI<float>() * sample_uv.y;
+            return r * Vector2f(cos(theta), sin(theta));
+        };
+
+        auto* samples = new Vector2f[max_sample_count];
+        for (int i = 0; i < max_sample_count; ++i)
+            samples[i] = cosine_disk_sampling(RNG::sample02(i));
+
+        D3D11_BUFFER_DESC desc = {};
+        desc.Usage = D3D11_USAGE_IMMUTABLE;
+        desc.ByteWidth = sizeof(float2) * max_sample_count;
+        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = 0;
+
+        D3D11_SUBRESOURCE_DATA resource_data = {};
+        resource_data.pSysMem = samples;
+        device.CreateBuffer(&desc, &resource_data, &m_samples);
+
+        delete[] samples;
+    }
 
     OBlob vertex_shader_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "vs_5_0", "main_vs");
     THROW_ON_FAILURE(device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shader));
@@ -92,7 +121,8 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
     }
 
     context.UpdateSubresource(m_constants, 0, nullptr, &settings, 0u, 0u);
-    context.PSSetConstantBuffers(1, 1, &m_constants);
+    ID3D11Buffer* constant_buffers[] = { m_constants, m_samples };
+    context.PSSetConstantBuffers(1, 2, constant_buffers);
 
     // Setup state.
     context.OMSetRenderTargets(1, &m_SSAO_RTV, nullptr);

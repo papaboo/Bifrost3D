@@ -26,6 +26,10 @@ cbuffer constants : register(b1) {
     float3 __padding;
 };
 
+cbuffer constants : register(b2) {
+    float2 uv_offsets[256];
+}
+
 // ------------------------------------------------------------------------------------------------
 // Vertex shader.
 // ------------------------------------------------------------------------------------------------
@@ -210,9 +214,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
 
     float occlusion = 0.0f;
     for (int i = 0; i < sample_count; ++i) {
-        float2 rng_samples = RNG::sample02(i);
-        float2 uv_offset = mul(cosine_disk_sampling(rng_samples) * ss_radius, sample_pattern_rotation);
-
+        float2 uv_offset = mul(uv_offsets[i] * ss_radius, sample_pattern_rotation);
         float2 sample_uv = input.texcoord + uv_offset;
 
         float depth_i = depth_tex.SampleLevel(point_sampler, sample_uv, 0).r;
