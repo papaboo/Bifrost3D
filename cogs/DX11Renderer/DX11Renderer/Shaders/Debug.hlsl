@@ -43,8 +43,12 @@ cbuffer debug_constants : register(b1) {
 
 float4 display_debug_ps(Varyings input) : SV_TARGET {
     float3 color;
-    if (mode == 1) // Normals
-        color = 0.5 * normal_tex.SampleLevel(point_sampler, input.uv, 0).rgb + 0.5;
+    if (mode == 1) { // Normals
+        float2 encoded_normal = normal_tex.SampleLevel(point_sampler, input.uv, 0).xy;
+        // color = float3(0.5 * encoded_normal + 0.5, 0);
+        float3 normal = decode_ss_octahedral_normal(encoded_normal);
+        color = 0.5 * normal + 0.5;
+    }
     else if (mode == 2) // Depth
         color = depth_tex.SampleLevel(point_sampler, input.uv, 0).rrr;
     else

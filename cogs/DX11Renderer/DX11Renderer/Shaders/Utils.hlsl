@@ -156,7 +156,7 @@ float3 decode_octahedral_normal(int packed_encoded_normal) {
     const int SHRT_MIN = -32768;
 
     // Unpack the 2 shorts representing the encoded normal. 
-    // The sign is implecitly handled for the 16 most significant bits, but needs to be explicitly handled for the least ones.
+    // The sign is implicitly handled for the 16 most significant bits, but needs to be explicitly handled for the least ones.
     int encoding_x = (packed_encoded_normal & 0xFFFF) + SHRT_MIN;
     int encoding_y = packed_encoded_normal >> 16;
 
@@ -182,6 +182,16 @@ float3 decode_octahedral_normal(float2 encoded_normal) {
     float3 n = float3(encoded_normal.xy, 1.0 - abs(encoded_normal.x) - abs(encoded_normal.y));
     if (n.z < 0.0)
         n.xy = (1.0 - abs(n.yx)) * non_zero_sign(n.xy);
+    return normalize(n);
+}
+
+float2 encode_ss_octahedral_normal(float3 normal) {
+    float l1norm = abs(normal.x) + abs(normal.y) + abs(normal.z);
+    return normal.xy / l1norm;
+}
+
+float3 decode_ss_octahedral_normal(float2 encoded_normal) {
+    float3 n = float3(encoded_normal.xy, -1.0 + abs(encoded_normal.x) + abs(encoded_normal.y));
     return normalize(n);
 }
 

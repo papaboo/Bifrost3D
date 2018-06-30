@@ -69,7 +69,7 @@ void sample_ao(float2 uv, float depth, float3 normal, inout float summed_ao, ino
     float normalized_depth_delta = abs(depth - sample_depth) / depth;
     float weight = exp(-pow2(normalized_depth_delta) / (2 * depth_std_dev * depth_std_dev));
 
-    float3 sample_normal = normal_tex.SampleLevel(point_sampler, uv, 0).xyz;
+    float3 sample_normal = decode_ss_octahedral_normal(normal_tex.SampleLevel(point_sampler, uv, 0).xy);
     float cos_theta = dot(sample_normal, normal);
     weight *= exp(-pow2(1.0f - cos_theta) / (2 * normal_std_dev * normal_std_dev));
 
@@ -84,7 +84,7 @@ float4 filter_ps(Varyings input) : SV_TARGET {
     ao_tex.GetDimensions(width, height);
 
     float2 uv = input.texcoord;
-    float3 view_normal = normal_tex.SampleLevel(point_sampler, uv, 0).xyz;
+    float3 view_normal = decode_ss_octahedral_normal(normal_tex.SampleLevel(point_sampler, uv, 0).xy);
     float depth = depth_tex.SampleLevel(point_sampler, uv, 0).r;
 
     // No occlusion on the far plane.
@@ -197,14 +197,12 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     float2x2 sample_pattern_rotation = generate_rotation_matrix(sample_pattern_rotation_angle);
 
     float depth = depth_tex.SampleLevel(point_sampler, input.texcoord, 0).r;
-    
+
     // No occlusion on the far plane.
     if (depth == 1.0)
         return float4(1, 0, 0, 0);
 
-    // float2 encoded_normal = normal_tex.SampleLevel(point_sampler, input.texcoord, 0).rg;
-    // float3 view_normal = decode_octahedral_normal(encoded_normal);
-    float3 view_normal = normal_tex.SampleLevel(point_sampler, input.texcoord, 0).xyz;
+    float3 view_normal = decode_ss_octahedral_normal(normal_tex.SampleLevel(point_sampler, input.texcoord, 0).xy);
     float3 view_position = position_from_depth(depth, input.texcoord);
 
     // Compute screen space radius.

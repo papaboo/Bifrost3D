@@ -45,8 +45,7 @@ OpaqueVaryings opaque_VS(float4 geometry : GEOMETRY) {
 
 float4 opaque_PS(OpaqueVaryings varyings) : SV_Target {
     float3 view_space_normal = normalize(varyings.normal_depth.xyz);
-    // return float4(encode_octahedral_normal(view_space_normal), 0, 1);
-    return float4(view_space_normal, 1);
+    return float4(encode_ss_octahedral_normal(view_space_normal), 0, 1);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -79,6 +78,5 @@ float4 cutout_PS(CutoutVaryings varyings) : SV_Target {
         discard;
 
     float3 view_space_normal = normalize(varyings.normal_depth.xyz);
-    // return float4(encode_octahedral_normal(view_space_normal), 0, 1);
-    return float4(view_space_normal, 1);
+    return float4(encode_ss_octahedral_normal(view_space_normal), 0, 1);
 }
