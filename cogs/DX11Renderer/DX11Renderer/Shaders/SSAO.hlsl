@@ -203,8 +203,8 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
         return float4(1, 0, 0, 0);
 
     float3 view_normal = decode_ss_octahedral_normal(normal_tex.SampleLevel(point_sampler, input.texcoord, 0).xy);
-    float pixel_bias = depth * bias *(1.0f + view_normal.z);
-    float3 view_position = position_from_depth(depth, input.texcoord) + view_normal;
+    float pixel_bias = depth * bias * (1.0f - pow2(pow2(view_normal.z)));
+    float3 view_position = position_from_depth(depth, input.texcoord) + view_normal * pixel_bias;
 
     // Compute screen space radius.
     float3 border_view_position = view_position + float3(world_radius, 0, 0);
