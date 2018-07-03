@@ -20,11 +20,12 @@ cbuffer scene_variables : register(b0) {
 cbuffer constants : register(b1) {
     float world_radius;
     float bias;
+    float intensity_scale;
+    float falloff;
     float normal_std_dev;
     float depth_std_dev;
     int sample_count;
     int filtering_enabled; // CPU side only
-    float2 __padding;
 };
 
 cbuffer constants : register(b2) {
@@ -187,9 +188,6 @@ float2x2 generate_rotation_matrix(float angle) {
 }
 
 float4 alchemy_ps(Varyings input) : SV_TARGET {
-    // State. Should be in a constant buffer.
-    const float intensity_scale = 0.25;
-    const float k = 1.0;
 
     // Setup sampling
     uint rng_offset = RNG::evenly_distributed_2D_seed(input.position.x, input.position.y);
@@ -203,7 +201,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
         return float4(1, 0, 0, 0);
 
     float3 view_normal = decode_ss_octahedral_normal(normal_tex.SampleLevel(point_sampler, input.texcoord, 0).xy);
-    float pixel_bias = depth * bias * (1.0f - pow2(pow2(view_normal.z)));
+    float pixel_bias = depth * bias * (1.0f - pow2(pow2(pow2(view_normal.z))));
     float3 view_position = position_from_depth(depth, input.texcoord) + view_normal * pixel_bias;
 
     // Compute screen space radius.
@@ -225,7 +223,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     }
 
     float a = 1 - (2 * intensity_scale / sample_count) * occlusion;
-    a = pow(max(0.0, a), k);
+    a = pow(max(0.0, a), falloff);
 
     return float4(a, 0, 0, 0);
 }
