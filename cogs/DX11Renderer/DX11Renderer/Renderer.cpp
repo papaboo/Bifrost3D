@@ -169,6 +169,7 @@ public:
 
             ID3D11SamplerState* samplers[2] = { point_sampler, linear_sampler };
             m_render_context->PSSetSamplers(14, 2, samplers);
+            m_render_context->CSSetSamplers(14, 2, samplers);
         }
 
         { // Setup g-buffer
@@ -436,6 +437,7 @@ public:
             m_render_context->UpdateSubresource(m_scene_buffer, 0, nullptr, &scene_vars, 0, 0);
             m_render_context->VSSetConstantBuffers(0, 1, &m_scene_buffer);
             m_render_context->PSSetConstantBuffers(0, 1, &m_scene_buffer);
+            m_render_context->CSSetConstantBuffers(0, 1, &m_scene_buffer);
         }
 
         { // Render G-buffer
