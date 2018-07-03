@@ -548,6 +548,7 @@ public:
             m_render_context->VSSetShader(m_vertex_shading.shader, 0, 0);
             m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
             m_render_context->PSSetShader(m_opaque.shader, 0, 0);
+            m_render_context->RSSetState(m_opaque.raster_state);
 
             // Set null buffer as default texcoord buffer.
             unsigned int stride = sizeof(float2);
