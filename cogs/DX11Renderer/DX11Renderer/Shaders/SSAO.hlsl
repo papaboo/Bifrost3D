@@ -26,6 +26,8 @@ cbuffer constants : register(b1) {
     float depth_std_dev;
     int sample_count;
     int filtering_enabled; // CPU side only
+    int2 texture_size;
+    float2 recip_texture_size;
 };
 
 cbuffer constants : register(b2) {
@@ -82,9 +84,6 @@ void sample_ao(float2 uv, float depth, float3 normal, inout float summed_ao, ino
 }
 
 float4 filter_ps(Varyings input) : SV_TARGET {
-    float width, height;
-    ao_tex.GetDimensions(width, height);
-
     float2 uv = input.texcoord;
     float3 view_normal = decode_ss_octahedral_normal(normal_tex.SampleLevel(point_sampler, uv, 0).xy);
     float depth = depth_tex.SampleLevel(point_sampler, uv, 0).r;
@@ -97,7 +96,7 @@ float4 filter_ps(Varyings input) : SV_TARGET {
     float center_weight = 0.0f;
     sample_ao(uv, depth, view_normal, center_ao, center_weight); // TODO Can be inlined, just need to compute the weight, which should be pow2(exp(-0)) I guess.
 
-    float2 uv_offset = pixel_offset * rcp(float2(width, height));
+    float2 uv_offset = pixel_offset * recip_texture_size;
 
     float border_ao = 0.0f;
     float border_weight = 0.0f;
@@ -209,6 +208,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     float border_u = u_coord_from_view_position(border_view_position);
     float ss_radius = border_u - input.texcoord.x;
 
+    // Determine occlusion
     float occlusion = 0.0f;
     for (int i = 0; i < sample_count; ++i) {
         float2 uv_offset = mul(uv_offsets[i] * ss_radius, sample_pattern_rotation);
@@ -224,6 +224,10 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
 
     float a = 1 - (2 * intensity_scale / sample_count) * occlusion;
     a = pow(max(0.0, a), falloff);
+
+    // Fade out if radius is less than two pixels.
+    float pixel_width = texture_size.x * ss_radius;
+    a = lerp(1, a, saturate(pixel_width * 0.5f));
 
     return float4(a, 0, 0, 0);
 }

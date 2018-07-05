@@ -34,6 +34,9 @@ BilateralBlur::BilateralBlur(ID3D11Device1& device, const std::wstring& shader_f
 
 OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, int width, int height) {
     if (m_width != width || m_height != height) {
+        m_intermediate_SRV.release();
+        m_intermediate_RTV.release();
+
         // Resize backbuffer
         ODevice1 device = get_device1(context);
         create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_intermediate_SRV, nullptr, &m_intermediate_RTV);
@@ -74,7 +77,7 @@ AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_pa
 
     using namespace Cogwheel::Math;
 
-    create_constant_buffer(device, sizeof(SsaoSettings), &m_constants);
+    create_constant_buffer(device, sizeof(SsaoSettings) + sizeof(float4), &m_constants);
 
     { // Allocate samples.
         static auto cosine_disk_sampling = [](Vector2f sample_uv) -> Vector2f {
@@ -85,7 +88,7 @@ AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_pa
 
         auto* samples = new Vector2f[max_sample_count];
         for (int i = 0; i < max_sample_count; ++i)
-            samples[i] = cosine_disk_sampling(RNG::sample02(i));
+            samples[i] = cosine_disk_sampling(RNG::sample02(i+1)); // Drop the first sample as it is (0, 0)
 
         D3D11_BUFFER_DESC desc = {};
         desc.Usage = D3D11_USAGE_IMMUTABLE;
@@ -112,6 +115,9 @@ AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_pa
 
 OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderResourceView& normals, OShaderResourceView& depth, int width, int height, SsaoSettings settings) {
     if (m_width != width || m_height != height) {
+        m_SSAO_SRV.release();
+        m_SSAO_RTV.release();
+
         // Resize backbuffer
         ODevice1 device = get_device1(context);
         create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_SSAO_SRV, nullptr, &m_SSAO_RTV);
@@ -120,7 +126,14 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
         m_height = height;
     }
 
-    context.UpdateSubresource(m_constants, 0, nullptr, &settings, 0u, 0u);
+    struct SsaoConstants {
+        SsaoSettings settings;
+        int2 texture_height;
+        float2 recip_texture_height;
+    };
+    SsaoConstants constants = { settings, m_width, m_height, 1.0f / m_width, 1.0f / m_height };
+    context.UpdateSubresource(m_constants, 0u, nullptr, &constants, 0u, 0u);
+    
     ID3D11Buffer* constant_buffers[] = { m_constants, m_samples };
     context.PSSetConstantBuffers(1, 2, constant_buffers);
 
@@ -148,6 +161,9 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
 
 OShaderResourceView& AlchemyAO::apply_none(ID3D11DeviceContext1& context, int width, int height) {
     if (m_width != width || m_height != height) {
+        m_SSAO_SRV.release();
+        m_SSAO_RTV.release();
+        
         // Resize backbuffer
         ODevice1 device = get_device1(context);
         create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_SSAO_SRV, nullptr, &m_SSAO_RTV);
