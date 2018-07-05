@@ -88,8 +88,8 @@ void sample_ao(float2 uv, float3 normal, float plane_d, inout float summed_ao, i
 
 float4 filter_ps(Varyings input) : SV_TARGET {
     float2 uv = input.texcoord;
-    float3 view_normal = decode_ss_octahedral_normal(normal_tex.SampleLevel(point_sampler, uv, 0).xy);
-    float depth = depth_tex.SampleLevel(point_sampler, uv, 0).r;
+    float3 view_normal = decode_ss_octahedral_normal(normal_tex[input.position.xy].xy);
+    float depth = depth_tex[input.position.xy].r;
 
     // No occlusion on the far plane.
     if (depth == 1.0)
@@ -186,13 +186,13 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     float sample_pattern_rotation_angle = float((rng_offset >> 8) & 0xffffff) / float(1 << 24) * TWO_PI;
     float2x2 sample_pattern_rotation = generate_rotation_matrix(sample_pattern_rotation_angle);
 
-    float depth = depth_tex.SampleLevel(point_sampler, input.texcoord, 0).r;
+    float depth = depth_tex[input.position.xy].r;
 
     // No occlusion on the far plane.
     if (depth == 1.0)
         return float4(1, 0, 0, 0);
 
-    float3 view_normal = decode_ss_octahedral_normal(normal_tex.SampleLevel(point_sampler, input.texcoord, 0).xy);
+    float3 view_normal = decode_ss_octahedral_normal(normal_tex[input.position.xy].xy);
     float pixel_bias = depth * bias * (1.0f - pow2(pow2(pow2(view_normal.z))));
     float3 view_position = perspective_position_from_depth(depth, input.texcoord, scene_vars.inverted_projection_matrix) + view_normal * pixel_bias;
 
