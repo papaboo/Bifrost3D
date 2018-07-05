@@ -82,7 +82,7 @@ void RenderingGUI::layout_frame() {
                     has_changed |= ImGui::Checkbox("Enable filter", &filter_enabled);
                     settings.ssao.settings.filtering_enabled = filter_enabled;
                     has_changed |= ImGui::InputFloat("Normal std dev", &settings.ssao.settings.normal_std_dev, 0.0f, 0.0f);
-                    has_changed |= ImGui::InputFloat("Depth std dev", &settings.ssao.settings.depth_std_dev, 0.0f, 0.0f);
+                    has_changed |= ImGui::InputFloat("Plane std dev", &settings.ssao.settings.plane_std_dev, 0.0f, 0.0f);
                     ImGui::TreePop();
                 }
 

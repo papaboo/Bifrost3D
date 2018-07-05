@@ -22,8 +22,8 @@ cbuffer constants : register(b1) {
     float bias;
     float intensity_scale;
     float falloff;
-    float normal_std_dev;
-    float depth_std_dev;
+    float recip_double_normal_variance;
+    float recip_double_plane_variance;
     int sample_count;
     int filtering_enabled; // CPU side only
     int2 texture_size;
@@ -55,6 +55,23 @@ Varyings main_vs(uint vertex_ID : SV_VertexID) {
 }
 
 // ------------------------------------------------------------------------------------------------
+// Utils.
+// ------------------------------------------------------------------------------------------------
+
+// Transform depth to view-space position.
+// https://mynameismjp.wordpress.com/2009/03/10/reconstructing-position-from-depth/
+float3 position_from_depth(float z_over_w, float2 viewport_uv) {
+    // Get x/w and y/w from the viewport position
+    float x_over_w = viewport_uv.x * 2 - 1;
+    float y_over_w = (1 - viewport_uv.y) * 2 - 1;
+    float4 projected_position = float4(x_over_w, y_over_w, z_over_w, 1.0f);
+    // Transform by the inverse projection matrix
+    float4 projected_view_pos = mul(projected_position, scene_vars.inverted_projection_matrix);
+    // Divide by w to get the view-space position
+    return projected_view_pos.xyz / projected_view_pos.w;
+}
+
+// ------------------------------------------------------------------------------------------------
 // Bilateral box blur.
 // ------------------------------------------------------------------------------------------------
 
@@ -68,16 +85,19 @@ cbuffer per_filter_constants : register(b2) {
     float pixel_offset;
 }
 
-void sample_ao(float2 uv, float depth, float3 normal, inout float summed_ao, inout float ao_weight) {
-    float sample_depth = depth_tex.SampleLevel(point_sampler, uv, 0).r;
-    float normalized_depth_delta = abs(depth - sample_depth) / depth;
-    float weight = exp(-pow2(normalized_depth_delta) / (2 * depth_std_dev * depth_std_dev));
-
+void sample_ao(float2 uv, float3 normal, float plane_d, inout float summed_ao, inout float ao_weight) {
+    // Normal weight
     float3 sample_normal = decode_ss_octahedral_normal(normal_tex.SampleLevel(point_sampler, uv, 0).xy);
     float cos_theta = dot(sample_normal, normal);
-    weight *= exp(-pow2(1.0f - cos_theta) / (2 * normal_std_dev * normal_std_dev));
+    float weight = exp(-pow2(1.0f - cos_theta) * recip_double_normal_variance);
 
-    weight += 0.0001;
+    // Plane fitting weight
+    float sample_depth = depth_tex.SampleLevel(point_sampler, uv, 0).r;
+    float3 sample_position = position_from_depth(sample_depth, uv);
+    float distance_to_plane = dot(normal, sample_position) + plane_d;
+    weight *= exp(-pow2(distance_to_plane) * recip_double_plane_variance);
+
+    weight += 0.00001;
 
     summed_ao += weight * ao_tex.SampleLevel(point_sampler, uv, 0).r;
     ao_weight += weight;
@@ -92,6 +112,9 @@ float4 filter_ps(Varyings input) : SV_TARGET {
     if (depth == 1.0)
         return float4(1, 0, 0, 0);
 
+    float3 view_position = position_from_depth(depth, uv);
+    float plane_d = -dot(view_position, view_normal);
+
     float center_ao = 0.0f;
     float center_weight = 0.0f;
     sample_ao(uv, depth, view_normal, center_ao, center_weight); // TODO Can be inlined, just need to compute the weight, which should be pow2(exp(-0)) I guess.
@@ -101,14 +124,14 @@ float4 filter_ps(Varyings input) : SV_TARGET {
     float border_ao = 0.0f;
     float border_weight = 0.0f;
 
-    sample_ao(uv + float2(-uv_offset.x,  uv_offset.y), depth, view_normal, border_ao, border_weight);
-    sample_ao(uv + float2(           0,  uv_offset.y), depth, view_normal, border_ao, border_weight);
-    sample_ao(uv + float2( uv_offset.x,  uv_offset.y), depth, view_normal, border_ao, border_weight);
-    sample_ao(uv + float2(-uv_offset.x,            0), depth, view_normal, border_ao, border_weight);
-    sample_ao(uv + float2( uv_offset.x,            0), depth, view_normal, border_ao, border_weight);
-    sample_ao(uv + float2(-uv_offset.x, -uv_offset.y), depth, view_normal, border_ao, border_weight);
-    sample_ao(uv + float2(           0, -uv_offset.y), depth, view_normal, border_ao, border_weight);
-    sample_ao(uv + float2( uv_offset.x, -uv_offset.y), depth, view_normal, border_ao, border_weight);
+    sample_ao(uv + float2(-uv_offset.x,  uv_offset.y), view_normal, plane_d, border_ao, border_weight);
+    sample_ao(uv + float2(           0,  uv_offset.y), view_normal, plane_d, border_ao, border_weight);
+    sample_ao(uv + float2( uv_offset.x,  uv_offset.y), view_normal, plane_d, border_ao, border_weight);
+    sample_ao(uv + float2(-uv_offset.x,            0), view_normal, plane_d, border_ao, border_weight);
+    sample_ao(uv + float2( uv_offset.x,            0), view_normal, plane_d, border_ao, border_weight);
+    sample_ao(uv + float2(-uv_offset.x, -uv_offset.y), view_normal, plane_d, border_ao, border_weight);
+    sample_ao(uv + float2(           0, -uv_offset.y), view_normal, plane_d, border_ao, border_weight);
+    sample_ao(uv + float2( uv_offset.x, -uv_offset.y), view_normal, plane_d, border_ao, border_weight);
 
     // Ensure that we perform at least some filtering in areas with high frequency geometry.
     if (border_weight < 2.0 * center_weight) {
@@ -128,19 +151,6 @@ float4 filter_ps(Varyings input) : SV_TARGET {
 
 Texture2D normal_tex : register(t0);
 Texture2D depth_tex : register(t1);
-
-// Transform depth to view-space position.
-// https://mynameismjp.wordpress.com/2009/03/10/reconstructing-position-from-depth/
-float3 position_from_depth(float z_over_w, float2 viewport_uv) {
-    // Get x/w and y/w from the viewport position
-    float x_over_w = viewport_uv.x * 2 - 1;
-    float y_over_w = (1 - viewport_uv.y) * 2 - 1;
-    float4 projected_position = float4(x_over_w, y_over_w, z_over_w, 1.0f);
-    // Transform by the inverse projection matrix
-    float4 projected_view_pos = mul(projected_position, scene_vars.inverted_projection_matrix);
-    // Divide by w to get the view-space position
-    return projected_view_pos.xyz / projected_view_pos.w;
-}
 
 // Transform view position to uv in screen space.
 float2 uv_from_view_position(float3 view_position) {

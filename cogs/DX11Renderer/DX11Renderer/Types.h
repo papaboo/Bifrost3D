@@ -110,9 +110,9 @@ struct SsaoSettings {
     float world_radius = 0.5f;
     float bias = 0.03f;
     float intensity_scale = 0.25f;
-    float falloff = 1.0f;
-    float normal_std_dev = 0.03f;
-    float depth_std_dev = 0.5f;
+    float falloff = 2.0f;
+    float normal_std_dev = 0.1f;
+    float plane_std_dev = 0.05f;
     int sample_count = 8;
     int filtering_enabled = 1;
 };

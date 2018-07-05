@@ -132,8 +132,10 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
         float2 recip_texture_height;
     };
     SsaoConstants constants = { settings, m_width, m_height, 1.0f / m_width, 1.0f / m_height };
+    constants.settings.normal_std_dev = 0.5f / (constants.settings.normal_std_dev * constants.settings.normal_std_dev);
+    constants.settings.plane_std_dev = 0.5f / (constants.settings.plane_std_dev * constants.settings.plane_std_dev);
     context.UpdateSubresource(m_constants, 0u, nullptr, &constants, 0u, 0u);
-    
+
     ID3D11Buffer* constant_buffers[] = { m_constants, m_samples };
     context.PSSetConstantBuffers(1, 2, constant_buffers);
 
@@ -163,7 +165,7 @@ OShaderResourceView& AlchemyAO::apply_none(ID3D11DeviceContext1& context, int wi
     if (m_width != width || m_height != height) {
         m_SSAO_SRV.release();
         m_SSAO_RTV.release();
-        
+
         // Resize backbuffer
         ODevice1 device = get_device1(context);
         create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_SSAO_SRV, nullptr, &m_SSAO_RTV);
