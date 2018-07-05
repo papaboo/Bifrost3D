@@ -55,23 +55,6 @@ Varyings main_vs(uint vertex_ID : SV_VertexID) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Utils.
-// ------------------------------------------------------------------------------------------------
-
-// Transform depth to view-space position.
-// https://mynameismjp.wordpress.com/2009/03/10/reconstructing-position-from-depth/
-float3 position_from_depth(float z_over_w, float2 viewport_uv) {
-    // Get x/w and y/w from the viewport position
-    float x_over_w = viewport_uv.x * 2 - 1;
-    float y_over_w = (1 - viewport_uv.y) * 2 - 1;
-    float4 projected_position = float4(x_over_w, y_over_w, z_over_w, 1.0f);
-    // Transform by the inverse projection matrix
-    float4 projected_view_pos = mul(projected_position, scene_vars.inverted_projection_matrix);
-    // Divide by w to get the view-space position
-    return projected_view_pos.xyz / projected_view_pos.w;
-}
-
-// ------------------------------------------------------------------------------------------------
 // Bilateral box blur.
 // ------------------------------------------------------------------------------------------------
 
@@ -93,7 +76,7 @@ void sample_ao(float2 uv, float3 normal, float plane_d, inout float summed_ao, i
 
     // Plane fitting weight
     float sample_depth = depth_tex.SampleLevel(point_sampler, uv, 0).r;
-    float3 sample_position = position_from_depth(sample_depth, uv);
+    float3 sample_position = perspective_position_from_depth(sample_depth, uv, scene_vars.inverted_projection_matrix);
     float distance_to_plane = dot(normal, sample_position) + plane_d;
     weight *= exp(-pow2(distance_to_plane) * recip_double_plane_variance);
 
@@ -112,12 +95,12 @@ float4 filter_ps(Varyings input) : SV_TARGET {
     if (depth == 1.0)
         return float4(1, 0, 0, 0);
 
-    float3 view_position = position_from_depth(depth, uv);
+    float3 view_position = perspective_position_from_depth(depth, uv, scene_vars.inverted_projection_matrix);
     float plane_d = -dot(view_position, view_normal);
 
     float center_ao = 0.0f;
     float center_weight = 0.0f;
-    sample_ao(uv, depth, view_normal, center_ao, center_weight); // TODO Can be inlined, just need to compute the weight, which should be pow2(exp(-0)) I guess.
+    sample_ao(uv, view_normal, plane_d, center_ao, center_weight); // TODO Can be inlined, just need to compute the weight, which should be pow2(exp(-0)) I guess.
 
     float2 uv_offset = pixel_offset * recip_texture_size;
 
@@ -211,7 +194,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
 
     float3 view_normal = decode_ss_octahedral_normal(normal_tex.SampleLevel(point_sampler, input.texcoord, 0).xy);
     float pixel_bias = depth * bias * (1.0f - pow2(pow2(pow2(view_normal.z))));
-    float3 view_position = position_from_depth(depth, input.texcoord) + view_normal * pixel_bias;
+    float3 view_position = perspective_position_from_depth(depth, input.texcoord, scene_vars.inverted_projection_matrix) + view_normal * pixel_bias;
 
     // Compute screen space radius.
     float3 border_view_position = view_position + float3(world_radius, 0, 0);
@@ -225,7 +208,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
         float2 sample_uv = input.texcoord + uv_offset;
 
         float depth_i = depth_tex.SampleLevel(point_sampler, sample_uv, 0).r;
-        float3 view_position_i = position_from_depth(depth_i, sample_uv);
+        float3 view_position_i = perspective_position_from_depth(depth_i, sample_uv, scene_vars.inverted_projection_matrix);
         float3 v_i = view_position_i - view_position;
 
         // Equation 10
