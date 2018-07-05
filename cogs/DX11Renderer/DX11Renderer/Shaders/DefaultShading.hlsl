@@ -151,15 +151,28 @@ struct DefaultShading {
         float3 diffuse_tint, specular_tint;
         evaluate_tints(cos_theta, diffuse_tint, specular_tint);
 
-        float3 radiance = float3(0, 0, 0);
+        // Evaluate Lambert.
+        Sphere local_sphere = Sphere::make(local_sphere_position, light.sphere_radius());
+        Cone light_sphere_cap = sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
+        float solidangle_of_light = solidangle(light_sphere_cap);
+        CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
+        float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle_of_light;
+        float3 radiance = diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_and_solidangle.centroid_direction.z) * light_radiance * light_radiance_scale;
+
+        // Scale ambient visibility by subtended solid angle.
+        float solidangle_percentage = inverse_lerp(0, TWO_PI, solidangle_of_light);
+        float scaled_ambient_visibility = lerp(1.0, ambient_visibility, solidangle_percentage);
+
+        radiance *= scaled_ambient_visibility;
+
         { // Evaluate GGX.
             float ggx_alpha = BSDFs::GGX::alpha_from_roughness(roughness());
             bool delta_GGX_distribution = ggx_alpha < 0.0005;
             if (delta_GGX_distribution) {
                 // Check if peak reflection and the most representative point are aligned.
                 float toggle = saturate(100000 * (dot(peak_reflection, wi) - 0.99999));
-                float inv_divisor = rcp(PI * sphere_surface_area(light.sphere_radius()));
-                float3 light_radiance = light.sphere_power() * inv_divisor;
+                float recip_divisor = rcp(PI * sphere_surface_area(light.sphere_radius()));
+                float3 light_radiance = light.sphere_power() * recip_divisor;
                 radiance += specular_tint * light_radiance * toggle;
             }
             else {
@@ -171,22 +184,11 @@ struct DefaultShading {
                 float sin_theta_squared = pow2(light.sphere_radius()) / dot(most_representative_point, most_representative_point);
                 float a2 = pow2(ggx_alpha);
                 float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta * 3.6 + 0.4));
+                float specular_ambient_visibility = lerp(1, scaled_ambient_visibility, a2);
 
-                radiance += specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway) * abs(wi.z) * light_radiance * area_light_normalization_term;
+                radiance += specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway) * abs(wi.z) * light_radiance * area_light_normalization_term * specular_ambient_visibility;
             }
         }
-
-        // Evaluate Lambert.
-        Sphere local_sphere = Sphere::make(local_sphere_position, light.sphere_radius());
-        Cone light_sphere_cap = sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
-        float solidangle_of_light = solidangle(light_sphere_cap);
-        CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
-        float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle_of_light;
-        radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_and_solidangle.centroid_direction.z) * light_radiance * light_radiance_scale;
-
-        // Scale ambient visibility by subtended solid angle.
-        float solidangle_percentage = inverse_lerp(0, TWO_PI, centroid_and_solidangle.solidangle);
-        float scaled_ambient_visibility = lerp(1.0, ambient_visibility, solidangle_percentage);
 
         return radiance * scaled_ambient_visibility;
     }
