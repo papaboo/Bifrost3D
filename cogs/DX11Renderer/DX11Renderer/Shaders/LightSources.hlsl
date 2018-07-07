@@ -105,8 +105,8 @@ LightSample sample_light(LightData light, float3 world_position) {
         return sample_directional_light(light);
     else if (light.type() > 0.5)
         return sample_sphere_light(light, world_position);
-
-    return LightSample::empty();
+    else
+        return LightSample::empty();
 }
 
 #endif // _DX11_RENDERER_SHADERS_LIGHTSOURCES_H_

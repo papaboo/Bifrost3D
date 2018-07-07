@@ -36,11 +36,8 @@ Varyings vs(uint primitive_ID : SV_VertexID) {
     // Determine which light to render and bail out if it is not a sphere light.
     uint light_index = primitive_ID / 6u;
     LightData light = light_data[light_index];
-    if (light.type() != LightType::Sphere) {
-        Varyings output;
-        output.position = float4(0.0f, 0.0f, 0.0f, 0.0f);
-        return output;
-    }
+    if (light.type() != LightType::Sphere)
+        return (Varyings)0;
 
     // Draw quad with two triangles: 
     //   {-1, -1}, {-1, 1}, {1, -1}

@@ -133,7 +133,7 @@ inline OBlob compile_shader(const std::wstring& filename, const char* target, co
         D3D_COMPILE_STANDARD_FILE_INCLUDE,
         entry_point,
         target,
-        D3DCOMPILE_OPTIMIZATION_LEVEL3,
+        D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_WARNINGS_ARE_ERRORS,
         0, // More flags. Unused.
         &shader_bytecode,
         &error_messages);

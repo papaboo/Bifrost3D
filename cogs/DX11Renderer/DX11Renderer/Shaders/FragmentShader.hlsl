@@ -62,7 +62,7 @@ float3 integration(PixelInput input, bool is_front_face, float ambient_visibilit
 #endif
         } else {
             // Apply regular delta lights.
-            LightSample light_sample = sample_light(light_data[l], input.world_position.xyz);
+            LightSample light_sample = sample_light(light, input.world_position.xyz);
             float3 wi = mul(world_to_shading_TBN, light_sample.direction_to_light);
             float3 f = default_shading.evaluate(wo, wi);
             radiance += f * light_sample.radiance * abs(wi.z);
