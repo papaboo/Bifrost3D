@@ -95,7 +95,7 @@ private:
 
     // Backbuffer members.
     Vector2ui m_backbuffer_size;
-    ORenderTargetView m_swap_chain_buffer_view;
+    ORenderTargetView m_swap_chain_RTV;
     ORenderTargetView m_backbuffer_RTV;
     OShaderResourceView m_backbuffer_SRV;
 
@@ -153,7 +153,7 @@ public:
             m_backbuffer_size = Vector2ui::zero();
 
             // Backbuffer is initialized on demand when the output dimensions are known.
-            m_swap_chain_buffer_view = nullptr;
+            m_swap_chain_RTV = nullptr;
             m_backbuffer_RTV = nullptr;
             m_backbuffer_SRV = nullptr;
         }
@@ -209,9 +209,6 @@ public:
         if (Cameras::begin() == Cameras::end())
             return;
 
-        if (m_device == nullptr)
-            return;
-
         Vector2ui current_backbuffer_size = Vector2ui(m_window.get_width(), m_window.get_height());
         if (m_backbuffer_size != current_backbuffer_size) {
             
@@ -219,7 +216,7 @@ public:
                 // https://msdn.microsoft.com/en-us/library/windows/desktop/bb205075(v=vs.85).aspx#Handling_Window_Resizing
 
                 m_render_context->OMSetRenderTargets(0, 0, 0);
-                if (m_swap_chain_buffer_view) m_swap_chain_buffer_view->Release();
+                m_swap_chain_RTV.release();
 
                 HRESULT hr = m_swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
                 THROW_ON_FAILURE(hr);
@@ -227,7 +224,7 @@ public:
                 ID3D11Texture2D* swap_chain_buffer;
                 hr = m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&swap_chain_buffer));
                 THROW_ON_FAILURE(hr);
-                hr = m_device->CreateRenderTargetView(swap_chain_buffer, nullptr, &m_swap_chain_buffer_view);
+                hr = m_device->CreateRenderTargetView(swap_chain_buffer, nullptr, &m_swap_chain_RTV);
                 THROW_ON_FAILURE(hr);
                 swap_chain_buffer->Release();
             }
@@ -265,11 +262,11 @@ public:
             dx_viewport.MinDepth = 0.0f;
             dx_viewport.MaxDepth = 1.0f;
             m_render_context->RSSetViewports(1, &dx_viewport);
-            
+
             // NOTE: Perhaps render should return a reference to an SRV that we can just pass to the camera effects.
             //       Then the renderer is responsible for everything and we need an SRV anyway for the post processing.
-            Renderers::UID renderer = Cameras::get_renderer_ID(camera_ID);
-            m_renderers[renderer]->render(m_backbuffer_RTV, camera_ID, int(ceilf(viewport.width)), int(ceilf(viewport.height)));
+            Renderers::UID renderer_ID = Cameras::get_renderer_ID(camera_ID);
+            m_renderers[renderer_ID]->render(m_backbuffer_RTV, camera_ID, int(viewport.width), int(viewport.height));
         }
 
         // Compute delta time for camera effects.
@@ -282,7 +279,7 @@ public:
         // Post process the images with the camera effects.
         Cameras::UID camera_ID = *Cameras::get_iterable().begin();
         auto effects_settings = Cameras::get_effects_settings(camera_ID);
-        m_camera_effects.process(m_render_context, effects_settings, delta_time, m_backbuffer_SRV, m_swap_chain_buffer_view, m_backbuffer_size.x, m_backbuffer_size.y);
+        m_camera_effects.process(m_render_context, effects_settings, delta_time, m_backbuffer_SRV, m_swap_chain_RTV, m_backbuffer_size.x, m_backbuffer_size.y);
 
         // Post render calls, fx for GUI
         for (int i = 1; i < m_GUI_renderers.size(); ++i)
