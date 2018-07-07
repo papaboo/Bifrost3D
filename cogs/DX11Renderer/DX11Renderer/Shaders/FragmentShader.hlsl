@@ -9,10 +9,6 @@
 #include "DefaultShading.hlsl"
 #include "LightSources.hlsl"
 
-cbuffer scene_variables : register(b0) {
-    SceneVariables scene_vars;
-};
-
 cbuffer lights : register(b1) {
     int4 light_count;
     LightData light_data[12];
@@ -21,6 +17,10 @@ cbuffer lights : register(b1) {
 cbuffer material : register(b3) {
     MaterialParams material_params;
 }
+
+cbuffer scene_variables : register(b13) {
+    SceneVariables scene_vars;
+};
 
 Texture2D ssao_tex : register(t13);
 

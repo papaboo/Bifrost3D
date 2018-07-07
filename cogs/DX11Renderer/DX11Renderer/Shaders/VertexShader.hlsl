@@ -12,12 +12,12 @@
 // Vertex shader.
 // ------------------------------------------------------------------------------------------------
 
-cbuffer scene_variables : register(b0) {
-    SceneVariables scene_vars;
-};
-
 cbuffer transform : register(b2) {
     float4x3 to_world_matrix;
+};
+
+cbuffer scene_variables : register(b13) {
+    SceneVariables scene_vars;
 };
 
 struct Output {

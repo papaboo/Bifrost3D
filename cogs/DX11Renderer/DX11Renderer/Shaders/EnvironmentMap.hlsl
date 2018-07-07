@@ -25,7 +25,7 @@ float3 project_ray_direction(float2 viewport_pos,
 // Scene constants.
 // ------------------------------------------------------------------------------------------------
 
-cbuffer scene_variables : register(b0) {
+cbuffer scene_variables : register(b13) {
     SceneVariables scene_vars;
 };
 

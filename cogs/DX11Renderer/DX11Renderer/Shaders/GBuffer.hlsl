@@ -12,10 +12,6 @@
 // Constants.
 // ------------------------------------------------------------------------------------------------
 
-cbuffer scene_variables : register(b0) {
-    SceneVariables scene_vars;
-};
-
 cbuffer transform : register(b2) {
     float4x3 to_world_matrix;
 };
@@ -23,6 +19,10 @@ cbuffer transform : register(b2) {
 cbuffer material : register(b3) {
     MaterialParams material_params;
 }
+
+cbuffer scene_variables : register(b13) {
+    SceneVariables scene_vars;
+};
 
 // ------------------------------------------------------------------------------------------------
 // Opaque geometry

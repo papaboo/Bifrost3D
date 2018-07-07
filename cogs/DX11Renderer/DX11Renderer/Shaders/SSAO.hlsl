@@ -13,10 +13,6 @@
 // Scene constants.
 // ------------------------------------------------------------------------------------------------
 
-cbuffer scene_variables : register(b0) {
-    SceneVariables scene_vars;
-};
-
 cbuffer constants : register(b1) {
     float world_radius;
     float bias;
@@ -30,9 +26,13 @@ cbuffer constants : register(b1) {
     float2 recip_texture_size;
 };
 
-cbuffer constants : register(b2) {
+cbuffer uv_offset_constants : register(b2) {
     float2 uv_offsets[256];
 }
+
+cbuffer scene_variables : register(b13) {
+    SceneVariables scene_vars;
+};
 
 // ------------------------------------------------------------------------------------------------
 // Vertex shader.

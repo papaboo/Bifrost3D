@@ -12,14 +12,14 @@
 // Vertex shader.
 // ------------------------------------------------------------------------------------------------
 
-cbuffer scene_variables : register(b0) {
-    SceneVariables scene_vars;
-};
-
 cbuffer lights : register(b1) {
     int4 light_count;
     LightData light_data[12];
 }
+
+cbuffer scene_variables : register(b13) {
+    SceneVariables scene_vars;
+};
 
 // ------------------------------------------------------------------------------------------------
 // Vertex shader.
