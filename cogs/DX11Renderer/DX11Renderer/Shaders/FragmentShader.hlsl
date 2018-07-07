@@ -9,13 +9,13 @@
 #include "DefaultShading.hlsl"
 #include "LightSources.hlsl"
 
-cbuffer lights : register(b1) {
-    int4 light_count;
-    LightData light_data[12];
-}
-
 cbuffer material : register(b3) {
     MaterialParams material_params;
+}
+
+cbuffer lights : register(b12) {
+    int4 light_count;
+    LightData light_data[12];
 }
 
 cbuffer scene_variables : register(b13) {

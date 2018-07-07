@@ -12,7 +12,7 @@
 // Vertex shader.
 // ------------------------------------------------------------------------------------------------
 
-cbuffer lights : register(b1) {
+cbuffer lights : register(b12) {
     int4 light_count;
     LightData light_data[12];
 }

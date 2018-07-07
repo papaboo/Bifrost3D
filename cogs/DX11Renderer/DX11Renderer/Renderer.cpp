@@ -530,8 +530,8 @@ public:
             m_environments->render(*m_render_context, scene.get_ID());
 
             // Bind light buffer.
-            m_render_context->VSSetConstantBuffers(1, 1, m_lights.manager.light_buffer_addr());
-            m_render_context->PSSetConstantBuffers(1, 1, m_lights.manager.light_buffer_addr());
+            m_render_context->VSSetConstantBuffers(12, 1, m_lights.manager.light_buffer_addr());
+            m_render_context->PSSetConstantBuffers(12, 1, m_lights.manager.light_buffer_addr());
 
             { // Render sphere lights.
                 m_render_context->VSSetShader(m_lights.vertex_shader, 0, 0);
