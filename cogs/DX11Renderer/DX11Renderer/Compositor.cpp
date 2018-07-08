@@ -19,7 +19,7 @@ using namespace Cogwheel::Scene;
 
 namespace DX11Renderer {
 
-using OIDXGISwapChain1 = DX11Renderer::OwnedResourcePtr<IDXGISwapChain1>;
+using ODXGISwapChain1 = DX11Renderer::OwnedResourcePtr<IDXGISwapChain1>;
 
 ODevice1 create_performant_device1(unsigned int create_device_flags) {
     // Find the best performing device (apparently the one with the most memory) and initialize that.
@@ -90,7 +90,7 @@ private:
 
     ODevice1 m_device;
     ODeviceContext1 m_render_context;
-    OIDXGISwapChain1 m_swap_chain;
+    ODXGISwapChain1 m_swap_chain;
     unsigned int m_sync_interval = 1;
 
     // Backbuffer members.
@@ -144,9 +144,8 @@ public:
             swap_chain_desc1.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
             hr = dxgi_factory2->CreateSwapChainForHwnd(m_device, hwnd, &swap_chain_desc1, nullptr, nullptr, &m_swap_chain);
-            THROW_ON_FAILURE(hr);
-
             dxgi_factory2->Release();
+            THROW_ON_FAILURE(hr);
         }
 
         { // Setup backbuffer.
@@ -172,6 +171,8 @@ public:
         { // Initialize renderer containers. Initialize the 0'th index to null.
             m_renderers.resize(1);
             m_renderers[0] = std::unique_ptr<IRenderer>(nullptr);
+            m_previous_effects_times.resize(1);
+            m_previous_effects_times[0] = std::numeric_limits<double>::lowest();
             m_GUI_renderers.resize(1);
             m_GUI_renderers[0] = std::unique_ptr<IGuiRenderer>(nullptr);
         }
@@ -220,20 +221,17 @@ public:
                 m_render_context->OMSetRenderTargets(0, 0, 0);
                 m_swap_chain_RTV.release();
 
-                HRESULT hr = m_swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
-                THROW_ON_FAILURE(hr);
+                THROW_ON_FAILURE(m_swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0));
 
                 ID3D11Texture2D* swap_chain_buffer;
-                hr = m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&swap_chain_buffer));
-                THROW_ON_FAILURE(hr);
-                hr = m_device->CreateRenderTargetView(swap_chain_buffer, nullptr, &m_swap_chain_RTV);
-                THROW_ON_FAILURE(hr);
+                THROW_ON_FAILURE(m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&swap_chain_buffer)));
+                THROW_ON_FAILURE(m_device->CreateRenderTargetView(swap_chain_buffer, nullptr, &m_swap_chain_RTV));
                 swap_chain_buffer->Release();
             }
 
             { // Setup backbuffer.
-                if (m_backbuffer_RTV) m_backbuffer_RTV->Release();
-                if (m_backbuffer_SRV) m_backbuffer_SRV->Release();
+                m_backbuffer_RTV.release();
+                m_backbuffer_SRV.release();
 
                 create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, current_backbuffer_size.x, current_backbuffer_size.y, &m_backbuffer_SRV, nullptr, &m_backbuffer_RTV);
             }
