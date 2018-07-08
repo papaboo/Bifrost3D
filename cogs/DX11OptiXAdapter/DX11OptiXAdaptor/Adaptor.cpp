@@ -25,7 +25,7 @@
 
 namespace DX11OptiXAdaptor {
 
-inline void throw_on_failure(cudaError_t error, const std::string& file, int line) {
+inline void throw_cuda_error(cudaError_t error, const std::string& file, int line) {
     if (error != cudaSuccess) {
         std::string message = "[file:" + file + " line:" + std::to_string(line) + 
             "] CUDA errror: " + std::string(cudaGetErrorString(error));
@@ -34,7 +34,7 @@ inline void throw_on_failure(cudaError_t error, const std::string& file, int lin
     }
 }
 
-#define THROW_ON_CUDA_FAILURE(error) ::DX11OptiXAdaptor::throw_on_failure(error, __FILE__,__LINE__)
+#define THROW_CUDA_ERROR(error) throw_cuda_error(error, __FILE__,__LINE__)
 
 class Adaptor::Implementation {
 public:
@@ -76,7 +76,7 @@ public:
             dxgi_device->Release();
 
             cudaError_t error = cudaD3D11GetDevice(&m_cuda_device_ID, adapter);
-            THROW_ON_CUDA_FAILURE(error);
+            THROW_CUDA_ERROR(error);
             adapter->Release();
 
             // Create OptiX Renderer on device.
@@ -146,7 +146,7 @@ public:
     ~Implementation() {
         m_render_target.optix_buffer = nullptr;
 #ifndef DISABLE_INTEROP
-        THROW_ON_CUDA_FAILURE(cudaGraphicsUnregisterResource(m_render_target.cuda_buffer));
+        THROW_CUDA_ERROR(cudaGraphicsUnregisterResource(m_render_target.cuda_buffer));
 #endif
         DX11Renderer::safe_release(&m_render_target.dx_SRV);
 
@@ -184,18 +184,18 @@ public:
 #else
         { // Render to render target.
             cudaError_t error = cudaGraphicsMapResources(1, &m_render_target.cuda_buffer); // Done before rendering?
-            THROW_ON_CUDA_FAILURE(error);
+            THROW_CUDA_ERROR(error);
             ushort4* pixels;
             size_t byte_count;
             error = cudaGraphicsResourceGetMappedPointer((void**)&pixels, &byte_count, m_render_target.cuda_buffer);
-            THROW_ON_CUDA_FAILURE(error);
+            THROW_CUDA_ERROR(error);
 
             OPTIX_VALIDATE(m_optix_renderer->get_context());
             OPTIX_VALIDATE(m_render_target.optix_buffer);
             m_render_target.optix_buffer->setDevicePointer(m_cuda_device_ID, pixels);
             m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, m_render_target.width, m_render_target.height);
 
-            THROW_ON_CUDA_FAILURE(cudaGraphicsUnmapResources(1, &m_render_target.cuda_buffer));
+            THROW_CUDA_ERROR(cudaGraphicsUnmapResources(1, &m_render_target.cuda_buffer));
         }
 #endif
 
@@ -258,10 +258,10 @@ public:
 #ifndef DISABLE_INTEROP
             // Register the buffer with CUDA.
             if (m_render_target.cuda_buffer != nullptr)
-                THROW_ON_CUDA_FAILURE(cudaGraphicsUnregisterResource(m_render_target.cuda_buffer));
+                THROW_CUDA_ERROR(cudaGraphicsUnregisterResource(m_render_target.cuda_buffer));
             cudaError_t error = cudaGraphicsD3D11RegisterResource(&m_render_target.cuda_buffer, dx_buffer,
                                                                   cudaGraphicsRegisterFlagsNone);
-            THROW_ON_CUDA_FAILURE(error);
+            THROW_CUDA_ERROR(error);
             cudaGraphicsResourceSetMapFlags(m_render_target.cuda_buffer, cudaGraphicsMapFlagsWriteDiscard);
             dx_buffer->Release();
 #endif
