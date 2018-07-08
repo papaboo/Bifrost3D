@@ -418,6 +418,15 @@ public:
         // TODO Replace by assert
         m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // NOTE This should already be the case as we finish a frame by rendering models or post process effects.
 
+        // Create and set the viewport.
+        D3D11_VIEWPORT dx_viewport;
+        dx_viewport.TopLeftX = dx_viewport.TopLeftY = 0.0f;
+        dx_viewport.Width = float(width);
+        dx_viewport.Height = float(height);
+        dx_viewport.MinDepth = 0.0f;
+        dx_viewport.MaxDepth = 1.0f;
+        m_render_context->RSSetViewports(1, &dx_viewport);
+
         // Opaque state setup.
         m_render_context->OMSetBlendState(0, 0, 0xffffffff);
         m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 0);

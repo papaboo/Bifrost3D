@@ -101,7 +101,7 @@ private:
 
     // Camera effects
     double m_counter_hertz;
-    double m_previous_effects_time;
+    std::vector<double> m_previous_effects_times;
     CameraEffects m_camera_effects;
 
 public:
@@ -163,7 +163,6 @@ public:
                 LARGE_INTEGER freq;
                 QueryPerformanceFrequency(&freq);
                 m_counter_hertz = 1.0 / freq.QuadPart;
-                m_previous_effects_time = std::numeric_limits<double>::lowest(); // Ensures that the first delta_time is positive infinity, which in turn disables eye adaptation for the first frame.
             }
 
             std::wstring shader_folder_path = m_data_folder_path + L"DX11Renderer\\Shaders\\";
@@ -187,11 +186,14 @@ public:
         if (renderer == nullptr)
             return m_renderers[0];
 
-        if (m_renderers.size() < Renderers::capacity())
+        if (m_renderers.size() < Renderers::capacity()) {
             m_renderers.resize(Renderers::capacity());
+            m_previous_effects_times.resize(Renderers::capacity());
+        }
 
         Renderers::UID renderer_ID = renderer->get_ID();
         m_renderers[renderer_ID] = std::unique_ptr<IRenderer>(renderer);
+        m_previous_effects_times[renderer_ID] = std::numeric_limits<double>::lowest(); // Ensures that the first delta_time is positive infinity, which in turn disables eye adaptation for the first frame.
         return m_renderers[renderer_ID];
     }
 
@@ -253,33 +255,24 @@ public:
             viewport.y *= m_window.get_height();
             viewport.height *= m_window.get_height();
 
-            // Create and set the viewport.
-            D3D11_VIEWPORT dx_viewport;
-            dx_viewport.TopLeftX = viewport.x;
-            dx_viewport.TopLeftY = viewport.y;
-            dx_viewport.Width = viewport.width;
-            dx_viewport.Height = viewport.height;
-            dx_viewport.MinDepth = 0.0f;
-            dx_viewport.MaxDepth = 1.0f;
-            m_render_context->RSSetViewports(1, &dx_viewport);
-
             // NOTE: Perhaps render should return a reference to an SRV that we can just pass to the camera effects.
             //       Then the renderer is responsible for everything and we need an SRV anyway for the post processing.
             Renderers::UID renderer_ID = Cameras::get_renderer_ID(camera_ID);
             m_renderers[renderer_ID]->render(m_backbuffer_RTV, camera_ID, int(viewport.width), int(viewport.height));
+
+            // Compute delta time for camera effects.
+            LARGE_INTEGER performance_count;
+            QueryPerformanceCounter(&performance_count);
+            double current_time = performance_count.QuadPart * m_counter_hertz;
+            float delta_time = float(current_time - m_previous_effects_times[renderer_ID]);
+            m_previous_effects_times[renderer_ID] = current_time;
+
+            // Post process the images with the camera effects.
+            // TODO Handle viewport
+            Cameras::UID camera_ID = *Cameras::get_iterable().begin();
+            auto effects_settings = Cameras::get_effects_settings(camera_ID);
+            m_camera_effects.process(m_render_context, effects_settings, delta_time, m_backbuffer_SRV, m_swap_chain_RTV, m_backbuffer_size.x, m_backbuffer_size.y);
         }
-
-        // Compute delta time for camera effects.
-        LARGE_INTEGER performance_count;
-        QueryPerformanceCounter(&performance_count);
-        double current_time = performance_count.QuadPart * m_counter_hertz;
-        float delta_time = float(current_time - m_previous_effects_time);
-        m_previous_effects_time = current_time;
-
-        // Post process the images with the camera effects.
-        Cameras::UID camera_ID = *Cameras::get_iterable().begin();
-        auto effects_settings = Cameras::get_effects_settings(camera_ID);
-        m_camera_effects.process(m_render_context, effects_settings, delta_time, m_backbuffer_SRV, m_swap_chain_RTV, m_backbuffer_size.x, m_backbuffer_size.y);
 
         // Post render calls, fx for GUI
         for (int i = 1; i < m_GUI_renderers.size(); ++i)

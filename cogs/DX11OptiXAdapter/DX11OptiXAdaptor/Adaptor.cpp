@@ -166,8 +166,6 @@ public:
     }
 
     void render(DX11Renderer::ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
-        m_render_context->OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
-
         if (m_render_target.width != width || m_render_target.height != height)
             resize_render_target(width, height);
 
@@ -200,6 +198,17 @@ public:
 #endif
 
         { // Render to back buffer.
+            m_render_context->OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
+
+            // Create and set the viewport.
+            D3D11_VIEWPORT dx_viewport;
+            dx_viewport.TopLeftX = dx_viewport.TopLeftY = 0.0f;
+            dx_viewport.Width = float(width);
+            dx_viewport.Height = float(height);
+            dx_viewport.MinDepth = 0.0f;
+            dx_viewport.MaxDepth = 1.0f;
+            m_render_context->RSSetViewports(1, &dx_viewport);
+
             m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             m_render_context->OMSetBlendState(nullptr, nullptr, 0xffffffff);
 
