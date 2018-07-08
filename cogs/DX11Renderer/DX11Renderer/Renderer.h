@@ -52,7 +52,7 @@ public:
 
     void handle_updates();
 
-    void render(ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Cameras::UID camera_ID, int width, int height);
+    RenderedFrame render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height);
 
     Settings get_settings() const;
     void set_settings(Settings& settings);

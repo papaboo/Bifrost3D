@@ -96,8 +96,6 @@ private:
     // Backbuffer members.
     Vector2ui m_backbuffer_size;
     ORenderTargetView m_swap_chain_RTV;
-    ORenderTargetView m_backbuffer_RTV;
-    OShaderResourceView m_backbuffer_SRV;
 
     // Camera effects
     double m_counter_hertz;
@@ -153,8 +151,6 @@ public:
 
             // Backbuffer is initialized on demand when the output dimensions are known.
             m_swap_chain_RTV = nullptr;
-            m_backbuffer_RTV = nullptr;
-            m_backbuffer_SRV = nullptr;
         }
 
         { // Setup tonemapper
@@ -229,13 +225,6 @@ public:
                 swap_chain_buffer->Release();
             }
 
-            { // Setup backbuffer.
-                m_backbuffer_RTV.release();
-                m_backbuffer_SRV.release();
-
-                create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, current_backbuffer_size.x, current_backbuffer_size.y, &m_backbuffer_SRV, nullptr, &m_backbuffer_RTV);
-            }
-
             m_backbuffer_size = current_backbuffer_size;
         }
 
@@ -253,10 +242,8 @@ public:
             viewport.y *= m_window.get_height();
             viewport.height *= m_window.get_height();
 
-            // NOTE: Perhaps render should return a reference to an SRV that we can just pass to the camera effects.
-            //       Then the renderer is responsible for everything and we need an SRV anyway for the post processing.
             Renderers::UID renderer_ID = Cameras::get_renderer_ID(camera_ID);
-            m_renderers[renderer_ID]->render(m_backbuffer_RTV, camera_ID, int(viewport.width), int(viewport.height));
+            auto frame = m_renderers[renderer_ID]->render(camera_ID, int(viewport.width), int(viewport.height));
 
             // Compute delta time for camera effects.
             LARGE_INTEGER performance_count;
@@ -269,7 +256,7 @@ public:
             // TODO Handle viewport
             Cameras::UID camera_ID = *Cameras::get_iterable().begin();
             auto effects_settings = Cameras::get_effects_settings(camera_ID);
-            m_camera_effects.process(m_render_context, effects_settings, delta_time, m_backbuffer_SRV, m_swap_chain_RTV, m_backbuffer_size.x, m_backbuffer_size.y);
+            m_camera_effects.process(m_render_context, effects_settings, delta_time, frame.frame_SRV, m_swap_chain_RTV, m_backbuffer_size.x, m_backbuffer_size.y);
         }
 
         // Post render calls, fx for GUI

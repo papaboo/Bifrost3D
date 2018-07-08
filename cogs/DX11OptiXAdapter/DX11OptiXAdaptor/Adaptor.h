@@ -37,7 +37,7 @@ public:
 
     void handle_updates();
 
-    void render(DX11Renderer::ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Cameras::UID camera_ID, int width, int height);
+    DX11Renderer::RenderedFrame render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height);
 
 private:
 

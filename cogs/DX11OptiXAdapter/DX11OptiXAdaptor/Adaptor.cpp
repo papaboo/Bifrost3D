@@ -17,10 +17,7 @@
 
 #include <optixu/optixpp_namespace.h>
 
-#define NOMINMAX
-#include <D3D11_1.h>
-#include <D3DCompiler.h>
-#undef RGB
+#include <DX11Renderer/Types.h>
 
 #include <codecvt>
 
@@ -45,6 +42,9 @@ public:
     ID3D11Device1& m_device;
     ID3D11DeviceContext1* m_render_context;
 
+    DX11Renderer::ORenderTargetView m_backbuffer_RTV;
+    DX11Renderer::OShaderResourceView m_backbuffer_SRV;
+
     struct {
         ID3D11ShaderResourceView* dx_SRV;
         optix::Buffer optix_buffer;
@@ -61,7 +61,7 @@ public:
     OptiXRenderer::Renderer* m_optix_renderer;
 
     Implementation(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path)
-        : m_device(device) {
+        : m_device(device), m_backbuffer_RTV(nullptr), m_backbuffer_SRV(nullptr) {
 
         device.GetImmediateContext1(&m_render_context);
 
@@ -85,15 +85,9 @@ public:
             m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, width_hint, height_hint, data_path);
         }
 
-        {
-            HRESULT hr = DX11Renderer::create_constant_buffer(m_device, sizeof(float) * 4, &m_constant_buffer);
-            THROW_ON_FAILURE(hr);
-        }
+        THROW_ON_FAILURE(DX11Renderer::create_constant_buffer(m_device, sizeof(float) * 4, &m_constant_buffer));
 
-        {
-            m_render_target = {};
-            resize_render_target(width_hint, height_hint);
-        }
+        m_render_target = {};
 
         { // Init shaders.
             const char* vertex_src =
@@ -165,9 +159,17 @@ public:
         m_optix_renderer->handle_updates();
     }
 
-    void render(DX11Renderer::ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
-        if (m_render_target.width != width || m_render_target.height != height)
+    DX11Renderer::RenderedFrame render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
+        if (m_render_target.width != width || m_render_target.height != height) {
+            { // Backbuffer.
+                m_backbuffer_RTV.release();
+                m_backbuffer_SRV.release();
+
+                DX11Renderer::create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_backbuffer_SRV, nullptr, &m_backbuffer_RTV);
+            }
+
             resize_render_target(width, height);
+        }
 
 #ifdef DISABLE_INTEROP
         { // Render and copy to backbuffer.
@@ -198,7 +200,7 @@ public:
 #endif
 
         { // Render to back buffer.
-            m_render_context->OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
+            m_render_context->OMSetRenderTargets(1, &m_backbuffer_RTV, nullptr);
 
             // Create and set the viewport.
             D3D11_VIEWPORT dx_viewport;
@@ -220,6 +222,10 @@ public:
 
             m_render_context->Draw(3, 0);
         }
+
+        Cogwheel::Math::Rect<int> rect = { 0, 0, width, height };
+        DX11Renderer::RenderedFrame frame = { m_backbuffer_SRV, rect };
+        return frame;
     }
 
     void resize_render_target(int width, int height) {
@@ -308,8 +314,8 @@ void Adaptor::handle_updates() {
     m_impl->handle_updates();
 }
 
-void Adaptor::render(DX11Renderer::ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
-    m_impl->render(backbuffer_RTV, camera_ID, width, height);
+DX11Renderer::RenderedFrame Adaptor::render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
+    return m_impl->render(camera_ID, width, height);
 }
 
 } // NS DX11OptiXAdaptor

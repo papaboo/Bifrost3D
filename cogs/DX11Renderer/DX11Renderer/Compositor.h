@@ -29,17 +29,27 @@ typedef HWND__* HWND;
 struct ID3D11Device1;
 struct ID3D11DeviceContext1;
 struct ID3D11RenderTargetView;
+struct ID3D11ShaderResourceView;
 
 namespace DX11Renderer {
 template <typename T> class OwnedResourcePtr;
 using ODevice1 = OwnedResourcePtr<ID3D11Device1>;
 using ODeviceContext1 = DX11Renderer::OwnedResourcePtr<ID3D11DeviceContext1>;
 using ORenderTargetView = OwnedResourcePtr<ID3D11RenderTargetView>;
+using OShaderResourceView = OwnedResourcePtr<ID3D11ShaderResourceView>;
 }
 
 #define D3D11_CREATE_DEVICE_NONE 0
 
 namespace DX11Renderer {
+
+//-------------------------------------------------------------------------------------------------
+// Result of rendering a frame.
+//-------------------------------------------------------------------------------------------------
+struct RenderedFrame {
+    ID3D11ShaderResourceView* frame_SRV; // TODO OShaderResourceView& frame_SRV;
+    Cogwheel::Math::Rect<int> rect;
+};
 
 //-------------------------------------------------------------------------------------------------
 // Renderer interface.
@@ -51,7 +61,7 @@ public:
     virtual ~IRenderer() {}
     virtual Cogwheel::Core::Renderers::UID get_ID() const = 0;
     virtual void handle_updates() = 0;
-    virtual void render(ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) = 0;
+    virtual RenderedFrame render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) = 0;
 };
 
 typedef IRenderer*(*RendererCreator)(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path);

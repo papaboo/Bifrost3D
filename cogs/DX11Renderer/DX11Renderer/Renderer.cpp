@@ -43,6 +43,9 @@ private:
     ID3D11Device1& m_device;
     ODeviceContext1 m_render_context;
 
+    ORenderTargetView m_backbuffer_RTV;
+    OShaderResourceView m_backbuffer_SRV;
+
     Settings m_settings;
     DebugSettings m_debug_settings;
 
@@ -206,6 +209,10 @@ public:
             m_g_buffer.depth_view = nullptr;
             m_g_buffer.normal_SRV = nullptr;
             m_g_buffer.normal_RTV = nullptr;
+
+            // So is the backbuffer.
+            m_backbuffer_RTV = nullptr;
+            m_backbuffer_SRV = nullptr;
         }
 
         m_ssao = SSAO::AlchemyAO(m_device, m_shader_folder_path);
@@ -414,7 +421,7 @@ public:
             context->Draw(mesh.vertex_count, 0);
     } 
 
-    void render(ORenderTargetView& backbuffer_RTV, const Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
+    RenderedFrame render(const Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
         // TODO Replace by assert
         m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // NOTE This should already be the case as we finish a frame by rendering models or post process effects.
 
@@ -454,9 +461,16 @@ public:
 
             // Re-allocate buffers if the dimensions have changed.
             if (m_g_buffer.width != width || m_g_buffer.height != height) {
+                { // Backbuffer.
+                    m_backbuffer_RTV.release();
+                    m_backbuffer_SRV.release();
+
+                    create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_backbuffer_SRV, nullptr, &m_backbuffer_RTV);
+                }
+
                 { // Depth buffer
-                    if (m_g_buffer.depth_SRV) m_g_buffer.depth_SRV->Release();
-                    if (m_g_buffer.depth_view) m_g_buffer.depth_view->Release();
+                    m_g_buffer.depth_SRV.release();
+                    m_g_buffer.depth_view.release();
 
                     D3D11_TEXTURE2D_DESC depth_desc;
                     depth_desc.Width = width;
@@ -482,8 +496,8 @@ public:
                 }
 
                 { // Normal buffer
-                    if (m_g_buffer.normal_SRV) m_g_buffer.normal_SRV->Release();
-                    if (m_g_buffer.normal_RTV) m_g_buffer.normal_RTV->Release();
+                    m_g_buffer.normal_SRV.release();
+                    m_g_buffer.normal_RTV.release();
                     create_texture_2D(m_device, DXGI_FORMAT_R16G16_SNORM, width, height, &m_g_buffer.normal_SRV, nullptr, &m_g_buffer.normal_RTV);
                 }
 
@@ -510,7 +524,7 @@ public:
             m_debug_settings.display_mode == DebugSettings::DisplayMode::Normals ||
             m_debug_settings.display_mode == DebugSettings::DisplayMode::AO) {
 
-            m_render_context->OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
+            m_render_context->OMSetRenderTargets(1, &m_backbuffer_RTV, nullptr);
 
             ID3D11ShaderResourceView* srvs[3] = { m_g_buffer.normal_SRV, m_g_buffer.depth_SRV, ssao_SRV };
             m_render_context->PSSetShaderResources(0, 3, srvs);
@@ -527,10 +541,12 @@ public:
             display_constant_buffer.release();
             m_render_context->PSSetConstantBuffers(1, 1, &display_constant_buffer);
 
-            return;
+            Cogwheel::Math::Rect<int> rect = { 0, 0, width, height };
+            DX11Renderer::RenderedFrame frame = { m_backbuffer_SRV, rect };
+            return frame;
         }
 
-        m_render_context->OMSetRenderTargets(1, &backbuffer_RTV, m_g_buffer.depth_view);
+        m_render_context->OMSetRenderTargets(1, &m_backbuffer_RTV, m_g_buffer.depth_view);
         m_render_context->PSSetShaderResources(13, 1, &ssao_SRV);
 
         { // Render lights.
@@ -621,6 +637,10 @@ public:
                 }
             }
         }
+
+        Cogwheel::Math::Rect<int> rect = { 0, 0, width, height };
+        DX11Renderer::RenderedFrame frame = { m_backbuffer_SRV, rect };
+        return frame;
     }
 
     template <typename T>
@@ -869,8 +889,8 @@ void Renderer::handle_updates() {
     m_impl->handle_updates();
 }
 
-void Renderer::render(ORenderTargetView& backbuffer_RTV, Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
-    m_impl->render(backbuffer_RTV, camera_ID, width, height);
+RenderedFrame Renderer::render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
+    return m_impl->render(camera_ID, width, height);
 }
 
 Renderer::Settings Renderer::get_settings() const { return m_impl->get_settings(); }
