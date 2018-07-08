@@ -36,6 +36,10 @@ struct ID3D11Texture2D;
 struct ID3D11VertexShader;
 struct ID3D11UnorderedAccessView;
 
+struct IDXGIAdapter;
+struct IDXGIDevice;
+struct IDXGIFactory2;
+
 //-------------------------------------------------------------------------------------------------
 // DX11 enum none flags.
 //-------------------------------------------------------------------------------------------------
@@ -70,6 +74,9 @@ using OTexture2D = DX11Renderer::OwnedResourcePtr<ID3D11Texture2D>;
 using OVertexShader = DX11Renderer::OwnedResourcePtr<ID3D11VertexShader>;
 using OUnorderedAccessView = DX11Renderer::OwnedResourcePtr<ID3D11UnorderedAccessView>;
 
+using ODXGIDevice = DX11Renderer::OwnedResourcePtr<IDXGIDevice>;
+using ODXGIAdapter = DX11Renderer::OwnedResourcePtr<IDXGIAdapter>;
+using ODXGIFactory2 = DX11Renderer::OwnedResourcePtr<IDXGIFactory2>;
 
 //-------------------------------------------------------------------------------------------------
 // Storage.
