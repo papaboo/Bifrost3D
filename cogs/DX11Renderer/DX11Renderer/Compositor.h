@@ -47,7 +47,7 @@ namespace DX11Renderer {
 // Result of rendering a frame.
 //-------------------------------------------------------------------------------------------------
 struct RenderedFrame {
-    ID3D11ShaderResourceView* frame_SRV; // TODO OShaderResourceView& frame_SRV;
+    OShaderResourceView& frame_SRV;
     Cogwheel::Math::Rect<int> rect;
 };
 
