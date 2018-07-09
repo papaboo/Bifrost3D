@@ -21,6 +21,8 @@
 
 #include <codecvt>
 
+using namespace DX11Renderer;
+
 // #define DISABLE_INTEROP 1
 
 namespace DX11OptiXAdaptor {
@@ -40,13 +42,13 @@ class Adaptor::Implementation {
 public:
     int m_cuda_device_ID = -1;
     ID3D11Device1& m_device;
-    ID3D11DeviceContext1* m_render_context;
+    ODeviceContext1 m_render_context;
 
-    DX11Renderer::ORenderTargetView m_backbuffer_RTV;
-    DX11Renderer::OShaderResourceView m_backbuffer_SRV;
+    ORenderTargetView m_backbuffer_RTV;
+    OShaderResourceView m_backbuffer_SRV;
 
     struct {
-        ID3D11ShaderResourceView* dx_SRV;
+        OShaderResourceView dx_SRV;
         optix::Buffer optix_buffer;
         cudaGraphicsResource* cuda_buffer;
         int capacity;
@@ -54,9 +56,9 @@ public:
         int height;
     } m_render_target;
 
-    ID3D11Buffer* m_constant_buffer;
-    ID3D11VertexShader* m_vertex_shader;
-    ID3D11PixelShader* m_pixel_shader;
+    OBuffer m_constant_buffer;
+    OVertexShader m_vertex_shader;
+    OPixelShader m_pixel_shader;
 
     OptiXRenderer::Renderer* m_optix_renderer;
 
@@ -66,18 +68,13 @@ public:
         device.GetImmediateContext1(&m_render_context);
 
         { // Get CUDA device from DX11 context.
-            IDXGIDevice* dxgi_device = nullptr;
-            HRESULT hr = device.QueryInterface(IID_PPV_ARGS(&dxgi_device));
-            THROW_ON_FAILURE(hr);
+            ODXGIDevice dxgi_device = nullptr;
+            THROW_ON_FAILURE(device.QueryInterface(IID_PPV_ARGS(&dxgi_device)));
 
-            IDXGIAdapter* adapter = nullptr;
-            hr = dxgi_device->GetAdapter(&adapter);
-            THROW_ON_FAILURE(hr); 
-            dxgi_device->Release();
+            ODXGIAdapter adapter = nullptr;
+            THROW_ON_FAILURE(dxgi_device->GetAdapter(&adapter));
 
-            cudaError_t error = cudaD3D11GetDevice(&m_cuda_device_ID, adapter);
-            THROW_CUDA_ERROR(error);
-            adapter->Release();
+            THROW_CUDA_ERROR(cudaD3D11GetDevice(&m_cuda_device_ID, adapter));
 
             // Create OptiX Renderer on device.
             std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
@@ -85,7 +82,7 @@ public:
             m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, width_hint, height_hint, data_path);
         }
 
-        THROW_ON_FAILURE(DX11Renderer::create_constant_buffer(m_device, sizeof(float) * 4, &m_constant_buffer));
+        THROW_ON_FAILURE(create_constant_buffer(m_device, sizeof(float) * 4, &m_constant_buffer));
 
         m_render_target = {};
 
@@ -109,9 +106,9 @@ public:
                 "   return pixels[int(pixel_pos.x) + int(viewport_size.y - pixel_pos.y) * viewport_size.x];\n"
                 "}\n";
 
-            static auto compile_shader = [](const char* const shader_src, const char* const target, const char* const entry_point) -> ID3DBlob* {
-                ID3DBlob* shader_bytecode;
-                ID3DBlob* error_messages = nullptr;
+            static auto compile_shader = [](const char* const shader_src, const char* const target, const char* const entry_point) -> OBlob {
+                OBlob shader_bytecode;
+                OBlob error_messages = nullptr;
                 HRESULT hr = D3DCompile(shader_src, strlen(shader_src), nullptr,
                     nullptr, // macroes
                     D3D_COMPILE_STANDARD_FILE_INCLUDE,
@@ -131,15 +128,11 @@ public:
                 return shader_bytecode;
             };
 
-            ID3DBlob* vertex_shader_bytecode = compile_shader(vertex_src, "vs_5_0", "main_vs");
-            HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_bytecode), nullptr, &m_vertex_shader);
-            THROW_ON_FAILURE(hr);
-            vertex_shader_bytecode->Release();
+            OBlob vertex_shader_bytecode = compile_shader(vertex_src, "vs_5_0", "main_vs");
+            THROW_ON_FAILURE(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_bytecode), nullptr, &m_vertex_shader));
 
-            ID3DBlob* pixel_shader_bytecode = compile_shader(pixel_src, "ps_5_0", "main_ps");
-            hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_bytecode), nullptr, &m_pixel_shader);
-            THROW_ON_FAILURE(hr);
-            pixel_shader_bytecode->Release();
+            OBlob pixel_shader_bytecode = compile_shader(pixel_src, "ps_5_0", "main_ps");
+            THROW_ON_FAILURE(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_bytecode), nullptr, &m_pixel_shader));
         }
     }
 
@@ -148,10 +141,6 @@ public:
 #ifndef DISABLE_INTEROP
         THROW_CUDA_ERROR(cudaGraphicsUnregisterResource(m_render_target.cuda_buffer));
 #endif
-        DX11Renderer::safe_release(&m_render_target.dx_SRV);
-
-        DX11Renderer::safe_release(&m_constant_buffer);
-
         delete m_optix_renderer;
     }
 
@@ -159,13 +148,13 @@ public:
         m_optix_renderer->handle_updates();
     }
 
-    DX11Renderer::RenderedFrame render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
+    RenderedFrame render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
         if (m_render_target.width != width || m_render_target.height != height) {
             { // Backbuffer.
                 m_backbuffer_RTV.release();
                 m_backbuffer_SRV.release();
 
-                DX11Renderer::create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_backbuffer_SRV, nullptr, &m_backbuffer_RTV);
+                create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_backbuffer_SRV, nullptr, &m_backbuffer_RTV);
             }
 
             resize_render_target(width, height);
@@ -176,19 +165,17 @@ public:
             m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, m_render_target.width, m_render_target.height);
 
             void* cpu_buffer = m_render_target.optix_buffer->map();
-            ID3D11Resource* dx_buffer = nullptr;
+            OResource dx_buffer = nullptr;
             m_render_target.dx_SRV->GetResource(&dx_buffer);
             m_render_context->UpdateSubresource(dx_buffer, 0, nullptr, cpu_buffer, 0, 0);
             m_render_target.optix_buffer->unmap();
         }
 #else
         { // Render to render target.
-            cudaError_t error = cudaGraphicsMapResources(1, &m_render_target.cuda_buffer); // Done before rendering?
-            THROW_CUDA_ERROR(error);
+            THROW_CUDA_ERROR(cudaGraphicsMapResources(1, &m_render_target.cuda_buffer)); // Done before rendering?
             ushort4* pixels;
             size_t byte_count;
-            error = cudaGraphicsResourceGetMappedPointer((void**)&pixels, &byte_count, m_render_target.cuda_buffer);
-            THROW_CUDA_ERROR(error);
+            THROW_CUDA_ERROR(cudaGraphicsResourceGetMappedPointer((void**)&pixels, &byte_count, m_render_target.cuda_buffer));
 
             OPTIX_VALIDATE(m_optix_renderer->get_context());
             OPTIX_VALIDATE(m_render_target.optix_buffer);
@@ -224,14 +211,14 @@ public:
         }
 
         Cogwheel::Math::Rect<int> rect = { 0, 0, width, height };
-        DX11Renderer::RenderedFrame frame = { m_backbuffer_SRV, rect };
+        RenderedFrame frame = { m_backbuffer_SRV, rect };
         return frame;
     }
 
     void resize_render_target(int width, int height) {
 
         if (m_render_target.capacity < width * height) {
-            DX11Renderer::safe_release(&m_render_target.dx_SRV);
+            m_render_target.dx_SRV.release();
 
             m_render_target.capacity = width * height;
 
@@ -243,17 +230,15 @@ public:
             // desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
             desc.MiscFlags = 0;
 
-            ID3D11Buffer* dx_buffer;
-            HRESULT hr = m_device.CreateBuffer(&desc, nullptr, &dx_buffer);
-            THROW_ON_FAILURE(hr);
+            OBuffer dx_buffer;
+            THROW_ON_FAILURE(m_device.CreateBuffer(&desc, nullptr, &dx_buffer));
 
             D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
             srv_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
             srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
             srv_desc.Buffer.NumElements = m_render_target.capacity;
 
-            hr = m_device.CreateShaderResourceView(dx_buffer, &srv_desc, &m_render_target.dx_SRV);
-            THROW_ON_FAILURE(hr);
+            THROW_ON_FAILURE(m_device.CreateShaderResourceView(dx_buffer, &srv_desc, &m_render_target.dx_SRV));
 
 #ifndef DISABLE_INTEROP
             // Register the buffer with CUDA.
@@ -263,7 +248,6 @@ public:
                                                                   cudaGraphicsRegisterFlagsNone);
             THROW_CUDA_ERROR(error);
             cudaGraphicsResourceSetMapFlags(m_render_target.cuda_buffer, cudaGraphicsMapFlagsWriteDiscard);
-            dx_buffer->Release();
 #endif
         }
 
@@ -288,7 +272,7 @@ public:
     }
 };
 
-DX11Renderer::IRenderer* Adaptor::initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path) {
+IRenderer* Adaptor::initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path) {
     return new Adaptor(device, width_hint, height_hint, data_folder_path);
 }
 
@@ -314,7 +298,7 @@ void Adaptor::handle_updates() {
     m_impl->handle_updates();
 }
 
-DX11Renderer::RenderedFrame Adaptor::render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
+RenderedFrame Adaptor::render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
     return m_impl->render(camera_ID, width, height);
 }
 
