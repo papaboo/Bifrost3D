@@ -36,7 +36,7 @@ inline DX11Renderer::OBuffer create_camera_effects_constants(DX11Renderer::ODevi
     constants.delta_time = 1.0f / 60.0f;
 
     DX11Renderer::OBuffer constant_buffer;
-    THROW_ON_FAILURE(DX11Renderer::create_constant_buffer(device, constants, &constant_buffer));
+    THROW_DX11_ERROR(DX11Renderer::create_constant_buffer(device, constants, &constant_buffer));
     return constant_buffer;
 }
 
@@ -51,7 +51,7 @@ inline DX11Renderer::OSamplerState create_bilinear_sampler(DX11Renderer::ODevice
     sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
 
     DX11Renderer::OSamplerState bilinear_sampler;
-    THROW_ON_FAILURE(device->CreateSamplerState(&sampler_desc, &bilinear_sampler));
+    THROW_DX11_ERROR(device->CreateSamplerState(&sampler_desc, &bilinear_sampler));
     return bilinear_sampler;
 }
 

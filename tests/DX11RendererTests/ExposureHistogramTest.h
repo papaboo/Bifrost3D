@@ -172,7 +172,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
 
     OBlob compute_exposure_blob = compile_shader(DX11_SHADER_ROOT + std::wstring(L"CameraEffects\\ReduceExposureHistogram.hlsl"), "cs_5_0", "CameraEffects::compute_linear_exposure");
     OComputeShader compute_exposure_shader;
-    THROW_ON_FAILURE(device->CreateComputeShader(UNPACK_BLOB_ARGS(compute_exposure_blob), nullptr, &compute_exposure_shader));
+    THROW_DX11_ERROR(device->CreateComputeShader(UNPACK_BLOB_ARGS(compute_exposure_blob), nullptr, &compute_exposure_shader));
 
     float min_log_luminance = -8;
     float max_log_luminance = 4;
@@ -218,7 +218,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_histogram) {
 
     OBlob compute_exposure_blob = compile_shader(DX11_SHADER_ROOT + std::wstring(L"CameraEffects\\ReduceExposureHistogram.hlsl"), "cs_5_0", "CameraEffects::compute_linear_exposure");
     OComputeShader compute_exposure_shader;
-    THROW_ON_FAILURE(device->CreateComputeShader(UNPACK_BLOB_ARGS(compute_exposure_blob), nullptr, &compute_exposure_shader));
+    THROW_DX11_ERROR(device->CreateComputeShader(UNPACK_BLOB_ARGS(compute_exposure_blob), nullptr, &compute_exposure_shader));
 
     float min_log_luminance = -8;
     float max_log_luminance = 4;

@@ -52,7 +52,7 @@ protected:
         m_bandwidth = constants.bloom_bandwidth = bandwidth;
         float std_dev = constants.bloom_bandwidth * 0.25f;
         OBuffer constant_buffer;
-        THROW_ON_FAILURE(create_constant_buffer(device, constants, &constant_buffer));
+        THROW_DX11_ERROR(create_constant_buffer(device, constants, &constant_buffer));
 
         context->CSSetConstantBuffers(0, 1, &constant_buffer);
 
