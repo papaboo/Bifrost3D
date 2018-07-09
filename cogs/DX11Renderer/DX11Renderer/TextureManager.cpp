@@ -42,7 +42,7 @@ TextureManager::TextureManager(ID3D11Device1& device) {
 
         OTexture2D texture;
         HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &texture);
-        THROW_ON_FAILURE(hr);
+        THROW_DX11_ERROR(hr);
 
         D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
         srv_desc.Format = tex_desc.Format;
@@ -50,7 +50,7 @@ TextureManager::TextureManager(ID3D11Device1& device) {
         srv_desc.Texture2D.MipLevels = tex_desc.MipLevels;
         srv_desc.Texture2D.MostDetailedMip = 0;
         hr = device.CreateShaderResourceView(texture, &srv_desc, &tex.srv);
-        THROW_ON_FAILURE(hr);
+        THROW_DX11_ERROR(hr);
 
         D3D11_SAMPLER_DESC sampler_desc = {};
         sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -62,7 +62,7 @@ TextureManager::TextureManager(ID3D11Device1& device) {
         sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
 
         hr = device.CreateSamplerState(&sampler_desc, &tex.sampler);
-        THROW_ON_FAILURE(hr);
+        THROW_DX11_ERROR(hr);
 
         return tex;
     };

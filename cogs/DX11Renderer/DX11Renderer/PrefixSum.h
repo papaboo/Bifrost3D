@@ -32,19 +32,19 @@ public:
 
     PrefixSum(ID3D11Device1& device, const std::wstring& shader_folder_path) {
         OBlob reduce_shader_blob = compile_shader(shader_folder_path + L"Compute\\PrefixSum.hlsl", "cs_5_0", "reduce");
-        THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_shader_blob), nullptr, &m_reduce_shader));
+        THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_shader_blob), nullptr, &m_reduce_shader));
 
         OBlob downsweep_shader_blob = compile_shader(shader_folder_path + L"Compute\\PrefixSum.hlsl", "cs_5_0", "downsweep");
-        THROW_ON_FAILURE(device.CreateComputeShader(UNPACK_BLOB_ARGS(downsweep_shader_blob), nullptr, &m_downsweep_shader));
+        THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(downsweep_shader_blob), nullptr, &m_downsweep_shader));
 
         int4 outer_constants = { 1, 0, 0, 0 };
-        THROW_ON_FAILURE(create_constant_buffer(device, outer_constants, &m_outer_constants));
+        THROW_DX11_ERROR(create_constant_buffer(device, outer_constants, &m_outer_constants));
 
         int4 outer_single_iteration_constants = { 1, 1, 0, 0 };
-        THROW_ON_FAILURE(create_constant_buffer(device, outer_single_iteration_constants, &m_outer_single_iteration_constants));
+        THROW_DX11_ERROR(create_constant_buffer(device, outer_single_iteration_constants, &m_outer_single_iteration_constants));
 
         int4 inner_constants = { int(GROUP_SIZE), 1, 1, 0 };
-        THROW_ON_FAILURE(create_constant_buffer(device, inner_constants, &m_inner_constants));
+        THROW_DX11_ERROR(create_constant_buffer(device, inner_constants, &m_inner_constants));
     }
 
     void apply(ID3D11Device1& device, unsigned int* begin, unsigned int* end) {

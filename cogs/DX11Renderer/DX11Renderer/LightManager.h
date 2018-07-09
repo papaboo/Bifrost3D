@@ -88,7 +88,7 @@ public:
         m_index_to_ID = Array<LightSources::UID>(initial_capacity);
         m_data.active_count = 0u;
 
-        THROW_ON_FAILURE(create_constant_buffer(device, sizeof(LightBuffer), &m_lights_buffer));
+        THROW_DX11_ERROR(create_constant_buffer(device, sizeof(LightBuffer), &m_lights_buffer));
     }
 
     inline int active_light_count() const { return m_data.active_count; }

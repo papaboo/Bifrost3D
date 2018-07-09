@@ -57,7 +57,7 @@ inline void CHECK_HRESULT(HRESULT hr, const std::string& file, int line) {
     }
 }
 
-#define THROW_ON_FAILURE(hr) ::DX11Renderer::CHECK_HRESULT(hr, __FILE__,__LINE__)
+#define THROW_DX11_ERROR(hr) ::DX11Renderer::CHECK_HRESULT(hr, __FILE__,__LINE__)
 
 inline void _assert(const char* expression, const char* file, int line) {
     fprintf(stderr, "Assertion failed: '%s', file '%s' line '%d'.\n", expression, file, line);
@@ -119,7 +119,7 @@ inline ODevice1 get_device1(ID3D11DeviceContext1& context) {
     ID3D11Device* basic_device;
     context.GetDevice(&basic_device);
     ODevice1 device1;
-    THROW_ON_FAILURE(basic_device->QueryInterface(IID_PPV_ARGS(&device1)));
+    THROW_DX11_ERROR(basic_device->QueryInterface(IID_PPV_ARGS(&device1)));
     basic_device->Release();
     return device1;
 }
@@ -207,9 +207,9 @@ inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, 
     if (data != nullptr) {
         D3D11_SUBRESOURCE_DATA buffer_data = {};
         buffer_data.pSysMem = data;
-        THROW_ON_FAILURE(device.CreateBuffer(&buffer_desc, &buffer_data, &buffer));
+        THROW_DX11_ERROR(device.CreateBuffer(&buffer_desc, &buffer_data, &buffer));
     } else
-        THROW_ON_FAILURE(device.CreateBuffer(&buffer_desc, nullptr, &buffer));
+        THROW_DX11_ERROR(device.CreateBuffer(&buffer_desc, nullptr, &buffer));
 
     if (buffer_SRV) {
         D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
@@ -217,7 +217,7 @@ inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, 
         srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
         srv_desc.Buffer.FirstElement = 0;
         srv_desc.Buffer.NumElements = element_count;
-        THROW_ON_FAILURE(device.CreateShaderResourceView(buffer, &srv_desc, buffer_SRV));
+        THROW_DX11_ERROR(device.CreateShaderResourceView(buffer, &srv_desc, buffer_SRV));
     }
 
     if (buffer_UAV) {
@@ -227,7 +227,7 @@ inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, 
         uav_desc.Buffer.FirstElement = 0;
         uav_desc.Buffer.NumElements = element_count;
         uav_desc.Buffer.Flags = 0;
-        THROW_ON_FAILURE(device.CreateUnorderedAccessView(buffer, &uav_desc, buffer_UAV));
+        THROW_DX11_ERROR(device.CreateUnorderedAccessView(buffer, &uav_desc, buffer_UAV));
     }
 
     return buffer;
@@ -262,16 +262,16 @@ inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, v
         resource_data.SysMemSlicePitch = resource_data.SysMemPitch * height;
         resource_data.pSysMem = pixels;
 
-        THROW_ON_FAILURE(device.CreateTexture2D(&tex_desc, &resource_data, &texture));
+        THROW_DX11_ERROR(device.CreateTexture2D(&tex_desc, &resource_data, &texture));
     } else
-        THROW_ON_FAILURE(device.CreateTexture2D(&tex_desc, nullptr, &texture));
+        THROW_DX11_ERROR(device.CreateTexture2D(&tex_desc, nullptr, &texture));
 
     if (texture_SRV != nullptr)
-        THROW_ON_FAILURE(device.CreateShaderResourceView(texture, nullptr, texture_SRV));
+        THROW_DX11_ERROR(device.CreateShaderResourceView(texture, nullptr, texture_SRV));
     if (texture_UAV != nullptr)
-        THROW_ON_FAILURE(device.CreateUnorderedAccessView(texture, nullptr, texture_UAV));
+        THROW_DX11_ERROR(device.CreateUnorderedAccessView(texture, nullptr, texture_UAV));
     if (texture_RTV != nullptr)
-        THROW_ON_FAILURE(device.CreateRenderTargetView(texture, nullptr, texture_RTV));
+        THROW_DX11_ERROR(device.CreateRenderTargetView(texture, nullptr, texture_RTV));
 
     return texture;
 };
@@ -305,13 +305,13 @@ inline void texture2D(ID3D11Device1* device, ID3D11DeviceContext1* context, ID3D
     staging_desc.MiscFlags = D3D11_RESOURCE_MISC_NONE;
 
     ID3D11Texture2D* staging_texture;
-    THROW_ON_FAILURE(device->CreateTexture2D(&staging_desc, nullptr, &staging_texture));
+    THROW_DX11_ERROR(device->CreateTexture2D(&staging_desc, nullptr, &staging_texture));
 
     context->CopyResource(staging_texture, gpu_texture);
     // context->Flush();
 
     D3D11_MAPPED_SUBRESOURCE mapped_resource = {};
-    THROW_ON_FAILURE(context->Map(staging_texture, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_NONE, &mapped_resource));
+    THROW_DX11_ERROR(context->Map(staging_texture, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_NONE, &mapped_resource));
     memcpy(&(*cpu_buffer_begin), mapped_resource.pData, sizeof(std::iterator_traits<RandomAccessIterator>::value_type) * element_count);
     context->Unmap(staging_texture, 0);
 
@@ -329,13 +329,13 @@ inline void buffer(ID3D11Device1* device, ID3D11DeviceContext1* context, ID3D11B
     staging_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 
     ID3D11Buffer* staging_buffer;
-    THROW_ON_FAILURE(device->CreateBuffer(&staging_desc, nullptr, &staging_buffer));
+    THROW_DX11_ERROR(device->CreateBuffer(&staging_desc, nullptr, &staging_buffer));
 
     context->CopyResource(staging_buffer, gpu_buffer);
     // context->Flush();
 
     D3D11_MAPPED_SUBRESOURCE mapped_resource = {};
-    THROW_ON_FAILURE(context->Map(staging_buffer, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_NONE, &mapped_resource));
+    THROW_DX11_ERROR(context->Map(staging_buffer, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_NONE, &mapped_resource));
     memcpy(&(*cpu_buffer_begin), mapped_resource.pData, sizeof(std::iterator_traits<RandomAccessIterator>::value_type) * element_count);
     context->Unmap(staging_buffer, 0);
 

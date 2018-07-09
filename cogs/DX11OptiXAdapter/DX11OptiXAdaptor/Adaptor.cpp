@@ -69,10 +69,10 @@ public:
 
         { // Get CUDA device from DX11 context.
             ODXGIDevice dxgi_device = nullptr;
-            THROW_ON_FAILURE(device.QueryInterface(IID_PPV_ARGS(&dxgi_device)));
+            THROW_DX11_ERROR(device.QueryInterface(IID_PPV_ARGS(&dxgi_device)));
 
             ODXGIAdapter adapter = nullptr;
-            THROW_ON_FAILURE(dxgi_device->GetAdapter(&adapter));
+            THROW_DX11_ERROR(dxgi_device->GetAdapter(&adapter));
 
             THROW_CUDA_ERROR(cudaD3D11GetDevice(&m_cuda_device_ID, adapter));
 
@@ -82,7 +82,7 @@ public:
             m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, width_hint, height_hint, data_path);
         }
 
-        THROW_ON_FAILURE(create_constant_buffer(m_device, sizeof(float) * 4, &m_constant_buffer));
+        THROW_DX11_ERROR(create_constant_buffer(m_device, sizeof(float) * 4, &m_constant_buffer));
 
         m_render_target = {};
 
@@ -129,10 +129,10 @@ public:
             };
 
             OBlob vertex_shader_bytecode = compile_shader(vertex_src, "vs_5_0", "main_vs");
-            THROW_ON_FAILURE(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_bytecode), nullptr, &m_vertex_shader));
+            THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_bytecode), nullptr, &m_vertex_shader));
 
             OBlob pixel_shader_bytecode = compile_shader(pixel_src, "ps_5_0", "main_ps");
-            THROW_ON_FAILURE(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_bytecode), nullptr, &m_pixel_shader));
+            THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_bytecode), nullptr, &m_pixel_shader));
         }
     }
 
@@ -231,14 +231,14 @@ public:
             desc.MiscFlags = 0;
 
             OBuffer dx_buffer;
-            THROW_ON_FAILURE(m_device.CreateBuffer(&desc, nullptr, &dx_buffer));
+            THROW_DX11_ERROR(m_device.CreateBuffer(&desc, nullptr, &dx_buffer));
 
             D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
             srv_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
             srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
             srv_desc.Buffer.NumElements = m_render_target.capacity;
 
-            THROW_ON_FAILURE(m_device.CreateShaderResourceView(dx_buffer, &srv_desc, &m_render_target.dx_SRV));
+            THROW_DX11_ERROR(m_device.CreateShaderResourceView(dx_buffer, &srv_desc, &m_render_target.dx_SRV));
 
 #ifndef DISABLE_INTEROP
             // Register the buffer with CUDA.

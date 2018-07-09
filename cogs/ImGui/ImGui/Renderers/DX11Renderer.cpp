@@ -112,8 +112,8 @@ struct DX11Renderer::Implementation {
                     }";
 
                 OBlob vertex_shader_blob;
-                THROW_ON_FAILURE(D3DCompile(vertex_shader_src, strlen(vertex_shader_src), NULL, NULL, NULL, "main", "vs_5_0", 0, 0, &vertex_shader_blob, NULL));
-                THROW_ON_FAILURE(m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shader));
+                THROW_DX11_ERROR(D3DCompile(vertex_shader_src, strlen(vertex_shader_src), NULL, NULL, NULL, "main", "vs_5_0", 0, 0, &vertex_shader_blob, NULL));
+                THROW_DX11_ERROR(m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shader));
 
                 // Create the input layout
                 D3D11_INPUT_ELEMENT_DESC local_layout[] = {
@@ -121,7 +121,7 @@ struct DX11Renderer::Implementation {
                     { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->uv),  D3D11_INPUT_PER_VERTEX_DATA, 0 },
                     { "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (size_t)(&((ImDrawVert*)0)->col), D3D11_INPUT_PER_VERTEX_DATA, 0 },
                 };
-                THROW_ON_FAILURE(m_device->CreateInputLayout(local_layout, 3, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_input_layout));
+                THROW_DX11_ERROR(m_device->CreateInputLayout(local_layout, 3, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_input_layout));
             }
 
             { // Pixel shader
@@ -139,8 +139,8 @@ struct DX11Renderer::Implementation {
                     }";
 
                 OBlob pixel_shader_blob;
-                THROW_ON_FAILURE(D3DCompile(pixel_shader_src, strlen(pixel_shader_src), NULL, NULL, NULL, "main", "ps_5_0", 0, 0, &pixel_shader_blob, NULL));
-                THROW_ON_FAILURE(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), NULL, &m_pixel_shader));
+                THROW_DX11_ERROR(D3DCompile(pixel_shader_src, strlen(pixel_shader_src), NULL, NULL, NULL, "main", "ps_5_0", 0, 0, &pixel_shader_blob, NULL));
+                THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), NULL, &m_pixel_shader));
             }
         }
 
@@ -169,7 +169,7 @@ struct DX11Renderer::Implementation {
             subresource.SysMemSlicePitch = 0;
             
             OTexture2D texture;
-            THROW_ON_FAILURE(m_device->CreateTexture2D(&desc, &subresource, &texture));
+            THROW_DX11_ERROR(m_device->CreateTexture2D(&desc, &subresource, &texture));
 
             // Create texture view
             D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
@@ -177,7 +177,7 @@ struct DX11Renderer::Implementation {
             srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
             srv_desc.Texture2D.MipLevels = desc.MipLevels;
             srv_desc.Texture2D.MostDetailedMip = 0;
-            THROW_ON_FAILURE(m_device->CreateShaderResourceView(texture, &srv_desc, &m_font_SRV));
+            THROW_DX11_ERROR(m_device->CreateShaderResourceView(texture, &srv_desc, &m_font_SRV));
 
             // Store our identifier
             io.Fonts->TexID = (void *)m_font_SRV; // NOTE Apparently needed to flag that a font is set/loaded.
@@ -216,7 +216,7 @@ struct DX11Renderer::Implementation {
                 desc.ByteWidth = m_vertex_buffer_capacity * sizeof(ImDrawVert);
                 desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
                 desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-                THROW_ON_FAILURE(m_device->CreateBuffer(&desc, NULL, &m_vertex_buffer));
+                THROW_DX11_ERROR(m_device->CreateBuffer(&desc, NULL, &m_vertex_buffer));
             }
 
             // Index buffer
@@ -228,15 +228,15 @@ struct DX11Renderer::Implementation {
                 desc.ByteWidth = m_index_buffer_capacity * sizeof(ImDrawIdx);
                 desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
                 desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-                THROW_ON_FAILURE(m_device->CreateBuffer(&desc, NULL, &m_index_buffer));
+                THROW_DX11_ERROR(m_device->CreateBuffer(&desc, NULL, &m_index_buffer));
             }
         }
 
         { // Render ImGui
 
             D3D11_MAPPED_SUBRESOURCE vertex_resource, index_resource;
-            THROW_ON_FAILURE(context->Map(m_vertex_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &vertex_resource));
-            THROW_ON_FAILURE(context->Map(m_index_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &index_resource));
+            THROW_DX11_ERROR(context->Map(m_vertex_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &vertex_resource));
+            THROW_DX11_ERROR(context->Map(m_index_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &index_resource));
             ImDrawVert* vertex_dest = (ImDrawVert*)vertex_resource.pData;
             ImDrawIdx* index_dest = (ImDrawIdx*)index_resource.pData;
             for (int n = 0; n < draw_data->CmdListsCount; ++n) {

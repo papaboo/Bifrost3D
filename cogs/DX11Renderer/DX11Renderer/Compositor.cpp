@@ -72,7 +72,7 @@ ODevice1 create_performant_device1(unsigned int create_device_flags) {
 
     ODevice1 device1;
     hr = device->QueryInterface(IID_PPV_ARGS(&device1));
-    THROW_ON_FAILURE(hr);
+    THROW_DX11_ERROR(hr);
     return device1;
 }
 
@@ -112,13 +112,13 @@ public:
         { // Get the device's dxgi factory and create the swap chain.
             IDXGIDevice* dxgi_device = nullptr;
             HRESULT hr = m_device->QueryInterface(IID_PPV_ARGS(&dxgi_device));
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
 
             // NOTE Can I use the original adapter for this?
             IDXGIAdapter* adapter = nullptr;
             hr = dxgi_device->GetAdapter(&adapter);
             dxgi_device->Release();
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
 
             DXGI_ADAPTER_DESC adapter_description;
             adapter->GetDesc(&adapter_description);
@@ -128,7 +128,7 @@ public:
             IDXGIFactory2* dxgi_factory2 = nullptr;
             hr = adapter->GetParent(IID_PPV_ARGS(&dxgi_factory2));
             adapter->Release();
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
 
             // Create swap chain
             DXGI_SWAP_CHAIN_DESC1 swap_chain_desc1 = {};
@@ -143,7 +143,7 @@ public:
 
             hr = dxgi_factory2->CreateSwapChainForHwnd(m_device, hwnd, &swap_chain_desc1, nullptr, nullptr, &m_swap_chain);
             dxgi_factory2->Release();
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
         }
 
         { // Setup backbuffer.
@@ -217,11 +217,11 @@ public:
                 m_render_context->OMSetRenderTargets(0, 0, 0);
                 m_swap_chain_RTV.release();
 
-                THROW_ON_FAILURE(m_swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0));
+                THROW_DX11_ERROR(m_swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0));
 
                 ID3D11Texture2D* swap_chain_buffer;
-                THROW_ON_FAILURE(m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&swap_chain_buffer)));
-                THROW_ON_FAILURE(m_device->CreateRenderTargetView(swap_chain_buffer, nullptr, &m_swap_chain_RTV));
+                THROW_DX11_ERROR(m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&swap_chain_buffer)));
+                THROW_DX11_ERROR(m_device->CreateRenderTargetView(swap_chain_buffer, nullptr, &m_swap_chain_RTV));
                 swap_chain_buffer->Release();
             }
 

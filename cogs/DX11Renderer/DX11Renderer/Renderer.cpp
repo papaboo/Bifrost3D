@@ -164,11 +164,11 @@ public:
             sampler_desc.MinLOD = 0;
             sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
             OSamplerState point_sampler;
-            THROW_ON_FAILURE(device.CreateSamplerState(&sampler_desc, &point_sampler));
+            THROW_DX11_ERROR(device.CreateSamplerState(&sampler_desc, &point_sampler));
 
             sampler_desc.Filter = D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
             OSamplerState linear_sampler;
-            THROW_ON_FAILURE(device.CreateSamplerState(&sampler_desc, &linear_sampler));
+            THROW_DX11_ERROR(device.CreateSamplerState(&sampler_desc, &linear_sampler));
 
             ID3D11SamplerState* samplers[2] = { point_sampler, linear_sampler };
             m_render_context->PSSetSamplers(14, 2, samplers);
@@ -178,29 +178,29 @@ public:
         { // Setup g-buffer
             { // Opaque shaders
                 OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "vs_5_0", "opaque_VS");
-                THROW_ON_FAILURE(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.opaque_vertex_shader));
+                THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.opaque_vertex_shader));
 
                 // Create the input layout
                 D3D11_INPUT_ELEMENT_DESC input_layout_desc = { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 };
-                THROW_ON_FAILURE(m_device.CreateInputLayout(&input_layout_desc, 1, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.opaque_vertex_input_layout));
+                THROW_DX11_ERROR(m_device.CreateInputLayout(&input_layout_desc, 1, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.opaque_vertex_input_layout));
 
                 OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "ps_5_0", "opaque_PS");
-                THROW_ON_FAILURE(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.opaque_pixel_shader));
+                THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.opaque_pixel_shader));
             }
 
             { // Cutout shaders
                 OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "vs_5_0", "cutout_VS");
-                THROW_ON_FAILURE(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.cutout_vertex_shader));
+                THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.cutout_vertex_shader));
 
                 // Create the input layout
                 D3D11_INPUT_ELEMENT_DESC input_layout_desc[] = {
                     { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
                     { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
                 };
-                THROW_ON_FAILURE(m_device.CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.cutout_vertex_input_layout));
+                THROW_DX11_ERROR(m_device.CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.cutout_vertex_input_layout));
 
                 OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "ps_5_0", "cutout_PS");
-                THROW_ON_FAILURE(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.cutout_pixel_shader));
+                THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.cutout_pixel_shader));
             }
 
             // G-buffer is initialized on demand when the output dimensions are known.
@@ -222,7 +222,7 @@ public:
 
             // Create the shader objects.
             HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shading.shader);
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
 
             // Create the input layout
             D3D11_INPUT_ELEMENT_DESC input_layout_desc[] = {
@@ -231,7 +231,7 @@ public:
             };
 
             hr = m_device.CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout);
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
 
             // Create a default emptyish buffer.
             D3D11_BUFFER_DESC empty_desc = {};
@@ -243,7 +243,7 @@ public:
             D3D11_SUBRESOURCE_DATA empty_data = {};
             empty_data.pSysMem = &lval;
             hr = m_device.CreateBuffer(&empty_desc, &empty_data, &m_vertex_shading.null_buffer);
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
         }
 
 #if SPTD_AREA_LIGHTS
@@ -255,23 +255,23 @@ public:
         { // Setup opaque rendering.
             CD3D11_RASTERIZER_DESC opaque_raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
             HRESULT hr = m_device.CreateRasterizerState(&opaque_raster_state, &m_opaque.raster_state);
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
 
             D3D11_DEPTH_STENCIL_DESC depth_desc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
             depth_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
             hr = m_device.CreateDepthStencilState(&depth_desc, &m_opaque.depth_state);
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
 
             OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "opaque", fragment_macros);
             hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_opaque.shader);
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
         }
 
         { // Setup cutout rendering. Reuses some of the opaque state.
             CD3D11_RASTERIZER_DESC twosided_raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
             twosided_raster_state.CullMode = D3D11_CULL_NONE;
             HRESULT hr = m_device.CreateRasterizerState(&twosided_raster_state, &m_cutout.raster_state);
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
         }
 
         { // Setup transparent rendering.
@@ -291,21 +291,21 @@ public:
             rt_blend_desc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
             HRESULT hr = m_device.CreateBlendState(&blend_desc, &m_transparent.blend_state);
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
 
             D3D11_DEPTH_STENCIL_DESC depth_desc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
             depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
             hr = m_device.CreateDepthStencilState(&depth_desc, &m_transparent.depth_state);
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
 
             OBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "transparent", fragment_macros);
             hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), nullptr, &m_transparent.shader);
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
         }
 
         { // Scene constant buffer
             HRESULT hr = create_constant_buffer(m_device, sizeof(SceneConstants), &m_scene_buffer);
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
         }
 
         { // Setup lights
@@ -314,17 +314,17 @@ public:
             // Sphere light visualization shaders.
             OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "vs_5_0", "vs");
             HRESULT hr = m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_lights.vertex_shader);
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
             OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "ps_5_0", "ps");
             hr = m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_lights.pixel_shader);
-            THROW_ON_FAILURE(hr);
+            THROW_DX11_ERROR(hr);
         }
 
         { // Debug
             OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"Debug.hlsl", "vs_5_0", "main_vs");
-            THROW_ON_FAILURE(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_debug.display_vertex_shader));
+            THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_debug.display_vertex_shader));
             OBlob display_debug_blob = compile_shader(m_shader_folder_path + L"Debug.hlsl", "ps_5_0", "display_debug_ps");
-            THROW_ON_FAILURE(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(display_debug_blob), nullptr, &m_debug.display_debug_pixel_shader));
+            THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(display_debug_blob), nullptr, &m_debug.display_debug_pixel_shader));
         }
     }
 
@@ -486,13 +486,13 @@ public:
                     depth_desc.MiscFlags = 0;
 
                     OTexture2D depth_buffer;
-                    THROW_ON_FAILURE(m_device.CreateTexture2D(&depth_desc, nullptr, &depth_buffer));
+                    THROW_DX11_ERROR(m_device.CreateTexture2D(&depth_desc, nullptr, &depth_buffer));
 
                     D3D11_DEPTH_STENCIL_VIEW_DESC depth_view_desc = CD3D11_DEPTH_STENCIL_VIEW_DESC(D3D11_DSV_DIMENSION_TEXTURE2D, DXGI_FORMAT_D32_FLOAT);
-                    THROW_ON_FAILURE(m_device.CreateDepthStencilView(depth_buffer, &depth_view_desc, &m_g_buffer.depth_view));
+                    THROW_DX11_ERROR(m_device.CreateDepthStencilView(depth_buffer, &depth_view_desc, &m_g_buffer.depth_view));
                     
                     D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURE2D, DXGI_FORMAT_R32_FLOAT);
-                    THROW_ON_FAILURE(m_device.CreateShaderResourceView(depth_buffer, &srv_desc, &m_g_buffer.depth_SRV));
+                    THROW_DX11_ERROR(m_device.CreateShaderResourceView(depth_buffer, &srv_desc, &m_g_buffer.depth_SRV));
                 }
 
                 { // Normal buffer

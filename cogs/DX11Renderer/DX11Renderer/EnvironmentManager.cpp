@@ -28,15 +28,15 @@ EnvironmentManager::EnvironmentManager(ID3D11Device1& device, const std::wstring
 
     OBlob vertex_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "vs_5_0", "main_vs");
     HRESULT hr = device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shader);
-    THROW_ON_FAILURE(hr);
+    THROW_DX11_ERROR(hr);
 
     OBlob pixel_shader_blob = compile_shader(shader_folder_path + L"EnvironmentMap.hlsl", "ps_5_0", "main_ps");
     hr = device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_pixel_shader);
-    THROW_ON_FAILURE(hr);
+    THROW_DX11_ERROR(hr);
 
     OBlob convolution_shader_blob = compile_shader(shader_folder_path + L"IBLConvolution.hlsl", "cs_5_0", "MIS_convolute");
     hr = device.CreateComputeShader(UNPACK_BLOB_ARGS(convolution_shader_blob), nullptr, &m_convolution_shader);
-    THROW_ON_FAILURE(hr);
+    THROW_DX11_ERROR(hr);
 
     D3D11_SAMPLER_DESC sampler_desc = {};
     sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -48,7 +48,7 @@ EnvironmentManager::EnvironmentManager(ID3D11Device1& device, const std::wstring
     sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
 
     hr = device.CreateSamplerState(&sampler_desc, &m_sampler);
-    THROW_ON_FAILURE(hr);
+    THROW_DX11_ERROR(hr);
 }
 
 bool EnvironmentManager::render(ID3D11DeviceContext1& render_context, int environment_ID) {
@@ -173,7 +173,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         }
 
                         HRESULT hr = device.CreateTexture2D(&tex_desc, tex_data, &env.texture2D);
-                        THROW_ON_FAILURE(hr);
+                        THROW_DX11_ERROR(hr);
                     }
 
                     delete[] pixel_data;
@@ -215,7 +215,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                             sample_resource_data.pSysMem = light_samples;
                             sample_resource_data.SysMemPitch = sizeof(LightSample) * light_sample_count;
                             HRESULT hr = device.CreateBuffer(&sample_buffer_desc, &sample_resource_data, &light_samples_buffer);
-                            THROW_ON_FAILURE(hr);
+                            THROW_DX11_ERROR(hr);
 
                             delete[] light_samples;
 
@@ -225,7 +225,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                             light_samples_SRV_desc.Buffer.ElementOffset = 0;
                             light_samples_SRV_desc.Buffer.NumElements = light_sample_count;
                             hr = device.CreateShaderResourceView(light_samples_buffer, &light_samples_SRV_desc, &light_samples_SRV);
-                            THROW_ON_FAILURE(hr);
+                            THROW_DX11_ERROR(hr);
                         }
                     }
 
@@ -243,7 +243,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
 
                         HRESULT hr = device.CreateTexture2D(&tex_desc, nullptr, &env.texture2D);
-                        THROW_ON_FAILURE(hr);
+                        THROW_DX11_ERROR(hr);
 
                         R11G11B10_Float* pixels = new R11G11B10_Float[env_width* env_height];
                         #pragma omp parallel for schedule(dynamic, 16)
@@ -272,7 +272,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         ConvolutionConstants constants = { 1.0f / float(mipmap_count - 1), 1.0f / smallest_width, 1024u };
                         OBuffer constant_buffer;
                         HRESULT hr = create_constant_buffer(device, constants, &constant_buffer);
-                        THROW_ON_FAILURE(hr);
+                        THROW_DX11_ERROR(hr);
 
                         // Create UAVs for the mip levels.
                         OUnorderedAccessView* mip_level_UAVs = new OUnorderedAccessView[mipmap_count - 1];
@@ -284,7 +284,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                             mip_level_UAV_desc.Texture2D.MipSlice = m;
 
                             HRESULT hr = device.CreateUnorderedAccessView(env.texture2D, &mip_level_UAV_desc, &mip_level_UAVs[m - 1]);
-                            THROW_ON_FAILURE(hr);
+                            THROW_DX11_ERROR(hr);
                         }
 
                         D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
@@ -294,7 +294,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         srv_desc.Texture2D.MostDetailedMip = 0;
                         OShaderResourceView env_SRV;
                         hr = device.CreateShaderResourceView(env.texture2D, &srv_desc, &env_SRV);
-                        THROW_ON_FAILURE(hr);
+                        THROW_DX11_ERROR(hr);
 
                         // Launch kernels.
                         device_context.CSSetShader(m_convolution_shader, nullptr, 0);
@@ -330,7 +330,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                 srv_desc.Texture2D.MipLevels = mipmap_count;
                 srv_desc.Texture2D.MostDetailedMip = 0;
                 HRESULT hr = device.CreateShaderResourceView(env.texture2D, &srv_desc, &env.srv);
-                THROW_ON_FAILURE(hr);
+                THROW_DX11_ERROR(hr);
             }
         }
     }
