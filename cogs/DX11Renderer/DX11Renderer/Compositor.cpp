@@ -31,8 +31,8 @@ ODevice1 create_performant_device1(unsigned int create_device_flags) {
         }
     };
 
-    IDXGIFactory1* dxgi_factory1;
-    HRESULT hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory1));
+    ODXGIFactory1 dxgi_factory1;
+    THROW_DX11_ERROR(CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory1)));
 
     IDXGIAdapter1* adapter = nullptr;
     std::vector<WeightedAdapter> sorted_adapters;
@@ -46,6 +46,8 @@ ODevice1 create_performant_device1(unsigned int create_device_flags) {
 
         WeightedAdapter e = { adapter_index, int(desc.DedicatedVideoMemory >> 20) };
         sorted_adapters.push_back(e);
+
+        adapter->Release();
     }
 
     std::sort(sorted_adapters.begin(), sorted_adapters.end());
@@ -54,25 +56,23 @@ ODevice1 create_performant_device1(unsigned int create_device_flags) {
     ID3D11Device* device = nullptr;
     ID3D11DeviceContext* render_context = nullptr;
     for (WeightedAdapter a : sorted_adapters) {
+        ODXGIAdapter1 adapter = nullptr;
         dxgi_factory1->EnumAdapters1(a.index, &adapter);
 
         D3D_FEATURE_LEVEL feature_level_requested = D3D_FEATURE_LEVEL_11_0;
-
         D3D_FEATURE_LEVEL feature_level;
-        hr = D3D11CreateDevice(adapter, D3D_DRIVER_TYPE_UNKNOWN, nullptr, create_device_flags, &feature_level_requested, 1,
-            D3D11_SDK_VERSION, &device, &feature_level, &render_context);
+        HRESULT hr = D3D11CreateDevice(adapter, D3D_DRIVER_TYPE_UNKNOWN, nullptr, create_device_flags, &feature_level_requested, 1,
+                                       D3D11_SDK_VERSION, &device, &feature_level, &render_context);
 
         if (SUCCEEDED(hr))
             break;
     }
-    dxgi_factory1->Release();
 
     if (device == nullptr)
         return nullptr;
 
     ODevice1 device1;
-    hr = device->QueryInterface(IID_PPV_ARGS(&device1));
-    THROW_DX11_ERROR(hr);
+    THROW_DX11_ERROR(device->QueryInterface(IID_PPV_ARGS(&device1)));
     return device1;
 }
 
@@ -110,25 +110,20 @@ public:
         m_device->GetImmediateContext1(&m_render_context);
 
         { // Get the device's dxgi factory and create the swap chain.
-            IDXGIDevice* dxgi_device = nullptr;
-            HRESULT hr = m_device->QueryInterface(IID_PPV_ARGS(&dxgi_device));
-            THROW_DX11_ERROR(hr);
+            ODXGIDevice dxgi_device = nullptr;
+            THROW_DX11_ERROR(m_device->QueryInterface(IID_PPV_ARGS(&dxgi_device)));
 
             // NOTE Can I use the original adapter for this?
-            IDXGIAdapter* adapter = nullptr;
-            hr = dxgi_device->GetAdapter(&adapter);
-            dxgi_device->Release();
-            THROW_DX11_ERROR(hr);
+            ODXGIAdapter adapter = nullptr;
+            THROW_DX11_ERROR(dxgi_device->GetAdapter(&adapter));
 
             DXGI_ADAPTER_DESC adapter_description;
             adapter->GetDesc(&adapter_description);
             const char* readable_feature_level = m_device->GetFeatureLevel() == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "11.1";
             printf("DirectX 11 compositor using device '%S' with feature level %s.\n", adapter_description.Description, readable_feature_level);
 
-            IDXGIFactory2* dxgi_factory2 = nullptr;
-            hr = adapter->GetParent(IID_PPV_ARGS(&dxgi_factory2));
-            adapter->Release();
-            THROW_DX11_ERROR(hr);
+            ODXGIFactory2 dxgi_factory2 = nullptr;
+            THROW_DX11_ERROR(adapter->GetParent(IID_PPV_ARGS(&dxgi_factory2)));
 
             // Create swap chain
             DXGI_SWAP_CHAIN_DESC1 swap_chain_desc1 = {};
@@ -141,9 +136,7 @@ public:
             swap_chain_desc1.BufferCount = 1;
             swap_chain_desc1.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
-            hr = dxgi_factory2->CreateSwapChainForHwnd(m_device, hwnd, &swap_chain_desc1, nullptr, nullptr, &m_swap_chain);
-            dxgi_factory2->Release();
-            THROW_DX11_ERROR(hr);
+            THROW_DX11_ERROR(dxgi_factory2->CreateSwapChainForHwnd(m_device, hwnd, &swap_chain_desc1, nullptr, nullptr, &m_swap_chain));
         }
 
         { // Setup backbuffer.
@@ -219,10 +212,9 @@ public:
 
                 THROW_DX11_ERROR(m_swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0));
 
-                ID3D11Texture2D* swap_chain_buffer;
+                OTexture2D swap_chain_buffer;
                 THROW_DX11_ERROR(m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&swap_chain_buffer)));
                 THROW_DX11_ERROR(m_device->CreateRenderTargetView(swap_chain_buffer, nullptr, &m_swap_chain_RTV));
-                swap_chain_buffer->Release();
             }
 
             m_backbuffer_size = current_backbuffer_size;
