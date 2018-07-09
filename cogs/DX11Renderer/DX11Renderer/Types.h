@@ -37,7 +37,9 @@ struct ID3D11VertexShader;
 struct ID3D11UnorderedAccessView;
 
 struct IDXGIAdapter;
+struct IDXGIAdapter1;
 struct IDXGIDevice;
+struct IDXGIFactory1;
 struct IDXGIFactory2;
 
 //-------------------------------------------------------------------------------------------------
@@ -74,8 +76,10 @@ using OTexture2D = DX11Renderer::OwnedResourcePtr<ID3D11Texture2D>;
 using OVertexShader = DX11Renderer::OwnedResourcePtr<ID3D11VertexShader>;
 using OUnorderedAccessView = DX11Renderer::OwnedResourcePtr<ID3D11UnorderedAccessView>;
 
-using ODXGIDevice = DX11Renderer::OwnedResourcePtr<IDXGIDevice>;
 using ODXGIAdapter = DX11Renderer::OwnedResourcePtr<IDXGIAdapter>;
+using ODXGIAdapter1 = DX11Renderer::OwnedResourcePtr<IDXGIAdapter1>;
+using ODXGIDevice = DX11Renderer::OwnedResourcePtr<IDXGIDevice>;
+using ODXGIFactory1 = DX11Renderer::OwnedResourcePtr<IDXGIFactory1>;
 using ODXGIFactory2 = DX11Renderer::OwnedResourcePtr<IDXGIFactory2>;
 
 //-------------------------------------------------------------------------------------------------
