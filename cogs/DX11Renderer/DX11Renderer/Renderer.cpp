@@ -542,7 +542,7 @@ public:
             m_render_context->PSSetConstantBuffers(1, 1, &display_constant_buffer);
 
             Cogwheel::Math::Rect<int> rect = { 0, 0, width, height };
-            DX11Renderer::RenderedFrame frame = { m_backbuffer_SRV, rect };
+            RenderedFrame frame = { m_backbuffer_SRV, rect };
             return frame;
         }
 
@@ -639,7 +639,7 @@ public:
         }
 
         Cogwheel::Math::Rect<int> rect = { 0, 0, width, height };
-        DX11Renderer::RenderedFrame frame = { m_backbuffer_SRV, rect };
+        RenderedFrame frame = { m_backbuffer_SRV, rect };
         return frame;
     }
 
