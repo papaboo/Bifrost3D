@@ -151,33 +151,7 @@ struct DX11Renderer::Implementation {
             int width, height;
             io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
-            // Upload texture to graphics system
-            D3D11_TEXTURE2D_DESC desc = {};
-            desc.Width = width;
-            desc.Height = height;
-            desc.MipLevels = 1;
-            desc.ArraySize = 1;
-            desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-            desc.SampleDesc.Count = 1;
-            desc.Usage = D3D11_USAGE_DEFAULT;
-            desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-            desc.CPUAccessFlags = 0;
-
-            D3D11_SUBRESOURCE_DATA subresource;
-            subresource.pSysMem = pixels;
-            subresource.SysMemPitch = desc.Width * 4;
-            subresource.SysMemSlicePitch = 0;
-            
-            OTexture2D texture;
-            THROW_DX11_ERROR(m_device->CreateTexture2D(&desc, &subresource, &texture));
-
-            // Create texture view
-            D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-            srv_desc.Format = desc.Format;
-            srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-            srv_desc.Texture2D.MipLevels = desc.MipLevels;
-            srv_desc.Texture2D.MostDetailedMip = 0;
-            THROW_DX11_ERROR(m_device->CreateShaderResourceView(texture, &srv_desc, &m_font_SRV));
+            create_texture_2D(m_device, DXGI_FORMAT_R8G8B8A8_UNORM, pixels, width, height, &m_font_SRV);
 
             // Store our identifier
             io.Fonts->TexID = (void *)m_font_SRV; // NOTE Apparently needed to flag that a font is set/loaded.
