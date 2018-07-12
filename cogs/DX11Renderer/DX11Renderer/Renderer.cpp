@@ -68,13 +68,19 @@ private:
         OShaderResourceView normal_SRV;
         ORenderTargetView normal_RTV;
 
-        OVertexShader opaque_vertex_shader;
-        OInputLayout opaque_vertex_input_layout;
-        OPixelShader opaque_pixel_shader;
+        struct {
+            ORasterizerState raster_state;
+            OVertexShader vertex_shader;
+            OInputLayout vertex_input_layout;
+            OPixelShader pixel_shader;
+        } opaque;
 
-        OVertexShader cutout_vertex_shader;
-        OInputLayout cutout_vertex_input_layout;
-        OPixelShader cutout_pixel_shader;
+        struct {
+            ORasterizerState raster_state;
+            OVertexShader vertex_shader;
+            OInputLayout vertex_input_layout;
+            OPixelShader pixel_shader;
+        } cutout;
     } m_g_buffer;
 
     struct {
@@ -177,30 +183,37 @@ public:
 
         { // Setup g-buffer
             { // Opaque shaders
+                CD3D11_RASTERIZER_DESC raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
+                THROW_DX11_ERROR(m_device.CreateRasterizerState(&raster_state, &m_g_buffer.opaque.raster_state));
+
                 OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "vs_5_0", "opaque_VS");
-                THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.opaque_vertex_shader));
+                THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.opaque.vertex_shader));
 
                 // Create the input layout
                 D3D11_INPUT_ELEMENT_DESC input_layout_desc = { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 };
-                THROW_DX11_ERROR(m_device.CreateInputLayout(&input_layout_desc, 1, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.opaque_vertex_input_layout));
+                THROW_DX11_ERROR(m_device.CreateInputLayout(&input_layout_desc, 1, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.opaque.vertex_input_layout));
 
                 OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "ps_5_0", "opaque_PS");
-                THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.opaque_pixel_shader));
+                THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.opaque.pixel_shader));
             }
 
             { // Cutout shaders
+                CD3D11_RASTERIZER_DESC raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
+                raster_state.CullMode = D3D11_CULL_NONE;
+                THROW_DX11_ERROR(m_device.CreateRasterizerState(&raster_state, &m_g_buffer.cutout.raster_state));
+
                 OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "vs_5_0", "cutout_VS");
-                THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.cutout_vertex_shader));
+                THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.cutout.vertex_shader));
 
                 // Create the input layout
                 D3D11_INPUT_ELEMENT_DESC input_layout_desc[] = {
                     { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
                     { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
                 };
-                THROW_DX11_ERROR(m_device.CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.cutout_vertex_input_layout));
+                THROW_DX11_ERROR(m_device.CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.cutout.vertex_input_layout));
 
                 OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "ps_5_0", "cutout_PS");
-                THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.cutout_pixel_shader));
+                THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.cutout.pixel_shader));
             }
 
             // G-buffer is initialized on demand when the output dimensions are known.
@@ -346,10 +359,11 @@ public:
             m_render_context->ClearRenderTargetView(m_g_buffer.normal_RTV, zero);
             m_render_context->ClearDepthStencilView(m_g_buffer.depth_view, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-            // Shaders
-            m_render_context->VSSetShader(m_g_buffer.opaque_vertex_shader, 0, 0);
-            m_render_context->IASetInputLayout(m_g_buffer.opaque_vertex_input_layout);
-            m_render_context->PSSetShader(m_g_buffer.opaque_pixel_shader, 0, 0);
+            // Opaque state
+            m_render_context->RSSetState(m_g_buffer.opaque.raster_state);
+            m_render_context->VSSetShader(m_g_buffer.opaque.vertex_shader, 0, 0);
+            m_render_context->IASetInputLayout(m_g_buffer.opaque.vertex_input_layout);
+            m_render_context->PSSetShader(m_g_buffer.opaque.pixel_shader, 0, 0);
 
             // Set null buffer as default texcoord buffer.
             unsigned int stride = sizeof(float2);
@@ -361,10 +375,10 @@ public:
         for (int i = 1; i < m_transparent.first_model_index; ++i) {
             // Setup twosided raster state for cutout materials.
             if (i == m_cutout.first_model_index) {
-                m_render_context->RSSetState(m_cutout.raster_state);
-                m_render_context->VSSetShader(m_g_buffer.cutout_vertex_shader, 0, 0);
-                m_render_context->IASetInputLayout(m_g_buffer.cutout_vertex_input_layout);
-                m_render_context->PSSetShader(m_g_buffer.cutout_pixel_shader, 0, 0);
+                m_render_context->RSSetState(m_g_buffer.cutout.raster_state);
+                m_render_context->VSSetShader(m_g_buffer.cutout.vertex_shader, 0, 0);
+                m_render_context->IASetInputLayout(m_g_buffer.cutout.vertex_input_layout);
+                m_render_context->PSSetShader(m_g_buffer.cutout.pixel_shader, 0, 0);
             }
 
             Dx11Model model = m_sorted_models[i];
@@ -437,7 +451,6 @@ public:
         // Opaque state setup.
         m_render_context->OMSetBlendState(0, 0, 0xffffffff);
         m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 0);
-        m_render_context->RSSetState(m_opaque.raster_state);
 
         SceneRoot scene = Cameras::get_scene_ID(camera_ID);
         { // Setup scene constants.
@@ -548,6 +561,7 @@ public:
 
         m_render_context->OMSetRenderTargets(1, &m_backbuffer_RTV, m_g_buffer.depth_view);
         m_render_context->PSSetShaderResources(13, 1, &ssao_SRV);
+        m_render_context->RSSetState(m_opaque.raster_state);
 
         { // Render lights.
             auto lights_marker = PerformanceMarker(*m_render_context, L"Lights");
@@ -573,7 +587,6 @@ public:
             m_render_context->VSSetShader(m_vertex_shading.shader, 0, 0);
             m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
             m_render_context->PSSetShader(m_opaque.shader, 0, 0);
-            m_render_context->RSSetState(m_opaque.raster_state);
 
             // Set null buffer as default texcoord buffer.
             unsigned int stride = sizeof(float2);
