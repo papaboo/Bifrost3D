@@ -212,6 +212,7 @@ private:
 
     GaussianBloom m_bloom;
 
+    ORasterizerState m_raster_state;
     OVertexShader m_fullscreen_VS;
     OPixelShader m_linear_tonemapping_PS;
     OPixelShader m_uncharted2_tonemapping_PS;

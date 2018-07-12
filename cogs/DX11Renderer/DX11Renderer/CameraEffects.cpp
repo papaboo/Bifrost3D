@@ -410,6 +410,9 @@ CameraEffects::CameraEffects(ID3D11Device1& device, const std::wstring& shader_f
 
     m_bloom = GaussianBloom(device, shader_folder_path);
 
+    D3D11_RASTERIZER_DESC raster_desc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
+    THROW_DX11_ERROR(device.CreateRasterizerState(&raster_desc, &m_raster_state));
+
     { // Setup tonemapping shaders
         const std::wstring shader_filename = shader_folder_path + L"CameraEffects/Tonemapping.hlsl";
 
@@ -475,6 +478,7 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
         context.UpdateSubresource(m_constant_buffer, 0, nullptr, &constants, 0u, 0u);
     }
 
+    context.RSSetState(m_raster_state);
     context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
     context.PSSetConstantBuffers(0, 1, &m_constant_buffer);
     context.PSSetSamplers(0, 1, &m_bilinear_sampler); // TODO Get rid of PS bindings when all shaders are compute.
