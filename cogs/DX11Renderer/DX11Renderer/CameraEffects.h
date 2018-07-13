@@ -28,8 +28,8 @@ public:
 
     GaussianBloom& operator=(GaussianBloom&& rhs) = default;
 
-    OShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
-                                ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, int bandwidth);
+    OShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, 
+                                unsigned int image_width, unsigned int image_height, int bandwidth);
 
 private:
     GaussianBloom(GaussianBloom& other) = delete;
@@ -68,8 +68,8 @@ public:
 
     DualKawaseBloom& operator=(DualKawaseBloom&& rhs) = default;
 
-    OShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
-                                ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, unsigned int half_passes);
+    OShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, 
+                                unsigned int image_width, unsigned int image_height, unsigned int half_passes);
 
 private:
     DualKawaseBloom(DualKawaseBloom& other) = delete;
@@ -202,7 +202,6 @@ private:
     CameraEffects& operator=(CameraEffects& rhs) = delete;
 
     OBuffer m_constant_buffer;
-    OSamplerState m_bilinear_sampler;
 
     OShaderResourceView m_linear_exposure_SRV;
     OUnorderedAccessView m_linear_exposure_UAV;

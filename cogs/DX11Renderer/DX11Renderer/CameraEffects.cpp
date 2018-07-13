@@ -34,16 +34,13 @@ GaussianBloom::GaussianBloom(ID3D11Device1& device, const std::wstring& shader_f
     m_gaussian_samples.buffer = create_default_buffer(device, DXGI_FORMAT_R16G16_FLOAT, m_gaussian_samples.capacity, &m_gaussian_samples.SRV);
 }
 
-OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
-                                           ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, int bandwidth) {
+OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, 
+                                           unsigned int image_width, unsigned int image_height, int bandwidth) {
 #if CHECK_IMPLICIT_STATE
     // Check that the constants and sampler are bound.
     OBuffer bound_constants;
     context.CSGetConstantBuffers(0, 1, &bound_constants);
     always_assert(bound_constants.get() == &constants);
-    OSamplerState bound_sampler;
-    context.CSGetSamplers(0, 1, &bound_sampler);
-    always_assert(bound_sampler.get() == &bilinear_sampler);
 #endif
 
     auto performance_marker = PerformanceMarker(context, L"Gaussian bloom");
@@ -165,16 +162,13 @@ DualKawaseBloom::DualKawaseBloom(ID3D11Device1& device, const std::wstring& shad
     THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(upsample_pattern_blob), nullptr, &m_upsample_pattern));
 }
 
-OShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11SamplerState& bilinear_sampler,
-                                                   ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height, unsigned int half_passes) {
+OShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, 
+                                             unsigned int image_width, unsigned int image_height, unsigned int half_passes) {
 #if CHECK_IMPLICIT_STATE
     // Check that the constants and sampler are bound.
     OBuffer bound_constants;
     context.CSGetConstantBuffers(0, 1, &bound_constants);
     always_assert(bound_constants.get() == &constants);
-    OSamplerState bound_sampler;
-    context.CSGetSamplers(0, 1, &bound_sampler);
-    always_assert(bound_sampler.get() == &bilinear_sampler);
 #endif
 
     auto performance_marker = PerformanceMarker(context, L"Dual kawase bloom");
@@ -435,19 +429,6 @@ CameraEffects::CameraEffects(ID3D11Device1& device, const std::wstring& shader_f
         m_uncharted2_tonemapping_PS = create_pixel_shader("CameraEffects::uncharted2_tonemapping_ps");
         m_filmic_tonemapping_PS = create_pixel_shader("CameraEffects::unreal4_tonemapping_ps");
     }
-
-    { // Bilinear sampler
-        D3D11_SAMPLER_DESC sampler_desc = {};
-        sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-        sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-        sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-        sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-        sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-        sampler_desc.MinLOD = 0;
-        sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
-
-        THROW_DX11_ERROR(device.CreateSamplerState(&sampler_desc, &m_bilinear_sampler));
-    }
 }
 
 void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::CameraEffects::Settings settings, float delta_time,
@@ -480,10 +461,8 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
 
     context.RSSetState(m_raster_state);
     context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
-    context.PSSetConstantBuffers(0, 1, &m_constant_buffer);
-    context.PSSetSamplers(0, 1, &m_bilinear_sampler); // TODO Get rid of PS bindings when all shaders are compute.
+    context.PSSetConstantBuffers(0, 1, &m_constant_buffer); // TODO Get rid of PS bindings when all shaders are compute.
     context.CSSetConstantBuffers(0, 1, &m_constant_buffer);
-    context.CSSetSamplers(0, 1, &m_bilinear_sampler);
 
     { // Determine exposure.
         if (settings.exposure.mode == ExposureMode::Histogram)
@@ -506,7 +485,7 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
     ID3D11ShaderResourceView* bloom_SRV = nullptr;
     if (settings.bloom.threshold < INFINITY) {
         int bandwidth = int(settings.bloom.bandwidth * height);
-        bloom_SRV = m_bloom.filter(context, m_constant_buffer, m_bilinear_sampler, pixel_SRV, width, height, bandwidth).get();
+        bloom_SRV = m_bloom.filter(context, m_constant_buffer, pixel_SRV, width, height, bandwidth).get();
     }
 
     { // Tonemap and render into backbuffer.

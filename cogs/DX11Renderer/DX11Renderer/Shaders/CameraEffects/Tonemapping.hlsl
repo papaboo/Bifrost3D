@@ -142,8 +142,6 @@ inline float3 unreal4(float3 color, float slope = 0.91f, float toe = 0.53f, floa
 // Tonemapping pixel shaders.
 // ------------------------------------------------------------------------------------------------
 
-SamplerState bilinear_sampler : register(s0);
-
 Texture2D pixels : register(t0);
 Buffer<float> linear_exposure_buffer : register(t1);
 Texture2D bloom_texture : register(t2);

@@ -13,7 +13,6 @@
 namespace CameraEffects {
 
 Texture2D image : register(t0);
-SamplerState image_sampler : register(s0);
 RWTexture2D<float4> output_image : register(u0);
 
 // ------------------------------------------------------------------------------------------------
@@ -36,8 +35,8 @@ void sampled_gaussian_horizontal_filter(uint3 global_thread_ID : SV_DispatchThre
     for (int y = 0; y < sample_count; ++y) {
         float2 offset_weight = bilinear_gaussian_samples[y];
         offset_weight.x *= recip_width;
-        float3 lower_sample = image.SampleLevel(image_sampler, uv + float2(-offset_weight.x, 0), 0).rgb;
-        float3 upper_sample = image.SampleLevel(image_sampler, uv + float2(offset_weight.x, 0), 0).rgb;
+        float3 lower_sample = image.SampleLevel(bilinear_sampler, uv + float2(-offset_weight.x, 0), 0).rgb;
+        float3 upper_sample = image.SampleLevel(bilinear_sampler, uv + float2(offset_weight.x, 0), 0).rgb;
         sum += (max(0, lower_sample - bloom_threshold) + max(0, upper_sample - bloom_threshold)) * offset_weight.y;
     }
 
@@ -58,8 +57,8 @@ void sampled_gaussian_vertical_filter(uint3 global_thread_ID : SV_DispatchThread
     for (int y = 0; y < sample_count; ++y) {
         float2 offset_weight = bilinear_gaussian_samples[y];
         offset_weight.x *= recip_height;
-        sum += (image.SampleLevel(image_sampler, uv + float2(0, offset_weight.x), 0).rgb +
-                image.SampleLevel(image_sampler, uv + float2(0, -offset_weight.x), 0).rgb) * offset_weight.y;
+        sum += (image.SampleLevel(bilinear_sampler, uv + float2(0, offset_weight.x), 0).rgb +
+                image.SampleLevel(bilinear_sampler, uv + float2(0, -offset_weight.x), 0).rgb) * offset_weight.y;
     }
 
     output_image[global_thread_ID.xy] = float4(sum, 1.0);
@@ -84,11 +83,11 @@ void dual_kawase_downsample(uint3 global_thread_ID : SV_DispatchThreadID) {
     const float2 half_pixel_width = 0.5 * rcp(float2(width, height));
     float2 uv = global_thread_ID.xy * rcp(float2(width, height)) + half_pixel_width;
 
-    float4 sum = image.SampleLevel(image_sampler, uv, 0) * 4.0;
-    sum += image.SampleLevel(image_sampler, uv + float2( half_pixel_width.x,  half_pixel_width.y), 0);
-    sum += image.SampleLevel(image_sampler, uv + float2( half_pixel_width.x, -half_pixel_width.y), 0);
-    sum += image.SampleLevel(image_sampler, uv + float2(-half_pixel_width.x,  half_pixel_width.y), 0);
-    sum += image.SampleLevel(image_sampler, uv + float2(-half_pixel_width.x, -half_pixel_width.y), 0);
+    float4 sum = image.SampleLevel(bilinear_sampler, uv, 0) * 4.0;
+    sum += image.SampleLevel(bilinear_sampler, uv + float2( half_pixel_width.x,  half_pixel_width.y), 0);
+    sum += image.SampleLevel(bilinear_sampler, uv + float2( half_pixel_width.x, -half_pixel_width.y), 0);
+    sum += image.SampleLevel(bilinear_sampler, uv + float2(-half_pixel_width.x,  half_pixel_width.y), 0);
+    sum += image.SampleLevel(bilinear_sampler, uv + float2(-half_pixel_width.x, -half_pixel_width.y), 0);
 
     output_image[global_thread_ID.xy] = sum / 8.0;
 }
@@ -103,14 +102,14 @@ void dual_kawase_upsample(uint3 global_thread_ID : SV_DispatchThreadID) {
 
     float2 uv = global_thread_ID.xy * rcp(float2(width, height)) + half_pixel_width;
 
-    float4 sum = image.SampleLevel(image_sampler, uv + float2(-half_pixel_width.x * 2.0, 0.0), 0);
-    sum += image.SampleLevel(image_sampler, uv + float2(-half_pixel_width.x, half_pixel_width.y), 0) * 2.0;
-    sum += image.SampleLevel(image_sampler, uv + float2(0.0, half_pixel_width.y * 2.0), 0);
-    sum += image.SampleLevel(image_sampler, uv + float2(half_pixel_width.x, half_pixel_width.y), 0) * 2.0;
-    sum += image.SampleLevel(image_sampler, uv + float2(half_pixel_width.x * 2.0, 0.0), 0);
-    sum += image.SampleLevel(image_sampler, uv + float2(half_pixel_width.x, -half_pixel_width.y), 0) * 2.0;
-    sum += image.SampleLevel(image_sampler, uv + float2(0.0, -half_pixel_width.y * 2.0), 0);
-    sum += image.SampleLevel(image_sampler, uv + float2(-half_pixel_width.x, -half_pixel_width.y), 0) * 2.0;
+    float4 sum = image.SampleLevel(bilinear_sampler, uv + float2(-half_pixel_width.x * 2.0, 0.0), 0);
+    sum += image.SampleLevel(bilinear_sampler, uv + float2(-half_pixel_width.x, half_pixel_width.y), 0) * 2.0;
+    sum += image.SampleLevel(bilinear_sampler, uv + float2(0.0, half_pixel_width.y * 2.0), 0);
+    sum += image.SampleLevel(bilinear_sampler, uv + float2(half_pixel_width.x, half_pixel_width.y), 0) * 2.0;
+    sum += image.SampleLevel(bilinear_sampler, uv + float2(half_pixel_width.x * 2.0, 0.0), 0);
+    sum += image.SampleLevel(bilinear_sampler, uv + float2(half_pixel_width.x, -half_pixel_width.y), 0) * 2.0;
+    sum += image.SampleLevel(bilinear_sampler, uv + float2(0.0, -half_pixel_width.y * 2.0), 0);
+    sum += image.SampleLevel(bilinear_sampler, uv + float2(-half_pixel_width.x, -half_pixel_width.y), 0) * 2.0;
 
     output_image[global_thread_ID.xy] = sum / 12.0;
 }

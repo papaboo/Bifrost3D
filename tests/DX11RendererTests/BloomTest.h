@@ -34,7 +34,7 @@ protected:
         m_device->GetImmediateContext1(&m_context);
 
         m_bilinear_sampler = create_bilinear_sampler(m_device);
-        m_context->CSSetSamplers(0, 1, &m_bilinear_sampler);
+        m_context->CSSetSamplers(15, 1, &m_bilinear_sampler);
     }
 
     virtual void TearDown() {
@@ -221,7 +221,7 @@ protected:
 TEST_F(Bloom, dual_kawase_energy_conservation) {
     DualKawaseBloom bloom = DualKawaseBloom(*m_device, DX11_SHADER_ROOT);
     auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OShaderResourceView& {
-        return bloom.filter(m_context, constants, m_bilinear_sampler, pixels, image_width, image_height, 1);
+        return bloom.filter(m_context, constants, pixels, image_width, image_height, 1);
     };
 
     test_energy_conservation(bloom_filter, Cogwheel::Math::Vector3f(0.0001f));
@@ -230,7 +230,7 @@ TEST_F(Bloom, dual_kawase_energy_conservation) {
 TEST_F(Bloom, dual_kawase_mirroring) {
     DualKawaseBloom bloom = DualKawaseBloom(*m_device, DX11_SHADER_ROOT);
     auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OShaderResourceView& {
-        return bloom.filter(m_context, constants, m_bilinear_sampler, pixels, image_width, image_height, 4);
+        return bloom.filter(m_context, constants, pixels, image_width, image_height, 4);
     };
 
     test_mirroring(bloom_filter);
@@ -239,7 +239,7 @@ TEST_F(Bloom, dual_kawase_mirroring) {
 TEST_F(Bloom, dual_kawase_threshold) {
     DualKawaseBloom bloom = DualKawaseBloom(*m_device, DX11_SHADER_ROOT);
     auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OShaderResourceView& {
-        return bloom.filter(m_context, constants, m_bilinear_sampler, pixels, image_width, image_height, 0);
+        return bloom.filter(m_context, constants, pixels, image_width, image_height, 0);
     };
 
     test_thresholding(bloom_filter, 0.001);
@@ -252,7 +252,7 @@ TEST_F(Bloom, dual_kawase_threshold) {
 TEST_F(Bloom, gaussian_energy_conservation) {
     GaussianBloom bloom = GaussianBloom(*m_device, DX11_SHADER_ROOT);
     auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OShaderResourceView& {
-        return bloom.filter(m_context, constants, m_bilinear_sampler, pixels, image_width, image_height, m_bandwidth);
+        return bloom.filter(m_context, constants, pixels, image_width, image_height, m_bandwidth);
     };
 
     test_energy_conservation(bloom_filter, Cogwheel::Math::Vector3f(0.002f));
@@ -261,7 +261,7 @@ TEST_F(Bloom, gaussian_energy_conservation) {
 TEST_F(Bloom, guassian_mirroring) {
     GaussianBloom bloom = GaussianBloom(*m_device, DX11_SHADER_ROOT);
     auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OShaderResourceView& {
-        return bloom.filter(m_context, constants, m_bilinear_sampler, pixels, image_width, image_height, m_bandwidth);
+        return bloom.filter(m_context, constants, pixels, image_width, image_height, m_bandwidth);
     };
 
     test_mirroring(bloom_filter);
@@ -270,7 +270,7 @@ TEST_F(Bloom, guassian_mirroring) {
 TEST_F(Bloom, gaussian_threshold) {
     GaussianBloom bloom = GaussianBloom(*m_device, DX11_SHADER_ROOT);
     auto bloom_filter = [&](ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height) -> OShaderResourceView& {
-        return bloom.filter(m_context, constants, m_bilinear_sampler, pixels, image_width, image_height, m_bandwidth);
+        return bloom.filter(m_context, constants, pixels, image_width, image_height, m_bandwidth);
     };
 
     test_thresholding(bloom_filter, 0.01);
