@@ -34,6 +34,9 @@ public:
     Rect() = default;
     Rect(T x, T y, T width, T height)
         : x(x), y(y), width(width), height(height) { }
+    template <typename U>
+    Rect(Rect<U> other)
+        : x(T(other.x)), y(T(other.y)), width(T(other.width)), height(T(other.height)) { }
 
     inline Vector2<T> get_offset() const { return Vector2<T>(x, y); }
     inline Vector2<T> get_size() const { return Vector2<T>(width, height); }
