@@ -432,7 +432,7 @@ CameraEffects::CameraEffects(ID3D11Device1& device, const std::wstring& shader_f
 }
 
 void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::CameraEffects::Settings settings, float delta_time,
-                            ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, int width, int height) {
+                            ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, Cogwheel::Math::Rect<int> viewport) {
 
     using namespace Cogwheel::Math::CameraEffects;
 
@@ -440,6 +440,7 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
 
     { // Upload constants
         Constants constants;
+        constants.input_viewport = Cogwheel::Math::Rect<float>(viewport);
         constants.min_log_luminance = settings.exposure.min_log_luminance;
         constants.max_log_luminance = settings.exposure.max_log_luminance;
         constants.min_histogram_percentage = settings.exposure.min_histogram_percentage;
@@ -452,7 +453,7 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
             constants.eye_adaptation_brightness = constants.eye_adaptation_darkness = std::numeric_limits<float>::infinity();
 
         constants.bloom_threshold = settings.bloom.threshold;
-        constants.bloom_bandwidth = int(settings.bloom.bandwidth * height);
+        constants.bloom_bandwidth = int(settings.bloom.bandwidth * viewport.height);
 
         constants.delta_time = delta_time;
 
@@ -466,9 +467,9 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
 
     { // Determine exposure.
         if (settings.exposure.mode == ExposureMode::Histogram)
-            m_exposure_histogram.compute_linear_exposure(context, m_constant_buffer, pixel_SRV, width, m_linear_exposure_UAV);
+            m_exposure_histogram.compute_linear_exposure(context, m_constant_buffer, pixel_SRV, viewport.width, m_linear_exposure_UAV);
         else if (settings.exposure.mode == ExposureMode::LogAverage)
-            m_log_average_luminance.compute_linear_exposure(context, m_constant_buffer, pixel_SRV, width, m_linear_exposure_UAV);
+            m_log_average_luminance.compute_linear_exposure(context, m_constant_buffer, pixel_SRV, viewport.width, m_linear_exposure_UAV);
         else { // settings.exposure.mode == ExposureMode::Fixed
             context.CSSetConstantBuffers(0, 1, &m_constant_buffer);
 
@@ -484,8 +485,8 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
     // Bloom filter.
     ID3D11ShaderResourceView* bloom_SRV = nullptr;
     if (settings.bloom.threshold < INFINITY) {
-        int bandwidth = int(settings.bloom.bandwidth * height);
-        bloom_SRV = m_bloom.filter(context, m_constant_buffer, pixel_SRV, width, height, bandwidth).get();
+        int bandwidth = int(settings.bloom.bandwidth * viewport.height);
+        bloom_SRV = m_bloom.filter(context, m_constant_buffer, pixel_SRV, viewport.width, viewport.height, bandwidth).get();
     }
 
     { // Tonemap and render into backbuffer.

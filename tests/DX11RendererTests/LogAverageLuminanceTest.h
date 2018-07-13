@@ -45,7 +45,7 @@ protected:
 
         float min_log_luminance = -24;
         float max_log_luminance = 24;
-        OBuffer constant_buffer = create_camera_effects_constants(device, min_log_luminance, max_log_luminance);
+        OBuffer constant_buffer = create_camera_effects_constants(device, { width, height }, min_log_luminance, max_log_luminance);
         context->CSSetConstantBuffers(0, 1, &constant_buffer);
 
         OShaderResourceView pixel_SRV;

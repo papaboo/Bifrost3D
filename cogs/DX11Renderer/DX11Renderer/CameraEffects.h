@@ -10,6 +10,7 @@
 #define _DX11RENDERER_RENDERER_CAMERA_EFFECTS_H_
 
 #include <Cogwheel/Math/CameraEffects.h>
+#include <Cogwheel/Math/Rect.h>
 
 #include <DX11Renderer/Types.h>
 
@@ -172,6 +173,7 @@ class CameraEffects {
 public:
 
     struct Constants {
+        Cogwheel::Math::Rect<float> input_viewport;
         float min_log_luminance;
         float max_log_luminance;
         float min_histogram_percentage;
@@ -195,7 +197,7 @@ public:
 
     // Processes the pixels and stores them in the bound render target.
     void process(ID3D11DeviceContext1& context, Cogwheel::Math::CameraEffects::Settings settings, float delta_time,
-                 ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, int width, int height);
+                 ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, Cogwheel::Math::Rect<int> viewport);
 
 private:
     CameraEffects(CameraEffects& other) = delete;

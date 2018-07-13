@@ -80,7 +80,7 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
 
     float min_log_luminance = -8;
     float max_log_luminance = 4;
-    OBuffer constant_buffer = create_camera_effects_constants(device, min_log_luminance, max_log_luminance);
+    OBuffer constant_buffer = create_camera_effects_constants(device, { bin_count, 1 }, min_log_luminance, max_log_luminance);
     context->CSSetConstantBuffers(0, 1, &constant_buffer);
 
     // Image with one element in each bucket.
@@ -113,14 +113,14 @@ TEST_F(ExposureHistogramFixture, small_image) {
     ExposureHistogram& histogram = ExposureHistogram(*device, DX11_SHADER_ROOT);
     const unsigned int bin_count = ExposureHistogram::bin_count;
 
+    const int width = bin_count;
+    const int height = 6;
     float min_log_luminance = -8;
     float max_log_luminance = 4;
-    OBuffer constant_buffer = create_camera_effects_constants(device, min_log_luminance, max_log_luminance);
+    OBuffer constant_buffer = create_camera_effects_constants(device, { width, height }, min_log_luminance, max_log_luminance);
     context->CSSetConstantBuffers(0, 1, &constant_buffer);
 
     // Image with 4 elements in each bucket and (4 + width) elements in the first and last bucket
-    const int width = bin_count;
-    const int height = 6;
     const int element_count = width * height;
     half4 pixels[element_count];
     for (int x = 0; x < width; ++x) {
@@ -178,7 +178,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
     float max_log_luminance = 4;
     float min_percentage = 0.8f;
     float max_percentage = 0.95f;
-    OBuffer constant_buffer = create_camera_effects_constants(device, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
+    OBuffer constant_buffer = create_camera_effects_constants(device, { 1, 1 }, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
 
     context->CSSetShader(compute_exposure_shader, nullptr, 0u);
     context->CSSetConstantBuffers(0, 1, &constant_buffer);
@@ -224,7 +224,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_histogram) {
     float max_log_luminance = 4;
     float min_percentage = 0.8f;
     float max_percentage = 0.95f;
-    OBuffer constant_buffer = create_camera_effects_constants(device, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
+    OBuffer constant_buffer = create_camera_effects_constants(device, { 1, 1 }, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
 
     context->CSSetShader(compute_exposure_shader, nullptr, 0u);
     context->CSSetConstantBuffers(0, 1, &constant_buffer);

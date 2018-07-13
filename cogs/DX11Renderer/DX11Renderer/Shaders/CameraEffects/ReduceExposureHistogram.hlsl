@@ -34,11 +34,11 @@ void reduce(uint3 local_thread_ID : SV_GroupThreadID, uint3 group_ID : SV_GroupI
     for (uint bin = 0; bin < HISTOGRAM_SIZE; ++bin)
         shared_histograms[shared_histogram_offset + bin] = 0u;
 
-    uint width, height;
-    pixels.GetDimensions(width, height);
+    uint width = input_viewport.z;
+    uint height = input_viewport.w;
 
     // Reduce the histogram in local memory by letting the groups sweep the image horizontally in steps of size GROUP_HEIGHT.
-    uint2 pixel_coord = global_thread_ID.xy;
+    uint2 pixel_coord = global_thread_ID.xy + input_viewport.xy;
     if (pixel_coord.x < width) {
         for (; pixel_coord.y < height; pixel_coord.y += GROUP_HEIGHT) {
             float3 pixel = pixels[pixel_coord].rgb;

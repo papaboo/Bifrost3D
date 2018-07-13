@@ -14,6 +14,7 @@
 namespace CameraEffects {
 
 cbuffer constants : register(b0) {
+    float4 input_viewport; // offset in .xy, size in .zw.
     float min_log_luminance;
     float max_log_luminance;
     float min_percentage;

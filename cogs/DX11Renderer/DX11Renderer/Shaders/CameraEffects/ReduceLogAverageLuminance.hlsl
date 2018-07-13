@@ -26,14 +26,14 @@ void first_reduction(uint3 local_thread_ID : SV_GroupThreadID, uint3 group_ID : 
     uint linear_local_thread_ID = local_thread_ID.x + local_thread_ID.y * GROUP_WIDTH;
     shared_log_luminance[linear_local_thread_ID] = 0;
 
-    uint width, height;
-    pixels.GetDimensions(width, height);
+    uint width = input_viewport.z;
+    uint height = input_viewport.w;
 
     // Sum log luminance in shared memory by letting the groups sweep the image horizontally in steps of size GROUP_HEIGHT.
     uint2 pixel_coord;
     for (pixel_coord.x = global_thread_ID.x; pixel_coord.x < width; pixel_coord.x += GROUP_WIDTH * MAX_GROUPS_DISPATCHED) {
         for (pixel_coord.y = global_thread_ID.y; pixel_coord.y < height; pixel_coord.y += GROUP_HEIGHT) {
-            float3 pixel = pixels[pixel_coord].rgb;
+            float3 pixel = pixels[pixel_coord + input_viewport.xy].rgb;
             float log_luminance = log2(max(luminance(pixel), 0.0001f));
             shared_log_luminance[linear_local_thread_ID] += log_luminance;
         }

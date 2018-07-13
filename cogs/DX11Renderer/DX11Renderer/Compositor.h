@@ -48,7 +48,7 @@ namespace DX11Renderer {
 //-------------------------------------------------------------------------------------------------
 struct RenderedFrame {
     OShaderResourceView& frame_SRV;
-    Cogwheel::Math::Rect<int> rect;
+    Cogwheel::Math::Rect<int> viewport;
 };
 
 //-------------------------------------------------------------------------------------------------

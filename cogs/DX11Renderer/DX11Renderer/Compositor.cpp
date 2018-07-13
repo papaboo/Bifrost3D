@@ -248,7 +248,7 @@ public:
             // TODO Handle viewport
             Cameras::UID camera_ID = *Cameras::get_iterable().begin();
             auto effects_settings = Cameras::get_effects_settings(camera_ID);
-            m_camera_effects.process(m_render_context, effects_settings, delta_time, frame.frame_SRV, m_swap_chain_RTV, m_backbuffer_size.x, m_backbuffer_size.y);
+            m_camera_effects.process(m_render_context, effects_settings, delta_time, frame.frame_SRV, m_swap_chain_RTV, frame.viewport);
         }
 
         // Post render calls, fx for GUI

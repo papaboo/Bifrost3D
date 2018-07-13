@@ -146,10 +146,10 @@ Texture2D pixels : register(t0);
 Buffer<float> linear_exposure_buffer : register(t1);
 Texture2D bloom_texture : register(t2);
 
-float3 get_pixel_color(int2 pixel_index, float2 uv) {
+float3 get_pixel_color(int2 pixel_index, float2 bloom_uv) {
     float linear_exposure = linear_exposure_buffer[0];
-    float3 low_intensity_color = min(pixels[pixel_index].rgb, bloom_threshold);
-    float3 bloom_color = bloom_texture.SampleLevel(bilinear_sampler, uv, 0).rgb;
+    float3 low_intensity_color = min(pixels[pixel_index + input_viewport.xy].rgb, bloom_threshold);
+    float3 bloom_color = bloom_texture.SampleLevel(bilinear_sampler, bloom_uv, 0).rgb;
     return linear_exposure * (low_intensity_color + bloom_color);
 }
 

@@ -22,9 +22,10 @@ using half4 = Cogwheel::Math::Vector4<half>;
 // Utility functions
 // -------------------------------------------------------------------------------------------------
 
-inline DX11Renderer::OBuffer create_camera_effects_constants(DX11Renderer::ODevice1& device, float min_log_luminance, float max_log_luminance, float min_histogram_percentage = 0.8f, float max_histogram_percentage = 0.95f) {
+inline DX11Renderer::OBuffer create_camera_effects_constants(DX11Renderer::ODevice1& device, DX11Renderer::int2 viewport_size, float min_log_luminance, float max_log_luminance, float min_histogram_percentage = 0.8f, float max_histogram_percentage = 0.95f) {
 
     DX11Renderer::CameraEffects::Constants constants;
+    constants.input_viewport = { 0.0f, 0.0f, float(viewport_size.x), float(viewport_size.y) };
     constants.min_log_luminance = min_log_luminance;
     constants.max_log_luminance = max_log_luminance;
     constants.min_histogram_percentage = min_histogram_percentage;
