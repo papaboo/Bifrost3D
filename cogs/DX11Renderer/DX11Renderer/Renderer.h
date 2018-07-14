@@ -1,10 +1,10 @@
 // DirectX 11 renderer.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
-// ---------------------------------------------------------------------------
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+// ------------------------------------------------------------------------------------------------
 
 #ifndef _DX11RENDERER_RENDERER_H_
 #define _DX11RENDERER_RENDERER_H_
@@ -14,7 +14,7 @@
 
 namespace DX11Renderer {
 
-//----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // DirectX 11 renderer.
 // Future work
 // * SSAO
@@ -29,7 +29,8 @@ namespace DX11Renderer {
 // * Sort models by material ID as well and use the info while rendering.
 //   If the material hasn't changed then don't rebind it or the textures.
 // * Switch swap chain to use the flip  model. https://blogs.msdn.microsoft.com/directx/2018/04/09/dxgi-flip-model/
-//----------------------------------------------------------------------------
+// * Use reverse Z for stabile Z. https://mynameismjp.wordpress.com/2010/03/22/attack-of-the-depth-buffer/
+// ------------------------------------------------------------------------------------------------
 class Renderer final : public IRenderer {
 public:
 
