@@ -267,6 +267,7 @@ public:
 
         { // Setup opaque rendering.
             CD3D11_RASTERIZER_DESC opaque_raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
+            opaque_raster_state.ScissorEnable = true;
             HRESULT hr = m_device.CreateRasterizerState(&opaque_raster_state, &m_opaque.raster_state);
             THROW_DX11_ERROR(hr);
 
@@ -282,6 +283,7 @@ public:
 
         { // Setup cutout rendering. Reuses some of the opaque state.
             CD3D11_RASTERIZER_DESC twosided_raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
+            twosided_raster_state.ScissorEnable = true;
             twosided_raster_state.CullMode = D3D11_CULL_NONE;
             HRESULT hr = m_device.CreateRasterizerState(&twosided_raster_state, &m_cutout.raster_state);
             THROW_DX11_ERROR(hr);
@@ -436,17 +438,22 @@ public:
     } 
 
     RenderedFrame render(const Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
-        // TODO Replace by assert
-        m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // NOTE This should already be the case as we finish a frame by rendering models or post process effects.
+        m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        // Create and set the viewport.
-        D3D11_VIEWPORT dx_viewport;
-        dx_viewport.TopLeftX = dx_viewport.TopLeftY = 0.0f;
-        dx_viewport.Width = float(width);
-        dx_viewport.Height = float(height);
-        dx_viewport.MinDepth = 0.0f;
-        dx_viewport.MaxDepth = 1.0f;
-        m_render_context->RSSetViewports(1, &dx_viewport);
+        const float depth_guard_band_scale = 0.05f;
+        int2 g_buffer_guard_band_size = { int(width * depth_guard_band_scale), int(height * depth_guard_band_scale) };
+        int g_buffer_width = width + 2 * g_buffer_guard_band_size.x;
+        int g_buffer_height = height + 2 * g_buffer_guard_band_size.y;
+
+        { // Set the full g-buffer viewport.
+            D3D11_VIEWPORT dx_viewport;
+            dx_viewport.TopLeftX = dx_viewport.TopLeftY = 0.0f;
+            dx_viewport.Width = float(g_buffer_width);
+            dx_viewport.Height = float(g_buffer_height);
+            dx_viewport.MinDepth = 0.0f;
+            dx_viewport.MaxDepth = 1.0f;
+            m_render_context->RSSetViewports(1, &dx_viewport);
+        }
 
         // Opaque state setup.
         m_render_context->OMSetBlendState(0, 0, 0xffffffff);
@@ -454,15 +461,24 @@ public:
 
         SceneRoot scene = Cameras::get_scene_ID(camera_ID);
         { // Setup scene constants.
+            Matrix4x4f projection_matrix = Cameras::get_projection_matrix(camera_ID);
+            float projection_matrix_scale = 1.0f / (1.0f + 2.0f * depth_guard_band_scale);
+            // float projection_matrix_scale = 1.0f - depth_guard_band_scale;
+            projection_matrix.set_column(0, projection_matrix.get_column(0) * projection_matrix_scale);
+            projection_matrix.set_column(1, projection_matrix.get_column(1) * projection_matrix_scale);
+            // Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID); // TODO Use and match scale factor.
+            Matrix4x4f inverse_projection_matrix = invert(projection_matrix);
+            Transform view_transform = Cameras::get_view_transform(camera_ID);
+
             SceneConstants scene_vars;
-            scene_vars.view_projection_matrix = Cameras::get_view_projection_matrix(camera_ID);
+            scene_vars.view_projection_matrix = projection_matrix * to_matrix4x4(view_transform);
             scene_vars.camera_position = Vector4f(Cameras::get_transform(camera_ID).translation, 1.0f);
             RGB env_tint = scene.get_environment_tint();
             scene_vars.environment_tint = { env_tint.r, env_tint.g, env_tint.b, float(scene.get_environment_map().get_index()) };
-            scene_vars.inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
-            scene_vars.projection_matrix = Cameras::get_projection_matrix(camera_ID);
-            scene_vars.inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
-            scene_vars.world_to_view_matrix = to_matrix4x3(Cameras::get_view_transform(camera_ID));
+            scene_vars.inverse_view_projection_matrix = to_matrix4x4(invert(view_transform)) * inverse_projection_matrix;
+            scene_vars.projection_matrix = projection_matrix;
+            scene_vars.inverse_projection_matrix = inverse_projection_matrix;
+            scene_vars.world_to_view_matrix = to_matrix4x3(view_transform);
             m_render_context->UpdateSubresource(m_scene_buffer, 0, nullptr, &scene_vars, 0, 0);
             m_render_context->VSSetConstantBuffers(13, 1, &m_scene_buffer);
             m_render_context->PSSetConstantBuffers(13, 1, &m_scene_buffer);
@@ -473,12 +489,12 @@ public:
             auto g_buffer_marker = PerformanceMarker(*m_render_context, L"G-buffer");
 
             // Re-allocate buffers if the dimensions have changed.
-            if (m_g_buffer.width != width || m_g_buffer.height != height) {
+            if (m_g_buffer.width != g_buffer_width || m_g_buffer.height != g_buffer_height) {
                 { // Backbuffer.
                     m_backbuffer_RTV.release();
                     m_backbuffer_SRV.release();
 
-                    create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_backbuffer_SRV, nullptr, &m_backbuffer_RTV);
+                    create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, g_buffer_width, g_buffer_height, &m_backbuffer_SRV, nullptr, &m_backbuffer_RTV);
                 }
 
                 { // Depth buffer
@@ -486,8 +502,8 @@ public:
                     m_g_buffer.depth_view.release();
 
                     D3D11_TEXTURE2D_DESC depth_desc;
-                    depth_desc.Width = width;
-                    depth_desc.Height = height;
+                    depth_desc.Width = g_buffer_width;
+                    depth_desc.Height = g_buffer_height;
                     depth_desc.MipLevels = 1;
                     depth_desc.ArraySize = 1;
                     depth_desc.Format = DXGI_FORMAT_R32_TYPELESS; // DXGI_FORMAT_D32_FLOAT for depth view and DXGI_FORMAT_R32_FLOAT for SRV.
@@ -503,7 +519,7 @@ public:
 
                     D3D11_DEPTH_STENCIL_VIEW_DESC depth_view_desc = CD3D11_DEPTH_STENCIL_VIEW_DESC(D3D11_DSV_DIMENSION_TEXTURE2D, DXGI_FORMAT_D32_FLOAT);
                     THROW_DX11_ERROR(m_device.CreateDepthStencilView(depth_buffer, &depth_view_desc, &m_g_buffer.depth_view));
-                    
+
                     D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURE2D, DXGI_FORMAT_R32_FLOAT);
                     THROW_DX11_ERROR(m_device.CreateShaderResourceView(depth_buffer, &srv_desc, &m_g_buffer.depth_SRV));
                 }
@@ -511,11 +527,11 @@ public:
                 { // Normal buffer
                     m_g_buffer.normal_SRV.release();
                     m_g_buffer.normal_RTV.release();
-                    create_texture_2D(m_device, DXGI_FORMAT_R16G16_SNORM, width, height, &m_g_buffer.normal_SRV, nullptr, &m_g_buffer.normal_RTV);
+                    create_texture_2D(m_device, DXGI_FORMAT_R16G16_SNORM, g_buffer_width, g_buffer_height, &m_g_buffer.normal_SRV, nullptr, &m_g_buffer.normal_RTV);
                 }
 
-                m_g_buffer.width = width;
-                m_g_buffer.height = height;
+                m_g_buffer.width = g_buffer_width;
+                m_g_buffer.height = g_buffer_height;
             }
 
             fill_g_buffer();
@@ -530,6 +546,13 @@ public:
             else
                 // A really inefficient way to disable ssao. The application is still part of the material shaders.
                 ssao_SRV = m_ssao.apply_none(m_render_context, m_g_buffer.width, m_g_buffer.height).get();
+        }
+
+        // Scissor rect to disable rendering to the guard band.
+        if (depth_guard_band_scale != 0.0f) {
+            D3D11_RECT rect = CD3D11_RECT(g_buffer_guard_band_size.x, g_buffer_guard_band_size.y,
+                                          width + g_buffer_guard_band_size.x, height + g_buffer_guard_band_size.y);
+            m_render_context->RSSetScissorRects(1, &rect);
         }
 
         // Debug display g-buffer or AO
@@ -554,9 +577,11 @@ public:
             display_constant_buffer.release();
             m_render_context->PSSetConstantBuffers(1, 1, &display_constant_buffer);
 
-            Cogwheel::Math::Rect<int> rect = { 0, 0, width, height };
-            RenderedFrame frame = { m_backbuffer_SRV, rect };
-            return frame;
+            // Reset scissor rect, as noone expects this to be used.
+            m_render_context->RSSetScissorRects(0, nullptr);
+
+            Rect<int> viewport = { g_buffer_guard_band_size.x, g_buffer_guard_band_size.y, width, height };
+            return { m_backbuffer_SRV, viewport };
         }
 
         m_render_context->OMSetRenderTargets(1, &m_backbuffer_RTV, m_g_buffer.depth_view);
@@ -651,9 +676,11 @@ public:
             }
         }
 
-        Cogwheel::Math::Rect<int> rect = { 0, 0, width, height };
-        RenderedFrame frame = { m_backbuffer_SRV, rect };
-        return frame;
+        // Reset scissor rect, as noone expects this to be used.
+        m_render_context->RSSetScissorRects(0, nullptr);
+
+        Rect<int> viewport = { g_buffer_guard_band_size.x, g_buffer_guard_band_size.y, width, height };
+        return { m_backbuffer_SRV, viewport };
     }
 
     template <typename T>
