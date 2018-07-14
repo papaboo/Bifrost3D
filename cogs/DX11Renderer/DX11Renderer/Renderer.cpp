@@ -461,13 +461,17 @@ public:
 
         SceneRoot scene = Cameras::get_scene_ID(camera_ID);
         { // Setup scene constants.
+            // Scale projection matrix and it's inverse to fit the projection onto the backbuffer + guard band.
+            float inverse_projection_matrix_scale = 1.0f + 2.0f * depth_guard_band_scale;
+            Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
+            inverse_projection_matrix.set_row(0, inverse_projection_matrix.get_row(0) * inverse_projection_matrix_scale);
+            inverse_projection_matrix.set_row(1, inverse_projection_matrix.get_row(1) * inverse_projection_matrix_scale);
+
+            float projection_matrix_scale = 1.0f / inverse_projection_matrix_scale;
             Matrix4x4f projection_matrix = Cameras::get_projection_matrix(camera_ID);
-            float projection_matrix_scale = 1.0f / (1.0f + 2.0f * depth_guard_band_scale);
-            // float projection_matrix_scale = 1.0f - depth_guard_band_scale;
             projection_matrix.set_column(0, projection_matrix.get_column(0) * projection_matrix_scale);
             projection_matrix.set_column(1, projection_matrix.get_column(1) * projection_matrix_scale);
-            // Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID); // TODO Use and match scale factor.
-            Matrix4x4f inverse_projection_matrix = invert(projection_matrix);
+            
             Transform view_transform = Cameras::get_view_transform(camera_ID);
 
             SceneConstants scene_vars;
