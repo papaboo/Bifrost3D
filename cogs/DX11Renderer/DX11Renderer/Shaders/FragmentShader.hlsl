@@ -78,11 +78,7 @@ float4 opaque(PixelInput input, bool is_front_face : SV_IsFrontFace) : SV_TARGET
     if (coverage < CUTOFF)
         discard;
 
-    float width, height;
-    ssao_tex.GetDimensions(width, height);
-
-    float2 uv = (input.position.xy) / float2(width, height); // TODO Upload inverse viewport size.
-    float ambient_visibility = ssao_tex.SampleLevel(bilinear_sampler, uv, 0).r;
+    float ambient_visibility = ssao_tex[input.position.xy].r;
 
     return float4(integration(input, is_front_face, ambient_visibility), 1.0f);
 }
