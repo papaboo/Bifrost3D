@@ -70,6 +70,8 @@ void RenderingGUI::layout_frame() {
                 auto settings = m_renderer->get_settings();
                 bool has_changed = false;
 
+                has_changed |= ImGui::SliderFloat("G-buffer band scale", &settings.g_buffer_guard_band_scale, 0.0f, 0.99f, "%.2f");
+
                 if (ImGui::TreeNode("SSAO")) {
                     has_changed |= ImGui::Checkbox("SSAO", &settings.ssao.enabled);
                     has_changed |= ImGui::InputFloat("World radius", &settings.ssao.settings.world_radius, 0.05f, 0.25f, "%.2f");
