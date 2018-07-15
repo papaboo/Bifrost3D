@@ -203,9 +203,15 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
 
     // Determine occlusion
     float occlusion = 0.0f;
+    float used_sample_count = 0.0001f;
     for (int i = 0; i < sample_count; ++i) {
         float2 uv_offset = mul(uv_offsets[i] * ss_radius, sample_pattern_rotation);
         float2 sample_uv = input.texcoord + uv_offset;
+
+        // Break if sample is outside g-buffer.
+        // TODO Resample somehow to avoid wasting samples.
+        if (sample_uv.x < 0.0 || sample_uv.x > 1.0 || sample_uv.y < 0.0 || sample_uv.y > 1.0)
+            continue;
 
         float depth_i = depth_tex.SampleLevel(point_sampler, sample_uv, 0).r;
         float3 view_position_i = perspective_position_from_depth(depth_i, sample_uv, scene_vars.inverted_projection_matrix);
@@ -213,9 +219,10 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
 
         // Equation 10
         occlusion += max(0, dot(v_i, view_normal)) / (dot(v_i, v_i) + 0.0001f);
+        ++used_sample_count;
     }
 
-    float a = 1 - (2 * intensity_scale / sample_count) * occlusion;
+    float a = 1 - (2 * intensity_scale / used_sample_count) * occlusion;
     a = pow(max(0.0, a), falloff);
 
     // Fade out if radius is less than two pixels.
