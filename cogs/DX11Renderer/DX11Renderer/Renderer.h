@@ -35,6 +35,8 @@ class Renderer final : public IRenderer {
 public:
 
     struct Settings {
+        float g_buffer_guard_band_scale = 0.1f;
+
         struct {
             bool enabled = true;
             SsaoSettings settings;

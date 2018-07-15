@@ -440,8 +440,7 @@ public:
     RenderedFrame render(const Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
         m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        const float depth_guard_band_scale = 0.05f;
-        int2 g_buffer_guard_band_size = { int(width * depth_guard_band_scale), int(height * depth_guard_band_scale) };
+        int2 g_buffer_guard_band_size = { int(width * m_settings.g_buffer_guard_band_scale), int(height * m_settings.g_buffer_guard_band_scale) };
         int g_buffer_width = width + 2 * g_buffer_guard_band_size.x;
         int g_buffer_height = height + 2 * g_buffer_guard_band_size.y;
 
@@ -462,7 +461,7 @@ public:
         SceneRoot scene = Cameras::get_scene_ID(camera_ID);
         { // Setup scene constants.
             // Scale projection matrix and it's inverse to fit the projection onto the backbuffer + guard band.
-            float inverse_projection_matrix_scale = 1.0f + 2.0f * depth_guard_band_scale;
+            float inverse_projection_matrix_scale = 1.0f + 2.0f * m_settings.g_buffer_guard_band_scale;
             Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
             inverse_projection_matrix.set_row(0, inverse_projection_matrix.get_row(0) * inverse_projection_matrix_scale);
             inverse_projection_matrix.set_row(1, inverse_projection_matrix.get_row(1) * inverse_projection_matrix_scale);
@@ -553,11 +552,9 @@ public:
         }
 
         // Scissor rect to disable rendering to the guard band.
-        if (depth_guard_band_scale != 0.0f) {
-            D3D11_RECT rect = CD3D11_RECT(g_buffer_guard_band_size.x, g_buffer_guard_band_size.y,
-                                          width + g_buffer_guard_band_size.x, height + g_buffer_guard_band_size.y);
-            m_render_context->RSSetScissorRects(1, &rect);
-        }
+        D3D11_RECT rect = CD3D11_RECT(g_buffer_guard_band_size.x, g_buffer_guard_band_size.y,
+                                        width + g_buffer_guard_band_size.x, height + g_buffer_guard_band_size.y);
+        m_render_context->RSSetScissorRects(1, &rect);
 
         // Debug display g-buffer or AO
         if (m_debug_settings.display_mode == DebugSettings::DisplayMode::Depth ||
