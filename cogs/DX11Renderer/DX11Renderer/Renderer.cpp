@@ -460,16 +460,19 @@ public:
 
         SceneRoot scene = Cameras::get_scene_ID(camera_ID);
         { // Setup scene constants.
-            // Scale projection matrix and it's inverse to fit the projection onto the backbuffer + guard band.
-            float inverse_projection_matrix_scale = 1.0f + 2.0f * m_settings.g_buffer_guard_band_scale;
-            Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
-            inverse_projection_matrix.set_row(0, inverse_projection_matrix.get_row(0) * inverse_projection_matrix_scale);
-            inverse_projection_matrix.set_row(1, inverse_projection_matrix.get_row(1) * inverse_projection_matrix_scale);
+            // Recalculate the guard band scale to account for the buffer dimensions being discrete.
+            float2 guard_band_scale = { g_buffer_guard_band_size.x / float(width), g_buffer_guard_band_size.y / float(height) };
 
-            float projection_matrix_scale = 1.0f / inverse_projection_matrix_scale;
+            // Scale projection matrix and it's inverse to fit the projection onto the backbuffer + guard band.
+            float2 inverse_projection_matrix_scale = { 1.0f + 2.0f * guard_band_scale.x, 1.0f + 2.0f * guard_band_scale.y };
+            Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
+            inverse_projection_matrix.set_row(0, inverse_projection_matrix.get_row(0) * inverse_projection_matrix_scale.x);
+            inverse_projection_matrix.set_row(1, inverse_projection_matrix.get_row(1) * inverse_projection_matrix_scale.y);
+
+            float2 projection_matrix_scale = { 1.0f / inverse_projection_matrix_scale.x, 1.0f / inverse_projection_matrix_scale.y };
             Matrix4x4f projection_matrix = Cameras::get_projection_matrix(camera_ID);
-            projection_matrix.set_column(0, projection_matrix.get_column(0) * projection_matrix_scale);
-            projection_matrix.set_column(1, projection_matrix.get_column(1) * projection_matrix_scale);
+            projection_matrix.set_column(0, projection_matrix.get_column(0) * projection_matrix_scale.x);
+            projection_matrix.set_column(1, projection_matrix.get_column(1) * projection_matrix_scale.y);
             
             Transform view_transform = Cameras::get_view_transform(camera_ID);
 
