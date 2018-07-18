@@ -59,9 +59,8 @@ uint teschner_hash(uint x, uint y) {
 
 // Hashes x and y ensuring maximal distance between consecutive xs and ys.
 // NOTE: Unless filtered afterwards it visually displays a ton of correlation.
-uint evenly_distributed_2D_seed(uint x, uint y) {
-    return reversebits(morton_encode(x, y));
-}
+uint evenly_distributed_2D_seed(uint x, uint y) { return reversebits(morton_encode(x, y)); }
+uint evenly_distributed_2D_seed(uint2 i) { return evenly_distributed_2D_seed(i.x, i.y); }
 
 // Computes the power heuristic of pdf1 and pdf2.
 // It is assumed that pdf1 is always valid, i.e. not NaN.
