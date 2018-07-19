@@ -139,7 +139,8 @@ public:
     ~Implementation() {
         m_render_target.optix_buffer = nullptr;
 #ifndef DISABLE_INTEROP
-        THROW_CUDA_ERROR(cudaGraphicsUnregisterResource(m_render_target.cuda_buffer));
+        if (m_render_target.cuda_buffer != nullptr)
+            THROW_CUDA_ERROR(cudaGraphicsUnregisterResource(m_render_target.cuda_buffer));
 #endif
         delete m_optix_renderer;
     }
