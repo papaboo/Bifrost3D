@@ -9,6 +9,8 @@
 #ifndef _COGWHEEL_MATH_RECT_H_
 #define _COGWHEEL_MATH_RECT_H_
 
+#include <Cogwheel/Math/Vector.h>
+
 #include <cstring>
 #include <sstream>
 
