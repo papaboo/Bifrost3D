@@ -121,31 +121,24 @@ AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_pa
     m_filter = BilateralBlur(device, shader_folder_path);
 }
 
-inline int2 ssao_buffer_size_from_viewport(Cogwheel::Math::Recti viewport) {
-    int ssao_width = viewport.width + 2 * BilateralBlur::MARGIN;
-    int ssao_height = viewport.height + 2 * BilateralBlur::MARGIN;
-    return { ssao_width, ssao_height };
-}
-
 int2 AlchemyAO::compute_g_buffer_to_ao_index_offset(Cogwheel::Math::Recti viewport) const {
-    int2 ssao_buffer_size = ssao_buffer_size_from_viewport(viewport);
-    int2 g_buffer_size = { viewport.width + 2 * viewport.x, viewport.height + 2 * viewport.y };
-    return { (ssao_buffer_size.x - g_buffer_size.x) / 2, (ssao_buffer_size.y - g_buffer_size.y) / 2 };
+    return { BilateralBlur::MARGIN - viewport.x, BilateralBlur::MARGIN - viewport.y };
 }
 
 void AlchemyAO::conditional_buffer_resize(ID3D11DeviceContext1& context, Cogwheel::Math::Recti viewport) {
-    int2 ssao_buffer_size = ssao_buffer_size_from_viewport(viewport);
+    int ssao_width = viewport.width + 2 * BilateralBlur::MARGIN;
+    int ssao_height = viewport.height + 2 * BilateralBlur::MARGIN;
 
-    if (m_width != ssao_buffer_size.x || m_height != ssao_buffer_size.y) {
+    if (m_width != ssao_width || m_height != ssao_height) {
         m_SSAO_SRV.release();
         m_SSAO_RTV.release();
 
-        m_width = ssao_buffer_size.x;
-        m_height = ssao_buffer_size.y;
-
         // Resize backbuffer
         ODevice1 device = get_device1(context);
-        create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, m_width, m_height, &m_SSAO_SRV, nullptr, &m_SSAO_RTV);
+        create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, ssao_width, ssao_height, &m_SSAO_SRV, nullptr, &m_SSAO_RTV);
+
+        m_width = ssao_width;
+        m_height = ssao_height;
     }
 }
 
