@@ -74,9 +74,9 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
 // ------------------------------------------------------------------------------------------------
 struct SsaoConstants {
     SsaoSettings settings;
-    int2 g_buffer_size;
+    float2 g_buffer_size;
     float2 recip_g_buffer_size;
-    int2 ao_buffer_size;
+    float2 ao_buffer_size;
     int2 g_buffer_to_ao_index_offset; // (ao_buffer_size - g_buffer_size) / 2
 };
 
@@ -153,7 +153,8 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
     conditional_buffer_resize(context, viewport);
 
     int2 g_buffer_size = { viewport.width + 2 * viewport.x, viewport.height + 2 * viewport.y };
-    SsaoConstants constants = { settings, g_buffer_size.x, g_buffer_size.y, 1.0f / g_buffer_size.x, 1.0f / g_buffer_size.y, m_width, m_height, (m_width - g_buffer_size.x) / 2, (m_height - g_buffer_size.y) / 2 };
+    SsaoConstants constants = { settings, float(g_buffer_size.x), float(g_buffer_size.y), 1.0f / g_buffer_size.x, 1.0f / g_buffer_size.y, 
+                                float(m_width), float(m_height), compute_g_buffer_to_ao_index_offset(viewport) };
     constants.settings.normal_std_dev = 0.5f / (constants.settings.normal_std_dev * constants.settings.normal_std_dev);
     constants.settings.plane_std_dev = 0.5f / (constants.settings.plane_std_dev * constants.settings.plane_std_dev);
     context.UpdateSubresource(m_constants, 0u, nullptr, &constants, 0u, 0u);

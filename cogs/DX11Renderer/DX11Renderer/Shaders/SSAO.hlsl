@@ -22,10 +22,10 @@ cbuffer constants : register(b1) {
     float recip_double_plane_variance;
     int sample_count;
     int filtering_enabled; // CPU side only
-    int2 g_buffer_size;
+    float2 g_buffer_size;
     float2 recip_g_buffer_size;
-    int2 ao_buffer_size;
-    int2 g_buffer_to_ao_index_offset; // (ao_buffer_size - g_buffer_size) / 2
+    float2 ao_buffer_size;
+    int2 g_buffer_to_ao_index_offset;
 };
 
 cbuffer uv_offset_constants : register(b2) {
@@ -54,6 +54,7 @@ Varyings main_vs(uint vertex_ID : SV_VertexID) {
     output.position.x = vertex_ID == 2 ? 3 : -1;
     output.position.y = vertex_ID == 0 ? -3 : 1;
     output.position.zw = float2(1.0f, 1.0f);
+
     output.uvs.xy = output.position.xy * 0.5 + 0.5;
     output.uvs.y = 1.0f - output.uvs.y;
     output.uvs.zw = (output.uvs.xy * ao_buffer_size - g_buffer_to_ao_index_offset) * recip_g_buffer_size;
@@ -108,8 +109,6 @@ float4 filter_ps(Varyings input) : SV_TARGET {
     float center_ao = 0.0f;
     float center_weight = 0.0f;
     sample_ao(g_buffer_index, view_normal, plane_d, center_ao, center_weight); // TODO Can be inlined, just need to compute the weight, which should be pow2(exp(-0)) I guess.
-
-    float2 uv_offset = pixel_offset * recip_g_buffer_size;
 
     float border_ao = 0.0f;
     float border_weight = 0.0f;
