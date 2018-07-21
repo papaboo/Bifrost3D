@@ -11,12 +11,15 @@
 
 #include <DX11Renderer/Types.h>
 
+#include <Cogwheel/Math/Rect.h>
+
 namespace DX11Renderer {
 namespace SSAO {
 
 class BilateralBlur {
 public:
-    static const int max_passes = 3;
+    static const int MAX_PASSES = 3;
+    static const int MARGIN = 9;
 
     BilateralBlur() = default;
     BilateralBlur(BilateralBlur&& other) = default;
@@ -36,7 +39,7 @@ private:
         float pixel_offset;
         float3 _padding;
     };
-    OBuffer m_constants[max_passes];
+    OBuffer m_constants[MAX_PASSES];
 
     int m_width, m_height;
     ORenderTargetView m_intermediate_RTV;
@@ -59,11 +62,17 @@ public:
     AlchemyAO& operator=(AlchemyAO&& rhs) = default;
     AlchemyAO& operator=(AlchemyAO& rhs) = delete;
 
-    OShaderResourceView& apply(ID3D11DeviceContext1& context, OShaderResourceView& normals, OShaderResourceView& depth, int width, int height, SsaoSettings settings);
+    int2 compute_g_buffer_to_ao_index_offset(Cogwheel::Math::Recti viewport) const;
 
-    OShaderResourceView& apply_none(ID3D11DeviceContext1& context, int width, int height);
+    OShaderResourceView& apply(ID3D11DeviceContext1& context, OShaderResourceView& normals, OShaderResourceView& depth, Cogwheel::Math::Recti viewport, SsaoSettings settings);
+
+    OShaderResourceView& apply_none(ID3D11DeviceContext1& context, Cogwheel::Math::Recti viewport);
+
+    Cogwheel::Math::Recti get_ssao_viewport() const { return Cogwheel::Math::Recti(BilateralBlur::MARGIN, BilateralBlur::MARGIN, m_width, m_height); }
 
 private:
+    void conditional_buffer_resize(ID3D11DeviceContext1& context, Cogwheel::Math::Recti viewport);
+
     OBuffer m_constants;
     OBuffer m_samples;
     OVertexShader m_vertex_shader;

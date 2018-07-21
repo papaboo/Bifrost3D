@@ -118,6 +118,8 @@ private:
         Matrix4x4f view_projection_matrix;
         Vector4f camera_position;
         Vector4f environment_tint; // .w component is 0 if an environment tex is not bound, otherwise positive.
+        int2 g_buffer_to_ao_index_offset;
+        int2 __padding;
         Matrix4x4f inverse_view_projection_matrix;
         Matrix4x4f projection_matrix;
         Matrix4x4f inverse_projection_matrix;
@@ -443,6 +445,7 @@ public:
         int2 g_buffer_guard_band_size = { int(width * m_settings.g_buffer_guard_band_scale), int(height * m_settings.g_buffer_guard_band_scale) };
         int g_buffer_width = width + 2 * g_buffer_guard_band_size.x;
         int g_buffer_height = height + 2 * g_buffer_guard_band_size.y;
+        Rect<int> backbuffer_viewport = { g_buffer_guard_band_size.x, g_buffer_guard_band_size.y, width, height };
 
         { // Set the full g-buffer viewport.
             D3D11_VIEWPORT dx_viewport;
@@ -481,6 +484,7 @@ public:
             scene_vars.camera_position = Vector4f(Cameras::get_transform(camera_ID).translation, 1.0f);
             RGB env_tint = scene.get_environment_tint();
             scene_vars.environment_tint = { env_tint.r, env_tint.g, env_tint.b, float(scene.get_environment_map().get_index()) };
+            scene_vars.g_buffer_to_ao_index_offset = m_ssao.compute_g_buffer_to_ao_index_offset(backbuffer_viewport);
             scene_vars.inverse_view_projection_matrix = to_matrix4x4(invert(view_transform)) * inverse_projection_matrix;
             scene_vars.projection_matrix = projection_matrix;
             scene_vars.inverse_projection_matrix = inverse_projection_matrix;
@@ -548,10 +552,10 @@ public:
             auto ssao_marker = PerformanceMarker(*m_render_context, L"SSAO");
 
             if (m_settings.ssao.enabled)
-                ssao_SRV = m_ssao.apply(m_render_context, m_g_buffer.normal_SRV, m_g_buffer.depth_SRV, m_g_buffer.width, m_g_buffer.height, m_settings.ssao.settings).get();
+                ssao_SRV = m_ssao.apply(m_render_context, m_g_buffer.normal_SRV, m_g_buffer.depth_SRV, backbuffer_viewport, m_settings.ssao.settings).get();
             else
-                // A really inefficient way to disable ssao. The application is still part of the material shaders.
-                ssao_SRV = m_ssao.apply_none(m_render_context, m_g_buffer.width, m_g_buffer.height).get();
+                // A really inefficient way to disable ssao. Application is still part of the material shaders.
+                ssao_SRV = m_ssao.apply_none(m_render_context, backbuffer_viewport).get();
         }
 
         // Scissor rect to disable rendering to the guard band.
@@ -584,8 +588,7 @@ public:
             // Reset scissor rect, as noone expects this to be used.
             m_render_context->RSSetScissorRects(0, nullptr);
 
-            Rect<int> viewport = { g_buffer_guard_band_size.x, g_buffer_guard_band_size.y, width, height };
-            return { m_backbuffer_SRV, viewport };
+            return { m_backbuffer_SRV, backbuffer_viewport };
         }
 
         m_render_context->OMSetRenderTargets(1, &m_backbuffer_RTV, m_g_buffer.depth_view);
@@ -683,8 +686,7 @@ public:
         // Reset scissor rect, as noone expects this to be used.
         m_render_context->RSSetScissorRects(0, nullptr);
 
-        Rect<int> viewport = { g_buffer_guard_band_size.x, g_buffer_guard_band_size.y, width, height };
-        return { m_backbuffer_SRV, viewport };
+        return { m_backbuffer_SRV, backbuffer_viewport };
     }
 
     template <typename T>

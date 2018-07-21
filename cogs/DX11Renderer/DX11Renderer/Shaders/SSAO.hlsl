@@ -22,8 +22,10 @@ cbuffer constants : register(b1) {
     float recip_double_plane_variance;
     int sample_count;
     int filtering_enabled; // CPU side only
-    int2 texture_size;
-    float2 recip_texture_size;
+    int2 g_buffer_size;
+    float2 recip_g_buffer_size;
+    int2 ao_buffer_size;
+    int2 g_buffer_to_ao_index_offset; // (ao_buffer_size - g_buffer_size) / 2
 };
 
 cbuffer uv_offset_constants : register(b2) {
@@ -40,7 +42,10 @@ cbuffer scene_variables : register(b13) {
 
 struct Varyings {
     float4 position : SV_POSITION;
-    float2 texcoord : TEXCOORD;
+    float4 uvs : TEXCOORD; // [ao-uv, g-buffer-uv]
+
+    float2 ao_uv() { return uvs.xy; }
+    float2 g_buffer_uv() { return uvs.zw; }
 };
 
 Varyings main_vs(uint vertex_ID : SV_VertexID) {
@@ -49,8 +54,9 @@ Varyings main_vs(uint vertex_ID : SV_VertexID) {
     output.position.x = vertex_ID == 2 ? 3 : -1;
     output.position.y = vertex_ID == 0 ? -3 : 1;
     output.position.zw = float2(1.0f, 1.0f);
-    output.texcoord = output.position.xy * 0.5 + 0.5;
-    output.texcoord.y = 1.0f - output.texcoord.y;
+    output.uvs.xy = output.position.xy * 0.5 + 0.5;
+    output.uvs.y = 1.0f - output.uvs.y;
+    output.uvs.zw = (output.uvs.xy * ao_buffer_size - g_buffer_to_ao_index_offset) * recip_g_buffer_size;
     return output;
 }
 
@@ -68,53 +74,54 @@ cbuffer per_filter_constants : register(b2) {
     float pixel_offset;
 }
 
-void sample_ao(float2 uv, float3 normal, float plane_d, inout float summed_ao, inout float ao_weight) {
+void sample_ao(int2 g_buffer_index, float3 normal, float plane_d, inout float summed_ao, inout float ao_weight) {
     // Normal weight
-    float3 sample_normal = decode_ss_octahedral_normal(normal_tex.SampleLevel(point_sampler, uv, 0).xy);
+    float3 sample_normal = decode_ss_octahedral_normal(normal_tex[g_buffer_index].xy);
     float cos_theta = dot(sample_normal, normal);
     float weight = exp(-pow2(1.0f - cos_theta) * recip_double_normal_variance);
 
     // Plane fitting weight
-    float sample_depth = depth_tex.SampleLevel(point_sampler, uv, 0).r;
+    float sample_depth = depth_tex[g_buffer_index].r;
+    float2 uv = g_buffer_index * recip_g_buffer_size;
     float3 sample_position = perspective_position_from_depth(sample_depth, uv, scene_vars.inverted_projection_matrix);
     float distance_to_plane = dot(normal, sample_position) + plane_d;
     weight *= exp(-pow2(distance_to_plane) * recip_double_plane_variance);
 
     weight += 0.00001;
 
-    summed_ao += weight * ao_tex.SampleLevel(point_sampler, uv, 0).r;
+    summed_ao += weight * ao_tex[g_buffer_index + g_buffer_to_ao_index_offset].r;
     ao_weight += weight;
 }
 
 float4 filter_ps(Varyings input) : SV_TARGET {
-    float2 uv = input.texcoord;
-    float3 view_normal = decode_ss_octahedral_normal(normal_tex[input.position.xy].xy);
-    float depth = depth_tex[input.position.xy].r;
+    int2 g_buffer_index = input.position.xy - g_buffer_to_ao_index_offset;
+    float3 view_normal = decode_ss_octahedral_normal(normal_tex[g_buffer_index].xy);
+    float depth = depth_tex[g_buffer_index].r;
 
     // No occlusion on the far plane.
     if (depth == 1.0)
         return float4(1, 0, 0, 0);
 
-    float3 view_position = perspective_position_from_depth(depth, uv, scene_vars.inverted_projection_matrix);
+    float3 view_position = perspective_position_from_depth(depth, input.g_buffer_uv(), scene_vars.inverted_projection_matrix);
     float plane_d = -dot(view_position, view_normal);
 
     float center_ao = 0.0f;
     float center_weight = 0.0f;
-    sample_ao(uv, view_normal, plane_d, center_ao, center_weight); // TODO Can be inlined, just need to compute the weight, which should be pow2(exp(-0)) I guess.
+    sample_ao(g_buffer_index, view_normal, plane_d, center_ao, center_weight); // TODO Can be inlined, just need to compute the weight, which should be pow2(exp(-0)) I guess.
 
-    float2 uv_offset = pixel_offset * recip_texture_size;
+    float2 uv_offset = pixel_offset * recip_g_buffer_size;
 
     float border_ao = 0.0f;
     float border_weight = 0.0f;
 
-    sample_ao(uv + float2(-uv_offset.x,  uv_offset.y), view_normal, plane_d, border_ao, border_weight);
-    sample_ao(uv + float2(           0,  uv_offset.y), view_normal, plane_d, border_ao, border_weight);
-    sample_ao(uv + float2( uv_offset.x,  uv_offset.y), view_normal, plane_d, border_ao, border_weight);
-    sample_ao(uv + float2(-uv_offset.x,            0), view_normal, plane_d, border_ao, border_weight);
-    sample_ao(uv + float2( uv_offset.x,            0), view_normal, plane_d, border_ao, border_weight);
-    sample_ao(uv + float2(-uv_offset.x, -uv_offset.y), view_normal, plane_d, border_ao, border_weight);
-    sample_ao(uv + float2(           0, -uv_offset.y), view_normal, plane_d, border_ao, border_weight);
-    sample_ao(uv + float2( uv_offset.x, -uv_offset.y), view_normal, plane_d, border_ao, border_weight);
+    sample_ao(g_buffer_index + int2(-pixel_offset,  pixel_offset), view_normal, plane_d, border_ao, border_weight);
+    sample_ao(g_buffer_index + int2(            0,  pixel_offset), view_normal, plane_d, border_ao, border_weight);
+    sample_ao(g_buffer_index + int2( pixel_offset,  pixel_offset), view_normal, plane_d, border_ao, border_weight);
+    sample_ao(g_buffer_index + int2(-pixel_offset,             0), view_normal, plane_d, border_ao, border_weight);
+    sample_ao(g_buffer_index + int2( pixel_offset,             0), view_normal, plane_d, border_ao, border_weight);
+    sample_ao(g_buffer_index + int2(-pixel_offset, -pixel_offset), view_normal, plane_d, border_ao, border_weight);
+    sample_ao(g_buffer_index + int2(            0, -pixel_offset), view_normal, plane_d, border_ao, border_weight);
+    sample_ao(g_buffer_index + int2( pixel_offset, -pixel_offset), view_normal, plane_d, border_ao, border_weight);
 
     // Ensure that we perform at least some filtering in areas with high frequency geometry.
     if (border_weight < 2.0 * center_weight) {
@@ -145,7 +152,7 @@ float2 uv_from_view_position(float3 view_position) {
 }
 
 // Transform view position to u(v) in screen space.
-// Assumes that the projection_matrix is an actual projection matrix with 0'es in most entries.
+// Assumes that the projection_matrix is a perspective projection matrix with 0'es in most entries.
 float u_coord_from_view_position(float3 view_position) {
     // float x = dot(float4(view_position, 1), scene_vars.projection_matrix._m00_m10_m20_m30);
     // float w = dot(float4(view_position, 1), scene_vars.projection_matrix._m03_m13_m23_m33);
@@ -182,31 +189,31 @@ float2x2 generate_rotation_matrix(float angle) {
 float4 alchemy_ps(Varyings input) : SV_TARGET {
 
     // Setup sampling
-    uint rng_offset = RNG::evenly_distributed_2D_seed(input.position.x, input.position.y);
+    uint rng_offset = RNG::evenly_distributed_2D_seed(input.position.xy);
     float sample_pattern_rotation_angle = float((rng_offset >> 8) & 0xffffff) / float(1 << 24) * TWO_PI;
     float2x2 sample_pattern_rotation = generate_rotation_matrix(sample_pattern_rotation_angle);
 
-    float depth = depth_tex[input.position.xy].r;
+    float depth = depth_tex.SampleLevel(point_sampler, input.g_buffer_uv(), 0).r;
 
     // No occlusion on the far plane.
     if (depth == 1.0)
         return float4(1, 0, 0, 0);
 
-    float3 view_normal = decode_ss_octahedral_normal(normal_tex[input.position.xy].xy);
+    float3 view_normal = decode_ss_octahedral_normal(normal_tex.SampleLevel(point_sampler, input.g_buffer_uv(), 0).xy);
     float pixel_bias = depth * bias * (1.0f - pow2(pow2(pow2(view_normal.z))));
-    float3 view_position = perspective_position_from_depth(depth, input.texcoord, scene_vars.inverted_projection_matrix) + view_normal * pixel_bias;
+    float3 view_position = perspective_position_from_depth(depth, input.g_buffer_uv(), scene_vars.inverted_projection_matrix) + view_normal * pixel_bias;
 
     // Compute screen space radius.
     float3 border_view_position = view_position + float3(world_radius, 0, 0);
     float border_u = u_coord_from_view_position(border_view_position);
-    float ss_radius = border_u - input.texcoord.x;
+    float ss_radius = border_u - input.g_buffer_uv().x;
 
     // Determine occlusion
     float occlusion = 0.0f;
     float used_sample_count = 0.0001f;
     for (int i = 0; i < sample_count; ++i) {
         float2 uv_offset = mul(uv_offsets[i] * ss_radius, sample_pattern_rotation);
-        float2 sample_uv = input.texcoord + uv_offset;
+        float2 sample_uv = input.g_buffer_uv() + uv_offset;
 
         // Break if sample is outside g-buffer.
         // TODO Resample somehow to avoid wasting samples.
@@ -226,7 +233,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     a = pow(max(0.0, a), falloff);
 
     // Fade out if radius is less than two pixels.
-    float pixel_width = texture_size.x * ss_radius;
+    float pixel_width = g_buffer_size.x * ss_radius;
     a = lerp(1, a, saturate(pixel_width * 0.5f));
 
     return float4(a, 0, 0, 0);

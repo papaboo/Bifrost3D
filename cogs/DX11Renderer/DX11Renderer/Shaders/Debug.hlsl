@@ -8,6 +8,10 @@
 
 #include "Utils.hlsl"
 
+cbuffer scene_variables : register(b13) {
+    SceneVariables scene_vars;
+};
+
 // ------------------------------------------------------------------------------------------------
 // Vertex shader.
 // ------------------------------------------------------------------------------------------------
@@ -29,7 +33,7 @@ Varyings main_vs(uint vertex_ID : SV_VertexID) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Display debug shaders
+// Display debug shader.
 // ------------------------------------------------------------------------------------------------
 
 Texture2D normal_tex : register(t0);
@@ -52,6 +56,6 @@ float4 display_debug_ps(Varyings input) : SV_TARGET {
     else if (mode == 2) // Depth
         color = depth_tex.SampleLevel(point_sampler, input.uv, 0).rrr;
     else
-        color = ao_tex.SampleLevel(point_sampler, input.uv, 0).rrr;
+        color = ao_tex[input.position.xy + scene_vars.g_buffer_to_ao_index_offset].rrr;
     return float4(color, 1);
 }

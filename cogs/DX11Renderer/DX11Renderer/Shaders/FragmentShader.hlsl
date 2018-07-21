@@ -78,7 +78,7 @@ float4 opaque(PixelInput input, bool is_front_face : SV_IsFrontFace) : SV_TARGET
     if (coverage < CUTOFF)
         discard;
 
-    float ambient_visibility = ssao_tex[input.position.xy].r;
+    float ambient_visibility = ssao_tex[input.position.xy + scene_vars.g_buffer_to_ao_index_offset].r;
 
     return float4(integration(input, is_front_face, ambient_visibility), 1.0f);
 }
