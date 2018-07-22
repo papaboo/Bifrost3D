@@ -87,40 +87,10 @@ OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11
         // Grab the device.
         ODevice1 device = get_device1(context);
 
-        auto allocate_texture = [&](IntermediateTexture& tex) {
-
-            D3D11_TEXTURE2D_DESC tex_desc = {};
-            tex_desc.Width = tex.width = image_width;
-            tex_desc.Height = tex.height = image_height;
-            tex_desc.MipLevels = 1;
-            tex_desc.ArraySize = 1;
-            tex_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-            tex_desc.SampleDesc.Count = 1;
-            tex_desc.SampleDesc.Quality = 0;
-            tex_desc.Usage = D3D11_USAGE_DEFAULT;
-            tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
-
-            OTexture2D texture2D;
-            THROW_DX11_ERROR(device->CreateTexture2D(&tex_desc, nullptr, &texture2D));
-
-            // SRV
-            D3D11_SHADER_RESOURCE_VIEW_DESC mip_level_SRV_desc;
-            mip_level_SRV_desc.Format = tex_desc.Format;
-            mip_level_SRV_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-            mip_level_SRV_desc.Texture2D.MipLevels = 1;
-            mip_level_SRV_desc.Texture2D.MostDetailedMip = 0;
-            THROW_DX11_ERROR(device->CreateShaderResourceView(texture2D, &mip_level_SRV_desc, &tex.SRV));
-
-            // UAV
-            D3D11_UNORDERED_ACCESS_VIEW_DESC mip_level_UAV_desc = {};
-            mip_level_UAV_desc.Format = tex_desc.Format;
-            mip_level_UAV_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
-            mip_level_UAV_desc.Texture2D.MipSlice = 0;
-            THROW_DX11_ERROR(device->CreateUnorderedAccessView(texture2D, &mip_level_UAV_desc, &tex.UAV));
-        };
-
-        allocate_texture(m_ping);
-        allocate_texture(m_pong);
+        m_ping.width = m_pong.width = image_width;
+        m_ping.height = m_pong.height = image_height;
+        create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, image_width, image_height, &m_ping.SRV, &m_ping.UAV);
+        create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, image_width, image_height, &m_pong.SRV, &m_pong.UAV);
     }
 
     // High intensity pass and horizontal filter.
@@ -460,6 +430,7 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
         context.UpdateSubresource(m_constant_buffer, 0, nullptr, &constants, 0u, 0u);
     }
 
+    // Setup state
     context.RSSetState(m_raster_state);
     context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
     context.PSSetConstantBuffers(0, 1, &m_constant_buffer); // TODO Get rid of PS bindings when all shaders are compute.
