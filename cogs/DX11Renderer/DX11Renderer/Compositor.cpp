@@ -244,11 +244,20 @@ public:
             float delta_time = float(current_time - m_previous_effects_times[renderer_ID]);
             m_previous_effects_times[renderer_ID] = current_time;
 
-            // Post process the images with the camera effects.
-            // TODO Handle viewport
-            Cameras::UID camera_ID = *Cameras::get_iterable().begin();
-            auto effects_settings = Cameras::get_effects_settings(camera_ID);
-            m_camera_effects.process(m_render_context, effects_settings, delta_time, frame.frame_SRV, m_swap_chain_RTV, frame.viewport);
+            { // Post process the images with the camera effects.
+                D3D11_VIEWPORT dx_viewport;
+                dx_viewport.TopLeftX = float(viewport.x);
+                dx_viewport.TopLeftY = float(viewport.y);
+                dx_viewport.Width = float(viewport.width);
+                dx_viewport.Height = float(viewport.height);
+                dx_viewport.MinDepth = 0.0f;
+                dx_viewport.MaxDepth = 1.0f;
+                m_render_context->RSSetViewports(1, &dx_viewport);
+                
+                Cameras::UID camera_ID = *Cameras::get_iterable().begin();
+                auto effects_settings = Cameras::get_effects_settings(camera_ID);
+                m_camera_effects.process(m_render_context, effects_settings, delta_time, frame.frame_SRV, m_swap_chain_RTV, frame.viewport);
+            }
         }
 
         // Post render calls, fx for GUI
