@@ -24,10 +24,10 @@ Buffer<float2> bilinear_gaussian_samples : register (t1);
 [numthreads(32, 32, 1)]
 void sampled_gaussian_horizontal_filter(uint3 global_thread_ID : SV_DispatchThreadID) {
     float width, height;
-    output_image.GetDimensions(width, height);
+    image.GetDimensions(width, height);
     float recip_width = 1.0 / width;
 
-    float2 uv = (global_thread_ID.xy + 0.5) / float2(width, height);
+    float2 uv = (global_thread_ID.xy + input_viewport.xy + 0.5) / float2(width, height);
 
     int sample_count = bloom_bandwidth / 2;
 
@@ -46,7 +46,7 @@ void sampled_gaussian_horizontal_filter(uint3 global_thread_ID : SV_DispatchThre
 [numthreads(32, 32, 1)]
 void sampled_gaussian_vertical_filter(uint3 global_thread_ID : SV_DispatchThreadID) {
     float width, height;
-    output_image.GetDimensions(width, height);
+    image.GetDimensions(width, height);
     float recip_height = 1.0 / height;
 
     float2 uv = (global_thread_ID.xy + 0.5) / float2(width, height);
@@ -71,7 +71,7 @@ void sampled_gaussian_vertical_filter(uint3 global_thread_ID : SV_DispatchThread
 
 [numthreads(32, 32, 1)]
 void extract_high_intensity(uint3 global_thread_ID : SV_DispatchThreadID) {
-    float4 pixel = image[global_thread_ID.xy];
+    float4 pixel = image[global_thread_ID.xy + input_viewport.xy];
     output_image[global_thread_ID.xy] = float4(max(0.0, pixel.rgb - bloom_threshold), pixel.a);
 }
 
