@@ -24,7 +24,7 @@ namespace Scene {
 // ------------------------------------------------------------------------------------------------
 // Container for cogwheel matrix cameras.
 // Future work
-// * Iterators that iterates through the cameras in order of their render indices.
+// * Iterators that iterates through the cameras in order of their z indices.
 // * Reference a backbuffer or render_target to allow cameras to render to windows and FBO's.
 // * Change flags.
 // ------------------------------------------------------------------------------------------------
@@ -80,8 +80,10 @@ public:
         return to_matrix4x4(get_inverse_view_transform(camera_ID)) * get_inverse_projection_matrix(camera_ID);
     }
 
-    static unsigned int get_render_index(Cameras::UID camera_ID) { return m_render_indices[camera_ID]; }
-    static void set_render_index(Cameras::UID camera_ID, unsigned int index) { m_render_indices[camera_ID] = index; }
+    // Order that cameras are draw in. Cameras with higher z-index are rendered in front of cameras with lower z-index.
+    static unsigned int get_z_index(Cameras::UID camera_ID) { return m_z_indices[camera_ID]; }
+    static void set_z_index(Cameras::UID camera_ID, unsigned int index) { m_z_indices[camera_ID] = index; }
+    
     static Math::Rectf get_viewport(Cameras::UID camera_ID) { return m_viewports[camera_ID]; }
     static void set_viewport(Cameras::UID camera_ID, Math::Rectf projectionport) { m_viewports[camera_ID] = projectionport; }
 
@@ -99,7 +101,7 @@ private:
     static Math::Transform* m_transforms;
     static Math::Matrix4x4f* m_projection_matrices;
     static Math::Matrix4x4f* m_inverse_projection_matrices;
-    static unsigned int* m_render_indices;
+    static unsigned int* m_z_indices;
     static Math::Rectf* m_viewports;
     static Core::Renderers::UID* m_renderer_IDs;
     static Math::CameraEffects::Settings* m_effects_settings;

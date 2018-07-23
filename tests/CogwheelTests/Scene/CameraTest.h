@@ -97,7 +97,7 @@ TEST_F(Scene_Camera, create) {
     EXPECT_TRUE(Cameras::has(cam_ID));
 
     EXPECT_EQ(Cameras::get_name(cam_ID), "Test cam");
-    EXPECT_EQ(Cameras::get_render_index(cam_ID), 0u);
+    EXPECT_EQ(Cameras::get_z_index(cam_ID), 0u);
     EXPECT_EQ(Cameras::get_projection_matrix(cam_ID), perspective_matrix);
     EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_ID), inverse_perspective_matrix);
     EXPECT_EQ(Cameras::get_viewport(cam_ID), Math::Rectf(0.0f, 0.0f, 1.0f, 1.0f));
