@@ -24,7 +24,6 @@ namespace Scene {
 // ------------------------------------------------------------------------------------------------
 // Container for cogwheel matrix cameras.
 // Future work
-// * Iterators that iterates through the cameras in order of their z indices.
 // * Reference a backbuffer or render_target to allow cameras to render to windows and FBO's.
 // * Change flags.
 // ------------------------------------------------------------------------------------------------
@@ -83,7 +82,9 @@ public:
     // Order that cameras are draw in. Cameras with higher z-index are rendered in front of cameras with lower z-index.
     static unsigned int get_z_index(Cameras::UID camera_ID) { return m_z_indices[camera_ID]; }
     static void set_z_index(Cameras::UID camera_ID, unsigned int index) { m_z_indices[camera_ID] = index; }
-    
+    // Returns a an ordered list of camera IDs, where the camera with the lowest Z index is first.
+    static std::vector<Cameras::UID> get_z_sorted_IDs();
+
     static Math::Rectf get_viewport(Cameras::UID camera_ID) { return m_viewports[camera_ID]; }
     static void set_viewport(Cameras::UID camera_ID, Math::Rectf projectionport) { m_viewports[camera_ID] = projectionport; }
 

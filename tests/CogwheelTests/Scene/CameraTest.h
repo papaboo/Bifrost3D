@@ -127,6 +127,28 @@ TEST_F(Scene_Camera, set_new_matrices) {
     EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_ID), new_inverse_perspective_matrix);
 }
 
+TEST_F(Scene_Camera, z_sorting) {
+    SceneRoots::UID scene_ID = SceneRoots::create("Root", Math::RGB::white());
+    
+    Cameras::UID high_z_cam_ID = Cameras::create("high z cam", scene_ID, Math::Matrix4x4f::identity(), Math::Matrix4x4f::identity());
+    Cameras::set_z_index(high_z_cam_ID, 10);
+
+    Cameras::UID low_z_cam_ID = Cameras::create("Low z cam", scene_ID, Math::Matrix4x4f::identity(), Math::Matrix4x4f::identity());
+    Cameras::set_z_index(low_z_cam_ID, 0);
+
+    auto sorted_IDs = Cameras::get_z_sorted_IDs();
+    EXPECT_EQ(low_z_cam_ID, sorted_IDs[0]);
+    EXPECT_EQ(high_z_cam_ID, sorted_IDs[1]);
+
+    Cameras::UID medium_z_cam_ID = Cameras::create("Medium z cam", scene_ID, Math::Matrix4x4f::identity(), Math::Matrix4x4f::identity());
+    Cameras::set_z_index(medium_z_cam_ID, 5);
+
+    sorted_IDs = Cameras::get_z_sorted_IDs();
+    EXPECT_EQ(low_z_cam_ID, sorted_IDs[0]);
+    EXPECT_EQ(medium_z_cam_ID, sorted_IDs[1]);
+    EXPECT_EQ(high_z_cam_ID, sorted_IDs[2]);
+}
+
 TEST_F(Scene_Camera, ray_projection) {
     using namespace Cogwheel::Math;
 

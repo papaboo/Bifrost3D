@@ -149,6 +149,15 @@ Cameras::UID Cameras::create(const std::string& name, SceneRoots::UID scene_ID,
     return id;
 }
 
+std::vector<Cameras::UID> Cameras::get_z_sorted_IDs() {
+    auto IDs = std::vector<Cameras::UID>();
+    IDs.reserve(capacity());
+    for (Cameras::UID camera_ID : get_iterable())
+        IDs.push_back(camera_ID);
+    std::sort(IDs.begin(), IDs.end(), [](UID lhs, UID rhs) { return Cameras::get_z_index(lhs) < Cameras::get_z_index(rhs); });
+    return IDs;
+}
+
 //*****************************************************************************
 // Camera Utilities
 //*****************************************************************************
