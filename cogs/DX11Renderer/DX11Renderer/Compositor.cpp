@@ -226,7 +226,7 @@ public:
                 renderer->handle_updates();
 
         // Render.
-        for (Cameras::UID camera_ID : Cameras::get_iterable()) {
+        for (Cameras::UID camera_ID : Cameras::get_z_sorted_IDs()) {
 
             Rectf viewport = Cameras::get_viewport(camera_ID);
             viewport.x *= m_window.get_width();
