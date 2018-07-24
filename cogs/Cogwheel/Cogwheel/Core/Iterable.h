@@ -24,6 +24,7 @@ template <typename Iterator>
 struct Iterable final {
 public:
 
+    Iterable() = default;
     Iterable(Iterator begin, Iterator end)
         : m_begin(begin), m_end(end) {}
 
@@ -36,8 +37,8 @@ public:
     bool is_empty() const { return m_begin == m_end; }
 
 private:
-    Iterator m_begin;
-    Iterator m_end;
+    const Iterator m_begin;
+    const Iterator m_end;
 };
 
 } // NS Core
