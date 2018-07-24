@@ -174,6 +174,8 @@ public:
 
     struct Constants {
         Cogwheel::Math::Rect<float> input_viewport;
+        int2 output_pixel_offset;
+        int2 __padding;
         float min_log_luminance;
         float max_log_luminance;
         float min_histogram_percentage;
@@ -197,7 +199,8 @@ public:
 
     // Processes the pixels and stores them in the bound render target.
     void process(ID3D11DeviceContext1& context, Cogwheel::Math::CameraEffects::Settings settings, float delta_time,
-                 ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, Cogwheel::Math::Rect<int> viewport);
+                 ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, 
+                 Cogwheel::Math::Rect<int> input_viewport, Cogwheel::Math::Rect<int> output_viewport);
 
 private:
     CameraEffects(CameraEffects& other) = delete;

@@ -148,7 +148,7 @@ Texture2D bloom_texture : register(t2);
 
 float3 get_pixel_color(int2 pixel_index, float2 bloom_uv) {
     float linear_exposure = linear_exposure_buffer[0];
-    float3 low_intensity_color = min(pixels[pixel_index + input_viewport.xy].rgb, bloom_threshold);
+    float3 low_intensity_color = min(pixels[pixel_index + output_pixel_offset].rgb, bloom_threshold);
     float3 bloom_color = bloom_texture.SampleLevel(bilinear_sampler, bloom_uv, 0).rgb;
     return linear_exposure * (low_intensity_color + bloom_color);
 }
@@ -173,7 +173,7 @@ float4 uncharted2_tonemapping_ps(Varyings input) : SV_TARGET {
     return float4(tonemapped_color, 1.0);
 }
 
-float4 unreal4_tonemapping_ps(Varyings input) : SV_TARGET{
+float4 unreal4_tonemapping_ps(Varyings input) : SV_TARGET {
     float3 color = get_pixel_color(int2(input.position.xy), input.texcoord);
 
     // Tonemapping.

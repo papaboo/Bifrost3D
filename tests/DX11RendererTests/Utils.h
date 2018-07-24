@@ -26,6 +26,7 @@ inline DX11Renderer::OBuffer create_camera_effects_constants(DX11Renderer::ODevi
 
     DX11Renderer::CameraEffects::Constants constants;
     constants.input_viewport = { 0.0f, 0.0f, float(viewport_size.x), float(viewport_size.y) };
+    constants.output_pixel_offset = { 0, 0 };
     constants.min_log_luminance = min_log_luminance;
     constants.max_log_luminance = max_log_luminance;
     constants.min_histogram_percentage = min_histogram_percentage;
