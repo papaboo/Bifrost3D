@@ -25,7 +25,7 @@ Cameras::UIDGenerator Cameras::m_UID_generator = UIDGenerator(0u);
 
 std::string* Cameras::m_names = nullptr;
 SceneRoots::UID* Cameras::m_scene_IDs = nullptr;
-unsigned int* Cameras::m_z_indices = nullptr;
+int* Cameras::m_z_indices = nullptr;
 Transform* Cameras::m_transforms = nullptr;
 Matrix4x4f* Cameras::m_projection_matrices = nullptr;
 Matrix4x4f* Cameras::m_inverse_projection_matrices = nullptr;
@@ -45,7 +45,7 @@ void Cameras::allocate(unsigned int capacity) {
     m_transforms = new Transform[capacity];
     m_projection_matrices = new Matrix4x4f[capacity];
     m_inverse_projection_matrices = new Matrix4x4f[capacity];
-    m_z_indices = new unsigned int[capacity];
+    m_z_indices = new int[capacity];
     m_viewports = new Rectf[capacity];
     m_renderer_IDs = new Core::Renderers::UID[capacity];
     m_effects_settings = new CameraEffects::Settings[capacity];
@@ -54,7 +54,7 @@ void Cameras::allocate(unsigned int capacity) {
     m_names[0] = "Dummy camera";
     m_transforms[0] = Transform::identity();
     m_scene_IDs[0] = SceneRoots::UID::invalid_UID();
-    m_z_indices[0] = 0u;
+    m_z_indices[0] = 0;
     m_projection_matrices[0] = Matrix4x4f::zero();
     m_inverse_projection_matrices[0] = Matrix4x4f::zero();
     m_viewports[0] = Rectf(0,0,0,0);
@@ -139,7 +139,7 @@ Cameras::UID Cameras::create(const std::string& name, SceneRoots::UID scene_ID,
 
     m_names[id] = name;
     m_scene_IDs[id] = scene_ID;
-    m_z_indices[id] = 0u;
+    m_z_indices[id] = 0;
     m_transforms[id] = Math::Transform::identity();
     m_projection_matrices[id] = projection_matrix;
     m_inverse_projection_matrices[id] = inverse_projection_matrix;

@@ -80,8 +80,8 @@ public:
     }
 
     // Order that cameras are draw in. Cameras with higher z-index are rendered in front of cameras with lower z-index.
-    static unsigned int get_z_index(Cameras::UID camera_ID) { return m_z_indices[camera_ID]; }
-    static void set_z_index(Cameras::UID camera_ID, unsigned int index) { m_z_indices[camera_ID] = index; }
+    static int get_z_index(Cameras::UID camera_ID) { return m_z_indices[camera_ID]; }
+    static void set_z_index(Cameras::UID camera_ID, int index) { m_z_indices[camera_ID] = index; }
     // Returns a an ordered list of camera IDs, where the camera with the lowest Z index is first.
     static std::vector<Cameras::UID> get_z_sorted_IDs();
 
@@ -102,7 +102,7 @@ private:
     static Math::Transform* m_transforms;
     static Math::Matrix4x4f* m_projection_matrices;
     static Math::Matrix4x4f* m_inverse_projection_matrices;
-    static unsigned int* m_z_indices;
+    static int* m_z_indices;
     static Math::Rectf* m_viewports;
     static Core::Renderers::UID* m_renderer_IDs;
     static Math::CameraEffects::Settings* m_effects_settings;
