@@ -433,9 +433,17 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
     }
 
     // Setup state
+    D3D11_VIEWPORT dx_viewport;
+    dx_viewport.TopLeftX = float(output_viewport.x);
+    dx_viewport.TopLeftY = float(output_viewport.y);
+    dx_viewport.Width = float(output_viewport.width);
+    dx_viewport.Height = float(output_viewport.height);
+    dx_viewport.MinDepth = 0.0f;
+    dx_viewport.MaxDepth = 1.0f;
+    context.RSSetViewports(1, &dx_viewport);
     context.RSSetState(m_raster_state);
     context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
-    context.PSSetConstantBuffers(0, 1, &m_constant_buffer); // TODO Get rid of PS bindings when all shaders are compute.
+    context.PSSetConstantBuffers(0, 1, &m_constant_buffer);
     context.CSSetConstantBuffers(0, 1, &m_constant_buffer);
 
     { // Determine exposure.
