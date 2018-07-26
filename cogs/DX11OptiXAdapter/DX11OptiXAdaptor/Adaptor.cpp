@@ -223,32 +223,15 @@ public:
 
             m_render_target.capacity = width * height;
 
-            D3D11_BUFFER_DESC desc = {};
-            desc.Usage = D3D11_USAGE_DEFAULT;
-            desc.StructureByteStride = sizeof(short) * 4;
-            desc.ByteWidth = m_render_target.capacity * sizeof(short) * 4;
-            desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-            // desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-            desc.MiscFlags = 0;
-
-            OBuffer dx_buffer;
-            THROW_DX11_ERROR(m_device.CreateBuffer(&desc, nullptr, &dx_buffer));
-
-            D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-            srv_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-            srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-            srv_desc.Buffer.NumElements = m_render_target.capacity;
-
-            THROW_DX11_ERROR(m_device.CreateShaderResourceView(dx_buffer, &srv_desc, &m_render_target.dx_SRV));
+            OBuffer dx_buffer = create_default_buffer(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, m_render_target.capacity, &m_render_target.dx_SRV);
 
 #ifndef DISABLE_INTEROP
             // Register the buffer with CUDA.
             if (m_render_target.cuda_buffer != nullptr)
                 THROW_CUDA_ERROR(cudaGraphicsUnregisterResource(m_render_target.cuda_buffer));
-            cudaError_t error = cudaGraphicsD3D11RegisterResource(&m_render_target.cuda_buffer, dx_buffer,
-                                                                  cudaGraphicsRegisterFlagsNone);
-            THROW_CUDA_ERROR(error);
-            cudaGraphicsResourceSetMapFlags(m_render_target.cuda_buffer, cudaGraphicsMapFlagsWriteDiscard);
+            THROW_CUDA_ERROR(cudaGraphicsD3D11RegisterResource(&m_render_target.cuda_buffer, dx_buffer,
+                                                               cudaGraphicsRegisterFlagsNone));
+            THROW_CUDA_ERROR(cudaGraphicsResourceSetMapFlags(m_render_target.cuda_buffer, cudaGraphicsMapFlagsWriteDiscard));
 #endif
         }
 
