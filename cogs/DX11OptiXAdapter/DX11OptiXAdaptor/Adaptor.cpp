@@ -211,9 +211,8 @@ public:
             m_render_context->Draw(3, 0);
         }
 
-        Cogwheel::Math::Rect<int> rect = { 0, 0, width, height };
-        RenderedFrame frame = { m_backbuffer_SRV, rect };
-        return frame;
+        Cogwheel::Math::Rect<int> viewport = { 0, 0, width, height };
+        return { m_backbuffer_SRV, viewport };
     }
 
     void resize_render_target(int width, int height) {
