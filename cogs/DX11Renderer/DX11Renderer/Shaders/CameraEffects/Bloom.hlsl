@@ -31,11 +31,13 @@ void sampled_gaussian_horizontal_filter(uint3 global_thread_ID : SV_DispatchThre
 
     int sample_count = bloom_bandwidth / 2;
 
+    // NOTE Since the input buffer can be larger than the output buffer we should ideally clamp the uvs to the edge of the output buffer.
+    // But, for now the input buffer pixels outside the viewport is either less than bloom_threshold or has proper pixel values, so we let the sampler 'go ham'.
     float3 sum = 0.0;
     for (int y = 0; y < sample_count; ++y) {
         float2 offset_weight = bilinear_gaussian_samples[y];
         offset_weight.x *= recip_width;
-        float3 lower_sample = image.SampleLevel(bilinear_sampler, uv + float2(-offset_weight.x, 0), 0).rgb;
+        float3 lower_sample = image.SampleLevel(bilinear_sampler, uv - float2(offset_weight.x, 0), 0).rgb;
         float3 upper_sample = image.SampleLevel(bilinear_sampler, uv + float2(offset_weight.x, 0), 0).rgb;
         sum += (max(0, lower_sample - bloom_threshold) + max(0, upper_sample - bloom_threshold)) * offset_weight.y;
     }
