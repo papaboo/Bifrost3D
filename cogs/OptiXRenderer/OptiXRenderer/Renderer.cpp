@@ -711,8 +711,6 @@ struct Renderer::Implementation {
         }
 
         { // Model updates.
-            // TODO Properly handle reused model ID's. Is it faster to reuse the rt components then it is to destroy and recreate them? Perhaps even keep a list of 'ready to use' components?
-
             bool models_changed = false;
             for (MeshModel model : MeshModels::get_changed_models()) {
                 unsigned int scene_node_index = model.get_scene_node().get_ID();
@@ -825,6 +823,8 @@ struct Renderer::Implementation {
                 }
             }
         }
+
+        // TODO Clear camera state when a camera is destroyed. Needs camera change flags to be implemented.
 
         if (should_reset_allocations)
             for (auto& camera_state : per_camera_state)
