@@ -887,15 +887,15 @@ struct Renderer::Implementation {
         ++camera_state.accumulations;
 
         /*
-        if (is_power_of_two(accumulations - 1)) {
-            Vector4<double>* mapped_output = (Vector4<double>*)accumulation_buffer->map();
-            Image output = Images::create2D("Output", PixelFormat::RGBA_Float, 1.0, Vector2ui(screensize.x, screensize.y));
+        if (is_power_of_two(camera_state.accumulations - 1)) {
+            Vector4<double>* mapped_output = (Vector4<double>*)camera_state.accumulation_buffer->map();
+            Image output = Images::create2D("Output", PixelFormat::RGBA_Float, 1.0, Vector2ui(width, height));
             RGBA* pixels = output.get_pixels<RGBA>();
             for (unsigned int i = 0; i < output.get_pixel_count(); ++i)
                 pixels[i] = RGBA(float(mapped_output[i].x), float(mapped_output[i].y), float(mapped_output[i].z), 1.0f);
-            accumulation_buffer->unmap();
+            camera_state.accumulation_buffer->unmap();
             std::ostringstream filename;
-            filename << "C:\\Users\\Asger Hoedt\\Desktop\\image_" << (accumulations - 1) << ".hdr";
+            filename << "C:\\Users\\Asger Hoedt\\Desktop\\cam_" << camera_ID.get_index() << "_image_" << (camera_state.accumulations - 1) << ".png";
             StbImageWriter::write(output, filename.str());
         }
         */
