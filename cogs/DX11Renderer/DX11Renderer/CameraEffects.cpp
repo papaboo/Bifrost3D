@@ -146,8 +146,11 @@ OShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D
 
     auto performance_marker = PerformanceMarker(context, L"Dual kawase bloom");
 
-    if (m_temp.width != image_width || m_temp.height != image_height) {
-        
+    if (m_temp.width < image_width || m_temp.height < image_height) {
+
+        int buffer_width = max(m_temp.width, image_width);
+        int buffer_height = max(m_temp.height, image_height);
+
         // Release old resources
         for (unsigned int m = 0; m < m_temp.mipmap_count; ++m) {
             m_temp.SRVs[m].release();
@@ -160,12 +163,12 @@ OShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D
 
         // Allocate new temporaries
         m_temp.mipmap_count = 1;
-        while ((image_width >> m_temp.mipmap_count) > 0 || (image_height >> m_temp.mipmap_count) > 0)
+        while ((buffer_width >> m_temp.mipmap_count) > 0 || (buffer_height >> m_temp.mipmap_count) > 0)
             ++m_temp.mipmap_count;
 
         D3D11_TEXTURE2D_DESC tex_desc = {};
-        tex_desc.Width = image_width;
-        tex_desc.Height = image_height;
+        tex_desc.Width = buffer_width;
+        tex_desc.Height = buffer_height;
         tex_desc.MipLevels = m_temp.mipmap_count;
         tex_desc.ArraySize = 1;
         tex_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -198,8 +201,8 @@ OShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D
             THROW_DX11_ERROR(device->CreateUnorderedAccessView(texture2D, &mip_level_UAV_desc, &m_temp.UAVs[m]));
         }
 
-        m_temp.width = image_width;
-        m_temp.height = image_height;
+        m_temp.width = buffer_width;
+        m_temp.height = buffer_height;
     }
 
     // Copy high intensity part of image.
