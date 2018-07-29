@@ -27,7 +27,6 @@ void linear_exposure_from_constant_bias() {
 
 struct Varyings {
     float4 position : SV_POSITION;
-    float2 texcoord : TEXCOORD;
 };
 
 Varyings fullscreen_vs(uint vertex_ID : SV_VertexID) {
@@ -36,8 +35,6 @@ Varyings fullscreen_vs(uint vertex_ID : SV_VertexID) {
     output.position.x = vertex_ID == 2 ? 3 : -1;
     output.position.y = vertex_ID == 0 ? -3 : 1;
     output.position.zw = float2(1.0, 1.0);
-    output.texcoord = output.position.xy * 0.5 + 0.5;
-    output.texcoord.y = 1.0f - output.texcoord.y;
     return output;
 }
 
@@ -146,21 +143,20 @@ Texture2D pixels : register(t0);
 Buffer<float> linear_exposure_buffer : register(t1);
 Texture2D bloom_texture : register(t2);
 
-float3 get_pixel_color(int2 pixel_index, float2 bloom_uv) {
+float3 get_pixel_color(int2 pixel_index) {
     float linear_exposure = linear_exposure_buffer[0];
     float3 low_intensity_color = min(pixels[pixel_index + output_pixel_offset].rgb, bloom_threshold);
-    float3 bloom_color = bloom_texture.SampleLevel(bilinear_sampler, bloom_uv, 0).rgb;
+    float3 bloom_color = bloom_texture[pixel_index - output_viewport_offset].rgb;
     return linear_exposure * (low_intensity_color + bloom_color);
 }
 
 float4 linear_tonemapping_ps(Varyings input) : SV_TARGET {
-    return float4(get_pixel_color(int2(input.position.xy), input.texcoord), 1.0f);
+    return float4(get_pixel_color(int2(input.position.xy)), 1.0f);
 }
 
 float4 uncharted2_tonemapping_ps(Varyings input) : SV_TARGET {
-    float3 color = get_pixel_color(int2(input.position.xy), input.texcoord);
+    float3 color = get_pixel_color(int2(input.position.xy));
 
-    // Tonemapping.
     float shoulder_strength = 0.22f;
     float linear_strength = 0.3f;
     float linear_angle = 0.1f;
@@ -174,9 +170,7 @@ float4 uncharted2_tonemapping_ps(Varyings input) : SV_TARGET {
 }
 
 float4 unreal4_tonemapping_ps(Varyings input) : SV_TARGET {
-    float3 color = get_pixel_color(int2(input.position.xy), input.texcoord);
-
-    // Tonemapping.
+    float3 color = get_pixel_color(int2(input.position.xy));
     return float4(unreal4(color), 1.0);
 }
 

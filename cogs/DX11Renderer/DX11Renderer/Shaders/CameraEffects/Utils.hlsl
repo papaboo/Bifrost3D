@@ -15,8 +15,8 @@ namespace CameraEffects {
 
 cbuffer constants : register(b0) {
     float4 input_viewport; // offset in .xy, size in .zw.
+    int2 output_viewport_offset;
     int2 output_pixel_offset; // input_viewport.xy - output_viewport.xy. Use for looking up individual pixels in the input at their output pixel position.
-    int2 __padding;
 
     float min_log_luminance;
     float max_log_luminance;

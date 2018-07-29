@@ -174,8 +174,8 @@ public:
 
     struct Constants {
         Cogwheel::Math::Rect<float> input_viewport;
+        int2 output_viewport_offset;
         int2 output_pixel_offset;
-        int2 __padding;
         float min_log_luminance;
         float max_log_luminance;
         float min_histogram_percentage;

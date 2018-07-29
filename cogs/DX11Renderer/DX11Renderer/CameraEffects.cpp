@@ -76,7 +76,10 @@ OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11
         m_gaussian_samples.std_dev = std_dev;
     }
 
-    if (m_ping.width != image_width || m_ping.height != image_height) {
+    if (m_ping.width < image_width || m_ping.height < image_height) {
+
+        int buffer_width = max(m_ping.width, image_width);
+        int buffer_height = max(m_ping.height, image_height);
 
         // Release old resources
         m_ping.SRV.release();
@@ -87,10 +90,10 @@ OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11
         // Grab the device.
         ODevice1 device = get_device1(context);
 
-        m_ping.width = m_pong.width = image_width;
-        m_ping.height = m_pong.height = image_height;
-        create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, image_width, image_height, &m_ping.SRV, &m_ping.UAV);
-        create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, image_width, image_height, &m_pong.SRV, &m_pong.UAV);
+        m_ping.width = m_pong.width = buffer_width;
+        m_ping.height = m_pong.height = buffer_height;
+        create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, image_width, buffer_height, &m_ping.SRV, &m_ping.UAV);
+        create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, image_width, buffer_height, &m_pong.SRV, &m_pong.UAV);
     }
 
     // High intensity pass and horizontal filter.
@@ -199,7 +202,7 @@ OShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D
         m_temp.height = image_height;
     }
 
-    // Copy high intensity part of image. TODO Upload constant
+    // Copy high intensity part of image.
     context.CSSetShader(m_extract_high_intensity, nullptr, 0u);
     context.CSSetShaderResources(0, 1, &pixels);
     context.CSSetUnorderedAccessViews(0, 1, &m_temp.UAVs[0], 0u);
@@ -412,6 +415,7 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
     { // Upload constants
         Constants constants;
         constants.input_viewport = Cogwheel::Math::Rect<float>(input_viewport);
+        constants.output_viewport_offset = { output_viewport.x, output_viewport.y };
         constants.output_pixel_offset = { input_viewport.x - output_viewport.x, input_viewport.y - output_viewport.y };
         constants.min_log_luminance = settings.exposure.min_log_luminance;
         constants.max_log_luminance = settings.exposure.max_log_luminance;
