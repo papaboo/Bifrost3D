@@ -168,12 +168,24 @@ struct Renderer::Implementation {
     optix::Context context;
 
     // Per camera members.
-    uint2 screensize;
-    optix::Buffer accumulation_buffer;
-    unsigned int accumulations;
-    Matrix4x4f camera_inverse_view_projection_matrix;
-    Backend backend;
-    std::unique_ptr<IBackend> backend_impl;
+    struct CameraState {
+        uint2 screensize;
+        optix::Buffer accumulation_buffer;
+        unsigned int accumulations;
+        Matrix4x4f inverse_view_projection_matrix;
+        Backend backend;
+        std::unique_ptr<IBackend> backend_impl;
+
+        inline void clear() {
+            screensize = { 0u, 0u };
+            accumulation_buffer = nullptr;
+            accumulations = 0u;
+            inverse_view_projection_matrix = Matrix4x4f::identity();
+            backend = Backend::AlbedoVisualization;
+            backend_impl = nullptr;
+        }
+    };
+    std::vector<CameraState> per_camera_state;
 
     // Per scene members.
     optix::Group root_node;
@@ -207,11 +219,10 @@ struct Renderer::Implementation {
         optix::Geometry area_lights_geometry;
     } lights;
 
-    Implementation(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path)
-    : backend(Backend::PathTracing), backend_impl(new SimpleBackend(EntryPoints::PathTracing)) {
+    Implementation(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path) {
 
         device_IDs = { -1, -1 };
-        
+
         if (Context::getDeviceCount() == 0)
             return;
 
@@ -233,7 +244,9 @@ struct Renderer::Implementation {
         context->setEntryPointCount(EntryPoints::Count);
         context->setStackSize(1400);
 
-        accumulations = 0u;
+        // Per camera state
+        per_camera_state.resize(1);
+        per_camera_state[0].clear(); // Clear sentinel camera state.
 
         std::string shader_prefix = data_folder_path + "OptiXRenderer\\ptx\\OptiXRenderer_generated_";
         auto get_ptx_path = [](const std::string& shader_prefix, const std::string& shader_filename) -> std::string {
@@ -373,20 +386,6 @@ struct Renderer::Implementation {
             }
         }
 
-        { // Screen buffers
-            screensize = make_uint2(width_hint, height_hint);
-#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
-            accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER, screensize.x, screensize.y);
-            accumulation_buffer->setElementSize(sizeof(double) * 4);
-#else
-            accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, screensize.x, screensize.y);
-#endif
-            context["g_accumulation_buffer_ID"]->setInt(accumulation_buffer->getId());
-            context["g_output_buffer_ID"]->setInt(0);
-
-            camera_inverse_view_projection_matrix = Math::Matrix4x4f::identity();
-        }
-
 #ifdef ENABLE_OPTIX_DEBUG
         context->setPrintEnabled(true);
         context->setPrintLaunchIndex(screensize.x / 2, screensize.y / 2);
@@ -402,6 +401,8 @@ struct Renderer::Implementation {
     inline bool is_valid() const { return device_IDs.optix >= 0; }
 
     void handle_updates() {
+        bool should_reset_allocations = false;
+
         { // Mesh updates.
             for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
                 if (Meshes::get_changes(mesh_ID) == Meshes::Change::Destroyed) {
@@ -687,7 +688,7 @@ struct Renderer::Implementation {
                 }
 
                 context["g_light_count"]->setInt(lights.count);
-                accumulations = 0u;
+                should_reset_allocations = true;
 
                 // Update area light geometry if needed.
                 if (highest_area_light_index_updated >= 0) {
@@ -741,13 +742,13 @@ struct Renderer::Implementation {
                     optix::GeometryGroup geometry_group = optixTransform->getChild<optix::GeometryGroup>();
                     optix::GeometryInstance optix_model = geometry_group->getChild(0);
                     optix_model["material_index"]->setInt(model.get_material().get_ID());
-                    accumulations = 0u;
+                    should_reset_allocations = true;
                 }
             }
 
             if (models_changed) {
                 root_node->getAcceleration()->markDirty();
-                accumulations = 0u;
+                should_reset_allocations = true;
             }
         }
 
@@ -770,7 +771,7 @@ struct Renderer::Implementation {
 
             if (important_transform_changed) {
                 root_node->getAcceleration()->markDirty();
-                accumulations = 0u;
+                should_reset_allocations = true;
             }
         }
 
@@ -824,42 +825,66 @@ struct Renderer::Implementation {
                 }
             }
         }
+
+        if (should_reset_allocations)
+            for (auto& camera_state : per_camera_state)
+                camera_state.accumulations = 0u;
     }
 
     void render(Cogwheel::Scene::Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
-        context["g_output_buffer_ID"]->setInt(buffer->getId());
+        { // Update camera state
+            if (camera_ID >= per_camera_state.size())
+                per_camera_state.resize(Cameras::capacity());
 
-        // Resized screen buffers if necessary.
-        const uint2 current_screensize = make_uint2(width, height);
-        if (current_screensize != screensize) {
-            accumulation_buffer->setSize(width, height);
-            backend_impl->resize_backbuffers(width, height);
-            screensize = make_uint2(width, height);
-            accumulations = 0u;
-#ifdef ENABLE_OPTIX_DEBUG
-            context->setPrintLaunchIndex(width / 2, height / 2);
+            auto& camera_state = per_camera_state[camera_ID];
+            if (camera_state.backend_impl == nullptr) {
+
+                camera_state.screensize = { 0u, 0u };
+#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
+                camera_state.accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER, width, height);
+                camera_state.accumulation_buffer->setElementSize(sizeof(double) * 4);
+#else
+                camera_state.accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, width, height);
 #endif
-        }
+                camera_state.inverse_view_projection_matrix = {};
+                camera_state.backend = Backend::PathTracing;
+                camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::PathTracing));
+            }
 
-        { // Upload camera parameters.
-            // Check if the camera transforms changed and, if so, upload the new ones and reset accumulation.
-            Matrix4x4f inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
-            if (camera_inverse_view_projection_matrix != inverse_view_projection_matrix) {
-                camera_inverse_view_projection_matrix = inverse_view_projection_matrix;
+            // Resize screen buffers if necessary.
+            const uint2 current_screensize = make_uint2(width, height);
+            if (current_screensize != camera_state.screensize) {
+                camera_state.accumulation_buffer->setSize(width, height);
+                camera_state.backend_impl->resize_backbuffers(width, height);
+                camera_state.screensize = make_uint2(width, height);
+                camera_state.accumulations = 0u;
+#ifdef ENABLE_OPTIX_DEBUG
+                context->setPrintLaunchIndex(width / 2, height / 2);
+#endif
+            }
 
-                Vector3f cam_pos = Cameras::get_transform(camera_ID).translation;
+            { // Upload camera parameters.
+              // Check if the camera transforms changed and, if so, upload the new ones and reset accumulation.
+                Matrix4x4f inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
+                if (camera_state.inverse_view_projection_matrix != inverse_view_projection_matrix) {
+                    camera_state.inverse_view_projection_matrix = inverse_view_projection_matrix;
+                    camera_state.accumulations = 0u;
+                }
 
                 context["g_inverted_view_projection_matrix"]->setMatrix4x4fv(false, inverse_view_projection_matrix.begin());
+                Vector3f cam_pos = Cameras::get_transform(camera_ID).translation;
                 float4 camera_position = make_float4(cam_pos.x, cam_pos.y, cam_pos.z, 0.0f);
                 context["g_camera_position"]->setFloat(camera_position);
-
-                accumulations = 0u;
             }
         }
 
-        context["g_accumulations"]->setInt(accumulations);
-        backend_impl->render(context, screensize.x, screensize.y);
-        accumulations += 1u;
+        // TODO Join the per frame uploaded variables in a struct, to reduce the number of uploads and variable lookups.
+        auto& camera_state = per_camera_state[camera_ID];
+        context["g_output_buffer_ID"]->setInt(buffer->getId());
+        context["g_accumulation_buffer_ID"]->setInt(camera_state.accumulation_buffer->getId());
+        context["g_accumulations"]->setInt(camera_state.accumulations);
+        camera_state.backend_impl->render(context, width, height);
+        ++camera_state.accumulations;
 
         /*
         if (is_power_of_two(accumulations - 1)) {
@@ -908,31 +933,32 @@ void Renderer::set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID,
     m_impl->scene_epsilon = scene_epsilon;
 }
 
-Backend Renderer::get_backend() const {
-    return m_impl->backend;
+Backend Renderer::get_backend(Cameras::UID camera_ID) const {
+    return m_impl->per_camera_state[camera_ID].backend;
 }
 
-void Renderer::set_backend(Backend backend) {
-    m_impl->backend = backend;
+void Renderer::set_backend(Cameras::UID camera_ID, Backend backend) {
+    auto& camera_state = m_impl->per_camera_state[camera_ID];
+    camera_state.backend = backend;
     switch (backend) {
     case Backend::PathTracing:
-        m_impl->backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::PathTracing));
+        camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::PathTracing));
         break;
     case Backend::AlbedoVisualization:
-        m_impl->backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Albedo));
+        camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Albedo));
         break;
     case Backend::NormalVisualization:
-        m_impl->backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Normal));
+        camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Normal));
         break;
     }
-    m_impl->accumulations = 0;
+    camera_state.accumulations = 0u;
 }
 
 void Renderer::handle_updates() {
     m_impl->handle_updates();
 }
 
-void Renderer::render(Cogwheel::Scene::Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
+void Renderer::render(Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
     m_impl->render(camera_ID, buffer, width, height);
 }
 

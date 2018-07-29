@@ -60,8 +60,8 @@ public:
     float get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const;
     void set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon);
 
-    Backend get_backend() const;
-    void set_backend(Backend backend);
+    Backend get_backend(Cogwheel::Scene::Cameras::UID camera_ID) const;
+    void set_backend(Cogwheel::Scene::Cameras::UID camera_ID, Backend backend);
 
     void handle_updates();
 
