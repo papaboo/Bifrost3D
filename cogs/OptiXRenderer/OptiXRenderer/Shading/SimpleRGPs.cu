@@ -33,7 +33,7 @@ rtDeclareVariable(int, g_max_bounce_count, , );
 
 template <typename Evaluator>
 __inline_dev__ void accumulate(Evaluator evaluator) {
-    size_t2 screen_size = rtBufferId<ushort4, 2>(g_output_buffer_ID).size();
+    size_t2 screen_size = rtBufferId<ushort4, 2>(g_accumulation_buffer_ID).size();
 
     MonteCarloPayload payload = initialize_monte_carlo_payload(g_launch_index.x, g_launch_index.y,
         screen_size.x, screen_size.y, g_accumulations,
@@ -119,7 +119,7 @@ RT_PROGRAM void albedo_RPG() {
             rtTrace(g_scene_root, ray, payload);
         } while (payload.material_index == 0 && !is_black(payload.throughput));
 
-        size_t2 screen_size = rtBufferId<ushort4, 2>(g_output_buffer_ID).size();
+        size_t2 screen_size = rtBufferId<ushort4, 2>(g_accumulation_buffer_ID).size();
         bool valid_material = payload.material_index != 0;
         if (g_launch_index.x < screen_size.x / 2 && valid_material) {
             using namespace Shading::ShadingModels;
