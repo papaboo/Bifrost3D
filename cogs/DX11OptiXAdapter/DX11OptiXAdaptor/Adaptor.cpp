@@ -101,9 +101,10 @@ public:
                 "StructuredBuffer<half4> pixels : register(t0);\n"
                 "cbuffer constants : register(b0) {\n"
                 "    int2 viewport_size;\n"
+                "    int2 pixels_size;\n"
                 "};\n"
                 "float4 main_ps(float4 pixel_pos : SV_POSITION) : SV_TARGET {\n"
-                "   return pixels[int(pixel_pos.x) + int(viewport_size.y - pixel_pos.y) * viewport_size.x];\n"
+                "   return pixels[int(pixel_pos.x) + int(viewport_size.y - pixel_pos.y) * pixels_size.x];\n"
                 "}\n";
 
             static auto compile_shader = [](const char* const shader_src, const char* const target, const char* const entry_point) -> OBlob {
@@ -150,20 +151,23 @@ public:
     }
 
     RenderedFrame render(Cogwheel::Scene::Cameras::UID camera_ID, int width, int height) {
-        if (m_render_target.width != width || m_render_target.height != height) {
+        if (m_render_target.width < width || m_render_target.height < height) {
+            int buffer_width = std::max(m_render_target.width, width);
+            int buffer_height = std::max(m_render_target.height, height);
+
             { // Backbuffer.
                 m_backbuffer_RTV.release();
                 m_backbuffer_SRV.release();
 
-                create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_backbuffer_SRV, nullptr, &m_backbuffer_RTV);
+                create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, buffer_width, buffer_height, &m_backbuffer_SRV, nullptr, &m_backbuffer_RTV);
             }
 
-            resize_render_target(width, height);
+            resize_render_target(buffer_width, buffer_height);
         }
 
 #ifdef DISABLE_INTEROP
         { // Render and copy to backbuffer.
-            m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, m_render_target.width, m_render_target.height);
+            m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, width, height);
 
             void* cpu_buffer = m_render_target.optix_buffer->map();
             OResource dx_buffer = nullptr;
@@ -181,7 +185,7 @@ public:
             OPTIX_VALIDATE(m_optix_renderer->get_context());
             OPTIX_VALIDATE(m_render_target.optix_buffer);
             m_render_target.optix_buffer->setDevicePointer(m_cuda_device_ID, pixels);
-            m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, m_render_target.width, m_render_target.height);
+            m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, width, height);
 
             THROW_CUDA_ERROR(cudaGraphicsUnmapResources(1, &m_render_target.cuda_buffer));
         }
@@ -201,6 +205,9 @@ public:
 
             m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             m_render_context->OMSetBlendState(nullptr, nullptr, 0xffffffff);
+
+            int constant_data[4] = { width, height, m_render_target.width, m_render_target.height };
+            m_render_context->UpdateSubresource(m_constant_buffer, 0, nullptr, &constant_data, 0, 0);
 
             m_render_context->VSSetShader(m_vertex_shader, 0, 0);
             m_render_context->PSSetShader(m_pixel_shader, 0, 0);
@@ -245,10 +252,6 @@ public:
 #else
         m_render_target.optix_buffer = optix_context->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_HALF4, width, height);
 #endif
-
-        // Update the constant buffer to reflect the new dimensions.
-        int constant_data[4] = { width, height, 0, 0 };
-        m_render_context->UpdateSubresource(m_constant_buffer, 0, nullptr, &constant_data, 0, 0);
 
         m_render_target.width = width;
         m_render_target.height = height;
