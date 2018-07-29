@@ -61,6 +61,7 @@ static DX11Renderer::Renderer* dx11_renderer = nullptr;
 #ifdef OPTIX_FOUND
 bool optix_enabled = true;
 bool rasterizer_enabled = true;
+OptiXRenderer::Renderer* optix_renderer = nullptr;
 #endif
 
 class Navigation final {
@@ -590,6 +591,47 @@ int initialize_scene(Engine& engine) {
     engine.add_mutating_callback(TonemappingSwitcher::handle_callback, tonemapping_switcher);
     engine.add_mutating_callback(update_FPS, nullptr);
 
+    { // Picture in picture
+        auto second_cam_ID = Cameras::create("Second cam", scene_ID, Cameras::get_projection_matrix(cam_ID), Cameras::get_inverse_projection_matrix(cam_ID));
+        Cameras::set_transform(second_cam_ID, Cameras::get_transform(cam_ID));
+        Cameras::set_viewport(second_cam_ID, Rectf(0.75f, 0.75f, 0.25f, 0.25));
+        Cameras::set_z_index(second_cam_ID, 1);
+        Renderers::ConstUIDIterator renderer_itr = Renderers::get_iterator(Cameras::get_renderer_ID(cam_ID));
+        ++renderer_itr;
+        Renderers::ConstUIDIterator new_renderer_itr = (renderer_itr == Renderers::end()) ? Renderers::begin() : renderer_itr;
+        Cameras::set_renderer_ID(second_cam_ID, *new_renderer_itr);
+    }
+
+#ifdef OPTIX_FOUND
+    class OptiXBackendSwitcher {
+    public:
+        OptiXBackendSwitcher(OptiXRenderer::Renderer* renderer, Cameras::UID camera_ID)
+            : m_renderer(renderer), m_camera_ID(camera_ID) { }
+
+        void handle(const Engine& engine) {
+            const Keyboard* keyboard = engine.get_keyboard();
+
+            bool shift_pressed = keyboard->is_pressed(Keyboard::Key::LeftShift) || keyboard->is_pressed(Keyboard::Key::RightShift);
+            if (keyboard->was_released(Keyboard::Key::P) && shift_pressed) {
+                int backend_index = (int)m_renderer->get_backend(m_camera_ID);
+                int new_backend_index = (backend_index + 1) % 3;
+                m_renderer->set_backend(m_camera_ID, (OptiXRenderer::Backend)new_backend_index);
+            }
+        }
+
+        static inline void handle_callback(Engine& engine, void* state) {
+            static_cast<OptiXBackendSwitcher*>(state)->handle(engine);
+        }
+
+    private:
+        OptiXRenderer::Renderer* m_renderer;
+        Cameras::UID m_camera_ID;
+    };
+
+    OptiXBackendSwitcher* backend_switcher = new OptiXBackendSwitcher(optix_renderer, cam_ID);
+    engine.add_mutating_callback(OptiXBackendSwitcher::handle_callback, backend_switcher);
+#endif
+
     return 0;
 }
 
@@ -602,39 +644,13 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
     compositor = Compositor::initialize(hwnd, window, data_folder_path);
 
 #ifdef OPTIX_FOUND
-    class OptiXBackendSwitcher {
-    public:
-        OptiXBackendSwitcher(OptiXRenderer::Renderer* renderer)
-            : m_renderer(renderer) { }
-
-        void handle(const Engine& engine) {
-            const Keyboard* keyboard = engine.get_keyboard();
-
-            bool shift_pressed = keyboard->is_pressed(Keyboard::Key::LeftShift) || keyboard->is_pressed(Keyboard::Key::RightShift);
-            if (keyboard->was_released(Keyboard::Key::P) && shift_pressed) {
-                int backend_index = (int)m_renderer->get_backend();
-                int new_backend_index = (backend_index + 1) % 3;
-                m_renderer->set_backend((OptiXRenderer::Backend)new_backend_index);
-            }
-        }
-
-        static inline void handle_callback(Engine& engine, void* state) {
-            static_cast<OptiXBackendSwitcher*>(state)->handle(engine);
-        }
-
-    private:
-        OptiXRenderer::Renderer* m_renderer;
-    };
-
     if (rasterizer_enabled)
         dx11_renderer = (Renderer*)compositor->add_renderer(Renderer::initialize).get();
 
     if (optix_enabled) {
         auto* optix_adaptor = (DX11OptiXAdaptor::Adaptor*)compositor->add_renderer(DX11OptiXAdaptor::Adaptor::initialize).get();
-        if (optix_adaptor != nullptr) {
-            OptiXBackendSwitcher* backend_switcher = new OptiXBackendSwitcher(optix_adaptor->get_renderer());
-            engine.add_mutating_callback(OptiXBackendSwitcher::handle_callback, backend_switcher);
-        }
+        if (optix_adaptor != nullptr)
+            optix_renderer = optix_adaptor->get_renderer();
     }
 
 #else
