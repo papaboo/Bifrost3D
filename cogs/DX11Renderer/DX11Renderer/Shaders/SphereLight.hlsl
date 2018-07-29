@@ -29,7 +29,7 @@ struct Varyings {
     float4 position : SV_POSITION;
     float4 world_position : WORLD_POSITION;
     float2 texcoord : TEXCOORD;
-    float3 radiance : COLOR;
+    nointerpolation float3 radiance : COLOR;
 };
 
 Varyings vs(uint primitive_ID : SV_VertexID) {
