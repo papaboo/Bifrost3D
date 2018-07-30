@@ -33,16 +33,16 @@ BilateralBlur::BilateralBlur(ID3D11Device1& device, const std::wstring& shader_f
 }
 
 OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, int width, int height) {
-    if (m_width != width || m_height != height) {
+    if (m_width < width || m_height < height) {
+        m_width = std::max(m_width, width);
+        m_height = std::max(m_height, height);
+
         m_intermediate_SRV.release();
         m_intermediate_RTV.release();
 
         // Resize backbuffer
         ODevice1 device = get_device1(context);
-        create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, &m_intermediate_SRV, nullptr, &m_intermediate_RTV);
-
-        m_width = width;
-        m_height = height;
+        create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, m_width, m_height, &m_intermediate_SRV, nullptr, &m_intermediate_RTV);
     }
 
     // Need to grab the normal and depth buffers before OMSetRenderTarget clears them.
@@ -122,27 +122,24 @@ AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_pa
 }
 
 int2 AlchemyAO::compute_g_buffer_to_ao_index_offset(Cogwheel::Math::Recti viewport) const {
-    return { BilateralBlur::MARGIN - viewport.x, BilateralBlur::MARGIN - viewport.y };
+    return { margin() - viewport.x, margin() - viewport.y };
 }
 
-void AlchemyAO::conditional_buffer_resize(ID3D11DeviceContext1& context, Cogwheel::Math::Recti viewport) {
-    int ssao_width = viewport.width + 2 * BilateralBlur::MARGIN;
-    int ssao_height = viewport.height + 2 * BilateralBlur::MARGIN;
+void AlchemyAO::conditional_buffer_resize(ID3D11DeviceContext1& context, int ssao_width, int ssao_height) {
+    if (m_width < ssao_width || m_height < ssao_height) {
+        m_width = std::max(m_width, ssao_width);
+        m_height = std::max(m_height, ssao_height);
 
-    if (m_width != ssao_width || m_height != ssao_height) {
         m_SSAO_SRV.release();
         m_SSAO_RTV.release();
 
         // Resize backbuffer
         ODevice1 device = get_device1(context);
-        create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, ssao_width, ssao_height, &m_SSAO_SRV, nullptr, &m_SSAO_RTV);
-
-        m_width = ssao_width;
-        m_height = ssao_height;
+        create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, m_width, m_height, &m_SSAO_SRV, nullptr, &m_SSAO_RTV);
     }
 }
 
-OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderResourceView& normals, OShaderResourceView& depth, Cogwheel::Math::Recti viewport, SsaoSettings settings) {
+OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderResourceView& normals, OShaderResourceView& depth, int2 g_buffer_size, Cogwheel::Math::Recti viewport, SsaoSettings settings) {
 
     // Grab old viewport.
     // Assumes only one viewport is used. If we start using more then it may just be easier to bite the bullet and move to compute (which turned out to be slower than pixel shaders at first try)
@@ -150,11 +147,13 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
     D3D11_VIEWPORT previous_viewport;
     context.RSGetViewports(&previous_viewport_count, &previous_viewport);
 
-    conditional_buffer_resize(context, viewport);
+    int ssao_width = viewport.width + 2 * margin();
+    int ssao_height = viewport.height + 2 * margin();
 
-    int2 g_buffer_size = { viewport.width + 2 * viewport.x, viewport.height + 2 * viewport.y };
+    conditional_buffer_resize(context, ssao_width, ssao_height);
+
     SsaoConstants constants = { settings, float(g_buffer_size.x), float(g_buffer_size.y), 1.0f / g_buffer_size.x, 1.0f / g_buffer_size.y, 
-                                float(m_width), float(m_height), compute_g_buffer_to_ao_index_offset(viewport) };
+                                float(ssao_width), float(ssao_height), compute_g_buffer_to_ao_index_offset(viewport) };
     constants.settings.normal_std_dev = 0.5f / (constants.settings.normal_std_dev * constants.settings.normal_std_dev);
     constants.settings.plane_std_dev = 0.5f / (constants.settings.plane_std_dev * constants.settings.plane_std_dev);
     context.UpdateSubresource(m_constants, 0u, nullptr, &constants, 0u, 0u);
@@ -166,8 +165,8 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
     // Setup state.
     D3D11_VIEWPORT ao_viewport;
     ao_viewport.TopLeftX = ao_viewport.TopLeftY = 0.0f;
-    ao_viewport.Width = float(m_width);
-    ao_viewport.Height = float(m_height);
+    ao_viewport.Width = float(ssao_width);
+    ao_viewport.Height = float(ssao_height);
     ao_viewport.MinDepth = 0.0f;
     ao_viewport.MaxDepth = 1.0f;
     context.RSSetViewports(1, &ao_viewport);
@@ -183,7 +182,7 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
 
     // Filter
     OShaderResourceView& ao_SRV = settings.filtering_enabled ?
-        m_filter.apply(context, m_SSAO_RTV, m_SSAO_SRV, m_width, m_height) :
+        m_filter.apply(context, m_SSAO_RTV, m_SSAO_SRV, ssao_width, ssao_height) :
         m_SSAO_SRV;
 
     // Unbind SSAO_RTV
@@ -197,7 +196,10 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
 }
 
 OShaderResourceView& AlchemyAO::apply_none(ID3D11DeviceContext1& context, Cogwheel::Math::Recti viewport) {
-    conditional_buffer_resize(context, viewport);
+    int ssao_width = viewport.width + 2 * margin();
+    int ssao_height = viewport.height + 2 * margin();
+
+    conditional_buffer_resize(context, ssao_width, ssao_height);
 
     float cleared_ssao[4] = { 1, 0, 0, 0 };
     context.ClearView(m_SSAO_RTV, cleared_ssao, nullptr, 0);

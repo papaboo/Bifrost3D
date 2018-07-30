@@ -64,14 +64,15 @@ public:
 
     int2 compute_g_buffer_to_ao_index_offset(Cogwheel::Math::Recti viewport) const;
 
-    OShaderResourceView& apply(ID3D11DeviceContext1& context, OShaderResourceView& normals, OShaderResourceView& depth, Cogwheel::Math::Recti viewport, SsaoSettings settings);
+    OShaderResourceView& apply(ID3D11DeviceContext1& context, OShaderResourceView& normals, OShaderResourceView& depth, int2 g_buffer_size, Cogwheel::Math::Recti viewport, SsaoSettings settings);
 
     OShaderResourceView& apply_none(ID3D11DeviceContext1& context, Cogwheel::Math::Recti viewport);
 
     Cogwheel::Math::Recti get_ssao_viewport() const { return Cogwheel::Math::Recti(BilateralBlur::MARGIN, BilateralBlur::MARGIN, m_width, m_height); }
 
 private:
-    void conditional_buffer_resize(ID3D11DeviceContext1& context, Cogwheel::Math::Recti viewport);
+    void conditional_buffer_resize(ID3D11DeviceContext1& context, int ssao_width, int ssao_height);
+    inline int margin() const { return m_filter.MARGIN; }
 
     OBuffer m_constants;
     OBuffer m_samples;
