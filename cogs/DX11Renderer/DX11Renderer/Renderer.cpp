@@ -499,12 +499,15 @@ public:
             auto g_buffer_marker = PerformanceMarker(*m_render_context, L"G-buffer");
 
             // Re-allocate buffers if the dimensions have changed.
-            if (m_g_buffer.width != g_buffer_width || m_g_buffer.height != g_buffer_height) {
+            if (m_g_buffer.width < unsigned int(g_buffer_width )|| m_g_buffer.height < unsigned int(g_buffer_height)) {
+                m_g_buffer.width = std::max(m_g_buffer.width, unsigned int(g_buffer_width));
+                m_g_buffer.height = std::max(m_g_buffer.height, unsigned int(g_buffer_height));
+
                 { // Backbuffer.
                     m_backbuffer_RTV.release();
                     m_backbuffer_SRV.release();
 
-                    create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, g_buffer_width, g_buffer_height, &m_backbuffer_SRV, nullptr, &m_backbuffer_RTV);
+                    create_texture_2D(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, m_g_buffer.width, m_g_buffer.height, &m_backbuffer_SRV, nullptr, &m_backbuffer_RTV);
                 }
 
                 { // Depth buffer
@@ -512,8 +515,8 @@ public:
                     m_g_buffer.depth_view.release();
 
                     D3D11_TEXTURE2D_DESC depth_desc;
-                    depth_desc.Width = g_buffer_width;
-                    depth_desc.Height = g_buffer_height;
+                    depth_desc.Width = m_g_buffer.width;
+                    depth_desc.Height = m_g_buffer.height;
                     depth_desc.MipLevels = 1;
                     depth_desc.ArraySize = 1;
                     depth_desc.Format = DXGI_FORMAT_R32_TYPELESS; // DXGI_FORMAT_D32_FLOAT for depth view and DXGI_FORMAT_R32_FLOAT for SRV.
@@ -537,11 +540,8 @@ public:
                 { // Normal buffer
                     m_g_buffer.normal_SRV.release();
                     m_g_buffer.normal_RTV.release();
-                    create_texture_2D(m_device, DXGI_FORMAT_R16G16_SNORM, g_buffer_width, g_buffer_height, &m_g_buffer.normal_SRV, nullptr, &m_g_buffer.normal_RTV);
+                    create_texture_2D(m_device, DXGI_FORMAT_R16G16_SNORM, m_g_buffer.width, m_g_buffer.height, &m_g_buffer.normal_SRV, nullptr, &m_g_buffer.normal_RTV);
                 }
-
-                m_g_buffer.width = g_buffer_width;
-                m_g_buffer.height = g_buffer_height;
             }
 
             fill_g_buffer();
