@@ -46,8 +46,9 @@ protected:
     // --------------------------------------------------------------------------------------------
     // Helpers
     // --------------------------------------------------------------------------------------------
-    inline OBuffer create_and_bind_constants(ODevice1& device, ODeviceContext1& context, float bloom_threshold, int bandwidth = 11) {
+    inline OBuffer create_and_bind_constants(ODevice1& device, ODeviceContext1& context, int width, int height, float bloom_threshold, int bandwidth = 11) {
         CameraEffects::Constants constants;
+        constants.input_viewport = Cogwheel::Math::Rect<float>(0, 0, float(width), float(height));
         constants.bloom_threshold = bloom_threshold;
         m_bandwidth = constants.bloom_bandwidth = bandwidth;
         float std_dev = constants.bloom_bandwidth * 0.25f;
@@ -80,7 +81,7 @@ protected:
         OShaderResourceView pixel_SRV;
         create_texture_2D(*m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, &pixel_SRV);
 
-        OBuffer constants = create_and_bind_constants(m_device, m_context, 0.0f);
+        OBuffer constants = create_and_bind_constants(m_device, m_context, width, height, 0.0f);
 
         // Blur
         auto& filtered_SRV = bloom_filter(constants, pixel_SRV, width, height);
@@ -133,7 +134,7 @@ protected:
         OShaderResourceView mirrored_pixel_SRV;
         create_texture_2D(*m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, mirrored_pixels, width, height, &mirrored_pixel_SRV);
 
-        OBuffer constants = create_and_bind_constants(m_device, m_context, 0.0f);
+        OBuffer constants = create_and_bind_constants(m_device, m_context, width, height, 0.0f);
 
         // Blur
         DualKawaseBloom bloom = DualKawaseBloom(*m_device, DX11_SHADER_ROOT);
@@ -179,7 +180,7 @@ protected:
         create_texture_2D(*m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, pixels, width, height, &pixel_SRV);
 
         float bloom_threshold = 5.0f;
-        OBuffer constants = create_and_bind_constants(m_device, m_context, bloom_threshold);
+        OBuffer constants = create_and_bind_constants(m_device, m_context, width, height, bloom_threshold);
 
         auto& high_intensity_SRV = bloom_filter(constants, pixel_SRV, width, height);
 
