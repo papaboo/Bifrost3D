@@ -9,22 +9,25 @@
 #ifndef _COGWHEEL_MATH_RNG_H_
 #define _COGWHEEL_MATH_RNG_H_
 
+#include <Cogwheel/Math/MortonEncode.h>
 #include <Cogwheel/Math/Vector.h>
 
 namespace Cogwheel {
 namespace Math {
 namespace RNG {
 
-inline float van_der_corput(unsigned int n, unsigned int scramble) {
-
-    // Reverse bits of n.
+// Reverse bits of n.
+inline unsigned int reverse_bits(unsigned int n) {
     n = (n << 16) | (n >> 16);
     n = ((n & 0x00ff00ff) << 8) | ((n & 0xff00ff00) >> 8);
     n = ((n & 0x0f0f0f0f) << 4) | ((n & 0xf0f0f0f0) >> 4);
     n = ((n & 0x33333333) << 2) | ((n & 0xcccccccc) >> 2);
     n = ((n & 0x55555555) << 1) | ((n & 0xaaaaaaaa) >> 1);
-    n ^= scramble;
+    return n;
+}
 
+inline float van_der_corput(unsigned int n, unsigned int scramble) {
+    n = reverse_bits(n ^ scramble);
     return float((n >> 8) & 0xffffff) / float(1 << 24);
 }
 
@@ -60,6 +63,10 @@ inline unsigned int jenkins_hash(unsigned int a) {
     a = (a ^ 0xb55a4f09) ^ (a >> 16);
     return a;
 }
+
+// Hashes x and y ensuring maximal distance between consecutive xs and ys.
+// NOTE: Unless filtered afterwards it visually displays a ton of correlation.
+inline unsigned int even_distribution_2D(unsigned int x, unsigned int y) { return reverse_bits(morton_encode(x, y)); }
 
 // Computes the power heuristic of pdf1 and pdf2.
 // It is assumed that pdf1 is always valid, i.e. not NaN.

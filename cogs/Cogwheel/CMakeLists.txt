@@ -65,6 +65,7 @@ SET(MATH_SRCS
   Cogwheel/Math/Intersect.h
   Cogwheel/Math/Math.h
   Cogwheel/Math/Matrix.h
+  Cogwheel/Math/MortonEncode.h
   Cogwheel/Math/NelderMead.h
   Cogwheel/Math/OctahedralNormal.h
   Cogwheel/Math/Plane.h

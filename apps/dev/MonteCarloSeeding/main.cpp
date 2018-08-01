@@ -16,24 +16,6 @@ using namespace Cogwheel::Math;
 using namespace std;
 
 // ------------------------------------------------------------------------------------------------
-// Morton encoding
-// ------------------------------------------------------------------------------------------------
-
-// Insert a 0 bit in between each of the 16 low bits of v.
-unsigned int part_by_1(unsigned int v) {
-    v &= 0x0000ffff;                 // v = ---- ---- ---- ---- fedc ba98 7654 3210
-    v = (v ^ (v << 8)) & 0x00ff00ff; // v = ---- ---- fedc ba98 ---- ---- 7654 3210
-    v = (v ^ (v << 4)) & 0x0f0f0f0f; // v = ---- fedc ---- ba98 ---- 7654 ---- 3210
-    v = (v ^ (v << 2)) & 0x33333333; // v = --fe --dc --ba --98 --76 --54 --32 --10
-    v = (v ^ (v << 1)) & 0x55555555; // v = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
-    return v;
-}
-
-unsigned int morton_encode(unsigned int x, unsigned int y) {
-    return part_by_1(y) | (part_by_1(x) << 1);
-}
-
-// ------------------------------------------------------------------------------------------------
 // Linear congruential random number generator.
 // ------------------------------------------------------------------------------------------------
 struct LinearCongruential {
