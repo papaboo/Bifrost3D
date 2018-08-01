@@ -75,9 +75,11 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
 struct SsaoConstants {
     SsaoSettings settings;
     float2 g_buffer_size;
-    float2 recip_g_buffer_size;
+    float2 recip_g_buffer_viewport_size;
+    float2 g_buffer_max_uv;
+    int2 g_buffer_to_ao_index_offset;
     float2 ao_buffer_size;
-    int2 g_buffer_to_ao_index_offset; // (ao_buffer_size - g_buffer_size) / 2
+    float2 __padding;
 };
 
 AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_path)
@@ -152,11 +154,19 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
 
     conditional_buffer_resize(context, ssao_width, ssao_height);
 
-    SsaoConstants constants = { settings, float(g_buffer_size.x), float(g_buffer_size.y), 1.0f / g_buffer_size.x, 1.0f / g_buffer_size.y, 
-                                float(ssao_width), float(ssao_height), compute_g_buffer_to_ao_index_offset(viewport) };
-    constants.settings.normal_std_dev = 0.5f / (constants.settings.normal_std_dev * constants.settings.normal_std_dev);
-    constants.settings.plane_std_dev = 0.5f / (constants.settings.plane_std_dev * constants.settings.plane_std_dev);
-    context.UpdateSubresource(m_constants, 0u, nullptr, &constants, 0u, 0u);
+    { // Contants 
+        float2 g_buffer_viewport_size = { viewport.width + 2.0f * viewport.x, viewport.height + 2.0f * viewport.y };
+        SsaoConstants constants;
+        constants.settings = settings;
+        constants.g_buffer_size = { float(g_buffer_size.x), float(g_buffer_size.y) };
+        constants.recip_g_buffer_viewport_size = { 1.0f / g_buffer_viewport_size.x, 1.0f / g_buffer_viewport_size.y };
+        constants.g_buffer_max_uv = { g_buffer_viewport_size.x / g_buffer_size.x, g_buffer_viewport_size.y / g_buffer_size.y };
+        constants.g_buffer_to_ao_index_offset = compute_g_buffer_to_ao_index_offset(viewport);
+        constants.ao_buffer_size = { float(ssao_width), float(ssao_height) };
+        constants.settings.normal_std_dev = 0.5f / (constants.settings.normal_std_dev * constants.settings.normal_std_dev);
+        constants.settings.plane_std_dev = 0.5f / (constants.settings.plane_std_dev * constants.settings.plane_std_dev);
+        context.UpdateSubresource(m_constants, 0u, nullptr, &constants, 0u, 0u);
+    }
 
     ID3D11Buffer* constant_buffers[] = { m_constants, m_samples };
     context.VSSetConstantBuffers(1, 2, constant_buffers);
