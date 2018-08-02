@@ -16,6 +16,8 @@ namespace Cogwheel {
 namespace Math {
 namespace RNG {
 
+const float uint_normalizer = 1.0f / 4294967296.0f;
+
 // Reverse bits of n.
 inline unsigned int reverse_bits(unsigned int n) {
     n = (n << 16) | (n >> 16);
@@ -27,8 +29,8 @@ inline unsigned int reverse_bits(unsigned int n) {
 }
 
 inline float van_der_corput(unsigned int n, unsigned int scramble) {
-    n = reverse_bits(n ^ scramble);
-    return float((n >> 8) & 0xffffff) / float(1 << 24);
+    n = reverse_bits(n) ^ scramble;
+    return n * uint_normalizer;
 }
 
 inline float sobol2(unsigned int n, unsigned int scramble) {
@@ -36,7 +38,7 @@ inline float sobol2(unsigned int n, unsigned int scramble) {
     for (unsigned int v = 1u << 31u; n != 0; n >>= 1u, v ^= v >> 1u)
         if (n & 0x1) scramble ^= v;
 
-    return float((scramble >> 8) & 0xffffff) / float(1 << 24);
+    return scramble * uint_normalizer;
 }
 
 inline Vector2f sample02(unsigned int n, Vector2ui scramble = Vector2ui(5569, 95597)) {
