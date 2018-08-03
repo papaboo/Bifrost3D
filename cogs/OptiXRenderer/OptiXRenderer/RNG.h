@@ -40,6 +40,12 @@ static const int primes[128] =
     661, 673, 677, 683, 691, 701, 709, 719,
 };
 
+#if GPU_DEVICE
+__constant__ float uint_normalizer = 1.0f / 4294967296.0f;
+#else
+static const float uint_normalizer = 1.0f / 4294967296.0f;
+#endif
+
 // ------------------------------------------------------------------------------------------------
 // RNG sampling utils.
 // ------------------------------------------------------------------------------------------------
@@ -57,7 +63,7 @@ __inline_all__ float van_der_corput(unsigned int n, unsigned int scramble) {
 #endif
     n ^= scramble;
 
-    return float((n >> 8) & 0xffffff) / float(1 << 24);
+    return n * uint_normalizer;
 }
 
 __inline_all__ float sobol2(unsigned int n, unsigned int scramble) {
@@ -65,7 +71,7 @@ __inline_all__ float sobol2(unsigned int n, unsigned int scramble) {
     for (unsigned int v = 1u << 31u; n != 0; n >>= 1u, v ^= v >> 1u)
         if (n & 0x1) scramble ^= v;
 
-    return float((scramble >> 8) & 0xffffff) / float(1 << 24);
+    return scramble * uint_normalizer;
 }
 
 __inline_all__ optix::float2 sample02(unsigned int n, optix::uint2 scramble = optix::make_uint2(5569, 95597)) {
@@ -104,7 +110,6 @@ struct LinearCongruential {
 private:
     static const unsigned int multiplier = 1664525u;
     static const unsigned int increment = 1013904223u;
-    static const unsigned int max = 0xFFFFFFFFu; // uint32 max.
 
     unsigned int m_state;
 
@@ -117,11 +122,7 @@ public:
         return m_state;
     }
 
-    __inline_all__ float sample1f() {
-        const float inv_max = 1.0f / (float(max) + 1.0f);
-        return float(sample1ui()) * inv_max;
-    }
-
+    __inline_all__ float sample1f() { return float(sample1ui()) * uint_normalizer; }
     __inline_all__ optix::float2 sample2f() { return optix::make_float2(sample1f(), sample1f()); }
     __inline_all__ optix::float3 sample3f() { return optix::make_float3(sample2f(), sample1f()); }
     __inline_all__ optix::float4 sample4f() { return optix::make_float4(sample2f(), sample2f()); }
