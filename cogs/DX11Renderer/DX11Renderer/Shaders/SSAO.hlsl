@@ -191,7 +191,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
 
     // Setup sampling
     uint rng_offset = RNG::evenly_distributed_2D_seed(input.position.xy);
-    float sample_pattern_rotation_angle = float((rng_offset >> 8) & 0xffffff) / float(1 << 24) * TWO_PI;
+    float sample_pattern_rotation_angle = rng_offset * (TWO_PI / 4294967296.0f); // Scale a uint to the range [0, 2 * PI[
     float2x2 sample_pattern_rotation = generate_rotation_matrix(sample_pattern_rotation_angle);
 
     float depth = depth_tex[input.position.xy - g_buffer_to_ao_index_offset].r;

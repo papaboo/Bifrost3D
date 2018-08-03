@@ -27,7 +27,7 @@ namespace RNG {
 
 float van_der_corput(uint n, uint scramble) {
     n = reversebits(n) ^ scramble;
-    return float((n >> 8) & 0xffffff) / float(1 << 24);
+    return n / 4294967296.0f;
 }
 
 float sobol2(uint n, uint scramble) {
@@ -37,7 +37,7 @@ float sobol2(uint n, uint scramble) {
         if (n & 0x1)
             scramble ^= v;
 
-    return float((scramble >> 8) & 0xffffff) / float(1 << 24);
+    return scramble / 4294967296.0f;
 }
 
 float2 sample02(uint n, uint2 scramble = uint2(5569, 95597)) {
@@ -48,7 +48,7 @@ float lcg_sample(inout uint state) {
     const uint multiplier = 1664525u;
     const uint increment = 1013904223u;
     state = multiplier * state + increment;
-    return float((state >> 8) & 0xffffff) / float(1 << 24);
+    return state / 4294967296.0f;
 }
 
 // Optimized Spatial Hashing for Collision Detection of Deformable Objects.
