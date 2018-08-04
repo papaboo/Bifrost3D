@@ -14,6 +14,12 @@
 namespace DX11Renderer {
 namespace SSAO {
 
+struct FilterConstants {
+    int pixel_offset;
+    int __padding;
+    int2 axis;
+};
+
 // ------------------------------------------------------------------------------------------------
 // Bilateral blur for SSAO.
 // ------------------------------------------------------------------------------------------------
@@ -23,11 +29,11 @@ BilateralBlur::BilateralBlur(ID3D11Device1& device, const std::wstring& shader_f
     OBlob vertex_shader_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "vs_5_0", "main_vs");
     THROW_DX11_ERROR(device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shader));
 
-    OBlob filter_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "ps_5_0", "BilateralBoxBlur::filter_ps");
+    OBlob filter_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "ps_5_0", "BilateralBlur::box_filter_ps");
     THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(filter_blob), nullptr, &m_filter_shader));
 
     for (int i = 0; i < MAX_PASSES; ++i) {
-        Constants constants = { i * 2 + 1.0f };
+        FilterConstants constants = { i * 2 + 1 };
         create_constant_buffer(device, constants, &m_constants[i]);
     }
 }
@@ -158,6 +164,7 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
         float2 g_buffer_viewport_size = { viewport.width + 2.0f * viewport.x, viewport.height + 2.0f * viewport.y };
         SsaoConstants constants;
         constants.settings = settings;
+        constants.settings.sample_count = std::min(constants.settings.sample_count, int(max_sample_count));
         constants.g_buffer_size = { float(g_buffer_size.x), float(g_buffer_size.y) };
         constants.recip_g_buffer_viewport_size = { 1.0f / g_buffer_viewport_size.x, 1.0f / g_buffer_viewport_size.y };
         constants.g_buffer_max_uv = { g_buffer_viewport_size.x / g_buffer_size.x, g_buffer_viewport_size.y / g_buffer_size.y };

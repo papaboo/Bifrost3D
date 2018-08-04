@@ -35,10 +35,6 @@ private:
     OVertexShader m_vertex_shader;
     OPixelShader m_filter_shader;
 
-    struct Constants {
-        float pixel_offset;
-        float3 _padding;
-    };
     OBuffer m_constants[MAX_PASSES];
 
     int m_width, m_height;
