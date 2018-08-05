@@ -64,17 +64,19 @@ Varyings main_vs(uint vertex_ID : SV_VertexID) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Bilateral box blur.
+// Bilateral blur.
 // ------------------------------------------------------------------------------------------------
 
-namespace BilateralBoxBlur {
+namespace BilateralBlur {
 
 Texture2D normal_tex : register(t0);
 Texture2D depth_tex : register(t1);
 Texture2D ao_tex : register(t2);
 
 cbuffer per_filter_constants : register(b2) {
-    float pixel_offset;
+    int pixel_offset;
+    int __padding;
+    int2 axis;
 }
 
 void sample_ao(int2 g_buffer_index, float3 normal, float plane_d, inout float summed_ao, inout float ao_weight) {
@@ -96,7 +98,7 @@ void sample_ao(int2 g_buffer_index, float3 normal, float plane_d, inout float su
     ao_weight += weight;
 }
 
-float4 filter_ps(Varyings input) : SV_TARGET {
+float4 box_filter_ps(Varyings input) : SV_TARGET {
     int2 g_buffer_index = input.position.xy - g_buffer_to_ao_index_offset;
     float3 view_normal = decode_ss_octahedral_normal(normal_tex[g_buffer_index].xy);
     float depth = depth_tex[g_buffer_index].r;
@@ -134,7 +136,43 @@ float4 filter_ps(Varyings input) : SV_TARGET {
     return float4((center_ao + border_ao) / (center_weight + border_weight), 0, 0, 0);
 }
 
-} // NS BilateralBoxBlur
+float4 axis_filter_ps(Varyings input) : SV_TARGET{
+    int2 g_buffer_index = input.position.xy - g_buffer_to_ao_index_offset;
+    float3 view_normal = decode_ss_octahedral_normal(normal_tex[g_buffer_index].xy);
+    float depth = depth_tex[g_buffer_index].r;
+
+    // No occlusion on the far plane.
+    if (depth == 1.0)
+        return float4(1, 0, 0, 0);
+
+    float3 view_position = perspective_position_from_depth(depth, input.projection_uv(), scene_vars.inverted_projection_matrix);
+    float plane_d = -dot(view_position, view_normal);
+
+    float center_ao = 0.0f;
+    float center_weight = 0.0f;
+    sample_ao(g_buffer_index, view_normal, plane_d, center_ao, center_weight); // TODO Can be inlined, just need to compute the weight, which should be pow2(exp(-0)) I guess.
+
+    float border_ao = 0.0f;
+    float border_weight = 0.0f;
+
+    for (int i = 1; i < pixel_offset; ++i)
+    {
+        // TODO gaussian/tent filter
+        sample_ao(g_buffer_index + i * axis, view_normal, plane_d, border_ao, border_weight);
+        sample_ao(g_buffer_index - i * axis, view_normal, plane_d, border_ao, border_weight);
+    }
+
+    // Ensure that we perform at least some filtering in areas with high frequency geometry.
+    if (border_weight < 2.0 * center_weight) {
+        float weight_scale = 2.0 * center_weight * rcp(border_weight);
+        border_ao *= weight_scale;
+        border_weight = 2.0 * center_weight;
+    }
+
+    return float4((center_ao + border_ao) / (center_weight + border_weight), 0, 0, 0);
+}
+
+} // NS BilateralBlur
 
   // ------------------------------------------------------------------------------------------------
 // Alchemy pixel shader.
@@ -208,18 +246,22 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     float3 border_view_position = view_position + float3(world_radius, 0, 0);
     float border_u = u_coord_from_view_position(border_view_position);
     float ss_radius = border_u - input.projection_uv().x;
+    // ss_radius = min(0.25, ss_radius);
 
     // Determine occlusion
     float occlusion = 0.0f;
     float used_sample_count = 0.0001f;
     for (int i = 0; i < sample_count; ++i) {
-        float2 uv_offset = mul(uv_offsets[i] * ss_radius, sample_pattern_rotation);
+        // float2 uv_offset = mul(uv_offsets[i] * ss_radius, sample_pattern_rotation);
+        float2 disc_sample = cosine_disk_sampling(RNG::sample02(i + 1, uint2(0,0)));
+        float2 uv_offset = mul(disc_sample * ss_radius, sample_pattern_rotation);
         float2 sample_uv = input.projection_uv() + uv_offset;
 
-        // Break if sample is outside g-buffer.
-        // TODO Resample somehow to avoid wasting samples.
+        // Resample if sample is outside g-buffer.
         if (sample_uv.x < 0.0 || sample_uv.x > 1.0 || sample_uv.y < 0.0 || sample_uv.y > 1.0)
             continue;
+        // if (sample_uv.x < 0.0 || sample_uv.x > 1.0) sample_uv.x = sample_uv.x < 0.0 ? frac(-sample_uv.x) : 1.0f - frac(sample_uv.x);
+        // if (sample_uv.y < 0.0 || sample_uv.y > 1.0) sample_uv.y = sample_uv.y < 0.0 ? frac(-sample_uv.y) : 1.0f - frac(sample_uv.y);
 
         float depth_i = depth_tex.SampleLevel(point_sampler, sample_uv * g_buffer_max_uv.x, 0).r;
         float3 view_position_i = perspective_position_from_depth(depth_i, sample_uv, scene_vars.inverted_projection_matrix);
