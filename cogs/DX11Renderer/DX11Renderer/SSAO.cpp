@@ -20,6 +20,22 @@ struct FilterConstants {
     int2 axis;
 };
 
+inline void create_box_filter_constants(ID3D11Device1& device, OBuffer* m_constants) {
+    FilterConstants constants = { 5 };
+    create_constant_buffer(device, constants, &m_constants[0]);
+    constants.pixel_offset = 3;
+    create_constant_buffer(device, constants, &m_constants[1]);
+    constants.pixel_offset = 1;
+    create_constant_buffer(device, constants, &m_constants[2]);
+}
+
+inline void create_axis_filter_constants(ID3D11Device1& device, OBuffer* m_constants) {
+    FilterConstants pass1_constants = { 9, 0, 0, 1 };
+    create_constant_buffer(device, pass1_constants, &m_constants[0]);
+    FilterConstants pass2_constants = { 9, 0, 1, 0 };
+    create_constant_buffer(device, pass2_constants, &m_constants[1]);
+}
+
 // ------------------------------------------------------------------------------------------------
 // Bilateral blur for SSAO.
 // ------------------------------------------------------------------------------------------------
@@ -29,13 +45,10 @@ BilateralBlur::BilateralBlur(ID3D11Device1& device, const std::wstring& shader_f
     OBlob vertex_shader_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "vs_5_0", "main_vs");
     THROW_DX11_ERROR(device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shader));
 
-    OBlob filter_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "ps_5_0", "BilateralBlur::box_filter_ps");
+    OBlob filter_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "ps_5_0", "BilateralBlur::axis_filter_ps");
     THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(filter_blob), nullptr, &m_filter_shader));
 
-    for (int i = 0; i < MAX_PASSES; ++i) {
-        FilterConstants constants = { i * 2 + 1 };
-        create_constant_buffer(device, constants, &m_constants[i]);
-    }
+    create_box_filter_constants(device, m_constants);
 }
 
 OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, int width, int height) {
@@ -64,7 +77,7 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
         context.PSSetShaderResources(0, 2, srvs);
         auto& srv = (i % 2) == 0 ? ao_SRV : m_intermediate_SRV;
         context.PSSetShaderResources(2, 1, &srv);
-        context.PSSetConstantBuffers(2, 1, &m_constants[MAX_PASSES - i - 1]);
+        context.PSSetConstantBuffers(2, 1, &m_constants[i]);
         context.Draw(3, 0);
     }
 
