@@ -98,7 +98,11 @@ void sample_ao(int2 g_buffer_index, float3 normal, float plane_d, inout float su
     ao_weight += weight;
 }
 
-float4 box_filter_ps(Varyings input) : SV_TARGET {
+interface IFilter {
+    void apply(int2 g_buffer_index, float3 view_normal, float plane_d, inout float summed_ao, inout float ao_weight);
+};
+
+float4 filter_input(Varyings input, IFilter filter) {
     int2 g_buffer_index = input.position.xy - g_buffer_to_ao_index_offset;
     float3 view_normal = decode_ss_octahedral_normal(normal_tex[g_buffer_index].xy);
     float depth = depth_tex[g_buffer_index].r;
@@ -116,15 +120,7 @@ float4 box_filter_ps(Varyings input) : SV_TARGET {
 
     float border_ao = 0.0f;
     float border_weight = 0.0f;
-
-    sample_ao(g_buffer_index + int2(-pixel_offset,  pixel_offset), view_normal, plane_d, border_ao, border_weight);
-    sample_ao(g_buffer_index + int2(            0,  pixel_offset), view_normal, plane_d, border_ao, border_weight);
-    sample_ao(g_buffer_index + int2( pixel_offset,  pixel_offset), view_normal, plane_d, border_ao, border_weight);
-    sample_ao(g_buffer_index + int2(-pixel_offset,             0), view_normal, plane_d, border_ao, border_weight);
-    sample_ao(g_buffer_index + int2( pixel_offset,             0), view_normal, plane_d, border_ao, border_weight);
-    sample_ao(g_buffer_index + int2(-pixel_offset, -pixel_offset), view_normal, plane_d, border_ao, border_weight);
-    sample_ao(g_buffer_index + int2(            0, -pixel_offset), view_normal, plane_d, border_ao, border_weight);
-    sample_ao(g_buffer_index + int2( pixel_offset, -pixel_offset), view_normal, plane_d, border_ao, border_weight);
+    filter.apply(g_buffer_index, view_normal, plane_d, border_ao, border_weight);
 
     // Ensure that we perform at least some filtering in areas with high frequency geometry.
     if (border_weight < 2.0 * center_weight) {
@@ -136,40 +132,37 @@ float4 box_filter_ps(Varyings input) : SV_TARGET {
     return float4((center_ao + border_ao) / (center_weight + border_weight), 0, 0, 0);
 }
 
-float4 cross_filter_ps(Varyings input) : SV_TARGET{
-    int2 g_buffer_index = input.position.xy - g_buffer_to_ao_index_offset;
-    float3 view_normal = decode_ss_octahedral_normal(normal_tex[g_buffer_index].xy);
-    float depth = depth_tex[g_buffer_index].r;
-
-    // No occlusion on the far plane.
-    if (depth == 1.0)
-        return float4(1, 0, 0, 0);
-
-    float3 view_position = perspective_position_from_depth(depth, input.projection_uv(), scene_vars.inverted_projection_matrix);
-    float plane_d = -dot(view_position, view_normal);
-
-    float center_ao = 0.0f;
-    float center_weight = 0.0f;
-    sample_ao(g_buffer_index, view_normal, plane_d, center_ao, center_weight); // TODO Can be inlined, just need to compute the weight, which should be pow2(exp(-0)) I guess.
-
-    float border_ao = 0.0f;
-    float border_weight = 0.0f;
-
-    for (int i = 1; i < pixel_offset; ++i)
-    {
-        // TODO gaussian/tent filter
-        sample_ao(g_buffer_index + i * axis, view_normal, plane_d, border_ao, border_weight);
-        sample_ao(g_buffer_index - i * axis, view_normal, plane_d, border_ao, border_weight);
+class BoxFilter : IFilter {
+    void apply(int2 g_buffer_index, float3 view_normal, float plane_d, inout float summed_ao, inout float ao_weight) {
+        sample_ao(g_buffer_index + int2(-pixel_offset, pixel_offset), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(0, pixel_offset), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(pixel_offset, pixel_offset), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(-pixel_offset, 0), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(pixel_offset, 0), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(-pixel_offset, -pixel_offset), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(0, -pixel_offset), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(pixel_offset, -pixel_offset), view_normal, plane_d, summed_ao, ao_weight);
     }
+};
 
-    // Ensure that we perform at least some filtering in areas with high frequency geometry.
-    if (border_weight < 2.0 * center_weight) {
-        float weight_scale = 2.0 * center_weight * rcp(border_weight);
-        border_ao *= weight_scale;
-        border_weight = 2.0 * center_weight;
+float4 box_filter_ps(Varyings input) : SV_TARGET {
+    BoxFilter filter;
+    return filter_input(input, filter);
+}
+
+class CrossFilter : IFilter {
+    void apply(int2 g_buffer_index, float3 view_normal, float plane_d, inout float summed_ao, inout float ao_weight) {
+        for (int i = 1; i < pixel_offset; ++i) {
+            // TODO gaussian/tent filter
+            sample_ao(g_buffer_index + i * axis, view_normal, plane_d, summed_ao, ao_weight);
+            sample_ao(g_buffer_index - i * axis, view_normal, plane_d, summed_ao, ao_weight);
+        }
     }
+};
 
-    return float4((center_ao + border_ao) / (center_weight + border_weight), 0, 0, 0);
+float4 cross_filter_ps(Varyings input) : SV_TARGET {
+    CrossFilter filter;
+    return filter_input(input, filter);
 }
 
 } // NS BilateralBlur
