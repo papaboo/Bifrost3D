@@ -45,6 +45,7 @@ BilateralBlur::BilateralBlur(ID3D11Device1& device, const std::wstring& shader_f
         create_constant_buffer(device, sizeof(FilterConstants), &m_constants[0]);
         create_constant_buffer(device, sizeof(FilterConstants), &m_constants[1]);
     } else {
+        m_bandwidth = 9;
         OBlob filter_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "ps_5_0", "BilateralBlur::box_filter_ps");
         THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(filter_blob), nullptr, &m_filter_shader));
         create_box_filter_constants(device, m_constants);
@@ -153,7 +154,7 @@ AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_pa
 }
 
 int2 AlchemyAO::compute_g_buffer_to_ao_index_offset(Cogwheel::Math::Recti viewport) const {
-    return { margin() - viewport.x, margin() - viewport.y };
+    return { get_margin() - viewport.x, get_margin() - viewport.y };
 }
 
 void AlchemyAO::conditional_buffer_resize(ID3D11DeviceContext1& context, int ssao_width, int ssao_height) {
@@ -178,8 +179,8 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
     D3D11_VIEWPORT previous_viewport;
     context.RSGetViewports(&previous_viewport_count, &previous_viewport);
 
-    int ssao_width = viewport.width + 2 * margin();
-    int ssao_height = viewport.height + 2 * margin();
+    int ssao_width = viewport.width + 2 * get_margin();
+    int ssao_height = viewport.height + 2 * get_margin();
 
     conditional_buffer_resize(context, ssao_width, ssao_height);
 
@@ -236,8 +237,8 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
 }
 
 OShaderResourceView& AlchemyAO::apply_none(ID3D11DeviceContext1& context, Cogwheel::Math::Recti viewport) {
-    int ssao_width = viewport.width + 2 * margin();
-    int ssao_height = viewport.height + 2 * margin();
+    int ssao_width = viewport.width + 2 * get_margin();
+    int ssao_height = viewport.height + 2 * get_margin();
 
     conditional_buffer_resize(context, ssao_width, ssao_height);
 

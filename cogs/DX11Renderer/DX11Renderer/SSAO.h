@@ -21,7 +21,6 @@ public:
     enum class FilterType { Cross, Box };
 
     static const int MAX_PASSES = 3;
-    static const int MARGIN = 9;
 
     BilateralBlur() = default;
     BilateralBlur(BilateralBlur&& other) = default;
@@ -30,6 +29,8 @@ public:
 
     BilateralBlur& operator=(BilateralBlur&& rhs) = default;
     BilateralBlur& operator=(BilateralBlur& rhs) = delete;
+
+    inline int get_bandwidth() const { return m_bandwidth; }
 
     OShaderResourceView& apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, int width, int height, int bandwidth);
 
@@ -69,11 +70,11 @@ public:
 
     OShaderResourceView& apply_none(ID3D11DeviceContext1& context, Cogwheel::Math::Recti viewport);
 
-    Cogwheel::Math::Recti get_ssao_viewport() const { return Cogwheel::Math::Recti(BilateralBlur::MARGIN, BilateralBlur::MARGIN, m_width, m_height); }
+    Cogwheel::Math::Recti get_ssao_viewport() const { return Cogwheel::Math::Recti(get_margin(), get_margin(), m_width, m_height); }
 
 private:
     void conditional_buffer_resize(ID3D11DeviceContext1& context, int ssao_width, int ssao_height);
-    inline int margin() const { return m_filter.MARGIN; }
+    inline int get_margin() const { return m_filter.get_bandwidth(); }
 
     OBuffer m_constants;
     OBuffer m_samples;
