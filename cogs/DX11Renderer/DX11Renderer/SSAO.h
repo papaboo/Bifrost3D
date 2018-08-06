@@ -18,13 +18,15 @@ namespace SSAO {
 
 class BilateralBlur {
 public:
+    enum class FilterType { Cross, Box };
+
     static const int MAX_PASSES = 3;
     static const int MARGIN = 9;
 
     BilateralBlur() = default;
     BilateralBlur(BilateralBlur&& other) = default;
     BilateralBlur(BilateralBlur& other) = delete;
-    BilateralBlur(ID3D11Device1& device, const std::wstring& shader_folder_path);
+    BilateralBlur(ID3D11Device1& device, const std::wstring& shader_folder_path, FilterType type);
 
     BilateralBlur& operator=(BilateralBlur&& rhs) = default;
     BilateralBlur& operator=(BilateralBlur& rhs) = delete;
@@ -32,6 +34,8 @@ public:
     OShaderResourceView& apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, int width, int height);
 
 private:
+    FilterType m_type;
+
     OVertexShader m_vertex_shader;
     OPixelShader m_filter_shader;
 

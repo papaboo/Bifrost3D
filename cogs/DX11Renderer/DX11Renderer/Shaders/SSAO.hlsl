@@ -136,7 +136,7 @@ float4 box_filter_ps(Varyings input) : SV_TARGET {
     return float4((center_ao + border_ao) / (center_weight + border_weight), 0, 0, 0);
 }
 
-float4 axis_filter_ps(Varyings input) : SV_TARGET{
+float4 cross_filter_ps(Varyings input) : SV_TARGET{
     int2 g_buffer_index = input.position.xy - g_buffer_to_ao_index_offset;
     float3 view_normal = decode_ss_octahedral_normal(normal_tex[g_buffer_index].xy);
     float depth = depth_tex[g_buffer_index].r;
