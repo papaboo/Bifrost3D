@@ -20,20 +20,13 @@ struct FilterConstants {
     int2 axis;
 };
 
-inline void create_box_filter_constants(ID3D11Device1& device, OBuffer* m_constants) {
-    FilterConstants constants = { 5 };
-    create_constant_buffer(device, constants, &m_constants[0]);
-    constants.pixel_offset = 3;
-    create_constant_buffer(device, constants, &m_constants[1]);
-    constants.pixel_offset = 1;
-    create_constant_buffer(device, constants, &m_constants[2]);
-}
-
-inline void create_cross_filter_constants(ID3D11Device1& device, OBuffer* m_constants) {
-    FilterConstants pass1_constants = { 9, 0, 0, 1 };
-    create_constant_buffer(device, pass1_constants, &m_constants[0]);
-    FilterConstants pass2_constants = { 9, 0, 1, 0 };
-    create_constant_buffer(device, pass2_constants, &m_constants[1]);
+inline void create_box_filter_constants(ID3D11Device1& device, OBuffer* constants) {
+    FilterConstants host_constants = { 5 };
+    create_constant_buffer(device, constants, &constants[0]);
+    host_constants.pixel_offset = 3;
+    create_constant_buffer(device, constants, &constants[1]);
+    host_constants.pixel_offset = 1;
+    create_constant_buffer(device, constants, &constants[2]);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -46,9 +39,11 @@ BilateralBlur::BilateralBlur(ID3D11Device1& device, const std::wstring& shader_f
     THROW_DX11_ERROR(device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shader));
 
     if (type == FilterType::Cross) {
+        m_bandwidth = 0;
         OBlob filter_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "ps_5_0", "BilateralBlur::cross_filter_ps");
         THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(filter_blob), nullptr, &m_filter_shader));
-        create_cross_filter_constants(device, m_constants);
+        create_constant_buffer(device, sizeof(FilterConstants), &m_constants[0]);
+        create_constant_buffer(device, sizeof(FilterConstants), &m_constants[1]);
     } else {
         OBlob filter_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "ps_5_0", "BilateralBlur::box_filter_ps");
         THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(filter_blob), nullptr, &m_filter_shader));
@@ -56,7 +51,7 @@ BilateralBlur::BilateralBlur(ID3D11Device1& device, const std::wstring& shader_f
     }
 }
 
-OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, int width, int height) {
+OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, int width, int height, int bandwidth) {
     if (m_width < width || m_height < height) {
         m_width = std::max(m_width, width);
         m_height = std::max(m_height, height);
@@ -67,6 +62,14 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
         // Resize backbuffer
         ODevice1 device = get_device1(context);
         create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, m_width, m_height, &m_intermediate_SRV, nullptr, &m_intermediate_RTV);
+    }
+
+    if (m_bandwidth != bandwidth) {
+        m_bandwidth = bandwidth;
+        FilterConstants pass1_constants = { bandwidth, 0, 0, 1 };
+        context.UpdateSubresource(m_constants[0], 0u, nullptr, &pass1_constants, sizeof(FilterConstants), 0u);
+        FilterConstants pass2_constants = { bandwidth, 0, 1, 0 };
+        context.UpdateSubresource(m_constants[1], 0u, nullptr, &pass2_constants, sizeof(FilterConstants), 0u);
     }
 
     // Need to grab the normal and depth buffers before OMSetRenderTarget clears them.
@@ -218,8 +221,8 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
     context.Draw(3, 0);
 
     // Filter
-    OShaderResourceView& ao_SRV = settings.filtering_enabled ?
-        m_filter.apply(context, m_SSAO_RTV, m_SSAO_SRV, ssao_width, ssao_height) :
+    OShaderResourceView& ao_SRV = settings.filtering_bandwidth > 0 ?
+        m_filter.apply(context, m_SSAO_RTV, m_SSAO_SRV, ssao_width, ssao_height, settings.filtering_bandwidth) :
         m_SSAO_SRV;
 
     // Unbind SSAO_RTV

@@ -31,10 +31,11 @@ public:
     BilateralBlur& operator=(BilateralBlur&& rhs) = default;
     BilateralBlur& operator=(BilateralBlur& rhs) = delete;
 
-    OShaderResourceView& apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, int width, int height);
+    OShaderResourceView& apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, int width, int height, int bandwidth);
 
 private:
     FilterType m_type;
+    int m_bandwidth;
 
     OVertexShader m_vertex_shader;
     OPixelShader m_filter_shader;

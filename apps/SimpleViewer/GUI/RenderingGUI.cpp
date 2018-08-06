@@ -80,9 +80,9 @@ void RenderingGUI::layout_frame() {
                     has_changed |= ImGui::InputFloat("Intensity", &settings.ssao.settings.intensity_scale, 0.001f, 0.01f, "%.3f");
                     has_changed |= ImGui::InputFloat("Falloff", &settings.ssao.settings.falloff, 0.001f, 0.01f, "%.3f");
                     has_changed |= ImGui::InputInt("Sample count", &settings.ssao.settings.sample_count, 1, 5);
-                    bool filter_enabled = settings.ssao.settings.filtering_enabled ? true : false;
-                    has_changed |= ImGui::Checkbox("Enable filter", &filter_enabled);
-                    settings.ssao.settings.filtering_enabled = filter_enabled;
+                    settings.ssao.settings.sample_count = max(0, settings.ssao.settings.sample_count);
+                    has_changed |= ImGui::InputInt("Filter bandwidth", &settings.ssao.settings.filtering_bandwidth, 1, 5);
+                    settings.ssao.settings.filtering_bandwidth = max(0, settings.ssao.settings.filtering_bandwidth);
                     has_changed |= ImGui::InputFloat("Normal std dev", &settings.ssao.settings.normal_std_dev, 0.0f, 0.0f);
                     has_changed |= ImGui::InputFloat("Plane std dev", &settings.ssao.settings.plane_std_dev, 0.0f, 0.0f);
                     ImGui::TreePop();
