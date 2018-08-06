@@ -152,7 +152,7 @@ float4 box_filter_ps(Varyings input) : SV_TARGET {
 
 class CrossFilter : IFilter {
     void apply(int2 g_buffer_index, float3 view_normal, float plane_d, inout float summed_ao, inout float ao_weight) {
-        for (int i = 1; i < pixel_offset; ++i) {
+        for (int i = 1; i <= pixel_offset; ++i) {
             // TODO gaussian/tent filter
             sample_ao(g_buffer_index + i * axis, view_normal, plane_d, summed_ao, ao_weight);
             sample_ao(g_buffer_index - i * axis, view_normal, plane_d, summed_ao, ao_weight);
