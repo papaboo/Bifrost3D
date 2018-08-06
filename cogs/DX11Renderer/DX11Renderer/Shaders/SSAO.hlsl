@@ -239,7 +239,11 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     float3 border_view_position = view_position + float3(world_radius, 0, 0);
     float border_u = u_coord_from_view_position(border_view_position);
     float ss_radius = border_u - input.projection_uv().x;
-    // ss_radius = min(0.25, ss_radius);
+    float clamped_ss_radius = min(0.25, ss_radius);
+    float recip_radius_scale = clamped_ss_radius / ss_radius;
+
+    // Scale the view normal results in a scaled occlusion, which in turn accounts for the intensity change that comes from scaling the screen radius.
+    float3 scaled_view_normal = view_normal * recip_radius_scale;
 
     // Determine occlusion
     float occlusion = 0.0f;
@@ -251,17 +255,15 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
         float2 sample_uv = input.projection_uv() + uv_offset;
 
         // Resample if sample is outside g-buffer.
-        if (sample_uv.x < 0.0 || sample_uv.x > 1.0 || sample_uv.y < 0.0 || sample_uv.y > 1.0)
-            continue;
-        // if (sample_uv.x < 0.0 || sample_uv.x > 1.0) sample_uv.x = sample_uv.x < 0.0 ? frac(-sample_uv.x) : 1.0f - frac(sample_uv.x);
-        // if (sample_uv.y < 0.0 || sample_uv.y > 1.0) sample_uv.y = sample_uv.y < 0.0 ? frac(-sample_uv.y) : 1.0f - frac(sample_uv.y);
+        if (sample_uv.x < 0.0 || sample_uv.x > 1.0) sample_uv.x = sample_uv.x < 0.0 ? frac(-sample_uv.x) : 1.0f - frac(sample_uv.x);
+        if (sample_uv.y < 0.0 || sample_uv.y > 1.0) sample_uv.y = sample_uv.y < 0.0 ? frac(-sample_uv.y) : 1.0f - frac(sample_uv.y);
 
         float depth_i = depth_tex.SampleLevel(point_sampler, sample_uv * g_buffer_max_uv.x, 0).r;
         float3 view_position_i = perspective_position_from_depth(depth_i, sample_uv, scene_vars.inverted_projection_matrix);
         float3 v_i = view_position_i - view_position;
 
         // Equation 10
-        occlusion += max(0, dot(v_i, view_normal)) / (dot(v_i, v_i) + 0.0001f);
+        occlusion += max(0, dot(v_i, scaled_view_normal)) / (dot(v_i, v_i) + 0.0001f);
         ++used_sample_count;
     }
 
