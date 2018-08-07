@@ -31,8 +31,11 @@ cbuffer constants : register(b0) {
 };
 
 cbuffer uv_offset_constants : register(b1) {
-    float2 uv_offsets[256];
+    float4 packed_uv_offsets[128];
+
 }
+
+static float2 uv_offsets[256] = ((float2[256])packed_uv_offsets);
 
 cbuffer scene_variables : register(b13) {
     SceneVariables scene_vars;
@@ -249,9 +252,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     float occlusion = 0.0f;
     float used_sample_count = 0.0001f;
     for (int i = 0; i < sample_count; ++i) {
-        // float2 uv_offset = mul(uv_offsets[i] * ss_radius, sample_pattern_rotation);
-        float2 disc_sample = cosine_disk_sampling(RNG::sample02(i + 1, uint2(0,0)));
-        float2 uv_offset = mul(disc_sample * ss_radius, sample_pattern_rotation);
+        float2 uv_offset = mul(uv_offsets[i] * ss_radius, sample_pattern_rotation);
         float2 sample_uv = input.projection_uv() + uv_offset;
 
         // Resample if sample is outside g-buffer.
