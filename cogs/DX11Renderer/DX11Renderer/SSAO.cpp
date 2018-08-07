@@ -200,8 +200,8 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
     }
 
     ID3D11Buffer* constant_buffers[] = { m_constants, m_samples };
-    context.VSSetConstantBuffers(1, 2, constant_buffers);
-    context.PSSetConstantBuffers(1, 2, constant_buffers);
+    context.VSSetConstantBuffers(0, 1, constant_buffers);
+    context.PSSetConstantBuffers(0, 2, constant_buffers);
 
     // Setup state.
     D3D11_VIEWPORT ao_viewport;

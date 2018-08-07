@@ -13,7 +13,7 @@
 // Scene constants.
 // ------------------------------------------------------------------------------------------------
 
-cbuffer constants : register(b1) {
+cbuffer constants : register(b0) {
     float world_radius;
     float bias;
     float intensity_scale;
@@ -30,7 +30,7 @@ cbuffer constants : register(b1) {
     float2 __padding;
 };
 
-cbuffer uv_offset_constants : register(b2) {
+cbuffer uv_offset_constants : register(b1) {
     float2 uv_offsets[256];
 }
 
