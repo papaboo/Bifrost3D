@@ -54,12 +54,12 @@ GTEST_TEST(Math_Utils, compute_ulps) {
 // Gaussian bilinear samples test.
 // ------------------------------------------------------------------------------------------------
 GTEST_TEST(Math_Utils, bilinear_gaussian_samples) {
-    static auto gaussian_filter = [](float* value, float std_dev, int bandwidth) -> float {
+    static auto gaussian_filter = [](float* value, float std_dev, int support) -> float {
         float double_variance = 2.0f * std_dev * std_dev;
 
         float sum = 0.0f;
         float total_weight = 0.0f;
-        for (int i = -bandwidth; i <= bandwidth; ++i) {
+        for (int i = -support; i <= support; ++i) {
             float weight = exp(-(i * i) / double_variance);
 
             sum += *(value + i) * weight;
@@ -87,8 +87,8 @@ GTEST_TEST(Math_Utils, bilinear_gaussian_samples) {
                          1, 1, 1, 1, 1, 1, 1, 
                          0, 0, 0, 0, 0, 0, 0 };
 
-    const int bandwidth = 4;
-    const int sample_count = (bandwidth + 1) / 2;
+    const int support = 4;
+    const int sample_count = (support + 1) / 2;
     Tap gaussian_samples[sample_count];
     for (float std_dev : {0.1f, 0.5f, 1.0f}) {
 
@@ -102,7 +102,7 @@ GTEST_TEST(Math_Utils, bilinear_gaussian_samples) {
 
         // Test that they filter similarly to a gaussian filter.
         for (int i : {5, 7, 10}) {
-            float gaussian_filtered_value = gaussian_filter(values + i, std_dev, bandwidth);
+            float gaussian_filtered_value = gaussian_filter(values + i, std_dev, support);
             float sampled_filtered_value = sampled_filter(values + i, gaussian_samples, sample_count);
             EXPECT_FLOAT_EQ_PCT(gaussian_filtered_value, sampled_filtered_value, 0.0025f);
         }

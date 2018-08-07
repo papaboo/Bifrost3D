@@ -27,13 +27,13 @@ inline void gaussian(Cogwheel::Assets::Images::UID image_ID, float std_dev, Cogw
 
     int pixel_count = size.x * size.y * size.z;
 
-    int bandwidth = int(std_dev * 4.0f + 0.5f);
+    int support = int(std_dev * 4.0f + 0.5f);
     float double_variance = 2.0f * std_dev * std_dev;
 
     auto filter = [=](RGB* pixels, int target_index, int stride, int min_index, int max_index) -> RGB {
         RGB summed_color = RGB::black();
         float total_weight = 0.0f;
-        for (int i = -bandwidth; i <= bandwidth; ++i) {
+        for (int i = -support; i <= support; ++i) {
             float weight = exp(-(i * i) / double_variance);
 
             int index = target_index + stride * i;

@@ -35,7 +35,7 @@ GaussianBloom::GaussianBloom(ID3D11Device1& device, const std::wstring& shader_f
 }
 
 OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, 
-                                           unsigned int image_width, unsigned int image_height, int bandwidth) {
+                                           unsigned int image_width, unsigned int image_height, int support) {
 #if CHECK_IMPLICIT_STATE
     // Check that the constants and sampler are bound.
     OBuffer bound_constants;
@@ -45,7 +45,7 @@ OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11
 
     auto performance_marker = PerformanceMarker(context, L"Gaussian bloom");
 
-    int sample_count = ceil_divide(bandwidth, 2);
+    int sample_count = ceil_divide(support, 2);
     if (sample_count > m_gaussian_samples.capacity) {
         m_gaussian_samples.buffer.release();
         m_gaussian_samples.SRV.release();
@@ -58,7 +58,7 @@ OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11
         m_gaussian_samples.std_dev = std::numeric_limits<float>::infinity();
     }
 
-    float std_dev = bandwidth * 0.25f;
+    float std_dev = support * 0.25f;
     if (m_gaussian_samples.std_dev != std_dev) {
         sample_count = m_gaussian_samples.capacity;
         Tap* taps = new Tap[sample_count];
@@ -432,7 +432,7 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
             constants.eye_adaptation_brightness = constants.eye_adaptation_darkness = std::numeric_limits<float>::infinity();
 
         constants.bloom_threshold = settings.bloom.threshold;
-        constants.bloom_bandwidth = int(settings.bloom.bandwidth * input_viewport.height);
+        constants.bloom_support = int(settings.bloom.support * input_viewport.height);
 
         constants.delta_time = delta_time;
 
@@ -473,8 +473,8 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Cogwheel::Math::Camer
     // Bloom filter.
     ID3D11ShaderResourceView* bloom_SRV = nullptr;
     if (settings.bloom.threshold < INFINITY) {
-        int bandwidth = int(settings.bloom.bandwidth * input_viewport.height);
-        bloom_SRV = m_bloom.filter(context, m_constant_buffer, pixel_SRV, input_viewport.width, input_viewport.height, bandwidth).get();
+        int support = int(settings.bloom.support * input_viewport.height);
+        bloom_SRV = m_bloom.filter(context, m_constant_buffer, pixel_SRV, input_viewport.width, input_viewport.height, support).get();
     }
 
     { // Tonemap and render into backbuffer.

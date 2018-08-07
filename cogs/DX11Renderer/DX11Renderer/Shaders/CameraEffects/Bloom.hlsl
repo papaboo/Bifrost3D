@@ -29,7 +29,7 @@ void sampled_gaussian_horizontal_filter(uint3 global_thread_ID : SV_DispatchThre
 
     float2 uv = (global_thread_ID.xy + input_viewport.xy + 0.5) / float2(width, height);
 
-    int sample_count = bloom_bandwidth / 2;
+    int sample_count = bloom_support / 2;
 
     // NOTE Since the input buffer can be larger than the output buffer we should ideally clamp the uvs to the edge of the output buffer.
     // But, for now the input buffer pixels outside the viewport is either less than bloom_threshold or has proper pixel values, so we let the sampler 'go ham'.
@@ -53,7 +53,7 @@ void sampled_gaussian_vertical_filter(uint3 global_thread_ID : SV_DispatchThread
 
     float2 uv = (global_thread_ID.xy + 0.5) / float2(width, height);
 
-    int sample_count = bloom_bandwidth / 2;
+    int sample_count = bloom_support / 2;
 
     float3 sum = 0.0;
     for (int y = 0; y < sample_count; ++y) {

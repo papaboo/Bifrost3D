@@ -120,7 +120,7 @@ float ssim(Image reference_image, Image target_image) {
 // Structural similarity index (SSIM).
 // http://www.cns.nyu.edu/pub/lcv/wang03-reprint.pdf
 // ------------------------------------------------------------------------------------------------
-float mssim(Image reference_image, Image target_image, int bandwidth, Image diff_image = Image()) {
+float mssim(Image reference_image, Image target_image, int support, Image diff_image = Image()) {
 
     assert(reference_image.get_width() > 0u && reference_image.get_height() > 0u);
     assert(reference_image.get_width() == target_image.get_width() && reference_image.get_height() == target_image.get_height());
@@ -137,21 +137,21 @@ float mssim(Image reference_image, Image target_image, int bandwidth, Image diff
             target[x + y * width] = target_image.get_pixel(Vector2ui(x, y)).rgb();
         }
 
-    // Loop over all pixels and compute their SSIM values inside the kernel bandwidth.
+    // Loop over all pixels and compute their SSIM values inside the kernel's support area.
     double mssim = 0.0;
     for (int i = 0; i < int(width * height); ++i) {
         int xx = i % width, yy = i / width;
 
         // Kernel ranges.
-        int y_start = max(yy - bandwidth, 0);
-        int y_end = min(yy + bandwidth, int(height));
-        int x_start = max(xx - bandwidth, 0);
-        int x_end = min(xx + bandwidth, int(width));
+        int y_start = max(yy - support, 0);
+        int y_end = min(yy + support, int(height));
+        int x_start = max(xx - support, 0);
+        int x_end = min(xx + support, int(width));
 
         Statistics image_stats = {};
         for (int y = y_start; y < y_end; ++y)
             for (int x = x_start; x < x_end; ++x) {
-                float distance_squared = magnitude_squared(Vector2f(float(x - xx), float(y - yy)) / float(bandwidth));
+                float distance_squared = magnitude_squared(Vector2f(float(x - xx), float(y - yy)) / float(support));
                 float weight_variance = 1.5f * 1.5f;
                 float weight = exp(distance_squared / (2.0f * weight_variance)) / sqrtf(2.0f * PI<float>() * weight_variance);
                 image_stats.add(reference[x + y * width], target[x + y * width], weight);

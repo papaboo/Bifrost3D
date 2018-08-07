@@ -125,7 +125,7 @@ struct SsaoSettings {
     float normal_std_dev = 0.1f;
     float plane_std_dev = 0.05f;
     int sample_count = 8;
-    int filtering_bandwidth = 8;
+    int filter_support = 8;
 };
 
 //-------------------------------------------------------------------------------------------------

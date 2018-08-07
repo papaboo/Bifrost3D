@@ -27,7 +27,7 @@ cbuffer constants : register(b0) {
     float eye_adaptation_darkness;
 
     float bloom_threshold;
-    int bloom_bandwidth;
+    int bloom_support;
 
     float delta_time;
 }

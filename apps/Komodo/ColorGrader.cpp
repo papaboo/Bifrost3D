@@ -47,7 +47,7 @@ struct ColorGrader::Implementation final {
     struct {
         bool enabled = false;
         float threshold = 1.5f;
-        float bandwidth = 0.05f;
+        float support = 0.05f;
     } m_bloom;
 
     struct {
@@ -310,7 +310,7 @@ struct ColorGrader::Implementation final {
         { // Bloom
             TwAddVarCB(bar, "Enabled", TW_TYPE_BOOLCPP, WRAP_ANT_PROPERTY(m_bloom.enabled, bool), this, "group=Bloom");
             TwAddVarCB(bar, "Threshold", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_bloom.threshold, float), this, "step=0.1 group=Bloom");
-            TwAddVarCB(bar, "Bandwidth", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_bloom.bandwidth, float), this, "step=0.01 group=Bloom");
+            TwAddVarCB(bar, "Support", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_bloom.support, float), this, "step=0.01 group=Bloom");
         }
 
         { // Tonemapping
@@ -540,8 +540,8 @@ struct ColorGrader::Implementation final {
 
             if (!bloom_image.exists())
                 bloom_image = Images::create2D("high intensity", PixelFormat::RGB_Float, 1.0f, Vector2ui(width, height));
-            float pixel_bandwidth = image.get_height() * max(0.001f, m_bloom.bandwidth);
-            float std_dev = pixel_bandwidth / 4.0f;
+            float pixel_support = image.get_height() * max(0.001f, m_bloom.support);
+            float std_dev = pixel_support / 4.0f;
             Blur::gaussian(high_intensity_image.get_ID(), std_dev, bloom_image.get_ID());
         }
 

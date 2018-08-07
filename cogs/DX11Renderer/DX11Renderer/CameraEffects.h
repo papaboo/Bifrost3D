@@ -30,7 +30,7 @@ public:
     GaussianBloom& operator=(GaussianBloom&& rhs) = default;
 
     OShaderResourceView& filter(ID3D11DeviceContext1& context, ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, 
-                                unsigned int image_width, unsigned int image_height, int bandwidth);
+                                unsigned int image_width, unsigned int image_height, int support);
 
 private:
     GaussianBloom(GaussianBloom& other) = delete;
@@ -185,7 +185,7 @@ public:
         float eye_adaptation_darkness;
 
         float bloom_threshold;
-        int bloom_bandwidth;
+        int bloom_support;
 
         float delta_time;
         float2 _padding;

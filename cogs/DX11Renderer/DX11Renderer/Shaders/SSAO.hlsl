@@ -74,7 +74,7 @@ Texture2D depth_tex : register(t1);
 Texture2D ao_tex : register(t2);
 
 cbuffer per_filter_constants : register(b2) {
-    int pixel_offset;
+    int filter_support;
     int __padding;
     int2 axis;
 }
@@ -134,14 +134,14 @@ float4 filter_input(Varyings input, IFilter filter) {
 
 class BoxFilter : IFilter {
     void apply(int2 g_buffer_index, float3 view_normal, float plane_d, inout float summed_ao, inout float ao_weight) {
-        sample_ao(g_buffer_index + int2(-pixel_offset, pixel_offset), view_normal, plane_d, summed_ao, ao_weight);
-        sample_ao(g_buffer_index + int2(0, pixel_offset), view_normal, plane_d, summed_ao, ao_weight);
-        sample_ao(g_buffer_index + int2(pixel_offset, pixel_offset), view_normal, plane_d, summed_ao, ao_weight);
-        sample_ao(g_buffer_index + int2(-pixel_offset, 0), view_normal, plane_d, summed_ao, ao_weight);
-        sample_ao(g_buffer_index + int2(pixel_offset, 0), view_normal, plane_d, summed_ao, ao_weight);
-        sample_ao(g_buffer_index + int2(-pixel_offset, -pixel_offset), view_normal, plane_d, summed_ao, ao_weight);
-        sample_ao(g_buffer_index + int2(0, -pixel_offset), view_normal, plane_d, summed_ao, ao_weight);
-        sample_ao(g_buffer_index + int2(pixel_offset, -pixel_offset), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(-filter_support,  filter_support), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(              0,  filter_support), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2( filter_support,  filter_support), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(-filter_support,               0), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2( filter_support,               0), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(-filter_support, -filter_support), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(              0, -filter_support), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2( filter_support, -filter_support), view_normal, plane_d, summed_ao, ao_weight);
     }
 };
 
@@ -152,7 +152,7 @@ float4 box_filter_ps(Varyings input) : SV_TARGET {
 
 class CrossFilter : IFilter {
     void apply(int2 g_buffer_index, float3 view_normal, float plane_d, inout float summed_ao, inout float ao_weight) {
-        for (int i = 1; i <= pixel_offset; ++i) {
+        for (int i = 1; i <= filter_support; ++i) {
             // TODO gaussian/tent filter
             sample_ao(g_buffer_index + i * axis, view_normal, plane_d, summed_ao, ao_weight);
             sample_ao(g_buffer_index - i * axis, view_normal, plane_d, summed_ao, ao_weight);

@@ -30,13 +30,13 @@ public:
     BilateralBlur& operator=(BilateralBlur&& rhs) = default;
     BilateralBlur& operator=(BilateralBlur& rhs) = delete;
 
-    inline int get_bandwidth() const { return m_bandwidth; }
+    inline int get_support() const { return m_support; }
 
-    OShaderResourceView& apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, int width, int height, int bandwidth);
+    OShaderResourceView& apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, int width, int height, int support);
 
 private:
     FilterType m_type;
-    int m_bandwidth;
+    int m_support;
 
     OVertexShader m_vertex_shader;
     OPixelShader m_filter_shader;
@@ -74,7 +74,7 @@ public:
 
 private:
     void conditional_buffer_resize(ID3D11DeviceContext1& context, int ssao_width, int ssao_height);
-    inline int get_margin() const { return m_filter.get_bandwidth(); }
+    inline int get_margin() const { return m_filter.get_support(); }
 
     OBuffer m_constants;
     OBuffer m_samples;

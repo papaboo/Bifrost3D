@@ -35,8 +35,8 @@ struct Settings final {
 
     struct {
         float threshold;
-        float bandwidth; // Normalized bandwidth relative to the height of the image.
-        float std_dev(int height) { return (bandwidth * height) * 0.25f; }
+        float support; // Normalized support relative to the height of the image.
+        float std_dev(int height) { return (support * height) * 0.25f; }
         float variance(int height) { return std_dev(height) * std_dev(height); }
     } bloom;
 
@@ -57,7 +57,7 @@ struct Settings final {
         res.exposure.eye_adaptation_darkness = 1.0f;
 
         res.bloom.threshold = INFINITY;
-        res.bloom.bandwidth = 0.05f;
+        res.bloom.support = 0.05f;
 
         res.tonemapping.mode = TonemappingMode::Uncharted2;
 
