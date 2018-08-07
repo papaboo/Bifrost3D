@@ -33,11 +33,6 @@ namespace OptiXRenderer {
 // contain invalid values, e.g. invalud UID and nullptrs.
 // For environment monte carlo sampling see PBRT v2 chapter 14.6.5.
 // Future work:
-// * Structuring the CDF as 'breath first' should improve the cache hit rate of the first couple 
-//   of lookups when we do binary search or? Profile!
-// * Create an implicit kd-tree'ish structure instead of the current CDFs. Then instead of using a 
-//   single float to update lower or higher, store four children pr node, so we can load 
-//   a uint4 during traversal.This should make better use of the bandwidth.
 // * Sample the environment based on cos_theta between the environment sample direction and 
 //   the normal to sample more optimally compared to the total contribution of the environment. 
 //-------------------------------------------------------------------------------------------------
