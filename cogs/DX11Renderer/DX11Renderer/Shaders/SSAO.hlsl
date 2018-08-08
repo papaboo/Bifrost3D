@@ -16,7 +16,7 @@
 cbuffer constants : register(b0) {
     float world_radius;
     float bias;
-    float intensity_scale;
+    float intensity_over_sample_count; // Precomputed as (2 * intensity_scale / sample_count)
     float falloff;
     float recip_double_normal_variance;
     float recip_double_plane_variance;
@@ -132,7 +132,7 @@ float4 filter_input(Varyings input, IFilter filter) {
         border_weight = 2.0 * center_weight;
     }
 
-    return float4((center_ao + border_ao) / (center_weight + border_weight), 0, 0, 0);
+    return float4((center_ao + border_ao) * rcp(center_weight + border_weight), 0, 0, 0);
 }
 
 class BoxFilter : IFilter {
@@ -180,7 +180,7 @@ Texture2D depth_tex : register(t1);
 // Transform view position to uv in screen space.
 float2 uv_from_view_position(float3 view_position) {
     float4 _projected_view_pos = mul(float4(view_position, 1), scene_vars.projection_matrix);
-    float3 projected_view_pos = _projected_view_pos.xyz / _projected_view_pos.w;
+    float3 projected_view_pos = _projected_view_pos.xyz * rcp(_projected_view_pos.w);
 
     // Transform from normalized screen space to uv.
     return float2(projected_view_pos.x * 0.5 + 0.5, 1 - (projected_view_pos.y + 1) * 0.5);
@@ -193,7 +193,7 @@ float u_coord_from_view_position(float3 view_position) {
     // float w = dot(float4(view_position, 1), scene_vars.projection_matrix._m03_m13_m23_m33);
     float x = view_position.x * scene_vars.projection_matrix._m00;
     float w = view_position.z * scene_vars.projection_matrix._m23;
-    float projected_view_pos_x = x / w;
+    float projected_view_pos_x = x * rcp(w);
 
     // Transform from normalized screen space to uv.
     return projected_view_pos_x * 0.5 + 0.5;
@@ -243,14 +243,13 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     float border_u = u_coord_from_view_position(border_view_position);
     float ss_radius = border_u - input.projection_uv().x;
     float clamped_ss_radius = min(0.25, ss_radius);
-    float recip_radius_scale = clamped_ss_radius / ss_radius;
+    float recip_radius_scale = clamped_ss_radius * rcp(ss_radius);
 
     // Scale the view normal results in a scaled occlusion, which in turn accounts for the intensity change that comes from scaling the screen radius.
     float3 scaled_view_normal = view_normal * recip_radius_scale;
 
     // Determine occlusion
     float occlusion = 0.0f;
-    float used_sample_count = 0.0001f;
     for (int i = 0; i < sample_count; ++i) {
         float2 uv_offset = mul(uv_offsets[i] * ss_radius, sample_pattern_rotation);
         float2 sample_uv = input.projection_uv() + uv_offset;
@@ -264,11 +263,10 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
         float3 v_i = view_position_i - view_position;
 
         // Equation 10
-        occlusion += max(0, dot(v_i, scaled_view_normal)) / (dot(v_i, v_i) + 0.0001f);
-        ++used_sample_count;
+        occlusion += max(0, dot(v_i, scaled_view_normal)) * rcp(dot(v_i, v_i) + 0.0001f);
     }
 
-    float a = 1 - (2 * intensity_scale / used_sample_count) * occlusion;
+    float a = 1 - intensity_over_sample_count * occlusion;
     a = pow(max(0.0, a), falloff);
 
     // Fade out if radius is less than two pixels.

@@ -189,6 +189,7 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
         SsaoConstants constants;
         constants.settings = settings;
         constants.settings.sample_count = std::min(constants.settings.sample_count, int(max_sample_count));
+        constants.settings.intensity_scale *= 2.0f / constants.settings.sample_count;
         constants.g_buffer_size = { float(g_buffer_size.x), float(g_buffer_size.y) };
         constants.recip_g_buffer_viewport_size = { 1.0f / g_buffer_viewport_size.x, 1.0f / g_buffer_viewport_size.y };
         constants.g_buffer_max_uv = { g_buffer_viewport_size.x / g_buffer_size.x, g_buffer_viewport_size.y / g_buffer_size.y };
