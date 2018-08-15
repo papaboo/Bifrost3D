@@ -24,33 +24,7 @@ TextureManager::TextureManager(ID3D11Device1& device) {
     // Create default textures.
     static auto create_color_texture = [](ID3D11Device1& device, unsigned char pixel[4]) -> DefaultTexture {
         DefaultTexture tex;
-
-        D3D11_TEXTURE2D_DESC tex_desc = {};
-        tex_desc.Width = 1;
-        tex_desc.Height = 1;
-        tex_desc.MipLevels = 1;
-        tex_desc.ArraySize = 1;
-        tex_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-        tex_desc.SampleDesc.Count = 1;
-        tex_desc.SampleDesc.Quality = 0;
-        tex_desc.Usage = D3D11_USAGE_IMMUTABLE;
-        tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-
-        D3D11_SUBRESOURCE_DATA resource_data;
-        resource_data.pSysMem = pixel;
-        resource_data.SysMemPitch = sizeof(unsigned char) * 4;
-
-        OTexture2D texture;
-        HRESULT hr = device.CreateTexture2D(&tex_desc, &resource_data, &texture);
-        THROW_DX11_ERROR(hr);
-
-        D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
-        srv_desc.Format = tex_desc.Format;
-        srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        srv_desc.Texture2D.MipLevels = tex_desc.MipLevels;
-        srv_desc.Texture2D.MostDetailedMip = 0;
-        hr = device.CreateShaderResourceView(texture, &srv_desc, &tex.srv);
-        THROW_DX11_ERROR(hr);
+        create_texture_2D(device, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, pixel, 1, 1, &tex.srv);
 
         D3D11_SAMPLER_DESC sampler_desc = {};
         sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -61,8 +35,7 @@ TextureManager::TextureManager(ID3D11Device1& device) {
         sampler_desc.MinLOD = 0;
         sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
 
-        hr = device.CreateSamplerState(&sampler_desc, &tex.sampler);
-        THROW_DX11_ERROR(hr);
+        THROW_DX11_ERROR(device.CreateSamplerState(&sampler_desc, &tex.sampler));
 
         return tex;
     };
