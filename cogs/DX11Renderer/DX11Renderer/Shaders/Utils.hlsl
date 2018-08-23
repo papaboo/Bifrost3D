@@ -151,12 +151,12 @@ float3 perspective_position_from_depth(float z_over_w, float2 viewport_uv, float
     // Get x/w and y/w from the viewport position
     float x_over_w = viewport_uv.x * 2 - 1;
     float y_over_w = 1 - 2 * viewport_uv.y;
-    float4 projected_position = float4(x_over_w, y_over_w, z_over_w, 1.0f);
+
     // Transform by the inverse projection matrix
-    float4 projected_view_pos = { projected_position.x * inverted_projection_matrix._m00,
-                                  projected_position.y * inverted_projection_matrix._m11,
-                                  projected_position.w,
-                                  dot(projected_position.zw, inverted_projection_matrix._m23_m33) };
+    float4 projected_view_pos = { x_over_w * inverted_projection_matrix._m00,
+                                  y_over_w * inverted_projection_matrix._m11,
+                                  1.0,
+                                  z_over_w * inverted_projection_matrix._m23 + inverted_projection_matrix._m33 };
     // Divide by w to get the view-space position
     return projected_view_pos.xyz / projected_view_pos.w;
 }
