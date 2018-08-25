@@ -10,7 +10,7 @@
 #include "Utils.hlsl"
 
 // ------------------------------------------------------------------------------------------------
-// Scene constants.
+// Constants.
 // ------------------------------------------------------------------------------------------------
 
 cbuffer constants : register(b0) {
@@ -21,7 +21,7 @@ cbuffer constants : register(b0) {
     float recip_double_normal_variance;
     float recip_double_plane_variance;
     int sample_count;
-    int filtering_enabled; // CPU side only
+    int filter_support;
     float2 g_buffer_size;
     float2 recip_g_buffer_viewport_size;
     float2 g_buffer_max_uv;
@@ -32,7 +32,6 @@ cbuffer constants : register(b0) {
 
 cbuffer uv_offset_constants : register(b1) {
     float4 packed_uv_offsets[128];
-
 }
 
 static float2 uv_offsets[256] = ((float2[256])packed_uv_offsets);
@@ -41,141 +40,28 @@ cbuffer scene_variables : register(b13) {
     SceneVariables scene_vars;
 };
 
-// ------------------------------------------------------------------------------------------------
-// Vertex shader.
-// ------------------------------------------------------------------------------------------------
-
-struct Varyings {
-    float4 position : SV_POSITION;
-    float4 uvs : TEXCOORD; // [ao-uv, g-buffer-uv]
-
-    float2 ao_uv() { return uvs.xy; }
-    float2 projection_uv() { return uvs.zw; }
-};
-
-Varyings main_vs(uint vertex_ID : SV_VertexID) {
-    Varyings output;
-    // Draw triangle: {-1, -3}, { -1, 1 }, { 3, 1 }
-    output.position.x = vertex_ID == 2 ? 3 : -1;
-    output.position.y = vertex_ID == 0 ? -3 : 1;
-    output.position.zw = float2(1.0f, 1.0f);
-
-    output.uvs.xy = output.position.xy * 0.5 + 0.5;
-    output.uvs.y = 1.0f - output.uvs.y;
-    output.uvs.zw = (output.uvs.xy * ao_buffer_size - g_buffer_to_ao_index_offset) * recip_g_buffer_viewport_size;
-    return output;
-}
-
-// ------------------------------------------------------------------------------------------------
-// Bilateral blur.
-// ------------------------------------------------------------------------------------------------
-
-namespace BilateralBlur {
+static const float depth_far_plane_sentinel = 65504.0f;
 
 Texture2D normal_tex : register(t0);
 Texture2D depth_tex : register(t1);
-Texture2D ao_tex : register(t2);
 
-cbuffer per_filter_constants : register(b2) {
-    int filter_support;
-    int __padding;
-    int2 axis;
-}
-
-void sample_ao(int2 g_buffer_index, float3 normal, float plane_d, inout float summed_ao, inout float ao_weight) {
-    // Normal weight
-    float3 sample_normal = decode_ss_octahedral_normal(normal_tex[g_buffer_index].xy);
-    float cos_theta = dot(sample_normal, normal);
-    float weight = exp(-pow2(1.0f - cos_theta) * recip_double_normal_variance);
-
-    // Plane fitting weight
-    float sample_depth = depth_tex[g_buffer_index].r;
-    float2 uv = (g_buffer_index + 0.5f) * recip_g_buffer_viewport_size;
-    float3 sample_position = perspective_position_from_depth(sample_depth, uv, scene_vars.inverted_projection_matrix);
-    float distance_to_plane = dot(normal, sample_position) + plane_d;
-    weight *= exp(-pow2(distance_to_plane) * recip_double_plane_variance);
-
-    weight += 0.00001;
-
-    summed_ao += weight * ao_tex[g_buffer_index + g_buffer_to_ao_index_offset].r;
-    ao_weight += weight;
-}
-
-interface IFilter {
-    void apply(int2 g_buffer_index, float3 view_normal, float plane_d, inout float summed_ao, inout float ao_weight);
-};
-
-float4 filter_input(Varyings input, IFilter filter) {
-    int2 g_buffer_index = input.position.xy - g_buffer_to_ao_index_offset;
-    float3 view_normal = decode_ss_octahedral_normal(normal_tex[g_buffer_index].xy);
-    float depth = depth_tex[g_buffer_index].r;
-
-    // No occlusion on the far plane.
-    if (depth == 1.0)
-        return float4(1, 0, 0, 0);
-
-    float3 view_position = perspective_position_from_depth(depth, input.projection_uv(), scene_vars.inverted_projection_matrix);
-    float plane_d = -dot(view_position, view_normal);
-
-    float center_ao = 0.0f;
-    float center_weight = 0.0f;
-    sample_ao(g_buffer_index, view_normal, plane_d, center_ao, center_weight); // TODO Can be inlined, just need to compute the weight, which should be pow2(exp(-0)) I guess.
-
-    float border_ao = 0.0f;
-    float border_weight = 0.0f;
-    filter.apply(g_buffer_index, view_normal, plane_d, border_ao, border_weight);
-
-    // Ensure that we perform at least some filtering in areas with high frequency geometry.
-    if (border_weight < 2.0 * center_weight) {
-        float weight_scale = 2.0 * center_weight * rcp(border_weight);
-        border_ao *= weight_scale;
-        border_weight = 2.0 * center_weight;
-    }
-
-    return float4((center_ao + border_ao) * rcp(center_weight + border_weight), 0, 0, 0);
-}
-
-class BoxFilter : IFilter {
-    void apply(int2 g_buffer_index, float3 view_normal, float plane_d, inout float summed_ao, inout float ao_weight) {
-        sample_ao(g_buffer_index + int2(-filter_support,  filter_support), view_normal, plane_d, summed_ao, ao_weight);
-        sample_ao(g_buffer_index + int2(              0,  filter_support), view_normal, plane_d, summed_ao, ao_weight);
-        sample_ao(g_buffer_index + int2( filter_support,  filter_support), view_normal, plane_d, summed_ao, ao_weight);
-        sample_ao(g_buffer_index + int2(-filter_support,               0), view_normal, plane_d, summed_ao, ao_weight);
-        sample_ao(g_buffer_index + int2( filter_support,               0), view_normal, plane_d, summed_ao, ao_weight);
-        sample_ao(g_buffer_index + int2(-filter_support, -filter_support), view_normal, plane_d, summed_ao, ao_weight);
-        sample_ao(g_buffer_index + int2(              0, -filter_support), view_normal, plane_d, summed_ao, ao_weight);
-        sample_ao(g_buffer_index + int2( filter_support, -filter_support), view_normal, plane_d, summed_ao, ao_weight);
-    }
-};
-
-float4 box_filter_ps(Varyings input) : SV_TARGET {
-    BoxFilter filter;
-    return filter_input(input, filter);
-}
-
-class CrossFilter : IFilter {
-    void apply(int2 g_buffer_index, float3 view_normal, float plane_d, inout float summed_ao, inout float ao_weight) {
-        for (int i = 1; i <= filter_support; ++i) {
-            // TODO gaussian/tent filter
-            sample_ao(g_buffer_index + i * axis, view_normal, plane_d, summed_ao, ao_weight);
-            sample_ao(g_buffer_index - i * axis, view_normal, plane_d, summed_ao, ao_weight);
-        }
-    }
-};
-
-float4 cross_filter_ps(Varyings input) : SV_TARGET {
-    CrossFilter filter;
-    return filter_input(input, filter);
-}
-
-} // NS BilateralBlur
-
-  // ------------------------------------------------------------------------------------------------
-// Alchemy pixel shader.
+// ------------------------------------------------------------------------------------------------
+// SSAO utility functions.
 // ------------------------------------------------------------------------------------------------
 
-Texture2D normal_tex : register(t0);
-Texture2D depth_tex : register(t1);
+// Transform linear depth to view-space position using a perspective projection matrix.
+// https://mynameismjp.wordpress.com/2009/03/10/reconstructing-position-from-depth/
+float3 perspective_position_from_linear_depth(float z, float2 viewport_uv, float4x4 inverted_projection_matrix) {
+    // Get x/w and y/w from the viewport position
+    float x_over_w = viewport_uv.x * 2 - 1;
+    float y_over_w = 1 - 2 * viewport_uv.y;
+
+    // Transform by the inverse projection matrix
+    float2 projected_view_pos = { x_over_w * inverted_projection_matrix._m00,
+                                  y_over_w * inverted_projection_matrix._m11 };
+    // Divide by w to get the view-space position
+    return float3(projected_view_pos.xy * z, z);
+}
 
 // Transform view position to uv in screen space.
 float2 uv_from_view_position(float3 view_position) {
@@ -221,6 +107,152 @@ float2x2 generate_rotation_matrix(float angle) {
     return mat;
 }
 
+// ------------------------------------------------------------------------------------------------
+// Vertex shader.
+// ------------------------------------------------------------------------------------------------
+
+struct Varyings {
+    float4 position : SV_POSITION;
+    float4 uvs : TEXCOORD; // [ao-uv, projection-uv]
+
+    float2 ao_uv() { return uvs.xy; }
+    float2 projection_uv() { return uvs.zw; }
+};
+
+Varyings main_vs(uint vertex_ID : SV_VertexID) {
+    Varyings output;
+    // Draw triangle: {-1, -3}, { -1, 1 }, { 3, 1 }
+    output.position.x = vertex_ID == 2 ? 3 : -1;
+    output.position.y = vertex_ID == 0 ? -3 : 1;
+    output.position.zw = float2(1, 1);
+
+    output.uvs.xy = output.position.xy * 0.5 + 0.5;
+    output.uvs.y = 1.0 - output.uvs.y;
+    output.uvs.zw = (output.uvs.xy * ao_buffer_size - g_buffer_to_ao_index_offset) * recip_g_buffer_viewport_size;
+
+    return output;
+}
+
+// ------------------------------------------------------------------------------------------------
+// Depth conversion pixel shader.
+// ------------------------------------------------------------------------------------------------
+
+float linearize_depth_ps(Varyings input) : SV_TARGET {
+    float z_over_w = depth_tex[input.position.xy].r;
+    if (z_over_w == 1.0)
+        return depth_far_plane_sentinel;
+
+    float linear_depth = 1.0f / (z_over_w * scene_vars.inverted_projection_matrix._m23 + scene_vars.inverted_projection_matrix._m33);
+    return linear_depth;
+}
+// ------------------------------------------------------------------------------------------------
+// Bilateral blur.
+// ------------------------------------------------------------------------------------------------
+
+namespace BilateralBlur {
+
+Texture2D normal_tex : register(t0);
+Texture2D depth_tex : register(t1);
+Texture2D ao_tex : register(t2);
+
+cbuffer per_filter_constants : register(b2) {
+    int per_pass_support;
+    int __padding;
+    int2 axis;
+}
+
+void sample_ao(int2 g_buffer_index, float3 normal, float plane_d, inout float summed_ao, inout float ao_weight) {
+    // Normal weight
+    float3 sample_normal = decode_ss_octahedral_normal(normal_tex[g_buffer_index].xy);
+    float cos_theta = dot(sample_normal, normal);
+    float weight = exp(-pow2(1.0f - cos_theta) * recip_double_normal_variance);
+
+    // Plane fitting weight
+    float sample_depth = depth_tex[g_buffer_index].r;
+    float2 uv = (g_buffer_index + 0.5f) * recip_g_buffer_viewport_size;
+    float3 sample_position = perspective_position_from_linear_depth(sample_depth, uv, scene_vars.inverted_projection_matrix);
+    float distance_to_plane = dot(normal, sample_position) + plane_d;
+    weight *= exp(-pow2(distance_to_plane) * recip_double_plane_variance);
+
+    weight += 0.00001;
+
+    summed_ao += weight * ao_tex[g_buffer_index + g_buffer_to_ao_index_offset].r;
+    ao_weight += weight;
+}
+
+interface IFilter {
+    void apply(int2 g_buffer_index, float3 view_normal, float plane_d, inout float summed_ao, inout float ao_weight);
+};
+
+float4 filter_input(Varyings input, IFilter filter) {
+    int2 g_buffer_index = input.position.xy - g_buffer_to_ao_index_offset;
+    float3 view_normal = decode_ss_octahedral_normal(normal_tex[g_buffer_index].xy);
+    float depth = depth_tex[g_buffer_index].r;
+
+    // No occlusion on the far plane.
+    if (depth == depth_far_plane_sentinel)
+        return float4(1, 0, 0, 0);
+
+    float3 view_position = perspective_position_from_linear_depth(depth, input.projection_uv(), scene_vars.inverted_projection_matrix);
+    float plane_d = -dot(view_position, view_normal);
+
+    float center_ao = 0.0f;
+    float center_weight = 0.0f;
+    sample_ao(g_buffer_index, view_normal, plane_d, center_ao, center_weight); // TODO Can be inlined, just need to compute the weight, which should be pow2(exp(-0)) I guess.
+
+    float border_ao = 0.0f;
+    float border_weight = 0.0f;
+    filter.apply(g_buffer_index, view_normal, plane_d, border_ao, border_weight);
+
+    // Ensure that we perform at least some filtering in areas with high frequency geometry.
+    if (border_weight < 2.0 * center_weight) {
+        float weight_scale = 2.0 * center_weight * rcp(border_weight);
+        border_ao *= weight_scale;
+        border_weight = 2.0 * center_weight;
+    }
+
+    return float4((center_ao + border_ao) * rcp(center_weight + border_weight), 0, 0, 0);
+}
+
+class BoxFilter : IFilter {
+    void apply(int2 g_buffer_index, float3 view_normal, float plane_d, inout float summed_ao, inout float ao_weight) {
+        sample_ao(g_buffer_index + int2(-per_pass_support,  per_pass_support), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(                0,  per_pass_support), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2( per_pass_support,  per_pass_support), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(-per_pass_support,                 0), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2( per_pass_support,                 0), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(-per_pass_support, -per_pass_support), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2(                0, -per_pass_support), view_normal, plane_d, summed_ao, ao_weight);
+        sample_ao(g_buffer_index + int2( per_pass_support, -per_pass_support), view_normal, plane_d, summed_ao, ao_weight);
+    }
+};
+
+float4 box_filter_ps(Varyings input) : SV_TARGET {
+    BoxFilter filter;
+    return filter_input(input, filter);
+}
+
+class CrossFilter : IFilter {
+    void apply(int2 g_buffer_index, float3 view_normal, float plane_d, inout float summed_ao, inout float ao_weight) {
+        for (int i = 1; i <= per_pass_support; ++i) {
+            // TODO gaussian/tent filter
+            sample_ao(g_buffer_index + i * axis, view_normal, plane_d, summed_ao, ao_weight);
+            sample_ao(g_buffer_index - i * axis, view_normal, plane_d, summed_ao, ao_weight);
+        }
+    }
+};
+
+float4 cross_filter_ps(Varyings input) : SV_TARGET {
+    CrossFilter filter;
+    return filter_input(input, filter);
+}
+
+} // NS BilateralBlur
+
+// ------------------------------------------------------------------------------------------------
+// Alchemy pixel shader.
+// ------------------------------------------------------------------------------------------------
+
 float4 alchemy_ps(Varyings input) : SV_TARGET {
 
     // Setup sampling
@@ -231,12 +263,12 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     float depth = depth_tex[input.position.xy - g_buffer_to_ao_index_offset].r;
 
     // No occlusion on the far plane.
-    if (depth == 1.0)
+    if (depth == depth_far_plane_sentinel)
         return float4(1, 0, 0, 0);
 
     float3 view_normal = decode_ss_octahedral_normal(normal_tex[input.position.xy - g_buffer_to_ao_index_offset].xy);
     float pixel_bias = depth * bias * (1.0f - pow2(pow2(pow2(view_normal.z))));
-    float3 view_position = perspective_position_from_depth(depth, input.projection_uv(), scene_vars.inverted_projection_matrix) + view_normal * pixel_bias;
+    float3 view_position = perspective_position_from_linear_depth(depth, input.projection_uv(), scene_vars.inverted_projection_matrix) + view_normal * pixel_bias;
 
     // Compute screen space radius.
     float3 border_view_position = view_position + float3(world_radius, 0, 0);
@@ -259,7 +291,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
         if (sample_uv.y < 0.0 || sample_uv.y > 1.0) sample_uv.y = sample_uv.y < 0.0 ? frac(-sample_uv.y) : 1.0f - frac(sample_uv.y);
 
         float depth_i = depth_tex.SampleLevel(point_sampler, sample_uv * g_buffer_max_uv.x, 0).r;
-        float3 view_position_i = perspective_position_from_depth(depth_i, sample_uv, scene_vars.inverted_projection_matrix);
+        float3 view_position_i = perspective_position_from_linear_depth(depth_i, sample_uv, scene_vars.inverted_projection_matrix);
         float3 v_i = view_position_i - view_position;
 
         // Equation 10

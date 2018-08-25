@@ -73,8 +73,9 @@ public:
     Cogwheel::Math::Recti get_ssao_viewport() const { return Cogwheel::Math::Recti(get_margin(), get_margin(), m_width, m_height); }
 
 private:
-    void conditional_buffer_resize(ID3D11DeviceContext1& context, int ssao_width, int ssao_height);
     inline int get_margin() const { return m_filter.get_support(); }
+    void resize_ao_buffer(ID3D11DeviceContext1& context, int ssao_width, int ssao_height);
+    void resize_depth_buffer(ID3D11DeviceContext1& context, int depth_width, int depth_height);
 
     OBuffer m_constants;
     OBuffer m_samples;
@@ -84,6 +85,13 @@ private:
     int m_width, m_height;
     ORenderTargetView m_SSAO_RTV;
     OShaderResourceView m_SSAO_SRV;
+
+    struct {
+        int width, height;
+        ORenderTargetView RTV;
+        OShaderResourceView SRV;
+        OPixelShader pixel_shader;
+    } m_depth;
 
     BilateralBlur m_filter;
 };
