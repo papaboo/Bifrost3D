@@ -135,7 +135,21 @@ inline unsigned int next_power_of_two(unsigned int x) {
 }
 
 inline bool is_power_of_two(unsigned int v) {
-    return v && !(v & (v - 1));;
+    return v && !(v & (v - 1));
+}
+
+// See answer from johnwbyrd on https://stackoverflow.com/questions/2589096/find-most-significant-bit-left-most-that-is-set-in-a-bit-array
+inline unsigned int most_significant_bit(unsigned int v) {
+    static const int MultiplyDeBruijnBitPosition[32] = { 0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
+                                                         8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31};
+
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+
+    return MultiplyDeBruijnBitPosition[(v * 0x07C4ACDDU) >> 27];
 }
 
 inline float degrees_to_radians(float degress) {

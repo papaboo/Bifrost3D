@@ -50,6 +50,14 @@ GTEST_TEST(Math_Utils, compute_ulps) {
     }
 }
 
+GTEST_TEST(Math_Utils, most_significant_bit) {
+    EXPECT_EQ(0, most_significant_bit(0b1));
+    EXPECT_EQ(1, most_significant_bit(0b10));
+    EXPECT_EQ(1, most_significant_bit(0b11));
+    EXPECT_EQ(3, most_significant_bit(0b1010));
+    EXPECT_EQ(9, most_significant_bit(0b1000101100));
+}
+
 // ------------------------------------------------------------------------------------------------
 // Gaussian bilinear samples test.
 // ------------------------------------------------------------------------------------------------
