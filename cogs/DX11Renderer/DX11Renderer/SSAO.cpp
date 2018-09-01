@@ -174,19 +174,23 @@ void AlchemyAO::resize_ao_buffer(ID3D11DeviceContext1& context, int ssao_width, 
     }
 }
 
-void AlchemyAO::resize_depth_buffer(ID3D11DeviceContext1& context, int depth_width, int depth_height) {
-    if (m_width < depth_width || m_height < depth_height) {
-        m_depth.width = std::max(m_depth.width, depth_width);
-        m_depth.height = std::max(m_depth.height, depth_height);
+void AlchemyAO::resize_depth_buffer(ID3D11DeviceContext1& context, unsigned int camera_ID, int depth_width, int depth_height) {
+    if (m_depth.per_camera.size() <= camera_ID + 1)
+        m_depth.per_camera.resize(camera_ID + 1);
+    auto& camera_depth = m_depth.per_camera[camera_ID];
+
+    if (camera_depth.width != depth_width || camera_depth.height != depth_height) {
+        camera_depth.width = depth_width;
+        camera_depth.height = depth_height;
         
         ODevice1 device = get_device1(context);
 
-        m_depth.SRV.release();
-        m_depth.RTV.release();
+        camera_depth.SRV.release();
+        camera_depth.RTV.release();
 
         D3D11_TEXTURE2D_DESC tex_desc = {};
-        tex_desc.Width = m_depth.width;
-        tex_desc.Height = m_depth.height;
+        tex_desc.Width = camera_depth.width;
+        tex_desc.Height = camera_depth.height;
         tex_desc.MipLevels = 0;
         tex_desc.ArraySize = 1;
         tex_desc.Format = DXGI_FORMAT_R16_FLOAT;
@@ -204,21 +208,26 @@ void AlchemyAO::resize_depth_buffer(ID3D11DeviceContext1& context, int depth_wid
         srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         srv_desc.Texture2D.MipLevels = -1;
         srv_desc.Texture2D.MostDetailedMip = 0;
-        THROW_DX11_ERROR(device->CreateShaderResourceView(texture, &srv_desc, &m_depth.SRV));
+        THROW_DX11_ERROR(device->CreateShaderResourceView(texture, &srv_desc, &camera_depth.SRV));
 
-        THROW_DX11_ERROR(device->CreateRenderTargetView(texture, nullptr, &m_depth.RTV));
+        THROW_DX11_ERROR(device->CreateRenderTargetView(texture, nullptr, &camera_depth.RTV));
+
+        camera_depth.mip_count = 1;
+        while (depth_width >> camera_depth.mip_count > 0 || depth_height >> camera_depth.mip_count > 0)
+            ++camera_depth.mip_count;
     }
 }
 
-OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderResourceView& normals, OShaderResourceView& depth, int2 g_buffer_size, Cogwheel::Math::Recti viewport, SsaoSettings settings) {
+OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned int camera_ID, OShaderResourceView& normals, OShaderResourceView& depth,
+                                      int2 g_buffer_size, Cogwheel::Math::Recti viewport, SsaoSettings settings) {
 
     int ssao_width = viewport.width + 2 * get_margin();
     int ssao_height = viewport.height + 2 * get_margin();
+    int2 g_buffer_viewport_size = { viewport.width + 2 * viewport.x, viewport.height + 2 * viewport.y };
 
     resize_ao_buffer(context, ssao_width, ssao_height);
 
     { // Contants 
-        float2 g_buffer_viewport_size = { viewport.width + 2.0f * viewport.x, viewport.height + 2.0f * viewport.y };
         SsaoConstants constants;
         constants.settings = settings;
         constants.settings.sample_count = std::min(constants.settings.sample_count, int(max_sample_count));
@@ -226,7 +235,7 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
 
         constants.g_buffer_size = { float(g_buffer_size.x), float(g_buffer_size.y) };
         constants.recip_g_buffer_viewport_size = { 1.0f / g_buffer_viewport_size.x, 1.0f / g_buffer_viewport_size.y };
-        constants.g_buffer_max_uv = { g_buffer_viewport_size.x / g_buffer_size.x, g_buffer_viewport_size.y / g_buffer_size.y };
+        constants.g_buffer_max_uv = { float(g_buffer_viewport_size.x) / g_buffer_size.x, float(g_buffer_viewport_size.y) / g_buffer_size.y };
         constants.g_buffer_to_ao_index_offset = compute_g_buffer_to_ao_index_offset(viewport);
         constants.ao_buffer_size = { float(ssao_width), float(ssao_height) };
         constants.settings.normal_std_dev = 0.5f / (constants.settings.normal_std_dev * constants.settings.normal_std_dev);
@@ -238,14 +247,18 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
     context.VSSetConstantBuffers(0, 1, constant_buffers);
     context.PSSetConstantBuffers(0, 2, constant_buffers);
 
-    resize_depth_buffer(context, g_buffer_size.x, g_buffer_size.y);
+    resize_depth_buffer(context, camera_ID, g_buffer_viewport_size.x, g_buffer_viewport_size.y);
+    auto& camera_depth = m_depth.per_camera[camera_ID];
 
     // Compute linear depth and filter.
-    context.OMSetRenderTargets(1, &m_depth.RTV, nullptr);
+    // Assumes that the G-buffer viewport is set // TODO Assert on viewport dimensions!
+    context.OMSetRenderTargets(1, &camera_depth.RTV, nullptr);
     context.PSSetShaderResources(1, 1, &depth);
     context.VSSetShader(m_vertex_shader, 0, 0);
     context.PSSetShader(m_depth.pixel_shader, 0, 0);
     context.Draw(3, 0);
+
+    context.GenerateMips(camera_depth.SRV);
 
     // Grab old viewport.
     // Assumes only one viewport is used. If we start using more then it may just be easier to bite the bullet and move to compute (which turned out to be slower than pixel shaders at first try)
@@ -264,7 +277,7 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, OShaderReso
 
     // Compute SSAO.
     context.OMSetRenderTargets(1, &m_SSAO_RTV, nullptr);
-    ID3D11ShaderResourceView* SRVs[2] = { normals, m_depth.SRV };
+    ID3D11ShaderResourceView* SRVs[2] = { normals, camera_depth.SRV };
     context.PSSetShaderResources(0, 2, SRVs);
     context.PSSetShader(m_pixel_shader, 0, 0);
     context.Draw(3, 0);

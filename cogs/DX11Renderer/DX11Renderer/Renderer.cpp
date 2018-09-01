@@ -553,7 +553,8 @@ public:
 
             if (m_settings.ssao.enabled) {
                 int2 g_buffer_size = { int(m_g_buffer.width),  int(m_g_buffer.height) };
-                ssao_SRV = m_ssao.apply(m_render_context, m_g_buffer.normal_SRV, m_g_buffer.depth_SRV, g_buffer_size, backbuffer_viewport, m_settings.ssao.settings).get();
+                ssao_SRV = m_ssao.apply(m_render_context, camera_ID.get_index(), m_g_buffer.normal_SRV, m_g_buffer.depth_SRV, 
+                                        g_buffer_size, backbuffer_viewport, m_settings.ssao.settings).get();
             } else
                 // A really inefficient way to disable ssao. Application is still part of the material shaders.
                 ssao_SRV = m_ssao.apply_none(m_render_context, backbuffer_viewport).get();

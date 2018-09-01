@@ -145,6 +145,7 @@ float linearize_depth_ps(Varyings input) : SV_TARGET {
     float linear_depth = 1.0f / (z_over_w * scene_vars.inverted_projection_matrix._m23 + scene_vars.inverted_projection_matrix._m33);
     return linear_depth;
 }
+
 // ------------------------------------------------------------------------------------------------
 // Bilateral blur.
 // ------------------------------------------------------------------------------------------------
@@ -255,16 +256,16 @@ float4 cross_filter_ps(Varyings input) : SV_TARGET {
 
 float4 alchemy_ps(Varyings input) : SV_TARGET {
 
-    // Setup sampling
-    uint rng_offset = RNG::evenly_distributed_2D_seed(input.position.xy);
-    float sample_pattern_rotation_angle = rng_offset * (TWO_PI / 4294967296.0f); // Scale a uint to the range [0, 2 * PI[
-    float2x2 sample_pattern_rotation = generate_rotation_matrix(sample_pattern_rotation_angle);
-
     float depth = depth_tex[input.position.xy - g_buffer_to_ao_index_offset].r;
 
     // No occlusion on the far plane.
     if (depth == depth_far_plane_sentinel)
         return float4(1, 0, 0, 0);
+
+    // Setup sampling
+    uint rng_offset = RNG::evenly_distributed_2D_seed(input.position.xy);
+    float sample_pattern_rotation_angle = rng_offset * (TWO_PI / 4294967296.0f); // Scale a uint to the range [0, 2 * PI[
+    float2x2 sample_pattern_rotation = generate_rotation_matrix(sample_pattern_rotation_angle);
 
     float3 view_normal = decode_ss_octahedral_normal(normal_tex[input.position.xy - g_buffer_to_ao_index_offset].xy);
     float pixel_bias = depth * bias * (1.0f - pow2(pow2(pow2(view_normal.z))));
@@ -290,7 +291,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
         if (sample_uv.x < 0.0 || sample_uv.x > 1.0) sample_uv.x = sample_uv.x < 0.0 ? frac(-sample_uv.x) : 1.0f - frac(sample_uv.x);
         if (sample_uv.y < 0.0 || sample_uv.y > 1.0) sample_uv.y = sample_uv.y < 0.0 ? frac(-sample_uv.y) : 1.0f - frac(sample_uv.y);
 
-        float depth_i = depth_tex.SampleLevel(point_sampler, sample_uv * g_buffer_max_uv.x, 0).r;
+        float depth_i = depth_tex.SampleLevel(point_sampler, sample_uv, 0).r;
         float3 view_position_i = perspective_position_from_linear_depth(depth_i, sample_uv, scene_vars.inverted_projection_matrix);
         float3 v_i = view_position_i - view_position;
 

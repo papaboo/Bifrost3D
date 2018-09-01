@@ -13,6 +13,8 @@
 
 #include <Cogwheel/Math/Rect.h>
 
+#include <vector>
+
 namespace DX11Renderer {
 namespace SSAO {
 
@@ -66,7 +68,8 @@ public:
 
     int2 compute_g_buffer_to_ao_index_offset(Cogwheel::Math::Recti viewport) const;
 
-    OShaderResourceView& apply(ID3D11DeviceContext1& context, OShaderResourceView& normals, OShaderResourceView& depth, int2 g_buffer_size, Cogwheel::Math::Recti viewport, SsaoSettings settings);
+    OShaderResourceView& apply(ID3D11DeviceContext1& context, unsigned int camera_ID, OShaderResourceView& normals, OShaderResourceView& depth, 
+                               int2 g_buffer_size, Cogwheel::Math::Recti viewport, SsaoSettings settings);
 
     OShaderResourceView& apply_none(ID3D11DeviceContext1& context, Cogwheel::Math::Recti viewport);
 
@@ -75,7 +78,7 @@ public:
 private:
     inline int get_margin() const { return m_filter.get_support(); }
     void resize_ao_buffer(ID3D11DeviceContext1& context, int ssao_width, int ssao_height);
-    void resize_depth_buffer(ID3D11DeviceContext1& context, int depth_width, int depth_height);
+    void resize_depth_buffer(ID3D11DeviceContext1& context, unsigned int camera_ID, int depth_width, int depth_height);
 
     OBuffer m_constants;
     OBuffer m_samples;
@@ -86,10 +89,13 @@ private:
     ORenderTargetView m_SSAO_RTV;
     OShaderResourceView m_SSAO_SRV;
 
-    struct {
-        int width, height;
-        ORenderTargetView RTV;
-        OShaderResourceView SRV;
+    struct Depth {
+        struct PerCamera {
+            int width, height, mip_count;
+            ORenderTargetView RTV;
+            OShaderResourceView SRV;
+        };
+        std::vector<PerCamera> per_camera;
         OPixelShader pixel_shader;
     } m_depth;
 
