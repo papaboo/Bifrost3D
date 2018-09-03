@@ -1,21 +1,53 @@
+Use sincos
+Integrate newer tinyobj
+Fix env map black bug
+
 * SSAO
-** SAO
-** Cutout support
-** Scale application by sin_theta_sqrd / solidangle of light_source to avoid applying AO to delta lights.
-** Store normals as octahedral normal. 16 or 32 bit?
-** Adjust depth bias from local depth-variance? Low variance => high bias
-** Use reverse Z for stabile Z
-*** https://mynameismjp.wordpress.com/2010/03/22/attack-of-the-depth-buffer/
-*** There's a depth format???
-** Adjust shrink hemisphere by dot(hard_normal, shading_normal)
-** Multiscale AO
-** Spherical gaussians (Sphaussian?) for AO (bent normal + std dev) multiplied by material sgaussian 
-** Use bent normal for diffuse env map lookup.
-** Blog post?
+** Tweak filter sizes+offsets to perfectly match the seed distribution/period
+*** Seed = x * samples + y * bandwidth ish
+*** Or seed(xy % (2 * bandwidth + 1)
+*** If 256 samples are enough, then a 4x4/8x8 filter with 8 samples should do.
+** Scalable ambient obscurance.
+*** Perhaps sort the samples from inside to out, to make the lookups go from high res to low res texture. Profile!
+** Apply power function to uv_samples and reverse sampling so f(x) / PDF(x) = 1'ish
+** Bent normal
+*** For diffuse env map lookup.
+** GTSO / Bent cone
+*** Union with light cone / distribution
+*** Perhaps only output the bent cone and drop AO values.
+** TODOs
+** Remove pixelated noise on the rings in the test scene.
+*** Depth fighting. Depth bias when rendering. Only if it can be reproduced on other machines though.
+*** Drop depth writes during opaque pass?
+** HBAO/GTAO??
+
+* Blog post?
+** Sampling 
+*** Sample02 + reverse_morton_code hash
+*** McGuires samples
+*** Handle samples outside the buffer
+**** Guard band
+**** Discard samples
+**** Wrap around samples.
+**** Clamp screen space radius.
+** Filtering
+*** Create a ground truth for comparison
+** Optimizations
+*** Precompute samples (or inline in shaders)
+*** Octahedral normal encoding (faster g-buffer + sampling)
+*** SAO depth buffer + sorted samples.
+*** Temporal reprojection
+** Sources:
+*** McGuire 11 and 12, G3D
+*** Unreal, bilateral
+*** GTAO/GTSO
+
+* IBL Convolution should use (RNG::sample02(i) + rng_scramble) % 1.0 instead of RNG::sample02(i, rng_scramble) as that should give fewer blob patterns and more high frequent noise.
+** Or owen scrambling? Cranley patterson?
+
 
 BACKLOG:
-* OptiXrenderer: Create half4 { __half x, y, z, w; } and use in GPU code instead of ushort4.
-* Film grain
+* DX11OptiXAdaptor: Render directly to DX11 texture. Wrap a mapped DX11 texture in a CUDA surface and copy the accumulation buffer to it (in a kernel?)
 * Screenshot
 ** Request backbuffer through the composer. (when the image is converged)
 *** Request to composer or through the camera.
@@ -25,6 +57,9 @@ BACKLOG:
 ** Render to offscreen buffer stored on the camera.
 *** Let it iterate for multiple frames to converge.
 ** Render to window if a window is specified. Can a window and framebuffer have separate viewports? And then what? Render with the highest resolution and downscale?
+* Faster convergence
+** Reverse halton sequence
+** Faure-permuted Halton sequence sample, http://gruenschloss.org/
 * OptiX (filtering) backends
 ** Try OptiX 5 AI denoiser
 ** Filter neighbouring light samples before reconstruction - Screen space photon mapping approach with MIS weights / Path filtering.
@@ -37,16 +72,13 @@ BACKLOG:
 * Material improvements
 ** Metal specular tint should go to white at grazing angles.
 ** Importance sample improvement?
-*** Gold, which is a specular metal, has a specular weight of 0.6, so it's (supposedly) 40% diffuse.
 *** The black rubber ball in TestScene produces a lot of nearly black samples. Must be from GGX?
 ** Rho approximation.
 *** GGX contribution seems too strong. Materials are too bright.
 *** Perhaps computing the relation between GGX tint and rho would help figure out how much light scatters to the diffuse layer and how much the specular metal layers will reflect?
 ** Add coat.
-*** http://jcgt.org/published/0003/04/03/paper-lowres.pdf
-*** https://www.youtube.com/watch?v=4nKb9hRYbPA
+*** http://jcgt.org/published/0003/04/03/paper-lowres.pdf and https://www.youtube.com/watch?v=4nKb9hRYbPA
 *** Or just add a GGX layer on top with an iridescence parameter (red and blue fresnel offset relative to green.)
-* Multiple cameras.
 * Normals revisited
 ** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
@@ -67,6 +99,5 @@ BACKLOG:
 
 libs
 * RtAudio wrapper - https://github.com/thestk/rtaudio
-* Emscripten
 * LuaJit - OpenSource (Fallback to interpretted Lua if the target architecture isn't supported.)
-* Tiny-dnn / DirectML. Use CuDNN directly for inference.
+* Emscripten
