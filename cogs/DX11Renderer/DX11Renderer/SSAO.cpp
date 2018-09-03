@@ -104,12 +104,12 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
 // ------------------------------------------------------------------------------------------------
 struct SsaoConstants {
     SsaoSettings settings;
+    float __padding;
     float2 g_buffer_size;
     float2 recip_g_buffer_viewport_size;
     float2 g_buffer_max_uv;
     int2 g_buffer_to_ao_index_offset;
     float2 ao_buffer_size;
-    float2 __padding;
 };
 
 AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_path)
@@ -227,11 +227,15 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned in
 
     resize_ao_buffer(context, ssao_width, ssao_height);
 
+    resize_depth_buffer(context, camera_ID, g_buffer_viewport_size.x, g_buffer_viewport_size.y);
+    auto& camera_depth = m_depth.per_camera[camera_ID];
+
     { // Contants 
         SsaoConstants constants;
         constants.settings = settings;
         constants.settings.sample_count = std::min(constants.settings.sample_count, int(max_sample_count));
         constants.settings.intensity_scale *= 2.0f / constants.settings.sample_count;
+        constants.settings.depth_filtering_percentage *= camera_depth.mip_count; // Convert filtering percentage to mip level.
 
         constants.g_buffer_size = { float(g_buffer_size.x), float(g_buffer_size.y) };
         constants.recip_g_buffer_viewport_size = { 1.0f / g_buffer_viewport_size.x, 1.0f / g_buffer_viewport_size.y };
@@ -247,9 +251,6 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned in
     context.VSSetConstantBuffers(0, 1, constant_buffers);
     context.PSSetConstantBuffers(0, 2, constant_buffers);
 
-    resize_depth_buffer(context, camera_ID, g_buffer_viewport_size.x, g_buffer_viewport_size.y);
-    auto& camera_depth = m_depth.per_camera[camera_ID];
-
     // Compute linear depth and filter.
     // Assumes that the G-buffer viewport is set // TODO Assert on viewport dimensions!
     context.OMSetRenderTargets(1, &camera_depth.RTV, nullptr);
@@ -258,7 +259,8 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned in
     context.PSSetShader(m_depth.pixel_shader, 0, 0);
     context.Draw(3, 0);
 
-    context.GenerateMips(camera_depth.SRV);
+    if (settings.depth_filtering_percentage == 0.0f)
+        context.GenerateMips(camera_depth.SRV);
 
     // Grab old viewport.
     // Assumes only one viewport is used. If we start using more then it may just be easier to bite the bullet and move to compute (which turned out to be slower than pixel shaders at first try)

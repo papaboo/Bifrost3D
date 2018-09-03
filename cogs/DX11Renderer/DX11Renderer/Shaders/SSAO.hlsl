@@ -22,12 +22,13 @@ cbuffer constants : register(b0) {
     float recip_double_plane_variance;
     int sample_count;
     int filter_support;
+    float max_depth_filtered_mipmap;
+    float __padding;
     float2 g_buffer_size;
     float2 recip_g_buffer_viewport_size;
     float2 g_buffer_max_uv;
     int2 g_buffer_to_ao_index_offset;
     float2 ao_buffer_size;
-    float2 __padding;
 };
 
 cbuffer uv_offset_constants : register(b1) {
@@ -256,6 +257,9 @@ float4 cross_filter_ps(Varyings input) : SV_TARGET {
 
 float4 alchemy_ps(Varyings input) : SV_TARGET {
 
+    static const float max_ss_radius = 0.25f;
+    static const float rcp_max_ss_radius_squared = 1 / (max_ss_radius * max_ss_radius);
+
     float depth = depth_tex[input.position.xy - g_buffer_to_ao_index_offset].r;
 
     // No occlusion on the far plane.
@@ -275,7 +279,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     float3 border_view_position = view_position + float3(world_radius, 0, 0);
     float border_u = u_coord_from_view_position(border_view_position);
     float ss_radius = border_u - input.projection_uv().x;
-    float clamped_ss_radius = min(0.25, ss_radius);
+    float clamped_ss_radius = min(max_ss_radius, ss_radius);
     float recip_radius_scale = clamped_ss_radius * rcp(ss_radius);
 
     // Scale the view normal results in a scaled occlusion, which in turn accounts for the intensity change that comes from scaling the screen radius.
@@ -291,7 +295,10 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
         if (sample_uv.x < 0.0 || sample_uv.x > 1.0) sample_uv.x = sample_uv.x < 0.0 ? frac(-sample_uv.x) : 1.0f - frac(sample_uv.x);
         if (sample_uv.y < 0.0 || sample_uv.y > 1.0) sample_uv.y = sample_uv.y < 0.0 ? frac(-sample_uv.y) : 1.0f - frac(sample_uv.y);
 
-        float depth_i = depth_tex.SampleLevel(point_sampler, sample_uv, 0).r;
+        uv_offset = sample_uv - input.projection_uv();
+        float uv_length_squared = dot(uv_offset, uv_offset); // Use original uv_offset instead of the resampled one
+        float mip_level = max_depth_filtered_mipmap * sqrt(uv_length_squared * rcp_max_ss_radius_squared); // TODO Inline max radius squared.
+        float depth_i = depth_tex.SampleLevel(point_sampler, sample_uv, mip_level).r;
         float3 view_position_i = perspective_position_from_linear_depth(depth_i, sample_uv, scene_vars.inverted_projection_matrix);
         float3 v_i = view_position_i - view_position;
 

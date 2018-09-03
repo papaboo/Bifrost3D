@@ -126,6 +126,7 @@ struct SsaoSettings {
     float plane_std_dev = 0.05f;
     int sample_count = 8;
     int filter_support = 8;
+    float depth_filtering_percentage = 0.3f;
 };
 
 //-------------------------------------------------------------------------------------------------
