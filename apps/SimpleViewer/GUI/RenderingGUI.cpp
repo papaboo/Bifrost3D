@@ -73,18 +73,20 @@ void RenderingGUI::layout_frame() {
                 has_changed |= ImGui::SliderFloat("G-buffer band scale", &settings.g_buffer_guard_band_scale, 0.0f, 0.99f, "%.2f");
 
                 if (ImGui::TreeNode("SSAO")) {
+                    auto& ssao_settings = settings.ssao.settings;
                     has_changed |= ImGui::Checkbox("SSAO", &settings.ssao.enabled);
-                    has_changed |= ImGui::InputFloat("World radius", &settings.ssao.settings.world_radius, 0.05f, 0.25f, "%.2f");
-                    settings.ssao.settings.world_radius = max(0.0f, settings.ssao.settings.world_radius);
-                    has_changed |= ImGui::InputFloat("Bias", &settings.ssao.settings.bias, 0.001f, 0.01f, "%.3f");
-                    has_changed |= ImGui::InputFloat("Intensity", &settings.ssao.settings.intensity_scale, 0.001f, 0.01f, "%.3f");
-                    has_changed |= ImGui::InputFloat("Falloff", &settings.ssao.settings.falloff, 0.001f, 0.01f, "%.3f");
-                    has_changed |= ImGui::InputInt("Sample count", &settings.ssao.settings.sample_count, 1, 5);
-                    settings.ssao.settings.sample_count = max(0, settings.ssao.settings.sample_count);
-                    has_changed |= ImGui::InputInt("Filter support", &settings.ssao.settings.filter_support, 1, 5);
-                    settings.ssao.settings.filter_support = max(0, settings.ssao.settings.filter_support);
-                    has_changed |= ImGui::InputFloat("Normal std dev", &settings.ssao.settings.normal_std_dev, 0.0f, 0.0f);
-                    has_changed |= ImGui::InputFloat("Plane std dev", &settings.ssao.settings.plane_std_dev, 0.0f, 0.0f);
+                    has_changed |= ImGui::InputFloat("World radius", &ssao_settings.world_radius, 0.05f, 0.25f, "%.2f");
+                    ssao_settings.world_radius = max(0.0f, ssao_settings.world_radius);
+                    has_changed |= ImGui::InputFloat("Bias", &ssao_settings.bias, 0.001f, 0.01f, "%.3f");
+                    has_changed |= ImGui::InputFloat("Intensity", &ssao_settings.intensity_scale, 0.001f, 0.01f, "%.3f");
+                    has_changed |= ImGui::InputFloat("Falloff", &ssao_settings.falloff, 0.001f, 0.01f, "%.3f");
+                    has_changed |= ImGui::InputInt("Sample count", &ssao_settings.sample_count, 1, 5);
+                    ssao_settings.sample_count = max(0, ssao_settings.sample_count);
+                    has_changed |= ImGui::SliderFloat("Depth filtering %", &ssao_settings.depth_filtering_percentage, 0.0f, 1.0f, "%.2f");
+                    has_changed |= ImGui::InputInt("Filter support", &ssao_settings.filter_support, 1, 5);
+                    ssao_settings.filter_support = max(0, ssao_settings.filter_support);
+                    has_changed |= ImGui::InputFloat("Normal std dev", &ssao_settings.normal_std_dev, 0.0f, 0.0f);
+                    has_changed |= ImGui::InputFloat("Plane std dev", &ssao_settings.plane_std_dev, 0.0f, 0.0f);
                     ImGui::TreePop();
                 }
 
