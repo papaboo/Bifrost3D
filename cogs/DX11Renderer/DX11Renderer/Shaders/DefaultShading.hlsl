@@ -181,12 +181,13 @@ struct DefaultShading {
                 // float area_light_normalization_term = pow2(ggx_alpha / adjusted_ggx_alpha);
 
                 // NOTE We could try fitting the constants and try cos_theta VS wo and local_sphere_position VS local_sphere_position.
+                float cos_theta = max(wi.z, 0.0);
                 float sin_theta_squared = pow2(light.sphere_radius()) / dot(most_representative_point, most_representative_point);
                 float a2 = pow2(ggx_alpha);
                 float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta * 3.6 + 0.4));
                 float specular_ambient_visibility = lerp(1, scaled_ambient_visibility, a2);
 
-                radiance += specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway) * abs(wi.z) * light_radiance * area_light_normalization_term * specular_ambient_visibility;
+                radiance += specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway) * cos_theta * light_radiance * area_light_normalization_term * specular_ambient_visibility;
             }
         }
 
