@@ -101,14 +101,15 @@ void MIS_convolute(uint3 thread_ID : SV_DispatchThreadID) {
     for (unsigned int l = 0; l < half_sample_count; ++l) {
         LightSample light_sample = light_samples[(l + light_index_offset) % light_sample_count];
 
-        float cos_theta = max(dot(light_sample.direction_to_light, up_vector), 0.0f);
+        float cos_theta = dot(light_sample.direction_to_light, up_vector);
+
+        // NaN resilient check.
+        // Unfortunately it is possible to draw light samples with a PDF of zero. Floating point rounding error is a pain.
+        if (!(cos_theta > 0.00001f) || !(light_sample.PDF > 0.000000001f))
+            continue;
+
         float ggx_f = BSDFs::GGX::D(alpha, cos_theta);
         float ggx_PDF = ggx_f * cos_theta; // Inlining GGX::PDF(alpha, cos_theta)
-        
-        // NaN resilient check. 
-        // Unfortunately it is possible to draw light samples with a PDF of zero. Floating point rounding error is a pain.
-        if (!(ggx_PDF > 0.000000001f) || !(light_sample.PDF > 0.000000001f))
-            continue;
 
         float mis_weight = RNG::power_heuristic(light_sample.PDF, ggx_PDF);
         radiance += light_sample.radiance * (mis_weight * ggx_f * cos_theta / light_sample.PDF);
