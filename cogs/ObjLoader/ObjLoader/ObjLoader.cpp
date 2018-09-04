@@ -18,6 +18,8 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <ObjLoader/tiny_obj_loader.h>
 
+#include <map>
+
 using namespace Cogwheel;
 using namespace Cogwheel::Assets;
 using namespace Cogwheel::Core;
@@ -49,10 +51,11 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
     std::string directory, filename;
     split_path(directory, filename, path);
 
+    tinyobj::attrib_t attributes;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> tiny_materials;
     std::string error;
-    bool obj_loaded = tinyobj::LoadObj(shapes, tiny_materials, error, path.c_str(), directory.c_str());
+    bool obj_loaded = tinyobj::LoadObj(&attributes, &shapes, &tiny_materials, &error, path.c_str(), directory.c_str());
 
     if (!error.empty()) {
         printf("ObjLoader::load error: '%s'.\n", error.c_str());
@@ -131,51 +134,104 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
         materials[unsigned int(i)] = Materials::create(tiny_mat.name, material_data);
     }
 
-    for (size_t i = 0; i < shapes.size(); ++i) {
-
-        tinyobj::mesh_t tiny_mesh = shapes[i].mesh;
+    #pragma omp parallel for
+    for (int s = 0; s < shapes.size(); ++s) {
+        tinyobj::shape_t shape = shapes[s];
 
         Meshes::UID mesh_ID = Meshes::UID::invalid_UID();
-        { // Create mesh 
-            assert(tiny_mesh.indices.size() != 0); // Assert that there are indices, because currently we don't support non-indexed meshes.
-            assert((tiny_mesh.indices.size() % 3) == 0); // Assert that indices are for triangles.
-            assert((tiny_mesh.positions.size() % 3) == 0); // Assert that positions are three dimensional.
-            assert((tiny_mesh.normals.size() % 3) == 0); // Assert that normals are three dimensional.
-            assert((tiny_mesh.texcoords.size() % 2) == 0); // Assert that texcoords are two dimensional.
-
+        { // Create mesh
+            // Base normal and texcoords on the first vertex.
+            tinyobj::index_t first_vertex_index = shape.mesh.indices[0];
             MeshFlags mesh_flags = MeshFlag::Position;
-            if (tiny_mesh.normals.size() > 0)
+            if (first_vertex_index.normal_index != -1)
                 mesh_flags |= MeshFlag::Normal;
-            if (tiny_mesh.texcoords.size() > 0)
+            if (first_vertex_index.texcoord_index != -1)
                 mesh_flags |= MeshFlag::Texcoord;
 
-            unsigned int triangle_count = unsigned int(tiny_mesh.indices.size() / 3u);
-            unsigned int vertex_count = unsigned int(tiny_mesh.positions.size() / 3u);
-            assert(tiny_mesh.normals.size() == 0 || tiny_mesh.normals.size() == vertex_count * 3);
-            assert(tiny_mesh.texcoords.size() == 0 || tiny_mesh.texcoords.size() == vertex_count * 2);
+            // Tiny index comparer for the map.
+            struct IndexComparer {
+                inline bool operator()(tinyobj::index_t lhs, tinyobj::index_t rhs) const {
+                    if (lhs.vertex_index != rhs.vertex_index)
+                        return lhs.vertex_index < rhs.vertex_index;
+                    else if (lhs.normal_index != rhs.normal_index)
+                        return lhs.normal_index < rhs.normal_index;
+                    else if (lhs.texcoord_index != rhs.texcoord_index)
+                        return lhs.texcoord_index < rhs.texcoord_index;
+                    else
+                        return false;
+                }
+            };
 
-            mesh_ID = Meshes::create(shapes[i].name, triangle_count, vertex_count, mesh_flags);
+            std::map<tinyobj::index_t, unsigned int, IndexComparer> vertex_index_map; // TODO Sort and reduce to make a faster structure?
+            unsigned int vertex_count = 0;
+            for (auto tiny_vertex_index : shape.mesh.indices) {
+                auto res = vertex_index_map.emplace(tiny_vertex_index, vertex_count);
+                if (res.second)
+                    ++vertex_count;
+            }
 
+            unsigned int triangle_count = unsigned int(shape.mesh.num_face_vertices.size());
+            #pragma omp critical
+            {
+                mesh_ID = Meshes::create(shape.name, triangle_count, vertex_count, mesh_flags);
+            }
+            
             Mesh cogwheel_mesh = mesh_ID;
-            memcpy(cogwheel_mesh.get_primitives(), tiny_mesh.indices.data(), tiny_mesh.indices.size() * sizeof(unsigned int));
-            memcpy(cogwheel_mesh.get_positions(), tiny_mesh.positions.data(), tiny_mesh.positions.size() * sizeof(float));
-            if (mesh_flags & MeshFlag::Normal)
-                memcpy(cogwheel_mesh.get_normals(), tiny_mesh.normals.data(), tiny_mesh.normals.size() * sizeof(float));
-            if (mesh_flags & MeshFlag::Texcoord)
-                memcpy(cogwheel_mesh.get_texcoords(), tiny_mesh.texcoords.data(), tiny_mesh.texcoords.size() * sizeof(float));
+
+            // Copy indices.
+            auto* mesh_primitives = cogwheel_mesh.get_primitives();
+            for (unsigned int p = 0; p < cogwheel_mesh.get_primitive_count(); ++p) {
+                unsigned int i0 = vertex_index_map[shape.mesh.indices[3 * p + 0]];
+                unsigned int i1 = vertex_index_map[shape.mesh.indices[3 * p + 1]];
+                unsigned int i2 = vertex_index_map[shape.mesh.indices[3 * p + 2]];
+                mesh_primitives[p] = { i0, i1, i2 };
+            }
+
+            // Copy positions
+            auto* mesh_positions = cogwheel_mesh.get_positions();
+            for (auto index_pair : vertex_index_map) {
+                float vx = attributes.vertices[3 * index_pair.first.vertex_index + 0];
+                float vy = attributes.vertices[3 * index_pair.first.vertex_index + 1];
+                float vz = attributes.vertices[3 * index_pair.first.vertex_index + 2];
+                mesh_positions[index_pair.second] = { vx, vy, vz };
+            }
+
+            // Copy normals
+            auto* mesh_normals = cogwheel_mesh.get_normals();
+            if (mesh_normals != nullptr) {
+                for (auto index_pair : vertex_index_map) {
+                    float nx = attributes.normals[3 * index_pair.first.normal_index + 0];
+                    float ny = attributes.normals[3 * index_pair.first.normal_index + 1];
+                    float nz = attributes.normals[3 * index_pair.first.normal_index + 2];
+                    mesh_normals[index_pair.second] = { nx, ny, nz };
+                }
+            }
+
+            // Copy texcoords
+            auto* mesh_texcoord = cogwheel_mesh.get_texcoords();
+            if (mesh_texcoord != nullptr) {
+                for (auto index_pair : vertex_index_map) {
+                    float u = attributes.texcoords[2 * index_pair.first.texcoord_index + 0];
+                    float v = attributes.texcoords[2 * index_pair.first.texcoord_index + 1];
+                    mesh_texcoord[index_pair.second] = { u, v };
+                }
+            }
 
             cogwheel_mesh.compute_bounds();
         }
 
-        SceneNodes::UID node_ID = SceneNodes::create(shapes[i].name);
-        if (root_ID != SceneNodes::UID::invalid_UID())
-            SceneNodes::set_parent(node_ID, root_ID);
-        else
-            root_ID = node_ID;
+        #pragma omp critical
+        {
+            SceneNodes::UID node_ID = SceneNodes::create(shape.name);
+            if (root_ID != SceneNodes::UID::invalid_UID())
+                SceneNodes::set_parent(node_ID, root_ID);
+            else
+                root_ID = node_ID;
 
-        int material_index = tiny_mesh.material_ids.size() == 0 ? -1 : tiny_mesh.material_ids[0];
-        Materials::UID material_ID = material_index >= 0 ? materials[material_index] : Materials::UID::invalid_UID();
-        MeshModels::UID model_ID = MeshModels::create(node_ID, mesh_ID, material_ID);
+            int material_index = shape.mesh.material_ids[0]; // No per facet material support. TODO Add it in the future by splitting up the shape.
+            Materials::UID material_ID = material_index >= 0 ? materials[material_index] : Materials::UID::invalid_UID();
+            MeshModels::UID model_ID = MeshModels::create(node_ID, mesh_ID, material_ID);
+        }
     }
 
     return root_ID;
