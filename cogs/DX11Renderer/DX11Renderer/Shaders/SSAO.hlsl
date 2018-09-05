@@ -46,6 +46,8 @@ static const float depth_far_plane_sentinel = 65504.0f;
 Texture2D normal_tex : register(t0);
 Texture2D depth_tex : register(t1);
 
+SamplerState trilinear_sampler : register(s1);
+
 // ------------------------------------------------------------------------------------------------
 // SSAO utility functions.
 // ------------------------------------------------------------------------------------------------
@@ -298,7 +300,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
         uv_offset = sample_uv - input.projection_uv();
         float uv_length_squared = dot(uv_offset, uv_offset); // Use original uv_offset instead of the resampled one
         float mip_level = max_depth_filtered_mipmap * sqrt(uv_length_squared * rcp_max_ss_radius_squared); // TODO Inline max radius squared.
-        float depth_i = depth_tex.SampleLevel(point_sampler, sample_uv, mip_level).r;
+        float depth_i = depth_tex.SampleLevel(trilinear_sampler, sample_uv, mip_level).r;
         float3 view_position_i = perspective_position_from_linear_depth(depth_i, sample_uv, scene_vars.inverted_projection_matrix);
         float3 v_i = view_position_i - view_position;
 
