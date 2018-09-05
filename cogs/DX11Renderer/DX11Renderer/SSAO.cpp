@@ -269,7 +269,7 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned in
     context.PSSetShader(m_depth.pixel_shader, 0, 0);
     context.Draw(3, 0);
 
-    if (settings.depth_filtering_percentage == 0.0f)
+    if (settings.depth_filtering_percentage != 0.0f)
         context.GenerateMips(camera_depth.SRV);
 
     // Grab old viewport.
