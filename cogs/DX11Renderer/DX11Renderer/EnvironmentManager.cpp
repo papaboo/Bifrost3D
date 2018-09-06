@@ -271,8 +271,13 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                             THROW_DX11_ERROR(device.CreateUnorderedAccessView(env.texture2D, &mip_level_UAV_desc, &mip_level_UAVs[m - 1]));
                         }
 
+                        D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+                        srv_desc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
+                        srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+                        srv_desc.Texture2D.MipLevels = 1;
+                        srv_desc.Texture2D.MostDetailedMip = 0;
                         OShaderResourceView env_SRV;
-                        THROW_DX11_ERROR(device.CreateShaderResourceView(env.texture2D, nullptr, &env_SRV));
+                        THROW_DX11_ERROR(device.CreateShaderResourceView(env.texture2D, &srv_desc, &env_SRV));
 
                         // Launch kernels.
                         device_context.CSSetShader(m_convolution_shader, nullptr, 0);
