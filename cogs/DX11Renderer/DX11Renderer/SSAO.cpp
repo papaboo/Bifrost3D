@@ -22,11 +22,11 @@ struct FilterConstants {
 
 inline void create_box_filter_constants(ID3D11Device1& device, OBuffer* constants) {
     FilterConstants host_constants = { 5 };
-    THROW_DX11_ERROR(create_constant_buffer(device, constants, &constants[0]));
+    THROW_DX11_ERROR(create_constant_buffer(device, host_constants, &constants[0]));
     host_constants.pixel_offset = 3;
-    THROW_DX11_ERROR(create_constant_buffer(device, constants, &constants[1]));
+    THROW_DX11_ERROR(create_constant_buffer(device, host_constants, &constants[1]));
     host_constants.pixel_offset = 1;
-    THROW_DX11_ERROR(create_constant_buffer(device, constants, &constants[2]));
+    THROW_DX11_ERROR(create_constant_buffer(device, host_constants, &constants[2]));
 }
 
 // ------------------------------------------------------------------------------------------------
