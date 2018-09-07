@@ -178,7 +178,7 @@ void sample_ao(int2 g_buffer_index, float3 normal, float plane_d, inout float su
     float distance_to_plane = dot(normal, sample_position) + plane_d;
     weight *= exp(-pow2(distance_to_plane) * recip_double_plane_variance);
 
-    weight += 0.00001;
+    weight = max(weight, 0.00001);
 
     summed_ao += weight * ao_tex[g_buffer_index + g_buffer_to_ao_index_offset].r;
     ao_weight += weight;
@@ -195,18 +195,17 @@ float4 filter_input(Varyings input, IFilter filter) {
 
     // No occlusion on the far plane.
     if (depth == depth_far_plane_sentinel)
-        return float4(1, 0, 0, 0);
+        return float4(0, 0, 0, 0);
 
     float3 view_position = perspective_position_from_linear_depth(depth, input.projection_uv(), scene_vars.inverted_projection_matrix);
     float plane_d = -dot(view_position, view_normal);
 
-    float center_ao = 0.0f;
-    float center_weight = 0.0f;
-    sample_ao(g_buffer_index, view_normal, plane_d, center_ao, center_weight); // TODO Can be inlined, just need to compute the weight, which should be pow2(exp(-0)) I guess.
-
     float border_ao = 0.0f;
     float border_weight = 0.0f;
     filter.apply(g_buffer_index, view_normal, plane_d, border_ao, border_weight);
+
+    float center_weight = 1.0f;
+    float center_ao = ao_tex[g_buffer_index + g_buffer_to_ao_index_offset].r;
 
     // Ensure that we perform at least some filtering in areas with high frequency geometry.
     if (border_weight < 2.0 * center_weight) {
@@ -264,7 +263,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
 
     // No occlusion on the far plane.
     if (depth == depth_far_plane_sentinel)
-        return float4(1, 0, 0, 0);
+        return float4(0, 0, 0, 0);
 
     // Setup sampling
     uint rng_offset = RNG::evenly_distributed_2D_seed(input.position.xy);
