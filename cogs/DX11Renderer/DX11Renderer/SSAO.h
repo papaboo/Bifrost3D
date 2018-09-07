@@ -57,6 +57,7 @@ private:
 class AlchemyAO {
 public:
     static const unsigned int max_sample_count = 256;
+    static const float max_screen_space_radius;
 
     AlchemyAO() = default;
     AlchemyAO(AlchemyAO&& other) = default;

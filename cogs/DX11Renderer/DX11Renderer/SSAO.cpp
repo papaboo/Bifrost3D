@@ -65,7 +65,7 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
         create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, m_width, m_height, &m_intermediate_SRV, nullptr, &m_intermediate_RTV);
     }
 
-    if (m_support != support) {
+    if (m_support != support && m_type == FilterType::Cross) {
         m_support = support;
         FilterConstants pass1_constants = { support, 0, 0, 1 };
         context.UpdateSubresource(m_constants[0], 0u, nullptr, &pass1_constants, sizeof(FilterConstants), 0u);
@@ -111,6 +111,8 @@ struct SsaoConstants {
     int2 g_buffer_to_ao_index_offset;
     float2 ao_buffer_size;
 };
+
+const float AlchemyAO::max_screen_space_radius = 0.25f;
 
 AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_path)
     : m_width(0), m_height(0), m_SSAO_RTV(nullptr), m_SSAO_SRV(nullptr) {
@@ -243,9 +245,9 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned in
     { // Contants 
         SsaoConstants constants;
         constants.settings = settings;
-        constants.settings.sample_count = std::min(constants.settings.sample_count, int(max_sample_count));
+        constants.settings.sample_count = std::min(constants.settings.sample_count, max_sample_count);
         constants.settings.intensity_scale *= 2.0f / constants.settings.sample_count;
-        constants.settings.depth_filtering_percentage *= camera_depth.mip_count; // Convert filtering percentage to mip level.
+        constants.settings.depth_filtering_percentage *= camera_depth.mip_count / max_screen_space_radius; // Convert filtering percentage to mip level scale.
 
         constants.g_buffer_size = { float(g_buffer_size.x), float(g_buffer_size.y) };
         constants.recip_g_buffer_viewport_size = { 1.0f / g_buffer_viewport_size.x, 1.0f / g_buffer_viewport_size.y };

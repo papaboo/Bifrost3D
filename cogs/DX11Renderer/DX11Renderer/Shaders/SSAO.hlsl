@@ -20,9 +20,9 @@ cbuffer constants : register(b0) {
     float falloff;
     float recip_double_normal_variance;
     float recip_double_plane_variance;
-    int sample_count;
+    uint sample_count;
     int filter_support;
-    float max_depth_filtered_mipmap;
+    float sample_distance_to_mip_level;
     float __padding;
     float2 g_buffer_size;
     float2 recip_g_buffer_viewport_size;
@@ -34,8 +34,8 @@ cbuffer constants : register(b0) {
 cbuffer uv_offset_constants : register(b1) {
     float4 packed_uv_offsets[128];
 }
-
 static float2 uv_offsets[256] = ((float2[256])packed_uv_offsets);
+float2 get_uv_offset(uint i) { return uv_offsets[i % 256]; }
 
 cbuffer scene_variables : register(b13) {
     SceneVariables scene_vars;
@@ -95,7 +95,7 @@ float2 cosine_disk_sampling(float2 sample_uv) {
 }
 
 // Returns a position for the tap on a unit disk.
-float2 tap_location(int sample_number, int sample_count, float spin_angle) {
+float2 tap_location(int sample_number, uint sample_count, float spin_angle) {
     const float spiral_turns = 73856093;
     float alpha = float(sample_number + 0.5) / sample_count;
     float angle = alpha * (spiral_turns * TWO_PI) + spin_angle;
@@ -239,7 +239,6 @@ float4 box_filter_ps(Varyings input) : SV_TARGET {
 class CrossFilter : IFilter {
     void apply(int2 g_buffer_index, float3 view_normal, float plane_d, inout float summed_ao, inout float ao_weight) {
         for (int i = 1; i <= per_pass_support; ++i) {
-            // TODO gaussian/tent filter
             sample_ao(g_buffer_index + i * axis, view_normal, plane_d, summed_ao, ao_weight);
             sample_ao(g_buffer_index - i * axis, view_normal, plane_d, summed_ao, ao_weight);
         }
@@ -260,7 +259,6 @@ float4 cross_filter_ps(Varyings input) : SV_TARGET {
 float4 alchemy_ps(Varyings input) : SV_TARGET {
 
     static const float max_ss_radius = 0.25f;
-    static const float rcp_max_ss_radius_squared = 1 / (max_ss_radius * max_ss_radius);
 
     float depth = depth_tex[input.position.xy - g_buffer_to_ao_index_offset].r;
 
@@ -289,7 +287,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
 
     // Determine occlusion
     float occlusion = 0.0f;
-    for (int i = 0; i < sample_count; ++i) {
+    for (uint i = 0; i < sample_count; ++i) {
         float2 uv_offset = mul(uv_offsets[i] * ss_radius, sample_pattern_rotation);
         float2 sample_uv = input.projection_uv() + uv_offset;
 
@@ -297,9 +295,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
         if (sample_uv.x < 0.0 || sample_uv.x > 1.0) sample_uv.x = sample_uv.x < 0.0 ? frac(-sample_uv.x) : 1.0f - frac(sample_uv.x);
         if (sample_uv.y < 0.0 || sample_uv.y > 1.0) sample_uv.y = sample_uv.y < 0.0 ? frac(-sample_uv.y) : 1.0f - frac(sample_uv.y);
 
-        uv_offset = sample_uv - input.projection_uv();
-        float uv_length_squared = dot(uv_offset, uv_offset); // Use original uv_offset instead of the resampled one
-        float mip_level = max_depth_filtered_mipmap * sqrt(uv_length_squared * rcp_max_ss_radius_squared); // TODO Inline max radius squared.
+        float mip_level = sample_distance_to_mip_level * length(sample_uv - input.projection_uv());
         float depth_i = depth_tex.SampleLevel(trilinear_sampler, sample_uv, mip_level).r;
         float3 view_position_i = perspective_position_from_linear_depth(depth_i, sample_uv, scene_vars.inverted_projection_matrix);
         float3 v_i = view_position_i - view_position;

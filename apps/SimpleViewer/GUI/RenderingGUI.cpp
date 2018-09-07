@@ -16,6 +16,18 @@
 using namespace Cogwheel::Math;
 using namespace Cogwheel::Scene;
 
+// ------------------------------------------------------------------------------------------------
+// ImGui utility functions.
+// ------------------------------------------------------------------------------------------------
+namespace ImGui {
+
+    bool InputUint(const char* label, unsigned int* v, unsigned int step, unsigned int step_fast, ImGuiInputTextFlags extra_flags = 0) {
+        // Hexadecimal input provided as a convenience but the flag name is awkward. Typically you'd use InputText() to parse your own data, if you want to handle prefixes.
+        const char* format = (extra_flags & ImGuiInputTextFlags_CharsHexadecimal) ? "%08X" : "%u";
+        return InputScalar(label, ImGuiDataType_U32, (void*)v, (void*)(step > 0 ? &step : NULL), (void*)(step_fast > 0 ? &step_fast : NULL), format, extra_flags);
+    }
+}
+
 namespace GUI {
 
 void RenderingGUI::layout_frame() {
@@ -80,8 +92,7 @@ void RenderingGUI::layout_frame() {
                     has_changed |= ImGui::InputFloat("Bias", &ssao_settings.bias, 0.001f, 0.01f, "%.3f");
                     has_changed |= ImGui::InputFloat("Intensity", &ssao_settings.intensity_scale, 0.001f, 0.01f, "%.3f");
                     has_changed |= ImGui::InputFloat("Falloff", &ssao_settings.falloff, 0.001f, 0.01f, "%.3f");
-                    has_changed |= ImGui::InputInt("Sample count", &ssao_settings.sample_count, 1, 5);
-                    ssao_settings.sample_count = max(0, ssao_settings.sample_count);
+                    has_changed |= ImGui::InputUint("Sample count", &ssao_settings.sample_count, 1u, 5u);
                     has_changed |= ImGui::SliderFloat("Depth filtering %", &ssao_settings.depth_filtering_percentage, 0.0f, 1.0f, "%.2f");
                     has_changed |= ImGui::InputInt("Filter support", &ssao_settings.filter_support, 1, 5);
                     ssao_settings.filter_support = max(0, ssao_settings.filter_support);

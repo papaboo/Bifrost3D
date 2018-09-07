@@ -124,9 +124,9 @@ struct SsaoSettings {
     float falloff = 2.0f;
     float normal_std_dev = 0.1f;
     float plane_std_dev = 0.05f;
-    int sample_count = 8;
+    unsigned int sample_count = 8u;
     int filter_support = 8;
-    float depth_filtering_percentage = 0.3f;
+    float depth_filtering_percentage = 0.5f;
 };
 
 //-------------------------------------------------------------------------------------------------
