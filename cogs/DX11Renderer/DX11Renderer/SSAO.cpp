@@ -121,6 +121,7 @@ AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_pa
 
     THROW_DX11_ERROR(create_constant_buffer(device, sizeof(SsaoConstants), &m_constants));
     THROW_DX11_ERROR(create_constant_buffer(device, sizeof(Vector2f) * m_samples.capacity, &m_samples.buffer));
+    m_samples.size = 0;
 
     OBlob vertex_shader_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "vs_5_0", "main_vs");
     THROW_DX11_ERROR(device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shader));
@@ -226,12 +227,11 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned in
         context.UpdateSubresource(m_constants, 0u, nullptr, &constants, 0u, 0u);
     }
 
-    if (m_samples.size != occlusion_sample_count || m_samples.falloff != settings.falloff) {
+    if (m_samples.size != occlusion_sample_count) {
         // Update the samples buffer.
         using namespace Cogwheel::Math;
 
         m_samples.size = occlusion_sample_count;
-        m_samples.falloff = settings.falloff;
 
         static auto cosine_disk_sampling = [](Vector2f sample_uv) -> Vector2f {
             float r = sample_uv.x;

@@ -83,7 +83,6 @@ private:
     struct Samples {
         static const unsigned int capacity = 256;
         unsigned int size;
-        float falloff;
         OBuffer buffer;
     } m_samples;
     OBuffer m_constants;
