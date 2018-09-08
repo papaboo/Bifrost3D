@@ -32,7 +32,7 @@ public:
     BilateralBlur& operator=(BilateralBlur&& rhs) = default;
     BilateralBlur& operator=(BilateralBlur& rhs) = delete;
 
-    inline int get_support() const { return m_support; }
+    inline int get_support() const { return m_type == FilterType::Box ? 5 : m_support; }
 
     OShaderResourceView& apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, int width, int height, int support);
 
