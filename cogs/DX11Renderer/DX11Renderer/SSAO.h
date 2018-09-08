@@ -53,6 +53,8 @@ private:
 // ------------------------------------------------------------------------------------------------
 // The Alchemy screen-space ambient obscurance algorithm.
 // http://casual-effects.com/research/McGuire2011AlchemyAO/index.html
+// Future work:
+// * HBAO/GTAO: https://blog.selfshadow.com/publications/s2016-shading-course/activision/s2016_pbs_activision_occlusion.pdf
 // ------------------------------------------------------------------------------------------------
 class AlchemyAO {
 public:
