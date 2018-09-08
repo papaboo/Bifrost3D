@@ -34,8 +34,10 @@ cbuffer constants : register(b0) {
 cbuffer uv_offset_constants : register(b1) {
     float4 packed_uv_offsets[128];
 }
-static float2 uv_offsets[256] = ((float2[256])packed_uv_offsets);
-float2 get_uv_offset(uint i) { return uv_offsets[i % 256]; }
+float2 get_uv_offset(uint i) { 
+    float4 packed_uv_offset = packed_uv_offsets[i >> 1];
+    return (i % 2) ? packed_uv_offset.zw : packed_uv_offset.xy;
+}
 
 cbuffer scene_variables : register(b13) {
     SceneVariables scene_vars;
@@ -287,7 +289,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     // Determine occlusion
     float occlusion = 0.0f;
     for (uint i = 0; i < sample_count; ++i) {
-        float2 uv_offset = mul(uv_offsets[i] * ss_radius, sample_pattern_rotation);
+        float2 uv_offset = mul(get_uv_offset(i) * ss_radius, sample_pattern_rotation);
         float2 sample_uv = input.projection_uv() + uv_offset;
 
         // Resample if sample is outside g-buffer.

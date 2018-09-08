@@ -120,31 +120,7 @@ AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_pa
     using namespace Cogwheel::Math;
 
     THROW_DX11_ERROR(create_constant_buffer(device, sizeof(SsaoConstants), &m_constants));
-
-    { // Allocate samples.
-        static auto cosine_disk_sampling = [](Vector2f sample_uv) -> Vector2f {
-            float r = sample_uv.x;
-            float theta = 2.0f * PI<float>() * sample_uv.y;
-            return r * Vector2f(cos(theta), sin(theta));
-        };
-
-        auto* samples = new Vector2f[max_sample_count];
-        for (int i = 0; i < max_sample_count; ++i)
-            samples[i] = cosine_disk_sampling(RNG::sample02(i+1)); // Drop the first sample as it is (0, 0)
-
-        D3D11_BUFFER_DESC desc = {};
-        desc.Usage = D3D11_USAGE_IMMUTABLE;
-        desc.ByteWidth = sizeof(float2) * max_sample_count;
-        desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-        desc.CPUAccessFlags = 0;
-        desc.MiscFlags = 0;
-
-        D3D11_SUBRESOURCE_DATA resource_data = {};
-        resource_data.pSysMem = samples;
-        device.CreateBuffer(&desc, &resource_data, &m_samples);
-
-        delete[] samples;
-    }
+    THROW_DX11_ERROR(create_constant_buffer(device, sizeof(Vector2f) * m_samples.capacity, &m_samples.buffer));
 
     OBlob vertex_shader_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "vs_5_0", "main_vs");
     THROW_DX11_ERROR(device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shader));
@@ -235,6 +211,7 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned in
 
     int ssao_width = viewport.width + 2 * get_margin();
     int ssao_height = viewport.height + 2 * get_margin();
+    unsigned int occlusion_sample_count = std::min(settings.sample_count, m_samples.capacity);
     int2 g_buffer_viewport_size = { viewport.width + 2 * viewport.x, viewport.height + 2 * viewport.y };
 
     resize_ao_buffer(context, ssao_width, ssao_height);
@@ -245,7 +222,7 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned in
     { // Contants 
         SsaoConstants constants;
         constants.settings = settings;
-        constants.settings.sample_count = std::min(constants.settings.sample_count, max_sample_count);
+        constants.settings.sample_count = occlusion_sample_count;
         constants.settings.intensity_scale *= 2.0f / constants.settings.sample_count;
         constants.settings.depth_filtering_percentage *= camera_depth.mip_count / max_screen_space_radius; // Convert filtering percentage to mip level scale.
 
@@ -259,7 +236,30 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned in
         context.UpdateSubresource(m_constants, 0u, nullptr, &constants, 0u, 0u);
     }
 
-    ID3D11Buffer* constant_buffers[] = { m_constants, m_samples };
+    if (m_samples.size != occlusion_sample_count || m_samples.falloff != settings.falloff) {
+        // Update the samples buffer.
+        using namespace Cogwheel::Math;
+
+        m_samples.size = occlusion_sample_count;
+        m_samples.falloff = settings.falloff;
+
+        static auto cosine_disk_sampling = [](Vector2f sample_uv) -> Vector2f {
+            float r = sample_uv.x;
+            float theta = 2.0f * PI<float>() * sample_uv.y;
+            return r * Vector2f(cos(theta), sin(theta));
+        };
+
+        Vector2f samples[Samples::capacity];
+        for (unsigned int i = 0; i < m_samples.size; ++i)
+            samples[i] = cosine_disk_sampling(RNG::sample02(i + 1)); // Drop the first sample as it is (0, 0), e.g centered on the pixel being sampled.
+
+        // Sort samples based on distance from center pixel to improve mipmap cache coherence.
+        std::sort(samples, samples + m_samples.size, [](Vector2f lhs, Vector2f rhs) -> bool { return magnitude(lhs) < magnitude(rhs); });
+
+        context.UpdateSubresource(m_samples.buffer, 0u, nullptr, samples, 0u, 0u);
+    }
+
+    ID3D11Buffer* constant_buffers[] = { m_constants, m_samples.buffer };
     context.VSSetConstantBuffers(0, 1, constant_buffers);
     context.PSSetConstantBuffers(0, 2, constant_buffers);
 

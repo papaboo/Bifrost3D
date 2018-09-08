@@ -56,7 +56,6 @@ private:
 // ------------------------------------------------------------------------------------------------
 class AlchemyAO {
 public:
-    static const unsigned int max_sample_count = 256;
     static const float max_screen_space_radius;
 
     AlchemyAO() = default;
@@ -81,8 +80,13 @@ private:
     void resize_ao_buffer(ID3D11DeviceContext1& context, int ssao_width, int ssao_height);
     void resize_depth_buffer(ID3D11DeviceContext1& context, unsigned int camera_ID, int depth_width, int depth_height);
 
+    struct Samples {
+        static const unsigned int capacity = 256;
+        unsigned int size;
+        float falloff;
+        OBuffer buffer;
+    } m_samples;
     OBuffer m_constants;
-    OBuffer m_samples;
     OVertexShader m_vertex_shader;
     OPixelShader m_pixel_shader;
     OSamplerState m_trilinear_sampler;
