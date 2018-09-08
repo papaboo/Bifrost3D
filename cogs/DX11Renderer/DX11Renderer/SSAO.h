@@ -89,7 +89,6 @@ private:
     OBuffer m_constants;
     OVertexShader m_vertex_shader;
     OPixelShader m_pixel_shader;
-    OSamplerState m_trilinear_sampler;
 
     int m_width, m_height;
     ORenderTargetView m_SSAO_RTV;

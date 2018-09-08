@@ -132,16 +132,6 @@ AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_pa
     THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(ao_shader_blob), nullptr, &m_pixel_shader));
 
     m_filter = BilateralBlur(device, shader_folder_path, BilateralBlur::FilterType::Cross);
-
-    D3D11_SAMPLER_DESC sampler_desc = {};
-    sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-    sampler_desc.MinLOD = 0;
-    sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
-    THROW_DX11_ERROR(device.CreateSamplerState(&sampler_desc, &m_trilinear_sampler));
 }
 
 int2 AlchemyAO::compute_g_buffer_to_ao_index_offset(Cogwheel::Math::Recti viewport) const {
@@ -292,7 +282,6 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned in
     // Compute SSAO.
     context.OMSetRenderTargets(1, &m_SSAO_RTV, nullptr);
     ID3D11ShaderResourceView* SRVs[2] = { normals, camera_depth.SRV };
-    context.PSSetSamplers(1, 1, &m_trilinear_sampler);
     context.PSSetShaderResources(0, 2, SRVs);
     context.PSSetShader(m_pixel_shader, 0, 0);
     context.Draw(3, 0);
