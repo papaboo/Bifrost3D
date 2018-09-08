@@ -133,7 +133,7 @@ AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_pa
     OBlob ao_shader_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "ps_5_0", "alchemy_ps");
     THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(ao_shader_blob), nullptr, &m_pixel_shader));
 
-    m_filter = BilateralBlur(device, shader_folder_path, BilateralBlur::FilterType::Cross);
+    m_filter = BilateralBlur(device, shader_folder_path, BilateralBlur::FilterType::Box);
 }
 
 int2 AlchemyAO::compute_g_buffer_to_ao_index_offset(Cogwheel::Math::Recti viewport) const {
