@@ -161,11 +161,11 @@ Texture2D ao_tex : register(t2);
 
 cbuffer per_filter_constants : register(b2) {
     int per_pass_support;
-    int __padding;
+    int is_final_pass;
     int2 axis;
 }
 
-void sample_ao(int2 g_buffer_index, float3 normal, float plane_d, inout float summed_ao, inout float ao_weight) {
+void sample_ao(int2 g_buffer_index, float3 normal, float plane_d, inout float summed_av, inout float av_weight) {
     // Normal weight
     float3 sample_normal = decode_ss_octahedral_normal(normal_tex[g_buffer_index].xy);
     float cos_theta = dot(sample_normal, normal);
@@ -180,8 +180,8 @@ void sample_ao(int2 g_buffer_index, float3 normal, float plane_d, inout float su
 
     weight = max(weight, 0.00001);
 
-    summed_ao += weight * ao_tex[g_buffer_index + g_buffer_to_ao_index_offset].r;
-    ao_weight += weight;
+    summed_av += weight * ao_tex[g_buffer_index + g_buffer_to_ao_index_offset].r;
+    av_weight += weight;
 }
 
 interface IFilter {
@@ -200,21 +200,25 @@ float4 filter_input(Varyings input, IFilter filter) {
     float3 view_position = perspective_position_from_linear_depth(depth, input.projection_uv(), scene_vars.inverted_projection_matrix);
     float plane_d = -dot(view_position, view_normal);
 
-    float border_ao = 0.0f;
+    float border_av = 0.0f;
     float border_weight = 0.0f;
-    filter.apply(g_buffer_index, view_normal, plane_d, border_ao, border_weight);
+    filter.apply(g_buffer_index, view_normal, plane_d, border_av, border_weight);
 
     float center_weight = 1.0f;
-    float center_ao = ao_tex[g_buffer_index + g_buffer_to_ao_index_offset].r;
+    float center_av = ao_tex[g_buffer_index + g_buffer_to_ao_index_offset].r;
 
     // Ensure that we perform at least some filtering in areas with high frequency geometry.
     if (border_weight < 2.0 * center_weight) {
         float weight_scale = 2.0 * center_weight * rcp(border_weight);
-        border_ao *= weight_scale;
+        border_av *= weight_scale;
         border_weight = 2.0 * center_weight;
     }
 
-    return float4((center_ao + border_ao) * rcp(center_weight + border_weight), 0, 0, 0);
+    float av = (center_av + border_av) * rcp(center_weight + border_weight);
+    if (is_final_pass)
+        av = pow(max(0.0, av), falloff);
+
+    return float4(av, 0, 0, 0);
 }
 
 class BoxFilter : IFilter {
@@ -303,12 +307,12 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
         occlusion += max(0, dot(v_i, scaled_view_normal)) * rcp(dot(v_i, v_i) + 0.0001f);
     }
 
-    float a = 1 - intensity_over_sample_count * occlusion;
-    a = pow(max(0.0, a), falloff);
+    float visibility = 1 - intensity_over_sample_count * occlusion;
+    visibility = max(0.0, visibility);
 
     // Fade out if radius is less than two pixels.
     float pixel_width = g_buffer_size.x * ss_radius;
-    a = lerp(1, a, saturate(pixel_width * 0.5f));
+    visibility = lerp(1, visibility, saturate(pixel_width * 0.5f));
 
-    return float4(a, 0, 0, 0);
+    return float4(visibility, 0, 0, 0);
 }

@@ -16,16 +16,17 @@ namespace SSAO {
 
 struct FilterConstants {
     int pixel_offset;
-    int __padding;
+    int is_final_pass;
     int2 axis;
 };
 
 inline void create_box_filter_constants(ID3D11Device1& device, OBuffer* constants) {
-    FilterConstants host_constants = { 5 };
+    FilterConstants host_constants = { 5, 0 };
     THROW_DX11_ERROR(create_constant_buffer(device, host_constants, &constants[0]));
     host_constants.pixel_offset = 3;
     THROW_DX11_ERROR(create_constant_buffer(device, host_constants, &constants[1]));
     host_constants.pixel_offset = 1;
+    host_constants.is_final_pass = 1;
     THROW_DX11_ERROR(create_constant_buffer(device, host_constants, &constants[2]));
 }
 
@@ -69,7 +70,7 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
         m_support = support;
         FilterConstants pass1_constants = { support, 0, 0, 1 };
         context.UpdateSubresource(m_constants[0], 0u, nullptr, &pass1_constants, sizeof(FilterConstants), 0u);
-        FilterConstants pass2_constants = { support, 0, 1, 0 };
+        FilterConstants pass2_constants = { support, 1, 1, 0 };
         context.UpdateSubresource(m_constants[1], 0u, nullptr, &pass2_constants, sizeof(FilterConstants), 0u);
     }
 
