@@ -48,6 +48,8 @@ static const float depth_far_plane_sentinel = 65504.0f;
 Texture2D normal_tex : register(t0);
 Texture2D depth_tex : register(t1);
 
+SamplerState trilinear_sampler : register(s1);
+
 // ------------------------------------------------------------------------------------------------
 // SSAO utility functions.
 // ------------------------------------------------------------------------------------------------
@@ -189,6 +191,7 @@ interface IFilter {
 };
 
 float4 filter_input(Varyings input, IFilter filter) {
+
     int2 g_buffer_index = input.position.xy - g_buffer_to_ao_index_offset;
     float3 view_normal = decode_ss_octahedral_normal(normal_tex[g_buffer_index].xy);
     float depth = depth_tex[g_buffer_index].r;
@@ -299,7 +302,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
         if (sample_uv.y < 0.0 || sample_uv.y > 1.0) sample_uv.y = sample_uv.y < 0.0 ? frac(-sample_uv.y) : 1.0f - frac(sample_uv.y);
 
         float mip_level = sample_distance_to_mip_level * length(sample_uv - input.projection_uv());
-        float depth_i = depth_tex.SampleLevel(bilinear_sampler, sample_uv, mip_level).r;
+        float depth_i = depth_tex.SampleLevel(trilinear_sampler, sample_uv, mip_level).r;
         float3 view_position_i = perspective_position_from_linear_depth(depth_i, sample_uv, scene_vars.inverted_projection_matrix);
         float3 v_i = view_position_i - view_position;
 

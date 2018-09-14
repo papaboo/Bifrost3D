@@ -34,7 +34,7 @@ public:
 
     inline int get_support() const { return m_type == FilterType::Box ? 5 : m_support; }
 
-    OShaderResourceView& apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, int width, int height, int support);
+    OShaderResourceView& apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, OShaderResourceView& normal_SRV, OShaderResourceView& depth_SRV, int width, int height, int support);
 
 private:
     FilterType m_type;
@@ -90,6 +90,7 @@ private:
     OBuffer m_constants;
     OVertexShader m_vertex_shader;
     OPixelShader m_pixel_shader;
+    OSamplerState m_trilinear_sampler;
 
     int m_width, m_height;
     ORenderTargetView m_SSAO_RTV;
