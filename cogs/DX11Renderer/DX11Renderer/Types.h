@@ -117,6 +117,8 @@ struct AABB {
     float3 min, max;
 };
 
+enum class SsaoFilter { Cross, Box };
+
 struct SsaoSettings {
     float world_radius = 0.5f;
     float bias = 0.03f;
@@ -127,6 +129,7 @@ struct SsaoSettings {
     unsigned int sample_count = 8u;
     int filter_support = 8;
     float depth_filtering_percentage = 0.5f;
+    SsaoFilter filter_type = SsaoFilter::Box;
 };
 
 //-------------------------------------------------------------------------------------------------

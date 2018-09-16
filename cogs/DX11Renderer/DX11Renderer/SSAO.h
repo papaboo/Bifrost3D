@@ -20,24 +20,23 @@ namespace SSAO {
 
 class BilateralBlur {
 public:
-    enum class FilterType { Cross, Box };
-
     static const int MAX_PASSES = 3;
 
     BilateralBlur() = default;
     BilateralBlur(BilateralBlur&& other) = default;
     BilateralBlur(BilateralBlur& other) = delete;
-    BilateralBlur(ID3D11Device1& device, const std::wstring& shader_folder_path, FilterType type);
+    BilateralBlur(ID3D11Device1& device, const std::wstring& shader_folder_path, SsaoFilter type);
 
     BilateralBlur& operator=(BilateralBlur&& rhs) = default;
     BilateralBlur& operator=(BilateralBlur& rhs) = delete;
 
-    inline int get_support() const { return m_type == FilterType::Box ? 5 : m_support; }
+    inline SsaoFilter get_type() const { return m_type; }
+    inline int get_support() const { return m_type == SsaoFilter::Box ? 5 : m_support; }
 
     OShaderResourceView& apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, OShaderResourceView& normal_SRV, OShaderResourceView& depth_SRV, int width, int height, int support);
 
 private:
-    FilterType m_type;
+    SsaoFilter m_type;
     int m_support;
 
     OVertexShader m_vertex_shader;
@@ -70,17 +69,19 @@ public:
 
     int2 compute_g_buffer_to_ao_index_offset(Cogwheel::Math::Recti viewport) const;
 
-    OShaderResourceView& apply(ID3D11DeviceContext1& context, unsigned int camera_ID, OShaderResourceView& normals, OShaderResourceView& depth, 
+    OShaderResourceView& apply(ID3D11DeviceContext1& context, unsigned int camera_ID, OShaderResourceView& normals, OShaderResourceView& depth,
                                int2 g_buffer_size, Cogwheel::Math::Recti viewport, SsaoSettings settings);
 
     OShaderResourceView& apply_none(ID3D11DeviceContext1& context, Cogwheel::Math::Recti viewport);
 
-    Cogwheel::Math::Recti get_ssao_viewport() const { return Cogwheel::Math::Recti(get_margin(), get_margin(), m_width, m_height); }
-
 private:
+    inline Cogwheel::Math::Recti get_ssao_viewport() const { return Cogwheel::Math::Recti(get_margin(), get_margin(), m_width, m_height); }
     inline int get_margin() const { return m_filter.get_support(); }
+
     void resize_ao_buffer(ID3D11DeviceContext1& context, int ssao_width, int ssao_height);
     void resize_depth_buffer(ID3D11DeviceContext1& context, unsigned int camera_ID, int depth_width, int depth_height);
+
+    std::wstring m_shader_folder_path;
 
     struct Samples {
         static const unsigned int capacity = 256;

@@ -33,13 +33,13 @@ inline void create_box_filter_constants(ID3D11Device1& device, OBuffer* constant
 // ------------------------------------------------------------------------------------------------
 // Bilateral blur for SSAO.
 // ------------------------------------------------------------------------------------------------
-BilateralBlur::BilateralBlur(ID3D11Device1& device, const std::wstring& shader_folder_path, FilterType type)
+BilateralBlur::BilateralBlur(ID3D11Device1& device, const std::wstring& shader_folder_path, SsaoFilter type)
     : m_type(type), m_width(0), m_height(0), m_intermediate_RTV(nullptr), m_intermediate_SRV(nullptr) {
 
     OBlob vertex_shader_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "vs_5_0", "main_vs");
     THROW_DX11_ERROR(device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shader));
 
-    if (type == FilterType::Cross) {
+    if (type == SsaoFilter::Cross) {
         m_support = 0;
         OBlob filter_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "ps_5_0", "BilateralBlur::cross_filter_ps");
         THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(filter_blob), nullptr, &m_filter_shader));
@@ -66,7 +66,7 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
         create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, m_width, m_height, &m_intermediate_SRV, nullptr, &m_intermediate_RTV);
     }
 
-    if (m_support != support && m_type == FilterType::Cross) {
+    if (m_support != support && m_type == SsaoFilter::Cross) {
         m_support = support;
         FilterConstants pass1_constants = { support, 0, 0, 1 };
         context.UpdateSubresource(m_constants[0], 0u, nullptr, &pass1_constants, sizeof(FilterConstants), 0u);
@@ -77,9 +77,8 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
     context.VSSetShader(m_vertex_shader, 0, 0);
     context.PSSetShader(m_filter_shader, 0, 0);
 
-
     ID3D11ShaderResourceView* SRVs[2] = { normals_SRV, depth_SRV };
-    int passes = m_type == FilterType::Box ? MAX_PASSES : 2;
+    int passes = m_type == SsaoFilter::Box ? MAX_PASSES : 2;
     int i;
     for (i = 0; i < passes; ++i) {
         auto& rtv = (i % 2) == 0 ? m_intermediate_RTV : ao_RTV;
@@ -100,7 +99,6 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
 // ------------------------------------------------------------------------------------------------
 struct SsaoConstants {
     SsaoSettings settings;
-    float __padding;
     float2 g_buffer_size;
     float2 recip_g_buffer_viewport_size;
     float2 g_buffer_max_uv;
@@ -111,7 +109,7 @@ struct SsaoConstants {
 const float AlchemyAO::max_screen_space_radius = 0.25f;
 
 AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_path)
-    : m_width(0), m_height(0), m_SSAO_RTV(nullptr), m_SSAO_SRV(nullptr) {
+    : m_shader_folder_path(shader_folder_path), m_width(0), m_height(0), m_SSAO_RTV(nullptr), m_SSAO_SRV(nullptr) {
 
     using namespace Cogwheel::Math;
 
@@ -128,7 +126,7 @@ AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_pa
     OBlob ao_shader_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "ps_5_0", "alchemy_ps");
     THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(ao_shader_blob), nullptr, &m_pixel_shader));
 
-    m_filter = BilateralBlur(device, shader_folder_path, BilateralBlur::FilterType::Box);
+    m_filter = BilateralBlur(device, shader_folder_path, SsaoFilter::Box);
 
     D3D11_SAMPLER_DESC sampler_desc = {};
     sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -206,13 +204,17 @@ void AlchemyAO::resize_depth_buffer(ID3D11DeviceContext1& context, unsigned int 
 OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned int camera_ID, OShaderResourceView& normals, OShaderResourceView& depth,
                                       int2 g_buffer_size, Cogwheel::Math::Recti viewport, SsaoSettings settings) {
 
+    if (settings.filter_type != m_filter.get_type()) {
+        ODevice1 device = get_device1(context);
+        m_filter = BilateralBlur(device, m_shader_folder_path, settings.filter_type);
+    }
+
     int ssao_width = viewport.width + 2 * get_margin();
     int ssao_height = viewport.height + 2 * get_margin();
     unsigned int occlusion_sample_count = std::min(settings.sample_count, m_samples.capacity);
     int2 g_buffer_viewport_size = { viewport.width + 2 * viewport.x, viewport.height + 2 * viewport.y };
 
     resize_ao_buffer(context, ssao_width, ssao_height);
-
     resize_depth_buffer(context, camera_ID, g_buffer_viewport_size.x, g_buffer_viewport_size.y);
     auto& camera_depth = m_depth.per_camera[camera_ID];
 
