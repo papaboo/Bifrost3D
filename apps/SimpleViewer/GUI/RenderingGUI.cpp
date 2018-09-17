@@ -94,8 +94,15 @@ void RenderingGUI::layout_frame() {
                     has_changed |= ImGui::InputFloat("Falloff", &ssao_settings.falloff, 0.001f, 0.01f, "%.3f");
                     has_changed |= ImGui::InputUint("Sample count", &ssao_settings.sample_count, 1u, 5u);
                     has_changed |= ImGui::SliderFloat("Depth filtering %", &ssao_settings.depth_filtering_percentage, 0.0f, 1.0f, "%.2f");
-                    has_changed |= ImGui::InputInt("Filter support", &ssao_settings.filter_support, 1, 5);
-                    ssao_settings.filter_support = max(0, ssao_settings.filter_support);
+
+                    const char* filter_types[] = { "Cross", "Box" };
+                    int current_filter_type = (int)ssao_settings.filter_type;
+                    has_changed |= ImGui::Combo("Filter type", &current_filter_type, filter_types, IM_ARRAYSIZE(filter_types));
+                    ssao_settings.filter_type = (SsaoFilter)current_filter_type;
+                    if (ssao_settings.filter_type != SsaoFilter::Box) {
+                        has_changed |= ImGui::InputInt("Filter support", &ssao_settings.filter_support, 1, 5);
+                        ssao_settings.filter_support = max(0, ssao_settings.filter_support);
+                    }
                     has_changed |= ImGui::InputFloat("Normal std dev", &ssao_settings.normal_std_dev, 0.0f, 0.0f);
                     has_changed |= ImGui::InputFloat("Plane std dev", &ssao_settings.plane_std_dev, 0.0f, 0.0f);
                     ImGui::TreePop();
