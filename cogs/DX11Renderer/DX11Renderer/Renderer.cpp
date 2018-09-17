@@ -484,7 +484,7 @@ public:
             scene_vars.camera_position = Vector4f(Cameras::get_transform(camera_ID).translation, 1.0f);
             RGB env_tint = scene.get_environment_tint();
             scene_vars.environment_tint = { env_tint.r, env_tint.g, env_tint.b, float(scene.get_environment_map().get_index()) };
-            scene_vars.g_buffer_to_ao_index_offset = m_ssao.compute_g_buffer_to_ao_index_offset(backbuffer_viewport);
+            scene_vars.g_buffer_to_ao_index_offset = m_ssao.compute_g_buffer_to_ao_index_offset(m_settings.ssao.settings, backbuffer_viewport);
             scene_vars.inverse_view_projection_matrix = to_matrix4x4(invert(view_transform)) * inverse_projection_matrix;
             scene_vars.projection_matrix = projection_matrix;
             scene_vars.inverse_projection_matrix = inverse_projection_matrix;

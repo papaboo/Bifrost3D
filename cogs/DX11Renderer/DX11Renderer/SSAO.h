@@ -32,6 +32,7 @@ public:
 
     inline SsaoFilter get_type() const { return m_type; }
     inline int get_support() const { return m_type == SsaoFilter::Box ? 5 : m_support; }
+    inline static int get_support(SsaoSettings settings) { return settings.filter_type == SsaoFilter::Box ? 5 : settings.filter_support; }
 
     OShaderResourceView& apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, OShaderResourceView& normal_SRV, OShaderResourceView& depth_SRV, int width, int height, int support);
 
@@ -67,7 +68,9 @@ public:
     AlchemyAO& operator=(AlchemyAO&& rhs) = default;
     AlchemyAO& operator=(AlchemyAO& rhs) = delete;
 
-    int2 compute_g_buffer_to_ao_index_offset(Cogwheel::Math::Recti viewport) const;
+    inline static int2 compute_g_buffer_to_ao_index_offset(SsaoSettings settings, Cogwheel::Math::Recti viewport) {
+        return { BilateralBlur::get_support(settings) - viewport.x, BilateralBlur::get_support(settings) - viewport.y };
+    }
 
     OShaderResourceView& apply(ID3D11DeviceContext1& context, unsigned int camera_ID, OShaderResourceView& normals, OShaderResourceView& depth,
                                int2 g_buffer_size, Cogwheel::Math::Recti viewport, SsaoSettings settings);
@@ -75,6 +78,9 @@ public:
     OShaderResourceView& apply_none(ID3D11DeviceContext1& context, Cogwheel::Math::Recti viewport);
 
 private:
+    inline int2 compute_g_buffer_to_ao_index_offset(Cogwheel::Math::Recti viewport) const {
+        return { get_margin() - viewport.x, get_margin() - viewport.y };
+    }
     inline Cogwheel::Math::Recti get_ssao_viewport() const { return Cogwheel::Math::Recti(get_margin(), get_margin(), m_width, m_height); }
     inline int get_margin() const { return m_filter.get_support(); }
 

@@ -139,10 +139,6 @@ AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_pa
     THROW_DX11_ERROR(device.CreateSamplerState(&sampler_desc, &m_trilinear_sampler));
 }
 
-int2 AlchemyAO::compute_g_buffer_to_ao_index_offset(Cogwheel::Math::Recti viewport) const {
-    return { get_margin() - viewport.x, get_margin() - viewport.y };
-}
-
 void AlchemyAO::resize_ao_buffer(ID3D11DeviceContext1& context, int ssao_width, int ssao_height) {
     if (m_width < ssao_width || m_height < ssao_height) {
         m_width = std::max(m_width, ssao_width);
