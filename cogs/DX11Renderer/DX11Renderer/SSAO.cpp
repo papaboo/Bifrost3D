@@ -39,17 +39,28 @@ BilateralBlur::BilateralBlur(ID3D11Device1& device, const std::wstring& shader_f
     OBlob vertex_shader_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "vs_5_0", "main_vs");
     THROW_DX11_ERROR(device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shader));
 
-    if (type == SsaoFilter::Cross) {
+    if (m_type == SsaoFilter::Cross) {
         m_support = 0;
         OBlob filter_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "ps_5_0", "BilateralBlur::cross_filter_ps");
         THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(filter_blob), nullptr, &m_filter_shader));
         create_constant_buffer(device, sizeof(FilterConstants), &m_constants[0]);
         create_constant_buffer(device, sizeof(FilterConstants), &m_constants[1]);
     } else {
-        m_support = 9;
+        m_support = 5;
         OBlob filter_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "ps_5_0", "BilateralBlur::box_filter_ps");
         THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(filter_blob), nullptr, &m_filter_shader));
         create_box_filter_constants(device, m_constants);
+    }
+}
+
+void BilateralBlur::set_support(ID3D11DeviceContext1& context, int support) {
+    if (m_support != support && m_type == SsaoFilter::Cross) {
+        // Update support for the cross filter.
+        m_support = support;
+        FilterConstants pass1_constants = { support, 0, 0, 1 };
+        context.UpdateSubresource(m_constants[0], 0u, nullptr, &pass1_constants, sizeof(FilterConstants), 0u);
+        FilterConstants pass2_constants = { support, 1, 1, 0 };
+        context.UpdateSubresource(m_constants[1], 0u, nullptr, &pass2_constants, sizeof(FilterConstants), 0u);
     }
 }
 
@@ -66,13 +77,7 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
         create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, m_width, m_height, &m_intermediate_SRV, nullptr, &m_intermediate_RTV);
     }
 
-    if (m_support != support && m_type == SsaoFilter::Cross) {
-        m_support = support;
-        FilterConstants pass1_constants = { support, 0, 0, 1 };
-        context.UpdateSubresource(m_constants[0], 0u, nullptr, &pass1_constants, sizeof(FilterConstants), 0u);
-        FilterConstants pass2_constants = { support, 1, 1, 0 };
-        context.UpdateSubresource(m_constants[1], 0u, nullptr, &pass2_constants, sizeof(FilterConstants), 0u);
-    }
+    set_support(context, support);
 
     context.VSSetShader(m_vertex_shader, 0, 0);
     context.PSSetShader(m_filter_shader, 0, 0);
@@ -204,6 +209,7 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned in
         ODevice1 device = get_device1(context);
         m_filter = BilateralBlur(device, m_shader_folder_path, settings.filter_type);
     }
+    m_filter.set_support(context, settings.filter_support);
 
     int ssao_width = viewport.width + 2 * get_margin();
     int ssao_height = viewport.height + 2 * get_margin();

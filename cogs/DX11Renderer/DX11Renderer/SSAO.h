@@ -31,8 +31,9 @@ public:
     BilateralBlur& operator=(BilateralBlur& rhs) = delete;
 
     inline SsaoFilter get_type() const { return m_type; }
-    inline int get_support() const { return m_type == SsaoFilter::Box ? 5 : m_support; }
-    inline static int get_support(SsaoSettings settings) { return settings.filter_type == SsaoFilter::Box ? 5 : settings.filter_support; }
+    void set_support(ID3D11DeviceContext1& context, int support);
+    inline int get_support() const { return get_support(m_type, m_support); }
+    inline static int get_support(SsaoFilter type, int expected_support) { return type == SsaoFilter::Box ? 5 : expected_support; }
 
     OShaderResourceView& apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, OShaderResourceView& normal_SRV, OShaderResourceView& depth_SRV, int width, int height, int support);
 
@@ -69,7 +70,8 @@ public:
     AlchemyAO& operator=(AlchemyAO& rhs) = delete;
 
     inline static int2 compute_g_buffer_to_ao_index_offset(SsaoSettings settings, Cogwheel::Math::Recti viewport) {
-        return { BilateralBlur::get_support(settings) - viewport.x, BilateralBlur::get_support(settings) - viewport.y };
+        int support = BilateralBlur::get_support(settings.filter_type, settings.filter_support);
+        return { support - viewport.x, support - viewport.y };
     }
 
     OShaderResourceView& apply(ID3D11DeviceContext1& context, unsigned int camera_ID, OShaderResourceView& normals, OShaderResourceView& depth,
