@@ -77,7 +77,7 @@ public:
     OShaderResourceView& apply(ID3D11DeviceContext1& context, unsigned int camera_ID, OShaderResourceView& normals, OShaderResourceView& depth,
                                int2 g_buffer_size, Cogwheel::Math::Recti viewport, SsaoSettings settings);
 
-    OShaderResourceView& apply_none(ID3D11DeviceContext1& context, Cogwheel::Math::Recti viewport);
+    OShaderResourceView& apply_none(ID3D11DeviceContext1& context, unsigned int camera_ID, Cogwheel::Math::Recti viewport);
 
 private:
     inline int2 compute_g_buffer_to_ao_index_offset(Cogwheel::Math::Recti viewport) const {

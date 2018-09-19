@@ -557,7 +557,7 @@ public:
                                         g_buffer_size, backbuffer_viewport, m_settings.ssao.settings).get();
             } else
                 // A really inefficient way to disable ssao. Application is still part of the material shaders.
-                ssao_SRV = m_ssao.apply_none(m_render_context, backbuffer_viewport).get();
+                ssao_SRV = m_ssao.apply_none(m_render_context, camera_ID.get_index(), backbuffer_viewport).get();
         }
 
         // Scissor rect to disable rendering to the guard band.

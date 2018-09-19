@@ -312,11 +312,11 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned in
     return ao_SRV;
 }
 
-OShaderResourceView& AlchemyAO::apply_none(ID3D11DeviceContext1& context, Cogwheel::Math::Recti viewport) {
-    int ssao_width = viewport.width + 2 * get_margin();
-    int ssao_height = viewport.height + 2 * get_margin();
+OShaderResourceView& AlchemyAO::apply_none(ID3D11DeviceContext1& context, unsigned int camera_ID, Cogwheel::Math::Recti viewport) {
+    int ssao_width = 1, ssao_height = 1;
 
     resize_ao_buffer(context, ssao_width, ssao_height);
+    resize_depth_buffer(context, camera_ID, ssao_width, ssao_height);
 
     float cleared_ssao[4] = { 1, 0, 0, 0 };
     context.ClearView(m_SSAO_RTV, cleared_ssao, nullptr, 0);
