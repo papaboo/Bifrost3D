@@ -18,12 +18,12 @@ cbuffer constants : register(b0) {
     float bias;
     float intensity_over_sample_count; // Precomputed as (2 * intensity_scale / sample_count)
     float falloff;
+    uint sample_count;
+    float sample_distance_to_mip_level;
+    int filter_type;
+    int filter_support;
     float recip_double_normal_variance;
     float recip_double_plane_variance;
-    uint sample_count;
-    int filter_support;
-    float sample_distance_to_mip_level;
-    float __padding;
     float2 g_buffer_size;
     float2 recip_g_buffer_viewport_size;
     float2 g_buffer_max_uv;
@@ -184,6 +184,18 @@ void sample_ao(int2 g_buffer_index, float3 normal, float plane_d, inout float su
 
     summed_av += weight * ao_tex[g_buffer_index + g_buffer_to_ao_index_offset].r;
     av_weight += weight;
+}
+
+float hbao_filter_weight(float i, float sample_depth, float depth_slope, float center_depth, float center_sharpness) {
+    const float convolution_sigma = 0.5 * filter_support + 0.5;
+    const float convolution_falloff = 1.0 / (2.0 * pow2(convolution_sigma)); // TODO Use 0.25 / convolution_sigma and square right before exp2(...)
+
+    sample_depth -= depth_slope * i;
+
+    // TODO Convert to mad??
+    float delta_z = (sample_depth - center_depth) * center_sharpness;
+
+    return exp2(-i * i * convolution_falloff - pow2(delta_z));
 }
 
 interface IFilter {

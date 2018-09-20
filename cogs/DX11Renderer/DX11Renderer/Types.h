@@ -124,12 +124,12 @@ struct SsaoSettings {
     float bias = 0.03f;
     float intensity_scale = 0.25f;
     float falloff = 2.0f;
-    float normal_std_dev = 0.1f;
-    float plane_std_dev = 0.05f;
     unsigned int sample_count = 8u;
-    int filter_support = 8;
     float depth_filtering_percentage = 0.5f;
     SsaoFilter filter_type = SsaoFilter::Box;
+    int filter_support = 8;
+    float normal_std_dev = 0.1f;
+    float plane_std_dev = 0.05f;
 };
 
 //-------------------------------------------------------------------------------------------------
