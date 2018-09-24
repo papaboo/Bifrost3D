@@ -47,6 +47,7 @@ static const float depth_far_plane_sentinel = 65504.0f;
 
 Texture2D normal_tex : register(t0);
 Texture2D depth_tex : register(t1);
+Texture2D ao_tex : register(t2);
 
 SamplerState trilinear_sampler : register(s1);
 
@@ -68,15 +69,6 @@ float3 perspective_position_from_linear_depth(float z, float2 viewport_uv, float
     return float3(projected_view_pos.xy * z, z);
 }
 
-// Transform view position to uv in screen space.
-float2 uv_from_view_position(float3 view_position) {
-    float4 _projected_view_pos = mul(float4(view_position, 1), scene_vars.projection_matrix);
-    float3 projected_view_pos = _projected_view_pos.xyz * rcp(_projected_view_pos.w);
-
-    // Transform from normalized screen space to uv.
-    return float2(projected_view_pos.x * 0.5 + 0.5, 1 - (projected_view_pos.y + 1) * 0.5);
-}
-
 // Transform view position to u(v) in screen space.
 // Assumes that the projection_matrix is a perspective projection matrix with 0'es in most entries.
 float u_coord_from_view_position(float3 view_position) {
@@ -88,20 +80,6 @@ float u_coord_from_view_position(float3 view_position) {
 
     // Transform from normalized screen space to uv.
     return projected_view_pos_x * 0.5 + 0.5;
-}
-
-float2 cosine_disk_sampling(float2 sample_uv) {
-    float r = sample_uv.x;
-    float theta = TWO_PI * sample_uv.y;
-    return r * float2(cos(theta), sin(theta));
-}
-
-// Returns a position for the tap on a unit disk.
-float2 tap_location(int sample_number, uint sample_count, float spin_angle) {
-    const float spiral_turns = 73856093;
-    float alpha = float(sample_number + 0.5) / sample_count;
-    float angle = alpha * (spiral_turns * TWO_PI) + spin_angle;
-    return float2(cos(angle), sin(angle)) * alpha;
 }
 
 float2x2 generate_rotation_matrix(float angle) {
@@ -156,10 +134,6 @@ float linearize_depth_ps(Varyings input) : SV_TARGET {
 // ------------------------------------------------------------------------------------------------
 
 namespace BilateralBlur {
-
-Texture2D normal_tex : register(t0);
-Texture2D depth_tex : register(t1);
-Texture2D ao_tex : register(t2);
 
 cbuffer per_filter_constants : register(b2) {
     int per_pass_support;
