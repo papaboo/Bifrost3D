@@ -82,12 +82,9 @@ float u_coord_from_view_position(float3 view_position) {
     return projected_view_pos_x * 0.5 + 0.5;
 }
 
-float2x2 generate_rotation_matrix(float angle) {
-    float cos_angle = cos(angle);
-    float sin_angle = sin(angle);
-    float2x2 mat = { cos_angle, -sin_angle,   // row 1
-                     sin_angle,  cos_angle }; // row 2
-    return mat;
+float2 rotate(float2 dir, float2 cos_sin) {
+    return float2(dir.x * cos_sin.x + dir.y * cos_sin.y,
+                  dir.x * -cos_sin.y + dir.y * cos_sin.x);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -261,7 +258,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     // Setup sampling
     uint rng_offset = RNG::evenly_distributed_2D_seed(input.position.xy);
     float sample_pattern_rotation_angle = rng_offset * (TWO_PI / 4294967296.0f); // Scale a uint to the range [0, 2 * PI[
-    float2x2 sample_pattern_rotation = generate_rotation_matrix(sample_pattern_rotation_angle);
+    float2 rotation_cos_sin; sincos(sample_pattern_rotation_angle, rotation_cos_sin.y, rotation_cos_sin.x);
 
     float3 view_normal = decode_ss_octahedral_normal(normal_tex[input.position.xy - g_buffer_to_ao_index_offset].xy);
     float pixel_bias = depth * bias * (1.0f - pow2(pow2(pow2(view_normal.z))));
@@ -280,7 +277,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     // Determine occlusion
     float occlusion = 0.0f;
     for (uint i = 0; i < sample_count; ++i) {
-        float2 uv_offset = mul(get_uv_offset(i) * ss_radius, sample_pattern_rotation);
+        float2 uv_offset = rotate(get_uv_offset(i) * ss_radius, rotation_cos_sin);
         float2 sample_uv = input.projection_uv() + uv_offset;
 
         // Resample if sample is outside g-buffer.
