@@ -184,8 +184,13 @@ public:
         }
 
         { // Setup g-buffer
+            // Introducing a depth bias fixes an issue on (mostly) mobile GPUs where the depth from the G-buffer pass and the depth from the rasterization pass are not exactly equal.
+            // Strangely the issue does not manifest if SSAO is disabled, but the G-buffer pass is enabled. It also only presents itself on temporally changing pixels, i.e. moving objects.
+            // The issue is easiest to trigger in the SimpleViewer's test scene by observing the rotating rings.
+            const int depth_bias = 12;
             { // Opaque shaders
                 CD3D11_RASTERIZER_DESC raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
+                raster_state.DepthBias = depth_bias;
                 THROW_DX11_ERROR(m_device.CreateRasterizerState(&raster_state, &m_g_buffer.opaque.raster_state));
 
                 OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "vs_5_0", "opaque_VS");
@@ -201,6 +206,7 @@ public:
 
             { // Cutout shaders
                 CD3D11_RASTERIZER_DESC raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
+                raster_state.DepthBias = depth_bias;
                 raster_state.CullMode = D3D11_CULL_NONE;
                 THROW_DX11_ERROR(m_device.CreateRasterizerState(&raster_state, &m_g_buffer.cutout.raster_state));
 
