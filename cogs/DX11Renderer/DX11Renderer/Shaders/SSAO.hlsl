@@ -157,18 +157,6 @@ void sample_ao(int2 g_buffer_index, float3 normal, float plane_d, inout float su
     av_weight += weight;
 }
 
-float hbao_filter_weight(float i, float sample_depth, float depth_slope, float center_depth, float center_sharpness) {
-    const float convolution_sigma = 0.5 * filter_support + 0.5;
-    const float convolution_falloff = 1.0 / (2.0 * pow2(convolution_sigma)); // TODO Use 0.25 / convolution_sigma and square right before exp2(...)
-
-    sample_depth -= depth_slope * i;
-
-    // TODO Convert to mad??
-    float delta_z = (sample_depth - center_depth) * center_sharpness;
-
-    return exp2(-i * i * convolution_falloff - pow2(delta_z));
-}
-
 interface IFilter {
     void apply(int2 g_buffer_index, float3 view_normal, float plane_d, inout float summed_ao, inout float ao_weight);
 };
