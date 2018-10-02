@@ -47,7 +47,7 @@ namespace GGX {
     }
 
     // Understanding the Masking - Shadowing Function in Microfacet - Based BRDFs, Heitz 14, equation 72.
-    float height_correlated_smith_delta(float alpha, float3 w, float3 halfway) {
+    float height_correlated_smith_delta(float alpha, float3 w) {
         float cos_theta_sqrd = w.z * w.z;
         float tan_theta_sqrd = max(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
         float recip_a_sqrd = alpha * alpha * tan_theta_sqrd;
@@ -58,7 +58,7 @@ namespace GGX {
     // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14, equation 99. 
     float height_correlated_smith_G(float alpha, float3 wo, float3 wi, float3 halfway) {
         float numerator = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway));
-        return numerator / (1.0f + height_correlated_smith_delta(alpha, wo, halfway) + height_correlated_smith_delta(alpha, wi, halfway));
+        return numerator / (1.0f + height_correlated_smith_delta(alpha, wo) + height_correlated_smith_delta(alpha, wi));
     }
 
     float evaluate(float alpha, float3 wo, float3 wi, float3 halfway) {
