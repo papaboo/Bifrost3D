@@ -32,6 +32,7 @@ Matrix4x4f* Cameras::m_inverse_projection_matrices = nullptr;
 Rectf* Cameras::m_viewports = nullptr;
 Core::Renderers::UID* Cameras::m_renderer_IDs = nullptr;
 CameraEffects::Settings* Cameras::m_effects_settings = nullptr;
+Core::ChangeSet<Cameras::Changes, Cameras::UID> Cameras::m_changes;
 
 void Cameras::allocate(unsigned int capacity) {
     if (is_allocated())
@@ -49,6 +50,7 @@ void Cameras::allocate(unsigned int capacity) {
     m_viewports = new Rectf[capacity];
     m_renderer_IDs = new Core::Renderers::UID[capacity];
     m_effects_settings = new CameraEffects::Settings[capacity];
+    m_changes = Core::ChangeSet<Changes, UID>(capacity);
 
     // Allocate dummy camera at 0.
     m_names[0] = "Dummy camera";
@@ -77,6 +79,8 @@ void Cameras::deallocate() {
     delete[] m_viewports; m_viewports = nullptr;
     delete[] m_renderer_IDs; m_renderer_IDs = nullptr;
     delete[] m_effects_settings; m_effects_settings = nullptr;
+
+    m_changes.resize(0);
 }
 
 void Cameras::reserve(unsigned int new_capacity) {
@@ -115,6 +119,8 @@ void Cameras::reserve_camera_data(unsigned int new_capacity, unsigned int old_ca
     m_viewports = resize_and_copy_array(m_viewports, new_capacity, copyable_elements);
     m_renderer_IDs = resize_and_copy_array(m_renderer_IDs, new_capacity, copyable_elements);
     m_effects_settings = resize_and_copy_array(m_effects_settings, new_capacity, copyable_elements);
+
+    m_changes.resize(new_capacity);
 }
 
 Cameras::UID Cameras::create(const std::string& name, SceneRoots::UID scene_ID, 
@@ -146,6 +152,8 @@ Cameras::UID Cameras::create(const std::string& name, SceneRoots::UID scene_ID,
     m_viewports[id] = Rectf(0, 0, 1, 1);
     m_renderer_IDs[id] = Core::Renderers::has(renderer_ID) ? renderer_ID : *Core::Renderers::begin();
     m_effects_settings[id] = CameraEffects::Settings::default();
+    m_changes.set_change(id, Change::Created);
+
     return id;
 }
 

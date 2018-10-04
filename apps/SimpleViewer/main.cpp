@@ -472,6 +472,7 @@ void detect_and_flag_cutout_materials() {
 }
 
 static inline void miniheaps_cleanup_callback(void*) {
+    Cameras::reset_change_notifications();
     Images::reset_change_notifications();
     LightSources::reset_change_notifications();
     Materials::reset_change_notifications();

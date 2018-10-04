@@ -25,7 +25,6 @@ namespace Scene {
 // Container for cogwheel matrix cameras.
 // Future work
 // * Reference a backbuffer or render_target to allow cameras to render to windows and FBO's.
-// * Change flags.
 // ------------------------------------------------------------------------------------------------
 class Cameras final {
 public:
@@ -55,7 +54,10 @@ public:
     static SceneRoots::UID get_scene_ID(Cameras::UID camera_ID) { return m_scene_IDs[camera_ID]; }
 
     static Core::Renderers::UID get_renderer_ID(Cameras::UID camera_ID) { return m_renderer_IDs[camera_ID]; }
-    static void set_renderer_ID(Cameras::UID camera_ID, Core::Renderers::UID renderer_ID) { m_renderer_IDs[camera_ID] = renderer_ID; }
+    static void set_renderer_ID(Cameras::UID camera_ID, Core::Renderers::UID renderer_ID) { 
+        m_renderer_IDs[camera_ID] = renderer_ID;
+        m_changes.set_change(camera_ID, Change::Renderer);
+    }
 
     static Math::Transform get_transform(Cameras::UID camera_ID) { return m_transforms[camera_ID]; }
     static void set_transform(Cameras::UID camera_ID, Math::Transform transform) { m_transforms[camera_ID] = transform; }
@@ -88,8 +90,27 @@ public:
     static Math::Rectf get_viewport(Cameras::UID camera_ID) { return m_viewports[camera_ID]; }
     static void set_viewport(Cameras::UID camera_ID, Math::Rectf projectionport) { m_viewports[camera_ID] = projectionport; }
 
-    static void set_effects_settings(Cameras::UID camera_ID, Math::CameraEffects::Settings settings) { m_effects_settings[camera_ID] = settings; }
     static Math::CameraEffects::Settings get_effects_settings(Cameras::UID camera_ID) { return m_effects_settings[camera_ID]; }
+    static void set_effects_settings(Cameras::UID camera_ID, Math::CameraEffects::Settings settings) { m_effects_settings[camera_ID] = settings; }
+
+    //-------------------------------------------------------------------------
+    // Changes since last game loop tick.
+    //-------------------------------------------------------------------------
+    enum class Change : unsigned char {
+        None = 0u,
+        Created = 1u << 0u,
+        Destroyed = 1u << 1u, // reserved
+        Renderer = 1u << 2u,
+        All = Created | Destroyed | Renderer
+    };
+    typedef Core::Bitmask<Change> Changes;
+
+    static inline Changes get_changes(Cameras::UID node_ID) { return m_changes.get_changes(node_ID); }
+
+    typedef std::vector<UID>::iterator ChangedIterator;
+    static Core::Iterable<ChangedIterator> get_changed_cameras() { return m_changes.get_changed_resources(); }
+
+    static void reset_change_notifications() { return m_changes.reset_change_notifications(); }
 
 private:
 
@@ -106,6 +127,8 @@ private:
     static Math::Rectf* m_viewports;
     static Core::Renderers::UID* m_renderer_IDs;
     static Math::CameraEffects::Settings* m_effects_settings;
+
+    static Core::ChangeSet<Changes, UID> m_changes;
 };
 
 namespace CameraUtils {

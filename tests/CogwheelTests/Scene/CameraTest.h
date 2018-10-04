@@ -101,6 +101,12 @@ TEST_F(Scene_Camera, create) {
     EXPECT_EQ(Cameras::get_projection_matrix(cam_ID), perspective_matrix);
     EXPECT_EQ(Cameras::get_inverse_projection_matrix(cam_ID), inverse_perspective_matrix);
     EXPECT_EQ(Cameras::get_viewport(cam_ID), Math::Rectf(0.0f, 0.0f, 1.0f, 1.0f));
+
+    // Test camera created notification.
+    Core::Iterable<Cameras::ChangedIterator> camera_changes = Cameras::get_changed_cameras();
+    EXPECT_EQ(1, camera_changes.end() - camera_changes.begin());
+    EXPECT_EQ(cam_ID, *camera_changes.begin());
+    EXPECT_EQ(Cameras::Change::Created, Cameras::get_changes(cam_ID));
 }
 
 TEST_F(Scene_Camera, set_new_matrices) {
