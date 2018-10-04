@@ -56,7 +56,7 @@ public:
     static Core::Renderers::UID get_renderer_ID(Cameras::UID camera_ID) { return m_renderer_IDs[camera_ID]; }
     static void set_renderer_ID(Cameras::UID camera_ID, Core::Renderers::UID renderer_ID) { 
         m_renderer_IDs[camera_ID] = renderer_ID;
-        m_changes.set_change(camera_ID, Change::Renderer);
+        m_changes.add_change(camera_ID, Change::Renderer);
     }
 
     static Math::Transform get_transform(Cameras::UID camera_ID) { return m_transforms[camera_ID]; }
