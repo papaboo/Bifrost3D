@@ -181,7 +181,7 @@ struct Renderer::Implementation {
             accumulation_buffer = nullptr;
             accumulations = 0u;
             inverse_view_projection_matrix = Matrix4x4f::identity();
-            backend = Backend::AlbedoVisualization;
+            backend = Backend::None;
             backend_impl = nullptr;
         }
     };
@@ -402,6 +402,38 @@ struct Renderer::Implementation {
 
     void handle_updates() {
         bool should_reset_allocations = false;
+
+        { // Camera updates.
+            for (Cameras::UID cam_ID : Cameras::get_changed_cameras()) {
+                // TODO Do when renderer is switched as well.
+                if (Cameras::get_changes(cam_ID) == Cameras::Change::Destroyed)
+                    if (cam_ID < per_camera_state.size())
+                        per_camera_state[cam_ID].clear();
+
+                if (Cameras::get_changes(cam_ID).is_set(Cameras::Change::Created)) {
+                    if (per_camera_state.size() <= cam_ID)
+                        per_camera_state.resize(Cameras::capacity());
+                    auto& camera_state = per_camera_state[cam_ID];
+
+                    unsigned int width = 1, height = 1;
+                    camera_state.accumulations = 0u;
+                    camera_state.screensize = { width, height };
+#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
+                    camera_state.accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER, width, height);
+                    camera_state.accumulation_buffer->setElementSize(sizeof(double) * 4);
+#else
+                    camera_state.accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, width, height);
+#endif
+                    camera_state.inverse_view_projection_matrix = {};
+
+                    // Preserve backend if set from otuside before handle_updates is called. Yuck!
+                    if (camera_state.backend == Backend::None) {
+                        camera_state.backend = Backend::PathTracing;
+                        camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::PathTracing));
+                    }
+                }
+            }
+        }
 
         { // Mesh updates.
             for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
@@ -824,8 +856,6 @@ struct Renderer::Implementation {
             }
         }
 
-        // TODO Clear camera state when a camera is destroyed. Needs camera change flags to be implemented.
-
         if (should_reset_allocations)
             for (auto& camera_state : per_camera_state)
                 camera_state.accumulations = 0u;
@@ -833,26 +863,9 @@ struct Renderer::Implementation {
 
     void render(Cogwheel::Scene::Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
         { // Update camera state
-            if (camera_ID >= per_camera_state.size())
-                per_camera_state.resize(Cameras::capacity());
-
-            auto& camera_state = per_camera_state[camera_ID];
-            if (camera_state.backend_impl == nullptr) {
-
-                camera_state.screensize = { 0u, 0u };
-#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
-                camera_state.accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER, width, height);
-                camera_state.accumulation_buffer->setElementSize(sizeof(double) * 4);
-#else
-                camera_state.accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, width, height);
-#endif
-                camera_state.inverse_view_projection_matrix = {};
-                camera_state.backend = Backend::PathTracing;
-                camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::PathTracing));
-            }
-
             // Resize screen buffers if necessary.
-            const uint2 current_screensize = make_uint2(width, height);
+            uint2 current_screensize = make_uint2(width, height);
+            auto& camera_state = per_camera_state[camera_ID];
             if (current_screensize != camera_state.screensize) {
                 camera_state.accumulation_buffer->setSize(width, height);
                 camera_state.backend_impl->resize_backbuffers(width, height);
@@ -934,10 +947,18 @@ void Renderer::set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID,
 }
 
 Backend Renderer::get_backend(Cameras::UID camera_ID) const {
-    return m_impl->per_camera_state[camera_ID].backend;
+    // Handle case where camera is created and queried before data has been updated.
+    if (m_impl->per_camera_state.size() <= camera_ID)
+        return Backend::PathTracing;
+    else
+        return m_impl->per_camera_state[camera_ID].backend;
 }
 
 void Renderer::set_backend(Cameras::UID camera_ID, Backend backend) {
+    // Handle case where camera is created and queried before data has been updated.
+    if (m_impl->per_camera_state.size() <= camera_ID)
+        m_impl->per_camera_state.resize(camera_ID + 1);
+
     auto& camera_state = m_impl->per_camera_state[camera_ID];
     camera_state.backend = backend;
     switch (backend) {

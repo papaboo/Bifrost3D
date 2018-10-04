@@ -33,6 +33,7 @@ typedef Handle<ContextObj> Context;
 namespace OptiXRenderer {
 
 enum class Backend {
+    None,
     PathTracing,
     AlbedoVisualization,
     NormalVisualization,
