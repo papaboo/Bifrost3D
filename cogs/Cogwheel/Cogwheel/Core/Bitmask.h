@@ -31,7 +31,7 @@ public:
     // --------------------------------------------------------------------------------------------
     // Constructors.
     // --------------------------------------------------------------------------------------------
-    Bitmask() { }
+    Bitmask() = default;
     Bitmask(E v) : m_mask(T(v)) { }
     Bitmask(T mask) : m_mask(mask) { }
     Bitmask(std::initializer_list<E> flags) : m_mask(0) {  for (E flag : flags) m_mask |= T(flag); }
