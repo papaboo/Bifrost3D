@@ -56,7 +56,7 @@ enum class Backend {
 //----------------------------------------------------------------------------
 class Renderer final {
 public:
-    static Renderer* initialize(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path);
+    static Renderer* initialize(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path, Cogwheel::Core::Renderers::UID renderer_ID);
 
     float get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const;
     void set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon);
@@ -72,7 +72,7 @@ public:
 
 private:
 
-    Renderer(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path);
+    Renderer(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path, Cogwheel::Core::Renderers::UID renderer_ID);
 
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Renderer(Renderer& other) = delete;

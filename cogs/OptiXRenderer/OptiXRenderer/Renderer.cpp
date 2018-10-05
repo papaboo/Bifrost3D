@@ -167,6 +167,8 @@ struct Renderer::Implementation {
 
     optix::Context context;
 
+    Renderers::UID owning_renderer_ID;
+
     // Per camera members.
     struct CameraState {
         uint2 screensize;
@@ -219,9 +221,10 @@ struct Renderer::Implementation {
         optix::Geometry area_lights_geometry;
     } lights;
 
-    Implementation(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path) {
+    Implementation(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path, Renderers::UID renderer_ID) {
 
         device_IDs = { -1, -1 };
+        owning_renderer_ID = renderer_ID;
 
         if (Context::getDeviceCount() == 0)
             return;
@@ -405,31 +408,39 @@ struct Renderer::Implementation {
 
         { // Camera updates.
             for (Cameras::UID cam_ID : Cameras::get_changed_cameras()) {
-                // TODO Do when renderer is switched as well.
-                if (Cameras::get_changes(cam_ID) == Cameras::Change::Destroyed)
+                auto camera_changes = Cameras::get_changes(cam_ID);
+                if (camera_changes == Cameras::Change::Destroyed) {
                     if (cam_ID < per_camera_state.size())
                         per_camera_state[cam_ID].clear();
 
-                if (Cameras::get_changes(cam_ID).is_set(Cameras::Change::Created)) {
-                    if (per_camera_state.size() <= cam_ID)
-                        per_camera_state.resize(Cameras::capacity());
-                    auto& camera_state = per_camera_state[cam_ID];
+                } else {
 
-                    unsigned int width = 1, height = 1;
-                    camera_state.accumulations = 0u;
-                    camera_state.screensize = { width, height };
+                    bool camera_initialized = per_camera_state.size() > cam_ID && per_camera_state[cam_ID].accumulation_buffer.get() != nullptr;
+                    bool uses_optix_renderer = owning_renderer_ID == Cameras::get_renderer_ID(cam_ID);
+                    bool create_optix_renderer = uses_optix_renderer && camera_changes.is_set(Cameras::Change::Created);
+                    bool switch_to_optix_renderer = uses_optix_renderer && camera_changes.is_set(Cameras::Change::Renderer);
+
+                    if (!camera_initialized && (create_optix_renderer || switch_to_optix_renderer)) {
+                        if (per_camera_state.size() <= cam_ID)
+                            per_camera_state.resize(Cameras::capacity());
+                        auto& camera_state = per_camera_state[cam_ID];
+
+                        unsigned int width = 1, height = 1;
+                        camera_state.accumulations = 0u;
+                        camera_state.screensize = { width, height };
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
-                    camera_state.accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER, width, height);
-                    camera_state.accumulation_buffer->setElementSize(sizeof(double) * 4);
+                        camera_state.accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER, width, height);
+                        camera_state.accumulation_buffer->setElementSize(sizeof(double) * 4);
 #else
-                    camera_state.accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, width, height);
+                        camera_state.accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, width, height);
 #endif
-                    camera_state.inverse_view_projection_matrix = {};
+                        camera_state.inverse_view_projection_matrix = {};
 
-                    // Preserve backend if set from otuside before handle_updates is called. Yuck!
-                    if (camera_state.backend == Backend::None) {
-                        camera_state.backend = Backend::PathTracing;
-                        camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::PathTracing));
+                        // Preserve backend if set from otuside before handle_updates is called. Yuck!
+                        if (camera_state.backend == Backend::None) {
+                            camera_state.backend = Backend::PathTracing;
+                            camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::PathTracing));
+                        }
                     }
                 }
             }
@@ -919,9 +930,9 @@ struct Renderer::Implementation {
 // Renderer
 // ------------------------------------------------------------------------------------------------
 
-Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path) {
+Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path, Renderers::UID renderer_ID) {
     try {
-        Renderer* r = new Renderer(cuda_device_ID, width_hint, height_hint, data_folder_path);
+        Renderer* r = new Renderer(cuda_device_ID, width_hint, height_hint, data_folder_path, renderer_ID);
         if (r->m_impl->is_valid())
             return r;
         else {
@@ -934,8 +945,8 @@ Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hi
     }
 }
 
-Renderer::Renderer(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path)
-    : m_impl(new Implementation(cuda_device_ID, width_hint, height_hint, data_folder_path)) {}
+Renderer::Renderer(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path, Renderers::UID renderer_ID)
+    : m_impl(new Implementation(cuda_device_ID, width_hint, height_hint, data_folder_path, renderer_ID)) {}
 
 float Renderer::get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const {
     return m_impl->scene_epsilon;

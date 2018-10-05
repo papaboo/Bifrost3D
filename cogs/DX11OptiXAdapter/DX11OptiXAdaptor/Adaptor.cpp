@@ -62,7 +62,7 @@ public:
 
     OptiXRenderer::Renderer* m_optix_renderer;
 
-    Implementation(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path)
+    Implementation(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path, Cogwheel::Core::Renderers::UID renderer_ID)
         : m_device(device), m_backbuffer_RTV(nullptr), m_backbuffer_SRV(nullptr) {
 
         device.GetImmediateContext1(&m_render_context);
@@ -79,7 +79,7 @@ public:
             // Create OptiX Renderer on device.
             std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
             std::string data_path = converter.to_bytes(data_folder_path);
-            m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, width_hint, height_hint, data_path);
+            m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, width_hint, height_hint, data_path, renderer_ID);
         }
 
         THROW_DX11_ERROR(create_constant_buffer(m_device, sizeof(float) * 4, &m_constant_buffer));
@@ -263,8 +263,8 @@ IRenderer* Adaptor::initialize(ID3D11Device1& device, int width_hint, int height
 }
 
 Adaptor::Adaptor(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path) {
-    m_impl = new Implementation(device, width_hint, height_hint, data_folder_path);
     m_renderer_ID = Cogwheel::Core::Renderers::create("OptiXRenderer");
+    m_impl = new Implementation(device, width_hint, height_hint, data_folder_path, m_renderer_ID);
 }
 
 Adaptor::~Adaptor() {
