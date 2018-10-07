@@ -86,7 +86,6 @@ TEST_F(Scene_Camera, sentinel_camera) {
 }
 
 TEST_F(Scene_Camera, create) {
-
     Math::Matrix4x4f perspective_matrix, inverse_perspective_matrix;
     CameraUtils::compute_perspective_projection(1, 1000, Math::PI<float>() / 4.0f, 8.0f / 6.0f,
                                                 perspective_matrix, inverse_perspective_matrix);
@@ -107,6 +106,56 @@ TEST_F(Scene_Camera, create) {
     EXPECT_EQ(1, camera_changes.end() - camera_changes.begin());
     EXPECT_EQ(cam_ID, *camera_changes.begin());
     EXPECT_EQ(Cameras::Change::Created, Cameras::get_changes(cam_ID));
+}
+
+TEST_F(Scene_Camera, create_and_destroy_notifications) {
+    SceneRoots::UID scene_ID = SceneRoots::create("Root", Math::RGB::white());
+    Math::Matrix4x4f perspective_matrix = Math::Matrix4x4f::identity(), inverse_perspective_matrix = Math::Matrix4x4f::identity();
+
+    Cameras::UID cam_ID0 = Cameras::create("Cam0", scene_ID, perspective_matrix, inverse_perspective_matrix);
+    Cameras::UID cam_ID1 = Cameras::create("Cam1", scene_ID, perspective_matrix, inverse_perspective_matrix);
+    EXPECT_TRUE(Cameras::has(cam_ID0));
+    EXPECT_TRUE(Cameras::has(cam_ID1));
+
+    { // Test camera create notifications.
+        Core::Iterable<Cameras::ChangedIterator> changed_cameras = Cameras::get_changed_cameras();
+        EXPECT_EQ(changed_cameras.end() - changed_cameras.begin(), 2);
+
+        bool cam0_created = false;
+        bool cam1_created = false;
+        for (const Cameras::UID scene_ID : changed_cameras) {
+            bool scene_created = Cameras::get_changes(scene_ID) == Cameras::Change::Created;
+            cam0_created |= scene_ID == cam_ID0 && scene_created;
+            cam1_created |= scene_ID == cam_ID1 && scene_created;
+        }
+
+        EXPECT_TRUE(cam0_created);
+        EXPECT_TRUE(cam1_created);
+    }
+
+    Cameras::reset_change_notifications();
+
+    { // Test destroy.
+        Cameras::destroy(cam_ID0);
+        EXPECT_FALSE(Cameras::has(cam_ID0));
+
+        Core::Iterable<Cameras::ChangedIterator> changed_cameras = Cameras::get_changed_cameras();
+        EXPECT_EQ(changed_cameras.end() - changed_cameras.begin(), 1);
+
+        Cameras::UID changed_cam_ID = *changed_cameras.begin();
+        bool cam0_destroyed = changed_cam_ID == cam_ID0 && Cameras::get_changes(changed_cam_ID) == Cameras::Change::Destroyed;
+        EXPECT_TRUE(cam0_destroyed);
+    }
+
+    Cameras::reset_change_notifications();
+
+    { // Test that destroyed camera cannot be destroyed again.
+        EXPECT_FALSE(Cameras::has(cam_ID0));
+
+        Cameras::destroy(cam_ID0);
+        EXPECT_FALSE(Cameras::has(cam_ID0));
+        EXPECT_TRUE(Cameras::get_changed_cameras().is_empty());
+    }
 }
 
 TEST_F(Scene_Camera, set_new_matrices) {

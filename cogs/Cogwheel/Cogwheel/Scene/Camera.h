@@ -43,6 +43,7 @@ public:
     static Cameras::UID create(const std::string& name, SceneRoots::UID scene_ID,
                                Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix,
                                Core::Renderers::UID renderer_ID = Core::Renderers::UID::invalid_UID());
+    static void destroy(Cameras::UID camera_ID);
 
     static UIDGenerator::ConstIterator begin() { return m_UID_generator.begin(); }
     static UIDGenerator::ConstIterator end() { return m_UID_generator.end(); }
@@ -99,7 +100,7 @@ public:
     enum class Change : unsigned char {
         None = 0u,
         Created = 1u << 0u,
-        Destroyed = 1u << 1u, // reserved
+        Destroyed = 1u << 1u,
         Renderer = 1u << 2u,
         All = Created | Destroyed | Renderer
     };
