@@ -22,6 +22,8 @@ class TextureManager;
 //-------------------------------------------------------------------------------------------------
 // Environment manager.
 // Convolutes and uploads environments.
+// Future work:
+// * Fast Filtering of Reflection Probes https://www.ppsloan.org/publications/ggx_filtering.pdf
 //-------------------------------------------------------------------------------------------------
 class EnvironmentManager {
 public:
