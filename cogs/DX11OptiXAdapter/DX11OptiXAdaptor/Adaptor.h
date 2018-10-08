@@ -23,6 +23,7 @@ namespace DX11OptiXAdaptor {
 //-------------------------------------------------------------------------------------------------
 // Adaptor for the OptiX renderer that allows it to render to a DX11 buffer.
 // Future work:
+// * Render directly to DX11 texture. Wrap a mapped DX11 texture in a CUDA surface and copy the accumulation buffer to it.
 // * We should probably set the OMSetDepthStencilState and RSSetState before rendering.
 // * Try storing everything in a command list and execute that instead.
 //-------------------------------------------------------------------------------------------------
