@@ -18,6 +18,7 @@ namespace OptiXRenderer {
 // ------------------------------------------------------------------------------------------------
 class IBackend {
 public:
+    virtual ~IBackend() { };
     virtual void resize_backbuffers(int width, int height) = 0;
     virtual void render(optix::Context& context, int width, int height) = 0;
 };
@@ -29,6 +30,7 @@ public:
 class SimpleBackend : public IBackend {
 public:
     SimpleBackend(int entry_point) : m_entry_point(entry_point) { }
+    ~SimpleBackend() { }
     void resize_backbuffers(int width, int height) {}
     void render(optix::Context& context, int width, int height) {
         context->launch(m_entry_point, width, height);
