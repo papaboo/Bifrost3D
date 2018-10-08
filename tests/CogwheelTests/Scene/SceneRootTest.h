@@ -95,26 +95,20 @@ GTEST_TEST(Scene_SceneRoot, create_and_destroy_notifications) {
     EXPECT_TRUE(SceneRoots::has(scene_ID0));
     EXPECT_TRUE(SceneRoots::has(scene_ID1));
 
-    { // Test scene scene create notifications.
+    { // Test scene root create notifications.
         Core::Iterable<SceneRoots::ChangedIterator> changed_scenes = SceneRoots::get_changed_scenes();
         EXPECT_EQ(changed_scenes.end() - changed_scenes.begin(), 2);
 
         bool scene0_created = false;
         bool scene1_created = false;
-        bool other_changes = false;
         for (const SceneRoots::UID scene_ID : changed_scenes) {
             bool scene_created = SceneRoots::get_changes(scene_ID) == SceneRoots::Change::Created;
-            if (scene_ID == scene_ID0 && scene_created)
-                scene0_created = true;
-            else if (scene_ID == scene_ID1 && scene_created)
-                scene1_created = true;
-            else
-                other_changes = true;
+            scene0_created |= scene_ID == scene_ID0 && scene_created;
+            scene1_created |= scene_ID == scene_ID1 && scene_created;
         }
 
         EXPECT_TRUE(scene0_created);
         EXPECT_TRUE(scene1_created);
-        EXPECT_FALSE(other_changes);
     }
 
     SceneRoots::reset_change_notifications();
