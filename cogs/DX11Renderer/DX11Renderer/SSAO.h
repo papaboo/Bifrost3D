@@ -79,6 +79,8 @@ public:
 
     OShaderResourceView& apply_none(ID3D11DeviceContext1& context, unsigned int camera_ID, Cogwheel::Math::Recti viewport);
 
+    inline void clear_camera_state(unsigned int camera_ID) { if (camera_ID < m_depth.per_camera.size()) m_depth.per_camera[camera_ID].clear(); }
+
 private:
     inline int2 compute_g_buffer_to_ao_index_offset(Cogwheel::Math::Recti viewport) const {
         return { get_margin() - viewport.x, get_margin() - viewport.y };
@@ -110,6 +112,11 @@ private:
             int width, height, mip_count;
             ORenderTargetView RTV;
             OShaderResourceView SRV;
+
+            inline void clear() {
+                width = height = mip_count = 0;
+                RTV = nullptr; SRV = nullptr;
+            }
         };
         std::vector<PerCamera> per_camera;
         OPixelShader pixel_shader;

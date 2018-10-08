@@ -716,6 +716,12 @@ public:
         m_textures.handle_updates(m_device, *m_render_context);
         m_transforms.handle_updates(m_device, *m_render_context);
 
+        { // Camera updates.
+            for (Cameras::UID cam_ID : Cameras::get_changed_cameras())
+                if (Cameras::get_changes(cam_ID) == Cameras::Change::Destroyed)
+                    m_ssao.clear_camera_state(cam_ID);
+        }
+
         { // Mesh updates.
             for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
                 if (m_meshes.size() <= mesh_ID)

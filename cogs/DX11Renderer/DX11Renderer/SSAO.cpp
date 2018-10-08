@@ -159,8 +159,6 @@ void AlchemyAO::resize_ao_buffer(ID3D11DeviceContext1& context, int ssao_width, 
 }
 
 void AlchemyAO::resize_depth_buffer(ID3D11DeviceContext1& context, unsigned int camera_ID, int depth_width, int depth_height) {
-    if (m_depth.per_camera.size() <= camera_ID + 1)
-        m_depth.per_camera.resize(camera_ID + 1);
     auto& camera_depth = m_depth.per_camera[camera_ID];
 
     if (camera_depth.width != depth_width || camera_depth.height != depth_height) {
@@ -210,6 +208,13 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned in
         m_filter = BilateralBlur(device, m_shader_folder_path, settings.filter_type);
     }
     m_filter.set_support(context, settings.filter_support);
+
+    if (m_depth.per_camera.size() <= camera_ID + 1) {
+        size_t prev_size = m_depth.per_camera.size();
+        m_depth.per_camera.resize(camera_ID + 1);
+        for (size_t i = prev_size; i < m_depth.per_camera.size(); ++i)
+            m_depth.per_camera[i].clear();
+    }
 
     int ssao_width = viewport.width + 2 * get_margin();
     int ssao_height = viewport.height + 2 * get_margin();
