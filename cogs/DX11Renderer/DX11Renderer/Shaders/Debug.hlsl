@@ -42,16 +42,31 @@ cbuffer debug_constants : register(b1) {
     int3 _padding;
 };
 
-float4 display_debug_ps(Varyings input) : SV_TARGET {
-    float3 color;
+float3 display_debug_ps(Varyings input) : SV_TARGET {
     if (mode == 1) { // Normals
         float2 encoded_normal = normal_tex[input.position.xy].xy;
         float3 normal = decode_ss_octahedral_normal(encoded_normal);
-        color = 0.5 * normal + 0.5;
+        return 0.5 * normal + 0.5;
     }
     else if (mode == 2) // Depth
-        color = depth_tex[input.position.xy].rrr;
+        return depth_tex[input.position.xy].rrr;
+    else if (mode == 3) { // Scene size visualized as 1x1x1 grid cells
+        float g_width, g_height;
+        depth_tex.GetDimensions(g_width, g_height);
+
+        float z_over_w = depth_tex[input.position.xy].r;
+        float2 viewport_uv = input.position.xy / float2(g_width, g_height);
+        float3 position = position_from_depth(z_over_w, viewport_uv, scene_vars.inverted_view_projection_matrix);
+
+        int3 trunc_position = floor(position);
+        bool is_red = ((trunc_position.x & 1) == (trunc_position.y & 1)) ^ ((trunc_position.z & 1) == 1);
+        float3 color = is_red ? float3(1, 0, 0) : float3(1, 1, 1);
+
+        // Shade a bit by the normal
+        float2 encoded_normal = normal_tex[input.position.xy].xy;
+        float3 normal = decode_ss_octahedral_normal(encoded_normal);
+        return color * (abs(normal.z * 0.75f) + 0.25f);
+    }
     else
-        color = ao_tex[input.position.xy + scene_vars.g_buffer_to_ao_index_offset].rrr;
-    return float4(color, 1);
+        return ao_tex[input.position.xy + scene_vars.g_buffer_to_ao_index_offset].rrr;
 }

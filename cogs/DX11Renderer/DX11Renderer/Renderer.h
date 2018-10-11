@@ -44,7 +44,7 @@ public:
     };
 
     struct DebugSettings {
-        enum DisplayMode { Color, Normals, Depth, AO };
+        enum DisplayMode { Color, Normals, Depth, SceneSize, AO };
         DisplayMode display_mode = DisplayMode::Color;
     };
 

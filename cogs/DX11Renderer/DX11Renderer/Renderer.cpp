@@ -574,6 +574,7 @@ public:
         // Debug display g-buffer or AO
         if (m_debug_settings.display_mode == DebugSettings::DisplayMode::Depth ||
             m_debug_settings.display_mode == DebugSettings::DisplayMode::Normals ||
+            m_debug_settings.display_mode == DebugSettings::DisplayMode::SceneSize ||
             m_debug_settings.display_mode == DebugSettings::DisplayMode::AO) {
 
             m_render_context->OMSetRenderTargets(1, &m_backbuffer_RTV, nullptr);
