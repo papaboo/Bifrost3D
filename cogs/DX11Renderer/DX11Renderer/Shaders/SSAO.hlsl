@@ -181,13 +181,6 @@ float4 filter_input(Varyings input, IFilter filter) {
     float center_weight = 1.0f;
     float center_av = ao_tex[g_buffer_index + g_buffer_to_ao_index_offset].r;
 
-    // Ensure that we perform at least some filtering in areas with high frequency geometry.
-    if (border_weight < 2.0 * center_weight) {
-        float weight_scale = 2.0 * center_weight * rcp(border_weight);
-        border_av *= weight_scale;
-        border_weight = 2.0 * center_weight;
-    }
-
     float av = (center_av + border_av) * rcp(center_weight + border_weight);
     if (is_final_pass)
         av = pow(max(0.0, av), falloff);
