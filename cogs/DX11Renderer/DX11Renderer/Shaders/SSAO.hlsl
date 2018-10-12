@@ -161,7 +161,7 @@ interface IFilter {
     void apply(int2 g_buffer_index, float3 view_normal, float plane_d, inout float summed_ao, inout float ao_weight);
 };
 
-float4 filter_input(Varyings input, IFilter filter) {
+float filter_input(Varyings input, IFilter filter) {
 
     int2 g_buffer_index = input.position.xy - g_buffer_to_ao_index_offset;
     float3 view_normal = decode_ss_octahedral_normal(normal_tex[g_buffer_index].xy);
@@ -169,7 +169,7 @@ float4 filter_input(Varyings input, IFilter filter) {
 
     // No occlusion on the far plane.
     if (depth == depth_far_plane_sentinel)
-        return float4(0, 0, 0, 0);
+        return 0;
 
     float3 view_position = perspective_position_from_linear_depth(depth, input.projection_uv(), scene_vars.inverted_projection_matrix);
     float plane_d = -dot(view_position, view_normal);
@@ -185,7 +185,7 @@ float4 filter_input(Varyings input, IFilter filter) {
     if (is_final_pass)
         av = pow(max(0.0, av), falloff);
 
-    return float4(av, 0, 0, 0);
+    return av;
 }
 
 class BoxFilter : IFilter {
@@ -226,7 +226,7 @@ float4 cross_filter_ps(Varyings input) : SV_TARGET {
 // Alchemy pixel shader.
 // ------------------------------------------------------------------------------------------------
 
-float4 alchemy_ps(Varyings input) : SV_TARGET {
+float alchemy_ps(Varyings input) : SV_TARGET {
 
     static const float max_ss_radius = 0.25f;
 
@@ -234,7 +234,7 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
 
     // No occlusion on the far plane.
     if (depth == depth_far_plane_sentinel)
-        return float4(0, 0, 0, 0);
+        return 0;
 
     // Setup sampling
     uint rng_offset = RNG::evenly_distributed_2D_seed(input.position.xy);
@@ -281,5 +281,5 @@ float4 alchemy_ps(Varyings input) : SV_TARGET {
     float pixel_width = g_buffer_size.x * ss_radius;
     visibility = lerp(1, visibility, saturate(pixel_width * 0.5f));
 
-    return float4(visibility, 0, 0, 0);
+    return visibility;
 }

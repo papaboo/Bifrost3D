@@ -74,7 +74,7 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
 
         // Resize backbuffer
         ODevice1 device = get_device1(context);
-        create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, m_width, m_height, &m_intermediate_SRV, nullptr, &m_intermediate_RTV);
+        create_texture_2D(device, DXGI_FORMAT_R16_FLOAT, m_width, m_height, &m_intermediate_SRV, nullptr, &m_intermediate_RTV);
     }
 
     set_support(context, support);
@@ -154,7 +154,7 @@ void AlchemyAO::resize_ao_buffer(ID3D11DeviceContext1& context, int ssao_width, 
         // Resize backbuffer
         m_SSAO_SRV.release();
         m_SSAO_RTV.release();
-        create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, m_width, m_height, &m_SSAO_SRV, nullptr, &m_SSAO_RTV);
+        create_texture_2D(device, DXGI_FORMAT_R16_FLOAT, m_width, m_height, &m_SSAO_SRV, nullptr, &m_SSAO_RTV);
     }
 }
 
