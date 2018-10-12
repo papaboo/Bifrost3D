@@ -507,13 +507,16 @@ int initialize_scene(Engine& engine) {
     SceneRoots::UID scene_ID = SceneRoots::UID::invalid_UID();
     if (!g_environment.empty()) {
         Image image = StbImageLoader::load(g_environment);
-        if (channel_count(image.get_pixel_format()) != 4) {
-            Image new_image = ImageUtils::change_format(image.get_ID(), PixelFormat::RGBA_Float, 1.0f);
-            Images::destroy(image.get_ID());
-            image = new_image;
-        }
-        Textures::UID env_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
-        scene_ID = SceneRoots::create("Model scene", env_ID);
+        if (image.exists()) {
+            if (channel_count(image.get_pixel_format()) != 4) {
+                Image new_image = ImageUtils::change_format(image.get_ID(), PixelFormat::RGBA_Float, 1.0f);
+                Images::destroy(image.get_ID());
+                image = new_image;
+            }
+            Textures::UID env_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
+            scene_ID = SceneRoots::create("Model scene", env_ID);
+        } else
+            scene_ID = SceneRoots::create("Model scene", g_environment_color);
     } else
         scene_ID = SceneRoots::create("Model scene", g_environment_color);
     SceneNodes::UID root_node_ID = SceneRoots::get_root_node(scene_ID);
