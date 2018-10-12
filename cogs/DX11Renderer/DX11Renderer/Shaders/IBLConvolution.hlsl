@@ -97,7 +97,7 @@ void MIS_convolute(uint3 thread_ID : SV_DispatchThreadID) {
 
     uint light_sample_count, light_sample_stride;
     light_samples.GetDimensions(light_sample_count, light_sample_stride);
-    uint light_index_offset = RNG::teschner_hash(thread_ID.x, thread_ID.y);
+    uint light_index_offset = 0;
     for (unsigned int l = 0; l < half_sample_count; ++l) {
         LightSample light_sample = light_samples[(l + light_index_offset) % light_sample_count];
 
@@ -115,10 +115,10 @@ void MIS_convolute(uint3 thread_ID : SV_DispatchThreadID) {
         radiance += light_sample.radiance * (mis_weight * ggx_f * cos_theta / light_sample.PDF);
     }
 
-    uint2 rng_scramble = reversebits(thread_ID.xy);
+    // If using the same seed pr pixel causes firesplotches, then try owen scrambling or Cranley patterson rotation.
     float3x3 up_TBN = create_inverse_TBN(up_vector);
     for (unsigned int s = 0; s < half_sample_count; ++s) {
-        float4 bsdf_sample = BSDFs::GGX::sample(alpha, RNG::sample02(s, rng_scramble));
+        float4 bsdf_sample = BSDFs::GGX::sample(alpha, RNG::sample02(s));
         if (!(bsdf_sample.w > 0.000000001f)) // NaN resilient check.
             continue;
 

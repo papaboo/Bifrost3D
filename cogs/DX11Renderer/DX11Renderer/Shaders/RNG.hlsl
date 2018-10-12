@@ -40,7 +40,7 @@ float sobol2(uint n, uint scramble) {
     return scramble / 4294967296.0f;
 }
 
-float2 sample02(uint n, uint2 scramble = uint2(5569, 95597)) {
+float2 sample02(uint n, uint2 scramble = uint2(0, 0)) {
     return float2(van_der_corput(n, scramble.x), sobol2(n, scramble.y));
 }
 
