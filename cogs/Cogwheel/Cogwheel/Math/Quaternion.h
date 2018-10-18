@@ -130,16 +130,9 @@ public:
     inline const T* begin() const { return &x; }
 
     // The imaginary part of the quaternion.
-    inline Vector3<T>& imaginary() {
-        return *static_cast<Vector3<T>*>(static_cast<void*>(&x));
-    }
-    // The imaginary part of the quaternion.
-    inline Vector3<T> imaginary() const {
-        return Vector3<T>(x, y, z);
-    }
+    inline Vector3<T> imaginary() const { return Vector3<T>(x, y, z); }
 
     // The real part of the quaternion.
-    inline T& real() { return w; }
     inline T real() const { return w; }
 
     // Quaternion multiplication.
