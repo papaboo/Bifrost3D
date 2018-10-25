@@ -15,9 +15,6 @@
 #include <Cogwheel/Scene/SceneNode.h>
 
 namespace Cogwheel {
-namespace Core {
-    class IModule;
-}
 namespace Input {
     class Keyboard;
     class Mouse;
