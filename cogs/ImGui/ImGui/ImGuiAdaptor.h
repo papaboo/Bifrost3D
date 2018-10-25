@@ -30,13 +30,12 @@ public:
     virtual void layout_frame() = 0;
 };
 
-typedef IImGuiFrame*(*ImGuiFrameCreator)();
 // ------------------------------------------------------------------------------------------------
 // Dear IMGUI adaptor for Cogwheel input.
 // Future work:
 // * Disable keyboard and mouse events based on io.WantCaptureMouse and io.WantCaptureKeyboard.
 // * Load and set fonts.
-// * Support setting different mouse cursors images.
+// * Support setting different mouse cursor images.
 // ------------------------------------------------------------------------------------------------
 class ImGuiAdaptor {
 public:
@@ -44,7 +43,7 @@ public:
 
     void new_frame(const Cogwheel::Core::Engine& engine);
 
-    void add_frame(ImGuiFrameCreator frame_creator);
+    inline void add_frame(std::unique_ptr<IImGuiFrame> frame) { m_frames.push_back(frame); }
 
     bool is_enabled() const { return m_enabled; }
     void set_enabled(bool enabled) { m_enabled = enabled; }

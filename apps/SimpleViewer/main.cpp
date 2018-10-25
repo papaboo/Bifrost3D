@@ -663,7 +663,7 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
 
     { // Setup GUI
         auto* imgui = new ImGui::ImGuiAdaptor();
-        imgui->add_frame([]() -> ImGui::IImGuiFrame* { return new GUI::RenderingGUI(compositor, dx11_renderer); });
+        imgui->add_frame(std::make_unique<GUI::RenderingGUI>(compositor, dx11_renderer));
 
         auto imgui_callback = [](Engine& engine, void* imgui) {
             auto* keyboard = engine.get_keyboard();
@@ -676,7 +676,6 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
             imgui_adaptor->new_frame(engine);
         };
 
-        // engine.add_mutating_callback(ImGui::new_frame_callback, imgui);
         engine.add_mutating_callback(imgui_callback, imgui);
         compositor->add_GUI_renderer([](ODevice1& device) -> IGuiRenderer* { return new ImGui::Renderers::DX11Renderer(device); });
     }

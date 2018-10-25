@@ -105,9 +105,4 @@ void ImGuiAdaptor ::new_frame(const Cogwheel::Core::Engine& engine) {
         keyboard->consume_all_button_events();
 }
 
-void ImGuiAdaptor::add_frame(ImGuiFrameCreator frame_creator) {
-    IImGuiFrame* frame = frame_creator();
-    m_frames.push_back(std::unique_ptr<IImGuiFrame>(frame));
-}
-
 } // NS ImGui
