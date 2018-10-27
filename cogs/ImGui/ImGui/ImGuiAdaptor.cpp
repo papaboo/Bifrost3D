@@ -51,7 +51,7 @@ ImGuiAdaptor::ImGuiAdaptor()
     io.KeyMap[ImGuiKey_Z] = int(Keyboard::Key::Z);
 }
 
-void ImGuiAdaptor ::new_frame(const Cogwheel::Core::Engine& engine) {
+void ImGuiAdaptor::new_frame(const Cogwheel::Core::Engine& engine) {
     ImGuiIO& io = ImGui::GetIO();
 
     // Handle window.

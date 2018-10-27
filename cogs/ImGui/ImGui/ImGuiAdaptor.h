@@ -27,6 +27,7 @@ namespace ImGui {
 
 class IImGuiFrame {
 public:
+    virtual ~IImGuiFrame() {}
     virtual void layout_frame() = 0;
 };
 
@@ -43,7 +44,11 @@ public:
 
     void new_frame(const Cogwheel::Core::Engine& engine);
 
-    inline void add_frame(std::unique_ptr<IImGuiFrame> frame) { m_frames.push_back(frame); }
+    inline void add_frame(std::unique_ptr<IImGuiFrame> frame) {
+        // Ridiculous workaround for VS2015 attempting to reference some deleted function if frame is pushed directly.
+        IImGuiFrame* _frame = frame.release();
+        m_frames.push_back(std::unique_ptr<IImGuiFrame>(_frame));
+    }
 
     bool is_enabled() const { return m_enabled; }
     void set_enabled(bool enabled) { m_enabled = enabled; }
