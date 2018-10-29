@@ -33,6 +33,7 @@ target_link_libraries(${PROJECT_NAME}
   ImGui
   ObjLoader
   StbImageLoader
+  StbImageWriter
   Win32Driver
 )
 

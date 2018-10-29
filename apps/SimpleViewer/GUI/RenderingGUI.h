@@ -23,14 +23,20 @@ namespace GUI {
 
 class RenderingGUI : public ImGui::IImGuiFrame {
 public:
-    RenderingGUI(DX11Renderer::Compositor* compositor, DX11Renderer::Renderer* renderer)
-        : m_compositor(compositor), m_renderer(renderer) {}
+    RenderingGUI(DX11Renderer::Compositor* compositor, DX11Renderer::Renderer* renderer);
 
     void layout_frame();
 
 private:
     DX11Renderer::Compositor* m_compositor;
     DX11Renderer::Renderer* m_renderer;
+
+    struct {
+        static const unsigned int max_path_length = 1024u;
+        char path[max_path_length];
+        unsigned int iterations = 0;
+        bool is_HDR = false;
+    } m_screenshot;
 };
 
 } // NS GUI

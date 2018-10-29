@@ -13,6 +13,9 @@
 #include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/Renderer.h>
 
+#include <StbImageWriter/StbImageWriter.h>
+
+using namespace Cogwheel::Assets;
 using namespace Cogwheel::Math;
 using namespace Cogwheel::Scene;
 
@@ -21,7 +24,7 @@ using namespace Cogwheel::Scene;
 // ------------------------------------------------------------------------------------------------
 namespace ImGui {
 
-    bool InputUint(const char* label, unsigned int* v, unsigned int step, unsigned int step_fast, ImGuiInputTextFlags extra_flags = 0) {
+    bool InputUint(const char* label, unsigned int* v, unsigned int step = 1u, unsigned int step_fast = 100u, ImGuiInputTextFlags extra_flags = 0) {
         // Hexadecimal input provided as a convenience but the flag name is awkward. Typically you'd use InputText() to parse your own data, if you want to handle prefixes.
         const char* format = (extra_flags & ImGuiInputTextFlags_CharsHexadecimal) ? "%08X" : "%u";
         return InputScalar(label, ImGuiDataType_U32, (void*)v, (void*)(step > 0 ? &step : NULL), (void*)(step_fast > 0 ? &step_fast : NULL), format, extra_flags);
@@ -30,8 +33,42 @@ namespace ImGui {
 
 namespace GUI {
 
+RenderingGUI::RenderingGUI(DX11Renderer::Compositor* compositor, DX11Renderer::Renderer* renderer)
+    : m_compositor(compositor), m_renderer(renderer) {
+    strcpy_s(m_screenshot.path, m_screenshot.max_path_length, "c:\\temp\\ss.png");
+}
+
 void RenderingGUI::layout_frame() {
     ImGui::Begin("Rendering");
+
+    { // Screenshotting
+        { // Resolve existing screenshots
+            for (auto cam_ID : Cameras::get_iterable()) {
+                Images::UID image_ID = Cameras::resolve_screenshot(cam_ID, "ss");
+                if (Images::has(image_ID)) {
+                    if (!StbImageWriter::write(image_ID, std::string(m_screenshot.path)))
+                        printf("Failed to output screenshot to '%s'\n", m_screenshot.path);
+                    Images::destroy(image_ID);
+                }
+            }
+        }
+
+        if (ImGui::TreeNode("Screenshot")) {
+            bool take_screenshot = ImGui::Button("Take screenshots");
+            ImGui::InputText("Path", m_screenshot.path, m_screenshot.max_path_length);
+            ImGui::InputUint("Iterations", &m_screenshot.iterations);
+            ImGui::Checkbox("HDR", &m_screenshot.is_HDR);
+
+            if (take_screenshot) {
+                auto first_cam_ID = *Cameras::get_iterable().begin();
+                Cameras::request_screenshot(first_cam_ID, m_screenshot.is_HDR, m_screenshot.iterations);
+            }
+
+            ImGui::TreePop();
+        }
+    }
+
+    ImGui::Separator();
 
     if (ImGui::TreeNode("Compositor")) {
         if (ImGui::Button("Toggle V-sync")) {
