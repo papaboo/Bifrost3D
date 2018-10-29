@@ -14,6 +14,7 @@
 
 #include <Cogwheel/Math/AABB.h>
 #include <Cogwheel/Math/Ray.h>
+#include <Cogwheel/Math/Rect.h>
 #include <Cogwheel/Math/Transform.h>
 #include <Cogwheel/Math/Vector.h>
 #include <Cogwheel/Math/Utils.h>
@@ -310,6 +311,42 @@ inline void texture2D(ID3D11Device1* device, ID3D11DeviceContext1* context, ID3D
     THROW_DX11_ERROR(device->CreateTexture2D(&staging_desc, nullptr, &staging_texture));
 
     context->CopyResource(staging_texture, gpu_texture);
+    // context->Flush();
+
+    D3D11_MAPPED_SUBRESOURCE mapped_resource = {};
+    THROW_DX11_ERROR(context->Map(staging_texture, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_NONE, &mapped_resource));
+    memcpy(&(*cpu_buffer_begin), mapped_resource.pData, sizeof(std::iterator_traits<RandomAccessIterator>::value_type) * element_count);
+    context->Unmap(staging_texture, 0);
+
+    staging_texture->Release();
+}
+
+template <typename RandomAccessIterator>
+inline void texture2D(ID3D11Device1* device, ID3D11DeviceContext1* context, ID3D11Texture2D* gpu_texture, Cogwheel::Math::Rect<int> viewport,
+    RandomAccessIterator cpu_buffer_begin) {
+    int element_count = viewport.width * viewport.height;
+
+    D3D11_TEXTURE2D_DESC staging_desc = {};
+    gpu_texture->GetDesc(&staging_desc); // Copy format and sample description.
+    staging_desc.Width = viewport.width;
+    staging_desc.Height = viewport.height;
+    staging_desc.MipLevels = staging_desc.ArraySize = 1;
+    staging_desc.Usage = D3D11_USAGE_STAGING;
+    staging_desc.BindFlags = D3D11_BIND_NONE;
+    staging_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    staging_desc.MiscFlags = D3D11_RESOURCE_MISC_NONE;
+
+    ID3D11Texture2D* staging_texture;
+    THROW_DX11_ERROR(device->CreateTexture2D(&staging_desc, nullptr, &staging_texture));
+
+    D3D11_BOX region = {};
+    region.left = viewport.x;
+    region.right = viewport.x + viewport.width;
+    region.top = viewport.y;
+    region.bottom = viewport.y + viewport.height;
+    region.front = 0;
+    region.back = 1;
+    context->CopySubresourceRegion1(staging_texture, 0, 0, 0, 0, gpu_texture, 0, &region, 0);
     // context->Flush();
 
     D3D11_MAPPED_SUBRESOURCE mapped_resource = {};
