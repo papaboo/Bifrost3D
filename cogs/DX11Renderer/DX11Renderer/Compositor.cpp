@@ -13,6 +13,7 @@
 #include <Cogwheel/Core/Engine.h>
 #include <Cogwheel/Core/Window.h>
 
+using namespace Cogwheel::Assets;
 using namespace Cogwheel::Core;
 using namespace Cogwheel::Math;
 using namespace Cogwheel::Scene;
@@ -201,6 +202,51 @@ public:
         if (Cameras::begin() == Cameras::end())
             return;
 
+        auto screenshot_filler = [](ID3D11Device1* device, ID3D11DeviceContext1* context, 
+                                    ID3D11Texture2D* source_resource, DXGI_FORMAT source_format, Cogwheel::Math::Rect<int> source_viewport,
+                                    unsigned int minimum_iteration_count, PixelFormat format, int& width, int& height) -> Images::PixelData {
+            // Helpers
+            typedef Vector4<half> Vector4h;
+            typedef Vector4<unsigned char> Vector4uc;
+            auto to_uchar = [](half v) -> unsigned char { return unsigned char(clamp(v * 255.0f + 0.5f, 0.0f, 255.0f)); };
+
+            unsigned int current_iterations = 1;
+            if (current_iterations < minimum_iteration_count)
+                return nullptr;
+
+            width = source_viewport.width; height = source_viewport.height;
+            int element_count = width * height;
+            if (format == PixelFormat::RGBA32) {
+                assert(source_format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
+
+                Vector4uc* pixels = new Vector4uc[element_count];
+                Readback::texture2D(device, context, source_resource, source_viewport, pixels);
+                // Mirror around y.
+                std::vector<Vector4uc> tmp; tmp.resize(width);
+                int row_size = sizeof(Vector4uc) * width;
+                for (int row = 0; row < height / 2; ++row) {
+                    memcpy(tmp.data(), pixels + row * width, row_size);
+                    memcpy(pixels + row * width, pixels + (height - row - 1) * width, row_size);
+                    memcpy(pixels + (height - row - 1) * width, tmp.data(), row_size);
+                }
+                return pixels;
+            } if (format == PixelFormat::RGBA_Float) {
+                assert(source_format == DXGI_FORMAT_R16G16B16A16_FLOAT);
+
+                auto pixels = std::vector<Vector4h>(element_count);
+                Readback::texture2D(device, context, source_resource, source_viewport, pixels.begin());
+
+                RGBA* data = new RGBA[element_count];
+                for (int x = 0; x < width; ++x)
+                    for (int y = 0; y < height; ++y) {
+                        Vector4h& pixel = pixels[x + y * width];
+                        data[x + (height - y - 1) * width] = RGBA(pixel.x, pixel.y, pixel.z, pixel.w);
+                    }
+                return data;
+            } else
+                return nullptr;
+        };
+
         Vector2ui current_backbuffer_size = Vector2ui(m_window.get_width(), m_window.get_height());
         if (m_backbuffer_size != current_backbuffer_size) {
             
@@ -237,6 +283,16 @@ public:
             Renderers::UID renderer_ID = Cameras::get_renderer_ID(camera_ID);
             auto frame = m_renderers[renderer_ID]->render(camera_ID, int(viewport.width), int(viewport.height));
 
+            auto take_hdr_screenshot = [&](PixelFormat format, unsigned int minimum_iteration_count, int& width, int& height) -> Images::PixelData {
+                if (format != PixelFormat::RGBA_Float) return nullptr;
+
+                ID3D11Resource* sourceResource;
+                frame.frame_SRV->GetResource(&sourceResource);
+                return screenshot_filler(m_device, m_render_context, (ID3D11Texture2D*)sourceResource, DXGI_FORMAT_R16G16B16A16_FLOAT, frame.viewport,
+                                         minimum_iteration_count, format, width, height);
+            };
+            Cameras::fill_screenshot(camera_ID, take_hdr_screenshot);
+
             // Compute delta time for camera effects.
             LARGE_INTEGER performance_count;
             QueryPerformanceCounter(&performance_count);
@@ -248,6 +304,16 @@ public:
             Cameras::UID camera_ID = *Cameras::get_iterable().begin();
             auto effects_settings = Cameras::get_effects_settings(camera_ID);
             m_camera_effects.process(m_render_context, effects_settings, delta_time, frame.frame_SRV, m_swap_chain_RTV, frame.viewport, Recti(viewport));
+
+            auto take_ldr_screenshot = [&](PixelFormat format, unsigned int minimum_iteration_count, int& width, int& height) -> Images::PixelData {
+                if (format != PixelFormat::RGBA32) return nullptr;
+
+                ID3D11Resource* sourceResource;
+                m_swap_chain_RTV->GetResource(&sourceResource);
+                return screenshot_filler(m_device, m_render_context, (ID3D11Texture2D*)sourceResource, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, Recti(viewport),
+                                         minimum_iteration_count, format, width, height);
+            };
+            Cameras::fill_screenshot(camera_ID, take_ldr_screenshot);
         }
 
         // Post render calls, fx for GUI
