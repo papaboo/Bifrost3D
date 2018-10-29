@@ -204,6 +204,69 @@ TEST_F(Scene_Camera, z_sorting) {
     EXPECT_EQ(high_z_cam_ID, sorted_IDs[2]);
 }
 
+TEST_F(Scene_Camera, screenshots) {
+    using namespace Cogwheel::Assets;
+    using namespace Cogwheel::Math;
+
+    // Stub method can fill a screenshot with an image with 2 iterations.
+    auto screenshot_filler = [](PixelFormat format, unsigned int minimum_iteration_count, int& width, int& height) -> Images::PixelData {
+        unsigned int current_iteraions = 2;
+        if (current_iteraions < minimum_iteration_count)
+            return nullptr;
+
+        width = 2; height = 2;
+        if (format == PixelFormat::RGBA32)
+            return new unsigned char[width * height * 4];
+        else if (format == PixelFormat::RGBA_Float)
+            return new float[width * height * 4];
+        else
+            return nullptr;
+    };
+
+    Images::allocate(1);
+
+    Matrix4x4f initial_perspective_matrix = Matrix4x4f::identity(), initial_inverse_perspective_matrix = Matrix4x4f::identity();
+    SceneRoots::UID scene_ID = SceneRoots::create("Root", RGB::white());
+    Cameras::UID cam_ID = Cameras::create("Test cam", scene_ID, initial_perspective_matrix, initial_inverse_perspective_matrix);
+    EXPECT_FALSE(Cameras::is_screenshot_requested(cam_ID));
+
+    { // Request LDR image with at least 1 iteration. Filler has two iterations so it should be successful.
+        bool as_HDR = false;
+        unsigned int minimal_iteration_count = 1;
+        Cameras::request_screenshot(cam_ID, as_HDR, minimal_iteration_count);
+        EXPECT_TRUE(Cameras::is_screenshot_requested(cam_ID));
+
+        Cameras::fill_screenshot(cam_ID, screenshot_filler);
+        EXPECT_FALSE(Cameras::is_screenshot_requested(cam_ID));
+
+        Image image = Cameras::resolve_screenshot(cam_ID, "Test image");
+        EXPECT_TRUE(image.exists());
+        EXPECT_EQ(image.get_width(), 2);
+        EXPECT_EQ(image.get_height(), 2);
+        EXPECT_EQ(image.get_pixel_format(), PixelFormat::RGBA32);
+    }
+
+    { // Request LDR image with at least 3 iteration. Filler has two iterations so it should fail.
+        bool as_HDR = false;
+        unsigned int minimal_iteration_count = 3;
+        Cameras::request_screenshot(cam_ID, as_HDR, minimal_iteration_count);
+        EXPECT_TRUE(Cameras::is_screenshot_requested(cam_ID));
+
+        Cameras::fill_screenshot(cam_ID, screenshot_filler);
+        Image image = Cameras::resolve_screenshot(cam_ID, "Test image");
+        EXPECT_FALSE(image.exists());
+    }
+
+    { // Request and cancel screenshot.
+        Cameras::request_screenshot(cam_ID, false, 1);
+        EXPECT_TRUE(Cameras::is_screenshot_requested(cam_ID));
+        Cameras::cancel_screenshot(cam_ID);
+        EXPECT_FALSE(Cameras::is_screenshot_requested(cam_ID));
+    }
+
+    Images::deallocate();
+}
+
 TEST_F(Scene_Camera, ray_projection) {
     using namespace Cogwheel::Math;
 
@@ -213,8 +276,7 @@ TEST_F(Scene_Camera, ray_projection) {
         initial_perspective_matrix, initial_inverse_perspective_matrix);
 
     SceneRoots::UID scene_ID = SceneRoots::create("Root", RGB::white());
-    Cameras::UID cam_ID = Cameras::create("Test cam", scene_ID,
-                                          initial_perspective_matrix, initial_inverse_perspective_matrix);
+    Cameras::UID cam_ID = Cameras::create("Test cam", scene_ID, initial_perspective_matrix, initial_inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
 
     const float maximally_allowed_cos_angle = cos(degrees_to_radians(0.5f));

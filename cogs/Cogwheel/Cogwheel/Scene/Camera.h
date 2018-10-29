@@ -9,6 +9,7 @@
 #ifndef _COGWHEEL_SCENE_CAMERA_H_
 #define _COGWHEEL_SCENE_CAMERA_H_
 
+#include <Cogwheel/Assets/Image.h>
 #include <Cogwheel/Core/Renderer.h>
 #include <Cogwheel/Math/CameraEffects.h>
 #include <Cogwheel/Math/Conversions.h>
@@ -17,6 +18,8 @@
 #include <Cogwheel/Math/Rect.h>
 #include <Cogwheel/Math/Transform.h>
 #include <Cogwheel/Scene/SceneRoot.h>
+
+#include <functional>
 
 namespace Cogwheel {
 namespace Scene {
@@ -94,9 +97,25 @@ public:
     static Math::CameraEffects::Settings get_effects_settings(Cameras::UID camera_ID) { return m_effects_settings[camera_ID]; }
     static void set_effects_settings(Cameras::UID camera_ID, Math::CameraEffects::Settings settings) { m_effects_settings[camera_ID] = settings; }
 
+    //---------------------------------------------------------------------------------------------
+    // Screenshot functionality. Currently only supports getting screenshots based on iteration count.
     //-------------------------------------------------------------------------
+    static void request_screenshot(Cameras::UID camera_ID, bool as_HDR, unsigned int minimum_iteration_count = 1) {
+        m_screenshot_info[camera_ID].pixel_format = as_HDR ? Assets::PixelFormat::RGBA_Float : Assets::PixelFormat::RGBA32;
+        m_screenshot_info[camera_ID].minimum_iteration_count = minimum_iteration_count;
+    }
+    static bool is_screenshot_requested(Cameras::UID camera_ID) { 
+        return m_screenshot_info[camera_ID].pixel_format != Assets::PixelFormat::Unknown && m_screenshot_info[camera_ID].pixels == nullptr;
+    }
+    static void cancel_screenshot(Cameras::UID camera_ID) { m_screenshot_info[camera_ID].pixel_format = Assets::PixelFormat::Unknown; }
+    using ScreenshotFiller = std::function<Assets::Images::PixelData(Assets::PixelFormat format, unsigned int minimum_iteration_count, int& width, int& height)>;
+    // Grabs screenshot data from the renderer and stores it in an intermediate format while the datamodel is considered immutable.
+    static void fill_screenshot(Cameras::UID camera_ID, ScreenshotFiller screenshot_filler);
+    static Assets::Images::UID resolve_screenshot(Cameras::UID camera_ID, const std::string& name); // Resolves the last screenshot.
+
+    //---------------------------------------------------------------------------------------------
     // Changes since last game loop tick.
-    //-------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     enum class Change : unsigned char {
         None = 0u,
         Created = 1u << 0u,
@@ -129,9 +148,21 @@ private:
     static Core::Renderers::UID* m_renderer_IDs;
     static Math::CameraEffects::Settings* m_effects_settings;
 
+    struct ScreenshotInfo {
+        Assets::Images::PixelData pixels;
+        Assets::PixelFormat pixel_format;
+        int width, height;
+        unsigned int minimum_iteration_count;
+    };
+
+    static ScreenshotInfo* m_screenshot_info;
+
     static Core::ChangeSet<Changes, UID> m_changes;
 };
 
+//-------------------------------------------------------------------------------------------------
+// Camera utils
+//-------------------------------------------------------------------------------------------------
 namespace CameraUtils {
 
 void compute_perspective_projection(float near_distance, float far_distance, float field_of_view_in_radians, float aspect_ratio,

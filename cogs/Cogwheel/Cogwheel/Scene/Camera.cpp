@@ -32,6 +32,7 @@ Matrix4x4f* Cameras::m_inverse_projection_matrices = nullptr;
 Rectf* Cameras::m_viewports = nullptr;
 Core::Renderers::UID* Cameras::m_renderer_IDs = nullptr;
 CameraEffects::Settings* Cameras::m_effects_settings = nullptr;
+Cameras::ScreenshotInfo* Cameras::m_screenshot_info = nullptr;
 Core::ChangeSet<Cameras::Changes, Cameras::UID> Cameras::m_changes;
 
 void Cameras::allocate(unsigned int capacity) {
@@ -50,6 +51,7 @@ void Cameras::allocate(unsigned int capacity) {
     m_viewports = new Rectf[capacity];
     m_renderer_IDs = new Core::Renderers::UID[capacity];
     m_effects_settings = new CameraEffects::Settings[capacity];
+    m_screenshot_info = new ScreenshotInfo[capacity];
     m_changes = Core::ChangeSet<Changes, UID>(capacity);
 
     // Allocate dummy camera at 0.
@@ -62,6 +64,7 @@ void Cameras::allocate(unsigned int capacity) {
     m_viewports[0] = Rectf(0,0,0,0);
     m_renderer_IDs[0] = Core::Renderers::UID::invalid_UID();
     m_effects_settings[0] = {};
+    m_screenshot_info[0] = {};
 }
 
 void Cameras::deallocate() {
@@ -79,6 +82,7 @@ void Cameras::deallocate() {
     delete[] m_viewports; m_viewports = nullptr;
     delete[] m_renderer_IDs; m_renderer_IDs = nullptr;
     delete[] m_effects_settings; m_effects_settings = nullptr;
+    delete[] m_screenshot_info; m_screenshot_info = nullptr;
 
     m_changes.resize(0);
 }
@@ -119,6 +123,7 @@ void Cameras::reserve_camera_data(unsigned int new_capacity, unsigned int old_ca
     m_viewports = resize_and_copy_array(m_viewports, new_capacity, copyable_elements);
     m_renderer_IDs = resize_and_copy_array(m_renderer_IDs, new_capacity, copyable_elements);
     m_effects_settings = resize_and_copy_array(m_effects_settings, new_capacity, copyable_elements);
+    m_screenshot_info = resize_and_copy_array(m_screenshot_info, new_capacity, copyable_elements);
 
     m_changes.resize(new_capacity);
 }
@@ -152,6 +157,7 @@ Cameras::UID Cameras::create(const std::string& name, SceneRoots::UID scene_ID,
     m_viewports[id] = Rectf(0, 0, 1, 1);
     m_renderer_IDs[id] = Core::Renderers::has(renderer_ID) ? renderer_ID : *Core::Renderers::begin();
     m_effects_settings[id] = CameraEffects::Settings::default();
+    m_screenshot_info[id] = {};
     m_changes.set_change(id, Change::Created);
 
     return id;
@@ -171,6 +177,29 @@ std::vector<Cameras::UID> Cameras::get_z_sorted_IDs() {
         IDs.push_back(camera_ID);
     std::sort(IDs.begin(), IDs.end(), [](UID lhs, UID rhs) { return Cameras::get_z_index(lhs) < Cameras::get_z_index(rhs); });
     return IDs;
+}
+
+void Cameras::fill_screenshot(Cameras::UID camera_ID, ScreenshotFiller screenshot_filler) {
+    if (is_screenshot_requested(camera_ID)) {
+        auto& screenshot_info = m_screenshot_info[camera_ID];
+        Assets::Images::PixelData pixels = screenshot_filler(screenshot_info.pixel_format, screenshot_info.minimum_iteration_count, screenshot_info.width, screenshot_info.height);
+        if (pixels != nullptr) {
+            if (screenshot_info.pixels != nullptr)
+                delete[] screenshot_info.pixels;
+            screenshot_info.pixels = pixels;
+        }
+    }
+}
+
+Assets::Images::UID Cameras::resolve_screenshot(Cameras::UID camera_ID, const std::string& name) {
+    auto& info = m_screenshot_info[camera_ID];
+    if (info.pixels == nullptr)
+        return Assets::Images::UID::invalid_UID();
+
+    bool is_HDR = info.pixel_format == Assets::PixelFormat::RGBA_Float;
+    auto image_ID = Assets::Images::create2D(name, info.pixel_format, is_HDR ? 1.0f : 2.2f, Vector2ui(info.width, info.height), info.pixels);
+    info = {};
+    return image_ID;
 }
 
 //*****************************************************************************
