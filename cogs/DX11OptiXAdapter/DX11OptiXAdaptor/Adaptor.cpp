@@ -29,8 +29,7 @@ namespace DX11OptiXAdaptor {
 
 inline void throw_cuda_error(cudaError_t error, const std::string& file, int line) {
     if (error != cudaSuccess) {
-        std::string message = "[file:" + file + " line:" + std::to_string(line) + 
-            "] CUDA errror: " + std::string(cudaGetErrorString(error));
+        std::string message = "[file:" + file + " line:" + std::to_string(line) + "] CUDA errror: " + std::string(cudaGetErrorString(error));
         printf("%s.\n", message.c_str());
         throw std::exception(message.c_str(), error);
     }
