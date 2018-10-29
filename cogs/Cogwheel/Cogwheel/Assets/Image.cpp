@@ -132,9 +132,39 @@ Images::UID Images::create3D(const std::string& name, PixelFormat format, float 
     return id;
 }
 
+Images::UID Images::create2D(const std::string& name, PixelFormat format, float gamma, Math::Vector2ui size, PixelData& pixels) {
+    assert(m_metainfo != nullptr);
+    assert(m_pixels != nullptr);
+
+    unsigned int old_capacity = m_UID_generator.capacity();
+    UID id = m_UID_generator.generate();
+    if (old_capacity != m_UID_generator.capacity())
+        // The capacity has changed and the size of all arrays need to be adjusted.
+        reserve_image_data(m_UID_generator.capacity(), old_capacity);
+
+    // Only apply gamma to images that store colors.
+    if (format == PixelFormat::I8)
+        gamma = 1.0f;
+
+    MetaInfo& metainfo = m_metainfo[id];
+    metainfo.name = name;
+    metainfo.pixel_format = format;
+    metainfo.gamma = gamma;
+    metainfo.width = size.x;
+    metainfo.height = size.y;
+    metainfo.depth = 1u;
+
+    metainfo.mipmap_count = 1u;
+    metainfo.is_mipmapable = false;
+    m_pixels[id] = pixels; pixels = nullptr; // Take ownership of pixels.
+    m_changes.set_change(id, Change::Created);
+
+    return id;
+}
+
 void Images::destroy(Images::UID image_ID) {
     if (m_UID_generator.erase(image_ID)) {
-        delete[] m_pixels[image_ID];
+        delete[] m_pixels[image_ID]; m_pixels[image_ID] = nullptr;
         m_changes.set_change(image_ID, Change::Destroyed);
     }
 }

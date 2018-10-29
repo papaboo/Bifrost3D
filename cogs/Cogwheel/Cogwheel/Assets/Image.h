@@ -95,11 +95,13 @@ public:
         return create3D(name, format, gamma, Math::Vector3ui(width, 1u, 1u), mipmap_count);
     }
 
+    static Images::UID create2D(const std::string& name, PixelFormat format, float gamma, Math::Vector2ui size, PixelData& pixels);
+
     static void destroy(Images::UID image_ID);
 
     static inline ConstUIDIterator begin() { return m_UID_generator.begin(); }
     static inline ConstUIDIterator end() { return m_UID_generator.end(); }
-    static inline Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
+    static inline Core::Iterable<ConstUIDIterator> get_iterable() { return { begin(), end() }; }
 
     static inline std::string get_name(Images::UID image_ID) { return m_metainfo[image_ID].name; }
     static inline void set_name(Images::UID image_ID, const std::string& name) { m_metainfo[image_ID].name = name; }
