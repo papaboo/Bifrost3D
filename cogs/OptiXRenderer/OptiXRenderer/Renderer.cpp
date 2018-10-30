@@ -872,7 +872,7 @@ struct Renderer::Implementation {
                 camera_state.accumulations = 0u;
     }
 
-    void render(Cogwheel::Scene::Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
+    unsigned int render(Cogwheel::Scene::Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
         { // Update camera state
             // Resize screen buffers if necessary.
             uint2 current_screensize = make_uint2(width, height);
@@ -923,6 +923,8 @@ struct Renderer::Implementation {
             StbImageWriter::write(output, filename.str());
         }
         */
+
+        return camera_state.accumulations;
     }
 };
 
@@ -990,8 +992,8 @@ void Renderer::handle_updates() {
     m_impl->handle_updates();
 }
 
-void Renderer::render(Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
-    m_impl->render(camera_ID, buffer, width, height);
+unsigned int Renderer::render(Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
+    return m_impl->render(camera_ID, buffer, width, height);
 }
 
 optix::Context& Renderer::get_context() {

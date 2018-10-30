@@ -66,7 +66,7 @@ public:
 
     void handle_updates();
 
-    void render(Cogwheel::Scene::Cameras::UID camera_ID, optix::Buffer buffer, int width, int height);
+    unsigned int render(Cogwheel::Scene::Cameras::UID camera_ID, optix::Buffer buffer, int width, int height);
 
     optix::Context& get_context();
 

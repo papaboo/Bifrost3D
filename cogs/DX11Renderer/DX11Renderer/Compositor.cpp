@@ -203,15 +203,15 @@ public:
             return;
 
         auto screenshot_filler = [](ID3D11Device1* device, ID3D11DeviceContext1* context, 
-                                    ID3D11Texture2D* source_resource, DXGI_FORMAT source_format, Cogwheel::Math::Rect<int> source_viewport,
-                                    unsigned int minimum_iteration_count, PixelFormat format, int& width, int& height) -> Images::PixelData {
+                                    ID3D11Texture2D* source_resource, DXGI_FORMAT source_format, Cogwheel::Math::Rect<int> source_viewport, 
+                                    unsigned int source_iteration_count, unsigned int minimum_iteration_count, 
+                                    PixelFormat format, int& width, int& height) -> Images::PixelData {
             // Helpers
             typedef Vector4<half> Vector4h;
             typedef Vector4<unsigned char> Vector4uc;
             auto to_uchar = [](half v) -> unsigned char { return unsigned char(clamp(v * 255.0f + 0.5f, 0.0f, 255.0f)); };
 
-            unsigned int current_iterations = 1;
-            if (current_iterations < minimum_iteration_count)
+            if (source_iteration_count < minimum_iteration_count)
                 return nullptr;
 
             width = source_viewport.width; height = source_viewport.height;
@@ -289,7 +289,7 @@ public:
                 ID3D11Resource* sourceResource;
                 frame.frame_SRV->GetResource(&sourceResource);
                 return screenshot_filler(m_device, m_render_context, (ID3D11Texture2D*)sourceResource, DXGI_FORMAT_R16G16B16A16_FLOAT, frame.viewport,
-                                         minimum_iteration_count, format, width, height);
+                                         frame.iteration_count, minimum_iteration_count, format, width, height);
             };
             Cameras::fill_screenshot(camera_ID, take_hdr_screenshot);
 
@@ -311,7 +311,7 @@ public:
                 ID3D11Resource* sourceResource;
                 m_swap_chain_RTV->GetResource(&sourceResource);
                 return screenshot_filler(m_device, m_render_context, (ID3D11Texture2D*)sourceResource, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, Recti(viewport),
-                                         minimum_iteration_count, format, width, height);
+                                         frame.iteration_count, minimum_iteration_count, format, width, height);
             };
             Cameras::fill_screenshot(camera_ID, take_ldr_screenshot);
         }

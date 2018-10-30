@@ -164,9 +164,10 @@ public:
             resize_render_target(buffer_width, buffer_height);
         }
 
+        unsigned int iteration_count = 0;
 #ifdef DISABLE_INTEROP
         { // Render and copy to backbuffer.
-            m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, width, height);
+            iteration_count = m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, width, height);
 
             void* cpu_buffer = m_render_target.optix_buffer->map();
             OResource dx_buffer = nullptr;
@@ -184,7 +185,7 @@ public:
             OPTIX_VALIDATE(m_optix_renderer->get_context());
             OPTIX_VALIDATE(m_render_target.optix_buffer);
             m_render_target.optix_buffer->setDevicePointer(m_cuda_device_ID, pixels);
-            m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, width, height);
+            iteration_count = m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, width, height);
 
             THROW_CUDA_ERROR(cudaGraphicsUnmapResources(1, &m_render_target.cuda_buffer));
         }
@@ -218,7 +219,7 @@ public:
         }
 
         Cogwheel::Math::Rect<int> viewport = { 0, 0, width, height };
-        return { m_backbuffer_SRV, viewport };
+        return { m_backbuffer_SRV, viewport, iteration_count };
     }
 
     void resize_render_target(int width, int height) {

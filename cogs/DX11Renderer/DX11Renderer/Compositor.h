@@ -49,6 +49,7 @@ namespace DX11Renderer {
 struct RenderedFrame {
     OShaderResourceView& frame_SRV;
     Cogwheel::Math::Rect<int> viewport;
+    unsigned int iteration_count;
 };
 
 //-------------------------------------------------------------------------------------------------

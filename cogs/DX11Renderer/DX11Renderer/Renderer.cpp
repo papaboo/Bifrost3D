@@ -597,7 +597,7 @@ public:
             // Reset scissor rect, as noone expects this to be used.
             m_render_context->RSSetScissorRects(0, nullptr);
 
-            return { m_backbuffer_SRV, backbuffer_viewport };
+            return { m_backbuffer_SRV, backbuffer_viewport, std::numeric_limits<unsigned int>::max() };
         }
 
         m_render_context->OMSetRenderTargets(1, &m_backbuffer_RTV, m_g_buffer.depth_view);
@@ -695,7 +695,7 @@ public:
         // Reset scissor rect, as noone expects this to be used.
         m_render_context->RSSetScissorRects(0, nullptr);
 
-        return { m_backbuffer_SRV, backbuffer_viewport };
+        return { m_backbuffer_SRV, backbuffer_viewport, std::numeric_limits<unsigned int>::max() };
     }
 
     template <typename T>
