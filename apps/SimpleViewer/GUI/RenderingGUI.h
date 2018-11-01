@@ -24,6 +24,7 @@ namespace GUI {
 class RenderingGUI : public ImGui::IImGuiFrame {
 public:
     RenderingGUI(DX11Renderer::Compositor* compositor, DX11Renderer::Renderer* renderer);
+    ~RenderingGUI();
 
     void layout_frame();
 
@@ -37,6 +38,10 @@ private:
         unsigned int iterations = 0;
         bool is_HDR = false;
     } m_screenshot;
+
+    // Pimpl the state to avoid exposing dependencies.
+    struct State;
+    State* m_state;
 };
 
 } // NS GUI

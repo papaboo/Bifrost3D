@@ -33,9 +33,25 @@ namespace ImGui {
 
 namespace GUI {
 
+
+struct RenderingGUI::State {
+    struct {
+        Cogwheel::Math::CameraEffects::FilmicSettings filmic;
+        Cogwheel::Math::CameraEffects::Uncharted2Settings uncharted2;
+    } tonemapping;
+};
+
 RenderingGUI::RenderingGUI(DX11Renderer::Compositor* compositor, DX11Renderer::Renderer* renderer)
-    : m_compositor(compositor), m_renderer(renderer) {
+    : m_compositor(compositor), m_renderer(renderer), m_state(new State()) {
     strcpy_s(m_screenshot.path, m_screenshot.max_path_length, "c:\\temp\\ss.png");
+
+    // Tonemapping parameters
+    m_state->tonemapping.filmic = CameraEffects::FilmicSettings::default();
+    m_state->tonemapping.uncharted2 = CameraEffects::Uncharted2Settings::default();
+}
+
+RenderingGUI::~RenderingGUI() { 
+    delete m_state; 
 }
 
 void RenderingGUI::layout_frame() {
@@ -82,6 +98,7 @@ void RenderingGUI::layout_frame() {
     ImGui::Separator();
 
     if (ImGui::TreeNode("Camera effects")) {
+        using namespace Cogwheel::Math::CameraEffects;
 
         Cameras::UID camera_ID = *Cameras::get_iterable().begin();
         auto effects_settings = Cameras::get_effects_settings(camera_ID);
@@ -96,12 +113,69 @@ void RenderingGUI::layout_frame() {
         const char* exposure_modes[] = { "Fixed", "LogAverage", "Histogram" };
         int current_exposure_mode = (int)effects_settings.exposure.mode;
         has_changed |= ImGui::Combo("Exposure", &current_exposure_mode, exposure_modes, IM_ARRAYSIZE(exposure_modes));
-        effects_settings.exposure.mode = (CameraEffects::ExposureMode)current_exposure_mode;
+        effects_settings.exposure.mode = (ExposureMode)current_exposure_mode;
+
+        // Save tonemapping settings
+        switch (effects_settings.tonemapping.mode) {
+        case TonemappingMode::Filmic:
+            m_state->tonemapping.filmic = effects_settings.tonemapping.filmic; break;
+        case TonemappingMode::Uncharted2:
+            m_state->tonemapping.uncharted2 = effects_settings.tonemapping.uncharted2; break;
+        }
 
         const char* tonemapping_modes[] = { "Linear", "Filmic", "Uncharted2" };
         int current_tonemapping_mode = (int)effects_settings.tonemapping.mode;
         has_changed |= ImGui::Combo("Tonemapper", &current_tonemapping_mode, tonemapping_modes, IM_ARRAYSIZE(tonemapping_modes));
-        effects_settings.tonemapping.mode = (CameraEffects::TonemappingMode)current_tonemapping_mode;
+        effects_settings.tonemapping.mode = (TonemappingMode)current_tonemapping_mode;
+
+        // Restore tonemapping settings
+        switch (effects_settings.tonemapping.mode) {
+        case TonemappingMode::Filmic:
+            effects_settings.tonemapping.filmic = m_state->tonemapping.filmic; break;
+        case TonemappingMode::Uncharted2:
+            effects_settings.tonemapping.uncharted2 = m_state->tonemapping.uncharted2; break;
+        }
+
+        if (effects_settings.tonemapping.mode == TonemappingMode::Filmic) {
+            auto& filmic = effects_settings.tonemapping.filmic;
+            has_changed |= ImGui::SliderFloat("Black clip", &filmic.black_clip, 0.0f, 1.0f);
+            has_changed |= ImGui::SliderFloat("Toe", &filmic.toe, 0.0f, 1.0f);
+            has_changed |= ImGui::SliderFloat("Slope", &filmic.slope, 0.0f, 1.0f);
+            has_changed |= ImGui::SliderFloat("Shoulder", &filmic.shoulder, 0.0f, 1.0f);
+            has_changed |= ImGui::SliderFloat("White clip", &filmic.white_clip, 0.0f, 1.0f);
+
+            const char* filmic_presets[] = { "None", "Default", "Uncharted2", "Aces", "HP", "Legacy" };
+            int current_preset = 0;
+            has_changed |= ImGui::Combo("Preset", &current_preset, filmic_presets, IM_ARRAYSIZE(filmic_presets));
+            switch (current_preset) {
+            case 1:
+                filmic = FilmicSettings::default(); break;
+            case 2:
+                filmic = FilmicSettings::uncharted2(); break;
+            case 3:
+                filmic = FilmicSettings::ACES(); break;
+            case 4:
+                filmic = FilmicSettings::HP(); break;
+            case 5:
+                filmic = FilmicSettings::legacy(); break;
+            }
+
+        }
+        if (effects_settings.tonemapping.mode == TonemappingMode::Uncharted2) {
+            auto& uncharted2 = effects_settings.tonemapping.uncharted2;
+            has_changed |= ImGui::SliderFloat("Shoulder strength", &uncharted2.shoulder_strength, 0.0f, 1.0f);
+            has_changed |= ImGui::SliderFloat("Linear strength", &uncharted2.linear_strength, 0.0f, 1.0f);
+            has_changed |= ImGui::SliderFloat("Linear angle", &uncharted2.linear_angle, 0.0f, 1.0f);
+            has_changed |= ImGui::SliderFloat("Toe strength", &uncharted2.toe_strength, 0.0f, 1.0f);
+            has_changed |= ImGui::SliderFloat("Toe numerator", &uncharted2.toe_numerator, 0.0f, 1.0f);
+            has_changed |= ImGui::SliderFloat("Toe denominator", &uncharted2.toe_denominator, 0.0f, 1.0f);
+            // uncharted2.linear_white
+
+            if (ImGui::Button("Reset")) {
+                has_changed = true;
+                uncharted2 = Uncharted2Settings::default();
+            }
+        }
 
         if (has_changed)
             Cameras::set_effects_settings(camera_ID, effects_settings);
