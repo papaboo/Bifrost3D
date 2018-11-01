@@ -20,6 +20,51 @@ namespace CameraEffects {
 enum class TonemappingMode { Linear, Filmic, Uncharted2, Count };
 enum class ExposureMode { Fixed, LogAverage, Histogram, Count };
 
+struct FilmicSettings {
+    float black_clip;
+    float toe;
+    float slope;
+    float shoulder;
+    float white_clip;
+
+    static FilmicSettings default() {
+        FilmicSettings settings;
+        settings.black_clip = 0.0f;
+        settings.toe = 0.53f;
+        settings.slope = 0.91f;
+        settings.shoulder = 0.23f;
+        settings.white_clip = 0.035f;
+        return settings;
+    }
+
+    static FilmicSettings uncharted2() { return { 0.0f, 0.55f, 0.63f, 0.47f, 0.01f }; }
+    static FilmicSettings ACES() { return { 0.0f, 0.53f, 0.91f, 0.23f, 0.035f }; }
+    static FilmicSettings HP() { return { 0.0f, 0.63f, 0.65f, 0.45f, 0.0f }; }
+    static FilmicSettings legacy() { return { 0.0f, 0.3f, 0.98f, 0.22f, 0.025f}; }
+};
+
+struct Uncharted2Settings {
+    float shoulder_strength;
+    float linear_strength;
+    float linear_angle;
+    float toe_strength;
+    float toe_numerator;
+    float toe_denominator;
+    float linear_white;
+
+    static Uncharted2Settings default() {
+        Uncharted2Settings settings;
+        settings.shoulder_strength = 0.22f;
+        settings.linear_strength = 0.3f;
+        settings.linear_angle = 0.1f;
+        settings.toe_strength = 0.2f;
+        settings.toe_numerator = 0.01f;
+        settings.toe_denominator = 0.3f;
+        settings.linear_white = 11.2f;
+        return settings;
+    }
+};
+
 struct Settings final {
     struct {
         ExposureMode mode;
@@ -42,6 +87,10 @@ struct Settings final {
 
     struct {
         TonemappingMode mode;
+        union {
+            Uncharted2Settings uncharted2;
+            FilmicSettings filmic;
+        };
     } tonemapping;
 
     static Settings default() {
@@ -60,6 +109,7 @@ struct Settings final {
         res.bloom.support = 0.05f;
 
         res.tonemapping.mode = TonemappingMode::Uncharted2;
+        res.tonemapping.uncharted2 = Uncharted2Settings::default();
 
         return res;
     }
