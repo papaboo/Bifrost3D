@@ -67,23 +67,8 @@ struct ColorGrader::Implementation final {
     // Tonemapping members
     float m_reinhard_whitepoint = 3.0f;
 
-    struct {
-        float shoulder_strength = 0.22f;
-        float linear_strength = 0.3f;
-        float linear_angle = 0.1f;
-        float toe_strength = 0.2f;
-        float toe_numerator = 0.01f;
-        float toe_denominator = 0.3f;
-        float linear_white = 11.2f;
-    } m_uncharted2;
-
-    struct {
-        float slope = 0.91f;
-        float toe = 0.53f;
-        float shoulder = 0.23f;
-        float black_clip = 0.0f;
-        float white_clip = 0.035f;
-    } m_unreal4;
+    CameraEffects::Uncharted2Settings m_uncharted2 = CameraEffects::Uncharted2Settings::default();
+    CameraEffects::FilmicSettings m_unreal4 = CameraEffects::FilmicSettings::default();
 
     TwBar* m_gui = nullptr;
 
@@ -375,43 +360,22 @@ struct ColorGrader::Implementation final {
 
                         switch (preset) {
                         case Presets::None:
-                            // Do nothing
-                            break;
+                            break; // Do nothing
                         case Presets::Uncharted2:
-                            data->m_unreal4.slope = 0.63f;
-                            data->m_unreal4.toe = 0.55f;
-                            data->m_unreal4.shoulder = 0.47f;
-                            data->m_unreal4.black_clip = 0.0f;
-                            data->m_unreal4.white_clip = 0.01f;
+                            data->m_unreal4 = CameraEffects::FilmicSettings::uncharted2();
                             break;
                         case Presets::HP:
-                            data->m_unreal4.slope = 0.65f;
-                            data->m_unreal4.toe = 0.63f;
-                            data->m_unreal4.shoulder = 0.45f;
-                            data->m_unreal4.black_clip = 0.0f;
-                            data->m_unreal4.white_clip = 0.0f;
+                            data->m_unreal4 = CameraEffects::FilmicSettings::HP();
                             break;
                         case Presets::ACES:
-                            data->m_unreal4.slope = 0.91f;
-                            data->m_unreal4.toe = 0.53f;
-                            data->m_unreal4.shoulder = 0.23f;
-                            data->m_unreal4.black_clip = 0.0f;
-                            data->m_unreal4.white_clip = 0.035f;
+                            data->m_unreal4 = CameraEffects::FilmicSettings::ACES();
                             break;
                         case Presets::Legacy:
-                            data->m_unreal4.slope = 0.98f;
-                            data->m_unreal4.toe = 0.3f;
-                            data->m_unreal4.shoulder = 0.22f;
-                            data->m_unreal4.black_clip = 0.0f;
-                            data->m_unreal4.white_clip = 0.025f;
+                            data->m_unreal4 = CameraEffects::FilmicSettings::legacy();
                             break;
                         case Presets::Default:
                         default:
-                            data->m_unreal4.slope = 0.91f;
-                            data->m_unreal4.toe = 0.53f;
-                            data->m_unreal4.shoulder = 0.23f;
-                            data->m_unreal4.black_clip = 0.0f;
-                            data->m_unreal4.white_clip = 0.035f;
+                            data->m_unreal4 = CameraEffects::FilmicSettings::default();
                             break;
                         }
 
