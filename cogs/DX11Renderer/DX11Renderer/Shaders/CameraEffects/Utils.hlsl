@@ -30,6 +30,25 @@ cbuffer constants : register(b0) {
     int bloom_support;
 
     float delta_time;
+    float2 padding;
+
+    // float8 tonemapping params
+    float4 tonemapping_params_1;
+    float4 tonemapping_params_2;
+
+    float filmic_black_clip() { return tonemapping_params_1.x; }
+    float filmic_toe() { return tonemapping_params_1.y; }
+    float filmic_slope() { return tonemapping_params_1.z; }
+    float filmic_shoulder() { return tonemapping_params_1.w; }
+    float filmic_white_clip() { return tonemapping_params_2.x; }
+
+    float uncharted2_shoulder_strength() { return tonemapping_params_1.x; }
+    float uncharted2_linear_strength() { return tonemapping_params_1.y; }
+    float uncharted2_linear_angle() { return tonemapping_params_1.z; }
+    float uncharted2_toe_strength() { return tonemapping_params_1.w; }
+    float uncharted2_toe_numerator() { return tonemapping_params_2.x; }
+    float uncharted2_toe_denominator() { return tonemapping_params_2.y; }
+    float uncharted2_linear_white() { return tonemapping_params_2.z; }
 }
 
 float eye_adaptation(float current_exposure, float target_exposure) {

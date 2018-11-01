@@ -86,7 +86,7 @@ static const float3 AP1_RGB2Y = {
     0.0536895174 // AP1_to_XYZ_mat[2][1]
 };
 
-inline float3 unreal4(float3 color, float slope = 0.91f, float toe = 0.53f, float shoulder = 0.23f, float black_clip = 0.0f, float white_clip = 0.035f) {
+inline float3 unreal4(float3 color, float black_clip = 0.0f, float toe = 0.53f, float slope = 0.91f, float shoulder = 0.23f, float white_clip = 0.035f) {
 
     static const float3x3 sRGB_to_AP1 = mul(XYZ_to_AP1_mat, mul(D65_to_D60_cat, sRGB_to_XYZ_mat));
 
@@ -157,21 +157,16 @@ float4 linear_tonemapping_ps(Varyings input) : SV_TARGET {
 float4 uncharted2_tonemapping_ps(Varyings input) : SV_TARGET {
     float3 color = get_pixel_color(int2(input.position.xy));
 
-    float shoulder_strength = 0.22f;
-    float linear_strength = 0.3f;
-    float linear_angle = 0.1f;
-    float toe_strength = 0.2f;
-    float toe_numerator = 0.01f;
-    float toe_denominator = 0.3f;
-    float linear_white = 11.2f; 
-    float3 tonemapped_color = uncharted2(color, shoulder_strength, linear_strength, linear_angle, toe_strength, toe_numerator, toe_denominator, linear_white);
+    float3 tonemapped_color = uncharted2(color, uncharted2_shoulder_strength(), uncharted2_linear_strength(), uncharted2_linear_angle(), 
+                                         uncharted2_toe_strength(), uncharted2_toe_numerator(), uncharted2_toe_denominator(), 
+                                         uncharted2_linear_white());
 
     return float4(tonemapped_color, 1.0);
 }
 
 float4 unreal4_tonemapping_ps(Varyings input) : SV_TARGET {
     float3 color = get_pixel_color(int2(input.position.xy));
-    return float4(unreal4(color), 1.0);
+    return float4(unreal4(color, filmic_black_clip(), filmic_toe(), filmic_slope(), filmic_shoulder(), filmic_white_clip()), 1.0);
 }
 
 } // NS CameraEffects

@@ -189,6 +189,9 @@ public:
 
         float delta_time;
         float2 _padding;
+
+        // Generic tonemapping parameter storage
+        float tonemapping[8];
     };
 
     CameraEffects() = default;
