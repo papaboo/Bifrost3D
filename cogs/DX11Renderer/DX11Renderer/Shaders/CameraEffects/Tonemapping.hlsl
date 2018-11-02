@@ -60,25 +60,32 @@ float3 uncharted2(float3 color, float shoulder_strength, float linear_strength, 
 }
 
 // Bradford chromatic adaptation transforms between ACES white point (D60) and sRGB white point (D65)
-static const float3x3 D65_to_D60_cat = {
+static const float3x3 D65_to_D60 = {
     1.01303, 0.00610531, -0.014971,
     0.00769823, 0.998165, -0.00503203,
     -0.00284131, 0.00468516, 0.924507 };
 
-static const float3x3 sRGB_to_XYZ_mat = {
+static const float3x3 sRGB_to_XYZ = {
     0.4124564, 0.3575761, 0.1804375,
     0.2126729, 0.7151522, 0.0721750,
     0.0193339, 0.1191920, 0.9503041 };
 
-static const float3x3 XYZ_to_AP1_mat = {
+static const float3x3 XYZ_to_AP1 = {
     1.6410233797, -0.3248032942, -0.2364246952,
     -0.6636628587, 1.6153315917, 0.0167563477,
     0.0117218943, -0.0082844420, 0.9883948585 };
 
-static const float3x3 AP1_to_XYZ_mat = {
+static const float3x3 AP1_to_XYZ = {
     0.6624541811, 0.1340042065, 0.1561876870,
     0.2722287168, 0.6740817658, 0.0536895174,
     -0.0055746495, 0.0040607335, 1.0103391003 };
+
+static const float3x3 sRGB_to_AP1 = mul(XYZ_to_AP1, mul(D65_to_D60, sRGB_to_XYZ));
+
+static const float3x3 AP1_to_sRGB = {
+    1.70479095, -0.621689737,-0.0832421705,
+    -0.130263522, 1.14082849, -0.0105496496,
+    -0.0240088310, -0.128999621, 1.15324795 };
 
 static const float3 AP1_RGB2Y = {
     0.2722287168, // AP1_to_XYZ_mat[0][1],
@@ -87,8 +94,6 @@ static const float3 AP1_RGB2Y = {
 };
 
 inline float3 unreal4(float3 color, float black_clip = 0.0f, float toe = 0.53f, float slope = 0.91f, float shoulder = 0.23f, float white_clip = 0.035f) {
-
-    static const float3x3 sRGB_to_AP1 = mul(XYZ_to_AP1_mat, mul(D65_to_D60_cat, sRGB_to_XYZ_mat));
 
     // Use ACEScg primaries as working space
     float3 working_color = mul(sRGB_to_AP1, color);
@@ -131,8 +136,8 @@ inline float3 unreal4(float3 color, float black_clip = 0.0f, float toe = 0.53f, 
     // Post desaturate
     tone_color = lerp(dot(tone_color, AP1_RGB2Y), tone_color, 0.93f);
 
-    // Returning positive AP1 values
-    return max(0.0, tone_color);
+    // Returning positive values
+    return mul(AP1_to_sRGB, max(0.0, tone_color));
 }
 
 // ------------------------------------------------------------------------------------------------
