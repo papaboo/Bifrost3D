@@ -110,69 +110,78 @@ void RenderingGUI::layout_frame() {
             ImGui::TreePop();
         }
 
-        const char* exposure_modes[] = { "Fixed", "LogAverage", "Histogram" };
-        int current_exposure_mode = (int)effects_settings.exposure.mode;
-        has_changed |= ImGui::Combo("Exposure", &current_exposure_mode, exposure_modes, IM_ARRAYSIZE(exposure_modes));
-        effects_settings.exposure.mode = (ExposureMode)current_exposure_mode;
+        if (ImGui::TreeNode("Exposure")) {
+            const char* exposure_modes[] = { "Fixed", "LogAverage", "Histogram" };
+            int current_exposure_mode = (int)effects_settings.exposure.mode;
+            has_changed |= ImGui::Combo("Exposure", &current_exposure_mode, exposure_modes, IM_ARRAYSIZE(exposure_modes));
+            effects_settings.exposure.mode = (ExposureMode)current_exposure_mode;
 
-        // Save tonemapping settings
-        switch (effects_settings.tonemapping.mode) {
-        case TonemappingMode::Filmic:
-            m_state->tonemapping.filmic = effects_settings.tonemapping.filmic; break;
-        case TonemappingMode::Uncharted2:
-            m_state->tonemapping.uncharted2 = effects_settings.tonemapping.uncharted2; break;
+            has_changed |= ImGui::InputFloat("Bias", &effects_settings.exposure.log_lumiance_bias, 0.25, 1, "%.2f");
+
+            ImGui::TreePop();
         }
 
-        const char* tonemapping_modes[] = { "Linear", "Filmic", "Uncharted2" };
-        int current_tonemapping_mode = (int)effects_settings.tonemapping.mode;
-        has_changed |= ImGui::Combo("Tonemapper", &current_tonemapping_mode, tonemapping_modes, IM_ARRAYSIZE(tonemapping_modes));
-        effects_settings.tonemapping.mode = (TonemappingMode)current_tonemapping_mode;
-
-        // Restore tonemapping settings
-        switch (effects_settings.tonemapping.mode) {
-        case TonemappingMode::Filmic:
-            effects_settings.tonemapping.filmic = m_state->tonemapping.filmic; break;
-        case TonemappingMode::Uncharted2:
-            effects_settings.tonemapping.uncharted2 = m_state->tonemapping.uncharted2; break;
-        }
-
-        if (effects_settings.tonemapping.mode == TonemappingMode::Filmic) {
-            auto& filmic = effects_settings.tonemapping.filmic;
-            has_changed |= ImGui::SliderFloat("Black clip", &filmic.black_clip, 0.0f, 1.0f);
-            has_changed |= ImGui::SliderFloat("Toe", &filmic.toe, 0.0f, 1.0f);
-            has_changed |= ImGui::SliderFloat("Slope", &filmic.slope, 0.0f, 1.0f);
-            has_changed |= ImGui::SliderFloat("Shoulder", &filmic.shoulder, 0.0f, 1.0f);
-            has_changed |= ImGui::SliderFloat("White clip", &filmic.white_clip, 0.0f, 1.0f);
-
-            const char* filmic_presets[] = { "Select preset", "ACES", "Uncharted2", "HP", "Legacy" };
-            int current_preset = 0;
-            has_changed |= ImGui::Combo("Preset", &current_preset, filmic_presets, IM_ARRAYSIZE(filmic_presets));
-            switch (current_preset) {
-            case 1:
-                filmic = FilmicSettings::ACES(); break;
-            case 2:
-                filmic = FilmicSettings::uncharted2(); break;
-            case 3:
-                filmic = FilmicSettings::HP(); break;
-            case 4:
-                filmic = FilmicSettings::legacy(); break;
+        if (ImGui::TreeNode("Tonemapping")) {
+            // Save tonemapping settings
+            switch (effects_settings.tonemapping.mode) {
+            case TonemappingMode::Filmic:
+                m_state->tonemapping.filmic = effects_settings.tonemapping.filmic; break;
+            case TonemappingMode::Uncharted2:
+                m_state->tonemapping.uncharted2 = effects_settings.tonemapping.uncharted2; break;
             }
 
-        }
-        if (effects_settings.tonemapping.mode == TonemappingMode::Uncharted2) {
-            auto& uncharted2 = effects_settings.tonemapping.uncharted2;
-            has_changed |= ImGui::SliderFloat("Shoulder strength", &uncharted2.shoulder_strength, 0.0f, 1.0f);
-            has_changed |= ImGui::SliderFloat("Linear strength", &uncharted2.linear_strength, 0.0f, 1.0f);
-            has_changed |= ImGui::SliderFloat("Linear angle", &uncharted2.linear_angle, 0.0f, 1.0f);
-            has_changed |= ImGui::SliderFloat("Toe strength", &uncharted2.toe_strength, 0.0f, 1.0f);
-            has_changed |= ImGui::SliderFloat("Toe numerator", &uncharted2.toe_numerator, 0.0f, 1.0f);
-            has_changed |= ImGui::SliderFloat("Toe denominator", &uncharted2.toe_denominator, 0.0f, 1.0f);
-            // uncharted2.linear_white
+            const char* tonemapping_modes[] = { "Linear", "Filmic", "Uncharted2" };
+            int current_tonemapping_mode = (int)effects_settings.tonemapping.mode;
+            has_changed |= ImGui::Combo("Tonemapper", &current_tonemapping_mode, tonemapping_modes, IM_ARRAYSIZE(tonemapping_modes));
+            effects_settings.tonemapping.mode = (TonemappingMode)current_tonemapping_mode;
 
-            if (ImGui::Button("Reset")) {
-                has_changed = true;
-                uncharted2 = Uncharted2Settings::default();
+            // Restore tonemapping settings
+            switch (effects_settings.tonemapping.mode) {
+            case TonemappingMode::Filmic:
+                effects_settings.tonemapping.filmic = m_state->tonemapping.filmic; break;
+            case TonemappingMode::Uncharted2:
+                effects_settings.tonemapping.uncharted2 = m_state->tonemapping.uncharted2; break;
             }
+
+            if (effects_settings.tonemapping.mode == TonemappingMode::Filmic) {
+                auto& filmic = effects_settings.tonemapping.filmic;
+                has_changed |= ImGui::SliderFloat("Black clip", &filmic.black_clip, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("Toe", &filmic.toe, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("Slope", &filmic.slope, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("Shoulder", &filmic.shoulder, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("White clip", &filmic.white_clip, 0.0f, 1.0f);
+
+                const char* filmic_presets[] = { "Select preset", "ACES", "Uncharted2", "HP", "Legacy" };
+                int current_preset = 0;
+                has_changed |= ImGui::Combo("Preset", &current_preset, filmic_presets, IM_ARRAYSIZE(filmic_presets));
+                switch (current_preset) {
+                case 1:
+                    filmic = FilmicSettings::ACES(); break;
+                case 2:
+                    filmic = FilmicSettings::uncharted2(); break;
+                case 3:
+                    filmic = FilmicSettings::HP(); break;
+                case 4:
+                    filmic = FilmicSettings::legacy(); break;
+                }
+
+            }
+            if (effects_settings.tonemapping.mode == TonemappingMode::Uncharted2) {
+                auto& uncharted2 = effects_settings.tonemapping.uncharted2;
+                has_changed |= ImGui::SliderFloat("Shoulder strength", &uncharted2.shoulder_strength, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("Linear strength", &uncharted2.linear_strength, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("Linear angle", &uncharted2.linear_angle, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("Toe strength", &uncharted2.toe_strength, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("Toe numerator", &uncharted2.toe_numerator, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("Toe denominator", &uncharted2.toe_denominator, 0.0f, 1.0f);
+                // uncharted2.linear_white
+
+                if (ImGui::Button("Reset")) {
+                    has_changed = true;
+                    uncharted2 = Uncharted2Settings::default();
+                }
+            }
+            ImGui::TreePop();
         }
 
         if (has_changed)
