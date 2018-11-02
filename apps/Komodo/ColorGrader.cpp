@@ -345,12 +345,11 @@ struct ColorGrader::Implementation final {
 
             { // Unreal 4 filmic
                 { // Presets
-                    enum class Presets { None, Default, Uncharted2, HP, ACES, Legacy };
+                    enum class Presets { None, ACES, Uncharted2, HP, Legacy };
                     TwEnumVal ant_presets[] = { { int(Presets::None), "Select preset" },
-                                                { int(Presets::Default), "Default" },
+                                                { int(Presets::ACES), "ACES" },
                                                 { int(Presets::Uncharted2), "Uncharted2" },
                                                 { int(Presets::HP), "HP" },
-                                                { int(Presets::ACES), "ACES" },
                                                 { int(Presets::Legacy), "Legacy" } };
                     TwType AntPresetsEnum = TwDefineEnum("Presets", ant_presets, 6);
 
@@ -361,19 +360,18 @@ struct ColorGrader::Implementation final {
                         switch (preset) {
                         case Presets::None:
                             break; // Do nothing
+                        case Presets::ACES:
+                            data->m_unreal4 = CameraEffects::FilmicSettings::ACES();
+                            break;
                         case Presets::Uncharted2:
                             data->m_unreal4 = CameraEffects::FilmicSettings::uncharted2();
                             break;
                         case Presets::HP:
                             data->m_unreal4 = CameraEffects::FilmicSettings::HP();
                             break;
-                        case Presets::ACES:
-                            data->m_unreal4 = CameraEffects::FilmicSettings::ACES();
-                            break;
                         case Presets::Legacy:
                             data->m_unreal4 = CameraEffects::FilmicSettings::legacy();
                             break;
-                        case Presets::Default:
                         default:
                             data->m_unreal4 = CameraEffects::FilmicSettings::default();
                             break;
@@ -521,9 +519,9 @@ struct ColorGrader::Implementation final {
                 else if (m_operator == Operator::FilmicAlu)
                     adjusted_color = tonemap_filmic_ALU(adjusted_color);
                 else if (m_operator == Operator::Uncharted2)
-                    adjusted_color = CameraEffects::uncharted2(adjusted_color, m_uncharted2.shoulder_strength, m_uncharted2.linear_strength, m_uncharted2.linear_angle, m_uncharted2.toe_strength, m_uncharted2.toe_numerator, m_uncharted2.toe_denominator, m_uncharted2.linear_white);
+                    adjusted_color = CameraEffects::uncharted2(adjusted_color, m_uncharted2);
                 else if (m_operator == Operator::Unreal4)
-                    adjusted_color = CameraEffects::unreal4(adjusted_color, m_unreal4.slope, m_unreal4.toe, m_unreal4.shoulder, m_unreal4.black_clip, m_unreal4.white_clip);
+                    adjusted_color = CameraEffects::unreal4(adjusted_color, m_unreal4);
                 output[i] = gammacorrect(adjusted_color, 1.0f / 2.2f);
             }
         }
