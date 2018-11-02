@@ -27,20 +27,11 @@ struct FilmicSettings {
     float shoulder;
     float white_clip;
 
-    static FilmicSettings default() {
-        FilmicSettings settings;
-        settings.black_clip = 0.0f;
-        settings.toe = 0.53f;
-        settings.slope = 0.91f;
-        settings.shoulder = 0.23f;
-        settings.white_clip = 0.035f;
-        return settings;
-    }
-
-    static FilmicSettings uncharted2() { return { 0.0f, 0.55f, 0.63f, 0.47f, 0.01f }; }
     static FilmicSettings ACES() { return { 0.0f, 0.53f, 0.91f, 0.23f, 0.035f }; }
+    static FilmicSettings uncharted2() { return { 0.0f, 0.55f, 0.63f, 0.47f, 0.01f }; }
     static FilmicSettings HP() { return { 0.0f, 0.63f, 0.65f, 0.45f, 0.0f }; }
     static FilmicSettings legacy() { return { 0.0f, 0.3f, 0.98f, 0.22f, 0.025f}; }
+    static FilmicSettings default() { return ACES(); }
 };
 
 struct Uncharted2Settings {
@@ -108,8 +99,8 @@ struct Settings final {
         res.bloom.threshold = INFINITY;
         res.bloom.support = 0.05f;
 
-        res.tonemapping.mode = TonemappingMode::Uncharted2;
-        res.tonemapping.uncharted2 = Uncharted2Settings::default();
+        res.tonemapping.mode = TonemappingMode::Filmic;
+        res.tonemapping.filmic = FilmicSettings::default();
 
         return res;
     }
@@ -149,38 +140,43 @@ inline RGB uncharted2(RGB color, float shoulder_strength, float linear_strength,
         uncharted2_tonemap_helper(RGB(linear_white), shoulder_strength, linear_strength, linear_angle, toe_strength, toe_numerator, toe_denominator);
 }
 
+inline RGB uncharted2(RGB color, Uncharted2Settings s) {
+    return uncharted2(color, s.shoulder_strength, s.linear_strength, s.linear_angle, s.toe_strength, s.toe_numerator, s.toe_denominator, s.linear_white);
+}
+
 // ------------------------------------------------------------------------------------------------
 // Unreal Engine 4 filmic tonemapping, see TonemapCommon.ush FilmToneMap function for the 
 // tonemapping and ACES.ush for the conversion matrices.
 // ------------------------------------------------------------------------------------------------
 
 // Bradford chromatic adaptation transforms between ACES white point (D60) and sRGB white point (D65)
-static const Matrix3x3f D65_to_D60_cat = {
+static const Matrix3x3f D65_to_D60 = {
     1.01303f,    0.00610531f, -0.014971f,
     0.00769823f, 0.998165f,   -0.00503203f,
     -0.00284131f, 0.00468516f,  0.924507f };
 
 // https://www.image-engineering.de/library/technotes/958-how-to-convert-between-srgb-and-ciexyz
-static const Matrix3x3f sRGB_to_XYZ_mat = {
+static const Matrix3x3f sRGB_to_XYZ = {
     0.4124564f, 0.3575761f, 0.1804375f,
     0.2126729f, 0.7151522f, 0.0721750f,
     0.0193339f, 0.1191920f, 0.9503041f };
 
-static const Matrix3x3f XYZ_to_AP1_mat = {
+static const Matrix3x3f XYZ_to_AP1 = {
     1.6410233797f, -0.3248032942f, -0.2364246952f,
     -0.6636628587f,  1.6153315917f,  0.0167563477f,
     0.0117218943f, -0.0082844420f,  0.9883948585f };
 
-static const Matrix3x3f AP1_to_XYZ_mat = {
+static const Matrix3x3f AP1_to_XYZ = {
     0.6624541811f, 0.1340042065f, 0.1561876870f,
     0.2722287168f, 0.6740817658f, 0.0536895174f,
     -0.0055746495f, 0.0040607335f, 1.0103391003f };
 
-static const Vector3f AP1_RGB2Y = AP1_to_XYZ_mat.get_row(1);
+static const Matrix3x3f sRGB_to_AP1 = XYZ_to_AP1 * D65_to_D60 * sRGB_to_XYZ;
+static const Matrix3x3f AP1_to_sRGB = invert(sRGB_to_AP1);
+
+static const Vector3f AP1_RGB2Y = AP1_to_XYZ.get_row(1);
 
 inline RGB unreal4(RGB color, float slope = 0.91f, float toe = 0.53f, float shoulder = 0.23f, float black_clip = 0.0f, float white_clip = 0.035f) {
-
-    static const Matrix3x3f sRGB_to_AP1 = XYZ_to_AP1_mat * D65_to_D60_cat * sRGB_to_XYZ_mat;
 
     // Use ACEScg primaries as working space
     Vector3f working_color = sRGB_to_AP1 * Vector3f(color.r, color.g, color.b);
@@ -232,8 +228,14 @@ inline RGB unreal4(RGB color, float slope = 0.91f, float toe = 0.53f, float shou
     // Post desaturate
     tone_color = lerp(Vector3f(dot(tone_color, AP1_RGB2Y)), tone_color, 0.93f);
 
-    // Returning positive AP1 values
-    return RGB(fmaxf(0.0f, tone_color.x), fmaxf(0.0f, tone_color.y), fmaxf(0.0f, tone_color.z));
+    // Returning positive linear color values
+    Vector3f ap1_color = Vector3f(fmaxf(0.0f, tone_color.x), fmaxf(0.0f, tone_color.y), fmaxf(0.0f, tone_color.z));
+    Vector3f c = AP1_to_sRGB * ap1_color;
+    return RGB(c.x, c.y, c.z);
+}
+
+inline RGB unreal4(RGB color, FilmicSettings s) {
+    return unreal4(color, s.slope, s.toe, s.shoulder, s.black_clip, s.white_clip);
 }
 
 } // NS CameraEffects
