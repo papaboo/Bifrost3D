@@ -144,19 +144,17 @@ void RenderingGUI::layout_frame() {
             has_changed |= ImGui::SliderFloat("Shoulder", &filmic.shoulder, 0.0f, 1.0f);
             has_changed |= ImGui::SliderFloat("White clip", &filmic.white_clip, 0.0f, 1.0f);
 
-            const char* filmic_presets[] = { "None", "Default", "Uncharted2", "Aces", "HP", "Legacy" };
+            const char* filmic_presets[] = { "Select preset", "ACES", "Uncharted2", "HP", "Legacy" };
             int current_preset = 0;
             has_changed |= ImGui::Combo("Preset", &current_preset, filmic_presets, IM_ARRAYSIZE(filmic_presets));
             switch (current_preset) {
             case 1:
-                filmic = FilmicSettings::default(); break;
+                filmic = FilmicSettings::ACES(); break;
             case 2:
                 filmic = FilmicSettings::uncharted2(); break;
             case 3:
-                filmic = FilmicSettings::ACES(); break;
-            case 4:
                 filmic = FilmicSettings::HP(); break;
-            case 5:
+            case 4:
                 filmic = FilmicSettings::legacy(); break;
             }
 
