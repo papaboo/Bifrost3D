@@ -9,10 +9,12 @@
 #ifndef _COGWHEEL_CORE_ENGINE_H_
 #define _COGWHEEL_CORE_ENGINE_H_
 
-#include <Cogwheel/Core/Array.h>
 #include <Cogwheel/Core/Time.h>
 #include <Cogwheel/Core/Window.h>
 #include <Cogwheel/Scene/SceneNode.h>
+
+#include <functional>
+#include <vector>
 
 namespace Cogwheel {
 namespace Input {
@@ -30,7 +32,6 @@ namespace Core {
 // Future work
 // * Add a 'mutation complete' (said in the Zerg voice) callback.
 // * Add on_exit callback and deallocate the managers internal state.
-// * Can I setup callbacks using lambdas?
 // * Consider if anything is made easier by having the engine as a singleton.
 // ---------------------------------------------------------------------------
 class Engine final {
@@ -61,12 +62,15 @@ public:
     // -----------------------------------------------------------------------
     typedef void(*mutating_callback)(Engine& engine, void* callback_state);
     void add_mutating_callback(mutating_callback callback, void* callback_state);
+    inline void add_mutating_callback(std::function<void()> callback) { m_mutating_callbacks.push_back(callback); }
 
     typedef void(*non_mutating_callback)(const Engine& engine, void* callback_state);
     void add_non_mutating_callback(non_mutating_callback callback, void* callback_state);
+    inline void add_non_mutating_callback(std::function<void()> callback) { m_non_mutating_callbacks.push_back(callback); }
 
     typedef void(*tick_cleanup_callback)(void* callback_state);
     void add_tick_cleanup_callback(tick_cleanup_callback callback, void* callback_state);
+    inline void add_tick_cleanup_callback(std::function<void()> callback) { m_tick_cleanup_callbacks.push_back(callback); }
 
     // -----------------------------------------------------------------------
     // Paths
@@ -90,17 +94,10 @@ private:
     Window m_window;
     bool m_quit;
 
-    // A closure wrapping a callback function and its state.
-    template <typename Function>
-    struct Closure {
-        Function callback;
-        void* state;
-    };
-
     // All engine callbacks.
-    Core::Array<Closure<mutating_callback>> m_mutating_callbacks;
-    Core::Array<Closure<non_mutating_callback>> m_non_mutating_callbacks;
-    Core::Array<Closure<tick_cleanup_callback>> m_tick_cleanup_callbacks;
+    std::vector<std::function<void()>> m_mutating_callbacks;
+    std::vector<std::function<void()>> m_non_mutating_callbacks;
+    std::vector<std::function<void()>> m_tick_cleanup_callbacks;
 
     // Input should only be updated by whoever created it and not by access via the engine.
     const Input::Keyboard* m_keyboard;
