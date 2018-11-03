@@ -351,7 +351,7 @@ struct ColorGrader::Implementation final {
                                                 { int(Presets::Uncharted2), "Uncharted2" },
                                                 { int(Presets::HP), "HP" },
                                                 { int(Presets::Legacy), "Legacy" } };
-                    TwType AntPresetsEnum = TwDefineEnum("Presets", ant_presets, 6);
+                    TwType AntPresetsEnum = TwDefineEnum("Presets", ant_presets, 5);
 
                     auto set_preset = [](const void* input_data, void* client_data) {
                         ColorGrader::Implementation* data = (ColorGrader::Implementation*)client_data;
