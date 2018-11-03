@@ -143,13 +143,25 @@ void RenderingGUI::layout_frame() {
                 effects_settings.tonemapping.uncharted2 = m_state->tonemapping.uncharted2; break;
             }
 
+            { // Plot tonemap curve
+                const int max_sample_count = 32;
+                float intensities[max_sample_count];
+                for (int i = 0; i < max_sample_count; ++i) {
+                    float c = (i / (max_sample_count - 1.0f)) * 2.0f;
+                    switch (effects_settings.tonemapping.mode) {
+                    case TonemappingMode::Filmic:
+                        intensities[i] = luminance(unreal4(RGB(c), m_state->tonemapping.filmic)); break;
+                    case TonemappingMode::Uncharted2:
+                        intensities[i] = luminance(uncharted2(RGB(c), m_state->tonemapping.uncharted2)); break;
+                    case TonemappingMode::Linear:
+                        intensities[i] = c; break;
+                    }
+                }
+                ImGui::PlotLines("", intensities, IM_ARRAYSIZE(intensities), 0, "Intensity [0, 2]", 0.0f, 1.0f, ImVec2(0, 80));
+            }
+
             if (effects_settings.tonemapping.mode == TonemappingMode::Filmic) {
                 auto& filmic = effects_settings.tonemapping.filmic;
-                has_changed |= ImGui::SliderFloat("Black clip", &filmic.black_clip, 0.0f, 1.0f);
-                has_changed |= ImGui::SliderFloat("Toe", &filmic.toe, 0.0f, 1.0f);
-                has_changed |= ImGui::SliderFloat("Slope", &filmic.slope, 0.0f, 1.0f);
-                has_changed |= ImGui::SliderFloat("Shoulder", &filmic.shoulder, 0.0f, 1.0f);
-                has_changed |= ImGui::SliderFloat("White clip", &filmic.white_clip, 0.0f, 1.0f);
 
                 const char* filmic_presets[] = { "Select preset", "ACES", "Uncharted2", "HP", "Legacy" };
                 int current_preset = 0;
@@ -165,6 +177,11 @@ void RenderingGUI::layout_frame() {
                     filmic = FilmicSettings::legacy(); break;
                 }
 
+                has_changed |= ImGui::SliderFloat("Black clip", &filmic.black_clip, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("Toe", &filmic.toe, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("Slope", &filmic.slope, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("Shoulder", &filmic.shoulder, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("White clip", &filmic.white_clip, 0.0f, 1.0f);
             }
             if (effects_settings.tonemapping.mode == TonemappingMode::Uncharted2) {
                 auto& uncharted2 = effects_settings.tonemapping.uncharted2;
@@ -174,7 +191,7 @@ void RenderingGUI::layout_frame() {
                 has_changed |= ImGui::SliderFloat("Toe strength", &uncharted2.toe_strength, 0.0f, 1.0f);
                 has_changed |= ImGui::SliderFloat("Toe numerator", &uncharted2.toe_numerator, 0.0f, 1.0f);
                 has_changed |= ImGui::SliderFloat("Toe denominator", &uncharted2.toe_denominator, 0.0f, 1.0f);
-                // uncharted2.linear_white
+                has_changed |= ImGui::SliderFloat("Linear white", &uncharted2.linear_white, 0.0f, 20.0f);
 
                 if (ImGui::Button("Reset")) {
                     has_changed = true;
