@@ -1,13 +1,13 @@
 BACKLOG:
-* Screenshot
-** Request backbuffer through the composer. (when the image is converged)
-*** Request through the camera using a vector of functions that can request images if needed. The images need to be pre generated and should only be filled by the renderer as it happens during the immutable state run
-*** Expose certain backbuffer state pr camera/viewport in a renderer interface. Fx iteration_count, is_continuous_renderer and so on. Members that can be used to evaluate the 'doneness' of a backbuffer.
-*** Both HDR and LDR buffers. HDR buffers should not be tone mapped, color corrected or gamma corrected.
-** Render to offscreen buffer stored on the camera.
-*** Let it iterate for multiple frames to converge.
-** Render to window if a window is specified. Can a window and framebuffer have separate viewports? And then what? Render with the highest resolution and downscale?
-*** Conditional copy in a functor.
+* Should mutating and non-mutating callbacks be std::functions instead? If it cleans up the code then yes.
+* SSAO: In cornell scene there is some AO bleeding at top and bottom of the image.
+* SSAO: In test scene SSAO background bleed into the moving rings. But ONLY when they are moving?!? And it seems to be from the upper left corner. So probably an index error.
+* Faster convergence
+** Rho approximation.
+*** GGX contribution seems too strong. Materials are too bright.
+*** Perhaps computing the relation between GGX tint and rho would help figure out how much light scatters to the diffuse layer and how much the specular metal layers will reflect?
+** Reverse halton sequence
+** Faure-permuted Halton sequence sample, http://gruenschloss.org/
 * OptiX (filtering) backends
 ** Try OptiX 5 AI denoiser
 ** Filter neighbouring light samples before reconstruction - Screen space photon mapping approach with MIS weights / Path filtering.
@@ -16,10 +16,8 @@ BACKLOG:
 **** Perhaps select a vertex if the BSDF PDF is less than 1 / PI or maybe even a bit more. Then vertices are selected roughly proportional to how 'diffuse' they are.
 **** Trace ray footprint by assuming the ray is a cone. Then use Distributions::Cone::CosTheta(float angle) to compute the angle of each new cone after an intersection and use that for the density estimation kernel bandwidth.
 ** Pass BSDF and light sample to the path tracing RGP and let it handle accumulated radiance.
-* Faster convergence
-** Reverse halton sequence
-** Faure-permuted Halton sequence sample, http://gruenschloss.org/
-* SSBT
+* SDF shadows - check UE4
+* SSBN
 ** Bent normal
 *** Path tracer backend (Also one for SSAO?)
 *** For diffuse env map lookup.
@@ -30,9 +28,6 @@ BACKLOG:
 ** Metal specular tint should go to white at grazing angles.
 ** Importance sample improvement?
 *** The black rubber ball in TestScene produces a lot of nearly black samples. Must be from GGX?
-** Rho approximation.
-*** GGX contribution seems too strong. Materials are too bright.
-*** Perhaps computing the relation between GGX tint and rho would help figure out how much light scatters to the diffuse layer and how much the specular metal layers will reflect?
 ** Add coat.
 *** http://jcgt.org/published/0003/04/03/paper-lowres.pdf and https://www.youtube.com/watch?v=4nKb9hRYbPA
 *** Or just add a GGX layer on top with an iridescence parameter (red and blue fresnel offset relative to green.)
@@ -44,6 +39,7 @@ BACKLOG:
 *** Compute AO maps based on normal maps.
 ** 'Fix' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles. (Offset normal by -view_dir until the dot product is 0.)
 ** Or warp the hemisphere by the shading normal, such that the hemisphere is turned into a cone that only grazes the surface. That way samples would need to be converted from hemisphere to cone and back again. Pro: No special casing on light / view direction. Con: Black surface when view dir is outside the cone.
+** Perhaps just dim 'blocked' regions as they could be lit indirectly.
 * BTDF
 ** Transmission factor.
 *** Use IOR computed from specularity.
