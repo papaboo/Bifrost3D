@@ -56,7 +56,7 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
 
     // Create engine.
     std::string data_path = get_data_path();
-    Engine engine(data_path);
+    static Engine engine(data_path);
     if (on_launch != nullptr) {
         int error_code = on_launch(engine);
         if (error_code != 0) {
@@ -74,7 +74,7 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
     }
 
     GLFWwindowsizefun window_size_callback = [](GLFWwindow* window, int width, int height) {
-        Cogwheel::Core::Window& engine_window = Engine::get_instance()->get_window();
+        Cogwheel::Core::Window& engine_window = engine.get_window();
         engine_window.resize(width, height);
     };
     glfwSetWindowSizeCallback(window, window_size_callback);
