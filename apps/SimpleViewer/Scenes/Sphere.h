@@ -94,10 +94,7 @@ void create_sphere_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sc
         };
 
         MaterialSwapper* mat_swapper = new MaterialSwapper(scene_ID);
-        auto mat_swap_update = [](Core::Engine& engine, void* state) {
-            ((MaterialSwapper*)state)->update(engine);
-        };
-        engine.add_mutating_callback(mat_swap_update, mat_swapper);
+        engine.add_mutating_callback([=, &engine]() { mat_swapper->update(engine); });
 
         // TODO Destroy on shutdown.
     }

@@ -129,10 +129,6 @@ public:
         }
     }
 
-    static inline void navigate_callback(Engine& engine, void* state) {
-        static_cast<Navigation*>(state)->navigate(engine);
-    }
-
 private:
     Cameras::UID m_camera_ID;
     float m_vertical_rotation;
@@ -180,10 +176,6 @@ public:
         Cameras::set_projection_matrices(m_camera_ID, perspective_matrix, inverse_perspective_matrix);
     }
 
-    static inline void handle_callback(Engine& engine, void* state) {
-        static_cast<CameraHandler*>(state)->handle(engine);
-    }
-
 private:
     Cameras::UID m_camera_ID;
     float m_aspect_ratio;
@@ -207,71 +199,11 @@ public:
         }
     }
 
-    static inline void handle_callback(Engine& engine, void* state) {
-        static_cast<RenderSwapper*>(state)->handle(engine);
-    }
-
 private:
     Cameras::UID m_camera_ID;
 };
 
-class TonemappingSwitcher {
-public:
-    TonemappingSwitcher(Cameras::UID camera_ID)
-        : m_camera_ID(camera_ID) { }
-
-    void handle(const Engine& engine) {
-        using namespace Cogwheel::Math::CameraEffects;
-
-        bool update_exposure = engine.get_keyboard()->was_released(Keyboard::Key::E);
-        bool update_tonemapping = engine.get_keyboard()->was_released(Keyboard::Key::T);
-
-        if (update_exposure || update_tonemapping) {
-            auto settings = Cameras::get_effects_settings(m_camera_ID);
-            if (update_exposure) {
-                int exposure_mode = (int)settings.exposure.mode;
-                settings.exposure.mode = ExposureMode((exposure_mode + 1) % int(ExposureMode::Count));
-            }
-
-            if (update_tonemapping) {
-                int tonemapping_mode = (int)settings.tonemapping.mode;
-                settings.tonemapping.mode = TonemappingMode((tonemapping_mode + 1) % int(TonemappingMode::Count));
-            }
-
-            switch (settings.exposure.mode)
-            {
-            case ExposureMode::Fixed:
-                printf("Exposure: Fixed, "); break;
-            case ExposureMode::LogAverage:
-                printf("Exposure: Log-average, "); break;
-            case ExposureMode::Histogram:
-                printf("Exposure: Histogram, "); break;
-            }
-
-            switch (settings.tonemapping.mode)
-            {
-            case TonemappingMode::Linear:
-                printf("Tonemapping: Linear\n"); break;
-            case TonemappingMode::Filmic:
-                printf("Tonemapping: Filmic\n"); break;
-            case TonemappingMode::Uncharted2:
-                printf("Tonemapping: Uncharted2\n"); break;
-            }
-
-
-            Cameras::set_effects_settings(m_camera_ID, settings);
-        }
-    }
-
-    static inline void handle_callback(Engine& engine, void* state) {
-        static_cast<TonemappingSwitcher*>(state)->handle(engine);
-    }
-
-private:
-    Cameras::UID m_camera_ID;
-};
-
-static inline void update_FPS(Engine& engine, void*) {
+static inline void update_FPS(Engine& engine) {
     static const int COUNT = 8;
     static float delta_times[COUNT] = { 1e30f, 1e30f, 1e30f, 1e30f, 1e30f, 1e30f, 1e30f, 1e30f };
     static int next_index = 0;
@@ -471,7 +403,7 @@ void detect_and_flag_cutout_materials() {
     }
 }
 
-static inline void miniheaps_cleanup_callback(void*) {
+static inline void miniheaps_cleanup_callback() {
     Cameras::reset_change_notifications();
     Images::reset_change_notifications();
     LightSources::reset_change_notifications();
@@ -497,7 +429,7 @@ int initializer(Engine& engine) {
     SceneRoots::allocate(1u);
     Textures::allocate(8u);
 
-    engine.add_tick_cleanup_callback(miniheaps_cleanup_callback, nullptr);
+    engine.add_tick_cleanup_callback(miniheaps_cleanup_callback);
 
     return 0;
 }
@@ -524,7 +456,7 @@ int initialize_scene(Engine& engine) {
     // Create camera
     Cameras::UID cam_ID = Cameras::create("Camera", scene_ID, Matrix4x4f::identity(), Matrix4x4f::identity()); // Matrices will be set up by the CameraHandler.
     CameraHandler* camera_handler = new CameraHandler(cam_ID, engine.get_window().get_aspect_ratio(), 0.1f, 100.0f);
-    engine.add_mutating_callback(CameraHandler::handle_callback, camera_handler);
+    engine.add_mutating_callback([=, &engine] { camera_handler->handle(engine); });
 
     // Load model
     bool load_model_from_file = false;
@@ -588,14 +520,12 @@ int initialize_scene(Engine& engine) {
 
     float camera_velocity = g_scene_size * 0.1f;
     Navigation* camera_navigation = new Navigation(cam_ID, camera_velocity);
-    engine.add_mutating_callback(Navigation::navigate_callback, camera_navigation);
+    engine.add_mutating_callback([=, &engine] { camera_navigation->navigate(engine); });
     RenderSwapper* render_swapper = new RenderSwapper(cam_ID);
-    engine.add_mutating_callback(RenderSwapper::handle_callback, render_swapper);
-    TonemappingSwitcher* tonemapping_switcher = new TonemappingSwitcher(cam_ID);
-    engine.add_mutating_callback(TonemappingSwitcher::handle_callback, tonemapping_switcher);
-    engine.add_mutating_callback(update_FPS, nullptr);
+    engine.add_mutating_callback([=, &engine] { render_swapper->handle(engine); });
+    engine.add_mutating_callback([&engine] { update_FPS(engine); });
 
-    { // Picture in picture
+    if (false) { // Picture in picture
         auto second_cam_ID = Cameras::create("Second cam", scene_ID, Cameras::get_projection_matrix(cam_ID), Cameras::get_inverse_projection_matrix(cam_ID));
         Cameras::set_transform(second_cam_ID, Cameras::get_transform(cam_ID));
         Cameras::set_viewport(second_cam_ID, Rectf(0.75f, 0.75f, 0.25f, 0.25));
@@ -623,17 +553,13 @@ int initialize_scene(Engine& engine) {
             }
         }
 
-        static inline void handle_callback(Engine& engine, void* state) {
-            static_cast<OptiXBackendSwitcher*>(state)->handle(engine);
-        }
-
     private:
         OptiXRenderer::Renderer* m_renderer;
         Cameras::UID m_camera_ID;
     };
 
     OptiXBackendSwitcher* backend_switcher = new OptiXBackendSwitcher(optix_renderer, cam_ID);
-    engine.add_mutating_callback(OptiXBackendSwitcher::handle_callback, backend_switcher);
+    engine.add_mutating_callback([=, &engine] { backend_switcher->handle(engine); });
 #endif
 
     return 0;
@@ -665,7 +591,7 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
         auto* imgui = new ImGui::ImGuiAdaptor();
         imgui->add_frame(std::make_unique<GUI::RenderingGUI>(compositor, dx11_renderer));
 
-        auto imgui_callback = [](Engine& engine, void* imgui) {
+        engine.add_mutating_callback([=, &engine] {
             auto* keyboard = engine.get_keyboard();
             auto* imgui_adaptor = static_cast<ImGui::ImGuiAdaptor*>(imgui);
 
@@ -674,9 +600,8 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
             imgui_adaptor->set_enabled(imgui_adaptor->is_enabled() ^ (g_was_released && control_pressed));
 
             imgui_adaptor->new_frame(engine);
-        };
+        });
 
-        engine.add_mutating_callback(imgui_callback, imgui);
         compositor->add_GUI_renderer([](ODevice1& device) -> IGuiRenderer* { return new ImGui::Renderers::DX11Renderer(device); });
     }
 
@@ -684,7 +609,7 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
     for (auto camera_ID : Cameras::get_iterable())
         Cameras::set_renderer_ID(camera_ID, default_renderer);
 
-    engine.add_non_mutating_callback(render_callback, compositor);
+    engine.add_non_mutating_callback([=] { compositor->render(); });
 
     return initialize_scene(engine);
 }

@@ -39,10 +39,6 @@ public:
         }
     }
 
-    static inline void rotate_callback(Core::Engine& engine, void* state) {
-        static_cast<LocalRotator*>(state)->rotate(engine);
-    }
-
 private:
     Scene::SceneNodes::UID m_node_ID;
     float m_rotation_stength;
@@ -74,10 +70,6 @@ public:
             LightSources::destroy(m_light_ID);
             m_light_ID = LightSources::UID::invalid_UID();
         }
-    }
-
-    static inline void blink_callback(Core::Engine& engine, void* state) {
-        static_cast<BlinkingLight*>(state)->blink(engine);
     }
 
 private:
@@ -126,10 +118,6 @@ public:
                 m_model_ID = MeshModels::UID::invalid_UID();
             }
         }
-    }
-
-    static inline void update_callback(Core::Engine& engine, void* state) {
-        static_cast<BoxGun*>(state)->update(engine);
     }
 
 private:
@@ -218,7 +206,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
             parent_node = ring_node;
 
             LocalRotator* simple_rotator = new LocalRotator(ring_node.get_ID(), i * 0.31415f * 0.5f + 0.2f);
-            engine.add_mutating_callback(LocalRotator::rotate_callback, simple_rotator);
+            engine.add_mutating_callback([=, &engine] { simple_rotator->rotate(engine); });
         }
     }
 
@@ -271,7 +259,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
     { // GUN!
         Cameras::UID cam_ID = *Cameras::begin();
         BoxGun* boxgun = new BoxGun(cam_ID);
-        engine.add_mutating_callback(BoxGun::update_callback, boxgun);
+        engine.add_mutating_callback([=, &engine] { boxgun->update(engine); });
     }
 
     Vector3f light_position = Vector3f(100.0f, 20.0f, 100.0f);
@@ -281,7 +269,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
     SceneNodes::set_parent(light_node_ID, root_node.get_ID());
 
     BlinkingLight* blinking_light = new BlinkingLight();
-    engine.add_mutating_callback(BlinkingLight::blink_callback, blinking_light);
+    engine.add_mutating_callback([=, &engine] { blinking_light->blink(engine); });
 }
 
 } // NS Scenes
