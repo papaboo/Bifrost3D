@@ -99,7 +99,7 @@ std::string g_image_file;
 Options g_options;
 std::array<Image, 11> g_convoluted_images;
 
-void update(Engine& engine, void* none) {
+void update(Engine& engine) {
     // Initialize render texture
     static GLuint tex_ID = 0u;
     if (tex_ID == 0u) {
@@ -378,7 +378,7 @@ int initialize(Engine& engine) {
 
     // Hook up update callback.
     if (!g_options.headless)
-        engine.add_mutating_callback(update, nullptr);
+        engine.add_mutating_callback([&] { update(engine); });
 
     return 0;
 }
