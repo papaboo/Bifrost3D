@@ -32,14 +32,10 @@ namespace Core {
 // Future work
 // * Add a 'mutation complete' (said in the Zerg voice) callback.
 // * Add on_exit callback and deallocate the managers internal state.
-// * Consider if anything is made easier by having the engine as a singleton.
 // ---------------------------------------------------------------------------
 class Engine final {
 public:
-    static inline Engine* get_instance() { return m_instance; }
-
     Engine(const std::string& data_path);
-    ~Engine();
 
     inline Time& get_time() { return m_time; }
     inline Time get_time() const { return m_time; }
@@ -79,8 +75,6 @@ private:
     // Delete copy constructors.
     Engine(const Engine& rhs) = delete;
     Engine& operator=(Engine& rhs) = delete;
-
-    static Engine* m_instance;
 
     Time m_time;
     Window m_window;

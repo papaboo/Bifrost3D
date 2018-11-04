@@ -14,8 +14,6 @@
 namespace Cogwheel {
 namespace Core {
 
-Engine* Engine::m_instance = nullptr;
-
 Engine::Engine(const std::string& data_path)
     : m_window(Window("Cogwheel", 640, 480))
     , m_mutating_callbacks(0)
@@ -25,12 +23,6 @@ Engine::Engine(const std::string& data_path)
     , m_keyboard(nullptr)
     , m_mouse(nullptr) 
     , m_data_path(data_path) {
-    m_instance = this;
-}
-    
-Engine::~Engine() {
-    if (m_instance == this)
-        m_instance = nullptr;
 }
 
 void Engine::do_tick(double delta_time) {
