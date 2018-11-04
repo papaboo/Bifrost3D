@@ -33,21 +33,6 @@ Engine::~Engine() {
         m_instance = nullptr;
 }
 
-void Engine::add_mutating_callback(mutating_callback callback, void* callback_state) {
-    auto func = [=]() -> void { callback(*this, callback_state); };
-    m_mutating_callbacks.push_back(func);
-}
-
-void Engine::add_non_mutating_callback(non_mutating_callback callback, void* callback_state) {
-    auto func = [=]() -> void { callback(*this, callback_state); };
-    m_non_mutating_callbacks.push_back(func);
-}
-
-void Engine::add_tick_cleanup_callback(tick_cleanup_callback callback, void* callback_state) {
-    auto func = [=]() -> void { callback(callback_state); };
-    m_tick_cleanup_callbacks.push_back(func);
-}
-
 void Engine::do_tick(double delta_time) {
     m_time.tick(delta_time);
 

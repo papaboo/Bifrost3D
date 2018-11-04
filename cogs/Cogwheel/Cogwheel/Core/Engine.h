@@ -60,16 +60,8 @@ public:
     // -----------------------------------------------------------------------
     // Callbacks
     // -----------------------------------------------------------------------
-    typedef void(*mutating_callback)(Engine& engine, void* callback_state);
-    void add_mutating_callback(mutating_callback callback, void* callback_state);
     inline void add_mutating_callback(std::function<void()> callback) { m_mutating_callbacks.push_back(callback); }
-
-    typedef void(*non_mutating_callback)(const Engine& engine, void* callback_state);
-    void add_non_mutating_callback(non_mutating_callback callback, void* callback_state);
     inline void add_non_mutating_callback(std::function<void()> callback) { m_non_mutating_callbacks.push_back(callback); }
-
-    typedef void(*tick_cleanup_callback)(void* callback_state);
-    void add_tick_cleanup_callback(tick_cleanup_callback callback, void* callback_state);
     inline void add_tick_cleanup_callback(std::function<void()> callback) { m_tick_cleanup_callbacks.push_back(callback); }
 
     // -----------------------------------------------------------------------
