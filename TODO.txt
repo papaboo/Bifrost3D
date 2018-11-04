@@ -1,7 +1,6 @@
 BACKLOG:
-* Should mutating and non-mutating callbacks be std::functions instead? If it cleans up the code then yes.
 * SSAO: In cornell scene there is some AO bleeding at top and bottom of the image.
-* SSAO: In test scene SSAO background bleed into the moving rings. But ONLY when they are moving?!? And it seems to be from the upper left corner. So probably an index error.
+* SSAO: In test scene SSAO background bleed into the moving rings. But ONLY when they are moving?!?
 * Faster convergence
 ** Rho approximation.
 *** GGX contribution seems too strong. Materials are too bright.
