@@ -113,7 +113,7 @@ struct Blurer::Implementation final {
             m_tex_ID = create_texture();
 
             m_gui = setup_gui();
-            engine.add_mutating_callback([&]() -> void { this->update(engine); });
+            engine.add_mutating_callback([&]{ this->update(engine); });
         }
     }
 

@@ -464,7 +464,7 @@ struct ColorGrader::Implementation final {
 
             m_tonemapped_pixels = new RGB[m_input.get_pixel_count()];
             m_gui = setup_gui();
-            engine.add_mutating_callback([&]() -> void { this->update(engine); });
+            engine.add_mutating_callback([&]{ this->update(engine); });
         }
     }
 
