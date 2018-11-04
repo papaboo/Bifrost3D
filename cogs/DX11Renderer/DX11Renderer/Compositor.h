@@ -121,10 +121,6 @@ private:
     Implementation* m_impl;
 };
 
-static inline void render_callback(const Cogwheel::Core::Engine& engine, void* compositor) {
-    static_cast<Compositor*>(compositor)->render();
-}
-
 } // NS DX11Renderer
 
 #endif // _DX11RENDERER_COMPOSITOR_H_
