@@ -29,6 +29,13 @@ namespace ImGui {
         const char* format = (extra_flags & ImGuiInputTextFlags_CharsHexadecimal) ? "%08X" : "%u";
         return InputScalar(label, ImGuiDataType_U32, (void*)v, (void*)(step > 0 ? &step : NULL), (void*)(step_fast > 0 ? &step_fast : NULL), format, extra_flags);
     }
+
+    void PoppedTreeNode(const char* label, std::function<void()> body) {
+        if (ImGui::TreeNode(label)) {
+            body();
+            ImGui::TreePop();
+        }
+    }
 }
 
 namespace GUI {
@@ -96,6 +103,13 @@ void RenderingGUI::layout_frame() {
     }
 
     ImGui::Separator();
+
+    ImGui::PoppedTreeNode("Scene", [&]() {
+        SceneRoot scene_root = *SceneRoots::get_iterable().begin();
+        RGB environment_tint = scene_root.get_environment_tint();
+        if (ImGui::ColorEdit3("Environment tint", &environment_tint.r))
+            scene_root.set_environment_tint(environment_tint);
+    });
 
     if (ImGui::TreeNode("Camera effects")) {
         using namespace Cogwheel::Math::CameraEffects;
