@@ -822,6 +822,7 @@ struct Renderer::Implementation {
                     Math::RGB env_tint = scene.get_environment_tint();
                     float3 environment_tint = make_float3(env_tint.r, env_tint.g, env_tint.b);
                     context["g_scene_environment_tint"]->setFloat(environment_tint);
+                    should_reset_allocations = true;
                 }
 
                 if (scene.get_changes().any_set(SceneRoots::Change::EnvironmentMap, SceneRoots::Change::Created)) {
@@ -862,6 +863,7 @@ struct Renderer::Implementation {
                             context["g_scene_environment_light"]->setUserData(sizeof(light), &light);
                             printf("OptiXRenderer only supports environments with 4 channels. '%s' has %u.\n", image.get_name().c_str(), channel_count(image.get_pixel_format()));
                         }
+                        should_reset_allocations = true;
                     }
                 }
             }
