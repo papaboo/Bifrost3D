@@ -21,32 +21,28 @@ TransformManager::TransformManager(ID3D11Device1& device, ID3D11DeviceContext1& 
     m_transforms.resize(1);
     m_transforms[0] = Transform::identity();
 
-    m_constant_array = ConstantBufferArray<Matrix4x4f>();
+    m_GPU_transforms.resize(1);
+    auto identity_matrix = Matrix4x4f::identity();
+    create_constant_buffer(device, identity_matrix, &m_GPU_transforms[0]);
 }
-    
+
 void TransformManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& context) {
     if (SceneNodes::get_changed_nodes().is_empty())
         return;
 
     if (m_transforms.size() < SceneNodes::capacity()) {
         m_transforms.resize(SceneNodes::capacity());
-        m_constant_array = ConstantBufferArray<Matrix4x4f>(device, SceneNodes::capacity());
+        m_GPU_transforms.resize(SceneNodes::capacity());
+    }
 
-        m_constant_array.set(&context, Matrix4x4f::identity(), 0, D3D11_COPY_DISCARD);
-        for (SceneNodes::UID node_ID : SceneNodes::get_iterable()) {
+    for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
+        if (SceneNodes::get_changes(node_ID).any_set(SceneNodes::Change::Created, SceneNodes::Change::Transform)) {
             m_transforms[node_ID] = SceneNodes::get_global_transform(node_ID);
-
             Matrix4x4f to_world = to_matrix4x4(m_transforms[node_ID]);
-            m_constant_array.set(&context, to_world, node_ID);
-        }
-    } else {
-        for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
-            if (SceneNodes::get_changes(node_ID).any_set(SceneNodes::Change::Created, SceneNodes::Change::Transform)) {
-                m_transforms[node_ID] = SceneNodes::get_global_transform(node_ID);
-
-                Matrix4x4f to_world = to_matrix4x4(m_transforms[node_ID]);
-                m_constant_array.set(&context, to_world, node_ID);
-            }
+            if (m_GPU_transforms[node_ID] == nullptr)
+                create_constant_buffer(device, to_world, &m_GPU_transforms[node_ID], D3D11_USAGE_DEFAULT);
+            else
+                context.UpdateSubresource(m_GPU_transforms[node_ID], 0u, nullptr, &to_world, 0u, 0u);
         }
     }
 }

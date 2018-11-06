@@ -27,8 +27,7 @@ class TransformManager {
 private:
 
     std::vector<Cogwheel::Math::Transform> m_transforms;
-
-    ConstantBufferArray<Cogwheel::Math::Matrix4x4f> m_constant_array;
+    std::vector<OBuffer> m_GPU_transforms;
     
 public:
 
@@ -38,7 +37,9 @@ public:
     TransformManager& operator=(TransformManager&& rhs) = default;
     
     inline Cogwheel::Math::Transform& get_transform(unsigned int transform_index) { return m_transforms[transform_index]; }
-    inline void bind_transform(ID3D11DeviceContext1& context, unsigned int slot, unsigned int transform_index) { m_constant_array.VS_set(&context, slot, transform_index); }
+    inline void bind_transform(ID3D11DeviceContext1& context, unsigned int slot, unsigned int transform_index) { 
+        context.VSSetConstantBuffers(slot, 1, &m_GPU_transforms[transform_index]);
+    }
 
     void handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& context);
 
