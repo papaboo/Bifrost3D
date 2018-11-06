@@ -13,6 +13,7 @@
 #include "Dx11Renderer/Utils.h"
 
 #include <assert.h>
+#include <memory>
 
 namespace DX11Renderer {
 
@@ -50,22 +51,17 @@ public:
         desc.CPUAccessFlags = 0;
         desc.MiscFlags = 0;
 
-        unsigned char* data = new unsigned char[desc.ByteWidth];
+        auto data = std::make_unique<unsigned char[]>(desc.ByteWidth);
         for (unsigned int i = 0; i < element_count; ++i)
-            memcpy(data + i * get_element_stride(), elements + i, sizeof(T));
+            memcpy(data.get() + i * get_element_stride(), elements + i, sizeof(T));
 
         D3D11_SUBRESOURCE_DATA resource_data = {};
-        resource_data.pSysMem = data;
+        resource_data.pSysMem = data.get();
 
-        HRESULT hr = device.CreateBuffer(&desc, &resource_data, &m_constant_buffer);
-
-        delete[] data;
-
-        THROW_DX11_ERROR(hr);
+        THROW_DX11_ERROR(device.CreateBuffer(&desc, &resource_data, &m_constant_buffer));
     }
 
     ConstantBufferArray(ConstantBufferArray&& other) = default;
-
     ConstantBufferArray& operator=(ConstantBufferArray&& rhs) = default;
 
     // --------------------------------------------------------------------------------------------
