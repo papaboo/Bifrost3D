@@ -24,13 +24,13 @@ using namespace Cogwheel::Scene;
 // ------------------------------------------------------------------------------------------------
 namespace ImGui {
 
-    bool InputUint(const char* label, unsigned int* v, unsigned int step = 1u, unsigned int step_fast = 100u, ImGuiInputTextFlags extra_flags = 0) {
+    inline bool InputUint(const char* label, unsigned int* v, unsigned int step = 1u, unsigned int step_fast = 100u, ImGuiInputTextFlags extra_flags = 0) {
         // Hexadecimal input provided as a convenience but the flag name is awkward. Typically you'd use InputText() to parse your own data, if you want to handle prefixes.
         const char* format = (extra_flags & ImGuiInputTextFlags_CharsHexadecimal) ? "%08X" : "%u";
         return InputScalar(label, ImGuiDataType_U32, (void*)v, (void*)(step > 0 ? &step : NULL), (void*)(step_fast > 0 ? &step_fast : NULL), format, extra_flags);
     }
 
-    void PoppedTreeNode(const char* label, std::function<void()> body) {
+    inline void PoppedTreeNode(const char* label, std::function<void()> body) {
         if (ImGui::TreeNode(label)) {
             body();
             ImGui::TreePop();
@@ -76,7 +76,7 @@ void RenderingGUI::layout_frame() {
             }
         }
 
-        if (ImGui::TreeNode("Screenshot")) {
+        ImGui::PoppedTreeNode("Screenshot", [&]() {
             bool take_screenshot = ImGui::Button("Take screenshots");
             ImGui::InputText("Path", m_screenshot.path, m_screenshot.max_path_length);
             ImGui::InputUint("Iterations", &m_screenshot.iterations);
@@ -86,21 +86,17 @@ void RenderingGUI::layout_frame() {
                 auto first_cam_ID = *Cameras::get_iterable().begin();
                 Cameras::request_screenshot(first_cam_ID, m_screenshot.is_HDR, m_screenshot.iterations);
             }
-
-            ImGui::TreePop();
-        }
+        });
     }
 
     ImGui::Separator();
 
-    if (ImGui::TreeNode("Compositor")) {
+    ImGui::PoppedTreeNode("Compositor", [&]() {
         if (ImGui::Button("Toggle V-sync")) {
             bool is_v_sync_enabled = m_compositor->uses_v_sync();
             m_compositor->set_v_sync(!is_v_sync_enabled);
         }
-
-        ImGui::TreePop();
-    }
+    });
 
     ImGui::Separator();
 
@@ -111,31 +107,30 @@ void RenderingGUI::layout_frame() {
             scene_root.set_environment_tint(environment_tint);
     });
 
-    if (ImGui::TreeNode("Camera effects")) {
+    ImGui::Separator();
+
+    ImGui::PoppedTreeNode("Camera effects", [&]() {
         using namespace Cogwheel::Math::CameraEffects;
 
         Cameras::UID camera_ID = *Cameras::get_iterable().begin();
         auto effects_settings = Cameras::get_effects_settings(camera_ID);
         bool has_changed = false;
 
-        if (ImGui::TreeNode("Bloom")) {
+        ImGui::PoppedTreeNode("Bloom", [&]() {
             has_changed |= ImGui::InputFloat("Threshold", &effects_settings.bloom.threshold, 0.0f, 0.0f);
             has_changed |= ImGui::SliderFloat("Support", &effects_settings.bloom.support, 0.0f, 1.0f);
-            ImGui::TreePop();
-        }
+        });
 
-        if (ImGui::TreeNode("Exposure")) {
+        ImGui::PoppedTreeNode("Exposure", [&]() {
             const char* exposure_modes[] = { "Fixed", "LogAverage", "Histogram" };
             int current_exposure_mode = (int)effects_settings.exposure.mode;
             has_changed |= ImGui::Combo("Exposure", &current_exposure_mode, exposure_modes, IM_ARRAYSIZE(exposure_modes));
             effects_settings.exposure.mode = (ExposureMode)current_exposure_mode;
 
             has_changed |= ImGui::InputFloat("Bias", &effects_settings.exposure.log_lumiance_bias, 0.25, 1, "%.2f");
+        });
 
-            ImGui::TreePop();
-        }
-
-        if (ImGui::TreeNode("Tonemapping")) {
+        ImGui::PoppedTreeNode("Tonemapping", [&]() {
             // Save tonemapping settings
             switch (effects_settings.tonemapping.mode) {
             case TonemappingMode::Filmic:
@@ -212,19 +207,16 @@ void RenderingGUI::layout_frame() {
                     uncharted2 = Uncharted2Settings::default();
                 }
             }
-            ImGui::TreePop();
-        }
+        });
 
         if (has_changed)
             Cameras::set_effects_settings(camera_ID, effects_settings);
-
-        ImGui::TreePop();
-    }
+    });
 
     ImGui::Separator();
 
     if (m_renderer != nullptr) {
-        if (ImGui::TreeNode("DirectX11")) {
+        ImGui::PoppedTreeNode("DirectX11", [&]() {
             using namespace DX11Renderer;
 
             { // Settings
@@ -233,7 +225,7 @@ void RenderingGUI::layout_frame() {
 
                 has_changed |= ImGui::SliderFloat("G-buffer band scale", &settings.g_buffer_guard_band_scale, 0.0f, 0.99f, "%.2f");
 
-                if (ImGui::TreeNode("SSAO")) {
+                ImGui::PoppedTreeNode("SSAO", [&]() {
                     auto& ssao_settings = settings.ssao.settings;
                     has_changed |= ImGui::Checkbox("SSAO", &settings.ssao.enabled);
                     has_changed |= ImGui::InputFloat("World radius", &ssao_settings.world_radius, 0.05f, 0.25f, "%.2f");
@@ -254,15 +246,14 @@ void RenderingGUI::layout_frame() {
                     }
                     has_changed |= ImGui::InputFloat("Normal std dev", &ssao_settings.normal_std_dev, 0.0f, 0.0f);
                     has_changed |= ImGui::InputFloat("Plane std dev", &ssao_settings.plane_std_dev, 0.0f, 0.0f);
-                    ImGui::TreePop();
-                }
+                });
 
                 if (has_changed)
                     m_renderer->set_settings(settings);
             }
 
             // Debug settings
-            if (ImGui::TreeNode("Debug")) {
+            ImGui::PoppedTreeNode("Debug", [&]() {
                 auto settings = m_renderer->get_debug_settings();
                 bool has_changed = false;
 
@@ -273,12 +264,8 @@ void RenderingGUI::layout_frame() {
 
                 if (has_changed)
                     m_renderer->set_debug_settings(settings);
-
-                ImGui::TreePop();
-            }
-
-            ImGui::TreePop();
-        }
+            });
+        });
     }
 
     ImGui::End();
