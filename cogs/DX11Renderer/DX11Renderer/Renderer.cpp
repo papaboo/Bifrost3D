@@ -67,6 +67,7 @@ private:
         ODepthStencilView depth_view;
         OShaderResourceView normal_SRV;
         ORenderTargetView normal_RTV;
+        ODepthStencilState depth_state;
 
         struct {
             ORasterizerState raster_state;
@@ -218,6 +219,11 @@ public:
                 THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.cutout.pixel_shader));
             }
 
+            // Depth-stencil state
+            D3D11_DEPTH_STENCIL_DESC depth_desc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
+            depth_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+            THROW_DX11_ERROR(m_device.CreateDepthStencilState(&depth_desc, &m_g_buffer.depth_state));
+
             // G-buffer is initialized on demand when the output dimensions are known.
             m_g_buffer.width = m_g_buffer.height = 0u;
             m_g_buffer.depth_SRV = nullptr;
@@ -271,6 +277,7 @@ public:
 
             D3D11_DEPTH_STENCIL_DESC depth_desc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
             depth_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+            depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
             THROW_DX11_ERROR(m_device.CreateDepthStencilState(&depth_desc, &m_opaque.depth_state));
 
             OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "opaque", fragment_macros);
@@ -285,7 +292,6 @@ public:
         }
 
         { // Setup transparent rendering.
-
             D3D11_BLEND_DESC blend_desc;
             blend_desc.AlphaToCoverageEnable = false;
             blend_desc.IndependentBlendEnable = false;
@@ -303,6 +309,7 @@ public:
             THROW_DX11_ERROR(m_device.CreateBlendState(&blend_desc, &m_transparent.blend_state));
 
             D3D11_DEPTH_STENCIL_DESC depth_desc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
+            depth_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
             depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
             THROW_DX11_ERROR(m_device.CreateDepthStencilState(&depth_desc, &m_transparent.depth_state));
 
@@ -434,20 +441,6 @@ public:
         int g_buffer_height = height + 2 * g_buffer_guard_band_size.y;
         Rect<int> backbuffer_viewport = { g_buffer_guard_band_size.x, g_buffer_guard_band_size.y, width, height };
 
-        { // Set the full g-buffer viewport.
-            D3D11_VIEWPORT dx_viewport;
-            dx_viewport.TopLeftX = dx_viewport.TopLeftY = 0.0f;
-            dx_viewport.Width = float(g_buffer_width);
-            dx_viewport.Height = float(g_buffer_height);
-            dx_viewport.MinDepth = 0.0f;
-            dx_viewport.MaxDepth = 1.0f;
-            m_render_context->RSSetViewports(1, &dx_viewport);
-        }
-
-        // Opaque state setup.
-        m_render_context->OMSetBlendState(0, 0, 0xffffffff);
-        m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 0);
-
         SceneRoot scene = Cameras::get_scene_ID(camera_ID);
         { // Setup scene constants.
             // Recalculate the guard band scale to account for the buffer dimensions being discrete.
@@ -531,6 +524,20 @@ public:
                 }
             }
 
+            { // Set the full g-buffer viewport.
+                D3D11_VIEWPORT dx_viewport;
+                dx_viewport.TopLeftX = dx_viewport.TopLeftY = 0.0f;
+                dx_viewport.Width = float(g_buffer_width);
+                dx_viewport.Height = float(g_buffer_height);
+                dx_viewport.MinDepth = 0.0f;
+                dx_viewport.MaxDepth = 1.0f;
+                m_render_context->RSSetViewports(1, &dx_viewport);
+            }
+
+            // Opaque state setup.
+            m_render_context->OMSetBlendState(0, 0, 0xffffffff);
+            m_render_context->OMSetDepthStencilState(m_g_buffer.depth_state, 0);
+
             fill_g_buffer();
         }
 
@@ -584,6 +591,7 @@ public:
         m_render_context->OMSetRenderTargets(1, &m_backbuffer_RTV, m_g_buffer.depth_view);
         m_render_context->PSSetShaderResources(13, 1, &ssao_SRV);
         m_render_context->RSSetState(m_opaque.raster_state);
+        m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 0);
 
         { // Render lights.
             auto lights_marker = PerformanceMarker(*m_render_context, L"Lights");
