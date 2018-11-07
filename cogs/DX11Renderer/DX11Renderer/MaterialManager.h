@@ -19,32 +19,28 @@ namespace DX11Renderer {
 //----------------------------------------------------------------------------
 // Material manager.
 // Uploads and manages a buffer of material parameters.
-// Future work:
-// * Support a variable number of materials.
-// * Upload buffer with changed materials to the GPU and then scatter them
-//   to the constant buffer in a compute shader. Is that possible?
 //----------------------------------------------------------------------------
 class MaterialManager {
 public:
 
     MaterialManager() = default;
     MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& context);
-
+    MaterialManager(MaterialManager&& other) = default;
     MaterialManager& operator=(MaterialManager&& rhs) = default;
 
-    ID3D11ShaderResourceView** get_GGX_with_fresnel_rho_srv_addr() { return &m_GGX_with_fresnel_rho_srv; }
-    ID3D11ShaderResourceView** get_GGX_SPTD_fit_srv_addr() { return &m_GGX_SPTD_fit_srv; }
+    inline ID3D11ShaderResourceView** get_GGX_with_fresnel_rho_srv_addr() { return &m_GGX_with_fresnel_rho_srv; }
+    inline ID3D11ShaderResourceView** get_GGX_SPTD_fit_srv_addr() { return &m_GGX_SPTD_fit_srv; }
 
     inline Dx11Material& get_material(unsigned int material_index) { return m_materials[material_index]; }
     inline Dx11MaterialTextures& get_material_textures(unsigned int material_index) { return m_material_textures[material_index]; }
-    inline ID3D11Buffer** get_constant_buffer_addr() { return m_constant_array.get_buffer_addr(); }
-    inline void bind_material(ID3D11DeviceContext1& context, unsigned int slot, unsigned int material_index) { m_constant_array.PS_set(&context, slot, material_index); }
+    inline void bind_material(ID3D11DeviceContext1& context, unsigned int slot, unsigned int material_index) { 
+        context.PSSetConstantBuffers(slot, 1, &m_GPU_materials[material_index]);
+    }
 
     void handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& context);
 
 private:
     MaterialManager(MaterialManager& other) = delete;
-    MaterialManager(MaterialManager&& other) = delete;
     MaterialManager& operator=(MaterialManager& rhs) = delete;
 
     OShaderResourceView m_GGX_with_fresnel_rho_srv;
@@ -53,7 +49,7 @@ private:
     std::vector<Dx11Material> m_materials;
     std::vector<Dx11MaterialTextures> m_material_textures;
 
-    ConstantBufferArray<Dx11Material> m_constant_array;
+    std::vector<OBuffer> m_GPU_materials;
 };
 
 } // NS DX11Renderer

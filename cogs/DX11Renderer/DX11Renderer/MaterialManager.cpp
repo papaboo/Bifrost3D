@@ -71,43 +71,41 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
     #endif
 
     m_materials.resize(1);
-    m_material_textures.resize(1);
-    m_constant_array = ConstantBufferArray<Dx11Material>();
-
     m_materials[0] = make_dx11material(Materials::UID::invalid_UID());
+
+    m_material_textures.resize(1);
     m_material_textures[0] = make_dx11material_textures(Materials::UID::invalid_UID());
+
+    m_GPU_materials.resize(1);
+    auto invalid_dx_material = make_dx11material_textures(Materials::UID::invalid_UID());
+    create_constant_buffer(device, invalid_dx_material, &m_GPU_materials[0]);
 }
 
 void MaterialManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& context) {
+    if (Materials::get_changed_materials().is_empty())
+        return;
+
     // Resize buffers if needed.
     if (m_materials.size() < Materials::capacity()) {
-
-        // Fill the host side buffer.
         m_materials.resize(Materials::capacity());
         m_material_textures.resize(Materials::capacity());
-        for (Material mat : Materials::get_changed_materials())
-            // Just ignore deleted materials. They shouldn't be referenced anyway.
-            if (!mat.get_changes().is_set(Materials::Change::Destroyed)) {
-                unsigned int material_index = mat.get_ID();
-                m_materials[material_index] = make_dx11material(mat);
-                m_material_textures[material_index] = make_dx11material_textures(mat);
-            }
+        m_GPU_materials.resize(Materials::capacity());
+    } 
 
-        // Copy the elements to the constant buffer.
-        m_constant_array = ConstantBufferArray<Dx11Material>(device, m_materials.data(), Materials::capacity());
-    } else {
-        // Upload the changed materials.
-        for (Material mat : Materials::get_changed_materials()) {
-            // Just ignore deleted materials. They shouldn't be referenced anyway.
-            if (!mat.get_changes().is_set(Materials::Change::Destroyed)) {
-                unsigned int material_index = mat.get_ID();
+    // Upload the changed materials.
+    for (Material mat : Materials::get_changed_materials()) {
+        // Just ignore deleted materials. They shouldn't be referenced anyway.
+        if (!mat.get_changes().is_set(Materials::Change::Destroyed)) {
+            unsigned int material_index = mat.get_ID();
 
-                Dx11Material dx_mat = make_dx11material(mat);
-                m_materials[material_index] = dx_mat;
-                m_constant_array.set(&context, dx_mat, material_index);
+            Dx11Material dx_mat = make_dx11material(mat);
+            m_materials[material_index] = dx_mat;
+            m_material_textures[material_index] = make_dx11material_textures(mat);
 
-                m_material_textures[material_index] = make_dx11material_textures(mat);
-            }
+            if (m_GPU_materials[material_index] == nullptr)
+                create_constant_buffer(device, dx_mat, &m_GPU_materials[material_index], D3D11_USAGE_DEFAULT);
+            else
+                context.UpdateSubresource(m_GPU_materials[material_index], 0u, nullptr, &dx_mat, 0u, 0u);
         }
     }
 }
