@@ -22,13 +22,11 @@ namespace DX11Renderer {
 //-------------------------------------------------------------------------------------------------
 // Transform manager.
 // Uploads and manages a buffer of transforms.
+// Future work:
+// * Upload to a single buffer and use that buffer for GPU frustum culling.
+//   See NVIDIA's CAD/CAE pipeline presentations (Tavenrath)
 //-------------------------------------------------------------------------------------------------
 class TransformManager {
-private:
-
-    std::vector<Cogwheel::Math::Transform> m_transforms;
-    std::vector<OBuffer> m_GPU_transforms;
-    
 public:
 
     TransformManager() = default;
@@ -46,6 +44,9 @@ public:
 private:
     TransformManager(TransformManager& other) = delete;
     TransformManager& operator=(TransformManager& rhs) = delete;
+
+    std::vector<Cogwheel::Math::Transform> m_transforms;
+    std::vector<OBuffer> m_GPU_transforms;
 };
 
 } // NS DX11Renderer
