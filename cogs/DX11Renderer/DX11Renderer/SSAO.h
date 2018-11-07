@@ -33,7 +33,7 @@ public:
     inline SsaoFilter get_type() const { return m_type; }
     void set_support(ID3D11DeviceContext1& context, int support);
     inline int get_support() const { return get_support(m_type, m_support); }
-    inline static int get_support(SsaoFilter type, int expected_support) { return type == SsaoFilter::Box ? 5 : expected_support; }
+    inline static int get_support(SsaoFilter type, int expected_support) { return type == SsaoFilter::Box ? 9 : expected_support; }
 
     OShaderResourceView& apply(ID3D11DeviceContext1& context, ORenderTargetView& ao_RTV, OShaderResourceView& ao_SRV, OShaderResourceView& normal_SRV, OShaderResourceView& depth_SRV, int width, int height, int support);
 

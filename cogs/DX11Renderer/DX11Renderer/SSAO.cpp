@@ -46,7 +46,7 @@ BilateralBlur::BilateralBlur(ID3D11Device1& device, const std::wstring& shader_f
         create_constant_buffer(device, sizeof(FilterConstants), &m_constants[0]);
         create_constant_buffer(device, sizeof(FilterConstants), &m_constants[1]);
     } else {
-        m_support = 5;
+        m_support = 9;
         OBlob filter_blob = compile_shader(shader_folder_path + L"SSAO.hlsl", "ps_5_0", "BilateralBlur::box_filter_ps");
         THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(filter_blob), nullptr, &m_filter_shader));
         create_box_filter_constants(device, m_constants);
