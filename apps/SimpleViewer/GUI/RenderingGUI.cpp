@@ -15,6 +15,10 @@
 
 #include <StbImageWriter/StbImageWriter.h>
 
+#ifdef OPTIX_FOUND
+#include <OptiXRenderer/Renderer.h>
+#endif
+
 using namespace Cogwheel::Assets;
 using namespace Cogwheel::Math;
 using namespace Cogwheel::Scene;
@@ -48,8 +52,8 @@ struct RenderingGUI::State {
     } tonemapping;
 };
 
-RenderingGUI::RenderingGUI(DX11Renderer::Compositor* compositor, DX11Renderer::Renderer* renderer)
-    : m_compositor(compositor), m_renderer(renderer), m_state(new State()) {
+RenderingGUI::RenderingGUI(DX11Renderer::Compositor* compositor, DX11Renderer::Renderer* dx_renderer, OptiXRenderer::Renderer* optix_renderer)
+    : m_compositor(compositor), m_dx_renderer(dx_renderer), m_optix_renderer(optix_renderer), m_state(new State()) {
     strcpy_s(m_screenshot.path, m_screenshot.max_path_length, "c:\\temp\\ss.png");
 
     // Tonemapping parameters
@@ -215,12 +219,12 @@ void RenderingGUI::layout_frame() {
 
     ImGui::Separator();
 
-    if (m_renderer != nullptr) {
+    if (m_dx_renderer != nullptr) {
         ImGui::PoppedTreeNode("DirectX11", [&]() {
             using namespace DX11Renderer;
 
             { // Settings
-                auto settings = m_renderer->get_settings();
+                auto settings = m_dx_renderer->get_settings();
                 bool has_changed = false;
 
                 has_changed |= ImGui::SliderFloat("G-buffer band scale", &settings.g_buffer_guard_band_scale, 0.0f, 0.99f, "%.2f");
@@ -249,12 +253,12 @@ void RenderingGUI::layout_frame() {
                 });
 
                 if (has_changed)
-                    m_renderer->set_settings(settings);
+                    m_dx_renderer->set_settings(settings);
             }
 
             // Debug settings
             ImGui::PoppedTreeNode("Debug", [&]() {
-                auto settings = m_renderer->get_debug_settings();
+                auto settings = m_dx_renderer->get_debug_settings();
                 bool has_changed = false;
 
                 const char* display_modes[] = { "Color", "Normals", "Depth", "Scene size", "Ambient occlusion" };
@@ -263,10 +267,29 @@ void RenderingGUI::layout_frame() {
                 settings.display_mode = (Renderer::DebugSettings::DisplayMode)current_display_mode;
 
                 if (has_changed)
-                    m_renderer->set_debug_settings(settings);
+                    m_dx_renderer->set_debug_settings(settings);
             });
         });
     }
+
+#ifdef OPTIX_FOUND
+    ImGui::Separator();
+
+    if (m_optix_renderer != nullptr) {
+        ImGui::PoppedTreeNode("OptiX", [&]() {
+            float epsilon = m_optix_renderer->get_scene_epsilon(*SceneRoots::get_iterable().begin());
+            if (ImGui::InputFloat("Epsilon", &epsilon))
+                m_optix_renderer->set_scene_epsilon(*SceneRoots::get_iterable().begin(), epsilon);
+
+            const char* backend_modes[] = { "Path tracer", "Albedo", "Normal" };
+            int current_backend = int(m_optix_renderer->get_backend(*Cameras::get_iterable().begin())) - 1;
+            if (ImGui::Combo("Backend", &current_backend, backend_modes, IM_ARRAYSIZE(backend_modes))) {
+                auto backend = OptiXRenderer::Backend(current_backend + 1);
+                m_optix_renderer->set_backend(*Cameras::get_iterable().begin(), backend);
+            }
+        });
+    }
+#endif
 
     ImGui::End();
 }

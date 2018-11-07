@@ -589,8 +589,11 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
 
     { // Setup GUI
         auto* imgui = new ImGui::ImGuiAdaptor();
+#ifdef OPTIX_FOUND
+        imgui->add_frame(std::make_unique<GUI::RenderingGUI>(compositor, dx11_renderer, optix_renderer));
+#else
         imgui->add_frame(std::make_unique<GUI::RenderingGUI>(compositor, dx11_renderer));
-
+#endif
         engine.add_mutating_callback([=, &engine] {
             auto* keyboard = engine.get_keyboard();
             auto* imgui_adaptor = static_cast<ImGui::ImGuiAdaptor*>(imgui);

@@ -18,19 +18,23 @@ namespace DX11Renderer {
 class Compositor;
 class Renderer;
 }
+namespace OptiXRenderer {
+class Renderer;
+}
 
 namespace GUI {
 
 class RenderingGUI : public ImGui::IImGuiFrame {
 public:
-    RenderingGUI(DX11Renderer::Compositor* compositor, DX11Renderer::Renderer* renderer);
+    RenderingGUI(DX11Renderer::Compositor* compositor, DX11Renderer::Renderer* dx_renderer, OptiXRenderer::Renderer* optix_renderer = nullptr);
     ~RenderingGUI();
 
     void layout_frame();
 
 private:
     DX11Renderer::Compositor* m_compositor;
-    DX11Renderer::Renderer* m_renderer;
+    DX11Renderer::Renderer* m_dx_renderer;
+    OptiXRenderer::Renderer* m_optix_renderer;
 
     struct {
         static const unsigned int max_path_length = 1024u;
