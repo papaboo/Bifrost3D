@@ -57,6 +57,7 @@ static RGB g_environment_color = RGB(0.68f, 0.92f, 1.0f);
 static float g_scene_size;
 static DX11Renderer::Compositor* compositor = nullptr;
 static DX11Renderer::Renderer* dx11_renderer = nullptr;
+static ImGui::ImGuiAdaptor* imgui = nullptr;
 
 #ifdef OPTIX_FOUND
 bool optix_enabled = true;
@@ -467,7 +468,7 @@ int initialize_scene(Engine& engine) {
     else if (g_scene.compare("OpacityScene") == 0)
         Scenes::create_opacity_scene(engine, cam_ID, root_node_ID);
     else if (g_scene.compare("SphereScene") == 0)
-        Scenes::create_sphere_scene(engine, cam_ID, scene_ID);
+        Scenes::create_sphere_scene(engine, cam_ID, scene_ID, imgui);
     else if (g_scene.compare("SphereLightScene") == 0)
         Scenes::SphereLightScene::create(engine, cam_ID, scene_ID);
     else if (g_scene.compare("TestScene") == 0)
@@ -588,7 +589,7 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
 #endif
 
     { // Setup GUI
-        auto* imgui = new ImGui::ImGuiAdaptor();
+        imgui = new ImGui::ImGuiAdaptor();
 #ifdef OPTIX_FOUND
         imgui->add_frame(std::make_unique<GUI::RenderingGUI>(compositor, dx11_renderer, optix_renderer));
 #else

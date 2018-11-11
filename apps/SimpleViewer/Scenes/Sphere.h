@@ -18,11 +18,13 @@
 #include <Cogwheel/Scene/SceneNode.h>
 #include <Cogwheel/Scene/SceneRoot.h>
 
+#include <ImGui/ImGuiAdaptor.h>
+
 using namespace Cogwheel;
 
 namespace Scenes {
 
-void create_sphere_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoots::UID scene_ID) {
+void create_sphere_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoots::UID scene_ID, ImGui::ImGuiAdaptor* imgui) {
     using namespace Cogwheel::Assets;
     using namespace Cogwheel::Math;
     using namespace Cogwheel::Scene;
@@ -99,6 +101,40 @@ void create_sphere_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sc
         // TODO Destroy on shutdown.
     }
 
+    { // Setup GUI.
+
+        class MaterialGUI final : public ImGui::IImGuiFrame {
+        public:
+            MaterialGUI(Material material) : m_material(material) { }
+
+            void layout_frame() {
+                ImGui::Begin("Material");
+
+                RGB tint = m_material.get_tint();
+                if (ImGui::ColorEdit3("Tint", &tint.r))
+                    m_material.set_tint(tint);
+
+                float roughness = m_material.get_roughness();
+                if (ImGui::SliderFloat("Roughness", &roughness, 0, 1))
+                    m_material.set_roughness(roughness);
+
+                float metallic = m_material.get_metallic();
+                if (ImGui::SliderFloat("Metallic", &metallic, 0, 1))
+                    m_material.set_metallic(metallic);
+
+                float specularity = m_material.get_specularity();
+                if (ImGui::SliderFloat("Specularity", &specularity, 0, 1))
+                    m_material.set_specularity(specularity);
+
+                ImGui::End();
+            }
+
+        private:
+            Material m_material;
+        };
+
+        imgui->add_frame(std::make_unique<MaterialGUI>(*Materials::get_iterable().begin()));
+    }
 }
 
 } // NS Scenes
