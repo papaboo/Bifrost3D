@@ -591,8 +591,10 @@ struct Renderer::Implementation {
                     // Update new and changed materials. Just ignore destroyed ones.
                     OptiXRenderer::Material* device_materials = (OptiXRenderer::Material*)material_parameters->map();
                     for (Materials::UID material_ID : Materials::get_changed_materials())
-                        if (!Materials::get_changes(material_ID).is_set(Materials::Change::Destroyed))
+                        if (!Materials::get_changes(material_ID).is_set(Materials::Change::Destroyed)) {
                             upload_material(material_ID, device_materials, textures.data());
+                            should_reset_allocations = true;
+                        }
                     material_parameters->unmap();
                 }
             }
