@@ -68,6 +68,16 @@ inline bool InputUint(const char* label, unsigned int* v, unsigned int step = 1u
     return InputScalar(label, ImGuiDataType_U32, (void*)v, (void*)(step > 0 ? &step : NULL), (void*)(step_fast > 0 ? &step_fast : NULL), format, extra_flags);
 }
 
+struct PlotData {
+    std::function<float(int)> function;
+    int value_count;
+    ImU32 color; // = IM_COL32(255, 255, 255, 255);
+    const char* label;
+};
+
+void PlotLines(const char* label, PlotData* plots, int plot_count, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size);
+void PlotHistograms(const char* label, PlotData* plots, int plot_count, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size);
+
 inline void PoppedTreeNode(const char* label, std::function<void()> body) {
     if (ImGui::TreeNode(label)) {
         body();
