@@ -90,7 +90,7 @@ using ODXGIFactory2 = DX11Renderer::OwnedResourcePtr<IDXGIFactory2>;
 #define CONSTANT_BUFFER_ALIGNMENT 256
 
 struct half2 {
-    half x, y;
+    half_float::half x, y;
 };
 
 struct int2 {
@@ -122,10 +122,10 @@ enum class SsaoFilter { Cross, Box };
 struct SsaoSettings {
     float world_radius = 0.5f;
     float bias = 0.03f;
-    float intensity_scale = 0.25f;
+    float intensity_scale = 0.125f;
     float falloff = 2.0f;
     unsigned int sample_count = 8u;
-    float depth_filtering_percentage = 0.5f;
+    float depth_filtering_percentage = 0.25f;
     SsaoFilter filter_type = SsaoFilter::Box;
     int filter_support = 8;
     float normal_std_dev = 0.1f;
