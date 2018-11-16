@@ -131,7 +131,6 @@ inline void PlotMultiEx(ImGuiPlotType plot_type, const char* label, PlotData* pl
     ItemSize(total_bb, style.FramePadding.y);
     if (!ItemAdd(total_bb, 0, &frame_bb))
         return;
-    const bool hovered = ItemHoverable(inner_bb, 0);
 
     // Determine scale from values if not specified
     if (scale_min == FLT_MAX || scale_max == FLT_MAX) {
@@ -154,9 +153,13 @@ inline void PlotMultiEx(ImGuiPlotType plot_type, const char* label, PlotData* pl
     RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
 
     if (plots->value_count > 0) {
+        float t_hovered = -1.0f;
+
         // Tooltip on hover
-        float t_hovered = (g.IO.MousePos.x - inner_bb.Min.x) / (inner_bb.Max.x - inner_bb.Min.x);
+        const bool hovered = ItemHoverable(inner_bb, 0);
         if (hovered) {
+            t_hovered = (g.IO.MousePos.x - inner_bb.Min.x) / (inner_bb.Max.x - inner_bb.Min.x);
+
             std::ostringstream tooltip;
             for (int plot_index = 0; plot_index < plot_count; ++plot_index) {
                 auto& plot = plots[plot_index];
