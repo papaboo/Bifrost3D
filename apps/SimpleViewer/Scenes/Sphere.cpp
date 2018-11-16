@@ -36,10 +36,14 @@ public:
     MaterialGUI(Material material) : m_material(material) {
         std::fill_n(m_ggx.sampled_rho, m_ggx.sample_count, 0.0f);
         m_ggx.accumulation_count = 0;
+
+        std::fill_n(m_ggx_with_fresnel.sampled_rho, m_ggx_with_fresnel.sample_count, 0.0f);
+        m_ggx_with_fresnel.accumulation_count = 0;
     }
 
     void layout_frame() {
-        bool reset_ggx_sampling = false;
+        bool roughness_changed = false;
+        bool specularity_changed = false;
 
         ImGui::Begin("Material");
 
@@ -50,7 +54,7 @@ public:
         float roughness = m_material.get_roughness();
         if (ImGui::SliderFloat("Roughness", &roughness, 0, 1)) {
             m_material.set_roughness(roughness);
-            reset_ggx_sampling = true;
+            roughness_changed = true;
         }
 
         float metallic = m_material.get_metallic();
@@ -58,16 +62,18 @@ public:
             m_material.set_metallic(metallic);
 
         float specularity = m_material.get_specularity();
-        if (ImGui::SliderFloat("Specularity", &specularity, 0, 1))
+        if (ImGui::SliderFloat("Specularity", &specularity, 0, 1)) {
             m_material.set_specularity(specularity);
-
-
-        if (reset_ggx_sampling) {
-            std::fill_n(m_ggx.sampled_rho, m_ggx.sample_count, 0.0f);
-            m_ggx.accumulation_count = 0;
+            specularity_changed = true;
         }
 
+
         ImGui::PoppedTreeNode("GGX", [&] {
+            if (roughness_changed) {
+                std::fill_n(m_ggx.sampled_rho, m_ggx.sample_count, 0.0f);
+                m_ggx.accumulation_count = 0;
+            }
+
             float ggx_rho[GGX::sample_count];
             for (int i = 0; i < GGX::sample_count; ++i) {
                 float cos_theta = (i + 0.5f) / GGX::sample_count;
@@ -91,6 +97,43 @@ public:
             ImGui::Text("%u samples", m_ggx.accumulation_count);
         });
 
+        ImGui::PoppedTreeNode("GGX with Fresnel", [&] {
+            if (roughness_changed || specularity_changed) {
+                std::fill_n(m_ggx_with_fresnel.sampled_rho, m_ggx_with_fresnel.sample_count, 0.0f);
+                m_ggx_with_fresnel.accumulation_count = 0;
+            }
+
+            float ggx_rho[GGX::sample_count];
+            for (int i = 0; i < GGX::sample_count; ++i) {
+                float cos_theta = (i + 0.5f) / GGX::sample_count;
+                float ggx_no_fresnel_rho = Shading::Rho::sample_GGX(cos_theta, m_material.get_roughness());
+                float ggx_full_fresnel_rho = Shading::Rho::sample_GGX_with_fresnel(cos_theta, m_material.get_roughness());
+                float specularity_adjusted_ggx_rho = optix::lerp(ggx_full_fresnel_rho, ggx_no_fresnel_rho, specularity);
+                ggx_rho[i] = specularity_adjusted_ggx_rho;
+
+                float ggx_alpha = m_material.get_roughness() * m_material.get_roughness();
+
+                optix::float3 wo = { sqrtf(1.0f - cos_theta * cos_theta), 0.0f, cos_theta };
+                Vector2f uv = RNG::sample02(m_ggx_with_fresnel.accumulation_count, { 0,0 });
+                auto ggx_sample = OptiXRenderer::Shading::BSDFs::GGX::sample({ 1,1,1 }, ggx_alpha, wo, { uv.x, uv.y });
+                float new_sample_weight = 0.0f;
+                if (OptiXRenderer::is_PDF_valid(ggx_sample.PDF)) {
+                    new_sample_weight = ggx_sample.weight.x * ggx_sample.direction.z / ggx_sample.PDF; // f * ||cos_theta|| / pdf
+                    auto half_vector = normalize(wo + ggx_sample.direction);
+                    new_sample_weight *= OptiXRenderer::schlick_fresnel(m_material.get_specularity(), dot(wo, half_vector));
+                }
+                m_ggx_with_fresnel.sampled_rho[i] = (m_ggx_with_fresnel.accumulation_count * m_ggx_with_fresnel.sampled_rho[i] + new_sample_weight) / (m_ggx_with_fresnel.accumulation_count + 1);
+            }
+            ++m_ggx_with_fresnel.accumulation_count;
+
+            ImGui::PlotData ggx_plot = { [&](int i) -> float { return ggx_rho[i]; } , GGX::sample_count, IM_COL32(0, 255, 0, 255), "Precomputed GGX * Fresnel" };
+            ImGui::PlotData sampled_ggx_plot = { [&](int i) -> float { return m_ggx_with_fresnel.sampled_rho[i]; } , GGX::sample_count, IM_COL32(0, 0, 255, 255), "Sampled GGX * Fresnel" };
+            ImGui::PlotData plots[2] = { ggx_plot, sampled_ggx_plot };
+            ImGui::PlotLines("", plots, 2, "", 0.0f, 1.0f, ImVec2(0, 80));
+
+            ImGui::Text("%u samples", m_ggx_with_fresnel.accumulation_count);
+        });
+
         ImGui::End();
     }
 
@@ -102,6 +145,12 @@ private:
         float sampled_rho[sample_count];
         int accumulation_count;
     } m_ggx;
+
+    struct GGXWithFresnel {
+        static const int sample_count = 64;
+        float sampled_rho[sample_count];
+        int accumulation_count;
+    } m_ggx_with_fresnel;
 };
 
 void create_sphere_scene(Engine& engine, Cameras::UID camera_ID, SceneRoots::UID scene_ID, ImGui::ImGuiAdaptor* imgui) {
