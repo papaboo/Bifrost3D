@@ -30,12 +30,11 @@ namespace ShadingModels {
 // Default shading consist of a diffuse base with a specular layer on top.
 // The diffuse tint is weighted by contribution, or rho, of the specular term.
 // Future work:
-// * Perfectly specular metals' diffuse tint should be 0.
 // * Reintroduce the Helmholtz reciprocity.
-//   Basically the diffuse tint should depend on rho from both wo.z and wi.z.
+//   Basically the diffuse tint should depend on rho from both wo.z and wi.z. Perhaps average specular rho before mutiplying onto diffuse tint.
 // * All materials are white at grazing angles, even metals.
 //   http://bitsquid.blogspot.dk/2017/07/validating-materials-and-lights-in.html
-//   This will make it harder to precompute rho for metals.
+//   Tweak specular tint based on abs(dot(wo, halfway))
 // ---------------------------------------------------------------------------
 class DefaultShading {
 private:
@@ -201,8 +200,6 @@ public:
 
         if (sample_specular)
             bsdf_sample.weight *= fresnel;
-        else
-            bsdf_sample.weight *= (1.0f - fresnel);
 
         return bsdf_sample;
     }
@@ -242,11 +239,9 @@ public:
 
             // Evaluate diffuse layer as well.
             BSDFResponse diffuse_response = BSDFs::Lambert::evaluate_with_PDF(diffuse_tint, wo, bsdf_sample.direction);
-            bsdf_sample.weight += (1.0f - fresnel) * diffuse_response.weight;
+            bsdf_sample.weight += diffuse_response.weight;
             bsdf_sample.PDF += (1.0f - specular_probability) * diffuse_response.PDF;
         } else {
-            bsdf_sample.weight *= (1.0f - fresnel);
-
             // Evaluate specular layer as well.
             BSDFResponse glossy_response = GGXUsed::evaluate_with_PDF(specular_tint, ggx_alpha, wo, bsdf_sample.direction, halfway);
             bsdf_sample.weight += fresnel * glossy_response.weight;
