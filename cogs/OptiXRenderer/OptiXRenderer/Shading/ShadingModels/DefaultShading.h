@@ -14,7 +14,7 @@
 #include <OptiXRenderer/Utils.h>
 
 #if GPU_DEVICE
-rtTextureSampler<float, 2> ggx_with_fresnel_rho_texture;
+rtTextureSampler<float2, 2> ggx_with_fresnel_rho_texture;
 #else
 #include <Cogwheel/Assets/Shading/Fittings.h>
 #endif
@@ -50,12 +50,13 @@ private:
 
     __inline_all__ static float compute_specular_rho(float specularity, float abs_cos_theta, float roughness) {
 #if GPU_DEVICE
-        float base_specular_rho = tex2D(ggx_with_fresnel_rho_texture, abs_cos_theta, roughness);
+        float2 specular_rho = tex2D(ggx_with_fresnel_rho_texture, abs_cos_theta, roughness);
+        return optix::lerp(specular_rho.x, specular_rho.y, specularity);
 #else
         float base_specular_rho = Cogwheel::Assets::Shading::Rho::sample_GGX_with_fresnel(abs_cos_theta, roughness);
-#endif
-        float full_specular_rho = 1.0f; // TODO This is wrong. GGX doesn't have a rho of one. Try to use the actual GGX rho instead.
+        float full_specular_rho = Cogwheel::Assets::Shading::Rho::sample_GGX(abs_cos_theta, roughness);
         return optix::lerp(base_specular_rho, full_specular_rho, specularity);
+#endif
     }
 
     // Compute BSDF sampling probabilities based on their tinted weight.
