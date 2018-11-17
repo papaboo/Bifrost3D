@@ -44,11 +44,13 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         const unsigned int width = Rho::GGX_with_fresnel_angle_sample_count;
         const unsigned int height = Rho::GGX_with_fresnel_roughness_sample_count;
 
-        unsigned short* rho = new unsigned short[width * height];
-        for (unsigned int i = 0; i < width * height; ++i)
-            rho[i] = unsigned short(Rho::GGX_with_fresnel[i] * 65535);
+        unsigned short* rho = new unsigned short[2 * width * height];
+        for (unsigned int i = 0; i < width * height; ++i) {
+            rho[2 * i] = unsigned short(Rho::GGX_with_fresnel[i] * 65535 + 0.5f); // No specularity
+            rho[2 * i + 1] = unsigned short(Rho::GGX[i] * 65535 + 0.5f); // Full specularity
+        }
 
-        create_texture_2D(device, DXGI_FORMAT_R16_UNORM, rho, width, height, D3D11_USAGE_IMMUTABLE, &m_GGX_with_fresnel_rho_srv);
+        create_texture_2D(device, DXGI_FORMAT_R16G16_UNORM, rho, width, height, D3D11_USAGE_IMMUTABLE, &m_GGX_with_fresnel_rho_srv);
 
         delete[] rho;
     }
