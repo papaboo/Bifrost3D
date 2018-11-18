@@ -82,7 +82,7 @@ GTEST_TEST(GGX, consistent_PDF) {
             BSDFSample sample = Shading::BSDFs::GGX::sample(tint, alpha, wo, RNG::sample02(i));
             if (is_PDF_valid(sample.PDF)) {
                 float3 wi = sample.direction;
-                float PDF = Shading::BSDFs::GGX::PDF(alpha, wo, wi, normalize(wo + wi));
+                float PDF = Shading::BSDFs::GGX::PDF(alpha, wo, normalize(wo + wi));
                 EXPECT_FLOAT_EQ_EPS(sample.PDF, PDF, 0.0001f);
             }
         }
@@ -106,7 +106,7 @@ GTEST_TEST(GGX, evaluate_with_PDF) {
                 float3 halfway = normalize(wo + wi);
                 BSDFResponse response = Shading::BSDFs::GGX::evaluate_with_PDF(tint, alpha, wo, wi, halfway);
                 EXPECT_COLOR_EQ_EPS(Shading::BSDFs::GGX::evaluate(tint, alpha, wo, wi, halfway), response.weight, make_float3(0.000000001f));
-                EXPECT_FLOAT_EQ(Shading::BSDFs::GGX::PDF(alpha, wo, wi, halfway), response.PDF);
+                EXPECT_FLOAT_EQ(Shading::BSDFs::GGX::PDF(alpha, wo, halfway), response.PDF);
             }
         }
     }
@@ -133,44 +133,6 @@ GTEST_TEST(GGX, minimal_alpha) {
     const float3 grazing_wi = make_float3(grazing_w.x, -grazing_w.y, grazing_w.z);
     f = Shading::BSDFs::GGX::evaluate(tint, 0.00000000001f, grazing_w, grazing_wi, normalize(grazing_w + grazing_wi));
     EXPECT_FALSE(isnan(f.x));
-}
-
-GTEST_TEST(GGX, sampling_variance) {
-    using namespace Shading::BSDFs;
-    using namespace optix;
-
-    // Test that sampling GGX with the visible normal distribution has lower variance than Walter's sampling.
-
-    const int MAX_SAMPLES = 8196;
-    const float3 wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
-
-    const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
-    const float ggx_alpha = 0.1f;
-
-    for (float ggx_alpha = 0.1f; ggx_alpha < 1.0f; ggx_alpha += 0.2f) {
-        // Original GGX sample strategy.
-        auto original_GGX = Cogwheel::Math::Statistics<double>(0, MAX_SAMPLES, [&](int i) -> float {
-            BSDFSample sample = GGX::sample(tint, ggx_alpha, wo, RNG::sample02(i));
-            if (is_PDF_valid(sample.PDF))
-                return sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
-            else
-                return 0.0f;
-        });
-
-        // Heitz et al GGX sampling strategy.
-        auto GGX_with_VNDF = Cogwheel::Math::Statistics<double>(0, MAX_SAMPLES, [&](int i) -> float {
-            BSDFSample sample = GGXWithVNDF::sample(tint, ggx_alpha, wo, RNG::sample02(i));
-            if (is_PDF_valid(sample.PDF)) {
-                float w = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
-                EXPECT_LT(w, 1.0f);
-                return w;
-            } else
-                return 0.0f;
-        });
-
-        EXPECT_TRUE(almost_equal_eps(float(original_GGX.mean), float(GGX_with_VNDF.mean), 0.001f));
-        EXPECT_LT(GGX_with_VNDF.variance(), original_GGX.variance());
-    }
 }
 
 } // NS OptiXRenderer

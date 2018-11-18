@@ -37,17 +37,6 @@ __inline_all__ float roughness_from_alpha(float alpha) {
 }
 
 // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14.
-// Separable smith geometric term. Equation 98. 
-__inline_all__ float separable_smith_G(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
-#if _DEBUG
-    float heavisided = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway));
-    if (heavisided != 1.0f)
-        THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
-#endif
-    return 1.0f / ((1.0f + Distributions::VNDF_GGX::lambda(alpha, wo.z) * (1.0f + Distributions::VNDF_GGX::lambda(alpha, wi.z))));
-}
-
-// Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14.
 // Height correlated smith geometric term. Equation 99. 
 __inline_all__ float height_correlated_smith_G(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
 #if _DEBUG
@@ -81,72 +70,6 @@ __inline_all__ float3 evaluate(const float3& tint, float alpha, const float3& wo
     return tint * evaluate(alpha, wo, wi, halfway);
 }
 
-__inline_all__ float PDF(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
-#if _DEBUG
-    if (dot(wo, halfway) < 0.0f || halfway.z < 0.0f)
-        THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
-#endif
-
-    return Distributions::GGX::PDF(alpha, halfway.z) / (4.0f * dot(wo, halfway));
-}
-
-__inline_all__ BSDFResponse evaluate_with_PDF(const float3& tint, float alpha, const float3& wo, const float3& wi, const float3& halfway) {
-    float G = height_correlated_smith_G(alpha, wo, wi, halfway);
-    float D = Distributions::GGX::D(alpha, halfway.z);
-    float F = 1.0f; // No fresnel.
-    float f = (D * F * G) / (4.0f * wo.z * wi.z);
-    BSDFResponse res;
-    res.weight = tint * f;
-    res.PDF = (D * halfway.z) / (4.0f * dot(wo, halfway));
-    return res;
-}
-
-__inline_all__ float3 approx_off_specular_peak(float alpha, const float3& wo) {
-    float3 reflection = make_float3(-wo.x, -wo.y, wo.z);
-    // reflection = lerp(make_float3(0, 0, 1), reflection, (1 - alpha) * (sqrt(1 - alpha) + alpha)); // UE4 implementation
-    reflection = lerp(reflection, make_float3(0, 0, 1), alpha);
-    return normalize(reflection);
-}
-
-__inline_all__ BSDFSample sample(const float3& tint, float alpha, const float3& wo, float2 random_sample) {
-
-    BSDFSample bsdf_sample;
-
-    Distributions::DirectionalSample halfway_sample = Distributions::GGX::sample(alpha, random_sample);
-    bsdf_sample.direction = reflect(-wo, halfway_sample.direction);
-    bool discardSample = halfway_sample.PDF < 0.00001f || bsdf_sample.direction.z < 0.00001f; // Discard samples if the pdf is too low (precision issues) or if the new direction points into the surface (energy loss).
-    if (discardSample) return BSDFSample::none();
-
-    bsdf_sample.PDF = halfway_sample.PDF / (4.0f * dot(wo, halfway_sample.direction));
-
-    { // Evaluate using the already computed sample PDF, which is D * cos_theta.
-        const float3& wi = bsdf_sample.direction; // alias for readability.
-        float G = height_correlated_smith_G(alpha, wo, wi, halfway_sample.direction);
-        float D = halfway_sample.PDF / halfway_sample.direction.z;
-        float F = 1.0f;
-        bsdf_sample.weight = tint * ((D * F * G) / (4.0f * wo.z * wi.z));
-    }
-    return bsdf_sample;
-}
-
-} // NS GGX
-
-namespace GGXWithVNDF {
-
-using namespace optix;
-
-__inline_all__ float alpha_from_roughness(float roughness) {
-    return GGX::alpha_from_roughness(roughness);
-}
-
-__inline_all__ float evaluate(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
-    return GGX::evaluate(alpha, wo, wi, halfway);
-}
-
-__inline_all__ float3 evaluate(const float3& tint, float alpha, const float3& wo, const float3& wi, const float3& halfway) {
-    return tint * evaluate(alpha, wo, wi, halfway);
-}
-
 __inline_all__ float PDF(float alpha, const float3& wo, const float3& halfway) {
 #if _DEBUG
     if (dot(wo, halfway) < 0.0f || halfway.z < 0.0f)
@@ -174,6 +97,13 @@ __inline_all__ BSDFResponse evaluate_with_PDF(const float3& tint, float alpha, c
     return res;
 }
 
+__inline_all__ float3 approx_off_specular_peak(float alpha, const float3& wo) {
+    float3 reflection = make_float3(-wo.x, -wo.y, wo.z);
+    // reflection = lerp(make_float3(0, 0, 1), reflection, (1 - alpha) * (sqrt(1 - alpha) + alpha)); // UE4 implementation
+    reflection = lerp(reflection, make_float3(0, 0, 1), alpha);
+    return normalize(reflection);
+}
+
 __inline_all__ BSDFSample sample(const float3& tint, float alpha, const float3& wo, float2 random_sample) {
     BSDFSample bsdf_sample;
 
@@ -188,7 +118,7 @@ __inline_all__ BSDFSample sample(const float3& tint, float alpha, const float3& 
     return discardSample ? BSDFSample::none() : bsdf_sample;
 }
 
-} // NS GGXWithVNDF
+} // NS GGX
 
 } // NS BSDFs
 } // NS Shading

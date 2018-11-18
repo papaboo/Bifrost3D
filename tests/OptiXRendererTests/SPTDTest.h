@@ -91,7 +91,7 @@ float compute_ggx_fitting_error(const SPTD::Pivot& pivot, const optix::float3& w
             auto error_from_wi = [&](float3 wi) -> double {
                 float3 halfway = normalize(wo + wi);
                 float eval_brdf = GGX::evaluate(alpha, wo, wi, halfway);
-                float pdf_brdf = GGX::PDF(alpha, wo, wi, halfway);
+                float pdf_brdf = GGX::PDF(alpha, wo, halfway);
                 float eval_pivot = pivot.eval(wi);
                 float pdf_pivot = eval_pivot / pivot.amplitude;
                 double error = eval_brdf - eval_pivot;
