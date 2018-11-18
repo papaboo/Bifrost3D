@@ -38,8 +38,9 @@ __inline_all__ float roughness_from_alpha(float alpha) {
 
 // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14.
 // Height correlated smith geometric term. Equation 99. 
-__inline_all__ float height_correlated_smith_G(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
+__inline_all__ float height_correlated_smith_G(float alpha, const float3& wo, const float3& wi) {
 #if _DEBUG
+    float3 halfway = normalize(wo + wi);
     float heavisided = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway));
     if (heavisided != 1.0f)
         THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
@@ -59,15 +60,16 @@ __inline_all__ float height_correlated_smith_G(float alpha, const float3& wo, co
 // GGX BRDF, Walter et al 07.
 //----------------------------------------------------------------------------
 
-__inline_all__ float evaluate(float alpha, const float3& wo, const float3& wi, const float3& halfway) {
-    float G = height_correlated_smith_G(alpha, wo, wi, halfway);
+__inline_all__ float evaluate(float alpha, float specularity, const float3& wo, const float3& wi) {
+    float3 halfway = normalize(wo + wi);
+    float G = height_correlated_smith_G(alpha, wo, wi);
     float D = Distributions::GGX::D(alpha, halfway.z);
-    float F = 1.0f; // No fresnel.
+    float F = schlick_fresnel(specularity, dot(wo, halfway));
     return (D * F * G) / (4.0f * wo.z * wi.z);
 }
 
-__inline_all__ float3 evaluate(const float3& tint, float alpha, const float3& wo, const float3& wi, const float3& halfway) {
-    return tint * evaluate(alpha, wo, wi, halfway);
+__inline_all__ float3 evaluate(const float3& tint, float alpha, float specularity, const float3& wo, const float3& wi) {
+    return tint * evaluate(alpha, specularity, wo, wi);
 }
 
 __inline_all__ float PDF(float alpha, const float3& wo, const float3& halfway) {
@@ -79,22 +81,27 @@ __inline_all__ float PDF(float alpha, const float3& wo, const float3& halfway) {
     return Distributions::VNDF_GGX::PDF(alpha, wo, halfway) / (4.0f * dot(wo, halfway));
 }
 
-__inline_all__ BSDFResponse evaluate_with_PDF(const float3& tint, float alpha, const float3& wo, const float3& wi, const float3& halfway) {
+__inline_all__ BSDFResponse evaluate_with_PDF(const float3& tint, float alpha, float specularity, const float3& wo, const float3& wi, float3 halfway) {
     float lambda_wo = Distributions::VNDF_GGX::lambda(alpha, wo.z);
     float lambda_wi = Distributions::VNDF_GGX::lambda(alpha, wi.z);
 
-    float G1 = 1.0f / (1.0f + lambda_wo);
-    float G2 = 1.0f / (1.0f + lambda_wo + lambda_wi); // height_correlated_smith_G
-
     float D_over_4 = Distributions::GGX::D(alpha, halfway.z) / 4.0f;
 
-    float F = 1.0f; // No fresnel.
-    float f = (D_over_4 * F * G2) / (wo.z * wi.z);
+    float F = schlick_fresnel(specularity, dot(wo, halfway));
+
+    float recip_G2 = 1.0f + lambda_wo + lambda_wi; // reciprocal height_correlated_smith_G
+    float f = (D_over_4 * F) / (recip_G2 * wo.z * wi.z);
 
     BSDFResponse res;
     res.weight = tint * f;
-    res.PDF = G1 * D_over_4 / wo.z;
+    float recip_G1 = 1.0f + lambda_wo;
+    res.PDF = D_over_4 / (recip_G1 * wo.z);
     return res;
+}
+
+__inline_all__ BSDFResponse evaluate_with_PDF(const float3& tint, float alpha, float specularity, const float3& wo, const float3& wi) {
+    float3 halfway = normalize(wo + wi);
+    return evaluate_with_PDF(tint, alpha, specularity, wo, wi, halfway);
 }
 
 __inline_all__ float3 approx_off_specular_peak(float alpha, const float3& wo) {
@@ -104,13 +111,13 @@ __inline_all__ float3 approx_off_specular_peak(float alpha, const float3& wo) {
     return normalize(reflection);
 }
 
-__inline_all__ BSDFSample sample(const float3& tint, float alpha, const float3& wo, float2 random_sample) {
+__inline_all__ BSDFSample sample(const float3& tint, float alpha, float specularity, const float3& wo, float2 random_sample) {
     BSDFSample bsdf_sample;
 
     float3 halfway = Distributions::VNDF_GGX::sample_halfway(alpha, wo, random_sample);
     bsdf_sample.direction = reflect(-wo, halfway);
 
-    BSDFResponse response = evaluate_with_PDF(tint, alpha, wo, bsdf_sample.direction, halfway);
+    BSDFResponse response = evaluate_with_PDF(tint, alpha, specularity, wo, bsdf_sample.direction, halfway);
     bsdf_sample.PDF = response.PDF;
     bsdf_sample.weight = response.weight;
 

@@ -55,13 +55,13 @@ public:
             return BSDFResponse::none();
 
         float3 halfway = normalize(wo + wi);
-        auto f = Shading::BSDFs::GGX::evaluate_with_PDF(make_float3(1,1,1), alpha, wo, wi, halfway);
+        auto f = Shading::BSDFs::GGX::evaluate_with_PDF(make_float3(1,1,1), alpha, 1, wo, wi, halfway);
         f.weight *= wi.z; // eval scaled by cos theta
         return f;
     }
 
     BSDFSample sample(const float3& wo, float alpha, float U1, float U2) const {
-        auto brdf_sample = Shading::BSDFs::GGX::sample(make_float3(1.0f, 1.0f, 1.0f), alpha, wo, make_float2(U1, U2));
+        auto brdf_sample = Shading::BSDFs::GGX::sample(make_float3(1.0f, 1.0f, 1.0f), alpha, 1, wo, make_float2(U1, U2));
         brdf_sample.weight *= brdf_sample.direction.z; // eval scaled by cos theta
         return brdf_sample;
     }
@@ -74,10 +74,10 @@ public:
         if (wo.z <= 0)
             return BSDFResponse::none();
 
-        const float3 H = normalize(wo + wi);
-        float G2 = wi.z <= 0.0f ? 0.0f : Shading::BSDFs::GGX::height_correlated_smith_G(alpha, wo, wi, H);
+        float G2 = wi.z <= 0.0f ? 0.0f : Shading::BSDFs::GGX::height_correlated_smith_G(alpha, wo, wi);
 
         // D
+        const float3 H = normalize(wo + wi);
         const float slopex = H.x / H.z;
         const float slopey = H.y / H.z;
         float D = 1.0f / (1.0f + (slopex*slopex + slopey*slopey) / (alpha * alpha));

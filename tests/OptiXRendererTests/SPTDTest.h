@@ -78,6 +78,7 @@ float compute_ggx_fitting_error(const SPTD::Pivot& pivot, const optix::float3& w
     const int sample_count = 16;
 
     float alpha = GGX::alpha_from_roughness(roughness);
+    const float full_specularity = 1.0f;
 
     double error = 0.0;
     int valid_sample_count = 0;
@@ -90,7 +91,7 @@ float compute_ggx_fitting_error(const SPTD::Pivot& pivot, const optix::float3& w
             // error with MIS weight
             auto error_from_wi = [&](float3 wi) -> double {
                 float3 halfway = normalize(wo + wi);
-                float eval_brdf = GGX::evaluate(alpha, wo, wi, halfway);
+                float eval_brdf = GGX::evaluate(alpha, full_specularity, wo, wi);
                 float pdf_brdf = GGX::PDF(alpha, wo, halfway);
                 float eval_pivot = pivot.eval(wi);
                 float pdf_pivot = eval_pivot / pivot.amplitude;
@@ -108,7 +109,7 @@ float compute_ggx_fitting_error(const SPTD::Pivot& pivot, const optix::float3& w
 
             { // importance sample BRDF
                 const float3 dummy_tint = make_float3(1.0f, 1.0f, 1.0f);
-                const auto sample = GGX::sample(dummy_tint, alpha, wo, make_float2(U1, U2));
+                const auto sample = GGX::sample(dummy_tint, alpha, full_specularity, wo, make_float2(U1, U2));
                 if (sample.direction.z >= 0.0f && is_PDF_valid(sample.PDF)) {
                     error += error_from_wi(sample.direction);
                     ++valid_sample_count;
