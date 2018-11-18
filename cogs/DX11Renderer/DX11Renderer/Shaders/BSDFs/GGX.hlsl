@@ -22,9 +22,8 @@ namespace GGX {
         float alpha_sqrd = alpha * alpha;
         float cos_theta_sqrd = abs_cos_theta * abs_cos_theta;
         float tan_theta_sqrd = max(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
-        float cos_theta_cubed = cos_theta_sqrd * cos_theta_sqrd;
         float foo = alpha_sqrd + tan_theta_sqrd; // No idea what to call this.
-        return alpha_sqrd / (PI * cos_theta_cubed * foo * foo);
+        return alpha_sqrd / (PI * pow2(cos_theta_sqrd * foo));
     }
 
     // Samples the GGX distribution and returns a direction and PDF.
@@ -57,7 +56,7 @@ namespace GGX {
     // Height correlated smith geometric term.
     // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14, equation 99. 
     float height_correlated_smith_G(float alpha, float3 wo, float3 wi, float3 halfway) {
-        float numerator = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway));
+        float numerator = 1.0; // heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway)); // Should always be one.
         return numerator / (1.0f + height_correlated_smith_delta(alpha, wo) + height_correlated_smith_delta(alpha, wi));
     }
 
