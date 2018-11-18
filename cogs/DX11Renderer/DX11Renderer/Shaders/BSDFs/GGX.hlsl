@@ -61,10 +61,11 @@ namespace GGX {
         return numerator / (1.0f + height_correlated_smith_delta(alpha, wo) + height_correlated_smith_delta(alpha, wi));
     }
 
-    float evaluate(float alpha, float3 wo, float3 wi, float3 halfway) {
+    float evaluate(float alpha, float specularity, float3 wo, float3 wi) {
+        float3 halfway = normalize(wo + wi);
         float g = height_correlated_smith_G(alpha, wo, wi, halfway);
         float d = D(alpha, halfway.z);
-        float f = 1.0f; // No fresnel.
+        float f = schlick_fresnel(specularity, dot(wo, halfway));
         return (d * f * g) / (4.0f * wo.z * wi.z);
     }
 

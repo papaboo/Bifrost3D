@@ -50,7 +50,7 @@ struct DefaultShading {
     }
 
     static float compute_specular_rho(float specularity, float abs_cos_theta, float roughness) {
-        float2 specular_rho = ggx_with_fresnel_rho_tex.Sample(bilinear_sampler, float2(abs_cos_theta, roughness)).rg;
+        float2 specular_rho = ggx_with_fresnel_rho_tex.Sample(bilinear_sampler, float2(abs_cos_theta, roughness));
         return lerp(specular_rho.r, specular_rho.g, specularity);
     }
 
@@ -101,11 +101,6 @@ struct DefaultShading {
     // --------------------------------------------------------------------------------------------
     // Evaluations.
     // --------------------------------------------------------------------------------------------
-    void evaluate_tints(float abs_cos_theta, out float3 diffuse_tint, out float3 specular_tint) {
-        diffuse_tint = m_diffuse_tint;
-        specular_tint = m_specular_tint * schlick_fresnel(m_specularity, abs_cos_theta);
-    }
-
     float3 evaluate(float3 wo, float3 wi) {
         bool is_same_hemisphere = wi.z * wo.z >= 0.0;
         if (!is_same_hemisphere)
@@ -117,15 +112,9 @@ struct DefaultShading {
             wo.z = -wo.z;
         }
 
-        float3 halfway = normalize(wo + wi);
-        float cos_theta = dot(wo, halfway);
-
-        float3 diffuse_tint, specular_tint;
-        evaluate_tints(cos_theta, diffuse_tint, specular_tint);
-
-        float3 diffuse = diffuse_tint * BSDFs::Lambert::evaluate();
+        float3 diffuse = m_diffuse_tint * BSDFs::Lambert::evaluate();
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
-        float3 specular = specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway);
+        float3 specular = m_specular_tint * BSDFs::GGX::evaluate(ggx_alpha, m_specularity, wo, wi);
         return diffuse + specular;
     }
 
@@ -144,19 +133,13 @@ struct DefaultShading {
         float3 most_representative_point = local_sphere_position + center_to_ray * saturate(light.sphere_radius() * reciprocal_length(center_to_ray));
         float3 wi = normalize(most_representative_point);
 
-        float3 halfway = normalize(wo + wi);
-        float cos_theta = dot(wo, halfway);
-
-        float3 diffuse_tint, specular_tint;
-        evaluate_tints(cos_theta, diffuse_tint, specular_tint);
-
         // Evaluate Lambert.
         Sphere local_sphere = Sphere::make(local_sphere_position, light.sphere_radius());
         Cone light_sphere_cap = sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
         float solidangle_of_light = solidangle(light_sphere_cap);
         CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
         float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle_of_light;
-        float3 radiance = diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_and_solidangle.centroid_direction.z) * light_radiance * light_radiance_scale;
+        float3 radiance = m_diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_and_solidangle.centroid_direction.z) * light_radiance * light_radiance_scale;
 
         // Scale ambient visibility by subtended solid angle.
         float solidangle_percentage = inverse_lerp(0, TWO_PI, solidangle_of_light);
@@ -172,7 +155,7 @@ struct DefaultShading {
                 float toggle = saturate(100000 * (dot(peak_reflection, wi) - 0.99999));
                 float recip_divisor = rcp(PI * sphere_surface_area(light.sphere_radius()));
                 float3 light_radiance = light.sphere_power() * recip_divisor;
-                radiance += specular_tint * light_radiance * toggle;
+                radiance += m_specular_tint * light_radiance * toggle;
             }
             else {
                 // Deprecated area light normalization term. Equation 10 and 14 in Real Shading in Unreal Engine 4, 2013. Included for completeness
@@ -186,7 +169,7 @@ struct DefaultShading {
                 float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta * 3.6 + 0.4));
                 float specular_ambient_visibility = lerp(1, scaled_ambient_visibility, a2);
 
-                radiance += specular_tint * BSDFs::GGX::evaluate(ggx_alpha, wo, wi, halfway) * cos_theta * light_radiance * area_light_normalization_term * specular_ambient_visibility;
+                radiance += m_specular_tint * BSDFs::GGX::evaluate(ggx_alpha, m_specularity, wo, wi) * cos_theta * light_radiance * area_light_normalization_term * specular_ambient_visibility;
             }
         }
 
