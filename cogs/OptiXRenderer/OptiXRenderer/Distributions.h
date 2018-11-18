@@ -79,9 +79,8 @@ namespace GGX {
         float alpha_sqrd = alpha * alpha;
         float cos_theta_sqrd = abs_cos_theta * abs_cos_theta;
         float tan_theta_sqrd = optix::fmaxf(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
-        float cos_theta_cubed = cos_theta_sqrd * cos_theta_sqrd;
         float foo = alpha_sqrd + tan_theta_sqrd; // No idea what to call this.
-        return alpha_sqrd / (PIf * cos_theta_cubed * foo * foo);
+        return alpha_sqrd / (PIf * pow2(cos_theta_sqrd * foo));
     }
 
     __inline_all__ float PDF(float alpha, float abs_cos_theta) {
