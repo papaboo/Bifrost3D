@@ -145,7 +145,7 @@ GTEST_TEST(DefaultShadingModel, evaluate_with_PDF) {
 
             if (is_PDF_valid(sample.PDF)) {
                 BSDFResponse response = plastic_material.evaluate_with_PDF(wo, sample.direction);
-                EXPECT_COLOR_EQ_EPS(plastic_material.evaluate(wo, sample.direction), response.weight, make_float3(0.000000001f));
+                EXPECT_COLOR_EQ_EPS(plastic_material.evaluate(wo, sample.direction), response.weight, make_float3(0.000001f));
                 EXPECT_FLOAT_EQ(plastic_material.PDF(wo, sample.direction), response.PDF);
             }
         }
@@ -192,7 +192,7 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
             float scale = material_params.tint.x / weight.x;
             EXPECT_FLOAT_EQ(weight.x * scale, material_params.tint.x);
             EXPECT_FLOAT_EQ(weight.y * scale, material_params.tint.y);
-            // EXPECT_FLOAT_EQ(weight.z * scale, material_params.tint.z); Fails by an ever so tiny tiny amount.
+            EXPECT_FLOAT_EQ(weight.z * scale, material_params.tint.z);
         }
 
         { // Test that grazing angle reflectivity is tint scaled.

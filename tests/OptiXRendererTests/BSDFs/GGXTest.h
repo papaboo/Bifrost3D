@@ -108,7 +108,7 @@ GTEST_TEST(GGX, evaluate_with_PDF) {
                 float3 wi = sample.direction;
                 float3 halfway = normalize(wo + wi);
                 BSDFResponse response = Shading::BSDFs::GGX::evaluate_with_PDF(tint, alpha, full_specularity, wo, wi, halfway);
-                EXPECT_COLOR_EQ_EPS(Shading::BSDFs::GGX::evaluate(tint, alpha, full_specularity, wo, wi), response.weight, make_float3(0.000000001f));
+                EXPECT_COLOR_EQ_EPS(Shading::BSDFs::GGX::evaluate(tint, alpha, full_specularity, wo, wi), response.weight, make_float3(0.000001f));
                 EXPECT_FLOAT_EQ(Shading::BSDFs::GGX::PDF(alpha, wo, halfway), response.PDF);
             }
         }
