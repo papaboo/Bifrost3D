@@ -207,11 +207,61 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
     }
 }
 
+GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation) {
+    using namespace Shading::ShadingModels;
+    using namespace optix;
+
+    // Test albedo is properly estimated.
+
+    static auto test_albedo = [](float3 wo, float roughness, float metallic) {
+        Material material_params;
+        material_params.tint = make_float3(1.0f, 1.0f, 1.0f);
+        material_params.roughness = roughness;
+        material_params.metallic = metallic;
+        material_params.specularity = 0.5f;
+        DefaultShading material = DefaultShading(material_params);
+
+        const unsigned int MAX_SAMPLES = 2048 * 8;
+        double* ws = new double[MAX_SAMPLES];
+        for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
+            float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
+            BSDFSample sample = material.sample_one(wo, rng_sample);
+            if (is_PDF_valid(sample.PDF))
+                ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
+            else
+                ws[i] = 0.0f;
+        }
+
+        double sample_mean = Cogwheel::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / double(MAX_SAMPLES);
+        float rho = material.rho(wo, { 0,0,1 }).x;
+        // EXPECT_FLOAT_EQ(float(sample_mean), rho);
+        EXPECT_TRUE(rho * 0.985 < sample_mean && sample_mean < rho * 1.015f);
+    };
+
+    const float3 incident_wo = make_float3(0.0f, 0.0f, 1.0f);
+    test_albedo(incident_wo, 0.25f, 0.25f);
+    test_albedo(incident_wo, 0.25f, 0.75f);
+    test_albedo(incident_wo, 0.75f, 0.25f);
+    test_albedo(incident_wo, 0.75f, 0.75f);
+
+    const float3 average_wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
+    test_albedo(average_wo, 0.25f, 0.25f);
+    test_albedo(average_wo, 0.25f, 0.75f);
+    test_albedo(average_wo, 0.75f, 0.25f);
+    test_albedo(average_wo, 0.75f, 0.75f);
+
+    const float3 grazing_wo = normalize(make_float3(1.0f, 0.0f, 0.01f));
+    test_albedo(incident_wo, 0.25f, 0.25f);
+    test_albedo(grazing_wo, 0.25f, 0.75f);
+    test_albedo(grazing_wo, 0.75f, 0.25f);
+    test_albedo(grazing_wo, 0.75f, 0.75f);
+}
+
 GTEST_TEST(DefaultShadingModel, sampling_variance) {
     using namespace Shading::ShadingModels;
     using namespace optix;
 
-    // Test that sample_all has lower variance than sample_one and that they converge to the same result'ish.
+    // Test that sample_all has lower variance than sample_one and that they converge to the same result.
 
     const unsigned int MAX_SAMPLES = 8196;
     const float3 wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
@@ -253,7 +303,7 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
     double sample_all_mean_squared = Cogwheel::Math::sort_and_pairwise_summation(ws_squared, ws_squared + MAX_SAMPLES) / double(MAX_SAMPLES);
     double sample_all_variance = sample_all_mean_squared - sample_all_mean * sample_all_mean;
 
-    EXPECT_TRUE(almost_equal_eps(float(sample_one_mean), float(sample_all_mean), 0.001f));
+    EXPECT_TRUE(almost_equal_eps(float(sample_one_mean), float(sample_all_mean), 0.00001f));
     EXPECT_LT(sample_all_variance, sample_one_variance);
 
     delete[] ws;
