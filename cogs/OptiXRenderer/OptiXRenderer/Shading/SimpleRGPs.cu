@@ -125,7 +125,7 @@ RT_PROGRAM void albedo_RPG() {
             using namespace Shading::ShadingModels;
             const Material& material_parameter = g_materials[payload.material_index];
             const DefaultShading material = DefaultShading(material_parameter, payload.texcoord);
-            return material.IBL(last_ray_direction, payload.shading_normal, 0); // TODO Use a white IBL.
+            return material.rho(last_ray_direction, payload.shading_normal);
         } else
             return payload.throughput;
     });
