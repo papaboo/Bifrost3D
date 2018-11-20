@@ -45,11 +45,9 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
 
     const unsigned int MAX_SAMPLES = 4096u;
 
-    // A nearly white material to stress test power_conservation.
-    // We do not use a completely white material, as monte carlo sampling and 
-    // floating point errors makes it impossible to guarantee white or less.
+    // A white material to stress test power_conservation.
     Material material_params;
-    material_params.tint = optix::make_float3(0.95f, 0.95f, 0.95f);
+    material_params.tint = optix::make_float3(1.0f, 1.0f, 1.0f);
     material_params.roughness = 0.7f;
     material_params.metallic = 0.0f;
     material_params.specularity = 0.25f;
@@ -68,7 +66,7 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
         }
 
         float average_w = Cogwheel::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
-        EXPECT_LE(average_w, 1.0f);
+        EXPECT_LE(average_w, 1.0011f);
     }
 }
 
@@ -80,10 +78,9 @@ GTEST_TEST(DefaultShadingModel, Helmholtz_reciprocity) {
 
     const unsigned int MAX_SAMPLES = 128u;
 
-    DefaultShading plastic_material = DefaultShading(plastic_parameters());
-
     for (int i = 0; i < 10; ++i) {
         const float3 wo = normalize(make_float3(float(i), 0.0f, 1.001f - float(i) * 0.1f));
+        auto plastic_material = DefaultShading(plastic_parameters(), wo.z);
         for (unsigned int s = 0u; s < MAX_SAMPLES; ++s) {
             float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(MAX_SAMPLES));
             BSDFSample sample = plastic_material.sample_all(wo, rng_sample);
