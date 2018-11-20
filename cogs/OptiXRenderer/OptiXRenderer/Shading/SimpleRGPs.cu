@@ -124,8 +124,9 @@ RT_PROGRAM void albedo_RPG() {
         if (g_launch_index.x < screen_size.x / 2 && valid_material) {
             using namespace Shading::ShadingModels;
             const Material& material_parameter = g_materials[payload.material_index];
-            const DefaultShading material = DefaultShading(material_parameter, payload.texcoord);
-            return material.rho(last_ray_direction, payload.shading_normal);
+            const float abs_cos_theta = abs(dot(last_ray_direction, payload.shading_normal));
+            const DefaultShading material = DefaultShading(material_parameter, abs_cos_theta, payload.texcoord);
+            return material.rho(abs_cos_theta);
         } else
             return payload.throughput;
     });

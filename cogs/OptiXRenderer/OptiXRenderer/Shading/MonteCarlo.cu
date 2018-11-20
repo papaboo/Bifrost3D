@@ -109,9 +109,8 @@ RT_PROGRAM void closest_hit() {
     const TBN world_shading_tbn = TBN(monte_carlo_payload.shading_normal);
 
     const Material& material_parameter = g_materials[material_index];
-    const DefaultShading material = DefaultShading(material_parameter, texcoord);
 
-    float coverage = material.coverage(texcoord);
+    float coverage = DefaultShading::coverage(material_parameter, texcoord);
     if (monte_carlo_payload.rng.sample1f() > coverage) {
         monte_carlo_payload.position = ray.direction * (t_hit + g_scene_epsilon) + ray.origin;
         return;
@@ -124,6 +123,7 @@ RT_PROGRAM void closest_hit() {
     // Store intersection point and wo in payload.
     monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
     monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
+    const DefaultShading material = DefaultShading(material_parameter, abs(monte_carlo_payload.direction.z), texcoord);
 
 #if ENABLE_NEXT_EVENT_ESTIMATION
     // Sample a light source.

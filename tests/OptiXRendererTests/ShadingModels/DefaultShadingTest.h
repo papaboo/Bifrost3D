@@ -53,10 +53,10 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
     material_params.roughness = 0.7f;
     material_params.metallic = 0.0f;
     material_params.specularity = 0.25f;
-    DefaultShading material = DefaultShading(material_params);
 
     for (int i = 0; i < 10; ++i) {
         const float3 wo = normalize(make_float3(float(i), 0.0f, 1.001f - float(i) * 0.1f));
+        auto material = DefaultShading(material_params, wo.z);
         float ws[MAX_SAMPLES];
         for (unsigned int s = 0u; s < MAX_SAMPLES; ++s) {
             float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(MAX_SAMPLES));
@@ -103,29 +103,29 @@ GTEST_TEST(DefaultShadingModel, Helmholtz_reciprocity) {
 }
 */
 
-static void default_shading_model_consistent_PDF_test(Shading::ShadingModels::DefaultShading& material) {
-    using namespace optix;
-
-    const float3 wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
-
-    const unsigned int MAX_SAMPLES = 64;
-    for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
-        float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
-        BSDFSample sample = material.sample_all(wo, rng_sample);
-        if (is_PDF_valid(sample.PDF)) {
-            float PDF = material.PDF(wo, sample.direction);
-            EXPECT_TRUE(almost_equal_eps(sample.PDF, PDF, 0.0001f));
-        }
-    }
-}
-
 GTEST_TEST(DefaultShadingModel, consistent_PDF) {
     using namespace Shading::ShadingModels;
 
+    static auto default_shading_model_consistent_PDF_test = [](Material& material_params) {
+        using namespace optix;
+
+        const float3 wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
+        auto material = DefaultShading(material_params, wo.z);
+
+        const unsigned int MAX_SAMPLES = 64;
+        for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
+            float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
+            BSDFSample sample = material.sample_all(wo, rng_sample);
+            if (is_PDF_valid(sample.PDF)) {
+                float PDF = material.PDF(wo, sample.direction);
+                EXPECT_TRUE(almost_equal_eps(sample.PDF, PDF, 0.0001f));
+            }
+        }
+    };
+
     // This test can only be performed with rough materials, as the PDF of smooth materials 
     // is highly sensitive to floating point precision.
-    DefaultShading plastic_material = DefaultShading(plastic_parameters());
-    default_shading_model_consistent_PDF_test(plastic_material);
+    default_shading_model_consistent_PDF_test(plastic_parameters());
 }
 
 GTEST_TEST(DefaultShadingModel, evaluate_with_PDF) {
@@ -138,7 +138,7 @@ GTEST_TEST(DefaultShadingModel, evaluate_with_PDF) {
 
     for (int a = 0; a < 11; ++a) {
         plastic_params.roughness = lerp(0.2f, 1.0f, a / 10.0f);
-        DefaultShading plastic_material = DefaultShading(plastic_params);
+        auto plastic_material = DefaultShading(plastic_params, wo.z);
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
             BSDFSample sample = plastic_material.sample_all(wo, rng_sample);
@@ -162,10 +162,10 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
         material_params.roughness = 0.02f;
         material_params.metallic = 0.0f;
         material_params.specularity = 0.0f; // Testing specularity. Physically-based fubar value.
-        DefaultShading material = DefaultShading(material_params);
 
         { // Test that incident reflectivity is red.
             float3 wo = make_float3(0.0f, 0.0f, 1.0f);
+            auto material = DefaultShading(material_params, wo.z);
             float3 weight = material.evaluate(wo, wo);
             EXPECT_GT(weight.x, 0.0f);
             EXPECT_FLOAT_EQ(weight.y, 0.0f);
@@ -175,6 +175,7 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
         { // Test that specular reflectivity is white.
             float3 wo = normalize(make_float3(0.0f, 1.0f, 0.001f));
             float3 wi = normalize(make_float3(0.0f, -1.0f, 0.001f));
+            auto material = DefaultShading(material_params, wo.z);
             float3 weight = material.evaluate(wo, wi);
             EXPECT_GT(weight.x, 0.0f);
             EXPECT_FLOAT_EQ(weight.x, weight.y);
@@ -184,10 +185,10 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
 
     { // Test that specular reflections on metals are tinted.
         Material material_params = gold_parameters();
-        DefaultShading material = DefaultShading(material_params);
 
         { // Test that incident reflectivity is tint scaled.
             float3 wo = make_float3(0.0f, 0.0f, 1.0f);
+            auto material = DefaultShading(material_params, wo.z);
             float3 weight = material.evaluate(wo, wo);
             float scale = material_params.tint.x / weight.x;
             EXPECT_FLOAT_EQ(weight.x * scale, material_params.tint.x);
@@ -198,6 +199,7 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
         { // Test that grazing angle reflectivity is tint scaled.
             float3 wo = normalize(make_float3(0.0f, 1.0f, 0.001f));
             float3 wi = normalize(make_float3(0.0f, -1.0f, 0.001f));
+            auto material = DefaultShading(material_params, wo.z);
             float3 weight = material.evaluate(wo, wi);
             float scale = material_params.tint.x / weight.x;
             EXPECT_FLOAT_EQ(weight.x * scale, material_params.tint.x);
@@ -219,7 +221,7 @@ GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation
         material_params.roughness = roughness;
         material_params.metallic = metallic;
         material_params.specularity = 0.5f;
-        DefaultShading material = DefaultShading(material_params);
+        auto material = DefaultShading(material_params, wo.z);
 
         const unsigned int MAX_SAMPLES = 2048 * 8;
         double* ws = new double[MAX_SAMPLES];
@@ -233,7 +235,7 @@ GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation
         }
 
         double sample_mean = Cogwheel::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / double(MAX_SAMPLES);
-        float rho = material.rho(wo, { 0,0,1 }).x;
+        float rho = material.rho(wo.z).x;
         // EXPECT_FLOAT_EQ(float(sample_mean), rho);
         EXPECT_TRUE(rho * 0.985 < sample_mean && sample_mean < rho * 1.015f);
     };
@@ -271,7 +273,7 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
     material_params.roughness = 0.9f;
     material_params.metallic = 0.0f;
     material_params.specularity = 0.2f;
-    DefaultShading material = DefaultShading(material_params);
+    auto material = DefaultShading(material_params, wo.z);
 
     double* ws = new double[MAX_SAMPLES];
     double* ws_squared = new double[MAX_SAMPLES];

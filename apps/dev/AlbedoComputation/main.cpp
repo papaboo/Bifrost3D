@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
                 float cos_theta = (x + 0.5f) / float(width);
                 float3 wo = make_float3(sqrt(1.0f - cos_theta * cos_theta), 0.0f, cos_theta);
 
-                DefaultShading material = DefaultShading(material_params);
+                DefaultShading material = DefaultShading(material_params, wo.z);
 
                 Core::Array<double> specular_throughput = Core::Array<double>(sample_count);
                 Core::Array<double> total_throughput = Core::Array<double>(sample_count);
