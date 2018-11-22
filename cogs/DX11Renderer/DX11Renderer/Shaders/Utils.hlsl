@@ -109,10 +109,13 @@ inline float inverse_lerp(const float a, const float b, const float v) { return 
 
 float reciprocal_length(float3 v) { return rsqrt(length_squared(v)); }
 
-float schlick_fresnel(float abs_cos_theta) { return pow5(1.0f - abs_cos_theta); }
-
-float schlick_fresnel(float incident_specular, float abs_cos_theta) {
-    return incident_specular + (1.0f - incident_specular) * pow5(1.0f - abs_cos_theta);
+float schlick_fresnel(float abs_cos_theta) { return pow5(1.0 - abs_cos_theta); }
+float schlick_fresnel(float incident_specular, float abs_cos_theta) { 
+    return incident_specular + (1.0 - incident_specular) * pow5(1.0 - abs_cos_theta);
+}
+float3 schlick_fresnel(float3 incident_specular, float abs_cos_theta) { 
+    float t = pow5(1.0 - abs_cos_theta);
+    return (1 - t) * incident_specular + t;
 }
 
 float2 direction_to_latlong_texcoord(float3 direction) {

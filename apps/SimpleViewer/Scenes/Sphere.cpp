@@ -84,7 +84,7 @@ public:
 
                 optix::float3 wo = { sqrtf(1.0f - cos_theta * cos_theta), 0.0f, cos_theta };
                 Vector2f uv = RNG::sample02(m_ggx.accumulation_count, { 0,0 });
-                auto ggx_sample = OptiXRenderer::Shading::BSDFs::GGX::sample({ 1,1,1 }, ggx_alpha, full_specularity, wo, { uv.x, uv.y });
+                auto ggx_sample = OptiXRenderer::Shading::BSDFs::GGX::sample(ggx_alpha, full_specularity, wo, { uv.x, uv.y });
                 float new_sample_weight = OptiXRenderer::is_PDF_valid(ggx_sample.PDF) ? ggx_sample.weight.x * ggx_sample.direction.z / ggx_sample.PDF : 0.0f; // f * ||cos_theta|| / pdf
                 m_ggx.sampled_rho[i] = (m_ggx.accumulation_count * m_ggx.sampled_rho[i] + new_sample_weight) / (m_ggx.accumulation_count + 1);
             }
@@ -116,7 +116,7 @@ public:
 
                 optix::float3 wo = { sqrtf(1.0f - cos_theta * cos_theta), 0.0f, cos_theta };
                 Vector2f uv = RNG::sample02(m_ggx_with_fresnel.accumulation_count, { 0,0 });
-                auto ggx_sample = OptiXRenderer::Shading::BSDFs::GGX::sample({ 1,1,1 }, ggx_alpha, specularity, wo, { uv.x, uv.y });
+                auto ggx_sample = OptiXRenderer::Shading::BSDFs::GGX::sample(ggx_alpha, specularity, wo, { uv.x, uv.y });
                 float new_sample_weight = OptiXRenderer::is_PDF_valid(ggx_sample.PDF) ? ggx_sample.weight.x * ggx_sample.direction.z / ggx_sample.PDF : 0.0f; // f * ||cos_theta|| / pdf
                 m_ggx_with_fresnel.sampled_rho[i] = (m_ggx_with_fresnel.accumulation_count * m_ggx_with_fresnel.sampled_rho[i] + new_sample_weight) / (m_ggx_with_fresnel.accumulation_count + 1);
             }

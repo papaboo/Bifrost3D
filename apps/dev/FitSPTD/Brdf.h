@@ -54,14 +54,13 @@ public:
         if (wo.z <= 0)
             return BSDFResponse::none();
 
-        float3 halfway = normalize(wo + wi);
-        auto f = Shading::BSDFs::GGX::evaluate_with_PDF(make_float3(1,1,1), alpha, 1, wo, wi, halfway);
+        auto f = Shading::BSDFs::GGX::evaluate_with_PDF(alpha, 1, wo, wi);
         f.weight *= wi.z; // eval scaled by cos theta
         return f;
     }
 
     BSDFSample sample(const float3& wo, float alpha, float U1, float U2) const {
-        auto brdf_sample = Shading::BSDFs::GGX::sample(make_float3(1.0f, 1.0f, 1.0f), alpha, 1, wo, make_float2(U1, U2));
+        auto brdf_sample = Shading::BSDFs::GGX::sample(alpha, 1, wo, make_float2(U1, U2));
         brdf_sample.weight *= brdf_sample.direction.z; // eval scaled by cos theta
         return brdf_sample;
     }

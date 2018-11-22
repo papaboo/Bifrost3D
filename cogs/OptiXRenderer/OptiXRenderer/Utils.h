@@ -149,6 +149,11 @@ __inline_all__ float schlick_fresnel(float incident_specular, float abs_cos_thet
     return incident_specular + (1.0f - incident_specular) * pow5(optix::fmaxf(0.0f, 1.0f - abs_cos_theta));
 }
 
+__inline_all__ optix::float3 schlick_fresnel(const optix::float3& incident_specular, float abs_cos_theta) {
+    float t = pow5(1.0f - abs_cos_theta);
+    return (1.0f - t) * incident_specular + t;
+}
+
 __inline_all__ optix::float2 direction_to_latlong_texcoord(const optix::float3& direction) {
     float u = (atan2f(direction.z, direction.x) + PIf) * 0.5f / PIf;
     float v = (asinf(direction.y) + PIf * 0.5f) / PIf;

@@ -108,8 +108,7 @@ float compute_ggx_fitting_error(const SPTD::Pivot& pivot, const optix::float3& w
             }
 
             { // importance sample BRDF
-                const float3 dummy_tint = make_float3(1.0f, 1.0f, 1.0f);
-                const auto sample = GGX::sample(dummy_tint, alpha, full_specularity, wo, make_float2(U1, U2));
+                const auto sample = GGX::sample(alpha, full_specularity, wo, make_float2(U1, U2));
                 if (sample.direction.z >= 0.0f && is_PDF_valid(sample.PDF)) {
                     error += error_from_wi(sample.direction);
                     ++valid_sample_count;

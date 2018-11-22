@@ -22,7 +22,7 @@
 namespace OptiXRenderer {
 
 Material gold_parameters() {
-    Material gold_params;
+    Material gold_params = {};
     gold_params.tint = optix::make_float3(1.0f, 0.766f, 0.336f);
     gold_params.roughness = 0.02f;
     gold_params.metallic = 1.0f;
@@ -31,7 +31,7 @@ Material gold_parameters() {
 }
 
 Material plastic_parameters() {
-    Material plastic_params;
+    Material plastic_params = {};
     plastic_params.tint = optix::make_float3(0.02f, 0.27f, 0.33f);
     plastic_params.roughness = 0.7f;
     plastic_params.metallic = 0.0f;
@@ -46,7 +46,7 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
     const unsigned int MAX_SAMPLES = 4096u;
 
     // A white material to stress test power_conservation.
-    Material material_params;
+    Material material_params = {};
     material_params.tint = optix::make_float3(1.0f, 1.0f, 1.0f);
     material_params.roughness = 0.7f;
     material_params.metallic = 0.0f;
@@ -154,7 +154,7 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
     using namespace optix;
 
     { // Test that specular reflections on non-metals are white and incident reflections are diffuse.
-        Material material_params;
+        Material material_params = {};
         material_params.tint = make_float3(1.0f, 0.0f, 0.0f);
         material_params.roughness = 0.02f;
         material_params.metallic = 0.0f;
@@ -174,7 +174,7 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
             float3 wi = normalize(make_float3(0.0f, -1.0f, 0.001f));
             auto material = DefaultShading(material_params, wo.z);
             float3 weight = material.evaluate(wo, wi);
-            EXPECT_GT(weight.x, 0.0f);
+            EXPECT_GT(weight.x, 0.99f);
             EXPECT_FLOAT_EQ(weight.x, weight.y);
             EXPECT_FLOAT_EQ(weight.x, weight.z);
         }
@@ -193,15 +193,14 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
             EXPECT_FLOAT_EQ(weight.z * scale, material_params.tint.z);
         }
 
-        { // Test that grazing angle reflectivity is tint scaled.
+        { // Test that grazing angle reflectivity is nearly white.
             float3 wo = normalize(make_float3(0.0f, 1.0f, 0.001f));
             float3 wi = normalize(make_float3(0.0f, -1.0f, 0.001f));
             auto material = DefaultShading(material_params, wo.z);
             float3 weight = material.evaluate(wo, wi);
-            float scale = material_params.tint.x / weight.x;
-            EXPECT_FLOAT_EQ(weight.x * scale, material_params.tint.x);
-            EXPECT_FLOAT_EQ(weight.y * scale, material_params.tint.y);
-            EXPECT_FLOAT_EQ(weight.z * scale, material_params.tint.z);
+            EXPECT_GT(weight.y, 0.99f);
+            EXPECT_FLOAT_EQ_PCT(weight.y, weight.x, 0.01f);
+            EXPECT_FLOAT_EQ_PCT(weight.y, weight.z, 0.01f);
         }
     }
 }

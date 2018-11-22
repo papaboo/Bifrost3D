@@ -240,7 +240,7 @@ int main(int argc, char** argv) {
 
         static auto sample_ggx = [](const float3& tint, float roughness, const float3& wo, float2 random_sample) -> BSDFSample {
             float alpha = GGX::alpha_from_roughness(roughness);
-            return GGX::sample(tint, alpha, 1, wo, random_sample);
+            return GGX::sample(alpha, 1, wo, random_sample);
         };
 
         Image rho = estimate_rho(width, height, sample_count, sample_ggx);
@@ -254,7 +254,7 @@ int main(int argc, char** argv) {
 
         static auto sample_ggx_with_fresnel = [](const float3& tint, float roughness, const float3& wo, float2 random_sample) -> BSDFSample {
             float alpha = GGX::alpha_from_roughness(roughness);
-            return GGX::sample(tint, alpha, 0, wo, random_sample);
+            return GGX::sample(alpha, 0, wo, random_sample);
         };
 
         Image rho = estimate_rho(width, height, sample_count, sample_ggx_with_fresnel);

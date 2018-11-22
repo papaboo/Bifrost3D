@@ -35,23 +35,16 @@ Texture2D<float2> ggx_with_fresnel_rho_tex : register(t15);
 struct DefaultShading {
     float3 m_diffuse_tint;
     float m_coverage;
-    float3 m_specular_tint; // Without fresnel
-    float m_specularity;
+    float3 m_specularity;
     float3 m_off_specular_peak; // NOTE Computing this is trivial, so wasting 3 floats on storage may not be a good idea.
     float m_roughness;
 
     // --------------------------------------------------------------------------------------------
     // Helpers
     // --------------------------------------------------------------------------------------------
-    static float compute_specularity(float specularity, float metalness) {
-        float dielectric_specularity = specularity * 0.08; // See Physically-Based Shading at Disney bottom of page 8.
-        float metal_specularity = specularity * 0.2 + 0.6;
-        return lerp(dielectric_specularity, metal_specularity, metalness);
-    }
-
-    static float compute_specular_rho(float specularity, float abs_cos_theta, float roughness) {
+    static float3 compute_specular_rho(float3 specularity, float abs_cos_theta, float roughness) {
         float2 specular_rho = ggx_with_fresnel_rho_tex.Sample(bilinear_sampler, float2(abs_cos_theta, roughness));
-        return lerp(specular_rho.r, specular_rho.g, specularity);
+        return lerp(specular_rho.rrr, specular_rho.ggg, specularity);
     }
 
     // --------------------------------------------------------------------------------------------
@@ -72,16 +65,19 @@ struct DefaultShading {
         float metallic = material_params.m_metallic;
 
         // Specularity
-        shading.m_specularity = compute_specularity(material_params.m_specularity, metallic);
+        float dielectric_specularity = material_params.m_specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.
 
         // Diffuse and specular tint
         float3 tint = material_params.m_tint;
         if (material_params.m_textures_bound & TextureBound::Tint)
             tint *= color_tex.Sample(color_sampler, texcoord).rgb;
+
         float abs_cos_theta = abs(wo.z);
-        float specular_rho = compute_specular_rho(shading.m_specularity, abs_cos_theta, shading.m_roughness);
+        shading.m_specularity = lerp(dielectric_specularity, tint, metallic);
+        float3 specular_rho = compute_specular_rho(shading.m_specularity, abs_cos_theta, shading.m_roughness);
+
         shading.m_diffuse_tint = tint * (1.0 - specular_rho);
-        shading.m_specular_tint = lerp(float3(1.0, 1.0, 1.0), tint, metallic);
+        shading.m_diffuse_tint *= 1.0 - 0.5 * metallic; // Remove diffuse strength on metals. Ideally metals would be 100 specular, but GGX does not model multiple bounces, so we fake it by using the diffuse BRDF.
 
         // Off specular peak
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(shading.m_roughness);
@@ -94,7 +90,6 @@ struct DefaultShading {
     // Getters
     // --------------------------------------------------------------------------------------------
     float coverage() { return m_coverage; }
-    float specularity() { return m_specularity; }
     float3 off_specular_peak() { return m_off_specular_peak; }
     float roughness() { return m_roughness; }
 
@@ -114,7 +109,7 @@ struct DefaultShading {
 
         float3 diffuse = m_diffuse_tint * BSDFs::Lambert::evaluate();
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
-        float3 specular = m_specular_tint * BSDFs::GGX::evaluate(ggx_alpha, m_specularity, wo, wi);
+        float3 specular = BSDFs::GGX::evaluate(ggx_alpha, m_specularity, wo, wi);
         return diffuse + specular;
     }
 
@@ -155,7 +150,7 @@ struct DefaultShading {
                 float toggle = saturate(100000 * (dot(peak_reflection, wi) - 0.99999));
                 float recip_divisor = rcp(PI * sphere_surface_area(light.sphere_radius()));
                 float3 light_radiance = light.sphere_power() * recip_divisor;
-                radiance += m_specular_tint * light_radiance * toggle;
+                radiance += m_specularity * light_radiance * toggle;
             }
             else {
                 // Deprecated area light normalization term. Equation 10 and 14 in Real Shading in Unreal Engine 4, 2013. Included for completeness
@@ -169,7 +164,7 @@ struct DefaultShading {
                 float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta * 3.6 + 0.4));
                 float specular_ambient_visibility = lerp(1, scaled_ambient_visibility, a2);
 
-                radiance += m_specular_tint * BSDFs::GGX::evaluate(ggx_alpha, m_specularity, wo, wi) * cos_theta * light_radiance * area_light_normalization_term * specular_ambient_visibility;
+                radiance += BSDFs::GGX::evaluate(ggx_alpha, m_specularity, wo, wi) * cos_theta * light_radiance * area_light_normalization_term * specular_ambient_visibility;
             }
         }
 
@@ -190,10 +185,9 @@ struct DefaultShading {
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
         float3 wi = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo, normal);
         float abs_cos_theta = abs(dot(wo, normal));
-        float specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness);
-        float3 specular_tint = m_specular_tint * specular_rho;
+        float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness);
         float2 specular_tc = direction_to_latlong_texcoord(wi);
-        float3 specular = specular_tint * environment_tex.SampleLevel(environment_sampler, specular_tc, mip_count * m_roughness).rgb;
+        float3 specular = specular_rho * environment_tex.SampleLevel(environment_sampler, specular_tc, mip_count * m_roughness).rgb;
 
         return diffuse + specular;
     }

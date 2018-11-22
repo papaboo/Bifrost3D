@@ -68,6 +68,14 @@ namespace GGX {
         return (d * f * g) / (4.0f * wo.z * wi.z);
     }
 
+    float3 evaluate(float alpha, float3 specularity, float3 wo, float3 wi) {
+        float3 halfway = normalize(wo + wi);
+        float g = height_correlated_smith_G(alpha, wo, wi, halfway);
+        float d = D(alpha, halfway.z);
+        float3 f = schlick_fresnel(specularity, dot(wo, halfway));
+        return f * (d * g / (4.0f * wo.z * wi.z));
+    }
+
     float3 approx_off_specular_peak(float alpha, float3 wo) {
         float3 reflection = float3(-wo.x, -wo.y, wo.z);
         // reflection = lerp(float3(0, 0, 1), reflection, (1 - alpha) * (sqrt(1 - alpha) + alpha)); // UE4 implementation
