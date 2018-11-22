@@ -34,10 +34,9 @@ Texture2D<float2> ggx_with_fresnel_rho_tex : register(t15);
 //-----------------------------------------------------------------------------
 struct DefaultShading {
     float3 m_diffuse_tint;
-    float m_coverage;
-    float3 m_specularity;
-    float3 m_off_specular_peak; // NOTE Computing this is trivial, so wasting 3 floats on storage may not be a good idea.
     float m_roughness;
+    float3 m_specularity;
+    float m_coverage;
 
     // --------------------------------------------------------------------------------------------
     // Helpers
@@ -79,10 +78,6 @@ struct DefaultShading {
         shading.m_diffuse_tint = tint * (1.0 - specular_rho);
         shading.m_diffuse_tint *= 1.0 - 0.5 * metallic; // Remove diffuse strength on metals. Ideally metals would be 100 specular, but GGX does not model multiple bounces, so we fake it by using the diffuse BRDF.
 
-        // Off specular peak
-        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(shading.m_roughness);
-        shading.m_off_specular_peak = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo);
-
         return shading;
     }
 
@@ -90,7 +85,6 @@ struct DefaultShading {
     // Getters
     // --------------------------------------------------------------------------------------------
     float coverage() { return m_coverage; }
-    float3 off_specular_peak() { return m_off_specular_peak; }
     float roughness() { return m_roughness; }
 
     // --------------------------------------------------------------------------------------------
@@ -122,7 +116,8 @@ struct DefaultShading {
         float3 light_radiance = light.sphere_power() * rcp(4.0f * PI * dot(local_sphere_position, local_sphere_position));
 
         // Closest point on sphere to ray. Equation 11 in Real Shading in Unreal Engine 4, 2013.
-        float3 peak_reflection = off_specular_peak();
+        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(roughness());
+        float3 peak_reflection = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo);
         float3 closest_point_on_ray = dot(local_sphere_position, peak_reflection) * peak_reflection;
         float3 center_to_ray = closest_point_on_ray - local_sphere_position;
         float3 most_representative_point = local_sphere_position + center_to_ray * saturate(light.sphere_radius() * reciprocal_length(center_to_ray));
@@ -143,7 +138,6 @@ struct DefaultShading {
         radiance *= scaled_ambient_visibility;
 
         { // Evaluate GGX.
-            float ggx_alpha = BSDFs::GGX::alpha_from_roughness(roughness());
             bool delta_GGX_distribution = ggx_alpha < 0.0005;
             if (delta_GGX_distribution) {
                 // Check if peak reflection and the most representative point are aligned.
