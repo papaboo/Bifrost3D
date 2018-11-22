@@ -275,7 +275,6 @@ float alchemy_ps(Varyings input) : SV_TARGET {
     }
 
     float visibility = 1 - intensity_over_sample_count * occlusion;
-    visibility = max(0.0, visibility);
 
     // Fade out if radius is less than two pixels.
     float pixel_width = g_buffer_size.x * ss_radius;
