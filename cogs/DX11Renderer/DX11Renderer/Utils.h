@@ -202,7 +202,8 @@ inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, 
     buffer_desc.Usage = D3D11_USAGE_DEFAULT;
     buffer_desc.StructureByteStride = sizeof_dx_format(format);
     buffer_desc.ByteWidth = sizeof_dx_format(format) * element_count;
-    buffer_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+    buffer_desc.BindFlags = (buffer_SRV == nullptr ? D3D11_BIND_NONE : D3D11_BIND_SHADER_RESOURCE) |
+                            (buffer_UAV == nullptr ? D3D11_BIND_NONE : D3D11_BIND_UNORDERED_ACCESS);
     buffer_desc.MiscFlags = 0;
     buffer_desc.CPUAccessFlags = 0;
 
