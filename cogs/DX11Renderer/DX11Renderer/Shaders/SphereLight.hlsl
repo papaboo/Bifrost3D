@@ -9,7 +9,7 @@
 #include "LightSources.hlsl"
 
 // ------------------------------------------------------------------------------------------------
-// Vertex shader.
+// Constant buffers.
 // ------------------------------------------------------------------------------------------------
 
 cbuffer lights : register(b12) {
@@ -20,6 +20,20 @@ cbuffer lights : register(b12) {
 cbuffer scene_variables : register(b13) {
     SceneVariables scene_vars;
 };
+
+// ------------------------------------------------------------------------------------------------
+// Utils.
+// ------------------------------------------------------------------------------------------------
+
+float compute_pixel_depth(float4 world_position, float2 texcoord) {
+    float3 to_camera = normalize(scene_vars.camera_position.xyz - world_position.xyz);
+    float sphere_radius = world_position.w;
+    float offset = sqrt(1.0f - dot(texcoord, texcoord)) * sphere_radius;
+    world_position.xyz += to_camera * offset;
+    world_position.w = 1.0f;
+    float4 projected_position = mul(world_position, scene_vars.view_projection_matrix);
+    return projected_position.z / projected_position.w;
+}
 
 // ------------------------------------------------------------------------------------------------
 // Vertex shader.
@@ -63,7 +77,7 @@ Varyings vs(uint primitive_ID : SV_VertexID) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Pixel shader.
+// Color shader.
 // ------------------------------------------------------------------------------------------------
 
 struct Pixel {
@@ -71,19 +85,31 @@ struct Pixel {
     float depth : SV_DEPTH;
 };
 
-Pixel ps(Varyings input){
+Pixel color_PS(Varyings input) {
     if (dot(input.texcoord, input.texcoord) > 1.0f)
         discard;
 
     Pixel pixel;
-    float3 to_camera = normalize(scene_vars.camera_position.xyz - input.world_position.xyz);
-    float sphere_radius = input.world_position.w;
-    float offset = sqrt(1.0f - dot(input.texcoord, input.texcoord)) * sphere_radius;
-    input.world_position.xyz += to_camera * offset;
-    input.world_position.w = 1.0f;
-    float4 projected_position = mul(input.world_position, scene_vars.view_projection_matrix);
-    pixel.depth = projected_position.z / projected_position.w;
-
     pixel.color = float4(input.radiance, 1.0f);
+    pixel.depth = compute_pixel_depth(input.world_position, input.texcoord);
+    return pixel;
+}
+
+// ------------------------------------------------------------------------------------------------
+// GBuffer shader.
+// ------------------------------------------------------------------------------------------------
+
+struct GBufferPixel {
+    float4 normal_depth : SV_TARGET;
+    float depth : SV_DEPTH;
+};
+
+GBufferPixel g_buffer_PS(Varyings input) {
+    float3 view_space_normal = float3(0,0,1); // TODO
+
+    GBufferPixel pixel;
+    pixel.normal_depth.xy = encode_ss_octahedral_normal(view_space_normal);
+    pixel.normal_depth.z = 0;
+    pixel.normal_depth.w = pixel.depth = compute_pixel_depth(input.world_position, input.texcoord);
     return pixel;
 }

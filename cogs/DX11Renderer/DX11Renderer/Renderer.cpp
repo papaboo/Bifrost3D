@@ -70,6 +70,10 @@ private:
         ODepthStencilState depth_state;
 
         struct {
+            OPixelShader pixel_shader;
+        } lights;
+
+        struct {
             ORasterizerState raster_state;
             OVertexShader vertex_shader;
             OInputLayout vertex_input_layout;
@@ -185,6 +189,11 @@ public:
         }
 
         { // Setup g-buffer
+            { // Light
+                OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "ps_5_0", "g_buffer_PS");
+                THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.lights.pixel_shader));
+            }
+
             { // Opaque shaders
                 CD3D11_RASTERIZER_DESC raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
                 THROW_DX11_ERROR(m_device.CreateRasterizerState(&raster_state, &m_g_buffer.opaque.raster_state));
@@ -327,7 +336,7 @@ public:
             // Sphere light visualization shaders.
             OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "vs_5_0", "vs");
             THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_lights.vertex_shader));
-            OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "ps_5_0", "ps");
+            OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"SphereLight.hlsl", "ps_5_0", "color_PS");
             THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_lights.pixel_shader));
         }
 
@@ -367,6 +376,12 @@ public:
             unsigned int stride = sizeof(float2);
             unsigned int offset = 0;
             m_render_context->IASetVertexBuffers(2, 1, &m_vertex_shading.null_buffer, &stride, &offset);
+        }
+
+        { // Render sphere lights.
+            m_render_context->VSSetShader(m_lights.vertex_shader, 0, 0);
+            m_render_context->PSSetShader(m_g_buffer.lights.pixel_shader, 0, 0);
+            m_render_context->Draw(m_lights.manager.active_light_count() * 6, 0);
         }
 
         // Render opaque objects.
@@ -473,6 +488,11 @@ public:
             m_render_context->VSSetConstantBuffers(13, 1, &m_scene_buffer);
             m_render_context->PSSetConstantBuffers(13, 1, &m_scene_buffer);
             m_render_context->CSSetConstantBuffers(13, 1, &m_scene_buffer);
+        }
+
+        { // Bind light buffers
+            m_render_context->VSSetConstantBuffers(12, 1, m_lights.manager.light_buffer_addr());
+            m_render_context->PSSetConstantBuffers(12, 1, m_lights.manager.light_buffer_addr());
         }
 
         { // Render G-buffer
@@ -598,14 +618,9 @@ public:
 
             m_environments->render(*m_render_context, scene.get_ID());
 
-            // Bind light buffer.
-            m_render_context->VSSetConstantBuffers(12, 1, m_lights.manager.light_buffer_addr());
-            m_render_context->PSSetConstantBuffers(12, 1, m_lights.manager.light_buffer_addr());
-
             { // Render sphere lights.
                 m_render_context->VSSetShader(m_lights.vertex_shader, 0, 0);
                 m_render_context->PSSetShader(m_lights.pixel_shader, 0, 0);
-
                 m_render_context->Draw(m_lights.manager.active_light_count() * 6, 0);
             }
         }
