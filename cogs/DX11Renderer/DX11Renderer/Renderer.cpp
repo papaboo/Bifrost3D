@@ -368,9 +368,7 @@ public:
 
             // Opaque state
             m_render_context->RSSetState(m_g_buffer.opaque.raster_state);
-            m_render_context->VSSetShader(m_g_buffer.opaque.vertex_shader, 0, 0);
             m_render_context->IASetInputLayout(m_g_buffer.opaque.vertex_input_layout);
-            m_render_context->PSSetShader(m_g_buffer.opaque.pixel_shader, 0, 0);
 
             // Set null buffer as default texcoord buffer.
             unsigned int stride = sizeof(float2);
@@ -384,19 +382,22 @@ public:
             m_render_context->Draw(m_lights.manager.active_light_count() * 6, 0);
         }
 
-        // Render opaque objects.
-        for (int i = 1; i < m_transparent.first_model_index; ++i) {
-            // Setup twosided raster state for cutout materials.
-            if (i == m_cutout.first_model_index) {
-                m_render_context->RSSetState(m_g_buffer.cutout.raster_state);
-                m_render_context->VSSetShader(m_g_buffer.cutout.vertex_shader, 0, 0);
-                m_render_context->IASetInputLayout(m_g_buffer.cutout.vertex_input_layout);
-                m_render_context->PSSetShader(m_g_buffer.cutout.pixel_shader, 0, 0);
-            }
+        { // Render opaque objects.
+            m_render_context->VSSetShader(m_g_buffer.opaque.vertex_shader, 0, 0);
+            m_render_context->PSSetShader(m_g_buffer.opaque.pixel_shader, 0, 0);
+            for (int i = 1; i < m_transparent.first_model_index; ++i) {
+                // Setup twosided raster state for cutout materials.
+                if (i == m_cutout.first_model_index) {
+                    m_render_context->RSSetState(m_g_buffer.cutout.raster_state);
+                    m_render_context->VSSetShader(m_g_buffer.cutout.vertex_shader, 0, 0);
+                    m_render_context->IASetInputLayout(m_g_buffer.cutout.vertex_input_layout);
+                    m_render_context->PSSetShader(m_g_buffer.cutout.pixel_shader, 0, 0);
+                }
 
-            Dx11Model model = m_sorted_models[i];
-            assert(model.model_ID != 0);
-            render_model<true>(m_render_context, model);
+                Dx11Model model = m_sorted_models[i];
+                assert(model.model_ID != 0);
+                render_model<true>(m_render_context, model);
+            }
         }
     }
 
