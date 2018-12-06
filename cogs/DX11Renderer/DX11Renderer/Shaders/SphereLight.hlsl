@@ -65,8 +65,12 @@ Varyings vs(uint primitive_ID : SV_VertexID) {
 
     // Compute position in world space and offset the vertices by the sphere radius along the tangent axis.
     output.world_position.xyz = light.sphere_position();
-    float3x3 tangent_space = create_TBN(normalize(output.world_position.xyz - scene_vars.camera_position.xyz));
-    output.world_position.xyz += (output.texcoord.x * tangent_space[0] + output.texcoord.y * tangent_space[1]) * light.sphere_radius();
+    float3 forward = normalize(output.world_position.xyz - scene_vars.camera_position.xyz);
+    float3 camera_right = scene_vars.world_to_view_matrix._m00_m10_m20;
+    float3 light_up = normalize(cross(forward, camera_right));
+    float3 light_right = normalize(cross(light_up, forward));
+    output.world_position.xyz += (output.texcoord.x * light_right + output.texcoord.y * light_up) * light.sphere_radius();
+
     output.world_position.w = 1.0f;
     output.position = mul(output.world_position, scene_vars.view_projection_matrix);
     output.world_position.w = light.sphere_radius();
@@ -105,7 +109,11 @@ struct GBufferPixel {
 };
 
 GBufferPixel g_buffer_PS(Varyings input) {
-    float3 view_space_normal = float3(0,0,1); // TODO
+    float distSqrd = dot(input.texcoord, input.texcoord);
+    if (distSqrd > 1.0f)
+        discard;
+
+    float3 view_space_normal = float3(input.texcoord, sqrt(1 - distSqrd));
 
     GBufferPixel pixel;
     pixel.normal_depth.xy = encode_ss_octahedral_normal(view_space_normal);
