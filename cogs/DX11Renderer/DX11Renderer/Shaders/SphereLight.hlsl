@@ -104,7 +104,7 @@ Pixel color_PS(Varyings input) {
 // ------------------------------------------------------------------------------------------------
 
 struct GBufferPixel {
-    float4 normal_depth : SV_TARGET;
+    float2 normal : SV_TARGET;
     float depth : SV_DEPTH;
 };
 
@@ -116,8 +116,7 @@ GBufferPixel g_buffer_PS(Varyings input) {
     float3 view_space_normal = float3(input.texcoord, sqrt(1 - distSqrd));
 
     GBufferPixel pixel;
-    pixel.normal_depth.xy = encode_ss_octahedral_normal(view_space_normal);
-    pixel.normal_depth.z = 0;
-    pixel.normal_depth.w = pixel.depth = compute_pixel_depth(input.world_position, input.texcoord);
+    pixel.normal.xy = encode_ss_octahedral_normal(view_space_normal);
+    pixel.depth = compute_pixel_depth(input.world_position, input.texcoord);
     return pixel;
 }

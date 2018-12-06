@@ -43,9 +43,9 @@ OpaqueVaryings opaque_VS(float4 geometry : GEOMETRY) {
     return varyings;
 }
 
-float4 opaque_PS(OpaqueVaryings varyings) : SV_Target {
+float2 opaque_PS(OpaqueVaryings varyings) : SV_Target {
     float3 view_space_normal = normalize(varyings.normal_depth.xyz);
-    return float4(encode_ss_octahedral_normal(view_space_normal), 0, 1);
+    return encode_ss_octahedral_normal(view_space_normal);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -72,11 +72,11 @@ CutoutVaryings cutout_VS(float4 geometry : GEOMETRY, float2 uv : TEXCOORD) {
     return varyings;
 }
 
-float4 cutout_PS(CutoutVaryings varyings) : SV_Target {
+float2 cutout_PS(CutoutVaryings varyings) : SV_Target {
     float coverage = material_params.coverage(varyings.uv, coverage_tex, coverage_sampler);
     if (coverage < CUTOFF)
         discard;
 
     float3 view_space_normal = normalize(varyings.normal_depth.xyz);
-    return float4(encode_ss_octahedral_normal(view_space_normal), 0, 1);
+    return encode_ss_octahedral_normal(view_space_normal);
 }
