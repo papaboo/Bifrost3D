@@ -248,7 +248,7 @@ public:
         m_ssao = SSAO::AlchemyAO(m_device, m_shader_folder_path);
 
         { // Setup vertex processing.
-            OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"VertexShader.hlsl", "vs_5_0", "main");
+            OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"ModelShading.hlsl", "vs_5_0", "vs");
 
             // Create the shader objects.
             THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shading.shader));
@@ -289,7 +289,7 @@ public:
             depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
             THROW_DX11_ERROR(m_device.CreateDepthStencilState(&depth_desc, &m_opaque.depth_state));
 
-            OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "opaque", fragment_macros);
+            OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"ModelShading.hlsl", "ps_5_0", "opaque", fragment_macros);
             THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_opaque.shader));
         }
 
@@ -322,7 +322,7 @@ public:
             depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
             THROW_DX11_ERROR(m_device.CreateDepthStencilState(&depth_desc, &m_transparent.depth_state));
 
-            OBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"FragmentShader.hlsl", "ps_5_0", "transparent", fragment_macros);
+            OBlob pixel_shader_buffer = compile_shader(m_shader_folder_path + L"ModelShading.hlsl", "ps_5_0", "transparent", fragment_macros);
             THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), nullptr, &m_transparent.shader));
         }
 

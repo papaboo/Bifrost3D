@@ -1,4 +1,4 @@
-// Model fragment shaders.
+// Model shading.
 // ---------------------------------------------------------------------------
 // Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
 //
@@ -8,6 +8,15 @@
 
 #include "DefaultShading.hlsl"
 #include "LightSources.hlsl"
+#include "Utils.hlsl"
+
+// ------------------------------------------------------------------------------------------------
+// Input buffers.
+// ------------------------------------------------------------------------------------------------
+
+cbuffer transform : register(b2) {
+    float4x3 to_world_matrix;
+};
 
 cbuffer material : register(b3) {
     MaterialParams material_params;
@@ -29,14 +38,31 @@ Texture2D ssao_tex : register(t13);
 Texture2D sptd_ggx_fit_tex : register(t14);
 #endif
 
-struct PixelInput {
+struct Varyings {
     float4 position : SV_POSITION;
     float3 world_position : WORLD_POSITION;
     float3 normal : NORMAL;
     float2 texcoord : TEXCOORD;
 };
 
-float3 integration(PixelInput input, bool is_front_face, float ambient_visibility) {
+// ------------------------------------------------------------------------------------------------
+// Vertex shader.
+// ------------------------------------------------------------------------------------------------
+
+Varyings vs(float4 geometry : GEOMETRY, float2 texcoord : TEXCOORD) {
+    Varyings output;
+    output.world_position.xyz = mul(float4(geometry.xyz, 1.0f), to_world_matrix);
+    output.position = mul(float4(output.world_position.xyz, 1.0f), scene_vars.view_projection_matrix);
+    output.normal.xyz = mul(float4(decode_octahedral_normal(asint(geometry.w)), 0.0), to_world_matrix);
+    output.texcoord = texcoord;
+    return output;
+}
+
+// ------------------------------------------------------------------------------------------------
+// Fragment shader / light integration.
+// ------------------------------------------------------------------------------------------------
+
+float3 integrate(Varyings input, bool is_front_face, float ambient_visibility) {
     float3 world_wo = normalize(scene_vars.camera_position.xyz - input.world_position.xyz);
     float3 world_normal = normalize(input.normal.xyz) * (is_front_face ? 1.0 : -1.0);
 
@@ -72,7 +98,7 @@ float3 integration(PixelInput input, bool is_front_face, float ambient_visibilit
     return radiance;
 }
 
-float4 opaque(PixelInput input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
+float4 opaque(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
     // NOTE There may be a performance cost associated with having a potential discard, so we should probably have a separate pixel shader for cutouts.
     float coverage = material_params.coverage(input.texcoord, coverage_tex, coverage_sampler);
     if (coverage < CUTOFF)
@@ -80,10 +106,10 @@ float4 opaque(PixelInput input, bool is_front_face : SV_IsFrontFace) : SV_TARGET
 
     float ambient_visibility = ssao_tex[input.position.xy + scene_vars.g_buffer_to_ao_index_offset].r;
 
-    return float4(integration(input, is_front_face, ambient_visibility), 1.0f);
+    return float4(integrate(input, is_front_face, ambient_visibility), 1.0f);
 }
 
-float4 transparent(PixelInput input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
+float4 transparent(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
     float coverage = material_params.coverage(input.texcoord, coverage_tex, coverage_sampler);
-    return float4(integration(input, is_front_face, 1), coverage);
+    return float4(integrate(input, is_front_face, 1), coverage);
 }

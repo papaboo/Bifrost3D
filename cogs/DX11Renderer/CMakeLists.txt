@@ -39,16 +39,15 @@ if (DIRECTX_11_FOUND AND WIN32)
     DX11Renderer/Shaders/Debug.hlsl
     DX11Renderer/Shaders/DefaultShading.hlsl
     DX11Renderer/Shaders/EnvironmentMap.hlsl
-    DX11Renderer/Shaders/FragmentShader.hlsl
     DX11Renderer/Shaders/GBuffer.hlsl
     DX11Renderer/Shaders/IBLConvolution.hlsl
     DX11Renderer/Shaders/LightSources.hlsl
+    DX11Renderer/Shaders/ModelShading.hlsl
     DX11Renderer/Shaders/RNG.hlsl
     DX11Renderer/Shaders/SphereLight.hlsl
     DX11Renderer/Shaders/SPTD.hlsl
     DX11Renderer/Shaders/SSAO.hlsl
     DX11Renderer/Shaders/Utils.hlsl
-    DX11Renderer/Shaders/VertexShader.hlsl
   )
 
   set(SHADERS_BSDFS_SRC
