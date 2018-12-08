@@ -198,14 +198,14 @@ public:
                 CD3D11_RASTERIZER_DESC raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
                 THROW_DX11_ERROR(m_device.CreateRasterizerState(&raster_state, &m_g_buffer.opaque.raster_state));
 
-                OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "vs_5_0", "opaque_VS");
+                OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"ModelGBuffer.hlsl", "vs_5_0", "opaque_VS");
                 THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.opaque.vertex_shader));
 
                 // Create the input layout
                 D3D11_INPUT_ELEMENT_DESC input_layout_desc = { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 };
                 THROW_DX11_ERROR(m_device.CreateInputLayout(&input_layout_desc, 1, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.opaque.vertex_input_layout));
 
-                OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "ps_5_0", "opaque_PS");
+                OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"ModelGBuffer.hlsl", "ps_5_0", "opaque_PS");
                 THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.opaque.pixel_shader));
             }
 
@@ -214,7 +214,7 @@ public:
                 raster_state.CullMode = D3D11_CULL_NONE;
                 THROW_DX11_ERROR(m_device.CreateRasterizerState(&raster_state, &m_g_buffer.cutout.raster_state));
 
-                OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "vs_5_0", "cutout_VS");
+                OBlob vertex_shader_blob = compile_shader(m_shader_folder_path + L"ModelGBuffer.hlsl", "vs_5_0", "cutout_VS");
                 THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.cutout.vertex_shader));
 
                 // Create the input layout
@@ -224,7 +224,7 @@ public:
                 };
                 THROW_DX11_ERROR(m_device.CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.cutout.vertex_input_layout));
 
-                OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"GBuffer.hlsl", "ps_5_0", "cutout_PS");
+                OBlob pixel_shader_blob = compile_shader(m_shader_folder_path + L"ModelGBuffer.hlsl", "ps_5_0", "cutout_PS");
                 THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.cutout.pixel_shader));
             }
 
