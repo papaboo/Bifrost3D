@@ -116,19 +116,8 @@ void create_material_scene(Scene::Cameras::UID camera_ID, Scene::SceneNode root_
     }
 
     { // Create material models.
-        Materials::Data material0_data = {};
-        material0_data.tint = RGB(0.02f, 0.27f, 0.33f);
-        material0_data.roughness = 1.0f;
-        material0_data.specularity = 0.25f;
-        material0_data.metallic = 0.0f;
-        material0_data.coverage = 1.0f;
-
-        Materials::Data material1_data = {};
-        material1_data.tint = RGB(1.0f, 0.766f, 0.336f);
-        material1_data.roughness = 0.02f;
-        material1_data.specularity = 1.0f;
-        material1_data.metallic = 1.0f;
-        material1_data.coverage = 1.0f;
+        Materials::Data material0_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 1.0f, 0.25f);
+        Materials::Data material1_data = Materials::Data::create_metal(gold_tint, 0.02f);
 
         Meshes::UID cube_mesh_ID = MeshCreation::cube(1);
         Transform cube_transform = Transform(Vector3f(0.0f, -0.25f, 0.0f), Quaternionf::identity(), 1.5f);

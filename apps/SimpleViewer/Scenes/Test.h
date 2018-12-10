@@ -163,7 +163,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
     }
 
     { // Create rotating rings.
-        Materials::Data material_data = Materials::Data::create_metal(RGB(1.0f, 0.766f, 0.336f), 0.02f);
+        Materials::Data material_data = Materials::Data::create_metal(gold_tint, 0.02f);
         Materials::UID material_ID = Materials::create("Gold", material_data);
 
         unsigned int torus_detail = 64;
@@ -211,7 +211,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
     }
 
     { // Destroyable cylinder. TODO Implement destruction of the mesh, model and scene node.
-        Materials::Data material_data = Materials::Data::create_metal(RGB(0.56f, 0.57f, 0.58f), 0.4f);
+        Materials::Data material_data = Materials::Data::create_metal(iron_tint, 0.4f);
         Materials::UID material_ID = Materials::create("Iron", material_data);
 
         Transform transform = Transform(Vector3f(-1.5f, 0.5f, 0.0f));

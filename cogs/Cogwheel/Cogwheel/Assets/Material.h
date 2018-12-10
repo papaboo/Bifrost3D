@@ -28,6 +28,20 @@ enum class MaterialFlag : unsigned char {
 };
 
 // ---------------------------------------------------------------------------
+// Metal tints.
+// ---------------------------------------------------------------------------
+const Math::RGB iron_tint = Math::RGB(0.560f, 0.570f, 0.580f);
+const Math::RGB silver_tint = Math::RGB(0.972f, 0.960f, 0.915f);
+const Math::RGB aluminum_tint = Math::RGB(0.913f, 0.921f, 0.925f);
+const Math::RGB gold_tint = Math::RGB(1.000f, 0.766f, 0.336f);
+const Math::RGB copper_tint = Math::RGB(0.955f, 0.637f, 0.538f);
+const Math::RGB chromium_tint = Math::RGB(0.550f, 0.556f, 0.554f);
+const Math::RGB nickel_tint = Math::RGB(0.660f, 0.609f, 0.526f);
+const Math::RGB titanium_tint = Math::RGB(0.542f, 0.497f, 0.449f);
+const Math::RGB cobalt_tint = Math::RGB(0.662f, 0.655f, 0.634f);
+const Math::RGB platinum_tint = Math::RGB(0.672f, 0.637f, 0.585f);
+
+// ---------------------------------------------------------------------------
 // Cogwheel material properties container.
 // ---------------------------------------------------------------------------
 class Materials final {

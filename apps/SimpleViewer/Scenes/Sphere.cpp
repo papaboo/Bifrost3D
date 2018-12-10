@@ -197,10 +197,10 @@ void create_sphere_scene(Engine& engine, Cameras::UID camera_ID, SceneRoots::UID
                 auto rubber_mat_data = Materials::Data::create_dielectric(RGB::white(), 0.95f, 0.5f);
                 update_material(rubber_mat_data);
             } else if (keyboard->was_released(Keyboard::Key::Key4)) {
-                auto gold_mat_data = Materials::Data::create_metal(RGB(1.0f, 0.766f, 0.336f), 0.02f);
+                auto gold_mat_data = Materials::Data::create_metal(gold_tint, 0.02f);
                 update_material(gold_mat_data);
             } else if (keyboard->was_released(Keyboard::Key::Key5)) {
-                auto copper_mat_data = Materials::Data::create_metal(RGB(0.8f, 0.4f, 0.3f), 0.5f);
+                auto copper_mat_data = Materials::Data::create_metal(copper_tint, 0.5f);
                 update_material(copper_mat_data);
             }
         };
