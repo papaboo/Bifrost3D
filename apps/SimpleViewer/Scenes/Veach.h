@@ -109,7 +109,7 @@ void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sce
             positions[v] *= Vector3f(light_distance * 1.1f, 0.01f, block_depth);
 
         // Place the first block.
-        Materials::Data material_data = Materials::Data::create_metal(RGB(0.7f, 0.7f, 0.7f), base_roughness, 0.25f);
+        Materials::Data material_data = Materials::Data::create_metal(RGB(0.7f, 0.7f, 0.7f), base_roughness);
         Materials::UID material_ID = Materials::create("Block0", material_data);
         SceneNode block_node = SceneNodes::create("Block0", block_0_position);
         MeshModels::create(block_node.get_ID(), block_mesh.get_ID(), material_ID);
@@ -141,7 +141,7 @@ void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sce
             block_transform.rotation = Quaternionf::look_in(cross(-block_normal, Vector3f::right()));
 
             float roughness_scale = (block_count - 1 - b) / float(block_count - 1);
-            Materials::Data material_data = Materials::Data::create_metal(RGB(0.7f, 0.7f, 0.7f), base_roughness * roughness_scale, 0.25f);
+            Materials::Data material_data = Materials::Data::create_metal(RGB(0.7f, 0.7f, 0.7f), base_roughness * roughness_scale);
             Materials::UID material_ID = Materials::create("Block", material_data);
             SceneNode block_node = SceneNodes::create("Block", block_transform);
             MeshModels::create(block_node.get_ID(), block_mesh.get_ID(), material_ID);

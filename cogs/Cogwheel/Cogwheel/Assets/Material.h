@@ -58,11 +58,11 @@ public:
             return res;
         }
 
-        static Data create_metal(Math::RGB tint, float roughness, float specularity) {
+        static Data create_metal(Math::RGB tint, float roughness) {
             Data res = {};
             res.tint = tint;
             res.roughness = roughness;
-            res.specularity = specularity;
+            res.specularity = 1.0f;
             res.coverage = 1.0f;
             res.metallic = 1.0f;
             return res;

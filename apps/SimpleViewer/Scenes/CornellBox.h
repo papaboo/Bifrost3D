@@ -34,10 +34,10 @@ void create_cornell_box(Scene::Cameras::UID camera_ID, Scene::SceneNode root_nod
     Materials::Data green_material_data = Materials::Data::create_dielectric(RGB(0.02f, 0.98f, 0.02f), 1.0f, 0.25f);
     Materials::UID green_material_ID = Materials::create("Green", green_material_data);
 
-    Materials::Data iron_material_data = Materials::Data::create_metal(RGB(0.56f, 0.57f, 0.58f), 0.4f, 0.0f);
+    Materials::Data iron_material_data = Materials::Data::create_metal(RGB(0.56f, 0.57f, 0.58f), 0.4f);
     Materials::UID iron_material_ID = Materials::create("Iron", iron_material_data);
 
-    Materials::Data copper_material_data = Materials::Data::create_metal(RGB(0.8f, 0.4f, 0.3f), 0.02f, 0.0f);
+    Materials::Data copper_material_data = Materials::Data::create_metal(RGB(0.8f, 0.4f, 0.3f), 0.02f);
     Materials::UID copper_material_ID = Materials::create("Copper", copper_material_data);
 
     { // Set camera position
