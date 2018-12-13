@@ -1,10 +1,10 @@
 // OptiX renderer.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
-// ---------------------------------------------------------------------------
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+// ------------------------------------------------------------------------------------------------
 
 #ifndef _OPTIXRENDERER_RENDERER_H_
 #define _OPTIXRENDERER_RENDERER_H_
@@ -12,16 +12,9 @@
 #include <Cogwheel\Scene\Camera.h>
 #include <Cogwheel\Scene\SceneRoot.h>
 
-//----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Forward declarations.
-//----------------------------------------------------------------------------
-namespace Cogwheel {
-namespace Core {
-class Engine;
-class Window;
-}
-}
-
+// ------------------------------------------------------------------------------------------------
 namespace optix {
 template<class T> class Handle;
 class BufferObj;
@@ -32,6 +25,9 @@ typedef Handle<ContextObj> Context;
 
 namespace OptiXRenderer {
 
+// ------------------------------------------------------------------------------------------------
+// Different rendering backends.
+// ------------------------------------------------------------------------------------------------
 enum class Backend {
     None,
     PathTracing,
@@ -39,21 +35,17 @@ enum class Backend {
     NormalVisualization,
 };
 
-//----------------------------------------------------------------------------
-// OptiX renderer.
-// Supports several different rendering modes; Normal visualization and 
-// path tracing. 
+// ------------------------------------------------------------------------------------------------
+// OptiX renderer for rendering with global illumination.
 // Future work
-// * Cache acceleration structures for meshes not in the scene, but still active.
-//   Test if it speeds up the bullet creation of my boxgun!
 // * Have path tracer stop per bounce, filter and display the result.
 //   Should be good for interactivity and convergence. :)
 // * Clamp fireflies at vertices in a ray path. The current path PDF or 
 //   ray differentials should be able to tell us if a connection with
 //   a high intensity light source is a firefly.
 // * Add a genesis event when rendering the very very very first frame. Can also 
-//   be used if the renderer 'falls behind' and it's faster to simply reinitialize
-//----------------------------------------------------------------------------
+//   be used if the renderstate 'falls behind' and it's faster to simply reinitialize.
+// ------------------------------------------------------------------------------------------------
 class Renderer final {
 public:
     static Renderer* initialize(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path, Cogwheel::Core::Renderers::UID renderer_ID);
