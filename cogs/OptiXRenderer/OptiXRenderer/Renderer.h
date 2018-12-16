@@ -53,6 +53,12 @@ public:
     float get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const;
     void set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon);
 
+    unsigned int get_max_bounce_count(Cogwheel::Scene::Cameras::UID camera_ID) const;
+    void set_max_bounce_count(Cogwheel::Scene::Cameras::UID camera_ID, unsigned int bounce_count);
+
+    unsigned int get_max_accumulation_count(Cogwheel::Scene::Cameras::UID camera_ID) const;
+    void set_max_accumulation_count(Cogwheel::Scene::Cameras::UID camera_ID, unsigned int accumulation_count);
+
     Backend get_backend(Cogwheel::Scene::Cameras::UID camera_ID) const;
     void set_backend(Cogwheel::Scene::Cameras::UID camera_ID, Backend backend);
 

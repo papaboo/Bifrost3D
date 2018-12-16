@@ -174,6 +174,8 @@ struct Renderer::Implementation {
         uint2 screensize;
         optix::Buffer accumulation_buffer;
         unsigned int accumulations;
+        unsigned int max_accumulation_count;
+        unsigned int max_bounce_count;
         Matrix4x4f inverse_view_projection_matrix;
         Backend backend;
         std::unique_ptr<IBackend> backend_impl;
@@ -182,12 +184,24 @@ struct Renderer::Implementation {
             screensize = { 0u, 0u };
             accumulation_buffer = nullptr;
             accumulations = 0u;
+            max_accumulation_count = UINT_MAX;
+            max_bounce_count = 4;
             inverse_view_projection_matrix = Matrix4x4f::identity();
             backend = Backend::None;
             backend_impl = nullptr;
         }
     };
     std::vector<CameraState> per_camera_state;
+    inline bool conditional_per_camera_state_resize(int camera_ID) {
+        if (per_camera_state.size() <= camera_ID) {
+            size_t old_size = per_camera_state.size();
+            per_camera_state.resize(Cameras::capacity());
+            for (size_t i = old_size; i < per_camera_state.size(); ++i)
+                per_camera_state[i].clear();
+            return true;
+        } else
+            return false;
+    }
 
     // Per scene members.
     optix::Group root_node;
@@ -263,8 +277,6 @@ struct Renderer::Implementation {
 #ifdef ENABLE_OPTIX_DEBUG
             context->setExceptionProgram(EntryPoints::PathTracing, context->createProgramFromPTXFile(rgp_ptx_path, "exceptions"));
 #endif
-
-            context["g_max_bounce_count"]->setInt(4);
         }
 
         { // Albedo visualization setup.
@@ -421,8 +433,7 @@ struct Renderer::Implementation {
                     bool switch_to_optix_renderer = uses_optix_renderer && camera_changes.is_set(Cameras::Change::Renderer);
 
                     if (!camera_initialized && (create_optix_renderer || switch_to_optix_renderer)) {
-                        if (per_camera_state.size() <= cam_ID)
-                            per_camera_state.resize(Cameras::capacity());
+                        conditional_per_camera_state_resize(cam_ID);
                         auto& camera_state = per_camera_state[cam_ID];
 
                         unsigned int width = 1, height = 1;
@@ -906,11 +917,18 @@ struct Renderer::Implementation {
             }
         }
 
-        // TODO Join the per frame uploaded variables in a struct, to reduce the number of uploads and variable lookups.
+
+        // TODO Join the per frame and per camera uploaded variables in a struct, to reduce the number of uploads and variable lookups.
         auto& camera_state = per_camera_state[camera_ID];
+        if (camera_state.accumulations >= camera_state.max_accumulation_count)
+            return camera_state.accumulations;
+
         context["g_output_buffer_ID"]->setInt(buffer->getId());
         context["g_accumulation_buffer_ID"]->setInt(camera_state.accumulation_buffer->getId());
+        // TODO As uint!
         context["g_accumulations"]->setInt(camera_state.accumulations);
+        context["g_max_bounce_count"]->setInt(camera_state.max_bounce_count);
+
         camera_state.backend_impl->render(context, width, height);
         ++camera_state.accumulations;
 
@@ -954,27 +972,40 @@ Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hi
 Renderer::Renderer(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path, Renderers::UID renderer_ID)
     : m_impl(new Implementation(cuda_device_ID, width_hint, height_hint, data_folder_path, renderer_ID)) {}
 
-float Renderer::get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const {
-    return m_impl->scene_epsilon;
-}
-
+float Renderer::get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const { return m_impl->scene_epsilon; }
 void Renderer::set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon) {
-    m_impl->context["g_scene_epsilon"]->setFloat(m_impl->scene_epsilon);
+    m_impl->context["g_scene_epsilon"]->setFloat(scene_epsilon);
     m_impl->scene_epsilon = scene_epsilon;
 }
 
+unsigned int Renderer::get_max_bounce_count(Cameras::UID camera_ID) const { 
+    m_impl->conditional_per_camera_state_resize(camera_ID);
+    return m_impl->per_camera_state[camera_ID].max_bounce_count;
+}
+void Renderer::set_max_bounce_count(Cameras::UID camera_ID, unsigned int bounce_count) {
+    m_impl->conditional_per_camera_state_resize(camera_ID);
+    m_impl->per_camera_state[camera_ID].max_bounce_count = bounce_count;
+}
+
+unsigned int Renderer::get_max_accumulation_count(Cameras::UID camera_ID) const {
+    m_impl->conditional_per_camera_state_resize(camera_ID);
+    return m_impl->per_camera_state[camera_ID].max_accumulation_count;
+}
+void Renderer::set_max_accumulation_count(Cameras::UID camera_ID, unsigned int accumulation_count) {
+    m_impl->conditional_per_camera_state_resize(camera_ID); 
+    m_impl->per_camera_state[camera_ID].max_accumulation_count = accumulation_count;
+}
+
 Backend Renderer::get_backend(Cameras::UID camera_ID) const {
-    // Handle case where camera is created and queried before data has been updated.
-    if (m_impl->per_camera_state.size() <= camera_ID)
-        return Backend::PathTracing;
-    else
-        return m_impl->per_camera_state[camera_ID].backend;
+    m_impl->conditional_per_camera_state_resize(camera_ID);
+    return m_impl->per_camera_state[camera_ID].backend;
 }
 
 void Renderer::set_backend(Cameras::UID camera_ID, Backend backend) {
-    // Handle case where camera is created and queried before data has been updated.
-    if (m_impl->per_camera_state.size() <= camera_ID)
-        m_impl->per_camera_state.resize(camera_ID + 1);
+    if (backend == Backend::None)
+        return;
+
+    m_impl->conditional_per_camera_state_resize(camera_ID);
 
     auto& camera_state = m_impl->per_camera_state[camera_ID];
     camera_state.backend = backend;

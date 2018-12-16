@@ -20,6 +20,7 @@ using namespace optix;
 rtDeclareVariable(uint2, g_launch_index, rtLaunchIndex, );
 
 rtDeclareVariable(int, g_accumulations, , );
+rtDeclareVariable(int, g_max_bounce_count, , );
 rtDeclareVariable(int, g_accumulation_buffer_ID, , );
 rtDeclareVariable(int, g_output_buffer_ID, , );
 
@@ -29,7 +30,6 @@ rtDeclareVariable(Matrix4x4, g_inverted_view_projection_matrix, , );
 // Scene variables
 rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(float, g_scene_epsilon, , );
-rtDeclareVariable(int, g_max_bounce_count, , );
 
 template <typename Evaluator>
 __inline_dev__ void accumulate(Evaluator evaluator) {

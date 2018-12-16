@@ -258,16 +258,26 @@ void RenderingGUI::layout_frame() {
 
     if (m_optix_renderer != nullptr) {
         ImGui::PoppedTreeNode("OptiX", [&]() {
+            auto camera_ID = *Cameras::get_iterable().begin();
+
+            const char* backend_modes[] = { "Path tracer", "Albedo", "Normal" };
+            int current_backend = int(m_optix_renderer->get_backend(camera_ID)) - 1;
+            if (ImGui::Combo("Backend", &current_backend, backend_modes, IM_ARRAYSIZE(backend_modes))) {
+                auto backend = OptiXRenderer::Backend(current_backend + 1);
+                m_optix_renderer->set_backend(camera_ID, backend);
+            }
+
+            unsigned int max_bounce_count = m_optix_renderer->get_max_bounce_count(camera_ID);
+            if (ImGui::InputUint("Max bounces", &max_bounce_count))
+                m_optix_renderer->set_max_bounce_count(camera_ID, max_bounce_count);
+
+            unsigned int max_accumulation_count = m_optix_renderer->get_max_accumulation_count(camera_ID);
+            if (ImGui::InputUint("Max accumulations", &max_accumulation_count))
+                m_optix_renderer->set_max_accumulation_count(camera_ID, max(max_accumulation_count, 1u));
+
             float epsilon = m_optix_renderer->get_scene_epsilon(*SceneRoots::get_iterable().begin());
             if (ImGui::InputFloat("Epsilon", &epsilon))
                 m_optix_renderer->set_scene_epsilon(*SceneRoots::get_iterable().begin(), epsilon);
-
-            const char* backend_modes[] = { "Path tracer", "Albedo", "Normal" };
-            int current_backend = int(m_optix_renderer->get_backend(*Cameras::get_iterable().begin())) - 1;
-            if (ImGui::Combo("Backend", &current_backend, backend_modes, IM_ARRAYSIZE(backend_modes))) {
-                auto backend = OptiXRenderer::Backend(current_backend + 1);
-                m_optix_renderer->set_backend(*Cameras::get_iterable().begin(), backend);
-            }
         });
     }
 #endif
