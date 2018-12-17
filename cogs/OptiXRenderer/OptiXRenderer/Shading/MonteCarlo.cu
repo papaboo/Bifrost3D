@@ -22,13 +22,14 @@ rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
 rtDeclareVariable(MonteCarloPayload, monte_carlo_payload, rtPayload, );
 
+// Camera parameters
+rtDeclareVariable(CameraStateGPU, g_camera_state, , );
+
 // Scene parameters.
 rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(float, g_scene_epsilon, , );
 rtBuffer<Light, 1> g_lights;
 rtDeclareVariable(int, g_light_count, , );
-rtDeclareVariable(int, g_max_bounce_count, , );
-rtDeclareVariable(int, g_accumulations, , );
 
 // Material parameters.
 rtBuffer<Material, 1> g_materials;
@@ -61,7 +62,7 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
     const float3 shading_light_direction = world_shading_tbn * light_sample.direction_to_light;
     BSDFResponse bsdf_response = material.evaluate_with_PDF(monte_carlo_payload.direction, shading_light_direction);
     bool delta_light = LightSources::is_delta_light(light, monte_carlo_payload.position);
-    bool apply_MIS = !delta_light && monte_carlo_payload.bounces < g_max_bounce_count;
+    bool apply_MIS = !delta_light && monte_carlo_payload.bounces < g_camera_state.max_bounce_count;
     if (apply_MIS) { // TODO Try using math instead and profile using test scene.
         float mis_weight = RNG::power_heuristic(light_sample.PDF, bsdf_response.PDF);
         light_sample.radiance *= mis_weight;

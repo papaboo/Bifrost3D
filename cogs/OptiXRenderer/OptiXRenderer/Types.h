@@ -14,6 +14,7 @@
 #include <OptiXRenderer/RNG.h>
 
 #include <optixu/optixu_math_namespace.h>
+#include <optixu/optixu_matrix_namespace.h>
 
 #include <cuda_fp16.h>
 
@@ -205,6 +206,19 @@ struct __align__(16) MonteCarloPayload {
 
 struct ShadowPayload {
     optix::float3 attenuation;
+};
+
+//----------------------------------------------------------------------------
+// Camera data uploaded to the GPU
+//----------------------------------------------------------------------------
+
+struct __align__(16) CameraStateGPU {
+    optix::float4  camera_position;
+    optix::Matrix4x4 inverted_view_projection_matrix;
+    unsigned int accumulations;
+    unsigned int max_bounce_count;
+    int accumulation_buffer_ID;
+    int output_buffer_ID;
 };
 
 } // NS OptiXRenderer

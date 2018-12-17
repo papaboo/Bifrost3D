@@ -888,6 +888,9 @@ struct Renderer::Implementation {
     }
 
     unsigned int render(Cogwheel::Scene::Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
+
+        CameraStateGPU camera_state_GPU = {};
+
         { // Update camera state
             // Resize screen buffers if necessary.
             uint2 current_screensize = make_uint2(width, height);
@@ -910,24 +913,22 @@ struct Renderer::Implementation {
                     camera_state.accumulations = 0u;
                 }
 
-                context["g_inverted_view_projection_matrix"]->setMatrix4x4fv(false, inverse_view_projection_matrix.begin());
+                camera_state_GPU.inverted_view_projection_matrix = optix::Matrix4x4(inverse_view_projection_matrix.begin());
                 Vector3f cam_pos = Cameras::get_transform(camera_ID).translation;
-                float4 camera_position = make_float4(cam_pos.x, cam_pos.y, cam_pos.z, 0.0f);
-                context["g_camera_position"]->setFloat(camera_position);
+                camera_state_GPU.camera_position = make_float4(cam_pos.x, cam_pos.y, cam_pos.z, 0.0f);
             }
         }
 
 
-        // TODO Join the per frame and per camera uploaded variables in a struct, to reduce the number of uploads and variable lookups.
         auto& camera_state = per_camera_state[camera_ID];
         if (camera_state.accumulations >= camera_state.max_accumulation_count)
             return camera_state.accumulations;
 
-        context["g_output_buffer_ID"]->setInt(buffer->getId());
-        context["g_accumulation_buffer_ID"]->setInt(camera_state.accumulation_buffer->getId());
-        // TODO As uint!
-        context["g_accumulations"]->setInt(camera_state.accumulations);
-        context["g_max_bounce_count"]->setInt(camera_state.max_bounce_count);
+        camera_state_GPU.output_buffer_ID = buffer->getId();
+        camera_state_GPU.accumulation_buffer_ID = camera_state.accumulation_buffer->getId();
+        camera_state_GPU.accumulations = camera_state.accumulations;
+        camera_state_GPU.max_bounce_count = camera_state.max_bounce_count;
+        context["g_camera_state"]->setUserData(sizeof(CameraStateGPU), &camera_state_GPU);
 
         camera_state.backend_impl->render(context, width, height);
         ++camera_state.accumulations;
