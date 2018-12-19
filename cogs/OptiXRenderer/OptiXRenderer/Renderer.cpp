@@ -203,14 +203,16 @@ struct Renderer::Implementation {
             return false;
     }
 
-    // Per scene members.
-    optix::Group root_node;
-    float scene_epsilon;
+    // Per scene state.
+    struct {
+        optix::Group root;
 #if PRESAMPLE_ENVIRONMENT_MAP
-    PresampledEnvironmentMap environment;
+        PresampledEnvironmentMap environment;
 #else
-    EnvironmentMap environment;
+        EnvironmentMap environment;
 #endif
+        SceneStateGPU GPU_state;
+    } scene;
 
     std::vector<optix::Transform> transforms = std::vector<optix::Transform>(0);
     std::vector<optix::Geometry> meshes = std::vector<optix::Geometry>(0);
@@ -315,54 +317,54 @@ struct Renderer::Implementation {
             optix::Acceleration root_acceleration = context->createAcceleration("Trbvh", "Bvh");
             root_acceleration->setProperty("refit", "1");
 
-            root_node = context->createGroup();
-            root_node->setAcceleration(root_acceleration);
-            OPTIX_VALIDATE(root_node);
+            scene.root = context->createGroup();
+            scene.root->setAcceleration(root_acceleration);
+            context["g_scene_root"]->set(scene.root);
+            OPTIX_VALIDATE(scene.root);
 
-            context["g_scene_root"]->set(root_node);
-            scene_epsilon = 0.0001f;
-            context["g_scene_epsilon"]->setFloat(scene_epsilon);
+            scene.GPU_state.ray_epsilon = 0.0001f;
+
+            { // Light sources
+                lights.sources = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, 1);
+                lights.sources->setElementSize(sizeof(Light));
+                lights.count = 0;
+                scene.GPU_state.light_buffer_ID = lights.sources->getId();
+                scene.GPU_state.light_count = lights.count;
+
+                // Analytical area light geometry.
+                lights.area_lights_geometry = context->createGeometry();
+                std::string light_intersection_ptx_path = get_ptx_path(shader_prefix, "LightSources");
+                lights.area_lights_geometry->setIntersectionProgram(context->createProgramFromPTXFile(light_intersection_ptx_path, "intersect"));
+                lights.area_lights_geometry->setBoundingBoxProgram(context->createProgramFromPTXFile(light_intersection_ptx_path, "bounds"));
+                lights.area_lights_geometry->setPrimitiveCount(0u);
+                OPTIX_VALIDATE(lights.area_lights_geometry);
+
+                // Analytical area light material.
+                optix::Material material = context->createMaterial();
+                std::string monte_carlo_ptx_path = get_ptx_path(shader_prefix, "MonteCarlo");
+                material->setClosestHitProgram(RayTypes::MonteCarlo, context->createProgramFromPTXFile(monte_carlo_ptx_path, "light_closest_hit"));
+                OPTIX_VALIDATE(material);
+
+                optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
+                OPTIX_VALIDATE(acceleration);
+
+                optix::GeometryInstance area_lights = context->createGeometryInstance(lights.area_lights_geometry, &material, &material + 1);
+                OPTIX_VALIDATE(area_lights);
+
+                lights.area_lights = context->createGeometryGroup(&area_lights, &area_lights + 1);
+                lights.area_lights->setAcceleration(acceleration);
+                OPTIX_VALIDATE(lights.area_lights);
+
+                scene.root->addChild(lights.area_lights);
+
+                // Empty environment
 #if PRESAMPLE_ENVIRONMENT_MAP
-            PresampledEnvironmentLight environment = {};
-            context["g_scene_environment_light"]->setUserData(sizeof(PresampledEnvironmentLight), &environment);
+                scene.environment = PresampledEnvironmentMap();
 #else
-            EnvironmentLight environment = {};
-            context["g_scene_environment_light"]->setUserData(sizeof(environment), &environment);
+                scene.environment = EnvironmentMap();
 #endif
-        }
-
-        { // Light sources
-            lights.sources = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, 1);
-            lights.sources->setElementSize(sizeof(Light));
-            lights.count = 0;
-            context["g_lights"]->set(lights.sources);
-            context["g_light_count"]->setInt(lights.count);
-
-            // Analytical area light geometry.
-            lights.area_lights_geometry = context->createGeometry();
-            std::string light_intersection_ptx_path = get_ptx_path(shader_prefix, "LightSources");
-            lights.area_lights_geometry->setIntersectionProgram(context->createProgramFromPTXFile(light_intersection_ptx_path, "intersect"));
-            lights.area_lights_geometry->setBoundingBoxProgram(context->createProgramFromPTXFile(light_intersection_ptx_path, "bounds"));
-            lights.area_lights_geometry->setPrimitiveCount(0u);
-            OPTIX_VALIDATE(lights.area_lights_geometry);
-
-            // Analytical area light material.
-            optix::Material material = context->createMaterial();
-            std::string monte_carlo_ptx_path = get_ptx_path(shader_prefix, "MonteCarlo");
-            material->setClosestHitProgram(RayTypes::MonteCarlo, context->createProgramFromPTXFile(monte_carlo_ptx_path, "light_closest_hit"));
-            OPTIX_VALIDATE(material);
-
-            optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
-            OPTIX_VALIDATE(acceleration);
-
-            optix::GeometryInstance area_lights = context->createGeometryInstance(lights.area_lights_geometry, &material, &material + 1);
-            OPTIX_VALIDATE(area_lights);
-
-            lights.area_lights = context->createGeometryGroup(&area_lights, &area_lights + 1);
-            lights.area_lights->setAcceleration(acceleration);
-            OPTIX_VALIDATE(lights.area_lights);
-
-            root_node->addChild(lights.area_lights);
+                scene.GPU_state.environment_light = {};
+            }
         }
 
         { // Setup dummy texture.
@@ -672,14 +674,14 @@ struct Renderer::Implementation {
                     }
 
                     // Append the environment map, if valid, to the list of light sources.
-                    if (environment.next_event_estimation_possible())
-                        device_lights[lights.count++] = environment.get_light();
+                    if (scene.environment.next_event_estimation_possible())
+                        device_lights[lights.count++] = scene.environment.get_light();
 
                     lights.count = light_index;
                     lights.sources->unmap();
                 } else {
                     // Skip the environment light proxy at the end of the light buffer.
-                    if (environment.next_event_estimation_possible())
+                    if (scene.environment.next_event_estimation_possible())
                         lights.count -= 1;
 
                     Light* device_lights = (Light*)lights.sources->map();
@@ -737,20 +739,20 @@ struct Renderer::Implementation {
                     }
 
                     // Append the environment map, if valid, to the list of light sources.
-                    if (environment.next_event_estimation_possible())
-                        device_lights[lights.count++] = environment.get_light();
+                    if (scene.environment.next_event_estimation_possible())
+                        device_lights[lights.count++] = scene.environment.get_light();
 
                     lights.sources->unmap();
                 }
 
-                context["g_light_count"]->setInt(lights.count);
+                scene.GPU_state.light_count = lights.count;
                 should_reset_allocations = true;
 
                 // Update area light geometry if needed.
                 if (highest_area_light_index_updated >= 0) {
                     // Some area light was updated.
                     lights.area_lights->getAcceleration()->markDirty();
-                    root_node->getAcceleration()->markDirty();
+                    scene.root->getAcceleration()->markDirty();
 
                     // Increase primitive count if new area lights have been added.
                     int primitive_count = lights.area_lights_geometry->getPrimitiveCount();
@@ -774,7 +776,7 @@ struct Renderer::Implementation {
                 if (model.get_changes() == MeshModels::Change::Destroyed) {
                     if (scene_node_index < transforms.size() && transforms[scene_node_index]) {
                         optix::Transform& optixTransform = transforms[scene_node_index];
-                        root_node->removeChild(optixTransform);
+                        scene.root->removeChild(optixTransform);
                         optixTransform->destroy();
                         transforms[scene_node_index] = nullptr;
 
@@ -784,7 +786,7 @@ struct Renderer::Implementation {
 
                 if (model.get_changes() & MeshModels::Change::Created) {
                     optix::Transform transform = load_model(context, model, meshes.data(), default_material);
-                    root_node->addChild(transform);
+                    scene.root->addChild(transform);
 
                     if (transforms.size() <= scene_node_index)
                         transforms.resize(SceneNodes::capacity());
@@ -801,7 +803,7 @@ struct Renderer::Implementation {
             }
 
             if (models_changed) {
-                root_node->getAcceleration()->markDirty();
+                scene.root->getAcceleration()->markDirty();
                 should_reset_allocations = true;
             }
         }
@@ -824,36 +826,33 @@ struct Renderer::Implementation {
             }
 
             if (important_transform_changed) {
-                root_node->getAcceleration()->markDirty();
+                scene.root->getAcceleration()->markDirty();
                 should_reset_allocations = true;
             }
         }
 
         { // Scene root updates
-            for (SceneRoot scene : SceneRoots::get_changed_scenes()) {
-                if (scene.get_changes().any_set(SceneRoots::Change::EnvironmentTint, SceneRoots::Change::Created)) {
-                    Math::RGB env_tint = scene.get_environment_tint();
-                    float3 environment_tint = make_float3(env_tint.r, env_tint.g, env_tint.b);
-                    context["g_scene_environment_tint"]->setFloat(environment_tint);
+            for (SceneRoot scene_data : SceneRoots::get_changed_scenes()) {
+                if (scene_data.get_changes().any_set(SceneRoots::Change::EnvironmentTint, SceneRoots::Change::Created)) {
+                    Math::RGB env_tint = scene_data.get_environment_tint();
+                    scene.GPU_state.environment_tint = make_float3(env_tint.r, env_tint.g, env_tint.b);
                     should_reset_allocations = true;
                 }
 
-                if (scene.get_changes().any_set(SceneRoots::Change::EnvironmentMap, SceneRoots::Change::Created)) {
-                    Textures::UID environment_map_ID = scene.get_environment_map();
-                    if (environment_map_ID != environment.get_environment_map_ID()) {
+                if (scene_data.get_changes().any_set(SceneRoots::Change::EnvironmentMap, SceneRoots::Change::Created)) {
+                    Textures::UID environment_map_ID = scene_data.get_environment_map();
+                    if (environment_map_ID != scene.environment.get_environment_map_ID()) {
                         Image image = Textures::get_image_ID(environment_map_ID);
                         // Only textures with four channels are supported.
                         if (channel_count(image.get_pixel_format()) == 4) { // TODO Support other formats as well by converting the buffers to float4 and upload.
 #if PRESAMPLE_ENVIRONMENT_MAP
-                            environment = PresampledEnvironmentMap(context, *scene.get_environment_light(), textures.data());
-                            PresampledEnvironmentLight light = environment.get_light().presampled_environment;
+                            scene.environment = PresampledEnvironmentMap(context, *scene_data.get_environment_light(), textures.data());
+                            scene.GPU_state.environment_light = scene.environment.get_light().presampled_environment;
 #else
-                            environment = EnvironmentMap(context, *scene.get_environment_light(), textures.data());
-                            EnvironmentLight light = environment.get_light().environment;
+                            scene.environment = EnvironmentMap(context, *scene_data.get_environment_light(), textures.data());
+                            scene.GPU_state.environment_light = scene.environment.get_light().environment;
 #endif
-                            context["g_scene_environment_light"]->setUserData(sizeof(light), &light);
-
-                            if (environment.next_event_estimation_possible()) {
+                            if (scene.environment.next_event_estimation_possible()) {
                                 // Append environment light to the end of the light source buffer.
                                 // NOTE When multi-scene support is added we cannot know if an environment light is available pr scene, 
                                 // so we do not know if the environment light is always valid.
@@ -866,14 +865,19 @@ struct Renderer::Implementation {
                                 assert(lights.count + 1 <= light_source_capacity);
 #endif
                                 Light* device_lights = (Light*)lights.sources->map();
-                                device_lights[lights.count++] = environment.get_light();
+                                device_lights[lights.count++] = scene.environment.get_light();
                                 lights.sources->unmap();
 
-                                context["g_light_count"]->setInt(lights.count);
+                                scene.GPU_state.light_count = lights.count;
                             }
                         } else {
-                            EnvironmentLight light = EnvironmentLight::none();
-                            context["g_scene_environment_light"]->setUserData(sizeof(light), &light);
+#if PRESAMPLE_ENVIRONMENT_MAP
+                            scene.environment = PresampledEnvironmentMap();
+                            scene.GPU_state.environment_light = PresampledEnvironmentLight::none();
+#else
+                            scene.environment = EnvironmentMap();
+                            scene.GPU_state.environment_light = EnvironmentLight::none();
+#endif
                             printf("OptiXRenderer only supports environments with 4 channels. '%s' has %u.\n", image.get_name().c_str(), channel_count(image.get_pixel_format()));
                         }
                         should_reset_allocations = true;
@@ -930,6 +934,8 @@ struct Renderer::Implementation {
         camera_state_GPU.max_bounce_count = camera_state.max_bounce_count;
         context["g_camera_state"]->setUserData(sizeof(CameraStateGPU), &camera_state_GPU);
 
+        context["g_scene"]->setUserData(sizeof(SceneStateGPU), &scene.GPU_state);
+
         camera_state.backend_impl->render(context, width, height);
         ++camera_state.accumulations;
 
@@ -973,10 +979,9 @@ Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hi
 Renderer::Renderer(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path, Renderers::UID renderer_ID)
     : m_impl(new Implementation(cuda_device_ID, width_hint, height_hint, data_folder_path, renderer_ID)) {}
 
-float Renderer::get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const { return m_impl->scene_epsilon; }
+float Renderer::get_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID) const { return m_impl->scene.GPU_state.ray_epsilon; }
 void Renderer::set_scene_epsilon(Cogwheel::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon) {
-    m_impl->context["g_scene_epsilon"]->setFloat(scene_epsilon);
-    m_impl->scene_epsilon = scene_epsilon;
+    m_impl->scene.GPU_state.ray_epsilon = scene_epsilon;
 }
 
 unsigned int Renderer::get_max_bounce_count(Cameras::UID camera_ID) const { 

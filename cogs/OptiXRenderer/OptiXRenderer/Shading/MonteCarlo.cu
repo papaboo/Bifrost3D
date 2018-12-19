@@ -27,9 +27,7 @@ rtDeclareVariable(CameraStateGPU, g_camera_state, , );
 
 // Scene parameters.
 rtDeclareVariable(rtObject, g_scene_root, , );
-rtDeclareVariable(float, g_scene_epsilon, , );
-rtBuffer<Light, 1> g_lights;
-rtDeclareVariable(int, g_light_count, , );
+rtDeclareVariable(SceneStateGPU, g_scene, , );
 
 // Material parameters.
 rtBuffer<Material, 1> g_materials;
@@ -50,10 +48,10 @@ rtDeclareVariable(float2, texcoord, attribute texcoord, );
 // Sample a single light source, evaluates the material's response to the light and 
 // stores the combined response in the light source's radiance member.
 __inline_dev__ LightSample sample_single_light(const DefaultShading& material, const TBN& world_shading_tbn, float light_index_w) {
-    int light_index = min(g_light_count - 1, int(light_index_w * g_light_count));
-    const Light& light = g_lights[light_index];
+    int light_index = min(g_scene.light_count - 1, int(light_index_w * g_scene.light_count));
+    const Light& light = rtBufferId<Light, 1>(g_scene.light_buffer_ID)[light_index];
     LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_payload.position, monte_carlo_payload.rng.sample2f());
-    light_sample.radiance *= g_light_count; // Scale up radiance to account for only sampling one light.
+    light_sample.radiance *= g_scene.light_count; // Scale up radiance to account for only sampling one light.
 
     float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction_to_light);
     light_sample.radiance *= abs(N_dot_L) / light_sample.PDF;
@@ -113,7 +111,7 @@ RT_PROGRAM void closest_hit() {
 
     float coverage = DefaultShading::coverage(material_parameter, texcoord);
     if (monte_carlo_payload.rng.sample1f() > coverage) {
-        monte_carlo_payload.position = ray.direction * (t_hit + g_scene_epsilon) + ray.origin;
+        monte_carlo_payload.position = ray.direction * (t_hit + g_scene.ray_epsilon) + ray.origin;
         return;
     }
 
@@ -128,12 +126,12 @@ RT_PROGRAM void closest_hit() {
 
 #if ENABLE_NEXT_EVENT_ESTIMATION
     // Sample a light source.
-    if (g_light_count != 0) {
+    if (g_scene.light_count != 0) {
         const LightSample light_sample = reestimated_light_samples(material, world_shading_tbn, 3);
 
         if (light_sample.radiance.x > 0.0f || light_sample.radiance.y > 0.0f || light_sample.radiance.z > 0.0f) {
             ShadowPayload shadow_payload = { light_sample.radiance };
-            Ray shadow_ray(monte_carlo_payload.position, light_sample.direction_to_light, RayTypes::Shadow, g_scene_epsilon, light_sample.distance - g_scene_epsilon);
+            Ray shadow_ray(monte_carlo_payload.position, light_sample.direction_to_light, RayTypes::Shadow, g_scene.ray_epsilon, light_sample.distance - g_scene.ray_epsilon);
             rtTrace(g_scene_root, shadow_ray, shadow_payload);
 
             monte_carlo_payload.radiance += monte_carlo_payload.throughput * shadow_payload.attenuation;
@@ -172,7 +170,7 @@ RT_PROGRAM void shadow_any_hit() {
 RT_PROGRAM void light_closest_hit() {
 
     int light_index = __float_as_int(geometric_normal.x);
-    const SphereLight& light = g_lights[light_index].sphere;
+    const SphereLight& light = rtBufferId<Light, 1>(g_scene.light_buffer_ID)[light_index].sphere;
 
     bool next_event_estimated = monte_carlo_payload.bounces != 0; // Was next event estimated at previous intersection.
     float3 light_radiance = LightSources::evaluate_intersection(light, ray.origin, ray.direction, 

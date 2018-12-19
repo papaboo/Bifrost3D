@@ -221,6 +221,26 @@ struct __align__(16) CameraStateGPU {
     int output_buffer_ID;
 };
 
+//----------------------------------------------------------------------------
+// Scene data uploaded to the GPU
+//----------------------------------------------------------------------------
+
+struct __align__(16) SceneStateGPU {
+#if PRESAMPLE_ENVIRONMENT_MAP
+    PresampledEnvironmentLight environment_light; // Takes up 4 ints and 16 byte aligned.
+    optix::float2 __padding;
+#else
+    EnvironmentLight environment_light; // Takes up 6 ints
+#endif
+
+    // -- Aligned to 8 byte from here --
+
+    int light_buffer_ID;
+    unsigned int light_count;
+    optix::float3 environment_tint;
+    float ray_epsilon;
+};
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_TYPES_H_

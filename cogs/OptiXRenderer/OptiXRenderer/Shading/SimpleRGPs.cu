@@ -23,7 +23,7 @@ rtDeclareVariable(CameraStateGPU, g_camera_state, , );
 
 // Scene variables
 rtDeclareVariable(rtObject, g_scene_root, , );
-rtDeclareVariable(float, g_scene_epsilon, , );
+rtDeclareVariable(SceneStateGPU, g_scene, , );
 
 template <typename Evaluator>
 __inline_dev__ void accumulate(Evaluator evaluator) {
@@ -70,7 +70,7 @@ RT_PROGRAM void path_tracing_RPG() {
 
     accumulate([](MonteCarloPayload payload) -> float3 {
         do {
-            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene_epsilon);
+            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
             rtTrace(g_scene_root, ray, payload);
         } while (payload.bounces < g_camera_state.max_bounce_count && !is_black(payload.throughput));
 
@@ -88,7 +88,7 @@ RT_PROGRAM void normals_RPG() {
         float3 last_ray_direction = payload.direction;
         do {
             last_ray_direction = payload.direction;
-            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene_epsilon);
+            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
             rtTrace(g_scene_root, ray, payload);
         } while (payload.bsdf_MIS_PDF == 0.0f && !is_black(payload.throughput));
 
@@ -111,7 +111,7 @@ RT_PROGRAM void albedo_RPG() {
         float3 last_ray_direction = payload.direction;
         do {
             last_ray_direction = payload.direction;
-            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene_epsilon);
+            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
             rtTrace(g_scene_root, ray, payload);
         } while (payload.material_index == 0 && !is_black(payload.throughput));
 
@@ -134,20 +134,14 @@ RT_PROGRAM void albedo_RPG() {
 
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(MonteCarloPayload, monte_carlo_payload, rtPayload, );
-rtDeclareVariable(float3, g_scene_environment_tint, , );
-#if PRESAMPLE_ENVIRONMENT_MAP
-rtDeclareVariable(PresampledEnvironmentLight, g_scene_environment_light, , );
-#else
-rtDeclareVariable(EnvironmentLight, g_scene_environment_light, , );
-#endif
 
 RT_PROGRAM void miss() {
-    float3 environment_radiance = g_scene_environment_tint;
+    float3 environment_radiance = g_scene.environment_tint;
 
-    unsigned int environment_map_ID = g_scene_environment_light.environment_map_ID;
+    unsigned int environment_map_ID = g_scene.environment_light.environment_map_ID;
     if (environment_map_ID) {
         bool next_event_estimated = monte_carlo_payload.bounces != 0; // Was next event estimated at previous intersection.
-        environment_radiance *= LightSources::evaluate_intersection(g_scene_environment_light, ray.origin, ray.direction, 
+        environment_radiance *= LightSources::evaluate_intersection(g_scene.environment_light, ray.origin, ray.direction, 
                                                                     monte_carlo_payload.bsdf_MIS_PDF, next_event_estimated);
     }
 
