@@ -31,9 +31,9 @@ using namespace Cogwheel::Scene;
 
 namespace Scenes {
 
-class MaterialGUI final : public ImGui::IImGuiFrame {
+class SphereMaterialGUI final : public ImGui::IImGuiFrame {
 public:
-    MaterialGUI(Material material) : m_material(material) {
+    SphereMaterialGUI(Material material) : m_material(material) {
         std::fill_n(m_ggx.sampled_rho, m_ggx.sample_count, 0.0f);
         m_ggx.accumulation_count = 0;
 
@@ -66,7 +66,6 @@ public:
             m_material.set_specularity(specularity);
             specularity_changed = true;
         }
-
 
         ImGui::PoppedTreeNode("GGX", [&] {
             if (roughness_changed) {
@@ -209,7 +208,7 @@ void create_sphere_scene(Engine& engine, Cameras::UID camera_ID, SceneRoots::UID
     }
 
     { // Setup GUI.
-        imgui->add_frame(std::make_unique<MaterialGUI>(*Materials::get_iterable().begin()));
+        imgui->add_frame(std::make_unique<SphereMaterialGUI>(*Materials::get_iterable().begin()));
     }
 }
 
