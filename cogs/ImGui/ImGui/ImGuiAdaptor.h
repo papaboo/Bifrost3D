@@ -47,6 +47,14 @@ public:
 
     inline void add_frame(std::unique_ptr<IImGuiFrame> frame) { m_frames.push_back(std::move(frame)); }
 
+    template<class ImGuiFrame, class... ArgTypes>
+    inline ImGuiFrame& make_frame(ArgTypes&&... args) {
+        auto unique_ptr = std::make_unique<ImGuiFrame>(std::forward<ArgTypes>(args)...);
+        ImGuiFrame* ptr = unique_ptr.get();
+        m_frames.push_back(std::move(unique_ptr));
+        return *ptr;
+    }
+
     inline bool is_enabled() const { return m_enabled; }
     inline void set_enabled(bool enabled) { m_enabled = enabled; }
 
