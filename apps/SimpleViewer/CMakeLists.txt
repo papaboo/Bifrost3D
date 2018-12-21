@@ -12,6 +12,7 @@ set(GUI_SRCS
 set(SCENES_SRCS
   Scenes/CornellBox.h
   Scenes/Material.h
+  Scenes/Material.cpp
   Scenes/Opacity.h
   Scenes/SphereLight.h
   Scenes/Sphere.h
