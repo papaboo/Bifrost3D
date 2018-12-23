@@ -75,7 +75,7 @@ private:
     //   The light scattered from the 2nd, 3rd and so on scattering event is assumed to be diffuse and its rho/tint is energy_lost * specularity.
     // * The dielectric diffuse tint is computed as tint * (1 - specular_rho) and the metallic diffuse tint is black. 
     //   The diffuse tint of the materials is found by a linear interpolation of the two based on metallicness.
-    // * The metallic parameter defines and interpolation between a dielectric material and a conductor material. 
+    // * The metallic parameter defines an interpolation between a dielectric material and a conductor material. 
     //   As both materials are described as an independent combination of diffuse and microfacet BRDFs, 
     //   the interpolation between the materials can be computed by simply interpolating the material parameters, 
     //   ie. lerp(evaluate(dielectric, ...), evaluate(conductor, ...), metallic) can be expressed as evaluate(lerp(dielectric, conductor, metallic), ...)
