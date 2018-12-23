@@ -66,64 +66,65 @@ private:
         return specular_weight / (diffuse_weight + specular_weight);
     }
 
+    // Computes the specularity of the specular microfacet and the tint of the diffuse reflection.
+    // * The specularity is a linear interpolation of the dielectric specularity and the conductor/metal specularity.
+    //   The dielectric specularity is found by multiplying the materials specularity by 0.08, as is described on page 8 of Physically-Based Shading at Disney.
+    //   The conductor specularity is simply the tint of the material, as the tint describes the color of the metal when viewed head on.
+    // * A multiple scattering microfacet is approximated from the principle that white-is-white and energy lost 
+    //   from not simulating multiple scattering events can be computed as 1 - white_specular_rho = energy_lost. 
+    //   The light scattered from the 2nd, 3rd and so on scattering event is assumed to be diffuse and its rho/tint is energy_lost * specularity.
+    // * The dielectric diffuse tint is computed as tint * (1 - specular_rho) and the metallic diffuse tint is black. 
+    //   The diffuse tint of the materials is found by a linear interpolation of the two based on metallicness.
+    // * The metallic parameter defines and interpolation between a dielectric material and a conductor material. 
+    //   As both materials are described as an independent combination of diffuse and microfacet BRDFs, 
+    //   the interpolation between the materials can be computed by simply interpolating the material parameters, 
+    //   ie. lerp(evaluate(dielectric, ...), evaluate(conductor, ...), metallic) can be expressed as evaluate(lerp(dielectric, conductor, metallic), ...)
+    __inline_all__ static void compute_tints(const optix::float3& tint, float roughness, float specularity, float metallic, float abs_cos_theta,
+                                             optix::float3& diffuse_tint, optix::float3& base_specularity) {
+        using namespace optix;
+
+        // Specularity
+        float dielectric_specularity = specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.
+        float3 conductor_specularity = tint;
+        base_specularity = lerp(make_float3(dielectric_specularity), conductor_specularity, metallic);
+
+        // Specular directional-hemispherical reflectance function.
+        auto precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, roughness);
+        float dielectric_specular_rho = precomputed_specular_rho.rho(dielectric_specularity);
+        float3 conductor_specular_rho = precomputed_specular_rho.rho(conductor_specularity);
+
+        // Dielectric tint.
+        float dielectric_lossless_specular_rho = dielectric_specular_rho / precomputed_specular_rho.full;
+        float3 dielectric_tint = tint * (1.0f - dielectric_lossless_specular_rho);
+
+        // Microfacet specular interreflection.
+        float3 specular_rho = lerp(make_float3(dielectric_specular_rho), conductor_specular_rho, metallic);
+        float3 lossless_specular_rho = specular_rho / precomputed_specular_rho.full;
+        float3 specular_multiple_scattering_rho = lossless_specular_rho - specular_rho;
+
+        // Combining dielectric diffuse tint with specular scattering.
+        diffuse_tint = dielectric_tint * (1.0f - metallic) + specular_multiple_scattering_rho;
+    }
+
 public:
 
     __inline_all__ DefaultShading(const Material& material, float abs_cos_theta)
         : m_roughness(material.roughness) { 
-        using namespace optix;
-
-        // Metallic
-        float metallic = material.metallic;
-
-        float dielectric_specularity = material.specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.
-        float3 conductor_specularity = material.tint;
-        m_specularity = lerp(make_float3(dielectric_specularity), conductor_specularity, metallic);
-
-        auto precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, m_roughness);
-        float dielectric_specular_rho = precomputed_specular_rho.rho(dielectric_specularity);
-        float3 conductor_specular_rho = precomputed_specular_rho.rho(conductor_specularity);
-
-        // TODO Comment about specularity and interreflection.
-        float dielectric_lossless_specular_rho = dielectric_specular_rho / precomputed_specular_rho.full;
-        float3 dielectric_tint = material.tint * (1.0f - dielectric_lossless_specular_rho);
-
-        float3 specular_rho = lerp(make_float3(dielectric_specular_rho), conductor_specular_rho, metallic);
-        float3 lossless_specular_rho = specular_rho / precomputed_specular_rho.full;
-        float3 specular_secondary_scattering_rho = lossless_specular_rho - specular_rho;
-        m_diffuse_tint = dielectric_tint * (1.0f - metallic) + specular_secondary_scattering_rho; // Diffuse tint combines the tint of the diffuse scattering with the secondary scattering from the specular layer.
+        compute_tints(material.tint, m_roughness, material.specularity, material.metallic, abs_cos_theta,
+                      m_diffuse_tint, m_specularity);
     }
 
 #if GPU_DEVICE
     __inline_all__ DefaultShading(const Material& material, float abs_cos_theta, optix::float2 texcoord)
-        : m_roughness(material.roughness)
-    {
-        using namespace optix;
-
-        // Metallic
-        float metallic = material.metallic;
-
+        : m_roughness(material.roughness) {
         // Material tint
         float3 tint = material.tint;
         if (material.tint_texture_ID)
             tint *= make_float3(optix::rtTex2D<optix::float4>(material.tint_texture_ID, texcoord.x, texcoord.y));
 
-        float dielectric_specularity = material.specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.
-        float3 conductor_specularity = tint;
-        m_specularity = lerp(make_float3(dielectric_specularity), conductor_specularity, metallic);
-
-        auto precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, m_roughness);
-        float dielectric_specular_rho = precomputed_specular_rho.rho(dielectric_specularity);
-        float3 conductor_specular_rho = precomputed_specular_rho.rho(conductor_specularity);
-
-        // TODO Comment about specularity and interreflection.
-        float dielectric_lossless_specular_rho = dielectric_specular_rho / precomputed_specular_rho.full;
-        float3 dielectric_tint = tint * (1.0f - dielectric_lossless_specular_rho);
-
-        float3 specular_rho = lerp(make_float3(dielectric_specular_rho), conductor_specular_rho, metallic);
-        float3 lossless_specular_rho = specular_rho / precomputed_specular_rho.full;
-        float3 specular_secondary_scattering_rho = lossless_specular_rho - specular_rho;
-        m_diffuse_tint = dielectric_tint * (1.0f - metallic) + specular_secondary_scattering_rho; // Diffuse tint combines the tint of the diffuse scattering with the secondary scattering from the specular layer.
-}
+        compute_tints(tint, m_roughness, material.specularity, material.metallic, abs_cos_theta,
+                      m_diffuse_tint, m_specularity);
+    }
 #endif
 
     __inline_all__ static float coverage(const Material& material, optix::float2 texcoord) {

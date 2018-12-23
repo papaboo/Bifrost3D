@@ -84,18 +84,21 @@ struct DefaultShading {
         if (material_params.m_textures_bound & TextureBound::Tint)
             tint *= color_tex.Sample(color_sampler, texcoord).rgb;
 
+        // Specularity
         float dielectric_specularity = material_params.m_specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.
         float3 conductor_specularity = tint;
         shading.m_specularity = lerp(dielectric_specularity.rrr, conductor_specularity, metallic);
 
+        // Specular directional-hemispherical reflectance function.
         PrecomputedSpecularRho precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, shading.m_roughness); // TODO To abs_cos_theta
         float dielectric_specular_rho = precomputed_specular_rho.rho(dielectric_specularity);
         float3 conductor_specular_rho = precomputed_specular_rho.rho(conductor_specularity);
 
-        // TODO Comment about specularity and interreflection.
+        // Dielectric tint.
         float dielectric_lossless_specular_rho = dielectric_specular_rho / precomputed_specular_rho.full;
         float3 dielectric_tint = tint * (1.0f - dielectric_lossless_specular_rho);
 
+        // Microfacet specular interreflection.
         float3 specular_rho = lerp(dielectric_specular_rho.rrr, conductor_specular_rho, metallic);
         float3 lossless_specular_rho = specular_rho / precomputed_specular_rho.full;
         float3 specular_secondary_scattering_rho = lossless_specular_rho - specular_rho;
