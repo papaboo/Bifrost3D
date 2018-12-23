@@ -255,6 +255,66 @@ GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation
     test_albedo(grazing_wo, 0.75f, 0.75f);
 }
 
+GTEST_TEST(DefaultShadingModel, white_hot_room) {
+    using namespace Shading::ShadingModels;
+    using namespace optix;
+
+    // A white material to stress test power_conservation.
+    Material white_material_params = {};
+    white_material_params.tint = optix::make_float3(1.0f, 1.0f, 1.0f);
+    white_material_params.specularity = 0.5f;
+
+    for (float metallic : { 0.0f, 0.5f, 1.0f }) {
+        white_material_params.metallic = metallic;
+        for (float roughness : { 0.0f, 0.5f, 1.0f }) {
+            white_material_params.roughness = roughness;
+
+            for (int a = 0; a < 5; ++a) {
+                float abs_cos_theta = 1.0f - float(a) * 0.2f;
+                auto material = DefaultShading(white_material_params, abs_cos_theta);
+                EXPECT_FLOAT_EQ(1.0f, material.rho(abs_cos_theta).x);
+            }
+        }
+    }
+}
+
+GTEST_TEST(DefaultShadingModel, metallic_interpolation) {
+    using namespace Shading::ShadingModels;
+    using namespace optix;
+
+    // A white material to stress test power_conservation.
+    Material material_params = {};
+    material_params.tint = optix::make_float3(1.0f, 0.5f, 0.25f);
+    material_params.specularity = 0.5f;
+
+    for (float roughness : { 0.0f, 0.5f, 1.0f }) {
+        material_params.roughness = roughness;
+        for (float metallic : { 0.25f, 0.5f, 0.75f }) {
+            for (float abs_cos_theta : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
+
+                material_params.metallic = metallic;
+                auto material = DefaultShading(material_params, abs_cos_theta);
+                float3 rho = material.rho(abs_cos_theta);
+
+                material_params.metallic = 0;
+                auto dielectric_material = DefaultShading(material_params, abs_cos_theta);
+                float3 dielectric_rho = dielectric_material.rho(abs_cos_theta);
+
+                material_params.metallic = 1;
+                auto conductor_material = DefaultShading(material_params, abs_cos_theta);
+                float3 conductor_rho = conductor_material.rho(abs_cos_theta);
+
+                // Test that the directional-hemispherical reflectance of the semi-metallic material equals
+                // the one evaluated by interpolating a fully dielectric and fully conductor material.
+                float3 interpolated_rho = lerp(dielectric_rho, conductor_rho, metallic);
+                EXPECT_FLOAT_EQ(interpolated_rho.x, rho.x);
+                EXPECT_FLOAT_EQ(interpolated_rho.y, rho.y);
+                EXPECT_FLOAT_EQ(interpolated_rho.z, rho.z);
+            }
+        }
+    }
+}
+
 GTEST_TEST(DefaultShadingModel, sampling_variance) {
     using namespace Shading::ShadingModels;
     using namespace optix;

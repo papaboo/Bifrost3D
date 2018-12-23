@@ -70,7 +70,7 @@ float3 integrate(Varyings input, bool is_front_face, float ambient_visibility) {
     float3x3 world_to_shading_TBN = create_TBN(world_normal);
     float3 wo = mul(world_to_shading_TBN, world_wo);
 
-    const DefaultShading default_shading = DefaultShading::from_constants(material_params, wo, input.texcoord);
+    const DefaultShading default_shading = DefaultShading::from_constants(material_params, wo.z, input.texcoord);
     float3 radiance = ambient_visibility * scene_vars.environment_tint.rgb * default_shading.evaluate_IBL(world_wo, world_normal);
 
     for (int l = 0; l < light_count.x; ++l) {

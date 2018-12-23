@@ -1,10 +1,10 @@
 // Default shading.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
-// ---------------------------------------------------------------------------
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+// ------------------------------------------------------------------------------------------------
 
 #ifndef _DX11_RENDERER_SHADERS_DEFAULT_SHADING_H_
 #define _DX11_RENDERER_SHADERS_DEFAULT_SHADING_H_
@@ -14,9 +14,9 @@
 #include "LightSources.hlsl"
 #include "Utils.hlsl"
 
-//-----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Textures.
-//-----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 
 Texture2D environment_tex : register(t0);
 SamplerState environment_sampler : register(s0);
@@ -29,9 +29,33 @@ SamplerState coverage_sampler : register(s2);
 
 Texture2D<float2> ggx_with_fresnel_rho_tex : register(t15);
 
-//-----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+// Specular rho helpers.
+// ------------------------------------------------------------------------------------------------
+struct PrecomputedSpecularRho {
+    float base, full;
+    float rho(float specularity) { return lerp(base, full, specularity); }
+    float3 rho(float3 specularity) {
+        return float3(rho(specularity.x), rho(specularity.y), rho(specularity.z));
+    }
+};
+
+static PrecomputedSpecularRho fetch_specular_rho(float abs_cos_theta, float roughness) {
+    float2 specular_rho = ggx_with_fresnel_rho_tex.Sample(bilinear_sampler, float2(abs_cos_theta, roughness));
+    PrecomputedSpecularRho res;
+    res.base = specular_rho.r;
+    res.full = specular_rho.g;
+    return res;
+}
+
+static float3 compute_specular_rho(float3 specularity, float abs_cos_theta, float roughness) {
+    PrecomputedSpecularRho precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, roughness);
+    return precomputed_specular_rho.rho(specularity);
+}
+
+// ------------------------------------------------------------------------------------------------
 // Default shading.
-//-----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 struct DefaultShading {
     float3 m_diffuse_tint;
     float m_roughness;
@@ -39,17 +63,9 @@ struct DefaultShading {
     float m_coverage;
 
     // --------------------------------------------------------------------------------------------
-    // Helpers
-    // --------------------------------------------------------------------------------------------
-    static float3 compute_specular_rho(float3 specularity, float abs_cos_theta, float roughness) {
-        float2 specular_rho = ggx_with_fresnel_rho_tex.Sample(bilinear_sampler, float2(abs_cos_theta, roughness));
-        return lerp(specular_rho.rrr, specular_rho.ggg, specularity);
-    }
-
-    // --------------------------------------------------------------------------------------------
     // Factory function constructing a shading from a constant buffer.
     // --------------------------------------------------------------------------------------------
-    static DefaultShading from_constants(uniform MaterialParams material_params, float3 wo, float2 texcoord) {
+    static DefaultShading from_constants(uniform MaterialParams material_params, float abs_cos_theta, float2 texcoord) {
         DefaultShading shading;
 
         // Coverage
@@ -63,20 +79,27 @@ struct DefaultShading {
         // Metallic
         float metallic = material_params.m_metallic;
 
-        // Specularity
-        float dielectric_specularity = material_params.m_specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.
-
-        // Diffuse and specular tint
+        // Material tint
         float3 tint = material_params.m_tint;
         if (material_params.m_textures_bound & TextureBound::Tint)
             tint *= color_tex.Sample(color_sampler, texcoord).rgb;
 
-        float abs_cos_theta = abs(wo.z);
-        shading.m_specularity = lerp(dielectric_specularity, tint, metallic);
-        float3 specular_rho = compute_specular_rho(shading.m_specularity, abs_cos_theta, shading.m_roughness);
+        float dielectric_specularity = material_params.m_specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.
+        float3 conductor_specularity = tint;
+        shading.m_specularity = lerp(dielectric_specularity.rrr, conductor_specularity, metallic);
 
-        shading.m_diffuse_tint = tint * (1.0 - specular_rho);
-        shading.m_diffuse_tint *= 1.0 - 0.5 * metallic; // Remove diffuse strength on metals. Ideally metals would be 100 specular, but GGX does not model multiple bounces, so we fake it by using the diffuse BRDF.
+        PrecomputedSpecularRho precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, shading.m_roughness); // TODO To abs_cos_theta
+        float dielectric_specular_rho = precomputed_specular_rho.rho(dielectric_specularity);
+        float3 conductor_specular_rho = precomputed_specular_rho.rho(conductor_specularity);
+
+        // TODO Comment about specularity and interreflection.
+        float dielectric_lossless_specular_rho = dielectric_specular_rho / precomputed_specular_rho.full;
+        float3 dielectric_tint = tint * (1.0f - dielectric_lossless_specular_rho);
+
+        float3 specular_rho = lerp(dielectric_specular_rho.rrr, conductor_specular_rho, metallic);
+        float3 lossless_specular_rho = specular_rho / precomputed_specular_rho.full;
+        float3 specular_secondary_scattering_rho = lossless_specular_rho - specular_rho;
+        shading.m_diffuse_tint = dielectric_tint * (1.0f - metallic) + specular_secondary_scattering_rho; // Diffuse tint combines the tint of the diffuse scattering with the secondary scattering from the specular layer.
 
         return shading;
     }

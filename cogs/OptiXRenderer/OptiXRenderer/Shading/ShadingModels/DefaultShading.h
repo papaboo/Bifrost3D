@@ -37,19 +37,27 @@ private:
     float m_roughness;
     optix::float3 m_specularity;
 
-    __inline_all__ static optix::float3 compute_specular_rho(optix::float3 specularity, float abs_cos_theta, float roughness) {
+    struct PrecomputedSpecularRho { 
+        float base, full;
+        __inline_all__ float rho(float specularity) { return optix::lerp(base, full, specularity); }
+        __inline_all__ optix::float3 rho(optix::float3 specularity) { 
+            return { rho(specularity.x), rho(specularity.y), rho(specularity.z) };
+        }
+    };
+
+    __inline_all__ static PrecomputedSpecularRho fetch_specular_rho(float abs_cos_theta, float roughness) {
 #if GPU_DEVICE
         float2 specular_rho = tex2D(ggx_with_fresnel_rho_texture, abs_cos_theta, roughness);
-        return { optix::lerp(specular_rho.x, specular_rho.y, specularity.x),
-                 optix::lerp(specular_rho.x, specular_rho.y, specularity.y),
-                 optix::lerp(specular_rho.x, specular_rho.y, specularity.z) };
+        return { specular_rho.x, specular_rho.y };
 #else
-        float base_specular_rho = Cogwheel::Assets::Shading::Rho::sample_GGX_with_fresnel(abs_cos_theta, roughness);
-        float full_specular_rho = Cogwheel::Assets::Shading::Rho::sample_GGX(abs_cos_theta, roughness);
-        return { optix::lerp(base_specular_rho, full_specular_rho, specularity.x),
-                 optix::lerp(base_specular_rho, full_specular_rho, specularity.y),
-                 optix::lerp(base_specular_rho, full_specular_rho, specularity.z) };
+        return { Cogwheel::Assets::Shading::Rho::sample_GGX_with_fresnel(abs_cos_theta, roughness),
+                 Cogwheel::Assets::Shading::Rho::sample_GGX(abs_cos_theta, roughness) };
 #endif
+    }
+
+    __inline_all__ static optix::float3 compute_specular_rho(optix::float3 specularity, float abs_cos_theta, float roughness) {
+        auto precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, roughness);
+        return precomputed_specular_rho.rho(specularity);
     }
 
     __inline_all__ static float compute_specular_probability(optix::float3 diffuse_rho, optix::float3 specular_rho) {
@@ -62,42 +70,60 @@ public:
 
     __inline_all__ DefaultShading(const Material& material, float abs_cos_theta)
         : m_roughness(material.roughness) { 
+        using namespace optix;
 
         // Metallic
         float metallic = material.metallic;
 
-        // Specularity
         float dielectric_specularity = material.specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.
+        float3 conductor_specularity = material.tint;
+        m_specularity = lerp(make_float3(dielectric_specularity), conductor_specularity, metallic);
 
-        // Diffuse and specular tint
-        optix::float3 tint = material.tint;
+        auto precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, m_roughness);
+        float dielectric_specular_rho = precomputed_specular_rho.rho(dielectric_specularity);
+        float3 conductor_specular_rho = precomputed_specular_rho.rho(conductor_specularity);
 
-        m_specularity = optix::lerp(optix::make_float3(dielectric_specularity), tint, metallic);
-        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness);
-        m_diffuse_tint = tint * (1.0f - specular_rho);
-        m_diffuse_tint *= 1.0f - 0.5f * metallic; // Remove diffuse strength on metals. Ideally metals would be 100 specular, but GGX does not model multiple bounces, so we fake it by using the diffuse BRDF.
+        // TODO Comment about specularity and interreflection.
+        float dielectric_lossless_specular_rho = dielectric_specular_rho / precomputed_specular_rho.full;
+        float3 dielectric_tint = material.tint * (1.0f - dielectric_lossless_specular_rho);
+
+        float3 specular_rho = lerp(make_float3(dielectric_specular_rho), conductor_specular_rho, metallic);
+        float3 lossless_specular_rho = specular_rho / precomputed_specular_rho.full;
+        float3 specular_secondary_scattering_rho = lossless_specular_rho - specular_rho;
+        m_diffuse_tint = dielectric_tint * (1.0f - metallic) + specular_secondary_scattering_rho; // Diffuse tint combines the tint of the diffuse scattering with the secondary scattering from the specular layer.
     }
 
 #if GPU_DEVICE
     __inline_all__ DefaultShading(const Material& material, float abs_cos_theta, optix::float2 texcoord)
         : m_roughness(material.roughness)
     {
+        using namespace optix;
+
         // Metallic
         float metallic = material.metallic;
 
-        // Specularity
-        float dielectric_specularity = material.specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.
-
-        // Diffuse and specular tint
-        optix::float3 tint = material.tint;
+        // Material tint
+        float3 tint = material.tint;
         if (material.tint_texture_ID)
             tint *= make_float3(optix::rtTex2D<optix::float4>(material.tint_texture_ID, texcoord.x, texcoord.y));
 
-        m_specularity = optix::lerp(optix::make_float3(dielectric_specularity), tint, metallic);
-        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness);
-        m_diffuse_tint = tint * (1.0f - specular_rho);
-        m_diffuse_tint *= 1.0f - 0.5f * metallic; // Remove diffuse strength on metals. Ideally metals would be 100 specular, but GGX does not model multiple bounces, so we fake it by using the diffuse BRDF.
-    }
+        float dielectric_specularity = material.specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.
+        float3 conductor_specularity = tint;
+        m_specularity = lerp(make_float3(dielectric_specularity), conductor_specularity, metallic);
+
+        auto precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, m_roughness);
+        float dielectric_specular_rho = precomputed_specular_rho.rho(dielectric_specularity);
+        float3 conductor_specular_rho = precomputed_specular_rho.rho(conductor_specularity);
+
+        // TODO Comment about specularity and interreflection.
+        float dielectric_lossless_specular_rho = dielectric_specular_rho / precomputed_specular_rho.full;
+        float3 dielectric_tint = tint * (1.0f - dielectric_lossless_specular_rho);
+
+        float3 specular_rho = lerp(make_float3(dielectric_specular_rho), conductor_specular_rho, metallic);
+        float3 lossless_specular_rho = specular_rho / precomputed_specular_rho.full;
+        float3 specular_secondary_scattering_rho = lossless_specular_rho - specular_rho;
+        m_diffuse_tint = dielectric_tint * (1.0f - metallic) + specular_secondary_scattering_rho; // Diffuse tint combines the tint of the diffuse scattering with the secondary scattering from the specular layer.
+}
 #endif
 
     __inline_all__ static float coverage(const Material& material, optix::float2 texcoord) {
