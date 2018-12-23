@@ -28,10 +28,9 @@ GTEST_TEST(GGX, power_conservation) {
     const unsigned int MAX_SAMPLES = 1024u;
     const float full_specularity = 1.0f;
 
-    for (int i = 0; i < 10; ++i) {
-        const float3 wo = normalize(make_float3(float(i), 0.0f, 1.001f - float(i) * 0.1f));
-        for (int a = 0; a < 10; ++a) {
-            const float alpha = a / 10.0f;
+    for (float cos_theta : { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
+        const float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+        for (float alpha : { 0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
             float ws[MAX_SAMPLES];
             for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
                 BSDFSample sample = Shading::BSDFs::GGX::sample(alpha, full_specularity, wo, RNG::sample02(i));
@@ -55,8 +54,7 @@ GTEST_TEST(GGX, Helmholtz_reciprocity) {
     const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
     const float full_specularity = 1.0f;
 
-    for (int a = 0; a < 11; ++a) {
-        const float alpha = lerp(0.2f, 1.0f, a / 10.0f);
+    for (float alpha : { 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = Shading::BSDFs::GGX::sample(alpha, full_specularity, wo, RNG::sample02(i));
 
@@ -75,8 +73,7 @@ GTEST_TEST(GGX, consistent_PDF) {
     const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
     const float full_specularity = 1.0f;
 
-    for (int a = 0; a < 11; ++a) {
-        const float alpha = lerp(0.2f, 1.0f, a / 10.0f);
+    for (float alpha : { 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = Shading::BSDFs::GGX::sample(alpha, full_specularity, wo, RNG::sample02(i));
             if (is_PDF_valid(sample.PDF)) {
@@ -95,8 +92,7 @@ GTEST_TEST(GGX, evaluate_with_PDF) {
     const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
     const float full_specularity = 1.0f;
 
-    for (int a = 0; a < 11; ++a) {
-        const float alpha = lerp(0.2f, 1.0f, a / 10.0f);
+    for (float alpha : { 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = Shading::BSDFs::GGX::sample(alpha, full_specularity, wo, RNG::sample02(i));
 

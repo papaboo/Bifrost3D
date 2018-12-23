@@ -52,8 +52,8 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
     material_params.metallic = 0.0f;
     material_params.specularity = 0.25f;
 
-    for (int i = 0; i < 10; ++i) {
-        const float3 wo = normalize(make_float3(float(i), 0.0f, 1.001f - float(i) * 0.1f));
+    for (float cos_theta : { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
+        const float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
         auto material = DefaultShading(material_params, wo.z);
         float ws[MAX_SAMPLES];
         for (unsigned int s = 0u; s < MAX_SAMPLES; ++s) {
@@ -133,8 +133,8 @@ GTEST_TEST(DefaultShadingModel, evaluate_with_PDF) {
     const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
     Material plastic_params = plastic_parameters();
 
-    for (int a = 0; a < 11; ++a) {
-        plastic_params.roughness = lerp(0.2f, 1.0f, a / 10.0f);
+    for (float roughness : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
+        plastic_params.roughness = roughness;
         auto plastic_material = DefaultShading(plastic_params, wo.z);
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));

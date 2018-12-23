@@ -28,8 +28,7 @@ GTEST_TEST(OrenNayar, power_conservation) {
     const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
     const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
     
-    for (int r = 0; r < 10; ++r) {
-        const float roughness = r / 10.0f;
+    for (float roughness : { 0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
         float ws[MAX_SAMPLES];
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = Shading::BSDFs::OrenNayar::sample(tint, roughness, wo, RNG::sample02(i));
@@ -52,8 +51,7 @@ GTEST_TEST(OrenNayar, Helmholtz_reciprocity) {
     const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
     const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
 
-    for (int r = 0; r < 11; ++r) {
-        const float roughness = lerp(0.2f, 1.0f, r / 10.0f);
+    for (float roughness : { 0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = Shading::BSDFs::OrenNayar::sample(tint, roughness, wo, RNG::sample02(i));
 
@@ -72,8 +70,7 @@ GTEST_TEST(OrenNayar, consistent_PDF) {
     const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
     const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
 
-    for (int r = 0; r < 11; ++r) {
-        const float roughness = lerp(0.2f, 1.0f, r / 10.0f);
+    for (float roughness : { 0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = Shading::BSDFs::OrenNayar::sample(tint, roughness, wo, RNG::sample02(i));
             if (is_PDF_valid(sample.PDF)) {
@@ -91,8 +88,7 @@ GTEST_TEST(OrenNayar, evaluate_with_PDF) {
     const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
     const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
 
-    for (int r = 0; r < 11; ++r) {
-        const float roughness = lerp(0.2f, 1.0f, r / 10.0f);
+    for (float roughness : { 0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = Shading::BSDFs::OrenNayar::sample(tint, roughness, wo, RNG::sample02(i));
 
