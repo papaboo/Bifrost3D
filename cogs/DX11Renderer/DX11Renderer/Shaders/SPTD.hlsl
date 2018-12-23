@@ -87,7 +87,7 @@ struct BRDFPivotTransform {
 
 BRDFPivotTransform sptd_BRDF_pivot(Texture2D sptd_BRDF_fit_tex, float roughness, float3 wo) {
     float2 sptd_ggx_fit_uv = float2(abs(wo.z), roughness);
-    float4 pivot_params = sptd_BRDF_fit_tex.Sample(precomputation2D_sampler, sptd_ggx_fit_uv);
+    float4 pivot_params = sptd_BRDF_fit_tex.Sample(bilinear_sampler, sptd_ggx_fit_uv);
 
     BRDFPivotTransform res;
     res.brdf_scale = pivot_params.w;
@@ -132,16 +132,13 @@ float3 evaluate_sphere_light(LightData light, DefaultShading material, Texture2D
     float3 halfway = normalize(wo + wi);
     float cos_theta = dot(wo, halfway);
 
-    float3 diffuse_tint, specular_tint;
-    material.evaluate_tints(cos_theta, diffuse_tint, specular_tint);
-
     float3 radiance = float3(0,0,0);
     { // Evaluate Lambert.
         float solidangle_of_light = solidangle(light_sphere_cap);
         float visible_solidangle_of_light = solidangle_of_intersection(hemisphere_sphere_cap, light_sphere_cap);
         float light_radiance_scale = visible_solidangle_of_light / solidangle_of_light;
         LightSample light_sample = sample_light(light, world_position);
-        radiance += diffuse_tint * BSDFs::Lambert::evaluate() * abs(wi.z) * light_sample.radiance * light_radiance_scale;
+        radiance += material.diffuse_tint() * BSDFs::Lambert::evaluate() * abs(wi.z) * light_sample.radiance * light_radiance_scale;
     }
 
     { // Evaluate GGX/microfacet.
@@ -160,7 +157,7 @@ float3 evaluate_sphere_light(LightData light, DefaultShading material, Texture2D
         Cone ggx_light_sphere_cap = SPTD::pivot_transform(light_sphere_cap, adjusted_ggx_sptd.pivot);
         float light_solidangle = solidangle_of_intersection(ggx_light_sphere_cap, adjusted_ggx_sptd_cap);
         float3 l = light.sphere_power() / (PI * sphere_surface_area(light.sphere_radius()));
-        radiance += specular_tint * light_solidangle / (4.0f * PI) * l;
+        radiance += material.specularity() * light_solidangle / (4.0f * PI) * l;
     }
 
     return radiance;
