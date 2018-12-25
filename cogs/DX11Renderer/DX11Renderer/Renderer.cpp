@@ -870,10 +870,10 @@ public:
                         dx_model.transform_ID = model.get_scene_node().get_ID();
 
                         Material mat = model.get_material();
-                        bool is_transparent = mat.get_coverage_texture_ID() != Textures::UID::invalid_UID() || mat.get_coverage() < 1.0f;
+                        bool uses_coverage = mat.get_coverage_texture_ID() != Textures::UID::invalid_UID() || mat.get_coverage() < 1.0f;
                         bool is_cutout = mat.get_flags().is_set(MaterialFlag::Cutout);
-                        unsigned int transparent_type = is_cutout ? Dx11Model::Properties::Cutout : Dx11Model::Properties::Transparent;
-                        dx_model.properties = is_transparent ? transparent_type : Dx11Model::Properties::None;
+                        unsigned int coverage_type = is_cutout ? Dx11Model::Properties::Cutout : Dx11Model::Properties::Transparent;
+                        dx_model.properties = uses_coverage ? coverage_type : Dx11Model::Properties::None;
 
                         if (model_index == 0) {
                             m_model_indices[model.get_ID()] = (int)m_sorted_models.size();
