@@ -20,8 +20,6 @@ typedef Cogwheel::Assets::Images::UID (*ImageLoader)(const std::string& filename
 // -----------------------------------------------------------------------
 // Loads an obj file.
 // Future work:
-// * Support for materials.
-// * Pass in texture 2D loader function as argument.
 // * Return an (optional) list of created mesh model IDs?
 // * Reserve capacity for Mesh, MeshModels and SceneNodes before creating them.
 // -----------------------------------------------------------------------
