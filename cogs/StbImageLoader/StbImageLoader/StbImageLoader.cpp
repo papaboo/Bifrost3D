@@ -63,47 +63,61 @@ unsigned int sizeof_format(PixelFormat format) {
     return 0u;
 }
 
-Images::UID load(const std::string& path) {
-    
-    stbi_set_flip_vertically_on_load(true);
-
-    void* loaded_data = nullptr;
-    int width, height, channel_count;
-    bool is_HDR = check_HDR_fileformat(path);
-    if (is_HDR)
-        loaded_data = stbi_loadf(path.c_str(), &width, &height, &channel_count, 0);
-    else
-        loaded_data = stbi_load(path.c_str(), &width, &height, &channel_count, 0);
-
-    if (loaded_data == nullptr) {
-        printf("StbImageLoader::load(%s) failed with error: '%s'\n", path.c_str(), stbi_failure_reason());
+inline Images::UID convert_image(const std::string& name, void* loaded_pixels, int width, int height, int channel_count, bool is_HDR) {
+    if (loaded_pixels == nullptr) {
+        printf("StbImageLoader::load(%s) error: '%s'\n", name.c_str(), stbi_failure_reason());
         return Images::UID::invalid_UID();
     }
 
     PixelFormat pixel_format = resolve_format(channel_count, is_HDR);
     if (pixel_format == PixelFormat::Unknown) {
-        printf("StbImageLoader::load(%s) failed with error: 'Could not resolve format'\n", path.c_str());
+        printf("StbImageLoader::load(%s) error: 'Could not resolve format'\n", name.c_str());
         return Images::UID::invalid_UID();
     }
 
     float image_gamma = is_HDR ? 1.0f : 2.2f;
-    Images::UID image_ID = Images::create2D(path, pixel_format, image_gamma, Vector2ui(width, height));
+    Images::UID image_ID = Images::create2D(name, pixel_format, image_gamma, Vector2ui(width, height));
     Images::PixelData pixel_data = Images::get_pixels(image_ID);
     if (channel_count == 2) {
         unsigned char* pixel_data_uc4 = (unsigned char*)pixel_data;
-        unsigned char* loaded_data_uc2 = (unsigned char*)loaded_data;
+        unsigned char* loaded_data_uc2 = (unsigned char*)loaded_pixels;
         for (int i = 0; i < width * height; ++i) {
             pixel_data_uc4[4 * i] = loaded_data_uc2[2 * i];
             pixel_data_uc4[4 * i + 1] = loaded_data_uc2[2 * i];
             pixel_data_uc4[4 * i + 2] = loaded_data_uc2[2 * i];
             pixel_data_uc4[4 * i + 3] = loaded_data_uc2[2 * i + 1];
         }
-    } else
-        memcpy(pixel_data, loaded_data, sizeof_format(pixel_format) * width * height);
+    }
+    else
+        memcpy(pixel_data, loaded_pixels, sizeof_format(pixel_format) * width * height);
 
-    stbi_image_free(loaded_data);
+    stbi_image_free(loaded_pixels);
 
     return image_ID;
+}
+
+Images::UID load(const std::string& path) {
+    stbi_set_flip_vertically_on_load(true);
+
+    void* loaded_pixels = nullptr;
+    int width, height, channel_count;
+    bool is_HDR = check_HDR_fileformat(path);
+    if (is_HDR)
+        loaded_pixels = stbi_loadf(path.c_str(), &width, &height, &channel_count, 0);
+    else
+        loaded_pixels = stbi_load(path.c_str(), &width, &height, &channel_count, 0);
+
+    return convert_image(path, loaded_pixels, width, height, channel_count, is_HDR);
+}
+
+Cogwheel::Assets::Images::UID load_from_memory(const std::string& name, const void* const data, int data_byte_count) {
+    stbi_set_flip_vertically_on_load(true);
+
+    int width, height, channel_count;
+    void* loaded_pixels = stbi_load_from_memory((stbi_uc*)data, data_byte_count, &width, &height, &channel_count, 0);
+
+    bool is_HDR = false; // NOTE Currently we cannot distinguish LDR from HDR images.
+    return convert_image(name, loaded_pixels, width, height, channel_count, is_HDR);
 }
 
 } // NS StbImageLoader

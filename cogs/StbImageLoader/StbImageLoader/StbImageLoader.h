@@ -19,6 +19,7 @@ namespace StbImageLoader {
 // Basic support for png, exr, jpg and more.
 // -----------------------------------------------------------------------
 Cogwheel::Assets::Images::UID load(const std::string& filename);
+Cogwheel::Assets::Images::UID load_from_memory(const std::string& name, const void* const data, int data_byte_count);
 
 } // NS StbImageLoader
 
