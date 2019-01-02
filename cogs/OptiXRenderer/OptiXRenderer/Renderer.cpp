@@ -544,8 +544,8 @@ struct Renderer::Implementation {
                         texture->setWrapMode(1, convert_wrap_mode(Textures::get_wrapmode_V(texture_ID)));
                         texture->setWrapMode(2, convert_wrap_mode(Textures::get_wrapmode_W(texture_ID)));
                         texture->setIndexingMode(RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
-                        Images::UID image_id = Textures::get_image_ID(texture_ID);
-                        if (Images::get_gamma(Textures::get_image_ID(texture_ID)) == 1.0f)
+                        Images::UID image_ID = Textures::get_image_ID(texture_ID);
+                        if (Images::get_gamma(image_ID) == 1.0f)
                             texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT); // Image is in linear color space.
                         else
                             texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT_SRGB); // Assume that image is in sRGB color space.
@@ -555,7 +555,7 @@ struct Renderer::Implementation {
                         RTfiltermode mag_filtermode = Textures::get_magnification_filter(texture_ID) == MagnificationFilter::Linear ? RT_FILTER_LINEAR : RT_FILTER_NEAREST;
                         texture->setFilteringModes(min_filtermode, mag_filtermode, RT_FILTER_NONE);
                         texture->setArraySize(1u);
-                        texture->setBuffer(0u, 0u, images[image_id]);
+                        texture->setBuffer(0u, 0u, images[image_ID]);
                         OPTIX_VALIDATE(texture);
                     }
                 }
