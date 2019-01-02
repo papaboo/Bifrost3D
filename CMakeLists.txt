@@ -60,6 +60,7 @@ include_cog("Imgui") # Depends on DX11Renderer ... for now.
 include_cog("ObjLoader")
 include_cog("StbImageLoader")
 include_cog("StbImageWriter")
+include_cog("GLTFLoader") # Depends on StbImageLoader and StbImageWriter
 include_cog("TinyExr")
 include_cog("Win32Driver")
 include_cog("gtest")
