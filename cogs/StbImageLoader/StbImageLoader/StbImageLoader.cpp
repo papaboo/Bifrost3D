@@ -111,7 +111,7 @@ Images::UID load(const std::string& path) {
 }
 
 Cogwheel::Assets::Images::UID load_from_memory(const std::string& name, const void* const data, int data_byte_count) {
-    stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load(false);
 
     int width, height, channel_count;
     void* loaded_pixels = stbi_load_from_memory((stbi_uc*)data, data_byte_count, &width, &height, &channel_count, 0);
