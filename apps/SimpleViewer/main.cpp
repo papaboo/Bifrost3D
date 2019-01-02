@@ -37,6 +37,7 @@
 #include <OptiXRenderer/Renderer.h>
 #endif
 
+#include <GLTFLoader/GLTFLoader.h>
 #include <ObjLoader/ObjLoader.h>
 #include <StbImageLoader/StbImageLoader.h>
 
@@ -220,6 +221,13 @@ static inline void update_FPS(Engine& engine) {
     std::ostringstream title;
     title << "SimpleViewer - FPS " << fps;
     engine.get_window().set_name(title.str().c_str());
+}
+
+bool string_ends_with(const std::string& s, const std::string& end) {
+    if (s.length() < end.length())
+        return false;
+
+    return (0 == s.compare(s.length() - end.length(), end.length(), end));
 }
 
 Images::UID load_image(const std::string& path) {
@@ -477,7 +485,11 @@ int initialize_scene(Engine& engine) {
         Scenes::create_veach_scene(engine, cam_ID, scene_ID);
     else {
         printf("Loading scene: '%s'\n", g_scene.c_str());
-        SceneNodes::UID obj_root_ID = ObjLoader::load(g_scene, load_image);
+        SceneNodes::UID obj_root_ID = SceneNodes::UID::invalid_UID();
+        if (string_ends_with(g_scene, ".obj"))
+            obj_root_ID = ObjLoader::load(g_scene, load_image);
+        else if (string_ends_with(g_scene, ".gltf") || string_ends_with(g_scene, ".glb"))
+            obj_root_ID = GLTFLoader::load(g_scene);
         SceneNodes::set_parent(obj_root_ID, root_node_ID);
         // mesh_combine_whole_scene(root_node_ID);
         detect_and_flag_cutout_materials();
@@ -485,7 +497,7 @@ int initialize_scene(Engine& engine) {
     }
 
     if (SceneNodes::get_children_IDs(root_node_ID).size() == 0u) {
-        printf("Error: No objects in scene.\n");
+        printf("SimpleViewer error: No objects in scene.\n");
         return -1;
     }
 
