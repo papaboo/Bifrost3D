@@ -64,9 +64,9 @@ void MeshModels::reserve(unsigned int new_capacity) {
 
 MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Assets::Meshes::UID mesh_ID, Assets::Materials::UID material_ID) {
     assert(m_models != nullptr);
-
-    if (!Scene::SceneNodes::has(scene_node_ID) || !Assets::Meshes::has(mesh_ID) || !Assets::Materials::has(material_ID))
-        return MeshModels::UID::invalid_UID();
+    assert(Scene::SceneNodes::has(scene_node_ID));
+    assert(Assets::Meshes::has(mesh_ID));
+    assert(Assets::Materials::has(material_ID));
 
     unsigned int old_capacity = m_UID_generator.capacity();
     UID id = m_UID_generator.generate();
