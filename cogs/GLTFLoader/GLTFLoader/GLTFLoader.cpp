@@ -38,6 +38,44 @@ inline bool string_ends_with(const std::string& s, const std::string& end) {
     return (0 == s.compare(s.length() - end.length(), end.length(), end));
 }
 
+inline MagnificationFilter convert_magnification_filter(int gltf_magnification_filter) {
+    bool is_nearest = gltf_magnification_filter == TINYGLTF_TEXTURE_FILTER_NEAREST;
+    return is_nearest ? MagnificationFilter::None : MagnificationFilter::Linear;
+}
+
+inline MinificationFilter convert_minification_filter(int gltf_minification_filter) {
+    switch (gltf_minification_filter) {
+    case TINYGLTF_TEXTURE_FILTER_NEAREST:
+        return MinificationFilter::None;
+    case TINYGLTF_TEXTURE_FILTER_LINEAR:
+        return MinificationFilter::Linear;
+    case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
+        printf("GLTFLoader::load warning: Unsupported minification filter NEAREST_MIPMAP_NEAREST. Using LINEAR_MIPMAP_LINEAR\n");
+        return MinificationFilter::Trilinear;
+    case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_NEAREST:
+        printf("GLTFLoader::load warning: Unsupported minification filter LINEAR_MIPMAP_NEAREST. Using LINEAR_MIPMAP_LINEAR\n");
+        return MinificationFilter::Trilinear;
+    case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
+        printf("GLTFLoader::load warning: Unsupported minification filter NEAREST_MIPMAP_LINEAR. Using LINEAR_MIPMAP_LINEAR\n");
+        return MinificationFilter::Trilinear;
+    case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR:
+        return MinificationFilter::Trilinear;
+    default:
+        printf("GLTFLoader::load warning: Unknown minification filter mode %u.\n", gltf_minification_filter);
+        return MinificationFilter::Trilinear;
+    }
+}
+
+inline WrapMode convert_wrap_mode(int gltf_wrap_mode) {
+    if (gltf_wrap_mode == TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE)
+        return WrapMode::Clamp;
+    else if (gltf_wrap_mode == TINYGLTF_TEXTURE_WRAP_REPEAT)
+        return WrapMode::Repeat;
+    else if (gltf_wrap_mode == TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT)
+        printf("GLTFLoader::load error: Mirrored repeat wrap mode not supported.\n");
+    return WrapMode::Repeat;
+}
+
 SceneNodes::UID convert_node(const tinygltf::Model& model, const tinygltf::Node& node, const Transform parent_transform,
                              const std::vector<int>& meshes_start_index, const std::vector<Mesh>& meshes,
                              const std::vector<Materials::UID>& material_IDs) {
@@ -153,7 +191,6 @@ SceneNodes::UID load(const std::string& filename) {
         gltf_image->width = image.get_width();
         gltf_image->height = image.get_height();
         gltf_image->component = channel_count(image.get_pixel_format());
-        printf("%u: width %u, height %u, channels %u\n", image.get_ID().get_index(), image.get_width(), image.get_height(), gltf_image->component);
         // HACK Store image ID in pixels instead of pixel data.
         gltf_image->image.resize(4);
         memcpy(gltf_image->image.data(), &image.get_ID(), sizeof(Images::UID));
@@ -213,7 +250,12 @@ SceneNodes::UID load(const std::string& filename) {
                 Images::set_name(image_ID, gltf_mat.name + "_tint");
 
                 // Create basic texture.
-                mat_data.tint_texture_ID = Textures::create2D(image_ID);
+                const auto& gltf_sampler = model.samplers[gltf_texture.sampler];
+                MagnificationFilter magnification_filter = convert_magnification_filter(gltf_sampler.magFilter);
+                MinificationFilter minification_filter = convert_minification_filter(gltf_sampler.minFilter);
+                WrapMode wrapU = convert_wrap_mode(gltf_sampler.wrapR);
+                WrapMode wrapV = convert_wrap_mode(gltf_sampler.wrapS);
+                mat_data.tint_texture_ID = Textures::create2D(image_ID, magnification_filter, minification_filter, wrapU, wrapV);
             } else if (val.first.compare("roughnessFactor") == 0)
                 mat_data.roughness = float(val.second.Factor());
             else if (val.first.compare("metallicFactor") == 0)
