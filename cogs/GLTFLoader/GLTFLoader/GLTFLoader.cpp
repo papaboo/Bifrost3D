@@ -267,6 +267,10 @@ SceneNodes::UID load(const std::string& filename) {
                 // NOTE to self: Double sided should set a 'thin/doubleSided' property on the meshes instead of on the materials.
                 // In case the mesh is used by one sided and two sided meshes, we need to duplicate the mesh.
                 printf("GLTFLoader::load warning: doubleSided property not supported.\n");
+            else if (val.first.compare("alphaMode") == 0) {
+                bool is_cutout = val.second.string_value.compare("MASK") == 0;
+                mat_data.flags |= is_cutout ? MaterialFlag::Cutout : MaterialFlag::None;
+            }
         }
 
         loaded_material_IDs[i] = Materials::create(gltf_mat.name, mat_data);
