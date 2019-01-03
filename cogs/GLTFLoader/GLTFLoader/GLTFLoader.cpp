@@ -50,13 +50,13 @@ inline MinificationFilter convert_minification_filter(int gltf_minification_filt
     case TINYGLTF_TEXTURE_FILTER_LINEAR:
         return MinificationFilter::Linear;
     case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
-        printf("GLTFLoader::load warning: Unsupported minification filter NEAREST_MIPMAP_NEAREST. Using LINEAR_MIPMAP_LINEAR\n");
+        printf("GLTFLoader::load warning: Unsupported minification filter NEAREST_MIPMAP_NEAREST. Using LINEAR_MIPMAP_LINEAR.\n");
         return MinificationFilter::Trilinear;
     case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_NEAREST:
-        printf("GLTFLoader::load warning: Unsupported minification filter LINEAR_MIPMAP_NEAREST. Using LINEAR_MIPMAP_LINEAR\n");
+        printf("GLTFLoader::load warning: Unsupported minification filter LINEAR_MIPMAP_NEAREST. Using LINEAR_MIPMAP_LINEAR.\n");
         return MinificationFilter::Trilinear;
     case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
-        printf("GLTFLoader::load warning: Unsupported minification filter NEAREST_MIPMAP_LINEAR. Using LINEAR_MIPMAP_LINEAR\n");
+        printf("GLTFLoader::load warning: Unsupported minification filter NEAREST_MIPMAP_LINEAR. Using LINEAR_MIPMAP_LINEAR.\n");
         return MinificationFilter::Trilinear;
     case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR:
         return MinificationFilter::Trilinear;
@@ -260,6 +260,13 @@ SceneNodes::UID load(const std::string& filename) {
                 mat_data.roughness = float(val.second.Factor());
             else if (val.first.compare("metallicFactor") == 0)
                 mat_data.metallic = float(val.second.Factor());
+        }
+
+        for (const auto& val : gltf_mat.additionalValues) {
+            if (val.first.compare("doubleSided") == 0)
+                // NOTE to self: Double sided should set a 'thin/doubleSided' property on the meshes instead of on the materials.
+                // In case the mesh is used by one sided and two sided meshes, we need to duplicate the mesh.
+                printf("GLTFLoader::load warning: doubleSided property not supported.\n");
         }
 
         loaded_material_IDs[i] = Materials::create(gltf_mat.name, mat_data);
