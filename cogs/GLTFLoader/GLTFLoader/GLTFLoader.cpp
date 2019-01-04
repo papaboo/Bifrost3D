@@ -76,9 +76,9 @@ inline WrapMode convert_wrap_mode(int gltf_wrap_mode) {
     return WrapMode::Repeat;
 }
 
-SceneNodes::UID convert_node(const tinygltf::Model& model, const tinygltf::Node& node, const Transform parent_transform,
-                             const std::vector<int>& meshes_start_index, const std::vector<Mesh>& meshes,
-                             const std::vector<Materials::UID>& material_IDs) {
+SceneNodes::UID import_node(const tinygltf::Model& model, const tinygltf::Node& node, const Transform parent_transform,
+                            const std::vector<int>& meshes_start_index, const std::vector<Mesh>& meshes,
+                            const std::vector<Materials::UID>& material_IDs) {
     // Local transform and scene node.
     Transform local_transform;
     if (node.matrix.size() == 16) {
@@ -131,12 +131,22 @@ SceneNodes::UID convert_node(const tinygltf::Model& model, const tinygltf::Node&
     // Recurse over children.
     for (const int child_node_index : node.children) {
         const auto& node = model.nodes[child_node_index];
-        SceneNode child_node = convert_node(model, node, global_transform, meshes_start_index, meshes, material_IDs);
+        SceneNode child_node = import_node(model, node, global_transform, meshes_start_index, meshes, material_IDs);
         child_node.set_parent(scene_node_ID);
     }
 
     return scene_node_ID;
 };
+
+template<typename T>
+void copy_indices(unsigned int* cogwheel_indices, const T* gltf_indices, size_t count, int index_byte_stride) {
+    int gltf_index_T_stride = index_byte_stride / sizeof(T);
+    for (size_t i = 0; i < count; ++i) {
+        *cogwheel_indices = *gltf_indices;
+        ++cogwheel_indices;
+        gltf_indices += gltf_index_T_stride;
+    }
+}
 
 // ------------------------------------------------------------------------------------------------
 // Loads a gltf file.
@@ -318,7 +328,6 @@ SceneNodes::UID load(const std::string& filename) {
             
             { // Import primitve indices.
                 assert(index_accessor.type == TINYGLTF_TYPE_SCALAR);
-                assert(index_accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT);
                 int element_size = sizeof(unsigned int);
                 const auto& buffer_view = model.bufferViews[index_accessor.bufferView];
                 const auto& buffer = model.buffers[buffer_view.buffer];
@@ -330,12 +339,12 @@ SceneNodes::UID load(const std::string& filename) {
                 assert(byte_stride != -1);
 
                 const unsigned char* src = buffer.data.data() + buffer_offset;
-                for (unsigned int i = 0; i < index_accessor.count; ++i) {
-                    // Copy element
-                    memcpy(primitive_indices, src, element_size);
-                    ++primitive_indices;
-                    src += byte_stride;
-                }
+                if (index_accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
+                    copy_indices(primitive_indices, (unsigned int*)src, index_accessor.count, byte_stride);
+                else if (index_accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+                    copy_indices(primitive_indices, (unsigned short*)src, index_accessor.count, byte_stride);
+                else // index_accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE
+                    copy_indices(primitive_indices, src, index_accessor.count, byte_stride);
             }
 
             // Import vertex attributes.
@@ -393,14 +402,30 @@ SceneNodes::UID load(const std::string& filename) {
 
     // Import lights.
 
-    // Setup scene.
-    const tinygltf::Scene& scene = model.scenes[model.defaultScene];
-    assert(scene.nodes.size() == 1);
-    for (size_t i = 0; i < scene.nodes.size(); i++) {
-        const auto& node = model.nodes[scene.nodes[i]];
-        return convert_node(model, node, Transform::identity(), loaded_meshes_start_index, loaded_meshes, loaded_material_IDs);
-    }
+    { // Setup scene.
+        if (model.scenes.size() > 1)
+            printf("GLTFLoader::load warning: Only one scene supported. The default scene will be imported\n");
 
+        // No scene loaded.
+        if (model.defaultScene < 0)
+            SceneNodes::UID::invalid_UID();
+
+        const tinygltf::Scene& scene = model.scenes[model.defaultScene];
+        if (scene.nodes.size() == 1) {
+            // Only one node. Import it and return.
+            const auto& node = model.nodes[scene.nodes[0]];
+            return import_node(model, node, Transform::identity(), loaded_meshes_start_index, loaded_meshes, loaded_material_IDs);
+        } else {
+            // Several root nodes in the scene. Attach them to a single common root node.
+            SceneNode root_node = SceneNodes::create("Scene root");
+            for (size_t i = 0; i < scene.nodes.size(); i++) {
+                const auto& node = model.nodes[scene.nodes[i]];
+                SceneNode child_node = import_node(model, node, root_node.get_global_transform(), loaded_meshes_start_index, loaded_meshes, loaded_material_IDs);
+                child_node.set_parent(root_node);
+            }
+            return root_node.get_ID();
+        }
+    }
     return SceneNodes::UID::invalid_UID();
 }
 
