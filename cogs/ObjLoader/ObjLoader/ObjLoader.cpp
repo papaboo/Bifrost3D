@@ -230,4 +230,15 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
     return root_ID;
 }
 
+inline bool string_ends_with(const std::string& s, const std::string& end) {
+    if (s.length() < end.length())
+        return false;
+
+    return s.compare(s.length() - end.length(), end.length(), end) == 0;
+}
+
+bool file_supported(const std::string& filename) {
+    return string_ends_with(filename, ".obj");
+}
+
 } // NS ObjLoader

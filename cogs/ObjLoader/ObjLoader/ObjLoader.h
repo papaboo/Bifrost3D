@@ -25,6 +25,8 @@ typedef Cogwheel::Assets::Images::UID (*ImageLoader)(const std::string& filename
 // -----------------------------------------------------------------------
 Cogwheel::Scene::SceneNodes::UID load(const std::string& filename, ImageLoader image_loader);
 
+bool file_supported(const std::string& filename);
+
 } // NS ObjLoader
 
 #endif // _COGWHEEL_ASSETS_OBJ_LOADER_H_
