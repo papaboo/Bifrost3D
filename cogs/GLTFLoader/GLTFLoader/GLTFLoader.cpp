@@ -35,7 +35,7 @@ inline bool string_ends_with(const std::string& s, const std::string& end) {
     if (s.length() < end.length())
         return false;
 
-    return (0 == s.compare(s.length() - end.length(), end.length(), end));
+    return s.compare(s.length() - end.length(), end.length(), end) == 0;
 }
 
 inline MagnificationFilter convert_magnification_filter(int gltf_magnification_filter) {
@@ -402,6 +402,10 @@ SceneNodes::UID load(const std::string& filename) {
     }
 
     return SceneNodes::UID::invalid_UID();
+}
+
+bool file_supported(const std::string& filename) {
+    return string_ends_with(filename, ".glb") || string_ends_with(filename, ".gltf");
 }
 
 } // NS GLTFLoader

@@ -24,6 +24,8 @@ namespace GLTFLoader {
 // ------------------------------------------------------------------------------------------------
 Cogwheel::Scene::SceneNodes::UID load(const std::string& filename);
 
+bool file_supported(const std::string& filename);
+
 } // NS GLTFLoader
 
 #endif // _COGWHEEL_ASSETS_GLTF_LOADER_H_
