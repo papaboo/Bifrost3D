@@ -223,13 +223,6 @@ static inline void update_FPS(Engine& engine) {
     engine.get_window().set_name(title.str().c_str());
 }
 
-bool string_ends_with(const std::string& s, const std::string& end) {
-    if (s.length() < end.length())
-        return false;
-
-    return (0 == s.compare(s.length() - end.length(), end.length(), end));
-}
-
 Images::UID load_image(const std::string& path) {
     const int read_only_flag = 4;
     if (_access(path.c_str(), read_only_flag) >= 0)
@@ -486,9 +479,9 @@ int initialize_scene(Engine& engine) {
     else {
         printf("Loading scene: '%s'\n", g_scene.c_str());
         SceneNodes::UID obj_root_ID = SceneNodes::UID::invalid_UID();
-        if (string_ends_with(g_scene, ".obj"))
+        if (ObjLoader::file_supported(g_scene))
             obj_root_ID = ObjLoader::load(g_scene, load_image);
-        else if (string_ends_with(g_scene, ".gltf") || string_ends_with(g_scene, ".glb"))
+        else if (GLTFLoader::file_supported(g_scene))
             obj_root_ID = GLTFLoader::load(g_scene);
         SceneNodes::set_parent(obj_root_ID, root_node_ID);
         // mesh_combine_whole_scene(root_node_ID);
