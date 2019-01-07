@@ -25,7 +25,7 @@ namespace MeshCreation {
 
 Meshes::UID plane(unsigned int quads_pr_side, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
-Meshes::UID cube(unsigned int quads_pr_side, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
+Meshes::UID cube(unsigned int quads_pr_side, Math::Vector3f scaling = Math::Vector3f::one(), MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
 Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_quads, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 

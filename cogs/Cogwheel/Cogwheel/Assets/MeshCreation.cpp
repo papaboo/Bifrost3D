@@ -58,7 +58,7 @@ Meshes::UID plane(unsigned int quads_pr_edge, MeshFlags buffer_bitmask) {
     return mesh.get_ID();
 }
 
-Meshes::UID cube(unsigned int quads_pr_edge, MeshFlags buffer_bitmask) {
+Meshes::UID cube(unsigned int quads_pr_edge, Vector3f scaling, MeshFlags buffer_bitmask) {
     if (quads_pr_edge == 0)
         return Meshes::UID::invalid_UID();
 
@@ -79,22 +79,22 @@ Meshes::UID cube(unsigned int quads_pr_edge, MeshFlags buffer_bitmask) {
     Vector3f* position_iterator = mesh.get_positions();
     for (unsigned int i = 0; i < verts_pr_edge; ++i) // Top
         for (unsigned int j = 0; j < verts_pr_edge; ++j)
-            *position_iterator++ = Vector3f(halfsize - i * scale, halfsize, j * scale - halfsize);
+            *position_iterator++ = Vector3f(halfsize - i * scale, halfsize, j * scale - halfsize) * scaling;
     for (unsigned int i = 0; i < verts_pr_edge; ++i) // Bottom
         for (unsigned int j = 0; j < verts_pr_edge; ++j)
-            *position_iterator++ = Vector3f(halfsize - i * scale, -halfsize, halfsize - j * scale);
+            *position_iterator++ = Vector3f(halfsize - i * scale, -halfsize, halfsize - j * scale) * scaling;
     for (unsigned int i = 0; i < verts_pr_edge; ++i) // Left
         for (unsigned int j = 0; j < verts_pr_edge; ++j)
-            *position_iterator++ = Vector3f(-halfsize, halfsize - i * scale, j * scale - halfsize);
+            *position_iterator++ = Vector3f(-halfsize, halfsize - i * scale, j * scale - halfsize) * scaling;
     for (unsigned int i = 0; i < verts_pr_edge; ++i) // Right
         for (unsigned int j = 0; j < verts_pr_edge; ++j)
-            *position_iterator++ = Vector3f(halfsize, i * scale - halfsize, j * scale - halfsize);
+            *position_iterator++ = Vector3f(halfsize, i * scale - halfsize, j * scale - halfsize) * scaling;
     for (unsigned int i = 0; i < verts_pr_edge; ++i) // Front
         for (unsigned int j = 0; j < verts_pr_edge; ++j)
-            *position_iterator++ = Vector3f(halfsize - i * scale, halfsize - j * scale, halfsize);
+            *position_iterator++ = Vector3f(halfsize - i * scale, halfsize - j * scale, halfsize) * scaling;
     for (unsigned int i = 0; i < verts_pr_edge; ++i) // Back
         for (unsigned int j = 0; j < verts_pr_edge; ++j)
-            *position_iterator++ = Vector3f(i * scale - halfsize, halfsize - j * scale, -halfsize);
+            *position_iterator++ = Vector3f(i * scale - halfsize, halfsize - j * scale, -halfsize) * scaling;
 
     if (mesh.get_normals() != nullptr) {
         Vector3f* normal_iterator = mesh.get_normals();

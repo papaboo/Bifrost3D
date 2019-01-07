@@ -90,7 +90,7 @@ void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sce
         for (int i = light_count - 1; i >= 0; --i) {
             Transform light_transform = Transform(light_positions[i]);
             SceneNode light_node = SceneNodes::create("Light", light_transform);
-            LightSources::UID light_ID = LightSources::create_sphere_light(light_node.get_ID(), light_colors[i] * 10, light_radius);
+            LightSources::UID light_ID =  LightSources::create_sphere_light(light_node.get_ID(), light_colors[i] * 10, light_radius);
             light_node.set_parent(scene.get_root_node());
             light_radius *= 0.333f;
         }
@@ -103,7 +103,7 @@ void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sce
         int block_count = 4;
 
         // Create the block mesh. It's size is dependent on the distance between the lights.
-        Mesh block_mesh = MeshCreation::cube(1, MeshFlag::Position);
+        Mesh block_mesh = MeshCreation::cube(1, Vector3f::one(), MeshFlag::Position);
         Vector3f* positions = block_mesh.get_positions();
         for (unsigned int v = 0; v < block_mesh.get_vertex_count(); ++v)
             positions[v] *= Vector3f(light_distance * 1.1f, 0.01f, block_depth);
