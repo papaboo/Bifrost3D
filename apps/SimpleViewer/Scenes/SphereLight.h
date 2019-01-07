@@ -35,8 +35,6 @@ public:
         if (engine.get_time().is_paused())
             return;
 
-        // TODO ping pong inverse lerp math util
-
         float light_position_delta = fmodf(float(engine.get_time().get_total_time()) * 0.25f, 1.0f);
 
         float phi = 2.0f * Math::PI<float>() * light_position_delta;
