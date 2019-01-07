@@ -101,11 +101,18 @@ SceneNodes::UID import_node(const tinygltf::Model& model, const tinygltf::Node& 
         const auto& s = node.scale;
         float scale = s.size() == 0 ? 1.0f : float((s[0] + s[1] + s[2]) / 3.0); // Only uniform scaling supported.
         const auto& r = node.rotation;
-        Quaternionf rotation = r.size() == 0 ? Quaternionf::identity() : Quaterniond(r[1], r[2], r[3], r[0]);
+        Quaternionf rotation = r.size() == 0 ? Quaternionf::identity() : Quaterniond(r[0], r[1], r[2], r[3]);
         const auto& t = node.translation;
         Vector3f translation = t.size() == 0 ? Vector3f::zero() : Vector3f(Vector3d(t[0], t[1], t[2]));
         local_transform = Transform(translation, rotation, scale);
     }
+
+    // X-coord is negated as glTF uses a right-handed coordinate system and Cogwheel a right-handed.
+    // This also means that we have to invert some of the entries in the quaternion, specifically .x and the rotation direction in .w.
+    local_transform.rotation.x = -local_transform.rotation.x;
+    local_transform.rotation.w = -local_transform.rotation.w;
+    local_transform.translation.x = -local_transform.translation.x;
+
     Transform global_transform = parent_transform * local_transform;
     SceneNodes::UID scene_node_ID = SceneNodes::create(node.name, global_transform);
 
@@ -260,12 +267,15 @@ SceneNodes::UID load(const std::string& filename) {
                 Images::set_name(image_ID, gltf_mat.name + "_tint");
 
                 // Create basic texture.
-                const auto& gltf_sampler = model.samplers[gltf_texture.sampler];
-                MagnificationFilter magnification_filter = convert_magnification_filter(gltf_sampler.magFilter);
-                MinificationFilter minification_filter = convert_minification_filter(gltf_sampler.minFilter);
-                WrapMode wrapU = convert_wrap_mode(gltf_sampler.wrapR);
-                WrapMode wrapV = convert_wrap_mode(gltf_sampler.wrapS);
-                mat_data.tint_texture_ID = Textures::create2D(image_ID, magnification_filter, minification_filter, wrapU, wrapV);
+                if (gltf_texture.sampler >= 0) {
+                    const auto& gltf_sampler = model.samplers[gltf_texture.sampler];
+                    MagnificationFilter magnification_filter = convert_magnification_filter(gltf_sampler.magFilter);
+                    MinificationFilter minification_filter = convert_minification_filter(gltf_sampler.minFilter);
+                    WrapMode wrapU = convert_wrap_mode(gltf_sampler.wrapR);
+                    WrapMode wrapV = convert_wrap_mode(gltf_sampler.wrapS);
+                    mat_data.tint_texture_ID = Textures::create2D(image_ID, magnification_filter, minification_filter, wrapU, wrapV);
+                } else
+                    mat_data.tint_texture_ID = Textures::create2D(image_ID);
             } else if (val.first.compare("roughnessFactor") == 0)
                 mat_data.roughness = float(val.second.Factor());
             else if (val.first.compare("metallicFactor") == 0)
@@ -390,6 +400,22 @@ SceneNodes::UID load(const std::string& filename) {
                         src += byte_stride;
                     }
                 }
+            }
+
+            { // Negate the mesh's X component as glTF uses a right-handed coordinate system and we use a left-handed.
+                // Negate corners of bounding box.
+                min_position.x = -min_position.x;
+                max_position.x = -max_position.x;
+
+                // Negate positions and normals.
+                for (Vector3f& position : mesh.get_position_iterable())
+                    position.x = -position.x;
+                if (mesh.get_normals() != nullptr)
+                    for (Vector3f& normal : mesh.get_normal_iterable())
+                        normal.x = -normal.x;
+
+                for (Vector3ui& primitve_index : mesh.get_primitive_iterable())
+                    std::swap(primitve_index.x, primitve_index.y);
             }
 
             mesh.set_bounds(AABB(min_position, max_position));
