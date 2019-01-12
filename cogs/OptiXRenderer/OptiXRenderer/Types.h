@@ -80,6 +80,7 @@ struct __align__(16) LightSample {
 
     __inline_all__ static LightSample none() {
         LightSample sample = {};
+        sample.direction_to_light = { 0, 1, 0 };
         return sample;
     }
 };
