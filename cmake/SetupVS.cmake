@@ -1,5 +1,5 @@
 if(MSVC)
-  # Add OpenMP to Viual Studio compiler flags
+  # Add OpenMP to Visual Studio compiler flags
   find_package(OpenMP REQUIRED)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
