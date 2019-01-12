@@ -31,7 +31,7 @@ void LightSources::allocate(unsigned int capacity) {
     // Allocate dummy element at 0.
     m_lights[0].node_ID = SceneNodes::UID::invalid_UID();
     m_lights[0].type = LightSources::Type::Sphere;
-    m_lights[0].color = Math::RGB::black();
+    m_lights[0].color = Math::RGB(100000, 0, 100000);
     m_lights[0].sphere.radius = 0.0f;
 }
 
