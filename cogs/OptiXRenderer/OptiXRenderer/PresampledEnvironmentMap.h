@@ -36,7 +36,8 @@ public:
     // Constructors and destructor.
     //---------------------------------------------------------------------------------------------
     PresampledEnvironmentMap()
-        : m_per_pixel_PDF(nullptr), m_samples(nullptr) {}
+        : m_environment_map_ID(Cogwheel::Assets::Textures::UID::invalid_UID())
+        , m_per_pixel_PDF(nullptr), m_samples(nullptr), m_light(PresampledEnvironmentLight::none()) {}
     PresampledEnvironmentMap(optix::Context& context, const Cogwheel::Assets::InfiniteAreaLight& light, 
                              optix::TextureSampler* texture_cache, int sample_count = 0);
 
