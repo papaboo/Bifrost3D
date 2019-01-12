@@ -405,7 +405,7 @@ struct Renderer::Implementation {
 
 #ifdef ENABLE_OPTIX_DEBUG
         context->setPrintEnabled(true);
-        context->setPrintLaunchIndex(screensize.x / 2, screensize.y / 2);
+        context->setPrintLaunchIndex(0, 0);
         context->setExceptionEnabled(RT_EXCEPTION_ALL, true);
 #else
         context->setPrintEnabled(false);
@@ -650,6 +650,12 @@ struct Renderer::Implementation {
                         memcpy(&device_light.directional.radiance, &radiance, sizeof(device_light.directional.radiance));
                         break;
                     }
+                    default:
+                        printf("OptiXRenderer warning: Unknown light source type %u on light %u\n", LightSources::get_type(light_ID), light_ID.get_index());
+                        device_light.flags = Light::Sphere;
+                        device_light.sphere.position = { 0, 0, 0 };
+                        device_light.sphere.power = { 100000, 0, 100000 };
+                        device_light.sphere.radius = 5;
                     }
                 };
 
@@ -673,11 +679,12 @@ struct Renderer::Implementation {
                         ++light_index;
                     }
 
+                    lights.count = light_index;
+
                     // Append the environment map, if valid, to the list of light sources.
                     if (scene.environment.next_event_estimation_possible())
                         device_lights[lights.count++] = scene.environment.get_light();
 
-                    lights.count = light_index;
                     lights.sources->unmap();
                 } else {
                     // Skip the environment light proxy at the end of the light buffer.
