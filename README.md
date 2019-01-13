@@ -1,4 +1,4 @@
-# Cogwheel - Rendering Engine with a focus on composability.
+# Bifrost3D - Rendering Engine with a focus on composability.
 
 ![Materials](image.png)
 

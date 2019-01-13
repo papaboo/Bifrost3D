@@ -1,18 +1,18 @@
 // Test bed for different monte carlo seeding strategies..
 // -----------------------------------------------------------------------------------------------
-// Copyright (C) 2017, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2017, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
 // -----------------------------------------------------------------------------------------------
 
-#include <Cogwheel/Math/RNG.h>
-#include <Cogwheel/Math/Statistics.h>
+#include <Bifrost/Math/RNG.h>
+#include <Bifrost/Math/Statistics.h>
 
 #include <vector>
 #include <limits.h>
 
-using namespace Cogwheel::Math;
+using namespace Bifrost::Math;
 using namespace std;
 
 // ------------------------------------------------------------------------------------------------

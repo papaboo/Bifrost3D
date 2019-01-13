@@ -15,7 +15,7 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-  Cogwheel
+  Bifrost
   glfw
   ${OPENGL_LIBRARIES}
 )

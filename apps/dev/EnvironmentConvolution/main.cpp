@@ -1,18 +1,18 @@
 // Convolute environment maps with a GGX distribution.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2016, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include <Cogwheel/Assets/InfiniteAreaLight.h>
-#include <Cogwheel/Core/Engine.h>
-#include <Cogwheel/Core/Window.h>
-#include <Cogwheel/Input/Keyboard.h>
-#include <Cogwheel/Math/Quaternion.h>
-#include <Cogwheel/Math/Distributions.h>
-#include <Cogwheel/Math/RNG.h>
+#include <Bifrost/Assets/InfiniteAreaLight.h>
+#include <Bifrost/Core/Engine.h>
+#include <Bifrost/Core/Window.h>
+#include <Bifrost/Input/Keyboard.h>
+#include <Bifrost/Math/Quaternion.h>
+#include <Bifrost/Math/Distributions.h>
+#include <Bifrost/Math/RNG.h>
 
 #include <GLFWDriver.h>
 #include <StbImageLoader/StbImageLoader.h>
@@ -31,11 +31,11 @@
 #include <array>
 #include <fstream>
 
-using namespace Cogwheel::Assets;
-using namespace Cogwheel::Core;
-using namespace Cogwheel::Input;
-using namespace Cogwheel::Math;
-using namespace Cogwheel::Math::Distributions;
+using namespace Bifrost::Assets;
+using namespace Bifrost::Core;
+using namespace Bifrost::Input;
+using namespace Bifrost::Math;
+using namespace Bifrost::Math::Distributions;
 
 enum class SampleMethod {
     MIS, Light, BSDF, Recursive

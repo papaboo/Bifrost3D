@@ -1,24 +1,24 @@
 // Test bed for different unit vector representations.
 // See A Survey of Efficient Representations for Independent Unit Vectors, McGuire et al., 2014.
 // -----------------------------------------------------------------------------------------------
-// Copyright (C) 2016, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2016, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
 // -----------------------------------------------------------------------------------------------
 
-#include <Cogwheel/Math/Distributions.h>
-#include <Cogwheel/Math/Half.h>
-#include <Cogwheel/Math/OctahedralNormal.h>
-#include <Cogwheel/Math/RNG.h>
-#include <Cogwheel/Math/Statistics.h>
-#include <Cogwheel/Math/Vector.h>
-#include <Cogwheel/Math/Utils.h>
+#include <Bifrost/Math/Distributions.h>
+#include <Bifrost/Math/Half.h>
+#include <Bifrost/Math/OctahedralNormal.h>
+#include <Bifrost/Math/RNG.h>
+#include <Bifrost/Math/Statistics.h>
+#include <Bifrost/Math/Vector.h>
+#include <Bifrost/Math/Utils.h>
 
 #include <omp.h>
 #include <limits.h>
 
-using namespace Cogwheel::Math;
+using namespace Bifrost::Math;
 
 using Vector3sb = Vector3<char>;
 using Vector3s = Vector3<short>;

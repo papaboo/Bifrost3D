@@ -1,6 +1,6 @@
 // Komodo image blurer.
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
@@ -10,12 +10,12 @@
 #include <Utils.h>
 
 #include <AntTweakBar/AntTweakBar.h>
-#include <Cogwheel/Core/Engine.h>
+#include <Bifrost/Core/Engine.h>
 #include <ImageOperations/Blur.h>
 
-using namespace Cogwheel::Assets;
-using namespace Cogwheel::Core;
-using namespace Cogwheel::Math;
+using namespace Bifrost::Assets;
+using namespace Bifrost::Core;
+using namespace Bifrost::Math;
 
 struct Blurer::Implementation final {
     // --------------------------------------------------------------------------------------------

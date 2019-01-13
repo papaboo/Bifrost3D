@@ -1,12 +1,55 @@
+* Rename to Bifrost3D
+** Update folder names.
+** Update solution name to Bifrost3D
+** Update Copyright to Bifrost3D and not just Bifrost. And remove years
+** Move Bifrost to Core
+* Update gtest
+
+* glTF
+** Load alpha image
+*** Convert RGB24 images inside OptiX.
+*** Remove RGB24 to RGBA32 conversion in glTF and Obj loaders.
+*** Test scene should use RGB24
+** Apply non-uniform scaling to meshes. Find a model with non-uniform scale to test.
+*** Remember to update bounds
+** Rename to glTFLoader
+** Assert on non-handled properties (animations, curves, ...)
+** Load a bunch of gltf 2 scenes.
+
+** Material model blog post
+*** Update webpage. Ugh!
+*** Show off image with metal and details (lighthouse/rust) and shader balls. Reuse for different material realisations. (Save material and post processing parameters.)
+*** Material philosofy. 
+**** Same as Epic and Disney.
+***** Perceptually linear
+***** Debating whether to add specularity or not.
+**** Satisfy BRDF rules.
+*** Parameters.
+**** Lerp of different parameters.
+**** Implement metallic by linear interpolation of dielectric and conductor parameters.
+***** Just show as lerp(dielectric_rho, conductor_rho, metallic) and write that a lot can be simplified.
+*** Construction.
+*** Lambert
+*** Add GGX.
+*** Energy conservation.
+**** Hot white/grey room.
+*** Approximate microfacet interreflection by assuming no energy loss, i.e. white is white! Assume diffuse distribution and add interreflection to diffuse.
+*** Woops, what happened to reciprocity.
+**** Try to reintroduce the heimholtz reciprocity. Then diffuse * (1 - rho) can't be precomputed anymore. Do it in a separate material, so I can swap back and forth.
+**** Fix and show images with hopefully no perceptual difference.
+*** Future work
+**** Better interreflection energy approximation by fitting to Heitz paper.
+**** Iridescence / clear coat, translucency and anisotrophy.
+
+
 BACKLOG:
-* SSAO: In cornell scene there is some AO bleeding at top and bottom of the image.
-* SSAO: In test scene SSAO background bleed into the moving rings. But ONLY when they are moving?!?
 * Faster convergence
-** Rho approximation.
-*** GGX contribution seems too strong. Materials are too bright.
-*** Perhaps computing the relation between GGX tint and rho would help figure out how much light scatters to the diffuse layer and how much the specular metal layers will reflect?
-** Reverse halton sequence
-** Faure-permuted Halton sequence sample, http://gruenschloss.org/
+** Convergence on blue tourus in test scene seems slow near the blinking light. It should get a lot more samples from next event estimation
+** Solid angle sampled sphere light.
+** Pixar's PMJ02 sampler with test app. (Replicate their test setup)
+*** Perhaps test with SmallGI type scene and reference image?
+*** How to hash pixel index and depth? And is it really hash(pixel_index, depth, iteration)?? Ask Per
+** Scrambled (reverse) Halton - Stratified sampling for stochastic transparency. With Burley hash function (where do I get that? Per)
 * OptiX (filtering) backends
 ** Try OptiX 5 AI denoiser
 ** Filter neighbouring light samples before reconstruction - Screen space photon mapping approach with MIS weights / Path filtering.
@@ -16,6 +59,11 @@ BACKLOG:
 **** Trace ray footprint by assuming the ray is a cone. Then use Distributions::Cone::CosTheta(float angle) to compute the angle of each new cone after an intersection and use that for the density estimation kernel bandwidth.
 ** Pass BSDF and light sample to the path tracing RGP and let it handle accumulated radiance.
 * SDF shadows - check UE4
+** http://kunzhou.net/2013/fur-rendering-tvcg.pdf
+* SSAO
+** Intensity should be relative to sample distance, not absolute distance intensity.
+*** When hitting the screen space max radius then results should be independent of the world radius. Are they? Test scene with three 'infinite' walls.
+** Try seeding with hilbert curve + hash from 'Stratified sampling for stochastic transparency'
 * SSBN
 ** Bent normal
 *** Path tracer backend (Also one for SSAO?)
@@ -24,12 +72,9 @@ BACKLOG:
 *** Intersect bent cone with light cone or distribution and bake into 3D LUT (GTSO)
 * GLFW 3.3 - Handle windows high DPI scaling.
 * Material improvements
-** Metal specular tint should go to white at grazing angles.
-** Importance sample improvement?
-*** The black rubber ball in TestScene produces a lot of nearly black samples. Must be from GGX?
 ** Add coat.
 *** http://jcgt.org/published/0003/04/03/paper-lowres.pdf and https://www.youtube.com/watch?v=4nKb9hRYbPA
-*** Or just add a GGX layer on top with an iridescence parameter (red and blue fresnel offset relative to green.)
+*** Or just add a GGX layer on top with an iridescence parameter (red and blue fresnel offset relative to green. [Specularity, iridescence)
 * Normals revisited
 ** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
@@ -40,17 +85,14 @@ BACKLOG:
 ** Or warp the hemisphere by the shading normal, such that the hemisphere is turned into a cone that only grazes the surface. That way samples would need to be converted from hemisphere to cone and back again. Pro: No special casing on light / view direction. Con: Black surface when view dir is outside the cone.
 ** Perhaps just dim 'blocked' regions as they could be lit indirectly.
 * BTDF
-** Transmission factor.
-*** Use IOR computed from specularity.
+** Transmission factor. Use IOR computed from specularity.
 * Multiple scenes.
-** Only nodes in a certain scene should be rendered.
-** Should a scene node know if it is in a scene and in which? Store the root scene ID pr node?'
-** When loading models/scenes, store them in scene 0, i.e. the invalid one.
 * 3DS, STL and PLY loader.
-* Serialize scene and models, perhaps just build GLFT importer and exporter at first. https://github.com/KhronosGroup/glTF
-** https://github.com/syoyo/tinygltf
+* glTF exporter.
+** Convert SanMiguel and Rungholt
 
 libs
+* TinyDNN
 * RtAudio wrapper - https://github.com/thestk/rtaudio
 * LuaJit - OpenSource (Fallback to interpretted Lua if the target architecture isn't supported.)
 * Emscripten

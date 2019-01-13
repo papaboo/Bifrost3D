@@ -9,7 +9,7 @@ if (TARGET OptiXRenderer)
   target_include_directories(${PROJECT_NAME} PRIVATE .)
 
   target_link_libraries(${PROJECT_NAME}
-    Cogwheel
+    Bifrost
     OptiXRenderer
     StbImageWriter
   )
@@ -23,7 +23,7 @@ if (TARGET OptiXRenderer)
   if (WIN32)
     target_compile_definitions(${PROJECT_NAME} PRIVATE 
       NOMINMAX # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
-      COGWHEEL_SHADING_DIR="${COGWHEEL_COGS_DIR}/Cogwheel/Cogwheel/Assets/Shading/"
+      BIFROST_SHADING_DIR="${BIFROST_EXTENSIONS_DIR}/Bifrost/Bifrost/Assets/Shading/"
     )
   endif()
 else()

@@ -1,6 +1,6 @@
 // Komodo image color grader.
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
@@ -9,8 +9,8 @@
 #include <ColorGrader.h>
 #include <Utils.h>
 
-#include <Cogwheel/Core/Engine.h>
-#include <Cogwheel/Math/CameraEffects.h>
+#include <Bifrost/Core/Engine.h>
+#include <Bifrost/Math/CameraEffects.h>
 #include <ImageOperations/Blur.h>
 #include <ImageOperations/Exposure.h>
 
@@ -18,9 +18,9 @@
 
 #include <array>
 
-using namespace Cogwheel::Assets;
-using namespace Cogwheel::Core;
-using namespace Cogwheel::Math;
+using namespace Bifrost::Assets;
+using namespace Bifrost::Core;
+using namespace Bifrost::Math;
 using namespace ImageOperations;
 
 using Vector4uc = Vector4<unsigned char>;
@@ -417,7 +417,7 @@ struct ColorGrader::Implementation final {
     // --------------------------------------------------------------------------------------------
     // Constructor.
     // --------------------------------------------------------------------------------------------
-    Implementation(std::vector<char*> args, Cogwheel::Core::Engine& engine) {
+    Implementation(std::vector<char*> args, Bifrost::Core::Engine& engine) {
 
         if (args.size() == 0 || std::string(args[0]).compare("-h") == 0 || std::string(args[0]).compare("--help") == 0) {
             print_usage();
@@ -579,6 +579,6 @@ struct ColorGrader::Implementation final {
     }
 };
 
-ColorGrader::ColorGrader(std::vector<char*> args, Cogwheel::Core::Engine& engine) {
+ColorGrader::ColorGrader(std::vector<char*> args, Bifrost::Core::Engine& engine) {
     m_impl = new Implementation(args, engine);
 }

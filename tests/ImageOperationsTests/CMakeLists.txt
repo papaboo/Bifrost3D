@@ -9,7 +9,7 @@ set(SRCS
 
 add_executable(${PROJECT_NAME} ${SRCS})
 target_include_directories(${PROJECT_NAME} PRIVATE .)
-target_link_libraries(${PROJECT_NAME} gtest Cogwheel ImageOperations)
+target_link_libraries(${PROJECT_NAME} gtest Bifrost ImageOperations)
 
 source_group("" FILES ${SRCS})
 

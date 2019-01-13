@@ -1,6 +1,6 @@
 // SimpleViewer test scene.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015-2016, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
@@ -9,19 +9,19 @@
 #ifndef _SIMPLEVIEWER_TEST_SCENE_H_
 #define _SIMPLEVIEWER_TEST_SCENE_H_
 
-#include <Cogwheel/Assets/Image.h>
-#include <Cogwheel/Assets/Mesh.h>
-#include <Cogwheel/Assets/MeshCreation.h>
-#include <Cogwheel/Assets/MeshModel.h>
-#include <Cogwheel/Assets/Texture.h>
-#include <Cogwheel/Core/Engine.h>
-#include <Cogwheel/Input/Mouse.h>
-#include <Cogwheel/Math/Transform.h>
-#include <Cogwheel/Scene/Camera.h>
-#include <Cogwheel/Scene/LightSource.h>
-#include <Cogwheel/Scene/SceneNode.h>
+#include <Bifrost/Assets/Image.h>
+#include <Bifrost/Assets/Mesh.h>
+#include <Bifrost/Assets/MeshCreation.h>
+#include <Bifrost/Assets/MeshModel.h>
+#include <Bifrost/Assets/Texture.h>
+#include <Bifrost/Core/Engine.h>
+#include <Bifrost/Input/Mouse.h>
+#include <Bifrost/Math/Transform.h>
+#include <Bifrost/Scene/Camera.h>
+#include <Bifrost/Scene/LightSource.h>
+#include <Bifrost/Scene/SceneNode.h>
 
-using namespace Cogwheel;
+using namespace Bifrost;
 
 namespace Scenes {
 
@@ -87,9 +87,9 @@ public:
     }
 
     void update(Core::Engine& engine) {
-        using namespace Cogwheel::Assets;
-        using namespace Cogwheel::Input;
-        using namespace Cogwheel::Scene;
+        using namespace Bifrost::Assets;
+        using namespace Bifrost::Input;
+        using namespace Bifrost::Scene;
 
         if (engine.get_time().is_paused())
             return;
@@ -129,9 +129,9 @@ private:
 };
 
 void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneNode root_node) {
-    using namespace Cogwheel::Assets;
-    using namespace Cogwheel::Math;
-    using namespace Cogwheel::Scene;
+    using namespace Bifrost::Assets;
+    using namespace Bifrost::Math;
+    using namespace Bifrost::Scene;
 
     { // Setup camera transform.
         Transform cam_transform = Cameras::get_transform(camera_ID);

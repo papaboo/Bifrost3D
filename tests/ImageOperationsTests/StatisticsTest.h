@@ -1,6 +1,6 @@
 // Test image statistics.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2015-2017, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015-2017, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
@@ -10,7 +10,7 @@
 #define _IMAGE_OPERATIONS_STATISTICS_TEST_H_
 
 #include <ImageOperations/Compare.h>
-#include <../CogwheelTests/Expects.h>
+#include <../BifrostTests/Expects.h>
 
 namespace ImageOperations {
 namespace Compare {

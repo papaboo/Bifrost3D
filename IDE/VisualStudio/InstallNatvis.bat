@@ -1,1 +1,1 @@
-xcopy cogwheel.natvis "%UserProfile%\Documents\Visual Studio 2013\Visualizers\cogwheel.natvis*" /Y
+xcopy bifrost.natvis "%UserProfile%\Documents\Visual Studio 2015\Visualizers\bifrost.natvis*" /Y

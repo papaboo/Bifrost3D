@@ -1,12 +1,12 @@
 // Komodo Image Tool.
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2015, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#include <Cogwheel/Core/Engine.h>
+#include <Bifrost/Core/Engine.h>
 
 #include <GLFWDriver.h>
 
@@ -14,7 +14,7 @@
 #include <ColorGrader.h>
 #include <Comparer.h>
 
-using namespace Cogwheel::Core;
+using namespace Bifrost::Core;
 
 // Global state
 std::vector<char*> g_args;

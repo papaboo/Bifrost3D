@@ -1,6 +1,6 @@
 // Test blur operations.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
@@ -11,13 +11,13 @@
 
 #include <ImageOperations/Blur.h>
 
-#include <../CogwheelTests/Expects.h>
+#include <../BifrostTests/Expects.h>
 
 namespace ImageOperations {
 namespace Blur {
 
-using namespace Cogwheel::Assets;
-using namespace Cogwheel::Math;
+using namespace Bifrost::Assets;
+using namespace Bifrost::Math;
 
 class ImageOperations_Blur : public ::testing::Test {
 protected:

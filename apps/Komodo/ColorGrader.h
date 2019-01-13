@@ -1,6 +1,6 @@
 // Komodo image color grader.
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
@@ -11,7 +11,7 @@
 
 #include <vector>
 
-namespace Cogwheel {
+namespace Bifrost {
 namespace Core {
 class Engine;
 }
@@ -19,7 +19,7 @@ class Engine;
 
 class ColorGrader final {
 public:
-    ColorGrader(std::vector<char*> args, Cogwheel::Core::Engine& engine);
+    ColorGrader(std::vector<char*> args, Bifrost::Core::Engine& engine);
 
 private:
     // Pimpl the state to avoid exposing OptiX headers.

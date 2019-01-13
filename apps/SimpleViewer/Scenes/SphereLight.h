@@ -1,6 +1,6 @@
 // SimpleViewer shpere light scene.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
@@ -9,15 +9,15 @@
 #ifndef _SIMPLEVIEWER_SPHERE_LIGHT_SCENE_H_
 #define _SIMPLEVIEWER_SPHERE_LIGHT_SCENE_H_
 
-#include <Cogwheel/Assets/Mesh.h>
-#include <Cogwheel/Assets/MeshCreation.h>
-#include <Cogwheel/Assets/MeshModel.h>
-#include <Cogwheel/Math/Constants.h>
-#include <Cogwheel/Scene/Camera.h>
-#include <Cogwheel/Scene/LightSource.h>
-#include <Cogwheel/Scene/SceneNode.h>
+#include <Bifrost/Assets/Mesh.h>
+#include <Bifrost/Assets/MeshCreation.h>
+#include <Bifrost/Assets/MeshModel.h>
+#include <Bifrost/Math/Constants.h>
+#include <Bifrost/Scene/Camera.h>
+#include <Bifrost/Scene/LightSource.h>
+#include <Bifrost/Scene/SceneNode.h>
 
-using namespace Cogwheel;
+using namespace Bifrost;
 
 namespace Scenes {
 namespace SphereLightScene {
@@ -51,9 +51,9 @@ private:
 };
 
 void create(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoots::UID scene_ID) {
-    using namespace Cogwheel::Assets;
-    using namespace Cogwheel::Math;
-    using namespace Cogwheel::Scene;
+    using namespace Bifrost::Assets;
+    using namespace Bifrost::Math;
+    using namespace Bifrost::Scene;
 
     SceneNode root_node = SceneRoots::get_root_node(scene_ID);
 

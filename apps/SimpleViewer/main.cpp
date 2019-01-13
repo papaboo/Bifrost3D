@@ -1,6 +1,6 @@
 // SimpleViewer.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015-2016, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
@@ -16,15 +16,15 @@
 
 #include <GUI/RenderingGUI.h>
 
-#include <Cogwheel/Assets/Mesh.h>
-#include <Cogwheel/Assets/MeshModel.h>
-#include <Cogwheel/Core/Engine.h>
-#include <Cogwheel/Input/Keyboard.h>
-#include <Cogwheel/Input/Mouse.h>
-#include <Cogwheel/Scene/Camera.h>
-#include <Cogwheel/Scene/LightSource.h>
-#include <Cogwheel/Scene/SceneNode.h>
-#include <Cogwheel/Scene/SceneRoot.h>
+#include <Bifrost/Assets/Mesh.h>
+#include <Bifrost/Assets/MeshModel.h>
+#include <Bifrost/Core/Engine.h>
+#include <Bifrost/Input/Keyboard.h>
+#include <Bifrost/Input/Mouse.h>
+#include <Bifrost/Scene/Camera.h>
+#include <Bifrost/Scene/LightSource.h>
+#include <Bifrost/Scene/SceneNode.h>
+#include <Bifrost/Scene/SceneRoot.h>
 
 #include <ImGui/ImGUIAdaptor.h>
 #include <ImGui/Renderers/DX11Renderer.h>
@@ -46,11 +46,11 @@
 #include <iostream>
 #include <io.h>
 
-using namespace Cogwheel::Assets;
-using namespace Cogwheel::Core;
-using namespace Cogwheel::Input;
-using namespace Cogwheel::Math;
-using namespace Cogwheel::Scene;
+using namespace Bifrost::Assets;
+using namespace Bifrost::Core;
+using namespace Bifrost::Input;
+using namespace Bifrost::Math;
+using namespace Bifrost::Scene;
 
 static std::string g_scene;
 static std::string g_environment;

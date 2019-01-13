@@ -1,6 +1,6 @@
 // Komodo image comparison.
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2015, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
@@ -11,12 +11,12 @@
 
 #include <Utils.h>
 
-#include <Cogwheel/Input/Keyboard.h>
+#include <Bifrost/Input/Keyboard.h>
 #include <ImageOperations/Compare.h>
 
 #include <vector>
 
-using namespace Cogwheel::Assets;
+using namespace Bifrost::Assets;
 
 class Comparer final {
 public:
@@ -81,7 +81,7 @@ public:
             images.push_back(target);
 
         Image diff_image = Images::create2D(diff_path, reference.get_pixel_format(), reference.get_gamma(),
-                                            Cogwheel::Math::Vector2ui(reference.get_width(), reference.get_height()));
+                                            Bifrost::Math::Vector2ui(reference.get_width(), reference.get_height()));
         images.push_back(diff_image);
 
         printf("Compare '%s' with '%s'\n", reference_path.c_str(), target_path.c_str());
@@ -94,7 +94,7 @@ public:
         }
         case Algorithm::SSIM: {
             float ssim = ImageOperations::Compare::mssim(reference, target, 5, diff_image);
-            ssim = Cogwheel::Math::max(0.0f, ssim); // Clamp in case ssim becomes negative due to imprecision.
+            ssim = Bifrost::Math::max(0.0f, ssim); // Clamp in case ssim becomes negative due to imprecision.
             printf("  1.0f - ssim: %f - lower is better.\n", 1.0f - ssim);
             break;
         }
@@ -106,7 +106,7 @@ public:
         return images;
     }
 
-    Comparer(std::vector<char*> args, Cogwheel::Core::Engine& engine)
+    Comparer(std::vector<char*> args, Bifrost::Core::Engine& engine)
         : m_selected_image_index(-1) {
 
         m_images = apply(args);
@@ -125,9 +125,9 @@ public:
         engine.add_mutating_callback([&]{ this->update(engine); });
     }
 
-    void update(Cogwheel::Core::Engine& engine) {
-        using namespace Cogwheel::Input;
-        using namespace Cogwheel::Math;
+    void update(Bifrost::Core::Engine& engine) {
+        using namespace Bifrost::Input;
+        using namespace Bifrost::Math;
 
         const Keyboard* const keyboard = engine.get_keyboard();
 
@@ -136,7 +136,7 @@ public:
             --image_index;
         if (keyboard->was_released(Keyboard::Key::Right))
             ++image_index;
-        image_index = Cogwheel::Math::clamp(image_index, 0, int(m_images.size() - 1));
+        image_index = Bifrost::Math::clamp(image_index, 0, int(m_images.size() - 1));
 
         // Update the texture and window title in case the index has changed.
         if (m_selected_image_index != image_index) {
@@ -165,7 +165,7 @@ public:
         render_image(engine.get_window(), m_tex_ID, selected_image.get_width(), selected_image.get_height());
     }
 
-    static void update(Cogwheel::Core::Engine& engine, void* comparer) {
+    static void update(Bifrost::Core::Engine& engine, void* comparer) {
         ((Comparer*)comparer)->update(engine);
     }
 

@@ -1,6 +1,6 @@
 // Test Compare operations.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2015-2017, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015-2017, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
@@ -10,7 +10,7 @@
 #define _IMAGE_OPERATIONS_COMPARE_TEST_H_
 
 #include <ImageOperations/Compare.h>
-#include <../CogwheelTests/Expects.h>
+#include <../BifrostTests/Expects.h>
 
 namespace ImageOperations {
 namespace Compare {
@@ -19,10 +19,10 @@ class ImageOperations_Compare : public ::testing::Test {
 protected:
     // Per-test set-up and tear-down logic.
     virtual void SetUp() {
-        Cogwheel::Assets::Images::allocate(2u);
+        Bifrost::Assets::Images::allocate(2u);
     }
     virtual void TearDown() {
-        Cogwheel::Assets::Images::deallocate();
+        Bifrost::Assets::Images::deallocate();
     }
 };
 

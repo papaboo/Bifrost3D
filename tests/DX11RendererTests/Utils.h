@@ -1,6 +1,6 @@
 // DX11Renderer testing utils.
 // -------------------------------------------------------------------------------------------------
-// Copyright (C) 2015-2017, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015-2017, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
@@ -16,7 +16,7 @@
 // Typedefs.
 // -------------------------------------------------------------------------------------------------
 
-using half4 = Cogwheel::Math::Vector4<half>;
+using half4 = Bifrost::Math::Vector4<half>;
 
 // -------------------------------------------------------------------------------------------------
 // Utility functions
@@ -83,12 +83,12 @@ inline bool double_almost_equal_percentage(double lhs, double rhs, double percen
 }
 #define EXPECT_DOUBLE_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(double_almost_equal_percentage, expected, actual, percentage)
 
-static bool equal_vector3f(Cogwheel::Math::Vector3f lhs, Cogwheel::Math::Vector3f rhs) {
-    return Cogwheel::Math::almost_equal(lhs.x, rhs.x) && Cogwheel::Math::almost_equal(lhs.y, rhs.y) && Cogwheel::Math::almost_equal(lhs.z, rhs.z);
+static bool equal_vector3f(Bifrost::Math::Vector3f lhs, Bifrost::Math::Vector3f rhs) {
+    return Bifrost::Math::almost_equal(lhs.x, rhs.x) && Bifrost::Math::almost_equal(lhs.y, rhs.y) && Bifrost::Math::almost_equal(lhs.z, rhs.z);
 }
 #define EXPECT_VECTOR3F_EQ(expected, actual) EXPECT_PRED2(equal_vector3f, expected, actual)
 
-static bool equal_Vector3f_pct(Cogwheel::Math::Vector3f expected, Cogwheel::Math::Vector3f actual, Cogwheel::Math::Vector3f pct) {
+static bool equal_Vector3f_pct(Bifrost::Math::Vector3f expected, Bifrost::Math::Vector3f actual, Bifrost::Math::Vector3f pct) {
     auto eps = expected * pct;
     return abs(expected.x - actual.x) < eps.x && abs(expected.y - actual.y) < eps.y && abs(expected.z - actual.z) < eps.z;
 }

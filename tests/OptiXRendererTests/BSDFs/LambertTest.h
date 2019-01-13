@@ -1,6 +1,6 @@
 // Test OptiXRenderer's Lambert BSDF.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015-2016, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
@@ -11,7 +11,7 @@
 
 #include <Utils.h>
 
-#include <Cogwheel/Math/Utils.h>
+#include <Bifrost/Math/Utils.h>
 
 #include <OptiXRenderer/RNG.h>
 #include <OptiXRenderer/Shading/BSDFs/Lambert.h>
@@ -32,7 +32,7 @@ GTEST_TEST(Lambert, power_conservation) {
         ws[i] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
     }
 
-    float average_w = Cogwheel::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
+    float average_w = Bifrost::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
     EXPECT_TRUE(almost_equal_eps(average_w, 1.0f, 0.0001f));
 }
 

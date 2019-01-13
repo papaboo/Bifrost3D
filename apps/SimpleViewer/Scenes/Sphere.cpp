@@ -1,6 +1,6 @@
 // SimpleViewer sphere scene.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015-2016, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
@@ -8,14 +8,14 @@
 
 #include <Scenes/Sphere.h>
 
-#include <Cogwheel/Assets/Shading/Fittings.h>
-#include <Cogwheel/Assets/Material.h>
-#include <Cogwheel/Assets/Mesh.h>
-#include <Cogwheel/Assets/MeshCreation.h>
-#include <Cogwheel/Assets/MeshModel.h>
-#include <Cogwheel/Input/Keyboard.h>
-#include <Cogwheel/Math/Distributions.h>
-#include <Cogwheel/Scene/SceneNode.h>
+#include <Bifrost/Assets/Shading/Fittings.h>
+#include <Bifrost/Assets/Material.h>
+#include <Bifrost/Assets/Mesh.h>
+#include <Bifrost/Assets/MeshCreation.h>
+#include <Bifrost/Assets/MeshModel.h>
+#include <Bifrost/Input/Keyboard.h>
+#include <Bifrost/Math/Distributions.h>
+#include <Bifrost/Scene/SceneNode.h>
 
 #include <ImGui/ImGuiAdaptor.h>
 
@@ -24,10 +24,10 @@
 #include <OptiXRenderer/Shading/BSDFs/GGX.h>
 #endif
 
-using namespace Cogwheel::Assets;
-using namespace Cogwheel::Core;
-using namespace Cogwheel::Math;
-using namespace Cogwheel::Scene;
+using namespace Bifrost::Assets;
+using namespace Bifrost::Core;
+using namespace Bifrost::Math;
+using namespace Bifrost::Scene;
 
 namespace Scenes {
 
@@ -175,7 +175,7 @@ void create_sphere_scene(Engine& engine, Cameras::UID camera_ID, SceneRoots::UID
 
     { // Setup sphere and material swapper.
         static auto swap_material = [](Engine& engine) {
-            using namespace Cogwheel::Input;
+            using namespace Bifrost::Input;
 
             static auto update_material = [](Materials::Data data) {
                 Material m_material = *Materials::get_iterable().begin();

@@ -1,6 +1,6 @@
 // DX11Renderer exposure histogram test.
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
@@ -12,9 +12,9 @@
 #include <gtest/gtest.h>
 #include <Utils.h>
 
-#include <Cogwheel/Math/Half.h>
-#include <Cogwheel/Math/Vector.h>
-#include <Cogwheel/Math/Utils.h>
+#include <Bifrost/Math/Half.h>
+#include <Bifrost/Math/Vector.h>
+#include <Bifrost/Math/Utils.h>
 
 #include <DX11Renderer/CameraEffects.h>
 #include <DX11Renderer/Compositor.h>
@@ -33,7 +33,7 @@ protected:
         float min_percentage, float max_percentage, float min_log_luminance, float max_log_luminance) {
 
         auto compute_luminance_from_histogram_position = [=](float normalized_index) -> float {
-            return exp2(Cogwheel::Math::lerp(min_log_luminance, max_log_luminance, normalized_index));
+            return exp2(Bifrost::Math::lerp(min_log_luminance, max_log_luminance, normalized_index));
         };
 
         int histogram_size = int(histogram_end - histogram_begin);
@@ -45,7 +45,7 @@ protected:
         float min_pixel_count = pixel_count * min_percentage;
         float max_pixel_count = pixel_count * max_percentage;
 
-        Cogwheel::Math::Vector2f sum = Cogwheel::Math::Vector2f::zero();
+        Bifrost::Math::Vector2f sum = Bifrost::Math::Vector2f::zero();
         for (int i = 0; i < histogram_size; ++i) {
             float bucket_count = float(histogram_begin[i]);
 
@@ -61,7 +61,7 @@ protected:
 
             float luminance_at_bucket = compute_luminance_from_histogram_position((i + 0.5f) / float(histogram_size));
 
-            sum += Cogwheel::Math::Vector2f(luminance_at_bucket * bucket_count, bucket_count);
+            sum += Bifrost::Math::Vector2f(luminance_at_bucket * bucket_count, bucket_count);
         }
 
         return sum.x / fmaxf(0.0001f, sum.y);
@@ -69,7 +69,7 @@ protected:
 };
 
 TEST_F(ExposureHistogramFixture, tiny_image) {
-    using namespace Cogwheel::Math;
+    using namespace Bifrost::Math;
 
     auto device = create_performant_device1();
     ODeviceContext1 context;
@@ -104,7 +104,7 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
 }
 
 TEST_F(ExposureHistogramFixture, small_image) {
-    using namespace Cogwheel::Math;
+    using namespace Bifrost::Math;
 
     auto device = create_performant_device1();
     ODeviceContext1 context;
@@ -152,7 +152,7 @@ TEST_F(ExposureHistogramFixture, small_image) {
 }
 
 TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
-    using namespace Cogwheel::Math;
+    using namespace Bifrost::Math;
 
     auto device = create_performant_device1();
     ODeviceContext1 context;
@@ -197,7 +197,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
 }
 
 TEST_F(ExposureHistogramFixture, exposure_from_histogram) {
-    using namespace Cogwheel::Math;
+    using namespace Bifrost::Math;
 
     auto device = create_performant_device1();
     ODeviceContext1 context;

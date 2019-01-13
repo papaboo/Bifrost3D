@@ -1,6 +1,6 @@
 // Komodo utilities.
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2015, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
@@ -9,8 +9,8 @@
 #ifndef _KOMODO_UTILS_H_
 #define _KOMODO_UTILS_H_
 
-#include <Cogwheel/Assets/Image.h>
-#include <Cogwheel/Core/Window.h>
+#include <Bifrost/Assets/Image.h>
+#include <Bifrost/Core/Window.h>
 
 #include <StbImageLoader/StbImageLoader.h>
 #include <StbImageWriter/StbImageWriter.h>
@@ -40,7 +40,7 @@ inline bool validate_image_extension(const std::string& path) {
     return true;
 }
 
-inline Cogwheel::Assets::Image load_image(const std::string& path) {
+inline Bifrost::Assets::Image load_image(const std::string& path) {
     const int read_only_flag = 4;
     if (_access(path.c_str(), read_only_flag) >= 0) {
         std::string file_extension = std::string(path, path.length() - 3);
@@ -74,10 +74,10 @@ inline Cogwheel::Assets::Image load_image(const std::string& path) {
 
     // No dice. Report error and return an invalid ID.
     printf("No image found at '%s'\n", path.c_str());
-    return Cogwheel::Assets::Image();
+    return Bifrost::Assets::Image();
 }
 
-inline void store_image(Cogwheel::Assets::Image image, const std::string& path) {
+inline void store_image(Bifrost::Assets::Image image, const std::string& path) {
     std::string file_extension = std::string(path, path.length() - 3);
     if (file_extension.compare("exr") == 0)
         TinyExr::store(image.get_ID(), path);
@@ -86,10 +86,10 @@ inline void store_image(Cogwheel::Assets::Image image, const std::string& path) 
 }
 
 // Create a red and white error image.
-inline Cogwheel::Assets::Images::UID create_error_image() {
-    using namespace Cogwheel::Assets;
+inline Bifrost::Assets::Images::UID create_error_image() {
+    using namespace Bifrost::Assets;
 
-    Image error_img = Images::create2D("No images loaded", PixelFormat::RGBA32, 2.2f, Cogwheel::Math::Vector2ui(16, 16));
+    Image error_img = Images::create2D("No images loaded", PixelFormat::RGBA32, 2.2f, Bifrost::Math::Vector2ui(16, 16));
     unsigned char* pixels = (unsigned char*)error_img.get_pixels();
     for (unsigned int y = 0; y < error_img.get_height(); ++y) {
         for (unsigned int x = 0; x < error_img.get_width(); ++x) {
@@ -103,7 +103,7 @@ inline Cogwheel::Assets::Images::UID create_error_image() {
     return error_img.get_ID();
 }
 
-inline void render_image(Cogwheel::Core::Window& window, GLuint texture_ID, int image_width, int image_height) {
+inline void render_image(Bifrost::Core::Window& window, GLuint texture_ID, int image_width, int image_height) {
     glViewport(0, 0, window.get_width(), window.get_height());
 
     { // Setup matrices. I really don't need to do this every frame, since they never change.

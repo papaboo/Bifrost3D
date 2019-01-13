@@ -1,6 +1,6 @@
 // DX11Renderer bloom test.
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
@@ -12,8 +12,8 @@
 #include <gtest/gtest.h>
 #include <Utils.h>
 
-#include <Cogwheel/Math/Color.h>
-#include <Cogwheel/Math/Half.h>
+#include <Bifrost/Math/Color.h>
+#include <Bifrost/Math/Half.h>
 
 #include <DX11Renderer/CameraEffects.h>
 #include <DX11Renderer/Compositor.h>
@@ -48,7 +48,7 @@ protected:
     // --------------------------------------------------------------------------------------------
     inline OBuffer create_and_bind_constants(ODevice1& device, ODeviceContext1& context, int width, int height, float bloom_threshold, int support = 11) {
         CameraEffects::Constants constants;
-        constants.input_viewport = Cogwheel::Math::Rect<float>(0, 0, float(width), float(height));
+        constants.input_viewport = Bifrost::Math::Rect<float>(0, 0, float(width), float(height));
         constants.bloom_threshold = bloom_threshold;
         m_support = constants.bloom_support = support;
         float std_dev = constants.bloom_support * 0.25f;
@@ -65,8 +65,8 @@ protected:
     // --------------------------------------------------------------------------------------------
     using BloomFilter = std::function<OShaderResourceView&(ID3D11Buffer& constants, ID3D11ShaderResourceView* pixels, unsigned int image_width, unsigned int image_height)>;
 
-    inline void test_energy_conservation(BloomFilter bloom_filter, Cogwheel::Math::Vector3f error_pct) {
-        using namespace Cogwheel::Math;
+    inline void test_energy_conservation(BloomFilter bloom_filter, Bifrost::Math::Vector3f error_pct) {
+        using namespace Bifrost::Math;
 
         // Create image.
         const int width = 64, height = 64;
@@ -103,7 +103,7 @@ protected:
     }
 
     inline void test_mirroring(BloomFilter bloom_filter) {
-        using namespace Cogwheel::Math;
+        using namespace Bifrost::Math;
 
         const int width = 64, height = 64;
         const int pixel_count = width * height;
@@ -165,7 +165,7 @@ protected:
     }
 
     inline void test_thresholding(BloomFilter bloom_filter, double error_pct) {
-        using namespace Cogwheel::Math;
+        using namespace Bifrost::Math;
 
         // Create image.
         const int width = 64, height = 64;
@@ -225,7 +225,7 @@ TEST_F(Bloom, dual_kawase_energy_conservation) {
         return bloom.filter(m_context, constants, pixels, image_width, image_height, 1);
     };
 
-    test_energy_conservation(bloom_filter, Cogwheel::Math::Vector3f(0.0001f));
+    test_energy_conservation(bloom_filter, Bifrost::Math::Vector3f(0.0001f));
 }
 
 TEST_F(Bloom, dual_kawase_mirroring) {
@@ -256,7 +256,7 @@ TEST_F(Bloom, gaussian_energy_conservation) {
         return bloom.filter(m_context, constants, pixels, image_width, image_height, m_support);
     };
 
-    test_energy_conservation(bloom_filter, Cogwheel::Math::Vector3f(0.002f));
+    test_energy_conservation(bloom_filter, Bifrost::Math::Vector3f(0.002f));
 }
 
 TEST_F(Bloom, guassian_mirroring) {

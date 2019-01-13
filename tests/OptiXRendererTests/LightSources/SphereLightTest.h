@@ -1,6 +1,6 @@
 // Test sphere lights in OptiXRenderer.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015-2016, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
@@ -11,7 +11,7 @@
 
 #include <Utils.h>
 
-#include <Cogwheel/Math/Utils.h>
+#include <Bifrost/Math/Utils.h>
 
 #include <OptiXRenderer/Shading/LightSources/SphereLightImpl.h>
 
@@ -69,11 +69,11 @@ GTEST_TEST(SphereLight, power_preservation_when_radius_changes) {
         luminances_at_radius_9[i] = sample9.radiance.x * (dot(shading_normal, sample9.direction_to_light) / sample9.PDF);
     }
 
-    float luminance_at_radius_0 = Cogwheel::Math::sort_and_pairwise_summation(luminances_at_radius_0, luminances_at_radius_0 + MAX_SAMPLES) / float(MAX_SAMPLES);
-    float luminance_at_radius_1 = Cogwheel::Math::sort_and_pairwise_summation(luminances_at_radius_1, luminances_at_radius_1 + MAX_SAMPLES) / float(MAX_SAMPLES);
-    float luminance_at_radius_2 = Cogwheel::Math::sort_and_pairwise_summation(luminances_at_radius_2, luminances_at_radius_2 + MAX_SAMPLES) / float(MAX_SAMPLES);
-    float luminance_at_radius_5 = Cogwheel::Math::sort_and_pairwise_summation(luminances_at_radius_5, luminances_at_radius_5 + MAX_SAMPLES) / float(MAX_SAMPLES);
-    float luminance_at_radius_9 = Cogwheel::Math::sort_and_pairwise_summation(luminances_at_radius_9, luminances_at_radius_9 + MAX_SAMPLES) / float(MAX_SAMPLES);
+    float luminance_at_radius_0 = Bifrost::Math::sort_and_pairwise_summation(luminances_at_radius_0, luminances_at_radius_0 + MAX_SAMPLES) / float(MAX_SAMPLES);
+    float luminance_at_radius_1 = Bifrost::Math::sort_and_pairwise_summation(luminances_at_radius_1, luminances_at_radius_1 + MAX_SAMPLES) / float(MAX_SAMPLES);
+    float luminance_at_radius_2 = Bifrost::Math::sort_and_pairwise_summation(luminances_at_radius_2, luminances_at_radius_2 + MAX_SAMPLES) / float(MAX_SAMPLES);
+    float luminance_at_radius_5 = Bifrost::Math::sort_and_pairwise_summation(luminances_at_radius_5, luminances_at_radius_5 + MAX_SAMPLES) / float(MAX_SAMPLES);
+    float luminance_at_radius_9 = Bifrost::Math::sort_and_pairwise_summation(luminances_at_radius_9, luminances_at_radius_9 + MAX_SAMPLES) / float(MAX_SAMPLES);
 
     // Map radiance arriving at intersection point to light source power by applying an inverse quadratric fall off and assume that all lights are point lights.
     float distance_to_light = length(shading_position - light_with_radius_0.position);

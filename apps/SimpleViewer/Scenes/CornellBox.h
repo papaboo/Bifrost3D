@@ -1,6 +1,6 @@
 // SimpleViewer cornell box scene.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015-2016, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
@@ -9,21 +9,21 @@
 #ifndef _SIMPLEVIEWER_CORNELL_BOX_SCENE_H_
 #define _SIMPLEVIEWER_CORNELL_BOX_SCENE_H_
 
-#include <Cogwheel/Assets/Mesh.h>
-#include <Cogwheel/Assets/MeshCreation.h>
-#include <Cogwheel/Assets/MeshModel.h>
-#include <Cogwheel/Scene/Camera.h>
-#include <Cogwheel/Scene/LightSource.h>
-#include <Cogwheel/Scene/SceneNode.h>
+#include <Bifrost/Assets/Mesh.h>
+#include <Bifrost/Assets/MeshCreation.h>
+#include <Bifrost/Assets/MeshModel.h>
+#include <Bifrost/Scene/Camera.h>
+#include <Bifrost/Scene/LightSource.h>
+#include <Bifrost/Scene/SceneNode.h>
 
-using namespace Cogwheel;
+using namespace Bifrost;
 
 namespace Scenes {
 
 void create_cornell_box(Scene::Cameras::UID camera_ID, Scene::SceneNode root_node) {
-    using namespace Cogwheel::Assets;
-    using namespace Cogwheel::Math;
-    using namespace Cogwheel::Scene;
+    using namespace Bifrost::Assets;
+    using namespace Bifrost::Math;
+    using namespace Bifrost::Scene;
 
     Materials::Data white_material_data = Materials::Data::create_dielectric(RGB(0.98f), 1.0f, 0.25f);
     Materials::UID white_material_ID = Materials::create("White", white_material_data);

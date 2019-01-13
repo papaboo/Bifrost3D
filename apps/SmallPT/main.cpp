@@ -1,6 +1,6 @@
 // Smallpt viewer.
 // ----------------------------------------------------------------------------
-// Copyright (C) 2015, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
@@ -13,14 +13,14 @@
 
 #include <smallpt.h>
 
-#include <Cogwheel/Core/Array.h>
+#include <Bifrost/Core/Array.h>
 
 #include <glfw/glfw3.h>
 
 #include <stdio.h>
 
-using Cogwheel::Core::Array;
-using namespace Cogwheel::Math;
+using Bifrost::Core::Array;
+using namespace Bifrost::Math;
 
 inline float clamp(float x) { return x < 0.0f ? 0.0f : x > 1.0f ? 1.0f : x; }
 inline int toInt(float x) { return int(pow(clamp(x), 1.0f / 2.2f) * 255.0f + .5f); }

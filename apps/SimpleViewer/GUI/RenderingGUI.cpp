@@ -1,6 +1,6 @@
 // SimpleViewer rendering GUI.
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
@@ -8,7 +8,7 @@
 
 #include <GUI/RenderingGUI.h>
 
-#include <Cogwheel/Scene/Camera.h>
+#include <Bifrost/Scene/Camera.h>
 
 #include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/Renderer.h>
@@ -19,17 +19,17 @@
 #include <OptiXRenderer/Renderer.h>
 #endif
 
-using namespace Cogwheel::Assets;
-using namespace Cogwheel::Math;
-using namespace Cogwheel::Scene;
+using namespace Bifrost::Assets;
+using namespace Bifrost::Math;
+using namespace Bifrost::Scene;
 
 namespace GUI {
 
 
 struct RenderingGUI::State {
     struct {
-        Cogwheel::Math::CameraEffects::FilmicSettings filmic;
-        Cogwheel::Math::CameraEffects::Uncharted2Settings uncharted2;
+        Bifrost::Math::CameraEffects::FilmicSettings filmic;
+        Bifrost::Math::CameraEffects::Uncharted2Settings uncharted2;
     } tonemapping;
 };
 
@@ -95,7 +95,7 @@ void RenderingGUI::layout_frame() {
     ImGui::Separator();
 
     ImGui::PoppedTreeNode("Camera effects", [&]() {
-        using namespace Cogwheel::Math::CameraEffects;
+        using namespace Bifrost::Math::CameraEffects;
 
         Cameras::UID camera_ID = *Cameras::get_iterable().begin();
         auto effects_settings = Cameras::get_effects_settings(camera_ID);

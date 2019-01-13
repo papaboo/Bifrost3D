@@ -1,6 +1,6 @@
 // Smallpt
 // ----------------------------------------------------------------------------
-// Copyright (C) 2015, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
@@ -9,17 +9,17 @@
 #ifndef _SMALL_PT_H_
 #define _SMALL_PT_H_
 
-#include <Cogwheel/Core/Array.h>
-#include <Cogwheel/Math/Color.h>
-#include <Cogwheel/Math/Constants.h>
-#include <Cogwheel/Math/Vector.h>
-#include <Cogwheel/Math/Utils.h>
+#include <Bifrost/Core/Array.h>
+#include <Bifrost/Math/Color.h>
+#include <Bifrost/Math/Constants.h>
+#include <Bifrost/Math/Vector.h>
+#include <Bifrost/Math/Utils.h>
 
 #include <math.h>
 
 namespace smallpt {
 
-using namespace Cogwheel::Math;
+using namespace Bifrost::Math;
 
 class LinearCongruential {
 private:

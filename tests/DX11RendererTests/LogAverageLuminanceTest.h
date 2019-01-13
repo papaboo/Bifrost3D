@@ -1,6 +1,6 @@
 // DX11Renderer linear exposure from geometric mean of log-average luminance test.
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2018, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
@@ -12,10 +12,10 @@
 #include <gtest/gtest.h>
 #include <Utils.h>
 
-#include <Cogwheel/Math/Color.h>
-#include <Cogwheel/Math/Half.h>
-#include <Cogwheel/Math/Vector.h>
-#include <Cogwheel/Math/Utils.h>
+#include <Bifrost/Math/Color.h>
+#include <Bifrost/Math/Half.h>
+#include <Bifrost/Math/Vector.h>
+#include <Bifrost/Math/Utils.h>
 
 #include <DX11Renderer/CameraEffects.h>
 #include <DX11Renderer/Compositor.h>
@@ -62,8 +62,8 @@ protected:
 
             double log_average = 0.0;
             for (int i = 0; i < width * height; ++i) {
-                auto pixel = Cogwheel::Math::RGB(pixels[i].x, pixels[i].y, pixels[i].z);
-                log_average += log2(fmaxf(Cogwheel::Math::luminance(pixel), 0.0001f));
+                auto pixel = Bifrost::Math::RGB(pixels[i].x, pixels[i].y, pixels[i].z);
+                log_average += log2(fmaxf(Bifrost::Math::luminance(pixel), 0.0001f));
             }
             log_average = exp2(log_average / (width * height));
 
@@ -87,7 +87,7 @@ protected:
 };
 
 TEST_F(LogAverageLuminanceFixture, tiny_image) {
-    using namespace Cogwheel::Math;
+    using namespace Bifrost::Math;
 
     // Image with one element in each bucket.
     const unsigned int pixel_count = 64;
@@ -101,7 +101,7 @@ TEST_F(LogAverageLuminanceFixture, tiny_image) {
 }
 
 TEST_F(LogAverageLuminanceFixture, large_image) {
-    using namespace Cogwheel::Math;
+    using namespace Bifrost::Math;
 
     const unsigned int width = LogAverageLuminance::max_groups_dispatched * LogAverageLuminance::group_width + 17;
     const unsigned int height = 21;
@@ -117,7 +117,7 @@ TEST_F(LogAverageLuminanceFixture, large_image) {
 }
 
 TEST_F(LogAverageLuminanceFixture, black_image) {
-    using namespace Cogwheel::Math;
+    using namespace Bifrost::Math;
 
     const unsigned int width = LogAverageLuminance::max_groups_dispatched * LogAverageLuminance::group_width + 17;
     const unsigned int height = 21;

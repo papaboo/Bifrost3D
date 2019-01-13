@@ -1,6 +1,6 @@
 // SimpleViewer opacity scene.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2015-2017, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015-2017, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
@@ -9,23 +9,23 @@
 #ifndef _SIMPLEVIEWER_OPACITY_SCENE_H_
 #define _SIMPLEVIEWER_OPACITY_SCENE_H_
 
-#include <Cogwheel/Assets/Mesh.h>
-#include <Cogwheel/Assets/MeshCreation.h>
-#include <Cogwheel/Assets/MeshModel.h>
-#include <Cogwheel/Core/Engine.h>
-#include <Cogwheel/Input/Keyboard.h>
-#include <Cogwheel/Scene/Camera.h>
-#include <Cogwheel/Scene/SceneNode.h>
-#include <Cogwheel/Scene/SceneRoot.h>
+#include <Bifrost/Assets/Mesh.h>
+#include <Bifrost/Assets/MeshCreation.h>
+#include <Bifrost/Assets/MeshModel.h>
+#include <Bifrost/Core/Engine.h>
+#include <Bifrost/Input/Keyboard.h>
+#include <Bifrost/Scene/Camera.h>
+#include <Bifrost/Scene/SceneNode.h>
+#include <Bifrost/Scene/SceneRoot.h>
 
-using namespace Cogwheel;
+using namespace Bifrost;
 
 namespace Scenes {
 
 void create_opacity_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneNode root_node) {
-    using namespace Cogwheel::Assets;
-    using namespace Cogwheel::Math;
-    using namespace Cogwheel::Scene;
+    using namespace Bifrost::Assets;
+    using namespace Bifrost::Math;
+    using namespace Bifrost::Scene;
 
     { // Setup camera transform.
         Transform cam_transform = Cameras::get_transform(camera_ID);

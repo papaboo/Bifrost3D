@@ -1,6 +1,6 @@
 // Test OptiXRenderer's OrenNayar BRDF.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2015-2016, Cogwheel. See AUTHORS.txt for authors
+// Copyright (C) 2015-2016, Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License. See
 // LICENSE.txt for more detail.
@@ -11,7 +11,7 @@
 
 #include <Utils.h>
 
-#include <Cogwheel/Math/Utils.h>
+#include <Bifrost/Math/Utils.h>
 
 #include <OptiXRenderer/RNG.h>
 #include <OptiXRenderer/Shading/BSDFs/OrenNayar.h>
@@ -39,7 +39,7 @@ GTEST_TEST(OrenNayar, power_conservation) {
                 ws[i] = 0.0f;
         }
 
-        float average_w = Cogwheel::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
+        float average_w = Bifrost::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
         EXPECT_LE(average_w, 1.0f);
     }
 }
