@@ -1,9 +1,9 @@
 // Adaptor for the OptiX renderer that allows it to render to a DX11 buffer.
 //-------------------------------------------------------------------------------------------------
-// Copyright (C) 2016, Bifrost. See AUTHORS.txt for authors
+// Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
 //-------------------------------------------------------------------------------------------------
 
 #ifndef _DX11_OPTIX_ADAPTOR_H_

@@ -1,9 +1,9 @@
 // Test blur operations.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors
+// Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
 #ifndef _IMAGE_OPERATIONS_BLUR_TEST_H_

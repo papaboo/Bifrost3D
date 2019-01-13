@@ -1,7 +1,4 @@
 * Rename to Bifrost3D
-** Update folder names.
-** Update solution name to Bifrost3D
-** Update Copyright to Bifrost3D and not just Bifrost. And remove years
 ** Move Bifrost to Core
 * Update gtest
 

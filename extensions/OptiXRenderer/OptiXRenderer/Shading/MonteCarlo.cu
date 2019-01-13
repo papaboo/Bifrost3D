@@ -1,9 +1,9 @@
 // OptiX path tracing ray generation and miss program.
 // ---------------------------------------------------------------------------
-// Copyright (C) 2016, Bifrost. See AUTHORS.txt for authors
+// Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
 #include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>

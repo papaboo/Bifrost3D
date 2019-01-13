@@ -1,6 +1,6 @@
 // Compute the log-average of a texture and compute the linear exposure from that
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors
+// Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.

@@ -1,6 +1,6 @@
 // Helper expect definitions.
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2015-2016, Bifrost. See AUTHORS.txt for authors
+// Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.

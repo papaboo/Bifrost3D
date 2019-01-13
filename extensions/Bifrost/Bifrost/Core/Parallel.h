@@ -1,6 +1,6 @@
 // Bifrost parallel utility functions.
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2017, Bifrost. See AUTHORS.txt for authors
+// Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
 // This program is open source and distributed under the New BSD License. 
 // See LICENSE.txt for more detail.

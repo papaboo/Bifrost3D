@@ -1,9 +1,9 @@
 // Bifrost 1D distribution.
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2015, Bifrost. See AUTHORS.txt for authors
+// Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
-// This program is open source and distributed under the New BSD License. See
-// LICENSE.txt for more detail.
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
 #ifndef _BIFROST_MATH_DISTRIBUTION1D_H_
