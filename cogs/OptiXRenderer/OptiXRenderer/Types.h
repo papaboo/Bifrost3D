@@ -13,6 +13,10 @@
 #include <OptiXRenderer/OctahedralNormal.h>
 #include <OptiXRenderer/RNG.h>
 
+#ifndef GPU_DEVICE
+#include <optixu/optixpp_namespace.h>
+#undef RGB
+#endif // GPU_DEVICE
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_matrix_namespace.h>
 
@@ -218,8 +222,12 @@ struct __align__(16) CameraStateGPU {
     optix::Matrix4x4 inverted_view_projection_matrix;
     unsigned int accumulations;
     unsigned int max_bounce_count;
-    int accumulation_buffer_ID;
-    int output_buffer_ID;
+#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
+    rtBufferId<optix::double4, 2> accumulation_buffer;
+#else
+    rtBufferId<optix::float4, 2> accumulation_buffer;
+#endif
+    rtBufferId<optix::ushort4, 2> output_buffer;
 };
 
 //----------------------------------------------------------------------------
@@ -236,7 +244,7 @@ struct __align__(16) SceneStateGPU {
 
     // -- Aligned to 8 byte from here --
 
-    int light_buffer_ID;
+    rtBufferId<Light, 1> light_buffer;
     unsigned int light_count;
     optix::float3 environment_tint;
     float ray_epsilon;

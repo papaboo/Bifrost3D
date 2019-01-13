@@ -328,7 +328,7 @@ struct Renderer::Implementation {
                 lights.sources = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, 1);
                 lights.sources->setElementSize(sizeof(Light));
                 lights.count = 0;
-                scene.GPU_state.light_buffer_ID = lights.sources->getId();
+                scene.GPU_state.light_buffer = lights.sources->getId();
                 scene.GPU_state.light_count = lights.count;
 
                 // Analytical area light geometry.
@@ -935,8 +935,8 @@ struct Renderer::Implementation {
         if (camera_state.accumulations >= camera_state.max_accumulation_count)
             return camera_state.accumulations;
 
-        camera_state_GPU.output_buffer_ID = buffer->getId();
-        camera_state_GPU.accumulation_buffer_ID = camera_state.accumulation_buffer->getId();
+        camera_state_GPU.output_buffer = buffer->getId();
+        camera_state_GPU.accumulation_buffer = camera_state.accumulation_buffer->getId();
         camera_state_GPU.accumulations = camera_state.accumulations;
         camera_state_GPU.max_bounce_count = camera_state.max_bounce_count;
         context["g_camera_state"]->setUserData(sizeof(CameraStateGPU), &camera_state_GPU);

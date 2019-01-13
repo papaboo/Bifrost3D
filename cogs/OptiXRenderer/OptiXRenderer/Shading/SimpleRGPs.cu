@@ -29,7 +29,7 @@ template <typename Evaluator>
 __inline_dev__ void accumulate(Evaluator evaluator) {
     const CameraStateGPU& camera_state = g_camera_state;
     const int accumulation_count = camera_state.accumulations;
-    size_t2 screen_size = rtBufferId<ushort4, 2>(camera_state.accumulation_buffer_ID).size();
+    size_t2 screen_size = camera_state.accumulation_buffer.size();
 
     MonteCarloPayload payload = initialize_monte_carlo_payload(g_launch_index.x, g_launch_index.y,
         screen_size.x, screen_size.y, accumulation_count,
@@ -37,8 +37,8 @@ __inline_dev__ void accumulate(Evaluator evaluator) {
 
     float3 radiance = evaluator(payload);
 
+    auto accumulation_buffer = camera_state.accumulation_buffer;
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
-    rtBufferId<double4, 2> accumulation_buffer = rtBufferId<double4, 2>(camera_state.accumulation_buffer_ID);
     double3 accumulated_radiance_d;
     if (accumulation_count != 0) {
         double3 prev_radiance = make_double3(accumulation_buffer[g_launch_index].x, accumulation_buffer[g_launch_index].y, accumulation_buffer[g_launch_index].z);
@@ -48,7 +48,6 @@ __inline_dev__ void accumulate(Evaluator evaluator) {
     accumulation_buffer[g_launch_index] = make_double4(accumulated_radiance_d.x, accumulated_radiance_d.y, accumulated_radiance_d.z, 1.0f);
     float3 accumulated_radiance = make_float3(accumulated_radiance_d.x, accumulated_radiance_d.y, accumulated_radiance_d.z);
 #else
-    rtBufferId<float4, 2> accumulation_buffer = rtBufferId<float4, 2>(camera_state.accumulation_buffer_ID);
     float3 accumulated_radiance;
     if (accumulation_count != 0) {
         float3 prev_radiance = make_float3(accumulation_buffer[g_launch_index]);
@@ -59,8 +58,7 @@ __inline_dev__ void accumulate(Evaluator evaluator) {
     accumulation_buffer[g_launch_index] = make_float4(accumulated_radiance, 1.0f);
 #endif
 
-    rtBufferId<ushort4, 2> output_buffer = rtBufferId<ushort4, 2>(camera_state.output_buffer_ID);
-    output_buffer[g_launch_index] = float_to_half(make_float4(accumulated_radiance, 1.0f));
+    camera_state.output_buffer[g_launch_index] = float_to_half(make_float4(accumulated_radiance, 1.0f));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -115,7 +113,7 @@ RT_PROGRAM void albedo_RPG() {
             rtTrace(g_scene_root, ray, payload);
         } while (payload.material_index == 0 && !is_black(payload.throughput));
 
-        size_t2 screen_size = rtBufferId<ushort4, 2>(g_camera_state.accumulation_buffer_ID).size();
+        size_t2 screen_size = g_camera_state.accumulation_buffer.size();
         bool valid_material = payload.material_index != 0;
         if (g_launch_index.x < screen_size.x / 2 && valid_material) {
             using namespace Shading::ShadingModels;

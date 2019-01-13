@@ -49,7 +49,7 @@ rtDeclareVariable(float2, texcoord, attribute texcoord, );
 // stores the combined response in the light source's radiance member.
 __inline_dev__ LightSample sample_single_light(const DefaultShading& material, const TBN& world_shading_tbn, float light_index_w) {
     int light_index = min(g_scene.light_count - 1, int(light_index_w * g_scene.light_count));
-    const Light& light = rtBufferId<Light, 1>(g_scene.light_buffer_ID)[light_index];
+    const Light& light = g_scene.light_buffer[light_index];
     LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_payload.position, monte_carlo_payload.rng.sample2f());
     light_sample.radiance *= g_scene.light_count; // Scale up radiance to account for only sampling one light.
 
@@ -170,7 +170,7 @@ RT_PROGRAM void shadow_any_hit() {
 RT_PROGRAM void light_closest_hit() {
 
     int light_index = __float_as_int(geometric_normal.x);
-    const SphereLight& light = rtBufferId<Light, 1>(g_scene.light_buffer_ID)[light_index].sphere;
+    const SphereLight& light = g_scene.light_buffer[light_index].sphere;
 
     bool next_event_estimated = monte_carlo_payload.bounces != 0; // Was next event estimated at previous intersection.
     float3 light_radiance = LightSources::evaluate_intersection(light, ray.origin, ray.direction, 

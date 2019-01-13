@@ -29,7 +29,7 @@ rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 //=============================================================================
 RT_PROGRAM void intersect(int primitive_index) {
 
-    const Light& light = rtBufferId<Light, 1>(g_scene.light_buffer_ID)[primitive_index];
+    const Light& light = g_scene.light_buffer[primitive_index];
 
     // Only sphere lights can be intersected.
     if (light.get_type() != Light::Sphere) return;
@@ -49,7 +49,7 @@ RT_PROGRAM void intersect(int primitive_index) {
 RT_PROGRAM void bounds(int primitive_index, float result[6]) {
     optix::Aabb* aabb = (optix::Aabb*)result;
 
-    const Light& light = rtBufferId<Light, 1>(g_scene.light_buffer_ID)[primitive_index];
+    const Light& light = g_scene.light_buffer[primitive_index];
     if (light.get_type() != Light::Sphere) {
         aabb->invalidate();
         return;

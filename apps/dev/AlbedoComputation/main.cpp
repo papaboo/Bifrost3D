@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
         // * Fresnel base reflectivity is set to zero. This is completely unrealistic, but gives us the largest possible range between full diffuse and full specular.
 
         // Specular material.
-        Material material_params;
+        OptiXRenderer::Material material_params;
         material_params.tint = optix::make_float3(1.0f, 0.0f, 0.0f);
         material_params.metallic = 0.0f;
         material_params.specularity = 0.0f;
