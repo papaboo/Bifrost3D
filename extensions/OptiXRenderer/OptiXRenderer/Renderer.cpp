@@ -482,6 +482,7 @@ struct Renderer::Implementation {
                     images.resize(Images::capacity());
 
                 for (Images::UID image_ID : Images::get_changed_images()) {
+                    Image image = image_ID;
                     if (Images::get_changes(image_ID) == Images::Change::Destroyed) {
                         if (images[image_ID]) {
                             images[image_ID]->destroy();
@@ -489,11 +490,10 @@ struct Renderer::Implementation {
                         }
                     } else if (Images::get_changes(image_ID).is_set(Images::Change::Created)) {
                         RTformat pixel_format = RT_FORMAT_UNKNOWN;
-                        switch (Images::get_pixel_format(image_ID)) {
+                        switch (image.get_pixel_format()) {
                         case PixelFormat::I8:
                             pixel_format = RT_FORMAT_UNSIGNED_BYTE; break;
-                        case PixelFormat::RGB24:
-                            pixel_format = RT_FORMAT_UNSIGNED_BYTE3; break;
+                        case PixelFormat::RGB24: // OptiX does not support using ubyte3 buffers as input to samplers.
                         case PixelFormat::RGBA32:
                             pixel_format = RT_FORMAT_UNSIGNED_BYTE4; break;
                         case PixelFormat::RGB_Float:
@@ -505,11 +505,22 @@ struct Renderer::Implementation {
                         // NOTE setting the depth to 1 result in invalid 2D textures for some reason.
                         // Since we know that images attached to materials will be 2D for the foreseeable future, 
                         // we just don't set the depth for now.
-                        images[image_ID] = context->createBuffer(RT_BUFFER_INPUT, pixel_format,
-                            Images::get_width(image_ID), Images::get_height(image_ID));
+                        images[image_ID] = context->createBuffer(RT_BUFFER_INPUT, pixel_format, image.get_width(), image.get_height());
 
-                        void* pixel_data = images[image_ID]->map();
-                        std::memcpy(pixel_data, Images::get_pixels(image_ID), images[image_ID]->getElementSize() * Images::get_pixel_count(image_ID));
+                        unsigned char* optix_pixel_data = (unsigned char*)images[image_ID]->map();
+                        if (image.get_pixel_format() == PixelFormat::RGB24) {
+                            assert(images[image_ID]->getFormat() == RT_FORMAT_UNSIGNED_BYTE4); // RGB24 images are copied to ubyte4 buffers.
+                                                                                               // Copy every pixel individually and set alpha to 255.
+                            unsigned char* pixel_data = (unsigned char*)image.get_pixels();
+                            unsigned char* pixel_data_end = pixel_data + image.get_pixel_count() * 3;
+                            while (pixel_data != pixel_data_end) {
+                                *optix_pixel_data++ = *pixel_data++;
+                                *optix_pixel_data++ = *pixel_data++;
+                                *optix_pixel_data++ = *pixel_data++;
+                                *optix_pixel_data++ = 255;
+                            }
+                        } else
+                            std::memcpy(optix_pixel_data, image.get_pixels(), images[image_ID]->getElementSize() * image.get_pixel_count());
                         images[image_ID]->unmap();
                         OPTIX_VALIDATE(images[image_ID]);
                     } else if (Images::get_changes(image_ID).is_set(Images::Change::PixelsUpdated))
@@ -563,7 +574,8 @@ struct Renderer::Implementation {
         }
 
         { // Material updates.
-            static auto upload_material = [](Materials::UID material_ID, OptiXRenderer::Material* device_materials, optix::TextureSampler* samplers) {
+            static auto upload_material = [](Materials::UID material_ID, OptiXRenderer::Material* device_materials, 
+                                             optix::TextureSampler* samplers, Buffer* images) {
                 OptiXRenderer::Material& device_material = device_materials[material_ID];
                 Assets::Material host_material = material_ID;
                 device_material.tint.x = host_material.get_tint().r;
@@ -572,7 +584,8 @@ struct Renderer::Implementation {
                 if (host_material.get_tint_texture_ID() != Textures::UID::invalid_UID()) {
                     // Validate that the image has 4 channels! Otherwise OptiX goes boom boom.
                     Textures::UID texture_ID = host_material.get_tint_texture_ID();
-                    assert(channel_count(Images::get_pixel_format(Textures::get_image_ID(texture_ID))) == 4);
+                    RTformat pixel_format = images[Textures::get_image_ID(texture_ID)]->getFormat();
+                    assert(pixel_format == RT_FORMAT_UNSIGNED_BYTE4 || pixel_format == RT_FORMAT_FLOAT4);
                     device_material.tint_texture_ID = samplers[texture_ID]->getId();
                 } else
                     device_material.tint_texture_ID = 0;
@@ -583,7 +596,8 @@ struct Renderer::Implementation {
                 if (host_material.get_coverage_texture_ID() != Textures::UID::invalid_UID()) {
                     // Validate that the image has 1 channel! Otherwise OptiX goes boom boom.
                     Textures::UID texture_ID = host_material.get_coverage_texture_ID();
-                    assert(channel_count(Images::get_pixel_format(Textures::get_image_ID(texture_ID))) == 1);
+                    RTformat pixel_format = images[Textures::get_image_ID(texture_ID)]->getFormat();
+                    assert(pixel_format == RT_FORMAT_UNSIGNED_BYTE || pixel_format == RT_FORMAT_FLOAT);
                     device_material.coverage_texture_ID = samplers[texture_ID]->getId();
                 } else
                     device_material.coverage_texture_ID = 0;
@@ -596,16 +610,16 @@ struct Renderer::Implementation {
                     material_parameters->setSize(active_material_count);
 
                     OptiXRenderer::Material* device_materials = (OptiXRenderer::Material*)material_parameters->map();
-                    upload_material(Materials::UID::invalid_UID(), device_materials, textures.data()); // Upload invalid material params as well.
+                    upload_material(Materials::UID::invalid_UID(), device_materials, textures.data(), images.data()); // Upload invalid material params as well.
                     for (Materials::UID material_ID : Materials::get_iterable())
-                        upload_material(material_ID, device_materials, textures.data());
+                        upload_material(material_ID, device_materials, textures.data(), images.data());
                     material_parameters->unmap();
                 } else {
                     // Update new and changed materials. Just ignore destroyed ones.
                     OptiXRenderer::Material* device_materials = (OptiXRenderer::Material*)material_parameters->map();
                     for (Materials::UID material_ID : Materials::get_changed_materials())
                         if (!Materials::get_changes(material_ID).is_set(Materials::Change::Destroyed)) {
-                            upload_material(material_ID, device_materials, textures.data());
+                            upload_material(material_ID, device_materials, textures.data(), images.data());
                             should_reset_allocations = true;
                         }
                     material_parameters->unmap();
