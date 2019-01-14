@@ -198,13 +198,6 @@ SceneNodes::UID load(const std::string& filename) {
             return false;
         }
 
-        // HACK Resize to 4 channels, since OptiXRenderer crashes when there are only three. This should be handled in the OptiXRenderer itself.
-        if (channel_count(image.get_pixel_format()) == 3) {
-            auto new_image_ID = ImageUtils::change_format(image.get_ID(), PixelFormat::RGBA32);
-            Images::destroy(image.get_ID());
-            image = new_image_ID;
-        }
-
         gltf_image->width = image.get_width();
         gltf_image->height = image.get_height();
         gltf_image->component = channel_count(image.get_pixel_format());
