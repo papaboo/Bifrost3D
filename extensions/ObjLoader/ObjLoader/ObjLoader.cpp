@@ -126,11 +126,6 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
                         material_data.coverage_texture_ID = Textures::create2D(coverage_image_ID);
                     }
 
-                if (channel_count(Images::get_pixel_format(image_ID)) != 4) {
-                    Images::UID new_image_ID = ImageUtils::change_format(image_ID, PixelFormat::RGBA32);
-                    Images::destroy(image_ID);
-                    image_ID = new_image_ID;
-                }
                 material_data.tint_texture_ID = Textures::create2D(image_ID);
             }
         }
