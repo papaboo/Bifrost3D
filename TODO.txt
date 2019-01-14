@@ -1,7 +1,3 @@
-* Rename to Bifrost3D
-** Move Bifrost to Core
-* Update gtest
-
 * glTF
 ** Load alpha image
 *** Convert RGB24 images inside OptiX.
@@ -10,6 +6,7 @@
 ** Apply non-uniform scaling to meshes. Find a model with non-uniform scale to test.
 *** Remember to update bounds
 ** Rename to glTFLoader
+** Light
 ** Assert on non-handled properties (animations, curves, ...)
 ** Load a bunch of gltf 2 scenes.
 

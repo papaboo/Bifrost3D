@@ -36,10 +36,10 @@ macro(install_files)
 endmacro()
 
 set (INCLUDED_EXTENSIONS "")
-macro(include_extension EXT_NAME)
+macro(add_extension EXT_NAME)
   list(FIND INCLUDED_EXTENSIONS ${EXT_NAME} EXT_ALREADY_INCLUDED)
   if (${EXT_ALREADY_INCLUDED} EQUAL -1)
-    message(STATUS "Linking extension: ${EXT_NAME}")
+    message(STATUS "Adding extension: ${EXT_NAME}")
     set(INCLUDED_EXTENSIONS ${INCLUDED_EXTENSIONS} ${EXT_NAME})
 
     set(FULL_DIR "${BIFROST_EXTENSIONS_DIR}/${EXT_NAME}")
@@ -49,35 +49,38 @@ macro(include_extension EXT_NAME)
   endif()
 endmacro()
 
-include_extension("Bifrost")
-  include_extension("DX11Renderer")
-  include_extension("OptiXRenderer")
-include_extension("DX11OptiXAdapter") # Depends on OptiXRenderer and DX11Renderer
-include_extension("AntTweakBar")
-include_extension("GLFWDriver")
-include_extension("ImageOperations")
-include_extension("Imgui") # Depends on DX11Renderer ... for now.
-include_extension("ObjLoader")
-include_extension("StbImageLoader")
-include_extension("StbImageWriter")
-include_extension("GLTFLoader") # Depends on StbImageLoader and StbImageWriter
-include_extension("TinyExr")
-include_extension("Win32Driver")
-include_extension("gtest")
+#include Bifrost, our core datamodel, first.
+message(STATUS "Creating Bifrost")
+subdirs("${BIFROST_ROOT_DIR}/core/Bifrost")
 
-macro(include_applications DIR_TO_APPS APP_TYPE)
+  add_extension("DX11Renderer")
+  add_extension("OptiXRenderer")
+add_extension("DX11OptiXAdapter") # Depends on OptiXRenderer and DX11Renderer
+add_extension("AntTweakBar")
+add_extension("GLFWDriver")
+add_extension("ImageOperations")
+add_extension("Imgui") # Depends on DX11Renderer ... for now.
+add_extension("ObjLoader")
+add_extension("StbImageLoader")
+add_extension("StbImageWriter")
+add_extension("GLTFLoader") # Depends on StbImageLoader and StbImageWriter
+add_extension("TinyExr")
+add_extension("Win32Driver")
+add_extension("gtest")
+
+macro(add_applications DIR_TO_APPS APP_TYPE)
   file(GLOB APP_DIRECTORIES RELATIVE ${DIR_TO_APPS} "${DIR_TO_APPS}/*")
   foreach(APP_DIR ${APP_DIRECTORIES})
     set(FULL_DIR "${DIR_TO_APPS}/${APP_DIR}")
     set(CMAKE_FILE ${FULL_DIR}/CMakeLists.txt)
     if (EXISTS ${CMAKE_FILE})
-      message(STATUS "Linking ${APP_TYPE}: ${APP_DIR}")
+      message(STATUS "Adding ${APP_TYPE}: ${APP_DIR}")
       subdirs(${FULL_DIR})
     endif()
   endforeach()
 endmacro()
 
 # Setup applications
-include_applications(${BIFROST_APPS_DIR} "Application")
-include_applications(${BIFROST_DEV_APPS_DIR} "Developer App")
-include_applications(${BIFROST_TESTS_DIR} "Test")
+add_applications(${BIFROST_APPS_DIR} "Application")
+add_applications(${BIFROST_DEV_APPS_DIR} "Developer App")
+add_applications(${BIFROST_TESTS_DIR} "Test")
