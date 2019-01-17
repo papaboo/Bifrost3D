@@ -22,6 +22,8 @@
 #define TINYGLTF_NO_STB_IMAGE_WRITE 1
 #include <GLTFLoader/tiny_gltf.h>
 
+#include <unordered_map>
+
 using namespace Bifrost::Assets;
 using namespace Bifrost::Core;
 using namespace Bifrost::Math;
@@ -31,12 +33,48 @@ using Matrix3x3d = Matrix3x3<double>;
 
 namespace GLTFLoader {
 
+// ------------------------------------------------------------------------------------------------
+// Utils.
+// ------------------------------------------------------------------------------------------------
+
 inline bool string_ends_with(const std::string& s, const std::string& end) {
     if (s.length() < end.length())
         return false;
 
     return s.compare(s.length() - end.length(), end.length(), end) == 0;
 }
+
+// ------------------------------------------------------------------------------------------------
+// Image conversion utils.
+// Needed as glTF stores (tint, coverage) in one image and (metallic, roughness) in another.
+// Bifrost recognises that the most used maps are tint and roughness, so those are stored in a 
+// single (tint, roughness) image and metallic and coverage are stored in two seperate images.
+// ------------------------------------------------------------------------------------------------
+
+enum class ImageUsage { Tint, Coverage };
+
+struct ConvertedImageKey {
+    Images::UID image_ID;
+    ImageUsage usage;
+
+    ConvertedImageKey(Images::UID image_ID, ImageUsage usage) : image_ID(image_ID), usage(usage) {}
+    inline bool operator==(const ConvertedImageKey other) const { return image_ID == other.image_ID && usage == other.usage; }
+    inline std::size_t hash() const { return image_ID.get_index() | ((int)usage << 24); }
+};
+
+struct ConvertedImageKeyHasher {
+    inline std::size_t operator()(const ConvertedImageKey key) const {
+        return key.hash();
+    }
+};
+
+struct RGBA32 {
+    unsigned char r, g, b, a;
+};
+
+// ------------------------------------------------------------------------------------------------
+// Texture sampler conversion utils.
+// ------------------------------------------------------------------------------------------------
 
 inline MagnificationFilter convert_magnification_filter(int gltf_magnification_filter) {
     bool is_nearest = gltf_magnification_filter == TINYGLTF_TEXTURE_FILTER_NEAREST;
@@ -75,6 +113,10 @@ inline WrapMode convert_wrap_mode(int gltf_wrap_mode) {
         printf("GLTFLoader::load error: Mirrored repeat wrap mode not supported.\n");
     return WrapMode::Repeat;
 }
+
+// ------------------------------------------------------------------------------------------------
+// Importer
+// ------------------------------------------------------------------------------------------------
 
 SceneNodes::UID import_node(const tinygltf::Model& model, const tinygltf::Node& node, const Transform parent_transform,
                             const std::vector<int>& meshes_start_index, const std::vector<Mesh>& meshes,
@@ -239,14 +281,30 @@ SceneNodes::UID load(const std::string& filename) {
     }
 
     // Import materials.
+    std::unordered_map<ConvertedImageKey, Images::UID, ConvertedImageKeyHasher> converted_images;
     auto loaded_material_IDs = std::vector<Materials::UID>(model.materials.size());
     for (int i = 0; i < model.materials.size(); ++i) {
-        const auto& gltf_mat = model.materials[i];
         Materials::Data mat_data = {};
         mat_data.tint = RGB::white();
         mat_data.roughness = 1.0f;
         mat_data.metallic = 0.0f;
         mat_data.coverage = 1.0f;
+        bool is_opaque = true;
+
+        const auto& gltf_mat = model.materials[i];
+        // Process additional values first, as we need to know the alphaMode before converting images.
+        for (const auto& val : gltf_mat.additionalValues) {
+            if (val.first.compare("doubleSided") == 0)
+                // NOTE to self: Double sided should set a 'thin/doubleSided' property on the meshes instead of on the materials.
+                // In case the mesh is used by one sided and two sided meshes, we need to duplicate the mesh.
+                printf("GLTFLoader::load warning: doubleSided property not supported.\n");
+            else if (val.first.compare("alphaMode") == 0) {
+                is_opaque = false;
+                bool is_cutout = val.second.string_value.compare("MASK") == 0;
+                mat_data.flags |= is_cutout ? MaterialFlag::Cutout : MaterialFlag::None;
+            }
+        }
+
         for (const auto& val : gltf_mat.values) {
             if (val.first.compare("baseColorFactor") == 0) {
                 auto tint = val.second.number_array;
@@ -257,33 +315,66 @@ SceneNodes::UID load(const std::string& filename) {
                 Images::UID image_ID;
                 memcpy(&image_ID, gltf_image.image.data(), sizeof(image_ID));
                 assert(Images::has(image_ID));
-                Images::set_name(image_ID, gltf_mat.name + "_tint");
+                Image image = image_ID;
+                image.set_name(gltf_mat.name + "_tint");
 
-                // Create basic texture.
+                // Extract sampler params first and use for both tint and coverage.
+                MagnificationFilter magnification_filter = MagnificationFilter::Linear;
+                MinificationFilter minification_filter = MinificationFilter::Trilinear;
+                WrapMode wrapU = WrapMode::Repeat;
+                WrapMode wrapV = WrapMode::Repeat;
                 if (gltf_texture.sampler >= 0) {
                     const auto& gltf_sampler = model.samplers[gltf_texture.sampler];
-                    MagnificationFilter magnification_filter = convert_magnification_filter(gltf_sampler.magFilter);
-                    MinificationFilter minification_filter = convert_minification_filter(gltf_sampler.minFilter);
-                    WrapMode wrapU = convert_wrap_mode(gltf_sampler.wrapR);
-                    WrapMode wrapV = convert_wrap_mode(gltf_sampler.wrapS);
-                    mat_data.tint_texture_ID = Textures::create2D(image_ID, magnification_filter, minification_filter, wrapU, wrapV);
-                } else
-                    mat_data.tint_texture_ID = Textures::create2D(image_ID);
+                    magnification_filter = convert_magnification_filter(gltf_sampler.magFilter);
+                    minification_filter = convert_minification_filter(gltf_sampler.minFilter);
+                    wrapU = convert_wrap_mode(gltf_sampler.wrapR);
+                    wrapV = convert_wrap_mode(gltf_sampler.wrapS);
+                }
+
+                // Attempt to extract a coverage image if the color texture has an alpha channel and a blend mode was defined.
+                if (channel_count(image.get_pixel_format()) == 4 && !is_opaque) {
+
+                    auto converted_image_key = ConvertedImageKey(image.get_ID(), ImageUsage::Coverage);
+                    auto& converted_image_itr = converted_images.find(converted_image_key);
+                    if (converted_image_itr != converted_images.end()) {
+                        if (converted_image_itr->second != Images::UID::invalid_UID())
+                            mat_data.coverage_texture_ID = Textures::create2D(converted_image_itr->second);
+                    } else {
+                        // Extract coverage.
+                        assert(image.get_pixel_format() == PixelFormat::RGBA32);
+                        unsigned int mipmap_count = image.get_mipmap_count();
+                        Vector2ui size = Vector2ui(image.get_width(), image.get_height());
+                        Images::UID coverage_image_ID = Images::create2D(gltf_mat.name + "_coverage", PixelFormat::I8, 1.0, size, mipmap_count);
+
+                        unsigned char min_coverage = 255;
+                        for (unsigned int m = 0; m < mipmap_count; ++m) {
+                            RGBA32* image_pixels = image.get_pixels<RGBA32>(m);
+                            unsigned char* coverage_pixels = Images::get_pixels<unsigned char>(coverage_image_ID, m);
+
+                            int pixel_count = image.get_pixel_count(m);
+                            for (int p = 0; p < pixel_count; ++p) {
+                                coverage_pixels[p] = image_pixels[p].a;
+                                min_coverage = min(min_coverage, coverage_pixels[p]);
+                            }
+                        }
+
+                        // Only add coverage image if it has an effect.
+                        if (min_coverage < 255) {
+                            converted_images.insert({ converted_image_key, coverage_image_ID });
+                            mat_data.coverage_texture_ID = Textures::create2D(coverage_image_ID, magnification_filter, minification_filter, wrapU, wrapV);
+                        } else {
+                            Images::destroy(coverage_image_ID);
+                            converted_images.insert({ converted_image_key, Images::UID::invalid_UID() });
+                        }
+                    }
+                }
+
+                // Create tint texture.
+                mat_data.tint_texture_ID = Textures::create2D(image_ID, magnification_filter, minification_filter, wrapU, wrapV);
             } else if (val.first.compare("roughnessFactor") == 0)
                 mat_data.roughness = float(val.second.Factor());
             else if (val.first.compare("metallicFactor") == 0)
                 mat_data.metallic = float(val.second.Factor());
-        }
-
-        for (const auto& val : gltf_mat.additionalValues) {
-            if (val.first.compare("doubleSided") == 0)
-                // NOTE to self: Double sided should set a 'thin/doubleSided' property on the meshes instead of on the materials.
-                // In case the mesh is used by one sided and two sided meshes, we need to duplicate the mesh.
-                printf("GLTFLoader::load warning: doubleSided property not supported.\n");
-            else if (val.first.compare("alphaMode") == 0) {
-                bool is_cutout = val.second.string_value.compare("MASK") == 0;
-                mat_data.flags |= is_cutout ? MaterialFlag::Cutout : MaterialFlag::None;
-            }
         }
 
         loaded_material_IDs[i] = Materials::create(gltf_mat.name, mat_data);
