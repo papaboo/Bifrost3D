@@ -1,14 +1,9 @@
 * glTF
-** Load alpha image
-*** Convert RGB24 images inside OptiX.
-*** Remove RGB24 to RGBA32 conversion in glTF and Obj loaders.
-*** Test scene should use RGB24
 ** Apply non-uniform scaling to meshes. Find a model with non-uniform scale to test.
 *** Remember to update bounds
-** Rename to glTFLoader
-** Light
 ** Assert on non-handled properties (animations, curves, ...)
-** Load a bunch of gltf 2 scenes.
+** Rename to glTFLoader
+
 
 ** Material model blog post
 *** Update webpage. Ugh!

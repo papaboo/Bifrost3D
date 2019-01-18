@@ -510,11 +510,13 @@ SceneNodes::UID load(const std::string& filename) {
     // Finally push the total number of meshes to allow fetching begin and end indices as [index] and [index+1]
     loaded_meshes_start_index.push_back(loaded_meshes.size());
 
-    // Import lights.
+    // KHR_lights_cmn not supported.
+    if (model.lights.size() > 0)
+        printf("GLTFLoader::load warning: KHR_lights_cmn not supported. Light sources will be ignored.\n");
 
     { // Setup scene.
         if (model.scenes.size() > 1)
-            printf("GLTFLoader::load warning: Only one scene supported. The default scene will be imported\n");
+            printf("GLTFLoader::load warning: Only one scene supported. The default scene will be imported.\n");
 
         // No scene loaded.
         if (model.defaultScene < 0)
