@@ -232,7 +232,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
         sphere_node.set_parent(root_node);
     }
 
-    { // Partial coverage copper torus.
+    { // Partial coverage plastic torus.
         unsigned int width = 17, height = 17;
         Images::UID image_ID = Images::create2D("Grid", PixelFormat::I8, 1.0f, Vector2ui(width, height));
         unsigned char* pixels = Images::get_pixels<unsigned char>(image_ID);
