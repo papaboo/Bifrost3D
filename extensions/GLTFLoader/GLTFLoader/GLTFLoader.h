@@ -1,4 +1,4 @@
-// Bifrost gltf model loader.
+// Bifrost glTF model loader.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
@@ -15,9 +15,10 @@
 namespace GLTFLoader {
 
 // ------------------------------------------------------------------------------------------------
-// Loads a gltf file.
+// Loads a glTF file.
+// See the glTF spec at https://github.com/KhronosGroup/glTF/tree/master/specification
 // Future work:
-// * Support doubleSided on meshes. Requires mesh support first.
+// * Support doubleSided/thinwalled on meshes. Requires mesh support first.
 // * Reserve capacity for Mesh, MeshModels and SceneNodes before creating them.
 // * Import cameras. Perhaps as viewpoints, since there is no way to enable/disable cameras.
 // * Support triangle fan and triangle strip as well.
