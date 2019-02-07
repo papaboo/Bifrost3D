@@ -59,6 +59,9 @@ static float g_scene_size;
 static DX11Renderer::Compositor* compositor = nullptr;
 static DX11Renderer::Renderer* dx11_renderer = nullptr;
 static ImGui::ImGuiAdaptor* imgui = nullptr;
+static Vector3f g_camera_translation = Vector3f(nanf(""));
+static float g_camera_horizontal_rotation = nanf("");
+static float g_camera_vertical_rotation = nanf("");
 
 #ifdef OPTIX_FOUND
 bool optix_enabled = true;
@@ -69,14 +72,21 @@ OptiXRenderer::Renderer* optix_renderer = nullptr;
 class Navigation final {
 public:
 
-    Navigation(Cameras::UID camera_ID, float velocity) 
+    Navigation(Cameras::UID camera_ID, float velocity, Vector3f camera_translation, float camera_vertical_rotation, float camera_horizontal_rotation)
         : m_camera_ID(camera_ID)
         , m_velocity(velocity)
     {
         Transform transform = Cameras::get_transform(m_camera_ID);
+
         Vector3f forward = transform.rotation.forward();
-        m_horizontal_rotation = std::asin(forward.y);
-        m_vertical_rotation = std::atan2(forward.x, forward.z);
+        m_vertical_rotation = !isnan(camera_vertical_rotation) ? camera_vertical_rotation : std::atan2(forward.x, forward.z);
+        m_horizontal_rotation = !isnan(camera_horizontal_rotation) ? camera_horizontal_rotation : std::asin(forward.y);
+
+        if (!isnan(camera_translation.x))
+            transform.translation = camera_translation;
+        transform.rotation = Quaternionf::from_angle_axis(m_vertical_rotation, Vector3f::up()) * Quaternionf::from_angle_axis(m_horizontal_rotation, -Vector3f::right());
+
+        Cameras::set_transform(m_camera_ID, transform);
     }
 
     void navigate(Engine& engine) {
@@ -525,7 +535,7 @@ int initialize_scene(Engine& engine) {
     }
 
     float camera_velocity = g_scene_size * 0.1f;
-    Navigation* camera_navigation = new Navigation(cam_ID, camera_velocity);
+    Navigation* camera_navigation = new Navigation(cam_ID, camera_velocity, g_camera_translation, g_camera_vertical_rotation, g_camera_horizontal_rotation);
     engine.add_mutating_callback([=, &engine] { camera_navigation->navigate(engine); });
     RenderSwapper* render_swapper = new RenderSwapper(cam_ID);
     engine.add_mutating_callback([=, &engine] { render_swapper->handle(engine); });
@@ -633,25 +643,47 @@ void print_usage() {
         "  -r | --rasterizer-only: Launches with the rasterizer as the only avaliable renderer.\n"
 #endif
         "  -e  | --environment-map <image>: Loads the specified image for the environment.\n"
-        "  -c  | --environment-tint [R,G,B]: Tint the environment by the specified value.\n";
+        "  -c  | --environment-tint [R,G,B]: Tint the environment by the specified value.\n"
+        "      | --camera-position [X,Y,Z]: Position of the camera.\n"
+        "      | --camera-rotation [vertical, horizontal]: Orientation of the camera in radians.\n";
     printf("%s", usage);
 }
 
-// String representation is assumed to be "[r, g, b]".
-RGB parse_RGB(const std::string& rgb_str) {
-    const char* red_begin = rgb_str.c_str() + 1; // Skip [
+// String representation is assumed to be "[x, y]".
+inline Vector2f parse_vector2f(const char* const vec2_str) {
+    Vector2f result;
+
+    const char* x_begin = vec2_str + 1; // Skip [
     char* channel_end;
-    RGB result = RGB::black();
+    result.x = strtof(x_begin, &channel_end);
 
-    result.r = strtof(red_begin, &channel_end);
-
-    char* g_begin = channel_end + 1; // Skip ,
-    result.g = strtof(g_begin, &channel_end);
-
-    char* b_begin = channel_end + 1; // Skip ,
-    result.b = strtof(b_begin, &channel_end);
+    char* y_begin = channel_end + 1; // Skip ,
+    result.y = strtof(y_begin, &channel_end);
 
     return result;
+}
+
+// String representation is assumed to be "[x, y, z]".
+inline Vector3f parse_vector3f(const char* const vec3_str) {
+    Vector3f result;
+
+    const char* x_begin = vec3_str + 1; // Skip [
+    char* channel_end;
+    result.x = strtof(x_begin, &channel_end);
+
+    char* y_begin = channel_end + 1; // Skip ,
+    result.y = strtof(y_begin, &channel_end);
+
+    char* z_begin = channel_end + 1; // Skip ,
+    result.z = strtof(z_begin, &channel_end);
+
+    return result;
+}
+
+// String representation is assumed to be "[r, g, b]".
+inline RGB parse_RGB(const char* const rgb_str) {
+    Vector3f vec = parse_vector3f(rgb_str);
+    return RGB(vec.x, vec.y, vec.z);
 }
 
 int main(int argc, char** argv) {
@@ -670,7 +702,14 @@ int main(int argc, char** argv) {
         else if (strcmp(argv[argument], "--environment-map") == 0 || strcmp(argv[argument], "-e") == 0)
             g_environment = std::string(argv[++argument]);
         else if (strcmp(argv[argument], "--environment-tint") == 0 || strcmp(argv[argument], "-c") == 0)
-            g_environment_color = parse_RGB(std::string(argv[++argument]));
+            g_environment_color = parse_RGB(argv[++argument]);
+        else if (strcmp(argv[argument], "--camera-translation") == 0)
+            g_camera_translation = parse_vector3f(argv[++argument]);
+        else if (strcmp(argv[argument], "--camera-rotation") == 0) {
+            Vector2f camera_rotation = parse_vector2f(argv[++argument]);
+            g_camera_vertical_rotation = camera_rotation.x;
+            g_camera_horizontal_rotation = camera_rotation.y;
+        }
 #ifdef OPTIX_FOUND
         else if (strcmp(argv[argument], "--path-tracing-only") == 0 || strcmp(argv[argument], "-p") == 0) {
             optix_enabled = true;
