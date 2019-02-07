@@ -47,7 +47,10 @@ RenderingGUI::~RenderingGUI() {
 }
 
 void RenderingGUI::layout_frame() {
+    // ImGui::ShowDemoWindow();
+
     ImGui::Begin("Rendering");
+    ImGui::PushItemWidth(180);
 
     { // Screenshotting
         { // Resolve existing screenshots
@@ -90,6 +93,22 @@ void RenderingGUI::layout_frame() {
         RGB environment_tint = scene_root.get_environment_tint();
         if (ImGui::ColorEdit3("Environment tint", &environment_tint.r))
             scene_root.set_environment_tint(environment_tint);
+
+        ImGui::PoppedTreeNode("Camera", [&]() {
+            Cameras::UID camera_ID = *Cameras::get_iterable().begin();
+
+            // Translation
+            Transform transform = Cameras::get_transform(camera_ID);
+            Vector3f translation = transform.translation;
+            ImGui::InputFloat3("Translation", translation.begin(), 3, ImGuiInputTextFlags_ReadOnly);
+
+            // Rotation described as vertical and horizontal angle.
+            Vector3f forward = transform.rotation.forward();
+            float vertical_rotation = std::atan2(forward.x, forward.z);
+            float horizontal_rotation = std::asin(forward.y);
+            float rotation[2] = { vertical_rotation, horizontal_rotation };
+            ImGui::InputFloat2("Rotation", rotation, 3, ImGuiInputTextFlags_ReadOnly);
+        });
     });
 
     ImGui::Separator();
