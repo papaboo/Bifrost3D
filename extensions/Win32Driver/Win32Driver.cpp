@@ -341,6 +341,18 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
 
     bool running = true;
     while (running && !g_engine->is_quit_requested()) {
+        // Handle window updates. It's irrelevant whether this is at the end or the beginning of the loop, 
+        // but if done first we get to handle all window updates from initialization calls as well.
+        if (engine_window.has_changes(Bifrost::Core::Window::Changes::Resized)) {
+            Vector2i full_window_size = compute_full_window_size(engine_window.get_width(), engine_window.get_height());
+            SetWindowPos(hwnd, HWND_TOP,
+                0, 0, full_window_size.x, full_window_size.y,
+                SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+        }
+
+        if (engine_window.has_changes(Bifrost::Core::Window::Changes::Renamed))
+            SetWindowText(hwnd, engine_window.get_name().c_str());
+
         // Poll events.
         g_keyboard->per_frame_reset();
         g_mouse->per_frame_reset();
@@ -361,16 +373,6 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
         previous_time = current_time;
 
         g_engine->do_tick(delta_time);
-
-        if (engine_window.has_changes(Bifrost::Core::Window::Changes::Resized)) {
-            Vector2i full_window_size = compute_full_window_size(engine_window.get_width(), engine_window.get_height());
-            SetWindowPos(hwnd, HWND_TOP,
-                         0, 0, full_window_size.x, full_window_size.y,
-                         SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
-        }
-
-        if (engine_window.has_changes(Bifrost::Core::Window::Changes::Renamed))
-            SetWindowText(hwnd, engine_window.get_name().c_str());
     }
 
     delete g_mouse;

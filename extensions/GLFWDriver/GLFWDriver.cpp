@@ -142,6 +142,13 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
         double previous_time = glfwGetTime();
 
         while (!glfwWindowShouldClose(window)) {
+            // Handle window updates. It's irrelevant whether this is at the end or the beginning of the loop, 
+            // but if done first we get to handle all window updates from initialization calls as well.
+            if (engine_window.has_changes(Bifrost::Core::Window::Changes::Resized))
+                glfwSetWindowSize(window, engine_window.get_width(), engine_window.get_height());
+            if (engine_window.has_changes(Bifrost::Core::Window::Changes::Renamed))
+                glfwSetWindowTitle(window, engine_window.get_name().c_str());
+
             g_keyboard->per_frame_reset();
             g_mouse->per_frame_reset();
             glfwPollEvents();
@@ -159,11 +166,6 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
                 glfwSetWindowShouldClose(window, GL_TRUE);
                 break;
             }
-
-            if (engine_window.has_changes(Bifrost::Core::Window::Changes::Resized))
-                glfwSetWindowSize(window, engine_window.get_width(), engine_window.get_height());
-            if (engine_window.has_changes(Bifrost::Core::Window::Changes::Renamed))
-                glfwSetWindowTitle(window, engine_window.get_name().c_str());
         }
 
         // Cleanup.
