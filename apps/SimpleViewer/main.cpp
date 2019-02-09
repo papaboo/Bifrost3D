@@ -381,8 +381,8 @@ void detect_and_flag_cutout_materials() {
 
     for (MeshModel model : MeshModels::get_iterable()) {
         Material material = model.get_material();
-        if (material.get_coverage_texture_ID() != Textures::UID::invalid_UID()) {
-            Image coverage_img = Textures::get_image_ID(material.get_coverage_texture_ID());
+        if (material.get_coverage_texture().exists()) {
+            Image coverage_img = material.get_coverage_texture().get_image();
             assert(coverage_img.get_pixel_format() == PixelFormat::I8);
 
             State& image_state = image_states[coverage_img.get_ID()];
