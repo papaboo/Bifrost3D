@@ -170,7 +170,7 @@ void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1&
                 } else if (Textures::get_changes(tex_ID) & Textures::Change::Created) {
                     dx_tex.sampler.release(); // Explicit release, because the resource will be overwritten below.
 
-                    TextureND texture = tex_ID;
+                    Texture texture = tex_ID;
 
                     static auto to_DX_filtermode = [](MagnificationFilter mag_filter, MinificationFilter min_filter) -> D3D11_FILTER {
                         if (mag_filter == MagnificationFilter::None) {

@@ -19,7 +19,7 @@ namespace Assets {
 // ------------------------------------------------------------------------------------------------
 // Samplable, textured infinite area light.
 // ------------------------------------------------------------------------------------------------
-inline void InfiniteAreaLight::compute_PDF(TextureND latlong, float* PDF_result) {
+inline void InfiniteAreaLight::compute_PDF(Texture latlong, float* PDF_result) {
     Image image = latlong.get_image();
     int width = image.get_width(), height = image.get_height();
 

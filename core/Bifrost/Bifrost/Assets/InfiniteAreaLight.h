@@ -34,7 +34,7 @@ struct LightSample {
 // ------------------------------------------------------------------------------------------------
 class InfiniteAreaLight {
 private:
-    mutable TextureND m_latlong;
+    mutable Texture m_latlong;
     const Math::Distribution2D<float> m_distribution;
 
 public:
@@ -107,7 +107,7 @@ public:
     // Static utility functions.
     //*********************************************************************************************
 
-    static inline float* compute_PDF(TextureND latlong) {
+    static inline float* compute_PDF(Texture latlong) {
         float* PDF = new float[latlong.get_image().get_pixel_count()];
         compute_PDF(latlong, PDF);
         return PDF;
@@ -116,7 +116,7 @@ public:
     // Computes the array of per pixel PDFs for an infinite area light. 
     // The importance is based on the average radiance of a pixel.
     // The PDF input must contain room for at least as many elements as there are pixels.
-    static inline void compute_PDF(TextureND latlong, float* PDF_result);
+    static inline void compute_PDF(Texture latlong, float* PDF_result);
 };
 
 // ------------------------------------------------------------------------------------------------

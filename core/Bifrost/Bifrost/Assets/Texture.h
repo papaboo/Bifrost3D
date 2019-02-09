@@ -113,21 +113,21 @@ private:
 };
 
 //-------------------------------------------------------------------------------------------------
-// N dimensional Textures::UID wrapper
+// Texture UID wrapper.
 //-------------------------------------------------------------------------------------------------
-class TextureND {
+class Texture {
 public:
     //---------------------------------------------------------------------------------------------
     // Constructors and destructors.
     //---------------------------------------------------------------------------------------------
-    TextureND() : m_ID(Textures::UID::invalid_UID()) {}
-    TextureND(Textures::UID id) : m_ID(id) {}
+    Texture() : m_ID(Textures::UID::invalid_UID()) {}
+    Texture(Textures::UID id) : m_ID(id) {}
 
     inline const Textures::UID get_ID() const { return m_ID; }
     inline bool exists() const { return Textures::has(m_ID); }
 
-    inline bool operator==(TextureND rhs) const { return m_ID == rhs.m_ID; }
-    inline bool operator!=(TextureND rhs) const { return m_ID != rhs.m_ID; }
+    inline bool operator==(Texture rhs) const { return m_ID == rhs.m_ID; }
+    inline bool operator!=(Texture rhs) const { return m_ID != rhs.m_ID; }
 
     //---------------------------------------------------------------------------------------------
     // Getters and setters.

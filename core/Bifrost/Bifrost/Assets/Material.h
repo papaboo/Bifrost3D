@@ -182,9 +182,9 @@ public:
     
     inline Math::RGB get_tint() { return Materials::get_tint(m_ID); }
     inline void set_tint(Math::RGB tint) { Materials::set_tint(m_ID, tint); }
-    inline TextureND get_tint_texture() { return Materials::get_tint_texture_ID(m_ID); }
+    inline Texture get_tint_texture() { return Materials::get_tint_texture_ID(m_ID); }
     inline Textures::UID get_tint_texture_ID() { return Materials::get_tint_texture_ID(m_ID); }
-    inline void set_tint_texture(TextureND tint_texture) { Materials::set_tint_texture_ID(m_ID, tint_texture.get_ID()); }
+    inline void set_tint_texture(Texture tint_texture) { Materials::set_tint_texture_ID(m_ID, tint_texture.get_ID()); }
     inline float get_roughness() { return Materials::get_roughness(m_ID); }
     inline void set_roughness(float roughness) { Materials::set_roughness(m_ID, roughness); }
     inline float get_specularity() { return Materials::get_specularity(m_ID); }
@@ -194,7 +194,7 @@ public:
 
     inline float get_coverage() { return Materials::get_coverage(m_ID); }
     inline void set_coverage(float coverage) { Materials::set_coverage(m_ID, coverage); }
-    inline TextureND get_coverage_texture() { return Materials::get_coverage_texture_ID(m_ID); }
+    inline Texture get_coverage_texture() { return Materials::get_coverage_texture_ID(m_ID); }
     inline Textures::UID get_coverage_texture_ID() { return Materials::get_coverage_texture_ID(m_ID); }
     inline void set_coverage_texture_ID(Textures::UID texture_ID) { Materials::set_coverage_texture_ID(m_ID, texture_ID); }
     inline float get_transmission() { return Materials::get_transmission(m_ID); }

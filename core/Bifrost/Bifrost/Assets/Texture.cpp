@@ -105,7 +105,7 @@ void Textures::destroy(Textures::UID texture_ID) {
 //-----------------------------------------------------------------------------
 
 Math::RGBA sample2D(Textures::UID texture_ID, Vector2f texcoord, int mipmap_level) {
-    TextureND texture = texture_ID;
+    Texture texture = texture_ID;
 
     { // Modify tex coord based on wrap mode.
         if (texture.get_wrapmode_U() == WrapMode::Clamp)
@@ -141,7 +141,7 @@ Math::RGBA sample2D(Textures::UID texture_ID, Vector2f texcoord, int mipmap_leve
             float v_lerp = texcoord.y - float(lower_left_coord.y);
             if (v_lerp < 0.0f) v_lerp += 1.0f;
 
-            auto lookup_pixel = [](int pixelcoord_x, int pixelcoord_y, int mipmap_level, TextureND texture, Image image) {
+            auto lookup_pixel = [](int pixelcoord_x, int pixelcoord_y, int mipmap_level, Texture texture, Image image) {
                 int width = image.get_width(mipmap_level);
                 if (texture.get_wrapmode_U() == WrapMode::Clamp)
                     pixelcoord_x = clamp(pixelcoord_x, 0, width - 1);
