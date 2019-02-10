@@ -233,14 +233,14 @@ public:
             depth_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
             THROW_DX11_ERROR(m_device.CreateDepthStencilState(&depth_desc, &m_g_buffer.depth_state));
 
-            // G-buffer is initialized on demand when the output dimensions are known.
+            // G-buffer is initialized on demand when the output dimensions are known ...
             m_g_buffer.width = m_g_buffer.height = 0u;
             m_g_buffer.depth_SRV = nullptr;
             m_g_buffer.depth_view = nullptr;
             m_g_buffer.normal_SRV = nullptr;
             m_g_buffer.normal_RTV = nullptr;
 
-            // So is the backbuffer.
+            // .. and so is the backbuffer.
             m_backbuffer_RTV = nullptr;
             m_backbuffer_SRV = nullptr;
         }
@@ -434,7 +434,7 @@ public:
                     context->PSSetShaderResources(1, 1, &color_texture.image->srv);
                     context->PSSetSamplers(1, 1, &color_texture.sampler);
                 }
-            }
+                }
 
             Dx11Texture& coverage_texture = m_textures.get_texture(material_textures.coverage_index);
             if (coverage_texture.sampler != nullptr) {
