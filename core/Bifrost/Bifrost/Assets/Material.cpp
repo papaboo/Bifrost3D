@@ -126,6 +126,11 @@ void Materials::set_metallic(Materials::UID material_ID, float metallic) {
     flag_as_updated(material_ID);
 }
 
+void Materials::set_metallic_texture_ID(Materials::UID material_ID, Textures::UID metallic_texture_ID) {
+    m_materials[material_ID].metallic_texture_ID = metallic_texture_ID;
+    flag_as_updated(material_ID);
+}
+
 void Materials::set_coverage(Materials::UID material_ID, float coverage) {
     m_materials[material_ID].coverage = coverage;
     flag_as_updated(material_ID);
