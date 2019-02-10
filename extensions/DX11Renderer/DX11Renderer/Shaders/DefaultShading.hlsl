@@ -21,11 +21,14 @@
 Texture2D environment_tex : register(t0);
 SamplerState environment_sampler : register(s0);
 
-Texture2D color_tex : register(t1);
-SamplerState color_sampler : register(s1);
+Texture2D coverage_tex : register(t1);
+SamplerState coverage_sampler : register(s1);
 
-Texture2D coverage_tex : register(t2);
-SamplerState coverage_sampler : register(s2);
+Texture2D color_tex : register(t2);
+SamplerState color_sampler : register(s2);
+
+Texture2D metallic_tex : register(t3);
+SamplerState metallic_sampler : register(s3);
 
 Texture2D<float2> ggx_with_fresnel_rho_tex : register(t15);
 
@@ -78,6 +81,8 @@ struct DefaultShading {
 
         // Metallic
         float metallic = material_params.m_metallic;
+        if (material_params.m_textures_bound & TextureBound::Metallic)
+            metallic *= metallic_tex.Sample(metallic_sampler, texcoord).a;
 
         // Material tint
         float3 tint = material_params.m_tint;

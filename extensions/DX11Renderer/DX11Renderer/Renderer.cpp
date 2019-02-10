@@ -428,18 +428,28 @@ public:
 
             Dx11MaterialTextures& material_textures = m_materials.get_material_textures(model.material_ID);
 
-            if (!geometry_only) {
-                Dx11Texture& color_texture = m_textures.get_texture(material_textures.tint_index);
-                if (color_texture.sampler != nullptr) {
-                    context->PSSetShaderResources(1, 1, &color_texture.image->srv);
-                    context->PSSetSamplers(1, 1, &color_texture.sampler);
-                }
-                }
-
             Dx11Texture& coverage_texture = m_textures.get_texture(material_textures.coverage_index);
             if (coverage_texture.sampler != nullptr) {
-                context->PSSetShaderResources(2, 1, &coverage_texture.image->srv);
-                context->PSSetSamplers(2, 1, &coverage_texture.sampler);
+                context->PSSetShaderResources(1, 1, &coverage_texture.image->srv);
+                context->PSSetSamplers(1, 1, &coverage_texture.sampler);
+            }
+
+            if (!geometry_only) {
+                ID3D11ShaderResourceView* SRVs[2];
+                ID3D11SamplerState* samplers[2];
+
+                Dx11Texture& tint_texture = m_textures.get_texture(material_textures.tint_index);
+                bool has_tint_texture = tint_texture.sampler != nullptr;
+                SRVs[0] = has_tint_texture ? tint_texture.image->srv.get() : nullptr;
+                samplers[0] = has_tint_texture ? tint_texture.sampler.get() : nullptr;
+
+                Dx11Texture& metallic_texture = m_textures.get_texture(material_textures.metallic_index);
+                bool has_metallic_texture = metallic_texture.sampler != nullptr;
+                SRVs[1] = has_metallic_texture ? metallic_texture.image->srv.get() : nullptr;
+                samplers[1] = has_metallic_texture ? metallic_texture.sampler.get() : nullptr;
+
+                context->PSSetShaderResources(2, 2, SRVs);
+                context->PSSetSamplers(2, 2, samplers);
             }
         }
 

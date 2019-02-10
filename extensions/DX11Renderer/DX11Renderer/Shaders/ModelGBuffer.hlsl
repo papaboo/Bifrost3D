@@ -51,8 +51,8 @@ float2 opaque_PS(OpaqueVaryings varyings) : SV_Target {
 // Cutout model.
 // ------------------------------------------------------------------------------------------------
 
-Texture2D coverage_tex : register(t2);
-SamplerState coverage_sampler : register(s2);
+Texture2D coverage_tex : register(t1);
+SamplerState coverage_sampler : register(s1);
 
 struct CutoutVaryings {
     float4 position : SV_POSITION;

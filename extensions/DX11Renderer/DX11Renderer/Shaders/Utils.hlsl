@@ -65,6 +65,7 @@ struct TextureBound {
     static const unsigned int None = 0;
     static const unsigned int Tint = 1 << 0;
     static const unsigned int Coverage = 1 << 1;
+    static const unsigned int Metallic = 1 << 2;
 };
 
 struct MaterialParams {
