@@ -17,7 +17,7 @@ using namespace Bifrost::Assets;
 namespace DX11Renderer {
 
 inline Dx11Material make_dx11material(Material mat) {
-    Dx11Material dx11_material;
+    Dx11Material dx11_material = {};
     dx11_material.tint.x = mat.get_tint().r;
     dx11_material.tint.y = mat.get_tint().g;
     dx11_material.tint.z = mat.get_tint().b;
@@ -31,7 +31,7 @@ inline Dx11Material make_dx11material(Material mat) {
 }
 
 inline Dx11MaterialTextures make_dx11material_textures(Material mat) {
-    Dx11MaterialTextures dx11_material_textures;
+    Dx11MaterialTextures dx11_material_textures = {};
     dx11_material_textures.tint_index = mat.get_tint_texture_ID();
     dx11_material_textures.coverage_index = mat.get_coverage_texture_ID();
     return dx11_material_textures;
@@ -79,8 +79,7 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
     m_material_textures[0] = make_dx11material_textures(Materials::UID::invalid_UID());
 
     m_GPU_materials.resize(1);
-    auto invalid_dx_material = make_dx11material_textures(Materials::UID::invalid_UID());
-    create_constant_buffer(device, invalid_dx_material, &m_GPU_materials[0]);
+    create_constant_buffer(device, m_materials[0], &m_GPU_materials[0]);
 }
 
 void MaterialManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& context) {
