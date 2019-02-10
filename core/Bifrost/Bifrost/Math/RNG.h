@@ -85,6 +85,28 @@ inline float power_heuristic(float pdf1, float pdf2) {
     return !isnan(result) ? result : (pdf1 > pdf2 ? 1.0f : 0.0f);
 }
 
+// Linear congruential random number generator
+struct LinearCongruential final {
+private:
+    static const unsigned int multiplier = 1664525u;
+    static const unsigned int increment = 1013904223u;
+
+    unsigned int m_state;
+
+public:
+    explicit LinearCongruential(unsigned int seed) : m_state(seed) { }
+
+    inline void seed(unsigned int seed) { m_state = seed; }
+    inline unsigned int get_seed() const { return m_state; }
+
+    inline unsigned int sample1ui() {
+        m_state = multiplier * m_state + increment;
+        return m_state;
+    }
+
+    inline float sample1f() { return float(sample1ui()) * uint_normalizer; }
+};
+
 } // NS RNG
 } // NS Math
 } // NS Bifrost
