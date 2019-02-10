@@ -182,9 +182,10 @@ struct __align__(16) Material {
     float roughness;
     float specularity;
     float metallic;
+    int metallic_texture_ID;
     float coverage;
     int coverage_texture_ID;
-    optix::int3 __padding;
+    optix::int2 __padding;
 };
 
 //----------------------------------------------------------------------------

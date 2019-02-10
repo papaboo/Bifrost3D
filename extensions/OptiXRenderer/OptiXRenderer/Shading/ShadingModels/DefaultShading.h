@@ -117,12 +117,18 @@ public:
 #if GPU_DEVICE
     __inline_all__ DefaultShading(const Material& material, float abs_cos_theta, optix::float2 texcoord)
         : m_roughness(material.roughness) {
+
+        // Material tint
+        float metallic = material.metallic;
+        if (material.metallic_texture_ID)
+            metallic *= optix::rtTex2D<float>(material.metallic_texture_ID, texcoord.x, texcoord.y);
+
         // Material tint
         float3 tint = material.tint;
         if (material.tint_texture_ID)
             tint *= make_float3(optix::rtTex2D<optix::float4>(material.tint_texture_ID, texcoord.x, texcoord.y));
 
-        compute_tints(tint, m_roughness, material.specularity, material.metallic, abs_cos_theta,
+        compute_tints(tint, m_roughness, material.specularity, metallic, abs_cos_theta,
                       m_diffuse_tint, m_specularity);
     }
 #endif

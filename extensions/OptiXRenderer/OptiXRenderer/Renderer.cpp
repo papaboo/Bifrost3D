@@ -591,7 +591,18 @@ struct Renderer::Implementation {
                     device_material.tint_texture_ID = 0;
                 device_material.roughness = host_material.get_roughness();
                 device_material.specularity = host_material.get_specularity();
+
                 device_material.metallic = host_material.get_metallic();
+                if (host_material.get_metallic_texture_ID() != Textures::UID::invalid_UID()) {
+                    // Validate that the image has 1 channel! Otherwise OptiX goes boom boom.
+                    Textures::UID texture_ID = host_material.get_metallic_texture_ID();
+                    RTformat pixel_format = images[Textures::get_image_ID(texture_ID)]->getFormat();
+                    assert(pixel_format == RT_FORMAT_UNSIGNED_BYTE || pixel_format == RT_FORMAT_FLOAT);
+                    device_material.metallic_texture_ID = samplers[texture_ID]->getId();
+                }
+                else
+                    device_material.metallic_texture_ID = 0;
+
                 device_material.coverage = host_material.get_coverage();
                 if (host_material.get_coverage_texture_ID() != Textures::UID::invalid_UID()) {
                     // Validate that the image has 1 channel! Otherwise OptiX goes boom boom.
