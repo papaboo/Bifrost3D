@@ -221,13 +221,47 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
         cylinder_node.set_parent(root_node);
     }
 
-    { // Sphere for the hell of it.
-        Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.001f, 0.001f, 0.001f), 0.75f, 0.5f);
-        Materials::UID material_ID = Materials::create("Dark rubber", material_data);
+    { // Copper / rubber sphere.
+        struct TintRoughness {
+            unsigned char r, g, b, roughness;
+        };
+
+        const TintRoughness rubber_tint = { 3, 3, 3, 192 };
+        const TintRoughness metal_tint = { 244, 163, 135, 0 };
+
+        const int size = 1024;
+        const int metal_streak_count = 5;
+        Image tint = Images::create2D("Sphere tint", PixelFormat::RGBA32, 2.2f, Vector2ui(size));
+        TintRoughness* tint_pixels = tint.get_pixels<TintRoughness>();
+        std::fill_n(tint_pixels, size* size, rubber_tint);
+        Image metalness = Images::create2D("Sphere metalness", PixelFormat::I8, 1.0f, Vector2ui(size));
+        unsigned char* metalness_pixels = metalness.get_pixels<unsigned char>();
+        std::fill_n(metalness_pixels, size* size, (unsigned char)0u);
+        #pragma omp parallel for 
+        for (int s = 0; s < metal_streak_count; ++s) {
+            int streak_begin = size * s / metal_streak_count + 40;
+            int streak_end = size * (s + 1) / metal_streak_count - 40;
+            for (int y = 0; y < size; ++y) {
+                for (int x = streak_begin; x < streak_end; ++x) {
+                    int _x = x % size;
+                    metalness_pixels[_x + y * size] = 255u;
+                    tint_pixels[_x + y * size] = metal_tint;
+                }
+
+                streak_begin += 1;
+                streak_end += 1;
+            }
+        }
+
+        Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 0.75f, 0.5f);
+        material_data.tint_texture_ID = Textures::create2D(tint.get_ID());
+        material_data.metallic = 1.0f;
+        material_data.metallic_texture_ID = Textures::create2D(metalness.get_ID());
+        Materials::UID material_ID = Materials::create("Copper/rubber", material_data);
 
         Transform transform = Transform(Vector3f(1.5f, 0.5f, 0.0f));
         SceneNode sphere_node = SceneNodes::create("Sphere", transform);
-        Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(128, 64, { MeshFlag::Position, MeshFlag::Normal });
+        Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(128, 64);
         MeshModels::create(sphere_node.get_ID(), sphere_mesh_ID, material_ID);
         sphere_node.set_parent(root_node);
     }
