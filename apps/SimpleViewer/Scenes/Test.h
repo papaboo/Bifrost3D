@@ -27,13 +27,12 @@ namespace Scenes {
 
 class LocalRotator final {
 public:
-    LocalRotator(Scene::SceneNodes::UID node_ID, float rotation_stength)
-        : m_node_ID(node_ID), m_rotation_stength(rotation_stength){
-    }
+    LocalRotator(Scene::SceneNodes::UID node_ID, float rotation_stength, Math::Vector3f axis = Math::Vector3f::right())
+        : m_node_ID(node_ID), m_rotation_stength(rotation_stength), m_axis(axis) { }
 
     void rotate(Core::Engine& engine) {
         if (!engine.get_time().is_paused()) {
-            Math::Quaternionf rotation = Math::Quaternionf::from_angle_axis(float(engine.get_time().get_smooth_delta_time()) * m_rotation_stength, Math::Vector3f::right());
+            Math::Quaternionf rotation = Math::Quaternionf::from_angle_axis(float(engine.get_time().get_smooth_delta_time()) * m_rotation_stength, m_axis);
             Math::Transform delta_transform = Math::Transform(Math::Vector3f::zero(), rotation);
             Scene::SceneNodes::apply_delta_transform(m_node_ID, delta_transform);
         }
@@ -42,6 +41,7 @@ public:
 private:
     Scene::SceneNodes::UID m_node_ID;
     float m_rotation_stength;
+    Math::Vector3f m_axis;
 };
 
 class BlinkingLight final {
@@ -264,6 +264,9 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
         Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(128, 64);
         MeshModels::create(sphere_node.get_ID(), sphere_mesh_ID, material_ID);
         sphere_node.set_parent(root_node);
+
+        LocalRotator* simple_rotator = new LocalRotator(sphere_node.get_ID(), 0.2f, Vector3f::up());
+        engine.add_mutating_callback([=, &engine] { simple_rotator->rotate(engine); });
     }
 
     { // Partial coverage plastic torus.
