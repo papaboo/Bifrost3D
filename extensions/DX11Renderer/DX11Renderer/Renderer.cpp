@@ -435,21 +435,20 @@ public:
             }
 
             if (!geometry_only) {
-                ID3D11ShaderResourceView* SRVs[2];
-                ID3D11SamplerState* samplers[2];
 
                 Dx11Texture& tint_texture = m_textures.get_texture(material_textures.tint_index);
-                bool has_tint_texture = tint_texture.sampler != nullptr;
-                SRVs[0] = has_tint_texture ? tint_texture.image->srv.get() : nullptr;
-                samplers[0] = has_tint_texture ? tint_texture.sampler.get() : nullptr;
-
                 Dx11Texture& metallic_texture = m_textures.get_texture(material_textures.metallic_index);
-                bool has_metallic_texture = metallic_texture.sampler != nullptr;
-                SRVs[1] = has_metallic_texture ? metallic_texture.image->srv.get() : nullptr;
-                samplers[1] = has_metallic_texture ? metallic_texture.sampler.get() : nullptr;
+                if (metallic_texture.image || tint_texture.image) {
 
-                context->PSSetShaderResources(2, 2, SRVs);
-                context->PSSetSamplers(2, 2, samplers);
+                    ID3D11ShaderResourceView* SRVs[2] = {
+                        tint_texture.image ? tint_texture.image->srv.get() : nullptr,
+                        metallic_texture.image ? metallic_texture.image->srv.get() : nullptr
+                    };
+                    context->PSSetShaderResources(2, 2, SRVs);
+
+                    ID3D11SamplerState* samplers[2] = { tint_texture.sampler, metallic_texture.sampler };
+                    context->PSSetSamplers(2, 2, samplers);
+                }
             }
         }
 
