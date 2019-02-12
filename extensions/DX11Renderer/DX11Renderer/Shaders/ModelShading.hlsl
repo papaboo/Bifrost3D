@@ -113,3 +113,41 @@ float4 transparent(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TAR
     float coverage = material_params.coverage(input.texcoord, coverage_tex, coverage_sampler);
     return float4(integrate(input, is_front_face, 1), coverage);
 }
+
+// ------------------------------------------------------------------------------------------------
+// Material property visualization.
+// ------------------------------------------------------------------------------------------------
+
+static const uint visualize_tint = 5;
+static const uint visualize_roughness = 6;
+static const uint visualize_metallic = 7;
+static const uint visualize_coverage = 8;
+
+cbuffer visualization_mode : register(b4) {
+    uint visualization_mode;
+}
+
+float4 visualize_material_params(Varyings input) : SV_TARGET {
+    float coverage = material_params.coverage(input.texcoord, coverage_tex, coverage_sampler);
+    if (visualization_mode == visualize_coverage)
+        return float4(coverage, coverage, coverage, 1);
+    if (coverage < CUTOFF)
+        discard;
+
+    if (visualization_mode == visualize_metallic) {
+        float metallic = material_params.m_metallic;
+        if (material_params.m_textures_bound & TextureBound::Metallic)
+            metallic *= metallic_tex.Sample(metallic_sampler, input.texcoord).a;
+        return float4(metallic, metallic, metallic, 1);
+    }
+
+    if (visualization_mode == visualize_roughness) {
+        float roughness = material_params.m_roughness;
+        return float4(roughness, roughness, roughness, 1);
+    }
+
+    float3 tint = material_params.m_tint;
+    if (material_params.m_textures_bound & TextureBound::Tint)
+        tint *= color_tex.Sample(color_sampler, input.texcoord).rgb;
+    return float4(tint, 1);
+}

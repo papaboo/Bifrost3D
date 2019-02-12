@@ -142,6 +142,7 @@ private:
     struct {
         OVertexShader display_vertex_shader;
         OPixelShader display_debug_pixel_shader;
+        OPixelShader material_params_shader;
     } m_debug;
 
     std::wstring m_shader_folder_path;
@@ -345,6 +346,8 @@ public:
             THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_debug.display_vertex_shader));
             OBlob display_debug_blob = compile_shader(m_shader_folder_path + L"Debug.hlsl", "ps_5_0", "display_debug_ps");
             THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(display_debug_blob), nullptr, &m_debug.display_debug_pixel_shader));
+            OBlob material_params_blob = compile_shader(m_shader_folder_path + L"ModelShading.hlsl", "ps_5_0", "visualize_material_params");
+            THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(material_params_blob), nullptr, &m_debug.material_params_shader));
         }
     }
 
@@ -639,9 +642,20 @@ public:
             auto opaque_marker = PerformanceMarker(*m_render_context, L"Opaque geometry");
 
             // Set vertex and pixel shaders.
+            bool debug_material_params = m_debug_settings.display_mode == DebugSettings::DisplayMode::Tint ||
+                                         m_debug_settings.display_mode == DebugSettings::DisplayMode::Roughness ||
+                                         m_debug_settings.display_mode == DebugSettings::DisplayMode::Metallic ||
+                                         m_debug_settings.display_mode == DebugSettings::DisplayMode::Coverage;
+            OBuffer debug_material_constant_buffer;
+            if (debug_material_params) {
+                Vector4i debug_material_constants = { m_debug_settings.display_mode, 0, 0, 0 };
+                create_constant_buffer(m_device, debug_material_constants, &debug_material_constant_buffer);
+                m_render_context->PSSetConstantBuffers(4, 1, &debug_material_constant_buffer);
+            }
+
             m_render_context->VSSetShader(m_vertex_shading.shader, 0, 0);
             m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
-            m_render_context->PSSetShader(m_opaque.shader, 0, 0);
+            m_render_context->PSSetShader(debug_material_params ? m_debug.material_params_shader : m_opaque.shader, 0, 0);
 
             // Set null buffer as default texcoord buffer.
             unsigned int stride = sizeof(float2);
@@ -650,7 +664,7 @@ public:
 
             for (int i = 1; i < m_transparent.first_model_index; ++i) {
 
-                // Setup twosided raster state for cutout materials.
+                // Setup two-sided raster state for cutout materials.
                 if (i == m_cutout.first_model_index)
                     m_render_context->RSSetState(m_cutout.raster_state);
 
@@ -671,9 +685,10 @@ public:
                     m_render_context->RSSetState(m_cutout.raster_state);
 
                 // Set transparent state.
-                m_render_context->OMSetBlendState(m_transparent.blend_state, 0, 0xffffffff);
+                if (!debug_material_params)
+                    m_render_context->OMSetBlendState(m_transparent.blend_state, 0, 0xffffffff);
                 m_render_context->OMSetDepthStencilState(m_transparent.depth_state, 0);
-                m_render_context->PSSetShader(m_transparent.shader, 0, 0);
+                m_render_context->PSSetShader(debug_material_params ? m_debug.material_params_shader : m_transparent.shader, 0, 0);
 
                 int transparent_model_count = int(m_sorted_models.size()) - m_transparent.first_model_index;
                 auto transparent_models = m_transparent.sorted_models_pool; // Alias the pool.
