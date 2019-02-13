@@ -144,7 +144,7 @@ float4 visualize_material_params(Varyings input) : SV_TARGET {
     if (visualization_mode == visualize_roughness) {
         float roughness = material_params.m_roughness;
         if (material_params.m_textures_bound & TextureBound::Roughness)
-            roughness *= color_tex.Sample(color_sampler, input.texcoord).a;
+            roughness *= tint_roughness_tex.Sample(tint_roughness_sampler, input.texcoord).a;
         return float4(roughness, roughness, roughness, 1);
     }
 
