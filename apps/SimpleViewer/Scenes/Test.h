@@ -246,6 +246,9 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
                     int _x = x % size;
                     metalness_pixels[_x + y * size] = 255u;
                     tint_pixels[_x + y * size] = metal_tint;
+                    float t = inverse_lerp<float>(float(streak_begin), streak_end - 1.0f, float(x));
+                    float roughness = sin(t * PI<float>());
+                    tint_pixels[_x + y * size].roughness = 255u - unsigned char(roughness * 255u);
                 }
 
                 streak_begin += 1;
