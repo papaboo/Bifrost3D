@@ -153,7 +153,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
         }
 
         Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 0.3f, 0.25f);
-        material_data.tint_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
+        material_data.tint_roughness_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
         Materials::UID material_ID = Materials::create("Floor", material_data);
 
         SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0, -0.0005f, 0), Quaternionf::identity(), 10));
@@ -231,9 +231,9 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
 
         const int size = 1024;
         const int metal_streak_count = 5;
-        Image tint = Images::create2D("Sphere tint", PixelFormat::RGBA32, 2.2f, Vector2ui(size));
-        TintRoughness* tint_pixels = tint.get_pixels<TintRoughness>();
-        std::fill_n(tint_pixels, size* size, rubber_tint);
+        Image tint_roughness = Images::create2D("Sphere tint", PixelFormat::RGBA32, 2.2f, Vector2ui(size));
+        TintRoughness* tint_roughness_pixels = tint_roughness.get_pixels<TintRoughness>();
+        std::fill_n(tint_roughness_pixels, size* size, rubber_tint);
         Image metalness = Images::create2D("Sphere metalness", PixelFormat::I8, 1.0f, Vector2ui(size));
         unsigned char* metalness_pixels = metalness.get_pixels<unsigned char>();
         std::fill_n(metalness_pixels, size* size, (unsigned char)0u);
@@ -245,10 +245,10 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
                 for (int x = streak_begin; x < streak_end; ++x) {
                     int _x = x % size;
                     metalness_pixels[_x + y * size] = 255u;
-                    tint_pixels[_x + y * size] = metal_tint;
+                    tint_roughness_pixels[_x + y * size] = metal_tint;
                     float t = inverse_lerp<float>(float(streak_begin), streak_end - 1.0f, float(x));
                     float roughness = sin(t * PI<float>());
-                    tint_pixels[_x + y * size].roughness = 255u - unsigned char(roughness * 255u);
+                    tint_roughness_pixels[_x + y * size].roughness = 255u - unsigned char(roughness * 255u);
                 }
 
                 streak_begin += 1;
@@ -257,7 +257,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
         }
 
         Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 0.75f, 0.5f);
-        material_data.tint_texture_ID = Textures::create2D(tint.get_ID());
+        material_data.tint_roughness_texture_ID = Textures::create2D(tint_roughness.get_ID());
         material_data.metallic = 1.0f;
         material_data.metallic_texture_ID = Textures::create2D(metalness.get_ID());
         Materials::UID material_ID = Materials::create("Copper/rubber", material_data);

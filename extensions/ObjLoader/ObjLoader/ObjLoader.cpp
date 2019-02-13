@@ -72,7 +72,7 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
         Materials::Data material_data = {};
         material_data.flags = MaterialFlag::None;
         material_data.tint = Math::RGB(tiny_mat.diffuse[0], tiny_mat.diffuse[1], tiny_mat.diffuse[2]);
-        material_data.tint_texture_ID = Textures::UID::invalid_UID();
+        material_data.tint_roughness_texture_ID = Textures::UID::invalid_UID();
         material_data.roughness = sqrt(sqrt(2.0f / (tiny_mat.shininess + 2.0f))); // Map from blinn shininess to material roughness.
         bool is_metallic = tiny_mat.illum == 3 || tiny_mat.illum == 5;
         material_data.metallic = is_metallic ? 1.0f : 0.0f;
@@ -126,7 +126,7 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
                         material_data.coverage_texture_ID = Textures::create2D(coverage_image_ID);
                     }
 
-                material_data.tint_texture_ID = Textures::create2D(image_ID);
+                material_data.tint_roughness_texture_ID = Textures::create2D(image_ID);
             }
         }
 

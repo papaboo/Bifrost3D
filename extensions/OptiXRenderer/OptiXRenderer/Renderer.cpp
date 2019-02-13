@@ -581,9 +581,9 @@ struct Renderer::Implementation {
                 device_material.tint.x = host_material.get_tint().r;
                 device_material.tint.y = host_material.get_tint().g;
                 device_material.tint.z = host_material.get_tint().b;
-                if (host_material.get_tint_texture_ID() != Textures::UID::invalid_UID()) {
+                if (host_material.get_tint_roughness_texture_ID() != Textures::UID::invalid_UID()) {
                     // Validate that the image has 4 channels! Otherwise OptiX goes boom boom.
-                    Textures::UID texture_ID = host_material.get_tint_texture_ID();
+                    Textures::UID texture_ID = host_material.get_tint_roughness_texture_ID();
                     RTformat pixel_format = images[Textures::get_image_ID(texture_ID)]->getFormat();
                     assert(pixel_format == RT_FORMAT_UNSIGNED_BYTE4 || pixel_format == RT_FORMAT_FLOAT4);
                     device_material.tint_texture_ID = samplers[texture_ID]->getId();

@@ -370,7 +370,7 @@ SceneNodes::UID load(const std::string& filename) {
                 }
 
                 // Create tint texture.
-                mat_data.tint_texture_ID = Textures::create2D(image_ID, magnification_filter, minification_filter, wrapU, wrapV);
+                mat_data.tint_roughness_texture_ID = Textures::create2D(image_ID, magnification_filter, minification_filter, wrapU, wrapV);
             } else if (val.first.compare("roughnessFactor") == 0)
                 mat_data.roughness = float(val.second.Factor());
             else if (val.first.compare("metallicFactor") == 0)

@@ -106,8 +106,8 @@ void Materials::set_tint(Materials::UID material_ID, Math::RGB tint) {
     flag_as_updated(material_ID);
 }
 
-void Materials::set_tint_texture_ID(Materials::UID material_ID, Textures::UID tint_texture_ID) {
-    m_materials[material_ID].tint_texture_ID = tint_texture_ID;
+void Materials::set_tint_roughness_texture_ID(Materials::UID material_ID, Textures::UID tint_roughness_texture_ID) {
+    m_materials[material_ID].tint_roughness_texture_ID = tint_roughness_texture_ID;
     flag_as_updated(material_ID);
 }
 

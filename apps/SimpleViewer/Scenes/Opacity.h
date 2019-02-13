@@ -42,12 +42,13 @@ void create_opacity_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, S
             for (unsigned int x = 0; x < width; ++x) {
                 unsigned char* pixel = pixels + (x + y * width) * 4u;
                 unsigned char intensity = ((x & 1) == (y & 1)) ? 2 : 255;
-                pixel[0] = intensity; pixel[1] = intensity; pixel[2] = intensity; pixel[3] = 255;
+                pixel[0] = pixel[1] = pixel[2] = intensity; 
+                pixel[3] = 255;
             }
         }
 
         Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 0.3f, 0.25f);
-        material_data.tint_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
+        material_data.tint_roughness_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
         Materials::UID material_ID = Materials::create("Floor", material_data);
 
         SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0, -0.0005f, 0), Quaternionf::identity(), 10));

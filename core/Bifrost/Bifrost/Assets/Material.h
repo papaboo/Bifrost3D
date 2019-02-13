@@ -54,7 +54,7 @@ public:
 
     struct Data {
         Math::RGB tint;
-        Textures::UID tint_texture_ID;
+        Textures::UID tint_roughness_texture_ID;
         float roughness;
         float specularity;
         float metallic;
@@ -107,8 +107,8 @@ public:
 
     static inline Math::RGB get_tint(Materials::UID material_ID) { return m_materials[material_ID].tint; }
     static void set_tint(Materials::UID material_ID, Math::RGB tint);
-    static inline Textures::UID get_tint_texture_ID(Materials::UID material_ID) { return m_materials[material_ID].tint_texture_ID; }
-    static void set_tint_texture_ID(Materials::UID material_ID, Textures::UID tint_texture_ID);
+    static inline Textures::UID get_tint_roughness_texture_ID(Materials::UID material_ID) { return m_materials[material_ID].tint_roughness_texture_ID; }
+    static void set_tint_roughness_texture_ID(Materials::UID material_ID, Textures::UID tint_roughness_texture_ID);
     static inline float get_roughness(Materials::UID material_ID) { return m_materials[material_ID].roughness; }
     static void set_roughness(Materials::UID material_ID, float roughness);
 
@@ -187,9 +187,9 @@ public:
     
     inline Math::RGB get_tint() { return Materials::get_tint(m_ID); }
     inline void set_tint(Math::RGB tint) { Materials::set_tint(m_ID, tint); }
-    inline Texture get_tint_texture() { return Materials::get_tint_texture_ID(m_ID); }
-    inline Textures::UID get_tint_texture_ID() { return Materials::get_tint_texture_ID(m_ID); }
-    inline void set_tint_texture(Texture tint_texture) { Materials::set_tint_texture_ID(m_ID, tint_texture.get_ID()); }
+    inline Texture get_tint_roughness_texture() { return Materials::get_tint_roughness_texture_ID(m_ID); }
+    inline Textures::UID get_tint_roughness_texture_ID() { return Materials::get_tint_roughness_texture_ID(m_ID); }
+    inline void set_tint_roughness_texture(Texture tint_roughness_texture) { Materials::set_tint_roughness_texture_ID(m_ID, tint_roughness_texture.get_ID()); }
     inline float get_roughness() { return Materials::get_roughness(m_ID); }
     inline void set_roughness(float roughness) { Materials::set_roughness(m_ID, roughness); }
 
