@@ -586,9 +586,9 @@ struct Renderer::Implementation {
                     Textures::UID texture_ID = host_material.get_tint_roughness_texture_ID();
                     RTformat pixel_format = images[Textures::get_image_ID(texture_ID)]->getFormat();
                     assert(pixel_format == RT_FORMAT_UNSIGNED_BYTE4 || pixel_format == RT_FORMAT_FLOAT4);
-                    device_material.tint_texture_ID = samplers[texture_ID]->getId();
+                    device_material.tint_roughness_texture_ID = samplers[texture_ID]->getId();
                 } else
-                    device_material.tint_texture_ID = 0;
+                    device_material.tint_roughness_texture_ID = 0;
                 device_material.roughness = host_material.get_roughness();
                 device_material.specularity = host_material.get_specularity();
 

@@ -118,15 +118,17 @@ public:
     __inline_all__ DefaultShading(const Material& material, float abs_cos_theta, optix::float2 texcoord)
         : m_roughness(material.roughness) {
 
-        // Material tint
+        // Metallic
         float metallic = material.metallic;
         if (material.metallic_texture_ID)
             metallic *= optix::rtTex2D<float>(material.metallic_texture_ID, texcoord.x, texcoord.y);
 
-        // Material tint
-        float3 tint = material.tint;
-        if (material.tint_texture_ID)
-            tint *= make_float3(optix::rtTex2D<optix::float4>(material.tint_texture_ID, texcoord.x, texcoord.y));
+        // Tint and roughness
+        float4 tint_roughness = make_float4(material.tint, material.roughness);
+        if (material.tint_roughness_texture_ID)
+            tint_roughness *= optix::rtTex2D<optix::float4>(material.tint_roughness_texture_ID, texcoord.x, texcoord.y);
+        float3 tint = make_float3(tint_roughness);
+        m_roughness = tint_roughness.w;
 
         compute_tints(tint, m_roughness, material.specularity, metallic, abs_cos_theta,
                       m_diffuse_tint, m_specularity);

@@ -178,7 +178,7 @@ struct __align__(16) BSDFSample {
 
 struct __align__(16) Material {
     optix::float3 tint;
-    int tint_texture_ID;
+    int tint_roughness_texture_ID;
     float roughness;
     float specularity;
     float metallic;
