@@ -24,8 +24,8 @@ SamplerState environment_sampler : register(s0);
 Texture2D coverage_tex : register(t1);
 SamplerState coverage_sampler : register(s1);
 
-Texture2D color_tex : register(t2);
-SamplerState color_sampler : register(s2);
+Texture2D tint_roughness_tex : register(t2);
+SamplerState tint_roughness_sampler : register(s2);
 
 Texture2D metallic_tex : register(t3);
 SamplerState metallic_sampler : register(s3);
@@ -76,18 +76,17 @@ struct DefaultShading {
         if (material_params.m_textures_bound & TextureBound::Coverage)
             shading.m_coverage *= coverage_tex.Sample(coverage_sampler, texcoord).a;
 
-        // Roughness
-        shading.m_roughness = material_params.m_roughness;
+        // Tint and roughness
+        float4 tint_roughness = { material_params.m_tint, material_params.m_roughness };
+        if (material_params.m_textures_bound & TextureBound::Tint_Roughness)
+            tint_roughness *= tint_roughness_tex.Sample(tint_roughness_sampler, texcoord);
+        float3 tint = tint_roughness.rgb;
+        shading.m_roughness = tint_roughness.a;
 
         // Metallic
         float metallic = material_params.m_metallic;
         if (material_params.m_textures_bound & TextureBound::Metallic)
             metallic *= metallic_tex.Sample(metallic_sampler, texcoord).a;
-
-        // Material tint
-        float3 tint = material_params.m_tint;
-        if (material_params.m_textures_bound & TextureBound::Tint)
-            tint *= color_tex.Sample(color_sampler, texcoord).rgb;
 
         // Specularity
         float dielectric_specularity = material_params.m_specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.

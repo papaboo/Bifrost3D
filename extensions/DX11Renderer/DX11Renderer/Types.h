@@ -175,8 +175,9 @@ struct R10G10B10A2_Unorm {
 struct TextureBound {
     static const unsigned int None = 0;
     static const unsigned int Tint = 1 << 0;
-    static const unsigned int Coverage = 1 << 1;
-    static const unsigned int Metallic = 1 << 2;
+    static const unsigned int Roughness = 1 << 1;
+    static const unsigned int Coverage = 1 << 2;
+    static const unsigned int Metallic = 1 << 3;
 };
 
 struct Dx11Material {
@@ -189,7 +190,7 @@ struct Dx11Material {
 };
 
 struct Dx11MaterialTextures {
-    unsigned int tint_index;
+    unsigned int tint_roughness_index;
     unsigned int coverage_index;
     unsigned int metallic_index;
 };
