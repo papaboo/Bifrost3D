@@ -23,6 +23,7 @@
 using namespace Bifrost;
 using namespace Bifrost::Assets;
 using namespace Bifrost::Core;
+using namespace Bifrost::Math;
 using namespace Bifrost::Scene;
 
 namespace ObjLoader {
@@ -71,7 +72,7 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
 
         Materials::Data material_data = {};
         material_data.flags = MaterialFlag::None;
-        material_data.tint = Math::RGB(tiny_mat.diffuse[0], tiny_mat.diffuse[1], tiny_mat.diffuse[2]);
+        material_data.tint = RGB(tiny_mat.diffuse[0], tiny_mat.diffuse[1], tiny_mat.diffuse[2]);
         material_data.tint_roughness_texture_ID = Textures::UID::invalid_UID();
         material_data.roughness = sqrt(sqrt(2.0f / (tiny_mat.shininess + 2.0f))); // Map from blinn shininess to material roughness.
         bool is_metallic = tiny_mat.illum == 3 || tiny_mat.illum == 5;
@@ -100,33 +101,36 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
         }
 
         if (!tiny_mat.diffuse_texname.empty()) {
-            Images::UID image_ID = image_loader(directory + tiny_mat.diffuse_texname);
-            if (image_ID == Images::UID::invalid_UID())
+            Image image = image_loader(directory + tiny_mat.diffuse_texname);
+            if (!image.exists())
                 printf("ObjLoader::load error: Could not load image at '%s'.\n", (directory + tiny_mat.alpha_texname).c_str());
             else {
                 // Use diffuse alpha for coverage, if no explicit coverage texture has been set.
-                if (channel_count(Images::get_pixel_format(image_ID)) == 4 && material_data.coverage_texture_ID == Textures::UID::invalid_UID()) {
-                    Image image = image_ID;
+                if (channel_count(image.get_pixel_format()) == 4 && material_data.coverage_texture_ID == Textures::UID::invalid_UID()) {
                     unsigned int mipmap_count = image.get_mipmap_count();
-                    Math::Vector2ui size = Math::Vector2ui(image.get_width(), image.get_height());
-                    Images::UID coverage_image_ID = Images::create2D(image.get_name(), PixelFormat::A8, image.get_gamma(), size, mipmap_count);
+                    Vector2ui size = Vector2ui(image.get_width(), image.get_height());
+                    Image coverage_image = Images::create2D(image.get_name(), PixelFormat::A8, image.get_gamma(), size, mipmap_count);
 
                     float min_coverage = 1.0f;
                     for (unsigned int m = 0; m < mipmap_count; ++m)
                         for (unsigned int y = 0; y < image.get_height(m); ++y)
                             for (int x = 0; x < int(image.get_width(m)); ++x) {
-                                Math::Vector2ui index = Math::Vector2ui(x, y);
-                                float coverage = image.get_pixel(index, m).a;
-                                min_coverage = fminf(min_coverage, coverage);
-                                Math::RGBA pixel = Math::RGBA(coverage, coverage, coverage, coverage);
-                                Images::set_pixel(coverage_image_ID, pixel, index, m);
+                                Vector2ui index = Vector2ui(x, y);
+                                RGBA tint_pixel = image.get_pixel(index, m);
+                                min_coverage = fminf(min_coverage, tint_pixel.a);
+                                RGBA coverage_pixel = RGBA(RGB(1.0f), tint_pixel.a);
+                                coverage_image.set_pixel(coverage_pixel, index, m);
+
+                                // Set roughness to 1 in the original tint/roughness image.
+                                tint_pixel.a = 1.0f;
+                                image.set_pixel(tint_pixel, index, m);
                             }
 
                     if (min_coverage < 1.0f)
-                        material_data.coverage_texture_ID = Textures::create2D(coverage_image_ID);
-                    }
+                        material_data.coverage_texture_ID = Textures::create2D(coverage_image.get_ID());
+                }
 
-                material_data.tint_roughness_texture_ID = Textures::create2D(image_ID);
+                material_data.tint_roughness_texture_ID = Textures::create2D(image.get_ID());
             }
         }
 
