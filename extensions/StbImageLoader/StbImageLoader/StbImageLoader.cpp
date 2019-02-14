@@ -33,7 +33,7 @@ static PixelFormat resolve_format(int channels, bool is_HDR) {
     } else {
         switch (channels) {
         case 1:
-            return PixelFormat::I8;
+            return PixelFormat::A8;
         case 3:
             return PixelFormat::RGB24;
         case 2: // [intensity, alpha]. Data is expanded when copied to the datamodel.
@@ -46,7 +46,7 @@ static PixelFormat resolve_format(int channels, bool is_HDR) {
 
 unsigned int sizeof_format(PixelFormat format) {
     switch (format) {
-    case Bifrost::Assets::PixelFormat::I8:
+    case Bifrost::Assets::PixelFormat::A8:
         return sizeof(unsigned char);
     case Bifrost::Assets::PixelFormat::RGB24:
         return sizeof(unsigned char) * 3;

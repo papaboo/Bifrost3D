@@ -344,7 +344,7 @@ SceneNodes::UID load(const std::string& filename) {
                         assert(image.get_pixel_format() == PixelFormat::RGBA32);
                         unsigned int mipmap_count = image.get_mipmap_count();
                         Vector2ui size = Vector2ui(image.get_width(), image.get_height());
-                        Images::UID coverage_image_ID = Images::create2D(gltf_mat.name + "_coverage", PixelFormat::I8, 1.0, size, mipmap_count);
+                        Images::UID coverage_image_ID = Images::create2D(gltf_mat.name + "_coverage", PixelFormat::A8, 1.0, size, mipmap_count);
 
                         unsigned char min_coverage = 255;
                         for (unsigned int m = 0; m < mipmap_count; ++m) {
