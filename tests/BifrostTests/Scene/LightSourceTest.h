@@ -52,7 +52,7 @@ TEST_F(Scene_LightSource, sentinel_node) {
     EXPECT_FALSE(LightSources::has(sentinel_ID));
 
     EXPECT_EQ(SceneNodes::UID::invalid_UID(), LightSources::get_node_ID(sentinel_ID));
-    EXPECT_EQ(Math::RGB::black(), LightSources::get_sphere_light_power(sentinel_ID));
+    EXPECT_EQ(Math::RGB(100000, 0, 100000), LightSources::get_sphere_light_power(sentinel_ID));
 
     LightSources::deallocate();
 }
