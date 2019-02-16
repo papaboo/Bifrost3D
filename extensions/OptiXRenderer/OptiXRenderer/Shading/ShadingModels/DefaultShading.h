@@ -127,6 +127,8 @@ public:
         float4 tint_roughness = make_float4(material.tint, material.roughness);
         if (material.tint_roughness_texture_ID)
             tint_roughness *= optix::rtTex2D<optix::float4>(material.tint_roughness_texture_ID, texcoord.x, texcoord.y);
+        else if (material.roughness_texture_ID)
+            tint_roughness.w *= optix::rtTex2D<float>(material.roughness_texture_ID, texcoord.x, texcoord.y);
         float3 tint = make_float3(tint_roughness);
         m_roughness = tint_roughness.w;
 

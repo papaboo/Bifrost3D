@@ -581,7 +581,7 @@ struct Renderer::Implementation {
                 device_material.tint.x = host_material.get_tint().r;
                 device_material.tint.y = host_material.get_tint().g;
                 device_material.tint.z = host_material.get_tint().b;
-                if (host_material.get_tint_roughness_texture_ID() != Textures::UID::invalid_UID()) {
+                if (host_material.has_tint_texture()) {
                     // Validate that the image has 4 channels! Otherwise OptiX goes boom boom.
                     Textures::UID texture_ID = host_material.get_tint_roughness_texture_ID();
                     RTformat pixel_format = images[Textures::get_image_ID(texture_ID)]->getFormat();
@@ -589,7 +589,19 @@ struct Renderer::Implementation {
                     device_material.tint_roughness_texture_ID = samplers[texture_ID]->getId();
                 } else
                     device_material.tint_roughness_texture_ID = 0;
+
                 device_material.roughness = host_material.get_roughness();
+                // Only set a roughness texture if the tint texture is not set and the material has a roughness texture.
+                if (device_material.tint_roughness_texture_ID == 0 && host_material.has_roughness_texture()) {
+                    // Validate that the image has 1 channel! Otherwise OptiX goes boom boom.
+                    Textures::UID texture_ID = host_material.get_tint_roughness_texture_ID();
+                    RTformat pixel_format = images[Textures::get_image_ID(texture_ID)]->getFormat();
+                    assert(pixel_format == RT_FORMAT_UNSIGNED_BYTE || pixel_format == RT_FORMAT_FLOAT);
+                    device_material.roughness_texture_ID = samplers[texture_ID]->getId();
+                }
+                else
+                    device_material.roughness_texture_ID = 0;
+
                 device_material.specularity = host_material.get_specularity();
 
                 device_material.metallic = host_material.get_metallic();
