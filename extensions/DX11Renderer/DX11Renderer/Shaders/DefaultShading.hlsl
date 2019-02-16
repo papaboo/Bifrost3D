@@ -78,8 +78,11 @@ struct DefaultShading {
 
         // Tint and roughness
         float4 tint_roughness = { material_params.m_tint, material_params.m_roughness };
-        if (material_params.m_textures_bound & TextureBound::Tint_Roughness)
-            tint_roughness *= tint_roughness_tex.Sample(tint_roughness_sampler, texcoord);
+        if (material_params.m_textures_bound & TextureBound::Tint_Roughness) {
+            float4 tex_sample = tint_roughness_tex.Sample(tint_roughness_sampler, texcoord);
+            tex_sample.rgb = (material_params.m_textures_bound & TextureBound::Tint) == 0 ? float3(1, 1, 1) : tex_sample.rgb;
+            tint_roughness *= tex_sample;
+        }
         float3 tint = tint_roughness.rgb;
         shading.m_roughness = tint_roughness.a;
 
@@ -94,7 +97,7 @@ struct DefaultShading {
         shading.m_specularity = lerp(dielectric_specularity.rrr, conductor_specularity, metallic);
 
         // Specular directional-hemispherical reflectance function.
-        PrecomputedSpecularRho precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, shading.m_roughness); // TODO To abs_cos_theta
+        PrecomputedSpecularRho precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, shading.m_roughness);
         float dielectric_specular_rho = precomputed_specular_rho.rho(dielectric_specularity);
         float3 conductor_specular_rho = precomputed_specular_rho.rho(conductor_specularity);
 
