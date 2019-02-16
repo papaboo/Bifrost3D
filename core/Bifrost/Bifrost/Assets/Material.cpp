@@ -20,6 +20,22 @@ std::string* Materials::m_names = nullptr;
 Materials::Data* Materials::m_materials = nullptr;
 Core::ChangeSet<Materials::Changes, Materials::UID> Materials::m_changes;
 
+#ifdef NDEBUG 
+__forceinline void assert_coverage_texture(Texture coverage_tex) {}
+__forceinline void assert_metallic_texture(Texture metallic_tex) {}
+__forceinline void assert_tint_roughness_texture(Texture metallic_tex) {}
+#else
+__forceinline void assert_coverage_texture(Texture coverage_tex) {
+    assert(!coverage_tex.exists() || coverage_tex.get_image().get_pixel_format() == PixelFormat::A8);
+}
+__forceinline void assert_metallic_texture(Texture metallic_tex) {
+    assert(!metallic_tex.exists() || metallic_tex.get_image().get_pixel_format() == PixelFormat::A8);
+}
+__forceinline void assert_tint_roughness_texture(Texture tint_roughness_tex) {
+    assert(!tint_roughness_tex.exists() || tint_roughness_tex.get_image().get_pixel_format() != PixelFormat::Unknown);
+}
+#endif
+
 void Materials::allocate(unsigned int capacity) {
     if (is_allocated())
         return;
@@ -77,6 +93,9 @@ void Materials::reserve(unsigned int new_capacity) {
 Materials::UID Materials::create(const std::string& name, const Data& data) {
     assert(m_names != nullptr);
     assert(m_materials != nullptr);
+    assert_coverage_texture(data.coverage_texture_ID);
+    assert_metallic_texture(data.metallic_texture_ID);
+    assert_tint_roughness_texture(data.tint_roughness_texture_ID);
 
     unsigned int old_capacity = m_UID_generator.capacity();
     UID id = m_UID_generator.generate();
@@ -112,6 +131,7 @@ void Materials::set_roughness(Materials::UID material_ID, float roughness) {
 }
 
 void Materials::set_tint_roughness_texture_ID(Materials::UID material_ID, Textures::UID tint_roughness_texture_ID) {
+    assert_tint_roughness_texture(tint_roughness_texture_ID);
     m_materials[material_ID].tint_roughness_texture_ID = tint_roughness_texture_ID;
     flag_as_updated(material_ID);
 }
@@ -139,6 +159,7 @@ void Materials::set_metallic(Materials::UID material_ID, float metallic) {
 }
 
 void Materials::set_metallic_texture_ID(Materials::UID material_ID, Textures::UID metallic_texture_ID) {
+    assert_metallic_texture(metallic_texture_ID);
     m_materials[material_ID].metallic_texture_ID = metallic_texture_ID;
     flag_as_updated(material_ID);
 }
@@ -149,6 +170,7 @@ void Materials::set_coverage(Materials::UID material_ID, float coverage) {
 }
 
 void Materials::set_coverage_texture_ID(Materials::UID material_ID, Textures::UID coverage_texture_ID) {
+    assert_coverage_texture(coverage_texture_ID);
     m_materials[material_ID].coverage_texture_ID = coverage_texture_ID;
     flag_as_updated(material_ID);
 }
