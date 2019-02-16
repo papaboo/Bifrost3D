@@ -645,7 +645,8 @@ public:
             bool debug_material_params = m_debug_settings.display_mode == DebugSettings::DisplayMode::Tint ||
                                          m_debug_settings.display_mode == DebugSettings::DisplayMode::Roughness ||
                                          m_debug_settings.display_mode == DebugSettings::DisplayMode::Metallic ||
-                                         m_debug_settings.display_mode == DebugSettings::DisplayMode::Coverage;
+                                         m_debug_settings.display_mode == DebugSettings::DisplayMode::Coverage ||
+                                         m_debug_settings.display_mode == DebugSettings::DisplayMode::UV;
             OBuffer debug_material_constant_buffer;
             if (debug_material_params) {
                 Vector4i debug_material_constants = { m_debug_settings.display_mode, 0, 0, 0 };
