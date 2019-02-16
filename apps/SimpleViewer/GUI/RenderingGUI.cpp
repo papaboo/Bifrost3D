@@ -261,7 +261,7 @@ void RenderingGUI::layout_frame() {
                 auto settings = m_dx_renderer->get_debug_settings();
                 bool has_changed = false;
 
-                const char* display_modes[] = { "Color", "Normals", "Depth", "Scene size", "Ambient occlusion", "Tint", "Roughness", "Metallic", "Coverage" };
+                const char* display_modes[] = { "Color", "Normals", "Depth", "Scene size", "Ambient occlusion", "Tint", "Roughness", "Metallic", "Coverage", "UV" };
                 int current_display_mode = (int)settings.display_mode;
                 has_changed |= ImGui::Combo("Mode", &current_display_mode, display_modes, IM_ARRAYSIZE(display_modes));
                 settings.display_mode = (Renderer::DebugSettings::DisplayMode)current_display_mode;
