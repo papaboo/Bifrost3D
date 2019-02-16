@@ -106,14 +106,26 @@ void Materials::set_tint(Materials::UID material_ID, Math::RGB tint) {
     flag_as_updated(material_ID);
 }
 
+void Materials::set_roughness(Materials::UID material_ID, float roughness) {
+    m_materials[material_ID].roughness = roughness;
+    flag_as_updated(material_ID);
+}
+
 void Materials::set_tint_roughness_texture_ID(Materials::UID material_ID, Textures::UID tint_roughness_texture_ID) {
     m_materials[material_ID].tint_roughness_texture_ID = tint_roughness_texture_ID;
     flag_as_updated(material_ID);
 }
 
-void Materials::set_roughness(Materials::UID material_ID, float roughness) {
-    m_materials[material_ID].roughness = roughness;
-    flag_as_updated(material_ID);
+bool Materials::has_tint_texture(Materials::UID material_ID) {
+    Texture tex = m_materials[material_ID].tint_roughness_texture_ID;
+    auto pixel_format = tex.get_image().get_pixel_format();
+    return channel_count(pixel_format) >= 3;
+}
+
+bool Materials::has_roughness_texture(Materials::UID material_ID) {
+    Texture tex = m_materials[material_ID].tint_roughness_texture_ID;
+    auto pixel_format = tex.get_image().get_pixel_format();
+    return channel_count(pixel_format) == 4 || pixel_format == PixelFormat::Roughness8;
 }
 
 void Materials::set_specularity(Materials::UID material_ID, float incident_specularity) {
