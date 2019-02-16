@@ -211,12 +211,21 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
     }
 
     { // Destroyable cylinder. TODO Implement destruction of the mesh, model and scene node.
-        Materials::Data material_data = Materials::Data::create_metal(iron_tint, 0.4f);
+        // Checkered roughness texture.
+        const int size = 32;
+        Image roughness = Images::create2D("Cylinder roughness", PixelFormat::Roughness8, 1.0f, Vector2ui(size));
+        unsigned char* roughness_pixels = roughness.get_pixels<unsigned char>();
+        for (unsigned int y = 0; y < size; ++y)
+            for (unsigned int x = 0; x < size; ++x)
+                roughness_pixels[x + y * size] = ((x & 1) == (y & 1)) ? 63 : 127;
+
+        Materials::Data material_data = Materials::Data::create_metal(iron_tint, 1.0f);
+        material_data.tint_roughness_texture_ID = Textures::create2D(roughness.get_ID());
         Materials::UID material_ID = Materials::create("Iron", material_data);
 
         Transform transform = Transform(Vector3f(-1.5f, 0.5f, 0.0f));
         SceneNode cylinder_node = SceneNodes::create("Destroyed Cylinder", transform);
-        Meshes::UID cylinder_mesh_ID = MeshCreation::cylinder(4, 16, { MeshFlag::Position, MeshFlag::Normal });
+        Meshes::UID cylinder_mesh_ID = MeshCreation::cylinder(4, 16);
         MeshModels::create(cylinder_node.get_ID(), cylinder_mesh_ID, material_ID);
         cylinder_node.set_parent(root_node);
     }
