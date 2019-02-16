@@ -12,7 +12,7 @@
 #include <Bifrost/Scene/SceneNode.h>
 #include <string>
 
-namespace GLTFLoader {
+namespace glTFLoader {
 
 // ------------------------------------------------------------------------------------------------
 // Loads a glTF file.
@@ -27,6 +27,6 @@ Bifrost::Scene::SceneNodes::UID load(const std::string& filename);
 
 bool file_supported(const std::string& filename);
 
-} // NS GLTFLoader
+} // NS glTFLoader
 
 #endif // _BIFROST_ASSETS_GLTF_LOADER_H_

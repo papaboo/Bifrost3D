@@ -37,7 +37,7 @@
 #include <OptiXRenderer/Renderer.h>
 #endif
 
-#include <GLTFLoader/GLTFLoader.h>
+#include <glTFLoader/glTFLoader.h>
 #include <ObjLoader/ObjLoader.h>
 #include <StbImageLoader/StbImageLoader.h>
 
@@ -492,8 +492,8 @@ int initialize_scene(Engine& engine) {
         SceneNodes::UID obj_root_ID = SceneNodes::UID::invalid_UID();
         if (ObjLoader::file_supported(g_scene))
             obj_root_ID = ObjLoader::load(g_scene, load_image);
-        else if (GLTFLoader::file_supported(g_scene))
-            obj_root_ID = GLTFLoader::load(g_scene);
+        else if (glTFLoader::file_supported(g_scene))
+            obj_root_ID = glTFLoader::load(g_scene);
         SceneNodes::set_parent(obj_root_ID, root_node_ID);
         // mesh_combine_whole_scene(root_node_ID);
         detect_and_flag_cutout_materials();

@@ -1,4 +1,4 @@
-// Bifrost gltf model loader.
+// Bifrost glTF model loader.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
@@ -6,9 +6,9 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#pragma warning(disable : 4267) // Implicit conversion from size_t to int in tiny_gltf.h
+#pragma warning(disable : 4267) // Implicit conversion from size_t to int in tiny_glTF.h
 
-#include <GLTFLoader/GLTFLoader.h>
+#include <glTFLoader/glTFLoader.h>
 
 #include <Bifrost/Assets/Material.h>
 #include <Bifrost/Assets/Mesh.h>
@@ -20,7 +20,7 @@
 #define TINYGLTF_IMPLEMENTATION 1
 #define TINYGLTF_NO_STB_IMAGE 1
 #define TINYGLTF_NO_STB_IMAGE_WRITE 1
-#include <GLTFLoader/tiny_gltf.h>
+#include <glTFLoader/tiny_gltf.h>
 
 #include <unordered_map>
 
@@ -31,7 +31,7 @@ using namespace Bifrost::Scene;
 
 using Matrix3x3d = Matrix3x3<double>;
 
-namespace GLTFLoader {
+namespace glTFLoader {
 
 // ------------------------------------------------------------------------------------------------
 // Utils.
@@ -76,13 +76,13 @@ struct RGBA32 {
 // Texture sampler conversion utils.
 // ------------------------------------------------------------------------------------------------
 
-inline MagnificationFilter convert_magnification_filter(int gltf_magnification_filter) {
-    bool is_nearest = gltf_magnification_filter == TINYGLTF_TEXTURE_FILTER_NEAREST;
+inline MagnificationFilter convert_magnification_filter(int glTF_magnification_filter) {
+    bool is_nearest = glTF_magnification_filter == TINYGLTF_TEXTURE_FILTER_NEAREST;
     return is_nearest ? MagnificationFilter::None : MagnificationFilter::Linear;
 }
 
-inline MinificationFilter convert_minification_filter(int gltf_minification_filter) {
-    switch (gltf_minification_filter) {
+inline MinificationFilter convert_minification_filter(int glTF_minification_filter) {
+    switch (glTF_minification_filter) {
     case TINYGLTF_TEXTURE_FILTER_NEAREST:
         return MinificationFilter::None;
     case TINYGLTF_TEXTURE_FILTER_LINEAR:
@@ -99,18 +99,18 @@ inline MinificationFilter convert_minification_filter(int gltf_minification_filt
     case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR:
         return MinificationFilter::Trilinear;
     default:
-        printf("GLTFLoader::load warning: Unknown minification filter mode %u.\n", gltf_minification_filter);
+        printf("glTFLoader::load warning: Unknown minification filter mode %u.\n", glTF_minification_filter);
         return MinificationFilter::Trilinear;
     }
 }
 
-inline WrapMode convert_wrap_mode(int gltf_wrap_mode) {
-    if (gltf_wrap_mode == TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE)
+inline WrapMode convert_wrap_mode(int glTF_wrap_mode) {
+    if (glTF_wrap_mode == TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE)
         return WrapMode::Clamp;
-    else if (gltf_wrap_mode == TINYGLTF_TEXTURE_WRAP_REPEAT)
+    else if (glTF_wrap_mode == TINYGLTF_TEXTURE_WRAP_REPEAT)
         return WrapMode::Repeat;
-    else if (gltf_wrap_mode == TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT)
-        printf("GLTFLoader::load error: Mirrored repeat wrap mode not supported.\n");
+    else if (glTF_wrap_mode == TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT)
+        printf("glTFLoader::load error: Mirrored repeat wrap mode not supported.\n");
     return WrapMode::Repeat;
 }
 
@@ -160,13 +160,13 @@ SceneNodes::UID import_node(const tinygltf::Model& model, const tinygltf::Node& 
 
     if (node.mesh >= 0) {
         // Get loaded mesh indices.
-        int gltf_mesh_index = node.mesh;
-        int mesh_index = meshes_start_index[gltf_mesh_index];
-        int mesh_end_index = meshes_start_index[gltf_mesh_index + 1];
+        int glTF_mesh_index = node.mesh;
+        int mesh_index = meshes_start_index[glTF_mesh_index];
+        int mesh_end_index = meshes_start_index[glTF_mesh_index + 1];
 
-        for (const auto& primitive : model.meshes[gltf_mesh_index].primitives) {
+        for (const auto& primitive : model.meshes[glTF_mesh_index].primitives) {
             if (primitive.mode != TINYGLTF_MODE_TRIANGLES) {
-                printf("GLTFLoader::load warning: %s primitive %u not supported.\n", model.meshes[gltf_mesh_index].name.c_str(), primitive.mode);
+                printf("GLTFLoader::load warning: %s primitive %u not supported.\n", model.meshes[glTF_mesh_index].name.c_str(), primitive.mode);
                 continue;
             }
 
@@ -188,96 +188,96 @@ SceneNodes::UID import_node(const tinygltf::Model& model, const tinygltf::Node& 
 };
 
 template<typename T>
-void copy_indices(unsigned int* bifrost_indices, const T* gltf_indices, size_t count, int index_byte_stride) {
-    int gltf_index_T_stride = index_byte_stride / sizeof(T);
+void copy_indices(unsigned int* bifrost_indices, const T* glTF_indices, size_t count, int index_byte_stride) {
+    int glTF_index_T_stride = index_byte_stride / sizeof(T);
     for (size_t i = 0; i < count; ++i) {
-        *bifrost_indices = *gltf_indices;
+        *bifrost_indices = *glTF_indices;
         ++bifrost_indices;
-        gltf_indices += gltf_index_T_stride;
+        glTF_indices += glTF_index_T_stride;
     }
 }
 
 // ------------------------------------------------------------------------------------------------
-// Loads a gltf file.
+// Loads a glTF file.
 // ------------------------------------------------------------------------------------------------
 SceneNodes::UID load(const std::string& filename) {
 
     // See https://github.com/syoyo/tinygltf/blob/master/loader_example.cc
 
     tinygltf::Model model;
-    tinygltf::TinyGLTF gltf_ctx;
+    tinygltf::TinyGLTF glTF_ctx;
     std::string errors, warnings;
 
-    static auto image_loader = [](tinygltf::Image* gltf_image, std::string* error, std::string* warning, int req_width, int req_height,
+    static auto image_loader = [](tinygltf::Image* glTF_image, std::string* error, std::string* warning, int req_width, int req_height,
                                   const unsigned char *bytes, int size, void* user_data) -> bool {
 
         Image image = StbImageLoader::load_from_memory("Unnamed", bytes, size);
 
         if (!image.exists()) {
             if (error)
-                *error += "GLTFLoader::load error: Failed to load image from memory.\n";
+                *error += "glTFLoader::load error: Failed to load image from memory.\n";
             return false;
         }
 
         if (image.get_width() < 1 || image.get_height() < 1) {
             Images::destroy(image.get_ID());
             if (error)
-                *error += "GLTFLoader::load error: Failed to load image from memory.\n";
+                *error += "glTFLoader::load error: Failed to load image from memory.\n";
             return false;
         }
 
         if (req_width > 0 && image.get_width() != req_width) {
             Images::destroy(image.get_ID());
             if (error)
-                *error += "GLTFLoader::load error: Image width mismatch.\n";
+                *error += "glTFLoader::load error: Image width mismatch.\n";
             return false;
         }
 
         if (req_height > 0 && image.get_height() != req_height) {
             Images::destroy(image.get_ID());
             if (error)
-                *error += "GLTFLoader::load error: Image height mismatch.\n";
+                *error += "glTFLoader::load error: Image height mismatch.\n";
             return false;
         }
 
-        gltf_image->width = image.get_width();
-        gltf_image->height = image.get_height();
-        gltf_image->component = channel_count(image.get_pixel_format());
+        glTF_image->width = image.get_width();
+        glTF_image->height = image.get_height();
+        glTF_image->component = channel_count(image.get_pixel_format());
         // HACK Store image ID in pixels instead of pixel data.
-        gltf_image->image.resize(4);
-        memcpy(gltf_image->image.data(), &image.get_ID(), sizeof(Images::UID));
+        glTF_image->image.resize(4);
+        memcpy(glTF_image->image.data(), &image.get_ID(), sizeof(Images::UID));
 
         return true;
     };
 
-    gltf_ctx.SetImageLoader(image_loader, nullptr);
+    glTF_ctx.SetImageLoader(image_loader, nullptr);
 
     bool ret = false;
     if (string_ends_with(filename, "glb"))
-        ret = gltf_ctx.LoadBinaryFromFile(&model, &errors, &warnings, filename.c_str());
+        ret = glTF_ctx.LoadBinaryFromFile(&model, &errors, &warnings, filename.c_str());
     else if (string_ends_with(filename, "gltf"))
-        ret = gltf_ctx.LoadASCIIFromFile(&model, &errors, &warnings, filename.c_str());
+        ret = glTF_ctx.LoadASCIIFromFile(&model, &errors, &warnings, filename.c_str());
     else {
-        printf("GLTFLoader::load error: '%s' not a glTF file\n", filename.c_str());
+        printf("glTFLoader::load error: '%s' not a glTF file\n", filename.c_str());
         return SceneNodes::UID::invalid_UID();
     }
 
     if (!warnings.empty())
-        printf("GLTFLoader::load warning: %s\n", warnings.c_str());
+        printf("glTFLoader::load warning: %s\n", warnings.c_str());
 
 
     if (!errors.empty())
-        printf("GLTFLoader::load error: %s\n", errors.c_str());
+        printf("glTFLoader::load error: %s\n", errors.c_str());
 
     if (!ret) {
-        printf("GLTFLoader::load error: Failed to parse '%s'\n", filename.c_str());
+        printf("glTFLoader::load error: Failed to parse '%s'\n", filename.c_str());
         return SceneNodes::UID::invalid_UID();
     }
 
     // Import images.
     auto loaded_image_IDs = std::vector<Images::UID>(model.images.size());
     for (int i = 0; i < model.images.size(); ++i) {
-        const auto& gltf_image = model.images[i];
+        const auto& glTF_image = model.images[i];
     }
 
     // Import materials.
@@ -291,9 +291,9 @@ SceneNodes::UID load(const std::string& filename) {
         mat_data.coverage = 1.0f;
         bool is_opaque = true;
 
-        const auto& gltf_mat = model.materials[i];
+        const auto& glTF_mat = model.materials[i];
         // Process additional values first, as we need to know the alphaMode before converting images.
-        for (const auto& val : gltf_mat.additionalValues) {
+        for (const auto& val : glTF_mat.additionalValues) {
             if (val.first.compare("doubleSided") == 0)
                 // NOTE to self: Double sided should set a 'thin/doubleSided' property on the meshes instead of on the materials.
                 // In case the mesh is used by one sided and two sided meshes, we need to duplicate the mesh.
@@ -305,30 +305,30 @@ SceneNodes::UID load(const std::string& filename) {
             }
         }
 
-        for (const auto& val : gltf_mat.values) {
+        for (const auto& val : glTF_mat.values) {
             if (val.first.compare("baseColorFactor") == 0) {
                 auto tint = val.second.number_array;
                 mat_data.tint = { float(tint[0]), float(tint[1]), float(tint[2]) };
             } else if (val.first.compare("baseColorTexture") == 0) {
-                const auto& gltf_texture = model.textures[val.second.TextureIndex()];
-                const auto& gltf_image = model.images[gltf_texture.source];
+                const auto& glTF_texture = model.textures[val.second.TextureIndex()];
+                const auto& glTF_image = model.images[glTF_texture.source];
                 Images::UID image_ID;
-                memcpy(&image_ID, gltf_image.image.data(), sizeof(image_ID));
+                memcpy(&image_ID, glTF_image.image.data(), sizeof(image_ID));
                 assert(Images::has(image_ID));
                 Image image = image_ID;
-                image.set_name(gltf_mat.name + "_tint");
+                image.set_name(glTF_mat.name + "_tint");
 
                 // Extract sampler params first and use for both tint and coverage.
                 MagnificationFilter magnification_filter = MagnificationFilter::Linear;
                 MinificationFilter minification_filter = MinificationFilter::Trilinear;
                 WrapMode wrapU = WrapMode::Repeat;
                 WrapMode wrapV = WrapMode::Repeat;
-                if (gltf_texture.sampler >= 0) {
-                    const auto& gltf_sampler = model.samplers[gltf_texture.sampler];
-                    magnification_filter = convert_magnification_filter(gltf_sampler.magFilter);
-                    minification_filter = convert_minification_filter(gltf_sampler.minFilter);
-                    wrapU = convert_wrap_mode(gltf_sampler.wrapR);
-                    wrapV = convert_wrap_mode(gltf_sampler.wrapS);
+                if (glTF_texture.sampler >= 0) {
+                    const auto& glTF_sampler = model.samplers[glTF_texture.sampler];
+                    magnification_filter = convert_magnification_filter(glTF_sampler.magFilter);
+                    minification_filter = convert_minification_filter(glTF_sampler.minFilter);
+                    wrapU = convert_wrap_mode(glTF_sampler.wrapR);
+                    wrapV = convert_wrap_mode(glTF_sampler.wrapS);
                 }
 
                 // Attempt to extract a coverage image if the color texture has an alpha channel and a blend mode was defined.
@@ -344,7 +344,7 @@ SceneNodes::UID load(const std::string& filename) {
                         assert(image.get_pixel_format() == PixelFormat::RGBA32);
                         unsigned int mipmap_count = image.get_mipmap_count();
                         Vector2ui size = Vector2ui(image.get_width(), image.get_height());
-                        Images::UID coverage_image_ID = Images::create2D(gltf_mat.name + "_coverage", PixelFormat::A8, 1.0, size, mipmap_count);
+                        Images::UID coverage_image_ID = Images::create2D(glTF_mat.name + "_coverage", PixelFormat::A8, 1.0, size, mipmap_count);
 
                         unsigned char min_coverage = 255;
                         for (unsigned int m = 0; m < mipmap_count; ++m) {
@@ -377,7 +377,7 @@ SceneNodes::UID load(const std::string& filename) {
                 mat_data.metallic = float(val.second.Factor());
         }
 
-        loaded_material_IDs[i] = Materials::create(gltf_mat.name, mat_data);
+        loaded_material_IDs[i] = Materials::create(glTF_mat.name, mat_data);
     }
 
     // Import models.
@@ -385,14 +385,14 @@ SceneNodes::UID load(const std::string& filename) {
     loaded_meshes_start_index.reserve(model.meshes.size());
     auto loaded_meshes = std::vector<Mesh>();
     loaded_meshes.reserve(model.meshes.size());
-    for (const auto& gltf_mesh : model.meshes) {
-        // Mark at what index in loaded_meshes that the models corresponding to the current gltf mesh begins.
+    for (const auto& glTF_mesh : model.meshes) {
+        // Mark at what index in loaded_meshes that the models corresponding to the current glTF mesh begins.
         loaded_meshes_start_index.push_back(loaded_meshes.size());
-        for (size_t p = 0; p < gltf_mesh.primitives.size(); ++p) {
-            const auto& primitive = gltf_mesh.primitives[p];
+        for (size_t p = 0; p < glTF_mesh.primitives.size(); ++p) {
+            const auto& primitive = glTF_mesh.primitives[p];
             
             if (primitive.mode != TINYGLTF_MODE_TRIANGLES) {
-                printf("GLTFLoader::load warning: %s[%zu] primitive %u not supported.\n", gltf_mesh.name.c_str(), p, primitive.mode);
+                printf("GLTFLoader::load warning: %s[%zu] primitive %u not supported.\n", glTF_mesh.name.c_str(), p, primitive.mode);
                 continue;
             }
 
@@ -418,7 +418,7 @@ SceneNodes::UID load(const std::string& filename) {
             const tinygltf::Accessor& index_accessor = model.accessors[primitive.indices];
             unsigned int primitive_count = unsigned int(index_accessor.count) / 3;
 
-            Mesh mesh = Meshes::create(gltf_mesh.name, primitive_count, vertex_count, mesh_flags);
+            Mesh mesh = Meshes::create(glTF_mesh.name, primitive_count, vertex_count, mesh_flags);
             
             { // Import primitve indices.
                 assert(index_accessor.type == TINYGLTF_TYPE_SCALAR);
@@ -545,4 +545,4 @@ bool file_supported(const std::string& filename) {
     return string_ends_with(filename, ".glb") || string_ends_with(filename, ".gltf");
 }
 
-} // NS GLTFLoader
+} // NS glTFLoader
