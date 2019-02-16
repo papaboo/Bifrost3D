@@ -24,6 +24,7 @@ namespace Assets {
 enum class PixelFormat {
     Unknown = 0,
     A8,
+    Roughness8 = A8,
     RGB24,
     RGBA32,
     RGB_Float,
