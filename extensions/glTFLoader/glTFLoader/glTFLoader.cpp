@@ -44,33 +44,7 @@ inline bool string_ends_with(const std::string& s, const std::string& end) {
     return s.compare(s.length() - end.length(), end.length(), end) == 0;
 }
 
-// ------------------------------------------------------------------------------------------------
-// Image conversion utils.
-// Needed as glTF stores (tint, coverage) in one image and (metallic, roughness) in another.
-// Bifrost recognises that the most used maps are tint and roughness, so those are stored in a 
-// single (tint, roughness) image and metallic and coverage are stored in two seperate images.
-// ------------------------------------------------------------------------------------------------
-
-enum class ImageUsage { Tint, Coverage };
-
-struct ConvertedImageKey {
-    Images::UID image_ID;
-    ImageUsage usage;
-
-    ConvertedImageKey(Images::UID image_ID, ImageUsage usage) : image_ID(image_ID), usage(usage) {}
-    inline bool operator==(const ConvertedImageKey other) const { return image_ID == other.image_ID && usage == other.usage; }
-    inline std::size_t hash() const { return image_ID.get_index() | ((int)usage << 24); }
-};
-
-struct ConvertedImageKeyHasher {
-    inline std::size_t operator()(const ConvertedImageKey key) const {
-        return key.hash();
-    }
-};
-
-struct RGBA32 {
-    unsigned char r, g, b, a;
-};
+struct RGBA32 { unsigned char r, g, b, a; };
 
 // ------------------------------------------------------------------------------------------------
 // Texture sampler conversion utils.
@@ -112,6 +86,187 @@ inline WrapMode convert_wrap_mode(int glTF_wrap_mode) {
     else if (glTF_wrap_mode == TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT)
         printf("glTFLoader::load error: Mirrored repeat wrap mode not supported.\n");
     return WrapMode::Repeat;
+}
+
+// ------------------------------------------------------------------------------------------------
+// Image conversion utils.
+// Needed as glTF stores (tint, coverage) in one image and (metallic, roughness) in another.
+// Bifrost recognises that the most used maps are tint and roughness, so those are stored in a 
+// single (tint, roughness) image and metallic and coverage are stored in two seperate images.
+// ------------------------------------------------------------------------------------------------
+
+enum class ImageUsage { Tint = 1, Coverage = 2, Metallic = 4, Roughness = 8, Tint_roughness = 9 };
+
+inline std::string to_string(ImageUsage usage) {
+    switch (usage) {
+    case ImageUsage::Tint: return "tint";
+    case ImageUsage::Coverage: return "coverage";
+    case ImageUsage::Metallic: return "metallic";
+    case ImageUsage::Roughness: return "roughness";
+    case ImageUsage::Tint_roughness: return "tint_roughness";
+    default: return "unknown";
+    };
+}
+
+typedef size_t ConvertedImageKey;
+inline size_t hash_converted_image(Images::UID image_ID, Images::UID image2_ID, ImageUsage usage) {
+    return (size_t)image2_ID.get_index() << 32 | image_ID.get_index() << 8 | (size_t)usage;
+}
+inline size_t hash_converted_image(Images::UID image_ID, ImageUsage usage) {
+    return hash_converted_image(image_ID, Images::UID::invalid_UID(), usage);
+}
+
+using ImageCache = std::unordered_map<ConvertedImageKey, Images::UID>;
+
+struct SamplerParams {
+    MagnificationFilter Magnification_filter = MagnificationFilter::Linear;
+    MinificationFilter Minification_filter = MinificationFilter::Trilinear;
+    WrapMode WrapU = WrapMode::Repeat;
+    WrapMode WrapV = WrapMode::Repeat;
+
+    void parse_glTF_sampler(tinygltf::Sampler glTF_sampler) {
+        Magnification_filter = convert_magnification_filter(glTF_sampler.magFilter);
+        Minification_filter = convert_minification_filter(glTF_sampler.minFilter);
+        WrapU = convert_wrap_mode(glTF_sampler.wrapR);
+        WrapV = convert_wrap_mode(glTF_sampler.wrapS);
+    }
+
+    inline Textures::UID create_texture_2D(Images::UID image_ID) {
+        if (Images::has(image_ID))
+            return Textures::create2D(image_ID, Magnification_filter, Minification_filter, WrapU, WrapV);
+        return Textures::UID::invalid_UID();
+    }
+};
+
+struct TextureState {
+    Images::UID Image_ID = Images::UID::invalid_UID();
+    SamplerParams Sampler;
+
+    void parse_glTF_texture(tinygltf::Model& model, int texture_index) {
+        const auto& glTF_texture = model.textures[texture_index];
+        const auto& glTF_image = model.images[glTF_texture.source];
+        memcpy(&Image_ID, glTF_image.image.data(), sizeof(Image_ID));
+        assert(Images::has(Image_ID));
+
+        // Extract sampler params.
+        if (glTF_texture.sampler >= 0)
+            Sampler.parse_glTF_sampler(model.samplers[glTF_texture.sampler]);
+    }
+};
+
+// Extracts a single channel from an image or retrieves it from the cache. The resulting image is cached.
+Image extract_channel(Image image, int channel, ImageUsage usage, ImageCache& converted_images) {
+    if (channel >= channel_count(image.get_pixel_format()))
+        return Images::UID::invalid_UID();
+
+    if (image.get_pixel_format() == PixelFormat::A8 && channel == 0)
+        return image;
+
+    auto converted_image_hash = hash_converted_image(image.get_ID(), usage);
+    auto& converted_image_itr = converted_images.find(converted_image_hash);
+    if (converted_image_itr != converted_images.end())
+        return converted_image_itr->second;
+
+    // Extract the channel from the image and store the resulting image in the cache.
+    unsigned int mipmap_count = image.get_mipmap_count();
+    Vector2ui size = Vector2ui(image.get_width(), image.get_height());
+    Images::UID single_channel_image_ID = Images::create2D(image.get_name() + "_" + to_string(usage), PixelFormat::A8, 1.0, size, mipmap_count);
+
+    unsigned char min_value = 255;
+    for (unsigned int m = 0; m < mipmap_count; ++m) {
+        int pixel_count = image.get_pixel_count(m);
+        unsigned char* dst_pixels = Images::get_pixels<unsigned char>(single_channel_image_ID, m);
+
+        auto src_format = image.get_pixel_format();
+        if (src_format == PixelFormat::RGB24 || src_format == PixelFormat::RGBA32) {
+            // Memcpy unsigned char channels.
+            unsigned char* src_pixels = ((unsigned char*)image.get_pixels(m)) + channel;
+            int src_pixel_stride = size_of(image.get_pixel_format());
+
+            for (int p = 0; p < pixel_count; ++p) {
+                dst_pixels[p] = *src_pixels;
+                min_value = min(min_value, dst_pixels[p]);
+                src_pixels += src_pixel_stride;
+            }
+        } else {
+            // Copy using get pixel and data conversion.
+            for (int p = 0; p < pixel_count; ++p) {
+                RGBA pixel = image.get_pixel(p, m);
+                dst_pixels[p] = unsigned char(pixel[channel] * 255 + 0.5f);
+                min_value = min(min_value, dst_pixels[p]);
+            }
+        }
+    }
+
+    // Only create single channel image if it has values other than 1.0.
+    if (min_value < 255) {
+        converted_images.insert({ converted_image_hash, single_channel_image_ID });
+        return single_channel_image_ID;
+    } else {
+        Images::destroy(single_channel_image_ID);
+        converted_images.insert({ converted_image_hash, Images::UID::invalid_UID() });
+        return Images::UID::invalid_UID();
+    }
+}
+
+Image extract_tint_roughness(Image tint_image, Image roughness_image, ImageCache& converted_images) {
+    // Handle case where tint doesn't exist.
+    if (!tint_image.exists())
+        return extract_channel(roughness_image, 1, ImageUsage::Roughness, converted_images);
+
+    // Return tint_image if it has three channels and roughness image doesn't exist.
+    if (!roughness_image.exists() && channel_count(tint_image.get_pixel_format()) == 3)
+        return tint_image;
+
+    auto tint_roughness_image_hash = hash_converted_image(tint_image.get_ID(), roughness_image.get_ID(), ImageUsage::Tint_roughness);
+    auto& converted_image_itr = converted_images.find(tint_roughness_image_hash);
+    if (converted_image_itr != converted_images.end())
+        return converted_image_itr->second;
+
+    unsigned int mipmap_count = tint_image.get_mipmap_count();
+    Vector2ui size = Vector2ui(tint_image.get_width(), tint_image.get_height());
+    Image dst_image = Images::create2D(tint_image.get_name() + "_tint_roughness", PixelFormat::RGBA32, tint_image.get_gamma(), size, mipmap_count);
+
+    // Fill tint channels
+    assert(tint_image.get_pixel_format() == PixelFormat::RGB24 || tint_image.get_pixel_format() == PixelFormat::RGBA32);
+    for (unsigned int m = 0; m < mipmap_count; ++m) {
+        unsigned char* src_pixels = (unsigned char*)tint_image.get_pixels(m);
+        int src_pixel_size = size_of(tint_image.get_pixel_format());
+        RGBA32* dst_pixels = dst_image.get_pixels<RGBA32>(m);
+
+        int pixel_count = tint_image.get_pixel_count(m);
+        for (int p = 0; p < pixel_count; ++p) {
+            dst_pixels[p].r = src_pixels[0];
+            dst_pixels[p].g = src_pixels[1];
+            dst_pixels[p].b = src_pixels[2];
+            dst_pixels[p].a = 255;
+            src_pixels += src_pixel_size;
+        }
+    }
+
+    // Fill roughness channels. NOTE Gamma correct?
+    if (roughness_image.exists() && channel_count(roughness_image.get_pixel_format()) >= 2) {
+        auto roughness_pixel_format = roughness_image.get_pixel_format();
+        // Assert that image dimensions of the two images are equal and that the roughness image has 8bit channels.
+        assert(tint_image.get_width() == roughness_image.get_width());
+        assert(tint_image.get_height() == roughness_image.get_height());
+        assert(tint_image.get_mipmap_count() == roughness_image.get_mipmap_count());
+        assert(roughness_pixel_format == PixelFormat::RGB24 || roughness_pixel_format == PixelFormat::RGBA32);
+        for (unsigned int m = 0; m < mipmap_count; ++m) {
+            unsigned char* src_pixels = (unsigned char*)roughness_image.get_pixels(m);
+            int src_pixel_size = size_of(roughness_image.get_pixel_format());
+            RGBA32* dst_pixels = dst_image.get_pixels<RGBA32>(m);
+
+            int pixel_count = tint_image.get_pixel_count(m);
+            for (int p = 0; p < pixel_count; ++p) {
+                dst_pixels[p].a = src_pixels[1];
+                src_pixels += src_pixel_size;
+            }
+        }
+    }
+
+    converted_images.insert({ tint_roughness_image_hash, dst_image.get_ID() });
+    return dst_image;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -281,7 +436,7 @@ SceneNodes::UID load(const std::string& filename) {
     }
 
     // Import materials.
-    std::unordered_map<ConvertedImageKey, Images::UID, ConvertedImageKeyHasher> converted_images;
+    ImageCache converted_images;
     auto loaded_material_IDs = std::vector<Materials::UID>(model.materials.size());
     for (int i = 0; i < model.materials.size(); ++i) {
         Materials::Data mat_data = {};
@@ -305,77 +460,32 @@ SceneNodes::UID load(const std::string& filename) {
             }
         }
 
+        TextureState tint_coverage_tex;
+        TextureState metallic_roughness_tex;
+
         for (const auto& val : glTF_mat.values) {
             if (val.first.compare("baseColorFactor") == 0) {
                 auto tint = val.second.number_array;
                 mat_data.tint = { float(tint[0]), float(tint[1]), float(tint[2]) };
-            } else if (val.first.compare("baseColorTexture") == 0) {
-                const auto& glTF_texture = model.textures[val.second.TextureIndex()];
-                const auto& glTF_image = model.images[glTF_texture.source];
-                Images::UID image_ID;
-                memcpy(&image_ID, glTF_image.image.data(), sizeof(image_ID));
-                assert(Images::has(image_ID));
-                Image image = image_ID;
-                image.set_name(glTF_mat.name + "_tint");
-
-                // Extract sampler params first and use for both tint and coverage.
-                MagnificationFilter magnification_filter = MagnificationFilter::Linear;
-                MinificationFilter minification_filter = MinificationFilter::Trilinear;
-                WrapMode wrapU = WrapMode::Repeat;
-                WrapMode wrapV = WrapMode::Repeat;
-                if (glTF_texture.sampler >= 0) {
-                    const auto& glTF_sampler = model.samplers[glTF_texture.sampler];
-                    magnification_filter = convert_magnification_filter(glTF_sampler.magFilter);
-                    minification_filter = convert_minification_filter(glTF_sampler.minFilter);
-                    wrapU = convert_wrap_mode(glTF_sampler.wrapR);
-                    wrapV = convert_wrap_mode(glTF_sampler.wrapS);
-                }
-
-                // Attempt to extract a coverage image if the color texture has an alpha channel and a blend mode was defined.
-                if (channel_count(image.get_pixel_format()) == 4 && !is_opaque) {
-
-                    auto converted_image_key = ConvertedImageKey(image.get_ID(), ImageUsage::Coverage);
-                    auto& converted_image_itr = converted_images.find(converted_image_key);
-                    if (converted_image_itr != converted_images.end()) {
-                        if (converted_image_itr->second != Images::UID::invalid_UID())
-                            mat_data.coverage_texture_ID = Textures::create2D(converted_image_itr->second);
-                    } else {
-                        // Extract coverage.
-                        assert(image.get_pixel_format() == PixelFormat::RGBA32);
-                        unsigned int mipmap_count = image.get_mipmap_count();
-                        Vector2ui size = Vector2ui(image.get_width(), image.get_height());
-                        Images::UID coverage_image_ID = Images::create2D(glTF_mat.name + "_coverage", PixelFormat::A8, 1.0, size, mipmap_count);
-
-                        unsigned char min_coverage = 255;
-                        for (unsigned int m = 0; m < mipmap_count; ++m) {
-                            RGBA32* image_pixels = image.get_pixels<RGBA32>(m);
-                            unsigned char* coverage_pixels = Images::get_pixels<unsigned char>(coverage_image_ID, m);
-
-                            int pixel_count = image.get_pixel_count(m);
-                            for (int p = 0; p < pixel_count; ++p) {
-                                coverage_pixels[p] = image_pixels[p].a;
-                                min_coverage = min(min_coverage, coverage_pixels[p]);
-                            }
-                        }
-
-                        // Only add coverage image if it has an effect.
-                        if (min_coverage < 255) {
-                            converted_images.insert({ converted_image_key, coverage_image_ID });
-                            mat_data.coverage_texture_ID = Textures::create2D(coverage_image_ID, magnification_filter, minification_filter, wrapU, wrapV);
-                        } else {
-                            Images::destroy(coverage_image_ID);
-                            converted_images.insert({ converted_image_key, Images::UID::invalid_UID() });
-                        }
-                    }
-                }
-
-                // Create tint texture.
-                mat_data.tint_roughness_texture_ID = Textures::create2D(image_ID, magnification_filter, minification_filter, wrapU, wrapV);
-            } else if (val.first.compare("roughnessFactor") == 0)
+            } else if (val.first.compare("baseColorTexture") == 0)
+                tint_coverage_tex.parse_glTF_texture(model, val.second.TextureIndex());
+            else if (val.first.compare("metallicRoughnessTexture") == 0)
+                metallic_roughness_tex.parse_glTF_texture(model, val.second.TextureIndex());
+            else if (val.first.compare("roughnessFactor") == 0)
                 mat_data.roughness = float(val.second.Factor());
             else if (val.first.compare("metallicFactor") == 0)
                 mat_data.metallic = float(val.second.Factor());
         }
+
+        // Convert images from glTF channel layout to Bifrost channel layout.
+        auto metallic_image = extract_channel(metallic_roughness_tex.Image_ID, 2, ImageUsage::Metallic, converted_images);
+        mat_data.metallic_texture_ID = metallic_roughness_tex.Sampler.create_texture_2D(metallic_image.get_ID());
+
+        auto coverage_image = extract_channel(tint_coverage_tex.Image_ID, 3, ImageUsage::Coverage, converted_images);
+        mat_data.coverage_texture_ID = tint_coverage_tex.Sampler.create_texture_2D(coverage_image.get_ID());
+
+        auto tint_roughness_image = extract_tint_roughness(tint_coverage_tex.Image_ID, metallic_roughness_tex.Image_ID, converted_images);
+        mat_data.tint_roughness_texture_ID = tint_coverage_tex.Sampler.create_texture_2D(tint_roughness_image.get_ID());
 
         loaded_material_IDs[i] = Materials::create(glTF_mat.name, mat_data);
     }
