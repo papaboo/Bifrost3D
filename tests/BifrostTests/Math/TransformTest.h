@@ -77,7 +77,7 @@ TEST_F(Math_Transform, apply_scale) {
 TEST_F(Math_Transform, matrix_representation) {
     Transform t = Transform(Vector3f(3, -4, 1), normalize(Quaternionf(4,2,-7, 3)), 0.75f);
 
-    Matrix4x3f m4x3 = to_matrix4x3(t);
+    Matrix3x4f m4x3 = to_matrix3x4(t);
     Matrix4x4f m4x4 = to_matrix4x4(t);
 
     // Compare transformations of points.

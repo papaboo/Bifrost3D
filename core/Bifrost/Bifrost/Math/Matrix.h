@@ -177,12 +177,12 @@ public:
 
 template <typename T> using Matrix2x2 = Matrix<Vector2<T>, Vector2<T>>;
 template <typename T> using Matrix3x3 = Matrix<Vector3<T>, Vector3<T>>;
-template <typename T> using Matrix4x3 = Matrix<Vector4<T>, Vector3<T>>;
+template <typename T> using Matrix3x4 = Matrix<Vector4<T>, Vector3<T>>;
 template <typename T> using Matrix4x4 = Matrix<Vector4<T>, Vector4<T>>;
 
 using Matrix2x2f = Matrix2x2<float>;
 using Matrix3x3f = Matrix3x3<float>;
-using Matrix4x3f = Matrix4x3<float>;
+using Matrix3x4f = Matrix3x4<float>;
 using Matrix4x4f = Matrix4x4<float>;
 
 // Compute the determinant of a 2x2 matrix.

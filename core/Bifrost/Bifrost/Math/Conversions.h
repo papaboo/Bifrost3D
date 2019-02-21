@@ -66,24 +66,23 @@ inline Quaternion<T> to_quaternion(const Matrix3x3<T> m) {
     }
 }
 
-inline Matrix4x3f to_matrix4x3(Transform t) {
+inline Matrix3x4f to_matrix3x4(Transform t) {
     const Matrix3x3f r = to_matrix3x3(t.rotation);
     const float s = t.scale;
-    Matrix4x3f res = { s * r[0][0], s * r[0][1], s * r[0][2], t.translation.x,
-                       s * r[1][0], s * r[1][1], s * r[1][2], t.translation.y,
-                       s * r[2][0], s * r[2][1], s * r[2][2], t.translation.z };
-    return res;
+    return { s * r[0][0], s * r[0][1], s * r[0][2], t.translation.x,
+             s * r[1][0], s * r[1][1], s * r[1][2], t.translation.y,
+             s * r[2][0], s * r[2][1], s * r[2][2], t.translation.z };
 }
 
 inline Matrix4x4f to_matrix4x4(Transform t) {
     const Matrix3x3f r = to_matrix3x3(t.rotation);
     const float s = t.scale;
-    Matrix4x4f res = { s * r[0][0], s * r[0][1], s * r[0][2], t.translation.x,
-                       s * r[1][0], s * r[1][1], s * r[1][2], t.translation.y,
-                       s * r[2][0], s * r[2][1], s * r[2][2], t.translation.z,
-                       0.0f,        0.0f,        0.0f,        1.0f };
-    return res;
+    return { s * r[0][0], s * r[0][1], s * r[0][2], t.translation.x,
+             s * r[1][0], s * r[1][1], s * r[1][2], t.translation.y,
+             s * r[2][0], s * r[2][1], s * r[2][2], t.translation.z,
+             0.0f,        0.0f,        0.0f,        1.0f };
 }
+
 } // NS Math
 } // NS Bifrost
 

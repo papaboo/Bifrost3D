@@ -128,7 +128,7 @@ private:
         Matrix4x4f inverse_view_projection_matrix;
         Matrix4x4f projection_matrix;
         Matrix4x4f inverse_projection_matrix;
-        Matrix4x3f world_to_view_matrix;
+        Matrix3x4f world_to_view_matrix;
     };
     OBuffer m_scene_buffer;
 
@@ -496,7 +496,7 @@ public:
             scene_vars.inverse_view_projection_matrix = to_matrix4x4(invert(view_transform)) * inverse_projection_matrix;
             scene_vars.projection_matrix = projection_matrix;
             scene_vars.inverse_projection_matrix = inverse_projection_matrix;
-            scene_vars.world_to_view_matrix = to_matrix4x3(view_transform);
+            scene_vars.world_to_view_matrix = to_matrix3x4(view_transform);
             m_render_context->UpdateSubresource(m_scene_buffer, 0, nullptr, &scene_vars, 0, 0);
             m_render_context->VSSetConstantBuffers(13, 1, &m_scene_buffer);
             m_render_context->PSSetConstantBuffers(13, 1, &m_scene_buffer);
