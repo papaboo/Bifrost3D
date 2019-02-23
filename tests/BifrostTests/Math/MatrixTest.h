@@ -25,6 +25,9 @@ protected:
     static bool compare_matrix3x3f(Matrix3x3f lhs, Matrix3x3f rhs, unsigned short max_ulps) {
         return almost_equal(lhs, rhs, max_ulps);
     }
+    static bool compare_matrix3x4f(Matrix3x4f lhs, Matrix3x4f rhs, unsigned short max_ulps) {
+        return almost_equal(lhs, rhs, max_ulps);
+    }
     static bool compare_matrix4x4f(Matrix4x4f lhs, Matrix4x4f rhs, unsigned short max_ulps) {
         return almost_equal(lhs, rhs, max_ulps);
     }
@@ -65,6 +68,37 @@ TEST_F(Math_Matrix, invert4x4) {
     unsigned short max_error = 10;
     EXPECT_PRED3(compare_matrix4x4f, mat * mat_inverse, Matrix4x4f::identity(), max_error);
     EXPECT_PRED3(compare_matrix4x4f, mat_inverse * mat, Matrix4x4f::identity(), max_error);
+}
+
+TEST_F(Math_Matrix, affine_matrix3x4_multiply) {
+    static auto to_matrix4x4 = [](Matrix3x4f m) -> Matrix4x4f {
+        Matrix4x4f res;
+        res.set_row(0, m.get_row(0));
+        res.set_row(1, m.get_row(1));
+        res.set_row(2, m.get_row(2));
+        res.set_row(3, Vector4f(0, 0, 0, 1));
+        return res;
+    };
+
+    Matrix3x4f identity = { 1, 0, 0, 0,
+                            0, 1, 0, 0,
+                            0, 0, 1, 0 };
+
+    Matrix3x4f translation = { 0, 0, 0, 2,
+                               0, 0, 0, -3,
+                               0, 0, 0, 5 };
+
+    Matrix3x4f gibberish = { 4, 1, 8, 5,
+                             2, 7, 0, 3,
+                             5, 1, 5, 1 };
+
+    unsigned short max_error = 10;
+    EXPECT_PRED3(compare_matrix3x4f, identity * identity, identity, 0);
+    EXPECT_PRED3(compare_matrix3x4f, identity * translation, translation, 0);
+    EXPECT_PRED3(compare_matrix3x4f, translation * identity, translation, 0);
+    EXPECT_PRED3(compare_matrix3x4f, identity * gibberish, gibberish, 0);
+    EXPECT_PRED3(compare_matrix3x4f, gibberish * identity, gibberish, 0);
+    EXPECT_PRED3(compare_matrix4x4f, to_matrix4x4(gibberish * translation), to_matrix4x4(gibberish) * to_matrix4x4(translation), 0);
 }
 
 } // NS Math

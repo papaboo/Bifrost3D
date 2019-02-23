@@ -283,6 +283,18 @@ inline Row operator*(Column lhs, Matrix<Row, Column> rhs) {
     return res;
 }
 
+// Specialized multiplication operator for affine matrices. The bottom row is implicitly set to [0,0,0,1].
+template <typename T>
+inline Matrix3x4<T> operator*(Matrix3x4<T> affine_lhs, Matrix3x4<T> affine_rhs) {
+    Matrix3x4<T> res;
+    for (int r = 0; r < 3; ++r)
+        for (int c = 0; c < 4; ++c) {
+            res[r][c] = affine_lhs[r][0] * affine_rhs[0][c] + affine_lhs[r][1] * affine_rhs[1][c] + affine_lhs[r][2] * affine_rhs[2][c];
+            if (c == 3)
+                res[r][c] += affine_lhs[r][3];
+        }
+    return res;
+}
 
 template <typename Row, typename Column>
 inline bool almost_equal(Matrix<Row, Column> lhs, Matrix<Row, Column> rhs, unsigned short max_ulps = 4) {
