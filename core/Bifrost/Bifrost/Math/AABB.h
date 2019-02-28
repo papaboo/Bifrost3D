@@ -34,7 +34,7 @@ public:
     }
 
     static inline AABB invalid() {
-        return AABB(Vector3f(1e30f), Vector3f(-1e30f));
+        return AABB(Vector3f(std::numeric_limits<float>::infinity()), Vector3f(-std::numeric_limits<float>::infinity()));
     }
 
     //*************************************************************************
