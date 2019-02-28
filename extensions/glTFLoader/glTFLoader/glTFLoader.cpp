@@ -30,6 +30,7 @@ using namespace Bifrost::Math;
 using namespace Bifrost::Scene;
 
 using Matrix3x3d = Matrix3x3<double>;
+using Matrix3x4d = Matrix3x4<double>;
 
 namespace glTFLoader {
 
@@ -44,8 +45,22 @@ inline bool string_ends_with(const std::string& s, const std::string& end) {
     return s.compare(s.length() - end.length(), end.length(), end) == 0;
 }
 
+inline Matrix3x4d to_matrix3x4d(Transform t) {
+    Matrix3x4f m = to_matrix3x4(t);
+    return { Vector4d(m.get_row(0)), Vector4d(m.get_row(1)), Vector4d(m.get_row(2)) };
+}
+
+inline Matrix3x4f to_matrix3x4f(Matrix3x4d m) {
+    return { Vector4f(m.get_row(0)), Vector4f(m.get_row(1)), Vector4f(m.get_row(2)) };
+}
+
 struct RGBA32 { unsigned char r, g, b, a; };
 
+
+struct LoadedMesh {
+    Meshes::UID ID;
+    bool is_used;
+};
 // ------------------------------------------------------------------------------------------------
 // Texture sampler conversion utils.
 // ------------------------------------------------------------------------------------------------
@@ -272,54 +287,82 @@ Image extract_tint_roughness(Image tint_image, Image roughness_image, const std:
 }
 
 // ------------------------------------------------------------------------------------------------
+// Transformations
+// ------------------------------------------------------------------------------------------------
+
+// Decompose an affine 4x4 matrix, represented as a 3x4, into a Transform with translation, rotation and scale.
+// Returns true if the matrix was percetly decomposed into a transform and false if the transform could not represent all aspects of the matrix.
+bool decompose_transformation(Matrix3x4d matrix, Transform& transform) {
+    Matrix3x3d linear_part;
+    linear_part.set_column(0, matrix.get_column(0));
+    linear_part.set_column(1, matrix.get_column(1));
+    linear_part.set_column(2, matrix.get_column(2));
+
+    // Volume preserving scale
+    double determinant = Bifrost::Math::determinant(linear_part);
+    transform.scale = float(pow(determinant, 1 / 3.0));
+
+    // Rotation
+    linear_part /= transform.scale;
+    transform.rotation = to_quaternion(linear_part);
+    static auto is_approx_one = [](double v) -> bool { return 0.999 < v && v < 1.001; };
+    bool decomposed_perfectly = is_approx_one(magnitude(transform.rotation));
+    transform.rotation = normalize(transform.rotation);
+
+    // Translation
+    transform.translation = Vector3f(matrix.get_column(3));
+
+    return decomposed_perfectly;
+}
+
+// ------------------------------------------------------------------------------------------------
 // Importer
 // ------------------------------------------------------------------------------------------------
 
-SceneNodes::UID import_node(const tinygltf::Model& model, const tinygltf::Node& node, const Transform parent_transform,
-                            const std::vector<int>& meshes_start_index, const std::vector<Mesh>& meshes,
+SceneNodes::UID import_node(const tinygltf::Model& model, const tinygltf::Node& node, const Matrix3x4d parent_transform, 
+                            const std::vector<int>& meshes_start_index, std::vector<LoadedMesh>& meshes,
                             const std::vector<Materials::UID>& material_IDs) {
     // Local transform and scene node.
-    Transform local_transform;
+    Matrix3x4d local_transform;
     if (node.matrix.size() == 16) {
-        // Decompose into scale, rotation and translation.
         const auto& m = node.matrix;
-        Matrix3x3d linear_part = { m[0], m[4], m[8],
-                                   m[1], m[5], m[9],
-                                   m[2], m[6], m[10] };
-
-        Vector3d scales = { magnitude(linear_part.get_column(0)), magnitude(linear_part.get_column(1)), magnitude(linear_part.get_column(2)) };
-        float scale = float(scales.x); // TODO Extract min scale and apply non-uniform scaling.
-
-        // Normalize each row.
-        for (int r = 0; r < 3; ++r)
-            linear_part.set_column(r, normalize(linear_part.get_column(r)));
-        Quaterniond rotation = to_quaternion(linear_part);
-        Vector3f translation = Vector3f(Vector3d(m[12], m[13], m[14]));
-        local_transform = Transform(translation, Quaternionf(rotation), scale);
+        local_transform = { m[0], m[4], m[8], m[12],
+                            m[1], m[5], m[9], m[13],
+                            m[2], m[6], m[10], m[14] };
     } else {
         const auto& s = node.scale;
-        float scale = s.size() == 0 ? 1.0f : float((s[0] + s[1] + s[2]) / 3.0); // Only uniform scaling supported.
+        assert(s.size() == 0 || (s[0] == s[1] && s[0] == s[2])); // Only uniform scaling supported.
+        float scale = s.size() == 0 ? 1.0f : float(pow(s[0] * s[1] * s[2], 1 / 3.0));
         const auto& r = node.rotation;
         Quaternionf rotation = r.size() == 0 ? Quaternionf::identity() : Quaterniond(r[0], r[1], r[2], r[3]);
         const auto& t = node.translation;
         Vector3f translation = t.size() == 0 ? Vector3f::zero() : Vector3f(Vector3d(t[0], t[1], t[2]));
-        local_transform = Transform(translation, rotation, scale);
+        local_transform = to_matrix3x4d(Transform(translation, rotation, scale));
     }
 
     // X-coord is negated as glTF uses a right-handed coordinate system and Bifrost a right-handed.
-    // This also means that we have to invert some of the entries in the quaternion, specifically .x and the rotation direction in .w.
-    local_transform.rotation.x = -local_transform.rotation.x;
-    local_transform.rotation.w = -local_transform.rotation.w;
-    local_transform.translation.x = -local_transform.translation.x;
+    // This also means that we have to invert some of the entries in the rotation matrix, specifically [0,1], [0,2], [1,0] and [2,0].
+    local_transform[0][1] = -local_transform[0][1];
+    local_transform[0][2] = -local_transform[0][2];
+    local_transform[1][0] = -local_transform[1][0];
+    local_transform[2][0] = -local_transform[2][0];
+    local_transform[0][3] = -local_transform[0][3];
 
-    Transform global_transform = parent_transform * local_transform;
-    SceneNodes::UID scene_node_ID = SceneNodes::create(node.name, global_transform);
+    Matrix3x4d global_transform = parent_transform * local_transform;
+
+    Transform decomposed_global_transform;
+    bool apply_residual_transformation = !decompose_transformation(global_transform, decomposed_global_transform);
+
+    SceneNodes::UID scene_node_ID = SceneNodes::create(node.name, decomposed_global_transform);
 
     if (node.mesh >= 0) {
         // Get loaded mesh indices.
         int glTF_mesh_index = node.mesh;
         int mesh_index = meshes_start_index[glTF_mesh_index];
         int mesh_end_index = meshes_start_index[glTF_mesh_index + 1];
+
+        // The residual transformation represents the transformation on the mesh that cannot be expressed by a Transform, e.g non-uniform scaling and shearing.
+        Matrix3x4f residual_transformation = to_matrix3x4f(to_matrix3x4d(invert(decomposed_global_transform)) * global_transform);
 
         for (const auto& primitive : model.meshes[glTF_mesh_index].primitives) {
             if (primitive.mode != TINYGLTF_MODE_TRIANGLES) {
@@ -328,9 +371,15 @@ SceneNodes::UID import_node(const tinygltf::Model& model, const tinygltf::Node& 
             }
 
             // Create model.
-            Mesh mesh = meshes[mesh_index++];
+            auto& mesh = meshes[mesh_index++];
+            Meshes::UID mesh_ID = mesh.ID;
+            if (apply_residual_transformation) {
+                mesh_ID = MeshUtils::deep_clone(mesh_ID);
+                MeshUtils::transform_mesh(mesh_ID, residual_transformation);
+            }
+            mesh.is_used = mesh_ID == mesh.ID;
             auto material_ID = material_IDs[primitive.material];
-            MeshModels::create(scene_node_ID, mesh.get_ID(), material_ID);
+            MeshModels::create(scene_node_ID, mesh_ID, material_ID);
         }
     }
 
@@ -455,7 +504,7 @@ SceneNodes::UID load(const std::string& filename) {
         for (const auto& val : glTF_mat.additionalValues) {
             if (val.first.compare("doubleSided") == 0)
                 // NOTE to self: Double sided should set a 'thin/doubleSided' property on the meshes instead of on the materials.
-                // In case the mesh is used by one sided and two sided meshes, we need to duplicate the mesh.
+                // In case the material is used by one sided and two sided meshes, we need to duplicate the mesh or keep the doubleSided
                 printf("GLTFLoader::load warning: doubleSided property not supported.\n");
             else if (val.first.compare("alphaMode") == 0) {
                 is_opaque = false;
@@ -509,10 +558,10 @@ SceneNodes::UID load(const std::string& filename) {
     }
 
     // Import models.
+    auto loaded_meshes = std::vector<LoadedMesh>();
+    loaded_meshes.reserve(model.meshes.size());
     auto loaded_meshes_start_index = std::vector<int>();
     loaded_meshes_start_index.reserve(model.meshes.size());
-    auto loaded_meshes = std::vector<Mesh>();
-    loaded_meshes.reserve(model.meshes.size());
     for (const auto& glTF_mesh : model.meshes) {
         // Mark at what index in loaded_meshes that the models corresponding to the current glTF mesh begins.
         loaded_meshes_start_index.push_back(loaded_meshes.size());
@@ -632,7 +681,7 @@ SceneNodes::UID load(const std::string& filename) {
 
             mesh.set_bounds(AABB(min_position, max_position));
 
-            loaded_meshes.push_back(mesh);
+            loaded_meshes.push_back({ mesh.get_ID(), false });
         }
     }
     // Finally push the total number of meshes to allow fetching begin and end indices as [index] and [index+1]
@@ -648,21 +697,31 @@ SceneNodes::UID load(const std::string& filename) {
 
         // No scene loaded.
         if (model.defaultScene < 0)
-            SceneNodes::UID::invalid_UID();
+            return SceneNodes::UID::invalid_UID();
+
+        static auto destroy_unused_meshes = [](const std::vector<LoadedMesh>& meshes) {
+            for (auto mesh : meshes)
+                if (!mesh.is_used)
+                    Meshes::destroy(mesh.ID);
+        };
 
         const tinygltf::Scene& scene = model.scenes[model.defaultScene];
+        Matrix3x4d identity_transform = { {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0 } };
         if (scene.nodes.size() == 1) {
             // Only one node. Import it and return.
             const auto& node = model.nodes[scene.nodes[0]];
-            return import_node(model, node, Transform::identity(), loaded_meshes_start_index, loaded_meshes, loaded_material_IDs);
+            SceneNodes::UID root_node_ID = import_node(model, node, identity_transform, loaded_meshes_start_index, loaded_meshes, loaded_material_IDs);
+            destroy_unused_meshes(loaded_meshes);
+            return root_node_ID;
         } else {
             // Several root nodes in the scene. Attach them to a single common root node.
             SceneNode root_node = SceneNodes::create("Scene root");
             for (size_t i = 0; i < scene.nodes.size(); i++) {
                 const auto& node = model.nodes[scene.nodes[i]];
-                SceneNode child_node = import_node(model, node, root_node.get_global_transform(), loaded_meshes_start_index, loaded_meshes, loaded_material_IDs);
+                SceneNode child_node = import_node(model, node, identity_transform, loaded_meshes_start_index, loaded_meshes, loaded_material_IDs);
                 child_node.set_parent(root_node);
             }
+            destroy_unused_meshes(loaded_meshes);
             return root_node.get_ID();
         }
     }
