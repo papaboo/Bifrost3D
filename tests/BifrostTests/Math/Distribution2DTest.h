@@ -23,15 +23,15 @@ GTEST_TEST(Math_Distribution2D, single_value_function) {
 
     const Distribution2D<float> distribution = Distribution2D<float>(&f, 1, 1);
 
-    EXPECT_EQ(Vector2f::zero(), distribution.sample_discrete(Vector2f(0.0f, 0.0f)).index);
+    EXPECT_EQ(Vector2i::zero(), distribution.sample_discrete(Vector2f(0.0f, 0.0f)).index);
     EXPECT_FLOAT_EQ(1.0f, distribution.sample_discrete(Vector2f(0.0f, 0.0f)).PDF);
-    EXPECT_EQ(Vector2f::zero(), distribution.sample_discrete(Vector2f(nearly_one, 0.0f)).index);
+    EXPECT_EQ(Vector2i::zero(), distribution.sample_discrete(Vector2f(nearly_one, 0.0f)).index);
     EXPECT_FLOAT_EQ(1.0f, distribution.sample_discrete(Vector2f(nearly_one, 0.0f)).PDF);
-    EXPECT_EQ(Vector2f::zero(), distribution.sample_discrete(Vector2f(0.0f, nearly_one)).index);
+    EXPECT_EQ(Vector2i::zero(), distribution.sample_discrete(Vector2f(0.0f, nearly_one)).index);
     EXPECT_FLOAT_EQ(1.0f, distribution.sample_discrete(Vector2f(0.0f, nearly_one)).PDF);
-    EXPECT_EQ(Vector2f::zero(), distribution.sample_discrete(Vector2f(nearly_one, nearly_one)).index);
+    EXPECT_EQ(Vector2i::zero(), distribution.sample_discrete(Vector2f(nearly_one, nearly_one)).index);
     EXPECT_FLOAT_EQ(1.0f, distribution.sample_discrete(Vector2f(nearly_one, nearly_one)).PDF);
-    EXPECT_EQ(Vector2f::zero(), distribution.sample_discrete(Vector2f(0.5f, 0.5f)).index);
+    EXPECT_EQ(Vector2i::zero(), distribution.sample_discrete(Vector2f(0.5f, 0.5f)).index);
     EXPECT_FLOAT_EQ(1.0f, distribution.sample_discrete(Vector2f(0.5f, 0.5f)).PDF);
 }
 

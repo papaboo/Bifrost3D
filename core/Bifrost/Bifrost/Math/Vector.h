@@ -33,7 +33,7 @@ public:
     explicit Vector2(T s) : x(s), y(s) { }
     Vector2(T x, T y) : x(x), y(y) { }
     template <typename U>
-    Vector2(const Vector2<U>& v) : x(T(v.x)), y(T(v.y)) { }
+    explicit Vector2(const Vector2<U>& v) : x(T(v.x)), y(T(v.y)) { }
 
     static inline Vector2<T> zero() { return Vector2<T>(0, 0); }
     static inline Vector2<T> one() { return Vector2<T>(1, 1); }
