@@ -1,44 +1,22 @@
-* glTF
-** Apply non-uniform scaling to meshes. Find a model with non-uniform scale to test.
-*** Remember to update bounds
-** Assert on non-handled properties (animations, curves, ...)
-** Rename to glTFLoader
-
-
-** Material model blog post
-*** Update webpage. Ugh!
-*** Show off image with metal and details (lighthouse/rust) and shader balls. Reuse for different material realisations. (Save material and post processing parameters.)
-*** Material philosofy. 
-**** Same as Epic and Disney.
-***** Perceptually linear
-***** Debating whether to add specularity or not.
-**** Satisfy BRDF rules.
-*** Parameters.
-**** Lerp of different parameters.
-**** Implement metallic by linear interpolation of dielectric and conductor parameters.
-***** Just show as lerp(dielectric_rho, conductor_rho, metallic) and write that a lot can be simplified.
-*** Construction.
-*** Lambert
-*** Add GGX.
-*** Energy conservation.
-**** Hot white/grey room.
-*** Approximate microfacet interreflection by assuming no energy loss, i.e. white is white! Assume diffuse distribution and add interreflection to diffuse.
-*** Woops, what happened to reciprocity.
-**** Try to reintroduce the heimholtz reciprocity. Then diffuse * (1 - rho) can't be precomputed anymore. Do it in a separate material, so I can swap back and forth.
-**** Fix and show images with hopefully no perceptual difference.
-*** Future work
-**** Better interreflection energy approximation by fitting to Heitz paper.
-**** Iridescence / clear coat, translucency and anisotrophy.
-
-
 BACKLOG:
+* MSVC
+** https://blogs.msdn.microsoft.com/vcblog/2016/10/26/recommendations-to-speed-c-builds-in-visual-studio/
+** Parallelize cuda compilation
+** #define always_inline for VS, GCC and clang and use in math.
+*** https://news.ycombinator.com/item?id=9722897
 * Faster convergence
-** Convergence on blue tourus in test scene seems slow near the blinking light. It should get a lot more samples from next event estimation
+** Improved GGX sampling file:///C:/Users/Asger%20Hoedt/Downloads/Heitz2018GGX.pdf
+*** OptiX
+*** Use for DX11 IBL convolution and InfiniteAreaLight convolution? Would it even be different than the current one?
 ** Solid angle sampled sphere light.
 ** Pixar's PMJ02 sampler with test app. (Replicate their test setup)
 *** Perhaps test with SmallGI type scene and reference image?
 *** How to hash pixel index and depth? And is it really hash(pixel_index, depth, iteration)?? Ask Per
 ** Scrambled (reverse) Halton - Stratified sampling for stochastic transparency. With Burley hash function (where do I get that? Per)
+* OptiX 6.X and CUDA 10
+** Use VS 2017.
+*** Remove nested namespaces
+** Check if support for actual pixel formats and samplers instead of just types and channel count.
 * OptiX (filtering) backends
 ** Try OptiX 5 AI denoiser
 ** Filter neighbouring light samples before reconstruction - Screen space photon mapping approach with MIS weights / Path filtering.
@@ -70,15 +48,13 @@ BACKLOG:
 ** Bump mapping
 *** Filter bumpmap mipmaps using Toksvig05, SGGX or AGAA NDF construction.
 *** Compute AO maps based on normal maps.
-** 'Fix' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles. (Offset normal by -view_dir until the dot product is 0.)
-** Or warp the hemisphere by the shading normal, such that the hemisphere is turned into a cone that only grazes the surface. That way samples would need to be converted from hemisphere to cone and back again. Pro: No special casing on light / view direction. Con: Black surface when view dir is outside the cone.
+*** Warp the hemisphere by the shading normal, such that samples are always drawn in an unwarped hemisphere, but then warped such that <0,0,1> corresponds to the shading/bump normal direction and samples halfway between <0,0,1> and the border of the hemisphere will be warped to be halfway between the shading normal and hemisphere.
+*** 'Fix' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles. (Offset normal by -view_dir until the dot product is 0.)
+*** Or warp the hemisphere by the shading normal, such that the hemisphere is turned into a cone that only grazes the surface. That way samples would need to be converted from hemisphere to cone and back again. Pro: No special casing on light / view direction. Con: Black surface when view dir is outside the cone.
 ** Perhaps just dim 'blocked' regions as they could be lit indirectly.
 * BTDF
 ** Transmission factor. Use IOR computed from specularity.
 * Multiple scenes.
-* 3DS, STL and PLY loader.
-* glTF exporter.
-** Convert SanMiguel and Rungholt
 
 libs
 * TinyDNN

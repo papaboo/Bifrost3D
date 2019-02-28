@@ -557,6 +557,18 @@ SceneNodes::UID load(const std::string& filename) {
         }
     }
 
+    // Animations
+    if (model.animations.size() > 0)
+        printf("GLTFLoader::load warning: Animations are not supported and will be ignored.\n");
+
+    // Cameras
+    if (model.cameras.size() > 0)
+        printf("GLTFLoader::load warning: Cameras are not supported and will be ignored.\n");
+
+    // Skins
+    if (model.skins.size() > 0)
+        printf("GLTFLoader::load warning: Skins are not supported and will be ignored.\n");
+
     // Import models.
     auto loaded_meshes = std::vector<LoadedMesh>();
     loaded_meshes.reserve(model.meshes.size());
