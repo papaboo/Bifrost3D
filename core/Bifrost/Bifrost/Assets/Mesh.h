@@ -14,6 +14,7 @@
 #include <Bifrost/Core/Iterable.h>
 #include <Bifrost/Core/UniqueIDGenerator.h>
 #include <Bifrost/Math/AABB.h>
+#include <Bifrost/Math/Matrix.h>
 #include <Bifrost/Math/Transform.h>
 #include <Bifrost/Math/Vector.h>
 
@@ -173,6 +174,10 @@ private:
 // * Utility function for computing tangents and normals on bump mapped surfaces. Possibly splitting the mesh.
 //----------------------------------------------------------------------------
 namespace MeshUtils {
+
+Meshes::UID deep_clone(Meshes::UID mesh_ID);
+void transform_mesh(Meshes::UID mesh_ID, Math::Matrix3x4f affine_transform);
+void transform_mesh(Meshes::UID mesh_ID, Math::Transform transform);
 
 //-------------------------------------------------------------------------
 // Mesh combine utilities.

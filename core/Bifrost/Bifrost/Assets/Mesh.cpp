@@ -8,8 +8,9 @@
 
 #include <Bifrost/Assets/Mesh.h>
 
+#include <Bifrost/Math/Conversions.h>
+
 #include <assert.h>
-#include <cmath>
 
 using namespace Bifrost::Math;
 
@@ -101,11 +102,11 @@ Meshes::UID Meshes::create(const std::string& name, unsigned int primitive_count
 
     m_names[id] = name;
     m_buffers[id].primitive_count = primitive_count;
-    m_buffers[id].primitives = new Math::Vector3ui[primitive_count];
+    m_buffers[id].primitives = new Vector3ui[primitive_count];
     m_buffers[id].vertex_count = vertex_count;
-    m_buffers[id].positions = (buffer_bitmask & MeshFlag::Position) ? new Math::Vector3f[vertex_count] : nullptr;
-    m_buffers[id].normals = (buffer_bitmask & MeshFlag::Normal) ? new Math::Vector3f[vertex_count] : nullptr;
-    m_buffers[id].texcoords = (buffer_bitmask & MeshFlag::Texcoord) ? new Math::Vector2f[vertex_count] : nullptr;
+    m_buffers[id].positions = (buffer_bitmask & MeshFlag::Position) ? new Vector3f[vertex_count] : nullptr;
+    m_buffers[id].normals = (buffer_bitmask & MeshFlag::Normal) ? new Vector3f[vertex_count] : nullptr;
+    m_buffers[id].texcoords = (buffer_bitmask & MeshFlag::Texcoord) ? new Vector2f[vertex_count] : nullptr;
     m_bounds[id] = AABB::invalid();
     m_changes.set_change(id, Change::Created);
 
@@ -141,6 +142,66 @@ AABB Meshes::compute_bounds(Meshes::UID mesh_ID) {
 //-----------------------------------------------------------------------------
 
 namespace MeshUtils {
+
+Meshes::UID deep_clone(Meshes::UID mesh_ID) {
+    Mesh mesh = mesh_ID;
+    Meshes::UID new_ID = Meshes::create(mesh.get_name() + "_clone", mesh.get_primitive_count(), mesh.get_vertex_count(), mesh.get_flags());
+
+    Vector3f* positions_begin = mesh.get_positions();
+    if (positions_begin != nullptr)
+        std::copy_n(positions_begin, mesh.get_vertex_count(), Meshes::get_positions(new_ID));
+
+    Vector3f* normals_begin = mesh.get_normals();
+    if (normals_begin != nullptr)
+        std::copy_n(normals_begin, mesh.get_vertex_count(), Meshes::get_normals(new_ID));
+
+    Vector2f* texcoords_begin = mesh.get_texcoords();
+    if (texcoords_begin != nullptr)
+        std::copy_n(texcoords_begin, mesh.get_vertex_count(), Meshes::get_texcoords(new_ID));
+
+    Vector3ui* primitives_begin = mesh.get_primitives();
+    if (primitives_begin != nullptr)
+        std::copy_n(primitives_begin, mesh.get_primitive_count(), Meshes::get_primitives(new_ID));
+
+    Meshes::set_bounds(new_ID, mesh.get_bounds());
+
+    return new_ID;
+}
+
+void transform_mesh(Meshes::UID mesh_ID, Matrix3x4f affine_transform) {
+    Mesh mesh = mesh_ID;
+
+    Matrix3x3f rotation;
+    rotation.set_column(0, affine_transform.get_column(0));
+    rotation.set_column(1, affine_transform.get_column(1));
+    rotation.set_column(2, affine_transform.get_column(2));
+    Vector3f translation = affine_transform.get_column(3);
+
+    // Transform positions.
+    Vector3f* positions_itr = mesh.get_positions();
+    if (positions_itr != nullptr) {
+        AABB bounding_box = AABB(Vector3f(std::numeric_limits<float>::infinity()), Vector3f(-std::numeric_limits<float>::infinity()));
+        Vector3f* positions_end = positions_itr + mesh.get_vertex_count();
+        for (; positions_itr != positions_end; ++positions_itr) {
+            *positions_itr = rotation * *positions_itr + translation;
+            bounding_box.grow_to_contain(*positions_itr);
+        }
+        mesh.set_bounds(bounding_box);
+    }
+
+    // Transform normals.
+    Vector3f* normals_itr = mesh.get_normals();
+    if (normals_itr != nullptr) {
+        Matrix3x3f normal_rotation = transpose(invert(rotation));
+        Vector3f* normals_end = normals_itr + mesh.get_vertex_count();
+        for (; normals_itr != normals_end; ++normals_itr)
+            *normals_itr = normal_rotation * *normals_itr;
+    }
+}
+
+void transform_mesh(Meshes::UID mesh_ID, Transform transform) {
+    transform_mesh(mesh_ID, to_matrix3x4(transform));
+}
 
 Meshes::UID combine(const std::string& name,
                     const TransformedMesh* const meshes_begin,
