@@ -59,7 +59,7 @@ static float g_scene_size;
 static DX11Renderer::Compositor* compositor = nullptr;
 static DX11Renderer::Renderer* dx11_renderer = nullptr;
 static ImGui::ImGuiAdaptor* imgui = nullptr;
-static Vector2ui g_window_size = Vector2ui(960, 720);
+static Vector2ui g_window_size = Vector2ui(640, 480);
 static Vector3f g_camera_translation = Vector3f(nanf(""));
 static float g_camera_horizontal_rotation = nanf("");
 static float g_camera_vertical_rotation = nanf("");
@@ -585,7 +585,8 @@ int initialize_scene(Engine& engine) {
 int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
     using namespace DX11Renderer;
 
-    window.resize(g_window_size.x, g_window_size.y);
+    if (window.get_width() != g_window_size.x || window.get_height() != g_window_size.y)
+        window.resize(g_window_size.x, g_window_size.y);
 
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     std::wstring data_folder_path = converter.from_bytes(engine.data_path());
@@ -709,7 +710,7 @@ int main(int argc, char** argv) {
             g_environment_color = parse_RGB(argv[++argument]);
         else if (strcmp(argv[argument], "--window-size") == 0)
             g_window_size = (Vector2ui)parse_vector2f(argv[++argument]);
-        else if (strcmp(argv[argument], "--camera-translation") == 0)
+        else if (strcmp(argv[argument], "--camera-position") == 0)
             g_camera_translation = parse_vector3f(argv[++argument]);
         else if (strcmp(argv[argument], "--camera-rotation") == 0) {
             Vector2f camera_rotation = parse_vector2f(argv[++argument]);
