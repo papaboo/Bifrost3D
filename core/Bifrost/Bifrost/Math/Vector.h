@@ -9,7 +9,6 @@
 #ifndef _BIFROST_MATH_VECTOR_H_
 #define _BIFROST_MATH_VECTOR_H_
 
-#include <algorithm>
 #include <cstring>
 #include <sstream>
 
@@ -171,32 +170,42 @@ inline Vector3<T> cross(Vector3<T> lhs, Vector3<T> rhs) {
 
 template<typename T>
 inline Vector2<T> min(Vector2<T> lhs, Vector2<T> rhs) {
-    return Vector2<T>(std::min(lhs.x, rhs.x), std::min(lhs.y, rhs.y));
+    return Vector2<T>(lhs.x > rhs.x ? rhs.x : lhs.x, lhs.y > rhs.y ? rhs.y : lhs.y);
 }
 
 template<typename T>
 inline Vector3<T> min(Vector3<T> lhs, Vector3<T> rhs) {
-    return Vector3<T>(std::min(lhs.x, rhs.x), std::min(lhs.y, rhs.y), std::min(lhs.z, rhs.z));
+    return Vector3<T>(lhs.x > rhs.x ? rhs.x : lhs.x,
+                      lhs.y > rhs.y ? rhs.y : lhs.y,
+                      lhs.z > rhs.z ? rhs.z : lhs.z);
 }
 
 template<typename T>
 inline Vector4<T> min(Vector4<T> lhs, Vector4<T> rhs) {
-    return Vector4<T>(std::min(lhs.x, rhs.x), std::min(lhs.y, rhs.y), std::min(lhs.z, rhs.z), std::min(lhs.w, rhs.w));
+    return Vector4<T>(lhs.x > rhs.x ? rhs.x : lhs.x,
+                      lhs.y > rhs.y ? rhs.y : lhs.y,
+                      lhs.z > rhs.z ? rhs.z : lhs.z,
+                      lhs.w > rhs.w ? rhs.w : lhs.w);
 }
 
 template<typename T>
 inline Vector2<T> max(Vector2<T> lhs, Vector2<T> rhs) {
-    return Vector2<T>(std::max(lhs.x, rhs.x), std::max(lhs.y, rhs.y));
+    return Vector2<T>(lhs.x < rhs.x ? rhs.x : lhs.x, lhs.y < rhs.y ? rhs.y : lhs.y);
 }
 
 template<typename T>
 inline Vector3<T> max(Vector3<T> lhs, Vector3<T> rhs) {
-    return Vector3<T>(std::max(lhs.x, rhs.x), std::max(lhs.y, rhs.y), std::max(lhs.z, rhs.z));
+    return Vector3<T>(lhs.x < rhs.x ? rhs.x : lhs.x,
+                      lhs.y < rhs.y ? rhs.y : lhs.y,
+                      lhs.z < rhs.z ? rhs.z : lhs.z);
 }
 
 template<typename T>
 inline Vector4<T> max(Vector4<T> lhs, Vector4<T> rhs) {
-    return Vector4<T>(std::max(lhs.x, rhs.x), std::max(lhs.y, rhs.y), std::max(lhs.z, rhs.z), std::max(lhs.w, rhs.w));
+    return Vector4<T>(lhs.x < rhs.x ? rhs.x : lhs.x,
+                      lhs.y < rhs.y ? rhs.y : lhs.y,
+                      lhs.z < rhs.z ? rhs.z : lhs.z,
+                      lhs.w < rhs.w ? rhs.w : lhs.w);
 }
 
 // Comparison that checks if two vectors are almost equal.

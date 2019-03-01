@@ -65,7 +65,7 @@ inline float PDF() { return 0.5f / PI<float>(); }
 
 inline Vector3f Sample(Vector2f random_sample) {
     float z = 1.0f - 2.0f * random_sample.x;
-    float r = sqrt(std::max(0.0f, 1.0f - z * z));
+    float r = sqrt(fmaxf(0.0f, 1.0f - z * z));
     float phi = 2.0f * PI<float>() * random_sample.y;
     return Vector3f(r * cos(phi), r * sin(phi), z);
 }
