@@ -9,6 +9,7 @@
 #ifndef _BIFROST_MATH_RECT_H_
 #define _BIFROST_MATH_RECT_H_
 
+#include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/Vector.h>
 
 #include <cstring>
@@ -37,21 +38,21 @@ public:
     Rect(T x, T y, T width, T height)
         : x(x), y(y), width(width), height(height) { }
     template <typename U>
-    Rect(Rect<U> other)
+    explicit Rect(Rect<U> other)
         : x(T(other.x)), y(T(other.y)), width(T(other.width)), height(T(other.height)) { }
 
-    inline Vector2<T> get_offset() const { return Vector2<T>(x, y); }
-    inline Vector2<T> get_size() const { return Vector2<T>(width, height); }
-    inline Vector2<T> get_min() const { return Vector2<T>(x, y); }
-    inline Vector2<T> get_max() const { return Vector2<T>(x+width, y+height); }
+    __always_inline__ Vector2<T> get_offset() const { return Vector2<T>(x, y); }
+    __always_inline__ Vector2<T> get_size() const { return Vector2<T>(width, height); }
+    __always_inline__ Vector2<T> get_min() const { return Vector2<T>(x, y); }
+    __always_inline__ Vector2<T> get_max() const { return Vector2<T>(x+width, y+height); }
 
     //*************************************************************************
     // Comparison operators.
     //*************************************************************************
-    inline bool operator==(Rect<T> rhs) const {
+    __always_inline__ bool operator==(Rect<T> rhs) const {
         return memcmp(this, &rhs, sizeof(rhs)) == 0;
     }
-    inline bool operator!=(Rect<T> rhs) const {
+    __always_inline__ bool operator!=(Rect<T> rhs) const {
         return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
@@ -75,7 +76,7 @@ typedef Rect<int> Recti;
 
 // Convenience function that appends a rectangle's string representation to an ostream.
 template<class T>
-inline std::ostream& operator<<(std::ostream& s, Bifrost::Math::Rect<T> v) {
+__always_inline__ std::ostream& operator<<(std::ostream& s, Bifrost::Math::Rect<T> v) {
     return s << v.to_string();
 }
 

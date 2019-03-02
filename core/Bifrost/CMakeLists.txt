@@ -35,6 +35,7 @@ SET(CORE_SRCS
   Bifrost/Core/Array.h
   Bifrost/Core/Bitmask.h
   Bifrost/Core/ChangeSet.h
+  Bifrost/Core/Defines.h
   Bifrost/Core/Engine.h
   Bifrost/Core/Engine.cpp
   Bifrost/Core/Iterable.h

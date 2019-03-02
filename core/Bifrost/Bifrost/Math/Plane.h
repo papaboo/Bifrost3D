@@ -9,6 +9,7 @@
 #ifndef _BIFROST_MATH_PLANE_H_
 #define _BIFROST_MATH_PLANE_H_
 
+#include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/Vector.h>
 
 #include <cstring>
@@ -39,29 +40,29 @@ public:
         : a(a), b(b), c(c), d(d) {
     }
 
-    inline static Plane from_point_normal(Vector3f point, Vector3f normal) {
+    __always_inline__ static Plane from_point_normal(Vector3f point, Vector3f normal) {
         float d = -dot(point, normal);
         return Plane(normal.x, normal.y, normal.z, d);
     }
 
-    inline static Plane from_point_direction(Vector3f point, Vector3f direction) {
+    __always_inline__ static Plane from_point_direction(Vector3f point, Vector3f direction) {
         return from_point_normal(point, normalize(direction));
     }
-    
+
     // --------------------------------------------------------------------------------------------
     // Comparison operators.
     // --------------------------------------------------------------------------------------------
-    inline bool operator==(Plane rhs) const {
+    __always_inline__ bool operator==(Plane rhs) const {
         return memcmp(this, &rhs, sizeof(rhs)) == 0;
     }
-    inline bool operator!=(Plane rhs) const {
+    __always_inline__ bool operator!=(Plane rhs) const {
         return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
     // --------------------------------------------------------------------------------------------
     // Getters.
     // --------------------------------------------------------------------------------------------
-    inline Vector3f get_normal() const { return Vector3f(a, b, c); }
+    __always_inline__ Vector3f get_normal() const { return Vector3f(a, b, c); }
 
     // --------------------------------------------------------------------------------------------
     // To string.
@@ -77,7 +78,7 @@ public:
 } // NS Bifrost
 
 // Convenience function that appends an AABB's string representation to an ostream.
-inline std::ostream& operator<<(std::ostream& s, Bifrost::Math::Plane v) {
+__always_inline__ std::ostream& operator<<(std::ostream& s, Bifrost::Math::Plane v) {
     return s << v.to_string();
 }
 

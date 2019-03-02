@@ -9,6 +9,7 @@
 #ifndef _BIFROST_MATH_OCTAHEDRAL_NORMAL_H_
 #define _BIFROST_MATH_OCTAHEDRAL_NORMAL_H_
 
+#include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/Vector.h>
 #include <Bifrost/Math/Utils.h>
 
@@ -24,14 +25,14 @@ namespace Math {
 //-------------------------------------------------------------------------------------------------
 struct OctahedralNormal {
 private:
-    static float sign(float v) { return v >= 0.0f ? +1.0f : -1.0f; }
-    static Vector2f sign(Vector2f v) { return Vector2f(sign(v.x), sign(v.y)); }
+    static __always_inline__ float sign(float v) { return v >= 0.0f ? +1.0f : -1.0f; }
+    static __always_inline__ Vector2f sign(Vector2f v) { return Vector2f(sign(v.x), sign(v.y)); }
 
 public:
 
     Vector2s encoding;
 
-    static OctahedralNormal encode(Vector3f n) {
+    static __always_inline__ OctahedralNormal encode(Vector3f n) {
 
         // Project the sphere onto the octahedron, and then onto the xy plane.
         Vector2f p = Vector2f(n.x, n.y) / (abs(n.x) + abs(n.y) + abs(n.z));
@@ -45,11 +46,11 @@ public:
         return res;
     }
 
-    static OctahedralNormal encode(float x, float y, float z) {
+    static __always_inline__ OctahedralNormal encode(float x, float y, float z) {
         return encode(Vector3f(x, y, z));
     }
 
-    static OctahedralNormal encode_precise(Vector3f n) {
+    static __always_inline__ OctahedralNormal encode_precise(Vector3f n) {
         // Project the sphere onto the octahedron, and then onto the xy plane.
         Vector2f p = Vector2f(n.x, n.y) / (abs(n.x) + abs(n.y) + abs(n.z));
 
@@ -81,11 +82,11 @@ public:
         return best_representation;
     }
 
-    static OctahedralNormal encode_precise(float x, float y, float z) {
+    static __always_inline__ OctahedralNormal encode_precise(float x, float y, float z) {
         return encode_precise(Vector3f(x, y, z));
     }
 
-    Vector3f decode() const {
+    __always_inline__ Vector3f decode() const {
         Vector2f p2 = Vector2f(encoding);
         Vector3f n = Vector3f(p2, SHRT_MAX - abs(p2.x) - abs(p2.y));
         if (n.z < 0.0f) {

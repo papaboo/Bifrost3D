@@ -9,6 +9,8 @@
 #ifndef _BIFROST_MATH_DISTRIBUTION1D_H_
 #define _BIFROST_MATH_DISTRIBUTION1D_H_
 
+#include <Bifrost/Core/Defines.h>
+
 #include <assert.h>
 
 namespace Bifrost {
@@ -60,11 +62,11 @@ public:
     // Getters and setters.
     //*********************************************************************************************
 
-    inline int get_element_count() const { return m_element_count; }
-    inline T get_integral() const { return m_integral; }
+    __always_inline__ int get_element_count() const { return m_element_count; }
+    __always_inline__ T get_integral() const { return m_integral; }
 
-    inline const T* const get_CDF() const { return m_CDF; }
-    inline int get_CDF_size() const { return m_element_count + 1; }
+    __always_inline__ const T* const get_CDF() const { return m_CDF; }
+    __always_inline__ int get_CDF_size() const { return m_element_count + 1; }
 
     //*********************************************************************************************
     // Evaluate.

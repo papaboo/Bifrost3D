@@ -9,11 +9,13 @@
 #ifndef _BIFROST_MATH_MORTON_ENCODE_H_
 #define _BIFROST_MATH_MORTON_ENCODE_H_
 
+#include <Bifrost/Core/Defines.h>
+
 namespace Bifrost {
 namespace Math {
 
 // Insert a 0 bit in between each of the 16 low bits of v.
-inline unsigned int part_by_1(unsigned int v) {
+__always_inline__ unsigned int part_by_1(unsigned int v) {
     v &= 0x0000ffff;                 // v = ---- ---- ---- ---- fedc ba98 7654 3210
     v = (v ^ (v << 8)) & 0x00ff00ff; // v = ---- ---- fedc ba98 ---- ---- 7654 3210
     v = (v ^ (v << 4)) & 0x0f0f0f0f; // v = ---- fedc ---- ba98 ---- 7654 ---- 3210
@@ -22,7 +24,7 @@ inline unsigned int part_by_1(unsigned int v) {
     return v;
 }
 
-inline unsigned int morton_encode(unsigned int x, unsigned int y) {
+__always_inline__ unsigned int morton_encode(unsigned int x, unsigned int y) {
     return part_by_1(y) | (part_by_1(x) << 1);
 }
 

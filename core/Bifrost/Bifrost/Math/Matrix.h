@@ -9,6 +9,7 @@
 #ifndef _BIFROST_MATH_MATRIX_H_
 #define _BIFROST_MATH_MATRIX_H_
 
+#include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/Vector.h>
 
 #include <cstring>
@@ -65,11 +66,11 @@ public:
     //*****************************************************************************
     // Static constructor helpers.
     //*****************************************************************************
-    static Matrix<Row, Column> zero() {
+    static __always_inline__ Matrix<Row, Column> zero() {
         return Matrix<Row, Column>(0);
     }
-    
-    static Matrix<Row, Row> identity() { // Only square matrices have an identity, hence why row and column have the same type.
+
+    static __always_inline__ Matrix<Row, Row> identity() { // Only square matrices have an identity, hence why row and column have the same type.
         Matrix<Row, Row> res = zero();
         for (int r = 0; r < ROW_COUNT; ++r)
             res.m_rows[r][r] = T(1);
@@ -79,28 +80,28 @@ public:
     //*****************************************************************************
     // Direct data access.
     //*****************************************************************************
-    inline T* begin() { return m_rows[0].begin(); }
-    inline const T* begin() const { return m_rows[0].begin(); }
-    inline Row& operator[](int r) { return m_rows[r]; }
-    inline Row operator[](int r) const { return m_rows[r]; }
+    __always_inline__ T* begin() { return m_rows[0].begin(); }
+    __always_inline__ const T* begin() const { return m_rows[0].begin(); }
+    __always_inline__ Row& operator[](int r) { return m_rows[r]; }
+    __always_inline__ Row operator[](int r) const { return m_rows[r]; }
 
     //*****************************************************************************
     // Row and column getters and setters.
     //*****************************************************************************
-    inline Row get_row(int i) const {
+    __always_inline__ Row get_row(int i) const {
         return m_rows[i];
     }
-    inline void set_row(int i, Row row) {
+    __always_inline__ void set_row(int i, Row row) {
         m_rows[i] = row;
     }
 
-    inline Column get_column(int i) const {
+    __always_inline__ Column get_column(int i) const {
         Column column;
         for (int r = 0; r < ROW_COUNT; ++r)
             column[r] = m_rows[r][i];
         return column;
     }
-    inline void set_column(int i, Column column) {
+    __always_inline__ void set_column(int i, Column column) {
         for (int r = 0; r < ROW_COUNT; ++r)
             m_rows[r][i] = column[r];
     }
@@ -108,24 +109,24 @@ public:
     //*****************************************************************************
     // Multiplication operators
     //*****************************************************************************
-    inline Matrix<Row, Column>& operator*=(T rhs) {
+    __always_inline__ Matrix<Row, Column>& operator*=(T rhs) {
         for (int i = 0; i < N; ++i)
             begin()[i] *= rhs;
         return *this;
     }
-    inline Matrix<Row, Column> operator*(T rhs) const {
+    __always_inline__ Matrix<Row, Column> operator*(T rhs) const {
         Matrix<Row, Column> ret(*this);
         return ret *= rhs;
     }
     template <typename RhsRow>
-    inline Matrix<RhsRow, Column> operator*(Matrix<RhsRow, Row> rhs) const {
+    __always_inline__ Matrix<RhsRow, Column> operator*(Matrix<RhsRow, Row> rhs) const {
         Matrix<RhsRow, Column> ret;
         for (int r = 0; r < ret.ROW_COUNT; ++r)
             for (int c = 0; c < ret.COLUMN_COUNT; ++c)
                 ret[r][c] = dot(m_rows[r], rhs.get_column(c));
         return ret;
     }
-    inline Column operator*(Row rhs) const {
+    __always_inline__ Column operator*(Row rhs) const {
         Column res;
         for (int c = 0; c < ROW_COUNT; ++c)
             res[c] = dot(m_rows[c], rhs);
@@ -135,24 +136,23 @@ public:
     //*****************************************************************************
     // Division operators
     //*****************************************************************************
-    inline Matrix<Row, Column>& operator/=(T rhs) {
+    __always_inline__ Matrix<Row, Column>& operator/=(T rhs) {
         for (int i = 0; i < N; ++i)
             begin()[i] /= rhs;
         return *this;
     }
-    inline Matrix<Row, Column> operator/(T rhs) const {
+    __always_inline__ Matrix<Row, Column> operator/(T rhs) const {
         Matrix<Row, Column> ret(*this);
         return ret /= rhs;
     }
 
-
     //*****************************************************************************
     // Comparison operators.
     //*****************************************************************************
-    inline bool operator==(Matrix<Row, Column> rhs) const {
+    __always_inline__ bool operator==(Matrix<Row, Column> rhs) const {
         return memcmp(this, &rhs, sizeof(rhs)) == 0;
     }
-    inline bool operator!=(Matrix<Row, Column> rhs) const {
+    __always_inline__ bool operator!=(Matrix<Row, Column> rhs) const {
         return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
@@ -187,13 +187,13 @@ using Matrix4x4f = Matrix4x4<float>;
 
 // Compute the determinant of a 2x2 matrix.
 template <typename T>
-inline T determinant(Matrix2x2<T> v) {
+__always_inline__ T determinant(Matrix2x2<T> v) {
     return v[0][0] * v[1][1] - v[1][0] * v[0][1];
 }
 
 // Compute the determinant of a 3x3 matrix.
 template <typename T>
-inline T determinant(Matrix3x3<T> v) {
+__always_inline__ T determinant(Matrix3x3<T> v) {
     return v[0][0] * (v[1][1] * v[2][2] - v[1][2] * v[2][1])
          - v[0][1] * (v[1][0] * v[2][2] - v[1][2] * v[2][0])
          + v[0][2] * (v[1][0] * v[2][1] - v[1][1] * v[2][0]);
@@ -211,7 +211,7 @@ inline T determinant(Matrix4x4<T> v) {
 }
 
 template <typename T>
-inline Matrix2x2<T> invert(Matrix2x2<T> v) {
+__always_inline__ Matrix2x2<T> invert(Matrix2x2<T> v) {
     Matrix2x2<T> inverse;
     inverse[0][0] =  v[1][1];
     inverse[0][1] = -v[0][1];
@@ -285,7 +285,7 @@ inline Row operator*(Column lhs, Matrix<Row, Column> rhs) {
 
 // Specialized multiplication operator for affine matrices. The bottom row is implicitly set to [0,0,0,1].
 template <typename T>
-inline Matrix3x4<T> operator*(Matrix3x4<T> affine_lhs, Matrix3x4<T> affine_rhs) {
+__always_inline__ Matrix3x4<T> operator*(Matrix3x4<T> affine_lhs, Matrix3x4<T> affine_rhs) {
     Matrix3x4<T> res;
     for (int r = 0; r < 3; ++r)
         for (int c = 0; c < 4; ++c) {
@@ -297,7 +297,7 @@ inline Matrix3x4<T> operator*(Matrix3x4<T> affine_lhs, Matrix3x4<T> affine_rhs) 
 }
 
 template <typename Row, typename Column>
-inline bool almost_equal(Matrix<Row, Column> lhs, Matrix<Row, Column> rhs, unsigned short max_ulps = 4) {
+__always_inline__ bool almost_equal(Matrix<Row, Column> lhs, Matrix<Row, Column> rhs, unsigned short max_ulps = 4) {
     bool equal = true;
     for (int i = 0; i < Matrix<Row, Column>::N; ++i)
         equal &= almost_equal(lhs.begin()[i], rhs.begin()[i], max_ulps);
@@ -309,7 +309,7 @@ inline bool almost_equal(Matrix<Row, Column> lhs, Matrix<Row, Column> rhs, unsig
 
 // Convenience function that appends a matrix' string representation to an ostream.
 template<typename Row, typename Column>
-inline std::ostream& operator<<(std::ostream& s, Bifrost::Math::Matrix<Row, Column> v){
+__always_inline__ std::ostream& operator<<(std::ostream& s, Bifrost::Math::Matrix<Row, Column> v){
     return s << v.to_string();
 }
 

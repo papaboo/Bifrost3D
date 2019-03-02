@@ -9,6 +9,7 @@
 #ifndef _BIFROST_MATH_RAY_H_
 #define _BIFROST_MATH_RAY_H_
 
+#include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/Vector.h>
 
 #include <cstring>
@@ -35,14 +36,14 @@ public:
     //*************************************************************************
     // Comparison operators.
     //*************************************************************************
-    inline bool operator==(Ray rhs) const {
+    __always_inline__ bool operator==(Ray rhs) const {
         return memcmp(this, &rhs, sizeof(rhs)) == 0;
     }
-    inline bool operator!=(Ray rhs) const {
+    __always_inline__ bool operator!=(Ray rhs) const {
         return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
-    inline Vector3f position_at(float t) const {
+    __always_inline__ Vector3f position_at(float t) const {
         return origin + direction * t;
     }
 
@@ -57,7 +58,7 @@ public:
 } // NS Bifrost
 
 // Convenience function that appends a ray's string representation to an ostream.
-inline std::ostream& operator<<(std::ostream& s, Bifrost::Math::Ray v) {
+__always_inline__ std::ostream& operator<<(std::ostream& s, Bifrost::Math::Ray v) {
     return s << v.to_string();
 }
 

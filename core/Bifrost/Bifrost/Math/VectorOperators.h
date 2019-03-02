@@ -11,29 +11,29 @@
 //*****************************************************************************
 // Indexing operators.
 //*****************************************************************************
-inline T& operator[](const int i) { return begin()[i]; }
-inline T operator[](const int i) const { return begin()[i]; }
+__always_inline__ T& operator[](const int i) { return begin()[i]; }
+__always_inline__ T operator[](const int i) const { return begin()[i]; }
 
 //*****************************************************************************
 // Addition operators.
 //*****************************************************************************
-inline Vector<T>& operator+=(T rhs) {
+__always_inline__ Vector<T>& operator+=(T rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] += rhs;
     return *this;
 }
-inline Vector<T>& operator+=(Vector<T> rhs) {
+__always_inline__ Vector<T>& operator+=(Vector<T> rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] += rhs[i];
     return *this;
 }
-inline Vector<T> operator+(T rhs) const {
+__always_inline__ Vector<T> operator+(T rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] += rhs;
     return ret;
 }
-inline Vector<T> operator+(Vector<T> rhs) const {
+__always_inline__ Vector<T> operator+(Vector<T> rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] += rhs[i];
@@ -43,29 +43,29 @@ inline Vector<T> operator+(Vector<T> rhs) const {
 //*****************************************************************************
 // Subtraction operators.
 //*****************************************************************************
-inline Vector<T>& operator-=(T rhs) {
+__always_inline__ Vector<T>& operator-=(T rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] -= rhs;
     return *this;
 }
-inline Vector<T>& operator-=(Vector<T> rhs) {
+__always_inline__ Vector<T>& operator-=(Vector<T> rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] -= rhs[i];
     return *this;
 }
-inline Vector<T> operator-(T rhs) const {
+__always_inline__ Vector<T> operator-(T rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] -= rhs;
     return ret;
 }
-inline Vector<T> operator-(Vector<T> rhs) const {
+__always_inline__ Vector<T> operator-(Vector<T> rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] -= rhs[i];
     return ret;
 }
-inline Vector<T> operator-() const {
+__always_inline__ Vector<T> operator-() const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] = -(*this)[i];
@@ -75,23 +75,23 @@ inline Vector<T> operator-() const {
 //*****************************************************************************
 // Multiplication operators.
 //*****************************************************************************
-inline Vector<T>& operator*=(T rhs) {
+__always_inline__ Vector<T>& operator*=(T rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] *= rhs;
     return *this;
 }
-inline Vector<T>& operator*=(Vector<T> rhs) {
+__always_inline__ Vector<T>& operator*=(Vector<T> rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] *= rhs[i];
     return *this;
 }
-inline Vector<T> operator*(T rhs) const {
+__always_inline__ Vector<T> operator*(T rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] *= rhs;
     return ret;
 }
-inline Vector<T> operator*(Vector<T> rhs) const {
+__always_inline__ Vector<T> operator*(Vector<T> rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] *= rhs[i];
@@ -101,23 +101,23 @@ inline Vector<T> operator*(Vector<T> rhs) const {
 //*****************************************************************************
 // Division operators.
 //*****************************************************************************
-inline Vector<T>& operator/=(T rhs) {
+__always_inline__ Vector<T>& operator/=(T rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] /= rhs;
     return *this;
 }
-inline Vector<T>& operator/=(Vector<T> rhs) {
+__always_inline__ Vector<T>& operator/=(Vector<T> rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] /= rhs[i];
     return *this;
 }
-inline Vector<T> operator/(T rhs) const {
+__always_inline__ Vector<T> operator/(T rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] /= rhs;
     return ret;
 }
-inline Vector<T> operator/(Vector<T> rhs) const {
+__always_inline__ Vector<T> operator/(Vector<T> rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] /= rhs[i];
@@ -127,9 +127,9 @@ inline Vector<T> operator/(Vector<T> rhs) const {
 //*****************************************************************************
 // Comparison operators.
 //*****************************************************************************
-inline bool operator==(Vector<T> rhs) const {
+__always_inline__ bool operator==(Vector<T> rhs) const {
     return memcmp(this, &rhs, sizeof(rhs)) == 0;
 }
-inline bool operator!=(Vector<T> rhs) const {
+__always_inline__ bool operator!=(Vector<T> rhs) const {
     return memcmp(this, &rhs, sizeof(rhs)) != 0;
 }

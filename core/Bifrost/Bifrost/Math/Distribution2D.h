@@ -9,6 +9,7 @@
 #ifndef _BIFROST_MATH_DISTRIBUTION2D_H_
 #define _BIFROST_MATH_DISTRIBUTION2D_H_
 
+#include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/Vector.h>
 
 #include <assert.h>
@@ -67,15 +68,15 @@ public:
     // Getters and setters.
     //*********************************************************************************************
 
-    inline int get_width() const { return m_width; }
-    inline int get_height() const { return m_height; }
-    inline T get_integral() const { return m_integral; }
+    __always_inline__ int get_width() const { return m_width; }
+    __always_inline__ int get_height() const { return m_height; }
+    __always_inline__ T get_integral() const { return m_integral; }
 
-    inline const T* const get_marginal_CDF() const { return m_marginal_CDF; }
-    inline int get_marginal_CDF_size() const { return m_height + 1; }
+    __always_inline__ const T* const get_marginal_CDF() const { return m_marginal_CDF; }
+    __always_inline__ int get_marginal_CDF_size() const { return m_height + 1; }
 
-    inline const T* const get_conditional_CDF() const { return m_conditional_CDF; }
-    inline Vector2i get_conditional_CDF_size() const { return Vector2i(m_width + 1, m_height); }
+    __always_inline__ const T* const get_conditional_CDF() const { return m_conditional_CDF; }
+    __always_inline__ Vector2i get_conditional_CDF_size() const { return Vector2i(m_width + 1, m_height); }
 
     //*********************************************************************************************
     // Evaluate.

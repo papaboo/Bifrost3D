@@ -9,6 +9,7 @@
 #ifndef _BIFROST_MATH_RNG_H_
 #define _BIFROST_MATH_RNG_H_
 
+#include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/MortonEncode.h>
 #include <Bifrost/Math/Vector.h>
 
@@ -19,7 +20,7 @@ namespace RNG {
 const float uint_normalizer = 1.0f / 4294967296.0f;
 
 // Reverse bits of n.
-inline unsigned int reverse_bits(unsigned int n) {
+__always_inline__ unsigned int reverse_bits(unsigned int n) {
     n = (n << 16) | (n >> 16);
     n = ((n & 0x00ff00ff) << 8) | ((n & 0xff00ff00) >> 8);
     n = ((n & 0x0f0f0f0f) << 4) | ((n & 0xf0f0f0f0) >> 4);
@@ -28,12 +29,12 @@ inline unsigned int reverse_bits(unsigned int n) {
     return n;
 }
 
-inline float van_der_corput(unsigned int n, unsigned int scramble) {
+__always_inline__ float van_der_corput(unsigned int n, unsigned int scramble) {
     n = reverse_bits(n) ^ scramble;
     return n * uint_normalizer;
 }
 
-inline float sobol2(unsigned int n, unsigned int scramble) {
+__always_inline__ float sobol2(unsigned int n, unsigned int scramble) {
 
     for (unsigned int v = 1u << 31u; n != 0; n >>= 1u, v ^= v >> 1u)
         if (n & 0x1) scramble ^= v;
@@ -41,22 +42,22 @@ inline float sobol2(unsigned int n, unsigned int scramble) {
     return scramble * uint_normalizer;
 }
 
-inline Vector2f sample02(unsigned int n, Vector2ui scramble = Vector2ui(5569, 95597)) {
+__always_inline__ Vector2f sample02(unsigned int n, Vector2ui scramble = Vector2ui(5569, 95597)) {
     return Vector2f(van_der_corput(n, scramble.x), sobol2(n, scramble.y));
 }
 
 // Optimized Spatial Hashing for Collision Detection of Deformable Objects.
 // Teschner et al, 2013
-inline unsigned int teschner_hash(unsigned int x, unsigned int y) {
+__always_inline__ unsigned int teschner_hash(unsigned int x, unsigned int y) {
     return (x * 73856093) ^ (y * 19349669);
 }
-inline unsigned int teschner_hash(unsigned int x, unsigned int y, unsigned int z) {
+__always_inline__ unsigned int teschner_hash(unsigned int x, unsigned int y, unsigned int z) {
     return (x * 73856093) ^ (y * 19349669) ^ (z * 83492791);
 }
 
 // Robert Jenkins hash function.
 // https://gist.github.com/badboy/6267743
-inline unsigned int jenkins_hash(unsigned int a) {
+__always_inline__ unsigned int jenkins_hash(unsigned int a) {
     a = (a + 0x7ed55d16) + (a << 12);
     a = (a ^ 0xc761c23c) ^ (a >> 19);
     a = (a + 0x165667b1) + (a << 5);
@@ -68,12 +69,12 @@ inline unsigned int jenkins_hash(unsigned int a) {
 
 // Hashes x and y ensuring maximal distance between consecutive xs and ys.
 // NOTE: Unless filtered afterwards it visually displays a ton of correlation.
-inline unsigned int even_distribution_2D(unsigned int x, unsigned int y) { return reverse_bits(morton_encode(x, y)); }
+__always_inline__ unsigned int even_distribution_2D(unsigned int x, unsigned int y) { return reverse_bits(morton_encode(x, y)); }
 
 // Computes the power heuristic of pdf1 and pdf2.
 // It is assumed that pdf1 is always valid, i.e. not NaN.
 // pdf2 is allowed to be NaN, but generally try to avoid it. :)
-inline float power_heuristic(float pdf1, float pdf2) {
+__always_inline__ float power_heuristic(float pdf1, float pdf2) {
     pdf1 *= pdf1;
     pdf2 *= pdf2;
     float result = pdf1 / (pdf1 + pdf2);
@@ -96,15 +97,15 @@ private:
 public:
     explicit LinearCongruential(unsigned int seed) : m_state(seed) { }
 
-    inline void seed(unsigned int seed) { m_state = seed; }
-    inline unsigned int get_seed() const { return m_state; }
+    __always_inline__ void seed(unsigned int seed) { m_state = seed; }
+    __always_inline__ unsigned int get_seed() const { return m_state; }
 
-    inline unsigned int sample1ui() {
+    __always_inline__ unsigned int sample1ui() {
         m_state = multiplier * m_state + increment;
         return m_state;
     }
 
-    inline float sample1f() { return float(sample1ui()) * uint_normalizer; }
+    __always_inline__ float sample1f() { return float(sample1ui()) * uint_normalizer; }
 };
 
 } // NS RNG

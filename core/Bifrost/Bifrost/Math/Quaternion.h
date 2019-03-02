@@ -9,6 +9,7 @@
 #ifndef _BIFROST_MATH_QUATERNION_H_
 #define _BIFROST_MATH_QUATERNION_H_
 
+#include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/Constants.h>
 #include <Bifrost/Math/Utils.h>
 #include <Bifrost/Math/Vector.h>
@@ -61,13 +62,13 @@ public:
     Quaternion(const Quaternion<U>& v) : x(T(v.x)), y(T(v.y)), z(T(v.z)), w(T(v.w)) { }
 
     // The identity quaternion.
-    static inline Quaternion<T> identity() {
+    static __always_inline__ Quaternion<T> identity() {
         return Quaternion(0, 0, 0, 1);
     }
 
     // Create a quaternion describing a rotation in angles around a normalized axis in R^3.
     // http://www.euclideanspace.com/maths/geometry/rotations/conversions/angleToQuaternion/
-    static inline Quaternion<T> from_angle_axis(T angle_in_radians, Vector3<T> axis) {
+    static __always_inline__ Quaternion<T> from_angle_axis(T angle_in_radians, Vector3<T> axis) {
         T radian_halved = angle_in_radians * T(0.5);
         T sin_angle = sin(radian_halved);
         Vector3<T> imaginary = axis * sin_angle;
@@ -118,30 +119,30 @@ public:
     //*****************************************************************************
     // Comparison operators.
     //*****************************************************************************
-    inline bool operator==(Quaternion<T> rhs) const {
+    __always_inline__ bool operator==(Quaternion<T> rhs) const {
         return memcmp(this, &rhs, sizeof(rhs)) == 0;
     }
-    inline bool operator!=(Quaternion<T> rhs) const {
+    __always_inline__ bool operator!=(Quaternion<T> rhs) const {
         return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
     // Pointer to the first element of the quaternion.
-    inline T* begin() { return &x; }
-    inline const T* begin() const { return &x; }
+    __always_inline__ T* begin() { return &x; }
+    __always_inline__ const T* begin() const { return &x; }
 
     // The imaginary part of the quaternion.
-    inline Vector3<T> imaginary() const { return Vector3<T>(x, y, z); }
+    __always_inline__ Vector3<T> imaginary() const { return Vector3<T>(x, y, z); }
 
     // The real part of the quaternion.
-    inline T real() const { return w; }
+    __always_inline__ T real() const { return w; }
 
     // Quaternion multiplication.
-    inline Quaternion<T> operator*(Quaternion<T> rhs) const {
+    __always_inline__ Quaternion<T> operator*(Quaternion<T> rhs) const {
         T real_part = w * rhs.w - dot(imaginary(), rhs.imaginary());
         Vector3<T> imaginary_part = cross(imaginary(), rhs.imaginary()) + rhs.imaginary() * w + imaginary() * rhs.w;
         return Quaternion(imaginary_part, real_part);
     }
-    inline Quaternion<T>& operator*=(Quaternion<T> rhs) {
+    __always_inline__ Quaternion<T>& operator*=(Quaternion<T> rhs) {
         Quaternion<T> r = *this * rhs;
         x = r.x; y = r.y; z = r.z;
         w = r.w;
@@ -149,7 +150,7 @@ public:
     }
 
     // Multiplying a vector by a quaternion, e.g. rotating it.
-    inline Vector3<T> operator*(Vector3<T> rhs) const {
+    __always_inline__ Vector3<T> operator*(Vector3<T> rhs) const {
         Vector3<T> img = imaginary();
         Vector3<T> uv = cross(img, rhs);
         Vector3<T> uuv = cross(img, uv);
@@ -157,22 +158,22 @@ public:
         Vector3<T> half_res = (uv * w) + uuv;
         return rhs + half_res * T(2);
     }
-        
+
     // The forward vector of the rotation.
     // The same as rotating Vector3::forward() by the quaternion.
-    inline Vector3<T> forward() const {
+    __always_inline__ Vector3<T> forward() const {
         return *this * Vector3<T>::forward();
     }
 
     // The up vector of the rotation.
     // The same as rotating Vector3::up() by the quaternion.
-    inline Vector3<T> up() const {
+    __always_inline__ Vector3<T> up() const {
         return *this * Vector3<T>::up();
     }
 
     // The right vector of the rotation.
     // The same as rotating Vector3::right() by the quaternion.
-    inline Vector3<T> right() const {
+    __always_inline__ Vector3<T> right() const {
         return *this * Vector3<T>::right();
     }
 
@@ -186,38 +187,38 @@ public:
 
 // Returns the conjugate of the quaternion.
 template <typename T>
-inline Quaternion<T> conjugate(Quaternion<T> v) {
+__always_inline__ Quaternion<T> conjugate(Quaternion<T> v) {
     return Quaternion<T>(-v.x, -v.y, -v.z, v.w);
 }
 
 // The inverse of a unit quaternion.
 template <typename T>
-inline Quaternion<T> inverse_unit(Quaternion<T> v) {
+__always_inline__ Quaternion<T> inverse_unit(Quaternion<T> v) {
     return conjugate(v);
 }
 
 // Dot product between two quaternions.
 template<typename T>
-inline T dot(Quaternion<T> lhs, Quaternion<T> rhs) {
+__always_inline__ T dot(Quaternion<T> lhs, Quaternion<T> rhs) {
     return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
 }
 
 // Computes the magnitude of a quaternion.
 template<typename T>
-inline T magnitude(Quaternion<T> v) {
+__always_inline__ T magnitude(Quaternion<T> v) {
     return sqrt(dot(v, v));
 }
 
 // Returns the input quaternion as normalized quaternion.
 template<typename T>
-inline Quaternion<T> normalize(Quaternion<T> v) {
+__always_inline__ Quaternion<T> normalize(Quaternion<T> v) {
     T m = magnitude(v);
     return Quaternion<T>(v.x / m, v.y / m, v.z / m, v.w / m);
 }
 
 // Lerps between two quaternions and normalizes the result.
 template<typename T>
-inline Quaternion<T> nlerp(Quaternion<T> from, Quaternion<T> to, T by) {
+__always_inline__ Quaternion<T> nlerp(Quaternion<T> from, Quaternion<T> to, T by) {
     return Quaternion<T>(lerp(from.x, to.x, by),
                          lerp(from.y, to.y, by),
                          lerp(from.z, to.z, by),
@@ -226,7 +227,7 @@ inline Quaternion<T> nlerp(Quaternion<T> from, Quaternion<T> to, T by) {
 
 // Comparison that checks if two quaternions are almost equal.
 template<typename T>
-inline bool almost_equal(Quaternion<T> lhs, Quaternion<T> rhs, unsigned short max_ulps = 4) {
+__always_inline__ bool almost_equal(Quaternion<T> lhs, Quaternion<T> rhs, unsigned short max_ulps = 4) {
     return almost_equal(lhs.x, rhs.x, max_ulps)
         && almost_equal(lhs.y, rhs.y, max_ulps)
         && almost_equal(lhs.z, rhs.z, max_ulps)
@@ -235,7 +236,7 @@ inline bool almost_equal(Quaternion<T> lhs, Quaternion<T> rhs, unsigned short ma
 
 // Comparison that checks if two quaternions interpreted as rotations in R3 are almost equal.
 template<typename T>
-inline bool almost_equal_rotation(Quaternion<T> lhs, Quaternion<T> rhs, unsigned short max_ulps = 4) {
+__always_inline__ bool almost_equal_rotation(Quaternion<T> lhs, Quaternion<T> rhs, unsigned short max_ulps = 4) {
     // A quaternion as rotation is conceptually equal to the same quaternion with all elements negated.
     // Therefore if the left and right quaternion's real component do not have the same sign, we negate rhs.
     if (lhs.w * rhs.w < T(0))
@@ -260,7 +261,7 @@ typedef Quaternion<double> Quaterniond;
 
 // Convenience function that appends a quaternion's string representation to an ostream.
 template<class T>
-inline std::ostream& operator<<(std::ostream& s, Bifrost::Math::Quaternion<T> v){
+__always_inline__ std::ostream& operator<<(std::ostream& s, Bifrost::Math::Quaternion<T> v){
     return s << v.to_string();
 }
 

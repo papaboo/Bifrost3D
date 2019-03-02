@@ -9,6 +9,7 @@
 #ifndef _BIFROST_MATH_STATISTICS_H_
 #define _BIFROST_MATH_STATISTICS_H_
 
+#include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/Utils.h>
 
 namespace Bifrost {
@@ -66,14 +67,14 @@ struct Statistics final {
     //---------------------------------------------------------------------------------------------
     // Getters
     //---------------------------------------------------------------------------------------------
-    inline T rms() const { return (T)sqrt(m2); }
-    inline T variance() const { return m2 - mean * mean; }
-    inline T standard_deviation() const { return (T)sqrt(variance()); }
+    __always_inline__ T rms() const { return (T)sqrt(m2); }
+    __always_inline__ T variance() const { return m2 - mean * mean; }
+    __always_inline__ T standard_deviation() const { return (T)sqrt(variance()); }
 
     //---------------------------------------------------------------------------------------------
     // Operations.
     //---------------------------------------------------------------------------------------------
-    void add(T v) {
+    inline void add(T v) {
         minimum = std::min(minimum, v);
         maximum = std::max(maximum, v);
 
@@ -83,7 +84,7 @@ struct Statistics final {
         sample_count = total_sample_count;
     }
 
-    void merge_with(Statistics other) {
+    inline void merge_with(Statistics other) {
         minimum = std::min(minimum, other.minimum);
         maximum = std::max(maximum, other.maximum);
         
@@ -94,7 +95,7 @@ struct Statistics final {
     }
 
     template <typename RandomAccessItr>
-    static Statistics merge(RandomAccessItr first, RandomAccessItr last) {
+    static inline Statistics merge(RandomAccessItr first, RandomAccessItr last) {
         Statistics res = *first;
         while (++first < last)
             res.merge_with(*first);

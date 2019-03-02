@@ -9,6 +9,7 @@
 #ifndef _BIFROST_MATH_UTILS_H_
 #define _BIFROST_MATH_UTILS_H_
 
+#include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/Constants.h>
 #include <Bifrost/Math/Vector.h>
 
@@ -48,7 +49,7 @@ inline bool almost_equal(float a, float b, unsigned short max_ulps = 4) {
 }
 
 // Returns the previous floating point number.
-inline float previous_float(float v) {
+__always_inline__ float previous_float(float v) {
     int vi;
     memcpy(&vi, &v, sizeof(int));
     if (vi < 0)
@@ -61,7 +62,7 @@ inline float previous_float(float v) {
 }
 
 // Returns the next floating point number.
-inline float next_float(float v) {
+__always_inline__ float next_float(float v) {
     int vi;
     memcpy(&vi, &v, sizeof(int));
     if (vi < 0)
@@ -77,13 +78,13 @@ inline float next_float(float v) {
 // Trigonometry.
 // ------------------------------------------------------------------------------------------------
 
-inline Vector2f direction_to_latlong_texcoord(Vector3f direction) {
+__always_inline__ Vector2f direction_to_latlong_texcoord(Vector3f direction) {
     float u = (atan2f(direction.z, direction.x) + PI<float>()) * 0.5f / PI<float>();
     float v = (asinf(direction.y) + PI<float>() * 0.5f) / PI<float>();
     return Vector2f(u, v);
 }
 
-inline Vector3f latlong_texcoord_to_direction(Vector2f uv) {
+__always_inline__ Vector3f latlong_texcoord_to_direction(Vector2f uv) {
     float phi = uv.x * 2.0f * PI<float>();
     float theta = uv.y * PI<float>();
     float sin_theta = sinf(theta);
@@ -94,37 +95,37 @@ inline Vector3f latlong_texcoord_to_direction(Vector2f uv) {
 // General helper methods.
 // ------------------------------------------------------------------------------------------------
 
-inline unsigned int ceil_divide(unsigned int a, unsigned int b) {
+__always_inline__ unsigned int ceil_divide(unsigned int a, unsigned int b) {
     return (a / b) + ((a % b) > 0);
 }
 
 // Linear interpolation of arbitrary types that implement addition, subtraction and multiplication.
 template <typename T, typename U>
-inline T lerp(const T a, const T b, const U t) {
+__always_inline__ T lerp(const T a, const T b, const U t) {
     return a + (b - a) * t;
 }
 
 template <typename T, typename U>
-inline T inverse_lerp(const T a, const T b, const U v) {
+__always_inline__ T inverse_lerp(const T a, const T b, const U v) {
     return (v - a) / (b - a);
 }
 
 template <typename T>
-inline T min(const T a, const T b) {
+__always_inline__ T min(const T a, const T b) {
     return a < b ? a : b;
 }
 
 template <typename T>
-inline T max(const T a, const T b) {
+__always_inline__ T max(const T a, const T b) {
     return a > b ? a : b;
 }
 template <typename T>
-inline T clamp(const T value, const T lower_bound, const T upper_bound) {
+__always_inline__ T clamp(const T value, const T lower_bound, const T upper_bound) {
     return min(max(value, lower_bound), upper_bound);
 }
 
 // Finds the smallest power of 2 greater or equal to x.
-inline unsigned int next_power_of_two(unsigned int x) {
+__always_inline__ unsigned int next_power_of_two(unsigned int x) {
     --x;
     x |= x >> 1;
     x |= x >> 2;
@@ -134,12 +135,12 @@ inline unsigned int next_power_of_two(unsigned int x) {
     return x + 1;
 }
 
-inline bool is_power_of_two(unsigned int v) {
+__always_inline__ bool is_power_of_two(unsigned int v) {
     return v && !(v & (v - 1));
 }
 
 // See answer from johnwbyrd on https://stackoverflow.com/questions/2589096/find-most-significant-bit-left-most-that-is-set-in-a-bit-array
-inline unsigned int most_significant_bit(unsigned int v) {
+__always_inline__ unsigned int most_significant_bit(unsigned int v) {
     static const int MultiplyDeBruijnBitPosition[32] = { 0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
                                                          8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31};
 
@@ -152,20 +153,20 @@ inline unsigned int most_significant_bit(unsigned int v) {
     return MultiplyDeBruijnBitPosition[(v * 0x07C4ACDDU) >> 27];
 }
 
-inline float degrees_to_radians(float degress) {
+__always_inline__ float degrees_to_radians(float degress) {
     return degress * (PI<float>() / 180.0f);
 }
 
-inline float radians_to_degress(float radians) {
+__always_inline__ float radians_to_degress(float radians) {
     return radians * (180.0f / PI<float>());
 }
 
 template <typename T>
-inline Vector3<T> reflect(Vector3<T> incident, Vector3<T> normal) {
+__always_inline__ Vector3<T> reflect(Vector3<T> incident, Vector3<T> normal) {
     return incident - normal * dot(normal, incident) * T(2);
 }
 
-inline unsigned int reverse_bits(unsigned int n) {
+__always_inline__ unsigned int reverse_bits(unsigned int n) {
     // Reverse bits of n.
     n = (n << 16) | (n >> 16);
     n = ((n & 0x00ff00ff) << 8) | ((n & 0xff00ff00) >> 8);
