@@ -22,7 +22,7 @@
 #include <Bifrost/Assets/Texture.h>
 #include <Bifrost/Core/Array.h>
 #include <Bifrost/Core/Engine.h>
-#include <Bifrost/Math/Math.h>
+#include <Bifrost/Math/OctahedralNormal.h>
 #include <Bifrost/Scene/Camera.h>
 #include <Bifrost/Scene/LightSource.h>
 #include <Bifrost/Scene/SceneNode.h>
