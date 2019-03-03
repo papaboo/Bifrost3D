@@ -69,7 +69,6 @@ SET(MATH_SRCS
   Bifrost/Math/NelderMead.h
   Bifrost/Math/OctahedralNormal.h
   Bifrost/Math/Plane.h
-  Bifrost/Math/Polynomial.h
   Bifrost/Math/Quaternion.h
   Bifrost/Math/Ray.h
   Bifrost/Math/Rect.h
