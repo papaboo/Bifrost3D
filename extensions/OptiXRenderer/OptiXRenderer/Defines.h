@@ -9,6 +9,8 @@
 #ifndef _OPTIXRENDERER_SHADING_DEFINES_H_
 #define _OPTIXRENDERER_SHADING_DEFINES_H_
 
+#include <Bifrost/Core/Defines.h>
+
 #define DOUBLE_PRECISION_ACCUMULATION_BUFFER 1
 #define PRESAMPLE_ENVIRONMENT_MAP 1
 // When disabling next event estimation to compare images, remember to increase the bounce count by one. 
@@ -40,7 +42,7 @@ void validate_optix_resource(T resource, char* file, int line) {
 #    if GPU_DEVICE
 #        define __inline_all__ __forceinline__ __host__ __device__
 #    else
-#        define __inline_all__ inline
+#        define __inline_all__ __always_inline__
 #    endif
 #endif
 
@@ -48,7 +50,7 @@ void validate_optix_resource(T resource, char* file, int line) {
 #    if GPU_DEVICE
 #        define __inline_dev__ __forceinline__ __device__
 #    else
-#        define __inline_dev__ inline
+#        define __inline_dev__ __always_inline__
 #    endif
 #endif
 
