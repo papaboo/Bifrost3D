@@ -111,23 +111,23 @@ GTEST_TEST(GGX, evaluate_with_PDF) {
 GTEST_TEST(GGX, minimal_alpha) {
     using namespace optix;
         
-    const float alpha = 0.0f;
+    const float min_alpha = 0.00000000001f;
     const float full_specularity = 1.0f;
 
     const float3 incident_w = make_float3(0.0f, 0.0f, 1.0f);
     const float3 grazing_w = normalize(make_float3(0.0f, 1.0f, 0.001f));
 
-    float f = Shading::BSDFs::GGX::evaluate(0.00000000001f, full_specularity, incident_w, incident_w);
+    float f = Shading::BSDFs::GGX::evaluate(min_alpha, full_specularity, incident_w, incident_w);
     EXPECT_FALSE(isnan(f));
 
-    f = Shading::BSDFs::GGX::evaluate(alpha, full_specularity, grazing_w, incident_w);
+    f = Shading::BSDFs::GGX::evaluate(min_alpha, full_specularity, grazing_w, incident_w);
     EXPECT_FALSE(isnan(f));
 
-    f = Shading::BSDFs::GGX::evaluate(alpha, full_specularity, grazing_w, grazing_w);
+    f = Shading::BSDFs::GGX::evaluate(min_alpha, full_specularity, grazing_w, grazing_w);
     EXPECT_FALSE(isnan(f));
 
     const float3 grazing_wi = make_float3(grazing_w.x, -grazing_w.y, grazing_w.z);
-    f = Shading::BSDFs::GGX::evaluate(0.00000000001f, full_specularity, grazing_w, grazing_wi);
+    f = Shading::BSDFs::GGX::evaluate(min_alpha, full_specularity, grazing_w, grazing_wi);
     EXPECT_FALSE(isnan(f));
 }
 

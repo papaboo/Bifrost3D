@@ -63,7 +63,7 @@ __inline_all__ float height_correlated_smith_G(float alpha, const float3& wo, co
 __inline_all__ float evaluate(float alpha, float specularity, const float3& wo, const float3& wi) {
     float3 halfway = normalize(wo + wi);
     float G = height_correlated_smith_G(alpha, wo, wi);
-    float D = Distributions::GGX::D(alpha, halfway.z);
+    float D = Distributions::GGX_VNDF::D(alpha, halfway);
     float F = schlick_fresnel(specularity, dot(wo, halfway));
     return (D * F * G) / (4.0f * wo.z * wi.z);
 }
@@ -71,14 +71,14 @@ __inline_all__ float evaluate(float alpha, float specularity, const float3& wo, 
 __inline_all__ float3 evaluate(float alpha, const float3& specularity, const float3& wo, const float3& wi) {
     float3 halfway = normalize(wo + wi);
     float G = height_correlated_smith_G(alpha, wo, wi);
-    float D = Distributions::GGX::D(alpha, halfway.z);
+    float D = Distributions::GGX_VNDF::D(alpha, halfway);
     float3 F = schlick_fresnel(specularity, dot(wo, halfway));
     return F * (D * G / (4.0f * wo.z * wi.z));
 }
 
 __inline_all__ float3 evaluate(float alpha, const float3& specularity, const float3& wo, const float3& wi, const float3& halfway) {
     float G = height_correlated_smith_G(alpha, wo, wi);
-    float D = Distributions::GGX::D(alpha, halfway.z);
+    float D = Distributions::GGX_VNDF::D(alpha, halfway);
     float3 F = schlick_fresnel(specularity, dot(wo, halfway));
     return F * (D * G / (4.0f * wo.z * wi.z));
 }
@@ -92,11 +92,11 @@ __inline_all__ float PDF(float alpha, const float3& wo, const float3& halfway) {
     return Distributions::GGX_VNDF::PDF(alpha, wo, halfway) / (4.0f * dot(wo, halfway));
 }
 
-__inline_all__ BSDFResponse evaluate_with_PDF(float alpha, const float3& specularity, const float3& wo, const float3& wi, float3 halfway) {
+__inline_all__ BSDFResponse evaluate_with_PDF(float alpha, const float3& specularity, const float3& wo, const float3& wi, const float3& halfway) {
     float lambda_wo = Distributions::GGX_VNDF::lambda(alpha, wo);
     float lambda_wi = Distributions::GGX_VNDF::lambda(alpha, wi);
 
-    float D_over_4 = Distributions::GGX::D(alpha, halfway.z) / 4.0f;
+    float D_over_4 = Distributions::GGX_VNDF::D(alpha, halfway) / 4.0f;
 
     float3 F = schlick_fresnel(specularity, dot(wo, halfway));
 

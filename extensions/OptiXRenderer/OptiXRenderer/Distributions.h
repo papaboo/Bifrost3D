@@ -110,15 +110,18 @@ namespace GGX {
 // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz, 2014.
 //=================================================================================================
 namespace GGX_VNDF {
+    // Sampling the GGX Distribution of Visible Normals, equation 1.
+    __inline_all__ float D(float alpha_x, float alpha_y, const optix::float3& halfway) {
+        float m = pow2(halfway.x / alpha_x) + pow2(halfway.y / alpha_y) + pow2(halfway.z);
+        return 1 / (PIf * alpha_x * alpha_y * pow2(m));
+    }
+    __inline_all__ float D(float alpha, const optix::float3& halfway) { return D(alpha, alpha, halfway); }
+
     // Sampling the GGX Distribution of Visible Normals, equation 2.
     __inline_all__ float lambda(float alpha_x, float alpha_y, const optix::float3& w) {
         return 0.5f * (-1 + sqrt(1 + (pow2(alpha_x * w.x) + pow2(alpha_y * w.y)) / pow2(w.z)));
     }
-
-    // Sampling the GGX Distribution of Visible Normals, equation 2.
-    __inline_all__ float lambda(float alpha, const optix::float3& w) {
-        return lambda(alpha, alpha, w);
-    }
+    __inline_all__ float lambda(float alpha, const optix::float3& w) { return lambda(alpha, alpha, w); }
 
     // Sampling the GGX Distribution of Visible Normals, listing 1.
     __inline_all__ optix::float3 sample_halfway(float alpha_x, float alpha_y, optix::float3 wo, optix::float2 random_sample) {
@@ -144,11 +147,7 @@ namespace GGX_VNDF {
         // Section 3.4: transforming the normal back to the ellipsoid configuration
         return normalize(make_float3(alpha_x * Nh.x, alpha_y * Nh.y, fmaxf(0.0f, Nh.z)));
     }
-
-    // Sampling the GGX Distribution of Visible Normals, listing 1.
-    __inline_all__ optix::float3 sample_halfway(float alpha, optix::float3 wo, optix::float2 random_sample) {
-        return sample_halfway(alpha, alpha, wo, random_sample);
-    }
+    __inline_all__ optix::float3 sample_halfway(float alpha, optix::float3 wo, optix::float2 random_sample) { return sample_halfway(alpha, alpha, wo, random_sample); }
 
     // Sampling the GGX Distribution of Visible Normals, equation 3.
     __inline_all__ float PDF(float alpha, optix::float3 wo, optix::float3 halfway) {
@@ -158,7 +157,7 @@ namespace GGX_VNDF {
 #endif
 
         float recip_G1 = 1.0f + lambda(alpha, wo);
-        float D = Distributions::GGX::D(alpha, abs(halfway.z));
+        float D = Distributions::GGX_VNDF::D(alpha, halfway);
         return optix::dot(wo, halfway) * D / (recip_G1 * wo.z);
     }
 
