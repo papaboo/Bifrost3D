@@ -166,8 +166,8 @@ __always_inline__ Vector<T> normalize(Vector<T> v){
 template<typename T>
 __always_inline__ Vector3<T> cross(Vector3<T> lhs, Vector3<T> rhs) {
     return Vector3<T>((lhs.y * rhs.z) - (lhs.z * rhs.y),
-        (lhs.z * rhs.x) - (lhs.x * rhs.z),
-        (lhs.x * rhs.y) - (lhs.y * rhs.x));
+                      (lhs.z * rhs.x) - (lhs.x * rhs.z),
+                      (lhs.x * rhs.y) - (lhs.y * rhs.x));
 }
 
 template<typename T>
