@@ -110,18 +110,14 @@ namespace GGX {
 // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz, 2014.
 //=================================================================================================
 namespace GGX_VNDF {
-    // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Equation 72.
-    __inline_all__ float lambda(float alpha, float cos_theta) {
-        // NOTE At grazing angles the lambda function is going to return very low values. 
-        //      This is generally not a problem, unless alpha is low as well, 
-        //      meaning that the in and out vectors will always be at grazing angles 
-        //      and therefore the masking is consistently underestimated. 
-        //      We could fix this be adding a very specific scaling for this one case.
-        //      Check the GGX Rho computation for validity.
-        float cos_theta_sqrd = cos_theta * cos_theta;
-        float tan_theta_sqrd = fmaxf(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
-        float recip_a_sqrd = alpha * alpha * tan_theta_sqrd;
-        return 0.5f * (-1.0f + sqrt(1.0f + recip_a_sqrd));
+    // Sampling the GGX Distribution of Visible Normals, Equation 2.
+    __inline_all__ float lambda(float alpha_x, float alpha_y, const optix::float3& w) {
+        return 0.5f * (-1 + sqrt(1 + (pow2(alpha_x * w.x) + pow2(alpha_y * w.y)) / pow2(w.z)));
+    }
+
+    // Sampling the GGX Distribution of Visible Normals, Equation 2.
+    __inline_all__ float lambda(float alpha, const optix::float3& w) {
+        return lambda(alpha, alpha, w);
     }
 
     // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, supplemental 1, page 19.
@@ -199,7 +195,7 @@ namespace GGX_VNDF {
             THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
 #endif
 
-        float recip_G1 = 1.0f + lambda(alpha, wo.z);
+        float recip_G1 = 1.0f + lambda(alpha, wo);
         float D = Distributions::GGX::D(alpha, abs(halfway.z));
         return optix::dot(wo, halfway) * D / (recip_G1 * wo.z);
     }

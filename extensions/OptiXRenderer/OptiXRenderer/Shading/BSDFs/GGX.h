@@ -45,7 +45,7 @@ __inline_all__ float height_correlated_smith_G(float alpha, const float3& wo, co
     if (heavisided != 1.0f)
         THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
 #endif
-    return 1.0f / (1.0f + Distributions::GGX_VNDF::lambda(alpha, wo.z) + Distributions::GGX_VNDF::lambda(alpha, wi.z));
+    return 1.0f / (1.0f + Distributions::GGX_VNDF::lambda(alpha, wo) + Distributions::GGX_VNDF::lambda(alpha, wi));
 }
 
 //----------------------------------------------------------------------------
@@ -93,8 +93,8 @@ __inline_all__ float PDF(float alpha, const float3& wo, const float3& halfway) {
 }
 
 __inline_all__ BSDFResponse evaluate_with_PDF(float alpha, const float3& specularity, const float3& wo, const float3& wi, float3 halfway) {
-    float lambda_wo = Distributions::GGX_VNDF::lambda(alpha, wo.z);
-    float lambda_wi = Distributions::GGX_VNDF::lambda(alpha, wi.z);
+    float lambda_wo = Distributions::GGX_VNDF::lambda(alpha, wo);
+    float lambda_wi = Distributions::GGX_VNDF::lambda(alpha, wi);
 
     float D_over_4 = Distributions::GGX::D(alpha, halfway.z) / 4.0f;
 
