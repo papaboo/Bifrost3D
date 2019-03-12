@@ -45,7 +45,7 @@ __inline_all__ float height_correlated_smith_G(float alpha, const float3& wo, co
     if (heavisided != 1.0f)
         THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
 #endif
-    return 1.0f / (1.0f + Distributions::VNDF_GGX::lambda(alpha, wo.z) + Distributions::VNDF_GGX::lambda(alpha, wi.z));
+    return 1.0f / (1.0f + Distributions::GGX_VNDF::lambda(alpha, wo.z) + Distributions::GGX_VNDF::lambda(alpha, wi.z));
 }
 
 //----------------------------------------------------------------------------
@@ -76,18 +76,25 @@ __inline_all__ float3 evaluate(float alpha, const float3& specularity, const flo
     return F * (D * G / (4.0f * wo.z * wi.z));
 }
 
+__inline_all__ float3 evaluate(float alpha, const float3& specularity, const float3& wo, const float3& wi, const float3& halfway) {
+    float G = height_correlated_smith_G(alpha, wo, wi);
+    float D = Distributions::GGX::D(alpha, halfway.z);
+    float3 F = schlick_fresnel(specularity, dot(wo, halfway));
+    return F * (D * G / (4.0f * wo.z * wi.z));
+}
+
 __inline_all__ float PDF(float alpha, const float3& wo, const float3& halfway) {
 #if _DEBUG
     if (dot(wo, halfway) < 0.0f || halfway.z < 0.0f)
         THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
 #endif
 
-    return Distributions::VNDF_GGX::PDF(alpha, wo, halfway) / (4.0f * dot(wo, halfway));
+    return Distributions::GGX_VNDF::PDF(alpha, wo, halfway) / (4.0f * dot(wo, halfway));
 }
 
 __inline_all__ BSDFResponse evaluate_with_PDF(float alpha, const float3& specularity, const float3& wo, const float3& wi, float3 halfway) {
-    float lambda_wo = Distributions::VNDF_GGX::lambda(alpha, wo.z);
-    float lambda_wi = Distributions::VNDF_GGX::lambda(alpha, wi.z);
+    float lambda_wo = Distributions::GGX_VNDF::lambda(alpha, wo.z);
+    float lambda_wi = Distributions::GGX_VNDF::lambda(alpha, wi.z);
 
     float D_over_4 = Distributions::GGX::D(alpha, halfway.z) / 4.0f;
 
@@ -122,7 +129,7 @@ __inline_all__ float3 approx_off_specular_peak(float alpha, const float3& wo) {
 __inline_all__ BSDFSample sample(float alpha, const float3& specularity, const float3& wo, float2 random_sample) {
     BSDFSample bsdf_sample;
 
-    float3 halfway = Distributions::VNDF_GGX::sample_halfway(alpha, wo, random_sample);
+    float3 halfway = Distributions::GGX_VNDF::sample_halfway(alpha, wo, random_sample);
     bsdf_sample.direction = reflect(-wo, halfway);
 
     BSDFResponse response = evaluate_with_PDF(alpha, specularity, wo, bsdf_sample.direction, halfway);

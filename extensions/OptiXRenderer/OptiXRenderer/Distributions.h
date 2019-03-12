@@ -105,10 +105,11 @@ namespace GGX {
 
 //=================================================================================================
 // Sampling of the visible normal distribution function for GGX.
-// Importance Sampling Microfacet-Based BSDFs with the Distribution of Visible Normals, Heitz 14.
-// Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14.
+// Sampling the GGX Distribution of Visible Normals, Heitz, 2018
+// Importance Sampling Microfacet-Based BSDFs with the Distribution of Visible Normals, Heitz, 2014.
+// Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz, 2014.
 //=================================================================================================
-namespace VNDF_GGX {
+namespace GGX_VNDF {
     // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Equation 72.
     __inline_all__ float lambda(float alpha, float cos_theta) {
         // NOTE At grazing angles the lambda function is going to return very low values. 
@@ -121,10 +122,6 @@ namespace VNDF_GGX {
         float tan_theta_sqrd = fmaxf(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
         float recip_a_sqrd = alpha * alpha * tan_theta_sqrd;
         return 0.5f * (-1.0f + sqrt(1.0f + recip_a_sqrd));
-    }
-
-    __inline_all__ float masking(float alpha, float cos_theta) {
-        return 1.0f / (1.0f + lambda(alpha, cos_theta));
     }
 
     // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, supplemental 1, page 19.
@@ -198,13 +195,13 @@ namespace VNDF_GGX {
     // Importance Sampling Microfacet-Based BSDFs with the Distribution of Visible Normals, equation 2
     __inline_all__ float PDF(float alpha, optix::float3 wo, optix::float3 halfway) {
 #if _DEBUG
-        if (wo.z < 0.0f)
+        if (wo.z < 0.0f || optix::dot(wo, halfway) < 0.0f)
             THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
 #endif
 
-        float G1 = masking(alpha, wo.z);
+        float recip_G1 = 1.0f + lambda(alpha, wo.z);
         float D = Distributions::GGX::D(alpha, abs(halfway.z));
-        return G1 * abs(optix::dot(wo, halfway)) * D / wo.z;
+        return optix::dot(wo, halfway) * D / (recip_G1 * wo.z);
     }
 
     __inline_all__ Distributions::DirectionalSample sample(float alpha, optix::float3 wo, optix::float2 random_sample) {
@@ -214,7 +211,7 @@ namespace VNDF_GGX {
         return sample;
     }
 
-} // NS VNDF_GGX
+} // NS GGX_VNDF
 
 } // NS Distributions
 } // NS OptiXRenderer

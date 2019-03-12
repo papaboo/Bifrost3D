@@ -118,6 +118,7 @@ __inline_all__ bool is_black(const optix::float3 color) {
     return color.x <= 0.0f && color.y <= 0.0f && color.z <= 0.0f;
 }
 
+
 __inline_all__ bool is_PDF_valid(float PDF) {
     return PDF > 0.000001f;
 }
