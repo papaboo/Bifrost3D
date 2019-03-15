@@ -30,7 +30,7 @@ GTEST_TEST(GGX, power_conservation) {
 
     for (float cos_theta : { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
         const float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
-        for (float alpha : { 0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
+        for (float alpha : { 0.0f, 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
             float ws[MAX_SAMPLES];
             for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
                 BSDFSample sample = Shading::BSDFs::GGX::sample(alpha, full_specularity, wo, RNG::sample02(i));
@@ -54,7 +54,7 @@ GTEST_TEST(GGX, Helmholtz_reciprocity) {
     const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
     const float full_specularity = 1.0f;
 
-    for (float alpha : { 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
+    for (float alpha : { 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = Shading::BSDFs::GGX::sample(alpha, full_specularity, wo, RNG::sample02(i));
 
@@ -73,7 +73,7 @@ GTEST_TEST(GGX, consistent_PDF) {
     const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
     const float full_specularity = 1.0f;
 
-    for (float alpha : { 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
+    for (float alpha : { 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = Shading::BSDFs::GGX::sample(alpha, full_specularity, wo, RNG::sample02(i));
             if (is_PDF_valid(sample.PDF)) {
@@ -90,18 +90,17 @@ GTEST_TEST(GGX, evaluate_with_PDF) {
 
     const unsigned int MAX_SAMPLES = 128u;
     const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
-    const float full_specularity = 1.0f;
+    const float3 full_specularity = { 1, 1, 1 };
 
-    for (float alpha : { 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
+    for (float alpha : { 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = Shading::BSDFs::GGX::sample(alpha, full_specularity, wo, RNG::sample02(i));
 
             if (is_PDF_valid(sample.PDF)) {
                 float3 wi = sample.direction;
                 float3 halfway = normalize(wo + wi);
-                BSDFResponse response = Shading::BSDFs::GGX::evaluate_with_PDF(alpha, full_specularity, wo, wi);
-                const float3 f = make_float3(Shading::BSDFs::GGX::evaluate(alpha, full_specularity, wo, wi));
-                EXPECT_COLOR_EQ_EPS(f, response.weight, make_float3(0.000001f));
+                BSDFResponse response = Shading::BSDFs::GGX::evaluate_with_PDF(alpha, full_specularity, wo, wi, halfway);
+                EXPECT_FLOAT_EQ(Shading::BSDFs::GGX::evaluate(alpha, full_specularity, wo, wi, halfway).x, response.weight.x);
                 EXPECT_FLOAT_EQ(Shading::BSDFs::GGX::PDF(alpha, wo, halfway), response.PDF);
             }
         }
@@ -172,7 +171,7 @@ GTEST_TEST(GGX, sampling_variance) {
     };
 
     const float3 wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
-    for (float alpha : { 0.125f, 0.25f, 0.5f, 1.0f }) {
+    for (float alpha : { 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
         double vanilla_GGX_mean, vanilla_GGX_variance;
         sampling_mean_and_variance(sample_GGX_vanilla, alpha, wo, vanilla_GGX_mean, vanilla_GGX_variance);
 
