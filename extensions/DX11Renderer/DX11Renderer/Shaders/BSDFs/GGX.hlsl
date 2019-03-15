@@ -18,6 +18,12 @@ namespace GGX {
         return max(0.00000000001f, roughness * roughness);
     }
 
+    // Sampling the GGX Distribution of Visible Normals, equation 1.
+    float D(float alpha_x, float alpha_y, float3 halfway) {
+        float m = pow2(halfway.x / alpha_x) + pow2(halfway.y / alpha_y) + pow2(halfway.z);
+        return 1 / (PI * alpha_x * alpha_y * pow2(m));
+    }
+
     float D(float alpha, float abs_cos_theta) {
         float alpha_sqrd = alpha * alpha;
         float cos_theta_sqrd = abs_cos_theta * abs_cos_theta;
@@ -45,32 +51,22 @@ namespace GGX {
         return D(alpha, abs_cos_theta) * abs_cos_theta;
     }
 
-    // Understanding the Masking - Shadowing Function in Microfacet - Based BRDFs, Heitz 14, equation 72.
-    float height_correlated_smith_delta(float alpha, float3 w) {
-        float cos_theta_sqrd = w.z * w.z;
-        float tan_theta_sqrd = max(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
-        float recip_a_sqrd = alpha * alpha * tan_theta_sqrd;
-        return 0.5 * (-1.0f + sqrt(1.0f + recip_a_sqrd));
+    // Sampling the GGX Distribution of Visible Normals, equation 2.
+    float lambda(float alpha_x, float alpha_y, float3 w) {
+        return 0.5f * (-1 + sqrt(1 + (pow2(alpha_x * w.x) + pow2(alpha_y * w.y)) / pow2(w.z)));
     }
+    float lambda(float alpha, float3 w) { return lambda(alpha, alpha, w); }
 
     // Height correlated smith geometric term.
     // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14, equation 99. 
-    float height_correlated_smith_G(float alpha, float3 wo, float3 wi, float3 halfway) {
+    float G2(float alpha, float3 wo, float3 wi, float3 halfway) {
         float numerator = 1.0; // heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway)); // Should always be one.
-        return numerator / (1.0f + height_correlated_smith_delta(alpha, wo) + height_correlated_smith_delta(alpha, wi));
-    }
-
-    float evaluate(float alpha, float specularity, float3 wo, float3 wi) {
-        float3 halfway = normalize(wo + wi);
-        float g = height_correlated_smith_G(alpha, wo, wi, halfway);
-        float d = D(alpha, halfway.z);
-        float f = schlick_fresnel(specularity, dot(wo, halfway));
-        return (d * f * g) / (4.0f * wo.z * wi.z);
+        return numerator / (1.0f + lambda(alpha, wo) + lambda(alpha, wi));
     }
 
     float3 evaluate(float alpha, float3 specularity, float3 wo, float3 wi) {
         float3 halfway = normalize(wo + wi);
-        float g = height_correlated_smith_G(alpha, wo, wi, halfway);
+        float g = G2(alpha, wo, wi, halfway);
         float d = D(alpha, halfway.z);
         float3 f = schlick_fresnel(specularity, dot(wo, halfway));
         return f * (d * g / (4.0f * wo.z * wi.z));
