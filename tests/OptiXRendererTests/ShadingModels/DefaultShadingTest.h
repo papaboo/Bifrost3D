@@ -361,7 +361,7 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
     double sample_all_mean_squared = Bifrost::Math::sort_and_pairwise_summation(ws_squared, ws_squared + MAX_SAMPLES) / double(MAX_SAMPLES);
     double sample_all_variance = sample_all_mean_squared - sample_all_mean * sample_all_mean;
 
-    EXPECT_TRUE(almost_equal_eps(float(sample_one_mean), float(sample_all_mean), 0.00001f));
+    EXPECT_TRUE(almost_equal_eps(float(sample_one_mean), float(sample_all_mean), 0.0001f));
     EXPECT_LT(sample_all_variance, sample_one_variance);
 
     delete[] ws;
