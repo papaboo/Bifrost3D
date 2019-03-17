@@ -110,78 +110,28 @@ void create_material_scene(Cameras::UID camera_ID, SceneNode root_node, ImGui::I
     }
 
     { // Create floor.
-        const int tile_count_pr_side = 41;
-        const int vertices_pr_side = tile_count_pr_side + 1;
-
-        auto is_odd = [](int i) -> bool { return (i % 2) == 1; };
-
-        { // White tiles.
-            Transform transform = Transform(Vector3f(0.0f, -1.0f, 0.0f));
-            SceneNode node = SceneNodes::create("White tiles", transform);
-            int white_tile_count = tile_count_pr_side * tile_count_pr_side + is_odd(tile_count_pr_side);
-            int vertex_count = (tile_count_pr_side + 1) * (tile_count_pr_side + 1);
-            Meshes::UID tiles_mesh_ID = Meshes::create("White tiles", white_tile_count, vertex_count, MeshFlag::Position);
-
-            Vector3f* positions = Meshes::get_positions(tiles_mesh_ID);
-            for (int y = 0; y < vertices_pr_side; ++y)
-                for (int x = 0; x < vertices_pr_side; ++x)
-                    positions[x + y * vertices_pr_side] = Vector3f(x - 20.0f, 0.0f, y - 20.0f);
-
-            Vector3ui* primitives = Meshes::get_primitives(tiles_mesh_ID);
-            for (int y = 0; y < tile_count_pr_side; ++y)
-                for (int x = 0; x < tile_count_pr_side; ++x) {
-                    if ((x & 1) != (y & 1))
-                        continue; // Ignore every other tile.
-
-                    unsigned int base_index = x + y * vertices_pr_side;
-                    *primitives = Vector3ui(base_index, base_index + vertices_pr_side, base_index + 1);
-                    ++primitives;
-                    *primitives = Vector3ui(base_index + 1, base_index + vertices_pr_side, base_index + vertices_pr_side + 1);
-                    ++primitives;
-                }
-
-            Meshes::compute_bounds(tiles_mesh_ID);
-
-            Materials::Data white_tile_data = Materials::Data::create_dielectric(RGB(0.5f), 0.4f, 0.25f);
-            Materials::UID white_tile_material_ID = Materials::create("White tile", white_tile_data);
-
-            MeshModels::create(node.get_ID(), tiles_mesh_ID, white_tile_material_ID);
-            node.set_parent(root_node);
+      // A checker pattern texture would be really nice on the floor.
+        unsigned int size = 41;
+        Images::UID tint_roughness_image_ID = Images::create2D("Floor color", PixelFormat::RGBA32, 2.2f, Vector2ui(size, size));
+        unsigned char* tint_roughness_pixels = (unsigned char*)Images::get_pixels(tint_roughness_image_ID);
+        for (unsigned int y = 0; y < size; ++y) {
+            for (unsigned int x = 0; x < size; ++x) {
+                bool is_black = (x & 1) != (y & 1);
+                unsigned char* pixel = tint_roughness_pixels + (x + y * size) * 4u;
+                unsigned char intensity = is_black ? 1 : 255;
+                pixel[0] = pixel[1] = pixel[2] = intensity;
+                pixel[3] = is_black ? 6 : 102;
+            }
         }
 
-        { // Black tiles.
-            Transform transform = Transform(Vector3f(0.0f, -1.0f, 0.0f));
-            SceneNode node = SceneNodes::create("Black tiles", transform);
-            int white_tile_count = tile_count_pr_side * tile_count_pr_side - is_odd(tile_count_pr_side);
-            int vertex_count = (tile_count_pr_side + 1) * (tile_count_pr_side + 1);
-            Meshes::UID tiles_mesh_ID = Meshes::create("Black tiles", white_tile_count, vertex_count, MeshFlag::Position);
+        Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 1, 0.5f);
+        material_data.tint_roughness_texture_ID = Textures::create2D(tint_roughness_image_ID, MagnificationFilter::None, MinificationFilter::None);
+        Materials::UID material_ID = Materials::create("Floor", material_data);
 
-            Vector3f* positions = Meshes::get_positions(tiles_mesh_ID);
-            for (int y = 0; y < vertices_pr_side; ++y)
-                for (int x = 0; x < vertices_pr_side; ++x)
-                    positions[x + y * vertices_pr_side] = Vector3f(x - 20.0f, 0.0f, y - 20.0f);
-
-            Vector3ui* indices = Meshes::get_primitives(tiles_mesh_ID);
-            for (int y = 0; y < tile_count_pr_side; ++y)
-                for (int x = 0; x < tile_count_pr_side; ++x) {
-                    if ((x & 1) == (y & 1))
-                        continue; // Ignore every other tile.
-
-                    unsigned int base_index = x + y * vertices_pr_side;
-                    *indices = Vector3ui(base_index, base_index + vertices_pr_side, base_index + 1);
-                    ++indices;
-                    *indices = Vector3ui(base_index + 1, base_index + vertices_pr_side, base_index + vertices_pr_side + 1);
-                    ++indices;
-                }
-
-            Meshes::compute_bounds(tiles_mesh_ID);
-
-            Materials::Data black_tile_data = Materials::Data::create_dielectric(RGB(0.001f), 0.02f, 0.5f);
-            Materials::UID black_tile_material_ID = Materials::create("Black tile", black_tile_data);
-
-            MeshModels::create(node.get_ID(), tiles_mesh_ID, black_tile_material_ID);
-            node.set_parent(root_node);
-        }
+        SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0.5, -1.0, 0.5), Quaternionf::identity(), float(size)));
+        Meshes::UID plane_mesh_ID = MeshCreation::plane(1, { MeshFlag::Position, MeshFlag::Texcoord });
+        MeshModels::create(plane_node.get_ID(), plane_mesh_ID, material_ID);
+        plane_node.set_parent(root_node);
     }
 
     // Materials
