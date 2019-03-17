@@ -147,10 +147,28 @@ struct R11G11B10_Float {
         // This fits perfectly with the half format, that also have a 5 bit exponent.
         // The solution therefore is to convert the float to half and then using bitmasks 
         // to extract the 5 bit exponent and the first 5/6 bits of the mantissa.
+        // Masking, however, yields a result that always truncates the values and is therefore biased towards zero.
+        // To avoid this bias, we isolate the ignored decimals and add them once more to the color.
+        // Any decimals above 0.5 will then cause the next bit to flip and thus round upwards.
+        // If speed is a concern it might be faster to use the conversion tables in half_float directly instead of performing math.
+        // See Jeroen van der Zijp's Fast Half Float Conversions, http://www.fox-toolkit.org/ftp/fasthalffloatconversion.pdf
         // The memory layout is confusingly [B10, G11, R11]. Go figure.
-        unsigned int blue = (half_float::half(b).raw() & 0x7FE0) << 17;
-        unsigned int green = (half_float::half(g).raw() & 0x7FF0) << 7;
-        unsigned int red = (half_float::half(r).raw() & 0x7FF0) >> 4;
+
+        half_float::detail::uint16 biased_blue_raw = half(b).raw() & 0x7FE0;
+        half biased_blue;
+        memcpy(&biased_blue, &biased_blue_raw, sizeof(half));
+        unsigned int blue = (half_float::half(2 * b - biased_blue).raw() & 0x7FE0) << 17;
+
+        half_float::detail::uint16 biased_green_raw = half(g).raw() & 0x7FF0;
+        half biased_green;
+        memcpy(&biased_green, &biased_green_raw, sizeof(half));
+        unsigned int green = (half_float::half(2 * g - biased_green).raw() & 0x7FF0) << 7;
+
+        half_float::detail::uint16 biased_red_raw = half(r).raw() & 0x7FF0;
+        half biased_red;
+        memcpy(&biased_red, &biased_red_raw, sizeof(half));
+        unsigned int red = (half_float::half(2 * r - biased_red).raw() & 0x7FF0) >> 4;
+
         raw = red | green | blue;
     }
 };
