@@ -1,10 +1,10 @@
 // Bifrost model for meshes.
-// ---------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 // Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
-// ---------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 
 #ifndef _BIFROST_ASSETS_MESH_MODEL_H_
 #define _BIFROST_ASSETS_MESH_MODEL_H_
@@ -20,13 +20,12 @@
 namespace Bifrost {
 namespace Assets {
 
-//----------------------------------------------------------------------------
-// A mesh model contains the mesh and material IDs and combines them with 
-// the scene node ID.
-//----------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+// A mesh model contains the mesh and material IDs and combines them with the scene node ID.
+//-------------------------------------------------------------------------------------------------
 class MeshModels final {
 public:
-    typedef Core::TypedUIDGenerator<Meshes> UIDGenerator;
+    typedef Core::TypedUIDGenerator<MeshModels> UIDGenerator;
     typedef UIDGenerator::UID UID;
     typedef UIDGenerator::ConstIterator ConstUIDIterator;
 
@@ -38,7 +37,7 @@ public:
     static void reserve(unsigned int new_capacity);
     static bool has(MeshModels::UID model_ID) { return m_UID_generator.has(model_ID); }
 
-    static MeshModels::UID create(Scene::SceneNodes::UID scene_node_ID, Assets::Meshes::UID mesh_ID, Assets::Materials::UID material_ID);
+    static MeshModels::UID create(Scene::SceneNodes::UID scene_node_ID, Meshes::UID mesh_ID, Materials::UID material_ID);
     static void destroy(MeshModels::UID model_ID);
 
     static ConstUIDIterator begin() { return m_UID_generator.begin(); }
@@ -46,13 +45,13 @@ public:
     static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
 
     static inline Scene::SceneNodes::UID get_scene_node_ID(MeshModels::UID model_ID) { return m_models[model_ID].scene_node_ID; }
-    static inline Assets::Meshes::UID get_mesh_ID(MeshModels::UID model_ID) { return m_models[model_ID].mesh_ID; }
-    static inline Assets::Materials::UID get_material_ID(MeshModels::UID model_ID) { return m_models[model_ID].material_ID; }
-    static void set_material_ID(MeshModels::UID model_ID, Assets::Materials::UID material_ID);
+    static inline Meshes::UID get_mesh_ID(MeshModels::UID model_ID) { return m_models[model_ID].mesh_ID; }
+    static inline Materials::UID get_material_ID(MeshModels::UID model_ID) { return m_models[model_ID].material_ID; }
+    static void set_material_ID(MeshModels::UID model_ID, Materials::UID material_ID);
 
-    //-------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     // Changes since last game loop tick.
-    //-------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     enum class Change : unsigned char {
         None = 0u,
         Created = 1u << 0u,
@@ -74,8 +73,8 @@ private:
 
     struct Model final {
         Scene::SceneNodes::UID scene_node_ID;
-        Assets::Meshes::UID mesh_ID;
-        Assets::Materials::UID material_ID;
+        Meshes::UID mesh_ID;
+        Materials::UID material_ID;
     };
 
     static UIDGenerator m_UID_generator;
@@ -83,14 +82,14 @@ private:
     static Core::ChangeSet<Changes, UID> m_changes;
 };
 
-// ---------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 // MeshModel UID wrapper.
-// ---------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 class MeshModel final {
 public:
-    // -----------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     // Class management.
-    // -----------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------
     MeshModel() : m_ID(MeshModels::UID::invalid_UID()) {}
     MeshModel(MeshModels::UID id) : m_ID(id) {}
 
@@ -104,9 +103,9 @@ public:
     // Getters.
     // -----------------------------------------------------------------------
     inline Scene::SceneNode get_scene_node() const { return MeshModels::get_scene_node_ID(m_ID); }
-    inline Assets::Mesh get_mesh() const { return MeshModels::get_mesh_ID(m_ID); }
-    inline Assets::Material get_material() const { return MeshModels::get_material_ID(m_ID); }
-    inline void set_material_ID(Assets::Materials::UID material_ID) { MeshModels::set_material_ID(m_ID, material_ID); }
+    inline Mesh get_mesh() const { return MeshModels::get_mesh_ID(m_ID); }
+    inline Material get_material() const { return MeshModels::get_material_ID(m_ID); }
+    inline void set_material_ID(Materials::UID material_ID) { MeshModels::set_material_ID(m_ID, material_ID); }
 
     inline MeshModels::Changes get_changes() const { return MeshModels::get_changes(m_ID); }
 

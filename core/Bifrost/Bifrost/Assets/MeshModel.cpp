@@ -28,7 +28,7 @@ void MeshModels::allocate(unsigned int capacity) {
     m_changes = Core::ChangeSet<Changes, UID>(capacity);
 
     // Allocate dummy element at 0.
-    m_models[0] = { Scene::SceneNodes::UID::invalid_UID(), Assets::Meshes::UID::invalid_UID() };
+    m_models[0] = { Scene::SceneNodes::UID::invalid_UID(), Meshes::UID::invalid_UID() };
 }
 
 void MeshModels::deallocate() {
@@ -62,11 +62,11 @@ void MeshModels::reserve(unsigned int new_capacity) {
     reserve_model_data(m_UID_generator.capacity(), old_capacity);
 }
 
-MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Assets::Meshes::UID mesh_ID, Assets::Materials::UID material_ID) {
+MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Meshes::UID mesh_ID, Materials::UID material_ID) {
     assert(m_models != nullptr);
     assert(Scene::SceneNodes::has(scene_node_ID));
-    assert(Assets::Meshes::has(mesh_ID));
-    assert(Assets::Materials::has(material_ID));
+    assert(Meshes::has(mesh_ID));
+    assert(Materials::has(material_ID));
 
     unsigned int old_capacity = m_UID_generator.capacity();
     UID id = m_UID_generator.generate();
@@ -85,9 +85,9 @@ void MeshModels::destroy(MeshModels::UID model_ID) {
         m_changes.set_change(model_ID, Change::Destroyed);
 }
 
-void MeshModels::set_material_ID(MeshModels::UID model_ID, Assets::Materials::UID material_ID) {
+void MeshModels::set_material_ID(MeshModels::UID model_ID, Materials::UID material_ID) {
     assert(has(model_ID));
-    assert(Assets::Materials::has(material_ID));
+    assert(Materials::has(material_ID));
 
     m_models[model_ID].material_ID = material_ID;
     m_changes.add_change(model_ID, Change::Material);
