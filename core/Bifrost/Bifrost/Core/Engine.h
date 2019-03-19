@@ -11,7 +11,6 @@
 
 #include <Bifrost/Core/Time.h>
 #include <Bifrost/Core/Window.h>
-#include <Bifrost/Scene/SceneNode.h>
 
 #include <functional>
 #include <vector>
