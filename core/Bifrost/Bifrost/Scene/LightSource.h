@@ -20,7 +20,7 @@ namespace Bifrost {
 namespace Scene {
 
 // ---------------------------------------------------------------------------
-// Container class for bifrost light sources.
+// Container class for Bifrost light sources.
 // Future work
 // * Setters.
 // ---------------------------------------------------------------------------
