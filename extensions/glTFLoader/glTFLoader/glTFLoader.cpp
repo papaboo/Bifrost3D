@@ -45,17 +45,7 @@ inline bool string_ends_with(const std::string& s, const std::string& end) {
     return s.compare(s.length() - end.length(), end.length(), end) == 0;
 }
 
-inline Matrix3x4d to_matrix3x4d(Transform t) {
-    Matrix3x4f m = to_matrix3x4(t);
-    return { Vector4d(m.get_row(0)), Vector4d(m.get_row(1)), Vector4d(m.get_row(2)) };
-}
-
-inline Matrix3x4f to_matrix3x4f(Matrix3x4d m) {
-    return { Vector4f(m.get_row(0)), Vector4f(m.get_row(1)), Vector4f(m.get_row(2)) };
-}
-
 struct RGBA32 { unsigned char r, g, b, a; };
-
 
 struct LoadedMesh {
     Meshes::UID ID;
@@ -337,7 +327,7 @@ SceneNodes::UID import_node(const tinygltf::Model& model, const tinygltf::Node& 
         Quaternionf rotation = r.size() == 0 ? Quaternionf::identity() : Quaterniond(r[0], r[1], r[2], r[3]);
         const auto& t = node.translation;
         Vector3f translation = t.size() == 0 ? Vector3f::zero() : Vector3f(Vector3d(t[0], t[1], t[2]));
-        local_transform = to_matrix3x4d(Transform(translation, rotation, scale));
+        local_transform = Matrix3x4d(to_matrix3x4(Transform(translation, rotation, scale)));
     }
 
     // X-coord is negated as glTF uses a right-handed coordinate system and Bifrost a right-handed.
@@ -362,7 +352,7 @@ SceneNodes::UID import_node(const tinygltf::Model& model, const tinygltf::Node& 
         int mesh_end_index = meshes_start_index[glTF_mesh_index + 1];
 
         // The residual transformation represents the transformation on the mesh that cannot be expressed by a Transform, e.g non-uniform scaling and shearing.
-        Matrix3x4f residual_transformation = to_matrix3x4f(to_matrix3x4d(invert(decomposed_global_transform)) * global_transform);
+        Matrix3x4f residual_transformation = Matrix3x4f(Matrix3x4d(to_matrix3x4(invert(decomposed_global_transform))) * global_transform);
 
         for (const auto& primitive : model.meshes[glTF_mesh_index].primitives) {
             if (primitive.mode != TINYGLTF_MODE_TRIANGLES) {
