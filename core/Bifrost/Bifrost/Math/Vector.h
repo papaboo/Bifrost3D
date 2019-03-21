@@ -40,7 +40,9 @@ public:
     static __always_inline__ Vector2<T> one() { return Vector2<T>(1, 1); }
 
     __always_inline__ T* begin() { return &x; }
-    __always_inline__ const T* begin() const { return &x; }
+    __always_inline__ const T* const begin() const { return &x; }
+    __always_inline__ T* end() { return begin() + N; }
+    __always_inline__ const T* const end() const { return begin() + N; }
 
     inline std::string to_string() const {
         std::ostringstream out;
@@ -80,7 +82,9 @@ public:
     static __always_inline__ Vector3<T> right() { return Vector3(1, 0, 0); }
 
     __always_inline__ T* begin() { return &x; }
-    __always_inline__ const T* begin() const { return &x; }
+    __always_inline__ const T* const begin() const { return &x; }
+    __always_inline__ T* end() { return begin() + N; }
+    __always_inline__ const T* const end() const { return begin() + N; }
 
     inline std::string to_string() const {
         std::ostringstream out;
@@ -118,7 +122,9 @@ public:
     static __always_inline__ Vector4<T> one() { return Vector4<T>(1, 1, 1, 1); }
 
     __always_inline__ T* begin() { return &x; }
-    __always_inline__ const T* begin() const { return &x; }
+    __always_inline__ const T* const begin() const { return &x; }
+    __always_inline__ T* end() { return begin() + N; }
+    __always_inline__ const T* const end() const { return begin() + N; }
 
     inline std::string to_string() const {
         std::ostringstream out;

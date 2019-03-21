@@ -128,7 +128,9 @@ public:
 
     // Pointer to the first element of the quaternion.
     __always_inline__ T* begin() { return &x; }
-    __always_inline__ const T* begin() const { return &x; }
+    __always_inline__ const T* const begin() const { return &x; }
+    __always_inline__ T* end() { return begin() + N; }
+    __always_inline__ const T* const end() const { return begin() + N; }
 
     // The imaginary part of the quaternion.
     __always_inline__ Vector3<T> imaginary() const { return Vector3<T>(x, y, z); }

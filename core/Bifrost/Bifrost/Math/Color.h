@@ -49,7 +49,9 @@ struct RGB final {
     static __always_inline__ RGB white()  { return RGB(1.0f, 1.0f, 1.0f); }
 
     __always_inline__ float* begin() { return &r; }
-    __always_inline__ const float* begin() const { return &r; }
+    __always_inline__ const float* const begin() const { return &r; }
+    __always_inline__ float* end() { return begin() + N; }
+    __always_inline__ const float* const end() const { return begin() + N; }
 
     __always_inline__ float& operator[](const int i) { return begin()[i]; }
     __always_inline__ float operator[](const int i) const { return begin()[i]; }
@@ -206,7 +208,9 @@ struct RGBA final {
     static __always_inline__ RGBA white()  { return RGBA(RGB::white()); }
 
     __always_inline__ float* begin() { return &r; }
-    __always_inline__ const float* begin() const { return &r; }
+    __always_inline__ const float* const begin() const { return &r; }
+    __always_inline__ float* end() { return begin() + N; }
+    __always_inline__ const float* const end() const { return begin() + N; }
 
     __always_inline__ float& operator[](const int i) { return begin()[i]; }
     __always_inline__ float operator[](const int i) const { return begin()[i]; }
