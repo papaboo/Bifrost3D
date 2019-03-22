@@ -229,7 +229,7 @@ void compute_perspective_projection(float near_distance, float far_distance, flo
 
     // Yes you could just use inverse_projection_matrix = invert(projection_matrix) as this is by no means performance critical code.
     // But this wasn't done to speed up perspective camera creation. This was done for fun and to have a way to easily derive the inverse perspective matrix later given the perspective matrix.
-    
+
     const Matrix4x4f& v = projection_matrix;
     float determinant = v[0][0] * v[1][1] * v[2][3];
 
@@ -263,11 +263,11 @@ Ray ray_from_viewport_point(Cameras::UID camera_ID, Vector2f viewport_point) {
     // NOTE We can elliminate some multiplications here by not doing the full mat/vec multiplication or does the compiler already do that for us (constants and all that.)
     Vector4f normalized_projected_pos = Vector4f(viewport_point.x * 2.0f - 1.0f, viewport_point.y * 2.0f - 1.0f, -1.0f, 1.0f);
     Vector4f projected_world_pos = inverse_view_projection_matrix * normalized_projected_pos;
-    Vector3f ray_origin = Vector3f(projected_world_pos.x, projected_world_pos.y, projected_world_pos.z) / projected_world_pos.w;
-    
+    Vector3f ray_point = Vector3f(projected_world_pos.x, projected_world_pos.y, projected_world_pos.z) / projected_world_pos.w;
+
     Vector3f camera_position = Cameras::get_transform(camera_ID).translation;
 
-    return Ray(ray_origin, normalize(ray_origin - camera_position));
+    return Ray(camera_position, normalize(ray_point - camera_position));
 }
 
 } // NS CameraUtils
