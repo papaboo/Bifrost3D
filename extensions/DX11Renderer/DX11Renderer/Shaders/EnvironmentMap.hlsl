@@ -8,17 +8,11 @@
 
 #include "Utils.hlsl"
 
-float3 project_ray_direction(float2 viewport_pos,
-                             float3 camera_position,
-                             float4x4 inverted_view_projection_matrix) {
-
+float3 project_ray_direction(float2 viewport_pos, float4x4 inverted_view_projection_matrix) {
     float4 projected_pos = float4(viewport_pos.x, viewport_pos.y, -1.0f, 1.0f);
-
     float4 projected_world_pos = mul(projected_pos, inverted_view_projection_matrix);
-
-    float3 ray_origin = projected_world_pos.xyz / projected_world_pos.w;
-
-    return normalize(ray_origin - camera_position);
+    float3 ray_direction = projected_world_pos.xyz / projected_world_pos.w;
+    return normalize(ray_direction);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -61,7 +55,9 @@ SamplerState env_sampler : register(s0);
 
 float4 main_ps(Varyings input) : SV_TARGET {
     float2 viewport_pos = input.texcoord;
-    float3 view_dir = project_ray_direction(viewport_pos, scene_vars.camera_position.xyz, scene_vars.inverted_view_projection_matrix);
+    float3 view_dir = project_ray_direction(viewport_pos, scene_vars.inverted_projection_matrix);
+    view_dir = mul(scene_vars.world_to_view_matrix, view_dir).xyz;
+
     float2 tc = direction_to_latlong_texcoord(view_dir);
     return float4(scene_vars.environment_tint.rgb * env_tex.SampleLevel(env_sampler, tc, 0).rgb, 1);
 }
