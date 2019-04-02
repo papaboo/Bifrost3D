@@ -41,7 +41,7 @@ enum class SampleMethod {
     MIS, Light, BSDF, Recursive
 };
 
-void output_convoluted_image(std::string original_image_file, Image image, float roughness) {
+void output_convoluted_image(const std::string& original_image_file, Image image, float roughness) {
     size_t dot_pos = original_image_file.find_last_of('.');
     std::string file_sans_extension = std::string(original_image_file, 0, dot_pos);
     std::string extension = std::string(original_image_file, dot_pos); 
@@ -182,30 +182,6 @@ void update(Engine& engine) {
 int initialize(Engine& engine) {
     engine.get_window().set_name("Environment convolution");
 
-    /*
-    int iterations = 21;
-    for (int r = 0; r < iterations; ++r) {
-        float roughness = r / (iterations - 1.0f);
-        float alpha = roughness * roughness;
-
-        std::vector<GGX::Sample> ggx_samples = std::vector<GGX::Sample>();
-        ggx_samples.resize(4096);
-        #pragma omp parallel for schedule(dynamic, 16)
-        for (int s = 0; s < ggx_samples.size(); ++s)
-            ggx_samples[s] = GGX::sample(alpha, RNG::sample02(s));
-
-        std::sort(ggx_samples.begin(), ggx_samples.end(), [](GGX::Sample lhs, GGX::Sample rhs) -> bool { return lhs.direction.z < rhs.direction.z; });
-        printf("Roughness: %f, alpha: %f, cos mean angle: %f, mean angle: %f\n", roughness, alpha, ggx_samples[2048].direction.z, acosf(ggx_samples[2048].direction.z));
-
-        if (r > 0) {
-            float prev_roughness = (r-1) / (iterations - 1.0f);
-            float prev_alpha = prev_roughness * prev_roughness;
-            printf("  prev: roughness: %f, alpha: %f, recursive alpha: %.5f\n", prev_roughness, prev_alpha, alpha * (1.0f - prev_alpha));
-        }
-    }
-
-    return -1;
-    */
     Images::allocate(1);
     Textures::allocate(1);
 
@@ -221,21 +197,28 @@ int initialize(Engine& engine) {
         return 1;
     }
 
+    // Convert image to HDR if needed.
+    if (image.get_pixel_format() != PixelFormat::RGB_Float || image.get_gamma() != 1.0f) {
+        Images::UID old_image_ID = image.get_ID();
+        image = ImageUtils::change_format(old_image_ID, PixelFormat::RGB_Float, 1.0f);
+        Images::destroy(old_image_ID);
+    }
+
     Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
     InfiniteAreaLight* infinite_area_light = nullptr;
     std::vector<LightSample> light_samples = std::vector<LightSample>();
-    if (g_options.sample_method != SampleMethod::BSDF) {
+    if (g_options.sample_method == SampleMethod::Light || g_options.sample_method == SampleMethod::MIS) {
         infinite_area_light = new InfiniteAreaLight(texture_ID);
         light_samples.resize(g_options.sample_count * 8);
         #pragma omp parallel for schedule(dynamic, 16)
         for (int s = 0; s < light_samples.size(); ++s)
-            light_samples[s] = infinite_area_light->sample(RNG::sample02(s));
+            light_samples[s] = infinite_area_light->sample(RNG::sample02(s, Vector2ui::zero()));
     }
 
     printf("\rProgress: %.2f%%", 0.0f);
 
     std::atomic_int finished_pixel_count;
-    finished_pixel_count.store(0);
+    finished_pixel_count = 0;
     for (int r = 0; r < g_convoluted_images.size(); ++r) {
         int width = image.get_width(), height = image.get_height();
 
@@ -252,9 +235,8 @@ int initialize(Engine& engine) {
 
                 pixels[x + y * width] = image.get_pixel(Vector2ui(x, y)).rgb();
 
-                ++finished_pixel_count;
                 if (omp_get_thread_num() == 0)
-                    printf("\rProgress: %.2f%%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * g_convoluted_images.size()));
+                    printf("\rProgress: %.2f%%", 0.0f);
             }
             continue;
         }
@@ -275,7 +257,7 @@ int initialize(Engine& engine) {
         ggx_samples.resize(g_options.sample_count * 8);
         #pragma omp parallel for schedule(dynamic, 16)
         for (int s = 0; s < ggx_samples.size(); ++s)
-            ggx_samples[s] = GGX::sample(alpha, RNG::sample02(s));
+            ggx_samples[s] = GGX::sample(alpha, RNG::sample02(s, Vector2ui::zero()));
 
         #pragma omp parallel for schedule(dynamic, 16)
         for (int i = 0; i < int(image.get_pixel_count()); ++i) {
@@ -286,7 +268,7 @@ int initialize(Engine& engine) {
             int bsdf_index_offset = RNG::teschner_hash(x, y) ^ 83492791;
             int light_index_offset = bsdf_index_offset ^ 83492791;
 
-            Vector2f up_uv = Vector2f((x + 0.5f) / width, (y + 0.5f) / height);
+                Vector2f up_uv = Vector2f((x + 0.5f) / width, (y + 0.5f) / height);
             Vector3f up_vector = latlong_texcoord_to_direction(up_uv);
             Quaternionf up_rotation = Quaternionf::look_in(up_vector);
 
@@ -353,7 +335,7 @@ int initialize(Engine& engine) {
                     Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
                     RGB r = sample2D(previous_roughness_tex_ID, sample_uv).rgb();
                     radiance += gammacorrect(r, 1.0f / 2.2f); // HACK Accumulate in gamma space to reduce fireflies.
-                }
+                    }
                 // Convert back to linear color space.
                 radiance = gammacorrect(radiance / float(g_options.sample_count), 2.2f) * float(g_options.sample_count);
                 break;
@@ -365,7 +347,7 @@ int initialize(Engine& engine) {
 
             ++finished_pixel_count;
             if (omp_get_thread_num() == 0)
-                printf("\rProgress: %.2f%%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * g_convoluted_images.size()));
+                printf("\rProgress: %.2f%%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * (g_convoluted_images.size() - 1)));
         }
 
         Textures::destroy(previous_roughness_tex_ID);
@@ -385,7 +367,7 @@ int initialize(Engine& engine) {
 
 void print_usage() {
     char* usage =
-        "usage EnvironmentConvolution <path/to/environment.ext>:\n"
+        "usage EnvironmentConvolution <path/to/environment.ext>\n"
         "  -h | --help: Show command line usage for EnvironmentConvolution.\n"
         "  -s | --sample-count: The number of samples pr pixel.\n"
         "  -m | --mis-sampling: Combine light and bsdf samples by multiple importance sampling.\n"
