@@ -33,8 +33,8 @@ namespace OptiXRenderer {
 // contain invalid values, e.g. invalud UID and nullptrs.
 // For environment monte carlo sampling see PBRT v2 chapter 14.6.5.
 // Future work:
-// * Sample the environment based on cos_theta between the environment sample direction and 
-//   the normal to sample more optimally compared to the total contribution of the environment. 
+// * Fast Product Importance Sampling of Environment Maps, Conty and Lecocq, 2018, for better material based importance sampling.
+//   Perhaps combined with a fixed number of samples pr lower level in the hierarchy to avoid sampling a 2D distribution.
 //-------------------------------------------------------------------------------------------------
 class EnvironmentMap final {
 public:
