@@ -30,7 +30,7 @@ inline void InfiniteAreaLight::compute_PDF(Texture latlong, float* PDF_result) {
 
     #pragma omp parallel for schedule(dynamic, 16)
     for (int y = 0; y < height; ++y) {
-        // PBRT p. 728. Account for the non-uniform surface area of the pixels, e.g. the higher density near the poles.
+        // PBRT p. 728. Account for the non-uniform surface area of the pixels, i.e. the higher density near the poles.
         float sin_theta = sinf(Math::PI<float>() * (y + 0.5f) / float(height));
 
         float* PDF_row = PDF + y * width;
