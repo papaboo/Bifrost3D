@@ -38,7 +38,7 @@ using namespace Bifrost::Math;
 using namespace Bifrost::Math::Distributions;
 
 enum class SampleMethod {
-    MIS, Light, BSDF, Recursive
+    MIS, Light, BSDF, Recursive, Separable
 };
 
 void output_convoluted_image(const std::string& original_image_file, Image image, float roughness) {
@@ -73,6 +73,8 @@ struct Options {
                 options.sample_method = SampleMethod::BSDF;
             else if (strcmp(argv[argument], "--recursive-sampling") == 0 || strcmp(argv[argument], "-r") == 0)
                 options.sample_method = SampleMethod::Recursive;
+            else if (strcmp(argv[argument], "--separable-filtering") == 0)
+                options.sample_method = SampleMethod::Separable;
             else if (strcmp(argv[argument], "--sample-count") == 0 || strcmp(argv[argument], "-s") == 0)
                 options.sample_count = atoi(argv[++argument]);
             else if (strcmp(argv[argument], "--headless") == 0)
@@ -85,12 +87,15 @@ struct Options {
     std::string to_string() const {
         std::ostringstream out;
         switch (sample_method) {
-        case SampleMethod::MIS: out << "MIS sampling, "; break;
-        case SampleMethod::Light: out << "Light sampling, "; break;
-        case SampleMethod::BSDF: out << "BSDF sampling, "; break;
-        case SampleMethod::Recursive: out << "Recursive sampling, "; break;
+        case SampleMethod::MIS: out << "MIS sampling"; break;
+        case SampleMethod::Light: out << "Light sampling"; break;
+        case SampleMethod::BSDF: out << "BSDF sampling"; break;
+        case SampleMethod::Recursive: out << "Recursive sampling"; break;
+        case SampleMethod::Separable: out << "Separable filtering"; break;
         }
-        out << sample_count << " samples pr pixel.";
+        if (sample_method != SampleMethod::Separable)
+            out << sample_count << ", samples pr pixel";
+        out << ".";
         return out.str();
     }
 };
@@ -179,6 +184,145 @@ void update(Engine& engine) {
     }
 }
 
+class IBLConvolution final {
+    RGB* m_tmp_pixels;
+    float* m_sin_thetas;
+    int m_max_width, m_max_height;
+
+public:
+    IBLConvolution(int max_width, int max_height)
+        : m_max_width(max_width), m_max_height(max_height)
+        , m_tmp_pixels(new RGB[max_width * max_height])
+        , m_sin_thetas(new float[max_height]) { }
+
+    ~IBLConvolution() {
+        delete[] m_tmp_pixels;
+        delete[] m_sin_thetas;
+    }
+
+    void ggx_filter(float alpha, int width, int height, RGB* pixels, RGB* target_pixels) {
+        // Filter using a GGX distribution in a cone around the current pixel.
+        const float contribution_threshold = 0.001f;
+
+        // Precompute sin_theta.
+        // PBRT p. 728. Account for the non-uniform surface area of the pixels, i.e. the higher density near the poles.
+        for (int y = 0; y < height; ++y)
+            m_sin_thetas[y] = sinf(PI<float>() * (y + 0.5f) / height);
+
+        auto GGX_D_from_uv = [=](Vector3f up_vector, int x, int y) -> float {
+            Vector2f sample_uv = Vector2f((x + 0.5f) / width, (y + 0.5f) / height);
+            Vector3f sample_vector = latlong_texcoord_to_direction(sample_uv);
+            float cos_theta = fmaxf(0.0f, dot(sample_vector, up_vector));
+            float f = Distributions::GGX::D(alpha, cos_theta);
+            return f * cos_theta;
+        };
+
+        // Filter vertically into the temporary pixel buffer.
+        #pragma omp parallel for schedule(dynamic, 16)
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+
+                Vector2f up_uv = Vector2f((x + 0.5f) / width, (y + 0.5f) / height);
+                Vector3f up_vector = latlong_texcoord_to_direction(up_uv);
+
+                float cos_theta = 1;
+                float f = Distributions::GGX::D(alpha, cos_theta) * cos_theta;
+                float w = f * m_sin_thetas[y];
+                RGB radiance = pixels[x + y * width] * w;
+                float total_weight = w;
+
+                int delta_y = 1;
+                while ((f = GGX_D_from_uv(up_vector, x, y + delta_y)) >= contribution_threshold) {
+                    if (y - delta_y >= 0) {
+                        float w = f * m_sin_thetas[y - delta_y];;
+                        radiance += pixels[x + (y - delta_y) * width] * w;
+                        total_weight += w;
+                    }
+
+                    if (y + delta_y < height) {
+                        float w = f * m_sin_thetas[y + delta_y];
+                        radiance += pixels[x + (y + delta_y) * width] * w;
+                        total_weight += w;
+                    }
+
+                    ++delta_y;
+                }
+
+                m_tmp_pixels[x + y * width] = radiance / total_weight;
+            }
+        }
+
+        // Filter horizontally into the target buffer. If the filter did not wrap around completely 
+        // then there is a discontinuity / lobe in the row and we need to filter from behind as well.
+        int half_width = width / 2;
+        #pragma omp parallel for schedule(dynamic, 16)
+        for (int y = 0; y < height; ++y) {
+            float sin_theta = m_sin_thetas[y]; // Irrelevant? It's constant across all samples.
+
+            for (int x = 0; x < width; ++x) {
+
+                Vector2f up_uv = Vector2f((x + 0.5f) / width, (y + 0.5f) / height);
+                Vector3f up_vector = latlong_texcoord_to_direction(up_uv);
+
+                float cos_theta = 1;
+                float f = Distributions::GGX::D(alpha, cos_theta) * cos_theta;
+                float w = f * m_sin_thetas[y];
+                RGB radiance = m_tmp_pixels[x + y * width] * w;
+                float total_weight = w;
+
+                auto filter_left = [&](int x) -> int {
+                    int low_x = x - 1;
+                    low_x = low_x < 0 ? low_x + width : low_x;
+                    while (low_x != x && (f = GGX_D_from_uv(up_vector, low_x, y)) >= contribution_threshold) {
+                        float w = f * m_sin_thetas[y];
+                        radiance += m_tmp_pixels[low_x + y * width] * w;
+                        total_weight += w;
+
+                        --low_x;
+                        low_x = low_x < 0 ? low_x + width : low_x;
+                    }
+
+                    return low_x;
+                };
+
+                auto filter_right = [&](int x) {
+                    int delta_x = 1;
+                    while (delta_x < width / 2 && (f = GGX_D_from_uv(up_vector, x + delta_x, y)) >= contribution_threshold) {
+                        float w = f * m_sin_thetas[y];
+
+                        int high_x = x + delta_x;
+                        high_x = high_x >= width ? high_x - width : high_x;
+                        radiance += m_tmp_pixels[high_x + y * width] * w;
+                        total_weight += w;
+
+                        ++delta_x;
+                    }
+                };
+
+                int left_x = filter_left(x);
+                if (left_x != x) {
+                    filter_right(x);
+
+                    // Check filtering on the flipside.
+                    int flipside_x = x - half_width;
+                    flipside_x = flipside_x < 0 ? flipside_x + width : flipside_x;
+                    float f = GGX_D_from_uv(up_vector, flipside_x, y);
+                    if (f >= contribution_threshold)
+                    {
+                        float w = f * m_sin_thetas[y];
+                        radiance += m_tmp_pixels[flipside_x + y * width] * w;
+                        total_weight += w;
+                        filter_left(flipside_x);
+                        filter_right(flipside_x);
+                    }
+                }
+
+                target_pixels[x + y * width] = radiance / total_weight;
+            }
+        }
+    }
+};
+
 int initialize(Engine& engine) {
     engine.get_window().set_name("Environment convolution");
 
@@ -205,15 +349,19 @@ int initialize(Engine& engine) {
     }
 
     Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
-    InfiniteAreaLight* infinite_area_light = nullptr;
+    std::unique_ptr<InfiniteAreaLight> infinite_area_light = nullptr;
     std::vector<LightSample> light_samples = std::vector<LightSample>();
     if (g_options.sample_method == SampleMethod::Light || g_options.sample_method == SampleMethod::MIS) {
-        infinite_area_light = new InfiniteAreaLight(texture_ID);
+        infinite_area_light = std::make_unique<InfiniteAreaLight>(texture_ID);
         light_samples.resize(g_options.sample_count * 8);
         #pragma omp parallel for schedule(dynamic, 16)
         for (int s = 0; s < light_samples.size(); ++s)
             light_samples[s] = infinite_area_light->sample(RNG::sample02(s, Vector2ui::zero()));
     }
+
+    std::unique_ptr<IBLConvolution> IBL_convolution = nullptr;
+    if (g_options.sample_method == SampleMethod::Separable)
+        IBL_convolution = std::make_unique<IBLConvolution>(image.get_width(), image.get_height());
 
     printf("\rProgress: %.2f%%", 0.0f);
 
@@ -223,7 +371,7 @@ int initialize(Engine& engine) {
         int width = image.get_width(), height = image.get_height();
 
         g_convoluted_images[r] = Images::create2D("Convoluted image", PixelFormat::RGB_Float, 1.0f, Vector2ui(width, height));
-        RGB* pixels = g_convoluted_images[r].get_pixels<RGB>();
+        RGB* target_pixels = g_convoluted_images[r].get_pixels<RGB>();
 
         // No convolution needed when roughness is 0.
         if (r == 0) {
@@ -233,7 +381,7 @@ int initialize(Engine& engine) {
                 int x = i % width;
                 int y = i / width;
 
-                pixels[x + y * width] = image.get_pixel(Vector2ui(x, y)).rgb();
+                target_pixels[x + y * width] = image.get_pixel(Vector2ui(x, y)).rgb();
 
                 if (omp_get_thread_num() == 0)
                     printf("\rProgress: %.2f%%", 0.0f);
@@ -246,108 +394,115 @@ int initialize(Engine& engine) {
 
         Textures::UID previous_roughness_tex_ID = Textures::UID::invalid_UID();
         if (g_options.sample_method == SampleMethod::Recursive) {
-            previous_roughness_tex_ID = Textures::create2D(g_convoluted_images[r-1].get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
-            float prev_roughness = (r - 1.0f) / (g_convoluted_images.size() - 1.0f);
+            int prev_r = min(r - 1, 6); // Approximation seems to break down when alpha is high. Use alpha = 0.5 as input.
+            previous_roughness_tex_ID = Textures::create2D(g_convoluted_images[prev_r].get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
+            float prev_roughness = prev_r / (g_convoluted_images.size() - 1.0f);
             float prev_alpha = prev_roughness * prev_roughness;
-            // ("roughness: %.3f (%.3f), alpha: %.3f (%.3f), recursive alpha: %.5f\n", roughness, prev_roughness, alpha, prev_alpha, alpha * (1.0f - prev_alpha));
-            alpha *= 1.0f - prev_alpha;
+            float target_alpha = alpha;
+            alpha = sqrt(target_alpha * target_alpha - prev_alpha * prev_alpha);
+            printf("alpha: %f, target_alpha: %f, prev_alpha %f\n", alpha, target_alpha, prev_alpha);
         }
 
-        std::vector<GGX::Sample> ggx_samples = std::vector<GGX::Sample>();
-        ggx_samples.resize(g_options.sample_count * 8);
-        #pragma omp parallel for schedule(dynamic, 16)
-        for (int s = 0; s < ggx_samples.size(); ++s)
-            ggx_samples[s] = GGX::sample(alpha, RNG::sample02(s, Vector2ui::zero()));
+        if (g_options.sample_method == SampleMethod::Separable) {
+            IBL_convolution->ggx_filter(alpha, width, height, image.get_pixels<RGB>(), target_pixels);
+            finished_pixel_count += width * height;
+            printf("\rProgress: %.2f%%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * (g_convoluted_images.size() - 1)));
 
-        #pragma omp parallel for schedule(dynamic, 16)
-        for (int i = 0; i < int(image.get_pixel_count()); ++i) {
+        } else {
 
-            int x = i % width;
-            int y = i / width;
+            std::vector<GGX::Sample> ggx_samples = std::vector<GGX::Sample>();
+            ggx_samples.resize(g_options.sample_count * 8);
+            #pragma omp parallel for schedule(dynamic, 16)
+            for (int s = 0; s < ggx_samples.size(); ++s)
+                ggx_samples[s] = GGX::sample(alpha, RNG::sample02(s, Vector2ui::zero()));
 
-            int bsdf_index_offset = RNG::teschner_hash(x, y) ^ 83492791;
-            int light_index_offset = bsdf_index_offset ^ 83492791;
+            #pragma omp parallel for schedule(dynamic, 16)
+            for (int i = 0; i < int(image.get_pixel_count()); ++i) {
+
+                int x = i % width;
+                int y = i / width;
+
+                int bsdf_index_offset = RNG::teschner_hash(x, y) ^ 83492791;
+                int light_index_offset = bsdf_index_offset ^ 83492791;
 
                 Vector2f up_uv = Vector2f((x + 0.5f) / width, (y + 0.5f) / height);
-            Vector3f up_vector = latlong_texcoord_to_direction(up_uv);
-            Quaternionf up_rotation = Quaternionf::look_in(up_vector);
+                Vector3f up_vector = latlong_texcoord_to_direction(up_uv);
+                Quaternionf up_rotation = Quaternionf::look_in(up_vector);
 
-            RGB radiance = RGB::black();
+                RGB radiance = RGB::black();
 
-            switch (g_options.sample_method) {
-            case SampleMethod::MIS: {
-                int bsdf_sample_count = g_options.sample_count / 2;
-                int light_sample_count = g_options.sample_count - bsdf_sample_count;
+                switch (g_options.sample_method) {
+                case SampleMethod::MIS: {
+                    int bsdf_sample_count = g_options.sample_count / 2;
+                    int light_sample_count = g_options.sample_count - bsdf_sample_count;
 
-                for (int s = 0; s < light_sample_count; ++s) {
-                    const LightSample& sample = light_samples[(s + light_index_offset) % light_samples.size()];
-                    if (sample.PDF < 0.000000001f)
-                        continue;
+                    for (int s = 0; s < light_sample_count; ++s) {
+                        const LightSample& sample = light_samples[(s + light_index_offset) % light_samples.size()];
+                        if (sample.PDF < 0.000000001f)
+                            continue;
 
-                    float cos_theta = fmaxf(dot(sample.direction_to_light, up_vector), 0.0f);
-                    float ggx_f = GGX::D(alpha, cos_theta);
-                    if (isnan(ggx_f))
-                        continue;
+                        float cos_theta = fmaxf(dot(sample.direction_to_light, up_vector), 0.0f);
+                        float ggx_f = GGX::D(alpha, cos_theta);
+                        if (isnan(ggx_f))
+                            continue;
 
-                    float mis_weight = RNG::power_heuristic(sample.PDF, GGX::PDF(alpha, cos_theta));
-                    radiance += sample.radiance * (mis_weight * ggx_f * cos_theta / sample.PDF);
-                }
-
-                for (int s = 0; s < bsdf_sample_count; ++s) {
-                    GGX::Sample sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
-                    if (sample.PDF < 0.000000001f)
-                        continue;
-
-                    sample.direction = normalize(up_rotation * sample.direction);
-                    float mis_weight = RNG::power_heuristic(sample.PDF, infinite_area_light->PDF(sample.direction));
-                    radiance += infinite_area_light->evaluate(sample.direction) * mis_weight;
-                }
-
-                // Account for the samples being split evenly between BSDF and light.
-                radiance *= 2.0f;
-
-                break;
-            }
-            case SampleMethod::Light:
-                for (int s = 0; s < g_options.sample_count; ++s) {
-                    const LightSample& sample = light_samples[(s + light_index_offset) % light_samples.size()];
-                    if (sample.PDF < 0.000000001f)
-                        continue;
-
-                    float cos_theta = fmaxf(dot(sample.direction_to_light, up_vector), 0.0f);
-                    float ggx_f = GGX::D(alpha, cos_theta);
-                    if (isnan(ggx_f))
-                        continue;
-
-                    radiance += sample.radiance * ggx_f * cos_theta / sample.PDF;
-                }
-                break;
-            case SampleMethod::BSDF:
-                for (int s = 0; s < g_options.sample_count; ++s) {
-                    const GGX::Sample& sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
-                    Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
-                    radiance += sample2D(texture_ID, sample_uv).rgb();
-                }
-                break;
-            case SampleMethod::Recursive:
-                for (int s = 0; s < g_options.sample_count; ++s) {
-                    const GGX::Sample& sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
-                    Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
-                    RGB r = sample2D(previous_roughness_tex_ID, sample_uv).rgb();
-                    radiance += gammacorrect(r, 1.0f / 2.2f); // HACK Accumulate in gamma space to reduce fireflies.
+                        float mis_weight = RNG::power_heuristic(sample.PDF, GGX::PDF(alpha, cos_theta));
+                        radiance += sample.radiance * (mis_weight * ggx_f * cos_theta / sample.PDF);
                     }
-                // Convert back to linear color space.
-                radiance = gammacorrect(radiance / float(g_options.sample_count), 2.2f) * float(g_options.sample_count);
-                break;
+
+                    for (int s = 0; s < bsdf_sample_count; ++s) {
+                        GGX::Sample sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
+                        if (sample.PDF < 0.000000001f)
+                            continue;
+
+                        sample.direction = normalize(up_rotation * sample.direction);
+                        float mis_weight = RNG::power_heuristic(sample.PDF, infinite_area_light->PDF(sample.direction));
+                        radiance += infinite_area_light->evaluate(sample.direction) * mis_weight;
+                    }
+
+                    // Account for the samples being split evenly between BSDF and light.
+                    radiance *= 2.0f;
+
+                    break;
+                }
+                case SampleMethod::Light:
+                    for (int s = 0; s < g_options.sample_count; ++s) {
+                        const LightSample& sample = light_samples[(s + light_index_offset) % light_samples.size()];
+                        if (sample.PDF < 0.000000001f)
+                            continue;
+
+                        float cos_theta = fmaxf(dot(sample.direction_to_light, up_vector), 0.0f);
+                        float ggx_f = GGX::D(alpha, cos_theta);
+                        if (isnan(ggx_f))
+                            continue;
+
+                        radiance += sample.radiance * ggx_f * cos_theta / sample.PDF;
+                    }
+                    break;
+                case SampleMethod::BSDF:
+                    for (int s = 0; s < g_options.sample_count; ++s) {
+                        const GGX::Sample& sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
+                        Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
+                        radiance += sample2D(texture_ID, sample_uv).rgb();
+                    }
+                    break;
+                case SampleMethod::Recursive:
+                    for (int s = 0; s < g_options.sample_count; ++s) {
+                        const GGX::Sample& sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
+                        Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
+                        radiance += sample2D(previous_roughness_tex_ID, sample_uv).rgb();
+                    }
+                    break;
+                }
+
+                radiance /= float(g_options.sample_count);
+
+                target_pixels[x + y * width] = radiance;
+
+                ++finished_pixel_count;
+                if (omp_get_thread_num() == 0)
+                    printf("\rProgress: %.2f%%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * (g_convoluted_images.size() - 1)));
             }
-
-            radiance /= float(g_options.sample_count);
-
-            pixels[x + y * width] = radiance;
-
-            ++finished_pixel_count;
-            if (omp_get_thread_num() == 0)
-                printf("\rProgress: %.2f%%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * (g_convoluted_images.size() - 1)));
         }
 
         Textures::destroy(previous_roughness_tex_ID);
@@ -374,6 +529,7 @@ void print_usage() {
         "  -l | --light-sampling: Draw samples from the environment.\n"
         "  -b | --bsdf-sampling: Draw samples from the GGX distribution.\n"
         "  -r | --recursive-sampling: Convolute based on the previous convoluted image.\n"
+        "     | --separable-filtering: Two-pass convolution using a separable GGX filter.\n"
         "     | --headless: Launch without a window and instead output the convoluted images.\n"
         "\n"
         "Keys:\n"
