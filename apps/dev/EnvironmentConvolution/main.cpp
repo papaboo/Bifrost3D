@@ -29,6 +29,7 @@
 
 #include <atomic>
 #include <array>
+#include <chrono>
 #include <fstream>
 
 using namespace Bifrost::Assets;
@@ -37,9 +38,17 @@ using namespace Bifrost::Input;
 using namespace Bifrost::Math;
 using namespace Bifrost::Math::Distributions;
 
-enum class SampleMethod {
-    MIS, Light, BSDF, Recursive, Separable
+enum class ConvolutionType {
+    MIS, Light, BSDF, Recursive, Separable, SeparableRecursive
 };
+
+bool is_recursive(ConvolutionType convolution) {
+    return convolution == ConvolutionType::Recursive || convolution == ConvolutionType::SeparableRecursive;
+}
+
+bool is_separable(ConvolutionType convolution) {
+    return convolution == ConvolutionType::Separable || convolution == ConvolutionType::SeparableRecursive;
+}
 
 void output_convoluted_image(const std::string& original_image_file, Image image, float roughness) {
     size_t dot_pos = original_image_file.find_last_of('.');
@@ -56,25 +65,27 @@ void output_convoluted_image(const std::string& original_image_file, Image image
 }
 
 struct Options {
-    SampleMethod sample_method;
+    ConvolutionType sample_method;
     int sample_count;
     bool headless;
 
     static Options parse(int argc, char** argv) {
-        Options options = { SampleMethod::MIS, 256, false };
+        Options options = { ConvolutionType::MIS, 256, false };
 
         // Skip the first two arguments, the application name and image path.
         for (int argument = 2; argument < argc; ++argument) {
             if (strcmp(argv[argument], "--mis-sampling") == 0 || strcmp(argv[argument], "-m") == 0)
-                options.sample_method = SampleMethod::MIS;
+                options.sample_method = ConvolutionType::MIS;
             else if (strcmp(argv[argument], "--light-sampling") == 0 || strcmp(argv[argument], "-l") == 0)
-                options.sample_method = SampleMethod::Light;
+                options.sample_method = ConvolutionType::Light;
             else if (strcmp(argv[argument], "--bsdf-sampling") == 0 || strcmp(argv[argument], "-b") == 0)
-                options.sample_method = SampleMethod::BSDF;
+                options.sample_method = ConvolutionType::BSDF;
             else if (strcmp(argv[argument], "--recursive-sampling") == 0 || strcmp(argv[argument], "-r") == 0)
-                options.sample_method = SampleMethod::Recursive;
+                options.sample_method = ConvolutionType::Recursive;
             else if (strcmp(argv[argument], "--separable-filtering") == 0)
-                options.sample_method = SampleMethod::Separable;
+                options.sample_method = ConvolutionType::Separable;
+            else if (strcmp(argv[argument], "--separable-recursive-filtering") == 0)
+                options.sample_method = ConvolutionType::SeparableRecursive;
             else if (strcmp(argv[argument], "--sample-count") == 0 || strcmp(argv[argument], "-s") == 0)
                 options.sample_count = atoi(argv[++argument]);
             else if (strcmp(argv[argument], "--headless") == 0)
@@ -87,13 +98,14 @@ struct Options {
     std::string to_string() const {
         std::ostringstream out;
         switch (sample_method) {
-        case SampleMethod::MIS: out << "MIS sampling"; break;
-        case SampleMethod::Light: out << "Light sampling"; break;
-        case SampleMethod::BSDF: out << "BSDF sampling"; break;
-        case SampleMethod::Recursive: out << "Recursive sampling"; break;
-        case SampleMethod::Separable: out << "Separable filtering"; break;
+        case ConvolutionType::MIS: out << "MIS sampling"; break;
+        case ConvolutionType::Light: out << "Light sampling"; break;
+        case ConvolutionType::BSDF: out << "BSDF sampling"; break;
+        case ConvolutionType::Recursive: out << "Recursive sampling"; break;
+        case ConvolutionType::Separable: out << "Separable convolution"; break;
+        case ConvolutionType::SeparableRecursive: out << "Separable recursive convolution"; break;
         }
-        if (sample_method != SampleMethod::Separable)
+        if (sample_method != ConvolutionType::Separable && sample_method != ConvolutionType::SeparableRecursive)
             out << sample_count << ", samples pr pixel";
         out << ".";
         return out.str();
@@ -184,6 +196,13 @@ void update(Engine& engine) {
     }
 }
 
+// ------------------------------------------------------------------------------------------------
+// Convolute an IBL using a separable GGX filter scaled by the cosine of the angle between the 
+// direction to the target pixel and the source pixel.
+// Future work:
+// * Add parameter for minimal delta cosine between samples to avoid excessive oversampling near the poles.
+// * Stabilize floating point computations by summing from the outside and in.
+// ------------------------------------------------------------------------------------------------
 class IBLConvolution final {
     RGB* m_tmp_pixels;
     float* m_sin_thetas;
@@ -202,7 +221,7 @@ public:
 
     void ggx_filter(float alpha, int width, int height, RGB* pixels, RGB* target_pixels) {
         // Filter using a GGX distribution in a cone around the current pixel.
-        const float contribution_threshold = 0.001f;
+        const float contribution_threshold = 0.01f;
 
         // Precompute sin_theta.
         // PBRT p. 728. Account for the non-uniform surface area of the pixels, i.e. the higher density near the poles.
@@ -257,24 +276,20 @@ public:
         int half_width = width / 2;
         #pragma omp parallel for schedule(dynamic, 16)
         for (int y = 0; y < height; ++y) {
-            float sin_theta = m_sin_thetas[y]; // Irrelevant? It's constant across all samples.
-
             for (int x = 0; x < width; ++x) {
 
                 Vector2f up_uv = Vector2f((x + 0.5f) / width, (y + 0.5f) / height);
                 Vector3f up_vector = latlong_texcoord_to_direction(up_uv);
 
                 float cos_theta = 1;
-                float f = Distributions::GGX::D(alpha, cos_theta) * cos_theta;
-                float w = f * m_sin_thetas[y];
+                float w = Distributions::GGX::D(alpha, cos_theta) * cos_theta;
                 RGB radiance = m_tmp_pixels[x + y * width] * w;
                 float total_weight = w;
 
                 auto filter_left = [&](int x) -> int {
                     int low_x = x - 1;
                     low_x = low_x < 0 ? low_x + width : low_x;
-                    while (low_x != x && (f = GGX_D_from_uv(up_vector, low_x, y)) >= contribution_threshold) {
-                        float w = f * m_sin_thetas[y];
+                    while (low_x != x && (w = GGX_D_from_uv(up_vector, low_x, y)) >= contribution_threshold) {
                         radiance += m_tmp_pixels[low_x + y * width] * w;
                         total_weight += w;
 
@@ -287,9 +302,7 @@ public:
 
                 auto filter_right = [&](int x) {
                     int delta_x = 1;
-                    while (delta_x < width / 2 && (f = GGX_D_from_uv(up_vector, x + delta_x, y)) >= contribution_threshold) {
-                        float w = f * m_sin_thetas[y];
-
+                    while (delta_x < width / 2 && (w = GGX_D_from_uv(up_vector, x + delta_x, y)) >= contribution_threshold) {
                         int high_x = x + delta_x;
                         high_x = high_x >= width ? high_x - width : high_x;
                         radiance += m_tmp_pixels[high_x + y * width] * w;
@@ -306,10 +319,9 @@ public:
                     // Check filtering on the flipside.
                     int flipside_x = x - half_width;
                     flipside_x = flipside_x < 0 ? flipside_x + width : flipside_x;
-                    float f = GGX_D_from_uv(up_vector, flipside_x, y);
-                    if (f >= contribution_threshold)
+                    float w = GGX_D_from_uv(up_vector, flipside_x, y);
+                    if (w >= contribution_threshold)
                     {
-                        float w = f * m_sin_thetas[y];
                         radiance += m_tmp_pixels[flipside_x + y * width] * w;
                         total_weight += w;
                         filter_left(flipside_x);
@@ -351,7 +363,7 @@ int initialize(Engine& engine) {
     Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
     std::unique_ptr<InfiniteAreaLight> infinite_area_light = nullptr;
     std::vector<LightSample> light_samples = std::vector<LightSample>();
-    if (g_options.sample_method == SampleMethod::Light || g_options.sample_method == SampleMethod::MIS) {
+    if (g_options.sample_method == ConvolutionType::Light || g_options.sample_method == ConvolutionType::MIS) {
         infinite_area_light = std::make_unique<InfiniteAreaLight>(texture_ID);
         light_samples.resize(g_options.sample_count * 8);
         #pragma omp parallel for schedule(dynamic, 16)
@@ -360,8 +372,10 @@ int initialize(Engine& engine) {
     }
 
     std::unique_ptr<IBLConvolution> IBL_convolution = nullptr;
-    if (g_options.sample_method == SampleMethod::Separable)
+    if (is_separable(g_options.sample_method))
         IBL_convolution = std::make_unique<IBLConvolution>(image.get_width(), image.get_height());
+
+    auto starttime = std::chrono::system_clock::now();
 
     printf("\rProgress: %.2f%%", 0.0f);
 
@@ -393,18 +407,22 @@ int initialize(Engine& engine) {
         float alpha = roughness * roughness;
 
         Textures::UID previous_roughness_tex_ID = Textures::UID::invalid_UID();
-        if (g_options.sample_method == SampleMethod::Recursive) {
-            int prev_r = min(r - 1, 6); // Approximation seems to break down when alpha is high. Use alpha = 0.5 as input.
+        if (is_recursive(g_options.sample_method)) {
+            int prev_r = r - 1;
             previous_roughness_tex_ID = Textures::create2D(g_convoluted_images[prev_r].get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
             float prev_roughness = prev_r / (g_convoluted_images.size() - 1.0f);
             float prev_alpha = prev_roughness * prev_roughness;
             float target_alpha = alpha;
             alpha = sqrt(target_alpha * target_alpha - prev_alpha * prev_alpha);
-            printf("alpha: %f, target_alpha: %f, prev_alpha %f\n", alpha, target_alpha, prev_alpha);
         }
 
-        if (g_options.sample_method == SampleMethod::Separable) {
-            IBL_convolution->ggx_filter(alpha, width, height, image.get_pixels<RGB>(), target_pixels);
+        if (is_separable(g_options.sample_method)) {
+            if (g_options.sample_method == ConvolutionType::Separable)
+                IBL_convolution->ggx_filter(alpha, width, height, image.get_pixels<RGB>(), target_pixels);
+            else if (g_options.sample_method == ConvolutionType::SeparableRecursive) {
+                Image prev_convoluted_image = Textures::get_image_ID(previous_roughness_tex_ID);
+                IBL_convolution->ggx_filter(alpha, width, height, prev_convoluted_image.get_pixels<RGB>(), target_pixels);
+            }
             finished_pixel_count += width * height;
             printf("\rProgress: %.2f%%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * (g_convoluted_images.size() - 1)));
 
@@ -432,7 +450,7 @@ int initialize(Engine& engine) {
                 RGB radiance = RGB::black();
 
                 switch (g_options.sample_method) {
-                case SampleMethod::MIS: {
+                case ConvolutionType::MIS: {
                     int bsdf_sample_count = g_options.sample_count / 2;
                     int light_sample_count = g_options.sample_count - bsdf_sample_count;
 
@@ -465,7 +483,7 @@ int initialize(Engine& engine) {
 
                     break;
                 }
-                case SampleMethod::Light:
+                case ConvolutionType::Light:
                     for (int s = 0; s < g_options.sample_count; ++s) {
                         const LightSample& sample = light_samples[(s + light_index_offset) % light_samples.size()];
                         if (sample.PDF < 0.000000001f)
@@ -479,14 +497,14 @@ int initialize(Engine& engine) {
                         radiance += sample.radiance * ggx_f * cos_theta / sample.PDF;
                     }
                     break;
-                case SampleMethod::BSDF:
+                case ConvolutionType::BSDF:
                     for (int s = 0; s < g_options.sample_count; ++s) {
                         const GGX::Sample& sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
                         Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
                         radiance += sample2D(texture_ID, sample_uv).rgb();
                     }
                     break;
-                case SampleMethod::Recursive:
+                case ConvolutionType::Recursive:
                     for (int s = 0; s < g_options.sample_count; ++s) {
                         const GGX::Sample& sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
                         Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
@@ -513,6 +531,11 @@ int initialize(Engine& engine) {
 
     printf("\rProgress: 100.00%%\n");
 
+    // Print convolution time
+    auto endtime = std::chrono::system_clock::now();
+    float delta_miliseconds = (float)std::chrono::duration_cast<std::chrono::milliseconds>(endtime - starttime).count();
+    printf("Time to convolute: %.3fseconds\n", delta_miliseconds / 1000);
+
     // Hook up update callback.
     if (!g_options.headless)
         engine.add_mutating_callback([&] { update(engine); });
@@ -530,6 +553,7 @@ void print_usage() {
         "  -b | --bsdf-sampling: Draw samples from the GGX distribution.\n"
         "  -r | --recursive-sampling: Convolute based on the previous convoluted image.\n"
         "     | --separable-filtering: Two-pass convolution using a separable GGX filter.\n"
+        "     | --separable-recursive-filtering: Two-pass convolution using a separable GGX filter that uses the previous convoluted image as input.\n"
         "     | --headless: Launch without a window and instead output the convoluted images.\n"
         "\n"
         "Keys:\n"
