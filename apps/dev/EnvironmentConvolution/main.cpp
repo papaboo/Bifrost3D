@@ -197,29 +197,33 @@ void update(Engine& engine) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Convolute an IBL using a separable GGX filter scaled by the cosine of the angle between the 
-// direction to the target pixel and the source pixel.
+// Convolute a latitude longtitude image using a GGX kernel scaled by the cosine of the angle between the 
+// direction to the target pixel and the source pixel. The GGX kernel is assumed to be separable.
 // Future work:
+// * Fix such that it produces the same output as the other filter methods.
+//   The initial vertical filter seems to be wrong and summing the contributions of
+//   the individual rows diverges from the sum from the other filters.
 // * Add parameter for minimal delta cosine between samples to avoid excessive oversampling near the poles.
 // * Stabilize floating point computations by summing from the outside and in.
 // ------------------------------------------------------------------------------------------------
-class IBLConvolution final {
+class LatLongConvoluter final {
+private:
     RGB* m_tmp_pixels;
     float* m_sin_thetas;
     int m_max_width, m_max_height;
 
 public:
-    IBLConvolution(int max_width, int max_height)
+    LatLongConvoluter(int max_width, int max_height)
         : m_max_width(max_width), m_max_height(max_height)
         , m_tmp_pixels(new RGB[max_width * max_height])
         , m_sin_thetas(new float[max_height]) { }
 
-    ~IBLConvolution() {
-        delete[] m_tmp_pixels;
+    ~LatLongConvoluter() {
         delete[] m_sin_thetas;
+        delete[] m_tmp_pixels;
     }
 
-    void ggx_filter(float alpha, int width, int height, RGB* pixels, RGB* target_pixels) {
+    void ggx_kernel(float alpha, int width, int height, RGB* source_pixels, RGB* target_pixels) {
         // Filter using a GGX distribution in a cone around the current pixel.
         const float contribution_threshold = 0.01f;
 
@@ -247,20 +251,20 @@ public:
                 float cos_theta = 1;
                 float f = Distributions::GGX::D(alpha, cos_theta) * cos_theta;
                 float w = f * m_sin_thetas[y];
-                RGB radiance = pixels[x + y * width] * w;
+                RGB radiance = source_pixels[x + y * width] * w;
                 float total_weight = w;
 
                 int delta_y = 1;
                 while ((f = GGX_D_from_uv(up_vector, x, y + delta_y)) >= contribution_threshold) {
                     if (y - delta_y >= 0) {
                         float w = f * m_sin_thetas[y - delta_y];;
-                        radiance += pixels[x + (y - delta_y) * width] * w;
+                        radiance += source_pixels[x + (y - delta_y) * width] * w;
                         total_weight += w;
                     }
 
                     if (y + delta_y < height) {
                         float w = f * m_sin_thetas[y + delta_y];
-                        radiance += pixels[x + (y + delta_y) * width] * w;
+                        radiance += source_pixels[x + (y + delta_y) * width] * w;
                         total_weight += w;
                     }
 
@@ -271,8 +275,7 @@ public:
             }
         }
 
-        // Filter horizontally into the target buffer. If the filter did not wrap around completely 
-        // then there is a discontinuity / lobe in the row and we need to filter from behind as well.
+        // Filter horizontally into the target buffer.
         int half_width = width / 2;
         #pragma omp parallel for schedule(dynamic, 16)
         for (int y = 0; y < height; ++y) {
@@ -313,21 +316,8 @@ public:
                 };
 
                 int left_x = filter_left(x);
-                if (left_x != x) {
+                if (left_x != x)
                     filter_right(x);
-
-                    // Check filtering on the flipside.
-                    int flipside_x = x - half_width;
-                    flipside_x = flipside_x < 0 ? flipside_x + width : flipside_x;
-                    float w = GGX_D_from_uv(up_vector, flipside_x, y);
-                    if (w >= contribution_threshold)
-                    {
-                        radiance += m_tmp_pixels[flipside_x + y * width] * w;
-                        total_weight += w;
-                        filter_left(flipside_x);
-                        filter_right(flipside_x);
-                    }
-                }
 
                 target_pixels[x + y * width] = radiance / total_weight;
             }
@@ -371,9 +361,9 @@ int initialize(Engine& engine) {
             light_samples[s] = infinite_area_light->sample(RNG::sample02(s, Vector2ui::zero()));
     }
 
-    std::unique_ptr<IBLConvolution> IBL_convolution = nullptr;
+    std::unique_ptr<LatLongConvoluter> IBL_convolution = nullptr;
     if (is_separable(g_options.sample_method))
-        IBL_convolution = std::make_unique<IBLConvolution>(image.get_width(), image.get_height());
+        IBL_convolution = std::make_unique<LatLongConvoluter>(image.get_width(), image.get_height());
 
     auto starttime = std::chrono::system_clock::now();
 
@@ -418,10 +408,10 @@ int initialize(Engine& engine) {
 
         if (is_separable(g_options.sample_method)) {
             if (g_options.sample_method == ConvolutionType::Separable)
-                IBL_convolution->ggx_filter(alpha, width, height, image.get_pixels<RGB>(), target_pixels);
+                IBL_convolution->ggx_kernel(alpha, width, height, image.get_pixels<RGB>(), target_pixels);
             else if (g_options.sample_method == ConvolutionType::SeparableRecursive) {
                 Image prev_convoluted_image = Textures::get_image_ID(previous_roughness_tex_ID);
-                IBL_convolution->ggx_filter(alpha, width, height, prev_convoluted_image.get_pixels<RGB>(), target_pixels);
+                IBL_convolution->ggx_kernel(alpha, width, height, prev_convoluted_image.get_pixels<RGB>(), target_pixels);
             }
             finished_pixel_count += width * height;
             printf("\rProgress: %.2f%%", 100.0f * float(finished_pixel_count) / (image.get_pixel_count() * (g_convoluted_images.size() - 1)));
