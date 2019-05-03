@@ -113,6 +113,7 @@ void create_material_scene(Cameras::UID camera_ID, SceneNode root_node, ImGui::I
       // A checker pattern texture would be really nice on the floor.
         unsigned int size = 41;
         Images::UID tint_roughness_image_ID = Images::create2D("Floor color", PixelFormat::RGBA32, 2.2f, Vector2ui(size, size));
+        Images::set_mipmapable(tint_roughness_image_ID, true);
         unsigned char* tint_roughness_pixels = (unsigned char*)Images::get_pixels(tint_roughness_image_ID);
         for (unsigned int y = 0; y < size; ++y) {
             for (unsigned int x = 0; x < size; ++x) {
@@ -125,7 +126,7 @@ void create_material_scene(Cameras::UID camera_ID, SceneNode root_node, ImGui::I
         }
 
         Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 1, 0.5f);
-        material_data.tint_roughness_texture_ID = Textures::create2D(tint_roughness_image_ID, MagnificationFilter::None, MinificationFilter::None);
+        material_data.tint_roughness_texture_ID = Textures::create2D(tint_roughness_image_ID, MagnificationFilter::None, MinificationFilter::Trilinear);
         Materials::UID material_ID = Materials::create("Floor", material_data);
 
         SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0.5, -1.0, 0.5), Quaternionf::identity(), float(size)));
