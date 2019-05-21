@@ -8,6 +8,7 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
+#include <Tests.h>
 #include <ProgressiveJittered.h>
 #include <ProgressiveMultijittered.h>
 
@@ -30,36 +31,16 @@ using namespace Bifrost::Input;
 using namespace Bifrost::Math;
 using namespace std;
 
-// ------------------------------------------------------------------------------------------------
-// Tests
-// ------------------------------------------------------------------------------------------------
+std::vector<Vector2f> generate_linear_congruential_random_samples(unsigned int subdivisions) {
+    unsigned int m = 1 << subdivisions;
+    unsigned int M = m * m;
+    auto samples = std::vector<Vector2f>(M);
 
-bool is_multijittered(Vector2f* samples, unsigned int sample_count) {
-    auto strata = vector<bool>(sample_count);
+    auto rng = RNG::LinearCongruential(19349669);
+    for (unsigned int s = 0; s < M; ++s)
+        samples[s] = { rng.sample1f(), rng.sample1f() };
 
-    // Check that the samples are stratified along x.
-    fill(strata.begin(), strata.end(), false);
-    for (unsigned int s = 0; s < sample_count; ++s) {
-        int stratum = int(sample_count * samples[s].x);
-        strata[stratum] = true;
-    }
-
-    for (unsigned int s = 0; s < sample_count; ++s)
-        if (!strata[s])
-            return false;
-
-    // Check that the samples are stratified along x.
-    fill(strata.begin(), strata.end(), false);
-    for (unsigned int s = 0; s < sample_count; ++s) {
-        int stratum = int(sample_count * samples[s].y);
-        strata[stratum] = true;
-    }
-
-    for (unsigned int s = 0; s < sample_count; ++s)
-        if (!strata[s])
-            return false;
-
-    return true;
+    return samples;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -98,8 +79,23 @@ int main(int argc, char** argv) {
 
     // TODO Test if progressive??
 
-    if (is_multijittered(samples.data(), (unsigned int)samples.size()))
+    if (Test::is_multijittered(samples.data(), (unsigned int)samples.size()))
         printf("... is multijittered\n");
     else
         printf("... is not multijittered\n");
+
+    // Convergence tests
+    auto test = [&](const char* name, std::function<float(Vector2f*, int)> test) {
+        printf("%s convergence:\n", name);
+        printf("  1 sample: error %.4f\n", test(samples.data(), 1));
+        for (int s = 2; s <= samples.size(); s *= 2)
+            printf("  %u samples: error %.4f\n", s, test(samples.data(), s));
+        printf("\n");
+    };
+
+    test("Disc", Test::disc_convergence);
+    test("Triangle", Test::triangle_convergence);
+    test("Step", Test::step_convergence);
+    test("Gaussian", Test::gaussian_convergence);
+    test("Bilinear", Test::bilinear_convergence);
 }
