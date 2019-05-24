@@ -11,23 +11,13 @@
 #include <Tests.h>
 #include <ProgressiveJittered.h>
 #include <ProgressiveMultijittered.h>
-
-#include <Bifrost/Core/Engine.h>
-#include <Bifrost/Core/Window.h>
-#include <Bifrost/Input/Keyboard.h>
+#include <ProgressiveMultijitteredBlueNoise.h>
 
 #include <StbImageWriter/stb_image_write.h>
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-#include <GL/gl.h>
-#undef RGB
-
 #include <chrono>
+#include <functional>
 
-using namespace Bifrost::Core;
-using namespace Bifrost::Input;
 using namespace Bifrost::Math;
 using namespace std;
 
@@ -70,7 +60,7 @@ int main(int argc, char** argv) {
 
     // Generate samples.
     auto starttime = std::chrono::system_clock::now();
-    auto samples = generate_progressive_multijittered_samples(6);
+    auto samples = generate_progressive_multijittered_bluenoise_samples(3);
     auto endtime = std::chrono::system_clock::now();
     float delta_miliseconds = (float)std::chrono::duration_cast<std::chrono::milliseconds>(endtime - starttime).count();
     printf("Time to generate %d samples: %.3fseconds\n", int(samples.size()), delta_miliseconds / 1000);

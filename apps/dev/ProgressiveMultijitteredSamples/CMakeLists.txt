@@ -2,7 +2,13 @@ set(PROJECT_NAME "ProgressiveMultijitteredSamples")
 
 find_package(OpenGL REQUIRED)
 
-set(SRCS main.cpp ProgressiveJittered.h ProgressiveMultijittered.h Tests.h)
+set(SRCS
+  main.cpp
+  ProgressiveJittered.h
+  ProgressiveMultijittered.h
+  ProgressiveMultijitteredBlueNoise.h
+  Tests.h
+)
 
 add_executable(${PROJECT_NAME} ${SRCS})
 
