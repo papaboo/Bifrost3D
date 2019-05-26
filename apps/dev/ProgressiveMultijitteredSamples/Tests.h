@@ -54,6 +54,30 @@ inline bool is_multijittered(const Vector2f* const samples, unsigned int sample_
     return true;
 }
 
+inline float compute_blue_noise_score(const Vector2f* const samples, unsigned int sample_count) {
+    double error = 0.0;
+    double squared_error = 0.0;
+    for (unsigned int s = 0; s < sample_count; ++s) {
+        Vector2f sample = samples[s];
+        float shortest_distance = 2;
+        for (unsigned int i = 0; i < sample_count; ++i) {
+            if (s != i) {
+                float distance = magnitude(samples[i] - sample);
+                shortest_distance = fmin(shortest_distance, distance);
+            }
+        }
+        error += shortest_distance;
+        squared_error += shortest_distance * shortest_distance;
+    }
+
+    double mean_error = error / sample_count;
+    double mean_squared_error = squared_error / sample_count;
+    double variance = mean_squared_error - mean_error * mean_error;
+    double std_dev = sqrt(fmax(0.0, variance));
+
+    return float(std_dev / mean_error);
+}
+
 // ------------------------------------------------------------------------------------------------
 // Convergence tests.
 // See section 3 in Progressive Multi-Jittered Sample Sequences, Christensen et al., 2018

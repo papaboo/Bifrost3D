@@ -147,6 +147,9 @@ int main(int argc, char** argv) {
     else
         printf("... is not multijittered\n");
 
+    float blue_noise_score = Test::compute_blue_noise_score(samples.data(), (unsigned int)samples.size());
+    printf("... has blue noise score %f\n", blue_noise_score);
+
     // Convergence tests.
     auto test = [&](const char* name, std::function<float(Vector2f*, int)> test) {
         printf("%s convergence:\n", name);
