@@ -54,11 +54,12 @@ inline bool is_multijittered(const Vector2f* const samples, unsigned int sample_
     return true;
 }
 
-inline float compute_blue_noise_score(const Vector2f* const samples, unsigned int sample_count) {
+template<template<typename> class Vector, typename T>
+inline float compute_blue_noise_score(const Vector<T>* const samples, unsigned int sample_count) {
     double error = 0.0;
     double squared_error = 0.0;
     for (unsigned int s = 0; s < sample_count; ++s) {
-        Vector2f sample = samples[s];
+        Vector<T> sample = samples[s];
         float shortest_distance = 2;
         for (unsigned int i = 0; i < sample_count; ++i) {
             if (s != i) {
