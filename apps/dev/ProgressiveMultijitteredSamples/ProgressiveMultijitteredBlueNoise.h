@@ -32,11 +32,12 @@ std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_bluenois
     unsigned int M = m * m;
     auto samples = std::vector<Vector2f>(); samples.reserve(M);
 
-    // Create occupied array. The array is filled with the sample occupying it or nan if unoccupied.
-    auto stratum_samples_x = std::vector<Vector2f>(M);
-    auto stratum_samples_y = std::vector<Vector2f>(M);
+    // Create occupied array.
+    const unsigned short FREE_STRATUM = 65535;
+    auto stratum_samples_x = std::vector<unsigned short>(M);
+    auto stratum_samples_y = std::vector<unsigned short>(M);
 
-    // Create xhalves and yhalves used by extend_sequence_odd once. TODO Make bool/bit array
+    // Create xhalves and yhalves used by extend_sequence_odd once.
     auto xhalves = std::vector<int>(M / 2);
     auto yhalves = std::vector<int>(M / 2);
 
@@ -52,12 +53,12 @@ std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_bluenois
             // Generate candidate sample x coord
             do {
                 pt.x = (i + 0.5f * (xhalf + rnd())) / n;
-            } while (!isnan(stratum_samples_x[int(NN * pt.x)].x));
+            } while (stratum_samples_x[int(NN * pt.x)] != FREE_STRATUM);
 
             // Generate candidate sample y coord
             do {
                 pt.y = (j + 0.5f * (yhalf + rnd())) / n;
-            } while (!isnan(stratum_samples_y[int(NN * pt.y)].x));
+            } while (stratum_samples_y[int(NN * pt.y)] != FREE_STRATUM);
 
             int xstratum = int(NN * pt.x);
             int ystratum = int(NN * pt.y);
@@ -66,7 +67,11 @@ std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_bluenois
             int max_search_stratum = int(NN * distance_to_neighbour);
 
             for (int offset = 1; offset <= max_search_stratum; ++offset) {
-                auto test_neighbour_sample = [&](Vector2f neighbour_sample) {
+                auto test_neighbour_sample = [&](unsigned short neighbour_sample_index) {
+                    if (neighbour_sample_index == FREE_STRATUM)
+                        return;
+
+                    auto neighbour_sample = samples[neighbour_sample_index];
                     // Samples should be distributed wrt a repeating sample pattern, so modify the sample such that it is closest in this pattern.
                     if (neighbour_sample.x < pt.x - 0.5f)
                         neighbour_sample.x += 1.0f;
@@ -96,8 +101,7 @@ std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_bluenois
         // Mark 1D strata as occupied
         int xstratum = int(NN * best_pt.x);
         int ystratum = int(NN * best_pt.y);
-        stratum_samples_x[xstratum] = best_pt;
-        stratum_samples_y[ystratum] = best_pt;
+        stratum_samples_x[xstratum] = stratum_samples_y[ystratum] = unsigned short(samples.size());
 
         // Assign new sample point
         samples.push_back(best_pt);
@@ -109,12 +113,12 @@ std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_bluenois
         stratum_samples_x.resize(NN);
         stratum_samples_y.resize(NN);
         for (unsigned int i = 0; i < NN; ++i)
-            stratum_samples_x[i] = stratum_samples_y[i] = { NAN, NAN }; // init array
+            stratum_samples_x[i] = stratum_samples_y[i] = FREE_STRATUM;
 
         for (unsigned int s = 0; s < N; ++s) {
             int xstratum = int(NN * samples[s].x);
             int ystratum = int(NN * samples[s].y);
-            stratum_samples_x[xstratum] = stratum_samples_y[ystratum] = samples[s];
+            stratum_samples_x[xstratum] = stratum_samples_y[ystratum] = unsigned short(s);
         }
     };
 
@@ -204,7 +208,7 @@ std::vector<Bifrost::Math::Vector3f> generate_3D_progressive_multijittered_sampl
     unsigned int M = m * m * m;
     auto samples = std::vector<Vector3f>(); samples.reserve(M);
 
-    // Create occupied array. The array is filled with the sample occupying it or nan if unoccupied.
+    // Create occupied array.
     const unsigned short FREE_STRATUM = 65535;
     auto stratum_samples_x = std::vector<unsigned short>(M);
     auto stratum_samples_y = std::vector<unsigned short>(M);
