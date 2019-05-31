@@ -15,6 +15,7 @@
 
 #include <StbImageWriter/stb_image_write.h>
 
+#include <algorithm>
 #include <chrono>
 #include <functional>
 
@@ -253,6 +254,35 @@ int main(int argc, char** argv) {
         }
 
         { // Convergence tests.
+            auto test = [&](const char* name, std::function<float(std::vector<Vector3f>&, int)> test) {
+                printf("%s convergence:\n", name);
+                printf("  1 sample: error %.4f\n", test(samples, 1));
+                for (int s = 2; s <= samples.size(); s *= 2) {
+                    printf("  %u samples: error %.4f\n", s, test(samples, s));
+                    int ss = int(s * 1.5f);
+                    if (ss < samples.size())
+                        printf("  %u samples: error %.4f\n", ss, test(samples, ss));
+                }
+                printf("\n");
+            };
+
+            auto test_2D = [&](std::vector<Vector3f>& vs, int count) -> float {
+                float split = 1 / PI<float>();
+                auto second_partition_begin = std::partition(vs.begin(), vs.begin() + count, [&](Vector3f v) -> bool { return v.x < split;  });
+                int first_partition_count = int(second_partition_begin - vs.begin());
+                auto samples_2D = std::vector<Vector2f>(count);
+                for (int s = 0; s < count; ++s)
+                    samples_2D[s] = { vs[s].y, vs[s].z };
+
+                float error1 = Test::step_convergence(samples_2D.data(), first_partition_count);
+                float error2 = Test::gaussian_convergence(samples_2D.data() + first_partition_count, count - first_partition_count);
+
+                float t = first_partition_count / float(count);
+
+                return error1 * t + error2 * (1 - t);
+            };
+
+            test("Step and gaussian", test_2D);
         }
     }
 }
