@@ -112,6 +112,37 @@ void output_images(const std::vector<Vector3f>& samples, const char* const path)
 }
 
 // ------------------------------------------------------------------------------------------------
+// Random number generators
+// ------------------------------------------------------------------------------------------------
+
+struct SampleGenerator {
+private:
+    std::vector<Vector2f>& m_samples;
+    int m_index = 0;
+    int m_dimension = 0;
+
+public:
+    SampleGenerator(std::vector<Vector2f>& samples, int index)
+        : m_samples(samples), m_index(index) {}
+
+    int get_index() const {
+        return (m_index >> m_dimension) % m_samples.size();
+    }
+
+    Vector2f sample2f() {
+        int index = get_index();
+        m_dimension += 2;
+        return m_samples[index];
+    }
+
+    float sample1f() {
+        int index = get_index();
+        m_dimension += 1;
+        return m_samples[index].x;
+    }
+};
+
+// ------------------------------------------------------------------------------------------------
 // Options
 // ------------------------------------------------------------------------------------------------
 
@@ -120,6 +151,7 @@ struct Options {
     int subdivisions = 3;
     int dimensions = 2;
     int blue_noise_candidates = 8;
+    bool output_images = false;
 
     static Options parse(int argc, char** argv) {
         Options res;
@@ -136,6 +168,8 @@ struct Options {
                 res.subdivisions = atoi(argv[++argument]);
             else if (strcmp(argv[argument], "-d") == 0 || strcmp(argv[argument], "--dimensions") == 0)
                 res.dimensions = atoi(argv[++argument]);
+            else if (strcmp(argv[argument], "--output") == 0)
+                res.output_images = true;
             else
                 printf("Unsupported argument: '%s'\n", argv[argument]);
         }
@@ -156,7 +190,8 @@ void print_usage() {
         "     | --pmj: Generate samples using a progressive multi-jittered generator.\n"
         "     | --pmjbn: Generate samples using a progressive multi-jittered pseudo blue noise generator.\n"
         "  -s | --subdivisions: Number of image subdivisions. Total sample count is subdivisions^4.\n"
-        "  -d | --dimensions: Number of dimensions in the samples. 2 or 3 supported.\n";
+        "  -d | --dimensions: Number of dimensions in the samples. 2 or 3 supported.\n"
+        "     | --output: Output the generated sample images to C:\\temp\\.\n";
     printf("%s", usage);
 }
 
@@ -194,8 +229,10 @@ int main(int argc, char** argv) {
         float delta_miliseconds = (float)std::chrono::duration_cast<std::chrono::milliseconds>(endtime - starttime).count();
         printf("Time to generate %d samples: %.3fseconds\n", int(samples.size()), delta_miliseconds / 1000);
 
-        printf("Output image to %s\n", path.str().c_str());
-        output_image(samples, path.str().c_str());
+        if (options.output_images) {
+            printf("Output image to %s\n", path.str().c_str());
+            output_image(samples, path.str().c_str());
+        }
 
         { // Property tests.
         // TODO Test if progressive??
@@ -224,6 +261,55 @@ int main(int argc, char** argv) {
             test("Gaussian", Test::gaussian_convergence);
             test("Bilinear", Test::bilinear_convergence);
         }
+
+        { // Sample sequence tests.
+            int distribution_count = 2;
+            int bsdf_dimension_count = 2;
+            int bsdf_count = bsdf_dimension_count * bsdf_dimension_count;
+            int samples_pr_dimension = bsdf_count * distribution_count;
+            int dimension_count = 2;
+            int sample_bin_count = int(pow(samples_pr_dimension, dimension_count));
+            auto bins = std::vector<int>(sample_bin_count);
+            int samples_pr_bin = 1;
+
+            for (int i = 0; i < samples_pr_bin * sample_bin_count; ++i) {
+                int bin_begin = 0;
+                int bin_end = sample_bin_count;
+                auto partition_bins = [&](int index, int sample_count) {
+                    int bins_pr_sample = (bin_end - bin_begin) / sample_count;
+                    bin_begin += index * bins_pr_sample;
+                    bin_end = bin_begin + bins_pr_sample;
+                };
+
+                printf("iteration %u:", i);
+
+                auto rnd = SampleGenerator(samples, i + int(samples.size()));
+                for (int d = 0; d < dimension_count; ++d) {
+                    int index0 = rnd.get_index();
+                    int distribution_index = int(rnd.sample1f() * distribution_count);
+                    partition_bins(distribution_index, distribution_count);
+                    int index1 = rnd.get_index();
+                    Vector2f distribution_sample = rnd.sample2f();
+                    Vector2i distribution_dimension_bin = Vector2i(distribution_sample * float(bsdf_dimension_count));
+                    partition_bins(distribution_dimension_bin.x, bsdf_dimension_count);
+                    partition_bins(distribution_dimension_bin.y, bsdf_dimension_count);
+                    printf(" %d -> %d ->", index0, index1);
+                }
+                printf(" bin index %d\n", bin_begin);
+                bins[bin_begin] += 1;
+            }
+
+            float bin_error = 0.0f;
+            for (int b = 0; b < bins.size(); ++b)
+                bin_error += abs(bins[b] - samples_pr_bin);
+            bin_error /= (bins.size() * samples_pr_bin);
+
+            printf("Bin count: [%d", bins[0]);
+            for (int b = 1; b < bins.size(); ++b)
+                printf(", %d", bins[b]);
+            printf("]\n");
+            printf("Bin error: %f\n", bin_error);
+        }
     } else if (options.dimensions == 3) {
         // Generate samples.
         auto generata_samples = [](Generator generator, int subdivisions) -> std::vector<Vector3f> {
@@ -245,8 +331,10 @@ int main(int argc, char** argv) {
         printf("Time to generate %d samples: %.3fseconds\n", int(samples.size()), delta_miliseconds / 1000);
 
         // Flatten along each dimension and save the resulting image.
-        printf("Output image to %s\n", path.str().c_str());
-        output_images(samples, path.str().c_str());
+        if (options.output_images) {
+            printf("Output image to %s\n", path.str().c_str());
+            output_images(samples, path.str().c_str());
+        }
 
         { // Property tests.
             float blue_noise_score = Test::compute_blue_noise_score(samples.data(), (unsigned int)samples.size());
