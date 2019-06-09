@@ -19,7 +19,6 @@ namespace Test {
 using namespace Bifrost::Math;
 using namespace std;
 
-inline float pow2(float v) { return v*v; }
 inline double pow2(double v) { return v*v; }
 
 // ------------------------------------------------------------------------------------------------
@@ -63,7 +62,15 @@ inline float compute_blue_noise_score(const Vector<T>* const samples, unsigned i
         float shortest_distance = 2;
         for (unsigned int i = 0; i < sample_count; ++i) {
             if (s != i) {
-                float distance = magnitude(samples[i] - sample);
+                Vector<T> neighbour_sample = samples[i];
+
+                // Samples can wrap around the borders to find the shortest distance.
+                for (int d = 0; d < Vector<T>::N; ++d) {
+                    neighbour_sample[d] += (neighbour_sample[d] + 0.5f < sample[d]) ? 1.0f : 0.0f;
+                    neighbour_sample[d] -= (neighbour_sample[d] - 0.5f > sample[d]) ? 1.0f : 0.0f;
+                }
+
+                float distance = magnitude(neighbour_sample - sample);
                 shortest_distance = fmin(shortest_distance, distance);
             }
         }
