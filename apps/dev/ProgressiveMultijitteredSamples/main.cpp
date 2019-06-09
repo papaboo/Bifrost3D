@@ -44,25 +44,21 @@ const char* generator_shortname(Generator generator) {
     return "unknown";
 };
 
-std::vector<Vector2f> generate_linear_congruential_random_samples(unsigned int subdivisions) {
-    unsigned int m = 1 << subdivisions;
-    unsigned int M = m * m;
-    auto samples = std::vector<Vector2f>(M);
+std::vector<Vector2f> generate_linear_congruential_random_samples(unsigned int sample_count) {
+    auto samples = std::vector<Vector2f>(sample_count);
 
     auto rng = RNG::LinearCongruential(19349669);
-    for (unsigned int s = 0; s < M; ++s)
+    for (unsigned int s = 0; s < sample_count; ++s)
         samples[s] = { rng.sample1f(), rng.sample1f() };
 
     return samples;
 }
 
-std::vector<Vector3f> generate_3D_linear_congruential_random_samples(unsigned int subdivisions) {
-    unsigned int m = 1 << subdivisions;
-    unsigned int M = m * m * m;
-    auto samples = std::vector<Vector3f>(M);
+std::vector<Vector3f> generate_3D_linear_congruential_random_samples(unsigned int sample_count) {
+    auto samples = std::vector<Vector3f>(sample_count);
 
     auto rng = RNG::LinearCongruential(19349669);
-    for (unsigned int s = 0; s < M; ++s)
+    for (unsigned int s = 0; s < sample_count; ++s)
         samples[s] = { rng.sample1f(), rng.sample1f(), rng.sample1f() };
 
     return samples;
@@ -148,7 +144,7 @@ public:
 
 struct Options {
     Generator generator = Generator::PMJBN;
-    int subdivisions = 3;
+    int sample_count = 64;
     int dimensions = 2;
     int blue_noise_candidates = 8;
     bool output_images = false;
@@ -164,8 +160,8 @@ struct Options {
                 res.generator = Generator::PMJ;
             else if (strcmp(argv[argument], "--pmjbn") == 0)
                 res.generator = Generator::PMJBN;
-            else if (strcmp(argv[argument], "-s") == 0 || strcmp(argv[argument], "--subdivisions") == 0)
-                res.subdivisions = atoi(argv[++argument]);
+            else if (strcmp(argv[argument], "-s") == 0 || strcmp(argv[argument], "--samplecount") == 0)
+                res.sample_count = next_power_of_two(atoi(argv[++argument]));
             else if (strcmp(argv[argument], "-d") == 0 || strcmp(argv[argument], "--dimensions") == 0)
                 res.dimensions = atoi(argv[++argument]);
             else if (strcmp(argv[argument], "--output") == 0)
@@ -189,7 +185,7 @@ void print_usage() {
         "     | --pj: Generate samples using a progressive jittered generator.\n"
         "     | --pmj: Generate samples using a progressive multi-jittered generator.\n"
         "     | --pmjbn: Generate samples using a progressive multi-jittered pseudo blue noise generator.\n"
-        "  -s | --subdivisions: Number of image subdivisions. Total sample count is subdivisions^4.\n"
+        "  -s | --samplecount: Number of samples generates. Will be rounded up to next power of two.\n"
         "  -d | --dimensions: Number of dimensions in the samples. 2 or 3 supported.\n"
         "     | --output: Output the generated sample images to C:\\temp\\.\n";
     printf("%s", usage);
@@ -206,25 +202,25 @@ int main(int argc, char** argv) {
 
     auto options = Options::parse(argc, argv);
 
-    printf("Generate %uD %s samples.\n", options.dimensions, generator_name(options.generator));
+    printf("Generate %d %dD %s samples.\n", options.sample_count, options.dimensions, generator_name(options.generator));
 
     std::ostringstream path;
-    path << "C:\\temp\\" << options.subdivisions << "_" << generator_shortname(options.generator) << "_samples.png";
+    path << "C:\\temp\\" << options.sample_count << "_" << generator_shortname(options.generator) << "_samples.png";
 
     if (options.dimensions == 2) {
         // Generate samples.
-        auto generata_samples = [](Generator generator, int subdivisions) -> std::vector<Vector2f> {
+        auto generata_samples = [](Generator generator, int sample_count) -> std::vector<Vector2f> {
             switch (generator) {
-            case Generator::LCG: return generate_linear_congruential_random_samples(subdivisions);
-            case Generator::PJ: return generate_progressive_jittered_samples(subdivisions);
-            case Generator::PMJ: return generate_progressive_multijittered_samples(subdivisions);
-            case Generator::PMJBN: return generate_progressive_multijittered_bluenoise_samples(subdivisions);
+            case Generator::LCG: return generate_linear_congruential_random_samples(sample_count);
+            case Generator::PJ: return generate_progressive_jittered_samples(sample_count);
+            case Generator::PMJ: return generate_progressive_multijittered_samples(sample_count);
+            case Generator::PMJBN: return generate_progressive_multijittered_bluenoise_samples(sample_count);
             }
             return std::vector<Vector2f>();
         };
 
         auto starttime = std::chrono::system_clock::now();
-        auto samples = generata_samples(options.generator, options.subdivisions);
+        auto samples = generata_samples(options.generator, options.sample_count);
         auto endtime = std::chrono::system_clock::now();
         float delta_miliseconds = (float)std::chrono::duration_cast<std::chrono::milliseconds>(endtime - starttime).count();
         printf("Time to generate %d samples: %.3fseconds\n", int(samples.size()), delta_miliseconds / 1000);
@@ -235,8 +231,6 @@ int main(int argc, char** argv) {
         }
 
         { // Property tests.
-        // TODO Test if progressive??
-
             if (Test::is_multijittered(samples.data(), (unsigned int)samples.size()))
                 printf("... is multijittered\n");
             else
@@ -312,20 +306,20 @@ int main(int argc, char** argv) {
         }
     } else if (options.dimensions == 3) {
         // Generate samples.
-        auto generata_samples = [](Generator generator, int subdivisions) -> std::vector<Vector3f> {
+        auto generata_samples = [](Generator generator, int sample_count) -> std::vector<Vector3f> {
             switch (generator) {
-            case Generator::LCG: return generate_3D_linear_congruential_random_samples(subdivisions);
+            case Generator::LCG: return generate_3D_linear_congruential_random_samples(sample_count);
             case Generator::PJ:
                 printf("3D progressive jittered samples not supported. Generate PMJ samples instead.\n");
-            case Generator::PMJ: return generate_3D_progressive_multijittered_samples(subdivisions, 1);
-            case Generator::PMJBN: return generate_3D_progressive_multijittered_samples(subdivisions, 8);
+            case Generator::PMJ: return generate_3D_progressive_multijittered_samples(sample_count, 1);
+            case Generator::PMJBN: return generate_3D_progressive_multijittered_samples(sample_count, 8);
             default:
                 return std::vector<Vector3f>();
             }
         };
 
         auto starttime = std::chrono::system_clock::now();
-        auto samples = generata_samples(options.generator, options.subdivisions);
+        auto samples = generata_samples(options.generator, options.sample_count);
         auto endtime = std::chrono::system_clock::now();
         float delta_miliseconds = (float)std::chrono::duration_cast<std::chrono::milliseconds>(endtime - starttime).count();
         printf("Time to generate %d samples: %.3fseconds\n", int(samples.size()), delta_miliseconds / 1000);

@@ -12,7 +12,9 @@
 
 #include <Bifrost/Math/RNG.h>
 #include <Bifrost/Math/Vector.h>
+#include <Bifrost/Math/Utils.h>
 
+#include <cassert>
 #include <vector>
 
 // ------------------------------------------------------------------------------------------------
@@ -21,14 +23,13 @@
 // http://graphics.pixar.com/library/ProgressiveMultiJitteredSampling/pmj_suppl.pdf
 // ------------------------------------------------------------------------------------------------
 
-std::vector<Bifrost::Math::Vector2f> generate_progressive_jittered_samples(unsigned int subdivisions) {
+std::vector<Bifrost::Math::Vector2f> generate_progressive_jittered_samples(unsigned int sample_count) {
     using namespace Bifrost::Math;
+    assert(is_power_of_two(sample_count));
 
     auto rnd = RNG::LinearCongruential(19349669);
     
-    unsigned int m = 1 << subdivisions;
-    unsigned int M = m * m;
-    auto samples = std::vector<Vector2f>(M);
+    auto samples = std::vector<Vector2f>(sample_count);
     
     auto generate_sample_point = [&](int i, int j, int xhalf, int yhalf, int n) -> Vector2f {
         float x = (i + 0.5f * (xhalf + rnd.sample1f())) / n;
@@ -54,22 +55,24 @@ std::vector<Bifrost::Math::Vector2f> generate_progressive_jittered_samples(unsig
             samples[N + s] = generate_sample_point(i, j, xhalf, yhalf, n);
 
             // Then randomly select one of the two remaining sub-quadrants
-            if (rnd.sample1f() > 0.5f)
-                xhalf = 1 - xhalf;
-            else
-                yhalf = 1 - yhalf;
-            samples[2 * N + s] = generate_sample_point(i, j, xhalf, yhalf, n);
+            if (2 * N + s < sample_count) {
+                if (rnd.sample1f() > 0.5f)
+                    xhalf = 1 - xhalf;
+                else
+                    yhalf = 1 - yhalf;
+                samples[2 * N + s] = generate_sample_point(i, j, xhalf, yhalf, n);
 
-            // And finally select the last sub-quadrant
-            xhalf = 1 - xhalf;
-            yhalf = 1 - yhalf;
-            samples[3 * N + s] = generate_sample_point(i, j, xhalf, yhalf, n);
+                // And finally select the last sub-quadrant
+                xhalf = 1 - xhalf;
+                yhalf = 1 - yhalf;
+                samples[3 * N + s] = generate_sample_point(i, j, xhalf, yhalf, n);
+            }
         }
     };
 
     samples[0] = { rnd.sample1f(), rnd.sample1f() };
     unsigned int N = 1;
-    while (N < M) {
+    while (N < sample_count) {
         extend_sequence(N);
         N *= 4;
     }

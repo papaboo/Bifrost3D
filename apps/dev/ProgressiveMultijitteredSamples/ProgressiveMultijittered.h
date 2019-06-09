@@ -12,7 +12,9 @@
 
 #include <Bifrost/Math/RNG.h>
 #include <Bifrost/Math/Vector.h>
+#include <Bifrost/Math/Utils.h>
 
+#include <cassert>
 #include <vector>
 
 // ------------------------------------------------------------------------------------------------
@@ -21,24 +23,22 @@
 // http://graphics.pixar.com/library/ProgressiveMultiJitteredSampling/pmj_suppl.pdf
 // ------------------------------------------------------------------------------------------------
 
-std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_samples(unsigned int subdivisions) {
+std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_samples(unsigned int sample_count) {
     using namespace Bifrost::Math;
+    assert(is_power_of_two(sample_count));
 
     auto rng = RNG::LinearCongruential(19349669);
     auto rnd = [&]() -> float { return rng.sample1f(); };
 
-    unsigned int m = 1 << subdivisions;
-    unsigned int M = m * m;
-    auto samples = std::vector<Vector2f>(M);
-    unsigned int sample_count = 0;
+    auto samples = std::vector<Vector2f>(); samples.reserve(sample_count);
 
     // Create occupied array
-    auto occupied1Dx = std::vector<bool>(M);
-    auto occupied1Dy = std::vector<bool>(M);
+    auto occupied1Dx = std::vector<bool>(sample_count);
+    auto occupied1Dy = std::vector<bool>(sample_count);
 
     // Create xhalves and yhalves used by extend_sequence_odd once. TODO Make bool/bit array
-    auto xhalves = std::vector<int>(M / 2);
-    auto yhalves = std::vector<int>(M / 2);
+    auto xhalves = std::vector<int>(sample_count / 2);
+    auto yhalves = std::vector<int>(sample_count / 2);
 
     auto generate_sample_point = [&](int i, int j, int xhalf, int yhalf, int n, int N) {
         int NN = 2 * N;
@@ -61,8 +61,7 @@ std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_samples(
         occupied1Dy[ystratum] = true;
 
         // Assign new sample point
-        samples[sample_count] = pt;
-        ++sample_count;
+        samples.push_back(pt);
     };
 
     // Mark all occupied 1D strata.
@@ -86,7 +85,7 @@ std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_samples(
         // Mark already occupied 1D strata so we can avoid them
         mark_occupied_strata(N);
         
-        // Loop over N old samples and generate 1 new sample for each
+        // Loop over N old samples and generate 1 new sample for each if the sample buffer isn't full.
         for (unsigned int s = 0; s < N; ++s) {
             Vector2f oldpt = samples[s];
             int i = int(n * oldpt.x);
@@ -144,12 +143,12 @@ std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_samples(
         }
     };
 
-    samples[0] = { rnd(), rnd() };
-    sample_count = 1;
+    samples.push_back( { rnd(), rnd() } );
     unsigned int N = 1;
-    while (N < M) {
+    while (N < sample_count) {
         extend_sequence_even(N); // N even pow2
-        extend_sequence_odd(2 * N); // 2N odd pow2
+        if (2 * N < sample_count)
+            extend_sequence_odd(2 * N); // 2N odd pow2
         N *= 4;
     }
 

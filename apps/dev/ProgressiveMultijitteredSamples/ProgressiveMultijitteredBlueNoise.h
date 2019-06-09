@@ -12,34 +12,35 @@
 
 #include <Bifrost/Math/RNG.h>
 #include <Bifrost/Math/Vector.h>
+#include <Bifrost/Math/Utils.h>
 
+#include <cassert>
 #include <vector>
 
 // ------------------------------------------------------------------------------------------------
-// Generate progressive mullti-jittered samples with a blue noise approximation.
+// Generate progressive multi-jittered samples with a blue noise approximation.
 // Progressive Multi-Jittered Sample Sequences - Supplemental materials, Christensen et al., 2018
 // http://graphics.pixar.com/library/ProgressiveMultiJitteredSampling/pmj_suppl.pdf.
 // The nearest neighbour search is implemented by searcing nearby strata for their random samples.
 // ------------------------------------------------------------------------------------------------
 
-std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_bluenoise_samples(unsigned int subdivisions, unsigned int blue_noise_samples = 8) {
+std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_bluenoise_samples(unsigned int sample_count, unsigned int blue_noise_samples = 8) {
     using namespace Bifrost::Math;
+    assert(is_power_of_two(sample_count));
 
     auto rng = RNG::LinearCongruential(19349669);
     auto rnd = [&]() -> float { return rng.sample1f(); };
 
-    unsigned int m = 1 << subdivisions;
-    unsigned int M = m * m;
-    auto samples = std::vector<Vector2f>(); samples.reserve(M);
+    auto samples = std::vector<Vector2f>(); samples.reserve(sample_count);
 
     // Create occupied array.
     const unsigned short FREE_STRATUM = 65535;
-    auto stratum_samples_x = std::vector<unsigned short>(M);
-    auto stratum_samples_y = std::vector<unsigned short>(M);
+    auto stratum_samples_x = std::vector<unsigned short>(sample_count);
+    auto stratum_samples_y = std::vector<unsigned short>(sample_count);
 
     // Create xhalves and yhalves used by extend_sequence_odd once.
-    auto xhalves = std::vector<int>(M / 2);
-    auto yhalves = std::vector<int>(M / 2);
+    auto xhalves = std::vector<int>(sample_count / 2);
+    auto yhalves = std::vector<int>(sample_count / 2);
 
     auto generate_sample_point = [&](Vector2f oldpt, int i, int j, int xhalf, int yhalf, int n, int N) {
         int NN = 2 * N;
@@ -189,32 +190,31 @@ std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_bluenois
 
     samples.push_back( { rnd(), rnd() } );
     unsigned int N = 1;
-    while (N < M) {
+    while (N < sample_count) {
         extend_sequence_even(N); // N even pow2
-        extend_sequence_odd(2 * N); // 2N odd pow2
+        if (2 * N < sample_count)
+            extend_sequence_odd(2 * N); // 2N odd pow2
         N *= 4;
     }
 
     return samples;
 }
 
-std::vector<Bifrost::Math::Vector3f> generate_3D_progressive_multijittered_samples(unsigned int subdivisions, unsigned int blue_noise_samples = 8) {
+std::vector<Bifrost::Math::Vector3f> generate_3D_progressive_multijittered_samples(unsigned int sample_count, unsigned int blue_noise_samples = 8) {
     using namespace Bifrost::Math;
 
     auto rng = RNG::LinearCongruential(19349669);
     auto rnd = [&]() -> float { return rng.sample1f(); };
 
-    unsigned int m = 1 << subdivisions;
-    unsigned int M = m * m * m;
-    auto samples = std::vector<Vector3f>(); samples.reserve(M);
+    auto samples = std::vector<Vector3f>(); samples.reserve(sample_count);
 
     // Create occupied array.
     const unsigned short FREE_STRATUM = 65535;
-    auto stratum_samples_x = std::vector<unsigned short>(M);
-    auto stratum_samples_y = std::vector<unsigned short>(M);
-    auto stratum_samples_z = std::vector<unsigned short>(M);
+    auto stratum_samples_x = std::vector<unsigned short>(sample_count);
+    auto stratum_samples_y = std::vector<unsigned short>(sample_count);
+    auto stratum_samples_z = std::vector<unsigned short>(sample_count);
 
-    auto occupied_octants = std::vector<unsigned char>(M);
+    auto occupied_octants = std::vector<unsigned char>(sample_count);
 
     auto sample_to_octant_flag = [&](Vector3f sample, unsigned int grid_size) -> unsigned char {
         Vector3i grid_coord = Vector3i(sample * float(grid_size));
@@ -332,7 +332,8 @@ std::vector<Bifrost::Math::Vector3f> generate_3D_progressive_multijittered_sampl
         mark_occupied_octants(grid_size, N);
         
         // Loop over 7N empty samples and generate new samples.
-        for (unsigned int s = 0; s < 7 * N; ++s) {
+        unsigned int samples_generates = std::min(8 * N, sample_count) - N;
+        for (unsigned int s = 0; s < samples_generates; ++s) {
             Vector3f oldpt = samples[s % N];
             Vector3i grid_coord = Vector3i(oldpt * float(grid_size));
 
@@ -343,7 +344,7 @@ std::vector<Bifrost::Math::Vector3f> generate_3D_progressive_multijittered_sampl
 
     samples.push_back({ rnd(), rnd(), rnd() });
     unsigned int N = 1;
-    while (N < M) {
+    while (N < sample_count) {
         extend_sequence(N);
         N *= 8;
     }
