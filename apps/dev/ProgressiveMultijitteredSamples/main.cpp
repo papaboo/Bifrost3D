@@ -114,15 +114,17 @@ void output_images(const std::vector<Vector3f>& samples, const char* const path)
 struct SampleGenerator {
 private:
     std::vector<Vector2f>& m_samples;
-    int m_index = 0;
+    int m_iteration = 0;
     int m_dimension = 0;
 
 public:
-    SampleGenerator(std::vector<Vector2f>& samples, int index)
-        : m_samples(samples), m_index(index) {}
+    SampleGenerator(std::vector<Vector2f>& samples, int iteration)
+        : m_samples(samples), m_iteration(iteration) {}
 
     int get_index() const {
-        return (m_index >> m_dimension) % m_samples.size();
+        if (m_dimension == 0)
+            return m_iteration % m_samples.size();
+        return (m_iteration ^ (m_iteration >> m_dimension)) % m_samples.size();
     }
 
     Vector2f sample2f() {
@@ -277,7 +279,7 @@ int main(int argc, char** argv) {
 
                 printf("iteration %u:", i);
 
-                auto rnd = SampleGenerator(samples, i + int(samples.size()));
+                auto rnd = SampleGenerator(samples, i);
                 for (int d = 0; d < dimension_count; ++d) {
                     int index0 = rnd.get_index();
                     int distribution_index = int(rnd.sample1f() * distribution_count);
