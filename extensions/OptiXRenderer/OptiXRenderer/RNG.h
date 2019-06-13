@@ -83,6 +83,9 @@ __inline_all__ optix::float2 sample02(unsigned int n, optix::uint2 scramble = op
 __inline_all__ unsigned int teschner_hash(unsigned int x, unsigned int y) {
     return (x * 73856093) ^ (y * 19349669);
 }
+__inline_all__ unsigned int teschner_hash(unsigned int x, unsigned int y, unsigned int z) {
+    return (x * 73856093) ^ (y * 19349669) ^ (z * 83492791);
+}
 
 // Computes the power heuristic of pdf1 and pdf2.
 // It is assumed that pdf1 is always valid, i.e. not NaN.

@@ -193,9 +193,39 @@ struct __align__(16) Material {
 // Ray payloads.
 //----------------------------------------------------------------------------
 
+struct PMJSampler {
+public:
+    static const unsigned int MAX_SAMPLE_COUNT = 4096;
+    unsigned int iteration : 13;
+    unsigned int dimension : 5;
+    unsigned int x_offset : 7;
+    unsigned int y_offset : 7;
+
+    __inline_all__ static PMJSampler make(unsigned int iteration, float x_offset, float y_offset) {
+        PMJSampler sampler;
+        sampler.iteration = iteration;
+        sampler.dimension = 0;
+        sampler.x_offset = unsigned int(x_offset * (1 << 7) + 0.5f);
+        sampler.y_offset = unsigned int(y_offset * (1 << 7) + 0.5f);
+        return sampler;
+    }
+
+    __inline_all__ void set_dimension(unsigned int dim) { this->dimension = dim; }
+    __inline_all__ int get_index() const {
+        if (dimension == 0)
+            return iteration % MAX_SAMPLE_COUNT;
+        return (iteration ^ (iteration >> dimension)) % MAX_SAMPLE_COUNT;
+    }
+
+    __inline_all__ int get_index_1d() { int index = get_index(); dimension += 1; return index; }
+    __inline_all__ int get_index_2d() { int index = get_index(); dimension += 2; return index; }
+    __inline_all__ float scramble(float x) const { return fmodf(x + x_offset / 128.0f, 1); }
+    __inline_all__ optix::float2 scramble(optix::float2 v) const { return{ fmodf(v.x + x_offset / 128.0f, 1), fmodf(v.y + y_offset / 128.0f, 1) }; }
+};
+
 struct __align__(16) MonteCarloPayload {
     optix::float3 radiance;
-    RNG::LinearCongruential rng;
+    PMJSampler pmj_rng;
     optix::float3 throughput;
     unsigned int bounces;
 

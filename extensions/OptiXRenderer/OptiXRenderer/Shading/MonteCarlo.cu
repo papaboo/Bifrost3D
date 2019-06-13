@@ -17,6 +17,9 @@ using namespace optix;
 using namespace OptiXRenderer;
 using namespace OptiXRenderer::Shading::ShadingModels;
 
+// System state
+rtBuffer<float2, 1> g_pmj_samples;
+
 // Ray parameters.
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
@@ -42,6 +45,18 @@ rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 rtDeclareVariable(float2, texcoord, attribute texcoord, );
 
 //-----------------------------------------------------------------------------
+// PMJ sampling
+//-----------------------------------------------------------------------------
+
+__inline_dev__ float sample1f(PMJSampler& pmj_sampler) {
+    return pmj_sampler.scramble(g_pmj_samples[pmj_sampler.get_index_1d()].x);
+}
+__inline_dev__ float2 sample2f(PMJSampler& pmj_sampler) {
+    return pmj_sampler.scramble(g_pmj_samples[pmj_sampler.get_index_2d()]);
+}
+__inline_dev__ float3 sample3f(PMJSampler& pmj_sampler) { return make_float3(sample2f(pmj_sampler), sample1f(pmj_sampler)); }
+
+//-----------------------------------------------------------------------------
 // Light sampling.
 //-----------------------------------------------------------------------------
 
@@ -50,7 +65,7 @@ rtDeclareVariable(float2, texcoord, attribute texcoord, );
 __inline_dev__ LightSample sample_single_light(const DefaultShading& material, const TBN& world_shading_tbn, float light_index_w) {
     int light_index = min(g_scene.light_count - 1, int(light_index_w * g_scene.light_count));
     const Light& light = g_scene.light_buffer[light_index];
-    LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_payload.position, monte_carlo_payload.rng.sample2f());
+    LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_payload.position, sample2f(monte_carlo_payload.pmj_rng));
     light_sample.radiance *= g_scene.light_count; // Scale up radiance to account for only sampling one light.
 
     float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction_to_light);
@@ -77,7 +92,7 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
 // Take multiple light samples and from that set pick one based on the contribution of the light scaled by the material.
 // Basic Resampled importance sampling: http://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=1662&context=etd.
 __inline_dev__ LightSample reestimated_light_samples(const DefaultShading& material, const TBN& world_shading_tbn, int samples) {
-    float light_sample_w = monte_carlo_payload.rng.sample1f();
+    float light_sample_w = sample1f(monte_carlo_payload.pmj_rng);
     LightSample light_sample = sample_single_light(material, world_shading_tbn, light_sample_w);
     for (int s = 1; s < samples; ++s) {
         light_sample_w += 1.0f / samples;
@@ -86,7 +101,7 @@ __inline_dev__ LightSample reestimated_light_samples(const DefaultShading& mater
         float light_weight = sum(light_sample.radiance);
         float new_light_weight = sum(new_light_sample.radiance);
         float new_light_probability = new_light_weight / (light_weight + new_light_weight);
-        if (monte_carlo_payload.rng.sample1f() < new_light_probability) {
+        if (sample1f(monte_carlo_payload.pmj_rng) < new_light_probability) {
             light_sample = new_light_sample;
             light_sample.radiance /= new_light_probability;
         } else
@@ -110,7 +125,7 @@ RT_PROGRAM void closest_hit() {
     const Material& material_parameter = g_materials[material_index];
 
     float coverage = DefaultShading::coverage(material_parameter, texcoord);
-    if (monte_carlo_payload.rng.sample1f() > coverage) {
+    if (sample1f(monte_carlo_payload.pmj_rng) > coverage) {
         monte_carlo_payload.position = ray.direction * (t_hit + g_scene.ray_epsilon) + ray.origin;
         return;
     }
@@ -140,7 +155,8 @@ RT_PROGRAM void closest_hit() {
 #endif // ENABLE_NEXT_EVENT_ESTIMATION
 
     // Sample BSDF.
-    BSDFSample bsdf_sample = material.sample_all(monte_carlo_payload.direction, monte_carlo_payload.rng.sample3f());
+    monte_carlo_payload.pmj_rng.set_dimension(4 * monte_carlo_payload.bounces); // 4 Represents the dimensions used for coverage(1), bsdf_selection(1) and bsdf sampling(2).
+    BSDFSample bsdf_sample = material.sample_all(monte_carlo_payload.direction, sample3f(monte_carlo_payload.pmj_rng));
     monte_carlo_payload.direction = bsdf_sample.direction * world_shading_tbn;
     monte_carlo_payload.bsdf_MIS_PDF = bsdf_sample.PDF;
     if (!is_PDF_valid(bsdf_sample.PDF))
