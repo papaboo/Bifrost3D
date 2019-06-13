@@ -1,4 +1,4 @@
-// Bifrost random number generators.
+// Bifrost random number generators and utilities.
 // ----------------------------------------------------------------------------
 // Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
@@ -86,7 +86,17 @@ __always_inline__ float power_heuristic(float pdf1, float pdf2) {
     return !isnan(result) ? result : (pdf1 > pdf2 ? 1.0f : 0.0f);
 }
 
+// ------------------------------------------------------------------------------------------------
+// Generate progressive multi-jittered samples with a blue noise approximation.
+// Progressive Multi-Jittered Sample Sequences - Supplemental materials, Christensen et al., 2018
+// http://graphics.pixar.com/library/ProgressiveMultiJitteredSampling/pmj_suppl.pdf.
+// The nearest neighbour search is implemented by searcing nearby strata for their random samples.
+// ------------------------------------------------------------------------------------------------
+void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, Vector2f* samples_end, unsigned int blue_noise_samples = 8);
+
+// ------------------------------------------------------------------------------------------------
 // Linear congruential random number generator
+// ------------------------------------------------------------------------------------------------
 struct LinearCongruential final {
 private:
     static const unsigned int multiplier = 1664525u;

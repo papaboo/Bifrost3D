@@ -73,6 +73,7 @@ SET(MATH_SRCS
   Bifrost/Math/Ray.h
   Bifrost/Math/Rect.h
   Bifrost/Math/RNG.h
+  Bifrost/Math/RNG.cpp
   Bifrost/Math/Statistics.h
   Bifrost/Math/Transform.h
   Bifrost/Math/Utils.h
