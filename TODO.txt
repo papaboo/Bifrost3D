@@ -1,20 +1,24 @@
+* Debug test scene crash.
+
+
+* Progressive multijittered sample sequences dev app
+** Optimize stratum picking using acceleration structure
+** Is debug builds faster with arrays instead of vectors?
+
 BACKLOG:
-* Shorter initial path and uniform seed after N iterations
-* IBL Convolution with std dev instead of alpha. Add to IBL convolution app and source the std dev derivation. Compute horizontal extend by lat long to angle to border latlong
-* Faster convergence
-** Solid angle sampled sphere light. https://schuttejoe.github.io/post/arealightsampling/
-** Pixar's PMJ02 sampler with test app. (Replicate their test setup) See also http://jcgt.org/published/0008/01/04/
-*** Perhaps test with SmallGI type scene and reference image?
-*** How to hash pixel index and depth? And is it really hash(pixel_index, depth, iteration)?? Ask Per
-** Better cosine distribution. See Sampling Zoo chapter 16.5.2. Same PDF?
-** Scrambled (reverse) Halton - Stratified sampling for stochastic transparency. With Burley hash function (where do I get that? Per)
-** Path regularization. Perhaps just by clamping roughness along a path.
+* Path regularization. Perhaps just by clamping roughness along a path and then relax pr iteration.
 * OptiX 6.X and CUDA 10
 ** Use VS 2017.
+*** Enable intrinsic functions and whole program optimization. (Test for convolution)
+*** Disable security checks in release
+*** Disable RTTI!!
 *** https://blogs.msdn.microsoft.com/vcblog/2016/10/26/recommendations-to-speed-c-builds-in-visual-studio/
 ** Check if support for actual pixel formats and samplers instead of just types and channel count.
+* Upgrade tinygltf (Draco support!) and other tinys.
+* Upgrade CMake and use the native CUDA compilation. https://cmake.org/cmake/help/v3.12/module/FindCUDA.html
+* GLFW 3.3 - Handle windows high DPI scaling. https://www.glfw.org/docs/latest/news.html#content_scale_33
 * OptiX (filtering) backends
-** Try OptiX 5 AI denoiser
+** Try OptiX AI denoiser
 ** Filter neighbouring light samples before reconstruction - Screen space photon mapping approach with MIS weights / Path filtering.
 *** Output buffers: Material ID, texcoord, position, normal, ray dir, weight, light sample, indirect sample. Define for compressing directions and use half/byte for some values.
 *** Output screen space sample based on path/BSDF PDF.
@@ -33,7 +37,6 @@ BACKLOG:
 *** For diffuse env map lookup.
 *** For cones compute aparture from visibility
 *** Intersect bent cone with light cone or distribution and bake into 3D LUT (GTSO)
-* GLFW 3.3 - Handle windows high DPI scaling.
 * Add coat to the default material.
 ** http://jcgt.org/published/0003/04/03/paper-lowres.pdf and https://www.youtube.com/watch?v=4nKb9hRYbPA
 ** Or just add a GGX layer on top with an iridescence parameter (red and blue fresnel offset relative to green. [Specularity, iridescence)
@@ -52,5 +55,9 @@ BACKLOG:
 
 libs
 * TinyDNN
+** Cat detection
+** A neural algorithm of artistic style, Gatys et al, 2015
+** Use a siamese network to detect individual predefined lego bricks. (As opposed to classifying all lego bricks for all pixels.) Perhaps use transfer learning on some face recognition net
+* ReactPhysics or BulletPhyssics (or both)
 * RtAudio wrapper - https://github.com/thestk/rtaudio
 * LuaJit - OpenSource (Fallback to interpretted Lua if the target architecture isn't supported.)
