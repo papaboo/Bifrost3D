@@ -30,7 +30,6 @@
 #include <atomic>
 #include <array>
 #include <chrono>
-#include <fstream>
 
 using namespace Bifrost::Assets;
 using namespace Bifrost::Core;
@@ -106,7 +105,7 @@ struct Options {
         case ConvolutionType::SeparableRecursive: out << "Separable recursive convolution"; break;
         }
         if (sample_method != ConvolutionType::Separable && sample_method != ConvolutionType::SeparableRecursive)
-            out << sample_count << ", samples pr pixel";
+            out << ", " << sample_count << " samples pr pixel";
         out << ".";
         return out.str();
     }
