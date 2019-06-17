@@ -158,7 +158,7 @@ __always_inline__ T magnitude_squared(Vector<T> v) {
 // Compute the magnitude of the input vector.
 template<template<typename> class Vector, typename T>
 __always_inline__ T magnitude(Vector<T> v) {
-    return sqrt(dot(v, v));
+    return (T)sqrt(dot(v, v));
 }
 
 // Create a normalized version of the input vector.

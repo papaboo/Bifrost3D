@@ -22,7 +22,7 @@
 using namespace Bifrost::Math;
 using namespace std;
 
-enum class Generator { LCG, PJ, PMJ, PMJBN };
+enum class Generator { LCG, PJ, PMJ, PMJBN, SamplePattern2D };
 
 const char* generator_name(Generator generator) {
     switch (generator) {
@@ -30,6 +30,7 @@ const char* generator_name(Generator generator) {
     case Generator::PJ: return "progressive jittered";
     case Generator::PMJ: return "progressive multijittered";
     case Generator::PMJBN: return "progressive multijittered blue-noise";
+    case Generator::SamplePattern2D: return "sample pattern 2D";
     }
     return "unknown";
 };
@@ -108,7 +109,7 @@ void output_images(const std::vector<Vector3f>& samples, const char* const path)
 }
 
 // ------------------------------------------------------------------------------------------------
-// Random number generators
+// PMJ sampler
 // ------------------------------------------------------------------------------------------------
 
 struct SampleGenerator {
@@ -141,6 +142,110 @@ public:
 };
 
 // ------------------------------------------------------------------------------------------------
+// Screen space sample offset pattern
+// ------------------------------------------------------------------------------------------------
+
+void generate_2D_offset_pattern(int period) {
+    // Generate offsets.
+    auto offsets = std::vector<Vector2f>(period * period);
+    float rcp_period = 1.0f / float(period);
+    for (int y = 0; y < period; ++y)
+        for (int x = 0; x < period; ++x) {
+            Vector2f a = Vector2f(float(x), float(y)) * rcp_period;
+            Vector2f b = Vector2f(x + 1.0f, y + 1.0f) * rcp_period;
+            offsets[x + y * period] = lerp(a, b, Vector2f(a.y, a.x));
+        }
+
+    // Compute the score of a single cell in the offset grid.
+    auto cell_score = [&](int x, int y) -> float {
+        Vector2f v = offsets[x + y * period];
+        float score = 0.0f;
+        for (int _y = y + period - 2; _y < y + period + 2; ++_y)
+            for (int _x = x + period - 2; _x < x + period + 2; ++_x) {
+                if (_x != x && _y != y) {
+                    Vector2f n = offsets[(_x % period) + (_y % period) * period];
+                    Vector2f diff = Vector2f(abs(n.x - v.x), abs(n.y - v.y));
+                    if (diff.x > 0.5f) diff.x = 1 - diff.x;
+                    if (diff.y > 0.5f) diff.y = 1 - diff.y;
+                    score += dot(diff, diff) / magnitude(Vector2i(_x, _y));
+                }
+            }
+
+        return score;
+    };
+
+    // Compute the total score of the offset grid.
+    auto score = [&]() -> float {
+        float score = 0.0f;
+        for (int y = 0; y < period; ++y)
+            for (int x = 0; x < period; ++x)
+                score += cell_score(x, y);
+        return score;
+    };
+
+    // Print offsets.
+    auto print_offsets = [&]() {
+        printf("offsets with score %.3f:\n", score());
+        for (int y = 0; y < period; ++y) {
+            Vector2f* row = offsets.data() + y * period;
+            printf("[[%.2f, %.2f]", row[0].x, row[0].y);
+            for (int x = 1; x < period; ++x)
+                printf(", [%.2f, %.2f]", row[x].x, row[x].y);
+            printf("]\n");
+        }
+    };
+
+    printf("Initial ");
+    print_offsets();
+    printf("\n");
+
+    auto rnd = RNG::LinearCongruential(19349669);
+
+    // Randomly shuffle period^2 rows and columns.
+    for (int i = 0; i < period * period; ++i) {
+        int i0 = rnd.sample1ui() % (period * period);
+        int i1 = rnd.sample1ui() % (period * period);
+        std::swap(offsets[i0], offsets[i1]);
+    }
+
+    printf("Randomly shuffled ");
+    print_offsets();
+    printf("\n");
+
+    // Only shuffle if swaps produce a lower error.
+    float current_score = score();
+    for (int i = 0; i < period * period * period; ++i) {
+        int i0 = rnd.sample1ui() % (period * period);
+        int i1 = rnd.sample1ui() % (period * period);
+        std::swap(offsets[i0], offsets[i1]);
+
+        // Swap back if the error of the next configuration is more than the previous.
+        float next_score = score();
+        if (current_score > next_score)
+            std::swap(offsets[i0], offsets[i1]);
+        else
+            current_score = next_score;
+    }
+
+    printf("Broad phase optimization ");
+    print_offsets();
+    printf("\n");
+
+    // TODO Separate neighbours sharing one of the two offsets.
+
+    // Print as optix constant buffer.
+    printf("__constant__ float2 pmj_offsets[%d] = {\n", period * period);
+    for (int y = 0; y < period; ++y) {
+        Vector2f* row = offsets.data() + y * period;
+        printf("    ");
+        for (int x = 0; x < period; ++x)
+            printf("{ %.2ff, %.2ff }, ", row[x].x, row[x].y);
+        printf("\n");
+    }
+    printf("};\n");
+}
+
+// ------------------------------------------------------------------------------------------------
 // Options
 // ------------------------------------------------------------------------------------------------
 
@@ -152,24 +257,27 @@ struct Options {
     bool output_images = false;
 
     static Options parse(int argc, char** argv) {
+        char** argument_end = argv + argc;
         Options res;
-        for (int argument = 1; argument < argc; ++argument) {
-            if (strcmp(argv[argument], "--lcg") == 0)
+        for (char** argument = argv + 1; argument < argument_end; ++argument) {
+            if (strcmp(*argument, "--lcg") == 0)
                 res.generator = Generator::LCG;
-            else if (strcmp(argv[argument], "--pj") == 0)
+            else if (strcmp(*argument, "--pj") == 0)
                 res.generator = Generator::PJ;
-            else if (strcmp(argv[argument], "--pmj") == 0)
+            else if (strcmp(*argument, "--pmj") == 0)
                 res.generator = Generator::PMJ;
-            else if (strcmp(argv[argument], "--pmjbn") == 0)
+            else if (strcmp(*argument, "--pmjbn") == 0)
                 res.generator = Generator::PMJBN;
-            else if (strcmp(argv[argument], "-s") == 0 || strcmp(argv[argument], "--samplecount") == 0)
-                res.sample_count = next_power_of_two(atoi(argv[++argument]));
-            else if (strcmp(argv[argument], "-d") == 0 || strcmp(argv[argument], "--dimensions") == 0)
-                res.dimensions = atoi(argv[++argument]);
-            else if (strcmp(argv[argument], "--output") == 0)
+            else if (strcmp(*argument, "--samplepattern2D") == 0)
+                res.generator = Generator::SamplePattern2D;
+            else if (strcmp(*argument, "-s") == 0 || strcmp(*argument, "--samplecount") == 0)
+                res.sample_count = atoi(*(++argument));
+            else if (strcmp(*argument, "-d") == 0 || strcmp(*argument, "--dimensions") == 0)
+                res.dimensions = atoi(*(++argument));
+            else if (strcmp(*argument, "--output") == 0)
                 res.output_images = true;
             else
-                printf("Unsupported argument: '%s'\n", argv[argument]);
+                printf("Unsupported argument: '%s'\n", *argv);
         }
         return res;
     }
@@ -189,6 +297,7 @@ void print_usage() {
         "     | --pmjbn: Generate samples using a progressive multi-jittered pseudo blue noise generator.\n"
         "  -s | --samplecount: Number of samples generates. Will be rounded up to next power of two.\n"
         "  -d | --dimensions: Number of dimensions in the samples. 2 or 3 supported.\n"
+        "     | --samplepattern2D: Pattern for translating the PMJ samples in 2D.\n"
         "     | --output: Output the generated sample images to C:\\temp\\.\n";
     printf("%s", usage);
 }
@@ -204,6 +313,13 @@ int main(int argc, char** argv) {
 
     auto options = Options::parse(argc, argv);
 
+    if (options.generator == Generator::SamplePattern2D) {
+        printf("Generate 2D sample pattern with period of %d.\n", options.sample_count);
+        generate_2D_offset_pattern(options.sample_count);
+        return 0;
+    }
+
+    options.sample_count = next_power_of_two(options.sample_count);
     printf("Generate %d %dD %s samples.\n", options.sample_count, options.dimensions, generator_name(options.generator));
 
     std::ostringstream path;
