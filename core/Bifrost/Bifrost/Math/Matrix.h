@@ -76,7 +76,7 @@ public:
         }
         int r = 0;
         for (RowType row : rows) {
-            std::copy(row.begin(), row.end(), m_elements + r * 4);
+            std::copy(row.begin(), row.end(), m_elements + r * COLUMN_COUNT);
             ++r;
         }
     }
