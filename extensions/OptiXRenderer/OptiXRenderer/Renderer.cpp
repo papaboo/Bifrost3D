@@ -281,9 +281,9 @@ struct Renderer::Implementation {
 #endif
 
             { // PMJ random samples.
-                optix::Buffer pmj_sample_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, PMJSampler::MAX_SAMPLE_COUNT);
+                optix::Buffer pmj_sample_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, PMJSamplerState::MAX_SAMPLE_COUNT);
                 Vector2f* pmj_samples = (Vector2f*)pmj_sample_buffer->map();
-                Bifrost::Math::RNG::fill_progressive_multijittered_bluenoise_samples(pmj_samples, pmj_samples + PMJSampler::MAX_SAMPLE_COUNT);
+                Bifrost::Math::RNG::fill_progressive_multijittered_bluenoise_samples(pmj_samples, pmj_samples + PMJSamplerState::MAX_SAMPLE_COUNT);
                 pmj_sample_buffer->unmap();
                 context["g_pmj_samples"]->set(pmj_sample_buffer);
             }

@@ -193,7 +193,7 @@ struct __align__(16) Material {
 // Ray payloads.
 //----------------------------------------------------------------------------
 
-struct PMJSampler {
+struct PMJSamplerState {
 public:
     static const unsigned int MAX_SAMPLE_COUNT = 4096;
     unsigned int iteration : 13;
@@ -201,8 +201,8 @@ public:
     unsigned int x_offset : 7;
     unsigned int y_offset : 7;
 
-    __inline_all__ static PMJSampler make(unsigned int iteration, float x_offset, float y_offset) {
-        PMJSampler sampler;
+    __inline_all__ static PMJSamplerState make(unsigned int iteration, float x_offset, float y_offset) {
+        PMJSamplerState sampler;
         sampler.iteration = iteration;
         sampler.dimension = 0;
         sampler.x_offset = unsigned int(x_offset * (1 << 7) + 0.5f);
@@ -225,7 +225,7 @@ public:
 
 struct __align__(16) MonteCarloPayload {
     optix::float3 radiance;
-    PMJSampler pmj_rng;
+    PMJSamplerState pmj_rng_state;
     optix::float3 throughput;
     unsigned int bounces;
 

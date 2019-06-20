@@ -54,7 +54,7 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     RNG::LinearCongruential pmj_offset_rng; pmj_offset_rng.seed(__brev(RNG::teschner_hash(x, y)));
     float2 offset = pmj_offsets[(x % pmj_period) + (y % pmj_period) * pmj_period];
     offset += make_float2(-1 / 18.0f) + pmj_offset_rng.sample2f() / pmj_period;
-    payload.pmj_rng = PMJSampler::make(accumulation_count, offset.x, offset.y);
+    payload.pmj_rng_state = PMJSamplerState::make(accumulation_count, offset.x, offset.y);
 
     /*
     const int period = 5;
@@ -65,7 +65,7 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     int x_stratum = ((x + y) % period);
     x_stratum ^= x_stratum >> 1;
     float pmj_x_offset = x_stratum * pixel_span + pixel_span * pmj_offset_rng.sample1f();
-    payload.pmj_rng = PMJSampler::make(accumulation_count, pmj_x_offset, pmj_y_offset);
+    payload.pmj_rng_state = PMJSampler::make(accumulation_count, pmj_x_offset, pmj_y_offset);
     */
 
     payload.throughput = make_float3(1.0f);
