@@ -36,10 +36,6 @@ std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_samples(
     auto occupied1Dx = std::vector<bool>(sample_count);
     auto occupied1Dy = std::vector<bool>(sample_count);
 
-    // Create xhalves and yhalves used by extend_sequence_odd once. TODO Make bool/bit array
-    auto xhalves = std::vector<int>(sample_count / 2);
-    auto yhalves = std::vector<int>(sample_count / 2);
-
     auto generate_sample_point = [&](int i, int j, int xhalf, int yhalf, int n, int N) {
         int NN = 2 * N;
 
@@ -106,11 +102,6 @@ std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_samples(
         // Mark already occupied 1D strata so we can avoid them
         mark_occupied_strata(N);
         
-        // Optionally:
-        // 1) Classify occupied sub-pixels: odd or even diagonal
-        // 2) Pre-select well-balanced subquadrants here for better sample distribution between powers of two samples)
-        // Loop over N/2 old samples and generate 2 new samples for each – one at a time to keep the order consecutive (for "greedy" best candidates)
-        
         // Select one of the two remaining subquadrants
         for (unsigned int s = 0; s < N / 2; ++s) {
             Vector2f oldpt = samples[s];
@@ -119,25 +110,27 @@ std::vector<Bifrost::Math::Vector2f> generate_progressive_multijittered_samples(
             int xhalf = int(2 * (n * oldpt.x - i));
             int yhalf = int(2 * (n * oldpt.y - j));
 
-            // Randomly select one of the two remaining subquadrants (Or optionally use the well-balanced subquads chosen above)
+            // Randomly select one of the two remaining subquadrants
             if (rnd() > 0.5)
                 xhalf = 1 - xhalf;
             else
                 yhalf = 1 - yhalf;
-            xhalves[s] = xhalf;
-            yhalves[s] = yhalf;
             // Generate a sample point
             generate_sample_point(i, j, xhalf, yhalf, n, N);
         }
             
         // And finally fill in the last subquadrants
         for (unsigned int s = 0; s < N / 2; ++s) {
-            Vector2f oldpt = samples[s];
+            Vector2f oldpt = samples[s + N];
             int i = int(n * oldpt.x);
             int j = int(n * oldpt.y);
-            int xhalf = 1 - xhalves[s];
-            int yhalf = 1 - yhalves[s];
-            
+
+            int old_xhalf = int(2 * (n * oldpt.x - i));
+            int old_yhalf = int(2 * (n * oldpt.y - j));
+
+            int xhalf = 1 - old_xhalf;
+            int yhalf = 1 - old_yhalf;
+
             // Generate a sample point
             generate_sample_point(i, j, xhalf, yhalf, n, N);
         }
