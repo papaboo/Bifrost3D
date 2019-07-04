@@ -19,7 +19,7 @@ using namespace Bifrost::Math;
 namespace StbImageWriter {
 
 enum class FileType {
-    BMP, HDR, PNG, TGA, Unknown
+    BMP, HDR, JPG, PNG, TGA, Unknown
 };
 
 enum class ChannelType {
@@ -30,23 +30,19 @@ FileType get_file_type(const std::string& path) {
     if (path[path.size() - 4] != '.')
         return FileType::Unknown;
 
-    char type_first_letter = path[path.size() - 3];
-    switch (type_first_letter) {
-    case 'b':
-    case 'B':
+    const char* filetype_begin = path.data() + (path.size() - 3);
+    if (strcmp("bmp", filetype_begin) == 0)
         return FileType::BMP;
-    case 'h':
-    case 'H':
+    else if (strcmp("hdr", filetype_begin) == 0)
         return FileType::HDR;
-    case 'p':
-    case 'P':
+    else if (strcmp("jpg", filetype_begin) == 0)
+        return FileType::JPG;
+    else if (strcmp("png", filetype_begin) == 0)
         return FileType::PNG;
-    case 't':
-    case 'T':
+    else if (strcmp("tga", filetype_begin) == 0)
         return FileType::TGA;
-    default:
+    else
         return FileType::Unknown;
-    }
 }
 
 bool write(Image image, const std::string& path) {
@@ -99,6 +95,9 @@ bool write(Image image, const std::string& path) {
         break;
     case FileType::HDR:
         did_succeed = stbi_write_hdr(path.c_str(), width, height, channel_count, static_cast<float*>(data)) != 0;
+        break;
+    case FileType::JPG:
+        did_succeed = stbi_write_jpg(path.c_str(), width, height, channel_count, static_cast<float*>(data), 90) != 0;
         break;
     case FileType::PNG:
         did_succeed = stbi_write_png(path.c_str(), width, height, channel_count, data, 0) != 0;
