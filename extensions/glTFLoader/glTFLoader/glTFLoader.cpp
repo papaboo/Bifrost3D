@@ -404,7 +404,7 @@ SceneNodes::UID load(const std::string& filename) {
     tinygltf::TinyGLTF glTF_ctx;
     std::string errors, warnings;
 
-    static auto image_loader = [](tinygltf::Image* glTF_image, std::string* error, std::string* warning, int req_width, int req_height,
+    static auto image_loader = [](tinygltf::Image* glTF_image, int index, std::string* error, std::string* warning, int req_width, int req_height,
                                   const unsigned char *bytes, int size, void* user_data) -> bool {
 
         Image image = StbImageLoader::load_from_memory("Unnamed", bytes, size);
