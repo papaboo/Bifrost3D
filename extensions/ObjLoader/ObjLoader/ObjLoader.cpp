@@ -55,14 +55,18 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
     tinyobj::attrib_t attributes;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> tiny_materials;
+    std::string warning;
     std::string error;
-    bool obj_loaded = tinyobj::LoadObj(&attributes, &shapes, &tiny_materials, &error, path.c_str(), directory.c_str());
 
-    if (!error.empty()) {
+    bool obj_loaded = tinyobj::LoadObj(&attributes, &shapes, &tiny_materials, &warning, &error, path.c_str(), directory.c_str());
+
+    if (!warning.empty())
+        printf("ObjLoader::load warning: '%s'.\n", warning.c_str());
+    if (!error.empty())
         printf("ObjLoader::load error: '%s'.\n", error.c_str());
-        if (!obj_loaded)
-            return SceneNodes::UID::invalid_UID();
-    }
+
+    if (!obj_loaded)
+        return SceneNodes::UID::invalid_UID();
 
     SceneNodes::UID root_ID = shapes.size() > 1u ? SceneNodes::create(std::string(filename.begin(), filename.end()-4)) : SceneNodes::UID::invalid_UID();
 
