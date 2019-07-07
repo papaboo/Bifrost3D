@@ -23,21 +23,23 @@ namespace RNG {
 // The nearest neighbour search is implemented by searcing nearby strata for their random samples.
 // ------------------------------------------------------------------------------------------------
 void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, Vector2f* samples_end, unsigned int blue_noise_samples) {
-    unsigned int sample_count = unsigned int(samples_end - samples_begin);
-    assert(is_power_of_two(sample_count));
+    unsigned int total_sample_count = unsigned int(samples_end - samples_begin);
+    assert(is_power_of_two(total_sample_count));
 
     auto rng = RNG::LinearCongruential(19349669);
     auto rnd = [&]() -> float { return rng.sample1f(); };
+
+    blue_noise_samples = max(1u, blue_noise_samples);
 
     unsigned short next_sample_index = 0;
 
     // Create occupied array.
     const unsigned short FREE_STRATUM = 65535;
-    auto stratum_samples_x = std::vector<unsigned short>(sample_count);
-    auto stratum_samples_y = std::vector<unsigned short>(sample_count);
+    auto stratum_samples_x = std::vector<unsigned short>(total_sample_count);
+    auto stratum_samples_y = std::vector<unsigned short>(total_sample_count);
 
-    auto generate_sample_point = [&](Vector2f oldpt, int i, int j, int xhalf, int yhalf, int n, int N) {
-        int NN = 2 * N;
+    auto generate_sample_point = [&](Vector2f oldpt, int i, int j, int xhalf, int yhalf, int prev_grid_size, int prev_sample_count) {
+        int next_sample_count = 2 * prev_sample_count;
 
         Vector2f best_pt = { NAN, NAN };
         float best_distance = 0;
@@ -47,19 +49,19 @@ void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, V
             Vector2f pt;
             // Generate candidate sample x coord
             do {
-                pt.x = (i + 0.5f * (xhalf + rnd())) / n;
-            } while (stratum_samples_x[int(NN * pt.x)] != FREE_STRATUM);
+                pt.x = (i + 0.5f * (xhalf + rnd())) / prev_grid_size;
+            } while (stratum_samples_x[int(next_sample_count * pt.x)] != FREE_STRATUM);
 
             // Generate candidate sample y coord
             do {
-                pt.y = (j + 0.5f * (yhalf + rnd())) / n;
-            } while (stratum_samples_y[int(NN * pt.y)] != FREE_STRATUM);
+                pt.y = (j + 0.5f * (yhalf + rnd())) / prev_grid_size;
+            } while (stratum_samples_y[int(next_sample_count * pt.y)] != FREE_STRATUM);
 
-            int xstratum = int(NN * pt.x);
-            int ystratum = int(NN * pt.y);
+            int xstratum = int(next_sample_count * pt.x);
+            int ystratum = int(next_sample_count * pt.y);
 
             float distance_to_neighbour = magnitude(oldpt - pt);
-            int max_search_stratum = int(NN * distance_to_neighbour);
+            int max_search_stratum = int(next_sample_count * distance_to_neighbour);
 
             for (int offset = 1; offset <= max_search_stratum; ++offset) {
                 auto test_neighbour_sample = [&](unsigned short neighbour_sample_index) {
@@ -78,7 +80,7 @@ void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, V
                         neighbour_sample.y -= 1.0f;
 
                     distance_to_neighbour = fminf(distance_to_neighbour, magnitude(neighbour_sample - pt));
-                    max_search_stratum = int(NN * distance_to_neighbour);
+                    max_search_stratum = int(next_sample_count * distance_to_neighbour);
                 };
 
                 test_neighbour_sample(stratum_samples_x[(xstratum + offset) % stratum_samples_x.size()]);
@@ -94,8 +96,8 @@ void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, V
         }
 
         // Mark 1D strata as occupied
-        int xstratum = int(NN * best_pt.x);
-        int ystratum = int(NN * best_pt.y);
+        int xstratum = int(next_sample_count * best_pt.x);
+        int ystratum = int(next_sample_count * best_pt.y);
         stratum_samples_x[xstratum] = stratum_samples_y[ystratum] = next_sample_index;
 
         // Assign new sample point
@@ -103,57 +105,58 @@ void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, V
     };
 
     // Mark all occupied 1D strata.
-    auto mark_occupied_strata = [&](unsigned int N) {
-        unsigned int NN = 2 * N;
-        stratum_samples_x.resize(NN);
-        stratum_samples_y.resize(NN);
-        for (unsigned int i = 0; i < NN; ++i)
+    auto mark_occupied_strata = [&](unsigned int prev_sample_count) {
+        unsigned int next_sample_count = 2 * prev_sample_count;
+        stratum_samples_x.resize(next_sample_count);
+        stratum_samples_y.resize(next_sample_count);
+        for (unsigned int i = 0; i < next_sample_count; ++i)
             stratum_samples_x[i] = stratum_samples_y[i] = FREE_STRATUM;
 
-        for (unsigned int s = 0; s < N; ++s) {
-            int xstratum = int(NN * samples_begin[s].x);
-            int ystratum = int(NN * samples_begin[s].y);
+        for (unsigned int s = 0; s < prev_sample_count; ++s) {
+            int xstratum = int(next_sample_count * samples_begin[s].x);
+            int ystratum = int(next_sample_count * samples_begin[s].y);
             stratum_samples_x[xstratum] = stratum_samples_y[ystratum] = unsigned short(s);
         }
     };
 
     // Generate next N sample points(for N being an even power of two)
-    auto extend_sequence_even = [&](unsigned int N) {
-        unsigned int n = (unsigned int)sqrt(N);
+    auto extend_sequence_even = [&](unsigned int prev_sample_count) {
+        unsigned int prev_grid_size = (unsigned int)sqrt(prev_sample_count);
 
         // Mark already occupied 1D strata so we can avoid them
-        mark_occupied_strata(N);
+        mark_occupied_strata(prev_sample_count);
 
         // Loop over N old samples and generate 1 new sample for each
-        for (unsigned int s = 0; s < N; ++s) {
+        for (unsigned int s = 0; s < prev_sample_count; ++s) {
             Vector2f oldpt = samples_begin[s];
-            int i = int(n * oldpt.x);
-            int j = int(n * oldpt.y);
-            int xhalf = int(2 * (n * oldpt.x - i));
-            int yhalf = int(2 * (n * oldpt.y - j));
+            int i = int(prev_grid_size * oldpt.x);
+            int j = int(prev_grid_size * oldpt.y);
+            int xhalf = int(2 * (prev_grid_size * oldpt.x - i));
+            int yhalf = int(2 * (prev_grid_size * oldpt.y - j));
             // Select the diagonally opposite subquadrant
             xhalf = 1 - xhalf;
             yhalf = 1 - yhalf;
             // Generate a sample point
-            generate_sample_point(oldpt, i, j, xhalf, yhalf, n, N);
+            generate_sample_point(oldpt, i, j, xhalf, yhalf, prev_grid_size, prev_sample_count);
         }
     };
 
     // Generate next N sample points(for N being an odd power of two)
-    auto extend_sequence_odd = [&](unsigned int N) {
-        unsigned int n = (unsigned int)sqrt(N / 2);
+    auto extend_sequence_odd = [&](unsigned int prev_sample_count) {
+        unsigned int prev_grid_size = (unsigned int)sqrt(prev_sample_count / 2);
         // Mark already occupied 1D strata so we can avoid them
-        mark_occupied_strata(N);
+        mark_occupied_strata(prev_sample_count);
 
-        // Loop over N/2 old samples and generate 2 new samples for each – one at a time to keep the order consecutive (for "greedy" best candidates)
+        // Loop over the first half of the samples, the ones used in extend_sequence_even as well,
+        // and generate 2 new samples for each – one at a time to keep the order consecutive (for "greedy" best candidates)
 
         // Select one of the two remaining subquadrants
-        for (unsigned int s = 0; s < N / 2; ++s) {
+        for (unsigned int s = 0; s < prev_sample_count / 2; ++s) {
             Vector2f oldpt = samples_begin[s];
-            int i = int(n * oldpt.x);
-            int j = int(n * oldpt.y);
-            int xhalf = int(2 * (n * oldpt.x - i));
-            int yhalf = int(2 * (n * oldpt.y - j));
+            int i = int(prev_grid_size * oldpt.x);
+            int j = int(prev_grid_size * oldpt.y);
+            int xhalf = int(2 * (prev_grid_size * oldpt.x - i));
+            int yhalf = int(2 * (prev_grid_size * oldpt.y - j));
 
             // Randomly select one of the two remaining subquadrants
             if (rnd() > 0.5)
@@ -161,33 +164,33 @@ void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, V
             else
                 yhalf = 1 - yhalf;
             // Generate a sample point
-            generate_sample_point(oldpt, i, j, xhalf, yhalf, n, N);
+            generate_sample_point(oldpt, i, j, xhalf, yhalf, prev_grid_size, prev_sample_count);
         }
 
         // And finally fill in the last subquadrants opposite to the previous subquadrant filled.
-        for (unsigned int s = 0; s < N / 2; ++s) {
-            Vector2f oldpt = samples_begin[s + N];
-            int i = int(n * oldpt.x);
-            int j = int(n * oldpt.y);
+        for (unsigned int s = 0; s < prev_sample_count / 2; ++s) {
+            Vector2f oldpt = samples_begin[s + prev_sample_count];
+            int i = int(prev_grid_size * oldpt.x);
+            int j = int(prev_grid_size * oldpt.y);
 
-            int old_xhalf = int(2 * (n * oldpt.x - i));
-            int old_yhalf = int(2 * (n * oldpt.y - j));
+            int old_xhalf = int(2 * (prev_grid_size * oldpt.x - i));
+            int old_yhalf = int(2 * (prev_grid_size * oldpt.y - j));
 
             int xhalf = 1 - old_xhalf;
             int yhalf = 1 - old_yhalf;
 
             // Generate a sample point
-            generate_sample_point(oldpt, i, j, xhalf, yhalf, n, N);
+            generate_sample_point(oldpt, i, j, xhalf, yhalf, prev_grid_size, prev_sample_count);
         }
     };
 
     samples_begin[next_sample_index++] = { rnd(), rnd() };
-    unsigned int N = 1;
-    while (N < sample_count) {
-        extend_sequence_even(N); // N even pow2
-        if (2 * N < sample_count)
-            extend_sequence_odd(2 * N); // 2N odd pow2
-        N *= 4;
+    unsigned int current_sample_count = 1;
+    while (current_sample_count < total_sample_count) {
+        extend_sequence_even(current_sample_count); // current_sample_count is even pow2
+        if (2 * current_sample_count < total_sample_count)
+            extend_sequence_odd(2 * current_sample_count); // 2 * current_sample_count is odd pow2
+        current_sample_count *= 4;
     }
 }
 
