@@ -10,7 +10,6 @@
 #include <Bifrost/Math/Utils.h>
 
 #include <cassert>
-#include <vector>
 
 namespace Bifrost {
 namespace Math {
@@ -35,8 +34,9 @@ void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, V
 
     // Create occupied array.
     const unsigned short FREE_STRATUM = 65535;
-    auto stratum_samples_x = std::vector<unsigned short>(total_sample_count);
-    auto stratum_samples_y = std::vector<unsigned short>(total_sample_count);
+    auto* tmp_storage = new unsigned short[2 * total_sample_count];
+    auto stratum_samples_x = tmp_storage;
+    auto stratum_samples_y = tmp_storage + total_sample_count;
 
     auto generate_sample_point = [&](Vector2f oldpt, int i, int j, int xhalf, int yhalf, int prev_grid_size, int prev_sample_count) {
         int next_sample_count = 2 * prev_sample_count;
@@ -83,10 +83,10 @@ void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, V
                     max_search_stratum = int(next_sample_count * distance_to_neighbour);
                 };
 
-                test_neighbour_sample(stratum_samples_x[(xstratum + offset) % stratum_samples_x.size()]);
-                test_neighbour_sample(stratum_samples_x[(xstratum + stratum_samples_x.size() - offset) % stratum_samples_x.size()]);
-                test_neighbour_sample(stratum_samples_y[(ystratum + offset) % stratum_samples_y.size()]);
-                test_neighbour_sample(stratum_samples_y[(ystratum + stratum_samples_y.size() - offset) % stratum_samples_y.size()]);
+                test_neighbour_sample(stratum_samples_x[(xstratum + offset) % next_sample_count]);
+                test_neighbour_sample(stratum_samples_x[(xstratum + next_sample_count - offset) % next_sample_count]);
+                test_neighbour_sample(stratum_samples_y[(ystratum + offset) % next_sample_count]);
+                test_neighbour_sample(stratum_samples_y[(ystratum + next_sample_count - offset) % next_sample_count]);
             }
 
             if (best_distance < distance_to_neighbour) {
@@ -107,8 +107,6 @@ void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, V
     // Mark all occupied 1D strata.
     auto mark_occupied_strata = [&](unsigned int prev_sample_count) {
         unsigned int next_sample_count = 2 * prev_sample_count;
-        stratum_samples_x.resize(next_sample_count);
-        stratum_samples_y.resize(next_sample_count);
         for (unsigned int i = 0; i < next_sample_count; ++i)
             stratum_samples_x[i] = stratum_samples_y[i] = FREE_STRATUM;
 
@@ -192,6 +190,8 @@ void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, V
             extend_sequence_odd(2 * current_sample_count); // 2 * current_sample_count is odd pow2
         current_sample_count *= 4;
     }
+
+    delete[] tmp_storage;
 }
 
 } // NS RNG
