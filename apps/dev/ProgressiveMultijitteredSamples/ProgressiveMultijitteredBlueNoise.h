@@ -38,6 +38,8 @@ std::vector<Bifrost::Math::Vector3f> generate_3D_progressive_multijittered_sampl
     auto rng = RNG::LinearCongruential(19349669);
     auto rnd = [&]() -> float { return rng.sample1f(); };
 
+    blue_noise_samples = std::max(1u, blue_noise_samples);
+
     auto samples = std::vector<Vector3f>(); samples.reserve(sample_count);
 
     // Create occupied array.
