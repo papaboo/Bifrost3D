@@ -8,6 +8,7 @@
 
 #include <GUI/RenderingGUI.h>
 
+#include <Bifrost/Assets/Material.h>
 #include <Bifrost/Scene/Camera.h>
 
 #include <DX11Renderer/Compositor.h>
@@ -109,6 +110,30 @@ void RenderingGUI::layout_frame() {
             float rotation[2] = { vertical_rotation, horizontal_rotation };
             ImGui::InputFloat2("Rotation", rotation, 3, ImGuiInputTextFlags_ReadOnly);
         });
+    });
+
+    ImGui::Separator();
+
+    ImGui::PoppedTreeNode("Materials", [&] {
+        for (Material material : Materials::get_iterable()) {
+            ImGui::PoppedTreeNode(material.get_name().c_str(), [&] {
+                RGB tint = material.get_tint();
+                if (ImGui::ColorEdit3("Tint", &tint.r))
+                    material.set_tint(tint);
+
+                float roughness = material.get_roughness();
+                if (ImGui::SliderFloat("Roughness", &roughness, 0, 1))
+                    material.set_roughness(roughness);
+
+                float metallic = material.get_metallic();
+                if (ImGui::SliderFloat("Metallic", &metallic, 0, 1))
+                    material.set_metallic(metallic);
+
+                float specularity = material.get_specularity();
+                if (ImGui::SliderFloat("Specularity", &specularity, 0, 1))
+                    material.set_specularity(specularity);
+            });
+        }
     });
 
     ImGui::Separator();
