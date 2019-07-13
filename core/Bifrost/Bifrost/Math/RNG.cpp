@@ -60,8 +60,8 @@ void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, V
             int xstratum = int(next_sample_count * pt.x);
             int ystratum = int(next_sample_count * pt.y);
 
-            float distance_to_neighbour = magnitude(oldpt - pt);
-            int max_search_stratum = int(next_sample_count * distance_to_neighbour);
+            float distance_to_neighbour = magnitude_squared(oldpt - pt);
+            int max_search_stratum = int(next_sample_count * sqrt(distance_to_neighbour));
 
             for (int offset = 1; offset <= max_search_stratum; ++offset) {
                 auto test_neighbour_sample = [&](unsigned short neighbour_sample_index) {
@@ -79,8 +79,11 @@ void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, V
                     else if (neighbour_sample.y > pt.y + 0.5f)
                         neighbour_sample.y -= 1.0f;
 
-                    distance_to_neighbour = fminf(distance_to_neighbour, magnitude(neighbour_sample - pt));
-                    max_search_stratum = int(next_sample_count * distance_to_neighbour);
+                    float local_distance_to_neighbour = magnitude_squared(neighbour_sample - pt);
+                    if (local_distance_to_neighbour < distance_to_neighbour) {
+                        distance_to_neighbour = local_distance_to_neighbour;
+                        max_search_stratum = int(next_sample_count * sqrt(distance_to_neighbour));
+                    }
                 };
 
                 test_neighbour_sample(stratum_samples_x[(xstratum + offset) % next_sample_count]);
