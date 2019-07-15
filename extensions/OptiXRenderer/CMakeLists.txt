@@ -1,6 +1,6 @@
 set(LIBRARY_NAME "OptiXRenderer")
 
-find_package(CUDA 9.0)
+find_package(CUDA 10.0)
 
 set(CMAKE_MODULE_PATH "${BIFROST_EXTENSIONS_DIR}/OptiXRenderer" ${CMAKE_MODULE_PATH})
 find_package(OptiX)

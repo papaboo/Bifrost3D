@@ -11,12 +11,8 @@ ENDMACRO(set_boolean)
 
 # First locate the OptiX search path.
 set(OPTIX_WINDOWS_SEARCH_PATHS
-  "C:/ProgramData/NVIDIA Corporation/OptiX SDK 5.1.1"
-  "C:/Program Files/NVIDIA Corporation/OptiX SDK 5.1.1"
-  "C:/ProgramData/NVIDIA Corporation/OptiX SDK 5.1.0"
-  "C:/Program Files/NVIDIA Corporation/OptiX SDK 5.1.0"
-  "C:/ProgramData/NVIDIA Corporation/OptiX SDK 5.0.1"
-  "C:/Program Files/NVIDIA Corporation/OptiX SDK 5.0.1")
+  "C:/ProgramData/NVIDIA Corporation/OptiX SDK 6.0.0"
+  "C:/Program Files/NVIDIA Corporation/OptiX SDK 6.0.0")
 
 foreach (SEARCH_PATH ${OPTIX_WINDOWS_SEARCH_PATHS})
   if (EXISTS ${SEARCH_PATH}/bin64/ AND EXISTS ${SEARCH_PATH}/include/ AND EXISTS ${SEARCH_PATH}/lib64/)
@@ -35,13 +31,13 @@ find_path(OPTIX_INCLUDE_DIRS optix.h
 )
 
 # Find libraries.
-find_library(OPTIX_LIB optix.1 optix.51
+find_library(OPTIX_LIB optix.6.0.0
              PATHS
              ${OPTIX_PATH}/lib64
              DOC "The main optix library"
 )
 
-find_library(OPTIX_U_LIB optixu.1
+find_library(OPTIX_U_LIB optixu.6.0.0
              PATHS
              ${OPTIX_PATH}/lib64
              DOC "The optix C++ namespace library"
@@ -50,16 +46,12 @@ find_library(OPTIX_U_LIB optixu.1
 set(OPTIX_LIBRARIES "${OPTIX_LIB}" "${OPTIX_U_LIB}")
 
 # Find dlls
-if (EXISTS ${OPTIX_PATH}/bin64/optix.1.dll)
-  set(OPTIX_DLL "${OPTIX_PATH}/bin64/optix.1.dll")
+if (EXISTS ${OPTIX_PATH}/bin64/optix.6.0.0.dll)
+  set(OPTIX_DLL "${OPTIX_PATH}/bin64/optix.6.0.0.dll")
 endif()
 
-if (EXISTS ${OPTIX_PATH}/bin64/optix.51.dll)
-  set(OPTIX_DLL "${OPTIX_PATH}/bin64/optix.51.dll")
-endif()
-
-if (EXISTS ${OPTIX_PATH}/bin64/optixu.1.dll)
-  set(OPTIX_U_DLL "${OPTIX_PATH}/bin64/optixu.1.dll")
+if (EXISTS ${OPTIX_PATH}/bin64/optixu.6.0.0.dll)
+  set(OPTIX_U_DLL "${OPTIX_PATH}/bin64/optixu.6.0.0.dll")
 endif()
 
 set(OPTIX_DLLS "${OPTIX_DLL}" "${OPTIX_U_DLL}")

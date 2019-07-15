@@ -680,7 +680,7 @@ struct Renderer::Implementation {
                         device_light.sphere.radius = host_light.get_radius();
 
                         if (!host_light.is_delta_light())
-                            highest_area_light_index_updated = max(highest_area_light_index_updated, light_index);
+                            highest_area_light_index_updated = std::max<int>(highest_area_light_index_updated, light_index);
                         break;
                     }
                     case LightSources::Type::Directional: {
@@ -750,7 +750,7 @@ struct Renderer::Implementation {
                         unsigned int light_index = lights.ID_to_index[light_ID];
 
                         if (!LightSources::is_delta_light(light_ID))
-                            highest_area_light_index_updated = max(highest_area_light_index_updated, light_index);
+                            highest_area_light_index_updated = std::max<int>(highest_area_light_index_updated, light_index);
 
                         if (created_lights_begin != LightSources::get_changed_lights().end()) {
                             // Replace deleted light by new light source.
