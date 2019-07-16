@@ -82,7 +82,7 @@ if (DIRECTX_11_FOUND AND WIN32)
 
   target_include_directories(${LIBRARY_NAME} 
     PUBLIC . 
-    PRIVATE ${DIRECTX_11_INCLUDE_DIRS}
+    PRIVATE ${DIRECTX_11_INCLUDE_DIR}
   )
 
   target_link_libraries(${LIBRARY_NAME}

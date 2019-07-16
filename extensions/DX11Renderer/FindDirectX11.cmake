@@ -1,29 +1,19 @@
 # Find and setup DirectX 11.
-# Search in the default install locations.
 
-# List windows SDK versions.
-set(WINDOWS_SDK_VERSIONS "10.0.17134.0" "10.0.16299.0")
-
-foreach (SDK_VERSION ${WINDOWS_SDK_VERSIONS})
-  set(SDK_INCLUDE_DIR "C:/Program Files (x86)/Windows Kits/10/Include/${SDK_VERSION}")
-  set(INCLUDE_DIR "${SDK_INCLUDE_DIR}/um")
-  set(INCLUDE_SHARED_DIR "${SDK_INCLUDE_DIR}/shared")
-  set(LIB_DIR "C:/Program Files (x86)/Windows Kits/10/Lib/${SDK_VERSION}/um/x64")
-  if (EXISTS ${INCLUDE_DIR} AND EXISTS ${INCLUDE_SHARED_DIR} AND EXISTS ${LIB_DIR})
-    set(WINDOWS_SDK_VERSION ${SDK_VERSION})
-    break()
-  endif()
-endforeach()
-
+# Setup paths
+set(WINDOWS_SDK_VERSION ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION})
+set(SDK_INCLUDE_DIR "C:/Program Files (x86)/Windows Kits/10/Include/${WINDOWS_SDK_VERSION}")
+set(INCLUDE_DIR "${SDK_INCLUDE_DIR}/um")
+set(LIB_DIR "C:/Program Files (x86)/Windows Kits/10/Lib/${WINDOWS_SDK_VERSION}/um/x64")
+  
 # Find dlls, libs and include dirs.
 
 # Include directory.
-find_path(DIRECTX_11_INCLUDE_DIRS d3d11_1.h
+find_path(DIRECTX_11_INCLUDE_DIR d3d11_1.h
           PATHS
           ${INCLUDE_DIR}
-          DOC "The directories to include DirectX 11 headers from"
+          DOC "The directory to include DirectX 11 headers from"
 )
-set(DIRECTX_11_INCLUDE_DIRS "${SDK_INCLUDE_DIR}/shared" "${DIRECTX_12_INCLUDE_DIRS}")
 
 # Find libraries.
 find_library(DIRECTX_11_LIB D3D11
@@ -49,4 +39,4 @@ set(DIRECTX_11_LIBRARIES "${DIRECTX_11_LIB}" "${DXGI_LIB}" "${D3D_COMPILER_LIB}"
 include(${CMAKE_ROOT}/Modules/FindPackageHandleStandardArgs.cmake)
 find_package_handle_standard_args(DIRECTX_11 DEFAULT_MSG 
                                   DIRECTX_11_LIB DXGI_LIB D3D_COMPILER_LIB
-                                  DIRECTX_11_INCLUDE_DIRS)
+                                  DIRECTX_11_INCLUDE_DIR)
