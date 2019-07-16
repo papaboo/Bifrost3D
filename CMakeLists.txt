@@ -16,6 +16,7 @@ set(BIFROST_DATA_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/Data)
 file(MAKE_DIRECTORY ${BIFROST_DATA_OUTPUT_DIRECTORY})
 
 # Global cmake configuration
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo" CACHE STRING "Build configurations" FORCE)
 include("cmake/SetupVS.cmake")
 
 # Functions
