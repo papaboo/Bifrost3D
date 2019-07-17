@@ -1,4 +1,4 @@
-if(MSVC)
+if (MSVC)
   # Add OpenMP to Visual Studio compiler flags
   find_package(OpenMP REQUIRED)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -19,7 +19,25 @@ if(MSVC)
     file(WRITE ${USER_FILENAME} ${USER_CONFIG})
   endfunction()
 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX2")
+  # Multithreaded compilation for faster compilation
+  add_compile_options(/MP)
+
+  # Make some /O2 options explicit to make it obvious in the Visual Studio GUI what is enabled
+  add_compile_options("$<$<CONFIG:RELEASE>:/Oi>")
+  add_compile_options("$<$<CONFIG:RELEASE>:/Ot>")
+
+  # Whole program optimization
+  add_compile_options("$<$<CONFIG:RELEASE>:/GL>")
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE) # Tells the linker to use link time code generation /LTCG.
+
+  # Enable AVX2 intrinsics
+  add_compile_options(/arch:AVX2)
+
+  # Do not check for security issues
+  add_compile_options(/GS-)
+
+  # Disable run-time type information. Projects that absolutely needs this can enable it again, but the default must be to never create code that requires a dynamic cast.
+  add_compile_options(/GR-)
 
   # Setup warnings
 
