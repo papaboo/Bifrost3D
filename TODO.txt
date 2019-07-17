@@ -1,24 +1,29 @@
-* Debug test scene crash.
-
-
-* Progressive multijittered sample sequences dev app
-** Optimize stratum picking using acceleration structure
-** Is debug builds faster with arrays instead of vectors?
-
 BACKLOG:
-* Path regularization. Perhaps just by clamping roughness along a path and then relax pr iteration.
-* OptiX 6.X and CUDA 10
-** Use VS 2017.
-*** Enable intrinsic functions and whole program optimization. (Test for convolution)
-*** Disable security checks in release
-*** Disable RTTI!!
-*** https://blogs.msdn.microsoft.com/vcblog/2016/10/26/recommendations-to-speed-c-builds-in-visual-studio/
-** Check if support for actual pixel formats and samplers instead of just types and channel count.
-* Upgrade tinygltf (Draco support!) and other tinys.
-* Upgrade CMake and use the native CUDA compilation. https://cmake.org/cmake/help/v3.12/module/FindCUDA.html
+* OptiX 6.X and CUDA 10 - Cornell box with shiodomo env map ~18.5fps in 5.1.1 and 12.5fps in 6.0 on P2000
+** Use RTgeometrytriangles with RT_GEOMETRYBUILDFLAGS_RELEASE_BUFFERS build flag
+*** Load vertex buffers and RTgeometrytriangles in load mesh and render as green.
+*** Attributes must be attached to the geometry instance then. See 4.11.3. Render normal.
+*** Add shading.
+** Enable RTX
+** Experiment with local memory size.
+** AI denoiser
+* CMake: use the native CUDA compilation. https://cmake.org/cmake/help/v3.12/module/FindCUDA.html
+** https://devblogs.nvidia.com/building-cuda-applications-cmake/
 * GLFW 3.3 - Handle windows high DPI scaling. https://www.glfw.org/docs/latest/news.html#content_scale_33
+* Progressive multijittered sample sequences
+** Heitz and Goergiev blue noise screen space seed scheme. Optimize towards equal distribution of first four seeds. Seed, swap row/columns and then optimize random cells.
+*** Try a LCG offset between the dimensions?
+** Pregenerate samples with 64 bluenoise samples for OptiX.
+* Path regularization. Perhaps just by clamping roughness along a path and then relax pr iteration.
+** Base on pdf / distance if possible? Shorter distances are easier to sample, but short is relative to the overall scale.
+** No more than a single parameter.
+* Film grain
+** http://www.loopit.dk/banding_in_games.pdf
+** https://www.shadertoy.com/view/4t2SDh
+* Decima Engine Area lights
+** https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Shaders/Private/BRDF.ush
+** https://www.guerrilla-games.com/read/decima-engine-advances-in-lighting-and-aa
 * OptiX (filtering) backends
-** Try OptiX AI denoiser
 ** Filter neighbouring light samples before reconstruction - Screen space photon mapping approach with MIS weights / Path filtering.
 *** Output buffers: Material ID, texcoord, position, normal, ray dir, weight, light sample, indirect sample. Define for compressing directions and use half/byte for some values.
 *** Output screen space sample based on path/BSDF PDF.
@@ -57,6 +62,7 @@ libs
 * TinyDNN
 ** Cat detection
 ** A neural algorithm of artistic style, Gatys et al, 2015
+** Face recognition.
 ** Use a siamese network to detect individual predefined lego bricks. (As opposed to classifying all lego bricks for all pixels.) Perhaps use transfer learning on some face recognition net
 * ReactPhysics or BulletPhyssics (or both)
 * RtAudio wrapper - https://github.com/thestk/rtaudio
