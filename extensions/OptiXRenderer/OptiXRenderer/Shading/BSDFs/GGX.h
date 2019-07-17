@@ -38,7 +38,7 @@ __inline_all__ float roughness_from_alpha(float alpha) {
 
 // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14.
 // Height correlated smith geometric term. Equation 99. 
-__inline_all__ float height_correlated_smith_G(float alpha, const float3& wo, const float3& wi) {
+__inline_all__ float height_correlated_smith_G(float alpha, float3 wo, float3 wi) {
 #if _DEBUG
     float3 halfway = normalize(wo + wi);
     float heavisided = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway));
@@ -60,7 +60,7 @@ __inline_all__ float height_correlated_smith_G(float alpha, const float3& wo, co
 // GGX BRDF, Walter et al 07.
 //----------------------------------------------------------------------------
 
-__inline_all__ float evaluate(float alpha, float specularity, const float3& wo, const float3& wi) {
+__inline_all__ float evaluate(float alpha, float specularity, float3 wo, float3 wi) {
     float3 halfway = normalize(wo + wi);
     float G = height_correlated_smith_G(alpha, wo, wi);
     float D = Distributions::GGX_VNDF::D(alpha, halfway);
@@ -68,7 +68,7 @@ __inline_all__ float evaluate(float alpha, float specularity, const float3& wo, 
     return (D * F * G) / (4.0f * wo.z * wi.z);
 }
 
-__inline_all__ float3 evaluate(float alpha, const float3& specularity, const float3& wo, const float3& wi) {
+__inline_all__ float3 evaluate(float alpha, float3 specularity, float3 wo, float3 wi) {
     float3 halfway = normalize(wo + wi);
     float G = height_correlated_smith_G(alpha, wo, wi);
     float D = Distributions::GGX_VNDF::D(alpha, halfway);
@@ -76,14 +76,14 @@ __inline_all__ float3 evaluate(float alpha, const float3& specularity, const flo
     return F * (D * G / (4.0f * wo.z * wi.z));
 }
 
-__inline_all__ float3 evaluate(float alpha, const float3& specularity, const float3& wo, const float3& wi, const float3& halfway) {
+__inline_all__ float3 evaluate(float alpha, float3 specularity, float3 wo, float3 wi, float3 halfway) {
     float G = height_correlated_smith_G(alpha, wo, wi);
     float D = Distributions::GGX_VNDF::D(alpha, halfway);
     float3 F = schlick_fresnel(specularity, dot(wo, halfway));
     return F * (D * G / (4.0f * wo.z * wi.z));
 }
 
-__inline_all__ float PDF(float alpha, const float3& wo, const float3& halfway) {
+__inline_all__ float PDF(float alpha, float3 wo, float3 halfway) {
 #if _DEBUG
     if (dot(wo, halfway) < 0.0f || halfway.z < 0.0f)
         THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
@@ -92,7 +92,7 @@ __inline_all__ float PDF(float alpha, const float3& wo, const float3& halfway) {
     return Distributions::GGX_VNDF::PDF(alpha, wo, halfway) / (4.0f * dot(wo, halfway));
 }
 
-__inline_all__ BSDFResponse evaluate_with_PDF(float alpha, const float3& specularity, const float3& wo, const float3& wi, const float3& halfway) {
+__inline_all__ BSDFResponse evaluate_with_PDF(float alpha, float3 specularity, float3 wo, float3 wi, float3 halfway) {
     float lambda_wo = Distributions::GGX_VNDF::lambda(alpha, wo);
     float lambda_wi = Distributions::GGX_VNDF::lambda(alpha, wi);
 
@@ -110,23 +110,23 @@ __inline_all__ BSDFResponse evaluate_with_PDF(float alpha, const float3& specula
     return res;
 }
 
-__inline_all__ BSDFResponse evaluate_with_PDF(float alpha, const float3& specularity, const float3& wo, const float3& wi) {
+__inline_all__ BSDFResponse evaluate_with_PDF(float alpha, float3 specularity, float3 wo, float3 wi) {
     float3 halfway = normalize(wo + wi);
     return evaluate_with_PDF(alpha, specularity, wo, wi, halfway);
 }
 
-__inline_all__ BSDFResponse evaluate_with_PDF(float alpha, float specularity, const float3& wo, const float3& wi) {
+__inline_all__ BSDFResponse evaluate_with_PDF(float alpha, float specularity, float3 wo, float3 wi) {
     return evaluate_with_PDF(alpha, make_float3(specularity), wo, wi);
 }
 
-__inline_all__ float3 approx_off_specular_peak(float alpha, const float3& wo) {
+__inline_all__ float3 approx_off_specular_peak(float alpha, float3 wo) {
     float3 reflection = make_float3(-wo.x, -wo.y, wo.z);
     // reflection = lerp(make_float3(0, 0, 1), reflection, (1 - alpha) * (sqrt(1 - alpha) + alpha)); // UE4 implementation
     reflection = lerp(reflection, make_float3(0, 0, 1), alpha);
     return normalize(reflection);
 }
 
-__inline_all__ BSDFSample sample(float alpha, const float3& specularity, const float3& wo, float2 random_sample) {
+__inline_all__ BSDFSample sample(float alpha, float3 specularity, float3 wo, float2 random_sample) {
     BSDFSample bsdf_sample;
 
     float3 halfway = Distributions::GGX_VNDF::sample_halfway(alpha, wo, random_sample);
@@ -139,7 +139,7 @@ __inline_all__ BSDFSample sample(float alpha, const float3& specularity, const f
     bool discardSample = bsdf_sample.PDF < 0.00001f || bsdf_sample.direction.z < 0.00001f; // Discard samples if the pdf is too low (precision issues) or if the new direction points into the surface (energy loss).
     return discardSample ? BSDFSample::none() : bsdf_sample;
 }
-__inline_all__ BSDFSample sample(float alpha, float specularity, const float3& wo, float2 random_sample) { return sample(alpha, make_float3(specularity), wo, random_sample); }
+__inline_all__ BSDFSample sample(float alpha, float specularity, float3 wo, float2 random_sample) { return sample(alpha, make_float3(specularity), wo, random_sample); }
 
 } // NS GGX
 

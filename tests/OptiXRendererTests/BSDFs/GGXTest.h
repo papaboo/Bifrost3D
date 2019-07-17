@@ -134,7 +134,7 @@ GTEST_TEST(GGX, minimal_alpha) {
 GTEST_TEST(GGX, sampling_variance) {
     using namespace optix;
 
-    static auto sample_GGX_vanilla = [](float alpha, const float3& specularity, const float3& wo, float2 random_sample) -> BSDFSample {
+    static auto sample_GGX_vanilla = [](float alpha, float3 specularity, float3 wo, float2 random_sample) -> BSDFSample {
         BSDFSample bsdf_sample;
 
         Distributions::DirectionalSample ggx_sample = Distributions::GGX::sample(alpha, random_sample);
@@ -147,7 +147,7 @@ GTEST_TEST(GGX, sampling_variance) {
         return discardSample ? BSDFSample::none() : bsdf_sample;
     };
 
-    typedef BSDFSample(*SampleFunction)(float alpha, const float3& specularity, const float3& wo, float2 random_sample);
+    typedef BSDFSample(*SampleFunction)(float alpha, float3 specularity, float3 wo, float2 random_sample);
     auto sampling_mean_and_variance = [&](SampleFunction function, float alpha, float3 wo, double& mean, double& variance) {
         const float3 specularity = { 1, 1, 1 };
 

@@ -27,7 +27,7 @@ using namespace OptiXRenderer;
 using namespace OptiXRenderer::Shading::BSDFs;
 using namespace OptiXRenderer::Shading::ShadingModels;
 
-typedef BSDFSample(*SampleRoughBSDF)(const float3& tint, float roughness, const float3& wo, float2 random_sample);
+typedef BSDFSample(*SampleRoughBSDF)(float3 tint, float roughness, float3 wo, float2 random_sample);
 
 double estimate_rho(float3 wo, float roughness, unsigned int sample_count, SampleRoughBSDF sample_rough_BSDF) {
 
@@ -238,7 +238,7 @@ int main(int argc, char** argv) {
 
     { // Compute GGX rho.
 
-        static auto sample_ggx = [](const float3& tint, float roughness, const float3& wo, float2 random_sample) -> BSDFSample {
+        static auto sample_ggx = [](float3 tint, float roughness, float3 wo, float2 random_sample) -> BSDFSample {
             float alpha = GGX::alpha_from_roughness(roughness);
             return GGX::sample(alpha, 1, wo, random_sample);
         };
@@ -252,7 +252,7 @@ int main(int argc, char** argv) {
 
     { // Compute GGX with fresnel rho.
 
-        static auto sample_ggx_with_fresnel = [](const float3& tint, float roughness, const float3& wo, float2 random_sample) -> BSDFSample {
+        static auto sample_ggx_with_fresnel = [](float3 tint, float roughness, float3 wo, float2 random_sample) -> BSDFSample {
             float alpha = GGX::alpha_from_roughness(roughness);
             return GGX::sample(alpha, 0, wo, random_sample);
         };

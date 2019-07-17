@@ -79,7 +79,7 @@ private:
     //   As both materials are described as an independent combination of diffuse and microfacet BRDFs, 
     //   the interpolation between the materials can be computed by simply interpolating the material parameters, 
     //   ie. lerp(evaluate(dielectric, ...), evaluate(conductor, ...), metallic) can be expressed as evaluate(lerp(dielectric, conductor, metallic), ...)
-    __inline_all__ static void compute_tints(const optix::float3& tint, float roughness, float specularity, float metallic, float abs_cos_theta,
+    __inline_all__ static void compute_tints(optix::float3 tint, float roughness, float specularity, float metallic, float abs_cos_theta,
                                              optix::float3& diffuse_tint, optix::float3& base_specularity) {
         using namespace optix;
 
@@ -165,7 +165,7 @@ public:
         return diffuse + specular;
     }
 
-    __inline_all__ float PDF(const optix::float3& wo, const optix::float3& wi) const {
+    __inline_all__ float PDF(optix::float3 wo, optix::float3 wi) const {
         using namespace optix;
 
         float abs_cos_theta = abs(wo.z);
@@ -207,7 +207,7 @@ public:
         return res;
     }
 
-    __inline_all__ BSDFSample sample_one(const optix::float3& wo, const optix::float3& random_sample) const {
+    __inline_all__ BSDFSample sample_one(optix::float3 wo, optix::float3 random_sample) const {
         using namespace optix;
 
         // Sample BSDFs based on the contribution of each BRDF.
@@ -230,7 +230,7 @@ public:
         return bsdf_sample;
     }
 
-    __inline_all__ BSDFSample sample_all(const optix::float3& wo, const optix::float3& random_sample) const {
+    __inline_all__ BSDFSample sample_all(optix::float3 wo, optix::float3 random_sample) const {
         using namespace optix;
 
         // Sample BSDFs based on the contribution of each BRDF.

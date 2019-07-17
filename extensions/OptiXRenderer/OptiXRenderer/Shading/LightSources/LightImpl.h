@@ -17,7 +17,7 @@
 namespace OptiXRenderer {
 namespace LightSources {
 
-__inline_dev__ bool is_delta_light(const Light& light, const optix::float3& position) {
+__inline_dev__ bool is_delta_light(const Light& light, optix::float3 position) {
     switch (light.get_type()) {
     case Light::Sphere:
         return is_delta_light(light.sphere, position);
@@ -31,7 +31,7 @@ __inline_dev__ bool is_delta_light(const Light& light, const optix::float3& posi
     return false;
 }
 
-__inline_dev__ LightSample sample_radiance(const Light& light, const optix::float3& position, optix::float2 random_sample) {
+__inline_dev__ LightSample sample_radiance(const Light& light, optix::float3 position, optix::float2 random_sample) {
     switch (light.get_type()) {
     case Light::Sphere:
         return sample_radiance(light.sphere, position, random_sample);
@@ -45,7 +45,7 @@ __inline_dev__ LightSample sample_radiance(const Light& light, const optix::floa
     return LightSample::none();
 }
 
-__inline_dev__ float PDF(const Light& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
+__inline_dev__ float PDF(const Light& light, optix::float3 lit_position, optix::float3 direction_to_light) {
     switch (light.get_type()) {
     case Light::Sphere:
         return PDF(light.sphere, lit_position, direction_to_light);
@@ -59,7 +59,7 @@ __inline_dev__ float PDF(const Light& light, const optix::float3& lit_position, 
     return 0.0f;
 }
 
-__inline_dev__ optix::float3 evaluate(const Light& light, const optix::float3& position, const optix::float3& direction_to_light) {
+__inline_dev__ optix::float3 evaluate(const Light& light, optix::float3 position, optix::float3 direction_to_light) {
     switch (light.get_type()) {
     case Light::Sphere:
         return evaluate(light.sphere, position, direction_to_light);
@@ -74,7 +74,7 @@ __inline_dev__ optix::float3 evaluate(const Light& light, const optix::float3& p
 }
 
 template <typename LightType>
-__inline_dev__ optix::float3 evaluate_intersection(const LightType& light, const optix::float3& position, const optix::float3& direction_to_light, 
+__inline_dev__ optix::float3 evaluate_intersection(const LightType& light, optix::float3 position, optix::float3 direction_to_light, 
                                                   float bsdf_PDF, bool next_event_estimated) {
     optix::float3 radiance = evaluate(light, position, ray.direction);
 

@@ -29,13 +29,13 @@ __inline_all__ float2 pivot_transform(float2 r, float pivot) {
 }
 
 // Equation 2 in SPDT, Dupuy et al. 17.
-__inline_all__ float3 pivot_transform(const float3& r, const float3& pivot) {
+__inline_all__ float3 pivot_transform(float3 r, float3 pivot) {
     float3 numerator = (dot(r, pivot) - 1.0f) * (r - pivot) - cross(r - pivot, cross(r, pivot));
     float denominator = pow2(dot(r, pivot) - 1.0f) + length_squared(cross(r, pivot));
     return numerator / denominator;
 }
 
-__inline_all__ OptiXRenderer::Cone pivot_transform(const Cone& cone, const float3& pivot) {
+__inline_all__ OptiXRenderer::Cone pivot_transform(const Cone& cone, float3 pivot) {
     // extract pivot length and direction
     float pivot_mag = length(pivot);
     // special case: the pivot is at the origin
@@ -77,7 +77,7 @@ __inline_all__ OptiXRenderer::Cone pivot_transform(const Cone& cone, const float
 }
 
 // Map a sphere to the spherical cap at origo.
-__inline_all__ Cone sphere_to_sphere_cap(const float3& position, float radius) {
+__inline_all__ Cone sphere_to_sphere_cap(float3 position, float radius) {
     float sin_theta_sqrd = clamp(radius * radius / dot(position, position), 0.0f, 1.0f);
     return Cone::make(normalize(position), sqrt(1.0f - sin_theta_sqrd));
 }
@@ -172,7 +172,7 @@ struct Pivot {
     // pivot position
     inline optix::float3 position() const { return distance * optix::make_float3(sinf(theta), 0.0f, cosf(theta)); }
 
-    float eval(const optix::float3& wi) const {
+    float eval(optix::float3 wi) const {
         optix::float3 xi = position();
         float num = 1.0f - dot(xi, xi);
         optix::float3 tmp = wi - xi;

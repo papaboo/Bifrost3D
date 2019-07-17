@@ -113,20 +113,20 @@ namespace GGX_VNDF {
     using namespace optix;
 
     // Sampling the GGX Distribution of Visible Normals, equation 1.
-    __inline_all__ float D(float alpha_x, float alpha_y, const float3& halfway) {
+    __inline_all__ float D(float alpha_x, float alpha_y, float3 halfway) {
         float m = pow2(halfway.x / alpha_x) + pow2(halfway.y / alpha_y) + pow2(halfway.z);
         return 1 / (PIf * alpha_x * alpha_y * pow2(m));
     }
-    __inline_all__ float D(float alpha, const float3& halfway) { return D(alpha, alpha, halfway); }
+    __inline_all__ float D(float alpha, float3 halfway) { return D(alpha, alpha, halfway); }
 
     // Sampling the GGX Distribution of Visible Normals, equation 2.
-    __inline_all__ float lambda(float alpha_x, float alpha_y, const float3& w) {
+    __inline_all__ float lambda(float alpha_x, float alpha_y, float3 w) {
         return 0.5f * (-1 + sqrt(1 + (pow2(alpha_x * w.x) + pow2(alpha_y * w.y)) / pow2(w.z)));
     }
-    __inline_all__ float lambda(float alpha, const float3& w) { return lambda(alpha, alpha, w); }
+    __inline_all__ float lambda(float alpha, float3 w) { return lambda(alpha, alpha, w); }
 
     // Sampling the GGX Distribution of Visible Normals, listing 1.
-    __inline_all__ float3 sample_halfway(float alpha_x, float alpha_y, const float3& wo, float2 random_sample) {
+    __inline_all__ float3 sample_halfway(float alpha_x, float alpha_y, float3 wo, float2 random_sample) {
         // Section 3.2: transforming the view direction to the hemisphere configuration
         float3 Vh = normalize(make_float3(alpha_x * wo.x, alpha_y * wo.y, wo.z));
 
@@ -148,10 +148,10 @@ namespace GGX_VNDF {
         // Section 3.4: transforming the normal back to the ellipsoid configuration
         return normalize(make_float3(alpha_x * Nh.x, alpha_y * Nh.y, fmaxf(0.0f, Nh.z)));
     }
-    __inline_all__ float3 sample_halfway(float alpha, const float3& wo, float2 random_sample) { return sample_halfway(alpha, alpha, wo, random_sample); }
+    __inline_all__ float3 sample_halfway(float alpha, float3 wo, float2 random_sample) { return sample_halfway(alpha, alpha, wo, random_sample); }
 
     // Sampling the GGX Distribution of Visible Normals, equation 3.
-    __inline_all__ float PDF(float alpha, const float3& wo, const float3& halfway) {
+    __inline_all__ float PDF(float alpha, float3 wo, float3 halfway) {
 #if _DEBUG
         if (wo.z < 0.0f || dot(wo, halfway) < 0.0f)
             THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
@@ -162,7 +162,7 @@ namespace GGX_VNDF {
         return dot(wo, halfway) * D / (recip_G1 * wo.z);
     }
 
-    __inline_all__ Distributions::DirectionalSample sample(float alpha, const float3& wo, float2 random_sample) {
+    __inline_all__ Distributions::DirectionalSample sample(float alpha, float3 wo, float2 random_sample) {
         Distributions::DirectionalSample sample;
         sample.direction = sample_halfway(alpha, wo, random_sample);
         sample.PDF = PDF(alpha, wo, sample.direction);

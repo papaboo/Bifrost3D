@@ -18,7 +18,7 @@ namespace Intersect {
 
 // Intersection of ray and sphere.
 // Returns the distance to the sphere or negative if no hit.
-__inline_all__ float ray_sphere(const optix::float3& ray_origin, const optix::float3& ray_direction, const optix::float3& sphere_center, float sphere_radius) {
+__inline_all__ float ray_sphere(optix::float3 ray_origin, optix::float3 ray_direction, optix::float3 sphere_center, float sphere_radius) {
     optix::float3 direction_to_sphere = ray_origin - sphere_center;
     float b = optix::dot(direction_to_sphere, ray_direction);
     float c = optix::dot(direction_to_sphere, direction_to_sphere) - sphere_radius * sphere_radius;

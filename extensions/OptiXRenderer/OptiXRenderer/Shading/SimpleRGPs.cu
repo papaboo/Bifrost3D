@@ -43,9 +43,7 @@ __constant__ float2 pmj_offsets[81] = {
 };
 
 __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, int image_width, int image_height,
-    int accumulation_count,
-    const optix::float3& camera_position,
-    const optix::Matrix4x4& inverted_view_projection_matrix) {
+    int accumulation_count, optix::float3 camera_position, const optix::Matrix4x4& inverted_view_projection_matrix) {
     using namespace optix;
 
     MonteCarloPayload payload;

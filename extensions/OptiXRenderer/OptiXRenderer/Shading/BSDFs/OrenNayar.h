@@ -40,7 +40,7 @@ __inline_all__ State compute_state(float roughness) {
     return s;
 }
 
-__inline_all__ float evaluate(float roughness, const float3& wo, const float3& wi) {
+__inline_all__ float evaluate(float roughness, float3 wo, float3 wi) {
     float2 cos_theta = make_float2(abs(wi.z), abs(wo.z));
     const float sin_theta_sqrd = (1.0f - cos_theta.x * cos_theta.x) * (1.0f - cos_theta.y * cos_theta.y);
     float sin_theta = sqrt(fmaxf(0.0f, sin_theta_sqrd)); // AVH Hmm this is not sin_theta to the above cos_theta. Is it sin_theta to the halfwayvector? Must investigate!
@@ -54,22 +54,22 @@ __inline_all__ float evaluate(float roughness, const float3& wo, const float3& w
     return (state.A + state.B * cos_phi * sin_theta / fmaxf(cos_theta.x, cos_theta.y)) * RECIP_PIf;
 }
 
-__inline_all__ float3 evaluate(const float3& tint, float roughness, const float3& wo, const float3& wi) {
+__inline_all__ float3 evaluate(float3 tint, float roughness, float3 wo, float3 wi) {
     return tint * evaluate(roughness, wo, wi);
 }
 
-__inline_all__ float PDF(float roughness, const float3& wo, const float3& wi) {
+__inline_all__ float PDF(float roughness, float3 wo, float3 wi) {
     return Distributions::Cosine::PDF(wi.z);
 }
 
-__inline_all__ BSDFResponse evaluate_with_PDF(const float3& tint, float roughness, const float3& wo, const float3& wi) {
+__inline_all__ BSDFResponse evaluate_with_PDF(float3 tint, float roughness, float3 wo, float3 wi) {
     BSDFResponse response;
     response.weight = evaluate(tint, roughness, wo, wi);
     response.PDF = PDF(roughness, wo, wi);
     return response;
 }
 
-__inline_all__ BSDFSample sample(const float3& tint, float roughness, const float3& wo, float2 random_sample) {
+__inline_all__ BSDFSample sample(float3 tint, float roughness, float3 wo, float2 random_sample) {
     // Sampling can potentially be improved by combining a uniform and cosine distribution, based on roughness.
     Distributions::DirectionalSample cosine_sample = Distributions::Cosine::sample(random_sample);
     BSDFSample bsdf_sample;

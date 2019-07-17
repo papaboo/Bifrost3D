@@ -62,7 +62,7 @@ __inline_dev__ float3 sample3f(PMJSamplerState& pmj_sampler) { return make_float
 
 // Sample a single light source, evaluates the material's response to the light and 
 // stores the combined response in the light source's radiance member.
-__inline_dev__ LightSample sample_single_light(const DefaultShading& material, const TBN& world_shading_tbn, const float3& random_sample) {
+__inline_dev__ LightSample sample_single_light(const DefaultShading& material, const TBN& world_shading_tbn, float3 random_sample) {
     int light_index = min(g_scene.light_count - 1, int(random_sample.z * g_scene.light_count));
     const Light& light = g_scene.light_buffer[light_index];
     LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_payload.position, make_float2(random_sample));

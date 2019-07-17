@@ -27,11 +27,11 @@ __inline_all__ LightSample sample_radiance(const DirectionalLight& light, optix:
     return sample;
 }
 
-__inline_all__ float PDF(const DirectionalLight& light, const optix::float3& direction_to_light) {
+__inline_all__ float PDF(const DirectionalLight& light, optix::float3 direction_to_light) {
     return 0.0f;
 }
 
-__inline_all__ optix::float3 evaluate(const DirectionalLight& light, const optix::float3& direction_to_light) {
+__inline_all__ optix::float3 evaluate(const DirectionalLight& light, optix::float3 direction_to_light) {
     return optix::make_float3(0.0f, 0.0f, 0.0f);
 }
 
@@ -39,15 +39,15 @@ __inline_all__ optix::float3 evaluate(const DirectionalLight& light, const optix
 // Functions with generalized parameters.
 // ------------------------------------------------------------------------------------------------
 
-__inline_dev__ LightSample sample_radiance(const DirectionalLight& light, const optix::float3& lit_position, optix::float2 random_sample) {
+__inline_dev__ LightSample sample_radiance(const DirectionalLight& light, optix::float3 lit_position, optix::float2 random_sample) {
     return sample_radiance(light, random_sample);
 }
 
-__inline_dev__ float PDF(const DirectionalLight& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
+__inline_dev__ float PDF(const DirectionalLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
     return PDF(light, direction_to_light);
 }
 
-__inline_dev__ optix::float3 evaluate(const DirectionalLight& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
+__inline_dev__ optix::float3 evaluate(const DirectionalLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
     return evaluate(light, direction_to_light);
 }
 

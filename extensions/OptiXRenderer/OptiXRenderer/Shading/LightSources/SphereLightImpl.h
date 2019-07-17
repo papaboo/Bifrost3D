@@ -30,13 +30,13 @@ __inline_all__ float surface_area(const SphereLight& light) {
 //      in the veach scene to be too dim and not produce bloom.
 //      There are at least 3 'unguarded' sqrt functions when sampling cones, 
 //      where the input has a risc of becoming negative.
-__inline_all__ bool is_delta_light(const SphereLight& light, const optix::float3& position) {
+__inline_all__ bool is_delta_light(const SphereLight& light, optix::float3 position) {
     optix::float3 vector_to_light = light.position - position;
     float sin_theta_squared = light.radius * light.radius / optix::dot(vector_to_light, vector_to_light);
     return sin_theta_squared <= sphere_light_small_sin_theta_squared;
 }
 
-__inline_all__ LightSample sample_radiance(const SphereLight& light, const optix::float3& position, optix::float2 random_sample) {
+__inline_all__ LightSample sample_radiance(const SphereLight& light, optix::float3 position, optix::float2 random_sample) {
 
     // Sample Sphere light by sampling a cone with the angle subtended by the sphere.
     optix::float3 vector_to_light = light.position - position;
@@ -74,7 +74,7 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, const optix
     return light_sample;
 }
 
-__inline_all__ float PDF(const SphereLight& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
+__inline_all__ float PDF(const SphereLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
     optix::float3 vector_to_light_center = light.position - lit_position;
 
     float sin_theta_squared = light.radius * light.radius / optix::dot(vector_to_light_center, vector_to_light_center);
@@ -89,12 +89,12 @@ __inline_all__ float PDF(const SphereLight& light, const optix::float3& lit_posi
     }
 }
 
-__inline_all__ optix::float3 evaluate(const SphereLight& light, const optix::float3& position) {
+__inline_all__ optix::float3 evaluate(const SphereLight& light, optix::float3 position) {
     float inv_divisor = 1.0f / (is_delta_light(light, position) ? (4.0f * PIf) : (PIf * surface_area(light)));
     return light.power * inv_divisor;
 }
 
-__inline_all__ optix::float3 evaluate(const SphereLight& light, const optix::float3& position, const optix::float3& direction) {
+__inline_all__ optix::float3 evaluate(const SphereLight& light, optix::float3 position, optix::float3 direction) {
     return evaluate(light, position);
 }
 

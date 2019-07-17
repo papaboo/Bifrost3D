@@ -34,7 +34,7 @@ __inline_all__ static float schlick_fresnel(float abs_cos_theta) {
     return pow5(m);
 }
 
-__inline_all__ float evaluate(float roughness, const float3& wo, const float3& wi, const float3& halfway) {
+__inline_all__ float evaluate(float roughness, float3 wo, float3 wi, float3 halfway) {
     float wi_dot_halfway = dot(wi, halfway);
     float fd90 = 0.5f + 2.0f * wi_dot_halfway * wi_dot_halfway * roughness;
     float fresnel_wo = schlick_fresnel(wo.z);
@@ -43,27 +43,27 @@ __inline_all__ float evaluate(float roughness, const float3& wo, const float3& w
     return lerp(1.0f, fd90, fresnel_wo) * lerp(1.0f, fd90, fresnel_wi) * RECIP_PIf * normalizer;
 }
 
-__inline_all__ float3 evaluate(const float3& tint, float roughness, const float3& wo, const float3& wi, const float3& halfway) {
+__inline_all__ float3 evaluate(float3 tint, float roughness, float3 wo, float3 wi, float3 halfway) {
     return tint * evaluate(roughness, wo, wi, halfway);
 }
 
-__inline_all__ float3 evaluate(const float3& tint, float roughness, const float3& wo, const float3& wi) {
+__inline_all__ float3 evaluate(float3 tint, float roughness, float3 wo, float3 wi) {
     float3 halfway = normalize(wi + wo);
     return tint * evaluate(roughness, wo, wi, halfway);
 }
 
-__inline_all__ float PDF(float roughness, const float3& wo, const float3& wi) {
+__inline_all__ float PDF(float roughness, float3 wo, float3 wi) {
     return Distributions::Cosine::PDF(wi.z);
 }
 
-__inline_all__ BSDFResponse evaluate_with_PDF(const float3& tint, float roughness, const float3& wo, const float3& wi) {
+__inline_all__ BSDFResponse evaluate_with_PDF(float3 tint, float roughness, float3 wo, float3 wi) {
     BSDFResponse response;
     response.weight = evaluate(tint, roughness, wo, wi);
     response.PDF = PDF(roughness, wo, wi);
     return response;
 }
 
-__inline_all__ BSDFSample sample(const float3& tint, float roughness, const float3& wo, float2 random_sample) {
+__inline_all__ BSDFSample sample(float3 tint, float roughness, float3 wo, float2 random_sample) {
     // Sampling can potentially be improved by combining a uniform and cosine distribution, based on roughness.
     Distributions::DirectionalSample cosine_sample = Distributions::Cosine::sample(random_sample);
     BSDFSample bsdf_sample;

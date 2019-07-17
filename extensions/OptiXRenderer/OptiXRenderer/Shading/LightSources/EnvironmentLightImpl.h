@@ -81,7 +81,7 @@ __inline_dev__ LightSample sample_radiance(const EnvironmentLight& light, optix:
     return sample;
 }
 
-__inline_dev__ float PDF(const EnvironmentLight& light, const optix::float3& direction_to_light) {
+__inline_dev__ float PDF(const EnvironmentLight& light, optix::float3 direction_to_light) {
     if (light.per_pixel_PDF_ID == 0) return 0.0f;
 
     optix::float2 uv = direction_to_latlong_texcoord(direction_to_light);
@@ -90,7 +90,7 @@ __inline_dev__ float PDF(const EnvironmentLight& light, const optix::float3& dir
     return sin_theta == 0.0f ? 0.0f : PDF;
 }
 
-__inline_dev__ optix::float3 evaluate(const EnvironmentLight& light, const optix::float3& direction_to_light) {
+__inline_dev__ optix::float3 evaluate(const EnvironmentLight& light, optix::float3 direction_to_light) {
     optix::float2 uv = direction_to_latlong_texcoord(direction_to_light);
     return optix::make_float3(optix::rtTex2D<optix::float4>(light.environment_map_ID, uv.x, uv.y));
 }
@@ -99,15 +99,15 @@ __inline_dev__ optix::float3 evaluate(const EnvironmentLight& light, const optix
 // Functions with generalized parameters.
 // ------------------------------------------------------------------------------------------------
 
-__inline_dev__ LightSample sample_radiance(const EnvironmentLight& light, const optix::float3& lit_position, optix::float2 random_sample) {
+__inline_dev__ LightSample sample_radiance(const EnvironmentLight& light, optix::float3 lit_position, optix::float2 random_sample) {
     return sample_radiance(light, random_sample);
 }
 
-__inline_dev__ float PDF(const EnvironmentLight& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
+__inline_dev__ float PDF(const EnvironmentLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
     return PDF(light, direction_to_light);
 }
 
-__inline_dev__ optix::float3 evaluate(const EnvironmentLight& light, const optix::float3& lit_position, const optix::float3& direction_to_light) {
+__inline_dev__ optix::float3 evaluate(const EnvironmentLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
     return evaluate(light, direction_to_light);
 }
 
