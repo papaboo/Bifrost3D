@@ -16,8 +16,6 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
     OptiXRenderer/EnvironmentMap.cpp
     OptiXRenderer/IBackend.h
     OptiXRenderer/Intersect.h
-    OptiXRenderer/Kernel.h
-    OptiXRenderer/Kernel.cu
     OptiXRenderer/OctahedralNormal.h
     OptiXRenderer/PresampledEnvironmentMap.h
     OptiXRenderer/PresampledEnvironmentMap.cpp
@@ -71,9 +69,6 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
   set(_OPTIONS "-arch sm_30")
   cuda_wrap_srcs(${LIBRARY_NAME} PTX _GENERATED_FILES ${SHADING_SRC} ${SHADING_LIGHTSOURCES_SRC} OPTIONS ${_OPTIONS} )
 
-  # Compute the file name of the intermedate link file used for separable compilation.
-  cuda_compute_separable_compilation_object_file_name(LINK_FILE ${LIBRARY_NAME} "${${LIBRARY_NAME}_SEPARABLE_COMPILATION_OBJECTS}")
-
   # Add the library.
   add_library(${LIBRARY_NAME} ${_cmake_options}
     ${_GENERATED_FILES}
@@ -84,11 +79,6 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
     ${SHADING_SHADING_MODELS_SRC}
     ${LINK_FILE}
   )
-
-  # Add a link phase for the separable compilation if it has been enabled.  If
-  # it has been enabled then the ${LIBRARY_NAME}_SEPARABLE_COMPILATION_OBJECTS
-  # variable will have been defined.
-  cuda_link_separable_compilation_objects("${LINK_FILE}" ${LIBRARY_NAME} "${_OPTIONS}" "${${LIBRARY_NAME}_SEPARABLE_COMPILATION_OBJECTS}")
 
   source_group("" FILES ${ROOT_SRC})
   source_group("Shading" FILES ${SHADING_SRC})

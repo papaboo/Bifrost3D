@@ -5,7 +5,6 @@ BACKLOG:
 ** AI denoiser
 * CMake: use the native CUDA compilation. https://cmake.org/cmake/help/v3.12/module/FindCUDA.html
 ** https://devblogs.nvidia.com/building-cuda-applications-cmake/
-** Remove kernel.cu
 * GLFW 3.3 - Handle windows high DPI scaling. https://www.glfw.org/docs/latest/news.html#content_scale_33
 * Progressive multijittered sample sequences
 ** Heitz and Goergiev blue noise screen space seed scheme. Optimize towards equal distribution of first four seeds. Seed, swap row/columns and then optimize random cells.

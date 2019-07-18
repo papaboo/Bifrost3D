@@ -12,7 +12,6 @@
 #include <OptiXRenderer/IBackend.h>
 #include <OptiXRenderer/OctahedralNormal.h>
 #include <OptiXRenderer/PresampledEnvironmentMap.h>
-#include <OptiXRenderer/Kernel.h>
 #include <OptiXRenderer/RhoTexture.h>
 #include <OptiXRenderer/Types.h>
 
