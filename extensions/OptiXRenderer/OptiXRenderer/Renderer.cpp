@@ -248,6 +248,10 @@ struct Renderer::Implementation {
         if (Context::getDeviceCount() == 0)
             return;
 
+        int enable_RTX = true;
+        if (rtGlobalSetAttribute(RT_GLOBAL_ATTRIBUTE_ENABLE_RTX, sizeof(enable_RTX), &enable_RTX) != RT_SUCCESS)
+            enable_RTX = false;
+
         context = Context::create();
 
         // TODO Use cuda_device_ID to select device.
@@ -256,9 +260,9 @@ struct Renderer::Implementation {
         int2 compute_capability;
         context->getDeviceAttribute(device_IDs.optix, RT_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY, sizeof(compute_capability), &compute_capability);
         int optix_major = OPTIX_VERSION / 10000, optix_minor = (OPTIX_VERSION % 10000) / 100, optix_micro = OPTIX_VERSION % 100;
-        printf("OptiX %u.%u.%u renderer using device %u: '%s' with compute capability %u.%u.\n", 
-            optix_major, optix_minor, optix_micro, 
-            device_IDs.optix, context->getDeviceName(device_IDs.optix).c_str(), compute_capability.x, compute_capability.y);
+        printf("OptiX %u.%u.%u renderer using device %u: '%s' with compute capability %u.%u and RTX %s.\n", 
+            optix_major, optix_minor, optix_micro, device_IDs.optix, context->getDeviceName(device_IDs.optix).c_str(), 
+            compute_capability.x, compute_capability.y, enable_RTX ? "enabled" : "disabled");
 
         context->getDeviceAttribute(device_IDs.optix, RT_DEVICE_ATTRIBUTE_CUDA_DEVICE_ORDINAL, sizeof(device_IDs.cuda), &device_IDs.cuda);
 
