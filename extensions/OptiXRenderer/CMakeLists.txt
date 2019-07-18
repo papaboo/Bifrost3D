@@ -35,9 +35,9 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
 
   set(SHADING_SRC
     OptiXRenderer/Shading/IntersectSphere.cu
-    OptiXRenderer/Shading/IntersectTriangle.cu
     OptiXRenderer/Shading/MonteCarlo.cu
     OptiXRenderer/Shading/SimpleRGPs.cu
+    OptiXRenderer/Shading/TriangleAttributes.cu
   )
 
   set(SHADING_BSDFS_SRC

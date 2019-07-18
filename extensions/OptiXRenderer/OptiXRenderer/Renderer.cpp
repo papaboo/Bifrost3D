@@ -78,25 +78,18 @@ static inline optix::Buffer create_buffer(optix::Context& context, unsigned int 
     return buffer;
 }
 
-static inline optix::Geometry load_mesh(optix::Context& context, Meshes::UID mesh_ID,
-    optix::Program intersection_program, optix::Program bounds_program) {
-    optix::Geometry optix_mesh = context->createGeometry();
+static inline optix::GeometryTriangles load_mesh(optix::Context& context, Meshes::UID mesh_ID, optix::Program attribute_program) {
 
     Mesh mesh = mesh_ID;
 
-    optix_mesh->setIntersectionProgram(intersection_program);
-    optix_mesh->setBoundingBoxProgram(bounds_program);
-
     optix::Buffer index_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT3, mesh.get_primitive_count(), mesh.get_primitives());
-    optix_mesh["index_buffer"]->setBuffer(index_buffer);
-    optix_mesh->setPrimitiveCount(mesh.get_primitive_count());
 
-    // Vertex attributes
-    RTsize vertex_count = mesh.get_vertex_count();
+    // Position and normal buffer
+    unsigned int vertex_count = mesh.get_vertex_count();
     optix::Buffer geometry_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, vertex_count);
     geometry_buffer->setElementSize(sizeof(VertexGeometry));
     VertexGeometry* mapped_geometry = (VertexGeometry*)geometry_buffer->map();
-    for (RTsize i = 0; i < vertex_count; ++i) {
+    for (unsigned int i = 0; i < vertex_count; ++i) {
         Vector3f position = mesh.get_positions()[i];
         mapped_geometry[i].position = optix::make_float3(position.x, position.y, position.z);
         if (mesh.get_normals() != nullptr) {
@@ -106,33 +99,45 @@ static inline optix::Geometry load_mesh(optix::Context& context, Meshes::UID mes
         }
     }
     geometry_buffer->unmap();
-    optix_mesh["geometry_buffer"]->setBuffer(geometry_buffer);
 
-    RTsize texcoord_count = mesh.get_texcoords() ? vertex_count : 0;
-    optix::Buffer texcoord_buffer = texcoord_count != 0 ? 
-        create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, texcoord_count, mesh.get_texcoords()) :
-        context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, 1);
-    optix_mesh["texcoord_buffer"]->setBuffer(texcoord_buffer);
+    optix::Buffer texcoord_buffer = mesh.get_texcoords() != nullptr ?
+        create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, vertex_count, mesh.get_texcoords()) :
+        context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, 0); // TODO Use shared default buffer or bind default to context.
 
-    OPTIX_VALIDATE(optix_mesh);
+    { // Setup triangle geometry representation.
+        optix::GeometryTriangles triangle_mesh = context->createGeometryTriangles();
 
-    return optix_mesh;
+        triangle_mesh->setPrimitiveCount(mesh.get_primitive_count());
+        triangle_mesh->setTriangleIndices(index_buffer, RT_FORMAT_UNSIGNED_INT3);
+        RTsize vertex_buffer_byte_offset = 0;
+        RTsize vertex_byte_stride = sizeof(VertexGeometry);
+        triangle_mesh->setVertices(vertex_count, geometry_buffer, vertex_buffer_byte_offset, vertex_byte_stride, RT_FORMAT_FLOAT3);
+        triangle_mesh->setBuildFlags(RT_GEOMETRY_BUILD_FLAG_RELEASE_BUFFERS);
+
+        triangle_mesh->setAttributeProgram(attribute_program);
+        triangle_mesh["index_buffer"]->setBuffer(index_buffer);
+        triangle_mesh["geometry_buffer"]->setBuffer(geometry_buffer);
+        triangle_mesh["texcoord_buffer"]->setBuffer(texcoord_buffer);
+
+        OPTIX_VALIDATE(triangle_mesh);
+        return triangle_mesh;
+    }
 }
 
-static inline optix::Transform load_model(optix::Context& context, MeshModel model, optix::Geometry* meshes, optix::Material optix_material) {
+static inline optix::Transform load_model(optix::Context& context, MeshModel model, optix::GeometryTriangles* meshes, optix::Material optix_material) {
     Mesh mesh = model.get_mesh();
-    optix::Geometry optix_mesh = meshes[mesh.get_ID()];
+    optix::GeometryTriangles optix_mesh = meshes[mesh.get_ID()];
 
     assert(optix_mesh);
 
-    optix::GeometryInstance optix_model = context->createGeometryInstance(optix_mesh, &optix_material, &optix_material + 1);
+    optix::GeometryInstance optix_model = context->createGeometryInstance(optix_mesh, optix_material);
     optix_model["material_index"]->setInt(model.get_material().get_ID());
     unsigned char mesh_flags = mesh.get_normals() != nullptr ? MeshFlags::Normals : MeshFlags::None;
     mesh_flags |= mesh.get_texcoords() != nullptr ? MeshFlags::Texcoords : MeshFlags::None;
     optix_model["mesh_flags"]->setInt(mesh_flags);
     OPTIX_VALIDATE(optix_model);
 
-    optix::Acceleration acceleration = context->createAcceleration("Sbvh", "Bvh"); // TODO Use Trbvh when it's stable.
+    optix::Acceleration acceleration = context->createAcceleration("Trbvh", "Bvh");
     acceleration->setProperty("index_buffer_name", "index_buffer");
     acceleration->setProperty("vertex_buffer_name", "geometry_buffer");
     acceleration->setProperty("vertex_buffer_stride", "16");
@@ -215,7 +220,7 @@ struct Renderer::Implementation {
     } scene;
 
     std::vector<optix::Transform> transforms = std::vector<optix::Transform>(0);
-    std::vector<optix::Geometry> meshes = std::vector<optix::Geometry>(0);
+    std::vector<optix::GeometryTriangles> meshes = std::vector<optix::GeometryTriangles>(0);
 
     std::vector<optix::Buffer> images = std::vector<optix::Buffer>(0);
     std::vector<optix::TextureSampler> textures = std::vector<optix::TextureSampler>(0);
@@ -224,8 +229,7 @@ struct Renderer::Implementation {
     optix::Buffer material_parameters;
     unsigned int active_material_count;
 
-    optix::Program triangle_intersection_program;
-    optix::Program triangle_bounds_program;
+    optix::Program triangle_attribute_program;
 
     struct {
         Core::Array<unsigned int> ID_to_index;
@@ -308,9 +312,8 @@ struct Renderer::Implementation {
 
             OPTIX_VALIDATE(default_material);
 
-            std::string trangle_intersection_ptx_path = get_ptx_path(shader_prefix, "IntersectTriangle");
-            triangle_intersection_program = context->createProgramFromPTXFile(trangle_intersection_ptx_path, "intersect");
-            triangle_bounds_program = context->createProgramFromPTXFile(trangle_intersection_ptx_path, "bounds");
+            std::string trangle_attributes_ptx_path = get_ptx_path(shader_prefix, "TriangleAttributes");
+            triangle_attribute_program = context->createProgramFromPTXFile(trangle_attributes_ptx_path, "interpolate_attributes");
 
             active_material_count = 0;
             material_parameters = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, active_material_count);
@@ -353,7 +356,7 @@ struct Renderer::Implementation {
                 material->setClosestHitProgram(RayTypes::MonteCarlo, context->createProgramFromPTXFile(monte_carlo_ptx_path, "light_closest_hit"));
                 OPTIX_VALIDATE(material);
 
-                optix::Acceleration acceleration = context->createAcceleration("Bvh", "Bvh");
+                optix::Acceleration acceleration = context->createAcceleration("Trbvh", "Bvh");
                 OPTIX_VALIDATE(acceleration);
 
                 optix::GeometryInstance area_lights = context->createGeometryInstance(lights.area_lights_geometry, &material, &material + 1);
@@ -479,7 +482,7 @@ struct Renderer::Implementation {
                 if (Meshes::get_changes(mesh_ID) & Meshes::Change::Created) {
                     if (meshes.size() <= mesh_ID)
                         meshes.resize(Meshes::capacity());
-                    meshes[mesh_ID] = load_mesh(context, mesh_ID, triangle_intersection_program, triangle_bounds_program);
+                    meshes[mesh_ID] = load_mesh(context, mesh_ID, triangle_attribute_program);
                 }
             }
         }
