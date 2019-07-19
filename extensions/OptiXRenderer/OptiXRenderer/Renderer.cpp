@@ -268,7 +268,7 @@ struct Renderer::Implementation {
 
         context->setRayTypeCount(RayTypes::Count);
         context->setEntryPointCount(EntryPoints::Count);
-        context->setStackSize(1400);
+        context->setStackSize(0); // Apparently this results in an actual stack size of 128, which is enough to render a textured scene with all bounces.
 
         // Per camera state
         per_camera_state.resize(1);

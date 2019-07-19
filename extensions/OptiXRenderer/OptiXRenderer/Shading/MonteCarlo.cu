@@ -134,6 +134,12 @@ RT_PROGRAM void closest_hit() {
 
     const Material& material_parameter = g_materials[material_index];
 
+    // Reset the dimension on the progressive multijittered sampler state to ignore samples drawn for next event estimation and to reduce the curse of dimensionality's effect on the RNG.
+    // This is acceptable as paths made from next event estimation and BSDF sampling are independent from the current intersection and onwards (modulo MIS) 
+    // and therefore resetting the dimension won't cause correlation artefacts.
+    // Since we spend 4 dimensions pr intersection (coverage(1), bsdf selection(1) and bsdf sampling(2)) the dimensions should be reset to 4 * bounce_count.
+    monte_carlo_payload.pmj_rng_state.set_dimension(4 * monte_carlo_payload.bounces);
+
     float coverage = DefaultShading::coverage(material_parameter, texcoord);
     if (sample1f(monte_carlo_payload.pmj_rng_state) > coverage) {
         monte_carlo_payload.position = ray.direction * (t_hit + g_scene.ray_epsilon) + ray.origin;
@@ -149,10 +155,19 @@ RT_PROGRAM void closest_hit() {
     monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
     const DefaultShading material = DefaultShading(material_parameter, abs(monte_carlo_payload.direction.z), texcoord);
 
+    // Deferred BSDF sampling.
+    // The BSDF is sampled before tracing the shadow ray in order to avoid flushing world_shading_tbn and the material to the local stack when tracing the ray.
+    BSDFSample bsdf_sample = material.sample_all(monte_carlo_payload.direction, sample3f(monte_carlo_payload.pmj_rng_state));
+    float3 next_payload_direction = bsdf_sample.direction * world_shading_tbn;
+    float next_payload_MIS_PDF = bsdf_sample.PDF;
+    float3 next_payload_throughput = make_float3(0.0f);
+    if (is_PDF_valid(bsdf_sample.PDF))
+       next_payload_throughput = monte_carlo_payload.throughput * bsdf_sample.weight * (abs(bsdf_sample.direction.z) / bsdf_sample.PDF); // f * ||cos(theta)|| / pdf
+
 #if ENABLE_NEXT_EVENT_ESTIMATION
     // Sample a light source.
     if (g_scene.light_count != 0) {
-        const LightSample light_sample = reestimated_light_samples(material, world_shading_tbn, 3);
+        const LightSample light_sample = reestimated_light_samples(material, world_shading_tbn, 1);
 
         if (light_sample.radiance.x > 0.0f || light_sample.radiance.y > 0.0f || light_sample.radiance.z > 0.0f) {
             ShadowPayload shadow_payload = { light_sample.radiance };
@@ -164,20 +179,10 @@ RT_PROGRAM void closest_hit() {
     }
 #endif // ENABLE_NEXT_EVENT_ESTIMATION
 
-    // Sample BSDF.
-    // Reset the dimension on the progressive multijittered sampler state to ignore samples drawn for next event estimation and to reduce the curse of dimensionality's effect on the RNG.
-    // This is acceptable as paths made from next event estimation and BSDF sampling are independent from the current intersection and onwards (modulo MIS) 
-    // and therefore resetting the dimension won't cause correlation artefacts.
-    // Since we spend 4 dimensions pr intersection (coverage(1), bsdf selection(1) and bsdf sampling(2)) and the coverage sample has been drawn, 
-    // dimensions should be reset to 4 * bounce_count + 1.
-    monte_carlo_payload.pmj_rng_state.set_dimension(4 * monte_carlo_payload.bounces + 1); // 4 Represents the dimensions used for coverage(1), bsdf_selection(1) and bsdf sampling(2).
-    BSDFSample bsdf_sample = material.sample_all(monte_carlo_payload.direction, sample3f(monte_carlo_payload.pmj_rng_state));
-    monte_carlo_payload.direction = bsdf_sample.direction * world_shading_tbn;
-    monte_carlo_payload.bsdf_MIS_PDF = bsdf_sample.PDF;
-    if (!is_PDF_valid(bsdf_sample.PDF))
-        monte_carlo_payload.throughput = make_float3(0.0f);
-    else
-        monte_carlo_payload.throughput *= bsdf_sample.weight * (abs(bsdf_sample.direction.z) / bsdf_sample.PDF); // f * ||cos(theta)|| / pdf
+    // Apply deferred BSDF sample to the ray payload.
+    monte_carlo_payload.direction = next_payload_direction;
+    monte_carlo_payload.bsdf_MIS_PDF = next_payload_MIS_PDF;
+    monte_carlo_payload.throughput = next_payload_throughput;
     monte_carlo_payload.bounces += 1u;
 }
 
