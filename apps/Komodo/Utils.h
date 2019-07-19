@@ -26,6 +26,9 @@
 #undef RGB
 
 inline bool validate_image_extension(const std::string& path) {
+    if (path.length() < 4)
+        return false;
+
     std::string file_extension = std::string(path, path.length() - 4);
     if (!(file_extension.compare(".bmp") == 0 ||
         file_extension.compare(".exr") == 0 ||
@@ -49,7 +52,11 @@ inline Bifrost::Assets::Image load_image(const std::string& path) {
         else
             return StbImageLoader::load(path);
     }
-    
+
+    // Check that the path is long enough to even contain an extension that can be replaced.
+    if (path.length() < 4)
+        return Bifrost::Assets::Image();
+
     std::string new_path = path;
 
     // Test tga.
