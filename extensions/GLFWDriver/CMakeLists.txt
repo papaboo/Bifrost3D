@@ -1,42 +1,42 @@
-set(GLFW_ZIP_URL "https://github.com/glfw/glfw/releases/download/3.2.1/glfw-3.2.1.zip")
-set(GLFW_LIBS_DIR "${BIFROST_LIBS_DIR}/glfw-3.2.1")
+set(GLFW_ZIP_URL "https://github.com/glfw/glfw/releases/download/3.3/glfw-3.3.zip")
+set(GLFW_LIBS_DIR "${BIFROST_LIBS_DIR}/glfw-3.3")
 set(GLFW_ZIP_DEST "${GLFW_LIBS_DIR}.zip")
 
 # TODO Split into function that downloads, unzips and deletes.
 if (NOT EXISTS ${GLFW_LIBS_DIR}/CMakeLists.txt)
-  message(STATUS "Downloading '${GLFW_ZIP_URL}'
-    to '${GLFW_ZIP_DEST}'
-    if the download fails, then manually downloading the zip will work as well."
-  )
+  if (NOT EXISTS ${GLFW_ZIP_DEST})
+    message(STATUS "Downloading '${GLFW_ZIP_URL}'
+      to '${GLFW_ZIP_DEST}'
+      if the download fails, then manually download ${GLFW_ZIP_URL} and place it in ${BIFROST_LIBS_DIR}.")
 
-  file(DOWNLOAD
-    "${GLFW_ZIP_URL}"
-    "${GLFW_ZIP_DEST}"
-    SHOW_PROGRESS
-    EXPECTED_MD5;824c99eea073bdd6d2fec76b538f79af
-    # no TIMEOUT
-    STATUS status
-    LOG log
-  )
+    file(DOWNLOAD
+      "${GLFW_ZIP_URL}"
+      "${GLFW_ZIP_DEST}"
+      SHOW_PROGRESS
+      EXPECTED_MD5;e4f3c4848710093f29b1781f2d1b7acc
+      # no TIMEOUT
+      STATUS status
+      LOG log)
 
-  list(GET status 0 status_code)
-  list(GET status 1 status_string)
+    list(GET status 0 status_code)
+    list(GET status 1 status_string)
 
-  if(NOT status_code EQUAL 0)
-    message(FATAL_ERROR "error: downloading '${GLFW_ZIP_URL}'
-      status_code: ${status_code}
-      status_string: ${status_string}
-      log: ${log}"
-    )
+    if(NOT status_code EQUAL 0)
+      message(FATAL_ERROR "error: downloading '${GLFW_ZIP_URL}'
+        status_code: ${status_code}
+        status_string: ${status_string}
+        log: ${log}")
+      file(REMOVE "${GLFW_ZIP_DEST}") # remove the file to ensure that partially downloaded files won't corrupt a reconfiguration run.
+    endif()
+  endif()
 
-  else()
-
+  if (EXISTS ${GLFW_ZIP_DEST})
     # Unzip the source
-    message(STATUS "Unzipping glfw-3.2.1.zip")
+    message(STATUS "Unzipping glfw-3.3.zip to ${GLFW_LIBS_DIR}")
     execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${GLFW_ZIP_DEST}" WORKING_DIRECTORY "${BIFROST_LIBS_DIR}" )
 
     # Delete the zip file
-    message(STATUS "Deleting glfw-3.2.1.zip")
+    message(STATUS "Deleting glfw-3.3.zip")
     file(REMOVE "${GLFW_ZIP_DEST}")
   endif()
 endif()
@@ -60,19 +60,17 @@ if (EXISTS ${GLFW_LIBS_DIR}/CMakeLists.txt)
 
   target_include_directories(GLFWDriver
     PUBLIC .
-    PRIVATE "${GLFW_LIBS_DIR}/include"
-  )
+    PRIVATE "${GLFW_LIBS_DIR}/include")
 
   target_link_libraries(GLFWDriver
     PUBLIC Bifrost
-    PRIVATE glfw
-  )
+    PRIVATE glfw)
 
   source_group("GLFWDriver" FILES GLFWDriver.h GLFWDriver.cpp)
 
   set_target_properties(GLFWDriver PROPERTIES 
     LINKER_LANGUAGE CXX
-    FOLDER "Extensions"
-  )
-
+    FOLDER "Extensions")
+else()
+  message(FATAL_ERROR "error: GLFW source not found at '${GLFW_LIBS_DIR}'")
 endif()
