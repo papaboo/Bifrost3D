@@ -39,6 +39,23 @@ private:
     int m_entry_point;
 };
 
+// ------------------------------------------------------------------------------------------------
+// Simple OptiX renderer backend.
+// Launches the ray generation program and outputs directly to the output buffer.
+// ------------------------------------------------------------------------------------------------
+class AIFilteredBackend : public IBackend {
+public:
+    AIFilteredBackend(optix::Context& context, int width, int height);
+    ~AIFilteredBackend() { }
+    void resize_backbuffers(int width, int height);
+    void render(optix::Context& context, int width, int height);
+private:
+    optix::CommandList m_command_list;
+    optix::PostprocessingStage m_denoiser;
+    optix::Buffer m_noisy_pixels; // float4 buffer
+    optix::Buffer m_filtered_pixels; // float4 buffer
+};
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_IBACKEND_H_

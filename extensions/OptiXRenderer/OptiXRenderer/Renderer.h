@@ -31,6 +31,7 @@ namespace OptiXRenderer {
 enum class Backend {
     None,
     PathTracing,
+    AIFilteredPathTracing,
     AlbedoVisualization,
     NormalVisualization,
 };

@@ -46,17 +46,13 @@ find_library(OPTIX_U_LIB optixu.6.0.0
 set(OPTIX_LIBRARIES "${OPTIX_LIB}" "${OPTIX_U_LIB}")
 
 # Find dlls
-if (EXISTS ${OPTIX_PATH}/bin64/optix.6.0.0.dll)
-  set(OPTIX_DLL "${OPTIX_PATH}/bin64/optix.6.0.0.dll")
-endif()
-
-if (EXISTS ${OPTIX_PATH}/bin64/optixu.6.0.0.dll)
-  set(OPTIX_U_DLL "${OPTIX_PATH}/bin64/optixu.6.0.0.dll")
-endif()
-
-set(OPTIX_DLLS "${OPTIX_DLL}" "${OPTIX_U_DLL}")
+set(OPTIX_DLL "${OPTIX_PATH}/bin64/optix.6.0.0.dll")
+set(OPTIX_U_DLL "${OPTIX_PATH}/bin64/optixu.6.0.0.dll")
+set(OPTIX_DENOISER_DLL "${OPTIX_PATH}/bin64/optix_denoiser.6.0.0.dll")
+set(CUDNN_DLL "${OPTIX_PATH}/bin64/cudnn64_7.dll")
+set(OPTIX_DLLS "${OPTIX_DLL}" "${OPTIX_U_DLL}" "${OPTIX_DENOISER_DLL}" "${CUDNN_DLL}")
 
 # Handle the QUIETLY and REQUIRED arguments and set OPTIX_FOUND to TRUE if
 # all listed variables are set.
 include(${CMAKE_ROOT}/Modules/FindPackageHandleStandardArgs.cmake)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(OPTIX DEFAULT_MSG OPTIX_LIB OPTIX_U_LIB OPTIX_DLL OPTIX_U_DLL OPTIX_INCLUDE_DIRS)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(OPTIX DEFAULT_MSG OPTIX_LIB OPTIX_U_LIB OPTIX_DLL OPTIX_U_DLL OPTIX_DENOISER_DLL CUDNN_DLL OPTIX_INCLUDE_DIRS)

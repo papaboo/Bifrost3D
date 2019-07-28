@@ -20,6 +20,7 @@ using namespace optix;
 rtDeclareVariable(uint2, g_launch_index, rtLaunchIndex, );
 
 rtDeclareVariable(CameraStateGPU, g_camera_state, , );
+rtDeclareVariable(AIDenoiserStateGPU, g_AI_denoiser_state, , );
 
 // ------------------------------------------------------------------------------------------------
 // Ray generation program utility functions.
@@ -131,6 +132,40 @@ RT_PROGRAM void path_tracing_RPG() {
         return payload.radiance;
     });
 }
+
+//-------------------------------------------------------------------------------------------------
+// Denoise ray generation program.
+// TODO Wrap in a namespace
+//-------------------------------------------------------------------------------------------------
+namespace AI_denoiser {
+
+RT_PROGRAM void path_tracing_RPG() {
+
+    accumulate([](MonteCarloPayload payload) -> float3 {
+        do {
+            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
+            rtTrace(g_scene_root, ray, payload);
+        } while (payload.bounces < g_camera_state.max_bounce_count && !is_black(payload.throughput));
+
+        return payload.radiance;
+    });
+
+#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
+    double4 p = g_camera_state.accumulation_buffer[g_launch_index];
+    float4 noisy_pixel = make_float4(p.x, p.y, p.z, 1.0f);
+#else
+    float4 noisy_pixel = g_camera_state.accumulation_buffer[g_launch_index];
+#endif
+
+    g_AI_denoiser_state.noisy_pixels_buffer[g_launch_index] = gamma_correct(noisy_pixel);
+}
+
+RT_PROGRAM void copy_to_output() {
+    float4 pixel = g_AI_denoiser_state.denoised_pixels_buffer[g_launch_index];
+    g_camera_state.output_buffer[g_launch_index] = float_to_half(reverse_gamma_correct(pixel));
+}
+
+} // NS AI_denoiser
 
 //-------------------------------------------------------------------------------------------------
 // Ray generation program for visualizing normals.

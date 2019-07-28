@@ -1,17 +1,22 @@
 BACKLOG:
 * OptiX 6.X and CUDA 10 - Cornell box with shiodomo env map ~18.5fps in 5.1.1 and 15.0fps in 6.0 on P2000
 ** AI denoiser
+*** Denoise after K iterations and stop. Do a normal launch until then.
+*** Output albedo.
+*** Output normal.
 * CMake: use the native CUDA compilation. https://cmake.org/cmake/help/v3.12/module/FindCUDA.html
 ** https://devblogs.nvidia.com/building-cuda-applications-cmake/
+* Roughness regularization. Perhaps just by clamping roughness along a path and then relax pr iteration.
+** Base on some (pdf, cos_theta) -> roughness.
+** Base factor and decay rate as parameters
 * Progressive multijittered sample sequences
+** Unit test for different sampling scenarios.
+** Debug VeachScene sampling with no next event estimation. The large light's reflection on the second slab is very noisy around the edges.
 ** Path debugger. Select pixel and trace all 4096 paths, then visualize ranges of paths.
 ** Heitz and Georgiev blue noise screen space seed scheme. Optimize towards equal distribution of first four seeds. Seed, swap row/columns and then optimize random cells.
 *** Toroidal shift + random sample index?
 *** Toroidal shift using 14 bit bitmask, right-shift by 1 pr dimension and reinsert the swapped bit as the most significant one.
 ** Pregenerate samples with 64 bluenoise samples for OptiX.
-* Path regularization. Perhaps just by clamping roughness along a path and then relax pr iteration.
-** Base on pdf / distance if possible? Shorter distances are easier to sample, but short is relative to the overall scale.
-** No more than a single parameter.
 * Film grain
 ** http://www.loopit.dk/banding_in_games.pdf
 ** https://www.shadertoy.com/view/4t2SDh

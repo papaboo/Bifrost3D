@@ -8,6 +8,8 @@ find_package(OptiX)
 if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
   install_file(${OPTIX_DLL})
   install_file(${OPTIX_U_DLL})
+  install_file(${OPTIX_DENOISER_DLL})
+  install_file(${CUDNN_DLL})
 
   set(ROOT_SRC
     OptiXRenderer/Defines.h
@@ -15,6 +17,7 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
     OptiXRenderer/EnvironmentMap.h
     OptiXRenderer/EnvironmentMap.cpp
     OptiXRenderer/IBackend.h
+    OptiXRenderer/IBackend.cpp
     OptiXRenderer/Intersect.h
     OptiXRenderer/OctahedralNormal.h
     OptiXRenderer/PresampledEnvironmentMap.h

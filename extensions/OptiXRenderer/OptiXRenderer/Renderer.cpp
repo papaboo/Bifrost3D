@@ -278,9 +278,9 @@ struct Renderer::Implementation {
         auto get_ptx_path = [](const std::string& shader_prefix, const std::string& shader_filename) -> std::string {
             return shader_prefix + shader_filename + ".cu.ptx";
         };
+        std::string rgp_ptx_path = get_ptx_path(shader_prefix, "SimpleRGPs");
 
         { // Path tracing setup.
-            std::string rgp_ptx_path = get_ptx_path(shader_prefix, "SimpleRGPs");
             context->setRayGenerationProgram(EntryPoints::PathTracing, context->createProgramFromPTXFile(rgp_ptx_path, "path_tracing_RPG"));
             context->setMissProgram(RayTypes::MonteCarlo, context->createProgramFromPTXFile(rgp_ptx_path, "miss"));
 #ifdef ENABLE_OPTIX_DEBUG
@@ -296,14 +296,17 @@ struct Renderer::Implementation {
             }
         }
 
+        { // AI Denoiser
+            context->setRayGenerationProgram(EntryPoints::AIDenoiserPathTracing, context->createProgramFromPTXFile(rgp_ptx_path, "AI_denoiser::path_tracing_RPG"));
+            context->setRayGenerationProgram(EntryPoints::AIDenoiserCopyOutput, context->createProgramFromPTXFile(rgp_ptx_path, "AI_denoiser::copy_to_output"));
+        }
+
         { // Albedo visualization setup.
-            std::string ptx_path = get_ptx_path(shader_prefix, "SimpleRGPs");
-            context->setRayGenerationProgram(EntryPoints::Albedo, context->createProgramFromPTXFile(ptx_path, "albedo_RPG"));
+            context->setRayGenerationProgram(EntryPoints::Albedo, context->createProgramFromPTXFile(rgp_ptx_path, "albedo_RPG"));
         }
 
         { // Normal visualization setup.
-            std::string ptx_path = get_ptx_path(shader_prefix, "SimpleRGPs");
-            context->setRayGenerationProgram(EntryPoints::Normal, context->createProgramFromPTXFile(ptx_path, "normals_RPG"));
+            context->setRayGenerationProgram(EntryPoints::Normal, context->createProgramFromPTXFile(rgp_ptx_path, "normals_RPG"));
         }
 
         { // Setup default material.
@@ -990,7 +993,7 @@ struct Renderer::Implementation {
         camera_state_GPU.accumulation_buffer = camera_state.accumulation_buffer->getId();
         camera_state_GPU.accumulations = camera_state.accumulations;
         camera_state_GPU.max_bounce_count = camera_state.max_bounce_count;
-        context["g_camera_state"]->setUserData(sizeof(CameraStateGPU), &camera_state_GPU);
+        context["g_camera_state"]->setUserData(sizeof(camera_state_GPU), &camera_state_GPU);
 
         context["g_scene"]->setUserData(sizeof(SceneStateGPU), &scene.GPU_state);
 
@@ -1076,6 +1079,9 @@ void Renderer::set_backend(Cameras::UID camera_ID, Backend backend) {
     switch (backend) {
     case Backend::PathTracing:
         camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::PathTracing));
+        break;
+    case Backend::AIFilteredPathTracing:
+        camera_state.backend_impl = std::unique_ptr<IBackend>(new AIFilteredBackend(m_impl->context, camera_state.screensize.x, camera_state.screensize.y));
         break;
     case Backend::AlbedoVisualization:
         camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Albedo));

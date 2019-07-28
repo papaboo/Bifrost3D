@@ -32,9 +32,11 @@ struct RayTypes {
 
 struct EntryPoints {
     static const unsigned int PathTracing = 0;
-    static const unsigned int Albedo = 1;
-    static const unsigned int Normal = 2;
-    static const unsigned int Count = 3;
+    static const unsigned int AIDenoiserPathTracing = 1;
+    static const unsigned int AIDenoiserCopyOutput = 2;
+    static const unsigned int Albedo = 3;
+    static const unsigned int Normal = 4;
+    static const unsigned int Count = 5;
 };
 
 struct MeshFlags {
@@ -283,5 +285,14 @@ struct __align__(16) SceneStateGPU {
 };
 
 } // NS OptiXRenderer
+
+//----------------------------------------------------------------------------
+// AI denoiser data uploaded to the GPU
+//----------------------------------------------------------------------------
+
+struct __align__(8) AIDenoiserStateGPU {
+    rtBufferId<optix::float4, 2> noisy_pixels_buffer;
+    rtBufferId<optix::float4, 2> denoised_pixels_buffer;
+};
 
 #endif // _OPTIXRENDERER_TYPES_H_

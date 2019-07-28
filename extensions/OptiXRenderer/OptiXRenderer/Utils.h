@@ -88,7 +88,7 @@ __inline_all__ optix::double3 lerp_double(const optix::double3& a, const optix::
     return optix::make_double3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
 }
 
-__inline_all__ bool is_black(const optix::float3 color) {
+__inline_all__ bool is_black(optix::float3 color) {
     return color.x <= 0.0f && color.y <= 0.0f && color.z <= 0.0f;
 }
 
@@ -135,11 +135,21 @@ __inline_all__ optix::float2 direction_to_latlong_texcoord(optix::float3 directi
     return optix::make_float2(u, v);
 }
 
-__inline_all__ optix::float3 latlong_texcoord_to_direction(const optix::float2& uv) {
+__inline_all__ optix::float3 latlong_texcoord_to_direction(optix::float2 uv) {
     float phi = uv.x * 2.0f * PIf;
     float theta = uv.y * PIf;
     float sin_theta = sinf(theta);
     return -optix::make_float3(sin_theta * cosf(phi), cosf(theta), sin_theta * sinf(phi));
+}
+
+__inline_all__ optix::float4 gamma_correct(optix::float4 color) {
+    const float rcp_gamma = 1.0f / 2.2f;
+    return optix::make_float4(powf(color.x, rcp_gamma), powf(color.y, rcp_gamma), powf(color.z, rcp_gamma), color.w);
+}
+
+__inline_all__ optix::float4 reverse_gamma_correct(optix::float4 color) {
+    const float gamma = 2.2f;
+    return optix::make_float4(powf(color.x, gamma), powf(color.y, gamma), powf(color.z, gamma), color.w);
 }
 
 //-----------------------------------------------------------------------------
