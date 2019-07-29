@@ -34,7 +34,7 @@ public:
     Bitmask() = default;
     Bitmask(E v) : m_mask(T(v)) { }
     Bitmask(T mask) : m_mask(mask) { }
-    Bitmask(std::initializer_list<E> flags) : m_mask(0) {  for (E flag : flags) m_mask |= T(flag); }
+    Bitmask(std::initializer_list<E> flags) : m_mask(0) { for (E flag : flags) m_mask |= T(flag); }
 
     // --------------------------------------------------------------------------------------------
     // Modifiers.
@@ -56,13 +56,14 @@ public:
     inline Bitmask<E> operator|(Bitmask v) const { return Bitmask(m_mask | v.m_mask); }
     inline Bitmask<E> operator^(E v) const { return Bitmask(m_mask ^ T(v)); }
     inline Bitmask<E> operator^(Bitmask v) const { return Bitmask(m_mask ^ v.m_mask); }
+    inline Bitmask<E> operator~() const { return Bitmask(~m_mask); }
 
     // --------------------------------------------------------------------------------------------
     // Accessors.
     // --------------------------------------------------------------------------------------------
     inline bool none_set() const { return m_mask == T(0); }
     inline bool not_set(E v) const { return (T(v) & m_mask) == T(0); }
-    inline bool all_set(E v1, E v2) const { T v = (T(v1) | T(v2);  return v & m_mask) == v; }
+    inline bool all_set(E v1, E v2) const { T v = (T(v1) | T(v2)); return (v & m_mask) == v; }
     inline bool is_set(E v) const { return (T(v) & m_mask) != T(0); }
     inline bool any_set(E v) const { return (T(v) & m_mask) != T(0); }
     inline bool any_set(E v1, E v2) const { return ((T(v1) | T(v2)) & m_mask) != T(0); }
