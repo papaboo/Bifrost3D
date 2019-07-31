@@ -20,8 +20,7 @@ enum class Backend {
     None,
     PathTracing,
     AIDenoisedPathTracing,
-    AlbedoVisualization,
-    NormalVisualization,
+    AlbedoVisualization
 };
 
 // ------------------------------------------------------------------------------------------------

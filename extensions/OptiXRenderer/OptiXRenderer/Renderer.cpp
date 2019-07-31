@@ -307,10 +307,6 @@ struct Renderer::Implementation {
             context->setRayGenerationProgram(EntryPoints::Albedo, context->createProgramFromPTXFile(rgp_ptx_path, "albedo_RPG"));
         }
 
-        { // Normal visualization setup.
-            context->setRayGenerationProgram(EntryPoints::Normal, context->createProgramFromPTXFile(rgp_ptx_path, "normals_RPG"));
-        }
-
         { // Setup default material.
             default_material = context->createMaterial();
 
@@ -1087,9 +1083,6 @@ void Renderer::set_backend(Cameras::UID camera_ID, Backend backend) {
         break;
     case Backend::AlbedoVisualization:
         camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Albedo));
-        break;
-    case Backend::NormalVisualization:
-        camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Normal));
         break;
     }
     camera_state.accumulations = 0u;

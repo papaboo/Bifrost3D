@@ -304,7 +304,7 @@ void RenderingGUI::layout_frame() {
         ImGui::PoppedTreeNode("OptiX", [&]() {
             auto camera_ID = *Cameras::get_iterable().begin();
 
-            const char* backend_modes[] = { "Path tracer", "AI denoised GI", "Albedo", "Normal" };
+            const char* backend_modes[] = { "Path tracer", "AI denoised GI", "Albedo" };
             int current_backend = int(m_optix_renderer->get_backend(camera_ID)) - 1;
             if (ImGui::Combo("Backend", &current_backend, backend_modes, IM_ARRAYSIZE(backend_modes))) {
                 auto backend = OptiXRenderer::Backend(current_backend + 1);
@@ -341,7 +341,7 @@ void RenderingGUI::layout_frame() {
                     int visualization_index = AI_flags & AIDenoiserFlag::VisualizeNormals ? 3 : 0;
                     visualization_index = AI_flags & AIDenoiserFlag::VisualizeAlbedo ? 2 : visualization_index;
                     visualization_index = AI_flags & AIDenoiserFlag::VisualizeNoise ? 1 : visualization_index;
-                    if (ImGui::Combo("Visualization", &visualization_index, debug_vis_modes, IM_ARRAYSIZE(backend_modes))) {
+                    if (ImGui::Combo("Visualization", &visualization_index, debug_vis_modes, IM_ARRAYSIZE(debug_vis_modes))) {
                         // Clear visualization modes
                         const OptiXRenderer::AIDenoiserFlags visualization_flags = { AIDenoiserFlag::VisualizeNoise, AIDenoiserFlag::VisualizeAlbedo, AIDenoiserFlag::VisualizeNormals };
                         AI_flags &= ~visualization_flags;

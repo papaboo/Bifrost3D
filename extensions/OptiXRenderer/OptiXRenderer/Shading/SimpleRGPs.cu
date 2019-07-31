@@ -223,28 +223,6 @@ RT_PROGRAM void copy_to_output() {
 } // NS AIDenoiser
 
 //-------------------------------------------------------------------------------------------------
-// Ray generation program for visualizing normals.
-//-------------------------------------------------------------------------------------------------
-RT_PROGRAM void normals_RPG() {
-
-    accumulate([](MonteCarloPayload payload) -> float3 {
-        // Iterate until a material is sampled.
-        float3 last_ray_direction = payload.direction;
-        do {
-            last_ray_direction = payload.direction;
-            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
-            rtTrace(g_scene_root, ray, payload);
-        } while (payload.bsdf_MIS_PDF == 0.0f && !is_black(payload.throughput));
-
-        float D_dot_N = -dot(last_ray_direction, payload.shading_normal);
-        if (D_dot_N < 0.0f)
-            return make_float3(0.25f - 0.75f * D_dot_N, 0.0f, 0.0f);
-        else
-            return make_float3(0.0f, 0.25f + 0.75f * D_dot_N, 0.0f);
-    });
-}
-
-//-------------------------------------------------------------------------------------------------
 // Ray generation program for visualizing estimated and sampled albedo.
 //-------------------------------------------------------------------------------------------------
 
