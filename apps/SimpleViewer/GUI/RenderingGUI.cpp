@@ -242,9 +242,9 @@ void RenderingGUI::layout_frame() {
             Cameras::set_effects_settings(camera_ID, effects_settings);
     });
 
-    ImGui::Separator();
-
     if (m_dx_renderer != nullptr) {
+        ImGui::Separator();
+
         ImGui::PoppedTreeNode("DirectX11", [&]() {
             using namespace DX11Renderer;
 
@@ -298,9 +298,9 @@ void RenderingGUI::layout_frame() {
     }
 
 #ifdef OPTIX_FOUND
-    ImGui::Separator();
-
     if (m_optix_renderer != nullptr) {
+        ImGui::Separator();
+
         ImGui::PoppedTreeNode("OptiX", [&]() {
             auto camera_ID = *Cameras::get_iterable().begin();
 
@@ -322,6 +322,49 @@ void RenderingGUI::layout_frame() {
             float epsilon = m_optix_renderer->get_scene_epsilon(*SceneRoots::get_iterable().begin());
             if (ImGui::InputFloat("Epsilon", &epsilon))
                 m_optix_renderer->set_scene_epsilon(*SceneRoots::get_iterable().begin(), epsilon);
+
+            if (m_optix_renderer->get_backend(camera_ID) == OptiXRenderer::Backend::AIDenoisedPathTracing) {
+                ImGui::PoppedTreeNode("AI Denoiser", [&]{
+                    using OptiXRenderer::AIDenoiserFlag;
+                    
+                    bool has_AI_changes = false;
+                    auto AI_flags = m_optix_renderer->get_AI_denoiser_flags();
+
+                    bool use_albedo = AI_flags & AIDenoiserFlag::Albedo;
+                    has_AI_changes |= ImGui::Checkbox("Use albedo", &use_albedo);
+
+                    bool use_normals = AI_flags & AIDenoiserFlag::Normals;
+                    has_AI_changes |= ImGui::Checkbox("Use normals", &use_normals);
+
+                    const char* debug_vis_modes[] = { "Denoised image", "Noisy image", "Albedo", "Normals" };
+
+                    int visualization_index = AI_flags & AIDenoiserFlag::VisualizeNormals ? 3 : 0;
+                    visualization_index = AI_flags & AIDenoiserFlag::VisualizeAlbedo ? 2 : visualization_index;
+                    visualization_index = AI_flags & AIDenoiserFlag::VisualizeNoise ? 1 : visualization_index;
+                    if (ImGui::Combo("Visualization", &visualization_index, debug_vis_modes, IM_ARRAYSIZE(backend_modes))) {
+                        // Clear visualization modes
+                        const OptiXRenderer::AIDenoiserFlags visualization_flags = { AIDenoiserFlag::VisualizeNoise, AIDenoiserFlag::VisualizeAlbedo, AIDenoiserFlag::VisualizeNormals };
+                        AI_flags &= ~visualization_flags;
+                        if (visualization_index == 1)
+                            AI_flags |= AIDenoiserFlag::VisualizeNoise;
+                        else if (visualization_index == 2)
+                            AI_flags |= AIDenoiserFlag::VisualizeAlbedo;
+                        else if (visualization_index == 3)
+                            AI_flags |= AIDenoiserFlag::VisualizeNormals;
+
+                        has_AI_changes = true;
+                    }
+
+                    if (has_AI_changes) {
+                        const OptiXRenderer::AIDenoiserFlags setup_flags = { AIDenoiserFlag::Albedo, AIDenoiserFlag::Normals };
+                        AI_flags &= ~setup_flags;
+                        AI_flags |= use_albedo ? AIDenoiserFlag::Albedo : AIDenoiserFlag::None;
+                        AI_flags |= use_normals ? AIDenoiserFlag::Normals : AIDenoiserFlag::None;
+
+                        m_optix_renderer->set_AI_denoiser_flags(AI_flags);
+                    }
+                });
+            }
         });
     }
 #endif
