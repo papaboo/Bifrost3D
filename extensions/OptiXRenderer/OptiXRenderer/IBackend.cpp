@@ -13,18 +13,21 @@ using namespace optix;
 
 namespace OptiXRenderer {
 
-AIFilteredBackend::AIFilteredBackend(optix::Context& context, int width, int height) {
+AIDenoisedBackend::AIDenoisedBackend(optix::Context& context, AIDenoiserFlags* flags, int width, int height)
+    : m_flags(flags) {
 
     m_noisy_pixels = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4);
     m_filtered_pixels = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4);
+    m_albedo = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4);
+    m_normals = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4);
 
     m_denoiser = context->createBuiltinPostProcessingStage("DLDenoiser");
-    m_denoiser->declareVariable("input_buffer");
-    m_denoiser->declareVariable("output_buffer");
     unsigned int hdr_enabled = 1u;
     m_denoiser->declareVariable("hdr")->set1uiv(&hdr_enabled);
-    // TODO m_denoiser->declareVariable("input_albedo_buffer");
-    // TODO m_denoiser->declareVariable("input_normal_buffer");
+    m_denoiser->declareVariable("input_buffer")->set(m_noisy_pixels);
+    m_denoiser->declareVariable("output_buffer")->set(m_filtered_pixels);
+    m_denoiser->declareVariable("input_albedo_buffer")->set(m_albedo);
+    m_denoiser->declareVariable("input_normal_buffer")->set(m_normals);
 
     // Initialize dummy command list to store the context. No rendering can be done until resize_backbuffers has been called.
     m_command_list = nullptr;
@@ -32,12 +35,14 @@ AIFilteredBackend::AIFilteredBackend(optix::Context& context, int width, int hei
     resize_backbuffers(width, height);
 }
 
-void AIFilteredBackend::resize_backbuffers(int width, int height) {
+void AIDenoisedBackend::resize_backbuffers(int width, int height) {
     auto context = m_denoiser->getContext();
-    
+
     // Resize internal buffers
     m_noisy_pixels->setSize(width, height);
     m_filtered_pixels->setSize(width, height);
+    m_albedo->setSize(width, height);
+    m_normals->setSize(width, height);
 
     // Recreate command list
     m_command_list = context->createCommandList();
@@ -47,15 +52,36 @@ void AIFilteredBackend::resize_backbuffers(int width, int height) {
     m_command_list->finalize();
 }
 
-void AIFilteredBackend::render(optix::Context& context, int width, int height) {
+void AIDenoisedBackend::render(optix::Context& context, int width, int height) {
 
-    AIDenoiserStateGPU denoiser_state;
+    RTsize albedoSize;
+    m_albedo->getSize(albedoSize);
+    if (m_flags->is_set(AIDenoiserFlag::Albedo) && albedoSize == 0)
+        m_albedo->setSize(width, height); // TODO Clear in RGP
+    else if (!m_flags->is_set(AIDenoiserFlag::Albedo) && albedoSize != 0)
+        m_albedo->setSize(RTsize(0), RTsize(0));
+
+    RTsize normalSize;
+    m_normals->getSize(normalSize);
+    // The normal buffer is only supported as input if albedo is used as well.
+    bool use_normal_buffer = m_flags->all_set(AIDenoiserFlag::Albedo, AIDenoiserFlag::Normals);
+    if (use_normal_buffer && normalSize == 0)
+        m_normals->setSize(width, height); // TODO Clear in RGP
+    else if (!use_normal_buffer && normalSize != 0)
+        m_normals->setSize(RTsize(0), RTsize(0));
+
+    AIDenoiserStateGPU denoiser_state = {};
+    denoiser_state.flags = m_flags->raw();
+    if (!(denoiser_state.flags & int(AIDenoiserFlag::Albedo)))
+        denoiser_state.flags &= ~int(AIDenoiserFlag::VisualizeAlbedo);
+    if (!(denoiser_state.flags & int(AIDenoiserFlag::Normals)))
+        denoiser_state.flags &= ~int(AIDenoiserFlag::VisualizeNormals);
     denoiser_state.noisy_pixels_buffer = m_noisy_pixels->getId();
     denoiser_state.denoised_pixels_buffer = m_filtered_pixels->getId();
+    denoiser_state.albedo_buffer = m_flags->is_set(AIDenoiserFlag::Albedo) ? m_albedo->getId() : 0;
+    denoiser_state.normals_buffer = use_normal_buffer ? m_normals->getId() : 0;
+    context["AIDenoiser::g_AI_denoiser_state"]->setUserData(sizeof(denoiser_state), &denoiser_state);
 
-    context["g_AI_denoiser_state"]->setUserData(sizeof(denoiser_state), &denoiser_state);
-    m_denoiser["input_buffer"]->set(m_noisy_pixels);
-    m_denoiser["output_buffer"]->set(m_filtered_pixels);
     m_command_list->execute();
 }
 

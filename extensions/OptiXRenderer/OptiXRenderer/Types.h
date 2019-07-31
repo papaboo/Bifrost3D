@@ -11,6 +11,7 @@
 
 #include <OptiXRenderer/Defines.h>
 #include <OptiXRenderer/OctahedralNormal.h>
+#include <OptiXRenderer/PublicTypes.h>
 #include <OptiXRenderer/RNG.h>
 
 #ifndef GPU_DEVICE
@@ -284,15 +285,18 @@ struct __align__(16) SceneStateGPU {
     float ray_epsilon;
 };
 
-} // NS OptiXRenderer
-
 //----------------------------------------------------------------------------
-// AI denoiser data uploaded to the GPU
+// AI denoiser data uploaded to OptiX
 //----------------------------------------------------------------------------
 
 struct __align__(8) AIDenoiserStateGPU {
+    unsigned int flags;
     rtBufferId<optix::float4, 2> noisy_pixels_buffer;
     rtBufferId<optix::float4, 2> denoised_pixels_buffer;
+    rtBufferId<optix::float4, 2> albedo_buffer;
+    rtBufferId<optix::float4, 2> normals_buffer;
 };
+
+} // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_TYPES_H_

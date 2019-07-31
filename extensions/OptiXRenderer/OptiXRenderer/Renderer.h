@@ -9,8 +9,10 @@
 #ifndef _OPTIXRENDERER_RENDERER_H_
 #define _OPTIXRENDERER_RENDERER_H_
 
-#include <Bifrost\Scene\Camera.h>
-#include <Bifrost\Scene\SceneRoot.h>
+#include <OptiXRenderer/PublicTypes.h>
+
+#include <Bifrost/Scene/Camera.h>
+#include <Bifrost/Scene/SceneRoot.h>
 
 // ------------------------------------------------------------------------------------------------
 // Forward declarations.
@@ -24,17 +26,6 @@ typedef Handle<ContextObj> Context;
 }
 
 namespace OptiXRenderer {
-
-// ------------------------------------------------------------------------------------------------
-// Different rendering backends.
-// ------------------------------------------------------------------------------------------------
-enum class Backend {
-    None,
-    PathTracing,
-    AIFilteredPathTracing,
-    AlbedoVisualization,
-    NormalVisualization,
-};
 
 // ------------------------------------------------------------------------------------------------
 // OptiX renderer for rendering with global illumination.
@@ -62,6 +53,9 @@ public:
 
     Backend get_backend(Bifrost::Scene::Cameras::UID camera_ID) const;
     void set_backend(Bifrost::Scene::Cameras::UID camera_ID, Backend backend);
+
+    AIDenoiserFlags get_AI_denoiser_flags() const;
+    void set_AI_denoiser_flags(AIDenoiserFlags flags);
 
     void handle_updates();
 

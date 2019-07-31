@@ -22,6 +22,7 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
     OptiXRenderer/OctahedralNormal.h
     OptiXRenderer/PresampledEnvironmentMap.h
     OptiXRenderer/PresampledEnvironmentMap.cpp
+    OptiXRenderer/PublicTypes.h
     OptiXRenderer/RNG.h
     OptiXRenderer/Renderer.h
     OptiXRenderer/Renderer.cpp

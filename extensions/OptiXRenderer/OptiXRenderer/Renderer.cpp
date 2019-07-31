@@ -207,6 +207,8 @@ struct Renderer::Implementation {
             return false;
     }
 
+    AIDenoiserFlags AI_denoiser_flags = AIDenoiserFlag::Default;
+
     // Per scene state.
     struct {
         optix::Group root;
@@ -297,8 +299,8 @@ struct Renderer::Implementation {
         }
 
         { // AI Denoiser
-            context->setRayGenerationProgram(EntryPoints::AIDenoiserPathTracing, context->createProgramFromPTXFile(rgp_ptx_path, "AI_denoiser::path_tracing_RPG"));
-            context->setRayGenerationProgram(EntryPoints::AIDenoiserCopyOutput, context->createProgramFromPTXFile(rgp_ptx_path, "AI_denoiser::copy_to_output"));
+            context->setRayGenerationProgram(EntryPoints::AIDenoiserPathTracing, context->createProgramFromPTXFile(rgp_ptx_path, "AIDenoiser::path_tracing_RPG"));
+            context->setRayGenerationProgram(EntryPoints::AIDenoiserCopyOutput, context->createProgramFromPTXFile(rgp_ptx_path, "AIDenoiser::copy_to_output"));
         }
 
         { // Albedo visualization setup.
@@ -1080,8 +1082,8 @@ void Renderer::set_backend(Cameras::UID camera_ID, Backend backend) {
     case Backend::PathTracing:
         camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::PathTracing));
         break;
-    case Backend::AIFilteredPathTracing:
-        camera_state.backend_impl = std::unique_ptr<IBackend>(new AIFilteredBackend(m_impl->context, camera_state.screensize.x, camera_state.screensize.y));
+    case Backend::AIDenoisedPathTracing:
+        camera_state.backend_impl = std::unique_ptr<IBackend>(new AIDenoisedBackend(m_impl->context, &m_impl->AI_denoiser_flags, camera_state.screensize.x, camera_state.screensize.y));
         break;
     case Backend::AlbedoVisualization:
         camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Albedo));
@@ -1091,6 +1093,14 @@ void Renderer::set_backend(Cameras::UID camera_ID, Backend backend) {
         break;
     }
     camera_state.accumulations = 0u;
+}
+
+AIDenoiserFlags Renderer::get_AI_denoiser_flags() const {
+    return m_impl->AI_denoiser_flags;
+}
+
+void Renderer::set_AI_denoiser_flags(AIDenoiserFlags flags) {
+    m_impl->AI_denoiser_flags = flags;
 }
 
 void Renderer::handle_updates() {

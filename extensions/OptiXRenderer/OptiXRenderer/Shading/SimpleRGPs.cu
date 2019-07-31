@@ -20,7 +20,7 @@ using namespace optix;
 rtDeclareVariable(uint2, g_launch_index, rtLaunchIndex, );
 
 rtDeclareVariable(CameraStateGPU, g_camera_state, , );
-rtDeclareVariable(AIDenoiserStateGPU, g_AI_denoiser_state, , );
+rtBuffer<Material, 1> g_materials;
 
 // ------------------------------------------------------------------------------------------------
 // Ray generation program utility functions.
@@ -135,21 +135,63 @@ RT_PROGRAM void path_tracing_RPG() {
 
 //-------------------------------------------------------------------------------------------------
 // Denoise ray generation program.
-// TODO Wrap in a namespace
 //-------------------------------------------------------------------------------------------------
-namespace AI_denoiser {
+namespace AIDenoiser {
+
+rtDeclareVariable(AIDenoiserStateGPU, g_AI_denoiser_state, , );
 
 RT_PROGRAM void path_tracing_RPG() {
+    float3 albedo = { 0, 0, 0 };
+    float3 normal;
 
-    accumulate([](MonteCarloPayload payload) -> float3 {
+    accumulate([&](MonteCarloPayload payload) -> float3 {
+        bool properties_accumulated = false;
+        normal = -payload.direction;
         do {
+            float3 last_ray_direction = payload.direction;
             Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
             rtTrace(g_scene_root, ray, payload);
+
+            // Accumulate surface properties of the first non-specular surface hit.
+            if (!properties_accumulated && payload.bsdf_MIS_PDF != 0.0f) {
+                properties_accumulated = true;
+
+                normal = payload.shading_normal;
+
+                using namespace Shading::ShadingModels;
+                const float abs_cos_theta = abs(dot(last_ray_direction, normal));
+                const auto material_parameters = g_materials[payload.material_index];
+                const auto material = DefaultShading(material_parameters, abs_cos_theta, payload.texcoord);
+                albedo = material.rho(abs_cos_theta);
+            }
+
         } while (payload.bounces < g_camera_state.max_bounce_count && !is_black(payload.throughput));
 
         return payload.radiance;
     });
 
+    // Accumulate normals
+    // TODO Transform to camera space and potentialy flip y/z.
+    if (g_AI_denoiser_state.normals_buffer != 0) {
+        auto normals_buffer = g_AI_denoiser_state.normals_buffer;
+        float3 prev_normals = make_float3(normals_buffer[g_launch_index]);
+        const float magnitude = g_camera_state.accumulations ? normals_buffer[g_launch_index].w : 0.0f;
+        prev_normals *= magnitude;
+        float3 accumulated_normals = prev_normals + normal;
+        float new_length = length(accumulated_normals);
+        normals_buffer[g_launch_index] = make_float4(accumulated_normals / new_length, new_length);
+    }
+
+    // Accumulate albedo
+    if (g_AI_denoiser_state.albedo_buffer != 0) {
+        auto albedo_buffer = g_AI_denoiser_state.albedo_buffer;
+        const float3 prev_albedo = make_float3(albedo_buffer[g_launch_index]);
+        const float accumulation_count = g_camera_state.accumulations ? (albedo_buffer[g_launch_index].w + 1.0f) : 1.0f;
+        const float3 accumulated_albedo = lerp(prev_albedo, albedo, 1.0f / accumulation_count);
+        albedo_buffer[g_launch_index] = make_float4(accumulated_albedo, accumulation_count);
+    }
+
+    // Output radiance.
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
     double4 p = g_camera_state.accumulation_buffer[g_launch_index];
     float4 noisy_pixel = make_float4(p.x, p.y, p.z, 1.0f);
@@ -161,11 +203,24 @@ RT_PROGRAM void path_tracing_RPG() {
 }
 
 RT_PROGRAM void copy_to_output() {
-    float4 pixel = g_AI_denoiser_state.denoised_pixels_buffer[g_launch_index];
-    g_camera_state.output_buffer[g_launch_index] = float_to_half(reverse_gamma_correct(pixel));
+    float4 pixel = reverse_gamma_correct(g_AI_denoiser_state.denoised_pixels_buffer[g_launch_index]);
+
+    if (g_AI_denoiser_state.flags & unsigned int(AIDenoiserFlag::VisualizeNoise)) {
+#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
+        double4 p = g_camera_state.accumulation_buffer[g_launch_index];
+        pixel = make_float4(p.x, p.y, p.z, 1.0f);
+#else
+        pixel = g_camera_state.accumulation_buffer[g_launch_index];
+#endif
+    } else if (g_AI_denoiser_state.flags & int(AIDenoiserFlag::VisualizeAlbedo))
+        pixel = g_AI_denoiser_state.albedo_buffer[g_launch_index];
+    else if (g_AI_denoiser_state.flags & int(AIDenoiserFlag::VisualizeNormals))
+        pixel = g_AI_denoiser_state.normals_buffer[g_launch_index] * 0.5f + 0.5f;
+
+    g_camera_state.output_buffer[g_launch_index] = float_to_half(pixel);
 }
 
-} // NS AI_denoiser
+} // NS AIDenoiser
 
 //-------------------------------------------------------------------------------------------------
 // Ray generation program for visualizing normals.
@@ -192,7 +247,6 @@ RT_PROGRAM void normals_RPG() {
 //-------------------------------------------------------------------------------------------------
 // Ray generation program for visualizing estimated and sampled albedo.
 //-------------------------------------------------------------------------------------------------
-rtBuffer<Material, 1> g_materials;
 
 RT_PROGRAM void albedo_RPG() {
 

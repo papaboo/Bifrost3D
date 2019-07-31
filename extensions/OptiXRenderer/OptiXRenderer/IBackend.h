@@ -9,6 +9,8 @@
 #ifndef _OPTIXRENDERER_IBACKEND_H_
 #define _OPTIXRENDERER_IBACKEND_H_
 
+#include <OptiXRenderer/PublicTypes.h>
+
 #include <optixu/optixpp_namespace.h>
 
 namespace OptiXRenderer {
@@ -40,20 +42,22 @@ private:
 };
 
 // ------------------------------------------------------------------------------------------------
-// Simple OptiX renderer backend.
-// Launches the ray generation program and outputs directly to the output buffer.
+// Path tracing filtered using OptiX' AI denoiser.
 // ------------------------------------------------------------------------------------------------
-class AIFilteredBackend : public IBackend {
+class AIDenoisedBackend : public IBackend {
 public:
-    AIFilteredBackend(optix::Context& context, int width, int height);
-    ~AIFilteredBackend() { }
+    AIDenoisedBackend(optix::Context& context, AIDenoiserFlags* flags, int width, int height);
+    ~AIDenoisedBackend() { }
     void resize_backbuffers(int width, int height);
     void render(optix::Context& context, int width, int height);
 private:
+    AIDenoiserFlags* m_flags; // Reference to renderer's denoise flags so we can check when they are changed.
     optix::CommandList m_command_list;
     optix::PostprocessingStage m_denoiser;
     optix::Buffer m_noisy_pixels; // float4 buffer
     optix::Buffer m_filtered_pixels; // float4 buffer
+    optix::Buffer m_albedo; // float4 buffer
+    optix::Buffer m_normals; // float4 buffer
 };
 
 } // NS OptiXRenderer
