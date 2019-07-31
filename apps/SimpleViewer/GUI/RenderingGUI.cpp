@@ -24,8 +24,19 @@ using namespace Bifrost::Assets;
 using namespace Bifrost::Math;
 using namespace Bifrost::Scene;
 
-namespace GUI {
+namespace ImGui {
 
+template <typename E>
+inline bool CheckboxFlags(const char* label, Bifrost::Core::Bitmask<E>* flags, E flags_value) {
+    unsigned int raw_flags = flags->raw();
+    bool result = CheckboxFlags(label, &raw_flags, (unsigned int)flags_value);
+    *flags = Bifrost::Core::Bitmask<E>(raw_flags);
+    return result;
+}
+
+} // NS ImGui
+
+namespace GUI {
 
 struct RenderingGUI::State {
     struct {
@@ -326,15 +337,10 @@ void RenderingGUI::layout_frame() {
             if (m_optix_renderer->get_backend(camera_ID) == OptiXRenderer::Backend::AIDenoisedPathTracing) {
                 ImGui::PoppedTreeNode("AI Denoiser", [&]{
                     using OptiXRenderer::AIDenoiserFlag;
-                    
-                    bool has_AI_changes = false;
+
                     auto AI_flags = m_optix_renderer->get_AI_denoiser_flags();
-
-                    bool use_albedo = AI_flags & AIDenoiserFlag::Albedo;
-                    has_AI_changes |= ImGui::Checkbox("Use albedo", &use_albedo);
-
-                    bool use_normals = AI_flags & AIDenoiserFlag::Normals;
-                    has_AI_changes |= ImGui::Checkbox("Use normals", &use_normals);
+                    bool has_AI_changes = ImGui::CheckboxFlags("Use albedo", &AI_flags, AIDenoiserFlag::Albedo);
+                    has_AI_changes |= ImGui::CheckboxFlags("Use normals", &AI_flags, AIDenoiserFlag::Normals);
 
                     const char* debug_vis_modes[] = { "Denoised image", "Noisy image", "Albedo", "Normals" };
 
@@ -345,6 +351,7 @@ void RenderingGUI::layout_frame() {
                         // Clear visualization modes
                         const OptiXRenderer::AIDenoiserFlags visualization_flags = { AIDenoiserFlag::VisualizeNoise, AIDenoiserFlag::VisualizeAlbedo, AIDenoiserFlag::VisualizeNormals };
                         AI_flags &= ~visualization_flags;
+
                         if (visualization_index == 1)
                             AI_flags |= AIDenoiserFlag::VisualizeNoise;
                         else if (visualization_index == 2)
@@ -355,14 +362,8 @@ void RenderingGUI::layout_frame() {
                         has_AI_changes = true;
                     }
 
-                    if (has_AI_changes) {
-                        const OptiXRenderer::AIDenoiserFlags setup_flags = { AIDenoiserFlag::Albedo, AIDenoiserFlag::Normals };
-                        AI_flags &= ~setup_flags;
-                        AI_flags |= use_albedo ? AIDenoiserFlag::Albedo : AIDenoiserFlag::None;
-                        AI_flags |= use_normals ? AIDenoiserFlag::Normals : AIDenoiserFlag::None;
-
+                    if (has_AI_changes)
                         m_optix_renderer->set_AI_denoiser_flags(AI_flags);
-                    }
                 });
             }
         });
