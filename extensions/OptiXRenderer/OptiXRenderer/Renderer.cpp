@@ -978,10 +978,12 @@ struct Renderer::Implementation {
 
                 camera_state_GPU.inverted_view_projection_matrix = optix::Matrix4x4(inverse_view_projection_matrix.begin());
                 Vector3f cam_pos = Cameras::get_transform(camera_ID).translation;
-                camera_state_GPU.camera_position = make_float4(cam_pos.x, cam_pos.y, cam_pos.z, 0.0f);
+                camera_state_GPU.camera_position = make_float3(cam_pos.x, cam_pos.y, cam_pos.z);
+
+                Matrix3x3f world_to_view_rotation = to_matrix3x3(Cameras::get_view_transform(camera_ID).rotation);
+                camera_state_GPU.world_to_view_rotation = optix::Matrix3x3(world_to_view_rotation.begin());
             }
         }
-
 
         auto& camera_state = per_camera_state[camera_ID];
         if (camera_state.accumulations >= camera_state.max_accumulation_count)

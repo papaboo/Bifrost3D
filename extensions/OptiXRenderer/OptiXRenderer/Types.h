@@ -252,7 +252,8 @@ struct ShadowPayload {
 //----------------------------------------------------------------------------
 
 struct __align__(16) CameraStateGPU {
-    optix::float4  camera_position;
+    optix::Matrix3x3 world_to_view_rotation;
+    optix::float3 camera_position;
     optix::Matrix4x4 inverted_view_projection_matrix;
     unsigned int accumulations;
     unsigned int max_bounce_count;

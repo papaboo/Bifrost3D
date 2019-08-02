@@ -90,7 +90,7 @@ __inline_dev__ void accumulate(Evaluator evaluator) {
 
     MonteCarloPayload payload = initialize_monte_carlo_payload(g_launch_index.x, g_launch_index.y,
         screen_size.x, screen_size.y, accumulation_count,
-        make_float3(camera_state.camera_position), camera_state.inverted_view_projection_matrix);
+        camera_state.camera_position, camera_state.inverted_view_projection_matrix);
 
     float3 radiance = evaluator(payload);
 
@@ -142,27 +142,32 @@ rtDeclareVariable(AIDenoiserStateGPU, g_AI_denoiser_state, , );
 
 RT_PROGRAM void path_tracing_RPG() {
     float3 albedo = { 0, 0, 0 };
-    float3 normal;
+    float3 normal = { 0, 0, 0 };
 
     accumulate([&](MonteCarloPayload payload) -> float3 {
         bool properties_accumulated = false;
-        normal = -payload.direction;
         do {
             float3 last_ray_direction = payload.direction;
             Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
             rtTrace(g_scene_root, ray, payload);
 
+            bool terminate_ray = !(payload.bounces < g_camera_state.max_bounce_count && !is_black(payload.throughput));
+
             // Accumulate surface properties of the first non-specular surface hit.
-            if (!properties_accumulated && payload.bsdf_MIS_PDF != 0.0f) {
+            // If no non-specular hits are found or the BSDF PDF is zero due to a bad sample being drawn, 
+            // then use the last hit to ensure that some feature data is output.
+            if (!properties_accumulated && (payload.bsdf_MIS_PDF != 0.0f || terminate_ray)) {
                 properties_accumulated = true;
 
                 normal = payload.shading_normal;
 
-                using namespace Shading::ShadingModels;
-                const float abs_cos_theta = abs(dot(last_ray_direction, normal));
-                const auto material_parameters = g_materials[payload.material_index];
-                const auto material = DefaultShading(material_parameters, abs_cos_theta, payload.texcoord);
-                albedo = material.rho(abs_cos_theta);
+                if (payload.material_index > 0) {
+                    using namespace Shading::ShadingModels;
+                    const float abs_cos_theta = abs(dot(last_ray_direction, normal));
+                    const auto material_parameters = g_materials[payload.material_index];
+                    const auto material = DefaultShading(material_parameters, abs_cos_theta, payload.texcoord);
+                    albedo = material.rho(abs_cos_theta);
+                }
             }
 
         } while (payload.bounces < g_camera_state.max_bounce_count && !is_black(payload.throughput));
@@ -177,7 +182,12 @@ RT_PROGRAM void path_tracing_RPG() {
         float3 prev_normals = make_float3(normals_buffer[g_launch_index]);
         const float magnitude = g_camera_state.accumulations ? normals_buffer[g_launch_index].w : 0.0f;
         prev_normals *= magnitude;
-        float3 accumulated_normals = prev_normals + normal;
+
+        // OptiX expects a normal in view space with red going from left to right, green as up and blue along the depth, with normals pointing towards the camera as 100% blue.
+        float3 denoiser_normal = g_camera_state.world_to_view_rotation * normal;
+        denoiser_normal.z = -denoiser_normal.z;
+
+        float3 accumulated_normals = prev_normals + denoiser_normal;
         float new_length = length(accumulated_normals);
         normals_buffer[g_launch_index] = make_float4(accumulated_normals / new_length, new_length);
     }
