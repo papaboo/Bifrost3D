@@ -56,8 +56,9 @@ void AIDenoisedBackend::render(optix::Context& context, int width, int height) {
 
     RTsize albedoSize;
     m_albedo->getSize(albedoSize);
-    if (m_flags->is_set(AIDenoiserFlag::Albedo) && albedoSize == 0)
-        m_albedo->setSize(width, height); // TODO Clear in RGP
+    bool reset_albedo_accumulation = m_flags->is_set(AIDenoiserFlag::Albedo) && albedoSize == 0;
+    if (reset_albedo_accumulation)
+        m_albedo->setSize(width, height);
     else if (!m_flags->is_set(AIDenoiserFlag::Albedo) && albedoSize != 0)
         m_albedo->setSize(RTsize(0), RTsize(0));
 
@@ -65,8 +66,9 @@ void AIDenoisedBackend::render(optix::Context& context, int width, int height) {
     m_normals->getSize(normalSize);
     // The normal buffer is only supported as input if albedo is used as well.
     bool use_normal_buffer = m_flags->all_set(AIDenoiserFlag::Albedo, AIDenoiserFlag::Normals);
-    if (use_normal_buffer && normalSize == 0)
-        m_normals->setSize(width, height); // TODO Clear in RGP
+    bool reset_normal_accumulation = use_normal_buffer && normalSize == 0;
+    if (reset_normal_accumulation)
+        m_normals->setSize(width, height);
     else if (!use_normal_buffer && normalSize != 0)
         m_normals->setSize(RTsize(0), RTsize(0));
 
@@ -74,8 +76,12 @@ void AIDenoisedBackend::render(optix::Context& context, int width, int height) {
     denoiser_state.flags = m_flags->raw();
     if (!(denoiser_state.flags & int(AIDenoiserFlag::Albedo)))
         denoiser_state.flags &= ~int(AIDenoiserFlag::VisualizeAlbedo);
-    if (!(denoiser_state.flags & int(AIDenoiserFlag::Normals)))
+    if (!use_normal_buffer)
         denoiser_state.flags &= ~int(AIDenoiserFlag::VisualizeNormals);
+    if (reset_albedo_accumulation)
+        denoiser_state.flags |= AIDenoiserStateGPU::ResetAlbedoAccumulation;
+    if (reset_normal_accumulation)
+        denoiser_state.flags |= AIDenoiserStateGPU::ResetNormalAccumulation;
     denoiser_state.noisy_pixels_buffer = m_noisy_pixels->getId();
     denoiser_state.denoised_pixels_buffer = m_filtered_pixels->getId();
     denoiser_state.albedo_buffer = m_flags->is_set(AIDenoiserFlag::Albedo) ? m_albedo->getId() : 0;
