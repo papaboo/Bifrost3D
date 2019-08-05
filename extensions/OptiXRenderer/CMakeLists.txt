@@ -26,8 +26,6 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
     OptiXRenderer/RNG.h
     OptiXRenderer/Renderer.h
     OptiXRenderer/Renderer.cpp
-    OptiXRenderer/RhoTexture.h
-    OptiXRenderer/RhoTexture.cpp
     OptiXRenderer/SPTD.h
     OptiXRenderer/SPTD.cpp
     OptiXRenderer/TBN.h
