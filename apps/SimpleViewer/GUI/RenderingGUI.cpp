@@ -340,6 +340,7 @@ void RenderingGUI::layout_frame() {
 
                     auto AI_flags = m_optix_renderer->get_AI_denoiser_flags();
                     bool has_AI_changes = ImGui::CheckboxFlags("Gamma correct pixels", &AI_flags, AIDenoiserFlag::GammaCorrect);
+                    has_AI_changes |= ImGui::CheckboxFlags("Logarithmic update", &AI_flags, AIDenoiserFlag::LogarithmicFeedback);
                     has_AI_changes |= ImGui::CheckboxFlags("Use albedo", &AI_flags, AIDenoiserFlag::Albedo);
                     has_AI_changes |= ImGui::CheckboxFlags("Use normals", &AI_flags, AIDenoiserFlag::Normals);
 

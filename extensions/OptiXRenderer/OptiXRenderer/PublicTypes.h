@@ -37,7 +37,7 @@ enum class AIDenoiserFlag : unsigned char {
     VisualizeNoise = 1 << 4,
     VisualizeAlbedo = 1 << 5,
     VisualizeNormals = 1 << 6,
-    Default = GammaCorrect
+    Default = GammaCorrect | LogarithmicFeedback
 };
 typedef Bifrost::Core::Bitmask<AIDenoiserFlag> AIDenoiserFlags;
 

@@ -9,6 +9,8 @@
 #include <OptiXRenderer/IBackend.h>
 #include <OptiXRenderer/Types.h>
 
+#include <Bifrost/Math/Utils.h>
+
 using namespace optix;
 
 namespace OptiXRenderer {
@@ -29,8 +31,8 @@ AIDenoisedBackend::AIDenoisedBackend(optix::Context& context, AIDenoiserFlags* f
     m_denoiser->declareVariable("input_albedo_buffer")->set(m_albedo);
     m_denoiser->declareVariable("input_normal_buffer")->set(m_normals);
 
-    // Initialize dummy command list to store the context. No rendering can be done until resize_backbuffers has been called.
-    m_command_list = nullptr;
+    m_presenting_command_list = nullptr;
+    m_not_presenting_command_list = nullptr;
 
     resize_backbuffers(width, height);
 }
@@ -44,15 +46,20 @@ void AIDenoisedBackend::resize_backbuffers(int width, int height) {
     m_albedo->setSize(width, height);
     m_normals->setSize(width, height);
 
-    // Recreate command list
-    m_command_list = context->createCommandList();
-    m_command_list->appendLaunch(EntryPoints::AIDenoiserPathTracing, width, height);
-    m_command_list->appendPostprocessingStage(m_denoiser, width, height);
-    m_command_list->appendLaunch(EntryPoints::AIDenoiserCopyOutput, width, height);
-    m_command_list->finalize();
+    // Recreate command lists
+    m_presenting_command_list = context->createCommandList();
+    m_presenting_command_list->appendLaunch(EntryPoints::AIDenoiserPathTracing, width, height);
+    m_presenting_command_list->appendPostprocessingStage(m_denoiser, width, height);
+    m_presenting_command_list->appendLaunch(EntryPoints::AIDenoiserCopyOutput, width, height);
+    m_presenting_command_list->finalize();
+
+    m_not_presenting_command_list = context->createCommandList();
+    m_not_presenting_command_list->appendLaunch(EntryPoints::AIDenoiserPathTracing, width, height);
+    m_not_presenting_command_list->appendLaunch(EntryPoints::AIDenoiserCopyOutput, width, height);
+    m_not_presenting_command_list->finalize();
 }
 
-void AIDenoisedBackend::render(optix::Context& context, int width, int height) {
+void AIDenoisedBackend::render(optix::Context& context, int width, int height, int accumulation_count) {
 
     RTsize albedoSize;
     m_albedo->getSize(albedoSize);
@@ -78,9 +85,9 @@ void AIDenoisedBackend::render(optix::Context& context, int width, int height) {
         denoiser_state.flags &= ~int(AIDenoiserFlag::VisualizeAlbedo);
     if (!use_normal_buffer)
         denoiser_state.flags &= ~int(AIDenoiserFlag::VisualizeNormals);
-    if (reset_albedo_accumulation)
+    if (reset_albedo_accumulation || accumulation_count == 0)
         denoiser_state.flags |= AIDenoiserStateGPU::ResetAlbedoAccumulation;
-    if (reset_normal_accumulation)
+    if (reset_normal_accumulation || accumulation_count == 0)
         denoiser_state.flags |= AIDenoiserStateGPU::ResetNormalAccumulation;
     denoiser_state.noisy_pixels_buffer = m_noisy_pixels->getId();
     denoiser_state.denoised_pixels_buffer = m_filtered_pixels->getId();
@@ -88,7 +95,13 @@ void AIDenoisedBackend::render(optix::Context& context, int width, int height) {
     denoiser_state.normals_buffer = use_normal_buffer ? m_normals->getId() : 0;
     context["AIDenoiser::g_AI_denoiser_state"]->setUserData(sizeof(denoiser_state), &denoiser_state);
 
-    m_command_list->execute();
+    // Present a new denoised image every power of two frame or 32'th frame if logarithmic feedback is requested.
+    int frame_number = accumulation_count + 1;
+    bool power_of_two_frame_number = Bifrost::Math::is_power_of_two(frame_number);
+    if (power_of_two_frame_number || (frame_number % 32) == 0 || !m_flags->is_set(AIDenoiserFlag::LogarithmicFeedback))
+        m_presenting_command_list->execute();
+    else
+        m_not_presenting_command_list->execute();
 }
 
 } // NS OptiXRenderer

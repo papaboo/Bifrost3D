@@ -1027,7 +1027,7 @@ struct Renderer::Implementation {
 
         context["g_scene"]->setUserData(sizeof(SceneStateGPU), &scene.GPU_state);
 
-        camera_state.backend_impl->render(context, width, height);
+        camera_state.backend_impl->render(context, width, height, camera_state.accumulations);
         ++camera_state.accumulations;
 
         /*

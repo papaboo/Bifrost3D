@@ -22,7 +22,7 @@ class IBackend {
 public:
     virtual ~IBackend() { };
     virtual void resize_backbuffers(int width, int height) = 0;
-    virtual void render(optix::Context& context, int width, int height) = 0;
+    virtual void render(optix::Context& context, int width, int height, int accumulation_count) = 0;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -34,7 +34,7 @@ public:
     SimpleBackend(int entry_point) : m_entry_point(entry_point) { }
     ~SimpleBackend() { }
     void resize_backbuffers(int width, int height) {}
-    void render(optix::Context& context, int width, int height) {
+    void render(optix::Context& context, int width, int height, int accumulation_count) {
         context->launch(m_entry_point, width, height);
     }
 private:
@@ -49,10 +49,11 @@ public:
     AIDenoisedBackend(optix::Context& context, AIDenoiserFlags* flags, int width, int height);
     ~AIDenoisedBackend() { }
     void resize_backbuffers(int width, int height);
-    void render(optix::Context& context, int width, int height);
+    void render(optix::Context& context, int width, int height, int accumulation_count);
 private:
     AIDenoiserFlags* m_flags; // Reference to renderer's denoise flags so we can check when they are changed.
-    optix::CommandList m_command_list;
+    optix::CommandList m_presenting_command_list;
+    optix::CommandList m_not_presenting_command_list;
     optix::PostprocessingStage m_denoiser;
     optix::Buffer m_noisy_pixels; // float4 buffer
     optix::Buffer m_filtered_pixels; // float4 buffer

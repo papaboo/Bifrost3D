@@ -1,8 +1,5 @@
 BACKLOG:
-* OptiX 6.X and CUDA 10 - Cornell box with shiodomo env map ~18.5fps in 5.1.1 and 15.0fps in 6.0 on P2000
-** AI denoiser
-*** Logarithmic feedback. Only denoise and present every power of two ( / 2 ) frames. After 32 frames update ever 32'th frame.
-** Remove SPTD from OptiX
+* Remove SPTD from OptiXRenderer
 * Fix bilateral filters by not normalizing between passes.
 * CMake: use the native CUDA compilation. https://cmake.org/cmake/help/v3.12/module/FindCUDA.html
 ** https://devblogs.nvidia.com/building-cuda-applications-cmake/

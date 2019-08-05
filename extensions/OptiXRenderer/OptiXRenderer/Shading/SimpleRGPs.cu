@@ -179,7 +179,7 @@ RT_PROGRAM void path_tracing_RPG() {
     if (g_AI_denoiser_state.normals_buffer != 0) {
         auto normals_buffer = g_AI_denoiser_state.normals_buffer;
         float3 prev_normals = make_float3(normals_buffer[g_launch_index]);
-        const bool reset_normals_buffer = g_camera_state.accumulations || (g_AI_denoiser_state.flags & AIDenoiserStateGPU::ResetNormalAccumulation);
+        const bool reset_normals_buffer = g_AI_denoiser_state.flags & AIDenoiserStateGPU::ResetNormalAccumulation;
         const float magnitude = reset_normals_buffer ? normals_buffer[g_launch_index].w : 0.0f;
         prev_normals *= magnitude;
 
@@ -196,7 +196,7 @@ RT_PROGRAM void path_tracing_RPG() {
     if (g_AI_denoiser_state.albedo_buffer != 0) {
         auto albedo_buffer = g_AI_denoiser_state.albedo_buffer;
         const float3 prev_albedo = make_float3(albedo_buffer[g_launch_index]);
-        const bool reset_albedo_buffer = g_camera_state.accumulations || (g_AI_denoiser_state.flags & AIDenoiserStateGPU::ResetAlbedoAccumulation);
+        const bool reset_albedo_buffer = g_AI_denoiser_state.flags & AIDenoiserStateGPU::ResetAlbedoAccumulation;
         const float accumulation_count = reset_albedo_buffer ? (albedo_buffer[g_launch_index].w + 1.0f) : 1.0f;
         const float3 accumulated_albedo = lerp(prev_albedo, albedo, 1.0f / accumulation_count);
         albedo_buffer[g_launch_index] = make_float4(accumulated_albedo, accumulation_count);
