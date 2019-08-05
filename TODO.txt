@@ -1,5 +1,4 @@
 BACKLOG:
-* Remove SPTD from OptiXRenderer
 * Fix bilateral filters by not normalizing between passes.
 * CMake: use the native CUDA compilation. https://cmake.org/cmake/help/v3.12/module/FindCUDA.html
 ** https://devblogs.nvidia.com/building-cuda-applications-cmake/

@@ -22,15 +22,15 @@ namespace BRDF {
 class Lambert {
 public:
 
-    BSDFResponse eval(const float3& wo, const float3& wi, float alpha) const {
+    BSDFResponse eval(float3 wo, float3 wi, float alpha) const {
         if (wo.z <= 0)
             return BSDFResponse::none();
-        
+
         float pdf = wi.z * RECIP_PIf;
         return{ make_float3(pdf, pdf, pdf), pdf };
     }
 
-    float3 sample_direction(const float3& wo, float alpha, float U1, float U2) const {
+    float3 sample_direction(float3 wo, float alpha, float U1, float U2) const {
         float phi = TWO_PIf * U1;
         float r2 = U2;
         float r = sqrt(1.0f - r2);
@@ -38,7 +38,7 @@ public:
         return make_float3(cos(phi) * r, sin(phi) * r, z);
     }
 
-    BSDFSample sample(const float3& wo, float alpha, float U1, float U2) const {
+    BSDFSample sample(float3 wo, float alpha, float U1, float U2) const {
         BSDFSample result;
         result.direction = sample_direction(wo, alpha, U1, U2);
         BSDFResponse response = eval(wo, result.direction, alpha);
@@ -50,7 +50,7 @@ public:
 
 class GGX {
 public:
-    BSDFResponse eval(const float3& wo, const float3& wi, float alpha) const {
+    BSDFResponse eval(float3 wo, float3 wi, float alpha) const {
         if (wo.z <= 0)
             return BSDFResponse::none();
 
@@ -59,7 +59,7 @@ public:
         return f;
     }
 
-    BSDFSample sample(const float3& wo, float alpha, float U1, float U2) const {
+    BSDFSample sample(float3 wo, float alpha, float U1, float U2) const {
         auto brdf_sample = Shading::BSDFs::GGX::sample(alpha, 1, wo, make_float2(U1, U2));
         brdf_sample.weight *= brdf_sample.direction.z; // eval scaled by cos theta
         return brdf_sample;
@@ -69,7 +69,7 @@ public:
 class FastGGX {
 public:
 
-    BSDFResponse eval(const float3& wo, const float3& wi, float alpha) const {
+    BSDFResponse eval(float3 wo, float3 wi, float alpha) const {
         if (wo.z <= 0)
             return BSDFResponse::none();
 
@@ -88,14 +88,14 @@ public:
         return { make_float3(f, f, f), pdf };
     }
 
-    float3 sample_direction(const float3& wo, float alpha, float U1, float U2) const {
+    float3 sample_direction(float3 wo, float alpha, float U1, float U2) const {
         const float phi = TWO_PIf * U1;
         const float r = alpha * sqrtf(U2 / (1.0f - U2));
         const float3 halfway = normalize(make_float3(r * cosf(phi), r * sinf(phi), 1.0f));
         return reflect(-wo, halfway);
     }
 
-    BSDFSample sample(const float3& wo, float alpha, float U1, float U2) const {
+    BSDFSample sample(float3 wo, float alpha, float U1, float U2) const {
         BSDFSample result;
         result.direction = sample_direction(wo, alpha, U1, U2);
         BSDFResponse response = eval(wo, result.direction, alpha);

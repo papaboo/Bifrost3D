@@ -6,19 +6,29 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _OPTIXRENDERER_SPTD_FIT_H_
-#define _OPTIXRENDERER_SPTD_FIT_H_
+#ifndef _FIT_SPTD_H_
+#define _FIT_SPTD_H_
 
 #include <OptiXRenderer/Utils.h>
 
 #include <optixu/optixpp_namespace.h>
 #undef RGB
 
-namespace OptiXRenderer {
 namespace SPTD {
+
 using namespace optix;
 
-__inline_all__ float2 pivot_transform(float2 r, float pivot) {
+struct __align__(16) Cone {
+    float3 direction;
+    float cos_theta;
+
+    inline static Cone make(float3 direction, float cos_theta) {
+        Cone c = { direction, cos_theta };
+        return c;
+    }
+};
+
+inline float2 pivot_transform(float2 r, float pivot) {
     float2 tmp1 = make_float2(r.x - pivot, r.y);
     float2 tmp2 = pivot * r - make_float2(1, 0);
     float x = dot(tmp1, tmp2);
@@ -29,18 +39,19 @@ __inline_all__ float2 pivot_transform(float2 r, float pivot) {
 }
 
 // Equation 2 in SPDT, Dupuy et al. 17.
-__inline_all__ float3 pivot_transform(float3 r, float3 pivot) {
+inline float3 pivot_transform(float3 r, float3 pivot) {
+    using namespace OptiXRenderer;
     float3 numerator = (dot(r, pivot) - 1.0f) * (r - pivot) - cross(r - pivot, cross(r, pivot));
     float denominator = pow2(dot(r, pivot) - 1.0f) + length_squared(cross(r, pivot));
     return numerator / denominator;
 }
 
-__inline_all__ OptiXRenderer::Cone pivot_transform(const Cone& cone, float3 pivot) {
+inline Cone pivot_transform(const Cone& cone, float3 pivot) {
     // extract pivot length and direction
     float pivot_mag = length(pivot);
     // special case: the pivot is at the origin
     if (pivot_mag < 0.001f)
-        return OptiXRenderer::Cone::make(-cone.direction, cone.cos_theta);
+        return Cone::make(-cone.direction, cone.cos_theta);
     float3 pivot_dir = pivot / pivot_mag;
 
     // 2D cap dir
@@ -72,20 +83,20 @@ __inline_all__ OptiXRenderer::Cone pivot_transform(const Cone& cone, float3 pivo
     float s = area > 0.0f ? 1.0f : -1.0f;
     float2 dir_xf = s * normalize(dir1_xf + dir2_xf);
 
-    return OptiXRenderer::Cone::make(dir_xf.x * pivot_dir + dir_xf.y * pivot_ortho_dir,
-        dot(dir_xf, dir1_xf));
+    return Cone::make(dir_xf.x * pivot_dir + dir_xf.y * pivot_ortho_dir,
+                      dot(dir_xf, dir1_xf));
 }
 
 // Map a sphere to the spherical cap at origo.
-__inline_all__ Cone sphere_to_sphere_cap(float3 position, float radius) {
+inline Cone sphere_to_sphere_cap(float3 position, float radius) {
     float sin_theta_sqrd = clamp(radius * radius / dot(position, position), 0.0f, 1.0f);
     return Cone::make(normalize(position), sqrt(1.0f - sin_theta_sqrd));
 }
 
-__inline_all__ float solidangle(const Cone& c) { return TWO_PIf - TWO_PIf * c.cos_theta; }
+inline float solidangle(const Cone& c) { return TWO_PIf - TWO_PIf * c.cos_theta; }
 
 // Based on Oat and Sander's 2007 technique in Ambient aperture lighting.
-__inline_all__ float solidangle_of_union(const Cone& c1, const Cone& c2) {
+inline float solidangle_of_union(const Cone& c1, const Cone& c2) {
     float r1 = acos(c1.cos_theta);
     float r2 = acos(c2.cos_theta);
     float rd = acos(dot(c1.direction, c2.direction));
@@ -106,7 +117,7 @@ __inline_all__ float solidangle_of_union(const Cone& c1, const Cone& c2) {
 
 // The centroid of the intersection of the two cones.
 // See Ambient aperture lighting, 2007, section 3.3.
-__inline_all__ float3 centroid_of_union(const Cone& c1, const Cone& c2) {
+inline float3 centroid_of_union(const Cone& c1, const Cone& c2) {
     float r1 = acos(c1.cos_theta);
     float r2 = acos(c2.cos_theta);
     float d = acos(dot(c1.direction, c2.direction));
@@ -127,7 +138,7 @@ struct  __align__(16) CentroidAndSolidangle {
 
 // Computes the centroid and solidangle of the intersection from the cone with the hemisphere.
 // Assumes that the cone has a maximum angle of 90 degrees (positive cos theta).
-__inline_all__ CentroidAndSolidangle centroid_and_solidangle_on_hemisphere(const Cone& cone) {
+inline CentroidAndSolidangle centroid_and_solidangle_on_hemisphere(const Cone& cone) {
     const Cone hemipshere = { make_float3(0.0f, 0.0f, 1.0f), 0.0f };
 
     float r1 = acos(cone.cos_theta);
@@ -158,7 +169,6 @@ __inline_all__ CentroidAndSolidangle centroid_and_solidangle_on_hemisphere(const
 
 // ------------------------------------------------------------------------------------------------
 // Fitted Spherical pivot.
-// TODO Parameterize by distribution, fx uniform or cosine.
 // ------------------------------------------------------------------------------------------------
 struct Pivot {
 
@@ -170,12 +180,12 @@ struct Pivot {
     float theta;
 
     // pivot position
-    inline optix::float3 position() const { return distance * optix::make_float3(sinf(theta), 0.0f, cosf(theta)); }
+    inline float3 position() const { return distance * make_float3(sinf(theta), 0.0f, cosf(theta)); }
 
-    float eval(optix::float3 wi) const {
-        optix::float3 xi = position();
+    inline float eval(float3 wi) const {
+        float3 xi = position();
         float num = 1.0f - dot(xi, xi);
-        optix::float3 tmp = wi - xi;
+        float3 tmp = wi - xi;
         float den = dot(tmp, tmp);
         float p = num / den;
         float jacobian = p * p;
@@ -183,7 +193,7 @@ struct Pivot {
         return amplitude * pdf;
     }
 
-    optix::float3 sample(const float U1, const float U2) const {
+    inline float3 sample(float U1, float U2) const {
         const float sphere_theta = acosf(-1.0f + 2.0f * U1);
         const float sphere_phi = 2.0f * 3.14159f * U2;
         const optix::float3 sphere_sample = optix::make_float3(sinf(sphere_theta) * cosf(sphere_phi), sinf(sphere_theta) * sinf(sphere_phi), -cosf(sphere_theta));
@@ -191,11 +201,6 @@ struct Pivot {
     }
 };
 
-optix::float4 GGX_fit_lookup(float cos_theta, float ggx_alpha);
-
-optix::TextureSampler GGX_fit_texture(optix::Context& context);
-
 } // NS SPTD
-} // NS OptiXRenderer
 
-#endif // _OPTIXRENDERER_SPTD_FIT_H_
+#endif // _FIT_SPTD_H_

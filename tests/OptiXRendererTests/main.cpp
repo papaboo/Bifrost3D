@@ -18,7 +18,6 @@
 #include <ShadingModels/DefaultShadingTest.h>
 
 #include <MiscTest.h>
-#include <SPTDTest.h>
 
 // NOTE
 // To run a subset of test cases use a filter, e.g '--gtest_filter=*BSDFs*'.

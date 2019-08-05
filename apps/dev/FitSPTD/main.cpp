@@ -4,10 +4,10 @@
 // ------------------------------------------------------------------------------------------------
 
 #include "Brdf.h"
+#include "SPTD.h"
 
 #include <Bifrost/Assets/Image.h>
 #include <Bifrost/Math/NelderMead.h>
-#include <OptiXRenderer/SPTD.h>
 #include <StbImageWriter/StbImageWriter.h>
 
 #include <fstream>
@@ -15,7 +15,7 @@
 #include <sstream>
 #include <string>
 
-using namespace OptiXRenderer::SPTD;
+using namespace SPTD;
 
 // number of samples used to compute the error during fitting
 const int sample_count = 32;
@@ -27,7 +27,7 @@ struct DirectionAndRho {
 
 // compute average vector of the BRDF
 template <typename BRDF>
-DirectionAndRho compute_average_sample(BRDF brdf, const float3& wo, float alpha) {
+DirectionAndRho compute_average_sample(BRDF brdf, float3 wo, float alpha) {
     float3 summed_direction = make_float3(0.0f);
     float norm = 0.0;
 
@@ -52,7 +52,7 @@ DirectionAndRho compute_average_sample(BRDF brdf, const float3& wo, float alpha)
 
 // compute the error between the BRDF and the pivot using Multiple Importance Sampling
 template <typename BRDF>
-float compute_error(const Pivot& pivot, BRDF brdf, const float3& wo, float alpha) {
+float compute_error(Pivot pivot, BRDF brdf, float3 wo, float alpha) {
     double error = 0.0;
     int valid_sample_count = 0;
 
@@ -122,7 +122,7 @@ float compute_error(const Pivot& pivot, BRDF brdf, const float3& wo, float alpha
 template <typename BRDF>
 struct PivotFitter {
 
-    PivotFitter(Pivot& pivot, BRDF brdf, const float3& wo, float alpha)
+    PivotFitter(Pivot& pivot, BRDF brdf, float3 wo, float alpha)
         : pivot(pivot), brdf(brdf), wo(wo), alpha(alpha) { }
 
     void update(float* params) {
@@ -157,7 +157,7 @@ struct PivotFitter {
 
 // Fit using nelder-mead.
 template <typename BRDF>
-void fit(Pivot& pivot, BRDF brdf, const float3& wo, float alpha, float epsilon = 0.05f) {
+void fit(Pivot& pivot, BRDF brdf, float3 wo, float alpha, float epsilon = 0.05f) {
 
     float start_fit[2] = { pivot.distance, pivot.theta };
     float result_fit[2];

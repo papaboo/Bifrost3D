@@ -5,7 +5,6 @@ if (TARGET OptiXRenderer)
   set(SRCS 
     main.cpp
     MiscTest.h
-	SPTDTest.h
     Utils.h
   )
 
