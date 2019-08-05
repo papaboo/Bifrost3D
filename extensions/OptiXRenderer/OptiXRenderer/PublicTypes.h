@@ -1,4 +1,5 @@
 // OptiX renderer public POD types.
+// These types should not depent on any OptiX types so they can safely be exposed.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
@@ -36,7 +37,7 @@ enum class AIDenoiserFlag : unsigned char {
     VisualizeNoise = 1 << 4,
     VisualizeAlbedo = 1 << 5,
     VisualizeNormals = 1 << 6,
-    Default = Albedo | Normals
+    Default = GammaCorrect
 };
 typedef Bifrost::Core::Bitmask<AIDenoiserFlag> AIDenoiserFlags;
 

@@ -210,11 +210,16 @@ RT_PROGRAM void path_tracing_RPG() {
     float4 noisy_pixel = g_camera_state.accumulation_buffer[g_launch_index];
 #endif
 
-    g_AI_denoiser_state.noisy_pixels_buffer[g_launch_index] = gamma_correct(noisy_pixel);
+    if (g_AI_denoiser_state.flags & int(AIDenoiserFlag::GammaCorrect))
+        noisy_pixel = gamma_correct(noisy_pixel);
+    g_AI_denoiser_state.noisy_pixels_buffer[g_launch_index] = noisy_pixel;
 }
 
 RT_PROGRAM void copy_to_output() {
-    float4 pixel = reverse_gamma_correct(g_AI_denoiser_state.denoised_pixels_buffer[g_launch_index]);
+    float4 pixel = g_AI_denoiser_state.denoised_pixels_buffer[g_launch_index];
+
+    if (g_AI_denoiser_state.flags & int(AIDenoiserFlag::GammaCorrect))
+        pixel = reverse_gamma_correct(pixel);
 
     if (g_AI_denoiser_state.flags & unsigned int(AIDenoiserFlag::VisualizeNoise)) {
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
