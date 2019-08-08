@@ -21,9 +21,9 @@ namespace RNG {
 // See https://primes.utm.edu/lists/small/1000.txt for more.
 // ------------------------------------------------------------------------------------------------
 #if GPU_DEVICE
-__constant__ int primes[128] = 
+__constant__ unsigned short primes[128] =
 #else
-static const int primes[128] = 
+static const unsigned short primes[128] = 
 #endif
     { 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 
     31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 
@@ -177,7 +177,7 @@ private:
     }
 
     __inline_all__ float reverse_halton(const int p, int i) const {
-        const int prime = primes[p];
+        const unsigned short prime = primes[p];
         double h = 0.0, f = 1.0 / (double)prime, fct = f;
         while (i > 0) {
             h += reverse(i % prime, prime) * fct;
