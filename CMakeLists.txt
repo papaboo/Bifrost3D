@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 
 set(PROJECT_NAME "Bifrost3D")
-project(${PROJECT_NAME})
+project(${PROJECT_NAME} LANGUAGES CXX)
 
 set(BIFROST_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(BIFROST_EXTENSIONS_DIR "${BIFROST_ROOT_DIR}/extensions")
