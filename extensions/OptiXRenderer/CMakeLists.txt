@@ -66,7 +66,7 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
   include_directories(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
   # TODO cuda_include_directories(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
   # Create custom commands and targets for each file.
-  set(_OPTIONS "-arch sm_30")
+  set(_OPTIONS "--use_fast_math")
   cuda_wrap_srcs(${LIBRARY_NAME} PTX _GENERATED_FILES ${SHADING_SRC} ${SHADING_LIGHTSOURCES_SRC} OPTIONS ${_OPTIONS} )
 
   # Add the library.

@@ -1,7 +1,4 @@
 BACKLOG:
-* Fix bilateral filters by not normalizing between passes.
-* CMake: use the native CUDA compilation. https://cmake.org/cmake/help/v3.12/module/FindCUDA.html
-** https://devblogs.nvidia.com/building-cuda-applications-cmake/
 * Roughness regularization. Perhaps just by clamping roughness along a path and then relax pr iteration.
 ** Base on some (pdf, cos_theta) -> roughness.
 ** Base factor and decay rate as parameters
@@ -19,15 +16,9 @@ BACKLOG:
 * Decima Engine Area lights
 ** https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Shaders/Private/BRDF.ush
 ** https://www.guerrilla-games.com/read/decima-engine-advances-in-lighting-and-aa
-* OptiX (filtering) backends
-** Filter neighbouring light samples before reconstruction - Screen space photon mapping approach with MIS weights / Path filtering.
-*** Output buffers: Material ID, texcoord, position, normal, ray dir, weight, light sample, indirect sample. Define for compressing directions and use half/byte for some values.
-*** Output screen space sample based on path/BSDF PDF.
-**** Perhaps select a vertex if the BSDF PDF is less than 1 / PI or maybe even a bit more. Then vertices are selected roughly proportional to how 'diffuse' they are.
-**** Trace ray footprint by assuming the ray is a cone. Then use Distributions::Cone::CosTheta(float angle) to compute the angle of each new cone after an intersection and use that for the density estimation kernel bandwidth.
-** Pass BSDF and light sample to the path tracing RGP and let it handle accumulated radiance.
 * SDF shadows - check UE4
 ** http://kunzhou.net/2013/fur-rendering-tvcg.pdf
+* Massively parallel path space filtering or QR Factorization (has example code and test data)
 * SSAO
 ** Intensity should be relative to sample distance, not absolute distance intensity.
 *** When hitting the screen space max radius then results should be independent of the world radius. Are they? Test scene with three 'infinite' walls.
@@ -42,6 +33,7 @@ BACKLOG:
 ** http://jcgt.org/published/0003/04/03/paper-lowres.pdf and https://www.youtube.com/watch?v=4nKb9hRYbPA
 ** Or just add a GGX layer on top with an iridescence parameter (red and blue fresnel offset relative to green. [Specularity, iridescence)
 * Normals revisited
+** Taming the Shadow Terminator
 ** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
 ** Bump mapping
