@@ -30,6 +30,7 @@ rtBuffer<Material, 1> g_materials;
 rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(SceneStateGPU, g_scene, , );
 
+#if PMJ_RNG
 const int pmj_period = 9;
 __constant__ float2 pmj_offsets[81] = {
     { 0.93f, 0.43f }, { 0.48f, 0.38f }, { 0.96f, 0.77f }, { 0.22f, 0.02f }, { 0.23f, 0.14f }, { 0.95f, 0.65f }, { 0.67f, 0.07f }, { 0.06f, 0.56f }, { 0.99f, 0.99f },
@@ -42,6 +43,7 @@ __constant__ float2 pmj_offsets[81] = {
     { 0.59f, 0.40f }, { 0.74f, 0.74f }, { 0.02f, 0.22f }, { 0.40f, 0.59f }, { 0.46f, 0.16f }, { 0.01f, 0.11f }, { 0.94f, 0.54f }, { 0.43f, 0.93f }, { 0.00f, 0.00f },
     { 0.49f, 0.49f }, { 0.44f, 0.05f }, { 0.98f, 0.88f }, { 0.79f, 0.20f }, { 0.62f, 0.62f }, { 0.81f, 0.42f }, { 0.38f, 0.48f }, { 0.65f, 0.95f }, { 0.54f, 0.94f },
 };
+#endif
 
 __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, int image_width, int image_height,
     int accumulation_count, optix::float3 camera_position, const optix::Matrix4x4& inverted_view_projection_matrix) {
@@ -50,10 +52,14 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     MonteCarloPayload payload;
     payload.radiance = make_float3(0.0f);
 
+#if LCG_RNG
+    payload.rng_state.seed(__brev(RNG::teschner_hash(x, y) ^ 83492791 ^ accumulation_count));
+#elif PMJ_RNG
+
     RNG::LinearCongruential pmj_offset_rng; pmj_offset_rng.seed(__brev(RNG::teschner_hash(x, y)));
     float2 offset = pmj_offsets[(x % pmj_period) + (y % pmj_period) * pmj_period];
     offset += make_float2(-1 / 18.0f) + pmj_offset_rng.sample2f() / pmj_period;
-    payload.pmj_rng_state = PMJSamplerState::make(accumulation_count, offset.x, offset.y);
+    payload.rng_state = PMJSamplerState::make(accumulation_count, offset.x, offset.y);
 
     /*
     const int period = 5;
@@ -66,6 +72,7 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     float pmj_x_offset = x_stratum * pixel_span + pixel_span * pmj_offset_rng.sample1f();
     payload.pmj_rng_state = PMJSampler::make(accumulation_count, pmj_x_offset, pmj_y_offset);
     */
+#endif
 
     payload.throughput = make_float3(1.0f);
     payload.bounces = 0;

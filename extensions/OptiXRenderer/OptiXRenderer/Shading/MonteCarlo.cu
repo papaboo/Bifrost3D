@@ -45,16 +45,26 @@ rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 rtDeclareVariable(float2, texcoord, attribute texcoord, );
 
 //-----------------------------------------------------------------------------
-// PMJ sampling
+// RNG sampling
 //-----------------------------------------------------------------------------
 
+#if LCG_RNG
+
+__inline_dev__ float sample1f(RNG::LinearCongruential& lcg) { return lcg.sample1f(); }
+__inline_dev__ float2 sample2f(RNG::LinearCongruential& lcg) { return lcg.sample2f(); }
+__inline_dev__ float3 sample3f(RNG::LinearCongruential& lcg) { return lcg.sample3f(); }
+
+#elif PMJ_RNG
+
 __inline_dev__ float sample1f(PMJSamplerState& pmj_sampler) {
-    return pmj_sampler.scramble(g_pmj_samples[pmj_sampler.get_index_1d()].x);
+	return pmj_sampler.scramble(g_pmj_samples[pmj_sampler.get_index_1d()].x);
 }
 __inline_dev__ float2 sample2f(PMJSamplerState& pmj_sampler) {
-    return pmj_sampler.scramble(g_pmj_samples[pmj_sampler.get_index_2d()]);
+	return pmj_sampler.scramble(g_pmj_samples[pmj_sampler.get_index_2d()]);
 }
 __inline_dev__ float3 sample3f(PMJSamplerState& pmj_sampler) { return make_float3(sample2f(pmj_sampler), sample1f(pmj_sampler)); }
+
+#endif
 
 //-----------------------------------------------------------------------------
 // Light sampling.
@@ -92,8 +102,8 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
 // Take multiple light samples and from that set pick one based on the contribution of the light scaled by the material.
 // Basic Resampled importance sampling: http://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=1662&context=etd.
 __inline_dev__ LightSample reestimated_light_samples(const DefaultShading& material, const TBN& world_shading_tbn, int samples) {
-    float3 light_random_number = sample3f(monte_carlo_payload.pmj_rng_state);
-    float keep_light_probability = sample1f(monte_carlo_payload.pmj_rng_state);
+    float3 light_random_number = sample3f(monte_carlo_payload.rng_state);
+    float keep_light_probability = sample1f(monte_carlo_payload.rng_state);
     LightSample light_sample = sample_single_light(material, world_shading_tbn, light_random_number);
 
     for (int s = 1; s < samples; ++s) {
@@ -134,14 +144,16 @@ RT_PROGRAM void closest_hit() {
 
     const Material& material_parameter = g_materials[material_index];
 
+#if PMJ_RNG
     // Reset the dimension on the progressive multijittered sampler state to ignore samples drawn for next event estimation and to reduce the curse of dimensionality's effect on the RNG.
     // This is acceptable as paths made from next event estimation and BSDF sampling are independent from the current intersection and onwards (modulo MIS) 
     // and therefore resetting the dimension won't cause correlation artefacts.
     // Since we spend 4 dimensions pr intersection (coverage(1), bsdf selection(1) and bsdf sampling(2)) the dimensions should be reset to 4 * bounce_count.
-    monte_carlo_payload.pmj_rng_state.set_dimension(4 * monte_carlo_payload.bounces);
+    monte_carlo_payload.rng_state.set_dimension(4 * monte_carlo_payload.bounces);
+#endif
 
     float coverage = DefaultShading::coverage(material_parameter, texcoord);
-    if (sample1f(monte_carlo_payload.pmj_rng_state) > coverage) {
+    if (sample1f(monte_carlo_payload.rng_state) > coverage) {
         monte_carlo_payload.position = ray.direction * (t_hit + g_scene.ray_epsilon) + ray.origin;
         return;
     }
@@ -157,7 +169,7 @@ RT_PROGRAM void closest_hit() {
 
     // Deferred BSDF sampling.
     // The BSDF is sampled before tracing the shadow ray in order to avoid flushing world_shading_tbn and the material to the local stack when tracing the ray.
-    BSDFSample bsdf_sample = material.sample_all(monte_carlo_payload.direction, sample3f(monte_carlo_payload.pmj_rng_state));
+    BSDFSample bsdf_sample = material.sample_all(monte_carlo_payload.direction, sample3f(monte_carlo_payload.rng_state));
     float3 next_payload_direction = bsdf_sample.direction * world_shading_tbn;
     float next_payload_MIS_PDF = bsdf_sample.PDF;
     float3 next_payload_throughput = make_float3(0.0f);

@@ -217,7 +217,11 @@ public:
 
 struct __align__(16) MonteCarloPayload {
     optix::float3 radiance;
-    PMJSamplerState pmj_rng_state;
+#if LCG_RNG
+    RNG::LinearCongruential rng_state;
+#elif PMJ_RNG
+    PMJSamplerState rng_state;
+#endif
     optix::float3 throughput;
     unsigned int bounces;
 
