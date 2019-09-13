@@ -133,7 +133,7 @@ RT_PROGRAM void path_tracing_RPG() {
     accumulate([](MonteCarloPayload payload) -> float3 {
         do {
             Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
-            rtTrace(g_scene_root, ray, payload);
+            rtTrace(g_scene_root, ray, payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_ANYHIT);
         } while (payload.bounces < g_camera_state.max_bounce_count && !is_black(payload.throughput));
 
         return payload.radiance;
@@ -156,7 +156,7 @@ RT_PROGRAM void path_tracing_RPG() {
         do {
             float3 last_ray_direction = payload.direction;
             Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
-            rtTrace(g_scene_root, ray, payload);
+            rtTrace(g_scene_root, ray, payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_ANYHIT);
 
             bool terminate_ray = !(payload.bounces < g_camera_state.max_bounce_count && !is_black(payload.throughput));
 
@@ -256,7 +256,7 @@ RT_PROGRAM void albedo_RPG() {
         do {
             last_ray_direction = payload.direction;
             Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
-            rtTrace(g_scene_root, ray, payload);
+            rtTrace(g_scene_root, ray, payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_ANYHIT);
         } while (payload.material_index == 0 && !is_black(payload.throughput));
 
         size_t2 screen_size = g_camera_state.accumulation_buffer.size();
