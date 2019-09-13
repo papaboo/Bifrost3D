@@ -270,7 +270,11 @@ struct Renderer::Implementation {
 
         context->setRayTypeCount(RayTypes::Count);
         context->setEntryPointCount(EntryPoints::Count);
-        context->setStackSize(0); // Apparently this results in an actual stack size of 128, which is enough to render a textured scene with all bounces.
+        if (enable_RTX) {
+            context->setMaxTraceDepth(0); // Path tracing is iterative instead of recursive, so the trace depth is always 1 ray deep.
+            context->setMaxCallableProgramDepth(0);
+        } else
+            context->setStackSize(1400);
 
         // Per camera state
         per_camera_state.resize(1);
