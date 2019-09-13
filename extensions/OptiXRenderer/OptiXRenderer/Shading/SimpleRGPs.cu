@@ -75,6 +75,7 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
 #endif
 
     payload.throughput = make_float3(1.0f);
+    payload.light_sample = LightSample::none();
     payload.bounces = 0;
     payload.bsdf_MIS_PDF = 0.0f;
     payload.shading_normal = make_float3(0.0f);
@@ -125,16 +126,32 @@ __inline_dev__ void accumulate(Evaluator evaluator) {
     camera_state.output_buffer[g_launch_index] = float_to_half(make_float4(accumulated_radiance, 1.0f));
 }
 
+__inline_dev__ void path_trace_single_bounce(MonteCarloPayload& payload) {
+    Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
+    rtTrace(g_scene_root, ray, payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_ANYHIT);
+
+    // Trace shadow ray for light sample.
+    const LightSample& light_sample = payload.light_sample;
+    if (light_sample.radiance.x > 0 || light_sample.radiance.y > 0 || light_sample.radiance.z > 0) {
+        ShadowPayload shadow_payload = { light_sample.radiance };
+        Ray shadow_ray(payload.position, light_sample.direction_to_light, RayTypes::Shadow, g_scene.ray_epsilon, light_sample.distance - g_scene.ray_epsilon);
+        rtTrace(g_scene_root, shadow_ray, shadow_payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_CLOSESTHIT);
+
+        payload.radiance += shadow_payload.attenuation;
+
+        payload.light_sample = LightSample::none();
+    }
+}
+
 //-------------------------------------------------------------------------------------------------
 // Path tracing ray generation program.
 //-------------------------------------------------------------------------------------------------
 RT_PROGRAM void path_tracing_RPG() {
 
     accumulate([](MonteCarloPayload payload) -> float3 {
-        do {
-            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
-            rtTrace(g_scene_root, ray, payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_ANYHIT);
-        } while (payload.bounces < g_camera_state.max_bounce_count && !is_black(payload.throughput));
+        do
+            path_trace_single_bounce(payload);
+        while (payload.bounces < g_camera_state.max_bounce_count && !is_black(payload.throughput));
 
         return payload.radiance;
     });
@@ -155,8 +172,7 @@ RT_PROGRAM void path_tracing_RPG() {
         bool properties_accumulated = false;
         do {
             float3 last_ray_direction = payload.direction;
-            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
-            rtTrace(g_scene_root, ray, payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_ANYHIT);
+            path_trace_single_bounce(payload);
 
             bool terminate_ray = !(payload.bounces < g_camera_state.max_bounce_count && !is_black(payload.throughput));
 

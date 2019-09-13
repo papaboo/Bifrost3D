@@ -179,15 +179,8 @@ RT_PROGRAM void closest_hit() {
 #if ENABLE_NEXT_EVENT_ESTIMATION
     // Sample a light source.
     if (g_scene.light_count != 0) {
-        const LightSample light_sample = reestimated_light_samples(material, world_shading_tbn, 3);
-
-        if (light_sample.radiance.x > 0.0f || light_sample.radiance.y > 0.0f || light_sample.radiance.z > 0.0f) {
-            ShadowPayload shadow_payload = { light_sample.radiance };
-            Ray shadow_ray(monte_carlo_payload.position, light_sample.direction_to_light, RayTypes::Shadow, g_scene.ray_epsilon, light_sample.distance - g_scene.ray_epsilon);
-            rtTrace(g_scene_root, shadow_ray, shadow_payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_CLOSESTHIT);
-
-            monte_carlo_payload.radiance += monte_carlo_payload.throughput * shadow_payload.attenuation;
-        }
+        monte_carlo_payload.light_sample = reestimated_light_samples(material, world_shading_tbn, 3);
+        monte_carlo_payload.light_sample.radiance *= monte_carlo_payload.throughput;
     }
 #endif // ENABLE_NEXT_EVENT_ESTIMATION
 

@@ -230,6 +230,8 @@ struct __align__(16) MonteCarloPayload {
     optix::float3 direction;
     int __padding0;
 
+    LightSample light_sample;
+
     optix::float3 shading_normal;
     int material_index;
 
