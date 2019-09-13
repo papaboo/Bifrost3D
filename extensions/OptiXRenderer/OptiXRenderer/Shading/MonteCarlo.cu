@@ -179,7 +179,7 @@ RT_PROGRAM void closest_hit() {
 #if ENABLE_NEXT_EVENT_ESTIMATION
     // Sample a light source.
     if (g_scene.light_count != 0) {
-        const LightSample light_sample = reestimated_light_samples(material, world_shading_tbn, 1);
+        const LightSample light_sample = reestimated_light_samples(material, world_shading_tbn, 3);
 
         if (light_sample.radiance.x > 0.0f || light_sample.radiance.y > 0.0f || light_sample.radiance.z > 0.0f) {
             ShadowPayload shadow_payload = { light_sample.radiance };
