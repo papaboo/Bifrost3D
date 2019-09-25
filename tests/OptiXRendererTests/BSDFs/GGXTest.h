@@ -11,6 +11,8 @@
 
 #include <Utils.h>
 
+#include <Bifrost/Assets/Shading/Fittings.h>
+#include <Bifrost/Math/RNG.h>
 #include <Bifrost/Math/Statistics.h>
 #include <Bifrost/Math/Utils.h>
 
@@ -180,6 +182,46 @@ GTEST_TEST(GGX, sampling_variance) {
 
         EXPECT_TRUE(almost_equal_eps(float(vanilla_GGX_mean), float(GGX_VNDF_mean), 0.001f));
         EXPECT_LT(GGX_VNDF_variance, vanilla_GGX_variance);
+    }
+}
+
+GTEST_TEST(GGX, estimate_alpha_from_max_PDF) {
+    using namespace Bifrost;
+    using namespace Bifrost::Assets::Shading::EstimateGGXAlpha;
+    using namespace Shading::BSDFs;
+
+    const int sample_count = 16;
+    const float max_alpha_error = 1.0f / max_PDF_sample_count;
+    Math::Vector2f samples[sample_count];
+    Math::RNG::fill_progressive_multijittered_bluenoise_samples(samples, samples + sample_count, 4);
+
+    for (auto sample : samples) {
+        float cos_theta = sample.x;
+        float max_PDF = decode_PDF(sample.y);
+        float estimated_alpha = estimate_alpha(cos_theta, max_PDF);
+
+        optix::float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+        optix::float3 halfway = { 0, 0, 1 };
+
+        float estimated_PDF = GGX::PDF(estimated_alpha, wo, halfway);
+
+        // Shift alpha towards the correct PDF by the max_alpha_error.
+        // If the estimated PDF is lower than the max PDF, then the alpha needs to be reduced (the peak increased),
+        // otherwise the alpha should be increased (blurrier reflection).
+        float alpha_step_size = max_alpha_error * (estimated_PDF < max_PDF ? -1 : 1);
+        float shifted_alpha = estimated_alpha + alpha_step_size;
+        shifted_alpha = Math::clamp(shifted_alpha, 0.0f, 1.0f);
+        float shifted_PDF = GGX::PDF(shifted_alpha, wo, halfway);
+
+        // Wether the max PDF is found somewhere between the estimated PDF and the shifted PDF,
+        // i.e. the correct alpha is between the estimated alpha and the shifted alpha.
+        bool passed_correct_alpha = (estimated_PDF <= max_PDF && max_PDF <= shifted_PDF) ||
+                                    (shifted_PDF <= max_PDF && max_PDF <= estimated_PDF);
+        // Not all max PDFs are possible when alpha is limited to the range [0, 1]. Discard those invalid samples.
+        bool invalid_max_PDF = (shifted_alpha == 0.0f && shifted_PDF < max_PDF) ||
+                               (shifted_alpha == 1.0f && max_PDF < shifted_PDF);
+
+        EXPECT_TRUE(passed_correct_alpha || invalid_max_PDF);
     }
 }
 
