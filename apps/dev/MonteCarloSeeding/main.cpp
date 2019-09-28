@@ -8,6 +8,7 @@
 
 #include <Bifrost/Math/RNG.h>
 #include <Bifrost/Math/Statistics.h>
+#include <Bifrost/Math/Utils.h>
 
 #include <vector>
 #include <limits.h>

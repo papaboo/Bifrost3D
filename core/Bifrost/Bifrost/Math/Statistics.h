@@ -10,7 +10,6 @@
 #define _BIFROST_MATH_STATISTICS_H_
 
 #include <Bifrost/Core/Defines.h>
-#include <Bifrost/Math/Utils.h>
 
 namespace Bifrost {
 namespace Math {
