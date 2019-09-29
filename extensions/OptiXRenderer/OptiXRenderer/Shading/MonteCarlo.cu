@@ -165,7 +165,9 @@ RT_PROGRAM void closest_hit() {
     // Store intersection point and wo in payload.
     monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
     monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
-    const DefaultShading material = DefaultShading(material_parameter, abs(monte_carlo_payload.direction.z), texcoord);
+    float abs_cos_theta = abs(monte_carlo_payload.direction.z);
+    float pdf_regularization_hint = monte_carlo_payload.bsdf_MIS_PDF;
+    const DefaultShading material = DefaultShading::initialize_with_max_PDF_hint(material_parameter, abs_cos_theta, texcoord, pdf_regularization_hint);
 
     // Deferred BSDF sampling.
     // The BSDF is sampled before tracing the shadow ray in order to avoid flushing world_shading_tbn and the material to the local stack when tracing the ray.

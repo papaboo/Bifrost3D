@@ -14,6 +14,7 @@
 #include <OptiXRenderer/Utils.h>
 
 #if GPU_DEVICE
+rtTextureSampler<float, 2> estimate_GGX_alpha_texture;
 rtTextureSampler<float2, 2> ggx_with_fresnel_rho_texture;
 #else
 #include <Bifrost/Assets/Shading/Fittings.h>
@@ -115,9 +116,7 @@ public:
     }
 
 #if GPU_DEVICE
-    __inline_all__ DefaultShading(const Material& material, float abs_cos_theta, optix::float2 texcoord)
-        : m_roughness(material.roughness) {
-
+    __inline_all__ DefaultShading(const Material& material, float abs_cos_theta, optix::float2 texcoord, float min_roughness = 0.0f) {
         // Metallic
         float metallic = material.metallic;
         if (material.metallic_texture_ID)
@@ -131,9 +130,21 @@ public:
             tint_roughness.w *= optix::rtTex2D<float>(material.roughness_texture_ID, texcoord.x, texcoord.y);
         float3 tint = make_float3(tint_roughness);
         m_roughness = tint_roughness.w;
+        m_roughness = max(m_roughness, min_roughness);
 
         compute_tints(tint, m_roughness, material.specularity, metallic, abs_cos_theta,
                       m_diffuse_tint, m_specularity);
+    }
+
+    __inline_all__ static DefaultShading initialize_with_max_PDF_hint(const Material& material, float abs_cos_theta, optix::float2 texcoord, float max_PDF_hint) {
+        // Regularize the material by using a maximally allowed PDF hint and cos(theta) to estimate a minimally allowed GGX alpha / roughness.
+        float max_PDF = fminf(max_PDF_hint, 1e37f);
+        float2 uv = { max_PDF / (1.0f + max_PDF), abs_cos_theta };
+        uv = uv * 62.0f / 64.0f + 1.0f / 64.0f; // Rescale uv from [0, 1] to [1/64, 63/64]. The image is 32x32 and the center of the pixels correspond to the boundary values of estimate_GGX_alpha(max_PDF, cos_theta).
+        float min_alpha = tex2D(estimate_GGX_alpha_texture, uv.x, uv.y);
+        min_alpha = max_PDF_hint == 0 ? 0.0f : min_alpha; // Set min_alpha to 0.0f if PDF is invalid. (The texture lookup will set it to 1.0f)
+        float min_roughness = BSDFs::GGX::roughness_from_alpha(min_alpha);
+        return DefaultShading(material, abs_cos_theta, texcoord, min_roughness);
     }
 #endif
 

@@ -328,6 +328,37 @@ struct Renderer::Implementation {
             material_parameters->setElementSize(sizeof(OptiXRenderer::Material));
             context["g_materials"]->set(material_parameters);
 
+            { // Upload texture for estimating roughness from cos(theta) and max_PDF
+                using namespace Bifrost::Assets::Shading;
+
+                // Create buffer.
+                int width = EstimateGGXAlpha::cos_theta_sample_count;
+                int height = EstimateGGXAlpha::max_PDF_sample_count;
+                Buffer alpha_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_SHORT, width, height);
+
+                unsigned short* rho_data = static_cast<unsigned short*>(alpha_buffer->map());
+                for (int i = 0; i < width * height; ++i)
+                    rho_data[i] = unsigned short(EstimateGGXAlpha::alphas[i] * 65535 + 0.5f);
+                alpha_buffer->unmap();
+                OPTIX_VALIDATE(alpha_buffer);
+
+                // ... and wrap it in a texture sampler.
+                TextureSampler& rho_texture = context->createTextureSampler();
+                rho_texture->setWrapMode(0, RT_WRAP_CLAMP_TO_EDGE);
+                rho_texture->setWrapMode(1, RT_WRAP_CLAMP_TO_EDGE);
+                rho_texture->setWrapMode(2, RT_WRAP_CLAMP_TO_EDGE);
+                rho_texture->setIndexingMode(RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
+                rho_texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT);
+                rho_texture->setMaxAnisotropy(1.0f);
+                rho_texture->setMipLevelCount(1u);
+                rho_texture->setFilteringModes(RT_FILTER_LINEAR, RT_FILTER_LINEAR, RT_FILTER_NONE);
+                rho_texture->setArraySize(1u);
+                rho_texture->setBuffer(0u, 0u, alpha_buffer);
+                OPTIX_VALIDATE(rho_texture);
+
+                context["estimate_GGX_alpha_texture"]->setTextureSampler(rho_texture);
+            }
+
             { // Upload directional-hemispherical reflectance texture.
                 using namespace Bifrost::Assets::Shading;
 
@@ -1124,24 +1155,15 @@ void Renderer::set_backend(Cameras::UID camera_ID, Backend backend) {
     camera_state.accumulations = 0u;
 }
 
-AIDenoiserFlags Renderer::get_AI_denoiser_flags() const {
-    return m_impl->AI_denoiser_flags;
-}
+AIDenoiserFlags Renderer::get_AI_denoiser_flags() const { return m_impl->AI_denoiser_flags; }
+void Renderer::set_AI_denoiser_flags(AIDenoiserFlags flags) { m_impl->AI_denoiser_flags = flags; }
 
-void Renderer::set_AI_denoiser_flags(AIDenoiserFlags flags) {
-    m_impl->AI_denoiser_flags = flags;
-}
-
-void Renderer::handle_updates() {
-    m_impl->handle_updates();
-}
+void Renderer::handle_updates() { m_impl->handle_updates(); }
 
 unsigned int Renderer::render(Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
     return m_impl->render(camera_ID, buffer, width, height);
 }
 
-optix::Context& Renderer::get_context() {
-    return m_impl->context;
-}
+optix::Context& Renderer::get_context() { return m_impl->context; }
 
 } // NS OptiXRenderer
