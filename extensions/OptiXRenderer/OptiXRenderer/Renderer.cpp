@@ -217,6 +217,7 @@ struct Renderer::Implementation {
 #else
         EnvironmentMap environment;
 #endif
+        PathRegularizationSettings path_regularization;
         SceneStateGPU GPU_state;
     } scene;
 
@@ -403,6 +404,9 @@ struct Renderer::Implementation {
             OPTIX_VALIDATE(scene.root);
 
             scene.GPU_state.ray_epsilon = 0.0001f;
+
+            scene.path_regularization.scale = 1.0f;
+            scene.path_regularization.decay = 1.0f / 6.0f;
 
             { // Light sources
                 lights.sources = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, 1);
@@ -1058,6 +1062,7 @@ struct Renderer::Implementation {
         camera_state_GPU.accumulation_buffer = camera_state.accumulation_buffer->getId();
         camera_state_GPU.accumulations = camera_state.accumulations;
         camera_state_GPU.max_bounce_count = camera_state.max_bounce_count;
+        camera_state_GPU.path_regularization_scale = scene.path_regularization.scale * (1.0f + scene.path_regularization.decay * camera_state_GPU.accumulations);
         context["g_camera_state"]->setUserData(sizeof(camera_state_GPU), &camera_state_GPU);
 
         context["g_scene"]->setUserData(sizeof(SceneStateGPU), &scene.GPU_state);
@@ -1154,6 +1159,9 @@ void Renderer::set_backend(Cameras::UID camera_ID, Backend backend) {
     }
     camera_state.accumulations = 0u;
 }
+
+PathRegularizationSettings Renderer::get_path_regularization_settings() const { return m_impl->scene.path_regularization; }
+void Renderer::set_path_regularization_settings(PathRegularizationSettings settings) { m_impl->scene.path_regularization = settings; }
 
 AIDenoiserFlags Renderer::get_AI_denoiser_flags() const { return m_impl->AI_denoiser_flags; }
 void Renderer::set_AI_denoiser_flags(AIDenoiserFlags flags) { m_impl->AI_denoiser_flags = flags; }

@@ -32,9 +32,6 @@ namespace OptiXRenderer {
 // Future work
 // * Have path tracer stop per bounce, filter and display the result.
 //   Should be good for interactivity and convergence. :)
-// * Clamp fireflies at vertices in a ray path. The current path PDF or 
-//   ray differentials should be able to tell us if a connection with
-//   a high intensity light source is a firefly.
 // * Add a genesis event when rendering the very very very first frame. Can also 
 //   be used if the renderstate 'falls behind' and it's faster to simply reinitialize.
 // ------------------------------------------------------------------------------------------------
@@ -53,6 +50,9 @@ public:
 
     Backend get_backend(Bifrost::Scene::Cameras::UID camera_ID) const;
     void set_backend(Bifrost::Scene::Cameras::UID camera_ID, Backend backend);
+
+    PathRegularizationSettings get_path_regularization_settings() const;
+    void set_path_regularization_settings(PathRegularizationSettings settings);
 
     AIDenoiserFlags get_AI_denoiser_flags() const;
     void set_AI_denoiser_flags(AIDenoiserFlags flags);

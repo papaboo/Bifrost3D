@@ -166,7 +166,7 @@ RT_PROGRAM void closest_hit() {
     monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
     monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
     float abs_cos_theta = abs(monte_carlo_payload.direction.z);
-    float pdf_regularization_hint = monte_carlo_payload.bsdf_MIS_PDF;
+    float pdf_regularization_hint = monte_carlo_payload.bsdf_MIS_PDF * g_camera_state.path_regularization_scale;
     const DefaultShading material = DefaultShading::initialize_with_max_PDF_hint(material_parameter, abs_cos_theta, texcoord, pdf_regularization_hint);
 
     // Deferred BSDF sampling.

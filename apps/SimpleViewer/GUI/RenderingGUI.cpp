@@ -43,6 +43,11 @@ struct RenderingGUI::State {
         Bifrost::Math::CameraEffects::FilmicSettings filmic;
         Bifrost::Math::CameraEffects::Uncharted2Settings uncharted2;
     } tonemapping;
+
+    struct {
+        bool use_path_regularization = true;
+        OptiXRenderer::PathRegularizationSettings path_regularization_settings;
+    } optix;
 };
 
 RenderingGUI::RenderingGUI(DX11Renderer::Compositor* compositor, DX11Renderer::Renderer* dx_renderer, OptiXRenderer::Renderer* optix_renderer)
@@ -333,6 +338,25 @@ void RenderingGUI::layout_frame() {
             float epsilon = m_optix_renderer->get_scene_epsilon(*SceneRoots::get_iterable().begin());
             if (ImGui::InputFloat("Epsilon", &epsilon))
                 m_optix_renderer->set_scene_epsilon(*SceneRoots::get_iterable().begin(), epsilon);
+
+            ImGui::PoppedTreeNode("Path regularization", [&] {
+                if (ImGui::Checkbox("Enable", &m_state->optix.use_path_regularization)) {
+                    if (m_state->optix.use_path_regularization)
+                        m_optix_renderer->set_path_regularization_settings(m_state->optix.path_regularization_settings);
+                    else {
+                        OptiXRenderer::PathRegularizationSettings settings = { 1e37f, 0.0f };
+                        m_optix_renderer->set_path_regularization_settings(settings);
+                    }
+                }
+
+                if (m_state->optix.use_path_regularization) {
+                    auto& path_regularization_settings = m_state->optix.path_regularization_settings;
+                    bool has_changes = ImGui::InputFloat("Scale", &path_regularization_settings.scale);
+                    has_changes |= ImGui::InputFloat("Decay", &path_regularization_settings.decay);
+                    if (has_changes)
+                        m_optix_renderer->set_path_regularization_settings(path_regularization_settings);
+                }
+            });
 
             if (m_optix_renderer->get_backend(camera_ID) == OptiXRenderer::Backend::AIDenoisedPathTracing) {
                 ImGui::PoppedTreeNode("AI Denoiser", [&]{

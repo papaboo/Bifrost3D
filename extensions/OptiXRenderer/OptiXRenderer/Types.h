@@ -259,6 +259,9 @@ struct __align__(16) CameraStateGPU {
     rtBufferId<optix::float4, 2> accumulation_buffer;
 #endif
     rtBufferId<optix::ushort4, 2> output_buffer;
+
+    float path_regularization_scale;
+    optix::float3 _padding;
 };
 
 //----------------------------------------------------------------------------
@@ -274,9 +277,10 @@ struct __align__(16) SceneStateGPU {
 #endif
 
     // -- Aligned to 8'th byte from here --
-
     rtBufferId<Light, 1> light_buffer;
     unsigned int light_count;
+
+    // -- Aligned to 16'th byte from here --
     optix::float3 environment_tint;
     float ray_epsilon;
 };
