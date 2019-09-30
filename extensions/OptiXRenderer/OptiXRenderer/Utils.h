@@ -92,7 +92,6 @@ __inline_all__ bool is_black(optix::float3 color) {
     return color.x <= 0.0f && color.y <= 0.0f && color.z <= 0.0f;
 }
 
-
 __inline_all__ bool is_PDF_valid(float PDF) {
     return PDF > 0.000001f;
 }
@@ -140,16 +139,6 @@ __inline_all__ optix::float3 latlong_texcoord_to_direction(optix::float2 uv) {
     float theta = uv.y * PIf;
     float sin_theta = sinf(theta);
     return -optix::make_float3(sin_theta * cosf(phi), cosf(theta), sin_theta * sinf(phi));
-}
-
-__inline_all__ optix::float4 gamma_correct(optix::float4 color) {
-    const float rcp_gamma = 1.0f / 2.2f;
-    return optix::make_float4(powf(color.x, rcp_gamma), powf(color.y, rcp_gamma), powf(color.z, rcp_gamma), color.w);
-}
-
-__inline_all__ optix::float4 reverse_gamma_correct(optix::float4 color) {
-    const float gamma = 2.2f;
-    return optix::make_float4(powf(color.x, gamma), powf(color.y, gamma), powf(color.z, gamma), color.w);
 }
 
 //-----------------------------------------------------------------------------

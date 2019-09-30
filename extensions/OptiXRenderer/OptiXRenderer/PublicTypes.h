@@ -39,12 +39,11 @@ enum class AIDenoiserFlag : unsigned char {
     None = 0,
     Albedo = 1 << 0,
     Normals = 1 << 1,
-    GammaCorrect = 1 << 2,
-    LogarithmicFeedback = 1 << 3,
+    LogarithmicFeedback = 1 << 2,
     // Mutually exclusive debug flags
-    VisualizeNoise = 1 << 4,
-    VisualizeAlbedo = 1 << 5,
-    VisualizeNormals = 1 << 6,
+    VisualizeNoise = 1 << 3,
+    VisualizeAlbedo = 1 << 4,
+    VisualizeNormals = 1 << 5,
     Default = LogarithmicFeedback
 };
 typedef Bifrost::Core::Bitmask<AIDenoiserFlag> AIDenoiserFlags;
