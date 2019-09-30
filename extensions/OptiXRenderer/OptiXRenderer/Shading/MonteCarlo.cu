@@ -18,7 +18,9 @@ using namespace OptiXRenderer;
 using namespace OptiXRenderer::Shading::ShadingModels;
 
 // System state
+#if PMJ_RNG
 rtBuffer<float2, 1> g_pmj_samples;
+#endif
 
 // Ray parameters.
 rtDeclareVariable(Ray, ray, rtCurrentRay, );
