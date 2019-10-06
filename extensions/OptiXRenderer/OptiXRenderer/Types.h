@@ -240,7 +240,7 @@ struct __align__(16) MonteCarloPayload {
 };
 
 struct ShadowPayload {
-    optix::float3 attenuation;
+    optix::float3 radiance;
 };
 
 //----------------------------------------------------------------------------

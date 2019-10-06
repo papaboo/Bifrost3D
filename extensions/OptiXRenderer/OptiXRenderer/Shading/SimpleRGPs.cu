@@ -137,7 +137,7 @@ __inline_dev__ void path_trace_single_bounce(MonteCarloPayload& payload) {
         Ray shadow_ray(payload.position, light_sample.direction_to_light, RayTypes::Shadow, g_scene.ray_epsilon, light_sample.distance - g_scene.ray_epsilon);
         rtTrace(g_scene_root, shadow_ray, shadow_payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_CLOSESTHIT);
 
-        payload.radiance += shadow_payload.attenuation;
+        payload.radiance += shadow_payload.radiance;
 
         payload.light_sample = LightSample::none();
     }
@@ -302,6 +302,7 @@ RT_PROGRAM void miss() {
 
     monte_carlo_payload.radiance += monte_carlo_payload.throughput * environment_radiance;
     monte_carlo_payload.throughput = make_float3(0.0f);
+    monte_carlo_payload.position = 1e30f * monte_carlo_payload.direction;
     monte_carlo_payload.shading_normal = -ray.direction;
 }
 

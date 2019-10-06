@@ -68,19 +68,16 @@ __inline_all__ float evaluate(float alpha, float specularity, float3 wo, float3 
     return (D * F * G) / (4.0f * wo.z * wi.z);
 }
 
-__inline_all__ float3 evaluate(float alpha, float3 specularity, float3 wo, float3 wi) {
-    float3 halfway = normalize(wo + wi);
+__inline_all__ float3 evaluate(float alpha, float3 specularity, float3 wo, float3 wi, float3 halfway) {
     float G = height_correlated_smith_G(alpha, wo, wi);
     float D = Distributions::GGX_VNDF::D(alpha, halfway);
     float3 F = schlick_fresnel(specularity, dot(wo, halfway));
     return F * (D * G / (4.0f * wo.z * wi.z));
 }
 
-__inline_all__ float3 evaluate(float alpha, float3 specularity, float3 wo, float3 wi, float3 halfway) {
-    float G = height_correlated_smith_G(alpha, wo, wi);
-    float D = Distributions::GGX_VNDF::D(alpha, halfway);
-    float3 F = schlick_fresnel(specularity, dot(wo, halfway));
-    return F * (D * G / (4.0f * wo.z * wi.z));
+__inline_all__ float3 evaluate(float alpha, float3 specularity, float3 wo, float3 wi) {
+    float3 halfway = normalize(wo + wi);
+    return evaluate(alpha, specularity, wo, wi, halfway);
 }
 
 __inline_all__ float PDF(float alpha, float3 wo, float3 halfway) {
@@ -96,17 +93,17 @@ __inline_all__ BSDFResponse evaluate_with_PDF(float alpha, float3 specularity, f
     float lambda_wo = Distributions::GGX_VNDF::lambda(alpha, wo);
     float lambda_wi = Distributions::GGX_VNDF::lambda(alpha, wi);
 
-    float D_over_4 = Distributions::GGX_VNDF::D(alpha, halfway) / 4.0f;
+    float quater_D = 0.25f * Distributions::GGX_VNDF::D(alpha, halfway);
 
     float3 F = schlick_fresnel(specularity, dot(wo, halfway));
 
     float recip_G2 = 1.0f + lambda_wo + lambda_wi; // reciprocal height_correlated_smith_G
-    float3 f = F * (D_over_4 / (recip_G2 * wo.z * wi.z));
+    float3 f = F * (quater_D / (recip_G2 * wo.z * wi.z));
 
     BSDFResponse res;
     res.weight = f;
     float recip_G1 = 1.0f + lambda_wo;
-    res.PDF = D_over_4 / (recip_G1 * wo.z);
+    res.PDF = quater_D / (recip_G1 * wo.z);
     return res;
 }
 

@@ -203,9 +203,11 @@ rtDeclareVariable(ShadowPayload, shadow_payload, rtPayload, );
 
 RT_PROGRAM void shadow_any_hit() {
     float coverage = DefaultShading::coverage(g_materials[material_index], texcoord);
-    shadow_payload.attenuation *= 1.0f - coverage;
-    if (shadow_payload.attenuation.x < 0.0000001f && shadow_payload.attenuation.y < 0.0000001f && shadow_payload.attenuation.z < 0.0000001f)
+    shadow_payload.radiance *= 1.0f - coverage;
+    if (shadow_payload.radiance.x < 0.0000001f && shadow_payload.radiance.y < 0.0000001f && shadow_payload.radiance.z < 0.0000001f) {
+        shadow_payload.radiance = make_float3(0, 0, 0);
         rtTerminateRay();
+    }
 }
 
 //=============================================================================
@@ -223,5 +225,6 @@ RT_PROGRAM void light_closest_hit() {
 
     monte_carlo_payload.radiance += monte_carlo_payload.throughput * light_radiance;
     monte_carlo_payload.throughput = make_float3(0.0f);
+    monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
     monte_carlo_payload.shading_normal = -ray.direction;
 }
