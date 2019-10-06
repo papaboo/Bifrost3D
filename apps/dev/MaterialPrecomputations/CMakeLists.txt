@@ -1,6 +1,6 @@
 if (TARGET OptiXRenderer)
 
-  set(PROJECT_NAME "AlbedoComputation")
+  set(PROJECT_NAME "MaterialPrecomputations")
 
   set(SRCS main.cpp)
 
@@ -27,5 +27,5 @@ if (TARGET OptiXRenderer)
     )
   endif()
 else()
-  message(STATUS "OptiXRenderer not found. Skipping albedo computation development project.")
+  message(STATUS "OptiXRenderer not found. Skipping material precomputation development project.")
 endif()
