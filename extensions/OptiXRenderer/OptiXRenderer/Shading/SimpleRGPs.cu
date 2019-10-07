@@ -126,7 +126,11 @@ __inline_dev__ void accumulate(Evaluator evaluator) {
     camera_state.output_buffer[g_launch_index] = float_to_half(make_float4(accumulated_radiance, 1.0f));
 }
 
+//-------------------------------------------------------------------------------------------------
+// Path tracing ray generation program.
+//-------------------------------------------------------------------------------------------------
 __inline_dev__ void path_trace_single_bounce(MonteCarloPayload& payload) {
+    payload.material_index = 0;
     Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
     rtTrace(g_scene_root, ray, payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_ANYHIT);
 
@@ -143,9 +147,6 @@ __inline_dev__ void path_trace_single_bounce(MonteCarloPayload& payload) {
     }
 }
 
-//-------------------------------------------------------------------------------------------------
-// Path tracing ray generation program.
-//-------------------------------------------------------------------------------------------------
 RT_PROGRAM void path_tracing_RPG() {
 
     accumulate([](MonteCarloPayload payload) -> float3 {
@@ -179,7 +180,8 @@ RT_PROGRAM void path_tracing_RPG() {
             // Accumulate surface properties of the first non-specular surface hit.
             // If no non-specular hits are found or the BSDF PDF is zero due to a bad sample being drawn, 
             // then use the last hit to ensure that some feature data is output.
-            if (!properties_accumulated && (payload.bsdf_MIS_PDF != 0.0f || terminate_ray)) {
+            bool non_zero_normal = payload.shading_normal.x != 0 || payload.shading_normal.y != 0 || payload.shading_normal.z != 0;
+            if (!properties_accumulated && non_zero_normal) {
                 properties_accumulated = true;
 
                 normal = payload.shading_normal;
@@ -190,7 +192,9 @@ RT_PROGRAM void path_tracing_RPG() {
                     const auto material_parameters = g_materials[payload.material_index];
                     const auto material = DefaultShading(material_parameters, abs_cos_theta, payload.texcoord);
                     albedo = material.rho(abs_cos_theta);
-                }
+                } else
+                    // Must have hit a light source. Accumulate it's contribution, but normalize to [0, 1] range otherwise AI denoising blows up.
+                    albedo = payload.radiance / (1 + payload.radiance);
             }
 
         } while (payload.bounces < g_camera_state.max_bounce_count && !is_black(payload.throughput));

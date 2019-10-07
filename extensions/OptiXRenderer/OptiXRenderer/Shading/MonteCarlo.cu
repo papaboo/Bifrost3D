@@ -226,5 +226,5 @@ RT_PROGRAM void light_closest_hit() {
     monte_carlo_payload.radiance += monte_carlo_payload.throughput * light_radiance;
     monte_carlo_payload.throughput = make_float3(0.0f);
     monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
-    monte_carlo_payload.shading_normal = -ray.direction;
+    monte_carlo_payload.shading_normal = normalize(monte_carlo_payload.position - light.position);
 }
