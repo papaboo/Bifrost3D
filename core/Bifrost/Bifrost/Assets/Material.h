@@ -58,6 +58,8 @@ public:
         float roughness;
         float specularity;
         float metallic;
+        float coat;
+        float coat_roughness;
         Textures::UID metallic_texture_ID;
         float coverage;
         Textures::UID coverage_texture_ID;
@@ -80,6 +82,17 @@ public:
             res.specularity = 1.0f;
             res.coverage = 1.0f;
             res.metallic = 1.0f;
+            return res;
+        }
+
+        static Data create_coated_dielectric(Math::RGB tint, float roughness, float specularity, float coat_roughness) {
+            Data res = {};
+            res.tint = tint;
+            res.roughness = roughness;
+            res.specularity = specularity;
+            res.coat = 1.0f;
+            res.coat_roughness = coat_roughness;
+            res.coverage = 1.0f;
             return res;
         }
     };
@@ -121,6 +134,11 @@ public:
     static void set_metallic(Materials::UID material_ID, float metallic);
     static inline Textures::UID get_metallic_texture_ID(Materials::UID material_ID) { return m_materials[material_ID].metallic_texture_ID; }
     static void set_metallic_texture_ID(Materials::UID material_ID, Textures::UID metallic_texture_ID);
+
+    static inline float get_coat(Materials::UID material_ID) { return m_materials[material_ID].coat; }
+    static void set_coat(Materials::UID material_ID, float coat);
+    static inline float get_coat_roughness(Materials::UID material_ID) { return m_materials[material_ID].coat_roughness; }
+    static void set_coat_roughness(Materials::UID material_ID, float coat_roughness);
 
     // Transparency getters and setters.
     static inline float get_coverage(Materials::UID material_ID) { return m_materials[material_ID].coverage; }
@@ -205,6 +223,11 @@ public:
     inline Texture get_metallic_texture() { return Materials::get_metallic_texture_ID(m_ID); }
     inline Textures::UID get_metallic_texture_ID() { return Materials::get_metallic_texture_ID(m_ID); }
     inline void set_metallic_texture(Texture metallic_texture) { Materials::set_metallic_texture_ID(m_ID, metallic_texture.get_ID()); }
+
+    inline float get_coat() { return Materials::get_coat(m_ID); }
+    inline void set_coat(float coat) { Materials::set_coat(m_ID, coat); }
+    inline float get_coat_roughness() { return Materials::get_coat_roughness(m_ID); }
+    inline void set_coat_roughness(float coat_roughness) { Materials::set_coat_roughness(m_ID, coat_roughness); }
 
     inline float get_coverage() { return Materials::get_coverage(m_ID); }
     inline void set_coverage(float coverage) { Materials::set_coverage(m_ID, coverage); }

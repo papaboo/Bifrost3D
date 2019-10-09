@@ -164,6 +164,16 @@ void Materials::set_metallic_texture_ID(Materials::UID material_ID, Textures::UI
     flag_as_updated(material_ID);
 }
 
+void Materials::set_coat(Materials::UID material_ID, float coat) {
+    m_materials[material_ID].coat = coat;
+    flag_as_updated(material_ID);
+}
+
+void Materials::set_coat_roughness(Materials::UID material_ID, float coat_roughness) {
+    m_materials[material_ID].coat_roughness = coat_roughness;
+    flag_as_updated(material_ID);
+}
+
 void Materials::set_coverage(Materials::UID material_ID, float coverage) {
     m_materials[material_ID].coverage = coverage;
     flag_as_updated(material_ID);
