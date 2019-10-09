@@ -148,6 +148,14 @@ void RenderingGUI::layout_frame() {
                 float specularity = material.get_specularity();
                 if (ImGui::SliderFloat("Specularity", &specularity, 0, 1))
                     material.set_specularity(specularity);
+
+                float coat = material.get_coat();
+                if (ImGui::SliderFloat("Coat", &coat, 0, 1))
+                    material.set_coat(coat);
+
+                float coat_roughness = material.get_coat_roughness();
+                if (ImGui::SliderFloat("Coat roughness", &coat_roughness, 0, 1))
+                    material.set_coat_roughness(coat_roughness);
             });
         }
     });
