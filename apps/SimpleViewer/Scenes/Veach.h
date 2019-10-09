@@ -142,8 +142,8 @@ void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sce
 
             float roughness_scale = (block_count - 1 - b) / float(block_count - 1);
             Materials::Data material_data = Materials::Data::create_metal(RGB(0.7f, 0.7f, 0.7f), base_roughness * roughness_scale);
-            Materials::UID material_ID = Materials::create("Block", material_data);
-            SceneNode block_node = SceneNodes::create("Block", block_transform);
+            Materials::UID material_ID = Materials::create("Block" + std::to_string(b), material_data);
+            SceneNode block_node = SceneNodes::create("Block" + std::to_string(b), block_transform);
             MeshModels::create(block_node.get_ID(), block_mesh.get_ID(), material_ID);
             block_node.set_parent(scene.get_root_node());
 

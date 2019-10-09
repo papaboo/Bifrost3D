@@ -40,7 +40,7 @@ public:
             material_data.specularity = lerp(m_material0_data.specularity, m_material1_data.specularity, lerp_t);
             material_data.metallic = lerp(m_material0_data.metallic, m_material1_data.metallic, lerp_t);
             material_data.coverage = lerp(m_material0_data.coverage, m_material1_data.coverage, lerp_t);
-            m_material_IDs[m] = Materials::create("Lerped material", material_data);
+            m_material_IDs[m] = Materials::create("Lerped material " + std::to_string(m), material_data);
         }
     }
 
