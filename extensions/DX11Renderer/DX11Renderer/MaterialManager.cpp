@@ -25,6 +25,8 @@ inline Dx11Material make_dx11material(Material mat) {
     dx11_material.specularity = mat.get_specularity();
     dx11_material.metallic = mat.get_metallic();
     dx11_material.coverage = mat.get_coverage();
+    dx11_material.coat = mat.get_coat();
+    dx11_material.coat_roughness = mat.get_coat_roughness();
     dx11_material.textures_bound = mat.has_tint_texture() ? TextureBound::Tint : TextureBound::None;
     dx11_material.textures_bound |= mat.has_roughness_texture() ? TextureBound::Roughness : TextureBound::None;
     dx11_material.textures_bound |= mat.get_coverage_texture_ID() ? TextureBound::Coverage : TextureBound::None;

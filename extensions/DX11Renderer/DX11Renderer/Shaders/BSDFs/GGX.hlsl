@@ -14,9 +14,8 @@
 namespace BSDFs {
 namespace GGX {
 
-    float alpha_from_roughness(float roughness) {
-        return max(0.00000000001f, roughness * roughness);
-    }
+    float alpha_from_roughness(float roughness) { return max(0.00000000001f, roughness * roughness); }
+    float roughness_from_alpha(float alpha) { return sqrt(alpha); }
 
     // Sampling the GGX Distribution of Visible Normals, equation 1.
     float D(float alpha_x, float alpha_y, float3 halfway) {

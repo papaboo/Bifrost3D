@@ -77,6 +77,9 @@ struct MaterialParams {
     float m_specularity;
     float m_metallic;
     float m_coverage;
+    float m_coat;
+    float m_coat_roughness;
+    float2 __padding;
 
     float coverage(float2 texcoord, Texture2D coverage_tex, SamplerState coverage_sampler) {
         float coverage = m_coverage;
@@ -98,11 +101,8 @@ float non_zero_sign(float v) { return v >= 0.0f ? +1.0f : -1.0f; }
 float2 non_zero_sign(float2 v) { return float2(non_zero_sign(v.x), non_zero_sign(v.y)); }
 
 float pow2(float x) { return x * x; }
-
-float pow5(float x) {
-    float xx = x * x;
-    return xx * xx * x;
-}
+float pow4(float x) { float xx = x * x; return xx * xx; }
+float pow5(float x) { return pow4(x) * x; }
 
 float length_squared(float3 v) { return dot(v, v); }
 

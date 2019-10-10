@@ -64,6 +64,11 @@ struct DefaultShading {
     float m_roughness;
     float3 m_specularity;
     float m_coverage;
+    float m_coat_scale;
+    float m_coat_roughness;
+    float m_coat_rho;
+
+    static const float coat_specularity = 0.04f;
 
     // --------------------------------------------------------------------------------------------
     // Factory function constructing a shading from a constant buffer.
@@ -76,6 +81,12 @@ struct DefaultShading {
         if (material_params.m_textures_bound & TextureBound::Coverage)
             shading.m_coverage *= coverage_tex.Sample(coverage_sampler, texcoord).a;
 
+        // Clear coat with fixed index of refraction of 1.5 / specularity of 0.04, representative of polyurethane and glass.
+        // We skip adding the contribution from additional coat bounces to diffuse, as the coat is mostly meant to be clear and would have little contribution from additional bounces.
+        shading.m_coat_scale = material_params.m_coat;
+        shading.m_coat_roughness = material_params.m_coat_roughness;
+        shading.m_coat_rho = material_params.m_coat * fetch_specular_rho(abs_cos_theta, shading.m_coat_roughness).rho(coat_specularity);
+
         // Tint and roughness
         float4 tint_roughness = { material_params.m_tint, material_params.m_roughness };
         if (material_params.m_textures_bound & TextureBound::Tint_Roughness) {
@@ -85,6 +96,8 @@ struct DefaultShading {
         }
         float3 tint = tint_roughness.rgb;
         shading.m_roughness = tint_roughness.a;
+        float coat_scaled_roughness = BSDFs::GGX::roughness_from_alpha(1.0f - (1.0f - BSDFs::GGX::alpha_from_roughness(shading.m_roughness)) * (1.0f - BSDFs::GGX::alpha_from_roughness(shading.m_coat_roughness)));
+        shading.m_roughness = lerp(shading.m_roughness, coat_scaled_roughness, material_params.m_coat);
 
         // Metallic
         float metallic = material_params.m_metallic;
@@ -121,6 +134,8 @@ struct DefaultShading {
     float roughness() { return m_roughness; }
     float3 diffuse_tint() { return m_diffuse_tint; }
     float3 specularity() { return m_specularity; }
+    float coat_scale() { return m_coat_scale; }
+    float coat_roughness() { return m_coat_roughness; }
 
     // --------------------------------------------------------------------------------------------
     // Evaluations.
@@ -136,27 +151,24 @@ struct DefaultShading {
             wo.z = -wo.z;
         }
 
-        float3 diffuse = m_diffuse_tint * BSDFs::Lambert::evaluate();
+        float3 reflectance = m_diffuse_tint * BSDFs::Lambert::evaluate();
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
-        float3 specular = BSDFs::GGX::evaluate(ggx_alpha, m_specularity, wo, wi);
-        return diffuse + specular;
+        reflectance += BSDFs::GGX::evaluate(ggx_alpha, m_specularity, wo, wi);
+        if (m_coat_scale > 0) {
+            reflectance *= 1 - m_coat_rho;
+            float coat_ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
+            reflectance += m_coat_scale * BSDFs::GGX::evaluate(coat_ggx_alpha, coat_specularity, wo, wi);
+        }
+        return reflectance;
     }
 
-    // Most representativepoint material evaluation, heavily inspired by Real Shading in Unreal Engine 4.
-    // For UE4 reference see the function AreaLightSpecular() in DeferredLightingCommon.usf. (15/1 -2018)
+    // Evaluate the material lit by an area light.
+    // Uses evaluation by most representative point internally.
     float3 evaluate_area_light(LightData light, float3 world_position, float3 wo, float3x3 world_to_shading_TBN, float ambient_visibility) {
 
         // Sphere light in local space
         float3 local_sphere_position = mul(world_to_shading_TBN, light.sphere_position() - world_position);
         float3 light_radiance = light.sphere_power() * rcp(4.0f * PI * dot(local_sphere_position, local_sphere_position));
-
-        // Closest point on sphere to ray. Equation 11 in Real Shading in Unreal Engine 4, 2013.
-        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(roughness());
-        float3 peak_reflection = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo);
-        float3 closest_point_on_ray = dot(local_sphere_position, peak_reflection) * peak_reflection;
-        float3 center_to_ray = closest_point_on_ray - local_sphere_position;
-        float3 most_representative_point = local_sphere_position + center_to_ray * saturate(light.sphere_radius() * reciprocal_length(center_to_ray));
-        float3 wi = normalize(most_representative_point);
 
         // Evaluate Lambert.
         Sphere local_sphere = Sphere::make(local_sphere_position, light.sphere_radius());
@@ -172,32 +184,48 @@ struct DefaultShading {
 
         radiance *= scaled_ambient_visibility;
 
-        { // Evaluate GGX.
-            bool delta_GGX_distribution = ggx_alpha < 0.0005;
-            if (delta_GGX_distribution) {
-                // Check if peak reflection and the most representative point are aligned.
-                float toggle = saturate(100000 * (dot(peak_reflection, wi) - 0.99999));
-                float recip_divisor = rcp(PI * sphere_surface_area(light.sphere_radius()));
-                float3 light_radiance = light.sphere_power() * recip_divisor;
-                radiance += m_specularity * light_radiance * toggle;
-            }
-            else {
-                // Deprecated area light normalization term. Equation 10 and 14 in Real Shading in Unreal Engine 4, 2013. Included for completeness
-                // float adjusted_ggx_alpha = saturate(ggx_alpha + light.sphere_radius() / (3 * length(local_sphere_position)));
-                // float area_light_normalization_term = pow2(ggx_alpha / adjusted_ggx_alpha);
+        radiance += evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, m_specularity, m_roughness, scaled_ambient_visibility);
 
-                // NOTE We could try fitting the constants and try cos_theta VS wo and local_sphere_position VS local_sphere_position.
-                float cos_theta = max(wi.z, 0.0);
-                float sin_theta_squared = pow2(light.sphere_radius()) / dot(most_representative_point, most_representative_point);
-                float a2 = pow2(ggx_alpha);
-                float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta * 3.6 + 0.4));
-                float specular_ambient_visibility = lerp(1, scaled_ambient_visibility, a2);
-
-                radiance += BSDFs::GGX::evaluate(ggx_alpha, m_specularity, wo, wi) * cos_theta * light_radiance * area_light_normalization_term * specular_ambient_visibility;
-            }
+        if (m_coat_scale > 0) {
+            radiance *= (1 - m_coat_rho);
+            radiance += m_coat_scale * evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, coat_specularity, m_coat_roughness, scaled_ambient_visibility);
         }
 
-        return radiance * scaled_ambient_visibility;
+        return radiance;
+    }
+
+    // GGX sphere light evaluation by most representative point, heavily inspired by Real Shading in Unreal Engine 4.
+    // For UE4 reference see the function AreaLightSpecular() in DeferredLightingCommon.usf. (15/1 -2018)
+    float3 evaluate_sphere_light_GGX(LightData light, float3 local_light_position, float3 light_radiance, float3 wo, float3 specularity, float roughness, float ambient_visibility) {
+        // Closest point on sphere to ray. Equation 11 in Real Shading in Unreal Engine 4, 2013.
+        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(roughness);
+        float3 peak_reflection = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo);
+        float3 closest_point_on_ray = dot(local_light_position, peak_reflection) * peak_reflection;
+        float3 center_to_ray = closest_point_on_ray - local_light_position;
+        float3 most_representative_point = local_light_position + center_to_ray * saturate(light.sphere_radius() * reciprocal_length(center_to_ray));
+        float3 wi = normalize(most_representative_point);
+
+        bool delta_GGX_distribution = ggx_alpha < 0.0005;
+        if (delta_GGX_distribution) {
+            // Check if peak reflection and the most representative point are aligned.
+            float toggle = saturate(100000 * (dot(peak_reflection, wi) - 0.99999));
+            float recip_divisor = rcp(PI * sphere_surface_area(light.sphere_radius()));
+            float3 light_radiance = light.sphere_power() * recip_divisor;
+            return specularity * light_radiance * toggle;
+        } else {
+            // Deprecated area light normalization term. Equation 10 and 14 in Real Shading in Unreal Engine 4, 2013. Included for completeness
+            // float adjusted_ggx_alpha = saturate(ggx_alpha + light.sphere_radius() / (3 * length(local_light_position)));
+            // float area_light_normalization_term = pow2(ggx_alpha / adjusted_ggx_alpha);
+
+            // NOTE We could try fitting the constants and try cos_theta VS wo and local_sphere_position VS local_sphere_position.
+            float cos_theta = max(wi.z, 0.0);
+            float sin_theta_squared = pow2(light.sphere_radius()) / dot(most_representative_point, most_representative_point);
+            float a2 = pow2(ggx_alpha);
+            float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta * 3.6 + 0.4));
+            float specular_ambient_visibility = lerp(1, ambient_visibility, a2);
+
+            return BSDFs::GGX::evaluate(ggx_alpha, specularity, wo, wi) * cos_theta * light_radiance * area_light_normalization_term * specular_ambient_visibility;
+        }
     }
 
     // Apply the shading model to the IBL.
@@ -209,18 +237,26 @@ struct DefaultShading {
         environment_tex.GetDimensions(0, width, height, mip_count);
 
         float2 diffuse_tc = direction_to_latlong_texcoord(normal);
-        float3 diffuse = m_diffuse_tint * environment_tex.SampleLevel(environment_sampler, diffuse_tc, mip_count).rgb;
+        float3 radiance = m_diffuse_tint * environment_tex.SampleLevel(environment_sampler, diffuse_tc, mip_count).rgb;
 
-        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
-        float3 wi = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo, normal);
         float abs_cos_theta = abs(dot(wo, normal));
-        float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness);
-        float2 specular_tc = direction_to_latlong_texcoord(wi);
-        float3 specular = specular_rho * environment_tex.SampleLevel(environment_sampler, specular_tc, mip_count * m_roughness).rgb;
 
-        return diffuse + specular;
+        radiance += evaluate_IBL_GGX(wo, normal, abs_cos_theta, m_roughness, m_specularity, mip_count);
+        if (m_coat_scale > 0) {
+            radiance *= (1 - m_coat_rho);
+            radiance += m_coat_scale * evaluate_IBL_GGX(wo, normal, abs_cos_theta, m_coat_roughness, coat_specularity, mip_count);
+        }
+        return radiance;
     }
 
+    // Evaluate GGX lit by an IBL.
+    float3 evaluate_IBL_GGX(float3 wo, float3 normal, float abs_cos_theta, float roughness, float3 specularity, int mip_count) {
+        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(roughness);
+        float3 wi = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo, normal);
+        float3 rho = compute_specular_rho(specularity, abs_cos_theta, roughness);
+        float2 ibl_tc = direction_to_latlong_texcoord(wi);
+        return rho * environment_tex.SampleLevel(environment_sampler, ibl_tc, mip_count * roughness).rgb;
+    }
 };
 
 #endif // _DX11_RENDERER_SHADERS_DEFAULT_SHADING_H_

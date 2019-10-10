@@ -205,6 +205,9 @@ struct Dx11Material {
     float specularity;
     float metallic;
     float coverage;
+    float coat;
+    float coat_roughness;
+    float2 __padding;
 };
 
 struct Dx11MaterialTextures {
