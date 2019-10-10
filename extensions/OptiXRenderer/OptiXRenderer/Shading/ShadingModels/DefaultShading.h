@@ -30,13 +30,19 @@ namespace ShadingModels {
 // The diffuse tint is weighted by contribution, or rho, of the specular term.
 // Future work:
 // * Reintroduce the Helmholtz reciprocity.
-//   Basically the diffuse tint should depend on rho from both wo.z and wi.z. Perhaps average specular rho before mutiplying onto diffuse tint.
+//   Basically the diffuse tint should depend on rho from both wo.z and wi.z. Perhaps average specular rho before multiplying onto diffuse tint.
 // ---------------------------------------------------------------------------
+#define COAT_SPECULARITY 0.04f
+// static const float COAT_SPECULARITY = 0.04f;
+
 class DefaultShading {
 private:
     optix::float3 m_diffuse_tint;
     float m_roughness;
     optix::float3 m_specularity;
+    float m_coat_scale;
+    float m_coat_roughness;
+    float m_coat_rho;
 
     struct PrecomputedSpecularRho { 
         float base, full;
@@ -67,6 +73,12 @@ private:
         return specular_weight / (diffuse_weight + specular_weight);
     }
 
+    __inline_all__ static float compute_coat_probability(optix::float3 base_rho, float coat_rho) {
+        float base_weight = average(base_rho) * (1 - coat_rho);
+        float coat_weight = coat_rho;
+        return coat_weight / (base_weight + coat_weight);
+    }
+
     // Computes the specularity of the specular microfacet and the tint of the diffuse reflection.
     // * The specularity is a linear interpolation of the dielectric specularity and the conductor/metal specularity.
     //   The dielectric specularity is found by multiplying the materials specularity by 0.08, as is described on page 8 of Physically-Based Shading at Disney.
@@ -76,13 +88,17 @@ private:
     //   The light scattered from the 2nd, 3rd and so on scattering event is assumed to be diffuse and its rho/tint is energy_lost * specularity.
     // * The dielectric diffuse tint is computed as tint * (1 - specular_rho) and the metallic diffuse tint is black. 
     //   The diffuse tint of the materials is found by a linear interpolation of the two based on metallicness.
-    // * The metallic parameter defines an interpolation between a dielectric material and a conductor material. 
-    //   As both materials are described as an independent combination of diffuse and microfacet BRDFs, 
+    // * The metallic parameter defines an interpolation between a dielectric material and a conductive material. 
+    //   As both materials are described as an independent linear combination of diffuse and microfacet BRDFs, 
     //   the interpolation between the materials can be computed by simply interpolating the material parameters, 
     //   ie. lerp(evaluate(dielectric, ...), evaluate(conductor, ...), metallic) can be expressed as evaluate(lerp(dielectric, conductor, metallic), ...)
-    __inline_all__ static void compute_tints(optix::float3 tint, float roughness, float specularity, float metallic, float abs_cos_theta,
-                                             optix::float3& diffuse_tint, optix::float3& base_specularity) {
+    __inline_all__ static void compute_tints(optix::float3 tint, float roughness, float specularity, float metallic, float coat, float coat_roughness, float abs_cos_theta,
+                                             optix::float3& diffuse_tint, optix::float3& base_specularity, float& coat_rho) {
         using namespace optix;
+
+        // Clear coat with fixed index of refraction of 1.5 / specularity of 0.04, representative of polyurethane and glass.
+        // We skip adding the contribution from additional coat bounces to diffuse, as the coat is mostly meant to be clear and would have little contribution from additional bounces.
+        coat_rho = coat * fetch_specular_rho(abs_cos_theta, coat_roughness).rho(COAT_SPECULARITY);
 
         // Specularity
         float dielectric_specularity = specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.
@@ -110,30 +126,38 @@ private:
 public:
 
     __inline_all__ DefaultShading(const Material& material, float abs_cos_theta)
-        : m_roughness(material.roughness) { 
-        compute_tints(material.tint, m_roughness, material.specularity, material.metallic, abs_cos_theta,
-                      m_diffuse_tint, m_specularity);
+        : m_roughness(material.roughness), m_coat_scale(material.coat), m_coat_roughness(material.coat_roughness) {
+        compute_tints(material.tint, m_roughness, material.specularity, material.metallic, m_coat_scale, m_coat_roughness, abs_cos_theta,
+                      m_diffuse_tint, m_specularity, m_coat_rho);
     }
 
 #if GPU_DEVICE
     __inline_all__ DefaultShading(const Material& material, float abs_cos_theta, optix::float2 texcoord, float min_roughness = 0.0f) {
+        using namespace optix;
+
+        // Coat
+        m_coat_scale = material.coat;
+        m_coat_roughness = material.coat_roughness;
+
         // Metallic
         float metallic = material.metallic;
         if (material.metallic_texture_ID)
-            metallic *= optix::rtTex2D<float>(material.metallic_texture_ID, texcoord.x, texcoord.y);
+            metallic *= rtTex2D<float>(material.metallic_texture_ID, texcoord.x, texcoord.y);
 
         // Tint and roughness
         float4 tint_roughness = make_float4(material.tint, material.roughness);
         if (material.tint_roughness_texture_ID)
-            tint_roughness *= optix::rtTex2D<optix::float4>(material.tint_roughness_texture_ID, texcoord.x, texcoord.y);
+            tint_roughness *= rtTex2D<float4>(material.tint_roughness_texture_ID, texcoord.x, texcoord.y);
         else if (material.roughness_texture_ID)
-            tint_roughness.w *= optix::rtTex2D<float>(material.roughness_texture_ID, texcoord.x, texcoord.y);
+            tint_roughness.w *= rtTex2D<float>(material.roughness_texture_ID, texcoord.x, texcoord.y);
         float3 tint = make_float3(tint_roughness);
         m_roughness = tint_roughness.w;
         m_roughness = max(m_roughness, min_roughness);
+        float coat_scaled_roughness = BSDFs::GGX::roughness_from_alpha(1.0f - (1.0f - BSDFs::GGX::alpha_from_roughness(m_roughness)) * (1.0f - BSDFs::GGX::alpha_from_roughness(m_coat_roughness)));
+        m_roughness = lerp(m_roughness, coat_scaled_roughness, m_coat_scale);
 
-        compute_tints(tint, m_roughness, material.specularity, metallic, abs_cos_theta,
-                      m_diffuse_tint, m_specularity);
+        compute_tints(tint, m_roughness, material.specularity, metallic, m_coat_scale, m_coat_roughness, abs_cos_theta,
+                      m_diffuse_tint, m_specularity, m_coat_rho);
     }
 
     __inline_all__ static DefaultShading initialize_with_max_PDF_hint(const Material& material, float abs_cos_theta, optix::float2 texcoord, float max_PDF_hint) {
@@ -170,10 +194,19 @@ public:
             wo.z = -wo.z;
         }
 
+        optix::float3 reflectance = BSDFs::Lambert::evaluate(m_diffuse_tint, wo, wi);
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
-        optix::float3 specular = BSDFs::GGX::evaluate(ggx_alpha, m_specularity, wo, wi);
-        optix::float3 diffuse = BSDFs::Lambert::evaluate(m_diffuse_tint, wo, wi);
-        return diffuse + specular;
+        reflectance += BSDFs::GGX::evaluate(ggx_alpha, m_specularity, wo, wi);
+
+        if (m_coat_scale > 0)
+        {
+            reflectance *= (1 - m_coat_rho);
+            float coat_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
+            float coat_f = m_coat_scale * BSDFs::GGX::evaluate(coat_alpha, COAT_SPECULARITY, wo, wi);
+            reflectance += make_float3(coat_f, coat_f, coat_f);
+        }
+
+        return reflectance;
     }
 
     __inline_all__ float PDF(optix::float3 wo, optix::float3 wi) const {
@@ -183,11 +216,20 @@ public:
         optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness);
         float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
 
-        // Merge PDFs based on the specular probability.
+        // Merge base PDFs based on the specular probability.
         float diffuse_PDF = BSDFs::Lambert::PDF(wo, wi);
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
         float specular_PDF = BSDFs::GGX::PDF(ggx_alpha, wo, normalize(wo + wi));
-        return lerp(diffuse_PDF, specular_PDF, specular_probability);
+        float PDF = lerp(diffuse_PDF, specular_PDF, specular_probability);
+        
+        if (m_coat_scale > 0) {
+            float coat_probability = compute_coat_probability(m_diffuse_tint + specular_rho, m_coat_rho);
+            float coat_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
+            float coat_PDF = BSDFs::GGX::PDF(coat_alpha, wo, normalize(wo + wi));
+            PDF = lerp(PDF, coat_PDF, coat_probability);
+        }
+        
+        return PDF;
     }
 
     __inline_all__ BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
@@ -215,6 +257,16 @@ public:
         const float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
         res.PDF = lerp(diffuse_eval.PDF, specular_eval.PDF, specular_probability);
 
+        if (m_coat_scale > 0) {
+            res.weight *= (1 - m_coat_rho);
+
+            float coat_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
+            float coat_probability = compute_coat_probability(m_diffuse_tint + specular_rho, m_coat_rho); 
+            BSDFResponse coat_eval = BSDFs::GGX::evaluate_with_PDF(coat_alpha, COAT_SPECULARITY, wo, wi);
+            res.weight += m_coat_scale * coat_eval.weight;
+            res.PDF = lerp(res.PDF, coat_eval.PDF, coat_probability);
+        }
+
         return res;
     }
 
@@ -225,9 +277,23 @@ public:
         float abs_cos_theta = abs(wo.z);
         optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness);
         float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
-        bool sample_specular = random_sample.z < specular_probability;
+
+        float coat_probability = compute_coat_probability(m_diffuse_tint + specular_rho, m_coat_rho);
+        if (coat_probability > 0) {
+            bool sample_coat = random_sample.z < coat_probability;
+            if (sample_coat) {
+                float coat_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
+                BSDFSample coat_sample = BSDFs::GGX::sample(coat_alpha, COAT_SPECULARITY, wo, make_float2(random_sample));
+                coat_sample.PDF *= coat_probability;
+                return coat_sample;
+            }
+
+            // Rescale the random BSDF selection sample.
+            random_sample.z = (random_sample.z - coat_probability) / (1 - coat_probability);
+        }
 
         // Sample selected BRDF.
+        bool sample_specular = random_sample.z < specular_probability;
         BSDFSample bsdf_sample;
         if (sample_specular) {
             float alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
@@ -235,7 +301,13 @@ public:
             bsdf_sample.PDF *= specular_probability;
         } else {
             bsdf_sample = BSDFs::Lambert::sample(m_diffuse_tint, make_float2(random_sample));
-            bsdf_sample.PDF *= (1.0f - specular_probability);
+            bsdf_sample.PDF *= (1 - specular_probability);
+        }
+
+        // Scale diffuse and specular sample by coat contribution if coat is active.
+        if (m_coat_scale > 0) {
+            bsdf_sample.weight *= (1 - m_coat_rho);
+            bsdf_sample.PDF *= (1 - coat_probability);
         }
 
         return bsdf_sample;
@@ -248,31 +320,54 @@ public:
         float abs_cos_theta = abs(wo.z);
         optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness);
         float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
-        bool sample_specular = random_sample.z < specular_probability;
+        float coat_probability = compute_coat_probability(m_diffuse_tint + specular_rho, m_coat_rho);
 
-        const float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
+        // Pick a BRDF
+        bool sample_coat = random_sample.z < coat_probability;
+        bool sample_specular = !sample_coat && (random_sample.z - coat_probability) / (1 - coat_probability) < specular_probability;
+        bool sample_diffuse = !sample_coat && !sample_specular;
+
+        const float coat_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
+        const float specular_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
 
         // Sample selected BRDF.
         BSDFSample bsdf_sample;
-        if (sample_specular) {
-            bsdf_sample = BSDFs::GGX::sample(ggx_alpha, m_specularity, wo, make_float2(random_sample));
-            bsdf_sample.PDF *= specular_probability;
-        } else {
+        if (sample_diffuse) {
             bsdf_sample = BSDFs::Lambert::sample(m_diffuse_tint, make_float2(random_sample));
-            bsdf_sample.PDF *= (1.0f - specular_probability);
+            bsdf_sample.weight *= (1 - m_coat_rho);
+            bsdf_sample.PDF *= (1 - coat_probability) * (1 - specular_probability);
+        } else if (sample_specular) {
+            bsdf_sample = BSDFs::GGX::sample(specular_alpha, m_specularity, wo, make_float2(random_sample));
+            bsdf_sample.weight *= (1 - m_coat_rho);
+            bsdf_sample.PDF *= (1 - coat_probability) * specular_probability;
+        } else {
+            bsdf_sample = BSDFs::GGX::sample(coat_alpha, COAT_SPECULARITY, wo, make_float2(random_sample));
+            bsdf_sample.weight *= m_coat_scale;
+            bsdf_sample.PDF *= coat_probability;
         }
 
-        // Apply fresnel and compute contribution of the rest of the material.
-        if (sample_specular) {
+        // Break if an invalid sample is produced.
+        if (!is_PDF_valid(bsdf_sample.PDF))
+            return bsdf_sample;
+
+        // Apply fresnel and compute contribution of the material components not sampled.
+        if (!sample_diffuse) {
             // Evaluate diffuse layer as well.
             BSDFResponse diffuse_response = BSDFs::Lambert::evaluate_with_PDF(m_diffuse_tint, wo, bsdf_sample.direction);
-            bsdf_sample.weight += diffuse_response.weight;
-            bsdf_sample.PDF += (1.0f - specular_probability) * diffuse_response.PDF;
-        } else {
+            bsdf_sample.weight += diffuse_response.weight * (1 - m_coat_rho);
+            bsdf_sample.PDF += (1 - coat_probability) * (1 - specular_probability) * diffuse_response.PDF;
+        }
+        if (!sample_specular) {
             // Evaluate specular layer as well.
-            BSDFResponse glossy_response = BSDFs::GGX::evaluate_with_PDF(ggx_alpha, m_specularity, wo, bsdf_sample.direction);
-            bsdf_sample.weight += glossy_response.weight;
-            bsdf_sample.PDF += specular_probability * glossy_response.PDF;
+            BSDFResponse specular_response = BSDFs::GGX::evaluate_with_PDF(specular_alpha, m_specularity, wo, bsdf_sample.direction);
+            bsdf_sample.weight += specular_response.weight * (1 - m_coat_rho);
+            bsdf_sample.PDF += (1 - coat_probability) * specular_probability * specular_response.PDF;
+        }
+        if (!sample_coat && m_coat_scale > 0) {
+            // Evaluate coat layer as well.
+            BSDFResponse coat_response = BSDFs::GGX::evaluate_with_PDF(coat_alpha, COAT_SPECULARITY, wo, bsdf_sample.direction);
+            bsdf_sample.weight += m_coat_scale * coat_response.weight;
+            bsdf_sample.PDF += coat_probability * coat_response.PDF;
         }
 
         return bsdf_sample;
@@ -281,7 +376,7 @@ public:
     // Estimate the directional-hemispherical reflectance function.
     __inline_dev__ optix::float3 rho(float abs_cos_theta) const {
         optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness);
-        return m_diffuse_tint + specular_rho;
+        return (m_diffuse_tint + specular_rho) * (1 - m_coat_rho) + m_coat_rho;
     }
 };
 

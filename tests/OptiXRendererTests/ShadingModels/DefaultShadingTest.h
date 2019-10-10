@@ -39,6 +39,13 @@ Material plastic_parameters() {
     return plastic_params;
 }
 
+Material coated_plastic_parameters() {
+    Material plastic_params = plastic_parameters();
+    plastic_params.coat = 1.0f;
+    plastic_params.coat_roughness = plastic_params.roughness;
+    return plastic_params;
+}
+
 GTEST_TEST(DefaultShadingModel, power_conservation) {
     using namespace Shading::ShadingModels;
     using namespace optix;
@@ -123,30 +130,38 @@ GTEST_TEST(DefaultShadingModel, consistent_PDF) {
     // This test can only be performed with rough materials, as the PDF of smooth materials 
     // is highly sensitive to floating point precision.
     default_shading_model_consistent_PDF_test(plastic_parameters());
+    default_shading_model_consistent_PDF_test(coated_plastic_parameters());
 }
 
 GTEST_TEST(DefaultShadingModel, evaluate_with_PDF) {
     using namespace optix;
     using namespace Shading::ShadingModels;
 
-    const unsigned int MAX_SAMPLES = 128u;
-    const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
-    Material plastic_params = plastic_parameters();
 
-    for (float roughness : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
-        plastic_params.roughness = roughness;
-        auto plastic_material = DefaultShading(plastic_params, wo.z);
-        for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
-            float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
-            BSDFSample sample = plastic_material.sample_all(wo, rng_sample);
+    static auto evaluate_with_PDF_test = [](Material& material_params) {
+        const unsigned int MAX_SAMPLES = 128u;
+        const float3 wo = normalize(make_float3(1.0f, 1.0f, 1.0f));
 
-            if (is_PDF_valid(sample.PDF)) {
-                BSDFResponse response = plastic_material.evaluate_with_PDF(wo, sample.direction);
-                EXPECT_COLOR_EQ_EPS(plastic_material.evaluate(wo, sample.direction), response.weight, make_float3(0.000001f));
-                EXPECT_FLOAT_EQ(plastic_material.PDF(wo, sample.direction), response.PDF);
+        for (float roughness : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
+            material_params.roughness = roughness;
+            auto material = DefaultShading(material_params, wo.z);
+            for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
+                float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
+                BSDFSample sample = material.sample_all(wo, rng_sample);
+
+                if (is_PDF_valid(sample.PDF)) {
+                    BSDFResponse response = material.evaluate_with_PDF(wo, sample.direction);
+                    EXPECT_COLOR_EQ_PCT(material.evaluate(wo, sample.direction), response.weight, make_float3(0.00002f));
+                    EXPECT_FLOAT_EQ(material.PDF(wo, sample.direction), response.PDF);
+                }
             }
+
         }
-    }
+    };
+
+    evaluate_with_PDF_test(gold_parameters());
+    evaluate_with_PDF_test(plastic_parameters());
+    evaluate_with_PDF_test(coated_plastic_parameters());
 }
 
 GTEST_TEST(DefaultShadingModel, Fresnel) {
@@ -210,20 +225,21 @@ GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation
     using namespace optix;
 
     // Test albedo is properly estimated.
-
-    static auto test_albedo = [](float3 wo, float roughness, float metallic) {
-        Material material_params;
+    static auto test_albedo = [](float3 wo, float roughness, float metallic, float coat = 0.0f, float coat_roughness = 0.0f) {
+        Material material_params = {};
         material_params.tint = make_float3(1.0f, 1.0f, 1.0f);
         material_params.roughness = roughness;
         material_params.metallic = metallic;
         material_params.specularity = 0.5f;
+        material_params.coat = coat;
+        material_params.coat_roughness = coat_roughness;
         auto material = DefaultShading(material_params, wo.z);
 
-        const unsigned int MAX_SAMPLES = 2048 * 8;
+        const unsigned int MAX_SAMPLES = 2048;
         double* ws = new double[MAX_SAMPLES];
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
-            BSDFSample sample = material.sample_one(wo, rng_sample);
+            BSDFSample sample = material.sample_all(wo, rng_sample);
             if (is_PDF_valid(sample.PDF))
                 ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
             else
@@ -232,27 +248,22 @@ GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation
 
         double sample_mean = Bifrost::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / double(MAX_SAMPLES);
         float rho = material.rho(wo.z).x;
-        // EXPECT_FLOAT_EQ(float(sample_mean), rho);
-        EXPECT_TRUE(rho * 0.985 < sample_mean && sample_mean < rho * 1.015f);
+
+        // The error is slightly higher for low roughness materials.
+        float error_percentage = 0.015f * (2 - roughness) * (2 - coat_roughness);
+        EXPECT_FLOAT_EQ_PCT(float(sample_mean), rho, error_percentage) << "Material params: roughness: " << roughness << ", metallic: " << metallic << ", coat: " << coat << ", coat roughness: " << coat_roughness;
     };
 
     const float3 incident_wo = make_float3(0.0f, 0.0f, 1.0f);
-    test_albedo(incident_wo, 0.25f, 0.25f);
-    test_albedo(incident_wo, 0.25f, 0.75f);
-    test_albedo(incident_wo, 0.75f, 0.25f);
-    test_albedo(incident_wo, 0.75f, 0.75f);
-
     const float3 average_wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
-    test_albedo(average_wo, 0.25f, 0.25f);
-    test_albedo(average_wo, 0.25f, 0.75f);
-    test_albedo(average_wo, 0.75f, 0.25f);
-    test_albedo(average_wo, 0.75f, 0.75f);
-
     const float3 grazing_wo = normalize(make_float3(1.0f, 0.0f, 0.01f));
-    test_albedo(incident_wo, 0.25f, 0.25f);
-    test_albedo(grazing_wo, 0.25f, 0.75f);
-    test_albedo(grazing_wo, 0.75f, 0.25f);
-    test_albedo(grazing_wo, 0.75f, 0.75f);
+
+    for (auto wo : { incident_wo, average_wo, grazing_wo })
+        for (float roughness : { 0.25f, 0.75f })
+            for (float metallic : { 0.0f, 0.5f, 1.0f })
+                for (float coat : { 0.0f, 0.5f, 1.0f })
+                    for (float coat_roughness : { 0.25f, 0.75f })
+                        test_albedo(wo, roughness, metallic, coat, coat_roughness);
 }
 
 GTEST_TEST(DefaultShadingModel, white_hot_room) {
@@ -282,7 +293,6 @@ GTEST_TEST(DefaultShadingModel, metallic_interpolation) {
     using namespace Shading::ShadingModels;
     using namespace optix;
 
-    // A white material to stress test power_conservation.
     Material material_params = {};
     material_params.tint = optix::make_float3(1.0f, 0.5f, 0.25f);
     material_params.specularity = 0.5f;
@@ -315,54 +325,90 @@ GTEST_TEST(DefaultShadingModel, metallic_interpolation) {
     }
 }
 
+// Test that a partial coat is the linear interpolation of the material with no coat and full coat.
+GTEST_TEST(DefaultShadingModel, coat_interpolation) {
+    using namespace Shading::ShadingModels;
+    using namespace optix;
+
+    Material material_params = plastic_parameters();
+
+    for (float coat_roughness : { 0.0f, 0.5f, 1.0f }) {
+        material_params.coat_roughness = coat_roughness;
+        for (float coat : { 0.25f, 0.5f, 0.75f }) {
+            for (float abs_cos_theta : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
+                material_params.coat = coat;
+                auto material = DefaultShading(material_params, abs_cos_theta);
+                float3 rho = material.rho(abs_cos_theta);
+
+                material_params.coat = 0;
+                auto non_coat_material = DefaultShading(material_params, abs_cos_theta);
+                float3 non_coat_rho = non_coat_material.rho(abs_cos_theta);
+
+                material_params.coat = 1;
+                auto coated_material = DefaultShading(material_params, abs_cos_theta);
+                float3 coated_rho = coated_material.rho(abs_cos_theta);
+
+                // Test that the directional-hemispherical reflectance of the semi-coated material equals
+                // the one evaluated by interpolating between a material with no coat and coated material.
+                float3 interpolated_rho = lerp(non_coat_rho, coated_rho, coat);
+                EXPECT_FLOAT_EQ(interpolated_rho.x, rho.x);
+                EXPECT_FLOAT_EQ(interpolated_rho.y, rho.y);
+                EXPECT_FLOAT_EQ(interpolated_rho.z, rho.z);
+            }
+        }
+    }
+
+}
+
 GTEST_TEST(DefaultShadingModel, sampling_variance) {
     using namespace Shading::ShadingModels;
     using namespace optix;
 
-    // Test that sample_all has lower variance than sample_one and that they converge to the same result.
-
     const unsigned int MAX_SAMPLES = 8196;
     const float3 wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
 
-    Material material_params;
-    material_params.tint = make_float3(0.5f, 0.5f, 0.5f);
-    material_params.roughness = 0.9f;
-    material_params.metallic = 0.0f;
-    material_params.specularity = 0.2f;
-    auto material = DefaultShading(material_params, wo.z);
-
     double* ws = new double[MAX_SAMPLES];
     double* ws_squared = new double[MAX_SAMPLES];
-    for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
-        float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
-        BSDFSample sample = material.sample_one(wo, rng_sample);
-        if (is_PDF_valid(sample.PDF)) {
-            ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
-            ws_squared[i] = ws[i] * ws[i];
-        } else
-            ws_squared[i] = ws[i] = 0.0f;
-    }
-    
-    double sample_one_mean = Bifrost::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / double(MAX_SAMPLES);
-    double sample_one_mean_squared = Bifrost::Math::sort_and_pairwise_summation(ws_squared, ws_squared + MAX_SAMPLES) / double(MAX_SAMPLES);
-    double sample_one_variance = sample_one_mean_squared - sample_one_mean * sample_one_mean;
 
-    for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
-        float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
-        BSDFSample sample = material.sample_all(wo, rng_sample);
-        if (is_PDF_valid(sample.PDF)) {
-            ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
-            ws_squared[i] = ws[i] * ws[i];
-        } else
-            ws_squared[i] = ws[i] = 0.0f;
-    }
+    // Test that sample_all has lower variance than sample_one and that they converge to the same result.
+    static auto sampling_variance_test = [=](Material& material_params) {
 
-    double sample_all_mean = Bifrost::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / double(MAX_SAMPLES);
-    double sample_all_mean_squared = Bifrost::Math::sort_and_pairwise_summation(ws_squared, ws_squared + MAX_SAMPLES) / double(MAX_SAMPLES);
-    double sample_all_variance = sample_all_mean_squared - sample_all_mean * sample_all_mean;
+        auto material = DefaultShading(material_params, wo.z);
 
-    EXPECT_TRUE(almost_equal_eps(float(sample_one_mean), float(sample_all_mean), 0.0001f));
-    EXPECT_LT(sample_all_variance, sample_one_variance);
+        for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
+            float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
+            BSDFSample sample = material.sample_one(wo, rng_sample);
+            if (is_PDF_valid(sample.PDF)) {
+                ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
+                ws_squared[i] = ws[i] * ws[i];
+            } else
+                ws_squared[i] = ws[i] = 0.0f;
+        }
+
+        double sample_one_mean = Bifrost::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / double(MAX_SAMPLES);
+        double sample_one_mean_squared = Bifrost::Math::sort_and_pairwise_summation(ws_squared, ws_squared + MAX_SAMPLES) / double(MAX_SAMPLES);
+        double sample_one_variance = sample_one_mean_squared - sample_one_mean * sample_one_mean;
+
+        for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
+            float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
+            BSDFSample sample = material.sample_all(wo, rng_sample);
+            if (is_PDF_valid(sample.PDF)) {
+                ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
+                ws_squared[i] = ws[i] * ws[i];
+            } else
+                ws_squared[i] = ws[i] = 0.0f;
+        }
+
+        double sample_all_mean = Bifrost::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / double(MAX_SAMPLES);
+        double sample_all_mean_squared = Bifrost::Math::sort_and_pairwise_summation(ws_squared, ws_squared + MAX_SAMPLES) / double(MAX_SAMPLES);
+        double sample_all_variance = sample_all_mean_squared - sample_all_mean * sample_all_mean;
+
+        EXPECT_TRUE(almost_equal_eps(float(sample_one_mean), float(sample_all_mean), 0.0001f));
+        EXPECT_LT(sample_all_variance, sample_one_variance);
+    };
+
+    sampling_variance_test(plastic_parameters());
+    sampling_variance_test(coated_plastic_parameters());
 
     delete[] ws;
     delete[] ws_squared;

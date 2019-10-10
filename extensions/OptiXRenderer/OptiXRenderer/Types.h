@@ -171,14 +171,20 @@ struct __align__(16) BSDFSample {
 struct __align__(16) Material {
     optix::float3 tint;
     int tint_roughness_texture_ID;
+
     float roughness;
     int roughness_texture_ID; // Should only be set if tint_roughness_texture_ID is 0. Can be packed with tint_roughness_texture_ID if needed and the most significant bits can be used to denote the type.
     float specularity;
+    int __padding;
+
     float metallic;
     int metallic_texture_ID;
     float coverage;
     int coverage_texture_ID;
-    int __padding;
+
+    float coat;
+    float coat_roughness;
+    optix::float2 __padding2;
 };
 
 //----------------------------------------------------------------------------

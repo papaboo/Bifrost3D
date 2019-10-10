@@ -701,6 +701,9 @@ struct Renderer::Implementation {
                 else
                     device_material.metallic_texture_ID = 0;
 
+                device_material.coat = host_material.get_coat();
+                device_material.coat_roughness = host_material.get_coat_roughness();
+
                 device_material.coverage = host_material.get_coverage();
                 if (host_material.get_coverage_texture_ID() != Textures::UID::invalid_UID()) {
                     // Validate that the image has 1 channel! Otherwise OptiX goes boom boom.
