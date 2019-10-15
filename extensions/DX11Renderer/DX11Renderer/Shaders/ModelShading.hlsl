@@ -68,11 +68,12 @@ float3 integrate(Varyings input, bool is_front_face, float ambient_visibility) {
     float3 world_wo = normalize(scene_vars.camera_position.xyz - input.world_position.xyz);
     float3 world_normal = normalize(input.normal.xyz) * (is_front_face ? 1.0 : -1.0);
 
-    // Apply IBL
     float3x3 world_to_shading_TBN = create_TBN(world_normal);
     float3 wo = mul(world_to_shading_TBN, world_wo);
 
     const DefaultShading default_shading = DefaultShading::from_constants(material_params, wo.z, input.texcoord);
+
+    // Apply IBL
     float3 radiance = ambient_visibility * scene_vars.environment_tint.rgb * default_shading.evaluate_IBL(world_wo, world_normal);
 
     for (int l = 0; l < light_count.x; ++l) {
@@ -123,8 +124,10 @@ float4 transparent(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TAR
 static const uint visualize_tint = 5;
 static const uint visualize_roughness = 6;
 static const uint visualize_metallic = 7;
-static const uint visualize_coverage = 8;
-static const uint visualize_UV = 9;
+static const uint visualize_coat = 8;
+static const uint visualize_coat_roughness = 9;
+static const uint visualize_coverage = 10;
+static const uint visualize_UV = 11;
 
 cbuffer visualization_mode : register(b4) {
     uint visualization_mode;
@@ -154,8 +157,16 @@ bool inside_arrow(float2 uv) {
     return inside_box || inside_head;
 }
 
-float4 visualize_material_params(Varyings input) : SV_TARGET {
-    float coverage = material_params.coverage(input.texcoord, coverage_tex, coverage_sampler);
+float4 visualize_material_params(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
+    float3 world_wo = normalize(scene_vars.camera_position.xyz - input.world_position.xyz);
+    float3 world_normal = normalize(input.normal.xyz) * (is_front_face ? 1.0 : -1.0);
+
+    float3x3 world_to_shading_TBN = create_TBN(world_normal);
+    float3 wo = mul(world_to_shading_TBN, world_wo);
+
+    const DefaultShading default_shading = DefaultShading::from_constants(material_params, wo.z, input.texcoord);
+
+    float coverage = default_shading.coverage();
     if (visualization_mode == visualize_coverage)
         return float4(coverage, coverage, coverage, 1);
     if (coverage < CUTOFF)
@@ -169,10 +180,23 @@ float4 visualize_material_params(Varyings input) : SV_TARGET {
     }
 
     if (visualization_mode == visualize_roughness) {
-        float roughness = material_params.m_roughness;
-        if (material_params.m_textures_bound & TextureBound::Roughness)
-            roughness *= tint_roughness_tex.Sample(tint_roughness_sampler, input.texcoord).a;
+        float roughness = default_shading.roughness();
         return float4(roughness, roughness, roughness, 1);
+    }
+
+    if (visualization_mode == visualize_roughness) {
+        float roughness = default_shading.roughness();
+        return float4(roughness, roughness, roughness, 1);
+    }
+
+    if (visualization_mode == visualize_coat) {
+        float coat = default_shading.coat_scale();
+        return float4(coat, coat, coat, 1);
+    }
+
+    if (visualization_mode == visualize_coat_roughness) {
+        float coat_roughness = default_shading.coat_roughness();
+        return float4(coat_roughness, coat_roughness, coat_roughness, 1);
     }
 
     if (visualization_mode == visualize_UV) {

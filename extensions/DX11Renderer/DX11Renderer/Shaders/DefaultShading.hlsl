@@ -132,8 +132,6 @@ struct DefaultShading {
     // --------------------------------------------------------------------------------------------
     float coverage() { return m_coverage; }
     float roughness() { return m_roughness; }
-    float3 diffuse_tint() { return m_diffuse_tint; }
-    float3 specularity() { return m_specularity; }
     float coat_scale() { return m_coat_scale; }
     float coat_roughness() { return m_coat_roughness; }
 

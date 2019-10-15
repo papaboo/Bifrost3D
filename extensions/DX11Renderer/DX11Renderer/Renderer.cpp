@@ -645,6 +645,8 @@ public:
             bool debug_material_params = m_debug_settings.display_mode == DebugSettings::DisplayMode::Tint ||
                                          m_debug_settings.display_mode == DebugSettings::DisplayMode::Roughness ||
                                          m_debug_settings.display_mode == DebugSettings::DisplayMode::Metallic ||
+                                         m_debug_settings.display_mode == DebugSettings::DisplayMode::Coat ||
+                                         m_debug_settings.display_mode == DebugSettings::DisplayMode::CoatRoughness ||
                                          m_debug_settings.display_mode == DebugSettings::DisplayMode::Coverage ||
                                          m_debug_settings.display_mode == DebugSettings::DisplayMode::UV;
             OBuffer debug_material_constant_buffer;
