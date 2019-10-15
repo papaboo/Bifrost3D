@@ -33,6 +33,7 @@ namespace ShadingModels {
 //   Basically the diffuse tint should depend on rho from both wo.z and wi.z. Perhaps average specular rho before multiplying onto diffuse tint.
 // ---------------------------------------------------------------------------
 #define COAT_SPECULARITY 0.04f
+#define USHORT_MAX 65535.0f
 // static const float COAT_SPECULARITY = 0.04f;
 
 class DefaultShading {
@@ -43,6 +44,8 @@ private:
     float m_coat_scale;
     float m_coat_roughness;
     float m_coat_rho;
+    unsigned short m_specular_probability;
+    unsigned short m_coat_probability;
 
     struct PrecomputedSpecularRho { 
         float base, full;
@@ -129,6 +132,12 @@ public:
         : m_roughness(material.roughness), m_coat_scale(material.coat), m_coat_roughness(material.coat_roughness) {
         compute_tints(material.tint, m_roughness, material.specularity, material.metallic, m_coat_scale, m_coat_roughness, abs_cos_theta,
                       m_diffuse_tint, m_specularity, m_coat_rho);
+
+        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness);
+        float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
+        m_specular_probability = unsigned short(specular_probability * USHORT_MAX + 0.5f);
+        float coat_probability = compute_coat_probability(m_diffuse_tint + specular_rho, m_coat_rho);
+        m_coat_probability = unsigned short(coat_probability * USHORT_MAX + 0.5f);
     }
 
 #if GPU_DEVICE
@@ -158,6 +167,12 @@ public:
 
         compute_tints(tint, m_roughness, material.specularity, metallic, m_coat_scale, m_coat_roughness, abs_cos_theta,
                       m_diffuse_tint, m_specularity, m_coat_rho);
+
+        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness);
+        float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
+        m_specular_probability = unsigned short(specular_probability * USHORT_MAX + 0.5f);
+        float coat_probability = compute_coat_probability(m_diffuse_tint + specular_rho, m_coat_rho);
+        m_coat_probability = unsigned short(coat_probability * USHORT_MAX + 0.5f);
     }
 
     __inline_all__ static DefaultShading initialize_with_max_PDF_hint(const Material& material, float abs_cos_theta, optix::float2 texcoord, float max_PDF_hint) {
@@ -212,9 +227,7 @@ public:
     __inline_all__ float PDF(optix::float3 wo, optix::float3 wi) const {
         using namespace optix;
 
-        float abs_cos_theta = abs(wo.z);
-        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness);
-        float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
+        float specular_probability = m_specular_probability / USHORT_MAX;
 
         // Merge base PDFs based on the specular probability.
         float diffuse_PDF = BSDFs::Lambert::PDF(wo, wi);
@@ -223,7 +236,7 @@ public:
         float PDF = lerp(diffuse_PDF, specular_PDF, specular_probability);
         
         if (m_coat_scale > 0) {
-            float coat_probability = compute_coat_probability(m_diffuse_tint + specular_rho, m_coat_rho);
+            float coat_probability = m_coat_probability / USHORT_MAX;
             float coat_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
             float coat_PDF = BSDFs::GGX::PDF(coat_alpha, wo, normalize(wo + wi));
             PDF = lerp(PDF, coat_PDF, coat_probability);
@@ -252,16 +265,14 @@ public:
         BSDFResponse res;
         res.weight = diffuse_eval.weight + specular_eval.weight;
 
-        float abs_cos_theta = wo.z;
-        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness);
-        const float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
+        float specular_probability = m_specular_probability / USHORT_MAX;
         res.PDF = lerp(diffuse_eval.PDF, specular_eval.PDF, specular_probability);
 
         if (m_coat_scale > 0) {
             res.weight *= (1 - m_coat_rho);
 
+            float coat_probability = m_coat_probability / USHORT_MAX;
             float coat_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
-            float coat_probability = compute_coat_probability(m_diffuse_tint + specular_rho, m_coat_rho); 
             BSDFResponse coat_eval = BSDFs::GGX::evaluate_with_PDF(coat_alpha, COAT_SPECULARITY, wo, wi);
             res.weight += m_coat_scale * coat_eval.weight;
             res.PDF = lerp(res.PDF, coat_eval.PDF, coat_probability);
@@ -274,11 +285,8 @@ public:
         using namespace optix;
 
         // Sample BSDFs based on the contribution of each BRDF.
-        float abs_cos_theta = abs(wo.z);
-        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness);
-        float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
 
-        float coat_probability = compute_coat_probability(m_diffuse_tint + specular_rho, m_coat_rho);
+        float coat_probability = m_coat_probability / USHORT_MAX;
         if (coat_probability > 0) {
             bool sample_coat = random_sample.z < coat_probability;
             if (sample_coat) {
@@ -293,6 +301,7 @@ public:
         }
 
         // Sample selected BRDF.
+        float specular_probability = m_specular_probability / USHORT_MAX;
         bool sample_specular = random_sample.z < specular_probability;
         BSDFSample bsdf_sample;
         if (sample_specular) {
@@ -317,10 +326,8 @@ public:
         using namespace optix;
 
         // Sample BSDFs based on the contribution of each BRDF.
-        float abs_cos_theta = abs(wo.z);
-        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness);
-        float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
-        float coat_probability = compute_coat_probability(m_diffuse_tint + specular_rho, m_coat_rho);
+        float specular_probability = m_specular_probability / USHORT_MAX;
+        float coat_probability = m_coat_probability / USHORT_MAX;
 
         // Pick a BRDF
         bool sample_coat = random_sample.z < coat_probability;
