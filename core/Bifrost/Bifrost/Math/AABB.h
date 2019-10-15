@@ -29,7 +29,7 @@ public:
     Vector3f minimum;
     Vector3f maximum;
 
-    AABB() {}
+    AABB() = default;
     AABB(Vector3f minimum, Vector3f maximum)
         : minimum(minimum), maximum(maximum) {
     }
