@@ -29,7 +29,7 @@ GTEST_TEST(Lambert, power_conservation) {
     float ws[MAX_SAMPLES];
     for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
         BSDFSample sample = Shading::BSDFs::Lambert::sample(tint, RNG::sample02(i));
-        ws[i] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
+        ws[i] = sample.reflectance.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
     }
 
     float average_w = Bifrost::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
@@ -47,7 +47,7 @@ GTEST_TEST(Lambert, evaluate_with_PDF) {
         BSDFSample sample = Shading::BSDFs::Lambert::sample(tint, RNG::sample02(i));
 
         BSDFResponse response = Shading::BSDFs::Lambert::evaluate_with_PDF(tint, wo, sample.direction);
-        EXPECT_NORMAL_EQ(sample.weight, response.weight, 0.000000001f);
+        EXPECT_NORMAL_EQ(sample.reflectance, response.reflectance, 0.000000001f);
         EXPECT_FLOAT_EQ(sample.PDF, response.PDF);
     }
 }

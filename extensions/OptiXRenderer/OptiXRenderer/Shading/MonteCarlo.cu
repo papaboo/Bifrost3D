@@ -93,10 +93,10 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
         light_sample.radiance *= mis_weight;
     } else
         // BIAS Nearly specular materials and delta lights will lead to insane fireflies, so we clamp them here.
-        bsdf_response.weight = fminf(bsdf_response.weight, make_float3(32.0f));
+        bsdf_response.reflectance = fminf(bsdf_response.reflectance, make_float3(32.0f));
 
     // Inline the material response into the light sample's radiance.
-    light_sample.radiance *= bsdf_response.weight;
+    light_sample.radiance *= bsdf_response.reflectance;
 
     return light_sample;
 }
@@ -178,7 +178,7 @@ RT_PROGRAM void closest_hit() {
     float next_payload_MIS_PDF = bsdf_sample.PDF;
     float3 next_payload_throughput = make_float3(0.0f);
     if (is_PDF_valid(bsdf_sample.PDF))
-       next_payload_throughput = monte_carlo_payload.throughput * bsdf_sample.weight * (abs(bsdf_sample.direction.z) / bsdf_sample.PDF); // f * ||cos(theta)|| / pdf
+       next_payload_throughput = monte_carlo_payload.throughput * bsdf_sample.reflectance * (abs(bsdf_sample.direction.z) / bsdf_sample.PDF); // f * ||cos(theta)|| / pdf
 
 #if ENABLE_NEXT_EVENT_ESTIMATION
     // Sample a light source.

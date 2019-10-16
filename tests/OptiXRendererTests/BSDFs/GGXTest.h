@@ -38,7 +38,7 @@ GTEST_TEST(GGX, power_conservation) {
                 BSDFSample sample = Shading::BSDFs::GGX::sample(alpha, full_specularity, wo, RNG::sample02(i));
 
                 if (is_PDF_valid(sample.PDF))
-                    ws[i] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
+                    ws[i] = sample.reflectance.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
                 else
                     ws[i] = 0.0f;
             }
@@ -62,7 +62,7 @@ GTEST_TEST(GGX, Helmholtz_reciprocity) {
 
             if (is_PDF_valid(sample.PDF)) {
                 float3 f = Shading::BSDFs::GGX::evaluate(alpha, make_float3(full_specularity), sample.direction, wo);
-                EXPECT_COLOR_EQ_EPS(sample.weight, f, make_float3(0.0001f));
+                EXPECT_COLOR_EQ_EPS(sample.reflectance, f, make_float3(0.0001f));
             }
         }
     }
@@ -102,7 +102,7 @@ GTEST_TEST(GGX, evaluate_with_PDF) {
                 float3 wi = sample.direction;
                 float3 halfway = normalize(wo + wi);
                 BSDFResponse response = Shading::BSDFs::GGX::evaluate_with_PDF(alpha, full_specularity, wo, wi, halfway);
-                EXPECT_FLOAT_EQ(Shading::BSDFs::GGX::evaluate(alpha, full_specularity, wo, wi, halfway).x, response.weight.x);
+                EXPECT_FLOAT_EQ(Shading::BSDFs::GGX::evaluate(alpha, full_specularity, wo, wi, halfway).x, response.reflectance.x);
                 EXPECT_FLOAT_EQ(Shading::BSDFs::GGX::PDF(alpha, wo, halfway), response.PDF);
             }
         }
@@ -143,7 +143,7 @@ GTEST_TEST(GGX, sampling_variance) {
         bsdf_sample.direction = reflect(-wo, ggx_sample.direction);
 
         bsdf_sample.PDF = ggx_sample.PDF / (4.0f * dot(wo, ggx_sample.direction));
-        bsdf_sample.weight = Shading::BSDFs::GGX::evaluate(alpha, specularity, wo, bsdf_sample.direction, ggx_sample.direction);
+        bsdf_sample.reflectance = Shading::BSDFs::GGX::evaluate(alpha, specularity, wo, bsdf_sample.direction, ggx_sample.direction);
 
         bool discardSample = bsdf_sample.PDF < 0.00001f || bsdf_sample.direction.z < 0.00001f; // Discard samples if the pdf is too low (precision issues) or if the new direction points into the surface (energy loss).
         return discardSample ? BSDFSample::none() : bsdf_sample;
@@ -160,7 +160,7 @@ GTEST_TEST(GGX, sampling_variance) {
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             BSDFSample sample = function(alpha, specularity, wo, RNG::sample02(i));
             if (is_PDF_valid(sample.PDF)) {
-                ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
+                ws[i] = sample.reflectance.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
                 ws_squared[i] = ws[i] * ws[i];
             }
             else

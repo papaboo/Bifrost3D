@@ -41,7 +41,7 @@ DirectionAndRho compute_average_sample(BRDF brdf, float3 wo, float alpha) {
             auto brdf_sample = brdf.sample(wo, alpha, U1, U2);
             if (is_PDF_valid(brdf_sample.PDF)) {
                 // accumulate
-                float weight = (brdf_sample.PDF > 0) ? brdf_sample.weight.x / brdf_sample.PDF : 0.0f;
+                float weight = (brdf_sample.PDF > 0) ? brdf_sample.reflectance.x / brdf_sample.PDF : 0.0f;
                 norm += weight;
                 summed_direction += weight * brdf_sample.direction;
             }
@@ -68,7 +68,7 @@ float compute_error(Pivot pivot, BRDF brdf, float3 wo, float alpha) {
                 auto brdf_response = brdf.eval(wo, wi, alpha);
                 float eval_pivot = pivot.eval(wi);
                 float pdf_pivot = eval_pivot / pivot.amplitude;
-                double error = brdf_response.weight.x - eval_pivot;
+                double error = brdf_response.reflectance.x - eval_pivot;
                 return error * error / (pdf_pivot + brdf_response.PDF);
             };
 
@@ -93,7 +93,7 @@ float compute_error(Pivot pivot, BRDF brdf, float3 wo, float alpha) {
             auto compute_error = [&](float3 sampled_wi, BSDFResponse brdf_response) -> double {
                 float eval_pivot = pivot.eval(sampled_wi);
                 float pdf_pivot = eval_pivot / pivot.amplitude;
-                double error = brdf_response.weight.x - eval_pivot;
+                double error = brdf_response.reflectance.x - eval_pivot;
                 return error * error / (pdf_pivot + brdf_response.PDF);
             };
 
@@ -109,7 +109,7 @@ float compute_error(Pivot pivot, BRDF brdf, float3 wo, float alpha) {
             { // importance sample BRDF
                 auto brdf_sample = brdf.sample(wo, alpha, U1, U2);
                 if (is_PDF_valid(brdf_sample.PDF)) {
-                    BSDFResponse brdf_response = { brdf_sample.weight, brdf_sample.PDF };
+                    BSDFResponse brdf_response = { brdf_sample.reflectance, brdf_sample.PDF };
                     error += compute_error(brdf_sample.direction, brdf_response);
                     ++valid_sample_count;
                 }

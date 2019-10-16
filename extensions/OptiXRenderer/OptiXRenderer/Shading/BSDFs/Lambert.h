@@ -37,7 +37,7 @@ __inline_all__ float PDF(float3 wo, float3 wi) {
 
 __inline_all__ BSDFResponse evaluate_with_PDF(float3 tint, float3 wo, float3 wi) {
     BSDFResponse response;
-    response.weight = evaluate(tint);
+    response.reflectance = evaluate(tint);
     response.PDF = PDF(wo, wi);
     return response;
 }
@@ -47,7 +47,7 @@ __inline_all__ BSDFSample sample(float3 tint, float2 random_sample) {
     BSDFSample bsdf_sample;
     bsdf_sample.direction = cosine_sample.direction;
     bsdf_sample.PDF = cosine_sample.PDF;
-    bsdf_sample.weight = evaluate(tint);
+    bsdf_sample.reflectance = evaluate(tint);
     return bsdf_sample;
 }
 

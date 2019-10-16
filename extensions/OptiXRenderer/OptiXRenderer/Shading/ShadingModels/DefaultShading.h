@@ -263,18 +263,18 @@ public:
         BSDFResponse diffuse_eval = BSDFs::Lambert::evaluate_with_PDF(m_diffuse_tint, wo, wi);
 
         BSDFResponse res;
-        res.weight = diffuse_eval.weight + specular_eval.weight;
+        res.reflectance = diffuse_eval.reflectance + specular_eval.reflectance;
 
         float specular_probability = m_specular_probability / USHORT_MAX;
         res.PDF = lerp(diffuse_eval.PDF, specular_eval.PDF, specular_probability);
 
         if (m_coat_scale > 0) {
-            res.weight *= (1 - m_coat_rho);
+            res.reflectance *= (1 - m_coat_rho);
 
             float coat_probability = m_coat_probability / USHORT_MAX;
             float coat_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
             BSDFResponse coat_eval = BSDFs::GGX::evaluate_with_PDF(coat_alpha, COAT_SPECULARITY, wo, wi);
-            res.weight += m_coat_scale * coat_eval.weight;
+            res.reflectance += m_coat_scale * coat_eval.reflectance;
             res.PDF = lerp(res.PDF, coat_eval.PDF, coat_probability);
         }
 
@@ -315,7 +315,7 @@ public:
 
         // Scale diffuse and specular sample by coat contribution if coat is active.
         if (m_coat_scale > 0) {
-            bsdf_sample.weight *= (1 - m_coat_rho);
+            bsdf_sample.reflectance *= (1 - m_coat_rho);
             bsdf_sample.PDF *= (1 - coat_probability);
         }
 
@@ -341,15 +341,15 @@ public:
         BSDFSample bsdf_sample;
         if (sample_diffuse) {
             bsdf_sample = BSDFs::Lambert::sample(m_diffuse_tint, make_float2(random_sample));
-            bsdf_sample.weight *= (1 - m_coat_rho);
+            bsdf_sample.reflectance *= (1 - m_coat_rho);
             bsdf_sample.PDF *= (1 - coat_probability) * (1 - specular_probability);
         } else if (sample_specular) {
             bsdf_sample = BSDFs::GGX::sample(specular_alpha, m_specularity, wo, make_float2(random_sample));
-            bsdf_sample.weight *= (1 - m_coat_rho);
+            bsdf_sample.reflectance *= (1 - m_coat_rho);
             bsdf_sample.PDF *= (1 - coat_probability) * specular_probability;
         } else {
             bsdf_sample = BSDFs::GGX::sample(coat_alpha, COAT_SPECULARITY, wo, make_float2(random_sample));
-            bsdf_sample.weight *= m_coat_scale;
+            bsdf_sample.reflectance *= m_coat_scale;
             bsdf_sample.PDF *= coat_probability;
         }
 
@@ -361,19 +361,19 @@ public:
         if (!sample_diffuse) {
             // Evaluate diffuse layer as well.
             BSDFResponse diffuse_response = BSDFs::Lambert::evaluate_with_PDF(m_diffuse_tint, wo, bsdf_sample.direction);
-            bsdf_sample.weight += diffuse_response.weight * (1 - m_coat_rho);
+            bsdf_sample.reflectance += diffuse_response.reflectance * (1 - m_coat_rho);
             bsdf_sample.PDF += (1 - coat_probability) * (1 - specular_probability) * diffuse_response.PDF;
         }
         if (!sample_specular) {
             // Evaluate specular layer as well.
             BSDFResponse specular_response = BSDFs::GGX::evaluate_with_PDF(specular_alpha, m_specularity, wo, bsdf_sample.direction);
-            bsdf_sample.weight += specular_response.weight * (1 - m_coat_rho);
+            bsdf_sample.reflectance += specular_response.reflectance * (1 - m_coat_rho);
             bsdf_sample.PDF += (1 - coat_probability) * specular_probability * specular_response.PDF;
         }
         if (!sample_coat && m_coat_scale > 0) {
             // Evaluate coat layer as well.
             BSDFResponse coat_response = BSDFs::GGX::evaluate_with_PDF(coat_alpha, COAT_SPECULARITY, wo, bsdf_sample.direction);
-            bsdf_sample.weight += m_coat_scale * coat_response.weight;
+            bsdf_sample.reflectance += m_coat_scale * coat_response.reflectance;
             bsdf_sample.PDF += coat_probability * coat_response.PDF;
         }
 

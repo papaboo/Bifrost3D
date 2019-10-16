@@ -147,7 +147,7 @@ struct __align__(16) Light {
 
 // NOTE the suboptimal alignment of 8 instead of 16 yields a tiny tiny performance benefit. I have no clue why.
 struct __align__(8) BSDFResponse {
-    optix::float3 weight;
+    optix::float3 reflectance;
     float PDF;
 
     __inline_all__ static BSDFResponse none() {
@@ -157,7 +157,7 @@ struct __align__(8) BSDFResponse {
 };
 
 struct __align__(16) BSDFSample {
-    optix::float3 weight;
+    optix::float3 reflectance;
     float PDF;
     optix::float3 direction;
     float __padding;

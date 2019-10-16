@@ -98,10 +98,10 @@ __inline_all__ BSDFResponse evaluate_with_PDF(float alpha, float3 specularity, f
     float3 F = schlick_fresnel(specularity, dot(wo, halfway));
 
     float recip_G2 = 1.0f + lambda_wo + lambda_wi; // reciprocal height_correlated_smith_G
-    float3 f = F * (quater_D / (recip_G2 * wo.z * wi.z));
+    float3 reflectance = F * (quater_D / (recip_G2 * wo.z * wi.z));
 
     BSDFResponse res;
-    res.weight = f;
+    res.reflectance = reflectance;
     float recip_G1 = 1.0f + lambda_wo;
     res.PDF = quater_D / (recip_G1 * wo.z);
     return res;
@@ -131,7 +131,7 @@ __inline_all__ BSDFSample sample(float alpha, float3 specularity, float3 wo, flo
 
     BSDFResponse response = evaluate_with_PDF(alpha, specularity, wo, bsdf_sample.direction, halfway);
     bsdf_sample.PDF = response.PDF;
-    bsdf_sample.weight = response.weight;
+    bsdf_sample.reflectance = response.reflectance;
 
     bool discardSample = bsdf_sample.PDF < 0.00001f || bsdf_sample.direction.z < 0.00001f; // Discard samples if the pdf is too low (precision issues) or if the new direction points into the surface (energy loss).
     return discardSample ? BSDFSample::none() : bsdf_sample;

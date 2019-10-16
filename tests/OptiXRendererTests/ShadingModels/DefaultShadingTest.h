@@ -67,7 +67,7 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
             float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(MAX_SAMPLES));
             BSDFSample sample = material.sample_all(wo, rng_sample);
             if (is_PDF_valid(sample.PDF))
-                ws[s] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
+                ws[s] = sample.reflectance.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
             else
                 ws[s] = 0.0f;
         }
@@ -151,7 +151,7 @@ GTEST_TEST(DefaultShadingModel, evaluate_with_PDF) {
 
                 if (is_PDF_valid(sample.PDF)) {
                     BSDFResponse response = material.evaluate_with_PDF(wo, sample.direction);
-                    EXPECT_COLOR_EQ_PCT(material.evaluate(wo, sample.direction), response.weight, make_float3(0.00002f));
+                    EXPECT_COLOR_EQ_PCT(material.evaluate(wo, sample.direction), response.reflectance, make_float3(0.00002f));
                     EXPECT_FLOAT_EQ(material.PDF(wo, sample.direction), response.PDF);
                 }
             }
@@ -241,7 +241,7 @@ GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation
             float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
             BSDFSample sample = material.sample_all(wo, rng_sample);
             if (is_PDF_valid(sample.PDF))
-                ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
+                ws[i] = sample.reflectance.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
             else
                 ws[i] = 0.0f;
         }
@@ -379,7 +379,7 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
             float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
             BSDFSample sample = material.sample_one(wo, rng_sample);
             if (is_PDF_valid(sample.PDF)) {
-                ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
+                ws[i] = sample.reflectance.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
                 ws_squared[i] = ws[i] * ws[i];
             } else
                 ws_squared[i] = ws[i] = 0.0f;
@@ -393,7 +393,7 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
             float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
             BSDFSample sample = material.sample_all(wo, rng_sample);
             if (is_PDF_valid(sample.PDF)) {
-                ws[i] = sample.weight.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
+                ws[i] = sample.reflectance.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
                 ws_squared[i] = ws[i] * ws[i];
             } else
                 ws_squared[i] = ws[i] = 0.0f;

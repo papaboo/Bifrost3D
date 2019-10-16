@@ -34,7 +34,7 @@ GTEST_TEST(OrenNayar, power_conservation) {
             BSDFSample sample = Shading::BSDFs::OrenNayar::sample(tint, roughness, wo, RNG::sample02(i));
 
             if (is_PDF_valid(sample.PDF))
-                ws[i] = sample.weight.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
+                ws[i] = sample.reflectance.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
             else
                 ws[i] = 0.0f;
         }
@@ -57,7 +57,7 @@ GTEST_TEST(OrenNayar, Helmholtz_reciprocity) {
 
             if (is_PDF_valid(sample.PDF)) {
                 float3 f = Shading::BSDFs::OrenNayar::evaluate(tint, roughness, sample.direction, wo);
-                EXPECT_COLOR_EQ_EPS(sample.weight, f, make_float3(0.0001f));
+                EXPECT_COLOR_EQ_EPS(sample.reflectance, f, make_float3(0.0001f));
             }
         }
     }
@@ -94,7 +94,7 @@ GTEST_TEST(OrenNayar, evaluate_with_PDF) {
 
             if (is_PDF_valid(sample.PDF)) {
                 BSDFResponse response = Shading::BSDFs::OrenNayar::evaluate_with_PDF(tint, roughness, wo, sample.direction);
-                EXPECT_COLOR_EQ_EPS(Shading::BSDFs::OrenNayar::evaluate(tint, roughness, wo, sample.direction), response.weight, make_float3(0.000000001f));
+                EXPECT_COLOR_EQ_EPS(Shading::BSDFs::OrenNayar::evaluate(tint, roughness, wo, sample.direction), response.reflectance, make_float3(0.000000001f));
                 EXPECT_FLOAT_EQ(Shading::BSDFs::OrenNayar::PDF(roughness, wo, sample.direction), response.PDF);
             }
         }

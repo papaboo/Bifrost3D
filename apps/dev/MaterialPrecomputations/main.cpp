@@ -38,7 +38,7 @@ double estimate_rho(float3 wo, float roughness, unsigned int sample_count, Sampl
         float2 rng_sample = RNG::sample02(s);
         BSDFSample sample = sample_rough_BSDF(tint, roughness, wo, rng_sample);
         if (is_PDF_valid(sample.PDF))
-            throughput[s] = sample.weight.x * sample.direction.z / sample.PDF;
+            throughput[s] = sample.reflectance.x * sample.direction.z / sample.PDF;
         else
             throughput[s] = 0.0;
     }
@@ -344,8 +344,8 @@ int main(int argc, char** argv) {
                     float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(sample_count));
                     BSDFSample sample = material.sample_all(wo, rng_sample);
                     if (is_PDF_valid(sample.PDF)) {
-                        total_throughput[s] = sample.weight.x * sample.direction.z / sample.PDF;
-                        specular_throughput[s] = sample.weight.y * sample.direction.z / sample.PDF;
+                        total_throughput[s] = sample.reflectance.x * sample.direction.z / sample.PDF;
+                        specular_throughput[s] = sample.reflectance.y * sample.direction.z / sample.PDF;
                     } else
                         total_throughput[s] = specular_throughput[s] = 0.0;
                 }

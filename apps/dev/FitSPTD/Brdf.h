@@ -42,7 +42,7 @@ public:
         BSDFSample result;
         result.direction = sample_direction(wo, alpha, U1, U2);
         BSDFResponse response = eval(wo, result.direction, alpha);
-        result.weight = response.weight;
+        result.reflectance = response.reflectance;
         result.PDF = response.PDF;
         return result;
     }
@@ -55,13 +55,13 @@ public:
             return BSDFResponse::none();
 
         auto f = Shading::BSDFs::GGX::evaluate_with_PDF(alpha, 1, wo, wi);
-        f.weight *= wi.z; // eval scaled by cos theta
+        f.reflectance *= wi.z; // eval scaled by cos theta
         return f;
     }
 
     BSDFSample sample(float3 wo, float alpha, float U1, float U2) const {
         auto brdf_sample = Shading::BSDFs::GGX::sample(alpha, 1, wo, make_float2(U1, U2));
-        brdf_sample.weight *= brdf_sample.direction.z; // eval scaled by cos theta
+        brdf_sample.reflectance *= brdf_sample.direction.z; // eval scaled by cos theta
         return brdf_sample;
     }
 };
@@ -99,7 +99,7 @@ public:
         BSDFSample result;
         result.direction = sample_direction(wo, alpha, U1, U2);
         BSDFResponse response = eval(wo, result.direction, alpha);
-        result.weight = response.weight;
+        result.reflectance = response.reflectance;
         result.PDF = response.PDF;
         return result;
     }
