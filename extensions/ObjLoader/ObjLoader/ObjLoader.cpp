@@ -28,6 +28,8 @@ using namespace Bifrost::Scene;
 
 namespace ObjLoader {
 
+struct RGBA32 { unsigned char r, g, b, a; };
+
 void split_path(std::string& directory, std::string& filename, const std::string& path) {
     std::string::const_iterator slash_itr = path.end();
     std::string::const_iterator itr = path.end()-1;
@@ -71,7 +73,8 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
     SceneNodes::UID root_ID = shapes.size() > 1u ? SceneNodes::create(std::string(filename.begin(), filename.end()-4)) : SceneNodes::UID::invalid_UID();
 
     Core::Array<Materials::UID> materials = Core::Array<Materials::UID>(unsigned int(tiny_materials.size()));
-    for (size_t i = 0; i < tiny_materials.size(); ++i) {
+    #pragma omp parallel for schedule(dynamic, 16)
+    for (int i = 0; i < int(tiny_materials.size()); ++i) {
         tinyobj::material_t tiny_mat = tiny_materials[i];
 
         Materials::Data material_data = {};
@@ -107,7 +110,7 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
         if (!tiny_mat.diffuse_texname.empty()) {
             Image image = image_loader(directory + tiny_mat.diffuse_texname);
             if (!image.exists())
-                printf("ObjLoader::load error: Could not load image at '%s'.\n", (directory + tiny_mat.alpha_texname).c_str());
+                printf("ObjLoader::load error: Could not load image at '%s'.\n", (directory + tiny_mat.diffuse_texname).c_str());
             else {
                 // Use diffuse alpha for coverage, if no explicit coverage texture has been set.
                 if (channel_count(image.get_pixel_format()) == 4 && material_data.coverage_texture_ID == Textures::UID::invalid_UID()) {
@@ -138,10 +141,62 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
             }
         }
 
+        if (!tiny_mat.roughness_texname.empty()) {
+            Image roughness_map = image_loader(directory + tiny_mat.roughness_texname);
+            if (!roughness_map.exists())
+                printf("ObjLoader::load error: Could not load image at '%s'.\n", (directory + tiny_mat.roughness_texname).c_str());
+            else {
+                // If no diffuse map exists, then save a single channel texture as roughness texture.
+                if (!Textures::has(material_data.tint_roughness_texture_ID)) {
+                    if (roughness_map.get_pixel_format() != PixelFormat::Roughness8) {
+                        Image tmp_image = roughness_map;
+                        roughness_map = ImageUtils::change_format(roughness_map.get_ID(), PixelFormat::Roughness8, 1.0f, [](RGBA c) -> RGBA { return RGBA(c.r, c.r, c.r, c.r); });
+                        Images::destroy(tmp_image.get_ID());
+                    }
+                    material_data.tint_roughness_texture_ID = Textures::create2D(roughness_map.get_ID());;
+                } else {
+                    // Diffuse texture exists.
+                    Image tint_roughness_map = Textures::get_image_ID(material_data.tint_roughness_texture_ID);
+                    
+                    // Image should have a fourth channel to store roughness in.
+                    if (channel_count(tint_roughness_map.get_pixel_format()) != 4) {
+                        Image tmp_image = tint_roughness_map;
+                        tint_roughness_map = ImageUtils::change_format(tint_roughness_map.get_ID(), PixelFormat::RGBA32, 2.2f);
+                        Images::destroy(tmp_image.get_ID());
+                    }
+
+                    // Blit roughness texture if possible.
+                    if (tint_roughness_map.get_width() == roughness_map.get_width() && tint_roughness_map.get_height() == roughness_map.get_height() &&
+                        roughness_map.get_pixel_format() == PixelFormat::Roughness8) {
+                        RGBA32* tint_roughness_pixels = tint_roughness_map.get_pixels<RGBA32>();
+                        unsigned char* roughness_pixels = roughness_map.get_pixels<unsigned char>();
+                        for (unsigned int p = 0; p < roughness_map.get_pixel_count(); ++p)
+                            tint_roughness_pixels[p].a = roughness_pixels[p];
+                    } else {
+                        // Otherwise sample roughness texture.
+                        Textures::UID tmp_roughness_tex_ID = Textures::create2D(roughness_map.get_ID());
+                        #pragma omp parallel for schedule(dynamic, 16)
+                        for (int y = 0; y < int(tint_roughness_map.get_height()); ++y)
+                            for (unsigned int x = 0; x < tint_roughness_map.get_width(); ++x) {
+                                Vector2f uv = { (x + 0.5f) / tint_roughness_map.get_width(), (y + 0.5f) / tint_roughness_map.get_height() };
+                                RGBA pixel = tint_roughness_map.get_pixel(Vector2ui(x, y));
+                                pixel.a = sample2D(tmp_roughness_tex_ID, uv).r;
+                                tint_roughness_map.set_pixel(pixel, Vector2ui(x, y));
+                            }
+                        Textures::destroy(tmp_roughness_tex_ID);
+
+                        Textures::destroy(material_data.tint_roughness_texture_ID);
+                        material_data.tint_roughness_texture_ID = Textures::create2D(tint_roughness_map.get_ID());;
+                    }
+                }
+            }
+        }
+
         materials[unsigned int(i)] = Materials::create(tiny_mat.name, material_data);
     }
 
-    for (size_t s = 0; s < int(shapes.size()); ++s) {
+    #pragma omp parallel for schedule(dynamic, 16)
+    for (int s = 0; s < int(shapes.size()); ++s) {
         tinyobj::shape_t shape = shapes[s];
 
         // Base normal and texcoords on the first vertex.
