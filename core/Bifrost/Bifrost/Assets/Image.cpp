@@ -265,22 +265,22 @@ static void set_linear_pixel(Images::UID image_ID, RGBA color, unsigned int inde
     switch (Images::get_pixel_format(image_ID)) {
     case PixelFormat::A8: {
         unsigned char* pixel = ((unsigned char*)pixels) + index;
-        pixel[0] = unsigned char(clamp(color.a * 255.0f, 0.0f, 255.0f));
+        pixel[0] = unsigned char(clamp(color.a * 255.0f + 0.5f, 0.0f, 255.0f));
         break;
     }
     case PixelFormat::RGB24: {
         unsigned char* pixel = ((unsigned char*)pixels) + index * 3;
-        pixel[0] = unsigned char(clamp(color.r * 255.0f, 0.0f, 255.0f));
-        pixel[1] = unsigned char(clamp(color.g * 255.0f, 0.0f, 255.0f));
-        pixel[2] = unsigned char(clamp(color.b * 255.0f, 0.0f, 255.0f));
+        pixel[0] = unsigned char(clamp(color.r * 255.0f + 0.5f, 0.0f, 255.0f));
+        pixel[1] = unsigned char(clamp(color.g * 255.0f + 0.5f, 0.0f, 255.0f));
+        pixel[2] = unsigned char(clamp(color.b * 255.0f + 0.5f, 0.0f, 255.0f));
         break;
     }
     case PixelFormat::RGBA32: {
         unsigned char* pixel = ((unsigned char*)pixels) + index * 4;
-        pixel[0] = unsigned char(clamp(color.r * 255.0f, 0.0f, 255.0f));
-        pixel[1] = unsigned char(clamp(color.g * 255.0f, 0.0f, 255.0f));
-        pixel[2] = unsigned char(clamp(color.b * 255.0f, 0.0f, 255.0f));
-        pixel[3] = unsigned char(clamp(color.a * 255.0f, 0.0f, 255.0f));
+        pixel[0] = unsigned char(clamp(color.r * 255.0f + 0.5f, 0.0f, 255.0f));
+        pixel[1] = unsigned char(clamp(color.g * 255.0f + 0.5f, 0.0f, 255.0f));
+        pixel[2] = unsigned char(clamp(color.b * 255.0f + 0.5f, 0.0f, 255.0f));
+        pixel[3] = unsigned char(clamp(color.a * 255.0f + 0.5f, 0.0f, 255.0f));
         break;
     }
     case PixelFormat::RGB_Float: {
