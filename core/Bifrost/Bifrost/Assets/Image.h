@@ -244,7 +244,27 @@ private:
 
 namespace ImageUtils {
 
-Images::UID change_format(Images::UID image_ID, PixelFormat new_format, float new_gamma);
+template <typename T>
+inline Images::UID change_format(Images::UID image_ID, PixelFormat new_format, float new_gamma, T process_pixel) {
+    Image image = image_ID;
+    unsigned int mipmap_count = image.get_mipmap_count();
+    auto size = Math::Vector3ui(image.get_width(), image.get_height(), image.get_depth());
+    Images::UID new_image_ID = Images::create3D(image.get_name(), new_format, new_gamma, size, mipmap_count);
+
+    for (unsigned int m = 0; m < mipmap_count; ++m)
+        #pragma omp parallel for schedule(dynamic, 16)
+        for (int p = 0; p < int(image.get_pixel_count(m)); ++p) {
+            auto pixel = image.get_pixel(p, m);
+            Images::set_pixel(new_image_ID, process_pixel(pixel), p, m);
+        }
+
+    Images::set_mipmapable(new_image_ID, image.is_mipmapable());
+    return new_image_ID;
+}
+
+inline Images::UID change_format(Images::UID image_ID, PixelFormat new_format, float new_gamma) {
+    return change_format(image_ID, new_format, new_gamma, [](Math::RGBA c) -> Math::RGBA { return c; } );
+}
 
 inline Images::UID change_format(Images::UID image_ID, PixelFormat new_format) {
     return change_format(image_ID, new_format, Images::get_gamma(image_ID));

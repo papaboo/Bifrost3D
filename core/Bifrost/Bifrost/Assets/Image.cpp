@@ -350,26 +350,6 @@ void Images::set_pixel(Images::UID image_ID, RGBA color, Vector3ui index, unsign
 
 namespace ImageUtils {
 
-Images::UID change_format(Images::UID image_ID, PixelFormat new_format, float new_gamma) {
-    Image image = image_ID;
-    unsigned int mipmap_count = image.get_mipmap_count();
-    Vector3ui size = Vector3ui(image.get_width(), image.get_height(), image.get_depth());
-    Images::UID new_image_ID = Images::create3D(image.get_name(), new_format, new_gamma, size, mipmap_count);
-
-    for (unsigned int m = 0; m < mipmap_count; ++m)
-        for (unsigned int z = 0; z < image.get_depth(m); ++z)
-            for (unsigned int y = 0; y < image.get_height(m); ++y)
-                #pragma omp parallel for schedule(dynamic, 16)
-                for (int x = 0; x < int(image.get_width(m)); ++x) {
-                    Vector3ui index = Vector3ui(x, y, z);
-                    RGBA pixel = image.get_pixel(index, m);
-                    Images::set_pixel(new_image_ID, pixel, index, m);
-                }
-
-    Images::set_mipmapable(new_image_ID, image.is_mipmapable());
-    return new_image_ID;
-}
-
 void fill_mipmap_chain(Images::UID image_ID) {
     // assert that depth is 1, since 3D textures are not supported.
 
