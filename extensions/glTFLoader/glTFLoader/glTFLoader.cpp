@@ -45,8 +45,6 @@ inline bool string_ends_with(const std::string& s, const std::string& end) {
     return s.compare(s.length() - end.length(), end.length(), end) == 0;
 }
 
-struct RGBA32 { unsigned char r, g, b, a; };
-
 struct LoadedMesh {
     Meshes::UID ID;
     bool is_used;

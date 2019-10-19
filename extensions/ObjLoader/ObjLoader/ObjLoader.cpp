@@ -28,8 +28,6 @@ using namespace Bifrost::Scene;
 
 namespace ObjLoader {
 
-struct RGBA32 { unsigned char r, g, b, a; };
-
 void split_path(std::string& directory, std::string& filename, const std::string& path) {
     std::string::const_iterator slash_itr = path.end();
     std::string::const_iterator itr = path.end()-1;
