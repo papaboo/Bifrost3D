@@ -335,7 +335,7 @@ int initialize(Engine& engine) {
     if (file_extension.compare(".exr") == 0)
         image = TinyExr::load(g_image_file);
     else
-        image = StbImageLoader::load(std::string(g_image_file));
+        image = StbImageLoader::load(g_image_file);
 
     if (!image.exists()) {
         printf("Could not load image: %s\n", g_image_file.c_str());
