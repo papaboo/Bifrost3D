@@ -32,8 +32,7 @@ struct RGB final {
     RGB() = default;
 
     RGB(float intensity)
-        : r(intensity), g(intensity), b(intensity) {
-    }
+        : r(intensity), g(intensity), b(intensity) { }
 
     RGB(float r, float g, float b)
         : r(r), g(g), b(b) { }
@@ -259,6 +258,20 @@ __always_inline__ float luminance(RGB color) {
 __always_inline__ RGB saturate(RGB color) {
     auto saturate = [](float v) { return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v); };
     return RGB(saturate(color.r), saturate(color.g), saturate(color.b));
+}
+
+__always_inline__ float hue(RGB color) {
+    const float c = 0.8660254f; // 0.5f * sqrtf(3);
+    float alpha = color.r - 0.5f * (color.g + color.b);
+    float beta = c * (color.g - color.b);
+    return atan2f(beta, alpha);
+}
+
+__always_inline__ float chroma(RGB color) {
+    const float c = 0.8660254f; // 0.5f * sqrtf(3);
+    float alpha = color.r - 0.5f * (color.g + color.b);
+    float beta = c * (color.g - color.b);
+    return sqrtf(alpha * alpha + beta * beta);
 }
 
 } // NS Math
