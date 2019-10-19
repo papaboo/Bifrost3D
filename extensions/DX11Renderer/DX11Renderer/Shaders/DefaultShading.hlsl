@@ -64,9 +64,9 @@ struct DefaultShading {
     float m_roughness;
     float3 m_specularity;
     float m_coverage;
+    float m_base_rho; // 1 - coat_rho, the contribution from the BSDFs under the coat.
     float m_coat_scale;
     float m_coat_roughness;
-    float m_coat_rho;
 
     static const float coat_specularity = 0.04f;
 
@@ -85,7 +85,8 @@ struct DefaultShading {
         // We skip adding the contribution from additional coat bounces to diffuse, as the coat is mostly meant to be clear and would have little contribution from additional bounces.
         shading.m_coat_scale = material_params.m_coat;
         shading.m_coat_roughness = material_params.m_coat_roughness;
-        shading.m_coat_rho = material_params.m_coat * fetch_specular_rho(abs_cos_theta, shading.m_coat_roughness).rho(coat_specularity);
+        float coat_rho = material_params.m_coat * fetch_specular_rho(abs_cos_theta, shading.m_coat_roughness).rho(coat_specularity);
+        shading.m_base_rho = 1.0f - coat_rho;
 
         // Tint and roughness
         float4 tint_roughness = { material_params.m_tint, material_params.m_roughness };
@@ -153,7 +154,7 @@ struct DefaultShading {
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
         reflectance += BSDFs::GGX::evaluate(ggx_alpha, m_specularity, wo, wi);
         if (m_coat_scale > 0) {
-            reflectance *= 1 - m_coat_rho;
+            reflectance *= m_base_rho;
             float coat_ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
             reflectance += m_coat_scale * BSDFs::GGX::evaluate(coat_ggx_alpha, coat_specularity, wo, wi);
         }
@@ -185,7 +186,7 @@ struct DefaultShading {
         radiance += evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, m_specularity, m_roughness, scaled_ambient_visibility);
 
         if (m_coat_scale > 0) {
-            radiance *= (1 - m_coat_rho);
+            radiance *= m_base_rho;
             radiance += m_coat_scale * evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, coat_specularity, m_coat_roughness, scaled_ambient_visibility);
         }
 
@@ -241,7 +242,7 @@ struct DefaultShading {
 
         radiance += evaluate_IBL_GGX(wo, normal, abs_cos_theta, m_roughness, m_specularity, mip_count);
         if (m_coat_scale > 0) {
-            radiance *= (1 - m_coat_rho);
+            radiance *= m_base_rho;
             radiance += m_coat_scale * evaluate_IBL_GGX(wo, normal, abs_cos_theta, m_coat_roughness, coat_specularity, mip_count);
         }
         return radiance;
