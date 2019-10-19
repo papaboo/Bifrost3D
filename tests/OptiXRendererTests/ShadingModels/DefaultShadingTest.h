@@ -351,13 +351,12 @@ GTEST_TEST(DefaultShadingModel, coat_interpolation) {
                 // Test that the directional-hemispherical reflectance of the semi-coated material equals
                 // the one evaluated by interpolating between a material with no coat and coated material.
                 float3 interpolated_rho = lerp(non_coat_rho, coated_rho, coat);
-                EXPECT_FLOAT_EQ(interpolated_rho.x, rho.x);
-                EXPECT_FLOAT_EQ(interpolated_rho.y, rho.y);
-                EXPECT_FLOAT_EQ(interpolated_rho.z, rho.z);
+                EXPECT_FLOAT_EQ_EPS(interpolated_rho.x, rho.x, 0.000001f);
+                EXPECT_FLOAT_EQ_EPS(interpolated_rho.y, rho.y, 0.000001f);
+                EXPECT_FLOAT_EQ_EPS(interpolated_rho.z, rho.z, 0.000001f);
             }
         }
     }
-
 }
 
 GTEST_TEST(DefaultShadingModel, sampling_variance) {
