@@ -144,7 +144,7 @@ struct R11G11B10_Float {
 
     R11G11B10_Float(float r, float g, float b) {
         // Pack RGB into R11G11B10. All three channels have a 5 bit exponent and no sign bit.
-        // This fits perfectly with the half format, that also have a 5 bit exponent.
+        // This fits perfectly with the half format, that also has a 5 bit exponent.
         // The solution therefore is to convert the float to half and then using bitmasks 
         // to extract the 5 bit exponent and the first 5/6 bits of the mantissa.
         // Masking, however, yields a result that always truncates the values and is therefore biased towards zero.
