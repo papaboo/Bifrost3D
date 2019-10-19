@@ -133,17 +133,18 @@ public:
     // Getters and setters.
     //---------------------------------------------------------------------------------------------
     inline Image get_image() { return Image(Textures::get_image_ID(m_ID)); }
-    inline Textures::Type get_type() { return Textures::get_type(m_ID); }
-    inline MagnificationFilter get_magnification_filter() { return Textures::get_magnification_filter(m_ID); }
-    inline MinificationFilter get_minification_filter() { return Textures::get_minification_filter(m_ID); }
-    inline WrapMode get_wrapmode_U() { return Textures::get_wrapmode_U(m_ID); }
-    inline WrapMode get_wrapmode_V() { return Textures::get_wrapmode_V(m_ID); }
-    inline WrapMode get_wrapmode_W() { return Textures::get_wrapmode_W(m_ID); }
+    inline const Image get_image() const { return Image(Textures::get_image_ID(m_ID)); }
+    inline Textures::Type get_type() const { return Textures::get_type(m_ID); }
+    inline MagnificationFilter get_magnification_filter() const { return Textures::get_magnification_filter(m_ID); }
+    inline MinificationFilter get_minification_filter() const { return Textures::get_minification_filter(m_ID); }
+    inline WrapMode get_wrapmode_U() const { return Textures::get_wrapmode_U(m_ID); }
+    inline WrapMode get_wrapmode_V() const { return Textures::get_wrapmode_V(m_ID); }
+    inline WrapMode get_wrapmode_W() const { return Textures::get_wrapmode_W(m_ID); }
 
     //---------------------------------------------------------------------------------------------
     // Changes since last game loop tick.
     //---------------------------------------------------------------------------------------------
-    inline unsigned char get_changes() { return Textures::get_changes(m_ID); }
+    inline unsigned char get_changes() const { return Textures::get_changes(m_ID); }
 
 private:
     Textures::UID m_ID;

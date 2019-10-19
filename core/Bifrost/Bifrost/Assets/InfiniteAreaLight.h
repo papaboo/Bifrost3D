@@ -34,7 +34,7 @@ struct LightSample {
 // ------------------------------------------------------------------------------------------------
 class InfiniteAreaLight {
 private:
-    mutable Texture m_latlong;
+    Texture m_latlong;
     const Math::Distribution2D<float> m_distribution;
 
 public:
