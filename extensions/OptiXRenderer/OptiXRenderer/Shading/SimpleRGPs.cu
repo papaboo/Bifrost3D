@@ -295,7 +295,7 @@ rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(MonteCarloPayload, monte_carlo_payload, rtPayload, );
 
 RT_PROGRAM void miss() {
-    float3 environment_radiance = g_scene.environment_tint;
+    float3 environment_radiance = g_scene.environment_light.get_tint();
 
     unsigned int environment_map_ID = g_scene.environment_light.environment_map_ID;
     if (environment_map_ID) {

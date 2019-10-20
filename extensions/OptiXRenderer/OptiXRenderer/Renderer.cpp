@@ -245,6 +245,8 @@ struct Renderer::Implementation {
 
     Implementation(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path, Renderers::UID renderer_ID) {
 
+#pragma warning( disable : 4302 4311 )
+
         device_IDs = { -1, -1 };
         owning_renderer_ID = renderer_ID;
 
@@ -966,9 +968,11 @@ struct Renderer::Implementation {
 
         { // Scene root updates
             for (SceneRoot scene_data : SceneRoots::get_changed_scenes()) {
+                Math::RGB _env_tint = scene_data.get_environment_tint();
+                float3 env_tint = make_float3(_env_tint.r, _env_tint.g, _env_tint.b);
                 if (scene_data.get_changes().any_set(SceneRoots::Change::EnvironmentTint, SceneRoots::Change::Created)) {
-                    Math::RGB env_tint = scene_data.get_environment_tint();
-                    scene.GPU_state.environment_tint = make_float3(env_tint.r, env_tint.g, env_tint.b);
+                    scene.environment.set_tint(env_tint);
+                    scene.GPU_state.environment_light.set_tint(env_tint);
                     should_reset_allocations = true;
                 }
 
@@ -979,10 +983,10 @@ struct Renderer::Implementation {
                         // Only textures with four channels are supported.
                         if (channel_count(image.get_pixel_format()) == 4) { // TODO Support other formats as well by converting the buffers to float4 and upload.
 #if PRESAMPLE_ENVIRONMENT_MAP
-                            scene.environment = PresampledEnvironmentMap(context, *scene_data.get_environment_light(), textures.data());
+                            scene.environment = PresampledEnvironmentMap(context, *scene_data.get_environment_light(), env_tint, textures.data());
                             scene.GPU_state.environment_light = scene.environment.get_light().presampled_environment;
 #else
-                            scene.environment = EnvironmentMap(context, *scene_data.get_environment_light(), textures.data());
+                            scene.environment = EnvironmentMap(context, *scene_data.get_environment_light(), env_tint, textures.data());
                             scene.GPU_state.environment_light = scene.environment.get_light().environment;
 #endif
                             if (scene.environment.next_event_estimation_possible()) {
@@ -1005,11 +1009,11 @@ struct Renderer::Implementation {
                             }
                         } else {
 #if PRESAMPLE_ENVIRONMENT_MAP
-                            scene.environment = PresampledEnvironmentMap();
-                            scene.GPU_state.environment_light = PresampledEnvironmentLight::none();
+                            scene.environment = PresampledEnvironmentMap(env_tint);
+                            scene.GPU_state.environment_light = scene.environment.get_light().presampled_environment;
 #else
-                            scene.environment = EnvironmentMap();
-                            scene.GPU_state.environment_light = EnvironmentLight::none();
+                            scene.environment = EnvironmentMap(env_tint);
+                            scene.GPU_state.environment_light = scene.environment.get_light().environment;
 #endif
                             printf("OptiXRenderer only supports environments with 4 channels. '%s' has %u.\n", image.get_name().c_str(), channel_count(image.get_pixel_format()));
                         }

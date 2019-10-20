@@ -94,16 +94,31 @@ struct DirectionalLight {
 };
 
 struct EnvironmentLight {
-    int width;
-    int height;
     int environment_map_ID;
     int marginal_CDF_ID;
     int conditional_CDF_ID;
     int per_pixel_PDF_ID;
+    unsigned short tint_x; // Tint stored as fixedpoint
+    unsigned short tint_y; // Tint stored as fixedpoint
+    unsigned short tint_z; // Tint stored as fixedpoint
+    unsigned short __padding; // Tint stored as fixedpoint
+    unsigned short width;
+    unsigned short height;
 
-    __inline_all__ static EnvironmentLight none() {
+    __inline_all__ static EnvironmentLight empty(optix::float3 tint) {
         EnvironmentLight light = {};
+        light.set_tint(tint);
         return light;
+    }
+
+    __inline_all__ void set_tint(optix::float3 tint) {
+        tint_x = (unsigned short)fmaxf(65535.0f, tint.x * 65535.0f + 0.5f);
+        tint_y = (unsigned short)fmaxf(65535.0f, tint.y * 65535.0f + 0.5f);
+        tint_z = (unsigned short)fmaxf(65535.0f, tint.z * 65535.0f + 0.5f);
+    }
+
+    __inline_all__ optix::float3 get_tint() const {
+        return optix::make_float3(tint_x / 65535.0f, tint_y / 65535.0f, tint_z / 65535.0f);
     }
 };
 
@@ -112,11 +127,16 @@ struct PresampledEnvironmentLight {
     int per_pixel_PDF_ID; // Texture ID.
     int samples_ID; // Buffer ID.
     int sample_count;
+    optix::float3 tint;
 
-    __inline_all__ static PresampledEnvironmentLight none() {
+    __inline_all__ static PresampledEnvironmentLight empty(optix::float3 tint) {
         PresampledEnvironmentLight light = {};
+        light.tint = tint;
         return light;
     }
+
+    __inline_all__ void set_tint(optix::float3 t) { tint = t; }
+    __inline_all__ optix::float3 get_tint() const { return tint; }
 };
 
 struct __align__(16) Light {
@@ -276,19 +296,18 @@ struct __align__(16) CameraStateGPU {
 
 struct __align__(16) SceneStateGPU {
 #if PRESAMPLE_ENVIRONMENT_MAP
-    PresampledEnvironmentLight environment_light; // Takes up 4 ints and 16 byte aligned.
-    optix::float2 __padding;
+    static_assert(sizeof(PresampledEnvironmentLight) == sizeof(float) * 7, "PresampledEnvironmentLight expected to take up seven floats");
+    PresampledEnvironmentLight environment_light;
 #else
-    EnvironmentLight environment_light; // Takes up 6 ints
+    static_assert(sizeof(EnvironmentLight) == sizeof(float) * 7, "EnvironmentLight expected to take up seven floats");
+    EnvironmentLight environment_light; // Takes up 7 ints
 #endif
+
+    float ray_epsilon;
 
     // -- Aligned to 8'th byte from here --
     rtBufferId<Light, 1> light_buffer;
     unsigned int light_count;
-
-    // -- Aligned to 16'th byte from here --
-    optix::float3 environment_tint;
-    float ray_epsilon;
 };
 
 //----------------------------------------------------------------------------

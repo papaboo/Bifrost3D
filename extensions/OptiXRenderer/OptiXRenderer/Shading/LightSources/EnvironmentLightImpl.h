@@ -75,6 +75,7 @@ __inline_dev__ LightSample sample_radiance(const EnvironmentLight& light, optix:
     sample.direction_to_light = latlong_texcoord_to_direction(uv);
     sample.distance = 1e30f;
     sample.radiance = optix::make_float3(optix::rtTex2D<optix::float4>(light.environment_map_ID, uv.x, uv.y));
+    sample.radiance *= light.get_tint();
     float sin_theta = sqrtf(1.0f - sample.direction_to_light.y * sample.direction_to_light.y);
     float PDF = optix::rtTex2D<float>(light.per_pixel_PDF_ID, uv.x, uv.y) / sin_theta;
     sample.PDF = sin_theta == 0.0f ? 0.0f : PDF;
@@ -92,7 +93,7 @@ __inline_dev__ float PDF(const EnvironmentLight& light, optix::float3 direction_
 
 __inline_dev__ optix::float3 evaluate(const EnvironmentLight& light, optix::float3 direction_to_light) {
     optix::float2 uv = direction_to_latlong_texcoord(direction_to_light);
-    return optix::make_float3(optix::rtTex2D<optix::float4>(light.environment_map_ID, uv.x, uv.y));
+    return light.get_tint() * optix::make_float3(optix::rtTex2D<optix::float4>(light.environment_map_ID, uv.x, uv.y));
 }
 
 // ------------------------------------------------------------------------------------------------

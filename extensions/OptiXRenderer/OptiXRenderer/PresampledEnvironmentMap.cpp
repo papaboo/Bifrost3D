@@ -16,7 +16,7 @@ using namespace optix;
 
 namespace OptiXRenderer {
 
-PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Assets::InfiniteAreaLight& light, 
+PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Assets::InfiniteAreaLight& light, optix::float3 tint,
                                                    TextureSampler* texture_cache, int sample_count) {
 
     int width = light.get_width(), height = light.get_height();
@@ -89,6 +89,7 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Asset
     m_light.per_pixel_PDF_ID = m_per_pixel_PDF->getId();
     m_light.sample_count = sample_count;
     m_light.environment_map_ID = texture_cache[light.get_texture_ID()]->getId();
+    m_light.tint = tint;
 }
 
 PresampledEnvironmentMap::~PresampledEnvironmentMap() {
