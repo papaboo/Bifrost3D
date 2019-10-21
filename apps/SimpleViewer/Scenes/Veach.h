@@ -31,8 +31,9 @@ void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sce
 
     SceneRoot scene = scene_ID;
 
-    // Remove background lighting
-    SceneRoots::set_environment_tint(scene_ID, RGB::black());
+    // Black background if no environment map is specified.
+    if (!Textures::has(SceneRoots::get_environment_map(scene_ID)))
+        SceneRoots::set_environment_tint(scene_ID, RGB::black());
 
     { // Setup camera transform. Look downwards by 22.5 degress
         Transform cam_transform = Cameras::get_transform(camera_ID);
