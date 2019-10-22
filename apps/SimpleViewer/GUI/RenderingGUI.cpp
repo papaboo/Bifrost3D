@@ -180,7 +180,7 @@ void RenderingGUI::layout_frame() {
             has_changed |= ImGui::Combo("Exposure", &current_exposure_mode, exposure_modes, IM_ARRAYSIZE(exposure_modes));
             effects_settings.exposure.mode = (ExposureMode)current_exposure_mode;
 
-            has_changed |= ImGui::InputFloat("Bias", &effects_settings.exposure.log_lumiance_bias, 0.25, 1, "%.2f");
+            has_changed |= ImGui::InputFloat("Bias", &effects_settings.exposure.log_lumiance_bias, 0.25f, 1.0f, "%.2f");
         });
 
         ImGui::PoppedTreeNode("Tonemapping", [&]() {
@@ -261,6 +261,8 @@ void RenderingGUI::layout_frame() {
                 }
             }
         });
+
+        has_changed |= ImGui::InputFloat("Vignette", &effects_settings.vignette, 0.01f, 0.1f, "%.2f");
 
         if (has_changed)
             Cameras::set_effects_settings(camera_ID, effects_settings);
