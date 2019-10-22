@@ -76,6 +76,8 @@ struct Settings final {
         float variance(int height) { return std_dev(height) * std_dev(height); }
     } bloom;
 
+    float vignette;
+
     struct {
         TonemappingMode mode;
         union {
@@ -98,6 +100,8 @@ struct Settings final {
 
         res.bloom.threshold = INFINITY;
         res.bloom.support = 0.05f;
+
+        res.vignette = 0.63f;
 
         res.tonemapping.mode = TonemappingMode::Filmic;
         res.tonemapping.filmic = FilmicSettings::default();
