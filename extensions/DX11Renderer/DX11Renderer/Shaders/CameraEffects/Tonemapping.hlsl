@@ -141,6 +141,18 @@ inline float3 unreal4(float3 color, float black_clip = 0.0f, float toe = 0.53f, 
 }
 
 // ------------------------------------------------------------------------------------------------
+// Simple vignette using smoothstep.
+// Adapted from https://github.com/mattdesl/lwjgl-basics/wiki/ShaderLesson3
+// ------------------------------------------------------------------------------------------------
+
+float simple_vignette_tint(float2 fragcoord, float2 viewport_size, float scale) {
+    float outerRadius = 0.9f;
+    float2 uv = fragcoord / viewport_size.xy;
+    float2 coord = uv - float2(0.5, 0.5);
+    return 1.0 - smoothstep(0.1f, outerRadius, length(coord) * 1.5f * scale);
+}
+
+// ------------------------------------------------------------------------------------------------
 // Tonemapping pixel shaders.
 // ------------------------------------------------------------------------------------------------
 
@@ -148,30 +160,60 @@ Texture2D pixels : register(t0);
 Buffer<float> linear_exposure_buffer : register(t1);
 Texture2D bloom_texture : register(t2);
 
-float3 get_pixel_color(int2 pixel_index) {
+interface ITonemapper {
+    float3 tonemap(float3 color);
+};
+
+class LinearTonemapper : ITonemapper {
+    float3 tonemap(float3 color) { return color; }
+};
+
+class Uncharted2Tonemapper : ITonemapper {
+    float3 tonemap(float3 color) {
+        return uncharted2(color, uncharted2_shoulder_strength(), uncharted2_linear_strength(), uncharted2_linear_angle(), 
+                          uncharted2_toe_strength(), uncharted2_toe_numerator(), uncharted2_toe_denominator(), 
+                          uncharted2_linear_white());
+    }
+};
+
+class Unreal4Tonemapper : ITonemapper {
+    float3 tonemap(float3 color) {
+        return unreal4(color, filmic_black_clip(), filmic_toe(), filmic_slope(), filmic_shoulder(), filmic_white_clip());
+    }
+};
+
+float4 postprocess_pixel(Varyings input, ITonemapper tonemapper) {
+    int2 pixel_index = int2(input.position.xy);
+
+    // Bloom and exposure
     float linear_exposure = linear_exposure_buffer[0];
     float3 low_intensity_color = min(pixels[pixel_index + output_pixel_offset].rgb, bloom_threshold);
     float3 bloom_color = bloom_texture[pixel_index - output_viewport_offset].rgb;
-    return linear_exposure * (low_intensity_color + bloom_color);
+    float3 color  = linear_exposure * (low_intensity_color + bloom_color);
+
+    // Vignette
+    float2 viewport_size = input_viewport.zw;
+    color *= simple_vignette_tint(input.position.xy, viewport_size, vignette);
+
+    // Tonemap
+    color = tonemapper.tonemap(color);
+
+    return float4(color, 1.0f);
 }
 
 float4 linear_tonemapping_ps(Varyings input) : SV_TARGET {
-    return float4(get_pixel_color(int2(input.position.xy)), 1.0f);
+    LinearTonemapper tonemapper;
+    return postprocess_pixel(input, tonemapper);
 }
 
 float4 uncharted2_tonemapping_ps(Varyings input) : SV_TARGET {
-    float3 color = get_pixel_color(int2(input.position.xy));
-
-    float3 tonemapped_color = uncharted2(color, uncharted2_shoulder_strength(), uncharted2_linear_strength(), uncharted2_linear_angle(), 
-                                         uncharted2_toe_strength(), uncharted2_toe_numerator(), uncharted2_toe_denominator(), 
-                                         uncharted2_linear_white());
-
-    return float4(tonemapped_color, 1.0);
+    Uncharted2Tonemapper tonemapper;
+    return postprocess_pixel(input, tonemapper);
 }
 
 float4 unreal4_tonemapping_ps(Varyings input) : SV_TARGET {
-    float3 color = get_pixel_color(int2(input.position.xy));
-    return float4(unreal4(color, filmic_black_clip(), filmic_toe(), filmic_slope(), filmic_shoulder(), filmic_white_clip()), 1.0);
+    Unreal4Tonemapper tonemapper;
+    return postprocess_pixel(input, tonemapper);
 }
 
 } // NS CameraEffects

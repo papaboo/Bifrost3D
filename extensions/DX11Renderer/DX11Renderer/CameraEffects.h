@@ -188,7 +188,8 @@ public:
         int bloom_support;
 
         float delta_time;
-        float2 _padding;
+        float vignette;
+        float _padding;
 
         // Generic tonemapping parameter storage
         float tonemapping[8];
