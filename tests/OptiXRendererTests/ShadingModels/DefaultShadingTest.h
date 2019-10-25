@@ -334,19 +334,19 @@ GTEST_TEST(DefaultShadingModel, coat_interpolation) {
 
     for (float coat_roughness : { 0.0f, 0.5f, 1.0f }) {
         material_params.coat_roughness = coat_roughness;
-        for (float coat : { 0.25f, 0.5f, 0.75f }) {
-            for (float abs_cos_theta : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
+        for (float abs_cos_theta : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
+            material_params.coat = 0;
+            auto non_coat_material = DefaultShading(material_params, abs_cos_theta);
+            float3 non_coat_rho = non_coat_material.rho(abs_cos_theta);
+
+            material_params.coat = 1;
+            auto coated_material = DefaultShading(material_params, abs_cos_theta);
+            float3 coated_rho = coated_material.rho(abs_cos_theta);
+
+            for (float coat : { 0.25f, 0.5f, 0.75f }) {
                 material_params.coat = coat;
                 auto material = DefaultShading(material_params, abs_cos_theta);
                 float3 rho = material.rho(abs_cos_theta);
-
-                material_params.coat = 0;
-                auto non_coat_material = DefaultShading(material_params, abs_cos_theta);
-                float3 non_coat_rho = non_coat_material.rho(abs_cos_theta);
-
-                material_params.coat = 1;
-                auto coated_material = DefaultShading(material_params, abs_cos_theta);
-                float3 coated_rho = coated_material.rho(abs_cos_theta);
 
                 // Test that the directional-hemispherical reflectance of the semi-coated material equals
                 // the one evaluated by interpolating between a material with no coat and coated material.
