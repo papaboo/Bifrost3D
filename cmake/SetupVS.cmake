@@ -41,6 +41,11 @@ if (MSVC)
 
   # Setup warnings
 
+  # Remove warnings from system level includes
+  add_compile_options(/experimental:external)
+  add_compile_options(/external:W0)
+  set(CMAKE_INCLUDE_SYSTEM_FLAG_CXX "/external:I ")
+
   add_definitions(-WX) # Warnings as errors
   # add_definitions(-Wall)
 
@@ -54,8 +59,11 @@ if (MSVC)
   add_definitions(-wd4710) # Function not inlined
   add_definitions(-wd4711) # Function selected for automatic inline expansion.
 
-  if (MSVC14)
-      add_definitions(-wd5026) # move constructor was implicitly defined as deleted
-      add_definitions(-wd5027) # move assignment operator was implicitly defined as deleted
-  endif()
+  add_definitions(-wd5026) # move constructor was implicitly defined as deleted
+  add_definitions(-wd5027) # move assignment operator was implicitly defined as deleted
+
+  add_definitions(-wd6993) # Do not warn that OpenMP is analyzed single threaded.
+
+  add_definitions(-wd26451) # Arithmetic overflow warning. Pops up all places where ints are used as sizes to allocated arrays.
+  add_definitions(-wd26812) # Prefer enum class over enum.
 endif()
