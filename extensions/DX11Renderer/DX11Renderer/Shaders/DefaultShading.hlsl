@@ -64,7 +64,7 @@ struct DefaultShading {
     float m_roughness;
     float3 m_specularity;
     float m_coverage;
-    float m_base_rho; // 1 - coat_rho, the contribution from the BSDFs under the coat.
+    float m_coat_transmission; // 1 - coat_rho, the contribution from the BSDFs under the coat.
     float m_coat_scale;
     float m_coat_roughness;
 
@@ -82,11 +82,13 @@ struct DefaultShading {
             shading.m_coverage *= coverage_tex.Sample(coverage_sampler, texcoord).a;
 
         // Clear coat with fixed index of refraction of 1.5 / specularity of 0.04, representative of polyurethane and glass.
-        // We skip adding the contribution from additional coat bounces to diffuse, as the coat is mostly meant to be clear and would have little contribution from additional bounces.
         shading.m_coat_scale = material_params.m_coat;
         shading.m_coat_roughness = material_params.m_coat_roughness;
-        float coat_rho = material_params.m_coat * fetch_specular_rho(abs_cos_theta, shading.m_coat_roughness).rho(coat_specularity);
-        shading.m_base_rho = 1.0f - coat_rho;
+        PrecomputedSpecularRho precomputed_coat_rho = fetch_specular_rho(abs_cos_theta, shading.m_coat_roughness);
+        float coat_single_bounce_rho = material_params.m_coat * precomputed_coat_rho.rho(coat_specularity);
+        float lossless_coat_rho = coat_single_bounce_rho / precomputed_coat_rho.full;
+        float coat_interreflection_rho = lossless_coat_rho - coat_single_bounce_rho;
+        shading.m_coat_transmission = 1.0f - lossless_coat_rho;
 
         // Tint and roughness
         float4 tint_roughness = { material_params.m_tint, material_params.m_roughness };
@@ -120,10 +122,14 @@ struct DefaultShading {
         float3 dielectric_tint = tint * (1.0f - dielectric_lossless_specular_rho);
 
         // Microfacet specular interreflection.
-        float3 specular_rho = lerp(dielectric_specular_rho.rrr, conductor_specular_rho, metallic);
-        float3 lossless_specular_rho = specular_rho / precomputed_specular_rho.full;
-        float3 specular_secondary_scattering_rho = lossless_specular_rho - specular_rho;
-        shading.m_diffuse_tint = dielectric_tint * (1.0f - metallic) + specular_secondary_scattering_rho; // Diffuse tint combines the tint of the diffuse scattering with the secondary scattering from the specular layer.
+        float3 single_bounce_specular_rho = lerp(dielectric_specular_rho.rrr, conductor_specular_rho, metallic);
+        float3 lossless_specular_rho = single_bounce_specular_rho / precomputed_specular_rho.full;
+        float3 specular_interreflection_rho = lossless_specular_rho - single_bounce_specular_rho;
+
+        // Combining dielectric diffuse tint with specular scattering.
+        shading.m_diffuse_tint = dielectric_tint * (1.0f - metallic) + specular_interreflection_rho; // Diffuse tint combines the tint of the diffuse scattering with the secondary scattering from the specular layer.
+        shading.m_diffuse_tint *= shading.m_coat_transmission; // Scale by coat transmission
+        shading.m_diffuse_tint += coat_interreflection_rho; // Add contribution from coat interreflection
 
         return shading;
     }
@@ -152,9 +158,8 @@ struct DefaultShading {
 
         float3 reflectance = m_diffuse_tint * BSDFs::Lambert::evaluate();
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
-        reflectance += BSDFs::GGX::evaluate(ggx_alpha, m_specularity, wo, wi);
+        reflectance += BSDFs::GGX::evaluate(ggx_alpha, m_specularity, wo, wi) * m_coat_transmission;
         if (m_coat_scale > 0) {
-            reflectance *= m_base_rho;
             float coat_ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
             reflectance += m_coat_scale * BSDFs::GGX::evaluate(coat_ggx_alpha, coat_specularity, wo, wi);
         }
@@ -183,12 +188,10 @@ struct DefaultShading {
 
         radiance *= scaled_ambient_visibility;
 
-        radiance += evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, m_specularity, m_roughness, scaled_ambient_visibility);
+        radiance += evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, m_specularity, m_roughness, scaled_ambient_visibility) * m_coat_transmission;
 
-        if (m_coat_scale > 0) {
-            radiance *= m_base_rho;
+        if (m_coat_scale > 0)
             radiance += m_coat_scale * evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, coat_specularity, m_coat_roughness, scaled_ambient_visibility);
-        }
 
         return radiance;
     }
@@ -240,11 +243,10 @@ struct DefaultShading {
 
         float abs_cos_theta = abs(dot(wo, normal));
 
-        radiance += evaluate_IBL_GGX(wo, normal, abs_cos_theta, m_roughness, m_specularity, mip_count);
-        if (m_coat_scale > 0) {
-            radiance *= m_base_rho;
+        radiance += evaluate_IBL_GGX(wo, normal, abs_cos_theta, m_roughness, m_specularity, mip_count) * m_coat_transmission;
+        if (m_coat_scale > 0)
             radiance += m_coat_scale * evaluate_IBL_GGX(wo, normal, abs_cos_theta, m_coat_roughness, coat_specularity, mip_count);
-        }
+
         return radiance;
     }
 
