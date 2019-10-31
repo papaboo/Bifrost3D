@@ -41,6 +41,7 @@ private:
         char path[max_path_length];
         unsigned int iterations = 0;
         bool is_HDR = false;
+        bool capture_albedo = false;
     } m_screenshot;
 
     // Pimpl the state to avoid exposing dependencies.

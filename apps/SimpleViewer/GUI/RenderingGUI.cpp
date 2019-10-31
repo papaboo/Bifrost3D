@@ -52,7 +52,7 @@ struct RenderingGUI::State {
 
 RenderingGUI::RenderingGUI(DX11Renderer::Compositor* compositor, DX11Renderer::Renderer* dx_renderer, OptiXRenderer::Renderer* optix_renderer)
     : m_compositor(compositor), m_dx_renderer(dx_renderer), m_optix_renderer(optix_renderer), m_state(new State()) {
-    strcpy_s(m_screenshot.path, m_screenshot.max_path_length, "c:\\temp\\ss.png");
+    strcpy_s(m_screenshot.path, m_screenshot.max_path_length, "c:\\temp\\ss");
 
     // Tonemapping parameters
     m_state->tonemapping.filmic = CameraEffects::FilmicSettings::default();
@@ -72,24 +72,34 @@ void RenderingGUI::layout_frame() {
     { // Screenshotting
         { // Resolve existing screenshots
             for (auto cam_ID : Cameras::get_iterable()) {
-                Images::UID image_ID = Cameras::resolve_screenshot(cam_ID, "ss");
-                if (Images::has(image_ID)) {
-                    if (!StbImageWriter::write(image_ID, std::string(m_screenshot.path)))
-                        printf("Failed to output screenshot to '%s'\n", m_screenshot.path);
-                    Images::destroy(image_ID);
-                }
+                auto output_screenshot = [&](Screenshot::Content content, char* file_extension) {
+                    auto image_ID = Cameras::resolve_screenshot(cam_ID, content, "ss");
+                    if (Images::has(image_ID)) {
+                        std::string path = std::string(m_screenshot.path) + file_extension;
+                        if (!StbImageWriter::write(image_ID, path))
+                            printf("Failed to output screenshot to '%s'\n", path.c_str());
+                        Images::destroy(image_ID);
+                    }
+                };
+                output_screenshot(Screenshot::Content::ColorLDR, ".png");
+                output_screenshot(Screenshot::Content::ColorHDR, ".hdr");
+                output_screenshot(Screenshot::Content::Albedo, "_albedo.png");
             }
         }
 
         ImGui::PoppedTreeNode("Screenshot", [&]() {
             bool take_screenshot = ImGui::Button("Take screenshots");
-            ImGui::InputText("Path", m_screenshot.path, m_screenshot.max_path_length);
+            ImGui::InputText("Path without extension", m_screenshot.path, m_screenshot.max_path_length);
             ImGui::InputUint("Iterations", &m_screenshot.iterations);
             ImGui::Checkbox("HDR", &m_screenshot.is_HDR);
+            ImGui::Checkbox("Albedo", &m_screenshot.capture_albedo);
 
             if (take_screenshot) {
                 auto first_cam_ID = *Cameras::get_iterable().begin();
-                Cameras::request_screenshot(first_cam_ID, m_screenshot.is_HDR, m_screenshot.iterations);
+                Cameras::RequestedContent content = m_screenshot.is_HDR ? Screenshot::Content::ColorHDR : Screenshot::Content::ColorLDR;
+                if (m_screenshot.capture_albedo)
+                    content |= Screenshot::Content::Albedo;
+                Cameras::request_screenshot(first_cam_ID, content, m_screenshot.iterations);
             }
         });
     }

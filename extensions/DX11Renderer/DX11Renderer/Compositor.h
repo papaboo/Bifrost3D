@@ -63,6 +63,7 @@ public:
     virtual Bifrost::Core::Renderers::UID get_ID() const = 0;
     virtual void handle_updates() = 0;
     virtual RenderedFrame render(Bifrost::Scene::Cameras::UID camera_ID, int width, int height) = 0;
+    virtual std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::Cameras::UID camera_ID, Bifrost::Scene::Cameras::RequestedContent content_requested, int width, int height) { return std::vector<Bifrost::Scene::Screenshot>(); }
 };
 
 typedef IRenderer*(*RendererCreator)(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path);

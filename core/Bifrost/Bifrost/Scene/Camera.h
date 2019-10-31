@@ -25,9 +25,24 @@ namespace Bifrost {
 namespace Scene {
 
 // ------------------------------------------------------------------------------------------------
+// Container for screenshots from the camera.
+// ------------------------------------------------------------------------------------------------
+struct Screenshot {
+    enum class Content : unsigned char {
+        None = 0u,
+        ColorLDR = 1u << 0u,
+        ColorHDR = 1u << 1u,
+        Albedo = 1u << 2u
+    };
+
+    Assets::Images::PixelData pixels;
+    Content content;
+    Assets::PixelFormat format;
+    int width, height;
+};
+
+// ------------------------------------------------------------------------------------------------
 // Container for bifrost matrix cameras.
-// Future work
-// * Reference a backbuffer or render_target to allow cameras to render to windows and FBO's.
 // ------------------------------------------------------------------------------------------------
 class Cameras final {
 public:
@@ -99,19 +114,20 @@ public:
 
     //---------------------------------------------------------------------------------------------
     // Screenshot functionality. Currently only supports getting screenshots based on iteration count.
-    //-------------------------------------------------------------------------
-    static void request_screenshot(Cameras::UID camera_ID, bool as_HDR, unsigned int minimum_iteration_count = 1) {
-        m_screenshot_info[camera_ID].pixel_format = as_HDR ? Assets::PixelFormat::RGBA_Float : Assets::PixelFormat::RGBA32;
-        m_screenshot_info[camera_ID].minimum_iteration_count = minimum_iteration_count;
+    //---------------------------------------------------------------------------------------------
+    using RequestedContent = Core::Bitmask<Screenshot::Content>;
+    static void request_screenshot(Cameras::UID camera_ID, RequestedContent content_requested, unsigned int minimum_iteration_count = 1) {
+        m_screenshot_request[camera_ID].content_requested = content_requested;
+        m_screenshot_request[camera_ID].minimum_iteration_count = minimum_iteration_count;
     }
     static bool is_screenshot_requested(Cameras::UID camera_ID) { 
-        return m_screenshot_info[camera_ID].pixel_format != Assets::PixelFormat::Unknown && m_screenshot_info[camera_ID].pixels == nullptr;
+        return m_screenshot_request[camera_ID].content_requested != Screenshot::Content::None;
     }
-    static void cancel_screenshot(Cameras::UID camera_ID) { m_screenshot_info[camera_ID].pixel_format = Assets::PixelFormat::Unknown; }
-    using ScreenshotFiller = std::function<Assets::Images::PixelData(Assets::PixelFormat format, unsigned int minimum_iteration_count, int& width, int& height)>;
+    static void cancel_screenshot(Cameras::UID camera_ID) { m_screenshot_request[camera_ID].content_requested = Screenshot::Content::None; }
+    using ScreenshotFiller = std::function<std::vector<Screenshot>(RequestedContent, unsigned int minimum_iteration_count)>;
     // Grabs screenshot data from the renderer and stores it in an intermediate format while the datamodel is considered immutable.
     static void fill_screenshot(Cameras::UID camera_ID, ScreenshotFiller screenshot_filler);
-    static Assets::Images::UID resolve_screenshot(Cameras::UID camera_ID, const std::string& name); // Resolves the last screenshot.
+    static Assets::Images::UID resolve_screenshot(Cameras::UID camera_ID, Screenshot::Content image_content, const std::string& name); // Resolves the last screenshot.
 
     //---------------------------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -148,14 +164,14 @@ private:
     static Core::Renderers::UID* m_renderer_IDs;
     static Math::CameraEffects::Settings* m_effects_settings;
 
-    struct ScreenshotInfo {
-        Assets::Images::PixelData pixels;
-        Assets::PixelFormat pixel_format;
-        int width, height;
+    struct ScreenshotRequest {
+        Core::Bitmask<Screenshot::Content> content_requested;
         unsigned int minimum_iteration_count;
+
+        std::vector<Screenshot> images;
     };
 
-    static ScreenshotInfo* m_screenshot_info;
+    static ScreenshotRequest* m_screenshot_request;
 
     static Core::ChangeSet<Changes, UID> m_changes;
 };

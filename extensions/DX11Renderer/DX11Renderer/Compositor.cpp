@@ -203,21 +203,34 @@ public:
             return;
 
         auto screenshot_filler = [](ID3D11Device1* device, ID3D11DeviceContext1* context, 
-                                    ID3D11Texture2D* source_resource, DXGI_FORMAT source_format, Bifrost::Math::Rect<int> source_viewport, 
-                                    unsigned int source_iteration_count, unsigned int minimum_iteration_count, 
-                                    PixelFormat format, int& width, int& height) -> Images::PixelData {
+                                    bool is_HDR, ID3D11Texture2D* source_resource, Bifrost::Math::Rect<int> source_viewport) -> Screenshot {
             // Helpers
             typedef Vector4<half> Vector4h;
             typedef Vector4<unsigned char> Vector4uc;
             auto to_uchar = [](half v) -> unsigned char { return unsigned char(clamp(v * 255.0f + 0.5f, 0.0f, 255.0f)); };
 
-            if (source_iteration_count < minimum_iteration_count)
-                return nullptr;
-
-            width = source_viewport.width; height = source_viewport.height;
+            Screenshot screenshot;
+            int width = screenshot.width = source_viewport.width; 
+            int height = screenshot.height = source_viewport.height;
             int element_count = width * height;
-            if (format == PixelFormat::RGBA32) {
-                assert(source_format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
+            if (is_HDR) {
+                screenshot.format = PixelFormat::RGBA_Float;
+                screenshot.content = Screenshot::Content::ColorHDR;
+
+                auto pixels = std::vector<Vector4h>(element_count);
+                Readback::texture2D(device, context, source_resource, source_viewport, pixels.begin());
+
+                RGBA* data = new RGBA[element_count];
+                for (int y = 0; y < height; ++y)
+                    for (int x = 0; x < width; ++x) {
+                        Vector4h& pixel = pixels[x + y * width];
+                        data[x + (height - y - 1) * width] = RGBA(pixel.x, pixel.y, pixel.z, pixel.w);
+                    }
+                screenshot.pixels = data;
+                return screenshot;
+            } else {
+                screenshot.format = PixelFormat::RGBA32;
+                screenshot.content = Screenshot::Content::ColorLDR;
 
                 Vector4uc* pixels = new Vector4uc[element_count];
                 Readback::texture2D(device, context, source_resource, source_viewport, pixels);
@@ -229,22 +242,9 @@ public:
                     memcpy(pixels + row * width, pixels + (height - row - 1) * width, row_size);
                     memcpy(pixels + (height - row - 1) * width, tmp.data(), row_size);
                 }
-                return pixels;
-            } if (format == PixelFormat::RGBA_Float) {
-                assert(source_format == DXGI_FORMAT_R16G16B16A16_FLOAT);
-
-                auto pixels = std::vector<Vector4h>(element_count);
-                Readback::texture2D(device, context, source_resource, source_viewport, pixels.begin());
-
-                RGBA* data = new RGBA[element_count];
-                for (int x = 0; x < width; ++x)
-                    for (int y = 0; y < height; ++y) {
-                        Vector4h& pixel = pixels[x + y * width];
-                        data[x + (height - y - 1) * width] = RGBA(pixel.x, pixel.y, pixel.z, pixel.w);
-                    }
-                return data;
-            } else
-                return nullptr;
+                screenshot.pixels = pixels;
+                return screenshot;
+            }
         };
 
         Vector2ui current_backbuffer_size = Vector2ui(m_window.get_width(), m_window.get_height());
@@ -283,13 +283,26 @@ public:
             Renderers::UID renderer_ID = Cameras::get_renderer_ID(camera_ID);
             auto frame = m_renderers[renderer_ID]->render(camera_ID, int(viewport.width), int(viewport.height));
 
-            auto take_hdr_screenshot = [&](PixelFormat format, unsigned int minimum_iteration_count, int& width, int& height) -> Images::PixelData {
-                if (format != PixelFormat::RGBA_Float) return nullptr;
+            auto take_screenshot = [&](Cameras::RequestedContent content_requested, unsigned int minimum_iteration_count, bool is_HDR) -> std::vector<Screenshot> {
+                if (frame.iteration_count < minimum_iteration_count)
+                    return std::vector<Screenshot>();
 
-                ID3D11Resource* sourceResource;
-                frame.frame_SRV->GetResource(&sourceResource);
-                return screenshot_filler(m_device, m_render_context, (ID3D11Texture2D*)sourceResource, DXGI_FORMAT_R16G16B16A16_FLOAT, frame.viewport,
-                                         frame.iteration_count, minimum_iteration_count, format, width, height);
+                auto images = m_renderers[renderer_ID]->request_auxiliary_buffers(camera_ID, content_requested, int(viewport.width), int(viewport.height));
+
+                Screenshot::Content color_content = is_HDR ? Screenshot::Content::ColorHDR : Screenshot::Content::ColorLDR;
+                if (content_requested.is_set(color_content)) {
+                    ID3D11View* color_buffer_view = is_HDR ? (ID3D11View*)frame.frame_SRV : (ID3D11View*)m_swap_chain_RTV;
+                    ID3D11Resource* sourceResource;
+                    color_buffer_view->GetResource(&sourceResource);
+                    auto screenshot = screenshot_filler(m_device, m_render_context, is_HDR, (ID3D11Texture2D*)sourceResource, frame.viewport);
+                    if (screenshot.pixels != nullptr)
+                        images.push_back(screenshot);
+                }
+
+                return images;
+            };
+            auto take_hdr_screenshot = [&](Cameras::RequestedContent content_requested, unsigned int minimum_iteration_count) -> std::vector<Screenshot> {
+                return take_screenshot(content_requested, minimum_iteration_count, true);
             };
             Cameras::fill_screenshot(camera_ID, take_hdr_screenshot);
 
@@ -305,13 +318,8 @@ public:
             auto effects_settings = Cameras::get_effects_settings(camera_ID);
             m_camera_effects.process(m_render_context, effects_settings, delta_time, frame.frame_SRV, m_swap_chain_RTV, frame.viewport, Recti(viewport));
 
-            auto take_ldr_screenshot = [&](PixelFormat format, unsigned int minimum_iteration_count, int& width, int& height) -> Images::PixelData {
-                if (format != PixelFormat::RGBA32) return nullptr;
-
-                ID3D11Resource* sourceResource;
-                m_swap_chain_RTV->GetResource(&sourceResource);
-                return screenshot_filler(m_device, m_render_context, (ID3D11Texture2D*)sourceResource, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, Recti(viewport),
-                                         frame.iteration_count, minimum_iteration_count, format, width, height);
+            auto take_ldr_screenshot = [&](Cameras::RequestedContent content_requested, unsigned int minimum_iteration_count) -> std::vector<Screenshot> {
+                return take_screenshot(content_requested, minimum_iteration_count, false);
             };
             Cameras::fill_screenshot(camera_ID, take_ldr_screenshot);
         }

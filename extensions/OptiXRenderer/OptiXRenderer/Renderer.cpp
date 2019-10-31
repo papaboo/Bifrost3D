@@ -46,6 +46,8 @@ using namespace optix;
 
 namespace OptiXRenderer {
 
+struct half4 { half x, y, z, w; };
+
 static inline size_t size_of(RTformat format) {
     switch (format) {
     case RT_FORMAT_FLOAT: return sizeof(float);
@@ -1028,14 +1030,13 @@ struct Renderer::Implementation {
                 camera_state.accumulations = 0u;
     }
 
-    unsigned int render(Bifrost::Scene::Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
-
+    inline CameraStateGPU prepare_camera_state(Bifrost::Scene::Cameras::UID camera_ID, int width, int height) {
+        auto& camera_state = per_camera_state[camera_ID];
         CameraStateGPU camera_state_GPU = {};
 
         { // Update camera state
             // Resize screen buffers if necessary.
             uint2 current_screensize = make_uint2(width, height);
-            auto& camera_state = per_camera_state[camera_ID];
             if (current_screensize != camera_state.screensize) {
                 camera_state.accumulation_buffer->setSize(width, height);
                 camera_state.backend_impl->resize_backbuffers(width, height);
@@ -1047,7 +1048,7 @@ struct Renderer::Implementation {
             }
 
             { // Upload camera parameters.
-              // Check if the camera transforms changed and, if so, upload the new ones and reset accumulation.
+                // Check if the camera transforms changed and, if so, upload the new ones and reset accumulation.
                 Matrix4x4f inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
                 if (camera_state.inverse_view_projection_matrix != inverse_view_projection_matrix) {
                     camera_state.inverse_view_projection_matrix = inverse_view_projection_matrix;
@@ -1063,37 +1064,81 @@ struct Renderer::Implementation {
             }
         }
 
-        auto& camera_state = per_camera_state[camera_ID];
-        if (camera_state.accumulations >= camera_state.max_accumulation_count)
-            return camera_state.accumulations;
-
-        camera_state_GPU.output_buffer = buffer->getId();
         camera_state_GPU.accumulation_buffer = camera_state.accumulation_buffer->getId();
         camera_state_GPU.accumulations = camera_state.accumulations;
         camera_state_GPU.max_bounce_count = camera_state.max_bounce_count;
         camera_state_GPU.path_regularization_scale = scene.path_regularization.scale * (1.0f + scene.path_regularization.decay * camera_state_GPU.accumulations);
-        context["g_camera_state"]->setUserData(sizeof(camera_state_GPU), &camera_state_GPU);
+        return camera_state_GPU;
+    }
 
-        context["g_scene"]->setUserData(sizeof(SceneStateGPU), &scene.GPU_state);
+    unsigned int render(Bifrost::Scene::Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
+        CameraStateGPU camera_state_GPU = prepare_camera_state(camera_ID, width, height);
+        camera_state_GPU.output_buffer = buffer->getId();
+
+        auto& camera_state = per_camera_state[camera_ID];
+        if (camera_state.accumulations >= camera_state.max_accumulation_count)
+            return camera_state.accumulations;
+
+        context["g_camera_state"]->setUserData(sizeof(camera_state_GPU), &camera_state_GPU);
+        context["g_scene"]->setUserData(sizeof(scene.GPU_state), &scene.GPU_state);
 
         camera_state.backend_impl->render(context, width, height, camera_state.accumulations);
         ++camera_state.accumulations;
 
-        /*
-        if (is_power_of_two(camera_state.accumulations - 1)) {
-            Vector4<double>* mapped_output = (Vector4<double>*)camera_state.accumulation_buffer->map();
-            Image output = Images::create2D("Output", PixelFormat::RGBA_Float, 1.0, Vector2ui(width, height));
-            RGBA* pixels = output.get_pixels<RGBA>();
-            for (unsigned int i = 0; i < output.get_pixel_count(); ++i)
-                pixels[i] = RGBA(float(mapped_output[i].x), float(mapped_output[i].y), float(mapped_output[i].z), 1.0f);
-            camera_state.accumulation_buffer->unmap();
-            std::ostringstream filename;
-            filename << "C:\\Users\\Asger Hoedt\\Desktop\\cam_" << camera_ID.get_index() << "_image_" << (camera_state.accumulations - 1) << ".png";
-            StbImageWriter::write(output, filename.str());
-        }
-        */
-
         return camera_state.accumulations;
+    }
+
+    std::vector<Screenshot> request_auxiliary_buffers(Cameras::UID camera_ID, Cameras::RequestedContent content_requested, int width, int height) {
+        const Cameras::RequestedContent supported_content = { Screenshot::Content::Albedo };
+        if ((content_requested & supported_content) == Screenshot::Content::None)
+            return std::vector<Screenshot>();
+
+        // Rerender for the requested content into a scratch render buffer.
+        auto& camera_state = per_camera_state[camera_ID];
+        unsigned int accumulation_count = camera_state.accumulations;
+        auto output_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_SHORT4, width, height);
+#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
+        auto accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER, width, height);
+        accumulation_buffer->setElementSize(sizeof(double) * 4);
+#else
+        auto accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, width, height);
+#endif
+
+        auto screenshots = std::vector<Screenshot>();
+
+        // Upload general camera state
+        CameraStateGPU camera_state_GPU = prepare_camera_state(camera_ID, width, height);
+        camera_state_GPU.output_buffer = output_buffer->getId();
+        camera_state_GPU.accumulation_buffer = accumulation_buffer->getId();
+        context["g_scene"]->setUserData(sizeof(scene.GPU_state), &scene.GPU_state);
+
+        // Render albedo
+        if (content_requested & Screenshot::Content::Albedo) {
+            for (camera_state_GPU.accumulations = 0; camera_state_GPU.accumulations < accumulation_count; ++camera_state_GPU.accumulations) {
+                context["g_camera_state"]->setUserData(sizeof(camera_state_GPU), &camera_state_GPU);
+                context->launch(EntryPoints::Albedo, width, height);
+            }
+
+            // Readback screenshot data
+            Screenshot albedo_screenshot;
+            albedo_screenshot.width = width;
+            albedo_screenshot.height = height;
+            albedo_screenshot.content = Screenshot::Content::Albedo;
+            albedo_screenshot.format = PixelFormat::RGBA32;
+            RGBA32* pixels = new RGBA32[width * height];
+            half4* gpu_pixels = (half4*)output_buffer->map();
+            for (int i = 0; i < width * height; ++i) {
+                pixels[i].r = unsigned char(gpu_pixels[i].x * 255.0f + 0.5f);
+                pixels[i].g = unsigned char(gpu_pixels[i].y * 255.0f + 0.5f);
+                pixels[i].b = unsigned char(gpu_pixels[i].z * 255.0f + 0.5f);
+                pixels[i].a = 255;
+            }
+            output_buffer->unmap();
+            albedo_screenshot.pixels = pixels;
+            screenshots.push_back(albedo_screenshot);
+        }
+
+        return screenshots;
     }
 };
 
@@ -1179,6 +1224,10 @@ void Renderer::handle_updates() { m_impl->handle_updates(); }
 
 unsigned int Renderer::render(Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
     return m_impl->render(camera_ID, buffer, width, height);
+}
+
+std::vector<Screenshot> Renderer::request_auxiliary_buffers(Cameras::UID camera_ID, Cameras::RequestedContent content_requested, int width, int height) {
+    return m_impl->request_auxiliary_buffers(camera_ID, content_requested, width, height);
 }
 
 optix::Context& Renderer::get_context() { return m_impl->context; }

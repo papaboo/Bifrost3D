@@ -274,16 +274,15 @@ RT_PROGRAM void albedo_RPG() {
             rtTrace(g_scene_root, ray, payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_ANYHIT);
         } while (payload.material_index == 0 && !is_black(payload.throughput));
 
-        size_t2 screen_size = g_camera_state.accumulation_buffer.size();
         bool valid_material = payload.material_index != 0;
-        if (g_launch_index.x < screen_size.x / 2 && valid_material) {
+        if (valid_material) {
             using namespace Shading::ShadingModels;
             const Material& material_parameter = g_materials[payload.material_index];
             const float abs_cos_theta = abs(dot(last_ray_direction, payload.shading_normal));
             const DefaultShading material = DefaultShading(material_parameter, abs_cos_theta, payload.texcoord);
             return material.rho(abs_cos_theta);
         } else
-            return payload.throughput;
+            return make_float3(0, 0, 0);
     });
 }
 
