@@ -26,19 +26,24 @@ enum class PixelFormat {
     A8,
     Metallic8 = A8,
     Roughness8 = A8,
+    Intensity8, // Uses the red channel when getting and setting pixels. Alpha is always one when getting a pixel. Green and blue are undefined.
     RGB24,
     RGBA32,
+    Intensity_Float, // Uses the red channel when getting and setting pixels. Alpha is always one when getting a pixel. Green and blue are undefined.
     RGB_Float,
     RGBA_Float,
 };
 
 inline int size_of(PixelFormat format) {
     switch (format) {
-    case PixelFormat::RGBA32: return 4;
-    case PixelFormat::RGBA_Float: return 16;
+    case PixelFormat::A8:
+    case PixelFormat::Intensity8: return 1;
     case PixelFormat::RGB24: return 3;
+    case PixelFormat::RGBA32:
+    case PixelFormat::Intensity_Float:
+        return 4;
     case PixelFormat::RGB_Float: return 12;
-    case PixelFormat::A8: return 1;
+    case PixelFormat::RGBA_Float: return 16;
     case PixelFormat::Unknown:
     default:
         return 0;
@@ -54,6 +59,8 @@ inline int channel_count(PixelFormat format) {
     case PixelFormat::RGB_Float:
         return 3;
     case PixelFormat::A8:
+    case PixelFormat::Intensity8:
+    case PixelFormat::Intensity_Float:
         return 1;
     case PixelFormat::Unknown:
     default:

@@ -78,15 +78,18 @@ bool Images::has(Images::UID image_ID) {
 static inline Images::PixelData allocate_pixels(PixelFormat format, unsigned int pixel_count) {
     switch (format) {
     case PixelFormat::A8:
+    case PixelFormat::Intensity8:
         return new unsigned char[pixel_count];
     case PixelFormat::RGB24:
         return new unsigned char[3 * pixel_count];
     case PixelFormat::RGBA32:
         return new unsigned char[4 * pixel_count];
+    case PixelFormat::Intensity_Float:
+        return new float[pixel_count];
     case PixelFormat::RGB_Float:
-        return new float[3 * pixel_count];
+        return new RGB[pixel_count];
     case PixelFormat::RGBA_Float:
-        return new float[4 * pixel_count];
+        return new RGBA[pixel_count];
     case PixelFormat::Unknown:
         return nullptr;
     }
@@ -194,9 +197,12 @@ static RGBA get_nonlinear_pixel(Images::UID image_ID, unsigned int index) {
     Images::PixelData pixels = Images::get_pixels(image_ID);
     switch (Images::get_pixel_format(image_ID)) {
     case PixelFormat::A8: {
-        unsigned char* pixel = ((unsigned char*)pixels) + index;
-        float alpha = pixel[0] / 255.0f;
+        float alpha = ((unsigned char*)pixels)[index] / 255.0f;
         return RGBA(1.0f, 1.0f, 1.0f, alpha);
+    }
+    case PixelFormat::Intensity8: {
+        float i = ((unsigned char*)pixels)[index] / 255.0f;
+        return RGBA(i, i, i, 1.0f);
     }
     case PixelFormat::RGB24: {
         unsigned char* pixel = ((unsigned char*)pixels) + index * 3;
@@ -206,13 +212,16 @@ static RGBA get_nonlinear_pixel(Images::UID image_ID, unsigned int index) {
         unsigned char* pixel = ((unsigned char*)pixels) + index * 4;
         return RGBA(pixel[0] / 255.0f, pixel[1] / 255.0f, pixel[2] / 255.0f, pixel[3] / 255.0f);
     }
+    case PixelFormat::Intensity_Float: {
+        float value = ((float*)pixels)[index];
+        return RGBA(value, value, value, 1.0f);
+    }
     case PixelFormat::RGB_Float: {
-        float* pixel = ((float*)pixels) + index * 3;
-        return RGBA(pixel[0], pixel[1], pixel[2], 1.0f);
+        RGB pixel = ((RGB*)pixels)[index];
+        return RGBA(pixel.r, pixel.g, pixel.b, 1.0f);
     }
     case PixelFormat::RGBA_Float: {
-        float* pixel = ((float*)pixels) + index * 4;
-        return RGBA(pixel[0], pixel[1], pixel[2], pixel[3]);
+        return ((RGBA*)pixels)[index];
     }
     case PixelFormat::Unknown:
         return RGBA::red();
@@ -268,6 +277,11 @@ static void set_linear_pixel(Images::UID image_ID, RGBA color, unsigned int inde
         pixel[0] = unsigned char(clamp(color.a * 255.0f + 0.5f, 0.0f, 255.0f));
         break;
     }
+    case PixelFormat::Intensity8: {
+        unsigned char* pixel = ((unsigned char*)pixels) + index;
+        pixel[0] = unsigned char(clamp(color.r * 255.0f + 0.5f, 0.0f, 255.0f));
+        break;
+    }
     case PixelFormat::RGB24: {
         unsigned char* pixel = ((unsigned char*)pixels) + index * 3;
         pixel[0] = unsigned char(clamp(color.r * 255.0f + 0.5f, 0.0f, 255.0f));
@@ -283,19 +297,16 @@ static void set_linear_pixel(Images::UID image_ID, RGBA color, unsigned int inde
         pixel[3] = unsigned char(clamp(color.a * 255.0f + 0.5f, 0.0f, 255.0f));
         break;
     }
+    case PixelFormat::Intensity_Float: {
+        ((float*)pixels)[index] = color.r;
+        break;
+    }
     case PixelFormat::RGB_Float: {
-        float* pixel = ((float*)pixels) + index * 3;
-        pixel[0] = color.r;
-        pixel[1] = color.g;
-        pixel[2] = color.b;
+        ((RGB*)pixels)[index] = color.rgb();
         break;
     }
     case PixelFormat::RGBA_Float: {
-        float* pixel = ((float*)pixels) + index * 4;
-        pixel[0] = color.r;
-        pixel[1] = color.g;
-        pixel[2] = color.b;
-        pixel[3] = color.a;
+        ((RGBA*)pixels)[index] = color;
         break;
     }
     case PixelFormat::Unknown:
