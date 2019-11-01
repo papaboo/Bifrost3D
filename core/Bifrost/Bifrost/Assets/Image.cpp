@@ -96,6 +96,28 @@ static inline Images::PixelData allocate_pixels(PixelFormat format, unsigned int
     return nullptr;
 }
 
+static inline void deallocate_pixels(PixelFormat format, Images::PixelData data) {
+    switch (format) {
+    case PixelFormat::A8:
+    case PixelFormat::Intensity8:
+    case PixelFormat::RGB24:
+    case PixelFormat::RGBA32:
+        delete[] (unsigned char*)data;
+        break;
+    case PixelFormat::Intensity_Float:
+        delete[] (float*)data;
+        break;
+    case PixelFormat::RGB_Float:
+        delete[] (RGB*)data;
+        break;
+    case PixelFormat::RGBA_Float:
+        delete[] (RGBA*)data;
+        break;
+    case PixelFormat::Unknown:
+        printf("WARNING: Deallocating unknown pixel format.\n");
+    }
+}
+
 Images::UID Images::create3D(const std::string& name, PixelFormat format, float gamma, Vector3ui size, unsigned int mipmap_count) {
     assert(m_metainfo != nullptr);
     assert(m_pixels != nullptr);
@@ -167,7 +189,8 @@ Images::UID Images::create2D(const std::string& name, PixelFormat format, float 
 
 void Images::destroy(Images::UID image_ID) {
     if (m_UID_generator.erase(image_ID)) {
-        delete[] m_pixels[image_ID]; m_pixels[image_ID] = nullptr;
+        deallocate_pixels(m_metainfo[image_ID].pixel_format, m_pixels[image_ID]);
+        m_pixels[image_ID] = nullptr;
         m_changes.set_change(image_ID, Change::Destroyed);
     }
 }
