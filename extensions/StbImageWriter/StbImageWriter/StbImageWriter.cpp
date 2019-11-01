@@ -45,6 +45,22 @@ FileType get_file_type(const std::string& path) {
         return FileType::Unknown;
 }
 
+bool save_image(const std::string& path, FileType file_type, unsigned int width, unsigned int height, int channel_count, void* data) {
+    switch (file_type) {
+    case FileType::BMP:
+        return stbi_write_bmp(path.c_str(), width, height, channel_count, data) != 0;
+    case FileType::HDR:
+        return stbi_write_hdr(path.c_str(), width, height, channel_count, static_cast<float*>(data)) != 0;
+    case FileType::JPG:
+        return stbi_write_jpg(path.c_str(), width, height, channel_count, data, 90) != 0;
+    case FileType::PNG:
+        return stbi_write_png(path.c_str(), width, height, channel_count, data, 0) != 0;
+    case FileType::TGA:
+        return stbi_write_tga(path.c_str(), width, height, channel_count, data) != 0;
+    }
+    return false;
+}
+
 bool write(Image image, const std::string& path) {
 
     if (image.get_depth() != 1)
@@ -61,55 +77,36 @@ bool write(Image image, const std::string& path) {
     // Flip texture vertically, as stb_image_writer uses the upper left corner as origo,
     // and ensure that the image format is correct.
     // NOTE This could be optimized if the image already has the correct format and gamma.
-    void* data = nullptr;
+    bool did_succeed = false;
     if (file_type == FileType::HDR) {
-        float* float_data = new float[width * height * channel_count];
+        float* data = new float[width * height * channel_count];
         for (unsigned int y = 0; y < height; ++y)
             for (unsigned int x = 0; x < width; ++x) {
                 int data_index = x + (height - 1 - y) * width;
-                float* pixel_data = float_data + data_index * channel_count;
+                float* pixel_data = data + data_index * channel_count;
                 RGBA pixel = image.get_pixel(Vector2ui(x, y));
                 memcpy(pixel_data, pixel.begin(), sizeof(float) * channel_count);
             }
-        data = float_data;
+
+        did_succeed = save_image(path, file_type, width, height, channel_count, data);
+        delete[] data;
     } else {
-        unsigned char* char_data = new unsigned char[width * height * channel_count];
+        unsigned char* data = new unsigned char[width * height * channel_count];
         float gamma = 1.0f / 2.2f;
         for (unsigned int y = 0; y < height; ++y)
             for (unsigned int x = 0; x < width; ++x) {
                 int data_index = x + (height - 1 - y) * width;
-                unsigned char* pixel_data = char_data + data_index * channel_count;
+                unsigned char* pixel_data = data + data_index * channel_count;
                 RGBA pixel = image.get_pixel(Vector2ui(x, y));
                 for (int c = 0; c < channel_count; ++c) {
                     float channel_intensity = c != 3 ? pow(pixel[c], gamma) : pixel[c]; // Gamme correct colors but leave alpha as linear.
                     pixel_data[c] = unsigned char(clamp(channel_intensity, 0.0f, 1.0f) * 255 + 0.5f);
                 }
             }
-        data = char_data;
-    }
 
-    bool did_succeed = false;
-    switch (file_type) {
-    case FileType::BMP:
-        did_succeed = stbi_write_bmp(path.c_str(), width, height, channel_count, data) != 0;
-        break;
-    case FileType::HDR:
-        did_succeed = stbi_write_hdr(path.c_str(), width, height, channel_count, static_cast<float*>(data)) != 0;
-        break;
-    case FileType::JPG:
-        did_succeed = stbi_write_jpg(path.c_str(), width, height, channel_count, static_cast<float*>(data), 90) != 0;
-        break;
-    case FileType::PNG:
-        did_succeed = stbi_write_png(path.c_str(), width, height, channel_count, data, 0) != 0;
-        break;
-    case FileType::TGA:
-        did_succeed = stbi_write_tga(path.c_str(), width, height, channel_count, data) != 0;
-        break;
-    case FileType::Unknown: // Silence compiler warning.
-        break; // Cannot happen. Checked above.
+        did_succeed = save_image(path, file_type, width, height, channel_count, data);
+        delete[] data;
     }
-
-    delete[] data;
 
     return did_succeed;
 }
