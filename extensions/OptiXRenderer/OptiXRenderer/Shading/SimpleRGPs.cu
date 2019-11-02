@@ -261,7 +261,7 @@ RT_PROGRAM void copy_to_output() {
 } // NS AIDenoiser
 
 //-------------------------------------------------------------------------------------------------
-// Ray generation program for visualizing estimated and sampled albedo.
+// Ray generation program for visualizing estimated albedo.
 //-------------------------------------------------------------------------------------------------
 
 RT_PROGRAM void albedo_RPG() {
@@ -281,6 +281,66 @@ RT_PROGRAM void albedo_RPG() {
             const float abs_cos_theta = abs(dot(last_ray_direction, payload.shading_normal));
             const DefaultShading material = DefaultShading(material_parameter, abs_cos_theta, payload.texcoord);
             return material.rho(abs_cos_theta);
+        } else
+            return make_float3(0, 0, 0);
+    });
+}
+
+//-------------------------------------------------------------------------------------------------
+// Ray generation program for visualizing aggregated depth.
+//-------------------------------------------------------------------------------------------------
+
+RT_PROGRAM void depth_RPG() {
+
+    float4 normalized_projected_pos = make_float4(0, 0, 1, 1);
+    float4 projected_world_pos = g_camera_state.inverted_view_projection_matrix * normalized_projected_pos;
+    float3 ray_end = make_float3(projected_world_pos) / projected_world_pos.w;
+    float far_plane = length(ray_end - g_camera_state.camera_position);
+
+    accumulate([=](MonteCarloPayload payload) -> float3 {
+        float depth = 0;
+        do {
+            float3 last_position = payload.position;
+            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
+            rtTrace(g_scene_root, ray, payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_ANYHIT);
+            depth += length(last_position - payload.position);
+        } while (payload.material_index == 0 && !is_black(payload.throughput));
+
+        return make_float3(depth, depth, depth);
+    });
+
+#ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
+    float depth = (float)g_camera_state.accumulation_buffer[g_launch_index].x;
+#else
+    float depth = g_camera_state.accumulation_buffer[g_launch_index].x;
+#endif
+
+    float d = depth / far_plane;
+    g_camera_state.output_buffer[g_launch_index] = float_to_half(make_float4(d, d, d, 1.0f));
+}
+
+//-------------------------------------------------------------------------------------------------
+// Ray generation program for visualizing aggregated roughness.
+//-------------------------------------------------------------------------------------------------
+
+RT_PROGRAM void roughness_RPG() {
+
+    accumulate([](MonteCarloPayload payload) -> float3 {
+        float3 last_ray_direction = payload.direction;
+        do {
+            last_ray_direction = payload.direction;
+            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
+            rtTrace(g_scene_root, ray, payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_ANYHIT);
+        } while (payload.material_index == 0 && !is_black(payload.throughput));
+
+        bool valid_material = payload.material_index != 0;
+        if (valid_material) {
+            using namespace Shading::ShadingModels;
+            const Material& material_parameter = g_materials[payload.material_index];
+            const float abs_cos_theta = abs(dot(last_ray_direction, payload.shading_normal));
+            const DefaultShading material = DefaultShading(material_parameter, abs_cos_theta, payload.texcoord);
+            float roughness = material.get_roughness();
+            return make_float3(roughness, roughness, roughness);
         } else
             return make_float3(0, 0, 0);
     });

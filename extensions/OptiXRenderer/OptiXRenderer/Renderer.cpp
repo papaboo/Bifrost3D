@@ -247,7 +247,7 @@ struct Renderer::Implementation {
 
     Implementation(int cuda_device_ID, int width_hint, int height_hint, const std::string& data_folder_path, Renderers::UID renderer_ID) {
 
-#pragma warning( disable : 4302 4311 )
+#pragma warning(disable : 4302 4311)
 
         device_IDs = { -1, -1 };
         owning_renderer_ID = renderer_ID;
@@ -314,8 +314,10 @@ struct Renderer::Implementation {
             context->setRayGenerationProgram(EntryPoints::AIDenoiserCopyOutput, context->createProgramFromPTXFile(rgp_ptx_path, "AIDenoiser::copy_to_output"));
         }
 
-        { // Albedo visualization setup.
+        { // Auxiliary image visualization setup.
             context->setRayGenerationProgram(EntryPoints::Albedo, context->createProgramFromPTXFile(rgp_ptx_path, "albedo_RPG"));
+            context->setRayGenerationProgram(EntryPoints::Depth, context->createProgramFromPTXFile(rgp_ptx_path, "depth_RPG"));
+            context->setRayGenerationProgram(EntryPoints::Roughness, context->createProgramFromPTXFile(rgp_ptx_path, "roughness_RPG"));
         }
 
         { // Setup default material.
@@ -1089,7 +1091,7 @@ struct Renderer::Implementation {
     }
 
     std::vector<Screenshot> request_auxiliary_buffers(Cameras::UID camera_ID, Cameras::RequestedContent content_requested, int width, int height) {
-        const Cameras::RequestedContent supported_content = { Screenshot::Content::Albedo };
+        const Cameras::RequestedContent supported_content = { Screenshot::Content::Albedo, Screenshot::Content::Depth, Screenshot::Content::Roughness };
         if ((content_requested & supported_content) == Screenshot::Content::None)
             return std::vector<Screenshot>();
 
@@ -1112,19 +1114,18 @@ struct Renderer::Implementation {
         camera_state_GPU.accumulation_buffer = accumulation_buffer->getId();
         context["g_scene"]->setUserData(sizeof(scene.GPU_state), &scene.GPU_state);
 
-        // Render albedo
-        if (content_requested & Screenshot::Content::Albedo) {
+        auto render_auxiliary_feature = [&](unsigned int entrypoint) {
             for (camera_state_GPU.accumulations = 0; camera_state_GPU.accumulations < accumulation_count; ++camera_state_GPU.accumulations) {
                 context["g_camera_state"]->setUserData(sizeof(camera_state_GPU), &camera_state_GPU);
-                context->launch(EntryPoints::Albedo, width, height);
+                context->launch(entrypoint, width, height);
             }
+        };
+
+        // Render albedo
+        if (content_requested & Screenshot::Content::Albedo) {
+            render_auxiliary_feature(EntryPoints::Albedo);
 
             // Readback screenshot data
-            Screenshot albedo_screenshot;
-            albedo_screenshot.width = width;
-            albedo_screenshot.height = height;
-            albedo_screenshot.content = Screenshot::Content::Albedo;
-            albedo_screenshot.format = PixelFormat::RGBA32;
             RGBA32* pixels = new RGBA32[width * height];
             half4* gpu_pixels = (half4*)output_buffer->map();
             for (int i = 0; i < width * height; ++i) {
@@ -1134,8 +1135,34 @@ struct Renderer::Implementation {
                 pixels[i].a = 255;
             }
             output_buffer->unmap();
-            albedo_screenshot.pixels = pixels;
-            screenshots.push_back(albedo_screenshot);
+
+            screenshots.emplace_back(width, height, Screenshot::Content::Albedo, PixelFormat::RGBA32, pixels);
+        }
+
+        if (content_requested & Screenshot::Content::Depth) {
+            render_auxiliary_feature(EntryPoints::Depth);
+
+            // Readback screenshot data
+            float* pixels = new float[width * height];
+            double4* gpu_pixels = (double4*)accumulation_buffer->map();
+            for (int i = 0; i < width * height; ++i)
+                pixels[i] = float(gpu_pixels[i].x);
+            accumulation_buffer->unmap();
+
+            screenshots.emplace_back(width, height, Screenshot::Content::Depth, PixelFormat::Intensity_Float, pixels);
+        }
+
+        if (content_requested & Screenshot::Content::Roughness) {
+            render_auxiliary_feature(EntryPoints::Roughness);
+
+            // Readback screenshot data
+            unsigned char* pixels = new unsigned char[width * height];
+            half4* gpu_pixels = (half4*)output_buffer->map();
+            for (int i = 0; i < width * height; ++i)
+                pixels[i] = unsigned char(gpu_pixels[i].x * 255.0f + 0.5f);
+            output_buffer->unmap();
+
+            screenshots.emplace_back(width, height, Screenshot::Content::Roughness, PixelFormat::Intensity8, pixels);
         }
 
         return screenshots;
@@ -1210,6 +1237,15 @@ void Renderer::set_backend(Cameras::UID camera_ID, Backend backend) {
     case Backend::AlbedoVisualization:
         camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Albedo));
         break;
+    case Backend::DepthVisualization:
+        camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Depth));
+        break;
+    case Backend::RoughnessVisualization:
+        camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Roughness));
+        break;
+    default:
+        camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Albedo));
+        printf("OptiXRenderer: Backend %u not supported.\n", backend);
     }
     camera_state.accumulations = 0u;
 }

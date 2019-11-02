@@ -36,7 +36,9 @@ struct EntryPoints {
     static const unsigned int AIDenoiserPathTracing = 1;
     static const unsigned int AIDenoiserCopyOutput = 2;
     static const unsigned int Albedo = 3;
-    static const unsigned int Count = 4;
+    static const unsigned int Depth = 4;
+    static const unsigned int Roughness = 5;
+    static const unsigned int Count = 6;
 };
 
 struct MeshFlags {

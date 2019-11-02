@@ -197,6 +197,8 @@ public:
     }
 #endif
 
+    __inline_all__ float get_roughness() const { return m_roughness; }
+
     __inline_all__ static float coverage(const Material& material, optix::float2 texcoord) {
         float coverage = material.coverage;
 #if GPU_DEVICE
