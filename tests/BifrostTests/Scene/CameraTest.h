@@ -210,24 +210,18 @@ TEST_F(Scene_Camera, screenshots) {
 
     // Stub method can fill a screenshot with an image with 2 iterations.
     auto screenshot_filler = [](Cameras::RequestedContent content_requested, unsigned int minimum_iteration_count) -> std::vector<Screenshot> {
-        unsigned int current_iteraions = 2;
-        if (current_iteraions < minimum_iteration_count)
+        unsigned int current_iteration_count = 2;
+        if (current_iteration_count < minimum_iteration_count)
             return std::vector<Screenshot>();
 
         std::vector<Screenshot> screenshots;
-        Screenshot screenshot;
-        screenshot.width = 2; screenshot.height = 2;
-        int pixel_count = screenshot.width * screenshot.height;
+        int width = 2; int height = 2;
         if (content_requested.is_set(Screenshot::Content::ColorLDR)) {
-            screenshot.content = Screenshot::Content::ColorLDR;
-            screenshot.format = PixelFormat::RGBA32;
-            screenshot.pixels = new unsigned char[pixel_count * 4];
-            screenshots.push_back(screenshot);
+            auto* pixels = new unsigned char[width * height * 4];
+            screenshots.emplace_back(width, height, Screenshot::Content::ColorLDR, PixelFormat::RGBA32, pixels);
         } else if (content_requested.is_set(Screenshot::Content::ColorHDR)) {
-            screenshot.content = Screenshot::Content::ColorHDR;
-            screenshot.format = PixelFormat::RGBA_Float;
-            screenshot.pixels = new float[pixel_count * 4];
-            screenshots.push_back(screenshot);
+            auto* pixels = new float[width * height * 4];
+            screenshots.emplace_back(width, height, Screenshot::Content::ColorLDR, PixelFormat::RGBA_Float, pixels);
         }
 
         return screenshots;
