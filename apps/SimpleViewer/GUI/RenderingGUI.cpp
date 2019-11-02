@@ -84,6 +84,8 @@ void RenderingGUI::layout_frame() {
                 output_screenshot(Screenshot::Content::ColorLDR, ".png");
                 output_screenshot(Screenshot::Content::ColorHDR, ".hdr");
                 output_screenshot(Screenshot::Content::Albedo, "_albedo.png");
+                output_screenshot(Screenshot::Content::Depth, "_depth.hdr");
+                output_screenshot(Screenshot::Content::Roughness, "_roughness.png");
             }
         }
 
@@ -92,13 +94,19 @@ void RenderingGUI::layout_frame() {
             ImGui::InputText("Path without extension", m_screenshot.path, m_screenshot.max_path_length);
             ImGui::InputUint("Iterations", &m_screenshot.iterations);
             ImGui::Checkbox("HDR", &m_screenshot.is_HDR);
-            ImGui::Checkbox("Albedo", &m_screenshot.capture_albedo);
+            ImGui::CheckboxFlags("Albedo", &m_screenshot.auxiliary_images, AuxiliaryImages::Albedo);
+            ImGui::CheckboxFlags("Depth", &m_screenshot.auxiliary_images, AuxiliaryImages::Depth);
+            ImGui::CheckboxFlags("Roughness", &m_screenshot.auxiliary_images, AuxiliaryImages::Roughness);
 
             if (take_screenshot) {
                 auto first_cam_ID = *Cameras::get_iterable().begin();
                 Cameras::RequestedContent content = m_screenshot.is_HDR ? Screenshot::Content::ColorHDR : Screenshot::Content::ColorLDR;
-                if (m_screenshot.capture_albedo)
+                if (m_screenshot.auxiliary_images & AuxiliaryImages::Albedo)
                     content |= Screenshot::Content::Albedo;
+                if (m_screenshot.auxiliary_images & AuxiliaryImages::Depth)
+                    content |= Screenshot::Content::Depth;
+                if (m_screenshot.auxiliary_images & AuxiliaryImages::Roughness)
+                    content |= Screenshot::Content::Roughness;
                 Cameras::request_screenshot(first_cam_ID, content, m_screenshot.iterations);
             }
         });
@@ -340,7 +348,7 @@ void RenderingGUI::layout_frame() {
         ImGui::PoppedTreeNode("OptiX", [&]() {
             auto camera_ID = *Cameras::get_iterable().begin();
 
-            const char* backend_modes[] = { "Path tracer", "AI denoised GI", "Albedo" };
+            const char* backend_modes[] = { "Path tracer", "AI denoised GI", "Albedo", "Depth", "Roughness" };
             int current_backend = int(m_optix_renderer->get_backend(camera_ID)) - 1;
             if (ImGui::Combo("Backend", &current_backend, backend_modes, IM_ARRAYSIZE(backend_modes))) {
                 auto backend = OptiXRenderer::Backend(current_backend + 1);

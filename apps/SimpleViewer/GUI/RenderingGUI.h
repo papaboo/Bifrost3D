@@ -9,6 +9,8 @@
 #ifndef _SIMPLEVIEWER_GUI_RENDERING_GUI_H_
 #define _SIMPLEVIEWER_GUI_RENDERING_GUI_H_
 
+#include <Bifrost/Core/Bitmask.h>
+
 #include <ImGui/ImGuiAdaptor.h>
 
 // ------------------------------------------------------------------------------------------------
@@ -36,12 +38,19 @@ private:
     DX11Renderer::Renderer* m_dx_renderer;
     OptiXRenderer::Renderer* m_optix_renderer;
 
+    enum AuxiliaryImages : unsigned char {
+        None = 0u,
+        Albedo = 1u << 0u,
+        Depth = 1u << 1u,
+        Roughness = 1u << 2u,
+    };
+
     struct {
         static const unsigned int max_path_length = 1024u;
         char path[max_path_length];
         unsigned int iterations = 0;
         bool is_HDR = false;
-        bool capture_albedo = false;
+        Bifrost::Core::Bitmask<AuxiliaryImages> auxiliary_images = AuxiliaryImages::None;
     } m_screenshot;
 
     // Pimpl the state to avoid exposing dependencies.
