@@ -209,14 +209,10 @@ public:
             typedef Vector4<unsigned char> Vector4uc;
             auto to_uchar = [](half v) -> unsigned char { return unsigned char(clamp(v * 255.0f + 0.5f, 0.0f, 255.0f)); };
 
-            Screenshot screenshot;
-            int width = screenshot.width = source_viewport.width; 
-            int height = screenshot.height = source_viewport.height;
+            int width = source_viewport.width; 
+            int height = source_viewport.height;
             int element_count = width * height;
             if (is_HDR) {
-                screenshot.format = PixelFormat::RGBA_Float;
-                screenshot.content = Screenshot::Content::ColorHDR;
-
                 auto pixels = std::vector<Vector4h>(element_count);
                 Readback::texture2D(device, context, source_resource, source_viewport, pixels.begin());
 
@@ -226,12 +222,8 @@ public:
                         Vector4h& pixel = pixels[x + y * width];
                         data[x + (height - y - 1) * width] = RGBA(pixel.x, pixel.y, pixel.z, pixel.w);
                     }
-                screenshot.pixels = data;
-                return screenshot;
+                return Screenshot(width, height, Screenshot::Content::ColorHDR, PixelFormat::RGBA_Float, data);
             } else {
-                screenshot.format = PixelFormat::RGBA32;
-                screenshot.content = Screenshot::Content::ColorLDR;
-
                 Vector4uc* pixels = new Vector4uc[element_count];
                 Readback::texture2D(device, context, source_resource, source_viewport, pixels);
                 // Mirror around y.
@@ -242,8 +234,7 @@ public:
                     memcpy(pixels + row * width, pixels + (height - row - 1) * width, row_size);
                     memcpy(pixels + (height - row - 1) * width, tmp.data(), row_size);
                 }
-                screenshot.pixels = pixels;
-                return screenshot;
+                return Screenshot(width, height, Screenshot::Content::ColorLDR, PixelFormat::RGBA32, pixels);
             }
         };
 
