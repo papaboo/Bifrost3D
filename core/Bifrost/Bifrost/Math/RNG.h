@@ -116,6 +116,8 @@ public:
     }
 
     __always_inline__ float sample1f() { return float(sample1ui()) * uint_normalizer; }
+    __always_inline__ Vector2f sample2f() { return Vector2f(sample1f(), sample1f()); }
+    __always_inline__ Vector3f sample3f() { return Vector3f(sample1f(), sample1f(), sample1f()); }
 };
 
 } // NS RNG
