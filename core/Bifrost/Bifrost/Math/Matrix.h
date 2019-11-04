@@ -30,7 +30,6 @@ public:
     typedef typename T value_type;
     static const int ROW_COUNT = R;
     static const int COLUMN_COUNT = C;
-    static const int ELEMENT_COUNT = ROW_COUNT * COLUMN_COUNT;
     static const int N = ROW_COUNT * COLUMN_COUNT;
     typedef typename Matrix<R, C, T> MatrixType;
     using RowType = typename std::conditional<COLUMN_COUNT == 4, Vector4<T>,
@@ -45,7 +44,7 @@ public:
     using HasColumnType = std::enable_if_t<1 < R && R <= 4>;
 
 private:
-    T m_elements[ELEMENT_COUNT];
+    T m_elements[N];
 
 public:
 
