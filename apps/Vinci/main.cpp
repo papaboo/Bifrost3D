@@ -6,6 +6,8 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
+#include <SceneGenerator.h>
+
 #include <Bifrost/Assets/Mesh.h>
 #include <Bifrost/Assets/MeshModel.h>
 #include <Bifrost/Core/Engine.h>
@@ -200,7 +202,44 @@ private:
     float m_velocity;
 };
 
-int setup_scene(Engine& engine, const Options& options) {
+class SceneRefresher final {
+public:
+
+    SceneRefresher(SceneGenerator::RandomScene& scene)
+        : m_scene(scene) {}
+
+    void refresh(Engine& engine) {
+        if (engine.get_keyboard()->was_pressed(Keyboard::Key::N))
+            m_scene.new_scene();
+    }
+
+private:
+    SceneGenerator::RandomScene& m_scene;
+};
+
+// ------------------------------------------------------------------------------------------------
+// Vinci
+// ------------------------------------------------------------------------------------------------
+
+Options g_options;
+
+DX11Renderer::Compositor* g_compositor = nullptr;
+DX11OptiXAdaptor::Adaptor* g_optix_adaptor = nullptr;
+SceneGenerator::RandomScene* g_random_scene = nullptr;
+
+static inline void miniheaps_cleanup_callback() {
+    Cameras::reset_change_notifications();
+    Images::reset_change_notifications();
+    LightSources::reset_change_notifications();
+    Materials::reset_change_notifications();
+    Meshes::reset_change_notifications();
+    MeshModels::reset_change_notifications();
+    SceneNodes::reset_change_notifications();
+    SceneRoots::reset_change_notifications();
+    Textures::reset_change_notifications();
+}
+
+int setup_scene(Engine& engine, Options& options) {
     // Setup scene root.
     SceneRoot scene_root = SceneRoots::create("Model scene", options.environment_map.get_ID(), options.environment_tint);
     SceneNode root_node = scene_root.get_root_node();
@@ -216,10 +255,11 @@ int setup_scene(Engine& engine, const Options& options) {
         scene_root.set_parent(root_node);
     } else {
         // Generate random scene primitives
+        g_random_scene = new SceneGenerator::RandomScene(options.random_seed);
+        g_random_scene->get_root_node().set_parent(root_node);
 
-        // Stuff X primitives in a scene with random transforms. Centered on zero.
-
-        return -1;
+        auto* scene_refresher = new SceneRefresher(*g_random_scene);
+        engine.add_mutating_callback([=, &engine] { scene_refresher->refresh(engine); });
     }
 
     AABB scene_bounds = AABB::invalid();
@@ -251,27 +291,6 @@ int setup_scene(Engine& engine, const Options& options) {
     engine.add_mutating_callback([=, &engine] { camera_navigation->navigate(engine); });
 
     return 0;
-}
-
-// ------------------------------------------------------------------------------------------------
-// Vinci
-// ------------------------------------------------------------------------------------------------
-
-Options g_options;
-
-DX11Renderer::Compositor* g_compositor;
-DX11OptiXAdaptor::Adaptor* g_optix_adaptor;
-
-static inline void miniheaps_cleanup_callback() {
-    Cameras::reset_change_notifications();
-    Images::reset_change_notifications();
-    LightSources::reset_change_notifications();
-    Materials::reset_change_notifications();
-    Meshes::reset_change_notifications();
-    MeshModels::reset_change_notifications();
-    SceneNodes::reset_change_notifications();
-    SceneRoots::reset_change_notifications();
-    Textures::reset_change_notifications();
 }
 
 int initializer(Engine& engine) {

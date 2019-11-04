@@ -2,7 +2,7 @@ if (TARGET OptiXRenderer)
 
   set(PROJECT_NAME "Vinci")
 
-  set(SRCS main.cpp)
+  set(SRCS main.cpp SceneGenerator.h)
 
   add_executable(${PROJECT_NAME} ${SRCS})
 
