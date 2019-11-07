@@ -555,7 +555,9 @@ struct Renderer::Implementation {
 
         { // Mesh updates.
             for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
-                if (Meshes::get_changes(mesh_ID) == Meshes::Change::Destroyed) {
+                // Destroy a destroyed mesh or a previous one where a new one has been created.
+                if (Meshes::get_changes(mesh_ID) == Meshes::Change::Destroyed ||
+                    Meshes::get_changes(mesh_ID) == Meshes::Change::Created) {
                     if (mesh_ID < meshes.size() && meshes[mesh_ID]) {
                         meshes[mesh_ID]->destroy();
                         meshes[mesh_ID] = nullptr;
@@ -628,8 +630,10 @@ struct Renderer::Implementation {
                 textures.resize(Textures::capacity());
 
                 for (Textures::UID texture_ID : Textures::get_changed_textures()) {
-                    if (Textures::get_changes(texture_ID) == Textures::Change::Destroyed) {
-                        if (texture_ID < textures.size() && textures[texture_ID]) {
+                    // Destroy a destroyed texture or a previous one where a new one has been created.
+                    if (Textures::get_changes(texture_ID) == Textures::Change::Destroyed ||
+                        Textures::get_changes(texture_ID) & Textures::Change::Created) {
+                        if (textures[texture_ID]) {
                             textures[texture_ID]->destroy();
                             textures[texture_ID] = nullptr;
                         }
