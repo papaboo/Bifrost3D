@@ -286,6 +286,13 @@ int setup_scene(Engine& engine, Options& options) {
     cam_transform.translation = scene_bounds.center() + scene_bounds.size() * 0.5f;
     cam_transform.look_at(scene_bounds.center());
     Cameras::set_transform(camera_ID, cam_transform);
+    
+    // Disable screen space effects two keep the data in a linear color space.
+    auto effects_settings = Cameras::get_effects_settings(camera_ID);
+    effects_settings.exposure.mode = CameraEffects::ExposureMode::Fixed;
+    effects_settings.tonemapping.mode = CameraEffects::TonemappingMode::Linear;
+    effects_settings.vignette = 0.0f;
+    Cameras::set_effects_settings(camera_ID, effects_settings);
 
     Navigation* camera_navigation = new Navigation(camera_ID, camera_velocity);
     engine.add_mutating_callback([=, &engine] { camera_navigation->navigate(engine); });
