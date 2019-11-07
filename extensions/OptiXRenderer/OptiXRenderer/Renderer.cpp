@@ -512,7 +512,7 @@ struct Renderer::Implementation {
     inline bool is_valid() const { return device_IDs.optix >= 0; }
 
     void handle_updates() {
-        bool should_reset_allocations = false;
+        bool should_reset_accumulations = false;
 
         { // Camera updates.
             for (Cameras::UID cam_ID : Cameras::get_changed_cameras()) {
@@ -740,7 +740,7 @@ struct Renderer::Implementation {
                     for (Materials::UID material_ID : Materials::get_changed_materials())
                         if (!Materials::get_changes(material_ID).is_set(Materials::Change::Destroyed)) {
                             upload_material(material_ID, device_materials, textures.data(), images.data());
-                            should_reset_allocations = true;
+                            should_reset_accumulations = true;
                         }
                     material_parameters->unmap();
                 }
@@ -887,7 +887,7 @@ struct Renderer::Implementation {
                 }
 
                 scene.GPU_state.light_count = lights.count;
-                should_reset_allocations = true;
+                should_reset_accumulations = true;
 
                 // Update area light geometry if needed.
                 if (highest_area_light_index_updated >= 0) {
@@ -938,7 +938,7 @@ struct Renderer::Implementation {
 
             if (transform_changed) {
                 scene.root->getAcceleration()->markDirty();
-                should_reset_allocations = true;
+                should_reset_accumulations = true;
             }
         }
 
@@ -989,13 +989,13 @@ struct Renderer::Implementation {
                     optix::GeometryGroup geometry_group = optixTransform->getChild<optix::GeometryGroup>();
                     optix::GeometryInstance optix_model = geometry_group->getChild(0);
                     optix_model["material_index"]->setInt(model.get_material().get_ID());
-                    should_reset_allocations = true;
+                    should_reset_accumulations = true;
                 }
             }
 
             if (models_changed) {
                 scene.root->getAcceleration()->markDirty();
-                should_reset_allocations = true;
+                should_reset_accumulations = true;
             }
         }
 
@@ -1006,7 +1006,7 @@ struct Renderer::Implementation {
                 if (scene_data.get_changes().any_set(SceneRoots::Change::EnvironmentTint, SceneRoots::Change::Created)) {
                     scene.environment.set_tint(env_tint);
                     scene.GPU_state.environment_light.set_tint(env_tint);
-                    should_reset_allocations = true;
+                    should_reset_accumulations = true;
                 }
 
                 if (scene_data.get_changes().any_set(SceneRoots::Change::EnvironmentMap, SceneRoots::Change::Created)) {
@@ -1050,13 +1050,13 @@ struct Renderer::Implementation {
 #endif
                             printf("OptiXRenderer only supports environments with 4 channels. '%s' has %u.\n", image.get_name().c_str(), channel_count(image.get_pixel_format()));
                         }
-                        should_reset_allocations = true;
+                        should_reset_accumulations = true;
                     }
                 }
             }
         }
 
-        if (should_reset_allocations)
+        if (should_reset_accumulations)
             for (auto& camera_state : per_camera_state)
                 camera_state.accumulations = 0u;
     }
