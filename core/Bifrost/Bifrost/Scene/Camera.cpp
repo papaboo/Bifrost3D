@@ -8,8 +8,6 @@
 
 #include <Bifrost/Scene/Camera.h>
 
-#include <Bifrost/Math/Conversions.h>
-
 #include <assert.h>
 
 using namespace Bifrost::Math;
@@ -213,7 +211,7 @@ Assets::Images::UID Cameras::resolve_screenshot(Cameras::UID camera_ID, Screensh
 namespace CameraUtils {
 
 void compute_perspective_projection(float near_distance, float far_distance, float field_of_view_in_radians, float aspect_ratio,
-    Matrix4x4f& projection_matrix, Matrix4x4f& inverse_projection_matrix) {
+                                    Matrix4x4f& projection_matrix, Matrix4x4f& inverse_projection_matrix) {
 
     // http://www.3dcpptutorials.sk/index.php?id=2, which creates an OpenGL projection matrix (-Z forward)
     // Negated the third column to have +Z as forward, see Real-Time Rendering - Third Edition, page 95.
@@ -259,19 +257,17 @@ void compute_perspective_projection(float near_distance, float far_distance, flo
 }
 
 Ray ray_from_viewport_point(Cameras::UID camera_ID, Vector2f viewport_point) {
-    
-    Matrix4x4f inverse_view_matrix = to_matrix4x4(Cameras::get_inverse_view_transform(camera_ID));
-    Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
-    Matrix4x4f inverse_view_projection_matrix = inverse_view_matrix * inverse_projection_matrix;
 
-    // NOTE We can elliminate some multiplications here by not doing the full mat/vec multiplication or does the compiler already do that for us (constants and all that.)
-    Vector4f normalized_projected_pos = Vector4f(viewport_point.x * 2.0f - 1.0f, viewport_point.y * 2.0f - 1.0f, -1.0f, 1.0f);
-    Vector4f projected_world_pos = inverse_view_projection_matrix * normalized_projected_pos;
-    Vector3f ray_point = Vector3f(projected_world_pos.x, projected_world_pos.y, projected_world_pos.z) / projected_world_pos.w;
+    Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
+    Vector4f NDC_far_pos = Vector4f(viewport_point.x * 2.0f - 1.0f, viewport_point.y * 2.0f - 1.0f, 1.0f, 1.0f);
+    Vector4f scaled_world_pos = inverse_projection_matrix * NDC_far_pos;
+    Vector3f ray_direction = normalize(Vector3f(scaled_world_pos.x, scaled_world_pos.y, scaled_world_pos.z));
+
+    Quaternionf inverse_view_rotation = Cameras::get_inverse_view_transform(camera_ID).rotation;
+    ray_direction = inverse_view_rotation * ray_direction;
 
     Vector3f camera_position = Cameras::get_transform(camera_ID).translation;
-
-    return Ray(camera_position, normalize(ray_point - camera_position));
+    return Ray(camera_position, ray_direction);
 }
 
 } // NS CameraUtils
