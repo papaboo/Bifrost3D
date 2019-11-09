@@ -106,6 +106,12 @@ public:
     static Math::Matrix4x4f get_inverse_view_projection_matrix(Cameras::UID camera_ID) {
         return to_matrix4x4(get_inverse_view_transform(camera_ID)) * get_inverse_projection_matrix(camera_ID);
     }
+    static Math::Matrix4x4f get_inverse_rotated_projection_matrix(Cameras::UID camera_ID) {
+        Math::Transform inverse_rotation = get_inverse_view_transform(camera_ID);
+        inverse_rotation.scale = 1.0f;
+        inverse_rotation.translation = Math::Vector3f::zero();
+        return to_matrix4x4(inverse_rotation) * get_inverse_projection_matrix(camera_ID);
+    }
 
     // Order that cameras are draw in. Cameras with higher z-index are rendered in front of cameras with lower z-index.
     static int get_z_index(Cameras::UID camera_ID) { return m_z_indices[camera_ID]; }
