@@ -183,7 +183,8 @@ struct Renderer::Implementation {
         unsigned int accumulations;
         unsigned int max_accumulation_count;
         unsigned int max_bounce_count;
-        Matrix4x4f inverse_view_projection_matrix;
+        Matrix4x4f inverse_rotated_projection_matrix;
+        Vector3f position;
         Backend backend;
         std::unique_ptr<IBackend> backend_impl;
 
@@ -193,7 +194,8 @@ struct Renderer::Implementation {
             accumulations = 0u;
             max_accumulation_count = UINT_MAX;
             max_bounce_count = 4;
-            inverse_view_projection_matrix = Matrix4x4f::identity();
+            inverse_rotated_projection_matrix = Matrix4x4f::identity();
+            position = Vector3f::zero();
             backend = Backend::None;
             backend_impl = nullptr;
         }
@@ -541,7 +543,8 @@ struct Renderer::Implementation {
 #else
                         camera_state.accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, width, height);
 #endif
-                        camera_state.inverse_view_projection_matrix = {};
+                        camera_state.inverse_rotated_projection_matrix = {};
+                        camera_state.position = Vector3f::zero();
 
                         // Preserve backend if set from otuside before handle_updates is called. Yuck!
                         if (camera_state.backend == Backend::None) {
@@ -1083,15 +1086,18 @@ struct Renderer::Implementation {
             }
 
             { // Upload camera parameters.
-                // Check if the camera transforms changed and, if so, upload the new ones and reset accumulation.
-                Matrix4x4f inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
-                if (camera_state.inverse_view_projection_matrix != inverse_view_projection_matrix) {
-                    camera_state.inverse_view_projection_matrix = inverse_view_projection_matrix;
+                // Check if the camera transform or projection matrix changed and, if so, upload the new data and reset accumulation.
+                Matrix4x4f inverse_rotated_projection_matrix = Cameras::get_inverse_rotated_projection_matrix(camera_ID);;
+                Vector3f cam_pos = Cameras::get_transform(camera_ID).translation;
+
+                if (camera_state.inverse_rotated_projection_matrix != inverse_rotated_projection_matrix ||
+                    camera_state.position != cam_pos) {
+                    camera_state.inverse_rotated_projection_matrix = inverse_rotated_projection_matrix;
+                    camera_state.position = cam_pos;
                     camera_state.accumulations = 0u;
                 }
 
-                camera_state_GPU.inverted_view_projection_matrix = optix::Matrix4x4(inverse_view_projection_matrix.begin());
-                Vector3f cam_pos = Cameras::get_transform(camera_ID).translation;
+                camera_state_GPU.inverted_rotated_projection_matrix = optix::Matrix4x4(inverse_rotated_projection_matrix.begin());
                 camera_state_GPU.camera_position = make_float3(cam_pos.x, cam_pos.y, cam_pos.z);
 
                 Matrix3x3f world_to_view_rotation = to_matrix3x3(Cameras::get_view_transform(camera_ID).rotation);

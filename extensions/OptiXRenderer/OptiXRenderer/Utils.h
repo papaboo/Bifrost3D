@@ -20,19 +20,15 @@
 namespace OptiXRenderer {
 
 __inline_dev__ optix::float3 project_ray_direction(optix::float2 viewport_pos, 
-                                                   optix::float3 camera_position, 
-                                                   const optix::Matrix4x4& inverted_view_projection_matrix) {
+                                                   const optix::Matrix4x4& inverted_rotated_projection_matrix) {
     using namespace optix;
 
     float4 normalized_projected_pos = make_float4(viewport_pos.x * 2.0f - 1.0f,
                                                   viewport_pos.y * 2.0f - 1.0f,
                                                   -1.0f, 1.0f);
 
-    float4 projected_world_pos = inverted_view_projection_matrix * normalized_projected_pos;
-
-    float3 ray_origin = make_float3(projected_world_pos) / projected_world_pos.w;
-
-    return normalize(ray_origin - camera_position);
+    float3 projected_world_pos = make_float3(inverted_rotated_projection_matrix * normalized_projected_pos);
+    return normalize(projected_world_pos);
 }
 
 // Computes a tangent and bitangent that together with the normal creates an orthonormal bases.

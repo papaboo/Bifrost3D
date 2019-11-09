@@ -46,7 +46,7 @@ __constant__ float2 pmj_offsets[81] = {
 #endif
 
 __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, int image_width, int image_height,
-    int accumulation_count, optix::float3 camera_position, const optix::Matrix4x4& inverted_view_projection_matrix) {
+    int accumulation_count, optix::float3 camera_position, const optix::Matrix4x4& inverted_rotated_projection_matrix) {
     using namespace optix;
 
     MonteCarloPayload payload;
@@ -86,7 +86,7 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     float2 screen_pos = make_float2(x, y) + (accumulation_count == 0 ? make_float2(0.5f) : rng.sample2f());
     float2 viewport_pos = make_float2(screen_pos.x / float(image_width), screen_pos.y / float(image_height));
     payload.position = camera_position;
-    payload.direction = project_ray_direction(viewport_pos, payload.position, inverted_view_projection_matrix);
+    payload.direction = project_ray_direction(viewport_pos, inverted_rotated_projection_matrix);
     return payload;
 }
 
@@ -98,7 +98,7 @@ __inline_dev__ void accumulate(Evaluator evaluator) {
 
     MonteCarloPayload payload = initialize_monte_carlo_payload(g_launch_index.x, g_launch_index.y,
         screen_size.x, screen_size.y, accumulation_count,
-        camera_state.camera_position, camera_state.inverted_view_projection_matrix);
+        camera_state.camera_position, camera_state.inverted_rotated_projection_matrix);
 
     float3 radiance = evaluator(payload);
 
@@ -293,7 +293,7 @@ RT_PROGRAM void albedo_RPG() {
 RT_PROGRAM void depth_RPG() {
 
     float4 normalized_projected_pos = make_float4(0, 0, 1, 1);
-    float4 projected_world_pos = g_camera_state.inverted_view_projection_matrix * normalized_projected_pos;
+    float4 projected_world_pos = g_camera_state.inverted_rotated_projection_matrix * normalized_projected_pos;
     float3 ray_end = make_float3(projected_world_pos) / projected_world_pos.w;
     float far_plane = length(ray_end - g_camera_state.camera_position);
 
