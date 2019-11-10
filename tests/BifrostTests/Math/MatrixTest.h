@@ -22,6 +22,9 @@ protected:
     static bool compare_matrix2x2f(Matrix2x2f lhs, Matrix2x2f rhs, unsigned short max_ulps) {
         return almost_equal(lhs, rhs, max_ulps);
     }
+    static bool compare_matrix2x4f(Matrix<2,4,float> lhs, Matrix<2,4,float> rhs, unsigned short max_ulps) {
+        return almost_equal(lhs, rhs, max_ulps);
+    }
     static bool compare_matrix3x3f(Matrix3x3f lhs, Matrix3x3f rhs, unsigned short max_ulps) {
         return almost_equal(lhs, rhs, max_ulps);
     }
@@ -68,6 +71,27 @@ TEST_F(Math_Matrix, invert4x4) {
     unsigned short max_error = 10;
     EXPECT_PRED3(compare_matrix4x4f, mat * mat_inverse, Matrix4x4f::identity(), max_error);
     EXPECT_PRED3(compare_matrix4x4f, mat_inverse * mat, Matrix4x4f::identity(), max_error);
+}
+
+TEST_F(Math_Matrix, matrix_multiplication_dimensions) {
+    Matrix<2, 4, float> mat2x4 = { 0, 1, 2, 3, 4, 5, 6, 7 };
+
+    auto identity_2x2 = Matrix<2, 2, float>::identity();
+    EXPECT_PRED3(compare_matrix2x4f, mat2x4, identity_2x2 * mat2x4, 0);
+    auto identity_4x4 = Matrix<4, 4, float>::identity();
+    EXPECT_PRED3(compare_matrix2x4f, mat2x4, mat2x4 * identity_4x4, 0);
+
+    Matrix<2, 2, float> double_top_row = { 2, 0, 0, 0 };
+    Matrix<2, 4, float> top_row_doubled = { 0, 2, 4, 6, 0, 0, 0, 0 };
+    EXPECT_PRED3(compare_matrix2x4f, top_row_doubled, double_top_row * mat2x4, 0);
+
+    Matrix<2, 2, float> copy_top_row_to_bottom_row = { 0, 0, 1, 0 };
+    Matrix<2, 4, float> top_row_copied = { 0, 0, 0, 0, 0, 1, 2, 3 };
+    EXPECT_PRED3(compare_matrix2x4f, top_row_copied, copy_top_row_to_bottom_row * mat2x4, 0);
+
+    Matrix<2, 2, float> row_swapper = { 0, 1, 1, 0 };
+    Matrix<2, 4, float> rows_swapped = { 4, 5, 6, 7, 0, 1, 2, 3 };
+    EXPECT_PRED3(compare_matrix2x4f, rows_swapped, row_swapper * mat2x4, 0);
 }
 
 TEST_F(Math_Matrix, affine_matrix3x4_multiply) {

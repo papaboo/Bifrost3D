@@ -156,14 +156,14 @@ public:
         MatrixType ret(*this);
         return ret *= rhs;
     }
-    template <int RHS_ROW_COUNT>
-    __always_inline__ Matrix<RHS_ROW_COUNT, COLUMN_COUNT, T> operator*(Matrix<RHS_ROW_COUNT, ROW_COUNT, T> rhs) const {
-        Matrix<RHS_ROW_COUNT, COLUMN_COUNT, T> ret;
+    template <int RHS_COLUMN_COUNT>
+    __always_inline__ Matrix<ROW_COUNT, RHS_COLUMN_COUNT, T> operator*(Matrix<COLUMN_COUNT, RHS_COLUMN_COUNT, T> rhs) const {
+        Matrix<ROW_COUNT, RHS_COLUMN_COUNT, T> ret;
         for (int r = 0; r < ret.ROW_COUNT; ++r)
             for (int c = 0; c < ret.COLUMN_COUNT; ++c) {
                 ret[r][c] = T(0);
-                for (int d = 0; d < ROW_COUNT; ++d)
-                    ret[r][c] += (*this)(r, d) * rhs[d][c];
+                for (int d = 0; d < COLUMN_COUNT; ++d)
+                    ret[r][c] += (*this)(r, d) * rhs(d, c);
             }
         return ret;
     }
@@ -202,14 +202,14 @@ public:
     inline std::string to_string() const {
         std::ostringstream out;
         out << "[[";
-        for (int e = 0; e < N; ++e) {
+        for (int e = 0; e < N-1; ++e) {
             out << m_elements[e];
-            if (e % COLUMN_COUNT == COLUMN_COUNT)
+            if (e % COLUMN_COUNT == (COLUMN_COUNT - 1))
                 out << "], [";
             else if (e < N - 1)
                 out << ",";
         }
-        out << "]]";
+        out << m_elements[N-1] << "]]";
         return out.str();
     }
 };
