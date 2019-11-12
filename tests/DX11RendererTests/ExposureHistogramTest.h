@@ -20,6 +20,8 @@
 #include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/Utils.h>
 
+#include <random>
+
 namespace DX11Renderer {
 
 // ------------------------------------------------------------------------------------------------
@@ -208,7 +210,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_histogram) {
     unsigned int histogram[bin_count];
     for (int i = 0; i < bin_count; ++i)
         histogram[i] = i;
-    std::random_shuffle(histogram, histogram + bin_count);
+    std::shuffle(histogram, histogram + bin_count, std::minstd_rand(1234567799));
 
     OShaderResourceView histogram_SRV;
     create_default_buffer(device, DXGI_FORMAT_R32_UINT, histogram, bin_count, &histogram_SRV);

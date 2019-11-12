@@ -21,6 +21,8 @@
 #include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/Utils.h>
 
+#include <random>
+
 namespace DX11Renderer {
 
 // ------------------------------------------------------------------------------------------------
@@ -111,7 +113,7 @@ TEST_F(LogAverageLuminanceFixture, large_image) {
         half g = half(float(i));
         pixels[i] = { g, g, g, half(1.0f) };
     }
-    std::random_shuffle(pixels, pixels + pixel_count);
+    std::shuffle(pixels, pixels + pixel_count, std::minstd_rand(1234567799));
 
     test_image(width, height, pixels);
 }
@@ -126,7 +128,7 @@ TEST_F(LogAverageLuminanceFixture, black_image) {
     half4* pixels = new half4[pixel_count];
     for (int i = 0; i < pixel_count; ++i)
         pixels[i] = { zero, zero, zero, half(1.0f) };
-    std::random_shuffle(pixels, pixels + pixel_count);
+    std::shuffle(pixels, pixels + pixel_count, std::minstd_rand(1234567799));
 
     test_image(width, height, pixels);
 }
