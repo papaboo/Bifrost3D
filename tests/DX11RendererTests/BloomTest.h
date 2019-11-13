@@ -19,6 +19,8 @@
 #include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/Utils.h>
 
+#include <filesystem>
+
 namespace DX11Renderer {
 
 // ------------------------------------------------------------------------------------------------

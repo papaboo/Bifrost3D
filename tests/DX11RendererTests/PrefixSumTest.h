@@ -15,6 +15,8 @@
 #include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/PrefixSum.h>
 
+#include <filesystem>
+
 namespace DX11Renderer {
 
 // ------------------------------------------------------------------------------------------------

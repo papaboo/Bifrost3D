@@ -13,6 +13,7 @@
 
 #include <Bifrost/Math/Rect.h>
 
+#include <filesystem>
 #include <vector>
 
 namespace DX11Renderer {
@@ -25,7 +26,7 @@ public:
     BilateralBlur() = default;
     BilateralBlur(BilateralBlur&& other) = default;
     BilateralBlur(BilateralBlur& other) = delete;
-    BilateralBlur(ID3D11Device1& device, const std::wstring& shader_folder_path, SsaoFilter type);
+    BilateralBlur(ID3D11Device1& device, const std::filesystem::path& shader_directory, SsaoFilter type);
 
     BilateralBlur& operator=(BilateralBlur&& rhs) = default;
     BilateralBlur& operator=(BilateralBlur& rhs) = delete;
@@ -64,7 +65,7 @@ public:
     AlchemyAO() = default;
     AlchemyAO(AlchemyAO&& other) = default;
     AlchemyAO(AlchemyAO& other) = delete;
-    AlchemyAO(ID3D11Device1& device, const std::wstring& shader_folder_path);
+    AlchemyAO(ID3D11Device1& device, const std::filesystem::path& shader_directory);
 
     AlchemyAO& operator=(AlchemyAO&& rhs) = default;
     AlchemyAO& operator=(AlchemyAO& rhs) = delete;
@@ -91,7 +92,7 @@ private:
     void resize_ao_buffer(ID3D11DeviceContext1& context, int ssao_width, int ssao_height);
     void resize_depth_buffer(ID3D11DeviceContext1& context, unsigned int camera_ID, int depth_width, int depth_height);
 
-    std::wstring m_shader_folder_path;
+    std::filesystem::path m_shader_directory;
 
     struct Samples {
         static const unsigned int capacity = 256;

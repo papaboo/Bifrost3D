@@ -153,9 +153,7 @@ public:
                 m_counter_hertz = 1.0 / freq.QuadPart;
             }
 
-            // auto shader_folder_path = m_data_directory + std::filesystem::path("DX11Renderer\\Shaders\\");
-            auto shader_folder_path = m_data_directory / "DX11Renderer" / "Shaders";
-            m_camera_effects = CameraEffects(m_device, (std::wstring)shader_folder_path + L"/");
+            m_camera_effects = CameraEffects(m_device, m_data_directory / "DX11Renderer" / "Shaders");
         }
 
         { // Initialize renderer containers. Initialize the 0'th index to null.

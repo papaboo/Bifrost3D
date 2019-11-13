@@ -15,6 +15,8 @@
 
 #include <vector>
 
+namespace std::filesystem { class path; }
+
 namespace DX11Renderer {
 
 class TextureManager;
@@ -28,7 +30,7 @@ class TextureManager;
 class EnvironmentManager {
 public:
 
-    EnvironmentManager(ID3D11Device1& device, const std::wstring& shader_folder_path, TextureManager& textures);
+    EnvironmentManager(ID3D11Device1& device, const std::filesystem::path& shader_directory, TextureManager& textures);
 
     // Render an environment to the active backbuffer.
     bool render(ID3D11DeviceContext1& render_context, int environment_ID);
