@@ -14,9 +14,8 @@
 //-------------------------------------------------------------------------------------------------
 // Forward declarations.
 //-------------------------------------------------------------------------------------------------
-namespace OptiXRenderer {
-class Renderer;
-}
+namespace OptiXRenderer { class Renderer; }
+namespace std::filesystem { class path; }
 
 namespace DX11OptiXAdaptor {
 
@@ -29,7 +28,7 @@ namespace DX11OptiXAdaptor {
 //-------------------------------------------------------------------------------------------------
 class Adaptor final : public DX11Renderer::IRenderer {
 public:
-    static DX11Renderer::IRenderer* initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path);
+    static DX11Renderer::IRenderer* initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory);
     ~Adaptor();
 
     Bifrost::Core::Renderers::UID get_ID() const { return m_renderer_ID; }
@@ -43,7 +42,7 @@ public:
 
 private:
 
-    Adaptor(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path);
+    Adaptor(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory);
 
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Adaptor(Adaptor& other) = delete;

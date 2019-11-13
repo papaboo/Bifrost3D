@@ -14,7 +14,7 @@
 namespace Bifrost {
 namespace Core {
 
-Engine::Engine(const std::string& data_path)
+Engine::Engine(const std::filesystem::path& data_directory)
     : m_window(Window("Bifrost", 640, 480))
     , m_mutating_callbacks(0)
     , m_non_mutating_callbacks(0)
@@ -22,7 +22,7 @@ Engine::Engine(const std::string& data_path)
     , m_quit(false)
     , m_keyboard(nullptr)
     , m_mouse(nullptr) 
-    , m_data_path(data_path) {
+    , m_data_directory(data_directory) {
 }
 
 void Engine::do_tick(double delta_time) {

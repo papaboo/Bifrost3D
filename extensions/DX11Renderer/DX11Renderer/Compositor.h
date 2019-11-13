@@ -18,12 +18,11 @@
 //-------------------------------------------------------------------------------------------------
 // Forward declarations.
 //-------------------------------------------------------------------------------------------------
-namespace Bifrost {
-namespace Core {
+namespace Bifrost::Core {
 class Engine;
 class Window;
 }
-}
+
 struct HWND__;
 typedef HWND__* HWND;
 struct ID3D11Device1;
@@ -38,6 +37,8 @@ using ODeviceContext1 = DX11Renderer::OwnedResourcePtr<ID3D11DeviceContext1>;
 using ORenderTargetView = OwnedResourcePtr<ID3D11RenderTargetView>;
 using OShaderResourceView = OwnedResourcePtr<ID3D11ShaderResourceView>;
 }
+
+namespace std::filesystem { class path; }
 
 #define D3D11_CREATE_DEVICE_NONE 0
 
@@ -66,7 +67,7 @@ public:
     virtual std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::Cameras::UID camera_ID, Bifrost::Scene::Cameras::RequestedContent content_requested, int width, int height) { return std::vector<Bifrost::Scene::Screenshot>(); }
 };
 
-typedef IRenderer*(*RendererCreator)(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path);
+typedef IRenderer*(*RendererCreator)(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory);
 
 //-------------------------------------------------------------------------------------------------
 // GUI renderer interface.
@@ -92,7 +93,7 @@ ODevice1 create_performant_debug_device1();
 class Compositor final {
 public:
 
-    static Compositor* initialize(HWND& hwnd, const Bifrost::Core::Window& window, const std::wstring& data_folder_path);
+    static Compositor* initialize(HWND& hwnd, const Bifrost::Core::Window& window, const std::filesystem::path& data_directory);
     ~Compositor();
 
     // --------------------------------------------------------------------------------------------
@@ -111,7 +112,7 @@ public:
 
 private:
 
-    Compositor(HWND& hwnd, const Bifrost::Core::Window& window, const std::wstring& data_folder_path);
+    Compositor(HWND& hwnd, const Bifrost::Core::Window& window, const std::filesystem::path& data_directory);
 
     // Delete copy constructors to avoid having multiple versions of the same Compositor.
     Compositor(Compositor& other) = delete;

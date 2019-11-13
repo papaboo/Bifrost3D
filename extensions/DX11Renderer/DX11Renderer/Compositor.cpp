@@ -10,8 +10,7 @@
 #include <DX11Renderer/CameraEffects.h>
 #include <DX11Renderer/Utils.h>
 
-#include <Bifrost/Core/Engine.h>
-#include <Bifrost/Core/Window.h>
+#include <filesystem>
 
 using namespace Bifrost::Assets;
 using namespace Bifrost::Core;
@@ -85,7 +84,7 @@ ODevice1 create_performant_debug_device1() { return create_performant_device1(D3
 class Compositor::Implementation {
 private:
     const Window& m_window;
-    const std::wstring m_data_folder_path;
+    const std::filesystem::path m_data_directory;
     std::vector<std::unique_ptr<IRenderer>> m_renderers;
     std::vector<std::unique_ptr<IGuiRenderer>> m_GUI_renderers;
 
@@ -104,8 +103,8 @@ private:
     CameraEffects m_camera_effects;
 
 public:
-    Implementation(HWND& hwnd, const Window& window, const std::wstring& data_folder_path)
-        : m_window(window), m_data_folder_path(data_folder_path) {
+    Implementation(HWND& hwnd, const Window& window, const std::filesystem::path& data_directory)
+        : m_window(window), m_data_directory(data_directory) {
 
         m_device = create_performant_device1();
         m_device->GetImmediateContext1(&m_render_context);
@@ -154,8 +153,9 @@ public:
                 m_counter_hertz = 1.0 / freq.QuadPart;
             }
 
-            std::wstring shader_folder_path = m_data_folder_path + L"DX11Renderer\\Shaders\\";
-            m_camera_effects = CameraEffects(m_device, shader_folder_path);
+            // auto shader_folder_path = m_data_directory + std::filesystem::path("DX11Renderer\\Shaders\\");
+            auto shader_folder_path = m_data_directory / "DX11Renderer" / "Shaders";
+            m_camera_effects = CameraEffects(m_device, (std::wstring)shader_folder_path + L"/");
         }
 
         { // Initialize renderer containers. Initialize the 0'th index to null.
@@ -173,7 +173,7 @@ public:
     }
 
     std::unique_ptr<IRenderer>& add_renderer(RendererCreator renderer_creator) {
-        IRenderer* renderer = renderer_creator(*m_device, m_window.get_width(), m_window.get_height(), m_data_folder_path);
+        IRenderer* renderer = renderer_creator(*m_device, m_window.get_width(), m_window.get_height(), m_data_directory);
         if (renderer == nullptr)
             return m_renderers[0];
 
@@ -329,9 +329,8 @@ public:
 //----------------------------------------------------------------------------
 // DirectX 11 compositor.
 //----------------------------------------------------------------------------
-Compositor* Compositor::initialize(HWND& hwnd, const Bifrost::Core::Window& window, 
-                                                  const std::wstring& data_folder_path) {
-    Compositor* c = new Compositor(hwnd, window, data_folder_path);
+Compositor* Compositor::initialize(HWND& hwnd, const Bifrost::Core::Window& window, const std::filesystem::path& data_directory) {
+    Compositor* c = new Compositor(hwnd, window, data_directory);
     if (!c->m_impl->is_valid()) {
         delete c;
         return nullptr;
@@ -340,8 +339,8 @@ Compositor* Compositor::initialize(HWND& hwnd, const Bifrost::Core::Window& wind
     return c;
 }
 
-Compositor::Compositor(HWND& hwnd, const Bifrost::Core::Window& window, const std::wstring& data_folder_path) {
-    m_impl = new Implementation(hwnd, window, data_folder_path);
+Compositor::Compositor(HWND& hwnd, const Bifrost::Core::Window& window, const std::filesystem::path& data_directory) {
+    m_impl = new Implementation(hwnd, window, data_directory);
 }
 
 Compositor::~Compositor() {

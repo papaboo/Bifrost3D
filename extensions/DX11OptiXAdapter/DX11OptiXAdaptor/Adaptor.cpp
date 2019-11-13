@@ -6,8 +6,6 @@
 // See LICENSE.txt for more detail.
 //-------------------------------------------------------------------------------------------------
 
-#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING 1
-
 #include <DX11OptiXAdaptor/Adaptor.h>
 #include <DX11Renderer/Renderer.h>
 #include <DX11Renderer/Utils.h>
@@ -20,8 +18,6 @@
 #include <optixu/optixpp_namespace.h>
 
 #include <DX11Renderer/Types.h>
-
-#include <codecvt>
 
 using namespace DX11Renderer;
 
@@ -63,7 +59,7 @@ public:
 
     OptiXRenderer::Renderer* m_optix_renderer;
 
-    Implementation(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path, Bifrost::Core::Renderers::UID renderer_ID)
+    Implementation(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory, Bifrost::Core::Renderers::UID renderer_ID)
         : m_device(device), m_backbuffer_RTV(nullptr), m_backbuffer_SRV(nullptr) {
 
         device.GetImmediateContext1(&m_render_context);
@@ -78,9 +74,7 @@ public:
             THROW_CUDA_ERROR(cudaD3D11GetDevice(&m_cuda_device_ID, adapter));
 
             // Create OptiX Renderer on device.
-            std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-            std::string data_path = converter.to_bytes(data_folder_path);
-            m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, width_hint, height_hint, data_path, renderer_ID);
+            m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, width_hint, height_hint, data_directory, renderer_ID);
         }
 
         THROW_DX11_ERROR(create_constant_buffer(m_device, sizeof(float) * 4, &m_constant_buffer));
@@ -260,13 +254,13 @@ public:
     }
 };
 
-IRenderer* Adaptor::initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path) {
-    return new Adaptor(device, width_hint, height_hint, data_folder_path);
+IRenderer* Adaptor::initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory) {
+    return new Adaptor(device, width_hint, height_hint, data_directory);
 }
 
-Adaptor::Adaptor(ID3D11Device1& device, int width_hint, int height_hint, const std::wstring& data_folder_path) {
+Adaptor::Adaptor(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory) {
     m_renderer_ID = Bifrost::Core::Renderers::create("OptiXRenderer");
-    m_impl = new Implementation(device, width_hint, height_hint, data_folder_path, m_renderer_ID);
+    m_impl = new Implementation(device, width_hint, height_hint, data_directory, m_renderer_ID);
 }
 
 Adaptor::~Adaptor() {

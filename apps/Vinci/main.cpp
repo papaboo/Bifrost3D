@@ -6,8 +6,6 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING 1
-
 #include <SceneGenerator.h>
 
 #include <Bifrost/Assets/Mesh.h>
@@ -30,9 +28,6 @@
 #include <StbImageWriter/StbImageWriter.h>
 
 #include <Win32Driver.h>
-
-#include <codecvt>
-#include <cstdio>
 
 using namespace Bifrost::Assets;
 using namespace Bifrost::Core;
@@ -314,10 +309,7 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
     if (window.get_width() != g_options.window_size.x || window.get_height() != g_options.window_size.y)
         window.resize(g_options.window_size.x, g_options.window_size.y);
 
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    std::wstring data_folder_path = converter.from_bytes(engine.data_path());
-
-    g_compositor = DX11Renderer::Compositor::initialize(hwnd, window, data_folder_path);
+    g_compositor = DX11Renderer::Compositor::initialize(hwnd, window, engine.data_directory());
 
     g_optix_adaptor = (DX11OptiXAdaptor::Adaptor*)g_compositor->add_renderer(DX11OptiXAdaptor::Adaptor::initialize).get();
 

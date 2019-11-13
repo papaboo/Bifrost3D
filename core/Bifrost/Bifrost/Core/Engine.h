@@ -12,18 +12,16 @@
 #include <Bifrost/Core/Time.h>
 #include <Bifrost/Core/Window.h>
 
+#include <filesystem>
 #include <functional>
 #include <vector>
 
-namespace Bifrost {
-namespace Input {
+namespace Bifrost::Input {
     class Keyboard;
     class Mouse;
 }
-}
 
-namespace Bifrost {
-namespace Core {
+namespace Bifrost::Core {
 
 // ---------------------------------------------------------------------------
 // Engine driver, responsible for invoking the modules and handling all engine
@@ -34,7 +32,7 @@ namespace Core {
 // ---------------------------------------------------------------------------
 class Engine final {
 public:
-    Engine(const std::string& data_path);
+    Engine(const std::filesystem::path& data_directory);
 
     inline Time& get_time() { return m_time; }
     inline Time get_time() const { return m_time; }
@@ -47,10 +45,10 @@ public:
     // -----------------------------------------------------------------------
     // Input
     // -----------------------------------------------------------------------
-    void set_keyboard(const Input::Keyboard* const keyboard) { m_keyboard = keyboard; }
-    const Input::Keyboard* const get_keyboard() const { return m_keyboard; } // So .... you're saying it's const? TODO Return an immutable mouse and keyboard (Just wrap them in thin shells that only lets user query state.)
-    void set_mouse(const Input::Mouse* const mouse) { m_mouse = mouse; }
-    const Input::Mouse* const get_mouse() const { return m_mouse; }
+    inline void set_keyboard(const Input::Keyboard* const keyboard) { m_keyboard = keyboard; }
+    inline const Input::Keyboard* const get_keyboard() const { return m_keyboard; } // So .... you're saying it's const? TODO Return an immutable mouse and keyboard (Just wrap them in thin shells that only lets user query state.)
+    inline void set_mouse(const Input::Mouse* const mouse) { m_mouse = mouse; }
+    inline const Input::Mouse* const get_mouse() const { return m_mouse; }
 
     // -----------------------------------------------------------------------
     // Callbacks
@@ -62,7 +60,7 @@ public:
     // -----------------------------------------------------------------------
     // Paths
     // -----------------------------------------------------------------------
-    const std::string& data_path() { return m_data_path; }
+    inline const std::filesystem::path& data_directory() { return m_data_directory; }
 
     // -----------------------------------------------------------------------
     // Main loop
@@ -88,10 +86,9 @@ private:
     const Input::Keyboard* m_keyboard;
     const Input::Mouse* m_mouse;
 
-    const std::string m_data_path;
+    const std::filesystem::path m_data_directory;
 };
 
-} // NS Core
-} // NS Bifrost
+} // NS Bifrost::Core
 
 #endif // _BIFROST_CORE_ENGINE_H_
