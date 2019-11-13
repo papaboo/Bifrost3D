@@ -6,6 +6,8 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
+#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING 1
+
 #include <SceneGenerator.h>
 
 #include <Bifrost/Assets/Mesh.h>
@@ -286,7 +288,7 @@ int setup_scene(Engine& engine, Options& options) {
     cam_transform.translation = scene_bounds.center() + scene_bounds.size() * 0.5f;
     cam_transform.look_at(scene_bounds.center());
     Cameras::set_transform(camera_ID, cam_transform);
-    
+
     // Disable screen space effects two keep the data in a linear color space.
     auto effects_settings = Cameras::get_effects_settings(camera_ID);
     effects_settings.exposure.mode = CameraEffects::ExposureMode::Fixed;

@@ -6,6 +6,8 @@
 // See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
+#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING 1
+
 #include <Scenes/CornellBox.h>
 #include <Scenes/Material.h>
 #include <Scenes/Opacity.h>
