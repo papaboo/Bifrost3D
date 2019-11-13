@@ -78,6 +78,7 @@ struct Options {
 
     int random_seed;
     int random_scene_images;
+    std::string texture_directory;
 
     Texture environment_map;
     RGB environment_tint;
@@ -103,6 +104,8 @@ struct Options {
                 options.scene = std::string(argv[++argument]);
             else if (strcmp(argv[argument], "--output") == 0 || strcmp(argv[argument], "-o") == 0)
                 options.output = std::string(argv[++argument]);
+            else if (strcmp(argv[argument], "--textures") == 0 || strcmp(argv[argument], "-t") == 0)
+                options.texture_directory = std::string(argv[++argument]);
             else if (strcmp(argv[argument], "--environment-map") == 0 || strcmp(argv[argument], "-e") == 0) {
                 std::string environment_path = std::string(argv[++argument]);
                 Image image = load_image(environment_path);
@@ -252,7 +255,7 @@ int setup_scene(Engine& engine, Options& options) {
         scene_root.set_parent(root_node);
     } else {
         // Generate random scene primitives
-        g_random_scene = new SceneGenerator::RandomScene(options.random_seed);
+        g_random_scene = new SceneGenerator::RandomScene(options.random_seed, options.texture_directory);
         g_random_scene->get_root_node().set_parent(root_node);
 
         auto* scene_refresher = new SceneRefresher(*g_random_scene);
@@ -328,6 +331,7 @@ void print_usage() {
         "  -h  | --help: Show command line usage for Vinci.\n"
         "  -s  | --scene <model file>: Loads the model specified.\n"
         "  -o  | --output <output directory>.\n"
+        "  -t  | --textures <texture folder>: Root folder of physically based rendering textures.\n"
         "  -e  | --environment-map <image>: Loads the specified image for the environment.\n"
         "      | --environment-tint [R,G,B]: Tint the environment by the specified value.\n"
         "      | --window-size [width, height]: Size of the window.\n";

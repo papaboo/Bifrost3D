@@ -9,6 +9,8 @@
 #ifndef _VINCI_SCENE_GENERATOR_H_
 #define _VINCI_SCENE_GENERATOR_H_
 
+#include "TextureManager.h"
+
 #include <Bifrost/Assets/MeshModel.h>
 #include <Bifrost/Assets/MeshCreation.h>
 #include <Bifrost/Assets/Material.h>
@@ -27,8 +29,8 @@ using namespace Bifrost::Scene;
 
 class RandomScene {
 public:
-    RandomScene(int seed) 
-    : m_seed(seed),  m_root_node(SceneNodes::create("root node")) {
+    RandomScene(int seed, const std::string& texture_directory) 
+    : m_seed(seed), m_textures(TextureManager(texture_directory)), m_root_node(SceneNodes::create("root node")) {
         new_scene();
     }
 
@@ -83,6 +85,7 @@ private:
     unsigned int m_seed;
 
     // Collections of objects in the scene.
+    TextureManager m_textures;
     SceneNode m_root_node;
     std::vector<Mesh> m_meshes;
     std::vector<Material> m_materials;
@@ -97,10 +100,7 @@ private:
         Transform transform = Transform(translation, rotation);
 
         // Generate random material
-        RGB tint = RGB(rng.sample1f(), rng.sample1f(), rng.sample1f());
-        float roughness = rng.sample1f();
-        auto material_data = Materials::Data::create_dielectric(tint, roughness, 0.5f);
-        auto material_ID = Materials::create("Mat", material_data);
+        auto material_ID = m_textures.generate_random_material(rng);
         m_materials.push_back(material_ID);
 
         // Assemble in scene node.
@@ -118,7 +118,7 @@ private:
     }
 
     static Mesh generate_cylinder(RNG::LinearCongruential& rng) {
-        Mesh cylinder = MeshCreation::cylinder(1, 128);
+        Mesh cylinder = MeshCreation::cylinder(1, 512);
 
         Vector3f scaling = rng.sample3f() * 1.5f + 0.5f;
         Vector3f* positions = cylinder.get_positions();
