@@ -124,6 +124,7 @@ private:
         Vector3f* positions = cylinder.get_positions();
         for (unsigned int i = 0; i < cylinder.get_vertex_count(); ++i)
             positions[i] *= scaling;
+        MeshUtils::compute_normals(cylinder.get_ID());
 
         return cylinder;
     }
