@@ -228,8 +228,11 @@ public:
     inline unsigned int get_pixel_count(unsigned int mipmap_level = 0) const { return Images::get_pixel_count(m_ID, mipmap_level); }
 
     inline Images::PixelData get_pixels(unsigned int mipmap_level = 0) { return Images::get_pixels(m_ID, mipmap_level); }
+    inline const Images::PixelData get_pixels(unsigned int mipmap_level = 0) const { return Images::get_pixels(m_ID, mipmap_level); }
     template <typename T>
     inline T* get_pixels(int mipmap_level = 0) { return Images::get_pixels<T>(m_ID, mipmap_level); }
+    template <typename T>
+    inline const T* const get_pixels(int mipmap_level = 0) const { return Images::get_pixels<T>(m_ID, mipmap_level); }
 
     inline Math::RGBA get_pixel(unsigned int index, unsigned int mipmap_level = 0) const { return Images::get_pixel(m_ID, index, mipmap_level); }
     inline Math::RGBA get_pixel(Math::Vector2ui index, unsigned int mipmap_level = 0) const { return Images::get_pixel(m_ID, index, mipmap_level); }
