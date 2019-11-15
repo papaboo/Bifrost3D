@@ -77,7 +77,7 @@ bool Images::has(Images::UID image_ID) {
 
 static inline Images::PixelData allocate_pixels(PixelFormat format, unsigned int pixel_count) {
     switch (format) {
-    case PixelFormat::A8:
+    case PixelFormat::Alpha8:
     case PixelFormat::Intensity8:
         return new unsigned char[pixel_count];
     case PixelFormat::RGB24:
@@ -98,7 +98,7 @@ static inline Images::PixelData allocate_pixels(PixelFormat format, unsigned int
 
 static inline void deallocate_pixels(PixelFormat format, Images::PixelData data) {
     switch (format) {
-    case PixelFormat::A8:
+    case PixelFormat::Alpha8:
     case PixelFormat::Intensity8:
     case PixelFormat::RGB24:
     case PixelFormat::RGBA32:
@@ -130,7 +130,7 @@ Images::UID Images::create3D(const std::string& name, PixelFormat format, float 
         reserve_image_data(m_UID_generator.capacity(), old_capacity);
 
     // Only apply gamma to images that store colors.
-    if (format == PixelFormat::A8)
+    if (format == PixelFormat::Alpha8)
         gamma = 1.0f;
 
     MetaInfo& metainfo = m_metainfo[id];
@@ -168,7 +168,7 @@ Images::UID Images::create2D(const std::string& name, PixelFormat format, float 
         reserve_image_data(m_UID_generator.capacity(), old_capacity);
 
     // Only apply gamma to images that store colors.
-    if (format == PixelFormat::A8)
+    if (format == PixelFormat::Alpha8)
         gamma = 1.0f;
 
     MetaInfo& metainfo = m_metainfo[id];
@@ -219,7 +219,7 @@ Images::PixelData Images::get_pixels(Images::UID image_ID, int mipmap_level) {
 static RGBA get_nonlinear_pixel(Images::UID image_ID, unsigned int index) {
     Images::PixelData pixels = Images::get_pixels(image_ID);
     switch (Images::get_pixel_format(image_ID)) {
-    case PixelFormat::A8: {
+    case PixelFormat::Alpha8: {
         float alpha = ((unsigned char*)pixels)[index] / 255.0f;
         return RGBA(1.0f, 1.0f, 1.0f, alpha);
     }
@@ -295,7 +295,7 @@ static void set_linear_pixel(Images::UID image_ID, RGBA color, unsigned int inde
     color = gammacorrect(color, 1.0f / Images::get_gamma(image_ID));
     Images::PixelData pixels = Images::get_pixels(image_ID);
     switch (Images::get_pixel_format(image_ID)) {
-    case PixelFormat::A8: {
+    case PixelFormat::Alpha8: {
         unsigned char* pixel = ((unsigned char*)pixels) + index;
         pixel[0] = unsigned char(clamp(color.a * 255.0f + 0.5f, 0.0f, 255.0f));
         break;

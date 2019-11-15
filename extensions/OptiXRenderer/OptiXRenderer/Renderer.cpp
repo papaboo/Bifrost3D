@@ -590,7 +590,7 @@ struct Renderer::Implementation {
                     } else if (Images::get_changes(image_ID).is_set(Images::Change::Created)) {
                         RTformat pixel_format = RT_FORMAT_UNKNOWN;
                         switch (image.get_pixel_format()) {
-                        case PixelFormat::A8:
+                        case PixelFormat::Alpha8:
                             pixel_format = RT_FORMAT_UNSIGNED_BYTE; break;
                         case PixelFormat::RGB24: // OptiX does not support using ubyte3 buffers as input to samplers.
                         case PixelFormat::RGBA32:

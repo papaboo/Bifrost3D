@@ -23,9 +23,9 @@ namespace Assets {
 
 enum class PixelFormat {
     Unknown = 0,
-    A8,
-    Metallic8 = A8,
-    Roughness8 = A8,
+    Alpha8,
+    Metallic8 = Alpha8,
+    Roughness8 = Alpha8,
     Intensity8, // Uses the red channel when getting and setting pixels. Alpha is always one when getting a pixel. Green and blue are undefined.
     RGB24,
     RGBA32,
@@ -36,7 +36,7 @@ enum class PixelFormat {
 
 inline int size_of(PixelFormat format) {
     switch (format) {
-    case PixelFormat::A8:
+    case PixelFormat::Alpha8:
     case PixelFormat::Intensity8: return 1;
     case PixelFormat::RGB24: return 3;
     case PixelFormat::RGBA32:
@@ -58,7 +58,7 @@ inline int channel_count(PixelFormat format) {
     case PixelFormat::RGB24:
     case PixelFormat::RGB_Float:
         return 3;
-    case PixelFormat::A8:
+    case PixelFormat::Alpha8:
     case PixelFormat::Intensity8:
     case PixelFormat::Intensity_Float:
         return 1;

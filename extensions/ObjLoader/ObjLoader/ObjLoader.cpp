@@ -96,8 +96,8 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
             if (image_ID == Images::UID::invalid_UID())
                 printf("ObjLoader::load error: Could not load image at '%s'.\n", (directory + tiny_mat.alpha_texname).c_str());
             else {
-                if (Images::get_pixel_format(image_ID) != PixelFormat::A8) {
-                    Images::UID new_image_ID = ImageUtils::change_format(image_ID, PixelFormat::A8); // TODO Own change format. Alpha should come from the alpha channel if there is one, otherwise from red.
+                if (Images::get_pixel_format(image_ID) != PixelFormat::Alpha8) {
+                    Images::UID new_image_ID = ImageUtils::change_format(image_ID, PixelFormat::Alpha8); // TODO Own change format. Alpha should come from the alpha channel if there is one, otherwise from red.
                     Images::destroy(image_ID);
                     image_ID = new_image_ID;
                 }
@@ -114,7 +114,7 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
                 if (channel_count(image.get_pixel_format()) == 4 && material_data.coverage_texture_ID == Textures::UID::invalid_UID()) {
                     unsigned int mipmap_count = image.get_mipmap_count();
                     Vector2ui size = Vector2ui(image.get_width(), image.get_height());
-                    Image coverage_image = Images::create2D(image.get_name(), PixelFormat::A8, image.get_gamma(), size, mipmap_count);
+                    Image coverage_image = Images::create2D(image.get_name(), PixelFormat::Alpha8, image.get_gamma(), size, mipmap_count);
 
                     float min_coverage = 1.0f;
                     for (unsigned int m = 0; m < mipmap_count; ++m)

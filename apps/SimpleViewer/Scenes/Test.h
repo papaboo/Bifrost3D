@@ -243,7 +243,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
         Image tint_roughness = Images::create2D("Sphere tint", PixelFormat::RGBA32, 2.2f, Vector2ui(size));
         TintRoughness* tint_roughness_pixels = tint_roughness.get_pixels<TintRoughness>();
         std::fill_n(tint_roughness_pixels, size* size, rubber_tint);
-        Image metalness = Images::create2D("Sphere metalness", PixelFormat::A8, 1.0f, Vector2ui(size));
+        Image metalness = Images::create2D("Sphere metalness", PixelFormat::Alpha8, 1.0f, Vector2ui(size));
         unsigned char* metalness_pixels = metalness.get_pixels<unsigned char>();
         std::fill_n(metalness_pixels, size* size, (unsigned char)0u);
         #pragma omp parallel for 
@@ -283,7 +283,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
 
     { // Partial coverage plastic torus.
         unsigned int width = 17, height = 17;
-        Images::UID image_ID = Images::create2D("Grid", PixelFormat::A8, 1.0f, Vector2ui(width, height));
+        Images::UID image_ID = Images::create2D("Grid", PixelFormat::Alpha8, 1.0f, Vector2ui(width, height));
         unsigned char* pixels = Images::get_pixels<unsigned char>(image_ID);
         for (unsigned int y = 0; y < height; ++y) {
             for (unsigned int x = 0; x < width; ++x) {

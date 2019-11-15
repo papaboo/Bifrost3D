@@ -164,7 +164,7 @@ Image extract_channel(Image image, int channel, ImageUsage usage, const std::str
     if (channel >= channel_count(image.get_pixel_format()))
         return Images::UID::invalid_UID();
 
-    if (image.get_pixel_format() == PixelFormat::A8 && channel == 0)
+    if (image.get_pixel_format() == PixelFormat::Alpha8 && channel == 0)
         return image;
 
     auto converted_image_hash = hash_converted_image(image.get_ID(), usage);
@@ -175,7 +175,7 @@ Image extract_channel(Image image, int channel, ImageUsage usage, const std::str
     // Extract the channel from the image and store the resulting image in the cache.
     unsigned int mipmap_count = image.get_mipmap_count();
     Vector2ui size = Vector2ui(image.get_width(), image.get_height());
-    Images::UID single_channel_image_ID = Images::create2D(name + "_" + to_string(usage), PixelFormat::A8, 1.0, size, mipmap_count);
+    Images::UID single_channel_image_ID = Images::create2D(name + "_" + to_string(usage), PixelFormat::Alpha8, 1.0, size, mipmap_count);
 
     unsigned char min_value = 255;
     for (unsigned int m = 0; m < mipmap_count; ++m) {

@@ -26,10 +26,10 @@ __forceinline void assert_metallic_texture(Texture metallic_tex) {}
 __forceinline void assert_tint_roughness_texture(Texture metallic_tex) {}
 #else
 __forceinline void assert_coverage_texture(Texture coverage_tex) {
-    assert(!coverage_tex.exists() || coverage_tex.get_image().get_pixel_format() == PixelFormat::A8);
+    assert(!coverage_tex.exists() || coverage_tex.get_image().get_pixel_format() == PixelFormat::Alpha8);
 }
 __forceinline void assert_metallic_texture(Texture metallic_tex) {
-    assert(!metallic_tex.exists() || metallic_tex.get_image().get_pixel_format() == PixelFormat::A8);
+    assert(!metallic_tex.exists() || metallic_tex.get_image().get_pixel_format() == PixelFormat::Alpha8);
 }
 __forceinline void assert_tint_roughness_texture(Texture tint_roughness_tex) {
     assert(!tint_roughness_tex.exists() || tint_roughness_tex.get_image().get_pixel_format() != PixelFormat::Unknown);

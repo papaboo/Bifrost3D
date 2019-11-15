@@ -381,7 +381,7 @@ void detect_and_flag_cutout_materials() {
         Material material = model.get_material();
         if (material.get_coverage_texture().exists()) {
             Image coverage_img = material.get_coverage_texture().get_image();
-            assert(coverage_img.get_pixel_format() == PixelFormat::A8);
+            assert(coverage_img.get_pixel_format() == PixelFormat::Alpha8);
 
             State& image_state = image_states[coverage_img.get_ID()];
             if (image_state == Unprocessed)
