@@ -96,7 +96,7 @@ struct Options {
         options.random_scene_images = 32;
 
         options.environment_map = Textures::UID::invalid_UID();
-        options.environment_tint = RGB::white();
+        options.environment_tint = RGB::black();
 
         int argument = 1;
         while (argument < argc) {
@@ -286,6 +286,11 @@ int setup_scene(Engine& engine, Options& options) {
     cam_transform.translation = scene_bounds.center() + scene_bounds.size() * 0.5f;
     cam_transform.look_at(scene_bounds.center());
     Cameras::set_transform(camera_ID, cam_transform);
+
+    // Setup lightsource colocated with camera.
+    SceneNode light_node = SceneNodes::create("light node", cam_transform);
+    light_node.set_parent(root_node);
+    LightSources::create_sphere_light(light_node.get_ID(), RGB(20), 0);
 
     // Disable screen space effects two keep the data in a linear color space.
     auto effects_settings = Cameras::get_effects_settings(camera_ID);
