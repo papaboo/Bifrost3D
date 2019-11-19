@@ -80,7 +80,7 @@ public:
                     Texture tint_tex = m_tints[texture_index];
                     Texture roughness_tex = m_roughness[texture_index];
                     if (tint_tex.exists() && roughness_tex.exists()) {
-                        Image tint_roughness_image = combine_tint_roughness(tint_tex.get_image(), roughness_tex.get_image());
+                        Image tint_roughness_image = ImageUtils::combine_tint_roughness(tint_tex.get_image(), roughness_tex.get_image(), 3);
                         auto tint_roughness_tex_ID = Textures::create2D(tint_roughness_image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Trilinear);
                         m_tint_roughness.push_back(tint_roughness_tex_ID);
                     } else
@@ -139,90 +139,6 @@ public:
     }
 
 private:
-
-    Bifrost::Assets::Image combine_tint_roughness(const Bifrost::Assets::Image tint, const Bifrost::Assets::Image roughness) {
-        using namespace Bifrost::Assets;
-        using namespace Bifrost::Math;
-        assert(tint.get_width() == roughness.get_width());
-        assert(tint.get_height() == roughness.get_height());
-        assert(tint.get_depth() == roughness.get_depth() && tint.get_depth() == 1);
-
-        PixelFormat tint_format = tint.get_pixel_format();
-        PixelFormat roughness_format = roughness.get_pixel_format();
-
-        Vector2ui size = { tint.get_width(), tint.get_height() };
-        int mipmap_count = min(tint.get_mipmap_count(), roughness.get_mipmap_count());
-
-        int pixel_count = tint.get_pixel_count();
-        for (int m = 1; m < mipmap_count; ++m)
-            pixel_count += tint.get_pixel_count(m);
-
-        int chunk_size = 4096;
-        int chunk_count = pixel_count / chunk_size;
-
-        bool tint_is_byte = tint_format == PixelFormat::RGB24 || tint_format == PixelFormat::RGBA32;
-        bool roughness_is_byte = roughness_format == PixelFormat::Alpha8 || roughness_format == PixelFormat::Intensity8 || 
-                                 roughness_format == PixelFormat::RGB24 || roughness_format == PixelFormat::RGBA32;
-        if (tint_is_byte && roughness_is_byte) {
-            int tint_pixel_size = size_of(tint_format);
-            int roughness_pixel_size = size_of(roughness_format);
-
-            Image tint_roughness = Images::create2D(tint.get_name() + "_" + roughness.get_name(), PixelFormat::RGBA32, 2.2f, size, mipmap_count);
-            
-            const unsigned char* tint_pixels = (const unsigned char*)tint.get_pixels();
-            const unsigned char* roughness_pixels = (unsigned char*)roughness.get_pixels();
-            RGBA32* tint_roughness_pixels = tint_roughness.get_pixels<RGBA32>();
-
-            #pragma omp parallel for schedule(dynamic, 16)
-            for (int c = 0; c < chunk_count; ++c) {
-
-                int pixel_begin = c * chunk_size;
-                int pixel_end = min(pixel_begin + chunk_size, pixel_count);
-
-                // Fill tint channels
-                for (int p = pixel_begin; p < pixel_end; ++p) {
-                    tint_roughness_pixels[p].r = tint_pixels[p * tint_pixel_size];
-                    tint_roughness_pixels[p].g = tint_pixels[p * tint_pixel_size + 1];
-                    tint_roughness_pixels[p].b = tint_pixels[p * tint_pixel_size + 2];
-                }
-
-                // Fill roughness channels
-                if (roughness_format == PixelFormat::Roughness8 || roughness.get_gamma() == 1.0f)
-                    // Roughnes is stored in alpha and should not be gamma corrected.
-                    for (int p = pixel_begin; p < pixel_end; ++p)
-                        tint_roughness_pixels[p].a = roughness_pixels[p * roughness_pixel_size];
-                else
-                    // Roughness is stored as a color and should be degammaed.
-                    for (int p = pixel_begin; p < pixel_end; ++p) {
-                        float nonlinear_roughness = roughness_pixels[p * roughness_pixel_size] / 255.0f;
-                        float linear_roughness = powf(nonlinear_roughness, roughness.get_gamma());
-                        tint_roughness_pixels[p].a = unsigned char(linear_roughness * 255 + 0.5f);
-                    }
-            }
-
-            return tint_roughness;
-
-        } else {
-            // Fallback path
-            Image tint_roughness = Images::create2D(tint.get_name() + "_" + roughness.get_name(), PixelFormat::RGBA32, 2.2f, size, mipmap_count);
-
-            #pragma omp parallel for schedule(dynamic, 16)
-            for (int c = 0; c < chunk_count; ++c) {
-
-                int pixel_begin = c * chunk_size;
-                int pixel_end = min(pixel_begin + chunk_size, pixel_count);
-
-                // Fill tint and roughness channels.
-                for (int p = pixel_begin; p < pixel_end; ++p) {
-                    RGB t = tint.get_pixel(p).rgb();
-                    float r = roughness.get_pixel(p).a;
-                    tint_roughness.set_pixel(RGBA(t, r), p);
-                }
-            }
-
-            return tint_roughness;
-        }
-    }
 
     std::vector<Bifrost::Assets::Textures::UID> m_tints;
     std::vector<Bifrost::Assets::Textures::UID> m_roughness;
