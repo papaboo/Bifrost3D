@@ -228,48 +228,7 @@ Image extract_tint_roughness(Image tint_image, Image roughness_image, const std:
     if (converted_image_itr != converted_images.end())
         return converted_image_itr->second;
 
-    unsigned int mipmap_count = tint_image.get_mipmap_count();
-    Vector2ui size = Vector2ui(tint_image.get_width(), tint_image.get_height());
-    Image dst_image = Images::create2D(name + "_tint_roughness", PixelFormat::RGBA32, tint_image.get_gamma(), size, mipmap_count);
-
-    // Fill tint channels
-    assert(tint_image.get_pixel_format() == PixelFormat::RGB24 || tint_image.get_pixel_format() == PixelFormat::RGBA32);
-    for (unsigned int m = 0; m < mipmap_count; ++m) {
-        unsigned char* src_pixels = (unsigned char*)tint_image.get_pixels(m);
-        int src_pixel_size = size_of(tint_image.get_pixel_format());
-        RGBA32* dst_pixels = dst_image.get_pixels<RGBA32>(m);
-
-        int pixel_count = tint_image.get_pixel_count(m);
-        for (int p = 0; p < pixel_count; ++p) {
-            dst_pixels[p].r = src_pixels[0];
-            dst_pixels[p].g = src_pixels[1];
-            dst_pixels[p].b = src_pixels[2];
-            dst_pixels[p].a = 255;
-            src_pixels += src_pixel_size;
-        }
-    }
-
-    // Fill roughness channels. NOTE Gamma correct?
-    if (roughness_image.exists() && channel_count(roughness_image.get_pixel_format()) >= 2) {
-        auto roughness_pixel_format = roughness_image.get_pixel_format();
-        // Assert that image dimensions of the two images are equal and that the roughness image has 8bit channels.
-        assert(tint_image.get_width() == roughness_image.get_width());
-        assert(tint_image.get_height() == roughness_image.get_height());
-        assert(tint_image.get_mipmap_count() == roughness_image.get_mipmap_count());
-        assert(roughness_pixel_format == PixelFormat::RGB24 || roughness_pixel_format == PixelFormat::RGBA32);
-        for (unsigned int m = 0; m < mipmap_count; ++m) {
-            unsigned char* src_pixels = (unsigned char*)roughness_image.get_pixels(m);
-            int src_pixel_size = size_of(roughness_image.get_pixel_format());
-            RGBA32* dst_pixels = dst_image.get_pixels<RGBA32>(m);
-
-            int pixel_count = tint_image.get_pixel_count(m);
-            for (int p = 0; p < pixel_count; ++p) {
-                dst_pixels[p].a = src_pixels[1];
-                src_pixels += src_pixel_size;
-            }
-        }
-    }
-
+    Image dst_image = ImageUtils::combine_tint_roughness(tint_image, roughness_image, 1);
     converted_images.insert({ tint_roughness_image_hash, dst_image.get_ID() });
     return dst_image;
 }
