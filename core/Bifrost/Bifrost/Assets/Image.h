@@ -68,6 +68,10 @@ inline int channel_count(PixelFormat format) {
     }
 }
 
+inline bool has_alpha(PixelFormat format) {
+    return format == PixelFormat::Alpha8 || format == PixelFormat::RGBA32 || format == PixelFormat::RGBA_Float;
+}
+
 //----------------------------------------------------------------------------
 // Bifrost image container.
 // Images are indexed from the lower left corner to the top right one.
@@ -290,6 +294,8 @@ inline Math::RGBA* compute_summed_area_table(Images::UID image_ID) {
     compute_summed_area_table(image_ID, sat);
     return sat;
 }
+
+Image combine_tint_roughness(const Image tint, const Image roughness, int roughness_channel = 3);
 
 } // NS ImageUtils
 

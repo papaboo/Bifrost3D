@@ -473,6 +473,119 @@ void compute_summed_area_table(Images::UID image_ID, RGBA* sat_result) {
     delete[] sat;
 }
 
+Image combine_tint_roughness(const Image tint, const Image roughness, int roughness_channel) {
+    PixelFormat tint_format = tint.get_pixel_format();
+    PixelFormat roughness_format = roughness.get_pixel_format();
+
+    Vector2ui size = { tint.get_width(), tint.get_height() };
+
+    // Handle cases where one of the two textures doesn't exists and the other should be used.
+    if (!roughness.exists()) {
+        if (has_alpha(tint_format)) {
+            assert(tint_format == PixelFormat::RGBA32); // The alternative is float, but float isn't usual for tint.
+            Image tint_sans_roughness = Images::create2D(tint.get_name(), PixelFormat::RGBA32, 2.2f, size, tint.get_mipmap_count());
+            RGBA32* new_tint_pixels = tint_sans_roughness.get_pixels<RGBA32>();
+            memcpy(new_tint_pixels, tint.get_pixels(), size.x * size.y * size_of(tint_format));
+            // Set roughness to multiplicative identity.
+            for (unsigned int i = 0; i < size.x * size.y; ++i)
+                new_tint_pixels[i].a = 255;
+            return tint_sans_roughness;
+        } else
+            return tint;
+    }
+    
+    if (!tint.exists()) {
+        if (roughness_format == PixelFormat::Roughness8)
+            return roughness;
+        else
+            return ImageUtils::change_format(roughness.get_ID(), PixelFormat::Roughness8, 1.0f, [=](RGBA pixel) -> RGBA {
+                float v = pixel[roughness_channel];
+                return RGBA(v, v, v, v);
+            });
+    }
+
+    assert(tint.get_width() == roughness.get_width());
+    assert(tint.get_height() == roughness.get_height());
+    assert(tint.get_depth() == roughness.get_depth() && tint.get_depth() == 1);
+
+    int mipmap_count = min(tint.get_mipmap_count(), roughness.get_mipmap_count());
+    int pixel_count = tint.get_pixel_count();
+    for (int m = 1; m < mipmap_count; ++m)
+        pixel_count += tint.get_pixel_count(m);
+
+    int chunk_size = 4096;
+    int chunk_count = ceil_divide(pixel_count, chunk_size);
+
+    bool tint_is_byte = tint_format == PixelFormat::RGB24 || tint_format == PixelFormat::RGBA32;
+    bool roughness_is_byte = roughness_format == PixelFormat::Alpha8 || roughness_format == PixelFormat::Intensity8 || 
+        roughness_format == PixelFormat::RGB24 || roughness_format == PixelFormat::RGBA32;
+    if (tint_is_byte && roughness_is_byte) {
+        int tint_pixel_size = size_of(tint_format);
+        int roughness_pixel_size = size_of(roughness_format);
+
+        assert(roughness_format != PixelFormat::Intensity8 || (roughness_format == PixelFormat::Intensity8 && roughness_channel == 0)); // Roughness with PixelFormat::Intensity8 must use channel one for roughness.
+        assert(roughness_format != PixelFormat::Alpha8 || (roughness_format == PixelFormat::Alpha8 && roughness_channel == 3)); // Roughness with PixelFormat::Alpha8 must use channel three for roughness.
+        assert(roughness_format != PixelFormat::RGB24 || (roughness_format == PixelFormat::RGB24 && roughness_channel < 3)); // Roughness with PixelFormat::RGB24 must use channels one, two or three for roughness.
+        // Sanitize roughness channel index based on pixel format. Fx for Alpha8 the channel index is 3, but since only one channel contains information, the channel index must be reduced to 0 for direct access.
+        roughness_channel = min(roughness_channel, roughness_pixel_size - 1);
+
+        Image tint_roughness = Images::create2D(tint.get_name() + "_" + roughness.get_name(), PixelFormat::RGBA32, tint.get_gamma(), size, mipmap_count);
+
+        const unsigned char* tint_pixels = (const unsigned char*)tint.get_pixels();
+        const unsigned char* roughness_pixels = (unsigned char*)roughness.get_pixels() + roughness_channel;
+        RGBA32* tint_roughness_pixels = tint_roughness.get_pixels<RGBA32>();
+
+        // #pragma omp parallel for schedule(dynamic, 16)
+        for (int c = 0; c < chunk_count; ++c) {
+
+            int pixel_begin = c * chunk_size;
+            int pixel_end = min(pixel_begin + chunk_size, pixel_count);
+
+            // Fill tint channels
+            for (int p = pixel_begin; p < pixel_end; ++p) {
+                tint_roughness_pixels[p].r = tint_pixels[p * tint_pixel_size];
+                tint_roughness_pixels[p].g = tint_pixels[p * tint_pixel_size + 1];
+                tint_roughness_pixels[p].b = tint_pixels[p * tint_pixel_size + 2];
+            }
+
+            // Fill roughness channels
+            if (roughness_format == PixelFormat::Roughness8 || roughness.get_gamma() == 1.0f)
+                // Roughnes is stored in alpha and should not be gamma corrected.
+                for (int p = pixel_begin; p < pixel_end; ++p)
+                    tint_roughness_pixels[p].a = roughness_pixels[p * roughness_pixel_size];
+            else
+                // Roughness is stored as a color and should be degammaed.
+                for (int p = pixel_begin; p < pixel_end; ++p) {
+                    float nonlinear_roughness = roughness_pixels[p * roughness_pixel_size] / 255.0f;
+                    float linear_roughness = powf(nonlinear_roughness, roughness.get_gamma());
+                    tint_roughness_pixels[p].a = unsigned char(linear_roughness * 255 + 0.5f);
+                }
+        }
+
+        return tint_roughness;
+
+    } else {
+        // Fallback path
+        Image tint_roughness = Images::create2D(tint.get_name() + "_" + roughness.get_name(), PixelFormat::RGBA32, 2.2f, size, mipmap_count);
+
+        // #pragma omp parallel for schedule(dynamic, 16)
+        for (int c = 0; c < chunk_count; ++c) {
+
+            int pixel_begin = c * chunk_size;
+            int pixel_end = min(pixel_begin + chunk_size, pixel_count);
+
+            // Fill tint and roughness channels.
+            for (int p = pixel_begin; p < pixel_end; ++p) {
+                RGB t = tint.get_pixel(p).rgb();
+                float r = roughness.get_pixel(p)[roughness_channel];
+                tint_roughness.set_pixel(RGBA(t, r), p);
+            }
+        }
+
+        return tint_roughness;
+    }
+}
+
 } // NS ImageUtils
 
 } // NS Assets
