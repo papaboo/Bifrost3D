@@ -71,7 +71,6 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
     SceneNodes::UID root_ID = shapes.size() > 1u ? SceneNodes::create(std::string(filename.begin(), filename.end()-4)) : SceneNodes::UID::invalid_UID();
 
     Core::Array<Materials::UID> materials = Core::Array<Materials::UID>(unsigned int(tiny_materials.size()));
-    #pragma omp parallel for schedule(dynamic, 16)
     for (int i = 0; i < int(tiny_materials.size()); ++i) {
         tinyobj::material_t tiny_mat = tiny_materials[i];
 
@@ -157,7 +156,6 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
         materials[unsigned int(i)] = Materials::create(tiny_mat.name, material_data);
     }
 
-    #pragma omp parallel for schedule(dynamic, 16)
     for (int s = 0; s < int(shapes.size()); ++s) {
         tinyobj::shape_t shape = shapes[s];
 
