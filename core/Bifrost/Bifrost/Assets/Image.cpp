@@ -216,9 +216,8 @@ Images::PixelData Images::get_pixels(Images::UID image_ID, int mipmap_level) {
     return pixel_data;
 }
 
-static RGBA get_nonlinear_pixel(Images::UID image_ID, unsigned int index) {
-    Images::PixelData pixels = Images::get_pixels(image_ID);
-    switch (Images::get_pixel_format(image_ID)) {
+static RGBA get_nonlinear_pixel(Images::PixelData pixels, PixelFormat format, unsigned int index) {
+    switch (format) {
     case PixelFormat::Alpha8: {
         float alpha = ((unsigned char*)pixels)[index] / 255.0f;
         return RGBA(1.0f, 1.0f, 1.0f, alpha);
@@ -252,13 +251,19 @@ static RGBA get_nonlinear_pixel(Images::UID image_ID, unsigned int index) {
     return RGBA::red();
 }
 
+static inline RGBA get_linear_pixel(Images::UID image_ID, unsigned int index) {
+    Images::PixelData pixels = Images::get_pixels(image_ID);
+    PixelFormat format = Images::get_pixel_format(image_ID);
+    RGBA nonlinear_color = get_nonlinear_pixel(pixels, format, index);
+    return gammacorrect(nonlinear_color, Images::get_gamma(image_ID));
+}
+
 RGBA Images::get_pixel(Images::UID image_ID, unsigned int index, unsigned int mipmap_level) {
     assert(index < Images::get_pixel_count(image_ID, mipmap_level));
 
     while (mipmap_level)
         index += Images::get_width(image_ID, --mipmap_level);
-    RGBA nonlinear_pixel = get_nonlinear_pixel(image_ID, index);
-    return gammacorrect(nonlinear_pixel, Images::get_gamma(image_ID));
+    return get_linear_pixel(image_ID, index);
 }
 
 RGBA Images::get_pixel(Images::UID image_ID, Vector2ui index, unsigned int mipmap_level) {
@@ -272,8 +277,7 @@ RGBA Images::get_pixel(Images::UID image_ID, Vector2ui index, unsigned int mipma
         --mipmap_level;
         pixel_index += image.get_width(mipmap_level) * image.get_height(mipmap_level);
     }
-    RGBA nonlinear_pixel = get_nonlinear_pixel(image_ID, pixel_index);
-    return gammacorrect(nonlinear_pixel, Images::get_gamma(image_ID));
+    return get_linear_pixel(image_ID, pixel_index);
 }
 
 RGBA Images::get_pixel(Images::UID image_ID, Vector3ui index, unsigned int mipmap_level) {
@@ -287,14 +291,12 @@ RGBA Images::get_pixel(Images::UID image_ID, Vector3ui index, unsigned int mipma
         --mipmap_level;
         pixel_index += image.get_width(mipmap_level) * image.get_height(mipmap_level) * image.get_depth(mipmap_level);
     }
-    RGBA nonlinear_pixel = get_nonlinear_pixel(image_ID, pixel_index);
-    return gammacorrect(nonlinear_pixel, Images::get_gamma(image_ID));
+    return get_linear_pixel(image_ID, pixel_index);
 }
 
-static void set_linear_pixel(Images::UID image_ID, RGBA color, unsigned int index) {
-    color = gammacorrect(color, 1.0f / Images::get_gamma(image_ID));
-    Images::PixelData pixels = Images::get_pixels(image_ID);
-    switch (Images::get_pixel_format(image_ID)) {
+static void set_linear_pixel(Images::PixelData pixels, PixelFormat pixel_format, unsigned int index, RGBA color, float gamma) {
+    color = gammacorrect(color, 1.0f / gamma);
+    switch (pixel_format) {
     case PixelFormat::Alpha8: {
         unsigned char* pixel = ((unsigned char*)pixels) + index;
         pixel[0] = unsigned char(clamp(color.a * 255.0f + 0.5f, 0.0f, 255.0f));
@@ -337,6 +339,12 @@ static void set_linear_pixel(Images::UID image_ID, RGBA color, unsigned int inde
     }
 }
 
+static inline void set_linear_pixel(Images::UID image_ID, RGBA color, unsigned int index) {
+    Images::PixelData pixels = Images::get_pixels(image_ID);
+    PixelFormat format = Images::get_pixel_format(image_ID);
+    set_linear_pixel(pixels, format, index, color, Images::get_gamma(image_ID));
+}
+
 void Images::set_pixel(Images::UID image_ID, RGBA color, unsigned int index, unsigned int mipmap_level) {
     assert(index < Images::get_pixel_count(image_ID, mipmap_level));
 
@@ -374,6 +382,71 @@ void Images::set_pixel(Images::UID image_ID, RGBA color, Vector3ui index, unsign
         pixel_index += image.get_width(mipmap_level) * image.get_height(mipmap_level) * image.get_depth(mipmap_level);
     }
     set_linear_pixel(image_ID, color, pixel_index);
+    m_changes.add_change(image_ID, Change::PixelsUpdated);
+}
+
+void Images::change_format(Images::UID image_ID, PixelFormat new_format, float new_gamma) {
+    Image image = image_ID;
+    PixelFormat old_format = image.get_pixel_format();
+    float old_gamma = image.get_gamma();
+
+    unsigned int total_pixel_count = image.get_width() * image.get_height() * image.get_depth();
+    for (unsigned int m = 1; m < image.get_mipmap_count(); ++m)
+        total_pixel_count += image.get_width(m) * image.get_height(m) * image.get_depth(m);
+
+    auto gamma_correct_bytes = [](unsigned char* pixels, unsigned int total_pixel_count, float gamma) {
+        for (unsigned int p = 0; p < total_pixel_count; ++p) {
+            unsigned char linear_value = pixels[p];
+            float non_linear_pixel = pow(linear_value / 255.0f, gamma);
+            pixels[p] = unsigned char(clamp(non_linear_pixel * 255.0f + 0.5f, 0.0f, 255.0f));
+        }
+    };
+
+    if (old_format == PixelFormat::Intensity8 && new_format == PixelFormat::Alpha8) {
+        // Gamma correct if intensity values have been gamma corrected.
+        // Alpha is not affected by gamma, so new gamma is effectively one.
+        if (old_gamma != 1.0f)
+            gamma_correct_bytes(image.get_pixels<unsigned char>(), total_pixel_count, old_gamma);
+    } else if (old_format == PixelFormat::Alpha8 && new_format == PixelFormat::Intensity8) {
+        // Alpha is not affected by gamma, so old gamma is effectively one.
+        if (new_gamma != 1.0f)
+            gamma_correct_bytes(image.get_pixels<unsigned char>(), total_pixel_count, 1.0f / new_gamma);
+    } else {
+        // Fallback RGBA pixel copy
+        PixelData new_pixels = allocate_pixels(new_format, total_pixel_count);
+
+        // Copy pixels
+        if (!has_alpha(old_format) && new_format == PixelFormat::Alpha8) {
+            // Copy from RGB channels to alpha.
+            int channel_count = Assets::channel_count(old_format);
+            float normalizer = 1.0f / channel_count;
+            for (unsigned int p = 0; p < total_pixel_count; ++p) {
+                RGBA pixel = get_linear_pixel(image_ID, p);
+                pixel.a = pixel.r;
+                if (channel_count > 0) pixel.a += pixel.g;
+                if (channel_count > 1) pixel.a += pixel.b;
+                pixel.a *= normalizer;
+                set_linear_pixel(new_pixels, new_format, p, pixel, new_gamma);
+            }
+        } else if (old_format == PixelFormat::Alpha8 && !has_alpha(new_format)) {
+            // Copy from alpha to RGB channels.
+            for (unsigned int p = 0; p < total_pixel_count; ++p) {
+                RGBA pixel = get_linear_pixel(image_ID, p);
+                pixel.r = pixel.g = pixel.b = pixel.a;
+                set_linear_pixel(new_pixels, new_format, p, pixel, new_gamma);
+            }
+        } else {
+            for (unsigned int p = 0; p < total_pixel_count; ++p) {
+                RGBA pixel = get_linear_pixel(image_ID, p);
+                set_linear_pixel(new_pixels, new_format, p, pixel, new_gamma);
+            }
+        }
+
+        deallocate_pixels(old_format, m_pixels[image_ID]);
+        m_pixels[image_ID] = new_pixels;
+    }
+
+    m_metainfo[image_ID].pixel_format = new_format;
     m_changes.add_change(image_ID, Change::PixelsUpdated);
 }
 

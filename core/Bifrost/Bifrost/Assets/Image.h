@@ -77,6 +77,7 @@ inline bool has_alpha(PixelFormat format) {
 // Images are indexed from the lower left corner to the top right one.
 // E.g. (0, 0) is in the lower left corner.
 // Future work:
+// * Replace gamma by an is_sRGB bool/flag. We only ever use gamma 2.2 anyway. Then we can also precompute sRGB <-> linear tables for faster encoding and decoding.
 // * A for_each that applies a lambda to all pixels. Maybe specialize it 
 //   for floats and bytes and profile if that speeds up anything.
 // * set_pixels.
@@ -156,6 +157,8 @@ public:
             pixel_operation(pixel);
         }
     }
+
+    static void change_format(Images::UID image_ID, PixelFormat new_format, float new_gamma);
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -247,6 +250,8 @@ public:
 
     template <typename Operation>
     inline void iterate_pixels(Operation pixel_operation) { Images::iterate_pixels(m_ID, pixel_operation); }
+
+    inline void change_format(PixelFormat new_format, float new_gamma) { Images::change_format(m_ID, new_format, new_gamma); }
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
