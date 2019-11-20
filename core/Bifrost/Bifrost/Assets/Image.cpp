@@ -535,7 +535,7 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
         const unsigned char* roughness_pixels = (unsigned char*)roughness.get_pixels() + roughness_channel;
         RGBA32* tint_roughness_pixels = tint_roughness.get_pixels<RGBA32>();
 
-        // #pragma omp parallel for schedule(dynamic, 16)
+        #pragma omp parallel for schedule(dynamic, 16)
         for (int c = 0; c < chunk_count; ++c) {
 
             int pixel_begin = c * chunk_size;
@@ -568,7 +568,7 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
         // Fallback path
         Image tint_roughness = Images::create2D(tint.get_name() + "_" + roughness.get_name(), PixelFormat::RGBA32, 2.2f, size, mipmap_count);
 
-        // #pragma omp parallel for schedule(dynamic, 16)
+        #pragma omp parallel for schedule(dynamic, 16)
         for (int c = 0; c < chunk_count; ++c) {
 
             int pixel_begin = c * chunk_size;
