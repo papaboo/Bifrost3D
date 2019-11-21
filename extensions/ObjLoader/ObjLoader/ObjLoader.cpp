@@ -95,11 +95,8 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
             if (image_ID == Images::UID::invalid_UID())
                 printf("ObjLoader::load error: Could not load image at '%s'.\n", (directory + tiny_mat.alpha_texname).c_str());
             else {
-                if (Images::get_pixel_format(image_ID) != PixelFormat::Alpha8) {
-                    Images::UID new_image_ID = ImageUtils::copy_with_new_format(image_ID, PixelFormat::Alpha8); // TODO Own change format. Alpha should come from the alpha channel if there is one, otherwise from red.
-                    Images::destroy(image_ID);
-                    image_ID = new_image_ID;
-                }
+                if (Images::get_pixel_format(image_ID) != PixelFormat::Alpha8)
+                    Images::change_format(image_ID, PixelFormat::Alpha8, 1.0f);
                 material_data.coverage_texture_ID = Textures::create2D(image_ID);
             }
         }
