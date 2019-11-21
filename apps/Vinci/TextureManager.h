@@ -67,7 +67,7 @@ public:
                         Image roughness = StbImageLoader::load(roughness_map_path.string());
                         if (roughness.get_pixel_format() != PixelFormat::Roughness8) {
                             Image prev_roughness = roughness;
-                            roughness = ImageUtils::change_format(roughness.get_ID(), PixelFormat::Roughness8, 1.0f, [](RGBA pixel) -> RGBA { return RGBA(pixel.r, pixel.r, pixel.r, pixel.r); });
+                            roughness = ImageUtils::copy_with_new_format(roughness.get_ID(), PixelFormat::Roughness8, 1.0f, [](RGBA pixel) -> RGBA { return RGBA(pixel.r, pixel.r, pixel.r, pixel.r); });
                             Images::destroy(prev_roughness.get_ID());
                         }
                         m_roughness.push_back(Textures::create2D(roughness.get_ID(), MagnificationFilter::Linear, MinificationFilter::Trilinear));
@@ -93,7 +93,7 @@ public:
                         Image opacity = StbImageLoader::load(opacity_map_path.string());
                         if (opacity.get_pixel_format() != PixelFormat::Alpha8) {
                             Image prev_opacity = opacity;
-                            opacity = ImageUtils::change_format(opacity.get_ID(), PixelFormat::Alpha8, 1.0f, [](RGBA pixel) -> RGBA { return RGBA(pixel.r, pixel.r, pixel.r, pixel.r); });
+                            opacity = ImageUtils::copy_with_new_format(opacity.get_ID(), PixelFormat::Alpha8, 1.0f, [](RGBA pixel) -> RGBA { return RGBA(pixel.r, pixel.r, pixel.r, pixel.r); });
                             Images::destroy(prev_opacity.get_ID());
                         }
                         m_opacity.push_back(Textures::create2D(opacity.get_ID(), MagnificationFilter::Linear, MinificationFilter::Trilinear));

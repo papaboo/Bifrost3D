@@ -345,7 +345,7 @@ int initialize(Engine& engine) {
     // Convert image to HDR if needed.
     if (image.get_pixel_format() != PixelFormat::RGB_Float || image.get_gamma() != 1.0f) {
         Images::UID old_image_ID = image.get_ID();
-        image = ImageUtils::change_format(old_image_ID, PixelFormat::RGB_Float, 1.0f);
+        image = ImageUtils::copy_with_new_format(old_image_ID, PixelFormat::RGB_Float, 1.0f);
         Images::destroy(old_image_ID);
     }
 

@@ -260,7 +260,7 @@ private:
 namespace ImageUtils {
 
 template <typename T>
-inline Images::UID change_format(Images::UID image_ID, PixelFormat new_format, float new_gamma, T process_pixel) {
+inline Images::UID copy_with_new_format(Images::UID image_ID, PixelFormat new_format, float new_gamma, T process_pixel) {
     Image image = image_ID;
     unsigned int mipmap_count = image.get_mipmap_count();
     auto size = Math::Vector3ui(image.get_width(), image.get_height(), image.get_depth());
@@ -277,12 +277,12 @@ inline Images::UID change_format(Images::UID image_ID, PixelFormat new_format, f
     return new_image_ID;
 }
 
-inline Images::UID change_format(Images::UID image_ID, PixelFormat new_format, float new_gamma) {
-    return change_format(image_ID, new_format, new_gamma, [](Math::RGBA c) -> Math::RGBA { return c; } );
+inline Images::UID copy_with_new_format(Images::UID image_ID, PixelFormat new_format, float new_gamma) {
+    return copy_with_new_format(image_ID, new_format, new_gamma, [](Math::RGBA c) -> Math::RGBA { return c; } );
 }
 
-inline Images::UID change_format(Images::UID image_ID, PixelFormat new_format) {
-    return change_format(image_ID, new_format, Images::get_gamma(image_ID));
+inline Images::UID copy_with_new_format(Images::UID image_ID, PixelFormat new_format) {
+    return copy_with_new_format(image_ID, new_format, Images::get_gamma(image_ID));
 }
 
 void fill_mipmap_chain(Images::UID image_ID);

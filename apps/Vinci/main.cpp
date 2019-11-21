@@ -111,7 +111,7 @@ struct Options {
                 Image image = load_image(environment_path);
                 if (image.exists()) {
                     if (channel_count(image.get_pixel_format()) != 4) {
-                        Image new_image = ImageUtils::change_format(image.get_ID(), PixelFormat::RGBA_Float, 1.0f);
+                        Image new_image = ImageUtils::copy_with_new_format(image.get_ID(), PixelFormat::RGBA_Float, 1.0f);
                         Images::destroy(image.get_ID());
                         image = new_image;
                     }

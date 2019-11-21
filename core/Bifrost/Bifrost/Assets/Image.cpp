@@ -498,7 +498,7 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
         if (roughness_format == PixelFormat::Roughness8)
             return roughness;
         else
-            return ImageUtils::change_format(roughness.get_ID(), PixelFormat::Roughness8, 1.0f, [=](RGBA pixel) -> RGBA {
+            return ImageUtils::copy_with_new_format(roughness.get_ID(), PixelFormat::Roughness8, 1.0f, [=](RGBA pixel) -> RGBA {
                 float v = pixel[roughness_channel];
                 return RGBA(v, v, v, v);
             });
