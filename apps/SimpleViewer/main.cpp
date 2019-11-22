@@ -451,11 +451,8 @@ int initialize_scene(Engine& engine) {
     if (!g_environment.empty()) {
         Image image = StbImageLoader::load(g_environment);
         if (image.exists()) {
-            if (channel_count(image.get_pixel_format()) != 4) {
-                Image new_image = ImageUtils::copy_with_new_format(image.get_ID(), PixelFormat::RGBA_Float, 1.0f);
-                Images::destroy(image.get_ID());
-                image = new_image;
-            }
+            if (channel_count(image.get_pixel_format()) != 4)
+                image.change_format(PixelFormat::RGBA_Float, 1.0f);
             Textures::UID env_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
             scene_ID = SceneRoots::create("Model scene", env_ID);
         } else
