@@ -110,12 +110,11 @@ struct Options {
                 std::string environment_path = std::string(argv[++argument]);
                 Image image = load_image(environment_path);
                 if (image.exists()) {
-                    if (channel_count(image.get_pixel_format()) != 4) {
-                        Image new_image = ImageUtils::copy_with_new_format(image.get_ID(), PixelFormat::RGBA_Float, 1.0f);
-                        Images::destroy(image.get_ID());
-                        image = new_image;
-                    }
+                    if (channel_count(image.get_pixel_format()) != 4)
+                        image.change_format(PixelFormat::RGBA_Float, 1.0f);
                     options.environment_map = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
+                    if (options.environment_tint == RGB::black()) // Test if environment tint hasn't been set and if not then set it to white, so the environment map is shown.
+                        options.environment_tint = RGB::white();
                 }
             } else if (strcmp(argv[argument], "--environment-tint") == 0)
                 options.environment_tint = parse_RGB(argv[++argument]);

@@ -65,11 +65,8 @@ public:
                     fs::path roughness_map_path = directory / (tint_stem + "_rgh" + path.extension().string());
                     if (fs::exists(roughness_map_path)) {
                         Image roughness = StbImageLoader::load(roughness_map_path.string());
-                        if (roughness.get_pixel_format() != PixelFormat::Roughness8) {
-                            Image prev_roughness = roughness;
-                            roughness = ImageUtils::copy_with_new_format(roughness.get_ID(), PixelFormat::Roughness8, 1.0f, [](RGBA pixel) -> RGBA { return RGBA(pixel.r, pixel.r, pixel.r, pixel.r); });
-                            Images::destroy(prev_roughness.get_ID());
-                        }
+                        if (roughness.get_pixel_format() != PixelFormat::Roughness8)
+                            roughness.change_format(PixelFormat::Alpha8, 1.0f);
                         m_roughness.push_back(Textures::create2D(roughness.get_ID(), MagnificationFilter::Linear, MinificationFilter::Trilinear));
                     } else
                         m_roughness.push_back(Textures::UID::invalid_UID());
@@ -91,11 +88,8 @@ public:
                     fs::path opacity_map_path = directory / (tint_stem + "_mask" + path.extension().string());
                     if (fs::exists(opacity_map_path)) {
                         Image opacity = StbImageLoader::load(opacity_map_path.string());
-                        if (opacity.get_pixel_format() != PixelFormat::Alpha8) {
-                            Image prev_opacity = opacity;
-                            opacity = ImageUtils::copy_with_new_format(opacity.get_ID(), PixelFormat::Alpha8, 1.0f, [](RGBA pixel) -> RGBA { return RGBA(pixel.r, pixel.r, pixel.r, pixel.r); });
-                            Images::destroy(prev_opacity.get_ID());
-                        }
+                        if (opacity.get_pixel_format() != PixelFormat::Alpha8)
+                            opacity.change_format(PixelFormat::Alpha8, 1.0f);
                         m_opacity.push_back(Textures::create2D(opacity.get_ID(), MagnificationFilter::Linear, MinificationFilter::Trilinear));
                     }  else
                         m_opacity.push_back(Textures::UID::invalid_UID());
