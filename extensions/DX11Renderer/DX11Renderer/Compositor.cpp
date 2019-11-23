@@ -272,7 +272,7 @@ public:
             Renderers::UID renderer_ID = Cameras::get_renderer_ID(camera_ID);
             auto frame = m_renderers[renderer_ID]->render(camera_ID, int(viewport.width), int(viewport.height));
 
-            auto take_screenshot = [&](Cameras::RequestedContent content_requested, unsigned int minimum_iteration_count, bool is_HDR) -> std::vector<Screenshot> {
+            auto take_screenshot = [&](Cameras::ScreenshotContent content_requested, unsigned int minimum_iteration_count, bool is_HDR) -> std::vector<Screenshot> {
                 if (frame.iteration_count < minimum_iteration_count)
                     return std::vector<Screenshot>();
 
@@ -290,7 +290,7 @@ public:
 
                 return images;
             };
-            auto take_hdr_screenshot = [&](Cameras::RequestedContent content_requested, unsigned int minimum_iteration_count) -> std::vector<Screenshot> {
+            auto take_hdr_screenshot = [&](Cameras::ScreenshotContent content_requested, unsigned int minimum_iteration_count) -> std::vector<Screenshot> {
                 return take_screenshot(content_requested, minimum_iteration_count, true);
             };
             Cameras::fill_screenshot(camera_ID, take_hdr_screenshot);
@@ -307,7 +307,7 @@ public:
             auto effects_settings = Cameras::get_effects_settings(camera_ID);
             m_camera_effects.process(m_render_context, effects_settings, delta_time, frame.frame_SRV, m_swap_chain_RTV, frame.viewport, Recti(viewport));
 
-            auto take_ldr_screenshot = [&](Cameras::RequestedContent content_requested, unsigned int minimum_iteration_count) -> std::vector<Screenshot> {
+            auto take_ldr_screenshot = [&](Cameras::ScreenshotContent content_requested, unsigned int minimum_iteration_count) -> std::vector<Screenshot> {
                 return take_screenshot(content_requested, minimum_iteration_count, false);
             };
             Cameras::fill_screenshot(camera_ID, take_ldr_screenshot);

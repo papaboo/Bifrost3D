@@ -1130,8 +1130,8 @@ struct Renderer::Implementation {
         return camera_state.accumulations;
     }
 
-    std::vector<Screenshot> request_auxiliary_buffers(Cameras::UID camera_ID, Cameras::RequestedContent content_requested, int width, int height) {
-        const Cameras::RequestedContent supported_content = { Screenshot::Content::Depth, Screenshot::Content::Albedo, Screenshot::Content::Tint, Screenshot::Content::Roughness };
+    std::vector<Screenshot> request_auxiliary_buffers(Cameras::UID camera_ID, Cameras::ScreenshotContent content_requested, int width, int height) {
+        const Cameras::ScreenshotContent supported_content = { Screenshot::Content::Depth, Screenshot::Content::Albedo, Screenshot::Content::Tint, Screenshot::Content::Roughness };
         if ((content_requested & supported_content) == Screenshot::Content::None)
             return std::vector<Screenshot>();
 
@@ -1316,7 +1316,7 @@ unsigned int Renderer::render(Cameras::UID camera_ID, optix::Buffer buffer, int 
     return m_impl->render(camera_ID, buffer, width, height);
 }
 
-std::vector<Screenshot> Renderer::request_auxiliary_buffers(Cameras::UID camera_ID, Cameras::RequestedContent content_requested, int width, int height) {
+std::vector<Screenshot> Renderer::request_auxiliary_buffers(Cameras::UID camera_ID, Cameras::ScreenshotContent content_requested, int width, int height) {
     return m_impl->request_auxiliary_buffers(camera_ID, content_requested, width, height);
 }
 

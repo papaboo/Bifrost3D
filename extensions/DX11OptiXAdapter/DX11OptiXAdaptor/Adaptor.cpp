@@ -284,7 +284,7 @@ RenderedFrame Adaptor::render(Bifrost::Scene::Cameras::UID camera_ID, int width,
     return m_impl->render(camera_ID, width, height);
 }
 
-std::vector<Bifrost::Scene::Screenshot> Adaptor::request_auxiliary_buffers(Bifrost::Scene::Cameras::UID camera_ID, Bifrost::Scene::Cameras::RequestedContent content_requested, int width, int height) {
+std::vector<Bifrost::Scene::Screenshot> Adaptor::request_auxiliary_buffers(Bifrost::Scene::Cameras::UID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, int width, int height) {
     return m_impl->m_optix_renderer->request_auxiliary_buffers(camera_ID, content_requested, width, height);
 }
 

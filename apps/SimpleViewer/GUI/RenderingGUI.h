@@ -42,7 +42,7 @@ private:
         static const unsigned int max_path_length = 1024u;
         char path[max_path_length];
         unsigned int iterations = 0;
-        Bifrost::Scene::Cameras::RequestedContent screenshot_content;
+        Bifrost::Scene::Cameras::ScreenshotContent screenshot_content;
     } m_screenshot;
 
     // Pimpl the state to avoid exposing dependencies.

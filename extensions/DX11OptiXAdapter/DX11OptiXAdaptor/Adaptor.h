@@ -38,7 +38,7 @@ public:
     void handle_updates();
 
     DX11Renderer::RenderedFrame render(Bifrost::Scene::Cameras::UID camera_ID, int width, int height);
-    std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::Cameras::UID camera_ID, Bifrost::Scene::Cameras::RequestedContent content_requested, int width, int height);
+    std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::Cameras::UID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, int width, int height);
 
 private:
 

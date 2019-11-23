@@ -129,8 +129,8 @@ public:
     //---------------------------------------------------------------------------------------------
     // Screenshot functionality. Currently only supports getting screenshots based on iteration count.
     //---------------------------------------------------------------------------------------------
-    using RequestedContent = Core::Bitmask<Screenshot::Content>;
-    static void request_screenshot(Cameras::UID camera_ID, RequestedContent content_requested, unsigned int minimum_iteration_count = 1) {
+    using ScreenshotContent = Core::Bitmask<Screenshot::Content>;
+    static void request_screenshot(Cameras::UID camera_ID, ScreenshotContent content_requested, unsigned int minimum_iteration_count = 1) {
         m_screenshot_request[camera_ID].content_requested = content_requested;
         m_screenshot_request[camera_ID].minimum_iteration_count = minimum_iteration_count;
     }
@@ -138,7 +138,7 @@ public:
         return m_screenshot_request[camera_ID].content_requested != Screenshot::Content::None;
     }
     static void cancel_screenshot(Cameras::UID camera_ID) { m_screenshot_request[camera_ID].content_requested = Screenshot::Content::None; }
-    using ScreenshotFiller = std::function<std::vector<Screenshot>(RequestedContent, unsigned int minimum_iteration_count)>;
+    using ScreenshotFiller = std::function<std::vector<Screenshot>(ScreenshotContent, unsigned int minimum_iteration_count)>;
     // Grabs screenshot data from the renderer and stores it in an intermediate format while the datamodel is considered immutable.
     static void fill_screenshot(Cameras::UID camera_ID, ScreenshotFiller screenshot_filler);
     static Assets::Images::UID resolve_screenshot(Cameras::UID camera_ID, Screenshot::Content image_content, const std::string& name); // Resolves the last screenshot.

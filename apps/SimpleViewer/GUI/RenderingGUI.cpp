@@ -102,7 +102,7 @@ void RenderingGUI::layout_frame() {
 
             if (take_screenshot) {
                 auto first_cam_ID = *Cameras::get_iterable().begin();
-                Cameras::RequestedContent content = m_screenshot.screenshot_content;
+                auto content = m_screenshot.screenshot_content;
                 if (!(content & Screenshot::Content::ColorHDR))
                     content |= Screenshot::Content::ColorLDR;
                 Cameras::request_screenshot(first_cam_ID, content, m_screenshot.iterations);

@@ -209,7 +209,7 @@ TEST_F(Scene_Camera, screenshots) {
     using namespace Bifrost::Math;
 
     // Stub method can fill a screenshot with an image with 2 iterations.
-    auto screenshot_filler = [](Cameras::RequestedContent content_requested, unsigned int minimum_iteration_count) -> std::vector<Screenshot> {
+    auto screenshot_filler = [](Cameras::ScreenshotContent content_requested, unsigned int minimum_iteration_count) -> std::vector<Screenshot> {
         unsigned int current_iteration_count = 2;
         if (current_iteration_count < minimum_iteration_count)
             return std::vector<Screenshot>();
