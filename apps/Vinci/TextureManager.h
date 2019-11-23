@@ -114,22 +114,32 @@ public:
     }
 
     inline Bifrost::Assets::Materials::UID generate_random_material(Bifrost::Math::RNG::LinearCongruential& rng) const {
+        using namespace Bifrost::Assets;
+
         auto tint = Bifrost::Math::RGB(rng.sample1f(), rng.sample1f(), rng.sample1f());
         float roughness = rng.sample1f();
-        auto material_data = Bifrost::Assets::Materials::Data::create_dielectric(tint, roughness, 0.5f);
+        auto material_data = Materials::Data::create_dielectric(tint, roughness, 0.5f);
 
         float texture_probability = 0.9f;
         if (rng.sample1f() < texture_probability && m_tints.size() > 0) {
             int texture_sample = int(rng.sample1f() * m_tints.size() - 0.5f);
 
-            if (Bifrost::Assets::Textures::has(m_tint_roughness[texture_sample]))
+            bool use_roughness_texture = rng.sample1f() < 0.8f;
+            bool use_tint_texture = rng.sample1f() < 0.8f;
+
+            if (use_tint_texture && use_roughness_texture && Textures::has(m_tint_roughness[texture_sample])) {
                 material_data.tint_roughness_texture_ID = m_tint_roughness[texture_sample];
-            else
+                material_data.roughness = 0.3f * material_data.roughness + 0.7f;
+            } else if (use_tint_texture && !use_roughness_texture && Textures::has(m_tints[texture_sample]))
                 material_data.tint_roughness_texture_ID = m_tints[texture_sample];
+            else if (!use_tint_texture && use_roughness_texture && Textures::has(m_roughness[texture_sample])) {
+                material_data.tint_roughness_texture_ID = m_roughness[texture_sample];
+                material_data.roughness = 0.3f * material_data.roughness + 0.7f;
+            }
 
             material_data.coverage_texture_ID = m_opacity[texture_sample];
         }
-        return Bifrost::Assets::Materials::create("Mat", material_data);
+        return Materials::create("Mat", material_data);
     }
 
 private:
