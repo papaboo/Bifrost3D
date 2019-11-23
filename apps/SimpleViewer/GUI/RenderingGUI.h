@@ -40,9 +40,10 @@ private:
 
     enum AuxiliaryImages : unsigned char {
         None = 0u,
-        Albedo = 1u << 0u,
-        Depth = 1u << 1u,
-        Roughness = 1u << 2u,
+        Depth = 1u << 0u,
+        Albedo = 1u << 1u,
+        Tint = 1u << 2u,
+        Roughness = 1u << 3u,
     };
 
     struct {
