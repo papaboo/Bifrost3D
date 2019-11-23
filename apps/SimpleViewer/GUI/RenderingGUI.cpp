@@ -94,23 +94,17 @@ void RenderingGUI::layout_frame() {
             bool take_screenshot = ImGui::Button("Take screenshots");
             ImGui::InputText("Path without extension", m_screenshot.path, m_screenshot.max_path_length);
             ImGui::InputUint("Iterations", &m_screenshot.iterations);
-            ImGui::Checkbox("HDR", &m_screenshot.is_HDR);
-            ImGui::CheckboxFlags("Depth", &m_screenshot.auxiliary_images, AuxiliaryImages::Depth);
-            ImGui::CheckboxFlags("Albedo", &m_screenshot.auxiliary_images, AuxiliaryImages::Albedo);
-            ImGui::CheckboxFlags("Tint", &m_screenshot.auxiliary_images, AuxiliaryImages::Tint);
-            ImGui::CheckboxFlags("Roughness", &m_screenshot.auxiliary_images, AuxiliaryImages::Roughness);
+            ImGui::CheckboxFlags("HDR", &m_screenshot.screenshot_content, Screenshot::Content::ColorHDR);
+            ImGui::CheckboxFlags("Depth", &m_screenshot.screenshot_content, Screenshot::Content::Depth);
+            ImGui::CheckboxFlags("Albedo", &m_screenshot.screenshot_content, Screenshot::Content::Albedo);
+            ImGui::CheckboxFlags("Tint", &m_screenshot.screenshot_content, Screenshot::Content::Tint);
+            ImGui::CheckboxFlags("Roughness", &m_screenshot.screenshot_content, Screenshot::Content::Roughness);
 
             if (take_screenshot) {
                 auto first_cam_ID = *Cameras::get_iterable().begin();
-                Cameras::RequestedContent content = m_screenshot.is_HDR ? Screenshot::Content::ColorHDR : Screenshot::Content::ColorLDR;
-                if (m_screenshot.auxiliary_images & AuxiliaryImages::Depth)
-                    content |= Screenshot::Content::Depth;
-                if (m_screenshot.auxiliary_images & AuxiliaryImages::Albedo)
-                    content |= Screenshot::Content::Albedo;
-                if (m_screenshot.auxiliary_images & AuxiliaryImages::Tint)
-                    content |= Screenshot::Content::Tint;
-                if (m_screenshot.auxiliary_images & AuxiliaryImages::Roughness)
-                    content |= Screenshot::Content::Roughness;
+                Cameras::RequestedContent content = m_screenshot.screenshot_content;
+                if (!(content & Screenshot::Content::ColorHDR))
+                    content |= Screenshot::Content::ColorLDR;
                 Cameras::request_screenshot(first_cam_ID, content, m_screenshot.iterations);
             }
         });
