@@ -42,7 +42,7 @@ public:
         clear_scene();
 
         auto rng = RNG::LinearCongruential(m_seed);
-        int node_count = 3 + int(rng.sample1f() * 3);
+        int node_count = 5 + int(rng.sample1f() * 5);
 
         typedef Mesh(*MeshGenerator)(RNG::LinearCongruential&);
         int mesh_generator_count = 2;
