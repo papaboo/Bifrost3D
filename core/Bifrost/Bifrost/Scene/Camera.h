@@ -32,9 +32,10 @@ struct Screenshot {
         None = 0u,
         ColorLDR = 1u << 0u,
         ColorHDR = 1u << 1u,
-        Albedo = 1u << 2u,
-        Depth = 1u << 3u,
-        Roughness = 1u << 4u,
+        Depth = 1u << 2u,
+        Albedo = 1u << 3u,
+        Tint = 1u << 4u,
+        Roughness = 1u << 5u,
     };
 
     Assets::Images::PixelData pixels;
