@@ -260,42 +260,11 @@ RT_PROGRAM void copy_to_output() {
 
 } // NS AIDenoiser
 
-//-------------------------------------------------------------------------------------------------
-// Ray generation program for visualizing estimated albedo.
-//-------------------------------------------------------------------------------------------------
-
-RT_PROGRAM void albedo_RPG() {
-
-    accumulate([](MonteCarloPayload payload) -> float3 {
-        float3 last_ray_direction = payload.direction;
-        do {
-            last_ray_direction = payload.direction;
-            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
-            rtTrace(g_scene_root, ray, payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_ANYHIT);
-        } while (payload.material_index == 0 && !is_black(payload.throughput));
-
-        bool valid_material = payload.material_index != 0;
-        if (valid_material) {
-            using namespace Shading::ShadingModels;
-            const Material& material_parameter = g_materials[payload.material_index];
-            const float abs_cos_theta = abs(dot(last_ray_direction, payload.shading_normal));
-            const DefaultShading material = DefaultShading(material_parameter, abs_cos_theta, payload.texcoord);
-            return material.rho(abs_cos_theta);
-        } else
-            return make_float3(0, 0, 0);
-    });
-}
-
-//-------------------------------------------------------------------------------------------------
-// Ray generation program for visualizing aggregated depth.
-//-------------------------------------------------------------------------------------------------
+  //-------------------------------------------------------------------------------------------------
+  // Ray generation program for visualizing aggregated depth.
+  //-------------------------------------------------------------------------------------------------
 
 RT_PROGRAM void depth_RPG() {
-
-    float4 normalized_projected_pos = make_float4(0, 0, 1, 1);
-    float4 projected_world_pos = g_camera_state.inverted_rotated_projection_matrix * normalized_projected_pos;
-    float3 ray_end = make_float3(projected_world_pos) / projected_world_pos.w;
-    float far_plane = length(ray_end - g_camera_state.camera_position);
 
     accumulate([=](MonteCarloPayload payload) -> float3 {
         float depth = 0;
@@ -315,17 +284,22 @@ RT_PROGRAM void depth_RPG() {
     float depth = g_camera_state.accumulation_buffer[g_launch_index].x;
 #endif
 
+    float4 normalized_projected_pos = make_float4(0, 0, 1, 1);
+    float4 projected_world_pos = g_camera_state.inverted_rotated_projection_matrix * normalized_projected_pos;
+    float3 ray_end = make_float3(projected_world_pos) / projected_world_pos.w;
+    float far_plane = length(ray_end - g_camera_state.camera_position);
+
     float d = depth / far_plane;
     g_camera_state.output_buffer[g_launch_index] = float_to_half(make_float4(d, d, d, 1.0f));
 }
 
 //-------------------------------------------------------------------------------------------------
-// Ray generation program for visualizing aggregated roughness.
+// Ray generation programs for visualizing ggregated material properties.
 //-------------------------------------------------------------------------------------------------
 
-RT_PROGRAM void roughness_RPG() {
-
-    accumulate([](MonteCarloPayload payload) -> float3 {
+template <typename IntersectionProcesor>
+__inline_dev__ void process_first_intersection(IntersectionProcesor process_intersection) {
+    accumulate([process_intersection](MonteCarloPayload payload) -> float3 {
         float3 last_ray_direction = payload.direction;
         do {
             last_ray_direction = payload.direction;
@@ -333,17 +307,48 @@ RT_PROGRAM void roughness_RPG() {
             rtTrace(g_scene_root, ray, payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_ANYHIT);
         } while (payload.material_index == 0 && !is_black(payload.throughput));
 
-        bool valid_material = payload.material_index != 0;
-        if (valid_material) {
-            using namespace Shading::ShadingModels;
-            const Material& material_parameter = g_materials[payload.material_index];
-            const float abs_cos_theta = abs(dot(last_ray_direction, payload.shading_normal));
-            const DefaultShading material = DefaultShading(material_parameter, abs_cos_theta, payload.texcoord);
-            float roughness = material.get_roughness();
-            return make_float3(roughness, roughness, roughness);
-        } else
+        if (payload.material_index == 0)
             return make_float3(0, 0, 0);
+
+        return process_intersection(payload, last_ray_direction);
     });
+}
+
+typedef float3(*MaterialPropertyGetter)(const Shading::ShadingModels::DefaultShading&, float abs_cos_theta);
+
+__inline_dev__ void accumulate_material_property(MaterialPropertyGetter get_material_property) {
+    process_first_intersection([get_material_property](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
+        const auto& material_parameter = g_materials[payload.material_index];
+        const float abs_cos_theta = abs(dot(last_ray_direction, payload.shading_normal));
+        const auto material = Shading::ShadingModels::DefaultShading(material_parameter, abs_cos_theta, payload.texcoord);
+        return get_material_property(material, abs_cos_theta);
+    });
+}
+
+RT_PROGRAM void albedo_RPG() {
+    MaterialPropertyGetter rho_getter = [](const Shading::ShadingModels::DefaultShading& material, float abs_cos_theta)->float3 { return material.rho(abs_cos_theta); };
+    accumulate_material_property(rho_getter);
+}
+
+RT_PROGRAM void tint_RPG() {
+    process_first_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
+        if (payload.material_index == 0)
+            return make_float3(0, 0, 0);
+
+        const auto& material_parameter = g_materials[payload.material_index];
+        float3 tint = material_parameter.tint;
+        if (material_parameter.tint_roughness_texture_ID)
+            tint *= make_float3(rtTex2D<float4>(material_parameter.tint_roughness_texture_ID, payload.texcoord.x, payload.texcoord.y));
+        return tint;
+    });
+}
+
+RT_PROGRAM void roughness_RPG() {
+    MaterialPropertyGetter roughness_getter = [](const Shading::ShadingModels::DefaultShading& material, float abs_cos_theta)->float3 { 
+        float roughness = material.get_roughness();
+        return make_float3(roughness, roughness, roughness);
+    };
+    accumulate_material_property(roughness_getter);
 }
 
 //-------------------------------------------------------------------------------------------------

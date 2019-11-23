@@ -319,8 +319,9 @@ struct Renderer::Implementation {
         }
 
         { // Auxiliary image visualization setup.
-            context->setRayGenerationProgram(EntryPoints::Albedo, context->createProgramFromPTXFile(rgp_ptx_path, "albedo_RPG"));
             context->setRayGenerationProgram(EntryPoints::Depth, context->createProgramFromPTXFile(rgp_ptx_path, "depth_RPG"));
+            context->setRayGenerationProgram(EntryPoints::Albedo, context->createProgramFromPTXFile(rgp_ptx_path, "albedo_RPG"));
+            context->setRayGenerationProgram(EntryPoints::Tint, context->createProgramFromPTXFile(rgp_ptx_path, "tint_RPG"));
             context->setRayGenerationProgram(EntryPoints::Roughness, context->createProgramFromPTXFile(rgp_ptx_path, "roughness_RPG"));
         }
 
@@ -1130,7 +1131,7 @@ struct Renderer::Implementation {
     }
 
     std::vector<Screenshot> request_auxiliary_buffers(Cameras::UID camera_ID, Cameras::RequestedContent content_requested, int width, int height) {
-        const Cameras::RequestedContent supported_content = { Screenshot::Content::Albedo, Screenshot::Content::Depth, Screenshot::Content::Roughness };
+        const Cameras::RequestedContent supported_content = { Screenshot::Content::Depth, Screenshot::Content::Albedo, Screenshot::Content::Tint, Screenshot::Content::Roughness };
         if ((content_requested & supported_content) == Screenshot::Content::None)
             return std::vector<Screenshot>();
 
@@ -1160,24 +1161,7 @@ struct Renderer::Implementation {
             }
         };
 
-        // Render albedo
-        if (content_requested & Screenshot::Content::Albedo) {
-            render_auxiliary_feature(EntryPoints::Albedo);
-
-            // Readback screenshot data
-            RGBA32* pixels = new RGBA32[width * height];
-            half4* gpu_pixels = (half4*)output_buffer->map();
-            for (int i = 0; i < width * height; ++i) {
-                pixels[i].r = unsigned char(gpu_pixels[i].x * 255.0f + 0.5f);
-                pixels[i].g = unsigned char(gpu_pixels[i].y * 255.0f + 0.5f);
-                pixels[i].b = unsigned char(gpu_pixels[i].z * 255.0f + 0.5f);
-                pixels[i].a = 255;
-            }
-            output_buffer->unmap();
-
-            screenshots.emplace_back(width, height, Screenshot::Content::Albedo, PixelFormat::RGBA32, pixels);
-        }
-
+        // Render depth
         if (content_requested & Screenshot::Content::Depth) {
             render_auxiliary_feature(EntryPoints::Depth);
 
@@ -1191,6 +1175,34 @@ struct Renderer::Implementation {
             screenshots.emplace_back(width, height, Screenshot::Content::Depth, PixelFormat::Intensity_Float, pixels);
         }
 
+        auto readback_rgba32_screenshot = [&](Screenshot::Content content) {
+            // Readback screenshot data
+            RGBA32* pixels = new RGBA32[width * height];
+            half4* gpu_pixels = (half4*)output_buffer->map();
+            for (int i = 0; i < width * height; ++i) {
+                pixels[i].r = unsigned char(gpu_pixels[i].x * 255.0f + 0.5f);
+                pixels[i].g = unsigned char(gpu_pixels[i].y * 255.0f + 0.5f);
+                pixels[i].b = unsigned char(gpu_pixels[i].z * 255.0f + 0.5f);
+                pixels[i].a = 255;
+            }
+            output_buffer->unmap();
+
+            screenshots.emplace_back(width, height, content, PixelFormat::RGBA32, pixels);
+        };
+
+        // Render albedo
+        if (content_requested & Screenshot::Content::Albedo) {
+            render_auxiliary_feature(EntryPoints::Albedo);
+            readback_rgba32_screenshot(Screenshot::Content::Albedo);
+        }
+
+        // Render tint
+        if (content_requested & Screenshot::Content::Tint) {
+            render_auxiliary_feature(EntryPoints::Tint);
+            readback_rgba32_screenshot(Screenshot::Content::Tint);
+        }
+
+        // Render roughness
         if (content_requested & Screenshot::Content::Roughness) {
             render_auxiliary_feature(EntryPoints::Roughness);
 
@@ -1273,11 +1285,14 @@ void Renderer::set_backend(Cameras::UID camera_ID, Backend backend) {
     case Backend::AIDenoisedPathTracing:
         camera_state.backend_impl = std::unique_ptr<IBackend>(new AIDenoisedBackend(m_impl->context, &m_impl->AI_denoiser_flags, camera_state.screensize.x, camera_state.screensize.y));
         break;
+    case Backend::DepthVisualization:
+        camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Depth));
+        break;
     case Backend::AlbedoVisualization:
         camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Albedo));
         break;
-    case Backend::DepthVisualization:
-        camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Depth));
+    case Backend::TintVisualization:
+        camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Tint));
         break;
     case Backend::RoughnessVisualization:
         camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Roughness));
