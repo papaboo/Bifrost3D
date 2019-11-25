@@ -141,7 +141,8 @@ public:
     using ScreenshotFiller = std::function<std::vector<Screenshot>(ScreenshotContent, unsigned int minimum_iteration_count)>;
     // Grabs screenshot data from the renderer and stores it in an intermediate format while the datamodel is considered immutable.
     static void fill_screenshot(Cameras::UID camera_ID, ScreenshotFiller screenshot_filler);
-    static Assets::Images::UID resolve_screenshot(Cameras::UID camera_ID, Screenshot::Content image_content, const std::string& name); // Resolves the last screenshot.
+    static ScreenshotContent pending_screenshots(Cameras::UID camera_ID);
+    static Assets::Images::UID resolve_screenshot(Cameras::UID camera_ID, Screenshot::Content image_content, const std::string& name); // Resolves the last screenshot into an image.
 
     //---------------------------------------------------------------------------------------------
     // Changes since last game loop tick.

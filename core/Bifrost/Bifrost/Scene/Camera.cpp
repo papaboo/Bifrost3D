@@ -189,6 +189,13 @@ void Cameras::fill_screenshot(Cameras::UID camera_ID, ScreenshotFiller screensho
     }
 }
 
+Cameras::ScreenshotContent Cameras::pending_screenshots(Cameras::UID camera_ID) {
+    ScreenshotContent content = Screenshot::Content::None;
+    for (auto& image : m_screenshot_request[camera_ID].images)
+        content |= image.content;
+    return content;
+}
+
 Assets::Images::UID Cameras::resolve_screenshot(Cameras::UID camera_ID, Screenshot::Content image_content, const std::string& name) {
     auto& info = m_screenshot_request[camera_ID];
     for (int i = 0; i < info.images.size(); ++i) {
