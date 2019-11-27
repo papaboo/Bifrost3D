@@ -152,7 +152,7 @@ RT_PROGRAM void path_tracing_RPG() {
     accumulate([](MonteCarloPayload payload) -> float3 {
         do
             path_trace_single_bounce(payload);
-        while (payload.bounces < g_camera_state.max_bounce_count && !is_black(payload.throughput));
+        while (payload.bounces <= g_camera_state.max_bounce_count && !is_black(payload.throughput));
 
         return payload.radiance;
     });
@@ -175,8 +175,6 @@ RT_PROGRAM void path_tracing_RPG() {
             float3 last_ray_direction = payload.direction;
             path_trace_single_bounce(payload);
 
-            bool terminate_ray = !(payload.bounces < g_camera_state.max_bounce_count && !is_black(payload.throughput));
-
             // Accumulate surface properties of the first non-specular surface hit.
             // If no non-specular hits are found or the BSDF PDF is zero due to a bad sample being drawn, 
             // then use the last hit to ensure that some feature data is output.
@@ -197,7 +195,7 @@ RT_PROGRAM void path_tracing_RPG() {
                     albedo = payload.radiance / (1 + payload.radiance);
             }
 
-        } while (payload.bounces < g_camera_state.max_bounce_count && !is_black(payload.throughput));
+        } while (payload.bounces <= g_camera_state.max_bounce_count && !is_black(payload.throughput));
 
         return payload.radiance;
     });
