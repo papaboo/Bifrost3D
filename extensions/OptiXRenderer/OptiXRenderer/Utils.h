@@ -163,6 +163,19 @@ __inline_all__ float sin_phi(optix::float3 w) {
 }
 __inline_all__ float sin2_phi(optix::float3 w) { return sin_phi(w) * sin_phi(w); }
 
+//-----------------------------------------------------------------------------
+// OptiX asserts
+//-----------------------------------------------------------------------------
+
+// OptiX assert
+__inline_all__ void assert_frontside(float cos_theta) {
+#if _DEBUG
+    // The material should never be seen from the backside.
+    if (cos_theta < 0.0f)
+        THROW(OPTIX_SHADING_WRONG_HEMISPHERE_EXCEPTION);
+#endif
+}
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_SHADING_UTILS_H_

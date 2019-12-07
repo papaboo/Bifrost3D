@@ -73,7 +73,7 @@ void validate_optix_resource(T resource, char* file, int line) {
 #define TWO_PIf 6.283185307f
 #define RECIP_PIf 0.31830988618379067153776752674503f
 
-// Error messages.
-#define OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION (RT_EXCEPTION_USER + 0)
+// OptiX exceptions.
+#define OPTIX_SHADING_WRONG_HEMISPHERE_EXCEPTION (RT_EXCEPTION_USER + 0)
 
 #endif // _OPTIXRENDERER_SHADING_DEFINES_H_

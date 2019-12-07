@@ -43,7 +43,7 @@ __inline_all__ float height_correlated_smith_G(float alpha, float3 wo, float3 wi
     float3 halfway = normalize(wo + wi);
     float heavisided = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway));
     if (heavisided != 1.0f)
-        THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
+        THROW(OPTIX_SHADING_WRONG_HEMISPHERE_EXCEPTION);
 #endif
     return 1.0f / (1.0f + Distributions::GGX_VNDF::lambda(alpha, wo) + Distributions::GGX_VNDF::lambda(alpha, wi));
 }
@@ -83,7 +83,7 @@ __inline_all__ float3 evaluate(float alpha, float3 specularity, float3 wo, float
 __inline_all__ float PDF(float alpha, float3 wo, float3 halfway) {
 #if _DEBUG
     if (dot(wo, halfway) < 0.0f || halfway.z < 0.0f)
-        THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
+        THROW(OPTIX_SHADING_WRONG_HEMISPHERE_EXCEPTION);
 #endif
 
     return Distributions::GGX_VNDF::PDF(alpha, wo, halfway) / (4.0f * dot(wo, halfway));

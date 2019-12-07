@@ -152,11 +152,6 @@ namespace GGX_VNDF {
 
     // Sampling the GGX Distribution of Visible Normals, equation 3.
     __inline_all__ float PDF(float alpha, float3 wo, float3 halfway) {
-#if _DEBUG
-        if (wo.z < 0.0f || dot(wo, halfway) < 0.0f)
-            THROW(OPTIX_GGX_WRONG_HEMISPHERE_EXCEPTION);
-#endif
-
         float recip_G1 = 1.0f + lambda(alpha, wo);
         float D = Distributions::GGX_VNDF::D(alpha, halfway);
         return dot(wo, halfway) * D / (recip_G1 * wo.z);

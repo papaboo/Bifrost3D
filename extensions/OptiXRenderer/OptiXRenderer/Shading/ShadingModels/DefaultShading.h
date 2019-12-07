@@ -211,15 +211,11 @@ public:
     __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
         using namespace optix;
 
-        bool is_same_hemisphere = wi.z * wo.z >= 0.00000001f;
-        if (!is_same_hemisphere)
-            return make_float3(0.0f);
+        assert_frontside(wo.z);
 
-        // Flip directions if on the backside of the material.
-        if (wo.z < 0.0f) {
-            wi.z = -wi.z;
-            wo.z = -wo.z;
-        }
+        // Return no contribution if the light is on the backside.
+        if (wo.z < 0.000001f || wi.z < 0.000001f)
+            return make_float3(0.0f);
 
         optix::float3 reflectance = BSDFs::Lambert::evaluate(m_diffuse_tint, wo, wi);
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
@@ -237,6 +233,12 @@ public:
 
     __inline_all__ float PDF(optix::float3 wo, optix::float3 wi) const {
         using namespace optix;
+
+        assert_frontside(wo.z);
+
+        // Return no contribution if the light is on the backside.
+        if (wo.z < 0.000001f || wi.z < 0.000001f)
+            return 0.0f;
 
         float specular_probability = m_specular_probability / USHORT_MAX;
 
@@ -259,15 +261,11 @@ public:
     __inline_all__ BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
         using namespace optix;
 
-        bool is_same_hemisphere = wi.z * wo.z >= 0.00000001f;
-        if (!is_same_hemisphere)
-            return BSDFResponse::none();
+        assert_frontside(wo.z);
 
-        // Flip directions if on the backside of the material.
-        if (wo.z < 0.0f) {
-            wi.z = -wi.z;
-            wo.z = -wo.z;
-        }
+        // Return no contribution if the light is on the backside.
+        if (wo.z < 0.000001f || wi.z < 0.000001f)
+            return BSDFResponse::none();
 
         const float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
         BSDFResponse specular_eval = BSDFs::GGX::evaluate_with_PDF(ggx_alpha, m_specularity, wo, wi);
@@ -290,10 +288,11 @@ public:
         return res;
     }
 
+    // Sample one BSDF based on the contribution of each BRDF.
     __inline_all__ BSDFSample sample_one(optix::float3 wo, optix::float3 random_sample) const {
         using namespace optix;
 
-        // Sample BSDFs based on the contribution of each BRDF.
+        assert_frontside(wo.z);
 
         float coat_probability = m_coat_probability / USHORT_MAX;
         if (coat_probability > 0) {
@@ -330,10 +329,12 @@ public:
         return bsdf_sample;
     }
 
+    // Sample all BSDF based on the contribution of each BRDF.
     __inline_all__ BSDFSample sample_all(optix::float3 wo, optix::float3 random_sample) const {
         using namespace optix;
 
-        // Sample BSDFs based on the contribution of each BRDF.
+        assert_frontside(wo.z);
+
         float specular_probability = m_specular_probability / USHORT_MAX;
         float coat_probability = m_coat_probability / USHORT_MAX;
 
