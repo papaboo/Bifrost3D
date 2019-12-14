@@ -47,7 +47,10 @@ using namespace optix;
 
 namespace OptiXRenderer {
 
-struct half4 { half x, y, z, w; };
+inline float3 to_float3(const RGB v) { return { v.r, v.g, v.b }; }
+inline float3 to_float3(const Vector3f v) { return { v.x, v.y, v.z }; }
+
+struct half4 { __half x, y, z, w; };
 
 static inline size_t size_of(RTformat format) {
     switch (format) {
@@ -680,9 +683,7 @@ struct Renderer::Implementation {
                                              optix::TextureSampler* samplers, Buffer* images) {
                 OptiXRenderer::Material& device_material = device_materials[material_ID];
                 Assets::Material host_material = material_ID;
-                device_material.tint.x = host_material.get_tint().r;
-                device_material.tint.y = host_material.get_tint().g;
-                device_material.tint.z = host_material.get_tint().b;
+                device_material.tint = to_float3(host_material.get_tint());
                 if (host_material.has_tint_texture()) {
                     // Validate that the image has 4 channels! Otherwise OptiX goes boom boom.
                     Textures::UID texture_ID = host_material.get_tint_roughness_texture_ID();
@@ -768,13 +769,9 @@ struct Renderer::Implementation {
 
                         device_light.flags = Light::Sphere;
 
-                        Vector3f position = host_light.get_node().get_global_transform().translation;
-                        memcpy(&device_light.sphere.position, &position, sizeof(device_light.sphere.position));
-
-                        RGB power = host_light.get_power();
-                        memcpy(&device_light.sphere.power, &power, sizeof(device_light.sphere.power));
-
+                        device_light.sphere.position = to_float3(host_light.get_node().get_global_transform().translation);
                         device_light.sphere.radius = host_light.get_radius();
+                        device_light.sphere.power = to_float3(host_light.get_power());
 
                         if (!host_light.is_delta_light())
                             highest_area_light_index_updated = std::max<int>(highest_area_light_index_updated, light_index);
@@ -785,11 +782,8 @@ struct Renderer::Implementation {
 
                         device_light.flags = Light::Directional;
 
-                        Vector3f direction = host_light.get_node().get_global_transform().rotation.forward();
-                        memcpy(&device_light.directional.direction, &direction, sizeof(device_light.directional.direction));
-
-                        RGB radiance = host_light.get_radiance();
-                        memcpy(&device_light.directional.radiance, &radiance, sizeof(device_light.directional.radiance));
+                        device_light.directional.direction = to_float3(host_light.get_node().get_global_transform().rotation.forward());
+                        device_light.directional.radiance = to_float3(host_light.get_radiance());
                         break;
                     }
                     default:
