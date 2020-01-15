@@ -29,7 +29,7 @@ void validate_optix_resource(T resource, char* file, int line) {
     try {
         resource->validate();
     } catch (optix::Exception e) {
-        printf("Invalid resource in file %s, line %u:\n %s\n", file, line, e.getErrorString().c_str());
+        printf("Invalid resource in file %s, line %u:\n%s\n", file, line, e.getErrorString().c_str());
         throw e;
     }
 }
