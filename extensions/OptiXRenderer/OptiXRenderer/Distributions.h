@@ -18,10 +18,35 @@
 namespace OptiXRenderer {
 namespace Distributions {
 
+struct PositionalSample2D {
+    optix::float2 position;
+    float PDF;
+};
+
 struct __align__(16) DirectionalSample {
     optix::float3 direction;
     float PDF;
 };
+
+//=================================================================================================
+// Disk distribution.
+//=================================================================================================
+namespace Disk {
+
+    __inline_all__ float PDF(float radius) {
+        return 1.0f / (PIf * pow2(radius));
+    }
+
+    __inline_all__ PositionalSample2D sample(float radius, optix::float2 random_sample) {
+        float r = sqrtf(random_sample.x) * radius;
+        float phi = 2.0f * PIf * random_sample.y;
+        PositionalSample2D res;
+        res.position = optix::make_float2(r * cosf(phi), r * sinf(phi));
+        res.PDF = PDF(radius);
+        return res;
+    }
+
+} // NS Disk
 
 //=================================================================================================
 // Uniform cone distribution.
