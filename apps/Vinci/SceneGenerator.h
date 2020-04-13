@@ -42,11 +42,11 @@ public:
         clear_scene();
 
         auto rng = RNG::LinearCongruential(m_seed);
-        int node_count = 5 + int(rng.sample1f() * 5);
+        int node_count = 4 + int(rng.sample1f() * 44);
 
         typedef Mesh(*MeshGenerator)(RNG::LinearCongruential&);
-        int mesh_generator_count = 2;
-        MeshGenerator mesh_generators[] = { generate_cube, generate_cylinder };
+        int mesh_generator_count = 4;
+        MeshGenerator mesh_generators[] = { generate_cube, generate_cylinder, generate_sphere, generate_torus };
 
         m_root_node = SceneNodes::create("root node");
         for (int n = 0; n < node_count; ++n) {
@@ -118,15 +118,37 @@ private:
     }
 
     static Mesh generate_cylinder(RNG::LinearCongruential& rng) {
-        Mesh cylinder = MeshCreation::cylinder(1, 512);
+        Mesh cylinder = MeshCreation::cylinder(1, 128);
+        return scale_mesh(cylinder, rng);
+    }
 
+    static Mesh generate_sphere(RNG::LinearCongruential& rng) {
+        Mesh sphere = MeshCreation::revolved_sphere(128, 128);
+        return scale_mesh(sphere, rng);
+    }
+
+    static Mesh generate_torus(RNG::LinearCongruential& rng) {
+        Mesh torus = MeshCreation::torus(128, 128, 0.01f + 2.0f * rng.sample1f());
+        return scale_mesh(torus, rng);
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // Mesh modifications
+    // --------------------------------------------------------------------------------------------
+
+    static Mesh scale_mesh(Mesh mesh, RNG::LinearCongruential& rng) {
         Vector3f scaling = rng.sample3f() * 1.5f + 0.5f;
-        Vector3f* positions = cylinder.get_positions();
-        for (unsigned int i = 0; i < cylinder.get_vertex_count(); ++i)
+        Vector3f* positions = mesh.get_positions();
+        for (unsigned int i = 0; i < mesh.get_vertex_count(); ++i)
             positions[i] *= scaling;
-        MeshUtils::compute_normals(cylinder.get_ID());
+        MeshUtils::compute_normals(mesh.get_ID());
 
-        return cylinder;
+        AABB bounds = mesh.get_bounds();
+        bounds.minimum *= scaling;
+        bounds.maximum *= scaling;
+        mesh.set_bounds(bounds);
+
+        return mesh;
     }
 };
 

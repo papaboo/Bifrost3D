@@ -29,6 +29,10 @@
 
 #include <Win32Driver.h>
 
+#include <filesystem>
+
+namespace fs = std::filesystem;
+
 using namespace Bifrost::Assets;
 using namespace Bifrost::Core;
 using namespace Bifrost::Input;
@@ -48,7 +52,7 @@ inline void parse_float_array(const char* array_str, float* elements_begin, floa
             ++str;
 
         char* element_str_end;
-        *elements_begin = strtof(str, &element_str_end);
+        *elements_begin++ = strtof(str, &element_str_end);
         str = element_str_end;
     }
 }
@@ -83,12 +87,12 @@ struct Options {
     Texture environment_map;
     RGB environment_tint;
     Vector2ui window_size;
-    std::string output;
+    fs::path output_directory;
 
     // Parse command line arguments.
     static inline Options parse(int argc, char** argv) {
         Options options;
-        options.output = "";
+        options.output_directory = "";
         options.window_size = Vector2ui(640, 480);
 
         options.scene = "";
@@ -103,7 +107,7 @@ struct Options {
             if (strcmp(argv[argument], "--scene") == 0 || strcmp(argv[argument], "-s") == 0)
                 options.scene = std::string(argv[++argument]);
             else if (strcmp(argv[argument], "--output") == 0 || strcmp(argv[argument], "-o") == 0)
-                options.output = std::string(argv[++argument]);
+                options.output_directory = std::string(argv[++argument]);
             else if (strcmp(argv[argument], "--textures") == 0 || strcmp(argv[argument], "-t") == 0)
                 options.texture_directory = std::string(argv[++argument]);
             else if (strcmp(argv[argument], "--environment-map") == 0 || strcmp(argv[argument], "-e") == 0) {
@@ -139,13 +143,16 @@ public:
     Navigation(Cameras::UID camera_ID, float velocity)
         : m_camera_ID(camera_ID)
         , m_velocity(velocity)
-    {
+        , m_camera_moved(false) {
         Transform transform = Cameras::get_transform(m_camera_ID);
 
         Vector3f forward = transform.rotation.forward();
         m_vertical_rotation = std::atan2(forward.x, forward.z);
         m_horizontal_rotation = std::asin(forward.y);
     }
+
+    inline Cameras::UID camera_ID() const { return m_camera_ID; }
+    inline bool camera_has_moved() const { return m_camera_moved; }
 
     void navigate(Engine& engine) {
         const Keyboard* keyboard = engine.get_keyboard();
@@ -190,8 +197,10 @@ public:
             }
         }
 
-        if (transform != Cameras::get_transform(m_camera_ID))
+        if (transform != Cameras::get_transform(m_camera_ID)) {
+            m_camera_moved = true;
             Cameras::set_transform(m_camera_ID, transform);
+        }
     }
 
 private:
@@ -199,6 +208,7 @@ private:
     float m_vertical_rotation;
     float m_horizontal_rotation;
     float m_velocity;
+    bool m_camera_moved;
 };
 
 class SceneRefresher final {
@@ -214,6 +224,67 @@ public:
 
 private:
     SceneGenerator::RandomScene& m_scene;
+};
+
+class DataGeneration final {
+public:
+    DataGeneration(SceneGenerator::RandomScene& scene, Navigation& camera_navigation, const fs::path& output_directory, int max_iterations = 256)
+        : m_scene(scene), m_camera_navigation(camera_navigation), m_output_directory(output_directory), m_iteration(0), m_max_iterations(max_iterations) {
+        queue_screenshot();
+    }
+
+    void tick(Engine& engine) {
+        bool screenshot_resolved = false;
+
+        if (m_camera_navigation.camera_has_moved())
+            Cameras::cancel_screenshot(camera_ID());
+
+        if (Cameras::pending_screenshots(camera_ID())) {
+            // Resolve and save screenshots.
+            auto output_screenshot = [&](Screenshot::Content content, const std::string& path) {
+                auto image_ID = Cameras::resolve_screenshot(camera_ID(), content, "ss");
+                if (Images::has(image_ID)) {
+                    if (!StbImageWriter::write(image_ID, path))
+                        printf("Failed to output screenshot to '%s'\n", path.c_str());
+                    Images::destroy(image_ID);
+                }
+            };
+
+            std::string base_path = (m_output_directory / std::to_string(m_iteration)).string();
+            output_screenshot(Screenshot::Content::ColorLDR, base_path + "_color_LDR.png");
+            output_screenshot(Screenshot::Content::ColorHDR, base_path + "_color_HDR.hdr");
+            output_screenshot(Screenshot::Content::Depth, base_path + "_depth.hdr");
+            output_screenshot(Screenshot::Content::Albedo, base_path + "_albedo.png");
+            output_screenshot(Screenshot::Content::Tint, base_path + "_tint.png");
+            output_screenshot(Screenshot::Content::Roughness, base_path + "_roughness.png");
+            screenshot_resolved = true;
+
+            ++m_iteration;
+        }
+
+        if (m_iteration == m_max_iterations)
+            engine.request_quit();
+
+        if (screenshot_resolved) {
+            m_scene.new_scene();
+            queue_screenshot();
+        }
+    }
+
+private:
+    SceneGenerator::RandomScene& m_scene;
+    Navigation& m_camera_navigation;
+    const fs::path& m_output_directory;
+    int m_iteration;
+    int m_max_iterations;
+
+    inline Cameras::UID camera_ID() const { return m_camera_navigation.camera_ID(); }
+
+    void queue_screenshot() {
+        const Cameras::ScreenshotContent content = { Screenshot::Content::ColorLDR, Screenshot::Content::Depth, Screenshot::Content::Albedo, Screenshot::Content::Tint, Screenshot::Content::Roughness };
+        int iterations = 128;
+        Cameras::request_screenshot(camera_ID(), content, iterations);
+    }
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -289,9 +360,10 @@ int setup_scene(Engine& engine, Options& options) {
     // Setup lightsource colocated with camera.
     SceneNode light_node = SceneNodes::create("light node", cam_transform);
     light_node.set_parent(root_node);
-    LightSources::create_sphere_light(light_node.get_ID(), RGB(20), 0);
+    // LightSources::create_sphere_light(light_node.get_ID(), RGB(20), 0);
+    LightSources::create_directional_light(light_node.get_ID(), RGB(1));
 
-    // Disable screen space effects two keep the data in a linear color space.
+    // Disable screen space effects to keep the data in a linear color space.
     auto effects_settings = Cameras::get_effects_settings(camera_ID);
     effects_settings.exposure.mode = CameraEffects::ExposureMode::Fixed;
     effects_settings.tonemapping.mode = CameraEffects::TonemappingMode::Linear;
@@ -300,6 +372,15 @@ int setup_scene(Engine& engine, Options& options) {
 
     Navigation* camera_navigation = new Navigation(camera_ID, camera_velocity);
     engine.add_mutating_callback([=, &engine] { camera_navigation->navigate(engine); });
+
+    if (!g_options.output_directory.empty()) {
+        if (!fs::exists(g_options.output_directory))
+            fs::create_directories(g_options.output_directory);
+        if (fs::is_directory(g_options.output_directory)) {
+            DataGeneration* data_generation = new DataGeneration(*g_random_scene, *camera_navigation, g_options.output_directory);
+            engine.add_mutating_callback([=, &engine] { data_generation->tick(engine); });
+        }
+    }
 
     return 0;
 }
