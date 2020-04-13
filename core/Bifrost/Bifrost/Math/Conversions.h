@@ -58,7 +58,6 @@ inline Quaternion<T> to_quaternion(const Matrix3x3<T> m) {
         T s = std::sqrt((m[i][i] - (m[j][j] + m[k][k])) + 1.0f);
         Vector3<T> imaginary;
         imaginary[i] = s * 0.5f;
-        if (s != 0.f) s = 0.5f / s;
         T real = (m[k][j] - m[j][k]) * s;
         imaginary[j] = (m[j][i] + m[i][j]) * s;
         imaginary[k] = (m[k][i] + m[i][k]) * s;
