@@ -10,6 +10,7 @@
 
 #include <Bifrost/Assets/Material.h>
 #include <Bifrost/Scene/Camera.h>
+#include <Bifrost/Scene/LightSource.h>
 
 #include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/Renderer.h>
@@ -141,6 +142,47 @@ void RenderingGUI::layout_frame() {
             float horizontal_rotation = std::asin(forward.y);
             float rotation[2] = { vertical_rotation, horizontal_rotation };
             ImGui::InputFloat2("Rotation", rotation, 3, ImGuiInputTextFlags_ReadOnly);
+        });
+
+        ImGui::PoppedTreeNode("Lights", [&]() {
+            for (LightSources::UID light_ID : LightSources::get_iterable()) {
+                SceneNode scene_node = LightSources::get_node_ID(light_ID);
+                ImGui::PoppedTreeNode(scene_node.get_name().c_str(), [&]() {
+                    LightSources::Type light_type = LightSources::get_type(light_ID);
+                    
+                    if (light_type == LightSources::Type::Sphere) {
+                        SphereLight light = SphereLight(light_ID);
+
+                        float radius = light.get_radius();
+                        if (ImGui::InputFloat("Radius", &radius))
+                            light.set_radius(radius);
+
+                        RGB power = light.get_power();
+                        if (ImGui::InputFloat3("Power", &power.r, 3))
+                            light.set_power(power);
+                    } else if (light_type == LightSources::Type::Spot) {
+                        SpotLight light = SpotLight(light_ID);
+                        
+                        float radius = light.get_radius();
+                        if (ImGui::InputFloat("Radius", &radius))
+                            light.set_radius(radius);
+
+                        float cos_angle = light.get_cos_angle();
+                        if (ImGui::SliderFloat("Cos(angle)", &cos_angle, 0, 0.999f))
+                            light.set_cos_angle(cos_angle);
+
+                        RGB power = light.get_power();
+                        if (ImGui::InputFloat3("Power", &power.r, 3))
+                            light.set_power(power);
+                    } else if (light_type == LightSources::Type::Directional) {
+                        DirectionalLight light = DirectionalLight(light_ID);
+
+                        RGB radiance = light.get_radiance();
+                        if (ImGui::InputFloat3("Radiance", &radiance.r, 3))
+                            light.set_radiance(radiance);
+                    }
+                });
+            }
         });
     });
 
