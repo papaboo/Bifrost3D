@@ -86,7 +86,7 @@ Varyings vs(uint primitive_ID : SV_VertexID) {
 
 struct Pixel {
     float4 color : SV_TARGET;
-    float depth : SV_DEPTH;
+    float depth : SV_DEPTH; // TODO SV_DepthGreater, or SV_DepthLessEqual - source: https://mynameismjp.wordpress.com/2010/11/14/d3d11-features/
 };
 
 Pixel color_PS(Varyings input) {
