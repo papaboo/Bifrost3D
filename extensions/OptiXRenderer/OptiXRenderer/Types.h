@@ -90,6 +90,14 @@ struct SphereLight {
     float radius;
 };
 
+struct SpotLight {
+    optix::float3 power;
+    optix::float3 position;
+    float radius;
+    optix::float3 direction;
+    float cos_angle;
+};
+
 struct DirectionalLight {
     optix::float3 radiance;
     optix::float3 direction;
@@ -149,6 +157,7 @@ struct __align__(16) Light {
         Directional = 2u,
         Environment = 3u,
         PresampledEnvironment = 4u,
+        Spot = 5u,
         TypeMask = 7u
     };
 
@@ -157,6 +166,7 @@ struct __align__(16) Light {
         DirectionalLight directional;
         EnvironmentLight environment;
         PresampledEnvironmentLight presampled_environment;
+        SpotLight spot;
     };
 
     unsigned int flags;

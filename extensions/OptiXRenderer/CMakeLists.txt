@@ -50,6 +50,7 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
     OptiXRenderer/Shading/LightSources/LightSources.cu
     OptiXRenderer/Shading/LightSources/PresampledEnvironmentLightImpl.h
     OptiXRenderer/Shading/LightSources/SphereLightImpl.h
+    OptiXRenderer/Shading/LightSources/SpotLightImpl.h
   )
 
   set(SHADING_SHADING_MODELS_SRC

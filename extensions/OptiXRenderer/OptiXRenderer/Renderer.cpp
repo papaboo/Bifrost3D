@@ -772,9 +772,19 @@ struct Renderer::Implementation {
                         device_light.sphere.position = to_float3(host_light.get_node().get_global_transform().translation);
                         device_light.sphere.radius = host_light.get_radius();
                         device_light.sphere.power = to_float3(host_light.get_power());
+                        break;
+                    }
+                    case LightSources::Type::Spot: {
+                        Scene::SpotLight host_light = light_ID;
+                        auto light_transform = host_light.get_node().get_global_transform();
 
-                        if (!host_light.is_delta_light())
-                            highest_area_light_index_updated = std::max<int>(highest_area_light_index_updated, light_index);
+                        device_light.flags = Light::Spot;
+
+                        device_light.spot.position = to_float3(light_transform.translation);
+                        device_light.spot.radius = host_light.get_radius();
+                        device_light.spot.power = to_float3(host_light.get_power());
+                        device_light.spot.direction = to_float3(light_transform.rotation.forward());
+                        device_light.spot.cos_angle = host_light.get_cos_angle();
                         break;
                     }
                     case LightSources::Type::Directional: {
@@ -793,6 +803,9 @@ struct Renderer::Implementation {
                         device_light.sphere.power = { 100000, 0, 100000 };
                         device_light.sphere.radius = 5;
                     }
+
+                    if (!LightSources::is_delta_light(light_ID))
+                        highest_area_light_index_updated = std::max<int>(highest_area_light_index_updated, light_index);
                 };
 
                 // Deferred area light geometry update helper. Keeps track of the highest delta light index updated.
@@ -827,58 +840,48 @@ struct Renderer::Implementation {
                     if (scene.environment.next_event_estimation_possible())
                         lights.count -= 1;
 
-                    Light* device_lights = (Light*)lights.sources->map();
-                    LightSources::ChangedIterator created_lights_begin = LightSources::get_changed_lights().begin();
-                    while (created_lights_begin != LightSources::get_changed_lights().end() &&
-                        LightSources::get_changes(*created_lights_begin).not_set(LightSources::Change::Created))
-                        ++created_lights_begin;
+                    auto destroy_light = [](LightSources::Changes changes) -> bool {
+                        return changes.is_set(LightSources::Change::Destroyed) && changes.not_set(LightSources::Change::Created);
+                    };
 
-                    // Process destroyed lights.
+                    Light* device_lights = (Light*)lights.sources->map();
+
+                    // First process destroyed lights to ensure that we don't allocate lights and then afterwards adds holes to the light array.
                     for (LightSources::UID light_ID : LightSources::get_changed_lights()) {
-                        if (LightSources::get_changes(light_ID) != LightSources::Change::Destroyed)
+                        if (!destroy_light(LightSources::get_changes(light_ID)))
                             continue;
 
                         unsigned int light_index = lights.ID_to_index[light_ID];
+                        // Replace deleted light by light from the end of the array.
+                        --lights.count;
+                        if (light_index != lights.count) {
+                            memcpy(device_lights + light_index, device_lights + lights.count, sizeof(Light));
+
+                            // Rewire light ID and index maps.
+                            lights.index_to_ID[light_index] = lights.index_to_ID[lights.count];
+                            lights.ID_to_index[lights.index_to_ID[light_index]] = light_index;
+                        }
 
                         if (!LightSources::is_delta_light(light_ID))
                             highest_area_light_index_updated = std::max<int>(highest_area_light_index_updated, light_index);
-
-                        if (created_lights_begin != LightSources::get_changed_lights().end()) {
-                            // Replace deleted light by new light source.
-                            LightSources::UID new_light_ID = *created_lights_begin;
-                            light_creation(new_light_ID, light_index, device_lights, highest_area_light_index_updated);
-                            lights.ID_to_index[new_light_ID] = light_index;
-                            lights.index_to_ID[light_index] = new_light_ID;
-
-                            // Find next created light.
-                            while (created_lights_begin != LightSources::get_changed_lights().end() &&
-                                LightSources::get_changes(*created_lights_begin).not_set(LightSources::Change::Created))
-                                ++created_lights_begin;
-                        } else {
-                            // Replace deleted light by light from the end of the array.
-                            --lights.count;
-                            if (light_index != lights.count) {
-                                memcpy(device_lights + light_index, device_lights + lights.count, sizeof(Light));
-
-                                // Rewire light ID and index maps.
-                                lights.index_to_ID[light_index] = lights.index_to_ID[lights.count];
-                                lights.ID_to_index[lights.index_to_ID[light_index]] = light_index;
-
-                                highest_area_light_index_updated = min(highest_area_light_index_updated, int(lights.count));
-                            }
-                        }
                     }
 
-                    // If there are still lights that needs to be created, then append them to the list.
-                    for (LightSources::UID light_ID : Iterable<LightSources::ChangedIterator>(created_lights_begin, LightSources::get_changed_lights().end())) {
-                        if (LightSources::get_changes(light_ID).not_set(LightSources::Change::Created))
+                    // Then update or create the rest of the light sources.
+                    for (LightSources::UID light_ID : LightSources::get_changed_lights()) {
+                        auto light_changes = LightSources::get_changes(light_ID);
+                        if (destroy_light(light_changes))
                             continue;
 
-                        unsigned int light_index = lights.count++;
-                        lights.ID_to_index[light_ID] = light_index;
-                        lights.index_to_ID[light_index] = light_ID;
+                        if (light_changes.is_set(LightSources::Change::Created)) {
+                            unsigned int light_index = lights.count++;
+                            lights.ID_to_index[light_ID] = light_index;
+                            lights.index_to_ID[light_index] = light_ID;
 
-                        light_creation(light_ID, light_index, device_lights, highest_area_light_index_updated);
+                            light_creation(light_ID, light_index, device_lights, highest_area_light_index_updated);
+                        } else if (light_changes.is_set(LightSources::Change::Updated)) {
+                            unsigned int light_index = lights.ID_to_index[light_ID];
+                            light_creation(light_ID, light_index, device_lights, highest_area_light_index_updated);
+                        }
                     }
 
                     // Append the environment map, if valid, to the list of light sources.

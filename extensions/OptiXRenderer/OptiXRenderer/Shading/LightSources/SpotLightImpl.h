@@ -1,0 +1,55 @@
+// OptiX renderer functions for spot lights.
+// ---------------------------------------------------------------------------
+// Copyright (C) Bifrost. See AUTHORS.txt for authors.
+//
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+// ---------------------------------------------------------------------------
+
+#ifndef _OPTIXRENDERER_SPOT_LIGHT_IMPLEMENTATION_H_
+#define _OPTIXRENDERER_SPOT_LIGHT_IMPLEMENTATION_H_
+
+#include <OptiXRenderer/Distributions.h>
+#include <OptiXRenderer/Intersect.h>
+#include <OptiXRenderer/TBN.h>
+#include <OptiXRenderer/Types.h>
+
+namespace OptiXRenderer {
+namespace LightSources {
+
+__inline_all__ float is_delta_light(const SpotLight& light, optix::float3 lit_position) {
+    return true;
+}
+
+__inline_all__ float PDF(const SpotLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
+    return 0;
+}
+
+__inline_all__ optix::float3 evaluate(const SpotLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
+    using namespace optix;
+
+    float cos_theta = fmaxf(0, -dot(light.direction, normalize(direction_to_light)));
+    float normalization = TWO_PIf * (1 - light.cos_angle);
+    float3 radiance = light.power / (normalization * length_squared(direction_to_light));
+    radiance *= (cos_theta > light.cos_angle) ? 1.0f : 0.0f;
+    return radiance;
+}
+
+__inline_all__ LightSample sample_radiance(const SpotLight& light, optix::float3 lit_position, optix::float2 random_sample) {
+    using namespace optix;
+
+    optix::float3 vector_to_light = light.position - lit_position;
+
+    LightSample light_sample;
+    light_sample.direction_to_light = vector_to_light;
+    light_sample.distance = optix::length(light_sample.direction_to_light);
+    light_sample.direction_to_light /= light_sample.distance;
+    light_sample.radiance = evaluate(light, lit_position, vector_to_light);
+    light_sample.PDF = 1.0f;
+    return light_sample;
+}
+
+} // NS LightSources
+} // NS OptiXRenderer
+
+#endif // _OPTIXRENDERER_SPOT_LIGHT_IMPLEMENTATION_H_
