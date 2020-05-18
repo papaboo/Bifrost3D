@@ -270,16 +270,24 @@ struct Dx11Model {
 // Light source structs.
 //-------------------------------------------------------------------------------------------------
 
+struct Dx11DirectionalLight {
+    float3 radiance;
+    float3 direction;
+    float __padding;
+};
+
 struct Dx11SphereLight {
     float3 power;
     float3 position;
     float radius;
 };
 
-struct Dx11DirectionalLight {
-    float3 radiance;
+struct Dx11SpotLight {
+    float3 power;
+    float3 position;
+    float radius;
     float3 direction;
-    float __padding;
+    float cos_angle;
 };
 
 struct Dx11Light{
@@ -287,14 +295,16 @@ struct Dx11Light{
         None = 0u,
         Sphere = 1u,
         Directional = 2u,
+        Spot = 3u,
         TypeMask = 3u
     };
 
     float flags;
 
     union {
-        Dx11SphereLight sphere;
         Dx11DirectionalLight directional;
+        Dx11SphereLight sphere;
+        Dx11SpotLight spot;
     };
 
     unsigned int get_type() const { return (Flags)(unsigned int)flags; }

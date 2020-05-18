@@ -18,11 +18,13 @@
 namespace LightType {
     static const float Sphere = 1.0f;
     static const float Directional = 2.0f;
+    static const float Spot = 3.0f;
 }
 
 struct LightData {
     float4 type_power;
     float4 spatial_softness;
+    float4 spatial_softness2;
 
     float type() { return type_power.x; }
 
@@ -34,6 +36,14 @@ struct LightData {
     // Directional light property accessors.
     float3 directional_radiance() { return type_power.yzw; }
     float3 directional_direction() { return spatial_softness.xyz; } // Oh what a concise method name.
+
+    // Spot light property accessors.
+    float3 spot_power() { return type_power.yzw; }
+    float3 spot_position() { return spatial_softness.xyz; }
+    float spot_radius() { return spatial_softness.w; }
+    float spot_surface_area() { return PI * pow2(spot_radius()); }
+    float3 spot_direction() { return spatial_softness2.xyz; }
+    float spot_cos_angle() { return spatial_softness2.w; }
 };
 
 //-----------------------------------------------------------------------------
@@ -55,6 +65,19 @@ struct LightSample {
         return light_sample;
     }
 };
+
+//-----------------------------------------------------------------------------
+// Directional light sampling.
+//-----------------------------------------------------------------------------
+
+LightSample sample_directional_light(LightData light) {
+    LightSample light_sample;
+    light_sample.radiance = light.directional_radiance();
+    light_sample.direction_to_light = -light.directional_direction();
+    light_sample.distance = 1e30f;
+    light_sample.angle_subtended = 0.0;
+    return light_sample;
+}
 
 //-----------------------------------------------------------------------------
 // Sphere light sampling.
@@ -84,15 +107,23 @@ LightSample sample_sphere_light(LightData light, float3 world_position) {
 }
 
 //-----------------------------------------------------------------------------
-// Directional light sampling.
+// Spot light sampling.
 //-----------------------------------------------------------------------------
 
-LightSample sample_directional_light(LightData light) {
+LightSample sample_spot_light(LightData light, float3 world_position) {
+    float3 direction_to_light = light.spot_position() - world_position;
+
     LightSample light_sample;
-    light_sample.radiance = light.directional_radiance();
-    light_sample.direction_to_light = -light.directional_direction();
-    light_sample.distance = 1e30f;
-    light_sample.angle_subtended = 0.0;
+    light_sample.direction_to_light = direction_to_light;
+    light_sample.distance = length(light_sample.direction_to_light);
+    light_sample.direction_to_light /= light_sample.distance;
+
+    float cos_theta = max(0, -dot(light.spot_direction(), light_sample.direction_to_light));
+    float normalization = 2 * PI * (1 - light.spot_cos_angle());
+    light_sample.radiance = light.spot_power() / (normalization * pow2(light_sample.distance));
+    light_sample.radiance *= cos_theta > light.spot_cos_angle() ? 1.0 : 0.0;
+
+    light_sample.angle_subtended = (light.spot_surface_area() * cos_theta) / light_sample.distance;
     return light_sample;
 }
 
@@ -101,7 +132,9 @@ LightSample sample_directional_light(LightData light) {
 //-----------------------------------------------------------------------------
 
 LightSample sample_light(LightData light, float3 world_position) {
-    if (light.type() > 1.5)
+    if (light.type() > 2.5)
+        return sample_spot_light(light, world_position);
+    else if (light.type() > 1.5)
         return sample_directional_light(light);
     else if (light.type() > 0.5)
         return sample_sphere_light(light, world_position);

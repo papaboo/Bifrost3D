@@ -61,6 +61,27 @@ private:
             gpu_light.sphere.radius = host_light.get_radius();
             break;
         }
+        case LightSources::Type::Spot: {
+            SpotLight host_light = light_ID;
+            Transform global_transform = host_light.get_node().get_global_transform();
+
+            gpu_light.flags = Dx11Light::Spot;
+
+            Vector3f position = global_transform.translation;
+            memcpy(&gpu_light.spot.position, &position, sizeof(gpu_light.sphere.position));
+
+            RGB power = host_light.get_power();
+            memcpy(&gpu_light.spot.power, &power, sizeof(gpu_light.sphere.power));
+
+            gpu_light.spot.radius = host_light.get_radius();
+
+            gpu_light.spot.cos_angle = host_light.get_cos_angle();
+
+            Vector3f direction = global_transform.rotation.forward();
+            memcpy(&gpu_light.spot.direction, &direction, sizeof(gpu_light.spot.direction));
+
+            break;
+        }
         case LightSources::Type::Directional: {
             DirectionalLight host_light = light_ID;
 
@@ -117,52 +138,44 @@ public:
             } else {
 
                 Dx11Light* gpu_lights = m_data.lights;
-                LightSources::ChangedIterator created_lights_begin = LightSources::get_changed_lights().begin();
-                while (created_lights_begin != LightSources::get_changed_lights().end() &&
-                    LightSources::get_changes(*created_lights_begin).not_set(LightSources::Change::Created))
-                    ++created_lights_begin;
 
-                // Process destroyed 
+                auto destroy_light = [](LightSources::Changes changes) -> bool {
+                    return changes.is_set(LightSources::Change::Destroyed) && changes.not_set(LightSources::Change::Created);
+                };
+
+                // First process destroyed lights to ensure that we don't allocate lights and then afterwards adds holes to the light array.
                 for (LightSources::UID light_ID : LightSources::get_changed_lights()) {
-                    if (LightSources::get_changes(light_ID) != LightSources::Change::Destroyed)
+                    if (!destroy_light(LightSources::get_changes(light_ID)))
                         continue;
 
                     unsigned int light_index = m_ID_to_index[light_ID];
+                    // Replace deleted light by light from the end of the array.
+                    --m_data.active_count;
+                    if (light_index != m_data.active_count) {
+                        memcpy(gpu_lights + light_index, gpu_lights + m_data.active_count, sizeof(Dx11Light));
 
-                    if (created_lights_begin != LightSources::get_changed_lights().end()) {
-                        // Replace deleted light by new light source.
-                        LightSources::UID new_light_ID = *created_lights_begin;
-                        light_creation(new_light_ID, light_index, gpu_lights);
-                        m_ID_to_index[new_light_ID] = light_index;
-                        m_index_to_ID[light_index] = new_light_ID;
-
-                        // Find next created light.
-                        while (created_lights_begin != LightSources::get_changed_lights().end() &&
-                            LightSources::get_changes(*created_lights_begin).not_set(LightSources::Change::Created))
-                            ++created_lights_begin;
-                    } else {
-                        // Replace deleted light by light from the end of the array.
-                        --m_data.active_count;
-                        if (light_index != m_data.active_count) {
-                            memcpy(gpu_lights + light_index, gpu_lights + m_data.active_count, sizeof(Dx11Light));
-
-                            // Rewire light ID and index maps.
-                            m_index_to_ID[light_index] = m_index_to_ID[m_data.active_count];
-                            m_ID_to_index[m_index_to_ID[light_index]] = light_index;
-                        }
+                        // Rewire light ID and index maps.
+                        m_index_to_ID[light_index] = m_index_to_ID[m_data.active_count];
+                        m_ID_to_index[m_index_to_ID[light_index]] = light_index;
                     }
                 }
 
-                // If there are still lights that needs to be created, then append them to the list.
-                for (LightSources::UID light_ID : Iterable<LightSources::ChangedIterator>(created_lights_begin, LightSources::get_changed_lights().end())) {
-                    if (LightSources::get_changes(light_ID).not_set(LightSources::Change::Created))
+                // Then update or create the rest of the light sources.
+                for (LightSources::UID light_ID : LightSources::get_changed_lights()) {
+                    auto light_changes = LightSources::get_changes(light_ID);
+                    if (destroy_light(light_changes))
                         continue;
 
-                    unsigned int light_index = m_data.active_count++;
-                    m_ID_to_index[light_ID] = light_index;
-                    m_index_to_ID[light_index] = light_ID;
+                    if (light_changes.is_set(LightSources::Change::Created)) {
+                        unsigned int light_index = m_data.active_count++;
+                        m_ID_to_index[light_ID] = light_index;
+                        m_index_to_ID[light_index] = light_ID;
 
-                    light_creation(light_ID, light_index, gpu_lights);
+                        light_creation(light_ID, light_index, gpu_lights);
+                    } else if (light_changes.is_set(LightSources::Change::Updated)) {
+                        unsigned int light_index = m_ID_to_index[light_ID];
+                        light_creation(light_ID, light_index, gpu_lights);
+                    }
                 }
             }
 
