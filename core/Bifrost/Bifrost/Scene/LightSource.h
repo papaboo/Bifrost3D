@@ -14,6 +14,7 @@
 #include <Bifrost/Core/Iterable.h>
 #include <Bifrost/Core/UniqueIDGenerator.h>
 #include <Bifrost/Math/Color.h>
+#include <Bifrost/Math/Half.h>
 #include <Bifrost/Scene/SceneNode.h>
 
 namespace Bifrost {
@@ -32,6 +33,7 @@ public:
 
     enum class Type : unsigned char {
         Sphere,
+        Spot,
         Directional
     };
 
@@ -44,6 +46,7 @@ public:
     static bool has(LightSources::UID light_ID) { return m_UID_generator.has(light_ID); }
 
     static LightSources::UID create_sphere_light(SceneNodes::UID node_ID, Math::RGB power, float radius);
+    static LightSources::UID create_spot_light(SceneNodes::UID node_ID, Math::RGB power, float radius, float cos_angle);
     static LightSources::UID create_directional_light(SceneNodes::UID node_ID, Math::RGB radiance);
     static void destroy(LightSources::UID light_ID);
 
@@ -58,11 +61,23 @@ public:
     // Sphere light.
     static inline bool is_delta_sphere_light(LightSources::UID light_ID) { assert(get_type(light_ID) == Type::Sphere); return m_lights[light_ID].sphere.radius == 0.0f; }
     static inline Math::RGB get_sphere_light_power(LightSources::UID light_ID) { return m_lights[light_ID].color; }
+    static void set_sphere_light_power(LightSources::UID light_ID, Math::RGB power);
     static inline float get_sphere_light_radius(LightSources::UID light_ID) { assert(get_type(light_ID) == Type::Sphere); return m_lights[light_ID].sphere.radius; }
+    static void set_sphere_light_radius(LightSources::UID light_ID, float radius);
+
+    // Spot light
+    static inline bool is_delta_spot_light(LightSources::UID light_ID) { assert(get_type(light_ID) == Type::Spot); return m_lights[light_ID].spot.radius == 0.0f || m_lights[light_ID].spot.cos_angle == USHRT_MAX; }
+    static inline Math::RGB get_spot_light_power(LightSources::UID light_ID) { return m_lights[light_ID].color; }
+    static void set_spot_light_power(LightSources::UID light_ID, Math::RGB power);
+    static inline float get_spot_light_radius(LightSources::UID light_ID) { assert(get_type(light_ID) == Type::Spot); return m_lights[light_ID].spot.radius; }
+    static void set_spot_light_radius(LightSources::UID light_ID, float radius);
+    static inline float get_spot_light_cos_angle(LightSources::UID light_ID) { assert(get_type(light_ID) == Type::Spot); return m_lights[light_ID].spot.cos_angle / float(USHRT_MAX); }
+    static void set_spot_light_cos_angle(LightSources::UID light_ID, float cos_angle);
 
     // Directional light.
     static inline bool is_delta_directional_light(LightSources::UID light_ID) { assert(get_type(light_ID) == Type::Directional); return true; }
     static inline Math::RGB get_directional_light_radiance(LightSources::UID light_ID) { return m_lights[light_ID].color; }
+    static void set_directional_light_radiance(LightSources::UID light_ID, Math::RGB radiance);
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -71,7 +86,8 @@ public:
         None = 0u,
         Created = 1u << 0u,
         Destroyed = 1u << 1u,
-        All = Created | Destroyed
+        Updated = 1u << 2u,
+        All = Created | Destroyed | Updated
     };
     typedef Core::Bitmask<Change> Changes;
 
@@ -83,18 +99,21 @@ public:
     static void reset_change_notifications() { m_changes.reset_change_notifications(); }
 
 private:
-    static void reserve_light_data(unsigned int new_capacity, unsigned int old_capacity);
-
     static UIDGenerator m_UID_generator;
 
     struct Light {
         SceneNodes::UID node_ID;
-        Math::RGB color; // The power in case of sphere lights and radiance in case of directional lights.
+        Math::RGB color; // The power in case of sphere- or cone light and radiance in case of directional lights.
         Type type;
         union {
             struct {
                 float radius;
             } sphere;
+
+            struct {
+                half_float::half radius;
+                unsigned short cos_angle;
+            } spot;
 
             struct {
             } directional;
@@ -103,7 +122,12 @@ private:
 
     static Light* m_lights;
 
+    static void flag_as_updated(LightSources::UID light_ID);
+
     static Core::ChangeSet<Changes, UID> m_changes;
+
+    static LightSources::UID create_light(SceneNodes::UID node_ID, LightSources::Light light);
+    static void reserve_light_data(unsigned int new_capacity, unsigned int old_capacity);
 };
 
 // ---------------------------------------------------------------------------
@@ -129,7 +153,48 @@ public:
     inline SceneNode get_node() const { return LightSources::get_node_ID(m_ID); }
     inline bool is_delta_light() const { return LightSources::is_delta_sphere_light(m_ID); }
     inline Math::RGB get_power() const { return LightSources::get_sphere_light_power(m_ID); }
+    inline void set_power(Math::RGB power) { LightSources::set_sphere_light_power(m_ID, power); }
     inline float get_radius() const { return LightSources::get_sphere_light_radius(m_ID); }
+    inline void set_radius(float radius) { LightSources::set_sphere_light_radius(m_ID, radius); }
+
+    //-------------------------------------------------------------------------
+    // Changes since last game loop tick.
+    //-------------------------------------------------------------------------
+    inline LightSources::Changes get_changes() const { return LightSources::get_changes(m_ID); }
+
+private:
+    LightSources::UID m_ID;
+};
+
+// ---------------------------------------------------------------------------
+// Bifrost spot light wrapper.
+// ---------------------------------------------------------------------------
+class SpotLight final {
+public:
+    // -----------------------------------------------------------------------
+    // Constructors and destructors.
+    // -----------------------------------------------------------------------
+    SpotLight() : m_ID(LightSources::UID::invalid_UID()) {}
+    SpotLight(LightSources::UID id) : m_ID(id) { assert(LightSources::get_type(id) == LightSources::Type::Spot); }
+
+    inline const LightSources::UID get_ID() const { return m_ID; }
+    inline bool exists() const { return LightSources::has(m_ID); }
+
+    inline bool operator==(SpotLight rhs) const { return m_ID == rhs.m_ID; }
+    inline bool operator!=(SpotLight rhs) const { return m_ID != rhs.m_ID; }
+
+    // -----------------------------------------------------------------------
+    // Getters and setters.
+    // -----------------------------------------------------------------------
+    inline SceneNode get_node() const { return LightSources::get_node_ID(m_ID); }
+    inline bool is_delta_light() const { return LightSources::is_delta_spot_light(m_ID); }
+    inline Math::RGB get_power() const { return LightSources::get_spot_light_power(m_ID); }
+    inline void set_power(Math::RGB power) { LightSources::set_spot_light_power(m_ID, power); }
+    inline float get_radius() const { return LightSources::get_spot_light_radius(m_ID); }
+    inline void set_radius(float radius) { LightSources::set_spot_light_radius(m_ID, radius); }
+    inline float get_cos_angle() const { return LightSources::get_spot_light_cos_angle(m_ID); }
+    inline float get_angle() const { return acos(get_cos_angle()); }
+    inline void set_cos_angle(float cos_angle) { LightSources::set_spot_light_cos_angle(m_ID, cos_angle); }
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -163,6 +228,7 @@ public:
     inline SceneNode get_node() const { return LightSources::get_node_ID(m_ID); }
     inline bool is_delta_light() const { return LightSources::is_delta_directional_light(m_ID); }
     inline Math::RGB get_radiance() const { return LightSources::get_directional_light_radiance(m_ID); }
+    inline void set_radiance(Math::RGB radiance) { LightSources::set_directional_light_radiance(m_ID, radiance); }
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.

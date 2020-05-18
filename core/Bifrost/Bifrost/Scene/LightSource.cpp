@@ -1,10 +1,10 @@
 // Bifrost light source.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 
 #include <Bifrost/Scene/LightSource.h>
 
@@ -68,7 +68,7 @@ void LightSources::reserve(unsigned int new_capacity) {
     reserve_light_data(m_UID_generator.capacity(), old_capacity);
 }
 
-LightSources::UID LightSources::create_sphere_light(SceneNodes::UID node_ID, Math::RGB power, float radius) {
+inline LightSources::UID LightSources::create_light(SceneNodes::UID node_ID, LightSources::Light light) {
     assert(m_lights != nullptr);
 
     if (!SceneNodes::has(node_ID))
@@ -80,33 +80,39 @@ LightSources::UID LightSources::create_sphere_light(SceneNodes::UID node_ID, Mat
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_light_data(m_UID_generator.capacity(), old_capacity);
 
-    m_lights[id].node_ID = node_ID;
-    m_lights[id].type = LightSources::Type::Sphere;
-    m_lights[id].color = power;
-    m_lights[id].sphere.radius = radius;
+    m_lights[id] = light;
     m_changes.set_change(id, Change::Created);
 
     return id;
 }
 
+LightSources::UID LightSources::create_sphere_light(SceneNodes::UID node_ID, Math::RGB power, float radius) {
+    LightSources::Light light = {};
+    light.node_ID = node_ID;
+    light.type = LightSources::Type::Sphere;
+    light.color = power;
+    light.sphere.radius = radius;
+    return create_light(node_ID, light);
+}
+
+LightSources::UID LightSources::create_spot_light(SceneNodes::UID node_ID, Math::RGB power, float radius, float cos_angle) {
+    LightSources::Light light = {};
+    light.node_ID = node_ID;
+    light.type = LightSources::Type::Spot;
+    light.color = power;
+    light.spot.radius = half(radius);
+    light.spot.cos_angle = unsigned short(cos_angle * USHRT_MAX + 0.5f);
+
+    return create_light(node_ID, light);
+}
+
 LightSources::UID LightSources::create_directional_light(SceneNodes::UID node_ID, Math::RGB radiance) {
-    assert(m_lights != nullptr);
+    LightSources::Light light = {};
+    light.node_ID = node_ID;
+    light.type = LightSources::Type::Directional;
+    light.color = radiance;
 
-    if (!SceneNodes::has(node_ID))
-        return LightSources::UID::invalid_UID();
-
-    unsigned int old_capacity = m_UID_generator.capacity();
-    UID id = m_UID_generator.generate();
-    if (old_capacity != m_UID_generator.capacity())
-        // The capacity has changed and the size of all arrays need to be adjusted.
-        reserve_light_data(m_UID_generator.capacity(), old_capacity);
-
-    m_lights[id].node_ID = node_ID;
-    m_lights[id].type = LightSources::Type::Directional;
-    m_lights[id].color = radiance;
-    m_changes.set_change(id, Change::Created);
-
-    return id;
+    return create_light(node_ID, light);
 }
 
 void LightSources::destroy(LightSources::UID light_ID) {
@@ -120,10 +126,55 @@ bool LightSources::is_delta_light(LightSources::UID light_ID) {
     switch (get_type(light_ID)) {
     case Type::Sphere:
         return is_delta_sphere_light(light_ID);
+    case Type::Spot:
+        return is_delta_spot_light(light_ID);
     case Type::Directional:
         return is_delta_directional_light(light_ID);
     }
     return false;
+}
+
+void LightSources::flag_as_updated(LightSources::UID light_ID) {
+    m_changes.add_change(light_ID, Change::Updated);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Sphere light modifiers.
+// ------------------------------------------------------------------------------------------------
+
+void LightSources::set_sphere_light_power(LightSources::UID light_ID, Math::RGB power) {
+    m_lights[light_ID].color = power;
+    flag_as_updated(light_ID);
+}
+void LightSources::set_sphere_light_radius(LightSources::UID light_ID, float radius) {
+    m_lights[light_ID].sphere.radius = radius;
+    flag_as_updated(light_ID);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Spot light modifiers.
+// ------------------------------------------------------------------------------------------------
+
+void LightSources::set_spot_light_power(LightSources::UID light_ID, Math::RGB power) {
+    m_lights[light_ID].color = power;
+    flag_as_updated(light_ID);
+}
+void LightSources::set_spot_light_radius(LightSources::UID light_ID, float radius) {
+    m_lights[light_ID].spot.radius = half(radius);
+    flag_as_updated(light_ID);
+}
+void LightSources::set_spot_light_cos_angle(LightSources::UID light_ID, float cos_angle) {
+    m_lights[light_ID].spot.cos_angle = unsigned short(cos_angle * USHRT_MAX + 0.5f);
+    flag_as_updated(light_ID);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Directional light modifiers.
+// ------------------------------------------------------------------------------------------------
+
+void LightSources::set_directional_light_radiance(LightSources::UID light_ID, Math::RGB radiance) {
+    m_lights[light_ID].color = radiance;
+    flag_as_updated(light_ID);
 }
 
 } // NS Scene
