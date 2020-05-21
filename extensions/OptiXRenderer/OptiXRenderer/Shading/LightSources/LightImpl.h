@@ -29,7 +29,7 @@ __inline_dev__ bool is_delta_light(const Light& light, optix::float3 position) {
     case Light::PresampledEnvironment:
         return is_delta_light(light.presampled_environment);
     case Light::Spot:
-        return is_delta_light(light.spot, position);
+        return is_delta_light(light.spot);
     }
     return false;
 }

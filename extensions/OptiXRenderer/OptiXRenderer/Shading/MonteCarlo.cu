@@ -217,14 +217,19 @@ RT_PROGRAM void shadow_any_hit() {
 RT_PROGRAM void light_closest_hit() {
 
     int light_index = __float_as_int(geometric_normal.x);
-    const SphereLight& light = g_scene.light_buffer[light_index].sphere;
-
     bool next_event_estimated = monte_carlo_payload.bounces != 0; // Was next event estimated at previous intersection.
-    float3 light_radiance = LightSources::evaluate_intersection(light, ray.origin, ray.direction, 
-                                                                monte_carlo_payload.bsdf_MIS_PDF, next_event_estimated);
+
+    const Light light = g_scene.light_buffer[light_index];
+    float3 light_radiance = make_float3(0, 0, 0);
+    if (light.get_type() == Light::Sphere)
+        light_radiance = LightSources::evaluate_intersection(light.sphere, ray.origin, ray.direction,
+                                                             monte_carlo_payload.bsdf_MIS_PDF, next_event_estimated);
+    else if (light.get_type() == Light::Spot)
+        light_radiance = LightSources::evaluate_intersection(light.spot, ray.origin, ray.direction,
+                                                             monte_carlo_payload.bsdf_MIS_PDF, next_event_estimated);
 
     monte_carlo_payload.radiance += monte_carlo_payload.throughput * light_radiance;
     monte_carlo_payload.throughput = make_float3(0.0f);
     monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
-    monte_carlo_payload.shading_normal = normalize(monte_carlo_payload.position - light.position);
+    monte_carlo_payload.shading_normal = shading_normal;
 }

@@ -62,6 +62,17 @@ struct __align__(16) Sphere {
     }
 };
 
+struct Disk {
+    optix::float3 center;
+    optix::float3 normal;
+    float radius;
+
+    __inline_all__ static Disk make(optix::float3 center, optix::float3 normal, float radius) {
+        Disk d = { center, normal, radius };
+        return d;
+    }
+};
+
 struct __align__(16) VertexGeometry {
     optix::float3 position;
     OctahedralNormal normal;
