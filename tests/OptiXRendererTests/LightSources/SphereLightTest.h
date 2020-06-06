@@ -99,21 +99,15 @@ GTEST_TEST(SphereLight, consistent_PDF) {
 
     SphereLight light;
     light.position = make_float3(0.0f, 10.0f, 0.0f);
-    light.radius = 1.0f;
     light.power = make_float3(10.0f);
 
-    std::vector<SphereLight> lights = { light, light, light, light, light };
-    lights[1].radius = 2.0f;
-    lights[1].radius = 4.0f;
-    lights[1].radius = 7.0f;
-    lights[1].radius = 13.0f;
-
-    for (SphereLight& light : lights) {
+    for (float radius : { 1.0f, 2.0f, 4.0f, 7.0f, 13.0f }) {
+        light.radius = radius;
         for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
             LightSample sample = LightSources::sample_radiance(light, position, RNG::sample02(i));
             if (is_PDF_valid(sample.PDF)) {
                 float PDF = LightSources::PDF(light, position, sample.direction_to_light);
-                EXPECT_TRUE(almost_equal_eps(sample.PDF, PDF, 0.0001f));
+                EXPECT_FLOAT_EQ_EPS(sample.PDF, PDF, 0.0001f);
             }
         }
     }
