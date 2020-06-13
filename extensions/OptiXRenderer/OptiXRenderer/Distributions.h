@@ -46,6 +46,27 @@ namespace Disk {
         return res;
     }
 
+    // Concentric mapping sampling from Ray Tracing Gems 16.5.1.2. Supposed to better preserve stratification across samples.
+    __inline_all__ PositionalSample2D sample_concentric_mapping(float radius, optix::float2 random_sample) {
+        float a = 2 * random_sample.x - 1;
+        float b = 2 * random_sample.y - 1;
+        if (b == 0) b = 1;
+
+        float r, phi;
+        if (a * a > b * b) {
+            r = radius * a;
+            phi = (PIf / 4) * (b / a);
+        } else {
+            r = radius * b;
+            phi = (PIf / 2) - (PIf / 4) * (a / b);
+        }
+
+        PositionalSample2D res;
+        res.position = optix::make_float2(r * cosf(phi), r * sinf(phi));
+        res.PDF = PDF(radius);
+        return res;
+    }
+
 } // NS Disk
 
 //=================================================================================================
