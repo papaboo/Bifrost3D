@@ -37,10 +37,9 @@ __inline_all__ float is_delta_light(const SpotLight& light) {
 __inline_all__ float PDF(const SpotLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
     using namespace optix;
 
-    float cos_theta = fmaxf(0, -dot(light.direction, normalize(direction_to_light)));
+    float cos_theta = fmaxf(0, -dot(light.direction, direction_to_light));
 
     if (cos_theta > 0.0f && !is_delta_light(light)) {
-        direction_to_light = normalize(direction_to_light);
         float t = Intersect::ray_disk(lit_position, direction_to_light, light.position, light.direction, light.radius);
         if (t >= 0.0f) {
             float area_PDF_to_solid_angle_PDF = (t * t) / cos_theta;
@@ -54,11 +53,11 @@ __inline_all__ float PDF(const SpotLight& light, optix::float3 lit_position, opt
 __inline_all__ optix::float3 evaluate(const SpotLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
     using namespace optix;
 
-    float cos_theta = fmaxf(0, -dot(light.direction, normalize(direction_to_light)));
+    float cos_theta = fmaxf(0, -dot(light.direction, direction_to_light));
 
     float normalization = TWO_PIf * (1 - light.cos_angle);
     if (is_delta_light(light))
-        normalization *= length_squared(direction_to_light);
+        normalization *= length_squared(light.position - lit_position);
     else
         normalization *= surface_area(light) * cos_theta;
     float3 radiance = light.power / normalization;
@@ -70,13 +69,12 @@ __inline_all__ LightSample sample_radiance(const SpotLight& light, optix::float3
     using namespace optix;
 
     if (is_delta_light(light)) {
-        optix::float3 vector_to_light = light.position - lit_position;
-
         LightSample light_sample;
-        light_sample.direction_to_light = vector_to_light;
+        light_sample.direction_to_light = light.position - lit_position;
         light_sample.distance = optix::length(light_sample.direction_to_light);
         light_sample.direction_to_light /= light_sample.distance;
-        light_sample.radiance = evaluate(light, lit_position, vector_to_light);
+
+        light_sample.radiance = evaluate(light, lit_position, light_sample.direction_to_light);
         light_sample.PDF = 1.0f;
         return light_sample;
     } else {
@@ -84,17 +82,15 @@ __inline_all__ LightSample sample_radiance(const SpotLight& light, optix::float3
         const TBN light_to_world = TBN(light.direction);
         auto disk_sample = Distributions::Disk::sample(light.radius, random_sample);
         float3 sampled_position = light.position + make_float3(disk_sample.position, 0.0f) * light_to_world;
-        optix::float3 vector_to_light = sampled_position - lit_position;
 
         // Create sample
         LightSample light_sample;
-        light_sample.direction_to_light = vector_to_light;
-        light_sample.radiance = evaluate(light, lit_position, vector_to_light);
-        light_sample.PDF = PDF(light, lit_position, vector_to_light); // TODO Inline evaluate and PDF to reuse shared computations.
-
+        light_sample.direction_to_light = sampled_position - lit_position;
         light_sample.distance = optix::length(light_sample.direction_to_light);
         light_sample.direction_to_light /= light_sample.distance;
 
+        light_sample.radiance = evaluate(light, lit_position, light_sample.direction_to_light);
+        light_sample.PDF = PDF(light, lit_position, light_sample.direction_to_light); // TODO Inline evaluate and PDF to reuse shared computations.
         return light_sample;
     }
 }

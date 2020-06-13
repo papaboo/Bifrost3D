@@ -49,7 +49,7 @@ GTEST_TEST(SpotLight, consistent_PDF_and_radiance) {
                         float PDF = LightSources::PDF(light, position, sample.direction_to_light);
                         EXPECT_FLOAT_EQ_EPS(sample.PDF, PDF, 0.0001f);
 
-                        float radiance = LightSources::evaluate(light, position, sample.direction_to_light * sample.distance).x;
+                        float radiance = LightSources::evaluate(light, position, sample.direction_to_light).x;
                         EXPECT_FLOAT_EQ_EPS(sample.radiance.x, radiance, 0.0001f);
                     }
                 }
