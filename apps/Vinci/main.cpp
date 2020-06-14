@@ -360,8 +360,7 @@ int setup_scene(Engine& engine, Options& options) {
     // Setup lightsource colocated with camera.
     SceneNode light_node = SceneNodes::create("light node", cam_transform);
     light_node.set_parent(root_node);
-    // LightSources::create_sphere_light(light_node.get_ID(), RGB(20), 0);
-    LightSources::create_directional_light(light_node.get_ID(), RGB(1));
+    LightSources::create_spot_light(light_node.get_ID(), RGB(10), 1.3f, 0.95f);
 
     // Disable screen space effects to keep the data in a linear color space.
     auto effects_settings = Cameras::get_effects_settings(camera_ID);
