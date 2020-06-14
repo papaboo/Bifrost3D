@@ -37,7 +37,7 @@ __inline_all__ float is_delta_light(const SpotLight& light) {
 __inline_all__ float PDF(const SpotLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
     using namespace optix;
 
-    float cos_theta = fmaxf(0, -dot(light.direction, direction_to_light));
+    float cos_theta = -dot(light.direction, direction_to_light);
 
     if (cos_theta > 0.0f && !is_delta_light(light)) {
         float t = Intersect::ray_disk(lit_position, direction_to_light, light.position, light.direction, light.radius);
@@ -53,7 +53,7 @@ __inline_all__ float PDF(const SpotLight& light, optix::float3 lit_position, opt
 __inline_all__ optix::float3 evaluate(const SpotLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
     using namespace optix;
 
-    float cos_theta = fmaxf(0, -dot(light.direction, direction_to_light));
+    float cos_theta = -dot(light.direction, direction_to_light);
 
     float normalization = TWO_PIf * (1 - light.cos_angle);
     if (is_delta_light(light))
@@ -74,8 +74,8 @@ __inline_all__ LightSample sample_radiance(const SpotLight& light, optix::float3
         light_sample.distance = optix::length(light_sample.direction_to_light);
         light_sample.direction_to_light /= light_sample.distance;
 
-        light_sample.radiance = evaluate(light, lit_position, light_sample.direction_to_light);
         light_sample.PDF = 1.0f;
+        light_sample.radiance = evaluate(light, lit_position, light_sample.direction_to_light);
         return light_sample;
     } else {
         // Sample disk and transform to world space.
@@ -89,8 +89,11 @@ __inline_all__ LightSample sample_radiance(const SpotLight& light, optix::float3
         light_sample.distance = optix::length(light_sample.direction_to_light);
         light_sample.direction_to_light /= light_sample.distance;
 
+        float cos_theta = -dot(light.direction, light_sample.direction_to_light);
+        float area_PDF_to_solid_angle_PDF = pow2(light_sample.distance) / cos_theta;
+        light_sample.PDF = Distributions::Disk::PDF(light.radius) * area_PDF_to_solid_angle_PDF;
+
         light_sample.radiance = evaluate(light, lit_position, light_sample.direction_to_light);
-        light_sample.PDF = PDF(light, lit_position, light_sample.direction_to_light); // TODO Inline evaluate and PDF to reuse shared computations.
         return light_sample;
     }
 }
