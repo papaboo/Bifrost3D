@@ -154,20 +154,28 @@ struct R11G11B10_Float {
         // See Jeroen van der Zijp's Fast Half Float Conversions, http://www.fox-toolkit.org/ftp/fasthalffloatconversion.pdf
         // The memory layout is confusingly [B10, G11, R11]. Go figure.
 
-        half_float::detail::uint16 biased_blue_raw = half(b).raw() & 0x7FE0;
+        using namespace Bifrost::Math;
+
+        static auto to_bitpattern = [](half v) -> detail::uint16 {
+            detail::uint16 bitpattern;
+            memcpy(&bitpattern, &v, sizeof(v));
+            return bitpattern;
+        };
+
+        auto biased_blue_raw = to_bitpattern(half(b)) & 0x7FE0;
         half biased_blue;
-        memcpy(&biased_blue, &biased_blue_raw, sizeof(half));
-        unsigned int blue = (half_float::half(2 * b - biased_blue).raw() & 0x7FE0) << 17;
+        memcpy(&biased_blue, &biased_blue_raw, sizeof(biased_blue));
+        unsigned int blue = (to_bitpattern(half(2 * b - biased_blue)) & 0x7FE0) << 17;
 
-        half_float::detail::uint16 biased_green_raw = half(g).raw() & 0x7FF0;
+        auto biased_green_raw = to_bitpattern(half(g)) & 0x7FF0;
         half biased_green;
-        memcpy(&biased_green, &biased_green_raw, sizeof(half));
-        unsigned int green = (half_float::half(2 * g - biased_green).raw() & 0x7FF0) << 7;
+        memcpy(&biased_green, &biased_green_raw, sizeof(biased_green));
+        unsigned int green = (to_bitpattern(half(2 * g - biased_green)) & 0x7FF0) << 7;
 
-        half_float::detail::uint16 biased_red_raw = half(r).raw() & 0x7FF0;
+        auto biased_red_raw = to_bitpattern(half(r)) & 0x7FF0;
         half biased_red;
-        memcpy(&biased_red, &biased_red_raw, sizeof(half));
-        unsigned int red = (half_float::half(2 * r - biased_red).raw() & 0x7FF0) >> 4;
+        memcpy(&biased_red, &biased_red_raw, sizeof(biased_red));
+        unsigned int red = (to_bitpattern(half(2 * r - biased_red)) & 0x7FF0) >> 4;
 
         raw = red | green | blue;
     }

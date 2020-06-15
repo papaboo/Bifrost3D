@@ -89,7 +89,7 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
     // Image with one element in each bucket.
     half4 pixels[bin_count];
     for (int i = 0; i < bin_count; ++i) {
-        half g = half(exp2(lerp(min_log_luminance, max_log_luminance, (i + 0.5f) / bin_count)));
+        half g = half(exp2(lerp(min_log_luminance, max_log_luminance, (i + 0.49f) / bin_count)));
         pixels[i] = { g, g, g, half(1.0f) };
     }
     OShaderResourceView pixel_SRV;
@@ -99,7 +99,7 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
 
     OResource histogram_resource;
     histogram_SRV->GetResource(&histogram_resource);
-    std::vector<unsigned int> cpu_histogram; cpu_histogram.resize(bin_count);
+    std::vector<unsigned int> cpu_histogram(bin_count);
     Readback::buffer(device, context, (ID3D11Buffer*)histogram_resource.get(), cpu_histogram.begin(), cpu_histogram.end());
 
     for (int bin = 0; bin < cpu_histogram.size(); ++bin)
@@ -127,8 +127,8 @@ TEST_F(ExposureHistogramFixture, small_image) {
     const int element_count = width * height;
     half4 pixels[element_count];
     for (int x = 0; x < width; ++x) {
-        half g1 = half(exp2(lerp(min_log_luminance, max_log_luminance, (x + 0.5f) / bin_count)));
-        half g2 = half(exp2(lerp(min_log_luminance, max_log_luminance, 1.0f - (x + 0.5f) / bin_count)));
+        half g1 = half(exp2(lerp(min_log_luminance, max_log_luminance, (x + 0.49f) / bin_count)));
+        half g2 = half(exp2(lerp(min_log_luminance, max_log_luminance, 1.0f - (x + 0.51f) / bin_count)));
         float min_luminance = exp2(min_log_luminance) * 0.5f;
         pixels[x + 0 * width] = half4(Vector4f(min_luminance, min_luminance, min_luminance, 1.0f));
         pixels[x + 1 * width] = half4(g1, g1, g1, half(1.0f));
@@ -145,7 +145,7 @@ TEST_F(ExposureHistogramFixture, small_image) {
 
     OResource histogram_resource;
     histogram_SRV->GetResource(&histogram_resource);
-    std::vector<unsigned int> cpu_histogram; cpu_histogram.resize(bin_count);
+    std::vector<unsigned int> cpu_histogram(bin_count);
     Readback::buffer(device, context, (ID3D11Buffer*)histogram_resource.get(), cpu_histogram.begin(), cpu_histogram.end());
 
     EXPECT_EQ(4 + width, cpu_histogram[0]);

@@ -8,6 +8,8 @@
 
 #include <Bifrost/Scene/LightSource.h>
 
+using namespace Bifrost::Math;
+
 namespace Bifrost {
 namespace Scene {
 
