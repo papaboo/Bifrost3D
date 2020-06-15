@@ -99,7 +99,7 @@ bool write(Image image, const std::string& path) {
                 unsigned char* pixel_data = data + data_index * channel_count;
                 RGBA pixel = image.get_pixel(Vector2ui(x, y));
                 for (int c = 0; c < channel_count; ++c) {
-                    float channel_intensity = c != 3 ? pow(pixel[c], gamma) : pixel[c]; // Gamme correct colors but leave alpha as linear.
+                    float channel_intensity = c != 3 ? pow(pixel[c], gamma) : pixel[c]; // Gamma correct colors but leave alpha as linear.
                     pixel_data[c] = unsigned char(clamp(channel_intensity, 0.0f, 1.0f) * 255 + 0.5f);
                 }
             }
