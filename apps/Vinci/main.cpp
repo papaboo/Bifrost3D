@@ -357,17 +357,13 @@ int setup_scene(Engine& engine, Options& options) {
     cam_transform.look_at(scene_bounds.center());
     Cameras::set_transform(camera_ID, cam_transform);
 
+    // Disable screen space effects to keep the data in a linear color space.
+    Cameras::set_effects_settings(camera_ID, CameraEffects::Settings::linear());
+
     // Setup lightsource colocated with camera.
     SceneNode light_node = SceneNodes::create("light node", cam_transform);
     light_node.set_parent(root_node);
     LightSources::create_spot_light(light_node.get_ID(), RGB(10), 1.3f, 0.95f);
-
-    // Disable screen space effects to keep the data in a linear color space.
-    auto effects_settings = Cameras::get_effects_settings(camera_ID);
-    effects_settings.exposure.mode = CameraEffects::ExposureMode::Fixed;
-    effects_settings.tonemapping.mode = CameraEffects::TonemappingMode::Linear;
-    effects_settings.vignette = 0.0f;
-    Cameras::set_effects_settings(camera_ID, effects_settings);
 
     Navigation* camera_navigation = new Navigation(camera_ID, camera_velocity);
     engine.add_mutating_callback([=, &engine] { camera_navigation->navigate(engine); });

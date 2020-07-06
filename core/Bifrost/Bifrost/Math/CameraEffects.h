@@ -108,6 +108,30 @@ struct Settings final {
 
         return res;
     }
+
+    // Output linear colors without any exposure, vignetting or other screen space effects.
+    static Settings linear() {
+        Settings res;
+        res.exposure.mode = ExposureMode::Fixed;
+        res.exposure.min_log_luminance = -4;
+        res.exposure.max_log_luminance = 4;
+        res.exposure.min_histogram_percentage = 0.7f;
+        res.exposure.max_histogram_percentage = 0.95f;
+        res.exposure.log_lumiance_bias = 0;
+        res.exposure.eye_adaptation_enabled = false;
+        res.exposure.eye_adaptation_brightness = INFINITY;
+        res.exposure.eye_adaptation_darkness = INFINITY;
+
+        res.bloom.threshold = INFINITY;
+        res.bloom.support = 0.00f;
+
+        res.vignette = 0.0f;
+
+        res.tonemapping.mode = TonemappingMode::Linear;
+        res.tonemapping.filmic = FilmicSettings::default();
+
+        return res;
+    }
 };
 
 
