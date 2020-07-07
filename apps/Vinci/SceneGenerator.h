@@ -17,6 +17,7 @@
 #include <Bifrost/Math/Color.h>
 #include <Bifrost/Math/Constants.h>
 #include <Bifrost/Math/RNG.h>
+#include <Bifrost/Scene/Camera.h>
 #include <Bifrost/Scene/SceneNode.h>
 
 #include <vector>
@@ -29,8 +30,8 @@ using namespace Bifrost::Scene;
 
 class RandomScene {
 public:
-    RandomScene(int seed, const std::string& texture_directory) 
-    : m_seed(seed), m_textures(TextureManager(texture_directory)), m_root_node(SceneNodes::create("root node")) {
+    RandomScene(int seed, Cameras::UID camera_ID, std::string& texture_directory) 
+    : m_seed(seed), m_camera_ID(camera_ID), m_textures(TextureManager(texture_directory)), m_root_node(SceneNodes::create("root node")) {
         new_scene();
     }
 
@@ -84,6 +85,8 @@ private:
 
     unsigned int m_seed;
 
+    Cameras::UID m_camera_ID;
+
     // Collections of objects in the scene.
     TextureManager m_textures;
     SceneNode m_root_node;
@@ -93,8 +96,15 @@ private:
     std::vector<MeshModel> m_mesh_models;
 
     SceneNode generate_scene_node(RNG::LinearCongruential& rng, Mesh mesh) {
+
+        // Generate random position in front of the camera
+        auto bounds = mesh.get_bounds();
+        float radius = magnitude(bounds.center() - bounds.minimum);
+        Ray ray = CameraUtils::ray_from_viewport_point(m_camera_ID, rng.sample2f());
+        float t = radius + 3 * rng.sample1f() * radius;
+        Vector3f translation = ray.position_at(t);
+
         // Generate random transform
-        Vector3f translation = rng.sample3f() * 2 - 1;
         Vector3f axis = normalize(rng.sample3f() * 2 - 1);
         Quaternionf rotation = Quaternionf::from_angle_axis(rng.sample1f() * 2 * PI<float>(), axis);
         Transform transform = Transform(translation, rotation);

@@ -314,6 +314,18 @@ int setup_scene(Engine& engine, Options& options) {
     SceneRoot scene_root = SceneRoots::create("Model scene", options.environment_map.get_ID(), options.environment_tint);
     SceneNode root_node = scene_root.get_root_node();
 
+    // Setup camera
+    Matrix4x4f perspective_matrix, inverse_perspective_matrix;
+    float near = 0.3f;
+    float far = 100;
+    float field_of_view = PI<float>() / 4.0f;
+    CameraUtils::compute_perspective_projection(near, far, field_of_view, engine.get_window().get_aspect_ratio(),
+        perspective_matrix, inverse_perspective_matrix);
+    Cameras::UID camera_ID = Cameras::create("Camera", scene_root.get_ID(), perspective_matrix, inverse_perspective_matrix);
+    Transform cam_transform = Cameras::get_transform(camera_ID);
+    // Disable screen space effects to keep the data in a linear color space.
+    Cameras::set_effects_settings(camera_ID, CameraEffects::Settings::linear());
+
     // Generate scene
     if (!options.scene.empty()) {
         printf("Loading scene: '%s'\n", options.scene.c_str());
@@ -325,7 +337,7 @@ int setup_scene(Engine& engine, Options& options) {
         scene_root.set_parent(root_node);
     } else {
         // Generate random scene primitives
-        g_random_scene = new SceneGenerator::RandomScene(options.random_seed, options.texture_directory);
+        g_random_scene = new SceneGenerator::RandomScene(options.random_seed, camera_ID, options.texture_directory);
         g_random_scene->get_root_node().set_parent(root_node);
 
         auto* scene_refresher = new SceneRefresher(*g_random_scene);
@@ -343,28 +355,12 @@ int setup_scene(Engine& engine, Options& options) {
     }
     float scene_size = magnitude(scene_bounds.size());
 
-    // Setup camera
-    Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-    float near = scene_size / 10000.0f;
-    float far = scene_size * 3.0f;
-    float field_of_view = PI<float>() / 4.0f;
-    CameraUtils::compute_perspective_projection(near, far, field_of_view, engine.get_window().get_aspect_ratio(),
-        perspective_matrix, inverse_perspective_matrix);
-    Cameras::UID camera_ID = Cameras::create("Camera", scene_root.get_ID(), perspective_matrix, inverse_perspective_matrix);
-    float camera_velocity = scene_size * 0.1f;
-    Transform cam_transform = Cameras::get_transform(camera_ID);
-    cam_transform.translation = scene_bounds.center() + scene_bounds.size() * 0.5f;
-    cam_transform.look_at(scene_bounds.center());
-    Cameras::set_transform(camera_ID, cam_transform);
-
-    // Disable screen space effects to keep the data in a linear color space.
-    Cameras::set_effects_settings(camera_ID, CameraEffects::Settings::linear());
-
     // Setup lightsource colocated with camera.
     SceneNode light_node = SceneNodes::create("light node", cam_transform);
     light_node.set_parent(root_node);
     LightSources::create_spot_light(light_node.get_ID(), RGB(10), 1.3f, 0.95f);
 
+    float camera_velocity = 0.3f;
     Navigation* camera_navigation = new Navigation(camera_ID, camera_velocity);
     engine.add_mutating_callback([=, &engine] { camera_navigation->navigate(engine); });
 
