@@ -139,7 +139,7 @@ Meshes::UID cube(unsigned int quads_pr_edge, Vector3f scaling, MeshFlags buffer_
                                        j + 1 + (i + 1) * verts_pr_edge) + side_offset;
             }
 
-    mesh.set_bounds(AABB(Vector3f(-halfsize), Vector3f(halfsize)));
+    mesh.set_bounds(AABB(Vector3f(-halfsize) * scaling, Vector3f(halfsize) * scaling));
 
     return mesh.get_ID();
 }
