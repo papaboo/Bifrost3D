@@ -45,6 +45,17 @@ __constant__ float2 pmj_offsets[81] = {
 };
 #endif
 
+__inline_dev__ optix::float3 project_ray_direction(optix::float2 viewport_pos,
+    const optix::Matrix4x4& inverted_rotated_projection_matrix) {
+    using namespace optix;
+
+    float4 NDC_near_pos = make_float4(viewport_pos.x * 2.0f - 1.0f, viewport_pos.y * 2.0f - 1.0f, -1.0f, 1.0f);
+
+    float4 scaled_world_pos = inverted_rotated_projection_matrix * NDC_near_pos;
+    float3 projected_world_pos = make_float3(scaled_world_pos) / scaled_world_pos.w;
+    return projected_world_pos;
+}
+
 __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, int image_width, int image_height,
     int accumulation_count, optix::float3 camera_position, const optix::Matrix4x4& inverted_rotated_projection_matrix) {
     using namespace optix;
@@ -85,8 +96,9 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     RNG::LinearCongruential rng; rng.seed(__brev(RNG::teschner_hash(x, y, accumulation_count)));
     float2 screen_pos = make_float2(x, y) + (accumulation_count == 0 ? make_float2(0.5f) : rng.sample2f());
     float2 viewport_pos = make_float2(screen_pos.x / float(image_width), screen_pos.y / float(image_height));
-    payload.position = camera_position;
     payload.direction = project_ray_direction(viewport_pos, inverted_rotated_projection_matrix);
+    payload.position = camera_position + payload.direction; // Position on nearplane
+    payload.direction = normalize(payload.direction);
     return payload;
 }
 

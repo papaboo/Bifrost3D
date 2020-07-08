@@ -19,18 +19,6 @@
 
 namespace OptiXRenderer {
 
-__inline_dev__ optix::float3 project_ray_direction(optix::float2 viewport_pos, 
-                                                   const optix::Matrix4x4& inverted_rotated_projection_matrix) {
-    using namespace optix;
-
-    float4 normalized_projected_pos = make_float4(viewport_pos.x * 2.0f - 1.0f,
-                                                  viewport_pos.y * 2.0f - 1.0f,
-                                                  -1.0f, 1.0f);
-
-    float3 projected_world_pos = make_float3(inverted_rotated_projection_matrix * normalized_projected_pos);
-    return normalize(projected_world_pos);
-}
-
 // Computes a tangent and bitangent that together with the normal creates an orthonormal bases.
 // Building an Orthonormal Basis, Revisited, Duff et al.
 // http://jcgt.org/published/0006/01/01/paper.pdf
