@@ -34,11 +34,12 @@ Meshes::UID plane(unsigned int quads_pr_edge, MeshFlags buffer_bitmask) {
     float tc_normalizer = 1.0f / quads_pr_edge;
     for (unsigned int z = 0; z < size; ++z) {
         for (unsigned int x = 0; x < size; ++x) {
-            mesh.get_positions()[z * size + x] = Vector3f(x - quads_pr_edge * 0.5f, 0.0f, z - quads_pr_edge * 0.5f);
+            Vector2f texcoord = Vector2f(float(x), float(z)) * tc_normalizer;
+            mesh.get_positions()[z * size + x] = Vector3f(texcoord.x - 0.5f, 0.0f, texcoord.y - 0.5f);
             if (mesh.get_normals() != nullptr)
                 mesh.get_normals()[z * size + x] = Vector3f(0.0f, 1.0f, 0.0f);
             if (mesh.get_texcoords() != nullptr)
-                mesh.get_texcoords()[z * size + x] = Vector2f(float(x), float(z)) * tc_normalizer;
+                mesh.get_texcoords()[z * size + x] = texcoord;
         }
     }
 
