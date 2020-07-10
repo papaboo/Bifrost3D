@@ -113,7 +113,7 @@ public:
         destroy_texture_assets(m_opacity);
     }
 
-    inline Bifrost::Assets::Materials::UID generate_random_material(Bifrost::Math::RNG::LinearCongruential& rng) const {
+    inline Bifrost::Assets::Materials::UID generate_random_material(Bifrost::Math::RNG::XorShift32& rng) const {
         using namespace Bifrost::Assets;
 
         auto tint = Bifrost::Math::RGB(rng.sample1f(), rng.sample1f(), rng.sample1f());

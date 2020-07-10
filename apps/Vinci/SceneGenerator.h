@@ -29,6 +29,8 @@ using namespace Bifrost::Math;
 using namespace Bifrost::Scene;
 
 class RandomScene {
+private:
+    typedef RNG::XorShift32 NumberGenerator;
 public:
     RandomScene(int seed, Cameras::UID camera_ID, std::string& texture_directory) 
     : m_seed(seed), m_camera_ID(camera_ID), m_textures(TextureManager(texture_directory)), m_root_node(SceneNodes::create("root node")) {
@@ -42,20 +44,49 @@ public:
     void new_scene() {
         clear_scene();
 
-        auto rng = RNG::LinearCongruential(m_seed);
-        int node_count = 4 + int(rng.sample1f() * 44);
+        auto rng = NumberGenerator(m_seed);
+        int node_count = 40 + int(rng.sample1f() * 88);
 
-        typedef Mesh(*MeshGenerator)(RNG::LinearCongruential&);
+        typedef Mesh(*MeshGenerator)(NumberGenerator&);
         int mesh_generator_count = 4;
         MeshGenerator mesh_generators[] = { generate_cube, generate_cylinder, generate_sphere, generate_torus };
 
-        m_root_node = SceneNodes::create("root node");
         for (int n = 0; n < node_count; ++n) {
             auto mesh_generator = mesh_generators[rng.sample1ui() % mesh_generator_count];
             Mesh mesh = mesh_generator(rng);
             m_meshes.push_back(mesh);
             SceneNode node = generate_scene_node(rng, mesh);
             node.set_parent(m_root_node);
+        }
+
+        // Background heightmap
+        if (true || rng.sample1f() < 0.5f) {
+            Mesh mesh = generate_heightmap(rng);
+            scale_mesh(mesh, Vector3f(40, 1, 40)); // TODO Fit to cover camera and somewhat outside the bounds.
+            m_meshes.push_back(mesh);
+
+            // Generate random position in front of the camera
+            auto bounds = mesh.get_bounds();
+            float radius = magnitude(bounds.center() - bounds.minimum);
+            float t = radius + 3 * rng.sample1f() * radius;
+            Ray ray = CameraUtils::ray_from_viewport_point(m_camera_ID, Vector2f(0.5f));
+            Vector3f translation = ray.position_at(t);
+
+            // Generate random transform
+            Quaternionf rotation = Quaternionf::from_angle_axis(PI<float>() * 0.5f, Vector3f::right());
+            Transform transform = Transform(translation, rotation);
+
+            // Generate random material
+            auto material_ID = m_textures.generate_random_material(rng);
+            m_materials.push_back(material_ID);
+
+            // Assemble in scene node.
+            SceneNodes::UID node_ID = SceneNodes::create("Heightmap", transform);
+            m_nodes.push_back(node_ID);
+            auto mesh_model = MeshModels::create(node_ID, mesh.get_ID(), material_ID);
+            m_mesh_models.push_back(mesh_model);
+
+            SceneNodes::set_parent(node_ID, m_root_node.get_ID());
         }
 
         m_seed = rng.get_seed();
@@ -95,12 +126,12 @@ private:
     std::vector<SceneNode> m_nodes;
     std::vector<MeshModel> m_mesh_models;
 
-    SceneNode generate_scene_node(RNG::LinearCongruential& rng, Mesh mesh) {
+    SceneNode generate_scene_node(NumberGenerator& rng, Mesh mesh) {
 
         // Generate random position in front of the camera
         auto bounds = mesh.get_bounds();
         float radius = magnitude(bounds.center() - bounds.minimum);
-        Ray ray = CameraUtils::ray_from_viewport_point(m_camera_ID, rng.sample2f());
+        Ray ray = CameraUtils::ray_from_viewport_point(m_camera_ID, rng.sample2f() * 2 - 0.5f);
         float t = radius + 3 * rng.sample1f() * radius;
         Vector3f translation = ray.position_at(t);
 
@@ -122,36 +153,93 @@ private:
         return node_ID;
     }
 
-    static Mesh generate_cube(RNG::LinearCongruential& rng) {
+    static Mesh generate_cube(NumberGenerator& rng) {
         Vector3f scaling = rng.sample3f() * 1.5f + 0.5f;
         return MeshCreation::cube(1, scaling);
     }
 
-    static Mesh generate_cylinder(RNG::LinearCongruential& rng) {
-        Mesh cylinder = MeshCreation::cylinder(1, 128);
+    static Mesh generate_cylinder(NumberGenerator& rng) {
+        MeshFlags flags = MeshFlag::AllBuffers;
+        int resolution = 128;
+
+        bool hard_normals = rng.sample1f() < 0.3f;
+        if (hard_normals) {
+            resolution = int(resolution * (0.2f + 0.8f * rng.sample1f()));
+            flags ^= MeshFlag::Normal;
+        }
+
+        Mesh cylinder = MeshCreation::cylinder(resolution / 8, resolution, flags);
         return scale_mesh(cylinder, rng);
     }
 
-    static Mesh generate_sphere(RNG::LinearCongruential& rng) {
-        Mesh sphere = MeshCreation::revolved_sphere(128, 128);
+    static Mesh generate_sphere(NumberGenerator& rng) {
+        MeshFlags flags = MeshFlag::AllBuffers;
+        int resolution = 128;
+
+        bool hard_normals = rng.sample1f() < 0.3f;
+        if (hard_normals) {
+            resolution = int(resolution * (0.2f + 0.8f * rng.sample1f()));
+            flags ^= MeshFlag::Normal;
+        }
+
+        Mesh sphere = MeshCreation::revolved_sphere(resolution, resolution, flags);
         return scale_mesh(sphere, rng);
     }
 
-    static Mesh generate_torus(RNG::LinearCongruential& rng) {
-        Mesh torus = MeshCreation::torus(128, 128, 0.01f + 2.0f * rng.sample1f());
+    static Mesh generate_torus(NumberGenerator& rng) {
+        MeshFlags flags = MeshFlag::AllBuffers;
+        int resolution = 128;
+
+        bool hard_normals = rng.sample1f() < 0.3f;
+        if (hard_normals) {
+            resolution = int(resolution * (0.2f + 0.8f * rng.sample1f()));
+            flags ^= MeshFlag::Normal;
+        }
+
+        Mesh torus = MeshCreation::torus(resolution, resolution, 0.01f + 2.0f * rng.sample1f(), flags);
         return scale_mesh(torus, rng);
+    }
+
+    static Mesh generate_heightmap(NumberGenerator& rng) {
+        Mesh heightmap = MeshCreation::plane(128);
+        auto position_itr = heightmap.get_position_iterable();
+
+        // Apply sinus noise to the heightmap
+        float two_pi = 2 * PI<float>();
+        int wave_count = 7 + int(rng.sample1f() * 7);
+        for (int i = 0; i < wave_count; ++i) {
+            Vector2f amplitude = 0.4f * rng.sample2f();
+            Vector2f frequency = Vector2f(amplitude) / rng.sample2f();
+            Vector2f offset = rng.sample2f();
+            
+            for (auto& position : position_itr) {
+                float sin_x = amplitude.x * sinf((position.x + offset.x) * frequency.x);
+                float sin_y = amplitude.y * sinf((position.z + offset.y) * frequency.y);
+                position.y += sin_x + sin_y;
+            }
+        }
+
+        MeshUtils::compute_normals(heightmap.get_ID());
+
+        auto bounds = AABB::invalid();
+        for (auto& position : position_itr)
+            bounds.grow_to_contain(position);
+        heightmap.set_bounds(bounds);
+
+        return heightmap;
     }
 
     // --------------------------------------------------------------------------------------------
     // Mesh modifications
     // --------------------------------------------------------------------------------------------
 
-    static Mesh scale_mesh(Mesh mesh, RNG::LinearCongruential& rng) {
-        Vector3f scaling = rng.sample3f() * 1.5f + 0.5f;
+    static Mesh scale_mesh(Mesh mesh, Vector3f scaling) {
         Vector3f* positions = mesh.get_positions();
         for (unsigned int i = 0; i < mesh.get_vertex_count(); ++i)
             positions[i] *= scaling;
-        MeshUtils::compute_normals(mesh.get_ID());
+
+        if (mesh.get_normals() != nullptr)
+            MeshUtils::compute_normals(mesh.get_ID());
 
         AABB bounds = mesh.get_bounds();
         bounds.minimum *= scaling;
@@ -159,6 +247,11 @@ private:
         mesh.set_bounds(bounds);
 
         return mesh;
+    }
+
+    static Mesh scale_mesh(Mesh mesh, NumberGenerator& rng) {
+        Vector3f scaling = rng.sample3f() * 9.5f + 0.5f;
+        return scale_mesh(mesh, scaling);
     }
 };
 
