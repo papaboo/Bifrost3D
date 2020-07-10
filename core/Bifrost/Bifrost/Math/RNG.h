@@ -120,6 +120,30 @@ public:
     __always_inline__ Vector3f sample3f() { return Vector3f(sample1f(), sample1f(), sample1f()); }
 };
 
+// ------------------------------------------------------------------------------------------------
+// Xor shift random number generator
+// https://en.wikipedia.org/wiki/Xorshift
+// ------------------------------------------------------------------------------------------------
+struct XorShift32 final {
+    unsigned int m_state;
+
+    explicit XorShift32(unsigned int seed) : m_state(seed) { }
+
+    __always_inline__ void seed(unsigned int seed) { m_state = seed; }
+    __always_inline__ unsigned int get_seed() const { return m_state; }
+
+    __always_inline__ unsigned int sample1ui() {
+        m_state ^= m_state << 13;
+        m_state ^= m_state >> 17;
+        m_state ^= m_state << 5;
+        return m_state;
+    }
+
+    __always_inline__ float sample1f() { return float(sample1ui()) * uint_normalizer; }
+    __always_inline__ Vector2f sample2f() { return Vector2f(sample1f(), sample1f()); }
+    __always_inline__ Vector3f sample3f() { return Vector3f(sample1f(), sample1f(), sample1f()); }
+};
+
 } // NS RNG
 } // NS Math
 } // NS Bifrost
