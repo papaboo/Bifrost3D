@@ -316,9 +316,10 @@ int setup_scene(Engine& engine, Options& options) {
 
     // Setup camera
     Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-    float near = 0.3f;
-    float far = 100;
-    float field_of_view = PI<float>() / 4.0f;
+    float near = 43.180657f;
+    float far = 1000;
+    float cos_field_of_view = 0.9853505f;
+    float field_of_view = acos(cos_field_of_view);
     CameraUtils::compute_perspective_projection(near, far, field_of_view, engine.get_window().get_aspect_ratio(),
         perspective_matrix, inverse_perspective_matrix);
     Cameras::UID camera_ID = Cameras::create("Camera", scene_root.get_ID(), perspective_matrix, inverse_perspective_matrix);
@@ -356,11 +357,13 @@ int setup_scene(Engine& engine, Options& options) {
     float scene_size = magnitude(scene_bounds.size());
 
     // Setup lightsource colocated with camera.
-    SceneNode light_node = SceneNodes::create("light node", cam_transform);
+    Transform light_transform = cam_transform;
+    light_transform.translation += cam_transform.rotation.forward() * 7.887667f;
+    SceneNode light_node = SceneNodes::create("light node", light_transform);
     light_node.set_parent(root_node);
-    LightSources::create_spot_light(light_node.get_ID(), RGB(10), 1.3f, 0.95f);
+    LightSources::create_spot_light(light_node.get_ID(), RGB(1000), 0.75f, cos_field_of_view);
 
-    float camera_velocity = 0.3f;
+    float camera_velocity = 5.0f;
     Navigation* camera_navigation = new Navigation(camera_ID, camera_velocity);
     engine.add_mutating_callback([=, &engine] { camera_navigation->navigate(engine); });
 
@@ -426,15 +429,15 @@ int main(int argc, char** argv) {
 
     // Initialize mini heaps
     Cameras::allocate(1u);
-    Images::allocate(8u);
-    LightSources::allocate(8u);
-    Materials::allocate(8u);
-    Meshes::allocate(8u);
-    MeshModels::allocate(8u);
+    Images::allocate(128u);
+    LightSources::allocate(2u);
+    Materials::allocate(128u);
+    Meshes::allocate(128u);
+    MeshModels::allocate(128u);
     Renderers::allocate(2u);
-    SceneNodes::allocate(8u);
+    SceneNodes::allocate(128u);
     SceneRoots::allocate(1u);
-    Textures::allocate(8u);
+    Textures::allocate(128u);
 
     g_options = Options::parse(argc, argv);
 
