@@ -333,7 +333,7 @@ int setup_scene(Engine& engine, Options& options) {
 
     // Setup camera
     Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-    float near = 43.180657f;
+    float near = 7.887667f; // 43.180657f;
     float far = 1000;
     float cos_field_of_view = 0.9853505f;
     float field_of_view = acos(cos_field_of_view);
@@ -395,7 +395,7 @@ int setup_scene(Engine& engine, Options& options) {
 
     // Setup lightsource colocated with camera.
     Transform light_transform = cam_transform;
-    light_transform.translation += cam_transform.rotation.forward() * 7.887667f;
+    light_transform.translation += cam_transform.rotation.forward() * near * 0.999f;
     SceneNode light_node = SceneNodes::create("light node", light_transform);
     light_node.set_parent(root_node);
     LightSources::create_spot_light(light_node.get_ID(), RGB(1000), 0.75f, cos_field_of_view);
