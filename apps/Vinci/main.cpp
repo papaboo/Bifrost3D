@@ -7,6 +7,7 @@
 // ------------------------------------------------------------------------------------------------
 
 #include <SceneGenerator.h>
+#include <SceneSampler.h>
 
 #include <Bifrost/Assets/Mesh.h>
 #include <Bifrost/Assets/MeshModel.h>
@@ -214,22 +215,36 @@ private:
 class SceneRefresher final {
 public:
 
-    SceneRefresher(SceneGenerator::RandomScene& scene)
-        : m_scene(scene) {}
+    SceneRefresher(SceneGenerator::RandomScene& scene, Cameras::UID camera_ID)
+        : m_random_scene(&scene), m_scene_sampler(nullptr), m_camera_ID(camera_ID) {}
 
-    void refresh(Engine& engine) {
-        if (engine.get_keyboard()->was_pressed(Keyboard::Key::N))
-            m_scene.new_scene();
+    SceneRefresher(SceneSampler& scene, Cameras::UID camera_ID)
+        : m_random_scene(nullptr), m_scene_sampler(&scene), m_camera_ID(camera_ID) {}
+
+    void refresh() {
+        if (m_random_scene != nullptr)
+            m_random_scene->new_scene();
+        else {
+            Transform camera_transform = m_scene_sampler->sample_world_transform();
+
+            // Move camera backwards such that the focus point is in front on the nearplane.
+            Vector3f forward = camera_transform.rotation.forward();
+            camera_transform.translation -= forward * 50.0f; // TODO Randomize between near plane (find by projection) and 22 units further out
+
+            Cameras::set_transform(m_camera_ID, camera_transform);
+        }
     }
 
 private:
-    SceneGenerator::RandomScene& m_scene;
+    SceneGenerator::RandomScene* m_random_scene;
+    SceneSampler* m_scene_sampler;
+    Cameras::UID m_camera_ID;
 };
 
 class DataGeneration final {
 public:
-    DataGeneration(SceneGenerator::RandomScene& scene, Navigation& camera_navigation, const fs::path& output_directory, int max_iterations = 256)
-        : m_scene(scene), m_camera_navigation(camera_navigation), m_output_directory(output_directory), m_iteration(0), m_max_iterations(max_iterations) {
+    DataGeneration(SceneRefresher& scene_refresher, Navigation& camera_navigation, const fs::path& output_directory, int max_iterations = 256)
+        : m_scene_refresher(&scene_refresher), m_camera_navigation(camera_navigation), m_output_directory(output_directory), m_iteration(0), m_max_iterations(max_iterations) {
         queue_screenshot();
     }
 
@@ -266,13 +281,14 @@ public:
             engine.request_quit();
 
         if (screenshot_resolved) {
-            m_scene.new_scene();
+            m_scene_refresher->refresh();
             queue_screenshot();
         }
     }
 
 private:
-    SceneGenerator::RandomScene& m_scene;
+    SceneRefresher* m_scene_refresher;
+
     Navigation& m_camera_navigation;
     const fs::path& m_output_directory;
     int m_iteration;
@@ -295,6 +311,7 @@ Options g_options;
 
 DX11Renderer::Compositor* g_compositor = nullptr;
 DX11OptiXAdaptor::Adaptor* g_optix_adaptor = nullptr;
+SceneSampler* g_scene_sampler = nullptr;
 SceneGenerator::RandomScene* g_random_scene = nullptr;
 
 static inline void miniheaps_cleanup_callback() {
@@ -328,22 +345,42 @@ int setup_scene(Engine& engine, Options& options) {
     Cameras::set_effects_settings(camera_ID, CameraEffects::Settings::linear());
 
     // Generate scene
+    SceneRefresher* scene_refresher = nullptr;
+    float camera_velocity = 5.0f;
     if (!options.scene.empty()) {
         printf("Loading scene: '%s'\n", options.scene.c_str());
-        SceneNode scene_root;
+        SceneNode loaded_scene_root;
         if (ObjLoader::file_supported(options.scene))
-            scene_root = ObjLoader::load(options.scene, load_image);
+            loaded_scene_root = ObjLoader::load(options.scene, load_image);
         else if (glTFLoader::file_supported(options.scene))
-            scene_root = glTFLoader::load(options.scene);
-        scene_root.set_parent(root_node);
+            loaded_scene_root = glTFLoader::load(options.scene);
+        loaded_scene_root.set_parent(root_node);
+
+        g_scene_sampler = new SceneSampler(scene_root, options.random_seed);
+        scene_refresher = new SceneRefresher(*g_scene_sampler, camera_ID);
+
+        // Rough approximation of the scene bounds using bounding spheres for the geometry.
+        AABB scene_bounds = AABB::invalid();
+        for (MeshModel model : MeshModels::get_iterable()) {
+            AABB mesh_aabb = model.get_mesh().get_bounds();
+            Transform transform = model.get_scene_node().get_global_transform();
+            Vector3f bounding_sphere_center = transform * mesh_aabb.center();
+            float bounding_sphere_radius = magnitude(mesh_aabb.size()) * 0.5f;
+            AABB global_mesh_aabb = AABB(bounding_sphere_center - bounding_sphere_radius, bounding_sphere_center + bounding_sphere_radius);
+            scene_bounds.grow_to_contain(global_mesh_aabb);
+        }
+        camera_velocity = 0.1f * magnitude(scene_bounds.size());
     } else {
         // Generate random scene primitives
         g_random_scene = new SceneGenerator::RandomScene(options.random_seed, camera_ID, options.texture_directory);
         g_random_scene->get_root_node().set_parent(root_node);
 
-        auto* scene_refresher = new SceneRefresher(*g_random_scene);
-        engine.add_mutating_callback([=, &engine] { scene_refresher->refresh(engine); });
+        scene_refresher = new SceneRefresher(*g_random_scene, camera_ID);
     }
+    engine.add_mutating_callback([=, &engine] {
+        if (engine.get_keyboard()->was_pressed(Keyboard::Key::N))
+            scene_refresher->refresh();
+        });
 
     AABB scene_bounds = AABB::invalid();
     for (MeshModel model : MeshModels::get_iterable()) {
@@ -363,7 +400,6 @@ int setup_scene(Engine& engine, Options& options) {
     light_node.set_parent(root_node);
     LightSources::create_spot_light(light_node.get_ID(), RGB(1000), 0.75f, cos_field_of_view);
 
-    float camera_velocity = 5.0f;
     Navigation* camera_navigation = new Navigation(camera_ID, camera_velocity);
     engine.add_mutating_callback([=, &engine] { camera_navigation->navigate(engine); });
 
@@ -371,7 +407,7 @@ int setup_scene(Engine& engine, Options& options) {
         if (!fs::exists(g_options.output_directory))
             fs::create_directories(g_options.output_directory);
         if (fs::is_directory(g_options.output_directory)) {
-            DataGeneration* data_generation = new DataGeneration(*g_random_scene, *camera_navigation, g_options.output_directory);
+            DataGeneration* data_generation = new DataGeneration(*scene_refresher, *camera_navigation, g_options.output_directory);
             engine.add_mutating_callback([=, &engine] { data_generation->tick(engine); });
         }
     }
