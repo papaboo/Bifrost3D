@@ -265,16 +265,15 @@ void compute_perspective_projection(float near_distance, float far_distance, flo
 
 Ray ray_from_viewport_point(Cameras::UID camera_ID, Vector2f viewport_point) {
 
-    Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
+    Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
     Vector4f NDC_near_pos = Vector4f(viewport_point.x * 2.0f - 1.0f, viewport_point.y * 2.0f - 1.0f, -1.0f, 1.0f);
-    Vector4f scaled_world_pos = inverse_projection_matrix * NDC_near_pos;
-    Vector3f ray_to_viewport = Vector3f(scaled_world_pos.x, scaled_world_pos.y, scaled_world_pos.z) / scaled_world_pos.w;
+    Vector4f scaled_near_world_pos = inverse_projection_matrix * NDC_near_pos;
+    Vector3f ray_to_near_plane = Vector3f(scaled_near_world_pos.x, scaled_near_world_pos.y, scaled_near_world_pos.z) / scaled_near_world_pos.w;
 
-    Transform camera_transform = Cameras::get_transform(camera_ID);
-    ray_to_viewport = camera_transform.rotation * ray_to_viewport;
+    Vector4f scaled_far_world_pos = scaled_near_world_pos + 2.0f * inverse_projection_matrix.get_column(2);
+    Vector3f ray_to_far_plane = Vector3f(scaled_far_world_pos.x, scaled_far_world_pos.y, scaled_far_world_pos.z) / scaled_far_world_pos.w;
 
-    Vector3 position_on_viewport = camera_transform.translation + ray_to_viewport;
-    return Ray(position_on_viewport, normalize(ray_to_viewport));
+    return Ray(ray_to_near_plane, normalize(ray_to_far_plane - ray_to_near_plane));
 }
 
 } // NS CameraUtils
