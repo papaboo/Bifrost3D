@@ -45,6 +45,11 @@ using namespace OptiXRenderer;
 // Parsing utilities
 // ------------------------------------------------------------------------------------------------
 
+inline float parse_float(const char* float_str) {
+    char* dummy_end;
+    return strtof(float_str, &dummy_end);
+}
+
 inline void parse_float_array(const char* array_str, float* elements_begin, float* elements_end) {
     const char* str = array_str + 1; // Skip [
 
@@ -80,6 +85,7 @@ Images::UID load_image(const std::string& filename) {
 
 struct Options {
     std::string scene;
+    float scene_scale;
 
     int random_seed;
     int random_scene_images;
@@ -97,6 +103,7 @@ struct Options {
         options.window_size = Vector2ui(640, 480);
 
         options.scene = "";
+        options.scene_scale = 1.0f;
         options.random_seed = 45678907;
         options.random_scene_images = 32;
 
@@ -107,6 +114,8 @@ struct Options {
         while (argument < argc) {
             if (strcmp(argv[argument], "--scene") == 0 || strcmp(argv[argument], "-s") == 0)
                 options.scene = std::string(argv[++argument]);
+            if (strcmp(argv[argument], "--scene-scale") == 0)
+                options.scene_scale = parse_float(argv[++argument]);
             else if (strcmp(argv[argument], "--output") == 0 || strcmp(argv[argument], "-o") == 0)
                 options.output_directory = std::string(argv[++argument]);
             else if (strcmp(argv[argument], "--textures") == 0 || strcmp(argv[argument], "-t") == 0)
@@ -354,7 +363,9 @@ int setup_scene(Engine& engine, Options& options) {
             loaded_scene_root = ObjLoader::load(options.scene, load_image);
         else if (glTFLoader::file_supported(options.scene))
             loaded_scene_root = glTFLoader::load(options.scene);
+
         loaded_scene_root.set_parent(root_node);
+        root_node.apply_delta_transform(Transform(Vector3f::zero(), Quaternionf::identity(), options.scene_scale));
 
         g_scene_sampler = new SceneSampler(scene_root, options.random_seed);
         scene_refresher = new SceneRefresher(*g_scene_sampler, camera_ID);
@@ -365,10 +376,11 @@ int setup_scene(Engine& engine, Options& options) {
             AABB mesh_aabb = model.get_mesh().get_bounds();
             Transform transform = model.get_scene_node().get_global_transform();
             Vector3f bounding_sphere_center = transform * mesh_aabb.center();
-            float bounding_sphere_radius = magnitude(mesh_aabb.size()) * 0.5f;
+            float bounding_sphere_radius = transform.scale * magnitude(mesh_aabb.size()) * 0.5f;
             AABB global_mesh_aabb = AABB(bounding_sphere_center - bounding_sphere_radius, bounding_sphere_center + bounding_sphere_radius);
             scene_bounds.grow_to_contain(global_mesh_aabb);
         }
+
         camera_velocity = 0.1f * magnitude(scene_bounds.size());
     } else {
         // Generate random scene primitives
@@ -449,6 +461,7 @@ void print_usage() {
         "  -t  | --textures <texture folder>: Root folder of physically based rendering textures.\n"
         "  -e  | --environment-map <image>: Loads the specified image for the environment.\n"
         "      | --environment-tint [R,G,B]: Tint the environment by the specified value.\n"
+        "      | --scene-scale <scale>: The scale of the scene to fit with the camera options.\n"
         "      | --window-size [width, height]: Size of the window.\n";
     printf("%s", usage);
 }
