@@ -45,19 +45,22 @@ __constant__ float2 pmj_offsets[81] = {
 };
 #endif
 
-__inline_dev__ optix::float3 project_ray_direction(optix::float2 viewport_pos,
-    const optix::Matrix4x4& inverted_rotated_projection_matrix) {
+__inline_dev__ void fill_ray_info(optix::float2 viewport_pos, const optix::Matrix4x4& inverse_view_projection_matrix,
+    optix::float3& origin, optix::float3& direction, bool normalize_direction = true) {
     using namespace optix;
 
     float4 NDC_near_pos = make_float4(viewport_pos.x * 2.0f - 1.0f, viewport_pos.y * 2.0f - 1.0f, -1.0f, 1.0f);
-
-    float4 scaled_world_pos = inverted_rotated_projection_matrix * NDC_near_pos;
-    float3 projected_world_pos = make_float3(scaled_world_pos) / scaled_world_pos.w;
-    return projected_world_pos;
+    float4 scaled_near_world_pos = inverse_view_projection_matrix * NDC_near_pos;
+    float4 scaled_far_world_pos = scaled_near_world_pos + inverse_view_projection_matrix.getCol(2);
+    origin = make_float3(scaled_near_world_pos) / scaled_near_world_pos.w;
+    float3 far_world_pos = make_float3(scaled_far_world_pos) / scaled_far_world_pos.w;
+    direction = far_world_pos - origin;
+    if (normalize_direction)
+        direction = normalize(direction);
 }
 
 __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, int image_width, int image_height,
-    int accumulation_count, optix::float3 camera_position, const optix::Matrix4x4& inverted_rotated_projection_matrix) {
+    int accumulation_count, const optix::Matrix4x4& inverse_view_projection_matrix) {
     using namespace optix;
 
     MonteCarloPayload payload;
@@ -96,9 +99,7 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     RNG::LinearCongruential rng; rng.seed(__brev(RNG::teschner_hash(x, y, accumulation_count)));
     float2 screen_pos = make_float2(x, y) + (accumulation_count == 0 ? make_float2(0.5f) : rng.sample2f());
     float2 viewport_pos = make_float2(screen_pos.x / float(image_width), screen_pos.y / float(image_height));
-    payload.direction = project_ray_direction(viewport_pos, inverted_rotated_projection_matrix);
-    payload.position = camera_position + payload.direction; // Position on nearplane
-    payload.direction = normalize(payload.direction);
+    fill_ray_info(viewport_pos, inverse_view_projection_matrix, payload.position, payload.direction);
     return payload;
 }
 
@@ -109,8 +110,7 @@ __inline_dev__ void accumulate(Evaluator evaluator) {
     size_t2 screen_size = camera_state.accumulation_buffer.size();
 
     MonteCarloPayload payload = initialize_monte_carlo_payload(g_launch_index.x, g_launch_index.y,
-        screen_size.x, screen_size.y, accumulation_count,
-        camera_state.camera_position, camera_state.inverted_rotated_projection_matrix);
+        screen_size.x, screen_size.y, accumulation_count, camera_state.inverse_view_projection_matrix);
 
     float3 radiance = evaluator(payload);
 
@@ -294,12 +294,13 @@ RT_PROGRAM void depth_RPG() {
     float depth = g_camera_state.accumulation_buffer[g_launch_index].x;
 #endif
 
-    float4 normalized_projected_pos = make_float4(0, 0, 1, 1);
-    float4 projected_world_pos = g_camera_state.inverted_rotated_projection_matrix * normalized_projected_pos;
-    float3 ray_end = make_float3(projected_world_pos) / projected_world_pos.w;
-    float far_plane = length(ray_end - g_camera_state.camera_position);
+    size_t2 screen_size = g_camera_state.accumulation_buffer.size();
+    float2 viewport_pos = { (g_launch_index.x + 0.5f) / screen_size.x, (g_launch_index.y + 0.5f) / screen_size.y };
+    float3 origin, direction;
+    fill_ray_info(viewport_pos, g_camera_state.inverse_view_projection_matrix, origin, direction, false);
+    float max_depth = length(direction);
 
-    float d = depth / far_plane;
+    float d = depth / max_depth;
     g_camera_state.output_buffer[g_launch_index] = float_to_half(make_float4(d, d, d, 1.0f));
 }
 
