@@ -97,7 +97,7 @@ Textures::UID Textures::create2D(Images::UID image_ID, MagnificationFilter magni
 
 void Textures::destroy(Textures::UID texture_ID) {
     if (m_UID_generator.erase(texture_ID))
-        m_changes.set_change(texture_ID, Change::Destroyed);
+        m_changes.add_change(texture_ID, Change::Destroyed);
 }
 
 //-----------------------------------------------------------------------------

@@ -82,7 +82,7 @@ MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Meshes:
 
 void MeshModels::destroy(MeshModels::UID model_ID) {
     if (m_UID_generator.erase(model_ID))
-        m_changes.set_change(model_ID, Change::Destroyed);
+        m_changes.add_change(model_ID, Change::Destroyed);
 }
 
 void MeshModels::set_material_ID(MeshModels::UID model_ID, Materials::UID material_ID) {

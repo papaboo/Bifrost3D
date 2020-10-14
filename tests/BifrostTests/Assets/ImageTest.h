@@ -231,13 +231,14 @@ TEST_F(Assets_Images, mipmapable_events) {
         EXPECT_EQ(Images::Change::Mipmapable, changed_image.get_changes());
     }
 
-    { // Test that destroying an image removes the mipmapable change event.
+    { // Test that destroying an image keep the mipmapable change event.
         Images::destroy(image.get_ID());
         Core::Iterable<Images::ChangedIterator> changed_images = Images::get_changed_images();
         EXPECT_EQ(1u, changed_images.end() - changed_images.begin());
         Image destroyed_image = *changed_images.begin();
         EXPECT_EQ(destroyed_image, image);
-        EXPECT_EQ(Images::Change::Destroyed, destroyed_image.get_changes());
+        Core::Bitmask<Images::Change> mipmapable_destroyed = { Images::Change::Mipmapable, Images::Change::Destroyed };
+        EXPECT_EQ(mipmapable_destroyed, destroyed_image.get_changes());
     }
 }
 

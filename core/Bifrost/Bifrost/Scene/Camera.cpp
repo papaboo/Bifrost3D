@@ -165,7 +165,7 @@ void Cameras::destroy(Cameras::UID camera_ID) {
     // We don't actually destroy anything when destroying a camera.
     // The properties will get overwritten later when a new camera is created in same the spot.
     if (m_UID_generator.erase(camera_ID))
-        m_changes.set_change(camera_ID, Change::Destroyed);
+        m_changes.add_change(camera_ID, Change::Destroyed);
 }
 
 std::vector<Cameras::UID> Cameras::get_z_sorted_IDs() {

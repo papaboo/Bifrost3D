@@ -122,7 +122,7 @@ void Meshes::destroy(Meshes::UID mesh_ID) {
         delete[] buffers.normals;
         delete[] buffers.texcoords;
 
-        m_changes.set_change(mesh_ID, Change::Destroyed);
+        m_changes.add_change(mesh_ID, Change::Destroyed);
     }
 }
 

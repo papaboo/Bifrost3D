@@ -121,7 +121,7 @@ void LightSources::destroy(LightSources::UID light_ID) {
     // We don't actually destroy anything when destroying a light. 
     // The properties will get overwritten later when a node is created in same the spot.
     if (m_UID_generator.erase(light_ID)) 
-        m_changes.set_change(light_ID, Change::Destroyed);
+        m_changes.add_change(light_ID, Change::Destroyed);
 }
 
 bool LightSources::is_delta_light(LightSources::UID light_ID) {

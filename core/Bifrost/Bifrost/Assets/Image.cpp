@@ -191,7 +191,7 @@ void Images::destroy(Images::UID image_ID) {
     if (m_UID_generator.erase(image_ID)) {
         deallocate_pixels(m_metainfo[image_ID].pixel_format, m_pixels[image_ID]);
         m_pixels[image_ID] = nullptr;
-        m_changes.set_change(image_ID, Change::Destroyed);
+        m_changes.add_change(image_ID, Change::Destroyed);
     }
 }
 

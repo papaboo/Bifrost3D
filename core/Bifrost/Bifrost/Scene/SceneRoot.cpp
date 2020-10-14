@@ -87,7 +87,7 @@ void SceneRoots::destroy(SceneRoots::UID scene_ID) {
     // We don't actually destroy anything when destroying a scene.
     // The properties will get overwritten later when a scene is created in same the spot.
     if (m_UID_generator.erase(scene_ID))
-        m_changes.set_change(scene_ID, Change::Destroyed);
+        m_changes.add_change(scene_ID, Change::Destroyed);
 }
 
 void SceneRoots::set_environment_tint(SceneRoots::UID scene_ID, Math::RGB tint) {
