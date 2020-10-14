@@ -521,7 +521,7 @@ struct Renderer::Implementation {
         { // Camera updates.
             for (Cameras::UID cam_ID : Cameras::get_changed_cameras()) {
                 auto camera_changes = Cameras::get_changes(cam_ID);
-                if (camera_changes == Cameras::Change::Destroyed) {
+                if (camera_changes & Cameras::Change::Destroyed) {
                     if (cam_ID < per_camera_state.size())
                         per_camera_state[cam_ID].clear();
 
@@ -560,8 +560,7 @@ struct Renderer::Implementation {
         { // Mesh updates.
             for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
                 // Destroy a destroyed mesh or a previous one where a new one has been created.
-                if (Meshes::get_changes(mesh_ID) == Meshes::Change::Destroyed ||
-                    Meshes::get_changes(mesh_ID) == Meshes::Change::Created) {
+                if (Meshes::get_changes(mesh_ID).any_set(Meshes::Change::Created, Meshes::Change::Destroyed)) {
                     if (mesh_ID < meshes.size() && meshes[mesh_ID]) {
                         meshes[mesh_ID]->destroy();
                         meshes[mesh_ID] = nullptr;
@@ -583,12 +582,12 @@ struct Renderer::Implementation {
 
                 for (Images::UID image_ID : Images::get_changed_images()) {
                     Image image = image_ID;
-                    if (Images::get_changes(image_ID) == Images::Change::Destroyed) {
+                    if (Images::get_changes(image_ID) & Images::Change::Destroyed) {
                         if (images[image_ID]) {
                             images[image_ID]->destroy();
                             images[image_ID] = nullptr;
                         }
-                    } else if (Images::get_changes(image_ID).is_set(Images::Change::Created)) {
+                    } else if (Images::get_changes(image_ID) & Images::Change::Created) {
                         RTformat pixel_format = RT_FORMAT_UNKNOWN;
                         switch (image.get_pixel_format()) {
                         case PixelFormat::Alpha8:
@@ -623,7 +622,7 @@ struct Renderer::Implementation {
                             std::memcpy(optix_pixel_data, image.get_pixels(), images[image_ID]->getElementSize() * image.get_pixel_count());
                         images[image_ID]->unmap();
                         OPTIX_VALIDATE(images[image_ID]);
-                    } else if (Images::get_changes(image_ID).is_set(Images::Change::PixelsUpdated))
+                    } else if (Images::get_changes(image_ID) & Images::Change::PixelsUpdated)
                         assert(!"Pixel update not implemented yet.\n");
                 }
             }
@@ -635,13 +634,15 @@ struct Renderer::Implementation {
 
                 for (Textures::UID texture_ID : Textures::get_changed_textures()) {
                     // Destroy a destroyed texture or a previous one where a new one has been created.
-                    if (Textures::get_changes(texture_ID) == Textures::Change::Destroyed ||
-                        Textures::get_changes(texture_ID) & Textures::Change::Created) {
+                    if (Textures::get_changes(texture_ID).any_set(Textures::Change::Destroyed, Textures::Change::Created)) {
                         if (textures[texture_ID]) {
                             textures[texture_ID]->destroy();
                             textures[texture_ID] = nullptr;
                         }
                     }
+
+                    if (Textures::get_changes(texture_ID) & Textures::Change::Destroyed)
+                        continue;
 
                     static auto convert_wrap_mode = [](WrapMode wrapmode) {
                         switch (wrapmode) {
@@ -957,7 +958,7 @@ struct Renderer::Implementation {
                     mesh_models[mesh_model_index] = nullptr;
                 };
 
-                if (model.get_changes() == MeshModels::Change::Destroyed) {
+                if (model.get_changes() & MeshModels::Change::Destroyed) {
                     if (mesh_model_index < mesh_models.size() && mesh_models[mesh_model_index]) {
                         destroy_mesh_model(mesh_model_index);
 
@@ -967,8 +968,7 @@ struct Renderer::Implementation {
                         models_changed = true;
                     }
                 }
-
-                if (model.get_changes() & MeshModels::Change::Created) {
+                else if (model.get_changes() & MeshModels::Change::Created) {
                     if (mesh_models.size() <= mesh_model_index)
                         mesh_models.resize(MeshModels::capacity());
 
@@ -1003,6 +1003,20 @@ struct Renderer::Implementation {
 
         { // Scene root updates
             for (SceneRoot scene_data : SceneRoots::get_changed_scenes()) {
+                if (scene_data.get_changes() & SceneRoots::Change::Destroyed)
+                {
+                    float3 black = {0, 0, 0};
+#if PRESAMPLE_ENVIRONMENT_MAP
+                    scene.environment = PresampledEnvironmentMap(black);
+                    scene.GPU_state.environment_light = scene.environment.get_light().presampled_environment;
+#else
+                    scene.environment = EnvironmentMap(black);
+                    scene.GPU_state.environment_light = scene.environment.get_light().environment;
+#endif
+                    should_reset_accumulations = true;
+                    continue;
+                }
+
                 Math::RGB _env_tint = scene_data.get_environment_tint();
                 float3 env_tint = make_float3(_env_tint.r, _env_tint.g, _env_tint.b);
                 if (scene_data.get_changes().any_set(SceneRoots::Change::EnvironmentTint, SceneRoots::Change::Created)) {
