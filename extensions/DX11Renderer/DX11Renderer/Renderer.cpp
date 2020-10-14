@@ -751,7 +751,7 @@ public:
 
         { // Camera updates.
             for (Cameras::UID cam_ID : Cameras::get_changed_cameras())
-                if (Cameras::get_changes(cam_ID) == Cameras::Change::Destroyed)
+                if (Cameras::get_changes(cam_ID) & Cameras::Change::Destroyed)
                     m_ssao.clear_camera_state(cam_ID);
         }
 
@@ -760,7 +760,8 @@ public:
                 if (m_meshes.size() <= mesh_ID)
                     m_meshes.resize(Meshes::capacity());
 
-                if (Meshes::get_changes(mesh_ID).any_set(Meshes::Change::Created, Meshes::Change::Destroyed)) {
+                auto mesh_changes = Meshes::get_changes(mesh_ID);
+                if (mesh_changes.any_set(Meshes::Change::Created, Meshes::Change::Destroyed)) {
                     if (m_meshes[mesh_ID].vertex_count != 0) {
                         m_meshes[mesh_ID].index_count = m_meshes[mesh_ID].vertex_count = 0;
                         safe_release(&m_meshes[mesh_ID].indices);
@@ -769,7 +770,7 @@ public:
                     }
                 }
 
-                if (Meshes::get_changes(mesh_ID).is_set(Meshes::Change::Created)) {
+                if (mesh_changes.is_set(Meshes::Change::Created) && !mesh_changes.is_set(Meshes::Change::Destroyed)) {
                     Bifrost::Assets::Mesh mesh = mesh_ID;
                     Dx11Mesh dx_mesh = {};
 
@@ -879,7 +880,7 @@ public:
                 for (MeshModel model : MeshModels::get_changed_models()) {
                     unsigned int model_index = m_model_indices[model.get_ID()];
 
-                    if (model.get_changes() == MeshModels::Change::Destroyed) {
+                    if (model.get_changes() & MeshModels::Change::Destroyed) {
                         m_sorted_models[model_index].model_ID = 0;
                         m_sorted_models[model_index].material_ID = 0;
                         m_sorted_models[model_index].mesh_ID = 0;
@@ -888,8 +889,7 @@ public:
 
                         m_model_indices[model.get_ID()] = 0;
                     }
-
-                    if (model.get_changes() & MeshModels::Change::Created) {
+                    else if (model.get_changes() & MeshModels::Change::Created) {
                         Dx11Model dx_model;
                         dx_model.model_ID = model.get_ID();
                         dx_model.material_ID = model.get_material().get_ID();

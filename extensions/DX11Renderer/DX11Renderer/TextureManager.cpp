@@ -83,7 +83,7 @@ void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1&
             for (Images::UID image_ID : Images::get_changed_images()) {
                 Dx11Image& dx_image = m_images[image_ID];
 
-                if (Images::get_changes(image_ID) == Images::Change::Destroyed) {
+                if (Images::get_changes(image_ID).is_set(Images::Change::Destroyed)) {
                     dx_image.srv.release();
 
                 } else if (Images::get_changes(image_ID).is_set(Images::Change::Created)) {

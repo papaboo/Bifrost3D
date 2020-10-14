@@ -116,71 +116,72 @@ public:
     inline ID3D11Buffer** light_buffer_addr() { return &m_lights_buffer; }
 
     void handle_updates(ID3D11DeviceContext1& device_context) {
-        if (!LightSources::get_changed_lights().is_empty()) {
-            if (m_ID_to_index.size() < LightSources::capacity()) {
-                // Resize the light buffer to hold the new capacity.
-                unsigned int new_capacity = LightSources::capacity();
-                m_ID_to_index.resize(new_capacity);
-                m_index_to_ID.resize(new_capacity);
+        if (LightSources::get_changed_lights().is_empty())
+            return;
 
-                // Resizing removes old data, so this as an opportunity to linearize the light data.
-                Dx11Light* gpu_lights = m_data.lights;
-                unsigned int light_index = 0;
-                for (LightSources::UID light_ID : LightSources::get_iterable()) {
+        if (m_ID_to_index.size() < LightSources::capacity()) {
+            // Resize the light buffer to hold the new capacity.
+            unsigned int new_capacity = LightSources::capacity();
+            m_ID_to_index.resize(new_capacity);
+            m_index_to_ID.resize(new_capacity);
+
+            // Resizing removes old data, so this as an opportunity to linearize the light data.
+            Dx11Light* gpu_lights = m_data.lights;
+            unsigned int light_index = 0;
+            for (LightSources::UID light_ID : LightSources::get_iterable()) {
+                m_ID_to_index[light_ID] = light_index;
+                m_index_to_ID[light_index] = light_ID;
+
+                light_creation(light_ID, light_index, gpu_lights);
+                ++light_index;
+            }
+
+            m_data.active_count = light_index;
+        } else {
+
+            Dx11Light* gpu_lights = m_data.lights;
+
+            auto destroy_light = [](LightSources::Changes changes) -> bool {
+                return changes.is_set(LightSources::Change::Destroyed) && changes.not_set(LightSources::Change::Created);
+            };
+
+            // First process destroyed lights to ensure that we don't allocate lights and then afterwards adds holes to the light array.
+            for (LightSources::UID light_ID : LightSources::get_changed_lights()) {
+                if (!destroy_light(LightSources::get_changes(light_ID)))
+                    continue;
+
+                unsigned int light_index = m_ID_to_index[light_ID];
+                // Replace deleted light by light from the end of the array.
+                --m_data.active_count;
+                if (light_index != m_data.active_count) {
+                    memcpy(gpu_lights + light_index, gpu_lights + m_data.active_count, sizeof(Dx11Light));
+
+                    // Rewire light ID and index maps.
+                    m_index_to_ID[light_index] = m_index_to_ID[m_data.active_count];
+                    m_ID_to_index[m_index_to_ID[light_index]] = light_index;
+                }
+            }
+
+            // Then update or create the rest of the light sources.
+            for (LightSources::UID light_ID : LightSources::get_changed_lights()) {
+                auto light_changes = LightSources::get_changes(light_ID);
+                if (destroy_light(light_changes))
+                    continue;
+
+                if (light_changes.is_set(LightSources::Change::Created)) {
+                    unsigned int light_index = m_data.active_count++;
                     m_ID_to_index[light_ID] = light_index;
                     m_index_to_ID[light_index] = light_ID;
 
                     light_creation(light_ID, light_index, gpu_lights);
-                    ++light_index;
-                }
-
-                m_data.active_count = light_index;
-            } else {
-
-                Dx11Light* gpu_lights = m_data.lights;
-
-                auto destroy_light = [](LightSources::Changes changes) -> bool {
-                    return changes.is_set(LightSources::Change::Destroyed) && changes.not_set(LightSources::Change::Created);
-                };
-
-                // First process destroyed lights to ensure that we don't allocate lights and then afterwards adds holes to the light array.
-                for (LightSources::UID light_ID : LightSources::get_changed_lights()) {
-                    if (!destroy_light(LightSources::get_changes(light_ID)))
-                        continue;
-
+                } else if (light_changes.is_set(LightSources::Change::Updated)) {
                     unsigned int light_index = m_ID_to_index[light_ID];
-                    // Replace deleted light by light from the end of the array.
-                    --m_data.active_count;
-                    if (light_index != m_data.active_count) {
-                        memcpy(gpu_lights + light_index, gpu_lights + m_data.active_count, sizeof(Dx11Light));
-
-                        // Rewire light ID and index maps.
-                        m_index_to_ID[light_index] = m_index_to_ID[m_data.active_count];
-                        m_ID_to_index[m_index_to_ID[light_index]] = light_index;
-                    }
-                }
-
-                // Then update or create the rest of the light sources.
-                for (LightSources::UID light_ID : LightSources::get_changed_lights()) {
-                    auto light_changes = LightSources::get_changes(light_ID);
-                    if (destroy_light(light_changes))
-                        continue;
-
-                    if (light_changes.is_set(LightSources::Change::Created)) {
-                        unsigned int light_index = m_data.active_count++;
-                        m_ID_to_index[light_ID] = light_index;
-                        m_index_to_ID[light_index] = light_ID;
-
-                        light_creation(light_ID, light_index, gpu_lights);
-                    } else if (light_changes.is_set(LightSources::Change::Updated)) {
-                        unsigned int light_index = m_ID_to_index[light_ID];
-                        light_creation(light_ID, light_index, gpu_lights);
-                    }
+                    light_creation(light_ID, light_index, gpu_lights);
                 }
             }
-
-            device_context.UpdateSubresource(m_lights_buffer, 0, nullptr, &m_data, 0, 0);
         }
+
+        device_context.UpdateSubresource(m_lights_buffer, 0, nullptr, &m_data, 0, 0);
     }
 };
 
