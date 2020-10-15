@@ -6,6 +6,7 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
+#include <MaterialRandomizer.h>
 #include <SceneGenerator.h>
 #include <SceneSampler.h>
 
@@ -225,10 +226,17 @@ class SceneRefresher final {
 public:
 
     SceneRefresher(SceneGenerator::RandomScene& scene, Cameras::UID camera_ID)
-        : m_random_scene(&scene), m_scene_sampler(nullptr), m_camera_ID(camera_ID) {}
+        : m_random_scene(&scene), m_scene_sampler(nullptr), m_material_randomizer(nullptr), m_camera_ID(camera_ID)
+        , m_light_node(SceneNode()), m_camera_to_light_transform(Transform::identity()) {}
 
-    SceneRefresher(SceneSampler& scene, Cameras::UID camera_ID)
-        : m_random_scene(nullptr), m_scene_sampler(&scene), m_camera_ID(camera_ID) {}
+    SceneRefresher(SceneSampler& scene, MaterialRandomizer& material_randomizer, Cameras::UID camera_ID)
+        : m_random_scene(nullptr), m_scene_sampler(&scene), m_material_randomizer(&material_randomizer), m_camera_ID(camera_ID)
+        , m_light_node(SceneNode()), m_camera_to_light_transform(Transform::identity()) {}
+
+    void set_light_node(SceneNode light_node, Transform camera_to_light_transform) {
+        m_light_node = light_node;
+        m_camera_to_light_transform = camera_to_light_transform;
+    }
 
     void refresh() {
         if (m_random_scene != nullptr)
@@ -241,13 +249,38 @@ public:
             camera_transform.translation -= forward * 50.0f; // TODO Randomize between near plane (find by projection) and 22 units further out
 
             Cameras::set_transform(m_camera_ID, camera_transform);
+
+            ++m_counter;
+            if (m_material_randomizer != nullptr && (m_counter % 8) == 0)
+                m_material_randomizer->update_materials();
+        }
+
+        // Update light transform.
+        if (m_light_node.exists()) {
+            Transform camera_transform = Cameras::get_transform(m_camera_ID);
+            Transform light_transform = camera_transform * m_camera_to_light_transform;
+            m_light_node.set_global_transform(light_transform);
+
+            // Unfortunately lights won't move, so we have to manually flag the light as updated.
+            for (auto light : LightSources::get_iterable()) {
+                if (LightSources::get_node_ID(light) == m_light_node.get_ID()) {
+                    SpotLight spot_light = SpotLight(light);
+                    float radius = spot_light.get_radius();
+                    spot_light.set_radius(radius);
+                }
+            }
         }
     }
 
 private:
     SceneGenerator::RandomScene* m_random_scene;
     SceneSampler* m_scene_sampler;
+    MaterialRandomizer* m_material_randomizer;
     Cameras::UID m_camera_ID;
+    SceneNode m_light_node;
+    Transform m_camera_to_light_transform;
+
+    int m_counter = 0;
 };
 
 class DataGeneration final {
@@ -321,6 +354,7 @@ Options g_options;
 DX11Renderer::Compositor* g_compositor = nullptr;
 DX11OptiXAdaptor::Adaptor* g_optix_adaptor = nullptr;
 SceneSampler* g_scene_sampler = nullptr;
+MaterialRandomizer* g_material_randomizer = nullptr;
 SceneGenerator::RandomScene* g_random_scene = nullptr;
 
 static inline void miniheaps_cleanup_callback() {
@@ -368,7 +402,8 @@ int setup_scene(Engine& engine, Options& options) {
         root_node.apply_delta_transform(Transform(Vector3f::zero(), Quaternionf::identity(), options.scene_scale));
 
         g_scene_sampler = new SceneSampler(scene_root, options.random_seed);
-        scene_refresher = new SceneRefresher(*g_scene_sampler, camera_ID);
+        g_material_randomizer = new MaterialRandomizer(options.random_seed);
+        scene_refresher = new SceneRefresher(*g_scene_sampler, *g_material_randomizer, camera_ID);
 
         // Rough approximation of the scene bounds using bounding spheres for the geometry.
         AABB scene_bounds = AABB::invalid();
@@ -408,9 +443,12 @@ int setup_scene(Engine& engine, Options& options) {
     // Setup lightsource colocated with camera.
     Transform light_transform = cam_transform;
     light_transform.translation += cam_transform.rotation.forward() * near * 0.999f;
+    Transform camera_to_light_transform = cam_transform.inverse() * light_transform;
     SceneNode light_node = SceneNodes::create("light node", light_transform);
     light_node.set_parent(root_node);
-    LightSources::create_spot_light(light_node.get_ID(), RGB(1000), 0.75f, cos_field_of_view);
+    LightSources::create_spot_light(light_node.get_ID(), RGB(25), 0.75f, cos_field_of_view);
+
+    scene_refresher->set_light_node(light_node, camera_to_light_transform);
 
     Navigation* camera_navigation = new Navigation(camera_ID, camera_velocity);
     engine.add_mutating_callback([=, &engine] { camera_navigation->navigate(engine); });

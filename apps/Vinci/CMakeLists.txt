@@ -2,7 +2,7 @@ if (TARGET OptiXRenderer)
 
   set(PROJECT_NAME "Vinci")
 
-  set(SRCS main.cpp SceneGenerator.h SceneSampler.h TextureManager.h)
+  set(SRCS main.cpp MaterialRandomizer.h SceneGenerator.h SceneSampler.h TextureManager.h)
 
   add_executable(${PROJECT_NAME} ${SRCS})
 
