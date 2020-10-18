@@ -67,6 +67,7 @@ void validate_optix_resource(T resource, char* file, int line) {
 #define THROW(e) throw e
 #endif
 
+#define RT_ASSERT(condition, exception_ID) do { if (!condition) THROW(exception_ID); } while(false)
 
 // Constants.
 #define PIf 3.14159265358979323846f
