@@ -26,7 +26,7 @@ __inline_all__ float ray_sphere(optix::float3 ray_origin, optix::float3 ray_dire
     if (disc > 0.0f)
         return -b - sqrtf(disc);
     else
-        return -1e30f;
+        return nanf("");
 }
 
 __inline_all__ float ray_sphere(const optix::Ray& ray, Sphere sphere) {
@@ -48,10 +48,10 @@ __inline_all__ float ray_disk(optix::float3 ray_origin, optix::float3 ray_direct
     optix::float3 plane_intersection = ray_origin + ray_direction * distance_to_plane;
     optix::float3 v = plane_intersection - disk_center;
     float distance_squared = optix::dot(v, v);
-    if (distance_squared <= disk_radius * disk_radius && distance_to_plane > 0.0f)
+    if (distance_squared <= disk_radius * disk_radius && distance_to_plane >= 0.0f)
         return distance_to_plane;
     else
-        return -1e30f;
+        return nanf("");
 }
 
 __inline_all__ float ray_disk(const optix::Ray ray, Disk disk) {
