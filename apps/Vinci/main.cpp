@@ -386,6 +386,8 @@ int setup_scene(Engine& engine, Options& options) {
     Transform cam_transform = Cameras::get_transform(camera_ID);
     // Disable screen space effects to keep the data in a linear color space.
     Cameras::set_effects_settings(camera_ID, CameraEffects::Settings::linear());
+    auto optix_renderer = g_optix_adaptor->get_renderer();
+    optix_renderer->set_backend(camera_ID, OptiXRenderer::Backend::AIDenoisedPathTracing);
 
     // Generate scene
     SceneRefresher* scene_refresher = nullptr;
@@ -480,10 +482,6 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
     g_compositor = DX11Renderer::Compositor::initialize(hwnd, window, engine.data_directory());
 
     g_optix_adaptor = (DX11OptiXAdaptor::Adaptor*)g_compositor->add_renderer(DX11OptiXAdaptor::Adaptor::initialize).get();
-
-    Renderers::UID default_renderer = *Renderers::begin();
-    for (auto camera_ID : Cameras::get_iterable())
-        Cameras::set_renderer_ID(camera_ID, default_renderer);
 
     engine.add_non_mutating_callback([=] { g_compositor->render(); });
 
