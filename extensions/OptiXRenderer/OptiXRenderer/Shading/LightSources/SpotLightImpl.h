@@ -20,8 +20,6 @@ namespace LightSources {
 // ------------------------------------------------------------------------------------------------
 // Disk spot light.
 // Future work:
-// * Sample the disk or a cone from the lit position projected onto the spot lights plane,
-//   whichever has the smallest radius.
 // * Improved sampling of the disk wrt solid angle.
 //   https://www.arnoldrenderer.com/research/egsr2017_spherical_ellipse.pdf.
 // ------------------------------------------------------------------------------------------------
@@ -40,10 +38,17 @@ __inline_all__ float PDF(const SpotLight& light, optix::float3 lit_position, opt
     float cos_theta = -dot(light.direction, direction_to_light);
 
     if (cos_theta > 0.0f && !is_delta_light(light)) {
-        float t = Intersect::ray_disk(lit_position, direction_to_light, light.position, light.direction, light.radius);
-        if (t >= 0.0f) {
-            float area_PDF_to_solid_angle_PDF = (t * t) / cos_theta;
-            return Distributions::Disk::PDF(light.radius) * area_PDF_to_solid_angle_PDF;
+        // Sample the spot light by either sampling the surface of the spotlight or sampling the cone, whichever has the lowest radius.
+        float t = Intersect::ray_plane(lit_position, -light.direction, light.position, light.direction);
+        float cone_radius_at_intersection = t * sqrtf(1.0f - pow2(light.cos_angle)) / light.cos_angle;
+        if (light.radius > cone_radius_at_intersection && light.cos_angle > 1e-5f)
+            return Distributions::Cone::PDF(light.cos_angle);
+        else {
+            float t = Intersect::ray_disk(lit_position, direction_to_light, light.position, light.direction, light.radius);
+            if (t >= 0.0f) {
+                float area_PDF_to_solid_angle_PDF = (t * t) / cos_theta;
+                return Distributions::Disk::PDF(light.radius) * area_PDF_to_solid_angle_PDF;
+            }
         }
     }
 
@@ -78,22 +83,42 @@ __inline_all__ LightSample sample_radiance(const SpotLight& light, optix::float3
         light_sample.radiance = evaluate(light, lit_position, light_sample.direction_to_light);
         return light_sample;
     } else {
-        // Sample disk and transform to world space.
         const TBN light_to_world = TBN(light.direction);
-        auto disk_sample = Distributions::Disk::sample(light.radius, random_sample);
-        float3 sampled_position = light.position + make_float3(disk_sample.position, 0.0f) * light_to_world;
 
-        // Create sample
         LightSample light_sample;
-        light_sample.direction_to_light = sampled_position - lit_position;
-        light_sample.distance = optix::length(light_sample.direction_to_light);
-        light_sample.direction_to_light /= light_sample.distance;
 
-        float cos_theta = -dot(light.direction, light_sample.direction_to_light);
-        float area_PDF_to_solid_angle_PDF = pow2(light_sample.distance) / cos_theta;
-        light_sample.PDF = Distributions::Disk::PDF(light.radius) * area_PDF_to_solid_angle_PDF;
+        // Sample the spot light by either sampling the surface of the spotlight or sampling the cone, whichever has the lowest radius.
+        float t = Intersect::ray_plane(lit_position, -light.direction, light.position, light.direction);
+        float cone_radius_at_intersection = t * sqrtf(1.0f - pow2(light.cos_angle)) / light.cos_angle;
+        if (light.radius > cone_radius_at_intersection && light.cos_angle > 1e-5f) {
+            auto cone_sample = Distributions::Cone::sample(light.cos_angle, random_sample);
+            light_sample.direction_to_light = -cone_sample.direction * light_to_world;
+            light_sample.distance = Intersect::ray_plane(lit_position, light_sample.direction_to_light, light.position, light.direction);
+            light_sample.PDF = cone_sample.PDF;
 
-        light_sample.radiance = evaluate(light, lit_position, light_sample.direction_to_light);
+            // Evaluate radiance if sampled position is on the surface of the light, otherwise it is black.
+            light_sample.radiance = { 0, 0, 0 };
+            optix::float3 sample_position_on_light = lit_position + light_sample.direction_to_light * light_sample.distance;
+            optix::float3 light_pos_to_sample_pos = sample_position_on_light - light.position;
+            if (length_squared(light_pos_to_sample_pos) < pow2(light.radius))
+                light_sample.radiance = evaluate(light, lit_position, light_sample.direction_to_light);
+        } else {
+            // Sample disk and transform to world space.
+            auto disk_sample = Distributions::Disk::sample(light.radius, random_sample);
+            float3 sampled_position = light.position + make_float3(disk_sample.position, 0.0f) * light_to_world;
+
+            // Create sample
+            light_sample.direction_to_light = sampled_position - lit_position;
+            light_sample.distance = optix::length(light_sample.direction_to_light);
+            light_sample.direction_to_light /= light_sample.distance;
+
+            float cos_theta = -dot(light.direction, light_sample.direction_to_light);
+            float area_PDF_to_solid_angle_PDF = pow2(light_sample.distance) / cos_theta;
+            light_sample.PDF = Distributions::Disk::PDF(light.radius) * area_PDF_to_solid_angle_PDF;
+
+            light_sample.radiance = evaluate(light, lit_position, light_sample.direction_to_light);
+        }
+
         return light_sample;
     }
 }

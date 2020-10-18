@@ -45,10 +45,11 @@ GTEST_TEST(SpotLight, consistent_PDF_and_radiance) {
                 light.cos_angle = cos_angle;
                 for (unsigned int i = 0u; i < MAX_LIGHT_SAMPLES; ++i) {
                     LightSample sample = LightSources::sample_radiance(light, position, RNG::sample02(i));
-                    if (is_PDF_valid(sample.PDF)) {
-                        float PDF = LightSources::PDF(light, position, sample.direction_to_light);
-                        EXPECT_FLOAT_EQ_EPS(sample.PDF, PDF, 0.0001f);
 
+                    float PDF = LightSources::PDF(light, position, sample.direction_to_light);
+                    EXPECT_FLOAT_EQ_EPS(sample.PDF, PDF, 0.0001f);
+
+                    if (sample.radiance.x > 0.0f) {
                         float radiance = LightSources::evaluate(light, position, sample.direction_to_light).x;
                         EXPECT_FLOAT_EQ_EPS(sample.radiance.x, radiance, 0.0001f);
                     }
@@ -75,10 +76,13 @@ GTEST_TEST(SpotLight, pdf_rejects_rays_that_miss) {
     float hit_light_PDF = LightSources::PDF(light, lit_position, hit_light_direction);
     EXPECT_GT(hit_light_PDF, 0.0f);
 
+    // Implementation specific note:
+    // This only works because this light setup uses the surface PDF instead of the light distribution (cone) PDF, which can be zero outside the light source surface.
+    // This dependency to the PDF and Sample implementation is very unfortunate, but I currently cannot think of a better way to test the borders of the distribution.
     float miss_light_PDF = LightSources::PDF(light, lit_position, miss_light_direction);
     EXPECT_FLOAT_EQ(miss_light_PDF, 0.0f);
 
-    // Flip cone light so lit position is behind
+    // Flip cone light so lit position is behind.
     light.direction = -light.direction;
     EXPECT_FLOAT_EQ(LightSources::PDF(light, lit_position, hit_light_direction), 0.0f);
     EXPECT_FLOAT_EQ(LightSources::PDF(light, lit_position, miss_light_direction), 0.0f);
