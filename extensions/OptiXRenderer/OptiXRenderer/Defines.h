@@ -76,5 +76,6 @@ void validate_optix_resource(T resource, char* file, int line) {
 
 // OptiX exceptions.
 #define OPTIX_SHADING_WRONG_HEMISPHERE_EXCEPTION (RT_EXCEPTION_USER + 0)
+#define OPTIX_LIGHT_EVALUATED_OFF_SURFACE_EXCEPTION (RT_EXCEPTION_USER + 1)
 
 #endif // _OPTIXRENDERER_SHADING_DEFINES_H_

@@ -58,6 +58,12 @@ __inline_all__ float PDF(const SpotLight& light, optix::float3 lit_position, opt
 __inline_all__ optix::float3 evaluate(const SpotLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
     using namespace optix;
 
+#if _DEBUG
+    // Validate that assertion that the light affects the lit position since this is not explicitly tested in this method.
+    float t = Intersect::ray_disk(lit_position, direction_to_light, light.position, light.direction, light.radius);
+    RT_ASSERT(!isnan(t), OPTIX_LIGHT_EVALUATED_OFF_SURFACE_EXCEPTION);
+#endif
+
     float cos_theta = -dot(light.direction, direction_to_light);
 
     float normalization = TWO_PIf * (1 - light.cos_angle);
