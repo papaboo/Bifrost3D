@@ -81,7 +81,7 @@ __inline_all__ float3 evaluate(float alpha, float3 specularity, float3 wo, float
 
 __inline_all__ float PDF(float alpha, float3 wo, float3 halfway) {
 #if _DEBUG
-    RT_ASSERT((!dot(wo, halfway) < 0.0f || halfway.z < 0.0f), OPTIX_SHADING_WRONG_HEMISPHERE_EXCEPTION);
+    RT_ASSERT(!(dot(wo, halfway) < 0.0f || halfway.z < 0.0f), OPTIX_SHADING_WRONG_HEMISPHERE_EXCEPTION);
 #endif
 
     return Distributions::GGX_VNDF::PDF(alpha, wo, halfway) / (4.0f * dot(wo, halfway));
