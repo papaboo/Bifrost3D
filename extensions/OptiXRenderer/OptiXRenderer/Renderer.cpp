@@ -562,6 +562,11 @@ struct Renderer::Implementation {
                 // Destroy a destroyed mesh or a previous one where a new one has been created.
                 if (Meshes::get_changes(mesh_ID).any_set(Meshes::Change::Created, Meshes::Change::Destroyed)) {
                     if (mesh_ID < meshes.size() && meshes[mesh_ID]) {
+
+                        meshes[mesh_ID]["index_buffer"]->getBuffer()->destroy();
+                        meshes[mesh_ID]["geometry_buffer"]->getBuffer()->destroy();
+                        meshes[mesh_ID]["texcoord_buffer"]->getBuffer()->destroy();
+
                         meshes[mesh_ID]->destroy();
                         meshes[mesh_ID] = nullptr;
                     }
@@ -953,8 +958,17 @@ struct Renderer::Implementation {
 
                 auto destroy_mesh_model = [&](unsigned int mesh_model_index) {
                     optix::Transform& optixTransform = mesh_models[mesh_model_index];
+
+                    // Destroy transform and geometry wrappers.
+                    optix::GeometryGroup geometry_group = optixTransform->getChild<optix::GeometryGroup>();
+                    geometry_group->getAcceleration()->destroy();
+                    for (unsigned int i = 0; i < geometry_group->getChildCount(); ++i)
+                        geometry_group->getChild(i)->destroy();
+                    geometry_group->destroy();
+
                     scene.root->removeChild(optixTransform);
                     optixTransform->destroy();
+
                     mesh_models[mesh_model_index] = nullptr;
                 };
 
