@@ -1,11 +1,28 @@
+Vinci
+* Sample tube from outside and into the scene
+** Needs simple acceleration structure and cylinder/tube tracing
+* Place light further from the camera.
+* Wobbly/noisy primitives
+
+
 BACKLOG:
-* Roughness regularization. Perhaps just by clamping roughness along a path and then relax pr iteration.
-** Base on some (pdf, cos_theta) -> roughness.
-** Base factor and decay rate as parameters
+* Normals revisited
+** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
+*** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
+** Bump mapping
+*** Taming the Shadow Terminator for 'proper' handling of hemisphere distortion. Only scales the contribution. Mirror surfaces still have to be handled differently
+**** https://blog.yiningkarlli.com/2020/02/shadow-terminator-in-takua.html
+*** Filter bumpmap mipmaps using Toksvig05, SGGX or AGAA NDF construction.
+*** Compute AO maps based on normal maps.
+*** Surface Gradient Based Bump Mapping Framework for supporting multiple bump maps. Computes du, dv from pixel derivatives, so might be rasterizer only in its current form.
+*** Warp the hemisphere by the shading normal, such that samples are always drawn in an unwarped hemisphere, but then warped such that <0,0,1> corresponds to the shading/bump normal direction and samples halfway between <0,0,1> and the border of the hemisphere will be warped to be halfway between the shading normal and hemisphere.
+*** 'Fix' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles. (Offset normal by -view_dir until the dot product is 0.)
+*** Or warp the hemisphere by the shading normal, such that the hemisphere is turned into a cone that only grazes the surface. That way samples would need to be converted from hemisphere to cone and back again. Pro: No special casing on light / view direction. Con: Black surface when view dir is outside the cone.
 * Progressive multijittered sample sequences
-** Unit test for different sampling scenarios.
-** Debug VeachScene sampling with no next event estimation. The large light's reflection on the second slab is very noisy around the edges.
-** Path debugger. Select pixel and trace all 4096 paths, then visualize ranges of paths.
+** Test lighthouse sampler
+** Debug VeachScene sampling. The large light's reflection on the second slab is very noisy around the edges. It's somehow related to next event estimation sampling.
+*** Or just test it on a diffuse surface. The yellow light fades in over time on the floor, so something is wrong when sampling.
+** Unit test for different sampling scenarios with PMJ sampler
 ** Heitz and Georgiev blue noise screen space seed scheme. Optimize towards equal distribution of first four seeds. Seed, swap row/columns and then optimize random cells.
 *** Toroidal shift + random sample index?
 *** Toroidal shift using 14 bit bitmask, right-shift by 1 pr dimension and reinsert the swapped bit as the most significant one.
@@ -13,12 +30,15 @@ BACKLOG:
 * Film grain
 ** http://www.loopit.dk/banding_in_games.pdf
 ** https://www.shadertoy.com/view/4t2SDh
+* SDF shadows - check UE4
+** http://kunzhou.net/2013/fur-rendering-tvcg.pdf
+** Call of duty precomputed GI. Check how they handle light bleeding. http://advances.realtimerendering.com/s2017/Precomputed%20Lighting%20in%20CoD%20IW_20_PPS.pdf
+* Noise reduction
+** Massively parallel path space filtering
+** QR Factorization (has example code and test data)
 * Decima Engine Area lights
 ** https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Shaders/Private/BRDF.ush
 ** https://www.guerrilla-games.com/read/decima-engine-advances-in-lighting-and-aa
-* SDF shadows - check UE4
-** http://kunzhou.net/2013/fur-rendering-tvcg.pdf
-* Massively parallel path space filtering or QR Factorization (has example code and test data)
 * SSAO
 ** Intensity should be relative to sample distance, not absolute distance intensity.
 *** When hitting the screen space max radius then results should be independent of the world radius. Are they? Test scene with three 'infinite' walls.
@@ -29,29 +49,14 @@ BACKLOG:
 *** For diffuse env map lookup.
 *** For cones compute aparture from visibility
 *** Intersect bent cone with light cone or distribution and bake into 3D LUT (GTSO)
-* Add coat to the default material.
-** http://jcgt.org/published/0003/04/03/paper-lowres.pdf and https://www.youtube.com/watch?v=4nKb9hRYbPA
+* Iridescent clear coat.
+** https://hal.archives-ouvertes.fr/hal-01518344/document and https://www.youtube.com/watch?v=4nKb9hRYbPA
 ** Or just add a GGX layer on top with an iridescence parameter (red and blue fresnel offset relative to green. [Specularity, iridescence)
-* Normals revisited
-** Taming the Shadow Terminator
-** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
-*** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
-** Bump mapping
-*** Filter bumpmap mipmaps using Toksvig05, SGGX or AGAA NDF construction.
-*** Compute AO maps based on normal maps.
-*** Warp the hemisphere by the shading normal, such that samples are always drawn in an unwarped hemisphere, but then warped such that <0,0,1> corresponds to the shading/bump normal direction and samples halfway between <0,0,1> and the border of the hemisphere will be warped to be halfway between the shading normal and hemisphere.
-*** 'Fix' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles. (Offset normal by -view_dir until the dot product is 0.)
-*** Or warp the hemisphere by the shading normal, such that the hemisphere is turned into a cone that only grazes the surface. That way samples would need to be converted from hemisphere to cone and back again. Pro: No special casing on light / view direction. Con: Black surface when view dir is outside the cone.
-** Perhaps just dim 'blocked' regions as they could be lit indirectly.
 * BTDF
 ** Transmission factor. Use IOR computed from specularity.
 
 libs
-* TinyDNN
-** Cat detection
-** A neural algorithm of artistic style, Gatys et al, 2015
-** Face recognition.
-** Use a siamese network to detect individual predefined lego bricks. (As opposed to classifying all lego bricks for all pixels.) Perhaps use transfer learning on some face recognition net
 * ReactPhysics or BulletPhyssics (or both)
 * RtAudio wrapper - https://github.com/thestk/rtaudio
 * LuaJit - OpenSource (Fallback to interpretted Lua if the target architecture isn't supported.)
+* ply loader https://github.com/mhalber/msh
