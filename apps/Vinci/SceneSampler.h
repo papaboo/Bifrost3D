@@ -70,25 +70,25 @@ public:
 
         // Sample a position on a triangle.
         Vector3f barycentric_coord = sample_triangle_uniformly(m_rng.sample2f());
-        Vector3f* positions = mesh.get_positions();
-        Vector3f position = barycentric_coord.x * positions[vertex_indices.x] +
-                            barycentric_coord.y * positions[vertex_indices.y] +
-                            barycentric_coord.z * positions[vertex_indices.z];
+        Vector3f p0 = mesh.get_positions()[vertex_indices.x];
+        Vector3f p1 = mesh.get_positions()[vertex_indices.y];
+        Vector3f p2 = mesh.get_positions()[vertex_indices.z];
+
+        Vector3f position = barycentric_coord.x * p0 + barycentric_coord.y * p1 + barycentric_coord.z * p2;
         Vector3f normal;
         if (mesh.get_normals() != nullptr) {
             Vector3f* normals = mesh.get_normals();
             normal = normalize(barycentric_coord.x * normals[vertex_indices.x] +
                                barycentric_coord.y * normals[vertex_indices.y] +
                                barycentric_coord.z * normals[vertex_indices.z]);
-        } else {
-            Vector3f p0 = positions[vertex_indices.x];
-            Vector3f p1 = positions[vertex_indices.y];
-            Vector3f p2 = positions[vertex_indices.z];
+        } else
             normal = normalize(cross(p1 - p0, p2 - p0));
-        }
+
         Quaternionf rotation = Quaternionf::look_in(-normal);
 
-        return model.get_scene_node().get_global_transform() * Transform(position, rotation);
+        Transform global_transform = model.get_scene_node().get_global_transform() * Transform(position, rotation);
+        global_transform.scale = 1.0f;
+        return global_transform;
     }
 
 private:
