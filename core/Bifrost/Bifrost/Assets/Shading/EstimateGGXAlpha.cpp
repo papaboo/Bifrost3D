@@ -1,4 +1,5 @@
-// Estimate the alpha of the GGX distribution that with the given maximal PDF from a angle.
+// Estimate the alpha of the GGX distribution based on the maximal PDF value
+// and the angle between the view direction and the normal.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors
 //

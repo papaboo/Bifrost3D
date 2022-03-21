@@ -221,7 +221,8 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
     { // Output the fitting
         std::ofstream out_header(filename);
         out_header <<
-            "// Estimate the alpha of the GGX distribution that with the given maximal PDF from a angle.\n"
+            "// Estimate the alpha of the GGX distribution based on the maximal PDF value\n"
+            "// and the angle between the view direction and the normal.\n"
             "// ------------------------------------------------------------------------------------------------\n"
             "// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors\n"
             "//\n"
