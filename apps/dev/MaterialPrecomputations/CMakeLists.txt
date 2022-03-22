@@ -2,7 +2,7 @@ if (TARGET OptiXRenderer)
 
   set(PROJECT_NAME "MaterialPrecomputations")
 
-  set(SRCS main.cpp)
+  set(SRCS FitRhoApproximation.h main.cpp)
 
   add_executable(${PROJECT_NAME} ${SRCS})
 

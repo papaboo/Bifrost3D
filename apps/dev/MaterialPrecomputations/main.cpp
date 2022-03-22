@@ -6,6 +6,8 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
+#include <FitRhoApproximation.h>
+
 #include <OptiXRenderer/Shading/BSDFs/Burley.h>
 #include <OptiXRenderer/Shading/BSDFs/GGX.h>
 #include <OptiXRenderer/Shading/BSDFs/OrenNayar.h>
@@ -305,6 +307,8 @@ int main(int argc, char** argv) {
     const unsigned int width = 64, height = 64, sample_count = 4096;
 
     Images::allocate(1);
+
+    fit_GGX_rho_approximation(output_dir);
 
     // Given a max PDF and cos(theta) compute the corresponding alpha of the GGX distribution with that max PDF.
     estimate_alpha_from_max_PDF(32, 32, output_dir + "EstimateGGXAlpha.cpp");
