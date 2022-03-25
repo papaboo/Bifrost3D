@@ -25,17 +25,13 @@ void linear_exposure_from_constant_bias() {
 // Vertex shader.
 // ------------------------------------------------------------------------------------------------
 
-struct Varyings {
-    float4 position : SV_POSITION;
-};
-
-Varyings fullscreen_vs(uint vertex_ID : SV_VertexID) {
-    Varyings output;
+float4 fullscreen_vs(uint vertex_ID : SV_VertexID) : SV_POSITION {
+    float4 position;
     // Draw triangle: {-1, -3}, { -1, 1 }, { 3, 1 }
-    output.position.x = vertex_ID == 2 ? 3 : -1;
-    output.position.y = vertex_ID == 0 ? -3 : 1;
-    output.position.zw = float2(1.0, 1.0);
-    return output;
+    position.x = vertex_ID == 2 ? 3 : -1;
+    position.y = vertex_ID == 0 ? -3 : 1;
+    position.zw = float2(1.0, 1.0);
+    return position;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -182,8 +178,8 @@ class Unreal4Tonemapper : ITonemapper {
     }
 };
 
-float4 postprocess_pixel(Varyings input, ITonemapper tonemapper) {
-    int2 pixel_index = int2(input.position.xy);
+float4 postprocess_pixel(float4 position, ITonemapper tonemapper) {
+    int2 pixel_index = int2(position.xy);
 
     // Bloom and exposure
     float linear_exposure = linear_exposure_buffer[0];
@@ -193,7 +189,7 @@ float4 postprocess_pixel(Varyings input, ITonemapper tonemapper) {
 
     // Vignette
     float2 viewport_size = input_viewport.zw;
-    color *= simple_vignette_tint(input.position.xy, viewport_size, vignette);
+    color *= simple_vignette_tint(position.xy, viewport_size, vignette);
 
     // Tonemap
     color = tonemapper.tonemap(color);
@@ -201,19 +197,19 @@ float4 postprocess_pixel(Varyings input, ITonemapper tonemapper) {
     return float4(color, 1.0f);
 }
 
-float4 linear_tonemapping_ps(Varyings input) : SV_TARGET {
+float4 linear_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
     LinearTonemapper tonemapper;
-    return postprocess_pixel(input, tonemapper);
+    return postprocess_pixel(position, tonemapper);
 }
 
-float4 uncharted2_tonemapping_ps(Varyings input) : SV_TARGET {
+float4 uncharted2_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
     Uncharted2Tonemapper tonemapper;
-    return postprocess_pixel(input, tonemapper);
+    return postprocess_pixel(position, tonemapper);
 }
 
-float4 unreal4_tonemapping_ps(Varyings input) : SV_TARGET {
+float4 unreal4_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
     Unreal4Tonemapper tonemapper;
-    return postprocess_pixel(input, tonemapper);
+    return postprocess_pixel(position, tonemapper);
 }
 
 } // NS CameraEffects
