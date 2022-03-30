@@ -325,32 +325,76 @@ GTEST_TEST(DefaultShadingModel, metallic_interpolation) {
     }
 }
 
+// Helper function to generate a coated material with a specific target roughness.
+// The input roughness for the material is found through a binary search.
+Shading::ShadingModels::DefaultShading generate_interpolated_coated_material(Material material_params, float cos_theta, float target_roughness) {
+    using namespace Shading::ShadingModels;
+    using namespace optix;
+
+    double roughness = 0.5;
+    double roughness_adjustment = 0.25;
+    material_params.roughness = (float)roughness;
+    do {
+        auto material = DefaultShading(material_params, cos_theta);
+        float roughness_delta = abs(material.get_roughness() - target_roughness);
+        if (roughness_delta < 1e-8f)
+            return material;
+
+        bool decrease_roughness = material.get_roughness() > target_roughness;
+        roughness += decrease_roughness ? -roughness_adjustment : roughness_adjustment;
+        if (material_params.roughness == (float)roughness)
+            return material;
+
+        material_params.roughness = (float)roughness;
+        roughness_adjustment *= 0.5;
+    } while (true);
+}
+
 // Test that a partial coat is the linear interpolation of the material with no coat and full coat.
+// A rough coat will modulate the roughness of the base layer. Strictly speaking this breaks
+// the linear interpolation property of the coat, but that is how the material is defined.
+// A coated material and a non-coated material can still be linearly interpolated,
+// if we ensure that they both have the same roughness after being created.
 GTEST_TEST(DefaultShadingModel, coat_interpolation) {
     using namespace Shading::ShadingModels;
     using namespace optix;
 
     Material material_params = plastic_parameters();
+    material_params.roughness = 0.85f;
+    float original_roughness = material_params.roughness;
 
     for (float coat_roughness : { 0.0f, 0.5f, 1.0f }) {
         material_params.coat_roughness = coat_roughness;
-        for (float abs_cos_theta : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
-            material_params.coat = 0;
-            auto non_coat_material = DefaultShading(material_params, abs_cos_theta);
-            float3 non_coat_rho = non_coat_material.rho(abs_cos_theta);
-
+        for (float cos_theta : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
             material_params.coat = 1;
-            auto coated_material = DefaultShading(material_params, abs_cos_theta);
-            float3 coated_rho = coated_material.rho(abs_cos_theta);
+            material_params.roughness = original_roughness;
+            auto coated_material = DefaultShading(material_params, cos_theta);
+            float3 coated_rho = coated_material.rho(cos_theta);
+
+            // Verify that material roughness is lower when the coat isn't perfectly smooth.
+            if (coat_roughness > 0.0)
+                EXPECT_LT(material_params.roughness, coated_material.get_roughness());
+
+            material_params.coat = 0;
+            material_params.roughness = coated_material.get_roughness();
+            auto non_coated_material = DefaultShading(material_params, cos_theta);
+            float3 non_coated_rho = non_coated_material.rho(cos_theta);
+
+            // Verify that the two materials have the same roughness.
+            EXPECT_FLOAT_EQ_EPS(non_coated_material.get_roughness(), coated_material.get_roughness(), 0.000001f);
 
             for (float coat : { 0.25f, 0.5f, 0.75f }) {
+                // Generate a material with a partial coat that has the same roughness as the coated material.
                 material_params.coat = coat;
-                auto material = DefaultShading(material_params, abs_cos_theta);
-                float3 rho = material.rho(abs_cos_theta);
+                auto material = generate_interpolated_coated_material(material_params, cos_theta, coated_material.get_roughness());
+                float3 rho = material.rho(cos_theta);
+
+                // Verify that the two materials have the same roughness.
+                EXPECT_FLOAT_EQ_EPS(material.get_roughness(), coated_material.get_roughness(), 0.000001f);
 
                 // Test that the directional-hemispherical reflectance of the semi-coated material equals
                 // the one evaluated by interpolating between a material with no coat and coated material.
-                float3 interpolated_rho = lerp(non_coat_rho, coated_rho, coat);
+                float3 interpolated_rho = lerp(non_coated_rho, coated_rho, coat);
                 EXPECT_FLOAT_EQ_EPS(interpolated_rho.x, rho.x, 0.000001f);
                 EXPECT_FLOAT_EQ_EPS(interpolated_rho.y, rho.y, 0.000001f);
                 EXPECT_FLOAT_EQ_EPS(interpolated_rho.z, rho.z, 0.000001f);

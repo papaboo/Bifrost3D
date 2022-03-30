@@ -138,6 +138,10 @@ public:
 
     __inline_all__ DefaultShading(const Material& material, float abs_cos_theta)
         : m_roughness(material.roughness), m_coat_scale(material.coat), m_coat_roughness(material.coat_roughness) {
+
+        float coat_modulated_roughness = modulate_roughness_under_coat(m_roughness, m_coat_roughness);
+        m_roughness = optix::lerp(m_roughness, coat_modulated_roughness, m_coat_scale);
+
         float coat_single_bounce_rho;
         compute_tints(material.tint, m_roughness, material.specularity, material.metallic, m_coat_scale, m_coat_roughness, abs_cos_theta,
                       coat_single_bounce_rho, m_coat_transmission, m_specularity, m_diffuse_tint);
@@ -171,8 +175,8 @@ public:
         float3 tint = make_float3(tint_roughness);
         m_roughness = tint_roughness.w;
         m_roughness = max(m_roughness, min_roughness);
-        float coat_scaled_roughness = BSDFs::GGX::roughness_from_alpha(1.0f - (1.0f - BSDFs::GGX::alpha_from_roughness(m_roughness)) * (1.0f - BSDFs::GGX::alpha_from_roughness(m_coat_roughness)));
-        m_roughness = lerp(m_roughness, coat_scaled_roughness, m_coat_scale);
+        float coat_modulated_roughness = modulate_roughness_under_coat(m_roughness, m_coat_roughness);
+        m_roughness = lerp(m_roughness, coat_modulated_roughness, m_coat_scale);
 
         float coat_single_bounce_rho;
         compute_tints(tint, m_roughness, material.specularity, metallic, m_coat_scale, m_coat_roughness, abs_cos_theta,
@@ -390,7 +394,7 @@ public:
 
     // Estimate the directional-hemispherical reflectance function.
     __inline_dev__ optix::float3 rho(float abs_cos_theta) const {
-        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness) * m_coat_transmission ;
+        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness) * m_coat_transmission;
         float single_bounce_coat_rho = m_coat_scale * fetch_specular_rho(abs_cos_theta, m_coat_roughness).rho(COAT_SPECULARITY);
         return m_diffuse_tint + specular_rho + single_bounce_coat_rho;
     }

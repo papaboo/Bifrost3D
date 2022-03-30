@@ -19,31 +19,6 @@
 
 namespace OptiXRenderer {
 
-// Computes a tangent and bitangent that together with the normal creates an orthonormal bases.
-// Building an Orthonormal Basis, Revisited, Duff et al.
-// http://jcgt.org/published/0006/01/01/paper.pdf
-__inline_all__ static void compute_tangents(optix::float3 normal,
-                                            optix::float3& tangent, optix::float3& bitangent) {
-    using namespace optix;
-
-    float sign = copysignf(1.0f, normal.z);
-    const float a = -1.0f / (sign + normal.z);
-    const float b = normal.x * normal.y * a;
-    tangent = { 1.0f + sign * normal.x * normal.x * a, sign * b, -sign * normal.x };
-    bitangent = { b, sign + normal.y * normal.y * a, -normal.y };
-}
-
-#if GPU_DEVICE
-__inline_dev__ optix::float4 half_to_float(const optix::ushort4& xyzw) {
-    return optix::make_float4(__half2float(xyzw.x), __half2float(xyzw.y), __half2float(xyzw.z), __half2float(xyzw.w));
-}
-
-__inline_dev__ optix::ushort4 float_to_half(const optix::float4& xyzw) {
-    return optix::make_ushort4(((__half_raw)__float2half_rn(xyzw.x)).x, ((__half_raw)__float2half_rn(xyzw.y)).x,
-                               ((__half_raw)__float2half_rn(xyzw.z)).x, ((__half_raw)__float2half_rn(xyzw.w)).x);
-}
-#endif
-
 //-----------------------------------------------------------------------------
 // Math utils
 //-----------------------------------------------------------------------------
@@ -94,17 +69,17 @@ __inline_all__ unsigned int morton_encode(unsigned int x, unsigned int y) {
     return part_by_1(y) | (part_by_1(x) << 1);
 }
 
-__inline_all__ static float pow2(float x) {
+__inline_all__ float pow2(float x) {
     return x * x;
 }
 
-__inline_all__ static float pow5(float x) {
+__inline_all__ float pow5(float x) {
     float xx = x * x;
     return xx * xx * x;
 }
 
 __inline_all__ float schlick_fresnel(float incident_specular, float abs_cos_theta) {
-    return incident_specular + (1.0f - incident_specular) * pow5(optix::fmaxf(0.0f, 1.0f - abs_cos_theta));
+    return incident_specular + (1.0f - incident_specular) * pow5(1.0f - abs_cos_theta);
 }
 
 __inline_all__ optix::float3 schlick_fresnel(optix::float3 incident_specular, float abs_cos_theta) {
@@ -150,6 +125,42 @@ __inline_all__ float sin_phi(optix::float3 w) {
     return (sin_theta_ == 0) ? 0.0f : optix::clamp(w.y / sin_theta_, -1.0f, 1.0f);
 }
 __inline_all__ float sin2_phi(optix::float3 w) { return sin_phi(w) * sin_phi(w); }
+
+//-----------------------------------------------------------------------------
+// Utility functions
+//-----------------------------------------------------------------------------
+
+// Computes a tangent and bitangent that together with the normal creates an orthonormal basis.
+// Building an Orthonormal Basis, Revisited, Duff et al.
+// http://jcgt.org/published/0006/01/01/paper.pdf
+__inline_all__ void compute_tangents(optix::float3 normal,
+    optix::float3& tangent, optix::float3& bitangent) {
+    using namespace optix;
+
+    float sign = copysignf(1.0f, normal.z);
+    const float a = -1.0f / (sign + normal.z);
+    const float b = normal.x * normal.y * a;
+    tangent = { 1.0f + sign * normal.x * normal.x * a, sign * b, -sign * normal.x };
+    bitangent = { b, sign + normal.y * normal.y * a, -normal.y };
+}
+
+#if GPU_DEVICE
+__inline_dev__ optix::float4 half_to_float(const optix::ushort4& xyzw) {
+    return optix::make_float4(__half2float(xyzw.x), __half2float(xyzw.y), __half2float(xyzw.z), __half2float(xyzw.w));
+}
+
+__inline_dev__ optix::ushort4 float_to_half(const optix::float4& xyzw) {
+    return optix::make_ushort4(((__half_raw)__float2half_rn(xyzw.x)).x, ((__half_raw)__float2half_rn(xyzw.y)).x,
+        ((__half_raw)__float2half_rn(xyzw.z)).x, ((__half_raw)__float2half_rn(xyzw.w)).x);
+}
+#endif
+
+// Scales the roughness of a material placed underneath a rough coat layer.
+// This is done simulate how a wider lobe from the rough transmission would
+// perceptually widen the specular lobe of the underlying material.
+__inline_all__ float modulate_roughness_under_coat(float base_roughness, float coat_roughness) {
+    return sqrt(1.0f - (1.0f - pow2(base_roughness)) * (1.0f - pow2(coat_roughness)));
+}
 
 //-----------------------------------------------------------------------------
 // OptiX asserts
