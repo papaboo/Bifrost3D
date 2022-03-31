@@ -76,81 +76,111 @@ private:
     }
 
     __inline_all__ static float compute_coat_probability(optix::float3 base_rho, float coat_rho) {
-        float base_weight = average(base_rho);
-        float coat_weight = coat_rho;
+        float base_weight = sum(base_rho);
+        float coat_weight = 3 * coat_rho;
         return coat_weight / (base_weight + coat_weight);
     }
 
-    // Computes the specularity of the specular microfacet and the tint of the diffuse reflection.
-    // The directional-hemispherical reflectance and transmission of the coat is computed as well if the coat is enabled.
+    // Sets up the diffuse and specular component on the base layer.
+    // * The dielectric diffuse tint is computed as tint * dielectric_specular_transmission and the metallic diffuse tint is black. 
+    //   The diffuse tint of the materials is found by a linear interpolation of the dielectric and metallic tint based on metalness.
+    // * The metallic parameter defines an interpolation between a dielectric material and a conductive material with the given parameters.
+    //   As both materials are described as an independent linear combination of diffuse and microfacet BRDFs, 
+    //   the interpolation between the materials can be computed by simply interpolating the material parameters, 
+    //   ie. lerp(dielectric.evaluate(...), conductor.evaluate(...), metallic) can be expressed as lerp_params(dielectric, conductor, metallic)evaluate(...)
     // * The specularity is a linear interpolation of the dielectric specularity and the conductor/metal specularity.
     //   The dielectric specularity is found by multiplying the materials specularity by 0.08, as is described on page 8 of Physically-Based Shading at Disney.
     //   The conductor specularity is simply the tint of the material, as the tint describes the color of the metal when viewed head on.
     // * Microfacet interreflection is approximated from the principle that white-is-white and energy lost 
-    //   from not simulating multiple scattering events can be computed as 1 - white_specular_rho = energy_lost. 
-    //   The light scattered from the 2nd, 3rd and so on scattering event is assumed to be diffuse and its rho/tint is energy_lost * specularity.
-    // * The metallic parameter defines an interpolation between a dielectric material and a conductive material. 
-    //   As both materials are described as an independent linear combination of diffuse and microfacet BRDFs, 
-    //   the interpolation between the materials can be computed by simply interpolating the material parameters, 
-    //   ie. lerp(evaluate(dielectric, ...), evaluate(conductor, ...), metallic) can be expressed as evaluate(lerp(dielectric, conductor, metallic), ...)
-    // * The dielectric diffuse tint is computed as tint * (1 - specular_rho) and the metallic diffuse tint is black. 
-    //   The diffuse tint of the materials is found by a linear interpolation of the dieliectric and metallic tint based on metalness.
-    // * The coat is another microfacet layer on top of the diffuse + specular base. We output the single-bounce directional-hemispherical reflectance for computing importance sampling and the transmission factor.
-    //   The diffuse tint is prescaled by the transmission and interreflection from the coat is added to the diffuse tint.
-    //   The coat transmission cannot be baked into the specularity of the base material, due to how Fresnel is handled, and is instead applied when the specular layer is evaluated or sampled.
-    __inline_all__ static void compute_tints(optix::float3 tint, float roughness, float specularity, float metallic, float coat, float coat_roughness, float abs_cos_theta,
-                                             float& coat_single_bounce_rho, float& coat_transmission, optix::float3& base_specularity, optix::float3& diffuse_tint) {
+    //   from not simulating multiple scattering events can be computed as 1 - white_specular_rho = full_specular_interreflection.
+    //   The specular interreflection with the given specularity can be found by scaling with rho of the given specularity,
+    //   specular_interreflection = full_specular_interreflection / specular_rho.
+    //   The light scattered from interreflection of the 2nd, 3rd and so on scattering event is assumed to be diffuse and its contribution is added to the diffuse tint.
+    __inline_all__ void setup_base_layer(optix::float3 tint, float roughness, float specularity, float metallic, float abs_cos_theta) {
         using namespace optix;
 
-        // Clear coat with fixed index of refraction of 1.5 / specularity of 0.04, representative of polyurethane and glass.
-        PrecomputedSpecularRho precomputed_coat_rho = fetch_specular_rho(abs_cos_theta, coat_roughness);
-        coat_single_bounce_rho = coat * precomputed_coat_rho.rho(COAT_SPECULARITY);
-        float lossless_coat_rho = coat_single_bounce_rho / precomputed_coat_rho.full;
-        float coat_interreflection_rho = lossless_coat_rho - coat_single_bounce_rho;
-        coat_transmission = (1 - lossless_coat_rho);
+        // No coat
+        m_coat_scale = 0;
+        m_coat_roughness = 0;
+        m_coat_transmission = 1;
+        m_coat_probability = 0;
+
+        // Roughness
+        m_roughness = roughness;
 
         // Specularity
         float dielectric_specularity = specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.
         float3 conductor_specularity = tint;
-        base_specularity = lerp(make_float3(dielectric_specularity), conductor_specularity, metallic);
+        m_specularity = lerp(make_float3(dielectric_specularity), conductor_specularity, metallic);
 
-        // Specular directional-hemispherical reflectance function.
-        auto precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, roughness);
+        // Specular directional-hemispherical reflectance function, rho.
+        PrecomputedSpecularRho precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, m_roughness);
         float dielectric_specular_rho = precomputed_specular_rho.rho(dielectric_specularity);
-        float3 conductor_specular_rho = precomputed_specular_rho.rho(conductor_specularity);
 
         // Dielectric tint.
         float dielectric_lossless_specular_rho = dielectric_specular_rho / precomputed_specular_rho.full;
-        float3 dielectric_tint = tint * (1.0f - dielectric_lossless_specular_rho);
+        float dielectric_specular_transmission = 1.0f - dielectric_lossless_specular_rho;
+        float3 dielectric_tint = tint * dielectric_specular_transmission;
+        m_diffuse_tint = dielectric_tint * (1.0f - metallic);
 
-        // Microfacet specular interreflection.
-        float3 single_bounce_specular_rho = lerp(make_float3(dielectric_specular_rho), conductor_specular_rho, metallic);
+        // Compute microfacet specular interreflection. Assume it is diffuse and add its contribution to the diffuse tint.
+        float3 single_bounce_specular_rho = precomputed_specular_rho.rho(m_specularity);
         float3 lossless_specular_rho = single_bounce_specular_rho / precomputed_specular_rho.full;
         float3 specular_interreflection_rho = lossless_specular_rho - single_bounce_specular_rho;
+        m_diffuse_tint += specular_interreflection_rho;
+    }
 
-        // Combining dielectric diffuse tint with specular scattering.
-        diffuse_tint = dielectric_tint * (1.0f - metallic) + specular_interreflection_rho; // Base tint and specular interreflection
-        diffuse_tint *= coat_transmission; // Scale by coat transmission
-        diffuse_tint += make_float3(coat_interreflection_rho); // Add contribution from coat interreflection
+    // Sets up the specular microfacet and the diffuse reflection as described in setup_base_layer().
+    // If the coat is enabled then a microfacet coat on top of the base layer is initialized as well.
+    // * The base roughness is scaled by the coat roughness to simulate how light would scatter through the coat and 
+    //   perceptually widen the highlight of the underlying material.
+    // * The transmission through the coat is computed and baked into the diffuse tint.
+    //   The contribution from coat interreflection is then added to the diffuse tint.
+    // * The transmission cannot be baked into the specularity, as specularity only represents the contribution from the specular layer 
+    //   when viewed head on and we need the transmission to affect the reflectance at grazing angles as well.
+    //   Instead we store the transmission and scale the base layer's specular contribution by it when evaluating or sampling.
+    __inline_all__ void setup_shading(optix::float3 tint, float roughness, float specularity, float metallic, float coat_scale, float coat_roughness, float abs_cos_theta,
+                                      float& coat_single_bounce_rho) {
+        using namespace optix;
+
+        float coat_modulated_roughness = modulate_roughness_under_coat(roughness, coat_roughness);
+        roughness = lerp(roughness, coat_modulated_roughness, coat_scale);
+
+        setup_base_layer(tint, roughness, specularity, metallic, abs_cos_theta);
+
+        coat_single_bounce_rho = 0.0f;
+        if (coat_scale > 0) {
+            // Clear coat with fixed index of refraction of 1.5 / specularity of 0.04, representative of polyurethane and glass.
+            m_coat_scale = coat_scale;
+            m_coat_roughness = coat_roughness;
+            PrecomputedSpecularRho precomputed_coat_rho = fetch_specular_rho(abs_cos_theta, coat_roughness);
+            coat_single_bounce_rho = coat_scale * precomputed_coat_rho.rho(COAT_SPECULARITY);
+            float lossless_coat_rho = coat_single_bounce_rho / precomputed_coat_rho.full;
+            float coat_interreflection_rho = lossless_coat_rho - coat_single_bounce_rho;
+            m_coat_transmission = 1.0f - lossless_coat_rho;
+
+            // Scale diffuse component by the coat transmission and add contribution from coat interreflection to the diffues tint. 
+            m_diffuse_tint *= m_coat_transmission;
+            m_diffuse_tint += make_float3(coat_interreflection_rho);
+        }
+    }
+
+    __inline_all__ void setup_sampling_probabilities(float abs_cos_theta, float coat_rho) {
+        // Compute the probability of sampling the specular layer instead of the diffuse layer.
+        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness) * m_coat_transmission; 
+        float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
+        m_specular_probability = unsigned short(specular_probability * USHORT_MAX + 0.5f);
+        // Compute the probability of sampling the coat instead of the base layer.
+        float coat_probability = compute_coat_probability(m_diffuse_tint + specular_rho, coat_rho);
+        m_coat_probability = unsigned short(coat_probability * USHORT_MAX + 0.5f);
     }
 
 public:
 
-    __inline_all__ DefaultShading(const Material& material, float abs_cos_theta)
-        : m_roughness(material.roughness), m_coat_scale(material.coat), m_coat_roughness(material.coat_roughness) {
-
-        float coat_modulated_roughness = modulate_roughness_under_coat(m_roughness, m_coat_roughness);
-        m_roughness = optix::lerp(m_roughness, coat_modulated_roughness, m_coat_scale);
-
-        float coat_single_bounce_rho;
-        compute_tints(material.tint, m_roughness, material.specularity, material.metallic, m_coat_scale, m_coat_roughness, abs_cos_theta,
-                      coat_single_bounce_rho, m_coat_transmission, m_specularity, m_diffuse_tint);
-
-        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness) * m_coat_transmission;
-        float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
-        m_specular_probability = unsigned short(specular_probability * USHORT_MAX + 0.5f);
-        float coat_probability = compute_coat_probability(m_diffuse_tint + specular_rho, coat_single_bounce_rho);
-        m_coat_probability = unsigned short(coat_probability * USHORT_MAX + 0.5f);
+    __inline_all__ DefaultShading(const Material& material, float abs_cos_theta) {
+        float coat_rho;
+        setup_shading(material.tint, material.roughness, material.specularity, material.metallic, material.coat, material.coat_roughness, abs_cos_theta, coat_rho);
+        setup_sampling_probabilities(abs_cos_theta, coat_rho);
     }
 
 #if GPU_DEVICE
@@ -158,8 +188,7 @@ public:
         using namespace optix;
 
         // Coat
-        m_coat_scale = material.coat;
-        m_coat_roughness = material.coat_roughness;
+        float coat_roughness = max(material.coat_roughness, min_roughness);
 
         // Metallic
         float metallic = material.metallic;
@@ -173,20 +202,12 @@ public:
         else if (material.roughness_texture_ID)
             tint_roughness.w *= rtTex2D<float>(material.roughness_texture_ID, texcoord.x, texcoord.y);
         float3 tint = make_float3(tint_roughness);
-        m_roughness = tint_roughness.w;
-        m_roughness = max(m_roughness, min_roughness);
-        float coat_modulated_roughness = modulate_roughness_under_coat(m_roughness, m_coat_roughness);
-        m_roughness = lerp(m_roughness, coat_modulated_roughness, m_coat_scale);
+        float roughness = tint_roughness.w;
+        roughness = max(roughness, min_roughness);
 
-        float coat_single_bounce_rho;
-        compute_tints(tint, m_roughness, material.specularity, metallic, m_coat_scale, m_coat_roughness, abs_cos_theta,
-                      coat_single_bounce_rho, m_coat_transmission, m_specularity, m_diffuse_tint);
-
-        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness) * m_coat_transmission;
-        float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
-        m_specular_probability = unsigned short(specular_probability * USHORT_MAX + 0.5f);
-        float coat_probability = compute_coat_probability(m_diffuse_tint + specular_rho, coat_single_bounce_rho);
-        m_coat_probability = unsigned short(coat_probability * USHORT_MAX + 0.5f);
+        float coat_rho;
+        setup_shading(tint, roughness, material.specularity, metallic, material.coat, coat_roughness, abs_cos_theta, coat_rho);
+        setup_sampling_probabilities(abs_cos_theta, coat_rho);
     }
 
     __inline_all__ static DefaultShading initialize_with_max_PDF_hint(const Material& material, float abs_cos_theta, optix::float2 texcoord, float max_PDF_hint) {
