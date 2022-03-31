@@ -457,6 +457,47 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
     delete[] ws_squared;
 }
 
+GTEST_TEST(DefaultShadingModel, regression_test) {
+    using namespace Shading::ShadingModels;
+    using namespace optix;
+
+    const unsigned int MAX_SAMPLES = 2;
+
+    Material materials[3] = { gold_parameters(), plastic_parameters(), coated_plastic_parameters() };
+    float3 wos[3] = { make_float3(0.0f, 0.0f, 1.0f), normalize(make_float3(1.0f, 0.0f, 1.0f)), normalize(make_float3(1.0f, 0.0f, 0.01f)) };
+
+    BSDFResponse bsdf_responses[] = {
+        // Gold
+        {497357.906250f, 380976.156250f, 167112.25f, 497357.90625f}, {124339.273438f, 95243.882813f, 41777.996094f, 124339.210938f},
+        {994712.5f, 762451.4375f, 335647.0625f, 703368.8125f}, {249076.625f, 190918.921875f, 84047.960938f, 175982.875f},
+        {4938916864.0f, 4882190336.0f, 4777949696.0f, 49537124.0f}, {1234685696.0f, 1220504576.0f, 1194445312.0f, 12383978.0f},
+        // Plastic
+        {0.014787f, 0.092766f, 0.111481f, 0.319138f}, {0.012301f, 0.090280f, 0.108995f, 0.220644f},
+        {0.015975f, 0.093622f, 0.112258f, 0.300184f}, {0.021748f, 0.099395f, 0.118031f, 0.241324f},
+        {0.012864f, 0.083453f, 0.100394f, 0.290481f}, {0.099139f, 0.169727f, 0.186669f, 0.375691f},
+        // Coated plastic
+        {0.029084f, 0.103935f, 0.121900f, 0.313488f}, {0.024119f, 0.098970f, 0.116935f, 0.213343f},
+        {0.031833f, 0.106137f, 0.123970f, 0.296725f}, {0.043611f, 0.117915f, 0.135748f, 0.248994f},
+        {0.022988f, 0.086616f, 0.101887f, 0.273984f}, {0.024616f, 0.088245f, 0.103516f, 0.142139f} };
+
+    int response_index = 0;
+    for (int i = 0; i < 3; ++i)
+        for (float3 wo : wos) {
+            auto material = DefaultShading(materials[i], wo.z);
+            for (int s = 0; s < MAX_SAMPLES; ++s) {
+                float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(MAX_SAMPLES));
+                BSDFSample sample = material.sample_all(wo, rng_sample);
+                // printf("{%.6ff, %.6ff, %.6ff, %.6ff},\n", sample.reflectance.x, sample.reflectance.y, sample.reflectance.z, sample.PDF);
+                auto response = bsdf_responses[response_index++];
+
+                EXPECT_FLOAT_EQ_PCT(response.reflectance.x, sample.reflectance.x, 0.0001f);
+                EXPECT_FLOAT_EQ_PCT(response.reflectance.y, sample.reflectance.y, 0.0001f);
+                EXPECT_FLOAT_EQ_PCT(response.reflectance.z, sample.reflectance.z, 0.0001f);
+                EXPECT_FLOAT_EQ_PCT(response.PDF, sample.PDF, 0.0001f);
+            }
+        }
+}
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_SHADING_MODEL_DEFAULT_TEST_H_
