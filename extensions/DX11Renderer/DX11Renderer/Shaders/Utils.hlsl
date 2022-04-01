@@ -192,6 +192,13 @@ float3x3 create_inverse_TBN(float3 normal) {
     return transpose(create_TBN(normal));
 }
 
+// Scales the roughness of a material placed underneath a rough coat layer.
+// This is done simulate how a wider lobe from the rough transmission would
+// perceptually widen the specular lobe of the underlying material.
+float modulate_roughness_under_coat(float base_roughness, float coat_roughness) {
+    return sqrt(1.0f - (1.0f - pow2(base_roughness)) * (1.0f - pow2(coat_roughness)));
+}
+
 float3 decode_octahedral_normal(int packed_encoded_normal) {
     const int SHRT_MAX = 32767;
     const int SHRT_MIN = -32768;
