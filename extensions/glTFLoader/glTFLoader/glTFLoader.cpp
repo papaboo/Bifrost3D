@@ -130,8 +130,8 @@ struct SamplerParams {
     void parse_glTF_sampler(tinygltf::Sampler glTF_sampler) {
         Magnification_filter = convert_magnification_filter(glTF_sampler.magFilter);
         Minification_filter = convert_minification_filter(glTF_sampler.minFilter);
-        WrapU = convert_wrap_mode(glTF_sampler.wrapR);
-        WrapV = convert_wrap_mode(glTF_sampler.wrapS);
+        WrapU = convert_wrap_mode(glTF_sampler.wrapS);
+        WrapV = convert_wrap_mode(glTF_sampler.wrapT);
     }
 
     inline Textures::UID create_texture_2D(Images::UID image_ID) {
@@ -238,7 +238,7 @@ Image extract_tint_roughness(Image tint_image, Image roughness_image, const std:
 // ------------------------------------------------------------------------------------------------
 
 // Decompose an affine 4x4 matrix, represented as a 3x4, into a Transform with translation, rotation and scale.
-// Returns true if the matrix was percetly decomposed into a transform and false if the transform could not represent all aspects of the matrix.
+// Returns true if the matrix was perfectly decomposed into a transform and false if the transform could not represent all aspects of the matrix.
 bool decompose_transformation(Matrix3x4d matrix, Transform& transform) {
     Matrix3x3d linear_part;
     linear_part.set_column(0, matrix.get_column(0));
