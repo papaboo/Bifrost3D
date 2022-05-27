@@ -73,9 +73,51 @@ __inline_all__ float pow2(float x) {
     return x * x;
 }
 
+__inline_all__ optix::float3 pow2(optix::float3 x) {
+    return x * x;
+}
+
 __inline_all__ float pow5(float x) {
     float xx = x * x;
     return xx * xx * x;
+}
+
+// Reflectance of dielectrics at normal incidence, where the ray is leaving the medium with index of refraction ior1
+// and entering the medium with index of refraction, ior2.
+// Ray Tracing Gems 2, Chapter 9, The Schlick Fresnel Approximation, page 110 footnote.
+__inline_all__ float dielectric_reflectance(float ior1, float ior2) {
+    return pow2((ior1 - ior2) / (ior1 + ior2));
+}
+
+// Reflectance of dielectrics at normal incidence, where the ray is leaving the dielectric medium with index of refraction ior1
+// and entering the conductor medium with index of refraction, ior2, and extinction coefficient, ext2.
+__inline_all__ optix::float3 conductor_reflectance(optix::float3 ior1, optix::float3 ior2, optix::float3 ext2) {
+    optix::float3 ext2_sqrd = pow2(ext2);
+    return (pow2(ior1 - ior2) + ext2_sqrd) / (pow2(ior1 + ior2) + ext2_sqrd);
+}
+
+// Estimates a dielectric's index of refraction from reflectance.
+// It is assumed that the reflectance describes the reflectance of the material when bordering air, i.e ior1 is 1.0.
+// Finding the index of refraction requires solving a second degree polynomial with two solutions.
+// For dielectrics the solution with the largest value is the correct one.
+__inline_all__ float dielectric_ior_from_reflectance(float reflectance) {
+    float a = reflectance - 1;
+    float b = 2 * reflectance + 2;
+    float c = a;
+    return (-b - sqrt(b*b - 4 * a * c)) / (2 * a);
+}
+
+// Estimates a conductor's index of refraction from reflectance.
+// It is assumed that the reflectance describes the reflectance of the material when bordering air, i.e ior1 is 1.0.
+// Finding the index of refraction requires solving a second degree polynomial with two solutions.
+// For dielectrics the solution with the lowest value is the correct one.
+__inline_all__ optix::float3 conductor_ior_from_reflectance(optix::float3 reflectance, optix::float3 ext2) {
+    optix::float3 a = reflectance - 1;
+    optix::float3 b = 2 * reflectance + 2;
+    optix::float3 c = a + (reflectance - 1) * pow2(ext2);
+    optix::float3 d = b * b - 4 * a * c;
+    optix::float3 sqrt_d = { sqrt(d.x), sqrt(d.y), sqrt(d.z) };
+    return (-b + sqrt_d) / (2 * a);
 }
 
 __inline_all__ float schlick_fresnel(float incident_specular, float abs_cos_theta) {
