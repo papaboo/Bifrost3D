@@ -20,11 +20,7 @@ namespace RNG {
 // Primes.
 // See https://primes.utm.edu/lists/small/1000.txt for more.
 // ------------------------------------------------------------------------------------------------
-#if GPU_DEVICE
-__constant__ unsigned short primes[128] =
-#else
-static const unsigned short primes[128] = 
-#endif
+__constant_all__ unsigned short primes[128] =
     { 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 
     31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 
     73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 
@@ -40,11 +36,7 @@ static const unsigned short primes[128] =
     661, 673, 677, 683, 691, 701, 709, 719,
 };
 
-#if GPU_DEVICE
-__constant__ float uint_normalizer = 1.0f / 4294967296.0f;
-#else
-static const float uint_normalizer = 1.0f / 4294967296.0f;
-#endif
+__constant_all__ float uint_normalizer = 1.0f / 4294967296.0f;
 
 // ------------------------------------------------------------------------------------------------
 // RNG sampling utils.

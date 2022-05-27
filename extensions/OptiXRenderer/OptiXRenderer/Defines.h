@@ -62,6 +62,12 @@ void validate_optix_resource(T resource, char* file, int line) {
 #endif
 
 #if GPU_DEVICE
+#    define __constant_all__ __constant__
+#else
+#    define __constant_all__ static const
+#endif
+
+#if GPU_DEVICE
 #define THROW(e) rtThrow(e)
 #else
 #define THROW(e) throw e
