@@ -138,6 +138,15 @@ __inline_dev__ LightSample reestimated_light_samples(const DefaultShading& mater
 // Closest hit integrator.
 //-----------------------------------------------------------------------------
 
+__inline_all__ static float get_coverage(const Material& material, optix::float2 texcoord) {
+    float coverage = material.coverage;
+#if GPU_DEVICE
+    if (material.coverage_texture_ID)
+        coverage *= optix::rtTex2D<float>(material.coverage_texture_ID, texcoord.x, texcoord.y);
+#endif
+    return coverage;
+}
+
 RT_PROGRAM void closest_hit() {
     // const float3 world_geometric_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, geometric_normal));
     const float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
@@ -154,7 +163,7 @@ RT_PROGRAM void closest_hit() {
     monte_carlo_payload.rng_state.set_dimension(4 * monte_carlo_payload.bounces);
 #endif
 
-    float coverage = DefaultShading::coverage(material_parameter, texcoord);
+    float coverage = get_coverage(material_parameter, texcoord);
     if (sample1f(monte_carlo_payload.rng_state) > coverage) {
         monte_carlo_payload.position = ray.direction * (t_hit + g_scene.ray_epsilon) + ray.origin;
         return;
@@ -202,7 +211,7 @@ RT_PROGRAM void closest_hit() {
 rtDeclareVariable(ShadowPayload, shadow_payload, rtPayload, );
 
 RT_PROGRAM void shadow_any_hit() {
-    float coverage = DefaultShading::coverage(g_materials[material_index], texcoord);
+    float coverage = get_coverage(g_materials[material_index], texcoord);
     shadow_payload.radiance *= 1.0f - coverage;
     if (shadow_payload.radiance.x < 0.0000001f && shadow_payload.radiance.y < 0.0000001f && shadow_payload.radiance.z < 0.0000001f) {
         shadow_payload.radiance = make_float3(0, 0, 0);

@@ -10,7 +10,6 @@
 #define _OPTIXRENDERER_SHADING_MODEL_LAMBERT_SHADING_H_
 
 #include <OptiXRenderer/Shading/BSDFs/Lambert.h>
-#include <OptiXRenderer/Utils.h>
 
 namespace OptiXRenderer {
 namespace Shading {
@@ -36,15 +35,6 @@ public:
     }
 #endif
 
-    __inline_all__ static float coverage(const Material& material, optix::float2 texcoord) {
-        float coverage = material.coverage;
-#if GPU_DEVICE
-        if (material.coverage_texture_ID)
-            coverage *= optix::rtTex2D<float>(material.coverage_texture_ID, texcoord.x, texcoord.y);
-#endif
-        return coverage;
-    }
-
     __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
         return BSDFs::Lambert::evaluate(m_tint, wo, wi);
     }
@@ -61,7 +51,7 @@ public:
         return BSDFs::Lambert::sample(m_tint, make_float2(random_sample));
     }
 
-}; // NS DefaultShading
+}; // NS LambertShading
 
 } // NS ShadingModels
 } // NS Shading

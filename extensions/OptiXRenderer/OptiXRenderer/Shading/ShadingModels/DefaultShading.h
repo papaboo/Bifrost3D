@@ -224,15 +224,6 @@ public:
 
     __inline_all__ float get_roughness() const { return m_roughness; }
 
-    __inline_all__ static float coverage(const Material& material, optix::float2 texcoord) {
-        float coverage = material.coverage;
-#if GPU_DEVICE
-        if (material.coverage_texture_ID)
-            coverage *= optix::rtTex2D<float>(material.coverage_texture_ID, texcoord.x, texcoord.y);
-#endif
-        return coverage;
-    }
-
     __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
         using namespace optix;
 
