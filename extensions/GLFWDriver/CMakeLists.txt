@@ -1,5 +1,5 @@
-set(GLFW_ZIP_URL "https://github.com/glfw/glfw/releases/download/3.3/glfw-3.3.zip")
-set(GLFW_LIBS_DIR "${BIFROST_LIBS_DIR}/glfw-3.3")
+set(GLFW_ZIP_URL "https://github.com/glfw/glfw/releases/download/3.3.7/glfw-3.3.7.zip")
+set(GLFW_LIBS_DIR "${BIFROST_LIBS_DIR}/glfw-3.3.7")
 set(GLFW_ZIP_DEST "${GLFW_LIBS_DIR}.zip")
 
 # TODO Split into function that downloads, unzips and deletes.
@@ -13,7 +13,7 @@ if (NOT EXISTS ${GLFW_LIBS_DIR}/CMakeLists.txt)
       "${GLFW_ZIP_URL}"
       "${GLFW_ZIP_DEST}"
       SHOW_PROGRESS
-      EXPECTED_MD5;e4f3c4848710093f29b1781f2d1b7acc
+      EXPECTED_MD5;6985b0ecfba89ff4a3c7bc7e22f85a9d
       # no TIMEOUT
       STATUS status
       LOG log)
@@ -32,11 +32,11 @@ if (NOT EXISTS ${GLFW_LIBS_DIR}/CMakeLists.txt)
 
   if (EXISTS ${GLFW_ZIP_DEST})
     # Unzip the source
-    message(STATUS "Unzipping glfw-3.3.zip to ${GLFW_LIBS_DIR}")
+    message(STATUS "Unzipping glfw-3.3.7.zip to ${GLFW_LIBS_DIR}")
     execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${GLFW_ZIP_DEST}" WORKING_DIRECTORY "${BIFROST_LIBS_DIR}" )
 
     # Delete the zip file
-    message(STATUS "Deleting glfw-3.3.zip")
+    message(STATUS "Deleting glfw-3.3.7.zip")
     file(REMOVE "${GLFW_ZIP_DEST}")
   endif()
 endif()
@@ -51,9 +51,9 @@ if (EXISTS ${GLFW_LIBS_DIR}/CMakeLists.txt)
   # Add GLFW lib
   add_subdirectory(${GLFW_LIBS_DIR} ${CMAKE_BINARY_DIR}/glfw)
 
-  # Move GLFW source into Libs folder
-  set_target_properties(glfw PROPERTIES
-                        FOLDER "Libs")
+  # Move GLFW source into Libs/GLFW folder
+  set_target_properties(glfw PROPERTIES FOLDER "Libs/GLFW")
+  set_target_properties(update_mappings PROPERTIES FOLDER "Libs/GLFW")
 
   # Add the GLFW driver project
   add_library(GLFWDriver GLFWDriver.h GLFWDriver.cpp)
