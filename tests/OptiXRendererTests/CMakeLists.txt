@@ -22,6 +22,7 @@ if (TARGET OptiXRenderer)
 
   set(SHADING_MODELS_SRCS
     ShadingModels/DefaultShadingTest.h
+    ShadingModels/ShadingModelTestUtils.h
   )
 
   add_executable(${PROJECT_NAME} ${SRCS} ${BSDFS_SRCS} ${LIGHTSOURCES_SRCS} ${SHADING_MODELS_SRCS})
