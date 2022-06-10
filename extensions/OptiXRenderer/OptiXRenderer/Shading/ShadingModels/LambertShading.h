@@ -47,7 +47,7 @@ public:
         return BSDFs::Lambert::evaluate_with_PDF(m_tint, wo, wi);
     }
 
-    __inline_all__ BSDFSample sample_all(optix::float3 wo, optix::float3 random_sample) const {
+    __inline_all__ BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
         return BSDFs::Lambert::sample(m_tint, make_float2(random_sample));
     }
 

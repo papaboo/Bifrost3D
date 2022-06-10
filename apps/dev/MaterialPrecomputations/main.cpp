@@ -347,7 +347,7 @@ int main(int argc, char** argv) {
                 for (unsigned int s = 0; s < sample_count; ++s) {
 
                     float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(sample_count));
-                    BSDFSample sample = material.sample_all(wo, rng_sample);
+                    BSDFSample sample = material.sample(wo, rng_sample);
                     if (is_PDF_valid(sample.PDF)) {
                         total_throughput[s] = sample.reflectance.x * sample.direction.z / sample.PDF;
                         specular_throughput[s] = sample.reflectance.y * sample.direction.z / sample.PDF;

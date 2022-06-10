@@ -346,7 +346,7 @@ public:
     }
 
     // Sample all BSDF based on the contribution of each BRDF.
-    __inline_all__ BSDFSample sample_all(optix::float3 wo, optix::float3 random_sample) const {
+    __inline_all__ BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
         using namespace optix;
 
         assert_frontside(wo.z);

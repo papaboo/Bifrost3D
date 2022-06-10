@@ -182,7 +182,7 @@ RT_PROGRAM void closest_hit() {
 
     // Deferred BSDF sampling.
     // The BSDF is sampled before tracing the shadow ray in order to avoid flushing world_shading_tbn and the material to the local stack when tracing the ray.
-    BSDFSample bsdf_sample = material.sample_all(monte_carlo_payload.direction, sample3f(monte_carlo_payload.rng_state));
+    BSDFSample bsdf_sample = material.sample(monte_carlo_payload.direction, sample3f(monte_carlo_payload.rng_state));
     float3 next_payload_direction = bsdf_sample.direction * world_shading_tbn;
     float next_payload_MIS_PDF = bsdf_sample.PDF;
     float3 next_payload_throughput = make_float3(0.0f);

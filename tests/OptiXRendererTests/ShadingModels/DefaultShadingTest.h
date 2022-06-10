@@ -54,7 +54,7 @@ GTEST_TEST(DefaultShadingModel, Helmholtz_reciprocity) {
         auto plastic_material = DefaultShading(plastic_parameters(), wo.z);
         for (unsigned int s = 0u; s < MAX_SAMPLES; ++s) {
             float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(MAX_SAMPLES));
-            BSDFSample sample = plastic_material.sample_all(wo, rng_sample);
+            BSDFSample sample = plastic_material.sample(wo, rng_sample);
             if (is_PDF_valid(sample.PDF)) {
                 // Re-evaluate contribution from both directions to avoid 
                 // floating point imprecission between sampling and evaluating.
@@ -403,7 +403,7 @@ GTEST_TEST(DefaultShadingModel, regression_test) {
             auto material = DefaultShading(materials[i], wo.z);
             for (int s = 0; s < MAX_SAMPLES; ++s) {
                 float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(MAX_SAMPLES));
-                BSDFSample sample = material.sample_all(wo, rng_sample);
+                BSDFSample sample = material.sample(wo, rng_sample);
                 // printf("{%.6ff, %.6ff, %.6ff, %.6ff},\n", sample.reflectance.x, sample.reflectance.y, sample.reflectance.z, sample.PDF);
                 auto response = bsdf_responses[response_index++];
 

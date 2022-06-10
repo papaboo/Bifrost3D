@@ -59,7 +59,7 @@ RhoResult directional_hemispherical_reflectance_function(ShadingModel shading_mo
     double summed_weight_squared = 0.0;
     for (unsigned int s = 0u; s < MAX_SAMPLES; ++s) {
         float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(MAX_SAMPLES));
-        BSDFSample sample = shading_model.sample_all(wo, rng_sample);
+        BSDFSample sample = shading_model.sample(wo, rng_sample);
         float weight = 0.0f;
         if (is_PDF_valid(sample.PDF))
             weight = sample.reflectance.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
@@ -79,7 +79,7 @@ template <typename ShadingModel>
 void PDF_consistency_test(ShadingModel shading_model, float3 wo, unsigned int sample_count) {
     for (unsigned int i = 0u; i < sample_count; ++i) {
         float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(sample_count));
-        BSDFSample sample = shading_model.sample_all(wo, rng_sample);
+        BSDFSample sample = shading_model.sample(wo, rng_sample);
         if (is_PDF_valid(sample.PDF)) {
             float PDF = shading_model.PDF(wo, sample.direction);
             EXPECT_FLOAT_EQ_PCT(sample.PDF, PDF, 0.0001f);
@@ -91,7 +91,7 @@ template <typename ShadingModel>
 void evaluate_with_PDF_consistency_test(ShadingModel shading_model, float3 wo, unsigned int sample_count) {
     for (unsigned int i = 0u; i < sample_count; ++i) {
         float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(sample_count));
-        BSDFSample sample = shading_model.sample_all(wo, rng_sample);
+        BSDFSample sample = shading_model.sample(wo, rng_sample);
 
         if (is_PDF_valid(sample.PDF)) {
             BSDFResponse response = shading_model.evaluate_with_PDF(wo, sample.direction);
