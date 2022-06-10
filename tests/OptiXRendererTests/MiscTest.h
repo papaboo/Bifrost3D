@@ -63,32 +63,32 @@ GTEST_TEST(PowerHeuristic, invariants) {
     EXPECT_EQ(0.0f, RNG::power_heuristic(0.0f, almost_inf));
 }
 
-GTEST_TEST(Reflectance, dielectric_conversions_to_and_from_index_of_refraction) {
+GTEST_TEST(Specularity, dielectric_conversions_to_and_from_index_of_refraction) {
     // Index of refraction
     const float air_ior = 1.0f;
     const float water_ior = 1.333f;
     const float glass_ior = 1.50f;
 
-    // Reflectance of medium when transitioning from air to medium.
-    const float water_reflectance = 0.02037318784f;
-    const float glass_reflectance = 0.04f;
+    // Specularity of medium when transitioning from air to medium.
+    const float water_specularity = 0.02037318784f;
+    const float glass_specularity = 0.04f;
 
-    // Test conversion from index of refraction to reflectance.
-    float computed_water_reflectance = dielectric_reflectance(air_ior, water_ior);
-    float computed_glass_reflectance = dielectric_reflectance(air_ior, glass_ior);
+    // Test conversion from index of refraction to specularity.
+    float computed_water_specularity = dielectric_specularity(air_ior, water_ior);
+    float computed_glass_specularity = dielectric_specularity(air_ior, glass_ior);
 
-    EXPECT_FLOAT_EQ(water_reflectance, computed_water_reflectance);
-    EXPECT_FLOAT_EQ(glass_reflectance, computed_glass_reflectance);
+    EXPECT_FLOAT_EQ(water_specularity, computed_water_specularity);
+    EXPECT_FLOAT_EQ(glass_specularity, computed_glass_specularity);
 
-    // Test conversion from reflectance to index of refraction
-    float computed_water_ior = dielectric_ior_from_reflectance(water_reflectance);
-    float computed_glass_ior = dielectric_ior_from_reflectance(glass_reflectance);
+    // Test conversion from specularity to index of refraction
+    float computed_water_ior = dielectric_ior_from_specularity(water_specularity);
+    float computed_glass_ior = dielectric_ior_from_specularity(glass_specularity);
 
     EXPECT_FLOAT_EQ(water_ior, computed_water_ior);
     EXPECT_FLOAT_EQ(glass_ior, computed_glass_ior);
 }
 
-GTEST_TEST(Reflectance, conductor_conversions_to_and_from_index_of_refraction) {
+GTEST_TEST(Specularity, conductor_conversions_to_and_from_index_of_refraction) {
     using namespace optix;
     const float3 accuracy = { 1e-5f, 1e-5f, 1e-5f };
 
@@ -99,20 +99,20 @@ GTEST_TEST(Reflectance, conductor_conversions_to_and_from_index_of_refraction) {
     const float3 titanium_ior = { 2.6979f, 2.4793f, 2.3050f };
     const float3 titanium_extinction = { 3.7571f, 3.3511f, 3.0820f };
 
-    // Reflectance of medium when transitioning from air to medium.
-    const float3 gold_reflectance = { 0.932999f, 0.687356f, 0.384839f };
-    const float3 titanium_reflectance = { 0.61167696422f, 0.57501477894f, 0.54852055032f };
+    // Specularity of medium when transitioning from air to medium at wavelengths 630nm (red), 532nm (green) and 465nm (blue)
+    const float3 gold_specularity = { 0.932999f, 0.687356f, 0.384839f };
+    const float3 titanium_specularity = { 0.61167696422f, 0.57501477894f, 0.54852055032f };
 
-    // Test conversion from index of refraction to reflectance.
-    float3 computed_gold_reflectance = conductor_reflectance(air_ior, gold_ior, gold_extinction);
-    float3 computed_titanium_reflectance = conductor_reflectance(air_ior, titanium_ior, titanium_extinction);
+    // Test conversion from index of refraction to specularity.
+    float3 computed_gold_specularity = conductor_specularity(air_ior, gold_ior, gold_extinction);
+    float3 computed_titanium_specularity = conductor_specularity(air_ior, titanium_ior, titanium_extinction);
 
-    EXPECT_FLOAT3_EQ_PCT(gold_reflectance, computed_gold_reflectance, accuracy);
-    EXPECT_FLOAT3_EQ_PCT(titanium_reflectance, computed_titanium_reflectance, accuracy);
+    EXPECT_FLOAT3_EQ_PCT(gold_specularity, computed_gold_specularity, accuracy);
+    EXPECT_FLOAT3_EQ_PCT(titanium_specularity, computed_titanium_specularity, accuracy);
 
-    // Test conversion from reflectance to index of refraction
-    float3 computed_gold_ior = conductor_ior_from_reflectance(gold_reflectance, gold_extinction);
-    float3 computed_titanium_ior = conductor_ior_from_reflectance(titanium_reflectance, titanium_extinction);
+    // Test conversion from specularity to index of refraction
+    float3 computed_gold_ior = conductor_ior_from_specularity(gold_specularity, gold_extinction);
+    float3 computed_titanium_ior = conductor_ior_from_specularity(titanium_specularity, titanium_extinction);
 
     EXPECT_FLOAT3_EQ_PCT(gold_ior, computed_gold_ior, accuracy);
     EXPECT_FLOAT3_EQ_PCT(titanium_ior, computed_titanium_ior, accuracy);

@@ -82,39 +82,39 @@ __inline_all__ float pow5(float x) {
     return xx * xx * x;
 }
 
-// Reflectance of dielectrics at normal incidence, where the ray is leaving the medium with index of refraction ior1
-// and entering the medium with index of refraction, ior2.
+// Specularity of dielectrics at normal incidence, where the ray is leaving a medium with index of refraction ior_o
+// and entering a medium with index of refraction, ior_i.
 // Ray Tracing Gems 2, Chapter 9, The Schlick Fresnel Approximation, page 110 footnote.
-__inline_all__ float dielectric_reflectance(float ior1, float ior2) {
-    return pow2((ior1 - ior2) / (ior1 + ior2));
+__inline_all__ float dielectric_specularity(float ior_o, float ior_i) {
+    return pow2((ior_o - ior_i) / (ior_o + ior_i));
 }
 
-// Reflectance of dielectrics at normal incidence, where the ray is leaving the dielectric medium with index of refraction ior1
-// and entering the conductor medium with index of refraction, ior2, and extinction coefficient, ext2.
-__inline_all__ optix::float3 conductor_reflectance(optix::float3 ior1, optix::float3 ior2, optix::float3 ext2) {
-    optix::float3 ext2_sqrd = pow2(ext2);
-    return (pow2(ior1 - ior2) + ext2_sqrd) / (pow2(ior1 + ior2) + ext2_sqrd);
+// Specularity of dielectrics at normal incidence, where the ray is leaving a dielectric medium with index of refraction ior_o
+// and entering a conductor medium with index of refraction, ior_i, and extinction coefficient, ext_i.
+__inline_all__ optix::float3 conductor_specularity(optix::float3 ior_o, optix::float3 ior_i, optix::float3 ext_i) {
+    optix::float3 ext_i_sqrd = pow2(ext_i);
+    return (pow2(ior_o - ior_i) + ext_i_sqrd) / (pow2(ior_o + ior_i) + ext_i_sqrd);
 }
 
-// Estimates a dielectric's index of refraction from reflectance.
-// It is assumed that the reflectance describes the reflectance of the material when bordering air, i.e ior1 is 1.0.
+// Estimates a dielectric's index of refraction from specularity.
+// It is assumed that the specularity describes the specularity of the material when bordering air, i.e ior_o is 1.0.
 // Finding the index of refraction requires solving a second degree polynomial with two solutions.
 // For dielectrics the solution with the largest value is the correct one.
-__inline_all__ float dielectric_ior_from_reflectance(float reflectance) {
-    float a = reflectance - 1;
-    float b = 2 * reflectance + 2;
+__inline_all__ float dielectric_ior_from_specularity(float specularity) {
+    float a = specularity - 1;
+    float b = 2 * specularity + 2;
     float c = a;
     return (-b - sqrt(b*b - 4 * a * c)) / (2 * a);
 }
 
-// Estimates a conductor's index of refraction from reflectance.
-// It is assumed that the reflectance describes the reflectance of the material when bordering air, i.e ior1 is 1.0.
+// Estimates a conductor's index of refraction from specularity.
+// It is assumed that the specularity describes the specularity of the material when bordering air, i.e ior_o is 1.0.
 // Finding the index of refraction requires solving a second degree polynomial with two solutions.
 // For dielectrics the solution with the lowest value is the correct one.
-__inline_all__ optix::float3 conductor_ior_from_reflectance(optix::float3 reflectance, optix::float3 ext2) {
-    optix::float3 a = reflectance - 1;
-    optix::float3 b = 2 * reflectance + 2;
-    optix::float3 c = a + (reflectance - 1) * pow2(ext2);
+__inline_all__ optix::float3 conductor_ior_from_specularity(optix::float3 specularity, optix::float3 ext_i) {
+    optix::float3 a = specularity - 1;
+    optix::float3 b = 2 * specularity + 2;
+    optix::float3 c = a + (specularity - 1) * pow2(ext_i);
     optix::float3 d = b * b - 4 * a * c;
     optix::float3 sqrt_d = { sqrt(d.x), sqrt(d.y), sqrt(d.z) };
     return (-b + sqrt_d) / (2 * a);
