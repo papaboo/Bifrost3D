@@ -89,7 +89,7 @@ private:
     //   the interpolation between the materials can be computed by simply interpolating the material parameters, 
     //   ie. lerp(dielectric.evaluate(...), conductor.evaluate(...), metallic) can be expressed as lerp_params(dielectric, conductor, metallic)evaluate(...)
     // * The specularity is a linear interpolation of the dielectric specularity and the conductor/metal specularity.
-    //   The dielectric specularity is found by multiplying the materials specularity by 0.08, as is described on page 8 of Physically-Based Shading at Disney.
+    //   The dielectric specularity is defined by the material's specularity.
     //   The conductor specularity is simply the tint of the material, as the tint describes the color of the metal when viewed head on.
     // * Microfacet interreflection is approximated from the principle that white-is-white and energy lost 
     //   from not simulating multiple scattering events can be computed as 1 - white_specular_rho = full_specular_interreflection.
@@ -109,7 +109,7 @@ private:
         m_roughness = roughness;
 
         // Specularity
-        float dielectric_specularity = specularity * 0.08f; // See Physically-Based Shading at Disney bottom of page 8.
+        float dielectric_specularity = specularity;
         float3 conductor_specularity = tint;
         m_specularity = lerp(make_float3(dielectric_specularity), conductor_specularity, metallic);
 

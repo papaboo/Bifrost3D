@@ -28,7 +28,7 @@ public:
     static const int material_count = 9;
 
     MaterialGUI(){
-        m_material0_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 1.0f, 0.25f);
+        m_material0_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 1.0f, 0.02f);
         m_material1_data = Materials::Data::create_metal(gold_tint, 0.02f);
 
         for (int m = 0; m < material_count; ++m) {
@@ -125,7 +125,7 @@ void create_material_scene(Cameras::UID camera_ID, SceneNode root_node, ImGui::I
             }
         }
 
-        Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 1, 0.5f);
+        Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 1, 0.04f);
         material_data.tint_roughness_texture_ID = Textures::create2D(tint_roughness_image_ID, MagnificationFilter::None, MinificationFilter::Trilinear);
         Materials::UID material_ID = Materials::create("Floor", material_data);
 

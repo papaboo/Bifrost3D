@@ -204,7 +204,7 @@ void RenderingGUI::layout_frame() {
                     material.set_metallic(metallic);
 
                 float specularity = material.get_specularity();
-                if (ImGui::SliderFloat("Specularity", &specularity, 0, 1))
+                if (ImGui::SliderFloat("Specularity", &specularity, 0, 0.08f))
                     material.set_specularity(specularity);
 
                 float coat = material.get_coat();

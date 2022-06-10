@@ -26,7 +26,7 @@ Material gold_parameters() {
     gold_params.tint = make_float3(1.0f, 0.766f, 0.336f);
     gold_params.roughness = 0.02f;
     gold_params.metallic = 1.0f;
-    gold_params.specularity = 0.25f;
+    gold_params.specularity = 1.0f;
     return gold_params;
 }
 
@@ -35,7 +35,7 @@ Material plastic_parameters() {
     plastic_params.tint = make_float3(0.02f, 0.27f, 0.33f);
     plastic_params.roughness = 0.7f;
     plastic_params.metallic = 0.0f;
-    plastic_params.specularity = 0.25f;
+    plastic_params.specularity = 0.02f;
     return plastic_params;
 }
 

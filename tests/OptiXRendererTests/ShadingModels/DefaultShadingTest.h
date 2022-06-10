@@ -31,7 +31,7 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
     material_params.tint = optix::make_float3(1.0f, 1.0f, 1.0f);
     material_params.roughness = 0.7f;
     material_params.metallic = 0.0f;
-    material_params.specularity = 0.25f;
+    material_params.specularity = 0.02f;
 
     for (float cos_theta : { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
         const float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
@@ -170,7 +170,7 @@ GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation
         material_params.tint = make_float3(1.0f, 1.0f, 1.0f);
         material_params.roughness = roughness;
         material_params.metallic = metallic;
-        material_params.specularity = 0.5f;
+        material_params.specularity = 0.04f;
         material_params.coat = coat;
         material_params.coat_roughness = coat_roughness;
         auto shading_model = DefaultShading(material_params, wo.z);
@@ -202,7 +202,7 @@ GTEST_TEST(DefaultShadingModel, white_hot_room) {
     // A white material to stress test power_conservation.
     Material white_material_params = {};
     white_material_params.tint = optix::make_float3(1.0f, 1.0f, 1.0f);
-    white_material_params.specularity = 0.5f;
+    white_material_params.specularity = 0.04f;
 
     for (float metallic : { 0.0f, 0.5f, 1.0f }) {
         white_material_params.metallic = metallic;
@@ -224,7 +224,7 @@ GTEST_TEST(DefaultShadingModel, metallic_interpolation) {
 
     Material material_params = {};
     material_params.tint = optix::make_float3(1.0f, 0.5f, 0.25f);
-    material_params.specularity = 0.5f;
+    material_params.specularity = 0.04f;
 
     for (float roughness : { 0.0f, 0.5f, 1.0f }) {
         material_params.roughness = roughness;

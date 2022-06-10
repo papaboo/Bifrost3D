@@ -441,6 +441,7 @@ SceneNodes::UID load(const std::string& filename) {
     for (int i = 0; i < model.materials.size(); ++i) {
         Materials::Data mat_data = {};
         mat_data.tint = RGB::white();
+        mat_data.specularity = 0.04f; // Corresponds to index of refraction of 1.5
         mat_data.roughness = 1.0f;
         mat_data.metallic = 0.0f;
         mat_data.coverage = 1.0f;

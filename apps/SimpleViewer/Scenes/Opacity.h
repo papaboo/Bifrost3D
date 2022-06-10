@@ -47,7 +47,7 @@ void create_opacity_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, S
             }
         }
 
-        Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 0.3f, 0.25f);
+        Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 0.3f, 0.02f);
         material_data.tint_roughness_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
         Materials::UID material_ID = Materials::create("Floor", material_data);
 
@@ -76,7 +76,7 @@ void create_opacity_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, S
             }
         }
 
-        Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.005f, 0.01f, 0.25f), 0.05f, 0.5f);
+        Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.005f, 0.01f, 0.25f), 0.05f, 0.04f);
         material_data.coverage_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
         material_data.flags = MaterialFlag::Cutout;
         Materials::UID material_ID = Materials::create("Plastic", material_data);
@@ -89,7 +89,7 @@ void create_opacity_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, S
     }
 
     { // Planes in front of the box.
-        Materials::Data transparent_material_data = Materials::Data::create_dielectric(RGB(0.25f), 0.95f, 0.5f);
+        Materials::Data transparent_material_data = Materials::Data::create_dielectric(RGB(0.25f), 0.95f, 0.04f);
         transparent_material_data.coverage = 0.75;
         Materials::UID transparent_material_ID = Materials::create("Transparent", transparent_material_data);
 

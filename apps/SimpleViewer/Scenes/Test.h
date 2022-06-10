@@ -152,7 +152,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
             }
         }
 
-        Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 0.3f, 0.25f);
+        Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 0.3f, 0.02f);
         material_data.tint_roughness_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
         Materials::UID material_ID = Materials::create("Floor", material_data);
 
@@ -265,7 +265,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
             }
         }
 
-        Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 0.75f, 0.5f);
+        Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 0.75f, 0.04f);
         material_data.tint_roughness_texture_ID = Textures::create2D(tint_roughness.get_ID());
         material_data.metallic = 1.0f;
         material_data.metallic_texture_ID = Textures::create2D(metalness.get_ID());
@@ -293,7 +293,7 @@ void create_test_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scen
             }
         }
 
-        Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.005f, 0.01f, 0.25f), 0.05f, 0.5f);
+        Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.005f, 0.01f, 0.25f), 0.05f, 0.04f);
         material_data.coverage_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
         material_data.flags = MaterialFlag::Cutout;
         Materials::UID material_ID = Materials::create("Plastic", material_data);

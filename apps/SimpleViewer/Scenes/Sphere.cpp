@@ -62,7 +62,7 @@ public:
             m_material.set_metallic(metallic);
 
         float specularity = m_material.get_specularity();
-        if (ImGui::SliderFloat("Specularity", &specularity, 0, 1)) {
+        if (ImGui::SliderFloat("Specularity", &specularity, 0, 0.08f)) {
             m_material.set_specularity(specularity);
             specularity_changed = true;
         }
@@ -161,7 +161,7 @@ void create_sphere_scene(Engine& engine, Cameras::UID camera_ID, SceneRoots::UID
     }
 
     { // Create sphere.
-        auto plastic_mat_data = Materials::Data::create_dielectric(RGB(0.005f, 0.01f, 0.25f), 0.05f, 0.5f);
+        auto plastic_mat_data = Materials::Data::create_dielectric(RGB(0.005f, 0.01f, 0.25f), 0.05f, 0.04f);
         Materials::UID material_ID = Materials::create("Material", plastic_mat_data);
 
         Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(1024, 512);
@@ -187,13 +187,13 @@ void create_sphere_scene(Engine& engine, Cameras::UID camera_ID, SceneRoots::UID
 
             const Keyboard* const keyboard = engine.get_keyboard();
             if (keyboard->was_released(Keyboard::Key::Key1)) {
-                auto plastic_mat_data = Materials::Data::create_dielectric(RGB(0.005f, 0.01f, 0.25f), 0.05f, 0.5f);
+                auto plastic_mat_data = Materials::Data::create_dielectric(RGB(0.005f, 0.01f, 0.25f), 0.05f, 0.04f);
                 update_material(plastic_mat_data);
             } else if (keyboard->was_released(Keyboard::Key::Key2)) {
-                auto white_mat_data = Materials::Data::create_dielectric(RGB::white(), 0.0f, 0.25);
+                auto white_mat_data = Materials::Data::create_dielectric(RGB::white(), 0.0f, 0.02f);
                 update_material(white_mat_data);
             } else if (keyboard->was_released(Keyboard::Key::Key3)) {
-                auto rubber_mat_data = Materials::Data::create_dielectric(RGB::white(), 0.95f, 0.5f);
+                auto rubber_mat_data = Materials::Data::create_dielectric(RGB::white(), 0.95f, 0.04f);
                 update_material(rubber_mat_data);
             } else if (keyboard->was_released(Keyboard::Key::Key4)) {
                 auto gold_mat_data = Materials::Data::create_metal(gold_tint, 0.02f);

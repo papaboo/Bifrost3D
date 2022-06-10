@@ -112,7 +112,7 @@ void create(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoo
 
             Meshes::compute_bounds(tiles_mesh_ID);
 
-            Materials::Data white_tile_data = Materials::Data::create_dielectric(RGB(0.5f), 0.2f, 0.25f);
+            Materials::Data white_tile_data = Materials::Data::create_dielectric(RGB(0.5f), 0.2f, 0.02f);
             Materials::UID white_tile_material_ID = Materials::create("White tile", white_tile_data);
 
             MeshModels::create(node.get_ID(), tiles_mesh_ID, white_tile_material_ID);
@@ -146,7 +146,7 @@ void create(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoo
 
             Meshes::compute_bounds(tiles_mesh_ID);
 
-            Materials::Data black_tile_data = Materials::Data::create_dielectric(RGB(0.001f), 0.02f, 0.5f);
+            Materials::Data black_tile_data = Materials::Data::create_dielectric(RGB(0.001f), 0.02f, 0.04f);
             Materials::UID black_tile_material_ID = Materials::create("Black tile", black_tile_data);
 
             MeshModels::create(node.get_ID(), tiles_mesh_ID, black_tile_material_ID);
@@ -155,19 +155,8 @@ void create(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoo
     }
 
     { // Create material models.
-        Materials::Data material0_data = {};
-        material0_data.tint = RGB(0.02f, 0.27f, 0.33f);
-        material0_data.roughness = 1.0f;
-        material0_data.specularity = 0.25f;
-        material0_data.metallic = 0.0f;
-        material0_data.coverage = 1.0f;
-
-        Materials::Data material1_data = {};
-        material1_data.tint = RGB(1.0f, 0.766f, 0.336f);
-        material1_data.roughness = 0.02f;
-        material1_data.specularity = 1.0f;
-        material1_data.metallic = 1.0f;
-        material1_data.coverage = 1.0f;
+        Materials::Data material0_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 1, 0.02f);
+        Materials::Data material1_data = Materials::Data::create_metal(gold_tint, 0.02f);
 
         Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(32, 16);
         Transform sphere_transform = Transform(Vector3f(0.0f, 1.0f, 0.0f), Quaternionf::identity(), 1.5f);
