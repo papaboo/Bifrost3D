@@ -73,7 +73,7 @@ public:
         if (wo.z <= 0)
             return BSDFResponse::none();
 
-        float G2 = wi.z <= 0.0f ? 0.0f : Shading::BSDFs::GGX::height_correlated_smith_G(alpha, wo, wi);
+        float G2 = wi.z <= 0.0f ? 0.0f : Shading::BSDFs::GGX::height_correlated_G(alpha, wo, wi);
 
         // D
         const float3 H = normalize(wo + wi);

@@ -36,14 +36,9 @@ __inline_all__ float roughness_from_alpha(float alpha) {
     return sqrt(alpha);
 }
 
-// Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz 14.
-// Height correlated smith geometric term. Equation 99. 
-__inline_all__ float height_correlated_smith_G(float alpha, float3 wo, float3 wi) {
-#if _DEBUG
-    float3 halfway = normalize(wo + wi);
-    float heavisided = heaviside(dot(wo, halfway)) * heaviside(dot(wi, halfway));
-    RT_ASSERT(heavisided == 1.0f, OPTIX_SHADING_WRONG_HEMISPHERE_EXCEPTION);
-#endif
+// Height correlated masking and shadowing term.
+// PBRT V3, section 8.4.3, page 544.
+__inline_all__ float height_correlated_G(float alpha, float3 wo, float3 wi) {
     return 1.0f / (1.0f + Distributions::GGX_VNDF::lambda(alpha, wo) + Distributions::GGX_VNDF::lambda(alpha, wi));
 }
 
@@ -61,14 +56,14 @@ __inline_all__ float height_correlated_smith_G(float alpha, float3 wo, float3 wi
 
 __inline_all__ float evaluate(float alpha, float specularity, float3 wo, float3 wi) {
     float3 halfway = normalize(wo + wi);
-    float G = height_correlated_smith_G(alpha, wo, wi);
+    float G = height_correlated_G(alpha, wo, wi);
     float D = Distributions::GGX_VNDF::D(alpha, halfway);
     float F = schlick_fresnel(specularity, dot(wo, halfway));
     return (D * F * G) / (4.0f * wo.z * wi.z);
 }
 
 __inline_all__ float3 evaluate(float alpha, float3 specularity, float3 wo, float3 wi, float3 halfway) {
-    float G = height_correlated_smith_G(alpha, wo, wi);
+    float G = height_correlated_G(alpha, wo, wi);
     float D = Distributions::GGX_VNDF::D(alpha, halfway);
     float3 F = schlick_fresnel(specularity, dot(wo, halfway));
     return F * (D * G / (4.0f * wo.z * wi.z));
@@ -95,7 +90,7 @@ __inline_all__ BSDFResponse evaluate_with_PDF(float alpha, float3 specularity, f
 
     float3 F = schlick_fresnel(specularity, dot(wo, halfway));
 
-    float recip_G2 = 1.0f + lambda_wo + lambda_wi; // reciprocal height_correlated_smith_G
+    float recip_G2 = 1.0f + lambda_wo + lambda_wi; // reciprocal height_correlated_G
     float3 reflectance = F * (quater_D / (recip_G2 * wo.z * wi.z));
 
     BSDFResponse res;
