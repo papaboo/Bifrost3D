@@ -1,10 +1,3 @@
-Vinci
-* Sample tube from outside and into the scene
-** Needs simple acceleration structure and cylinder/tube tracing
-* Place light further from the camera.
-* Wobbly/noisy primitives
-
-
 BACKLOG:
 * Normals revisited
 ** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
@@ -19,6 +12,7 @@ BACKLOG:
 *** 'Fix' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles. (Offset normal by -view_dir until the dot product is 0.)
 *** Or warp the hemisphere by the shading normal, such that the hemisphere is turned into a cone that only grazes the surface. That way samples would need to be converted from hemisphere to cone and back again. Pro: No special casing on light / view direction. Con: Black surface when view dir is outside the cone.
 * Progressive multijittered sample sequences
+** Owen scrambled sobol sequence - https://www.reddit.com/r/GraphicsProgramming/comments/l1go2r/owenscrambled_sobol_02_sequences_shadertoy/
 ** Test lighthouse sampler
 ** Debug VeachScene sampling. The large light's reflection on the second slab is very noisy around the edges. It's somehow related to next event estimation sampling.
 *** Or just test it on a diffuse surface. The yellow light fades in over time on the floor, so something is wrong when sampling.
@@ -30,15 +24,16 @@ BACKLOG:
 * Film grain
 ** http://www.loopit.dk/banding_in_games.pdf
 ** https://www.shadertoy.com/view/4t2SDh
-* SDF shadows - check UE4
-** http://kunzhou.net/2013/fur-rendering-tvcg.pdf
-** Call of duty precomputed GI. Check how they handle light bleeding. http://advances.realtimerendering.com/s2017/Precomputed%20Lighting%20in%20CoD%20IW_20_PPS.pdf
 * Noise reduction
 ** Massively parallel path space filtering
 ** QR Factorization (has example code and test data)
+*** With deep learned features?
 * Decima Engine Area lights
 ** https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Shaders/Private/BRDF.ush
 ** https://www.guerrilla-games.com/read/decima-engine-advances-in-lighting-and-aa
+* SDF shadows - check UE4
+** http://kunzhou.net/2013/fur-rendering-tvcg.pdf
+** Call of duty precomputed GI. Check how they handle light bleeding. http://advances.realtimerendering.com/s2017/Precomputed%20Lighting%20in%20CoD%20IW_20_PPS.pdf
 * SSAO
 ** Intensity should be relative to sample distance, not absolute distance intensity.
 *** When hitting the screen space max radius then results should be independent of the world radius. Are they? Test scene with three 'infinite' walls.
