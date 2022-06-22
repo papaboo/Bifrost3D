@@ -42,8 +42,8 @@ inline bool equal_float3_percentage(optix::float3 expected, optix::float3 actual
     return equal_float3_eps(expected, actual, eps);
 }
 
-#define EXPECT_COLOR_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(equal_float3_eps, expected, actual, percentage)
-#define EXPECT_FLOAT3_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(equal_float3_eps, expected, actual, percentage)
+#define EXPECT_COLOR_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(equal_float3_percentage, expected, actual, percentage)
+#define EXPECT_FLOAT3_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(equal_float3_percentage, expected, actual, percentage)
 
 inline bool equal_normal_eps(optix::float3 lhs, optix::float3 rhs, double epsilon) {
     using namespace optix;

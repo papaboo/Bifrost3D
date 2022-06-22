@@ -58,14 +58,14 @@ RhoResult directional_hemispherical_reflectance_function(ShadingModel shading_mo
     double summed_weight = 0.0;
     double summed_weight_squared = 0.0;
     for (unsigned int s = 0u; s < MAX_SAMPLES; ++s) {
-        float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(MAX_SAMPLES));
+        float3 rng_sample = make_float3(RNG::sample02(s), (s + 0.5f) / MAX_SAMPLES);
         BSDFSample sample = shading_model.sample(wo, rng_sample);
-        float weight = 0.0f;
         if (is_PDF_valid(sample.PDF))
-            weight = sample.reflectance.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
-
-        summed_weight += weight;
-        summed_weight_squared += weight * weight;
+        {
+            float weight = sample.reflectance.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
+            summed_weight += weight;
+            summed_weight_squared += weight * weight;
+        }
     }
 
     double mean = summed_weight / double(MAX_SAMPLES);
@@ -78,7 +78,7 @@ RhoResult directional_hemispherical_reflectance_function(ShadingModel shading_mo
 template <typename ShadingModel>
 void PDF_consistency_test(ShadingModel shading_model, float3 wo, unsigned int sample_count) {
     for (unsigned int i = 0u; i < sample_count; ++i) {
-        float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(sample_count));
+        float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
         BSDFSample sample = shading_model.sample(wo, rng_sample);
         if (is_PDF_valid(sample.PDF)) {
             float PDF = shading_model.PDF(wo, sample.direction);
@@ -90,7 +90,7 @@ void PDF_consistency_test(ShadingModel shading_model, float3 wo, unsigned int sa
 template <typename ShadingModel>
 void evaluate_with_PDF_consistency_test(ShadingModel shading_model, float3 wo, unsigned int sample_count) {
     for (unsigned int i = 0u; i < sample_count; ++i) {
-        float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(sample_count));
+        float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
         BSDFSample sample = shading_model.sample(wo, rng_sample);
 
         if (is_PDF_valid(sample.PDF)) {
