@@ -60,23 +60,6 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
         delete[] rho;
     }
 
-    #if SPTD_AREA_LIGHTS
-    { // Setup GGX SPTD fit texture.
-        const unsigned int width = GGX_SPTD_fit_angular_sample_count;
-        const unsigned int height = GGX_SPTD_fit_roughness_sample_count;
-
-        R10G10B10A2_Unorm* pivots = new R10G10B10A2_Unorm[width * height];
-        for (unsigned int i = 0; i < width * height; ++i)
-            pivots[i] = R10G10B10A2_Unorm(GGX_SPTD_fit[i].x, cosf(GGX_SPTD_fit[i].y), GGX_SPTD_fit[i].z); 
-        
-        create_texture_2D(device, DXGI_FORMAT_R10G10B10A2_UNORM, pivots, width, height, D3D11_USAGE_IMMUTABLE, &m_GGX_SPTD_fit_srv);
-
-        delete[] pivots;
-    }
-    #else
-        m_GGX_SPTD_fit_srv = nullptr;
-    #endif
-
     m_materials.resize(1);
     m_materials[0] = make_dx11material(Materials::UID::invalid_UID());
 

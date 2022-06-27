@@ -73,14 +73,6 @@ float estimate_alpha(float cos_theta, float max_PDF);
 
 } // NS EstimateGGXAlpha 
 
-// ------------------------------------------------------------------------------------------------
-// GGX SPTD fit
-// ------------------------------------------------------------------------------------------------
-extern const unsigned int GGX_SPTD_fit_angular_sample_count;
-extern const unsigned int GGX_SPTD_fit_roughness_sample_count;
-extern const Bifrost::Math::Vector3f GGX_SPTD_fit[];
-Bifrost::Math::Vector3f GGX_SPTD_fit_lookup(float cos_theta, float roughness);
-
 } // NS Shading
 } // NS Assets
 } // NS Bifrost

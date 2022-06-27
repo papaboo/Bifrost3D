@@ -166,7 +166,6 @@ public:
             m_transforms = TransformManager(m_device, *m_render_context);
 
             // Setup static state.
-            m_render_context->PSSetShaderResources(14, 1, m_materials.get_GGX_SPTD_fit_srv_addr());
             m_render_context->PSSetShaderResources(15, 1, m_materials.get_GGX_with_fresnel_rho_srv_addr());
 
             D3D11_SAMPLER_DESC sampler_desc = {};
@@ -274,12 +273,6 @@ public:
             THROW_DX11_ERROR(m_device.CreateBuffer(&empty_desc, &empty_data, &m_vertex_shading.null_buffer));
         }
 
-#if SPTD_AREA_LIGHTS
-        D3D_SHADER_MACRO fragment_macros[] = { "SPTD_AREA_LIGHTS",  "1", 0, 0 };
-#else 
-        D3D_SHADER_MACRO fragment_macros[] = { "SPTD_AREA_LIGHTS",  "0", 0, 0 };
-#endif
-
         { // Setup opaque rendering.
             CD3D11_RASTERIZER_DESC opaque_raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
             opaque_raster_state.ScissorEnable = true;
@@ -290,7 +283,7 @@ public:
             depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
             THROW_DX11_ERROR(m_device.CreateDepthStencilState(&depth_desc, &m_opaque.depth_state));
 
-            OBlob pixel_shader_blob = compile_shader(m_shader_directory / "ModelShading.hlsl", "ps_5_0", "opaque", fragment_macros);
+            OBlob pixel_shader_blob = compile_shader(m_shader_directory / "ModelShading.hlsl", "ps_5_0", "opaque");
             THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_opaque.shader));
         }
 
@@ -323,7 +316,7 @@ public:
             depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
             THROW_DX11_ERROR(m_device.CreateDepthStencilState(&depth_desc, &m_transparent.depth_state));
 
-            OBlob pixel_shader_buffer = compile_shader(m_shader_directory / "ModelShading.hlsl", "ps_5_0", "transparent", fragment_macros);
+            OBlob pixel_shader_buffer = compile_shader(m_shader_directory / "ModelShading.hlsl", "ps_5_0", "transparent");
             THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), nullptr, &m_transparent.shader));
         }
 

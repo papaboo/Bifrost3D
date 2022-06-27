@@ -24,8 +24,6 @@ SET(ASSETS_SHADING_SRCS
   Bifrost/Assets/Shading/Fittings.h
   Bifrost/Assets/Shading/GGXRho.cpp
   Bifrost/Assets/Shading/GGXRho.png
-  Bifrost/Assets/Shading/GGXSPTDFit.cpp
-  Bifrost/Assets/Shading/GGXSPTDFit.png
   Bifrost/Assets/Shading/GGXWithFresnelRho.cpp
   Bifrost/Assets/Shading/GGXWithFresnelRho.png
   Bifrost/Assets/Shading/OrenNayarRho.cpp
