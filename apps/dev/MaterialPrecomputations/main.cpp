@@ -194,8 +194,8 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
 
             // Binary search to find the alpha that hits the target PDF
             float prev_alpha = t == 0 ? 1.0f : alphas[index - 1];
-            PDFSample low_PDF_sample = { 1.0f, encode_PDF(GGX::PDF(prev_alpha, wo, optix::make_float3(0, 0, 1))) };
-            PDFSample high_PDF_sample = { 0.0f, encode_PDF(GGX::PDF(0.00000000001f, wo, optix::make_float3(0, 0, 1))) };
+            PDFSample low_PDF_sample = { 1.0f, encode_PDF(GGX_R::PDF(prev_alpha, wo, optix::make_float3(0, 0, 1))) };
+            PDFSample high_PDF_sample = { 0.0f, encode_PDF(GGX_R::PDF(0.00000000001f, wo, optix::make_float3(0, 0, 1))) };
 
             float alpha = 0.0f;
             if (encoded_target_PDF > high_PDF_sample.encoded_PDF)
@@ -206,7 +206,7 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
                 PDFSample middle_sample;
                 do {
                     float middle_alpha = (low_PDF_sample.alpha + high_PDF_sample.alpha) * 0.5f;
-                    middle_sample = { middle_alpha, encode_PDF(GGX::PDF(middle_alpha, wo, optix::make_float3(0, 0, 1))) };
+                    middle_sample = { middle_alpha, encode_PDF(GGX_R::PDF(middle_alpha, wo, optix::make_float3(0, 0, 1))) };
                     if (encoded_target_PDF < middle_sample.encoded_PDF)
                         high_PDF_sample = middle_sample;
                     else
@@ -390,7 +390,7 @@ int main(int argc, char** argv) {
 
         static auto sample_ggx = [](float3 tint, float roughness, float3 wo, float2 random_sample) -> BSDFSample {
             float alpha = GGX::alpha_from_roughness(roughness);
-            return GGX::sample(alpha, 1, wo, random_sample);
+            return GGX_R::sample(alpha, 1, wo, random_sample);
         };
 
         Image rho = estimate_rho(width, height, sample_count, sample_ggx);
@@ -404,7 +404,7 @@ int main(int argc, char** argv) {
 
         static auto sample_ggx_with_fresnel = [](float3 tint, float roughness, float3 wo, float2 random_sample) -> BSDFSample {
             float alpha = GGX::alpha_from_roughness(roughness);
-            return GGX::sample(alpha, 0, wo, random_sample);
+            return GGX_R::sample(alpha, 0, wo, random_sample);
         };
 
         Image rho = estimate_rho(width, height, sample_count, sample_ggx_with_fresnel);
