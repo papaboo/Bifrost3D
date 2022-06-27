@@ -35,11 +35,6 @@ cbuffer scene_variables : register(b13) {
 
 Texture2D ssao_tex : register(t13);
 
-#if SPTD_AREA_LIGHTS
-#include "SPTD.hlsl"
-Texture2D sptd_ggx_fit_tex : register(t14);
-#endif
-
 struct Varyings {
     float4 position : SV_POSITION;
     float3 world_position : WORLD_POSITION;
@@ -81,14 +76,7 @@ float3 integrate(Varyings input, bool is_front_face, float ambient_visibility) {
 
         bool is_sphere_light = light.type() == LightType::Sphere && light.sphere_radius() > 0.0f;
         if (is_sphere_light) {
-            // Apply SPTD area light approximation.
-#if SPTD_AREA_LIGHTS
-            float distance_to_camera = length(scene_vars.camera_position.xyz - input.world_position.xyz);
-            radiance += SPTD::evaluate_sphere_light(light, default_shading, sptd_ggx_fit_tex,
-                input.world_position.xyz, world_to_shading_TBN, wo, distance_to_camera);
-#else
             radiance += default_shading.evaluate_area_light(light, input.world_position.xyz, wo, world_to_shading_TBN, ambient_visibility);
-#endif
         } else {
             // Apply regular delta lights.
             LightSample light_sample = sample_light(light, input.world_position.xyz);

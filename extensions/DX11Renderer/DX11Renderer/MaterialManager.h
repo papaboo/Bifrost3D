@@ -29,7 +29,6 @@ public:
     MaterialManager& operator=(MaterialManager&& rhs) = default;
 
     inline ID3D11ShaderResourceView** get_GGX_with_fresnel_rho_srv_addr() { return &m_GGX_with_fresnel_rho_srv; }
-    inline ID3D11ShaderResourceView** get_GGX_SPTD_fit_srv_addr() { return &m_GGX_SPTD_fit_srv; }
 
     inline Dx11Material& get_material(unsigned int material_index) { return m_materials[material_index]; }
     inline Dx11MaterialTextures& get_material_textures(unsigned int material_index) { return m_material_textures[material_index]; }
@@ -44,7 +43,6 @@ private:
     MaterialManager& operator=(MaterialManager& rhs) = delete;
 
     OShaderResourceView m_GGX_with_fresnel_rho_srv;
-    OShaderResourceView m_GGX_SPTD_fit_srv;
 
     std::vector<Dx11Material> m_materials;
     std::vector<Dx11MaterialTextures> m_material_textures;
