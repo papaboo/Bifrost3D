@@ -42,6 +42,8 @@ __inline_all__ float height_correlated_G(float alpha, float3 wo, float3 wi) {
     return 1.0f / (1.0f + Distributions::GGX_VNDF::lambda(alpha, wo) + Distributions::GGX_VNDF::lambda(alpha, wi));
 }
 
+} // NS GGX
+
 //----------------------------------------------------------------------------
 // GGX BSDF, Walter et al 07.
 // Here we have seperated the BRDF from the BTDF. 
@@ -54,16 +56,20 @@ __inline_all__ float height_correlated_G(float alpha, float3 wo, float3 wi) {
 // GGX BRDF, Walter et al 07.
 //----------------------------------------------------------------------------
 
+namespace GGX_R {
+
+using namespace optix;
+
 __inline_all__ float evaluate(float alpha, float specularity, float3 wo, float3 wi) {
     float3 halfway = normalize(wo + wi);
-    float G = height_correlated_G(alpha, wo, wi);
+    float G = GGX::height_correlated_G(alpha, wo, wi);
     float D = Distributions::GGX_VNDF::D(alpha, halfway);
     float F = schlick_fresnel(specularity, dot(wo, halfway));
     return (D * F * G) / (4.0f * wo.z * wi.z);
 }
 
 __inline_all__ float3 evaluate(float alpha, float3 specularity, float3 wo, float3 wi, float3 halfway) {
-    float G = height_correlated_G(alpha, wo, wi);
+    float G = GGX::height_correlated_G(alpha, wo, wi);
     float D = Distributions::GGX_VNDF::D(alpha, halfway);
     float3 F = schlick_fresnel(specularity, dot(wo, halfway));
     return F * (D * G / (4.0f * wo.z * wi.z));
@@ -131,7 +137,7 @@ __inline_all__ BSDFSample sample(float alpha, float3 specularity, float3 wo, flo
 }
 __inline_all__ BSDFSample sample(float alpha, float specularity, float3 wo, float2 random_sample) { return sample(alpha, make_float3(specularity), wo, random_sample); }
 
-} // NS GGX
+} // NS GGX_R
 
 } // NS BSDFs
 } // NS Shading

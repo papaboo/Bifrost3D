@@ -54,13 +54,13 @@ public:
         if (wo.z <= 0)
             return BSDFResponse::none();
 
-        auto f = Shading::BSDFs::GGX::evaluate_with_PDF(alpha, 1, wo, wi);
+        auto f = Shading::BSDFs::GGX_R::evaluate_with_PDF(alpha, 1, wo, wi);
         f.reflectance *= wi.z; // eval scaled by cos theta
         return f;
     }
 
     BSDFSample sample(float3 wo, float alpha, float U1, float U2) const {
-        auto brdf_sample = Shading::BSDFs::GGX::sample(alpha, 1, wo, make_float2(U1, U2));
+        auto brdf_sample = Shading::BSDFs::GGX_R::sample(alpha, 1, wo, make_float2(U1, U2));
         brdf_sample.reflectance *= brdf_sample.direction.z; // eval scaled by cos theta
         return brdf_sample;
     }
