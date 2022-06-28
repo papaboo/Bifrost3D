@@ -111,8 +111,8 @@ GTEST_TEST(GGX_R, evaluate_with_PDF) {
 
 GTEST_TEST(GGX_R, minimal_alpha) {
     using namespace optix;
-        
-    const float min_alpha = 0.00000000001f;
+
+    const float min_alpha = Shading::BSDFs::GGX::alpha_from_roughness(0.0f);
     const float full_specularity = 1.0f;
 
     const float3 incident_w = make_float3(0.0f, 0.0f, 1.0f);
