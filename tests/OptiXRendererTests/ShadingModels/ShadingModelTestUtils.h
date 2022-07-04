@@ -9,10 +9,7 @@
 #ifndef _OPTIXRENDERER_SHADING_MODEL_TEST_UTILS_H_
 #define _OPTIXRENDERER_SHADING_MODEL_TEST_UTILS_H_
 
-#include <Utils.h>
-
-#include <OptiXRenderer/RNG.h>
-#include <OptiXRenderer/Utils.h>
+#include <BSDFTestUtils.h>
 
 #include <gtest/gtest.h>
 
@@ -46,59 +43,20 @@ Material coated_plastic_parameters() {
     return plastic_params;
 }
 
-struct RhoResult {
-    float reflectance;
-    float variance;
-};
-
 template <typename ShadingModel>
-RhoResult directional_hemispherical_reflectance_function(ShadingModel shading_model, float3 wo) {
-    const unsigned int MAX_SAMPLES = 4096u;
-
-    double summed_weight = 0.0;
-    double summed_weight_squared = 0.0;
-    for (unsigned int s = 0u; s < MAX_SAMPLES; ++s) {
-        float3 rng_sample = make_float3(RNG::sample02(s), (s + 0.5f) / MAX_SAMPLES);
-        BSDFSample sample = shading_model.sample(wo, rng_sample);
-        if (is_PDF_valid(sample.PDF))
-        {
-            float weight = sample.reflectance.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
-            summed_weight += weight;
-            summed_weight_squared += weight * weight;
+BSDFTestUtils::RhoResult directional_hemispherical_reflectance_function(ShadingModel shading_model, float3 wo) {
+    unsigned int sample_count = 4096u;
+    return BSDFTestUtils::directional_hemispherical_reflectance_function(shading_model, wo, sample_count);
         }
-    }
-
-    double mean = summed_weight / double(MAX_SAMPLES);
-    double mean_squared = summed_weight_squared / double(MAX_SAMPLES);
-    double variance = mean_squared - mean * mean;
-
-    return { float(mean), float(variance) };
-}
 
 template <typename ShadingModel>
 void PDF_consistency_test(ShadingModel shading_model, float3 wo, unsigned int sample_count) {
-    for (unsigned int i = 0u; i < sample_count; ++i) {
-        float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
-        BSDFSample sample = shading_model.sample(wo, rng_sample);
-        if (is_PDF_valid(sample.PDF)) {
-            float PDF = shading_model.PDF(wo, sample.direction);
-            EXPECT_FLOAT_EQ_PCT(sample.PDF, PDF, 0.0001f);
+    BSDFTestUtils::PDF_consistency_test(shading_model, wo, sample_count);
         }
-    }
-}
 
 template <typename ShadingModel>
 void evaluate_with_PDF_consistency_test(ShadingModel shading_model, float3 wo, unsigned int sample_count) {
-    for (unsigned int i = 0u; i < sample_count; ++i) {
-        float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
-        BSDFSample sample = shading_model.sample(wo, rng_sample);
-
-        if (is_PDF_valid(sample.PDF)) {
-            BSDFResponse response = shading_model.evaluate_with_PDF(wo, sample.direction);
-            EXPECT_COLOR_EQ_PCT(shading_model.evaluate(wo, sample.direction), response.reflectance, make_float3(0.00002f));
-            EXPECT_FLOAT_EQ(shading_model.PDF(wo, sample.direction), response.PDF);
-        }
-    }
+    BSDFTestUtils::evaluate_with_PDF_consistency_test(shading_model, wo, sample_count);
 };
 
 } // NS ShadingModelTestUtils

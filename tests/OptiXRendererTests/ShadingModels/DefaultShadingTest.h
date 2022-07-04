@@ -364,7 +364,7 @@ GTEST_TEST(DefaultShadingModel, sampling_variance) {
         auto sample_all_result = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo);
 
         EXPECT_FLOAT_EQ_EPS(float(sample_one_mean), sample_all_result.reflectance, 0.0001f);
-        EXPECT_LT(sample_all_result.variance, sample_one_variance);
+        EXPECT_LT(sample_all_result.std_dev, sqrt(sample_one_variance));
     };
 
     sampling_variance_test(ShadingModelTestUtils::plastic_parameters());
