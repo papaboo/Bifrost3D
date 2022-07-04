@@ -3,6 +3,7 @@ if (TARGET OptiXRenderer)
   set(PROJECT_NAME "OptiXRendererTests")
 
   set(SRCS 
+    BSDFTestUtils.h
     main.cpp
     MiscTest.h
     Utils.h

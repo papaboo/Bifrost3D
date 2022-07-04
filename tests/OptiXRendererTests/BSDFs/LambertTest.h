@@ -9,47 +9,60 @@
 #ifndef _OPTIXRENDERER_BSDFS_LAMBERT_TEST_H_
 #define _OPTIXRENDERER_BSDFS_LAMBERT_TEST_H_
 
-#include <Utils.h>
+#include <BSDFTestUtils.h>
 
-#include <Bifrost/Math/Utils.h>
-
-#include <OptiXRenderer/RNG.h>
 #include <OptiXRenderer/Shading/BSDFs/Lambert.h>
 
 #include <gtest/gtest.h>
 
 namespace OptiXRenderer {
 
-GTEST_TEST(Lambert, power_conservation) {
-    using namespace optix;
+class LambertWrapper {
+public:
+    optix::float3 m_tint = optix::make_float3(1);
 
-    const unsigned int MAX_SAMPLES = 1024u;
-    const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
+    LambertWrapper() {}
 
-    float ws[MAX_SAMPLES];
-    for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
-        BSDFSample sample = Shading::BSDFs::Lambert::sample(tint, RNG::sample02(i));
-        ws[i] = sample.reflectance.x * sample.direction.z / sample.PDF; // f * ||cos_theta|| / pdf
+    optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
+        return Shading::BSDFs::Lambert::evaluate(m_tint, wo, wi);
     }
 
-    float average_w = Bifrost::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / float(MAX_SAMPLES);
-    EXPECT_TRUE(almost_equal_eps(average_w, 1.0f, 0.0001f));
+    float PDF(optix::float3 wo, optix::float3 wi) const {
+        return Shading::BSDFs::Lambert::PDF(wo, wi);
+    }
+
+    BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
+        return Shading::BSDFs::Lambert::evaluate_with_PDF(m_tint, wo, wi);
+    }
+
+    BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
+        return Shading::BSDFs::Lambert::sample(m_tint, optix::make_float2(random_sample));
+    }
+};
+
+GTEST_TEST(Lambert, power_conservation) {
+    optix::float3 wo = optix::normalize(optix::make_float3(1.0f, 1.0f, 1.0f));
+    LambertWrapper lambert = LambertWrapper();
+    auto res = BSDFTestUtils::directional_hemispherical_reflectance_function(lambert, wo, 1024u);
+    EXPECT_LE(res.reflectance, 1.0f);
+}
+
+GTEST_TEST(Lambert, Helmholtz_reciprocity) {
+    optix::float3 wo = optix::normalize(optix::make_float3(1.0f, 1.0f, 1.0f));
+    LambertWrapper lambert = LambertWrapper();
+    BSDFTestUtils::helmholtz_reciprocity(lambert, wo, 16u);
+}
+
+GTEST_TEST(Lambert, consistent_PDF) {
+    optix::float3 wo = optix::normalize(optix::make_float3(1.0f, 1.0f, 1.0f));
+    LambertWrapper lambert = LambertWrapper();
+    BSDFTestUtils::PDF_consistency_test(lambert, wo, 16u);
 }
 
 GTEST_TEST(Lambert, evaluate_with_PDF) {
-    using namespace optix;
-
-    const unsigned int MAX_SAMPLES = 128;
-    const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
-    const float3 wo = normalize(make_float3(1, 1, 1));
-
-    for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
-        BSDFSample sample = Shading::BSDFs::Lambert::sample(tint, RNG::sample02(i));
-
-        BSDFResponse response = Shading::BSDFs::Lambert::evaluate_with_PDF(tint, wo, sample.direction);
-        EXPECT_NORMAL_EQ(sample.reflectance, response.reflectance, 0.000000001f);
-        EXPECT_FLOAT_EQ(sample.PDF, response.PDF);
-    }
+    optix::float3 wo = optix::normalize(optix::make_float3(1.0f, 1.0f, 1.0f));
+    LambertWrapper lambert = LambertWrapper();
+    BSDFTestUtils::evaluate_with_PDF_consistency_test(lambert, wo, 16u);
 }
 
 } // NS OptiXRenderer
