@@ -200,7 +200,7 @@ namespace GGX_VNDF {
     __inline_all__ float PDF(float alpha, float3 wo, float3 halfway) {
         float recip_G1 = 1.0f + lambda(alpha, wo);
         float D = Distributions::GGX_VNDF::D(alpha, halfway);
-        return dot(wo, halfway) * D / (recip_G1 * wo.z);
+        return dot(wo, halfway) * D / (recip_G1 * abs(wo.z));
     }
 
     __inline_all__ Distributions::DirectionalSample sample(float alpha, float3 wo, float2 random_sample) {
