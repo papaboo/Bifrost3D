@@ -59,19 +59,11 @@ GTEST_TEST(Burley, Helmholtz_reciprocity) {
     }
 }
 
-GTEST_TEST(Burley, consistent_PDF) {
+GTEST_TEST(Burley, function_consistency) {
     optix::float3 wo = optix::normalize(optix::make_float3(1.0f, 1.0f, 1.0f));
     for (float roughness : {0.0f, 0.2f, 0.4f, 0.6f, 0.8f, 1.0f}) {
         BurleyWrapper burley = BurleyWrapper(roughness);
-        BSDFTestUtils::PDF_consistency_test(burley, wo, 16u);
-    }
-}
-
-GTEST_TEST(Burley, evaluate_with_PDF) {
-    optix::float3 wo = optix::normalize(optix::make_float3(1.0f, 1.0f, 1.0f));
-    for (float roughness : {0.0f, 0.2f, 0.4f, 0.6f, 0.8f, 1.0f}) {
-        BurleyWrapper burley = BurleyWrapper(roughness);
-        BSDFTestUtils::evaluate_with_PDF_consistency_test(burley, wo, 16u);
+        BSDFTestUtils::BSDF_consistency_test(burley, wo, 16u);
     }
 }
 

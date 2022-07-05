@@ -20,13 +20,17 @@
 
 namespace OptiXRenderer {
 
+// ---------------------------------------------------------------------------
+// GGX reflection tests. Specularity is always set to 1 to have full reflection.
+// ---------------------------------------------------------------------------
+
 class GGXReflectionWrapper {
 public:
     float m_alpha;
     float m_specularity;
 
-    GGXReflectionWrapper(float alpha, float specularity)
-        : m_alpha(alpha), m_specularity(specularity) {}
+    GGXReflectionWrapper(float alpha)
+        : m_alpha(alpha), m_specularity(1.0f) {}
 
     optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
         return optix::make_float3(1) * Shading::BSDFs::GGX_R::evaluate(m_alpha, m_specularity, wo, wi);
@@ -47,11 +51,10 @@ public:
 };
 
 GTEST_TEST(GGX_R, power_conservation) {
-    float full_specularity = 1.0f;
     for (float cos_theta : { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
         optix::float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
         for (float alpha : { 0.0f, 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
-            auto ggx = GGXReflectionWrapper(alpha, full_specularity);
+            auto ggx = GGXReflectionWrapper(alpha);
             auto res = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 1024u);
             EXPECT_LE(res.reflectance, 1.0f);
         }
@@ -59,33 +62,18 @@ GTEST_TEST(GGX_R, power_conservation) {
 }
 
 GTEST_TEST(GGX_R, Helmholtz_reciprocity) {
-    float full_specularity = 1.0f;
     optix::float3 wo = optix::normalize(optix::make_float3(1.0f, 1.0f, 1.0f));
-
     for (float alpha : { 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
-        auto ggx = GGXReflectionWrapper(alpha, full_specularity);
+        auto ggx = GGXReflectionWrapper(alpha);
         BSDFTestUtils::helmholtz_reciprocity(ggx, wo, 16u);
     }
 }
 
-GTEST_TEST(GGX_R, consistent_PDF) {
+GTEST_TEST(GGX_R, function_consistency) {
     optix::float3 wo = optix::normalize(optix::make_float3(1.0f, 1.0f, 1.0f));
-    float full_specularity = 1.0f;
-
     for (float alpha : { 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
-        auto ggx = GGXReflectionWrapper(alpha, full_specularity);
-        BSDFTestUtils::PDF_consistency_test(ggx, wo, 16u);
-    }
-}
-
-GTEST_TEST(GGX_R, evaluate_with_PDF) {
-    unsigned int MAX_SAMPLES = 128u;
-    optix::float3 wo = optix::normalize(optix::make_float3(1.0f, 1.0f, 1.0f));
-    float full_specularity = 1.0f;
-
-    for (float alpha : { 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
-        auto ggx = GGXReflectionWrapper(alpha, full_specularity);
-        BSDFTestUtils::evaluate_with_PDF_consistency_test(ggx, wo, 16u);
+        auto ggx = GGXReflectionWrapper(alpha);
+        BSDFTestUtils::BSDF_consistency_test(ggx, wo, 16u);
     }
 }
 

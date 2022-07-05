@@ -53,16 +53,10 @@ GTEST_TEST(Lambert, Helmholtz_reciprocity) {
     BSDFTestUtils::helmholtz_reciprocity(lambert, wo, 16u);
 }
 
-GTEST_TEST(Lambert, consistent_PDF) {
+GTEST_TEST(Lambert, function_consistency) {
     optix::float3 wo = optix::normalize(optix::make_float3(1.0f, 1.0f, 1.0f));
     LambertWrapper lambert = LambertWrapper();
-    BSDFTestUtils::PDF_consistency_test(lambert, wo, 16u);
-}
-
-GTEST_TEST(Lambert, evaluate_with_PDF) {
-    optix::float3 wo = optix::normalize(optix::make_float3(1.0f, 1.0f, 1.0f));
-    LambertWrapper lambert = LambertWrapper();
-    BSDFTestUtils::evaluate_with_PDF_consistency_test(lambert, wo, 16u);
+    BSDFTestUtils::BSDF_consistency_test(lambert, wo, 16u);
 }
 
 } // NS OptiXRenderer

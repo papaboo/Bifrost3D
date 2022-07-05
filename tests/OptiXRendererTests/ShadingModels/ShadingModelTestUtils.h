@@ -47,17 +47,12 @@ template <typename ShadingModel>
 BSDFTestUtils::RhoResult directional_hemispherical_reflectance_function(ShadingModel shading_model, float3 wo) {
     unsigned int sample_count = 4096u;
     return BSDFTestUtils::directional_hemispherical_reflectance_function(shading_model, wo, sample_count);
-        }
+}
 
 template <typename ShadingModel>
-void PDF_consistency_test(ShadingModel shading_model, float3 wo, unsigned int sample_count) {
-    BSDFTestUtils::PDF_consistency_test(shading_model, wo, sample_count);
-        }
-
-template <typename ShadingModel>
-void evaluate_with_PDF_consistency_test(ShadingModel shading_model, float3 wo, unsigned int sample_count) {
-    BSDFTestUtils::evaluate_with_PDF_consistency_test(shading_model, wo, sample_count);
-};
+void BSDF_consistency_test(ShadingModel shading_model, float3 wo, unsigned int sample_count) {
+    BSDFTestUtils::BSDF_consistency_test(shading_model, wo, sample_count);
+}
 
 } // NS ShadingModelTestUtils
 } // NS OptiXRenderer

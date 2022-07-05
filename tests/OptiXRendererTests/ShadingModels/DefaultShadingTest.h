@@ -71,22 +71,7 @@ GTEST_TEST(DefaultShadingModel, Helmholtz_reciprocity) {
 }
 */
 
-GTEST_TEST(DefaultShadingModel, consistent_PDF) {
-    using namespace Shading::ShadingModels;
-
-    static auto consistent_PDF_test = [](Material& material_params) {
-        auto wo = optix::normalize(optix::make_float3(1.0f, 0.0f, 1.0f));
-        auto shading_model = DefaultShading(material_params, wo.z);
-        ShadingModelTestUtils::PDF_consistency_test(shading_model, wo, 32);
-    };
-
-    // This test can only be performed with rough materials, as the PDF of smooth materials 
-    // is highly sensitive to floating point precision.
-    consistent_PDF_test(ShadingModelTestUtils::plastic_parameters());
-    consistent_PDF_test(ShadingModelTestUtils::coated_plastic_parameters());
-}
-
-GTEST_TEST(DefaultShadingModel, consistent_evaluate_with_PDF) {
+GTEST_TEST(DefaultShadingModel, function_consistency) {
     using namespace Shading::ShadingModels;
 
     static auto evaluate_with_PDF_test = [](Material& material_params) {
@@ -95,7 +80,7 @@ GTEST_TEST(DefaultShadingModel, consistent_evaluate_with_PDF) {
         for (float roughness : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
             material_params.roughness = roughness;
             auto shading_model = DefaultShading(material_params, wo.z);
-            ShadingModelTestUtils::evaluate_with_PDF_consistency_test(shading_model, wo, 32);
+            ShadingModelTestUtils::BSDF_consistency_test(shading_model, wo, 32);
         }
     };
 

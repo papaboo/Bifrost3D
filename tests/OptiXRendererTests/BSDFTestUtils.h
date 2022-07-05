@@ -62,27 +62,21 @@ void helmholtz_reciprocity(BSDFModel bsdf_model, float3 wo, unsigned int sample_
 }
 
 template <typename BSDFModel>
-void PDF_consistency_test(BSDFModel bsdf_model, float3 wo, unsigned int sample_count) {
-    for (unsigned int i = 0u; i < sample_count; ++i) {
-        float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
-        BSDFSample sample = bsdf_model.sample(wo, rng_sample);
-        if (is_PDF_valid(sample.PDF)) {
-            float PDF = bsdf_model.PDF(wo, sample.direction);
-            EXPECT_FLOAT_EQ_PCT(sample.PDF, PDF, 0.0001f) << "test " << i << " with cos_theta " << wo.z;
-        }
-    }
-}
-
-template <typename BSDFModel>
-void evaluate_with_PDF_consistency_test(BSDFModel bsdf_model, float3 wo, unsigned int sample_count) {
+void BSDF_consistency_test(BSDFModel bsdf_model, float3 wo, unsigned int sample_count) {
     for (unsigned int i = 0u; i < sample_count; ++i) {
         float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
         BSDFSample sample = bsdf_model.sample(wo, rng_sample);
 
+        EXPECT_GE(sample.PDF, 0.0f);
         if (is_PDF_valid(sample.PDF)) {
+            EXPECT_GE(sample.reflectance.x, 0.0f);
+
+            EXPECT_FLOAT_EQ_PCT(sample.PDF, bsdf_model.PDF(wo, sample.direction), 0.00002f);
+            EXPECT_COLOR_EQ_PCT(sample.reflectance, bsdf_model.evaluate(wo, sample.direction), make_float3(0.00002f));
+
             BSDFResponse response = bsdf_model.evaluate_with_PDF(wo, sample.direction);
-            EXPECT_COLOR_EQ_PCT(bsdf_model.evaluate(wo, sample.direction), response.reflectance, make_float3(0.00002f));
-            EXPECT_FLOAT_EQ(bsdf_model.PDF(wo, sample.direction), response.PDF);
+            EXPECT_COLOR_EQ_PCT(sample.reflectance, response.reflectance, make_float3(0.00002f));
+            EXPECT_FLOAT_EQ_PCT(sample.PDF, response.PDF, 0.00002f);
         }
     }
 };
