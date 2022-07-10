@@ -17,6 +17,7 @@
 #include <LightSources/SpotLightTest.h>
 
 #include <ShadingModels/DefaultShadingTest.h>
+#include <ShadingModels/RoughGlassShadingTest.h>
 
 #include <MiscTest.h>
 

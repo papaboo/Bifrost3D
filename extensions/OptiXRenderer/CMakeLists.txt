@@ -56,6 +56,7 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
   set(SHADING_SHADING_MODELS_SRC
     OptiXRenderer/Shading/ShadingModels/DefaultShading.h
     OptiXRenderer/Shading/ShadingModels/LambertShading.h
+    OptiXRenderer/Shading/ShadingModels/RoughGlassShading.h
   )
 
   # Add the path to the ptx to a define.
@@ -88,7 +89,7 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
 
   target_include_directories(${LIBRARY_NAME}
     PUBLIC . ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS}
-)
+  )
 
   target_link_libraries(${LIBRARY_NAME}
     PUBLIC Bifrost ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES}

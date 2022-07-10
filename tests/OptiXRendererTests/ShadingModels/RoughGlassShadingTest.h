@@ -1,0 +1,135 @@
+// Test OptiXRenderer's rough glass shading model.
+// ---------------------------------------------------------------------------
+// Copyright (C) Bifrost. See AUTHORS.txt for authors.
+//
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+// ---------------------------------------------------------------------------
+
+#ifndef _OPTIXRENDERER_SHADING_MODEL_ROUGH_GLASS_TEST_H_
+#define _OPTIXRENDERER_SHADING_MODEL_ROUGH_GLASS_TEST_H_
+
+#include <Utils.h>
+
+#include <Bifrost/Math/Utils.h>
+
+#include <OptiXRenderer/RNG.h>
+#include <OptiXRenderer/Shading/ShadingModels/RoughGlassShading.h>
+#include <OptiXRenderer/Utils.h>
+
+#include <gtest/gtest.h>
+
+namespace OptiXRenderer {
+
+Material smooth_glass_parameters() {
+    Material glass_params = {};
+    glass_params.tint = optix::make_float3(0.95f, 0.97f, 0.95f);
+    glass_params.roughness = 0.0f;
+    glass_params.metallic = 0.0f;
+    glass_params.specularity = 0.04f;
+    return glass_params;
+}
+
+Material frosted_glass_parameters() {
+    Material glass_params = smooth_glass_parameters();
+    glass_params.roughness = 0.2f;
+    return glass_params;
+}
+
+GTEST_TEST(RoughGlassShadingModel, power_conservation) {
+    using namespace Shading::ShadingModels;
+
+    // A white material to stress test power_conservation.
+    Material material_params = {};
+    material_params.tint = optix::make_float3(1.0f, 1.0f, 1.0f);
+    material_params.specularity = 0.02f;
+
+    for (float roughness : { 0.2f, 0.7f }) {
+        material_params.roughness = roughness;
+        for (float cos_theta : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
+            const optix::float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+            auto shading_model = RoughGlassShading(material_params, wo.z);
+            float rho = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
+            EXPECT_LE(rho, 1.0f) << " with roughness " << roughness << " and cos_theta " << cos_theta;
+        }
+    }
+}
+
+GTEST_TEST(RoughGlassShadingModel, function_consistency) {
+    using namespace optix;
+    using namespace Shading::ShadingModels;
+
+    for (float cos_theta : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
+        const float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+
+        Material material_params = frosted_glass_parameters();
+        for (float roughness : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
+            material_params.roughness = roughness;
+            auto shading_model = RoughGlassShading(material_params, wo.z);
+            ShadingModelTestUtils::BSDF_consistency_test(shading_model, wo, 32);
+        }
+    }
+}
+
+GTEST_TEST(RoughGlassShadingModel, Fresnel) {
+    using namespace Shading::ShadingModels;
+    using namespace optix;
+
+    // Test that specular reflections are white and incident reflections are black, i.e. all light is transmitted, when specularity is 0.
+    Material material_params = smooth_glass_parameters();
+    material_params.specularity = 0.0f; // Testing specularity. Physically-based fubar value.
+
+    { // Test that incident reflectivity is black.
+        float3 wo = make_float3(0.0f, 0.0f, 1.0f);
+        auto shading_model = RoughGlassShading(material_params, wo.z);
+        float3 weight = shading_model.evaluate(wo, wo);
+        EXPECT_FLOAT_EQ(weight.x, 0.0f);
+        EXPECT_FLOAT_EQ(weight.y, 0.0f);
+        EXPECT_FLOAT_EQ(weight.z, 0.0f);
+    }
+
+    { // Test that grazing angle reflectivity is white.
+        float3 wo = normalize(make_float3(0.0f, 1.0f, 0.001f));
+        float3 wi = normalize(make_float3(0.0f, -1.0f, 0.001f));
+        auto shading_model = RoughGlassShading(material_params, wo.z);
+        float3 weight = shading_model.evaluate(wo, wi);
+        EXPECT_GT(weight.x, 0.99f);
+        EXPECT_FLOAT_EQ(weight.x, weight.y);
+        EXPECT_FLOAT_EQ(weight.x, weight.z);
+    }
+}
+
+GTEST_TEST(RoughGlassShadingModel, regression_test) {
+    using namespace Shading::ShadingModels;
+    using namespace optix;
+
+    const unsigned int MAX_SAMPLES = 2;
+
+    BSDFResponse bsdf_responses[] = {
+        {362.193970f, 362.193970f, 362.193970f, 78.351860f},
+        {78.434082f, 80.085335f, 78.434082f, 62.168083f},
+        {903.713379f, 922.739014f, 903.713379f, 804.255981f},
+        {226.292801f, 231.056870f, 226.292801f, 201.343277f},
+        {1632.925171f, 1667.302612f, 1632.925171f, 1718.868652f},
+        {408.665558f, 417.269073f, 408.665558f, 430.136139f} };
+
+    Material material_params = frosted_glass_parameters();
+    int response_index = 0;
+    for (float cos_theta : { 0.2f, 0.6f, 1.0f }) {
+        float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+        auto material = RoughGlassShading(material_params, wo.z);
+        for (int s = 0; s < MAX_SAMPLES; ++s) {
+            float3 rng_sample = make_float3(RNG::sample02(s), (s + 0.5f) / MAX_SAMPLES);
+            BSDFSample sample = material.sample(wo, rng_sample);
+            // printf("{%.6ff, %.6ff, %.6ff, %.6ff},\n", sample.reflectance.x, sample.reflectance.y, sample.reflectance.z, sample.PDF);
+            auto response = bsdf_responses[response_index++];
+
+            EXPECT_COLOR_EQ_PCT(response.reflectance, sample.reflectance, make_float3(0.0001f));
+            EXPECT_FLOAT_EQ_PCT(response.PDF, sample.PDF, 0.0001f);
+        }
+    }
+}
+
+} // NS OptiXRenderer
+
+#endif // _OPTIXRENDERER_SHADING_MODEL_ROUGH_GLASS_TEST_H_
