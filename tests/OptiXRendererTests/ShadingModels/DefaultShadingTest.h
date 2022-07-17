@@ -317,48 +317,6 @@ GTEST_TEST(DefaultShadingModel, coat_interpolation) {
     }
 }
 
-GTEST_TEST(DefaultShadingModel, sampling_variance) {
-    using namespace Shading::ShadingModels;
-    using namespace optix;
-
-    const unsigned int MAX_SAMPLES = 8196;
-    const float3 wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
-
-    double* ws = new double[MAX_SAMPLES];
-    double* ws_squared = new double[MAX_SAMPLES];
-
-    // Test that evaluating all BRDFs with a given sample has lower variance than just sampling one and that they converge to the same result.
-    static auto sampling_variance_test = [=](Material& material_params) {
-
-        auto shading_model = DefaultShading(material_params, wo.z);
-
-        for (unsigned int i = 0u; i < MAX_SAMPLES; ++i) {
-            float3 rng_sample = make_float3(RNG::sample02(i), float(i) / float(MAX_SAMPLES));
-            BSDFSample sample = shading_model.sample_one(wo, rng_sample);
-            if (is_PDF_valid(sample.PDF)) {
-                ws[i] = sample.reflectance.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
-                ws_squared[i] = ws[i] * ws[i];
-            } else
-                ws_squared[i] = ws[i] = 0.0f;
-        }
-
-        double sample_one_mean = Bifrost::Math::sort_and_pairwise_summation(ws, ws + MAX_SAMPLES) / double(MAX_SAMPLES);
-        double sample_one_mean_squared = Bifrost::Math::sort_and_pairwise_summation(ws_squared, ws_squared + MAX_SAMPLES) / double(MAX_SAMPLES);
-        double sample_one_variance = sample_one_mean_squared - sample_one_mean * sample_one_mean;
-        
-        auto sample_all_result = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo);
-
-        EXPECT_FLOAT_EQ_EPS(float(sample_one_mean), sample_all_result.reflectance, 0.0001f);
-        EXPECT_LT(sample_all_result.std_dev, sqrt(sample_one_variance));
-    };
-
-    sampling_variance_test(ShadingModelTestUtils::plastic_parameters());
-    sampling_variance_test(ShadingModelTestUtils::coated_plastic_parameters());
-
-    delete[] ws;
-    delete[] ws_squared;
-}
-
 GTEST_TEST(DefaultShadingModel, regression_test) {
     using namespace Shading::ShadingModels;
     using namespace optix;

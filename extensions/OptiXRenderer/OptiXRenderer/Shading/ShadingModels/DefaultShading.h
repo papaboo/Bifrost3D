@@ -304,47 +304,6 @@ public:
         return res;
     }
 
-    // Sample one BSDF based on the contribution of each BRDF.
-    __inline_all__ BSDFSample sample_one(optix::float3 wo, optix::float3 random_sample) const {
-        using namespace optix;
-
-        assert_frontside(wo.z);
-
-        float coat_probability = m_coat_probability / USHORT_MAX;
-        if (coat_probability > 0) {
-            bool sample_coat = random_sample.z < coat_probability;
-            if (sample_coat) {
-                float coat_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
-                BSDFSample coat_sample = BSDFs::GGX_R::sample(coat_alpha, COAT_SPECULARITY, wo, make_float2(random_sample));
-                coat_sample.PDF *= coat_probability;
-                return coat_sample;
-            }
-
-            // Rescale the random BSDF selection sample.
-            random_sample.z = (random_sample.z - coat_probability) / (1 - coat_probability);
-        }
-
-        // Sample selected BRDF.
-        float specular_probability = m_specular_probability / USHORT_MAX;
-        bool sample_specular = random_sample.z < specular_probability;
-        BSDFSample bsdf_sample;
-        if (sample_specular) {
-            float alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
-            bsdf_sample = BSDFs::GGX_R::sample(alpha, m_specularity, wo, make_float2(random_sample));
-            bsdf_sample.reflectance *= m_coat_transmission;
-            bsdf_sample.PDF *= specular_probability;
-        } else {
-            bsdf_sample = BSDFs::Lambert::sample(m_diffuse_tint, make_float2(random_sample));
-            bsdf_sample.PDF *= (1 - specular_probability);
-        }
-
-        // Scale diffuse and specular sample probability by coat probability if coat is active.
-        if (m_coat_scale > 0)
-            bsdf_sample.PDF *= (1 - coat_probability);
-
-        return bsdf_sample;
-    }
-
     // Sample all BSDF based on the contribution of each BRDF.
     __inline_all__ BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
         using namespace optix;
