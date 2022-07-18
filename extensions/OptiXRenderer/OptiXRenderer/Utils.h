@@ -204,19 +204,6 @@ __inline_all__ float modulate_roughness_under_coat(float base_roughness, float c
     return sqrt(1.0f - (1.0f - pow2(base_roughness)) * (1.0f - pow2(coat_roughness)));
 }
 
-//-----------------------------------------------------------------------------
-// OptiX asserts
-//-----------------------------------------------------------------------------
-
-// OptiX assert
-__inline_all__ void assert_frontside(float cos_theta) {
-#if _DEBUG
-    // The material should never be seen from the backside.
-    if (cos_theta < 0.0f)
-        THROW(OPTIX_SHADING_WRONG_HEMISPHERE_EXCEPTION);
-#endif
-}
-
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_SHADING_UTILS_H_

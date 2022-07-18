@@ -227,8 +227,6 @@ public:
     __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
         using namespace optix;
 
-        assert_frontside(wo.z);
-
         // Return no contribution if the light is on the backside.
         if (wo.z < 0.000001f || wi.z < 0.000001f)
             return make_float3(0.0f);
@@ -249,8 +247,6 @@ public:
 
     __inline_all__ float PDF(optix::float3 wo, optix::float3 wi) const {
         using namespace optix;
-
-        assert_frontside(wo.z);
 
         // Return no contribution if the light is on the backside.
         if (wo.z < 0.000001f || wi.z < 0.000001f)
@@ -276,8 +272,6 @@ public:
 
     __inline_all__ BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
         using namespace optix;
-
-        assert_frontside(wo.z);
 
         // Return no contribution if the light is on the backside.
         if (wo.z < 0.000001f || wi.z < 0.000001f)
@@ -308,7 +302,9 @@ public:
     __inline_all__ BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
         using namespace optix;
 
-        assert_frontside(wo.z);
+        // Don't sample material from behind.
+        if (wo.z < 0.000001f)
+            return BSDFSample::none();
 
         float specular_probability = m_specular_probability / USHORT_MAX;
         float coat_probability = m_coat_probability / USHORT_MAX;
