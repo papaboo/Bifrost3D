@@ -127,6 +127,7 @@ void create_material_scene(Cameras::UID camera_ID, SceneNode root_node, ImGui::I
 
         Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 1, 0.04f);
         material_data.tint_roughness_texture_ID = Textures::create2D(tint_roughness_image_ID, MagnificationFilter::None, MinificationFilter::Trilinear);
+        material_data.flags = MaterialFlag::ThinWalled;
         Materials::UID material_ID = Materials::create("Floor", material_data);
 
         SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0.5, -1.0, 0.5), Quaternionf::identity(), float(size)));

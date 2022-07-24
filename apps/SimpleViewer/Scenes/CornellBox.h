@@ -26,12 +26,15 @@ void create_cornell_box(Scene::Cameras::UID camera_ID, Scene::SceneNode root_nod
     using namespace Bifrost::Scene;
 
     Materials::Data white_material_data = Materials::Data::create_dielectric(RGB(0.98f), 1.0f, 0.02f);
+    white_material_data.flags = MaterialFlag::ThinWalled;
     Materials::UID white_material_ID = Materials::create("White", white_material_data);
 
     Materials::Data red_material_data = Materials::Data::create_dielectric(RGB(0.98f, 0.02f, 0.02f), 1.0f, 0.02f);
+    red_material_data.flags = MaterialFlag::ThinWalled;
     Materials::UID red_material_ID = Materials::create("Red", red_material_data);
 
     Materials::Data green_material_data = Materials::Data::create_dielectric(RGB(0.02f, 0.98f, 0.02f), 1.0f, 0.02f);
+    green_material_data.flags = MaterialFlag::ThinWalled;
     Materials::UID green_material_ID = Materials::create("Green", green_material_data);
 
     Materials::Data iron_material_data = Materials::Data::create_metal(iron_tint, 0.4f);

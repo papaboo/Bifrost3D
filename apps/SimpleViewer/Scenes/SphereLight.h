@@ -113,6 +113,7 @@ void create(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoo
             Meshes::compute_bounds(tiles_mesh_ID);
 
             Materials::Data white_tile_data = Materials::Data::create_dielectric(RGB(0.5f), 0.2f, 0.02f);
+            white_tile_data.flags = MaterialFlag::ThinWalled;
             Materials::UID white_tile_material_ID = Materials::create("White tile", white_tile_data);
 
             MeshModels::create(node.get_ID(), tiles_mesh_ID, white_tile_material_ID);
@@ -147,6 +148,7 @@ void create(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoo
             Meshes::compute_bounds(tiles_mesh_ID);
 
             Materials::Data black_tile_data = Materials::Data::create_dielectric(RGB(0.001f), 0.02f, 0.04f);
+            black_tile_data.flags = MaterialFlag::ThinWalled;
             Materials::UID black_tile_material_ID = Materials::create("Black tile", black_tile_data);
 
             MeshModels::create(node.get_ID(), tiles_mesh_ID, black_tile_material_ID);

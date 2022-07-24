@@ -49,6 +49,7 @@ void create_opacity_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, S
 
         Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 0.3f, 0.02f);
         material_data.tint_roughness_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
+        material_data.flags = MaterialFlag::ThinWalled;
         Materials::UID material_ID = Materials::create("Floor", material_data);
 
         SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0, -0.0005f, 0), Quaternionf::identity(), 10));
