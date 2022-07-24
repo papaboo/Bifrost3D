@@ -213,13 +213,19 @@ struct __align__(16) BSDFSample {
 };
 
 struct __align__(16) Material {
+    enum Flags {
+        None = 0u,
+        ThinWalled = 1u,
+        Cutout = 2u,
+    };
+
+    int flags;
     optix::float3 tint;
-    int tint_roughness_texture_ID;
 
     float roughness;
+    int tint_roughness_texture_ID;
     int roughness_texture_ID; // Should only be set if tint_roughness_texture_ID is 0. Can be packed with tint_roughness_texture_ID if needed and the most significant bits can be used to denote the type.
     float specularity;
-    int __padding;
 
     float metallic;
     int metallic_texture_ID;
@@ -229,6 +235,9 @@ struct __align__(16) Material {
     float coat;
     float coat_roughness;
     optix::float2 __padding2;
+
+    __inline_all__ bool is_thin_walled() const { return (flags & (Flags::Cutout | Flags::ThinWalled)) != 0; }
+    __inline_all__ bool is_cutout() const { return (flags & Flags::Cutout) != 0; }
 };
 
 //----------------------------------------------------------------------------
