@@ -24,7 +24,8 @@ namespace Assets {
 // ---------------------------------------------------------------------------
 enum class MaterialFlag : unsigned char {
     None = 0u,
-    Cutout = 1u
+    ThinWalled = 1u,
+    Cutout = 2u,
 };
 
 // ---------------------------------------------------------------------------
@@ -112,7 +113,7 @@ public:
     static inline ConstUIDIterator end() { return m_UID_generator.end(); }
     static inline Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
 
-    static inline std::string get_name(Materials::UID material_ID) { return m_names[material_ID]; }
+    static inline const std::string& get_name(Materials::UID material_ID) { return m_names[material_ID]; }
     static inline void set_name(Materials::UID material_ID, const std::string& name) { m_names[material_ID] = name; }
 
     static inline Flags get_flags(Materials::UID material_ID) { return m_materials[material_ID].flags; }
@@ -199,43 +200,45 @@ public:
     // -----------------------------------------------------------------------
     // Getters and setters.
     // -----------------------------------------------------------------------
-    inline std::string get_name() const { return Materials::get_name(m_ID); }
+    inline const std::string& get_name() const { return Materials::get_name(m_ID); }
     inline void set_name(const std::string& name) { Materials::set_name(m_ID, name); }
 
-    inline Materials::Flags get_flags() { return Materials::get_flags(m_ID); }
     inline void set_flags(Materials::Flags flags) { Materials::set_flags(m_ID, flags); }
-    
-    inline Math::RGB get_tint() { return Materials::get_tint(m_ID); }
-    inline void set_tint(Math::RGB tint) { Materials::set_tint(m_ID, tint); }
-    inline float get_roughness() { return Materials::get_roughness(m_ID); }
-    inline void set_roughness(float roughness) { Materials::set_roughness(m_ID, roughness); }
-    inline Texture get_tint_roughness_texture() { return Materials::get_tint_roughness_texture_ID(m_ID); }
-    inline Textures::UID get_tint_roughness_texture_ID() { return Materials::get_tint_roughness_texture_ID(m_ID); }
-    inline void set_tint_roughness_texture(Texture tint_roughness_texture) { Materials::set_tint_roughness_texture_ID(m_ID, tint_roughness_texture.get_ID()); }
-    inline bool has_tint_texture() { return Materials::has_tint_texture(m_ID); }
-    inline bool has_roughness_texture() { return Materials::has_roughness_texture(m_ID); }
+    inline Materials::Flags get_flags() const { return Materials::get_flags(m_ID); }
+    inline bool is_thin_walled() const { return get_flags().is_set(MaterialFlag::ThinWalled); }
+    inline bool is_cutout() const { return get_flags().is_set(MaterialFlag::Cutout); }
 
-    inline float get_specularity() { return Materials::get_specularity(m_ID); }
+    inline Math::RGB get_tint() const { return Materials::get_tint(m_ID); }
+    inline void set_tint(Math::RGB tint) { Materials::set_tint(m_ID, tint); }
+    inline float get_roughness() const { return Materials::get_roughness(m_ID); }
+    inline void set_roughness(float roughness) { Materials::set_roughness(m_ID, roughness); }
+    inline const Texture get_tint_roughness_texture() const { return Materials::get_tint_roughness_texture_ID(m_ID); }
+    inline Textures::UID get_tint_roughness_texture_ID() const { return Materials::get_tint_roughness_texture_ID(m_ID); }
+    inline void set_tint_roughness_texture(Texture tint_roughness_texture) { Materials::set_tint_roughness_texture_ID(m_ID, tint_roughness_texture.get_ID()); }
+    inline bool has_tint_texture() const { return Materials::has_tint_texture(m_ID); }
+    inline bool has_roughness_texture() const { return Materials::has_roughness_texture(m_ID); }
+
+    inline float get_specularity() const { return Materials::get_specularity(m_ID); }
     inline void set_specularity(float specularity) { Materials::set_specularity(m_ID, specularity); }
 
-    inline float get_metallic() { return Materials::get_metallic(m_ID); }
+    inline float get_metallic() const { return Materials::get_metallic(m_ID); }
     inline void set_metallic(float metallic) { Materials::set_metallic(m_ID, metallic); }
-    inline Texture get_metallic_texture() { return Materials::get_metallic_texture_ID(m_ID); }
-    inline Textures::UID get_metallic_texture_ID() { return Materials::get_metallic_texture_ID(m_ID); }
+    inline const Texture get_metallic_texture() const { return Materials::get_metallic_texture_ID(m_ID); }
+    inline Textures::UID get_metallic_texture_ID() const { return Materials::get_metallic_texture_ID(m_ID); }
     inline void set_metallic_texture(Texture metallic_texture) { Materials::set_metallic_texture_ID(m_ID, metallic_texture.get_ID()); }
 
-    inline float get_coat() { return Materials::get_coat(m_ID); }
+    inline float get_coat() const { return Materials::get_coat(m_ID); }
     inline void set_coat(float coat) { Materials::set_coat(m_ID, coat); }
-    inline float get_coat_roughness() { return Materials::get_coat_roughness(m_ID); }
+    inline float get_coat_roughness() const { return Materials::get_coat_roughness(m_ID); }
     inline void set_coat_roughness(float coat_roughness) { Materials::set_coat_roughness(m_ID, coat_roughness); }
 
-    inline float get_coverage() { return Materials::get_coverage(m_ID); }
+    inline float get_coverage() const { return Materials::get_coverage(m_ID); }
     inline void set_coverage(float coverage) { Materials::set_coverage(m_ID, coverage); }
-    inline Texture get_coverage_texture() { return Materials::get_coverage_texture_ID(m_ID); }
-    inline Textures::UID get_coverage_texture_ID() { return Materials::get_coverage_texture_ID(m_ID); }
+    inline const Texture get_coverage_texture() const { return Materials::get_coverage_texture_ID(m_ID); }
+    inline Textures::UID get_coverage_texture_ID() const { return Materials::get_coverage_texture_ID(m_ID); }
     inline void set_coverage_texture_ID(Textures::UID texture_ID) { Materials::set_coverage_texture_ID(m_ID, texture_ID); }
 
-    inline float get_transmission() { return Materials::get_transmission(m_ID); }
+    inline float get_transmission() const { return Materials::get_transmission(m_ID); }
     inline void set_transmission(float transmission) { Materials::set_coverage(m_ID, transmission); }
 
     inline Materials::Changes get_changes() { return Materials::get_changes(m_ID); }
