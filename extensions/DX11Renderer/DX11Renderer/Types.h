@@ -257,8 +257,9 @@ struct Dx11Mesh {
 struct Dx11Model {
     struct Properties {
         static const unsigned int None = 0u;
-        static const unsigned int Cutout = 1u << 0u;
-        static const unsigned int Transparent = 1u << 1u;
+        static const unsigned int ThinWalled = 1u << 0u;
+        static const unsigned int Cutout = 1u << 1u;
+        static const unsigned int Transparent = 1u << 2u;
         static const unsigned int Destroyed = 1u << 31u;
     };
 
@@ -269,6 +270,7 @@ struct Dx11Model {
     unsigned int properties; // NOTE If I really really really wanted to keep this 16 byte aligned (which is nice), then I could store properties in upper 8 bits of the IDs.
 
     bool is_opaque() { return (properties & (Properties::Cutout | Properties::Transparent)) == 0; }
+    bool is_thin_walled() { return (properties & (Properties::Cutout | Properties::ThinWalled)) != 0; }
     bool is_cutout() { return (properties & Properties::Cutout) == Properties::Cutout; }
     bool is_transparent() { return (properties & Properties::Transparent) == Properties::Transparent; }
     bool is_destroyed() { return (properties & Properties::Destroyed) == Properties::Destroyed; }

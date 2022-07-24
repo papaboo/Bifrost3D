@@ -9,6 +9,7 @@
 #include <DX11Renderer/EnvironmentManager.h>
 #include <DX11Renderer/LightManager.h>
 #include <DX11Renderer/MaterialManager.h>
+#include <DX11Renderer/MeshModelManager.h>
 #include <DX11Renderer/Renderer.h>
 #include <DX11Renderer/SSAO.h>
 #include <DX11Renderer/TextureManager.h>
@@ -52,13 +53,11 @@ private:
     // Bifrost resources
     vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
 
-    vector<int> m_model_indices = vector<int>(0); // The models index in the sorted models array.
-    vector<Dx11Model> m_sorted_models = vector<Dx11Model>(0);
-
     EnvironmentManager* m_environments;
     MaterialManager m_materials;
     TextureManager m_textures;
     TransformManager m_transforms;
+    MeshModelManager m_mesh_models;
     SSAO::AlchemyAO m_ssao;
 
     struct {
@@ -101,17 +100,15 @@ private:
     } m_opaque;
 
     struct {
-        int first_model_index = 0;
         ORasterizerState raster_state;
     } m_cutout;
 
     struct Transparent {
         struct SortedModel {
             float distance;
-            int model_index;
+            MeshModelManager::Iterator model_iterator;
         };
 
-        int first_model_index = 0;
         OBlendState blend_state;
         ODepthStencilState depth_state;
         OPixelShader shader;
@@ -154,14 +151,10 @@ public:
         device.GetImmediateContext1(&m_render_context);
 
         { // Setup asset managing.
-            Dx11Model dummy_model = { 0, 0, 0, 0, 0 };
-            m_sorted_models.push_back(dummy_model);
-            m_model_indices.resize(1);
-            m_model_indices[0] = 0;
-
             m_environments = new EnvironmentManager(m_device, m_shader_directory, m_textures);
 
             m_materials = MaterialManager(m_device, *m_render_context);
+            m_mesh_models = MeshModelManager();
             m_textures = TextureManager(m_device);
             m_transforms = TransformManager(m_device, *m_render_context);
 
@@ -381,18 +374,17 @@ public:
         { // Render opaque objects.
             m_render_context->VSSetShader(m_g_buffer.opaque.vertex_shader, 0, 0);
             m_render_context->PSSetShader(m_g_buffer.opaque.pixel_shader, 0, 0);
-            for (int i = 1; i < m_transparent.first_model_index; ++i) {
-                // Setup twosided raster state for cutout materials.
-                if (i == m_cutout.first_model_index) {
+            for (auto model_itr = m_mesh_models.begin_models(); model_itr < m_mesh_models.begin_transparent_models(); ++model_itr) {
+                // Setup two-sided raster state for cutout materials.
+                if (model_itr == m_mesh_models.begin_cutout_models()) {
                     m_render_context->RSSetState(m_g_buffer.cutout.raster_state);
                     m_render_context->VSSetShader(m_g_buffer.cutout.vertex_shader, 0, 0);
                     m_render_context->IASetInputLayout(m_g_buffer.cutout.vertex_input_layout);
                     m_render_context->PSSetShader(m_g_buffer.cutout.pixel_shader, 0, 0);
                 }
 
-                Dx11Model model = m_sorted_models[i];
-                assert(model.model_ID != 0);
-                render_model<true>(m_render_context, model);
+                assert(model_itr->model_ID != 0);
+                render_model<true>(m_render_context, *model_itr);
             }
         }
     }
@@ -659,15 +651,13 @@ public:
             unsigned int offset = 0;
             m_render_context->IASetVertexBuffers(2, 1, &m_vertex_shading.null_buffer, &stride, &offset);
 
-            for (int i = 1; i < m_transparent.first_model_index; ++i) {
-
+            for (auto model_itr = m_mesh_models.begin_models(); model_itr < m_mesh_models.begin_transparent_models(); ++model_itr) {
                 // Setup two-sided raster state for cutout materials.
-                if (i == m_cutout.first_model_index)
+                if (model_itr == m_mesh_models.begin_cutout_models())
                     m_render_context->RSSetState(m_cutout.raster_state);
 
-                Dx11Model model = m_sorted_models[i];
-                assert(model.model_ID != 0);
-                render_model<false>(m_render_context, model);
+                assert(model_itr->model_ID != 0);
+                render_model<false>(m_render_context, *model_itr);
             }
 
             opaque_marker.end();
@@ -677,7 +667,7 @@ public:
                 auto transparent_marker = PerformanceMarker(*m_render_context, L"Transparent geometry");
 
                 // Apply used cutout state if not already applied.
-                bool no_cutouts_present = m_cutout.first_model_index >= m_transparent.first_model_index;
+                bool no_cutouts_present = m_mesh_models.begin_cutout_models() == m_mesh_models.begin_transparent_models();
                 if (no_cutouts_present)
                     m_render_context->RSSetState(m_cutout.raster_state);
 
@@ -687,21 +677,21 @@ public:
                 m_render_context->OMSetDepthStencilState(m_transparent.depth_state, 0);
                 m_render_context->PSSetShader(debug_material_params ? m_debug.material_params_shader : m_transparent.shader, 0, 0);
 
-                int transparent_model_count = int(m_sorted_models.size()) - m_transparent.first_model_index;
+                int transparent_model_count = int(m_mesh_models.end_models() - m_mesh_models.begin_transparent_models());
                 auto transparent_models = m_transparent.sorted_models_pool; // Alias the pool.
-                transparent_models.resize(transparent_model_count);
+                transparent_models.reserve(transparent_model_count);
+                transparent_models.resize(0);
 
                 { // Sort transparent models. TODO in a separate thread that is waited on when we get to the transparent render index.
                     Vector3f cam_pos = Cameras::get_transform(camera_ID).translation;
-                    for (int i = 0; i < transparent_model_count; ++i) {
+                    for (auto model_itr = m_mesh_models.begin_transparent_models(); model_itr < m_mesh_models.end_models(); ++model_itr) {
                         // Calculate the distance to point halfway between the models center and side of the bounding box.
-                        int model_index = i + m_transparent.first_model_index;
-                        Dx11Mesh& mesh = m_meshes[m_sorted_models[model_index].mesh_ID];
-                        Transform transform = m_transforms.get_transform(m_sorted_models[model_index].transform_ID);
+                        Dx11Mesh& mesh = m_meshes[model_itr->mesh_ID];
+                        Transform transform = m_transforms.get_transform(model_itr->transform_ID);
                         Bifrost::Math::AABB bounds = { Vector3f(mesh.bounds.min.x, mesh.bounds.min.y, mesh.bounds.min.z),
                                                         Vector3f(mesh.bounds.max.x, mesh.bounds.max.y, mesh.bounds.max.z) };
                         float distance_to_cam = alpha_sort_value(cam_pos, transform, bounds);
-                        transparent_models[i] = { distance_to_cam, model_index};
+                        transparent_models.push_back({ distance_to_cam, model_itr });
                     }
 
                     std::sort(transparent_models.begin(), transparent_models.end(), 
@@ -711,7 +701,7 @@ public:
                 }
 
                 for (auto transparent_model : transparent_models) {
-                    Dx11Model model = m_sorted_models[transparent_model.model_index];
+                    Dx11Model model = *transparent_model.model_iterator;
                     assert(model.model_ID != 0);
                     render_model<false>(m_render_context, model);
                 }
@@ -862,91 +852,8 @@ public:
             }
         }
 
-        { // Model updates
-            if (!MeshModels::get_changed_models().is_empty()) {
-                if (m_sorted_models.size() <= MeshModels::capacity()) {
-                    m_sorted_models.reserve(MeshModels::capacity());
-                    int old_size = (int)m_model_indices.size();
-                    m_model_indices.resize(MeshModels::capacity());
-                    std::fill(m_model_indices.begin() + old_size, m_model_indices.end(), 0);
+        m_mesh_models.handle_updates();
                 }
-
-                for (MeshModel model : MeshModels::get_changed_models()) {
-                    unsigned int model_index = m_model_indices[model.get_ID()];
-
-                    if (model.get_changes() & MeshModels::Change::Destroyed) {
-                        m_sorted_models[model_index].model_ID = 0;
-                        m_sorted_models[model_index].material_ID = 0;
-                        m_sorted_models[model_index].mesh_ID = 0;
-                        m_sorted_models[model_index].transform_ID = 0;
-                        m_sorted_models[model_index].properties = Dx11Model::Properties::Destroyed;
-
-                        m_model_indices[model.get_ID()] = 0;
-                    }
-                    else if (model.get_changes() & MeshModels::Change::Created) {
-                        Dx11Model dx_model;
-                        dx_model.model_ID = model.get_ID();
-                        dx_model.material_ID = model.get_material().get_ID();
-                        dx_model.mesh_ID = model.get_mesh().get_ID();
-                        dx_model.transform_ID = model.get_scene_node().get_ID();
-
-                        Material mat = model.get_material();
-                        bool uses_coverage = mat.get_coverage_texture_ID() != TextureID::invalid_UID() || mat.get_coverage() < 1.0f;
-                        bool is_cutout = mat.get_flags().is_set(MaterialFlag::Cutout);
-                        unsigned int coverage_type = is_cutout ? Dx11Model::Properties::Cutout : Dx11Model::Properties::Transparent;
-                        dx_model.properties = uses_coverage ? coverage_type : Dx11Model::Properties::None;
-
-                        if (model_index == 0) {
-                            m_model_indices[model.get_ID()] = (int)m_sorted_models.size();
-                            m_sorted_models.push_back(dx_model);
-                        } else
-                            m_sorted_models[model_index] = dx_model;
-                    } else if (model.get_changes() & MeshModels::Change::Material)
-                        m_sorted_models[model_index].material_ID = model.get_material().get_ID();
-                }
-
-                // Sort the models in the order [dummy, opaque, cutout, transparent, destroyed].
-                // The new position/index of the model is stored in model_index.
-                // Incidently also compacts the list of models by removing any deleted models.
-                {
-                    // The models to be sorted starts at index 1, because the first model is a dummy model.
-                    std::sort(m_sorted_models.begin() + 1, m_sorted_models.end(),
-                        [](Dx11Model lhs, Dx11Model rhs) -> bool {
-                        return lhs.properties < rhs.properties;
-                    });
-
-                    { // Register the models new position and find the transition between model buckets.
-                        int sorted_models_end = m_cutout.first_model_index = m_transparent.first_model_index =
-                            (int)m_sorted_models.size();
-
-                        #pragma omp parallel for
-                        for (int i = 1; i < m_sorted_models.size(); ++i) {
-                            Dx11Model& model = m_sorted_models[i];
-                            m_model_indices[model.model_ID] = i;
-
-                            Dx11Model& prevModel = m_sorted_models[i - 1];
-                            if (prevModel.properties != model.properties) {
-                                if (!prevModel.is_cutout() && model.is_cutout())
-                                    m_cutout.first_model_index = i;
-                                if (!prevModel.is_transparent() && model.is_transparent())
-                                    m_transparent.first_model_index = i;
-                                if (!prevModel.is_destroyed() && model.is_destroyed())
-                                    sorted_models_end = i;
-                            }
-                        }
-
-                        // Correct indices in case no bucket transition was found.
-                        if (m_transparent.first_model_index > sorted_models_end)
-                            m_transparent.first_model_index = sorted_models_end;
-                        if (m_cutout.first_model_index > m_transparent.first_model_index)
-                            m_cutout.first_model_index = m_transparent.first_model_index;
-
-                        m_sorted_models.resize(sorted_models_end);
-                    }
-                }
-            }
-        }
-    }
 
     Renderer::Settings get_settings() const { return m_settings; }
     void set_settings(Settings& settings) { m_settings = settings; }
