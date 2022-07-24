@@ -214,6 +214,12 @@ void RenderingGUI::layout_frame() {
                 float coat_roughness = material.get_coat_roughness();
                 if (ImGui::SliderFloat("Coat roughness", &coat_roughness, 0, 1))
                     material.set_coat_roughness(coat_roughness);
+
+                Materials::Flags flags = material.get_flags();
+                bool flags_changed = ImGui::CheckboxFlags("Thin walled", &flags, MaterialFlag::ThinWalled);
+                flags_changed |= ImGui::CheckboxFlags("Cutout", &flags, MaterialFlag::Cutout);
+                if (flags_changed)
+                    material.set_flags(flags);
             });
         }
     });
