@@ -140,19 +140,12 @@ __inline_dev__ LightSample reestimated_light_samples(const DefaultShading& mater
 
 __inline_all__ static float get_coverage(const Material& material, optix::float2 texcoord) {
     float coverage = material.coverage;
-#if GPU_DEVICE
     if (material.coverage_texture_ID)
         coverage *= optix::rtTex2D<float>(material.coverage_texture_ID, texcoord.x, texcoord.y);
-#endif
     return coverage;
 }
 
 RT_PROGRAM void closest_hit() {
-    // const float3 world_geometric_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, geometric_normal));
-    const float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
-    monte_carlo_payload.shading_normal = -dot(world_shading_normal, ray.direction) >= 0.0f ? world_shading_normal : -world_shading_normal;
-    const TBN world_shading_tbn = TBN(monte_carlo_payload.shading_normal);
-
     const Material& material_parameter = g_materials[material_index];
 
 #if PMJ_RNG
@@ -163,11 +156,27 @@ RT_PROGRAM void closest_hit() {
     monte_carlo_payload.rng_state.set_dimension(4 * monte_carlo_payload.bounces);
 #endif
 
+    // Backside culling of non-thin-walled geometry.
+    const float3 world_geometric_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, geometric_normal));
+    bool hit_from_behind = dot(world_geometric_normal, ray.direction) >= 0.0f;
+    bool ignore_intersection = hit_from_behind && !material_parameter.is_thin_walled();
+
     float coverage = get_coverage(material_parameter, texcoord);
-    if (sample1f(monte_carlo_payload.rng_state) > coverage) {
+    float coverage_cutoff = sample1f(monte_carlo_payload.rng_state); // Always draw coverage random number to have predictable RNG dimension usage whether the material is a cutout or not.
+    coverage_cutoff = material_parameter.is_cutout() ? 0.33f : coverage_cutoff;
+    ignore_intersection |= coverage < coverage_cutoff;
+
+    if (ignore_intersection) {
         monte_carlo_payload.position = ray.direction * (t_hit + g_scene.ray_epsilon) + ray.origin;
         return;
     }
+
+    const float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
+    if (material_parameter.is_thin_walled())
+        monte_carlo_payload.shading_normal = dot(world_shading_normal, ray.direction) < 0.0f ? world_shading_normal : -world_shading_normal;
+    else
+        monte_carlo_payload.shading_normal = world_shading_normal;
+    const TBN world_shading_tbn = TBN(monte_carlo_payload.shading_normal);
 
     // Store geometry varyings.
     monte_carlo_payload.material_index = material_index; // Store material index after coverage check, since the material isn't actually used unless the coverage check succeeded.
