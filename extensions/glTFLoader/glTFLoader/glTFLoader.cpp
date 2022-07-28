@@ -445,21 +445,14 @@ SceneNodeID load(const std::string& filename) {
         mat_data.roughness = 1.0f;
         mat_data.metallic = 0.0f;
         mat_data.coverage = 1.0f;
-        bool is_opaque = true;
 
         const auto& glTF_mat = model.materials[i];
+
         // Process additional values first, as we need to know the alphaMode before converting images.
-        for (const auto& val : glTF_mat.additionalValues) {
-            if (val.first.compare("doubleSided") == 0)
-                // NOTE to self: Double sided should set a 'thin/doubleSided' property on the meshes instead of on the materials.
-                // In case the material is used by one sided and two sided meshes, we need to duplicate the mesh or keep the doubleSided
-                printf("GLTFLoader::load warning: doubleSided property not supported.\n");
-            else if (val.first.compare("alphaMode") == 0) {
-                is_opaque = false;
-                bool is_cutout = val.second.string_value.compare("MASK") == 0;
-                mat_data.flags |= is_cutout ? MaterialFlag::Cutout : MaterialFlag::None;
-            }
-        }
+        if (glTF_mat.doubleSided)
+            mat_data.flags |= MaterialFlag::ThinWalled;
+        if (glTF_mat.alphaMode.compare("MASK") == 0)
+            mat_data.flags |= MaterialFlag::Cutout;
 
         TextureState tint_coverage_tex;
         TextureState metallic_roughness_tex;
