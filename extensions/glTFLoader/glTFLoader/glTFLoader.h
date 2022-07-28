@@ -18,7 +18,6 @@ namespace glTFLoader {
 // Loads a glTF file.
 // See the glTF spec at https://github.com/KhronosGroup/glTF/tree/master/specification
 // Future work:
-// * Support doubleSided/thinwalled on meshes. Requires mesh support first.
 // * Reserve capacity for Mesh, MeshModels and SceneNodes before creating them.
 // * Import cameras. Perhaps as viewpoints, since there is no way to enable/disable cameras.
 // * Support triangle fan and triangle strip as well.
