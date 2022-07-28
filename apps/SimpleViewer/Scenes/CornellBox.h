@@ -20,28 +20,28 @@ using namespace Bifrost;
 
 namespace Scenes {
 
-void create_cornell_box(Scene::Cameras::UID camera_ID, Scene::SceneNode root_node) {
+void create_cornell_box(Scene::CameraID camera_ID, Scene::SceneNode root_node) {
     using namespace Bifrost::Assets;
     using namespace Bifrost::Math;
     using namespace Bifrost::Scene;
 
     Materials::Data white_material_data = Materials::Data::create_dielectric(RGB(0.98f), 1.0f, 0.02f);
     white_material_data.flags = MaterialFlag::ThinWalled;
-    Materials::UID white_material_ID = Materials::create("White", white_material_data);
+    MaterialID white_material_ID = Materials::create("White", white_material_data);
 
     Materials::Data red_material_data = Materials::Data::create_dielectric(RGB(0.98f, 0.02f, 0.02f), 1.0f, 0.02f);
     red_material_data.flags = MaterialFlag::ThinWalled;
-    Materials::UID red_material_ID = Materials::create("Red", red_material_data);
+    MaterialID red_material_ID = Materials::create("Red", red_material_data);
 
     Materials::Data green_material_data = Materials::Data::create_dielectric(RGB(0.02f, 0.98f, 0.02f), 1.0f, 0.02f);
     green_material_data.flags = MaterialFlag::ThinWalled;
-    Materials::UID green_material_ID = Materials::create("Green", green_material_data);
+    MaterialID green_material_ID = Materials::create("Green", green_material_data);
 
     Materials::Data iron_material_data = Materials::Data::create_metal(iron_tint, 0.4f);
-    Materials::UID iron_material_ID = Materials::create("Iron", iron_material_data);
+    MaterialID iron_material_ID = Materials::create("Iron", iron_material_data);
 
     Materials::Data copper_material_data = Materials::Data::create_metal(copper_tint, 0.02f);
-    Materials::UID copper_material_ID = Materials::create("Copper", copper_material_data);
+    MaterialID copper_material_ID = Materials::create("Copper", copper_material_data);
 
     { // Set camera position
         Transform cam_transform = Cameras::get_transform(camera_ID);
@@ -54,11 +54,11 @@ void create_cornell_box(Scene::Cameras::UID camera_ID, Scene::SceneNode root_nod
         Transform light_transform = Transform(light_position);
         SceneNode light_node = SceneNodes::create("Light", light_transform);
         light_node.set_parent(root_node);
-        LightSources::UID light_ID = LightSources::create_sphere_light(light_node.get_ID(), RGB(2.0f), 0.05f);
+        LightSourceID light_ID = LightSources::create_sphere_light(light_node.get_ID(), RGB(2.0f), 0.05f);
     }
 
     { // Create room.
-        Meshes::UID plane_mesh_ID = MeshCreation::plane(1);
+        MeshID plane_mesh_ID = MeshCreation::plane(1);
         float PI_half = PI<float>() * 0.5f;
 
         { // Floor
@@ -98,7 +98,7 @@ void create_cornell_box(Scene::Cameras::UID camera_ID, Scene::SceneNode root_nod
     }
 
     { // Create small box.
-        Meshes::UID box_mesh_ID = MeshCreation::cube(1);
+        MeshID box_mesh_ID = MeshCreation::cube(1);
 
         Transform transform = Transform(Vector3f(0.2f, -0.35f, -0.2f),
             Quaternionf::from_angle_axis(PI<float>() / 6.0f, Vector3f::up()),
@@ -109,7 +109,7 @@ void create_cornell_box(Scene::Cameras::UID camera_ID, Scene::SceneNode root_nod
     }
 
     { // Create big box.
-        Meshes::UID box_mesh_ID = MeshCreation::cube(1);
+        MeshID box_mesh_ID = MeshCreation::cube(1);
 
         Vector3f* positions = Meshes::get_positions(box_mesh_ID);
         for (unsigned int v = 0; v < Meshes::get_vertex_count(box_mesh_ID); ++v) {

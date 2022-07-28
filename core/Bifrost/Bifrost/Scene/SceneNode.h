@@ -18,6 +18,13 @@
 namespace Bifrost {
 namespace Scene {
 
+//----------------------------------------------------------------------------
+// Scene node ID
+//----------------------------------------------------------------------------
+class SceneNodes;
+typedef Core::TypedUIDGenerator<SceneNodes> SceneNodeIDGenerator;
+typedef SceneNodeIDGenerator::UID SceneNodeID;
+
 // ---------------------------------------------------------------------------
 // Container class for the bifrost scene node.
 // Future work
@@ -31,9 +38,7 @@ namespace Scene {
 // ---------------------------------------------------------------------------
 class SceneNodes final {
 public:
-    typedef Core::TypedUIDGenerator<SceneNodes> UIDGenerator;
-    typedef UIDGenerator::UID UID;
-    typedef UIDGenerator::ConstIterator ConstUIDIterator;
+    using Iterator = SceneNodeIDGenerator::ConstIterator;
 
     static bool is_allocated() { return m_global_transforms != nullptr; }
     static void allocate(unsigned int capacity);
@@ -41,34 +46,34 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(SceneNodes::UID node_ID) { return m_UID_generator.has(node_ID); }
+    static bool has(SceneNodeID node_ID) { return m_UID_generator.has(node_ID); }
 
-    static SceneNodes::UID create(const std::string& name, Math::Transform transform = Math::Transform::identity());
-    static void destroy(SceneNodes::UID node_ID);
+    static SceneNodeID create(const std::string& name, Math::Transform transform = Math::Transform::identity());
+    static void destroy(SceneNodeID node_ID);
 
-    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
-    static ConstUIDIterator end() { return m_UID_generator.end(); }
-    static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
+    static Iterator begin() { return m_UID_generator.begin(); }
+    static Iterator end() { return m_UID_generator.end(); }
+    static Core::Iterable<Iterator> get_iterable() { return Core::Iterable<Iterator>(begin(), end()); }
 
-    static inline std::string get_name(SceneNodes::UID node_ID) { return m_names[node_ID]; }
-    static inline void set_name(SceneNodes::UID node_ID, const std::string& name) { m_names[node_ID] = name; }
+    static inline std::string get_name(SceneNodeID node_ID) { return m_names[node_ID]; }
+    static inline void set_name(SceneNodeID node_ID, const std::string& name) { m_names[node_ID] = name; }
 
-    static inline SceneNodes::UID get_parent_ID(SceneNodes::UID node_ID) { return m_parent_IDs[node_ID]; }
-    static void set_parent(SceneNodes::UID node_ID, const SceneNodes::UID parent_ID);
-    static bool has_child(SceneNodes::UID node_ID, SceneNodes::UID tested_child_ID);
-    static std::vector<SceneNodes::UID> get_sibling_IDs(SceneNodes::UID node_ID);
-    static std::vector<SceneNodes::UID> get_children_IDs(SceneNodes::UID node_ID);
+    static inline SceneNodeID get_parent_ID(SceneNodeID node_ID) { return m_parent_IDs[node_ID]; }
+    static void set_parent(SceneNodeID node_ID, const SceneNodeID parent_ID);
+    static bool has_child(SceneNodeID node_ID, SceneNodeID tested_child_ID);
+    static std::vector<SceneNodeID> get_sibling_IDs(SceneNodeID node_ID);
+    static std::vector<SceneNodeID> get_children_IDs(SceneNodeID node_ID);
 
-    static Math::Transform get_local_transform(SceneNodes::UID node_ID);
-    static void set_local_transform(SceneNodes::UID node_ID, Math::Transform transform);
-    static Math::Transform get_global_transform(SceneNodes::UID node_ID) { return m_global_transforms[node_ID];}
-    static void set_global_transform(SceneNodes::UID node_ID, Math::Transform transform);
-    static void apply_delta_transform(SceneNodes::UID node_ID, Math::Transform delta_transform);
+    static Math::Transform get_local_transform(SceneNodeID node_ID);
+    static void set_local_transform(SceneNodeID node_ID, Math::Transform transform);
+    static Math::Transform get_global_transform(SceneNodeID node_ID) { return m_global_transforms[node_ID];}
+    static void set_global_transform(SceneNodeID node_ID, Math::Transform transform);
+    static void apply_delta_transform(SceneNodeID node_ID, Math::Transform delta_transform);
 
     template<typename F>
-    static void apply_recursively(SceneNodes::UID node_ID, F& function);
+    static void apply_recursively(SceneNodeID node_ID, F& function);
     template<typename F>
-    static void apply_to_children_recursively(SceneNodes::UID node_ID, F& function);
+    static void apply_to_children_recursively(SceneNodeID node_ID, F& function);
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -82,28 +87,28 @@ public:
     };
     typedef Core::Bitmask<Change> Changes;
 
-    static inline Changes get_changes(SceneNodes::UID node_ID) { return m_changes.get_changes(node_ID); }
+    static inline Changes get_changes(SceneNodeID node_ID) { return m_changes.get_changes(node_ID); }
 
-    typedef std::vector<UID>::iterator ChangedIterator;
+    typedef std::vector<SceneNodeID>::iterator ChangedIterator;
     static Core::Iterable<ChangedIterator> get_changed_nodes() { return m_changes.get_changed_resources(); }
 
     static void reset_change_notifications() { return m_changes.reset_change_notifications(); }
 
 private:
     static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);
-    static void SceneNodes::unsafe_set_global_transform(SceneNodes::UID node_ID, Math::Transform transform);
+    static void SceneNodes::unsafe_set_global_transform(SceneNodeID node_ID, Math::Transform transform);
 
 
-    static UIDGenerator m_UID_generator;
+    static SceneNodeIDGenerator m_UID_generator;
     static std::string* m_names;
 
-    static SceneNodes::UID* m_parent_IDs;
-    static SceneNodes::UID* m_sibling_IDs;
-    static SceneNodes::UID* m_first_child_IDs;
+    static SceneNodeID* m_parent_IDs;
+    static SceneNodeID* m_sibling_IDs;
+    static SceneNodeID* m_first_child_IDs;
 
     static Math::Transform* m_global_transforms;
 
-    static Core::ChangeSet<Changes, UID> m_changes;
+    static Core::ChangeSet<Changes, SceneNodeID> m_changes;
 };
 
 // ---------------------------------------------------------------------------
@@ -117,10 +122,10 @@ public:
     // -----------------------------------------------------------------------
     // Constructors and destructors.
     // -----------------------------------------------------------------------
-    SceneNode() : m_ID(SceneNodes::UID::invalid_UID()) { }
-    SceneNode(SceneNodes::UID id) : m_ID(id) { }
+    SceneNode() : m_ID(SceneNodeID::invalid_UID()) { }
+    SceneNode(SceneNodeID id) : m_ID(id) { }
 
-    inline const SceneNodes::UID get_ID() const { return m_ID; }
+    inline const SceneNodeID get_ID() const { return m_ID; }
     inline bool exists() const { return SceneNodes::has(m_ID); }
 
     inline bool operator==(SceneNode rhs) const { return m_ID == rhs.m_ID; }
@@ -154,7 +159,7 @@ public:
     inline void apply_to_children_recursively(F& function) { SceneNodes::apply_to_children_recursively<F>(m_ID, function); }
 
 private:
-    SceneNodes::UID m_ID;
+    SceneNodeID m_ID;
 };
 
 // ---------------------------------------------------------------------------
@@ -162,18 +167,18 @@ private:
 // ---------------------------------------------------------------------------
 
 template<typename F>
-void SceneNodes::apply_to_children_recursively(SceneNodes::UID node_ID, F& function) {
-    UID node = m_first_child_IDs[node_ID];
-    if (node == UID::invalid_UID())
+void SceneNodes::apply_to_children_recursively(SceneNodeID node_ID, F& function) {
+    SceneNodeID node = m_first_child_IDs[node_ID];
+    if (node == SceneNodeID::invalid_UID())
         return;
 
     do {
         function(node);
 
-        if (m_first_child_IDs[node] != UID::invalid_UID())
+        if (m_first_child_IDs[node] != SceneNodeID::invalid_UID())
             // Visit the next child.
             node = m_first_child_IDs[node];
-        else if (m_sibling_IDs[node] != UID::invalid_UID())
+        else if (m_sibling_IDs[node] != SceneNodeID::invalid_UID())
             // Visit the next sibling.
             node = m_sibling_IDs[node];
         else
@@ -181,8 +186,8 @@ void SceneNodes::apply_to_children_recursively(SceneNodes::UID node_ID, F& funct
             // search upwards for next node not visited.
             node = m_parent_IDs[node];
             while (node != node_ID) {
-                UID parent_sibling = m_sibling_IDs[node];
-                if (parent_sibling == UID::invalid_UID())
+                SceneNodeID parent_sibling = m_sibling_IDs[node];
+                if (parent_sibling == SceneNodeID::invalid_UID())
                     node = m_parent_IDs[node];
                 else {
                     node = parent_sibling;
@@ -194,7 +199,7 @@ void SceneNodes::apply_to_children_recursively(SceneNodes::UID node_ID, F& funct
 }
 
 template<typename F>
-void SceneNodes::apply_recursively(SceneNodes::UID node_ID, F& function) {
+void SceneNodes::apply_recursively(SceneNodeID node_ID, F& function) {
     function(node_ID);
     apply_to_children_recursively(node_ID, function);
 }

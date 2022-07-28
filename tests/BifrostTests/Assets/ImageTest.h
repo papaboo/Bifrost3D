@@ -41,7 +41,7 @@ TEST_F(Assets_Images, resizing) {
 }
 
 TEST_F(Assets_Images, sentinel_material) {
-    Images::UID sentinel_ID = Images::UID::invalid_UID();
+    ImageID sentinel_ID = ImageID::invalid_UID();
 
     EXPECT_FALSE(Images::has(sentinel_ID));
     EXPECT_EQ(PixelFormat::Unknown, Images::get_pixel_format(sentinel_ID));
@@ -53,7 +53,7 @@ TEST_F(Assets_Images, sentinel_material) {
 }
 
 TEST_F(Assets_Images, create) {
-    Images::UID image_ID = Images::create3D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1,2,3), 2);
+    ImageID image_ID = Images::create3D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1,2,3), 2);
 
     EXPECT_TRUE(Images::has(image_ID));
     EXPECT_EQ(PixelFormat::RGBA32, Images::get_pixel_format(image_ID));
@@ -73,7 +73,7 @@ TEST_F(Assets_Images, create) {
 }
 
 TEST_F(Assets_Images, destroy) {
-    Images::UID image_ID = Images::create3D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1, 2, 3));
+    ImageID image_ID = Images::create3D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1, 2, 3));
     EXPECT_TRUE(Images::has(image_ID));
 
     Images::reset_change_notifications();
@@ -89,8 +89,8 @@ TEST_F(Assets_Images, destroy) {
 }
 
 TEST_F(Assets_Images, create_and_destroy_notifications) {
-    Images::UID image_ID0 = Images::create3D("Test image 0", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1, 2, 3));
-    Images::UID image_ID1 = Images::create3D("Test image 1", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(3, 2, 1));
+    ImageID image_ID0 = Images::create3D("Test image 0", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1, 2, 3));
+    ImageID image_ID1 = Images::create3D("Test image 1", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(3, 2, 1));
     EXPECT_TRUE(Images::has(image_ID0));
     EXPECT_TRUE(Images::has(image_ID1));
 
@@ -104,7 +104,7 @@ TEST_F(Assets_Images, create_and_destroy_notifications) {
         bool image0_created = false;
         bool image1_created = false;
         bool other_events = false;
-        for (const Images::UID image_ID : changed_images) {
+        for (const ImageID image_ID : changed_images) {
             bool image_created = Images::get_changes(image_ID) == Images::Change::Created;
             if (image_ID == image_ID0 && image_created)
                 image0_created = true;
@@ -130,7 +130,7 @@ TEST_F(Assets_Images, create_and_destroy_notifications) {
 
         bool image0_destroyed = false;
         bool other_events = false;
-        for (const Images::UID image_ID : changed_images) {
+        for (const ImageID image_ID : changed_images) {
             if (image_ID == image_ID0 && Images::get_changes(image_ID) == Images::Change::Destroyed)
                 image0_destroyed = true;
             else
@@ -155,7 +155,7 @@ TEST_F(Assets_Images, create_and_destroy_notifications) {
 }
 
 TEST_F(Assets_Images, create_and_change) {
-    Images::UID image_ID = Images::create3D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1, 2, 3));
+    ImageID image_ID = Images::create3D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1, 2, 3));
 
     Images::set_pixel(image_ID, Math::RGBA::yellow(), Math::Vector2ui(0,1));
 
@@ -168,7 +168,7 @@ TEST_F(Assets_Images, create_and_change) {
 }
 
 TEST_F(Assets_Images, pixel_updates) {
-    Images::UID image_ID = Images::create2D("Test image", PixelFormat::RGBA_Float, 2.2f, Math::Vector2ui(3, 2), 2);
+    ImageID image_ID = Images::create2D("Test image", PixelFormat::RGBA_Float, 2.2f, Math::Vector2ui(3, 2), 2);
 
     Images::set_pixel(image_ID, Math::RGBA(1, 2, 3, 1), Math::Vector2ui(0, 0));
     Images::set_pixel(image_ID, Math::RGBA(4, 5, 6, 1), Math::Vector2ui(1, 0));
@@ -194,7 +194,7 @@ TEST_F(Assets_Images, pixel_updates) {
 
 TEST_F(Assets_Images, mipmap_size) {
     unsigned int mipmap_count = 4u;
-    Images::UID image_ID = Images::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(8, 6), mipmap_count);
+    ImageID image_ID = Images::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(8, 6), mipmap_count);
 
     EXPECT_EQ(mipmap_count, Images::get_mipmap_count(image_ID));
 
@@ -347,17 +347,17 @@ TEST_F(Assets_ImageUtils, combine_tint_and_roughness) {
     }
 
     { // Test simple cases where only one image exists
-        Image combined_intensity8_none = ImageUtils::combine_tint_roughness(intensity8, Images::UID::invalid_UID());
+        Image combined_intensity8_none = ImageUtils::combine_tint_roughness(intensity8, ImageID::invalid_UID());
         ASSERT_EQ(intensity8, combined_intensity8_none);
 
-        Image combined_rgb24_none = ImageUtils::combine_tint_roughness(rgb24, Images::UID::invalid_UID());
+        Image combined_rgb24_none = ImageUtils::combine_tint_roughness(rgb24, ImageID::invalid_UID());
         ASSERT_EQ(rgb24, combined_rgb24_none);
 
-        Image combined_none_roughness8 = ImageUtils::combine_tint_roughness(Images::UID::invalid_UID(), roughness8);
+        Image combined_none_roughness8 = ImageUtils::combine_tint_roughness(ImageID::invalid_UID(), roughness8);
         ASSERT_EQ(roughness8, combined_none_roughness8);
 
         // Combining a four channel tint image with no roughness should still return a new image to ensure that the roughness channel is all ones.
-        Image combined_rgba32_none = ImageUtils::combine_tint_roughness(rgba32, Images::UID::invalid_UID());
+        Image combined_rgba32_none = ImageUtils::combine_tint_roughness(rgba32, ImageID::invalid_UID());
         ASSERT_NE(combined_rgba32_none, rgba32);
         for (int p = 0; p < pixel_count; ++p) {
             RGBA expected_pixel = RGBA(rgba32.get_pixel(p).rgb(), 1);

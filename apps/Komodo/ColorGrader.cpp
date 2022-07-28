@@ -485,9 +485,9 @@ struct ColorGrader::Implementation final {
         float l_scale = luminance_scale();
         int width = image.get_width(), height = image.get_height();
 
-        static Image bloom_image = Images::UID::invalid_UID();
+        static Image bloom_image = ImageID::invalid_UID();
         if (m_bloom.enabled) { // Bloom
-            static Image high_intensity_image = Images::UID::invalid_UID();
+            static Image high_intensity_image = ImageID::invalid_UID();
             if (!high_intensity_image.exists())
                 high_intensity_image = Images::create2D("high intensity", PixelFormat::RGB_Float, 1.0f, Vector2ui(width, height));
 

@@ -129,7 +129,7 @@ void RenderingGUI::layout_frame() {
             scene_root.set_environment_tint(environment_tint);
 
         ImGui::PoppedTreeNode("Camera", [&]() {
-            Cameras::UID camera_ID = *Cameras::get_iterable().begin();
+            CameraID camera_ID = *Cameras::get_iterable().begin();
 
             // Translation
             Transform transform = Cameras::get_transform(camera_ID);
@@ -145,7 +145,7 @@ void RenderingGUI::layout_frame() {
         });
 
         ImGui::PoppedTreeNode("Lights", [&]() {
-            for (LightSources::UID light_ID : LightSources::get_iterable()) {
+            for (LightSourceID light_ID : LightSources::get_iterable()) {
                 SceneNode scene_node = LightSources::get_node_ID(light_ID);
                 ImGui::PoppedTreeNode(scene_node.get_name().c_str(), [&]() {
                     LightSources::Type light_type = LightSources::get_type(light_ID);
@@ -233,7 +233,7 @@ void RenderingGUI::layout_frame() {
     ImGui::PoppedTreeNode("Camera effects", [&]() {
         using namespace Bifrost::Math::CameraEffects;
 
-        Cameras::UID camera_ID = *Cameras::get_iterable().begin();
+        CameraID camera_ID = *Cameras::get_iterable().begin();
         auto effects_settings = Cameras::get_effects_settings(camera_ID);
         bool has_changed = false;
 

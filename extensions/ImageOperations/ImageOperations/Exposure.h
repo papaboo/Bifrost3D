@@ -14,13 +14,13 @@
 namespace ImageOperations {
 namespace Exposure {
 
-float summed_log_luminance(Bifrost::Assets::Images::UID image_ID);
+float summed_log_luminance(Bifrost::Assets::ImageID image_ID);
 
 // Implements equation (1) in Reinhard et al, 2002, Photographic Tone Reproduction for Digital Images.
-float log_average_luminance(Bifrost::Assets::Images::UID image_ID);
+float log_average_luminance(Bifrost::Assets::ImageID image_ID);
 
 template <typename ForwardIterator>
-inline void log_luminance_histogram(Bifrost::Assets::Images::UID image_ID, float min_log_luminance, float max_log_luminance,
+inline void log_luminance_histogram(Bifrost::Assets::ImageID image_ID, float min_log_luminance, float max_log_luminance,
                                     ForwardIterator begin, ForwardIterator end) {
     using namespace Bifrost::Math;
 

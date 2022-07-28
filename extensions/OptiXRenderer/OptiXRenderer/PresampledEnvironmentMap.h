@@ -37,7 +37,7 @@ public:
     //---------------------------------------------------------------------------------------------
     PresampledEnvironmentMap() = default;
     PresampledEnvironmentMap(optix::float3 tint)
-        : m_environment_map_ID(Bifrost::Assets::Textures::UID::invalid_UID())
+        : m_environment_map_ID(Bifrost::Assets::TextureID::invalid_UID())
         , m_per_pixel_PDF(nullptr), m_samples(nullptr), m_light(PresampledEnvironmentLight::empty(tint)) {}
     PresampledEnvironmentMap(optix::Context& context, const Bifrost::Assets::InfiniteAreaLight& light, optix::float3 tint,
                              optix::TextureSampler* texture_cache, int sample_count = 0);
@@ -67,14 +67,14 @@ public:
     // Next event estimation is disabled if sample count is 1. The only sample in the buffer is going to be an invalid one.
     inline bool next_event_estimation_possible() const { return m_light.sample_count > 1; }
 
-    Bifrost::Assets::Textures::UID get_environment_map_ID() const { return m_environment_map_ID; }
+    Bifrost::Assets::TextureID get_environment_map_ID() const { return m_environment_map_ID; }
 
 private:
     PresampledEnvironmentMap(PresampledEnvironmentMap& other) = delete;
     PresampledEnvironmentMap(PresampledEnvironmentMap&& other) = delete;
     PresampledEnvironmentMap& operator=(PresampledEnvironmentMap& rhs) = delete;
 
-    Bifrost::Assets::Textures::UID m_environment_map_ID;
+    Bifrost::Assets::TextureID m_environment_map_ID;
 
     optix::TextureSampler m_per_pixel_PDF;
     optix::Buffer m_samples;

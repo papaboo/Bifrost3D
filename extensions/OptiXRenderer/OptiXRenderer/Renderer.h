@@ -39,19 +39,19 @@ namespace OptiXRenderer {
 // ------------------------------------------------------------------------------------------------
 class Renderer final {
 public:
-    static Renderer* initialize(int cuda_device_ID, int width_hint, int height_hint, const std::filesystem::path& data_directory, Bifrost::Core::Renderers::UID renderer_ID);
+    static Renderer* initialize(int cuda_device_ID, int width_hint, int height_hint, const std::filesystem::path& data_directory, Bifrost::Core::RendererID renderer_ID);
 
-    float get_scene_epsilon(Bifrost::Scene::SceneRoots::UID scene_root_ID) const;
-    void set_scene_epsilon(Bifrost::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon);
+    float get_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID) const;
+    void set_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID, float scene_epsilon);
 
-    unsigned int get_max_bounce_count(Bifrost::Scene::Cameras::UID camera_ID) const;
-    void set_max_bounce_count(Bifrost::Scene::Cameras::UID camera_ID, unsigned int bounce_count);
+    unsigned int get_max_bounce_count(Bifrost::Scene::CameraID camera_ID) const;
+    void set_max_bounce_count(Bifrost::Scene::CameraID camera_ID, unsigned int bounce_count);
 
-    unsigned int get_max_accumulation_count(Bifrost::Scene::Cameras::UID camera_ID) const;
-    void set_max_accumulation_count(Bifrost::Scene::Cameras::UID camera_ID, unsigned int accumulation_count);
+    unsigned int get_max_accumulation_count(Bifrost::Scene::CameraID camera_ID) const;
+    void set_max_accumulation_count(Bifrost::Scene::CameraID camera_ID, unsigned int accumulation_count);
 
-    Backend get_backend(Bifrost::Scene::Cameras::UID camera_ID) const;
-    void set_backend(Bifrost::Scene::Cameras::UID camera_ID, Backend backend);
+    Backend get_backend(Bifrost::Scene::CameraID camera_ID) const;
+    void set_backend(Bifrost::Scene::CameraID camera_ID, Backend backend);
 
     PathRegularizationSettings get_path_regularization_settings() const;
     void set_path_regularization_settings(PathRegularizationSettings settings);
@@ -61,15 +61,15 @@ public:
 
     void handle_updates();
 
-    unsigned int render(Bifrost::Scene::Cameras::UID camera_ID, optix::Buffer buffer, int width, int height);
+    unsigned int render(Bifrost::Scene::CameraID camera_ID, optix::Buffer buffer, int width, int height);
 
-    std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::Cameras::UID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, int width, int height);
+    std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, int width, int height);
 
     optix::Context& get_context();
 
 private:
 
-    Renderer(int cuda_device_ID, int width_hint, int height_hint, const std::filesystem::path& data_directory, Bifrost::Core::Renderers::UID renderer_ID);
+    Renderer(int cuda_device_ID, int width_hint, int height_hint, const std::filesystem::path& data_directory, Bifrost::Core::RendererID renderer_ID);
 
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Renderer(Renderer& other) = delete;

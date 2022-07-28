@@ -48,20 +48,20 @@ TEST_F(Assets_MeshModels, resizing) {
 }
 
 TEST_F(Assets_MeshModels, sentinel_mesh) {
-    MeshModels::UID sentinel_ID = MeshModels::UID::invalid_UID();
+    MeshModelID sentinel_ID = MeshModelID::invalid_UID();
 
     EXPECT_FALSE(MeshModels::has(sentinel_ID));
-    EXPECT_EQ(MeshModels::get_scene_node_ID(sentinel_ID), Scene::SceneNodes::UID::invalid_UID());
-    EXPECT_EQ(MeshModels::get_mesh_ID(sentinel_ID), Meshes::UID::invalid_UID());
+    EXPECT_EQ(MeshModels::get_scene_node_ID(sentinel_ID), Scene::SceneNodeID::invalid_UID());
+    EXPECT_EQ(MeshModels::get_mesh_ID(sentinel_ID), MeshID::invalid_UID());
 }
 
 TEST_F(Assets_MeshModels, create) {
-    Scene::SceneNodes::UID node_ID = Scene::SceneNodes::create("TestNode");
-    Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
+    Scene::SceneNodeID node_ID = Scene::SceneNodes::create("TestNode");
+    MeshID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
     Materials::Data data = {};
-    Materials::UID material_ID = Materials::create("TestMaterial", data);
+    MaterialID material_ID = Materials::create("TestMaterial", data);
 
-    MeshModels::UID model_ID = MeshModels::create(node_ID, mesh_ID, material_ID);
+    MeshModelID model_ID = MeshModels::create(node_ID, mesh_ID, material_ID);
 
     EXPECT_TRUE(MeshModels::has(model_ID));
     EXPECT_EQ(MeshModels::get_scene_node_ID(model_ID), node_ID);
@@ -76,12 +76,12 @@ TEST_F(Assets_MeshModels, create) {
 }
 
 TEST_F(Assets_MeshModels, destroy) {
-    Scene::SceneNodes::UID node_ID = Scene::SceneNodes::create("TestNode");
-    Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
+    Scene::SceneNodeID node_ID = Scene::SceneNodes::create("TestNode");
+    MeshID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
     Materials::Data data = {};
-    Materials::UID material_ID = Materials::create("TestMaterial", data);
+    MaterialID material_ID = Materials::create("TestMaterial", data);
 
-    MeshModels::UID model_ID = MeshModels::create(node_ID, mesh_ID, material_ID);
+    MeshModelID model_ID = MeshModels::create(node_ID, mesh_ID, material_ID);
     EXPECT_TRUE(MeshModels::has(model_ID));
 
     MeshModels::reset_change_notifications();
@@ -97,13 +97,13 @@ TEST_F(Assets_MeshModels, destroy) {
 }
 
 TEST_F(Assets_MeshModels, create_and_destroy_notifications) {
-    Scene::SceneNodes::UID node_ID = Scene::SceneNodes::create("TestNode");
-    Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
+    Scene::SceneNodeID node_ID = Scene::SceneNodes::create("TestNode");
+    MeshID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
     Materials::Data data = {};
-    Materials::UID material_ID = Materials::create("TestMaterial", data);
+    MaterialID material_ID = Materials::create("TestMaterial", data);
 
-    MeshModels::UID model_ID0 = MeshModels::create(node_ID, mesh_ID, material_ID);
-    MeshModels::UID model_ID1 = MeshModels::create(node_ID, mesh_ID, material_ID);
+    MeshModelID model_ID0 = MeshModels::create(node_ID, mesh_ID, material_ID);
+    MeshModelID model_ID1 = MeshModels::create(node_ID, mesh_ID, material_ID);
     EXPECT_TRUE(MeshModels::has(model_ID0));
     EXPECT_TRUE(MeshModels::has(model_ID1));
 
@@ -113,7 +113,7 @@ TEST_F(Assets_MeshModels, create_and_destroy_notifications) {
 
         bool model0_created = false;
         bool model1_created = false;
-        for (const MeshModels::UID model_ID : changed_models) {
+        for (const MeshModelID model_ID : changed_models) {
             if (model_ID == model_ID0 && MeshModels::get_changes(model_ID) == MeshModels::Change::Created)
                 model0_created = true;
             if (model_ID == model_ID1 && MeshModels::get_changes(model_ID) == MeshModels::Change::Created)
@@ -135,7 +135,7 @@ TEST_F(Assets_MeshModels, create_and_destroy_notifications) {
 
         bool model0_destroyed = false;
         bool other_change = false;
-        for (const MeshModels::UID model_ID : changed_models) {
+        for (const MeshModelID model_ID : changed_models) {
             if (model_ID == model_ID0 && MeshModels::get_changes(model_ID) == MeshModels::Change::Destroyed)
                 model0_destroyed = true;
             else

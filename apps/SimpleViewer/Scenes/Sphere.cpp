@@ -148,7 +148,7 @@ private:
     } m_ggx_with_fresnel;
 };
 
-void create_sphere_scene(Engine& engine, Cameras::UID camera_ID, SceneRoots::UID scene_ID, ImGui::ImGuiAdaptor* imgui) {
+void create_sphere_scene(Engine& engine, CameraID camera_ID, SceneRootID scene_ID, ImGui::ImGuiAdaptor* imgui) {
     SceneRoot scene = scene_ID;
     if (!Textures::has(scene.get_environment_map()))
         scene.set_environment_tint(RGB(0.5f));
@@ -162,9 +162,9 @@ void create_sphere_scene(Engine& engine, Cameras::UID camera_ID, SceneRoots::UID
 
     { // Create sphere.
         auto plastic_mat_data = Materials::Data::create_dielectric(RGB(0.005f, 0.01f, 0.25f), 0.05f, 0.04f);
-        Materials::UID material_ID = Materials::create("Material", plastic_mat_data);
+        MaterialID material_ID = Materials::create("Material", plastic_mat_data);
 
-        Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(1024, 512);
+        MeshID sphere_mesh_ID = MeshCreation::revolved_sphere(1024, 512);
 
         SceneNode node = SceneNodes::create("Sphere");
         MeshModel model = MeshModels::create(node.get_ID(), sphere_mesh_ID, material_ID);

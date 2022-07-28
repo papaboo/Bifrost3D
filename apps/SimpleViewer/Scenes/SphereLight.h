@@ -50,7 +50,7 @@ private:
     Scene::SceneNode m_light_node;
 };
 
-void create(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoots::UID scene_ID) {
+void create(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneRootID scene_ID) {
     using namespace Bifrost::Assets;
     using namespace Bifrost::Math;
     using namespace Bifrost::Scene;
@@ -90,7 +90,7 @@ void create(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoo
             SceneNode node = SceneNodes::create("White tiles", transform);
             int white_tile_count = tile_count_pr_side * tile_count_pr_side * 3;
             int vertex_count = (tile_count_pr_side + 1) * (tile_count_pr_side + 1);
-            Meshes::UID tiles_mesh_ID = Meshes::create("White tiles", white_tile_count, vertex_count, MeshFlag::Position);
+            MeshID tiles_mesh_ID = Meshes::create("White tiles", white_tile_count, vertex_count, MeshFlag::Position);
 
             Vector3f* positions = Meshes::get_positions(tiles_mesh_ID);
             for (int y = 0; y < vertices_pr_side; ++y)
@@ -114,7 +114,7 @@ void create(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoo
 
             Materials::Data white_tile_data = Materials::Data::create_dielectric(RGB(0.5f), 0.2f, 0.02f);
             white_tile_data.flags = MaterialFlag::ThinWalled;
-            Materials::UID white_tile_material_ID = Materials::create("White tile", white_tile_data);
+            MaterialID white_tile_material_ID = Materials::create("White tile", white_tile_data);
 
             MeshModels::create(node.get_ID(), tiles_mesh_ID, white_tile_material_ID);
             node.set_parent(root_node);
@@ -125,7 +125,7 @@ void create(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoo
             SceneNode node = SceneNodes::create("Black tiles", transform);
             int white_tile_count = tile_count_pr_side * tile_count_pr_side * 3;
             int vertex_count = (tile_count_pr_side + 1) * (tile_count_pr_side + 1);
-            Meshes::UID tiles_mesh_ID = Meshes::create("Black tiles", white_tile_count, vertex_count, MeshFlag::Position);
+            MeshID tiles_mesh_ID = Meshes::create("Black tiles", white_tile_count, vertex_count, MeshFlag::Position);
 
             Vector3f* positions = Meshes::get_positions(tiles_mesh_ID);
             for (int y = 0; y < vertices_pr_side; ++y)
@@ -149,7 +149,7 @@ void create(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoo
 
             Materials::Data black_tile_data = Materials::Data::create_dielectric(RGB(0.001f), 0.02f, 0.04f);
             black_tile_data.flags = MaterialFlag::ThinWalled;
-            Materials::UID black_tile_material_ID = Materials::create("Black tile", black_tile_data);
+            MaterialID black_tile_material_ID = Materials::create("Black tile", black_tile_data);
 
             MeshModels::create(node.get_ID(), tiles_mesh_ID, black_tile_material_ID);
             node.set_parent(root_node);
@@ -160,7 +160,7 @@ void create(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoo
         Materials::Data material0_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 1, 0.02f);
         Materials::Data material1_data = Materials::Data::create_metal(gold_tint, 0.02f);
 
-        Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(32, 16);
+        MeshID sphere_mesh_ID = MeshCreation::revolved_sphere(32, 16);
         Transform sphere_transform = Transform(Vector3f(0.0f, 1.0f, 0.0f), Quaternionf::identity(), 1.5f);
 
         for (int m = 0; m < 9; ++m) {
@@ -172,7 +172,7 @@ void create(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoo
             material_data.specularity = lerp(material0_data.specularity, material1_data.specularity, lerp_t);
             material_data.metallic = lerp(material0_data.metallic, material1_data.metallic, lerp_t);
             material_data.coverage = lerp(material0_data.coverage, material1_data.coverage, lerp_t);
-            Materials::UID material_ID = Materials::create("Lerped material", material_data);
+            MaterialID material_ID = Materials::create("Lerped material", material_data);
 
             Transform transform = Transform(Vector3f(float(m - 4) * 1.25f, 0.0, 0.0f));
             SceneNode node = SceneNodes::create("Model", transform);

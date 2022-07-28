@@ -19,48 +19,48 @@ namespace Scene {
 // Cameras
 //*****************************************************************************
 
-Cameras::UIDGenerator Cameras::m_UID_generator = UIDGenerator(0u);
+CameraIDGenerator Cameras::m_UID_generator = CameraIDGenerator(0u);
 
 std::string* Cameras::m_names = nullptr;
-SceneRoots::UID* Cameras::m_scene_IDs = nullptr;
+SceneRootID* Cameras::m_scene_IDs = nullptr;
 int* Cameras::m_z_indices = nullptr;
 Transform* Cameras::m_transforms = nullptr;
 Matrix4x4f* Cameras::m_projection_matrices = nullptr;
 Matrix4x4f* Cameras::m_inverse_projection_matrices = nullptr;
 Rectf* Cameras::m_viewports = nullptr;
-Core::Renderers::UID* Cameras::m_renderer_IDs = nullptr;
+Core::RendererID* Cameras::m_renderer_IDs = nullptr;
 CameraEffects::Settings* Cameras::m_effects_settings = nullptr;
 Cameras::ScreenshotRequest* Cameras::m_screenshot_request = nullptr;
-Core::ChangeSet<Cameras::Changes, Cameras::UID> Cameras::m_changes;
+Core::ChangeSet<Cameras::Changes, CameraID> Cameras::m_changes;
 
 void Cameras::allocate(unsigned int capacity) {
     if (is_allocated())
         return;
 
-    m_UID_generator = UIDGenerator(capacity);
+    m_UID_generator = CameraIDGenerator(capacity);
     capacity = m_UID_generator.capacity();
 
     m_names = new std::string[capacity];
-    m_scene_IDs = new SceneRoots::UID[capacity];
+    m_scene_IDs = new SceneRootID[capacity];
     m_transforms = new Transform[capacity];
     m_projection_matrices = new Matrix4x4f[capacity];
     m_inverse_projection_matrices = new Matrix4x4f[capacity];
     m_z_indices = new int[capacity];
     m_viewports = new Rectf[capacity];
-    m_renderer_IDs = new Core::Renderers::UID[capacity];
+    m_renderer_IDs = new Core::RendererID[capacity];
     m_effects_settings = new CameraEffects::Settings[capacity];
     m_screenshot_request = new ScreenshotRequest[capacity];
-    m_changes = Core::ChangeSet<Changes, UID>(capacity);
+    m_changes = Core::ChangeSet<Changes, CameraID>(capacity);
 
     // Allocate dummy camera at 0.
     m_names[0] = "Dummy camera";
     m_transforms[0] = Transform::identity();
-    m_scene_IDs[0] = SceneRoots::UID::invalid_UID();
+    m_scene_IDs[0] = SceneRootID::invalid_UID();
     m_z_indices[0] = 0;
     m_projection_matrices[0] = Matrix4x4f::zero();
     m_inverse_projection_matrices[0] = Matrix4x4f::zero();
     m_viewports[0] = Rectf(0,0,0,0);
-    m_renderer_IDs[0] = Core::Renderers::UID::invalid_UID();
+    m_renderer_IDs[0] = Core::RendererID::invalid_UID();
     m_effects_settings[0] = {};
     m_screenshot_request[0] = {};
 }
@@ -69,7 +69,7 @@ void Cameras::deallocate() {
     if (!is_allocated())
         return;
 
-    m_UID_generator = UIDGenerator(0u);
+    m_UID_generator = CameraIDGenerator(0u);
 
     delete[] m_names; m_names = nullptr;
     delete[] m_scene_IDs; m_scene_IDs = nullptr;
@@ -126,9 +126,9 @@ void Cameras::reserve_camera_data(unsigned int new_capacity, unsigned int old_ca
     m_changes.resize(new_capacity);
 }
 
-Cameras::UID Cameras::create(const std::string& name, SceneRoots::UID scene_ID, 
-                             Matrix4x4f projection_matrix, Matrix4x4f inverse_projection_matrix, 
-                             Core::Renderers::UID renderer_ID) {
+CameraID Cameras::create(const std::string& name, SceneRootID scene_ID, 
+                         Matrix4x4f projection_matrix, Matrix4x4f inverse_projection_matrix, 
+                         Core::RendererID renderer_ID) {
     assert(m_names != nullptr);
     assert(m_scene_IDs != nullptr);
     assert(m_z_indices != nullptr);
@@ -138,10 +138,10 @@ Cameras::UID Cameras::create(const std::string& name, SceneRoots::UID scene_ID,
     assert(m_viewports != nullptr);
 
     if (!SceneRoots::has(scene_ID))
-        return Cameras::UID::invalid_UID();
+        return CameraID::invalid_UID();
 
     unsigned int old_capacity = m_UID_generator.capacity();
-    UID id = m_UID_generator.generate();
+    CameraID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_camera_data(m_UID_generator.capacity(), old_capacity);
@@ -161,23 +161,23 @@ Cameras::UID Cameras::create(const std::string& name, SceneRoots::UID scene_ID,
     return id;
 }
 
-void Cameras::destroy(Cameras::UID camera_ID) {
+void Cameras::destroy(CameraID camera_ID) {
     // We don't actually destroy anything when destroying a camera.
     // The properties will get overwritten later when a new camera is created in same the spot.
     if (m_UID_generator.erase(camera_ID))
         m_changes.add_change(camera_ID, Change::Destroyed);
 }
 
-std::vector<Cameras::UID> Cameras::get_z_sorted_IDs() {
-    auto IDs = std::vector<Cameras::UID>();
+std::vector<CameraID> Cameras::get_z_sorted_IDs() {
+    auto IDs = std::vector<CameraID>();
     IDs.reserve(capacity());
-    for (Cameras::UID camera_ID : get_iterable())
+    for (CameraID camera_ID : get_iterable())
         IDs.push_back(camera_ID);
-    std::sort(IDs.begin(), IDs.end(), [](UID lhs, UID rhs) { return Cameras::get_z_index(lhs) < Cameras::get_z_index(rhs); });
+    std::sort(IDs.begin(), IDs.end(), [](CameraID lhs, CameraID rhs) { return Cameras::get_z_index(lhs) < Cameras::get_z_index(rhs); });
     return IDs;
 }
 
-void Cameras::fill_screenshot(Cameras::UID camera_ID, ScreenshotFiller screenshot_filler) {
+void Cameras::fill_screenshot(CameraID camera_ID, ScreenshotFiller screenshot_filler) {
     if (is_screenshot_requested(camera_ID)) {
         auto& screenshot_info = m_screenshot_request[camera_ID];
         auto screenshots = screenshot_filler(screenshot_info.content_requested, screenshot_info.minimum_iteration_count);
@@ -189,14 +189,14 @@ void Cameras::fill_screenshot(Cameras::UID camera_ID, ScreenshotFiller screensho
     }
 }
 
-Cameras::ScreenshotContent Cameras::pending_screenshots(Cameras::UID camera_ID) {
+Cameras::ScreenshotContent Cameras::pending_screenshots(CameraID camera_ID) {
     ScreenshotContent content = Screenshot::Content::None;
     for (auto& image : m_screenshot_request[camera_ID].images)
         content |= image.content;
     return content;
 }
 
-Assets::Images::UID Cameras::resolve_screenshot(Cameras::UID camera_ID, Screenshot::Content image_content, const std::string& name) {
+Assets::ImageID Cameras::resolve_screenshot(CameraID camera_ID, Screenshot::Content image_content, const std::string& name) {
     auto& info = m_screenshot_request[camera_ID];
     for (int i = 0; i < info.images.size(); ++i) {
         auto& image = info.images[i];
@@ -208,7 +208,7 @@ Assets::Images::UID Cameras::resolve_screenshot(Cameras::UID camera_ID, Screensh
         }
     }
 
-    return Assets::Images::UID::invalid_UID();
+    return Assets::ImageID::invalid_UID();
 }
 
 //*****************************************************************************
@@ -263,7 +263,7 @@ void compute_perspective_projection(float near_distance, float far_distance, flo
     inverse_projection_matrix[3][3] = - v[0][0] * v[1][1] * v[2][2] / determinant;
 }
 
-Ray ray_from_viewport_point(Cameras::UID camera_ID, Vector2f viewport_point) {
+Ray ray_from_viewport_point(CameraID camera_ID, Vector2f viewport_point) {
 
     Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
     Vector4f NDC_near_pos = Vector4f(viewport_point.x * 2.0f - 1.0f, viewport_point.y * 2.0f - 1.0f, -1.0f, 1.0f);

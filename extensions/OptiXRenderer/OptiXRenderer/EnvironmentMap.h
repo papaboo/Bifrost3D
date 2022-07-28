@@ -43,7 +43,7 @@ public:
     //---------------------------------------------------------------------------------------------
     EnvironmentMap() = default;
     EnvironmentMap(optix::float3 tint)
-        : m_environment_map_ID(Bifrost::Assets::Textures::UID::invalid_UID())
+        : m_environment_map_ID(Bifrost::Assets::TextureID::invalid_UID())
         , m_color_texture(nullptr), m_marginal_CDF(nullptr), m_conditional_CDF(nullptr), m_per_pixel_PDF(nullptr)
         , m_tint(tint) { }
 
@@ -67,7 +67,7 @@ public:
     //---------------------------------------------------------------------------------------------
     bool next_event_estimation_possible() const { return m_per_pixel_PDF != optix::TextureSampler(); }
 
-    Bifrost::Assets::Textures::UID get_environment_map_ID() const { return m_environment_map_ID; }
+    Bifrost::Assets::TextureID get_environment_map_ID() const { return m_environment_map_ID; }
 
     Light get_light() const {
         EnvironmentLight env_light;
@@ -94,7 +94,7 @@ private:
     EnvironmentMap(EnvironmentMap&& other) = delete;
     EnvironmentMap& operator=(EnvironmentMap& rhs) = delete;
 
-    Bifrost::Assets::Textures::UID m_environment_map_ID;
+    Bifrost::Assets::TextureID m_environment_map_ID;
     optix::TextureSampler m_color_texture;
     optix::TextureSampler m_marginal_CDF;
     optix::TextureSampler m_conditional_CDF;

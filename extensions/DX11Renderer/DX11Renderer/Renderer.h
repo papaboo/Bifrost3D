@@ -51,11 +51,11 @@ public:
     static IRenderer* initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory);
     ~Renderer();
 
-    Bifrost::Core::Renderers::UID get_ID() const { return m_renderer_ID; }
+    Bifrost::Core::RendererID get_ID() const { return m_renderer_ID; }
 
     void handle_updates();
 
-    RenderedFrame render(Bifrost::Scene::Cameras::UID camera_ID, int width, int height);
+    RenderedFrame render(Bifrost::Scene::CameraID camera_ID, int width, int height);
 
     Settings get_settings() const;
     void set_settings(Settings& settings);
@@ -71,7 +71,7 @@ private:
     Renderer(Renderer& other) = delete;
     Renderer& operator=(const Renderer& rhs) = delete;
 
-    Bifrost::Core::Renderers::UID m_renderer_ID;
+    Bifrost::Core::RendererID m_renderer_ID;
 
     // Pimpl the state to avoid exposing DirectX dependencies.
     class Implementation;

@@ -454,7 +454,7 @@ public:
             context->Draw(mesh.vertex_count, 0);
     } 
 
-    RenderedFrame render(const Bifrost::Scene::Cameras::UID camera_ID, int width, int height) {
+    RenderedFrame render(const Bifrost::Scene::CameraID camera_ID, int width, int height) {
         m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         int2 g_buffer_guard_band_size = { int(width * m_settings.g_buffer_guard_band_scale), int(height * m_settings.g_buffer_guard_band_scale) };
@@ -744,13 +744,13 @@ public:
         m_transforms.handle_updates(m_device, *m_render_context);
 
         { // Camera updates.
-            for (Cameras::UID cam_ID : Cameras::get_changed_cameras())
+            for (CameraID cam_ID : Cameras::get_changed_cameras())
                 if (Cameras::get_changes(cam_ID) & Cameras::Change::Destroyed)
                     m_ssao.clear_camera_state(cam_ID);
         }
 
         { // Mesh updates.
-            for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
+            for (MeshID mesh_ID : Meshes::get_changed_meshes()) {
                 if (m_meshes.size() <= mesh_ID)
                     m_meshes.resize(Meshes::capacity());
 
@@ -891,7 +891,7 @@ public:
                         dx_model.transform_ID = model.get_scene_node().get_ID();
 
                         Material mat = model.get_material();
-                        bool uses_coverage = mat.get_coverage_texture_ID() != Textures::UID::invalid_UID() || mat.get_coverage() < 1.0f;
+                        bool uses_coverage = mat.get_coverage_texture_ID() != TextureID::invalid_UID() || mat.get_coverage() < 1.0f;
                         bool is_cutout = mat.get_flags().is_set(MaterialFlag::Cutout);
                         unsigned int coverage_type = is_cutout ? Dx11Model::Properties::Cutout : Dx11Model::Properties::Transparent;
                         dx_model.properties = uses_coverage ? coverage_type : Dx11Model::Properties::None;
@@ -976,7 +976,7 @@ void Renderer::handle_updates() {
     m_impl->handle_updates();
 }
 
-RenderedFrame Renderer::render(Bifrost::Scene::Cameras::UID camera_ID, int width, int height) {
+RenderedFrame Renderer::render(Bifrost::Scene::CameraID camera_ID, int width, int height) {
     return m_impl->render(camera_ID, width, height);
 }
 

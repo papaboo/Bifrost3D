@@ -18,7 +18,7 @@ using namespace Bifrost::Math;
 
 namespace TinyExr {
 
-Result load_verbose(const std::string& filename, Bifrost::Assets::Images::UID& image_ID) {
+Result load_verbose(const std::string& filename, Bifrost::Assets::ImageID& image_ID) {
 
     float* rgba = nullptr;
     int width, height;
@@ -33,7 +33,7 @@ Result load_verbose(const std::string& filename, Bifrost::Assets::Images::UID& i
     }
     else
     {
-        image_ID = Images::UID::invalid_UID();
+        image_ID = ImageID::invalid_UID();
         printf("TinyExr: %s\n", error_msg);
     }
 
@@ -42,7 +42,7 @@ Result load_verbose(const std::string& filename, Bifrost::Assets::Images::UID& i
     return res;
 }
 
-Result store(Bifrost::Assets::Images::UID image_ID, const std::string& filename) {
+Result store(Bifrost::Assets::ImageID image_ID, const std::string& filename) {
     Result res;
     const char* error_msg = nullptr;
 

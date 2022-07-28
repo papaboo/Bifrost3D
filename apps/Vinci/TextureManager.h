@@ -34,8 +34,8 @@ public:
             return;
         }
 
-        auto load_texture = [](fs::path path) -> Textures::UID {
-            Images::UID image_ID = StbImageLoader::load(path.string());
+        auto load_texture = [](fs::path path) -> TextureID {
+            ImageID image_ID = StbImageLoader::load(path.string());
             return Textures::create2D(image_ID, MagnificationFilter::Linear, MinificationFilter::Trilinear);
         };
 
@@ -69,7 +69,7 @@ public:
                             roughness.change_format(PixelFormat::Alpha8, 1.0f);
                         m_roughness.push_back(Textures::create2D(roughness.get_ID(), MagnificationFilter::Linear, MinificationFilter::Trilinear));
                     } else
-                        m_roughness.push_back(Textures::UID::invalid_UID());
+                        m_roughness.push_back(TextureID::invalid_UID());
                 }
 
                 { // Combine albedo and roughness
@@ -81,7 +81,7 @@ public:
                         auto tint_roughness_tex_ID = Textures::create2D(tint_roughness_image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Trilinear);
                         m_tint_roughness.push_back(tint_roughness_tex_ID);
                     } else
-                        m_tint_roughness.push_back(Textures::UID::invalid_UID());
+                        m_tint_roughness.push_back(TextureID::invalid_UID());
                 }
 
                 { // Load opacity
@@ -92,7 +92,7 @@ public:
                             opacity.change_format(PixelFormat::Alpha8, 1.0f);
                         m_opacity.push_back(Textures::create2D(opacity.get_ID(), MagnificationFilter::Linear, MinificationFilter::Trilinear));
                     }  else
-                        m_opacity.push_back(Textures::UID::invalid_UID());
+                        m_opacity.push_back(TextureID::invalid_UID());
                 }
             }
         }
@@ -100,7 +100,7 @@ public:
     ~TextureManager() {
         using namespace Bifrost::Assets;
 
-        auto destroy_texture_assets = [](std::vector<Textures::UID> texture_IDs) {
+        auto destroy_texture_assets = [](std::vector<TextureID> texture_IDs) {
             for (Texture texture : texture_IDs) {
                 Images::destroy(texture.get_image().get_ID());
                 Textures::destroy(texture.get_ID());
@@ -113,7 +113,7 @@ public:
         destroy_texture_assets(m_opacity);
     }
 
-    inline Bifrost::Assets::Materials::UID generate_random_material(Bifrost::Math::RNG::XorShift32& rng) const {
+    inline Bifrost::Assets::MaterialID generate_random_material(Bifrost::Math::RNG::XorShift32& rng) const {
         using namespace Bifrost::Assets;
 
         auto tint = Bifrost::Math::RGB(rng.sample1f(), rng.sample1f(), rng.sample1f());
@@ -144,10 +144,10 @@ public:
 
 private:
 
-    std::vector<Bifrost::Assets::Textures::UID> m_tints;
-    std::vector<Bifrost::Assets::Textures::UID> m_roughness;
-    std::vector<Bifrost::Assets::Textures::UID> m_tint_roughness;
-    std::vector<Bifrost::Assets::Textures::UID> m_opacity;
+    std::vector<Bifrost::Assets::TextureID> m_tints;
+    std::vector<Bifrost::Assets::TextureID> m_roughness;
+    std::vector<Bifrost::Assets::TextureID> m_tint_roughness;
+    std::vector<Bifrost::Assets::TextureID> m_opacity;
 };
 
 #endif // _VINCI_TEXTURE_MANAGER_H_

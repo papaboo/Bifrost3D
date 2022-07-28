@@ -13,29 +13,29 @@
 namespace Bifrost {
 namespace Assets {
 
-MeshModels::UIDGenerator MeshModels::m_UID_generator = UIDGenerator(0u);
+MeshModelIDGenerator MeshModels::m_UID_generator = MeshModelIDGenerator(0u);
 MeshModels::Model* MeshModels::m_models = nullptr;
-Core::ChangeSet<MeshModels::Changes, MeshModels::UID> MeshModels::m_changes;
+Core::ChangeSet<MeshModels::Changes, MeshModelID> MeshModels::m_changes;
 
 void MeshModels::allocate(unsigned int capacity) {
     if (is_allocated())
         return;
 
-    m_UID_generator = UIDGenerator(capacity);
+    m_UID_generator = MeshModelIDGenerator(capacity);
     capacity = m_UID_generator.capacity();
 
     m_models = new Model[capacity];
-    m_changes = Core::ChangeSet<Changes, UID>(capacity);
+    m_changes = Core::ChangeSet<Changes, MeshModelID>(capacity);
 
     // Allocate dummy element at 0.
-    m_models[0] = { Scene::SceneNodes::UID::invalid_UID(), Meshes::UID::invalid_UID() };
+    m_models[0] = { Scene::SceneNodeID::invalid_UID(), MeshID::invalid_UID() };
 }
 
 void MeshModels::deallocate() {
     if (!is_allocated())
         return;
 
-    m_UID_generator = UIDGenerator(0u);
+    m_UID_generator = MeshModelIDGenerator(0u);
     delete[] m_models; m_models = nullptr;
     m_changes.resize(0);
 }
@@ -62,14 +62,14 @@ void MeshModels::reserve(unsigned int new_capacity) {
     reserve_model_data(m_UID_generator.capacity(), old_capacity);
 }
 
-MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Meshes::UID mesh_ID, Materials::UID material_ID) {
+MeshModelID MeshModels::create(Scene::SceneNodeID scene_node_ID, MeshID mesh_ID, MaterialID material_ID) {
     assert(m_models != nullptr);
     assert(Scene::SceneNodes::has(scene_node_ID));
     assert(Meshes::has(mesh_ID));
     assert(Materials::has(material_ID));
 
     unsigned int old_capacity = m_UID_generator.capacity();
-    UID id = m_UID_generator.generate();
+    MeshModelID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_model_data(m_UID_generator.capacity(), old_capacity);
@@ -80,12 +80,12 @@ MeshModels::UID MeshModels::create(Scene::SceneNodes::UID scene_node_ID, Meshes:
     return id;
 }
 
-void MeshModels::destroy(MeshModels::UID model_ID) {
+void MeshModels::destroy(MeshModelID model_ID) {
     if (m_UID_generator.erase(model_ID))
         m_changes.add_change(model_ID, Change::Destroyed);
 }
 
-void MeshModels::set_material_ID(MeshModels::UID model_ID, Materials::UID material_ID) {
+void MeshModels::set_material_ID(MeshModelID model_ID, MaterialID material_ID) {
     assert(has(model_ID));
     assert(Materials::has(material_ID));
 

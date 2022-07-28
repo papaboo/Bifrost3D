@@ -21,6 +21,9 @@
 namespace Bifrost {
 namespace Assets {
 
+//----------------------------------------------------------------------------
+// Pixel formats and helper functions.
+//----------------------------------------------------------------------------
 enum class PixelFormat {
     Unknown = 0,
     Alpha8,
@@ -73,6 +76,13 @@ inline bool has_alpha(PixelFormat format) {
 }
 
 //----------------------------------------------------------------------------
+// Image ID
+//----------------------------------------------------------------------------
+class Images;
+typedef Core::TypedUIDGenerator<Images> ImageIDGenerator;
+typedef ImageIDGenerator::UID ImageID;
+
+//----------------------------------------------------------------------------
 // Bifrost image container.
 // Images are indexed from the lower left corner to the top right one.
 // E.g. (0, 0) is in the lower left corner.
@@ -86,10 +96,7 @@ inline bool has_alpha(PixelFormat format) {
 //----------------------------------------------------------------------------
 class Images final {
 public:
-
-    typedef Core::TypedUIDGenerator<Images> UIDGenerator;
-    typedef UIDGenerator::UID UID;
-    typedef UIDGenerator::ConstIterator ConstUIDIterator;
+    using Iterator = ImageIDGenerator::ConstIterator;
 
     typedef void* PixelData;
 
@@ -99,58 +106,58 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(Images::UID image_ID);
+    static bool has(ImageID image_ID);
 
-    static Images::UID create3D(const std::string& name, PixelFormat format, float gamma, Math::Vector3ui size, unsigned int mipmap_count = 1);
-    static Images::UID create2D(const std::string& name, PixelFormat format, float gamma, Math::Vector2ui size, unsigned int mipmap_count = 1) {
+    static ImageID create3D(const std::string& name, PixelFormat format, float gamma, Math::Vector3ui size, unsigned int mipmap_count = 1);
+    static ImageID create2D(const std::string& name, PixelFormat format, float gamma, Math::Vector2ui size, unsigned int mipmap_count = 1) {
         return create3D(name, format, gamma, Math::Vector3ui(size.x, size.y, 1u), mipmap_count);
     }
-    static Images::UID create1D(const std::string& name, PixelFormat format, float gamma, unsigned int width, unsigned int mipmap_count = 1) {
+    static ImageID create1D(const std::string& name, PixelFormat format, float gamma, unsigned int width, unsigned int mipmap_count = 1) {
         return create3D(name, format, gamma, Math::Vector3ui(width, 1u, 1u), mipmap_count);
     }
 
-    static Images::UID create2D(const std::string& name, PixelFormat format, float gamma, Math::Vector2ui size, PixelData& pixels);
+    static ImageID create2D(const std::string& name, PixelFormat format, float gamma, Math::Vector2ui size, PixelData& pixels);
 
-    static void destroy(Images::UID image_ID);
+    static void destroy(ImageID image_ID);
 
-    static inline ConstUIDIterator begin() { return m_UID_generator.begin(); }
-    static inline ConstUIDIterator end() { return m_UID_generator.end(); }
-    static inline Core::Iterable<ConstUIDIterator> get_iterable() { return { begin(), end() }; }
+    static inline Iterator begin() { return m_UID_generator.begin(); }
+    static inline Iterator end() { return m_UID_generator.end(); }
+    static inline Core::Iterable<Iterator> get_iterable() { return { begin(), end() }; }
 
-    static inline const std::string& get_name(Images::UID image_ID) { return m_metainfo[image_ID].name; }
-    static inline void set_name(Images::UID image_ID, const std::string& name) { m_metainfo[image_ID].name = name; }
+    static inline const std::string& get_name(ImageID image_ID) { return m_metainfo[image_ID].name; }
+    static inline void set_name(ImageID image_ID, const std::string& name) { m_metainfo[image_ID].name = name; }
 
-    static inline PixelFormat get_pixel_format(Images::UID image_ID) { return m_metainfo[image_ID].pixel_format; }
-    static inline float get_gamma(Images::UID image_ID) { return m_metainfo[image_ID].gamma; }
-    static void set_gamma(Images::UID image_ID, float gamma) { m_metainfo[image_ID].gamma = gamma; }
-    static inline unsigned int get_mipmap_count(Images::UID image_ID) { return m_metainfo[image_ID].mipmap_count; }
-    static inline unsigned int get_width(Images::UID image_ID, unsigned int mipmap_level = 0) { return Math::max(1u, m_metainfo[image_ID].width >> mipmap_level); }
-    static inline unsigned int get_height(Images::UID image_ID, unsigned int mipmap_level = 0) { return Math::max(1u, m_metainfo[image_ID].height >> mipmap_level); }
-    static inline unsigned int get_depth(Images::UID image_ID, unsigned int mipmap_level = 0) { return Math::max(1u, m_metainfo[image_ID].depth >> mipmap_level); }
-    static inline unsigned int get_pixel_count(Images::UID image_ID, unsigned int mipmap_level = 0) {
+    static inline PixelFormat get_pixel_format(ImageID image_ID) { return m_metainfo[image_ID].pixel_format; }
+    static inline float get_gamma(ImageID image_ID) { return m_metainfo[image_ID].gamma; }
+    static void set_gamma(ImageID image_ID, float gamma) { m_metainfo[image_ID].gamma = gamma; }
+    static inline unsigned int get_mipmap_count(ImageID image_ID) { return m_metainfo[image_ID].mipmap_count; }
+    static inline unsigned int get_width(ImageID image_ID, unsigned int mipmap_level = 0) { return Math::max(1u, m_metainfo[image_ID].width >> mipmap_level); }
+    static inline unsigned int get_height(ImageID image_ID, unsigned int mipmap_level = 0) { return Math::max(1u, m_metainfo[image_ID].height >> mipmap_level); }
+    static inline unsigned int get_depth(ImageID image_ID, unsigned int mipmap_level = 0) { return Math::max(1u, m_metainfo[image_ID].depth >> mipmap_level); }
+    static inline unsigned int get_pixel_count(ImageID image_ID, unsigned int mipmap_level = 0) {
         return get_width(image_ID, mipmap_level) * get_height(image_ID, mipmap_level) * get_depth(image_ID, mipmap_level);
     }
 
     // Returns true if mipmaps can be auto generated for the texture.
-    static inline bool is_mipmapable(Images::UID image_ID) { return m_metainfo[image_ID].is_mipmapable; }
-    static void set_mipmapable(Images::UID image_ID, bool value);
+    static inline bool is_mipmapable(ImageID image_ID) { return m_metainfo[image_ID].is_mipmapable; }
+    static void set_mipmapable(ImageID image_ID, bool value);
 
-    static PixelData get_pixels(Images::UID image_ID, int mipmap_level = 0);
+    static PixelData get_pixels(ImageID image_ID, int mipmap_level = 0);
     template <typename T>
-    static T* get_pixels(Images::UID image_ID, int mipmap_level = 0) {
+    static T* get_pixels(ImageID image_ID, int mipmap_level = 0) {
         assert(sizeof(T) == size_of(get_pixel_format(image_ID)));
         return (T*)get_pixels(image_ID, mipmap_level);
     }
 
-    static Math::RGBA get_pixel(Images::UID image_ID, unsigned int index, unsigned int mipmap_level = 0);
-    static Math::RGBA get_pixel(Images::UID image_ID, Math::Vector2ui index, unsigned int mipmap_level = 0);
-    static Math::RGBA get_pixel(Images::UID image_ID, Math::Vector3ui index, unsigned int mipmap_level = 0);
-    static void set_pixel(Images::UID image_ID, Math::RGBA rgba, unsigned int index, unsigned int mipmap_level = 0);
-    static void set_pixel(Images::UID image_ID, Math::RGBA rgba, Math::Vector2ui index, unsigned int mipmap_level = 0);
-    static void set_pixel(Images::UID image_ID, Math::RGBA rgba, Math::Vector3ui index, unsigned int mipmap_level = 0);
+    static Math::RGBA get_pixel(ImageID image_ID, unsigned int index, unsigned int mipmap_level = 0);
+    static Math::RGBA get_pixel(ImageID image_ID, Math::Vector2ui index, unsigned int mipmap_level = 0);
+    static Math::RGBA get_pixel(ImageID image_ID, Math::Vector3ui index, unsigned int mipmap_level = 0);
+    static void set_pixel(ImageID image_ID, Math::RGBA rgba, unsigned int index, unsigned int mipmap_level = 0);
+    static void set_pixel(ImageID image_ID, Math::RGBA rgba, Math::Vector2ui index, unsigned int mipmap_level = 0);
+    static void set_pixel(ImageID image_ID, Math::RGBA rgba, Math::Vector3ui index, unsigned int mipmap_level = 0);
 
     template <typename Operation>
-    static void iterate_pixels(Images::UID image_ID, Operation pixel_operation) {
+    static void iterate_pixels(ImageID image_ID, Operation pixel_operation) {
         int pixel_count = get_pixel_count(image_ID);
         for (int i = 0; i < pixel_count; ++i) {
             RGBA pixel = get_pixel(image_ID, i);
@@ -158,7 +165,7 @@ public:
         }
     }
 
-    static void change_format(Images::UID image_ID, PixelFormat new_format, float new_gamma);
+    static void change_format(ImageID image_ID, PixelFormat new_format, float new_gamma);
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -173,9 +180,9 @@ public:
     }; 
     typedef Core::Bitmask<Change> Changes;
 
-    static inline Changes get_changes(Images::UID image_ID) { return m_changes.get_changes(image_ID); }
+    static inline Changes get_changes(ImageID image_ID) { return m_changes.get_changes(image_ID); }
 
-    typedef std::vector<UID>::iterator ChangedIterator;
+    typedef std::vector<ImageID>::iterator ChangedIterator;
     static Core::Iterable<ChangedIterator> get_changed_images() { return m_changes.get_changed_resources(); }
 
     static void reset_change_notifications() { m_changes.reset_change_notifications(); }
@@ -194,25 +201,25 @@ private:
         bool is_mipmapable;
     };
 
-    static UIDGenerator m_UID_generator;
+    static ImageIDGenerator m_UID_generator;
     static MetaInfo* m_metainfo;
     static PixelData* m_pixels;
-    static Core::ChangeSet<Changes, UID> m_changes;
+    static Core::ChangeSet<Changes, ImageID> m_changes;
 };
 
 // ---------------------------------------------------------------------------
-// Images::UID wrapper convinience class.
+// ImageID wrapper convinience class.
 // ---------------------------------------------------------------------------
 class Image final {
 public:
     // -----------------------------------------------------------------------
     // Constructors and destructors.
     // -----------------------------------------------------------------------
-    Image() : m_ID(Images::UID::invalid_UID()) {}
-    Image(Images::UID id) : m_ID(id) {}
+    Image() : m_ID(ImageID::invalid_UID()) {}
+    Image(ImageID id) : m_ID(id) {}
 
-    inline Images::UID get_ID() { return m_ID; }
-    inline const Images::UID get_ID() const { return m_ID; }
+    inline ImageID get_ID() { return m_ID; }
+    inline const ImageID get_ID() const { return m_ID; }
     inline bool exists() const { return Images::has(m_ID); }
 
     inline bool operator==(Image rhs) const { return m_ID == rhs.m_ID; }
@@ -259,17 +266,17 @@ public:
     inline Images::Changes get_changes() const { return Images::get_changes(m_ID); }
 
 private:
-    Images::UID m_ID;
+    ImageID m_ID;
 };
 
 namespace ImageUtils {
 
 template <typename T>
-inline Images::UID copy_with_new_format(Images::UID image_ID, PixelFormat new_format, float new_gamma, T process_pixel) {
+inline ImageID copy_with_new_format(ImageID image_ID, PixelFormat new_format, float new_gamma, T process_pixel) {
     Image image = image_ID;
     unsigned int mipmap_count = image.get_mipmap_count();
     auto size = Math::Vector3ui(image.get_width(), image.get_height(), image.get_depth());
-    Images::UID new_image_ID = Images::create3D(image.get_name(), new_format, new_gamma, size, mipmap_count);
+    ImageID new_image_ID = Images::create3D(image.get_name(), new_format, new_gamma, size, mipmap_count);
 
     for (unsigned int m = 0; m < mipmap_count; ++m)
         #pragma omp parallel for schedule(dynamic, 16)
@@ -282,19 +289,19 @@ inline Images::UID copy_with_new_format(Images::UID image_ID, PixelFormat new_fo
     return new_image_ID;
 }
 
-inline Images::UID copy_with_new_format(Images::UID image_ID, PixelFormat new_format, float new_gamma) {
+inline ImageID copy_with_new_format(ImageID image_ID, PixelFormat new_format, float new_gamma) {
     return copy_with_new_format(image_ID, new_format, new_gamma, [](Math::RGBA c) -> Math::RGBA { return c; } );
 }
 
-inline Images::UID copy_with_new_format(Images::UID image_ID, PixelFormat new_format) {
+inline ImageID copy_with_new_format(ImageID image_ID, PixelFormat new_format) {
     return copy_with_new_format(image_ID, new_format, Images::get_gamma(image_ID));
 }
 
-void fill_mipmap_chain(Images::UID image_ID);
+void fill_mipmap_chain(ImageID image_ID);
 
-void compute_summed_area_table(Images::UID image_ID, Math::RGBA* sat_result);
+void compute_summed_area_table(ImageID image_ID, Math::RGBA* sat_result);
 
-inline Math::RGBA* compute_summed_area_table(Images::UID image_ID) {
+inline Math::RGBA* compute_summed_area_table(ImageID image_ID) {
     Math::RGBA* sat = new Math::RGBA[Images::get_width(image_ID) * Images::get_height(image_ID)];
     compute_summed_area_table(image_ID, sat);
     return sat;

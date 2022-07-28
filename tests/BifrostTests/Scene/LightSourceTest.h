@@ -47,11 +47,11 @@ TEST_F(Scene_LightSource, resizing) {
 TEST_F(Scene_LightSource, sentinel_node) {
     LightSources::allocate(1u);
 
-    LightSources::UID sentinel_ID = LightSources::UID::invalid_UID();
+    LightSourceID sentinel_ID = LightSourceID::invalid_UID();
 
     EXPECT_FALSE(LightSources::has(sentinel_ID));
 
-    EXPECT_EQ(SceneNodes::UID::invalid_UID(), LightSources::get_node_ID(sentinel_ID));
+    EXPECT_EQ(SceneNodeID::invalid_UID(), LightSources::get_node_ID(sentinel_ID));
     EXPECT_EQ(Math::RGB(100000, 0, 100000), LightSources::get_sphere_light_power(sentinel_ID));
 
     LightSources::deallocate();
@@ -109,9 +109,9 @@ TEST_F(Scene_LightSource, create_directional_light) {
 
 TEST_F(Scene_LightSource, destroy) {
     LightSources::allocate(2u);
-    
-    SceneNodes::UID node_ID = SceneNodes::create("Foo");
-    LightSources::UID light_ID = LightSources::create_sphere_light(node_ID, Math::RGB::white(), 0.0f);
+
+    SceneNodeID node_ID = SceneNodes::create("Foo");
+    LightSourceID light_ID = LightSources::create_sphere_light(node_ID, Math::RGB::white(), 0.0f);
     EXPECT_TRUE(LightSources::has(light_ID));
 
     LightSources::reset_change_notifications();
@@ -131,10 +131,10 @@ TEST_F(Scene_LightSource, destroy) {
 TEST_F(Scene_LightSource, create_and_destroy_notifications) {
     LightSources::allocate(8u);
 
-    SceneNodes::UID node_ID = SceneNodes::create("Foo");
+    SceneNodeID node_ID = SceneNodes::create("Foo");
 
-    LightSources::UID light_ID0 = LightSources::create_sphere_light(node_ID, Math::RGB(0.0f), 0.0f);
-    LightSources::UID light_ID1 = LightSources::create_sphere_light(node_ID, Math::RGB(1.0f), 0.0f);
+    LightSourceID light_ID0 = LightSources::create_sphere_light(node_ID, Math::RGB(0.0f), 0.0f);
+    LightSourceID light_ID1 = LightSources::create_sphere_light(node_ID, Math::RGB(1.0f), 0.0f);
     EXPECT_TRUE(LightSources::has(light_ID0));
     EXPECT_TRUE(LightSources::has(light_ID1));
 
@@ -145,7 +145,7 @@ TEST_F(Scene_LightSource, create_and_destroy_notifications) {
         bool node0_created = false;
         bool node1_created = false;
         bool other_changes = false;
-        for (const LightSources::UID light_ID : changed_lights) {
+        for (const LightSourceID light_ID : changed_lights) {
             bool light_created = LightSources::get_changes(light_ID) == LightSources::Change::Created;
             if (light_ID == light_ID0 && light_created)
                 node0_created = true;
@@ -171,7 +171,7 @@ TEST_F(Scene_LightSource, create_and_destroy_notifications) {
 
         bool node0_destroyed = false;
         bool other_changes = false;
-        for (const LightSources::UID light_ID : changed_lights) {
+        for (const LightSourceID light_ID : changed_lights) {
             if (light_ID == light_ID0 && LightSources::get_changes(light_ID) == LightSources::Change::Destroyed)
                 node0_destroyed = true;
             else

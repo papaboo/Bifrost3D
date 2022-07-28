@@ -32,7 +32,7 @@ class RandomScene {
 private:
     typedef RNG::XorShift32 NumberGenerator;
 public:
-    RandomScene(int seed, Cameras::UID camera_ID, std::string& texture_directory) 
+    RandomScene(int seed, CameraID camera_ID, std::string& texture_directory) 
     : m_seed(seed), m_camera_ID(camera_ID), m_textures(TextureManager(texture_directory)), m_root_node(SceneNodes::create("root node")) {
         new_scene();
     }
@@ -81,7 +81,7 @@ public:
             m_materials.push_back(material_ID);
 
             // Assemble in scene node.
-            SceneNodes::UID node_ID = SceneNodes::create("Heightmap", transform);
+            SceneNodeID node_ID = SceneNodes::create("Heightmap", transform);
             m_nodes.push_back(node_ID);
             auto mesh_model = MeshModels::create(node_ID, mesh.get_ID(), material_ID);
             m_mesh_models.push_back(mesh_model);
@@ -116,7 +116,7 @@ private:
 
     unsigned int m_seed;
 
-    Cameras::UID m_camera_ID;
+    CameraID m_camera_ID;
 
     // Collections of objects in the scene.
     TextureManager m_textures;
@@ -145,7 +145,7 @@ private:
         m_materials.push_back(material_ID);
 
         // Assemble in scene node.
-        SceneNodes::UID node_ID = SceneNodes::create("Node", transform);
+        SceneNodeID node_ID = SceneNodes::create("Node", transform);
         m_nodes.push_back(node_ID);
         auto mesh_model = MeshModels::create(node_ID, mesh.get_ID(), material_ID);
         m_mesh_models.push_back(mesh_model);

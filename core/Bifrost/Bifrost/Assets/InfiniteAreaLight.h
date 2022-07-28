@@ -42,20 +42,20 @@ public:
     //*********************************************************************************************
     // Constructor.
     //*********************************************************************************************
-    explicit InfiniteAreaLight(Textures::UID latlong_ID)
+    explicit InfiniteAreaLight(TextureID latlong_ID)
         : m_latlong(latlong_ID)
         , m_distribution(Math::Distribution2D<double>(std::unique_ptr<float[]>(compute_PDF(m_latlong)).get(),
                                                       m_latlong.get_image().get_width(), m_latlong.get_image().get_height())) { }
 
-    InfiniteAreaLight(Textures::UID latlong_ID, float* latlong_PDF)
+    InfiniteAreaLight(TextureID latlong_ID, float* latlong_PDF)
         : m_latlong(latlong_ID)
         , m_distribution(Math::Distribution2D<double>(latlong_PDF, m_latlong.get_image().get_width(), m_latlong.get_image().get_height())) { }
 
     //*********************************************************************************************
     // Getters.
     //*********************************************************************************************
-    inline Textures::UID get_texture_ID() const { return m_latlong.get_ID(); }
-    inline Images::UID get_image_ID() const { return m_latlong.get_image().get_ID(); }
+    inline TextureID get_texture_ID() const { return m_latlong.get_ID(); }
+    inline ImageID get_image_ID() const { return m_latlong.get_image().get_ID(); }
     inline unsigned int get_width() const { return m_latlong.get_image().get_width(); }
     inline unsigned int get_height() const { return m_latlong.get_image().get_height(); }
     inline const float* const get_image_marginal_CDF() const { return m_distribution.get_marginal_CDF(); }

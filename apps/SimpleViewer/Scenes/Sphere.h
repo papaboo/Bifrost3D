@@ -17,8 +17,8 @@ namespace ImGui { class ImGuiAdaptor; }
 
 namespace Scenes {
 
-void create_sphere_scene(Bifrost::Core::Engine& engine, Bifrost::Scene::Cameras::UID camera_ID, 
-                         Bifrost::Scene::SceneRoots::UID scene_ID, ImGui::ImGuiAdaptor* imgui);
+void create_sphere_scene(Bifrost::Core::Engine& engine, Bifrost::Scene::CameraID camera_ID, 
+                         Bifrost::Scene::SceneRootID scene_ID, ImGui::ImGuiAdaptor* imgui);
 
 } // NS Scenes
 

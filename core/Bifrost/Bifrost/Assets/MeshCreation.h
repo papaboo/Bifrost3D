@@ -23,15 +23,15 @@ namespace Assets {
 //----------------------------------------------------------------------------
 namespace MeshCreation {
 
-Meshes::UID plane(unsigned int quads_pr_side, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
+MeshID plane(unsigned int quads_pr_side, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
-Meshes::UID cube(unsigned int quads_pr_side, Math::Vector3f scaling = Math::Vector3f::one(), MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
+MeshID cube(unsigned int quads_pr_side, Math::Vector3f scaling = Math::Vector3f::one(), MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
-Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_quads, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
+MeshID cylinder(unsigned int vertical_quads, unsigned int circumference_quads, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
-Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
+MeshID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
-Meshes::UID torus(unsigned int revolution_quads, unsigned int circumference_quads, float minor_radius, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
+MeshID torus(unsigned int revolution_quads, unsigned int circumference_quads, float minor_radius, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
 } // NS MeshCreation
 } // NS Assets

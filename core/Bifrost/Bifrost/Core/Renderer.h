@@ -17,11 +17,20 @@
 namespace Bifrost {
 namespace Core {
 
+//----------------------------------------------------------------------------
+// Renderer ID
+//----------------------------------------------------------------------------
+class Renderers;
+typedef Core::TypedUIDGenerator<Renderers> RendererIDGenerator;
+typedef RendererIDGenerator::UID RendererID;
+
+// ------------------------------------------------------------------------------------------------
+// Renderer representation in Bifrost.
+// Essentially just an ID that represents a renderer and can attach that renderer to a camera.
+// ------------------------------------------------------------------------------------------------
 class Renderers final {
 public:
-    typedef Core::TypedUIDGenerator<Renderers> UIDGenerator;
-    typedef UIDGenerator::UID UID;
-    typedef UIDGenerator::ConstIterator ConstUIDIterator;
+    using Iterator = RendererIDGenerator::ConstIterator;
 
     static bool is_allocated() { return m_names != nullptr; }
     static void allocate(unsigned int capacity);
@@ -29,23 +38,23 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(Renderers::UID renderer_ID) { return m_UID_generator.has(renderer_ID); }
+    static bool has(RendererID renderer_ID) { return m_UID_generator.has(renderer_ID); }
 
-    static Renderers::UID create(const std::string& name);
-    static void destroy(Renderers::UID renderer_ID);
+    static RendererID create(const std::string& name);
+    static void destroy(RendererID renderer_ID);
 
-    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
-    static ConstUIDIterator end() { return m_UID_generator.end(); }
-    static UIDGenerator::ConstIterator get_iterator(Renderers::UID renderer_ID) { return m_UID_generator.get_iterator(renderer_ID); }
-    static Iterable<ConstUIDIterator> get_iterable() { return Iterable<ConstUIDIterator>(begin(), end()); }
+    static Iterator begin() { return m_UID_generator.begin(); }
+    static Iterator end() { return m_UID_generator.end(); }
+    static Iterator get_iterator(RendererID renderer_ID) { return m_UID_generator.get_iterator(renderer_ID); }
+    static Iterable<Iterator> get_iterable() { return Iterable<Iterator>(begin(), end()); }
 
-    static std::string get_name(Renderers::UID renderer_ID) { return m_names[renderer_ID]; }
+    static std::string get_name(RendererID renderer_ID) { return m_names[renderer_ID]; }
 
 private:
 
     static void reserve_data(unsigned int new_capacity, unsigned int old_capacity);
 
-    static UIDGenerator m_UID_generator;
+    static RendererIDGenerator m_UID_generator;
     static std::string* m_names;
 };
 

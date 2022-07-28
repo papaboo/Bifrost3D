@@ -180,7 +180,7 @@ public:
             m_previous_effects_times.resize(Renderers::capacity());
         }
 
-        Renderers::UID renderer_ID = renderer->get_ID();
+        RendererID renderer_ID = renderer->get_ID();
         m_renderers[renderer_ID] = std::unique_ptr<IRenderer>(renderer);
         m_previous_effects_times[renderer_ID] = std::numeric_limits<double>::lowest(); // Ensures that the first delta_time is positive infinity, which in turn disables eye adaptation for the first frame.
         return m_renderers[renderer_ID];
@@ -261,7 +261,7 @@ public:
                 renderer->handle_updates();
 
         // Render.
-        for (Cameras::UID camera_ID : Cameras::get_z_sorted_IDs()) {
+        for (CameraID camera_ID : Cameras::get_z_sorted_IDs()) {
 
             Rectf viewport = Cameras::get_viewport(camera_ID);
             viewport.x *= m_window.get_width();
@@ -269,7 +269,7 @@ public:
             viewport.y *= m_window.get_height();
             viewport.height *= m_window.get_height();
 
-            Renderers::UID renderer_ID = Cameras::get_renderer_ID(camera_ID);
+            RendererID renderer_ID = Cameras::get_renderer_ID(camera_ID);
             auto frame = m_renderers[renderer_ID]->render(camera_ID, int(viewport.width), int(viewport.height));
 
             auto take_screenshot = [&](Cameras::ScreenshotContent content_requested, unsigned int minimum_iteration_count, bool is_HDR) -> std::vector<Screenshot> {
@@ -303,7 +303,7 @@ public:
             m_previous_effects_times[renderer_ID] = current_time;
 
             // Post process the images with the camera effects.
-            Cameras::UID camera_ID = *Cameras::get_iterable().begin();
+            CameraID camera_ID = *Cameras::get_iterable().begin();
             auto effects_settings = Cameras::get_effects_settings(camera_ID);
             m_camera_effects.process(m_render_context, effects_settings, delta_time, frame.frame_SRV, m_swap_chain_RTV, frame.viewport, Recti(viewport));
 

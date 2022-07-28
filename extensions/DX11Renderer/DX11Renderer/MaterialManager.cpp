@@ -61,10 +61,10 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
     }
 
     m_materials.resize(1);
-    m_materials[0] = make_dx11material(Materials::UID::invalid_UID());
+    m_materials[0] = make_dx11material(MaterialID::invalid_UID());
 
     m_material_textures.resize(1);
-    m_material_textures[0] = make_dx11material_textures(Materials::UID::invalid_UID());
+    m_material_textures[0] = make_dx11material_textures(MaterialID::invalid_UID());
 
     m_GPU_materials.resize(1);
     create_constant_buffer(device, m_materials[0], &m_GPU_materials[0]);
