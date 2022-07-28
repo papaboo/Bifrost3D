@@ -23,7 +23,19 @@ MeshModelManager::MeshModelManager() {
     m_model_indices = std::vector<unsigned int>(MeshModels::capacity());
 }
 
+inline unsigned int model_properties_from_material(Material material) {
+    bool uses_coverage = material.get_coverage_texture_ID() != TextureID::invalid_UID() || material.get_coverage() < 1.0f;
+    unsigned int coverage_type = material.is_cutout() ? Dx11Model::Properties::Cutout : Dx11Model::Properties::Transparent;
+    unsigned int properties = uses_coverage ? coverage_type : Dx11Model::Properties::None;
+
+    properties |= material.is_thin_walled() ? Dx11Model::Properties::ThinWalled : Dx11Model::Properties::None;
+
+    return properties;
+}
+
 void MeshModelManager::handle_updates() {
+    bool models_updated = false;
+
     if (!MeshModels::get_changed_models().is_empty()) {
         if (m_sorted_models.size() <= MeshModels::capacity()) {
             m_sorted_models.reserve(MeshModels::capacity());
@@ -36,39 +48,50 @@ void MeshModelManager::handle_updates() {
             unsigned int model_index = m_model_indices[model.get_ID()];
 
             if (model.get_changes() & MeshModels::Change::Destroyed) {
-                m_sorted_models[model_index].model_ID = 0;
-                m_sorted_models[model_index].material_ID = 0;
-                m_sorted_models[model_index].mesh_ID = 0;
-                m_sorted_models[model_index].transform_ID = 0;
-                m_sorted_models[model_index].properties = Dx11Model::Properties::Destroyed;
+                Dx11Model dx_model = {};
+                m_sorted_models[model_index] = dx_model;
 
                 m_model_indices[model.get_ID()] = 0;
-            }
-            else if (model.get_changes() & MeshModels::Change::Created) {
+            } else if (model.get_changes() & MeshModels::Change::Created) {
                 Dx11Model dx_model;
                 dx_model.model_ID = model.get_ID();
                 dx_model.material_ID = model.get_material().get_ID();
                 dx_model.mesh_ID = model.get_mesh().get_ID();
                 dx_model.transform_ID = model.get_scene_node().get_ID();
-
-                Material mat = model.get_material();
-                bool uses_coverage = mat.get_coverage_texture_ID() != Textures::UID::invalid_UID() || mat.get_coverage() < 1.0f;
-                unsigned int coverage_type = mat.is_cutout() ? Dx11Model::Properties::Cutout : Dx11Model::Properties::Transparent;
-                dx_model.properties = uses_coverage ? coverage_type : Dx11Model::Properties::None;
-
-                dx_model.properties |= mat.is_thin_walled() ? Dx11Model::Properties::ThinWalled : Dx11Model::Properties::None;
+                dx_model.properties = model_properties_from_material(model.get_material());
 
                 if (model_index == 0) {
                     m_model_indices[model.get_ID()] = (unsigned int)m_sorted_models.size();
                     m_sorted_models.push_back(dx_model);
-                }
-                else
+                } else
                     m_sorted_models[model_index] = dx_model;
+            } else if (model.get_changes() & MeshModels::Change::Material) {
+                Dx11Model& dx_model = m_sorted_models[model_index];
+                dx_model.material_ID = model.get_material().get_ID();
+                dx_model.properties = model_properties_from_material(model.get_material());
             }
-            else if (model.get_changes() & MeshModels::Change::Material)
-                m_sorted_models[model_index].material_ID = model.get_material().get_ID();
         }
 
+        models_updated = true;
+    }
+
+    // Check if any materials have changed.
+    if (!Materials::get_changed_materials().is_empty()) {
+        // This rarely happens, so for now we just loop over all models
+        for (Iterator model_itr = begin(); model_itr != end(); ++model_itr) {
+            // Ignore invalid models.
+            if (model_itr->model_ID == 0)
+                continue;
+
+            // Update material properties and set models_updated to true in case there was a change.
+            Material material = model_itr->material_ID;
+            unsigned int model_props = model_properties_from_material(material);
+            models_updated |= model_itr->properties != model_props;
+            model_itr->properties = model_props;
+        }
+    }
+
+    if (models_updated) {
         // Sort the models in the order [dummy, opaque backface-culled, opaque thin-walled, cutout, transparent, destroyed]
         // The models to be sorted starts at index 1, because the first model is a dummy model.
         std::sort(m_sorted_models.begin() + 1, m_sorted_models.end(),

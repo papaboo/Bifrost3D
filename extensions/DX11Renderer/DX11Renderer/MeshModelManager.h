@@ -22,21 +22,26 @@ namespace DX11Renderer {
 //-------------------------------------------------------------------------------------------------
 class MeshModelManager {
 public:
-    typedef std::vector<Dx11Model>::const_iterator Iterator;
+    typedef std::vector<Dx11Model>::iterator Iterator;
+    typedef std::vector<Dx11Model>::const_iterator ConstIterator;
 
     MeshModelManager();
     MeshModelManager(MeshModelManager&& other) = default;
     MeshModelManager& operator=(MeshModelManager&& rhs) = default;
-    
+
     void handle_updates();
 
-    Iterator begin_models() const { return m_sorted_models.begin() + 1; }
-    Iterator end_models() const { return m_sorted_models.end(); }
+    inline Iterator begin() { return m_sorted_models.begin() + 1; }
+    inline ConstIterator cbegin() const { return m_sorted_models.cbegin() + 1; }
+    inline ConstIterator begin() const { cbegin(); }
+    inline Iterator end() { return m_sorted_models.end(); }
+    inline ConstIterator cend() const { return m_sorted_models.cend(); }
+    inline ConstIterator end() const { cend(); }
 
-    inline Iterator begin_opaque_models() const { return begin_models(); }
-    inline Iterator begin_opaque_thin_walled_models() const { return m_begin_opaque_thin_walled_models; }
-    inline Iterator begin_cutout_models() const { return m_begin_cutout_models; }
-    inline Iterator begin_transparent_models() const { return m_begin_transparent_models; }
+    inline ConstIterator cbegin_opaque_models() const { return begin(); }
+    inline ConstIterator cbegin_opaque_thin_walled_models() const { return m_begin_opaque_thin_walled_models; }
+    inline ConstIterator cbegin_cutout_models() const { return m_begin_cutout_models; }
+    inline ConstIterator cbegin_transparent_models() const { return m_begin_transparent_models; }
 
 private:
     MeshModelManager(MeshModelManager& other) = delete;
@@ -45,9 +50,9 @@ private:
     std::vector<unsigned int> m_model_indices; // The model's entry in the sorted models array.
     std::vector<Dx11Model> m_sorted_models;
 
-    Iterator m_begin_opaque_thin_walled_models;
-    Iterator m_begin_cutout_models;
-    Iterator m_begin_transparent_models;
+    ConstIterator m_begin_opaque_thin_walled_models;
+    ConstIterator m_begin_cutout_models;
+    ConstIterator m_begin_transparent_models;
 };
 
 } // NS DX11Renderer

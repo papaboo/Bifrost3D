@@ -9,6 +9,7 @@
 #ifndef _DX11RENDERER_RENDERER_TYPES_H_
 #define _DX11RENDERER_RENDERER_TYPES_H_
 
+#include <Bifrost/Core/UniqueIDGenerator.h>
 #include <Bifrost/Math/half.h>
 
 #include <DX11Renderer/OwnedResourcePtr.h>
@@ -41,6 +42,23 @@ struct IDXGIAdapter1;
 struct IDXGIDevice;
 struct IDXGIFactory1;
 struct IDXGIFactory2;
+
+//-------------------------------------------------------------------------------------------------
+// Asset ID forward declaration.
+//-------------------------------------------------------------------------------------------------
+namespace Bifrost::Assets {
+class Meshes;
+typedef Core::TypedUIDGenerator<Meshes>::UID MeshID;
+class MeshModels;
+typedef Core::TypedUIDGenerator<MeshModels> MeshModelIDGenerator;
+typedef MeshModelIDGenerator::UID MeshModelID;
+class Materials;
+typedef Core::TypedUIDGenerator<Materials>::UID MaterialID;
+}
+namespace Bifrost::Scene {
+class SceneNodes;
+typedef Core::TypedUIDGenerator<SceneNodes>::UID SceneNodeID;
+}
 
 //-------------------------------------------------------------------------------------------------
 // DX11 enum none flags.
@@ -263,11 +281,11 @@ struct Dx11Model {
         static const unsigned int Destroyed = 1u << 31u;
     };
 
-    unsigned int model_ID;
-    unsigned int mesh_ID;
-    unsigned int transform_ID;
-    unsigned int material_ID;
-    unsigned int properties; // NOTE If I really really really wanted to keep this 16 byte aligned (which is nice), then I could store properties in upper 8 bits of the IDs.
+    Bifrost::Assets::MeshModelID model_ID;
+    Bifrost::Assets::MeshID mesh_ID;
+    Bifrost::Scene::SceneNodeID transform_ID;
+    Bifrost::Assets::MaterialID material_ID;
+    unsigned int properties;
 
     bool is_opaque() { return (properties & (Properties::Cutout | Properties::Transparent)) == 0; }
     bool is_thin_walled() { return (properties & (Properties::Cutout | Properties::ThinWalled)) != 0; }
