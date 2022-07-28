@@ -19,9 +19,9 @@ namespace Bifrost {
 namespace Assets {
 namespace MeshCreation {
 
-Meshes::UID plane(unsigned int quads_pr_edge, MeshFlags buffer_bitmask) {
+MeshID plane(unsigned int quads_pr_edge, MeshFlags buffer_bitmask) {
     if (quads_pr_edge == 0)
-        return Meshes::UID::invalid_UID();
+        return MeshID::invalid_UID();
 
     unsigned int size = quads_pr_edge + 1;
     unsigned int vertex_count = size * size;
@@ -59,9 +59,9 @@ Meshes::UID plane(unsigned int quads_pr_edge, MeshFlags buffer_bitmask) {
     return mesh.get_ID();
 }
 
-Meshes::UID cube(unsigned int quads_pr_edge, Vector3f scaling, MeshFlags buffer_bitmask) {
+MeshID cube(unsigned int quads_pr_edge, Vector3f scaling, MeshFlags buffer_bitmask) {
     if (quads_pr_edge == 0)
-        return Meshes::UID::invalid_UID();
+        return MeshID::invalid_UID();
 
     unsigned int sides = 6;
 
@@ -145,9 +145,9 @@ Meshes::UID cube(unsigned int quads_pr_edge, Vector3f scaling, MeshFlags buffer_
     return mesh.get_ID();
 }
 
-Meshes::UID cylinder(unsigned int vertical_quads, unsigned int circumference_quads, MeshFlags buffer_bitmask) {
+MeshID cylinder(unsigned int vertical_quads, unsigned int circumference_quads, MeshFlags buffer_bitmask) {
     if (vertical_quads == 0 || circumference_quads == 0)
-        return Meshes::UID::invalid_UID();
+        return MeshID::invalid_UID();
 
     unsigned int lid_vertex_count = circumference_quads + 1;
     unsigned int side_vertex_count = (vertical_quads + 1) * circumference_quads;
@@ -265,9 +265,9 @@ static Vector3f spherical_to_direction(float theta, float phi) {
     return Vector3f(x, y, z);
 }
 
-Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads, MeshFlags buffer_bitmask) {
+MeshID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads, MeshFlags buffer_bitmask) {
     if (longitude_quads < 3 || latitude_quads < 2)
-        return Meshes::UID::invalid_UID();
+        return MeshID::invalid_UID();
 
     unsigned int latitude_size = latitude_quads + 1;
     unsigned int longitude_size = longitude_quads + 1;
@@ -322,9 +322,9 @@ Meshes::UID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_
     return mesh.get_ID();
 }
 
-Meshes::UID torus(unsigned int revolution_quads, unsigned int circumference_quads, float minor_radius, MeshFlags buffer_bitmask) {
+MeshID torus(unsigned int revolution_quads, unsigned int circumference_quads, float minor_radius, MeshFlags buffer_bitmask) {
     if (revolution_quads == 0 || circumference_quads == 0)
-        return Meshes::UID::invalid_UID();
+        return MeshID::invalid_UID();
 
     unsigned int revolution_vertex_count = (revolution_quads + 1);
     unsigned int circumference_vertex_count = (circumference_quads + 1);

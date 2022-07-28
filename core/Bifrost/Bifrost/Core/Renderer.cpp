@@ -11,20 +11,20 @@
 namespace Bifrost {
 namespace Core {
 
-Renderers::UIDGenerator Renderers::m_UID_generator = UIDGenerator(0u);
+RendererIDGenerator Renderers::m_UID_generator = RendererIDGenerator(0u);
 std::string* Renderers::m_names = nullptr;
 
 void Renderers::allocate(unsigned int capacity) {
     assert(!is_allocated());
 
-    m_UID_generator = UIDGenerator(capacity);
+    m_UID_generator = RendererIDGenerator(capacity);
     m_names = new std::string[m_UID_generator.capacity()];
 }
 
 void Renderers::deallocate() {
     assert(is_allocated());
 
-    m_UID_generator = UIDGenerator(0u);
+    m_UID_generator = RendererIDGenerator(0u);
     delete[] m_names; m_names = nullptr;
 }
 
@@ -42,11 +42,11 @@ void Renderers::reserve_data(unsigned int new_capacity, unsigned int old_capacit
     m_names = new_names;
 }
 
-Renderers::UID Renderers::create(const std::string& name) {
+RendererID Renderers::create(const std::string& name) {
     assert(m_names != nullptr);
 
     unsigned int old_capacity = m_UID_generator.capacity();
-    UID id = m_UID_generator.generate();
+    RendererID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_data(m_UID_generator.capacity(), old_capacity);
@@ -55,7 +55,7 @@ Renderers::UID Renderers::create(const std::string& name) {
     return id;
 }
 
-void Renderers::destroy(Renderers::UID renderer_ID) {
+void Renderers::destroy(RendererID renderer_ID) {
     m_UID_generator.erase(renderer_ID);
 }
 

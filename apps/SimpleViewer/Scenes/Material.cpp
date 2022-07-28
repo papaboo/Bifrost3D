@@ -49,7 +49,7 @@ public:
             Materials::destroy(m_material_IDs[m]);
     }
 
-    inline Materials::UID get_material_ID(int index) const { return m_material_IDs[index]; }
+    inline MaterialID get_material_ID(int index) const { return m_material_IDs[index]; }
 
     void layout_frame() {
         ImGui::Begin("Materials");
@@ -89,10 +89,10 @@ private:
     Materials::Data m_material0_data;
     Materials::Data m_material1_data;
 
-    Materials::UID m_material_IDs[material_count];
+    MaterialID m_material_IDs[material_count];
 };
 
-void create_material_scene(Cameras::UID camera_ID, SceneNode root_node, ImGui::ImGuiAdaptor* imgui) {
+void create_material_scene(CameraID camera_ID, SceneNode root_node, ImGui::ImGuiAdaptor* imgui) {
 
     { // Setup camera transform.
         Transform cam_transform = Cameras::get_transform(camera_ID);
@@ -112,7 +112,7 @@ void create_material_scene(Cameras::UID camera_ID, SceneNode root_node, ImGui::I
     { // Create floor.
       // A checker pattern texture would be really nice on the floor.
         unsigned int size = 41;
-        Images::UID tint_roughness_image_ID = Images::create2D("Floor color", PixelFormat::RGBA32, 2.2f, Vector2ui(size, size));
+        ImageID tint_roughness_image_ID = Images::create2D("Floor color", PixelFormat::RGBA32, 2.2f, Vector2ui(size, size));
         Images::set_mipmapable(tint_roughness_image_ID, true);
         unsigned char* tint_roughness_pixels = (unsigned char*)Images::get_pixels(tint_roughness_image_ID);
         for (unsigned int y = 0; y < size; ++y) {
@@ -128,10 +128,10 @@ void create_material_scene(Cameras::UID camera_ID, SceneNode root_node, ImGui::I
         Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 1, 0.04f);
         material_data.tint_roughness_texture_ID = Textures::create2D(tint_roughness_image_ID, MagnificationFilter::None, MinificationFilter::Trilinear);
         material_data.flags = MaterialFlag::ThinWalled;
-        Materials::UID material_ID = Materials::create("Floor", material_data);
+        MaterialID material_ID = Materials::create("Floor", material_data);
 
         SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0.5, -1.0, 0.5), Quaternionf::identity(), float(size)));
-        Meshes::UID plane_mesh_ID = MeshCreation::plane(1, { MeshFlag::Position, MeshFlag::Texcoord });
+        MeshID plane_mesh_ID = MeshCreation::plane(1, { MeshFlag::Position, MeshFlag::Texcoord });
         MeshModels::create(plane_node.get_ID(), plane_mesh_ID, material_ID);
         plane_node.set_parent(root_node);
     }
@@ -140,13 +140,13 @@ void create_material_scene(Cameras::UID camera_ID, SceneNode root_node, ImGui::I
     auto& materials = imgui->make_frame<MaterialGUI>();
 
     { // Create material models.
-        Meshes::UID cube_mesh_ID = MeshCreation::cube(1);
+        MeshID cube_mesh_ID = MeshCreation::cube(1);
         Transform cube_transform = Transform(Vector3f(0.0f, -0.25f, 0.0f), Quaternionf::identity(), 1.5f);
-        Meshes::UID sphere_mesh_ID = MeshCreation::revolved_sphere(32, 16);
+        MeshID sphere_mesh_ID = MeshCreation::revolved_sphere(32, 16);
         Transform sphere_transform = Transform(Vector3f(0.0f, 1.0f, 0.0f), Quaternionf::identity(), 1.5f);
 
         // Mesh combine models.
-        Meshes::UID mesh_ID = MeshUtils::combine("MaterialMesh", cube_mesh_ID, cube_transform, sphere_mesh_ID, sphere_transform);
+        MeshID mesh_ID = MeshUtils::combine("MaterialMesh", cube_mesh_ID, cube_transform, sphere_mesh_ID, sphere_transform);
         Meshes::destroy(cube_mesh_ID);
         Meshes::destroy(sphere_mesh_ID);
 

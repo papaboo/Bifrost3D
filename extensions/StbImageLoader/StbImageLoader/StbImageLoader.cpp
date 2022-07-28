@@ -63,20 +63,20 @@ unsigned int sizeof_format(PixelFormat format) {
     return 0u;
 }
 
-inline Images::UID convert_image(const std::string& name, void* loaded_pixels, int width, int height, int channel_count, bool is_HDR) {
+inline ImageID convert_image(const std::string& name, void* loaded_pixels, int width, int height, int channel_count, bool is_HDR) {
     if (loaded_pixels == nullptr) {
         printf("StbImageLoader::load(%s) error: '%s'\n", name.c_str(), stbi_failure_reason());
-        return Images::UID::invalid_UID();
+        return ImageID::invalid_UID();
     }
 
     PixelFormat pixel_format = resolve_format(channel_count, is_HDR);
     if (pixel_format == PixelFormat::Unknown) {
         printf("StbImageLoader::load(%s) error: 'Could not resolve format'\n", name.c_str());
-        return Images::UID::invalid_UID();
+        return ImageID::invalid_UID();
     }
 
     float image_gamma = is_HDR ? 1.0f : 2.2f;
-    Images::UID image_ID = Images::create2D(name, pixel_format, image_gamma, Vector2ui(width, height));
+    ImageID image_ID = Images::create2D(name, pixel_format, image_gamma, Vector2ui(width, height));
     Images::PixelData pixel_data = Images::get_pixels(image_ID);
     if (channel_count == 2) {
         unsigned char* pixel_data_uc4 = (unsigned char*)pixel_data;
@@ -96,7 +96,7 @@ inline Images::UID convert_image(const std::string& name, void* loaded_pixels, i
     return image_ID;
 }
 
-Images::UID load(const std::string& path) {
+ImageID load(const std::string& path) {
     stbi_set_flip_vertically_on_load(true);
 
     void* loaded_pixels = nullptr;
@@ -110,7 +110,7 @@ Images::UID load(const std::string& path) {
     return convert_image(path, loaded_pixels, width, height, channel_count, is_HDR);
 }
 
-Bifrost::Assets::Images::UID load_from_memory(const std::string& name, const void* const data, int data_byte_count) {
+Bifrost::Assets::ImageID load_from_memory(const std::string& name, const void* const data, int data_byte_count) {
     stbi_set_flip_vertically_on_load(false);
 
     int width, height, channel_count;

@@ -80,7 +80,7 @@ void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1&
                 return new_pixels - pixel_count * 4;;
             };
 
-            for (Images::UID image_ID : Images::get_changed_images()) {
+            for (ImageID image_ID : Images::get_changed_images()) {
                 Dx11Image& dx_image = m_images[image_ID];
 
                 if (Images::get_changes(image_ID).is_set(Images::Change::Destroyed)) {
@@ -161,7 +161,7 @@ void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1&
             if (m_textures.size() < Textures::capacity())
                 m_textures.resize(Textures::capacity());
 
-            for (Textures::UID tex_ID : Textures::get_changed_textures()) {
+            for (TextureID tex_ID : Textures::get_changed_textures()) {
                 Dx11Texture& dx_tex = m_textures[tex_ID];
 
                 if (Textures::get_changes(tex_ID) == Textures::Change::Destroyed) {

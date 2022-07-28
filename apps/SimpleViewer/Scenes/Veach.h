@@ -24,7 +24,7 @@ using namespace Bifrost;
 
 namespace Scenes {
 
-void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Scene::SceneRoots::UID scene_ID) {
+void create_veach_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneRootID scene_ID) {
     using namespace Bifrost::Assets;
     using namespace Bifrost::Math;
     using namespace Bifrost::Scene;
@@ -45,10 +45,10 @@ void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sce
     { // Create floor.
         Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.4f, 0.4f, 0.4f), 0.9f, 0.04f);
         material_data.flags = MaterialFlag::ThinWalled;
-        Materials::UID material_ID = Materials::create("Floor", material_data);
+        MaterialID material_ID = Materials::create("Floor", material_data);
 
         SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0, 0.0f, 0), Quaternionf::identity(), 50));
-        Meshes::UID plane_mesh_ID = MeshCreation::plane(1, { MeshFlag::Position, MeshFlag::Texcoord });
+        MeshID plane_mesh_ID = MeshCreation::plane(1, { MeshFlag::Position, MeshFlag::Texcoord });
         MeshModels::create(plane_node.get_ID(), plane_mesh_ID, material_ID);
         plane_node.set_parent(scene.get_root_node());
     }
@@ -92,7 +92,7 @@ void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sce
         for (int i = light_count - 1; i >= 0; --i) {
             Transform light_transform = Transform(light_positions[i]);
             SceneNode light_node = SceneNodes::create("Light", light_transform);
-            LightSources::UID light_ID =  LightSources::create_sphere_light(light_node.get_ID(), light_colors[i] * 10, light_radius);
+            LightSourceID light_ID =  LightSources::create_sphere_light(light_node.get_ID(), light_colors[i] * 10, light_radius);
             light_node.set_parent(scene.get_root_node());
             light_radius *= 0.333f;
         }
@@ -112,7 +112,7 @@ void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sce
 
         // Place the first block.
         Materials::Data material_data = Materials::Data::create_metal(RGB(0.7f, 0.7f, 0.7f), base_roughness);
-        Materials::UID material_ID = Materials::create("Block0", material_data);
+        MaterialID material_ID = Materials::create("Block0", material_data);
         SceneNode block_node = SceneNodes::create("Block0", block_0_position);
         MeshModels::create(block_node.get_ID(), block_mesh.get_ID(), material_ID);
         block_node.set_parent(scene.get_root_node());
@@ -144,7 +144,7 @@ void create_veach_scene(Core::Engine& engine, Scene::Cameras::UID camera_ID, Sce
 
             float roughness_scale = (block_count - 1 - b) / float(block_count - 1);
             Materials::Data material_data = Materials::Data::create_metal(RGB(0.7f, 0.7f, 0.7f), base_roughness * roughness_scale);
-            Materials::UID material_ID = Materials::create("Block" + std::to_string(b), material_data);
+            MaterialID material_ID = Materials::create("Block" + std::to_string(b), material_data);
             SceneNode block_node = SceneNodes::create("Block" + std::to_string(b), block_transform);
             MeshModels::create(block_node.get_ID(), block_mesh.get_ID(), material_ID);
             block_node.set_parent(scene.get_root_node());

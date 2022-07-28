@@ -31,14 +31,14 @@ public:
     static DX11Renderer::IRenderer* initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory);
     ~Adaptor();
 
-    Bifrost::Core::Renderers::UID get_ID() const { return m_renderer_ID; }
+    Bifrost::Core::RendererID get_ID() const { return m_renderer_ID; }
     OptiXRenderer::Renderer* get_renderer();
     OptiXRenderer::Renderer* get_renderer() const;
 
     void handle_updates();
 
-    DX11Renderer::RenderedFrame render(Bifrost::Scene::Cameras::UID camera_ID, int width, int height);
-    std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::Cameras::UID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, int width, int height);
+    DX11Renderer::RenderedFrame render(Bifrost::Scene::CameraID camera_ID, int width, int height);
+    std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, int width, int height);
 
 private:
 
@@ -48,7 +48,7 @@ private:
     Adaptor(Adaptor& other) = delete;
     Adaptor& operator=(const Adaptor& rhs) = delete;
 
-    Bifrost::Core::Renderers::UID m_renderer_ID;
+    Bifrost::Core::RendererID m_renderer_ID;
 
     // Pimpl the state to avoid exposing DirectX and OptiX dependencies.
     class Implementation;

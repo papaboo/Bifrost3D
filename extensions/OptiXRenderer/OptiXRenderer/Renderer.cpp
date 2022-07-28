@@ -83,7 +83,7 @@ static inline optix::Buffer create_buffer(optix::Context& context, unsigned int 
 // Model loading.
 //-------------------------------------------------------------------------------------------------
 
-static inline optix::GeometryTriangles load_mesh(optix::Context& context, Meshes::UID mesh_ID, optix::Program attribute_program) {
+static inline optix::GeometryTriangles load_mesh(optix::Context& context, MeshID mesh_ID, optix::Program attribute_program) {
 
     Mesh mesh = mesh_ID;
 
@@ -177,7 +177,7 @@ struct Renderer::Implementation {
 
     optix::Context context;
 
-    Renderers::UID owning_renderer_ID;
+    RendererID owning_renderer_ID;
 
     // Per camera members.
     struct CameraState {
@@ -227,7 +227,7 @@ struct Renderer::Implementation {
         SceneStateGPU GPU_state;
     } scene;
 
-    std::vector<std::set<MeshModels::UID>> node_to_mesh_models = std::vector<std::set<MeshModels::UID>>(0);
+    std::vector<std::set<MeshModelID>> node_to_mesh_models = std::vector<std::set<MeshModelID>>(0);
     std::vector<optix::Transform> mesh_models = std::vector<optix::Transform>(0);
     std::vector<optix::GeometryTriangles> meshes = std::vector<optix::GeometryTriangles>(0);
 
@@ -242,7 +242,7 @@ struct Renderer::Implementation {
 
     struct {
         Core::Array<unsigned int> ID_to_index;
-        Core::Array<LightSources::UID> index_to_ID;
+        Core::Array<LightSourceID> index_to_ID;
         optix::Buffer sources;
         unsigned int count;
 
@@ -250,7 +250,7 @@ struct Renderer::Implementation {
         optix::Geometry area_lights_geometry;
     } lights;
 
-    Implementation(int cuda_device_ID, int width_hint, int height_hint, const std::filesystem::path& data_directory, Renderers::UID renderer_ID) {
+    Implementation(int cuda_device_ID, int width_hint, int height_hint, const std::filesystem::path& data_directory, RendererID renderer_ID) {
 
 #pragma warning(disable : 4302 4311)
 
@@ -519,7 +519,7 @@ struct Renderer::Implementation {
         bool should_reset_accumulations = false;
 
         { // Camera updates.
-            for (Cameras::UID cam_ID : Cameras::get_changed_cameras()) {
+            for (CameraID cam_ID : Cameras::get_changed_cameras()) {
                 auto camera_changes = Cameras::get_changes(cam_ID);
                 if (camera_changes & Cameras::Change::Destroyed) {
                     if (cam_ID < per_camera_state.size())
@@ -558,7 +558,7 @@ struct Renderer::Implementation {
         }
 
         { // Mesh updates.
-            for (Meshes::UID mesh_ID : Meshes::get_changed_meshes()) {
+            for (MeshID mesh_ID : Meshes::get_changed_meshes()) {
                 // Destroy a destroyed mesh or a previous one where a new one has been created.
                 if (Meshes::get_changes(mesh_ID).any_set(Meshes::Change::Created, Meshes::Change::Destroyed)) {
                     if (mesh_ID < meshes.size() && meshes[mesh_ID]) {
@@ -585,7 +585,7 @@ struct Renderer::Implementation {
                 if (images.size() < Images::capacity())
                     images.resize(Images::capacity());
 
-                for (Images::UID image_ID : Images::get_changed_images()) {
+                for (ImageID image_ID : Images::get_changed_images()) {
                     Image image = image_ID;
                     if (Images::get_changes(image_ID) & Images::Change::Destroyed) {
                         if (images[image_ID]) {
@@ -637,7 +637,7 @@ struct Renderer::Implementation {
             if (!Textures::get_changed_textures().is_empty()) {
                 textures.resize(Textures::capacity());
 
-                for (Textures::UID texture_ID : Textures::get_changed_textures()) {
+                for (TextureID texture_ID : Textures::get_changed_textures()) {
                     // Destroy a destroyed texture or a previous one where a new one has been created.
                     if (Textures::get_changes(texture_ID).any_set(Textures::Change::Destroyed, Textures::Change::Created)) {
                         if (textures[texture_ID]) {
@@ -663,7 +663,7 @@ struct Renderer::Implementation {
                         texture->setWrapMode(1, convert_wrap_mode(Textures::get_wrapmode_V(texture_ID)));
                         texture->setWrapMode(2, convert_wrap_mode(Textures::get_wrapmode_W(texture_ID)));
                         texture->setIndexingMode(RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
-                        Images::UID image_ID = Textures::get_image_ID(texture_ID);
+                        ImageID image_ID = Textures::get_image_ID(texture_ID);
                         if (Images::get_gamma(image_ID) == 1.0f)
                             texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT); // Image is in linear color space.
                         else
@@ -682,7 +682,7 @@ struct Renderer::Implementation {
         }
 
         { // Material updates.
-            static auto upload_material = [](Materials::UID material_ID, OptiXRenderer::Material* device_materials, 
+            static auto upload_material = [](MaterialID material_ID, OptiXRenderer::Material* device_materials, 
                                              optix::TextureSampler* samplers, Buffer* images) {
                 OptiXRenderer::Material& device_material = device_materials[material_ID];
                 Assets::Material host_material = material_ID;
@@ -691,7 +691,7 @@ struct Renderer::Implementation {
                 device_material.tint = to_float3(host_material.get_tint());
                 if (host_material.has_tint_texture()) {
                     // Validate that the image has 4 channels! Otherwise OptiX goes boom boom.
-                    Textures::UID texture_ID = host_material.get_tint_roughness_texture_ID();
+                    TextureID texture_ID = host_material.get_tint_roughness_texture_ID();
                     RTformat pixel_format = images[Textures::get_image_ID(texture_ID)]->getFormat();
                     assert(pixel_format == RT_FORMAT_UNSIGNED_BYTE4 || pixel_format == RT_FORMAT_FLOAT4);
                     device_material.tint_roughness_texture_ID = samplers[texture_ID]->getId();
@@ -702,7 +702,7 @@ struct Renderer::Implementation {
                 // Only set a roughness texture if the tint texture is not set and the material has a roughness texture.
                 if (device_material.tint_roughness_texture_ID == 0 && host_material.has_roughness_texture()) {
                     // Validate that the image has 1 channel! Otherwise OptiX goes boom boom.
-                    Textures::UID texture_ID = host_material.get_tint_roughness_texture_ID();
+                    TextureID texture_ID = host_material.get_tint_roughness_texture_ID();
                     RTformat pixel_format = images[Textures::get_image_ID(texture_ID)]->getFormat();
                     assert(pixel_format == RT_FORMAT_UNSIGNED_BYTE || pixel_format == RT_FORMAT_FLOAT);
                     device_material.roughness_texture_ID = samplers[texture_ID]->getId();
@@ -713,9 +713,9 @@ struct Renderer::Implementation {
                 device_material.specularity = host_material.get_specularity();
 
                 device_material.metallic = host_material.get_metallic();
-                if (host_material.get_metallic_texture_ID() != Textures::UID::invalid_UID()) {
+                if (host_material.get_metallic_texture_ID() != TextureID::invalid_UID()) {
                     // Validate that the image has 1 channel! Otherwise OptiX goes boom boom.
-                    Textures::UID texture_ID = host_material.get_metallic_texture_ID();
+                    TextureID texture_ID = host_material.get_metallic_texture_ID();
                     RTformat pixel_format = images[Textures::get_image_ID(texture_ID)]->getFormat();
                     assert(pixel_format == RT_FORMAT_UNSIGNED_BYTE || pixel_format == RT_FORMAT_FLOAT);
                     device_material.metallic_texture_ID = samplers[texture_ID]->getId();
@@ -727,9 +727,9 @@ struct Renderer::Implementation {
                 device_material.coat_roughness = host_material.get_coat_roughness();
 
                 device_material.coverage = host_material.get_coverage();
-                if (host_material.get_coverage_texture_ID() != Textures::UID::invalid_UID()) {
+                if (host_material.get_coverage_texture_ID() != TextureID::invalid_UID()) {
                     // Validate that the image has 1 channel! Otherwise OptiX goes boom boom.
-                    Textures::UID texture_ID = host_material.get_coverage_texture_ID();
+                    TextureID texture_ID = host_material.get_coverage_texture_ID();
                     RTformat pixel_format = images[Textures::get_image_ID(texture_ID)]->getFormat();
                     assert(pixel_format == RT_FORMAT_UNSIGNED_BYTE || pixel_format == RT_FORMAT_FLOAT);
                     device_material.coverage_texture_ID = samplers[texture_ID]->getId();
@@ -744,14 +744,14 @@ struct Renderer::Implementation {
                     material_parameters->setSize(active_material_count);
 
                     OptiXRenderer::Material* device_materials = (OptiXRenderer::Material*)material_parameters->map();
-                    upload_material(Materials::UID::invalid_UID(), device_materials, textures.data(), images.data()); // Upload invalid material params as well.
-                    for (Materials::UID material_ID : Materials::get_iterable())
+                    upload_material(MaterialID::invalid_UID(), device_materials, textures.data(), images.data()); // Upload invalid material params as well.
+                    for (MaterialID material_ID : Materials::get_iterable())
                         upload_material(material_ID, device_materials, textures.data(), images.data());
                     material_parameters->unmap();
                 } else {
                     // Update new and changed materials. Just ignore destroyed ones.
                     OptiXRenderer::Material* device_materials = (OptiXRenderer::Material*)material_parameters->map();
-                    for (Materials::UID material_ID : Materials::get_changed_materials())
+                    for (MaterialID material_ID : Materials::get_changed_materials())
                         if (!Materials::get_changes(material_ID).is_set(Materials::Change::Destroyed)) {
                             upload_material(material_ID, device_materials, textures.data(), images.data());
                             should_reset_accumulations = true;
@@ -764,7 +764,7 @@ struct Renderer::Implementation {
         { // Light updates.
             if (!LightSources::get_changed_lights().is_empty()) {
                 // Light creation helper method.
-                static auto light_creation = [](LightSources::UID light_ID, unsigned int light_index, Light* device_lights,
+                static auto light_creation = [](LightSourceID light_ID, unsigned int light_index, Light* device_lights,
                     int& highest_area_light_index_updated) {
 
                     Light& device_light = device_lights[light_index];
@@ -825,7 +825,7 @@ struct Renderer::Implementation {
                     // Resizing removes old data, so this as an opportunity to linearize the light data.
                     Light* device_lights = (Light*)lights.sources->map();
                     unsigned int light_index = 0;
-                    for (LightSources::UID light_ID : LightSources::get_iterable()) {
+                    for (LightSourceID light_ID : LightSources::get_iterable()) {
                         lights.ID_to_index[light_ID] = light_index;
                         lights.index_to_ID[light_index] = light_ID;
 
@@ -852,7 +852,7 @@ struct Renderer::Implementation {
                     Light* device_lights = (Light*)lights.sources->map();
 
                     // First process destroyed lights to ensure that we don't allocate lights and then afterwards adds holes to the light array.
-                    for (LightSources::UID light_ID : LightSources::get_changed_lights()) {
+                    for (LightSourceID light_ID : LightSources::get_changed_lights()) {
                         if (!destroy_light(LightSources::get_changes(light_ID)))
                             continue;
 
@@ -872,7 +872,7 @@ struct Renderer::Implementation {
                     }
 
                     // Then update or create the rest of the light sources.
-                    for (LightSources::UID light_ID : LightSources::get_changed_lights()) {
+                    for (LightSourceID light_ID : LightSources::get_changed_lights()) {
                         auto light_changes = LightSources::get_changes(light_ID);
                         if (destroy_light(light_changes))
                             continue;
@@ -921,7 +921,7 @@ struct Renderer::Implementation {
 
         { // Transform updates.
             bool transform_changed = false;
-            for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
+            for (SceneNodeID node_ID : SceneNodes::get_changed_nodes()) {
                 // We're only interested in changes in the transforms that are connected to renderables, such as meshes.
                 if (node_ID < node_to_mesh_models.size()) {
                     // Clear the set mesh models associated with this scene node on destruction and creation.
@@ -955,7 +955,7 @@ struct Renderer::Implementation {
         { // Model updates.
             bool models_changed = false;
             for (MeshModel model : MeshModels::get_changed_models()) {
-                MeshModels::UID mesh_model_index = model.get_ID();
+                MeshModelID mesh_model_index = model.get_ID();
                 unsigned int transform_index = model.get_scene_node().get_ID();
 
                 auto destroy_mesh_model = [&](unsigned int mesh_model_index) {
@@ -1042,7 +1042,7 @@ struct Renderer::Implementation {
                 }
 
                 if (scene_data.get_changes().any_set(SceneRoots::Change::EnvironmentMap, SceneRoots::Change::Created)) {
-                    Textures::UID environment_map_ID = scene_data.get_environment_map();
+                    TextureID environment_map_ID = scene_data.get_environment_map();
                     if (environment_map_ID != scene.environment.get_environment_map_ID()) {
                         Image image = Textures::get_image_ID(environment_map_ID);
                         // Only textures with four channels are supported.
@@ -1093,7 +1093,7 @@ struct Renderer::Implementation {
                 camera_state.accumulations = 0u;
     }
 
-    inline CameraStateGPU prepare_camera_state(Bifrost::Scene::Cameras::UID camera_ID, int width, int height) {
+    inline CameraStateGPU prepare_camera_state(Bifrost::Scene::CameraID camera_ID, int width, int height) {
         auto& camera_state = per_camera_state[camera_ID];
         CameraStateGPU camera_state_GPU = {};
 
@@ -1133,7 +1133,7 @@ struct Renderer::Implementation {
         return camera_state_GPU;
     }
 
-    unsigned int render(Bifrost::Scene::Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
+    unsigned int render(Bifrost::Scene::CameraID camera_ID, optix::Buffer buffer, int width, int height) {
         CameraStateGPU camera_state_GPU = prepare_camera_state(camera_ID, width, height);
         camera_state_GPU.output_buffer = buffer->getId();
 
@@ -1150,7 +1150,7 @@ struct Renderer::Implementation {
         return camera_state.accumulations;
     }
 
-    std::vector<Screenshot> request_auxiliary_buffers(Cameras::UID camera_ID, Cameras::ScreenshotContent content_requested, int width, int height) {
+    std::vector<Screenshot> request_auxiliary_buffers(CameraID camera_ID, Cameras::ScreenshotContent content_requested, int width, int height) {
         const Cameras::ScreenshotContent supported_content = { Screenshot::Content::Depth, Screenshot::Content::Albedo, Screenshot::Content::Tint, Screenshot::Content::Roughness };
         if ((content_requested & supported_content) == Screenshot::Content::None)
             return std::vector<Screenshot>();
@@ -1244,7 +1244,7 @@ struct Renderer::Implementation {
 // Renderer
 // ------------------------------------------------------------------------------------------------
 
-Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hint, const std::filesystem::path& data_directory, Renderers::UID renderer_ID) {
+Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hint, const std::filesystem::path& data_directory, RendererID renderer_ID) {
     try {
         Renderer* r = new Renderer(cuda_device_ID, width_hint, height_hint, data_directory, renderer_ID);
         if (r->m_impl->is_valid())
@@ -1259,38 +1259,38 @@ Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hi
     }
 }
 
-Renderer::Renderer(int cuda_device_ID, int width_hint, int height_hint, const std::filesystem::path& data_directory, Renderers::UID renderer_ID)
+Renderer::Renderer(int cuda_device_ID, int width_hint, int height_hint, const std::filesystem::path& data_directory, RendererID renderer_ID)
     : m_impl(new Implementation(cuda_device_ID, width_hint, height_hint, data_directory, renderer_ID)) {}
 
-float Renderer::get_scene_epsilon(Bifrost::Scene::SceneRoots::UID scene_root_ID) const { return m_impl->scene.GPU_state.ray_epsilon; }
-void Renderer::set_scene_epsilon(Bifrost::Scene::SceneRoots::UID scene_root_ID, float scene_epsilon) {
+float Renderer::get_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID) const { return m_impl->scene.GPU_state.ray_epsilon; }
+void Renderer::set_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID, float scene_epsilon) {
     m_impl->scene.GPU_state.ray_epsilon = scene_epsilon;
 }
 
-unsigned int Renderer::get_max_bounce_count(Cameras::UID camera_ID) const { 
+unsigned int Renderer::get_max_bounce_count(CameraID camera_ID) const { 
     m_impl->conditional_per_camera_state_resize(camera_ID);
     return m_impl->per_camera_state[camera_ID].max_bounce_count;
 }
-void Renderer::set_max_bounce_count(Cameras::UID camera_ID, unsigned int bounce_count) {
+void Renderer::set_max_bounce_count(CameraID camera_ID, unsigned int bounce_count) {
     m_impl->conditional_per_camera_state_resize(camera_ID);
     m_impl->per_camera_state[camera_ID].max_bounce_count = bounce_count;
 }
 
-unsigned int Renderer::get_max_accumulation_count(Cameras::UID camera_ID) const {
+unsigned int Renderer::get_max_accumulation_count(CameraID camera_ID) const {
     m_impl->conditional_per_camera_state_resize(camera_ID);
     return m_impl->per_camera_state[camera_ID].max_accumulation_count;
 }
-void Renderer::set_max_accumulation_count(Cameras::UID camera_ID, unsigned int accumulation_count) {
+void Renderer::set_max_accumulation_count(CameraID camera_ID, unsigned int accumulation_count) {
     m_impl->conditional_per_camera_state_resize(camera_ID); 
     m_impl->per_camera_state[camera_ID].max_accumulation_count = accumulation_count;
 }
 
-Backend Renderer::get_backend(Cameras::UID camera_ID) const {
+Backend Renderer::get_backend(CameraID camera_ID) const {
     m_impl->conditional_per_camera_state_resize(camera_ID);
     return m_impl->per_camera_state[camera_ID].backend;
 }
 
-void Renderer::set_backend(Cameras::UID camera_ID, Backend backend) {
+void Renderer::set_backend(CameraID camera_ID, Backend backend) {
     if (backend == Backend::None)
         return;
 
@@ -1332,11 +1332,11 @@ void Renderer::set_AI_denoiser_flags(AIDenoiserFlags flags) { m_impl->AI_denoise
 
 void Renderer::handle_updates() { m_impl->handle_updates(); }
 
-unsigned int Renderer::render(Cameras::UID camera_ID, optix::Buffer buffer, int width, int height) {
+unsigned int Renderer::render(CameraID camera_ID, optix::Buffer buffer, int width, int height) {
     return m_impl->render(camera_ID, buffer, width, height);
 }
 
-std::vector<Screenshot> Renderer::request_auxiliary_buffers(Cameras::UID camera_ID, Cameras::ScreenshotContent content_requested, int width, int height) {
+std::vector<Screenshot> Renderer::request_auxiliary_buffers(CameraID camera_ID, Cameras::ScreenshotContent content_requested, int width, int height) {
     return m_impl->request_auxiliary_buffers(camera_ID, content_requested, width, height);
 }
 

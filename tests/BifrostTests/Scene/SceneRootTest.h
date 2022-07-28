@@ -36,10 +36,10 @@ GTEST_TEST(Scene_SceneRoot, resizing) {
 GTEST_TEST(Scene_SceneRoot, sentinel_scene) {
     SceneRoots::allocate(1u);
 
-    SceneRoot sentinel = SceneRoots::UID::invalid_UID();
+    SceneRoot sentinel = SceneRootID::invalid_UID();
 
     EXPECT_EQ(Math::RGB::black(), sentinel.get_environment_tint());
-    EXPECT_EQ(Assets::Textures::UID::invalid_UID(), sentinel.get_environment_map());
+    EXPECT_EQ(Assets::TextureID::invalid_UID(), sentinel.get_environment_map());
 
     SceneRoots::deallocate();
 }
@@ -47,13 +47,13 @@ GTEST_TEST(Scene_SceneRoot, sentinel_scene) {
 GTEST_TEST(Scene_SceneRoot, create) {
     SceneNodes::allocate(1u);
     SceneRoots::allocate(1u);
-    
-    SceneRoots::UID scene_ID = SceneRoots::create("Foo", Math::RGB::blue());
+
+    SceneRootID scene_ID = SceneRoots::create("Foo", Math::RGB::blue());
     EXPECT_TRUE(SceneRoots::has(scene_ID));
-    
+
     EXPECT_EQ("Foo", SceneRoots::get_name(scene_ID));
     EXPECT_EQ(Math::RGB::blue(), SceneRoots::get_environment_tint(scene_ID));
-    EXPECT_EQ(Assets::Textures::UID::invalid_UID(), SceneRoots::get_environment_map(scene_ID));
+    EXPECT_EQ(Assets::TextureID::invalid_UID(), SceneRoots::get_environment_map(scene_ID));
 
     // Test scene root created notification.
     Core::Iterable<SceneRoots::ChangedIterator> changed_scenes = SceneRoots::get_changed_scenes();
@@ -90,8 +90,8 @@ GTEST_TEST(Scene_SceneRoot, create_and_destroy_notifications) {
     SceneNodes::allocate(2u);
     SceneRoots::allocate(2u);
 
-    SceneRoots::UID scene_ID0 = SceneRoots::create("Foo", Math::RGB::blue());
-    SceneRoots::UID scene_ID1 = SceneRoots::create("Bar", Math::RGB::blue());
+    SceneRootID scene_ID0 = SceneRoots::create("Foo", Math::RGB::blue());
+    SceneRootID scene_ID1 = SceneRoots::create("Bar", Math::RGB::blue());
     EXPECT_TRUE(SceneRoots::has(scene_ID0));
     EXPECT_TRUE(SceneRoots::has(scene_ID1));
 
@@ -101,7 +101,7 @@ GTEST_TEST(Scene_SceneRoot, create_and_destroy_notifications) {
 
         bool scene0_created = false;
         bool scene1_created = false;
-        for (const SceneRoots::UID scene_ID : changed_scenes) {
+        for (const SceneRootID scene_ID : changed_scenes) {
             bool scene_created = SceneRoots::get_changes(scene_ID) == SceneRoots::Change::Created;
             scene0_created |= scene_ID == scene_ID0 && scene_created;
             scene1_created |= scene_ID == scene_ID1 && scene_created;
@@ -162,7 +162,7 @@ GTEST_TEST(Scene_SceneRoot, update_notifications) {
     { // Environment map change notification.
         Assets::Textures::allocate(2u);
 
-        Assets::Textures::UID map = Assets::Textures::create2D(Assets::Images::UID::invalid_UID());
+        Assets::TextureID map = Assets::Textures::create2D(Assets::ImageID::invalid_UID());
 
         scene.set_environment_map(map);
 

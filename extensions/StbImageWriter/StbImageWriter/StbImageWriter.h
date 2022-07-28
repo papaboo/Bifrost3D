@@ -22,7 +22,7 @@ namespace StbImageWriter {
 // -----------------------------------------------------------------------
 bool write(Bifrost::Assets::Image image, const std::string& filename);
 
-inline bool write(Bifrost::Assets::Images::UID imageID, const std::string& filename) {
+inline bool write(Bifrost::Assets::ImageID imageID, const std::string& filename) {
     return write(Bifrost::Assets::Image(imageID), filename);
 }
 

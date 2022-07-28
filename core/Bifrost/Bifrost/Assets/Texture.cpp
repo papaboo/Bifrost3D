@@ -16,22 +16,22 @@ using namespace Bifrost::Math;
 namespace Bifrost {
 namespace Assets {
 
-Textures::UIDGenerator Textures::m_UID_generator = UIDGenerator(0u);
+TextureIDGenerator Textures::m_UID_generator = TextureIDGenerator(0u);
 Textures::Sampler* Textures::m_samplers = nullptr;
-Core::ChangeSet<Textures::Changes, Textures::UID> Textures::m_changes;
+Core::ChangeSet<Textures::Changes, TextureID> Textures::m_changes;
 
 void Textures::allocate(unsigned int capacity) {
     if (is_allocated())
         return;
 
-    m_UID_generator = UIDGenerator(capacity);
+    m_UID_generator = TextureIDGenerator(capacity);
     capacity = m_UID_generator.capacity();
 
     m_samplers = new Sampler[capacity];
-    m_changes = Core::ChangeSet<Changes, UID>(capacity);
+    m_changes = Core::ChangeSet<Changes, TextureID>(capacity);
 
     // Allocate dummy element at 0.
-    m_samplers[0].image_ID = Images::UID::invalid_UID();
+    m_samplers[0].image_ID = ImageID::invalid_UID();
     m_samplers[0].type = Type::OneD;
     m_samplers[0].magnification_filter = MagnificationFilter::None;
     m_samplers[0].minification_filter = MinificationFilter::None;
@@ -44,7 +44,7 @@ void Textures::deallocate() {
     if (!is_allocated())
         return;
 
-    m_UID_generator = UIDGenerator(0u);
+    m_UID_generator = TextureIDGenerator(0u);
     delete[] m_samplers; m_samplers = nullptr;
     m_changes.resize(0);
 }
@@ -71,14 +71,14 @@ void Textures::reserve(unsigned int new_capacity) {
     reserve_image_data(m_UID_generator.capacity(), old_capacity);
 }
 
-Textures::UID Textures::create2D(Images::UID image_ID, MagnificationFilter magnification_filter, MinificationFilter minification_filter, WrapMode wrapmode_U, WrapMode wrapmode_V) {
+TextureID Textures::create2D(ImageID image_ID, MagnificationFilter magnification_filter, MinificationFilter minification_filter, WrapMode wrapmode_U, WrapMode wrapmode_V) {
     assert(m_samplers != nullptr);
 
     if (!Images::has(image_ID))
-        return Textures::UID::invalid_UID();
+        return TextureID::invalid_UID();
 
     unsigned int old_capacity = m_UID_generator.capacity();
-    UID id = m_UID_generator.generate();
+    TextureID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_image_data(m_UID_generator.capacity(), old_capacity);
@@ -95,7 +95,7 @@ Textures::UID Textures::create2D(Images::UID image_ID, MagnificationFilter magni
     return id;
 }
 
-void Textures::destroy(Textures::UID texture_ID) {
+void Textures::destroy(TextureID texture_ID) {
     if (m_UID_generator.erase(texture_ID))
         m_changes.add_change(texture_ID, Change::Destroyed);
 }
@@ -104,7 +104,7 @@ void Textures::destroy(Textures::UID texture_ID) {
 // Sampling functions.
 //-----------------------------------------------------------------------------
 
-Math::RGBA sample2D(Textures::UID texture_ID, Vector2f texcoord, int mipmap_level) {
+Math::RGBA sample2D(TextureID texture_ID, Vector2f texcoord, int mipmap_level) {
     Texture texture = texture_ID;
 
     { // Modify tex coord based on wrap mode.

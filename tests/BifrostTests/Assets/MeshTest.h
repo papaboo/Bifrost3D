@@ -43,7 +43,7 @@ TEST_F(Assets_Mesh, resizing) {
 }
 
 TEST_F(Assets_Mesh, sentinel_mesh) {
-    Meshes::UID sentinel_ID = Meshes::UID::invalid_UID();
+    MeshID sentinel_ID = MeshID::invalid_UID();
 
     EXPECT_FALSE(Meshes::has(sentinel_ID));
     EXPECT_EQ(0u, Meshes::get_primitive_count(sentinel_ID));
@@ -58,7 +58,7 @@ TEST_F(Assets_Mesh, sentinel_mesh) {
 }
 
 TEST_F(Assets_Mesh, create) {
-    Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
+    MeshID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
 
     EXPECT_TRUE(Meshes::has(mesh_ID));
     EXPECT_EQ(32u, Meshes::get_primitive_count(mesh_ID));
@@ -77,7 +77,7 @@ TEST_F(Assets_Mesh, create) {
 }
 
 TEST_F(Assets_Mesh, create_only_positions) {
-    Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u, MeshFlag::Position);
+    MeshID mesh_ID = Meshes::create("TestMesh", 32u, 16u, MeshFlag::Position);
 
     EXPECT_TRUE(Meshes::has(mesh_ID));
     EXPECT_EQ(32u, Meshes::get_primitive_count(mesh_ID));
@@ -95,7 +95,7 @@ TEST_F(Assets_Mesh, create_only_positions) {
 }
 
 TEST_F(Assets_Mesh, destroy) {
-    Meshes::UID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
+    MeshID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
     EXPECT_TRUE(Meshes::has(mesh_ID));
 
     Meshes::reset_change_notifications();
@@ -111,8 +111,8 @@ TEST_F(Assets_Mesh, destroy) {
 }
 
 TEST_F(Assets_Mesh, create_and_destroy_notifications) {
-    Meshes::UID mesh_ID0 = Meshes::create("TestMesh0", 32u, 16u);
-    Meshes::UID mesh_ID1 = Meshes::create("TestMesh1", 32u, 16u);
+    MeshID mesh_ID0 = Meshes::create("TestMesh0", 32u, 16u);
+    MeshID mesh_ID1 = Meshes::create("TestMesh1", 32u, 16u);
     EXPECT_TRUE(Meshes::has(mesh_ID0));
     EXPECT_TRUE(Meshes::has(mesh_ID1));
 
@@ -123,7 +123,7 @@ TEST_F(Assets_Mesh, create_and_destroy_notifications) {
         bool mesh0_created = false;
         bool mesh1_created = false;
         bool other_changes = false;
-        for (const Meshes::UID mesh_ID : changed_meshes) {
+        for (const MeshID mesh_ID : changed_meshes) {
             bool mesh_created = Meshes::get_changes(mesh_ID) == Meshes::Change::Created;
             if (mesh_ID == mesh_ID0 && mesh_created)
                 mesh0_created = true;
@@ -149,7 +149,7 @@ TEST_F(Assets_Mesh, create_and_destroy_notifications) {
 
         bool mesh0_destroyed = false;
         bool other_changes = false;
-        for (const Meshes::UID mesh_ID : changed_meshes) {
+        for (const MeshID mesh_ID : changed_meshes) {
             if (mesh_ID == mesh_ID0 && Meshes::get_changes(mesh_ID) == Meshes::Change::Destroyed)
                 mesh0_destroyed = true;
             else
@@ -172,19 +172,19 @@ TEST_F(Assets_Mesh, create_and_destroy_notifications) {
 }
 
 TEST_F(Assets_Mesh, normals_correspond_to_winding_order) {
-    Meshes::UID plane_ID = MeshCreation::plane(3);
+    MeshID plane_ID = MeshCreation::plane(3);
     EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(plane_ID));
     EXPECT_EQ(0, MeshTests::count_degenerate_primitives(plane_ID, 0.000001f));
 
-    Meshes::UID cube_ID = MeshCreation::cube(3);
+    MeshID cube_ID = MeshCreation::cube(3);
     EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(cube_ID));
     EXPECT_EQ(0, MeshTests::count_degenerate_primitives(cube_ID, 0.000001f));
 
-    Meshes::UID cylinder_ID = MeshCreation::cylinder(3, 3);
+    MeshID cylinder_ID = MeshCreation::cylinder(3, 3);
     EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(cylinder_ID));
     EXPECT_EQ(0, MeshTests::count_degenerate_primitives(cylinder_ID, 0.000001f));
 
-    Meshes::UID revolved_sphere_ID = MeshCreation::revolved_sphere(3, 3);
+    MeshID revolved_sphere_ID = MeshCreation::revolved_sphere(3, 3);
     EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(revolved_sphere_ID));
     EXPECT_EQ(0, MeshTests::count_degenerate_primitives(revolved_sphere_ID, 0.000001f));
 }

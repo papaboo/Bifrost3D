@@ -21,12 +21,19 @@
 namespace Bifrost {
 namespace Scene {
 
+//----------------------------------------------------------------------------
+// Scene root ID
+//----------------------------------------------------------------------------
+class SceneRoots;
+typedef Core::TypedUIDGenerator<SceneRoots> SceneRootIDGenerator;
+typedef SceneRootIDGenerator::UID SceneRootID;
+
 // ------------------------------------------------------------------------------------------------
 // The scene root contains the root scene node and scene specific properties,
 // such as the environment map and tint.
 // Future work
 // * Environment projection modes: infinite sphere, camera X m above the earth, cube, sphere, ...
-// * Do we need to store SceneRoots::UIDs of the owning scene in the scene nodes?
+// * Do we need to store SceneRootIDs of the owning scene in the scene nodes?
 //   Wait until we have multi scene support to add it.
 // * IBL generation using a GGX kernel and 
 //   http://http.developer.nvidia.com/GPUGems3/gpugems3_ch20.html.
@@ -35,9 +42,7 @@ namespace Scene {
 // ------------------------------------------------------------------------------------------------
 class SceneRoots final {
 public:
-    typedef Core::TypedUIDGenerator<SceneRoots> UIDGenerator;
-    typedef UIDGenerator::UID UID;
-    typedef UIDGenerator::ConstIterator ConstUIDIterator;
+    using Iterator = SceneRootIDGenerator::ConstIterator;
 
     static bool is_allocated() { return m_scenes != nullptr; }
     static void allocate(unsigned int capacity);
@@ -45,28 +50,28 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(SceneRoots::UID scene_ID) { return m_UID_generator.has(scene_ID); }
+    static bool has(SceneRootID scene_ID) { return m_UID_generator.has(scene_ID); }
 
-    static SceneRoots::UID create(const std::string& name, Assets::Textures::UID environment_map, Math::RGB environment_tint = Math::RGB::white());
-    static SceneRoots::UID create(const std::string& name, Math::RGB environment_tint) {
-        return create(name, Assets::Textures::UID::invalid_UID(), environment_tint);
+    static SceneRootID create(const std::string& name, Assets::TextureID environment_map, Math::RGB environment_tint = Math::RGB::white());
+    static SceneRootID create(const std::string& name, Math::RGB environment_tint) {
+        return create(name, Assets::TextureID::invalid_UID(), environment_tint);
     }
-    static void destroy(SceneRoots::UID scene_ID);
+    static void destroy(SceneRootID scene_ID);
 
-    static ConstUIDIterator begin() { return m_UID_generator.begin(); }
-    static ConstUIDIterator end() { return m_UID_generator.end(); }
-    static Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
+    static Iterator begin() { return m_UID_generator.begin(); }
+    static Iterator end() { return m_UID_generator.end(); }
+    static Core::Iterable<Iterator> get_iterable() { return Core::Iterable<Iterator>(begin(), end()); }
 
-    static inline std::string get_name(SceneRoots::UID scene_ID) { return SceneNodes::get_name(m_scenes[scene_ID].root_node); }
-    static inline SceneNodes::UID get_root_node(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].root_node; }
-    static inline Math::RGB get_environment_tint(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].environment_tint; }
-    static void set_environment_tint(SceneRoots::UID scene_ID, Math::RGB tint);
-    static inline Assets::InfiniteAreaLight* get_environment_light(SceneRoots::UID scene_ID) { return m_scenes[scene_ID].environment_light; }
-    static inline Assets::Textures::UID get_environment_map(SceneRoots::UID scene_ID) { 
+    static inline std::string get_name(SceneRootID scene_ID) { return SceneNodes::get_name(m_scenes[scene_ID].root_node); }
+    static inline SceneNodeID get_root_node(SceneRootID scene_ID) { return m_scenes[scene_ID].root_node; }
+    static inline Math::RGB get_environment_tint(SceneRootID scene_ID) { return m_scenes[scene_ID].environment_tint; }
+    static void set_environment_tint(SceneRootID scene_ID, Math::RGB tint);
+    static inline Assets::InfiniteAreaLight* get_environment_light(SceneRootID scene_ID) { return m_scenes[scene_ID].environment_light; }
+    static inline Assets::TextureID get_environment_map(SceneRootID scene_ID) { 
         auto environment_light = m_scenes[scene_ID].environment_light;
-        return environment_light == nullptr ? Assets::Textures::UID::invalid_UID() : environment_light->get_texture_ID();
+        return environment_light == nullptr ? Assets::TextureID::invalid_UID() : environment_light->get_texture_ID();
     }
-    static void set_environment_map(SceneRoots::UID scene_ID, Assets::Textures::UID environment_map);
+    static void set_environment_map(SceneRootID scene_ID, Assets::TextureID environment_map);
 
     //---------------------------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -81,9 +86,9 @@ public:
     };
     typedef Core::Bitmask<Change> Changes;
 
-    static inline Changes get_changes(SceneRoots::UID scene_ID) { return m_changes.get_changes(scene_ID); }
+    static inline Changes get_changes(SceneRootID scene_ID) { return m_changes.get_changes(scene_ID); }
 
-    typedef std::vector<UID>::iterator ChangedIterator;
+    typedef std::vector<SceneRootID>::iterator ChangedIterator;
     static Core::Iterable<ChangedIterator> get_changed_scenes() { return m_changes.get_changed_resources(); }
 
     static void reset_change_notifications() { m_changes.reset_change_notifications(); }
@@ -91,17 +96,17 @@ private:
 
     static void reserve_scene_data(unsigned int new_capacity, unsigned int old_capacity);
 
-    static UIDGenerator m_UID_generator;
+    static SceneRootIDGenerator m_UID_generator;
 
     struct Scene {
-        SceneNodes::UID root_node;
+        SceneNodeID root_node;
         Math::RGB environment_tint;
         Assets::InfiniteAreaLight* environment_light;
     };
 
     static Scene* m_scenes;
 
-    static Core::ChangeSet<Changes, UID> m_changes;
+    static Core::ChangeSet<Changes, SceneRootID> m_changes;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -112,10 +117,10 @@ public:
     // --------------------------------------------------------------------------------------------
     // Constructors and destructors.
     // --------------------------------------------------------------------------------------------
-    SceneRoot() : m_ID(SceneRoots::UID::invalid_UID()) {}
-    SceneRoot(SceneRoots::UID id) : m_ID(id) {}
+    SceneRoot() : m_ID(SceneRootID::invalid_UID()) {}
+    SceneRoot(SceneRootID id) : m_ID(id) {}
 
-    inline const SceneRoots::UID get_ID() const { return m_ID; }
+    inline const SceneRootID get_ID() const { return m_ID; }
     inline bool exists() const { return SceneRoots::has(m_ID); }
 
     inline bool operator==(SceneRoot rhs) const { return m_ID == rhs.m_ID; }
@@ -125,11 +130,11 @@ public:
     // Getters and setters.
     //---------------------------------------------------------------------------------------------
     inline std::string get_name() const { return SceneRoots::get_name(m_ID); }
-    inline SceneNodes::UID get_root_node() const { return SceneRoots::get_root_node(m_ID); }
+    inline SceneNodeID get_root_node() const { return SceneRoots::get_root_node(m_ID); }
     inline Math::RGB get_environment_tint() const { return SceneRoots::get_environment_tint(m_ID); }
     inline void set_environment_tint(Math::RGB tint) { SceneRoots::set_environment_tint(m_ID, tint); }
-    inline Assets::Textures::UID get_environment_map() const { return SceneRoots::get_environment_map(m_ID); }
-    inline void set_environment_map(Assets::Textures::UID environment_map) { SceneRoots::set_environment_map(m_ID, environment_map); }
+    inline Assets::TextureID get_environment_map() const { return SceneRoots::get_environment_map(m_ID); }
+    inline void set_environment_map(Assets::TextureID environment_map) { SceneRoots::set_environment_map(m_ID, environment_map); }
     inline Assets::InfiniteAreaLight* get_environment_light() { return SceneRoots::get_environment_light(m_ID); }
 
     //---------------------------------------------------------------------------------------------
@@ -138,7 +143,7 @@ public:
     inline SceneRoots::Changes get_changes() const { return SceneRoots::get_changes(m_ID); }
 
 private:
-    SceneRoots::UID m_ID;
+    SceneRootID m_ID;
 };
 
 } // NS Scene

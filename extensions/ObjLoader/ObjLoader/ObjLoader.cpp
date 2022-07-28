@@ -48,7 +48,7 @@ void split_path(std::string& directory, std::string& filename, const std::string
     }
 }
 
-SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
+SceneNodeID load(const std::string& path, ImageLoader image_loader) {
     std::string directory, filename;
     split_path(directory, filename, path);
 
@@ -66,24 +66,24 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
         printf("ObjLoader::load error: '%s'.\n", error.c_str());
 
     if (!obj_loaded)
-        return SceneNodes::UID::invalid_UID();
+        return SceneNodeID::invalid_UID();
 
-    SceneNodes::UID root_ID = shapes.size() > 1u ? SceneNodes::create(std::string(filename.begin(), filename.end()-4)) : SceneNodes::UID::invalid_UID();
+    SceneNodeID root_ID = shapes.size() > 1u ? SceneNodes::create(std::string(filename.begin(), filename.end()-4)) : SceneNodeID::invalid_UID();
 
-    Core::Array<Materials::UID> materials = Core::Array<Materials::UID>(unsigned int(tiny_materials.size()));
+    Core::Array<MaterialID> materials = Core::Array<MaterialID>(unsigned int(tiny_materials.size()));
     for (int i = 0; i < int(tiny_materials.size()); ++i) {
         tinyobj::material_t tiny_mat = tiny_materials[i];
 
         Materials::Data material_data = {};
         material_data.flags = MaterialFlag::None;
         material_data.tint = RGB(tiny_mat.diffuse[0], tiny_mat.diffuse[1], tiny_mat.diffuse[2]);
-        material_data.tint_roughness_texture_ID = Textures::UID::invalid_UID();
+        material_data.tint_roughness_texture_ID = TextureID::invalid_UID();
         material_data.roughness = sqrt(2.0f / (tiny_mat.shininess + 2.0f)); // Map from blinn shininess to material roughness. See D_Blinn in https://github.com/EpicGames/UnrealEngine/blob/d94b38ae3446da52224bedd2568c078f828b4039/Engine/Shaders/Private/BRDF.ush
         bool is_metallic = tiny_mat.illum == 3 || tiny_mat.illum == 5;
         material_data.metallic = is_metallic ? 1.0f : 0.0f;
         material_data.specularity = (tiny_mat.specular[0] + tiny_mat.specular[1] + tiny_mat.specular[2]) / 3.0f;
         material_data.coverage = tiny_mat.dissolve;
-        material_data.coverage_texture_ID = Textures::UID::invalid_UID();
+        material_data.coverage_texture_ID = TextureID::invalid_UID();
         material_data.transmission = 0.0f; // (tiny_mat.transmittance[0] + tiny_mat.transmittance[1] + tiny_mat.transmittance[2]) / 3.0f;
 
         // Warn about completely transparent object. Happens from time to time and it's hell to debug a missing model.
@@ -91,8 +91,8 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
             printf("ObjLoader::load warning: Coverage set to %.3f. Material %s is completely transparent.\n", material_data.coverage, tiny_mat.name.c_str());
 
         if (!tiny_mat.alpha_texname.empty()) {
-            Images::UID image_ID = image_loader(directory + tiny_mat.alpha_texname);
-            if (image_ID == Images::UID::invalid_UID())
+            ImageID image_ID = image_loader(directory + tiny_mat.alpha_texname);
+            if (image_ID == ImageID::invalid_UID())
                 printf("ObjLoader::load error: Could not load image at '%s'.\n", (directory + tiny_mat.alpha_texname).c_str());
             else {
                 if (Images::get_pixel_format(image_ID) != PixelFormat::Alpha8)
@@ -107,7 +107,7 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
                 printf("ObjLoader::load error: Could not load image at '%s'.\n", (directory + tiny_mat.diffuse_texname).c_str());
             else {
                 // Use diffuse alpha for coverage, if no explicit coverage texture has been set.
-                if (channel_count(image.get_pixel_format()) == 4 && material_data.coverage_texture_ID == Textures::UID::invalid_UID()) {
+                if (channel_count(image.get_pixel_format()) == 4 && material_data.coverage_texture_ID == TextureID::invalid_UID()) {
                     unsigned int mipmap_count = image.get_mipmap_count();
                     Vector2ui size = Vector2ui(image.get_width(), image.get_height());
                     Image coverage_image = Images::create2D(image.get_name(), PixelFormat::Alpha8, image.get_gamma(), size, mipmap_count);
@@ -231,15 +231,15 @@ SceneNodes::UID load(const std::string& path, ImageLoader image_loader) {
 
         bifrost_mesh.compute_bounds();
 
-        SceneNodes::UID node_ID = SceneNodes::create(shape.name);
-        if (root_ID != SceneNodes::UID::invalid_UID())
+        SceneNodeID node_ID = SceneNodes::create(shape.name);
+        if (root_ID != SceneNodeID::invalid_UID())
             SceneNodes::set_parent(node_ID, root_ID);
         else
             root_ID = node_ID;
 
         int material_index = shape.mesh.material_ids[0]; // No per facet material support. TODO Add it in the future by splitting up the shape.
-        Materials::UID material_ID = material_index >= 0 ? materials[material_index] : Materials::UID::invalid_UID();
-        MeshModels::UID model_ID = MeshModels::create(node_ID, bifrost_mesh.get_ID(), material_ID);
+        MaterialID material_ID = material_index >= 0 ? materials[material_index] : MaterialID::invalid_UID();
+        MeshModelID model_ID = MeshModels::create(node_ID, bifrost_mesh.get_ID(), material_ID);
     }
 
     return root_ID;

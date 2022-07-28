@@ -346,7 +346,7 @@ int initialize(Engine& engine) {
     if (image.get_pixel_format() != PixelFormat::RGB_Float || image.get_gamma() != 1.0f)
         image.change_format(PixelFormat::RGB_Float, 1.0f);
 
-    Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
+    TextureID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
     std::unique_ptr<InfiniteAreaLight> infinite_area_light = nullptr;
     std::vector<LightSample> light_samples = std::vector<LightSample>();
     if (g_options.sample_method == ConvolutionType::Light || g_options.sample_method == ConvolutionType::MIS) {
@@ -392,7 +392,7 @@ int initialize(Engine& engine) {
         float roughness = r / (g_convoluted_images.size() - 1.0f);
         float alpha = roughness * roughness;
 
-        Textures::UID previous_roughness_tex_ID = Textures::UID::invalid_UID();
+        TextureID previous_roughness_tex_ID = TextureID::invalid_UID();
         if (is_recursive(g_options.sample_method)) {
             int prev_r = r - 1;
             previous_roughness_tex_ID = Textures::create2D(g_convoluted_images[prev_r].get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);

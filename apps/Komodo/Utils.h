@@ -93,7 +93,7 @@ inline void store_image(Bifrost::Assets::Image image, const std::string& path) {
 }
 
 // Create a red and white error image.
-inline Bifrost::Assets::Images::UID create_error_image() {
+inline Bifrost::Assets::ImageID create_error_image() {
     using namespace Bifrost::Assets;
 
     Image error_img = Images::create2D("No images loaded", PixelFormat::RGBA32, 2.2f, Bifrost::Math::Vector2ui(16, 16));

@@ -34,7 +34,7 @@ class LightManager {
 
 private:
     Array<unsigned int> m_ID_to_index;
-    Array<LightSources::UID> m_index_to_ID;
+    Array<LightSourceID> m_index_to_ID;
 
     struct LightBuffer {
         int active_count;
@@ -43,7 +43,7 @@ private:
     } m_data;
     OBuffer m_lights_buffer;
 
-    inline void light_creation(LightSources::UID light_ID, unsigned int light_index, Dx11Light* gpu_lights) {
+    inline void light_creation(LightSourceID light_ID, unsigned int light_index, Dx11Light* gpu_lights) {
 
         Dx11Light& gpu_light = gpu_lights[light_index];
         switch (LightSources::get_type(light_ID)) {
@@ -106,7 +106,7 @@ public:
     LightManager(ID3D11Device1& device, unsigned int initial_capacity) {
         initial_capacity = initial_capacity;
         m_ID_to_index = Array<unsigned int>(initial_capacity);
-        m_index_to_ID = Array<LightSources::UID>(initial_capacity);
+        m_index_to_ID = Array<LightSourceID>(initial_capacity);
         m_data.active_count = 0u;
 
         THROW_DX11_ERROR(create_constant_buffer(device, sizeof(LightBuffer), &m_lights_buffer));
@@ -128,7 +128,7 @@ public:
             // Resizing removes old data, so this as an opportunity to linearize the light data.
             Dx11Light* gpu_lights = m_data.lights;
             unsigned int light_index = 0;
-            for (LightSources::UID light_ID : LightSources::get_iterable()) {
+            for (LightSourceID light_ID : LightSources::get_iterable()) {
                 m_ID_to_index[light_ID] = light_index;
                 m_index_to_ID[light_index] = light_ID;
 
@@ -146,7 +146,7 @@ public:
             };
 
             // First process destroyed lights to ensure that we don't allocate lights and then afterwards adds holes to the light array.
-            for (LightSources::UID light_ID : LightSources::get_changed_lights()) {
+            for (LightSourceID light_ID : LightSources::get_changed_lights()) {
                 if (!destroy_light(LightSources::get_changes(light_ID)))
                     continue;
 
@@ -163,7 +163,7 @@ public:
             }
 
             // Then update or create the rest of the light sources.
-            for (LightSources::UID light_ID : LightSources::get_changed_lights()) {
+            for (LightSourceID light_ID : LightSources::get_changed_lights()) {
                 auto light_changes = LightSources::get_changes(light_ID);
                 if (destroy_light(light_changes))
                     continue;

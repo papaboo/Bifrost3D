@@ -17,24 +17,24 @@ using namespace Bifrost::Math;
 namespace Bifrost {
 namespace Assets {
 
-Meshes::UIDGenerator Meshes::m_UID_generator = UIDGenerator(0u);
+MeshIDGenerator Meshes::m_UID_generator = MeshIDGenerator(0u);
 std::string* Meshes::m_names = nullptr;
 Meshes::Buffers* Meshes::m_buffers = nullptr;
 AABB* Meshes::m_bounds = nullptr;
 
-Core::ChangeSet<Meshes::Changes, Meshes::UID> Meshes::m_changes;
+Core::ChangeSet<Meshes::Changes, MeshID> Meshes::m_changes;
 
 void Meshes::allocate(unsigned int capacity) {
     if (is_allocated())
         return;
 
-    m_UID_generator = UIDGenerator(capacity);
+    m_UID_generator = MeshIDGenerator(capacity);
     capacity = m_UID_generator.capacity();
 
     m_names = new std::string[capacity];
     m_buffers = new Buffers[capacity];
     m_bounds = new AABB[capacity];
-    m_changes = Core::ChangeSet<Changes, UID>(capacity);
+    m_changes = Core::ChangeSet<Changes, MeshID>(capacity);
 
     // Allocate dummy element at 0.
     m_names[0] = "Dummy Node";
@@ -47,7 +47,7 @@ void Meshes::deallocate() {
     if (!is_allocated())
         return;
 
-    for (UID id : m_UID_generator) {
+    for (MeshID id : m_UID_generator) {
         Buffers& buffers = m_buffers[id];
         delete[] buffers.primitives;
         delete[] buffers.positions;
@@ -60,7 +60,7 @@ void Meshes::deallocate() {
     
     m_changes.resize(0);
 
-    m_UID_generator = UIDGenerator(0u);
+    m_UID_generator = MeshIDGenerator(0u);
 }
 
 template <typename T>
@@ -89,13 +89,13 @@ void Meshes::reserve(unsigned int new_capacity) {
     reserve_mesh_data(m_UID_generator.capacity(), old_capacity);
 }
 
-Meshes::UID Meshes::create(const std::string& name, unsigned int primitive_count, unsigned int vertex_count, MeshFlags buffer_bitmask) {
+MeshID Meshes::create(const std::string& name, unsigned int primitive_count, unsigned int vertex_count, MeshFlags buffer_bitmask) {
     assert(m_buffers != nullptr);
     assert(m_names != nullptr);
     assert(m_bounds != nullptr);
 
     unsigned int old_capacity = m_UID_generator.capacity();
-    UID id = m_UID_generator.generate();
+    MeshID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_mesh_data(m_UID_generator.capacity(), old_capacity);
@@ -113,7 +113,7 @@ Meshes::UID Meshes::create(const std::string& name, unsigned int primitive_count
     return id;
 }
 
-void Meshes::destroy(Meshes::UID mesh_ID) {
+void Meshes::destroy(MeshID mesh_ID) {
     if (m_UID_generator.erase(mesh_ID)) {
 
         Buffers& buffers = m_buffers[mesh_ID];
@@ -126,7 +126,7 @@ void Meshes::destroy(Meshes::UID mesh_ID) {
     }
 }
 
-AABB Meshes::compute_bounds(Meshes::UID mesh_ID) {
+AABB Meshes::compute_bounds(MeshID mesh_ID) {
     Buffers& buffers = m_buffers[mesh_ID];
 
     AABB bounds = AABB(buffers.positions[0], buffers.positions[0]);
@@ -143,9 +143,9 @@ AABB Meshes::compute_bounds(Meshes::UID mesh_ID) {
 
 namespace MeshUtils {
 
-Meshes::UID deep_clone(Meshes::UID mesh_ID) {
+MeshID deep_clone(MeshID mesh_ID) {
     Mesh mesh = mesh_ID;
-    Meshes::UID new_ID = Meshes::create(mesh.get_name() + "_clone", mesh.get_primitive_count(), mesh.get_vertex_count(), mesh.get_flags());
+    MeshID new_ID = Meshes::create(mesh.get_name() + "_clone", mesh.get_primitive_count(), mesh.get_vertex_count(), mesh.get_flags());
 
     Vector3f* positions_begin = mesh.get_positions();
     if (positions_begin != nullptr)
@@ -168,7 +168,7 @@ Meshes::UID deep_clone(Meshes::UID mesh_ID) {
     return new_ID;
 }
 
-void transform_mesh(Meshes::UID mesh_ID, Matrix3x4f affine_transform) {
+void transform_mesh(MeshID mesh_ID, Matrix3x4f affine_transform) {
     Mesh mesh = mesh_ID;
 
     Matrix3x3f rotation;
@@ -199,11 +199,11 @@ void transform_mesh(Meshes::UID mesh_ID, Matrix3x4f affine_transform) {
     }
 }
 
-void transform_mesh(Meshes::UID mesh_ID, Transform transform) {
+void transform_mesh(MeshID mesh_ID, Transform transform) {
     transform_mesh(mesh_ID, to_matrix3x4(transform));
 }
 
-Meshes::UID combine(const std::string& name,
+MeshID combine(const std::string& name,
                     const TransformedMesh* const meshes_begin,
                     const TransformedMesh* const meshes_end,
                     MeshFlags flags) {
@@ -302,7 +302,7 @@ void compute_normals(Vector3ui* primitives_begin, Vector3ui* primitives_end,
     std::for_each(normals_begin, normals_end, [](Vector3f& n) { n = normalize(n); });
 }
 
-void compute_normals(Meshes::UID mesh_ID) {
+void compute_normals(MeshID mesh_ID) {
     Mesh mesh = mesh_ID;
     compute_normals(mesh.get_primitives(), mesh.get_primitives() + mesh.get_primitive_count(),
                     mesh.get_normals(), mesh.get_normals() + mesh.get_vertex_count(),
@@ -313,7 +313,7 @@ void compute_normals(Meshes::UID mesh_ID) {
 
 namespace MeshTests {
 
-unsigned int normals_correspond_to_winding_order(Meshes::UID mesh_ID) {
+unsigned int normals_correspond_to_winding_order(MeshID mesh_ID) {
     Mesh mesh = mesh_ID;
     unsigned int failed_primitives = 0;
 
@@ -349,7 +349,7 @@ unsigned int normals_correspond_to_winding_order(Meshes::UID mesh_ID) {
     return failed_primitives;
 }
 
-unsigned int count_degenerate_primitives(Meshes::UID mesh_ID, float epsilon_squared) {
+unsigned int count_degenerate_primitives(MeshID mesh_ID, float epsilon_squared) {
     Mesh mesh = mesh_ID;
     unsigned int degenerate_primitives = 0;
 

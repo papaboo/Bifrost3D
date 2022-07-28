@@ -18,8 +18,8 @@ namespace StbImageLoader {
 // Loads an image file.
 // Basic support for png, exr, jpg and more.
 // -----------------------------------------------------------------------
-Bifrost::Assets::Images::UID load(const std::string& filename);
-Bifrost::Assets::Images::UID load_from_memory(const std::string& name, const void* const data, int data_byte_count);
+Bifrost::Assets::ImageID load(const std::string& filename);
+Bifrost::Assets::ImageID load_from_memory(const std::string& name, const void* const data, int data_byte_count);
 
 } // NS StbImageLoader
 

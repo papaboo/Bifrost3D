@@ -43,15 +43,15 @@ TEST_F(Assets_Textures, resizing) {
 }
 
 TEST_F(Assets_Textures, sentinel_mesh) {
-    Textures::UID sentinel_ID = Textures::UID::invalid_UID();
+    TextureID sentinel_ID = TextureID::invalid_UID();
 
     EXPECT_FALSE(Textures::has(sentinel_ID));
-    EXPECT_EQ(Textures::get_image_ID(sentinel_ID), Images::UID::invalid_UID());
+    EXPECT_EQ(Textures::get_image_ID(sentinel_ID), ImageID::invalid_UID());
 }
 
 TEST_F(Assets_Textures, create) {
-    Images::UID image_ID = Images::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(3, 3));
-    Textures::UID texture_ID = Textures::create2D(image_ID);
+    ImageID image_ID = Images::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(3, 3));
+    TextureID texture_ID = Textures::create2D(image_ID);
 
     EXPECT_TRUE(Textures::has(texture_ID));
     EXPECT_EQ(Textures::get_image_ID(texture_ID), image_ID);
@@ -64,9 +64,9 @@ TEST_F(Assets_Textures, create) {
 }
 
 TEST_F(Assets_Textures, destroy) {
-    Images::UID image_ID = Images::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(1, 1));
+    ImageID image_ID = Images::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(1, 1));
 
-    Textures::UID texture_ID = Textures::create2D(image_ID);
+    TextureID texture_ID = Textures::create2D(image_ID);
     EXPECT_TRUE(Textures::has(texture_ID));
 
     Textures::reset_change_notifications();
@@ -82,10 +82,10 @@ TEST_F(Assets_Textures, destroy) {
 }
 
 TEST_F(Assets_Textures, create_and_destroy_notifications) {
-    Images::UID image_ID = Images::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(1, 1));
+    ImageID image_ID = Images::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(1, 1));
 
-    Textures::UID texture_ID0 = Textures::create2D(image_ID);
-    Textures::UID texture_ID1 = Textures::create2D(image_ID);
+    TextureID texture_ID0 = Textures::create2D(image_ID);
+    TextureID texture_ID1 = Textures::create2D(image_ID);
     EXPECT_TRUE(Textures::has(texture_ID0));
     EXPECT_TRUE(Textures::has(texture_ID1));
 
@@ -96,7 +96,7 @@ TEST_F(Assets_Textures, create_and_destroy_notifications) {
         bool texture0_created = false;
         bool texture1_created = false;
         bool other_event = false;
-        for (const Textures::UID texture_ID : changed_textures) {
+        for (const TextureID texture_ID : changed_textures) {
             bool texture_created = Textures::get_changes(texture_ID) == Textures::Change::Created;
             if (texture_ID == texture_ID0 && texture_created)
                 texture0_created = true;
@@ -122,7 +122,7 @@ TEST_F(Assets_Textures, create_and_destroy_notifications) {
 
         bool texture0_destroyed = false;
         bool other_change = false;
-        for (const Textures::UID texture_ID : changed_textures) {
+        for (const TextureID texture_ID : changed_textures) {
             if (texture_ID == texture_ID0 && Textures::get_changes(texture_ID) == Textures::Change::Destroyed)
                 texture0_destroyed = true;
             else
@@ -154,7 +154,7 @@ TEST_F(Assets_Textures, sample2D) {
             image.set_pixel(RGBA(x / float(size), y / float(size), 0, 1), Vector2ui(x, y));
 
     { // Test with no filter and clamp.
-        Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::None, MinificationFilter::None, WrapMode::Clamp, WrapMode::Clamp);
+        TextureID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::None, MinificationFilter::None, WrapMode::Clamp, WrapMode::Clamp);
 
         { // Sample lower left corner.
             RGBA color = sample2D(texture_ID, Vector2f(0, 0));
@@ -179,7 +179,7 @@ TEST_F(Assets_Textures, sample2D) {
 
     { // No filter and repeat.
         // Test that pixel borders are where they are expected to beby sampling around (2, 2).
-        Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::None, MinificationFilter::None, WrapMode::Repeat, WrapMode::Repeat);
+        TextureID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::None, MinificationFilter::None, WrapMode::Repeat, WrapMode::Repeat);
 
         RGBA color = sample2D(texture_ID, Vector2f(0.49f, 0.49f));
         EXPECT_RGBA_EQ(RGBA(0.25f, 0.25f, 0, 1), color);
@@ -195,7 +195,7 @@ TEST_F(Assets_Textures, sample2D) {
     }
 
     { // Test with linear filtering and repeat wrap mode.
-        Textures::UID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Repeat);
+        TextureID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Repeat);
 
         { // Sample lower left corner.
             RGBA color = sample2D(texture_ID, Vector2f(0.125f, 0.125f));

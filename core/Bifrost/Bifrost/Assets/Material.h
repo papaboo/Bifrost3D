@@ -42,28 +42,33 @@ const Math::RGB titanium_tint = Math::RGB(0.542f, 0.497f, 0.449f);
 const Math::RGB cobalt_tint = Math::RGB(0.662f, 0.655f, 0.634f);
 const Math::RGB platinum_tint = Math::RGB(0.672f, 0.637f, 0.585f);
 
+//----------------------------------------------------------------------------
+// Material ID
+//----------------------------------------------------------------------------
+class Materials;
+typedef Core::TypedUIDGenerator<Materials> MaterialIDGenerator;
+typedef MaterialIDGenerator::UID MaterialID;
+
 // ---------------------------------------------------------------------------
 // Bifrost material properties container.
 // ---------------------------------------------------------------------------
 class Materials final {
 public:
-    typedef Core::TypedUIDGenerator<Materials> UIDGenerator;
-    typedef UIDGenerator::UID UID;
-    typedef UIDGenerator::ConstIterator ConstUIDIterator;
+    using Iterator = MaterialIDGenerator::ConstIterator;
 
     typedef Core::Bitmask<MaterialFlag> Flags;
 
     struct Data {
         Math::RGB tint;
-        Textures::UID tint_roughness_texture_ID;
+        TextureID tint_roughness_texture_ID;
         float roughness;
         float specularity;
         float metallic;
         float coat;
         float coat_roughness;
-        Textures::UID metallic_texture_ID;
+        TextureID metallic_texture_ID;
         float coverage;
-        Textures::UID coverage_texture_ID;
+        TextureID coverage_texture_ID;
         float transmission;
         Flags flags;
 
@@ -104,50 +109,50 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static inline bool has(Materials::UID material_ID) { return m_UID_generator.has(material_ID); }
+    static inline bool has(MaterialID material_ID) { return m_UID_generator.has(material_ID); }
 
-    static Materials::UID create(const std::string& name, const Data& data);
-    static void destroy(Materials::UID material_ID);
+    static MaterialID create(const std::string& name, const Data& data);
+    static void destroy(MaterialID material_ID);
 
-    static inline ConstUIDIterator begin() { return m_UID_generator.begin(); }
-    static inline ConstUIDIterator end() { return m_UID_generator.end(); }
-    static inline Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
+    static inline Iterator begin() { return m_UID_generator.begin(); }
+    static inline Iterator end() { return m_UID_generator.end(); }
+    static inline Core::Iterable<Iterator> get_iterable() { return Core::Iterable<Iterator>(begin(), end()); }
 
-    static inline const std::string& get_name(Materials::UID material_ID) { return m_names[material_ID]; }
-    static inline void set_name(Materials::UID material_ID, const std::string& name) { m_names[material_ID] = name; }
+    static inline const std::string& get_name(MaterialID material_ID) { return m_names[material_ID]; }
+    static inline void set_name(MaterialID material_ID, const std::string& name) { m_names[material_ID] = name; }
 
-    static inline Flags get_flags(Materials::UID material_ID) { return m_materials[material_ID].flags; }
-    static void set_flags(Materials::UID material_ID, Flags flags);
+    static inline Flags get_flags(MaterialID material_ID) { return m_materials[material_ID].flags; }
+    static void set_flags(MaterialID material_ID, Flags flags);
 
-    static inline Math::RGB get_tint(Materials::UID material_ID) { return m_materials[material_ID].tint; }
-    static void set_tint(Materials::UID material_ID, Math::RGB tint);
-    static inline float get_roughness(Materials::UID material_ID) { return m_materials[material_ID].roughness; }
-    static void set_roughness(Materials::UID material_ID, float roughness);
-    static inline Textures::UID get_tint_roughness_texture_ID(Materials::UID material_ID) { return m_materials[material_ID].tint_roughness_texture_ID; }
-    static void set_tint_roughness_texture_ID(Materials::UID material_ID, Textures::UID tint_roughness_texture_ID);
-    static bool has_tint_texture(Materials::UID material_ID);
-    static bool has_roughness_texture(Materials::UID material_ID);
+    static inline Math::RGB get_tint(MaterialID material_ID) { return m_materials[material_ID].tint; }
+    static void set_tint(MaterialID material_ID, Math::RGB tint);
+    static inline float get_roughness(MaterialID material_ID) { return m_materials[material_ID].roughness; }
+    static void set_roughness(MaterialID material_ID, float roughness);
+    static inline TextureID get_tint_roughness_texture_ID(MaterialID material_ID) { return m_materials[material_ID].tint_roughness_texture_ID; }
+    static void set_tint_roughness_texture_ID(MaterialID material_ID, TextureID tint_roughness_texture_ID);
+    static bool has_tint_texture(MaterialID material_ID);
+    static bool has_roughness_texture(MaterialID material_ID);
 
-    static inline float get_specularity(Materials::UID material_ID) { return m_materials[material_ID].specularity; }
-    static void set_specularity(Materials::UID material_ID, float incident_specularity);
+    static inline float get_specularity(MaterialID material_ID) { return m_materials[material_ID].specularity; }
+    static void set_specularity(MaterialID material_ID, float incident_specularity);
 
-    static inline float get_metallic(Materials::UID material_ID) { return m_materials[material_ID].metallic; }
-    static void set_metallic(Materials::UID material_ID, float metallic);
-    static inline Textures::UID get_metallic_texture_ID(Materials::UID material_ID) { return m_materials[material_ID].metallic_texture_ID; }
-    static void set_metallic_texture_ID(Materials::UID material_ID, Textures::UID metallic_texture_ID);
+    static inline float get_metallic(MaterialID material_ID) { return m_materials[material_ID].metallic; }
+    static void set_metallic(MaterialID material_ID, float metallic);
+    static inline TextureID get_metallic_texture_ID(MaterialID material_ID) { return m_materials[material_ID].metallic_texture_ID; }
+    static void set_metallic_texture_ID(MaterialID material_ID, TextureID metallic_texture_ID);
 
-    static inline float get_coat(Materials::UID material_ID) { return m_materials[material_ID].coat; }
-    static void set_coat(Materials::UID material_ID, float coat);
-    static inline float get_coat_roughness(Materials::UID material_ID) { return m_materials[material_ID].coat_roughness; }
-    static void set_coat_roughness(Materials::UID material_ID, float coat_roughness);
+    static inline float get_coat(MaterialID material_ID) { return m_materials[material_ID].coat; }
+    static void set_coat(MaterialID material_ID, float coat);
+    static inline float get_coat_roughness(MaterialID material_ID) { return m_materials[material_ID].coat_roughness; }
+    static void set_coat_roughness(MaterialID material_ID, float coat_roughness);
 
     // Transparency getters and setters.
-    static inline float get_coverage(Materials::UID material_ID) { return m_materials[material_ID].coverage; }
-    static void set_coverage(Materials::UID material_ID, float coverage);
-    static inline Textures::UID get_coverage_texture_ID(Materials::UID material_ID) { return m_materials[material_ID].coverage_texture_ID; }
-    static void set_coverage_texture_ID(Materials::UID material_ID, Textures::UID coverage_texture_ID);
-    static inline float get_transmission(Materials::UID material_ID) { return m_materials[material_ID].transmission; }
-    static void set_transmission(Materials::UID material_ID, float transmission);
+    static inline float get_coverage(MaterialID material_ID) { return m_materials[material_ID].coverage; }
+    static void set_coverage(MaterialID material_ID, float coverage);
+    static inline TextureID get_coverage_texture_ID(MaterialID material_ID) { return m_materials[material_ID].coverage_texture_ID; }
+    static void set_coverage_texture_ID(MaterialID material_ID, TextureID coverage_texture_ID);
+    static inline float get_transmission(MaterialID material_ID) { return m_materials[material_ID].transmission; }
+    static void set_transmission(MaterialID material_ID, float transmission);
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -161,9 +166,9 @@ public:
     };
     typedef Core::Bitmask<Change> Changes;
 
-    static inline Changes get_changes(Materials::UID material_ID) { return m_changes.get_changes(material_ID); }
+    static inline Changes get_changes(MaterialID material_ID) { return m_changes.get_changes(material_ID); }
 
-    typedef std::vector<UID>::iterator ChangedIterator;
+    typedef std::vector<MaterialID>::iterator ChangedIterator;
     static Core::Iterable<ChangedIterator> get_changed_materials() { return m_changes.get_changed_resources(); }
 
     static void reset_change_notifications() { m_changes.reset_change_notifications(); }
@@ -171,27 +176,27 @@ public:
 private:
     static void reserve_material_data(unsigned int new_capacity, unsigned int old_capacity);
 
-    static void flag_as_updated(Materials::UID material_ID);
+    static void flag_as_updated(MaterialID material_ID);
 
-    static UIDGenerator m_UID_generator;
+    static MaterialIDGenerator m_UID_generator;
 
     static std::string* m_names;
     static Data* m_materials;
-    static Core::ChangeSet<Changes, UID> m_changes;
+    static Core::ChangeSet<Changes, MaterialID> m_changes;
 };
 
 // ---------------------------------------------------------------------------
-// Material UID wrapper.
+// Material ID wrapper.
 // ---------------------------------------------------------------------------
 class Material final {
 public:
     // -----------------------------------------------------------------------
     // Class management.
     // -----------------------------------------------------------------------
-    Material() : m_ID(Materials::UID::invalid_UID()) {}
-    Material(Materials::UID id) : m_ID(id) {}
+    Material() : m_ID(MaterialID::invalid_UID()) {}
+    Material(MaterialID id) : m_ID(id) {}
 
-    inline const Materials::UID get_ID() const { return m_ID; }
+    inline const MaterialID get_ID() const { return m_ID; }
     inline bool exists() const { return Materials::has(m_ID); }
 
     inline bool operator==(Material rhs) const { return m_ID == rhs.m_ID; }
@@ -213,7 +218,7 @@ public:
     inline float get_roughness() const { return Materials::get_roughness(m_ID); }
     inline void set_roughness(float roughness) { Materials::set_roughness(m_ID, roughness); }
     inline const Texture get_tint_roughness_texture() const { return Materials::get_tint_roughness_texture_ID(m_ID); }
-    inline Textures::UID get_tint_roughness_texture_ID() const { return Materials::get_tint_roughness_texture_ID(m_ID); }
+    inline TextureID get_tint_roughness_texture_ID() const { return Materials::get_tint_roughness_texture_ID(m_ID); }
     inline void set_tint_roughness_texture(Texture tint_roughness_texture) { Materials::set_tint_roughness_texture_ID(m_ID, tint_roughness_texture.get_ID()); }
     inline bool has_tint_texture() const { return Materials::has_tint_texture(m_ID); }
     inline bool has_roughness_texture() const { return Materials::has_roughness_texture(m_ID); }
@@ -224,7 +229,7 @@ public:
     inline float get_metallic() const { return Materials::get_metallic(m_ID); }
     inline void set_metallic(float metallic) { Materials::set_metallic(m_ID, metallic); }
     inline const Texture get_metallic_texture() const { return Materials::get_metallic_texture_ID(m_ID); }
-    inline Textures::UID get_metallic_texture_ID() const { return Materials::get_metallic_texture_ID(m_ID); }
+    inline TextureID get_metallic_texture_ID() const { return Materials::get_metallic_texture_ID(m_ID); }
     inline void set_metallic_texture(Texture metallic_texture) { Materials::set_metallic_texture_ID(m_ID, metallic_texture.get_ID()); }
 
     inline float get_coat() const { return Materials::get_coat(m_ID); }
@@ -235,8 +240,8 @@ public:
     inline float get_coverage() const { return Materials::get_coverage(m_ID); }
     inline void set_coverage(float coverage) { Materials::set_coverage(m_ID, coverage); }
     inline const Texture get_coverage_texture() const { return Materials::get_coverage_texture_ID(m_ID); }
-    inline Textures::UID get_coverage_texture_ID() const { return Materials::get_coverage_texture_ID(m_ID); }
-    inline void set_coverage_texture_ID(Textures::UID texture_ID) { Materials::set_coverage_texture_ID(m_ID, texture_ID); }
+    inline TextureID get_coverage_texture_ID() const { return Materials::get_coverage_texture_ID(m_ID); }
+    inline void set_coverage_texture_ID(TextureID texture_ID) { Materials::set_coverage_texture_ID(m_ID, texture_ID); }
 
     inline float get_transmission() const { return Materials::get_transmission(m_ID); }
     inline void set_transmission(float transmission) { Materials::set_coverage(m_ID, transmission); }
@@ -244,7 +249,7 @@ public:
     inline Materials::Changes get_changes() { return Materials::get_changes(m_ID); }
 
 private:
-    const Materials::UID m_ID;
+    const MaterialID m_ID;
 };
 
 } // NS Assets

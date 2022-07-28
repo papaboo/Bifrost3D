@@ -36,7 +36,7 @@ GTEST_TEST(Scene_SceneNode, resizing) {
 GTEST_TEST(Scene_SceneNode, sentinel_node) {
     SceneNodes::allocate(1u);
 
-    SceneNode sentinel = SceneNodes::UID::invalid_UID();
+    SceneNode sentinel = SceneNodeID::invalid_UID();
     SceneNode node = SceneNodes::create("Foo");
 
     // Test that sentinel node cannot have it's parent set.
@@ -52,9 +52,9 @@ GTEST_TEST(Scene_SceneNode, sentinel_node) {
 
 GTEST_TEST(Scene_SceneNode, create) {
     SceneNodes::allocate(2u);
-    SceneNodes::UID node_ID = SceneNodes::create("Foo");
+    SceneNodeID node_ID = SceneNodes::create("Foo");
     EXPECT_TRUE(SceneNodes::has(node_ID));
-    
+
     EXPECT_EQ("Foo", SceneNodes::get_name(node_ID));
 
     // Test scene node created notification.
@@ -68,7 +68,7 @@ GTEST_TEST(Scene_SceneNode, create) {
 
 GTEST_TEST(Scene_SceneNode, destroy) {
     SceneNodes::allocate(2u);
-    SceneNodes::UID node_ID = SceneNodes::create("Foo");
+    SceneNodeID node_ID = SceneNodes::create("Foo");
     EXPECT_TRUE(SceneNodes::has(node_ID));
 
     SceneNodes::reset_change_notifications();
@@ -88,8 +88,8 @@ GTEST_TEST(Scene_SceneNode, destroy) {
 GTEST_TEST(Scene_SceneNode, create_and_destroy_notifications) {
     SceneNodes::allocate(8u);
 
-    SceneNodes::UID node_ID0 = SceneNodes::create("Foo");
-    SceneNodes::UID node_ID1 = SceneNodes::create("Bar");
+    SceneNodeID node_ID0 = SceneNodes::create("Foo");
+    SceneNodeID node_ID1 = SceneNodes::create("Bar");
     EXPECT_TRUE(SceneNodes::has(node_ID0));
     EXPECT_TRUE(SceneNodes::has(node_ID1));
 
@@ -100,7 +100,7 @@ GTEST_TEST(Scene_SceneNode, create_and_destroy_notifications) {
         bool node0_created = false;
         bool node1_created = false;
         bool other_changes = false;
-        for (const SceneNodes::UID node_ID : changed_nodes) {
+        for (const SceneNodeID node_ID : changed_nodes) {
             bool node_created = SceneNodes::get_changes(node_ID) == SceneNodes::Change::Created;
             if (node_ID == node_ID0 && node_created)
                 node0_created = true;
@@ -266,7 +266,7 @@ GTEST_TEST(Scene_SceneNode, graph_traversal) {
     unsigned int* visits = new unsigned int[SceneNodes::capacity()];
     for (unsigned int i = 0; i < SceneNodes::capacity(); ++i)
         visits[i] = 0u;
-    n2.apply_to_children_recursively([&](SceneNodes::UID id) {
+    n2.apply_to_children_recursively([&](SceneNodeID id) {
         ++visits[id];
     });
     EXPECT_EQ(0u, visits[n0.get_ID()]);
@@ -277,7 +277,7 @@ GTEST_TEST(Scene_SceneNode, graph_traversal) {
     EXPECT_EQ(0u, visits[n5.get_ID()]);
     EXPECT_EQ(0u, visits[n6.get_ID()]);
 
-    n4.apply_recursively([&](SceneNodes::UID id) {
+    n4.apply_recursively([&](SceneNodeID id) {
         ++visits[id];
     });
     EXPECT_EQ(0u, visits[n0.get_ID()]);
@@ -288,7 +288,7 @@ GTEST_TEST(Scene_SceneNode, graph_traversal) {
     EXPECT_EQ(1u, visits[n5.get_ID()]);
     EXPECT_EQ(0u, visits[n6.get_ID()]);
 
-    n6.apply_to_children_recursively([&](SceneNodes::UID id) {
+    n6.apply_to_children_recursively([&](SceneNodeID id) {
         ++visits[id];
     });
     EXPECT_EQ(0u, visits[n0.get_ID()]);
@@ -299,7 +299,7 @@ GTEST_TEST(Scene_SceneNode, graph_traversal) {
     EXPECT_EQ(1u, visits[n5.get_ID()]);
     EXPECT_EQ(0u, visits[n6.get_ID()]);
 
-    n3.apply_recursively([&](SceneNodes::UID id) {
+    n3.apply_recursively([&](SceneNodeID id) {
         ++visits[id];
     });
     EXPECT_EQ(1u, visits[n0.get_ID()]);

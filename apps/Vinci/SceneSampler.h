@@ -32,7 +32,7 @@ public:
         : m_rng(RNG::XorShift32(random_seed)), m_scene_root(scene_root) {
 
         // Collect valid mesh models.
-        m_models = std::vector<MeshModels::UID>();
+        m_models = std::vector<MeshModelID>();
         m_models.reserve(MeshModels::capacity());
         unsigned long long total_triangle_count = 0;
         for (auto mesh_model_ID : MeshModels::get_iterable())
@@ -105,7 +105,7 @@ private:
     SceneRoot m_scene_root;
 
     std::vector<float> m_model_CDF;
-    std::vector<MeshModels::UID> m_models;
+    std::vector<MeshModelID> m_models;
 };
 
 #endif _VINCI_SCENE_SAMPLER_H_

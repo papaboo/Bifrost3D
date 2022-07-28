@@ -262,7 +262,7 @@ TEST_F(Scene_Transform, Transform_changed_notification) {
         bool n2_changed = false;
         bool other_changes = false;
 
-        for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
+        for (SceneNodeID node_ID : SceneNodes::get_changed_nodes()) {
             bool transform_changed = SceneNodes::get_changes(node_ID) == SceneNodes::Change::Transform;
             if (node_ID == n0.get_ID() && transform_changed)
                 n0_changed = true;
@@ -298,7 +298,7 @@ TEST_F(Scene_Transform, Transform_changed_notification) {
         bool n1_changed = false;
         bool n2_changed = false;
 
-        for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
+        for (SceneNodeID node_ID : SceneNodes::get_changed_nodes()) {
             bool transform_changed = SceneNodes::get_changes(node_ID) == SceneNodes::Change::Transform;
             if (node_ID == n0.get_ID() && transform_changed)
                 n0_changed = true;

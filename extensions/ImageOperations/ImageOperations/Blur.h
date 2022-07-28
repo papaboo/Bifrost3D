@@ -18,7 +18,7 @@ namespace Blur {
 // Guassian blur.
 // ------------------------------------------------------------------------------------------------
 
-inline void gaussian(Bifrost::Assets::Images::UID image_ID, float std_dev, Bifrost::Assets::Images::UID result_ID) {
+inline void gaussian(Bifrost::Assets::ImageID image_ID, float std_dev, Bifrost::Assets::ImageID result_ID) {
     using namespace Bifrost::Assets;
     using namespace Bifrost::Math;
 
@@ -88,13 +88,13 @@ inline void gaussian(Bifrost::Assets::Images::UID image_ID, float std_dev, Bifro
     delete[] pong;
 }
 
-inline Bifrost::Assets::Images::UID gaussian(Bifrost::Assets::Images::UID image_ID, float std_dev) {
+inline Bifrost::Assets::ImageID gaussian(Bifrost::Assets::ImageID image_ID, float std_dev) {
     using namespace Bifrost::Assets;
     using namespace Bifrost::Math;
 
     Image image = image_ID;
     Vector3ui size = Vector3ui(image.get_width(), image.get_height(), image.get_depth());
-    Images::UID result = Images::create3D("blurred_" + image.get_name(), image.get_pixel_format(), image.get_gamma(), size);
+    ImageID result = Images::create3D("blurred_" + image.get_name(), image.get_pixel_format(), image.get_gamma(), size);
     gaussian(image_ID, std_dev, result);
     return result;
 }

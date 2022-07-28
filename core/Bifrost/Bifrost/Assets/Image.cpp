@@ -15,21 +15,21 @@ using namespace Bifrost::Math;
 namespace Bifrost {
 namespace Assets {
 
-Images::UIDGenerator Images::m_UID_generator = UIDGenerator(0u);
+ImageIDGenerator Images::m_UID_generator = ImageIDGenerator(0u);
 Images::MetaInfo* Images::m_metainfo = nullptr;
 Images::PixelData* Images::m_pixels = nullptr;
-Core::ChangeSet<Images::Changes, Images::UID> Images::m_changes;
+Core::ChangeSet<Images::Changes, ImageID> Images::m_changes;
 
 void Images::allocate(unsigned int capacity) {
     if (is_allocated())
         return;
 
-    m_UID_generator = UIDGenerator(capacity);
+    m_UID_generator = ImageIDGenerator(capacity);
     capacity = m_UID_generator.capacity();
 
     m_metainfo = new MetaInfo[capacity];
     m_pixels = new PixelData[capacity];
-    m_changes = Core::ChangeSet<Changes, UID>(capacity);
+    m_changes = Core::ChangeSet<Changes, ImageID>(capacity);
 
     // Allocate dummy element at 0.
     MetaInfo info = { "Dummy image", 0u, 0u, 0u, 0u, PixelFormat::Unknown };
@@ -41,7 +41,7 @@ void Images::deallocate() {
     if (!is_allocated())
         return;
 
-    m_UID_generator = UIDGenerator(0u);
+    m_UID_generator = ImageIDGenerator(0u);
     delete[] m_metainfo; m_metainfo = nullptr;
     delete[] m_pixels; m_pixels = nullptr;
     m_changes.resize(0);
@@ -71,7 +71,7 @@ void Images::reserve(unsigned int new_capacity) {
     reserve_image_data(m_UID_generator.capacity(), old_capacity);
 }
 
-bool Images::has(Images::UID image_ID) {
+bool Images::has(ImageID image_ID) {
     return m_UID_generator.has(image_ID) && m_changes.get_changes(image_ID) != Change::Destroyed;
 }
 
@@ -118,13 +118,13 @@ static inline void deallocate_pixels(PixelFormat format, Images::PixelData data)
     }
 }
 
-Images::UID Images::create3D(const std::string& name, PixelFormat format, float gamma, Vector3ui size, unsigned int mipmap_count) {
+ImageID Images::create3D(const std::string& name, PixelFormat format, float gamma, Vector3ui size, unsigned int mipmap_count) {
     assert(m_metainfo != nullptr);
     assert(m_pixels != nullptr);
     assert(mipmap_count > 0u);
 
     unsigned int old_capacity = m_UID_generator.capacity();
-    UID id = m_UID_generator.generate();
+    ImageID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_image_data(m_UID_generator.capacity(), old_capacity);
@@ -157,12 +157,12 @@ Images::UID Images::create3D(const std::string& name, PixelFormat format, float 
     return id;
 }
 
-Images::UID Images::create2D(const std::string& name, PixelFormat format, float gamma, Math::Vector2ui size, PixelData& pixels) {
+ImageID Images::create2D(const std::string& name, PixelFormat format, float gamma, Math::Vector2ui size, PixelData& pixels) {
     assert(m_metainfo != nullptr);
     assert(m_pixels != nullptr);
 
     unsigned int old_capacity = m_UID_generator.capacity();
-    UID id = m_UID_generator.generate();
+    ImageID id = m_UID_generator.generate();
     if (old_capacity != m_UID_generator.capacity())
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_image_data(m_UID_generator.capacity(), old_capacity);
@@ -187,7 +187,7 @@ Images::UID Images::create2D(const std::string& name, PixelFormat format, float 
     return id;
 }
 
-void Images::destroy(Images::UID image_ID) {
+void Images::destroy(ImageID image_ID) {
     if (m_UID_generator.erase(image_ID)) {
         deallocate_pixels(m_metainfo[image_ID].pixel_format, m_pixels[image_ID]);
         m_pixels[image_ID] = nullptr;
@@ -195,7 +195,7 @@ void Images::destroy(Images::UID image_ID) {
     }
 }
 
-void Images::set_mipmapable(Images::UID image_ID, bool value) { 
+void Images::set_mipmapable(ImageID image_ID, bool value) { 
     // Only set as mipmapable if no mipmaps exist.
     value &= m_metainfo[image_ID].mipmap_count == 1;
 
@@ -207,7 +207,7 @@ void Images::set_mipmapable(Images::UID image_ID, bool value) {
     m_changes.add_change(image_ID, Change::Mipmapable);
 }
 
-Images::PixelData Images::get_pixels(Images::UID image_ID, int mipmap_level) {
+Images::PixelData Images::get_pixels(ImageID image_ID, int mipmap_level) {
     char* pixel_data = (char*)m_pixels[image_ID];
     int bytes_pr_pixel = size_of(get_pixel_format(image_ID));
     for (int l = 0; l < mipmap_level; ++l) {
@@ -251,14 +251,14 @@ static RGBA get_nonlinear_pixel(Images::PixelData pixels, PixelFormat format, un
     return RGBA::red();
 }
 
-static inline RGBA get_linear_pixel(Images::UID image_ID, unsigned int index) {
+static inline RGBA get_linear_pixel(ImageID image_ID, unsigned int index) {
     Images::PixelData pixels = Images::get_pixels(image_ID);
     PixelFormat format = Images::get_pixel_format(image_ID);
     RGBA nonlinear_color = get_nonlinear_pixel(pixels, format, index);
     return gammacorrect(nonlinear_color, Images::get_gamma(image_ID));
 }
 
-RGBA Images::get_pixel(Images::UID image_ID, unsigned int index, unsigned int mipmap_level) {
+RGBA Images::get_pixel(ImageID image_ID, unsigned int index, unsigned int mipmap_level) {
     assert(index < Images::get_pixel_count(image_ID, mipmap_level));
 
     while (mipmap_level)
@@ -266,7 +266,7 @@ RGBA Images::get_pixel(Images::UID image_ID, unsigned int index, unsigned int mi
     return get_linear_pixel(image_ID, index);
 }
 
-RGBA Images::get_pixel(Images::UID image_ID, Vector2ui index, unsigned int mipmap_level) {
+RGBA Images::get_pixel(ImageID image_ID, Vector2ui index, unsigned int mipmap_level) {
     assert(index.x < Images::get_width(image_ID, mipmap_level));
     assert(index.y < Images::get_height(image_ID, mipmap_level));
 
@@ -280,7 +280,7 @@ RGBA Images::get_pixel(Images::UID image_ID, Vector2ui index, unsigned int mipma
     return get_linear_pixel(image_ID, pixel_index);
 }
 
-RGBA Images::get_pixel(Images::UID image_ID, Vector3ui index, unsigned int mipmap_level) {
+RGBA Images::get_pixel(ImageID image_ID, Vector3ui index, unsigned int mipmap_level) {
     assert(index.x < Images::get_width(image_ID, mipmap_level));
     assert(index.y < Images::get_height(image_ID, mipmap_level));
     assert(index.z < Images::get_depth(image_ID, mipmap_level));
@@ -339,13 +339,13 @@ static void set_linear_pixel(Images::PixelData pixels, PixelFormat pixel_format,
     }
 }
 
-static inline void set_linear_pixel(Images::UID image_ID, RGBA color, unsigned int index) {
+static inline void set_linear_pixel(ImageID image_ID, RGBA color, unsigned int index) {
     Images::PixelData pixels = Images::get_pixels(image_ID);
     PixelFormat format = Images::get_pixel_format(image_ID);
     set_linear_pixel(pixels, format, index, color, Images::get_gamma(image_ID));
 }
 
-void Images::set_pixel(Images::UID image_ID, RGBA color, unsigned int index, unsigned int mipmap_level) {
+void Images::set_pixel(ImageID image_ID, RGBA color, unsigned int index, unsigned int mipmap_level) {
     assert(index < Images::get_pixel_count(image_ID, mipmap_level));
 
     Image image = image_ID;
@@ -356,7 +356,7 @@ void Images::set_pixel(Images::UID image_ID, RGBA color, unsigned int index, uns
     m_changes.add_change(image_ID, Change::PixelsUpdated);
 }
 
-void Images::set_pixel(Images::UID image_ID, RGBA color, Vector2ui index, unsigned int mipmap_level) {
+void Images::set_pixel(ImageID image_ID, RGBA color, Vector2ui index, unsigned int mipmap_level) {
     assert(index.x < Images::get_width(image_ID, mipmap_level));
     assert(index.y < Images::get_height(image_ID, mipmap_level));
 
@@ -370,7 +370,7 @@ void Images::set_pixel(Images::UID image_ID, RGBA color, Vector2ui index, unsign
     m_changes.add_change(image_ID, Change::PixelsUpdated);
 }
 
-void Images::set_pixel(Images::UID image_ID, RGBA color, Vector3ui index, unsigned int mipmap_level) {
+void Images::set_pixel(ImageID image_ID, RGBA color, Vector3ui index, unsigned int mipmap_level) {
     assert(index.x < Images::get_width(image_ID, mipmap_level));
     assert(index.y < Images::get_height(image_ID, mipmap_level));
     assert(index.z < Images::get_depth(image_ID, mipmap_level));
@@ -385,7 +385,7 @@ void Images::set_pixel(Images::UID image_ID, RGBA color, Vector3ui index, unsign
     m_changes.add_change(image_ID, Change::PixelsUpdated);
 }
 
-void Images::change_format(Images::UID image_ID, PixelFormat new_format, float new_gamma) {
+void Images::change_format(ImageID image_ID, PixelFormat new_format, float new_gamma) {
     Image image = image_ID;
     PixelFormat old_format = image.get_pixel_format();
     float old_gamma = image.get_gamma();
@@ -457,7 +457,7 @@ void Images::change_format(Images::UID image_ID, PixelFormat new_format, float n
 
 namespace ImageUtils {
 
-void fill_mipmap_chain(Images::UID image_ID) {
+void fill_mipmap_chain(ImageID image_ID) {
     // assert that depth is 1, since 3D textures are not supported.
 
     // Future work: Optimize for the most used data formats.
@@ -514,7 +514,7 @@ void fill_mipmap_chain(Images::UID image_ID) {
     }
 }
 
-void compute_summed_area_table(Images::UID image_ID, RGBA* sat_result) {
+void compute_summed_area_table(ImageID image_ID, RGBA* sat_result) {
     Image img = image_ID;
     unsigned int width = img.get_width(), height = img.get_height();
 

@@ -30,10 +30,10 @@ enum class Result {
 // -----------------------------------------------------------------------
 // Load an exr image file.
 // -----------------------------------------------------------------------
-Result load_verbose(const std::string& filename, Bifrost::Assets::Images::UID& image_ID);
+Result load_verbose(const std::string& filename, Bifrost::Assets::ImageID& image_ID);
 
-inline Bifrost::Assets::Images::UID load(const std::string& filename) {
-    Bifrost::Assets::Images::UID image_ID;
+inline Bifrost::Assets::ImageID load(const std::string& filename) {
+    Bifrost::Assets::ImageID image_ID;
     load_verbose(filename, image_ID);
     return image_ID;
 }
@@ -41,7 +41,7 @@ inline Bifrost::Assets::Images::UID load(const std::string& filename) {
 // -----------------------------------------------------------------------
 // Store an exr image file.
 // -----------------------------------------------------------------------
-Result store(Bifrost::Assets::Images::UID image_ID, const std::string& filename);
+Result store(Bifrost::Assets::ImageID image_ID, const std::string& filename);
 
 } // NS TinyExr
 

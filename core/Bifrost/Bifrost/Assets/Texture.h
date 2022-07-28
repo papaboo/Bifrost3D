@@ -34,6 +34,13 @@ enum class MinificationFilter {
     Trilinear
 };
 
+//----------------------------------------------------------------------------
+// Texture ID
+//----------------------------------------------------------------------------
+class Textures;
+typedef Core::TypedUIDGenerator<Textures> TextureIDGenerator;
+typedef TextureIDGenerator::UID TextureID;
+
 //-------------------------------------------------------------------------------------------------
 // Bifrost texture container.
 // Future work:
@@ -48,9 +55,7 @@ public:
         ThreeD
     };
 
-    typedef Core::TypedUIDGenerator<Textures> UIDGenerator;
-    typedef UIDGenerator::UID UID;
-    typedef UIDGenerator::ConstIterator ConstUIDIterator;
+    using Iterator = TextureIDGenerator::ConstIterator;
 
     static bool is_allocated() { return m_samplers != nullptr; }
     static void allocate(unsigned int capacity);
@@ -58,22 +63,22 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(Textures::UID texture_ID) { return m_UID_generator.has(texture_ID); }
+    static bool has(TextureID texture_ID) { return m_UID_generator.has(texture_ID); }
 
-    static Textures::UID create2D(Images::UID, MagnificationFilter magnification_filter = MagnificationFilter::Linear, MinificationFilter minification_filter = MinificationFilter::Linear, WrapMode wrapmode_U = WrapMode::Repeat, WrapMode wrapmode_V = WrapMode::Repeat);
-    static void destroy(Textures::UID texture_ID);
+    static TextureID create2D(ImageID, MagnificationFilter magnification_filter = MagnificationFilter::Linear, MinificationFilter minification_filter = MinificationFilter::Linear, WrapMode wrapmode_U = WrapMode::Repeat, WrapMode wrapmode_V = WrapMode::Repeat);
+    static void destroy(TextureID texture_ID);
 
-    static inline ConstUIDIterator begin() { return m_UID_generator.begin(); }
-    static inline ConstUIDIterator end() { return m_UID_generator.end(); }
-    static inline Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
+    static inline Iterator begin() { return m_UID_generator.begin(); }
+    static inline Iterator end() { return m_UID_generator.end(); }
+    static inline Core::Iterable<Iterator> get_iterable() { return Core::Iterable<Iterator>(begin(), end()); }
 
-    static inline Images::UID get_image_ID(Textures::UID texture_ID) { return m_samplers[texture_ID].image_ID; }
-    static inline Type get_type(Textures::UID texture_ID) { return m_samplers[texture_ID].type; }
-    static inline MagnificationFilter get_magnification_filter(Textures::UID texture_ID) { return m_samplers[texture_ID].magnification_filter; }
-    static inline MinificationFilter get_minification_filter(Textures::UID texture_ID) { return m_samplers[texture_ID].minification_filter; }
-    static inline WrapMode get_wrapmode_U(Textures::UID texture_ID) { return m_samplers[texture_ID].wrapmode_U; }
-    static inline WrapMode get_wrapmode_V(Textures::UID texture_ID) { return m_samplers[texture_ID].wrapmode_V; }
-    static inline WrapMode get_wrapmode_W(Textures::UID texture_ID) { return m_samplers[texture_ID].wrapmode_W; }
+    static inline ImageID get_image_ID(TextureID texture_ID) { return m_samplers[texture_ID].image_ID; }
+    static inline Type get_type(TextureID texture_ID) { return m_samplers[texture_ID].type; }
+    static inline MagnificationFilter get_magnification_filter(TextureID texture_ID) { return m_samplers[texture_ID].magnification_filter; }
+    static inline MinificationFilter get_minification_filter(TextureID texture_ID) { return m_samplers[texture_ID].minification_filter; }
+    static inline WrapMode get_wrapmode_U(TextureID texture_ID) { return m_samplers[texture_ID].wrapmode_U; }
+    static inline WrapMode get_wrapmode_V(TextureID texture_ID) { return m_samplers[texture_ID].wrapmode_V; }
+    static inline WrapMode get_wrapmode_W(TextureID texture_ID) { return m_samplers[texture_ID].wrapmode_W; }
 
     //---------------------------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -86,9 +91,9 @@ public:
     }; 
     typedef Core::Bitmask<Change> Changes;
     
-    static inline Changes get_changes(Textures::UID texture_ID) { return m_changes.get_changes(texture_ID); }
+    static inline Changes get_changes(TextureID texture_ID) { return m_changes.get_changes(texture_ID); }
 
-    typedef std::vector<UID>::iterator ChangedIterator;
+    typedef std::vector<TextureID>::iterator ChangedIterator;
     static Core::Iterable<ChangedIterator> get_changed_textures() { return m_changes.get_changed_resources(); }
 
     static void reset_change_notifications() { m_changes.reset_change_notifications(); }
@@ -98,7 +103,7 @@ private:
 
     // NOTE All of this but the ID can be stored in a single int.
     struct Sampler {
-        Images::UID image_ID;
+        ImageID image_ID;
         Type type;
         MagnificationFilter magnification_filter;
         MinificationFilter minification_filter;
@@ -107,23 +112,23 @@ private:
         WrapMode wrapmode_W;
     };
 
-    static UIDGenerator m_UID_generator;
+    static TextureIDGenerator m_UID_generator;
     static Sampler* m_samplers;
-    static Core::ChangeSet<Changes, UID> m_changes;
+    static Core::ChangeSet<Changes, TextureID> m_changes;
 };
 
 //-------------------------------------------------------------------------------------------------
-// Texture UID wrapper.
+// Texture ID wrapper.
 //-------------------------------------------------------------------------------------------------
 class Texture {
 public:
     //---------------------------------------------------------------------------------------------
     // Constructors and destructors.
     //---------------------------------------------------------------------------------------------
-    Texture() : m_ID(Textures::UID::invalid_UID()) {}
-    Texture(Textures::UID id) : m_ID(id) {}
+    Texture() : m_ID(TextureID::invalid_UID()) {}
+    Texture(TextureID id) : m_ID(id) {}
 
-    inline const Textures::UID get_ID() const { return m_ID; }
+    inline const TextureID get_ID() const { return m_ID; }
     inline bool exists() const { return Textures::has(m_ID); }
 
     inline bool operator==(Texture rhs) const { return m_ID == rhs.m_ID; }
@@ -147,13 +152,13 @@ public:
     inline unsigned char get_changes() const { return Textures::get_changes(m_ID); }
 
 private:
-    Textures::UID m_ID;
+    TextureID m_ID;
 };
 
 //-------------------------------------------------------------------------------------------------
 // Texture sampling
 //-------------------------------------------------------------------------------------------------
-Math::RGBA sample2D(Textures::UID texture_ID, Math::Vector2f texcoord, int mipmap_level = 0);
+Math::RGBA sample2D(TextureID texture_ID, Math::Vector2f texcoord, int mipmap_level = 0);
 
 } // NS Assets
 } // NS Bifrost

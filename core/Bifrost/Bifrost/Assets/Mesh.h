@@ -31,6 +31,13 @@ enum class MeshFlag : unsigned char {
 typedef Core::Bitmask<MeshFlag> MeshFlags;
 
 //----------------------------------------------------------------------------
+// Mesh ID
+//----------------------------------------------------------------------------
+class Meshes;
+typedef Core::TypedUIDGenerator<Meshes> MeshIDGenerator;
+typedef MeshIDGenerator::UID MeshID;
+
+//----------------------------------------------------------------------------
 // Container for mesh properties and their bufers.
 // Future work:
 // * Verify that creating and destroying meshes don't leak!
@@ -39,9 +46,7 @@ typedef Core::Bitmask<MeshFlag> MeshFlags;
 //----------------------------------------------------------------------------
 class Meshes final {
 public:
-    typedef Core::TypedUIDGenerator<Meshes> UIDGenerator;
-    typedef UIDGenerator::UID UID;
-    typedef UIDGenerator::ConstIterator ConstUIDIterator;
+    using Iterator = MeshIDGenerator::ConstIterator;
 
     static inline bool is_allocated() { return m_buffers != nullptr; }
     static void allocate(unsigned int capacity);
@@ -49,30 +54,30 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static inline bool has(Meshes::UID mesh_ID) { return m_UID_generator.has(mesh_ID); }
+    static inline bool has(MeshID mesh_ID) { return m_UID_generator.has(mesh_ID); }
 
-    static Meshes::UID create(const std::string& name, unsigned int primitive_count, unsigned int vertex_count, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
-    static void destroy(Meshes::UID mesh_ID);
+    static MeshID create(const std::string& name, unsigned int primitive_count, unsigned int vertex_count, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
+    static void destroy(MeshID mesh_ID);
 
-    static inline ConstUIDIterator begin() { return m_UID_generator.begin(); }
-    static inline ConstUIDIterator end() { return m_UID_generator.end(); }
-    static inline Core::Iterable<ConstUIDIterator> get_iterable() { return Core::Iterable<ConstUIDIterator>(begin(), end()); }
+    static inline Iterator begin() { return m_UID_generator.begin(); }
+    static inline Iterator end() { return m_UID_generator.end(); }
+    static inline Core::Iterable<Iterator> get_iterable() { return Core::Iterable<Iterator>(begin(), end()); }
 
-    static inline std::string get_name(Meshes::UID mesh_ID) { return m_names[mesh_ID]; }
-    static inline void set_name(Meshes::UID mesh_ID, const std::string& name) { m_names[mesh_ID] = name; }
+    static inline std::string get_name(MeshID mesh_ID) { return m_names[mesh_ID]; }
+    static inline void set_name(MeshID mesh_ID, const std::string& name) { m_names[mesh_ID] = name; }
 
-    static inline unsigned int get_primitive_count(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].primitive_count; }
-    static inline Math::Vector3ui* get_primitives(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].primitives; }
-    static inline unsigned int get_index_count(Meshes::UID mesh_ID) { return get_primitive_count(mesh_ID) * 3; }
-    static inline unsigned int* get_indices(Meshes::UID mesh_ID) { return (unsigned int*)(void*)get_primitives(mesh_ID); }
+    static inline unsigned int get_primitive_count(MeshID mesh_ID) { return m_buffers[mesh_ID].primitive_count; }
+    static inline Math::Vector3ui* get_primitives(MeshID mesh_ID) { return m_buffers[mesh_ID].primitives; }
+    static inline unsigned int get_index_count(MeshID mesh_ID) { return get_primitive_count(mesh_ID) * 3; }
+    static inline unsigned int* get_indices(MeshID mesh_ID) { return (unsigned int*)(void*)get_primitives(mesh_ID); }
 
-    static inline unsigned int get_vertex_count(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].vertex_count; }
-    static inline Math::Vector3f* get_positions(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].positions; }
-    static inline Math::Vector3f* get_normals(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].normals; }
-    static inline Math::Vector2f* get_texcoords(Meshes::UID mesh_ID) { return m_buffers[mesh_ID].texcoords; }
-    static inline Math::AABB get_bounds(Meshes::UID mesh_ID) { return m_bounds[mesh_ID]; }
-    static inline void set_bounds(Meshes::UID mesh_ID, Math::AABB bounds) { m_bounds[mesh_ID] = bounds; }
-    static Math::AABB compute_bounds(Meshes::UID mesh_ID);
+    static inline unsigned int get_vertex_count(MeshID mesh_ID) { return m_buffers[mesh_ID].vertex_count; }
+    static inline Math::Vector3f* get_positions(MeshID mesh_ID) { return m_buffers[mesh_ID].positions; }
+    static inline Math::Vector3f* get_normals(MeshID mesh_ID) { return m_buffers[mesh_ID].normals; }
+    static inline Math::Vector2f* get_texcoords(MeshID mesh_ID) { return m_buffers[mesh_ID].texcoords; }
+    static inline Math::AABB get_bounds(MeshID mesh_ID) { return m_bounds[mesh_ID]; }
+    static inline void set_bounds(MeshID mesh_ID, Math::AABB bounds) { m_bounds[mesh_ID] = bounds; }
+    static Math::AABB compute_bounds(MeshID mesh_ID);
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -85,9 +90,9 @@ public:
     };
     typedef Core::Bitmask<Change> Changes;
 
-    static inline Changes get_changes(Meshes::UID mesh_ID) { return m_changes.get_changes(mesh_ID); }
+    static inline Changes get_changes(MeshID mesh_ID) { return m_changes.get_changes(mesh_ID); }
 
-    typedef std::vector<UID>::iterator ChangedIterator;
+    typedef std::vector<MeshID>::iterator ChangedIterator;
     static inline Core::Iterable<ChangedIterator> get_changed_meshes() { return m_changes.get_changed_resources(); }
 
     static void reset_change_notifications() { m_changes.reset_change_notifications(); }
@@ -105,13 +110,13 @@ private:
         Math::Vector2f* texcoords;
     };
 
-    static UIDGenerator m_UID_generator;
+    static MeshIDGenerator m_UID_generator;
     static std::string* m_names;
 
     static Buffers* m_buffers;
     static Math::AABB* m_bounds;
 
-    static Core::ChangeSet<Changes, UID> m_changes;
+    static Core::ChangeSet<Changes, MeshID> m_changes;
 };
 
 // ---------------------------------------------------------------------------
@@ -122,10 +127,10 @@ public:
     // -----------------------------------------------------------------------
     // Class management.
     // -----------------------------------------------------------------------
-    Mesh() : m_ID(Meshes::UID::invalid_UID()) {}
-    Mesh(Meshes::UID id) : m_ID(id) {}
+    Mesh() : m_ID(MeshID::invalid_UID()) {}
+    Mesh(MeshID id) : m_ID(id) {}
 
-    inline const Meshes::UID get_ID() const { return m_ID; }
+    inline const MeshID get_ID() const { return m_ID; }
     inline bool exists() const { return Meshes::has(m_ID); }
 
     inline bool operator==(Mesh rhs) const { return m_ID == rhs.m_ID; }
@@ -163,7 +168,7 @@ public:
     inline Meshes::Changes get_changes() { return Meshes::get_changes(m_ID); }
 
 private:
-    const Meshes::UID m_ID;
+    const MeshID m_ID;
 };
 
 //----------------------------------------------------------------------------
@@ -175,25 +180,25 @@ private:
 //----------------------------------------------------------------------------
 namespace MeshUtils {
 
-Meshes::UID deep_clone(Meshes::UID mesh_ID);
-void transform_mesh(Meshes::UID mesh_ID, Math::Matrix3x4f affine_transform);
-void transform_mesh(Meshes::UID mesh_ID, Math::Transform transform);
+MeshID deep_clone(MeshID mesh_ID);
+void transform_mesh(MeshID mesh_ID, Math::Matrix3x4f affine_transform);
+void transform_mesh(MeshID mesh_ID, Math::Transform transform);
 
 //-------------------------------------------------------------------------
 // Mesh combine utilities.
 //-------------------------------------------------------------------------
 struct TransformedMesh {
-    Meshes::UID mesh_ID;
+    MeshID mesh_ID;
     Math::Transform transform;
 };
 
-Meshes::UID combine(const std::string& name, 
+MeshID combine(const std::string& name, 
                     const TransformedMesh* const meshes_begin, const TransformedMesh* const meshes_end, 
                     MeshFlags flags = MeshFlag::AllBuffers);
 
-inline Meshes::UID combine(const std::string& name, 
-                           Meshes::UID mesh0_ID, Math::Transform transform0,
-                           Meshes::UID mesh1_ID, Math::Transform transform1, 
+inline MeshID combine(const std::string& name, 
+                      MeshID mesh0_ID, Math::Transform transform0,
+                      MeshID mesh1_ID, Math::Transform transform1, 
                            MeshFlags flags = MeshFlag::AllBuffers) {
     TransformedMesh mesh0 = { mesh0_ID, transform0 };
     TransformedMesh mesh1 = { mesh1_ID, transform1 };
@@ -209,7 +214,7 @@ void compute_hard_normals(Math::Vector3f* positions_begin, Math::Vector3f* posit
 // This function assumes that the positions are used to describe triangles.
 void compute_normals(Math::Vector3ui* primitives_begin, Math::Vector3ui* primitives_end,
                      Math::Vector3f* normals_begin, Math::Vector3f* normals_end, Math::Vector3f* positions_begin);
-void compute_normals(Meshes::UID mesh_ID);
+void compute_normals(MeshID mesh_ID);
 
 // Expands a buffer and a list of triangle vertex indices into a non-indexed buffer.
 // Useful for expanding meshes that uses indexing into a mesh that does not.
@@ -246,13 +251,13 @@ namespace MeshTests {
 // is facing the same general direction as the normals.
 // TODO optional function that all invalid primitives are passed to.
 // Returns the number of primitives whose winding order did not correspond to their vertex normals.
-unsigned int normals_correspond_to_winding_order(Meshes::UID mesh_ID);
+unsigned int normals_correspond_to_winding_order(MeshID mesh_ID);
 
 // TODO callback function that receives found degenerate primitives.
-unsigned int count_degenerate_primitives(Meshes::UID mesh_ID, float epsilon_squared = 0.000001f);
+unsigned int count_degenerate_primitives(MeshID mesh_ID, float epsilon_squared = 0.000001f);
 
 // Tests that no indices index out of bounds.
-inline bool has_invalid_indices(Meshes::UID mesh_ID) {
+inline bool has_invalid_indices(MeshID mesh_ID) {
     Mesh mesh = mesh_ID;
 
     unsigned int max_index = 0;

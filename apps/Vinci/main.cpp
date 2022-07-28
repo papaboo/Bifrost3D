@@ -76,7 +76,7 @@ inline Vector3f parse_vector3f(const char* rgb_str) { return parse_array_type<Ve
 inline Vector4f parse_vector4f(const char* rgb_str) { return parse_array_type<Vector4f>(rgb_str); }
 inline RGB parse_RGB(const char* rgb_str) { return parse_array_type<RGB>(rgb_str); }
 
-Images::UID load_image(const std::string& filename) {
+ImageID load_image(const std::string& filename) {
     return StbImageLoader::load(filename);
 }
 
@@ -108,7 +108,7 @@ struct Options {
         options.random_seed = 45678907;
         options.random_scene_images = 32;
 
-        options.environment_map = Textures::UID::invalid_UID();
+        options.environment_map = TextureID::invalid_UID();
         options.environment_tint = RGB::black();
 
         int argument = 1;
@@ -151,7 +151,7 @@ struct Options {
 class Navigation final {
 public:
 
-    Navigation(Cameras::UID camera_ID, float velocity)
+    Navigation(CameraID camera_ID, float velocity)
         : m_camera_ID(camera_ID)
         , m_velocity(velocity)
         , m_camera_moved(false) {
@@ -162,7 +162,7 @@ public:
         m_horizontal_rotation = std::asin(forward.y);
     }
 
-    inline Cameras::UID camera_ID() const { return m_camera_ID; }
+    inline CameraID camera_ID() const { return m_camera_ID; }
     inline bool camera_has_moved() const { return m_camera_moved; }
 
     void navigate(Engine& engine) {
@@ -215,7 +215,7 @@ public:
     }
 
 private:
-    Cameras::UID m_camera_ID;
+    CameraID m_camera_ID;
     float m_vertical_rotation;
     float m_horizontal_rotation;
     float m_velocity;
@@ -225,11 +225,11 @@ private:
 class SceneRefresher final {
 public:
 
-    SceneRefresher(SceneGenerator::RandomScene& scene, Cameras::UID camera_ID)
+    SceneRefresher(SceneGenerator::RandomScene& scene, CameraID camera_ID)
         : m_random_scene(&scene), m_scene_sampler(nullptr), m_material_randomizer(nullptr), m_camera_ID(camera_ID)
         , m_light_node(SceneNode()), m_camera_to_light_transform(Transform::identity()) {}
 
-    SceneRefresher(SceneSampler& scene, MaterialRandomizer& material_randomizer, Cameras::UID camera_ID)
+    SceneRefresher(SceneSampler& scene, MaterialRandomizer& material_randomizer, CameraID camera_ID)
         : m_random_scene(nullptr), m_scene_sampler(&scene), m_material_randomizer(&material_randomizer), m_camera_ID(camera_ID)
         , m_light_node(SceneNode()), m_camera_to_light_transform(Transform::identity()) {}
 
@@ -276,7 +276,7 @@ private:
     SceneGenerator::RandomScene* m_random_scene;
     SceneSampler* m_scene_sampler;
     MaterialRandomizer* m_material_randomizer;
-    Cameras::UID m_camera_ID;
+    CameraID m_camera_ID;
     SceneNode m_light_node;
     Transform m_camera_to_light_transform;
 
@@ -336,7 +336,7 @@ private:
     int m_iteration;
     int m_max_iterations;
 
-    inline Cameras::UID camera_ID() const { return m_camera_navigation.camera_ID(); }
+    inline CameraID camera_ID() const { return m_camera_navigation.camera_ID(); }
 
     void queue_screenshot() {
         const Cameras::ScreenshotContent content = { Screenshot::Content::ColorLDR, Screenshot::Content::Depth, Screenshot::Content::Albedo, Screenshot::Content::Tint, Screenshot::Content::Roughness };
@@ -382,7 +382,7 @@ int setup_scene(Engine& engine, Options& options) {
     float field_of_view = acos(cos_field_of_view);
     CameraUtils::compute_perspective_projection(near, far, field_of_view, engine.get_window().get_aspect_ratio(),
         perspective_matrix, inverse_perspective_matrix);
-    Cameras::UID camera_ID = Cameras::create("Camera", scene_root.get_ID(), perspective_matrix, inverse_perspective_matrix);
+    CameraID camera_ID = Cameras::create("Camera", scene_root.get_ID(), perspective_matrix, inverse_perspective_matrix);
     Transform cam_transform = Cameras::get_transform(camera_ID);
     // Disable screen space effects to keep the data in a linear color space.
     Cameras::set_effects_settings(camera_ID, CameraEffects::Settings::linear());

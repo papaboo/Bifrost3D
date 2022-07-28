@@ -35,7 +35,7 @@ void TransformManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext
         m_GPU_transforms.resize(SceneNodes::capacity());
     }
 
-    for (SceneNodes::UID node_ID : SceneNodes::get_changed_nodes()) {
+    for (SceneNodeID node_ID : SceneNodes::get_changed_nodes()) {
         auto node_changes = SceneNodes::get_changes(node_ID);
         if (node_changes.is_set(SceneNodes::Change::Destroyed))
             continue;

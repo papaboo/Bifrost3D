@@ -15,7 +15,7 @@
 
 namespace ObjLoader {
 
-typedef Bifrost::Assets::Images::UID (*ImageLoader)(const std::string& filename);
+typedef Bifrost::Assets::ImageID (*ImageLoader)(const std::string& filename);
 
 // -----------------------------------------------------------------------
 // Loads an obj file.
@@ -23,7 +23,7 @@ typedef Bifrost::Assets::Images::UID (*ImageLoader)(const std::string& filename)
 // * Return an (optional) list of created mesh model IDs?
 // * Reserve capacity for Mesh, MeshModels and SceneNodes before creating them.
 // -----------------------------------------------------------------------
-Bifrost::Scene::SceneNodes::UID load(const std::string& filename, ImageLoader image_loader);
+Bifrost::Scene::SceneNodeID load(const std::string& filename, ImageLoader image_loader);
 
 bool file_supported(const std::string& filename);
 

@@ -59,7 +59,7 @@ public:
 
     OptiXRenderer::Renderer* m_optix_renderer;
 
-    Implementation(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory, Bifrost::Core::Renderers::UID renderer_ID)
+    Implementation(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory, Bifrost::Core::RendererID renderer_ID)
         : m_device(device), m_backbuffer_RTV(nullptr), m_backbuffer_SRV(nullptr) {
 
         device.GetImmediateContext1(&m_render_context);
@@ -145,7 +145,7 @@ public:
         m_optix_renderer->handle_updates();
     }
 
-    RenderedFrame render(Bifrost::Scene::Cameras::UID camera_ID, int width, int height) {
+    RenderedFrame render(Bifrost::Scene::CameraID camera_ID, int width, int height) {
         if (m_render_target.width < width || m_render_target.height < height) {
             int buffer_width = std::max(m_render_target.width, width);
             int buffer_height = std::max(m_render_target.height, height);
@@ -280,11 +280,11 @@ void Adaptor::handle_updates() {
     m_impl->handle_updates();
 }
 
-RenderedFrame Adaptor::render(Bifrost::Scene::Cameras::UID camera_ID, int width, int height) {
+RenderedFrame Adaptor::render(Bifrost::Scene::CameraID camera_ID, int width, int height) {
     return m_impl->render(camera_ID, width, height);
 }
 
-std::vector<Bifrost::Scene::Screenshot> Adaptor::request_auxiliary_buffers(Bifrost::Scene::Cameras::UID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, int width, int height) {
+std::vector<Bifrost::Scene::Screenshot> Adaptor::request_auxiliary_buffers(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, int width, int height) {
     return m_impl->m_optix_renderer->request_auxiliary_buffers(camera_ID, content_requested, width, height);
 }
 
