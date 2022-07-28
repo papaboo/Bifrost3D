@@ -106,7 +106,7 @@ private:
     struct Transparent {
         struct SortedModel {
             float distance;
-            MeshModelManager::Iterator model_iterator;
+            MeshModelManager::ConstIterator model_iterator;
         };
 
         OBlendState blend_state;
@@ -374,9 +374,9 @@ public:
         { // Render opaque objects.
             m_render_context->VSSetShader(m_g_buffer.opaque.vertex_shader, 0, 0);
             m_render_context->PSSetShader(m_g_buffer.opaque.pixel_shader, 0, 0);
-            for (auto model_itr = m_mesh_models.begin_models(); model_itr < m_mesh_models.begin_transparent_models(); ++model_itr) {
+            for (auto model_itr = m_mesh_models.cbegin(); model_itr != m_mesh_models.cbegin_transparent_models(); ++model_itr) {
                 // Setup two-sided raster state for cutout materials.
-                if (model_itr == m_mesh_models.begin_cutout_models()) {
+                if (model_itr == m_mesh_models.cbegin_cutout_models()) {
                     m_render_context->RSSetState(m_g_buffer.cutout.raster_state);
                     m_render_context->VSSetShader(m_g_buffer.cutout.vertex_shader, 0, 0);
                     m_render_context->IASetInputLayout(m_g_buffer.cutout.vertex_input_layout);
@@ -651,9 +651,9 @@ public:
             unsigned int offset = 0;
             m_render_context->IASetVertexBuffers(2, 1, &m_vertex_shading.null_buffer, &stride, &offset);
 
-            for (auto model_itr = m_mesh_models.begin_models(); model_itr < m_mesh_models.begin_transparent_models(); ++model_itr) {
+            for (auto model_itr = m_mesh_models.cbegin(); model_itr != m_mesh_models.cbegin_transparent_models(); ++model_itr) {
                 // Setup two-sided raster state for cutout materials.
-                if (model_itr == m_mesh_models.begin_cutout_models())
+                if (model_itr == m_mesh_models.cbegin_cutout_models())
                     m_render_context->RSSetState(m_cutout.raster_state);
 
                 assert(model_itr->model_ID != 0);
@@ -667,7 +667,7 @@ public:
                 auto transparent_marker = PerformanceMarker(*m_render_context, L"Transparent geometry");
 
                 // Apply used cutout state if not already applied.
-                bool no_cutouts_present = m_mesh_models.begin_cutout_models() == m_mesh_models.begin_transparent_models();
+                bool no_cutouts_present = m_mesh_models.cbegin_cutout_models() == m_mesh_models.cbegin_transparent_models();
                 if (no_cutouts_present)
                     m_render_context->RSSetState(m_cutout.raster_state);
 
@@ -677,14 +677,14 @@ public:
                 m_render_context->OMSetDepthStencilState(m_transparent.depth_state, 0);
                 m_render_context->PSSetShader(debug_material_params ? m_debug.material_params_shader : m_transparent.shader, 0, 0);
 
-                int transparent_model_count = int(m_mesh_models.end_models() - m_mesh_models.begin_transparent_models());
+                int transparent_model_count = int(m_mesh_models.cend() - m_mesh_models.cbegin_transparent_models());
                 auto transparent_models = m_transparent.sorted_models_pool; // Alias the pool.
                 transparent_models.reserve(transparent_model_count);
                 transparent_models.resize(0);
 
                 { // Sort transparent models. TODO in a separate thread that is waited on when we get to the transparent render index.
                     Vector3f cam_pos = Cameras::get_transform(camera_ID).translation;
-                    for (auto model_itr = m_mesh_models.begin_transparent_models(); model_itr < m_mesh_models.end_models(); ++model_itr) {
+                    for (auto model_itr = m_mesh_models.cbegin_transparent_models(); model_itr != m_mesh_models.cend(); ++model_itr) {
                         // Calculate the distance to point halfway between the models center and side of the bounding box.
                         Dx11Mesh& mesh = m_meshes[model_itr->mesh_ID];
                         Transform transform = m_transforms.get_transform(model_itr->transform_ID);
