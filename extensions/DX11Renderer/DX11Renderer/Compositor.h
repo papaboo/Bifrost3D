@@ -9,9 +9,9 @@
 #ifndef _DX11RENDERER_COMPOSITOR_H_
 #define _DX11RENDERER_COMPOSITOR_H_
 
-#include <Bifrost/Core/Renderer.h>
 #include <Bifrost/Core/Window.h>
 #include <Bifrost/Scene/Camera.h>
+#include <Bifrost/Utils/IdDeclarations.h>
 
 #include <memory>
 

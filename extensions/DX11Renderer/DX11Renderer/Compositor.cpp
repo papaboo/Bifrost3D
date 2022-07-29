@@ -7,8 +7,11 @@
 //-------------------------------------------------------------------------------------------------
 
 #include <DX11Renderer/Compositor.h>
+
 #include <DX11Renderer/CameraEffects.h>
 #include <DX11Renderer/Utils.h>
+
+#include <Bifrost/Core/Renderer.h>
 
 #include <filesystem>
 

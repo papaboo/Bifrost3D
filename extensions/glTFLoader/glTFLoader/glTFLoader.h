@@ -9,7 +9,8 @@
 #ifndef _BIFROST_ASSETS_GLTF_LOADER_H_
 #define _BIFROST_ASSETS_GLTF_LOADER_H_
 
-#include <Bifrost/Scene/SceneNode.h>
+#include <Bifrost/Utils/IdDeclarations.h>
+
 #include <string>
 
 namespace glTFLoader {

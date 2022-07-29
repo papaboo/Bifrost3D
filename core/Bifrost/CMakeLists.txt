@@ -91,7 +91,11 @@ SET(SCENE_SRCS
   Bifrost/Scene/SceneRoot.h
 )
 
-add_library(Bifrost ${ASSETS_SRCS} ${ASSETS_SHADING_SRCS} ${CORE_SRCS} ${INPUT_SRCS} ${MATH_SRCS} ${SCENE_SRCS})
+SET(UTILS_SRCS 
+  Bifrost/Utils/IdDeclarations.h
+)
+
+add_library(Bifrost ${ASSETS_SRCS} ${ASSETS_SHADING_SRCS} ${CORE_SRCS} ${INPUT_SRCS} ${MATH_SRCS} ${SCENE_SRCS} ${UTILS_SRCS})
 
 SOURCE_GROUP("Assets" FILES ${ASSETS_SRCS})
 SOURCE_GROUP("Assets\\Shading" FILES ${ASSETS_SHADING_SRCS})
@@ -99,6 +103,7 @@ SOURCE_GROUP("Core" FILES ${CORE_SRCS})
 SOURCE_GROUP("Input" FILES ${INPUT_SRCS})
 SOURCE_GROUP("Math" FILES ${MATH_SRCS})
 SOURCE_GROUP("Scene" FILES ${SCENE_SRCS})
+SOURCE_GROUP("Utils" FILES ${UTILS_SRCS})
 
 target_include_directories(Bifrost PUBLIC .)
 

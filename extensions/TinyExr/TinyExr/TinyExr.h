@@ -9,7 +9,7 @@
 #ifndef _BIFROST_TINY_EXR_H_
 #define _BIFROST_TINY_EXR_H_
 
-#include <Bifrost/Assets/Image.h>
+#include <Bifrost/Utils/IdDeclarations.h>
 #include <string>
 
 namespace TinyExr {

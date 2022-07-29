@@ -10,6 +10,8 @@
 
 #include <StbImageLoader/StbImageLoader.h>
 
+#include <Bifrost/Assets/Image.h>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <StbImageLoader/stb_image.h>
 

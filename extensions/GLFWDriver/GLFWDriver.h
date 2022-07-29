@@ -12,11 +12,9 @@
 //----------------------------------------------------------------------------
 // Forward declerations
 //----------------------------------------------------------------------------
-namespace Bifrost {
-namespace Core {
+namespace Bifrost::Core {
 class Engine;
 class Window;
-}
 }
 
 namespace GLFWDriver {
