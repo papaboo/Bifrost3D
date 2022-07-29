@@ -48,20 +48,20 @@ float2 opaque_PS(OpaqueVaryings varyings) : SV_Target {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Cutout model.
+// Thin-walled model.
 // ------------------------------------------------------------------------------------------------
 
 Texture2D coverage_tex : register(t1);
 SamplerState coverage_sampler : register(s1);
 
-struct CutoutVaryings {
+struct ThinWalledVaryings {
     float4 position : SV_POSITION;
     float3 normal : NORMAL;
     float2 uv : TEXCOORD;
 };
 
-CutoutVaryings cutout_VS(float4 geometry : GEOMETRY, float2 uv : TEXCOORD) {
-    CutoutVaryings varyings;
+ThinWalledVaryings thin_walled_VS(float4 geometry : GEOMETRY, float2 uv : TEXCOORD) {
+    ThinWalledVaryings varyings;
     float3 world_position = mul(float4(geometry.xyz, 1.0f), to_world_matrix).xyz;
     varyings.position = mul(float4(world_position, 1.0f), scene_vars.view_projection_matrix);
     float3 world_normal = mul(float4(decode_octahedral_normal(asint(geometry.w)), 0.0), to_world_matrix);
@@ -70,7 +70,7 @@ CutoutVaryings cutout_VS(float4 geometry : GEOMETRY, float2 uv : TEXCOORD) {
     return varyings;
 }
 
-float2 cutout_PS(CutoutVaryings varyings) : SV_Target {
+float2 thin_walled_PS(ThinWalledVaryings varyings) : SV_Target {
     float coverage = material_params.coverage(varyings.uv, coverage_tex, coverage_sampler);
     if (coverage < CUTOFF)
         discard;

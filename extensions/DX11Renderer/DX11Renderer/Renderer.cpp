@@ -84,7 +84,7 @@ private:
             OVertexShader vertex_shader;
             OInputLayout vertex_input_layout;
             OPixelShader pixel_shader;
-        } cutout;
+        } thin_walled;
     } m_g_buffer;
 
     struct {
@@ -99,9 +99,7 @@ private:
         OPixelShader shader;
     } m_opaque;
 
-    struct {
-        ORasterizerState raster_state;
-    } m_cutout;
+    ORasterizerState m_thin_walled_raster_state;
 
     struct Transparent {
         struct SortedModel {
@@ -202,23 +200,23 @@ public:
                 THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.opaque.pixel_shader));
             }
 
-            { // Cutout shaders
+            { // Thin walled shaders
                 CD3D11_RASTERIZER_DESC raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
                 raster_state.CullMode = D3D11_CULL_NONE;
-                THROW_DX11_ERROR(m_device.CreateRasterizerState(&raster_state, &m_g_buffer.cutout.raster_state));
+                THROW_DX11_ERROR(m_device.CreateRasterizerState(&raster_state, &m_g_buffer.thin_walled.raster_state));
 
-                OBlob vertex_shader_blob = compile_shader(m_shader_directory / "ModelGBuffer.hlsl", "vs_5_0", "cutout_VS");
-                THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.cutout.vertex_shader));
+                OBlob vertex_shader_blob = compile_shader(m_shader_directory / "ModelGBuffer.hlsl", "vs_5_0", "thin_walled_VS");
+                THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.thin_walled.vertex_shader));
 
                 // Create the input layout
                 D3D11_INPUT_ELEMENT_DESC input_layout_desc[] = {
                     { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
                     { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
                 };
-                THROW_DX11_ERROR(m_device.CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.cutout.vertex_input_layout));
+                THROW_DX11_ERROR(m_device.CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.thin_walled.vertex_input_layout));
 
-                OBlob pixel_shader_blob = compile_shader(m_shader_directory / "ModelGBuffer.hlsl", "ps_5_0", "cutout_PS");
-                THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.cutout.pixel_shader));
+                OBlob pixel_shader_blob = compile_shader(m_shader_directory / "ModelGBuffer.hlsl", "ps_5_0", "thin_walled_PS");
+                THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.thin_walled.pixel_shader));
             }
 
             // Depth-stencil state
@@ -280,11 +278,11 @@ public:
             THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_opaque.shader));
         }
 
-        { // Setup cutout rendering. Reuses some of the opaque state.
+        { // Setup thin-walled rendering. Reuses some of the opaque state.
             CD3D11_RASTERIZER_DESC twosided_raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
             twosided_raster_state.ScissorEnable = true;
             twosided_raster_state.CullMode = D3D11_CULL_NONE;
-            THROW_DX11_ERROR(m_device.CreateRasterizerState(&twosided_raster_state, &m_cutout.raster_state));
+            THROW_DX11_ERROR(m_device.CreateRasterizerState(&twosided_raster_state, &m_thin_walled_raster_state));
         }
 
         { // Setup transparent rendering.
@@ -375,12 +373,12 @@ public:
             m_render_context->VSSetShader(m_g_buffer.opaque.vertex_shader, 0, 0);
             m_render_context->PSSetShader(m_g_buffer.opaque.pixel_shader, 0, 0);
             for (auto model_itr = m_mesh_models.cbegin(); model_itr != m_mesh_models.cbegin_transparent_models(); ++model_itr) {
-                // Setup two-sided raster state for cutout materials.
-                if (model_itr == m_mesh_models.cbegin_cutout_models()) {
-                    m_render_context->RSSetState(m_g_buffer.cutout.raster_state);
-                    m_render_context->VSSetShader(m_g_buffer.cutout.vertex_shader, 0, 0);
-                    m_render_context->IASetInputLayout(m_g_buffer.cutout.vertex_input_layout);
-                    m_render_context->PSSetShader(m_g_buffer.cutout.pixel_shader, 0, 0);
+                // Setup two-sided raster state for thin-walled materials.
+                if (model_itr == m_mesh_models.cbegin_opaque_thin_walled_models()) {
+                    m_render_context->RSSetState(m_g_buffer.thin_walled.raster_state);
+                    m_render_context->VSSetShader(m_g_buffer.thin_walled.vertex_shader, 0, 0);
+                    m_render_context->IASetInputLayout(m_g_buffer.thin_walled.vertex_input_layout);
+                    m_render_context->PSSetShader(m_g_buffer.thin_walled.pixel_shader, 0, 0);
                 }
 
                 assert(model_itr->model_ID != 0);
@@ -652,9 +650,9 @@ public:
             m_render_context->IASetVertexBuffers(2, 1, &m_vertex_shading.null_buffer, &stride, &offset);
 
             for (auto model_itr = m_mesh_models.cbegin(); model_itr != m_mesh_models.cbegin_transparent_models(); ++model_itr) {
-                // Setup two-sided raster state for cutout materials.
-                if (model_itr == m_mesh_models.cbegin_cutout_models())
-                    m_render_context->RSSetState(m_cutout.raster_state);
+                // Setup two-sided raster state for thin-walled materials.
+                if (model_itr == m_mesh_models.cbegin_opaque_thin_walled_models())
+                    m_render_context->RSSetState(m_thin_walled_raster_state);
 
                 assert(model_itr->model_ID != 0);
                 render_model<false>(m_render_context, *model_itr);
@@ -666,10 +664,10 @@ public:
 
                 auto transparent_marker = PerformanceMarker(*m_render_context, L"Transparent geometry");
 
-                // Apply used cutout state if not already applied.
-                bool no_cutouts_present = m_mesh_models.cbegin_cutout_models() == m_mesh_models.cbegin_transparent_models();
-                if (no_cutouts_present)
-                    m_render_context->RSSetState(m_cutout.raster_state);
+                // Apply used thin-wall state if not already applied.
+                bool no_thin_walled_present = m_mesh_models.cbegin_opaque_thin_walled_models() == m_mesh_models.cbegin_transparent_models();
+                if (no_thin_walled_present)
+                    m_render_context->RSSetState(m_thin_walled_raster_state);
 
                 // Set transparent state.
                 if (!debug_material_params)
