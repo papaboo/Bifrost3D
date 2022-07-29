@@ -10,10 +10,12 @@
 
 #include <ObjLoader/ObjLoader.h>
 
+#include <Bifrost/Assets/Image.h>
 #include <Bifrost/Assets/Material.h>
 #include <Bifrost/Assets/Mesh.h>
 #include <Bifrost/Assets/MeshModel.h>
 #include <Bifrost/Core/Array.h>
+#include <Bifrost/Scene/SceneNode.h>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <ObjLoader/tiny_obj_loader.h>

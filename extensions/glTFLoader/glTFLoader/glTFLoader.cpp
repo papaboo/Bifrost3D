@@ -14,6 +14,7 @@
 #include <Bifrost/Assets/Mesh.h>
 #include <Bifrost/Assets/MeshModel.h>
 #include <Bifrost/Math/Conversions.h>
+#include <Bifrost/Scene/SceneNode.h>
 
 #include <StbImageLoader/StbImageLoader.h>
 

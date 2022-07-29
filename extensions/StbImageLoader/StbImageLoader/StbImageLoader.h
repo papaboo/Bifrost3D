@@ -9,7 +9,7 @@
 #ifndef _BIFROST_ASSETS_STB_IMAGE_LOADER_H_
 #define _BIFROST_ASSETS_STB_IMAGE_LOADER_H_
 
-#include <Bifrost/Assets/Image.h>
+#include <Bifrost/Utils/IdDeclarations.h>
 #include <string>
 
 namespace StbImageLoader {

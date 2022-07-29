@@ -10,6 +10,8 @@
 
 #include <TinyExr/TinyExr.h>
 
+#include <Bifrost/Assets/Image.h>
+
 #define TINYEXR_IMPLEMENTATION
 #include <TinyExr/tiny_exr.h>
 

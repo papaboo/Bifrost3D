@@ -12,7 +12,7 @@
 #include <OptiXRenderer/PublicTypes.h>
 
 #include <Bifrost/Scene/Camera.h>
-#include <Bifrost/Scene/SceneRoot.h>
+#include <Bifrost/Utils/IdDeclarations.h>
 
 // ------------------------------------------------------------------------------------------------
 // Forward declarations.

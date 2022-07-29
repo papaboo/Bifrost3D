@@ -9,8 +9,8 @@
 #ifndef _BIFROST_ASSETS_OBJ_LOADER_H_
 #define _BIFROST_ASSETS_OBJ_LOADER_H_
 
-#include <Bifrost/Assets/Image.h>
-#include <Bifrost/Scene/SceneNode.h>
+#include <Bifrost/Utils/IdDeclarations.h>
+
 #include <string>
 
 namespace ObjLoader {
