@@ -94,12 +94,20 @@ private:
     } m_vertex_shading;
 
     struct {
-        ORasterizerState raster_state;
         ODepthStencilState depth_state;
         OPixelShader shader;
     } m_opaque;
 
-    ORasterizerState m_thin_walled_raster_state;
+    struct {
+        ORasterizerState backface_culled;
+        ORasterizerState thin_walled;
+        ID3D11RasterizerState* current_state = nullptr;
+
+        void set_raster_state(ORasterizerState& rs_state, ODeviceContext1& render_context) { 
+            render_context->RSSetState(rs_state);
+            current_state = rs_state;
+        }
+    } m_raster_state;
 
     struct Transparent {
         struct SortedModel {
@@ -264,11 +272,18 @@ public:
             THROW_DX11_ERROR(m_device.CreateBuffer(&empty_desc, &empty_data, &m_vertex_shading.null_buffer));
         }
 
-        { // Setup opaque rendering.
-            CD3D11_RASTERIZER_DESC opaque_raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
-            opaque_raster_state.ScissorEnable = true;
-            THROW_DX11_ERROR(m_device.CreateRasterizerState(&opaque_raster_state, &m_opaque.raster_state));
+        { // Setup raster states
+            // Backface culled
+            CD3D11_RASTERIZER_DESC raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
+            raster_state.ScissorEnable = true; // Enable scissor rect to disable rendering to the guard band when shading.
+            THROW_DX11_ERROR(m_device.CreateRasterizerState(&raster_state, &m_raster_state.backface_culled));
 
+            // Thin walled
+            raster_state.CullMode = D3D11_CULL_NONE;
+            THROW_DX11_ERROR(m_device.CreateRasterizerState(&raster_state, &m_raster_state.thin_walled));
+        }
+
+        { // Setup opaque rendering.
             D3D11_DEPTH_STENCIL_DESC depth_desc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
             depth_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
             depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
@@ -276,13 +291,6 @@ public:
 
             OBlob pixel_shader_blob = compile_shader(m_shader_directory / "ModelShading.hlsl", "ps_5_0", "opaque");
             THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_opaque.shader));
-        }
-
-        { // Setup thin-walled rendering. Reuses some of the opaque state.
-            CD3D11_RASTERIZER_DESC twosided_raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
-            twosided_raster_state.ScissorEnable = true;
-            twosided_raster_state.CullMode = D3D11_CULL_NONE;
-            THROW_DX11_ERROR(m_device.CreateRasterizerState(&twosided_raster_state, &m_thin_walled_raster_state));
         }
 
         { // Setup transparent rendering.
@@ -607,7 +615,7 @@ public:
 
         m_render_context->OMSetRenderTargets(1, &m_backbuffer_RTV, m_g_buffer.depth_view);
         m_render_context->PSSetShaderResources(13, 1, &ssao_SRV);
-        m_render_context->RSSetState(m_opaque.raster_state);
+        m_raster_state.set_raster_state(m_raster_state.backface_culled, m_render_context);
         m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 0);
 
         { // Render lights.
@@ -652,7 +660,7 @@ public:
             for (auto model_itr = m_mesh_models.cbegin(); model_itr != m_mesh_models.cbegin_transparent_models(); ++model_itr) {
                 // Setup two-sided raster state for thin-walled materials.
                 if (model_itr == m_mesh_models.cbegin_opaque_thin_walled_models())
-                    m_render_context->RSSetState(m_thin_walled_raster_state);
+                    m_raster_state.set_raster_state(m_raster_state.thin_walled, m_render_context);
 
                 assert(model_itr->model_ID != 0);
                 render_model<false>(m_render_context, *model_itr);
@@ -665,9 +673,8 @@ public:
                 auto transparent_marker = PerformanceMarker(*m_render_context, L"Transparent geometry");
 
                 // Apply used thin-wall state if not already applied.
-                bool no_thin_walled_present = m_mesh_models.cbegin_opaque_thin_walled_models() == m_mesh_models.cbegin_transparent_models();
-                if (no_thin_walled_present)
-                    m_render_context->RSSetState(m_thin_walled_raster_state);
+                if (m_raster_state.current_state != m_raster_state.thin_walled.get())
+                    m_raster_state.set_raster_state(m_raster_state.thin_walled, m_render_context);
 
                 // Set transparent state.
                 if (!debug_material_params)
@@ -701,6 +708,16 @@ public:
                 for (auto transparent_model : transparent_models) {
                     Dx11Model model = *transparent_model.model_iterator;
                     assert(model.model_ID != 0);
+
+                    // Apply raster state
+                    if (model.is_thin_walled()) {
+                        if (m_raster_state.current_state != m_raster_state.thin_walled.get())
+                            m_raster_state.set_raster_state(m_raster_state.thin_walled, m_render_context);
+                    } else {
+                        if (m_raster_state.current_state != m_raster_state.backface_culled.get())
+                            m_raster_state.set_raster_state(m_raster_state.backface_culled, m_render_context);
+                    }
+
                     render_model<false>(m_render_context, model);
                 }
             }
