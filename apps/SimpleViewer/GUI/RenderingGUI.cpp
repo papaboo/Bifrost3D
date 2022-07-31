@@ -215,6 +215,10 @@ void RenderingGUI::layout_frame() {
                 if (ImGui::SliderFloat("Coat roughness", &coat_roughness, 0, 1))
                     material.set_coat_roughness(coat_roughness);
 
+                float coverage = material.get_coverage();
+                if (ImGui::SliderFloat("Coverage", &coverage, 0, 1))
+                    material.set_coverage(coverage);
+
                 Materials::Flags flags = material.get_flags();
                 bool flags_changed = ImGui::CheckboxFlags("Thin walled", &flags, MaterialFlag::ThinWalled);
                 flags_changed |= ImGui::CheckboxFlags("Cutout", &flags, MaterialFlag::Cutout);
