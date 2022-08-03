@@ -51,6 +51,8 @@ typedef MaterialIDGenerator::UID MaterialID;
 
 // ---------------------------------------------------------------------------
 // Bifrost material properties container.
+// Be aware that coverage and the cutout threshold map to the same storage, as they are mutually exclusive,
+// and the interpretation depends on whether the material is a cutout or not.
 // ---------------------------------------------------------------------------
 class Materials final {
 public:
@@ -151,6 +153,12 @@ public:
     static void set_coverage(MaterialID material_ID, float coverage);
     static inline TextureID get_coverage_texture_ID(MaterialID material_ID) { return m_materials[material_ID].coverage_texture_ID; }
     static void set_coverage_texture_ID(MaterialID material_ID, TextureID coverage_texture_ID);
+
+    static inline float get_cutout_threshold(MaterialID material_ID) { return m_materials[material_ID].coverage; }
+    static void set_cutout_threshold(MaterialID material_ID, float cutout_threshold) { set_coverage(material_ID, cutout_threshold); }
+    static inline TextureID get_cutout_threshold_texture_ID(MaterialID material_ID) { return m_materials[material_ID].coverage_texture_ID; }
+    static void set_cutout_threshold_texture_ID(MaterialID material_ID, TextureID cutout_thresholde_texture_ID) { set_coverage_texture_ID(material_ID, cutout_thresholde_texture_ID); }
+
     static inline float get_transmission(MaterialID material_ID) { return m_materials[material_ID].transmission; }
     static void set_transmission(MaterialID material_ID, float transmission);
 
@@ -242,6 +250,12 @@ public:
     inline const Texture get_coverage_texture() const { return Materials::get_coverage_texture_ID(m_ID); }
     inline TextureID get_coverage_texture_ID() const { return Materials::get_coverage_texture_ID(m_ID); }
     inline void set_coverage_texture_ID(TextureID texture_ID) { Materials::set_coverage_texture_ID(m_ID, texture_ID); }
+
+    inline float get_cutout_threshold() const { return Materials::get_cutout_threshold(m_ID); }
+    inline void set_cutout_threshold(float cutout_threshold) { Materials::set_cutout_threshold(m_ID, cutout_threshold); }
+    inline const Texture get_cutout_threshold_texture() const { return Materials::get_cutout_threshold_texture_ID(m_ID); }
+    inline TextureID get_cutout_threshold_texture_ID() const { return Materials::get_cutout_threshold_texture_ID(m_ID); }
+    inline void set_cutout_threshold_texture_ID(TextureID texture_ID) { Materials::set_cutout_threshold_texture_ID(m_ID, texture_ID); }
 
     inline float get_transmission() const { return Materials::get_transmission(m_ID); }
     inline void set_transmission(float transmission) { Materials::set_coverage(m_ID, transmission); }

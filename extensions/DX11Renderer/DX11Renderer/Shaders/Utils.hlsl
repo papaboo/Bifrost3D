@@ -23,7 +23,6 @@ SamplerState bilinear_sampler : register(s15);
 static const float PI = 3.14159265358979323846f;
 static const float TWO_PI = 6.283185307f;
 static const float RECIP_PI = 0.31830988618379067153776752674503f;
-static const float CUTOFF = 0.33f;
 
 // ------------------------------------------------------------------------------------------------
 // Types.
@@ -86,6 +85,13 @@ struct MaterialParams {
         if (m_textures_bound & TextureBound::Coverage)
             coverage *= coverage_tex.Sample(coverage_sampler, texcoord).a;
         return coverage;
+    }
+
+    bool discard_from_cutout(float2 texcoord, Texture2D coverage_tex, SamplerState coverage_sampler) {
+        if (m_textures_bound & TextureBound::Coverage)
+            return coverage_tex.Sample(coverage_sampler, texcoord).a < m_coverage;
+        else
+            return false;
     }
 };
 
