@@ -71,8 +71,7 @@ ThinWalledVaryings thin_walled_VS(float4 geometry : GEOMETRY, float2 uv : TEXCOO
 }
 
 float2 thin_walled_PS(ThinWalledVaryings varyings) : SV_Target {
-    float coverage = material_params.coverage(varyings.uv, coverage_tex, coverage_sampler);
-    if (coverage < CUTOFF)
+    if (material_params.discard_from_cutout(varyings.uv, coverage_tex, coverage_sampler))
         discard;
 
     float3 view_space_normal = normalize(varyings.normal);

@@ -163,7 +163,7 @@ RT_PROGRAM void closest_hit() {
 
     float coverage = get_coverage(material_parameter, texcoord);
     float coverage_cutoff = sample1f(monte_carlo_payload.rng_state); // Always draw coverage random number to have predictable RNG dimension usage whether the material is a cutout or not.
-    coverage_cutoff = material_parameter.is_cutout() ? 0.33f : coverage_cutoff;
+    coverage_cutoff = material_parameter.is_cutout() ? material_parameter.coverage : coverage_cutoff;
     ignore_intersection |= coverage < coverage_cutoff;
 
     if (ignore_intersection) {

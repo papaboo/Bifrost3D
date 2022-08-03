@@ -91,8 +91,7 @@ float3 integrate(Varyings input, bool is_front_face, float ambient_visibility) {
 
 float4 opaque(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
     // NOTE There may be a performance cost associated with having a potential discard, so we should probably have a separate pixel shader for cutouts.
-    float coverage = material_params.coverage(input.texcoord, coverage_tex, coverage_sampler);
-    if (coverage < CUTOFF)
+    if (material_params.discard_from_cutout(input.texcoord, coverage_tex, coverage_sampler))
         discard;
 
     float ambient_visibility = ssao_tex[input.position.xy + scene_vars.g_buffer_to_ao_index_offset].r;
@@ -157,7 +156,8 @@ float4 visualize_material_params(Varyings input, bool is_front_face : SV_IsFront
     float coverage = default_shading.coverage();
     if (visualization_mode == visualize_coverage)
         return float4(coverage, coverage, coverage, 1);
-    if (coverage < CUTOFF)
+
+    if (material_params.discard_from_cutout(input.texcoord, coverage_tex, coverage_sampler))
         discard;
 
     if (visualization_mode == visualize_metallic) {
