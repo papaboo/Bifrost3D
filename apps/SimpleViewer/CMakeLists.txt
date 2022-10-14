@@ -14,6 +14,8 @@ set(SCENES_SRCS
   Scenes/Material.h
   Scenes/Material.cpp
   Scenes/Opacity.h
+  Scenes/Sphere.cpp
+  Scenes/Sphere.h
   Scenes/SphereLight.h
   Scenes/Test.h
   Scenes/Veach.h

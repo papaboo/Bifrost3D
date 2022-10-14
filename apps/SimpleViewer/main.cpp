@@ -9,6 +9,7 @@
 #include <Scenes/CornellBox.h>
 #include <Scenes/Material.h>
 #include <Scenes/Opacity.h>
+#include <Scenes/Sphere.h>
 #include <Scenes/SphereLight.h>
 #include <Scenes/Test.h>
 #include <Scenes/Veach.h>
@@ -473,6 +474,8 @@ int initialize_scene(Engine& engine) {
         Scenes::create_material_scene(cam_ID, root_node_ID, imgui);
     else if (g_scene.compare("OpacityScene") == 0)
         Scenes::create_opacity_scene(engine, cam_ID, root_node_ID);
+    else if (g_scene.compare("SphereScene") == 0)
+        Scenes::create_sphere_scene(cam_ID, root_node_ID);
     else if (g_scene.compare("SphereLightScene") == 0)
         Scenes::SphereLightScene::create(engine, cam_ID, scene_ID);
     else if (g_scene.compare("TestScene") == 0)
