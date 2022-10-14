@@ -305,11 +305,11 @@ RT_PROGRAM void depth_RPG() {
 }
 
 //-------------------------------------------------------------------------------------------------
-// Ray generation programs for visualizing ggregated material properties.
+// Ray generation programs for visualizing aggregated material properties.
 //-------------------------------------------------------------------------------------------------
 
-template <typename IntersectionProcesor>
-__inline_dev__ void process_first_intersection(IntersectionProcesor process_intersection) {
+template <typename IntersectionProcessor>
+__inline_dev__ void process_first_intersection(IntersectionProcessor process_intersection) {
     accumulate([process_intersection](MonteCarloPayload payload) -> float3 {
         float3 last_ray_direction = payload.direction;
         do {
@@ -360,6 +360,15 @@ RT_PROGRAM void roughness_RPG() {
         return make_float3(roughness, roughness, roughness);
     };
     accumulate_material_property(roughness_getter);
+}
+
+RT_PROGRAM void shading_normal_RPG() {
+    process_first_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
+        if (payload.material_index == 0)
+            return make_float3(0, 0, 0);
+
+        return payload.shading_normal * 0.5f + 0.5f;
+    });
 }
 
 //-------------------------------------------------------------------------------------------------

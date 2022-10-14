@@ -39,7 +39,8 @@ struct EntryPoints {
     static const unsigned int Albedo = 4;
     static const unsigned int Tint = 5;
     static const unsigned int Roughness = 6;
-    static const unsigned int Count = 7;
+    static const unsigned int ShadingNormal = 7;
+    static const unsigned int Count = 8;
 };
 
 struct MeshFlags {

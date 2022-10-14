@@ -25,6 +25,7 @@ enum class Backend {
     AlbedoVisualization,
     TintVisualization,
     RoughnessVisualization,
+    ShadingNormalVisualization,
 };
 
 // ------------------------------------------------------------------------------------------------
