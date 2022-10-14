@@ -187,11 +187,11 @@ __inline_all__ void compute_tangents(optix::float3 normal,
 }
 
 #if GPU_DEVICE
-__inline_dev__ optix::float4 half_to_float(const optix::ushort4& xyzw) {
+__inline_dev__ optix::float4 half_to_float(const optix::ushort4 xyzw) {
     return optix::make_float4(__half2float(xyzw.x), __half2float(xyzw.y), __half2float(xyzw.z), __half2float(xyzw.w));
 }
 
-__inline_dev__ optix::ushort4 float_to_half(const optix::float4& xyzw) {
+__inline_dev__ optix::ushort4 float_to_half(const optix::float4 xyzw) {
     return optix::make_ushort4(((__half_raw)__float2half_rn(xyzw.x)).x, ((__half_raw)__float2half_rn(xyzw.y)).x,
         ((__half_raw)__float2half_rn(xyzw.z)).x, ((__half_raw)__float2half_rn(xyzw.w)).x);
 }
