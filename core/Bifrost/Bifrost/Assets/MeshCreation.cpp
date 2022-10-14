@@ -322,6 +322,21 @@ MeshID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads
     return mesh.get_ID();
 }
 
+MeshID spherical_cube(unsigned int quads_pr_edge, MeshFlags buffer_bitmask) {
+    Mesh mesh = cube(quads_pr_edge, Vector3f::one(), buffer_bitmask);
+
+    Vector3f* positions = mesh.get_positions();
+    Vector3f* normals = mesh.get_normals();
+
+    for (unsigned int i = 0; i < mesh.get_vertex_count(); i++) {
+        Vector3f normal = normalize(positions[i]);
+        positions[i] = 0.5f * normal;
+        normals[i] = normal;
+    }
+
+    return mesh.get_ID();
+}
+
 MeshID torus(unsigned int revolution_quads, unsigned int circumference_quads, float minor_radius, MeshFlags buffer_bitmask) {
     if (revolution_quads == 0 || circumference_quads == 0)
         return MeshID::invalid_UID();
