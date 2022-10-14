@@ -51,7 +51,7 @@ public:
         return BSDFs::Lambert::sample(m_tint, make_float2(random_sample));
     }
 
-}; // NS LambertShading
+};
 
 } // NS ShadingModels
 } // NS Shading

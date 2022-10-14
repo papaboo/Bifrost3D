@@ -77,7 +77,7 @@ public:
         return BSDFs::GGX::sample(m_tint, m_ggx_alpha, m_specularity, m_ior_i_over_o, wo, random_sample);
     }
 
-}; // NS RoughGlassShading
+};
 
 } // NS ShadingModels
 } // NS Shading
