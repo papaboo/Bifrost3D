@@ -115,9 +115,7 @@ namespace Cosine {
 } // NS Cosine
 
 //=================================================================================================
-// GGX distribution.
-// Future work
-// * Reference equations in Walter07.
+// GGX distribution, Walter07.
 //=================================================================================================
 namespace GGX {
 
@@ -143,15 +141,16 @@ namespace GGX {
 
         DirectionalSample res;
         res.direction = optix::make_float3(cos(phi) * r, sin(phi) * r, cos_theta);
-        res.PDF = PDF(alpha, cos_theta); // We have to be able to inline this to reuse some temporaries.
+        res.PDF = PDF(alpha, cos_theta);
         return res;
     }
 
 } // NS GGX
 
 //=================================================================================================
-// Sampling of the visible normal distribution function for GGX.
-// Sampling the GGX Distribution of Visible Normals, Heitz, 2018
+// Sampling the visible normal distribution function for GGX.
+// Sampling Visible GGX Normals with Spherical Caps, Dupuy et al, 2023.
+// Sampling the GGX Distribution of Visible Normals, Heitz, 2018.
 // Importance Sampling Microfacet-Based BSDFs with the Distribution of Visible Normals, Heitz, 2014.
 // Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz, 2014.
 //=================================================================================================
@@ -172,7 +171,7 @@ namespace GGX_VNDF {
     __inline_all__ float lambda(float alpha, float3 w) { return lambda(alpha, alpha, w); }
 
     // Sampling the GGX Distribution of Visible Normals, listing 1.
-    __inline_all__ float3 sample_halfway(float alpha_x, float alpha_y, float3 wo, float2 random_sample) {
+    __inline_all__ float3 sample_halfway_heitz(float alpha_x, float alpha_y, float3 wo, float2 random_sample) {
         // Section 3.2: transforming the view direction to the hemisphere configuration
         float3 Vh = normalize(make_float3(alpha_x * wo.x, alpha_y * wo.y, wo.z));
 
@@ -194,6 +193,27 @@ namespace GGX_VNDF {
         // Section 3.4: transforming the normal back to the ellipsoid configuration
         return normalize(make_float3(alpha_x * Nh.x, alpha_y * Nh.y, fmaxf(0.0f, Nh.z)));
     }
+
+    // Sampling Visible GGX Normals with Spherical Caps, listing 1 and 3.
+    __inline_all__ float3 sample_halfway(float alpha_x, float alpha_y, float3 wo, float2 random_sample) {
+        // Section 3.2: transforming the view direction to the hemisphere configuration
+        float3 wo_std = normalize(make_float3(alpha_x * wo.x, alpha_y * wo.y, wo.z));
+
+        // sample a spherical cap in (-wi.z, 1]
+        float phi = 2.0f * PIf * random_sample.y;
+        float z = fma(1.0f - random_sample.x, 1.0f + wo_std.z, -wo_std.z);
+        float sin_theta = sqrt(clamp(1.0f - z * z, 0.0f, 1.0f));
+        float x = sin_theta * cos(phi);
+        float y = sin_theta * sin(phi);
+        float3 c = make_float3(x, y, z);
+
+        // compute halfway direction;
+        float3 wi_std = c + wo_std;
+
+        // Section 3.4: transforming the normal back to the ellipsoid configuration
+        return normalize(make_float3(alpha_x * wi_std.x, alpha_y * wi_std.y, fmaxf(0.0f, wi_std.z)));
+    }
+
     __inline_all__ float3 sample_halfway(float alpha, float3 wo, float2 random_sample) { return sample_halfway(alpha, alpha, wo, random_sample); }
 
     // Sampling the GGX Distribution of Visible Normals, equation 3.

@@ -35,6 +35,8 @@ BACKLOG:
 ** http://kunzhou.net/2013/fur-rendering-tvcg.pdf
 ** Call of duty precomputed GI. Check how they handle light bleeding. http://advances.realtimerendering.com/s2017/Precomputed%20Lighting%20in%20CoD%20IW_20_PPS.pdf
 * SSAO
+** Compute SSAO based on geometric/screenspace normals and filter based on shading normals.
+*** That way we avoid issues with the SSAO hemisphere selfshadowing (think spherical cube), but we still filter across hard boundaries if they are defined as smooth.
 ** Intensity should be relative to sample distance, not absolute distance intensity.
 *** When hitting the screen space max radius then results should be independent of the world radius. Are they? Test scene with three 'infinite' walls.
 ** Try seeding with hilbert curve + hash from 'Stratified sampling for stochastic transparency'
