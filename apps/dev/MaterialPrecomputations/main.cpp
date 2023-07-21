@@ -317,14 +317,14 @@ int main(int argc, char** argv) {
 
         // Compute the directional-hemispherical reflectance function, albedo, by monte carlo integration and store the result in a texture and as an array in a header file.
         // The diffuse and specular components are separated by tinting the diffuse layer with green and keeping the specular layer white.
-        // The albedo is computed via monte arlo integration by assuming that the material is lit by a uniform infinitely far away area light with an intensity of one.
+        // The albedo is computed via monte carlo integration by assuming that the material is lit by a uniform infinitely far away area light with an intensity of one.
         // As the base material is green it has no contribution to the red and blue channels, which means that these contain the albedo of the specular component.
         // The green channel contains the contribution of both the specular and diffuse components and the diffuse contribution alone can be found by subtracting the specular contribution from the green channel.
         // Notes
         // * Fresnel base reflectivity is set to zero. This is completely unrealistic, but gives us the largest possible range between full diffuse and full specular.
 
         // Specular material.
-        OptiXRenderer::Material material_params;
+        OptiXRenderer::Material material_params = {};
         material_params.tint = optix::make_float3(1.0f, 0.0f, 0.0f);
         material_params.metallic = 0.0f;
         material_params.specularity = 0.0f;
@@ -346,7 +346,7 @@ int main(int argc, char** argv) {
                 Core::Array<double> total_throughput = Core::Array<double>(sample_count);
                 for (unsigned int s = 0; s < sample_count; ++s) {
 
-                    float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(sample_count));
+                    float3 rng_sample = make_float3(RNG::sample02(s), (s + 0.5f) / sample_count);
                     BSDFSample sample = material.sample(wo, rng_sample);
                     if (is_PDF_valid(sample.PDF)) {
                         total_throughput[s] = sample.reflectance.x * sample.direction.z / sample.PDF;
