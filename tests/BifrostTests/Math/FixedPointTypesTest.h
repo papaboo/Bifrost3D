@@ -29,7 +29,7 @@ GTEST_TEST(Math_FixedPointTypes, UNorm8) {
     EXPECT_EQ(0.5f + UNorm8::max_precision(), half.value());
 
     // Test assignment operator overload
-    UNorm8 quater = (unsigned char)64;
+    UNorm8 quater = byte(64);
     EXPECT_EQ(64, quater.raw);
 
     // Test overflow handling. Integer part is discarded and fraction is kept.

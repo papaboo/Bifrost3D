@@ -83,8 +83,8 @@ void create(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneRootID 
 
     { // Create checkered floor.
         unsigned int size = 41;
-        RGBA32 white_tile = { unsigned char(127), unsigned char(127), unsigned char(127), unsigned char(51) };
-        RGBA32 black_tile = { unsigned char(1), unsigned char(1), unsigned char(1), unsigned char(5) };
+        RGBA32 white_tile = { byte(127), byte(127), byte(127), byte(51) };
+        RGBA32 black_tile = { byte(1), byte(1), byte(1), byte(5) };
         ImageID tint_roughness_image_ID = Images::create2D("Floor image", PixelFormat::RGBA32, 2.2f, Vector2ui(size, size));
         Images::set_mipmapable(tint_roughness_image_ID, true);
         RGBA32* tint_roughness_pixels = Images::get_pixels<RGBA32>(tint_roughness_image_ID);

@@ -16,20 +16,20 @@ namespace Bifrost {
 namespace Math {
 
 struct UNorm8 final {
-    unsigned char raw;
+    byte raw;
 
     UNorm8() = default;
     UNorm8(float v) : raw(to_byte(v)) {}
-    UNorm8(unsigned char v) : raw(v) {}
+    UNorm8(byte v) : raw(v) {}
 
     static UNorm8 zero() { return {}; }
-    static UNorm8 one() { return { (unsigned char)255 }; }
+    static UNorm8 one() { return { byte(255) }; }
 
     float value() const { return to_float(raw); }
 
     __always_inline__ static float max_precision() { return 1.0f / 510.0f; }
-    __always_inline__ static unsigned char to_byte(float v) { return (unsigned char)(v * 255.0f + 0.5f); }
-    __always_inline__ static float to_float(unsigned char v) { return v / 255.0f; }
+    __always_inline__ static byte to_byte(float v) { return byte(v * 255.0f + 0.5f); }
+    __always_inline__ static float to_float(byte v) { return v / 255.0f; }
 };
 
 } // NS Math
