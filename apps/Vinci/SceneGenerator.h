@@ -126,6 +126,8 @@ private:
     std::vector<SceneNode> m_nodes;
     std::vector<MeshModel> m_mesh_models;
 
+    static MeshFlags default_mesh_flags() { return { MeshFlag::Position, MeshFlag::Normal, MeshFlag::Texcoord }; }
+
     SceneNode generate_scene_node(NumberGenerator& rng, Mesh mesh) {
 
         // Generate random position in front of the camera
@@ -159,7 +161,7 @@ private:
     }
 
     static Mesh generate_cylinder(NumberGenerator& rng) {
-        MeshFlags flags = MeshFlag::AllBuffers;
+        MeshFlags flags = default_mesh_flags();
         int resolution = 128;
 
         bool hard_normals = rng.sample1f() < 0.3f;
@@ -173,7 +175,7 @@ private:
     }
 
     static Mesh generate_sphere(NumberGenerator& rng) {
-        MeshFlags flags = MeshFlag::AllBuffers;
+        MeshFlags flags = default_mesh_flags();
         int resolution = 128;
 
         bool hard_normals = rng.sample1f() < 0.3f;
@@ -187,7 +189,7 @@ private:
     }
 
     static Mesh generate_torus(NumberGenerator& rng) {
-        MeshFlags flags = MeshFlag::AllBuffers;
+        MeshFlags flags = default_mesh_flags();
         int resolution = 128;
 
         bool hard_normals = rng.sample1f() < 0.3f;

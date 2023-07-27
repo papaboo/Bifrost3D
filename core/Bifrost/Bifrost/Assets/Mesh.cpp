@@ -53,6 +53,8 @@ void Meshes::deallocate() {
         delete[] buffers.positions;
         delete[] buffers.normals;
         delete[] buffers.texcoords;
+        delete[] buffers.colors;
+        delete[] buffers.roughness;
     }
     delete[] m_names; m_names = nullptr;
     delete[] m_buffers; m_buffers = nullptr;
@@ -107,6 +109,8 @@ MeshID Meshes::create(const std::string& name, unsigned int primitive_count, uns
     m_buffers[id].positions = (buffer_bitmask & MeshFlag::Position) ? new Vector3f[vertex_count] : nullptr;
     m_buffers[id].normals = (buffer_bitmask & MeshFlag::Normal) ? new Vector3f[vertex_count] : nullptr;
     m_buffers[id].texcoords = (buffer_bitmask & MeshFlag::Texcoord) ? new Vector2f[vertex_count] : nullptr;
+    m_buffers[id].colors = (buffer_bitmask & MeshFlag::Color) ? new RGB24[vertex_count] : nullptr;
+    m_buffers[id].roughness = (buffer_bitmask & MeshFlag::Roughness) ? new UNorm8[vertex_count] : nullptr;
     m_bounds[id] = AABB::invalid();
     m_changes.set_change(id, Change::Created);
 
@@ -121,6 +125,8 @@ void Meshes::destroy(MeshID mesh_ID) {
         delete[] buffers.positions;
         delete[] buffers.normals;
         delete[] buffers.texcoords;
+        delete[] buffers.colors;
+        delete[] buffers.roughness;
 
         m_changes.add_change(mesh_ID, Change::Destroyed);
     }
@@ -204,11 +210,21 @@ void transform_mesh(MeshID mesh_ID, Transform transform) {
 }
 
 MeshID combine(const std::string& name,
-                    const TransformedMesh* const meshes_begin,
-                    const TransformedMesh* const meshes_end,
-                    MeshFlags flags) {
+               const TransformedMesh* const meshes_begin,
+               const TransformedMesh* const meshes_end,
+               MeshFlags flags) {
 
     auto meshes = Core::Iterable<const TransformedMesh* const>(meshes_begin, meshes_end);
+
+    // Validate flags
+    // Roughness and color can always be default initialized to one, so they do not need to be present on the input mesh.
+    MeshFlags ignore_mask = { MeshFlag::Color, MeshFlag::Roughness };
+    MeshFlags checked_flags = flags & ~ignore_mask;
+    for (TransformedMesh transformed_mesh : meshes) {
+        Mesh mesh = transformed_mesh.mesh_ID;
+        if (!mesh.get_flags().all_set(checked_flags))
+            throw new std::exception("Required mesh flags not found on input mesh");
+    }
 
     unsigned int primitive_count = 0u;
     unsigned int vertex_count = 0u;
@@ -216,12 +232,6 @@ MeshID combine(const std::string& name,
         Mesh mesh = transformed_mesh.mesh_ID;
         primitive_count += mesh.get_primitive_count();
         vertex_count += mesh.get_vertex_count();
-    }
-
-    // Determine shared buffers.
-    for (TransformedMesh transformed_mesh : meshes) {
-        Mesh mesh = transformed_mesh.mesh_ID;
-        flags &= mesh.get_flags();
     }
 
     Mesh merged_mesh = Mesh(Meshes::create(name, primitive_count, vertex_count, flags));
@@ -261,6 +271,34 @@ MeshID combine(const std::string& name,
             Mesh mesh = transformed_mesh.mesh_ID;
             memcpy(texcoords, mesh.get_texcoords(), sizeof(Vector2f) * mesh.get_vertex_count());
             texcoords += mesh.get_vertex_count();
+        }
+    }
+
+    if (flags & MeshFlag::Color) {
+        RGB24* colors = merged_mesh.get_colors();
+        for (TransformedMesh transformed_mesh : meshes) {
+            Mesh mesh = transformed_mesh.mesh_ID;
+            auto* input_colors = mesh.get_colors();
+            if (input_colors != nullptr)
+                memcpy(colors, input_colors, sizeof(RGB24) * mesh.get_vertex_count());
+            else {
+                const RGB24 white = { UNorm8::one(), UNorm8::one(), UNorm8::one() };
+                std::fill(colors, colors + mesh.get_vertex_count(), white);
+            }
+            colors += mesh.get_vertex_count();
+        }
+    }
+
+    if (flags & MeshFlag::Roughness) {
+        UNorm8* roughness = merged_mesh.get_roughness();
+        for (TransformedMesh transformed_mesh : meshes) {
+            Mesh mesh = transformed_mesh.mesh_ID;
+            auto* input_roughness = mesh.get_roughness();
+            if (input_roughness != nullptr)
+                memcpy(roughness, input_roughness, sizeof(UNorm8) * mesh.get_vertex_count());
+            else
+                std::fill(roughness, roughness + mesh.get_vertex_count(), UNorm8::one());
+            roughness += mesh.get_vertex_count();
         }
     }
 
