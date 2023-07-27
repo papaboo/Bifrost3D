@@ -52,6 +52,8 @@ TEST_F(Assets_Mesh, sentinel_mesh) {
     EXPECT_EQ(nullptr, Meshes::get_positions(sentinel_ID));
     EXPECT_EQ(nullptr, Meshes::get_normals(sentinel_ID));
     EXPECT_EQ(nullptr, Meshes::get_texcoords(sentinel_ID));
+    EXPECT_EQ(nullptr, Meshes::get_colors(sentinel_ID));
+    EXPECT_EQ(nullptr, Meshes::get_roughness(sentinel_ID));
     Math::AABB bounds = Meshes::get_bounds(sentinel_ID);
     EXPECT_TRUE(isnan(bounds.minimum.x) && isnan(bounds.minimum.y) && isnan(bounds.minimum.z) &&
                 isnan(bounds.maximum.x) && isnan(bounds.maximum.y) && isnan(bounds.maximum.z));
@@ -67,6 +69,8 @@ TEST_F(Assets_Mesh, create) {
     EXPECT_NE(nullptr, Meshes::get_positions(mesh_ID));
     EXPECT_NE(nullptr, Meshes::get_normals(mesh_ID));
     EXPECT_NE(nullptr, Meshes::get_texcoords(mesh_ID));
+    EXPECT_NE(nullptr, Meshes::get_colors(mesh_ID));
+    EXPECT_NE(nullptr, Meshes::get_roughness(mesh_ID));
     EXPECT_INVALID_AABB(Meshes::get_bounds(mesh_ID));
 
     // Test mesh created notification.
@@ -86,6 +90,8 @@ TEST_F(Assets_Mesh, create_only_positions) {
     EXPECT_NE(nullptr, Meshes::get_positions(mesh_ID));
     EXPECT_EQ(nullptr, Meshes::get_normals(mesh_ID));
     EXPECT_EQ(nullptr, Meshes::get_texcoords(mesh_ID));
+    EXPECT_EQ(nullptr, Meshes::get_colors(mesh_ID));
+    EXPECT_EQ(nullptr, Meshes::get_roughness(mesh_ID));
 
     // Test mesh created notification.
     Core::Iterable<Meshes::ChangedIterator> changed_meshes = Meshes::get_changed_meshes();

@@ -64,6 +64,7 @@ public:
     inline bool none_set() const { return m_mask == T(0); }
     inline bool not_set(E v) const { return (T(v) & m_mask) == T(0); }
     inline bool all_set(E v1, E v2) const { T v = (T(v1) | T(v2)); return (v & m_mask) == v; }
+    inline bool all_set(Bitmask<E> v) const { return (T(v) & m_mask) == T(v); }
     inline bool is_set(E v) const { return (T(v) & m_mask) != T(0); }
     inline bool any_set(E v) const { return (T(v) & m_mask) != T(0); }
     inline bool any_set(E v1, E v2) const { return ((T(v1) | T(v2)) & m_mask) != T(0); }

@@ -14,6 +14,8 @@
 #include <Bifrost/Core/Iterable.h>
 #include <Bifrost/Core/UniqueIDGenerator.h>
 #include <Bifrost/Math/AABB.h>
+#include <Bifrost/Math/Color.h>
+#include <Bifrost/Math/FixedPointTypes.h>
 #include <Bifrost/Math/Matrix.h>
 #include <Bifrost/Math/Transform.h>
 #include <Bifrost/Math/Vector.h>
@@ -26,7 +28,9 @@ enum class MeshFlag : unsigned char {
     Position   = 1u << 0u,
     Normal     = 1u << 1u,
     Texcoord   = 1u << 2u,
-    AllBuffers = Position | Normal | Texcoord
+    Color      = 1u << 3u,
+    Roughness  = 1u << 4u,
+    AllBuffers = Position | Normal | Texcoord | Color | Roughness
 };
 typedef Core::Bitmask<MeshFlag> MeshFlags;
 
@@ -75,6 +79,8 @@ public:
     static inline Math::Vector3f* get_positions(MeshID mesh_ID) { return m_buffers[mesh_ID].positions; }
     static inline Math::Vector3f* get_normals(MeshID mesh_ID) { return m_buffers[mesh_ID].normals; }
     static inline Math::Vector2f* get_texcoords(MeshID mesh_ID) { return m_buffers[mesh_ID].texcoords; }
+    static inline Math::RGB24* get_colors(MeshID mesh_ID) { return m_buffers[mesh_ID].colors; }
+    static inline Math::UNorm8* get_roughness(MeshID mesh_ID) { return m_buffers[mesh_ID].roughness; }
     static inline Math::AABB get_bounds(MeshID mesh_ID) { return m_bounds[mesh_ID]; }
     static inline void set_bounds(MeshID mesh_ID, Math::AABB bounds) { m_bounds[mesh_ID] = bounds; }
     static Math::AABB compute_bounds(MeshID mesh_ID);
@@ -108,6 +114,8 @@ private:
         Math::Vector3f* positions;
         Math::Vector3f* normals;
         Math::Vector2f* texcoords;
+        Math::RGB24* colors;
+        Math::UNorm8* roughness;
     };
 
     static MeshIDGenerator m_UID_generator;
@@ -153,6 +161,10 @@ public:
     inline Core::Iterable<Math::Vector3f*> get_normal_iterable() { return Core::Iterable<Math::Vector3f*>(get_normals(), get_vertex_count()); }
     inline Math::Vector2f* get_texcoords() { return Meshes::get_texcoords(m_ID); }
     inline Core::Iterable<Math::Vector2f*> get_texcoord_iterable() { return Core::Iterable<Math::Vector2f*>(get_texcoords(), get_vertex_count()); }
+    inline Math::RGB24* get_colors() { return Meshes::get_colors(m_ID); }
+    inline Core::Iterable<Math::RGB24*> get_color_iterable() { return Core::Iterable<Math::RGB24*>(get_colors(), get_vertex_count()); }
+    inline Math::UNorm8* get_roughness() { return Meshes::get_roughness(m_ID); }
+    inline Core::Iterable<Math::UNorm8*> get_roughness_iterable() { return Core::Iterable<Math::UNorm8*>(get_roughness(), get_vertex_count()); }
     inline Math::AABB get_bounds() { return Meshes::get_bounds(m_ID); }
     inline void set_bounds(Math::AABB bounds) { Meshes::set_bounds(m_ID, bounds); }
 
@@ -162,6 +174,8 @@ public:
         MeshFlags mesh_flags = get_positions() ? MeshFlag::Position : MeshFlag::None;
         mesh_flags |= get_normals() ? MeshFlag::Normal : MeshFlag::None;
         mesh_flags |= get_texcoords() ? MeshFlag::Texcoord : MeshFlag::None;
+        mesh_flags |= get_colors() ? MeshFlag::Color : MeshFlag::None;
+        mesh_flags |= get_roughness() ? MeshFlag::Roughness : MeshFlag::None;
         return mesh_flags;
     }
 
@@ -193,13 +207,13 @@ struct TransformedMesh {
 };
 
 MeshID combine(const std::string& name, 
-                    const TransformedMesh* const meshes_begin, const TransformedMesh* const meshes_end, 
-                    MeshFlags flags = MeshFlag::AllBuffers);
+               const TransformedMesh* const meshes_begin, const TransformedMesh* const meshes_end, 
+               MeshFlags flags = MeshFlag::AllBuffers);
 
 inline MeshID combine(const std::string& name, 
                       MeshID mesh0_ID, Math::Transform transform0,
                       MeshID mesh1_ID, Math::Transform transform1, 
-                           MeshFlags flags = MeshFlag::AllBuffers) {
+                      MeshFlags flags = MeshFlag::AllBuffers) {
     TransformedMesh mesh0 = { mesh0_ID, transform0 };
     TransformedMesh mesh1 = { mesh1_ID, transform1 };
     TransformedMesh meshes[2] = { mesh0, mesh1 };
