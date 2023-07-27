@@ -1204,7 +1204,7 @@ struct Renderer::Implementation {
                 pixels[i].r = unsigned char(gpu_pixels[i].x * 255.0f + 0.5f);
                 pixels[i].g = unsigned char(gpu_pixels[i].y * 255.0f + 0.5f);
                 pixels[i].b = unsigned char(gpu_pixels[i].z * 255.0f + 0.5f);
-                pixels[i].a = 255;
+                pixels[i].a = unsigned char(255);
             }
             output_buffer->unmap();
 

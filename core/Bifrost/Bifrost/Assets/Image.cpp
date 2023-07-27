@@ -561,7 +561,7 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
             memcpy(new_tint_pixels, tint.get_pixels(), size.x * size.y * size_of(tint_format));
             // Set roughness to multiplicative identity.
             for (unsigned int i = 0; i < size.x * size.y; ++i)
-                new_tint_pixels[i].a = 255;
+                new_tint_pixels[i].a = (unsigned char)255;
             return tint_sans_roughness;
         } else
             return tint;
