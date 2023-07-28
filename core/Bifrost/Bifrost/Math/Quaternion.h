@@ -11,12 +11,9 @@
 
 #include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/Constants.h>
-#include <Bifrost/Math/Utils.h>
 #include <Bifrost/Math/Vector.h>
 
-#include <algorithm>
 #include <cstring>
-#include <cmath>
 #include <sstream>
 
 namespace Bifrost {

@@ -11,8 +11,7 @@
 #include <Bifrost/Input/Keyboard.h>
 #include <Bifrost/Input/Mouse.h>
 
-namespace Bifrost {
-namespace Core {
+namespace Bifrost::Core {
 
 Engine::Engine(const std::filesystem::path& data_directory)
     : m_window(Window("Bifrost", 640, 480))
@@ -40,5 +39,4 @@ void Engine::do_tick(double delta_time) {
         callback();
 }
 
-} // NS Core
-} // NS Bifrost
+} // NS Bifrost::Core

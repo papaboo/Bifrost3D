@@ -14,8 +14,7 @@
 
 #include <string>
 
-namespace Bifrost {
-namespace Core {
+namespace Bifrost::Core {
 
 //----------------------------------------------------------------------------
 // Renderer ID
@@ -48,7 +47,7 @@ public:
     static Iterator get_iterator(RendererID renderer_ID) { return m_UID_generator.get_iterator(renderer_ID); }
     static Iterable<Iterator> get_iterable() { return Iterable<Iterator>(begin(), end()); }
 
-    static std::string get_name(RendererID renderer_ID) { return m_names[renderer_ID]; }
+    static const std::string& get_name(RendererID renderer_ID) { return m_names[renderer_ID]; }
 
 private:
 
@@ -58,7 +57,6 @@ private:
     static std::string* m_names;
 };
 
-} // NS Core
-} // NS Bifrost
+} // NS Bifrost::Core
 
 #endif _BIFROST_CORE_RENDERER_H_

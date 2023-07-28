@@ -8,8 +8,7 @@
 
 #include <Bifrost/Core/Renderer.h>
 
-namespace Bifrost {
-namespace Core {
+namespace Bifrost::Core {
 
 RendererIDGenerator Renderers::m_UID_generator = RendererIDGenerator(0u);
 std::string* Renderers::m_names = nullptr;
@@ -59,5 +58,4 @@ void Renderers::destroy(RendererID renderer_ID) {
     m_UID_generator.erase(renderer_ID);
 }
 
-} // NS Core
-} // NS Bifrost
+} // NS Bifrost::Core
