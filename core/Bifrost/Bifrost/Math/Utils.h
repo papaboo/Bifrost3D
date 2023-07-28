@@ -15,10 +15,8 @@
 
 #include <algorithm>
 #include <cmath>
-#include <string>
 
-namespace Bifrost {
-namespace Math {
+namespace Bifrost::Math {
 
 // ------------------------------------------------------------------------------------------------
 // Floating point precision helpers.
@@ -248,7 +246,6 @@ inline void fill_bilinear_gaussian_samples(float std_dev, Tap* samples_begin, Ta
         samples_begin[s].weight /= total_weight;
 }
 
-} // NS Math
-} // NS Bifrost
+} // NS Bifrost::Math
 
 #endif // _BIFROST_MATH_UTILS_H_

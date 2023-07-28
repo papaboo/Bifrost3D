@@ -20,8 +20,7 @@
 #include <Bifrost/Math/Transform.h>
 #include <Bifrost/Math/Vector.h>
 
-namespace Bifrost {
-namespace Assets {
+namespace Bifrost::Assets {
 
 enum class MeshFlag : unsigned char {
     None       = 0u,
@@ -271,19 +270,10 @@ unsigned int normals_correspond_to_winding_order(MeshID mesh_ID);
 unsigned int count_degenerate_primitives(MeshID mesh_ID, float epsilon_squared = 0.000001f);
 
 // Tests that no indices index out of bounds.
-inline bool has_invalid_indices(MeshID mesh_ID) {
-    Mesh mesh = mesh_ID;
-
-    unsigned int max_index = 0;
-    for (unsigned int i = 0; i < mesh.get_index_count(); ++i)
-        max_index = Math::max(max_index, mesh.get_indices()[i]);
-
-    return !(max_index < mesh.get_vertex_count());
-}
+bool has_invalid_indices(MeshID mesh_ID);
 
 } // NS MeshTests
 
-} // NS Assets
-} // NS Bifrost
+} // NS Bifrost::Assets
 
 #endif // _BIFROST_ASSETS_MESH_H_

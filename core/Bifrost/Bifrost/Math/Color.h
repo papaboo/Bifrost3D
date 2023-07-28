@@ -12,7 +12,6 @@
 #include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/FixedPointTypes.h>
 
-#include <algorithm>
 #include <sstream>
 #include <string>
 

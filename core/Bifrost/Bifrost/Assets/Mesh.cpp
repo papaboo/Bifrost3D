@@ -10,12 +10,12 @@
 
 #include <Bifrost/Math/Conversions.h>
 
+#include <algorithm>
 #include <assert.h>
 
 using namespace Bifrost::Math;
 
-namespace Bifrost {
-namespace Assets {
+namespace Bifrost::Assets {
 
 MeshIDGenerator Meshes::m_UID_generator = MeshIDGenerator(0u);
 std::string* Meshes::m_names = nullptr;
@@ -409,7 +409,16 @@ unsigned int count_degenerate_primitives(MeshID mesh_ID, float epsilon_squared) 
     return degenerate_primitives;
 }
 
+bool has_invalid_indices(MeshID mesh_ID) {
+    Mesh mesh = mesh_ID;
+
+    unsigned int max_index = 0;
+    for (unsigned int i = 0; i < mesh.get_index_count(); ++i)
+        max_index = std::max(max_index, mesh.get_indices()[i]);
+
+    return !(max_index < mesh.get_vertex_count());
+}
+
 } // NS MeshUtils
 
-} // NS Assets
-} // NS Bifrost
+} // NS Bifrost::Assets
