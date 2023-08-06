@@ -163,6 +163,52 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
         plane_node.set_parent(root_node);
     }
 
+    { // Cube with vertex colors and roughness
+        Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 1.0f, 0.5f);
+        MaterialID material_ID = Materials::create("Identity", material_data);
+
+        Transform transform = Transform(Vector3f(-3.0f, 0.5f, 0.0f));
+        SceneNode cube_node = SceneNodes::create("Cube with vertex attributes", transform);
+        Mesh cube_mesh = MeshCreation::cube(2, Vector3f::one(), { MeshFlag::Position, MeshFlag::Color, MeshFlag::Roughness });
+        
+        // Update colors and roughness
+        // Set the color to the vertex position, in the range [0, 1]
+        // Roughness should be 1 at the edges, and 0 at the center of each side.
+        Vector3f* positions = cube_mesh.get_positions();
+        RGB24* colors = cube_mesh.get_colors();
+        UNorm8* roughness = cube_mesh.get_roughness();
+        for (unsigned int v = 0; v < cube_mesh.get_vertex_count(); ++v) {
+            colors[v].r = positions[v].x;
+            colors[v].g = positions[v].y;
+            colors[v].b = positions[v].z;
+            Vector3f roughness3d = 2.0f * (positions[v] - 0.5f);
+            roughness[v] = Math::min(Math::min(roughness3d.x, roughness3d.y), roughness3d.z);
+        }
+        
+        MeshModels::create(cube_node.get_ID(), cube_mesh.get_ID(), material_ID);
+        cube_node.set_parent(root_node);
+    }
+
+    { // Cylinder.
+        // Checkered roughness texture.
+        const int size = 32;
+        Image roughness = Images::create2D("Cylinder roughness", PixelFormat::Roughness8, 1.0f, Vector2ui(size));
+        unsigned char* roughness_pixels = roughness.get_pixels<unsigned char>();
+        for (unsigned int y = 0; y < size; ++y)
+            for (unsigned int x = 0; x < size; ++x)
+                roughness_pixels[x + y * size] = ((x & 1) == (y & 1)) ? 63 : 127;
+
+        Materials::Data material_data = Materials::Data::create_metal(iron_tint, 1.0f);
+        material_data.tint_roughness_texture_ID = Textures::create2D(roughness.get_ID());
+        MaterialID material_ID = Materials::create("Iron", material_data);
+
+        Transform transform = Transform(Vector3f(-1.5f, 0.5f, 0.0f));
+        SceneNode cylinder_node = SceneNodes::create("Cylinder", transform);
+        MeshID cylinder_mesh_ID = MeshCreation::cylinder(4, 16);
+        MeshModels::create(cylinder_node.get_ID(), cylinder_mesh_ID, material_ID);
+        cylinder_node.set_parent(root_node);
+    }
+
     { // Create rotating rings.
         Materials::Data material_data = Materials::Data::create_metal(gold_tint, 0.02f);
         MaterialID material_ID = Materials::create("Gold", material_data);
@@ -209,26 +255,6 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
             LocalRotator* simple_rotator = new LocalRotator(ring_node.get_ID(), i * 0.31415f * 0.5f + 0.2f);
             engine.add_mutating_callback([=, &engine] { simple_rotator->rotate(engine); });
         }
-    }
-
-    { // Destroyable cylinder. TODO Implement destruction of the mesh, model and scene node.
-        // Checkered roughness texture.
-        const int size = 32;
-        Image roughness = Images::create2D("Cylinder roughness", PixelFormat::Roughness8, 1.0f, Vector2ui(size));
-        unsigned char* roughness_pixels = roughness.get_pixels<unsigned char>();
-        for (unsigned int y = 0; y < size; ++y)
-            for (unsigned int x = 0; x < size; ++x)
-                roughness_pixels[x + y * size] = ((x & 1) == (y & 1)) ? 63 : 127;
-
-        Materials::Data material_data = Materials::Data::create_metal(iron_tint, 1.0f);
-        material_data.tint_roughness_texture_ID = Textures::create2D(roughness.get_ID());
-        MaterialID material_ID = Materials::create("Iron", material_data);
-
-        Transform transform = Transform(Vector3f(-1.5f, 0.5f, 0.0f));
-        SceneNode cylinder_node = SceneNodes::create("Destroyed Cylinder", transform);
-        MeshID cylinder_mesh_ID = MeshCreation::cylinder(4, 16);
-        MeshModels::create(cylinder_node.get_ID(), cylinder_mesh_ID, material_ID);
-        cylinder_node.set_parent(root_node);
     }
 
     { // Copper / rubber sphere.
