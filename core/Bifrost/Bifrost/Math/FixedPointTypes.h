@@ -22,14 +22,22 @@ struct UNorm8 final {
     UNorm8(float v) : raw(to_byte(v)) {}
     UNorm8(byte v) : raw(v) {}
 
+    static UNorm8 create_unchecked(float v) { return byte(v * 255.0f + 0.5f); }
+
     static UNorm8 zero() { return {}; }
     static UNorm8 one() { return { byte(255) }; }
 
-    float value() const { return to_float(raw); }
+    __always_inline__ float value() const { return to_float(raw); }
 
     __always_inline__ static float max_precision() { return 1.0f / 510.0f; }
-    __always_inline__ static byte to_byte(float v) { return byte(v * 255.0f + 0.5f); }
     __always_inline__ static float to_float(byte v) { return v / 255.0f; }
+    __always_inline__ static byte to_byte(float v) { 
+        float clamped_v = v < 0 ? 0.0f : (v > 1.0f ? 1.0f : v);
+        return byte(clamped_v * 255.0f + 0.5f);
+    }
+
+    __always_inline__ bool operator==(UNorm8 rhs) const { return raw == rhs.raw; }
+    __always_inline__ bool operator!=(UNorm8 rhs) const { return raw != rhs.raw; }
 };
 
 } // NS Math
