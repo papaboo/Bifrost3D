@@ -32,9 +32,17 @@ GTEST_TEST(Math_FixedPointTypes, UNorm8) {
     UNorm8 quater = byte(64);
     EXPECT_EQ(64, quater.raw);
 
-    // Test overflow handling. Integer part is discarded and fraction is kept.
-    UNorm8 half2 = 1.5f;
-    EXPECT_EQ(half.raw, half2.raw);
+    // Test overflow handling. Clamp to [0, 1] range.
+    UNorm8 one = 1.5f;
+    EXPECT_EQ(1.0f, one.value());
+    UNorm8 zero = -0.5f;
+    EXPECT_EQ(0.0f, zero.value());
+
+    // Test that unchecked creation works similarly to the standard constructor for values in range.
+    EXPECT_EQ(UNorm8(0.0f), UNorm8::create_unchecked(0.0f));
+    EXPECT_EQ(UNorm8(0.2f), UNorm8::create_unchecked(0.2f));
+    EXPECT_EQ(UNorm8(0.7f), UNorm8::create_unchecked(0.7f));
+    EXPECT_EQ(UNorm8(1.0f), UNorm8::create_unchecked(1.0f));
 }
 
 } // NS Math
