@@ -252,6 +252,7 @@ typedef Vector3<unsigned int> Vector3ui;
 typedef Vector4<double> Vector4d;
 typedef Vector4<float> Vector4f;
 typedef Vector4<int> Vector4i;
+typedef Vector4<unsigned int> Vector4ui;
 
 } // NS Math
 } // NS Bifrost

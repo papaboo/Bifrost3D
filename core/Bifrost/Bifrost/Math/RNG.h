@@ -46,6 +46,26 @@ __always_inline__ Vector2f sample02(unsigned int n, Vector2ui scramble = Vector2
     return Vector2f(van_der_corput(n, scramble.x), sobol2(n, scramble.y));
 }
 
+// Hash Functions for GPU Rendering// Jarzynski and Olano, 2020
+__always_inline__ Vector3ui pcg3d(Vector3ui v)
+{
+    v = v * 1664525u + 1013904223u;
+    v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+    v.x ^= v.x >> 16u; v.y ^= v.y >> 16u; v.z ^= v.z >> 16u;
+    v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+    return v;
+}
+
+// Hash Functions for GPU Rendering// Jarzynski and Olano, 2020
+__always_inline__ Vector4ui pcg4d(Vector4ui v)
+{
+    v = v * 1664525u + 1013904223u;
+    v.x += v.y * v.w; v.y += v.z * v.x; v.z += v.x * v.y; v.w += v.y * v.z;
+    v.x ^= v.x >> 16u; v.y ^= v.y >> 16u; v.z ^= v.z >> 16u; v.w ^= v.w >> 16u;
+    v.x += v.y * v.w; v.y += v.z * v.x; v.z += v.x * v.y; v.w += v.y * v.z;
+    return v;
+}
+
 // Optimized Spatial Hashing for Collision Detection of Deformable Objects.
 // Teschner et al, 2013
 __always_inline__ unsigned int teschner_hash(unsigned int x, unsigned int y) {
