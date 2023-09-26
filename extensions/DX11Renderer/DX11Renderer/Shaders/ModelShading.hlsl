@@ -40,13 +40,14 @@ struct Varyings {
     float3 world_position : WORLD_POSITION;
     float3 normal : NORMAL;
     float2 texcoord : TEXCOORD;
+    float4 color_roughness : COLOR_ROUGHNESS;
 };
 
 // ------------------------------------------------------------------------------------------------
 // Vertex shader.
 // ------------------------------------------------------------------------------------------------
 
-Varyings vs(float4 geometry : GEOMETRY, float2 texcoord : TEXCOORD) {
+Varyings vs(float4 geometry : GEOMETRY, float2 texcoord : TEXCOORD, float3 color : COLOR, float roughness : ROUGHNESS) {
     Varyings output;
     output.world_position.xyz = mul(float4(geometry.xyz, 1.0f), to_world_matrix);
     output.position = mul(float4(output.world_position.xyz, 1.0f), scene_vars.view_projection_matrix);

@@ -46,7 +46,8 @@ __always_inline__ Vector2f sample02(unsigned int n, Vector2ui scramble = Vector2
     return Vector2f(van_der_corput(n, scramble.x), sobol2(n, scramble.y));
 }
 
-// Hash Functions for GPU Rendering// Jarzynski and Olano, 2020
+// Hash Functions for GPU Rendering
+// Jarzynski and Olano, 2020
 __always_inline__ Vector3ui pcg3d(Vector3ui v)
 {
     v = v * 1664525u + 1013904223u;
@@ -56,7 +57,8 @@ __always_inline__ Vector3ui pcg3d(Vector3ui v)
     return v;
 }
 
-// Hash Functions for GPU Rendering// Jarzynski and Olano, 2020
+// Hash Functions for GPU Rendering
+// Jarzynski and Olano, 2020
 __always_inline__ Vector4ui pcg4d(Vector4ui v)
 {
     v = v * 1664525u + 1013904223u;

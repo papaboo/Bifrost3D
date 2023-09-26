@@ -1,4 +1,17 @@
 BACKLOG:
+* Add to DX renderer
+** Mesh constant buffer with color buffer set flag
+** Update input layout
+** Use in material
+* Add to glTF loader
+** COLOR_0
+** ROUGHNESS_0
+* Add OptiXRenderer
+
+* Upgrade CMake
+* Upgrade to VS 2022
+* Upgrade OptiX
+
 * Normals revisited
 ** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
 *** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
@@ -28,6 +41,7 @@ BACKLOG:
 ** Massively parallel path space filtering
 ** QR Factorization (has example code and test data)
 *** With deep learned features?
+** Running median with 3 or 5 floats pr channel.
 * Decima Engine Area lights
 ** https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Shaders/Private/BRDF.ush
 ** https://www.guerrilla-games.com/read/decima-engine-advances-in-lighting-and-aa

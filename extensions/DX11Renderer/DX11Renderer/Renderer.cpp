@@ -348,6 +348,7 @@ public:
             safe_release(&mesh.indices);
             safe_release(mesh.geometry_address());
             safe_release(mesh.texcoords_address());
+            safe_release(mesh.color_roughness_address());
         }
 
         delete m_environments;
@@ -766,6 +767,7 @@ public:
                         safe_release(&m_meshes[mesh_ID].indices);
                         safe_release(m_meshes[mesh_ID].geometry_address());
                         safe_release(m_meshes[mesh_ID].texcoords_address());
+                        safe_release(m_meshes[mesh_ID].color_roughness_address());
                     }
                 }
 
@@ -855,6 +857,47 @@ public:
 
                             if (texcoords != mesh.get_texcoords())
                                 delete[] texcoords;
+                        } else
+                            *dx_mesh.texcoords_address() = m_vertex_shading.null_buffer;
+                    }
+
+                    { // Upload color and roughness if present, otherwise upload 'null buffer'.
+                        RGB24* colors = mesh.get_colors();
+                        UNorm8* roughness = mesh.get_roughness();
+                        if (colors != nullptr || roughness != nullptr) {
+
+                            if (expand_indexed_buffers)
+                            {
+                                if (colors != nullptr)
+                                    colors = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), colors);
+                                if (roughness != nullptr)
+                                    roughness = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), roughness);
+                            }
+
+                            // Combine into one buffer
+                            RGBA32* colors_roughness = new RGBA32[dx_mesh.vertex_count];
+                            if (colors != nullptr && roughness != nullptr) {
+                                for (unsigned int i = 0; i < dx_mesh.vertex_count; i++)
+                                    colors_roughness[i] = { colors[i].r, colors[i].g, colors[i].b, roughness[i] };
+                            } else if (colors != nullptr) {
+                                for (unsigned int i = 0; i < dx_mesh.vertex_count; i++)
+                                    colors_roughness[i] = { colors[i].r, colors[i].g, colors[i].b, UNorm8::one() };
+                            } else {
+                                for (unsigned int i = 0; i < dx_mesh.vertex_count; i++)
+                                    colors_roughness[i] = { UNorm8::one(), UNorm8::one(), UNorm8::one(), roughness[i] };
+                            }
+
+                            HRESULT hr = upload_default_buffer(colors_roughness, dx_mesh.vertex_count, D3D11_BIND_VERTEX_BUFFER,
+                                                               dx_mesh.color_roughness_address());
+                            if (FAILED(hr))
+                                printf("Could not upload %s's color and roughness buffer.\n", mesh.get_name().c_str());
+
+                            delete[] colors_roughness;
+
+                            if (colors != mesh.get_colors())
+                                delete[] colors;
+                            if (roughness != mesh.get_roughness())
+                                delete[] roughness;
                         } else
                             *dx_mesh.texcoords_address() = m_vertex_shading.null_buffer;
                     }

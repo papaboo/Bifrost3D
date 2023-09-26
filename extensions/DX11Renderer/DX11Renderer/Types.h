@@ -261,7 +261,7 @@ struct Dx11Mesh {
     unsigned int vertex_count;
     ID3D11Buffer* indices;
 
-    ID3D11Buffer* buffers[2]; // [geometry, texcoords]
+    ID3D11Buffer* buffers[3]; // [geometry, texcoords, color_roughness]
     int buffer_count;
 
     AABB bounds;
@@ -270,6 +270,8 @@ struct Dx11Mesh {
     ID3D11Buffer** geometry_address() { return buffers + 0; }
     ID3D11Buffer* texcoords() { return buffers[1]; }
     ID3D11Buffer** texcoords_address() { return buffers + 1; }
+    ID3D11Buffer* color_roughness() { return buffers[2]; }
+    ID3D11Buffer** color_roughness_address() { return buffers + 2; }
 };
 
 struct Dx11Model {
