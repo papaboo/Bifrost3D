@@ -205,15 +205,15 @@ public:
 
         auto screenshot_filler = [](ID3D11Device1* device, ID3D11DeviceContext1* context, 
                                     bool is_HDR, ID3D11Texture2D* source_resource, Bifrost::Math::Rect<int> source_viewport) -> Screenshot {
-            // Helpers
-            typedef Vector4<half> Vector4h;
-            typedef Vector4<unsigned char> Vector4uc;
-            auto to_uchar = [](half v) -> unsigned char { return unsigned char(clamp(v * 255.0f + 0.5f, 0.0f, 255.0f)); };
+            // The textures in DirectX 11 have the (0,0) pixel coord in the upper left corner, whereas Bifrost images has it in the lower left.
+            // So the images have to be flipped vertically.
 
             int width = source_viewport.width; 
             int height = source_viewport.height;
             int element_count = width * height;
             if (is_HDR) {
+                typedef Vector4<half> Vector4h;
+
                 auto pixels = std::vector<Vector4h>(element_count);
                 Readback::texture2D(device, context, source_resource, source_viewport, pixels.begin());
 
@@ -225,11 +225,11 @@ public:
                     }
                 return Screenshot(width, height, Screenshot::Content::ColorHDR, PixelFormat::RGBA_Float, data);
             } else {
-                Vector4uc* pixels = new Vector4uc[element_count];
+                RGBA32* pixels = new RGBA32[element_count];
                 Readback::texture2D(device, context, source_resource, source_viewport, pixels);
-                // Mirror around y.
-                std::vector<Vector4uc> tmp; tmp.resize(width);
-                int row_size = sizeof(Vector4uc) * width;
+
+                std::vector<RGBA32> tmp; tmp.resize(width);
+                int row_size = sizeof(RGBA32) * width;
                 for (int row = 0; row < height / 2; ++row) {
                     memcpy(tmp.data(), pixels + row * width, row_size);
                     memcpy(pixels + row * width, pixels + (height - row - 1) * width, row_size);
@@ -284,9 +284,9 @@ public:
                 Screenshot::Content color_content = is_HDR ? Screenshot::Content::ColorHDR : Screenshot::Content::ColorLDR;
                 if (content_requested.is_set(color_content)) {
                     ID3D11View* color_buffer_view = is_HDR ? (ID3D11View*)frame.frame_SRV : (ID3D11View*)m_swap_chain_RTV;
-                    ID3D11Resource* sourceResource;
+                    OResource sourceResource;
                     color_buffer_view->GetResource(&sourceResource);
-                    auto screenshot = screenshot_filler(m_device, m_render_context, is_HDR, (ID3D11Texture2D*)sourceResource, frame.viewport);
+                    auto screenshot = screenshot_filler(m_device, m_render_context, is_HDR, (ID3D11Texture2D*)sourceResource.get(), frame.viewport);
                     if (screenshot.pixels != nullptr)
                         images.push_back(screenshot);
                 }
