@@ -93,13 +93,13 @@ public:
                 "}\n";
 
             const char* pixel_src =
-                "StructuredBuffer<half4> pixels : register(t0);\n"
+                "Buffer<float4> pixels : register(t0);\n"
                 "cbuffer constants : register(b0) {\n"
                 "    int2 viewport_size;\n"
                 "    int2 pixels_size;\n"
                 "};\n"
                 "float4 main_ps(float4 pixel_pos : SV_POSITION) : SV_TARGET {\n"
-                "   return pixels[int(pixel_pos.x) + int(viewport_size.y - pixel_pos.y) * pixels_size.x];\n"
+                "   return pixels[int(pixel_pos.x) + int(viewport_size.y - pixel_pos.y - 1) * viewport_size.x];\n"
                 "}\n";
 
             static auto compile_shader = [](const char* const shader_src, const char* const target, const char* const entry_point) -> OBlob {
