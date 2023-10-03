@@ -21,8 +21,6 @@
 
 using namespace DX11Renderer;
 
-// #define DISABLE_INTEROP 1
-
 namespace DX11OptiXAdaptor {
 
 inline void throw_cuda_error(cudaError_t error, const std::string& file, int line) {
@@ -59,6 +57,8 @@ public:
 
     OptiXRenderer::Renderer* m_optix_renderer;
 
+    bool m_use_interop;
+
     Implementation(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory, Bifrost::Core::RendererID renderer_ID)
         : m_device(device), m_backbuffer_RTV(nullptr), m_backbuffer_SRV(nullptr) {
 
@@ -75,6 +75,15 @@ public:
 
             // Create OptiX Renderer on device.
             m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, width_hint, height_hint, data_directory, renderer_ID);
+        }
+
+        // Decide if we should use interop or not.
+        // DX11 interop is currently not supported on multiple devices, as we use a GPU local CUDA buffer for interop.
+        m_use_interop = true;
+        optix::Context optix_context = m_optix_renderer->get_context();
+        if (optix_context->getEnabledDeviceCount() > 1) {
+            m_use_interop = false;
+            printf("DX11OptiXAdaptor: Disable interop on systems with multiple GPUs.\n");
         }
 
         THROW_DX11_ERROR(create_constant_buffer(m_device, sizeof(float) * 4, &m_constant_buffer));
@@ -134,10 +143,8 @@ public:
 
     ~Implementation() {
         m_render_target.optix_buffer = nullptr;
-#ifndef DISABLE_INTEROP
         if (m_render_target.cuda_buffer != nullptr)
             THROW_CUDA_ERROR(cudaGraphicsUnregisterResource(m_render_target.cuda_buffer));
-#endif
         delete m_optix_renderer;
     }
 
@@ -161,8 +168,9 @@ public:
         }
 
         unsigned int iteration_count = 0;
-#ifdef DISABLE_INTEROP
-        { // Render and copy to backbuffer.
+
+        if (!m_use_interop) {
+            // Render and copy to DX buffer resource.
             iteration_count = m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, width, height);
 
             void* cpu_buffer = m_render_target.optix_buffer->map();
@@ -170,9 +178,8 @@ public:
             m_render_target.dx_SRV->GetResource(&dx_buffer);
             m_render_context->UpdateSubresource(dx_buffer, 0, nullptr, cpu_buffer, 0, 0);
             m_render_target.optix_buffer->unmap();
-        }
-#else
-        { // Render to render target.
+        } else {
+            // Render to render target.
             THROW_CUDA_ERROR(cudaGraphicsMapResources(1, &m_render_target.cuda_buffer)); // Done before rendering?
             ushort4* pixels;
             size_t byte_count;
@@ -185,7 +192,6 @@ public:
 
             THROW_CUDA_ERROR(cudaGraphicsUnmapResources(1, &m_render_target.cuda_buffer));
         }
-#endif
 
         { // Render to back buffer.
             m_render_context->OMSetRenderTargets(1, &m_backbuffer_RTV, nullptr);
@@ -227,27 +233,26 @@ public:
 
             OBuffer dx_buffer = create_default_buffer(m_device, DXGI_FORMAT_R16G16B16A16_FLOAT, m_render_target.capacity, &m_render_target.dx_SRV);
 
-#ifndef DISABLE_INTEROP
-            // Register the buffer with CUDA.
-            if (m_render_target.cuda_buffer != nullptr)
-                THROW_CUDA_ERROR(cudaGraphicsUnregisterResource(m_render_target.cuda_buffer));
-            THROW_CUDA_ERROR(cudaGraphicsD3D11RegisterResource(&m_render_target.cuda_buffer, dx_buffer,
-                                                               cudaGraphicsRegisterFlagsNone));
-            THROW_CUDA_ERROR(cudaGraphicsResourceSetMapFlags(m_render_target.cuda_buffer, cudaGraphicsMapFlagsWriteDiscard));
-#endif
+            if (m_use_interop) {
+                // Register the buffer with CUDA.
+                if (m_render_target.cuda_buffer != nullptr)
+                    THROW_CUDA_ERROR(cudaGraphicsUnregisterResource(m_render_target.cuda_buffer));
+                THROW_CUDA_ERROR(cudaGraphicsD3D11RegisterResource(&m_render_target.cuda_buffer, dx_buffer,
+                    cudaGraphicsRegisterFlagsNone));
+                THROW_CUDA_ERROR(cudaGraphicsResourceSetMapFlags(m_render_target.cuda_buffer, cudaGraphicsMapFlagsWriteDiscard));
+            } else
+                m_render_target.cuda_buffer = nullptr;
         }
 
         // Create optix buffer.
-        // See https://devtalk.nvidia.com/default/topic/946870/optix/optix-4-and-cuda-interop-new-limitation-with-input-output-buffers/
-        // for why the buffer is GPU_LOCAL instead of OUTPUT.
-        // A GPU local buffer will obviously not work with multiple GPUs.
         optix::Context optix_context = m_optix_renderer->get_context();
-        assert(optix_context->getEnabledDeviceCount() == 1);
-#ifndef DISABLE_INTEROP
-        m_render_target.optix_buffer = optix_context->createBufferForCUDA(RT_BUFFER_INPUT_OUTPUT | RT_BUFFER_GPU_LOCAL, RT_FORMAT_HALF4, width, height);
-#else
-        m_render_target.optix_buffer = optix_context->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_HALF4, width, height);
-#endif
+        if (m_use_interop)
+            // See https://devtalk.nvidia.com/default/topic/946870/optix/optix-4-and-cuda-interop-new-limitation-with-input-output-buffers/
+            // for why the buffer is GPU_LOCAL instead of OUTPUT.
+            // A GPU local buffer will obviously not work with multiple GPUs.
+            m_render_target.optix_buffer = optix_context->createBufferForCUDA(RT_BUFFER_INPUT_OUTPUT | RT_BUFFER_GPU_LOCAL, RT_FORMAT_HALF4, width, height);
+        else
+            m_render_target.optix_buffer = optix_context->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_HALF4, width, height);
 
         m_render_target.width = width;
         m_render_target.height = height;
