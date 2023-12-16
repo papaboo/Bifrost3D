@@ -348,13 +348,13 @@ struct Renderer::Implementation {
                 using namespace Bifrost::Assets::Shading;
 
                 // Create buffer.
-                int width = EstimateGGXAlpha::cos_theta_sample_count;
-                int height = EstimateGGXAlpha::max_PDF_sample_count;
+                int width = Estimate_GGX_bounded_VNDF_alpha::wo_dot_normal_sample_count;
+                int height = Estimate_GGX_bounded_VNDF_alpha::max_PDF_sample_count;
                 Buffer alpha_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_SHORT, width, height);
 
                 unsigned short* rho_data = static_cast<unsigned short*>(alpha_buffer->map());
                 for (int i = 0; i < width * height; ++i)
-                    rho_data[i] = unsigned short(EstimateGGXAlpha::alphas[i] * 65535 + 0.5f);
+                    rho_data[i] = unsigned short(Estimate_GGX_bounded_VNDF_alpha::alphas[i] * 65535 + 0.5f);
                 alpha_buffer->unmap();
                 OPTIX_VALIDATE(alpha_buffer);
 

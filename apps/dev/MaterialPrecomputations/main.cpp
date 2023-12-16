@@ -195,7 +195,7 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
             // Binary search to find the alpha that hits the target PDF
             float prev_alpha = t == 0 ? 1.0f : alphas[index - 1];
             float3 reflected_wi = { -wo.x, -wo.y, wo.z };
-            PDFSample low_PDF_sample = { 1.0f, encode_PDF(GGX_R::PDF(prev_alpha, wo, reflected_wi)) };
+            PDFSample low_PDF_sample = { prev_alpha, encode_PDF(GGX_R::PDF(prev_alpha, wo, reflected_wi)) };
             PDFSample high_PDF_sample = { 0.0f, encode_PDF(GGX_R::PDF(0.00000000001f, wo, reflected_wi)) };
 
             float alpha = 0.0f;
@@ -224,7 +224,7 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
     { // Output the fitting
         std::ofstream out_header(filename);
         out_header <<
-            "// Estimate the alpha of the GGX distribution based on the maximal PDF value\n"
+            "// Estimate the alpha of the GGX bounded VNDF distribution based on the maximal PDF when sampling the bounded VNDF\n"
             "// and the angle between the view direction and the normal.\n"
             "// ------------------------------------------------------------------------------------------------\n"
             "// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors\n"
@@ -238,20 +238,17 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
             "#include <Bifrost/Assets/Shading/Fittings.h>\n"
             "#include <Bifrost/Math/Utils.h>\n"
             "\n"
-            "namespace Bifrost {\n"
-            "namespace Assets {\n"
-            "namespace Shading {\n"
-            "namespace EstimateGGXAlpha {\n"
+            "namespace Bifrost::Assets::Shading::Estimate_GGX_bounded_VNDF_alpha {\n"
             "\n"
             "const int alpha_sample_count = " << sample_count << ";\n"
-            "const int cos_theta_sample_count = " << cos_theta_count << ";\n"
+            "const int wo_dot_normal_sample_count = " << cos_theta_count << ";\n"
             "const int max_PDF_sample_count = " << max_PDF_count << ";\n"
             "\n"
             "const float alphas[] = {\n";
 
         for (int y = 0; y < cos_theta_count; ++y) {
             float cos_theta = y / float(cos_theta_count - 1u);
-            out_header << "    // cos(theta) " << cos_theta << "\n";
+            out_header << "    // wo_dot_normal " << cos_theta << "\n";
             out_header << "    ";
             for (int x = 0; x < max_PDF_count; ++x)
                 out_header << alphas[x + y * max_PDF_count] << ", ";
@@ -261,37 +258,34 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
         out_header <<
             "};\n"
             "\n"
-            "float encode_PDF(float p) { return p / (1.0f + p); }\n"
-            "float decode_PDF(float e) { return e / (1.0f - e); }\n"
+            "float encode_PDF(float pdf) { return pdf / (1.0f + pdf); }\n"
+            "float decode_PDF(float encoded_PDF) { return encoded_PDF / (1.0f - encoded_PDF); }\n"
             "\n"
-            "float estimate_alpha(float cos_theta, float max_PDF) {\n"
+            "float estimate_alpha(float wo_dot_normal, float max_PDF) {\n"
             "    using namespace Bifrost::Math;\n"
             "\n"
             "    float encoded_PDF = encode_PDF(max_PDF);\n"
             "\n"
-            "    int lower_cos_theta_row = int(cos_theta * (cos_theta_sample_count - 1));\n"
-            "    int upper_cos_theta_row = min(lower_cos_theta_row + 1, cos_theta_sample_count - 1);\n"
+            "    int lower_wo_dot_normal_row = int(wo_dot_normal * (wo_dot_normal_sample_count - 1));\n"
+            "    int upper_wo_dot_normal_row = min(lower_wo_dot_normal_row + 1, wo_dot_normal_sample_count - 1);\n"
             "\n"
             "    int lower_encoded_PDF_column = int(encoded_PDF * (max_PDF_sample_count - 1));\n"
             "    int upper_encoded_PDF_column = min(lower_encoded_PDF_column + 1, max_PDF_sample_count - 1);\n"
             "    float encoded_PDF_t = encoded_PDF * (max_PDF_sample_count - 1) - lower_encoded_PDF_column;\n"
             "\n"
             "    // Interpolate by encoded PDF\n"
-            "    const float* lower_alpha_row = alphas + lower_cos_theta_row * cos_theta_sample_count;\n"
+            "    const float* lower_alpha_row = alphas + lower_wo_dot_normal_row * wo_dot_normal_sample_count;\n"
             "    float lower_alpha = lerp(lower_alpha_row[lower_encoded_PDF_column], lower_alpha_row[upper_encoded_PDF_column], encoded_PDF_t);\n"
             "\n"
-            "    const float* upper_alpha_row = alphas + upper_cos_theta_row * cos_theta_sample_count;\n"
+            "    const float* upper_alpha_row = alphas + upper_wo_dot_normal_row * wo_dot_normal_sample_count;\n"
             "    float upper_alpha = lerp(upper_alpha_row[lower_encoded_PDF_column], upper_alpha_row[upper_encoded_PDF_column], encoded_PDF_t);\n"
             "\n"
-            "    // Interpolate by cos_theta\n"
-            "    float cos_theta_t = cos_theta * (cos_theta_sample_count - 1) - lower_cos_theta_row;\n"
-            "    return lerp(lower_alpha, upper_alpha, cos_theta_t);\n"
+            "    // Interpolate by wo_dot_normal\n"
+            "    float wo_dot_normal_t = wo_dot_normal * (wo_dot_normal_sample_count - 1) - lower_wo_dot_normal_row;\n"
+            "    return lerp(lower_alpha, upper_alpha, wo_dot_normal_t);\n"
             "}\n"
             "\n"
-            "} // NS EstimateGGXAlpha\n"
-            "} // NS Shading\n"
-            "} // NS Assets\n"
-            "} // NS Bifrost\n";
+            "} // NS Bifrost::Assets::Shading::Estimate_GGX_bounded_VNDF_alpha\n";
 
         out_header.close();
     }
@@ -312,7 +306,7 @@ int main(int argc, char** argv) {
     fit_GGX_rho_approximation(output_dir);
 
     // Given a max PDF and cos(theta) compute the corresponding alpha of the GGX distribution with that max PDF.
-    estimate_alpha_from_max_PDF(32, 32, output_dir + "EstimateGGXAlpha.cpp");
+    estimate_alpha_from_max_PDF(32, 32, output_dir + "EstimateGGXBoundedVNDFAlpha.cpp");
 
     { // Default shading albedo.
 
