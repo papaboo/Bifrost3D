@@ -257,13 +257,13 @@ public:
         // Merge base PDFs based on the specular probability.
         float diffuse_PDF = BSDFs::Lambert::PDF(wo, wi);
         float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
-        float specular_PDF = BSDFs::GGX_R::PDF(ggx_alpha, wo, normalize(wo + wi));
+        float specular_PDF = BSDFs::GGX_R::PDF(ggx_alpha, wo, wi);
         float PDF = lerp(diffuse_PDF, specular_PDF, specular_probability);
         
         if (m_coat_scale > 0) {
             float coat_probability = m_coat_probability / USHORT_MAX;
             float coat_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
-            float coat_PDF = BSDFs::GGX_R::PDF(coat_alpha, wo, normalize(wo + wi));
+            float coat_PDF = BSDFs::GGX_R::PDF(coat_alpha, wo, wi);
             PDF = lerp(PDF, coat_PDF, coat_probability);
         }
         
