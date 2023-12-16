@@ -83,7 +83,7 @@ GTEST_TEST(GGX_R, function_consistency) {
 }
 
 GTEST_TEST(GGX_R, sampling_standard_deviation) {
-    float expected_rho_std_dev = 0.685f;
+    float expected_rho_std_dev = 0.36f;
     float alpha = 0.75f;
     auto ggx = GGXReflectionWrapper(alpha); 
     BSDFTestUtils::BSDF_sampling_variance_test(ggx, 1024, expected_rho_std_dev);
@@ -112,18 +112,18 @@ GTEST_TEST(GGX_R, minimal_alpha) {
     EXPECT_FALSE(isnan(f));
 }
 
-GTEST_TEST(GGX_R, estimate_alpha_from_max_PDF) {
-    using namespace Bifrost::Assets::Shading::EstimateGGXAlpha;
+GTEST_TEST(GGX_R, estimate_bounded_VNDF_alpha_from_max_PDF) {
+    using namespace Bifrost::Assets::Shading;
     using namespace Shading::BSDFs;
 
     const int sample_count = 16;
-    const float max_alpha_error = 1.0f / max_PDF_sample_count;
-    
+    const float max_alpha_error = 1.0f / Estimate_GGX_bounded_VNDF_alpha::max_PDF_sample_count;
+
     for (int i = 0; i < sample_count; i++) {
         optix::float2 sample = RNG::sample02(i);
         float cos_theta = sample.x;
-        float max_PDF = decode_PDF(sample.y);
-        float estimated_alpha = estimate_alpha(cos_theta, max_PDF);
+        float max_PDF = Estimate_GGX_bounded_VNDF_alpha::decode_PDF(sample.y);
+        float estimated_alpha = Estimate_GGX_bounded_VNDF_alpha::estimate_alpha(cos_theta, max_PDF);
 
         optix::float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
         optix::float3 reflected_wi = { -wo.x, -wo.y, wo.z };

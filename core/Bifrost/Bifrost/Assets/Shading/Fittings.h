@@ -11,9 +11,8 @@
 
 #include <Bifrost/Math/Vector.h>
 
-namespace Bifrost {
-namespace Assets {
-namespace Shading {
+namespace Bifrost::Assets::Shading {
+
 namespace Rho {
 
 // ------------------------------------------------------------------------------------------------
@@ -58,23 +57,21 @@ float sample_oren_nayar(float wo_dot_normal, float roughness);
 
 } // NS Rho
 
-namespace EstimateGGXAlpha {
+namespace Estimate_GGX_bounded_VNDF_alpha {
 
-    // ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // Estimate the alpha of the GGX distribution that with the given maximal PDF from a angle.
 // ------------------------------------------------------------------------------------------------
 extern const int alpha_sample_count;
-extern const int cos_theta_sample_count;
+extern const int wo_dot_normal_sample_count;
 extern const int max_PDF_sample_count;
 extern const float alphas[];
-float encode_PDF(float p);
-float decode_PDF(float e);
-float estimate_alpha(float cos_theta, float max_PDF);
+float encode_PDF(float pdf);
+float decode_PDF(float encoded_PDF);
+float estimate_alpha(float wo_dot_normal, float max_PDF);
 
-} // NS EstimateGGXAlpha 
+} // NS Estimate_GGX_bounded_VNDF_alpha 
 
-} // NS Shading
-} // NS Assets
-} // NS Bifrost
+} // NS Bifrost::Assets::Shading
 
 #endif // _BIFROST_ASSETS_SHADING_FITTINGS_H

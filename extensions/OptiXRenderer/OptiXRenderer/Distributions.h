@@ -232,6 +232,83 @@ namespace GGX_VNDF {
 
 } // NS GGX_VNDF
 
+//=================================================================================================
+// Sampling a tighter bound of the visible normal distribution function for GGX.
+// Bounded VNDF Sampling for Smith–GGX Reflections, Eto et al, 2023.
+// Sampling Visible GGX Normals with Spherical Caps, Dupuy et al, 2023.
+// Sampling the GGX Distribution of Visible Normals, Heitz, 2018.
+// Importance Sampling Microfacet-Based BSDFs with the Distribution of Visible Normals, Heitz, 2014.
+// Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs, Heitz, 2014.
+//=================================================================================================
+namespace GGX_Bounded_VNDF {
+    using namespace optix;
+
+    // Sampling the GGX Distribution of Visible Normals, equation 1.
+    __inline_all__ float D(float2 alpha, float3 halfway) {
+        float m = pow2(halfway.x / alpha.x) + pow2(halfway.y / alpha.y) + pow2(halfway.z);
+        return 1 / (PIf * alpha.x * alpha.y * pow2(m));
+    }
+    __inline_all__ float D(float alpha, float3 halfway) { return D(make_float2(alpha, alpha), halfway); }
+
+    // Bounded VNDF Sampling for Smith–GGX Reflections, listing 1.
+    __inline_all__ float3 sample_reflection(float2 alpha, float3 wo, float2 random_sample) {
+        float3 wo_std = normalize(make_float3(wo.x * alpha.x, wo.y * alpha.y, wo.z));
+
+        // Sample a spherical cap
+        float phi = 2.0f * PIf * random_sample.y;
+        float a = fminf(alpha.x, alpha.y); // Eq. 6
+        float s = 1.0f + length(make_float2(wo)); // Omit sign for a <=1
+        float a2 = a * a; float s2 = s * s;
+        float k = (1.0f - a2) * s2 / (s2 + a2 * wo.z * wo.z); // Eq. 5
+        float b = wo.z >= 0 ? k * wo_std.z : wo_std.z;
+        float z = fma(1.0f - random_sample.x, 1.0f + b, -b);
+        float sin_theta = sqrt(fmaxf(1.0f - z * z, 0.0f));
+        float3 o_std = { sin_theta * cos(phi) , sin_theta * sin(phi) , z };
+
+        // Compute the microfacet normal m
+        float3 halfway_std = wo_std + o_std;
+        float3 halfway = normalize(make_float3(halfway_std.x * alpha.x, halfway_std.y * alpha.y, halfway_std.z));
+
+        // Return the reflection vector o
+        return reflect(-wo, halfway);
+    }
+
+    __inline_all__ float3 sample_reflection(float alpha, float3 wo, float2 random_sample) { return sample_reflection(make_float2(alpha), wo, random_sample); }
+
+    // Bounded VNDF Sampling for Smith–GGX Reflections, listing 2.
+    __inline_all__ float reflection_PDF(float2 alpha, float3 wo, float3 wi) {
+        float3 halfway = normalize(wo + wi);
+        float ndf = D(alpha, halfway);
+        float2 ao = alpha * make_float2(wo);
+        float len2 = dot(ao, ao);
+        float t = sqrt(len2 + wo.z * wo.z);
+        if (wo.z >= 0.0f) {
+            float min_alpha = fminf(alpha.x, alpha.y); // Eq. 6
+            float s = 1.0f + length(make_float2(wo)); // Omit sign for a <=1
+            float min_alpha_squared = min_alpha * min_alpha; float s2 = s * s;
+            float k = (1.0f - min_alpha_squared) * s2 / (s2 + min_alpha_squared * wo.z * wo.z); // Eq. 5
+            return ndf / (2.0f * (k * wo.z + t)); // Eq. 8 * || dm/do ||
+        }
+
+        // Numerically stable form of the previous PDF for wo.z < 0
+        return ndf * (t - wo.z) / (2.0f * len2); // = Eq. 7 * || dm/do ||
+    }
+
+    __inline_all__ float reflection_PDF(float alpha, float3 wo, float3 wi) { return reflection_PDF(make_float2(alpha, alpha), wo, wi); }
+
+    __inline_all__ Distributions::DirectionalSample sample(float2 alpha, float3 wo, float2 random_sample) {
+        Distributions::DirectionalSample sample;
+        sample.direction = sample_reflection(alpha, wo, random_sample);
+        sample.PDF = reflection_PDF(alpha, wo, sample.direction);
+        return sample;
+    }
+
+    __inline_all__ Distributions::DirectionalSample sample(float alpha, float3 wo, float2 random_sample) {
+        return sample(make_float2(alpha, alpha), wo, random_sample);
+    }
+
+} // NS GGX_Bounded_VNDF
+
 } // NS Distributions
 } // NS OptiXRenderer
 
