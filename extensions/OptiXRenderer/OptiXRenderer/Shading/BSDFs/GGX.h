@@ -80,11 +80,8 @@ __inline_all__ float3 evaluate(float alpha, float3 specularity, float3 wo, float
     return evaluate(alpha, specularity, wo, wi, halfway);
 }
 
-__inline_all__ float PDF(float alpha, float3 wo, float3 halfway) {
-#if _DEBUG
-    RT_ASSERT(!(dot(wo, halfway) < 0.0f || halfway.z < 0.0f), OPTIX_SHADING_WRONG_HEMISPHERE_EXCEPTION);
-#endif
-
+__inline_all__ float PDF(float alpha, float3 wo, float3 wi) {
+    float3 halfway = normalize(wo + wi);
     return Distributions::GGX_VNDF::PDF(alpha, wo, halfway) / (4.0f * dot(wo, halfway));
 }
 
@@ -261,7 +258,7 @@ __inline_all__ BSDFSample sample(float alpha, float ior_i_over_o, float3 wo, flo
 // * Turn ray refraction on or off.
 // ** transmission_PDF_scale evaluates to inf if the ior's are equal. Floating point precision could be generally unstable if the ior's are almost equal.
 // ** Should it degenerate to reflected GGX flipped to the other hemisphere?
-// * Configurable reciprocty by basing Fresnel on both wi and wo. Only needed if refraction is on. Requires injecting the Fresnel computation into GGX
+// * Configurable reciprocity by basing Fresnel on both wi and wo. Only needed if refraction is on. Requires injecting the Fresnel computation into GGX
 //----------------------------------------------------------------------------
 
 namespace GGX {

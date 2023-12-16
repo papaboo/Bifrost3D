@@ -37,8 +37,7 @@ public:
     }
 
     float PDF(optix::float3 wo, optix::float3 wi) const {
-        optix::float3 halfway = optix::normalize(wo + wi);
-        return Shading::BSDFs::GGX_R::PDF(m_alpha, wo, halfway);
+        return Shading::BSDFs::GGX_R::PDF(m_alpha, wo, wi);
     }
 
     BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
@@ -114,9 +113,9 @@ GTEST_TEST(GGX_R, estimate_alpha_from_max_PDF) {
         float estimated_alpha = estimate_alpha(cos_theta, max_PDF);
 
         optix::float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
-        optix::float3 halfway = { 0, 0, 1 };
+        optix::float3 reflected_wi = { -wo.x, -wo.y, wo.z };
 
-        float estimated_PDF = GGX_R::PDF(estimated_alpha, wo, halfway);
+        float estimated_PDF = GGX_R::PDF(estimated_alpha, wo, reflected_wi);
 
         // Shift alpha towards the correct PDF by the max_alpha_error.
         // If the estimated PDF is lower than the max PDF, then the alpha needs to be reduced (the peak increased),
@@ -124,7 +123,7 @@ GTEST_TEST(GGX_R, estimate_alpha_from_max_PDF) {
         float alpha_step_size = max_alpha_error * (estimated_PDF < max_PDF ? -1 : 1);
         float shifted_alpha = estimated_alpha + alpha_step_size;
         shifted_alpha = optix::clamp(shifted_alpha, 0.0f, 1.0f);
-        float shifted_PDF = GGX_R::PDF(shifted_alpha, wo, halfway);
+        float shifted_PDF = GGX_R::PDF(shifted_alpha, wo, reflected_wi);
 
         // Wether the max PDF is found somewhere between the estimated PDF and the shifted PDF,
         // i.e. the correct alpha is between the estimated alpha and the shifted alpha.
