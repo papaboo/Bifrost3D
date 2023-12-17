@@ -76,6 +76,13 @@ GTEST_TEST(GGX_R, function_consistency) {
     }
 }
 
+GTEST_TEST(GGX_R, sampling_standard_deviation) {
+    float expected_rho_std_dev = 0.685f;
+    float alpha = 0.75f;
+    auto ggx = GGXReflectionWrapper(alpha); 
+    BSDFTestUtils::BSDF_sampling_variance_test(ggx, 1024, expected_rho_std_dev);
+}
+
 GTEST_TEST(GGX_R, minimal_alpha) {
     using namespace optix;
 
@@ -198,6 +205,16 @@ GTEST_TEST(GGX_T, function_consistency) {
                 BSDFTestUtils::BSDF_consistency_test(ggx, wo, 16u);
             }
         }
+}
+
+GTEST_TEST(GGX_T, sampling_standard_deviation) {
+    float alpha = 0.75f;
+    float ior_i_over_os[] = { 0.5f, 0.9f, 1.1f, 1.5f };
+    float expected_rho_std_devs[] = { 2.05f, 0.53f, 0.05f, 0.08f };
+    for (int i = 0; i < 4; i++) {
+        auto ggx = GGXTransmissionWrapper(alpha, ior_i_over_os[i]);
+        BSDFTestUtils::BSDF_sampling_variance_test(ggx, 1024, expected_rho_std_devs[i]);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -331,6 +348,17 @@ GTEST_TEST(GGX, sample_according_to_specularity) {
                 EXPECT_FLOAT_EQ_EPS(specularity, res.reflectance, 0.00001f) << "alpha: " << alpha << ", cos_theta: " << cos_theta << ", specularity: " << specularity;
             }
         }
+    }
+}
+
+GTEST_TEST(GGX, sampling_standard_deviation) {
+    float alpha = 0.75f;
+    float specularity = 0.5f;
+    float ior_i_over_os[] = { 0.5f, 0.9f, 1.1f, 1.5f };
+    float expected_rho_std_devs[] = { 1.07f, 0.61f, 0.46f, 0.46f };
+    for (int i = 0; i < 4; i++) {
+        auto ggx = GGXWrapper(alpha, specularity, ior_i_over_os[i]);
+        BSDFTestUtils::BSDF_sampling_variance_test(ggx, 1024, expected_rho_std_devs[i]);
     }
 }
 

@@ -79,7 +79,24 @@ void BSDF_consistency_test(BSDFModel bsdf_model, float3 wo, unsigned int sample_
             EXPECT_FLOAT_EQ_PCT(sample.PDF, response.PDF, 0.00002f);
         }
     }
-};
+}
+
+template <typename BSDFModel>
+void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count, float expected_rho_std_dev, float epsilon = 0.01f) {
+    float total_std_dev = 0.0f;
+    for (float cos_theta : {0.1f, 0.3f, 0.5f, 0.7f, 0.9f, 1.0f}) {
+        float3 wo = wo_from_cos_theta(cos_theta);
+        auto rho = directional_hemispherical_reflectance_function(bsdf_model, wo, sample_count);
+        float rho_std_dev = rho.std_dev / rho.reflectance; // Normalize error wrt reflectance, so dark BSDFs don't automatically have a smaller error
+        total_std_dev += rho_std_dev;
+    }
+    float average_std_dev = total_std_dev / 6;
+    EXPECT_FLOAT_EQ_EPS(average_std_dev, expected_rho_std_dev, epsilon);
+}
+
+float3 wo_from_cos_theta(float cos_theta) {
+    return { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+}
 
 } // NS BSDFTestUtils
 } // NS OptiXRenderer
