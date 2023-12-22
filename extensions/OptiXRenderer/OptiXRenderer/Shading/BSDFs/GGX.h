@@ -162,12 +162,6 @@ __inline_all__ float evaluate(float alpha, float3 wo, float3 wi, float ior_i_ove
     if (sign(wo.z) == sign(wi.z))
         return 0;
 
-    bool entering = wo.z >= 0.0;
-    if (!entering) {
-        wo = -wo;
-        wi = -wi;
-    }
-
     // Same side? PBRT has this check, but is it needed if the halfway vector is correct? And why is it more extensive than the is_reflection check above?
     if (dot(wo, halfway) * dot(wi, halfway) > 0)
         return 0;
@@ -194,8 +188,8 @@ __inline_all__ float PDF(float alpha, float ior_i_over_o, float3 wo, float3 wi) 
 
     bool entering = wo.z >= 0.0;
     if (!entering) {
-        wo = -wo;
-        wi = -wi;
+        wo.z = -wo.z;
+        wi.z = -wi.z;
     }
 
     float3 halfway = compute_halfway_vector(ior_i_over_o, wo, wi);
@@ -221,7 +215,7 @@ __inline_all__ BSDFSample sample(float alpha, float ior_i_over_o, float3 wo, flo
     // Sample GGX
     bool entering = wo.z >= 0.0;
     if (!entering)
-        wo = -wo;
+        wo.z = -wo.z;
     float3 halfway = Distributions::GGX_VNDF::sample_halfway(alpha, wo, random_sample);
     bsdf_sample.PDF = Distributions::GGX_VNDF::PDF(alpha, wo, halfway);
 
@@ -236,17 +230,15 @@ __inline_all__ BSDFSample sample(float alpha, float ior_i_over_o, float3 wo, flo
     if (discardSample)
         return BSDFSample::none();
 
-    if (!entering) {
-        wo = -wo;
-        bsdf_sample.direction = -bsdf_sample.direction;
-    }
-
     // Same side?
     if (dot(wo, halfway) * dot(bsdf_sample.direction, halfway) > 0)
         return BSDFSample::none();
 
     float f = evaluate(alpha, wo, bsdf_sample.direction, ior_i_over_o, halfway);
     bsdf_sample.reflectance = make_float3(f);
+
+    if (!entering)
+        bsdf_sample.direction.z = -bsdf_sample.direction.z;
 
     return bsdf_sample;
 }
@@ -265,12 +257,6 @@ namespace GGX {
 using namespace optix;
 
 __inline_all__ float evaluate(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
-    bool entering = wo.z >= 0.0;
-    if (!entering) {
-        wo = -wo;
-        wi = -wi;
-    }
-
     bool is_reflection = sign(wo.z) == sign(wi.z);
     if (is_reflection)
         return BSDFs::GGX_R::evaluate(alpha, specularity, wo, wi);
@@ -283,7 +269,7 @@ __inline_all__ float evaluate(float alpha, float specularity, float ior_i_over_o
 
         float G = BSDFs::GGX::height_correlated_G(alpha, wo, wi);
         float D = Distributions::GGX_VNDF::D(alpha, halfway);
-        float F = 1.0f - schlick_fresnel(specularity, dot(wo, halfway));
+        float F = 1.0f - schlick_fresnel(specularity, abs(dot(wo, halfway)));
 
         // Walter et al 07 equation 21. Similar to PBRT V3, equation 8.20, page 548
         float f1 = abs(dot(wo, halfway) * dot(wi, halfway) / (wo.z * wi.z));
@@ -301,8 +287,8 @@ __inline_all__ float3 evaluate(float3 tint, float alpha, float specularity, floa
 __inline_all__ float PDF(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
     bool entering = wo.z >= 0.0;
     if (!entering) {
-        wo = -wo;
-        wi = -wi;
+        wo.z = -wo.z;
+        wi.z = -wi.z;
     }
 
     bool is_refraction = sign(wo.z) != sign(wi.z);
@@ -354,7 +340,8 @@ __inline_all__ BSDFSample sample(float alpha, float specularity, float ior_i_ove
     // Sample GGX
     bool entering = wo.z >= 0.0;
     if (!entering)
-        wo = -wo;
+        wo.z = -wo.z;
+
     float3 halfway = Distributions::GGX_VNDF::sample_halfway(alpha, wo, make_float2(random_sample));
     bsdf_sample.PDF = Distributions::GGX_VNDF::PDF(alpha, wo, halfway);
 
@@ -382,17 +369,15 @@ __inline_all__ BSDFSample sample(float alpha, float specularity, float ior_i_ove
     if (discardSample)
         return BSDFSample::none();
 
-    if (!entering) {
-        wo = -wo;
-        bsdf_sample.direction = -bsdf_sample.direction;
-    }
-
     // Same side?
     if (!is_reflection && dot(wo, halfway) * dot(bsdf_sample.direction, halfway) > 0)
         return BSDFSample::none();
 
     float f = evaluate(alpha, specularity, ior_i_over_o, wo, bsdf_sample.direction);
     bsdf_sample.reflectance = make_float3(f);
+
+    if (!entering)
+        bsdf_sample.direction.z = -bsdf_sample.direction.z;
 
     return bsdf_sample;
 }
