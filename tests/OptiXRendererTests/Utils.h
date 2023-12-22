@@ -17,6 +17,12 @@
 // Comparison helpers.
 //-----------------------------------------------------------------------------
 
+inline bool equal_float3(optix::float3 lhs, optix::float3 rhs) {
+    return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+}
+
+#define EXPECT_FLOAT3_EQ(expected, actual) EXPECT_PRED2(equal_float3, expected, actual)
+
 inline bool almost_equal_eps(float lhs, float rhs, float eps) {
     return abs(lhs - rhs) <= abs(eps);
 }

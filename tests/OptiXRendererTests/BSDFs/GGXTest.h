@@ -217,6 +217,27 @@ GTEST_TEST(GGX_T, sampling_standard_deviation) {
     }
 }
 
+GTEST_TEST(GGX_T, consistent_sampling_across_hemispheres) {
+    optix::float3 random_sample = { 0.5f, 0.5f, 0.5f };
+    for (float cos_theta : { -1.0f, -0.4f, -0.1f, 0.1f, 0.4f, 1.0f }) {
+        optix::float3 positive_wo = BSDFTestUtils::wo_from_cos_theta(cos_theta);
+        optix::float3 negative_wo = { positive_wo.x, positive_wo.y, -positive_wo.z };
+        for (float alpha : { 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
+            for (float ior_i_over_o : { 0.5f, 0.9f, 1.1f, 1.5f }) {
+                auto ggx = GGXTransmissionWrapper(alpha, ior_i_over_o);
+                auto positive_sample = ggx.sample(positive_wo, random_sample);
+                auto negative_sample = ggx.sample(negative_wo, random_sample);
+                EXPECT_EQ(positive_sample.PDF, negative_sample.PDF);
+                EXPECT_FLOAT3_EQ(positive_sample.reflectance, negative_sample.reflectance);
+
+                optix::float3 flipped_negative_direction = negative_sample.direction;
+                flipped_negative_direction.z = -flipped_negative_direction.z;
+                EXPECT_FLOAT3_EQ(positive_sample.direction, flipped_negative_direction);
+            }
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Full GGX with reflection and transmission tests.
 // ---------------------------------------------------------------------------
