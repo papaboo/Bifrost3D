@@ -213,7 +213,7 @@ public:
     optix::float3 m_tint;
 
     GGXWrapper(float alpha, float specularity, float ior_i_over_o, optix::float3 tint = optix::make_float3(1))
-        : m_alpha(alpha), m_specularity(specularity), m_ior_i_over_o(ior_i_over_o) {}
+        : m_alpha(alpha), m_specularity(specularity), m_ior_i_over_o(ior_i_over_o), m_tint(tint) {}
 
     optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
         return Shading::BSDFs::GGX::evaluate(m_tint, m_alpha, m_specularity, m_ior_i_over_o, wo, wi);
