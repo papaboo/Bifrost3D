@@ -56,7 +56,7 @@ void helmholtz_reciprocity(BSDFModel bsdf_model, float3 wo, unsigned int sample_
 
         if (is_PDF_valid(sample.PDF)) {
             float3 f = bsdf_model.evaluate(sample.direction, wo);
-            EXPECT_COLOR_EQ_EPS(sample.reflectance, f, make_float3(0.0001f)) << bsdf_model.to_string();
+            EXPECT_COLOR_EQ_EPS(sample.reflectance, f, 0.0001f) << bsdf_model.to_string();
         }
     }
 }
@@ -72,10 +72,10 @@ void BSDF_consistency_test(BSDFModel bsdf_model, float3 wo, unsigned int sample_
             EXPECT_GE(sample.reflectance.x, 0.0f) << bsdf_model.to_string();
 
             EXPECT_FLOAT_EQ_PCT(sample.PDF, bsdf_model.PDF(wo, sample.direction), 0.00002f) << bsdf_model.to_string();
-            EXPECT_COLOR_EQ_PCT(sample.reflectance, bsdf_model.evaluate(wo, sample.direction), make_float3(0.00002f)) << bsdf_model.to_string();
+            EXPECT_COLOR_EQ_PCT(sample.reflectance, bsdf_model.evaluate(wo, sample.direction), 0.00002f) << bsdf_model.to_string();
 
             BSDFResponse response = bsdf_model.evaluate_with_PDF(wo, sample.direction);
-            EXPECT_COLOR_EQ_PCT(sample.reflectance, response.reflectance, make_float3(0.00002f)) << bsdf_model.to_string();
+            EXPECT_COLOR_EQ_PCT(sample.reflectance, response.reflectance, 0.00002f) << bsdf_model.to_string();
             EXPECT_FLOAT_EQ_PCT(sample.PDF, response.PDF, 0.00002f) << bsdf_model.to_string();
         }
     }

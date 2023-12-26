@@ -150,7 +150,7 @@ GTEST_TEST(RoughGlassShadingModel, regression_test) {
             // printf("{%.6ff, %.6ff, %.6ff, %.6ff},\n", sample.reflectance.x, sample.reflectance.y, sample.reflectance.z, sample.PDF);
             auto response = bsdf_responses[response_index++];
 
-            EXPECT_COLOR_EQ_PCT(response.reflectance, sample.reflectance, make_float3(0.0001f));
+            EXPECT_COLOR_EQ_PCT(response.reflectance, sample.reflectance, 0.0001f);
             EXPECT_FLOAT_EQ_PCT(response.PDF, sample.PDF, 0.0001f);
         }
     }

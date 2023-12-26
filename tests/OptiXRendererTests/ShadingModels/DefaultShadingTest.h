@@ -162,7 +162,7 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
             auto material = DefaultShading(material_params, wo.z);
             float3 weight = material.evaluate(wo, wo);
             float scale = material_params.tint.x / weight.x;
-            EXPECT_FLOAT3_EQ_EPS(scale * weight, material_params.tint, optix::make_float3(1e-6f, 1e-6f, 1e-6f));
+            EXPECT_FLOAT3_EQ_EPS(scale * weight, material_params.tint, 1e-6f);
         }
 
         { // Test that grazing angle reflectivity is nearly white.
@@ -263,7 +263,7 @@ GTEST_TEST(DefaultShadingModel, metallic_interpolation) {
                 // Test that the directional-hemispherical reflectance of the semi-metallic material equals
                 // the one evaluated by interpolating a fully dielectric and fully conductor material.
                 float3 interpolated_rho = lerp(dielectric_rho, conductor_rho, metallic);
-                EXPECT_FLOAT3_EQ_EPS(interpolated_rho, rho, optix::make_float3(1e-6f, 1e-6f, 1e-6f)) << material.to_string();
+                EXPECT_FLOAT3_EQ_EPS(interpolated_rho, rho, 1e-6f) << material.to_string();
             }
         }
     }
@@ -339,7 +339,7 @@ GTEST_TEST(DefaultShadingModel, coat_interpolation) {
                 // Test that the directional-hemispherical reflectance of the semi-coated material equals
                 // the one evaluated by interpolating between a material with no coat and coated material.
                 float3 interpolated_rho = lerp(non_coated_rho, coated_rho, coat);
-                EXPECT_FLOAT3_EQ_EPS(interpolated_rho, rho, optix::make_float3(1e-6f, 1e-6f, 1e-6f));
+                EXPECT_FLOAT3_EQ_EPS(interpolated_rho, rho, 1e-6f);
             }
         }
     }
@@ -378,7 +378,7 @@ GTEST_TEST(DefaultShadingModel, regression_test) {
                 // printf("{%.6ff, %.6ff, %.5ff, %.6ff},\n", sample.reflectance.x, sample.reflectance.y, sample.reflectance.z, sample.PDF);
                 auto response = bsdf_responses[response_index++];
 
-                EXPECT_FLOAT3_EQ_PCT(response.reflectance, sample.reflectance, optix::make_float3(0.0001f, 0.0001f, 0.0001f));
+                EXPECT_FLOAT3_EQ_PCT(response.reflectance, sample.reflectance, 0.0001f);
                 EXPECT_FLOAT_EQ_PCT(response.PDF, sample.PDF, 0.0001f);
             }
         }

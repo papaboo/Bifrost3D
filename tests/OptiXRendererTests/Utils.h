@@ -36,18 +36,20 @@ inline bool almost_equal_percentage(float lhs, float rhs, float percentage) {
 
 #define EXPECT_FLOAT_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(almost_equal_percentage, expected, actual, percentage)
 
-inline bool equal_float3_eps(optix::float3 lhs, optix::float3 rhs, optix::float3 epsilon) {
-    return almost_equal_eps(lhs.x, rhs.x, epsilon.x) &&
-           almost_equal_eps(lhs.y, rhs.y, epsilon.y) &&
-           almost_equal_eps(lhs.z, rhs.z, epsilon.z);
+inline bool equal_float3_eps(optix::float3 lhs, optix::float3 rhs, float epsilon) {
+    return almost_equal_eps(lhs.x, rhs.x, epsilon) &&
+           almost_equal_eps(lhs.y, rhs.y, epsilon) &&
+           almost_equal_eps(lhs.z, rhs.z, epsilon);
 }
 
 #define EXPECT_COLOR_EQ_EPS(expected, actual, epsilon) EXPECT_PRED3(equal_float3_eps, expected, actual, epsilon)
 #define EXPECT_FLOAT3_EQ_EPS(expected, actual, epsilon) EXPECT_PRED3(equal_float3_eps, expected, actual, epsilon)
 
-inline bool equal_float3_percentage(optix::float3 expected, optix::float3 actual, optix::float3 percentage) {
-    optix::float3 eps = expected * percentage;
-    return equal_float3_eps(expected, actual, eps);
+inline bool equal_float3_percentage(optix::float3 expected, optix::float3 actual, float percentage) {
+    optix::float3 epsilon = expected * percentage;
+    return almost_equal_eps(expected.x, actual.x, epsilon.x) &&
+           almost_equal_eps(expected.y, actual.y, epsilon.y) &&
+           almost_equal_eps(expected.z, actual.z, epsilon.z);
 }
 
 #define EXPECT_COLOR_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(equal_float3_percentage, expected, actual, percentage)
