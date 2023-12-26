@@ -38,6 +38,10 @@ public:
     BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
         return Shading::BSDFs::Lambert::sample(m_tint, optix::make_float2(random_sample));
     }
+
+    std::string to_string() const {
+        return "Lambert";
+    }
 };
 
 GTEST_TEST(Lambert, power_conservation) {

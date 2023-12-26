@@ -56,7 +56,7 @@ void helmholtz_reciprocity(BSDFModel bsdf_model, float3 wo, unsigned int sample_
 
         if (is_PDF_valid(sample.PDF)) {
             float3 f = bsdf_model.evaluate(sample.direction, wo);
-            EXPECT_COLOR_EQ_EPS(sample.reflectance, f, make_float3(0.0001f));
+            EXPECT_COLOR_EQ_EPS(sample.reflectance, f, make_float3(0.0001f)) << bsdf_model.to_string();
         }
     }
 }
@@ -67,16 +67,16 @@ void BSDF_consistency_test(BSDFModel bsdf_model, float3 wo, unsigned int sample_
         float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
         BSDFSample sample = bsdf_model.sample(wo, rng_sample);
 
-        EXPECT_GE(sample.PDF, 0.0f);
+        EXPECT_GE(sample.PDF, 0.0f) << bsdf_model.to_string();
         if (is_PDF_valid(sample.PDF)) {
-            EXPECT_GE(sample.reflectance.x, 0.0f);
+            EXPECT_GE(sample.reflectance.x, 0.0f) << bsdf_model.to_string();
 
-            EXPECT_FLOAT_EQ_PCT(sample.PDF, bsdf_model.PDF(wo, sample.direction), 0.00002f);
-            EXPECT_COLOR_EQ_PCT(sample.reflectance, bsdf_model.evaluate(wo, sample.direction), make_float3(0.00002f));
+            EXPECT_FLOAT_EQ_PCT(sample.PDF, bsdf_model.PDF(wo, sample.direction), 0.00002f) << bsdf_model.to_string();
+            EXPECT_COLOR_EQ_PCT(sample.reflectance, bsdf_model.evaluate(wo, sample.direction), make_float3(0.00002f)) << bsdf_model.to_string();
 
             BSDFResponse response = bsdf_model.evaluate_with_PDF(wo, sample.direction);
-            EXPECT_COLOR_EQ_PCT(sample.reflectance, response.reflectance, make_float3(0.00002f));
-            EXPECT_FLOAT_EQ_PCT(sample.PDF, response.PDF, 0.00002f);
+            EXPECT_COLOR_EQ_PCT(sample.reflectance, response.reflectance, make_float3(0.00002f)) << bsdf_model.to_string();
+            EXPECT_FLOAT_EQ_PCT(sample.PDF, response.PDF, 0.00002f) << bsdf_model.to_string();
         }
     }
 }
@@ -91,7 +91,7 @@ void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count
         total_std_dev += rho_std_dev;
     }
     float average_std_dev = total_std_dev / 6;
-    EXPECT_FLOAT_EQ_EPS(average_std_dev, expected_rho_std_dev, epsilon);
+    EXPECT_FLOAT_EQ_EPS(average_std_dev, expected_rho_std_dev, epsilon) << bsdf_model.to_string();
 }
 
 float3 wo_from_cos_theta(float cos_theta) {

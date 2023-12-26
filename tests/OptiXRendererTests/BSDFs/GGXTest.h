@@ -47,6 +47,12 @@ public:
     BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
         return Shading::BSDFs::GGX_R::sample(m_alpha, m_specularity, wo, optix::make_float2(random_sample));
     }
+
+    std::string to_string() const {
+        std::ostringstream out;
+        out << "GGX reflection: alpha: " << m_alpha << ", specularity: " << m_specularity;
+        return out.str();
+    }
 };
 
 GTEST_TEST(GGX_R, power_conservation) {
@@ -171,6 +177,12 @@ public:
     BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
         return Shading::BSDFs::GGX_T::sample(m_alpha, m_ior_i_over_o, wo, optix::make_float2(random_sample));
     }
+
+    std::string to_string() const {
+        std::ostringstream out;
+        out << "GGX transmission: alpha: " << m_alpha << ", ior_i / ior_o: " << m_ior_i_over_o;
+        return out.str();
+    }
 };
 
 GTEST_TEST(GGX_T, power_conservation) {
@@ -266,6 +278,12 @@ public:
 
     BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
         return Shading::BSDFs::GGX::sample(m_tint, m_alpha, m_specularity, m_ior_i_over_o, wo, random_sample);
+    }
+
+    std::string to_string() const {
+        std::ostringstream out;
+        out << "GGX: alpha: " << m_alpha << ", specularity: " << m_specularity << ", ior_i / ior_o: " << m_ior_i_over_o;
+        return out.str();
     }
 };
 

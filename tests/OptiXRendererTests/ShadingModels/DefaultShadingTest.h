@@ -22,6 +22,40 @@
 
 namespace OptiXRenderer {
 
+class DefaultShadingWrapper {
+public:
+    Material m_material_params;
+    float m_cos_theta;
+    Shading::ShadingModels::DefaultShading m_shading_model;
+
+    DefaultShadingWrapper(const Material& material_params, float cos_theta)
+        : m_material_params(material_params), m_cos_theta(cos_theta), m_shading_model(material_params, cos_theta) {}
+
+    optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const { return m_shading_model.evaluate(wo, wi); }
+
+    float PDF(optix::float3 wo, optix::float3 wi) const { return m_shading_model.PDF(wo, wi); }
+
+    BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const { return m_shading_model.evaluate_with_PDF(wo, wi); }
+
+    BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const { return m_shading_model.sample(wo, random_sample); }
+
+    float get_roughness() const { return m_shading_model.get_roughness(); }
+
+    optix::float3 rho(float abs_cos_theta_wi) const { return m_shading_model.rho(abs_cos_theta_wi); }
+
+    std::string to_string() const {
+        std::ostringstream out;
+        out << "Default shading:" << std::endl;
+        out << "  Tint: " << m_material_params.tint.x << ", " << m_material_params.tint.y << ", " << m_material_params.tint.z << std::endl;
+        out << "  Roughness: " << m_material_params.roughness << std::endl;
+        out << "  Metalness: " << m_material_params.metallic << std::endl;
+        out << "  Coverage: " << m_material_params.coverage << std::endl;
+        out << "  Coat: " << m_material_params.coat << std::endl;
+        out << "  Coat roughness: " << m_material_params.coat_roughness << std::endl;
+        return out.str();
+    }
+};
+
 GTEST_TEST(DefaultShadingModel, power_conservation) {
     using namespace Shading::ShadingModels;
     using namespace optix;
@@ -37,7 +71,7 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
         const float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
         auto shading_model = DefaultShading(material_params, wo.z);
         auto result = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo);
-        EXPECT_LE(result.reflectance, 1.00037f);
+        EXPECT_LE(result.reflectance, 1.00037f) << "cos_theta: " << cos_theta;
     }
 }
 
@@ -79,7 +113,7 @@ GTEST_TEST(DefaultShadingModel, function_consistency) {
 
         for (float roughness : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
             material_params.roughness = roughness;
-            auto shading_model = DefaultShading(material_params, wo.z);
+            auto shading_model = DefaultShadingWrapper(material_params, wo.z);
             ShadingModelTestUtils::BSDF_consistency_test(shading_model, wo, 32);
         }
     };
@@ -128,9 +162,7 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
             auto material = DefaultShading(material_params, wo.z);
             float3 weight = material.evaluate(wo, wo);
             float scale = material_params.tint.x / weight.x;
-            EXPECT_FLOAT_EQ(weight.x * scale, material_params.tint.x);
-            EXPECT_FLOAT_EQ(weight.y * scale, material_params.tint.y);
-            EXPECT_FLOAT_EQ(weight.z * scale, material_params.tint.z);
+            EXPECT_FLOAT3_EQ_EPS(scale * weight, material_params.tint, optix::make_float3(1e-6f, 1e-6f, 1e-6f));
         }
 
         { // Test that grazing angle reflectivity is nearly white.
@@ -196,8 +228,8 @@ GTEST_TEST(DefaultShadingModel, white_hot_room) {
 
             for (int a = 0; a < 5; ++a) {
                 float abs_cos_theta = 1.0f - float(a) * 0.2f;
-                auto material = DefaultShading(white_material_params, abs_cos_theta);
-                EXPECT_FLOAT_EQ(1.0f, material.rho(abs_cos_theta).x);
+                auto material = DefaultShadingWrapper(white_material_params, abs_cos_theta);
+                EXPECT_FLOAT_EQ(1.0f, material.rho(abs_cos_theta).x) << material.to_string();
             }
         }
     }
@@ -217,7 +249,7 @@ GTEST_TEST(DefaultShadingModel, metallic_interpolation) {
             for (float abs_cos_theta : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
 
                 material_params.metallic = metallic;
-                auto material = DefaultShading(material_params, abs_cos_theta);
+                auto material = DefaultShadingWrapper(material_params, abs_cos_theta);
                 float3 rho = material.rho(abs_cos_theta);
 
                 material_params.metallic = 0;
@@ -231,9 +263,7 @@ GTEST_TEST(DefaultShadingModel, metallic_interpolation) {
                 // Test that the directional-hemispherical reflectance of the semi-metallic material equals
                 // the one evaluated by interpolating a fully dielectric and fully conductor material.
                 float3 interpolated_rho = lerp(dielectric_rho, conductor_rho, metallic);
-                EXPECT_FLOAT_EQ(interpolated_rho.x, rho.x);
-                EXPECT_FLOAT_EQ(interpolated_rho.y, rho.y);
-                EXPECT_FLOAT_EQ(interpolated_rho.z, rho.z);
+                EXPECT_FLOAT3_EQ_EPS(interpolated_rho, rho, optix::make_float3(1e-6f, 1e-6f, 1e-6f)) << material.to_string();
             }
         }
     }
@@ -295,7 +325,7 @@ GTEST_TEST(DefaultShadingModel, coat_interpolation) {
             float3 non_coated_rho = non_coated_material.rho(cos_theta);
 
             // Verify that the two materials have the same roughness.
-            EXPECT_FLOAT_EQ_EPS(non_coated_material.get_roughness(), coated_material.get_roughness(), 0.000001f);
+            EXPECT_FLOAT_EQ_EPS(non_coated_material.get_roughness(), coated_material.get_roughness(), 1e-6f);
 
             for (float coat : { 0.25f, 0.5f, 0.75f }) {
                 // Generate a material with a partial coat that has the same roughness as the coated material.
@@ -304,14 +334,12 @@ GTEST_TEST(DefaultShadingModel, coat_interpolation) {
                 float3 rho = material.rho(cos_theta);
 
                 // Verify that the two materials have the same roughness.
-                EXPECT_FLOAT_EQ_EPS(material.get_roughness(), coated_material.get_roughness(), 0.000001f);
+                EXPECT_FLOAT_EQ_EPS(material.get_roughness(), coated_material.get_roughness(), 1e-6f);
 
                 // Test that the directional-hemispherical reflectance of the semi-coated material equals
                 // the one evaluated by interpolating between a material with no coat and coated material.
                 float3 interpolated_rho = lerp(non_coated_rho, coated_rho, coat);
-                EXPECT_FLOAT_EQ_EPS(interpolated_rho.x, rho.x, 0.000001f);
-                EXPECT_FLOAT_EQ_EPS(interpolated_rho.y, rho.y, 0.000001f);
-                EXPECT_FLOAT_EQ_EPS(interpolated_rho.z, rho.z, 0.000001f);
+                EXPECT_FLOAT3_EQ_EPS(interpolated_rho, rho, optix::make_float3(1e-6f, 1e-6f, 1e-6f));
             }
         }
     }
@@ -350,9 +378,7 @@ GTEST_TEST(DefaultShadingModel, regression_test) {
                 // printf("{%.6ff, %.6ff, %.5ff, %.6ff},\n", sample.reflectance.x, sample.reflectance.y, sample.reflectance.z, sample.PDF);
                 auto response = bsdf_responses[response_index++];
 
-                EXPECT_FLOAT_EQ_PCT(response.reflectance.x, sample.reflectance.x, 0.0001f);
-                EXPECT_FLOAT_EQ_PCT(response.reflectance.y, sample.reflectance.y, 0.0001f);
-                EXPECT_FLOAT_EQ_PCT(response.reflectance.z, sample.reflectance.z, 0.0001f);
+                EXPECT_FLOAT3_EQ_PCT(response.reflectance, sample.reflectance, optix::make_float3(0.0001f, 0.0001f, 0.0001f));
                 EXPECT_FLOAT_EQ_PCT(response.PDF, sample.PDF, 0.0001f);
             }
         }
