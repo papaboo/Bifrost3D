@@ -152,7 +152,7 @@ __inline_all__ float transmission_PDF_scale(float ior_i_over_o, float3 wo, float
 // Compute the halfway vector from wo, wi and their relative index of refracion
 __inline_all__ float3 compute_halfway_vector(float ior_i_over_o, float3 wo, float3 wi) {
     float3 halfway = normalize(wo + ior_i_over_o * wi);
-    if (halfway.z < 0)
+    if (halfway.z < 0.0f)
         halfway = -halfway;
     return halfway;
 }
@@ -160,11 +160,11 @@ __inline_all__ float3 compute_halfway_vector(float ior_i_over_o, float3 wo, floa
 __inline_all__ float evaluate(float alpha, float3 wo, float3 wi, float ior_i_over_o, float3 halfway) {
     // Reflection evaluates to 0.
     if (sign(wo.z) == sign(wi.z))
-        return 0;
+        return 0.0f;
 
-    // Same side? PBRT has this check, but is it needed if the halfway vector is correct? And why is it more extensive than the is_reflection check above?
-    if (dot(wo, halfway) * dot(wi, halfway) > 0)
-        return 0;
+    // Discard backfacing microfacets. Hemisphere-invariant version of equation 9.35 in PBRT4.
+    if (dot(wo, halfway) * dot(wi, halfway) >= 0.0f)
+        return 0.0f;
 
     float G = BSDFs::GGX::height_correlated_G(alpha, wo, wi);
     float D = Distributions::GGX_VNDF::D(alpha, halfway);
@@ -186,7 +186,7 @@ __inline_all__ float PDF(float alpha, float ior_i_over_o, float3 wo, float3 wi) 
     if (sign(wo.z) == sign(wi.z))
         return 0;
 
-    bool entering = wo.z >= 0.0;
+    bool entering = wo.z >= 0.0f;
     if (!entering) {
         wo.z = -wo.z;
         wi.z = -wi.z;
@@ -194,10 +194,9 @@ __inline_all__ float PDF(float alpha, float ior_i_over_o, float3 wo, float3 wi) 
 
     float3 halfway = compute_halfway_vector(ior_i_over_o, wo, wi);
 
-    // Same side? PBRT has this check, but is it needed and why is it more extensive than the is_reflection check above?
-    // Could it be that it captures if a wi lies outside the refracted lobe?
-    if (dot(wo, halfway) * dot(wi, halfway) > 0)
-        return 0;
+    // Discard backfacing microfacets. Equation 9.35 in PBRT4.
+    if (dot(wo, halfway) < 0.0f || dot(wi, halfway) >= 0.0f)
+        return 0.0f;
 
     return Distributions::GGX_VNDF::PDF(alpha, wo, halfway) * transmission_PDF_scale(ior_i_over_o, wo, wi, halfway);
 }
@@ -213,7 +212,7 @@ __inline_all__ BSDFSample sample(float alpha, float ior_i_over_o, float3 wo, flo
     BSDFSample bsdf_sample;
 
     // Sample GGX
-    bool entering = wo.z >= 0.0;
+    bool entering = wo.z >= 0.0f;
     if (!entering)
         wo.z = -wo.z;
     float3 halfway = Distributions::GGX_VNDF::sample_halfway(alpha, wo, random_sample);
@@ -228,10 +227,6 @@ __inline_all__ BSDFSample sample(float alpha, float ior_i_over_o, float3 wo, flo
     bool discardSample = bsdf_sample.direction.z > -0.00001f;
     discardSample |= bsdf_sample.PDF < 0.00001f;
     if (discardSample)
-        return BSDFSample::none();
-
-    // Same side?
-    if (dot(wo, halfway) * dot(bsdf_sample.direction, halfway) > 0)
         return BSDFSample::none();
 
     float f = evaluate(alpha, wo, bsdf_sample.direction, ior_i_over_o, halfway);
@@ -263,7 +258,7 @@ __inline_all__ float evaluate(float alpha, float specularity, float ior_i_over_o
     else {
         float3 halfway = GGX_T::compute_halfway_vector(ior_i_over_o, wo, wi);
 
-        // Same side? PBRT has this check, but is it needed and why is it more extensive than the is_reflection check above?
+        // Discard backfacing microfacets. Hemisphere-invariant version of equation 9.35 in PBRT4.
         if (dot(wo, halfway) * dot(wi, halfway) > 0)
             return 0;
 
@@ -285,7 +280,7 @@ __inline_all__ float3 evaluate(float3 tint, float alpha, float specularity, floa
 }
 
 __inline_all__ float PDF(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
-    bool entering = wo.z >= 0.0;
+    bool entering = wo.z >= 0.0f;
     if (!entering) {
         wo.z = -wo.z;
         wi.z = -wi.z;
@@ -295,12 +290,11 @@ __inline_all__ float PDF(float alpha, float specularity, float ior_i_over_o, flo
     ior_i_over_o = is_refraction ? ior_i_over_o : 1.0f;
     float3 halfway = GGX_T::compute_halfway_vector(ior_i_over_o, wo, wi);
 
-    // Discard if the directions are close to perpendicular to the surface or if the halfvector is ill-defined.
-    // Same side? PBRT has this check, but is it needed and why is it more extensive than the is_reflection check above?
-    // Could it be that it captures if a wi lies outside the refracted lobe?
+    // Discard if the directions are close to or perpendicular to the surface.
+    // Discard backfacing microfacets. Equation 9.35 in PBRT4.
     bool energy_loss = is_refraction ? wi.z > -0.00001f : wi.z < 0.00001f;
-    bool same_side = is_refraction && dot(wo, halfway) * dot(wi, halfway) > 0;
-    if (energy_loss ||same_side)
+    bool backfacing_microfacet = is_refraction && dot(wo, halfway) * dot(wi, halfway) > 0;
+    if (energy_loss || backfacing_microfacet)
         return 0;
 
     float PDF = Distributions::GGX_VNDF::PDF(alpha, wo, halfway);
@@ -309,13 +303,13 @@ __inline_all__ float PDF(float alpha, float specularity, float ior_i_over_o, flo
     if (is_refraction)
         PDF *= GGX_T::transmission_PDF_scale(ior_i_over_o, wo, wi, halfway);
     else
-        PDF /= (4.0f * dot(wo, halfway));
+        PDF /= 4.0f * dot(wo, halfway);
 
     // Scale the PDF by the probability to reflect or refract.
     float reflection_propability = schlick_fresnel(specularity, dot(wo, halfway));
     PDF *= is_refraction ? (1 - reflection_propability) : reflection_propability;
 
-    // // Discard samples if the pdf is too low (precision issues).
+    // Discard samples if the pdf is too low (precision issues).
     bool discardSample = PDF < 0.00001f;
     return discardSample ? 0.0f : PDF;
 }
@@ -338,7 +332,7 @@ __inline_all__ BSDFSample sample(float alpha, float specularity, float ior_i_ove
     BSDFSample bsdf_sample;
 
     // Sample GGX
-    bool entering = wo.z >= 0.0;
+    bool entering = wo.z >= 0.0f;
     if (!entering)
         wo.z = -wo.z;
 
@@ -352,7 +346,7 @@ __inline_all__ BSDFSample sample(float alpha, float specularity, float ior_i_ove
     // Reflect or refract
     if (is_reflection) {
         bsdf_sample.PDF *= reflection_propability;
-        bsdf_sample.PDF /= (4.0f * dot(wo, halfway));
+        bsdf_sample.PDF /= 4.0f * dot(wo, halfway);
 
         bsdf_sample.direction = reflect(-wo, halfway);
     } else {
@@ -367,10 +361,6 @@ __inline_all__ BSDFSample sample(float alpha, float specularity, float ior_i_ove
     bool discardSample = is_reflection ? bsdf_sample.direction.z < 0.00001f : bsdf_sample.direction.z > -0.00001f;
     discardSample |= bsdf_sample.PDF < 0.00001f;
     if (discardSample)
-        return BSDFSample::none();
-
-    // Same side?
-    if (!is_reflection && dot(wo, halfway) * dot(bsdf_sample.direction, halfway) > 0)
         return BSDFSample::none();
 
     float f = evaluate(alpha, specularity, ior_i_over_o, wo, bsdf_sample.direction);
