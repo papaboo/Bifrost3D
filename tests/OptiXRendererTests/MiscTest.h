@@ -90,7 +90,7 @@ GTEST_TEST(Specularity, dielectric_conversions_to_and_from_index_of_refraction) 
 
 GTEST_TEST(Specularity, conductor_conversions_to_and_from_index_of_refraction) {
     using namespace optix;
-    const float3 accuracy = { 1e-5f, 1e-5f, 1e-5f };
+    float accuracy = 1e-5f;
 
     // Index of refraction and extinction coefficient for mediums at wavelengths 630nm (red), 532nm (green) and 465nm (blue)
     const float3 air_ior = { 1.0f, 1.0f, 1.0f };

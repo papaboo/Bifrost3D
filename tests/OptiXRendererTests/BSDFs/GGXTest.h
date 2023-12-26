@@ -325,7 +325,7 @@ GTEST_TEST(GGX, reflection_response_equals_GGX_R) {
                 BSDFSample ggx_sample = Shading::BSDFs::GGX::sample(alpha, fully_specular, ior_i_over_o, wo, rng_sample);
                 if (is_PDF_valid(ggx_sample.PDF)) {
                     BSDFResponse ggx_r_response = Shading::BSDFs::GGX_R::evaluate_with_PDF(alpha, fully_specular, wo, ggx_sample.direction);
-                    EXPECT_COLOR_EQ_PCT(ggx_sample.reflectance, ggx_r_response.reflectance, make_float3(0.00002f));
+                    EXPECT_COLOR_EQ_PCT(ggx_sample.reflectance, ggx_r_response.reflectance, 0.00002f);
                     EXPECT_FLOAT_EQ_PCT(ggx_sample.PDF, ggx_r_response.PDF, 0.00002f);
                 }
             }
@@ -359,7 +359,7 @@ GTEST_TEST(GGX, transmission_response_equals_GGX_T) {
                         ggx_t_response.reflectance *= transmission_propability;
                         ggx_t_response.PDF *= transmission_propability;
 
-                        EXPECT_COLOR_EQ_PCT(ggx_sample.reflectance, ggx_t_response.reflectance, make_float3(0.00002f));
+                        EXPECT_COLOR_EQ_PCT(ggx_sample.reflectance, ggx_t_response.reflectance, 0.00002f);
                         EXPECT_FLOAT_EQ_PCT(ggx_sample.PDF, ggx_t_response.PDF, 0.00002f);
                         ++i;
                     }
