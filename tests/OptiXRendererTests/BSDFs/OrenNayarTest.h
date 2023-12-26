@@ -40,6 +40,12 @@ public:
     BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
         return Shading::BSDFs::OrenNayar::sample(m_tint, m_roughness, wo, optix::make_float2(random_sample));
     }
+
+    std::string to_string() const {
+        std::ostringstream out;
+        out << "OrenNayar: roughness: " << m_roughness;
+        return out.str();
+    }
 };
 
 GTEST_TEST(OrenNayar, power_conservation) {

@@ -40,6 +40,12 @@ public:
     BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
         return Shading::BSDFs::Burley::sample(m_tint, m_roughness, wo, optix::make_float2(random_sample));
     }
+
+    std::string to_string() const {
+        std::ostringstream out;
+        out << "Burley: roughness: " << m_roughness;
+        return out.str();
+    }
 };
 
 GTEST_TEST(Burley, power_conservation) {

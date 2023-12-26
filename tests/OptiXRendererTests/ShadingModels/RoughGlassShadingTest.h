@@ -36,6 +36,32 @@ Material frosted_glass_parameters() {
     return glass_params;
 }
 
+class RoughGlassShadingWrapper {
+public:
+    Material m_material_params;
+    float m_cos_theta;
+    Shading::ShadingModels::RoughGlassShading m_shading_model;
+
+    RoughGlassShadingWrapper(const Material& material_params, float cos_theta)
+        : m_material_params(material_params), m_cos_theta(cos_theta), m_shading_model(material_params, cos_theta) {}
+
+    optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const { return m_shading_model.evaluate(wo, wi); }
+
+    float PDF(optix::float3 wo, optix::float3 wi) const { return m_shading_model.PDF(wo, wi); }
+
+    BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const { return m_shading_model.evaluate_with_PDF(wo, wi); }
+
+    BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const { return m_shading_model.sample(wo, random_sample); }
+
+    std::string to_string() const {
+        std::ostringstream out;
+        out << "Default shading:" << std::endl;
+        out << "  Tint: " << m_material_params.tint.x << ", " << m_material_params.tint.y << ", " << m_material_params.tint.z << std::endl;
+        out << "  Roughness:" << m_material_params.roughness << std::endl;
+        out << "  Metalness:" << m_material_params.metallic << std::endl;
+        return out.str();
+    }
+};
 GTEST_TEST(RoughGlassShadingModel, power_conservation) {
     using namespace Shading::ShadingModels;
 
@@ -65,7 +91,7 @@ GTEST_TEST(RoughGlassShadingModel, function_consistency) {
         Material material_params = frosted_glass_parameters();
         for (float roughness : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
             material_params.roughness = roughness;
-            auto shading_model = RoughGlassShading(material_params, wo.z);
+            auto shading_model = RoughGlassShadingWrapper(material_params, wo.z);
             ShadingModelTestUtils::BSDF_consistency_test(shading_model, wo, 32);
         }
     }
