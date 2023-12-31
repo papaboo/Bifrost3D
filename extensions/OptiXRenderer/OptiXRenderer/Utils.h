@@ -31,6 +31,10 @@ __inline_all__ float heaviside(float v) {
     return v >= 0.0f ? 1.0f : 0.0f;
 }
 
+__inline_all__ bool same_hemisphere(optix::float3 wo, optix::float3 wi) {
+    return wo.z * wi.z >= 0.0f;
+}
+
 __inline_all__ float sign(float v) {
     return v >= 0.0f ? 1.0f : -1.0f;
 }

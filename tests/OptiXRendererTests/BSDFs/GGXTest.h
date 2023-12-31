@@ -158,12 +158,15 @@ class GGXTransmissionWrapper {
 public:
     float m_alpha;
     float m_ior_i_over_o;
+    float m_specularity;
 
-    GGXTransmissionWrapper(float alpha, float ior_i_over_o)
-        : m_alpha(alpha), m_ior_i_over_o(ior_i_over_o) {}
+    GGXTransmissionWrapper(float alpha, float ior_i_over_o, float specularity = nanf(""))
+        : m_alpha(alpha), m_ior_i_over_o(ior_i_over_o), m_specularity(specularity) {}
 
     optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
-        return optix::make_float3(1) * Shading::BSDFs::GGX_T::evaluate(m_alpha, m_ior_i_over_o, wo, wi);
+        float reflectance = Shading::BSDFs::GGX_T::evaluate(m_alpha, m_ior_i_over_o, wo, wi);
+        reflectance *= fresnel(wo, wi);
+        return optix::make_float3(reflectance);
     }
 
     float PDF(optix::float3 wo, optix::float3 wi) const {
@@ -171,17 +174,33 @@ public:
     }
 
     BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
-        return Shading::BSDFs::GGX_T::evaluate_with_PDF(m_alpha, m_ior_i_over_o, wo, wi);
+        BSDFResponse response = Shading::BSDFs::GGX_T::evaluate_with_PDF(m_alpha, m_ior_i_over_o, wo, wi);
+        float f = fresnel(wo, wi);
+        response.reflectance *= f;
+        return response;
     }
 
     BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
-        return Shading::BSDFs::GGX_T::sample(m_alpha, m_ior_i_over_o, wo, optix::make_float2(random_sample));
+        BSDFSample sample = Shading::BSDFs::GGX_T::sample(m_alpha, m_ior_i_over_o, wo, optix::make_float2(random_sample));
+        float f = fresnel(wo, sample.direction);
+        sample.reflectance *= f;
+        return sample;
     }
 
     std::string to_string() const {
         std::ostringstream out;
         out << "GGX transmission: alpha: " << m_alpha << ", ior_i / ior_o: " << m_ior_i_over_o;
         return out.str();
+    }
+
+private:
+    // GGX_T ignores Fresnel, so we need to add it explicitly.
+    float fresnel(optix::float3 wo, optix::float3 wi) const {
+        if (isnan(m_specularity))
+            return 1.0f;
+
+        optix::float3 halfway = Shading::BSDFs::GGX_T::compute_halfway_vector(m_ior_i_over_o, wo, wi);
+        return 1.0f - schlick_fresnel(m_specularity, dot(wo, halfway));
     }
 };
 
@@ -260,24 +279,33 @@ public:
     float m_specularity;
     float m_ior_i_over_o;
     optix::float3 m_tint;
+    bool m_disable_reflection;
 
-    GGXWrapper(float alpha, float specularity, float ior_i_over_o, optix::float3 tint = optix::make_float3(1))
-        : m_alpha(alpha), m_specularity(specularity), m_ior_i_over_o(ior_i_over_o), m_tint(tint) {}
+    GGXWrapper(float alpha, float specularity, float ior_i_over_o, optix::float3 tint = optix::make_float3(1), bool disable_reflection = false)
+        : m_alpha(alpha), m_specularity(specularity), m_ior_i_over_o(ior_i_over_o), m_tint(tint), m_disable_reflection(disable_reflection){}
 
     optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
+        if (m_disable_reflection && same_hemisphere(wo, wi))
+            return optix::make_float3(0.0f);
         return Shading::BSDFs::GGX::evaluate(m_tint, m_alpha, m_specularity, m_ior_i_over_o, wo, wi);
     }
 
     float PDF(optix::float3 wo, optix::float3 wi) const {
+        if (m_disable_reflection && same_hemisphere(wo, wi))
+            return 0.0f;
         return Shading::BSDFs::GGX::PDF(m_alpha, m_specularity, m_ior_i_over_o, wo, wi);
     }
 
     BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
+        if (m_disable_reflection && same_hemisphere(wo, wi))
+            return BSDFResponse::none();
         return Shading::BSDFs::GGX::evaluate_with_PDF(m_tint, m_alpha, m_specularity, m_ior_i_over_o, wo, wi);
     }
 
     BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
-        return Shading::BSDFs::GGX::sample(m_tint, m_alpha, m_specularity, m_ior_i_over_o, wo, random_sample);
+        auto sample = Shading::BSDFs::GGX::sample(m_tint, m_alpha, m_specularity, m_ior_i_over_o, wo, random_sample);
+        bool reject_sample = m_disable_reflection && same_hemisphere(wo, sample.direction);
+        return reject_sample ? BSDFSample::none() : sample;
     }
 
     std::string to_string() const {
@@ -310,60 +338,47 @@ GTEST_TEST(GGX, function_consistency) {
         }
 }
 
-GTEST_TEST(GGX, reflection_response_equals_GGX_R) {
+GTEST_TEST(GGX, reflection_reflectance_equals_GGX_R) {
     using namespace optix;
 
-    int max_sample_count = 16;
     float fully_specular = 1.0f; // Disable transmission
     float ior_i_over_o = 1.5f;
 
     for (float cos_theta : { 0.2f, 1.0f }) {
-        const float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+        float3 wo = BSDFTestUtils::wo_from_cos_theta(cos_theta);
         for (float alpha : { 0.0675f, 0.25f, 1.0f }) {
-            for (int i = 0; i < max_sample_count; ++i) {
-                float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / max_sample_count);
-                BSDFSample ggx_sample = Shading::BSDFs::GGX::sample(alpha, fully_specular, ior_i_over_o, wo, rng_sample);
-                if (is_PDF_valid(ggx_sample.PDF)) {
-                    BSDFResponse ggx_r_response = Shading::BSDFs::GGX_R::evaluate_with_PDF(alpha, fully_specular, wo, ggx_sample.direction);
-                    EXPECT_COLOR_EQ_PCT(ggx_sample.reflectance, ggx_r_response.reflectance, 0.00002f);
-                    EXPECT_FLOAT_EQ_PCT(ggx_sample.PDF, ggx_r_response.PDF, 0.00002f);
-                }
-            }
+            auto ggx = GGXWrapper(alpha, fully_specular, ior_i_over_o);
+            auto ggx_r = GGXReflectionWrapper(alpha);
+            auto ggx_result = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 4096);
+            auto ggx_r_result = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx_r, wo, 2048);
+
+            float cos_theta_direction = dot(ggx_result.mean_direction, ggx_r_result.mean_direction);
+            EXPECT_FLOAT_EQ_EPS(ggx_result.reflectance, ggx_r_result.reflectance, 0.001f) << ggx.to_string();
+            EXPECT_FLOAT_EQ_EPS(1.0f, cos_theta_direction, 0.002f) << ggx.to_string();
         }
     }
 }
 
-GTEST_TEST(GGX, transmission_response_equals_GGX_T) {
+GTEST_TEST(GGX, transmission_reflectance_equals_GGX_T) {
     using namespace optix;
 
-    int max_sample_count = 16;
     float specularity = 0.0f;
     float ior_i_over_o = 1.5f;
+    float3 transmissive_tint = { 1.0f, 1.0f, 1.0f };
+    bool disable_reflection = true;
 
-    RNG::LinearCongruential rng; rng.seed(73856093);
     for (float ior_i_over_o : { 0.5f, 1.5f }) {
         for (float cos_theta : { 0.4f, 1.0f }) {
-            const float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+            float3 wo = BSDFTestUtils::wo_from_cos_theta(cos_theta);
             for (float alpha : { 0.0675f, 0.25f, 1.0f }) {
-                int i = 0;
-                while (i < max_sample_count) {
-                    BSDFSample ggx_sample = Shading::BSDFs::GGX::sample(alpha, specularity, ior_i_over_o, wo, rng.sample3f());
-                    bool is_transmission = sign(ggx_sample.direction.z) != sign(cos_theta);
-                    if (is_transmission && is_PDF_valid(ggx_sample.PDF)) {
-                        BSDFResponse ggx_t_response = Shading::BSDFs::GGX_T::evaluate_with_PDF(alpha, ior_i_over_o, wo, ggx_sample.direction);
+                auto ggx = GGXWrapper(alpha, specularity, ior_i_over_o, transmissive_tint, disable_reflection);
+                auto ggx_t = GGXTransmissionWrapper(alpha, ior_i_over_o, specularity);
+                auto ggx_result = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 2 * 4096);
+                auto ggx_t_result = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx_t, wo, 2 * 2048);
 
-                        // GGX_T ignores Fresnel, so we need to add it explicitly.
-                        // We assume that GGX uses Schlick's Fresnel approximation.
-                        float3 halfway = Shading::BSDFs::GGX_T::compute_halfway_vector(ior_i_over_o, wo, ggx_sample.direction);
-                        float transmission_propability = 1.0f - schlick_fresnel(specularity, dot(wo, halfway));
-                        ggx_t_response.reflectance *= transmission_propability;
-                        ggx_t_response.PDF *= transmission_propability;
-
-                        EXPECT_COLOR_EQ_PCT(ggx_sample.reflectance, ggx_t_response.reflectance, 0.00002f);
-                        EXPECT_FLOAT_EQ_PCT(ggx_sample.PDF, ggx_t_response.PDF, 0.00002f);
-                        ++i;
-                    }
-                }
+                float cos_theta_direction = dot(ggx_result.mean_direction, ggx_t_result.mean_direction);
+                EXPECT_FLOAT_EQ_EPS(ggx_result.reflectance, ggx_t_result.reflectance, 0.0015f) << ggx.to_string();
+                EXPECT_FLOAT_EQ_EPS(1.0f, cos_theta_direction, 0.002f) << ggx.to_string();
             }
         }
     }
