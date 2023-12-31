@@ -24,28 +24,37 @@ using namespace optix;
 struct RhoResult {
     float reflectance;
     float std_dev;
+    optix::float3 mean_direction;
 };
 
 template <typename BSDFModel>
 RhoResult directional_hemispherical_reflectance_function(BSDFModel bsdf_model, float3 wo, unsigned int sample_count) {
-    double summed_weight = 0.0;
-    double summed_weight_squared = 0.0;
+    double summed_reflectance = 0.0;
+    double summed_reflectance_squared = 0.0;
+    optix::double3 summed_directions = { 0.0, 0.0, 0.0 };
     for (unsigned int i = 0u; i < sample_count; ++i) {
         float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
         BSDFSample sample = bsdf_model.sample(wo, rng_sample);
         if (is_PDF_valid(sample.PDF))
         {
-            float weight = sample.reflectance.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
-            summed_weight += weight;
-            summed_weight_squared += weight * weight;
+            float reflectance = sample.reflectance.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
+            summed_reflectance += reflectance;
+            summed_reflectance_squared += reflectance * reflectance;
+
+            float direction_weight = sample.reflectance.x / sample.PDF;
+            summed_directions = optix::make_double3(summed_directions.x + direction_weight * sample.direction.x,
+                                                    summed_directions.y + direction_weight * sample.direction.y,
+                                                    summed_directions.z + direction_weight * sample.direction.z);
         }
     }
 
-    double mean = summed_weight / double(sample_count);
-    double mean_squared = summed_weight_squared / double(sample_count);
-    double variance = abs(mean_squared - mean * mean);
+    double mean_reflectance = summed_reflectance / sample_count;
+    double mean_reflectance_squared = summed_reflectance_squared / sample_count;
+    double reflectance_variance = abs(mean_reflectance_squared - mean_reflectance * mean_reflectance);
 
-    return { float(mean), float(sqrt(variance)) };
+    optix::float3 direction = { float(summed_directions.x), float(summed_directions.y), float(summed_directions.z) };
+
+    return { float(mean_reflectance), float(sqrt(reflectance_variance)), optix::normalize(direction) };
 }
 
 template <typename BSDFModel>

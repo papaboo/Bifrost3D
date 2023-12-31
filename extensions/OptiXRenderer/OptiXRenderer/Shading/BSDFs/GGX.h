@@ -252,7 +252,7 @@ namespace GGX {
 using namespace optix;
 
 __inline_all__ float evaluate(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
-    bool is_reflection = sign(wo.z) == sign(wi.z);
+    bool is_reflection = same_hemisphere(wo, wi);
     if (is_reflection)
         return BSDFs::GGX_R::evaluate(alpha, specularity, wo, wi);
     else {
