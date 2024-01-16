@@ -186,7 +186,7 @@ RT_PROGRAM void closest_hit() {
     monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
     monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
     float abs_cos_theta = abs(monte_carlo_payload.direction.z);
-    float pdf_regularization_hint = monte_carlo_payload.bsdf_MIS_PDF * g_camera_state.path_regularization_scale;
+    float pdf_regularization_hint = monte_carlo_payload.bsdf_MIS_PDF.PDF() * g_camera_state.path_regularization_scale;
     const DefaultShading material = DefaultShading::initialize_with_max_PDF_hint(material_parameter, abs_cos_theta, texcoord, pdf_regularization_hint);
 
     // Deferred BSDF sampling.
@@ -208,7 +208,7 @@ RT_PROGRAM void closest_hit() {
 
     // Apply deferred BSDF sample to the ray payload.
     monte_carlo_payload.direction = next_payload_direction;
-    monte_carlo_payload.bsdf_MIS_PDF = next_payload_MIS_PDF;
+    monte_carlo_payload.bsdf_MIS_PDF = MisPDF::from_PDF(next_payload_MIS_PDF);
     monte_carlo_payload.throughput = next_payload_throughput;
     monte_carlo_payload.bounces += 1u;
 }

@@ -91,7 +91,7 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     payload.throughput = make_float3(1.0f);
     payload.light_sample = LightSample::none();
     payload.bounces = 0;
-    payload.bsdf_MIS_PDF = 0.0f;
+    payload.bsdf_MIS_PDF = MisPDF::delta_dirac();
     payload.shading_normal = make_float3(0.0f);
     payload.material_index = 0;
 

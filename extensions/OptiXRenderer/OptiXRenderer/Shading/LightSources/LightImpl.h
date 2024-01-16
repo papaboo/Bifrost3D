@@ -84,15 +84,14 @@ __inline_dev__ optix::float3 evaluate(const Light& light, optix::float3 position
 
 template <typename LightType>
 __inline_dev__ optix::float3 evaluate_intersection(const LightType& light, optix::float3 position, optix::float3 direction_to_light, 
-                                                   float bsdf_PDF, bool next_event_estimated) {
+                                                   MisPDF bsdf_PDF, bool next_event_estimated) {
     optix::float3 radiance = evaluate(light, position, ray.direction);
 
 #if ENABLE_NEXT_EVENT_ESTIMATION
-    bool apply_MIS = bsdf_PDF > 0.0f;
-    if (apply_MIS) {
+    if (bsdf_PDF.use_for_MIS()) {
         // Calculate MIS weight and scale the radiance by it.
         float light_PDF = PDF(light, position, ray.direction);
-        float mis_weight = RNG::power_heuristic(bsdf_PDF, light_PDF);
+        float mis_weight = RNG::power_heuristic(bsdf_PDF.PDF(), light_PDF);
         radiance *= mis_weight;
     } else if (next_event_estimated)
         // Previous bounce used next event estimation, but did not calculate MIS, so don't apply light contribution.
@@ -103,7 +102,7 @@ __inline_dev__ optix::float3 evaluate_intersection(const LightType& light, optix
 }
 
 __inline_dev__ optix::float3 evaluate_intersection(const Light& light, optix::float3 position, optix::float3 direction_to_light,
-                                                   float bsdf_PDF, bool next_event_estimated) {
+                                                   MisPDF bsdf_PDF, bool next_event_estimated) {
     switch (light.get_type()) {
     case Light::Sphere:
         return evaluate_intersection(light.sphere, position, direction_to_light, bsdf_PDF, next_event_estimated);
