@@ -384,6 +384,16 @@ GTEST_TEST(DefaultShadingModel, regression_test) {
         }
 }
 
+GTEST_TEST(DefaultShadingModel, encode_PDF_for_GGX_alpha_estimation_correctly) {
+    using namespace Shading::ShadingModels;
+
+    for (float pdf : {0.1f, 1.0f, 10.0f, 1000.0f, 100000.0f}) {
+        float cpu_encoded_PDF = Bifrost::Assets::Shading::Estimate_GGX_bounded_VNDF_alpha::encode_PDF(pdf);
+        float gpu_encoded_PDF = DefaultShading::encode_PDF_for_GGX_alpha_estimation(pdf);
+        EXPECT_FLOAT_EQ(cpu_encoded_PDF, gpu_encoded_PDF);
+    }
+}
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_SHADING_MODEL_DEFAULT_TEST_H_
