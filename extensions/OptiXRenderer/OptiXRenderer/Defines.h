@@ -79,6 +79,7 @@ void validate_optix_resource(T resource, char* file, int line) {
 #define PIf 3.14159265358979323846f
 #define TWO_PIf 6.283185307f
 #define RECIP_PIf 0.31830988618379067153776752674503f
+#define FLT_MAX 3.402823466e+38F
 
 // OptiX exceptions.
 #define OPTIX_SHADING_WRONG_HEMISPHERE_EXCEPTION (RT_EXCEPTION_USER + 0)

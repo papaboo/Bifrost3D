@@ -190,6 +190,28 @@ struct __align__(16) Light {
 // Material type and sampling structs.
 //----------------------------------------------------------------------------
 
+// PDF wrapper for multiple importance sampling.
+// The wrapper contains a PDF and a boolean indicating if the PDF should be used for multiple importance sampling or not.
+struct MisPDF {
+private:
+    float m_PDF;
+
+public:
+    __inline_all__ static MisPDF from_PDF(float pdf) {
+        MisPDF mis_PDF;
+        mis_PDF.m_PDF = pdf;
+        return mis_PDF;
+    }
+    __inline_all__ static MisPDF delta_dirac() {
+        MisPDF mis_PDF;
+        mis_PDF.m_PDF = -FLT_MAX;
+        return mis_PDF;
+    }
+
+    __inline_all__ bool use_for_MIS() const { return m_PDF > 0.0f; }
+    __inline_all__ float PDF() const { return abs(m_PDF); }
+};
+
 // NOTE the suboptimal alignment of 8 instead of 16 yields a tiny tiny performance benefit. I have no clue why.
 struct __align__(8) BSDFResponse {
     optix::float3 reflectance;
@@ -286,7 +308,7 @@ struct __align__(16) MonteCarloPayload {
     unsigned int bounces;
 
     optix::float3 position;
-    float bsdf_MIS_PDF; // If negative, then it indicates that MIS should not be used.
+    MisPDF bsdf_MIS_PDF;
     optix::float3 direction;
     int __padding0;
 
