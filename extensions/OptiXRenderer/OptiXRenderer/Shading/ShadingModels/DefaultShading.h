@@ -212,15 +212,21 @@ public:
 
     __inline_all__ static DefaultShading initialize_with_max_PDF_hint(const Material& material, float abs_cos_theta, optix::float2 texcoord, float max_PDF_hint) {
         // Regularize the material by using a maximally allowed PDF hint and cos(theta) to estimate a minimally allowed GGX alpha / roughness.
-        float max_PDF = fminf(max_PDF_hint, 1e37f);
-        float2 uv = { max_PDF / (1.0f + max_PDF), abs_cos_theta };
-        uv = uv * 62.0f / 64.0f + 1.0f / 64.0f; // Rescale uv from [0, 1] to [1/64, 63/64]. The image is 32x32 and the center of the pixels correspond to the boundary values of estimate_GGX_alpha(max_PDF, cos_theta).
+        float encoded_PDF = encode_PDF_for_GGX_alpha_estimation(max_PDF_hint);
+        // Rescale uv to start and end at the center of the first and last pixel, as the center values represent the edges of the function.
+        float2 uv = make_float2(optix::lerp(0.5f / 32, 31.5f / 32, encoded_PDF),
+                                optix::lerp(0.5f / 32, 31.5f / 32, abs_cos_theta));
         float min_alpha = tex2D(estimate_GGX_alpha_texture, uv.x, uv.y);
         min_alpha = max_PDF_hint == 0 ? 0.0f : min_alpha; // Set min_alpha to 0.0f if PDF is invalid. (The texture lookup will set it to 1.0f)
         float min_roughness = BSDFs::GGX::roughness_from_alpha(min_alpha);
         return DefaultShading(material, abs_cos_theta, texcoord, min_roughness);
     }
 #endif
+
+    __inline_all__ static float encode_PDF_for_GGX_alpha_estimation(float pdf) {
+        float non_linear_PDF = pdf / (1.0f + pdf);
+        return (non_linear_PDF - 0.13f) / 0.87f;
+    }
 
     __inline_all__ float get_roughness() const { return m_roughness; }
 

@@ -159,7 +159,10 @@ void output_brdf(Image image, int sample_count, const std::string& filename, con
 void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const std::string& filename) {
     const int sample_count = max_PDF_count * cos_theta_count;
     constexpr float k = 1.0f; // Found to give a decent distribution of alphas, where decent is defined as the distribution of neighbouring alphas in the lookup table with the lowest standard deviatino
-    auto encode_PDF = [=](float pdf) -> float { return pdf / (k + pdf); };
+    auto encode_PDF = [=](float pdf) -> float {
+        float non_linear_PDF = pdf / (k + pdf);
+        return (non_linear_PDF - 0.13f) / 0.87f;
+    };
 
     // Cost function for determining k
     // auto std_dev_error = [=](float alphas[]) -> float {
@@ -199,9 +202,9 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
             PDFSample high_PDF_sample = { 0.0f, encode_PDF(GGX_R::PDF(0.00000000001f, wo, reflected_wi)) };
 
             float alpha = 0.0f;
-            if (encoded_target_PDF > high_PDF_sample.encoded_PDF)
+            if (encoded_target_PDF >= high_PDF_sample.encoded_PDF)
                 alpha = high_PDF_sample.alpha;
-            else if (encoded_target_PDF < low_PDF_sample.encoded_PDF)
+            else if (encoded_target_PDF <= low_PDF_sample.encoded_PDF)
                 alpha = low_PDF_sample.alpha;
             else {
                 PDFSample middle_sample;
@@ -219,6 +222,17 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
 
             alphas[index] = alpha;
         }
+    }
+
+    // Assert that the alpha map span the full range of [0, 1] per angle.
+    // If not then the encoding may be clipping information.
+    for (int y = 0; y < cos_theta_count; ++y) {
+        float first_column_alpha = alphas[0 + y * max_PDF_count];
+        if (first_column_alpha != 1.0f)
+            throw std::exception("Alpha in first column must be 1");
+        float last_column_alpha = alphas[(max_PDF_count - 1) + y * max_PDF_count];
+        if (last_column_alpha != 0.0f)
+            throw std::exception("Alpha in first column must be 0");
     }
 
     { // Output the fitting
@@ -258,8 +272,14 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
         out_header <<
             "};\n"
             "\n"
-            "float encode_PDF(float pdf) { return pdf / (1.0f + pdf); }\n"
-            "float decode_PDF(float encoded_PDF) { return encoded_PDF / (1.0f - encoded_PDF); }\n"
+            "float encode_PDF(float pdf) {\n"
+            "    float non_linear_PDF = pdf / (1.0f + pdf);\n"
+            "    return (non_linear_PDF - 0.13f) / 0.87f;\n"
+            "}\n"
+            "float decode_PDF(float encoded_pdf) {\n"
+            "    float non_linear_PDF = encoded_pdf * 0.87f + 0.13f;\n"
+            "    return non_linear_PDF / (1.0f - non_linear_PDF);\n"
+            "}\n"
             "\n"
             "float estimate_alpha(float wo_dot_normal, float max_PDF) {\n"
             "    using namespace Bifrost::Math;\n"

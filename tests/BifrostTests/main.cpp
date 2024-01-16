@@ -8,6 +8,8 @@
 
 #include <gtest/gtest.h>
 
+#include <Assets/Shading/FittingsTest.h>
+
 #include <Assets/ImageTest.h>
 #include <Assets/InfiniteAreaLightTest.h>
 #include <Assets/MaterialTest.h>
