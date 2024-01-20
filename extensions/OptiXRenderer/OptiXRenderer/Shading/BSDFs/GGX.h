@@ -60,20 +60,21 @@ namespace GGX_R {
 
 using namespace optix;
 
-__inline_all__ float evaluate(float alpha, float specularity, float3 wo, float3 wi) {
-    float3 halfway = normalize(wo + wi);
-    float G = GGX::height_correlated_G(alpha, wo, wi);
-    float D = Distributions::GGX_VNDF::D(alpha, halfway);
-    float F = schlick_fresnel(specularity, dot(wo, halfway));
-    return (D * F * G) / (4.0f * wo.z * wi.z);
-}
-
 __inline_all__ float3 evaluate(float alpha, float3 specularity, float3 wo, float3 wi) {
+    // Avoid dividing by zero at grazing angles.
+    if (wo.z == 0 || wi.z == 0)
+        return make_float3(0.0f);
+
     float3 halfway = normalize(wo + wi);
     float G = GGX::height_correlated_G(alpha, wo, wi);
     float D = Distributions::GGX_VNDF::D(alpha, halfway);
     float3 F = schlick_fresnel(specularity, dot(wo, halfway));
     return F * (D * G / (4.0f * wo.z * wi.z));
+}
+
+// Helper evaluate function for testing and rho computation.
+__inline_all__ float evaluate(float alpha, float specularity, float3 wo, float3 wi) {
+    return evaluate(alpha, make_float3(specularity), wo, wi).x;
 }
 
 __inline_all__ float PDF(float alpha, float3 wo, float3 wi) {
@@ -106,8 +107,9 @@ __inline_all__ BSDFSample sample(float alpha, float3 specularity, float3 wo, flo
     bsdf_sample.PDF = reflection_sample.PDF;
     bsdf_sample.reflectance = evaluate(alpha, specularity, wo, bsdf_sample.direction);
 
-    bool discardSample = bsdf_sample.PDF < 0.00001f || bsdf_sample.direction.z < 0.00001f; // Discard samples if the pdf is too low (precision issues) or if the new direction points into the surface (energy loss).
-    return discardSample ? BSDFSample::none() : bsdf_sample;
+    // Discard samples if the new direction points into the surface (energy loss).
+    bool energyloss = bsdf_sample.direction.z < 0.0f;
+    return energyloss ? BSDFSample::none() : bsdf_sample;
 }
 __inline_all__ BSDFSample sample(float alpha, float specularity, float3 wo, float2 random_sample) { return sample(alpha, make_float3(specularity), wo, random_sample); }
 
@@ -200,10 +202,9 @@ __inline_all__ BSDFSample sample(float alpha, float ior_i_over_o, float3 wo, flo
 
     bsdf_sample.PDF *= transmission_PDF_scale(ior_i_over_o, wo, bsdf_sample.direction, halfway);
 
-    // Discard samples if the pdf is too low (precision issues) or if wi is on the same side as wo.
-    bool discardSample = bsdf_sample.direction.z > -0.00001f;
-    discardSample |= bsdf_sample.PDF < 0.00001f;
-    if (discardSample)
+    // Discard samples if wi is on the same side as wo, which is interpreted as energyloss.
+    bool energyloss = bsdf_sample.direction.z >= -0.0f;
+    if (energyloss)
         return BSDFSample::none();
 
     float f = evaluate(alpha, wo, bsdf_sample.direction, ior_i_over_o, halfway);
@@ -214,6 +215,7 @@ __inline_all__ BSDFSample sample(float alpha, float ior_i_over_o, float3 wo, flo
 
     return bsdf_sample;
 }
+
 } // NS GGX_T
 
 //----------------------------------------------------------------------------
@@ -267,9 +269,9 @@ __inline_all__ float PDF(float alpha, float specularity, float ior_i_over_o, flo
     ior_i_over_o = is_refraction ? ior_i_over_o : 1.0f;
     float3 halfway = GGX_T::compute_halfway_vector(ior_i_over_o, wo, wi);
 
-    // Discard if the directions are close to or perpendicular to the surface.
+    // Discard samples if the direction points into the surface (energy loss).
     // Discard backfacing microfacets. Equation 9.35 in PBRT4.
-    bool energy_loss = is_refraction ? wi.z > -0.00001f : wi.z < 0.00001f;
+    bool energy_loss = is_refraction ? wi.z >= 0.0f : wi.z < 0.0f;
     bool backfacing_microfacet = is_refraction && dot(wo, halfway) * dot(wi, halfway) > 0;
     if (energy_loss || backfacing_microfacet)
         return 0;
@@ -286,9 +288,7 @@ __inline_all__ float PDF(float alpha, float specularity, float ior_i_over_o, flo
     float reflection_propability = schlick_fresnel(specularity, dot(wo, halfway));
     PDF *= is_refraction ? (1 - reflection_propability) : reflection_propability;
 
-    // Discard samples if the pdf is too low (precision issues).
-    bool discardSample = PDF < 0.00001f;
-    return discardSample ? 0.0f : PDF;
+    return PDF;
 }
 
 __inline_all__ BSDFResponse evaluate_with_PDF(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
@@ -334,10 +334,9 @@ __inline_all__ BSDFSample sample(float alpha, float specularity, float ior_i_ove
         bsdf_sample.PDF *= 1 - reflection_propability;
     }
 
-    // Discard samples if the pdf is too low (precision issues) or if the direction points into the surface (energy loss).
-    bool discardSample = is_reflection ? bsdf_sample.direction.z < 0.00001f : bsdf_sample.direction.z > -0.00001f;
-    discardSample |= bsdf_sample.PDF < 0.00001f;
-    if (discardSample)
+    // Discard samples if the direction points into the surface (energy loss).
+    bool energyloss = is_reflection ? bsdf_sample.direction.z < 0.0f : bsdf_sample.direction.z >= 0.0f;
+    if (energyloss)
         return BSDFSample::none();
 
     float f = evaluate(alpha, specularity, ior_i_over_o, wo, bsdf_sample.direction);
@@ -355,6 +354,7 @@ __inline_all__ BSDFSample sample(float3 tint, float alpha, float specularity, fl
         bsdf_sample.reflectance *= tint;
     return bsdf_sample;
 }
+
 } // NS GGX
 
 } // NS BSDFs
