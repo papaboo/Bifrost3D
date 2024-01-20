@@ -112,6 +112,26 @@ GTEST_TEST(GGX_R, minimal_alpha) {
     EXPECT_FALSE(isnan(f));
 }
 
+GTEST_TEST(GGX_R, fully_grazing_evaluates_to_black) {
+    using namespace optix;
+
+    const float3 incident_w = make_float3(0.0f, 0.0f, 1.0f);
+    const float3 grazing_w = make_float3(0.0f, 1.0f, 0.0f);
+
+    for (float alpha : { 0.0f, 0.5f, 1.0f }) {
+        auto ggx = GGXReflectionWrapper(alpha);
+
+        float grazing_wo_f = ggx.evaluate(grazing_w, incident_w).x;
+        EXPECT_FLOAT_EQ(grazing_wo_f, 0.0f);
+
+        float grazing_wi_f = ggx.evaluate(incident_w, grazing_w).x;
+        EXPECT_FLOAT_EQ(grazing_wi_f, 0.0f);
+
+        float both_grazing_f = ggx.evaluate(grazing_w, grazing_w).x;
+        EXPECT_FLOAT_EQ(both_grazing_f, 0.0f) << ggx.to_string();
+    }
+}
+
 GTEST_TEST(GGX_R, estimate_bounded_VNDF_alpha_from_max_PDF) {
     using namespace Bifrost::Assets::Shading;
     using namespace Shading::BSDFs;
@@ -269,6 +289,28 @@ GTEST_TEST(GGX_T, consistent_sampling_across_hemispheres) {
     }
 }
 
+GTEST_TEST(GGX_T, fully_grazing_evaluates_to_black) {
+    using namespace optix;
+
+    const float3 incident_w = make_float3(0.0f, 0.0f, -1.0f);
+    const float3 grazing_w = make_float3(0.0f, 1.0f, 0.0f);
+
+    for (float alpha : { 0.0f, 0.5f, 1.0f }) {
+        for (float ior_i_over_o : { 0.5f, 0.9f, 1.1f, 1.5f }) {
+            auto ggx = GGXTransmissionWrapper(alpha, ior_i_over_o);
+
+            float grazing_wo_f = ggx.evaluate(grazing_w, incident_w).x;
+            EXPECT_FLOAT_EQ(grazing_wo_f, 0.0f) << ggx.to_string();
+
+            float grazing_wi_f = ggx.evaluate(incident_w, grazing_w).x;
+            EXPECT_FLOAT_EQ(grazing_wi_f, 0.0f) << ggx.to_string();
+
+            float both_grazing_f = ggx.evaluate(grazing_w, grazing_w).x;
+            EXPECT_FLOAT_EQ(both_grazing_f, 0.0f) << ggx.to_string();
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Full GGX with reflection and transmission tests.
 // ---------------------------------------------------------------------------
@@ -415,6 +457,32 @@ GTEST_TEST(GGX, sampling_standard_deviation) {
         BSDFTestUtils::BSDF_sampling_variance_test(ggx, 1024, expected_rho_std_devs[i]);
     }
 }
+
+GTEST_TEST(GGX, fully_grazing_evaluates_to_black) {
+    using namespace optix;
+
+    const float specularity = 1.0f;
+    const float3 grazing_wo = make_float3(0.0f, 1.0f, 0.0f);
+    const float3 grazing_wi = make_float3(0.0f, -1.0f, 0.0f);
+
+    for (float alpha : { 0.0f, 0.5f, 1.0f }) {
+        for (float ior_i_over_o : { 0.5f, 0.9f, 1.1f, 1.5f }) {
+            auto ggx = GGXWrapper(alpha, specularity, ior_i_over_o);
+
+            for (float z_offset : { -0.1f, 0.0f, 0.1f }) {
+                float3 w_offset = { 0, 0, z_offset };
+
+                float grazing_wo_f = ggx.evaluate(grazing_wo, normalize(grazing_wi + w_offset)).x;
+                EXPECT_FLOAT_EQ(grazing_wo_f, 0.0f) << ggx.to_string();
+
+                float grazing_wi_f = ggx.evaluate(normalize(grazing_wo + w_offset), grazing_wi).x;
+                EXPECT_FLOAT_EQ(grazing_wi_f, 0.0f) << ggx.to_string();
+            }
+        }
+    }
+}
+
+
 
 } // NS OptiXRenderer
 
