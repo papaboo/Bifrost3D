@@ -29,8 +29,8 @@ public:
     float m_alpha;
     float m_specularity;
 
-    GGXReflectionWrapper(float alpha)
-        : m_alpha(alpha), m_specularity(1.0f) {}
+    GGXReflectionWrapper(float alpha, float specularity = 1.0f)
+        : m_alpha(alpha), m_specularity(specularity) {}
 
     optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
         return optix::make_float3(1) * Shading::BSDFs::GGX_R::evaluate(m_alpha, m_specularity, wo, wi);
@@ -129,6 +129,34 @@ GTEST_TEST(GGX_R, fully_grazing_evaluates_to_black) {
 
         float both_grazing_f = ggx.evaluate(grazing_w, grazing_w).x;
         EXPECT_FLOAT_EQ(both_grazing_f, 0.0f) << ggx.to_string();
+    }
+}
+
+// Validate that a few select samples in the GGX and GGX with Fresnel precomputed Rho tables have the correct values and can be looked up correct.
+// We test the corner and middle samples and make sure that the sample coordinates match with the original precomputed sample coords.
+GTEST_TEST(GGX_R, validate_ggx_rho_precomputations) {
+    using namespace Bifrost::Assets::Shading;
+
+    int sample_count = 4096;
+
+    float middle_cos_theta = (Rho::GGX_angle_sample_count / 2) / (Rho::GGX_angle_sample_count - 1.0f);
+    float middle_roughness = (Rho::GGX_roughness_sample_count / 2) / (Rho::GGX_roughness_sample_count - 1.0f);
+
+    for (float cos_theta : { 0.000001f, middle_cos_theta, 1.0f }) {
+        optix::float3 wo = BSDFTestUtils::wo_from_cos_theta(cos_theta);
+        for (float roughness : { 0.0f, middle_roughness, 1.0f }) {
+            float alpha = Shading::BSDFs::GGX::alpha_from_roughness(roughness);
+
+            auto no_specularity_ggx = GGXReflectionWrapper(alpha, 0.0f);
+            auto expected_no_specularity_rho = BSDFTestUtils::directional_hemispherical_reflectance_function(no_specularity_ggx, wo, sample_count);
+            float actual_no_specularity_rho = Rho::sample_GGX_with_fresnel(cos_theta, roughness);
+            EXPECT_FLOAT_EQ_EPS(expected_no_specularity_rho.reflectance, actual_no_specularity_rho, 0.0001f) << "for cos_theta: " << cos_theta << " and roughness: " << roughness;
+
+            auto full_specularity_ggx = GGXReflectionWrapper(alpha, 1.0f);
+            auto expected_full_specularity_rho = BSDFTestUtils::directional_hemispherical_reflectance_function(full_specularity_ggx, wo, sample_count);
+            float actual_full_specularity_rho = Rho::sample_GGX(cos_theta, roughness);
+            EXPECT_FLOAT_EQ_EPS(expected_full_specularity_rho.reflectance, actual_full_specularity_rho, 0.0001f) << "for cos_theta: " << cos_theta << " and roughness: " << roughness;
+        }
     }
 }
 
