@@ -51,12 +51,12 @@ double estimate_rho(float3 wo, float roughness, unsigned int sample_count, Sampl
 Image estimate_rho(unsigned int width, unsigned int height, unsigned int sample_count, SampleRoughBSDF sample_rough_BSDF) {
     Image rho_image = Images::create2D("rho", PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
     Math::RGB* rho_image_pixels = rho_image.get_pixels<Math::RGB>();
-    
+
+    #pragma omp parallel for
     for (int y = 0; y < int(height); ++y) {
-        float roughness = fmaxf(0.000001f, y / float(height - 1u));
-        #pragma omp parallel for
+        float roughness = y / float(height - 1);
         for (int x = 0; x < int(width); ++x) {
-            float cos_theta = (x + 0.5f) / float(width);
+            float cos_theta = max(0.000001f, x / float(width - 1));
             float3 wo = make_float3(sqrt(1.0f - cos_theta * cos_theta), 0.0f, cos_theta);
             double rho = estimate_rho(wo, roughness, sample_count, sample_rough_BSDF);
             rho_image_pixels[x + y * width] = Math::RGB(float(rho));
@@ -111,10 +111,7 @@ void output_brdf(Image image, int sample_count, const std::string& filename, con
     if (ElementDimensions > 1)
         out_header << "using Bifrost::Math::" << rho_type << ";\n\n";
     out_header <<
-        "namespace Bifrost {\n"
-        "namespace Assets {\n"
-        "namespace Shading {\n"
-        "namespace Rho {\n"
+        "namespace Bifrost::Assets::Shading::Rho {\n"
         "\n";
     out_header << "const unsigned int " << data_name << "_sample_count = " << sample_count << "u;\n"
         "const unsigned int " << data_name << "_angle_sample_count = " << width << "u;\n"
@@ -123,7 +120,7 @@ void output_brdf(Image image, int sample_count, const std::string& filename, con
         "const " << rho_type << " " << data_name << "[] = {\n";
 
     for (int y = 0; y < int(height); ++y) {
-        float roughness = y / float(height - 1u);
+        float roughness = y / float(height - 1);
         out_header << "    // Roughness " << roughness << "\n";
         out_header << "    ";
         for (int x = 0; x < int(width); ++x) {
@@ -142,15 +139,12 @@ void output_brdf(Image image, int sample_count, const std::string& filename, con
         "};\n"
         "\n"
         "" << rho_type << " sample_" << data_name << "(float wo_dot_normal, float roughness) {\n"
-        "    int wo_dot_normal_index = int(wo_dot_normal * " << data_name << "_angle_sample_count - 0.5f); \n"
-        "    int roughness_index = int(roughness * (" << data_name << "_roughness_sample_count - 1)); \n"
+        "    int wo_dot_normal_index = int(wo_dot_normal * (" << data_name << "_angle_sample_count - 1) + 0.5f); \n"
+        "    int roughness_index = int(roughness * (" << data_name << "_roughness_sample_count - 1) + 0.5f); \n"
         "    return " << data_name << "[wo_dot_normal_index + roughness_index * " << data_name << "_angle_sample_count]; \n"
         "}\n"
         "\n"
-        "} // NS Rho\n"
-        "} // NS Shading\n"
-        "} // NS Assets\n"
-        "} // NS Bifrost\n";
+        "} // NS Bifrost::Assets::Shading::Rho\n";
 
     out_header.close();
 }
@@ -331,7 +325,7 @@ int main(int argc, char** argv) {
     { // Default shading albedo.
 
         // Compute the directional-hemispherical reflectance function, albedo, by monte carlo integration and store the result in a texture and as an array in a header file.
-        // The diffuse and specular components are separated by tinting the diffuse layer with green and keeping the specular layer white.
+        // The diffuse and specular components are separated by tinting the diffuse layer with red and keeping the specular layer white.
         // The albedo is computed via monte carlo integration by assuming that the material is lit by a uniform infinitely far away area light with an intensity of one.
         // As the base material is green it has no contribution to the red and blue channels, which means that these contain the albedo of the specular component.
         // The green channel contains the contribution of both the specular and diffuse components and the diffuse contribution alone can be found by subtracting the specular contribution from the green channel.
@@ -347,12 +341,12 @@ int main(int argc, char** argv) {
         Image rho = Images::create2D("rho", PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
         Math::RGB* rho_pixels = rho.get_pixels<Math::RGB>();
 
+        #pragma omp parallel for
         for (int y = 0; y < int(height); ++y) {
             material_params.roughness = y / float(height - 1u);
-            #pragma omp parallel for
             for (int x = 0; x < int(width); ++x) {
 
-                float cos_theta = (x + 0.5f) / float(width);
+                float cos_theta = max(0.000001f, x / float(width - 1));
                 float3 wo = make_float3(sqrt(1.0f - cos_theta * cos_theta), 0.0f, cos_theta);
 
                 DefaultShading material = DefaultShading(material_params, wo.z);

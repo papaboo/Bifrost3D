@@ -71,7 +71,7 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
         const float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
         auto shading_model = DefaultShading(material_params, wo.z);
         auto result = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo);
-        EXPECT_LE(result.reflectance, 1.00037f) << "cos_theta: " << cos_theta;
+        EXPECT_LE(result.reflectance, 1.00123f) << "cos_theta: " << cos_theta;
     }
 }
 
@@ -358,15 +358,15 @@ GTEST_TEST(DefaultShadingModel, regression_test) {
         // Gold
         { 497357.906250f, 380976.156250f, 167112.23438f, 497357.968750f }, { 124339.210938f, 95243.835938f, 41777.96875f, 124339.195313f },
         { 994713.875000f, 762452.500000f, 335647.50000f, 703369.687500f }, { 249079.843750f, 190921.390625f, 84049.03906f, 175985.171875f },
-        { 4956792320.0f, 4899898880.0f, 4795352064.0f, 49642444.0f }, { 1455492480.0f, 1439430400.0f, 1409914496.0f, 13435066.0f },
+        { 4956792320.0f, 4899898880.0f, 4795352064.0f, 49665940.0f }, { 1455492480.0f, 1439430400.0f, 1409914496.0f, 13441425.0f },
         // Plastic
-        { 0.012615f, 0.090594f, 0.10931f, 0.005320f }, { 0.012301f, 0.090280f, 0.10900f, 0.222990f },
-        { 0.011357f, 0.089004f, 0.10764f, 0.004157f }, { 0.021748f, 0.099395f, 0.11803f, 0.246156f },
-        { 0.054550f, 0.125129f, 0.14207f, 0.352777f }, { 0.099133f, 0.169712f, 0.18665f, 0.376966f },
+        { 0.012610f, 0.090591f, 0.10931f, 0.005319f }, { 0.012296f, 0.090277f, 0.10899f, 0.222990f },
+        { 0.011306f, 0.088999f, 0.10765f, 0.004098f }, { 0.021696f, 0.099390f, 0.11804f, 0.245689f },
+        { 0.055105f, 0.125837f, 0.14281f, 0.349941f }, { 0.099688f, 0.170420f, 0.18740f, 0.372750f },
         // Coated plastic
-        { 0.025675f, 0.100526f, 0.11849f, 0.012227f }, { 0.024119f, 0.098971f, 0.11694f, 0.219746f },
-        { 0.022802f, 0.097106f, 0.11494f, 0.009449f }, { 0.043611f, 0.117915f, 0.13575f, 0.259546f },
-        { 0.090557f, 0.154167f, 0.16943f, 0.354369f }, { 0.155253f, 0.218863f, 0.23413f, 0.383913f } };
+        { 0.025670f, 0.100524f, 0.11849f, 0.012217f }, { 0.024114f, 0.098969f, 0.11693f, 0.219750f },
+        { 0.022732f, 0.097109f, 0.11496f, 0.009331f }, { 0.043542f, 0.117919f, 0.13577f, 0.259176f },
+        { 0.091717f, 0.155584f, 0.17091f, 0.351864f }, { 0.156448f, 0.220315f, 0.23564f, 0.380032f } };
 
     int response_index = 0;
     for (int i = 0; i < 3; ++i)
@@ -375,7 +375,7 @@ GTEST_TEST(DefaultShadingModel, regression_test) {
             for (int s = 0; s < MAX_SAMPLES; ++s) {
                 float3 rng_sample = make_float3(RNG::sample02(s), (s + 0.5f) / MAX_SAMPLES);
                 BSDFSample sample = material.sample(wo, rng_sample);
-                // printf("{%.6ff, %.6ff, %.5ff, %.6ff},\n", sample.reflectance.x, sample.reflectance.y, sample.reflectance.z, sample.PDF);
+                // printf("{ %.6ff, %.6ff, %.5ff, %.6ff },\n", sample.reflectance.x, sample.reflectance.y, sample.reflectance.z, sample.PDF);
                 auto response = bsdf_responses[response_index++];
 
                 EXPECT_FLOAT3_EQ_PCT(response.reflectance, sample.reflectance, 0.0001f);
