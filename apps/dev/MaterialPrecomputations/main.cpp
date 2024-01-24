@@ -107,15 +107,16 @@ void output_brdf(Image image, int sample_count, const std::string& filename, con
         "// ------------------------------------------------------------------------------------------------\n"
         "\n"
         "#include <Bifrost/Assets/Shading/Fittings.h>\n"
+        "#include <Bifrost/Math/Utils.h>\n"
         "\n";
     if (ElementDimensions > 1)
         out_header << "using Bifrost::Math::" << rho_type << ";\n\n";
     out_header <<
         "namespace Bifrost::Assets::Shading::Rho {\n"
         "\n";
-    out_header << "const unsigned int " << data_name << "_sample_count = " << sample_count << "u;\n"
-        "const unsigned int " << data_name << "_angle_sample_count = " << width << "u;\n"
-        "const unsigned int " << data_name << "_roughness_sample_count = " << height << "u;\n"
+    out_header << "const int " << data_name << "_sample_count = " << sample_count << "u;\n"
+        "const int " << data_name << "_angle_sample_count = " << width << "u;\n"
+        "const int " << data_name << "_roughness_sample_count = " << height << "u;\n"
         "\n"
         "const " << rho_type << " " << data_name << "[] = {\n";
 
@@ -139,9 +140,27 @@ void output_brdf(Image image, int sample_count, const std::string& filename, con
         "};\n"
         "\n"
         "" << rho_type << " sample_" << data_name << "(float wo_dot_normal, float roughness) {\n"
-        "    int wo_dot_normal_index = int(wo_dot_normal * (" << data_name << "_angle_sample_count - 1) + 0.5f); \n"
-        "    int roughness_index = int(roughness * (" << data_name << "_roughness_sample_count - 1) + 0.5f); \n"
-        "    return " << data_name << "[wo_dot_normal_index + roughness_index * " << data_name << "_angle_sample_count]; \n"
+        "    using namespace Bifrost::Math;\n"
+        "\n"
+        "    float roughness_coord = roughness * (" << data_name << "_roughness_sample_count - 1);\n"
+        "    int lower_roughness_row = int(roughness_coord);\n"
+        "    int upper_roughness_row = min(lower_roughness_row + 1, " << data_name << "_roughness_sample_count - 1);\n"
+        "\n"
+        "    float wo_dot_normal_coord = wo_dot_normal * (" << data_name << "_angle_sample_count - 1);\n"
+        "    int lower_wo_dot_normal_column = int(wo_dot_normal_coord);\n"
+        "    int upper_wo_dot_normal_column = min(lower_wo_dot_normal_column + 1, " << data_name << "_angle_sample_count - 1);\n"
+        "\n"
+        "    // Interpolate by wo_dot_normal\n"
+        "    float wo_dot_normal_t = wo_dot_normal * (" << data_name << "_angle_sample_count - 1) - lower_wo_dot_normal_column;\n"
+        "    const " << rho_type << "* lower_rho_row = " << data_name << " + lower_roughness_row * " << data_name << "_roughness_sample_count;\n"
+        "    " << rho_type << " lower_rho = lerp(lower_rho_row[lower_wo_dot_normal_column], lower_rho_row[upper_wo_dot_normal_column], wo_dot_normal_t);\n"
+        "\n"
+        "    const " << rho_type << "* upper_rho_row = " << data_name << " + upper_roughness_row * " << data_name << "_roughness_sample_count;\n"
+        "    " << rho_type << " upper_rho = lerp(upper_rho_row[lower_wo_dot_normal_column], upper_rho_row[upper_wo_dot_normal_column], wo_dot_normal_t);\n"
+        "\n"
+        "    // Interpolate by roughness\n"
+        "    float roughness_t = roughness_coord - lower_roughness_row;\n"
+        "    return lerp(lower_rho, upper_rho, roughness_t);\n"
         "}\n"
         "\n"
         "} // NS Bifrost::Assets::Shading::Rho\n";
@@ -280,14 +299,16 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
             "\n"
             "    float encoded_PDF = encode_PDF(max_PDF);\n"
             "\n"
-            "    int lower_wo_dot_normal_row = int(wo_dot_normal * (wo_dot_normal_sample_count - 1));\n"
+            "    float wo_dot_normal_coord = wo_dot_normal * (wo_dot_normal_sample_count - 1);\n"
+            "    int lower_wo_dot_normal_row = int(wo_dot_normal_coord);\n"
             "    int upper_wo_dot_normal_row = min(lower_wo_dot_normal_row + 1, wo_dot_normal_sample_count - 1);\n"
             "\n"
-            "    int lower_encoded_PDF_column = int(encoded_PDF * (max_PDF_sample_count - 1));\n"
+            "    float encoded_PDF_coord = encoded_PDF * (max_PDF_sample_count - 1);\n"
+            "    int lower_encoded_PDF_column = int(encoded_PDF_coord);\n"
             "    int upper_encoded_PDF_column = min(lower_encoded_PDF_column + 1, max_PDF_sample_count - 1);\n"
-            "    float encoded_PDF_t = encoded_PDF * (max_PDF_sample_count - 1) - lower_encoded_PDF_column;\n"
             "\n"
             "    // Interpolate by encoded PDF\n"
+            "    float encoded_PDF_t = encoded_PDF_coord - lower_encoded_PDF_column;\n"
             "    const float* lower_alpha_row = alphas + lower_wo_dot_normal_row * wo_dot_normal_sample_count;\n"
             "    float lower_alpha = lerp(lower_alpha_row[lower_encoded_PDF_column], lower_alpha_row[upper_encoded_PDF_column], encoded_PDF_t);\n"
             "\n"
@@ -295,7 +316,7 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
             "    float upper_alpha = lerp(upper_alpha_row[lower_encoded_PDF_column], upper_alpha_row[upper_encoded_PDF_column], encoded_PDF_t);\n"
             "\n"
             "    // Interpolate by wo_dot_normal\n"
-            "    float wo_dot_normal_t = wo_dot_normal * (wo_dot_normal_sample_count - 1) - lower_wo_dot_normal_row;\n"
+            "    float wo_dot_normal_t = wo_dot_normal_coord - lower_wo_dot_normal_row;\n"
             "    return lerp(lower_alpha, upper_alpha, wo_dot_normal_t);\n"
             "}\n"
             "\n"
@@ -341,9 +362,9 @@ int main(int argc, char** argv) {
         Image rho = Images::create2D("rho", PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
         Math::RGB* rho_pixels = rho.get_pixels<Math::RGB>();
 
-        #pragma omp parallel for
         for (int y = 0; y < int(height); ++y) {
             material_params.roughness = y / float(height - 1u);
+            #pragma omp parallel for
             for (int x = 0; x < int(width); ++x) {
 
                 float cos_theta = max(0.000001f, x / float(width - 1));

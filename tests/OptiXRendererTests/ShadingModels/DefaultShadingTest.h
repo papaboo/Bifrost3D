@@ -71,7 +71,7 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
         const float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
         auto shading_model = DefaultShading(material_params, wo.z);
         auto result = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo);
-        EXPECT_LE(result.reflectance, 1.00123f) << "cos_theta: " << cos_theta;
+        EXPECT_LE(result.reflectance, 1.00084f) << "cos_theta: " << cos_theta;
     }
 }
 

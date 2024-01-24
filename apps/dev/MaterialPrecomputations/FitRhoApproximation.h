@@ -104,10 +104,10 @@ struct GgxRhoFitter {
     // Compute the loss of a GGX rho approximation
     static float loss(GgxRhoApproximation approx, LossFunction loss) {
         double accumulated_error = 0.0;
-        for (unsigned int r = 0; r < Rho::GGX_roughness_sample_count; ++r)
+        for (int r = 0; r < Rho::GGX_roughness_sample_count; ++r)
         {
             float roughness = r / float(Rho::GGX_roughness_sample_count - 1);
-            for (unsigned int a = 0; a < Rho::GGX_angle_sample_count; ++a)
+            for (int a = 0; a < Rho::GGX_angle_sample_count; ++a)
             {
                 float wo_dot_normal = (a + 0.5f) / float(Rho::GGX_angle_sample_count);
 
