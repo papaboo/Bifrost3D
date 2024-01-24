@@ -9,12 +9,13 @@
 // ------------------------------------------------------------------------------------------------
 
 #include <Bifrost/Assets/Shading/Fittings.h>
+#include <Bifrost/Math/Utils.h>
 
 namespace Bifrost::Assets::Shading::Rho {
 
-const unsigned int oren_nayar_sample_count = 4096u;
-const unsigned int oren_nayar_angle_sample_count = 64u;
-const unsigned int oren_nayar_roughness_sample_count = 64u;
+const int oren_nayar_sample_count = 4096u;
+const int oren_nayar_angle_sample_count = 64u;
+const int oren_nayar_roughness_sample_count = 64u;
 
 const float oren_nayar[] = {
     // Roughness 0
@@ -148,9 +149,27 @@ const float oren_nayar[] = {
 };
 
 float sample_oren_nayar(float wo_dot_normal, float roughness) {
-    int wo_dot_normal_index = int(wo_dot_normal * (oren_nayar_angle_sample_count - 1) + 0.5f); 
-    int roughness_index = int(roughness * (oren_nayar_roughness_sample_count - 1) + 0.5f); 
-    return oren_nayar[wo_dot_normal_index + roughness_index * oren_nayar_angle_sample_count]; 
+    using namespace Bifrost::Math;
+
+    float roughness_coord = roughness * (oren_nayar_roughness_sample_count - 1);
+    int lower_roughness_row = int(roughness_coord);
+    int upper_roughness_row = min(lower_roughness_row + 1, oren_nayar_roughness_sample_count - 1);
+
+    float wo_dot_normal_coord = wo_dot_normal * (oren_nayar_angle_sample_count - 1);
+    int lower_wo_dot_normal_column = int(wo_dot_normal_coord);
+    int upper_wo_dot_normal_column = min(lower_wo_dot_normal_column + 1, oren_nayar_angle_sample_count - 1);
+
+    // Interpolate by wo_dot_normal
+    float wo_dot_normal_t = wo_dot_normal * (oren_nayar_angle_sample_count - 1) - lower_wo_dot_normal_column;
+    const float* lower_rho_row = oren_nayar + lower_roughness_row * oren_nayar_roughness_sample_count;
+    float lower_rho = lerp(lower_rho_row[lower_wo_dot_normal_column], lower_rho_row[upper_wo_dot_normal_column], wo_dot_normal_t);
+
+    const float* upper_rho_row = oren_nayar + upper_roughness_row * oren_nayar_roughness_sample_count;
+    float upper_rho = lerp(upper_rho_row[lower_wo_dot_normal_column], upper_rho_row[upper_wo_dot_normal_column], wo_dot_normal_t);
+
+    // Interpolate by roughness
+    float roughness_t = roughness_coord - lower_roughness_row;
+    return lerp(lower_rho, upper_rho, roughness_t);
 }
 
 } // NS Bifrost::Assets::Shading::Rho

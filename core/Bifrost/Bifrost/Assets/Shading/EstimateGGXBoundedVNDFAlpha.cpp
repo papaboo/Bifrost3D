@@ -99,14 +99,16 @@ float estimate_alpha(float wo_dot_normal, float max_PDF) {
 
     float encoded_PDF = encode_PDF(max_PDF);
 
-    int lower_wo_dot_normal_row = int(wo_dot_normal * (wo_dot_normal_sample_count - 1));
+    float wo_dot_normal_coord = wo_dot_normal * (wo_dot_normal_sample_count - 1);
+    int lower_wo_dot_normal_row = int(wo_dot_normal_coord);
     int upper_wo_dot_normal_row = min(lower_wo_dot_normal_row + 1, wo_dot_normal_sample_count - 1);
 
-    int lower_encoded_PDF_column = int(encoded_PDF * (max_PDF_sample_count - 1));
+    float encoded_PDF_coord = encoded_PDF * (max_PDF_sample_count - 1);
+    int lower_encoded_PDF_column = int(encoded_PDF_coord);
     int upper_encoded_PDF_column = min(lower_encoded_PDF_column + 1, max_PDF_sample_count - 1);
-    float encoded_PDF_t = encoded_PDF * (max_PDF_sample_count - 1) - lower_encoded_PDF_column;
 
     // Interpolate by encoded PDF
+    float encoded_PDF_t = encoded_PDF_coord - lower_encoded_PDF_column;
     const float* lower_alpha_row = alphas + lower_wo_dot_normal_row * wo_dot_normal_sample_count;
     float lower_alpha = lerp(lower_alpha_row[lower_encoded_PDF_column], lower_alpha_row[upper_encoded_PDF_column], encoded_PDF_t);
 
@@ -114,7 +116,7 @@ float estimate_alpha(float wo_dot_normal, float max_PDF) {
     float upper_alpha = lerp(upper_alpha_row[lower_encoded_PDF_column], upper_alpha_row[upper_encoded_PDF_column], encoded_PDF_t);
 
     // Interpolate by wo_dot_normal
-    float wo_dot_normal_t = wo_dot_normal * (wo_dot_normal_sample_count - 1) - lower_wo_dot_normal_row;
+    float wo_dot_normal_t = wo_dot_normal_coord - lower_wo_dot_normal_row;
     return lerp(lower_alpha, upper_alpha, wo_dot_normal_t);
 }
 
