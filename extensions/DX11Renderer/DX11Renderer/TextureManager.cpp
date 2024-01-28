@@ -44,6 +44,22 @@ TextureManager::TextureManager(ID3D11Device1& device) {
     m_white_texture = create_color_texture(device, white);
 }
 
+OSamplerState TextureManager::create_clamped_linear_sampler(ID3D11Device1& device) {
+    D3D11_SAMPLER_DESC sampler_desc = {};
+    sampler_desc.Filter = D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
+    sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    sampler_desc.MinLOD = 0;
+    sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
+
+    OSamplerState linear_sampler;
+    THROW_DX11_ERROR(device.CreateSamplerState(&sampler_desc, &linear_sampler));
+
+    return linear_sampler;
+}
+
 void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& device_context) {
     { // Image updates.
         if (!Images::get_changed_images().is_empty()) {
