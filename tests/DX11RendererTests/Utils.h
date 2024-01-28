@@ -42,21 +42,6 @@ inline DX11Renderer::OBuffer create_camera_effects_constants(DX11Renderer::ODevi
     return constant_buffer;
 }
 
-inline DX11Renderer::OSamplerState create_bilinear_sampler(DX11Renderer::ODevice1& device) {
-    D3D11_SAMPLER_DESC sampler_desc = {};
-    sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-    sampler_desc.MinLOD = 0;
-    sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
-
-    DX11Renderer::OSamplerState bilinear_sampler;
-    THROW_DX11_ERROR(device->CreateSamplerState(&sampler_desc, &bilinear_sampler));
-    return bilinear_sampler;
-}
-
 // -------------------------------------------------------------------------------------------------
 // Comparison helpers.
 // -------------------------------------------------------------------------------------------------

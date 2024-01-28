@@ -34,15 +34,11 @@ protected:
     virtual void SetUp() {
         m_device = create_performant_device1();
         m_device->GetImmediateContext1(&m_context);
-
-        m_bilinear_sampler = create_bilinear_sampler(m_device);
-        m_context->CSSetSamplers(15, 1, &m_bilinear_sampler);
     }
 
     virtual void TearDown() {
         m_device = nullptr;
         m_context = nullptr;
-        m_bilinear_sampler = nullptr;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -212,7 +208,6 @@ protected:
     // --------------------------------------------------------------------------------------------
     ODevice1 m_device;
     ODeviceContext1 m_context;
-    OSamplerState m_bilinear_sampler;
 
     int m_support;
 };
