@@ -39,6 +39,8 @@ public:
     TextureManager() = default;
     TextureManager(ID3D11Device1& device);
 
+    static OSamplerState create_clamped_linear_sampler(ID3D11Device1& device);
+
     inline const DefaultTexture& white_texture() { return m_white_texture; }
 
     inline Dx11Image& get_image(int id) { return m_images[id]; }
