@@ -128,8 +128,8 @@ inline ODevice1 get_device1(ID3D11DeviceContext1& context) {
     return device1;
 }
 
-inline OBlob compile_shader(const std::filesystem::path& shader_path, const char* target, const char* entry_point,
-                            const D3D_SHADER_MACRO* macros = nullptr) {
+inline OBlob compile_shader_from_file(const std::filesystem::path& shader_path, const char* target, const char* entry_point,
+                                      const D3D_SHADER_MACRO* macros = nullptr) {
     OBlob shader_bytecode;
     OBlob error_messages = nullptr;
     HRESULT hr = D3DCompileFromFile(shader_path.c_str(),
