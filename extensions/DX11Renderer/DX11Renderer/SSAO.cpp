@@ -38,18 +38,18 @@ inline void create_box_filter_constants(ID3D11Device1& device, OBuffer* constant
 BilateralBlur::BilateralBlur(ID3D11Device1& device, const std::filesystem::path& shader_directory, SsaoFilter type)
     : m_type(type), m_width(0), m_height(0), m_intermediate_RTV(nullptr), m_intermediate_SRV(nullptr) {
 
-    OBlob vertex_shader_blob = compile_shader(shader_directory / "SSAO.hlsl", "vs_5_0", "main_vs");
+    OBlob vertex_shader_blob = compile_shader_from_file(shader_directory / "SSAO.hlsl", "vs_5_0", "main_vs");
     THROW_DX11_ERROR(device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shader));
 
     if (m_type == SsaoFilter::Cross) {
         m_support = 0;
-        OBlob filter_blob = compile_shader(shader_directory / "SSAO.hlsl", "ps_5_0", "BilateralBlur::cross_filter_ps");
+        OBlob filter_blob = compile_shader_from_file(shader_directory / "SSAO.hlsl", "ps_5_0", "BilateralBlur::cross_filter_ps");
         THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(filter_blob), nullptr, &m_filter_shader));
         create_constant_buffer(device, sizeof(FilterConstants), &m_constants[0]);
         create_constant_buffer(device, sizeof(FilterConstants), &m_constants[1]);
     } else {
         m_support = 9;
-        OBlob filter_blob = compile_shader(shader_directory / "SSAO.hlsl", "ps_5_0", "BilateralBlur::box_filter_ps");
+        OBlob filter_blob = compile_shader_from_file(shader_directory / "SSAO.hlsl", "ps_5_0", "BilateralBlur::box_filter_ps");
         THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(filter_blob), nullptr, &m_filter_shader));
         create_box_filter_constants(device, m_constants);
     }
@@ -124,13 +124,13 @@ AlchemyAO::AlchemyAO(ID3D11Device1& device, const std::filesystem::path& shader_
     THROW_DX11_ERROR(create_constant_buffer(device, sizeof(Vector2f) * m_samples.capacity, &m_samples.buffer));
     m_samples.size = 0;
 
-    OBlob vertex_shader_blob = compile_shader(shader_directory / "SSAO.hlsl", "vs_5_0", "main_vs");
+    OBlob vertex_shader_blob = compile_shader_from_file(shader_directory / "SSAO.hlsl", "vs_5_0", "main_vs");
     THROW_DX11_ERROR(device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shader));
 
-    OBlob linearize_depth_shader_blob = compile_shader(shader_directory / "SSAO.hlsl", "ps_5_0", "linearize_depth_ps");
+    OBlob linearize_depth_shader_blob = compile_shader_from_file(shader_directory / "SSAO.hlsl", "ps_5_0", "linearize_depth_ps");
     THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(linearize_depth_shader_blob), nullptr, &m_depth.pixel_shader));
 
-    OBlob ao_shader_blob = compile_shader(shader_directory / "SSAO.hlsl", "ps_5_0", "alchemy_ps");
+    OBlob ao_shader_blob = compile_shader_from_file(shader_directory / "SSAO.hlsl", "ps_5_0", "alchemy_ps");
     THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(ao_shader_blob), nullptr, &m_pixel_shader));
 
     m_filter = BilateralBlur(device, shader_directory, SsaoFilter::Box);

@@ -25,10 +25,10 @@ GaussianBloom::GaussianBloom(ID3D11Device1& device, const std::filesystem::path&
 
     const auto shader_filename = shader_directory / "CameraEffects" / "Bloom.hlsl";
 
-    OBlob horizontal_filter_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::sampled_gaussian_horizontal_filter");
+    OBlob horizontal_filter_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::sampled_gaussian_horizontal_filter");
     THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(horizontal_filter_blob), nullptr, &m_horizontal_filter));
 
-    OBlob vertical_filter_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::sampled_gaussian_vertical_filter");
+    OBlob vertical_filter_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::sampled_gaussian_vertical_filter");
     THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(vertical_filter_blob), nullptr, &m_vertical_filter));
 
     m_gaussian_samples.std_dev = std::numeric_limits<float>::infinity();
@@ -127,13 +127,13 @@ DualKawaseBloom::DualKawaseBloom(ID3D11Device1& device, const std::filesystem::p
 
     const auto shader_filename = shader_directory / "CameraEffects" / "Bloom.hlsl";
 
-    OBlob m_extract_high_intensity_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::extract_high_intensity");
+    OBlob m_extract_high_intensity_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::extract_high_intensity");
     THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(m_extract_high_intensity_blob), nullptr, &m_extract_high_intensity));
 
-    OBlob downsample_pattern_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::dual_kawase_downsample");
+    OBlob downsample_pattern_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::dual_kawase_downsample");
     THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(downsample_pattern_blob), nullptr, &m_downsample_pattern));
 
-    OBlob upsample_pattern_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::dual_kawase_upsample");
+    OBlob upsample_pattern_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::dual_kawase_upsample");
     THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(upsample_pattern_blob), nullptr, &m_upsample_pattern));
 }
 
@@ -247,13 +247,13 @@ LogAverageLuminance::LogAverageLuminance(ID3D11Device1& device, const std::files
     const auto shader_filename = shader_directory / "CameraEffects" / "ReduceLogAverageLuminance.hlsl";
 
     // Create shaders.
-    OBlob log_average_first_reduction_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::first_reduction");
+    OBlob log_average_first_reduction_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::first_reduction");
     THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(log_average_first_reduction_blob), nullptr, &m_log_average_first_reduction));
 
-    OBlob log_average_computation_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::compute_log_average");
+    OBlob log_average_computation_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::compute_log_average");
     THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(log_average_computation_blob), nullptr, &m_log_average_computation));
 
-    OBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::compute_linear_exposure");
+    OBlob linear_exposure_computation_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::compute_linear_exposure");
     THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_computation_blob), nullptr, &m_linear_exposure_computation));
 
     // Create buffers
@@ -305,10 +305,10 @@ ExposureHistogram::ExposureHistogram(ID3D11Device1& device, const std::filesyste
     const auto shader_filename = shader_directory / "CameraEffects" / "ReduceExposureHistogram.hlsl";
 
     // Create shaders.
-    OBlob reduce_exposure_histogram_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::reduce");
+    OBlob reduce_exposure_histogram_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::reduce");
     THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_exposure_histogram_blob), nullptr, &m_histogram_reduction));
 
-    OBlob linear_exposure_computation_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::compute_linear_exposure");
+    OBlob linear_exposure_computation_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::compute_linear_exposure");
     THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_computation_blob), nullptr, &m_linear_exposure_computation));
 
     // Create buffers
@@ -388,16 +388,16 @@ CameraEffects::CameraEffects(ID3D11Device1& device, const std::filesystem::path&
     { // Setup tonemapping shaders
         const auto shader_filename = shader_directory / "CameraEffects" / "Tonemapping.hlsl";
 
-        OBlob linear_exposure_from_bias_blob = compile_shader(shader_filename, "cs_5_0", "CameraEffects::linear_exposure_from_constant_bias");
+        OBlob linear_exposure_from_bias_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::linear_exposure_from_constant_bias");
         THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_from_bias_blob), nullptr, &m_linear_exposure_from_bias_shader));
 
-        OBlob vertex_shader_blob = compile_shader(shader_filename, "vs_5_0", "CameraEffects::fullscreen_vs");
+        OBlob vertex_shader_blob = compile_shader_from_file(shader_filename, "vs_5_0", "CameraEffects::fullscreen_vs");
         HRESULT hr = device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_fullscreen_VS);
         THROW_DX11_ERROR(hr);
 
         auto create_pixel_shader = [&](const char* entry_point) -> OPixelShader {
             OPixelShader pixel_shader;
-            OBlob pixel_shader_blob = compile_shader(shader_filename, "ps_5_0", entry_point);
+            OBlob pixel_shader_blob = compile_shader_from_file(shader_filename, "ps_5_0", entry_point);
             HRESULT hr = device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &pixel_shader);
             THROW_DX11_ERROR(hr);
             return pixel_shader;
