@@ -8,7 +8,7 @@ set(CMAKE_MODULE_PATH
 
 find_package(DirectX11)
 
-if (DIRECTX_11_FOUND AND WIN32)
+if (DIRECTX11_FOUND AND WIN32)
   set(ROOT_SRC
     DX11Renderer/CameraEffects.h
     DX11Renderer/CameraEffects.cpp
@@ -83,12 +83,12 @@ if (DIRECTX_11_FOUND AND WIN32)
 
   target_include_directories(${LIBRARY_NAME} 
     PUBLIC . 
-    PRIVATE ${DIRECTX_11_INCLUDE_DIR}
+    PRIVATE ${DIRECTX11_INCLUDE_DIR}
   )
 
   target_link_libraries(${LIBRARY_NAME}
     PUBLIC Bifrost
-    PRIVATE ${DIRECTX_11_LIBRARIES}
+    PRIVATE ${DIRECTX11_LIBRARIES}
   )
 
   set_target_properties(${LIBRARY_NAME} PROPERTIES 
@@ -107,7 +107,6 @@ if (DIRECTX_11_FOUND AND WIN32)
   # )
 
   # Copy the shaders to the build directory.
-  # TODO Is there a general concept of installation in CMake?
   # TODO Copy or compile the cso files from release to bin output dir.
   set(DATA_PATH "${BIFROST_DATA_OUTPUT_DIRECTORY}/DX11Renderer/Shaders")
   foreach (SHADER_PATH ${ALL_SHADER_SRC})
@@ -117,10 +116,11 @@ if (DIRECTX_11_FOUND AND WIN32)
     add_custom_command(
       OUTPUT ${DESTINATION_FILE}
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_FILE} ${DESTINATION_FILE}
+      COMMAND ${CMAKE_COMMAND} -E echo "Copy ${SHADER_PATH} to ${DESTINATION_FILE}"
       MAIN_DEPENDENCY ${SOURCE_FILE})
   endforeach()
 else()
-  if (NOT DIRECTX_11_FOUND)
+  if (NOT DIRECTX11_FOUND)
     message(WARNING "DX11Renderer: DirectX 11 not found.")
   endif()
   if (NOT WIN32)

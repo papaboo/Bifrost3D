@@ -9,14 +9,14 @@ set(LIB_DIR "C:/Program Files (x86)/Windows Kits/10/Lib/${WINDOWS_SDK_VERSION}/u
 # Find dlls, libs and include dirs.
 
 # Include directory.
-find_path(DIRECTX_11_INCLUDE_DIR d3d11_1.h
+find_path(DIRECTX11_INCLUDE_DIR d3d11_1.h
           PATHS
           ${INCLUDE_DIR}
           DOC "The directory to include DirectX 11 headers from"
 )
 
 # Find libraries.
-find_library(DIRECTX_11_LIB D3D11
+find_library(DIRECTX11_LIB D3D11
              PATHS
              ${LIB_DIR}
              DOC "The DirectX 11 library"
@@ -32,11 +32,11 @@ find_library(D3D_COMPILER_LIB D3DCompiler
              DOC "The HLSL compiler library"
 )
 
-set(DIRECTX_11_LIBRARIES "${DIRECTX_11_LIB}" "${DXGI_LIB}" "${D3D_COMPILER_LIB}")
+set(DIRECTX11_LIBRARIES "${DIRECTX11_LIB}" "${DXGI_LIB}" "${D3D_COMPILER_LIB}")
 
-# Handle the QUIETLY and REQUIRED arguments and set OPTIX_FOUND to TRUE if
+# Handle the QUIETLY and REQUIRED arguments and set DIRECTX11_FOUND to TRUE if
 # all listed variables are set.
 include(${CMAKE_ROOT}/Modules/FindPackageHandleStandardArgs.cmake)
-find_package_handle_standard_args(DIRECTX_11 DEFAULT_MSG 
-                                  DIRECTX_11_LIB DXGI_LIB D3D_COMPILER_LIB
-                                  DIRECTX_11_INCLUDE_DIR)
+find_package_handle_standard_args(DirectX11 DEFAULT_MSG 
+                                  DIRECTX11_LIB DXGI_LIB D3D_COMPILER_LIB
+                                  DIRECTX11_INCLUDE_DIR)
