@@ -11,8 +11,6 @@
 
 #include <DX11Renderer/Utils.h>
 
-#include <filesystem>
-
 namespace DX11Renderer {
 
 // ------------------------------------------------------------------------------------------------
@@ -32,8 +30,8 @@ class PrefixSum {
 
 public:
 
-    PrefixSum(ID3D11Device1& device, const std::filesystem::path& shader_directory) {
-        const auto prefix_sum_path = shader_directory / "Compute" / "PrefixSum.hlsl";
+    PrefixSum(ID3D11Device1& device) {
+        auto prefix_sum_path = "Compute/PrefixSum.hlsl";
 
         OBlob reduce_shader_blob = compile_shader_from_file(prefix_sum_path, "cs_5_0", "reduce");
         THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_shader_blob), nullptr, &m_reduce_shader));

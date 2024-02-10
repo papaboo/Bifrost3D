@@ -59,7 +59,7 @@ public:
 
     bool m_use_interop;
 
-    Implementation(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory, Bifrost::Core::RendererID renderer_ID)
+    Implementation(ID3D11Device1& device, int width_hint, int height_hint, Bifrost::Core::RendererID renderer_ID)
         : m_device(device), m_backbuffer_RTV(nullptr), m_backbuffer_SRV(nullptr) {
 
         device.GetImmediateContext1(&m_render_context);
@@ -74,7 +74,7 @@ public:
             THROW_CUDA_ERROR(cudaD3D11GetDevice(&m_cuda_device_ID, adapter));
 
             // Create OptiX Renderer on device.
-            m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, width_hint, height_hint, data_directory, renderer_ID);
+            m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, width_hint, height_hint, renderer_ID);
         }
 
         // Decide if we should use interop or not.
@@ -259,13 +259,13 @@ public:
     }
 };
 
-IRenderer* Adaptor::initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory) {
-    return new Adaptor(device, width_hint, height_hint, data_directory);
+IRenderer* Adaptor::initialize(ID3D11Device1& device, int width_hint, int height_hint) {
+    return new Adaptor(device, width_hint, height_hint);
 }
 
-Adaptor::Adaptor(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory) {
+Adaptor::Adaptor(ID3D11Device1& device, int width_hint, int height_hint) {
     m_renderer_ID = Bifrost::Core::Renderers::create("OptiXRenderer");
-    m_impl = new Implementation(device, width_hint, height_hint, data_directory, m_renderer_ID);
+    m_impl = new Implementation(device, width_hint, height_hint, m_renderer_ID);
 }
 
 Adaptor::~Adaptor() {

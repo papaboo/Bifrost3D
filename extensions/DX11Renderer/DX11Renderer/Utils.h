@@ -130,9 +130,11 @@ inline ODevice1 get_device1(ID3D11DeviceContext1& context) {
 
 inline OBlob compile_shader_from_file(const std::filesystem::path& shader_path, const char* target, const char* entry_point,
                                       const D3D_SHADER_MACRO* macros = nullptr) {
+    std::filesystem::path resolved_path = shader_path.is_absolute() ? shader_path : "..\\Data\\DX11Renderer\\Shaders" / shader_path;
+
     OBlob shader_bytecode;
     OBlob error_messages = nullptr;
-    HRESULT hr = D3DCompileFromFile(shader_path.c_str(),
+    HRESULT hr = D3DCompileFromFile(resolved_path.c_str(),
         macros,
         D3D_COMPILE_STANDARD_FILE_INCLUDE,
         entry_point,
@@ -143,13 +145,13 @@ inline OBlob compile_shader_from_file(const std::filesystem::path& shader_path, 
         &error_messages);
     if (FAILED(hr)) {
         if (hr == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
-            printf("The system cannot find the file specified: '%ws'.\n", shader_path.c_str());
+            printf("The system cannot find the file specified: '%ws'.\n", resolved_path.c_str());
         else if (hr == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND))
-            printf("The system cannot find the path specified: '%ws'.\n", shader_path.c_str());
+            printf("The system cannot find the path specified: '%ws'.\n", resolved_path.c_str());
         else if (error_messages != nullptr)
             printf("Shader error: '%s'.\n", (char*)error_messages->GetBufferPointer());
         else 
-            printf("Unknown error occured when trying to load: '%ws'.\n", shader_path.c_str());
+            printf("Unknown error occured when trying to load: '%ws'.\n", resolved_path.c_str());
         return nullptr;
     }
 

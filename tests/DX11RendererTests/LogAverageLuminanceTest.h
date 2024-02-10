@@ -43,7 +43,7 @@ protected:
         ODeviceContext1 context;
         device->GetImmediateContext1(&context);
 
-        LogAverageLuminance& log_average_exposure = LogAverageLuminance(*device, DX11_SHADER_ROOT);
+        LogAverageLuminance& log_average_exposure = LogAverageLuminance(*device);
 
         float min_log_luminance = -24;
         float max_log_luminance = 24;

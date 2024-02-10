@@ -13,8 +13,6 @@
 
 #include <Bifrost/Core/Renderer.h>
 
-#include <filesystem>
-
 using namespace Bifrost::Assets;
 using namespace Bifrost::Core;
 using namespace Bifrost::Math;
@@ -87,7 +85,6 @@ ODevice1 create_performant_debug_device1() { return create_performant_device1(D3
 class Compositor::Implementation {
 private:
     const Window& m_window;
-    const std::filesystem::path m_data_directory;
     std::vector<std::unique_ptr<IRenderer>> m_renderers;
     std::vector<std::unique_ptr<IGuiRenderer>> m_GUI_renderers;
 
@@ -106,8 +103,8 @@ private:
     CameraEffects m_camera_effects;
 
 public:
-    Implementation(HWND& hwnd, const Window& window, const std::filesystem::path& data_directory)
-        : m_window(window), m_data_directory(data_directory) {
+    Implementation(HWND& hwnd, const Window& window)
+        : m_window(window) {
 
         m_device = create_performant_device1();
         m_device->GetImmediateContext1(&m_render_context);
@@ -156,7 +153,7 @@ public:
                 m_counter_hertz = 1.0 / freq.QuadPart;
             }
 
-            m_camera_effects = CameraEffects(m_device, m_data_directory / "DX11Renderer" / "Shaders");
+            m_camera_effects = CameraEffects(m_device);
         }
 
         { // Initialize renderer containers. Initialize the 0'th index to null.
@@ -174,7 +171,7 @@ public:
     }
 
     std::unique_ptr<IRenderer>& add_renderer(RendererCreator renderer_creator) {
-        IRenderer* renderer = renderer_creator(*m_device, m_window.get_width(), m_window.get_height(), m_data_directory);
+        IRenderer* renderer = renderer_creator(*m_device, m_window.get_width(), m_window.get_height());
         if (renderer == nullptr)
             return m_renderers[0];
 
@@ -330,8 +327,8 @@ public:
 //----------------------------------------------------------------------------
 // DirectX 11 compositor.
 //----------------------------------------------------------------------------
-Compositor* Compositor::initialize(HWND& hwnd, const Bifrost::Core::Window& window, const std::filesystem::path& data_directory) {
-    Compositor* c = new Compositor(hwnd, window, data_directory);
+Compositor* Compositor::initialize(HWND& hwnd, const Bifrost::Core::Window& window) {
+    Compositor* c = new Compositor(hwnd, window);
     if (!c->m_impl->is_valid()) {
         delete c;
         return nullptr;
@@ -340,8 +337,8 @@ Compositor* Compositor::initialize(HWND& hwnd, const Bifrost::Core::Window& wind
     return c;
 }
 
-Compositor::Compositor(HWND& hwnd, const Bifrost::Core::Window& window, const std::filesystem::path& data_directory) {
-    m_impl = new Implementation(hwnd, window, data_directory);
+Compositor::Compositor(HWND& hwnd, const Bifrost::Core::Window& window) {
+    m_impl = new Implementation(hwnd, window);
 }
 
 Compositor::~Compositor() {

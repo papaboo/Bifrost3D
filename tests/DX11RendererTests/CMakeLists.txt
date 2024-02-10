@@ -28,9 +28,6 @@ if (TARGET DX11Renderer)
   )
 
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Od") # The default is /O2, but that has less precise floating point arithmetic.
-  target_compile_definitions(${PROJECT_NAME} PRIVATE 
-    DX11_SHADER_ROOT="${BIFROST_EXTENSIONS_DIR}/DX11Renderer/DX11Renderer/Shaders/"
-  )
 else()
   message(STATUS "DX11Renderer not found. Skipping DX11Renderer tests.")
 endif()

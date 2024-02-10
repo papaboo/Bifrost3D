@@ -583,7 +583,7 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
     if (window.get_width() != g_window_size.x || window.get_height() != g_window_size.y)
         window.resize(g_window_size.x, g_window_size.y);
 
-    compositor = Compositor::initialize(hwnd, window, engine.data_directory());
+    compositor = Compositor::initialize(hwnd, window);
 
 #ifdef OPTIX_FOUND
     if (rasterizer_enabled)
