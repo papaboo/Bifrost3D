@@ -38,8 +38,6 @@ using ORenderTargetView = OwnedResourcePtr<ID3D11RenderTargetView>;
 using OShaderResourceView = OwnedResourcePtr<ID3D11ShaderResourceView>;
 }
 
-namespace std::filesystem { class path; }
-
 #define D3D11_CREATE_DEVICE_NONE 0
 
 namespace DX11Renderer {
@@ -67,7 +65,7 @@ public:
     virtual std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, int width, int height) { return std::vector<Bifrost::Scene::Screenshot>(); }
 };
 
-typedef IRenderer*(*RendererCreator)(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory);
+typedef IRenderer*(*RendererCreator)(ID3D11Device1& device, int width_hint, int height_hint);
 
 //-------------------------------------------------------------------------------------------------
 // GUI renderer interface.
@@ -93,7 +91,7 @@ ODevice1 create_performant_debug_device1();
 class Compositor final {
 public:
 
-    static Compositor* initialize(HWND& hwnd, const Bifrost::Core::Window& window, const std::filesystem::path& data_directory);
+    static Compositor* initialize(HWND& hwnd, const Bifrost::Core::Window& window);
     ~Compositor();
 
     // --------------------------------------------------------------------------------------------
@@ -112,7 +110,7 @@ public:
 
 private:
 
-    Compositor(HWND& hwnd, const Bifrost::Core::Window& window, const std::filesystem::path& data_directory);
+    Compositor(HWND& hwnd, const Bifrost::Core::Window& window);
 
     // Delete copy constructors to avoid having multiple versions of the same Compositor.
     Compositor(Compositor& other) = delete;

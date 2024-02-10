@@ -14,8 +14,6 @@
 #include "Bifrost/Math/RNG.h"
 #include "Bifrost/Scene/SceneRoot.h"
 
-#include <filesystem>
-
 using namespace Bifrost::Assets;
 using namespace Bifrost::Math;
 using namespace Bifrost::Scene;
@@ -25,16 +23,16 @@ namespace DX11Renderer {
 //=================================================================================================
 // Environment manager.
 //=================================================================================================
-EnvironmentManager::EnvironmentManager(ID3D11Device1& device, const std::filesystem::path& shader_directory, TextureManager& textures)
+EnvironmentManager::EnvironmentManager(ID3D11Device1& device, TextureManager& textures)
     : m_textures(textures) {
 
-    OBlob vertex_shader_blob = compile_shader_from_file(shader_directory / "EnvironmentMap.hlsl", "vs_5_0", "main_vs");
+    OBlob vertex_shader_blob = compile_shader_from_file("EnvironmentMap.hlsl", "vs_5_0", "main_vs");
     THROW_DX11_ERROR(device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shader));
 
-    OBlob pixel_shader_blob = compile_shader_from_file(shader_directory / "EnvironmentMap.hlsl", "ps_5_0", "main_ps");
+    OBlob pixel_shader_blob = compile_shader_from_file("EnvironmentMap.hlsl", "ps_5_0", "main_ps");
     THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_pixel_shader));
 
-    OBlob convolution_shader_blob = compile_shader_from_file(shader_directory / "IBLConvolution.hlsl", "cs_5_0", "MIS_convolute");
+    OBlob convolution_shader_blob = compile_shader_from_file("IBLConvolution.hlsl", "cs_5_0", "MIS_convolute");
     THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(convolution_shader_blob), nullptr, &m_convolution_shader));
 
     D3D11_SAMPLER_DESC sampler_desc = {};

@@ -48,7 +48,7 @@ public:
         DisplayMode display_mode = DisplayMode::Color;
     };
 
-    static IRenderer* initialize(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory);
+    static IRenderer* initialize(ID3D11Device1& device, int width_hint, int height_hint);
     ~Renderer();
 
     Bifrost::Core::RendererID get_ID() const { return m_renderer_ID; }
@@ -65,7 +65,7 @@ public:
 
 private:
 
-    Renderer(ID3D11Device1& device, int width_hint, int height_hint, const std::filesystem::path& data_directory);
+    Renderer(ID3D11Device1& device, int width_hint, int height_hint);
 
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Renderer(Renderer& other) = delete;

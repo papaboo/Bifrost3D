@@ -9,8 +9,6 @@
 #include <DX11Renderer/CameraEffects.h>
 #include <DX11Renderer/Utils.h>
 
-#include <filesystem>
-
 using namespace Bifrost::Math;
 
 namespace DX11Renderer {
@@ -18,12 +16,12 @@ namespace DX11Renderer {
 // ------------------------------------------------------------------------------------------------
 // Gaussian Bloom.
 // ------------------------------------------------------------------------------------------------
-GaussianBloom::GaussianBloom(ID3D11Device1& device, const std::filesystem::path& shader_directory) {
+GaussianBloom::GaussianBloom(ID3D11Device1& device) {
 
     m_ping = {};
     m_pong = {};
 
-    const auto shader_filename = shader_directory / "CameraEffects" / "Bloom.hlsl";
+    auto shader_filename = "CameraEffects/Bloom.hlsl";
 
     OBlob horizontal_filter_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::sampled_gaussian_horizontal_filter");
     THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(horizontal_filter_blob), nullptr, &m_horizontal_filter));
@@ -121,11 +119,11 @@ OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11
 // ------------------------------------------------------------------------------------------------
 // Dual Kawase Bloom.
 // ------------------------------------------------------------------------------------------------
-DualKawaseBloom::DualKawaseBloom(ID3D11Device1& device, const std::filesystem::path& shader_directory) {
+DualKawaseBloom::DualKawaseBloom(ID3D11Device1& device) {
 
     m_temp = {};
 
-    const auto shader_filename = shader_directory / "CameraEffects" / "Bloom.hlsl";
+    auto shader_filename = "CameraEffects/Bloom.hlsl";
 
     OBlob m_extract_high_intensity_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::extract_high_intensity");
     THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(m_extract_high_intensity_blob), nullptr, &m_extract_high_intensity));
@@ -243,8 +241,8 @@ OShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D
 // ------------------------------------------------------------------------------------------------
 // Log average luminance reduction.
 // ------------------------------------------------------------------------------------------------
-LogAverageLuminance::LogAverageLuminance(ID3D11Device1& device, const std::filesystem::path& shader_directory) {
-    const auto shader_filename = shader_directory / "CameraEffects" / "ReduceLogAverageLuminance.hlsl";
+LogAverageLuminance::LogAverageLuminance(ID3D11Device1& device) {
+    auto shader_filename = "CameraEffects/ReduceLogAverageLuminance.hlsl";
 
     // Create shaders.
     OBlob log_average_first_reduction_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::first_reduction");
@@ -301,8 +299,8 @@ void LogAverageLuminance::compute(ID3D11DeviceContext1& context, ID3D11Buffer* c
 // ------------------------------------------------------------------------------------------------
 // Exposure histogram
 // ------------------------------------------------------------------------------------------------
-ExposureHistogram::ExposureHistogram(ID3D11Device1& device, const std::filesystem::path& shader_directory) {
-    const auto shader_filename = shader_directory / "CameraEffects" / "ReduceExposureHistogram.hlsl";
+ExposureHistogram::ExposureHistogram(ID3D11Device1& device) {
+    auto shader_filename = "CameraEffects/ReduceExposureHistogram.hlsl";
 
     // Create shaders.
     OBlob reduce_exposure_histogram_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::reduce");
@@ -372,21 +370,21 @@ void ExposureHistogram::compute_linear_exposure(ID3D11DeviceContext1& context, I
 // ------------------------------------------------------------------------------------------------
 // Camera post processing
 // ------------------------------------------------------------------------------------------------
-CameraEffects::CameraEffects(ID3D11Device1& device, const std::filesystem::path& shader_directory) {
+CameraEffects::CameraEffects(ID3D11Device1& device) {
 
     THROW_DX11_ERROR(create_constant_buffer(device, sizeof(Constants), &m_constant_buffer));
 
     create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, &m_linear_exposure_SRV, &m_linear_exposure_UAV);
-    m_log_average_luminance = LogAverageLuminance(device, shader_directory);
-    m_exposure_histogram = ExposureHistogram(device, shader_directory);
+    m_log_average_luminance = LogAverageLuminance(device);
+    m_exposure_histogram = ExposureHistogram(device);
 
-    m_bloom = GaussianBloom(device, shader_directory);
+    m_bloom = GaussianBloom(device);
 
     D3D11_RASTERIZER_DESC raster_desc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
     THROW_DX11_ERROR(device.CreateRasterizerState(&raster_desc, &m_raster_state));
 
     { // Setup tonemapping shaders
-        const auto shader_filename = shader_directory / "CameraEffects" / "Tonemapping.hlsl";
+        auto shader_filename = "CameraEffects/Tonemapping.hlsl";
 
         OBlob linear_exposure_from_bias_blob = compile_shader_from_file(shader_filename, "cs_5_0", "CameraEffects::linear_exposure_from_constant_bias");
         THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(linear_exposure_from_bias_blob), nullptr, &m_linear_exposure_from_bias_shader));

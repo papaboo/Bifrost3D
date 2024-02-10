@@ -479,7 +479,7 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
     if (window.get_width() != g_options.window_size.x || window.get_height() != g_options.window_size.y)
         window.resize(g_options.window_size.x, g_options.window_size.y);
 
-    g_compositor = DX11Renderer::Compositor::initialize(hwnd, window, engine.data_directory());
+    g_compositor = DX11Renderer::Compositor::initialize(hwnd, window);
 
     g_optix_adaptor = (DX11OptiXAdaptor::Adaptor*)g_compositor->add_renderer(DX11OptiXAdaptor::Adaptor::initialize).get();
 
