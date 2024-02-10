@@ -19,12 +19,10 @@
 #include <Bifrost/Math/Vector.h>
 #include <Bifrost/Math/Utils.h>
 
-#include <filesystem>
 #include <string>
 
 #define NOMINMAX
 #include <D3D11_1.h>
-#include <D3DCompiler.h>
 #undef RGB
 
 namespace DX11Renderer {
@@ -39,10 +37,9 @@ void safe_release(ResourcePtr* resource_ptr) {
     }
 }
 
-inline void CHECK_HRESULT(HRESULT hr, const std::string& file, int line) {
+inline void CHECK_HRESULT(HRESULT hr, const char* const file, int line) {
     if (FAILED(hr)) {
-        std::string error = "[file:" + file +
-            " line:" + std::to_string(line) + "] DX 11";
+        std::string error = "[file:" + std::string(file) + " line:" + std::to_string(line) + "] DX 11";
         switch (hr) {
         case E_INVALIDARG:
             error += " invalid arg.";
@@ -59,7 +56,7 @@ inline void CHECK_HRESULT(HRESULT hr, const std::string& file, int line) {
     }
 }
 
-#define THROW_DX11_ERROR(hr) ::DX11Renderer::CHECK_HRESULT(hr, __FILE__,__LINE__)
+#define THROW_DX11_ERROR(hr) ::DX11Renderer::CHECK_HRESULT(hr, __FILE__, __LINE__)
 
 inline void _assert(const char* expression, const char* file, int line) {
     fprintf(stderr, "Assertion failed: '%s', file '%s' line '%d'.\n", expression, file, line);
@@ -126,36 +123,6 @@ inline ODevice1 get_device1(ID3D11DeviceContext1& context) {
     THROW_DX11_ERROR(basic_device->QueryInterface(IID_PPV_ARGS(&device1)));
     basic_device->Release();
     return device1;
-}
-
-inline OBlob compile_shader_from_file(const std::filesystem::path& shader_path, const char* target, const char* entry_point,
-                                      const D3D_SHADER_MACRO* macros = nullptr) {
-    std::filesystem::path resolved_path = shader_path.is_absolute() ? shader_path : "..\\Data\\DX11Renderer\\Shaders" / shader_path;
-
-    OBlob shader_bytecode;
-    OBlob error_messages = nullptr;
-    HRESULT hr = D3DCompileFromFile(resolved_path.c_str(),
-        macros,
-        D3D_COMPILE_STANDARD_FILE_INCLUDE,
-        entry_point,
-        target,
-        D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_WARNINGS_ARE_ERRORS,
-        0, // More flags. Unused.
-        &shader_bytecode,
-        &error_messages);
-    if (FAILED(hr)) {
-        if (hr == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
-            printf("The system cannot find the file specified: '%ws'.\n", resolved_path.c_str());
-        else if (hr == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND))
-            printf("The system cannot find the path specified: '%ws'.\n", resolved_path.c_str());
-        else if (error_messages != nullptr)
-            printf("Shader error: '%s'.\n", (char*)error_messages->GetBufferPointer());
-        else 
-            printf("Unknown error occured when trying to load: '%ws'.\n", resolved_path.c_str());
-        return nullptr;
-    }
-
-    return shader_bytecode;
 }
 
 inline float3 make_float3(Bifrost::Math::Vector3f v) {

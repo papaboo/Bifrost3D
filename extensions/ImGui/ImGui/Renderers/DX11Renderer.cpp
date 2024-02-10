@@ -10,7 +10,7 @@
 
 #include <ImGui/Src/imgui.h>
 
-#include <DX11Renderer/Types.h>
+#include <DX11Renderer/ShaderManager.h>
 #include <DX11Renderer/Utils.h>
 
 using namespace ::DX11Renderer;
@@ -103,7 +103,7 @@ struct DX11Renderer::Implementation {
                         float2 uv  : TEXCOORD0;\
                     };\
                     \
-                    PS_INPUT main(VS_INPUT input) {\
+                    PS_INPUT imgui_vs(VS_INPUT input) {\
                         PS_INPUT output;\
                         output.pos = mul(ProjectionMatrix, float4(input.pos.xy, 0.f, 1.f));\
                         output.col = input.col;\
@@ -111,8 +111,7 @@ struct DX11Renderer::Implementation {
                         return output;\
                     }";
 
-                OBlob vertex_shader_blob;
-                THROW_DX11_ERROR(D3DCompile(vertex_shader_src, strlen(vertex_shader_src), NULL, NULL, NULL, "main", "vs_5_0", 0, 0, &vertex_shader_blob, NULL));
+                OBlob vertex_shader_blob = ShaderManager::compile_shader_source(vertex_shader_src, "vs_5_0", "imgui_vs");
                 THROW_DX11_ERROR(m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shader));
 
                 // Create the input layout
@@ -134,12 +133,11 @@ struct DX11Renderer::Implementation {
                     Texture2D texture0 : register(t0);\
                     SamplerState bilinear_sampler : register(s15);\
                     \
-                    float4 main(PS_INPUT input) : SV_Target {\
+                    float4 imgui_ps(PS_INPUT input) : SV_Target {\
                         return input.col * texture0.Sample(bilinear_sampler, input.uv); \
                     }";
 
-                OBlob pixel_shader_blob;
-                THROW_DX11_ERROR(D3DCompile(pixel_shader_src, strlen(pixel_shader_src), NULL, NULL, NULL, "main", "ps_5_0", 0, 0, &pixel_shader_blob, NULL));
+                OBlob pixel_shader_blob = ShaderManager::compile_shader_source(pixel_shader_src, "ps_5_0", "imgui_ps");
                 THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), NULL, &m_pixel_shader));
             }
         }

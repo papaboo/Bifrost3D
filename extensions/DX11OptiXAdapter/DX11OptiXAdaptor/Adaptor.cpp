@@ -7,7 +7,9 @@
 //-------------------------------------------------------------------------------------------------
 
 #include <DX11OptiXAdaptor/Adaptor.h>
+
 #include <DX11Renderer/Renderer.h>
+#include <DX11Renderer/ShaderManager.h>
 #include <DX11Renderer/Utils.h>
 #include <OptiXRenderer/Defines.h>
 #include <OptiXRenderer/Renderer.h>
@@ -16,8 +18,6 @@
 #include <cuda_d3d11_interop.h>
 
 #include <optixu/optixpp_namespace.h>
-
-#include <DX11Renderer/Types.h>
 
 using namespace DX11Renderer;
 
@@ -92,7 +92,7 @@ public:
 
         { // Init shaders.
             const char* vertex_src =
-                "float4 main_vs(uint vertex_ID : SV_VertexID) : SV_POSITION {\n"
+                "float4 optix_adaptor_vs(uint vertex_ID : SV_VertexID) : SV_POSITION {\n"
                 "   float4 position;\n"
                 "   // Draw triangle: {-1, -3}, { -1, 1 }, { 3, 1 }\n"
                 "   position.x = vertex_ID == 2 ? 3 : -1;\n"
@@ -107,36 +107,14 @@ public:
                 "    int2 viewport_size;\n"
                 "    int2 pixels_size;\n"
                 "};\n"
-                "float4 main_ps(float4 pixel_pos : SV_POSITION) : SV_TARGET {\n"
+                "float4 optix_adaptor_ps(float4 pixel_pos : SV_POSITION) : SV_TARGET {\n"
                 "   return pixels[int(pixel_pos.x) + int(viewport_size.y - pixel_pos.y - 1) * viewport_size.x];\n"
                 "}\n";
 
-            static auto compile_shader = [](const char* const shader_src, const char* const target, const char* const entry_point) -> OBlob {
-                OBlob shader_bytecode;
-                OBlob error_messages = nullptr;
-                HRESULT hr = D3DCompile(shader_src, strlen(shader_src), nullptr,
-                    nullptr, // macroes
-                    D3D_COMPILE_STANDARD_FILE_INCLUDE,
-                    entry_point,
-                    target,
-                    0, // Flags
-                    0, // More flags. Unused.
-                    &shader_bytecode,
-                    &error_messages);
-                if (FAILED(hr)) {
-                    if (error_messages != nullptr)
-                        printf("Shader error: '%s'\n", (char*)error_messages->GetBufferPointer());
-                    else
-                        printf("Unknown error occured when trying to compile blit shader in DX11OptiXAdaptor.\n");
-                    throw std::exception("Shader compilation error.");
-                }
-                return shader_bytecode;
-            };
-
-            OBlob vertex_shader_bytecode = compile_shader(vertex_src, "vs_5_0", "main_vs");
+            OBlob vertex_shader_bytecode = ShaderManager::compile_shader_source(vertex_src, "vs_5_0", "optix_adaptor_vs");
             THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_bytecode), nullptr, &m_vertex_shader));
 
-            OBlob pixel_shader_bytecode = compile_shader(pixel_src, "ps_5_0", "main_ps");
+            OBlob pixel_shader_bytecode = ShaderManager::compile_shader_source(pixel_src, "ps_5_0", "optix_adaptor_ps");
             THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_bytecode), nullptr, &m_pixel_shader));
         }
     }
