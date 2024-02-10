@@ -21,12 +21,14 @@ if (DIRECTX11_FOUND AND WIN32)
     DX11Renderer/LightManager.h
     DX11Renderer/MaterialManager.h
     DX11Renderer/MaterialManager.cpp
-	DX11Renderer/MeshModelManager.h
-	DX11Renderer/MeshModelManager.cpp
+    DX11Renderer/MeshModelManager.h
+    DX11Renderer/MeshModelManager.cpp
     DX11Renderer/OwnedResourcePtr.h
     DX11Renderer/PrefixSum.h
     DX11Renderer/Renderer.h
     DX11Renderer/Renderer.cpp
+    DX11Renderer/ShaderManager.h
+    DX11Renderer/ShaderManager.cpp
     DX11Renderer/SSAO.h
     DX11Renderer/SSAO.cpp
     DX11Renderer/TextureManager.h

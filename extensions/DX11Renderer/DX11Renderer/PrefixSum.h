@@ -9,7 +9,7 @@
 #ifndef _DX11RENDERER_RENDERER_PREFIX_SUM_H_
 #define _DX11RENDERER_RENDERER_PREFIX_SUM_H_
 
-#include <DX11Renderer/Utils.h>
+#include <DX11Renderer/ShaderManager.h>
 
 namespace DX11Renderer {
 
@@ -33,10 +33,10 @@ public:
     PrefixSum(ID3D11Device1& device) {
         auto prefix_sum_path = "Compute/PrefixSum.hlsl";
 
-        OBlob reduce_shader_blob = compile_shader_from_file(prefix_sum_path, "cs_5_0", "reduce");
+        OBlob reduce_shader_blob = ShaderManager::compile_shader_from_file(prefix_sum_path, "cs_5_0", "reduce");
         THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_shader_blob), nullptr, &m_reduce_shader));
 
-        OBlob downsweep_shader_blob = compile_shader_from_file(prefix_sum_path, "cs_5_0", "downsweep");
+        OBlob downsweep_shader_blob = ShaderManager::compile_shader_from_file(prefix_sum_path, "cs_5_0", "downsweep");
         THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(downsweep_shader_blob), nullptr, &m_downsweep_shader));
 
         int4 outer_constants = { 1, 0, 0, 0 };
