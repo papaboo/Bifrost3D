@@ -27,6 +27,7 @@ public:
 
 static OBlob ShaderManager::compile_shader_source(const char* const shader_src, const char* const target, const char* const entry_point);
 static OBlob compile_shader_from_file(const std::filesystem::path& shader_path, const char* const target, const char* const entry_point);
+static OBlob compile_shader_from_file(const char* const shader_path, const char* const target, const char* const entry_point);
 
 };
 

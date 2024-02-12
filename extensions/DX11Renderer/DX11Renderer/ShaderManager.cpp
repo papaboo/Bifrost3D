@@ -12,17 +12,79 @@
 #include <D3DCompiler.h>
 
 #include <filesystem>
+#include <fstream>
 
 using namespace std::filesystem;
 
 namespace DX11Renderer {
 
+    // For ID3DInclude examples see
+    // * https://www.asawicki.info/news_1515_implementing_id3d10include
+    // * https://github.com/TheRealMJP/BakingLab/blob/master/SampleFramework11/v1.02/Graphics/ShaderCompilation.cpp#L131
+    class ShaderLibInclude : public ID3DInclude {
+    public:
+        path m_library_path;
+        path m_local_path;
+
+        ShaderLibInclude(path shader_path = path()) {
+            m_library_path = current_path() / ".." / "Data" / "DX11Renderer" / "Shaders";
+            m_local_path = shader_path.parent_path();
+            if (!m_local_path.is_absolute())
+                m_local_path = m_library_path / m_local_path;
+        }
+
+        HRESULT Open(D3D_INCLUDE_TYPE include_type, LPCSTR shader_path, LPCVOID parent_shader_source, LPCVOID* shader_source_ref, UINT* shader_source_size) override {
+            using namespace std::filesystem;
+
+            path resolved_path = resolve_shader_path(include_type, shader_path);
+            if (!exists(resolved_path))
+                return E_FAIL;
+
+            // Read shader source
+            std::ifstream file_stream(resolved_path.c_str(), std::ios::in);
+            std::string shader_content_str = read_stream(file_stream);
+
+            // Copy source to output parameters
+            *shader_source_size = UINT(shader_content_str.size());
+            char* shader_source = new char[*shader_source_size];
+            std::copy(shader_content_str.begin(), shader_content_str.end(), shader_source);
+            *shader_source_ref = shader_source;
+
+            return S_OK;
+        }
+
+        HRESULT Close(LPCVOID shader_source) override {
+            delete[] (char*)shader_source;
+            return S_OK;
+        }
+
+        path resolve_shader_path(D3D_INCLUDE_TYPE include_type, const char* const shader_path) const {
+            const path& path_prefix = include_type == D3D_INCLUDE_LOCAL ? m_local_path : m_library_path;
+            return path_prefix / shader_path;
+        }
+
+        static std::string read_stream(std::istream &input) {
+            // The characters in the stream are read one-by-one using a std::streambuf.
+            // That is faster than reading them one-by-one using the std::istream.
+            std::streambuf *buffer = input.rdbuf();
+        
+            // Copy the content untill the end of the file.
+            std::string content = "";
+            int c;
+            while ((c = buffer->sbumpc()) != EOF)
+                content += static_cast<char>(c);
+        
+            return content;
+        }
+    };
+
 OBlob ShaderManager::compile_shader_source(const char* const shader_src, const char* const target, const char* const entry_point) {
+    ShaderLibInclude shader_lib_include = ShaderLibInclude();
     OBlob shader_bytecode;
     OBlob error_messages = nullptr;
     HRESULT hr = D3DCompile(shader_src, strlen(shader_src), nullptr,
         nullptr, // macroes
-        D3D_COMPILE_STANDARD_FILE_INCLUDE,
+        &shader_lib_include,
         entry_point,
         target,
         D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_WARNINGS_ARE_ERRORS,
@@ -42,11 +104,12 @@ OBlob ShaderManager::compile_shader_source(const char* const shader_src, const c
 OBlob ShaderManager::compile_shader_from_file(const path& shader_path, const char* const target, const char* const entry_point) {
     path resolved_path = shader_path.is_absolute() ? shader_path : "..\\Data\\DX11Renderer\\Shaders" / shader_path;
 
+    ShaderLibInclude shader_lib_include = ShaderLibInclude(shader_path);
     OBlob shader_bytecode;
     OBlob error_messages = nullptr;
     HRESULT hr = D3DCompileFromFile(resolved_path.c_str(),
         nullptr, // macros
-        D3D_COMPILE_STANDARD_FILE_INCLUDE,
+        &shader_lib_include,
         entry_point,
         target,
         D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_WARNINGS_ARE_ERRORS,
@@ -66,6 +129,11 @@ OBlob ShaderManager::compile_shader_from_file(const path& shader_path, const cha
     }
 
     return shader_bytecode;
+}
+
+OBlob ShaderManager::compile_shader_from_file(const char* const shader_path, const char* const target, const char* const entry_point) {
+    path converted_path = path(shader_path);
+    return compile_shader_from_file(converted_path, target, entry_point);
 }
 
 } // NS DX11Renderer
