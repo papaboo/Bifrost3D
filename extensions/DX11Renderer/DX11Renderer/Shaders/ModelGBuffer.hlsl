@@ -6,6 +6,7 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
+#include <ShadingModels/Parameters.hlsl>
 #include <Utils.hlsl>
 
 // ------------------------------------------------------------------------------------------------
@@ -17,7 +18,7 @@ cbuffer transform : register(b2) {
 };
 
 cbuffer material : register(b3) {
-    MaterialParams material_params;
+    ShadingModels::Parameters material_params;
 }
 
 cbuffer scene_variables : register(b13) {
@@ -51,9 +52,6 @@ float2 opaque_PS(OpaqueVaryings varyings) : SV_Target {
 // Thin-walled model.
 // ------------------------------------------------------------------------------------------------
 
-Texture2D coverage_tex : register(t1);
-SamplerState coverage_sampler : register(s1);
-
 struct ThinWalledVaryings {
     float4 position : SV_POSITION;
     float3 normal : NORMAL;
@@ -71,7 +69,7 @@ ThinWalledVaryings thin_walled_VS(float4 geometry : GEOMETRY, float2 uv : TEXCOO
 }
 
 float2 thin_walled_PS(ThinWalledVaryings varyings) : SV_Target {
-    if (material_params.discard_from_cutout(varyings.uv, coverage_tex, coverage_sampler))
+    if (material_params.discard_from_cutout(varyings.uv))
         discard;
 
     float3 view_space_normal = normalize(varyings.normal);

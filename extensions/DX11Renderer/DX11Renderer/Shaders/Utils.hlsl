@@ -60,41 +60,6 @@ struct SceneVariables {
     float4x3 world_to_view_matrix;
 };
 
-struct TextureBound {
-    static const unsigned int None = 0;
-    static const unsigned int Tint = 1 << 0;
-    static const unsigned int Roughness = 1 << 1;
-    static const unsigned int Tint_Roughness = Tint | Roughness;
-    static const unsigned int Coverage = 1 << 2;
-    static const unsigned int Metallic = 1 << 3;
-};
-
-struct MaterialParams {
-    float3 m_tint;
-    unsigned int m_textures_bound;
-    float m_roughness;
-    float m_specularity;
-    float m_metallic;
-    float m_coverage;
-    float m_coat;
-    float m_coat_roughness;
-    float2 __padding;
-
-    float coverage(float2 texcoord, Texture2D coverage_tex, SamplerState coverage_sampler) {
-        float coverage = m_coverage;
-        if (m_textures_bound & TextureBound::Coverage)
-            coverage *= coverage_tex.Sample(coverage_sampler, texcoord).a;
-        return coverage;
-    }
-
-    bool discard_from_cutout(float2 texcoord, Texture2D coverage_tex, SamplerState coverage_sampler) {
-        if (m_textures_bound & TextureBound::Coverage)
-            return coverage_tex.Sample(coverage_sampler, texcoord).a < m_coverage;
-        else
-            return false;
-    }
-};
-
 // ------------------------------------------------------------------------------------------------
 // Math utils
 // ------------------------------------------------------------------------------------------------

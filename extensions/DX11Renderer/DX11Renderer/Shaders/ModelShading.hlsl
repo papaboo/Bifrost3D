@@ -21,7 +21,7 @@ cbuffer transform : register(b2) {
 };
 
 cbuffer material : register(b3) {
-    MaterialParams material_params;
+    ShadingModels::Parameters material_params;
 }
 
 cbuffer lights : register(b12) {
@@ -91,7 +91,7 @@ float3 integrate(Varyings input, bool is_front_face, float ambient_visibility) {
 
 float4 opaque(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
     // NOTE There may be a performance cost associated with having a potential discard, so we should probably have a separate pixel shader for cutouts.
-    if (material_params.discard_from_cutout(input.texcoord, ShadingModels::coverage_tex, ShadingModels::coverage_sampler))
+    if (material_params.discard_from_cutout(input.texcoord))
         discard;
 
     float ambient_visibility = ssao_tex[input.position.xy + scene_vars.g_buffer_to_ao_index_offset].r;
@@ -100,7 +100,7 @@ float4 opaque(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
 }
 
 float4 transparent(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
-    float coverage = material_params.coverage(input.texcoord, ShadingModels::coverage_tex, ShadingModels::coverage_sampler);
+    float coverage = material_params.coverage(input.texcoord);
     return float4(integrate(input, is_front_face, 1), coverage);
 }
 
@@ -153,34 +153,31 @@ float4 visualize_material_params(Varyings input, bool is_front_face : SV_IsFront
     float3x3 world_to_shading_TBN = create_TBN(world_normal);
     float3 wo = mul(world_to_shading_TBN, world_wo);
 
-    const ShadingModels::DefaultShading default_shading = ShadingModels::DefaultShading::from_constants(material_params, wo.z, input.texcoord);
-
-    float coverage = default_shading.coverage();
-    if (visualization_mode == visualize_coverage)
+    if (visualization_mode == visualize_coverage) {
+        float coverage = material_params.coverage(input.texcoord);
         return float4(coverage, coverage, coverage, 1);
+    }
 
-    if (material_params.discard_from_cutout(input.texcoord, ShadingModels::coverage_tex, ShadingModels::coverage_sampler))
+    if (material_params.discard_from_cutout(input.texcoord))
         discard;
 
     if (visualization_mode == visualize_metallic) {
-        float metallic = material_params.m_metallic;
-        if (material_params.m_textures_bound & TextureBound::Metallic)
-            metallic *= ShadingModels::metallic_tex.Sample(ShadingModels::metallic_sampler, input.texcoord).a;
+        float metallic = material_params.metallic(input.texcoord);
         return float4(metallic, metallic, metallic, 1);
     }
 
     if (visualization_mode == visualize_roughness) {
-        float roughness = default_shading.roughness();
+        float roughness = material_params.tint_roughness(input.texcoord).w;
         return float4(roughness, roughness, roughness, 1);
     }
 
     if (visualization_mode == visualize_coat) {
-        float coat = default_shading.coat_scale();
+        float coat = material_params.coat_scale();
         return float4(coat, coat, coat, 1);
     }
 
     if (visualization_mode == visualize_coat_roughness) {
-        float coat_roughness = default_shading.coat_roughness();
+        float coat_roughness = material_params.coat_roughness();
         return float4(coat_roughness, coat_roughness, coat_roughness, 1);
     }
 
@@ -209,8 +206,6 @@ float4 visualize_material_params(Varyings input, bool is_front_face : SV_IsFront
         return float4(uv_tint, 1);
     }
 
-    float3 tint = material_params.m_tint;
-    if (material_params.m_textures_bound & TextureBound::Tint)
-        tint *= ShadingModels::tint_roughness_tex.Sample(ShadingModels::tint_roughness_sampler, input.texcoord).rgb;
+    float3 tint = material_params.tint_roughness(input.texcoord).rgb;
     return float4(tint, 1);
 }

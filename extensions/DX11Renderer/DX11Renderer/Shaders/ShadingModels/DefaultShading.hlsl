@@ -11,52 +11,11 @@
 
 #include <BSDFs/Diffuse.hlsl>
 #include <BSDFs/GGX.hlsl>
+#include <ShadingModels/Parameters.hlsl>
 #include <LightSources.hlsl>
 #include <Utils.hlsl>
 
 namespace ShadingModels {
-
-// ------------------------------------------------------------------------------------------------
-// Textures.
-// ------------------------------------------------------------------------------------------------
-
-Texture2D environment_tex : register(t0);
-SamplerState environment_sampler : register(s0);
-
-Texture2D coverage_tex : register(t1);
-SamplerState coverage_sampler : register(s1);
-
-Texture2D tint_roughness_tex : register(t2);
-SamplerState tint_roughness_sampler : register(s2);
-
-Texture2D metallic_tex : register(t3);
-SamplerState metallic_sampler : register(s3);
-
-Texture2D<float2> ggx_with_fresnel_rho_tex : register(t15);
-
-// ------------------------------------------------------------------------------------------------
-// Specular rho helpers.
-// ------------------------------------------------------------------------------------------------
-struct PrecomputedSpecularRho {
-    float base, full;
-    float rho(float specularity) { return lerp(base, full, specularity); }
-    float3 rho(float3 specularity) {
-        return float3(rho(specularity.x), rho(specularity.y), rho(specularity.z));
-    }
-};
-
-static PrecomputedSpecularRho fetch_specular_rho(float abs_cos_theta, float roughness) {
-    float2 specular_rho = ggx_with_fresnel_rho_tex.Sample(bilinear_sampler, float2(abs_cos_theta, roughness));
-    PrecomputedSpecularRho res;
-    res.base = specular_rho.r;
-    res.full = specular_rho.g;
-    return res;
-}
-
-static float3 compute_specular_rho(float3 specularity, float abs_cos_theta, float roughness) {
-    PrecomputedSpecularRho precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, roughness);
-    return precomputed_specular_rho.rho(specularity);
-}
 
 // ------------------------------------------------------------------------------------------------
 // Default shading.
@@ -65,7 +24,6 @@ struct DefaultShading {
     float3 m_diffuse_tint;
     float m_roughness;
     float3 m_specularity;
-    float m_coverage;
     float m_coat_transmission; // 1 - coat_rho, the contribution from the BSDFs under the coat.
     float m_coat_scale;
     float m_coat_roughness;
@@ -104,18 +62,18 @@ struct DefaultShading {
         shading.m_specularity = lerp(dielectric_specularity, conductor_specularity, metallic);
 
         // Specular directional-hemispherical reflectance function, rho.
-        PrecomputedSpecularRho precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, roughness);
-        float dielectric_specular_rho = precomputed_specular_rho.rho(dielectric_specularity);
+        SpecularRho specular_rho = fetch_specular_rho(abs_cos_theta, roughness);
+        float dielectric_specular_rho = specular_rho.rho(dielectric_specularity);
 
         // Dielectric tint.
-        float dielectric_lossless_specular_rho = dielectric_specular_rho / precomputed_specular_rho.full;
+        float dielectric_lossless_specular_rho = dielectric_specular_rho / specular_rho.full;
         float dielectric_specular_transmission = 1.0f - dielectric_lossless_specular_rho;
         float3 dielectric_tint = tint * dielectric_specular_transmission;
         shading.m_diffuse_tint = dielectric_tint * (1.0f - metallic);
 
         // Compute microfacet specular interreflection. Assume it is diffuse and add its contribution to the diffuse tint.
-        float3 single_bounce_specular_rho = precomputed_specular_rho.rho(shading.m_specularity);
-        float3 lossless_specular_rho = single_bounce_specular_rho / precomputed_specular_rho.full;
+        float3 single_bounce_specular_rho = specular_rho.rho(shading.m_specularity);
+        float3 lossless_specular_rho = single_bounce_specular_rho / specular_rho.full;
         float3 specular_interreflection_rho = lossless_specular_rho - single_bounce_specular_rho;
         shading.m_diffuse_tint += specular_interreflection_rho;
 
@@ -141,9 +99,9 @@ struct DefaultShading {
             // Clear coat with fixed index of refraction of 1.5 / specularity of 0.04, representative of polyurethane and glass.
             shading.m_coat_scale = coat_scale;
             shading.m_coat_roughness = coat_roughness;
-            PrecomputedSpecularRho precomputed_coat_rho = fetch_specular_rho(abs_cos_theta, coat_roughness);
-            float coat_single_bounce_rho = coat_scale * precomputed_coat_rho.rho(COAT_SPECULARITY);
-            float lossless_coat_rho = coat_single_bounce_rho / precomputed_coat_rho.full;
+            SpecularRho coat_rho = fetch_specular_rho(abs_cos_theta, coat_roughness);
+            float coat_single_bounce_rho = coat_scale * coat_rho.rho(COAT_SPECULARITY);
+            float lossless_coat_rho = coat_single_bounce_rho / coat_rho.full;
             float coat_interreflection_rho = lossless_coat_rho - coat_single_bounce_rho;
             shading.m_coat_transmission = 1.0f - lossless_coat_rho;
 
@@ -158,36 +116,23 @@ struct DefaultShading {
     // --------------------------------------------------------------------------------------------
     // Factory function constructing a shading from a constant buffer.
     // --------------------------------------------------------------------------------------------
-    static DefaultShading from_constants(uniform MaterialParams material_params, float abs_cos_theta, float2 texcoord) {
-        // Metallic
-        float metallic = material_params.m_metallic;
-        if (material_params.m_textures_bound & TextureBound::Metallic)
-            metallic *= metallic_tex.Sample(metallic_sampler, texcoord).a;
-        
+    static DefaultShading from_constants(uniform Parameters material_params, float abs_cos_theta, float2 texcoord) {
         // Tint and roughness
-        float3 tint = material_params.m_tint;
-        float roughness = material_params.m_roughness;
-        if (material_params.m_textures_bound & TextureBound::Tint_Roughness) {
-            float4 tex_sample = tint_roughness_tex.Sample(tint_roughness_sampler, texcoord);
-            tint *= (material_params.m_textures_bound & TextureBound::Tint) == 0 ? float3(1, 1, 1) : tex_sample.rgb;
-            roughness *= tex_sample.a;
-        }
-        
-        DefaultShading shading = create(tint, roughness, material_params.m_specularity, metallic, material_params.m_coat,
-                                        material_params.m_coat_roughness, abs_cos_theta);
+        float4 tint_roughness = material_params.tint_roughness(texcoord);
+        float3 tint = tint_roughness.rgb;
+        float roughness = tint_roughness.w;
 
-        // Coverage
-        shading.m_coverage = material_params.m_coverage;
-        if (material_params.m_textures_bound & TextureBound::Coverage)
-            shading.m_coverage *= coverage_tex.Sample(coverage_sampler, texcoord).a;
+        float metallic = material_params.metallic(texcoord);
+        float specularity = material_params.m_specularity;
+        float coat_scale = material_params.coat_scale();
+        float coat_roughness = material_params.coat_roughness();
 
-        return shading;
+        return create(tint, roughness, specularity, metallic, coat_scale, coat_roughness, abs_cos_theta);
     }
 
     // --------------------------------------------------------------------------------------------
     // Getters
     // --------------------------------------------------------------------------------------------
-    float coverage() { return m_coverage; }
     float roughness() { return m_roughness; }
     float coat_scale() { return m_coat_scale; }
     float coat_roughness() { return m_coat_roughness; }
