@@ -6,13 +6,15 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _DX11_RENDERER_SHADERS_DEFAULT_SHADING_H_
-#define _DX11_RENDERER_SHADERS_DEFAULT_SHADING_H_
+#ifndef _DX11_RENDERER_SHADERS_SHADING_MODELS_DEFAULT_SHADING_H_
+#define _DX11_RENDERER_SHADERS_SHADING_MODELS_DEFAULT_SHADING_H_
 
-#include "BSDFs/Diffuse.hlsl"
-#include "BSDFs/GGX.hlsl"
-#include "LightSources.hlsl"
-#include "Utils.hlsl"
+#include <BSDFs/Diffuse.hlsl>
+#include <BSDFs/GGX.hlsl>
+#include <LightSources.hlsl>
+#include <Utils.hlsl>
+
+namespace ShadingModels {
 
 // ------------------------------------------------------------------------------------------------
 // Textures.
@@ -308,4 +310,6 @@ struct DefaultShading {
     }
 };
 
-#endif // _DX11_RENDERER_SHADERS_DEFAULT_SHADING_H_
+} // NS ShadingModels
+
+#endif // _DX11_RENDERER_SHADERS_SHADING_MODELS_DEFAULT_SHADING_H_

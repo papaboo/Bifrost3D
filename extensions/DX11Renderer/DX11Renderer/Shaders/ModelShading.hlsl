@@ -6,7 +6,7 @@
 // See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include "DefaultShading.hlsl"
+#include "ShadingModels/DefaultShading.hlsl"
 #include "LightSources.hlsl"
 #include "Utils.hlsl"
 
@@ -66,7 +66,7 @@ float3 integrate(Varyings input, bool is_front_face, float ambient_visibility) {
     float3x3 world_to_shading_TBN = create_TBN(world_normal);
     float3 wo = mul(world_to_shading_TBN, world_wo);
 
-    const DefaultShading default_shading = DefaultShading::from_constants(material_params, wo.z, input.texcoord);
+    const ShadingModels::DefaultShading default_shading = ShadingModels::DefaultShading::from_constants(material_params, wo.z, input.texcoord);
 
     // Apply IBL
     float3 radiance = ambient_visibility * scene_vars.environment_tint.rgb * default_shading.evaluate_IBL(world_wo, world_normal);
@@ -91,7 +91,7 @@ float3 integrate(Varyings input, bool is_front_face, float ambient_visibility) {
 
 float4 opaque(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
     // NOTE There may be a performance cost associated with having a potential discard, so we should probably have a separate pixel shader for cutouts.
-    if (material_params.discard_from_cutout(input.texcoord, coverage_tex, coverage_sampler))
+    if (material_params.discard_from_cutout(input.texcoord, ShadingModels::coverage_tex, ShadingModels::coverage_sampler))
         discard;
 
     float ambient_visibility = ssao_tex[input.position.xy + scene_vars.g_buffer_to_ao_index_offset].r;
@@ -100,9 +100,11 @@ float4 opaque(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
 }
 
 float4 transparent(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
-    float coverage = material_params.coverage(input.texcoord, coverage_tex, coverage_sampler);
+    float coverage = material_params.coverage(input.texcoord, ShadingModels::coverage_tex, ShadingModels::coverage_sampler);
     return float4(integrate(input, is_front_face, 1), coverage);
 }
+
+
 
 // ------------------------------------------------------------------------------------------------
 // Material property visualization.
@@ -151,25 +153,20 @@ float4 visualize_material_params(Varyings input, bool is_front_face : SV_IsFront
     float3x3 world_to_shading_TBN = create_TBN(world_normal);
     float3 wo = mul(world_to_shading_TBN, world_wo);
 
-    const DefaultShading default_shading = DefaultShading::from_constants(material_params, wo.z, input.texcoord);
+    const ShadingModels::DefaultShading default_shading = ShadingModels::DefaultShading::from_constants(material_params, wo.z, input.texcoord);
 
     float coverage = default_shading.coverage();
     if (visualization_mode == visualize_coverage)
         return float4(coverage, coverage, coverage, 1);
 
-    if (material_params.discard_from_cutout(input.texcoord, coverage_tex, coverage_sampler))
+    if (material_params.discard_from_cutout(input.texcoord, ShadingModels::coverage_tex, ShadingModels::coverage_sampler))
         discard;
 
     if (visualization_mode == visualize_metallic) {
         float metallic = material_params.m_metallic;
         if (material_params.m_textures_bound & TextureBound::Metallic)
-            metallic *= metallic_tex.Sample(metallic_sampler, input.texcoord).a;
+            metallic *= ShadingModels::metallic_tex.Sample(ShadingModels::metallic_sampler, input.texcoord).a;
         return float4(metallic, metallic, metallic, 1);
-    }
-
-    if (visualization_mode == visualize_roughness) {
-        float roughness = default_shading.roughness();
-        return float4(roughness, roughness, roughness, 1);
     }
 
     if (visualization_mode == visualize_roughness) {
@@ -214,6 +211,6 @@ float4 visualize_material_params(Varyings input, bool is_front_face : SV_IsFront
 
     float3 tint = material_params.m_tint;
     if (material_params.m_textures_bound & TextureBound::Tint)
-        tint *= tint_roughness_tex.Sample(tint_roughness_sampler, input.texcoord).rgb;
+        tint *= ShadingModels::tint_roughness_tex.Sample(ShadingModels::tint_roughness_sampler, input.texcoord).rgb;
     return float4(tint, 1);
 }
