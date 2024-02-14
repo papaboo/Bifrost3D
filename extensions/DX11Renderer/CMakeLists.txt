@@ -41,7 +41,6 @@ if (DIRECTX11_FOUND AND WIN32)
 
   set(SHADERS_SRC
     DX11Renderer/Shaders/Debug.hlsl
-    DX11Renderer/Shaders/DefaultShading.hlsl
     DX11Renderer/Shaders/EnvironmentMap.hlsl
     DX11Renderer/Shaders/IBLConvolution.hlsl
     DX11Renderer/Shaders/LightSources.hlsl
@@ -70,7 +69,11 @@ if (DIRECTX11_FOUND AND WIN32)
     DX11Renderer/Shaders/Compute/PrefixSum.hlsl
   )
 
-  set(ALL_SHADER_SRC ${SHADERS_SRC} ${SHADERS_BSDFS_SRC} ${SHADERS_CAMERAEFFECTS_SRC} ${SHADERS_COMPUTE_SRC})
+  set(SHADERS_SHADING_MODELS_SRC
+    DX11Renderer/Shaders/ShadingModels/DefaultShading.hlsl
+  )
+
+  set(ALL_SHADER_SRC ${SHADERS_SRC} ${SHADERS_BSDFS_SRC} ${SHADERS_CAMERAEFFECTS_SRC} ${SHADERS_COMPUTE_SRC} ${SHADERS_SHADING_MODELS_SRC})
 
   add_library(${LIBRARY_NAME}
     ${ROOT_SRC}
@@ -82,6 +85,7 @@ if (DIRECTX11_FOUND AND WIN32)
   source_group("Shaders\\BSDFs" FILES ${SHADERS_BSDFS_SRC})
   source_group("Shaders\\CameraEffects" FILES ${SHADERS_CAMERAEFFECTS_SRC})
   source_group("Shaders\\Compute" FILES ${SHADERS_COMPUTE_SRC})
+  source_group("Shaders\\ShadingModels" FILES ${SHADERS_SHADING_MODELS_SRC})
 
   target_include_directories(${LIBRARY_NAME} 
     PUBLIC . 
