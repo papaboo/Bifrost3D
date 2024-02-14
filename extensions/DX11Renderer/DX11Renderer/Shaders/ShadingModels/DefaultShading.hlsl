@@ -61,7 +61,7 @@ struct DefaultShading : IShadingModel {
         shading.m_specularity = lerp(dielectric_specularity, conductor_specularity, metallic);
 
         // Specular directional-hemispherical reflectance function, rho.
-        SpecularRho specular_rho = fetch_specular_rho(abs_cos_theta, roughness);
+        SpecularRho specular_rho = SpecularRho::fetch(abs_cos_theta, roughness);
         float dielectric_specular_rho = specular_rho.rho(dielectric_specularity);
 
         // Dielectric tint.
@@ -98,7 +98,7 @@ struct DefaultShading : IShadingModel {
             // Clear coat with fixed index of refraction of 1.5 / specularity of 0.04, representative of polyurethane and glass.
             shading.m_coat_scale = coat_scale;
             shading.m_coat_roughness = coat_roughness;
-            SpecularRho coat_rho = fetch_specular_rho(abs_cos_theta, coat_roughness);
+            SpecularRho coat_rho = SpecularRho::fetch(abs_cos_theta, coat_roughness);
             float coat_single_bounce_rho = coat_scale * coat_rho.rho(COAT_SPECULARITY);
             float lossless_coat_rho = coat_single_bounce_rho / coat_rho.full;
             float coat_interreflection_rho = lossless_coat_rho - coat_single_bounce_rho;

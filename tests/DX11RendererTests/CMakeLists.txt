@@ -7,6 +7,7 @@ if (TARGET DX11Renderer)
     ExposureHistogramTest.h
     LogAverageLuminanceTest.h
     main.cpp
+    MaterialManagerTest.h
     PrefixSumTest.h
     Utils.h
   )
