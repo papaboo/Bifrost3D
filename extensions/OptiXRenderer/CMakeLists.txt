@@ -55,7 +55,7 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
 
   set(SHADING_SHADING_MODELS_SRC
     OptiXRenderer/Shading/ShadingModels/DefaultShading.h
-    OptiXRenderer/Shading/ShadingModels/LambertShading.h
+    OptiXRenderer/Shading/ShadingModels/DiffuseShading.h
     OptiXRenderer/Shading/ShadingModels/RoughGlassShading.h
   )
 
