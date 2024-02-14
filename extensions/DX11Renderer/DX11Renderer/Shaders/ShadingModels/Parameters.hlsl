@@ -35,24 +35,30 @@ Texture2D<float2> ggx_with_fresnel_rho_tex : register(t15);
 // Specular rho helpers.
 // ------------------------------------------------------------------------------------------------
 struct SpecularRho {
+    static const int angle_sample_count = 64;
+    static const int roughness_sample_count = 64;
+
     float base, full;
     float rho(float specularity) { return lerp(base, full, specularity); }
     float3 rho(float3 specularity) {
         return float3(rho(specularity.x), rho(specularity.y), rho(specularity.z));
     }
+
+    static SpecularRho fetch(float abs_cos_theta, float roughness) {
+        // Adjust UV coordinates to start sampling half a pixel into the texture, as the pixel values correspond to the boundaries of the rho function.
+        float cos_theta_uv = lerp(0.5 / angle_sample_count, (angle_sample_count - 0.5) / angle_sample_count, abs_cos_theta);
+        float roughness_uv = lerp(0.5 / roughness_sample_count, (roughness_sample_count - 0.5) / roughness_sample_count, roughness);
+
+        float2 specular_rho = ggx_with_fresnel_rho_tex.SampleLevel(bilinear_sampler, float2(cos_theta_uv, roughness_uv), 0);
+        SpecularRho res;
+        res.base = specular_rho.r;
+        res.full = specular_rho.g;
+        return res;
+    }
 };
 
-static SpecularRho fetch_specular_rho(float abs_cos_theta, float roughness) {
-    float2 specular_rho = ggx_with_fresnel_rho_tex.Sample(bilinear_sampler, float2(abs_cos_theta, roughness));
-    SpecularRho res;
-    res.base = specular_rho.r;
-    res.full = specular_rho.g;
-    return res;
-}
-
 static float3 compute_specular_rho(float3 specularity, float abs_cos_theta, float roughness) {
-    SpecularRho specular_rho = fetch_specular_rho(abs_cos_theta, roughness);
-    return specular_rho.rho(specularity);
+    return SpecularRho::fetch(abs_cos_theta, roughness).rho(specularity);
 }
 
 // ------------------------------------------------------------------------------------------------

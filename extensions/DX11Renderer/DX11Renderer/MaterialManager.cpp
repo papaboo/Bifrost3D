@@ -43,22 +43,7 @@ inline Dx11MaterialTextures make_dx11material_textures(Material mat) {
 }
 
 MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& context) {
-    using namespace Bifrost::Assets::Shading;
-
-    { // Setup GGX with fresnel rho texture.
-        const unsigned int width = Rho::GGX_with_fresnel_angle_sample_count;
-        const unsigned int height = Rho::GGX_with_fresnel_roughness_sample_count;
-
-        unsigned short* rho = new unsigned short[2 * width * height];
-        for (unsigned int i = 0; i < width * height; ++i) {
-            rho[2 * i] = unsigned short(Rho::GGX_with_fresnel[i] * 65535 + 0.5f); // No specularity
-            rho[2 * i + 1] = unsigned short(Rho::GGX[i] * 65535 + 0.5f); // Full specularity
-        }
-
-        create_texture_2D(device, DXGI_FORMAT_R16G16_UNORM, rho, width, height, D3D11_USAGE_IMMUTABLE, &m_GGX_with_fresnel_rho_srv);
-
-        delete[] rho;
-    }
+    m_GGX_with_fresnel_rho_srv = create_GGX_with_fresnel_rho_srv(device);
 
     m_materials.resize(1);
     m_materials[0] = make_dx11material(MaterialID::invalid_UID());
@@ -97,6 +82,27 @@ void MaterialManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1
                 context.UpdateSubresource(m_GPU_materials[material_index], 0u, nullptr, &dx_mat, 0u, 0u);
         }
     }
+}
+
+// Setup GGX with fresnel rho texture.
+OShaderResourceView MaterialManager::create_GGX_with_fresnel_rho_srv(ID3D11Device1& device) {
+    using namespace Bifrost::Assets::Shading;
+
+    const unsigned int width = Rho::GGX_with_fresnel_angle_sample_count;
+    const unsigned int height = Rho::GGX_with_fresnel_roughness_sample_count;
+
+    unsigned short* rho = new unsigned short[2 * width * height];
+    for (unsigned int i = 0; i < width * height; ++i) {
+        rho[2 * i] = unsigned short(Rho::GGX_with_fresnel[i] * 65535 + 0.5f); // No specularity
+        rho[2 * i + 1] = unsigned short(Rho::GGX[i] * 65535 + 0.5f); // Full specularity
+    }
+
+    OShaderResourceView GGX_with_fresnel_rho_srv;
+    create_texture_2D(device, DXGI_FORMAT_R16G16_UNORM, rho, width, height, D3D11_USAGE_IMMUTABLE, &GGX_with_fresnel_rho_srv);
+
+    delete[] rho;
+
+    return GGX_with_fresnel_rho_srv;
 }
 
 } // NS DX11Renderer
