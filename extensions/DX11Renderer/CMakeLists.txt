@@ -71,6 +71,8 @@ if (DIRECTX11_FOUND AND WIN32)
 
   set(SHADERS_SHADING_MODELS_SRC
     DX11Renderer/Shaders/ShadingModels/DefaultShading.hlsl
+    DX11Renderer/Shaders/ShadingModels/DiffuseShading.hlsl
+    DX11Renderer/Shaders/ShadingModels/IShadingModel.hlsl
     DX11Renderer/Shaders/ShadingModels/Parameters.hlsl
   )
 

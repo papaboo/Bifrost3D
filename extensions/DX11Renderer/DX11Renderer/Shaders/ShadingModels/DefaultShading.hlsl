@@ -11,16 +11,15 @@
 
 #include <BSDFs/Diffuse.hlsl>
 #include <BSDFs/GGX.hlsl>
+#include <ShadingModels/IShadingModel.hlsl>
 #include <ShadingModels/Parameters.hlsl>
-#include <LightSources.hlsl>
-#include <Utils.hlsl>
 
 namespace ShadingModels {
 
 // ------------------------------------------------------------------------------------------------
 // Default shading.
 // ------------------------------------------------------------------------------------------------
-struct DefaultShading {
+struct DefaultShading : IShadingModel {
     float3 m_diffuse_tint;
     float m_roughness;
     float3 m_specularity;
