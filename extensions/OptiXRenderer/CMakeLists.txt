@@ -57,6 +57,7 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
     OptiXRenderer/Shading/ShadingModels/DefaultShading.h
     OptiXRenderer/Shading/ShadingModels/DiffuseShading.h
     OptiXRenderer/Shading/ShadingModels/RoughGlassShading.h
+    OptiXRenderer/Shading/ShadingModels/Utils.h
   )
 
   # Add the path to the ptx to a define.
