@@ -11,13 +11,11 @@
 
 #include <OptiXRenderer/Shading/BSDFs/Lambert.h>
 #include <OptiXRenderer/Shading/BSDFs/GGX.h>
+#include <OptiXRenderer/Shading/ShadingModels/Utils.h>
 #include <OptiXRenderer/Utils.h>
 
 #if GPU_DEVICE
 rtTextureSampler<float, 2> estimate_GGX_alpha_texture;
-rtTextureSampler<float2, 2> ggx_with_fresnel_rho_texture;
-#else
-#include <Bifrost/Assets/Shading/Fittings.h>
 #endif
 
 namespace OptiXRenderer {
@@ -45,29 +43,6 @@ private:
     float m_coat_roughness;
     unsigned short m_specular_probability;
     unsigned short m_coat_probability;
-
-    struct PrecomputedSpecularRho { 
-        float base, full;
-        __inline_all__ float rho(float specularity) { return optix::lerp(base, full, specularity); }
-        __inline_all__ optix::float3 rho(optix::float3 specularity) { 
-            return { rho(specularity.x), rho(specularity.y), rho(specularity.z) };
-        }
-    };
-
-    __inline_all__ static PrecomputedSpecularRho fetch_specular_rho(float abs_cos_theta, float roughness) {
-#if GPU_DEVICE
-        float2 specular_rho = tex2D(ggx_with_fresnel_rho_texture, abs_cos_theta, roughness);
-        return { specular_rho.x, specular_rho.y };
-#else
-        return { Bifrost::Assets::Shading::Rho::sample_GGX_with_fresnel(abs_cos_theta, roughness),
-                 Bifrost::Assets::Shading::Rho::sample_GGX(abs_cos_theta, roughness) };
-#endif
-    }
-
-    __inline_all__ static optix::float3 compute_specular_rho(optix::float3 specularity, float abs_cos_theta, float roughness) {
-        auto precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, roughness);
-        return precomputed_specular_rho.rho(specularity);
-    }
 
     __inline_all__ static float compute_specular_probability(optix::float3 diffuse_rho, optix::float3 specular_rho) {
         float diffuse_weight = sum(diffuse_rho);
@@ -114,18 +89,18 @@ private:
         m_specularity = lerp(make_float3(dielectric_specularity), conductor_specularity, metallic);
 
         // Specular directional-hemispherical reflectance function, rho.
-        PrecomputedSpecularRho precomputed_specular_rho = fetch_specular_rho(abs_cos_theta, m_roughness);
-        float dielectric_specular_rho = precomputed_specular_rho.rho(dielectric_specularity);
+        SpecularRho specular_rho = SpecularRho::fetch(abs_cos_theta, m_roughness);
+        float dielectric_specular_rho = specular_rho.rho(dielectric_specularity);
 
         // Dielectric tint.
-        float dielectric_lossless_specular_rho = dielectric_specular_rho / precomputed_specular_rho.full;
+        float dielectric_lossless_specular_rho = dielectric_specular_rho / specular_rho.full;
         float dielectric_specular_transmission = 1.0f - dielectric_lossless_specular_rho;
         float3 dielectric_tint = tint * dielectric_specular_transmission;
         m_diffuse_tint = dielectric_tint * (1.0f - metallic);
 
         // Compute microfacet specular interreflection. Assume it is diffuse and add its contribution to the diffuse tint.
-        float3 single_bounce_specular_rho = precomputed_specular_rho.rho(m_specularity);
-        float3 lossless_specular_rho = single_bounce_specular_rho / precomputed_specular_rho.full;
+        float3 single_bounce_specular_rho = specular_rho.rho(m_specularity);
+        float3 lossless_specular_rho = single_bounce_specular_rho / specular_rho.full;
         float3 specular_interreflection_rho = lossless_specular_rho - single_bounce_specular_rho;
         m_diffuse_tint += specular_interreflection_rho;
     }
@@ -153,9 +128,9 @@ private:
             // Clear coat with fixed index of refraction of 1.5 / specularity of 0.04, representative of polyurethane and glass.
             m_coat_scale = coat_scale;
             m_coat_roughness = coat_roughness;
-            PrecomputedSpecularRho precomputed_coat_rho = fetch_specular_rho(abs_cos_theta, coat_roughness);
-            coat_single_bounce_rho = coat_scale * precomputed_coat_rho.rho(COAT_SPECULARITY);
-            float lossless_coat_rho = coat_single_bounce_rho / precomputed_coat_rho.full;
+            SpecularRho coat_rho = SpecularRho::fetch(abs_cos_theta, coat_roughness);
+            coat_single_bounce_rho = coat_scale * coat_rho.rho(COAT_SPECULARITY);
+            float lossless_coat_rho = coat_single_bounce_rho / coat_rho.full;
             float coat_interreflection_rho = lossless_coat_rho - coat_single_bounce_rho;
             m_coat_transmission = 1.0f - lossless_coat_rho;
 
@@ -369,7 +344,7 @@ public:
     // Estimate the directional-hemispherical reflectance function.
     __inline_dev__ optix::float3 rho(float abs_cos_theta) const {
         optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness) * m_coat_transmission;
-        float single_bounce_coat_rho = m_coat_scale * fetch_specular_rho(abs_cos_theta, m_coat_roughness).rho(COAT_SPECULARITY);
+        float single_bounce_coat_rho = m_coat_scale * SpecularRho::fetch(abs_cos_theta, m_coat_roughness).rho(COAT_SPECULARITY);
         return m_diffuse_tint + specular_rho + single_bounce_coat_rho;
     }
 };
