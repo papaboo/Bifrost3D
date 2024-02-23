@@ -14,10 +14,6 @@
 #include <OptiXRenderer/Shading/ShadingModels/Utils.h>
 #include <OptiXRenderer/Utils.h>
 
-#if GPU_DEVICE
-rtTextureSampler<float, 2> estimate_GGX_alpha_texture;
-#endif
-
 namespace OptiXRenderer {
 namespace Shading {
 namespace ShadingModels {
@@ -186,23 +182,10 @@ public:
     }
 
     __inline_all__ static DefaultShading initialize_with_max_PDF_hint(const Material& material, float abs_cos_theta, optix::float2 texcoord, float max_PDF_hint) {
-        // Regularize the material by using a maximally allowed PDF hint and cos(theta) to estimate a minimally allowed GGX alpha / roughness.
-        float encoded_PDF = encode_PDF_for_GGX_alpha_estimation(max_PDF_hint);
-        // Rescale uv to start and end at the center of the first and last pixel, as the center values represent the edges of the function.
-        float2 uv = make_float2(optix::lerp(0.5f / 32, 31.5f / 32, encoded_PDF),
-                                optix::lerp(0.5f / 32, 31.5f / 32, abs_cos_theta));
-        float min_alpha = tex2D(estimate_GGX_alpha_texture, uv.x, uv.y);
-        float min_roughness = BSDFs::GGX::roughness_from_alpha(min_alpha);
+        float min_roughness = GGXMinimumRoughness::from_PDF(abs_cos_theta, max_PDF_hint);
         return DefaultShading(material, abs_cos_theta, texcoord, min_roughness);
     }
 #endif
-
-    __inline_all__ static float encode_PDF_for_GGX_alpha_estimation(float pdf) {
-        // Floats larger than 16777216 can't represent integers accurately, so we max at 16777216 - 1 to accurately represent the addition below.
-        pdf = fminf(pdf, 16777215.0f);
-        float non_linear_PDF = pdf / (1.0f + pdf);
-        return (non_linear_PDF - 0.13f) / 0.87f;
-    }
 
     __inline_all__ float get_roughness() const { return m_roughness; }
 
