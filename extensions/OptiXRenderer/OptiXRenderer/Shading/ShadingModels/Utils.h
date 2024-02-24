@@ -24,8 +24,8 @@ namespace ShadingModels {
 // Specular rho helpers.
 // ------------------------------------------------------------------------------------------------
 struct SpecularRho {
-    const static int angle_sample_count = 64;
-    const static int roughness_sample_count = 64;
+    const static int angle_sample_count = 32;
+    const static int roughness_sample_count = 32;
 
     float base, full;
     __inline_all__ float rho(float specularity) { return optix::lerp(base, full, specularity); }

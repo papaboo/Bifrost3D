@@ -334,7 +334,7 @@ int main(int argc, char** argv) {
     std::string output_dir = argc >= 2? argv[1] : std::string(BIFROST_SHADING_DIR);
     printf("output_dir: %s\n", output_dir.c_str());
 
-    const unsigned int width = 64, height = 64, sample_count = 4096;
+    const unsigned int width = 32, height = 32, sample_count = 4096;
 
     Images::allocate(1);
 

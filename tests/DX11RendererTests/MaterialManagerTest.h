@@ -124,8 +124,8 @@ GTEST_TEST(MaterialManager, sample_GPU_rho_texture_consistent_with_CPU) {
             float expected_ggx_rho = Rho::sample_GGX(cos_theta, roughness);
             float expected_ggx_with_fresnel_rho = Rho::sample_GGX_with_fresnel(cos_theta, roughness);
 
-            EXPECT_FLOAT_EQ_EPS(actual_ggx_rho, expected_ggx_rho, 0.00001f);
-            EXPECT_FLOAT_EQ_EPS(actual_ggx_with_fresnel_rho, expected_ggx_with_fresnel_rho, 0.00001f);
+            EXPECT_FLOAT_EQ_EPS(actual_ggx_rho, expected_ggx_rho, 0.0001f);
+            EXPECT_FLOAT_EQ_EPS(actual_ggx_with_fresnel_rho, expected_ggx_with_fresnel_rho, 0.0001f);
         }
     }
 }
