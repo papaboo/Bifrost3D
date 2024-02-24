@@ -9,6 +9,7 @@
 #ifndef _OPTIXRENDERER_LIGHT_IMPLEMENTATION_H_
 #define _OPTIXRENDERER_LIGHT_IMPLEMENTATION_H_
 
+#include <OptiXRenderer/MonteCarlo.h>
 #include <OptiXRenderer/Shading/LightSources/DirectionalLightImpl.h>
 #include <OptiXRenderer/Shading/LightSources/EnvironmentLightImpl.h>
 #include <OptiXRenderer/Shading/LightSources/PresampledEnvironmentLightImpl.h>
@@ -91,8 +92,7 @@ __inline_dev__ optix::float3 evaluate_intersection(const LightType& light, optix
     if (bsdf_PDF.use_for_MIS()) {
         // Calculate MIS weight and scale the radiance by it.
         float light_PDF = PDF(light, position, ray.direction);
-        float mis_weight = RNG::power_heuristic(bsdf_PDF.PDF(), light_PDF);
-        radiance *= mis_weight;
+        radiance *= MonteCarlo::MIS_weight(bsdf_PDF.PDF(), light_PDF);
     } else if (next_event_estimated)
         // Previous bounce used next event estimation, but did not calculate MIS, so don't apply light contribution.
         radiance = make_float3(0.0f);

@@ -6,6 +6,7 @@
 // See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
+#include <OptiXRenderer/MonteCarlo.h>
 #include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>
 #include <OptiXRenderer/Shading/LightSources/LightImpl.h>
 #include <OptiXRenderer/TBN.h>
@@ -88,10 +89,9 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
     BSDFResponse bsdf_response = material.evaluate_with_PDF(monte_carlo_payload.direction, shading_light_direction);
     bool delta_light = LightSources::is_delta_light(light, monte_carlo_payload.position);
     bool apply_MIS = !delta_light && monte_carlo_payload.bounces < g_camera_state.max_bounce_count;
-    if (apply_MIS) { // TODO Try using math instead and profile using test scene.
-        float mis_weight = RNG::power_heuristic(light_sample.PDF, bsdf_response.PDF);
-        light_sample.radiance *= mis_weight;
-    } else
+    if (apply_MIS) // TODO Try using math instead of branching and profile using test scene.
+        light_sample.radiance *= MonteCarlo::MIS_weight(light_sample.PDF, bsdf_response.PDF);
+    else
         // BIAS Nearly specular materials and delta lights will lead to insane fireflies, so we clamp them here.
         bsdf_response.reflectance = fminf(bsdf_response.reflectance, make_float3(32.0f));
 
