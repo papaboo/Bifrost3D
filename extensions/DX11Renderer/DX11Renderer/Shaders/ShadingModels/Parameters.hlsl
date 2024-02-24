@@ -35,8 +35,8 @@ Texture2D<float2> ggx_with_fresnel_rho_tex : register(t15);
 // Specular rho helpers.
 // ------------------------------------------------------------------------------------------------
 struct SpecularRho {
-    static const int angle_sample_count = 64;
-    static const int roughness_sample_count = 64;
+    static const int angle_sample_count = 32;
+    static const int roughness_sample_count = 32;
 
     float base, full;
     float rho(float specularity) { return lerp(base, full, specularity); }
