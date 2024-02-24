@@ -85,17 +85,25 @@ __inline_all__ unsigned int teschner_hash(unsigned int x, unsigned int y, unsign
 __inline_all__ float power_heuristic(float pdf1, float pdf2) {
     pdf1 *= pdf1;
     pdf2 *= pdf2;
-    float result = pdf1 / (pdf1 + pdf2);
+    float divisor = pdf1 + pdf2;
+    float result = pdf1 / divisor;
     // This is where floating point math gets tricky!
-    // If the mis weight is NaN then it can be caused by three things.
-    // 1. pdf1 is so insanely high that pdf1 * pdf1 = infinity. In that case we end up with inf / (inf + pdf2^2) and return 1, unless pdf2 was larger than pdf1, i.e. 'more infinite :p', then we return 0.
-    // 2. Conversely pdf2 can also be so insanely high that pdf2 * pdf2 = infinity. This is handled analogously to above.
-    // 3. pdf2 can also be NaN. In this case the power heuristic is ill-defined and we return 0.
-    return !isnan(result) ? result : (pdf1 > pdf2 ? 1.0f : 0.0f);
+    // If the power heuristic weight is NaN then it can be caused by three things.
+    // 1. pdf1 is so large that pdf1 * pdf1 = infinity. In that case we end up with inf / (inf + pdf2^2) and return 1, unless pdf2 was larger than pdf1, i.e. 'more infinite :p', then we return 0.
+    // 2. Conversely pdf2 can also be so large that pdf2 * pdf2 = infinity. This is handled analogously to above.
+    // 3. pdf2 can also be NaN. In this case only the first sample is valid and the returned weight should be 1.
+    bool result_is_invalid = isinf(divisor) || isnan(result);
+    return result_is_invalid ? (pdf1 <= pdf2 ? 0.0f : 1.0f) : result;
 }
 
+// Computes the balance heuristic of pdf1 and pdf2.
+// It is assumed that pdf1 is always valid, i.e. not NaN.
+// pdf2 is allowed to be NaN, but generally try to avoid it. :)
 __inline_all__ float balance_heuristic(float pdf1, float pdf2) {
-    return pdf1 / (pdf1 + pdf2);
+    float divisor = pdf1 + pdf2;
+    float result = pdf1 / divisor;
+    bool result_is_invalid = isinf(divisor) || isnan(result);
+    return result_is_invalid ? (pdf1 <= pdf2 ? 0.0f : 1.0f) : result;
 }
 
 // ------------------------------------------------------------------------------------------------
