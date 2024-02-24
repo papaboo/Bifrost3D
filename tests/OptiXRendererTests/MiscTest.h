@@ -12,6 +12,8 @@
 #include <Utils.h>
 
 #include <Bifrost/Math/OctahedralNormal.h>
+
+#include <OptiXRenderer/MonteCarlo.h>
 #include <OptiXRenderer/OctahedralNormal.h>
 
 #include <gtest/gtest.h>
@@ -44,54 +46,54 @@ GTEST_TEST(OctahedralNormal, equality_with_bifrost_implementation) {
 
 GTEST_TEST(MonteCarlo, Balance_heuristic_invariants) {
     // Sanity checks.
-    EXPECT_FLOAT_EQ(0.5f, RNG::balance_heuristic(1.0f, 1.0f));
-    EXPECT_FLOAT_EQ(0.25f, RNG::balance_heuristic(1.0f, 3.0f));
+    EXPECT_FLOAT_EQ(0.5f, MonteCarlo::balance_heuristic(1.0f, 1.0f));
+    EXPECT_FLOAT_EQ(0.25f, MonteCarlo::balance_heuristic(1.0f, 3.0f));
 
     // The balance heuristic should return 1 if the second pdf is NAN, as then the first sample trivially wins.
-    EXPECT_EQ(1.0f, RNG::balance_heuristic(1.0f, NAN));
+    EXPECT_EQ(1.0f, MonteCarlo::balance_heuristic(1.0f, NAN));
 
     float almost_inf = FLT_MAX;
     EXPECT_TRUE(isinf(almost_inf + almost_inf));
 
     // The balance heuristic should handle values close to infinity.
-    EXPECT_FLOAT_EQ(1.0f / almost_inf, RNG::balance_heuristic(1.0f, almost_inf));
-    EXPECT_FLOAT_EQ(1.0f, RNG::balance_heuristic(almost_inf, 1.0f));
-    EXPECT_FLOAT_EQ(0.0f, RNG::balance_heuristic(0.5f * almost_inf, almost_inf));
-    EXPECT_FLOAT_EQ(1.0f, RNG::balance_heuristic(almost_inf, 0.5f * almost_inf));
+    EXPECT_FLOAT_EQ(1.0f / almost_inf, MonteCarlo::balance_heuristic(1.0f, almost_inf));
+    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::balance_heuristic(almost_inf, 1.0f));
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.5f * almost_inf, almost_inf));
+    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::balance_heuristic(almost_inf, 0.5f * almost_inf));
 
     // The balance heuristic should handle infinity.
-    EXPECT_FLOAT_EQ(0.0f, RNG::balance_heuristic(1.0f, INFINITY));
-    EXPECT_FLOAT_EQ(1.0f, RNG::balance_heuristic(INFINITY, 1.0f));
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(1.0f, INFINITY));
+    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::balance_heuristic(INFINITY, 1.0f));
 
     // Zero should be a valid first parameter and always return zero.
-    EXPECT_FLOAT_EQ(0.0f, RNG::balance_heuristic(0.0f, 0.0f));
-    EXPECT_FLOAT_EQ(0.0f, RNG::balance_heuristic(0.0f, 1.0f));
-    EXPECT_FLOAT_EQ(0.0f, RNG::balance_heuristic(0.0f, almost_inf));
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.0f, 0.0f));
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.0f, 1.0f));
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.0f, almost_inf));
 }
 
 GTEST_TEST(MonteCarlo, Power_heuristic_invariants) {
     // Sanity checks.
-    EXPECT_FLOAT_EQ(0.5f, RNG::power_heuristic(1.0f, 1.0f));
-    EXPECT_FLOAT_EQ(0.1f, RNG::power_heuristic(1.0f, 3.0f));
+    EXPECT_FLOAT_EQ(0.5f, MonteCarlo::power_heuristic(1.0f, 1.0f));
+    EXPECT_FLOAT_EQ(0.1f, MonteCarlo::power_heuristic(1.0f, 3.0f));
 
     // The power heuristic should return 1 if the second pdf is NAN, as then the first sample trivially wins.
-    EXPECT_EQ(1.0f, RNG::power_heuristic(1.0f, NAN));
+    EXPECT_EQ(1.0f, MonteCarlo::power_heuristic(1.0f, NAN));
 
     float almost_inf = FLT_MAX;
     EXPECT_TRUE(isinf(almost_inf * almost_inf));
 
     // The power heuristic should handle values that squared become infinity.
-    EXPECT_FLOAT_EQ(0.0f, RNG::power_heuristic(1.0f, almost_inf));
-    EXPECT_FLOAT_EQ(1.0f, RNG::power_heuristic(almost_inf, 1.0f));
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(1.0f, almost_inf));
+    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::power_heuristic(almost_inf, 1.0f));
 
     // Zero should be a valid first parameter and always return zero.
-    EXPECT_FLOAT_EQ(0.0f, RNG::power_heuristic(0.0f, 0.0f));
-    EXPECT_FLOAT_EQ(0.0f, RNG::power_heuristic(0.0f, 1.0f));
-    EXPECT_FLOAT_EQ(0.0f, RNG::power_heuristic(0.0f, almost_inf));
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.0f, 0.0f));
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.0f, 1.0f));
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.0f, almost_inf));
 
     // Hacking the power heuristic by giving it pdf's that'll force the divisor to become infinite.
-    EXPECT_FLOAT_EQ(0.0f, RNG::power_heuristic(0.9f * sqrt(almost_inf), sqrt(almost_inf)));
-    EXPECT_FLOAT_EQ(1.0f, RNG::power_heuristic(sqrt(almost_inf), 0.9f * sqrt(almost_inf)));
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.9f * sqrt(almost_inf), sqrt(almost_inf)));
+    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::power_heuristic(sqrt(almost_inf), 0.9f * sqrt(almost_inf)));
 }
 
 GTEST_TEST(Specularity, dielectric_conversions_to_and_from_index_of_refraction) {
