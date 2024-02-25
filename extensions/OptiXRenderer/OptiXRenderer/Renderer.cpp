@@ -10,7 +10,6 @@
 
 #include <OptiXRenderer/EnvironmentMap.h>
 #include <OptiXRenderer/IBackend.h>
-#include <OptiXRenderer/OctahedralNormal.h>
 #include <OptiXRenderer/PresampledEnvironmentMap.h>
 #include <OptiXRenderer/Types.h>
 

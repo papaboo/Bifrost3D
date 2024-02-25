@@ -18,7 +18,6 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
     OptiXRenderer/IBackend.cpp
     OptiXRenderer/Intersect.h
     OptiXRenderer/MonteCarlo.h
-    OptiXRenderer/OctahedralNormal.h
     OptiXRenderer/PresampledEnvironmentMap.h
     OptiXRenderer/PresampledEnvironmentMap.cpp
     OptiXRenderer/PublicTypes.h
