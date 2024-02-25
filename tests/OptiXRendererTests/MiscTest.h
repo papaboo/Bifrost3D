@@ -14,7 +14,7 @@
 #include <Bifrost/Math/OctahedralNormal.h>
 
 #include <OptiXRenderer/MonteCarlo.h>
-#include <OptiXRenderer/OctahedralNormal.h>
+#include <OptiXRenderer/Types.h>
 
 #include <gtest/gtest.h>
 

@@ -10,7 +10,6 @@
 #define _OPTIXRENDERER_TYPES_H_
 
 #include <OptiXRenderer/Defines.h>
-#include <OptiXRenderer/OctahedralNormal.h>
 #include <OptiXRenderer/PublicTypes.h>
 #include <OptiXRenderer/RNG.h>
 
@@ -47,6 +46,27 @@ struct MeshFlags {
     static const unsigned char None = 0u;
     static const unsigned char Normals = 1u << 0u;
     static const unsigned char Texcoords = 1u << 1u;
+};
+
+//-------------------------------------------------------------------------------------------------
+// OptiX decoder for Bifrost::Math::OctahedralNormal.
+//-------------------------------------------------------------------------------------------------
+struct __align__(4) OctahedralNormal {
+
+    optix::short2 encoding;
+
+    __inline_all__ static float sign(float v) { return v >= 0.0f ? +1.0f : -1.0f; }
+
+    __inline_all__ optix::float3 decode_unnormalized() const {
+        optix::float2 p2 = optix::make_float2(encoding.x, encoding.y);
+        optix::float3 n = optix::make_float3(p2, SHRT_MAX - fabsf(p2.x) - fabsf(p2.y));
+        if (n.z < 0.0f) {
+            float tmp_x = (SHRT_MAX - fabsf(n.y)) * sign(n.x);
+            n.y = (SHRT_MAX - fabsf(n.x)) * sign(n.y);
+            n.x = tmp_x;
+        }
+        return n;
+    }
 };
 
 //----------------------------------------------------------------------------
