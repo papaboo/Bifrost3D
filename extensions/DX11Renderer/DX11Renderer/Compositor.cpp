@@ -303,7 +303,6 @@ public:
             m_previous_effects_times[renderer_ID] = current_time;
 
             // Post process the images with the camera effects.
-            CameraID camera_ID = *Cameras::get_iterable().begin();
             auto effects_settings = Cameras::get_effects_settings(camera_ID);
             m_camera_effects.process(m_render_context, effects_settings, delta_time, frame.frame_SRV, m_swap_chain_RTV, frame.viewport, Recti(viewport));
 
