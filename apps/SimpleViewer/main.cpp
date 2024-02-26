@@ -548,32 +548,6 @@ int initialize_scene(Engine& engine) {
         Cameras::set_renderer_ID(second_cam_ID, *new_renderer_itr);
     }
 
-#ifdef OPTIX_FOUND
-    class OptiXBackendSwitcher {
-    public:
-        OptiXBackendSwitcher(OptiXRenderer::Renderer* renderer, CameraID camera_ID)
-            : m_renderer(renderer), m_camera_ID(camera_ID) { }
-
-        void handle(const Engine& engine) {
-            const Keyboard* keyboard = engine.get_keyboard();
-
-            bool shift_pressed = keyboard->is_pressed(Keyboard::Key::LeftShift) || keyboard->is_pressed(Keyboard::Key::RightShift);
-            if (keyboard->was_released(Keyboard::Key::P) && shift_pressed) {
-                int backend_index = (int)m_renderer->get_backend(m_camera_ID);
-                int new_backend_index = (backend_index + 1) % 3;
-                m_renderer->set_backend(m_camera_ID, (OptiXRenderer::Backend)new_backend_index);
-            }
-        }
-
-    private:
-        OptiXRenderer::Renderer* m_renderer;
-        CameraID m_camera_ID;
-    };
-
-    OptiXBackendSwitcher* backend_switcher = new OptiXBackendSwitcher(optix_renderer, cam_ID);
-    engine.add_mutating_callback([=, &engine] { backend_switcher->handle(engine); });
-#endif
-
     return 0;
 }
 
