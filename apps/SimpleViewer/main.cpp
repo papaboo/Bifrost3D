@@ -620,10 +620,6 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
         compositor->add_GUI_renderer([](ODevice1& device) -> IGuiRenderer* { return new ImGui::Renderers::DX11Renderer(device); });
     }
 
-    RendererID default_renderer = *Renderers::begin();
-    for (auto camera_ID : Cameras::get_iterable())
-        Cameras::set_renderer_ID(camera_ID, default_renderer);
-
     engine.add_non_mutating_callback([=] { compositor->render(); });
 
     return initialize_scene(engine);
