@@ -11,11 +11,12 @@
 
 #include <Bifrost/Math/Utils.h>
 
+using namespace Bifrost::Math;
 using namespace optix;
 
 namespace OptiXRenderer {
 
-AIDenoisedBackend::AIDenoisedBackend(optix::Context& context, AIDenoiserFlags* flags, int width, int height)
+AIDenoisedBackend::AIDenoisedBackend(optix::Context& context, AIDenoiserFlags* flags)
     : m_flags(flags) {
 
     m_noisy_pixels = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4);
@@ -33,12 +34,12 @@ AIDenoisedBackend::AIDenoisedBackend(optix::Context& context, AIDenoiserFlags* f
 
     m_presenting_command_list = nullptr;
     m_not_presenting_command_list = nullptr;
-
-    resize_backbuffers(width, height);
 }
 
-void AIDenoisedBackend::resize_backbuffers(int width, int height) {
+void AIDenoisedBackend::resize_backbuffers(Vector2i frame_size) {
     auto context = m_denoiser->getContext();
+    int width = frame_size.x;
+    int height = frame_size.y;
 
     // Resize internal buffers
     m_noisy_pixels->setSize(width, height);
@@ -59,7 +60,9 @@ void AIDenoisedBackend::resize_backbuffers(int width, int height) {
     m_not_presenting_command_list->finalize();
 }
 
-void AIDenoisedBackend::render(optix::Context& context, int width, int height, int accumulation_count) {
+void AIDenoisedBackend::render(optix::Context& context, Vector2i frame_size, int accumulation_count) {
+    int width = frame_size.x;
+    int height = frame_size.y;
 
     RTsize albedoSize;
     m_albedo->getSize(albedoSize);

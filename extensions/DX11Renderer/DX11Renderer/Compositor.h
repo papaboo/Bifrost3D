@@ -47,22 +47,20 @@ namespace DX11Renderer {
 //-------------------------------------------------------------------------------------------------
 struct RenderedFrame {
     OShaderResourceView& frame_SRV;
-    Bifrost::Math::Rect<int> viewport;
+    Bifrost::Math::Recti frame_viewport;
     unsigned int iteration_count;
 };
 
 //-------------------------------------------------------------------------------------------------
 // Renderer interface.
-// Future work:
-// * Pass masked areas (rects) from overlapping (opaque) cameras in render, to help with masking and culling.
 //-------------------------------------------------------------------------------------------------
 class IRenderer {
 public:
     virtual ~IRenderer() {}
     virtual Bifrost::Core::RendererID get_ID() const = 0;
     virtual void handle_updates() = 0;
-    virtual RenderedFrame render(Bifrost::Scene::CameraID camera_ID, int width, int height) = 0;
-    virtual std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, int width, int height) { return std::vector<Bifrost::Scene::Screenshot>(); }
+    virtual RenderedFrame render(Bifrost::Scene::CameraID camera_ID, Bifrost::Math::Vector2i frame_size) = 0;
+    virtual std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, Bifrost::Math::Vector2i frame_size) { return std::vector<Bifrost::Scene::Screenshot>(); }
 };
 
 typedef IRenderer*(*RendererCreator)(ID3D11Device1& device);

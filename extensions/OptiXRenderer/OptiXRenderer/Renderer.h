@@ -59,9 +59,9 @@ public:
 
     void handle_updates();
 
-    unsigned int render(Bifrost::Scene::CameraID camera_ID, optix::Buffer buffer, int width, int height);
+    unsigned int render(Bifrost::Scene::CameraID camera_ID, optix::Buffer buffer, Bifrost::Math::Vector2i frame_size);
 
-    std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, int width, int height);
+    std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, Bifrost::Math::Vector2i frame_size);
 
     optix::Context& get_context();
 

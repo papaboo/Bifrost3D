@@ -120,6 +120,7 @@ public:
     static std::vector<CameraID> get_z_sorted_IDs();
 
     static Math::Rectf get_viewport(CameraID camera_ID) { return m_viewports[camera_ID]; }
+    static Math::Recti get_window_viewport(CameraID camera_ID, Math::Vector2i window_size);
     static void set_viewport(CameraID camera_ID, Math::Rectf projectionport) { m_viewports[camera_ID] = projectionport; }
 
     static Math::CameraEffects::Settings get_effects_settings(CameraID camera_ID) { return m_effects_settings[camera_ID]; }
