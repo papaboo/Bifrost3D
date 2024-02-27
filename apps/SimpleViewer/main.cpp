@@ -542,10 +542,6 @@ int initialize_scene(Engine& engine) {
         Cameras::set_transform(second_cam_ID, Cameras::get_transform(cam_ID));
         Cameras::set_viewport(second_cam_ID, Rectf(0.75f, 0.75f, 0.25f, 0.25));
         Cameras::set_z_index(second_cam_ID, 1);
-        Renderers::Iterator renderer_itr = Renderers::get_iterator(Cameras::get_renderer_ID(cam_ID));
-        ++renderer_itr;
-        Renderers::Iterator new_renderer_itr = (renderer_itr == Renderers::end()) ? Renderers::begin() : renderer_itr;
-        Cameras::set_renderer_ID(second_cam_ID, *new_renderer_itr);
     }
 
     return 0;
