@@ -28,7 +28,7 @@ namespace DX11Renderer {
 // * Frustum culling.
 // * Sort models by material ID as well and use the info while rendering.
 //   If the material hasn't changed then don't rebind it or the textures.
-// * Switch swap chain to use the flip  model. https://blogs.msdn.microsoft.com/directx/2018/04/09/dxgi-flip-model/
+// * Switch swap chain to use the flip model. https://blogs.msdn.microsoft.com/directx/2018/04/09/dxgi-flip-model/
 // * Use reverse Z for stabile Z. https://mynameismjp.wordpress.com/2010/03/22/attack-of-the-depth-buffer/
 // ------------------------------------------------------------------------------------------------
 class Renderer final : public IRenderer {
@@ -48,7 +48,8 @@ public:
         DisplayMode display_mode = DisplayMode::Color;
     };
 
-    static IRenderer* initialize(ID3D11Device1& device, int width_hint, int height_hint);
+    Renderer(ID3D11Device1& device);
+    static IRenderer* initialize(ID3D11Device1& device) { return new Renderer(device); }
     ~Renderer();
 
     Bifrost::Core::RendererID get_ID() const { return m_renderer_ID; }
@@ -64,8 +65,6 @@ public:
     void set_debug_settings(DebugSettings& settings);
 
 private:
-
-    Renderer(ID3D11Device1& device, int width_hint, int height_hint);
 
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Renderer(Renderer& other) = delete;

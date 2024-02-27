@@ -27,7 +27,8 @@ namespace DX11OptiXAdaptor {
 //-------------------------------------------------------------------------------------------------
 class Adaptor final : public DX11Renderer::IRenderer {
 public:
-    static DX11Renderer::IRenderer* initialize(ID3D11Device1& device, int width_hint, int height_hint);
+    Adaptor(ID3D11Device1& device);
+    static DX11Renderer::IRenderer* initialize(ID3D11Device1& device) { return new Adaptor(device); }
     ~Adaptor();
 
     Bifrost::Core::RendererID get_ID() const { return m_renderer_ID; }
@@ -40,8 +41,6 @@ public:
     std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, int width, int height);
 
 private:
-
-    Adaptor(ID3D11Device1& device, int width_hint, int height_hint);
 
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Adaptor(Adaptor& other) = delete;

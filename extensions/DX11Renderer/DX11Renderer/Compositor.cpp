@@ -171,7 +171,7 @@ public:
     }
 
     std::unique_ptr<IRenderer>& add_renderer(RendererCreator renderer_creator) {
-        IRenderer* renderer = renderer_creator(*m_device, m_window.get_width(), m_window.get_height());
+        IRenderer* renderer = renderer_creator(*m_device);
         if (renderer == nullptr)
             return m_renderers[0];
 
