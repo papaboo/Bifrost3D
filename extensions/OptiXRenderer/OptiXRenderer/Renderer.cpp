@@ -249,7 +249,7 @@ struct Renderer::Implementation {
         optix::Geometry area_lights_geometry;
     } lights;
 
-    Implementation(int cuda_device_ID, int width_hint, int height_hint, RendererID renderer_ID) {
+    Implementation(int cuda_device_ID, RendererID renderer_ID) {
 
 #pragma warning(disable : 4302 4311)
 
@@ -1244,9 +1244,9 @@ struct Renderer::Implementation {
 // Renderer
 // ------------------------------------------------------------------------------------------------
 
-Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hint, RendererID renderer_ID) {
+Renderer* Renderer::initialize(int cuda_device_ID, RendererID renderer_ID) {
     try {
-        Renderer* r = new Renderer(cuda_device_ID, width_hint, height_hint, renderer_ID);
+        Renderer* r = new Renderer(cuda_device_ID, renderer_ID);
         if (r->m_impl->is_valid())
             return r;
         else {
@@ -1259,8 +1259,8 @@ Renderer* Renderer::initialize(int cuda_device_ID, int width_hint, int height_hi
     }
 }
 
-Renderer::Renderer(int cuda_device_ID, int width_hint, int height_hint, RendererID renderer_ID)
-    : m_impl(new Implementation(cuda_device_ID, width_hint, height_hint, renderer_ID)) {}
+Renderer::Renderer(int cuda_device_ID, RendererID renderer_ID)
+    : m_impl(new Implementation(cuda_device_ID, renderer_ID)) {}
 
 float Renderer::get_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID) const { return m_impl->scene.GPU_state.ray_epsilon; }
 void Renderer::set_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID, float scene_epsilon) {

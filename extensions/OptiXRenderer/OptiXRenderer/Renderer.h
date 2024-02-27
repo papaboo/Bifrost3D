@@ -37,7 +37,7 @@ namespace OptiXRenderer {
 // ------------------------------------------------------------------------------------------------
 class Renderer final {
 public:
-    static Renderer* initialize(int cuda_device_ID, int width_hint, int height_hint, Bifrost::Core::RendererID renderer_ID);
+    static Renderer* initialize(int cuda_device_ID, Bifrost::Core::RendererID renderer_ID);
 
     float get_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID) const;
     void set_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID, float scene_epsilon);
@@ -67,7 +67,7 @@ public:
 
 private:
 
-    Renderer(int cuda_device_ID, int width_hint, int height_hint, Bifrost::Core::RendererID renderer_ID);
+    Renderer(int cuda_device_ID, Bifrost::Core::RendererID renderer_ID);
 
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Renderer(Renderer& other) = delete;

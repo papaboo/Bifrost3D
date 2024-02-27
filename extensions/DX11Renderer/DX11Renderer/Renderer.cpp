@@ -149,7 +149,7 @@ private:
     } m_debug;
 
 public:
-    Implementation(ID3D11Device1& device, int width_hint, int height_hint)
+    Implementation(ID3D11Device1& device)
         : m_device(device) {
 
         device.GetImmediateContext1(&m_render_context);
@@ -863,12 +863,8 @@ public:
 //----------------------------------------------------------------------------
 // DirectX 11 renderer.
 //----------------------------------------------------------------------------
-IRenderer* Renderer::initialize(ID3D11Device1& device, int width_hint, int height_hint) {
-    return new Renderer(device, width_hint, height_hint);
-}
-
-Renderer::Renderer(ID3D11Device1& device, int width_hint, int height_hint) {
-    m_impl = new Implementation(device, width_hint, height_hint);
+Renderer::Renderer(ID3D11Device1& device) {
+    m_impl = new Implementation(device);
     m_renderer_ID = Renderers::create("DX11Renderer");
 }
 
