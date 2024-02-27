@@ -56,7 +56,7 @@ public:
 
     void handle_updates();
 
-    RenderedFrame render(Bifrost::Scene::CameraID camera_ID, int width, int height);
+    RenderedFrame render(Bifrost::Scene::CameraID camera_ID, Bifrost::Math::Vector2i frame_size);
 
     Settings get_settings() const;
     void set_settings(Settings& settings);

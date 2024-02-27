@@ -177,6 +177,16 @@ std::vector<CameraID> Cameras::get_z_sorted_IDs() {
     return IDs;
 }
 
+Recti Cameras::get_window_viewport(CameraID camera_ID, Vector2i window_size) {
+    Rectf viewportf = Cameras::get_viewport(camera_ID);
+    Recti window_viewport;
+    window_viewport.x = int(round(viewportf.x * window_size.x));
+    window_viewport.width = int(round(viewportf.width * window_size.x));
+    window_viewport.y = int(round(viewportf.y * window_size.y));
+    window_viewport.height = int(round(viewportf.height * window_size.y));
+    return window_viewport;
+}
+
 void Cameras::fill_screenshot(CameraID camera_ID, ScreenshotFiller screenshot_filler) {
     if (is_screenshot_requested(camera_ID)) {
         auto& screenshot_info = m_screenshot_request[camera_ID];

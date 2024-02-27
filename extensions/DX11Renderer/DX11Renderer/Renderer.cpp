@@ -435,18 +435,20 @@ public:
             context->Draw(mesh.vertex_count, 0);
     } 
 
-    RenderedFrame render(const Bifrost::Scene::CameraID camera_ID, int width, int height) {
-        m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    RenderedFrame render(const Bifrost::Scene::CameraID camera_ID, Vector2i frame_size) {
+        int frame_width = frame_size.x;
+        int frame_height = frame_size.y;
 
-        int2 g_buffer_guard_band_size = { int(width * m_settings.g_buffer_guard_band_scale), int(height * m_settings.g_buffer_guard_band_scale) };
-        int g_buffer_width = width + 2 * g_buffer_guard_band_size.x;
-        int g_buffer_height = height + 2 * g_buffer_guard_band_size.y;
-        Rect<int> backbuffer_viewport = { g_buffer_guard_band_size.x, g_buffer_guard_band_size.y, width, height };
+        int2 g_buffer_guard_band_size = { int(frame_width * m_settings.g_buffer_guard_band_scale),
+                                          int(frame_height * m_settings.g_buffer_guard_band_scale) };
+        int g_buffer_width = frame_width + 2 * g_buffer_guard_band_size.x;
+        int g_buffer_height = frame_height + 2 * g_buffer_guard_band_size.y;
+        Recti backbuffer_viewport = { g_buffer_guard_band_size.x, g_buffer_guard_band_size.y, frame_width, frame_height };
 
         SceneRoot scene = Cameras::get_scene_ID(camera_ID);
         { // Setup scene constants.
             // Recalculate the guard band scale to account for the buffer dimensions being discrete.
-            float2 guard_band_scale = { g_buffer_guard_band_size.x / float(width), g_buffer_guard_band_size.y / float(height) };
+            float2 guard_band_scale = { g_buffer_guard_band_size.x / float(frame_width), g_buffer_guard_band_size.y / float(frame_height) };
 
             // Scale projection matrix and it's inverse to fit the projection onto the backbuffer + guard band.
             float2 inverse_projection_matrix_scale = { 1.0f + 2.0f * guard_band_scale.x, 1.0f + 2.0f * guard_band_scale.y };
@@ -482,6 +484,8 @@ public:
             m_render_context->VSSetConstantBuffers(12, 1, m_lights.manager.light_buffer_addr());
             m_render_context->PSSetConstantBuffers(12, 1, m_lights.manager.light_buffer_addr());
         }
+
+        m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         { // Render G-buffer
             auto g_buffer_marker = PerformanceMarker(*m_render_context, L"G-buffer");
@@ -564,7 +568,7 @@ public:
 
         // Scissor rect to disable rendering to the guard band.
         D3D11_RECT rect = CD3D11_RECT(g_buffer_guard_band_size.x, g_buffer_guard_band_size.y,
-                                        width + g_buffer_guard_band_size.x, height + g_buffer_guard_band_size.y);
+                                      frame_width + g_buffer_guard_band_size.x, frame_height + g_buffer_guard_band_size.y);
         m_render_context->RSSetScissorRects(1, &rect);
 
         // Debug display g-buffer or AO
@@ -877,8 +881,8 @@ void Renderer::handle_updates() {
     m_impl->handle_updates();
 }
 
-RenderedFrame Renderer::render(Bifrost::Scene::CameraID camera_ID, int width, int height) {
-    return m_impl->render(camera_ID, width, height);
+RenderedFrame Renderer::render(Bifrost::Scene::CameraID camera_ID, Vector2i frame_size) {
+    return m_impl->render(camera_ID, frame_size);
 }
 
 Renderer::Settings Renderer::get_settings() const { return m_impl->get_settings(); }

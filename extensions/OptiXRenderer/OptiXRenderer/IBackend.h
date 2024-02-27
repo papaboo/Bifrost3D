@@ -9,6 +9,8 @@
 #ifndef _OPTIXRENDERER_IBACKEND_H_
 #define _OPTIXRENDERER_IBACKEND_H_
 
+#include <Bifrost/Math/Vector.h>
+
 #include <OptiXRenderer/PublicTypes.h>
 
 #include <optixu/optixpp_namespace.h>
@@ -21,8 +23,8 @@ namespace OptiXRenderer {
 class IBackend {
 public:
     virtual ~IBackend() { };
-    virtual void resize_backbuffers(int width, int height) = 0;
-    virtual void render(optix::Context& context, int width, int height, int accumulation_count) = 0;
+    virtual void resize_backbuffers(Bifrost::Math::Vector2i frame_size) = 0;
+    virtual void render(optix::Context& context, Bifrost::Math::Vector2i frame_size, int accumulation_count) = 0;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -33,9 +35,9 @@ class SimpleBackend : public IBackend {
 public:
     SimpleBackend(int entry_point) : m_entry_point(entry_point) { }
     ~SimpleBackend() { }
-    void resize_backbuffers(int width, int height) {}
-    void render(optix::Context& context, int width, int height, int accumulation_count) {
-        context->launch(m_entry_point, width, height);
+    void resize_backbuffers(Bifrost::Math::Vector2i frame_size) {}
+    void render(optix::Context& context, Bifrost::Math::Vector2i frame_size, int accumulation_count) {
+        context->launch(m_entry_point, frame_size.x, frame_size.y);
     }
 private:
     int m_entry_point;
@@ -46,10 +48,10 @@ private:
 // ------------------------------------------------------------------------------------------------
 class AIDenoisedBackend : public IBackend {
 public:
-    AIDenoisedBackend(optix::Context& context, AIDenoiserFlags* flags, int width, int height);
+    AIDenoisedBackend(optix::Context& context, AIDenoiserFlags* flags);
     ~AIDenoisedBackend() { }
-    void resize_backbuffers(int width, int height);
-    void render(optix::Context& context, int width, int height, int accumulation_count);
+    void resize_backbuffers(Bifrost::Math::Vector2i frame_size);
+    void render(optix::Context& context, Bifrost::Math::Vector2i frame_size, int accumulation_count);
 private:
     AIDenoiserFlags* m_flags; // Reference to renderer's denoise flags so we can check when they are changed.
     optix::CommandList m_presenting_command_list;

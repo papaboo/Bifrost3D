@@ -19,6 +19,7 @@
 
 #include <optixu/optixpp_namespace.h>
 
+using namespace Bifrost::Math;
 using namespace DX11Renderer;
 
 namespace DX11OptiXAdaptor {
@@ -130,10 +131,13 @@ public:
         m_optix_renderer->handle_updates();
     }
 
-    RenderedFrame render(Bifrost::Scene::CameraID camera_ID, int width, int height) {
-        if (m_render_target.width < width || m_render_target.height < height) {
-            int buffer_width = std::max(m_render_target.width, width);
-            int buffer_height = std::max(m_render_target.height, height);
+    RenderedFrame render(Bifrost::Scene::CameraID camera_ID, Vector2i frame_size) {
+        int frame_width = frame_size.x;
+        int frame_height = frame_size.y;
+
+        if (m_render_target.width < frame_width || m_render_target.height < frame_height) {
+            int buffer_width = std::max(m_render_target.width, frame_width);
+            int buffer_height = std::max(m_render_target.height, frame_height);
 
             { // Backbuffer.
                 m_backbuffer_RTV.release();
@@ -149,7 +153,7 @@ public:
 
         if (!m_use_interop) {
             // Render and copy to DX buffer resource.
-            iteration_count = m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, width, height);
+            iteration_count = m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, frame_size);
 
             void* cpu_buffer = m_render_target.optix_buffer->map();
             OResource dx_buffer = nullptr;
@@ -166,7 +170,7 @@ public:
             OPTIX_VALIDATE(m_optix_renderer->get_context());
             OPTIX_VALIDATE(m_render_target.optix_buffer);
             m_render_target.optix_buffer->setDevicePointer(m_cuda_device_ID, pixels);
-            iteration_count = m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, width, height);
+            iteration_count = m_optix_renderer->render(camera_ID, m_render_target.optix_buffer, frame_size);
 
             THROW_CUDA_ERROR(cudaGraphicsUnmapResources(1, &m_render_target.cuda_buffer));
         }
@@ -177,8 +181,8 @@ public:
             // Create and set the viewport.
             D3D11_VIEWPORT dx_viewport;
             dx_viewport.TopLeftX = dx_viewport.TopLeftY = 0.0f;
-            dx_viewport.Width = float(width);
-            dx_viewport.Height = float(height);
+            dx_viewport.Width = float(frame_width);
+            dx_viewport.Height = float(frame_height);
             dx_viewport.MinDepth = 0.0f;
             dx_viewport.MaxDepth = 1.0f;
             m_render_context->RSSetViewports(1, &dx_viewport);
@@ -186,7 +190,7 @@ public:
             m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             m_render_context->OMSetBlendState(nullptr, nullptr, 0xffffffff);
 
-            int constant_data[4] = { width, height, m_render_target.width, m_render_target.height };
+            int constant_data[4] = { frame_width, frame_height, m_render_target.width, m_render_target.height };
             m_render_context->UpdateSubresource(m_constant_buffer, 0, nullptr, &constant_data, 0, 0);
 
             m_render_context->VSSetShader(m_vertex_shader, 0, 0);
@@ -198,7 +202,7 @@ public:
             m_render_context->Draw(3, 0);
         }
 
-        Bifrost::Math::Rect<int> viewport = { 0, 0, width, height };
+        Bifrost::Math::Rect<int> viewport = { 0, 0, frame_width, frame_height };
         return { m_backbuffer_SRV, viewport, iteration_count };
     }
 
@@ -259,12 +263,12 @@ void Adaptor::handle_updates() {
     m_impl->handle_updates();
 }
 
-RenderedFrame Adaptor::render(Bifrost::Scene::CameraID camera_ID, int width, int height) {
-    return m_impl->render(camera_ID, width, height);
+RenderedFrame Adaptor::render(Bifrost::Scene::CameraID camera_ID, Vector2i frame_size) {
+    return m_impl->render(camera_ID, frame_size);
 }
 
-std::vector<Bifrost::Scene::Screenshot> Adaptor::request_auxiliary_buffers(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, int width, int height) {
-    return m_impl->m_optix_renderer->request_auxiliary_buffers(camera_ID, content_requested, width, height);
+std::vector<Bifrost::Scene::Screenshot> Adaptor::request_auxiliary_buffers(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, Vector2i frame_size) {
+    return m_impl->m_optix_renderer->request_auxiliary_buffers(camera_ID, content_requested, frame_size);
 }
 
 } // NS DX11OptiXAdaptor

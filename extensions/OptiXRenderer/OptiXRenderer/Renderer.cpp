@@ -180,7 +180,7 @@ struct Renderer::Implementation {
 
     // Per camera members.
     struct CameraState {
-        uint2 screensize;
+        uint2 frame_size;
         optix::Buffer accumulation_buffer;
         unsigned int accumulations;
         unsigned int max_accumulation_count;
@@ -190,7 +190,7 @@ struct Renderer::Implementation {
         std::unique_ptr<IBackend> backend_impl;
 
         inline void clear() {
-            screensize = { 0u, 0u };
+            frame_size = { 0u, 0u };
             accumulation_buffer = nullptr;
             accumulations = 0u;
             max_accumulation_count = UINT_MAX;
@@ -538,7 +538,7 @@ struct Renderer::Implementation {
 
                         unsigned int width = 1, height = 1;
                         camera_state.accumulations = 0u;
-                        camera_state.screensize = { width, height };
+                        camera_state.frame_size = { width, height };
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
                         camera_state.accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER, width, height);
                         camera_state.accumulation_buffer->setElementSize(sizeof(double) * 4);
@@ -547,7 +547,7 @@ struct Renderer::Implementation {
 #endif
                         camera_state.inverse_view_projection_matrix = {};
 
-                        // Preserve backend if set from otuside before handle_updates is called. Yuck!
+                        // Preserve backend if set from outside before handle_updates is called. Yuck!
                         if (camera_state.backend == Backend::None) {
                             camera_state.backend = Backend::PathTracing;
                             camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::PathTracing));
@@ -1093,17 +1093,19 @@ struct Renderer::Implementation {
                 camera_state.accumulations = 0u;
     }
 
-    inline CameraStateGPU prepare_camera_state(Bifrost::Scene::CameraID camera_ID, int width, int height) {
+    inline CameraStateGPU prepare_camera_state(Bifrost::Scene::CameraID camera_ID, Vector2i frame_size) {
+        int frame_width = frame_size.x;
+        int frame_height = frame_size.y;
         auto& camera_state = per_camera_state[camera_ID];
         CameraStateGPU camera_state_GPU = {};
 
         { // Update camera state
             // Resize screen buffers if necessary.
-            uint2 current_screensize = make_uint2(width, height);
-            if (current_screensize != camera_state.screensize) {
-                camera_state.accumulation_buffer->setSize(width, height);
-                camera_state.backend_impl->resize_backbuffers(width, height);
-                camera_state.screensize = make_uint2(width, height);
+            uint2 current_frame_size = make_uint2(frame_width, frame_height);
+            if (current_frame_size != camera_state.frame_size) {
+                camera_state.accumulation_buffer->setSize(frame_width, frame_height);
+                camera_state.backend_impl->resize_backbuffers(frame_size);
+                camera_state.frame_size = current_frame_size;
                 camera_state.accumulations = 0u;
 #ifdef ENABLE_OPTIX_DEBUG
                 context->setPrintLaunchIndex(width / 2, height / 2);
@@ -1133,8 +1135,8 @@ struct Renderer::Implementation {
         return camera_state_GPU;
     }
 
-    unsigned int render(Bifrost::Scene::CameraID camera_ID, optix::Buffer buffer, int width, int height) {
-        CameraStateGPU camera_state_GPU = prepare_camera_state(camera_ID, width, height);
+    unsigned int render(Bifrost::Scene::CameraID camera_ID, optix::Buffer buffer, Vector2i frame_size) {
+        CameraStateGPU camera_state_GPU = prepare_camera_state(camera_ID, frame_size);
         camera_state_GPU.output_buffer = buffer->getId();
 
         auto& camera_state = per_camera_state[camera_ID];
@@ -1144,32 +1146,36 @@ struct Renderer::Implementation {
         context["g_camera_state"]->setUserData(sizeof(camera_state_GPU), &camera_state_GPU);
         context["g_scene"]->setUserData(sizeof(scene.GPU_state), &scene.GPU_state);
 
-        camera_state.backend_impl->render(context, width, height, camera_state.accumulations);
+        camera_state.backend_impl->render(context, frame_size, camera_state.accumulations);
         ++camera_state.accumulations;
 
         return camera_state.accumulations;
     }
 
-    std::vector<Screenshot> request_auxiliary_buffers(CameraID camera_ID, Cameras::ScreenshotContent content_requested, int width, int height) {
+    std::vector<Screenshot> request_auxiliary_buffers(CameraID camera_ID, Cameras::ScreenshotContent content_requested, Vector2i frame_size) {
         const Cameras::ScreenshotContent supported_content = { Screenshot::Content::Depth, Screenshot::Content::Albedo, Screenshot::Content::Tint, Screenshot::Content::Roughness };
         if ((content_requested & supported_content) == Screenshot::Content::None)
             return std::vector<Screenshot>();
 
+        int frame_width = frame_size.x;
+        int frame_height = frame_size.y;
+        int frame_pixel_count = frame_width * frame_height;
+
         // Rerender for the requested content into a scratch render buffer.
         auto& camera_state = per_camera_state[camera_ID];
         unsigned int accumulation_count = camera_state.accumulations;
-        auto output_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_SHORT4, width, height);
+        auto output_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_SHORT4, frame_width, frame_height);
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
-        auto accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER, width, height);
+        auto accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER, frame_width, frame_height);
         accumulation_buffer->setElementSize(sizeof(double) * 4);
 #else
-        auto accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, width, height);
+        auto accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, frame_width, frame_height);
 #endif
 
         auto screenshots = std::vector<Screenshot>();
 
         // Upload general camera state
-        CameraStateGPU camera_state_GPU = prepare_camera_state(camera_ID, width, height);
+        CameraStateGPU camera_state_GPU = prepare_camera_state(camera_ID, frame_size);
         camera_state_GPU.output_buffer = output_buffer->getId();
         camera_state_GPU.accumulation_buffer = accumulation_buffer->getId();
         context["g_scene"]->setUserData(sizeof(scene.GPU_state), &scene.GPU_state);
@@ -1177,7 +1183,7 @@ struct Renderer::Implementation {
         auto render_auxiliary_feature = [&](unsigned int entrypoint) {
             for (camera_state_GPU.accumulations = 0; camera_state_GPU.accumulations < accumulation_count; ++camera_state_GPU.accumulations) {
                 context["g_camera_state"]->setUserData(sizeof(camera_state_GPU), &camera_state_GPU);
-                context->launch(entrypoint, width, height);
+                context->launch(entrypoint, frame_width, frame_height);
             }
         };
 
@@ -1186,20 +1192,20 @@ struct Renderer::Implementation {
             render_auxiliary_feature(EntryPoints::Depth);
 
             // Readback screenshot data
-            float* pixels = new float[width * height];
+            float* pixels = new float[frame_pixel_count];
             double4* gpu_pixels = (double4*)accumulation_buffer->map();
-            for (int i = 0; i < width * height; ++i)
+            for (int i = 0; i < frame_pixel_count; ++i)
                 pixels[i] = float(gpu_pixels[i].x);
             accumulation_buffer->unmap();
 
-            screenshots.emplace_back(width, height, Screenshot::Content::Depth, PixelFormat::Intensity_Float, pixels);
+            screenshots.emplace_back(frame_width, frame_height, Screenshot::Content::Depth, PixelFormat::Intensity_Float, pixels);
         }
 
         auto readback_rgba32_screenshot = [&](Screenshot::Content content) {
             // Readback screenshot data
-            RGBA32* pixels = new RGBA32[width * height];
+            RGBA32* pixels = new RGBA32[frame_pixel_count];
             half4* gpu_pixels = (half4*)output_buffer->map();
-            for (int i = 0; i < width * height; ++i) {
+            for (int i = 0; i < frame_pixel_count; ++i) {
                 pixels[i].r = unsigned char(gpu_pixels[i].x * 255.0f + 0.5f);
                 pixels[i].g = unsigned char(gpu_pixels[i].y * 255.0f + 0.5f);
                 pixels[i].b = unsigned char(gpu_pixels[i].z * 255.0f + 0.5f);
@@ -1207,7 +1213,7 @@ struct Renderer::Implementation {
             }
             output_buffer->unmap();
 
-            screenshots.emplace_back(width, height, content, PixelFormat::RGBA32, pixels);
+            screenshots.emplace_back(frame_width, frame_height, content, PixelFormat::RGBA32, pixels);
         };
 
         // Render albedo
@@ -1227,13 +1233,13 @@ struct Renderer::Implementation {
             render_auxiliary_feature(EntryPoints::Roughness);
 
             // Readback screenshot data
-            unsigned char* pixels = new unsigned char[width * height];
+            unsigned char* pixels = new unsigned char[frame_pixel_count];
             half4* gpu_pixels = (half4*)output_buffer->map();
-            for (int i = 0; i < width * height; ++i)
+            for (int i = 0; i < frame_pixel_count; ++i)
                 pixels[i] = unsigned char(gpu_pixels[i].x * 255.0f + 0.5f);
             output_buffer->unmap();
 
-            screenshots.emplace_back(width, height, Screenshot::Content::Roughness, PixelFormat::Intensity8, pixels);
+            screenshots.emplace_back(frame_width, frame_height, Screenshot::Content::Roughness, PixelFormat::Intensity8, pixels);
         }
 
         return screenshots;
@@ -1303,7 +1309,7 @@ void Renderer::set_backend(CameraID camera_ID, Backend backend) {
         camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::PathTracing));
         break;
     case Backend::AIDenoisedPathTracing:
-        camera_state.backend_impl = std::unique_ptr<IBackend>(new AIDenoisedBackend(m_impl->context, &m_impl->AI_denoiser_flags, camera_state.screensize.x, camera_state.screensize.y));
+        camera_state.backend_impl = std::unique_ptr<IBackend>(new AIDenoisedBackend(m_impl->context, &m_impl->AI_denoiser_flags));
         break;
     case Backend::DepthVisualization:
         camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Depth));
@@ -1335,12 +1341,12 @@ void Renderer::set_AI_denoiser_flags(AIDenoiserFlags flags) { m_impl->AI_denoise
 
 void Renderer::handle_updates() { m_impl->handle_updates(); }
 
-unsigned int Renderer::render(CameraID camera_ID, optix::Buffer buffer, int width, int height) {
-    return m_impl->render(camera_ID, buffer, width, height);
+unsigned int Renderer::render(CameraID camera_ID, optix::Buffer buffer, Vector2i frame_size) {
+    return m_impl->render(camera_ID, buffer, frame_size);
 }
 
-std::vector<Screenshot> Renderer::request_auxiliary_buffers(CameraID camera_ID, Cameras::ScreenshotContent content_requested, int width, int height) {
-    return m_impl->request_auxiliary_buffers(camera_ID, content_requested, width, height);
+std::vector<Screenshot> Renderer::request_auxiliary_buffers(CameraID camera_ID, Cameras::ScreenshotContent content_requested, Vector2i frame_size) {
+    return m_impl->request_auxiliary_buffers(camera_ID, content_requested, frame_size);
 }
 
 optix::Context& Renderer::get_context() { return m_impl->context; }

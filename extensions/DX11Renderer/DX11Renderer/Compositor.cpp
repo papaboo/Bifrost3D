@@ -236,8 +236,8 @@ public:
             }
         };
 
-        Vector2ui current_backbuffer_size = Vector2ui(m_window.get_width(), m_window.get_height());
-        if (m_backbuffer_size != current_backbuffer_size) {
+        Vector2i window_size = Vector2i(m_window.get_width(), m_window.get_height());
+        if (m_backbuffer_size != (Vector2ui)window_size) {
             
             { // Setup swap chain buffer.
                 // https://msdn.microsoft.com/en-us/library/windows/desktop/bb205075(v=vs.85).aspx#Handling_Window_Resizing
@@ -252,7 +252,7 @@ public:
                 THROW_DX11_ERROR(m_device->CreateRenderTargetView(swap_chain_buffer, nullptr, &m_swap_chain_RTV));
             }
 
-            m_backbuffer_size = current_backbuffer_size;
+            m_backbuffer_size = (Vector2ui)window_size;
         }
 
         // Tell all renderers to update.
@@ -263,27 +263,24 @@ public:
         // Render.
         for (CameraID camera_ID : Cameras::get_z_sorted_IDs()) {
 
-            Rectf viewport = Cameras::get_viewport(camera_ID);
-            viewport.x *= m_window.get_width();
-            viewport.width *= m_window.get_width();
-            viewport.y *= m_window.get_height();
-            viewport.height *= m_window.get_height();
+            Recti viewport = Cameras::get_window_viewport(camera_ID, window_size);
+            Vector2i frame_size = Vector2i(viewport.width, viewport.height);
 
             RendererID renderer_ID = Cameras::get_renderer_ID(camera_ID);
-            auto frame = m_renderers[renderer_ID]->render(camera_ID, int(viewport.width), int(viewport.height));
+            auto frame = m_renderers[renderer_ID]->render(camera_ID, frame_size);
 
             auto take_screenshot = [&](Cameras::ScreenshotContent content_requested, unsigned int minimum_iteration_count, bool is_HDR) -> std::vector<Screenshot> {
                 if (frame.iteration_count < minimum_iteration_count)
                     return std::vector<Screenshot>();
 
-                auto images = m_renderers[renderer_ID]->request_auxiliary_buffers(camera_ID, content_requested, int(viewport.width), int(viewport.height));
+                auto images = m_renderers[renderer_ID]->request_auxiliary_buffers(camera_ID, content_requested, frame_size);
 
                 Screenshot::Content color_content = is_HDR ? Screenshot::Content::ColorHDR : Screenshot::Content::ColorLDR;
                 if (content_requested.is_set(color_content)) {
                     ID3D11View* color_buffer_view = is_HDR ? (ID3D11View*)frame.frame_SRV : (ID3D11View*)m_swap_chain_RTV;
                     OResource sourceResource;
                     color_buffer_view->GetResource(&sourceResource);
-                    auto screenshot = screenshot_filler(m_device, m_render_context, is_HDR, (ID3D11Texture2D*)sourceResource.get(), frame.viewport);
+                    auto screenshot = screenshot_filler(m_device, m_render_context, is_HDR, (ID3D11Texture2D*)sourceResource.get(), frame.frame_viewport);
                     if (screenshot.pixels != nullptr)
                         images.push_back(screenshot);
                 }
@@ -304,7 +301,7 @@ public:
 
             // Post process the images with the camera effects.
             auto effects_settings = Cameras::get_effects_settings(camera_ID);
-            m_camera_effects.process(m_render_context, effects_settings, delta_time, frame.frame_SRV, m_swap_chain_RTV, frame.viewport, Recti(viewport));
+            m_camera_effects.process(m_render_context, effects_settings, delta_time, frame.frame_SRV, m_swap_chain_RTV, frame.frame_viewport, viewport);
 
             auto take_ldr_screenshot = [&](Cameras::ScreenshotContent content_requested, unsigned int minimum_iteration_count) -> std::vector<Screenshot> {
                 return take_screenshot(content_requested, minimum_iteration_count, false);
