@@ -301,7 +301,7 @@ public:
 
             // Post process the images with the camera effects.
             auto effects_settings = Cameras::get_effects_settings(camera_ID);
-            m_camera_effects.process(m_render_context, effects_settings, delta_time, frame.frame_SRV, m_swap_chain_RTV, frame.frame_viewport, viewport);
+            m_camera_effects.process(m_render_context, effects_settings, delta_time, frame.frame_SRV, frame.frame_viewport, m_swap_chain_RTV, viewport);
 
             auto take_ldr_screenshot = [&](Cameras::ScreenshotContent content_requested, unsigned int minimum_iteration_count) -> std::vector<Screenshot> {
                 return take_screenshot(content_requested, minimum_iteration_count, false);

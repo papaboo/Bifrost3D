@@ -203,8 +203,8 @@ public:
 
     // Processes the pixels and stores them in the bound render target.
     void process(ID3D11DeviceContext1& context, Bifrost::Math::CameraEffects::Settings settings, float delta_time,
-                 ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, 
-                 Bifrost::Math::Rect<int> input_viewport, Bifrost::Math::Rect<int> output_viewport);
+                 ID3D11ShaderResourceView* frame_SRV, Bifrost::Math::Recti frame_viewport,
+                 ID3D11RenderTargetView* backbuffer_RTV, Bifrost::Math::Recti backbuffer_viewport);
 
 private:
     CameraEffects(CameraEffects& other) = delete;
