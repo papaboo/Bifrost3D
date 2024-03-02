@@ -106,10 +106,10 @@ public:
                 "Buffer<float4> pixels : register(t0);\n"
                 "cbuffer constants : register(b0) {\n"
                 "    int2 viewport_size;\n"
-                "    int2 pixels_size;\n"
+                "    int2 frame_buffer_size;\n"
                 "};\n"
                 "float4 optix_adaptor_ps(float4 pixel_pos : SV_POSITION) : SV_TARGET {\n"
-                "   return pixels[int(pixel_pos.x) + int(viewport_size.y - pixel_pos.y - 1) * viewport_size.x];\n"
+                "   return pixels[int(pixel_pos.x) + int(viewport_size.y - pixel_pos.y - 1) * frame_buffer_size.x];\n"
                 "}\n";
 
             OBlob vertex_shader_bytecode = ShaderManager::compile_shader_source(vertex_src, "vs_5_0", "optix_adaptor_vs");
