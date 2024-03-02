@@ -409,8 +409,8 @@ CameraEffects::CameraEffects(ID3D11Device1& device) {
 }
 
 void CameraEffects::process(ID3D11DeviceContext1& context, Bifrost::Math::CameraEffects::Settings settings, float delta_time,
-                            ID3D11ShaderResourceView* pixel_SRV, ID3D11RenderTargetView* backbuffer_RTV, 
-                            Bifrost::Math::Rect<int> input_viewport, Bifrost::Math::Rect<int> output_viewport) {
+                            ID3D11ShaderResourceView* frame_SRV, Recti frame_viewport,
+                            ID3D11RenderTargetView* backbuffer_RTV, Recti backbuffer_viewport) {
 
     using namespace Bifrost::Math::CameraEffects;
 
@@ -418,9 +418,9 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Bifrost::Math::Camera
 
     { // Upload constants
         Constants constants;
-        constants.input_viewport = Bifrost::Math::Rect<float>(input_viewport);
-        constants.output_viewport_offset = { output_viewport.x, output_viewport.y };
-        constants.output_pixel_offset = { input_viewport.x - output_viewport.x, input_viewport.y - output_viewport.y };
+        constants.input_viewport = Rectf(frame_viewport);
+        constants.output_viewport_offset = { backbuffer_viewport.x, backbuffer_viewport.y };
+        constants.output_pixel_offset = { frame_viewport.x - backbuffer_viewport.x, frame_viewport.y - backbuffer_viewport.y };
         constants.min_log_luminance = settings.exposure.min_log_luminance;
         constants.max_log_luminance = settings.exposure.max_log_luminance;
         constants.min_histogram_percentage = settings.exposure.min_histogram_percentage;
@@ -433,7 +433,7 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Bifrost::Math::Camera
             constants.eye_adaptation_brightness = constants.eye_adaptation_darkness = std::numeric_limits<float>::infinity();
 
         constants.bloom_threshold = settings.bloom.threshold;
-        constants.bloom_support = int(settings.bloom.support * input_viewport.height);
+        constants.bloom_support = int(settings.bloom.support * frame_viewport.height);
 
         constants.delta_time = delta_time;
         constants.vignette = settings.vignette;
@@ -458,24 +458,13 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Bifrost::Math::Camera
     }
 
     // Setup state
-    D3D11_VIEWPORT dx_viewport;
-    dx_viewport.TopLeftX = float(output_viewport.x);
-    dx_viewport.TopLeftY = float(output_viewport.y);
-    dx_viewport.Width = float(output_viewport.width);
-    dx_viewport.Height = float(output_viewport.height);
-    dx_viewport.MinDepth = 0.0f;
-    dx_viewport.MaxDepth = 1.0f;
-    context.RSSetViewports(1, &dx_viewport);
-    context.RSSetState(m_raster_state);
-    context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
-    context.PSSetConstantBuffers(0, 1, &m_constant_buffer);
     context.CSSetConstantBuffers(0, 1, &m_constant_buffer);
 
     { // Determine exposure.
         if (settings.exposure.mode == ExposureMode::Histogram)
-            m_exposure_histogram.compute_linear_exposure(context, m_constant_buffer, pixel_SRV, input_viewport.width, m_linear_exposure_UAV);
+            m_exposure_histogram.compute_linear_exposure(context, m_constant_buffer, frame_SRV, frame_viewport.width, m_linear_exposure_UAV);
         else if (settings.exposure.mode == ExposureMode::LogAverage)
-            m_log_average_luminance.compute_linear_exposure(context, m_constant_buffer, pixel_SRV, input_viewport.width, m_linear_exposure_UAV);
+            m_log_average_luminance.compute_linear_exposure(context, m_constant_buffer, frame_SRV, frame_viewport.width, m_linear_exposure_UAV);
         else { // settings.exposure.mode == ExposureMode::Fixed
             context.CSSetConstantBuffers(0, 1, &m_constant_buffer);
 
@@ -491,11 +480,23 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Bifrost::Math::Camera
     // Bloom filter.
     ID3D11ShaderResourceView* bloom_SRV = nullptr;
     if (settings.bloom.threshold < INFINITY) {
-        int support = int(settings.bloom.support * input_viewport.height);
-        bloom_SRV = m_bloom.filter(context, m_constant_buffer, pixel_SRV, input_viewport.width, input_viewport.height, support).get();
+        int support = int(settings.bloom.support * frame_viewport.height);
+        bloom_SRV = m_bloom.filter(context, m_constant_buffer, frame_SRV, frame_viewport.width, frame_viewport.height, support).get();
     }
 
     { // Tonemap and render into backbuffer.
+        D3D11_VIEWPORT dx_viewport;
+        dx_viewport.TopLeftX = float(backbuffer_viewport.x);
+        dx_viewport.TopLeftY = float(backbuffer_viewport.y);
+        dx_viewport.Width = float(backbuffer_viewport.width);
+        dx_viewport.Height = float(backbuffer_viewport.height);
+        dx_viewport.MinDepth = 0.0f;
+        dx_viewport.MaxDepth = 1.0f;
+        context.RSSetViewports(1, &dx_viewport);
+        context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
+        context.RSSetState(m_raster_state);
+        context.PSSetConstantBuffers(0, 1, &m_constant_buffer);
+
         context.VSSetShader(m_fullscreen_VS, 0, 0);
 
         if (settings.tonemapping.mode == TonemappingMode::Linear)
@@ -505,7 +506,7 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Bifrost::Math::Camera
         else // settings.tonemapping.mode == TonemappingMode::Filmic
             context.PSSetShader(m_filmic_tonemapping_PS, 0, 0);
 
-        ID3D11ShaderResourceView* srvs[3] = { pixel_SRV, m_linear_exposure_SRV, bloom_SRV };
+        ID3D11ShaderResourceView* srvs[3] = { frame_SRV, m_linear_exposure_SRV, bloom_SRV };
         context.PSSetShaderResources(0, 3, srvs);
 
         context.Draw(3, 0);
