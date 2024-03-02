@@ -178,9 +178,7 @@ class Unreal4Tonemapper : ITonemapper {
     }
 };
 
-float4 postprocess_pixel(float4 position, ITonemapper tonemapper) {
-    int2 pixel_index = int2(position.xy);
-
+float4 postprocess_pixel(int2 pixel_index, ITonemapper tonemapper) {
     // Bloom and exposure
     float linear_exposure = linear_exposure_buffer[0];
     float3 low_intensity_color = min(pixels[pixel_index + output_pixel_offset].rgb, bloom_threshold);
@@ -189,7 +187,7 @@ float4 postprocess_pixel(float4 position, ITonemapper tonemapper) {
 
     // Vignette
     float2 viewport_size = input_viewport.zw;
-    color *= simple_vignette_tint(position.xy, viewport_size, vignette);
+    color *= simple_vignette_tint(pixel_index - output_viewport_offset, viewport_size, vignette);
 
     // Tonemap
     color = tonemapper.tonemap(color);
@@ -199,17 +197,17 @@ float4 postprocess_pixel(float4 position, ITonemapper tonemapper) {
 
 float4 linear_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
     LinearTonemapper tonemapper;
-    return postprocess_pixel(position, tonemapper);
+    return postprocess_pixel(position.xy, tonemapper);
 }
 
 float4 uncharted2_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
     Uncharted2Tonemapper tonemapper;
-    return postprocess_pixel(position, tonemapper);
+    return postprocess_pixel(position.xy, tonemapper);
 }
 
 float4 unreal4_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
     Unreal4Tonemapper tonemapper;
-    return postprocess_pixel(position, tonemapper);
+    return postprocess_pixel(position.xy, tonemapper);
 }
 
 } // NS CameraEffects
