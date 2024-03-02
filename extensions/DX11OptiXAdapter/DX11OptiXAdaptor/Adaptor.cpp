@@ -202,7 +202,11 @@ public:
             m_render_context->Draw(3, 0);
         }
 
-        Bifrost::Math::Rect<int> viewport = { 0, 0, frame_width, frame_height };
+        // Unbind the rendertarget as the SRV is returned for reading.
+        ID3D11RenderTargetView* null_RTV = nullptr;
+        m_render_context->OMSetRenderTargets(1, &null_RTV, nullptr);
+
+        Recti viewport = { 0, 0, frame_width, frame_height };
         return { m_backbuffer_SRV, viewport, iteration_count };
     }
 

@@ -435,6 +435,15 @@ public:
             context->Draw(mesh.vertex_count, 0);
     } 
 
+    void post_render_cleanup() {
+        // Reset scissor rect used to maske out the guard band.
+        m_render_context->RSSetScissorRects(0, nullptr);
+
+        // Unbind the rendertarget as the SRV is returned for reading.
+        ID3D11RenderTargetView* null_RTV = nullptr;
+        m_render_context->OMSetRenderTargets(1, &null_RTV, nullptr);
+    }
+
     RenderedFrame render(const Bifrost::Scene::CameraID camera_ID, Vector2i frame_size) {
         int frame_width = frame_size.x;
         int frame_height = frame_size.y;
@@ -594,9 +603,7 @@ public:
             display_constant_buffer.release();
             m_render_context->PSSetConstantBuffers(1, 1, &display_constant_buffer);
 
-            // Reset scissor rect, as noone expects this to be used.
-            m_render_context->RSSetScissorRects(0, nullptr);
-
+            post_render_cleanup();
             return { m_backbuffer_SRV, backbuffer_viewport, std::numeric_limits<unsigned int>::max() };
         }
 
@@ -710,9 +717,7 @@ public:
             }
         }
 
-        // Reset scissor rect, as noone expects this to be used.
-        m_render_context->RSSetScissorRects(0, nullptr);
-
+        post_render_cleanup();
         return { m_backbuffer_SRV, backbuffer_viewport, std::numeric_limits<unsigned int>::max() };
     }
 
