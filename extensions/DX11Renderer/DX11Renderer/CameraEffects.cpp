@@ -403,7 +403,6 @@ CameraEffects::CameraEffects(ID3D11Device1& device) {
         };
 
         m_linear_tonemapping_PS = create_pixel_shader("CameraEffects::linear_tonemapping_ps");
-        m_uncharted2_tonemapping_PS = create_pixel_shader("CameraEffects::uncharted2_tonemapping_ps");
         m_filmic_tonemapping_PS = create_pixel_shader("CameraEffects::unreal4_tonemapping_ps");
     }
 }
@@ -444,14 +443,6 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Bifrost::Math::Camera
             constants.tonemapping[2] = settings.tonemapping.filmic.slope;
             constants.tonemapping[3] = settings.tonemapping.filmic.shoulder;
             constants.tonemapping[4] = settings.tonemapping.filmic.white_clip;
-        } else if (settings.tonemapping.mode == TonemappingMode::Uncharted2) {
-            constants.tonemapping[0] = settings.tonemapping.uncharted2.shoulder_strength;
-            constants.tonemapping[1] = settings.tonemapping.uncharted2.linear_strength;
-            constants.tonemapping[2] = settings.tonemapping.uncharted2.linear_angle;
-            constants.tonemapping[3] = settings.tonemapping.uncharted2.toe_strength;
-            constants.tonemapping[4] = settings.tonemapping.uncharted2.toe_numerator;
-            constants.tonemapping[5] = settings.tonemapping.uncharted2.toe_denominator;
-            constants.tonemapping[6] = settings.tonemapping.uncharted2.linear_white;
         }
 
         context.UpdateSubresource(m_constant_buffer, 0, nullptr, &constants, 0u, 0u);
@@ -501,8 +492,6 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Bifrost::Math::Camera
 
         if (settings.tonemapping.mode == TonemappingMode::Linear)
             context.PSSetShader(m_linear_tonemapping_PS, 0, 0);
-        else if (settings.tonemapping.mode == TonemappingMode::Uncharted2)
-            context.PSSetShader(m_uncharted2_tonemapping_PS, 0, 0);
         else // settings.tonemapping.mode == TonemappingMode::Filmic
             context.PSSetShader(m_filmic_tonemapping_PS, 0, 0);
 
