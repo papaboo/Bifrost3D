@@ -38,23 +38,6 @@ float4 fullscreen_vs(uint vertex_ID : SV_VertexID) : SV_POSITION {
 // Tonemappers.
 // ------------------------------------------------------------------------------------------------
 
-float3 uncharted2_tonemap_helper(float3 color, float shoulder_strength, float linear_strength, float linear_angle, float toe_strength, float toe_numerator, float toe_denominator) {
-    float3 x = color;
-    float A = shoulder_strength;
-    float B = linear_strength;
-    float C = linear_angle;
-    float D = toe_strength;
-    float E = toe_numerator;
-    float F = toe_denominator;
-    return ((x*(x*A + C*B) + D*E) / (x*(x*A + B) + D*F)) - E / F;
-};
-
-// Uncharted 2's filmic operator.
-float3 uncharted2(float3 color, float shoulder_strength, float linear_strength, float linear_angle, float toe_strength, float toe_numerator, float toe_denominator, float linear_white) {
-    return uncharted2_tonemap_helper(color, shoulder_strength, linear_strength, linear_angle, toe_strength, toe_numerator, toe_denominator) /
-        uncharted2_tonemap_helper(float3(linear_white, linear_white, linear_white), shoulder_strength, linear_strength, linear_angle, toe_strength, toe_numerator, toe_denominator);
-}
-
 // Bradford chromatic adaptation transforms between ACES white point (D60) and sRGB white point (D65)
 static const float3x3 D65_to_D60 = {
     1.01303, 0.00610531, -0.014971,
@@ -164,14 +147,6 @@ class LinearTonemapper : ITonemapper {
     float3 tonemap(float3 color) { return color; }
 };
 
-class Uncharted2Tonemapper : ITonemapper {
-    float3 tonemap(float3 color) {
-        return uncharted2(color, uncharted2_shoulder_strength(), uncharted2_linear_strength(), uncharted2_linear_angle(), 
-                          uncharted2_toe_strength(), uncharted2_toe_numerator(), uncharted2_toe_denominator(), 
-                          uncharted2_linear_white());
-    }
-};
-
 class Unreal4Tonemapper : ITonemapper {
     float3 tonemap(float3 color) {
         return unreal4(color, filmic_black_clip(), filmic_toe(), filmic_slope(), filmic_shoulder(), filmic_white_clip());
@@ -197,11 +172,6 @@ float4 postprocess_pixel(int2 pixel_index, ITonemapper tonemapper) {
 
 float4 linear_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
     LinearTonemapper tonemapper;
-    return postprocess_pixel(position.xy, tonemapper);
-}
-
-float4 uncharted2_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
-    Uncharted2Tonemapper tonemapper;
     return postprocess_pixel(position.xy, tonemapper);
 }
 

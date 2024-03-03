@@ -17,7 +17,7 @@ namespace Bifrost {
 namespace Math {
 namespace CameraEffects {
 
-enum class TonemappingMode { Linear, Filmic, Uncharted2, Count };
+enum class TonemappingMode { Linear, Filmic, Count };
 enum class ExposureMode { Fixed, LogAverage, Histogram, Count };
 
 struct FilmicSettings {
@@ -32,28 +32,6 @@ struct FilmicSettings {
     static FilmicSettings HP() { return { 0.0f, 0.63f, 0.65f, 0.45f, 0.0f }; }
     static FilmicSettings legacy() { return { 0.0f, 0.3f, 0.98f, 0.22f, 0.025f}; }
     static FilmicSettings default() { return ACES(); }
-};
-
-struct Uncharted2Settings {
-    float shoulder_strength;
-    float linear_strength;
-    float linear_angle;
-    float toe_strength;
-    float toe_numerator;
-    float toe_denominator;
-    float linear_white;
-
-    static Uncharted2Settings default() {
-        Uncharted2Settings settings;
-        settings.shoulder_strength = 0.22f;
-        settings.linear_strength = 0.3f;
-        settings.linear_angle = 0.1f;
-        settings.toe_strength = 0.2f;
-        settings.toe_numerator = 0.01f;
-        settings.toe_denominator = 0.3f;
-        settings.linear_white = 11.2f;
-        return settings;
-    }
 };
 
 struct Settings final {
@@ -80,10 +58,7 @@ struct Settings final {
 
     struct {
         TonemappingMode mode;
-        union {
-            Uncharted2Settings uncharted2;
-            FilmicSettings filmic;
-        };
+        FilmicSettings filmic;
     } tonemapping;
 
     static Settings default() {
@@ -150,29 +125,6 @@ inline RGB reinhard(RGB color, float white_level_sqrd) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Uncharted 2's filmic operator.
-// ------------------------------------------------------------------------------------------------
-inline RGB uncharted2(RGB color, float shoulder_strength, float linear_strength, float linear_angle, float toe_strength, float toe_numerator, float toe_denominator, float linear_white) {
-    auto uncharted2_tonemap_helper = [](RGB color, float shoulder_strength, float linear_strength, float linear_angle, float toe_strength, float toe_numerator, float toe_denominator) -> RGB {
-        RGB x = color;
-        float A = shoulder_strength;
-        float B = linear_strength;
-        float C = linear_angle;
-        float D = toe_strength;
-        float E = toe_numerator;
-        float F = toe_denominator;
-        return ((x*(x*A + C*B) + D*E) / (x*(x*A + B) + D*F)) - E / F;
-    };
-
-    return uncharted2_tonemap_helper(color, shoulder_strength, linear_strength, linear_angle, toe_strength, toe_numerator, toe_denominator) /
-        uncharted2_tonemap_helper(RGB(linear_white), shoulder_strength, linear_strength, linear_angle, toe_strength, toe_numerator, toe_denominator);
-}
-
-inline RGB uncharted2(RGB color, Uncharted2Settings s) {
-    return uncharted2(color, s.shoulder_strength, s.linear_strength, s.linear_angle, s.toe_strength, s.toe_numerator, s.toe_denominator, s.linear_white);
-}
-
-// ------------------------------------------------------------------------------------------------
 // Unreal Engine 4 filmic tonemapping, see TonemapCommon.ush FilmToneMap function for the 
 // tonemapping and ACES.ush for the conversion matrices.
 // ------------------------------------------------------------------------------------------------
@@ -204,7 +156,7 @@ static const Matrix3x3f AP1_to_sRGB = invert(sRGB_to_AP1);
 
 static const Vector3f AP1_RGB2Y = AP1_to_XYZ.get_row(1);
 
-inline RGB unreal4(RGB color, float slope = 0.91f, float toe = 0.53f, float shoulder = 0.23f, float black_clip = 0.0f, float white_clip = 0.035f) {
+inline RGB filmic(RGB color, float slope = 0.91f, float toe = 0.53f, float shoulder = 0.23f, float black_clip = 0.0f, float white_clip = 0.035f) {
 
     // Use ACEScg primaries as working space
     Vector3f working_color = sRGB_to_AP1 * Vector3f(color.r, color.g, color.b);
@@ -262,8 +214,8 @@ inline RGB unreal4(RGB color, float slope = 0.91f, float toe = 0.53f, float shou
     return RGB(c.x, c.y, c.z);
 }
 
-inline RGB unreal4(RGB color, FilmicSettings s) {
-    return unreal4(color, s.slope, s.toe, s.shoulder, s.black_clip, s.white_clip);
+inline RGB filmic(RGB color, FilmicSettings s) {
+    return filmic(color, s.slope, s.toe, s.shoulder, s.black_clip, s.white_clip);
 }
 
 } // NS CameraEffects

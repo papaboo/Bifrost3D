@@ -30,7 +30,7 @@ struct ColorGrader::Implementation final {
     // --------------------------------------------------------------------------------------------
     // Members
     // --------------------------------------------------------------------------------------------
-    enum class Operator { Linear, Reinhard, FilmicAlu, Uncharted2, Unreal4 };
+    enum class Operator { Linear, Reinhard, FilmicAlu, Unreal4 };
     Operator m_operator = Operator::Unreal4;
     Image m_input;
     RGB* m_tonemapped_pixels;
@@ -67,7 +67,6 @@ struct ColorGrader::Implementation final {
     // Tonemapping members
     float m_reinhard_whitepoint = 3.0f;
 
-    CameraEffects::Uncharted2Settings m_uncharted2 = CameraEffects::Uncharted2Settings::default();
     CameraEffects::FilmicSettings m_unreal4 = CameraEffects::FilmicSettings::default();
 
     TwBar* m_gui = nullptr;
@@ -173,7 +172,6 @@ struct ColorGrader::Implementation final {
             "  -h | --help: Show command line usage for Komodo Tonemapping.\n"
             "     | --linear: No tonemapping.\n"
             "     | --reinhard: Apply Reinhard tonemapper.\n"
-            "     | --uncharted2: Apply Uncharted 2 filmic tonemapper.\n"
             "     | --unreal4: Apply Unreal Engine 4 filmic tonemapper.\n"
             "     | --input <path>: Path to the image to be tonemapped.\n"
             "     | --output <path>: Path to where to store the final image.\n";
@@ -192,8 +190,6 @@ struct ColorGrader::Implementation final {
                 m_operator = Operator::Linear;
             else if (arg.compare("--reinhard") == 0)
                 m_operator = Operator::Reinhard;
-            else if (arg.compare("--uncharted2") == 0)
-                m_operator = Operator::Uncharted2;
             else if (arg.compare("--unreal4") == 0)
                 m_operator = Operator::Unreal4;
             else if (arg.compare("--input") == 0)
@@ -302,7 +298,6 @@ struct ColorGrader::Implementation final {
             TwEnumVal operators[] = { { int(Operator::Linear), "Linear" },
                                       { int(Operator::Reinhard), "Reinhard" }, 
                                       { int(Operator::FilmicAlu), "FilmicAlu" },
-                                      { int(Operator::Uncharted2), "Uncharted2" },
                                       { int(Operator::Unreal4), "Unreal4" } };
             TwType AntOperatorEnum = TwDefineEnum("Operators", operators, 5);
 
@@ -313,9 +308,6 @@ struct ColorGrader::Implementation final {
 
                 auto show_reinhard = std::string("ColorGrader/Reinhard visible=") + (data->m_operator == Operator::Reinhard ? "true" : "false");
                 TwDefine(show_reinhard.c_str());
-
-                auto show_uncharted2 = std::string("ColorGrader/Uncharted2 visible=") + (data->m_operator == Operator::Uncharted2 ? "true" : "false");
-                TwDefine(show_uncharted2.c_str());
 
                 auto show_unreal4 = std::string("ColorGrader/Unreal4 visible=") + (data->m_operator == Operator::Unreal4 ? "true" : "false");
                 TwDefine(show_unreal4.c_str());
@@ -329,18 +321,6 @@ struct ColorGrader::Implementation final {
                 TwAddVarCB(bar, "White point", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_reinhard_whitepoint, float), this, "min=0 step=0.1 group='Reinhard'");
 
                 TwDefine("ColorGrader/Reinhard group='Tonemapping'");
-            }
-
-            { // Uncharted 2 filmic
-                TwAddVarCB(bar, "Shoulder strength", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.shoulder_strength, float), this, "min=0 step=0.1 group=Uncharted2");
-                TwAddVarCB(bar, "Linear strength", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.linear_strength, float), this, "min=0 step=0.1 group=Uncharted2");
-                TwAddVarCB(bar, "Linear angle", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.linear_angle, float), this, "min=0 step=0.1 group=Uncharted2");
-                TwAddVarCB(bar, "Toe strength", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.toe_strength, float), this, "min=0 step=0.1 group=Uncharted2");
-                TwAddVarCB(bar, "Toe numerator", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.toe_numerator, float), this, "min=0 step=0.1 group=Uncharted2");
-                TwAddVarCB(bar, "Toe denominator", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.toe_denominator, float), this, "min=0 step=0.1 group=Uncharted2");
-                TwAddVarCB(bar, "Linear white", TW_TYPE_FLOAT, WRAP_ANT_PROPERTY(m_uncharted2.linear_white, float), this, "min=0 step=0.1 group=Uncharted2");
-
-                TwDefine("ColorGrader/Uncharted2 group='Tonemapping' label='Uncharted 2'");
             }
 
             { // Unreal 4 filmic
@@ -518,10 +498,8 @@ struct ColorGrader::Implementation final {
                     adjusted_color = CameraEffects::reinhard(adjusted_color, m_reinhard_whitepoint * m_reinhard_whitepoint);
                 else if (m_operator == Operator::FilmicAlu)
                     adjusted_color = tonemap_filmic_ALU(adjusted_color);
-                else if (m_operator == Operator::Uncharted2)
-                    adjusted_color = CameraEffects::uncharted2(adjusted_color, m_uncharted2);
                 else if (m_operator == Operator::Unreal4)
-                    adjusted_color = CameraEffects::unreal4(adjusted_color, m_unreal4);
+                    adjusted_color = CameraEffects::filmic(adjusted_color, m_unreal4);
                 output[i] = gammacorrect(adjusted_color, 1.0f / 2.2f);
             }
         }

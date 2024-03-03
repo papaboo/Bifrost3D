@@ -41,11 +41,6 @@ namespace GUI {
 
 struct RenderingGUI::State {
     struct {
-        Bifrost::Math::CameraEffects::FilmicSettings filmic;
-        Bifrost::Math::CameraEffects::Uncharted2Settings uncharted2;
-    } tonemapping;
-
-    struct {
         bool use_path_regularization = true;
         OptiXRenderer::PathRegularizationSettings path_regularization_settings;
     } optix;
@@ -54,10 +49,6 @@ struct RenderingGUI::State {
 RenderingGUI::RenderingGUI(DX11Renderer::Compositor* compositor, DX11Renderer::Renderer* dx_renderer, OptiXRenderer::Renderer* optix_renderer)
     : m_compositor(compositor), m_dx_renderer(dx_renderer), m_optix_renderer(optix_renderer), m_state(new State()) {
     strcpy_s(m_screenshot.path, m_screenshot.max_path_length, "c:\\temp\\ss");
-
-    // Tonemapping parameters
-    m_state->tonemapping.filmic = CameraEffects::FilmicSettings::default();
-    m_state->tonemapping.uncharted2 = CameraEffects::Uncharted2Settings::default();
 }
 
 RenderingGUI::~RenderingGUI() { 
@@ -258,37 +249,21 @@ void RenderingGUI::layout_frame() {
         });
 
         ImGui::PoppedTreeNode("Tonemapping", [&]() {
-            // Save tonemapping settings
-            switch (effects_settings.tonemapping.mode) {
-            case TonemappingMode::Filmic:
-                m_state->tonemapping.filmic = effects_settings.tonemapping.filmic; break;
-            case TonemappingMode::Uncharted2:
-                m_state->tonemapping.uncharted2 = effects_settings.tonemapping.uncharted2; break;
-            }
-
-            const char* tonemapping_modes[] = { "Linear", "Filmic", "Uncharted2" };
+            const char* tonemapping_modes[] = { "Linear", "Filmic" };
             int current_tonemapping_mode = (int)effects_settings.tonemapping.mode;
             has_changed |= ImGui::Combo("Tonemapper", &current_tonemapping_mode, tonemapping_modes, IM_ARRAYSIZE(tonemapping_modes));
             effects_settings.tonemapping.mode = (TonemappingMode)current_tonemapping_mode;
 
-            // Restore tonemapping settings
-            switch (effects_settings.tonemapping.mode) {
-            case TonemappingMode::Filmic:
-                effects_settings.tonemapping.filmic = m_state->tonemapping.filmic; break;
-            case TonemappingMode::Uncharted2:
-                effects_settings.tonemapping.uncharted2 = m_state->tonemapping.uncharted2; break;
-            }
-
             { // Plot tonemap curve
+                auto filmic_settings = effects_settings.tonemapping.filmic;
+
                 const int max_sample_count = 32;
                 float intensities[max_sample_count];
                 for (int i = 0; i < max_sample_count; ++i) {
                     float c = (i / (max_sample_count - 1.0f)) * 2.0f;
                     switch (effects_settings.tonemapping.mode) {
                     case TonemappingMode::Filmic:
-                        intensities[i] = luminance(unreal4(RGB(c), m_state->tonemapping.filmic)); break;
-                    case TonemappingMode::Uncharted2:
-                        intensities[i] = luminance(uncharted2(RGB(c), m_state->tonemapping.uncharted2)); break;
+                        intensities[i] = luminance(filmic(RGB(c), filmic_settings)); break;
                     case TonemappingMode::Linear:
                         intensities[i] = c; break;
                     }
@@ -318,21 +293,6 @@ void RenderingGUI::layout_frame() {
                 has_changed |= ImGui::SliderFloat("Slope", &filmic.slope, 0.0f, 1.0f);
                 has_changed |= ImGui::SliderFloat("Shoulder", &filmic.shoulder, 0.0f, 1.0f);
                 has_changed |= ImGui::SliderFloat("White clip", &filmic.white_clip, 0.0f, 1.0f);
-            }
-            if (effects_settings.tonemapping.mode == TonemappingMode::Uncharted2) {
-                auto& uncharted2 = effects_settings.tonemapping.uncharted2;
-                has_changed |= ImGui::SliderFloat("Shoulder strength", &uncharted2.shoulder_strength, 0.0f, 1.0f);
-                has_changed |= ImGui::SliderFloat("Linear strength", &uncharted2.linear_strength, 0.0f, 1.0f);
-                has_changed |= ImGui::SliderFloat("Linear angle", &uncharted2.linear_angle, 0.0f, 1.0f);
-                has_changed |= ImGui::SliderFloat("Toe strength", &uncharted2.toe_strength, 0.0f, 1.0f);
-                has_changed |= ImGui::SliderFloat("Toe numerator", &uncharted2.toe_numerator, 0.0f, 1.0f);
-                has_changed |= ImGui::SliderFloat("Toe denominator", &uncharted2.toe_denominator, 0.0f, 1.0f);
-                has_changed |= ImGui::SliderFloat("Linear white", &uncharted2.linear_white, 0.0f, 20.0f);
-
-                if (ImGui::Button("Reset")) {
-                    has_changed = true;
-                    uncharted2 = Uncharted2Settings::default();
-                }
             }
         });
 
