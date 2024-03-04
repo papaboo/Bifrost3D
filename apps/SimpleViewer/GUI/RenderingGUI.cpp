@@ -39,6 +39,112 @@ inline bool CheckboxFlags(const char* label, Bifrost::Core::Bitmask<E>* flags, E
 
 namespace GUI {
 
+void camera_effects(CameraID camera_ID) {
+    ImGui::PoppedTreeNode("Camera effects", [&]() {
+        using namespace Bifrost::Math::CameraEffects;
+
+        auto effects_settings = Cameras::get_effects_settings(camera_ID);
+        bool has_changed = false;
+
+        ImGui::PoppedTreeNode("Bloom", [&]() {
+            has_changed |= ImGui::InputFloat("Threshold", &effects_settings.bloom.threshold, 0.0f, 0.0f);
+            has_changed |= ImGui::SliderFloat("Support", &effects_settings.bloom.support, 0.0f, 1.0f);
+        });
+
+        ImGui::PoppedTreeNode("Exposure", [&]() {
+            const char* exposure_modes[] = { "Fixed", "LogAverage", "Histogram" };
+            int current_exposure_mode = (int)effects_settings.exposure.mode;
+            has_changed |= ImGui::Combo("Exposure", &current_exposure_mode, exposure_modes, IM_ARRAYSIZE(exposure_modes));
+            effects_settings.exposure.mode = (ExposureMode)current_exposure_mode;
+
+            has_changed |= ImGui::InputFloat("Bias", &effects_settings.exposure.log_lumiance_bias, 0.25f, 1.0f, "%.2f");
+        });
+
+        ImGui::PoppedTreeNode("Tonemapping", [&]() {
+            const char* tonemapping_modes[] = { "Linear", "Filmic" };
+            int current_tonemapping_mode = (int)effects_settings.tonemapping.mode;
+            has_changed |= ImGui::Combo("Tonemapper", &current_tonemapping_mode, tonemapping_modes, IM_ARRAYSIZE(tonemapping_modes));
+            effects_settings.tonemapping.mode = (TonemappingMode)current_tonemapping_mode;
+
+            { // Plot tonemap curve
+                auto filmic_settings = effects_settings.tonemapping.filmic;
+
+                const int max_sample_count = 32;
+                float intensities[max_sample_count];
+                for (int i = 0; i < max_sample_count; ++i) {
+                    float c = (i / (max_sample_count - 1.0f)) * 2.0f;
+                    switch (effects_settings.tonemapping.mode) {
+                    case TonemappingMode::Filmic:
+                        intensities[i] = luminance(filmic(RGB(c), filmic_settings)); break;
+                    case TonemappingMode::Linear:
+                        intensities[i] = c; break;
+                    }
+                }
+                ImGui::PlotLines("", intensities, IM_ARRAYSIZE(intensities), 0, "Intensity [0, 2]", 0.0f, 1.0f, ImVec2(0, 80));
+            }
+
+            if (effects_settings.tonemapping.mode == TonemappingMode::Filmic) {
+                auto& filmic = effects_settings.tonemapping.filmic;
+
+                const char* filmic_presets[] = { "Select preset", "ACES", "Uncharted2", "HP", "Legacy" };
+                int current_preset = 0;
+                has_changed |= ImGui::Combo("Preset", &current_preset, filmic_presets, IM_ARRAYSIZE(filmic_presets));
+                switch (current_preset) {
+                case 1:
+                    filmic = FilmicSettings::ACES(); break;
+                case 2:
+                    filmic = FilmicSettings::uncharted2(); break;
+                case 3:
+                    filmic = FilmicSettings::HP(); break;
+                case 4:
+                    filmic = FilmicSettings::legacy(); break;
+                }
+
+                has_changed |= ImGui::SliderFloat("Black clip", &filmic.black_clip, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("Toe", &filmic.toe, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("Slope", &filmic.slope, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("Shoulder", &filmic.shoulder, 0.0f, 1.0f);
+                has_changed |= ImGui::SliderFloat("White clip", &filmic.white_clip, 0.0f, 1.0f);
+            }
+        });
+
+        has_changed |= ImGui::InputFloat("Vignette", &effects_settings.vignette, 0.01f, 0.1f, "%.2f");
+
+        if (has_changed)
+            Cameras::set_effects_settings(camera_ID, effects_settings);
+    });
+}
+
+void camera_GUI(CameraID camera_ID) {
+
+    // Viewport
+    ImGui::PoppedTreeNode("Viewport", [&]() {
+        Rectf viewport = Cameras::get_viewport(camera_ID);
+        bool has_changed = ImGui::SliderFloat("X", &viewport.x, 0.0f, 1.0f);
+        has_changed |= ImGui::SliderFloat("Y", &viewport.y, 0.0f, 1.0f);
+        has_changed |= ImGui::SliderFloat("width", &viewport.width, 0.0f, 1.0f);
+        has_changed |= ImGui::SliderFloat("height", &viewport.height, 0.0f, 1.0f);
+        if (has_changed)
+            Cameras::set_viewport(camera_ID, viewport);
+    });
+
+    ImGui::PoppedTreeNode("Transform", [&]() {
+        // Translation
+        Transform transform = Cameras::get_transform(camera_ID);
+        Vector3f translation = transform.translation;
+        ImGui::InputFloat3("Translation", translation.begin(), 3, ImGuiInputTextFlags_ReadOnly);
+
+        // Rotation described as vertical and horizontal angle.
+        Vector3f forward = transform.rotation.forward();
+        float vertical_rotation = std::atan2(forward.x, forward.z);
+        float horizontal_rotation = std::asin(forward.y);
+        float rotation[2] = { vertical_rotation, horizontal_rotation };
+        ImGui::InputFloat2("Rotation", rotation, 3, ImGuiInputTextFlags_ReadOnly);
+    });
+
+    camera_effects(camera_ID);
+}
+
 struct RenderingGUI::State {
     struct {
         bool use_path_regularization = true;
@@ -120,20 +226,26 @@ void RenderingGUI::layout_frame() {
             scene_root.set_environment_tint(environment_tint);
 
         ImGui::PoppedTreeNode("Camera", [&]() {
-            CameraID camera_ID = *Cameras::get_iterable().begin();
+            int camera_count = 0;
+            for (CameraID camera_ID : Cameras::get_iterable()) {
+                camera_count++;
+                ImGui::PoppedTreeNode(Cameras::get_name(camera_ID).c_str(), [&]() {
+                    camera_GUI(camera_ID);
+                });
+            }
 
-            // Translation
-            Transform transform = Cameras::get_transform(camera_ID);
-            Vector3f translation = transform.translation;
-            ImGui::InputFloat3("Translation", translation.begin(), 3, ImGuiInputTextFlags_ReadOnly);
-
-            // Rotation described as vertical and horizontal angle.
-            Vector3f forward = transform.rotation.forward();
-            float vertical_rotation = std::atan2(forward.x, forward.z);
-            float horizontal_rotation = std::asin(forward.y);
-            float rotation[2] = { vertical_rotation, horizontal_rotation };
-            ImGui::InputFloat2("Rotation", rotation, 3, ImGuiInputTextFlags_ReadOnly);
+            if (camera_count == 1 && ImGui::Button("Add picture in picture")) {
+                // Picture in picture camera option
+                CameraID camera_ID = *(Cameras::get_iterable().begin());
+                CameraID new_cam_ID = Cameras::create("Picture-in-picture", Cameras::get_scene_ID(camera_ID),
+                                                      Cameras::get_projection_matrix(camera_ID), Cameras::get_inverse_projection_matrix(camera_ID));
+                Cameras::set_transform(new_cam_ID, Cameras::get_transform(camera_ID));
+                Cameras::set_viewport(new_cam_ID, Rectf(0.75f, 0.75f, 0.25f, 0.25));
+                Cameras::set_z_index(new_cam_ID, Cameras::get_z_index(camera_ID) + 1);
+            }
         });
+
+        ImGui::Separator();
 
         ImGui::PoppedTreeNode("Lights", [&]() {
             for (LightSourceID light_ID : LightSources::get_iterable()) {
@@ -175,131 +287,55 @@ void RenderingGUI::layout_frame() {
                 });
             }
         });
-    });
 
-    ImGui::Separator();
+        ImGui::Separator();
 
-    ImGui::PoppedTreeNode("Materials", [&] {
-        for (Material material : Materials::get_iterable()) {
-            ImGui::PoppedTreeNode(material.get_name().c_str(), [&] {
-                RGB tint = material.get_tint();
-                if (ImGui::ColorEdit3("Tint", &tint.r))
-                    material.set_tint(tint);
+        ImGui::PoppedTreeNode("Materials", [&] {
+            for (Material material : Materials::get_iterable()) {
+                ImGui::PoppedTreeNode(material.get_name().c_str(), [&] {
+                    RGB tint = material.get_tint();
+                    if (ImGui::ColorEdit3("Tint", &tint.r))
+                        material.set_tint(tint);
 
-                float roughness = material.get_roughness();
-                if (ImGui::SliderFloat("Roughness", &roughness, 0, 1))
-                    material.set_roughness(roughness);
+                    float roughness = material.get_roughness();
+                    if (ImGui::SliderFloat("Roughness", &roughness, 0, 1))
+                        material.set_roughness(roughness);
 
-                float metallic = material.get_metallic();
-                if (ImGui::SliderFloat("Metallic", &metallic, 0, 1))
-                    material.set_metallic(metallic);
+                    float metallic = material.get_metallic();
+                    if (ImGui::SliderFloat("Metallic", &metallic, 0, 1))
+                        material.set_metallic(metallic);
 
-                float specularity = material.get_specularity();
-                if (ImGui::SliderFloat("Specularity", &specularity, 0, 0.08f))
-                    material.set_specularity(specularity);
+                    float specularity = material.get_specularity();
+                    if (ImGui::SliderFloat("Specularity", &specularity, 0, 0.08f))
+                        material.set_specularity(specularity);
 
-                float coat = material.get_coat();
-                if (ImGui::SliderFloat("Coat", &coat, 0, 1))
-                    material.set_coat(coat);
+                    float coat = material.get_coat();
+                    if (ImGui::SliderFloat("Coat", &coat, 0, 1))
+                        material.set_coat(coat);
 
-                float coat_roughness = material.get_coat_roughness();
-                if (ImGui::SliderFloat("Coat roughness", &coat_roughness, 0, 1))
-                    material.set_coat_roughness(coat_roughness);
+                    float coat_roughness = material.get_coat_roughness();
+                    if (ImGui::SliderFloat("Coat roughness", &coat_roughness, 0, 1))
+                        material.set_coat_roughness(coat_roughness);
 
-                if (material.is_cutout()) {
-                    float cutout_threshold = material.get_cutout_threshold();
-                    if (ImGui::SliderFloat("Cutout threshold", &cutout_threshold, 0, 1))
-                        material.set_cutout_threshold(cutout_threshold);
-                } else {
-                    float coverage = material.get_coverage();
-                    if (ImGui::SliderFloat("Coverage", &coverage, 0, 1))
-                        material.set_coverage(coverage);
-                }
-
-                Materials::Flags flags = material.get_flags();
-                bool flags_changed = ImGui::CheckboxFlags("Thin walled", &flags, MaterialFlag::ThinWalled);
-                flags_changed |= ImGui::CheckboxFlags("Cutout", &flags, MaterialFlag::Cutout);
-                if (flags_changed)
-                    material.set_flags(flags);
-            });
-        }
-    });
-
-    ImGui::Separator();
-
-    ImGui::PoppedTreeNode("Camera effects", [&]() {
-        using namespace Bifrost::Math::CameraEffects;
-
-        CameraID camera_ID = *Cameras::get_iterable().begin();
-        auto effects_settings = Cameras::get_effects_settings(camera_ID);
-        bool has_changed = false;
-
-        ImGui::PoppedTreeNode("Bloom", [&]() {
-            has_changed |= ImGui::InputFloat("Threshold", &effects_settings.bloom.threshold, 0.0f, 0.0f);
-            has_changed |= ImGui::SliderFloat("Support", &effects_settings.bloom.support, 0.0f, 1.0f);
-        });
-
-        ImGui::PoppedTreeNode("Exposure", [&]() {
-            const char* exposure_modes[] = { "Fixed", "LogAverage", "Histogram" };
-            int current_exposure_mode = (int)effects_settings.exposure.mode;
-            has_changed |= ImGui::Combo("Exposure", &current_exposure_mode, exposure_modes, IM_ARRAYSIZE(exposure_modes));
-            effects_settings.exposure.mode = (ExposureMode)current_exposure_mode;
-
-            has_changed |= ImGui::InputFloat("Bias", &effects_settings.exposure.log_lumiance_bias, 0.25f, 1.0f, "%.2f");
-        });
-
-        ImGui::PoppedTreeNode("Tonemapping", [&]() {
-            const char* tonemapping_modes[] = { "Linear", "Filmic" };
-            int current_tonemapping_mode = (int)effects_settings.tonemapping.mode;
-            has_changed |= ImGui::Combo("Tonemapper", &current_tonemapping_mode, tonemapping_modes, IM_ARRAYSIZE(tonemapping_modes));
-            effects_settings.tonemapping.mode = (TonemappingMode)current_tonemapping_mode;
-
-            { // Plot tonemap curve
-                auto filmic_settings = effects_settings.tonemapping.filmic;
-
-                const int max_sample_count = 32;
-                float intensities[max_sample_count];
-                for (int i = 0; i < max_sample_count; ++i) {
-                    float c = (i / (max_sample_count - 1.0f)) * 2.0f;
-                    switch (effects_settings.tonemapping.mode) {
-                    case TonemappingMode::Filmic:
-                        intensities[i] = luminance(filmic(RGB(c), filmic_settings)); break;
-                    case TonemappingMode::Linear:
-                        intensities[i] = c; break;
+                    if (material.is_cutout()) {
+                        float cutout_threshold = material.get_cutout_threshold();
+                        if (ImGui::SliderFloat("Cutout threshold", &cutout_threshold, 0, 1))
+                            material.set_cutout_threshold(cutout_threshold);
                     }
-                }
-                ImGui::PlotLines("", intensities, IM_ARRAYSIZE(intensities), 0, "Intensity [0, 2]", 0.0f, 1.0f, ImVec2(0, 80));
-            }
+                    else {
+                        float coverage = material.get_coverage();
+                        if (ImGui::SliderFloat("Coverage", &coverage, 0, 1))
+                            material.set_coverage(coverage);
+                    }
 
-            if (effects_settings.tonemapping.mode == TonemappingMode::Filmic) {
-                auto& filmic = effects_settings.tonemapping.filmic;
-
-                const char* filmic_presets[] = { "Select preset", "ACES", "Uncharted2", "HP", "Legacy" };
-                int current_preset = 0;
-                has_changed |= ImGui::Combo("Preset", &current_preset, filmic_presets, IM_ARRAYSIZE(filmic_presets));
-                switch (current_preset) {
-                case 1:
-                    filmic = FilmicSettings::ACES(); break;
-                case 2:
-                    filmic = FilmicSettings::uncharted2(); break;
-                case 3:
-                    filmic = FilmicSettings::HP(); break;
-                case 4:
-                    filmic = FilmicSettings::legacy(); break;
-                }
-
-                has_changed |= ImGui::SliderFloat("Black clip", &filmic.black_clip, 0.0f, 1.0f);
-                has_changed |= ImGui::SliderFloat("Toe", &filmic.toe, 0.0f, 1.0f);
-                has_changed |= ImGui::SliderFloat("Slope", &filmic.slope, 0.0f, 1.0f);
-                has_changed |= ImGui::SliderFloat("Shoulder", &filmic.shoulder, 0.0f, 1.0f);
-                has_changed |= ImGui::SliderFloat("White clip", &filmic.white_clip, 0.0f, 1.0f);
+                    Materials::Flags flags = material.get_flags();
+                    bool flags_changed = ImGui::CheckboxFlags("Thin walled", &flags, MaterialFlag::ThinWalled);
+                    flags_changed |= ImGui::CheckboxFlags("Cutout", &flags, MaterialFlag::Cutout);
+                    if (flags_changed)
+                        material.set_flags(flags);
+                });
             }
         });
-
-        has_changed |= ImGui::InputFloat("Vignette", &effects_settings.vignette, 0.01f, 0.1f, "%.2f");
-
-        if (has_changed)
-            Cameras::set_effects_settings(camera_ID, effects_settings);
     });
 
     if (m_dx_renderer != nullptr) {

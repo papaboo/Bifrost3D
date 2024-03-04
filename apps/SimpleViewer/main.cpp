@@ -537,13 +537,6 @@ int initialize_scene(Engine& engine) {
     engine.add_mutating_callback([=, &engine] { render_swapper->handle(engine); });
     engine.add_mutating_callback([&engine] { update_FPS(engine); });
 
-    if (false) { // Picture in picture
-        auto second_cam_ID = Cameras::create("Second cam", scene_ID, Cameras::get_projection_matrix(cam_ID), Cameras::get_inverse_projection_matrix(cam_ID));
-        Cameras::set_transform(second_cam_ID, Cameras::get_transform(cam_ID));
-        Cameras::set_viewport(second_cam_ID, Rectf(0.75f, 0.75f, 0.25f, 0.25));
-        Cameras::set_z_index(second_cam_ID, 1);
-    }
-
     return 0;
 }
 
