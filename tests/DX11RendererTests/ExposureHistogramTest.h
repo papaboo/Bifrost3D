@@ -17,7 +17,6 @@
 #include <Bifrost/Math/Utils.h>
 
 #include <DX11Renderer/CameraEffects.h>
-#include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/ShaderManager.h>
 
 #include <random>
@@ -73,9 +72,8 @@ protected:
 TEST_F(ExposureHistogramFixture, tiny_image) {
     using namespace Bifrost::Math;
 
-    auto device = create_performant_device1();
-    ODeviceContext1 context;
-    device->GetImmediateContext1(&context);
+    auto device = create_test_device();
+    auto context = get_immidiate_context1(device);
 
     ExposureHistogram& histogram = ExposureHistogram(*device);
     const unsigned int bin_count = ExposureHistogram::bin_count;
@@ -108,9 +106,8 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
 TEST_F(ExposureHistogramFixture, small_image) {
     using namespace Bifrost::Math;
 
-    auto device = create_performant_device1();
-    ODeviceContext1 context;
-    device->GetImmediateContext1(&context);
+    auto device = create_test_device();
+    auto context = get_immidiate_context1(device);
 
     ExposureHistogram& histogram = ExposureHistogram(*device);
     const unsigned int bin_count = ExposureHistogram::bin_count;
@@ -156,9 +153,8 @@ TEST_F(ExposureHistogramFixture, small_image) {
 TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
     using namespace Bifrost::Math;
 
-    auto device = create_performant_device1();
-    ODeviceContext1 context;
-    device->GetImmediateContext1(&context);
+    auto device = create_test_device();
+    auto context = get_immidiate_context1(device);
 
     const unsigned int bin_count = ExposureHistogram::bin_count;
 
@@ -201,9 +197,8 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
 TEST_F(ExposureHistogramFixture, exposure_from_histogram) {
     using namespace Bifrost::Math;
 
-    auto device = create_performant_device1();
-    ODeviceContext1 context;
-    device->GetImmediateContext1(&context);
+    auto device = create_test_device();
+    auto context = get_immidiate_context1(device);
 
     const unsigned int bin_count = ExposureHistogram::bin_count;
 

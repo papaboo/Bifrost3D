@@ -18,7 +18,6 @@
 #include <Bifrost/Math/Utils.h>
 
 #include <DX11Renderer/CameraEffects.h>
-#include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/Utils.h>
 
 #include <random>
@@ -39,9 +38,8 @@ protected:
     }
 
     inline void test_image(int width, int height, half4* pixels) {
-        auto device = create_performant_device1();
-        ODeviceContext1 context;
-        device->GetImmediateContext1(&context);
+        auto device = create_test_device();
+        auto context = get_immidiate_context1(device);
 
         LogAverageLuminance& log_average_exposure = LogAverageLuminance(*device);
 

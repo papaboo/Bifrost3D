@@ -16,7 +16,6 @@
 #include <Bifrost/Math/Half.h>
 
 #include <DX11Renderer/CameraEffects.h>
-#include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/Utils.h>
 
 namespace DX11Renderer {
@@ -30,7 +29,7 @@ protected:
     // Fixture setup
     // --------------------------------------------------------------------------------------------
     virtual void SetUp() {
-        m_device = create_performant_device1();
+        m_device = create_test_device();
         m_device->GetImmediateContext1(&m_context);
     }
 
