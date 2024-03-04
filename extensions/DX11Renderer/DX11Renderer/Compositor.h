@@ -80,7 +80,6 @@ typedef IGuiRenderer*(*GuiRendererCreator)(ODevice1& device);
 // Utility function to create a 'performant' DX11 device.
 //-------------------------------------------------------------------------------------------------
 ODevice1 create_performant_device1(unsigned int create_device_flags = D3D11_CREATE_DEVICE_NONE);
-ODevice1 create_performant_debug_device1();
 
 //-------------------------------------------------------------------------------------------------
 // DirectX 11 compositor.

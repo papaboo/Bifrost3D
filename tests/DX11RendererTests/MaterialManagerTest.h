@@ -27,9 +27,8 @@ GTEST_TEST(MaterialManager, GPU_rho_texture_dimensions_consistent_with_CPU) {
     using namespace Bifrost::Assets::Shading;
 
     // Setup GPU
-    auto device = create_performant_device1();
-    ODeviceContext1 context;
-    device->GetImmediateContext1(&context);
+    auto device = create_test_device();
+    auto context = get_immidiate_context1(device);
 
     // Create CS shader to return the texture dimensions
     const char* rho_dimensions_cs =
@@ -68,9 +67,8 @@ GTEST_TEST(MaterialManager, sample_GPU_rho_texture_consistent_with_CPU) {
     using namespace Bifrost::Assets::Shading;
 
     // Setup GPU
-    auto device = create_performant_device1();
-    ODeviceContext1 context;
-    device->GetImmediateContext1(&context);
+    auto device = create_test_device();
+    auto context = get_immidiate_context1(device);
 
     // Create material manager
     auto GGX_with_fresnel_rho_srv = MaterialManager::create_GGX_with_fresnel_rho_srv(device);

@@ -77,8 +77,6 @@ ODevice1 create_performant_device1(unsigned int create_device_flags) {
     return device1;
 }
 
-ODevice1 create_performant_debug_device1() { return create_performant_device1(D3D11_CREATE_DEVICE_DEBUG); }
-
 //-------------------------------------------------------------------------------------------------
 // DirectX 11 compositor implementation.
 //-------------------------------------------------------------------------------------------------

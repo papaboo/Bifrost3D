@@ -10,6 +10,7 @@
 #define _DX11RENDERERTEST_UTILS_H_
 
 #include <DX11Renderer/CameraEffects.h>
+#include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/Utils.h>
 
 // -------------------------------------------------------------------------------------------------
@@ -21,6 +22,16 @@ using half4 = Bifrost::Math::Vector4<Bifrost::Math::half>;
 // -------------------------------------------------------------------------------------------------
 // Utility functions
 // -------------------------------------------------------------------------------------------------
+
+inline DX11Renderer::ODevice1 create_test_device() {
+    return DX11Renderer::create_performant_device1(D3D11_CREATE_DEVICE_DEBUG);
+}
+
+inline DX11Renderer::ODeviceContext1 get_immidiate_context1(DX11Renderer::ODevice1& device) {
+    DX11Renderer::ODeviceContext1 context;
+    device->GetImmediateContext1(&context);
+    return context;
+}
 
 inline DX11Renderer::OBuffer create_camera_effects_constants(DX11Renderer::ODevice1& device, DX11Renderer::int2 viewport_size, float min_log_luminance, float max_log_luminance, float min_histogram_percentage = 0.8f, float max_histogram_percentage = 0.95f) {
 

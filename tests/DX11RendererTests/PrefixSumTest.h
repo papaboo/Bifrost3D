@@ -12,7 +12,6 @@
 #include <gtest/gtest.h>
 #include <Utils.h>
 
-#include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/PrefixSum.h>
 
 namespace DX11Renderer {
@@ -23,7 +22,7 @@ namespace DX11Renderer {
 //  * Test for overflow
 // ------------------------------------------------------------------------------------------------
 GTEST_TEST(PrefixSum, 8_uniform_elements) {
-    auto device = create_performant_device1();
+    auto device = create_test_device();
 
     const int element_count = 8;
     unsigned int ds[] = { 1, 1, 1, 1, 1, 1, 1, 1 };
@@ -35,7 +34,7 @@ GTEST_TEST(PrefixSum, 8_uniform_elements) {
 }
 
 GTEST_TEST(PrefixSum, 6_random_elements) {
-    auto device = create_performant_device1();
+    auto device = create_test_device();
 
     const int element_count = 6;
     unsigned int ds[] = { 4, 2, 3, 7, 1, 5 };
@@ -48,7 +47,7 @@ GTEST_TEST(PrefixSum, 6_random_elements) {
 }
 
 GTEST_TEST(PrefixSum, 1024_uniform_elements) {
-    auto device = create_performant_device1();
+    auto device = create_test_device();
 
     const int element_count = 1024;
     unsigned int ds[element_count];
@@ -63,7 +62,7 @@ GTEST_TEST(PrefixSum, 1024_uniform_elements) {
 }
 
 GTEST_TEST(PrefixSum, 873_uniform_elements) {
-    auto device = create_performant_device1();
+    auto device = create_test_device();
 
     const int element_count = 873;
     unsigned int ds[element_count];
@@ -78,7 +77,7 @@ GTEST_TEST(PrefixSum, 873_uniform_elements) {
 }
 
 GTEST_TEST(PrefixSum, 873_random_elements) {
-    auto device = create_performant_device1();
+    auto device = create_test_device();
 
     unsigned int mini_LCG_state = 12190865u;
     auto mini_LCG = [&]() -> unsigned int {
