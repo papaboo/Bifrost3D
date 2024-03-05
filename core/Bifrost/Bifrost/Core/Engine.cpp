@@ -11,10 +11,9 @@
 #include <Bifrost/Input/Keyboard.h>
 #include <Bifrost/Input/Mouse.h>
 
-namespace Bifrost {
-namespace Core {
+namespace Bifrost::Core {
 
-Engine::Engine(const std::filesystem::path& data_directory)
+Engine::Engine(const std::filesystem::path& application_path)
     : m_window(Window("Bifrost", 640, 480))
     , m_mutating_callbacks(0)
     , m_non_mutating_callbacks(0)
@@ -22,7 +21,16 @@ Engine::Engine(const std::filesystem::path& data_directory)
     , m_quit(false)
     , m_keyboard(nullptr)
     , m_mouse(nullptr) 
-    , m_data_directory(data_directory) {
+    , m_application_path(application_path) {
+}
+
+std::filesystem::path Engine::data_directory() {
+    auto application_directory = m_application_path.parent_path();
+    return application_directory.parent_path() / "Data";
+}
+
+std::filesystem::path Engine::current_working_directory() {
+    return std::filesystem::current_path();
 }
 
 void Engine::do_tick(double delta_time) {
@@ -40,5 +48,4 @@ void Engine::do_tick(double delta_time) {
         callback();
 }
 
-} // NS Core
-} // NS Bifrost
+} // NS Bifrost::Core

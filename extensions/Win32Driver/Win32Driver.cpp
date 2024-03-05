@@ -18,6 +18,8 @@
 #include <Bifrost/Input/Keyboard.h>
 #include <Bifrost/Input/Mouse.h>
 
+#include <filesystem>
+
 using Bifrost::Core::Engine;
 using Bifrost::Input::Keyboard;
 using Bifrost::Input::Mouse;
@@ -257,21 +259,12 @@ int run(OnLaunchCallback on_launch, OnWindowCreatedCallback on_window_created) {
 
     HINSTANCE instance_handle = GetModuleHandle(0);
 
-    char exepath[512];
-    GetModuleFileName(nullptr, exepath, 512);
-    // Find the second last slash and terminate after by setting the next character to '0'.
-    char* last_char = exepath + strlen(exepath);
-    int slash_count = 0;
-    while (slash_count != 2) {
-        char c = *--last_char;
-        if (c == '/' || c == '\\')
-            ++slash_count;
-    }
-    *++last_char = 0;
-    std::string data_path = std::string(exepath) + "Data\\";
-
+    char exe_path[512];
+    GetModuleFileName(nullptr, exe_path, 512);
+    auto application_path = std::filesystem::path(exe_path);
+    
     // Create engine.
-    g_engine = new Engine(data_path);
+    g_engine = new Engine(application_path);
     if (on_launch) {
         int error_code = on_launch(*g_engine);
         if (error_code != S_OK)
