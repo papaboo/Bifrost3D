@@ -60,7 +60,7 @@ public:
 
     bool m_use_interop;
 
-    Implementation(ID3D11Device1& device, Bifrost::Core::RendererID renderer_ID)
+    Implementation(ID3D11Device1& device, const std::filesystem::path& data_directory, Bifrost::Core::RendererID renderer_ID)
         : m_device(device), m_backbuffer_RTV(nullptr), m_backbuffer_SRV(nullptr) {
 
         device.GetImmediateContext1(&m_render_context);
@@ -75,7 +75,7 @@ public:
             THROW_CUDA_ERROR(cudaD3D11GetDevice(&m_cuda_device_ID, adapter));
 
             // Create OptiX Renderer on device.
-            m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, renderer_ID);
+            m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, data_directory, renderer_ID);
         }
 
         // Decide if we should use interop or not.
@@ -112,10 +112,11 @@ public:
                 "   return pixels[int(pixel_pos.x) + int(viewport_size.y - pixel_pos.y - 1) * frame_buffer_size.x];\n"
                 "}\n";
 
-            OBlob vertex_shader_bytecode = ShaderManager::compile_shader_source(vertex_src, "vs_5_0", "optix_adaptor_vs");
+            auto shader_manager = ShaderManager(data_directory);
+            OBlob vertex_shader_bytecode = shader_manager.compile_shader_source(vertex_src, "vs_5_0", "optix_adaptor_vs");
             THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_bytecode), nullptr, &m_vertex_shader));
 
-            OBlob pixel_shader_bytecode = ShaderManager::compile_shader_source(pixel_src, "ps_5_0", "optix_adaptor_ps");
+            OBlob pixel_shader_bytecode = shader_manager.compile_shader_source(pixel_src, "ps_5_0", "optix_adaptor_ps");
             THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_bytecode), nullptr, &m_pixel_shader));
         }
     }
@@ -245,9 +246,9 @@ public:
     }
 };
 
-Adaptor::Adaptor(ID3D11Device1& device) {
+Adaptor::Adaptor(ID3D11Device1& device, const std::filesystem::path& data_directory) {
     m_renderer_ID = Bifrost::Core::Renderers::create("OptiXRenderer");
-    m_impl = new Implementation(device, m_renderer_ID);
+    m_impl = new Implementation(device, data_directory, m_renderer_ID);
 }
 
 Adaptor::~Adaptor() {

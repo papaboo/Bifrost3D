@@ -37,6 +37,7 @@ if (DIRECTX11_FOUND AND WIN32)
     DX11Renderer/TransformManager.cpp
     DX11Renderer/Types.h
     DX11Renderer/Utils.h
+    DX11Renderer/Utils.cpp
   )
 
   set(SHADERS_SRC

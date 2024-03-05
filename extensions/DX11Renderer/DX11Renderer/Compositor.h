@@ -38,6 +38,8 @@ using ORenderTargetView = OwnedResourcePtr<ID3D11RenderTargetView>;
 using OShaderResourceView = OwnedResourcePtr<ID3D11ShaderResourceView>;
 }
 
+namespace std::filesystem { class path; }
+
 #define D3D11_CREATE_DEVICE_NONE 0
 
 namespace DX11Renderer {
@@ -63,7 +65,7 @@ public:
     virtual std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, Bifrost::Math::Vector2i frame_size) { return std::vector<Bifrost::Scene::Screenshot>(); }
 };
 
-typedef IRenderer*(*RendererCreator)(ID3D11Device1& device);
+typedef IRenderer*(*RendererCreator)(ID3D11Device1& device, const std::filesystem::path& data_directory);
 
 //-------------------------------------------------------------------------------------------------
 // GUI renderer interface.
@@ -74,7 +76,7 @@ public:
     virtual void render(ODeviceContext1& context) = 0;
 };
 
-typedef IGuiRenderer*(*GuiRendererCreator)(ODevice1& device);
+typedef IGuiRenderer*(*GuiRendererCreator)(ODevice1& device, const std::filesystem::path& data_directory);
 
 //-------------------------------------------------------------------------------------------------
 // Utility function to create a 'performant' DX11 device.

@@ -15,8 +15,7 @@
 
 using namespace ::DX11Renderer;
 
-namespace ImGui {
-namespace Renderers {
+namespace ImGui::Renderers {
 
 struct DX11Renderer::Implementation {
 
@@ -44,7 +43,7 @@ struct DX11Renderer::Implementation {
     // --------------------------------------------------------------------------------------------
     // Constructor
     // --------------------------------------------------------------------------------------------
-    DX11Renderer::Implementation(ODevice1& device) 
+    DX11Renderer::Implementation(ODevice1& device, const std::filesystem::path& data_directory)
         : m_device(device) {
 
         { // Pipeline state
@@ -85,6 +84,8 @@ struct DX11Renderer::Implementation {
             create_constant_buffer(m_device, 16 * sizeof(float), &m_projection_matrix);
         }
 
+        auto shader_manager = ShaderManager(data_directory);
+
         { // Shaders
             { // Vertex
                 static const char* vertex_shader_src =
@@ -111,7 +112,7 @@ struct DX11Renderer::Implementation {
                         return output;\
                     }";
 
-                OBlob vertex_shader_blob = ShaderManager::compile_shader_source(vertex_shader_src, "vs_5_0", "imgui_vs");
+                OBlob vertex_shader_blob = shader_manager.compile_shader_source(vertex_shader_src, "vs_5_0", "imgui_vs");
                 THROW_DX11_ERROR(m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), NULL, &m_vertex_shader));
 
                 // Create the input layout
@@ -137,7 +138,7 @@ struct DX11Renderer::Implementation {
                         return input.col * texture0.Sample(bilinear_sampler, input.uv); \
                     }";
 
-                OBlob pixel_shader_blob = ShaderManager::compile_shader_source(pixel_shader_src, "ps_5_0", "imgui_ps");
+                OBlob pixel_shader_blob = shader_manager.compile_shader_source(pixel_shader_src, "ps_5_0", "imgui_ps");
                 THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), NULL, &m_pixel_shader));
             }
         }
@@ -316,13 +317,12 @@ struct DX11Renderer::Implementation {
 // ------------------------------------------------------------------------------------------------
 // Facade
 // ------------------------------------------------------------------------------------------------
-DX11Renderer::DX11Renderer(ODevice1& device) {
-    m_impl = new Implementation(device);
+DX11Renderer::DX11Renderer(ODevice1& device, const std::filesystem::path& data_directory) {
+    m_impl = new Implementation(device, data_directory);
 }
 
 void DX11Renderer::render(ODeviceContext1& context) {
     m_impl->render(context);
 }
 
-} // NS Renderers
-} // NS ImGui
+} // NS ImGui::Renderers

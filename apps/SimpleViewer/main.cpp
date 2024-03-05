@@ -580,7 +580,7 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
             imgui_adaptor->new_frame(engine);
         });
 
-        compositor->add_GUI_renderer([](ODevice1& device) -> IGuiRenderer* { return new ImGui::Renderers::DX11Renderer(device); });
+        compositor->add_GUI_renderer(ImGui::Renderers::DX11Renderer::initialize);
     }
 
     engine.add_non_mutating_callback([=] { compositor->render(); });

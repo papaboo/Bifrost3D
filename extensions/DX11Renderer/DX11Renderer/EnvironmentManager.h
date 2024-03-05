@@ -15,9 +15,15 @@
 
 #include <vector>
 
+//-------------------------------------------------------------------------------------------------
+// Forward declarations.
+//-------------------------------------------------------------------------------------------------
 namespace DX11Renderer {
-
+class ShaderManager;
 class TextureManager;
+}
+
+namespace DX11Renderer {
 
 //-------------------------------------------------------------------------------------------------
 // Environment manager.
@@ -28,7 +34,7 @@ class TextureManager;
 class EnvironmentManager {
 public:
 
-    EnvironmentManager(ID3D11Device1& device, TextureManager& textures);
+    EnvironmentManager(ID3D11Device1& device, TextureManager& textures, const ShaderManager& shader_manager);
 
     // Render an environment to the active backbuffer.
     bool render(ID3D11DeviceContext1& render_context, int environment_ID);

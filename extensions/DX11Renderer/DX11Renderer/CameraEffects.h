@@ -14,6 +14,11 @@
 
 #include <DX11Renderer/Types.h>
 
+//-------------------------------------------------------------------------------------------------
+// Forward declarations.
+//-------------------------------------------------------------------------------------------------
+namespace DX11Renderer { class ShaderManager; }
+
 namespace DX11Renderer {
 
 // ------------------------------------------------------------------------------------------------
@@ -25,7 +30,7 @@ public:
 
     GaussianBloom() = default;
     GaussianBloom(GaussianBloom&& other) = default;
-    GaussianBloom(ID3D11Device1& device);
+    GaussianBloom(ID3D11Device1& device, const ShaderManager& shader_manager);
 
     GaussianBloom& operator=(GaussianBloom&& rhs) = default;
 
@@ -65,7 +70,7 @@ public:
 
     DualKawaseBloom() = default;
     DualKawaseBloom(DualKawaseBloom&& other) = default;
-    DualKawaseBloom(ID3D11Device1& device);
+    DualKawaseBloom(ID3D11Device1& device, const ShaderManager& shader_manager);
 
     DualKawaseBloom& operator=(DualKawaseBloom&& rhs) = default;
 
@@ -100,7 +105,7 @@ public:
 
     LogAverageLuminance() = default;
     LogAverageLuminance(LogAverageLuminance&& other) = default;
-    LogAverageLuminance(ID3D11Device1& device);
+    LogAverageLuminance(ID3D11Device1& device, const ShaderManager& shader_manager);
 
     LogAverageLuminance& operator=(LogAverageLuminance&& rhs) = default;
 
@@ -141,7 +146,7 @@ public:
 
     ExposureHistogram() = default;
     ExposureHistogram(ExposureHistogram&& other) = default;
-    ExposureHistogram(ID3D11Device1& device);
+    ExposureHistogram(ID3D11Device1& device, const ShaderManager& shader_manager);
 
     ExposureHistogram& operator=(ExposureHistogram&& rhs) = default;
 
@@ -197,7 +202,7 @@ public:
 
     CameraEffects() = default;
     CameraEffects(CameraEffects&& other) = default;
-    CameraEffects(ID3D11Device1& device);
+    CameraEffects(ID3D11Device1& device, const ShaderManager& shader_manager);
 
     CameraEffects& operator=(CameraEffects&& rhs) = default;
 
