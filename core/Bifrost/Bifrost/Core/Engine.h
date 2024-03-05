@@ -32,7 +32,7 @@ namespace Bifrost::Core {
 // ---------------------------------------------------------------------------
 class Engine final {
 public:
-    Engine(const std::filesystem::path& data_directory);
+    Engine(const std::filesystem::path& application_path);
 
     inline Time& get_time() { return m_time; }
     inline Time get_time() const { return m_time; }
@@ -60,7 +60,9 @@ public:
     // -----------------------------------------------------------------------
     // Paths
     // -----------------------------------------------------------------------
-    inline const std::filesystem::path& data_directory() { return m_data_directory; }
+    inline const std::filesystem::path& application_path() { return m_application_path; }
+    std::filesystem::path data_directory();
+    std::filesystem::path current_working_directory();
 
     // -----------------------------------------------------------------------
     // Main loop
@@ -86,7 +88,7 @@ private:
     const Input::Keyboard* m_keyboard;
     const Input::Mouse* m_mouse;
 
-    const std::filesystem::path m_data_directory;
+    const std::filesystem::path m_application_path;
 };
 
 } // NS Bifrost::Core
