@@ -249,7 +249,7 @@ struct Renderer::Implementation {
         optix::Geometry area_lights_geometry;
     } lights;
 
-    Implementation(int cuda_device_ID, RendererID renderer_ID) {
+    Implementation(int cuda_device_ID, const std::filesystem::path& data_directory, RendererID renderer_ID) {
 
 #pragma warning(disable : 4302 4311)
 
@@ -289,7 +289,7 @@ struct Renderer::Implementation {
         per_camera_state.resize(1);
         per_camera_state[0].clear(); // Clear sentinel camera state.
 
-        auto shader_prefix = std::filesystem::path("..") / "Data" / "OptiXRenderer" / "ptx" / "OptiXRenderer_generated_";
+        auto shader_prefix = data_directory / "OptiXRenderer" / "ptx" / "OptiXRenderer_generated_";
         auto get_ptx_path = [](const std::filesystem::path& shader_prefix, const std::string& shader_filename) -> std::string {
             return shader_prefix.generic_string() + shader_filename + ".cu.ptx";
         };
@@ -1250,9 +1250,9 @@ struct Renderer::Implementation {
 // Renderer
 // ------------------------------------------------------------------------------------------------
 
-Renderer* Renderer::initialize(int cuda_device_ID, RendererID renderer_ID) {
+Renderer* Renderer::initialize(int cuda_device_ID, const std::filesystem::path& data_directory, RendererID renderer_ID) {
     try {
-        Renderer* r = new Renderer(cuda_device_ID, renderer_ID);
+        Renderer* r = new Renderer(cuda_device_ID, data_directory, renderer_ID);
         if (r->m_impl->is_valid())
             return r;
         else {
@@ -1265,8 +1265,8 @@ Renderer* Renderer::initialize(int cuda_device_ID, RendererID renderer_ID) {
     }
 }
 
-Renderer::Renderer(int cuda_device_ID, RendererID renderer_ID)
-    : m_impl(new Implementation(cuda_device_ID, renderer_ID)) {}
+Renderer::Renderer(int cuda_device_ID, const std::filesystem::path& data_directory, RendererID renderer_ID)
+    : m_impl(new Implementation(cuda_device_ID, data_directory, renderer_ID)) {}
 
 float Renderer::get_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID) const { return m_impl->scene.GPU_state.ray_epsilon; }
 void Renderer::set_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID, float scene_epsilon) {

@@ -11,6 +11,8 @@
 
 #include <DX11Renderer/Types.h>
 
+#include <filesystem>
+
 //-------------------------------------------------------------------------------------------------
 // Forward declarations.
 //-------------------------------------------------------------------------------------------------
@@ -25,10 +27,20 @@ namespace DX11Renderer {
 class ShaderManager final {
 public:
 
-static OBlob ShaderManager::compile_shader_source(const char* const shader_src, const char* const target, const char* const entry_point);
-static OBlob compile_shader_from_file(const std::filesystem::path& shader_path, const char* const target, const char* const entry_point);
-static OBlob compile_shader_from_file(const char* const shader_path, const char* const target, const char* const entry_point);
+    ShaderManager();
+    ShaderManager(const std::filesystem::path& data_directory);
+    ShaderManager(ShaderManager&& other) = default;
+    ShaderManager(const ShaderManager& other) = default;
 
+    ShaderManager& operator=(ShaderManager&& rhs) = default;
+    ShaderManager& operator=(const ShaderManager& rhs) = default;
+
+    OBlob ShaderManager::compile_shader_source(const char* const shader_src, const char* const target, const char* const entry_point) const;
+    OBlob compile_shader_from_file(const std::filesystem::path& shader_path, const char* const target, const char* const entry_point) const;
+    OBlob compile_shader_from_file(const char* const shader_path, const char* const target, const char* const entry_point) const;
+
+private:
+    std::filesystem::path m_library_path;
 };
 
 } // NS DX11Renderer

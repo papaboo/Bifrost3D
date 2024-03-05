@@ -48,8 +48,8 @@ public:
         DisplayMode display_mode = DisplayMode::Color;
     };
 
-    Renderer(ID3D11Device1& device);
-    static IRenderer* initialize(ID3D11Device1& device) { return new Renderer(device); }
+    Renderer(ID3D11Device1& device, const std::filesystem::path& data_directory);
+    static IRenderer* initialize(ID3D11Device1& device, const std::filesystem::path& data_directory) { return new Renderer(device, data_directory); }
     ~Renderer();
 
     Bifrost::Core::RendererID get_ID() const { return m_renderer_ID; }

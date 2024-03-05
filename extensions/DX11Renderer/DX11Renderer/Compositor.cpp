@@ -9,9 +9,12 @@
 #include <DX11Renderer/Compositor.h>
 
 #include <DX11Renderer/CameraEffects.h>
+#include <DX11Renderer/ShaderManager.h>
 #include <DX11Renderer/Utils.h>
 
 #include <Bifrost/Core/Renderer.h>
+
+#include <filesystem>
 
 using namespace Bifrost::Assets;
 using namespace Bifrost::Core;
@@ -100,9 +103,13 @@ private:
     std::vector<double> m_previous_effects_times;
     CameraEffects m_camera_effects;
 
+    std::filesystem::path m_data_directory;
+
 public:
     Implementation(HWND& hwnd, const Window& window)
         : m_window(window) {
+
+        get_data_directory(m_data_directory);
 
         m_device = create_performant_device1();
         m_device->GetImmediateContext1(&m_render_context);
@@ -151,7 +158,8 @@ public:
                 m_counter_hertz = 1.0 / freq.QuadPart;
             }
 
-            m_camera_effects = CameraEffects(m_device);
+            auto shader_manager = ShaderManager(m_data_directory);
+            m_camera_effects = CameraEffects(m_device, shader_manager);
         }
 
         { // Initialize renderer containers. Initialize the 0'th index to null.
@@ -169,7 +177,7 @@ public:
     }
 
     std::unique_ptr<IRenderer>& add_renderer(RendererCreator renderer_creator) {
-        IRenderer* renderer = renderer_creator(*m_device);
+        IRenderer* renderer = renderer_creator(*m_device, m_data_directory);
         if (renderer == nullptr)
             return m_renderers[0];
 
@@ -185,7 +193,7 @@ public:
     }
 
     std::unique_ptr<IGuiRenderer>& add_GUI_renderer(GuiRendererCreator renderer_creator) {
-        IGuiRenderer* renderer = renderer_creator(m_device);
+        IGuiRenderer* renderer = renderer_creator(m_device, m_data_directory);
         if (renderer != nullptr) {
             m_GUI_renderers.push_back(std::unique_ptr<IGuiRenderer>(renderer));
             return m_GUI_renderers[m_GUI_renderers.size() - 1];

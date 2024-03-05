@@ -13,17 +13,16 @@
 #include <DX11Renderer/Types.h>
 
 #include <Bifrost/Math/AABB.h>
-#include <Bifrost/Math/Ray.h>
 #include <Bifrost/Math/Rect.h>
 #include <Bifrost/Math/Transform.h>
 #include <Bifrost/Math/Vector.h>
 #include <Bifrost/Math/Utils.h>
 
-#include <string>
-
 #define NOMINMAX
 #include <D3D11_1.h>
 #undef RGB
+
+namespace std::filesystem { class path; }
 
 namespace DX11Renderer {
 
@@ -37,24 +36,7 @@ void safe_release(ResourcePtr* resource_ptr) {
     }
 }
 
-inline void CHECK_HRESULT(HRESULT hr, const char* const file, int line) {
-    if (FAILED(hr)) {
-        std::string error = "[file:" + std::string(file) + " line:" + std::to_string(line) + "] DX 11";
-        switch (hr) {
-        case E_INVALIDARG:
-            error += " invalid arg.";
-            break;
-        case DXGI_ERROR_INVALID_CALL:
-            error += " DXGI error invalid call.";
-            break;
-        default:
-            error += " unknown HRESULT code: " + std::to_string(hr);
-            break;
-        }
-        fprintf(stderr, "%s\n", error.c_str());
-        throw std::exception(error.c_str());
-    }
-}
+void CHECK_HRESULT(HRESULT hr, const char* const file, int line);
 
 #define THROW_DX11_ERROR(hr) ::DX11Renderer::CHECK_HRESULT(hr, __FILE__, __LINE__)
 
@@ -116,14 +98,7 @@ inline int sizeof_dx_format(DXGI_FORMAT format) {
     }
 };
 
-inline ODevice1 get_device1(ID3D11DeviceContext1& context) {
-    ID3D11Device* basic_device;
-    context.GetDevice(&basic_device);
-    ODevice1 device1;
-    THROW_DX11_ERROR(basic_device->QueryInterface(IID_PPV_ARGS(&device1)));
-    basic_device->Release();
-    return device1;
-}
+ODevice1 get_device1(ID3D11DeviceContext1& context);
 
 inline float3 make_float3(Bifrost::Math::Vector3f v) {
     float3 r = { v.x, v.y, v.z };
@@ -137,6 +112,9 @@ inline float alpha_sort_value(Bifrost::Math::Vector3f camera_pos, Bifrost::Math:
     return magnitude_squared(camera_pos - center);
 }
 
+// Fill the data directory.
+// Passed as a reference instead of returned as a value to allow forward declaration of path.
+void get_data_directory(std::filesystem::path& data_directory);
 
 // ------------------------------------------------------------------------------------------------
 // Resource creation
@@ -282,7 +260,6 @@ inline void texture2D(ID3D11Device1* device, ID3D11DeviceContext1* context, ID3D
     THROW_DX11_ERROR(device->CreateTexture2D(&staging_desc, nullptr, &staging_texture));
 
     context->CopyResource(staging_texture, gpu_texture);
-    // context->Flush();
 
     D3D11_MAPPED_SUBRESOURCE mapped_resource = {};
     THROW_DX11_ERROR(context->Map(staging_texture, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_NONE, &mapped_resource));
@@ -293,7 +270,7 @@ inline void texture2D(ID3D11Device1* device, ID3D11DeviceContext1* context, ID3D
 }
 
 template <typename RandomAccessIterator>
-inline void texture2D(ID3D11Device1* device, ID3D11DeviceContext1* context, ID3D11Texture2D* gpu_texture, Bifrost::Math::Rect<int> viewport,
+inline void texture2D(ID3D11Device1* device, ID3D11DeviceContext1* context, ID3D11Texture2D* gpu_texture, Bifrost::Math::Recti viewport,
     RandomAccessIterator cpu_buffer_begin) {
     int element_count = viewport.width * viewport.height;
 
@@ -318,7 +295,6 @@ inline void texture2D(ID3D11Device1* device, ID3D11DeviceContext1* context, ID3D
     region.front = 0;
     region.back = 1;
     context->CopySubresourceRegion1(staging_texture, 0, 0, 0, 0, gpu_texture, 0, &region, 0);
-    // context->Flush();
 
     D3D11_MAPPED_SUBRESOURCE mapped_resource = {};
     THROW_DX11_ERROR(context->Map(staging_texture, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_NONE, &mapped_resource));
@@ -342,7 +318,6 @@ inline void buffer(ID3D11Device1* device, ID3D11DeviceContext1* context, ID3D11B
     THROW_DX11_ERROR(device->CreateBuffer(&staging_desc, nullptr, &staging_buffer));
 
     context->CopyResource(staging_buffer, gpu_buffer);
-    // context->Flush();
 
     D3D11_MAPPED_SUBRESOURCE mapped_resource = {};
     THROW_DX11_ERROR(context->Map(staging_buffer, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_NONE, &mapped_resource));

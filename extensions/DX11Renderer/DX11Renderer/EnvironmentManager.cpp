@@ -24,16 +24,16 @@ namespace DX11Renderer {
 //=================================================================================================
 // Environment manager.
 //=================================================================================================
-EnvironmentManager::EnvironmentManager(ID3D11Device1& device, TextureManager& textures)
+EnvironmentManager::EnvironmentManager(ID3D11Device1& device, TextureManager& textures, const ShaderManager& shader_manager)
     : m_textures(textures) {
 
-    OBlob vertex_shader_blob = ShaderManager::compile_shader_from_file("EnvironmentMap.hlsl", "vs_5_0", "main_vs");
+    OBlob vertex_shader_blob = shader_manager.compile_shader_from_file("EnvironmentMap.hlsl", "vs_5_0", "main_vs");
     THROW_DX11_ERROR(device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shader));
 
-    OBlob pixel_shader_blob = ShaderManager::compile_shader_from_file("EnvironmentMap.hlsl", "ps_5_0", "main_ps");
+    OBlob pixel_shader_blob = shader_manager.compile_shader_from_file("EnvironmentMap.hlsl", "ps_5_0", "main_ps");
     THROW_DX11_ERROR(device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_pixel_shader));
 
-    OBlob convolution_shader_blob = ShaderManager::compile_shader_from_file("IBLConvolution.hlsl", "cs_5_0", "MIS_convolute");
+    OBlob convolution_shader_blob = shader_manager.compile_shader_from_file("IBLConvolution.hlsl", "cs_5_0", "MIS_convolute");
     THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(convolution_shader_blob), nullptr, &m_convolution_shader));
 
     D3D11_SAMPLER_DESC sampler_desc = {};

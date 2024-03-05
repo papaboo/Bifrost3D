@@ -42,7 +42,7 @@ GTEST_TEST(MaterialManager, GPU_rho_texture_dimensions_consistent_with_CPU) {
         "   rho_dimensions[1] = ShadingModels::SpecularRho::roughness_sample_count;\n"
         "}\n";
     OComputeShader rho_dimensions_shader;
-    OBlob rho_dimensions_blob = ShaderManager::compile_shader_source(rho_dimensions_cs, "cs_5_0", "rho_dimensions_cs");
+    OBlob rho_dimensions_blob = ShaderManager().compile_shader_source(rho_dimensions_cs, "cs_5_0", "rho_dimensions_cs");
     THROW_DX11_ERROR(device->CreateComputeShader(UNPACK_BLOB_ARGS(rho_dimensions_blob), nullptr, &rho_dimensions_shader));
 
     OUnorderedAccessView rho_dimensions_UAV;
@@ -94,7 +94,7 @@ GTEST_TEST(MaterialManager, sample_GPU_rho_texture_consistent_with_CPU) {
         "   rho_samples[linear_index] = float2(specular_rho.base, specular_rho.full);\n"
         "}\n";
     OComputeShader sample_rho_shader;
-    OBlob sample_rho_blob = ShaderManager::compile_shader_source(sample_rho_cs, "cs_5_0", "sample_rho_cs");
+    OBlob sample_rho_blob = ShaderManager().compile_shader_source(sample_rho_cs, "cs_5_0", "sample_rho_cs");
     THROW_DX11_ERROR(device->CreateComputeShader(UNPACK_BLOB_ARGS(sample_rho_blob), nullptr, &sample_rho_shader));
 
     // Sample the rho texture on the GPU and readback the samples
