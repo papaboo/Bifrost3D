@@ -31,7 +31,7 @@ public:
     static DX11Renderer::IRenderer* initialize(DX11Renderer::ODevice1& device, const std::filesystem::path& data_directory) { return new Adaptor(device, data_directory); }
     ~Adaptor();
 
-    Bifrost::Core::RendererID get_ID() const { return m_renderer_ID; }
+    Bifrost::Core::RendererID get_ID() const;
     OptiXRenderer::Renderer* get_renderer();
 
     void handle_updates();
@@ -44,8 +44,6 @@ private:
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Adaptor(Adaptor& other) = delete;
     Adaptor& operator=(const Adaptor& rhs) = delete;
-
-    Bifrost::Core::RendererID m_renderer_ID;
 
     // Pimpl the state to avoid exposing DirectX and OptiX dependencies.
     class Implementation;

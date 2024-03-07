@@ -39,7 +39,10 @@ namespace OptiXRenderer {
 // ------------------------------------------------------------------------------------------------
 class Renderer final {
 public:
-    static Renderer* initialize(int cuda_device_ID, const std::filesystem::path& data_directory, Bifrost::Core::RendererID renderer_ID);
+    static Renderer* initialize(int cuda_device_ID, const std::filesystem::path& data_directory);
+    ~Renderer();
+
+    Bifrost::Core::RendererID get_renderer_ID() const { return m_renderer_ID; }
 
     float get_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID) const;
     void set_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID, float scene_epsilon);
@@ -69,11 +72,13 @@ public:
 
 private:
 
-    Renderer(int cuda_device_ID, const std::filesystem::path& data_directory, Bifrost::Core::RendererID renderer_ID);
+    Renderer(int cuda_device_ID, const std::filesystem::path& data_directory);
 
     // Delete copy constructors to avoid having multiple versions of the same renderer.
     Renderer(Renderer& other) = delete;
     Renderer& operator=(const Renderer& rhs) = delete;
+
+    Bifrost::Core::RendererID m_renderer_ID;
 
     // Pimpl the state to avoid exposing OptiX headers.
     struct Implementation;
