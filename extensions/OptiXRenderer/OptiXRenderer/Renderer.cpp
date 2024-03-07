@@ -1250,9 +1250,9 @@ struct Renderer::Implementation {
 // Renderer
 // ------------------------------------------------------------------------------------------------
 
-Renderer* Renderer::initialize(int cuda_device_ID, const std::filesystem::path& data_directory, RendererID renderer_ID) {
+Renderer* Renderer::initialize(int cuda_device_ID, const std::filesystem::path& data_directory) {
     try {
-        Renderer* r = new Renderer(cuda_device_ID, data_directory, renderer_ID);
+        Renderer* r = new Renderer(cuda_device_ID, data_directory);
         if (r->m_impl->is_valid())
             return r;
         else {
@@ -1265,8 +1265,14 @@ Renderer* Renderer::initialize(int cuda_device_ID, const std::filesystem::path& 
     }
 }
 
-Renderer::Renderer(int cuda_device_ID, const std::filesystem::path& data_directory, RendererID renderer_ID)
-    : m_impl(new Implementation(cuda_device_ID, data_directory, renderer_ID)) {}
+Renderer::Renderer(int cuda_device_ID, const std::filesystem::path& data_directory)
+    : m_renderer_ID(Bifrost::Core::Renderers::create("OptiXRenderer")),
+      m_impl(new Implementation(cuda_device_ID, data_directory, m_renderer_ID)) {}
+
+Renderer::~Renderer() {
+    Bifrost::Core::Renderers::destroy(m_renderer_ID);
+    delete m_impl;
+}
 
 float Renderer::get_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID) const { return m_impl->scene.GPU_state.ray_epsilon; }
 void Renderer::set_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID, float scene_epsilon) {

@@ -6,6 +6,8 @@
 // See LICENSE.txt for more detail.
 //-------------------------------------------------------------------------------------------------
 
+#define no_init_all deprecated
+
 #include <DX11OptiXAdaptor/Adaptor.h>
 
 #include <DX11Renderer/Renderer.h>
@@ -60,7 +62,7 @@ public:
 
     bool m_use_interop;
 
-    Implementation(ODevice1& device, const std::filesystem::path& data_directory, Bifrost::Core::RendererID renderer_ID)
+    Implementation(ODevice1& device, const std::filesystem::path& data_directory)
         : m_device(device), m_backbuffer_RTV(nullptr), m_backbuffer_SRV(nullptr) {
 
         m_device->GetImmediateContext1(&m_render_context);
@@ -75,7 +77,7 @@ public:
             THROW_CUDA_ERROR(cudaD3D11GetDevice(&m_cuda_device_ID, adapter));
 
             // Create OptiX Renderer on device.
-            m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, data_directory, renderer_ID);
+            m_optix_renderer = OptiXRenderer::Renderer::initialize(m_cuda_device_ID, data_directory);
         }
 
         // Decide if we should use interop or not.
@@ -247,13 +249,15 @@ public:
 };
 
 Adaptor::Adaptor(ODevice1& device, const std::filesystem::path& data_directory) {
-    m_renderer_ID = Bifrost::Core::Renderers::create("OptiXRenderer");
-    m_impl = new Implementation(device, data_directory, m_renderer_ID);
+    m_impl = new Implementation(device, data_directory);
 }
 
 Adaptor::~Adaptor() {
-    Bifrost::Core::Renderers::destroy(m_renderer_ID);
     delete m_impl;
+}
+
+Bifrost::Core::RendererID Adaptor::get_ID() const {
+    return m_impl->m_optix_renderer->get_renderer_ID();
 }
 
 OptiXRenderer::Renderer* Adaptor::get_renderer() {
