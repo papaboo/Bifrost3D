@@ -37,7 +37,7 @@ inline void throw_cuda_error(cudaError_t error, const std::string& file, int lin
 class Adaptor::Implementation {
 public:
     int m_cuda_device_ID = -1;
-    ID3D11Device1& m_device;
+    ODevice1& m_device;
     ODeviceContext1 m_render_context;
 
     ORenderTargetView m_backbuffer_RTV;
@@ -60,14 +60,14 @@ public:
 
     bool m_use_interop;
 
-    Implementation(ID3D11Device1& device, const std::filesystem::path& data_directory, Bifrost::Core::RendererID renderer_ID)
+    Implementation(ODevice1& device, const std::filesystem::path& data_directory, Bifrost::Core::RendererID renderer_ID)
         : m_device(device), m_backbuffer_RTV(nullptr), m_backbuffer_SRV(nullptr) {
 
-        device.GetImmediateContext1(&m_render_context);
+        m_device->GetImmediateContext1(&m_render_context);
 
         { // Get CUDA device from DX11 context.
             ODXGIDevice dxgi_device = nullptr;
-            THROW_DX11_ERROR(device.QueryInterface(IID_PPV_ARGS(&dxgi_device)));
+            THROW_DX11_ERROR(device->QueryInterface(IID_PPV_ARGS(&dxgi_device)));
 
             ODXGIAdapter adapter = nullptr;
             THROW_DX11_ERROR(dxgi_device->GetAdapter(&adapter));
@@ -114,10 +114,10 @@ public:
 
             auto shader_manager = ShaderManager(data_directory);
             OBlob vertex_shader_bytecode = shader_manager.compile_shader_source(vertex_src, "vs_5_0", "optix_adaptor_vs");
-            THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_bytecode), nullptr, &m_vertex_shader));
+            THROW_DX11_ERROR(m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_bytecode), nullptr, &m_vertex_shader));
 
             OBlob pixel_shader_bytecode = shader_manager.compile_shader_source(pixel_src, "ps_5_0", "optix_adaptor_ps");
-            THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_bytecode), nullptr, &m_pixel_shader));
+            THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_bytecode), nullptr, &m_pixel_shader));
         }
     }
 
@@ -246,7 +246,7 @@ public:
     }
 };
 
-Adaptor::Adaptor(ID3D11Device1& device, const std::filesystem::path& data_directory) {
+Adaptor::Adaptor(ODevice1& device, const std::filesystem::path& data_directory) {
     m_renderer_ID = Bifrost::Core::Renderers::create("OptiXRenderer");
     m_impl = new Implementation(device, data_directory, m_renderer_ID);
 }
@@ -257,10 +257,6 @@ Adaptor::~Adaptor() {
 }
 
 OptiXRenderer::Renderer* Adaptor::get_renderer() {
-    return m_impl->m_optix_renderer;
-}
-
-OptiXRenderer::Renderer* Adaptor::get_renderer() const {
     return m_impl->m_optix_renderer;
 }
 

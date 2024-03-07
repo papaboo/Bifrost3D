@@ -177,7 +177,7 @@ public:
     }
 
     std::unique_ptr<IRenderer>& add_renderer(RendererCreator renderer_creator) {
-        IRenderer* renderer = renderer_creator(*m_device, m_data_directory);
+        IRenderer* renderer = renderer_creator(m_device, m_data_directory);
         if (renderer == nullptr)
             return m_renderers[0];
 

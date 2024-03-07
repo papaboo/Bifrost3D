@@ -41,7 +41,7 @@ namespace DX11Renderer {
 //----------------------------------------------------------------------------
 class Renderer::Implementation {
 private:
-    ID3D11Device1& m_device;
+    ODevice1& m_device;
     ODeviceContext1 m_render_context;
 
     ShaderManager m_shader_manager;
@@ -151,10 +151,10 @@ private:
     } m_debug;
 
 public:
-    Implementation(ID3D11Device1& device, const std::filesystem::path& data_directory)
+    Implementation(ODevice1& device, const std::filesystem::path& data_directory)
         : m_device(device), m_shader_manager(ShaderManager(data_directory)) {
 
-        device.GetImmediateContext1(&m_render_context);
+        device->GetImmediateContext1(&m_render_context);
 
         { // Setup asset managing.
             m_environments = new EnvironmentManager(m_device, m_textures, m_shader_manager);
@@ -175,47 +175,47 @@ public:
         { // Setup g-buffer
             { // Light
                 OBlob pixel_shader_blob = m_shader_manager.compile_shader_from_file("SphereLight.hlsl", "ps_5_0", "g_buffer_PS");
-                THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.lights.pixel_shader));
+                THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.lights.pixel_shader));
             }
 
             { // Opaque shaders
                 CD3D11_RASTERIZER_DESC raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
-                THROW_DX11_ERROR(m_device.CreateRasterizerState(&raster_state, &m_g_buffer.opaque.raster_state));
+                THROW_DX11_ERROR(m_device->CreateRasterizerState(&raster_state, &m_g_buffer.opaque.raster_state));
 
                 OBlob vertex_shader_blob = m_shader_manager.compile_shader_from_file("ModelGBuffer.hlsl", "vs_5_0", "opaque_VS");
-                THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.opaque.vertex_shader));
+                THROW_DX11_ERROR(m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.opaque.vertex_shader));
 
                 // Create the input layout
                 D3D11_INPUT_ELEMENT_DESC input_layout_desc = { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 };
-                THROW_DX11_ERROR(m_device.CreateInputLayout(&input_layout_desc, 1, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.opaque.vertex_input_layout));
+                THROW_DX11_ERROR(m_device->CreateInputLayout(&input_layout_desc, 1, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.opaque.vertex_input_layout));
 
                 OBlob pixel_shader_blob = m_shader_manager.compile_shader_from_file("ModelGBuffer.hlsl", "ps_5_0", "opaque_PS");
-                THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.opaque.pixel_shader));
+                THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.opaque.pixel_shader));
             }
 
             { // Thin walled shaders
                 CD3D11_RASTERIZER_DESC raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
                 raster_state.CullMode = D3D11_CULL_NONE;
-                THROW_DX11_ERROR(m_device.CreateRasterizerState(&raster_state, &m_g_buffer.thin_walled.raster_state));
+                THROW_DX11_ERROR(m_device->CreateRasterizerState(&raster_state, &m_g_buffer.thin_walled.raster_state));
 
                 OBlob vertex_shader_blob = m_shader_manager.compile_shader_from_file("ModelGBuffer.hlsl", "vs_5_0", "thin_walled_VS");
-                THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.thin_walled.vertex_shader));
+                THROW_DX11_ERROR(m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_g_buffer.thin_walled.vertex_shader));
 
                 // Create the input layout
                 D3D11_INPUT_ELEMENT_DESC input_layout_desc[] = {
                     { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
                     { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
                 };
-                THROW_DX11_ERROR(m_device.CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.thin_walled.vertex_input_layout));
+                THROW_DX11_ERROR(m_device->CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_g_buffer.thin_walled.vertex_input_layout));
 
                 OBlob pixel_shader_blob = m_shader_manager.compile_shader_from_file("ModelGBuffer.hlsl", "ps_5_0", "thin_walled_PS");
-                THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.thin_walled.pixel_shader));
+                THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.thin_walled.pixel_shader));
             }
 
             // Depth-stencil state
             D3D11_DEPTH_STENCIL_DESC depth_desc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
             depth_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-            THROW_DX11_ERROR(m_device.CreateDepthStencilState(&depth_desc, &m_g_buffer.depth_state));
+            THROW_DX11_ERROR(m_device->CreateDepthStencilState(&depth_desc, &m_g_buffer.depth_state));
 
             // G-buffer is initialized on demand when the output dimensions are known ...
             m_g_buffer.width = m_g_buffer.height = 0u;
@@ -235,7 +235,7 @@ public:
             OBlob vertex_shader_blob = m_shader_manager.compile_shader_from_file("ModelShading.hlsl", "vs_5_0", "vs");
 
             // Create the shader objects.
-            THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shading.shader));
+            THROW_DX11_ERROR(m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shading.shader));
 
             // Create the input layout
             D3D11_INPUT_ELEMENT_DESC input_layout_desc[] = {
@@ -243,7 +243,7 @@ public:
                 { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
             };
 
-            THROW_DX11_ERROR(m_device.CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout));
+            THROW_DX11_ERROR(m_device->CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout));
 
             // Create a default emptyish buffer.
             D3D11_BUFFER_DESC empty_desc = {};
@@ -254,28 +254,28 @@ public:
             Vector4f lval = Vector4f::zero();
             D3D11_SUBRESOURCE_DATA empty_data = {};
             empty_data.pSysMem = &lval;
-            THROW_DX11_ERROR(m_device.CreateBuffer(&empty_desc, &empty_data, &m_vertex_shading.null_buffer));
+            THROW_DX11_ERROR(m_device->CreateBuffer(&empty_desc, &empty_data, &m_vertex_shading.null_buffer));
         }
 
         { // Setup raster states
             // Backface culled
             CD3D11_RASTERIZER_DESC raster_state = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
             raster_state.ScissorEnable = true; // Enable scissor rect to disable rendering to the guard band when shading.
-            THROW_DX11_ERROR(m_device.CreateRasterizerState(&raster_state, &m_raster_state.backface_culled));
+            THROW_DX11_ERROR(m_device->CreateRasterizerState(&raster_state, &m_raster_state.backface_culled));
 
             // Thin walled
             raster_state.CullMode = D3D11_CULL_NONE;
-            THROW_DX11_ERROR(m_device.CreateRasterizerState(&raster_state, &m_raster_state.thin_walled));
+            THROW_DX11_ERROR(m_device->CreateRasterizerState(&raster_state, &m_raster_state.thin_walled));
         }
 
         { // Setup opaque rendering.
             D3D11_DEPTH_STENCIL_DESC depth_desc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
             depth_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
             depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-            THROW_DX11_ERROR(m_device.CreateDepthStencilState(&depth_desc, &m_opaque.depth_state));
+            THROW_DX11_ERROR(m_device->CreateDepthStencilState(&depth_desc, &m_opaque.depth_state));
 
             OBlob pixel_shader_blob = m_shader_manager.compile_shader_from_file("ModelShading.hlsl", "ps_5_0", "opaque");
-            THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_opaque.shader));
+            THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_opaque.shader));
         }
 
         { // Setup transparent rendering.
@@ -293,15 +293,15 @@ public:
             rt_blend_desc.BlendOpAlpha = D3D11_BLEND_OP_ADD;
             rt_blend_desc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-            THROW_DX11_ERROR(m_device.CreateBlendState(&blend_desc, &m_transparent.blend_state));
+            THROW_DX11_ERROR(m_device->CreateBlendState(&blend_desc, &m_transparent.blend_state));
 
             D3D11_DEPTH_STENCIL_DESC depth_desc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
             depth_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
             depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-            THROW_DX11_ERROR(m_device.CreateDepthStencilState(&depth_desc, &m_transparent.depth_state));
+            THROW_DX11_ERROR(m_device->CreateDepthStencilState(&depth_desc, &m_transparent.depth_state));
 
             OBlob pixel_shader_buffer = m_shader_manager.compile_shader_from_file("ModelShading.hlsl", "ps_5_0", "transparent");
-            THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), nullptr, &m_transparent.shader));
+            THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), nullptr, &m_transparent.shader));
         }
 
         { // Scene constant buffer
@@ -313,18 +313,18 @@ public:
 
             // Sphere light visualization shaders.
             OBlob vertex_shader_blob = m_shader_manager.compile_shader_from_file("SphereLight.hlsl", "vs_5_0", "vs");
-            THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_lights.vertex_shader));
+            THROW_DX11_ERROR(m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_lights.vertex_shader));
             OBlob pixel_shader_blob = m_shader_manager.compile_shader_from_file("SphereLight.hlsl", "ps_5_0", "color_PS");
-            THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_lights.pixel_shader));
+            THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_lights.pixel_shader));
         }
 
         { // Debug
             OBlob vertex_shader_blob = m_shader_manager.compile_shader_from_file("Debug.hlsl", "vs_5_0", "main_vs");
-            THROW_DX11_ERROR(m_device.CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_debug.display_vertex_shader));
+            THROW_DX11_ERROR(m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_debug.display_vertex_shader));
             OBlob display_debug_blob = m_shader_manager.compile_shader_from_file("Debug.hlsl", "ps_5_0", "display_debug_ps");
-            THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(display_debug_blob), nullptr, &m_debug.display_debug_pixel_shader));
+            THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(display_debug_blob), nullptr, &m_debug.display_debug_pixel_shader));
             OBlob material_params_blob = m_shader_manager.compile_shader_from_file("ModelShading.hlsl", "ps_5_0", "visualize_material_params");
-            THROW_DX11_ERROR(m_device.CreatePixelShader(UNPACK_BLOB_ARGS(material_params_blob), nullptr, &m_debug.material_params_shader));
+            THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(material_params_blob), nullptr, &m_debug.material_params_shader));
         }
     }
 
@@ -531,13 +531,13 @@ public:
                     depth_desc.MiscFlags = 0;
 
                     OTexture2D depth_buffer;
-                    THROW_DX11_ERROR(m_device.CreateTexture2D(&depth_desc, nullptr, &depth_buffer));
+                    THROW_DX11_ERROR(m_device->CreateTexture2D(&depth_desc, nullptr, &depth_buffer));
 
                     D3D11_DEPTH_STENCIL_VIEW_DESC depth_view_desc = CD3D11_DEPTH_STENCIL_VIEW_DESC(D3D11_DSV_DIMENSION_TEXTURE2D, DXGI_FORMAT_D32_FLOAT);
-                    THROW_DX11_ERROR(m_device.CreateDepthStencilView(depth_buffer, &depth_view_desc, &m_g_buffer.depth_view));
+                    THROW_DX11_ERROR(m_device->CreateDepthStencilView(depth_buffer, &depth_view_desc, &m_g_buffer.depth_view));
 
                     D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = CD3D11_SHADER_RESOURCE_VIEW_DESC(D3D11_SRV_DIMENSION_TEXTURE2D, DXGI_FORMAT_R32_FLOAT);
-                    THROW_DX11_ERROR(m_device.CreateShaderResourceView(depth_buffer, &srv_desc, &m_g_buffer.depth_SRV));
+                    THROW_DX11_ERROR(m_device->CreateShaderResourceView(depth_buffer, &srv_desc, &m_g_buffer.depth_SRV));
                 }
 
                 { // Normal buffer
@@ -732,7 +732,7 @@ public:
 
         D3D11_SUBRESOURCE_DATA resource_data = {};
         resource_data.pSysMem = data;
-        return m_device.CreateBuffer(&desc, &resource_data, buffer);
+        return m_device->CreateBuffer(&desc, &resource_data, buffer);
     }
 
     void handle_updates() {
@@ -874,7 +874,7 @@ public:
 //----------------------------------------------------------------------------
 // DirectX 11 renderer.
 //----------------------------------------------------------------------------
-Renderer::Renderer(ID3D11Device1& device, const std::filesystem::path& data_directory) {
+Renderer::Renderer(ODevice1& device, const std::filesystem::path& data_directory) {
     m_impl = new Implementation(device, data_directory);
     m_renderer_ID = Renderers::create("DX11Renderer");
 }

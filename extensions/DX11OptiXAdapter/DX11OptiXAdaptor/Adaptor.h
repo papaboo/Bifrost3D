@@ -27,13 +27,12 @@ namespace DX11OptiXAdaptor {
 //-------------------------------------------------------------------------------------------------
 class Adaptor final : public DX11Renderer::IRenderer {
 public:
-    Adaptor(ID3D11Device1& device, const std::filesystem::path& data_directory);
-    static DX11Renderer::IRenderer* initialize(ID3D11Device1& device, const std::filesystem::path& data_directory) { return new Adaptor(device, data_directory); }
+    Adaptor(DX11Renderer::ODevice1& device, const std::filesystem::path& data_directory);
+    static DX11Renderer::IRenderer* initialize(DX11Renderer::ODevice1& device, const std::filesystem::path& data_directory) { return new Adaptor(device, data_directory); }
     ~Adaptor();
 
     Bifrost::Core::RendererID get_ID() const { return m_renderer_ID; }
     OptiXRenderer::Renderer* get_renderer();
-    OptiXRenderer::Renderer* get_renderer() const;
 
     void handle_updates();
 
