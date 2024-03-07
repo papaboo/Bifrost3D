@@ -65,7 +65,7 @@ public:
     virtual std::vector<Bifrost::Scene::Screenshot> request_auxiliary_buffers(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Cameras::ScreenshotContent content_requested, Bifrost::Math::Vector2i frame_size) { return std::vector<Bifrost::Scene::Screenshot>(); }
 };
 
-typedef IRenderer*(*RendererCreator)(ID3D11Device1& device, const std::filesystem::path& data_directory);
+typedef IRenderer*(*RendererCreator)(ODevice1& device, const std::filesystem::path& data_directory);
 
 //-------------------------------------------------------------------------------------------------
 // GUI renderer interface.
