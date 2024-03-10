@@ -29,6 +29,15 @@ enum class MaterialFlag : unsigned char {
 };
 
 // ---------------------------------------------------------------------------
+// Bifrost shading models.
+// ---------------------------------------------------------------------------
+enum class ShadingModel : unsigned char {
+    Default = 0u,
+    Diffuse = 1u,
+    Count = 2
+};
+
+// ---------------------------------------------------------------------------
 // Metal tints.
 // ---------------------------------------------------------------------------
 const Math::RGB iron_tint = Math::RGB(0.560f, 0.570f, 0.580f);
@@ -61,6 +70,7 @@ public:
     typedef Core::Bitmask<MaterialFlag> Flags;
 
     struct Data {
+        ShadingModel shading_model;
         Math::RGB tint;
         TextureID tint_roughness_texture_ID;
         float roughness;
@@ -123,6 +133,9 @@ public:
     static inline const std::string& get_name(MaterialID material_ID) { return m_names[material_ID]; }
     static inline void set_name(MaterialID material_ID, const std::string& name) { m_names[material_ID] = name; }
 
+    static inline ShadingModel get_shading_model(MaterialID material_ID) { return m_materials[material_ID].shading_model; }
+    static void set_shading_model(MaterialID material_ID, ShadingModel shading_model);
+
     static inline Flags get_flags(MaterialID material_ID) { return m_materials[material_ID].flags; }
     static void set_flags(MaterialID material_ID, Flags flags);
 
@@ -170,6 +183,7 @@ public:
         Created = 1,
         Destroyed = 2,
         Updated = 4,
+        ShadingModel = 8,
         All = Created | Destroyed | Updated
     };
     typedef Core::Bitmask<Change> Changes;
@@ -215,6 +229,9 @@ public:
     // -----------------------------------------------------------------------
     inline const std::string& get_name() const { return Materials::get_name(m_ID); }
     inline void set_name(const std::string& name) { Materials::set_name(m_ID, name); }
+
+    inline ShadingModel get_shading_model() { return Materials::get_shading_model(m_ID); }
+    inline void set_shading_model(ShadingModel shading_model) { return Materials::set_shading_model(m_ID, shading_model); }
 
     inline void set_flags(Materials::Flags flags) { Materials::set_flags(m_ID, flags); }
     inline Materials::Flags get_flags() const { return Materials::get_flags(m_ID); }
