@@ -115,6 +115,11 @@ void Materials::destroy(MaterialID material_ID) {
         m_changes.add_change(material_ID, Change::Destroyed);
 }
 
+void Materials::set_shading_model(MaterialID material_ID, ShadingModel shading_model) {
+    m_materials[material_ID].shading_model = shading_model;
+    flag_as_updated(material_ID);
+}
+
 void Materials::set_flags(MaterialID material_ID, Flags flags) {
     m_materials[material_ID].flags = flags;
     flag_as_updated(material_ID);
