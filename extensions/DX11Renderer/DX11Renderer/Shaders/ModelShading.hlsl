@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 
 #include "ShadingModels/DefaultShading.hlsl"
+#include "ShadingModels/DiffuseShading.hlsl"
 #include "LightSources.hlsl"
 #include "Utils.hlsl"
 
@@ -56,32 +57,36 @@ Varyings vs(float4 geometry : GEOMETRY, float2 texcoord : TEXCOORD) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Fragment shader / light integration.
+// Light integration.
 // ------------------------------------------------------------------------------------------------
 
-float3 integrate(Varyings input, bool is_front_face, float ambient_visibility) {
+interface IShadingModelCreator {
+    ShadingModels::IShadingModel create(float2 texcoord, float abs_cos_theta_o);
+};
+
+float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, bool is_front_face, float ambient_visibility) {
     float3 world_wo = normalize(scene_vars.camera_position.xyz - input.world_position.xyz);
     float3 world_normal = normalize(input.normal.xyz) * (is_front_face ? 1.0 : -1.0);
 
     float3x3 world_to_shading_TBN = create_TBN(world_normal);
     float3 wo = mul(world_to_shading_TBN, world_wo);
 
-    const ShadingModels::DefaultShading default_shading = ShadingModels::DefaultShading::from_constants(material_params, wo.z, input.texcoord);
+    const ShadingModels::IShadingModel shading_model = shading_model_creator.create(input.texcoord, wo.z);
 
     // Apply IBL
-    float3 radiance = ambient_visibility * scene_vars.environment_tint.rgb * default_shading.evaluate_IBL(world_wo, world_normal);
+    float3 radiance = ambient_visibility * scene_vars.environment_tint.rgb * shading_model.evaluate_IBL(world_wo, world_normal);
 
     for (int l = 0; l < light_count.x; ++l) {
         LightData light = light_data[l];
 
         bool is_sphere_light = light.type() == LightType::Sphere && light.sphere_radius() > 0.0f;
         if (is_sphere_light) {
-            radiance += default_shading.evaluate_area_light(light, input.world_position.xyz, wo, world_to_shading_TBN, ambient_visibility);
+            radiance += shading_model.evaluate_area_light(light, input.world_position.xyz, wo, world_to_shading_TBN, ambient_visibility);
         } else {
             // Apply regular delta lights.
             LightSample light_sample = sample_light(light, input.world_position.xyz);
             float3 wi = mul(world_to_shading_TBN, light_sample.direction_to_light);
-            float3 f = default_shading.evaluate(wo, wi);
+            float3 f = shading_model.evaluate(wo, wi);
             radiance += f * light_sample.radiance * abs(wi.z);
         }
     }
@@ -89,22 +94,69 @@ float3 integrate(Varyings input, bool is_front_face, float ambient_visibility) {
     return radiance;
 }
 
-float4 opaque(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
+float4 opaque(IShadingModelCreator shading_model_creator, Varyings input, bool is_front_face){
     // NOTE There may be a performance cost associated with having a potential discard, so we should probably have a separate pixel shader for cutouts.
     if (material_params.discard_from_cutout(input.texcoord))
         discard;
 
     float ambient_visibility = ssao_tex[input.position.xy + scene_vars.g_buffer_to_ao_index_offset].r;
-
-    return float4(integrate(input, is_front_face, ambient_visibility), 1.0f);
+    return float4(integrate(shading_model_creator, input, is_front_face, ambient_visibility), 1.0f);
 }
 
-float4 transparent(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
+float4 transparent(IShadingModelCreator shading_model_creator, Varyings input, bool is_front_face) {
     float coverage = material_params.coverage(input.texcoord);
-    return float4(integrate(input, is_front_face, 1), coverage);
+    return float4(integrate(shading_model_creator, input, is_front_face, 1), coverage);
 }
 
+// ------------------------------------------------------------------------------------------------
+// Default shading entry points
+// ------------------------------------------------------------------------------------------------
 
+struct DefaultShadingCreator : IShadingModelCreator {
+    ShadingModels::IShadingModel create(float2 texcoord, float abs_cos_theta_o) {
+        float4 tint_roughness = material_params.tint_roughness(texcoord);
+        float3 tint = tint_roughness.rgb;
+        float roughness = tint_roughness.w;
+
+        float metallic = material_params.metallic(texcoord);
+        float specularity = material_params.m_specularity;
+        float coat_scale = material_params.coat_scale();
+        float coat_roughness = material_params.coat_roughness();
+
+        return ShadingModels::DefaultShading::create(tint, roughness, specularity, metallic, coat_scale, coat_roughness, abs_cos_theta_o);
+    }
+};
+
+float4 default_opaque(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
+    DefaultShadingCreator shading_creator;
+    return opaque(shading_creator, input, is_front_face);
+}
+
+float4 default_transparent(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
+    DefaultShadingCreator shading_creator;
+    return transparent(shading_creator, input, is_front_face);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Diffuse shading entry points
+// ------------------------------------------------------------------------------------------------
+
+struct DiffuseShadingCreator : IShadingModelCreator {
+    ShadingModels::IShadingModel create(float2 texcoord, float abs_cos_theta_o) {
+        float3 tint = material_params.tint_roughness(texcoord).rgb;
+        return ShadingModels::DiffuseShading::create(tint);
+    }
+};
+
+float4 diffuse_opaque(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
+    DiffuseShadingCreator shading_creator;
+    return opaque(shading_creator, input, is_front_face);
+}
+
+float4 diffuse_transparent(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
+    DiffuseShadingCreator shading_creator;
+    return transparent(shading_creator, input, is_front_face);
+}
 
 // ------------------------------------------------------------------------------------------------
 // Material property visualization.

@@ -18,6 +18,7 @@ namespace DX11Renderer {
 
 inline Dx11Material make_dx11material(Material mat) {
     Dx11Material dx11_material = {};
+    dx11_material.shading_model = (unsigned int)mat.get_shading_model();
     dx11_material.tint.x = mat.get_tint().r;
     dx11_material.tint.y = mat.get_tint().g;
     dx11_material.tint.z = mat.get_tint().b;

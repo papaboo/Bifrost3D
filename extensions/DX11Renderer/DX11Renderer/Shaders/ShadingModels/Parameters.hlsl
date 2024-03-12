@@ -83,7 +83,8 @@ struct Parameters {
     float m_coverage;
     float m_coat;
     float m_coat_roughness;
-    float2 __padding;
+    int shading_model; // Shading model pixel shaders are set on the host, but this can be used to validate that the correct pixel shaders are used.
+    float __padding;
 
     float4 tint_roughness(float2 texcoord) {
         float4 tint_roughness = float4(m_tint, m_roughness);
