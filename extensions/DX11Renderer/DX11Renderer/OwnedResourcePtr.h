@@ -64,7 +64,6 @@ public:
     // Resource management.
     // --------------------------------------------------------------------------------------------
 
-    inline T* detach() { T* tmp = resource; resource = nullptr; return tmp; }
     inline unsigned int release() { 
         if (resource == nullptr) return 0u;
         unsigned int res = resource->Release(); resource = nullptr; return res;
@@ -76,6 +75,8 @@ public:
     }
 
 private:
+    inline T* detach() { T* tmp = resource; resource = nullptr; return tmp; }
+
     OwnedResourcePtr(OwnedResourcePtr& other) = delete;
     OwnedResourcePtr& operator=(OwnedResourcePtr& rhs) = delete;
 };

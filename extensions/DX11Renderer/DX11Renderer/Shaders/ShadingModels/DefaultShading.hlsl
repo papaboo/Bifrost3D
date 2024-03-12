@@ -113,23 +113,6 @@ struct DefaultShading : IShadingModel {
     }
 
     // --------------------------------------------------------------------------------------------
-    // Factory function constructing a shading from a constant buffer.
-    // --------------------------------------------------------------------------------------------
-    static DefaultShading from_constants(uniform Parameters material_params, float abs_cos_theta, float2 texcoord) {
-        // Tint and roughness
-        float4 tint_roughness = material_params.tint_roughness(texcoord);
-        float3 tint = tint_roughness.rgb;
-        float roughness = tint_roughness.w;
-
-        float metallic = material_params.metallic(texcoord);
-        float specularity = material_params.m_specularity;
-        float coat_scale = material_params.coat_scale();
-        float coat_roughness = material_params.coat_roughness();
-
-        return create(tint, roughness, specularity, metallic, coat_scale, coat_roughness, abs_cos_theta);
-    }
-
-    // --------------------------------------------------------------------------------------------
     // Getters
     // --------------------------------------------------------------------------------------------
     float roughness() { return m_roughness; }

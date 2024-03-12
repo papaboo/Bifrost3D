@@ -233,7 +233,8 @@ struct Dx11Material {
     float coverage;
     float coat;
     float coat_roughness;
-    float2 __padding;
+    unsigned int shading_model;
+    float __padding;
 };
 
 struct Dx11MaterialTextures {

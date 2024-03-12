@@ -86,4 +86,4 @@ struct DiffuseShading : IShadingModel {
 
 } // NS ShadingModels
 
-#endif // _DX11_RENDERER_SHADERS_SHADING_MODELS_DEFAULT_SHADING_H_
+#endif // _DX11_RENDERER_SHADERS_SHADING_MODELS_DIFFUSE_SHADING_H_
