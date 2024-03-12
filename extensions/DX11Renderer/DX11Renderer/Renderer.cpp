@@ -97,7 +97,7 @@ private:
 
     struct {
         ODepthStencilState depth_state;
-        OPixelShader shader;
+        vector<OPixelShader> shading_models;
     } m_opaque;
 
     struct {
@@ -119,8 +119,8 @@ private:
 
         OBlendState blend_state;
         ODepthStencilState depth_state;
-        OPixelShader shader;
-        std::vector<SortedModel> sorted_models_pool; // List of sorted transparent models. Created as a pool to minimize runtime memory allocation.
+        vector<OPixelShader> shading_models;
+        vector<SortedModel> sorted_models_pool; // List of sorted transparent models. Created as a pool to minimize runtime memory allocation.
     } m_transparent;
 
     // Scene constants
@@ -149,6 +149,13 @@ private:
         OPixelShader display_debug_pixel_shader;
         OPixelShader material_params_shader;
     } m_debug;
+
+    OPixelShader create_shading_model(ODevice1& device, ShaderManager& shader_manager, const char* entry_point) {
+        OBlob pixel_shader_blob = shader_manager.compile_shader_from_file("ModelShading.hlsl", "ps_5_0", entry_point);
+        OPixelShader pixel_shader;
+        THROW_DX11_ERROR(device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &pixel_shader));
+        return pixel_shader;
+    }
 
 public:
     Implementation(ODevice1& device, const std::filesystem::path& data_directory)
@@ -274,8 +281,9 @@ public:
             depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
             THROW_DX11_ERROR(m_device->CreateDepthStencilState(&depth_desc, &m_opaque.depth_state));
 
-            OBlob pixel_shader_blob = m_shader_manager.compile_shader_from_file("ModelShading.hlsl", "ps_5_0", "opaque");
-            THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_opaque.shader));
+            m_opaque.shading_models.resize((int)ShadingModel::Count);
+            m_opaque.shading_models[(int)ShadingModel::Default] = create_shading_model(m_device, m_shader_manager, "default_opaque");
+            m_opaque.shading_models[(int)ShadingModel::Diffuse] = create_shading_model(m_device, m_shader_manager, "diffuse_opaque");
         }
 
         { // Setup transparent rendering.
@@ -300,8 +308,9 @@ public:
             depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
             THROW_DX11_ERROR(m_device->CreateDepthStencilState(&depth_desc, &m_transparent.depth_state));
 
-            OBlob pixel_shader_buffer = m_shader_manager.compile_shader_from_file("ModelShading.hlsl", "ps_5_0", "transparent");
-            THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_buffer), nullptr, &m_transparent.shader));
+            m_transparent.shading_models.resize((int)ShadingModel::Count);
+            m_transparent.shading_models[(int)ShadingModel::Default] = create_shading_model(m_device, m_shader_manager, "default_transparent");
+            m_transparent.shading_models[(int)ShadingModel::Diffuse] = create_shading_model(m_device, m_shader_manager, "diffuse_transparent");
         }
 
         { // Scene constant buffer
@@ -627,16 +636,15 @@ public:
         }
 
         { // Render models.
-            auto opaque_marker = PerformanceMarker(*m_render_context, L"Opaque geometry");
 
-            // Set vertex and pixel shaders.
+            // Setup debug material if needed.
             bool debug_material_params = m_debug_settings.display_mode == DebugSettings::DisplayMode::Tint ||
-                                         m_debug_settings.display_mode == DebugSettings::DisplayMode::Roughness ||
-                                         m_debug_settings.display_mode == DebugSettings::DisplayMode::Metallic ||
-                                         m_debug_settings.display_mode == DebugSettings::DisplayMode::Coat ||
-                                         m_debug_settings.display_mode == DebugSettings::DisplayMode::CoatRoughness ||
-                                         m_debug_settings.display_mode == DebugSettings::DisplayMode::Coverage ||
-                                         m_debug_settings.display_mode == DebugSettings::DisplayMode::UV;
+                m_debug_settings.display_mode == DebugSettings::DisplayMode::Roughness ||
+                m_debug_settings.display_mode == DebugSettings::DisplayMode::Metallic ||
+                m_debug_settings.display_mode == DebugSettings::DisplayMode::Coat ||
+                m_debug_settings.display_mode == DebugSettings::DisplayMode::CoatRoughness ||
+                m_debug_settings.display_mode == DebugSettings::DisplayMode::Coverage ||
+                m_debug_settings.display_mode == DebugSettings::DisplayMode::UV;
             OBuffer debug_material_constant_buffer;
             if (debug_material_params) {
                 Vector4i debug_material_constants = { m_debug_settings.display_mode, 0, 0, 0 };
@@ -644,28 +652,39 @@ public:
                 m_render_context->PSSetConstantBuffers(4, 1, &debug_material_constant_buffer);
             }
 
-            m_render_context->VSSetShader(m_vertex_shading.shader, 0, 0);
-            m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
-            m_render_context->PSSetShader(debug_material_params ? m_debug.material_params_shader : m_opaque.shader, 0, 0);
+            { // Render opaque models
+                auto opaque_marker = PerformanceMarker(*m_render_context, L"Opaque geometry");
 
-            // Set null buffer as default texcoord buffer.
-            unsigned int stride = sizeof(float2);
-            unsigned int offset = 0;
-            m_render_context->IASetVertexBuffers(2, 1, &m_vertex_shading.null_buffer, &stride, &offset);
+                m_render_context->VSSetShader(m_vertex_shading.shader, 0, 0);
+                m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
 
-            for (auto model_itr = m_mesh_models.cbegin(); model_itr != m_mesh_models.cbegin_transparent_models(); ++model_itr) {
-                // Setup two-sided raster state for thin-walled materials.
-                if (model_itr == m_mesh_models.cbegin_opaque_thin_walled_models())
-                    m_raster_state.set_raster_state(m_raster_state.thin_walled, m_render_context);
+                // Set null buffer as default texcoord buffer.
+                unsigned int stride = sizeof(float2);
+                unsigned int offset = 0;
+                m_render_context->IASetVertexBuffers(2, 1, &m_vertex_shading.null_buffer, &stride, &offset);
 
-                assert(model_itr->model_ID != 0);
-                render_model<false>(m_render_context, *model_itr);
+                unsigned int previous_shading_model = 0;
+                m_render_context->PSSetShader(debug_material_params ? m_debug.material_params_shader : m_opaque.shading_models[previous_shading_model], 0, 0);
+                for (auto model_itr = m_mesh_models.cbegin(); model_itr != m_mesh_models.cbegin_transparent_models(); ++model_itr) {
+                    assert(model_itr->model_ID != 0);
+
+                    // Setup two-sided raster state for thin-walled materials.
+                    if (model_itr == m_mesh_models.cbegin_opaque_thin_walled_models())
+                        m_raster_state.set_raster_state(m_raster_state.thin_walled, m_render_context);
+
+                    unsigned int current_shading_model = m_materials.get_material(model_itr->material_ID).shading_model;
+                    if (previous_shading_model != current_shading_model && !debug_material_params) {
+                        m_render_context->PSSetShader(m_opaque.shading_models[current_shading_model], 0, 0);
+                        previous_shading_model = current_shading_model;
+                    }
+
+                    render_model<false>(m_render_context, *model_itr);
+                }
+
+                opaque_marker.end();
             }
 
-            opaque_marker.end();
-
             { // Render transparent models
-
                 auto transparent_marker = PerformanceMarker(*m_render_context, L"Transparent geometry");
 
                 // Apply used thin-wall state if not already applied.
@@ -676,7 +695,6 @@ public:
                 if (!debug_material_params)
                     m_render_context->OMSetBlendState(m_transparent.blend_state, 0, 0xffffffff);
                 m_render_context->OMSetDepthStencilState(m_transparent.depth_state, 0);
-                m_render_context->PSSetShader(debug_material_params ? m_debug.material_params_shader : m_transparent.shader, 0, 0);
 
                 int transparent_model_count = int(m_mesh_models.cend() - m_mesh_models.cbegin_transparent_models());
                 auto transparent_models = m_transparent.sorted_models_pool; // Alias the pool.
@@ -690,7 +708,7 @@ public:
                         Dx11Mesh& mesh = m_meshes[model_itr->mesh_ID];
                         Transform transform = m_transforms.get_transform(model_itr->transform_ID);
                         Bifrost::Math::AABB bounds = { Vector3f(mesh.bounds.min.x, mesh.bounds.min.y, mesh.bounds.min.z),
-                                                        Vector3f(mesh.bounds.max.x, mesh.bounds.max.y, mesh.bounds.max.z) };
+                                                       Vector3f(mesh.bounds.max.x, mesh.bounds.max.y, mesh.bounds.max.z) };
                         float distance_to_cam = alpha_sort_value(cam_pos, transform, bounds);
                         transparent_models.push_back({ distance_to_cam, model_itr });
                     }
@@ -701,9 +719,17 @@ public:
                     });
                 }
 
+                unsigned int previous_shading_model = 0;
+                m_render_context->PSSetShader(debug_material_params ? m_debug.material_params_shader : m_transparent.shading_models[previous_shading_model], 0, 0);
                 for (auto transparent_model : transparent_models) {
                     Dx11Model model = *transparent_model.model_iterator;
                     assert(model.model_ID != 0);
+
+                    unsigned int current_shading_model = m_materials.get_material(model.material_ID).shading_model;
+                    if (previous_shading_model != current_shading_model && !debug_material_params) {
+                        m_render_context->PSSetShader(m_transparent.shading_models[current_shading_model], 0, 0);
+                        previous_shading_model = current_shading_model;
+                    }
 
                     // Apply raster state
                     if (model.is_thin_walled()) {
