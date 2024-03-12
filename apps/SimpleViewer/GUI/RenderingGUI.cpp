@@ -293,6 +293,11 @@ void RenderingGUI::layout_frame() {
         ImGui::PoppedTreeNode("Materials", [&] {
             for (Material material : Materials::get_iterable()) {
                 ImGui::PoppedTreeNode(material.get_name().c_str(), [&] {
+                    const char* shading_model_names[] = { "Default", "Diffuse" };
+                    int current_shading_model = (int)material.get_shading_model();
+                    if (ImGui::Combo("Shading model", &current_shading_model, shading_model_names, IM_ARRAYSIZE(shading_model_names)))
+                        material.set_shading_model(ShadingModel(current_shading_model));
+
                     RGB tint = material.get_tint();
                     if (ImGui::ColorEdit3("Tint", &tint.r))
                         material.set_tint(tint);
