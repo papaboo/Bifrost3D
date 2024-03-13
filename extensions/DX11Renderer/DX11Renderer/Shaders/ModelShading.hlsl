@@ -210,9 +210,6 @@ float4 visualize_material_params(Varyings input, bool is_front_face : SV_IsFront
         return float4(coverage, coverage, coverage, 1);
     }
 
-    if (material_params.discard_from_cutout(input.texcoord))
-        discard;
-
     if (visualization_mode == visualize_metallic) {
         float metallic = material_params.metallic(input.texcoord);
         return float4(metallic, metallic, metallic, 1);
