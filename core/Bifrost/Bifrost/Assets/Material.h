@@ -138,6 +138,8 @@ public:
 
     static inline Flags get_flags(MaterialID material_ID) { return m_materials[material_ID].flags; }
     static void set_flags(MaterialID material_ID, Flags flags);
+    static inline bool is_thin_walled(MaterialID material_ID) { return get_flags(material_ID).is_set(MaterialFlag::ThinWalled); }
+    static inline bool is_cutout(MaterialID material_ID) { return get_flags(material_ID).is_set(MaterialFlag::Cutout); }
 
     static inline Math::RGB get_tint(MaterialID material_ID) { return m_materials[material_ID].tint; }
     static void set_tint(MaterialID material_ID, Math::RGB tint);
@@ -161,16 +163,13 @@ public:
     static inline float get_coat_roughness(MaterialID material_ID) { return m_materials[material_ID].coat_roughness; }
     static void set_coat_roughness(MaterialID material_ID, float coat_roughness);
 
-    // Transparency getters and setters.
-    static inline float get_coverage(MaterialID material_ID) { return m_materials[material_ID].coverage; }
-    static void set_coverage(MaterialID material_ID, float coverage);
+    // Coverage and cutout getters and setters.
+    static inline float get_coverage(MaterialID material_ID) { return !is_cutout(material_ID) ? m_materials[material_ID].coverage : 1.0F; }
+    static void set_coverage(MaterialID material_ID, float cutout_threshold) { if (!is_cutout(material_ID)) set_coverage_and_cutout_threshold(material_ID, cutout_threshold); }
+    static inline float get_cutout_threshold(MaterialID material_ID) { return is_cutout(material_ID) ? m_materials[material_ID].coverage : 1.0f; }
+    static void set_cutout_threshold(MaterialID material_ID, float cutout_threshold) { if (is_cutout(material_ID)) set_coverage_and_cutout_threshold(material_ID, cutout_threshold); }
     static inline TextureID get_coverage_texture_ID(MaterialID material_ID) { return m_materials[material_ID].coverage_texture_ID; }
     static void set_coverage_texture_ID(MaterialID material_ID, TextureID coverage_texture_ID);
-
-    static inline float get_cutout_threshold(MaterialID material_ID) { return m_materials[material_ID].coverage; }
-    static void set_cutout_threshold(MaterialID material_ID, float cutout_threshold) { set_coverage(material_ID, cutout_threshold); }
-    static inline TextureID get_cutout_threshold_texture_ID(MaterialID material_ID) { return m_materials[material_ID].coverage_texture_ID; }
-    static void set_cutout_threshold_texture_ID(MaterialID material_ID, TextureID cutout_thresholde_texture_ID) { set_coverage_texture_ID(material_ID, cutout_thresholde_texture_ID); }
 
     static inline float get_transmission(MaterialID material_ID) { return m_materials[material_ID].transmission; }
     static void set_transmission(MaterialID material_ID, float transmission);
@@ -197,6 +196,8 @@ public:
 
 private:
     static void reserve_material_data(unsigned int new_capacity, unsigned int old_capacity);
+
+    static void set_coverage_and_cutout_threshold(MaterialID material_ID, float coverage_and_cutout);
 
     static void flag_as_updated(MaterialID material_ID);
 
@@ -264,15 +265,11 @@ public:
 
     inline float get_coverage() const { return Materials::get_coverage(m_ID); }
     inline void set_coverage(float coverage) { Materials::set_coverage(m_ID, coverage); }
+    inline float get_cutout_threshold() const { return Materials::get_cutout_threshold(m_ID); }
+    inline void set_cutout_threshold(float cutout_threshold) { Materials::set_cutout_threshold(m_ID, cutout_threshold); }
     inline const Texture get_coverage_texture() const { return Materials::get_coverage_texture_ID(m_ID); }
     inline TextureID get_coverage_texture_ID() const { return Materials::get_coverage_texture_ID(m_ID); }
     inline void set_coverage_texture_ID(TextureID texture_ID) { Materials::set_coverage_texture_ID(m_ID, texture_ID); }
-
-    inline float get_cutout_threshold() const { return Materials::get_cutout_threshold(m_ID); }
-    inline void set_cutout_threshold(float cutout_threshold) { Materials::set_cutout_threshold(m_ID, cutout_threshold); }
-    inline const Texture get_cutout_threshold_texture() const { return Materials::get_cutout_threshold_texture_ID(m_ID); }
-    inline TextureID get_cutout_threshold_texture_ID() const { return Materials::get_cutout_threshold_texture_ID(m_ID); }
-    inline void set_cutout_threshold_texture_ID(TextureID texture_ID) { Materials::set_cutout_threshold_texture_ID(m_ID, texture_ID); }
 
     inline float get_transmission() const { return Materials::get_transmission(m_ID); }
     inline void set_transmission(float transmission) { Materials::set_coverage(m_ID, transmission); }
