@@ -440,6 +440,8 @@ SceneNodeID load(const std::string& filename) {
     };
 
     for (int i = 0; i < model.materials.size(); ++i) {
+        const auto& glTF_mat = model.materials[i];
+
         Materials::Data mat_data = {};
         mat_data.tint = RGB::white();
         mat_data.specularity = 0.04f; // Corresponds to index of refraction of 1.5
@@ -447,13 +449,13 @@ SceneNodeID load(const std::string& filename) {
         mat_data.metallic = 0.0f;
         mat_data.coverage = 1.0f;
 
-        const auto& glTF_mat = model.materials[i];
-
         // Process additional values first, as we need to know the alphaMode before converting images.
         if (glTF_mat.doubleSided)
             mat_data.flags |= MaterialFlag::ThinWalled;
-        if (glTF_mat.alphaMode.compare("MASK") == 0)
+        if (glTF_mat.alphaMode.compare("MASK") == 0) {
             mat_data.flags |= MaterialFlag::Cutout;
+            mat_data.coverage = float(glTF_mat.alphaCutoff);
+        }
 
         TextureState tint_coverage_tex;
         TextureState metallic_roughness_tex;
