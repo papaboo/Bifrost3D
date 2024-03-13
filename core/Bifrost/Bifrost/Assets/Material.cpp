@@ -179,8 +179,8 @@ void Materials::set_coat_roughness(MaterialID material_ID, float coat_roughness)
     flag_as_updated(material_ID);
 }
 
-void Materials::set_coverage(MaterialID material_ID, float coverage) {
-    m_materials[material_ID].coverage = coverage;
+void Materials::set_coverage_and_cutout_threshold(MaterialID material_ID, float coverage_and_cutout) {
+    m_materials[material_ID].coverage = coverage_and_cutout;
     flag_as_updated(material_ID);
 }
 
