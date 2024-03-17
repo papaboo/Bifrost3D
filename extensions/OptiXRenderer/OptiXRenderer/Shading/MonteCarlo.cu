@@ -8,6 +8,8 @@
 
 #include <OptiXRenderer/MonteCarlo.h>
 #include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>
+#include <OptiXRenderer/Shading/ShadingModels/DiffuseShading.h>
+#include <OptiXRenderer/Shading/ShadingModels/IShadingModel.h>
 #include <OptiXRenderer/Shading/LightSources/LightImpl.h>
 #include <OptiXRenderer/TBN.h>
 #include <OptiXRenderer/Types.h>
@@ -75,7 +77,8 @@ __inline_dev__ float3 sample3f(PMJSamplerState& pmj_sampler) { return make_float
 
 // Sample a single light source, evaluates the material's response to the light and 
 // stores the combined response in the light source's radiance member.
-__inline_dev__ LightSample sample_single_light(const DefaultShading& material, const TBN& world_shading_tbn, float3 random_sample) {
+template <class T>
+__inline_dev__ LightSample sample_single_light(const IShadingModel<T>& material, const TBN& world_shading_tbn, float3 random_sample) {
     int light_index = min(g_scene.light_count - 1, int(random_sample.z * g_scene.light_count));
     const Light& light = g_scene.light_buffer[light_index];
     LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_payload.position, make_float2(random_sample));
@@ -103,7 +106,8 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
 
 // Take multiple light samples and from that set pick one based on the contribution of the light scaled by the material.
 // Basic Resampled importance sampling: http://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=1662&context=etd.
-__inline_dev__ LightSample reestimated_light_samples(const DefaultShading& material, const TBN& world_shading_tbn, int samples) {
+template <class T>
+__inline_dev__ LightSample reestimated_light_samples(const IShadingModel<T>& material, const TBN& world_shading_tbn, int samples) {
     float3 light_random_number = sample3f(monte_carlo_payload.rng_state);
     float keep_light_probability = sample1f(monte_carlo_payload.rng_state);
     LightSample light_sample = sample_single_light(material, world_shading_tbn, light_random_number);
@@ -188,10 +192,11 @@ RT_PROGRAM void closest_hit() {
     float abs_cos_theta = abs(monte_carlo_payload.direction.z);
     float pdf_regularization_hint = monte_carlo_payload.bsdf_MIS_PDF.PDF() * g_camera_state.path_regularization_scale;
     const DefaultShading material = DefaultShading::initialize_with_max_PDF_hint(material_parameter, abs_cos_theta, texcoord, pdf_regularization_hint);
+    const IShadingModel<DefaultShading> i_material = IShadingModel<DefaultShading>(material);
 
     // Deferred BSDF sampling.
     // The BSDF is sampled before tracing the shadow ray in order to avoid flushing world_shading_tbn and the material to the local stack when tracing the ray.
-    BSDFSample bsdf_sample = material.sample(monte_carlo_payload.direction, sample3f(monte_carlo_payload.rng_state));
+    BSDFSample bsdf_sample = i_material.sample(monte_carlo_payload.direction, sample3f(monte_carlo_payload.rng_state));
     float3 next_payload_direction = bsdf_sample.direction * world_shading_tbn;
     float next_payload_MIS_PDF = bsdf_sample.PDF;
     float3 next_payload_throughput = make_float3(0.0f);
@@ -201,7 +206,7 @@ RT_PROGRAM void closest_hit() {
 #if ENABLE_NEXT_EVENT_ESTIMATION
     // Sample a light source.
     if (g_scene.light_count != 0) {
-        monte_carlo_payload.light_sample = reestimated_light_samples(material, world_shading_tbn, 3);
+        monte_carlo_payload.light_sample = reestimated_light_samples(i_material, world_shading_tbn, 3);
         monte_carlo_payload.light_sample.radiance *= monte_carlo_payload.throughput;
     }
 #endif // ENABLE_NEXT_EVENT_ESTIMATION

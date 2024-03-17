@@ -1,4 +1,4 @@
-// OptiX renderer diffuse shading model.
+// OptiX renderer shading model interface.
 // ---------------------------------------------------------------------------
 // Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
@@ -6,8 +6,8 @@
 // See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#ifndef _OPTIXRENDERER_SHADING_MODEL_DIFFUSE_SHADING_H_
-#define _OPTIXRENDERER_SHADING_MODEL_DIFFUSE_SHADING_H_
+#ifndef _OPTIXRENDERER_SHADING_MODEL_SHADING_MODEL_INTERFACE_H_
+#define _OPTIXRENDERER_SHADING_MODEL_SHADING_MODEL_INTERFACE_H_
 
 #include <OptiXRenderer/Shading/BSDFs/Lambert.h>
 
@@ -16,41 +16,33 @@ namespace Shading {
 namespace ShadingModels {
 
 // ---------------------------------------------------------------------------
-// The diffuse shading model.
+// The shading model interface.
+// As we don't use virtual calls, the interface is meant to be used for function that are templated with a shading model,
+// to allow the compiler and developer to easily see the shading model interface contract.
 // ---------------------------------------------------------------------------
-class DiffuseShading {
+template <class ShadingModel>
+class IShadingModel : public ShadingModel {
 private:
-    optix::float3 m_tint;
+    ShadingModel m_shading_model;
 
 public:
 
-    DiffuseShading() = default;
-
-    __inline_all__ DiffuseShading(const Material& material)
-        : m_tint(material.tint) { }
-
-#if GPU_DEVICE
-    __inline_all__ DiffuseShading(const Material& material, optix::float2 texcoord) {
-        m_tint = material.tint;
-        if (material.tint_roughness_texture_ID)
-            m_tint *= make_float3(optix::rtTex2D<optix::float4>(material.tint_roughness_texture_ID, texcoord.x, texcoord.y));
-    }
-#endif
+    __inline_all__ IShadingModel(ShadingModel shading_model) : m_shading_model(shading_model) { }
 
     __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
-        return BSDFs::Lambert::evaluate(m_tint, wo, wi);
+        return ShadingModel::evaluate(m_tint, wo, wi);
     }
 
     __inline_all__ float PDF(optix::float3 wo, optix::float3 wi) const {
-        return BSDFs::Lambert::PDF(wo, wi);
+        return ShadingModel::PDF(wo, wi);
     }
 
     __inline_all__ BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
-        return BSDFs::Lambert::evaluate_with_PDF(m_tint, wo, wi);
+        return ShadingModel::evaluate_with_PDF(wo, wi);
     }
 
     __inline_all__ BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
-        return BSDFs::Lambert::sample(m_tint, make_float2(random_sample));
+        return ShadingModel::sample(wo, random_sample);
     }
 };
 
@@ -58,4 +50,4 @@ public:
 } // NS Shading
 } // NS OptiXRenderer
 
-#endif // _OPTIXRENDERER_SHADING_MODEL_DIFFUSE_SHADING_H_
+#endif // _OPTIXRENDERER_SHADING_MODEL_SHADING_MODEL_INTERFACE_H_

@@ -19,7 +19,7 @@ namespace Shading {
 namespace ShadingModels {
 
 // ---------------------------------------------------------------------------
-// The default shading material.
+// The default shading model.
 // Default shading consist of a diffuse base with a specular layer on top.
 // The diffuse tint is weighted by contribution, or rho, of the specular term.
 // Future work:
@@ -147,6 +147,8 @@ private:
     }
 
 public:
+
+    DefaultShading() = default;
 
     __inline_all__ DefaultShading(const Material& material, float abs_cos_theta) {
         float coat_rho;
