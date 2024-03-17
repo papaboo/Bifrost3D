@@ -128,7 +128,7 @@ static inline optix::GeometryTriangles load_mesh(optix::Context& context, MeshID
     }
 }
 
-static inline optix::Transform load_model(optix::Context& context, MeshModel model, optix::GeometryTriangles* meshes, optix::Material optix_material) {
+static inline optix::GeometryInstance create_model(optix::Context& context, MeshModel model, optix::GeometryTriangles* meshes, optix::Material optix_material) {
     Mesh mesh = model.get_mesh();
     optix::GeometryTriangles optix_mesh = meshes[mesh.get_ID()];
 
@@ -141,6 +141,10 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
     optix_model["mesh_flags"]->setInt(mesh_flags);
     OPTIX_VALIDATE(optix_model);
 
+    return optix_model;
+}
+
+static inline optix::Transform transformable_model(optix::Context& context, optix::GeometryInstance optix_model, SceneNode scene_node) {
     optix::Acceleration acceleration = context->createAcceleration("Trbvh", "Bvh");
     acceleration->setProperty("index_buffer_name", "index_buffer");
     acceleration->setProperty("vertex_buffer_name", "geometry_buffer");
@@ -153,7 +157,7 @@ static inline optix::Transform load_model(optix::Context& context, MeshModel mod
 
     optix::Transform optix_transform = context->createTransform();
     {
-        Math::Transform transform = model.get_scene_node().get_global_transform();
+        Math::Transform transform = scene_node.get_global_transform();
         Math::Transform inverse_transform = invert(transform);
         optix_transform->setMatrix(false, to_matrix4x4(transform).begin(), to_matrix4x4(inverse_transform).begin());
         optix_transform->setChild(geometry_group);
@@ -227,13 +231,14 @@ struct Renderer::Implementation {
     } scene;
 
     std::vector<std::set<MeshModelID>> node_to_mesh_models = std::vector<std::set<MeshModelID>>(0);
-    std::vector<optix::Transform> mesh_models = std::vector<optix::Transform>(0);
     std::vector<optix::GeometryTriangles> meshes = std::vector<optix::GeometryTriangles>(0);
+    std::vector<optix::GeometryInstance> mesh_models = std::vector<optix::GeometryInstance>(0);
+    std::vector<optix::Transform> mesh_model_transforms = std::vector<optix::Transform>(0);
 
     std::vector<optix::Buffer> images = std::vector<optix::Buffer>(0);
     std::vector<optix::TextureSampler> textures = std::vector<optix::TextureSampler>(0);
 
-    optix::Material default_material;
+    optix::Material shading_models[(int)ShadingModel::Count];
     optix::Buffer material_parameters;
     unsigned int active_material_count;
 
@@ -327,13 +332,18 @@ struct Renderer::Implementation {
         }
 
         { // Setup default material.
-            default_material = context->createMaterial();
-
             std::string monte_carlo_ptx_path = get_ptx_path(shader_prefix, "MonteCarlo");
-            default_material->setClosestHitProgram(RayTypes::MonteCarlo, context->createProgramFromPTXFile(monte_carlo_ptx_path, "closest_hit"));
-            default_material->setAnyHitProgram(RayTypes::Shadow, context->createProgramFromPTXFile(monte_carlo_ptx_path, "shadow_any_hit"));
 
-            OPTIX_VALIDATE(default_material);
+            auto create_shading_model = [](optix::Context context, const std::string& ptx_path, const std::string& closest_hit_program) -> optix::Material {
+                optix::Material shading_model = context->createMaterial();
+                shading_model->setClosestHitProgram(RayTypes::MonteCarlo, context->createProgramFromPTXFile(ptx_path, closest_hit_program));
+                shading_model->setAnyHitProgram(RayTypes::Shadow, context->createProgramFromPTXFile(ptx_path, "shadow_any_hit"));
+                OPTIX_VALIDATE(shading_model);
+                return shading_model;
+            };
+
+            shading_models[(int)ShadingModel::Default] = create_shading_model(context, monte_carlo_ptx_path, "default_closest_hit");
+            shading_models[(int)ShadingModel::Diffuse] = create_shading_model(context, monte_carlo_ptx_path, "diffuse_closest_hit");
 
             std::string trangle_attributes_ptx_path = get_ptx_path(shader_prefix, "TriangleAttributes");
             triangle_attribute_program = context->createProgramFromPTXFile(trangle_attributes_ptx_path, "interpolate_attributes");
@@ -751,11 +761,23 @@ struct Renderer::Implementation {
                 } else {
                     // Update new and changed materials. Just ignore destroyed ones.
                     OptiXRenderer::Material* device_materials = (OptiXRenderer::Material*)material_parameters->map();
-                    for (MaterialID material_ID : Materials::get_changed_materials())
-                        if (!Materials::get_changes(material_ID).is_set(Materials::Change::Destroyed)) {
-                            upload_material(material_ID, device_materials, textures.data(), images.data());
+                    for (Assets::Material material : Materials::get_changed_materials()) {
+                        if (material.get_changes().any_set(Materials::Change::Created, Materials::Change::Updated)) {
+                            upload_material(material.get_ID(), device_materials, textures.data(), images.data());
                             should_reset_accumulations = true;
                         }
+                        if (material.get_changes().is_set(Materials::Change::ShadingModel)) {
+                            // We don't expect this operation to happen often, so we'll just loop over all mesh models,
+                            // check if they use the changed material and update their shading model.
+                            auto new_shading_model = shading_models[(int)material.get_shading_model()];
+                            for (MeshModel mesh_model : MeshModels::get_iterable()) {
+                                if (mesh_model.get_material() == material) {
+                                    mesh_models[mesh_model.get_ID()]->setMaterial(0, new_shading_model);
+                                    should_reset_accumulations = true;
+                                }
+                            }
+                        }
+                    }
                     material_parameters->unmap();
                 }
             }
@@ -935,7 +957,7 @@ struct Renderer::Implementation {
                         Matrix3x4f transform_matrix = to_matrix3x4(transform);
                         Matrix3x4f inverse_transform_matrix = to_matrix3x4(invert(transform));
                         for (auto mesh_model_index : node_to_mesh_models[node_ID]) {
-                            optix::Transform model_transform = mesh_models[mesh_model_index];
+                            optix::Transform model_transform = mesh_model_transforms[mesh_model_index];
                             if (model_transform) {
                                 model_transform->setMatrix(false, transform_matrix.begin(), inverse_transform_matrix.begin());
                                 transform_changed = true;
@@ -959,7 +981,7 @@ struct Renderer::Implementation {
                 unsigned int transform_index = model.get_scene_node().get_ID();
 
                 auto destroy_mesh_model = [&](unsigned int mesh_model_index) {
-                    optix::Transform& optixTransform = mesh_models[mesh_model_index];
+                    optix::Transform& optixTransform = mesh_model_transforms[mesh_model_index];
 
                     // Destroy transform and geometry wrappers.
                     optix::GeometryGroup geometry_group = optixTransform->getChild<optix::GeometryGroup>();
@@ -971,11 +993,11 @@ struct Renderer::Implementation {
                     scene.root->removeChild(optixTransform);
                     optixTransform->destroy();
 
-                    mesh_models[mesh_model_index] = nullptr;
+                    mesh_model_transforms[mesh_model_index] = nullptr;
                 };
 
                 if (model.get_changes() & MeshModels::Change::Destroyed) {
-                    if (mesh_model_index < mesh_models.size() && mesh_models[mesh_model_index]) {
+                    if (mesh_model_index < mesh_model_transforms.size() && mesh_model_transforms[mesh_model_index]) {
                         destroy_mesh_model(mesh_model_index);
 
                         // Remove association to scene node.
@@ -985,17 +1007,23 @@ struct Renderer::Implementation {
                     }
                 }
                 else if (model.get_changes() & MeshModels::Change::Created) {
-                    if (mesh_models.size() <= mesh_model_index)
+                    if (mesh_models.size() <= mesh_model_index) {
                         mesh_models.resize(MeshModels::capacity());
+                        mesh_model_transforms.resize(MeshModels::capacity());
+                    }
 
                     // Remove old mesh model if present. The ID of the previous scene node cannot be recovered / is not stored,
                     // so the transformation association isn't broken until the transform is next updated or destroyed.
-                    if (mesh_models[mesh_model_index])
+                    if (mesh_model_transforms[mesh_model_index])
                         destroy_mesh_model(mesh_model_index);
 
-                    optix::Transform transform = load_model(context, model, meshes.data(), default_material);
+                    auto shading_model = shading_models[(int)model.get_material().get_shading_model()];
+                    optix::GeometryInstance optix_model = create_model(context, model, meshes.data(), shading_model);
+                    optix::Transform transform = transformable_model(context, optix_model, model.get_scene_node());
+
+                    mesh_models[mesh_model_index] = optix_model;
+                    mesh_model_transforms[mesh_model_index] = transform;
                     scene.root->addChild(transform);
-                    mesh_models[mesh_model_index] = transform;
 
                     if (node_to_mesh_models.size() <= transform_index)
                         node_to_mesh_models.resize(SceneNodes::capacity());
@@ -1003,9 +1031,7 @@ struct Renderer::Implementation {
 
                     models_changed = true;
                 } else if (model.get_changes() & MeshModels::Change::Material) {
-                    optix::Transform& optixTransform = mesh_models[mesh_model_index];
-                    optix::GeometryGroup geometry_group = optixTransform->getChild<optix::GeometryGroup>();
-                    optix::GeometryInstance optix_model = geometry_group->getChild(0);
+                    optix::GeometryInstance optix_model = mesh_models[mesh_model_index];
                     optix_model["material_index"]->setInt(model.get_material().get_ID());
                     should_reset_accumulations = true;
                 }

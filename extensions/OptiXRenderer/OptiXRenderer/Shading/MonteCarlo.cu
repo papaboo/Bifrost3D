@@ -8,6 +8,7 @@
 
 #include <OptiXRenderer/MonteCarlo.h>
 #include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>
+#include <OptiXRenderer/Shading/ShadingModels/DiffuseShading.h>
 #include <OptiXRenderer/Shading/LightSources/LightImpl.h>
 #include <OptiXRenderer/TBN.h>
 #include <OptiXRenderer/Types.h>
@@ -75,7 +76,8 @@ __inline_dev__ float3 sample3f(PMJSamplerState& pmj_sampler) { return make_float
 
 // Sample a single light source, evaluates the material's response to the light and 
 // stores the combined response in the light source's radiance member.
-__inline_dev__ LightSample sample_single_light(const DefaultShading& material, const TBN& world_shading_tbn, float3 random_sample) {
+template <class ShadingModel>
+__inline_dev__ LightSample sample_single_light(const ShadingModel& material, const TBN& world_shading_tbn, float3 random_sample) {
     int light_index = min(g_scene.light_count - 1, int(random_sample.z * g_scene.light_count));
     const Light& light = g_scene.light_buffer[light_index];
     LightSample light_sample = LightSources::sample_radiance(light, monte_carlo_payload.position, make_float2(random_sample));
@@ -103,7 +105,8 @@ __inline_dev__ LightSample sample_single_light(const DefaultShading& material, c
 
 // Take multiple light samples and from that set pick one based on the contribution of the light scaled by the material.
 // Basic Resampled importance sampling: http://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=1662&context=etd.
-__inline_dev__ LightSample reestimated_light_samples(const DefaultShading& material, const TBN& world_shading_tbn, int samples) {
+template <class ShadingModel>
+__inline_dev__ LightSample reestimated_light_samples(const ShadingModel& material, const TBN& world_shading_tbn, int samples) {
     float3 light_random_number = sample3f(monte_carlo_payload.rng_state);
     float keep_light_probability = sample1f(monte_carlo_payload.rng_state);
     LightSample light_sample = sample_single_light(material, world_shading_tbn, light_random_number);
@@ -138,14 +141,15 @@ __inline_dev__ LightSample reestimated_light_samples(const DefaultShading& mater
 // Closest hit integrator.
 //-----------------------------------------------------------------------------
 
-__inline_all__ static float get_coverage(const Material& material, optix::float2 texcoord) {
+__inline_all__ float get_coverage(const Material& material, optix::float2 texcoord) {
     float coverage = material.coverage;
     if (material.coverage_texture_ID)
         coverage *= optix::rtTex2D<float>(material.coverage_texture_ID, texcoord.x, texcoord.y);
     return coverage;
 }
 
-RT_PROGRAM void closest_hit() {
+template <typename MaterialCreator>
+__inline_all__ void path_tracing_closest_hit() {
     const Material& material_parameter = g_materials[material_index];
 
 #if PMJ_RNG
@@ -185,9 +189,9 @@ RT_PROGRAM void closest_hit() {
     // Store intersection point and wo in payload.
     monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
     monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
-    float abs_cos_theta = abs(monte_carlo_payload.direction.z);
+    float abs_cos_theta_o = abs(monte_carlo_payload.direction.z);
     float pdf_regularization_hint = monte_carlo_payload.bsdf_MIS_PDF.PDF() * g_camera_state.path_regularization_scale;
-    const DefaultShading material = DefaultShading::initialize_with_max_PDF_hint(material_parameter, abs_cos_theta, texcoord, pdf_regularization_hint);
+    const MaterialCreator::material_type material = MaterialCreator::create(material_parameter, texcoord, abs_cos_theta_o, pdf_regularization_hint);
 
     // Deferred BSDF sampling.
     // The BSDF is sampled before tracing the shadow ray in order to avoid flushing world_shading_tbn and the material to the local stack when tracing the ray.
@@ -211,6 +215,36 @@ RT_PROGRAM void closest_hit() {
     monte_carlo_payload.bsdf_MIS_PDF = MisPDF::from_PDF(next_payload_MIS_PDF);
     monte_carlo_payload.throughput = next_payload_throughput;
     monte_carlo_payload.bounces += 1u;
+}
+
+//----------------------------------------------------------------------------
+// Path tracing closest hit programs for different shading models.
+//----------------------------------------------------------------------------
+
+struct DefaultMaterialCreator {
+    typedef DefaultShading material_type;
+    __inline_all__ static material_type create(const Material& material_params, optix::float2 texcoord, float abs_cos_theta_o, float max_PDF_hint) {
+        return DefaultShading::initialize_with_max_PDF_hint(material_params, texcoord, abs_cos_theta_o, max_PDF_hint);
+    }
+};
+
+RT_PROGRAM void default_closest_hit() {
+    path_tracing_closest_hit<DefaultMaterialCreator>();
+}
+
+struct DiffuseMaterialCreator {
+    typedef DiffuseShading material_type;
+    __inline_all__ static material_type create(const Material& material_params, optix::float2 texcoord, float abs_cos_theta_o, float max_PDF_hint) {
+        float3 tint = material_params.tint;
+        if (material_params.tint_roughness_texture_ID)
+            tint *= make_float3(rtTex2D<float4>(material_params.tint_roughness_texture_ID, texcoord.x, texcoord.y));
+
+        return DiffuseShading(tint);
+    }
+};
+
+RT_PROGRAM void diffuse_closest_hit() {
+    path_tracing_closest_hit<DiffuseMaterialCreator>();
 }
 
 //----------------------------------------------------------------------------
