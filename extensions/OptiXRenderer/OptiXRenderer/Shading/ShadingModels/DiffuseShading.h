@@ -16,7 +16,7 @@ namespace Shading {
 namespace ShadingModels {
 
 // ---------------------------------------------------------------------------
-// The diffuse shading material.
+// The diffuse shading model.
 // ---------------------------------------------------------------------------
 class DiffuseShading {
 private:
@@ -24,16 +24,8 @@ private:
 
 public:
 
-    __inline_all__ DiffuseShading(const Material& material)
-        : m_tint(material.tint) { }
-
-#if GPU_DEVICE
-    __inline_all__ DiffuseShading(const Material& material, optix::float2 texcoord) {
-        m_tint = material.tint;
-        if (material.tint_roughness_texture_ID)
-            m_tint *= make_float3(optix::rtTex2D<optix::float4>(material.tint_roughness_texture_ID, texcoord.x, texcoord.y));
-    }
-#endif
+    __inline_all__ DiffuseShading(optix::float3 tint)
+        : m_tint(tint) { }
 
     __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
         return BSDFs::Lambert::evaluate(m_tint, wo, wi);

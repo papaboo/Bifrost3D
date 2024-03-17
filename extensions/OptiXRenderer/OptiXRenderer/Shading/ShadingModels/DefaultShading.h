@@ -19,7 +19,7 @@ namespace Shading {
 namespace ShadingModels {
 
 // ---------------------------------------------------------------------------
-// The default shading material.
+// The default shading model.
 // Default shading consist of a diffuse base with a specular layer on top.
 // The diffuse tint is weighted by contribution, or rho, of the specular term.
 // Future work:
@@ -67,7 +67,7 @@ private:
     //   The specular interreflection with the given specularity can be found by scaling with rho of the given specularity,
     //   specular_interreflection = full_specular_interreflection / specular_rho.
     //   The light scattered from interreflection of the 2nd, 3rd and so on scattering event is assumed to be diffuse and its contribution is added to the diffuse tint.
-    __inline_all__ void setup_base_layer(optix::float3 tint, float roughness, float specularity, float metallic, float abs_cos_theta) {
+    __inline_all__ void setup_base_layer(optix::float3 tint, float roughness, float specularity, float metallic, float abs_cos_theta_o) {
         using namespace optix;
 
         // No coat
@@ -85,7 +85,7 @@ private:
         m_specularity = lerp(make_float3(dielectric_specularity), conductor_specularity, metallic);
 
         // Specular directional-hemispherical reflectance function, rho.
-        SpecularRho specular_rho = SpecularRho::fetch(abs_cos_theta, m_roughness);
+        SpecularRho specular_rho = SpecularRho::fetch(abs_cos_theta_o, m_roughness);
         float dielectric_specular_rho = specular_rho.rho(dielectric_specularity);
 
         // Dielectric tint.
@@ -110,21 +110,21 @@ private:
     // * The transmission cannot be baked into the specularity, as specularity only represents the contribution from the specular layer 
     //   when viewed head on and we need the transmission to affect the reflectance at grazing angles as well.
     //   Instead we store the transmission and scale the base layer's specular contribution by it when evaluating or sampling.
-    __inline_all__ void setup_shading(optix::float3 tint, float roughness, float specularity, float metallic, float coat_scale, float coat_roughness, float abs_cos_theta,
+    __inline_all__ void setup_shading(optix::float3 tint, float roughness, float specularity, float metallic, float coat_scale, float coat_roughness, float abs_cos_theta_o,
                                       float& coat_single_bounce_rho) {
         using namespace optix;
 
         float coat_modulated_roughness = modulate_roughness_under_coat(roughness, coat_roughness);
         roughness = lerp(roughness, coat_modulated_roughness, coat_scale);
 
-        setup_base_layer(tint, roughness, specularity, metallic, abs_cos_theta);
+        setup_base_layer(tint, roughness, specularity, metallic, abs_cos_theta_o);
 
         coat_single_bounce_rho = 0.0f;
         if (coat_scale > 0) {
             // Clear coat with fixed index of refraction of 1.5 / specularity of 0.04, representative of polyurethane and glass.
             m_coat_scale = coat_scale;
             m_coat_roughness = coat_roughness;
-            SpecularRho coat_rho = SpecularRho::fetch(abs_cos_theta, coat_roughness);
+            SpecularRho coat_rho = SpecularRho::fetch(abs_cos_theta_o, coat_roughness);
             coat_single_bounce_rho = coat_scale * coat_rho.rho(COAT_SPECULARITY);
             float lossless_coat_rho = coat_single_bounce_rho / coat_rho.full;
             float coat_interreflection_rho = lossless_coat_rho - coat_single_bounce_rho;
@@ -136,9 +136,9 @@ private:
         }
     }
 
-    __inline_all__ void setup_sampling_probabilities(float abs_cos_theta, float coat_rho) {
+    __inline_all__ void setup_sampling_probabilities(float abs_cos_theta_o, float coat_rho) {
         // Compute the probability of sampling the specular layer instead of the diffuse layer.
-        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness) * m_coat_transmission; 
+        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta_o, m_roughness) * m_coat_transmission;
         float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
         m_specular_probability = unsigned short(specular_probability * USHORT_MAX + 0.5f);
         // Compute the probability of sampling the coat instead of the base layer.
@@ -148,14 +148,14 @@ private:
 
 public:
 
-    __inline_all__ DefaultShading(const Material& material, float abs_cos_theta) {
+    __inline_all__ DefaultShading(const Material& material, float abs_cos_theta_o) {
         float coat_rho;
-        setup_shading(material.tint, material.roughness, material.specularity, material.metallic, material.coat, material.coat_roughness, abs_cos_theta, coat_rho);
-        setup_sampling_probabilities(abs_cos_theta, coat_rho);
+        setup_shading(material.tint, material.roughness, material.specularity, material.metallic, material.coat, material.coat_roughness, abs_cos_theta_o, coat_rho);
+        setup_sampling_probabilities(abs_cos_theta_o, coat_rho);
     }
 
 #if GPU_DEVICE
-    __inline_all__ DefaultShading(const Material& material, float abs_cos_theta, optix::float2 texcoord, float min_roughness = 0.0f) {
+    __inline_all__ DefaultShading(const Material& material, float abs_cos_theta_o, optix::float2 texcoord, float min_roughness = 0.0f) {
         using namespace optix;
 
         // Coat
@@ -177,13 +177,13 @@ public:
         roughness = max(roughness, min_roughness);
 
         float coat_rho;
-        setup_shading(tint, roughness, material.specularity, metallic, material.coat, coat_roughness, abs_cos_theta, coat_rho);
-        setup_sampling_probabilities(abs_cos_theta, coat_rho);
+        setup_shading(tint, roughness, material.specularity, metallic, material.coat, coat_roughness, abs_cos_theta_o, coat_rho);
+        setup_sampling_probabilities(abs_cos_theta_o, coat_rho);
     }
 
-    __inline_all__ static DefaultShading initialize_with_max_PDF_hint(const Material& material, float abs_cos_theta, optix::float2 texcoord, float max_PDF_hint) {
-        float min_roughness = GGXMinimumRoughness::from_PDF(abs_cos_theta, max_PDF_hint);
-        return DefaultShading(material, abs_cos_theta, texcoord, min_roughness);
+    __inline_all__ static DefaultShading initialize_with_max_PDF_hint(const Material& material, optix::float2 texcoord, float abs_cos_theta_o, float max_PDF_hint) {
+        float min_roughness = GGXMinimumRoughness::from_PDF(abs_cos_theta_o, max_PDF_hint);
+        return DefaultShading(material, abs_cos_theta_o, texcoord, min_roughness);
     }
 #endif
 
