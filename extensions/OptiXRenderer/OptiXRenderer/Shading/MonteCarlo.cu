@@ -175,11 +175,11 @@ __inline_all__ void path_tracing_closest_hit() {
         return;
     }
 
-    const float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
-    if (material_parameter.is_thin_walled())
-        monte_carlo_payload.shading_normal = dot(world_shading_normal, ray.direction) < 0.0f ? world_shading_normal : -world_shading_normal;
-    else
-        monte_carlo_payload.shading_normal = world_shading_normal;
+    // Setup world shading normal and tangents.
+    // If the surface is hit from behind then we flip the shading normal to the backside of the surface.
+    float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
+    world_shading_normal = hit_from_behind ? -world_shading_normal : world_shading_normal;
+    monte_carlo_payload.shading_normal = fix_backfacing_shading_normal(-ray.direction, world_shading_normal, 0.001f);
     const TBN world_shading_tbn = TBN(monte_carlo_payload.shading_normal);
 
     // Store geometry varyings.

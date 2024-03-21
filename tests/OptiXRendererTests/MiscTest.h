@@ -151,6 +151,46 @@ GTEST_TEST(Specularity, conductor_conversions_to_and_from_index_of_refraction) {
     EXPECT_FLOAT3_EQ_PCT(titanium_ior, computed_titanium_ior, accuracy);
 }
 
+GTEST_TEST(Trigonometry, fix_backfacing_shading_normal) {
+    using namespace optix;
+
+    float3 normal = { 0, 0, 1 };
+    float3 wo_in_hemisphere = normalize(make_float3(1, 0, 1));
+    float3 wo_orthogonal = { 1, 0, 0 };
+    float3 wo_below_hemipshere = normalize(make_float3(1, 0, -0.1f));
+
+    float3 uncorrected_normal = fix_backfacing_shading_normal(wo_in_hemisphere, normal);
+    EXPECT_FLOAT3_EQ(normal, uncorrected_normal);
+
+    uncorrected_normal = fix_backfacing_shading_normal(wo_orthogonal, normal);
+    EXPECT_FLOAT3_EQ(normal, uncorrected_normal);
+
+    float3 corrected_normal = fix_backfacing_shading_normal(wo_below_hemipshere, normal);
+    float cos_theta = dot(wo_below_hemipshere, corrected_normal);
+    EXPECT_FLOAT_EQ(0.0f, cos_theta);
+}
+
+GTEST_TEST(Trigonometry, fix_backfacing_shading_normal_with_target_cos_theta) {
+    using namespace optix;
+
+    float target_cos_theta = 0.002f;
+    float3 normal = { 0, 0, 1 };
+    float3 wo_in_hemisphere = normalize(make_float3(1, 0, 1));
+    float3 wo_orthogonal = { 1, 0, 0 };
+    float3 wo_below_hemipshere = normalize(make_float3(1, 0, -0.1f));
+
+    float3 uncorrected_normal = fix_backfacing_shading_normal(wo_in_hemisphere, normal, target_cos_theta);
+    EXPECT_FLOAT3_EQ(normal, uncorrected_normal);
+
+    float3 corrected_normal = fix_backfacing_shading_normal(wo_orthogonal, normal, target_cos_theta);
+    float actual_cos_theta = dot(wo_orthogonal, corrected_normal);
+    EXPECT_FLOAT_EQ_EPS(target_cos_theta, actual_cos_theta, 1e-5f);
+
+    corrected_normal = fix_backfacing_shading_normal(wo_below_hemipshere, normal, target_cos_theta);
+    actual_cos_theta = dot(wo_below_hemipshere, corrected_normal);
+    EXPECT_FLOAT_EQ_EPS(target_cos_theta, actual_cos_theta, 1e-5f);
+}
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_MISC_TEST_H_
