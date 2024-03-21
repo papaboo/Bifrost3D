@@ -35,6 +35,23 @@ __inline_all__ bool same_hemisphere(optix::float3 wo, optix::float3 wi) {
     return wo.z * wi.z >= 0.0f;
 }
 
+// Fix shading normals that are facing away from the camera that intersected the surface.
+// The issue happens when a ray intersects a triangle, where the shading normal at
+// one of more vertices are pointing away from the view direction. Think tesselated sphere.
+// We 'fix' this by offsetting the shading normal along the view direction, w, until it is no longer viewed from behind.
+// w is assumed to be normalized.
+// It's possible to set a target cos(angle) or dot(w,n). As the output normal is normalized afterwards,
+// the target is going to be overshot by by the returned normal,
+// but as it's generally smaller cos_theta adjustments we're interested in that's acceptable.
+__inline_all__ optix::float3 fix_backfacing_shading_normal(optix::float3 w, optix::float3 n, float target_cos_theta = 0.0f) {
+    float cos_theta = optix::dot(w, n);
+    if (cos_theta < target_cos_theta) {
+        float c = cos_theta - target_cos_theta;
+        return optix::normalize(n - c * w);
+    } else
+        return n;
+}
+
 __inline_all__ float sign(float v) {
     return v >= 0.0f ? 1.0f : -1.0f;
 }
