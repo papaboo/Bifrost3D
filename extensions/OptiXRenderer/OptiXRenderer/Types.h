@@ -391,12 +391,10 @@ struct __align__(16) SceneStateGPU {
 
 struct __align__(8) AIDenoiserStateGPU {
     static const unsigned int ResetAlbedoAccumulation = 1 << 16;
-    static const unsigned int ResetNormalAccumulation = 1 << 17;
     unsigned int flags;
     rtBufferId<optix::float4, 2> noisy_pixels_buffer;
     rtBufferId<optix::float4, 2> denoised_pixels_buffer;
     rtBufferId<optix::float4, 2> albedo_buffer;
-    rtBufferId<optix::float4, 2> normals_buffer;
 };
 
 } // NS OptiXRenderer

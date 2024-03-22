@@ -449,25 +449,20 @@ void RenderingGUI::layout_frame() {
 
                     auto AI_flags = m_optix_renderer->get_AI_denoiser_flags();
                     bool has_AI_changes = ImGui::CheckboxFlags("Logarithmic update", &AI_flags, AIDenoiserFlag::LogarithmicFeedback);
-                    has_AI_changes |= ImGui::CheckboxFlags("Use albedo", &AI_flags, AIDenoiserFlag::Albedo);
-                    has_AI_changes |= ImGui::CheckboxFlags("Use normals", &AI_flags, AIDenoiserFlag::Normals);
 
-                    const char* debug_vis_modes[] = { "Denoised image", "Noisy image", "Albedo", "Normals" };
+                    const char* debug_vis_modes[] = { "Denoised image", "Noisy image", "Albedo" };
 
-                    int visualization_index = AI_flags & AIDenoiserFlag::VisualizeNormals ? 3 : 0;
-                    visualization_index = AI_flags & AIDenoiserFlag::VisualizeAlbedo ? 2 : visualization_index;
+                    int visualization_index = AI_flags & AIDenoiserFlag::VisualizeAlbedo ? 2 : 0;
                     visualization_index = AI_flags & AIDenoiserFlag::VisualizeNoise ? 1 : visualization_index;
                     if (ImGui::Combo("Visualization", &visualization_index, debug_vis_modes, IM_ARRAYSIZE(debug_vis_modes))) {
                         // Clear visualization modes
-                        const OptiXRenderer::AIDenoiserFlags visualization_flags = { AIDenoiserFlag::VisualizeNoise, AIDenoiserFlag::VisualizeAlbedo, AIDenoiserFlag::VisualizeNormals };
+                        const OptiXRenderer::AIDenoiserFlags visualization_flags = { AIDenoiserFlag::VisualizeNoise, AIDenoiserFlag::VisualizeAlbedo };
                         AI_flags &= ~visualization_flags;
 
                         if (visualization_index == 1)
                             AI_flags |= AIDenoiserFlag::VisualizeNoise;
                         else if (visualization_index == 2)
                             AI_flags |= AIDenoiserFlag::VisualizeAlbedo;
-                        else if (visualization_index == 3)
-                            AI_flags |= AIDenoiserFlag::VisualizeNormals;
 
                         has_AI_changes = true;
                     }

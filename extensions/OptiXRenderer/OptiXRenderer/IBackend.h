@@ -60,7 +60,6 @@ private:
     optix::Buffer m_noisy_pixels; // float4 buffer
     optix::Buffer m_filtered_pixels; // float4 buffer
     optix::Buffer m_albedo; // float4 buffer
-    optix::Buffer m_normals; // float4 buffer
 };
 
 } // NS OptiXRenderer
