@@ -23,7 +23,6 @@ namespace OptiXRenderer {
 class IBackend {
 public:
     virtual ~IBackend() { };
-    virtual void resize_backbuffers(Bifrost::Math::Vector2i frame_size) = 0;
     virtual void render(optix::Context& context, Bifrost::Math::Vector2i frame_size, int accumulation_count) = 0;
 };
 
@@ -35,7 +34,6 @@ class SimpleBackend : public IBackend {
 public:
     SimpleBackend(int entry_point) : m_entry_point(entry_point) { }
     ~SimpleBackend() { }
-    void resize_backbuffers(Bifrost::Math::Vector2i frame_size) {}
     void render(optix::Context& context, Bifrost::Math::Vector2i frame_size, int accumulation_count) {
         context->launch(m_entry_point, frame_size.x, frame_size.y);
     }
@@ -50,13 +48,18 @@ class AIDenoisedBackend : public IBackend {
 public:
     AIDenoisedBackend(optix::Context& context, AIDenoiserFlags* flags);
     ~AIDenoisedBackend() { }
-    void resize_backbuffers(Bifrost::Math::Vector2i frame_size);
     void render(optix::Context& context, Bifrost::Math::Vector2i frame_size, int accumulation_count);
 private:
+    void resize_backbuffers(Bifrost::Math::Vector2i frame_size);
+
     AIDenoiserFlags* m_flags; // Reference to renderer's denoise flags so we can check when they are changed.
+
+    Bifrost::Math::Vector2i m_frame_size;
+
+    optix::PostprocessingStage m_denoiser;
     optix::CommandList m_presenting_command_list;
     optix::CommandList m_not_presenting_command_list;
-    optix::PostprocessingStage m_denoiser;
+
     optix::Buffer m_noisy_pixels; // float4 buffer
     optix::Buffer m_filtered_pixels; // float4 buffer
     optix::Buffer m_albedo; // float4 buffer

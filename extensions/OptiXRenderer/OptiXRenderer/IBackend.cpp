@@ -17,7 +17,7 @@ using namespace optix;
 namespace OptiXRenderer {
 
 AIDenoisedBackend::AIDenoisedBackend(optix::Context& context, AIDenoiserFlags* flags)
-    : m_flags(flags) {
+    : m_flags(flags), m_frame_size(Vector2i::zero()) {
 
     m_noisy_pixels = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4);
     m_filtered_pixels = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4);
@@ -58,8 +58,10 @@ void AIDenoisedBackend::resize_backbuffers(Vector2i frame_size) {
 }
 
 void AIDenoisedBackend::render(optix::Context& context, Vector2i frame_size, int accumulation_count) {
-    int width = frame_size.x;
-    int height = frame_size.y;
+    if (m_frame_size != frame_size) {
+        resize_backbuffers(frame_size);
+        m_frame_size = frame_size;
+    }
 
     AIDenoiserStateGPU denoiser_state = {};
     denoiser_state.flags = m_flags->raw();
