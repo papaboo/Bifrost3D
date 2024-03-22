@@ -1130,7 +1130,6 @@ struct Renderer::Implementation {
             uint2 current_frame_size = make_uint2(frame_width, frame_height);
             if (current_frame_size != camera_state.frame_size) {
                 camera_state.accumulation_buffer->setSize(frame_width, frame_height);
-                camera_state.backend_impl->resize_backbuffers(frame_size);
                 camera_state.frame_size = current_frame_size;
                 camera_state.accumulations = 0u;
 #ifdef ENABLE_OPTIX_DEBUG
