@@ -105,6 +105,23 @@ float3 latlong_texcoord_to_direction(float2 uv) {
     return -float3(sin_theta * cos(phi), cos(theta), sin_theta * sin(phi));
 }
 
+// Fix shading normals that are facing away from the camera that intersected the surface.
+// The issue happens when a ray intersects a triangle, where the shading normal at
+// one of more vertices are pointing away from the view direction. Think tesselated sphere.
+// We 'fix' this by offsetting the shading normal along the view direction, w, until it is no longer viewed from behind.
+// w is assumed to be normalized.
+// It's possible to set a target cos(angle) or dot(w,n). As the output normal is normalized afterwards,
+// the target is going to be overshot by by the returned normal,
+// but as it's generally smaller cos_theta adjustments we're interested in that's acceptable.
+float3 fix_backfacing_shading_normal(float3 w, float3 n, float target_cos_theta) {
+    float cos_theta = dot(w, n);
+    if (cos_theta < target_cos_theta) {
+        float c = cos_theta - target_cos_theta;
+        return normalize(n - c * w);
+    } else
+        return n;
+}
+
 // ------------------------------------------------------------------------------------------------
 // Space transformations.
 // ------------------------------------------------------------------------------------------------

@@ -66,9 +66,11 @@ interface IShadingModelCreator {
 
 float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, bool is_front_face, float ambient_visibility) {
     float3 world_wo = normalize(scene_vars.camera_position.xyz - input.world_position.xyz);
-    float3 world_normal = normalize(input.normal.xyz) * (is_front_face ? 1.0 : -1.0);
 
+    float3 world_normal = normalize(input.normal.xyz) * (is_front_face ? 1.0 : -1.0);
+    world_normal = fix_backfacing_shading_normal(world_wo, world_normal, 0.001f);
     float3x3 world_to_shading_TBN = create_TBN(world_normal);
+
     float3 wo = mul(world_to_shading_TBN, world_wo);
 
     const ShadingModels::IShadingModel shading_model = shading_model_creator.create(input.texcoord, wo.z);
