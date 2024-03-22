@@ -1,33 +1,58 @@
 BACKLOG:
+* Debug heap corroption in san miguel and sphere scene
+* Create one geometry group per transform and attach models to it? Then we can remove the mesh to node map
+** Mark the acceleration structure as dirty
+* Dump multi scattering contribution in specular lobe instead of diffuse.
+** Could make it simpler to make the coat a separate interface instead of build into the default material.
+** Move area light abstractions out into util functions?
+*** Remove world to shading as parameter?
+*** Improve documentation.
+**** Why is AO scaled?
+**** What's that nearly diffuse or mirror special case in GGX? And why does it ignore AO?
+**** Can we reduce the amount of computations done inside the branches?
+*** Can we take the coming split into account? Is there any shared GGX/lambert area light code?
+*** There are some shared variables; light center, radiance, ambient visibility, that'll have to be precomputed in then passed to the actual BSDF implementations.
+*** We can have a shading model wrapper, similar to in optix, that handles these precomputations and dispatches to the different light modes
 * Normals revisited
-** Offset slightly along the geometric normal as well? To avoid self shadowing and hard edges on tesselated balls.
-*** Or perhaps offset along the incoming direction? That one should obviously not intersect anything else.
-** Bump mapping
-*** Taming the Shadow Terminator for 'proper' handling of hemisphere distortion. Only scales the contribution. Mirror surfaces still have to be handled differently
-**** https://blog.yiningkarlli.com/2020/02/shadow-terminator-in-takua.html
-*** Filter bumpmap mipmaps using Toksvig05, SGGX or AGAA NDF construction.
-*** Compute AO maps based on normal maps.
-*** Surface Gradient Based Bump Mapping Framework for supporting multiple bump maps. Computes du, dv from pixel derivatives, so might be rasterizer only in its current form.
-*** Warp the hemisphere by the shading normal, such that samples are always drawn in an unwarped hemisphere, but then warped such that <0,0,1> corresponds to the shading/bump normal direction and samples halfway between <0,0,1> and the border of the hemisphere will be warped to be halfway between the shading normal and hemisphere.
-*** 'Fix' the normals at edges. Let the shading normal lerp towards the geometric normal at grazing angles. (Offset normal by -view_dir until the dot product is 0.)
-*** Or warp the hemisphere by the shading normal, such that the hemisphere is turned into a cone that only grazes the surface. That way samples would need to be converted from hemisphere to cone and back again. Pro: No special casing on light / view direction. Con: Black surface when view dir is outside the cone.
+** Cubical sphere's in sphere scene are partially seethrough near the border.
+*** Toggling thin-walled has a pretty drastic effect even though all intersections should be on the outside
+*** The scene also crashes with heap corruption, so maybe somethings wrong.
+** Implement Solving Self-Intersection Artifacts in DirectX Raytracing in OptiX, to avoid hard shadows on tesselated spheres.
+*** https://developer.nvidia.com/blog/solving-self-intersection-artifacts-in-directx-raytracing/
+** Investigate why the spheres in the material scene still have dark outlines. The same with Kalestra's hair in the path tracer.
+*** Time to fire up the old OptiX debugger
+* Rough glass
+** Test that PDF is always positive if reflectance is positive
+*** Test for entire sphere, not just expected hemisphere.
+** Change integrators such that shading normal doesn't always point towards the camera and can be used to differentiate between front and backside intersections in GGX.
+** Add rough glass shading model
+*** Rough glass sheet test scene.
+** Can we use Bounded VNDF when the IOR is greater (or was it less) than 1.0? So cases where the refraction will cause more of the lobe to be occluded.
+** Approximate rough glass in DX11 using a guassian filter, see Doom 2016.
+** Allow ior of 1, which is effectively tinting the transmission.
+*** See PBRTv4 bxdfs.cpp line 80: if (eta == 1 || mfDistrib.EffectivelySmooth()) { .. }
+*** What is 'EffectivelySmooth' defined as?
+*** PBRT handles it as a delta dirac, which I'd still like to avoid
+* Bump mapping
+** Taming the Shadow Terminator for 'proper' handling of hemisphere distortion. Only scales the contribution. Mirror surfaces still have to be handled differently
+*** https://blog.yiningkarlli.com/2020/02/shadow-terminator-in-takua.html
+** Approach it the same way that Heitz did with multiple bounces.
+** Or simply flip the normal or correct back facing, similar to the original shading normal.
+* Film grain
+** http://www.loopit.dk/banding_in_games.pdf
+** https://www.shadertoy.com/view/4t2SDh
+* Upgrade OptiX to get better denoiser
+* ReSTIR
+** Generalized Resampled Importance Sampling
 * Progressive multijittered sample sequences
+** Sampling artifacts on backside of middle sphere in MaterialScene and missing yellow/green color on the right floor in VeachScene for the first many frames.
 ** Owen scrambled sobol sequence - https://www.reddit.com/r/GraphicsProgramming/comments/l1go2r/owenscrambled_sobol_02_sequences_shadertoy/
 ** Test lighthouse sampler
-** Debug VeachScene sampling. The large light's reflection on the second slab is very noisy around the edges. It's somehow related to next event estimation sampling.
-*** Or just test it on a diffuse surface. The yellow light fades in over time on the floor, so something is wrong when sampling.
 ** Unit test for different sampling scenarios with PMJ sampler
 ** Heitz and Georgiev blue noise screen space seed scheme. Optimize towards equal distribution of first four seeds. Seed, swap row/columns and then optimize random cells.
 *** Toroidal shift + random sample index?
 *** Toroidal shift using 14 bit bitmask, right-shift by 1 pr dimension and reinsert the swapped bit as the most significant one.
 ** Pregenerate samples with 64 bluenoise samples for OptiX.
-* Film grain
-** http://www.loopit.dk/banding_in_games.pdf
-** https://www.shadertoy.com/view/4t2SDh
-* Noise reduction
-** Massively parallel path space filtering
-** QR Factorization (has example code and test data)
-*** With deep learned features?
 * Decima Engine Area lights
 ** https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Shaders/Private/BRDF.ush
 ** https://www.guerrilla-games.com/read/decima-engine-advances-in-lighting-and-aa
@@ -49,8 +74,6 @@ BACKLOG:
 * Iridescent clear coat.
 ** https://hal.archives-ouvertes.fr/hal-01518344/document and https://www.youtube.com/watch?v=4nKb9hRYbPA
 ** Or just add a GGX layer on top with an iridescence parameter (red and blue fresnel offset relative to green. [Specularity, iridescence)
-* BTDF
-** Transmission factor. Use IOR computed from specularity.
 
 libs
 * ReactPhysics or BulletPhyssics (or both)
