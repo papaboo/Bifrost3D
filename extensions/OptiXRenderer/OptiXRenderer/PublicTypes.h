@@ -41,13 +41,10 @@ struct PathRegularizationSettings {
 // ------------------------------------------------------------------------------------------------
 enum class AIDenoiserFlag : unsigned char {
     None = 0,
-    Albedo = 1 << 0,
-    Normals = 1 << 1,
-    LogarithmicFeedback = 1 << 2,
+    LogarithmicFeedback = 1 << 0,
     // Mutually exclusive debug flags
-    VisualizeNoise = 1 << 3,
-    VisualizeAlbedo = 1 << 4,
-    VisualizeNormals = 1 << 5,
+    VisualizeNoise = 1 << 1,
+    VisualizeAlbedo = 1 << 2,
     Default = LogarithmicFeedback
 };
 typedef Bifrost::Core::Bitmask<AIDenoiserFlag> AIDenoiserFlags;

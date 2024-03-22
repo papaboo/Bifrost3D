@@ -212,32 +212,13 @@ RT_PROGRAM void path_tracing_RPG() {
         return payload.radiance;
     });
 
-    // Accumulate normals
-    if (g_AI_denoiser_state.normals_buffer != 0) {
-        auto normals_buffer = g_AI_denoiser_state.normals_buffer;
-        float3 prev_normals = make_float3(normals_buffer[g_launch_index]);
-        const bool reset_normals_buffer = g_AI_denoiser_state.flags & AIDenoiserStateGPU::ResetNormalAccumulation;
-        const float magnitude = reset_normals_buffer ? 0.0f : normals_buffer[g_launch_index].w;
-        prev_normals *= magnitude;
-
-        // OptiX expects a normal in view space with red going from left to right, green as up and blue along the depth, with normals pointing towards the camera as 100% blue.
-        float3 denoiser_normal = g_camera_state.world_to_view_rotation * normal;
-        denoiser_normal.z = -denoiser_normal.z;
-
-        const float3 accumulated_normals = prev_normals + denoiser_normal;
-        const float new_length = length(accumulated_normals);
-        normals_buffer[g_launch_index] = make_float4(accumulated_normals / new_length, new_length);
-    }
-
     // Accumulate albedo
-    if (g_AI_denoiser_state.albedo_buffer != 0) {
-        auto albedo_buffer = g_AI_denoiser_state.albedo_buffer;
-        const float3 prev_albedo = make_float3(albedo_buffer[g_launch_index]);
-        const bool reset_albedo_buffer = g_AI_denoiser_state.flags & AIDenoiserStateGPU::ResetAlbedoAccumulation;
-        const float accumulation_count = reset_albedo_buffer ? 1.0f : (albedo_buffer[g_launch_index].w + 1.0f);
-        const float3 accumulated_albedo = lerp(prev_albedo, albedo, 1.0f / accumulation_count);
-        albedo_buffer[g_launch_index] = make_float4(accumulated_albedo, accumulation_count);
-    }
+    auto albedo_buffer = g_AI_denoiser_state.albedo_buffer;
+    const float3 prev_albedo = make_float3(albedo_buffer[g_launch_index]);
+    const bool reset_albedo_buffer = g_AI_denoiser_state.flags & AIDenoiserStateGPU::ResetAlbedoAccumulation;
+    const float accumulation_count = reset_albedo_buffer ? 1.0f : (albedo_buffer[g_launch_index].w + 1.0f);
+    const float3 accumulated_albedo = lerp(prev_albedo, albedo, 1.0f / accumulation_count);
+    albedo_buffer[g_launch_index] = make_float4(accumulated_albedo, accumulation_count);
 
     // Output radiance.
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
@@ -262,8 +243,6 @@ RT_PROGRAM void copy_to_output() {
 #endif
     } else if (g_AI_denoiser_state.flags & int(AIDenoiserFlag::VisualizeAlbedo))
         pixel = g_AI_denoiser_state.albedo_buffer[g_launch_index];
-    else if (g_AI_denoiser_state.flags & int(AIDenoiserFlag::VisualizeNormals))
-        pixel = g_AI_denoiser_state.normals_buffer[g_launch_index] * 0.5f + 0.5f;
 
     g_camera_state.output_buffer[g_launch_index] = float_to_half(pixel);
 }
