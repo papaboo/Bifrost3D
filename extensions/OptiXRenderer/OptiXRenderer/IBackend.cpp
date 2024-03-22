@@ -63,8 +63,6 @@ void AIDenoisedBackend::render(optix::Context& context, Vector2i frame_size, int
 
     AIDenoiserStateGPU denoiser_state = {};
     denoiser_state.flags = m_flags->raw();
-    if (accumulation_count == 0)
-        denoiser_state.flags |= AIDenoiserStateGPU::ResetAlbedoAccumulation; // Needed?
     denoiser_state.noisy_pixels_buffer = m_noisy_pixels->getId();
     denoiser_state.denoised_pixels_buffer = m_filtered_pixels->getId();
     denoiser_state.albedo_buffer = m_albedo->getId();

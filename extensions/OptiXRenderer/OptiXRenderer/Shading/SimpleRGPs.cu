@@ -215,10 +215,8 @@ RT_PROGRAM void path_tracing_RPG() {
     // Accumulate albedo
     auto albedo_buffer = g_AI_denoiser_state.albedo_buffer;
     const float3 prev_albedo = make_float3(albedo_buffer[g_launch_index]);
-    const bool reset_albedo_buffer = g_AI_denoiser_state.flags & AIDenoiserStateGPU::ResetAlbedoAccumulation;
-    const float accumulation_count = reset_albedo_buffer ? 1.0f : (albedo_buffer[g_launch_index].w + 1.0f);
-    const float3 accumulated_albedo = lerp(prev_albedo, albedo, 1.0f / accumulation_count);
-    albedo_buffer[g_launch_index] = make_float4(accumulated_albedo, accumulation_count);
+    const float3 accumulated_albedo = lerp(prev_albedo, albedo, 1.0f / (g_camera_state.accumulations + 1));
+    albedo_buffer[g_launch_index] = make_float4(accumulated_albedo, 1.0f);
 
     // Output radiance.
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
