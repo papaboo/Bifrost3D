@@ -7367,7 +7367,7 @@ typedef struct {
     unsigned char pad[3];
 } ChannelInfo;
 
-typedef struct {
+struct HeaderInfo {
     std::vector<tinyexr::ChannelInfo> channels;
     std::vector<EXRAttribute> attributes;
 
@@ -7419,7 +7419,7 @@ typedef struct {
         header_len = 0;
         compression_type = 0;
     }
-} HeaderInfo;
+};
 
 static bool ReadChannelInfo(std::vector<ChannelInfo> &channels,
     const std::vector<unsigned char> &data) {
