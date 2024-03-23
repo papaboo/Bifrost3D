@@ -93,52 +93,55 @@ SceneNodeID load(const std::string& path, ImageLoader image_loader) {
             printf("ObjLoader::load warning: Coverage set to %.3f. Material %s is completely transparent.\n", material_data.coverage, tiny_mat.name.c_str());
 
         if (!tiny_mat.alpha_texname.empty()) {
-            ImageID image_ID = image_loader(directory + tiny_mat.alpha_texname);
-            if (image_ID == ImageID::invalid_UID())
-                printf("ObjLoader::load error: Could not load image at '%s'.\n", (directory + tiny_mat.alpha_texname).c_str());
+            std::string alpha_image_path = directory + tiny_mat.alpha_texname;
+            Image alpha_image = image_loader(alpha_image_path);
+            if (!alpha_image.exists())
+                printf("ObjLoader::load error: Could not load image at '%s'.\n", alpha_image_path.c_str());
             else {
-                if (Images::get_pixel_format(image_ID) != PixelFormat::Alpha8)
-                    Images::change_format(image_ID, PixelFormat::Alpha8, 1.0f);
-                material_data.coverage_texture_ID = Textures::create2D(image_ID);
+                if (alpha_image.get_pixel_format() != PixelFormat::Alpha8)
+                    alpha_image.change_format(PixelFormat::Alpha8, 1.0f);
+                material_data.coverage_texture_ID = Textures::create2D(alpha_image.get_ID());
             }
         }
 
         if (!tiny_mat.diffuse_texname.empty()) {
-            Image image = image_loader(directory + tiny_mat.diffuse_texname);
-            if (!image.exists())
-                printf("ObjLoader::load error: Could not load image at '%s'.\n", (directory + tiny_mat.diffuse_texname).c_str());
+            std::string tint_image_name = directory + tiny_mat.diffuse_texname;
+            Image tint_image = image_loader(tint_image_name);
+            if (!tint_image.exists())
+                printf("ObjLoader::load error: Could not load image at '%s'.\n", tint_image_name.c_str());
             else {
                 // Use diffuse alpha for coverage, if no explicit coverage texture has been set.
-                if (channel_count(image.get_pixel_format()) == 4 && material_data.coverage_texture_ID == TextureID::invalid_UID()) {
-                    unsigned int mipmap_count = image.get_mipmap_count();
-                    Vector2ui size = Vector2ui(image.get_width(), image.get_height());
-                    Image coverage_image = Images::create2D(image.get_name(), PixelFormat::Alpha8, image.get_gamma(), size, mipmap_count);
+                if (channel_count(tint_image.get_pixel_format()) == 4 && material_data.coverage_texture_ID == TextureID::invalid_UID()) {
+                    unsigned int mipmap_count = tint_image.get_mipmap_count();
+                    Vector2ui size = Vector2ui(tint_image.get_width(), tint_image.get_height());
+                    Image coverage_image = Images::create2D(tint_image_name, PixelFormat::Alpha8, tint_image.get_gamma(), size, mipmap_count);
 
                     float min_coverage = 1.0f;
                     for (unsigned int m = 0; m < mipmap_count; ++m)
-                        for (unsigned int y = 0; y < image.get_height(m); ++y)
-                            for (int x = 0; x < int(image.get_width(m)); ++x) {
+                        for (unsigned int y = 0; y < tint_image.get_height(m); ++y)
+                            for (int x = 0; x < int(tint_image.get_width(m)); ++x) {
                                 Vector2ui index = Vector2ui(x, y);
-                                RGBA tint_pixel = image.get_pixel(index, m);
+                                RGBA tint_pixel = tint_image.get_pixel(index, m);
                                 min_coverage = fminf(min_coverage, tint_pixel.a);
                                 RGBA coverage_pixel = RGBA(RGB(1.0f), tint_pixel.a);
                                 coverage_image.set_pixel(coverage_pixel, index, m);
 
                                 // Set roughness to 1 in the original tint/roughness image.
                                 tint_pixel.a = 1.0f;
-                                image.set_pixel(tint_pixel, index, m);
+                                tint_image.set_pixel(tint_pixel, index, m);
                             }
 
                     if (min_coverage < 1.0f)
                         material_data.coverage_texture_ID = Textures::create2D(coverage_image.get_ID());
                 }
 
-                material_data.tint_roughness_texture_ID = Textures::create2D(image.get_ID());
+                material_data.tint_roughness_texture_ID = Textures::create2D(tint_image.get_ID());
             }
         }
 
         if (!tiny_mat.roughness_texname.empty()) {
-            Image roughness_map = image_loader(directory + tiny_mat.roughness_texname);
+            std::string roughness_image_name = directory + tiny_mat.roughness_texname;
+            Image roughness_map = image_loader(roughness_image_name);
             if (!roughness_map.exists())
                 printf("ObjLoader::load error: Could not load image at '%s'.\n", (directory + tiny_mat.roughness_texname).c_str());
             else {
