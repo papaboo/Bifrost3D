@@ -130,7 +130,7 @@ public:
     static inline Iterator end() { return m_UID_generator.end(); }
     static inline Core::Iterable<Iterator> get_iterable() { return Core::Iterable<Iterator>(begin(), end()); }
 
-    static inline const std::string& get_name(MaterialID material_ID) { return m_names[material_ID]; }
+    static inline std::string get_name(MaterialID material_ID) { return m_names[material_ID]; }
     static inline void set_name(MaterialID material_ID, const std::string& name) { m_names[material_ID] = name; }
 
     static inline ShadingModel get_shading_model(MaterialID material_ID) { return m_materials[material_ID].shading_model; }
@@ -228,7 +228,7 @@ public:
     // -----------------------------------------------------------------------
     // Getters and setters.
     // -----------------------------------------------------------------------
-    inline const std::string& get_name() const { return Materials::get_name(m_ID); }
+    inline std::string get_name() const { return Materials::get_name(m_ID); }
     inline void set_name(const std::string& name) { Materials::set_name(m_ID, name); }
 
     inline ShadingModel get_shading_model() { return Materials::get_shading_model(m_ID); }
