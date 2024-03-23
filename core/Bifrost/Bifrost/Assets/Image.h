@@ -124,7 +124,7 @@ public:
     static inline Iterator end() { return m_UID_generator.end(); }
     static inline Core::Iterable<Iterator> get_iterable() { return { begin(), end() }; }
 
-    static inline const std::string& get_name(ImageID image_ID) { return m_metainfo[image_ID].name; }
+    static inline std::string get_name(ImageID image_ID) { return m_metainfo[image_ID].name; }
     static inline void set_name(ImageID image_ID, const std::string& name) { m_metainfo[image_ID].name = name; }
 
     static inline PixelFormat get_pixel_format(ImageID image_ID) { return m_metainfo[image_ID].pixel_format; }
@@ -228,7 +228,7 @@ public:
     // -----------------------------------------------------------------------
     // Getters and setters.
     // -----------------------------------------------------------------------
-    inline const std::string& get_name() const { return Images::get_name(m_ID); }
+    inline std::string get_name() const { return Images::get_name(m_ID); }
     inline void set_name(const std::string& name) { Images::set_name(m_ID, name); }
 
     inline PixelFormat get_pixel_format() const { return Images::get_pixel_format(m_ID); }
