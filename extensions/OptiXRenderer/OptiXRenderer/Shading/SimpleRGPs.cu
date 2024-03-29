@@ -7,6 +7,7 @@
 // ------------------------------------------------------------------------------------------------
 
 #include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>
+#include <OptiXRenderer/Shading/ShadingModels/DiffuseShading.h>
 #include <OptiXRenderer/Shading/LightSources/LightImpl.h>
 #include <OptiXRenderer/Types.h>
 #include <OptiXRenderer/Utils.h>
@@ -289,7 +290,7 @@ RT_PROGRAM void depth_RPG() {
 //-------------------------------------------------------------------------------------------------
 
 template <typename IntersectionProcessor>
-__inline_dev__ void process_first_intersection(IntersectionProcessor process_intersection) {
+__inline_dev__ void process_material_intersection(IntersectionProcessor process_intersection) {
     accumulate([process_intersection](MonteCarloPayload payload) -> float3 {
         float3 last_ray_direction = payload.direction;
         do {
@@ -305,37 +306,30 @@ __inline_dev__ void process_first_intersection(IntersectionProcessor process_int
     });
 }
 
-typedef float3(*MaterialPropertyGetter)(const Shading::ShadingModels::DefaultShading&, float abs_cos_theta);
-
-__inline_dev__ void accumulate_material_property(MaterialPropertyGetter get_material_property) {
-    process_first_intersection([get_material_property](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
-        const auto& material_parameter = g_materials[payload.material_index];
-        const float abs_cos_theta = abs(dot(last_ray_direction, payload.shading_normal));
-        const auto material = Shading::ShadingModels::DefaultShading(material_parameter, abs_cos_theta, payload.texcoord);
-        return get_material_property(material, abs_cos_theta);
+RT_PROGRAM void albedo_RPG() {
+    process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
+        float abs_cos_theta = abs(dot(last_ray_direction, payload.shading_normal));
+        const auto& material_parameters = g_materials[payload.material_index];
+        if (material_parameters.shading_model == Material::ShadingModel::Default) {
+            auto material = Shading::ShadingModels::DefaultShading(material_parameters, abs_cos_theta, payload.texcoord);
+            return material.rho(abs_cos_theta);
+        } else if (material_parameters.shading_model == Material::ShadingModel::Diffuse) {
+            float3 tint = make_float3(material_parameters.get_tint_roughness(payload.texcoord));
+            return Shading::ShadingModels::DiffuseShading(tint).rho(abs_cos_theta);
+        } else
+            return { 0,0,0 };
     });
 }
 
-RT_PROGRAM void albedo_RPG() {
-    MaterialPropertyGetter rho_getter = [](const Shading::ShadingModels::DefaultShading& material, float abs_cos_theta)->float3 { return material.rho(abs_cos_theta); };
-    accumulate_material_property(rho_getter);
-}
-
 RT_PROGRAM void tint_RPG() {
-    process_first_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
-        if (payload.material_index == 0)
-            return make_float3(0, 0, 0);
-
+    process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
         const auto& material_parameters = g_materials[payload.material_index];
         return optix::make_float3(material_parameters.get_tint_roughness(payload.texcoord));
     });
 }
 
 RT_PROGRAM void roughness_RPG() {
-    process_first_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
-        if (payload.material_index == 0)
-            return make_float3(0, 0, 0);
-
+    process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
         const auto& material_parameters = g_materials[payload.material_index];
         float roughness = material_parameters.get_tint_roughness(payload.texcoord).w;
         return { roughness, roughness, roughness };
@@ -343,10 +337,7 @@ RT_PROGRAM void roughness_RPG() {
 }
 
 RT_PROGRAM void shading_normal_RPG() {
-    process_first_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
-        if (payload.material_index == 0)
-            return make_float3(0, 0, 0);
-
+    process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
         return payload.shading_normal * 0.5f + 0.5f;
     });
 }

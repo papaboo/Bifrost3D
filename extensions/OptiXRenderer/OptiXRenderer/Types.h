@@ -256,13 +256,19 @@ struct __align__(16) BSDFSample {
 };
 
 struct __align__(16) Material {
-    enum Flags {
+    enum Flags : unsigned short {
         None = 0u,
         ThinWalled = 1u,
         Cutout = 2u,
     };
 
-    int flags;
+    enum ShadingModel : unsigned short {
+        Default = 0u,
+        Diffuse = 1u,
+    };
+
+    Flags flags;
+    ShadingModel shading_model;
     optix::float3 tint;
 
     float roughness;
