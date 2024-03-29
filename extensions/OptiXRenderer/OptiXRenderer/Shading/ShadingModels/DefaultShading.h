@@ -162,16 +162,10 @@ public:
         float coat_roughness = max(material.coat_roughness, min_roughness);
 
         // Metallic
-        float metallic = material.metallic;
-        if (material.metallic_texture_ID)
-            metallic *= rtTex2D<float>(material.metallic_texture_ID, texcoord.x, texcoord.y);
+        float metallic = material.get_metallic(texcoord);
 
         // Tint and roughness
-        float4 tint_roughness = make_float4(material.tint, material.roughness);
-        if (material.tint_roughness_texture_ID)
-            tint_roughness *= rtTex2D<float4>(material.tint_roughness_texture_ID, texcoord.x, texcoord.y);
-        else if (material.roughness_texture_ID)
-            tint_roughness.w *= rtTex2D<float>(material.roughness_texture_ID, texcoord.x, texcoord.y);
+        float4 tint_roughness = material.get_tint_roughness(texcoord);
         float3 tint = make_float3(tint_roughness);
         float roughness = tint_roughness.w;
         roughness = max(roughness, min_roughness);

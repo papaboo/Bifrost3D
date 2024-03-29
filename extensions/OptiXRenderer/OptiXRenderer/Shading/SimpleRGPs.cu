@@ -179,7 +179,6 @@ rtDeclareVariable(AIDenoiserStateGPU, g_AI_denoiser_state, , );
 
 RT_PROGRAM void path_tracing_RPG() {
     float3 albedo = { 0, 0, 0 };
-    float3 normal = { 0, 0, 0 };
 
     accumulate([&](MonteCarloPayload payload) -> float3 {
         bool properties_accumulated = false;
@@ -190,15 +189,14 @@ RT_PROGRAM void path_tracing_RPG() {
             // Accumulate surface properties of the first non-specular surface hit.
             // If no non-specular hits are found or the BSDF PDF is zero due to a bad sample being drawn, 
             // then use the last hit to ensure that some feature data is output.
-            bool non_zero_normal = payload.shading_normal.x != 0 || payload.shading_normal.y != 0 || payload.shading_normal.z != 0;
+            float3 shading_normal = payload.shading_normal;
+            bool non_zero_normal = shading_normal.x != 0 || shading_normal.y != 0 || shading_normal.z != 0;
             if (!properties_accumulated && non_zero_normal) {
                 properties_accumulated = true;
 
-                normal = payload.shading_normal;
-
                 if (payload.material_index > 0) {
                     using namespace Shading::ShadingModels;
-                    const float abs_cos_theta = abs(dot(last_ray_direction, normal));
+                    const float abs_cos_theta = abs(dot(last_ray_direction, shading_normal));
                     const auto material_parameters = g_materials[payload.material_index];
                     const auto material = DefaultShading(material_parameters, abs_cos_theta, payload.texcoord);
                     albedo = material.rho(abs_cos_theta);
@@ -323,20 +321,20 @@ RT_PROGRAM void tint_RPG() {
         if (payload.material_index == 0)
             return make_float3(0, 0, 0);
 
-        const auto& material_parameter = g_materials[payload.material_index];
-        float3 tint = material_parameter.tint;
-        if (material_parameter.tint_roughness_texture_ID)
-            tint *= make_float3(rtTex2D<float4>(material_parameter.tint_roughness_texture_ID, payload.texcoord.x, payload.texcoord.y));
-        return tint;
+        const auto& material_parameters = g_materials[payload.material_index];
+        return optix::make_float3(material_parameters.get_tint_roughness(payload.texcoord));
     });
 }
 
 RT_PROGRAM void roughness_RPG() {
-    MaterialPropertyGetter roughness_getter = [](const Shading::ShadingModels::DefaultShading& material, float abs_cos_theta)->float3 { 
-        float roughness = material.get_roughness();
-        return make_float3(roughness, roughness, roughness);
-    };
-    accumulate_material_property(roughness_getter);
+    process_first_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
+        if (payload.material_index == 0)
+            return make_float3(0, 0, 0);
+
+        const auto& material_parameters = g_materials[payload.material_index];
+        float roughness = material_parameters.get_tint_roughness(payload.texcoord).w;
+        return { roughness, roughness, roughness };
+    });
 }
 
 RT_PROGRAM void shading_normal_RPG() {
