@@ -696,7 +696,10 @@ struct Renderer::Implementation {
                                              optix::TextureSampler* samplers, Buffer* images) {
                 OptiXRenderer::Material& device_material = device_materials[material_ID];
                 Assets::Material host_material = material_ID;
-                device_material.flags = Material::Flags(int(host_material.get_flags())); // The Bifrost and OptiX flags have the same layout.
+
+                // The Bifrost and OptiX flags and shading models have the same layout.
+                device_material.flags = Material::Flags(int(host_material.get_flags()));
+                device_material.shading_model = Material::ShadingModel(int(host_material.get_shading_model()));
 
                 device_material.tint = to_float3(host_material.get_tint());
                 if (host_material.has_tint_texture()) {
@@ -767,6 +770,8 @@ struct Renderer::Implementation {
                             should_reset_accumulations = true;
                         }
                         if (material.get_changes().is_set(Materials::Change::ShadingModel)) {
+                            upload_material(material.get_ID(), device_materials, textures.data(), images.data());
+
                             // We don't expect this operation to happen often, so we'll just loop over all mesh models,
                             // check if they use the changed material and update their shading model.
                             auto new_shading_model = shading_models[(int)material.get_shading_model()];

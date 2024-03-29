@@ -51,6 +51,10 @@ public:
             res.direction.z = -res.direction.z;
         return res;
     }
+
+    __inline_all__ optix::float3 rho(float abs_cos_theta) const {
+        return m_tint;
+    }
 };
 
 } // NS ShadingModels
