@@ -198,6 +198,11 @@ RT_PROGRAM void path_tracing_RPG() {
                     using namespace Shading::ShadingModels;
                     const float abs_cos_theta = abs(dot(last_ray_direction, shading_normal));
                     const auto material_parameters = g_materials[payload.material_index];
+
+                    // Use DefaultMaterial for all materials.
+                    // This is because default material's rho contains the view dependent specular highlight as well,
+                    // which can give an edge in the image between surfaces with different normals,
+                    // so the albedo image captures both the surface albedo and surface normal effects.
                     const auto material = DefaultShading(material_parameters, abs_cos_theta, payload.texcoord);
                     albedo = material.rho(abs_cos_theta);
                 } else
