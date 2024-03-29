@@ -281,6 +281,31 @@ struct __align__(16) Material {
 
     __inline_all__ bool is_thin_walled() const { return (flags & (Flags::Cutout | Flags::ThinWalled)) != 0; }
     __inline_all__ bool is_cutout() const { return (flags & Flags::Cutout) != 0; }
+
+#if GPU_DEVICE
+    __inline_all__ optix::float4 get_tint_roughness(optix::float2 texcoord) const {
+        optix::float4 tint_roughness = optix::make_float4(tint, roughness);
+        if (tint_roughness_texture_ID)
+            tint_roughness *= optix::rtTex2D<optix::float4>(tint_roughness_texture_ID, texcoord.x, texcoord.y);
+        if (roughness_texture_ID)
+            tint_roughness.w *= optix::rtTex2D<float>(roughness_texture_ID, texcoord.x, texcoord.y);
+        return tint_roughness;
+    }
+
+    __inline_all__ float get_metallic(optix::float2 texcoord) const {
+        if (metallic_texture_ID)
+            return metallic * optix::rtTex2D<float>(metallic_texture_ID, texcoord.x, texcoord.y);
+        else
+            return metallic;
+    }
+
+    __inline_all__ float get_coverage(optix::float2 texcoord) const {
+        if (coverage_texture_ID)
+            return coverage * optix::rtTex2D<float>(coverage_texture_ID, texcoord.x, texcoord.y);
+        else
+            return coverage;
+    }
+#endif // GPU_DEVICE
 };
 
 //----------------------------------------------------------------------------

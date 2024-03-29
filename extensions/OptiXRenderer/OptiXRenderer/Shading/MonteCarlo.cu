@@ -141,13 +141,6 @@ __inline_dev__ LightSample reestimated_light_samples(const ShadingModel& materia
 // Closest hit integrator.
 //-----------------------------------------------------------------------------
 
-__inline_all__ float get_coverage(const Material& material, optix::float2 texcoord) {
-    float coverage = material.coverage;
-    if (material.coverage_texture_ID)
-        coverage *= optix::rtTex2D<float>(material.coverage_texture_ID, texcoord.x, texcoord.y);
-    return coverage;
-}
-
 template <typename MaterialCreator>
 __inline_all__ void path_tracing_closest_hit() {
     const Material& material_parameter = g_materials[material_index];
@@ -165,7 +158,7 @@ __inline_all__ void path_tracing_closest_hit() {
     bool hit_from_behind = dot(world_geometric_normal, ray.direction) >= 0.0f;
     bool ignore_intersection = hit_from_behind && !material_parameter.is_thin_walled();
 
-    float coverage = get_coverage(material_parameter, texcoord);
+    float coverage = material_parameter.get_coverage(texcoord);
     float coverage_cutoff = sample1f(monte_carlo_payload.rng_state); // Always draw coverage random number to have predictable RNG dimension usage whether the material is a cutout or not.
     coverage_cutoff = material_parameter.is_cutout() ? material_parameter.coverage : coverage_cutoff;
     ignore_intersection |= coverage < coverage_cutoff;
@@ -235,10 +228,7 @@ RT_PROGRAM void default_closest_hit() {
 struct DiffuseMaterialCreator {
     typedef DiffuseShading material_type;
     __inline_all__ static material_type create(const Material& material_params, optix::float2 texcoord, float abs_cos_theta_o, float max_PDF_hint) {
-        float3 tint = material_params.tint;
-        if (material_params.tint_roughness_texture_ID)
-            tint *= make_float3(rtTex2D<float4>(material_params.tint_roughness_texture_ID, texcoord.x, texcoord.y));
-
+        float3 tint = make_float3(material_params.get_tint_roughness(texcoord));
         return DiffuseShading(tint);
     }
 };
@@ -254,7 +244,7 @@ RT_PROGRAM void diffuse_closest_hit() {
 rtDeclareVariable(ShadowPayload, shadow_payload, rtPayload, );
 
 RT_PROGRAM void shadow_any_hit() {
-    float coverage = get_coverage(g_materials[material_index], texcoord);
+    float coverage = g_materials[material_index].get_coverage(texcoord);
     shadow_payload.radiance *= 1.0f - coverage;
     if (shadow_payload.radiance.x < 0.0000001f && shadow_payload.radiance.y < 0.0000001f && shadow_payload.radiance.z < 0.0000001f) {
         shadow_payload.radiance = make_float3(0, 0, 0);
