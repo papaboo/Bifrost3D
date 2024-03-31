@@ -54,7 +54,7 @@ TEST_F(Assets_Material, sentinel_material) {
 }
 
 TEST_F(Assets_Material, create) {
-    Materials::Data data;
+    Materials::Data data = {};
     data.tint = Math::RGB::red();
     data.roughness = 0.5f;
     data.metallic = 1.0f;
