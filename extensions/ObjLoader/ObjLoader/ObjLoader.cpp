@@ -114,22 +114,33 @@ SceneNodeID load(const std::string& path, ImageLoader image_loader) {
                 if (channel_count(tint_image.get_pixel_format()) == 4 && material_data.coverage_texture_ID == TextureID::invalid_UID()) {
                     unsigned int mipmap_count = tint_image.get_mipmap_count();
                     Vector2ui size = Vector2ui(tint_image.get_width(), tint_image.get_height());
-                    Image coverage_image = Images::create2D(tint_image_name, PixelFormat::Alpha8, tint_image.get_gamma(), size, mipmap_count);
+                    Image coverage_image = Images::create2D(tint_image_name, PixelFormat::Alpha8, 1.0f, size);
+                    unsigned char* coverage_pixels = coverage_image.get_pixels<unsigned char>();
 
                     float min_coverage = 1.0f;
-                    for (unsigned int m = 0; m < mipmap_count; ++m)
-                        for (unsigned int y = 0; y < tint_image.get_height(m); ++y)
-                            for (int x = 0; x < int(tint_image.get_width(m)); ++x) {
-                                Vector2ui index = Vector2ui(x, y);
-                                RGBA tint_pixel = tint_image.get_pixel(index, m);
-                                min_coverage = fminf(min_coverage, tint_pixel.a);
-                                RGBA coverage_pixel = RGBA(RGB(1.0f), tint_pixel.a);
-                                coverage_image.set_pixel(coverage_pixel, index, m);
+                    if (tint_image.get_pixel_format() == PixelFormat::RGBA32) {
+                        min_coverage = 255.0f;
+                        RGBA32* tint_pixels = tint_image.get_pixels<RGBA32>();
+                        for (unsigned int p = 0; p < tint_image.get_pixel_count(); ++p) {
+                            coverage_pixels[p] = tint_pixels[p].a;
+                            min_coverage = fminf(min_coverage, coverage_pixels[p]);
+                            tint_pixels[p].a = 255;
+                        }
+                        min_coverage /= 255;
 
-                                // Set roughness to 1 in the original tint/roughness image.
-                                tint_pixel.a = 1.0f;
-                                tint_image.set_pixel(tint_pixel, index, m);
-                            }
+                    } else {
+
+                        for (unsigned int p = 0; p < tint_image.get_pixel_count(); ++p) {
+                            RGBA tint_pixel = tint_image.get_pixel(p);
+
+                            min_coverage = fminf(min_coverage, tint_pixel.a);
+                            coverage_pixels[p] = unsigned char(tint_pixel.a * 255 + 0.5f);
+
+                            // Set roughness to 1 in the original tint/roughness image.
+                            tint_pixel.a = 1.0f;
+                            tint_image.set_pixel(tint_pixel, p);
+                        }
+                    }
 
                     if (min_coverage < 1.0f)
                         material_data.coverage_texture_ID = Textures::create2D(coverage_image.get_ID());
