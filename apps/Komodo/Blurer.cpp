@@ -83,14 +83,13 @@ struct Blurer::Implementation final {
         }
         engine.get_window().set_name("Komodo - " + m_input.get_name());
 
-        Vector2ui size = Vector2ui(m_input.get_width(), m_input.get_height());
+        Vector2ui size = m_input.get_size_2D();
         m_blurred_image = Images::create2D("blurred_" + m_input.get_name(), PixelFormat::RGB_Float, 2.2f, size);
 
         bool headless = engine.get_window().get_width() == 0 && engine.get_window().get_height() == 0;
         if (headless) {
             if (m_output_path.size() != 0) {
                 // Blur and store the image
-                Vector2ui size = { m_input.get_width(), m_input.get_height() };
                 Image output_image = blur_image(m_input);
                 store_image(output_image, m_output_path);
             }
@@ -144,12 +143,10 @@ struct Blurer::Implementation final {
             auto save_image = [](void* client_data) {
                 // Tonemap and store the image
                 Implementation* data = (Implementation*)client_data;
-                Vector2ui size = { data->m_input.get_width(), data->m_input.get_height() };
                 store_image(data->m_blurred_image, data->m_output_path);
             };
             TwAddButton(bar, "Save", save_image, this, "");
         }
-
 
         return bar;
     }

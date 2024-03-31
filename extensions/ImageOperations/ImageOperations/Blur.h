@@ -23,8 +23,7 @@ inline void gaussian(Bifrost::Assets::ImageID image_ID, float std_dev, Bifrost::
     using namespace Bifrost::Math;
 
     Image image = image_ID;
-    Vector3ui size = Vector3ui(image.get_width(), image.get_height(), image.get_depth());
-
+    Vector3ui size = image.get_size_3D();
     int pixel_count = size.x * size.y * size.z;
 
     int support = int(std_dev * 4.0f + 0.5f);
@@ -93,17 +92,11 @@ inline Bifrost::Assets::ImageID gaussian(Bifrost::Assets::ImageID image_ID, floa
     using namespace Bifrost::Math;
 
     Image image = image_ID;
-    Vector3ui size = Vector3ui(image.get_width(), image.get_height(), image.get_depth());
+    Vector3ui size = image.get_size_3D();
     ImageID result = Images::create3D("blurred_" + image.get_name(), image.get_pixel_format(), image.get_gamma(), size);
     gaussian(image_ID, std_dev, result);
     return result;
 }
-
-
-// ------------------------------------------------------------------------------------------------
-// Kawase blur.
-// ------------------------------------------------------------------------------------------------
-
 
 } // NS Blur
 } // NS ImageOperations

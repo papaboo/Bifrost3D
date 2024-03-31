@@ -175,7 +175,7 @@ Image extract_channel(Image image, int channel, ImageUsage usage, const std::str
 
     // Extract the channel from the image and store the resulting image in the cache.
     unsigned int mipmap_count = image.get_mipmap_count();
-    Vector2ui size = Vector2ui(image.get_width(), image.get_height());
+    Vector2ui size = image.get_size_2D();
     ImageID single_channel_image_ID = Images::create2D(name + "_" + to_string(usage), PixelFormat::Alpha8, 1.0, size, mipmap_count);
 
     unsigned char min_value = 255;

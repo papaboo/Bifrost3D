@@ -129,9 +129,8 @@ Math::RGBA sample2D(TextureID texture_ID, Vector2f texcoord, int mipmap_level) {
         Image image = texture.get_image();
 
         if (texture.get_minification_filter() == MinificationFilter::None) {
-            Vector2ui pixel_coord = Vector2ui(unsigned int(texcoord.x * image.get_width(mipmap_level)),
-                                              unsigned int(texcoord.y * image.get_height(mipmap_level)));
-            return image.get_pixel(pixel_coord);
+            Vector2f pixel_coord = texcoord * (Vector2f)image.get_size_2D(mipmap_level);
+            return image.get_pixel((Vector2ui)pixel_coord);
         } else { // MinificationFilter::Linear
             unsigned int width = image.get_width(mipmap_level), height = image.get_height(mipmap_level);
             texcoord = Vector2f(texcoord.x * float(width), texcoord.y * float(height)) - 0.5f;
