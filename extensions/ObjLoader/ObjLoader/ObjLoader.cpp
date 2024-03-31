@@ -21,6 +21,7 @@
 #include <ObjLoader/tiny_obj_loader.h>
 
 #include <map>
+#include <unordered_map>
 
 using namespace Bifrost;
 using namespace Bifrost::Assets;
@@ -29,6 +30,8 @@ using namespace Bifrost::Math;
 using namespace Bifrost::Scene;
 
 namespace ObjLoader {
+
+using ImageCache = std::unordered_map<std::string, ImageID>;
 
 void split_path(std::string& directory, std::string& filename, const std::string& path) {
     std::string::const_iterator slash_itr = path.end();
@@ -50,71 +53,37 @@ void split_path(std::string& directory, std::string& filename, const std::string
     }
 }
 
-SceneNodeID load(const std::string& path, ImageLoader image_loader) {
-    std::string directory, filename;
-    split_path(directory, filename, path);
+// Loads images in materials.
+// Images that fail to load are are also added to the cache to prevent attempting to load them multiple times and to make all image lookups valid later.
+void load_material_images(const std::vector<tinyobj::material_t>& materials, const std::string& directory, ImageLoader image_loader,
+    ImageCache& tint_cache, ImageCache& coverage_cache) {
+    for (auto mat : materials) {
 
-    tinyobj::attrib_t attributes;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> tiny_materials;
-    std::string warning;
-    std::string error;
+        std::string& coverage_name = mat.alpha_texname;
+        if (!coverage_name.empty() && coverage_cache.find(coverage_name) == coverage_cache.end()) {
+            std::string coverage_image_path = directory + coverage_name;
+            Image coverage_image = image_loader(coverage_image_path);
+            coverage_cache.insert({ coverage_name, coverage_image.get_ID() });
 
-    bool obj_loaded = tinyobj::LoadObj(&attributes, &shapes, &tiny_materials, &warning, &error, path.c_str(), directory.c_str());
-
-    if (!warning.empty())
-        printf("ObjLoader::load warning: '%s'.\n", warning.c_str());
-    if (!error.empty())
-        printf("ObjLoader::load error: '%s'.\n", error.c_str());
-
-    if (!obj_loaded)
-        return SceneNodeID::invalid_UID();
-
-    SceneNodeID root_ID = shapes.size() > 1u ? SceneNodes::create(std::string(filename.begin(), filename.end()-4)) : SceneNodeID::invalid_UID();
-
-    Core::Array<MaterialID> materials = Core::Array<MaterialID>(unsigned int(tiny_materials.size()));
-    for (int i = 0; i < int(tiny_materials.size()); ++i) {
-        tinyobj::material_t tiny_mat = tiny_materials[i];
-
-        Materials::Data material_data = {};
-        material_data.flags = MaterialFlag::None;
-        material_data.tint = RGB(tiny_mat.diffuse[0], tiny_mat.diffuse[1], tiny_mat.diffuse[2]);
-        material_data.tint_roughness_texture_ID = TextureID::invalid_UID();
-        material_data.roughness = sqrt(2.0f / (tiny_mat.shininess + 2.0f)); // Map from blinn shininess to material roughness. See D_Blinn in https://github.com/EpicGames/UnrealEngine/blob/d94b38ae3446da52224bedd2568c078f828b4039/Engine/Shaders/Private/BRDF.ush
-        bool is_metallic = tiny_mat.illum == 3 || tiny_mat.illum == 5;
-        material_data.metallic = is_metallic ? 1.0f : 0.0f;
-        material_data.specularity = (tiny_mat.specular[0] + tiny_mat.specular[1] + tiny_mat.specular[2]) / 3.0f;
-        material_data.coverage = tiny_mat.dissolve;
-        material_data.coverage_texture_ID = TextureID::invalid_UID();
-        material_data.transmission = 0.0f; // (tiny_mat.transmittance[0] + tiny_mat.transmittance[1] + tiny_mat.transmittance[2]) / 3.0f;
-
-        // Warn about completely transparent object. Happens from time to time and it's hell to debug a missing model.
-        if (material_data.coverage <= 0.0f)
-            printf("ObjLoader::load warning: Coverage set to %.3f. Material %s is completely transparent.\n", material_data.coverage, tiny_mat.name.c_str());
-
-        if (!tiny_mat.alpha_texname.empty()) {
-            std::string alpha_image_path = directory + tiny_mat.alpha_texname;
-            Image alpha_image = image_loader(alpha_image_path);
-            if (!alpha_image.exists())
-                printf("ObjLoader::load error: Could not load image at '%s'.\n", alpha_image_path.c_str());
-            else {
-                if (alpha_image.get_pixel_format() != PixelFormat::Alpha8)
-                    alpha_image.change_format(PixelFormat::Alpha8, 1.0f);
-                material_data.coverage_texture_ID = Textures::create2D(alpha_image.get_ID());
-            }
+            if (coverage_image.exists())
+                if (coverage_image.get_pixel_format() != PixelFormat::Alpha8)
+                    coverage_image.change_format(PixelFormat::Alpha8, 1.0f);
+            else
+                printf("ObjLoader::load error: Could not load image at '%s'.\n", coverage_image_path.c_str());
         }
 
-        if (!tiny_mat.diffuse_texname.empty()) {
-            std::string tint_image_name = directory + tiny_mat.diffuse_texname;
-            Image tint_image = image_loader(tint_image_name);
-            if (!tint_image.exists())
-                printf("ObjLoader::load error: Could not load image at '%s'.\n", tint_image_name.c_str());
-            else {
-                // Use diffuse alpha for coverage, if no explicit coverage texture has been set.
-                if (channel_count(tint_image.get_pixel_format()) == 4 && material_data.coverage_texture_ID == TextureID::invalid_UID()) {
+        std::string& tint_name = mat.diffuse_texname;
+        if (!tint_name.empty() && tint_cache.find(tint_name) == tint_cache.end()) {
+            std::string tint_image_path = directory + tint_name;
+            Image tint_image = image_loader(tint_image_path);
+            tint_cache.insert({ tint_name, tint_image.get_ID() });
+
+            if (tint_image.exists()) {
+                // Extract alpha as coverage and set the roughness to 1 if the image has an alpha channel
+                if (channel_count(tint_image.get_pixel_format()) == 4) {
                     unsigned int mipmap_count = tint_image.get_mipmap_count();
                     Vector2ui size = Vector2ui(tint_image.get_width(), tint_image.get_height());
-                    Image coverage_image = Images::create2D(tint_image_name, PixelFormat::Alpha8, 1.0f, size);
+                    Image coverage_image = Images::create2D(tint_image_path, PixelFormat::Alpha8, 1.0f, size);
                     unsigned char* coverage_pixels = coverage_image.get_pixels<unsigned char>();
 
                     float min_coverage = 1.0f;
@@ -143,26 +112,96 @@ SceneNodeID load(const std::string& path, ImageLoader image_loader) {
                     }
 
                     if (min_coverage < 1.0f)
-                        material_data.coverage_texture_ID = Textures::create2D(coverage_image.get_ID());
+                        coverage_cache.insert({ tint_name, coverage_image.get_ID() });
                 }
-
-                material_data.tint_roughness_texture_ID = Textures::create2D(tint_image.get_ID());
-            }
+            } else
+                printf("ObjLoader::load error: Could not load image at '%s'.\n", tint_image_path.c_str());
         }
 
-        if (!tiny_mat.roughness_texname.empty()) {
-            std::string roughness_image_name = directory + tiny_mat.roughness_texname;
-            Image roughness_map = image_loader(roughness_image_name);
-            if (!roughness_map.exists())
-                printf("ObjLoader::load error: Could not load image at '%s'.\n", (directory + tiny_mat.roughness_texname).c_str());
-            else {
-                Texture old_tex = material_data.tint_roughness_texture_ID;
-                Image new_tint_roughness_image = ImageUtils::combine_tint_roughness(old_tex.get_image(), roughness_map.get_ID(), 0);
-                if (new_tint_roughness_image != old_tex.get_image()) {
-                    Textures::destroy(old_tex.get_ID());
-                    Images::destroy(old_tex.get_image().get_ID());
-                }
-                material_data.tint_roughness_texture_ID = Textures::create2D(new_tint_roughness_image.get_ID());;
+        if (!mat.roughness_texname.empty())
+            printf("ObjLoader::load error: Roughness texture not supported.\n");
+        if (!mat.metallic_texname.empty())
+            printf("ObjLoader::load error: Metallic texture not supported.\n");
+        if (!mat.sheen_texname.empty())
+            printf("ObjLoader::load error: Sheen texture not supported.\n");
+        if (!mat.emissive_texname.empty())
+            printf("ObjLoader::load error: Emissive texture not supported.\n");
+        if (!mat.normal_texname.empty())
+            printf("ObjLoader::load error: Normal map not supported.\n");
+    }
+}
+
+SceneNodeID load(const std::string& path, ImageLoader image_loader) {
+    std::string directory, filename;
+    split_path(directory, filename, path);
+
+    tinyobj::attrib_t attributes;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> tiny_materials;
+    std::string warning;
+    std::string error;
+
+    bool obj_loaded = tinyobj::LoadObj(&attributes, &shapes, &tiny_materials, &warning, &error, path.c_str(), directory.c_str());
+
+    if (!warning.empty())
+        printf("ObjLoader::load warning: '%s'.\n", warning.c_str());
+    if (!error.empty())
+        printf("ObjLoader::load error: '%s'.\n", error.c_str());
+
+    if (!obj_loaded)
+        return SceneNodeID::invalid_UID();
+
+    SceneNodeID root_ID = shapes.size() > 1u ? SceneNodes::create(std::string(filename.begin(), filename.end()-4)) : SceneNodeID::invalid_UID();
+
+    ImageCache tint_images;
+    ImageCache coverage_images;
+    load_material_images(tiny_materials, directory, image_loader, tint_images, coverage_images);
+
+    Core::Array<MaterialID> materials = Core::Array<MaterialID>(unsigned int(tiny_materials.size()));
+    for (int i = 0; i < int(tiny_materials.size()); ++i) {
+        tinyobj::material_t tiny_mat = tiny_materials[i];
+
+        Materials::Data material_data = {};
+        material_data.flags = MaterialFlag::None;
+        material_data.tint = RGB(tiny_mat.diffuse[0], tiny_mat.diffuse[1], tiny_mat.diffuse[2]);
+        material_data.roughness = sqrt(2.0f / (tiny_mat.shininess + 2.0f)); // Map from blinn shininess to material roughness. See D_Blinn in https://github.com/EpicGames/UnrealEngine/blob/d94b38ae3446da52224bedd2568c078f828b4039/Engine/Shaders/Private/BRDF.ush
+        bool is_metallic = tiny_mat.illum == 3 || tiny_mat.illum == 5;
+        material_data.metallic = is_metallic ? 1.0f : 0.0f;
+        material_data.specularity = (tiny_mat.specular[0] + tiny_mat.specular[1] + tiny_mat.specular[2]) / 3.0f;
+        material_data.coverage = tiny_mat.dissolve;
+        material_data.transmission = 0.0f; // (tiny_mat.transmittance[0] + tiny_mat.transmittance[1] + tiny_mat.transmittance[2]) / 3.0f;
+
+        // Warn about completely transparent object. Happens from time to time and it's hell to debug a missing model.
+        if (material_data.coverage <= 0.0f)
+            printf("ObjLoader::load warning: Coverage set to %.3f. Material %s is completely transparent.\n", material_data.coverage, tiny_mat.name.c_str());
+
+        // Coverage image
+        if (!tiny_mat.alpha_texname.empty() || !tiny_mat.diffuse_texname.empty()) {
+            Image alpha_image = Image();
+
+            // First lookup in coverage images
+            auto& alpha_image_itr = coverage_images.find(tiny_mat.alpha_texname);
+            if (alpha_image_itr != coverage_images.end())
+                alpha_image = alpha_image_itr->second;
+
+            // Then attempt diffuse alpha channel images if coverage images didn't provide an image
+            if (!alpha_image.exists()) {
+                auto& alpha_image_itr = coverage_images.find(tiny_mat.diffuse_texname);
+                if (alpha_image_itr != coverage_images.end())
+                    alpha_image = alpha_image_itr->second;
+            }
+
+            if (alpha_image.exists())
+                material_data.coverage_texture_ID = Textures::create2D(alpha_image.get_ID());
+        }
+
+        // Diffuse image
+        if (!tiny_mat.diffuse_texname.empty()) {
+            auto& tint_image_itr = tint_images.find(tiny_mat.diffuse_texname);
+            if (tint_image_itr != tint_images.end()) {
+                Image tint_image = tint_image_itr->second;
+                if (tint_image.exists())
+                    material_data.tint_roughness_texture_ID = Textures::create2D(tint_image.get_ID());
             }
         }
 
