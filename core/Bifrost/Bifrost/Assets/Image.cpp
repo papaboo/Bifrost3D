@@ -81,9 +81,9 @@ static inline Images::PixelData allocate_pixels(PixelFormat format, unsigned int
     case PixelFormat::Intensity8:
         return new unsigned char[pixel_count];
     case PixelFormat::RGB24:
-        return new unsigned char[3 * pixel_count];
+        return new RGB24[pixel_count];
     case PixelFormat::RGBA32:
-        return new unsigned char[4 * pixel_count];
+        return new RGBA32[pixel_count];
     case PixelFormat::Intensity_Float:
         return new float[pixel_count];
     case PixelFormat::RGB_Float:
@@ -100,9 +100,13 @@ static inline void deallocate_pixels(PixelFormat format, Images::PixelData data)
     switch (format) {
     case PixelFormat::Alpha8:
     case PixelFormat::Intensity8:
-    case PixelFormat::RGB24:
-    case PixelFormat::RGBA32:
         delete[] (unsigned char*)data;
+        break;
+    case PixelFormat::RGB24:
+        delete[] (RGB24*)data;
+        break;
+    case PixelFormat::RGBA32:
+        delete[] (RGBA32*)data;
         break;
     case PixelFormat::Intensity_Float:
         delete[] (float*)data;
@@ -217,22 +221,24 @@ Images::PixelData Images::get_pixels(ImageID image_ID, int mipmap_level) {
 }
 
 static RGBA get_nonlinear_pixel(Images::PixelData pixels, PixelFormat format, unsigned int index) {
+    float byte_normalizer = 1.0f / 255.0f;
+
     switch (format) {
     case PixelFormat::Alpha8: {
-        float alpha = ((unsigned char*)pixels)[index] / 255.0f;
+        float alpha = ((unsigned char*)pixels)[index] * byte_normalizer;
         return RGBA(1.0f, 1.0f, 1.0f, alpha);
     }
     case PixelFormat::Intensity8: {
-        float i = ((unsigned char*)pixels)[index] / 255.0f;
+        float i = ((unsigned char*)pixels)[index] * byte_normalizer;
         return RGBA(i, i, i, 1.0f);
     }
     case PixelFormat::RGB24: {
-        unsigned char* pixel = ((unsigned char*)pixels) + index * 3;
-        return RGBA(pixel[0] / 255.0f, pixel[1] / 255.0f, pixel[2] / 255.0f, 1.0f);
+        RGB24 pixel = ((RGB24*)pixels)[index];
+        return RGBA(pixel.r * byte_normalizer, pixel.g * byte_normalizer, pixel.b * byte_normalizer, 1.0f);
     }
     case PixelFormat::RGBA32: {
-        unsigned char* pixel = ((unsigned char*)pixels) + index * 4;
-        return RGBA(pixel[0] / 255.0f, pixel[1] / 255.0f, pixel[2] / 255.0f, pixel[3] / 255.0f);
+        RGBA32 pixel = ((RGBA32*)pixels)[index];
+        return RGBA(pixel.r * byte_normalizer, pixel.g * byte_normalizer, pixel.b * byte_normalizer, pixel.a * byte_normalizer);
     }
     case PixelFormat::Intensity_Float: {
         float value = ((float*)pixels)[index];
@@ -308,18 +314,18 @@ static void set_linear_pixel(Images::PixelData pixels, PixelFormat pixel_format,
         break;
     }
     case PixelFormat::RGB24: {
-        unsigned char* pixel = ((unsigned char*)pixels) + index * 3;
-        pixel[0] = unsigned char(clamp(color.r * 255.0f + 0.5f, 0.0f, 255.0f));
-        pixel[1] = unsigned char(clamp(color.g * 255.0f + 0.5f, 0.0f, 255.0f));
-        pixel[2] = unsigned char(clamp(color.b * 255.0f + 0.5f, 0.0f, 255.0f));
+        RGB24* pixel = ((RGB24*)pixels) + index;
+        pixel->r = unsigned char(clamp(color.r * 255.0f + 0.5f, 0.0f, 255.0f));
+        pixel->g = unsigned char(clamp(color.g * 255.0f + 0.5f, 0.0f, 255.0f));
+        pixel->b = unsigned char(clamp(color.b * 255.0f + 0.5f, 0.0f, 255.0f));
         break;
     }
     case PixelFormat::RGBA32: {
-        unsigned char* pixel = ((unsigned char*)pixels) + index * 4;
-        pixel[0] = unsigned char(clamp(color.r * 255.0f + 0.5f, 0.0f, 255.0f));
-        pixel[1] = unsigned char(clamp(color.g * 255.0f + 0.5f, 0.0f, 255.0f));
-        pixel[2] = unsigned char(clamp(color.b * 255.0f + 0.5f, 0.0f, 255.0f));
-        pixel[3] = unsigned char(clamp(color.a * 255.0f + 0.5f, 0.0f, 255.0f));
+        RGBA32* pixel = ((RGBA32*)pixels) + index;
+        pixel->r = unsigned char(clamp(color.r * 255.0f + 0.5f, 0.0f, 255.0f));
+        pixel->g = unsigned char(clamp(color.g * 255.0f + 0.5f, 0.0f, 255.0f));
+        pixel->b = unsigned char(clamp(color.b * 255.0f + 0.5f, 0.0f, 255.0f));
+        pixel->a = unsigned char(clamp(color.a * 255.0f + 0.5f, 0.0f, 255.0f));
         break;
     }
     case PixelFormat::Intensity_Float: {
