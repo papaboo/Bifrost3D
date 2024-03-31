@@ -82,7 +82,7 @@ void load_material_images(const std::vector<tinyobj::material_t>& materials, con
                 // Extract alpha as coverage and set the roughness to 1 if the image has an alpha channel
                 if (channel_count(tint_image.get_pixel_format()) == 4) {
                     unsigned int mipmap_count = tint_image.get_mipmap_count();
-                    Vector2ui size = Vector2ui(tint_image.get_width(), tint_image.get_height());
+                    Vector2ui size = tint_image.get_size_2D();
                     Image coverage_image = Images::create2D(tint_image_path, PixelFormat::Alpha8, 1.0f, size);
                     unsigned char* coverage_pixels = coverage_image.get_pixels<unsigned char>();
 

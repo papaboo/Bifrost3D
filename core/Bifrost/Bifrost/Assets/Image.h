@@ -134,6 +134,8 @@ public:
     static inline unsigned int get_width(ImageID image_ID, unsigned int mipmap_level = 0) { return Math::max(1u, m_metainfo[image_ID].width >> mipmap_level); }
     static inline unsigned int get_height(ImageID image_ID, unsigned int mipmap_level = 0) { return Math::max(1u, m_metainfo[image_ID].height >> mipmap_level); }
     static inline unsigned int get_depth(ImageID image_ID, unsigned int mipmap_level = 0) { return Math::max(1u, m_metainfo[image_ID].depth >> mipmap_level); }
+    static inline Math::Vector2ui get_size_2D(ImageID image_ID, unsigned int mipmap_level = 0) { return Math::Vector2ui(get_width(image_ID, mipmap_level), get_height(image_ID, mipmap_level)); }
+    static inline Math::Vector3ui get_size_3D(ImageID image_ID, unsigned int mipmap_level = 0) { return Math::Vector3ui(get_size_2D(image_ID, mipmap_level), get_depth(image_ID, mipmap_level)); }
     static inline unsigned int get_pixel_count(ImageID image_ID, unsigned int mipmap_level = 0) {
         return get_width(image_ID, mipmap_level) * get_height(image_ID, mipmap_level) * get_depth(image_ID, mipmap_level);
     }
@@ -239,6 +241,8 @@ public:
     inline unsigned int get_width(unsigned int mipmap_level = 0) const { return Images::get_width(m_ID, mipmap_level); }
     inline unsigned int get_height(unsigned int mipmap_level = 0) const { return Images::get_height(m_ID, mipmap_level); }
     inline unsigned int get_depth(unsigned int mipmap_level = 0) const { return Images::get_depth(m_ID, mipmap_level); }
+    inline Math::Vector2ui get_size_2D(unsigned int mipmap_level = 0) const { return Images::get_size_2D(m_ID, mipmap_level); }
+    inline Math::Vector3ui get_size_3D(unsigned int mipmap_level = 0) const { return Images::get_size_3D(m_ID, mipmap_level); }
     inline unsigned int get_pixel_count(unsigned int mipmap_level = 0) const { return Images::get_pixel_count(m_ID, mipmap_level); }
 
     inline Images::PixelData get_pixels(unsigned int mipmap_level = 0) { return Images::get_pixels(m_ID, mipmap_level); }
@@ -275,7 +279,7 @@ template <typename T>
 inline ImageID copy_with_new_format(ImageID image_ID, PixelFormat new_format, float new_gamma, T process_pixel) {
     Image image = image_ID;
     unsigned int mipmap_count = image.get_mipmap_count();
-    auto size = Math::Vector3ui(image.get_width(), image.get_height(), image.get_depth());
+    Math::Vector3ui size = image.get_size_3D();
     ImageID new_image_ID = Images::create3D(image.get_name(), new_format, new_gamma, size, mipmap_count);
 
     for (unsigned int m = 0; m < mipmap_count; ++m)
