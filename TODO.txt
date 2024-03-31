@@ -1,7 +1,10 @@
 BACKLOG:
-* Debug heap corroption in san miguel and sphere scene
-* Create one geometry group per transform and attach models to it? Then we can remove the mesh to node map
-** Mark the acceleration structure as dirty
+* Coverage behaves weirdly in both renderers
+** Play with coverage / cutout on plastic material in test scene.
+** Center looks like it gets brighter and only pops in after N frames
+*** The same effect might be visible in Sponza under the pots/plants
+** Center isn't visible behind other geometry.
+** Rose and grass has streaky artifacts in rungholt/house as opacity, but fint as cutout
 * Dump multi scattering contribution in specular lobe instead of diffuse.
 ** Could make it simpler to make the coat a separate interface instead of build into the default material.
 ** Move area light abstractions out into util functions?
@@ -9,18 +12,17 @@ BACKLOG:
 *** Improve documentation.
 **** Why is AO scaled?
 **** What's that nearly diffuse or mirror special case in GGX? And why does it ignore AO?
+**** Why does the nearly mirror specular rings in TestScene have (strong) AO?
 **** Can we reduce the amount of computations done inside the branches?
 *** Can we take the coming split into account? Is there any shared GGX/lambert area light code?
 *** There are some shared variables; light center, radiance, ambient visibility, that'll have to be precomputed in then passed to the actual BSDF implementations.
 *** We can have a shading model wrapper, similar to in optix, that handles these precomputations and dispatches to the different light modes
 * Normals revisited
-** Cubical sphere's in sphere scene are partially seethrough near the border.
-*** Toggling thin-walled has a pretty drastic effect even though all intersections should be on the outside
-*** The scene also crashes with heap corruption, so maybe somethings wrong.
 ** Implement Solving Self-Intersection Artifacts in DirectX Raytracing in OptiX, to avoid hard shadows on tesselated spheres.
 *** https://developer.nvidia.com/blog/solving-self-intersection-artifacts-in-directx-raytracing/
-** Investigate why the spheres in the material scene still have dark outlines. The same with Kalestra's hair in the path tracer.
-*** Time to fire up the old OptiX debugger
+*** Will probably require an origin per new ray, so one for light samples and one for BSDF samples
+** Cubical sphere's in sphere scene are partially see-through near the border.
+*** Toggling thin-walled has a pretty drastic effect even though all intersections should be on the outside
 * Rough glass
 ** Test that PDF is always positive if reflectance is positive
 *** Test for entire sphere, not just expected hemisphere.
@@ -28,11 +30,11 @@ BACKLOG:
 ** Add rough glass shading model
 *** Rough glass sheet test scene.
 ** Can we use Bounded VNDF when the IOR is greater (or was it less) than 1.0? So cases where the refraction will cause more of the lobe to be occluded.
-** Approximate rough glass in DX11 using a guassian filter, see Doom 2016.
 ** Allow ior of 1, which is effectively tinting the transmission.
 *** See PBRTv4 bxdfs.cpp line 80: if (eta == 1 || mfDistrib.EffectivelySmooth()) { .. }
 *** What is 'EffectivelySmooth' defined as?
 *** PBRT handles it as a delta dirac, which I'd still like to avoid
+** Approximate rough glass in DX11 using a guassian filter, see Doom 2016.
 * Bump mapping
 ** Taming the Shadow Terminator for 'proper' handling of hemisphere distortion. Only scales the contribution. Mirror surfaces still have to be handled differently
 *** https://blog.yiningkarlli.com/2020/02/shadow-terminator-in-takua.html
@@ -41,6 +43,12 @@ BACKLOG:
 * Film grain
 ** http://www.loopit.dk/banding_in_games.pdf
 ** https://www.shadertoy.com/view/4t2SDh
+* Threadsafe asset management
+** Assets shouldn't be copied on resize/reserve, as that gives issues when multithreading asset creation.
+*** Instead we can allocate the assets in chunks and just allocate more chunks as needed. Linked list style
+*** To avoid dereferencing multiple pointers whenever an asset's property is accessed, we can just return the (now static) reference to the asset. So instead of having Images::get_size, we'll instead use Images::get(image_ID) to return an image and then call get_size on that.
+** Allow multithreaded UID generation
+** Use the threadsafe asset management in model loaders to parallelize asset loading and creation.
 * Upgrade OptiX to get better denoiser
 * ReSTIR
 ** Generalized Resampled Importance Sampling
