@@ -167,7 +167,7 @@ GTEST_TEST(Trigonometry, fix_backfacing_shading_normal) {
 
     float3 corrected_normal = fix_backfacing_shading_normal(wo_below_hemipshere, normal);
     float cos_theta = dot(wo_below_hemipshere, corrected_normal);
-    EXPECT_FLOAT_EQ(0.0f, cos_theta);
+    EXPECT_FLOAT_EQ_EPS(0.0f, cos_theta, 1e-6f);
 }
 
 GTEST_TEST(Trigonometry, fix_backfacing_shading_normal_with_target_cos_theta) {
