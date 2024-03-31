@@ -262,7 +262,7 @@ RGBA Images::get_pixel(ImageID image_ID, unsigned int index, unsigned int mipmap
     assert(index < Images::get_pixel_count(image_ID, mipmap_level));
 
     while (mipmap_level)
-        index += Images::get_width(image_ID, --mipmap_level);
+        index += Images::get_pixel_count(image_ID, --mipmap_level);
     return get_linear_pixel(image_ID, index);
 }
 
@@ -349,9 +349,8 @@ void Images::set_pixel(ImageID image_ID, RGBA color, unsigned int index, unsigne
     assert(index < Images::get_pixel_count(image_ID, mipmap_level));
 
     Image image = image_ID;
-    unsigned int width = image.get_width();
     while (mipmap_level)
-        index += image.get_width(--mipmap_level);
+        index += image.get_pixel_count(--mipmap_level);
     set_linear_pixel(image_ID, color, index);
     m_changes.add_change(image_ID, Change::PixelsUpdated);
 }
@@ -412,11 +411,17 @@ void Images::change_format(ImageID image_ID, PixelFormat new_format, float new_g
         if (new_gamma != 1.0f)
             gamma_correct_bytes(image.get_pixels<unsigned char>(), total_pixel_count, 1.0f / new_gamma);
     } else {
-        // Fallback RGBA pixel copy
+        // Formatsizes don't match up and we need to copy to a new pixel allocation.
         PixelData new_pixels = allocate_pixels(new_format, total_pixel_count);
 
         // Copy pixels
-        if (!has_alpha(old_format) && new_format == PixelFormat::Alpha8) {
+        if (old_format == PixelFormat::RGBA32 && new_format == PixelFormat::Alpha8) {
+            // Copy the alpha channel from RGBA32 into Alpha8
+            RGBA32* old_pixels = image.get_pixels<RGBA32>();
+            unsigned char* new_pixels_typed = (unsigned char*)new_pixels;
+            for (unsigned int p = 0; p < total_pixel_count; ++p)
+                new_pixels_typed[p] = old_pixels[p].a;
+        } else if (!has_alpha(old_format) && new_format == PixelFormat::Alpha8) {
             // Copy from RGB channels to alpha.
             int channel_count = Assets::channel_count(old_format);
             float normalizer = 1.0f / channel_count;
