@@ -341,13 +341,19 @@ MeshID torus(unsigned int revolution_quads, unsigned int circumference_quads, fl
     if (revolution_quads == 0 || circumference_quads == 0)
         return MeshID::invalid_UID();
 
+    if (minor_radius <= 0.0f || minor_radius >= 0.5f)
+    {
+        minor_radius = clamp(minor_radius, next_float(0.0f), previous_float(0.5f));
+        printf("MeshCreation::torus: minor_radius must be in range ]0, 0.5[, otherwise the surface normals and hard normals are inconsistent.");
+    }
+
     unsigned int revolution_vertex_count = (revolution_quads + 1);
     unsigned int circumference_vertex_count = (circumference_quads + 1);
     unsigned int vertex_count = (revolution_quads + 1) * (circumference_quads + 1);
     unsigned int index_count = 2 * revolution_quads * circumference_quads;
     float major_radius = 0.5f;
 
-    Mesh mesh = Meshes::create("Ring", index_count, vertex_count, buffer_bitmask);
+    Mesh mesh = Meshes::create("Torus", index_count, vertex_count, buffer_bitmask);
 
     // Precompute local normal directions.
     Core::Array<Vector3f> local_normal_dirs(circumference_vertex_count);
@@ -360,7 +366,7 @@ MeshID torus(unsigned int revolution_quads, unsigned int circumference_quads, fl
     // Vertex attributes.
     Vector2f tc_normalizer = Vector2f(1.0f / circumference_quads, 1.0f / revolution_quads);
     for (unsigned int z = 0; z < revolution_vertex_count; ++z) {
-        // Create local coordinate system on the ring.
+        // Create local coordinate system on the torus.
         float major_radians = z / float(revolution_quads) * 2.0f * Math::PI<float>();
         Vector3f center = Vector3f(cos(major_radians) * major_radius, 0.0, sin(major_radians) * major_radius);
         if (z == 0 || z == revolution_vertex_count - 1)
