@@ -11,15 +11,10 @@
 
 #include <Bifrost/Assets/Mesh.h>
 
-namespace Bifrost {
-namespace Assets {
+namespace Bifrost::Assets {
 
 //----------------------------------------------------------------------------
 // Mesh creation utilities.
-// Future work
-// * Tex coord functions and pass them to the relevant mesh creators.
-// * Allow for non uniform scaling on creation, 
-//   since the transforms only support uniform scaling.
 //----------------------------------------------------------------------------
 namespace MeshCreation {
 
@@ -36,7 +31,6 @@ MeshID spherical_cube(unsigned int quads_pr_edge, MeshFlags buffer_bitmask = Mes
 MeshID torus(unsigned int revolution_quads, unsigned int circumference_quads, float minor_radius, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
 } // NS MeshCreation
-} // NS Assets
-} // NS Bifrost
+} // NS Bifrost::Assets
 
 #endif // _BIFROST_ASSETS_MESH_CREATION_H_
