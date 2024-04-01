@@ -299,9 +299,10 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
         material_data.flags = MaterialFlag::Cutout;
         MaterialID material_ID = Materials::create("Plastic", material_data);
 
-        Transform transform = Transform(Vector3f(3.0f, 0.35f, 0.0f), Quaternionf::identity(), 0.5f);
+        Transform transform = Transform(Vector3f(3.0f, 0.35f, 0.0f), Quaternionf::identity(), 0.7f);
         SceneNode torus_node = SceneNodes::create("Swizz torus", transform);
-        MeshID torus_mesh_ID = MeshCreation::torus(64, 64, 0.7f);
+        MeshID torus_mesh_ID = MeshCreation::torus(64, 64, 0.49f);
+
         MeshModels::create(torus_node.get_ID(), torus_mesh_ID, material_ID);
         torus_node.set_parent(root_node);
     }
