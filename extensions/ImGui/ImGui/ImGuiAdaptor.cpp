@@ -9,11 +9,9 @@
 #include <ImGui/ImGuiAdaptor.h>
 
 #include <Bifrost/Core/Engine.h>
-#include <Bifrost/Input/Keyboard.h>
 #include <Bifrost/Input/Mouse.h>
 #include <Bifrost/Math/Vector.h>
 
-#define IMGUI_DEFINE_MATH_OPERATORS
 #include <ImGui/Src/imgui_internal.h>
 
 #include <sstream>
@@ -27,33 +25,46 @@ ImGuiAdaptor::ImGuiAdaptor()
     : m_enabled(true) {
 
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-
-    // io.ImeWindowHandle = hwnd;
 
     ImGui::StyleColorsDark();
 
-    io.KeyMap[ImGuiKey_Tab] = int(Keyboard::Key::Tab);
-    io.KeyMap[ImGuiKey_LeftArrow] = int(Keyboard::Key::Left);
-    io.KeyMap[ImGuiKey_RightArrow] = int(Keyboard::Key::Right);
-    io.KeyMap[ImGuiKey_UpArrow] = int(Keyboard::Key::Up);
-    io.KeyMap[ImGuiKey_DownArrow] = int(Keyboard::Key::Down);
-    io.KeyMap[ImGuiKey_PageUp] = int(Keyboard::Key::PageUp);
-    io.KeyMap[ImGuiKey_PageDown] = int(Keyboard::Key::PageDown);
-    io.KeyMap[ImGuiKey_Home] = int(Keyboard::Key::Home);
-    io.KeyMap[ImGuiKey_End] = int(Keyboard::Key::End);
-    io.KeyMap[ImGuiKey_Insert] = int(Keyboard::Key::Insert);
-    io.KeyMap[ImGuiKey_Delete] = int(Keyboard::Key::Delete);
-    io.KeyMap[ImGuiKey_Backspace] = int(Keyboard::Key::Backspace);
-    io.KeyMap[ImGuiKey_Space] = int(Keyboard::Key::Space);
-    io.KeyMap[ImGuiKey_Enter] = int(Keyboard::Key::Enter);
-    io.KeyMap[ImGuiKey_Escape] = int(Keyboard::Key::Escape);
-    io.KeyMap[ImGuiKey_A] = int(Keyboard::Key::A);
-    io.KeyMap[ImGuiKey_C] = int(Keyboard::Key::C);
-    io.KeyMap[ImGuiKey_V] = int(Keyboard::Key::V);
-    io.KeyMap[ImGuiKey_X] = int(Keyboard::Key::X);
-    io.KeyMap[ImGuiKey_Y] = int(Keyboard::Key::Y);
-    io.KeyMap[ImGuiKey_Z] = int(Keyboard::Key::Z);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::Tab, ImGuiKey_Tab);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::Left, ImGuiKey_LeftArrow);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::Right, ImGuiKey_RightArrow);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::Up, ImGuiKey_UpArrow);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::Down, ImGuiKey_DownArrow);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::PageUp, ImGuiKey_PageUp);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::PageDown, ImGuiKey_PageDown);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::Home, ImGuiKey_Home);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::End, ImGuiKey_End);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::Insert, ImGuiKey_Insert);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::Delete, ImGuiKey_Delete);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::Backspace, ImGuiKey_Backspace);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::Space, ImGuiKey_Space);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::Enter, ImGuiKey_Enter);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::Escape, ImGuiKey_Escape);
+
+    // Modifier keys
+    m_keyboard_mapping.emplace_back(Keyboard::Key::LeftControl, ImGuiKey_LeftCtrl);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::LeftShift, ImGuiKey_LeftShift);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::LeftAlt, ImGuiKey_LeftAlt);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::LeftSuper, ImGuiKey_LeftSuper);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::RightControl, ImGuiKey_RightCtrl);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::RightShift, ImGuiKey_RightShift);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::RightAlt, ImGuiKey_RightAlt);
+    m_keyboard_mapping.emplace_back(Keyboard::Key::RightSuper, ImGuiKey_RightSuper);
+
+    // All keys from A to Z
+    for (int i = 0; i <= int(Keyboard::Key::Z) - int(Keyboard::Key::A); i++)
+        m_keyboard_mapping.emplace_back(Keyboard::Key(int(Keyboard::Key::A) + i), ImGuiKey(ImGuiKey_A + i));
+
+    // Numberic keys
+    for (int i = 0; i < 10; i++)
+        m_keyboard_mapping.emplace_back(Keyboard::Key(int(Keyboard::Key::Keypad0) + i), ImGuiKey(ImGuiKey_0 + i));
+
+    // Function keys
+    for (int i = 0; i < 12; i++)
+        m_keyboard_mapping.emplace_back(Keyboard::Key(int(Keyboard::Key::F1) + i), ImGuiKey(ImGuiKey_F1 + i));
 }
 
 void ImGuiAdaptor::new_frame(const Bifrost::Core::Engine& engine) {
@@ -64,7 +75,8 @@ void ImGuiAdaptor::new_frame(const Bifrost::Core::Engine& engine) {
     Vector2i window_size = { window.get_width(), window.get_height() };
     io.DisplaySize = ImVec2((float)window_size.x, (float)window_size.y);
 
-    io.DeltaTime = engine.get_time().get_smooth_delta_time();
+    // Using raw delta time as the smooth one is zero when the engine is paused and ImGUI expects a positive non-zero delta-time.
+    io.DeltaTime = engine.get_time().get_raw_delta_time();
 
     Mouse* mouse = (Mouse*)engine.get_mouse();
     Keyboard* keyboard = (Keyboard*)engine.get_keyboard();
@@ -80,15 +92,21 @@ void ImGuiAdaptor::new_frame(const Bifrost::Core::Engine& engine) {
     }
 
     { // Handle keyboard
-        // Modifiers
-        io.KeyCtrl = keyboard->is_pressed(Keyboard::Key::LeftControl) || keyboard->is_pressed(Keyboard::Key::RightControl);
-        io.KeyShift = keyboard->is_pressed(Keyboard::Key::LeftShift) || keyboard->is_pressed(Keyboard::Key::RightShift);
-        io.KeyAlt = keyboard->is_pressed(Keyboard::Key::LeftAlt) || keyboard->is_pressed(Keyboard::Key::RightAlt);
-        io.KeySuper = keyboard->is_pressed(Keyboard::Key::LeftSuper) || keyboard->is_pressed(Keyboard::Key::RightSuper);
+        // Keymodifiers
+        io.AddKeyEvent(ImGuiMod_Ctrl, keyboard->is_pressed(Keyboard::Key::LeftControl) || keyboard->is_pressed(Keyboard::Key::RightControl));
+        io.AddKeyEvent(ImGuiMod_Shift, keyboard->is_pressed(Keyboard::Key::LeftShift) || keyboard->is_pressed(Keyboard::Key::RightShift));
+        io.AddKeyEvent(ImGuiMod_Alt, keyboard->is_pressed(Keyboard::Key::LeftAlt) || keyboard->is_pressed(Keyboard::Key::RightAlt));
+        io.AddKeyEvent(ImGuiMod_Super, keyboard->is_pressed(Keyboard::Key::LeftSuper) || keyboard->is_pressed(Keyboard::Key::RightSuper));
 
-        // Keymapped keys
-        for (int k = 0; k < ImGuiKey_COUNT; ++k)
-            io.KeysDown[io.KeyMap[k]] = keyboard->is_pressed(Keyboard::Key(io.KeyMap[k]));
+        // Key-presses and -releases
+        for (auto key_mapping : m_keyboard_mapping) {
+            Keyboard::Key key = key_mapping.first;
+            ImGuiKey imgui_key = key_mapping.second;
+            if (keyboard->is_pressed(key))
+                io.AddKeyEvent(imgui_key, true);
+            if (keyboard->is_released(key))
+                io.AddKeyEvent(imgui_key, false);
+        }
 
         // Text.
         const std::wstring& text = keyboard->get_text();
@@ -156,7 +174,7 @@ inline void PlotMultiEx(ImGuiPlotType plot_type, const char* label, PlotData* pl
         float t_hovered = -1.0f;
 
         // Tooltip on hover
-        const bool hovered = ItemHoverable(inner_bb, 0);
+        const bool hovered = ItemHoverable(inner_bb, 0, ImGuiItemFlags_ReadOnly);
         if (hovered) {
             t_hovered = (g.IO.MousePos.x - inner_bb.Min.x) / (inner_bb.Max.x - inner_bb.Min.x);
 

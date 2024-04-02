@@ -10,6 +10,11 @@ set(IMGUI_SRC_SRCS
   ImGui/Src/imgui_demo.cpp
   ImGui/Src/imgui_draw.cpp
   ImGui/Src/imgui_internal.h
+  ImGui/Src/imgui_tables.cpp
+  ImGui/Src/imgui_widgets.cpp
+  ImGui/Src/imstb_rectpack.h
+  ImGui/Src/imstb_textedit.h
+  ImGui/Src/imstb_truetype.h
 )
 
 set(IMGUI_RENDERERS

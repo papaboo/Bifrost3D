@@ -9,6 +9,9 @@
 #ifndef _BIFROST_IMGUI_ADAPTOR_H_
 #define _BIFROST_IMGUI_ADAPTOR_H_
 
+#include <Bifrost/Input/Keyboard.h>
+
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include <ImGui/Src/imgui.h> // Convenience include of ImGui functionality
 
 #include <functional>
@@ -18,10 +21,8 @@
 // ------------------------------------------------------------------------------------------------
 // Forward declerations
 // ------------------------------------------------------------------------------------------------
-namespace Bifrost {
-namespace Core {
+namespace Bifrost::Core {
 class Engine;
-}
 }
 
 namespace ImGui {
@@ -36,8 +37,6 @@ public:
 // Dear IMGUI adaptor for Bifrost input.
 // Future work:
 // * Disable keyboard and mouse events based on io.WantCaptureMouse and io.WantCaptureKeyboard.
-// * Load and set fonts.
-// * Support setting different mouse cursor images.
 // ------------------------------------------------------------------------------------------------
 class ImGuiAdaptor {
 public:
@@ -61,6 +60,8 @@ public:
 private:
     std::vector<std::unique_ptr<IImGuiFrame>> m_frames;
     bool m_enabled;
+
+    std::vector<std::pair<Bifrost::Input::Keyboard::Key, ImGuiKey>> m_keyboard_mapping;
 };
 
 static inline void new_frame_callback(Bifrost::Core::Engine& engine, void* adaptor) {
