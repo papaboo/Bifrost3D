@@ -132,14 +132,14 @@ void camera_GUI(CameraID camera_ID) {
         // Translation
         Transform transform = Cameras::get_transform(camera_ID);
         Vector3f translation = transform.translation;
-        ImGui::InputFloat3("Translation", translation.begin(), 3, ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputFloat3("Translation", translation.begin(), "%.3f", ImGuiInputTextFlags_ReadOnly);
 
         // Rotation described as vertical and horizontal angle.
         Vector3f forward = transform.rotation.forward();
         float vertical_rotation = std::atan2(forward.x, forward.z);
         float horizontal_rotation = std::asin(forward.y);
         float rotation[2] = { vertical_rotation, horizontal_rotation };
-        ImGui::InputFloat2("Rotation", rotation, 3, ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputFloat2("Rotation", rotation, "%.3f", ImGuiInputTextFlags_ReadOnly);
     });
 
     camera_effects(camera_ID);
@@ -261,7 +261,7 @@ void RenderingGUI::layout_frame() {
                             light.set_radius(radius);
 
                         RGB power = light.get_power();
-                        if (ImGui::InputFloat3("Power", &power.r, 3))
+                        if (ImGui::InputFloat3("Power", &power.r))
                             light.set_power(power);
                     } else if (light_type == LightSources::Type::Spot) {
                         SpotLight light = SpotLight(light_ID);
@@ -275,13 +275,13 @@ void RenderingGUI::layout_frame() {
                             light.set_cos_angle(cos_angle);
 
                         RGB power = light.get_power();
-                        if (ImGui::InputFloat3("Power", &power.r, 3))
+                        if (ImGui::InputFloat3("Power", &power.r))
                             light.set_power(power);
                     } else if (light_type == LightSources::Type::Directional) {
                         DirectionalLight light = DirectionalLight(light_ID);
 
                         RGB radiance = light.get_radiance();
-                        if (ImGui::InputFloat3("Radiance", &radiance.r, 3))
+                        if (ImGui::InputFloat3("Radiance", &radiance.r))
                             light.set_radiance(radiance);
                     }
                 });
