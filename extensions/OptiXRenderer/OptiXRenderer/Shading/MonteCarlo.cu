@@ -185,7 +185,7 @@ __inline_all__ void path_tracing_closest_hit() {
     monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
     monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
     float abs_cos_theta_o = abs(monte_carlo_payload.direction.z);
-    float pdf_regularization_hint = monte_carlo_payload.bsdf_MIS_PDF.PDF() * g_camera_state.path_regularization_scale;
+    float pdf_regularization_hint = monte_carlo_payload.bsdf_MIS_PDF.PDF() * g_camera_state.path_regularization_PDF_scale;
     const MaterialCreator::material_type material = MaterialCreator::create(material_parameter, texcoord, abs_cos_theta_o, pdf_regularization_hint);
 
     // Deferred BSDF sampling.

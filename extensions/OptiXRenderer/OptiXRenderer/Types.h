@@ -392,7 +392,7 @@ struct __align__(16) CameraStateGPU {
 #endif
     rtBufferId<optix::ushort4, 2> output_buffer;
 
-    float path_regularization_scale;
+    float path_regularization_PDF_scale;
     optix::float3 _padding;
 };
 
