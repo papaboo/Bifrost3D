@@ -155,6 +155,8 @@ struct RenderingGUI::State {
 RenderingGUI::RenderingGUI(DX11Renderer::Compositor* compositor, DX11Renderer::Renderer* dx_renderer, OptiXRenderer::Renderer* optix_renderer)
     : m_compositor(compositor), m_dx_renderer(dx_renderer), m_optix_renderer(optix_renderer), m_state(new State()) {
     strcpy_s(m_screenshot.path, m_screenshot.max_path_length, "c:\\temp\\ss");
+
+    m_state->optix.path_regularization_settings = m_optix_renderer->get_path_regularization_settings();
 }
 
 RenderingGUI::~RenderingGUI() { 
@@ -436,8 +438,8 @@ void RenderingGUI::layout_frame() {
 
                 if (m_state->optix.use_path_regularization) {
                     auto& path_regularization_settings = m_state->optix.path_regularization_settings;
-                    bool has_changes = ImGui::InputFloat("Scale", &path_regularization_settings.scale);
-                    has_changes |= ImGui::InputFloat("Decay", &path_regularization_settings.decay);
+                    bool has_changes = ImGui::InputFloat("PDF scale", &path_regularization_settings.PDF_scale);
+                    has_changes |= ImGui::InputFloat("Scale decay", &path_regularization_settings.scale_decay);
                     if (has_changes)
                         m_optix_renderer->set_path_regularization_settings(path_regularization_settings);
                 }

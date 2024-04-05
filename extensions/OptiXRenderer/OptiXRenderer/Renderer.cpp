@@ -429,8 +429,9 @@ struct Renderer::Implementation {
 
             scene.GPU_state.ray_epsilon = 0.0001f;
 
-            scene.path_regularization.scale = 1.0f;
-            scene.path_regularization.decay = 1.0f / 6.0f;
+            // Setup path regularization for fast convergence.
+            scene.path_regularization.PDF_scale = 0.5f;
+            scene.path_regularization.scale_decay = 0.0f;
 
             { // Light sources
                 lights.sources = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER, 1);
@@ -1161,7 +1162,7 @@ struct Renderer::Implementation {
         camera_state_GPU.accumulation_buffer = camera_state.accumulation_buffer->getId();
         camera_state_GPU.accumulations = camera_state.accumulations;
         camera_state_GPU.max_bounce_count = camera_state.max_bounce_count;
-        camera_state_GPU.path_regularization_scale = scene.path_regularization.scale * (1.0f + scene.path_regularization.decay * camera_state_GPU.accumulations);
+        camera_state_GPU.path_regularization_PDF_scale = scene.path_regularization.PDF_scale_at_accumulation(camera_state_GPU.accumulations);
         return camera_state_GPU;
     }
 

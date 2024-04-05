@@ -30,10 +30,17 @@ enum class Backend {
 
 // ------------------------------------------------------------------------------------------------
 // Path regularization settings.
+// The PDF scale scales how large a PDF we allow intersections to produce relative to the previous sample.
+// Paths with large PDFs (glossy samples) at the previous bounce are allowed to continue with large PDF,
+// paths with low PDFs (diffuse) will try to limit high frequency/specular samples.
+// This effectively limits the amount of caustics the renderer can produce and allows images to converge faster.
+// The scale decay will decay the effects of PDF scale as the accumulation count increases.
 // ------------------------------------------------------------------------------------------------
 struct PathRegularizationSettings {
-    float scale = 1.0f;
-    float decay = 1.0f / 6.0f;
+    float PDF_scale;
+    float scale_decay;
+
+    float PDF_scale_at_accumulation(int accumulation) { return PDF_scale * (1.0f + scale_decay * accumulation); }
 };
 
 // ------------------------------------------------------------------------------------------------
