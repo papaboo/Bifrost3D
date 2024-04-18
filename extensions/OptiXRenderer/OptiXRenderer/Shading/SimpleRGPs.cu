@@ -31,21 +31,6 @@ rtBuffer<Material, 1> g_materials;
 rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(SceneStateGPU, g_scene, , );
 
-#if PMJ_RNG
-const int pmj_period = 9;
-__constant__ float2 pmj_offsets[81] = {
-    { 0.93f, 0.43f }, { 0.48f, 0.38f }, { 0.96f, 0.77f }, { 0.22f, 0.02f }, { 0.23f, 0.14f }, { 0.95f, 0.65f }, { 0.67f, 0.07f }, { 0.06f, 0.56f }, { 0.99f, 0.99f },
-    { 0.51f, 0.60f }, { 0.27f, 0.47f }, { 0.88f, 0.98f }, { 0.72f, 0.52f }, { 0.52f, 0.72f }, { 0.20f, 0.79f }, { 0.53f, 0.83f }, { 0.16f, 0.46f }, { 0.09f, 0.78f },
-    { 0.78f, 0.09f }, { 0.33f, 0.04f }, { 0.36f, 0.26f }, { 0.80f, 0.31f }, { 0.14f, 0.23f }, { 0.69f, 0.30f }, { 0.57f, 0.17f }, { 0.12f, 0.12f }, { 0.58f, 0.28f },
-    { 0.84f, 0.64f }, { 0.32f, 0.91f }, { 0.31f, 0.80f }, { 0.85f, 0.75f }, { 0.35f, 0.15f }, { 0.73f, 0.63f }, { 0.07f, 0.67f }, { 0.04f, 0.33f }, { 0.28f, 0.58f },
-    { 0.64f, 0.84f }, { 0.70f, 0.41f }, { 0.15f, 0.35f }, { 0.68f, 0.19f }, { 0.89f, 0.10f }, { 0.30f, 0.69f }, { 0.77f, 0.96f }, { 0.11f, 0.01f }, { 0.10f, 0.89f },
-    { 0.91f, 0.32f }, { 0.75f, 0.85f }, { 0.25f, 0.25f }, { 0.83f, 0.53f }, { 0.56f, 0.06f }, { 0.17f, 0.57f }, { 0.60f, 0.51f }, { 0.42f, 0.81f }, { 0.26f, 0.36f },
-    { 0.37f, 0.37f }, { 0.21f, 0.90f }, { 0.19f, 0.68f }, { 0.41f, 0.70f }, { 0.63f, 0.73f }, { 0.90f, 0.21f }, { 0.47f, 0.27f }, { 0.86f, 0.86f }, { 0.05f, 0.44f },
-    { 0.59f, 0.40f }, { 0.74f, 0.74f }, { 0.02f, 0.22f }, { 0.40f, 0.59f }, { 0.46f, 0.16f }, { 0.01f, 0.11f }, { 0.94f, 0.54f }, { 0.43f, 0.93f }, { 0.00f, 0.00f },
-    { 0.49f, 0.49f }, { 0.44f, 0.05f }, { 0.98f, 0.88f }, { 0.79f, 0.20f }, { 0.62f, 0.62f }, { 0.81f, 0.42f }, { 0.38f, 0.48f }, { 0.65f, 0.95f }, { 0.54f, 0.94f },
-};
-#endif
-
 __inline_dev__ void fill_ray_info(optix::float2 viewport_pos, const optix::Matrix4x4& inverse_view_projection_matrix,
     optix::float3& origin, optix::float3& direction, bool normalize_direction = true) {
     using namespace optix;
@@ -68,25 +53,7 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     payload.radiance = make_float3(0.0f);
 
 #if LCG_RNG
-    payload.rng_state.seed(__brev(RNG::teschner_hash(x, y) ^ 83492791 ^ accumulation_count));
-#elif PMJ_RNG
-
-    RNG::LinearCongruential pmj_offset_rng; pmj_offset_rng.seed(__brev(RNG::teschner_hash(x, y)));
-    float2 offset = pmj_offsets[(x % pmj_period) + (y % pmj_period) * pmj_period];
-    offset += make_float2(-1 / 18.0f) + pmj_offset_rng.sample2f() / pmj_period;
-    payload.rng_state = PMJSamplerState::make(accumulation_count, offset.x, offset.y);
-
-    /*
-    const int period = 5;
-    const float pixel_span = 1.0f / period;
-    int y_stratum = (x % period);
-    y_stratum ^= y_stratum >> 1;
-    float pmj_y_offset = y_stratum * pixel_span + pixel_span * pmj_offset_rng.sample1f();
-    int x_stratum = ((x + y) % period);
-    x_stratum ^= x_stratum >> 1;
-    float pmj_x_offset = x_stratum * pixel_span + pixel_span * pmj_offset_rng.sample1f();
-    payload.pmj_rng_state = PMJSampler::make(accumulation_count, pmj_x_offset, pmj_y_offset);
-    */
+    payload.rng_state.seed(__brev(RNG::teschner_hash(x, y) + accumulation_count));
 #endif
 
     payload.throughput = make_float3(1.0f);
