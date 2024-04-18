@@ -19,10 +19,8 @@
 
 // Pick an RNG by defining which is used.
 // Define LCG_RNG to 1 to use a simple LCG for random number generation.
-#define LCG_RNG 0
-// Define PMJ_RNG to 1 to use 2D progressive multi-jittered blue noise for random number generation.
-#define PMJ_RNG 1
-static_assert((LCG_RNG + PMJ_RNG) == 1, "Only one RNG can be selected.");
+#define LCG_RNG 1
+static_assert((LCG_RNG) == 1, "Only one RNG can be selected.");
 
 template <typename T>
 void validate_optix_resource(T resource, char* file, int line) {
