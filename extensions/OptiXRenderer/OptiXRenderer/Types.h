@@ -321,7 +321,9 @@ struct __align__(16) Material {
 struct __align__(16) MonteCarloPayload {
     optix::float3 radiance;
 #if LCG_RNG
-    RNG::LinearCongruential rng_state;
+    RNG::LinearCongruential rng;
+#elif PRACTICAL_SOBOL_RNG
+    RNG::PracticalScrambledSobol rng;
 #endif
     optix::float3 throughput;
     unsigned int bounces;
