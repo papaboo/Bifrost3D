@@ -10,7 +10,6 @@
 #define _OPTIXRENDERER_SHADING_UTILS_H_
 
 #include <OptiXRenderer/Defines.h>
-#include <OptiXRenderer/Types.h>
 
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_matrix_namespace.h>
@@ -74,24 +73,6 @@ __inline_all__ bool is_black(optix::float3 color) {
 
 __inline_all__ float saturate(float v) {
     return optix::clamp(v, 0.0f, 1.0f);
-}
-
-__inline_all__ bool is_PDF_valid(float PDF) {
-    return PDF > 0.000001f;
-}
-
-// Insert a 0 bit in between each of the 16 low bits of v.
-__inline_all__ unsigned int part_by_1(unsigned int v) {
-    v &= 0x0000ffff;                 // v = ---- ---- ---- ---- fedc ba98 7654 3210
-    v = (v ^ (v << 8)) & 0x00ff00ff; // v = ---- ---- fedc ba98 ---- ---- 7654 3210
-    v = (v ^ (v << 4)) & 0x0f0f0f0f; // v = ---- fedc ---- ba98 ---- 7654 ---- 3210
-    v = (v ^ (v << 2)) & 0x33333333; // v = --fe --dc --ba --98 --76 --54 --32 --10
-    v = (v ^ (v << 1)) & 0x55555555; // v = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
-    return v;
-}
-
-__inline_all__ unsigned int morton_encode(unsigned int x, unsigned int y) {
-    return part_by_1(y) | (part_by_1(x) << 1);
 }
 
 __inline_all__ float pow2(float x) {
@@ -197,6 +178,37 @@ __inline_all__ float sin2_phi(optix::float3 w) { return sin_phi(w) * sin_phi(w);
 // Utility functions
 //-----------------------------------------------------------------------------
 
+__inline_all__ bool is_PDF_valid(float PDF) {
+    return PDF > 0.000001f;
+}
+
+// Insert a 0 bit in between each of the 16 low bits of v.
+__inline_all__ unsigned int part_by_1(unsigned int v) {
+    v &= 0x0000ffff;                 // v = ---- ---- ---- ---- fedc ba98 7654 3210
+    v = (v ^ (v << 8)) & 0x00ff00ff; // v = ---- ---- fedc ba98 ---- ---- 7654 3210
+    v = (v ^ (v << 4)) & 0x0f0f0f0f; // v = ---- fedc ---- ba98 ---- 7654 ---- 3210
+    v = (v ^ (v << 2)) & 0x33333333; // v = --fe --dc --ba --98 --76 --54 --32 --10
+    v = (v ^ (v << 1)) & 0x55555555; // v = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
+    return v;
+}
+
+__inline_all__ unsigned int morton_encode(unsigned int x, unsigned int y) {
+    return part_by_1(y) | (part_by_1(x) << 1);
+}
+
+__inline_all__ unsigned int reverse_bits(unsigned int n) {
+#if GPU_DEVICE
+    n = __brev(n);
+#else
+    n = (n << 16) | (n >> 16);
+    n = ((n & 0x00ff00ff) << 8) | ((n & 0xff00ff00) >> 8);
+    n = ((n & 0x0f0f0f0f) << 4) | ((n & 0xf0f0f0f0) >> 4);
+    n = ((n & 0x33333333) << 2) | ((n & 0xcccccccc) >> 2);
+    n = ((n & 0x55555555) << 1) | ((n & 0xaaaaaaaa) >> 1);
+#endif
+    return n;
+}
+
 // Computes a tangent and bitangent that together with the normal creates an orthonormal basis.
 // Building an Orthonormal Basis, Revisited, Duff et al.
 // http://jcgt.org/published/0006/01/01/paper.pdf
@@ -210,17 +222,6 @@ __inline_all__ void compute_tangents(optix::float3 normal,
     tangent = { 1.0f + sign * normal.x * normal.x * a, sign * b, -sign * normal.x };
     bitangent = { b, sign + normal.y * normal.y * a, -normal.y };
 }
-
-#if GPU_DEVICE
-__inline_dev__ optix::float4 half_to_float(const optix::ushort4 xyzw) {
-    return optix::make_float4(__half2float(xyzw.x), __half2float(xyzw.y), __half2float(xyzw.z), __half2float(xyzw.w));
-}
-
-__inline_dev__ optix::ushort4 float_to_half(const optix::float4 xyzw) {
-    return optix::make_ushort4(((__half_raw)__float2half_rn(xyzw.x)).x, ((__half_raw)__float2half_rn(xyzw.y)).x,
-        ((__half_raw)__float2half_rn(xyzw.z)).x, ((__half_raw)__float2half_rn(xyzw.w)).x);
-}
-#endif
 
 // Scales the roughness of a material placed underneath a rough coat layer.
 // This is done simulate how a wider lobe from the rough transmission would

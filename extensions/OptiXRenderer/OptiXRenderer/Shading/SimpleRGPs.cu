@@ -31,6 +31,15 @@ rtBuffer<Material, 1> g_materials;
 rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(SceneStateGPU, g_scene, , );
 
+__inline_dev__ optix::float4 half_to_float(const optix::ushort4 xyzw) {
+    return optix::make_float4(__half2float(xyzw.x), __half2float(xyzw.y), __half2float(xyzw.z), __half2float(xyzw.w));
+}
+
+__inline_dev__ optix::ushort4 float_to_half(const optix::float4 xyzw) {
+    return optix::make_ushort4(((__half_raw)__float2half_rn(xyzw.x)).x, ((__half_raw)__float2half_rn(xyzw.y)).x,
+        ((__half_raw)__float2half_rn(xyzw.z)).x, ((__half_raw)__float2half_rn(xyzw.w)).x);
+}
+
 __inline_dev__ void fill_ray_info(optix::float2 viewport_pos, const optix::Matrix4x4& inverse_view_projection_matrix,
     optix::float3& origin, optix::float3& direction, bool normalize_direction = true) {
     using namespace optix;
@@ -53,7 +62,9 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     payload.radiance = make_float3(0.0f);
 
 #if LCG_RNG
-    payload.rng_state.seed(__brev(RNG::teschner_hash(x, y) + accumulation_count));
+    payload.rng.set_state(__brev(RNG::teschner_hash(x, y) + accumulation_count));
+#elif PRACTICAL_SOBOL_RNG
+    payload.rng = RNG::PracticalScrambledSobol(x, y, accumulation_count);
 #endif
 
     payload.throughput = make_float3(1.0f);
@@ -64,7 +75,7 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     payload.material_index = 0;
 
     // Generate rays.
-    RNG::LinearCongruential rng; rng.seed(__brev(RNG::teschner_hash(x, y, accumulation_count)));
+    RNG::LinearCongruential rng; rng.set_state(__brev(RNG::teschner_hash(x, y, accumulation_count)));
     float2 screen_pos = make_float2(x, y) + (accumulation_count == 0 ? make_float2(0.5f) : rng.sample2f());
     float2 viewport_pos = make_float2(screen_pos.x / float(image_width), screen_pos.y / float(image_height));
     fill_ray_info(viewport_pos, inverse_view_projection_matrix, payload.position, payload.direction);
