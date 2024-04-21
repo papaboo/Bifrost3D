@@ -285,7 +285,7 @@ struct Renderer::Implementation {
         context->setRayTypeCount(RayTypes::Count);
         context->setEntryPointCount(EntryPoints::Count);
         if (enable_RTX) {
-            context->setMaxTraceDepth(0); // Path tracing is iterative instead of recursive, so the trace depth is always 1 ray deep.
+            context->setMaxTraceDepth(1); // Path tracing is iterative instead of recursive, so the trace depth is always 1 ray deep.
             context->setMaxCallableProgramDepth(0);
         } else
             context->setStackSize(1400);
@@ -1138,7 +1138,7 @@ struct Renderer::Implementation {
                 camera_state.frame_size = current_frame_size;
                 camera_state.accumulations = 0u;
 #ifdef ENABLE_OPTIX_DEBUG
-                context->setPrintLaunchIndex(width / 2, height / 2);
+                context->setPrintLaunchIndex(frame_width / 2, frame_height / 2);
 #endif
             }
 
