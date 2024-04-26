@@ -50,6 +50,16 @@ struct LoadedMesh {
     MeshID ID;
     bool is_used;
 };
+
+template <typename T>
+void name_unnamed_resources(std::vector<T>& resources, const std::string& prefix) {
+    for (int i = 0; i < resources.size(); ++i) {
+        auto& glTF_resource = resources[i];
+        if (glTF_resource.name.empty())
+            glTF_resource.name = prefix + std::to_string(i);
+    }
+}
+
 // ------------------------------------------------------------------------------------------------
 // Texture sampler conversion utils.
 // ------------------------------------------------------------------------------------------------
@@ -419,7 +429,6 @@ SceneNodeID load(const std::string& filename) {
     if (!warnings.empty())
         printf("glTFLoader::load warning: %s\n", warnings.c_str());
 
-
     if (!errors.empty())
         printf("glTFLoader::load error: %s\n", errors.c_str());
 
@@ -427,6 +436,13 @@ SceneNodeID load(const std::string& filename) {
         printf("glTFLoader::load error: Failed to parse '%s'\n", filename.c_str());
         return SceneNodeID::invalid_UID();
     }
+
+    // Assign distinct names to unnamed resources
+    name_unnamed_resources(model.materials, "unnamed_material_");
+    name_unnamed_resources(model.meshes, "unnamed_mesh_");
+    name_unnamed_resources(model.nodes, "unnamed_node_");
+    name_unnamed_resources(model.textures, "unnamed_texture_");
+    name_unnamed_resources(model.images, "unnamed_image_");
 
     // Import materials.
     ImageCache converted_images;
