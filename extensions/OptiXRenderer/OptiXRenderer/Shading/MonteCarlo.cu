@@ -91,7 +91,7 @@ __inline_dev__ LightSample sample_single_light(const ShadingModel& material, con
     BSDFResponse bsdf_response = material.evaluate_with_PDF(monte_carlo_payload.direction, shading_light_direction);
     bool delta_light = LightSources::is_delta_light(light, monte_carlo_payload.position);
     bool apply_MIS = !delta_light && monte_carlo_payload.bounces < g_camera_state.max_bounce_count;
-    if (apply_MIS) // TODO Try using math instead of branching and profile using test scene.
+    if (apply_MIS)
         light_sample.radiance *= MonteCarlo::MIS_weight(light_sample.PDF, bsdf_response.PDF);
     else
         // BIAS Nearly specular materials and delta lights will lead to insane fireflies, so we clamp them here.
@@ -164,7 +164,9 @@ __inline_all__ void path_tracing_closest_hit() {
     ignore_intersection |= coverage < coverage_cutoff;
 
     if (ignore_intersection) {
-        monte_carlo_payload.position = ray.direction * (t_hit + g_scene.ray_epsilon) + ray.origin;
+        // Advance the ray past the intersection by incrementing the min distance past the intersected distance.
+        // This should be stable wrt floating point precision as origin and direction are not changed.
+        monte_carlo_payload.ray_min_t = nextafterf(t_hit, INFINITY);
         return;
     }
 
@@ -204,6 +206,7 @@ __inline_all__ void path_tracing_closest_hit() {
 #endif // ENABLE_NEXT_EVENT_ESTIMATION
 
     // Apply deferred BSDF sample to the ray payload.
+    monte_carlo_payload.ray_min_t = g_scene.ray_epsilon;
     monte_carlo_payload.direction = next_payload_direction;
     monte_carlo_payload.bsdf_MIS_PDF = MisPDF::from_PDF(next_payload_MIS_PDF);
     monte_carlo_payload.throughput = next_payload_throughput;

@@ -359,9 +359,9 @@ struct __align__(16) MonteCarloPayload {
     unsigned int bounces;
 
     optix::float3 position;
-    MisPDF bsdf_MIS_PDF;
+    float ray_min_t;
     optix::float3 direction;
-    int __padding0;
+    MisPDF bsdf_MIS_PDF;
 
     LightSample light_sample;
 
