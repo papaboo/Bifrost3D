@@ -473,6 +473,15 @@ SceneNodeID load(const std::string& filename) {
             mat_data.coverage = float(glTF_mat.alphaCutoff);
         }
 
+        // Support for clearcoat extension
+        auto clearcoat_parameters_itr = glTF_mat.extensions.find("KHR_materials_clearcoat");
+        if (clearcoat_parameters_itr != glTF_mat.extensions.end())
+        {
+            auto& clearcoat_parameters = clearcoat_parameters_itr->second;
+            mat_data.coat = (float)clearcoat_parameters.Get("clearcoatFactor").GetNumberAsDouble();
+            mat_data.coat_roughness = (float)clearcoat_parameters.Get("clearcoatRoughnessFactor").GetNumberAsDouble();
+        }
+
         TextureState tint_coverage_tex;
         TextureState metallic_roughness_tex;
 
