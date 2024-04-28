@@ -64,7 +64,7 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     int accumulation_count, const optix::Matrix4x4& inverse_view_projection_matrix) {
     using namespace optix;
 
-    MonteCarloPayload payload;
+    MonteCarloPayload payload = {};
     payload.radiance = make_float3(0.0f);
 
 #if LCG_RNG
@@ -144,7 +144,7 @@ __inline_dev__ void accumulate(Evaluator evaluator) {
 //-------------------------------------------------------------------------------------------------
 __inline_dev__ void path_trace_single_bounce(MonteCarloPayload& payload) {
     payload.material_index = 0;
-    Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
+    Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, payload.ray_min_t);
     rtTrace(g_scene_root, ray, payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_ANYHIT);
 
     // Trace shadow ray for light sample.
@@ -261,7 +261,7 @@ RT_PROGRAM void depth_RPG() {
         float depth = 0;
         do {
             float3 last_position = payload.position;
-            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
+            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, payload.ray_min_t);
             rtTrace(g_scene_root, ray, payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_ANYHIT);
             depth += length(last_position - payload.position);
         } while (payload.material_index == 0 && !is_black(payload.throughput));
@@ -295,7 +295,7 @@ __inline_dev__ void process_material_intersection(IntersectionProcessor process_
         float3 last_ray_direction = payload.direction;
         do {
             last_ray_direction = payload.direction;
-            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, g_scene.ray_epsilon);
+            Ray ray(payload.position, payload.direction, RayTypes::MonteCarlo, payload.ray_min_t);
             rtTrace(g_scene_root, ray, payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_ANYHIT);
         } while (payload.material_index == 0 && !is_black(payload.throughput));
 
