@@ -111,12 +111,26 @@ __inline_all__ unsigned int teschner_hash(unsigned int x, unsigned int y, unsign
 // Stratified Sampling for Stochastic Transparency, Laine and Karras, 2011
 // The hashing extracted from Figure 4 in the original paper and as used in
 // Practical Hash-based Owen Scrambling, Brent Burley, 2020
+// Can be used as a fast replacement for Owen-scrambling.
 __inline_all__ unsigned int laine_karras_hash(unsigned int x, unsigned int seed) {
     x += seed;
     x ^= x * 0x6c50b47cu;
     x ^= x * 0xb82f1e52u;
     x ^= x * 0xc7afe638u;
     x ^= x * 0x8d22f6e6u;
+    return x;
+}
+
+// Hash developed by cessen and used in pbrt4.
+// Can be used as a fast replacement for Owen-scrambling.
+// https://psychopath.io/post/2021_01_30_building_a_better_lk_hash
+// https://pbr-book.org/4ed/Sampling_and_Reconstruction/Sobol_Samplers
+__inline_all__ unsigned int cessen_owen_hash(unsigned int x, unsigned int seed) {
+    x ^= x * 0x3d20adea;
+    x += seed;
+    x *= (seed >> 16) | 1;
+    x ^= x * 0x05526c56;
+    x ^= x * 0x53a22864;
     return x;
 }
 
@@ -196,7 +210,7 @@ private:
 
     __inline_all__ static unsigned int nested_uniform_scramble_base2(unsigned int x, unsigned int seed) {
         x = reverse_bits(x);
-        x = laine_karras_hash(x, seed);
+        x = cessen_owen_hash(x, seed);
         x = reverse_bits(x);
         return x;
     }
