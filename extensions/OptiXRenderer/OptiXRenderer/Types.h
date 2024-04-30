@@ -381,9 +381,12 @@ struct __align__(16) SceneStateGPU {
 
     float ray_epsilon;
 
-    // -- Aligned to 8'th byte from here --
+    // -- Aligned to 8'th word from here --
     rtBufferId<Light, 1> light_buffer;
     unsigned int light_count;
+
+    int next_event_sample_count;
+    int __padding;
 };
 
 //----------------------------------------------------------------------------

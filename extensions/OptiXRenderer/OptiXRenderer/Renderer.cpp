@@ -418,6 +418,7 @@ struct Renderer::Implementation {
             OPTIX_VALIDATE(scene.root);
 
             scene.GPU_state.ray_epsilon = 0.0001f;
+            scene.GPU_state.next_event_sample_count = 3;
 
             // Setup path regularization for fast convergence.
             scene.path_regularization.PDF_scale = 0.5f;
@@ -1298,6 +1299,11 @@ Renderer::~Renderer() {
 float Renderer::get_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID) const { return m_impl->scene.GPU_state.ray_epsilon; }
 void Renderer::set_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID, float scene_epsilon) {
     m_impl->scene.GPU_state.ray_epsilon = scene_epsilon;
+}
+
+int Renderer::get_next_event_sample_count(Bifrost::Scene::SceneRootID scene_root_ID) const { return m_impl->scene.GPU_state.next_event_sample_count; }
+void Renderer::set_next_event_sample_count(Bifrost::Scene::SceneRootID scene_root_ID, int sample_count) {
+    m_impl->scene.GPU_state.next_event_sample_count = sample_count;
 }
 
 unsigned int Renderer::get_max_bounce_count(CameraID camera_ID) const { 

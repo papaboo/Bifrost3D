@@ -422,8 +422,12 @@ void RenderingGUI::layout_frame() {
             if (ImGui::InputUint("Max accumulations", &max_accumulation_count))
                 m_optix_renderer->set_max_accumulation_count(camera_ID, max(max_accumulation_count, 1u));
 
+            int light_sample_count = m_optix_renderer->get_next_event_sample_count(*SceneRoots::get_iterable().begin());
+            if (ImGui::InputInt("Light sample count", &light_sample_count))
+                m_optix_renderer->set_next_event_sample_count(*SceneRoots::get_iterable().begin(), light_sample_count);
+
             float epsilon = m_optix_renderer->get_scene_epsilon(*SceneRoots::get_iterable().begin());
-            if (ImGui::InputFloat("Epsilon", &epsilon))
+            if (ImGui::InputFloat("Epsilon", &epsilon, 0, 0, "%.6f"))
                 m_optix_renderer->set_scene_epsilon(*SceneRoots::get_iterable().begin(), epsilon);
 
             ImGui::PoppedTreeNode("Path regularization", [&] {

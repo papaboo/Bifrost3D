@@ -44,8 +44,8 @@ public:
 
     Bifrost::Core::RendererID get_renderer_ID() const { return m_renderer_ID; }
 
-    float get_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID) const;
-    void set_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID, float scene_epsilon);
+    Backend get_backend(Bifrost::Scene::CameraID camera_ID) const;
+    void set_backend(Bifrost::Scene::CameraID camera_ID, Backend backend);
 
     unsigned int get_max_bounce_count(Bifrost::Scene::CameraID camera_ID) const;
     void set_max_bounce_count(Bifrost::Scene::CameraID camera_ID, unsigned int bounce_count);
@@ -53,8 +53,11 @@ public:
     unsigned int get_max_accumulation_count(Bifrost::Scene::CameraID camera_ID) const;
     void set_max_accumulation_count(Bifrost::Scene::CameraID camera_ID, unsigned int accumulation_count);
 
-    Backend get_backend(Bifrost::Scene::CameraID camera_ID) const;
-    void set_backend(Bifrost::Scene::CameraID camera_ID, Backend backend);
+    float get_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID) const;
+    void set_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID, float scene_epsilon);
+
+    int get_next_event_sample_count(Bifrost::Scene::SceneRootID scene_root_ID) const;
+    void set_next_event_sample_count(Bifrost::Scene::SceneRootID scene_root_ID, int sample_count);
 
     PathRegularizationSettings get_path_regularization_settings() const;
     void set_path_regularization_settings(PathRegularizationSettings settings);
