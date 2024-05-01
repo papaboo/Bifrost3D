@@ -506,7 +506,7 @@ int initialize_scene(Engine& engine) {
         AABB mesh_aabb = model.get_mesh().get_bounds();
         Transform transform = model.get_scene_node().get_global_transform();
         Vector3f bounding_sphere_center = transform * mesh_aabb.center();
-        float bounding_sphere_radius = magnitude(mesh_aabb.size()) * 0.5f;
+        float bounding_sphere_radius = magnitude(mesh_aabb.size() * transform.scale) * 0.5f;
         AABB global_mesh_aabb = AABB(bounding_sphere_center - bounding_sphere_radius, bounding_sphere_center + bounding_sphere_radius);
         scene_bounds.grow_to_contain(global_mesh_aabb);
     }
