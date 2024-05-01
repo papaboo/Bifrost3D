@@ -28,8 +28,6 @@
 #include <optixu/optixpp_namespace.h>
 #include <optixu/optixu_math_namespace.h>
 
-#include <StbImageWriter/StbImageWriter.h>
-
 #include <assert.h>
 #include <memory>
 #include <set>
@@ -45,6 +43,8 @@ using namespace optix;
 // #define ENABLE_OPTIX_DEBUG
 
 namespace OptiXRenderer {
+
+const int MAX_RNG_SAMPLE_OFFSETS = 256;
 
 inline float3 to_float3(const RGB v) { return { v.r, v.g, v.b }; }
 inline float3 to_float3(const Vector3f v) { return { v.x, v.y, v.z }; }
@@ -303,6 +303,22 @@ struct Renderer::Implementation {
         { // Path tracing setup.
             context->setRayGenerationProgram(EntryPoints::PathTracing, context->createProgramFromPTXFile(rgp_ptx_path, "path_tracing_RPG"));
             context->setMissProgram(RayTypes::MonteCarlo, context->createProgramFromPTXFile(rgp_ptx_path, "miss"));
+
+            { // Setup evenly distributed sample offsets for multiple light and BRDF samples per bounce.
+                // The samples in the buffer can be randomized per usage by applying a toroidal shift to them.
+                // (Add the shift and wrap around to keep them in the range [0, 1[)
+                // The zero'th sample is [0,0,0,0], meaning that the actual sample is the value that they are shifted by.
+                Buffer rng_sample_offsets_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT4, MAX_RNG_SAMPLE_OFFSETS);
+
+                float4* rng_sample_offsets = (float4*)(rng_sample_offsets_buffer->map());
+                for (int index = 0; index < MAX_RNG_SAMPLE_OFFSETS; ++index)
+                    rng_sample_offsets[index] = RNG::ReverseHalton(index).sample4f();
+                rng_sample_offsets_buffer->unmap();
+                OPTIX_VALIDATE(rng_sample_offsets_buffer);
+
+                context["g_random_sample_offsets"]->setBuffer(rng_sample_offsets_buffer);
+            }
+
 #ifdef ENABLE_OPTIX_DEBUG
             context->setExceptionProgram(EntryPoints::PathTracing, context->createProgramFromPTXFile(rgp_ptx_path, "exceptions"));
 #endif
@@ -1303,7 +1319,7 @@ void Renderer::set_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID, floa
 
 int Renderer::get_next_event_sample_count(Bifrost::Scene::SceneRootID scene_root_ID) const { return m_impl->scene.GPU_state.next_event_sample_count; }
 void Renderer::set_next_event_sample_count(Bifrost::Scene::SceneRootID scene_root_ID, int sample_count) {
-    m_impl->scene.GPU_state.next_event_sample_count = sample_count;
+    m_impl->scene.GPU_state.next_event_sample_count = min(sample_count, MAX_RNG_SAMPLE_OFFSETS); // Limit the number of samples to the number of random offsets available.
 }
 
 unsigned int Renderer::get_max_bounce_count(CameraID camera_ID) const { 
