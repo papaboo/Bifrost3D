@@ -165,7 +165,9 @@ public:
 // ------------------------------------------------------------------------------------------------
 struct ReverseHalton {
 
-    __inline_all__ void initialize(unsigned int index, int prime_index = 0) {
+    ReverseHalton() = default;
+
+    __inline_all__ ReverseHalton(unsigned int index, int prime_index = 0) {
         m_index = index;
         m_prime_index = prime_index;
     }

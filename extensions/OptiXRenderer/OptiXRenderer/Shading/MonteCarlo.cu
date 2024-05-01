@@ -35,6 +35,9 @@ rtDeclareVariable(SceneStateGPU, g_scene, , );
 rtBuffer<Material, 1> g_materials;
 rtDeclareVariable(int, material_index, , );
 
+// Renderer config
+rtBuffer<float4, 1> g_random_sample_offsets;
+
 //----------------------------------------------------------------------------
 // Closest hit program for monte carlo sampling rays.
 //----------------------------------------------------------------------------
@@ -87,7 +90,8 @@ __inline_dev__ LightSample reestimated_light_samples(const ShadingModel& materia
     int light_sample_count = g_scene.next_event_sample_count;
     for (int s = 1; s < light_sample_count; ++s) {
         // Grab the next light sample
-        light_random_4f = monte_carlo_payload.rng.sample4f();
+        light_random_4f += g_random_sample_offsets[s];
+        light_random_4f = light_random_4f - floor(light_random_4f);
         light_random_number = make_float3(light_random_4f);
         float use_new_light_decision = light_random_4f.w;
 

@@ -94,7 +94,6 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
 
   target_link_libraries(${LIBRARY_NAME}
     PUBLIC Bifrost ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES}
-    PRIVATE StbImageWriter
   )
 
   set_target_properties(${LIBRARY_NAME} PROPERTIES 
