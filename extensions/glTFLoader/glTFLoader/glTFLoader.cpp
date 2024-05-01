@@ -653,6 +653,7 @@ SceneNodeID load(const std::string& filename) {
                 // Negate corners of bounding box.
                 min_position.x = -min_position.x;
                 max_position.x = -max_position.x;
+                std::swap(min_position.x, max_position.x);
 
                 // Negate positions and normals.
                 for (Vector3f& position : mesh.get_position_iterable())
