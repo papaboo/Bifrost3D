@@ -567,8 +567,13 @@ SceneNodeID load(const std::string& filename) {
             const tinygltf::Accessor& index_accessor = model.accessors[primitive.indices];
             unsigned int primitive_count = unsigned int(index_accessor.count) / 3;
 
-            Mesh mesh = Meshes::create(glTF_mesh.name, primitive_count, vertex_count, mesh_flags);
-            
+            // Append the primitive index to the mesh name in case there's more than one primitive.
+            std::string mesh_name = glTF_mesh.name;
+            if (glTF_mesh.primitives.size() > 1)
+                mesh_name = mesh_name + "_primitive_" + std::to_string(p);
+
+            Mesh mesh = Meshes::create(mesh_name, primitive_count, vertex_count, mesh_flags);
+
             { // Import primitve indices.
                 assert(index_accessor.type == TINYGLTF_TYPE_SCALAR);
                 int element_size = sizeof(unsigned int);
