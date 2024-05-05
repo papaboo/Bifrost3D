@@ -1,8 +1,10 @@
 set(PROJECT_NAME "SimpleViewer")
 
 set(SRCS 
+  CameraHandlers.h
+  CameraHandlers.cpp
   main.cpp
-  )
+)
 
 set(GUI_SRCS
   GUI/RenderingGUI.h
