@@ -6,6 +6,8 @@
 // See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
+#include <CameraHandlers.h>
+
 #include <Scenes/CornellBox.h>
 #include <Scenes/Material.h>
 #include <Scenes/Opacity.h>
@@ -53,11 +55,13 @@ using namespace Bifrost::Scene;
 static std::string g_scene;
 static std::string g_environment;
 static RGB g_environment_color = RGB(0.68f, 0.92f, 1.0f);
-static float g_scene_size;
 static DX11Renderer::Compositor* compositor = nullptr;
 static DX11Renderer::Renderer* dx11_renderer = nullptr;
 static ImGui::ImGuiAdaptor* imgui = nullptr;
+static CameraNavigation* camera_navigation = nullptr;
+static CameraViewportHandler* camera_handler;
 static Vector2ui g_window_size = Vector2ui(640, 480);
+
 static Vector3f g_camera_translation = Vector3f(nanf(""));
 static float g_camera_horizontal_rotation = nanf("");
 static float g_camera_vertical_rotation = nanf("");
@@ -67,152 +71,6 @@ bool optix_enabled = true;
 bool rasterizer_enabled = true;
 OptiXRenderer::Renderer* optix_renderer = nullptr;
 #endif
-
-class Navigation final {
-public:
-
-    Navigation(CameraID camera_ID, float velocity, Vector3f camera_translation, float camera_vertical_rotation, float camera_horizontal_rotation)
-        : m_camera_ID(camera_ID)
-        , m_velocity(velocity)
-    {
-        Transform transform = Cameras::get_transform(m_camera_ID);
-
-        Vector3f forward = transform.rotation.forward();
-        m_vertical_rotation = !isnan(camera_vertical_rotation) ? camera_vertical_rotation : std::atan2(forward.x, forward.z);
-        m_horizontal_rotation = !isnan(camera_horizontal_rotation) ? camera_horizontal_rotation : std::asin(forward.y);
-
-        if (!isnan(camera_translation.x))
-            transform.translation = camera_translation;
-        transform.rotation = Quaternionf::from_angle_axis(m_vertical_rotation, Vector3f::up()) * Quaternionf::from_angle_axis(m_horizontal_rotation, -Vector3f::right());
-
-        Cameras::set_transform(m_camera_ID, transform);
-    }
-
-    void navigate(Engine& engine) {
-        const Keyboard* keyboard = engine.get_keyboard();
-        const Mouse* mouse = engine.get_mouse();
-
-        Transform transform = Cameras::get_transform(m_camera_ID);
-
-        { // Translation
-            float strafing = 0.0f;
-            if (keyboard->is_pressed(Keyboard::Key::D) || keyboard->is_pressed(Keyboard::Key::Right))
-                strafing = 1.0f;
-            if (keyboard->is_pressed(Keyboard::Key::A) || keyboard->is_pressed(Keyboard::Key::Left))
-                strafing -= 1.0f;
-
-            float forward = 0.0f;
-            if (keyboard->is_pressed(Keyboard::Key::W) || keyboard->is_pressed(Keyboard::Key::Up))
-                forward = 1.0f;
-            if (keyboard->is_pressed(Keyboard::Key::S) || keyboard->is_pressed(Keyboard::Key::Down))
-                forward -= 1.0f;
-
-            float velocity = m_velocity;
-            if (keyboard->is_pressed(Keyboard::Key::LeftShift) || keyboard->is_pressed(Keyboard::Key::RightShift))
-                velocity *= 5.0f;
-
-            if (strafing != 0.0f || forward != 0.0f) {
-                Vector3f translation_offset = transform.rotation * Vector3f(strafing, 0.0f, forward);
-                float dt = engine.get_time().is_paused() ? engine.get_time().get_raw_delta_time() : engine.get_time().get_smooth_delta_time();
-                transform.translation += normalize(translation_offset) * velocity * dt;
-            }
-        }
-
-        { // Rotation
-            if (mouse->is_pressed(Mouse::Button::Left)) {
-
-                m_vertical_rotation += degrees_to_radians(float(mouse->get_delta().x));
-
-                // Clamp horizontal rotation to -89 and 89 degrees to avoid turning the camera on it's head and the singularities of cross products at the poles.
-                m_horizontal_rotation -= degrees_to_radians(float(mouse->get_delta().y));
-                m_horizontal_rotation = clamp(m_horizontal_rotation, -PI<float>() * 0.49f, PI<float>() * 0.49f);
-
-                transform.rotation = Quaternionf::from_angle_axis(m_vertical_rotation, Vector3f::up()) * Quaternionf::from_angle_axis(m_horizontal_rotation, -Vector3f::right());
-            }
-        }
-
-        if (transform != Cameras::get_transform(m_camera_ID))
-            Cameras::set_transform(m_camera_ID, transform);
-
-        if (keyboard->was_pressed(Keyboard::Key::Space)) {
-            float new_time_scale = engine.get_time().is_paused() ? 1.0f : 0.0f;
-            engine.get_time().set_time_scale(new_time_scale);
-        }
-    }
-
-private:
-    CameraID m_camera_ID;
-    float m_vertical_rotation;
-    float m_horizontal_rotation;
-    float m_velocity;
-};
-
-class CameraHandler final {
-public:
-    CameraHandler(CameraID camera_ID, float aspect_ratio, float near, float far)
-        : m_camera_ID(camera_ID), m_aspect_ratio(aspect_ratio), m_FOV(PI<float>() / 4.0f)
-        , m_near(near), m_far(far) {
-        Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-        CameraUtils::compute_perspective_projection(m_near, m_far, m_FOV, m_aspect_ratio,
-            perspective_matrix, inverse_perspective_matrix);
-
-        Cameras::set_projection_matrices(m_camera_ID, perspective_matrix, inverse_perspective_matrix);
-    }
-
-    void handle(const Engine& engine) {
-
-        const Mouse* mouse = engine.get_mouse();
-        float new_FOV = m_FOV - mouse->get_scroll_delta() * engine.get_time().get_smooth_delta_time(); // TODO Non-linear increased / decrease. Especially that it can become negative is an issue.
-
-        float window_aspect_ratio = engine.get_window().get_aspect_ratio();
-        if (window_aspect_ratio != m_aspect_ratio || new_FOV != m_FOV) {
-            Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-            CameraUtils::compute_perspective_projection(m_near, m_far, new_FOV, window_aspect_ratio,
-                perspective_matrix, inverse_perspective_matrix);
-
-            Cameras::set_projection_matrices(m_camera_ID, perspective_matrix, inverse_perspective_matrix);
-            m_aspect_ratio = window_aspect_ratio;
-            m_FOV = new_FOV;
-        }
-    }
-
-    void set_near_and_far(float near, float far) {
-        m_near = near;
-        m_far = far;
-
-        Matrix4x4f perspective_matrix, inverse_perspective_matrix;
-        CameraUtils::compute_perspective_projection(m_near, m_far, m_FOV, m_aspect_ratio,
-            perspective_matrix, inverse_perspective_matrix);
-
-        Cameras::set_projection_matrices(m_camera_ID, perspective_matrix, inverse_perspective_matrix);
-    }
-
-private:
-    CameraID m_camera_ID;
-    float m_aspect_ratio;
-    float m_FOV;
-    float m_near, m_far;
-};
-
-class RenderSwapper final {
-public:
-    RenderSwapper(CameraID camera_ID)
-        : m_camera_ID(camera_ID) { }
-
-    void handle(const Engine& engine) {
-        const Keyboard* keyboard = engine.get_keyboard();
-
-        if (keyboard->was_released(Keyboard::Key::P) && !keyboard->is_modifiers_pressed()) {
-            Renderers::Iterator renderer_itr = Renderers::get_iterator(Cameras::get_renderer_ID(m_camera_ID));
-            ++renderer_itr;
-            Renderers::Iterator new_renderer_itr = (renderer_itr == Renderers::end()) ? Renderers::begin() : renderer_itr;
-            Cameras::set_renderer_ID(m_camera_ID, *new_renderer_itr);
-        }
-    }
-
-private:
-    CameraID m_camera_ID;
-};
 
 static inline void update_FPS(Engine& engine) {
     static const int COUNT = 8;
@@ -414,6 +272,34 @@ void detect_and_flag_cutout_materials() {
     }
 }
 
+void main_loop(Engine& engine) {
+    const Keyboard* keyboard = engine.get_keyboard();
+
+    // Update window title with FPS
+    update_FPS(engine);
+
+    { // ImGUI callback
+        bool control_pressed = keyboard->is_pressed(Keyboard::Key::LeftControl) || keyboard->is_pressed(Keyboard::Key::RightControl);
+        bool g_was_released = keyboard->was_released(Keyboard::Key::G);
+        imgui->set_enabled(imgui->is_enabled() ^ (g_was_released && control_pressed));
+
+        imgui->new_frame(engine);
+    }
+
+    // Toggle the renderer of the main camera
+    if (keyboard->was_released(Keyboard::Key::P) && !keyboard->is_modifiers_pressed()) {
+        CameraID first_camera_ID = *Cameras::begin();
+        Renderers::Iterator renderer_itr = Renderers::get_iterator(Cameras::get_renderer_ID(first_camera_ID));
+        ++renderer_itr;
+        Renderers::Iterator new_renderer_itr = (renderer_itr == Renderers::end()) ? Renderers::begin() : renderer_itr;
+        Cameras::set_renderer_ID(first_camera_ID, *new_renderer_itr);
+    }
+
+    // Handle camera navigation and frustum.
+    camera_navigation->navigate(engine);
+    camera_handler->handle(engine);
+}
+
 static inline void miniheaps_cleanup_callback() {
     Cameras::reset_change_notifications();
     Images::reset_change_notifications();
@@ -461,10 +347,8 @@ int initialize_scene(Engine& engine) {
         scene_ID = SceneRoots::create("Model scene", g_environment_color);
     SceneNodeID root_node_ID = SceneRoots::get_root_node(scene_ID);
 
-    // Create camera
-    CameraID cam_ID = Cameras::create("Camera", scene_ID, Matrix4x4f::identity(), Matrix4x4f::identity()); // Matrices will be set up by the CameraHandler.
-    CameraHandler* camera_handler = new CameraHandler(cam_ID, engine.get_window().get_aspect_ratio(), 0.1f, 100.0f);
-    engine.add_mutating_callback([=, &engine] { camera_handler->handle(engine); });
+    // Create camera. Matrices will be set up by the CameraViewportHandler.
+    CameraID cam_ID = Cameras::create("Camera", scene_ID, Matrix4x4f::identity(), Matrix4x4f::identity());
 
     // Load model
     bool load_model_from_file = false;
@@ -510,8 +394,7 @@ int initialize_scene(Engine& engine) {
         AABB global_mesh_aabb = AABB(bounding_sphere_center - bounding_sphere_radius, bounding_sphere_center + bounding_sphere_radius);
         scene_bounds.grow_to_contain(global_mesh_aabb);
     }
-    g_scene_size = magnitude(scene_bounds.size());
-    camera_handler->set_near_and_far(g_scene_size / 10000.0f, g_scene_size * 3.0f);
+    float scene_size = magnitude(scene_bounds.size());
 
     if (load_model_from_file) {
         Transform cam_transform = Cameras::get_transform(cam_ID);
@@ -530,12 +413,11 @@ int initialize_scene(Engine& engine) {
         SceneNodes::set_parent(light_node_ID, root_node_ID);
     }
 
-    float camera_velocity = g_scene_size * 0.1f;
-    Navigation* camera_navigation = new Navigation(cam_ID, camera_velocity, g_camera_translation, g_camera_vertical_rotation, g_camera_horizontal_rotation);
-    engine.add_mutating_callback([=, &engine] { camera_navigation->navigate(engine); });
-    RenderSwapper* render_swapper = new RenderSwapper(cam_ID);
-    engine.add_mutating_callback([=, &engine] { render_swapper->handle(engine); });
-    engine.add_mutating_callback([&engine] { update_FPS(engine); });
+    camera_handler = new CameraViewportHandler(cam_ID, engine.get_window().get_aspect_ratio(), 0.1f, 100.0f);
+    camera_handler->set_near_and_far(scene_size / 10000.0f, scene_size * 3.0f);
+
+    float camera_velocity = scene_size * 0.1f;
+    camera_navigation = new CameraNavigation(cam_ID, camera_velocity, g_camera_translation, g_camera_vertical_rotation, g_camera_horizontal_rotation);
 
     return 0;
 }
@@ -562,30 +444,25 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
     compositor->add_renderer(Renderer::initialize);
 #endif
 
+    engine.add_non_mutating_callback([=] { compositor->render(); });
+
+    int scene_result = initialize_scene(engine);
+    if (scene_result < 0)
+        return scene_result;
+
     { // Setup GUI
         imgui = new ImGui::ImGuiAdaptor();
 #ifdef OPTIX_FOUND
-        imgui->add_frame(std::make_unique<GUI::RenderingGUI>(compositor, dx11_renderer, optix_renderer));
+        imgui->add_frame(std::make_unique<GUI::RenderingGUI>(camera_navigation, compositor, dx11_renderer, optix_renderer));
 #else
-        imgui->add_frame(std::make_unique<GUI::RenderingGUI>(compositor, dx11_renderer));
+        imgui->add_frame(std::make_unique<GUI::RenderingGUI>(camera_navigation, compositor, dx11_renderer));
 #endif
-        engine.add_mutating_callback([=, &engine] {
-            auto* keyboard = engine.get_keyboard();
-            auto* imgui_adaptor = static_cast<ImGui::ImGuiAdaptor*>(imgui);
-
-            bool control_pressed = keyboard->is_pressed(Keyboard::Key::LeftControl) || keyboard->is_pressed(Keyboard::Key::RightControl);
-            bool g_was_released = keyboard->was_released(Keyboard::Key::G);
-            imgui_adaptor->set_enabled(imgui_adaptor->is_enabled() ^ (g_was_released && control_pressed));
-
-            imgui_adaptor->new_frame(engine);
-        });
-
         compositor->add_GUI_renderer(ImGui::Renderers::DX11Renderer::initialize);
     }
 
-    engine.add_non_mutating_callback([=] { compositor->render(); });
+    engine.add_mutating_callback([&engine] { main_loop(engine); });
 
-    return initialize_scene(engine);
+    return  0;
 }
 
 void print_usage() {

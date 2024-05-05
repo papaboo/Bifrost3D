@@ -7,6 +7,7 @@
 // ------------------------------------------------------------------------------------------------
 
 #include <GUI/RenderingGUI.h>
+#include <CameraHandlers.h>
 
 #include <Bifrost/Assets/Material.h>
 #include <Bifrost/Scene/Camera.h>
@@ -115,7 +116,7 @@ void camera_effects(CameraID camera_ID) {
     });
 }
 
-void camera_GUI(CameraID camera_ID) {
+void camera_GUI(CameraID camera_ID, CameraNavigation* navigation) {
 
     // Viewport
     ImGui::PoppedTreeNode("Viewport", [&]() {
@@ -128,7 +129,15 @@ void camera_GUI(CameraID camera_ID) {
             Cameras::set_viewport(camera_ID, viewport);
     });
 
-    ImGui::PoppedTreeNode("Transform", [&]() {
+    ImGui::PoppedTreeNode("Movement", [&]() {
+        // Camera speed
+        if (camera_ID == navigation->get_camera_ID())
+        {
+            float velocity = navigation->get_velocity();
+            if (ImGui::InputFloat("Velocity", &velocity))
+                navigation->set_velocity(velocity);
+        }
+
         // Translation
         Transform transform = Cameras::get_transform(camera_ID);
         Vector3f translation = transform.translation;
@@ -152,8 +161,9 @@ struct RenderingGUI::State {
     } optix;
 };
 
-RenderingGUI::RenderingGUI(DX11Renderer::Compositor* compositor, DX11Renderer::Renderer* dx_renderer, OptiXRenderer::Renderer* optix_renderer)
-    : m_compositor(compositor), m_dx_renderer(dx_renderer), m_optix_renderer(optix_renderer), m_state(new State()) {
+RenderingGUI::RenderingGUI(CameraNavigation* navigation, DX11Renderer::Compositor* compositor,
+    DX11Renderer::Renderer* dx_renderer, OptiXRenderer::Renderer* optix_renderer)
+    : m_navigation(navigation), m_compositor(compositor), m_dx_renderer(dx_renderer), m_optix_renderer(optix_renderer), m_state(new State()) {
     strcpy_s(m_screenshot.path, m_screenshot.max_path_length, "c:\\temp\\ss");
 
     m_state->optix.path_regularization_settings = m_optix_renderer->get_path_regularization_settings();
@@ -232,7 +242,7 @@ void RenderingGUI::layout_frame() {
             for (CameraID camera_ID : Cameras::get_iterable()) {
                 camera_count++;
                 ImGui::PoppedTreeNode(Cameras::get_name(camera_ID).c_str(), [&]() {
-                    camera_GUI(camera_ID);
+                    camera_GUI(camera_ID, m_navigation);
                 });
             }
 
