@@ -23,7 +23,7 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Asset
 
     // Check if we should disable importance sampling.
     // To avoid too much branching in the shaders, a presampled environment with 
-    // importance sampling disabled only contains a single invalid sampling.
+    // importance sampling disabled only contains a single invalid sample.
     bool is_tiny_image = (width * height) < (64 * 32);
     bool is_dark_image = light.image_integral() < 0.00001f;
     bool disable_importance_sampling = is_tiny_image || is_dark_image;
@@ -67,18 +67,27 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Asset
         if (disable_importance_sampling) {
             samples_data[0] = LightSample::none();
         } else {
+            Math::Vector2f* rng_samples = new Math::Vector2f[sample_count];
+            Math::RNG::fill_progressive_multijittered_bluenoise_samples(rng_samples, rng_samples + sample_count);
+
             #pragma omp parallel for schedule(dynamic, 16)
             for (int i = 0; i < sample_count; ++i) {
-                // RNG::sample02 is correlated with the seeding strategy in the path tracer (hash ^ brev(accumulation).
-                // To avoid this, and keep the drawing the nicely distributed samples that sample02 gives us,
-                // we change the order in which the samples are drawn by reversing the bit pattern.
-                int s = Math::reverse_bits(i) >> (32 - exponent);
-                Assets::LightSample sample = light.sample(Math::RNG::sample02(s));
+                // Decorrelate stratified random numbers for light samples and ray samples.
+                // The rays RNG expect that samples drawn similar random numbers produce light samples drawn from similar places.
+                // That assumption breaks when drawing the samples with PMJ, as those samples are themselves nicely stratified,
+                // meaning the first sample will be drawn from one quadrant, the second from another and so on and so forth.
+                // A simple way to change this is to reverse the bit pattern when accessing the samples,
+                // that way all samples from the first quadrant will be located together,
+                // and all samples from sub quadrants will located near each other as well.
+                int adjusted_sample_index = Math::reverse_bits(i) >> (32 - exponent);
+                Assets::LightSample sample = light.sample(rng_samples[adjusted_sample_index]);
                 samples_data[i].radiance = { sample.radiance.r, sample.radiance.g, sample.radiance.b };
                 samples_data[i].PDF = sample.PDF;
                 samples_data[i].direction_to_light = { sample.direction_to_light.x, sample.direction_to_light.y, sample.direction_to_light.z };
                 samples_data[i].distance = sample.distance;
             }
+
+            delete[] rng_samples;
         }
         m_samples->unmap();
         OPTIX_VALIDATE(m_samples);
