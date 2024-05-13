@@ -1,46 +1,9 @@
-Owen scrambled sobol
-* How are indices scrambled/reversed in the current PMJ index hash?
-* Implement Owen scrambled sobol sequence - https://www.reddit.com/r/GraphicsProgramming/comments/l1go2r/owenscrambled_sobol_02_sequences_shadertoy/
-** sample index = sampleId + pixelId * samplesPerPixel.  ??? Flipped pixelId and sampleId?
-** Shuffle the index using Laine-Karras hash
-** Draw Sobol sample
-* Then try with the hash from Psycopath https://psychopath.io/post/2021_01_30_building_a_better_lk_hash
-* Use ReverseHalton scrambled with a Laine-Karras hash pr pixel
-* And finally have a look at https://graphics.pixar.com/library/SampleSequences/paper.pdf
-* Remove the old PMJ implementation
-* We can use the same 4 random floats for BRDF and (first) light sampling. The paths are independent and it would mean postponing the bad effects of higher discrepancy at larger dimensions
-** Can we fix the light offset though, so isn't just +PI, which seems not to work.
-* Blue noise screen space 128x128 scramble seeds or offset into the sequence with the seed?
-
 BACKLOG:
-* Progressive multijittered sample sequences
-** Sampling artifacts on backside of middle sphere in MaterialScene and missing yellow/green color on the right floor in VeachScene for the first many frames.
-** Owen scrambled sobol sequence - https://www.reddit.com/r/GraphicsProgramming/comments/l1go2r/owenscrambled_sobol_02_sequences_shadertoy/
-** Test lighthouse sampler
-** Unit test for different sampling scenarios with PMJ sampler
-** Heitz and Georgiev blue noise screen space seed scheme. Optimize towards equal distribution of first four seeds. Seed, swap row/columns and then optimize random cells.
-*** Toroidal shift + random sample index?
-*** Toroidal shift using 14 bit bitmask, right-shift by 1 pr dimension and reinsert the swapped bit as the most significant one.
-** Pregenerate samples with 64 bluenoise samples for OptiX.
-* Coverage behaves weirdly in both renderers
-** Perhaps I should split the integrator from the closest hit, to allow myself to test the integrator and light sampling code
-** Center isn't visible behind other geometry.
-*** That's the RNG!!
-*** Test the RNG
-** Second light in test scene is downprioritized by plastic material.
-*** Happens with both RNGs, but the code looks okay'ish. Perhaps I need to move it out of MonteCarlo and write a test for it? Restir has some nice Resovoir sample accumulators
-*** How can the second light even be downprioritized? The first light has 0 contribution. Is it the background being sampled? If the background is just a constant color we shouldn't waste light samples on it should we?
-*** Some lights in the Veach scene are downprioritized too.
-** The same effect might be visible in Sponza under the pots/plants
-*** Check for pickups in GUI?
-** Rose and grass has streaky artifacts in rungholt/house as opacity, but fine as cutout
-* Dithered transparency in the material
-** using a fairly large blue noise texture
-** Consider it an effect and include it in the path tracer as well
-** See https://www.youtube.com/watch?v=NHd1PeJfyzE
 * Dump multi scattering contribution in specular lobe instead of diffuse.
-** Could make it simpler to make the coat a separate interface instead of build into the default material.
-** Move area light abstractions out into util functions?
+** OptiX: Could make it simpler to make the coat a separate interface instead of build into the default material.
+*** Refactor to dump MS in SS
+*** Split shading models
+** DX: Move area light abstractions out into util functions?
 *** Remove world to shading as parameter?
 *** Improve documentation.
 **** Why is AO scaled?
@@ -49,13 +12,16 @@ BACKLOG:
 **** Can we reduce the amount of computations done inside the branches?
 *** Can we take the coming split into account? Is there any shared GGX/lambert area light code?
 *** There are some shared variables; light center, radiance, ambient visibility, that'll have to be precomputed in then passed to the actual BSDF implementations.
-*** We can have a shading model wrapper, similar to in optix, that handles these precomputations and dispatches to the different light modes
+*** We can have a shading model wrapper, that handles these precomputations and dispatches to the different light modes
+** Define how we should scale roughness of a surface underneath another rough surface
+** Add support for local refraction in the GGX BSDF??
 * Normals revisited
 ** Implement Solving Self-Intersection Artifacts in DirectX Raytracing in OptiX, to avoid hard shadows on tesselated spheres.
 *** https://developer.nvidia.com/blog/solving-self-intersection-artifacts-in-directx-raytracing/
 *** Will probably require an origin per new ray, so one for light samples and one for BSDF samples
 ** Cubical sphere's in sphere scene are partially see-through near the border.
 *** Toggling thin-walled has a pretty drastic effect even though all intersections should be on the outside
+** Can we remove scene epsilon then?
 * Rough glass
 ** Test that PDF is always positive if reflectance is positive
 *** Test for entire sphere, not just expected hemisphere.
@@ -69,6 +35,14 @@ BACKLOG:
 *** What is 'EffectivelySmooth' defined as?
 *** PBRT handles it as a delta dirac, which I'd still like to avoid
 ** Approximate rough glass in DX11 using a guassian filter, see Doom 2016.
+* Emissive meshes
+** Mirror glTF for starters. Emissive texture and emissive 'strength'
+*** https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_emissive_strength/README.md
+** Do something similar to or reuse the fixed light samples in PresampledEnvironmentLight and add MIS
+* Dithered transparency in the material
+** using a fairly large blue noise texture, morton encoding or Laine-Karras hash
+** Consider it an engine effect and include it in the path tracer as well
+** See https://www.youtube.com/watch?v=NHd1PeJfyzE
 * Bump mapping
 ** Taming the Shadow Terminator for 'proper' handling of hemisphere distortion. Only scales the contribution. Mirror surfaces still have to be handled differently
 *** https://blog.yiningkarlli.com/2020/02/shadow-terminator-in-takua.html
@@ -85,10 +59,17 @@ BACKLOG:
 ** Use the threadsafe asset management in model loaders to parallelize asset loading and creation.
 * Upgrade OptiX to get better denoiser
 * ReSTIR
+** Start with the simpler Spatiotemporal variance-guided filtering: real-time reconstruction for path-traced global illumination
 ** Generalized Resampled Importance Sampling
+** Change the rng seed to be based on a frame count instead of an accumulation count
+*** How will that affect non-ReSTIR
 * Decima Engine Area lights
 ** https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Shaders/Private/BRDF.ush
 ** https://www.guerrilla-games.com/read/decima-engine-advances-in-lighting-and-aa
+* Blue noise seed
+** PBRTs random morton code seed looks pretty simple (and I do love a good morton code)
+*** Make ZSobolSampler 'progressive' with fixed 256 sample offset in between the pixels.
+** Heitz and Georgiev blue noise screen space seed scheme.
 * SDF shadows - check UE4
 ** http://kunzhou.net/2013/fur-rendering-tvcg.pdf
 ** Call of duty precomputed GI. Check how they handle light bleeding. http://advances.realtimerendering.com/s2017/Precomputed%20Lighting%20in%20CoD%20IW_20_PPS.pdf
