@@ -34,9 +34,11 @@ private:
     optix::float3 m_diffuse_tint;
     float m_roughness;
     optix::float3 m_specularity;
+    float m_specular_energy_loss_adjustment;
     float m_coat_transmission; // 1 - coat_specular_rho - coat_interreflection_rho, the contribution from the BSDFs under the coat.
     float m_coat_scale;
     float m_coat_roughness;
+    float m_coat_energy_loss_adjustment;
     unsigned short m_specular_probability;
     unsigned short m_coat_probability;
 
@@ -73,6 +75,7 @@ private:
         // No coat
         m_coat_scale = 0;
         m_coat_roughness = 0;
+        m_coat_energy_loss_adjustment = 0;
         m_coat_transmission = 1;
         m_coat_probability = 0;
 
@@ -88,17 +91,19 @@ private:
         SpecularRho specular_rho = SpecularRho::fetch(abs_cos_theta_o, m_roughness);
         float dielectric_specular_rho = specular_rho.rho(dielectric_specularity);
 
+        // Compensate for lost energy due to multi-scattering.
+        // Multiple-scattering microfacet BSDFs with the smith model, Heitz et al., 2016 and 
+        // Practical multiple scattering compensation for microfacet models, Emmanuel Turquin, 2018
+        // showed that multi-scattered reflectance has roughly the same distribution as single-scattering reflectance.
+        // Here we use that result to account for multi-scattering by computing the ratio of lost energy of a fully specular material,
+        // and then scaling the specular reflectance by that ratio during evaluation, which increases reflectance to account for energy lost.
+        m_specular_energy_loss_adjustment = 1.0f / specular_rho.full;
+
         // Dielectric tint.
         float dielectric_lossless_specular_rho = dielectric_specular_rho / specular_rho.full;
         float dielectric_specular_transmission = 1.0f - dielectric_lossless_specular_rho;
         float3 dielectric_tint = tint * dielectric_specular_transmission;
         m_diffuse_tint = dielectric_tint * (1.0f - metallic);
-
-        // Compute microfacet specular interreflection. Assume it is diffuse and add its contribution to the diffuse tint.
-        float3 single_bounce_specular_rho = specular_rho.rho(m_specularity);
-        float3 lossless_specular_rho = single_bounce_specular_rho / specular_rho.full;
-        float3 specular_interreflection_rho = lossless_specular_rho - single_bounce_specular_rho;
-        m_diffuse_tint += specular_interreflection_rho;
     }
 
     // Sets up the specular microfacet and the diffuse reflection as described in setup_base_layer().
@@ -127,18 +132,19 @@ private:
             SpecularRho coat_rho = SpecularRho::fetch(abs_cos_theta_o, coat_roughness);
             coat_single_bounce_rho = coat_scale * coat_rho.rho(COAT_SPECULARITY);
             float lossless_coat_rho = coat_single_bounce_rho / coat_rho.full;
-            float coat_interreflection_rho = lossless_coat_rho - coat_single_bounce_rho;
             m_coat_transmission = 1.0f - lossless_coat_rho;
+
+            // Compensate for lost energy due to multi-scattering.
+            m_coat_energy_loss_adjustment = 1.0f / coat_rho.full;
 
             // Scale diffuse component by the coat transmission and add contribution from coat interreflection to the diffues tint. 
             m_diffuse_tint *= m_coat_transmission;
-            m_diffuse_tint += make_float3(coat_interreflection_rho);
         }
     }
 
     __inline_all__ void setup_sampling_probabilities(float abs_cos_theta_o, float coat_rho) {
         // Compute the probability of sampling the specular layer instead of the diffuse layer.
-        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta_o, m_roughness) * m_coat_transmission;
+        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta_o, m_roughness) * m_specular_energy_loss_adjustment * m_coat_transmission;
         float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
         m_specular_probability = unsigned short(specular_probability * USHORT_MAX + 0.5f);
         // Compute the probability of sampling the coat instead of the base layer.
@@ -195,7 +201,7 @@ public:
         BSDFResponse diffuse_eval = BSDFs::Lambert::evaluate_with_PDF(m_diffuse_tint, wo, wi);
 
         BSDFResponse res;
-        res.reflectance = diffuse_eval.reflectance + specular_eval.reflectance * m_coat_transmission;
+        res.reflectance = diffuse_eval.reflectance + specular_eval.reflectance * m_specular_energy_loss_adjustment * m_coat_transmission;
 
         float specular_probability = m_specular_probability / USHORT_MAX;
         res.PDF = lerp(diffuse_eval.PDF, specular_eval.PDF, specular_probability);
@@ -204,7 +210,7 @@ public:
             float coat_probability = m_coat_probability / USHORT_MAX;
             float coat_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
             BSDFResponse coat_eval = BSDFs::GGX_R::evaluate_with_PDF(coat_alpha, COAT_SPECULARITY, wo, wi);
-            res.reflectance += m_coat_scale * coat_eval.reflectance;
+            res.reflectance += m_coat_energy_loss_adjustment * m_coat_scale * coat_eval.reflectance;
             res.PDF = lerp(res.PDF, coat_eval.PDF, coat_probability);
         }
 
@@ -237,11 +243,11 @@ public:
             bsdf_sample.PDF *= (1 - coat_probability) * (1 - specular_probability);
         } else if (sample_specular) {
             bsdf_sample = BSDFs::GGX_R::sample(specular_alpha, m_specularity, wo, make_float2(random_sample));
-            bsdf_sample.reflectance *= m_coat_transmission;
+            bsdf_sample.reflectance *= m_specular_energy_loss_adjustment * m_coat_transmission;
             bsdf_sample.PDF *= (1 - coat_probability) * specular_probability;
         } else {
             bsdf_sample = BSDFs::GGX_R::sample(coat_alpha, COAT_SPECULARITY, wo, make_float2(random_sample));
-            bsdf_sample.reflectance *= m_coat_scale;
+            bsdf_sample.reflectance *= m_coat_energy_loss_adjustment * m_coat_scale;
             bsdf_sample.PDF *= coat_probability;
         }
 
@@ -259,13 +265,13 @@ public:
         if (!sample_specular) {
             // Evaluate specular layer as well.
             BSDFResponse specular_response = BSDFs::GGX_R::evaluate_with_PDF(specular_alpha, m_specularity, wo, bsdf_sample.direction);
-            bsdf_sample.reflectance += specular_response.reflectance * m_coat_transmission;
+            bsdf_sample.reflectance += specular_response.reflectance * m_specular_energy_loss_adjustment * m_coat_transmission;
             bsdf_sample.PDF += (1 - coat_probability) * specular_probability * specular_response.PDF;
         }
         if (!sample_coat && m_coat_scale > 0) {
             // Evaluate coat layer as well.
             BSDFResponse coat_response = BSDFs::GGX_R::evaluate_with_PDF(coat_alpha, COAT_SPECULARITY, wo, bsdf_sample.direction);
-            bsdf_sample.reflectance += m_coat_scale * coat_response.reflectance;
+            bsdf_sample.reflectance += m_coat_energy_loss_adjustment * m_coat_scale * coat_response.reflectance;
             bsdf_sample.PDF += coat_probability * coat_response.PDF;
         }
 
@@ -274,8 +280,8 @@ public:
 
     // Estimate the directional-hemispherical reflectance function.
     __inline_dev__ optix::float3 rho(float abs_cos_theta) const {
-        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness) * m_coat_transmission;
-        float single_bounce_coat_rho = m_coat_scale * SpecularRho::fetch(abs_cos_theta, m_coat_roughness).rho(COAT_SPECULARITY);
+        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, m_roughness) * m_specular_energy_loss_adjustment * m_coat_transmission;
+        float single_bounce_coat_rho = m_coat_energy_loss_adjustment * m_coat_scale * SpecularRho::fetch(abs_cos_theta, m_coat_roughness).rho(COAT_SPECULARITY);
         return m_diffuse_tint + specular_rho + single_bounce_coat_rho;
     }
 };

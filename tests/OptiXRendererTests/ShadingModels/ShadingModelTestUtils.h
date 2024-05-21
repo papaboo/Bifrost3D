@@ -45,7 +45,7 @@ Material coated_plastic_parameters() {
 
 template <typename ShadingModel>
 BSDFTestUtils::RhoResult directional_hemispherical_reflectance_function(ShadingModel shading_model, float3 wo) {
-    unsigned int sample_count = 4096u;
+    unsigned int sample_count = 8192u;
     return BSDFTestUtils::directional_hemispherical_reflectance_function(shading_model, wo, sample_count);
 }
 
