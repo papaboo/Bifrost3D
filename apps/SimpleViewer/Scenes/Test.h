@@ -237,7 +237,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
         };
 
         const TintRoughness rubber_tint = { 3, 3, 3, 192 };
-        const TintRoughness metal_tint = { 244, 163, 135, 0 };
+        const TintRoughness metal_tint = { 255, 255, 255, 0 };
 
         const int size = 1024;
         const int metal_streak_count = 5;
@@ -266,7 +266,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
             }
         }
 
-        Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 0.75f, 0.04f);
+        Materials::Data material_data = Materials::Data::create_dielectric(copper_tint, 0.75f, 0.04f);
         material_data.tint_roughness_texture_ID = Textures::create2D(tint_roughness.get_ID());
         material_data.metallic = 1.0f;
         material_data.metallic_texture_ID = Textures::create2D(metalness.get_ID());
@@ -296,7 +296,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
 
         Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.005f, 0.01f, 0.25f), 0.05f, 0.04f);
         material_data.coverage_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
-        material_data.flags = MaterialFlag::Cutout;
+        material_data.flags = { MaterialFlag::Cutout, MaterialFlag::ThinWalled };
         MaterialID material_ID = Materials::create("Plastic", material_data);
 
         Transform transform = Transform(Vector3f(3.0f, 0.35f, 0.0f), Quaternionf::identity(), 0.7f);
