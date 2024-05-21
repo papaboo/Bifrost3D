@@ -27,18 +27,6 @@ public:
     __inline_all__ DiffuseShading(optix::float3 tint)
         : m_tint(tint) { }
 
-    __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
-        if (!same_hemisphere(wo, wi))
-            return { 0, 0, 0 };
-        return BSDFs::Lambert::evaluate(m_tint, wo, wi);
-    }
-
-    __inline_all__ float PDF(optix::float3 wo, optix::float3 wi) const {
-        if (!same_hemisphere(wo, wi))
-            return 0;
-        return BSDFs::Lambert::PDF(wo, wi);
-    }
-
     __inline_all__ BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
         if (!same_hemisphere(wo, wi))
             return BSDFResponse::none();

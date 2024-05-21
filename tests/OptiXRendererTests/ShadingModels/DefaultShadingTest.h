@@ -31,10 +31,6 @@ public:
     DefaultShadingWrapper(const Material& material_params, float cos_theta)
         : m_material_params(material_params), m_cos_theta(cos_theta), m_shading_model(material_params, cos_theta) {}
 
-    optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const { return m_shading_model.evaluate(wo, wi); }
-
-    float PDF(optix::float3 wo, optix::float3 wi) const { return m_shading_model.PDF(wo, wi); }
-
     BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const { return m_shading_model.evaluate_with_PDF(wo, wi); }
 
     BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const { return m_shading_model.sample(wo, random_sample); }
@@ -114,7 +110,7 @@ GTEST_TEST(DefaultShadingModel, function_consistency) {
         for (float roughness : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
             material_params.roughness = roughness;
             auto shading_model = DefaultShadingWrapper(material_params, wo.z);
-            ShadingModelTestUtils::BSDF_consistency_test(shading_model, wo, 32);
+            ShadingModelTestUtils::consistency_test(shading_model, wo, 32);
         }
     };
 
@@ -137,7 +133,7 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
         { // Test that incident reflectivity is red.
             float3 wo = make_float3(0.0f, 0.0f, 1.0f);
             auto material = DefaultShading(material_params, wo.z);
-            float3 weight = material.evaluate(wo, wo);
+            float3 weight = material.evaluate_with_PDF(wo, wo).reflectance;
             EXPECT_GT(weight.x, 0.0f);
             EXPECT_FLOAT_EQ_EPS(weight.y, 0.0f, 1e-6f);
             EXPECT_FLOAT_EQ_EPS(weight.z, 0.0f, 1e-6f);
@@ -147,7 +143,7 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
             float3 wo = normalize(make_float3(0.0f, 1.0f, 0.001f));
             float3 wi = normalize(make_float3(0.0f, -1.0f, 0.001f));
             auto material = DefaultShading(material_params, wo.z);
-            float3 weight = material.evaluate(wo, wi);
+            float3 weight = material.evaluate_with_PDF(wo, wi).reflectance;
             EXPECT_GT(weight.x, 0.99f);
             EXPECT_FLOAT_EQ(weight.x, weight.y);
             EXPECT_FLOAT_EQ(weight.x, weight.z);
@@ -160,7 +156,7 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
         { // Test that incident reflectivity equals a scaled tint.
             float3 wo = make_float3(0.0f, 0.0f, 1.0f);
             auto material = DefaultShading(material_params, wo.z);
-            float3 weight = material.evaluate(wo, wo);
+            float3 weight = material.evaluate_with_PDF(wo, wo).reflectance;
             float scale = material_params.tint.x / weight.x;
             EXPECT_FLOAT3_EQ_EPS(scale * weight, material_params.tint, 1e-6f);
         }
@@ -169,7 +165,7 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
             float3 wo = normalize(make_float3(0.0f, 1.0f, 0.001f));
             float3 wi = normalize(make_float3(0.0f, -1.0f, 0.001f));
             auto material = DefaultShading(material_params, wo.z);
-            float3 weight = material.evaluate(wo, wi);
+            float3 weight = material.evaluate_with_PDF(wo, wi).reflectance;
             EXPECT_GT(weight.y, 0.99f);
             EXPECT_FLOAT_EQ_PCT(weight.y, weight.x, 0.01f);
             EXPECT_FLOAT_EQ_PCT(weight.y, weight.z, 0.01f);

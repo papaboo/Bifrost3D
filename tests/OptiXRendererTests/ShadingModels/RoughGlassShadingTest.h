@@ -9,6 +9,7 @@
 #ifndef _OPTIXRENDERER_SHADING_MODEL_ROUGH_GLASS_TEST_H_
 #define _OPTIXRENDERER_SHADING_MODEL_ROUGH_GLASS_TEST_H_
 
+#include <ShadingModels/ShadingModelTestUtils.h>
 #include <Utils.h>
 
 #include <Bifrost/Math/Utils.h>
@@ -44,10 +45,6 @@ public:
 
     RoughGlassShadingWrapper(const Material& material_params, float cos_theta)
         : m_material_params(material_params), m_cos_theta(cos_theta), m_shading_model(material_params, cos_theta) {}
-
-    optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const { return m_shading_model.evaluate(wo, wi); }
-
-    float PDF(optix::float3 wo, optix::float3 wi) const { return m_shading_model.PDF(wo, wi); }
 
     BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const { return m_shading_model.evaluate_with_PDF(wo, wi); }
 
@@ -92,7 +89,7 @@ GTEST_TEST(RoughGlassShadingModel, function_consistency) {
         for (float roughness : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
             material_params.roughness = roughness;
             auto shading_model = RoughGlassShadingWrapper(material_params, wo.z);
-            ShadingModelTestUtils::BSDF_consistency_test(shading_model, wo, 32);
+            ShadingModelTestUtils::consistency_test(shading_model, wo, 32);
         }
     }
 }
@@ -108,7 +105,7 @@ GTEST_TEST(RoughGlassShadingModel, Fresnel) {
     { // Test that incident reflectivity is black.
         float3 wo = make_float3(0.0f, 0.0f, 1.0f);
         auto shading_model = RoughGlassShading(material_params, wo.z);
-        float3 weight = shading_model.evaluate(wo, wo);
+        float3 weight = shading_model.evaluate_with_PDF(wo, wo).reflectance;
         EXPECT_FLOAT_EQ(weight.x, 0.0f);
         EXPECT_FLOAT_EQ(weight.y, 0.0f);
         EXPECT_FLOAT_EQ(weight.z, 0.0f);
@@ -118,7 +115,7 @@ GTEST_TEST(RoughGlassShadingModel, Fresnel) {
         float3 wo = normalize(make_float3(0.0f, 1.0f, 0.001f));
         float3 wi = normalize(make_float3(0.0f, -1.0f, 0.001f));
         auto shading_model = RoughGlassShading(material_params, wo.z);
-        float3 weight = shading_model.evaluate(wo, wi);
+        float3 weight = shading_model.evaluate_with_PDF(wo, wi).reflectance;
         EXPECT_GT(weight.x, 0.99f);
         EXPECT_FLOAT_EQ(weight.x, weight.y);
         EXPECT_FLOAT_EQ(weight.x, weight.z);
