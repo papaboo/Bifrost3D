@@ -61,14 +61,6 @@ public:
     }
 #endif
 
-    __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
-        return BSDFs::GGX::evaluate(m_tint, m_ggx_alpha, m_specularity, m_ior_i_over_o, wo, wi);
-    }
-
-    __inline_all__ float PDF(optix::float3 wo, optix::float3 wi) const {
-        return BSDFs::GGX::PDF(m_ggx_alpha, m_specularity, m_ior_i_over_o, wo, wi);
-    }
-
     __inline_all__ BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
         return BSDFs::GGX::evaluate_with_PDF(m_tint, m_ggx_alpha, m_specularity, m_ior_i_over_o, wo, wi);
     }
