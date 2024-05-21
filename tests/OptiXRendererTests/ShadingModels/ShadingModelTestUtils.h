@@ -50,8 +50,20 @@ BSDFTestUtils::RhoResult directional_hemispherical_reflectance_function(ShadingM
 }
 
 template <typename ShadingModel>
-void BSDF_consistency_test(ShadingModel shading_model, float3 wo, unsigned int sample_count) {
-    BSDFTestUtils::BSDF_consistency_test(shading_model, wo, sample_count);
+void consistency_test(ShadingModel shading_model, float3 wo, unsigned int sample_count) {
+    for (unsigned int i = 0u; i < sample_count; ++i) {
+        float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
+        BSDFSample sample = shading_model.sample(wo, rng_sample);
+
+        EXPECT_GE(sample.PDF, 0.0f) << shading_model.to_string();
+        if (is_PDF_valid(sample.PDF)) {
+            EXPECT_GE(sample.reflectance.x, 0.0f) << shading_model.to_string();
+
+            BSDFResponse response = shading_model.evaluate_with_PDF(wo, sample.direction);
+            EXPECT_COLOR_EQ_PCT(sample.reflectance, response.reflectance, 0.00002f) << shading_model.to_string();
+            EXPECT_FLOAT_EQ_PCT(sample.PDF, response.PDF, 0.00002f) << shading_model.to_string();
+        }
+    }
 }
 
 } // NS ShadingModelTestUtils

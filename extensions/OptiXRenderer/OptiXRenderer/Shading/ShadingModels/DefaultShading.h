@@ -183,52 +183,6 @@ public:
 
     __inline_all__ float get_roughness() const { return m_roughness; }
 
-    __inline_all__ optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
-        using namespace optix;
-
-        // Return no contribution if the light is on the backside.
-        if (wo.z < 0.000001f || wi.z < 0.000001f)
-            return make_float3(0.0f);
-
-        optix::float3 reflectance = BSDFs::Lambert::evaluate(m_diffuse_tint, wo, wi);
-        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
-        reflectance += BSDFs::GGX_R::evaluate(ggx_alpha, m_specularity, wo, wi) * m_coat_transmission;
-
-        if (m_coat_scale > 0)
-        {
-            float coat_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
-            float coat_f = m_coat_scale * BSDFs::GGX_R::evaluate(coat_alpha, COAT_SPECULARITY, wo, wi);
-            reflectance += make_float3(coat_f, coat_f, coat_f);
-        }
-
-        return reflectance;
-    }
-
-    __inline_all__ float PDF(optix::float3 wo, optix::float3 wi) const {
-        using namespace optix;
-
-        // Return no contribution if the light is on the backside.
-        if (wo.z < 0.000001f || wi.z < 0.000001f)
-            return 0.0f;
-
-        float specular_probability = m_specular_probability / USHORT_MAX;
-
-        // Merge base PDFs based on the specular probability.
-        float diffuse_PDF = BSDFs::Lambert::PDF(wo, wi);
-        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
-        float specular_PDF = BSDFs::GGX_R::PDF(ggx_alpha, wo, wi);
-        float PDF = lerp(diffuse_PDF, specular_PDF, specular_probability);
-        
-        if (m_coat_scale > 0) {
-            float coat_probability = m_coat_probability / USHORT_MAX;
-            float coat_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
-            float coat_PDF = BSDFs::GGX_R::PDF(coat_alpha, wo, wi);
-            PDF = lerp(PDF, coat_PDF, coat_probability);
-        }
-        
-        return PDF;
-    }
-
     __inline_all__ BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
         using namespace optix;
 
@@ -295,7 +249,7 @@ public:
         if (!is_PDF_valid(bsdf_sample.PDF))
             return bsdf_sample;
 
-        // Apply fresnel and compute contribution of the material components not sampled.
+        // Compute contribution of the material components not sampled.
         if (!sample_diffuse) {
             // Evaluate diffuse layer as well.
             BSDFResponse diffuse_response = BSDFs::Lambert::evaluate_with_PDF(m_diffuse_tint, wo, bsdf_sample.direction);
