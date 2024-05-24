@@ -28,7 +28,11 @@ if (TARGET OptiXRenderer)
     ShadingModels/UtilsTest.h
   )
 
-  add_executable(${PROJECT_NAME} ${SRCS} ${BSDFS_SRCS} ${LIGHTSOURCES_SRCS} ${SHADING_MODELS_SRCS})
+  set(SHADING_MODELS_LAYERS_SRCS
+    ShadingModels/Layers/GGXReflectionTest.h
+  )
+
+  add_executable(${PROJECT_NAME} ${SRCS} ${BSDFS_SRCS} ${LIGHTSOURCES_SRCS} ${SHADING_MODELS_SRCS} ${SHADING_MODELS_LAYERS_SRCS})
 
   target_include_directories(${PROJECT_NAME} PRIVATE .)
 
@@ -42,6 +46,7 @@ if (TARGET OptiXRenderer)
   source_group("BSDFs" FILES ${BSDFS_SRCS})
   source_group("LightSources" FILES ${LIGHTSOURCES_SRCS})
   source_group("ShadingModels" FILES ${SHADING_MODELS_SRCS})
+  source_group("ShadingModels/Layers" FILES ${SHADING_MODELS_LAYERS_SRCS})
 
   set_target_properties(${PROJECT_NAME} PROPERTIES
     FOLDER "Tests"

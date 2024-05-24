@@ -16,6 +16,7 @@
 #include <LightSources/SphereLightTest.h>
 #include <LightSources/SpotLightTest.h>
 
+#include <ShadingModels/Layers/GGXReflectionTest.h>
 #include <ShadingModels/DefaultShadingTest.h>
 #include <ShadingModels/RoughGlassShadingTest.h>
 #include <ShadingModels/UtilsTest.h>

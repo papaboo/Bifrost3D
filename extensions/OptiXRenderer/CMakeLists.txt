@@ -60,6 +60,10 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
     OptiXRenderer/Shading/ShadingModels/Utils.h
   )
 
+  set(SHADING_SHADING_MODELS_LAYERS_SRC
+    OptiXRenderer/Shading/ShadingModels/Layers/GGXReflection.h
+  )
+
   # Add the path to the ptx to a define.
   set(CUDA_GENERATED_OUTPUT_DIR ${BIFROST_DATA_OUTPUT_DIRECTORY}/OptiXRenderer/ptx)
   file(MAKE_DIRECTORY ${CUDA_GENERATED_OUTPUT_DIR})
@@ -78,6 +82,7 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
     ${SHADING_BSDFS_SRC}
     ${SHADING_LIGHTSOURCES_SRC}
     ${SHADING_SHADING_MODELS_SRC}
+    ${SHADING_SHADING_MODELS_LAYERS_SRC}
     ${LINK_FILE}
   )
 
@@ -86,6 +91,7 @@ if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
   source_group("Shading\\BSDFs" FILES ${SHADING_BSDFS_SRC})
   source_group("Shading\\LightSources" FILES ${SHADING_LIGHTSOURCES_SRC})
   source_group("Shading\\ShadingModels" FILES ${SHADING_SHADING_MODELS_SRC})
+  source_group("Shading\\ShadingModels\\Layers" FILES ${SHADING_SHADING_MODELS_LAYERS_SRC})
   source_group("Shading\\ptx" FILES ${_GENERATED_FILES}) # Add the ptx files to a source group.
 
   target_include_directories(${LIBRARY_NAME}

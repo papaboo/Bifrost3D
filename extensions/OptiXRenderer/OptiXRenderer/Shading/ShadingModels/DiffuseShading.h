@@ -24,6 +24,8 @@ private:
 
 public:
 
+    DiffuseShading() = default;
+
     __inline_all__ DiffuseShading(optix::float3 tint)
         : m_tint(tint) { }
 
