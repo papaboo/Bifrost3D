@@ -61,7 +61,7 @@ GTEST_TEST(GGX_R, power_conservation) {
         for (float alpha : { 0.0f, 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
             auto ggx = GGXReflectionWrapper(alpha);
             auto res = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 1024u);
-            EXPECT_LE(res.reflectance, 1.0f);
+            EXPECT_FLOAT3_LE(res.reflectance, 1.0f);
         }
     }
 }
@@ -148,14 +148,14 @@ GTEST_TEST(GGX_R, validate_ggx_rho_precomputations) {
             float alpha = Shading::BSDFs::GGX::alpha_from_roughness(roughness);
 
             auto no_specularity_ggx = GGXReflectionWrapper(alpha, 0.0f);
-            auto expected_no_specularity_rho = BSDFTestUtils::directional_hemispherical_reflectance_function(no_specularity_ggx, wo, sample_count);
+            float expected_no_specularity_rho = BSDFTestUtils::directional_hemispherical_reflectance_function(no_specularity_ggx, wo, sample_count).reflectance.x;
             float actual_no_specularity_rho = Rho::sample_GGX_with_fresnel(cos_theta, roughness);
-            EXPECT_FLOAT_EQ_EPS(expected_no_specularity_rho.reflectance, actual_no_specularity_rho, 0.0001f) << "for cos_theta: " << cos_theta << " and roughness: " << roughness;
+            EXPECT_FLOAT_EQ_EPS(expected_no_specularity_rho, actual_no_specularity_rho, 0.0001f) << "for cos_theta: " << cos_theta << " and roughness: " << roughness;
 
             auto full_specularity_ggx = GGXReflectionWrapper(alpha, 1.0f);
-            auto expected_full_specularity_rho = BSDFTestUtils::directional_hemispherical_reflectance_function(full_specularity_ggx, wo, sample_count);
+            float expected_full_specularity_rho = BSDFTestUtils::directional_hemispherical_reflectance_function(full_specularity_ggx, wo, sample_count).reflectance.x;
             float actual_full_specularity_rho = Rho::sample_GGX(cos_theta, roughness);
-            EXPECT_FLOAT_EQ_EPS(expected_full_specularity_rho.reflectance, actual_full_specularity_rho, 0.0001f) << "for cos_theta: " << cos_theta << " and roughness: " << roughness;
+            EXPECT_FLOAT_EQ_EPS(expected_full_specularity_rho, actual_full_specularity_rho, 0.0001f) << "for cos_theta: " << cos_theta << " and roughness: " << roughness;
         }
     }
 }
@@ -259,7 +259,7 @@ GTEST_TEST(GGX_T, power_conservation) {
             for (float alpha : { 0.0f, 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
                 auto ggx = GGXTransmissionWrapper(alpha, ior_i_over_o);
                 auto res = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 1024u);
-                EXPECT_LE(res.reflectance, 1.0f);
+                EXPECT_LE(res.reflectance.x, 1.0f);
             }
         }
 }
@@ -392,7 +392,7 @@ GTEST_TEST(GGX, power_conservation) {
             for (float alpha : { 0.0f, 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
                 auto ggx = GGXWrapper(alpha, 0.04f, ior_i_over_o);
                 auto res = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 1024u);
-                EXPECT_LE(res.reflectance, 1.0f);
+                EXPECT_FLOAT3_LE(res.reflectance, 1.0f);
             }
         }
 }
@@ -423,7 +423,7 @@ GTEST_TEST(GGX, reflection_reflectance_equals_GGX_R) {
             auto ggx_r_result = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx_r, wo, 2048);
 
             float cos_theta_direction = dot(ggx_result.mean_direction, ggx_r_result.mean_direction);
-            EXPECT_FLOAT_EQ_EPS(ggx_result.reflectance, ggx_r_result.reflectance, 0.001f) << ggx.to_string();
+            EXPECT_FLOAT3_EQ_EPS(ggx_result.reflectance, ggx_r_result.reflectance, 0.001f) << ggx.to_string();
             EXPECT_FLOAT_EQ_EPS(1.0f, cos_theta_direction, 0.002f) << ggx.to_string();
         }
     }
@@ -447,7 +447,7 @@ GTEST_TEST(GGX, transmission_reflectance_equals_GGX_T) {
                 auto ggx_t_result = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx_t, wo, 2 * 2048);
 
                 float cos_theta_direction = dot(ggx_result.mean_direction, ggx_t_result.mean_direction);
-                EXPECT_FLOAT_EQ_EPS(ggx_result.reflectance, ggx_t_result.reflectance, 0.0015f) << ggx.to_string();
+                EXPECT_FLOAT3_EQ_EPS(ggx_result.reflectance, ggx_t_result.reflectance, 0.0015f) << ggx.to_string();
                 EXPECT_FLOAT_EQ_EPS(1.0f, cos_theta_direction, 0.002f) << ggx.to_string();
             }
         }
@@ -469,7 +469,7 @@ GTEST_TEST(GGX, sample_according_to_specularity) {
             for (float ior_i_over_o : { 0.5f, 1.5f }) {
                 auto ggx = GGXWrapper(alpha, specularity, ior_i_over_o, black);
                 auto res = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 1024u);
-                EXPECT_FLOAT_EQ_EPS(specularity, res.reflectance, 0.00001f) << "alpha: " << alpha << ", cos_theta: " << cos_theta << ", specularity: " << specularity;
+                EXPECT_FLOAT_EQ_EPS(specularity, res.reflectance.x, 0.00001f) << "alpha: " << alpha << ", cos_theta: " << cos_theta << ", specularity: " << specularity;
             }
         }
     }
@@ -509,8 +509,6 @@ GTEST_TEST(GGX, fully_grazing_evaluates_to_black) {
         }
     }
 }
-
-
 
 } // NS OptiXRenderer
 

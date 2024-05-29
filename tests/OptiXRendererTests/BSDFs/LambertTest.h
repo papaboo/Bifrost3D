@@ -48,7 +48,7 @@ GTEST_TEST(Lambert, power_conservation) {
     optix::float3 wo = optix::normalize(optix::make_float3(1.0f, 1.0f, 1.0f));
     LambertWrapper lambert = LambertWrapper();
     auto res = BSDFTestUtils::directional_hemispherical_reflectance_function(lambert, wo, 1024u);
-    EXPECT_LE(res.reflectance, 1.0f);
+    EXPECT_FLOAT3_LE(res.reflectance, 1.0f);
 }
 
 GTEST_TEST(Lambert, Helmholtz_reciprocity) {
