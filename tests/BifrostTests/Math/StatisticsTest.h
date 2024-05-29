@@ -22,8 +22,7 @@ GTEST_TEST(Math_Statistics, accumulate) {
     EXPECT_EQ(5, stats.sample_count);
     EXPECT_FLOAT_EQ(1.0f, stats.minimum);
     EXPECT_FLOAT_EQ(5.0f, stats.maximum);
-    EXPECT_FLOAT_EQ(3.0f, stats.mean);
-    EXPECT_FLOAT_EQ(11.0f, stats.m2);
+    EXPECT_FLOAT_EQ(3.0f, stats.mean());
     EXPECT_FLOAT_EQ(2.0f, stats.variance());
 }
 
@@ -35,8 +34,7 @@ GTEST_TEST(Math_Statistics, adding) {
     EXPECT_EQ(5, stats.sample_count);
     EXPECT_FLOAT_EQ(1.0f, float(stats.minimum));
     EXPECT_FLOAT_EQ(5.0f, float(stats.maximum));
-    EXPECT_FLOAT_EQ(3.0f, float(stats.mean));
-    EXPECT_FLOAT_EQ(11.0f, float(stats.m2));
+    EXPECT_FLOAT_EQ(3.0f, float(stats.mean()));
     EXPECT_FLOAT_EQ(2.0f, float(stats.variance()));
 }
 
@@ -48,8 +46,7 @@ GTEST_TEST(Math_Statistics, merging) {
     EXPECT_EQ(5, stats.sample_count);
     EXPECT_FLOAT_EQ(1.0f, float(stats.minimum));
     EXPECT_FLOAT_EQ(5.0f, float(stats.maximum));
-    EXPECT_FLOAT_EQ(3.0f, float(stats.mean));
-    EXPECT_FLOAT_EQ(11.0f, float(stats.m2));
+    EXPECT_FLOAT_EQ(3.0f, float(stats.mean()));
     EXPECT_FLOAT_EQ(2.0f, float(stats.variance()));
 }
 
