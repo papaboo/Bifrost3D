@@ -180,7 +180,7 @@ void test_encoding(const std::string& name, EncodeDecode encode_decode) {
 
     printf("\nStats %s:\n", name.c_str());
     printf("  Min: %f\n", stats.minimum);
-    printf("  Mean: %f\n", stats.mean);
+    printf("  Mean: %f\n", stats.mean());
     printf("  Max: %f\n", stats.maximum);
     printf("  Std dev: %f\n", stats.standard_deviation());
 }

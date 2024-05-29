@@ -23,15 +23,15 @@ template <typename T>
 struct Statistics final {
     T minimum;
     T maximum;
-    T mean;
-    T m2;
+    T sum;
+    T sum_squared;
     size_t sample_count;
 
     //---------------------------------------------------------------------------------------------
     // Constructors
     //---------------------------------------------------------------------------------------------
     Statistics()
-        : minimum(T(-1e30)), maximum(T(1e30)), mean(0), m2(0), sample_count(0) {}
+        : minimum(T(-1e30)), maximum(T(1e30)), sum(0), sum_squared(0), sample_count(0) {}
 
     template <typename RandomAccessItr, class UnaryPredicate>
     Statistics(RandomAccessItr first, RandomAccessItr last, UnaryPredicate predicate) {
@@ -52,8 +52,8 @@ struct Statistics final {
         }
         means -= sample_count; means_sqrd -= sample_count;
 
-        mean = T(sort_and_pairwise_summation(means, means + sample_count) / sample_count);
-        m2 = T(sort_and_pairwise_summation(means_sqrd, means_sqrd + sample_count) / sample_count);
+        sum = T(sort_and_pairwise_summation(means, means + sample_count));
+        sum_squared = T(sort_and_pairwise_summation(means_sqrd, means_sqrd + sample_count));
 
         delete[] means;
         delete[] means_sqrd;
@@ -66,8 +66,13 @@ struct Statistics final {
     //---------------------------------------------------------------------------------------------
     // Getters
     //---------------------------------------------------------------------------------------------
-    __always_inline__ T rms() const { return (T)sqrt(m2); }
-    __always_inline__ T variance() const { return m2 - mean * mean; }
+    __always_inline__ T mean() const { return sum / sample_count; }
+    __always_inline__ T rms() const { return (T)sqrt(sum_squared / sample_count); }
+    __always_inline__ T variance() const {
+        T m2 = sum_squared / sample_count;
+        T m1 = mean();
+        return m2 - m1 * m1;
+    }
     __always_inline__ T standard_deviation() const { return (T)sqrt(variance()); }
 
     //---------------------------------------------------------------------------------------------
@@ -77,20 +82,18 @@ struct Statistics final {
         minimum = std::min(minimum, v);
         maximum = std::max(maximum, v);
 
-        size_t total_sample_count = sample_count + 1;
-        mean = (mean * sample_count + v) / total_sample_count;
-        m2 = (m2 * sample_count + v * v) / total_sample_count;
-        sample_count = total_sample_count;
+        sum += v;
+        sum_squared += v * v;
+        sample_count += 1;
     }
 
     inline void merge_with(Statistics other) {
         minimum = std::min(minimum, other.minimum);
         maximum = std::max(maximum, other.maximum);
         
-        size_t total_sample_count = sample_count + other.sample_count;
-        mean = (mean * sample_count + other.mean * other.sample_count) / total_sample_count;
-        m2 = (m2 * sample_count + other.m2 * other.sample_count) / total_sample_count;
-        sample_count = total_sample_count;
+        sum += other.sum;
+        sum_squared += other.sum_squared;
+        sample_count += other.sample_count;
     }
 
     template <typename RandomAccessItr>
