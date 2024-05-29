@@ -12,8 +12,6 @@
 #include <ShadingModels/ShadingModelTestUtils.h>
 #include <Utils.h>
 
-#include <Bifrost/Math/Utils.h>
-
 #include <OptiXRenderer/RNG.h>
 #include <OptiXRenderer/Shading/ShadingModels/RoughGlassShading.h>
 #include <OptiXRenderer/Utils.h>
@@ -40,11 +38,10 @@ Material frosted_glass_parameters() {
 class RoughGlassShadingWrapper {
 public:
     Material m_material_params;
-    float m_cos_theta;
     Shading::ShadingModels::RoughGlassShading m_shading_model;
 
     RoughGlassShadingWrapper(const Material& material_params, float cos_theta)
-        : m_material_params(material_params), m_cos_theta(cos_theta), m_shading_model(material_params, cos_theta) {}
+        : m_material_params(material_params), m_shading_model(material_params, cos_theta) {}
 
     BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const { return m_shading_model.evaluate_with_PDF(wo, wi); }
 
@@ -52,10 +49,9 @@ public:
 
     std::string to_string() const {
         std::ostringstream out;
-        out << "Default shading:" << std::endl;
+        out << "Rough glass shading:" << std::endl;
         out << "  Tint: " << m_material_params.tint.x << ", " << m_material_params.tint.y << ", " << m_material_params.tint.z << std::endl;
         out << "  Roughness:" << m_material_params.roughness << std::endl;
-        out << "  Metalness:" << m_material_params.metallic << std::endl;
         return out.str();
     }
 };
@@ -72,8 +68,8 @@ GTEST_TEST(RoughGlassShadingModel, power_conservation) {
         for (float cos_theta : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
             const optix::float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
             auto shading_model = RoughGlassShading(material_params, wo.z);
-            float rho = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
-            EXPECT_LE(rho, 1.0f) << " with roughness " << roughness << " and cos_theta " << cos_theta;
+            auto rho = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
+            EXPECT_LE(rho.x, 1.0f) << " with roughness " << roughness << " and cos_theta " << cos_theta;
         }
     }
 }

@@ -11,6 +11,8 @@
 
 #include <Utils.h>
 
+#include <Bifrost/Math/Statistics.h>
+
 #include <OptiXRenderer/RNG.h>
 #include <OptiXRenderer/Utils.h>
 
@@ -22,39 +24,47 @@ namespace BSDFTestUtils {
 using namespace optix;
 
 struct RhoResult {
-    float reflectance;
-    float std_dev;
+    optix::float3 reflectance;
+    optix::float3 std_dev;
     optix::float3 mean_direction;
 };
 
 template <typename BSDFModel>
 RhoResult directional_hemispherical_reflectance_function(BSDFModel bsdf_model, float3 wo, unsigned int sample_count) {
-    double summed_reflectance = 0.0;
-    double summed_reflectance_squared = 0.0;
-    optix::double3 summed_directions = { 0.0, 0.0, 0.0 };
+    using namespace Bifrost::Math;
+    using namespace optix;
+
+    Statistics<double> reflectance_statistics[3] = { Statistics<double>(), Statistics<double>(), Statistics<double>() };
+    double3 summed_directions = { 0.0, 0.0, 0.0 };
     for (unsigned int i = 0u; i < sample_count; ++i) {
         float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
         BSDFSample sample = bsdf_model.sample(wo, rng_sample);
-        if (is_PDF_valid(sample.PDF))
-        {
-            float reflectance = sample.reflectance.x * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
-            summed_reflectance += reflectance;
-            summed_reflectance_squared += reflectance * reflectance;
 
-            float direction_weight = sample.reflectance.x / sample.PDF;
-            summed_directions = optix::make_double3(summed_directions.x + direction_weight * sample.direction.x,
-                                                    summed_directions.y + direction_weight * sample.direction.y,
-                                                    summed_directions.z + direction_weight * sample.direction.z);
+        float3 reflectance = { 0, 0, 0 };
+        if (is_PDF_valid(sample.PDF)) {
+            reflectance = sample.reflectance * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
+
+            float direction_weight = sum(sample.reflectance) / sample.PDF;
+            summed_directions = { summed_directions.x + direction_weight * sample.direction.x,
+                                  summed_directions.y + direction_weight * sample.direction.y,
+                                  summed_directions.z + direction_weight * sample.direction.z };
         }
+
+        reflectance_statistics[0].add(reflectance.x);
+        reflectance_statistics[1].add(reflectance.y);
+        reflectance_statistics[2].add(reflectance.z);
     }
 
-    double mean_reflectance = summed_reflectance / sample_count;
-    double mean_reflectance_squared = summed_reflectance_squared / sample_count;
-    double reflectance_variance = abs(mean_reflectance_squared - mean_reflectance * mean_reflectance);
+    float3 mean_reflectance = { (float)reflectance_statistics[0].mean(),
+                                (float)reflectance_statistics[1].mean(),
+                                (float)reflectance_statistics[2].mean() };
+    float3 reflectance_std_dev = { (float)reflectance_statistics[0].standard_deviation(),
+                                   (float)reflectance_statistics[1].standard_deviation(),
+                                   (float)reflectance_statistics[2].standard_deviation() };
 
-    optix::float3 direction = { float(summed_directions.x), float(summed_directions.y), float(summed_directions.z) };
+    float3 direction = { float(summed_directions.x), float(summed_directions.y), float(summed_directions.z) };
 
-    return { float(mean_reflectance), float(sqrt(reflectance_variance)), optix::normalize(direction) };
+    return { mean_reflectance, reflectance_std_dev, normalize(direction) };
 }
 
 template <typename BSDFModel>
@@ -91,16 +101,21 @@ void BSDF_consistency_test(BSDFModel bsdf_model, float3 wo, unsigned int sample_
 }
 
 template <typename BSDFModel>
-void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count, float expected_rho_std_dev, float epsilon = 0.01f) {
-    float total_std_dev = 0.0f;
+void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count, optix::float3 expected_rho_std_dev, float epsilon = 0.01f) {
+    optix::float3 total_std_dev = { 0, 0, 0 };
     for (float cos_theta : {0.1f, 0.3f, 0.5f, 0.7f, 0.9f, 1.0f}) {
         float3 wo = wo_from_cos_theta(cos_theta);
         auto rho = directional_hemispherical_reflectance_function(bsdf_model, wo, sample_count);
-        float rho_std_dev = rho.std_dev / rho.reflectance; // Normalize error wrt reflectance, so dark BSDFs don't automatically have a smaller error
+        optix::float3 rho_std_dev = rho.std_dev / rho.reflectance; // Normalize error wrt reflectance, so dark BSDFs don't automatically have a smaller error
         total_std_dev += rho_std_dev;
     }
-    float average_std_dev = total_std_dev / 6;
-    EXPECT_FLOAT_EQ_EPS(average_std_dev, expected_rho_std_dev, epsilon) << bsdf_model.to_string();
+    optix::float3 average_std_dev = total_std_dev / 6;
+    EXPECT_FLOAT3_EQ_EPS(average_std_dev, expected_rho_std_dev, epsilon) << bsdf_model.to_string();
+}
+
+template <typename BSDFModel>
+void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count, float expected_rho_std_dev, float epsilon = 0.01f) {
+    BSDF_sampling_variance_test(bsdf_model, sample_count, optix::make_float3(expected_rho_std_dev), epsilon);
 }
 
 float3 wo_from_cos_theta(float cos_theta) {

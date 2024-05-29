@@ -12,8 +12,6 @@
 #include <ShadingModels/ShadingModelTestUtils.h>
 #include <Utils.h>
 
-#include <Bifrost/Math/Utils.h>
-
 #include <OptiXRenderer/RNG.h>
 #include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>
 #include <OptiXRenderer/Utils.h>
@@ -67,7 +65,7 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
         const float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
         auto shading_model = DefaultShading(material_params, wo.z);
         auto result = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo);
-        EXPECT_LE(result.reflectance, 1.00084f) << "cos_theta: " << cos_theta;
+        EXPECT_FLOAT3_LE(result.reflectance, 1.00084f) << "cos_theta: " << cos_theta;
     }
 }
 
@@ -187,13 +185,13 @@ GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation
         material_params.coat = coat;
         material_params.coat_roughness = coat_roughness;
         auto shading_model = DefaultShading(material_params, wo.z);
-        float sample_mean = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
+        float3 sample_mean = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
 
-        float rho = shading_model.rho(wo.z).x;
+        float3 rho = shading_model.rho(wo.z);
 
         // The error is slightly higher for low roughness materials.
         float error_percentage = 0.015f * (2 - roughness) * (2 - coat_roughness);
-        EXPECT_FLOAT_EQ_PCT(float(sample_mean), rho, error_percentage) << "Material params: roughness: " << roughness << ", metallic: " << metallic << ", coat: " << coat << ", coat roughness: " << coat_roughness;
+        EXPECT_FLOAT3_EQ_PCT(sample_mean, rho, error_percentage) << "Material params: roughness: " << roughness << ", metallic: " << metallic << ", coat: " << coat << ", coat roughness: " << coat_roughness;
     };
 
     const float3 incident_wo = make_float3(0.0f, 0.0f, 1.0f);

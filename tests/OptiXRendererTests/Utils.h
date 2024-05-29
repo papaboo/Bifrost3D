@@ -55,6 +55,18 @@ inline bool equal_float3_percentage(optix::float3 expected, optix::float3 actual
 #define EXPECT_COLOR_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(equal_float3_percentage, expected, actual, percentage)
 #define EXPECT_FLOAT3_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(equal_float3_percentage, expected, actual, percentage)
 
+inline bool float3_less_or_equal(optix::float3 value, float threshold) {
+    return value.x <= threshold && value.y <= threshold && value.z <= threshold;
+}
+
+#define EXPECT_FLOAT3_LE(value, threshold) EXPECT_PRED2(float3_less_or_equal, value, threshold)
+
+inline bool float3_greater_or_equal(optix::float3 value, float threshold) {
+    return value.x >= threshold && value.y >= threshold && value.z >= threshold;
+}
+
+#define EXPECT_FLOAT3_GE(value, threshold) EXPECT_PRED2(float3_greater_or_equal, value, threshold)
+
 inline bool equal_normal_eps(optix::float3 lhs, optix::float3 rhs, double epsilon) {
     using namespace optix;
 
