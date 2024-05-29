@@ -53,7 +53,7 @@ GTEST_TEST(OrenNayar, power_conservation) {
     for (float roughness : {0.0f, 0.2f, 0.4f, 0.6f, 0.8f, 1.0f}) {
         OrenNayarWrapper oren_nayar = OrenNayarWrapper(roughness);
         auto res = BSDFTestUtils::directional_hemispherical_reflectance_function(oren_nayar, wo, 1024u);
-        EXPECT_LE(res.reflectance, 1.0f);
+        EXPECT_FLOAT3_LE(res.reflectance, 1.0f);
     }
 }
 

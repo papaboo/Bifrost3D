@@ -143,8 +143,7 @@ GTEST_TEST(SpotLight, power_preservation_when_radius_changes) {
     for (float radius : { 0.0f, 1.0f, 2.0f, 4.0f }) {
         light.radius = radius;
         auto power_statistics = estimate_power(light, 1, UVs, MAX_LIGHT_SAMPLES);
-        // printf("Radius %.0f: Power %.3f, normalized std dev: %.3f\n", radius, power_statistics.mean, power_statistics.standard_deviation());
-        EXPECT_FLOAT_EQ_EPS(light.power.x, (float)power_statistics.mean, 0.0025f);
+        EXPECT_FLOAT_EQ_EPS(light.power.x, (float)power_statistics.mean(), 0.0025f);
     }
 }
 
@@ -164,8 +163,7 @@ GTEST_TEST(SpotLight, power_preservation_when_angle_changes) {
     for (float cos_angle : { 0.3f, 0.5f, 0.7f }) {
         light.cos_angle = cos_angle;
         auto power_statistics = estimate_power(light, 1, UVs, MAX_LIGHT_SAMPLES);
-        // printf("cos_angle %.3f: Power %.3f, normalized std dev: %.3f\n", cos_angle, power_statistics.mean, power_statistics.standard_deviation());
-        EXPECT_FLOAT_EQ_EPS(light.power.x, (float)power_statistics.mean, 0.0045f);
+        EXPECT_FLOAT_EQ_EPS(light.power.x, (float)power_statistics.mean(), 0.0045f);
     }
 }
 
