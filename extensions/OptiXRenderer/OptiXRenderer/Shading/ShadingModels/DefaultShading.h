@@ -112,7 +112,7 @@ private:
     //   when viewed head on and we need the transmission to affect the reflectance at grazing angles as well.
     //   Instead we store the transmission and scale the base layer's specular contribution by it when evaluating or sampling.
     __inline_all__ void setup_shading(optix::float3 tint, float roughness, float specularity, float metallic, float coat_scale, float coat_roughness, float abs_cos_theta_o,
-                                      float& coat_single_bounce_rho) {
+                                      float& coat_rho) {
         using namespace optix;
 
         float coat_modulated_roughness = modulate_roughness_under_coat(roughness, coat_roughness);
@@ -120,17 +120,17 @@ private:
 
         setup_base_layer(tint, roughness, specularity, metallic, abs_cos_theta_o);
 
-        coat_single_bounce_rho = 0.0f;
+        coat_rho = 0.0f;
         if (coat_scale > 0) {
             // Clear coat with fixed index of refraction of 1.5 / specularity of 0.04, representative of polyurethane and glass.
             m_coat_alpha = BSDFs::GGX::alpha_from_roughness(coat_roughness);
-            SpecularRho coat_rho = SpecularRho::fetch(abs_cos_theta_o, coat_roughness);
-            coat_single_bounce_rho = coat_scale * coat_rho.rho(COAT_SPECULARITY);
-            float lossless_coat_rho = coat_single_bounce_rho / coat_rho.full;
-            float coat_transmission = 1.0f - lossless_coat_rho;
+            SpecularRho coat_rho_computation = SpecularRho::fetch(abs_cos_theta_o, coat_roughness);
+            float coat_single_bounce_rho = coat_scale * coat_rho_computation.rho(COAT_SPECULARITY);
+            coat_rho = coat_single_bounce_rho / coat_rho_computation.full;
+            float coat_transmission = 1.0f - coat_rho;
 
             // Compensate for lost energy due to multi-scattering.
-            float coat_energy_loss_adjustment = 1.0f / coat_rho.full;
+            float coat_energy_loss_adjustment = 1.0f / coat_rho_computation.full;
             m_coat_scale = coat_energy_loss_adjustment * coat_scale;
 
             // Scale specular and diffuse component by the coat transmission.
@@ -142,7 +142,7 @@ private:
     __inline_all__ void setup_sampling_probabilities(float abs_cos_theta_o, float coat_rho) {
         // Compute the probability of sampling the specular layer instead of the diffuse layer.
         optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta_o, get_roughness()) * m_specular_scale;
-        float specular_probability = compute_specular_probability(m_diffuse_tint, specular_rho);
+        float specular_probability = compute_specular_probability(m_diffuse_tint + coat_rho, specular_rho);
         m_specular_probability = unsigned short(specular_probability * USHORT_MAX + 0.5f);
         // Compute the probability of sampling the coat instead of the base layer.
         float coat_probability = compute_coat_probability(m_diffuse_tint + specular_rho, coat_rho);
@@ -186,6 +186,10 @@ public:
 
     __inline_all__ float get_roughness() const { return BSDFs::GGX::roughness_from_alpha(m_specular_alpha); }
 
+    __inline_all__ float get_diffuse_probability() const { return 1.0f - (m_specular_probability + m_coat_probability) / USHORT_MAX; }
+    __inline_all__ float get_specular_probability() const { return m_specular_probability / USHORT_MAX; }
+    __inline_all__ float get_coat_probability() const { return m_coat_probability / USHORT_MAX; }
+
     __inline_all__ BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
         using namespace optix;
 
@@ -199,11 +203,11 @@ public:
         BSDFResponse res;
         res.reflectance = diffuse_eval.reflectance + specular_eval.reflectance * m_specular_scale;
 
-        float specular_probability = m_specular_probability / USHORT_MAX;
+        float specular_probability = get_specular_probability();
         res.PDF = lerp(diffuse_eval.PDF, specular_eval.PDF, specular_probability);
 
         if (m_coat_scale > 0) {
-            float coat_probability = m_coat_probability / USHORT_MAX;
+            float coat_probability = get_coat_probability();
             BSDFResponse coat_eval = BSDFs::GGX_R::evaluate_with_PDF(m_coat_alpha, COAT_SPECULARITY, wo, wi);
             res.reflectance += m_coat_scale * coat_eval.reflectance;
             res.PDF = lerp(res.PDF, coat_eval.PDF, coat_probability);
@@ -220,8 +224,8 @@ public:
         if (wo.z < 0.000001f)
             return BSDFSample::none();
 
-        float specular_probability = m_specular_probability / USHORT_MAX;
-        float coat_probability = m_coat_probability / USHORT_MAX;
+        float specular_probability = get_specular_probability();
+        float coat_probability = get_coat_probability();
 
         // Pick a BRDF
         bool sample_coat = random_sample.z < coat_probability;
@@ -271,14 +275,21 @@ public:
     }
 
     // Estimate the directional-hemispherical reflectance function.
-    __inline_dev__ optix::float3 rho(float abs_cos_theta) const {
+    __inline_all__ optix::float3 rho(float abs_cos_theta) const {
+        optix::float3 radiance = diffuse_rho(abs_cos_theta) + specular_rho(abs_cos_theta);
+        if (m_coat_scale > 0.0f)
+            radiance = radiance + coat_rho(abs_cos_theta);
+        return radiance;
+    }
+
+    __inline_all__ optix::float3 diffuse_rho(float abs_cos_theta) const { return m_diffuse_tint; }
+    __inline_all__ optix::float3 specular_rho(float abs_cos_theta) const {
         float specular_roughness = BSDFs::GGX::roughness_from_alpha(m_specular_alpha);
-        optix::float3 specular_rho = compute_specular_rho(m_specularity, abs_cos_theta, specular_roughness) * m_specular_scale;
-
+        return compute_specular_rho(m_specularity, abs_cos_theta, specular_roughness) * m_specular_scale;
+    }
+    __inline_all__ float coat_rho(float abs_cos_theta) const {
         float coat_roughness = BSDFs::GGX::roughness_from_alpha(m_coat_alpha);
-        float single_bounce_coat_rho = m_coat_scale * SpecularRho::fetch(abs_cos_theta, coat_roughness).rho(COAT_SPECULARITY);
-
-        return m_diffuse_tint + specular_rho + single_bounce_coat_rho;
+        return SpecularRho::fetch(abs_cos_theta, coat_roughness).rho(COAT_SPECULARITY) * m_coat_scale;
     }
 };
 
