@@ -35,7 +35,14 @@ public:
 
     float get_roughness() const { return m_shading_model.get_roughness(); }
 
+    float get_diffuse_probability() const { return m_shading_model.get_diffuse_probability(); }
+    float get_specular_probability() const { return m_shading_model.get_specular_probability(); }
+    float get_coat_probability() const { return m_shading_model.get_coat_probability(); }
+
     optix::float3 rho(float abs_cos_theta_wi) const { return m_shading_model.rho(abs_cos_theta_wi); }
+    optix::float3 diffuse_rho(float abs_cos_theta_wi) const { return m_shading_model.diffuse_rho(abs_cos_theta_wi); }
+    optix::float3 specular_rho(float abs_cos_theta_wi) const { return m_shading_model.specular_rho(abs_cos_theta_wi); }
+    float coat_rho(float abs_cos_theta_wi) const { return m_shading_model.coat_rho(abs_cos_theta_wi); }
 
     std::string to_string() const {
         std::ostringstream out;
@@ -198,7 +205,7 @@ GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation
     const float3 average_wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
     const float3 grazing_wo = normalize(make_float3(1.0f, 0.0f, 0.01f));
 
-    for (auto wo : { incident_wo, average_wo, grazing_wo })
+    for (float3 wo : { incident_wo, average_wo, grazing_wo })
         for (float roughness : { 0.25f, 0.75f })
             for (float metallic : { 0.0f, 0.5f, 1.0f })
                 for (float coat : { 0.0f, 0.5f, 1.0f })
@@ -208,11 +215,10 @@ GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation
 
 GTEST_TEST(DefaultShadingModel, white_hot_room) {
     using namespace Shading::ShadingModels;
-    using namespace optix;
 
     // A white material to stress test power_conservation.
     Material white_material_params = {};
-    white_material_params.tint = optix::make_float3(1.0f, 1.0f, 1.0f);
+    white_material_params.tint = { 1.0f, 1.0f, 1.0f };
     white_material_params.specularity = 0.04f;
 
     for (float metallic : { 0.0f, 0.5f, 1.0f }) {
@@ -227,6 +233,42 @@ GTEST_TEST(DefaultShadingModel, white_hot_room) {
             }
         }
     }
+}
+
+GTEST_TEST(DefaultShadingModel, sampling_probability_match_reflectance_contribution) {
+    using namespace optix;
+
+    for (float cos_theta_o : { 0.5f, 1.0f })
+        for (float roughness : { 0.25f, 0.75f })
+            for (float metallic : { 0.0f, 1.0f })
+                for (float coat : { 0.0f, 0.5f, 1.0f })
+                    for (float coat_roughness : { 0.25f, 0.75f }) {
+                        Material material_params = {};
+                        material_params.tint = { 1.0f, 1.0f, 1.0f };
+                        material_params.specularity = 0.04f;
+                        material_params.roughness = roughness;
+                        material_params.metallic = metallic;
+                        material_params.coat = coat;
+                        material_params.coat_roughness = coat_roughness;
+                        auto material = DefaultShadingWrapper(material_params, cos_theta_o);
+
+                        float3 diffuse_rho = material.diffuse_rho(cos_theta_o);
+                        float3 specular_rho = material.specular_rho(cos_theta_o);
+                        float3 coat_rho = make_float3(material.coat_rho(cos_theta_o));
+                        float3 total_rho = material.rho(cos_theta_o);
+
+                        float expected_diffuse_contribution = sum(diffuse_rho) / sum(total_rho);
+                        float expected_specular_contribution = sum(specular_rho) / sum(total_rho);
+                        float expected_coat_contribution = sum(coat_rho) / sum(total_rho);
+
+                        float actual_diffuse_probability = material.get_diffuse_probability();
+                        float actual_specular_probability = material.get_specular_probability();
+                        float actual_coat_probability = material.get_coat_probability();
+
+                        EXPECT_FLOAT_EQ_EPS(expected_diffuse_contribution, actual_diffuse_probability, 2e-5f);
+                        EXPECT_FLOAT_EQ_EPS(expected_specular_contribution, actual_specular_probability, 2e-5f);
+                        EXPECT_FLOAT_EQ_EPS(expected_coat_contribution, actual_coat_probability, 2e-5f);
+                    }
 }
 
 GTEST_TEST(DefaultShadingModel, metallic_interpolation) {
@@ -263,7 +305,7 @@ GTEST_TEST(DefaultShadingModel, metallic_interpolation) {
     }
 }
 
-// Helper function to generate a coated material with a specific target roughness.
+// Helper function to generate a coated material with a specific target specular roughness.
 // The input roughness for the material is found through a binary search.
 Shading::ShadingModels::DefaultShading generate_interpolated_coated_material(Material material_params, float cos_theta, float target_roughness) {
     using namespace Shading::ShadingModels;
@@ -358,9 +400,9 @@ GTEST_TEST(DefaultShadingModel, regression_test) {
         { 0.010227f, 0.087904f, 0.10655f, 0.005283f }, { 0.025274f, 0.102950f, 0.12159f, 0.255087f },
         { 0.054774f, 0.125411f, 0.14236f, 0.354429f }, { 0.100238f, 0.170874f, 0.18783f, 0.379421f },
         // Coated plastic
-        { 0.026947f, 0.101801f, 0.11977f, 0.017392f }, { 0.023793f, 0.098647f, 0.11661f, 0.217566f },
-        { 0.021004f, 0.095354f, 0.11320f, 0.013394f }, { 0.051778f, 0.126128f, 0.14397f, 0.262095f },
-        { 0.090937f, 0.154627f, 0.16991f, 0.355085f }, { 0.157052f, 0.220742f, 0.23603f, 0.385136f } };
+        { 0.026947f, 0.101801f, 0.11977f, 0.018183f }, { 0.023793f, 0.098647f, 0.11661f, 0.216895f },
+        { 0.021004f, 0.095354f, 0.11320f, 0.013441f }, { 0.051778f, 0.126128f, 0.14397f, 0.274674f },
+        { 0.090937f, 0.154627f, 0.16991f, 0.353412f }, { 0.157052f, 0.220742f, 0.23603f, 0.380933f } };
 
     int response_index = 0;
     for (int i = 0; i < 3; ++i)
