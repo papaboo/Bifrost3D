@@ -33,6 +33,14 @@ struct SpecularRho {
         return { rho(specularity.x), rho(specularity.y), rho(specularity.z) };
     }
 
+    // Compensate for lost energy due to multiple scattering.
+    // Multiple-scattering microfacet BSDFs with the smith model, Heitz et al., 2016 and 
+    // Practical multiple scattering compensation for microfacet models, Emmanuel Turquin, 2018
+    // showed that multiple-scattered reflectance has roughly the same distribution as single-scattering reflectance.
+    // We can therefore account for energy lost to multi-scattering by computing the ratio of lost energy of a fully specular material,
+    // and then scaling the specular reflectance by that ratio during evaluation, which increases reflectance to account for energy lost.
+    __inline_all__ float energy_loss_adjustment() const { return 1.0f / full; }
+
     __inline_all__ static SpecularRho fetch(float abs_cos_theta, float roughness) {
 #if GPU_DEVICE
         // Adjust UV coordinates to start sampling half a pixel into the texture, as the pixel values correspond to the boundaries of the rho function.
@@ -47,10 +55,6 @@ struct SpecularRho {
 #endif
     }
 };
-
-__inline_all__ static optix::float3 compute_specular_rho(optix::float3 specularity, float abs_cos_theta, float roughness) {
-    return SpecularRho::fetch(abs_cos_theta, roughness).rho(specularity);
-}
 
 // ------------------------------------------------------------------------------------------------
 // Helper to regularize the material by using a maximally allowed PDF and cos(theta) to estimate a minimally allowed GGX alpha / roughness.
