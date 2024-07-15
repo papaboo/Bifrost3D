@@ -21,11 +21,11 @@ namespace ShadingModels {
 // ------------------------------------------------------------------------------------------------
 struct DefaultShading : IShadingModel {
     float3 m_diffuse_tint;
-    float m_roughness;
+    float m_specular_alpha;
     float3 m_specularity;
     float m_coat_transmission; // 1 - coat_rho, the contribution from the BSDFs under the coat.
     float m_coat_scale;
-    float m_coat_roughness;
+    float m_coat_alpha;
 
     static const float COAT_SPECULARITY = 0.04f;
 
@@ -49,11 +49,11 @@ struct DefaultShading : IShadingModel {
 
         // No coat
         shading.m_coat_scale = 0;
-        shading.m_coat_roughness = 0;
+        shading.m_coat_alpha = 0;
         shading.m_coat_transmission = 1;
 
         // Roughness
-        shading.m_roughness = roughness;
+        shading.m_specular_alpha = BSDFs::GGX::alpha_from_roughness(roughness);
 
         // Specularity
         float dielectric_specularity = specularity;
@@ -97,7 +97,7 @@ struct DefaultShading : IShadingModel {
         if (coat_scale > 0) {
             // Clear coat with fixed index of refraction of 1.5 / specularity of 0.04, representative of polyurethane and glass.
             shading.m_coat_scale = coat_scale;
-            shading.m_coat_roughness = coat_roughness;
+            shading.m_coat_alpha = BSDFs::GGX::alpha_from_roughness(coat_roughness);
             SpecularRho coat_rho = SpecularRho::fetch(abs_cos_theta_o, coat_roughness);
             float coat_single_bounce_rho = coat_scale * coat_rho.rho(COAT_SPECULARITY);
             float lossless_coat_rho = coat_single_bounce_rho / coat_rho.full;
@@ -115,9 +115,9 @@ struct DefaultShading : IShadingModel {
     // --------------------------------------------------------------------------------------------
     // Getters
     // --------------------------------------------------------------------------------------------
-    float roughness() { return m_roughness; }
+    float roughness() { return BSDFs::GGX::roughness_from_alpha(m_specular_alpha); }
     float coat_scale() { return m_coat_scale; }
-    float coat_roughness() { return m_coat_roughness; }
+    float coat_roughness() { return BSDFs::GGX::roughness_from_alpha(m_coat_alpha); }
 
     // --------------------------------------------------------------------------------------------
     // Evaluations.
@@ -134,12 +134,9 @@ struct DefaultShading : IShadingModel {
         }
 
         float3 reflectance = m_diffuse_tint * BSDFs::Lambert::evaluate();
-        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_roughness);
-        reflectance += BSDFs::GGX::evaluate(ggx_alpha, m_specularity, wo, wi) * m_coat_transmission;
-        if (m_coat_scale > 0) {
-            float coat_ggx_alpha = BSDFs::GGX::alpha_from_roughness(m_coat_roughness);
-            reflectance += m_coat_scale * BSDFs::GGX::evaluate(coat_ggx_alpha, COAT_SPECULARITY, wo, wi);
-        }
+        reflectance += BSDFs::GGX::evaluate(m_specular_alpha, m_specularity, wo, wi) * m_coat_transmission;
+        if (m_coat_scale > 0)
+            reflectance += m_coat_scale * BSDFs::GGX::evaluate(m_coat_alpha, COAT_SPECULARITY, wo, wi);
         return reflectance;
     }
 
@@ -165,19 +162,18 @@ struct DefaultShading : IShadingModel {
 
         radiance *= scaled_ambient_visibility;
 
-        radiance += evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, m_specularity, m_roughness, scaled_ambient_visibility) * m_coat_transmission;
+        radiance += evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, m_specularity, m_specular_alpha, scaled_ambient_visibility) * m_coat_transmission;
 
         if (m_coat_scale > 0)
-            radiance += m_coat_scale * evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, COAT_SPECULARITY, m_coat_roughness, scaled_ambient_visibility);
+            radiance += m_coat_scale * evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, COAT_SPECULARITY, m_coat_alpha, scaled_ambient_visibility);
 
         return radiance;
     }
 
     // GGX sphere light evaluation by most representative point, heavily inspired by Real Shading in Unreal Engine 4.
     // For UE4 reference see the function AreaLightSpecular() in DeferredLightingCommon.usf. (15/1 -2018)
-    float3 evaluate_sphere_light_GGX(LightData light, float3 local_light_position, float3 light_radiance, float3 wo, float3 specularity, float roughness, float ambient_visibility) {
+    float3 evaluate_sphere_light_GGX(LightData light, float3 local_light_position, float3 light_radiance, float3 wo, float3 specularity, float ggx_alpha, float ambient_visibility) {
         // Closest point on sphere to ray. Equation 11 in Real Shading in Unreal Engine 4, 2013.
-        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(roughness);
         float3 peak_reflection = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo);
         float3 closest_point_on_ray = dot(local_light_position, peak_reflection) * peak_reflection;
         float3 center_to_ray = closest_point_on_ray - local_light_position;
@@ -220,16 +216,16 @@ struct DefaultShading : IShadingModel {
 
         float abs_cos_theta_o = abs(dot(wo, normal));
 
-        radiance += evaluate_IBL_GGX(wo, normal, abs_cos_theta_o, m_roughness, m_specularity, mip_count) * m_coat_transmission;
+        radiance += evaluate_IBL_GGX(wo, normal, abs_cos_theta_o, m_specular_alpha, m_specularity, mip_count) * m_coat_transmission;
         if (m_coat_scale > 0)
-            radiance += m_coat_scale * evaluate_IBL_GGX(wo, normal, abs_cos_theta_o, m_coat_roughness, COAT_SPECULARITY, mip_count);
+            radiance += m_coat_scale * evaluate_IBL_GGX(wo, normal, abs_cos_theta_o, m_coat_alpha, COAT_SPECULARITY, mip_count);
 
         return radiance;
     }
 
     // Evaluate GGX lit by an IBL.
-    float3 evaluate_IBL_GGX(float3 wo, float3 normal, float abs_cos_theta_o, float roughness, float3 specularity, int mip_count) {
-        float ggx_alpha = BSDFs::GGX::alpha_from_roughness(roughness);
+    float3 evaluate_IBL_GGX(float3 wo, float3 normal, float abs_cos_theta_o, float ggx_alpha, float3 specularity, int mip_count) {
+        float roughness = BSDFs::GGX::roughness_from_alpha(ggx_alpha);
         float3 wi = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo, normal);
         float3 rho = compute_specular_rho(specularity, abs_cos_theta_o, roughness);
         float2 ibl_tc = direction_to_latlong_texcoord(wi);
