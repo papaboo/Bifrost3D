@@ -17,96 +17,76 @@
 namespace ShadingModels {
 
 // ------------------------------------------------------------------------------------------------
-// Default shading.
+// Default shading consist of a diffuse base with a specular layer on top. It can optionally be coated.
+// * The metallic parameter defines an interpolation between the evaluation of a dielectric material and the evaluation of a conductive material with the given parameters.
+//   However, the same effect can be achieved by interpolating the two materials' diffuse tint and specularity, saving one material evaluation.
+// * The specularity is a linear interpolation of the dielectric specularity and the conductor/metal specularity.
+//   The dielectric specularity is defined by the material's specularity.
+//   The conductor specularity is simply the tint of the material, as the tint describes the color of the metal when viewed head on.
+// The diffuse and specular component of the base layer are set up in the following way.
+// * The dielectric diffuse tint is computed as tint * dielectric_specular_transmission and the metallic diffuse tint is black. 
+//   The diffuse tint of the materials is found by a linear interpolation of the dielectric and metallic tint based on metalness.
+// If the coat is enabled then a microfacet coat on top of the base layer is initialized as well.
+// * The base roughness is scaled by the coat roughness to simulate how light would scatter through the coat and 
+//   perceptually widen the highlight of the underlying material.
+// * The transmission through the coat is computed and baked into the diffuse tint and the specular scale
 // ------------------------------------------------------------------------------------------------
 struct DefaultShading : IShadingModel {
     float3 m_diffuse_tint;
     float m_specular_alpha;
     float3 m_specularity;
-    float m_coat_transmission; // 1 - coat_rho, the contribution from the BSDFs under the coat.
+    float m_specular_scale;
     float m_coat_scale;
     float m_coat_alpha;
 
     static const float COAT_SPECULARITY = 0.04f;
 
-    // Sets up the diffuse and specular component on the base layer.
-    // * The dielectric diffuse tint is computed as tint * dielectric_specular_transmission and the metallic diffuse tint is black. 
-    //   The diffuse tint of the materials is found by a linear interpolation of the dielectric and metallic tint based on metalness.
-    // * The metallic parameter defines an interpolation between a dielectric material and a conductive material with the given parameters.
-    //   As both materials are described as an independent linear combination of diffuse and microfacet BRDFs, 
-    //   the interpolation between the materials can be computed by simply interpolating the material parameters, 
-    //   ie. lerp(dielectric.evaluate(...), conductor.evaluate(...), metallic) can be expressed as lerp_params(dielectric, conductor, metallic)evaluate(...)
-    // * The specularity is a linear interpolation of the dielectric specularity and the conductor/metal specularity.
-    //   The dielectric specularity is defined by the material's specularity.
-    //   The conductor specularity is simply the tint of the material, as the tint describes the color of the metal when viewed head on.
-    // * Microfacet interreflection is approximated from the principle that white-is-white and energy lost 
-    //   from not simulating multiple scattering events can be computed as 1 - white_specular_rho = full_specular_interreflection.
-    //   The specular interreflection with the given specularity can be found by scaling with rho of the given specularity,
-    //   specular_interreflection = full_specular_interreflection / specular_rho.
-    //   The light scattered from interreflection of the 2nd, 3rd and so on scattering event is assumed to be diffuse and its contribution is added to the diffuse tint.
-    static DefaultShading create(float3 tint, float roughness, float specularity, float metallic, float abs_cos_theta_o) {
-        DefaultShading shading;
+    static void compute_specular_properties(float roughness, float specularity, float scale, float cos_theta_o,
+        out float alpha, out float reflection_scale, out float transmission_scale) {
+        alpha = BSDFs::GGX::alpha_from_roughness(roughness);
+        SpecularRho rho_computation = SpecularRho::fetch(cos_theta_o, roughness);
 
-        // No coat
-        shading.m_coat_scale = 0;
-        shading.m_coat_alpha = 0;
-        shading.m_coat_transmission = 1;
+        // Compensate for lost energy due to multi-scattering and scale by the strength of the specular reflection.
+        reflection_scale = scale * rho_computation.energy_loss_adjustment();
+        float specular_rho = rho_computation.rho(specularity) * reflection_scale;
 
-        // Roughness
-        shading.m_specular_alpha = BSDFs::GGX::alpha_from_roughness(roughness);
-
-        // Specularity
-        float dielectric_specularity = specularity;
-        float3 conductor_specularity = tint;
-        shading.m_specularity = lerp(dielectric_specularity, conductor_specularity, metallic);
-
-        // Specular directional-hemispherical reflectance function, rho.
-        SpecularRho specular_rho = SpecularRho::fetch(abs_cos_theta_o, roughness);
-        float dielectric_specular_rho = specular_rho.rho(dielectric_specularity);
-
-        // Dielectric tint.
-        float dielectric_lossless_specular_rho = dielectric_specular_rho / specular_rho.full;
-        float dielectric_specular_transmission = 1.0f - dielectric_lossless_specular_rho;
-        float3 dielectric_tint = tint * dielectric_specular_transmission;
-        shading.m_diffuse_tint = dielectric_tint * (1.0f - metallic);
-
-        // Compute microfacet specular interreflection. Assume it is diffuse and add its contribution to the diffuse tint.
-        float3 single_bounce_specular_rho = specular_rho.rho(shading.m_specularity);
-        float3 lossless_specular_rho = single_bounce_specular_rho / specular_rho.full;
-        float3 specular_interreflection_rho = lossless_specular_rho - single_bounce_specular_rho;
-        shading.m_diffuse_tint += specular_interreflection_rho;
-
-        return shading;
+        // The amount of energy not reflected by the specular reflection is transmitted further into the material.
+        transmission_scale = 1.0f - specular_rho;
     }
 
-    // Sets up the specular microfacet and the diffuse reflection as described in setup_base_layer().
-    // If the coat is enabled then a microfacet coat on top of the base layer is initialized as well.
-    // * The base roughness is scaled by the coat roughness to simulate how light would scatter through the coat and 
-    //   perceptually widen the highlight of the underlying material.
-    // * The transmission through the coat is computed and baked into the diffuse tint.
-    //   The contribution from coat interreflection is then added to the diffuse tint.
-    // * The transmission cannot be baked into the specularity, as specularity only represents the contribution from the specular layer 
-    //   when viewed head on and we need the transmission to affect the reflectance at grazing angles as well.
-    //   Instead we store the transmission and scale the base layer's specular contribution by it when evaluating or sampling.
-    static DefaultShading create(float3 tint, float roughness, float specularity, float metallic, float coat_scale, float coat_roughness, float abs_cos_theta_o) {
+    static DefaultShading create(float3 tint, float roughness, float dielectric_specularity, float metallic, float coat_scale, float coat_roughness, float abs_cos_theta_o) {
+
+        DefaultShading shading;
+
+        // Adjust specular reflection roughness
         float coat_modulated_roughness = modulate_roughness_under_coat(roughness, coat_roughness);
         roughness = lerp(roughness, coat_modulated_roughness, coat_scale);
 
-        DefaultShading shading = create(tint, roughness, specularity, metallic, abs_cos_theta_o);
+        // Dielectric material parameters
+        float dielectric_specular_transmission;
+        compute_specular_properties(roughness, dielectric_specularity, 1.0f, abs_cos_theta_o,
+            shading.m_specular_alpha, shading.m_specular_scale, dielectric_specular_transmission);
+        float3 dielectric_tint = tint * dielectric_specular_transmission;
+
+        // Interpolate between dieletric and conductor parameters based on the metallic parameter.
+        // Conductor diffuse component is black, so interpolation amounts to scaling.
+        float3 conductor_specularity = tint;
+        shading.m_specularity = lerp(dielectric_specularity, conductor_specularity, metallic);
+        shading.m_diffuse_tint = dielectric_tint * (1.0f - metallic);
 
         if (coat_scale > 0) {
             // Clear coat with fixed index of refraction of 1.5 / specularity of 0.04, representative of polyurethane and glass.
-            shading.m_coat_scale = coat_scale;
-            shading.m_coat_alpha = BSDFs::GGX::alpha_from_roughness(coat_roughness);
-            SpecularRho coat_rho = SpecularRho::fetch(abs_cos_theta_o, coat_roughness);
-            float coat_single_bounce_rho = coat_scale * coat_rho.rho(COAT_SPECULARITY);
-            float lossless_coat_rho = coat_single_bounce_rho / coat_rho.full;
-            float coat_interreflection_rho = lossless_coat_rho - coat_single_bounce_rho;
-            shading.m_coat_transmission = 1.0f - lossless_coat_rho;
+            float coat_transmission;
+            compute_specular_properties(coat_roughness, COAT_SPECULARITY, coat_scale, abs_cos_theta_o,
+                shading.m_coat_alpha, shading.m_coat_scale, coat_transmission);
 
-            // Scale diffuse component by the coat transmission and add contribution from coat interreflection to the diffues tint. 
-            shading.m_diffuse_tint *= shading.m_coat_transmission;
-            shading.m_diffuse_tint += coat_interreflection_rho;
+            // Scale specular and diffuse component by the coat transmission.
+            shading.m_specular_scale *= coat_transmission;
+            shading.m_diffuse_tint *= coat_transmission;
+        } else {
+            // No coat
+            shading.m_coat_scale = 0;
+            shading.m_coat_alpha = 0;
         }
 
         return shading;
@@ -134,7 +114,7 @@ struct DefaultShading : IShadingModel {
         }
 
         float3 reflectance = m_diffuse_tint * BSDFs::Lambert::evaluate();
-        reflectance += BSDFs::GGX::evaluate(m_specular_alpha, m_specularity, wo, wi) * m_coat_transmission;
+        reflectance += m_specular_scale * BSDFs::GGX::evaluate(m_specular_alpha, m_specularity, wo, wi);
         if (m_coat_scale > 0)
             reflectance += m_coat_scale * BSDFs::GGX::evaluate(m_coat_alpha, COAT_SPECULARITY, wo, wi);
         return reflectance;
@@ -162,7 +142,7 @@ struct DefaultShading : IShadingModel {
 
         radiance *= scaled_ambient_visibility;
 
-        radiance += evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, m_specularity, m_specular_alpha, scaled_ambient_visibility) * m_coat_transmission;
+        radiance += m_specular_scale * evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, m_specularity, m_specular_alpha, scaled_ambient_visibility);
 
         if (m_coat_scale > 0)
             radiance += m_coat_scale * evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, COAT_SPECULARITY, m_coat_alpha, scaled_ambient_visibility);
@@ -216,7 +196,7 @@ struct DefaultShading : IShadingModel {
 
         float abs_cos_theta_o = abs(dot(wo, normal));
 
-        radiance += evaluate_IBL_GGX(wo, normal, abs_cos_theta_o, m_specular_alpha, m_specularity, mip_count) * m_coat_transmission;
+        radiance += m_specular_scale * evaluate_IBL_GGX(wo, normal, abs_cos_theta_o, m_specular_alpha, m_specularity, mip_count);
         if (m_coat_scale > 0)
             radiance += m_coat_scale * evaluate_IBL_GGX(wo, normal, abs_cos_theta_o, m_coat_alpha, COAT_SPECULARITY, mip_count);
 
