@@ -103,15 +103,9 @@ struct DefaultShading : IShadingModel {
     // Evaluations.
     // --------------------------------------------------------------------------------------------
     float3 evaluate(float3 wo, float3 wi) {
-        bool is_same_hemisphere = wi.z * wo.z >= 0.0;
-        if (!is_same_hemisphere)
-            return float3(0.0, 0.0, 0.0);
-
-        // Flip directions if on the backside of the material.
-        if (wo.z < 0.0) {
-            wi.z = -wi.z;
-            wo.z = -wo.z;
-        }
+        // Return no contribution if seen from the backside.
+        if (wo.z <= 0.0f || wi.z <= 0.0f)
+            return float3(0, 0, 0);
 
         float3 reflectance = m_diffuse_tint * BSDFs::Lambert::evaluate();
         reflectance += m_specular_scale * BSDFs::GGX::evaluate(m_specular_alpha, m_specularity, wo, wi);
@@ -123,6 +117,9 @@ struct DefaultShading : IShadingModel {
     // Evaluate the material lit by an area light.
     // Uses evaluation by most representative point internally.
     float3 evaluate_area_light(LightData light, float3 world_position, float3 wo, float3x3 world_to_shading_TBN, float ambient_visibility) {
+        // Return no contribution if seen from the backside.
+        if (wo.z <= 0.0f)
+            return float3(0, 0, 0);
 
         // Sphere light in local space
         float3 local_sphere_position = mul(world_to_shading_TBN, light.sphere_position() - world_position);
@@ -160,6 +157,10 @@ struct DefaultShading : IShadingModel {
         float3 most_representative_point = local_light_position + center_to_ray * saturate(light.sphere_radius() * reciprocal_length(center_to_ray));
         float3 wi = normalize(most_representative_point);
 
+        // Return no contribution if seen from the backside.
+        if (wi.z <= 0.0f)
+            return float3(0, 0, 0);
+
         bool delta_GGX_distribution = ggx_alpha < 0.0005;
         if (delta_GGX_distribution) {
             // Check if peak reflection and the most representative point are aligned.
@@ -173,13 +174,13 @@ struct DefaultShading : IShadingModel {
             // float area_light_normalization_term = pow2(ggx_alpha / adjusted_ggx_alpha);
 
             // NOTE We could try fitting the constants and try cos_theta VS wo and local_sphere_position VS local_sphere_position.
-            float cos_theta = max(wi.z, 0.0);
+            float cos_theta_i = wi.z;
             float sin_theta_squared = pow2(light.sphere_radius()) / dot(most_representative_point, most_representative_point);
             float a2 = pow2(ggx_alpha);
-            float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta * 3.6 + 0.4));
+            float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta_i * 3.6 + 0.4));
             float specular_ambient_visibility = lerp(1, ambient_visibility, a2);
 
-            return BSDFs::GGX::evaluate(ggx_alpha, specularity, wo, wi) * cos_theta * light_radiance * area_light_normalization_term * specular_ambient_visibility;
+            return BSDFs::GGX::evaluate(ggx_alpha, specularity, wo, wi) * cos_theta_i * light_radiance * area_light_normalization_term * specular_ambient_visibility;
         }
     }
 
