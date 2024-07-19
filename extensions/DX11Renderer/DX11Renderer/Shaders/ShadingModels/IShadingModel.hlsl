@@ -19,8 +19,8 @@ namespace ShadingModels {
 interface IShadingModel {
     float3 evaluate(float3 wo, float3 wi);
 
-    // Evaluate the material lit by an area light.
-    float3 evaluate_area_light(LightData light, float3 world_position, float3 wo, float3x3 world_to_shading_TBN, float ambient_visibility);
+    // Evaluate the material lit by a sphere light.
+    float3 evaluate_sphere_light(float3 wo, SphereLight light, float ambient_visibility);
 
     // Apply the shading model to the IBL.
     float3 evaluate_IBL(float3 wo, float3 normal);

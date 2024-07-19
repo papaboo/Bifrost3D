@@ -45,21 +45,18 @@ struct DiffuseShading : IShadingModel {
         return m_tint * BSDFs::Lambert::evaluate();
     }
 
-    // Evaluate the material lit by an area light.
+    // Evaluate the material lit by a sphere light.
     // Uses evaluation by most representative point internally.
-    float3 evaluate_area_light(LightData light, float3 world_position, float3 wo, float3x3 world_to_shading_TBN, float ambient_visibility) {
+    float3 evaluate_sphere_light(float3 wo, SphereLight light, float ambient_visibility) {
 
-        // Sphere light in local space
-        float3 local_sphere_position = mul(world_to_shading_TBN, light.sphere_position() - world_position);
-        float3 light_radiance = light.sphere_power() * rcp(4.0f * PI * dot(local_sphere_position, local_sphere_position));
+        float3 light_radiance = light.power * rcp(4.0f * PI * dot(light.position, light.position));
 
         // Evaluate Lambert.
-        Sphere local_sphere = Sphere::make(local_sphere_position, light.sphere_radius());
-        Cone light_sphere_cap = sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
+        Cone light_sphere_cap = sphere_to_sphere_cap(light.position, light.radius);
         float solidangle_of_light = solidangle(light_sphere_cap);
         CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
         float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle_of_light;
-        float3 radiance = m_tint * BSDFs::Lambert::evaluate() * abs(centroid_and_solidangle.centroid_direction.z) * light_radiance * light_radiance_scale;
+        float3 radiance = m_tint * BSDFs::Lambert::evaluate() * centroid_and_solidangle.centroid_direction.z * light_radiance * light_radiance_scale;
 
         // Scale ambient visibility by subtended solid angle.
         float solidangle_percentage = inverse_lerp(0, TWO_PI, solidangle_of_light);

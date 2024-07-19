@@ -12,6 +12,27 @@
 #include "Utils.hlsl"
 
 //-----------------------------------------------------------------------------
+// Sphere light specialization
+//-----------------------------------------------------------------------------
+
+struct SphereLight {
+    float3 position;
+    float radius;
+    float3 power;
+
+    static SphereLight make(float3 position, float radius, float3 power) {
+        SphereLight light = { position, radius, power };
+        return light;
+    }
+
+    // Evaluate the radiance of samples emitted from the sphere light source.
+    float3 radiance() {
+        float divisor = 4.0 * pow2(PI * radius); // PI * surface area of sphere
+        return power * rcp(divisor);
+    }
+};
+
+//-----------------------------------------------------------------------------
 // Light sources data.
 //-----------------------------------------------------------------------------
 
@@ -32,6 +53,7 @@ struct LightData {
     float3 sphere_power() { return type_power.yzw; }
     float3 sphere_position() { return spatial_softness.xyz; }
     float sphere_radius() { return spatial_softness.w; }
+    SphereLight sphere_light() { return SphereLight::make(sphere_position(), sphere_radius(), sphere_power()); }
 
     // Directional light property accessors.
     float3 directional_radiance() { return type_power.yzw; }
@@ -82,15 +104,6 @@ LightSample sample_directional_light(LightData light) {
 //-----------------------------------------------------------------------------
 // Sphere light sampling.
 //-----------------------------------------------------------------------------
-
-float sphere_surface_area(float radius) {
-    return 4.0f * PI * radius * radius;
-}
-
-float3 evaluate_sphere_light(LightData light, float3 world_position) {
-    float divisor = PI * sphere_surface_area(light.sphere_radius());
-    return light.sphere_power() * rcp(divisor);
-}
 
 LightSample sample_sphere_light(LightData light, float3 world_position) {
     float3 direction_to_light = light.sphere_position() - world_position;

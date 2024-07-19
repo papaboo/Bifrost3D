@@ -83,7 +83,11 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
 
         bool is_sphere_light = light.type() == LightType::Sphere && light.sphere_radius() > 0.0f;
         if (is_sphere_light) {
-            radiance += shading_model.evaluate_area_light(light, input.world_position.xyz, wo, world_to_shading_TBN, ambient_visibility);
+            // Compute sphere light position in shading space
+            SphereLight sphere_light = light.sphere_light();
+            sphere_light.position = mul(world_to_shading_TBN, sphere_light.position - input.world_position.xyz);
+
+            radiance += shading_model.evaluate_sphere_light(wo, sphere_light, ambient_visibility);
         } else {
             // Apply regular delta lights.
             LightSample light_sample = sample_light(light, input.world_position.xyz);
