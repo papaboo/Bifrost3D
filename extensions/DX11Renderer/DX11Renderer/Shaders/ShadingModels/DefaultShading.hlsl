@@ -103,7 +103,7 @@ struct DefaultShading : IShadingModel {
     // Evaluations.
     // --------------------------------------------------------------------------------------------
     float3 evaluate(float3 wo, float3 wi) {
-        // Return no contribution if seen from the backside.
+        // Return no contribution if seen or lit from the backside.
         if (wo.z <= 0.0f || wi.z <= 0.0f)
             return float3(0, 0, 0);
 
@@ -114,24 +114,22 @@ struct DefaultShading : IShadingModel {
         return reflectance;
     }
 
-    // Evaluate the material lit by an area light.
+    // Evaluate the material lit by a sphere light.
     // Uses evaluation by most representative point internally.
-    float3 evaluate_area_light(LightData light, float3 world_position, float3 wo, float3x3 world_to_shading_TBN, float ambient_visibility) {
-        // Return no contribution if seen from the backside.
-        if (wo.z <= 0.0f)
+    float3 evaluate_sphere_light(float3 wo, SphereLight light, float ambient_visibility) {
+        // Return no contribution if seen or lit from the backside.
+        bool light_below_surface = light.position.z < -light.radius;
+        if (wo.z <= 0.0f || light_below_surface)
             return float3(0, 0, 0);
 
-        // Sphere light in local space
-        float3 local_sphere_position = mul(world_to_shading_TBN, light.sphere_position() - world_position);
-        float3 light_radiance = light.sphere_power() * rcp(4.0f * PI * dot(local_sphere_position, local_sphere_position));
+        float3 light_radiance = light.power * rcp(4.0f * PI * dot(light.position, light.position));
 
         // Evaluate Lambert.
-        Sphere local_sphere = Sphere::make(local_sphere_position, light.sphere_radius());
-        Cone light_sphere_cap = sphere_to_sphere_cap(local_sphere.position, local_sphere.radius);
+        Cone light_sphere_cap = sphere_to_sphere_cap(light.position, light.radius);
         float solidangle_of_light = solidangle(light_sphere_cap);
         CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
         float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle_of_light;
-        float3 radiance = m_diffuse_tint * BSDFs::Lambert::evaluate() * abs(centroid_and_solidangle.centroid_direction.z) * light_radiance * light_radiance_scale;
+        float3 radiance = m_diffuse_tint * BSDFs::Lambert::evaluate() * centroid_and_solidangle.centroid_direction.z * light_radiance * light_radiance_scale;
 
         // Scale ambient visibility by subtended solid angle.
         float solidangle_percentage = inverse_lerp(0, TWO_PI, solidangle_of_light);
@@ -139,45 +137,41 @@ struct DefaultShading : IShadingModel {
 
         radiance *= scaled_ambient_visibility;
 
-        radiance += m_specular_scale * evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, m_specularity, m_specular_alpha, scaled_ambient_visibility);
+        radiance += m_specular_scale * evaluate_sphere_light_GGX(light, light_radiance, wo, m_specularity, m_specular_alpha, scaled_ambient_visibility);
 
         if (m_coat_scale > 0)
-            radiance += m_coat_scale * evaluate_sphere_light_GGX(light, local_sphere_position, light_radiance, wo, COAT_SPECULARITY, m_coat_alpha, scaled_ambient_visibility);
+            radiance += m_coat_scale * evaluate_sphere_light_GGX(light, light_radiance, wo, COAT_SPECULARITY, m_coat_alpha, scaled_ambient_visibility);
 
         return radiance;
     }
 
     // GGX sphere light evaluation by most representative point, heavily inspired by Real Shading in Unreal Engine 4.
     // For UE4 reference see the function AreaLightSpecular() in DeferredLightingCommon.usf. (15/1 -2018)
-    float3 evaluate_sphere_light_GGX(LightData light, float3 local_light_position, float3 light_radiance, float3 wo, float3 specularity, float ggx_alpha, float ambient_visibility) {
+    float3 evaluate_sphere_light_GGX(SphereLight light, float3 light_radiance, float3 wo, float3 specularity, float ggx_alpha, float ambient_visibility) {
         // Closest point on sphere to ray. Equation 11 in Real Shading in Unreal Engine 4, 2013.
         float3 peak_reflection = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo);
-        float3 closest_point_on_ray = dot(local_light_position, peak_reflection) * peak_reflection;
-        float3 center_to_ray = closest_point_on_ray - local_light_position;
-        float3 most_representative_point = local_light_position + center_to_ray * saturate(light.sphere_radius() * reciprocal_length(center_to_ray));
+        float3 closest_point_on_ray = dot(light.position, peak_reflection) * peak_reflection;
+        float3 center_to_ray = closest_point_on_ray - light.position;
+        float3 most_representative_point = light.position + center_to_ray * saturate(light.radius * reciprocal_length(center_to_ray));
         float3 wi = normalize(most_representative_point);
 
-        // Return no contribution if seen from the backside.
+        // Return no contribution if lit from the backside.
+        // Due to floating point precision this can happen even if the light is not found to be on the backside.
         if (wi.z <= 0.0f)
             return float3(0, 0, 0);
 
         bool delta_GGX_distribution = ggx_alpha < 0.0005;
         if (delta_GGX_distribution) {
             // Check if peak reflection and the most representative point are aligned.
-            float toggle = saturate(100000 * (dot(peak_reflection, wi) - 0.99999));
-            float recip_divisor = rcp(PI * sphere_surface_area(light.sphere_radius()));
-            float3 light_radiance = light.sphere_power() * recip_divisor;
-            return specularity * light_radiance * toggle;
+            float toggle_reflection = saturate(100000 * (dot(peak_reflection, wi) - 0.99999));
+            float3 light_radiance = light.radiance(); // Recompute radiance for point light instead of using the argument above
+            return specularity * light_radiance * toggle_reflection;
         } else {
-            // Deprecated area light normalization term. Equation 10 and 14 in Real Shading in Unreal Engine 4, 2013. Included for completeness
-            // float adjusted_ggx_alpha = saturate(ggx_alpha + light.sphere_radius() / (3 * length(local_light_position)));
-            // float area_light_normalization_term = pow2(ggx_alpha / adjusted_ggx_alpha);
-
-            // NOTE We could try fitting the constants and try cos_theta VS wo and local_sphere_position VS local_sphere_position.
             float cos_theta_i = wi.z;
-            float sin_theta_squared = pow2(light.sphere_radius()) / dot(most_representative_point, most_representative_point);
+            float sin_theta_squared = pow2(light.radius) / dot(most_representative_point, most_representative_point);
             float a2 = pow2(ggx_alpha);
             float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta_i * 3.6 + 0.4));
+
             float specular_ambient_visibility = lerp(1, ambient_visibility, a2);
 
             return BSDFs::GGX::evaluate(ggx_alpha, specularity, wo, wi) * cos_theta_i * light_radiance * area_light_normalization_term * specular_ambient_visibility;

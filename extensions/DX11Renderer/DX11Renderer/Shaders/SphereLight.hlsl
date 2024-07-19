@@ -49,8 +49,8 @@ struct Varyings {
 Varyings vs(uint primitive_ID : SV_VertexID) {
     // Determine which light to render and bail out if it is not a sphere light.
     uint light_index = primitive_ID / 6u;
-    LightData light = light_data[light_index];
-    if (light.type() != LightType::Sphere)
+    LightData general_light = light_data[light_index];
+    if (general_light.type() != LightType::Sphere)
         return (Varyings)0;
 
     // Draw quad with two triangles: 
@@ -63,19 +63,21 @@ Varyings vs(uint primitive_ID : SV_VertexID) {
     output.texcoord.x = vertex_ID < 2 ? -1 : 1;
     output.texcoord.y = (vertex_ID % 2 == 0) ? -1 : 1;
 
+    SphereLight light = general_light.sphere_light();
+
     // Compute position in world space and offset the vertices by the sphere radius along the tangent axis.
-    output.world_position.xyz = light.sphere_position();
+    output.world_position.xyz = light.position;
     float3 forward = normalize(output.world_position.xyz - scene_vars.camera_position.xyz);
     float3 camera_right = scene_vars.world_to_view_matrix._m00_m10_m20;
     float3 light_up = normalize(cross(forward, camera_right));
     float3 light_right = normalize(cross(light_up, forward));
-    output.world_position.xyz += (output.texcoord.x * light_right + output.texcoord.y * light_up) * light.sphere_radius();
+    output.world_position.xyz += (output.texcoord.x * light_right + output.texcoord.y * light_up) * light.radius;
 
     output.world_position.w = 1.0f;
     output.position = mul(output.world_position, scene_vars.view_projection_matrix);
-    output.world_position.w = light.sphere_radius();
+    output.world_position.w = light.radius;
 
-    output.radiance = evaluate_sphere_light(light, scene_vars.camera_position.xyz);
+    output.radiance = light.radiance();
 
     return output;
 }
