@@ -279,7 +279,7 @@ float3 centroid_of_intersection(Cone c1, Cone c2) {
     }
 }
 
-struct  CentroidAndSolidangle {
+struct CentroidAndSolidangle {
     float3 centroid_direction;
     float solidangle;
 };
@@ -287,7 +287,7 @@ struct  CentroidAndSolidangle {
 // Computes the centroid and solidangle of the intersection from the cone with the hemisphere.
 // Assumes that the cone has a maximum angle of 90 degrees (positive cos theta).
 CentroidAndSolidangle centroid_and_solidangle_on_hemisphere(Cone cone) {
-    const Cone hemipshere = { float3(0.0f, 0.0f, 1.0f), 0.0f };
+    const Cone hemisphere = { float3(0.0f, 0.0f, 1.0f), 0.0f };
 
     float r1 = acos(cone.cos_theta);
     float r2 = 1.57079637f;
@@ -295,13 +295,13 @@ CentroidAndSolidangle centroid_and_solidangle_on_hemisphere(Cone cone) {
 
     if (rd <= r2 - r1) {
         // One cone is completely inside the other
-        float3 centroid_direction = cone.cos_theta > hemipshere.cos_theta ? cone.direction : hemipshere.direction;
+        float3 centroid_direction = cone.cos_theta > hemisphere.cos_theta ? cone.direction : hemisphere.direction;
         float solidangle = TWO_PI - TWO_PI * cone.cos_theta;
         return Cone::make(centroid_direction, solidangle);
     }
     else {
         float w = (r2 - r1 + rd) / (2.0f * rd);
-        float3 centroid_direction = normalize(lerp(hemipshere.direction, cone.direction, w));
+        float3 centroid_direction = normalize(lerp(hemisphere.direction, cone.direction, w));
 
         if (rd >= r1 + r2)
             // No intersection exists
