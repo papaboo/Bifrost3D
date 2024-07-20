@@ -124,18 +124,16 @@ struct DefaultShading : IShadingModel {
 
         float3 light_radiance = light.power * rcp(4.0f * PI * dot(light.position, light.position));
 
+        // Scale ambient visibility.
+        Cone light_sphere_cap = light.get_sphere_cap();
+        float scaled_ambient_visibility = SphereLight::scale_ambient_visibility(light_sphere_cap, ambient_visibility);
+
         // Evaluate Lambert.
-        Cone light_sphere_cap = sphere_to_sphere_cap(light.position, light.radius);
-        float solidangle_of_light = solidangle(light_sphere_cap);
         CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
-        float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle_of_light;
-        float3 radiance = m_diffuse_tint * BSDFs::Lambert::evaluate() * centroid_and_solidangle.centroid_direction.z * light_radiance * light_radiance_scale;
-
-        // Scale ambient visibility by subtended solid angle.
-        float solidangle_percentage = inverse_lerp(0, TWO_PI, solidangle_of_light);
-        float scaled_ambient_visibility = lerp(1.0, ambient_visibility, solidangle_percentage);
-
-        radiance *= scaled_ambient_visibility;
+        float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle(light_sphere_cap);
+        float3 diffuse_f = m_diffuse_tint * BSDFs::Lambert::evaluate();
+        float3 diffuse_light_contribution = light_radiance * centroid_and_solidangle.centroid_direction.z * light_radiance_scale * scaled_ambient_visibility;
+        float3 radiance = diffuse_f * diffuse_light_contribution;
 
         radiance += m_specular_scale * evaluate_sphere_light_GGX(light, light_radiance, wo, m_specularity, m_specular_alpha, scaled_ambient_visibility);
 
@@ -172,7 +170,8 @@ struct DefaultShading : IShadingModel {
             float a2 = pow2(ggx_alpha);
             float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta_i * 3.6 + 0.4));
 
-            float specular_ambient_visibility = lerp(1, ambient_visibility, a2);
+            // Adjust ambient visibility such that a rough surface has full ambient occlusion applied, while a mirror reflection has none.
+            float specular_ambient_visibility = lerp(1, ambient_visibility, ggx_alpha);
 
             return BSDFs::GGX::evaluate(ggx_alpha, specularity, wo, wi) * cos_theta_i * light_radiance * area_light_normalization_term * specular_ambient_visibility;
         }

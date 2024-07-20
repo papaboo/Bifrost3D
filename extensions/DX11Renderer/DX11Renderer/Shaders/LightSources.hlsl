@@ -30,6 +30,17 @@ struct SphereLight {
         float divisor = 4.0 * pow2(PI * radius); // PI * surface area of sphere
         return power * rcp(divisor);
     }
+
+    Cone get_sphere_cap() { return sphere_to_sphere_cap(position, radius); }
+
+    // Use the spherical cap of a sphere light to scale ambient visibility.
+    // The rationale is that a large light needs AO to effectively occlude the light,
+    // while a small light source can rely on shadowmaps or other means of direct sampling.
+    static float scale_ambient_visibility(Cone light_sphere_cap, float ambient_visibility) {
+        float solidangle_of_light = solidangle(light_sphere_cap);
+        float solidangle_percentage = inverse_lerp(0, TWO_PI, solidangle_of_light);
+        return lerp(1.0, ambient_visibility, solidangle_percentage);
+    }
 };
 
 //-----------------------------------------------------------------------------
