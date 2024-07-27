@@ -36,10 +36,9 @@ void create_veach_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::
         SceneRoots::set_environment_tint(scene_ID, RGB::black());
 
     { // Setup camera transform. Look downwards by 22.5 degress
-        Transform cam_transform = Cameras::get_transform(camera_ID);
-        cam_transform.translation = Vector3f(0.0f, 2.0f, 0.0f);
-        cam_transform.rotation = Quaternionf::from_angle_axis(PI<float>() / 8.0f, Vector3f::right());
-        Cameras::set_transform(camera_ID, cam_transform);
+        Vector3f camera_translation = Vector3f(0.0f, 2.0f, 0.0f);
+        Quaternionf camera_rotation = Quaternionf::from_angle_axis(PI<float>() / 8.0f, Vector3f::right());
+        Cameras::set_transform(camera_ID, Transform(camera_translation, camera_rotation));
     }
 
     { // Create floor.
