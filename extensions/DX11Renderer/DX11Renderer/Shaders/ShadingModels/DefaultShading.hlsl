@@ -158,23 +158,17 @@ struct DefaultShading : IShadingModel {
         if (wi.z <= 0.0f)
             return float3(0, 0, 0);
 
-        bool delta_GGX_distribution = ggx_alpha < 0.0005;
-        if (delta_GGX_distribution) {
-            // Check if peak reflection and the most representative point are aligned.
-            float toggle_reflection = saturate(100000 * (dot(peak_reflection, wi) - 0.99999));
-            float3 light_radiance = light.radiance(); // Recompute radiance for point light instead of using the argument above
-            return specularity * light_radiance * toggle_reflection;
-        } else {
-            float cos_theta_i = wi.z;
-            float sin_theta_squared = pow2(light.radius) / dot(most_representative_point, most_representative_point);
-            float a2 = pow2(ggx_alpha);
-            float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta_i * 3.6 + 0.4));
+        // Adjust ambient visibility such that a rough surface has full ambient occlusion applied, while a mirror reflection has none.
+        float specular_ambient_visibility = lerp(1, ambient_visibility, ggx_alpha);
 
-            // Adjust ambient visibility such that a rough surface has full ambient occlusion applied, while a mirror reflection has none.
-            float specular_ambient_visibility = lerp(1, ambient_visibility, ggx_alpha);
+        // Limit GGX alpha as nearly specular surfaces produce artifacts.
+        ggx_alpha = max(0.0005, ggx_alpha);
+        float cos_theta_i = wi.z;
+        float sin_theta_squared = pow2(light.radius) / dot(most_representative_point, most_representative_point);
+        float a2 = pow2(ggx_alpha);
+        float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta_i * 3.6 + 0.4));
 
-            return BSDFs::GGX::evaluate(ggx_alpha, specularity, wo, wi) * cos_theta_i * light_radiance * area_light_normalization_term * specular_ambient_visibility;
-        }
+        return BSDFs::GGX::evaluate(ggx_alpha, specularity, wo, wi) * cos_theta_i * light_radiance * area_light_normalization_term * specular_ambient_visibility;
     }
 
     // Apply the shading model to the IBL.
