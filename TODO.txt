@@ -1,32 +1,22 @@
 BACKLOG:
-* Dump multi scattering contribution in specular lobe instead of diffuse.
-** OptiX: Could make it simpler to make the coat a separate interface instead of build into the default material.
-*** Refactor to dump MS in SS
-*** Split shading models
-** DX: Move area light abstractions out into util functions?
-*** Remove world to shading as parameter?
-*** Improve documentation.
-**** Why is AO scaled?
-**** What's that nearly diffuse or mirror special case in GGX? And why does it ignore AO?
-**** Why does the nearly mirror specular rings in TestScene have (strong) AO?
-**** Can we reduce the amount of computations done inside the branches?
-*** Can we take the coming split into account? Is there any shared GGX/lambert area light code?
-*** There are some shared variables; light center, radiance, ambient visibility, that'll have to be precomputed in then passed to the actual BSDF implementations.
-*** We can have a shading model wrapper, that handles these precomputations and dispatches to the different light modes
-** Define how we should scale roughness of a surface underneath another rough surface
-** Add support for local refraction in the GGX BSDF??
+* DX11 crash when box gun shot destroyed
 * Normals revisited
 ** Implement Solving Self-Intersection Artifacts in DirectX Raytracing in OptiX, to avoid hard shadows on tesselated spheres.
 *** https://developer.nvidia.com/blog/solving-self-intersection-artifacts-in-directx-raytracing/
 *** Will probably require an origin per new ray, so one for light samples and one for BSDF samples
 ** Cubical sphere's in sphere scene are partially see-through near the border.
 *** Toggling thin-walled has a pretty drastic effect even though all intersections should be on the outside
+** sea_keep_lonely_watcher shows bright artifacts on transparent geometry. The artifact scales with transparency. Is it just rays penetrating all surfaces due to cutouts?
 ** Can we remove scene epsilon then?
+* Plastic torus has different highlights depending on if it's cutout or transparent.
 * Rough glass
+** Add support for local refraction of the coat in default shading
+** Define how we should scale roughness of a surface underneath another rough surface
 ** Test that PDF is always positive if reflectance is positive
 *** Test for entire sphere, not just expected hemisphere.
 ** Change integrators such that shading normal doesn't always point towards the camera and can be used to differentiate between front and backside intersections in GGX.
-*** Or keep the normal as is and 'flip' the index of refraction
+*** Or keep the normal as is and 'flip' the index of refraction on backsides
+*** Make sure it's consistent!! Right now some layers/BSDFs will flip the view direction, others will refuse to sample the backside.
 ** Add rough glass shading model
 *** Rough glass sheet test scene.
 ** Can we use Bounded VNDF when the IOR is greater (or was it less) than 1.0? So cases where the refraction will cause more of the lobe to be occluded.
@@ -34,29 +24,30 @@ BACKLOG:
 *** See PBRTv4 bxdfs.cpp line 80: if (eta == 1 || mfDistrib.EffectivelySmooth()) { .. }
 *** What is 'EffectivelySmooth' defined as?
 *** PBRT handles it as a delta dirac, which I'd still like to avoid
-** Approximate rough glass in DX11 using a guassian filter, see Doom 2016.
+** Approximate rough glass in DX11 using a gaussian filter, see Doom 2016.
 * Emissive meshes
 ** Mirror glTF for starters. Emissive texture and emissive 'strength'
 *** https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_emissive_strength/README.md
 ** Do something similar to or reuse the fixed light samples in PresampledEnvironmentLight and add MIS
-* Dithered transparency in the material
-** using a fairly large blue noise texture, morton encoding or Laine-Karras hash
-** Consider it an engine effect and include it in the path tracer as well
-** See https://www.youtube.com/watch?v=NHd1PeJfyzE
+*** Presample mesh lights. Handle textures by random sampling and then do reestimated importance sampling when combining samples. Cheapest memory wise, parallelisable, and a pretty simple solution.
 * Bump mapping
+** Create test scene with a plane where one side has proper micro geometry and the other is normal mapped.
 ** Taming the Shadow Terminator for 'proper' handling of hemisphere distortion. Only scales the contribution. Mirror surfaces still have to be handled differently
 *** https://blog.yiningkarlli.com/2020/02/shadow-terminator-in-takua.html
 ** Approach it the same way that Heitz did with multiple bounces.
 ** Or simply flip the normal or correct back facing, similar to the original shading normal.
-* Film grain
-** http://www.loopit.dk/banding_in_games.pdf
-** https://www.shadertoy.com/view/4t2SDh
+* Remove color banding
+** http://www.loopit.dk/banding_in_games.pdf and https://www.shadertoy.com/view/4t2SDh
 * Threadsafe asset management
 ** Assets shouldn't be copied on resize/reserve, as that gives issues when multithreading asset creation.
 *** Instead we can allocate the assets in chunks and just allocate more chunks as needed. Linked list style
 *** To avoid dereferencing multiple pointers whenever an asset's property is accessed, we can just return the (now static) reference to the asset. So instead of having Images::get_size, we'll instead use Images::get(image_ID) to return an image and then call get_size on that.
 ** Allow multithreaded UID generation
 ** Use the threadsafe asset management in model loaders to parallelize asset loading and creation.
+* Dithered transparency in the material
+** using a fairly large blue noise texture, morton encoding or Laine-Karras hash
+** Consider it an engine effect and include it in the path tracer as well
+** See https://www.youtube.com/watch?v=NHd1PeJfyzE
 * Upgrade OptiX to get better denoiser
 * ReSTIR
 ** Start with the simpler Spatiotemporal variance-guided filtering: real-time reconstruction for path-traced global illumination
@@ -72,6 +63,7 @@ BACKLOG:
 ** Heitz and Georgiev blue noise screen space seed scheme.
 * SDF shadows - check UE4
 ** http://kunzhou.net/2013/fur-rendering-tvcg.pdf
+** RTSDF: Real-time Signed Distance Fields for Soft Shadow Approximation in Games
 ** Call of duty precomputed GI. Check how they handle light bleeding. http://advances.realtimerendering.com/s2017/Precomputed%20Lighting%20in%20CoD%20IW_20_PPS.pdf
 * SSAO
 ** Compute SSAO based on geometric/screenspace normals and filter based on shading normals.
