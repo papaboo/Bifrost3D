@@ -349,6 +349,7 @@ int initialize_scene(Engine& engine) {
 
     // Create camera. Matrices will be set up by the CameraViewportHandler.
     CameraID cam_ID = Cameras::create("Camera", scene_ID, Matrix4x4f::identity(), Matrix4x4f::identity());
+    camera_handler = new CameraViewportHandler(cam_ID, engine.get_window().get_aspect_ratio(), 0.1f, 100.0f);
 
     // Load model
     bool load_model_from_file = false;
@@ -394,7 +395,6 @@ int initialize_scene(Engine& engine) {
         AABB global_mesh_aabb = AABB(bounding_sphere_center - bounding_sphere_radius, bounding_sphere_center + bounding_sphere_radius);
         scene_bounds.grow_to_contain(global_mesh_aabb);
     }
-    float scene_size = magnitude(scene_bounds.size());
 
     if (load_model_from_file) {
         Transform cam_transform = Cameras::get_transform(cam_ID);
@@ -404,7 +404,7 @@ int initialize_scene(Engine& engine) {
     }
 
     // Add a light source if none were added yet.
-    bool no_light_sources = LightSources::begin() == LightSources::end() && g_environment.empty();
+    bool no_light_sources = LightSources::get_iterable().is_empty() && g_environment.empty();
     if (no_light_sources && load_model_from_file) {
         Quaternionf light_direction = Quaternionf::look_in(normalize(Vector3f(-0.1f, -10.0f, -0.1f)));
         Transform light_transform = Transform(Vector3f::zero(), light_direction);
@@ -413,7 +413,7 @@ int initialize_scene(Engine& engine) {
         SceneNodes::set_parent(light_node_ID, root_node_ID);
     }
 
-    camera_handler = new CameraViewportHandler(cam_ID, engine.get_window().get_aspect_ratio(), 0.1f, 100.0f);
+    float scene_size = magnitude(scene_bounds.size());
     camera_handler->set_near_and_far(scene_size / 10000.0f, scene_size * 3.0f);
 
     float camera_velocity = scene_size * 0.1f;
