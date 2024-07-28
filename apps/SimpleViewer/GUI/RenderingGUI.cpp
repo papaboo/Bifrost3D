@@ -155,10 +155,12 @@ void camera_GUI(CameraID camera_ID, CameraNavigation* navigation) {
 }
 
 struct RenderingGUI::State {
+#ifdef OPTIX_FOUND
     struct {
         bool use_path_regularization = true;
         OptiXRenderer::PathRegularizationSettings path_regularization_settings;
     } optix;
+#endif // OPTIX_FOUND
 };
 
 RenderingGUI::RenderingGUI(CameraNavigation* navigation, DX11Renderer::Compositor* compositor,
@@ -166,7 +168,9 @@ RenderingGUI::RenderingGUI(CameraNavigation* navigation, DX11Renderer::Composito
     : m_navigation(navigation), m_compositor(compositor), m_dx_renderer(dx_renderer), m_optix_renderer(optix_renderer), m_state(new State()) {
     strcpy_s(m_screenshot.path, m_screenshot.max_path_length, "c:\\temp\\ss");
 
+#ifdef OPTIX_FOUND
     m_state->optix.path_regularization_settings = m_optix_renderer->get_path_regularization_settings();
+#endif
 }
 
 RenderingGUI::~RenderingGUI() { 
