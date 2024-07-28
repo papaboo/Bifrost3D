@@ -5,7 +5,12 @@ find_package(CUDA 10.0)
 set(CMAKE_MODULE_PATH "${BIFROST_EXTENSIONS_DIR}/OptiXRenderer" ${CMAKE_MODULE_PATH})
 find_package(OptiX)
 
-if (CUDA_FOUND AND OPTIX_FOUND AND WIN32)
+# Visual studio versions https://cmake.org/cmake/help/latest/variable/MSVC_VERSION.html
+if (WIN32 AND (MSVC_VERSION GREATER 1910) AND (MSVC_VERSION LESS_EQUAL 1929))
+  set(SUPPORTED_VISUAL_STUDIO_FOUND TRUE)
+endif()
+
+if (CUDA_FOUND AND OPTIX_FOUND AND SUPPORTED_VISUAL_STUDIO_FOUND)
   install_file(${OPTIX_DLL})
   install_file(${OPTIX_U_DLL})
 
@@ -113,7 +118,7 @@ else()
   if (NOT OPTIX_FOUND)
     message(WARNING "OptiXRenderer: OptiX not installed.")
   endif()
-  if (NOT WIN32)
-    message(WARNING "OptiXRenderer: Only supported on windows.")
+  if (NOT SUPPORTED_VISUAL_STUDIO_FOUND)
+    message(WARNING "OptiXRenderer: Only supported on windows with MSVC version between 1910 and 1929 inclusive. Current MSVC version is ${MSVC_VERSION}")
   endif()
 endif()
