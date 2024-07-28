@@ -1,4 +1,4 @@
-// Material model parameters.
+// Shading model utilities.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
@@ -6,9 +6,12 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _DX11_RENDERER_SHADERS_SHADING_MODELS_PARAMETERS_H_
-#define _DX11_RENDERER_SHADERS_SHADING_MODELS_PARAMETERS_H_
+#ifndef _DX11_RENDERER_SHADERS_SHADING_MODELS_UTILS_H_
+#define _DX11_RENDERER_SHADERS_SHADING_MODELS_UTILS_H_
 
+#include <BSDFs/Diffuse.hlsl>
+#include <BSDFs/GGX.hlsl>
+#include <LightSources.hlsl>
 #include <Utils.hlsl>
 
 namespace ShadingModels {
@@ -129,6 +132,57 @@ struct Parameters {
     float coat_roughness() { return m_coat_roughness; }
 };
 
+//-----------------------------------------------------------------------------
+// Sphere light BRDF approximations.
+//-----------------------------------------------------------------------------
+
+float3 evaluate_sphere_light_lambert(SphereLight light, float3 light_radiance, float3 wo, float3 tint, float ambient_visibility) {
+    // Scale ambient visibility.
+    Cone light_sphere_cap = light.get_sphere_cap();
+
+    // Use the spherical cap of a sphere light to scale ambient visibility.
+    // The rationale is that a large light needs AO to effectively occlude the light,
+    // while a small light source can rely on shadowmaps or other means of direct sampling.
+    float solidangle_of_light = solidangle(light_sphere_cap);
+    float solidangle_percentage = inverse_lerp(0, TWO_PI, solidangle_of_light);
+    float scaled_ambient_visibility = lerp(1.0, ambient_visibility, solidangle_percentage);
+
+    // Evaluate Lambert lighting.
+    CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
+    float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle(light_sphere_cap);
+    float3 lambert_f = tint * BSDFs::Lambert::evaluate();
+    float3 light_contribution = light_radiance * centroid_and_solidangle.centroid_direction.z * light_radiance_scale * scaled_ambient_visibility;
+    return lambert_f * light_contribution;
+}
+
+// GGX sphere light evaluation by most representative point, heavily inspired by Real Shading in Unreal Engine 4.
+// For UE4 reference see the function AreaLightSpecular() in DeferredLightingCommon.usf. (15/1 -2018)
+float3 evaluate_sphere_light_GGX(SphereLight light, float3 light_radiance, float3 wo, float3 specularity, float ggx_alpha, float ambient_visibility) {
+    // Closest point on sphere to ray. Equation 11 in Real Shading in Unreal Engine 4, 2013.
+    float3 peak_reflection = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo);
+    float3 closest_point_on_ray = dot(light.position, peak_reflection) * peak_reflection;
+    float3 center_to_ray = closest_point_on_ray - light.position;
+    float3 most_representative_point = light.position + center_to_ray * saturate(light.radius * reciprocal_length(center_to_ray));
+    float3 wi = normalize(most_representative_point);
+
+    // Return no contribution if lit from the backside.
+    // Due to floating point precision this can happen even if the light is not found to be on the backside.
+    if (wi.z <= 0.0f)
+        return float3(0, 0, 0);
+
+    // Adjust ambient visibility such that a rough surface has full ambient occlusion applied, while a mirror reflection has none.
+    float specular_ambient_visibility = lerp(1, ambient_visibility, ggx_alpha);
+
+    // Limit GGX alpha as nearly specular surfaces produce artifacts.
+    ggx_alpha = max(0.0005, ggx_alpha);
+    float cos_theta_i = wi.z;
+    float sin_theta_squared = pow2(light.radius) / dot(most_representative_point, most_representative_point);
+    float a2 = pow2(ggx_alpha);
+    float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta_i * 3.6 + 0.4));
+
+    return BSDFs::GGX::evaluate(ggx_alpha, specularity, wo, wi) * cos_theta_i * light_radiance * area_light_normalization_term * specular_ambient_visibility;
+}
+
 } // NS ShadingModels
 
-#endif // _DX11_RENDERER_SHADERS_SHADING_MODELS_PARAMETERS_H_
+#endif // _DX11_RENDERER_SHADERS_SHADING_MODELS_UTILS_H_

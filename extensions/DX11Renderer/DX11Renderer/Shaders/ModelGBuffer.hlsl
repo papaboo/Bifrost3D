@@ -6,7 +6,7 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#include <ShadingModels/Parameters.hlsl>
+#include <ShadingModels/Utils.hlsl>
 #include <Utils.hlsl>
 
 // ------------------------------------------------------------------------------------------------

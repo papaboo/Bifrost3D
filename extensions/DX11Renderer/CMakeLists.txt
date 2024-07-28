@@ -74,7 +74,7 @@ if (DIRECTX11_FOUND AND WIN32)
     DX11Renderer/Shaders/ShadingModels/DefaultShading.hlsl
     DX11Renderer/Shaders/ShadingModels/DiffuseShading.hlsl
     DX11Renderer/Shaders/ShadingModels/IShadingModel.hlsl
-    DX11Renderer/Shaders/ShadingModels/Parameters.hlsl
+    DX11Renderer/Shaders/ShadingModels/Utils.hlsl
   )
 
   set(ALL_SHADER_SRC ${SHADERS_SRC} ${SHADERS_BSDFS_SRC} ${SHADERS_CAMERAEFFECTS_SRC} ${SHADERS_COMPUTE_SRC} ${SHADERS_SHADING_MODELS_SRC})

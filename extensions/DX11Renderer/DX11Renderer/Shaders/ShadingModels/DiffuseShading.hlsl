@@ -11,7 +11,7 @@
 
 #include <BSDFs/Diffuse.hlsl>
 #include <ShadingModels/IShadingModel.hlsl>
-#include <ShadingModels/Parameters.hlsl>
+#include <ShadingModels/Utils.hlsl>
 
 namespace ShadingModels {
 
@@ -49,19 +49,7 @@ struct DiffuseShading : IShadingModel {
     // Uses evaluation by most representative point internally.
     float3 evaluate_sphere_light(float3 wo, SphereLight light, float ambient_visibility) {
         float3 light_radiance = light.power * rcp(4.0f * PI * dot(light.position, light.position));
-
-        // Scale ambient visibility.
-        Cone light_sphere_cap = light.get_sphere_cap();
-        float scaled_ambient_visibility = SphereLight::scale_ambient_visibility(light_sphere_cap, ambient_visibility);
-
-        // Evaluate Lambert.
-        CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
-        float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle(light_sphere_cap);
-        float3 diffuse_f = m_tint * BSDFs::Lambert::evaluate();
-        float3 diffuse_light_contribution = light_radiance * centroid_and_solidangle.centroid_direction.z * light_radiance_scale * scaled_ambient_visibility;
-        float3 radiance = diffuse_f * diffuse_light_contribution;
-
-        return radiance;
+        return evaluate_sphere_light_lambert(light, light_radiance, wo, m_tint, ambient_visibility);
     }
 
     // Apply the shading model to the IBL.
