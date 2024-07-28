@@ -1,14 +1,6 @@
 # Find and setup OptiX.
 # Search in the default install locations.
 
-MACRO(set_boolean variable)
-  if(${ARGN})
-    set(${variable} TRUE)
-  else(${ARGN})
-    set(${name} FALSE)
-  endif(${ARGN})
-ENDMACRO(set_boolean)
-
 # First locate the OptiX search path.
 set(OPTIX_WINDOWS_SEARCH_PATHS
   "C:/ProgramData/NVIDIA Corporation/OptiX SDK 6.5.0"
