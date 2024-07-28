@@ -22,8 +22,8 @@ interface IShadingModel {
     // Evaluate the material lit by a sphere light.
     float3 evaluate_sphere_light(float3 wo, SphereLight light, float ambient_visibility);
 
-    // Apply the shading model to the IBL.
-    float3 evaluate_IBL(float3 wo, float3 normal);
+    // Evaluate the material lit by an IBL.
+    float3 evaluate_IBL(float3 wo, float3 normal, float ambient_visibility);
 };
 
 } // NS ShadingModels

@@ -76,7 +76,7 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
     const ShadingModels::IShadingModel shading_model = shading_model_creator.create(input.texcoord, wo.z);
 
     // Apply IBL
-    float3 radiance = ambient_visibility * scene_vars.environment_tint.rgb * shading_model.evaluate_IBL(world_wo, world_normal);
+    float3 radiance = scene_vars.environment_tint.rgb * shading_model.evaluate_IBL(world_wo, world_normal, ambient_visibility);
 
     for (int l = 0; l < light_count.x; ++l) {
         LightData light = light_data[l];
