@@ -10,12 +10,13 @@
 #define _BIFROST_INPUT_KEYBOARD_H_
 
 #include <array>
+#include <string>
 
 namespace Bifrost {
 namespace Input {
 
 //----------------------------------------------------------------------------
-// Implementats a keyboard abstraction.
+// Implements a keyboard abstraction.
 // The keyboard supports up to MAX_HALFTAP_COUNT half taps, press or release, 
 // pr frame. This can be used to implement such interactions as double tap 
 // for dash without worrying (too much) about the framerate.

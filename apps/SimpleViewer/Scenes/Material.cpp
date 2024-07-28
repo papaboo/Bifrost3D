@@ -93,6 +93,7 @@ public:
             }
         }
 
+#ifdef OPTIX_FOUND
         ImGui::PoppedTreeNode("Shading model properties", [&] {
             updated |= ImGui::SliderFloat("Material lerp", &m_material_lerp, 0, 1);
             float specularity = lerp(m_material0_data.specularity, m_material1_data.specularity, m_material_lerp);
@@ -159,6 +160,7 @@ public:
                 ImGui::Text("%u samples", m_ggx_with_fresnel.accumulation_count);
             });
         });
+#endif // OPTIX_FOUND
 
         ImGui::End();
     }

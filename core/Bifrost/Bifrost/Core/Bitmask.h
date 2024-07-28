@@ -9,6 +9,7 @@
 #ifndef _BIFROST_CORE_BITMASK_H_
 #define _BIFROST_CORE_BITMASK_H_
 
+#include <initializer_list>
 #include <type_traits>
 
 namespace Bifrost {
