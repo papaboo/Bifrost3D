@@ -52,18 +52,9 @@ struct DiffuseShading : IShadingModel {
         return evaluate_sphere_light_lambert(light, light_radiance, wo, m_tint, ambient_visibility);
     }
 
-    // Apply the shading model to the IBL.
-    // TODO Take the current LOD and pixel density into account before choosing sample LOD.
-    //      See http://casual-effects.blogspot.dk/2011/08/plausible-environment-lighting-in-two.html 
-    //      for how to derive the LOD level for cubemaps.
-    float3 evaluate_IBL(float3 wo, float3 normal) {
-        float width, height, mip_count;
-        environment_tex.GetDimensions(0, width, height, mip_count);
-
-        float2 diffuse_tc = direction_to_latlong_texcoord(normal);
-        float3 radiance = m_tint * environment_tex.SampleLevel(environment_sampler, diffuse_tc, mip_count).rgb;
-
-        return radiance;
+    // Evaluate the material lit by an IBL.
+    float3 evaluate_IBL(float3 wo, float3 normal, float ambient_visibility) {
+        return evaluate_IBL_lambert(wo, normal, m_tint, ambient_visibility);
     }
 };
 

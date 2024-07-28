@@ -132,33 +132,14 @@ struct DefaultShading : IShadingModel {
         return radiance;
     }
 
-    // Apply the shading model to the IBL.
-    // TODO Take the current LOD and pixel density into account before choosing sample LOD.
-    //      See http://casual-effects.blogspot.dk/2011/08/plausible-environment-lighting-in-two.html 
-    //      for how to derive the LOD level for cubemaps.
-    float3 evaluate_IBL(float3 wo, float3 normal) {
-        float width, height, mip_count;
-        environment_tex.GetDimensions(0, width, height, mip_count);
-
-        float2 diffuse_tc = direction_to_latlong_texcoord(normal);
-        float3 radiance = m_diffuse_tint * environment_tex.SampleLevel(environment_sampler, diffuse_tc, mip_count).rgb;
-
-        float abs_cos_theta_o = abs(dot(wo, normal));
-
-        radiance += m_specular_scale * evaluate_IBL_GGX(wo, normal, abs_cos_theta_o, m_specular_alpha, m_specularity, mip_count);
+    // Evaluate the material lit by an IBL.
+    float3 evaluate_IBL(float3 wo, float3 normal, float ambient_visibility) {
+        float3 radiance = evaluate_IBL_lambert(wo, normal, m_diffuse_tint, ambient_visibility);
+        radiance += m_specular_scale * evaluate_IBL_GGX(wo, normal, m_specular_alpha, m_specularity, ambient_visibility);
         if (m_coat_scale > 0)
-            radiance += m_coat_scale * evaluate_IBL_GGX(wo, normal, abs_cos_theta_o, m_coat_alpha, COAT_SPECULARITY, mip_count);
+            radiance += m_coat_scale * evaluate_IBL_GGX(wo, normal, m_coat_alpha, COAT_SPECULARITY, ambient_visibility);
 
         return radiance;
-    }
-
-    // Evaluate GGX lit by an IBL.
-    float3 evaluate_IBL_GGX(float3 wo, float3 normal, float abs_cos_theta_o, float ggx_alpha, float3 specularity, int mip_count) {
-        float roughness = BSDFs::GGX::roughness_from_alpha(ggx_alpha);
-        float3 wi = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo, normal);
-        float3 rho = compute_specular_rho(specularity, abs_cos_theta_o, roughness);
-        float2 ibl_tc = direction_to_latlong_texcoord(wi);
-        return rho * environment_tex.SampleLevel(environment_sampler, ibl_tc, mip_count * roughness).rgb;
     }
 };
 

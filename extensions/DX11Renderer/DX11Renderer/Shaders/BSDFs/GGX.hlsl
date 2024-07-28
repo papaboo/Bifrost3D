@@ -17,6 +17,11 @@ namespace GGX {
     float alpha_from_roughness(float roughness) { return max(0.00000000001f, roughness * roughness); }
     float roughness_from_alpha(float alpha) { return sqrt(alpha); }
 
+    // Adjust ambient visibility such that a rough surface has full ambient occlusion applied, while a mirror reflection has none.
+    float scaled_ambient_visibility(float alpha, float ambient_visibility) {
+        return lerp(1, ambient_visibility, alpha);
+    }
+
     // Sampling the GGX Distribution of Visible Normals, equation 1.
     float D(float alpha_x, float alpha_y, float3 halfway) {
         float m = pow2(halfway.x / alpha_x) + pow2(halfway.y / alpha_y) + pow2(halfway.z);
