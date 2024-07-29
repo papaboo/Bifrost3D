@@ -61,8 +61,10 @@ struct Settings final {
         FilmicSettings filmic;
     } tonemapping;
 
+    float film_grain;
+
     static Settings default() {
-        Settings res;
+        Settings res = {};
         res.exposure.mode = ExposureMode::Histogram;
         res.exposure.min_log_luminance = -4;
         res.exposure.max_log_luminance = 4;
@@ -81,12 +83,14 @@ struct Settings final {
         res.tonemapping.mode = TonemappingMode::Filmic;
         res.tonemapping.filmic = FilmicSettings::default();
 
+        res.film_grain = 1 / 255.0f;
+
         return res;
     }
 
     // Output linear colors without any exposure, vignetting or other screen space effects.
     static Settings linear() {
-        Settings res;
+        Settings res = {};
         res.exposure.mode = ExposureMode::Fixed;
         res.exposure.min_log_luminance = -4;
         res.exposure.max_log_luminance = 4;
@@ -105,10 +109,11 @@ struct Settings final {
         res.tonemapping.mode = TonemappingMode::Linear;
         res.tonemapping.filmic = FilmicSettings::default();
 
+        res.film_grain = 0.0f;
+
         return res;
     }
 };
-
 
 // ------------------------------------------------------------------------------------------------
 // Free functions.
