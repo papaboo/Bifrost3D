@@ -196,8 +196,13 @@ public:
         float vignette_strength;
         float film_grain_strength;
 
-        // Generic tonemapping parameter storage
-        float tonemapping[8];
+        float tonemapping_black_clip;
+        float tonemapping_toe;
+        float tonemapping_slope;
+        float tonemapping_shoulder;
+        float tonemapping_white_clip;
+
+        float3 _padding;
     };
 
     CameraEffects() = default;

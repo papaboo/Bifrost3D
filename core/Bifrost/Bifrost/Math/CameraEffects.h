@@ -13,25 +13,23 @@
 #include <Bifrost/Math/Matrix.h>
 #include <Bifrost/Math/Utils.h>
 
-namespace Bifrost {
-namespace Math {
-namespace CameraEffects {
+namespace Bifrost::Math::CameraEffects {
 
 enum class TonemappingMode { Linear, Filmic, Count };
 enum class ExposureMode { Fixed, LogAverage, Histogram, Count };
 
-struct FilmicSettings {
+struct TonemappingSettings {
     float black_clip;
     float toe;
     float slope;
     float shoulder;
     float white_clip;
 
-    static FilmicSettings ACES() { return { 0.0f, 0.53f, 0.91f, 0.23f, 0.035f }; }
-    static FilmicSettings uncharted2() { return { 0.0f, 0.55f, 0.63f, 0.47f, 0.01f }; }
-    static FilmicSettings HP() { return { 0.0f, 0.63f, 0.65f, 0.45f, 0.0f }; }
-    static FilmicSettings legacy() { return { 0.0f, 0.3f, 0.98f, 0.22f, 0.025f}; }
-    static FilmicSettings default() { return ACES(); }
+    static TonemappingSettings ACES() { return { 0.0f, 0.53f, 0.91f, 0.23f, 0.035f }; }
+    static TonemappingSettings uncharted2() { return { 0.0f, 0.55f, 0.63f, 0.47f, 0.01f }; }
+    static TonemappingSettings HP() { return { 0.0f, 0.63f, 0.65f, 0.45f, 0.0f }; }
+    static TonemappingSettings legacy() { return { 0.0f, 0.3f, 0.98f, 0.22f, 0.025f}; }
+    static TonemappingSettings default() { return ACES(); }
 };
 
 struct Settings final {
@@ -58,7 +56,7 @@ struct Settings final {
 
     struct {
         TonemappingMode mode;
-        FilmicSettings filmic;
+        TonemappingSettings settings;
     } tonemapping;
 
     float film_grain;
@@ -81,7 +79,7 @@ struct Settings final {
         res.vignette = 0.63f;
 
         res.tonemapping.mode = TonemappingMode::Filmic;
-        res.tonemapping.filmic = FilmicSettings::default();
+        res.tonemapping.settings = TonemappingSettings::default();
 
         res.film_grain = 1 / 255.0f;
 
@@ -107,7 +105,7 @@ struct Settings final {
         res.vignette = 0.0f;
 
         res.tonemapping.mode = TonemappingMode::Linear;
-        res.tonemapping.filmic = FilmicSettings::default();
+        res.tonemapping.settings = TonemappingSettings::default();
 
         res.film_grain = 0.0f;
 
@@ -219,12 +217,10 @@ inline RGB filmic(RGB color, float slope = 0.91f, float toe = 0.53f, float shoul
     return RGB(c.x, c.y, c.z);
 }
 
-inline RGB filmic(RGB color, FilmicSettings s) {
+inline RGB filmic(RGB color, TonemappingSettings s) {
     return filmic(color, s.slope, s.toe, s.shoulder, s.black_clip, s.white_clip);
 }
 
-} // NS CameraEffects
-} // NS Math
-} // NS Bifrost
+} // NS Bifrost::Math::CameraEffects
 
 #endif // _BIFROST_MATH_CAMERA_EFFECTS_H_

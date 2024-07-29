@@ -438,13 +438,11 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Bifrost::Math::Camera
         constants.vignette_strength = settings.vignette;
         constants.film_grain_strength = settings.film_grain;
 
-        if (settings.tonemapping.mode == TonemappingMode::Filmic) {
-            constants.tonemapping[0] = settings.tonemapping.filmic.black_clip;
-            constants.tonemapping[1] = settings.tonemapping.filmic.toe;
-            constants.tonemapping[2] = settings.tonemapping.filmic.slope;
-            constants.tonemapping[3] = settings.tonemapping.filmic.shoulder;
-            constants.tonemapping[4] = settings.tonemapping.filmic.white_clip;
-        }
+        constants.tonemapping_black_clip = settings.tonemapping.settings.black_clip;
+        constants.tonemapping_toe = settings.tonemapping.settings.toe;
+        constants.tonemapping_slope = settings.tonemapping.settings.slope;
+        constants.tonemapping_shoulder = settings.tonemapping.settings.shoulder;
+        constants.tonemapping_white_clip = settings.tonemapping.settings.white_clip;
 
         context.UpdateSubresource(m_constant_buffer, 0, nullptr, &constants, 0u, 0u);
     }

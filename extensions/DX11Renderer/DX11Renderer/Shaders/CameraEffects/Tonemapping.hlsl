@@ -159,7 +159,7 @@ class LinearTonemapper : ITonemapper {
 
 class Unreal4Tonemapper : ITonemapper {
     float3 tonemap(float3 color) {
-        return unreal4(color, filmic_black_clip(), filmic_toe(), filmic_slope(), filmic_shoulder(), filmic_white_clip());
+        return unreal4(color, tonemapping_black_clip, tonemapping_toe, tonemapping_slope, tonemapping_shoulder, tonemapping_white_clip);
     }
 };
 

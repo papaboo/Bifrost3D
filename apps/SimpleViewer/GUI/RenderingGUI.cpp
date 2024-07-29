@@ -68,7 +68,7 @@ void camera_effects(CameraID camera_ID) {
             effects_settings.tonemapping.mode = (TonemappingMode)current_tonemapping_mode;
 
             { // Plot tonemap curve
-                auto filmic_settings = effects_settings.tonemapping.filmic;
+                auto filmic_settings = effects_settings.tonemapping.settings;
 
                 const int max_sample_count = 32;
                 float intensities[max_sample_count];
@@ -85,20 +85,20 @@ void camera_effects(CameraID camera_ID) {
             }
 
             if (effects_settings.tonemapping.mode == TonemappingMode::Filmic) {
-                auto& filmic = effects_settings.tonemapping.filmic;
+                auto& filmic = effects_settings.tonemapping.settings;
 
                 const char* filmic_presets[] = { "Select preset", "ACES", "Uncharted2", "HP", "Legacy" };
                 int current_preset = 0;
                 has_changed |= ImGui::Combo("Preset", &current_preset, filmic_presets, IM_ARRAYSIZE(filmic_presets));
                 switch (current_preset) {
                 case 1:
-                    filmic = FilmicSettings::ACES(); break;
+                    filmic = TonemappingSettings::ACES(); break;
                 case 2:
-                    filmic = FilmicSettings::uncharted2(); break;
+                    filmic = TonemappingSettings::uncharted2(); break;
                 case 3:
-                    filmic = FilmicSettings::HP(); break;
+                    filmic = TonemappingSettings::HP(); break;
                 case 4:
-                    filmic = FilmicSettings::legacy(); break;
+                    filmic = TonemappingSettings::legacy(); break;
                 }
 
                 has_changed |= ImGui::SliderFloat("Black clip", &filmic.black_clip, 0.0f, 1.0f);
