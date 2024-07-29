@@ -111,6 +111,8 @@ void camera_effects(CameraID camera_ID) {
 
         has_changed |= ImGui::InputFloat("Vignette", &effects_settings.vignette, 0.01f, 0.1f, "%.2f");
 
+        has_changed |= ImGui::InputFloat("Film grain", &effects_settings.film_grain, 0.0001f, 0.001f, "%.4f");
+
         if (has_changed)
             Cameras::set_effects_settings(camera_ID, effects_settings);
     });
