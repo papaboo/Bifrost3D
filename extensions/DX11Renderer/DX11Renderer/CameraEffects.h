@@ -193,8 +193,8 @@ public:
         int bloom_support;
 
         float delta_time;
-        float vignette;
-        float _padding;
+        float vignette_strength;
+        float film_grain_strength;
 
         // Generic tonemapping parameter storage
         float tonemapping[8];

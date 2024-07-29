@@ -435,7 +435,8 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Bifrost::Math::Camera
         constants.bloom_support = int(settings.bloom.support * frame_viewport.height);
 
         constants.delta_time = delta_time;
-        constants.vignette = settings.vignette;
+        constants.vignette_strength = settings.vignette;
+        constants.film_grain_strength = settings.film_grain;
 
         if (settings.tonemapping.mode == TonemappingMode::Filmic) {
             constants.tonemapping[0] = settings.tonemapping.filmic.black_clip;
