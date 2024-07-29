@@ -124,11 +124,21 @@ inline float3 unreal4(float3 color, float black_clip = 0.0f, float toe = 0.53f, 
 // Adapted from https://github.com/mattdesl/lwjgl-basics/wiki/ShaderLesson3
 // ------------------------------------------------------------------------------------------------
 
-float simple_vignette_tint(float2 fragcoord, float2 viewport_size, float scale) {
+float simple_vignette_tint(float2 viewport_uv, float scale) {
     float outerRadius = 0.9f;
-    float2 uv = fragcoord / viewport_size.xy;
-    float2 coord = uv - float2(0.5, 0.5);
+    float2 coord = viewport_uv - float2(0.5, 0.5);
     return 1.0 - smoothstep(0.1f, outerRadius, length(coord) * 1.5f * scale);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Film grain
+// Adapted from https://gameidea.org/2023/12/01/film-grain-shader/
+// ------------------------------------------------------------------------------------------------
+
+float film_grain(float2 viewport_uv, float scale) {
+    float2 grain_uv = viewport_uv + delta_time;
+    float noise = frac(sin(dot(grain_uv, float2(12.9898, 78.233))) * 43758.5453) - 0.5;
+    return scale * noise;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -158,14 +168,18 @@ float4 postprocess_pixel(int2 pixel_index, ITonemapper tonemapper) {
     float linear_exposure = linear_exposure_buffer[0];
     float3 low_intensity_color = min(pixels[pixel_index + output_pixel_offset].rgb, bloom_threshold);
     float3 bloom_color = bloom_texture[pixel_index - output_viewport_offset].rgb;
-    float3 color  = linear_exposure * (low_intensity_color + bloom_color);
+    float3 color = linear_exposure * (low_intensity_color + bloom_color);
 
     // Vignette
     float2 viewport_size = input_viewport.zw;
-    color *= simple_vignette_tint(pixel_index - output_viewport_offset, viewport_size, vignette);
+    float2 viewport_uv = (pixel_index - output_viewport_offset) / viewport_size;
+    color *= simple_vignette_tint(viewport_uv, vignette_strength);
 
     // Tonemap
     color = tonemapper.tonemap(color);
+
+    // Film grain
+    color += film_grain(viewport_uv, film_grain_strength);
 
     return float4(color, 1.0f);
 }

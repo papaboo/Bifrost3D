@@ -30,8 +30,8 @@ cbuffer constants : register(b0) {
     int bloom_support;
 
     float delta_time;
-    float vignette;
-    float padding;
+    float vignette_strength;
+    float film_grain_strength;
 
     // float8 tonemapping params
     float4 tonemapping_params_1;
