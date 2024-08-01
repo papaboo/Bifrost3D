@@ -423,7 +423,7 @@ void RenderingGUI::layout_frame() {
         ImGui::PoppedTreeNode("OptiX", [&]() {
             auto camera_ID = *Cameras::get_iterable().begin();
 
-            static const char* backend_modes[] = { "Uninitialized", "Path tracer", "AI denoised GI", "Depth", "Albedo", "Tint", "Roughness", "Shading normal" };
+            static const char* backend_modes[] = { "Uninitialized", "Path tracer", "AI denoised GI", "Depth", "Albedo", "Tint", "Roughness", "Shading normal", "Primitive ID" };
             int current_backend = int(m_optix_renderer->get_backend(camera_ID));
             if (ImGui::Combo("Backend", &current_backend, backend_modes, IM_ARRAYSIZE(backend_modes)) && current_backend != 0) {
                 auto backend = OptiXRenderer::Backend(current_backend);

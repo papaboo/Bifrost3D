@@ -26,6 +26,7 @@ enum class Backend {
     TintVisualization,
     RoughnessVisualization,
     ShadingNormalVisualization,
+    PrimitiveIdVisualization,
 };
 
 // ------------------------------------------------------------------------------------------------
