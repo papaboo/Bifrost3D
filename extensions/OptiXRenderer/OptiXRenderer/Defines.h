@@ -13,9 +13,6 @@
 
 #define DOUBLE_PRECISION_ACCUMULATION_BUFFER 1
 #define PRESAMPLE_ENVIRONMENT_MAP 1
-// When disabling next event estimation to compare images, remember to increase the bounce count by one. 
-// Otherwise the longest paths will be missing from the image.
-#define ENABLE_NEXT_EVENT_ESTIMATION 1
 
 // Pick an RNG by defining which is used.
 // Define LCG_RNG to 1 to use a simple LCG for random number generation.

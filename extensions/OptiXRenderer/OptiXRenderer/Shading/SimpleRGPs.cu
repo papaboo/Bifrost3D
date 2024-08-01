@@ -349,11 +349,9 @@ RT_PROGRAM void miss() {
     float3 environment_radiance = g_scene.environment_light.get_tint();
 
     unsigned int environment_map_ID = g_scene.environment_light.environment_map_ID;
-    if (environment_map_ID) {
-        bool next_event_estimated = monte_carlo_payload.bounces != 0; // Was next event estimated at previous intersection.
+    if (environment_map_ID)
         environment_radiance *= LightSources::evaluate_intersection(g_scene.environment_light, ray.origin, ray.direction, 
-                                                                    monte_carlo_payload.bsdf_MIS_PDF, next_event_estimated);
-    }
+                                                                    monte_carlo_payload.bsdf_MIS_PDF);
 
     monte_carlo_payload.radiance += monte_carlo_payload.throughput * environment_radiance;
     monte_carlo_payload.throughput = make_float3(0.0f);

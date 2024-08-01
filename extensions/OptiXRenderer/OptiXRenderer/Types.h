@@ -265,8 +265,9 @@ public:
         return mis_PDF;
     }
 
-    __inline_all__ bool use_for_MIS() const { return m_PDF > 0.0f; }
     __inline_all__ float PDF() const { return abs(m_PDF); }
+    __inline_all__ void disable_MIS() { m_PDF = -PDF(); }
+    __inline_all__ bool use_for_MIS() const { return m_PDF > 0.0f; }
 };
 
 // NOTE the suboptimal alignment of 8 instead of 16 yields a tiny tiny performance benefit. I have no clue why.
