@@ -188,19 +188,19 @@ float modulate_roughness_under_coat(float base_roughness, float coat_roughness) 
 }
 
 float3 decode_octahedral_normal(int packed_encoded_normal) {
-    const int SHRT_MAX = 32767;
-    const int SHRT_MIN = -32768;
+    const int SHORT_MAX = 32767;
+    const int SHORT_MIN = -32768;
 
     // Unpack the 2 shorts representing the encoded normal. 
     // The sign is implicitly handled for the 16 most significant bits, but needs to be explicitly handled for the least ones.
-    int encoding_x = (packed_encoded_normal & 0xFFFF) + SHRT_MIN;
+    int encoding_x = (packed_encoded_normal & 0xFFFF) + SHORT_MIN;
     int encoding_y = packed_encoded_normal >> 16;
 
     float2 p2 = float2(encoding_x, encoding_y);
-    float3 n = float3(p2, SHRT_MAX - abs(p2.x) - abs(p2.y));
+    float3 n = float3(p2, SHORT_MAX - abs(p2.x) - abs(p2.y));
     if (n.z < 0.0f) {
-        float tmp_x = (SHRT_MAX - abs(n.y)) * non_zero_sign(n.x);
-        n.y = (SHRT_MAX - abs(n.x)) * non_zero_sign(n.y);
+        float tmp_x = (SHORT_MAX - abs(n.y)) * non_zero_sign(n.x);
+        n.y = (SHORT_MAX - abs(n.x)) * non_zero_sign(n.y);
         n.x = tmp_x;
     }
     return n;

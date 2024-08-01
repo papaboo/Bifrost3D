@@ -51,7 +51,7 @@ Varyings vs(float4 geometry : GEOMETRY, float2 texcoord : TEXCOORD) {
     Varyings output;
     output.world_position.xyz = mul(float4(geometry.xyz, 1.0f), to_world_matrix);
     output.position = mul(float4(output.world_position.xyz, 1.0f), scene_vars.view_projection_matrix);
-    output.normal.xyz = mul(float4(decode_octahedral_normal(asint(geometry.w)), 0.0), to_world_matrix);
+    output.normal.xyz = normalize(mul(float4(decode_octahedral_normal(asint(geometry.w)), 0.0), to_world_matrix));
     output.texcoord = texcoord;
     return output;
 }
