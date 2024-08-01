@@ -84,30 +84,24 @@ __inline_dev__ optix::float3 evaluate(const Light& light, optix::float3 position
 }
 
 template <typename LightType>
-__inline_dev__ optix::float3 evaluate_intersection(const LightType& light, optix::float3 position, optix::float3 direction_to_light, 
-                                                   MisPDF bsdf_PDF, bool next_event_estimated) {
+__inline_dev__ optix::float3 evaluate_intersection(const LightType& light, optix::float3 position, optix::float3 direction_to_light,  MisPDF bsdf_PDF) {
     optix::float3 radiance = evaluate(light, position, ray.direction);
 
-#if ENABLE_NEXT_EVENT_ESTIMATION
     if (bsdf_PDF.use_for_MIS()) {
         // Calculate MIS weight and scale the radiance by it.
         float light_PDF = PDF(light, position, ray.direction);
         radiance *= MonteCarlo::MIS_weight(bsdf_PDF.PDF(), light_PDF);
-    } else if (next_event_estimated)
-        // Previous bounce used next event estimation, but did not calculate MIS, so don't apply light contribution.
-        radiance = make_float3(0.0f);
-#endif // ENABLE_NEXT_EVENT_ESTIMATION
+    }
 
     return radiance;
 }
 
-__inline_dev__ optix::float3 evaluate_intersection(const Light& light, optix::float3 position, optix::float3 direction_to_light,
-                                                   MisPDF bsdf_PDF, bool next_event_estimated) {
+__inline_dev__ optix::float3 evaluate_intersection(const Light& light, optix::float3 position, optix::float3 direction_to_light, MisPDF bsdf_PDF) {
     switch (light.get_type()) {
     case Light::Sphere:
-        return evaluate_intersection(light.sphere, position, direction_to_light, bsdf_PDF, next_event_estimated);
+        return evaluate_intersection(light.sphere, position, direction_to_light, bsdf_PDF);
     case Light::Spot:
-        return evaluate_intersection(light.spot, position, direction_to_light, bsdf_PDF, next_event_estimated);
+        return evaluate_intersection(light.spot, position, direction_to_light, bsdf_PDF);
     default:
         return optix::make_float3(1000.0f, 0, 1000);
     }
