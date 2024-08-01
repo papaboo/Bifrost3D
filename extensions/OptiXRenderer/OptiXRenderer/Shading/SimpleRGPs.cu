@@ -341,6 +341,7 @@ RT_PROGRAM void miss() {
     monte_carlo_payload.throughput = make_float3(0.0f);
     monte_carlo_payload.position = 1e30f * monte_carlo_payload.direction;
     monte_carlo_payload.shading_normal = -ray.direction;
+    monte_carlo_payload.primitive_id = PrimitiveID::make(InstanceID::analytical_light_sources(), 0xFFFFFFFF);
 }
 
 //-------------------------------------------------------------------------------------------------

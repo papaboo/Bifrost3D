@@ -135,7 +135,12 @@ static inline optix::GeometryInstance create_model(optix::Context& context, Mesh
     assert(optix_mesh);
 
     optix::GeometryInstance optix_model = context->createGeometryInstance(optix_mesh, optix_material);
-    optix_model["material_index"]->setInt(model.get_material().get_ID());
+
+    InstanceID instance_id = InstanceID::make(InstanceID::Type::MeshModel, model.get_ID().get_index());
+    int material_index = model.get_material().get_ID();
+    ModelState model_state = { instance_id, material_index };
+    optix_model["model_state"]->setUserData(sizeof(model_state), &model_state);
+
     unsigned char mesh_flags = mesh.get_normals() != nullptr ? MeshFlags::Normals : MeshFlags::None;
     mesh_flags |= mesh.get_texcoords() != nullptr ? MeshFlags::Texcoords : MeshFlags::None;
     optix_model["mesh_flags"]->setInt(mesh_flags);

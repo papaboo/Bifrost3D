@@ -104,6 +104,37 @@ struct __align__(16) VertexGeometry {
     OctahedralNormal normal;
 };
 
+struct InstanceID {
+    enum class Type {
+        MeshModel = 1,
+        LightSource = 2
+    };
+
+    int id;
+
+    __inline_all__ static InstanceID make(Type type, int instance_id) {
+        InstanceID id = { int(type) << 30 | instance_id };
+        return id;
+    }
+
+    __inline_all__ bool operator==(const InstanceID& rhs) const { return id == rhs.id; }
+
+    // There is only one analytical light source instance, so we can hardcode the value
+    __inline_all__ static InstanceID analytical_light_sources() { return InstanceID::make(InstanceID::Type::LightSource, 1); }
+};
+
+struct PrimitiveID {
+    InstanceID instance_id;
+    int primitive_id;
+
+    __inline_all__ static PrimitiveID make(InstanceID instance_id, int primitive_id) {
+        PrimitiveID id = { instance_id, primitive_id };
+        return id;
+    }
+
+    __inline_all__ bool operator==(const PrimitiveID& rhs) const { return instance_id == rhs.instance_id && primitive_id == rhs.primitive_id; }
+};
+
 //----------------------------------------------------------------------------
 // Light source structs.
 //----------------------------------------------------------------------------
@@ -344,11 +375,20 @@ struct __align__(16) MonteCarloPayload {
     int material_index;
 
     optix::float2 texcoord;
-    optix::float2 __padding1;
+    PrimitiveID primitive_id;
 };
 
 struct ShadowPayload {
     optix::float3 radiance;
+};
+
+//----------------------------------------------------------------------------
+// Model state
+//----------------------------------------------------------------------------
+
+struct ModelState {
+    InstanceID instance_id;
+    int material_index;
 };
 
 //----------------------------------------------------------------------------
