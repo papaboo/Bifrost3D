@@ -35,18 +35,20 @@ RT_PROGRAM void interpolate_attributes() {
     geometric_normal = normalize(cross(g1.position - g0.position, g2.position - g0.position));
 
     const float2 barycentrics = rtGetTriangleBarycentrics();
+    float barycentrics_z = 1.0f - barycentrics.x - barycentrics.y;
 
-    if (mesh_flags & MeshFlags::Normals)
-        shading_normal = g1.normal.decode_unnormalized() * barycentrics.x + g2.normal.decode_unnormalized() * barycentrics.y +
-                         g0.normal.decode_unnormalized() * (1.0f - barycentrics.x - barycentrics.y);
-    else
+    if (mesh_flags & MeshFlags::Normals) {
+        shading_normal = g1.normal.decode() * barycentrics.x + g2.normal.decode() * barycentrics.y +
+                         g0.normal.decode() * barycentrics_z;
+        shading_normal = normalize(shading_normal);
+    } else
         shading_normal = geometric_normal;
 
     if (mesh_flags & MeshFlags::Texcoords) {
         const float2 texcoord0 = texcoord_buffer[vertex_indices.x];
         const float2 texcoord1 = texcoord_buffer[vertex_indices.y];
         const float2 texcoord2 = texcoord_buffer[vertex_indices.z];
-        texcoord = texcoord1 * barycentrics.x + texcoord2 * barycentrics.y + texcoord0 * (1.0f - barycentrics.x - barycentrics.y);
+        texcoord = texcoord1 * barycentrics.x + texcoord2 * barycentrics.y + texcoord0 * barycentrics_z;
     }
     else
         texcoord - make_float2(0.0f);
