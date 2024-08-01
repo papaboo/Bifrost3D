@@ -320,6 +320,24 @@ RT_PROGRAM void shading_normal_RPG() {
     });
 }
 
+// Convert a primitive ID to a color. Primitive ID's that are close to each other should map to very different colors.
+// This is achieved by interpreting the primitive ID as a 30bit reversed morton code. Reversing the bits give us high variance
+// in the most significant bits for neighbouring ID's and decoding the bitmask as a morton code
+// splits the most significant bits into the different color channels.
+// To have different colors across different geometry instances, we additionally xor the primitive ID with the instance ID.
+__inline_dev__ float3 primitive_id_to_color(PrimitiveID primitive_id) {
+    unsigned int instance_encoding = primitive_id.instance_id.id & 0x3FFFFFF;
+    unsigned int primitive_encoding = reverse_bits(primitive_id.primitive_id + 1) >> 2;
+    uint3 color = morton_decode_3D(instance_encoding ^ primitive_encoding);
+    return make_float3(color) / 1023.0f;
+}
+
+RT_PROGRAM void primitive_id_RPG() {
+    process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
+        return primitive_id_to_color(payload.primitive_id);
+    });
+}
+
 //-------------------------------------------------------------------------------------------------
 // Miss program for monte carlo rays.
 //-------------------------------------------------------------------------------------------------

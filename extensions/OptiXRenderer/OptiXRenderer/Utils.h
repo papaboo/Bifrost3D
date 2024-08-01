@@ -196,6 +196,20 @@ __inline_all__ unsigned int morton_encode(unsigned int x, unsigned int y) {
     return part_by_1(y) | (part_by_1(x) << 1);
 }
 
+// Delete all bits not at positions divisible by 3 and compacts the rest.
+__inline_all__ unsigned int compact_by_2(unsigned int v) {
+    v &= 0x09249249;                  // v = ---- 9--8 --7- -6-- 5--4 --3- -2-- 1--0
+    v = (v ^ (v >> 2)) & 0x030c30c3;  // v = ---- --98 ---- 76-- --54 ---- 32-- --10
+    v = (v ^ (v >> 4)) & 0x0300f00f;  // v = ---- --98 ---- ---- 7654 ---- ---- 3210
+    v = (v ^ (v >> 8)) & 0xff0000ff;  // v = ---- --98 ---- ---- ---- ---- 7654 3210
+    v = (v ^ (v >> 16)) & 0x000003ff; // v = ---- ---- ---- ---- ---- --98 7654 3210
+    return v;
+}
+
+__inline_all__ optix::uint3 morton_decode_3D(unsigned int v) {
+    return optix::make_uint3(compact_by_2(v >> 2), compact_by_2(v >> 1), compact_by_2(v));
+}
+
 __inline_all__ unsigned int reverse_bits(unsigned int n) {
 #if GPU_DEVICE
     n = __brev(n);

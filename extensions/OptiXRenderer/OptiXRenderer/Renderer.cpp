@@ -340,6 +340,7 @@ struct Renderer::Implementation {
             context->setRayGenerationProgram(EntryPoints::Tint, context->createProgramFromPTXFile(rgp_ptx_path, "tint_RPG"));
             context->setRayGenerationProgram(EntryPoints::Roughness, context->createProgramFromPTXFile(rgp_ptx_path, "roughness_RPG"));
             context->setRayGenerationProgram(EntryPoints::ShadingNormal, context->createProgramFromPTXFile(rgp_ptx_path, "shading_normal_RPG"));
+            context->setRayGenerationProgram(EntryPoints::PrimitiveID, context->createProgramFromPTXFile(rgp_ptx_path, "primitive_id_RPG"));
         }
 
         { // Setup default material.
@@ -1379,6 +1380,9 @@ void Renderer::set_backend(CameraID camera_ID, Backend backend) {
         break;
     case Backend::ShadingNormalVisualization:
         camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::ShadingNormal));
+        break;
+    case Backend::PrimitiveIdVisualization:
+        camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::PrimitiveID));
         break;
     default:
         camera_state.backend_impl = std::unique_ptr<IBackend>(new SimpleBackend(EntryPoints::Albedo));
