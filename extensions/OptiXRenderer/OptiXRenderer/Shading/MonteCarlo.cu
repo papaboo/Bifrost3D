@@ -33,7 +33,9 @@ rtDeclareVariable(SceneStateGPU, g_scene, , );
 
 // Material parameters.
 rtBuffer<Material, 1> g_materials;
-rtDeclareVariable(int, material_index, , );
+
+// Model parameters
+rtDeclareVariable(ModelState, model_state, , );
 
 // Renderer config
 rtBuffer<float4, 1> g_random_sample_offsets;
@@ -45,6 +47,7 @@ rtBuffer<float4, 1> g_random_sample_offsets;
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 rtDeclareVariable(float2, texcoord, attribute texcoord, );
+rtDeclareVariable(unsigned int, primitive_index, attribute primitive_index, );
 
 //-----------------------------------------------------------------------------
 // Light sampling.
@@ -119,7 +122,18 @@ __inline_dev__ LightSample reestimated_light_samples(const ShadingModel& materia
 
 template <typename MaterialCreator>
 __inline_all__ void path_tracing_closest_hit() {
-    const Material& material_parameter = g_materials[material_index];
+    InstanceID instance_id = model_state.instance_id;
+    PrimitiveID primitive_id = PrimitiveID::make(instance_id, primitive_index);
+
+    // Ignore self intersection with the same primitive.
+    if (primitive_id == monte_carlo_payload.primitive_id) {
+        // Advance the ray past the intersection by incrementing the min distance past the intersected distance.
+        // This is stable wrt floating point precision as origin and direction are not changed.
+        monte_carlo_payload.ray_min_t = nextafterf(t_hit, INFINITY);
+        return;
+    }
+
+    const Material& material_parameter = g_materials[model_state.material_index];
 
     // Backside culling of non-thin-walled geometry.
     const float3 world_geometric_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, geometric_normal));
@@ -136,10 +150,16 @@ __inline_all__ void path_tracing_closest_hit() {
 
     if (ignore_intersection) {
         // Advance the ray past the intersection by incrementing the min distance past the intersected distance.
-        // This should be stable wrt floating point precision as origin and direction are not changed.
+        // This is stable wrt floating point precision as origin and direction are not changed.
         monte_carlo_payload.ray_min_t = nextafterf(t_hit, INFINITY);
         return;
     }
+
+    // Store geometry varyings and surface properties
+    // Store them after successful sefl-intersection and coverage checks to avoid storing state of an ignored surface.
+    monte_carlo_payload.material_index = model_state.material_index;
+    monte_carlo_payload.texcoord = texcoord;
+    monte_carlo_payload.primitive_id = primitive_id;
 
     // Setup world shading normal and tangents.
     // If the surface is hit from behind then we flip the shading normal to the backside of the surface.
@@ -148,16 +168,12 @@ __inline_all__ void path_tracing_closest_hit() {
     monte_carlo_payload.shading_normal = fix_backfacing_shading_normal(-ray.direction, world_shading_normal, 0.001f);
     const TBN world_shading_tbn = TBN(monte_carlo_payload.shading_normal);
 
-    // Store geometry varyings.
-    monte_carlo_payload.material_index = material_index; // Store material index after coverage check, since the material isn't actually used unless the coverage check succeeded.
-    monte_carlo_payload.texcoord = texcoord;
-
     // Store intersection point and wo in payload.
     monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
     monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
     float abs_cos_theta_o = abs(monte_carlo_payload.direction.z);
     float pdf_regularization_hint = monte_carlo_payload.bsdf_MIS_PDF.PDF() * g_camera_state.path_regularization_PDF_scale;
-    const MaterialCreator::material_type material = MaterialCreator::create(material_parameter, texcoord, abs_cos_theta_o, pdf_regularization_hint);
+    const auto material = MaterialCreator::create(material_parameter, texcoord, abs_cos_theta_o, pdf_regularization_hint);
 
     // Deferred BSDF sampling.
     // The BSDF is sampled before tracing the shadow ray in order to avoid flushing world_shading_tbn and the material to the local stack when tracing the ray.
@@ -195,8 +211,7 @@ __inline_all__ void path_tracing_closest_hit() {
 //----------------------------------------------------------------------------
 
 struct DefaultMaterialCreator {
-    typedef DefaultShading material_type;
-    __inline_all__ static material_type create(const Material& material_params, optix::float2 texcoord, float abs_cos_theta_o, float max_PDF_hint) {
+    __inline_all__ static DefaultShading create(const Material& material_params, optix::float2 texcoord, float abs_cos_theta_o, float max_PDF_hint) {
         return DefaultShading::initialize_with_max_PDF_hint(material_params, texcoord, abs_cos_theta_o, max_PDF_hint);
     }
 };
@@ -206,8 +221,7 @@ RT_PROGRAM void default_closest_hit() {
 }
 
 struct DiffuseMaterialCreator {
-    typedef DiffuseShading material_type;
-    __inline_all__ static material_type create(const Material& material_params, optix::float2 texcoord, float abs_cos_theta_o, float max_PDF_hint) {
+    __inline_all__ static DiffuseShading create(const Material& material_params, optix::float2 texcoord, float abs_cos_theta_o, float max_PDF_hint) {
         float3 tint = make_float3(material_params.get_tint_roughness(texcoord));
         return DiffuseShading(tint);
     }
@@ -224,7 +238,7 @@ RT_PROGRAM void diffuse_closest_hit() {
 rtDeclareVariable(ShadowPayload, shadow_payload, rtPayload, );
 
 RT_PROGRAM void shadow_any_hit() {
-    float coverage = g_materials[material_index].get_coverage(texcoord);
+    float coverage = g_materials[model_state.material_index].get_coverage(texcoord);
     shadow_payload.radiance *= 1.0f - coverage;
     if (shadow_payload.radiance.x < 0.0000001f && shadow_payload.radiance.y < 0.0000001f && shadow_payload.radiance.z < 0.0000001f) {
         shadow_payload.radiance = make_float3(0, 0, 0);
@@ -238,10 +252,9 @@ RT_PROGRAM void shadow_any_hit() {
 
 RT_PROGRAM void light_closest_hit() {
 
-    int light_index = __float_as_int(geometric_normal.x);
     bool next_event_estimated = monte_carlo_payload.bounces != 0; // Was next event estimated at previous intersection.
 
-    const Light light = g_scene.light_buffer[light_index];
+    const Light light = g_scene.light_buffer[primitive_index];
     float3 light_radiance = make_float3(0, 0, 0);
     if (light.get_type() == Light::Sphere)
         light_radiance = LightSources::evaluate_intersection(light.sphere, ray.origin, ray.direction,
@@ -254,4 +267,5 @@ RT_PROGRAM void light_closest_hit() {
     monte_carlo_payload.throughput = make_float3(0.0f);
     monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
     monte_carlo_payload.shading_normal = shading_normal;
+    monte_carlo_payload.primitive_id = PrimitiveID::make(InstanceID::analytical_light_sources(), primitive_index);
 }

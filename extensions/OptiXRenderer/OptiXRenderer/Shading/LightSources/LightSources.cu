@@ -20,16 +20,15 @@ rtDeclareVariable(Ray, ray, rtCurrentRay, );
 
 rtDeclareVariable(SceneStateGPU, g_scene, , );
 
-// Encode light index in geometric_normal.x
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
+rtDeclareVariable(unsigned int, primitive_index, attribute primitive_index, );
 
 //=============================================================================
 // Sphere light intersection programs.
 //=============================================================================
-RT_PROGRAM void intersect(int primitive_index) {
-
-    const Light& light = g_scene.light_buffer[primitive_index];
+RT_PROGRAM void intersect(int prim_index) {
+    const Light& light = g_scene.light_buffer[prim_index];
 
     float t = -1e30f;
     float3 local_shading_normal;
@@ -47,9 +46,9 @@ RT_PROGRAM void intersect(int primitive_index) {
         local_shading_normal = spot_light.direction;
     }
 
-    if (t > 0.0f && rtPotentialIntersection(t)) {
-        shading_normal = local_shading_normal;
-        geometric_normal.x = __int_as_float(primitive_index);
+    if (rtPotentialIntersection(t)) {
+        geometric_normal = shading_normal = local_shading_normal;
+        primitive_index = prim_index;
         rtReportIntersection(0);
     }
 }

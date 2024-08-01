@@ -22,12 +22,15 @@ rtBuffer<float2> texcoord_buffer;
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, ); 
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, ); 
 rtDeclareVariable(float2, texcoord, attribute texcoord, );
+rtDeclareVariable(unsigned int, primitive_index, attribute primitive_index, );
 
 //-------------------------------------------------------------------------------------------------
 // Attribute program for triangle meshes.
 //-------------------------------------------------------------------------------------------------
 RT_PROGRAM void interpolate_attributes() {
-    const uint3 vertex_indices = index_buffer[rtGetPrimitiveIndex()];
+    primitive_index = rtGetPrimitiveIndex();
+
+    const uint3 vertex_indices = index_buffer[primitive_index];
     const VertexGeometry g0 = geometry_buffer[vertex_indices.x];
     const VertexGeometry g1 = geometry_buffer[vertex_indices.y];
     const VertexGeometry g2 = geometry_buffer[vertex_indices.z];
