@@ -67,6 +67,11 @@ struct __align__(4) OctahedralNormal {
         }
         return n;
     }
+
+    __inline_all__ optix::float3 decode() const {
+        optix::float3 decoded_unnormalized = decode_unnormalized();
+        return optix::normalize(decoded_unnormalized);
+    }
 };
 
 //----------------------------------------------------------------------------
