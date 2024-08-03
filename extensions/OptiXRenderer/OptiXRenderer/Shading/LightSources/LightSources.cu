@@ -20,6 +20,7 @@ rtDeclareVariable(Ray, ray, rtCurrentRay, );
 
 rtDeclareVariable(SceneStateGPU, g_scene, , );
 
+rtDeclareVariable(float3, intersection_point, attribute intersection_point, );
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 rtDeclareVariable(unsigned int, primitive_index, attribute primitive_index, );
@@ -30,25 +31,40 @@ rtDeclareVariable(unsigned int, primitive_index, attribute primitive_index, );
 RT_PROGRAM void intersect(int prim_index) {
     const Light& light = g_scene.light_buffer[prim_index];
 
+    // Only area lights can be intersected.
     float t = -1e30f;
-    float3 local_shading_normal;
-    // Only lights with a spherical geometry can be intersected.
     if (light.get_type() == Light::Sphere) {
-        const SphereLight& sphere_light = light.sphere;
+        const SphereLight sphere_light = light.sphere;
         t = Intersect::ray_sphere(ray, Sphere::make(sphere_light.position, sphere_light.radius));
-        float3 intersection_point = t * ray.direction + ray.origin;
-        float inv_radius = 1.0f / sphere_light.radius;
-        local_shading_normal = (intersection_point - sphere_light.position) * inv_radius;
-
     } else if (light.get_type() == Light::Spot) {
         const SpotLight spot_light = light.spot;
         t = Intersect::ray_disk(ray, Disk::make(spot_light.position, spot_light.direction, spot_light.radius));
-        local_shading_normal = spot_light.direction;
     }
 
     if (rtPotentialIntersection(t)) {
-        geometric_normal = shading_normal = local_shading_normal;
         primitive_index = prim_index;
+
+        float3 coarse_intersection_point = t * ray.direction + ray.origin;
+        if (light.get_type() == Light::Sphere) {
+            const SphereLight sphere_light = light.sphere;
+            shading_normal = normalize(coarse_intersection_point - sphere_light.position);
+
+            // Computing the intersection point using origin + t * direction can be unstable if t is large.
+            // To avoid this the intersection point is recomputed wrt the shading normal,
+            // to ensure that the intersection point is as close to the sphere surface as possible.
+            intersection_point = sphere_light.position + sphere_light.radius * shading_normal;
+        } else if (light.get_type() == Light::Spot) {
+            const SpotLight spot_light = light.spot;
+            shading_normal = spot_light.direction;
+
+            // Computing the intersection point using origin + t * direction can be unstable if t is large.
+            // So the coarse but close intersection point is projected on to the plane.
+            float t_fine = Intersect::point_distance_to_plane(coarse_intersection_point, spot_light.position, spot_light.direction);
+            intersection_point = coarse_intersection_point + t_fine * spot_light.direction;
+        }
+
+        geometric_normal = shading_normal;
+
         rtReportIntersection(0);
     }
 }
