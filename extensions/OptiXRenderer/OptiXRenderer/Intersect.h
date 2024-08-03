@@ -37,7 +37,6 @@ __inline_all__ float ray_sphere(const optix::Ray& ray, Sphere sphere) {
 }
 
 __inline_all__ float ray_plane(optix::float3 ray_origin, optix::float3 ray_direction, optix::float3 plane_point, optix::float3 plane_normal) {
-    // Intersect plane
     float d = optix::dot(plane_normal, plane_point);
     float n_dot_o = optix::dot(plane_normal, ray_origin);
     float n_dot_d = optix::dot(plane_normal, ray_direction);
@@ -57,8 +56,14 @@ __inline_all__ float ray_disk(optix::float3 ray_origin, optix::float3 ray_direct
         return nanf("");
 }
 
-__inline_all__ float ray_disk(const optix::Ray ray, Disk disk) {
+__inline_all__ float ray_disk(const optix::Ray& ray, Disk disk) {
     return ray_disk(ray.origin, ray.direction, disk.center, disk.normal, disk.radius);
+}
+
+__inline_all__ float point_distance_to_plane(optix::float3 point, optix::float3 plane_point, optix::float3 plane_normal) {
+    float d = optix::dot(plane_normal, plane_point);
+    float n_dot_o = optix::dot(plane_normal, point);
+    return d - n_dot_o;
 }
 
 } // NS Intersect

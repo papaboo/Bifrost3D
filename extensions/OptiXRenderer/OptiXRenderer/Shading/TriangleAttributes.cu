@@ -19,6 +19,7 @@ rtBuffer<uint3> index_buffer;
 rtBuffer<VertexGeometry> geometry_buffer;
 rtBuffer<float2> texcoord_buffer;
 
+rtDeclareVariable(float3, intersection_point, attribute intersection_point, );
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, ); 
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, ); 
 rtDeclareVariable(float2, texcoord, attribute texcoord, );
@@ -39,6 +40,8 @@ RT_PROGRAM void interpolate_attributes() {
 
     const float2 barycentrics = rtGetTriangleBarycentrics();
     float barycentrics_z = 1.0f - barycentrics.x - barycentrics.y;
+
+    intersection_point = g1.position * barycentrics.x + g2.position * barycentrics.y + g0.position * barycentrics_z;
 
     if (mesh_flags & MeshFlags::Normals) {
         shading_normal = g1.normal.decode() * barycentrics.x + g2.normal.decode() * barycentrics.y +

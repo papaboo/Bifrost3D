@@ -44,6 +44,7 @@ rtBuffer<float4, 1> g_random_sample_offsets;
 // Closest hit program for monte carlo sampling rays.
 //----------------------------------------------------------------------------
 
+rtDeclareVariable(float3, intersection_point, attribute intersection_point, );
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 rtDeclareVariable(float2, texcoord, attribute texcoord, );
@@ -169,14 +170,16 @@ __inline_all__ void path_tracing_closest_hit() {
     const TBN world_shading_tbn = TBN(monte_carlo_payload.shading_normal);
 
     // Store intersection point and wo in payload.
-    monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
+    // Compute world position by transforming the local intersection point to world space,
+    // as that should be numerically more stable than picking a point on the ray, for large values of 't'.
+    // Source: Ray Tracing Gems 1, chapter 6, A Fast and Robust Method for Avoiding Self - Intersection.
+    monte_carlo_payload.position = rtTransformPoint(RT_OBJECT_TO_WORLD, intersection_point);
     monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
     float abs_cos_theta_o = abs(monte_carlo_payload.direction.z);
     float pdf_regularization_hint = monte_carlo_payload.bsdf_MIS_PDF.PDF() * g_camera_state.path_regularization_PDF_scale;
     const auto material = MaterialCreator::create(material_parameter, texcoord, abs_cos_theta_o, pdf_regularization_hint);
 
     // Deferred BSDF sampling.
-    // The BSDF is sampled before tracing the shadow ray in order to avoid flushing world_shading_tbn and the material to the local stack when tracing the ray.
     BSDFSample bsdf_sample = material.sample(monte_carlo_payload.direction, bsdf_random_uvs);
     float3 next_payload_direction = bsdf_sample.direction * world_shading_tbn;
     MisPDF next_payload_MIS_PDF = MisPDF::from_PDF(bsdf_sample.PDF);
