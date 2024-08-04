@@ -72,7 +72,7 @@ TEST_F(Scene_Camera, perspective_matrices) {
                              0.00000f, 0.00000f, 1.00000f,  0.00000f };
 
     EXPECT_PRED3(compare_matrix4x4f, perspective_matrix, qed, 25);
-    EXPECT_EQ(invert(perspective_matrix), inverse_perspective_matrix);
+    EXPECT_PRED3(compare_matrix4x4f, inverse_perspective_matrix, invert(perspective_matrix), 1);
 }
 
 TEST_F(Scene_Camera, sentinel_camera) {
@@ -272,13 +272,12 @@ TEST_F(Scene_Camera, screenshots) {
 TEST_F(Scene_Camera, ray_projection) {
     using namespace Bifrost::Math;
 
-    // Create initial projection matrices.
-    Matrix4x4f initial_perspective_matrix, initial_inverse_perspective_matrix;
+    Matrix4x4f perspective_matrix, inverse_perspective_matrix;
     CameraUtils::compute_perspective_projection(1, 1000, PI<float>() / 4.0f, 8.0f / 6.0f,
-        initial_perspective_matrix, initial_inverse_perspective_matrix);
+        perspective_matrix, inverse_perspective_matrix);
 
     SceneRootID scene_ID = SceneRoots::create("Root", RGB::white());
-    CameraID cam_ID = Cameras::create("Test cam", scene_ID, initial_perspective_matrix, initial_inverse_perspective_matrix);
+    CameraID cam_ID = Cameras::create("Test cam", scene_ID, perspective_matrix, inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
 
     const float maximally_allowed_cos_angle = cos(degrees_to_radians(0.5f));

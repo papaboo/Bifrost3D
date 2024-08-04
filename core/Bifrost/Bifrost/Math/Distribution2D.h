@@ -96,7 +96,7 @@ public:
     //*********************************************************************************************
 
 private:
-    static int binary_search (float random_sample, T* CDF, int element_count) {
+    static int binary_search(float random_sample, T* CDF, int element_count) {
         int lowerbound = 0;
         int upperbound = element_count;
         while (lowerbound + 1 != upperbound) {
