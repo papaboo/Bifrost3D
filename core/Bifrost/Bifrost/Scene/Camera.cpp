@@ -236,6 +236,7 @@ void compute_perspective_projection(float near_distance, float far_distance, flo
     float a = (far_distance + near_distance) / (near_distance - far_distance);
     float b = (2.0f * far_distance * near_distance) / (near_distance - far_distance);
 
+    projection_matrix = {};
     projection_matrix[0][0] = f / aspect_ratio;
     projection_matrix[0][1] = projection_matrix[0][2] = projection_matrix[0][3] = 0.0f;
     projection_matrix[1][1] = f;
@@ -247,30 +248,14 @@ void compute_perspective_projection(float near_distance, float far_distance, flo
     projection_matrix[3][2] = 1.0f;
 
     // Yes you could just use inverse_projection_matrix = invert(projection_matrix) as this is by no means performance critical code.
-    // But this wasn't done to speed up perspective camera creation. This was done for fun and to have a way to easily derive the inverse perspective matrix later given the perspective matrix.
+    // But this wasn't done to speed up perspective camera creation. This was done to have a way to easily derive the inverse perspective matrix later given the perspective matrix.
 
-    const Matrix4x4f& v = projection_matrix;
-    float determinant = v[0][0] * v[1][1] * v[2][3];
-
-    inverse_projection_matrix[0][0] = v[1][1] * v[2][3] / determinant;
-    inverse_projection_matrix[0][1] = 0.0f;
-    inverse_projection_matrix[0][2] = 0.0f;
-    inverse_projection_matrix[0][3] = 0.0f;
-
-    inverse_projection_matrix[1][0] = 0.0f;
-    inverse_projection_matrix[1][1] = v[0][0] * v[2][3] / determinant;
-    inverse_projection_matrix[1][2] = 0.0f;
-    inverse_projection_matrix[1][3] = 0.0f;
-
-    inverse_projection_matrix[2][0] = 0.0f;
-    inverse_projection_matrix[2][1] = 0.0f;
-    inverse_projection_matrix[2][2] = 0.0f;
+    inverse_projection_matrix = {};
+    inverse_projection_matrix[0][0] = 1.0f / projection_matrix[0][0];
+    inverse_projection_matrix[1][1] = 1.0f / projection_matrix[1][1];
     inverse_projection_matrix[2][3] = 1.0f;
-
-    inverse_projection_matrix[3][0] = 0.0f;
-    inverse_projection_matrix[3][1] = 0.0f;
-    inverse_projection_matrix[3][2] = v[0][0] * v[1][1] / determinant;
-    inverse_projection_matrix[3][3] = - v[0][0] * v[1][1] * v[2][2] / determinant;
+    inverse_projection_matrix[3][2] = 1.0f / projection_matrix[2][3];
+    inverse_projection_matrix[3][3] = - projection_matrix[2][2] / projection_matrix[2][3];
 }
 
 Ray ray_from_viewport_point(CameraID camera_ID, Vector2f viewport_point) {
