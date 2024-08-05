@@ -31,32 +31,28 @@ rtBuffer<Material, 1> g_materials;
 rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(SceneStateGPU, g_scene, , );
 
-__inline_dev__ optix::float4 half_to_float(const optix::ushort4 xyzw) {
-    return optix::make_float4(__half2float(xyzw.x), __half2float(xyzw.y), __half2float(xyzw.z), __half2float(xyzw.w));
+__inline_dev__ float4 half_to_float(ushort4 xyzw) {
+    return make_float4(__half2float(xyzw.x), __half2float(xyzw.y), __half2float(xyzw.z), __half2float(xyzw.w));
 }
 
-__inline_dev__ optix::ushort4 float_to_half(const optix::float4 xyzw) {
-    return optix::make_ushort4(((__half_raw)__float2half_rn(xyzw.x)).x, ((__half_raw)__float2half_rn(xyzw.y)).x,
+__inline_dev__ ushort4 float_to_half(float4 xyzw) {
+    return make_ushort4(((__half_raw)__float2half_rn(xyzw.x)).x, ((__half_raw)__float2half_rn(xyzw.y)).x,
         ((__half_raw)__float2half_rn(xyzw.z)).x, ((__half_raw)__float2half_rn(xyzw.w)).x);
 }
 
-__inline_dev__ void fill_ray_info(optix::float2 viewport_pos, const optix::Matrix4x4& inverse_view_projection_matrix,
-    optix::float3& origin, optix::float3& direction, bool normalize_direction = true) {
-    using namespace optix;
+__inline_dev__ void fill_ray_info(float2 viewport_pos, const optix::Matrix4x4& inverse_view_projection_matrix,
+    float3& origin, float3& direction) {
 
     float4 NDC_near_pos = make_float4(viewport_pos.x * 2.0f - 1.0f, viewport_pos.y * 2.0f - 1.0f, -1.0f, 1.0f);
     float4 scaled_near_world_pos = inverse_view_projection_matrix * NDC_near_pos;
     float4 scaled_far_world_pos = scaled_near_world_pos + inverse_view_projection_matrix.getCol(2);
     origin = make_float3(scaled_near_world_pos) / scaled_near_world_pos.w;
     float3 far_world_pos = make_float3(scaled_far_world_pos) / scaled_far_world_pos.w;
-    direction = far_world_pos - origin;
-    if (normalize_direction)
-        direction = normalize(direction);
+    direction = normalize(far_world_pos - origin);
 }
 
 __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, int image_width, int image_height,
     int accumulation_count, const optix::Matrix4x4& inverse_view_projection_matrix) {
-    using namespace optix;
 
     MonteCarloPayload payload = {};
     payload.radiance = make_float3(0.0f);
@@ -253,11 +249,15 @@ RT_PROGRAM void depth_RPG() {
     float depth = g_camera_state.accumulation_buffer[g_launch_index].x;
 #endif
 
-    size_t2 screen_size = g_camera_state.accumulation_buffer.size();
-    float2 viewport_pos = { (g_launch_index.x + 0.5f) / screen_size.x, (g_launch_index.y + 0.5f) / screen_size.y };
-    float3 origin, direction;
-    fill_ray_info(viewport_pos, g_camera_state.inverse_view_projection_matrix, origin, direction, false);
-    float max_depth = length(direction);
+    // Compute the max depth as the length from the center of the near plane to the center of the far plane.
+    float4 NDC_near_pos = { 0.0f, 0.0f, -1.0f, 1.0f };
+    float4 scaled_near_view_pos = g_camera_state.inverse_projection_matrix * NDC_near_pos;
+    float near_view_Z = scaled_near_view_pos.z / scaled_near_view_pos.w;
+
+    float4 NDC_far_pos = { 0.0f, 0.0f, 1.0f, 1.0f };
+    float4 scaled_far_view_pos = g_camera_state.inverse_projection_matrix * NDC_far_pos;
+    float far_view_Z = scaled_far_view_pos.z / scaled_far_view_pos.w;
+    float max_depth = far_view_Z - near_view_Z;
 
     float d = depth / max_depth;
     g_camera_state.output_buffer[g_launch_index] = float_to_half(make_float4(d, d, d, 1.0f));
@@ -302,7 +302,7 @@ RT_PROGRAM void albedo_RPG() {
 RT_PROGRAM void tint_RPG() {
     process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
         const auto& material_parameters = g_materials[payload.material_index];
-        return optix::make_float3(material_parameters.get_tint_roughness(payload.texcoord));
+        return make_float3(material_parameters.get_tint_roughness(payload.texcoord));
     });
 }
 

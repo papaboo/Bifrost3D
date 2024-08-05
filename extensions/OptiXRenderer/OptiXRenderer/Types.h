@@ -399,6 +399,7 @@ struct ModelState {
 
 struct __align__(16) CameraStateGPU {
     optix::Matrix3x3 world_to_view_rotation;
+    optix::Matrix4x4 inverse_projection_matrix;
     optix::Matrix4x4 inverse_view_projection_matrix;
     unsigned int accumulations;
     unsigned int max_bounce_count;
