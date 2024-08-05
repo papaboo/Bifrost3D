@@ -48,9 +48,9 @@ struct Sphere {
     }
 };
 
+// Mirrored CPU side by Renderer::SceneConstants
 struct SceneVariables {
     float4x4 view_projection_matrix;
-    float4 camera_position;
     float4 environment_tint; // .w component is 1 if an environment tex is bound, otherwise 0.
     int2 g_buffer_to_ao_index_offset;
     int2 viewport_size;
@@ -58,6 +58,9 @@ struct SceneVariables {
     float4x4 projection_matrix;
     float4x4 inverted_projection_matrix;
     float4x3 world_to_view_matrix;
+    float4x3 view_to_world_matrix;
+
+    float3 camera_world_position() { return view_to_world_matrix._m30_m31_m32; }
 };
 
 // ------------------------------------------------------------------------------------------------
