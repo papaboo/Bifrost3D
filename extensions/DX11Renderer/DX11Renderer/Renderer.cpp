@@ -123,10 +123,9 @@ private:
         vector<SortedModel> sorted_models_pool; // List of sorted transparent models. Created as a pool to minimize runtime memory allocation.
     } m_transparent;
 
-    // Scene constants
+    // Mirrored GPU side by SceneVariables in Utils.hlsl
     struct SceneConstants {
         Matrix4x4f view_projection_matrix;
-        Vector4f camera_position;
         Vector4f environment_tint; // .w component is 0 if an environment tex is not bound, otherwise positive.
         int2 g_buffer_to_ao_index_offset;
         int2 viewport_size;
@@ -134,6 +133,7 @@ private:
         Matrix4x4f projection_matrix;
         Matrix4x4f inverse_projection_matrix;
         Matrix3x4f world_to_view_matrix;
+        Matrix3x4f view_to_world_matrix;
     };
     OBuffer m_scene_buffer;
 
@@ -481,19 +481,20 @@ public:
             projection_matrix.set_column(0, projection_matrix.get_column(0) * projection_matrix_scale.x);
             projection_matrix.set_column(1, projection_matrix.get_column(1) * projection_matrix_scale.y);
             
-            Transform view_transform = Cameras::get_view_transform(camera_ID);
+            Transform world_to_view_transform = Cameras::get_view_transform(camera_ID);
+            Transform view_to_world_transform = Cameras::get_inverse_view_transform(camera_ID);
 
             SceneConstants scene_vars;
-            scene_vars.view_projection_matrix = projection_matrix * to_matrix4x4(view_transform);
-            scene_vars.camera_position = Vector4f(Cameras::get_transform(camera_ID).translation, 1.0f);
+            scene_vars.view_projection_matrix = projection_matrix * to_matrix4x4(world_to_view_transform);
             RGB env_tint = scene.get_environment_tint();
             scene_vars.environment_tint = { env_tint.r, env_tint.g, env_tint.b, float(scene.get_environment_map().get_index()) };
             scene_vars.g_buffer_to_ao_index_offset = m_ssao.compute_g_buffer_to_ao_index_offset(m_settings.ssao.settings, backbuffer_viewport);
             scene_vars.viewport_size = { backbuffer_viewport.width, backbuffer_viewport.height };
-            scene_vars.inverse_view_projection_matrix = to_matrix4x4(invert(view_transform)) * inverse_projection_matrix;
+            scene_vars.inverse_view_projection_matrix = to_matrix4x4(view_to_world_transform) * inverse_projection_matrix;
             scene_vars.projection_matrix = projection_matrix;
             scene_vars.inverse_projection_matrix = inverse_projection_matrix;
-            scene_vars.world_to_view_matrix = to_matrix3x4(view_transform);
+            scene_vars.world_to_view_matrix = to_matrix3x4(world_to_view_transform);
+            scene_vars.view_to_world_matrix = to_matrix3x4(view_to_world_transform);
             m_render_context->UpdateSubresource(m_scene_buffer, 0, nullptr, &scene_vars, 0, 0);
             m_render_context->VSSetConstantBuffers(13, 1, &m_scene_buffer);
             m_render_context->PSSetConstantBuffers(13, 1, &m_scene_buffer);

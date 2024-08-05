@@ -35,7 +35,7 @@ Varyings main_vs(uint vertex_ID : SV_VertexID) {
     float2 viewport_pos = output.position.xy;
     float4 projected_pos = float4(viewport_pos.x, viewport_pos.y, 1.0f, 1.0f);
     output.view_direction = mul(projected_pos, scene_vars.inverted_projection_matrix).xyz;
-    output.view_direction = mul(scene_vars.world_to_view_matrix, output.view_direction).xyz;
+    output.view_direction = mul(output.view_direction, (float3x3)scene_vars.view_to_world_matrix);
     return output;
 }
 
