@@ -40,19 +40,20 @@ __inline_dev__ ushort4 float_to_half(float4 xyzw) {
         ((__half_raw)__float2half_rn(xyzw.z)).x, ((__half_raw)__float2half_rn(xyzw.w)).x);
 }
 
-__inline_dev__ void fill_ray_info(float2 viewport_pos, const optix::Matrix4x4& inverse_view_projection_matrix,
-    float3& origin, float3& direction) {
+__inline_dev__ void fill_ray_info(float2 viewport_pos, const CameraStateGPU& camera_state_GPU,
+                                  float3& origin, float3& direction) {
 
     float4 NDC_near_pos = make_float4(viewport_pos.x * 2.0f - 1.0f, viewport_pos.y * 2.0f - 1.0f, -1.0f, 1.0f);
-    float4 scaled_near_world_pos = inverse_view_projection_matrix * NDC_near_pos;
-    float4 scaled_far_world_pos = scaled_near_world_pos + inverse_view_projection_matrix.getCol(2);
+    float4 scaled_near_world_pos = camera_state_GPU.inverse_view_projection_matrix * NDC_near_pos;
     origin = make_float3(scaled_near_world_pos) / scaled_near_world_pos.w;
-    float3 far_world_pos = make_float3(scaled_far_world_pos) / scaled_far_world_pos.w;
-    direction = normalize(far_world_pos - origin);
+
+    float4 NDC_far_pos = make_float4(NDC_near_pos.x, NDC_near_pos.y, 1.0f, 1.0f);
+    float4 scaled_near_view_pos = camera_state_GPU.inverse_projection_matrix * NDC_far_pos;
+    direction = normalize(camera_state_GPU.view_to_world_rotation * make_float3(scaled_near_view_pos));
 }
 
 __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, int image_width, int image_height,
-    int accumulation_count, const optix::Matrix4x4& inverse_view_projection_matrix) {
+    int accumulation_count, const CameraStateGPU& camera_state_GPU) {
 
     MonteCarloPayload payload = {};
     payload.radiance = make_float3(0.0f);
@@ -74,7 +75,7 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     RNG::LinearCongruential rng; rng.set_state(__brev(RNG::teschner_hash(x, y, accumulation_count)));
     float2 screen_pos = make_float2(x, y) + (accumulation_count == 0 ? make_float2(0.5f) : rng.sample2f());
     float2 viewport_pos = make_float2(screen_pos.x / float(image_width), screen_pos.y / float(image_height));
-    fill_ray_info(viewport_pos, inverse_view_projection_matrix, payload.position, payload.direction);
+    fill_ray_info(viewport_pos, camera_state_GPU, payload.position, payload.direction);
     return payload;
 }
 
@@ -85,7 +86,7 @@ __inline_dev__ void accumulate(Evaluator evaluator) {
     size_t2 screen_size = camera_state.accumulation_buffer.size();
 
     MonteCarloPayload payload = initialize_monte_carlo_payload(g_launch_index.x, g_launch_index.y,
-        screen_size.x, screen_size.y, accumulation_count, camera_state.inverse_view_projection_matrix);
+        screen_size.x, screen_size.y, accumulation_count, camera_state);
 
     float3 radiance = evaluator(payload);
 
