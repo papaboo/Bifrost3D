@@ -1160,22 +1160,20 @@ struct Renderer::Implementation {
             }
 
             { // Upload camera parameters.
-                // Check if the camera transform or projection matrix changed and, if so, upload the new data and reset accumulation.
+                // Check if the camera transform or projection matrix changed and, if so, reset accumulation.
                 Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_projection_matrix(camera_ID);
                 Matrix4x4f inverse_view_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);;
 
-                if (camera_state.inverse_projection_matrix != inverse_projection_matrix ||
-                    camera_state.inverse_view_projection_matrix != inverse_view_projection_matrix)
+                if (camera_state.inverse_view_projection_matrix != inverse_view_projection_matrix)
                     camera_state.accumulations = 0u;
 
-                camera_state.inverse_projection_matrix = inverse_projection_matrix;
                 camera_state.inverse_view_projection_matrix = inverse_view_projection_matrix;
 
                 camera_state_GPU.inverse_projection_matrix = optix::Matrix4x4(inverse_projection_matrix.begin());
                 camera_state_GPU.inverse_view_projection_matrix = optix::Matrix4x4(inverse_view_projection_matrix.begin());
 
-                Matrix3x3f world_to_view_rotation = to_matrix3x3(Cameras::get_view_transform(camera_ID).rotation);
-                camera_state_GPU.world_to_view_rotation = optix::Matrix3x3(world_to_view_rotation.begin());
+                Matrix3x3f world_to_view_rotation = to_matrix3x3(Cameras::get_inverse_view_transform(camera_ID).rotation);
+                camera_state_GPU.view_to_world_rotation = optix::Matrix3x3(world_to_view_rotation.begin());
             }
         }
 
