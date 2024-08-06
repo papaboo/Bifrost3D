@@ -441,7 +441,6 @@ struct Renderer::Implementation {
             context["g_scene_root"]->set(scene.root);
             OPTIX_VALIDATE(scene.root);
 
-            scene.GPU_state.ray_epsilon = 0.0001f;
             scene.GPU_state.next_event_sample_count = 3;
 
             // Setup path regularization for fast convergence.
@@ -1321,11 +1320,6 @@ Renderer::Renderer(int cuda_device_ID, const std::filesystem::path& data_directo
 Renderer::~Renderer() {
     Bifrost::Core::Renderers::destroy(m_renderer_ID);
     delete m_impl;
-}
-
-float Renderer::get_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID) const { return m_impl->scene.GPU_state.ray_epsilon; }
-void Renderer::set_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID, float scene_epsilon) {
-    m_impl->scene.GPU_state.ray_epsilon = scene_epsilon;
 }
 
 int Renderer::get_next_event_sample_count(Bifrost::Scene::SceneRootID scene_root_ID) const { return m_impl->scene.GPU_state.next_event_sample_count; }
