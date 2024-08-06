@@ -53,9 +53,6 @@ public:
     unsigned int get_max_accumulation_count(Bifrost::Scene::CameraID camera_ID) const;
     void set_max_accumulation_count(Bifrost::Scene::CameraID camera_ID, unsigned int accumulation_count);
 
-    float get_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID) const;
-    void set_scene_epsilon(Bifrost::Scene::SceneRootID scene_root_ID, float scene_epsilon);
-
     int get_next_event_sample_count(Bifrost::Scene::SceneRootID scene_root_ID) const;
     void set_next_event_sample_count(Bifrost::Scene::SceneRootID scene_root_ID, int sample_count);
 

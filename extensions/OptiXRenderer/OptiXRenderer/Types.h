@@ -427,14 +427,13 @@ struct __align__(16) SceneStateGPU {
     EnvironmentLight environment_light; // Takes up 7 ints
 #endif
 
-    float ray_epsilon;
+    int next_event_sample_count;
 
     // -- Aligned to 8'th word from here --
     rtBufferId<Light, 1> light_buffer;
     unsigned int light_count;
 
-    int next_event_sample_count;
-    int __padding;
+    optix::int2 __padding;
 };
 
 //----------------------------------------------------------------------------
