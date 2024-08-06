@@ -50,7 +50,7 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, optix::floa
         light_sample.distance = optix::length(light_sample.direction_to_light);
         light_sample.direction_to_light /= light_sample.distance;
         light_sample.radiance = light.power / (4.0f * PIf * light_sample.distance * light_sample.distance);
-        light_sample.distance -= 1.1f * light.radius; // Reduce distance by slightly more than the radius to avoid self intersections.
+        light_sample.distance -= light.radius;
         light_sample.PDF = 1.0f;
     } else {
         // Sample the cone and project the sample onto the sphere.
@@ -70,6 +70,10 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, optix::floa
         float inv_divisor = 1.0f / (PIf * surface_area(light));
         light_sample.radiance = light.power * inv_divisor;
     }
+
+    // Decrement the shadow ray distance by one ULP. This should avoid self intersections,
+    // as it's the same intersection test that is used in the intersection program.
+    light_sample.distance = nextafterf(light_sample.distance, 0.0f);
 
     return light_sample;
 }

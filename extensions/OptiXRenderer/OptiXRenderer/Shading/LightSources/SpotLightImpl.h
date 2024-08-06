@@ -17,6 +17,8 @@
 namespace OptiXRenderer {
 namespace LightSources {
 
+__device__ static const float spot_light_min_cone_angle_to_sample = 1e-5f;
+
 // ------------------------------------------------------------------------------------------------
 // Disk spot light.
 // Future work:
@@ -41,7 +43,7 @@ __inline_all__ float PDF(const SpotLight& light, optix::float3 lit_position, opt
         // Sample the spot light by either sampling the surface of the spotlight or sampling the cone, whichever has the lowest radius.
         float t = Intersect::ray_plane(lit_position, -light.direction, light.position, light.direction);
         float cone_radius_at_intersection = t * sqrtf(1.0f - pow2(light.cos_angle)) / light.cos_angle;
-        if (light.radius > cone_radius_at_intersection && light.cos_angle > 1e-5f)
+        if (light.radius > cone_radius_at_intersection && light.cos_angle > spot_light_min_cone_angle_to_sample)
             return Distributions::Cone::PDF(light.cos_angle);
         else {
             float t = Intersect::ray_disk(lit_position, direction_to_light, light.position, light.direction, light.radius);
@@ -90,7 +92,7 @@ __inline_all__ LightSample sample_radiance(const SpotLight& light, optix::float3
         // Sample the spot light by either sampling the surface of the spotlight or sampling the cone, whichever has the lowest radius.
         float t = Intersect::ray_plane(lit_position, -light.direction, light.position, light.direction);
         float cone_radius_at_intersection = t * sqrtf(1.0f - pow2(light.cos_angle)) / light.cos_angle;
-        if (light.radius > cone_radius_at_intersection && light.cos_angle > 1e-5f) {
+        if (light.radius > cone_radius_at_intersection && light.cos_angle > spot_light_min_cone_angle_to_sample) {
             auto cone_sample = Distributions::Cone::sample(light.cos_angle, random_sample);
             light_sample.direction_to_light = -cone_sample.direction * light_to_world;
             light_sample.distance = Intersect::ray_plane(lit_position, light_sample.direction_to_light, light.position, light.direction);
@@ -118,6 +120,10 @@ __inline_all__ LightSample sample_radiance(const SpotLight& light, optix::float3
 
             light_sample.radiance = evaluate(light, lit_position, light_sample.direction_to_light);
         }
+
+        // Decrement the shadow ray distance by one ULP. This should avoid self intersections,
+        // as it's the same intersection test that is used in the intersection program.
+        light_sample.distance = nextafterf(light_sample.distance, 0.0f);
 
         return light_sample;
     }
