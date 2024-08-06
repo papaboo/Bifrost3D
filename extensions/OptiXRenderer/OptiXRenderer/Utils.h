@@ -244,6 +244,27 @@ __inline_all__ float modulate_roughness_under_coat(float base_roughness, float c
     return sqrt(1.0f - (1.0f - pow2(base_roughness)) * (1.0f - pow2(coat_roughness)));
 }
 
+// Offset ray origin along the geometric normal. Values should ideally be in world space.
+// Source: Ray Tracing Gems 1, Chapter 6, A Fast and Robust Method for Avoiding Self-Intersection
+// For a more stable approach see https://developer.nvidia.com/blog/solving-self-intersection-artifacts-in-directx-raytracing/
+__inline_all__ optix::float3 offset_ray_origin(optix::float3 ray_world_origin, optix::float3 world_normal) {
+    using namespace optix;
+
+    constexpr float origin = 1.0f / 32.0f;
+    constexpr float float_scale = 1.0f / 65536.0f;
+    constexpr float int_scale = 256.0f;
+
+    int3 of_i = make_int3(int_scale * world_normal);
+
+    float3 p_i = make_float3(int_as_float(float_as_int(ray_world_origin.x) + ((ray_world_origin.x < 0) ? -of_i.x : of_i.x)),
+                             int_as_float(float_as_int(ray_world_origin.y) + ((ray_world_origin.y < 0) ? -of_i.y : of_i.y)),
+                             int_as_float(float_as_int(ray_world_origin.z) + ((ray_world_origin.z < 0) ? -of_i.z : of_i.z)));
+
+    return make_float3(fabsf(ray_world_origin.x) < origin ? ray_world_origin.x + float_scale * world_normal.x : p_i.x,
+                       fabsf(ray_world_origin.y) < origin ? ray_world_origin.y + float_scale * world_normal.y : p_i.y,
+                       fabsf(ray_world_origin.z) < origin ? ray_world_origin.z + float_scale * world_normal.z : p_i.z);
+}
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_SHADING_UTILS_H_
