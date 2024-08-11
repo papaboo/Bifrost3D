@@ -26,6 +26,12 @@ __inline_all__ float average(optix::float3 v) {
     return (v.x + v.y + v.z) / 3.0f;
 }
 
+// Toroidal shift of a base random number.
+__inline_all__ optix::float4 toroidal_shift(optix::float4 base, optix::float4 shift) {
+    optix::float4 s = base + shift;
+    return s - floor(s);
+}
+
 __inline_all__ float heaviside(float v) {
     return v >= 0.0f ? 1.0f : 0.0f;
 }
