@@ -180,8 +180,7 @@ __inline_all__ void path_tracing_closest_hit() {
     monte_carlo_payload.position = offset_ray_origin(monte_carlo_payload.position, world_geometric_normal);
     monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
     float abs_cos_theta_o = abs(monte_carlo_payload.direction.z);
-    float pdf_regularization_hint = monte_carlo_payload.bsdf_MIS_PDF.PDF() * g_camera_state.path_regularization_PDF_scale;
-    const auto material = MaterialCreator::create(material_parameter, texcoord, abs_cos_theta_o, pdf_regularization_hint);
+    const auto material = MaterialCreator::create(material_parameter, texcoord, abs_cos_theta_o);
 
     { // Next event estimation, sample the light sources directly.
         // Grab the RNG state before next even estimation to reset it afterwards which reduces the curse of dimensionality.
@@ -216,7 +215,8 @@ __inline_all__ void path_tracing_closest_hit() {
 //----------------------------------------------------------------------------
 
 struct DefaultMaterialCreator {
-    __inline_all__ static DefaultShading create(const Material& material_params, optix::float2 texcoord, float abs_cos_theta_o, float max_PDF_hint) {
+    __inline_all__ static DefaultShading create(const Material& material_params, optix::float2 texcoord, float abs_cos_theta_o) {
+        float max_PDF_hint = monte_carlo_payload.bsdf_MIS_PDF.PDF() * g_camera_state.path_regularization_PDF_scale;
         return DefaultShading::initialize_with_max_PDF_hint(material_params, texcoord, abs_cos_theta_o, max_PDF_hint);
     }
 };
@@ -226,7 +226,7 @@ RT_PROGRAM void default_closest_hit() {
 }
 
 struct DiffuseMaterialCreator {
-    __inline_all__ static DiffuseShading create(const Material& material_params, optix::float2 texcoord, float abs_cos_theta_o, float max_PDF_hint) {
+    __inline_all__ static DiffuseShading create(const Material& material_params, optix::float2 texcoord, float abs_cos_theta_o) {
         float3 tint = make_float3(material_params.get_tint_roughness(texcoord));
         return DiffuseShading(tint);
     }
