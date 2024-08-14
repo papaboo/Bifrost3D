@@ -28,7 +28,6 @@ rtDeclareVariable(MonteCarloPayload, monte_carlo_payload, rtPayload, );
 rtDeclareVariable(CameraStateGPU, g_camera_state, , );
 
 // Scene parameters.
-rtDeclareVariable(rtObject, g_scene_root, , );
 rtDeclareVariable(SceneStateGPU, g_scene, , );
 
 // Material parameters.
@@ -66,12 +65,13 @@ __inline_dev__ LightSample sample_single_light(const ShadingModel& material, con
     float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction_to_light);
     light_sample.radiance *= abs(N_dot_L) / light_sample.PDF;
 
-    // Apply MIS weights if the light isn't a delta function and if a new material ray will be spawned, i.e. it isn't the final bounce.
+    // Apply MIS weights if the light isn't a delta function.
     const float3 shading_light_direction = world_shading_tbn * light_sample.direction_to_light;
     BSDFResponse bsdf_response = material.evaluate_with_PDF(monte_carlo_payload.direction, shading_light_direction);
-    bool delta_light = LightSources::is_delta_light(light, monte_carlo_payload.position);
-    bool apply_MIS = !delta_light && monte_carlo_payload.bounces < g_camera_state.max_bounce_count;
+    bool apply_MIS = !LightSources::is_delta_light(light, monte_carlo_payload.position);
     if (apply_MIS)
+        // The light source connected to the final bounce will be scaled by the MIS weight as well, even though the BSDF sample isn't traced and thus the second sample scheme isn't used.
+        // This is done as the MIS weight will still reduce variance from light sources that would be more easily sampled using the BSDf.
         light_sample.radiance *= MonteCarlo::MIS_weight(light_sample.PDF, bsdf_response.PDF);
     else
         // BIAS Nearly specular materials and delta lights will lead to insane fireflies, so we clamp them here.
