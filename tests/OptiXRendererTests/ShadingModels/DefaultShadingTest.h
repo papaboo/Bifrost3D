@@ -63,7 +63,7 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
 
     // A white material to stress test power_conservation.
     Material material_params = {};
-    material_params.tint = optix::make_float3(1.0f, 1.0f, 1.0f);
+    material_params.tint = make_float3(1.0f, 1.0f, 1.0f);
     material_params.roughness = 0.7f;
     material_params.metallic = 0.0f;
     material_params.specularity = 0.02f;
@@ -107,8 +107,6 @@ GTEST_TEST(DefaultShadingModel, Helmholtz_reciprocity) {
 */
 
 GTEST_TEST(DefaultShadingModel, function_consistency) {
-    using namespace Shading::ShadingModels;
-
     static auto evaluate_with_PDF_test = [](Material& material_params) {
         auto wo = optix::normalize(optix::make_float3(1.0f, 1.0f, 1.0f));
 
@@ -214,8 +212,6 @@ GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation
 }
 
 GTEST_TEST(DefaultShadingModel, white_hot_room) {
-    using namespace Shading::ShadingModels;
-
     // A white material to stress test power_conservation.
     Material white_material_params = {};
     white_material_params.tint = { 1.0f, 1.0f, 1.0f };
@@ -276,7 +272,7 @@ GTEST_TEST(DefaultShadingModel, metallic_interpolation) {
     using namespace optix;
 
     Material material_params = {};
-    material_params.tint = optix::make_float3(1.0f, 0.5f, 0.25f);
+    material_params.tint = make_float3(1.0f, 0.5f, 0.25f);
     material_params.specularity = 0.04f;
 
     for (float roughness : { 0.0f, 0.5f, 1.0f }) {
