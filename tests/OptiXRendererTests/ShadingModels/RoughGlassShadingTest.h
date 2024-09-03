@@ -76,7 +76,6 @@ GTEST_TEST(RoughGlassShadingModel, power_conservation) {
 
 GTEST_TEST(RoughGlassShadingModel, function_consistency) {
     using namespace optix;
-    using namespace Shading::ShadingModels;
 
     for (float cos_theta : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
         const float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
