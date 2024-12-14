@@ -164,23 +164,25 @@ __inline_all__ void path_tracing_closest_hit() {
     monte_carlo_payload.texcoord = texcoord;
     monte_carlo_payload.primitive_id = primitive_id;
 
-    // Setup world shading normal and tangents.
+    // Setup normals and tangents.
     // If the surface is hit from behind then we flip the shading and geometric normal to the backside of the surface.
+    world_geometric_normal = hit_from_behind ? -world_geometric_normal : world_geometric_normal;
     float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
     world_shading_normal = hit_from_behind ? -world_shading_normal : world_shading_normal;
-    world_geometric_normal = hit_from_behind ? -world_geometric_normal : world_geometric_normal;
-    monte_carlo_payload.shading_normal = fix_backfacing_shading_normal(-ray.direction, world_shading_normal, 0.001f);
-    const TBN world_shading_tbn = TBN(monte_carlo_payload.shading_normal);
+    world_shading_normal = fix_backfacing_shading_normal(-ray.direction, world_shading_normal, 0.002f);
+    monte_carlo_payload.shading_normal = world_shading_normal;
+    const TBN world_shading_tbn = TBN(world_shading_normal);
 
     // Store intersection point and wo in payload.
     // Compute world position by transforming the local intersection point to world space,
     // as that should be numerically more stable than picking a point on the ray, for large values of 't'.
-    // Source: Ray Tracing Gems 1, chapter 6, A Fast and Robust Method for Avoiding Self - Intersection.
+    // Source: Ray Tracing Gems 1, chapter 6, A Fast and Robust Method for Avoiding Self-Intersection.
     monte_carlo_payload.position = rtTransformPoint(RT_OBJECT_TO_WORLD, intersection_point);
     monte_carlo_payload.position = offset_ray_origin(monte_carlo_payload.position, world_geometric_normal);
     monte_carlo_payload.direction = world_shading_tbn * -ray.direction;
-    float abs_cos_theta_o = abs(monte_carlo_payload.direction.z);
-    const auto material = MaterialCreator::create(material_parameter, texcoord, abs_cos_theta_o);
+
+    float cos_theta_o = monte_carlo_payload.direction.z;
+    const auto material = MaterialCreator::create(material_parameter, texcoord, cos_theta_o);
 
     { // Next event estimation, sample the light sources directly.
         // Grab the RNG state before next even estimation to reset it afterwards which reduces the curse of dimensionality.
@@ -201,6 +203,15 @@ __inline_all__ void path_tracing_closest_hit() {
         monte_carlo_payload.throughput *= bsdf_sample.reflectance * (abs(bsdf_sample.direction.z) / bsdf_sample.PDF); // f * ||cos(theta)|| / pdf
     else
         monte_carlo_payload.throughput = make_float3(0.0f);
+
+    // Mirror the BSDF direction if the sampled reflection direction points into the geometry.
+    // This makes the integrator non-symmetric wrt wi and wo, but gives a decent
+    // reflection vector in the case of a low-tesselated (cubical) sphere.
+    // The reflection is handled independently of the ray throughput to avoid increasing
+    // variance by changing cos_theta after sampling, but again, that makes it non-symmetrical.
+    float cos_geometric_theta_i = dot(monte_carlo_payload.direction, world_geometric_normal);
+    if (cos_geometric_theta_i < 0.0f)
+        monte_carlo_payload.direction = reflect(monte_carlo_payload.direction, world_geometric_normal);
 
     monte_carlo_payload.ray_min_t = 0.0f;
     monte_carlo_payload.bounces += 1u;
