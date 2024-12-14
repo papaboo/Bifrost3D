@@ -378,6 +378,11 @@ struct __align__(16) MonteCarloPayload {
 
     optix::float2 texcoord;
     PrimitiveID primitive_id;
+
+    __inline_dev__ void debug_output(optix::float3 color) {
+        throughput = { 0,0,0 };
+        radiance = color;
+    }
 };
 
 struct ShadowPayload {
