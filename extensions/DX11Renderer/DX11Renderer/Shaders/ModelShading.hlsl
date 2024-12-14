@@ -68,7 +68,7 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
     float3 world_wo = normalize(scene_vars.camera_world_position() - input.world_position.xyz);
 
     float3 world_normal = normalize(input.normal.xyz) * (is_front_face ? 1.0 : -1.0);
-    world_normal = fix_backfacing_shading_normal(world_wo, world_normal, 0.001f);
+    world_normal = fix_backfacing_shading_normal(world_wo, world_normal, 0.002f);
     float3x3 world_to_shading_TBN = create_TBN(world_normal);
 
     float3 wo = mul(world_to_shading_TBN, world_wo);
