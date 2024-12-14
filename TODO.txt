@@ -1,88 +1,87 @@
 BACKLOG:
-* DX11 crash when box gun shot destroyed
-* Normals revisited
-** Implement Solving Self-Intersection Artifacts in DirectX Raytracing in OptiX, to avoid hard shadows on tesselated spheres.
-*** https://developer.nvidia.com/blog/solving-self-intersection-artifacts-in-directx-raytracing/
-*** Will probably require an origin per new ray, so one for light samples and one for BSDF samples
-** Cubical sphere's in sphere scene are partially see-through near the border.
-*** Toggling thin-walled has a pretty drastic effect even though all intersections should be on the outside
-** sea_keep_lonely_watcher shows bright artifacts on transparent geometry. The artifact scales with transparency. Is it just rays penetrating all surfaces due to cutouts?
-** Can we remove scene epsilon then?
-* Plastic torus has different highlights depending on if it's cutout or transparent.
+* Material scene crashes in ImGUI. Probably after update
+* sea_keep_lonely_watcher shows bright artifacts on transparent geometry. The artifact scales with transparency.
+ * The artifact is clearly seen on palm tree leaves
+ * Some of them disappear if we remove the hemisphere (material 4)
+ * All geometry is loaded as transparent. Are the textures transparent?
+ * It's not just transparent surfaces. Some of the rocks do it as well (perhaps after making them cutouts)
 * Rough glass
-** Add support for local refraction of the coat in default shading
-** Define how we should scale roughness of a surface underneath another rough surface
-** Test that PDF is always positive if reflectance is positive
-*** Test for entire sphere, not just expected hemisphere.
-** Change integrators such that shading normal doesn't always point towards the camera and can be used to differentiate between front and backside intersections in GGX.
-*** Or keep the normal as is and 'flip' the index of refraction on backsides
-*** Make sure it's consistent!! Right now some layers/BSDFs will flip the view direction, others will refuse to sample the backside.
-** Add rough glass shading model
-*** Rough glass sheet test scene.
-** Can we use Bounded VNDF when the IOR is greater (or was it less) than 1.0? So cases where the refraction will cause more of the lobe to be occluded.
-** Allow ior of 1, which is effectively tinting the transmission.
-*** See PBRTv4 bxdfs.cpp line 80: if (eta == 1 || mfDistrib.EffectivelySmooth()) { .. }
-*** What is 'EffectivelySmooth' defined as?
-*** PBRT handles it as a delta dirac, which I'd still like to avoid
-** Approximate rough glass in DX11 using a gaussian filter, see Doom 2016.
+ * Test that PDF is always positive if reflectance is positive
+  * Test for entire sphere, not just expected hemisphere.
+ * 'Flip' the index of refraction on backsides
+  * This is actually handled inside the refract call. Negate wo.z and ior = 1 / ior. But it might be better to be explicit to avoid a bunch of abs calls and not knowing which side we're on.
+  * Make sure it's consistent!! Right now some layers/BSDFs will flip the view direction, others will refuse to sample the backside.
+ * Add rough glass shading model
+  * Use Snell's law to test that the ray refracts the right way
+  * Rough glass sheet test scene.
+  * Thin walled materials should not refract, effectively only tinting the transmission by the base color.
+ * Allow ior of 1, which is effectively tinting the transmission.
+  * See PBRTv4 bxdfs.cpp line 80: if (eta == 1 || mfDistrib.EffectivelySmooth()) { .. }
+  * What is 'EffectivelySmooth' defined as?
+  * PBRT handles it as a delta dirac, which I'd still like to avoid
+ * How can we ensure that refractions handle bidirectional renderers? PBRT does it by tracing 'importance' or radiance. I think I'd prefer to handle it based on front/backside or IOR <=> 1 instead.
+ * Can we use Bounded VNDF when the IOR is greater (or was it less) than 1.0? So cases where the refraction will cause more of the lobe to be occluded.
+ * Add support for local refraction of the coat in default shading
+ * Define how we should scale roughness of a surface underneath another rough surface.
+  * Fixed coat roughness, binary search of underlying roughness that matches GGX * GGX
+  * Test in a scene with rough glass and default material underneath and another material with coated default material
+ * Approximate rough glass in DX11 using a gaussian filter, see Doom 2016.
+* Bugs
+ * environment map has different intensities in DX and OptiX. See --environment-map "C:\Users\Asger Hoedt\Development\data\textures\spheremaps\3DTotal_free_sample_1_Bg.jpg"
+ * Plastic torus has different highlights in DX11 depending on if it's cutout or transparent.
+ * DX11 crash when box gun shot destroyed
 * Emissive meshes
-** Mirror glTF for starters. Emissive texture and emissive 'strength'
-*** https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_emissive_strength/README.md
-** Do something similar to or reuse the fixed light samples in PresampledEnvironmentLight and add MIS
-*** Presample mesh lights. Handle textures by random sampling and then do reestimated importance sampling when combining samples. Cheapest memory wise, parallelisable, and a pretty simple solution.
+ * Mirror glTF for starters. Emissive texture and emissive 'strength'
+  * https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_emissive_strength/README.md
+ * Do something similar to or reuse the fixed light samples in PresampledEnvironmentLight and add MIS
+  * Presample mesh lights. Handle textures by random sampling and then do reestimated importance sampling when combining samples. Cheapest memory wise, parallelisable, and a pretty simple solution.
+ * Efficient triangle sampling https://gpuopen.com/download/publications/Hierarchical_Light_Sampling_with_Accurate_Spherical_Gaussian_Lighting.pdf
 * Bump mapping
-** Create test scene with a plane where one side has proper micro geometry and the other is normal mapped.
-** Taming the Shadow Terminator for 'proper' handling of hemisphere distortion. Only scales the contribution. Mirror surfaces still have to be handled differently
-*** https://blog.yiningkarlli.com/2020/02/shadow-terminator-in-takua.html
-** Approach it the same way that Heitz did with multiple bounces.
-** Or simply flip the normal or correct back facing, similar to the original shading normal.
+ * Create test scene with a plane where one side has proper micro geometry and the other is normal mapped.
+ * Use Microfacet-based Normal Mapping for Robust Monte Carlo Path Tracing to solve the energy preservation issue.
+ * Or simply negate the part of the shading hemisphere that disagrees with the geometric normal to make a complete hemisphere.
+  * That should preserve abs(cos(theta)) as well, so not affect variance adversely
 * Remove color banding
-** http://www.loopit.dk/banding_in_games.pdf and https://www.shadertoy.com/view/4t2SDh
+ * http://www.loopit.dk/banding_in_games.pdf and https://www.shadertoy.com/view/4t2SDh
 * Threadsafe asset management
-** Assets shouldn't be copied on resize/reserve, as that gives issues when multithreading asset creation.
-*** Instead we can allocate the assets in chunks and just allocate more chunks as needed. Linked list style
-*** To avoid dereferencing multiple pointers whenever an asset's property is accessed, we can just return the (now static) reference to the asset. So instead of having Images::get_size, we'll instead use Images::get(image_ID) to return an image and then call get_size on that.
-** Allow multithreaded UID generation
-** Use the threadsafe asset management in model loaders to parallelize asset loading and creation.
+ * Assets shouldn't be copied on resize/reserve, as that gives issues when multithreading asset creation.
+  * Instead we can allocate the assets in chunks and just allocate more chunks as needed. Linked list style
+  * To avoid dereferencing multiple pointers whenever an asset's property is accessed, we can just return the (now static) reference to the asset. So instead of having Images::get_size, we'll instead use Images::get(image_ID) to return an image and then call get_size on that.
+ * Allow multithreaded UID generation
+ * Use the threadsafe asset management in model loaders to parallelize asset loading and creation.
 * Dithered transparency in the material
-** using a fairly large blue noise texture, morton encoding or Laine-Karras hash
-** Consider it an engine effect and include it in the path tracer as well
-** See https://www.youtube.com/watch?v=NHd1PeJfyzE
+ * using a fairly large blue noise texture, morton encoding or Laine-Karras hash
+ * Consider it an engine effect and include it in the path tracer as well
+ * See https://www.youtube.com/watch?v=NHd1PeJfyzE
 * Upgrade OptiX to get better denoiser
 * ReSTIR
-** Start with the simpler Spatiotemporal variance-guided filtering: real-time reconstruction for path-traced global illumination
-** Generalized Resampled Importance Sampling
-** Change the rng seed to be based on a frame count instead of an accumulation count
-*** How will that affect non-ReSTIR
+ * Start with the simpler Spatiotemporal variance-guided filtering: real-time reconstruction for path-traced global illumination
+ * Generalized Resampled Importance Sampling
+ * Change the rng seed to be based on a frame count instead of an accumulation count
+  * How will that affect non-ReSTIR
 * Decima Engine Area lights
-** https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Shaders/Private/BRDF.ush
-** https://www.guerrilla-games.com/read/decima-engine-advances-in-lighting-and-aa
+ * https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Shaders/Private/BRDF.ush
+ * https://www.guerrilla-games.com/read/decima-engine-advances-in-lighting-and-aa
 * Blue noise seed
-** PBRTs random morton code seed looks pretty simple (and I do love a good morton code)
-*** Make ZSobolSampler 'progressive' with fixed 256 sample offset in between the pixels.
-** Heitz and Georgiev blue noise screen space seed scheme.
+ * PBRTs random morton code seed looks pretty simple (and I do love a good morton code)
+  * Make ZSobolSampler 'progressive' with fixed 256 sample offset in between the pixels.
+ * Heitz and Georgiev blue noise screen space seed scheme.
 * SDF shadows - check UE4
-** http://kunzhou.net/2013/fur-rendering-tvcg.pdf
-** RTSDF: Real-time Signed Distance Fields for Soft Shadow Approximation in Games
-** Call of duty precomputed GI. Check how they handle light bleeding. http://advances.realtimerendering.com/s2017/Precomputed%20Lighting%20in%20CoD%20IW_20_PPS.pdf
+ * http://kunzhou.net/2013/fur-rendering-tvcg.pdf
+ * RTSDF: Real-time Signed Distance Fields for Soft Shadow Approximation in Games
+ * Call of duty precomputed GI. Check how they handle light bleeding. http://advances.realtimerendering.com/s2017/Precomputed%20Lighting%20in%20CoD%20IW_20_PPS.pdf
 * SSAO
-** Compute SSAO based on geometric/screenspace normals and filter based on shading normals.
-*** That way we avoid issues with the SSAO hemisphere selfshadowing (think spherical cube), but we still filter across hard boundaries if they are defined as smooth.
-** Intensity should be relative to sample distance, not absolute distance intensity.
-*** When hitting the screen space max radius then results should be independent of the world radius. Are they? Test scene with three 'infinite' walls.
-** Try seeding with hilbert curve + hash from 'Stratified sampling for stochastic transparency'
-* SSBN
-** Bent normal
-*** Path tracer backend (Also one for SSAO?)
-*** For diffuse env map lookup.
-*** For cones compute aparture from visibility
-*** Intersect bent cone with light cone or distribution and bake into 3D LUT (GTSO)
+ * Compute SSAO based on geometric/screenspace normals and filter based on shading normals.
+  * That way we avoid issues with the SSAO hemisphere selfshadowing (think spherical cube), but we still filter across hard boundaries if they are defined as smooth.
+ * Intensity should be relative to sample distance, not absolute distance intensity.
+  * When hitting the screen space max radius then results should be independent of the world radius. Are they? Test scene with three 'infinite' walls.
 * Iridescent clear coat.
-** https://hal.archives-ouvertes.fr/hal-01518344/document and https://www.youtube.com/watch?v=4nKb9hRYbPA
-** Or just add a GGX layer on top with an iridescence parameter (red and blue fresnel offset relative to green. [Specularity, iridescence)
+ * https://hal.archives-ouvertes.fr/hal-01518344/document and https://www.youtube.com/watch?v=4nKb9hRYbPA
+ * Or just add a GGX layer on top with an iridescence parameter (red and blue fresnel offset relative to green. [Specularity, iridescence)
 
 libs
 * ReactPhysics or BulletPhyssics (or both)
 * RtAudio wrapper - https://github.com/thestk/rtaudio
 * LuaJit - OpenSource (Fallback to interpretted Lua if the target architecture isn't supported.)
 * ply loader https://github.com/mhalber/msh
+* CPU BVH https://github.com/jbikker/tinybvh
