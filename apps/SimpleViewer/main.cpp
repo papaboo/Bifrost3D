@@ -331,7 +331,7 @@ int initializer(Engine& engine) {
     return 0;
 }
 
-int initialize_scene(Engine& engine) {
+int initialize_scene(Engine& engine, ImGui::ImGuiAdaptor* imgui) {
     // Setup scene.
     SceneRootID scene_ID = SceneRootID::invalid_UID();
     if (!g_environment.empty()) {
@@ -446,12 +446,13 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
 
     engine.add_non_mutating_callback([=] { compositor->render(); });
 
-    int scene_result = initialize_scene(engine);
+    imgui = new ImGui::ImGuiAdaptor();
+
+    int scene_result = initialize_scene(engine, imgui);
     if (scene_result < 0)
         return scene_result;
 
     { // Setup GUI
-        imgui = new ImGui::ImGuiAdaptor();
 #ifdef OPTIX_FOUND
         imgui->add_frame(std::make_unique<GUI::RenderingGUI>(camera_navigation, compositor, dx11_renderer, optix_renderer));
 #else
