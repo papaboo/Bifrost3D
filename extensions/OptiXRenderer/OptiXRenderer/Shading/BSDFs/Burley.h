@@ -73,9 +73,9 @@ __inline_all__ BSDFSample sample(float3 tint, float roughness, float3 wo, float2
     return bsdf_sample;
 }
 
-} // NS OrenNayar
+} // NS Burley
 } // NS BSDFs
 } // NS Shading
 } // NS OptiXRenderer
 
-#endif // _OPTIXRENDERER_BSDFS_ORENNAYAR_H_
+#endif // _OPTIXRENDERER_BSDFS_BURLEY_H_
