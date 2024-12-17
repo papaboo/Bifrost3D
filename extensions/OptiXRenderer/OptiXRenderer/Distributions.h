@@ -92,6 +92,28 @@ namespace Cone {
 } // NS Cone
 
 //=================================================================================================
+// Uniform hemisphere distribution.
+//=================================================================================================
+namespace UniformHemisphere {
+
+__inline_all__ float PDF() {
+    return 0.5f * RECIP_PIf;
+}
+
+__inline_all__ DirectionalSample sample(optix::float2 random_sample) {
+    float z = random_sample.x;
+    float r = sqrt(fmaxf(0.0f, 1.0f - z * z));
+    float phi = TWO_PIf * random_sample.y;
+
+    DirectionalSample res;
+    res.direction = optix::make_float3(r * cos(phi), r * sin(phi), z);
+    res.PDF = PDF();
+    return res;
+}
+
+} // NS Uniform hemisphere distribution
+
+//=================================================================================================
 // Cosine distribution.
 //=================================================================================================
 namespace Cosine {
