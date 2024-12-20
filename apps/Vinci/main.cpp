@@ -296,7 +296,7 @@ public:
         if (m_camera_navigation.camera_has_moved())
             Cameras::cancel_screenshot(camera_ID());
 
-        if (Cameras::pending_screenshots(camera_ID())) {
+        if (Cameras::pending_screenshots(camera_ID()).any_set()) {
             // Resolve and save screenshots.
             auto output_screenshot = [&](Screenshot::Content content, const std::string& path) {
                 auto image_ID = Cameras::resolve_screenshot(camera_ID(), content, "ss");

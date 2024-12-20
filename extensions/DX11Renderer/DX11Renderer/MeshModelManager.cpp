@@ -47,12 +47,12 @@ void MeshModelManager::handle_updates() {
         for (MeshModel model : MeshModels::get_changed_models()) {
             unsigned int model_index = m_model_indices[model.get_ID()];
 
-            if (model.get_changes() & MeshModels::Change::Destroyed) {
+            if (model.get_changes().contains(MeshModels::Change::Destroyed)) {
                 Dx11Model dx_model = {};
                 m_sorted_models[model_index] = dx_model;
 
                 m_model_indices[model.get_ID()] = 0;
-            } else if (model.get_changes() & MeshModels::Change::Created) {
+            } else if (model.get_changes().contains(MeshModels::Change::Created)) {
                 Dx11Model dx_model;
                 dx_model.model_ID = model.get_ID();
                 dx_model.material_ID = model.get_material().get_ID();
@@ -65,7 +65,7 @@ void MeshModelManager::handle_updates() {
                     m_sorted_models.push_back(dx_model);
                 } else
                     m_sorted_models[model_index] = dx_model;
-            } else if (model.get_changes() & MeshModels::Change::Material) {
+            } else if (model.get_changes().contains(MeshModels::Change::Material)) {
                 Dx11Model& dx_model = m_sorted_models[model_index];
                 dx_model.material_ID = model.get_material().get_ID();
                 dx_model.properties = model_properties_from_material(model.get_material());

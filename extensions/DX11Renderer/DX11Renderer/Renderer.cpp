@@ -785,7 +785,7 @@ public:
 
         { // Camera updates.
             for (CameraID cam_ID : Cameras::get_changed_cameras())
-                if (Cameras::get_changes(cam_ID) & Cameras::Change::Destroyed)
+                if (Cameras::get_changes(cam_ID).contains(Cameras::Change::Destroyed))
                     m_ssao.clear_camera_state(cam_ID);
         }
 

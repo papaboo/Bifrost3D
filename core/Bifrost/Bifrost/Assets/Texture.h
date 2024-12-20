@@ -149,7 +149,7 @@ public:
     //---------------------------------------------------------------------------------------------
     // Changes since last game loop tick.
     //---------------------------------------------------------------------------------------------
-    inline unsigned char get_changes() const { return Textures::get_changes(m_ID); }
+    inline Textures::Changes get_changes() const { return Textures::get_changes(m_ID); }
 
 private:
     TextureID m_ID;

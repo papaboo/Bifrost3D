@@ -219,7 +219,7 @@ void RenderingGUI::layout_frame() {
             if (take_screenshot) {
                 auto first_cam_ID = *Cameras::get_iterable().begin();
                 auto content = m_screenshot.screenshot_content;
-                if (!(content & Screenshot::Content::ColorHDR))
+                if (content.not_set(Screenshot::Content::ColorHDR))
                     content |= Screenshot::Content::ColorLDR;
                 Cameras::request_screenshot(first_cam_ID, content, m_screenshot.iterations);
             }
@@ -470,8 +470,8 @@ void RenderingGUI::layout_frame() {
 
                     const char* debug_vis_modes[] = { "Denoised image", "Noisy image", "Albedo" };
 
-                    int visualization_index = AI_flags & AIDenoiserFlag::VisualizeAlbedo ? 2 : 0;
-                    visualization_index = AI_flags & AIDenoiserFlag::VisualizeNoise ? 1 : visualization_index;
+                    int visualization_index = AI_flags.contains(AIDenoiserFlag::VisualizeAlbedo) ? 2 : 0;
+                    visualization_index = AI_flags.contains(AIDenoiserFlag::VisualizeNoise) ? 1 : visualization_index;
                     if (ImGui::Combo("Visualization", &visualization_index, debug_vis_modes, IM_ARRAYSIZE(debug_vis_modes))) {
                         // Clear visualization modes
                         const OptiXRenderer::AIDenoiserFlags visualization_flags = { AIDenoiserFlag::VisualizeNoise, AIDenoiserFlag::VisualizeAlbedo };

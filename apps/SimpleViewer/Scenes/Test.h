@@ -283,9 +283,9 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
     }
 
     { // Partial coverage plastic torus.
-        unsigned int width = 17, height = 17;
-        ImageID image_ID = Images::create2D("Grid", PixelFormat::Alpha8, 1.0f, Vector2ui(width, height));
-        unsigned char* pixels = Images::get_pixels<unsigned char>(image_ID);
+        unsigned int width = 16, height = 16;
+        ImageID coverage_image_ID = Images::create2D("Grid", PixelFormat::Alpha8, 1.0f, Vector2ui(width, height));
+        unsigned char* pixels = Images::get_pixels<unsigned char>(coverage_image_ID);
         for (unsigned int y = 0; y < height; ++y) {
             for (unsigned int x = 0; x < width; ++x) {
                 unsigned char* pixel = pixels + (x + y * width);
@@ -295,7 +295,8 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
         }
 
         Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.005f, 0.01f, 0.25f), 0.05f, 0.04f);
-        material_data.coverage_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
+        material_data.coverage = 0.5f;
+        material_data.coverage_texture_ID = Textures::create2D(coverage_image_ID, MagnificationFilter::None, MinificationFilter::None);
         material_data.flags = { MaterialFlag::Cutout, MaterialFlag::ThinWalled };
         MaterialID material_ID = Materials::create("Plastic", material_data);
 
