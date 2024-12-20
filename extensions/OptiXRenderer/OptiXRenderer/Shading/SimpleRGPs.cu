@@ -56,20 +56,15 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     int accumulation_count, const CameraStateGPU& camera_state_GPU) {
 
     MonteCarloPayload payload = {};
-    payload.radiance = make_float3(0.0f);
+    payload.throughput = make_float3(1.0f);
+    payload.light_sample = LightSample::none();
+    payload.bsdf_MIS_PDF = MisPDF::delta_dirac();
 
 #if LCG_RNG
     payload.rng.set_state(__brev(RNG::teschner_hash(x, y) + accumulation_count));
 #elif PRACTICAL_SOBOL_RNG
     payload.rng = RNG::PracticalScrambledSobol(x, y, accumulation_count);
 #endif
-
-    payload.throughput = make_float3(1.0f);
-    payload.light_sample = LightSample::none();
-    payload.bounces = 0;
-    payload.bsdf_MIS_PDF = MisPDF::delta_dirac();
-    payload.shading_normal = make_float3(0.0f);
-    payload.material_index = 0;
 
     // Generate rays.
     RNG::LinearCongruential rng; rng.set_state(__brev(RNG::teschner_hash(x, y, accumulation_count)));
