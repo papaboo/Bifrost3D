@@ -104,9 +104,9 @@ MeshID Meshes::create(const std::string& name, unsigned int primitive_count, uns
     m_buffers[id].primitive_count = primitive_count;
     m_buffers[id].primitives = new Vector3ui[primitive_count];
     m_buffers[id].vertex_count = vertex_count;
-    m_buffers[id].positions = (buffer_bitmask & MeshFlag::Position) ? new Vector3f[vertex_count] : nullptr;
-    m_buffers[id].normals = (buffer_bitmask & MeshFlag::Normal) ? new Vector3f[vertex_count] : nullptr;
-    m_buffers[id].texcoords = (buffer_bitmask & MeshFlag::Texcoord) ? new Vector2f[vertex_count] : nullptr;
+    m_buffers[id].positions = (buffer_bitmask.contains(MeshFlag::Position)) ? new Vector3f[vertex_count] : nullptr;
+    m_buffers[id].normals = (buffer_bitmask.contains(MeshFlag::Normal)) ? new Vector3f[vertex_count] : nullptr;
+    m_buffers[id].texcoords = (buffer_bitmask.contains(MeshFlag::Texcoord)) ? new Vector2f[vertex_count] : nullptr;
     m_bounds[id] = AABB::invalid();
     m_changes.set_change(id, Change::Created);
 
@@ -237,7 +237,7 @@ MeshID combine(const std::string& name,
         }
     }
 
-    if (flags & MeshFlag::Position) {
+    if (flags.contains(MeshFlag::Position)) {
         Vector3f* positions = merged_mesh.get_positions();
         for (TransformedMesh transformed_mesh : meshes) {
             Mesh mesh = transformed_mesh.mesh_ID;
@@ -246,7 +246,7 @@ MeshID combine(const std::string& name,
         }
     }
 
-    if (flags & MeshFlag::Normal) {
+    if (flags.contains(MeshFlag::Normal)) {
         Vector3f* normals = merged_mesh.get_normals();
         for (TransformedMesh transformed_mesh : meshes) {
             Mesh mesh = transformed_mesh.mesh_ID;
@@ -255,7 +255,7 @@ MeshID combine(const std::string& name,
         }
     }
 
-    if (flags & MeshFlag::Texcoord) {
+    if (flags.contains(MeshFlag::Texcoord)) {
         Vector2f* texcoords = merged_mesh.get_texcoords();
         for (TransformedMesh transformed_mesh : meshes) {
             Mesh mesh = transformed_mesh.mesh_ID;

@@ -183,7 +183,7 @@ void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1&
                 if (Textures::get_changes(tex_ID) == Textures::Change::Destroyed) {
                     dx_tex.sampler.release();
 
-                } else if (Textures::get_changes(tex_ID) & Textures::Change::Created) {
+                } else if (Textures::get_changes(tex_ID).contains(Textures::Change::Created)) {
                     dx_tex.sampler.release(); // Explicit release, because the resource will be overwritten below.
 
                     Texture texture = tex_ID;

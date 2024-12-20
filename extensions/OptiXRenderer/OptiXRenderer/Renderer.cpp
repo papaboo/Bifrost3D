@@ -546,7 +546,7 @@ struct Renderer::Implementation {
         { // Camera updates.
             for (CameraID cam_ID : Cameras::get_changed_cameras()) {
                 auto camera_changes = Cameras::get_changes(cam_ID);
-                if (camera_changes & Cameras::Change::Destroyed) {
+                if (camera_changes.contains(Cameras::Change::Destroyed)) {
                     if (cam_ID < per_camera_state.size())
                         per_camera_state[cam_ID].clear();
 
@@ -598,7 +598,7 @@ struct Renderer::Implementation {
                     }
                 }
 
-                if (Meshes::get_changes(mesh_ID) & Meshes::Change::Created) {
+                if (Meshes::get_changes(mesh_ID).contains(Meshes::Change::Created)) {
                     if (meshes.size() <= mesh_ID)
                         meshes.resize(Meshes::capacity());
                     meshes[mesh_ID] = load_mesh(context, mesh_ID, triangle_attribute_program);
@@ -613,12 +613,12 @@ struct Renderer::Implementation {
 
                 for (ImageID image_ID : Images::get_changed_images()) {
                     Image image = image_ID;
-                    if (Images::get_changes(image_ID) & Images::Change::Destroyed) {
+                    if (Images::get_changes(image_ID).contains(Images::Change::Destroyed)) {
                         if (images[image_ID]) {
                             images[image_ID]->destroy();
                             images[image_ID] = nullptr;
                         }
-                    } else if (Images::get_changes(image_ID) & Images::Change::Created) {
+                    } else if (Images::get_changes(image_ID).contains(Images::Change::Created)) {
                         RTformat pixel_format = RT_FORMAT_UNKNOWN;
                         switch (image.get_pixel_format()) {
                         case PixelFormat::Alpha8:
@@ -653,7 +653,7 @@ struct Renderer::Implementation {
                             std::memcpy(optix_pixel_data, image.get_pixels(), images[image_ID]->getElementSize() * image.get_pixel_count());
                         images[image_ID]->unmap();
                         OPTIX_VALIDATE(images[image_ID]);
-                    } else if (Images::get_changes(image_ID) & Images::Change::PixelsUpdated)
+                    } else if (Images::get_changes(image_ID).is_set(Images::Change::PixelsUpdated))
                         assert(!"Pixel update not implemented yet.\n");
                 }
             }
@@ -672,7 +672,7 @@ struct Renderer::Implementation {
                         }
                     }
 
-                    if (Textures::get_changes(texture_ID) & Textures::Change::Destroyed)
+                    if (Textures::get_changes(texture_ID).contains(Textures::Change::Destroyed))
                         continue;
 
                     static auto convert_wrap_mode = [](WrapMode wrapmode) {
@@ -683,7 +683,7 @@ struct Renderer::Implementation {
                         return RT_WRAP_REPEAT;
                     };
 
-                    if (Textures::get_changes(texture_ID) & Textures::Change::Created) {
+                    if (Textures::get_changes(texture_ID).contains(Textures::Change::Created)) {
                         TextureSampler& texture = textures[texture_ID] = context->createTextureSampler();
                         texture->setWrapMode(0, convert_wrap_mode(Textures::get_wrapmode_U(texture_ID)));
                         texture->setWrapMode(1, convert_wrap_mode(Textures::get_wrapmode_V(texture_ID)));
@@ -714,7 +714,7 @@ struct Renderer::Implementation {
                 Assets::Material host_material = material_ID;
 
                 // The Bifrost and OptiX flags and shading models have the same layout.
-                device_material.flags = Material::Flags(int(host_material.get_flags()));
+                device_material.flags = Material::Flags(host_material.get_flags().raw());
                 device_material.shading_model = Material::ShadingModel(int(host_material.get_shading_model()));
 
                 device_material.tint = to_float3(host_material.get_tint());
@@ -969,11 +969,11 @@ struct Renderer::Implementation {
                 if (node_ID < node_to_mesh_models.size()) {
                     // Clear the set mesh models associated with this scene node on destruction and creation.
                     if (SceneNodes::get_changes(node_ID) == SceneNodes::Change::Destroyed ||
-                        SceneNodes::get_changes(node_ID) & SceneNodes::Change::Created)
+                        SceneNodes::get_changes(node_ID).contains(SceneNodes::Change::Created))
                         node_to_mesh_models[node_ID].clear();
 
                     // Update the transformation of all models associated with transformed scene nodes.
-                    if (SceneNodes::get_changes(node_ID) & SceneNodes::Change::Transform && !node_to_mesh_models[node_ID].empty()) {
+                    if (SceneNodes::get_changes(node_ID).contains(SceneNodes::Change::Transform) && !node_to_mesh_models[node_ID].empty()) {
                         Math::Transform transform = SceneNodes::get_global_transform(node_ID);
                         Matrix3x4f transform_matrix = to_matrix3x4(transform);
                         Matrix3x4f inverse_transform_matrix = to_matrix3x4(invert(transform));
@@ -1017,7 +1017,7 @@ struct Renderer::Implementation {
                     mesh_model_transforms[mesh_model_index] = nullptr;
                 };
 
-                if (model.get_changes() & MeshModels::Change::Destroyed) {
+                if (model.get_changes().contains(MeshModels::Change::Destroyed)) {
                     if (mesh_model_index < mesh_model_transforms.size() && mesh_model_transforms[mesh_model_index]) {
                         destroy_mesh_model(mesh_model_index);
 
@@ -1027,7 +1027,7 @@ struct Renderer::Implementation {
                         models_changed = true;
                     }
                 }
-                else if (model.get_changes() & MeshModels::Change::Created) {
+                else if (model.get_changes().contains(MeshModels::Change::Created)) {
                     if (mesh_models.size() <= mesh_model_index) {
                         mesh_models.resize(MeshModels::capacity());
                         mesh_model_transforms.resize(MeshModels::capacity());
@@ -1051,7 +1051,7 @@ struct Renderer::Implementation {
                     node_to_mesh_models[transform_index].insert(mesh_model_index);
 
                     models_changed = true;
-                } else if (model.get_changes() & MeshModels::Change::Material) {
+                } else if (model.get_changes().contains(MeshModels::Change::Material)) {
                     optix::GeometryInstance optix_model = mesh_models[mesh_model_index];
                     optix_model["material_index"]->setInt(model.get_material().get_ID());
                     should_reset_accumulations = true;
@@ -1066,7 +1066,7 @@ struct Renderer::Implementation {
 
         { // Scene root updates
             for (SceneRoot scene_data : SceneRoots::get_changed_scenes()) {
-                if (scene_data.get_changes() & SceneRoots::Change::Destroyed)
+                if (scene_data.get_changes().contains(SceneRoots::Change::Destroyed))
                 {
                     float3 black = {0, 0, 0};
 #if PRESAMPLE_ENVIRONMENT_MAP
@@ -1236,7 +1236,7 @@ struct Renderer::Implementation {
         };
 
         // Render depth
-        if (content_requested & Screenshot::Content::Depth) {
+        if (content_requested.contains(Screenshot::Content::Depth)) {
             render_auxiliary_feature(EntryPoints::Depth);
 
             // Readback screenshot data
@@ -1265,19 +1265,19 @@ struct Renderer::Implementation {
         };
 
         // Render albedo
-        if (content_requested & Screenshot::Content::Albedo) {
+        if (content_requested.contains(Screenshot::Content::Albedo)) {
             render_auxiliary_feature(EntryPoints::Albedo);
             readback_rgba32_screenshot(Screenshot::Content::Albedo);
         }
 
         // Render tint
-        if (content_requested & Screenshot::Content::Tint) {
+        if (content_requested.contains(Screenshot::Content::Tint)) {
             render_auxiliary_feature(EntryPoints::Tint);
             readback_rgba32_screenshot(Screenshot::Content::Tint);
         }
 
         // Render roughness
-        if (content_requested & Screenshot::Content::Roughness) {
+        if (content_requested.contains(Screenshot::Content::Roughness)) {
             render_auxiliary_feature(EntryPoints::Roughness);
 
             // Readback screenshot data
