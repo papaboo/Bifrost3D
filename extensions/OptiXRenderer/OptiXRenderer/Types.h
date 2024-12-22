@@ -344,10 +344,14 @@ struct __align__(16) Material {
     }
 
     __inline_all__ float get_coverage(optix::float2 texcoord) const {
+        float coverage_tex_sample = 1.0f;
         if (coverage_texture_ID)
-            return coverage * optix::rtTex2D<float>(coverage_texture_ID, texcoord.x, texcoord.y);
+            coverage_tex_sample = optix::rtTex2D<float>(coverage_texture_ID, texcoord.x, texcoord.y);
+
+        if (is_cutout())
+            return coverage_tex_sample < coverage ? 0 : 1;
         else
-            return coverage;
+            return coverage * coverage_tex_sample;
     }
 #endif // GPU_DEVICE
 };

@@ -755,7 +755,7 @@ struct Renderer::Implementation {
                 device_material.coat = host_material.get_coat();
                 device_material.coat_roughness = host_material.get_coat_roughness();
 
-                device_material.coverage = host_material.get_coverage();
+                device_material.coverage = host_material.is_cutout() ? host_material.get_cutout_threshold() : host_material.get_coverage();
                 if (host_material.get_coverage_texture_ID() != TextureID::invalid_UID()) {
                     // Validate that the image has 1 channel! Otherwise OptiX goes boom boom.
                     TextureID texture_ID = host_material.get_coverage_texture_ID();
