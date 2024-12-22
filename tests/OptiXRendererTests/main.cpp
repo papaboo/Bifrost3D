@@ -8,6 +8,8 @@
 
 #include <gtest/gtest.h>
 
+#include <Assets/FlagsTest.h>
+
 #include <BSDFs/BurleyTest.h>
 #include <BSDFs/GGXTest.h>
 #include <BSDFs/LambertTest.h>
