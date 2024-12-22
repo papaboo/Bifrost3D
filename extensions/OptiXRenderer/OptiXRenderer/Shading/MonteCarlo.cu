@@ -148,7 +148,6 @@ __inline_all__ void path_tracing_closest_hit() {
     float3 bsdf_random_uvs = make_float3(bsdf_coverage_random_4f);
 
     float coverage = material_parameter.get_coverage(texcoord);
-    coverage_cutoff = material_parameter.is_cutout() ? material_parameter.coverage : coverage_cutoff;
     ignore_intersection |= coverage < coverage_cutoff;
 
     if (ignore_intersection) {
