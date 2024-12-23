@@ -125,6 +125,8 @@ __inline_dev__ LightSample reestimated_light_samples(const ShadingModel& materia
 
 template <typename MaterialCreator>
 __inline_all__ void path_tracing_closest_hit() {
+    monte_carlo_payload.light_sample = LightSample::none();
+
     InstanceID instance_id = model_state.instance_id;
     PrimitiveID primitive_id = PrimitiveID::make(instance_id, primitive_index);
 
