@@ -409,7 +409,10 @@ int main(int argc, char** argv) {
 
     { // Compute OrenNayar rho.
 
-        Image rho = estimate_rho(width, height, sample_count, OrenNayar::sample);
+        static auto sample_oren_nayar = [](float3 tint, float roughness, float3 wo, float2 random_sample) -> BSDFSample {
+            return OrenNayar::sample(tint, roughness, wo, random_sample, true);
+        };
+        Image rho = estimate_rho(width, height, sample_count, sample_oren_nayar);
 
         // Store.
         StbImageWriter::write(rho, output_dir + "OrenNayarRho.png");
