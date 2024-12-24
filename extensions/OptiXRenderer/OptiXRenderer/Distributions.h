@@ -137,6 +137,83 @@ namespace Cosine {
 } // NS Cosine
 
 //=================================================================================================
+// Clipped linearly transformed cosine distribution for OrenNayar.
+//=================================================================================================
+namespace OrenNayerCLTC {
+    using namespace optix;
+
+    __inline_all__ float3 apply_tangent_basis(Matrix2x2 tangents, float3 w) {
+        float2 xy = tangents * make_float2(w);
+        return make_float3(xy, w.z);
+    }
+
+    // Unlike Listing 3 in the paper, we here limit the basis to a 2x2 matrix,
+    // as the rest of the entries in the 3x3 are just from the identity matrix and holds no value.
+    // This reduces the number of registers used.
+    __inline_all__ optix::Matrix2x2 orthonormal_tangents_ltc(float3 w) {
+        float2 wh = make_float2(w);
+        float lenSqr = dot(wh, wh);
+        float2 X = lenSqr > 0.0f ? wh / sqrt(lenSqr) : make_float2(1, 0);
+        float2 Y = make_float2(-X.y, X.x); // cross(Z, X)
+
+        Matrix2x2 res;
+        res.setCol(0, X);
+        res.setCol(1, Y);
+        return res;
+    }
+
+    __inline_all__ void oren_nayar_LTC_coefficients(float cos_theta, float roughness,
+        float& a, float& b, float& c, float& d) {
+        a = 1.0f + roughness * (0.303392f + (-0.518982f + 0.111709f*cos_theta)*cos_theta + (-0.276266f + 0.335918f*cos_theta)*roughness);
+        b = roughness * (-1.16407f + 1.15859f*cos_theta + (0.150815f - 0.150105f*cos_theta)*roughness) / (cos_theta*cos_theta*cos_theta - 1.43545f);
+        c = 1.0f + (0.20013f + (-0.506373f + 0.261777f*cos_theta)*cos_theta)*roughness;
+        d = ((0.540852f + (-1.01625f + 0.475392f*cos_theta)*cos_theta)*roughness) / (-1.0743f + cos_theta * (0.0725628f + cos_theta));
+    }
+
+    __inline_all__ DirectionalSample sample(float roughness, float3 wo, optix::float2 random_sample) {
+        float a, b, c, d;
+        oren_nayar_LTC_coefficients(wo.z, roughness, a, b, c, d); // coeffs of LTC M
+
+        float radius = sqrt(random_sample.x);
+        float phi = 2.0f * PIf * random_sample.y; // CLTC sampling
+        float x = radius * cos(phi);
+        float y = radius * sin(phi); // CLTC sampling
+
+        float vz = 1.0f / sqrt(d*d + 1.0f); // CLTC sampling factors
+        float s = 0.5f * (1.0f + vz); // CLTC sampling factors
+        x = -lerp(sqrt(1.0f - y * y), x, s); // CLTC sampling
+        float3 wh = make_float3(x, y, sqrt(fmaxf(1.0f - (x*x + y * y), 0.0f))); // wH sample via CLTC
+        float pdf_wh = wh.z / (PIf * s); // PDF of wH sample
+        float3 wi = make_float3(a*wh.x + b * wh.z, c*wh.y, d*wh.x + wh.z); // M wH (unnormalized)
+        float wi_magnitude = length(wi); // ||M wH|| = 1 / ||M^-1 wh||
+        float determinant_M = c * (a - b * d); // |M|
+        float pdf_wi = pdf_wh * wi_magnitude * wi_magnitude * wi_magnitude / determinant_M; // wi sample PDF
+        auto from_LTC = orthonormal_tangents_ltc(wo); // wi -> local space
+        wi = normalize(apply_tangent_basis(from_LTC, wi)); // wi -> local space
+
+        DirectionalSample res;
+        res.direction = wi;
+        res.PDF = pdf_wi;
+        return res;
+    }
+
+    __inline_all__ float PDF(float roughness, float3 wo_shading, float3 wi_shading) {
+        auto to_LTC = orthonormal_tangents_ltc(wo_shading).transpose(); // wi -> LTC space
+        float3 wi = apply_tangent_basis(to_LTC, wi_shading); // wi -> LTC space
+
+        float a, b, c, d;
+        oren_nayar_LTC_coefficients(wo_shading.z, roughness, a, b, c, d); // coeffs of LTC M
+    
+        float determinant_M = c * (a - b * d); // |M|
+        float3 wh = make_float3(c*(wi.x - b * wi.z), (a - b * d)*wi.y, -c * (d*wi.x - a * wi.z)); // adj(M) wi
+        float wh_magnitude_squared = dot(wh, wh); // |M| ||M^-1 wi||
+        float vz = 1.0f / sqrt(d*d + 1.0f); // CLTC sampling factors
+        float s = 0.5f * (1.0f + vz); // CLTC sampling factors
+        return determinant_M * determinant_M / pow2(wh_magnitude_squared) * fmaxf(wh.z, 0.0f) / (PIf * s); // wi sample PDF
+    }
+}
+
+//=================================================================================================
 // GGX distribution, Walter07.
 //=================================================================================================
 namespace GGX {
