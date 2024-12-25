@@ -239,8 +239,8 @@ RT_PROGRAM void default_closest_hit() {
 
 struct DiffuseMaterialCreator {
     __inline_all__ static DiffuseShading create(const Material& material_params, optix::float2 texcoord, float abs_cos_theta_o) {
-        float3 tint = make_float3(material_params.get_tint_roughness(texcoord));
-        return DiffuseShading(tint);
+        float4 tint_roughness = material_params.get_tint_roughness(texcoord);
+        return DiffuseShading(make_float3(tint_roughness), tint_roughness.w);
     }
 };
 
