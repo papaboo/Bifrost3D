@@ -33,7 +33,7 @@ namespace ShadingModels {
 // ------------------------------------------------------------------------------------------------
 struct DefaultShading : IShadingModel {
     float3 m_diffuse_tint;
-    float m_specular_alpha;
+    float m_roughness;
     float3 m_specularity;
     float m_specular_scale;
     float m_coat_scale;
@@ -60,12 +60,12 @@ struct DefaultShading : IShadingModel {
 
         // Adjust specular reflection roughness
         float coat_modulated_roughness = modulate_roughness_under_coat(roughness, coat_roughness);
-        roughness = lerp(roughness, coat_modulated_roughness, coat_scale);
+        shading.m_roughness = lerp(roughness, coat_modulated_roughness, coat_scale);
 
         // Dielectric material parameters
-        float dielectric_specular_transmission;
-        compute_specular_properties(roughness, dielectric_specularity, 1.0f, abs_cos_theta_o,
-            shading.m_specular_alpha, shading.m_specular_scale, dielectric_specular_transmission);
+        float specular_alpha, dielectric_specular_transmission;
+        compute_specular_properties(shading.m_roughness, dielectric_specularity, 1.0f, abs_cos_theta_o,
+            specular_alpha, shading.m_specular_scale, dielectric_specular_transmission);
         float3 dielectric_tint = tint * dielectric_specular_transmission;
 
         // Interpolate between dieletric and conductor parameters based on the metallic parameter.
@@ -95,7 +95,8 @@ struct DefaultShading : IShadingModel {
     // --------------------------------------------------------------------------------------------
     // Getters
     // --------------------------------------------------------------------------------------------
-    float roughness() { return BSDFs::GGX::roughness_from_alpha(m_specular_alpha); }
+    float roughness() { return m_roughness; }
+    float specular_alpha() { return BSDFs::GGX::alpha_from_roughness(m_roughness); }
     float coat_scale() { return m_coat_scale; }
     float coat_roughness() { return BSDFs::GGX::roughness_from_alpha(m_coat_alpha); }
 
@@ -107,8 +108,8 @@ struct DefaultShading : IShadingModel {
         if (wo.z <= 0.0f || wi.z <= 0.0f)
             return float3(0, 0, 0);
 
-        float3 reflectance = m_diffuse_tint * BSDFs::Lambert::evaluate();
-        reflectance += m_specular_scale * BSDFs::GGX::evaluate(m_specular_alpha, m_specularity, wo, wi);
+        float3 reflectance = m_diffuse_tint * BSDFs::OrenNayar::evaluate(m_roughness, wo, wi);
+        reflectance += m_specular_scale * BSDFs::GGX::evaluate(specular_alpha(), m_specularity, wo, wi);
         if (m_coat_scale > 0)
             reflectance += m_coat_scale * BSDFs::GGX::evaluate(m_coat_alpha, COAT_SPECULARITY, wo, wi);
         return reflectance;
@@ -125,7 +126,7 @@ struct DefaultShading : IShadingModel {
         float3 light_radiance = light.power * rcp(4.0f * PI * dot(light.position, light.position));
 
         float3 radiance = evaluate_sphere_light_lambert(light, light_radiance, wo, m_diffuse_tint, ambient_visibility);
-        radiance += m_specular_scale * evaluate_sphere_light_GGX(light, light_radiance, wo, m_specularity, m_specular_alpha, ambient_visibility);
+        radiance += m_specular_scale * evaluate_sphere_light_GGX(light, light_radiance, wo, m_specularity, specular_alpha(), ambient_visibility);
         if (m_coat_scale > 0)
             radiance += m_coat_scale * evaluate_sphere_light_GGX(light, light_radiance, wo, COAT_SPECULARITY, m_coat_alpha, ambient_visibility);
 
@@ -135,7 +136,7 @@ struct DefaultShading : IShadingModel {
     // Evaluate the material lit by an IBL.
     float3 evaluate_IBL(float3 wo, float3 normal, float ambient_visibility) {
         float3 radiance = evaluate_IBL_lambert(wo, normal, m_diffuse_tint, ambient_visibility);
-        radiance += m_specular_scale * evaluate_IBL_GGX(wo, normal, m_specular_alpha, m_specularity, ambient_visibility);
+        radiance += m_specular_scale * evaluate_IBL_GGX(wo, normal, specular_alpha(), m_specularity, ambient_visibility);
         if (m_coat_scale > 0)
             radiance += m_coat_scale * evaluate_IBL_GGX(wo, normal, m_coat_alpha, COAT_SPECULARITY, ambient_visibility);
 

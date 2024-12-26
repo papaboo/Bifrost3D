@@ -149,8 +149,8 @@ float4 default_transparent(Varyings input, bool is_front_face : SV_IsFrontFace) 
 
 struct DiffuseShadingCreator : IShadingModelCreator {
     ShadingModels::IShadingModel create(float2 texcoord, float abs_cos_theta_o) {
-        float3 tint = material_params.tint_roughness(texcoord).rgb;
-        return ShadingModels::DiffuseShading::create(tint);
+        float4 tint_roughness = material_params.tint_roughness(texcoord);
+        return ShadingModels::DiffuseShading::create(tint_roughness.rgb, tint_roughness.w);
     }
 };
 

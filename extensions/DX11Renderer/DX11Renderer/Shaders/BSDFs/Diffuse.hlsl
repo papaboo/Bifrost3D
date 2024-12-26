@@ -48,34 +48,41 @@ float evaluate(float roughness, float3 wo, float3 wi, float3 halfway) {
 
 namespace OrenNayar {
 
-float evaluate(float roughness, float3 wo, float3 wi) {
-    float2 cos_theta = float2(abs(wi.z), abs(wo.z));
-    float sin_theta_sqrd = (1.0f - cos_theta.x * cos_theta.x) * (1.0f - cos_theta.y * cos_theta.y);
-    float sin_theta = sqrt(max(0.0f, sin_theta_sqrd));
-
-    const float3 normal = float3(0.0f, 0.0f, 1.0f);
-    float3 light_plane = normalize(wi - cos_theta.x * normal);
-    float3 view_plane = normalize(wo - cos_theta.y * normal);
-    float cos_phi = clamp(dot(light_plane, view_plane), 0.0f, 1.0f);
-
-    float sigma_sqrd = roughness * roughness;
-    float A = 1.0f - (sigma_sqrd / (2.0f * sigma_sqrd + 0.66f));
-    float B = 0.45f * sigma_sqrd / (sigma_sqrd + 0.09f);
-
-    return (A + B * cos_phi * sin_theta / max(cos_theta.x, cos_theta.y)) * RECIP_PI;
+float E_FON_approx(float cos_theta, float roughness, float A, float B) {
+    float mucomp = 1.0 - cos_theta;
+    // Rewritten from Listing 1 to perform fewer multiplications.
+    float GoverPi = mucomp * (-0.332181442 + mucomp * 0.0714429953);
+    GoverPi = mucomp * (0.491881867 + GoverPi);
+    GoverPi = mucomp * (0.0571085289 + GoverPi);
+    return A + B * GoverPi;
 }
 
-// As seen in Unreal Engine and based on
-// Beyond a Simple Physically Based Blinn-Phong Model in Real-Time, Gotanda 2012.
-float evaluate_approx(float roughness, float wo_dot_n, float wi_dot_n, float wo_dot_h) {
-    float a = roughness * roughness;
-    float s = a;// / ( 1.29 + 0.5 * a );
-    float s2 = s * s;
-    float VoL = 2 * wo_dot_h * wo_dot_h - 1; // double angle identity
-    float Cosri = VoL - wo_dot_n * wo_dot_n;
-    float C1 = 1 - 0.5 * s2 / (s2 + 0.33);
-    float C2 = 0.45 * s2 / (s2 + 0.09) * Cosri * (Cosri >= 0 ? rcp(max(wi_dot_n, wi_dot_n)) : 1);
-    return (C1 + C2) * (1 + roughness * 0.5) / PI;
+// Evaluate the energy-preserving Oren-Nayar diffuse BRDF.
+// Based of Listing 1 in EON: A practical energy-preserving rough diffuse BRDF
+// As explained on page 12 in the paper, we here choose to avoid the color shifting multi-scattering term.
+// Instead we evaluate the BRDF as if rho=1 and then multiply by albedo after if tinting is required.
+// This makes rho trivial to compute, as it is just the input albedo, and makes the BRDF color tweaking a linear operation.
+float evaluate(float roughness, float3 wo, float3 wi) {
+    const float constant1_FON = 0.5 - 2.0 / (3.0 * PI);
+    const float constant2_FON = 2.0 / 3.0 - 28.0 / (15.0 * PI);
+
+    float cos_theta_i = wi.z; // input angle cos
+    float cos_theta_o = wo.z; // output angle cos
+    float s = dot(wi, wo) - cos_theta_i * cos_theta_o; // QON s term
+    float s_over_t = s > 0.0 ? s / max(cos_theta_i, cos_theta_o) : s; // FON s/t
+    float A = 1.0 / (1.0 + constant1_FON * roughness); // FON A coeff.
+    float B = roughness * A; // FON B coeff.
+
+    float f_single_scatter = RECIP_PI * A * (1.0 + roughness * s_over_t); // single-scatter
+
+    // Always use the approximate E term in DX11
+    float EF_o = E_FON_approx(cos_theta_o, roughness, A, B); // FON wo albedo (approx)
+    float EF_i = E_FON_approx(cos_theta_i, roughness, A, B); // FON wi albedo (approx)
+    float average_EF = A * (1.0 + constant2_FON * roughness); // avg. albedo
+    float multi_scatter_rho = average_EF / (1.0 - (1.0 - average_EF));
+    float f_multi_scatter = (multi_scatter_rho * RECIP_PI) * abs(1.0 - EF_o) * abs(1.0 - EF_i) // Replaced max(eps) from the paper with abs
+        / max(1.0e-7, 1.0 - average_EF); // multi-scatter lobe
+    return f_single_scatter + f_multi_scatter;
 }
 
 } // NS OrenNayar
