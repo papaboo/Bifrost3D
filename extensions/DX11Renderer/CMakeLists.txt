@@ -118,7 +118,6 @@ if (DIRECTX11_FOUND AND WIN32)
 
   # Copy the shaders to the build directory.
   # TODO Copy or compile the cso files from release to bin output dir.
-  set(DATA_PATH "${BIFROST_DATA_OUTPUT_DIRECTORY}/DX11Renderer/Shaders")
   foreach (SHADER_PATH ${ALL_SHADER_SRC})
     set(SOURCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_PATH})
     set(DESTINATION_FILE ${BIFROST_DATA_OUTPUT_DIRECTORY}/${SHADER_PATH})

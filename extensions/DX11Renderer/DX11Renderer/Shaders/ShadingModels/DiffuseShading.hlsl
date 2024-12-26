@@ -20,11 +20,13 @@ namespace ShadingModels {
 // ------------------------------------------------------------------------------------------------
 struct DiffuseShading : IShadingModel {
     float3 m_tint;
-    
-    // Sets up the diffuse and specular component on the base layer.
-    static DiffuseShading create(float3 tint) {
+    float m_roughness;
+
+    // Set up the shading model.
+    static DiffuseShading create(float3 tint, float roughness) {
         DiffuseShading shading;
         shading.m_tint = tint;
+        shading.m_roughness = roughness;
         return shading;
     }
 
@@ -42,11 +44,11 @@ struct DiffuseShading : IShadingModel {
             wo.z = -wo.z;
         }
 
-        return m_tint * BSDFs::Lambert::evaluate();
+        return m_tint * BSDFs::OrenNayar::evaluate(m_roughness, wo, wi);
     }
 
     // Evaluate the material lit by a sphere light.
-    // Uses evaluation by most representative point internally.
+    // Not fitted to OrenNayar, so we use a lambertian (roughness = 0) approximation
     float3 evaluate_sphere_light(float3 wo, SphereLight light, float ambient_visibility) {
         float3 light_radiance = light.power * rcp(4.0f * PI * dot(light.position, light.position));
         return evaluate_sphere_light_lambert(light, light_radiance, wo, m_tint, ambient_visibility);
