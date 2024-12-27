@@ -61,8 +61,11 @@ namespace Disk {
             phi = (PIf / 2) - (PIf / 4) * (a / b);
         }
 
+        float sin_phi, cos_phi;
+        sincos(phi, sin_phi, cos_phi);
+
         PositionalSample2D res;
-        res.position = optix::make_float2(r * cosf(phi), r * sinf(phi));
+        res.position = optix::make_float2(r * cos_phi, r * sin_phi);
         res.PDF = PDF(radius);
         return res;
     }
@@ -81,10 +84,13 @@ namespace Cone {
     __inline_all__ DirectionalSample sample(float cos_theta_max, optix::float2 random_sample) {
         float cos_theta = (1.0f - random_sample.x) + random_sample.x * cos_theta_max;
         float sin_theta = sqrt(1.0f - cos_theta * cos_theta);
+
         float phi = 2.0f * PIf * random_sample.y;
+        float sin_phi, cos_phi;
+        sincos(phi, sin_phi, cos_phi);
 
         DirectionalSample res;
-        res.direction = optix::make_float3(cos(phi) * sin_theta, sin(phi) * sin_theta, cos_theta);
+        res.direction = optix::make_float3(cos_phi * sin_theta, sin_phi * sin_theta, cos_theta);
         res.PDF = PDF(cos_theta_max);
         return res;
     }
@@ -103,10 +109,13 @@ __inline_all__ float PDF() {
 __inline_all__ DirectionalSample sample(optix::float2 random_sample) {
     float z = random_sample.x;
     float r = sqrt(fmaxf(0.0f, 1.0f - z * z));
+
     float phi = TWO_PIf * random_sample.y;
+    float sin_phi, cos_phi;
+    sincos(phi, sin_phi, cos_phi);
 
     DirectionalSample res;
-    res.direction = optix::make_float3(r * cos(phi), r * sin(phi), z);
+    res.direction = optix::make_float3(r * cos_phi, r * sin_phi, z);
     res.PDF = PDF();
     return res;
 }
@@ -123,13 +132,16 @@ namespace Cosine {
     }
 
     __inline_all__ DirectionalSample sample(optix::float2 random_sample) {
-        float phi = 2.0f * PIf * random_sample.x;
-        float r2 = random_sample.y;
+        float r2 = random_sample.x;
         float r = sqrt(1.0f - r2);
         float z = sqrt(r2);
 
+        float phi = 2.0f * PIf * random_sample.y;
+        float sin_phi, cos_phi;
+        sincos(phi, sin_phi, cos_phi);
+
         DirectionalSample res;
-        res.direction = optix::make_float3(cos(phi) * r, sin(phi) * r, z);
+        res.direction = optix::make_float3(r * cos_phi, r * sin_phi, z);
         res.PDF = z * RECIP_PIf;
         return res;
     }
@@ -176,8 +188,10 @@ namespace OrenNayerCLTC {
 
         float radius = sqrt(random_sample.x);
         float phi = 2.0f * PIf * random_sample.y; // CLTC sampling
-        float x = radius * cos(phi);
-        float y = radius * sin(phi); // CLTC sampling
+        float sin_phi, cos_phi;
+        sincos(phi, sin_phi, cos_phi);
+        float x = radius * cos_phi;
+        float y = radius * sin_phi; // CLTC sampling
 
         float vz = 1.0f / sqrt(d*d + 1.0f); // CLTC sampling factors
         float s = 0.5f * (1.0f + vz); // CLTC sampling factors
@@ -232,6 +246,8 @@ namespace GGX {
 
     __inline_all__ DirectionalSample sample(float alpha, optix::float2 random_sample) {
         float phi = random_sample.y * (2.0f * PIf);
+        float sin_phi, cos_phi;
+        sincos(phi, sin_phi, cos_phi);
 
         float tan_theta_sqrd = alpha * alpha * random_sample.x / (1.0f - random_sample.x);
         float cos_theta = 1.0f / sqrt(1.0f + tan_theta_sqrd);
@@ -239,7 +255,7 @@ namespace GGX {
         float r = sqrt(optix::fmaxf(1.0f - cos_theta * cos_theta, 0.0f));
 
         DirectionalSample res;
-        res.direction = optix::make_float3(cos(phi) * r, sin(phi) * r, cos_theta);
+        res.direction = optix::make_float3(r * cos_phi, r * sin_phi, cos_theta);
         res.PDF = PDF(alpha, cos_theta);
         return res;
     }
@@ -281,8 +297,10 @@ namespace GGX_VNDF {
         // Section 4.2: parameterization of the projected area
         float r = sqrt(random_sample.x);
         float phi = 2.0f * PIf * random_sample.y;
-        float t1 = r * cos(phi);
-        float t2 = r * sin(phi);
+        float sin_phi, cos_phi;
+        sincos(phi, sin_phi, cos_phi);
+        float t1 = r * cos_phi;
+        float t2 = r * sin_phi;
         float s = 0.5f * (1.0f + Vh.z);
         t2 = (1.0f - s) * sqrt(1.0f - t1 * t1) + s * t2;
 
@@ -302,9 +320,9 @@ namespace GGX_VNDF {
         float phi = 2.0f * PIf * random_sample.y;
         float z = fma(1.0f - random_sample.x, 1.0f + wo_std.z, -wo_std.z);
         float sin_theta = sqrt(clamp(1.0f - z * z, 0.0f, 1.0f));
-        float x = sin_theta * cos(phi);
-        float y = sin_theta * sin(phi);
-        float3 c = make_float3(x, y, z);
+        float sin_phi, cos_phi;
+        sincos(phi, sin_phi, cos_phi);
+        float3 c = make_float3(sin_theta * cos_phi, sin_theta * sin_phi, z);
 
         // compute halfway direction;
         float3 wi_std = c + wo_std;
@@ -362,7 +380,9 @@ namespace GGX_Bounded_VNDF {
         float b = wo.z >= 0 ? k * wo_std.z : wo_std.z;
         float z = fma(1.0f - random_sample.x, 1.0f + b, -b);
         float sin_theta = sqrt(fmaxf(1.0f - z * z, 0.0f));
-        float3 o_std = { sin_theta * cos(phi) , sin_theta * sin(phi) , z };
+        float sin_phi, cos_phi;
+        sincos(phi, sin_phi, cos_phi);
+        float3 o_std = { sin_theta * cos_phi, sin_theta * sin_phi, z };
 
         // Compute the microfacet normal m
         float3 halfway_std = wo_std + o_std;

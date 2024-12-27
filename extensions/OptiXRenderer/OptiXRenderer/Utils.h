@@ -141,22 +141,18 @@ __inline_all__ optix::float3 schlick_fresnel(optix::float3 incident_specular, fl
     return (1.0f - t) * incident_specular + t;
 }
 
-__inline_all__ optix::float2 direction_to_latlong_texcoord(optix::float3 direction) {
-    float u = (atan2f(direction.z, direction.x) + PIf) * 0.5f / PIf;
-    float v = (asinf(direction.y) + PIf * 0.5f) / PIf;
-    return optix::make_float2(u, v);
-}
-
-__inline_all__ optix::float3 latlong_texcoord_to_direction(optix::float2 uv) {
-    float phi = uv.x * 2.0f * PIf;
-    float theta = uv.y * PIf;
-    float sin_theta = sinf(theta);
-    return -optix::make_float3(sin_theta * cosf(phi), cosf(theta), sin_theta * sinf(phi));
-}
-
 //-----------------------------------------------------------------------------
 // Trigonometri utils
 //-----------------------------------------------------------------------------
+
+__inline_all__ void sincos(float theta, float& sin_theta, float& cos_theta) {
+#if GPU_DEVICE
+    sincosf(theta, &sin_theta, &cos_theta);
+#else
+    sin_theta = sin(theta);
+    cos_theta = cos(theta);
+#endif
+}
 
 __inline_all__ float cos_theta(optix::float3 w) { return w.z; }
 __inline_all__ float cos2_theta(optix::float3 w) { return w.z * w.z; }
@@ -172,17 +168,32 @@ __inline_all__ float cos_phi(optix::float3 w) {
     float sin_theta_ = sin_theta(w);
     return (sin_theta_ == 0) ? 1.0f : optix::clamp(w.x / sin_theta_, -1.0f, 1.0f);
 }
-__inline_all__ float cos2_phi(optix::float3 w) { return cos_phi(w) * cos_phi(w); }
+__inline_all__ float cos2_phi(optix::float3 w) { return pow2(cos_phi(w)); }
 
 __inline_all__ float sin_phi(optix::float3 w) {
     float sin_theta_ = sin_theta(w);
     return (sin_theta_ == 0) ? 0.0f : optix::clamp(w.y / sin_theta_, -1.0f, 1.0f);
 }
-__inline_all__ float sin2_phi(optix::float3 w) { return sin_phi(w) * sin_phi(w); }
+__inline_all__ float sin2_phi(optix::float3 w) { return pow2(sin_phi(w)); }
 
 //-----------------------------------------------------------------------------
 // Utility functions
 //-----------------------------------------------------------------------------
+
+__inline_all__ optix::float2 direction_to_latlong_texcoord(optix::float3 direction) {
+    float u = (atan2f(direction.z, direction.x) + PIf) * 0.5f / PIf;
+    float v = (asinf(direction.y) + PIf * 0.5f) / PIf;
+    return optix::make_float2(u, v);
+}
+
+__inline_all__ optix::float3 latlong_texcoord_to_direction(optix::float2 uv) {
+    float phi = uv.x * 2.0f * PIf;
+    float theta = uv.y * PIf;
+    float sin_theta, cos_theta, sin_phi, cos_phi;
+    sincos(theta, sin_theta, cos_theta);
+    sincos(phi, sin_phi, cos_phi);
+    return -optix::make_float3(sin_theta * cos_phi, cos_theta, sin_theta * sin_phi);
+}
 
 __inline_all__ bool is_PDF_valid(float PDF) {
     return PDF > 0.000001f;
