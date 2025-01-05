@@ -27,8 +27,8 @@ void MeshModels::allocate(unsigned int capacity) {
     m_models = new Model[capacity];
     m_changes = Core::ChangeSet<Changes, MeshModelID>(capacity);
 
-    // Allocate dummy element at 0.
-    m_models[0] = { Scene::SceneNodeID::invalid_UID(), MeshID::invalid_UID() };
+    // Allocate zero'ed dummy element at 0.
+    m_models[0] = { };
 }
 
 void MeshModels::deallocate() {
@@ -83,6 +83,13 @@ MeshModelID MeshModels::create(Scene::SceneNodeID scene_node_ID, MeshID mesh_ID,
 void MeshModels::destroy(MeshModelID model_ID) {
     if (m_UID_generator.erase(model_ID))
         m_changes.add_change(model_ID, Change::Destroyed);
+}
+
+MeshModelID MeshModels::get_attached_mesh_model(Scene::SceneNodeID scene_node_ID) {
+    for (MeshModelID model_ID : get_iterable())
+        if (m_models[model_ID].scene_node_ID == scene_node_ID)
+            return model_ID;
+    return MeshModelID::invalid_UID();
 }
 
 void MeshModels::set_material_ID(MeshModelID model_ID, MaterialID material_ID) {

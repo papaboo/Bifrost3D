@@ -151,7 +151,7 @@ public:
     inline SceneNodes::Changes get_changes() const { return SceneNodes::get_changes(m_ID); }
 
     // -----------------------------------------------------------------------
-    // Applies a function recursively.
+    // Apply a function recursively to the scene node hierarchy.
     // -----------------------------------------------------------------------
     template<typename F>
     inline void apply_recursively(F& function) { SceneNodes::apply_recursively<F>(m_ID, function); }

@@ -49,6 +49,8 @@ public:
     static Iterator end() { return m_UID_generator.end(); }
     static Core::Iterable<Iterator> get_iterable() { return Core::Iterable<Iterator>(begin(), end()); }
 
+    static MeshModelID get_attached_mesh_model(Scene::SceneNodeID scene_node_ID);
+
     static inline Scene::SceneNodeID get_scene_node_ID(MeshModelID model_ID) { return m_models[model_ID].scene_node_ID; }
     static inline MeshID get_mesh_ID(MeshModelID model_ID) { return m_models[model_ID].mesh_ID; }
     static inline MaterialID get_material_ID(MeshModelID model_ID) { return m_models[model_ID].material_ID; }
@@ -110,7 +112,7 @@ public:
     inline Scene::SceneNode get_scene_node() const { return MeshModels::get_scene_node_ID(m_ID); }
     inline Mesh get_mesh() const { return MeshModels::get_mesh_ID(m_ID); }
     inline Material get_material() const { return MeshModels::get_material_ID(m_ID); }
-    inline void set_material_ID(MaterialID material_ID) { MeshModels::set_material_ID(m_ID, material_ID); }
+    inline void set_material(Material material) { MeshModels::set_material_ID(m_ID, material.get_ID()); }
 
     inline MeshModels::Changes get_changes() const { return MeshModels::get_changes(m_ID); }
 
