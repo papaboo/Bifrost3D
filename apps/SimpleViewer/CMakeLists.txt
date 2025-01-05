@@ -21,6 +21,8 @@ set(SCENES_SRCS
   Scenes/Sphere.h
   Scenes/SphereLight.h
   Scenes/Test.h
+  Scenes/Utils.h
+  Scenes/Utils.cpp
   Scenes/Veach.h
 )
 
