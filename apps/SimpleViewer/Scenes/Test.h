@@ -9,6 +9,8 @@
 #ifndef _SIMPLEVIEWER_TEST_SCENE_H_
 #define _SIMPLEVIEWER_TEST_SCENE_H_
 
+#include <Scenes/Utils.h>
+
 #include <Bifrost/Assets/Image.h>
 #include <Bifrost/Assets/Mesh.h>
 #include <Bifrost/Assets/MeshCreation.h>
@@ -140,27 +142,14 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
     }
 
     { // Create floor.
-        // A checker pattern texture would be really nice on the floor.
-        unsigned int width = 16, height = 16;
-        ImageID image_ID = Images::create2D("Checker", PixelFormat::RGB24, 2.2f, Vector2ui(width, height));
-        unsigned char* pixels = (unsigned char*)Images::get_pixels(image_ID);
-        for (unsigned int y = 0; y < height; ++y) {
-            for (unsigned int x = 0; x < width; ++x) {
-                unsigned char* pixel = pixels + (x + y * width) * 3u;
-                unsigned char intensity = ((x & 1) == (y & 1)) ? 2 : 255;
-                pixel[0] = pixel[1] = pixel[2] = intensity;
-            }
-        }
+        SceneNode floor_node = create_checkered_floor(400, 0.66f);
+        floor_node.set_global_transform(Transform(Vector3f(0, -0.0005f, 0)));
+        floor_node.set_parent(root_node);
 
-        Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 0.3f, 0.02f);
-        material_data.tint_roughness_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
-        material_data.flags = MaterialFlag::ThinWalled;
-        MaterialID material_ID = Materials::create("Floor", material_data);
-
-        SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0, -0.0005f, 0), Quaternionf::identity(), 10));
-        MeshID plane_mesh_ID = MeshCreation::plane(1, { MeshFlag::Position, MeshFlag::Texcoord });
-        MeshModels::create(plane_node.get_ID(), plane_mesh_ID, material_ID);
-        plane_node.set_parent(root_node);
+        MeshModel floor_model = MeshModels::get_attached_mesh_model(floor_node.get_ID());
+        Material floor_material = floor_model.get_material();
+        floor_material.set_tint(RGB(0.02f, 0.27f, 0.33f));
+        floor_material.set_roughness(0.3f);
     }
 
     { // Create rotating rings.

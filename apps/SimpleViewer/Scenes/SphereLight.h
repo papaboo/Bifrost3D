@@ -82,29 +82,9 @@ void create(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneRootID 
     }
 
     { // Create checkered floor.
-        unsigned int size = 41;
-        RGBA32 white_tile = { 127, 127, 127, 51 };
-        RGBA32 black_tile = { 1, 1, 1, 5 };
-        ImageID tint_roughness_image_ID = Images::create2D("Floor image", PixelFormat::RGBA32, 2.2f, Vector2ui(size, size));
-        Images::set_mipmapable(tint_roughness_image_ID, true);
-        RGBA32* tint_roughness_pixels = Images::get_pixels<RGBA32>(tint_roughness_image_ID);
-        for (unsigned int y = 0; y < size; ++y) {
-            for (unsigned int x = 0; x < size; ++x) {
-                bool is_black = (x & 1) != (y & 1);
-                RGBA32* tile = tint_roughness_pixels + (x + y * size);
-                *tile = is_black ? black_tile : white_tile;
-            }
-        }
-
-        Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 1, 0.04f);
-        material_data.tint_roughness_texture_ID = Textures::create2D(tint_roughness_image_ID, MagnificationFilter::None, MinificationFilter::Trilinear);
-        material_data.flags = MaterialFlag::ThinWalled;
-        MaterialID material_ID = Materials::create("Floor", material_data);
-
-        SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0.0, -1.0, 0.0), Quaternionf::identity(), float(size)));
-        MeshID plane_mesh_ID = MeshCreation::plane(1, { MeshFlag::Position, MeshFlag::Texcoord });
-        MeshModels::create(plane_node.get_ID(), plane_mesh_ID, material_ID);
-        plane_node.set_parent(root_node);
+        SceneNode floor_node = create_checkered_floor(400, 1);
+        floor_node.set_global_transform(Transform(Vector3f(0, -1.0f, 0)));
+        floor_node.set_parent(root_node);
     }
 
     { // Create material models.

@@ -7,9 +7,9 @@
 // ---------------------------------------------------------------------------
 
 #include <Scenes/Material.h>
+#include <Scenes/Utils.h>
 
 #include <Bifrost/Assets/Mesh.h>
-#include <Bifrost/Assets/MeshCreation.h>
 #include <Bifrost/Assets/MeshModel.h>
 #include <Bifrost/Scene/Camera.h>
 #include <Bifrost/Scene/LightSource.h>
@@ -158,31 +158,10 @@ void create_material_scene(CameraID camera_ID, SceneNode root_node, ImGui::ImGui
         LightSources::create_directional_light(light_node.get_ID(), RGB(3.0f, 2.9f, 2.5f));
     }
 
-    { // Create floor.
-      // A checker pattern texture would be really nice on the floor.
-        unsigned int size = 41;
-        ImageID tint_roughness_image_ID = Images::create2D("Floor color", PixelFormat::RGBA32, 2.2f, Vector2ui(size, size));
-        Images::set_mipmapable(tint_roughness_image_ID, true);
-        unsigned char* tint_roughness_pixels = (unsigned char*)Images::get_pixels(tint_roughness_image_ID);
-        for (unsigned int y = 0; y < size; ++y) {
-            for (unsigned int x = 0; x < size; ++x) {
-                bool is_black = (x & 1) != (y & 1);
-                unsigned char* pixel = tint_roughness_pixels + (x + y * size) * 4u;
-                unsigned char intensity = is_black ? 1 : 255;
-                pixel[0] = pixel[1] = pixel[2] = intensity;
-                pixel[3] = is_black ? 6 : 102;
-            }
-        }
-
-        Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 1, 0.04f);
-        material_data.tint_roughness_texture_ID = Textures::create2D(tint_roughness_image_ID, MagnificationFilter::None, MinificationFilter::Trilinear);
-        material_data.flags = MaterialFlag::ThinWalled;
-        MaterialID material_ID = Materials::create("Floor", material_data);
-
-        SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0.5, -1.0, 0.5), Quaternionf::identity(), float(size)));
-        MeshID plane_mesh_ID = MeshCreation::plane(1, { MeshFlag::Position, MeshFlag::Texcoord });
-        MeshModels::create(plane_node.get_ID(), plane_mesh_ID, material_ID);
-        plane_node.set_parent(root_node);
+    { // Create checkered floor.
+        SceneNode floor_node = create_checkered_floor(400, 1);
+        floor_node.set_global_transform(Transform(Vector3f(0, -1.0f, 0)));
+        floor_node.set_parent(root_node);
     }
 
     // Materials
