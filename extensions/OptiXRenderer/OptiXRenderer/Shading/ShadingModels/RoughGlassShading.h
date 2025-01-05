@@ -49,11 +49,7 @@ public:
         using namespace optix;
 
         // Tint and roughness
-        float4 tint_roughness = make_float4(material.tint, material.roughness);
-        if (material.tint_roughness_texture_ID)
-            tint_roughness *= rtTex2D<float4>(material.tint_roughness_texture_ID, texcoord.x, texcoord.y);
-        else if (material.roughness_texture_ID)
-            tint_roughness.w *= rtTex2D<float>(material.roughness_texture_ID, texcoord.x, texcoord.y);
+        float4 tint_roughness = material.get_tint_roughness(texcoord);
         float3 tint = make_float3(tint_roughness);
         float roughness = tint_roughness.w;
 
@@ -62,10 +58,18 @@ public:
 #endif
 
     __inline_all__ BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
+        // Return no contribution if the material is viewed from behind.
+        if (wo.z < 0.000001f)
+            return BSDFResponse::none();
+
         return BSDFs::GGX::evaluate_with_PDF(m_tint, m_ggx_alpha, m_specularity, m_ior_i_over_o, wo, wi);
     }
 
     __inline_all__ BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
+        // Don't sample material from behind.
+        if (wo.z < 0.000001f)
+            return BSDFSample::none();
+
         return BSDFs::GGX::sample(m_tint, m_ggx_alpha, m_specularity, m_ior_i_over_o, wo, random_sample);
     }
 

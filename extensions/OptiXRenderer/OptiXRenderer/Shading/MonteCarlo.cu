@@ -142,17 +142,17 @@ __inline_all__ void path_tracing_closest_hit() {
 
     // Backside culling of non-thin-walled geometry.
     float3 world_geometric_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, geometric_normal));
-    bool hit_from_behind = dot(world_geometric_normal, ray.direction) >= 0.0f;
-    bool ignore_intersection = hit_from_behind && !material_parameter.is_thin_walled();
+    bool hit_from_front = dot(world_geometric_normal, ray.direction) < 0.0f;
+    bool backside_cull = !hit_from_front && !material_parameter.is_thin_walled();
 
     float4 bsdf_coverage_random_4f = monte_carlo_payload.rng.sample4f(); // Always draw coverage random number to have predictable RNG dimension usage whether the material is a cutout or not.
     float coverage_cutoff = bsdf_coverage_random_4f.w;
     float3 bsdf_random_uvs = make_float3(bsdf_coverage_random_4f);
 
     float coverage = material_parameter.get_coverage(texcoord);
-    ignore_intersection |= coverage < coverage_cutoff;
+    bool discard_from_coverage = coverage < coverage_cutoff;
 
-    if (ignore_intersection) {
+    if (backside_cull || discard_from_coverage) {
         // Advance the ray past the intersection by incrementing the min distance past the intersected distance.
         // This is stable wrt floating point precision as origin and direction are not changed.
         monte_carlo_payload.ray_min_t = nextafterf(t_hit, INFINITY);
@@ -167,9 +167,9 @@ __inline_all__ void path_tracing_closest_hit() {
 
     // Setup normals and tangents.
     // If the surface is hit from behind then we flip the shading and geometric normal to the backside of the surface.
-    world_geometric_normal = hit_from_behind ? -world_geometric_normal : world_geometric_normal;
+    world_geometric_normal = hit_from_front ? world_geometric_normal : -world_geometric_normal;
     float3 world_shading_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, shading_normal));
-    world_shading_normal = hit_from_behind ? -world_shading_normal : world_shading_normal;
+    world_shading_normal = hit_from_front ? world_shading_normal : -world_shading_normal;
     world_shading_normal = fix_backfacing_shading_normal(-ray.direction, world_shading_normal, 0.002f);
     monte_carlo_payload.shading_normal = world_shading_normal;
     const TBN world_shading_tbn = TBN(world_shading_normal);
@@ -183,7 +183,8 @@ __inline_all__ void path_tracing_closest_hit() {
     float3 world_wo = -ray.direction;
     float3 wo = world_shading_tbn * world_wo;
 
-    const auto material = MaterialCreator::create(material_parameter, texcoord, wo.z);
+    float cos_theta = hit_from_front || material_parameter.is_thin_walled() ? wo.z : -wo.z;
+    const auto material = MaterialCreator::create(material_parameter, texcoord, cos_theta);
 
     { // Next event estimation, sample the light sources directly.
         // Grab the RNG state before next even estimation to reset it afterwards which reduces the curse of dimensionality.
@@ -227,9 +228,9 @@ __inline_all__ void path_tracing_closest_hit() {
 //----------------------------------------------------------------------------
 
 struct DefaultMaterialCreator {
-    __inline_all__ static DefaultShading create(const Material& material_params, optix::float2 texcoord, float abs_cos_theta_o) {
+    __inline_all__ static DefaultShading create(const Material& material_params, optix::float2 texcoord, float cos_theta_o) {
         float max_PDF_hint = monte_carlo_payload.bsdf_MIS_PDF.PDF() * g_camera_state.path_regularization_PDF_scale;
-        return DefaultShading::initialize_with_max_PDF_hint(material_params, texcoord, abs_cos_theta_o, max_PDF_hint);
+        return DefaultShading::initialize_with_max_PDF_hint(material_params, texcoord, cos_theta_o, max_PDF_hint);
     }
 };
 
@@ -238,7 +239,7 @@ RT_PROGRAM void default_closest_hit() {
 }
 
 struct DiffuseMaterialCreator {
-    __inline_all__ static DiffuseShading create(const Material& material_params, optix::float2 texcoord, float abs_cos_theta_o) {
+    __inline_all__ static DiffuseShading create(const Material& material_params, optix::float2 texcoord, float cos_theta_o) {
         float4 tint_roughness = material_params.get_tint_roughness(texcoord);
         return DiffuseShading(make_float3(tint_roughness), tint_roughness.w);
     }

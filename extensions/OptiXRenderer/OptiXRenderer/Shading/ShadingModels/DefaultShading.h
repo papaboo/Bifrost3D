@@ -50,10 +50,10 @@ private:
     unsigned short m_specular_probability;
     unsigned short m_coat_probability;
 
-    __inline_all__ static float compute_specular_properties(float roughness, float specularity, float scale, float cos_theta_o,
+    __inline_all__ static float compute_specular_properties(float roughness, float specularity, float scale, float abs_cos_theta_o,
         float& alpha, float& reflection_scale, float& transmission_scale) {
         alpha = BSDFs::GGX::alpha_from_roughness(roughness);
-        SpecularRho rho_computation = SpecularRho::fetch(cos_theta_o, roughness);
+        SpecularRho rho_computation = SpecularRho::fetch(abs_cos_theta_o, roughness);
 
         // Compensate for lost energy due to multi-scattering and scale by the strength of the specular reflection.
         reflection_scale = scale * rho_computation.energy_loss_adjustment();
@@ -67,8 +67,10 @@ private:
 
     // Sets up the specular microfacet and the diffuse reflection as described in setup_base_layer().
     __inline_all__ void setup_shading(optix::float3 tint, float roughness, float dielectric_specularity, float metallic, float coat_scale, float coat_roughness,
-                                      float abs_cos_theta_o, float& coat_rho) {
+                                      float cos_theta_o, float& coat_rho) {
         using namespace optix;
+
+        float abs_cos_theta_o = abs(cos_theta_o);
 
         // Adjust specular reflection roughness
         float coat_modulated_roughness = modulate_roughness_under_coat(roughness, coat_roughness);
