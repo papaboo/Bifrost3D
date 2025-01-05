@@ -82,7 +82,7 @@ float length_squared(float3 v) { return dot(v, v); }
 
 float luminance(float3 color) { return dot(color, float3(0.2126f, 0.7152f, 0.0722f)); }
 
-inline float inverse_lerp(const float a, const float b, const float v) { return (v - a) / (b - a); }
+float inverse_lerp(float a, float b, float v) { return (v - a) / (b - a); }
 
 float reciprocal_length(float3 v) { return rsqrt(length_squared(v)); }
 
