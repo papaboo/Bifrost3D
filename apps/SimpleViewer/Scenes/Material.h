@@ -12,11 +12,13 @@
 #include <Bifrost/Scene/Camera.h>
 #include <Bifrost/Scene/SceneNode.h>
 
+#include <filesystem>
+
 namespace ImGui { class ImGuiAdaptor; }
 
 namespace Scenes {
 
-void create_material_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::SceneNode root_node, ImGui::ImGuiAdaptor* imgui);
+void create_material_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::SceneNode root_node, ImGui::ImGuiAdaptor* imgui, const std::filesystem::path& data_directory);
 
 } // NS Scenes
 

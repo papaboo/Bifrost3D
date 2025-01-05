@@ -11,17 +11,12 @@
 #include <Bifrost/Assets/Mesh.h>
 #include <Bifrost/Assets/MeshCreation.h>
 #include <Bifrost/Assets/MeshModel.h>
-#include <Bifrost/Assets/Shading/Fittings.h>
 #include <Bifrost/Scene/Camera.h>
 #include <Bifrost/Scene/LightSource.h>
 #include <Bifrost/Scene/SceneNode.h>
 
 #include <ImGui/ImGuiAdaptor.h>
-
-#define NOMINMAX
-#ifdef OPTIX_FOUND
-#include <OptiXRenderer/Shading/BSDFs/GGX.h>
-#endif
+#include <glTFLoader/glTFLoader.h>
 
 using namespace Bifrost::Assets;
 using namespace Bifrost::Math;
@@ -31,11 +26,12 @@ namespace Scenes {
 
 class MaterialGUI final : public ImGui::IImGuiFrame {
 public:
-    static const int material_count = 9;
+    static const int material_count = 7;
 
     MaterialGUI(){
-        m_material0_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 1.0f, 0.02f);
+        m_material0_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 1.0f, 0.04f);
         m_material1_data = Materials::Data::create_metal(gold_tint, 0.02f);
+        m_material1_data.specularity = m_material0_data.specularity;
 
         for (int m = 0; m < material_count; ++m) {
             float lerp_t = m / (material_count - 1.0f);
@@ -93,75 +89,6 @@ public:
             }
         }
 
-#ifdef OPTIX_FOUND
-        ImGui::PoppedTreeNode("Shading model properties", [&] {
-            updated |= ImGui::SliderFloat("Material lerp", &m_material_lerp, 0, 1);
-            float specularity = lerp(m_material0_data.specularity, m_material1_data.specularity, m_material_lerp);
-            float roughness = lerp(m_material0_data.roughness, m_material1_data.roughness, m_material_lerp);
-            float ggx_alpha = OptiXRenderer::Shading::BSDFs::GGX::alpha_from_roughness(roughness);
-            ImGui::LabelText("Roughness", "%f", roughness);
-            ImGui::LabelText("Specularity", "%f", specularity);
-
-            ImGui::PoppedTreeNode("GGX", [&] {
-                if (updated) {
-                    std::fill_n(m_ggx.sampled_rho, m_ggx.sample_count, 0.0f);
-                    m_ggx.accumulation_count = 0;
-                }
-
-                const float full_specularity = 1.0f;
-                float ggx_rho[GGX::sample_count];
-                for (int i = 0; i < GGX::sample_count; ++i) {
-                    float cos_theta = (i + 0.5f) / GGX::sample_count;
-                    ggx_rho[i] = Shading::Rho::sample_GGX(cos_theta, roughness);
-
-                    optix::float3 wo = { sqrtf(1.0f - cos_theta * cos_theta), 0.0f, cos_theta };
-                    Vector2f uv = RNG::sample02(m_ggx.accumulation_count, { 0,0 });
-                    auto ggx_sample = OptiXRenderer::Shading::BSDFs::GGX_R::sample(ggx_alpha, full_specularity, wo, { uv.x, uv.y });
-                    float new_sample_weight = OptiXRenderer::is_PDF_valid(ggx_sample.PDF) ? ggx_sample.reflectance.x * ggx_sample.direction.z / ggx_sample.PDF : 0.0f; // f * ||cos_theta|| / pdf
-                    m_ggx.sampled_rho[i] = (m_ggx.accumulation_count * m_ggx.sampled_rho[i] + new_sample_weight) / (m_ggx.accumulation_count + 1);
-                }
-                ++m_ggx.accumulation_count;
-
-                ImGui::PlotData ggx_plot = { [&](int i) -> float { return ggx_rho[i]; } , GGX::sample_count, IM_COL32(0, 255, 0, 255), "Precomputed GGX" };
-                ImGui::PlotData sampled_ggx_plot = { [&](int i) -> float { return m_ggx.sampled_rho[i]; } , GGX::sample_count, IM_COL32(0, 0, 255, 255), "Sampled GGX" };
-                ImGui::PlotData plots[2] = { ggx_plot, sampled_ggx_plot };
-                ImGui::PlotLines("", plots, 2, "", 0.0f, 1.0f, ImVec2(0, 80));
-
-                ImGui::Text("%u samples", m_ggx.accumulation_count);
-            });
-
-            ImGui::PoppedTreeNode("GGX with Fresnel", [&] {
-                if (updated) {
-                    std::fill_n(m_ggx_with_fresnel.sampled_rho, m_ggx_with_fresnel.sample_count, 0.0f);
-                    m_ggx_with_fresnel.accumulation_count = 0;
-                }
-
-                float ggx_rho[GGX::sample_count];
-                for (int i = 0; i < GGX::sample_count; ++i) {
-                    float cos_theta = (i + 0.5f) / GGX::sample_count;
-                    float ggx_no_fresnel_rho = Shading::Rho::sample_GGX(cos_theta, roughness);
-                    float ggx_full_fresnel_rho = Shading::Rho::sample_GGX_with_fresnel(cos_theta, roughness);
-                    float specularity_adjusted_ggx_rho = optix::lerp(ggx_full_fresnel_rho, ggx_no_fresnel_rho, specularity);
-                    ggx_rho[i] = specularity_adjusted_ggx_rho;
-
-                    optix::float3 wo = { sqrtf(1.0f - cos_theta * cos_theta), 0.0f, cos_theta };
-                    Vector2f uv = RNG::sample02(m_ggx_with_fresnel.accumulation_count, { 0,0 });
-                    auto ggx_sample = OptiXRenderer::Shading::BSDFs::GGX_R::sample(ggx_alpha, specularity, wo, { uv.x, uv.y });
-                    float new_sample_weight = OptiXRenderer::is_PDF_valid(ggx_sample.PDF) ? ggx_sample.reflectance.x * ggx_sample.direction.z / ggx_sample.PDF : 0.0f; // f * ||cos_theta|| / pdf
-                    m_ggx_with_fresnel.sampled_rho[i] = (m_ggx_with_fresnel.accumulation_count * m_ggx_with_fresnel.sampled_rho[i] + new_sample_weight) / (m_ggx_with_fresnel.accumulation_count + 1);
-                }
-                ++m_ggx_with_fresnel.accumulation_count;
-
-                ImGui::PlotData ggx_plot = { [&](int i) -> float { return ggx_rho[i]; } , GGX::sample_count, IM_COL32(0, 255, 0, 255), "Precomputed GGX * Fresnel" };
-                ImGui::PlotData sampled_ggx_plot = { [&](int i) -> float { return m_ggx_with_fresnel.sampled_rho[i]; } , GGX::sample_count, IM_COL32(0, 0, 255, 255), "Sampled GGX * Fresnel" };
-                ImGui::PlotData plots[2] = { ggx_plot, sampled_ggx_plot };
-                ImGui::PlotLines("", plots, 2, "", 0.0f, 1.0f, ImVec2(0, 80));
-
-                ImGui::Text("%u samples", m_ggx_with_fresnel.accumulation_count);
-            });
-        });
-#endif // OPTIX_FOUND
-
         ImGui::End();
     }
 
@@ -186,12 +113,40 @@ private:
     } m_ggx_with_fresnel;
 };
 
-void create_material_scene(CameraID camera_ID, SceneNode root_node, ImGui::ImGuiAdaptor* imgui) {
+SceneNode shallow_clone(SceneNode node) {
+    // Clone the node
+    SceneNode cloned_node = SceneNodes::create(node.get_name(), node.get_global_transform());
+
+    // Clone the mesh model
+    MeshModel mesh_model = MeshModels::get_attached_mesh_model(node.get_ID());
+    if (mesh_model.exists())
+        MeshModels::create(cloned_node.get_ID(), mesh_model.get_mesh().get_ID(), mesh_model.get_material().get_ID());
+
+    // Recurse over children and attach to cloned node
+    for (SceneNode child_node : node.get_children()) {
+        SceneNode cloned_child = shallow_clone(child_node);
+        cloned_child.set_parent(cloned_node);
+    }
+
+    return cloned_node;
+}
+
+void replace_material(Material material, SceneNode parent_node, const std::string& child_scene_node_name) {
+    parent_node.apply_to_children_recursively([=](SceneNode node) {
+        if (node.get_name() == child_scene_node_name) {
+            MeshModel mesh_model = MeshModels::get_attached_mesh_model(node.get_ID());
+            if (mesh_model.exists())
+                mesh_model.set_material(material);
+        }
+    });
+}
+
+void create_material_scene(CameraID camera_ID, SceneNode root_node, ImGui::ImGuiAdaptor* imgui, const std::filesystem::path& data_directory) {
 
     { // Setup camera transform.
         Transform cam_transform = Cameras::get_transform(camera_ID);
-        cam_transform.translation = Vector3f(0, 3.0f, -17.0f);
-        cam_transform.look_at(Vector3f(0, 1.0f, 0.0f));
+        cam_transform.translation = Vector3f(0, 5.5f, -18.5f);
+        cam_transform.look_at(Vector3f(0, 0.5f, 0.0f));
         Cameras::set_transform(camera_ID, cam_transform);
     }
 
@@ -234,21 +189,36 @@ void create_material_scene(CameraID camera_ID, SceneNode root_node, ImGui::ImGui
     auto& materials = imgui->make_frame<MaterialGUI>();
 
     { // Create material models.
-        MeshID cube_mesh_ID = MeshCreation::cube(1);
-        Transform cube_transform = Transform(Vector3f(0.0f, -0.25f, 0.0f), Quaternionf::identity(), 1.5f);
-        MeshID sphere_mesh_ID = MeshCreation::revolved_sphere(32, 16);
-        Transform sphere_transform = Transform(Vector3f(0.0f, 1.0f, 0.0f), Quaternionf::identity(), 1.5f);
+        const float shader_ball_distance = 300.0f;
 
-        // Mesh combine models.
-        MeshID mesh_ID = MeshUtils::combine("MaterialMesh", cube_mesh_ID, cube_transform, sphere_mesh_ID, sphere_transform);
-        Meshes::destroy(cube_mesh_ID);
-        Meshes::destroy(sphere_mesh_ID);
+        // Load and setup shaderball
+        printf("Shader ball curtesy of https://github.com/derkreature/ShaderBall\n");
+        auto shader_ball_path = data_directory / "SimpleViewer" / "Shaderball.glb";
+        SceneNode shader_ball_node = glTFLoader::load(shader_ball_path.generic_string());
+        float shader_ball_pos_x = shader_ball_distance * 0.5f * (materials.material_count - 1);
+        Transform transform = Transform(Vector3f::zero(), Quaternionf::from_angle_axis(PI<float>(), Vector3f::up()), 0.01f);
+        shader_ball_node.set_global_transform(transform);
+        shader_ball_node.apply_delta_transform(Transform(Vector3f(shader_ball_pos_x, -102, 0)));
+        shader_ball_node.set_parent(root_node);
 
-        for (int m = 0; m < materials.material_count; ++m) {
-            Transform transform = Transform(Vector3f(float(m * 2 - 8), 0.0, 0.0f));
-            SceneNode node = SceneNodes::create("Model", transform);
-            MeshModels::create(node.get_ID(), mesh_ID, materials.get_material_ID(m));
-            node.set_parent(root_node);
+        // Set base materials to rubber
+        Materials::Data rubber_material_data = Materials::Data::create_dielectric(RGB(0.05f), 1, 0.04f);
+        Material rubber_material = Materials::create("Rubber", rubber_material_data);
+        for (std::string node_name : { "Node1", "Node4", "Node5" })
+            replace_material(rubber_material, shader_ball_node, node_name);
+
+        // Set surrounding surface to tested material
+        for (std::string node_name : { "Node2", "Node3", "Node6" })
+            replace_material(materials.get_material_ID(0), shader_ball_node, node_name);
+
+        for (int m = 1; m < materials.material_count; ++m) {
+            SceneNode shader_ball_node_clone = shallow_clone(shader_ball_node);
+            shader_ball_node_clone.apply_delta_transform(Transform(Vector3f(m * -shader_ball_distance, 0, 0)));
+            shader_ball_node_clone.set_parent(root_node);
+
+            // Set surrounding surface to tested material
+            for (std::string node_name : { "Node2", "Node3", "Node6" })
+                replace_material(materials.get_material_ID(m), shader_ball_node_clone, node_name);
         }
     }
 }

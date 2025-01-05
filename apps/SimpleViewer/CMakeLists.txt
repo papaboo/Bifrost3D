@@ -16,6 +16,7 @@ set(SCENES_SRCS
   Scenes/Material.h
   Scenes/Material.cpp
   Scenes/Opacity.h
+  Scenes/Shaderball.glb
   Scenes/Sphere.cpp
   Scenes/Sphere.h
   Scenes/SphereLight.h
@@ -49,6 +50,15 @@ endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
   FOLDER "Apps"
+)
+
+# Install shader ball
+set(SHADER_BALL_SOURCE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Scenes/Shaderball.glb)
+set(SHADER_BALL_DESTINATION_PATH ${BIFROST_DATA_OUTPUT_DIRECTORY}/SimpleViewer/Shaderball.glb)
+add_custom_command(
+  OUTPUT ${SHADER_BALL_DESTINATION_PATH}
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_BALL_SOURCE_PATH} ${SHADER_BALL_DESTINATION_PATH}
+  MAIN_DEPENDENCY ${SHADER_BALL_SOURCE_PATH}
 )
 
 if (MSVC)
