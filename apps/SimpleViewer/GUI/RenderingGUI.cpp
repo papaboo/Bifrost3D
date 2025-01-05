@@ -168,6 +168,7 @@ struct RenderingGUI::State {
 RenderingGUI::RenderingGUI(CameraNavigation* navigation, DX11Renderer::Compositor* compositor,
     DX11Renderer::Renderer* dx_renderer, OptiXRenderer::Renderer* optix_renderer)
     : m_navigation(navigation), m_compositor(compositor), m_dx_renderer(dx_renderer), m_optix_renderer(optix_renderer), m_state(new State()) {
+    m_screenshot = {};
     strcpy_s(m_screenshot.path, m_screenshot.max_path_length, "c:\\temp\\ss");
 
 #ifdef OPTIX_FOUND
