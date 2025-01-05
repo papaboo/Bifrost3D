@@ -1,39 +1,62 @@
 BACKLOG:
-* Screenshot
- * DX renderer including margin for SSAO?
- * UI flags set at random
- * OptiX renderer not getting screenshot call
- * Update readme and reference images.
 * Rough glass
- * Test that PDF is always positive if reflectance is positive
-  * Test for entire sphere, not just expected hemisphere.
- * 'Flip' the index of refraction on backsides
-  * This is actually handled inside the refract call. Negate wo.z and ior = 1 / ior. But it might be better to be explicit to avoid a bunch of abs calls and not knowing which side we're on.
-  * Make sure it's consistent!! Right now some layers/BSDFs will flip the view direction, others will refuse to sample the backside.
- * Add rough glass shading model (use default shading in DX11)
-  * Use Snell's law to test that the ray refracts the right way
-  * Rough glass sheet test scene.
+ * Glass test scene.
+  * Fix (water?) artifacts in pool
+ * Fixups: Rename glass shading models to transmissive
+ * New Shaderball that is complete on the inside
+  * https://casual-effects.com/data/
+  * Better simpleviewer data handling in data folder
+ * DX11: Transmissive shading with fresnel transparency 
+ * Use Mesh instead of MeshID and same for materials
+  * Check get_ID usages
+  * Add constructors to avoid calling the heaps directly
+  * Add destructors/delete
+  * Avoid Materials::Data and use Material directly with appropriate factory functions.
+  * Mesh creation, is it a box or a cube? Are cubes equally sized on all sides?
+ * Delta dirac reflections when GGX alpha is near 0
+  * bool TrowbridgeReitzDistribution::EffectivelySmooth() const { return std::max(alpha_x, alpha_y) < 1e-3f; }
+  * Rename MisPDF to PDF
+ * Handle thin walled transmissive material
+  * Test!!
   * Thin walled materials should not refract, effectively only tinting the transmission by the base color.
- * Allow ior of 1, which is effectively tinting the transmission.
   * See PBRTv4 bxdfs.cpp line 80: if (eta == 1 || mfDistrib.EffectivelySmooth()) { .. }
-  * What is 'EffectivelySmooth' defined as?
-  * PBRT handles it as a delta dirac, which I'd still like to avoid
- * How can we ensure that refractions handle bidirectional renderers? PBRT does it by tracing 'importance' or radiance. I think I'd prefer to handle it based on front/backside or IOR <=> 1 instead.
+  * Does that amount to just squaring alpha, squaring tint, and disabling refraction / IOR of 1?
+  * Thinwalled transmissive smooth materials can tint the anyhit
+ * Add total internal reflection to GGX_T and GGX. PBRT 8.2.1
+  * Is it just black? It is in PBRT chapter 8, but what about the final implementation?
+  * Detect critical angle (sinThetaT >= 1). Use snell's law and known IOR and sinThetaO.
+  * How to handle evaluation reflectance? We can do it in TransmissiveShading by scaling the reflection using a precomputation, but ideally I'd like it directly in GGX.
  * Can we use Bounded VNDF when the IOR is greater (or was it less) than 1.0? So cases where the refraction will cause more of the lobe to be occluded.
- * Add support for local refraction of the coat in default shading
+ * How can we ensure that refractions handle bidirectional renderers? PBRT does it by tracing 'importance' or radiance. I think I'd prefer to just differentiate on samping wo or wi.
+  * The current implementation samples wi from wo, but internally it acts as if wo is wi. See both the reflectance scaling and refract(...) expects the incident light direction.
+  * See PBRT section 16.1. Apparently light rays need to be scaled, but not view rays.
+ * Energy preserving transmission. 16^3 8bit texture?
+  * cos_theta, roughness, and relative IOR dependent.
+ * Implement TransmissiveShading::Rho
+ * Add support for local refraction in the coat in default shading
  * Define how we should scale roughness of a surface underneath another rough surface.
   * Fixed coat roughness, binary search of underlying roughness that matches GGX * GGX
-  * Test in a scene with rough glass and default material underneath and another material with coated default material
  * Approximate rough glass in DX11 using a gaussian filter, see Doom 2016.
   * Possibly expand with OIT using moments, as transparency is a PITA https://momentsingraphics.de/MissingTMBOITCode.html
+ * Support for absorption / Beers law. Add case to transmission test scene. Whisky in glass? (Cylinder inside glass)
+  * Suppport for nested layers? Add (ice) cubes to the whisky. Make a tesselated box, bevel the edges and randomly offset the side vertices. Add air bubble inside the ice cubes.
+  * See Yi's post on nested dielectrics and ordering
+* Screenshot
+ * DX renderer including margin for SSAO?
+ * OptiX renderer not getting screenshot call
+ * Update readme and reference images.
+* Vertex color support
 * Improving shadow terminator
  * Reflections: Hacking the shadow terminator https://jo.dreggn.org/home/2021_terminator.pdf
  * Refractions: Taming the shadow terminator https://www.yiningkarlli.com/projects/shadowterminator.html
 * Integrate rough glass into DefaultShading
  * See how gltf distinguishes between opacity, cutout and refracting. They should be orthogonal, as you can still have refracting perforated microgeometry.
 * Bugs
+ * SimpleViewer test scene - There seems to be a sampler bug. The blue torus has a ghost highlight from the blinking light and if the blinking light is on, then the copper sphere has a discontinuity in shading bases on position. It's not the RNG. Has been tested with LCG
+ * SimpleViewer can't switch between rasterizer and ray tracer using P after alt tabbing. Windows input seems to be recorded correctly, but the keyboard state is wrong. Perhaps a clear/reinitialize is in order?
+ * Simpleviewers picture in picture's height/depth ratio doesn't update when the viewport updates
+ * Test scene area light reflection in floor has artifacts.
  * Environment map has different intensities in DX and OptiX. See --environment-map "C:\Users\Asger Hoedt\Development\data\textures\spheremaps\3DTotal_free_sample_1_Bg.jpg"
-  * Why doesn't luminance adaption catch it?
  * Plastic torus has different highlights in DX11 depending on if it's cutout or transparent.
  * DX11 crash when box gun shot destroyed
 * Bump mapping
