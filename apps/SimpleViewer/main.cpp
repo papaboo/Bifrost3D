@@ -356,7 +356,7 @@ int initialize_scene(Engine& engine, ImGui::ImGuiAdaptor* imgui) {
     if (g_scene.empty() || g_scene.compare("CornellBox") == 0)
         Scenes::create_cornell_box(cam_ID, root_node_ID);
     else if (g_scene.compare("MaterialScene") == 0)
-        Scenes::create_material_scene(cam_ID, root_node_ID, imgui);
+        Scenes::create_material_scene(cam_ID, root_node_ID, imgui, engine.data_directory());
     else if (g_scene.compare("OpacityScene") == 0)
         Scenes::create_opacity_scene(engine, cam_ID, root_node_ID);
     else if (g_scene.compare("SphereScene") == 0)
