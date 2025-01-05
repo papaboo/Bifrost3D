@@ -1,17 +1,16 @@
 BACKLOG:
-* Material scene crashes in ImGUI. Probably after update
-* sea_keep_lonely_watcher shows bright artifacts on transparent geometry. The artifact scales with transparency.
- * The artifact is clearly seen on palm tree leaves
- * Some of them disappear if we remove the hemisphere (material 4)
- * All geometry is loaded as transparent. Are the textures transparent?
- * It's not just transparent surfaces. Some of the rocks do it as well (perhaps after making them cutouts)
+* Screenshot
+ * DX renderer including margin for SSAO?
+ * UI flags set at random
+ * OptiX renderer not getting screenshot call
+ * Update readme and reference images.
 * Rough glass
  * Test that PDF is always positive if reflectance is positive
   * Test for entire sphere, not just expected hemisphere.
  * 'Flip' the index of refraction on backsides
   * This is actually handled inside the refract call. Negate wo.z and ior = 1 / ior. But it might be better to be explicit to avoid a bunch of abs calls and not knowing which side we're on.
   * Make sure it's consistent!! Right now some layers/BSDFs will flip the view direction, others will refuse to sample the backside.
- * Add rough glass shading model
+ * Add rough glass shading model (use default shading in DX11)
   * Use Snell's law to test that the ray refracts the right way
   * Rough glass sheet test scene.
   * Thin walled materials should not refract, effectively only tinting the transmission by the base color.
@@ -26,21 +25,30 @@ BACKLOG:
   * Fixed coat roughness, binary search of underlying roughness that matches GGX * GGX
   * Test in a scene with rough glass and default material underneath and another material with coated default material
  * Approximate rough glass in DX11 using a gaussian filter, see Doom 2016.
+  * Possibly expand with OIT using moments, as transparency is a PITA https://momentsingraphics.de/MissingTMBOITCode.html
+* Improving shadow terminator
+ * Reflections: Hacking the shadow terminator https://jo.dreggn.org/home/2021_terminator.pdf
+ * Refractions: Taming the shadow terminator https://www.yiningkarlli.com/projects/shadowterminator.html
+* Integrate rough glass into DefaultShading
+ * See how gltf distinguishes between opacity, cutout and refracting. They should be orthogonal, as you can still have refracting perforated microgeometry.
 * Bugs
- * environment map has different intensities in DX and OptiX. See --environment-map "C:\Users\Asger Hoedt\Development\data\textures\spheremaps\3DTotal_free_sample_1_Bg.jpg"
+ * Environment map has different intensities in DX and OptiX. See --environment-map "C:\Users\Asger Hoedt\Development\data\textures\spheremaps\3DTotal_free_sample_1_Bg.jpg"
+  * Why doesn't luminance adaption catch it?
  * Plastic torus has different highlights in DX11 depending on if it's cutout or transparent.
  * DX11 crash when box gun shot destroyed
-* Emissive meshes
- * Mirror glTF for starters. Emissive texture and emissive 'strength'
-  * https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_emissive_strength/README.md
- * Do something similar to or reuse the fixed light samples in PresampledEnvironmentLight and add MIS
-  * Presample mesh lights. Handle textures by random sampling and then do reestimated importance sampling when combining samples. Cheapest memory wise, parallelisable, and a pretty simple solution.
- * Efficient triangle sampling https://gpuopen.com/download/publications/Hierarchical_Light_Sampling_with_Accurate_Spherical_Gaussian_Lighting.pdf
 * Bump mapping
  * Create test scene with a plane where one side has proper micro geometry and the other is normal mapped.
  * Use Microfacet-based Normal Mapping for Robust Monte Carlo Path Tracing to solve the energy preservation issue.
  * Or simply negate the part of the shading hemisphere that disagrees with the geometric normal to make a complete hemisphere.
   * That should preserve abs(cos(theta)) as well, so not affect variance adversely
+* Emissive meshes
+ * Mirror glTF for starters. Emissive texture and emissive 'strength'
+  * https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_emissive_strength/README.md
+ * Do something similar to or reuse the fixed light samples in PresampledEnvironmentLight and add MIS
+  * Presample mesh lights. Handle textures by random sampling and then do reestimated importance sampling when combining samples. Cheapest memory wise, parallelisable, and a pretty simple solution.
+ * Efficient triangle sampling
+  * https://gpuopen.com/download/publications/Hierarchical_Light_Sampling_with_Accurate_Spherical_Gaussian_Lighting.pdf
+  * https://dl.acm.org/doi/10.1145/3665320.3670993
 * Remove color banding
  * http://www.loopit.dk/banding_in_games.pdf and https://www.shadertoy.com/view/4t2SDh
 * Threadsafe asset management
@@ -54,6 +62,8 @@ BACKLOG:
  * Consider it an engine effect and include it in the path tracer as well
  * See https://www.youtube.com/watch?v=NHd1PeJfyzE
 * Upgrade OptiX to get better denoiser
+ * sea_keep_lonely_watcher shows bright artifacts on transparent geometry. They seem to come from the anyhit programs not always intersecting all geometry, but stopping after the first nearest intersections.
+ * Implement statistical denoiser as https://dl.acm.org/doi/pdf/10.1145/3680528.3687591
 * ReSTIR
  * Start with the simpler Spatiotemporal variance-guided filtering: real-time reconstruction for path-traced global illumination
  * Generalized Resampled Importance Sampling
