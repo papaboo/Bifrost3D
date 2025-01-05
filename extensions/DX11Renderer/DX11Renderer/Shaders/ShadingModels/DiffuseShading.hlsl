@@ -34,15 +34,9 @@ struct DiffuseShading : IShadingModel {
     // Evaluations.
     // --------------------------------------------------------------------------------------------
     float3 evaluate(float3 wo, float3 wi) {
-        bool is_same_hemisphere = wi.z * wo.z >= 0.0;
-        if (!is_same_hemisphere)
-            return float3(0.0, 0.0, 0.0);
-
-        // Flip directions if on the backside of the material.
-        if (wo.z < 0.0) {
-            wi.z = -wi.z;
-            wo.z = -wo.z;
-        }
+        // Return no contribution if seen or lit from the backside.
+        if (wo.z <= 0.0f || wi.z <= 0.0f)
+            return float3(0, 0, 0);
 
         return m_tint * BSDFs::OrenNayar::evaluate(m_roughness, wo, wi);
     }
@@ -50,6 +44,11 @@ struct DiffuseShading : IShadingModel {
     // Evaluate the material lit by a sphere light.
     // Not fitted to OrenNayar, so we use a lambertian (roughness = 0) approximation
     float3 evaluate_sphere_light(float3 wo, SphereLight light, float ambient_visibility) {
+        // Return no contribution if seen or lit from the backside.
+        bool light_below_surface = light.position.z < -light.radius;
+        if (wo.z <= 0.0f || light_below_surface)
+            return float3(0, 0, 0);
+
         float3 light_radiance = light.power * rcp(4.0f * PI * dot(light.position, light.position));
         return evaluate_sphere_light_lambert(light, light_radiance, wo, m_tint, ambient_visibility);
     }
