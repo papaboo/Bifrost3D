@@ -23,16 +23,10 @@
 namespace Bifrost {
 namespace Math {
 
-GTEST_TEST(Math_TypeTraits, RGB) {
-    EXPECT_TRUE(std::is_trivial<RGB>::value);
-    EXPECT_TRUE(std::is_standard_layout<RGB>::value);
-    EXPECT_TRUE(std::is_pod<RGB>::value);
-}
-
-GTEST_TEST(Math_TypeTraits, RGBA) {
-    EXPECT_TRUE(std::is_trivial<RGBA>::value);
-    EXPECT_TRUE(std::is_standard_layout<RGBA>::value);
-    EXPECT_TRUE(std::is_pod<RGBA>::value);
+GTEST_TEST(Math_TypeTraits, Linef) {
+    EXPECT_TRUE(std::is_trivial<Linef>::value);
+    EXPECT_TRUE(std::is_standard_layout<Linef>::value);
+    EXPECT_TRUE(std::is_pod<Linef>::value);
 }
 
 GTEST_TEST(Math_TypeTraits, Matrix3x3f) {
@@ -69,6 +63,18 @@ GTEST_TEST(Math_TypeTraits, Rectf) {
     EXPECT_TRUE(std::is_trivial<Rectf>::value);
     EXPECT_TRUE(std::is_standard_layout<Rectf>::value);
     EXPECT_TRUE(std::is_pod<Rectf>::value);
+}
+
+GTEST_TEST(Math_TypeTraits, RGB) {
+    EXPECT_TRUE(std::is_trivial<RGB>::value);
+    EXPECT_TRUE(std::is_standard_layout<RGB>::value);
+    EXPECT_TRUE(std::is_pod<RGB>::value);
+}
+
+GTEST_TEST(Math_TypeTraits, RGBA) {
+    EXPECT_TRUE(std::is_trivial<RGBA>::value);
+    EXPECT_TRUE(std::is_standard_layout<RGBA>::value);
+    EXPECT_TRUE(std::is_pod<RGBA>::value);
 }
 
 GTEST_TEST(Math_TypeTraits, Transform) {
