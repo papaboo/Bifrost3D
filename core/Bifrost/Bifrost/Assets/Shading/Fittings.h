@@ -47,14 +47,6 @@ extern const int GGX_with_fresnel_roughness_sample_count;
 extern const float GGX_with_fresnel[];
 float sample_GGX_with_fresnel(float wo_dot_normal, float roughness);
 
-// ------------------------------------------------------------------------------------------------
-// OrenNayar rho fit
-// ------------------------------------------------------------------------------------------------
-extern const int oren_nayar_angle_sample_count;
-extern const int oren_nayar_roughness_sample_count;
-extern const float oren_nayar[];
-float sample_oren_nayar(float wo_dot_normal, float roughness);
-
 } // NS Rho
 
 namespace Estimate_GGX_bounded_VNDF_alpha {
