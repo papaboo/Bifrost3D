@@ -26,8 +26,6 @@ SET(ASSETS_SHADING_SRCS
   Bifrost/Assets/Shading/GGXRho.png
   Bifrost/Assets/Shading/GGXWithFresnelRho.cpp
   Bifrost/Assets/Shading/GGXWithFresnelRho.png
-  Bifrost/Assets/Shading/OrenNayarRho.cpp
-  Bifrost/Assets/Shading/OrenNayarRho.png
 )
 
 SET(CORE_SRCS 

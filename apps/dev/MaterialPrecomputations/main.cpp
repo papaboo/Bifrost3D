@@ -10,7 +10,6 @@
 
 #include <OptiXRenderer/Shading/BSDFs/Burley.h>
 #include <OptiXRenderer/Shading/BSDFs/GGX.h>
-#include <OptiXRenderer/Shading/BSDFs/OrenNayar.h>
 #include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>
 #include <OptiXRenderer/RNG.h>
 
@@ -405,18 +404,6 @@ int main(int argc, char** argv) {
         // Store.
         StbImageWriter::write(rho, output_dir + "BurleyRho.png");
         output_brdf<1>(rho, sample_count, output_dir + "BurleyRho.cpp", "burley", "Directional-hemispherical reflectance for Burley.");
-    }
-
-    { // Compute OrenNayar rho.
-
-        static auto sample_oren_nayar = [](float3 tint, float roughness, float3 wo, float2 random_sample) -> BSDFSample {
-            return OrenNayar::sample(tint, roughness, wo, random_sample, true);
-        };
-        Image rho = estimate_rho(width, height, sample_count, sample_oren_nayar);
-
-        // Store.
-        StbImageWriter::write(rho, output_dir + "OrenNayarRho.png");
-        output_brdf<1>(rho, sample_count, output_dir + "OrenNayarRho.cpp", "oren_nayar", "Directional-hemispherical reflectance for OrenNayar.");
     }
 
     { // Compute GGX rho.
