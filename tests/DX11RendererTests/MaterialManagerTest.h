@@ -32,7 +32,7 @@ GTEST_TEST(MaterialManager, GPU_rho_texture_dimensions_consistent_with_CPU) {
 
     // Create CS shader to return the texture dimensions
     const char* rho_dimensions_cs =
-        "#include <ShadingModels/Parameters.hlsl>\n"
+        "#include <ShadingModels/Utils.hlsl>\n"
         "\n"
         "RWStructuredBuffer<int> rho_dimensions : register(u0);\n"
         "\n"
@@ -80,7 +80,7 @@ GTEST_TEST(MaterialManager, sample_GPU_rho_texture_consistent_with_CPU) {
 
     // Create CS shader to sample the rho texture
     const char* sample_rho_cs =
-        "#include <ShadingModels/Parameters.hlsl>\n"
+        "#include <ShadingModels/Utils.hlsl>\n"
         "\n"
         "RWStructuredBuffer<float2> rho_samples : register(u0);\n"
         "static const int samples_per_dimension = 4;\n"
