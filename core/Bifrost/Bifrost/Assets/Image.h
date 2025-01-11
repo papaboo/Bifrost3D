@@ -139,6 +139,7 @@ public:
     static inline unsigned int get_pixel_count(ImageID image_ID, unsigned int mipmap_level = 0) {
         return get_width(image_ID, mipmap_level) * get_height(image_ID, mipmap_level) * get_depth(image_ID, mipmap_level);
     }
+    static inline unsigned int get_total_pixel_count(ImageID image_ID) { return m_metainfo[image_ID].total_pixel_count; }
 
     // Returns true if mipmaps can be auto generated for the texture.
     static inline bool is_mipmapable(ImageID image_ID) { return m_metainfo[image_ID].is_mipmapable; }
@@ -198,6 +199,7 @@ private:
         unsigned int height;
         unsigned int depth;
         unsigned int mipmap_count;
+        unsigned int total_pixel_count;
         PixelFormat pixel_format;
         float gamma;
         bool is_mipmapable;
@@ -244,6 +246,7 @@ public:
     inline Math::Vector2ui get_size_2D(unsigned int mipmap_level = 0) const { return Images::get_size_2D(m_ID, mipmap_level); }
     inline Math::Vector3ui get_size_3D(unsigned int mipmap_level = 0) const { return Images::get_size_3D(m_ID, mipmap_level); }
     inline unsigned int get_pixel_count(unsigned int mipmap_level = 0) const { return Images::get_pixel_count(m_ID, mipmap_level); }
+    inline unsigned int get_total_pixel_count() const { return Images::get_total_pixel_count(m_ID); }
 
     inline Images::PixelData get_pixels(unsigned int mipmap_level = 0) { return Images::get_pixels(m_ID, mipmap_level); }
     inline const Images::PixelData get_pixels(unsigned int mipmap_level = 0) const { return Images::get_pixels(m_ID, mipmap_level); }
@@ -263,6 +266,9 @@ public:
     inline void iterate_pixels(Operation pixel_operation) { Images::iterate_pixels(m_ID, pixel_operation); }
 
     inline void change_format(PixelFormat new_format, float new_gamma) { Images::change_format(m_ID, new_format, new_gamma); }
+
+    void clear();
+    void clear(Math::RGBA clear_color);
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
