@@ -209,7 +209,7 @@ float3 evaluate_IBL_GGX(float3 wo, float3 normal, float ggx_alpha, float3 specul
     float3 wi = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo, normal);
     float3 rho = compute_specular_rho(specularity, abs(dot(wo, normal)), roughness);
     float2 ibl_tc = direction_to_latlong_texcoord(wi);
-    return rho * environment_tex.SampleLevel(environment_sampler, ibl_tc, mip_count * roughness).rgb;
+    return rho * environment_tex.SampleLevel(environment_sampler, ibl_tc, mip_count * roughness).rgb * specular_ambient_visibility;
 }
 
 } // NS ShadingModels
