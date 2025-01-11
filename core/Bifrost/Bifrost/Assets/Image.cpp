@@ -32,8 +32,8 @@ void Images::allocate(unsigned int capacity) {
     m_changes = Core::ChangeSet<Changes, ImageID>(capacity);
 
     // Allocate dummy element at 0.
-    MetaInfo info = { "Dummy image", 0u, 0u, 0u, 0u, PixelFormat::Unknown };
-    m_metainfo[0] = info;
+    m_metainfo[0] = { };
+    m_metainfo[0].name = "Dummy image";
     m_pixels[0] = nullptr;
 }
 
@@ -154,6 +154,7 @@ ImageID Images::create3D(const std::string& name, PixelFormat format, float gamm
             break;
     }
     metainfo.mipmap_count = mip_count;
+    metainfo.total_pixel_count = total_pixel_count;
     metainfo.is_mipmapable = false;
     m_pixels[id] = allocate_pixels(format, total_pixel_count);
     m_changes.set_change(id, Change::Created);
@@ -184,6 +185,7 @@ ImageID Images::create2D(const std::string& name, PixelFormat format, float gamm
     metainfo.depth = 1u;
 
     metainfo.mipmap_count = 1u;
+    metainfo.total_pixel_count = size.x * size.y;
     metainfo.is_mipmapable = false;
     m_pixels[id] = pixels; pixels = nullptr; // Take ownership of pixels.
     m_changes.set_change(id, Change::Created);
@@ -461,6 +463,30 @@ void Images::change_format(ImageID image_ID, PixelFormat new_format, float new_g
     m_changes.add_change(image_ID, Change::PixelsUpdated);
 }
 
+void Image::clear() {
+    unsigned int total_pixel_count = get_total_pixel_count();
+    int pixel_size = size_of(get_pixel_format());
+    Images::PixelData pixels = get_pixels();
+    memset(pixels, 0, pixel_size * total_pixel_count);
+}
+
+void Image::clear(Math::RGBA clear_color) {
+    // Set the first pixel, to convert the clear color to its image representation
+    set_pixel(clear_color, 0);
+
+    PixelFormat format = get_pixel_format();
+    int pixel_size = size_of(format);
+    unsigned int total_pixel_count = get_total_pixel_count();
+    unsigned char* pixels_begin = (unsigned char*)get_pixels();
+    unsigned char* pixels_end = pixels_begin + total_pixel_count * pixel_size;
+
+    // Copy the first pixel into the rest of the pixels.
+    if (pixel_size == 1)
+        memset(pixels_begin + 1, *pixels_begin, total_pixel_count);
+    else
+        for (unsigned char* pixel_itr = pixels_begin + pixel_size; pixel_itr < pixels_end; pixel_itr += pixel_size)
+            memcpy(pixel_itr, pixels_begin, pixel_size);
+}
 
 //*****************************************************************************
 // Image Utilities
