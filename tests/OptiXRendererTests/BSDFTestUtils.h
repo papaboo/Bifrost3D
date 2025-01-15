@@ -104,7 +104,7 @@ template <typename BSDFModel>
 void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count, optix::float3 expected_rho_std_dev, float epsilon = 0.01f) {
     optix::float3 total_std_dev = { 0, 0, 0 };
     for (float cos_theta : {0.1f, 0.3f, 0.5f, 0.7f, 0.9f, 1.0f}) {
-        float3 wo = wo_from_cos_theta(cos_theta);
+        float3 wo = w_from_cos_theta(cos_theta);
         auto rho = directional_hemispherical_reflectance_function(bsdf_model, wo, sample_count);
         optix::float3 rho_std_dev = rho.std_dev / rho.reflectance; // Normalize error wrt reflectance, so dark BSDFs don't automatically have a smaller error
         total_std_dev += rho_std_dev;
@@ -118,7 +118,7 @@ void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count
     BSDF_sampling_variance_test(bsdf_model, sample_count, optix::make_float3(expected_rho_std_dev), epsilon);
 }
 
-float3 wo_from_cos_theta(float cos_theta) {
+float3 w_from_cos_theta(float cos_theta) {
     return { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
 }
 

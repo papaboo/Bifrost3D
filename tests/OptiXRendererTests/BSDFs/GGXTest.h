@@ -56,8 +56,8 @@ public:
 };
 
 GTEST_TEST(GGX_R, power_conservation) {
-    for (float cos_theta : { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
-        optix::float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+    for (float cos_theta_o : { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
+        optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
         for (float alpha : { 0.0f, 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
             auto ggx = GGXReflectionWrapper(alpha);
             auto res = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 1024u);
@@ -142,19 +142,19 @@ GTEST_TEST(GGX_R, validate_ggx_rho_precomputations) {
     float middle_cos_theta = (Rho::GGX_angle_sample_count / 2) / (Rho::GGX_angle_sample_count - 1.0f);
     float middle_roughness = (Rho::GGX_roughness_sample_count / 2) / (Rho::GGX_roughness_sample_count - 1.0f);
 
-    for (float cos_theta : { 0.000001f, middle_cos_theta, 1.0f }) {
-        optix::float3 wo = BSDFTestUtils::wo_from_cos_theta(cos_theta);
+    for (float cos_theta_o : { 0.000001f, middle_cos_theta, 1.0f }) {
+        optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
         for (float roughness : { 0.0f, middle_roughness, 1.0f }) {
             float alpha = Shading::BSDFs::GGX::alpha_from_roughness(roughness);
 
             auto no_specularity_ggx = GGXReflectionWrapper(alpha, 0.0f);
             float expected_no_specularity_rho = BSDFTestUtils::directional_hemispherical_reflectance_function(no_specularity_ggx, wo, sample_count).reflectance.x;
-            float actual_no_specularity_rho = Rho::sample_GGX_with_fresnel(cos_theta, roughness);
+            float actual_no_specularity_rho = Rho::sample_GGX_with_fresnel(cos_theta_o, roughness);
             EXPECT_FLOAT_EQ_EPS(expected_no_specularity_rho, actual_no_specularity_rho, 0.0001f) << "for cos_theta: " << cos_theta << " and roughness: " << roughness;
 
             auto full_specularity_ggx = GGXReflectionWrapper(alpha, 1.0f);
             float expected_full_specularity_rho = BSDFTestUtils::directional_hemispherical_reflectance_function(full_specularity_ggx, wo, sample_count).reflectance.x;
-            float actual_full_specularity_rho = Rho::sample_GGX(cos_theta, roughness);
+            float actual_full_specularity_rho = Rho::sample_GGX(cos_theta_o, roughness);
             EXPECT_FLOAT_EQ_EPS(expected_full_specularity_rho, actual_full_specularity_rho, 0.0001f) << "for cos_theta: " << cos_theta << " and roughness: " << roughness;
         }
     }
@@ -169,11 +169,11 @@ GTEST_TEST(GGX_R, estimate_bounded_VNDF_alpha_from_max_PDF) {
 
     for (int i = 0; i < sample_count; i++) {
         optix::float2 sample = RNG::sample02(i);
-        float cos_theta = sample.x;
+        float cos_theta_o = sample.x;
         float max_PDF = Estimate_GGX_bounded_VNDF_alpha::decode_PDF(sample.y);
-        float estimated_alpha = Estimate_GGX_bounded_VNDF_alpha::estimate_alpha(cos_theta, max_PDF);
+        float estimated_alpha = Estimate_GGX_bounded_VNDF_alpha::estimate_alpha(cos_theta_o, max_PDF);
 
-        optix::float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+        optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
         optix::float3 reflected_wi = { -wo.x, -wo.y, wo.z };
 
         float estimated_PDF = GGX_R::PDF(estimated_alpha, wo, reflected_wi);
@@ -254,8 +254,8 @@ private:
 
 GTEST_TEST(GGX_T, power_conservation) {
     for (float ior_i_over_o : { 0.5f, 0.9f, 1.1f, 1.5f })
-        for (float cos_theta : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
-            optix::float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+        for (float cos_theta_o : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
+            optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
             for (float alpha : { 0.0f, 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
                 auto ggx = GGXTransmissionWrapper(alpha, ior_i_over_o);
                 auto res = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 1024u);
@@ -266,8 +266,8 @@ GTEST_TEST(GGX_T, power_conservation) {
 
 // GTEST_TEST(GGX_T, Helmholtz_reciprocity) {
 //     for (float ior_i_over_o : { 0.5f, 0.9f, 1.1f, 1.5f })
-//         for (float cos_theta : { -1.0f, -0.4f, -0.1f, 0.1f, 0.4f, 1.0f }) {
-//             optix::float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+//         for (float cos_theta_o : { -1.0f, -0.4f, -0.1f, 0.1f, 0.4f, 1.0f }) {
+//             optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
 //             for (float alpha : { 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
 //                 auto ggx = GGXTransmissionWrapper(alpha, 0.0f, ior_i_over_o);
 //                 BSDFTestUtils::helmholtz_reciprocity(ggx, wo, 16u);
@@ -277,8 +277,8 @@ GTEST_TEST(GGX_T, power_conservation) {
 
 GTEST_TEST(GGX_T, function_consistency) {
     for (float ior_i_over_o : { 0.5f, 0.9f, 1.1f, 1.5f })
-        for (float cos_theta : { -1.0f, -0.4f, -0.1f, 0.1f, 0.4f, 1.0f }) {
-            optix::float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+        for (float cos_theta_o : { -1.0f, -0.4f, -0.1f, 0.1f, 0.4f, 1.0f }) {
+            optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
             for (float alpha : { 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
                 auto ggx = GGXTransmissionWrapper(alpha, ior_i_over_o);
                 BSDFTestUtils::BSDF_consistency_test(ggx, wo, 16u);
@@ -298,8 +298,8 @@ GTEST_TEST(GGX_T, sampling_standard_deviation) {
 
 GTEST_TEST(GGX_T, consistent_sampling_across_hemispheres) {
     optix::float3 random_sample = { 0.5f, 0.5f, 0.5f };
-    for (float cos_theta : { -1.0f, -0.4f, -0.1f, 0.1f, 0.4f, 1.0f }) {
-        optix::float3 positive_wo = BSDFTestUtils::wo_from_cos_theta(cos_theta);
+    for (float cos_theta_o : { -1.0f, -0.4f, -0.1f, 0.1f, 0.4f, 1.0f }) {
+        optix::float3 positive_wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
         optix::float3 negative_wo = { positive_wo.x, positive_wo.y, -positive_wo.z };
         for (float alpha : { 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
             for (float ior_i_over_o : { 0.5f, 0.9f, 1.1f, 1.5f }) {
@@ -387,8 +387,8 @@ public:
 
 GTEST_TEST(GGX, power_conservation) {
     for (float ior_i_over_o : { 0.5f, 0.9f, 1.1f, 1.5f })
-        for (float cos_theta : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
-            optix::float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+        for (float cos_theta_o : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
+            optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
             for (float alpha : { 0.0f, 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
                 auto ggx = GGXWrapper(alpha, 0.04f, ior_i_over_o);
                 auto res = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 1024u);
@@ -399,8 +399,8 @@ GTEST_TEST(GGX, power_conservation) {
 
 GTEST_TEST(GGX, function_consistency) {
     for (float ior_i_over_o : { 0.5f, 0.9f, 1.1f, 1.5f })
-        for (float cos_theta : { -1.0f, -0.4f, -0.1f, 0.1f, 0.4f, 1.0f }) {
-            optix::float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+        for (float cos_theta_o : { -1.0f, -0.4f, -0.1f, 0.1f, 0.4f, 1.0f }) {
+            optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
             for (float alpha : { 0.0675f, 0.25f, 1.0f }) {
                 auto ggx = GGXWrapper(alpha, 0.04f, ior_i_over_o);
                 BSDFTestUtils::BSDF_consistency_test(ggx, wo, 16u);
@@ -414,8 +414,8 @@ GTEST_TEST(GGX, reflection_reflectance_equals_GGX_R) {
     float fully_specular = 1.0f; // Disable transmission
     float ior_i_over_o = 1.5f;
 
-    for (float cos_theta : { 0.2f, 1.0f }) {
-        float3 wo = BSDFTestUtils::wo_from_cos_theta(cos_theta);
+    for (float cos_theta_o : { 0.2f, 1.0f }) {
+        float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
         for (float alpha : { 0.0675f, 0.25f, 1.0f }) {
             auto ggx = GGXWrapper(alpha, fully_specular, ior_i_over_o);
             auto ggx_r = GGXReflectionWrapper(alpha);
@@ -438,8 +438,8 @@ GTEST_TEST(GGX, transmission_reflectance_equals_GGX_T) {
     bool disable_reflection = true;
 
     for (float ior_i_over_o : { 0.5f, 1.5f }) {
-        for (float cos_theta : { 0.4f, 1.0f }) {
-            float3 wo = BSDFTestUtils::wo_from_cos_theta(cos_theta);
+        for (float cos_theta_o : { 0.4f, 1.0f }) {
+            float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
             for (float alpha : { 0.0675f, 0.25f, 1.0f }) {
                 auto ggx = GGXWrapper(alpha, specularity, ior_i_over_o, transmissive_tint, disable_reflection);
                 auto ggx_t = GGXTransmissionWrapper(alpha, ior_i_over_o, specularity);

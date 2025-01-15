@@ -68,11 +68,11 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
     material_params.metallic = 0.0f;
     material_params.specularity = 0.02f;
 
-    for (float cos_theta : { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
-        const float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+    for (float cos_theta_o : { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f }) {
+        const float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
         auto shading_model = DefaultShading(material_params, wo.z);
         auto result = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo);
-        EXPECT_FLOAT3_LE(result.reflectance, 1.00084f) << "cos_theta: " << cos_theta;
+        EXPECT_FLOAT3_LE(result.reflectance, 1.00084f) << "cos_theta: " << cos_theta_o;
     }
 }
 

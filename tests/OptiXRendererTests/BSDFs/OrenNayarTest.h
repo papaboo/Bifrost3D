@@ -87,8 +87,8 @@ GTEST_TEST(OrenNayar, input_albedo_equals_actual_reflectance) {
     optix::float3 albedo = { 0.25f, 0.5f, 0.75f };
     for (float roughness : {0.25f, 0.5f, 0.75f }) {
         auto oren_nayar = OrenNayarWrapper(roughness, albedo);
-        for (float cos_theta : {0.1f, 0.5f, 0.9f }) {
-            optix::float3 wo = BSDFTestUtils::wo_from_cos_theta(cos_theta);
+        for (float cos_theta_o : {0.1f, 0.5f, 0.9f }) {
+            optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
             auto reflectance = BSDFTestUtils::directional_hemispherical_reflectance_function(oren_nayar, wo, 2048).reflectance;
             EXPECT_FLOAT3_EQ_EPS(reflectance, albedo, 0.0002f) << oren_nayar.to_string();
         }

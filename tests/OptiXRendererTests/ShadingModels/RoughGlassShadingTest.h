@@ -65,11 +65,11 @@ GTEST_TEST(RoughGlassShadingModel, power_conservation) {
 
     for (float roughness : { 0.2f, 0.7f }) {
         material_params.roughness = roughness;
-        for (float cos_theta : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
-            const optix::float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+        for (float cos_theta_o : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
+            optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
             auto shading_model = RoughGlassShading(material_params, wo.z);
             auto rho = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
-            EXPECT_LE(rho.x, 1.0f) << " with roughness " << roughness << " and cos_theta " << cos_theta;
+            EXPECT_LE(rho.x, 1.0f) << " with roughness " << roughness << " and cos_theta " << cos_theta_o;
         }
     }
 }
@@ -77,8 +77,8 @@ GTEST_TEST(RoughGlassShadingModel, power_conservation) {
 GTEST_TEST(RoughGlassShadingModel, function_consistency) {
     using namespace optix;
 
-    for (float cos_theta : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
-        const float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+    for (float cos_theta_o : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
+        float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
 
         Material material_params = frosted_glass_parameters();
         for (float roughness : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
@@ -133,8 +133,8 @@ GTEST_TEST(RoughGlassShadingModel, regression_test) {
 
     Material material_params = frosted_glass_parameters();
     int response_index = 0;
-    for (float cos_theta : { 0.2f, 0.6f, 1.0f }) {
-        float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+    for (float cos_theta_o : { 0.2f, 0.6f, 1.0f }) {
+        float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
         auto material = RoughGlassShading(material_params, wo.z);
         for (int s = 0; s < MAX_SAMPLES; ++s) {
             float3 rng_sample = make_float3(RNG::sample02(s), (s + 0.5f) / MAX_SAMPLES);
