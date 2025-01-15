@@ -98,29 +98,61 @@ namespace Cone {
 } // NS Cone
 
 //=================================================================================================
+// Uniform sphere distribution.
+// Using octahedral concentric map as in Ray Tracing Gems 16.5.4.2.
+//=================================================================================================
+namespace UniformSphere {
+
+    __inline_all__ float PDF() {
+        return 0.25f * RECIP_PIf;
+    }
+
+    __inline_all__ DirectionalSample sample(optix::float2 random_sample) {
+        // Compute radius r
+        optix::float2 u = 2 * random_sample - 1;
+        float d = 1 - (abs(u.x) + abs(u.y));
+        float r = 1 - abs(d);
+
+        // Compute phi in the first quadrant (branchless, except for the division-by-zero test),
+        // using sign(u) to map the result to the correct quadrant below.
+        float phi = (r == 0) ? 0 : (PIf / 4) * ((abs(u.x) - abs(u.y)) / r + 1);
+        float sin_phi, cos_phi;
+        sincos(phi, sin_phi, cos_phi);
+        float f = r * sqrt(2 - r * r);
+        float x = f * sign(u.x) * cos_phi;
+        float y = f * sign(u.y) * sin_phi;
+        float z = sign(d) * (1 - r * r);
+
+        optix::float3 direction = { x, y, z };
+        return { direction, PDF() };
+    }
+
+} // NS Uniform sphere
+
+//=================================================================================================
 // Uniform hemisphere distribution.
 //=================================================================================================
 namespace UniformHemisphere {
 
-__inline_all__ float PDF() {
-    return 0.5f * RECIP_PIf;
-}
+    __inline_all__ float PDF() {
+        return 0.5f * RECIP_PIf;
+    }
 
-__inline_all__ DirectionalSample sample(optix::float2 random_sample) {
-    float z = random_sample.x;
-    float r = sqrt(fmaxf(0.0f, 1.0f - z * z));
+    __inline_all__ DirectionalSample sample(optix::float2 random_sample) {
+        float z = random_sample.x;
+        float r = sqrt(fmaxf(0.0f, 1.0f - z * z));
 
-    float phi = TWO_PIf * random_sample.y;
-    float sin_phi, cos_phi;
-    sincos(phi, sin_phi, cos_phi);
+        float phi = TWO_PIf * random_sample.y;
+        float sin_phi, cos_phi;
+        sincos(phi, sin_phi, cos_phi);
 
-    DirectionalSample res;
-    res.direction = optix::make_float3(r * cos_phi, r * sin_phi, z);
-    res.PDF = PDF();
-    return res;
-}
+        DirectionalSample res;
+        res.direction = optix::make_float3(r * cos_phi, r * sin_phi, z);
+        res.PDF = PDF();
+        return res;
+    }
 
-} // NS Uniform hemisphere distribution
+} // NS Uniform hemisphere
 
 //=================================================================================================
 // Cosine distribution.
