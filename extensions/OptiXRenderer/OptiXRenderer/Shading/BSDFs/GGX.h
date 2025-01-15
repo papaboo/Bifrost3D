@@ -61,8 +61,8 @@ namespace GGX_R {
 using namespace optix;
 
 __inline_all__ float3 evaluate(float alpha, float3 specularity, float3 wo, float3 wi) {
-    // Avoid dividing by zero at grazing angles.
-    if (wo.z == 0 || wi.z == 0)
+    // Avoid dividing by zero at grazing angles and reflection is only defined if the directions are in the same hemisphere.
+    if (wo.z * wi.z <= 0.0f)
         return make_float3(0.0f);
 
     float3 halfway = normalize(wo + wi);

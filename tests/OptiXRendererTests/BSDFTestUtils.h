@@ -13,6 +13,7 @@
 
 #include <Bifrost/Math/Statistics.h>
 
+#include <OptiXRenderer/Distributions.h>
 #include <OptiXRenderer/RNG.h>
 #include <OptiXRenderer/Utils.h>
 
@@ -68,6 +69,24 @@ RhoResult directional_hemispherical_reflectance_function(BSDFModel bsdf_model, f
 }
 
 template <typename BSDFModel>
+void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count, optix::float3 expected_rho_std_dev, float epsilon = 0.01f) {
+    optix::float3 total_std_dev = { 0, 0, 0 };
+    for (float cos_theta : {0.1f, 0.3f, 0.5f, 0.7f, 0.9f, 1.0f}) {
+        float3 wo = w_from_cos_theta(cos_theta);
+        auto rho = directional_hemispherical_reflectance_function(bsdf_model, wo, sample_count);
+        optix::float3 rho_std_dev = rho.std_dev / rho.reflectance; // Normalize error wrt reflectance, so dark BSDFs don't automatically have a smaller error
+        total_std_dev += rho_std_dev;
+    }
+    optix::float3 average_std_dev = total_std_dev / 6;
+    EXPECT_FLOAT3_EQ_EPS(average_std_dev, expected_rho_std_dev, epsilon) << bsdf_model.to_string();
+}
+
+template <typename BSDFModel>
+void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count, float expected_rho_std_dev, float epsilon = 0.01f) {
+    BSDF_sampling_variance_test(bsdf_model, sample_count, optix::make_float3(expected_rho_std_dev), epsilon);
+}
+
+template <typename BSDFModel>
 void helmholtz_reciprocity(BSDFModel bsdf_model, float3 wo, unsigned int sample_count) {
     for (unsigned int i = 0u; i < sample_count; ++i) {
         float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
@@ -100,22 +119,26 @@ void BSDF_consistency_test(BSDFModel bsdf_model, float3 wo, unsigned int sample_
     }
 }
 
+// Sample BRDF over a sphere and validate that if the BRDF reflects light, then the PDF must be positive.
 template <typename BSDFModel>
-void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count, optix::float3 expected_rho_std_dev, float epsilon = 0.01f) {
-    optix::float3 total_std_dev = { 0, 0, 0 };
-    for (float cos_theta : {0.1f, 0.3f, 0.5f, 0.7f, 0.9f, 1.0f}) {
-        float3 wo = w_from_cos_theta(cos_theta);
-        auto rho = directional_hemispherical_reflectance_function(bsdf_model, wo, sample_count);
-        optix::float3 rho_std_dev = rho.std_dev / rho.reflectance; // Normalize error wrt reflectance, so dark BSDFs don't automatically have a smaller error
-        total_std_dev += rho_std_dev;
-    }
-    optix::float3 average_std_dev = total_std_dev / 6;
-    EXPECT_FLOAT3_EQ_EPS(average_std_dev, expected_rho_std_dev, epsilon) << bsdf_model.to_string();
-}
+void PDF_positivity_test(BSDFModel bsdf_model, optix::float3 wo, unsigned int sample_count) {
+    using namespace optix;
 
-template <typename BSDFModel>
-void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count, float expected_rho_std_dev, float epsilon = 0.01f) {
-    BSDF_sampling_variance_test(bsdf_model, sample_count, optix::make_float3(expected_rho_std_dev), epsilon);
+    for (unsigned int i = 0u; i < sample_count; ++i) {
+        float2 rng_sample = RNG::sample02(i);
+        auto wi = Distributions::UniformSphere::sample(rng_sample).direction;
+
+        BSDFResponse sample = bsdf_model.evaluate_with_PDF(wo, wi);
+
+        // Test that reflectance is never negative.
+        EXPECT_GE(sample.reflectance.x, 0.0f) << bsdf_model.to_string();
+        EXPECT_GE(sample.reflectance.y, 0.0f) << bsdf_model.to_string();
+        EXPECT_GE(sample.reflectance.z, 0.0f) << bsdf_model.to_string();
+
+        // Test that if the bsdf reflects light, then the PDF is positive.
+        if (!is_black(sample.reflectance))
+            EXPECT_GE(sample.PDF, 0.0f) << bsdf_model.to_string();
+    }
 }
 
 float3 w_from_cos_theta(float cos_theta) {

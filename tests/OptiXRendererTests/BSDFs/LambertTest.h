@@ -24,7 +24,7 @@ public:
     LambertWrapper() {}
 
     optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
-        return Shading::BSDFs::Lambert::evaluate(m_tint, wo, wi);
+        return Shading::BSDFs::Lambert::evaluate(m_tint);
     }
 
     float PDF(optix::float3 wo, optix::float3 wi) const {
