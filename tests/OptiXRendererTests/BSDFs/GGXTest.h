@@ -82,6 +82,16 @@ GTEST_TEST(GGX_R, function_consistency) {
     }
 }
 
+GTEST_TEST(GGX_R, PDF_positivity) {
+    for (float cos_theta_o : {-0.8f, -0.4f, 0.1f, 0.5f, 0.9f}) {
+        optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
+        for (float alpha : { 0.2f, 0.6f, 1.0f }) {
+            auto ggx = GGXReflectionWrapper(alpha);
+            BSDFTestUtils::PDF_positivity_test(ggx, wo, 128);
+        }
+    }
+}
+
 GTEST_TEST(GGX_R, sampling_standard_deviation) {
     float expected_rho_std_dev = 0.36f;
     float alpha = 0.75f;
@@ -286,6 +296,16 @@ GTEST_TEST(GGX_T, function_consistency) {
         }
 }
 
+GTEST_TEST(GGX_T, PDF_positivity) {
+    for (float cos_theta_o : {-0.8f, -0.4f, 0.1f, 0.5f, 0.9f}) {
+        optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
+        for (float alpha : { 0.2f, 0.6f, 1.0f }) {
+            auto ggx = GGXTransmissionWrapper(alpha, 0.5f);
+            BSDFTestUtils::PDF_positivity_test(ggx, wo, 128);
+        }
+    }
+}
+
 GTEST_TEST(GGX_T, sampling_standard_deviation) {
     float alpha = 0.75f;
     float ior_i_over_os[] = { 0.5f, 0.9f, 1.1f, 1.5f };
@@ -406,6 +426,16 @@ GTEST_TEST(GGX, function_consistency) {
                 BSDFTestUtils::BSDF_consistency_test(ggx, wo, 16u);
             }
         }
+}
+
+GTEST_TEST(GGX, PDF_positivity) {
+    for (float cos_theta_o : {-0.8f, -0.4f, 0.1f, 0.5f, 0.9f}) {
+        optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
+        for (float alpha : { 0.2f, 0.6f, 1.0f }) {
+            auto ggx = GGXTransmissionWrapper(alpha, 0.5f);
+            BSDFTestUtils::PDF_positivity_test(ggx, wo, 128);
+        }
+    }
 }
 
 GTEST_TEST(GGX, reflection_reflectance_equals_GGX_R) {

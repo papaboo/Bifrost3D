@@ -27,10 +27,6 @@ __inline_all__ float3 evaluate(float3 tint) {
     return tint * RECIP_PIf;
 }
 
-__inline_all__ float3 evaluate(float3 tint, float3 wo, float3 wi) {
-    return tint * RECIP_PIf;
-}
-
 __inline_all__ float PDF(float3 wo, float3 wi) {
     return Distributions::Cosine::PDF(wi.z);
 }

@@ -80,11 +80,24 @@ GTEST_TEST(RoughGlassShadingModel, function_consistency) {
     for (float cos_theta_o : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
         float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
 
-        Material material_params = frosted_glass_parameters();
+        Material material_params = smooth_glass_parameters();
         for (float roughness : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
             material_params.roughness = roughness;
             auto shading_model = RoughGlassShadingWrapper(material_params, wo.z);
             ShadingModelTestUtils::consistency_test(shading_model, wo, 32);
+        }
+    }
+}
+
+GTEST_TEST(RoughGlassShadingModel, PDF_positivity) {
+    for (float cos_theta_o : {-0.8f, -0.4f, 0.1f, 0.5f, 0.9f}) {
+        optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
+
+        Material material_params = smooth_glass_parameters();
+        for (float roughness : { 0.2f, 0.6f, 1.0f }) {
+            material_params.roughness = roughness;
+            auto shading_model = RoughGlassShadingWrapper(material_params, wo.z);
+            BSDFTestUtils::PDF_positivity_test(shading_model, wo, 1024);
         }
     }
 }

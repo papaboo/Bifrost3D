@@ -122,6 +122,24 @@ GTEST_TEST(DefaultShadingModel, function_consistency) {
     evaluate_with_PDF_test(ShadingModelTestUtils::coated_plastic_parameters());
 }
 
+GTEST_TEST(DefaultShadingModel, PDF_positivity) {
+    static auto PDF_positivity_test = [](Material& material_params) {
+        for (float cos_theta_o : {-0.8f, -0.4f, 0.1f, 0.5f, 0.9f}) {
+            optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
+
+            for (float roughness : { 0.2f, 0.6f, 1.0f }) {
+                material_params.roughness = roughness;
+                auto shading_model = DefaultShadingWrapper(material_params, wo.z);
+                BSDFTestUtils::PDF_positivity_test(shading_model, wo, 128);
+            }
+        }
+    };
+
+    PDF_positivity_test(ShadingModelTestUtils::gold_parameters());
+    PDF_positivity_test(ShadingModelTestUtils::plastic_parameters());
+    PDF_positivity_test(ShadingModelTestUtils::coated_plastic_parameters());
+}
+
 GTEST_TEST(DefaultShadingModel, Fresnel) {
     using namespace Shading::ShadingModels;
     using namespace optix;
