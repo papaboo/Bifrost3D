@@ -284,6 +284,7 @@ public:
             m_opaque.shading_models.resize((int)ShadingModel::Count);
             m_opaque.shading_models[(int)ShadingModel::Default] = create_shading_model(m_device, m_shader_manager, "default_opaque");
             m_opaque.shading_models[(int)ShadingModel::Diffuse] = create_shading_model(m_device, m_shader_manager, "diffuse_opaque");
+            m_opaque.shading_models[(int)ShadingModel::Transmissive] = create_shading_model(m_device, m_shader_manager, "error_material"); // Should never be called as transmissive aren't opaque.
         }
 
         { // Setup transparent rendering.
@@ -311,6 +312,7 @@ public:
             m_transparent.shading_models.resize((int)ShadingModel::Count);
             m_transparent.shading_models[(int)ShadingModel::Default] = create_shading_model(m_device, m_shader_manager, "default_transparent");
             m_transparent.shading_models[(int)ShadingModel::Diffuse] = create_shading_model(m_device, m_shader_manager, "diffuse_transparent");
+            m_transparent.shading_models[(int)ShadingModel::Transmissive] = create_shading_model(m_device, m_shader_manager, "transmissive_transparent");
         }
 
         { // Scene constant buffer

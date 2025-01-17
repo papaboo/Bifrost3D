@@ -92,9 +92,13 @@ struct DefaultShading : IShadingModel {
         return shading;
     }
 
+    // Used by the transmissive shading to avoid diffuse shading.
+    void zero_diffuse_component() { m_diffuse_tint = float3(0, 0, 0); }
+
     // --------------------------------------------------------------------------------------------
     // Getters
     // --------------------------------------------------------------------------------------------
+    float3 diffuse_tint() { return m_diffuse_tint; }
     float roughness() { return m_roughness; }
     float specular_alpha() { return BSDFs::GGX::alpha_from_roughness(m_roughness); }
     float coat_scale() { return m_coat_scale; }
