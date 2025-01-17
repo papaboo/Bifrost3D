@@ -359,6 +359,26 @@ GTEST_TEST(GGX_T, fully_grazing_evaluates_to_black) {
     }
 }
 
+GTEST_TEST(GGX_T, snells_law) {
+    using namespace optix;
+    using namespace Shading::BSDFs;
+
+    float ior_o = 1;
+    float ior_i = 2;
+    float ior_i_over_o = ior_i / ior_o;
+    float alpha = GGX::alpha_from_roughness(0.0f); // Use a smooth surface to test snells law to only allow a single output direction.
+
+    for (float cos_theta_o : { 0.2f, 0.5f, 0.9f }) {
+        float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
+        float3 wi = GGX_T::sample(alpha, ior_i_over_o, wo, make_float2(0.5f)).direction;
+
+        float sin_theta_o = sin_theta(wo);
+        float sin_theta_i = sin_theta(wi);
+
+        EXPECT_FLOAT_EQ_EPS(ior_o * sin_theta_o, ior_i * sin_theta_i, 1e-6f);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Full GGX with reflection and transmission tests.
 // ---------------------------------------------------------------------------
