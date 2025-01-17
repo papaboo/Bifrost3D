@@ -34,8 +34,27 @@ enum class MaterialFlag : unsigned char {
 enum class ShadingModel : unsigned char {
     Default = 0u,
     Diffuse = 1u,
-    Count = 2
+    Transmissive = 2u,
+    Count = 3
 };
+
+// ---------------------------------------------------------------------------
+// Indices of refraction
+// ---------------------------------------------------------------------------
+const float air_ior = 1.0003f;
+const float ice_ior = 1.31f;
+const float water_ior = 1.33f;
+const float glass_ior = 1.52f;
+const float diamond_ior = 2.42f;
+
+// ---------------------------------------------------------------------------
+// Specularities of materials in air
+// ---------------------------------------------------------------------------
+const float coat_specularity = 0.04f;
+const float ice_specularity = Math::dielectric_specularity(air_ior, ice_ior);
+const float water_specularity = Math::dielectric_specularity(air_ior, water_ior);
+const float glass_specularity = Math::dielectric_specularity(air_ior, glass_ior);
+const float diamond_specularity = Math::dielectric_specularity(air_ior, diamond_ior);
 
 // ---------------------------------------------------------------------------
 // Metal tints.
@@ -110,6 +129,16 @@ public:
             res.specularity = specularity;
             res.coat = 1.0f;
             res.coat_roughness = coat_roughness;
+            res.coverage = 1.0f;
+            return res;
+        }
+
+        static Data create_transmissive(Math::RGB tint, float roughness, float specularity = glass_specularity) {
+            Data res = {};
+            res.shading_model = ShadingModel::Transmissive;
+            res.tint = tint;
+            res.roughness = roughness;
+            res.specularity = specularity;
             res.coverage = 1.0f;
             return res;
         }
