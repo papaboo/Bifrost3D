@@ -130,6 +130,33 @@ GTEST_TEST(RoughGlassShadingModel, Fresnel) {
     }
 }
 
+GTEST_TEST(RoughGlassShadingModel, snells_law) {
+    using namespace optix;
+    using namespace Shading::ShadingModels;
+
+    float transmission_random_sample = 1; // We know that if we pass 1 as the third random value, then the BTDF will always be sampled.
+    float ior_o = 1;
+    float ior_i = 2;
+
+    Material material_params = smooth_glass_parameters();
+    material_params.specularity = dielectric_specularity(ior_o, ior_i);
+
+    for (float cos_theta_o : { 0.2f, 0.5f, 0.9f }) {
+        float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
+        auto shading_model = RoughGlassShading(material_params, wo.z);
+
+        float3 wi = shading_model.sample(wo, make_float3(0.5f, 0.5f, transmission_random_sample)).direction;
+
+        // Test that wi was sampled as a transmission.
+        EXPECT_LT(wi.z, 0.0f);
+
+        float sin_theta_o = sin_theta(wo);
+        float sin_theta_i = sin_theta(wi);
+
+        EXPECT_FLOAT_EQ_EPS(ior_o * sin_theta_o, ior_i * sin_theta_i, 1e-6f);
+    }
+}
+
 GTEST_TEST(RoughGlassShadingModel, regression_test) {
     using namespace Shading::ShadingModels;
     using namespace optix;
