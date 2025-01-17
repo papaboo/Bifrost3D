@@ -120,6 +120,12 @@ float4 transparent(IShadingModelCreator shading_model_creator, Varyings input, b
 
 struct DefaultShadingCreator : IShadingModelCreator {
     ShadingModels::IShadingModel create(float2 texcoord, float abs_cos_theta_o) {
+        return create_typed(texcoord, abs_cos_theta_o);
+    }
+
+    // Helper method for creating default shading that returns an instance of default shading
+    // instead of the interface type required by IShadingModelCreator.
+    static ShadingModels::DefaultShading create_typed(float2 texcoord, float abs_cos_theta_o) {
         float4 tint_roughness = material_params.tint_roughness(texcoord);
         float3 tint = tint_roughness.rgb;
         float roughness = tint_roughness.w;
@@ -162,6 +168,40 @@ float4 diffuse_opaque(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_
 float4 diffuse_transparent(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
     DiffuseShadingCreator shading_creator;
     return transparent(shading_creator, input, is_front_face);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Transmissive shading entry points
+// ------------------------------------------------------------------------------------------------
+
+struct TransmissiveShadingCreator : IShadingModelCreator {
+    float transmission;
+    ShadingModels::IShadingModel create(float2 texcoord, float abs_cos_theta_o) {
+        // We can reuse the specular layer of the default shading for the transmissive material.
+        // The diffuse tint is simply considered as the transmissive tint, used to compute the transmission factor
+        // and then zeroed to avoid diffuse light interaction.
+        ShadingModels::DefaultShading default_shading = DefaultShadingCreator::create_typed(texcoord, abs_cos_theta_o);
+
+        // The pipeline currently doesn't support RGB scaled transmission. Instead we use the average of the transmissive tint.
+        float3 transmission_tint = default_shading.diffuse_tint();
+        transmission = 1.0f - (transmission_tint.r + transmission_tint.g + transmission_tint.b) / 3;
+
+        default_shading.zero_diffuse_component();
+        return default_shading;
+    }
+};
+
+float4 transmissive_transparent(Varyings input, bool is_front_face : SV_IsFrontFace) : SV_TARGET {
+    TransmissiveShadingCreator shading_creator;
+    float3 radiance = transparent(shading_creator, input, is_front_face).rgb;
+    float transmission = shading_creator.transmission;
+
+    // Blending uses D3D11_BLEND_INV_SRC_ALPHA to adjust the destination, because that works for opacity.
+    // For transmissive materials we're interested in reflected_radiance + transmission * transmitted_irradiance,
+    // so we need to adjust the radiance to counter the blend operation.
+    float3 blend_adjusted_radiance = radiance / (1 - transmission);
+
+    return float4(blend_adjusted_radiance, transmission);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -264,4 +304,14 @@ float4 visualize_material_params(Varyings input, bool is_front_face : SV_IsFront
 
     float3 tint = material_params.tint_roughness(input.texcoord).rgb;
     return float4(tint, 1);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Error material. Render as a red and white grid.
+// ------------------------------------------------------------------------------------------------
+
+float4 error_material(float4 position : SV_POSITION) : SV_TARGET {
+    int2 grid_indices = position.xy / 10;
+    bool is_red_checker = (grid_indices.x & 2) == (grid_indices.y & 2);
+    return is_red_checker ? float4(1, 0, 0, 1) : float4(1, 1, 1, 1);
 }

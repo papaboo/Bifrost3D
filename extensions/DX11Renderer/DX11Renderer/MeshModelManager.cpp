@@ -24,6 +24,9 @@ MeshModelManager::MeshModelManager() {
 }
 
 inline unsigned int model_properties_from_material(Material material) {
+    if (material.get_shading_model() == ShadingModel::Transmissive)
+        return Dx11Model::Properties::ThinWalled | Dx11Model::Properties::Transparent;
+
     bool uses_coverage = material.get_coverage_texture_ID() != TextureID::invalid_UID() || material.get_coverage() < 1.0f;
     unsigned int coverage_type = material.is_cutout() ? Dx11Model::Properties::Cutout : Dx11Model::Properties::Transparent;
     unsigned int properties = uses_coverage ? coverage_type : Dx11Model::Properties::None;
