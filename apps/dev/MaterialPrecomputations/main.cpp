@@ -200,7 +200,7 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
     float* alphas = new float[sample_count];
     for (int c = 0; c < cos_theta_count; ++c) {
         float cos_theta = fmaxf(c / (cos_theta_count - 1.0f), 0.0001f);
-        float3 wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+        float3 wo = { sqrt(1 - OptiXRenderer::pow2(cos_theta)), 0.0f, cos_theta };
         float3 wi = { -wo.x, -wo.y, wo.z };
 
         for (int t = 0; t < max_PDF_count; ++t) {

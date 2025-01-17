@@ -149,6 +149,8 @@ __always_inline__ bool is_power_of_two(unsigned int v) {
     return v && !(v & (v - 1));
 }
 
+__always_inline__ float pow2(float x) { return x * x; }
+
 // See answer from johnwbyrd on https://stackoverflow.com/questions/2589096/find-most-significant-bit-left-most-that-is-set-in-a-bit-array
 __always_inline__ unsigned int most_significant_bit(unsigned int v) {
     static const int MultiplyDeBruijnBitPosition[32] = { 0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
@@ -186,6 +188,12 @@ __always_inline__ unsigned int reverse_bits(unsigned int n) {
     return n;
 }
 
+// Specularity of dielectrics at normal incidence, where the ray is leaving a medium with index of refraction ior_o
+// and entering a medium with index of refraction, ior_i.
+// Ray Tracing Gems 2, Chapter 9, The Schlick Fresnel Approximation, page 110 footnote.
+__always_inline__ float dielectric_specularity(float ior_o, float ior_i) {
+    return pow2((ior_o - ior_i) / (ior_o + ior_i));
+}
 // ------------------------------------------------------------------------------------------------
 // Stable pairwise summation.
 // ------------------------------------------------------------------------------------------------
