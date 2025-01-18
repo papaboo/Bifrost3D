@@ -8,6 +8,7 @@
 
 #include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>
 #include <OptiXRenderer/Shading/ShadingModels/DiffuseShading.h>
+#include <OptiXRenderer/Shading/ShadingModels/GlassShading.h>
 #include <OptiXRenderer/Shading/LightSources/LightImpl.h>
 #include <OptiXRenderer/Types.h>
 #include <OptiXRenderer/Utils.h>
@@ -290,6 +291,9 @@ RT_PROGRAM void albedo_RPG() {
         } else if (material_parameters.shading_model == Material::ShadingModel::Diffuse) {
             float4 tint_roughness = material_parameters.get_tint_roughness(payload.texcoord);
             return Shading::ShadingModels::DiffuseShading(make_float3(tint_roughness), tint_roughness.w).rho(abs_cos_theta);
+        } else if (material_parameters.shading_model == Material::ShadingModel::Glass) {
+            auto material = Shading::ShadingModels::GlassShading(material_parameters, payload.texcoord, abs_cos_theta);
+            return material.rho(abs_cos_theta);
         } else
             return { 0, 0, 0 };
     });

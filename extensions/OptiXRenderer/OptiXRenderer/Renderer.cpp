@@ -358,6 +358,7 @@ struct Renderer::Implementation {
 
             shading_models[(int)ShadingModel::Default] = create_shading_model(context, monte_carlo_ptx_path, "default_closest_hit");
             shading_models[(int)ShadingModel::Diffuse] = create_shading_model(context, monte_carlo_ptx_path, "diffuse_closest_hit");
+            shading_models[(int)ShadingModel::Glass] = create_shading_model(context, monte_carlo_ptx_path, "glass_closest_hit");
 
             std::string trangle_attributes_ptx_path = get_ptx_path(shader_prefix, "TriangleAttributes");
             triangle_attribute_program = context->createProgramFromPTXFile(trangle_attributes_ptx_path, "interpolate_attributes");

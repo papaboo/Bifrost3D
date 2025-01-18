@@ -141,8 +141,7 @@ public:
         // Tint and roughness
         float4 tint_roughness = material.get_tint_roughness(texcoord);
         float3 tint = make_float3(tint_roughness);
-        float roughness = tint_roughness.w;
-        roughness = max(roughness, min_roughness);
+        float roughness = max(tint_roughness.w, min_roughness);
 
         float coat_rho;
         setup_shading(tint, roughness, material.specularity, metallic, material.coat, coat_roughness, abs_cos_theta_o, coat_rho);

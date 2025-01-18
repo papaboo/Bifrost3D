@@ -1,4 +1,4 @@
-// OptiX renderer rough glass shading model.
+// OptiX renderer glass shading model.
 // ---------------------------------------------------------------------------
 // Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
@@ -6,8 +6,8 @@
 // See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#ifndef _OPTIXRENDERER_SHADING_MODEL_ROUGH_GLASS_SHADING_H_
-#define _OPTIXRENDERER_SHADING_MODEL_ROUGH_GLASS_SHADING_H_
+#ifndef _OPTIXRENDERER_SHADING_MODEL_GLASS_SHADING_H_
+#define _OPTIXRENDERER_SHADING_MODEL_GLASS_SHADING_H_
 
 #include <OptiXRenderer/Shading/BSDFs/GGX.h>
 #include <OptiXRenderer/Utils.h>
@@ -17,9 +17,9 @@ namespace Shading {
 namespace ShadingModels {
 
 // ---------------------------------------------------------------------------
-// The rough glass shading material.
+// The glass shading material.
 // ---------------------------------------------------------------------------
-class RoughGlassShading {
+class GlassShading {
 private:
     optix::float3 m_tint;
     float m_specularity;
@@ -40,20 +40,25 @@ public:
         m_ior_i_over_o = ior_i / ior_o;
     }
 
-    __inline_all__ RoughGlassShading(const Material& material, float cos_theta) {
+    __inline_all__ GlassShading(const Material& material, float cos_theta) {
         setup_shading(material.tint, material.roughness, material.specularity, cos_theta);
     }
 
 #if GPU_DEVICE
-    __inline_all__ RoughGlassShading(const Material& material, optix::float2 texcoord, float cos_theta) {
+    __inline_all__ GlassShading(const Material& material, optix::float2 texcoord, float cos_theta, float min_roughness = 0.0f) {
         using namespace optix;
 
         // Tint and roughness
         float4 tint_roughness = material.get_tint_roughness(texcoord);
         float3 tint = make_float3(tint_roughness);
-        float roughness = tint_roughness.w;
+        float roughness = max(tint_roughness.w, min_roughness);
 
         setup_shading(tint, roughness, material.specularity, cos_theta);
+    }
+
+    __inline_all__ static GlassShading initialize_with_max_PDF_hint(const Material& material, optix::float2 texcoord, float cos_theta_o, float max_PDF_hint) {
+        float min_roughness = GGXMinimumRoughness::from_PDF(abs(cos_theta_o), max_PDF_hint);
+        return GlassShading(material, texcoord, cos_theta_o, min_roughness);
     }
 #endif
 
@@ -73,10 +78,15 @@ public:
         return BSDFs::GGX::sample(m_tint, m_ggx_alpha, m_specularity, m_ior_i_over_o, wo, random_sample);
     }
 
+    // Estimate the directional-hemispherical reflectance function.
+    __inline_all__ optix::float3 rho(float abs_cos_theta) const {
+        THROW(OPTIX_NOT_IMPLEMENTED);
+        return optix::make_float3(1, 0, 1);
+    }
 };
 
 } // NS ShadingModels
 } // NS Shading
 } // NS OptiXRenderer
 
-#endif // _OPTIXRENDERER_SHADING_MODEL_ROUGH_GLASS_SHADING_H_
+#endif // _OPTIXRENDERER_SHADING_MODEL_GLASS_SHADING_H_

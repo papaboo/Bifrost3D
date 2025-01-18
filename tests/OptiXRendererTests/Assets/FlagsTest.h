@@ -25,7 +25,8 @@ GTEST_TEST(Assets, material_flags_has_same_layout_as_Bifrost) {
 GTEST_TEST(Assets, shading_models_has_same_layout_as_Bifrost) {
     EXPECT_EQ((int)Bifrost::Assets::ShadingModel::Default, OptiXRenderer::Material::ShadingModel::Default);
     EXPECT_EQ((int)Bifrost::Assets::ShadingModel::Diffuse, OptiXRenderer::Material::ShadingModel::Diffuse);
-    EXPECT_EQ((int)Bifrost::Assets::ShadingModel::Count, 2);
+    EXPECT_EQ((int)Bifrost::Assets::ShadingModel::Glass, OptiXRenderer::Material::ShadingModel::Glass);
+    EXPECT_EQ((int)Bifrost::Assets::ShadingModel::Count, 3);
 }
 
 } // NS OptiXRenderer

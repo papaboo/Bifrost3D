@@ -29,7 +29,7 @@ namespace GGX {
 using namespace optix;
 
 __inline_all__ float alpha_from_roughness(float roughness) {
-    return fmaxf(0.00000000001f, roughness * roughness);
+    return fmaxf(1e-6f, roughness * roughness);
 }
 
 __inline_all__ float roughness_from_alpha(float alpha) {
