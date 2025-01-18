@@ -303,6 +303,7 @@ struct __align__(16) Material {
     enum ShadingModel : unsigned short {
         Default = 0u,
         Diffuse = 1u,
+        Transmissive = 2u,
     };
 
     Flags flags;

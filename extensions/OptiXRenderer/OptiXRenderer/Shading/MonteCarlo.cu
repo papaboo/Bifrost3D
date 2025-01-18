@@ -9,6 +9,7 @@
 #include <OptiXRenderer/MonteCarlo.h>
 #include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>
 #include <OptiXRenderer/Shading/ShadingModels/DiffuseShading.h>
+#include <OptiXRenderer/Shading/ShadingModels/TransmissiveShading.h>
 #include <OptiXRenderer/Shading/LightSources/LightImpl.h>
 #include <OptiXRenderer/TBN.h>
 #include <OptiXRenderer/Types.h>
@@ -253,6 +254,17 @@ struct DiffuseMaterialCreator {
 
 RT_PROGRAM void diffuse_closest_hit() {
     path_tracing_closest_hit<DiffuseMaterialCreator>();
+}
+
+struct TransmissiveMaterialCreator {
+    __inline_all__ static TransmissiveShading create(const Material& material_params, optix::float2 texcoord, float cos_theta_o) {
+        float max_PDF_hint = monte_carlo_payload.bsdf_MIS_PDF.PDF() * g_camera_state.path_regularization_PDF_scale;
+        return TransmissiveShading::initialize_with_max_PDF_hint(material_params, texcoord, cos_theta_o, max_PDF_hint);
+    }
+};
+
+RT_PROGRAM void transmissive_closest_hit() {
+    path_tracing_closest_hit<TransmissiveMaterialCreator>();
 }
 
 //----------------------------------------------------------------------------

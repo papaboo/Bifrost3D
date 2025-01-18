@@ -60,7 +60,7 @@ if (CUDA_FOUND AND OPTIX_FOUND AND SUPPORTED_VISUAL_STUDIO_FOUND)
   set(SHADING_SHADING_MODELS_SRC
     OptiXRenderer/Shading/ShadingModels/DefaultShading.h
     OptiXRenderer/Shading/ShadingModels/DiffuseShading.h
-    OptiXRenderer/Shading/ShadingModels/RoughGlassShading.h
+    OptiXRenderer/Shading/ShadingModels/TransmissiveShading.h
     OptiXRenderer/Shading/ShadingModels/Utils.h
   )
 
