@@ -27,7 +27,7 @@ if (TARGET OptiXRenderer)
 
   set(SHADING_MODELS_SRCS
     ShadingModels/DefaultShadingTest.h
-    ShadingModels/RoughGlassShadingTest.h
+    ShadingModels/TransmissiveShadingTest.h
     ShadingModels/ShadingModelTestUtils.h
     ShadingModels/UtilsTest.h
   )

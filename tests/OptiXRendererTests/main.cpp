@@ -19,7 +19,7 @@
 #include <LightSources/SpotLightTest.h>
 
 #include <ShadingModels/DefaultShadingTest.h>
-#include <ShadingModels/RoughGlassShadingTest.h>
+#include <ShadingModels/TransmissiveShadingTest.h>
 #include <ShadingModels/UtilsTest.h>
 
 #include <MiscTest.h>
