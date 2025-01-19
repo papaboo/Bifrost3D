@@ -376,6 +376,8 @@ struct __align__(16) MonteCarloPayload {
     MisPDF bsdf_MIS_PDF;
 
     LightSample light_sample;
+    optix::float3 light_sample_origin;
+    float _padding;
 
     optix::float3 shading_normal;
     int material_index;

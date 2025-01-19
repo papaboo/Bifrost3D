@@ -121,7 +121,7 @@ __inline_dev__ void path_trace_single_bounce(MonteCarloPayload& payload) {
     const LightSample& light_sample = payload.light_sample;
     if (light_sample.radiance.x > 0 || light_sample.radiance.y > 0 || light_sample.radiance.z > 0) {
         ShadowPayload shadow_payload = { light_sample.radiance };
-        Ray shadow_ray(payload.position, light_sample.direction_to_light, RayTypes::Shadow, 0.0f, light_sample.distance);
+        Ray shadow_ray(payload.light_sample_origin, light_sample.direction_to_light, RayTypes::Shadow, 0.0f, light_sample.distance);
         rtTrace(g_scene_root, shadow_ray, shadow_payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_CLOSESTHIT);
 
         payload.radiance += shadow_payload.radiance;
