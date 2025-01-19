@@ -145,6 +145,7 @@ __inline_all__ void path_tracing_closest_hit() {
     float3 world_geometric_normal = normalize(rtTransformNormal(RT_OBJECT_TO_WORLD, geometric_normal));
     bool hit_from_front = dot(world_geometric_normal, ray.direction) < 0.0f;
     bool backside_cull = !hit_from_front && !material_parameter.is_thin_walled();
+    backside_cull &= !material_parameter.is_transmissive();
 
     float4 bsdf_coverage_random_4f = monte_carlo_payload.rng.sample4f(); // Always draw coverage random number to have predictable RNG dimension usage whether the material is a cutout or not.
     float coverage_cutoff = bsdf_coverage_random_4f.w;

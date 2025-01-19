@@ -326,6 +326,7 @@ struct __align__(16) Material {
 
     __inline_all__ bool is_thin_walled() const { return (flags & (Flags::Cutout | Flags::ThinWalled)) != 0; }
     __inline_all__ bool is_cutout() const { return (flags & Flags::Cutout) != 0; }
+    __inline_all__ bool is_transmissive() const { return shading_model == ShadingModel::Glass; }
 
 #if GPU_DEVICE
     __inline_all__ optix::float4 get_tint_roughness(optix::float2 texcoord) const {
