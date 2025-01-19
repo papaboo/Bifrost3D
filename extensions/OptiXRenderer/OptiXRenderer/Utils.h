@@ -282,6 +282,15 @@ __inline_all__ optix::float3 offset_ray_origin(optix::float3 ray_world_origin, o
                        fabsf(ray_world_origin.z) < origin ? ray_world_origin.z + float_scale * world_normal.z : p_i.z);
 }
 
+// Offset ray origin along the geometric normal in the direction of the ray direction.
+// Values should ideally be in world space for best precision.
+__inline_all__ optix::float3 offset_ray_origin(optix::float3 ray_origin, optix::float3 ray_direction,
+                                               optix::float3 geometric_normal) {
+    float cos_theta = optix::dot(geometric_normal, ray_direction);
+    geometric_normal = cos_theta >= 0 ? geometric_normal : -geometric_normal;
+    return offset_ray_origin(ray_origin, geometric_normal);
+}
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_SHADING_UTILS_H_

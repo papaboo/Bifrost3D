@@ -178,8 +178,7 @@ __inline_all__ void path_tracing_closest_hit() {
     // Compute world position by transforming the local intersection point to world space,
     // as that should be numerically more stable than picking a point on the ray, for large values of 't'.
     // Source: Ray Tracing Gems 1, chapter 6, A Fast and Robust Method for Avoiding Self-Intersection.
-    monte_carlo_payload.position = rtTransformPoint(RT_OBJECT_TO_WORLD, intersection_point);
-    monte_carlo_payload.position = offset_ray_origin(monte_carlo_payload.position, world_geometric_normal);
+    float3 world_intersection_point = rtTransformPoint(RT_OBJECT_TO_WORLD, intersection_point);
     float3 world_wo = -ray.direction;
     float3 wo = world_shading_tbn * world_wo;
 
@@ -192,6 +191,8 @@ __inline_all__ void path_tracing_closest_hit() {
         auto pre_NNE_rng_state = monte_carlo_payload.rng.get_state();
 
         monte_carlo_payload.light_sample = reestimated_light_samples(material, wo, world_shading_tbn);
+        monte_carlo_payload.light_sample_origin = offset_ray_origin(
+            world_intersection_point, monte_carlo_payload.light_sample.direction_to_light, world_geometric_normal);
         monte_carlo_payload.light_sample.radiance *= monte_carlo_payload.throughput;
 
         monte_carlo_payload.rng.set_state(pre_NNE_rng_state);
@@ -199,6 +200,7 @@ __inline_all__ void path_tracing_closest_hit() {
 
     // BSDF sampling.
     BSDFSample bsdf_sample = material.sample(wo, bsdf_random_uvs);
+    bool is_reflection = bsdf_sample.direction.z >= 0;
     monte_carlo_payload.direction = bsdf_sample.direction * world_shading_tbn;
     monte_carlo_payload.bsdf_MIS_PDF = MisPDF::from_PDF(bsdf_sample.PDF);
     if (is_PDF_valid(bsdf_sample.PDF))
@@ -206,14 +208,18 @@ __inline_all__ void path_tracing_closest_hit() {
     else
         monte_carlo_payload.throughput = make_float3(0.0f);
 
-    // Mirror the BSDF direction if the sampled reflection direction points into the geometry.
+    // Mirror the BSDF direction if the sampled BSDF direction points into the geometry.
     // This makes the integrator non-symmetric wrt wi and wo, but gives a decent
     // reflection vector in the case of a low-tesselated (cubical) sphere.
     // The reflection is handled independently of the ray throughput to avoid increasing
     // variance by changing cos_theta after sampling, but again, that makes it non-symmetrical.
     float cos_geometric_theta_i = dot(monte_carlo_payload.direction, world_geometric_normal);
-    if (cos_geometric_theta_i < 0.0f)
+    if (is_reflection ? cos_geometric_theta_i < 0.0f : cos_geometric_theta_i >= 0.0f)
         monte_carlo_payload.direction = reflect(monte_carlo_payload.direction, world_geometric_normal);
+
+    // Offset the ray origin along the geometric normal in the sampled BSDF direction.
+    monte_carlo_payload.position = offset_ray_origin(
+        world_intersection_point, monte_carlo_payload.direction, world_geometric_normal);
 
     monte_carlo_payload.ray_min_t = 0.0f;
     monte_carlo_payload.bounces += 1u;
