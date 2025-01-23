@@ -41,7 +41,7 @@ public:
             material_data.specularity = lerp(m_material0_data.specularity, m_material1_data.specularity, lerp_t);
             material_data.metallic = lerp(m_material0_data.metallic, m_material1_data.metallic, lerp_t);
             material_data.coverage = lerp(m_material0_data.coverage, m_material1_data.coverage, lerp_t);
-            m_material_IDs[m] = Materials::create("Lerped material " + std::to_string(m), material_data);
+            m_materials[m] = Materials::create("Lerped material " + std::to_string(m), material_data);
         }
 
         std::fill_n(m_ggx.sampled_rho, m_ggx.sample_count, 0.0f);
@@ -52,15 +52,25 @@ public:
 
     ~MaterialGUI() {
         for (int m = 0; m < material_count; ++m)
-            Materials::destroy(m_material_IDs[m]);
+            Materials::destroy(m_materials[m].get_ID());
     }
 
-    inline MaterialID get_material_ID(int index) const { return m_material_IDs[index]; }
+    inline Material get_material(int index) const { return m_materials[index]; }
 
     void layout_frame() {
         ImGui::Begin("Materials");
 
         bool updated = false;
+
+        const char* shading_model_names[] = { "Default", "Diffuse", "Transmissive" };
+        int current_shading_model = (int)m_material0_data.shading_model;
+        if (ImGui::Combo("Shading model", &current_shading_model, shading_model_names, IM_ARRAYSIZE(shading_model_names))) {
+            m_material0_data.shading_model = ShadingModel(current_shading_model);
+            m_material1_data.shading_model = ShadingModel(current_shading_model);
+            for (int m = 0; m < material_count; ++m) {
+                m_materials[m].set_shading_model(ShadingModel(current_shading_model));
+            }
+        }
 
         ImGui::PoppedTreeNode("Left material", [&] {
             updated |= ImGui::ColorEdit3("Tint", &m_material0_data.tint.r);
@@ -79,7 +89,7 @@ public:
         if (updated) {
             for (int m = 0; m < material_count; ++m) {
                 float lerp_t = m / (material_count - 1.0f);
-                Material material = m_material_IDs[m];
+                Material material = m_materials[m];
                 material.set_tint(lerp(m_material0_data.tint, m_material1_data.tint, lerp_t));
                 material.set_roughness(lerp(m_material0_data.roughness, m_material1_data.roughness, lerp_t));
                 material.set_specularity(lerp(m_material0_data.specularity, m_material1_data.specularity, lerp_t));
@@ -95,7 +105,7 @@ private:
     Materials::Data m_material0_data;
     Materials::Data m_material1_data;
 
-    MaterialID m_material_IDs[material_count];
+    Material m_materials[material_count];
 
     // Shading model visualizations
     float m_material_lerp = 0.0f;
@@ -159,7 +169,7 @@ void create_material_scene(CameraID camera_ID, SceneNode root_node, ImGui::ImGui
     { // Create material models.
         const float shader_ball_distance = 300.0f;
 
-        SceneNode shader_ball_node = load_shader_ball(data_directory, materials.get_material_ID(0));
+        SceneNode shader_ball_node = load_shader_ball(data_directory, materials.get_material(0));
         Transform transform = Transform(Vector3f::zero(), Quaternionf::from_angle_axis(PI<float>(), Vector3f::up()), 0.01f);
         shader_ball_node.set_global_transform(transform);
         float shader_ball_pos_x = shader_ball_distance * 0.5f * (materials.material_count - 1);
@@ -173,7 +183,7 @@ void create_material_scene(CameraID camera_ID, SceneNode root_node, ImGui::ImGui
 
             // Set surrounding surface to tested material
             for (std::string node_name : { "Node2", "Node3", "Node6" })
-                replace_material(materials.get_material_ID(m), shader_ball_node_clone, node_name);
+                replace_material(materials.get_material(m), shader_ball_node_clone, node_name);
         }
     }
 }
