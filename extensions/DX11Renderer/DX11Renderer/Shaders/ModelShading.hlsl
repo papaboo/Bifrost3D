@@ -198,9 +198,9 @@ bool in_range(float x, float lower, float upper) {
 bool inside_arrow(float2 uv) {
     bool inside_box = 0.2 <= uv.x && uv.x <= 0.6 &&
                       0.4 <= uv.y && uv.y <= 0.6;
-    bool inside_head = uv.x >= 0.6
-        && uv.y >= uv.x - 0.3
-                       && uv.y <= -uv.x + 1.3;
+    bool inside_head = uv.x >= 0.6 &&
+                       uv.y >= uv.x - 0.3 &&
+                       uv.y <= -uv.x + 1.3;
     return inside_box || inside_head;
 }
 
@@ -240,22 +240,23 @@ float4 visualize_material_params(Varyings input, bool is_front_face : SV_IsFront
         // Show UV as arrays colored by the texcoord along the direction of the arrow.
         // Every 25% we render a line across the texture. Black in the center and dark grey at 25%.
         const int block_count = 24;
-        float2 uv_blocks = input.texcoord * block_count;
+        float2 uv = frac(input.texcoord);
+        float2 uv_blocks = uv * block_count;
         int2 uv_blocks_indices = int2(uv_blocks);
         bool show_u = uv_blocks_indices.x % 2 == uv_blocks_indices.y % 2;
         float3 uv_tint = float3(0.5, 0.5, 0.5);
         if (show_u)
-            uv_tint = inside_arrow(uv_blocks - uv_blocks_indices) ? float3(input.texcoord.x, 0, 0) : uv_tint;
+            uv_tint = inside_arrow(uv_blocks - uv_blocks_indices) ? float3(uv.x, 0, 0) : uv_tint;
         else
-            uv_tint = inside_arrow(uv_blocks.yx - uv_blocks_indices.yx) ? float3(0, input.texcoord.y, 0) : uv_tint;
+            uv_tint = inside_arrow(uv_blocks.yx - uv_blocks_indices.yx) ? float3(0, uv.y, 0) : uv_tint;
 
         // Lines at 25% and 75%.
-        if (in_range(input.texcoord.x, 0.2475, 0.2525) || in_range(input.texcoord.x, 0.7475, 0.7525) ||
-            in_range(input.texcoord.y, 0.2475, 0.2525) || in_range(input.texcoord.y, 0.7475, 0.7525))
+        if (in_range(uv.x, 0.2475, 0.2525) || in_range(uv.x, 0.7475, 0.7525) ||
+            in_range(uv.y, 0.2475, 0.2525) || in_range(uv.y, 0.7475, 0.7525))
             uv_tint = float3(0.25, 0.25, 0.25);
 
         // Lines at 50%.
-        if (in_range(input.texcoord.x, 0.4975, 0.5025) || in_range(input.texcoord.y, 0.4975, 0.5025))
+        if (in_range(uv.x, 0.4975, 0.5025) || in_range(uv.y, 0.4975, 0.5025))
             uv_tint = float3(0, 0, 0);
 
         return float4(uv_tint, 1);
