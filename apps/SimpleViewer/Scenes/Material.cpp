@@ -16,7 +16,6 @@
 #include <Bifrost/Scene/SceneNode.h>
 
 #include <ImGui/ImGuiAdaptor.h>
-#include <glTFLoader/glTFLoader.h>
 
 using namespace Bifrost::Assets;
 using namespace Bifrost::Math;
@@ -131,16 +130,6 @@ SceneNode shallow_clone(SceneNode node) {
     return cloned_node;
 }
 
-void replace_material(Material material, SceneNode parent_node, const std::string& child_scene_node_name) {
-    parent_node.apply_to_children_recursively([=](SceneNode node) {
-        if (node.get_name() == child_scene_node_name) {
-            MeshModel mesh_model = MeshModels::get_attached_mesh_model(node.get_ID());
-            if (mesh_model.exists())
-                mesh_model.set_material(material);
-        }
-    });
-}
-
 void create_material_scene(CameraID camera_ID, SceneNode root_node, ImGui::ImGuiAdaptor* imgui, const std::filesystem::path& data_directory) {
 
     { // Setup camera transform.
@@ -170,25 +159,12 @@ void create_material_scene(CameraID camera_ID, SceneNode root_node, ImGui::ImGui
     { // Create material models.
         const float shader_ball_distance = 300.0f;
 
-        // Load and setup shaderball
-        printf("Shader ball curtesy of https://github.com/derkreature/ShaderBall\n");
-        auto shader_ball_path = data_directory / "SimpleViewer" / "Shaderball.glb";
-        SceneNode shader_ball_node = glTFLoader::load(shader_ball_path.generic_string());
-        float shader_ball_pos_x = shader_ball_distance * 0.5f * (materials.material_count - 1);
+        SceneNode shader_ball_node = load_shader_ball(data_directory, materials.get_material_ID(0));
         Transform transform = Transform(Vector3f::zero(), Quaternionf::from_angle_axis(PI<float>(), Vector3f::up()), 0.01f);
         shader_ball_node.set_global_transform(transform);
+        float shader_ball_pos_x = shader_ball_distance * 0.5f * (materials.material_count - 1);
         shader_ball_node.apply_delta_transform(Transform(Vector3f(shader_ball_pos_x, -102, 0)));
         shader_ball_node.set_parent(root_node);
-
-        // Set base materials to rubber
-        Materials::Data rubber_material_data = Materials::Data::create_dielectric(RGB(0.05f), 1, 0.04f);
-        Material rubber_material = Materials::create("Rubber", rubber_material_data);
-        for (std::string node_name : { "Node1", "Node4", "Node5" })
-            replace_material(rubber_material, shader_ball_node, node_name);
-
-        // Set surrounding surface to tested material
-        for (std::string node_name : { "Node2", "Node3", "Node6" })
-            replace_material(materials.get_material_ID(0), shader_ball_node, node_name);
 
         for (int m = 1; m < materials.material_count; ++m) {
             SceneNode shader_ball_node_clone = shallow_clone(shader_ball_node);
