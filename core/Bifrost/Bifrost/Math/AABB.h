@@ -66,6 +66,10 @@ public:
         return maximum - minimum;
     }
 
+    __always_inline__ Vector3f closest_point_on_surface(Vector3f point) const {
+        return max(minimum, min(maximum, point));
+    }
+
     inline std::string to_string() const {
         std::ostringstream out;
         out << "[minimum: " << minimum << ", maximum: " << maximum << "]";

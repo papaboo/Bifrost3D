@@ -99,6 +99,10 @@ __always_inline__ unsigned int ceil_divide(unsigned int a, unsigned int b) {
     return (a / b) + ((a % b) > 0);
 }
 
+__always_inline__ float non_zero_sign(float v) {
+    return signbit(v) ? -1.0f : 1.0f;
+}
+
 // Linear interpolation of arbitrary types that implement addition, subtraction and multiplication.
 template <typename T, typename U>
 __always_inline__ T lerp(const T a, const T b, const U t) {
@@ -119,9 +123,15 @@ template <typename T>
 __always_inline__ T max(const T a, const T b) {
     return a > b ? a : b;
 }
+
 template <typename T>
 __always_inline__ T clamp(const T value, const T lower_bound, const T upper_bound) {
     return min(max(value, lower_bound), upper_bound);
+}
+
+template <typename T>
+__always_inline__ T clamp01(const T value) {
+    return min(max(value, T(0)), T(1));
 }
 
 // Finds the smallest power of 2 greater or equal to x.
