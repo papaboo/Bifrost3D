@@ -13,6 +13,9 @@ set(GUI_SRCS
 
 set(SCENES_SRCS
   Scenes/CornellBox.h
+  Scenes/Diamond.glb
+  Scenes/Glass.h
+  Scenes/Glass.cpp
   Scenes/Material.h
   Scenes/Material.cpp
   Scenes/Opacity.h
@@ -55,7 +58,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   FOLDER "Apps"
 )
 
-# Install shader ball
+# Install shader ball and diamond
 set(SHADER_BALL_SOURCE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Scenes/Shaderball.glb)
 set(SHADER_BALL_DESTINATION_PATH ${BIFROST_DATA_OUTPUT_DIRECTORY}/SimpleViewer/Shaderball.glb)
 add_custom_command(
@@ -70,6 +73,14 @@ add_custom_command(
   OUTPUT ${WORLD_DESTINATION_PATH}
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WORLD_SOURCE_PATH} ${WORLD_DESTINATION_PATH}
   MAIN_DEPENDENCY ${WORLD_SOURCE_PATH}
+)
+
+set(DIAMOND_SOURCE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Scenes/Diamond.glb)
+set(DIAMOND_DESTINATION_PATH ${BIFROST_DATA_OUTPUT_DIRECTORY}/SimpleViewer/Diamond.glb)
+add_custom_command(
+  OUTPUT ${DIAMOND_DESTINATION_PATH}
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DIAMOND_SOURCE_PATH} ${DIAMOND_DESTINATION_PATH}
+  MAIN_DEPENDENCY ${DIAMOND_SOURCE_PATH}
 )
 
 if (MSVC)

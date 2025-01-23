@@ -9,6 +9,7 @@
 #include <CameraHandlers.h>
 
 #include <Scenes/CornellBox.h>
+#include <Scenes/Glass.h>
 #include <Scenes/Material.h>
 #include <Scenes/Opacity.h>
 #include <Scenes/Sphere.h>
@@ -355,6 +356,8 @@ int initialize_scene(Engine& engine, ImGui::ImGuiAdaptor* imgui) {
     bool load_model_from_file = false;
     if (g_scene.empty() || g_scene.compare("CornellBox") == 0)
         Scenes::create_cornell_box(cam_ID, root_node_ID);
+    else if (g_scene.compare("GlassScene") == 0)
+        Scenes::create_glass_scene(cam_ID, root_node_ID, engine.data_directory());
     else if (g_scene.compare("MaterialScene") == 0)
         Scenes::create_material_scene(cam_ID, root_node_ID, imgui, engine.data_directory());
     else if (g_scene.compare("OpacityScene") == 0)
@@ -470,7 +473,7 @@ void print_usage() {
     char* usage =
         "usage simpleviewer:\n"
         "  -h  | --help: Show command line usage for simpleviewer.\n"
-        "  -s  | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'MaterialScene', 'SphereScene', 'SphereLightScene', 'TestScene' and 'VeachScene', which loads the corresponding builtin scenes.\n"
+        "  -s  | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'GlassScene', 'MaterialScene', 'SphereScene', 'SphereLightScene', 'TestScene' and 'VeachScene', which loads the corresponding builtin scenes.\n"
 #ifdef OPTIX_FOUND
         "  -p | --path-tracing-only: Launches with the path tracer as the only avaliable renderer.\n"
         "  -r | --rasterizer-only: Launches with the rasterizer as the only avaliable renderer.\n"
