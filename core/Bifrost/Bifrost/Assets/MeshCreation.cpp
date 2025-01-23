@@ -19,19 +19,19 @@ namespace Bifrost {
 namespace Assets {
 namespace MeshCreation {
 
-MeshID plane(unsigned int quads_pr_edge, MeshFlags buffer_bitmask) {
-    if (quads_pr_edge == 0)
+MeshID plane(unsigned int quads_per_edge, MeshFlags buffer_bitmask) {
+    if (quads_per_edge == 0)
         return MeshID::invalid_UID();
 
-    unsigned int size = quads_pr_edge + 1;
+    unsigned int size = quads_per_edge + 1;
     unsigned int vertex_count = size * size;
-    unsigned int quad_count = quads_pr_edge * quads_pr_edge;
+    unsigned int quad_count = quads_per_edge * quads_per_edge;
     unsigned int index_count = quad_count * 2;
     
     Mesh mesh = Meshes::create("Plane", index_count, vertex_count, buffer_bitmask);
 
     // Vertex attributes.
-    float tc_normalizer = 1.0f / quads_pr_edge;
+    float tc_normalizer = 1.0f / quads_per_edge;
     for (unsigned int z = 0; z < size; ++z) {
         for (unsigned int x = 0; x < size; ++x) {
             Vector2f texcoord = Vector2f(float(x), float(z)) * tc_normalizer;
@@ -45,8 +45,8 @@ MeshID plane(unsigned int quads_pr_edge, MeshFlags buffer_bitmask) {
 
     // Primitives.
     Vector3ui* primitives = mesh.get_primitives();
-    for (unsigned int z = 0; z < quads_pr_edge; ++z) {
-        for (unsigned int x = 0; x < quads_pr_edge; ++x) {
+    for (unsigned int z = 0; z < quads_per_edge; ++z) {
+        for (unsigned int x = 0; x < quads_per_edge; ++x) {
             unsigned int base_index = x + z * size;
             *primitives++ = Vector3ui(base_index, base_index + size, base_index + 1);
             *primitives++ = Vector3ui(base_index + 1, base_index + size, base_index + size + 1);
@@ -59,88 +59,145 @@ MeshID plane(unsigned int quads_pr_edge, MeshFlags buffer_bitmask) {
     return mesh.get_ID();
 }
 
-MeshID cube(unsigned int quads_pr_edge, Vector3f scaling, MeshFlags buffer_bitmask) {
-    if (quads_pr_edge == 0)
+MeshID cube(unsigned int quads_per_edge, Vector3f size, MeshFlags buffer_bitmask) {
+    if (quads_per_edge == 0)
         return MeshID::invalid_UID();
 
     unsigned int sides = 6;
 
-    unsigned int verts_pr_edge = quads_pr_edge + 1;
-    float scale = 1.0f / quads_pr_edge;
-    float halfsize = 0.5f; // verts_pr_edge * 0.5f;
-    unsigned int quad_count = quads_pr_edge * quads_pr_edge * sides;
+    unsigned int verts_per_edge = quads_per_edge + 1;
+    Vector3f quad_size = size / float(quads_per_edge);
+    Vector3f half_size = 0.5f * size;
+    unsigned int quad_count = quads_per_edge * quads_per_edge * sides;
     unsigned int index_count = quad_count * 2;
-    unsigned int verts_pr_side = verts_pr_edge * verts_pr_edge;
-    unsigned int vertex_count = verts_pr_side * sides;
+    unsigned int verts_per_side = verts_per_edge * verts_per_edge;
+    unsigned int vertex_count = verts_per_side * sides;
 
     Mesh mesh = Meshes::create("Cube", index_count, vertex_count, buffer_bitmask);
 
     // Create the vertices.
     // [..TOP.. ..BOTTOM.. ..LEFT.. ..RIGHT.. ..FRONT.. ..BACK..]
     Vector3f* position_iterator = mesh.get_positions();
-    for (unsigned int i = 0; i < verts_pr_edge; ++i) // Top
-        for (unsigned int j = 0; j < verts_pr_edge; ++j)
-            *position_iterator++ = Vector3f(halfsize - i * scale, halfsize, j * scale - halfsize) * scaling;
-    for (unsigned int i = 0; i < verts_pr_edge; ++i) // Bottom
-        for (unsigned int j = 0; j < verts_pr_edge; ++j)
-            *position_iterator++ = Vector3f(halfsize - i * scale, -halfsize, halfsize - j * scale) * scaling;
-    for (unsigned int i = 0; i < verts_pr_edge; ++i) // Left
-        for (unsigned int j = 0; j < verts_pr_edge; ++j)
-            *position_iterator++ = Vector3f(-halfsize, halfsize - i * scale, j * scale - halfsize) * scaling;
-    for (unsigned int i = 0; i < verts_pr_edge; ++i) // Right
-        for (unsigned int j = 0; j < verts_pr_edge; ++j)
-            *position_iterator++ = Vector3f(halfsize, i * scale - halfsize, j * scale - halfsize) * scaling;
-    for (unsigned int i = 0; i < verts_pr_edge; ++i) // Front
-        for (unsigned int j = 0; j < verts_pr_edge; ++j)
-            *position_iterator++ = Vector3f(halfsize - i * scale, halfsize - j * scale, halfsize) * scaling;
-    for (unsigned int i = 0; i < verts_pr_edge; ++i) // Back
-        for (unsigned int j = 0; j < verts_pr_edge; ++j)
-            *position_iterator++ = Vector3f(i * scale - halfsize, halfsize - j * scale, -halfsize) * scaling;
+    for (unsigned int i = 0; i < verts_per_edge; ++i) // Top
+        for (unsigned int j = 0; j < verts_per_edge; ++j)
+            *position_iterator++ = Vector3f(half_size.x - i * quad_size.x, half_size.y, j * quad_size.z - half_size.z);
+    for (unsigned int i = 0; i < verts_per_edge; ++i) // Bottom
+        for (unsigned int j = 0; j < verts_per_edge; ++j)
+            *position_iterator++ = Vector3f(half_size.x - i * quad_size.x, -half_size.y, half_size.z - j * quad_size.z);
+    for (unsigned int i = 0; i < verts_per_edge; ++i) // Left
+        for (unsigned int j = 0; j < verts_per_edge; ++j)
+            *position_iterator++ = Vector3f(-half_size.x, half_size.y - i * quad_size.y, j * quad_size.z - half_size.z);
+    for (unsigned int i = 0; i < verts_per_edge; ++i) // Right
+        for (unsigned int j = 0; j < verts_per_edge; ++j)
+            *position_iterator++ = Vector3f(half_size.x, i * quad_size.y - half_size.y, j * quad_size.z - half_size.z);
+    for (unsigned int i = 0; i < verts_per_edge; ++i) // Front
+        for (unsigned int j = 0; j < verts_per_edge; ++j)
+            *position_iterator++ = Vector3f(half_size.x - i * quad_size.x, half_size.y - j * quad_size.y, half_size.z);
+    for (unsigned int i = 0; i < verts_per_edge; ++i) // Back
+        for (unsigned int j = 0; j < verts_per_edge; ++j)
+            *position_iterator++ = Vector3f(i * quad_size.x - half_size.x, half_size.y - j * quad_size.y, -half_size.z);
 
     if (mesh.get_normals() != nullptr) {
         Vector3f* normal_iterator = mesh.get_normals();
-        while (normal_iterator < mesh.get_normals() + verts_pr_side) // Top
+        while (normal_iterator < mesh.get_normals() + verts_per_side) // Top
             *normal_iterator++ = Vector3f(0, 1, 0);
-        while (normal_iterator < mesh.get_normals() + verts_pr_side * 2) // Bottom
+        while (normal_iterator < mesh.get_normals() + verts_per_side * 2) // Bottom
             *normal_iterator++ = Vector3f(0, -1, 0);
-        while (normal_iterator < mesh.get_normals() + verts_pr_side * 3) // Left
+        while (normal_iterator < mesh.get_normals() + verts_per_side * 3) // Left
             *normal_iterator++ = Vector3f(-1, 0, 0);
-        while (normal_iterator < mesh.get_normals() + verts_pr_side * 4) // Right
+        while (normal_iterator < mesh.get_normals() + verts_per_side * 4) // Right
             *normal_iterator++ = Vector3f(1, 0, 0);
-        while (normal_iterator < mesh.get_normals() + verts_pr_side * 5) // Front
+        while (normal_iterator < mesh.get_normals() + verts_per_side * 5) // Front
             *normal_iterator++ = Vector3f(0, 0, 1);
-        while (normal_iterator < mesh.get_normals() + verts_pr_side * 6) // Back
+        while (normal_iterator < mesh.get_normals() + verts_per_side * 6) // Back
             *normal_iterator++ = Vector3f(0, 0, -1);
     }
 
     if (mesh.get_texcoords() != nullptr) {
         Vector2f* texcoords = mesh.get_texcoords();
-        float tc_normalizer = 1.0f / quads_pr_edge;
-        for (unsigned int i = 0; i < verts_pr_edge; ++i)
-            for (unsigned int j = 0; j < verts_pr_edge; ++j)
-                texcoords[i * verts_pr_edge + j] =
-                texcoords[i * verts_pr_edge + j + verts_pr_side] =
-                texcoords[i * verts_pr_edge + j + verts_pr_side * 2] =
-                texcoords[i * verts_pr_edge + j + verts_pr_side * 3] =
-                texcoords[i * verts_pr_edge + j + verts_pr_side * 4] =
-                texcoords[i * verts_pr_edge + j + verts_pr_side * 5] = Vector2f(float(i), float(j)) * tc_normalizer;
+        float tc_normalizer = 1.0f / quads_per_edge;
+        for (unsigned int i = 0; i < verts_per_edge; ++i)
+            for (unsigned int j = 0; j < verts_per_edge; ++j)
+                texcoords[i * verts_per_edge + j] =
+                texcoords[i * verts_per_edge + j + verts_per_side] =
+                texcoords[i * verts_per_edge + j + verts_per_side * 2] =
+                texcoords[i * verts_per_edge + j + verts_per_side * 3] =
+                texcoords[i * verts_per_edge + j + verts_per_side * 4] =
+                texcoords[i * verts_per_edge + j + verts_per_side * 5] = Vector2f(float(i), float(j)) * tc_normalizer;
     }
 
     // Set indices.
     Vector3ui* primitives = mesh.get_primitives();
-    for (unsigned int side_offset = 0; side_offset < vertex_count; side_offset += verts_pr_side)
-        for (unsigned int i = 0; i < quads_pr_edge; ++i)
-            for (unsigned int j = 0; j < quads_pr_edge; ++j) {
-                *primitives++ = Vector3ui(j + i * verts_pr_edge,
-                                       j + (i + 1) * verts_pr_edge,
-                                       j + 1 + i * verts_pr_edge) + side_offset;
+    for (unsigned int side_offset = 0; side_offset < vertex_count; side_offset += verts_per_side)
+        for (unsigned int i = 0; i < quads_per_edge; ++i)
+            for (unsigned int j = 0; j < quads_per_edge; ++j) {
+                *primitives++ = Vector3ui(j + i * verts_per_edge,
+                                          j + (i + 1) * verts_per_edge,
+                                          j + 1 + i * verts_per_edge) + side_offset;
 
-                *primitives++ = Vector3ui(j + 1 + i * verts_pr_edge,
-                                       j + (i + 1) * verts_pr_edge,
-                                       j + 1 + (i + 1) * verts_pr_edge) + side_offset;
+                *primitives++ = Vector3ui(j + 1 + i * verts_per_edge,
+                                          j + (i + 1) * verts_per_edge,
+                                          j + 1 + (i + 1) * verts_per_edge) + side_offset;
             }
 
-    mesh.set_bounds(AABB(Vector3f(-halfsize) * scaling, Vector3f(halfsize) * scaling));
+    mesh.set_bounds(AABB(-half_size, half_size));
+
+    return mesh.get_ID();
+}
+
+MeshID beveled_cube(unsigned int quads_per_side, float bevel_size, Math::Vector3f size, MeshFlags buffer_bitmask) {
+    if (quads_per_side == 0)
+        return MeshID::invalid_UID();
+
+    // Create a regular cube with additional 6 quads per side to be used for beveling.
+    const int bevel_quads = 3;
+    unsigned int full_quads_per_side = quads_per_side + 2 * bevel_quads;
+    Mesh mesh = cube(full_quads_per_side, size, buffer_bitmask);
+
+    // Relocate vertices to move the vertices used for beveling near the edges of the cube.
+    // A band of three quads are moved such that they are bevel_size from the edges of the cube and
+    // the rest of the vertices are moved such that they are uniformly distributed on the flat side of the cube.
+    // The beveling effect is created by all vertices having bevel_size distance to an 'inner cube', thus giving the rounded edges.
+    // The distance to the 'inner cube' is trivially upheld for vertices on the flat sides.
+    // The cube's vertices are in the range [-size / 2, size / 2].
+    Vector3f half_size = 0.5f * size;
+    Vector3f initial_quad_size = size / float(full_quads_per_side);
+    Vector3f bevel_vertex_threshold = half_size - initial_quad_size * bevel_quads;
+    Vector3f side_quad_scale = (half_size - bevel_size) / bevel_vertex_threshold;
+    AABB inner_cube = AABB(-half_size + bevel_size, half_size - bevel_size);
+
+    Vector3f* positions = mesh.get_positions();
+    for (unsigned int v = 0; v < mesh.get_vertex_count(); ++v) {
+        Vector3f& position = positions[v];
+
+        // Move position
+        auto move_coordinate = [&](int d) -> bool {
+            bool is_bevel_pos = abs(position[d]) > bevel_vertex_threshold[d];
+            if (is_bevel_pos) {
+                // Move the vertices closest to the edges inside the beveling threshold.
+                float sign = non_zero_sign(position[d]);
+                float bevel_t = inverse_lerp(bevel_vertex_threshold[d], half_size[d], abs(position[d]));
+                position[d] = sign * lerp(half_size[d] - bevel_size, half_size[d], bevel_t);
+            } else
+                // Move vertex position on the side of the cube to uniformly fill in the space between the beveled edges.
+                position[d] *= side_quad_scale[d];
+            return is_bevel_pos;
+        };
+
+        bool bevel_vertex = move_coordinate(0);
+        bevel_vertex |= move_coordinate(1);
+        bevel_vertex |= move_coordinate(2);
+
+        if (bevel_vertex) {
+            // Compute direction from closest point on inner cube and use that direction as the normal and to determine the position.
+            Vector3f closest_point = inner_cube.closest_point_on_surface(position);
+            Vector3f direction = normalize(position - closest_point);
+            position = closest_point + bevel_size * direction;
+        }
+    }
+
+    if (mesh.get_normals() != nullptr)
+        MeshUtils::compute_normals(mesh.get_ID());
 
     return mesh.get_ID();
 }
@@ -322,8 +379,8 @@ MeshID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads
     return mesh.get_ID();
 }
 
-MeshID spherical_cube(unsigned int quads_pr_edge, MeshFlags buffer_bitmask) {
-    Mesh mesh = cube(quads_pr_edge, Vector3f::one(), buffer_bitmask);
+MeshID spherical_cube(unsigned int quads_per_edge, MeshFlags buffer_bitmask) {
+    Mesh mesh = cube(quads_per_edge, Vector3f::one(), buffer_bitmask);
 
     Vector3f* positions = mesh.get_positions();
     Vector3f* normals = mesh.get_normals();
