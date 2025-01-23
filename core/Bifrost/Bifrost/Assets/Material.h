@@ -306,7 +306,7 @@ public:
     inline Materials::Changes get_changes() { return Materials::get_changes(m_ID); }
 
 private:
-    const MaterialID m_ID;
+    MaterialID m_ID;
 };
 
 } // NS Assets
