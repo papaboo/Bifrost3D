@@ -17,6 +17,8 @@
 #include <Bifrost/Math/Transform.h>
 #include <Bifrost/Math/Quaternion.h>
 
+#include <glTFLoader/glTFLoader.h>
+
 using namespace Bifrost::Assets;
 using namespace Bifrost::Scene;
 using namespace Bifrost::Math;
@@ -57,6 +59,41 @@ SceneNode create_checkered_floor(float floor_size, float checker_size) {
     MeshModels::create(plane_node.get_ID(), plane_mesh.get_ID(), material_ID);
     
     return plane_node;
+}
+
+void replace_material(Material material, SceneNode parent_node, const std::string& child_scene_node_name) {
+    parent_node.apply_to_children_recursively([=](SceneNode node) {
+        if (node.get_name() == child_scene_node_name) {
+            MeshModel mesh_model = MeshModels::get_attached_mesh_model(node.get_ID());
+            if (mesh_model.exists())
+                mesh_model.set_material(material);
+        }
+        });
+}
+
+Bifrost::Scene::SceneNode load_shader_ball(const std::filesystem::path& data_directory, Material material) {
+    printf("Shader ball curtesy of https://github.com/derkreature/ShaderBall\n");
+    auto shader_ball_path = data_directory / "SimpleViewer" / "Shaderball.glb";
+    SceneNode shader_ball_node = glTFLoader::load(shader_ball_path.generic_string());
+
+    // Delete original materials as they get replaced
+    shader_ball_node.apply_to_children_recursively([=](SceneNode node) {
+        MeshModel mesh_model = MeshModels::get_attached_mesh_model(node.get_ID());
+        Material material = mesh_model.get_material();
+        Materials::destroy(material.get_ID());
+    });
+
+    // Set base materials to rubber
+    Materials::Data rubber_material_data = Materials::Data::create_dielectric(RGB(0.05f), 1, 0.04f);
+    Material rubber_material = Materials::create("Rubber", rubber_material_data);
+    for (std::string node_name : { "Node1", "Node4", "Node5" })
+        replace_material(rubber_material, shader_ball_node, node_name);
+
+    // Set surrounding surface to tested material
+    for (std::string node_name : { "Node2", "Node3", "Node6" })
+        replace_material(material, shader_ball_node, node_name);
+
+    return shader_ball_node;
 }
 
 } // NS Scenes
