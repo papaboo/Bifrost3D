@@ -141,11 +141,14 @@ public:
     // -----------------------------------------------------------------------
     inline std::string get_name() const { return Meshes::get_name(m_ID); }
     inline void set_name(const std::string& name) { Meshes::set_name(m_ID, name); }
-    inline unsigned int get_primitive_count() { return Meshes::get_primitive_count(m_ID); }
-    inline Math::Vector3ui* get_primitives() { return Meshes::get_primitives(m_ID); }
+
     inline unsigned int get_index_count() { return Meshes::get_index_count(m_ID); }
     inline unsigned int* get_indices() { return Meshes::get_indices(m_ID); }
+    inline Core::Iterable<unsigned int*> get_indices_iterable() { return Core::Iterable<unsigned int*>(get_indices(), get_index_count()); }
+    inline unsigned int get_primitive_count() { return Meshes::get_primitive_count(m_ID); }
+    inline Math::Vector3ui* get_primitives() { return Meshes::get_primitives(m_ID); }
     inline Core::Iterable<Math::Vector3ui*> get_primitive_iterable() { return Core::Iterable<Math::Vector3ui*>(get_primitives(), get_primitive_count()); }
+
     inline unsigned int get_vertex_count() { return Meshes::get_vertex_count(m_ID); }
     inline Math::Vector3f* get_positions() { return Meshes::get_positions(m_ID); }
     inline Core::Iterable<Math::Vector3f*> get_position_iterable() { return Core::Iterable<Math::Vector3f*>(get_positions(), get_vertex_count()); }
@@ -153,9 +156,9 @@ public:
     inline Core::Iterable<Math::Vector3f*> get_normal_iterable() { return Core::Iterable<Math::Vector3f*>(get_normals(), get_vertex_count()); }
     inline Math::Vector2f* get_texcoords() { return Meshes::get_texcoords(m_ID); }
     inline Core::Iterable<Math::Vector2f*> get_texcoord_iterable() { return Core::Iterable<Math::Vector2f*>(get_texcoords(), get_vertex_count()); }
+
     inline Math::AABB get_bounds() { return Meshes::get_bounds(m_ID); }
     inline void set_bounds(Math::AABB bounds) { Meshes::set_bounds(m_ID, bounds); }
-
     inline Math::AABB compute_bounds() { return Meshes::compute_bounds(m_ID); }
 
     inline MeshFlags get_flags() {
@@ -210,8 +213,7 @@ inline MeshID combine(const std::string& name,
 // This function assumes that the positions are used to describe triangles.
 void compute_hard_normals(Math::Vector3f* positions_begin, Math::Vector3f* positions_end, Math::Vector3f* normals_begin);
 
-// Computes a list of hard normals from a list of triangle positions.
-// This function assumes that the positions are used to describe triangles.
+// Computes per vertex normals.
 void compute_normals(Math::Vector3ui* primitives_begin, Math::Vector3ui* primitives_end,
                      Math::Vector3f* normals_begin, Math::Vector3f* normals_end, Math::Vector3f* positions_begin);
 void compute_normals(MeshID mesh_ID);
@@ -238,6 +240,9 @@ typename std::iterator_traits<RandomAccessIterator>::value_type*
     expand_indexed_buffer(primitives, primitive_count, buffer, expanded_buffer);
     return expanded_buffer;
 };
+
+// Creates a new mesh where vertices with the same vertex attributes have been merged.
+Mesh merge_duplicate_vertices(Mesh mesh, MeshFlags attribute_types = MeshFlag::AllBuffers);
 
 } // NS MeshUtils
 

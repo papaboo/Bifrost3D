@@ -224,6 +224,127 @@ TEST_F(Assets_Mesh, hard_normal_computation) {
     }
 }
 
+TEST_F(Assets_Mesh, merge_duplicate_vertices) {
+    using namespace Math;
+
+    Mesh two_tris = Meshes::create("two_tris", 2, 6, MeshFlag::Position);
+    Vector3f* positions = two_tris.get_positions();
+    positions[0] = Vector3f(0, 0, 0);
+    positions[1] = positions[3] = Vector3f(1, 0, 0);
+    positions[2] = positions[4] = Vector3f(0, 1, 0);
+    positions[5] = Vector3f(1, 1, 0);
+    Vector3ui* triangles = two_tris.get_primitives();
+    triangles[0] = Vector3ui(0, 1, 2);
+    triangles[1] = Vector3ui(3, 4, 5);
+
+    // Assert that the number of indices went down to 4.
+    Mesh two_merged_tris = MeshUtils::merge_duplicate_vertices(two_tris);
+    EXPECT_EQ(4, two_merged_tris.get_vertex_count());
+
+    // Assert that the unique vertices have been kept
+    Vector3f* merged_positions = two_merged_tris.get_positions();
+    EXPECT_EQ(Vector3f(0, 0, 0), merged_positions[0]);
+    EXPECT_EQ(Vector3f(1, 0, 0), merged_positions[1]);
+    EXPECT_EQ(Vector3f(0, 1, 0), merged_positions[2]);
+    EXPECT_EQ(Vector3f(1, 1, 0), merged_positions[3]);
+
+    // Assert that the new facets reference the correct vertices.
+    // Here we make an assumption about the layout of the vertices after merging,
+    // which is irrelevant to the functionality, but makes the test simpler.
+    Vector3ui* merged_triangles = two_merged_tris.get_primitives();
+    EXPECT_EQ(Vector3ui(0, 1, 2), merged_triangles[0]);
+    EXPECT_EQ(Vector3ui(1, 2, 3), merged_triangles[1]);
+}
+
+TEST_F(Assets_Mesh, merge_duplicate_vertices_returns_copy_if_no_duplicates) {
+    using namespace Math;
+
+    Mesh expected_mesh = Meshes::create("two_tris", 2, 6, MeshFlag::Position);
+    Vector3f* positions = expected_mesh.get_positions();
+    positions[0] = Vector3f(0, 0, 0);
+    positions[1] = Vector3f(1, 0, 0);
+    positions[2] = Vector3f(0, 1, 0);
+    positions[3] = Vector3f(2, 0, 0);
+    positions[4] = Vector3f(0, 2, 0);
+    positions[5] = Vector3f(2, 2, 0);
+    Vector3ui* triangles = expected_mesh.get_primitives();
+    triangles[0] = Vector3ui(0, 1, 2);
+    triangles[1] = Vector3ui(3, 4, 5);
+
+    // Assert that the meshes are equal
+    Mesh actual_mesh = MeshUtils::merge_duplicate_vertices(expected_mesh);
+    
+    // Assert vertex equality
+    EXPECT_EQ(expected_mesh.get_vertex_count(), actual_mesh.get_vertex_count());
+    for (unsigned int v = 0; v < expected_mesh.get_vertex_count(); ++v)
+        EXPECT_EQ(expected_mesh.get_positions()[v], actual_mesh.get_positions()[v]);
+
+    // Assert primitive equality
+    EXPECT_EQ(expected_mesh.get_primitive_count(), actual_mesh.get_primitive_count());
+    for (unsigned int p = 0; p < expected_mesh.get_primitive_count(); ++p)
+        EXPECT_EQ(expected_mesh.get_primitives()[p], actual_mesh.get_primitives()[p]);
+}
+
+TEST_F(Assets_Mesh, merge_duplicate_vertices_with_different_positions_if_positions_are_ignored) {
+    using namespace Math;
+
+    // Single triangle with duplicate normals at vertex 1 and 2.
+    Mesh single_tri = Meshes::create("single_tri", 1, 3, { MeshFlag::Position, MeshFlag::Normal });
+    Vector3f* positions = single_tri.get_positions();
+    Vector3f* normals = single_tri.get_normals();
+    positions[0] = Vector3f(0, 0, 0); normals[0] = Vector3f(1, 0, 0);
+    positions[1] = Vector3f(1, 0, 0); normals[1] = Vector3f(0, 1, 0);
+    positions[2] = Vector3f(0, 1, 0); normals[2] = Vector3f(0, 1, 0);
+    Vector3ui* triangles = single_tri.get_primitives();
+    triangles[0] = Vector3ui(0, 1, 2);
+
+    // Merge vertices with duplicate normals and ignore differing positions.
+    Mesh degenerate_tri = MeshUtils::merge_duplicate_vertices(single_tri, MeshFlag::Normal);
+
+    // Assert that the number of indices went down to 2.
+    EXPECT_EQ(2, degenerate_tri.get_vertex_count());
+
+    // Assert that the new facet reference the correct vertices.
+    Vector3ui degenerate_triangle = degenerate_tri.get_primitives()[0];
+    EXPECT_EQ(Vector3ui(0, 1, 1), degenerate_triangle);
+}
+
+TEST_F(Assets_Mesh, merge_torus_duplicate_vertices) {
+    using namespace Math;
+
+    unsigned int torus_detail = 5;
+    float minor_radius = 0.1f;
+    Mesh original_mesh = MeshCreation::torus(torus_detail, torus_detail, minor_radius, { MeshFlag::Position, MeshFlag::Normal });
+    Mesh merged_mesh = MeshUtils::merge_duplicate_vertices(original_mesh, { MeshFlag::Position, MeshFlag::Normal });
+
+    // Assert that the merged mesh has fewer triangles and that the primitive counts are equal.
+    EXPECT_EQ(36, original_mesh.get_vertex_count());
+    EXPECT_EQ(25, merged_mesh.get_vertex_count());
+    EXPECT_EQ(original_mesh.get_primitive_count(), merged_mesh.get_primitive_count());
+
+    // Assert that triangles in the meshes define the same vertices.
+    unsigned int primitive_count = original_mesh.get_primitive_count();
+    Vector3ui* original_primitives = original_mesh.get_primitives();
+    Vector3ui* merged_primitives = merged_mesh.get_primitives();
+    for (unsigned int p = 0; p < primitive_count; ++p) {
+        Vector3ui original_primitive = original_primitives[p];
+        Vector3ui merged_primitive = merged_primitives[p];
+
+        for (unsigned int v = 0; v < 3; ++v) {
+            unsigned int original_vertex_index = original_primitive[v];
+            unsigned int merged_vertex_index = merged_primitive[v];
+
+            Vector3f original_position = original_mesh.get_positions()[original_vertex_index];
+            Vector3f merged_position = merged_mesh.get_positions()[merged_vertex_index];
+            EXPECT_EQ(original_position, merged_position);
+
+            Vector3f original_normal = original_mesh.get_normals()[original_vertex_index];
+            Vector3f merged_normal = merged_mesh.get_normals()[merged_vertex_index];
+            EXPECT_EQ(original_normal, merged_normal);
+        }
+    }
+}
+
 } // NS Assets
 } // NS Bifrost
 

@@ -8,6 +8,7 @@
 
 #include <Bifrost/Assets/Mesh.h>
 
+#include <Bifrost/Core/Array.h>
 #include <Bifrost/Math/Conversions.h>
 
 #include <assert.h>
@@ -307,6 +308,80 @@ void compute_normals(MeshID mesh_ID) {
     compute_normals(mesh.get_primitives(), mesh.get_primitives() + mesh.get_primitive_count(),
                     mesh.get_normals(), mesh.get_normals() + mesh.get_vertex_count(),
                     mesh.get_positions());
+}
+
+Mesh merge_duplicate_vertices(Mesh mesh, MeshFlags attribute_types) {
+    // Limit the duplicate checks to avaliable buffers.
+    attribute_types &= mesh.get_flags() & MeshFlag::AllBuffers;
+    if (attribute_types.none_set())
+        return Mesh();
+
+    unsigned int vertex_count = mesh.get_vertex_count();
+    Vector3f* positions = attribute_types.is_set(MeshFlag::Position) ? mesh.get_positions() : nullptr;
+    Vector3f* normals = attribute_types.is_set(MeshFlag::Normal) ? mesh.get_normals() : nullptr;
+    Vector2f* uvs = attribute_types.is_set(MeshFlag::Texcoord) ? mesh.get_texcoords() : nullptr;
+
+    // Detect duplicate vertices and fill array of new vertex indices.
+    unsigned int duplicate_count = 0;
+    Core::Array<unsigned int> new_vertex_indices(vertex_count);
+    new_vertex_indices[0] = 0;
+    int next_vertex_index = 1;
+    for (unsigned int v = 1; v < vertex_count; ++v) {
+        bool duplicate_found = false;
+
+        // Search backwards to see if there are duplicates.
+        for (unsigned int j = v - 1; j != UINT_MAX && !duplicate_found; --j) {
+            bool is_equal = true;
+            if (positions != nullptr)
+                is_equal &= positions[v] == positions[j];
+            if (normals != nullptr)
+                is_equal &= normals[v] == normals[j];
+            if (uvs != nullptr)
+                is_equal &= uvs[v] == uvs[j];
+
+            if (is_equal) {
+                duplicate_found = true;
+                ++duplicate_count;
+
+                // v is a duplicate of j and should point to the same new vertex index as j.
+                new_vertex_indices[v] = new_vertex_indices[j];
+            }
+        }
+
+        if (!duplicate_found)
+            new_vertex_indices[v] = next_vertex_index++;
+    }
+
+    Mesh new_mesh = Meshes::create(mesh.get_name() + "_without_duplicates", mesh.get_primitive_count(), vertex_count - duplicate_count, mesh.get_flags());
+
+    // Copy vertices
+    positions = mesh.get_positions();
+    normals = mesh.get_normals();
+    uvs = mesh.get_texcoords();
+    Vector3f* new_positions = new_mesh.get_positions();
+    Vector3f* new_normals = new_mesh.get_normals();
+    Vector2f* new_uvs = new_mesh.get_texcoords();
+    for (unsigned int v = 0; v < vertex_count; ++v) {
+        unsigned int new_v = new_vertex_indices[v];
+        if (positions != nullptr)
+            new_positions[new_v] = positions[v];
+        if (normals != nullptr)
+            new_normals[new_v] = normals[v];
+        if (uvs != nullptr)
+            new_uvs[new_v] = uvs[v];
+    }
+
+    // Copy primitives one index at a time to support primitives of arbitrary arity.
+    unsigned int index_count = mesh.get_index_count();
+    unsigned int* old_indices = mesh.get_indices();
+    unsigned int* new_indices = new_mesh.get_indices();
+    for (unsigned int i = 0; i < index_count; ++i) {
+        unsigned int old_vertex_index = old_indices[i];
+        unsigned int new_vertex_index = new_vertex_indices[old_vertex_index];
+        new_indices[i] = new_vertex_index;
+    }
+
+    return new_mesh;
 }
 
 } // NS MeshUtils
