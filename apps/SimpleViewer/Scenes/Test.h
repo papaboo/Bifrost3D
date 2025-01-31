@@ -158,7 +158,8 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
 
         unsigned int torus_detail = 64;
         float minor_radius = 0.02f;
-        Mesh ring_mesh = MeshCreation::torus(torus_detail, torus_detail, minor_radius, { MeshFlag::Position, MeshFlag::Normal });
+        Mesh discontinuous_ring_mesh = MeshCreation::torus(torus_detail, torus_detail, minor_radius, { MeshFlag::Position, MeshFlag::Normal });
+        Mesh ring_mesh = MeshUtils::merge_duplicate_vertices(discontinuous_ring_mesh, { MeshFlag::Position, MeshFlag::Normal });
 
         { // Ringify
             Vector3f* positions = ring_mesh.get_positions();
@@ -171,14 +172,6 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
                 positions[i] -= dir * (1.0f - abs(dot(dir, normals[i]))) * 0.5f * minor_radius;
             }
             MeshUtils::compute_normals(ring_mesh.get_ID());
-            
-            // Fix normals at the discontinuity where the ring mesh starts and ends.
-            Vector3f* end_normals = normals + ring_mesh.get_vertex_count() - torus_detail - 2;
-            for (unsigned int v = 0; v < torus_detail + 1; ++v) {
-                Vector3f begin_normal = normals[v];
-                Vector3f end_normal = end_normals[v];
-                normals[v] = end_normals[v] = normalize(begin_normal + end_normal);
-            }
         }
 
         // Create the rings.
