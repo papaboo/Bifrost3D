@@ -24,6 +24,7 @@ set(SCENES_SRCS
   Scenes/Utils.h
   Scenes/Utils.cpp
   Scenes/Veach.h
+  Scenes/WorldMask.png
 )
 
 add_executable(${PROJECT_NAME} ${SRCS} ${GUI_SRCS} ${SCENES_SRCS})
@@ -61,6 +62,14 @@ add_custom_command(
   OUTPUT ${SHADER_BALL_DESTINATION_PATH}
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_BALL_SOURCE_PATH} ${SHADER_BALL_DESTINATION_PATH}
   MAIN_DEPENDENCY ${SHADER_BALL_SOURCE_PATH}
+)
+
+set(WORLD_SOURCE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Scenes/WorldMask.png)
+set(WORLD_DESTINATION_PATH ${BIFROST_DATA_OUTPUT_DIRECTORY}/SimpleViewer/WorldMask.png)
+add_custom_command(
+  OUTPUT ${WORLD_DESTINATION_PATH}
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WORLD_SOURCE_PATH} ${WORLD_DESTINATION_PATH}
+  MAIN_DEPENDENCY ${WORLD_SOURCE_PATH}
 )
 
 if (MSVC)
