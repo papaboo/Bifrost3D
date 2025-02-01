@@ -23,6 +23,8 @@
 #include <Bifrost/Scene/LightSource.h>
 #include <Bifrost/Scene/SceneNode.h>
 
+#include <StbImageLoader/StbImageLoader.h>
+
 using namespace Bifrost;
 
 namespace Scenes {
@@ -130,7 +132,7 @@ private:
     float m_existed_time;
 };
 
-void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneNode root_node) {
+void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneNode root_node, const std::filesystem::path& data_directory) {
     using namespace Bifrost::Assets;
     using namespace Bifrost::Math;
     using namespace Bifrost::Scene;
@@ -190,6 +192,25 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
 
             LocalRotator* simple_rotator = new LocalRotator(ring_node.get_ID(), i * 0.31415f * 0.5f + 0.2f);
             engine.add_mutating_callback([=, &engine] { simple_rotator->rotate(engine); });
+        }
+
+        { // Glass ball inside the rings
+            Materials::Data glass_material_data = Materials::Data::create_glass(RGB(0.95f), 1.0f, glass_specularity);
+            Material glass_material = Materials::create("Glass", glass_material_data);
+
+            auto world_mask_path = data_directory / "SimpleViewer" / "WorldMask.png";
+            Image world_mask = StbImageLoader::load(world_mask_path.generic_string());
+            world_mask.change_format(PixelFormat::Roughness8, 1.0f);
+            glass_material.set_tint_roughness_texture(Textures::create2D(world_mask.get_ID()));
+
+            Mesh sphere_mesh = MeshCreation::revolved_sphere(64, 32);
+            Vector2f* uvs = sphere_mesh.get_texcoords();
+            for (unsigned int v = 0; v < sphere_mesh.get_vertex_count(); ++v)
+                uvs[v].y = 1.0f - uvs[v].y;
+            
+            SceneNode sphere_node = SceneNodes::create("Glass sphere", Transform(Vector3f(0, 0.5f, 0), Quaternionf::identity(), 0.7f));
+            MeshModels::create(sphere_node.get_ID(), sphere_mesh.get_ID(), glass_material.get_ID());
+            sphere_node.set_parent(root_node);
         }
     }
 

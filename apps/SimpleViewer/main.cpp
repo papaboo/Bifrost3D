@@ -364,7 +364,7 @@ int initialize_scene(Engine& engine, ImGui::ImGuiAdaptor* imgui) {
     else if (g_scene.compare("SphereLightScene") == 0)
         Scenes::SphereLightScene::create(engine, cam_ID, scene_ID);
     else if (g_scene.compare("TestScene") == 0)
-        Scenes::create_test_scene(engine, cam_ID, root_node_ID);
+        Scenes::create_test_scene(engine, cam_ID, root_node_ID, engine.data_directory());
     else if (g_scene.compare("VeachScene") == 0)
         Scenes::create_veach_scene(engine, cam_ID, scene_ID);
     else {
