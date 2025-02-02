@@ -272,6 +272,11 @@ public:
             Recti viewport = Cameras::get_window_viewport(camera_ID, window_size);
             Vector2i frame_size = Vector2i(viewport.width, viewport.height);
 
+            // Ignore the frame if it has no content.
+            // Can happen on window minimization.
+            if (frame_size.x <= 0 || frame_size.y <= 0)
+                continue;
+
             RendererID renderer_ID = Cameras::get_renderer_ID(camera_ID);
             auto frame = m_renderers[renderer_ID]->render(camera_ID, frame_size);
 
