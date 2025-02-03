@@ -43,9 +43,8 @@ OpaqueVaryings opaque_VS(float4 geometry : GEOMETRY) {
     return varyings;
 }
 
-float2 opaque_PS(OpaqueVaryings varyings) : SV_Target {
-    float3 view_space_normal = normalize(varyings.normal);
-    return encode_ss_octahedral_normal(view_space_normal);
+float2 opaque_PS(OpaqueVaryings varyings, bool is_front_face : SV_IsFrontFace) : SV_Target {
+    return encode_ss_octahedral_normal(is_front_face ? varyings.normal : -varyings.normal);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -68,10 +67,9 @@ ThinWalledVaryings thin_walled_VS(float4 geometry : GEOMETRY, float2 uv : TEXCOO
     return varyings;
 }
 
-float2 thin_walled_PS(ThinWalledVaryings varyings) : SV_Target {
+float2 thin_walled_PS(ThinWalledVaryings varyings, bool is_front_face : SV_IsFrontFace) : SV_Target {
     if (material_params.discard_from_cutout(varyings.uv))
         discard;
 
-    float3 view_space_normal = normalize(varyings.normal);
-    return encode_ss_octahedral_normal(view_space_normal);
+    return encode_ss_octahedral_normal(is_front_face ? varyings.normal : -varyings.normal);
 }
