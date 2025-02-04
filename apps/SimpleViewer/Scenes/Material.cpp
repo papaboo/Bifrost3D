@@ -140,7 +140,7 @@ SceneNode shallow_clone(SceneNode node) {
     return cloned_node;
 }
 
-void create_material_scene(CameraID camera_ID, SceneNode root_node, ImGui::ImGuiAdaptor* imgui, const std::filesystem::path& data_directory) {
+void create_material_scene(CameraID camera_ID, SceneNode root_node, ImGui::ImGuiAdaptor* imgui, const std::filesystem::path& resource_directory) {
 
     { // Setup camera transform.
         Transform cam_transform = Cameras::get_transform(camera_ID);
@@ -167,23 +167,22 @@ void create_material_scene(CameraID camera_ID, SceneNode root_node, ImGui::ImGui
     auto& materials = imgui->make_frame<MaterialGUI>();
 
     { // Create material models.
-        const float shader_ball_distance = 300.0f;
+        const float shader_ball_distance = 1.2f;
 
-        SceneNode shader_ball_node = load_shader_ball(data_directory, materials.get_material(0));
-        Transform transform = Transform(Vector3f::zero(), Quaternionf::from_angle_axis(PI<float>(), Vector3f::up()), 0.01f);
+        SceneNode shader_ball_node = load_shader_ball(resource_directory, materials.get_material(0));
+        Transform transform = Transform(Vector3f::zero(), Quaternionf::identity(), 2.0f);
         shader_ball_node.set_global_transform(transform);
-        float shader_ball_pos_x = shader_ball_distance * 0.5f * (materials.material_count - 1);
-        shader_ball_node.apply_delta_transform(Transform(Vector3f(shader_ball_pos_x, -102, 0)));
+        float shader_ball_pos_x = -shader_ball_distance * 0.5f * (materials.material_count - 1);
+        shader_ball_node.apply_delta_transform(Transform(Vector3f(shader_ball_pos_x, 0, 0)));
         shader_ball_node.set_parent(root_node);
 
         for (int m = 1; m < materials.material_count; ++m) {
             SceneNode shader_ball_node_clone = shallow_clone(shader_ball_node);
-            shader_ball_node_clone.apply_delta_transform(Transform(Vector3f(m * -shader_ball_distance, 0, 0)));
+            shader_ball_node_clone.apply_delta_transform(Transform(Vector3f(m * shader_ball_distance, 0, 0)));
             shader_ball_node_clone.set_parent(root_node);
 
-            // Set surrounding surface to tested material
-            for (std::string node_name : { "Node2", "Node3", "Node6" })
-                replace_material(materials.get_material(m), shader_ball_node_clone, node_name);
+            // Set outer surface to tested material
+            replace_material(materials.get_material(m), shader_ball_node_clone, "Node5");
         }
     }
 }
