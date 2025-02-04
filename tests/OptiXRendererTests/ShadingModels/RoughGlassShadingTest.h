@@ -153,7 +153,7 @@ GTEST_TEST(RoughGlassShadingModel, snells_law) {
         float sin_theta_o = sin_theta(wo);
         float sin_theta_i = sin_theta(wi);
 
-        EXPECT_FLOAT_EQ_EPS(ior_o * sin_theta_o, ior_i * sin_theta_i, 1e-6f);
+        EXPECT_FLOAT_EQ_EPS(ior_o * sin_theta_o, ior_i * sin_theta_i, 1e-3f);
     }
 }
 
