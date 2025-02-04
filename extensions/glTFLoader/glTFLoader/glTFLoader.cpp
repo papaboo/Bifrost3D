@@ -571,10 +571,12 @@ SceneNodeID load(const std::string& filename) {
             }
             assert(mesh_flags.is_set(MeshFlag::Position));
 
-            if (primitive.indices < 0)
-                throw new std::exception("GLTFLoader::load error: mesh without primitive indices not supported yet. FIX!\n");
-            const tinygltf::Accessor& index_accessor = model.accessors[primitive.indices];
-            unsigned int primitive_count = unsigned int(index_accessor.count) / 3;
+            unsigned int primitive_count = vertex_count;
+            bool has_index_buffer = primitive.indices >= 0;
+            if (has_index_buffer) {
+                size_t index_count = model.accessors[primitive.indices].count;
+                primitive_count = unsigned int(index_count / 3); // Division by threee assumes TINYGLTF_MODE_TRIANGLES
+            }
 
             // Append the primitive index to the mesh name in case there's more than one primitive.
             std::string mesh_name = glTF_mesh.name;
@@ -583,13 +585,15 @@ SceneNodeID load(const std::string& filename) {
 
             Mesh mesh = Meshes::create(mesh_name, primitive_count, vertex_count, mesh_flags);
 
-            { // Import primitve indices.
+            if (has_index_buffer) {
+                // Import primitve indices.
+                const tinygltf::Accessor& index_accessor = model.accessors[primitive.indices];
                 assert(index_accessor.type == TINYGLTF_TYPE_SCALAR);
                 int element_size = sizeof(unsigned int);
                 const auto& buffer_view = model.bufferViews[index_accessor.bufferView];
                 const auto& buffer = model.buffers[buffer_view.buffer];
 
-                unsigned int* primitive_indices = (unsigned int*)(void*)mesh.get_primitives();
+                unsigned int* primitive_indices = mesh.get_indices();
                 
                 int buffer_offset = buffer_view.byteOffset + index_accessor.byteOffset;
                 int byte_stride = index_accessor.ByteStride(buffer_view);
@@ -602,6 +606,11 @@ SceneNodeID load(const std::string& filename) {
                     copy_indices(primitive_indices, (unsigned short*)src, index_accessor.count, byte_stride);
                 else // index_accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE
                     copy_indices(primitive_indices, src, index_accessor.count, byte_stride);
+            } else {
+                // Non indexed meshes not supported so create a list of incremental indices.
+                unsigned int* primitive_indices = mesh.get_indices();
+                for (unsigned int i = 0; i < mesh.get_index_count(); ++i)
+                    primitive_indices[i] = i;
             }
 
             // Import vertex attributes.
