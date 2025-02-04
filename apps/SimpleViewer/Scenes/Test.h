@@ -132,7 +132,7 @@ private:
     float m_existed_time;
 };
 
-void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneNode root_node, const std::filesystem::path& data_directory) {
+void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneNode root_node, const std::filesystem::path& resource_directory) {
     using namespace Bifrost::Assets;
     using namespace Bifrost::Math;
     using namespace Bifrost::Scene;
@@ -198,7 +198,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
             Materials::Data glass_material_data = Materials::Data::create_transmissive(RGB(0.95f), 1.0f, glass_specularity);
             Material glass_material = Materials::create("Glass", glass_material_data);
 
-            auto world_mask_path = data_directory / "SimpleViewer" / "WorldMask.png";
+            auto world_mask_path = resource_directory / "WorldMask.png";
             Image world_mask = StbImageLoader::load(world_mask_path.generic_string());
             world_mask.change_format(PixelFormat::Roughness8, 1.0f);
             glass_material.set_tint_roughness_texture(Textures::create2D(world_mask.get_ID()));

@@ -6,6 +6,12 @@ set(SRCS
   main.cpp
 )
 
+set(RESOURCE_FILES
+  Resources/Diamond.glb
+  Resources/Shaderball.gltf
+  Resources/WorldMask.png
+)
+
 set(GUI_SRCS
   GUI/RenderingGUI.h
   GUI/RenderingGUI.cpp
@@ -13,13 +19,11 @@ set(GUI_SRCS
 
 set(SCENES_SRCS
   Scenes/CornellBox.h
-  Scenes/Diamond.glb
   Scenes/Glass.h
   Scenes/Glass.cpp
   Scenes/Material.h
   Scenes/Material.cpp
   Scenes/Opacity.h
-  Scenes/Shaderball.glb
   Scenes/Sphere.cpp
   Scenes/Sphere.h
   Scenes/SphereLight.h
@@ -27,12 +31,12 @@ set(SCENES_SRCS
   Scenes/Utils.h
   Scenes/Utils.cpp
   Scenes/Veach.h
-  Scenes/WorldMask.png
 )
 
-add_executable(${PROJECT_NAME} ${SRCS} ${GUI_SRCS} ${SCENES_SRCS})
+add_executable(${PROJECT_NAME} ${SRCS} ${RESOURCE_FILES} ${GUI_SRCS} ${SCENES_SRCS})
 
 source_group("" FILES ${SRCS})
+source_group("Resources" FILES ${RESOURCE_FILES})
 source_group("GUI" FILES ${GUI_SRCS})
 source_group("Scenes" FILES ${SCENES_SRCS})
 
@@ -58,30 +62,17 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   FOLDER "Apps"
 )
 
-# Install shader ball and diamond
-set(SHADER_BALL_SOURCE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Scenes/Shaderball.glb)
-set(SHADER_BALL_DESTINATION_PATH ${BIFROST_DATA_OUTPUT_DIRECTORY}/SimpleViewer/Shaderball.glb)
-add_custom_command(
-  OUTPUT ${SHADER_BALL_DESTINATION_PATH}
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_BALL_SOURCE_PATH} ${SHADER_BALL_DESTINATION_PATH}
-  MAIN_DEPENDENCY ${SHADER_BALL_SOURCE_PATH}
-)
-
-set(WORLD_SOURCE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Scenes/WorldMask.png)
-set(WORLD_DESTINATION_PATH ${BIFROST_DATA_OUTPUT_DIRECTORY}/SimpleViewer/WorldMask.png)
-add_custom_command(
-  OUTPUT ${WORLD_DESTINATION_PATH}
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WORLD_SOURCE_PATH} ${WORLD_DESTINATION_PATH}
-  MAIN_DEPENDENCY ${WORLD_SOURCE_PATH}
-)
-
-set(DIAMOND_SOURCE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Scenes/Diamond.glb)
-set(DIAMOND_DESTINATION_PATH ${BIFROST_DATA_OUTPUT_DIRECTORY}/SimpleViewer/Diamond.glb)
-add_custom_command(
-  OUTPUT ${DIAMOND_DESTINATION_PATH}
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DIAMOND_SOURCE_PATH} ${DIAMOND_DESTINATION_PATH}
-  MAIN_DEPENDENCY ${DIAMOND_SOURCE_PATH}
-)
+# Install resources
+foreach (RESOURCE_FILE_PATH ${RESOURCE_FILES})
+  set(SOURCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/${RESOURCE_FILE_PATH})
+  set(DESTINATION_FILE ${BIFROST_DATA_OUTPUT_DIRECTORY}/SimpleViewer/${RESOURCE_FILE_PATH})
+  
+  add_custom_command(
+    OUTPUT ${DESTINATION_FILE}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_FILE} ${DESTINATION_FILE}
+    COMMAND ${CMAKE_COMMAND} -E echo "Copy ${RESOURCE_FILE_PATH} to ${DESTINATION_FILE}"
+    MAIN_DEPENDENCY ${SOURCE_FILE})
+endforeach()
 
 if (MSVC)
   create_project_VS_user_file(${PROJECT_NAME})

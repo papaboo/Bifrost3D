@@ -71,27 +71,34 @@ void replace_material(Material material, SceneNode parent_node, const std::strin
         });
 }
 
-Bifrost::Scene::SceneNode load_shader_ball(const std::filesystem::path& data_directory, Material material) {
-    printf("Shader ball curtesy of https://github.com/derkreature/ShaderBall\n");
-    auto shader_ball_path = data_directory / "SimpleViewer" / "Shaderball.glb";
+Bifrost::Scene::SceneNode load_shader_ball(const std::filesystem::path& resource_directory, Bifrost::Assets::Material material) {
+    printf("Mori knob curtesy of Yasutoshi Mori\n");
+    auto shader_ball_path = resource_directory / "Shaderball.gltf";
     SceneNode shader_ball_node = glTFLoader::load(shader_ball_path.generic_string());
 
-    // Delete original materials as they get replaced
-    shader_ball_node.apply_to_children_recursively([=](SceneNode node) {
-        MeshModel mesh_model = MeshModels::get_attached_mesh_model(node.get_ID());
-        Material material = mesh_model.get_material();
-        Materials::destroy(material.get_ID());
-    });
-
-    // Set base materials to rubber
+    // Rubber material for the inside
     Materials::Data rubber_material_data = Materials::Data::create_dielectric(RGB(0.05f), 1, 0.04f);
     Material rubber_material = Materials::create("Rubber", rubber_material_data);
-    for (std::string node_name : { "Node1", "Node4", "Node5" })
-        replace_material(rubber_material, shader_ball_node, node_name);
 
-    // Set surrounding surface to tested material
-    for (std::string node_name : { "Node2", "Node3", "Node6" })
-        replace_material(material, shader_ball_node, node_name);
+    const std::string inside_node_name = "Node2";
+    const std::string outside_node_name = "Node5";
+
+    shader_ball_node.apply_to_children_recursively([&](SceneNode node) {
+        std::string& node_name = node.get_name();
+        MeshModel mesh_model = MeshModels::get_attached_mesh_model(node.get_ID());
+        if (mesh_model.exists()) {
+            if (node_name == outside_node_name)
+                mesh_model.set_material(material);
+            else if (node_name == inside_node_name)
+                mesh_model.set_material(rubber_material);
+            else {
+                // Delete anything but the shaderball.
+                Meshes::destroy(mesh_model.get_mesh().get_ID());
+                Materials::destroy(mesh_model.get_material().get_ID());
+                MeshModels::destroy(mesh_model.get_ID());
+            }
+        }
+    });
 
     return shader_ball_node;
 }

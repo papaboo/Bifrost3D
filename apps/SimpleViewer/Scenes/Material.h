@@ -18,7 +18,7 @@ namespace ImGui { class ImGuiAdaptor; }
 
 namespace Scenes {
 
-void create_material_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::SceneNode root_node, ImGui::ImGuiAdaptor* imgui, const std::filesystem::path& data_directory);
+void create_material_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::SceneNode root_node, ImGui::ImGuiAdaptor* imgui, const std::filesystem::path& resource_directory);
 
 } // NS Scenes
 

@@ -25,7 +25,7 @@ using namespace Bifrost::Scene;
 
 namespace Scenes {
 
-void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::SceneNode root_node, const std::filesystem::path& data_directory) {
+void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::SceneNode root_node, const std::filesystem::path& resource_directory) {
 
     MeshFlags positions_and_normals = { MeshFlag::Position, MeshFlag::Normal };
 
@@ -54,10 +54,9 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
         Materials::Data glass_material_data = Materials::Data::create_transmissive(RGB(0.95f), 0.25f, glass_specularity);
         Material glass_material = Materials::create("Glass shader ball", glass_material_data);
 
-        SceneNode shader_ball_node = load_shader_ball(data_directory, glass_material);
-        Transform transform = Transform(Vector3f::zero(), Quaternionf::from_angle_axis(1.1f * PI<float>(), Vector3f::up()), 0.01f);
+        SceneNode shader_ball_node = load_shader_ball(resource_directory, glass_material);
+        Transform transform = Transform(Vector3f(0,-0.25f,0), Quaternionf::from_angle_axis(0.1f * PI<float>(), Vector3f::up()), 1.5f);
         shader_ball_node.set_global_transform(transform);
-        shader_ball_node.apply_delta_transform(Transform(Vector3f(0, -102, 0)));
         shader_ball_node.set_parent(root_node);
     }
 
@@ -114,7 +113,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
     }
 
     { // Diamond
-        auto diamond_path = data_directory / "SimpleViewer" / "Diamond.glb";
+        auto diamond_path = resource_directory / "Diamond.glb";
         SceneNode diamond_node = glTFLoader::load(diamond_path.generic_string());
         Quaternionf rotation = Quaternionf::from_angle_axis(-0.5f * PI<float>(), Vector3f::right());
         diamond_node.set_global_transform(Transform(Vector3f(-3, 0, 0), rotation));
