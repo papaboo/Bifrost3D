@@ -146,16 +146,18 @@ GTEST_TEST(GGX_R, fully_grazing_evaluates_to_black) {
 // We test the corner and middle samples and make sure that the sample coordinates match with the original precomputed sample coords.
 GTEST_TEST(GGX_R, validate_ggx_rho_precomputations) {
     using namespace Bifrost::Assets::Shading;
+    using namespace OptiXRenderer::Shading::BSDFs;
 
     int sample_count = 4096;
 
     float middle_cos_theta = (Rho::GGX_angle_sample_count / 2) / (Rho::GGX_angle_sample_count - 1.0f);
     float middle_roughness = (Rho::GGX_roughness_sample_count / 2) / (Rho::GGX_roughness_sample_count - 1.0f);
+    float middle_alpha = GGX::alpha_from_roughness(middle_roughness);
 
     for (float cos_theta_o : { 0.000001f, middle_cos_theta, 1.0f }) {
         optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
-        for (float roughness : { 0.0f, middle_roughness, 1.0f }) {
-            float alpha = Shading::BSDFs::GGX::alpha_from_roughness(roughness);
+        for (float alpha : { 1e-9f, middle_alpha, 1.0f }) {
+            float roughness = GGX::roughness_from_alpha(alpha);
 
             auto no_specularity_ggx = GGXReflectionWrapper(alpha, 0.0f);
             float expected_no_specularity_rho = BSDFTestUtils::directional_hemispherical_reflectance_function(no_specularity_ggx, wo, sample_count).reflectance.x;
@@ -366,7 +368,7 @@ GTEST_TEST(GGX_T, snells_law) {
     float ior_o = 1;
     float ior_i = 2;
     float ior_i_over_o = ior_i / ior_o;
-    float alpha = GGX::alpha_from_roughness(0.0f); // Use a smooth surface to test snells law to only allow a single output direction.
+    float alpha = 0.0f; // Use a smooth surface to test snells law to only allow a single output direction.
 
     for (float cos_theta_o : { 0.2f, 0.5f, 0.9f }) {
         float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
