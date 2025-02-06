@@ -51,8 +51,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
     }
 
     { // Add glass shaderball
-        Materials::Data glass_material_data = Materials::Data::create_transmissive(RGB(0.95f), 0.25f, glass_specularity);
-        Material glass_material = Materials::create("Glass shader ball", glass_material_data);
+        Material glass_material = Material::create_transmissive("Glass shader ball", RGB(0.95f), 0.25f, glass_specularity);
 
         SceneNode shader_ball_node = load_shader_ball(resource_directory, glass_material);
         Transform transform = Transform(Vector3f(0,-0.25f,0), Quaternionf::from_angle_axis(0.1f * PI<float>(), Vector3f::up()), 1.5f);
@@ -64,8 +63,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
         SceneNode magnifying_glass_node = SceneNodes::create("Magnifying glass");
 
         { // Glass
-            Materials::Data glass_material_data = Materials::Data::create_transmissive(RGB(0.975f), 0.0f, glass_specularity);
-            Material glass_material = Materials::create("Magnifying glass", glass_material_data);
+            Material glass_material = Material::create_transmissive("Magnifying glass", RGB(0.975f), 0.0f, glass_specularity);
 
             // Create sphere and flatten it to use as the glass in the magnifying glass.
             Mesh glass_mesh = MeshCreation::revolved_sphere(64, 32, positions_and_normals);
@@ -84,8 +82,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
         }
 
         { // Frame
-            Materials::Data frame_material_data = Materials::Data::create_metal(gold_tint, 0.5f);
-            Material frame_material = Materials::create("Magnifying glass frame", frame_material_data);
+            Material frame_material = Material::create_metal("Magnifying glass frame", gold_tint, 0.5f);
 
             Mesh frame_mesh = MeshCreation::torus(64, 64, 0.05f, positions_and_normals);
 
@@ -119,8 +116,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
         diamond_node.set_global_transform(Transform(Vector3f(-3, 0, 0), rotation));
         diamond_node.set_parent(root_node);
 
-        Materials::Data diamond_material_data = Materials::Data::create_transmissive(RGB(1.0f), 0.0f, diamond_specularity);
-        Material diamond_material = Materials::create("Diamond", diamond_material_data);
+        Material diamond_material = Material::create_transmissive("Diamond", RGB(1.0f), 0.0f, diamond_specularity);
         replace_material(diamond_material, diamond_node, "pCone1_DiamondOutside_0");
     }
 
@@ -128,8 +124,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
         SceneNode pool_node = SceneNodes::create("Pool");
 
         { // Pool sides grout
-            Materials::Data grout_material_data = Materials::Data::create_dielectric(RGB(0.2f, 0.2f, 0.2f), 0.9f, 0.04f);
-            Material grout_material = Materials::create("Pool tile", grout_material_data);
+            Material grout_material = Material::create_dielectric("Pool tile", RGB(0.2f), 0.9f);
 
             Mesh grout_side1 = MeshCreation::box(1, Vector3f(2.0f, 0.5f, 0.25f), positions_and_normals);
             Mesh grout_side2 = MeshCreation::box(1, Vector3f(0.25f, 0.5f, 1.5f), positions_and_normals);
@@ -152,8 +147,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
         }
 
         { // Tiles
-            Materials::Data tile_material_data = Materials::Data::create_coated_dielectric(RGB(0.001f, 0.56f, 0.81f), 0.8f, 0.04f, 0.05f);
-            Material tile_material = Materials::create("Pool tile", tile_material_data);
+            Material tile_material = Material::create_coated_dielectric("Pool tile", RGB(0.001f, 0.56f, 0.81f), 0.8f, 0.04f, 0.05f);
 
             Mesh tmp_tile_mesh = MeshCreation::beveled_box(5, 0.002f, Vector3f(0.235f, 0.005f, 0.235f), positions_and_normals);
             Mesh tile_mesh = MeshUtils::merge_duplicate_vertices(tmp_tile_mesh, { MeshFlag::Position, MeshFlag::Normal });
@@ -214,8 +208,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
         }
 
         { // Water
-            Materials::Data water_material_data = Materials::Data::create_transmissive(RGB(0.95f), 0.0f, water_specularity);
-            Material water_material = Materials::create("Water", water_material_data);
+            Material water_material = Material::create_transmissive("Water", RGB(0.95f), 0.0f, water_specularity);
 
             Mesh water_surface = MeshCreation::plane(128, positions_and_normals);
             for (Vector3f& position : water_surface.get_position_iterable())
@@ -246,7 +239,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
         box_material_data.tint_roughness_texture_ID = roughness_gradient_texture.get_ID();
 
         { // Glass box
-            Material box_material = Materials::create("Glass sheet", box_material_data);
+            Material box_material = Material("Glass sheet", box_material_data);
             Mesh box_mesh = MeshCreation::box(1, Vector3f(1, 1, 0.001f));
 
             // Fix UVs so they match the UVs of the plane below by aligning them with the xy plane.
@@ -263,7 +256,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
 
         { // Thin-walled plane
             box_material_data.flags |= MaterialFlag::ThinWalled;
-            Material thinwalled_material = Materials::create("Thin-walled glass sheet", box_material_data);
+            Material thinwalled_material = Material("Thin-walled glass sheet", box_material_data);
             Mesh plane_mesh = MeshCreation::plane(1);
             Quaternionf rotation = Quaternionf::from_angle_axis(0.5f * PI<float>(), Vector3f::right());
             SceneNode plane_node = SceneNodes::create("Thin-walled glass sheet", Transform(Vector3f(6, 0.5f, 0), rotation));
@@ -283,14 +276,13 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
         Quaternionf plane_rotation = Quaternionf::from_angle_axis(0.5f * PI<float>(), Vector3f::right());
 
         { // Default material in coat box
-            Material nickel_material = Materials::create("Nickel", nickel_material_data);
+            Material nickel_material = Material("Nickel", nickel_material_data);
             SceneNode plane_node = SceneNodes::create("Nickel", Transform(Vector3f(-6, -0.5f, 0), plane_rotation));
             MeshModels::create(plane_node.get_ID(), plane_mesh.get_ID(), nickel_material.get_ID());
             plane_node.set_parent(root_node);
 
             // Coat outside plane
-            Materials::Data coat_material_data = Materials::Data::create_transmissive(RGB::white(), coat_roughness, coat_specularity);
-            Material coat_material = Materials::create("Coat", coat_material_data);
+            Material coat_material = Material::create_transmissive("Coat", RGB::white(), coat_roughness, coat_specularity);
 
             Mesh box_mesh = MeshCreation::box(1, Vector3f(1, 1, 0.002f));
             SceneNode box_node = SceneNodes::create("Nickel coat", Transform(Vector3f(-6, -0.5f, 0)));
@@ -301,7 +293,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
         { // Coated default material
             nickel_material_data.coat = 1.0f;
             nickel_material_data.coat_roughness = coat_roughness;
-            Material coated_nickel_material = Materials::create("Coated nickel", nickel_material_data);
+            Material coated_nickel_material = Material("Coated nickel", nickel_material_data);
             SceneNode plane_node = SceneNodes::create("Coated nickel", Transform(Vector3f(-6, 0.5f, 0), plane_rotation));
             MeshModels::create(plane_node.get_ID(), plane_mesh.get_ID(), coated_nickel_material.get_ID());
             plane_node.set_parent(root_node);

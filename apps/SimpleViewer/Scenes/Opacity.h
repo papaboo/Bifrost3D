@@ -68,12 +68,12 @@ void create_opacity_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene
         Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.005f, 0.01f, 0.25f), 0.05f, 0.04f);
         material_data.coverage_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
         material_data.flags = MaterialFlag::Cutout;
-        MaterialID material_ID = Materials::create("Plastic", material_data);
+        Material material = Material("Plastic", material_data);
 
         Transform transform = Transform(Vector3f(0.0f, 0.5f, 0.0f));
         SceneNode box_node = SceneNodes::create("Swizz box", transform);
         MeshID box_mesh_ID = MeshCreation::box(1);
-        MeshModels::create(box_node.get_ID(), box_mesh_ID, material_ID);
+        MeshModels::create(box_node.get_ID(), box_mesh_ID, material.get_ID());
         box_node.set_parent(root_node);
     }
 

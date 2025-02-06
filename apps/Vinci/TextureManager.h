@@ -118,7 +118,7 @@ public:
 
         auto tint = Bifrost::Math::RGB(rng.sample1f(), rng.sample1f(), rng.sample1f());
         float roughness = rng.sample1f();
-        auto material_data = Materials::Data::create_dielectric(tint, roughness, 0.04f);
+        auto material_data = Materials::Data::create_dielectric(tint, roughness, default_specularity);
 
         float texture_probability = 0.9f;
         if (rng.sample1f() < texture_probability && m_tints.size() > 0) {

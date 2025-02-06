@@ -27,21 +27,19 @@ void create_cornell_box(Scene::CameraID camera_ID, Scene::SceneNode root_node) {
 
     Materials::Data white_material_data = Materials::Data::create_dielectric(RGB(0.98f), 1.0f, 0.02f);
     white_material_data.flags = MaterialFlag::ThinWalled;
-    MaterialID white_material_ID = Materials::create("White", white_material_data);
+    Material white_material = Materials::create("White", white_material_data);
 
     Materials::Data red_material_data = Materials::Data::create_dielectric(RGB(0.98f, 0.02f, 0.02f), 1.0f, 0.02f);
     red_material_data.flags = MaterialFlag::ThinWalled;
-    MaterialID red_material_ID = Materials::create("Red", red_material_data);
+    Material red_material = Materials::create("Red", red_material_data);
 
     Materials::Data green_material_data = Materials::Data::create_dielectric(RGB(0.02f, 0.98f, 0.02f), 1.0f, 0.02f);
     green_material_data.flags = MaterialFlag::ThinWalled;
-    MaterialID green_material_ID = Materials::create("Green", green_material_data);
+    Material green_material = Materials::create("Green", green_material_data);
 
-    Materials::Data iron_material_data = Materials::Data::create_metal(iron_tint, 0.4f);
-    MaterialID iron_material_ID = Materials::create("Iron", iron_material_data);
+    Material iron_material = Material::create_metal("Iron", iron_tint, 0.4f);
 
-    Materials::Data copper_material_data = Materials::Data::create_metal(copper_tint, 0.02f);
-    MaterialID copper_material_ID = Materials::create("Copper", copper_material_data);
+    Material copper_material = Material::create_metal("Copper", copper_tint, 0.02f);
 
     { // Set camera position
         Transform cam_transform = Cameras::get_transform(camera_ID);
@@ -64,35 +62,35 @@ void create_cornell_box(Scene::CameraID camera_ID, Scene::SceneNode root_node) {
         { // Floor
             Transform floor_transform = Transform(Vector3f(0.0f, -0.5f, 0.0f));
             SceneNode floor_node = SceneNodes::create("Floor", floor_transform);
-            MeshModels::create(floor_node.get_ID(), plane_mesh_ID, white_material_ID);
+            MeshModels::create(floor_node.get_ID(), plane_mesh_ID, white_material.get_ID());
             floor_node.set_parent(root_node);
         }
 
         { // Roof
             Transform roof_transform = Transform(Vector3f(0.0f, 0.5f, 0.0f), Quaternionf::from_angle_axis(Math::PI<float>(), Vector3f::forward()));
             SceneNode roof_node = SceneNodes::create("Roof", roof_transform);
-            MeshModels::create(roof_node.get_ID(), plane_mesh_ID, white_material_ID);
+            MeshModels::create(roof_node.get_ID(), plane_mesh_ID, white_material.get_ID());
             roof_node.set_parent(root_node);
         }
 
         { // Back
             Transform back_transform = Transform(Vector3f(0.0f, 0.0f, 0.5f), Quaternionf::from_angle_axis(-PI_half, Vector3f::right()));
             SceneNode back_node = SceneNodes::create("Back", back_transform);
-            MeshModels::create(back_node.get_ID(), plane_mesh_ID, white_material_ID);
+            MeshModels::create(back_node.get_ID(), plane_mesh_ID, white_material.get_ID());
             back_node.set_parent(root_node);
         }
 
         { // Left
             Transform left_transform = Transform(Vector3f(-0.5f, 0.0f, 0.0f), Quaternionf::from_angle_axis(-PI_half, Vector3f::forward()));
             SceneNode left_node = SceneNodes::create("Left", left_transform);
-            MeshModels::create(left_node.get_ID(), plane_mesh_ID, red_material_ID);
+            MeshModels::create(left_node.get_ID(), plane_mesh_ID, red_material.get_ID());
             left_node.set_parent(root_node);
         }
 
         { // Right
             Transform right_transform = Transform(Vector3f(0.5f, 0.0f, 0.0f), Quaternionf::from_angle_axis(PI_half, Vector3f::forward()));
             SceneNode right_node = SceneNodes::create("Right", right_transform);
-            MeshModels::create(right_node.get_ID(), plane_mesh_ID, green_material_ID);
+            MeshModels::create(right_node.get_ID(), plane_mesh_ID, green_material.get_ID());
             right_node.set_parent(root_node);
         }
     }
@@ -104,7 +102,7 @@ void create_cornell_box(Scene::CameraID camera_ID, Scene::SceneNode root_node) {
             Quaternionf::from_angle_axis(PI<float>() / 6.0f, Vector3f::up()),
             0.3f);
         SceneNode node = SceneNodes::create("Small box", transform);
-        MeshModels::create(node.get_ID(), box_mesh_ID, iron_material_ID);
+        MeshModels::create(node.get_ID(), box_mesh_ID, iron_material.get_ID());
         node.set_parent(root_node);
     }
 
@@ -120,7 +118,7 @@ void create_cornell_box(Scene::CameraID camera_ID, Scene::SceneNode root_node) {
             Quaternionf::from_angle_axis(-PI<float>() / 6.0f, Vector3f::up()),
             0.3f);
         SceneNode node = SceneNodes::create("Big box", transform);
-        MeshModels::create(node.get_ID(), box_mesh_ID, copper_material_ID);
+        MeshModels::create(node.get_ID(), box_mesh_ID, copper_material.get_ID());
         node.set_parent(root_node);
     }
 }

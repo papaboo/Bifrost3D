@@ -40,8 +40,7 @@ void create_sphere_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Sce
     }
 
     { // Cubed spheres
-        Materials::Data material_data = Materials::Data::create_metal(silver_tint, 0.04f);
-        MaterialID material_ID = Materials::create("Spheres", material_data);
+        Material material = Material::create_metal("Spheres", silver_tint, 0.04f);
 
         const float sphere_scale = 1.5f;
         const float sphere_spacing = 2.0f;
@@ -51,7 +50,7 @@ void create_sphere_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Sce
         for (int i = 0; i < sphere_model_count; ++i) {
             auto add_mesh_to_scene = [=](MeshID mesh_ID, Transform transform) {
                 SceneNode sphere_node = SceneNodes::create("Sphere", transform);
-                MeshModels::create(sphere_node.get_ID(), mesh_ID, material_ID);
+                MeshModels::create(sphere_node.get_ID(), mesh_ID, material.get_ID());
                 sphere_node.set_parent(root_node);
             };
 

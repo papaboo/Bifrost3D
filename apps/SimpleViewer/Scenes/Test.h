@@ -155,8 +155,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
     }
 
     { // Create rotating rings.
-        Materials::Data material_data = Materials::Data::create_metal(gold_tint, 0.02f);
-        MaterialID material_ID = Materials::create("Gold", material_data);
+        Material material = Material::create_metal("Gold", gold_tint, 0.02f);
 
         unsigned int torus_detail = 64;
         float minor_radius = 0.02f;
@@ -186,7 +185,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
             transform.translation = Vector3f(0, 0.5f, 0);
 
             SceneNode ring_node = SceneNodes::create("Rotating ring", transform);
-            MeshModels::create(ring_node.get_ID(), ring_mesh.get_ID(), material_ID);
+            MeshModels::create(ring_node.get_ID(), ring_mesh.get_ID(), material.get_ID());
             ring_node.set_parent(parent_node);
             parent_node = ring_node;
 
@@ -195,8 +194,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
         }
 
         { // Glass ball inside the rings
-            Materials::Data glass_material_data = Materials::Data::create_transmissive(RGB(0.95f), 1.0f, glass_specularity);
-            Material glass_material = Materials::create("Glass", glass_material_data);
+            Material glass_material = Material::create_transmissive("Glass", RGB(0.95f), 1.0f, glass_specularity);
 
             auto world_mask_path = resource_directory / "WorldMask.png";
             Image world_mask = StbImageLoader::load(world_mask_path.generic_string());
@@ -225,12 +223,12 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
 
         Materials::Data material_data = Materials::Data::create_metal(iron_tint, 1.0f);
         material_data.tint_roughness_texture_ID = Textures::create2D(roughness.get_ID());
-        MaterialID material_ID = Materials::create("Iron", material_data);
+        Material material = Material("Iron", material_data);
 
         Transform transform = Transform(Vector3f(-1.5f, 0.5f, 0.0f));
         SceneNode cylinder_node = SceneNodes::create("Destroyed Cylinder", transform);
         MeshID cylinder_mesh_ID = MeshCreation::cylinder(4, 16);
-        MeshModels::create(cylinder_node.get_ID(), cylinder_mesh_ID, material_ID);
+        MeshModels::create(cylinder_node.get_ID(), cylinder_mesh_ID, material.get_ID());
         cylinder_node.set_parent(root_node);
     }
 
@@ -273,12 +271,12 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
         material_data.tint_roughness_texture_ID = Textures::create2D(tint_roughness.get_ID());
         material_data.metallic = 1.0f;
         material_data.metallic_texture_ID = Textures::create2D(metalness.get_ID());
-        MaterialID material_ID = Materials::create("Copper/rubber", material_data);
+        Material material = Material("Copper/rubber", material_data);
 
         Transform transform = Transform(Vector3f(1.5f, 0.5f, 0.0f));
         SceneNode sphere_node = SceneNodes::create("Sphere", transform);
         MeshID sphere_mesh_ID = MeshCreation::revolved_sphere(128, 64);
-        MeshModels::create(sphere_node.get_ID(), sphere_mesh_ID, material_ID);
+        MeshModels::create(sphere_node.get_ID(), sphere_mesh_ID, material.get_ID());
         sphere_node.set_parent(root_node);
 
         LocalRotator* simple_rotator = new LocalRotator(sphere_node.get_ID(), 0.2f, Vector3f::up());
@@ -301,13 +299,13 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
         material_data.coverage = 0.5f;
         material_data.coverage_texture_ID = Textures::create2D(coverage_image_ID, MagnificationFilter::None, MinificationFilter::None);
         material_data.flags = { MaterialFlag::Cutout, MaterialFlag::ThinWalled };
-        MaterialID material_ID = Materials::create("Plastic", material_data);
+        Material material = Material("Plastic", material_data);
 
         Transform transform = Transform(Vector3f(3.0f, 0.35f, 0.0f), Quaternionf::identity(), 0.7f);
         SceneNode torus_node = SceneNodes::create("Swizz torus", transform);
         MeshID torus_mesh_ID = MeshCreation::torus(64, 64, 0.49f);
 
-        MeshModels::create(torus_node.get_ID(), torus_mesh_ID, material_ID);
+        MeshModels::create(torus_node.get_ID(), torus_mesh_ID, material.get_ID());
         torus_node.set_parent(root_node);
     }
 

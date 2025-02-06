@@ -50,6 +50,7 @@ const float diamond_ior = 2.42f;
 // ---------------------------------------------------------------------------
 // Specularities of materials in air
 // ---------------------------------------------------------------------------
+const float default_specularity = 0.04f;
 const float coat_specularity = 0.04f;
 const float ice_specularity = Math::dielectric_specularity(air_ior, ice_ior);
 const float water_specularity = Math::dielectric_specularity(air_ior, water_ior);
@@ -247,6 +248,29 @@ public:
     // -----------------------------------------------------------------------
     Material() : m_ID(MaterialID::invalid_UID()) {}
     Material(MaterialID id) : m_ID(id) {}
+    Material(const std::string& name, const Materials::Data& data) {
+        m_ID = Materials::create(name, data);
+    }
+
+    static Material create_dielectric(const std::string& name, Math::RGB tint, float roughness, float specularity = default_specularity) {
+        auto data = Materials::Data::create_dielectric(tint, roughness, specularity);
+        return Materials::create(name, data);
+    }
+
+    static Material create_metal(const std::string& name, Math::RGB tint, float roughness) {
+        auto data = Materials::Data::create_metal(tint, roughness);
+        return Materials::create(name, data);
+    }
+
+    static Material create_coated_dielectric(const std::string& name, Math::RGB tint, float roughness, float specularity, float coat_roughness) {
+        auto data = Materials::Data::create_coated_dielectric(tint, roughness, specularity, coat_roughness);
+        return Materials::create(name, data);
+    }
+
+    static Material create_transmissive(const std::string& name, Math::RGB tint, float roughness, float specularity = glass_specularity) {
+        auto data = Materials::Data::create_transmissive(tint, roughness, specularity);
+        return Materials::create(name, data);
+    }
 
     inline const MaterialID get_ID() const { return m_ID; }
     inline bool exists() const { return Materials::has(m_ID); }

@@ -103,11 +103,11 @@ void create(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneRootID 
             material_data.specularity = lerp(material0_data.specularity, material1_data.specularity, lerp_t);
             material_data.metallic = lerp(material0_data.metallic, material1_data.metallic, lerp_t);
             material_data.coverage = lerp(material0_data.coverage, material1_data.coverage, lerp_t);
-            MaterialID material_ID = Materials::create("Lerped material", material_data);
+            Material material = Material("Lerped material", material_data);
 
             Transform transform = Transform(Vector3f(float(m - 4) * 1.25f, 0.0, 0.0f));
             SceneNode node = SceneNodes::create("Model", transform);
-            MeshModels::create(node.get_ID(), sphere_mesh_ID, material_ID);
+            MeshModels::create(node.get_ID(), sphere_mesh_ID, material.get_ID());
             node.set_parent(root_node);
         }
     }
