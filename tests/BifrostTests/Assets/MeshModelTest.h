@@ -48,64 +48,64 @@ TEST_F(Assets_MeshModels, resizing) {
 }
 
 TEST_F(Assets_MeshModels, sentinel_mesh) {
-    MeshModelID sentinel_ID = MeshModelID::invalid_UID();
+    MeshModel sentinel = MeshModelID();
 
-    EXPECT_FALSE(MeshModels::has(sentinel_ID));
-    EXPECT_EQ(MeshModels::get_scene_node_ID(sentinel_ID), Scene::SceneNodeID::invalid_UID());
-    EXPECT_EQ(MeshModels::get_mesh_ID(sentinel_ID), MeshID::invalid_UID());
+    EXPECT_FALSE(sentinel.exists());
+    EXPECT_EQ(sentinel.get_scene_node(), Scene::SceneNode::invalid());
+    EXPECT_EQ(sentinel.get_mesh(), Mesh::invalid());
 }
 
 TEST_F(Assets_MeshModels, create) {
-    Scene::SceneNodeID node_ID = Scene::SceneNodes::create("TestNode");
-    MeshID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
+    Scene::SceneNode node = Scene::SceneNode("TestNode");
+    Mesh mesh = Mesh("TestMesh", 32u, 16u);
     Materials::Data data = {};
-    MaterialID material_ID = Materials::create("TestMaterial", data);
+    Material material = Material("TestMaterial", data);
 
-    MeshModelID model_ID = MeshModels::create(node_ID, mesh_ID, material_ID);
+    MeshModel model = MeshModel(node, mesh, material);
 
-    EXPECT_TRUE(MeshModels::has(model_ID));
-    EXPECT_EQ(MeshModels::get_scene_node_ID(model_ID), node_ID);
-    EXPECT_EQ(MeshModels::get_mesh_ID(model_ID), mesh_ID);
-    EXPECT_EQ(MeshModels::get_material_ID(model_ID), material_ID);
+    EXPECT_TRUE(model.exists());
+    EXPECT_EQ(model.get_scene_node(), node);
+    EXPECT_EQ(model.get_mesh(), mesh);
+    EXPECT_EQ(model.get_material(), material);
 
     // Test model created notification.
     Core::Iterable<MeshModels::ChangedIterator> changed_models = MeshModels::get_changed_models();
     EXPECT_EQ(changed_models.end() - changed_models.begin(), 1);
-    EXPECT_EQ(*changed_models.begin(), model_ID);
-    EXPECT_EQ(MeshModels::get_changes(model_ID), MeshModels::Change::Created);
+    EXPECT_EQ(model, *changed_models.begin());
+    EXPECT_EQ(model.get_changes(), MeshModels::Change::Created);
 }
 
 TEST_F(Assets_MeshModels, destroy) {
-    Scene::SceneNodeID node_ID = Scene::SceneNodes::create("TestNode");
-    MeshID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
+    Scene::SceneNode node = Scene::SceneNode("TestNode");
+    Mesh mesh = Mesh("TestMesh", 32u, 16u);
     Materials::Data data = {};
-    MaterialID material_ID = Materials::create("TestMaterial", data);
+    Material material = Material("TestMaterial", data);
 
-    MeshModelID model_ID = MeshModels::create(node_ID, mesh_ID, material_ID);
-    EXPECT_TRUE(MeshModels::has(model_ID));
+    MeshModel model = MeshModel(node, mesh, material);
+    EXPECT_TRUE(model.exists());
 
     MeshModels::reset_change_notifications();
 
-    MeshModels::destroy(model_ID);
-    EXPECT_FALSE(MeshModels::has(model_ID));
+    model.destroy();
+    EXPECT_FALSE(model.exists());
 
     // Test model destroyed notification.
     Core::Iterable<MeshModels::ChangedIterator> changed_models = MeshModels::get_changed_models();
     EXPECT_EQ(changed_models.end() - changed_models.begin(), 1);
-    EXPECT_EQ(*changed_models.begin(), model_ID);
-    EXPECT_EQ(MeshModels::get_changes(model_ID), MeshModels::Change::Destroyed);
+    EXPECT_EQ(model, *changed_models.begin());
+    EXPECT_EQ(model.get_changes(), MeshModels::Change::Destroyed);
 }
 
 TEST_F(Assets_MeshModels, create_and_destroy_notifications) {
-    Scene::SceneNodeID node_ID = Scene::SceneNodes::create("TestNode");
-    MeshID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
+    Scene::SceneNode node = Scene::SceneNode("TestNode");
+    Mesh mesh = Mesh("TestMesh", 32u, 16u);
     Materials::Data data = {};
-    MaterialID material_ID = Materials::create("TestMaterial", data);
+    Material material = Material("TestMaterial", data);
 
-    MeshModelID model_ID0 = MeshModels::create(node_ID, mesh_ID, material_ID);
-    MeshModelID model_ID1 = MeshModels::create(node_ID, mesh_ID, material_ID);
-    EXPECT_TRUE(MeshModels::has(model_ID0));
-    EXPECT_TRUE(MeshModels::has(model_ID1));
+    MeshModel model0 = MeshModel(node, mesh, material);
+    MeshModel model1 = MeshModel(node, mesh, material);
+    EXPECT_TRUE(model0.exists());
+    EXPECT_TRUE(model1.exists());
 
     { // Test model create notifications.
         Core::Iterable<MeshModels::ChangedIterator> changed_models = MeshModels::get_changed_models();
@@ -113,10 +113,10 @@ TEST_F(Assets_MeshModels, create_and_destroy_notifications) {
 
         bool model0_created = false;
         bool model1_created = false;
-        for (const MeshModelID model_ID : changed_models) {
-            if (model_ID == model_ID0 && MeshModels::get_changes(model_ID) == MeshModels::Change::Created)
+        for (const MeshModel model : changed_models) {
+            if (model == model0 && model.get_changes() == MeshModels::Change::Created)
                 model0_created = true;
-            if (model_ID == model_ID1 && MeshModels::get_changes(model_ID) == MeshModels::Change::Created)
+            if (model == model1 && model.get_changes() == MeshModels::Change::Created)
                 model1_created = true;
         }
 
@@ -127,16 +127,16 @@ TEST_F(Assets_MeshModels, create_and_destroy_notifications) {
     MeshModels::reset_change_notifications();
 
     { // Test destroy.
-        MeshModels::destroy(model_ID0);
-        EXPECT_FALSE(MeshModels::has(model_ID0));
+        model0.destroy();
+        EXPECT_FALSE(model0.exists());
 
         Core::Iterable<MeshModels::ChangedIterator> changed_models = MeshModels::get_changed_models();
         EXPECT_EQ(changed_models.end() - changed_models.begin(), 1);
 
         bool model0_destroyed = false;
         bool other_change = false;
-        for (const MeshModelID model_ID : changed_models) {
-            if (model_ID == model_ID0 && MeshModels::get_changes(model_ID) == MeshModels::Change::Destroyed)
+        for (const MeshModel model : changed_models) {
+            if (model == model0 && model.get_changes() == MeshModels::Change::Destroyed)
                 model0_destroyed = true;
             else
                 other_change = true;
@@ -149,10 +149,10 @@ TEST_F(Assets_MeshModels, create_and_destroy_notifications) {
     MeshModels::reset_change_notifications();
 
     { // Test that destroyed model cannot be destroyed again.
-        EXPECT_FALSE(MeshModels::has(model_ID0));
+        EXPECT_FALSE(model0.exists());
 
-        MeshModels::destroy(model_ID0);
-        EXPECT_FALSE(MeshModels::has(model_ID0));
+        model0.destroy();
+        EXPECT_FALSE(model0.exists());
         EXPECT_TRUE(MeshModels::get_changed_models().is_empty());
     }
 }

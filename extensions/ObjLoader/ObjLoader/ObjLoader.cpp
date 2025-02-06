@@ -31,7 +31,7 @@ using namespace Bifrost::Scene;
 
 namespace ObjLoader {
 
-using ImageCache = std::unordered_map<std::string, ImageID>;
+using ImageCache = std::unordered_map<std::string, Image>;
 
 void split_path(std::string& directory, std::string& filename, const std::string& path) {
     std::string::const_iterator slash_itr = path.end();
@@ -63,7 +63,7 @@ void load_material_images(const std::vector<tinyobj::material_t>& materials, con
         if (!coverage_name.empty() && coverage_cache.find(coverage_name) == coverage_cache.end()) {
             std::string coverage_image_path = directory + coverage_name;
             Image coverage_image = image_loader(coverage_image_path);
-            coverage_cache.insert({ coverage_name, coverage_image.get_ID() });
+            coverage_cache.insert({ coverage_name, coverage_image });
 
             if (coverage_image.exists())
                 if (coverage_image.get_pixel_format() != PixelFormat::Alpha8)
@@ -76,14 +76,14 @@ void load_material_images(const std::vector<tinyobj::material_t>& materials, con
         if (!tint_name.empty() && tint_cache.find(tint_name) == tint_cache.end()) {
             std::string tint_image_path = directory + tint_name;
             Image tint_image = image_loader(tint_image_path);
-            tint_cache.insert({ tint_name, tint_image.get_ID() });
+            tint_cache.insert({ tint_name, tint_image });
 
             if (tint_image.exists()) {
                 // Extract alpha as coverage and set the roughness to 1 if the image has an alpha channel
                 if (channel_count(tint_image.get_pixel_format()) == 4) {
                     unsigned int mipmap_count = tint_image.get_mipmap_count();
                     Vector2ui size = tint_image.get_size_2D();
-                    Image coverage_image = Images::create2D(tint_image_path, PixelFormat::Alpha8, 1.0f, size);
+                    Image coverage_image = Image::create2D(tint_image_path, PixelFormat::Alpha8, 1.0f, size);
                     unsigned char* coverage_pixels = coverage_image.get_pixels<unsigned char>();
 
                     float min_coverage = 1.0f;
@@ -112,7 +112,7 @@ void load_material_images(const std::vector<tinyobj::material_t>& materials, con
                     }
 
                     if (min_coverage < 1.0f)
-                        coverage_cache.insert({ tint_name, coverage_image.get_ID() });
+                        coverage_cache.insert({ tint_name, coverage_image });
                 }
             } else
                 printf("ObjLoader::load error: Could not load image at '%s'.\n", tint_image_path.c_str());
@@ -131,7 +131,7 @@ void load_material_images(const std::vector<tinyobj::material_t>& materials, con
     }
 }
 
-SceneNodeID load(const std::string& path, ImageLoader image_loader) {
+SceneNode load(const std::string& path, ImageLoader image_loader) {
     std::string directory, filename;
     split_path(directory, filename, path);
 
@@ -149,15 +149,15 @@ SceneNodeID load(const std::string& path, ImageLoader image_loader) {
         printf("ObjLoader::load error: '%s'.\n", error.c_str());
 
     if (!obj_loaded)
-        return SceneNodeID::invalid_UID();
+        return SceneNode::invalid();
 
-    SceneNodeID root_ID = shapes.size() > 1u ? SceneNodes::create(std::string(filename.begin(), filename.end()-4)) : SceneNodeID::invalid_UID();
+    SceneNode root = shapes.size() > 1u ? SceneNode(std::string(filename.begin(), filename.end()-4)) : SceneNodeID::invalid_UID();
 
     ImageCache tint_images;
     ImageCache coverage_images;
     load_material_images(tiny_materials, directory, image_loader, tint_images, coverage_images);
 
-    Core::Array<MaterialID> materials = Core::Array<MaterialID>(unsigned int(tiny_materials.size()));
+    Core::Array<Material> materials = Core::Array<Material>(unsigned int(tiny_materials.size()));
     for (int i = 0; i < int(tiny_materials.size()); ++i) {
         tinyobj::material_t tiny_mat = tiny_materials[i];
 
@@ -192,7 +192,7 @@ SceneNodeID load(const std::string& path, ImageLoader image_loader) {
             }
 
             if (alpha_image.exists())
-                material_data.coverage_texture_ID = Textures::create2D(alpha_image.get_ID());
+                material_data.coverage_texture_ID = Texture::create2D(alpha_image).get_ID();
         }
 
         // Diffuse image
@@ -201,11 +201,11 @@ SceneNodeID load(const std::string& path, ImageLoader image_loader) {
             if (tint_image_itr != tint_images.end()) {
                 Image tint_image = tint_image_itr->second;
                 if (tint_image.exists())
-                    material_data.tint_roughness_texture_ID = Textures::create2D(tint_image.get_ID());
+                    material_data.tint_roughness_texture_ID = Texture::create2D(tint_image).get_ID();
             }
         }
 
-        materials[unsigned int(i)] = Materials::create(tiny_mat.name, material_data);
+        materials[i] = Material(tiny_mat.name, material_data);
     }
 
     for (int s = 0; s < int(shapes.size()); ++s) {
@@ -243,7 +243,7 @@ SceneNodeID load(const std::string& path, ImageLoader image_loader) {
 
         unsigned int triangle_count = unsigned int(shape.mesh.num_face_vertices.size());
 
-        Mesh bifrost_mesh = Meshes::create(shape.name, triangle_count, vertex_count, mesh_flags);
+        Mesh bifrost_mesh = Mesh(shape.name, triangle_count, vertex_count, mesh_flags);
 
         // Copy indices.
         auto* mesh_primitives = bifrost_mesh.get_primitives();
@@ -286,18 +286,18 @@ SceneNodeID load(const std::string& path, ImageLoader image_loader) {
 
         bifrost_mesh.compute_bounds();
 
-        SceneNodeID node_ID = SceneNodes::create(shape.name);
-        if (root_ID != SceneNodeID::invalid_UID())
-            SceneNodes::set_parent(node_ID, root_ID);
+        SceneNode node = SceneNode(shape.name);
+        if (root != SceneNode::invalid())
+            node.set_parent(root);
         else
-            root_ID = node_ID;
+            root = node;
 
         int material_index = shape.mesh.material_ids[0]; // No per facet material support. TODO Add it in the future by splitting up the shape.
-        MaterialID material_ID = material_index >= 0 ? materials[material_index] : MaterialID::invalid_UID();
-        MeshModelID model_ID = MeshModels::create(node_ID, bifrost_mesh.get_ID(), material_ID);
+        Material material = material_index >= 0 ? materials[material_index] : Material::invalid();
+        MeshModel(node, bifrost_mesh, material);
     }
 
-    return root_ID;
+    return root;
 }
 
 inline bool string_ends_with(const std::string& s, const std::string& end) {

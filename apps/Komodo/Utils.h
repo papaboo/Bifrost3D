@@ -87,16 +87,16 @@ inline Bifrost::Assets::Image load_image(const std::string& path) {
 inline void store_image(Bifrost::Assets::Image image, const std::string& path) {
     std::string file_extension = std::string(path, path.length() - 3);
     if (file_extension.compare("exr") == 0)
-        TinyExr::store(image.get_ID(), path);
+        TinyExr::store(image, path);
     else
-        StbImageWriter::write(image.get_ID(), path);
+        StbImageWriter::write(image, path);
 }
 
 // Create a red and white error image.
-inline Bifrost::Assets::ImageID create_error_image() {
+inline Bifrost::Assets::Image create_error_image() {
     using namespace Bifrost::Assets;
 
-    Image error_img = Images::create2D("No images loaded", PixelFormat::RGBA32, 2.2f, Bifrost::Math::Vector2ui(16, 16));
+    Image error_img = Image::create2D("No images loaded", PixelFormat::RGBA32, 2.2f, Bifrost::Math::Vector2ui(16, 16));
     unsigned char* pixels = (unsigned char*)error_img.get_pixels();
     for (unsigned int y = 0; y < error_img.get_height(); ++y) {
         for (unsigned int x = 0; x < error_img.get_width(); ++x) {
@@ -107,7 +107,7 @@ inline Bifrost::Assets::ImageID create_error_image() {
             pixel[3] = 255u;
         }
     }
-    return error_img.get_ID();
+    return error_img;
 }
 
 inline void render_image(Bifrost::Core::Window& window, GLuint texture_ID, int image_width, int image_height) {

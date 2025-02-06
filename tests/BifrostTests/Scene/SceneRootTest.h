@@ -33,13 +33,13 @@ GTEST_TEST(Scene_SceneRoot, resizing) {
     EXPECT_LT(SceneRoots::capacity(), larger_capacity);
 }
 
-GTEST_TEST(Scene_SceneRoot, sentinel_scene) {
+GTEST_TEST(Scene_SceneRoot, invalid_scene_root_properties) {
     SceneRoots::allocate(1u);
 
-    SceneRoot sentinel = SceneRootID::invalid_UID();
+    SceneRoot invalid_scene_root = SceneRoot::invalid();
 
-    EXPECT_EQ(Math::RGB::black(), sentinel.get_environment_tint());
-    EXPECT_EQ(Assets::TextureID::invalid_UID(), sentinel.get_environment_map());
+    EXPECT_EQ(Math::RGB::black(), invalid_scene_root.get_environment_tint());
+    EXPECT_EQ(Assets::Texture::invalid(), invalid_scene_root.get_environment_map());
 
     SceneRoots::deallocate();
 }
@@ -48,18 +48,18 @@ GTEST_TEST(Scene_SceneRoot, create) {
     SceneNodes::allocate(1u);
     SceneRoots::allocate(1u);
 
-    SceneRootID scene_ID = SceneRoots::create("Foo", Math::RGB::blue());
-    EXPECT_TRUE(SceneRoots::has(scene_ID));
+    SceneRoot scene = SceneRoot("Foo", Math::RGB::blue());
+    EXPECT_TRUE(scene.exists());
 
-    EXPECT_EQ("Foo", SceneRoots::get_name(scene_ID));
-    EXPECT_EQ(Math::RGB::blue(), SceneRoots::get_environment_tint(scene_ID));
-    EXPECT_EQ(Assets::TextureID::invalid_UID(), SceneRoots::get_environment_map(scene_ID));
+    EXPECT_EQ("Foo", scene.get_name());
+    EXPECT_EQ(Math::RGB::blue(), scene.get_environment_tint());
+    EXPECT_EQ(Assets::Texture::invalid(), scene.get_environment_map());
 
     // Test scene root created notification.
     Core::Iterable<SceneRoots::ChangedIterator> changed_scenes = SceneRoots::get_changed_scenes();
     EXPECT_EQ(1, changed_scenes.end() - changed_scenes.begin());
-    EXPECT_EQ(scene_ID, *changed_scenes.begin());
-    EXPECT_EQ(SceneRoots::Change::Created, SceneRoots::get_changes(scene_ID));
+    EXPECT_EQ(scene, *changed_scenes.begin());
+    EXPECT_EQ(SceneRoots::Change::Created, scene.get_changes());
 
     SceneRoots::deallocate();
     SceneNodes::deallocate();
@@ -68,18 +68,18 @@ GTEST_TEST(Scene_SceneRoot, create) {
 GTEST_TEST(Scene_SceneRoot, destroy) {
     SceneNodes::allocate(1u);
     SceneRoots::allocate(1u);
-    SceneRoot scene = SceneRoots::create("Foo", Math::RGB::blue());
+    SceneRoot scene = SceneRoot("Foo", Math::RGB::blue());
     EXPECT_TRUE(scene.exists());
 
     SceneRoots::reset_change_notifications();
 
-    SceneRoots::destroy(scene.get_ID());
+    scene.destroy();
     EXPECT_FALSE(scene.exists());
 
     // Test scene node destroyed notification.
     Core::Iterable<SceneRoots::ChangedIterator> changed_scenes = SceneRoots::get_changed_scenes();
     EXPECT_EQ(1, changed_scenes.end() - changed_scenes.begin());
-    EXPECT_EQ(scene.get_ID(), *changed_scenes.begin());
+    EXPECT_EQ(scene, *changed_scenes.begin());
     EXPECT_EQ(SceneRoots::Change::Destroyed, scene.get_changes());
 
     SceneRoots::deallocate();
@@ -90,10 +90,10 @@ GTEST_TEST(Scene_SceneRoot, create_and_destroy_notifications) {
     SceneNodes::allocate(2u);
     SceneRoots::allocate(2u);
 
-    SceneRootID scene_ID0 = SceneRoots::create("Foo", Math::RGB::blue());
-    SceneRootID scene_ID1 = SceneRoots::create("Bar", Math::RGB::blue());
-    EXPECT_TRUE(SceneRoots::has(scene_ID0));
-    EXPECT_TRUE(SceneRoots::has(scene_ID1));
+    SceneRoot scene0 = SceneRoot("Foo", Math::RGB::blue());
+    SceneRoot scene1 = SceneRoot("Bar", Math::RGB::blue());
+    EXPECT_TRUE(scene0.exists());
+    EXPECT_TRUE(scene1.exists());
 
     { // Test scene root create notifications.
         Core::Iterable<SceneRoots::ChangedIterator> changed_scenes = SceneRoots::get_changed_scenes();
@@ -101,10 +101,10 @@ GTEST_TEST(Scene_SceneRoot, create_and_destroy_notifications) {
 
         bool scene0_created = false;
         bool scene1_created = false;
-        for (const SceneRootID scene_ID : changed_scenes) {
-            bool scene_created = SceneRoots::get_changes(scene_ID) == SceneRoots::Change::Created;
-            scene0_created |= scene_ID == scene_ID0 && scene_created;
-            scene1_created |= scene_ID == scene_ID1 && scene_created;
+        for (const SceneRoot scene : changed_scenes) {
+            bool scene_created = scene.get_changes() == SceneRoots::Change::Created;
+            scene0_created |= scene == scene0 && scene_created;
+            scene1_created |= scene == scene1 && scene_created;
         }
 
         EXPECT_TRUE(scene0_created);
@@ -114,24 +114,24 @@ GTEST_TEST(Scene_SceneRoot, create_and_destroy_notifications) {
     SceneRoots::reset_change_notifications();
 
     { // Test destroy.
-        SceneRoots::destroy(scene_ID0);
-        EXPECT_FALSE(SceneRoots::has(scene_ID0));
+        scene0.destroy();
+        EXPECT_FALSE(scene0.exists());
 
         Core::Iterable<SceneRoots::ChangedIterator> changed_scenes = SceneRoots::get_changed_scenes();
         EXPECT_EQ(changed_scenes.end() - changed_scenes.begin(), 1);
 
         SceneRoot changed_scene = *changed_scenes.begin();
-        bool scene0_destroyed = changed_scene.get_ID() == scene_ID0 && changed_scene.get_changes() == SceneRoots::Change::Destroyed;
+        bool scene0_destroyed = changed_scene == scene0 && changed_scene.get_changes() == SceneRoots::Change::Destroyed;
         EXPECT_TRUE(scene0_destroyed);
     }
 
     SceneRoots::reset_change_notifications();
 
     { // Test that destroyed scene cannot be destroyed again.
-        EXPECT_FALSE(SceneRoots::has(scene_ID0));
+        EXPECT_FALSE(scene0.exists());
 
-        SceneRoots::destroy(scene_ID0);
-        EXPECT_FALSE(SceneRoots::has(scene_ID0));
+        scene0.destroy();
+        EXPECT_FALSE(scene0.exists());
         EXPECT_TRUE(SceneRoots::get_changed_scenes().is_empty());
     }
 
@@ -143,7 +143,7 @@ GTEST_TEST(Scene_SceneRoot, update_notifications) {
     SceneNodes::allocate(1u);
     SceneRoots::allocate(1u);
 
-    SceneRoot scene = SceneRoots::create("Foo", Math::RGB::blue());
+    SceneRoot scene = SceneRoot("Foo", Math::RGB::blue());
     
     SceneRoots::reset_change_notifications();
 
@@ -152,9 +152,8 @@ GTEST_TEST(Scene_SceneRoot, update_notifications) {
 
         Core::Iterable<SceneRoots::ChangedIterator> changed_scenes = SceneRoots::get_changed_scenes();
         EXPECT_EQ(changed_scenes.end() - changed_scenes.begin(), 1);
-
-        EXPECT_TRUE(scene.get_ID() == *changed_scenes.begin());
-        EXPECT_TRUE(scene.get_changes() == SceneRoots::Change::EnvironmentTint);
+        EXPECT_EQ(scene, *changed_scenes.begin());
+        EXPECT_EQ(scene.get_changes(), SceneRoots::Change::EnvironmentTint);
     }
 
     SceneRoots::reset_change_notifications();
@@ -162,15 +161,14 @@ GTEST_TEST(Scene_SceneRoot, update_notifications) {
     { // Environment map change notification.
         Assets::Textures::allocate(2u);
 
-        Assets::TextureID map = Assets::Textures::create2D(Assets::ImageID::invalid_UID());
+        Assets::Texture map = Assets::Texture::create2D(Assets::Image::invalid());
 
         scene.set_environment_map(map);
 
         Core::Iterable<SceneRoots::ChangedIterator> changed_scenes = SceneRoots::get_changed_scenes();
         EXPECT_EQ(changed_scenes.end() - changed_scenes.begin(), 1);
-
-        EXPECT_TRUE(scene.get_ID() == *changed_scenes.begin());
-        EXPECT_TRUE(scene.get_changes() == SceneRoots::Change::EnvironmentMap);
+        EXPECT_EQ(scene, *changed_scenes.begin());
+        EXPECT_EQ(scene.get_changes(), SceneRoots::Change::EnvironmentMap);
 
         Assets::Textures::deallocate();
     }

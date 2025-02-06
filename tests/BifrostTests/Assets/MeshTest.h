@@ -42,79 +42,79 @@ TEST_F(Assets_Mesh, resizing) {
     EXPECT_LT(Meshes::capacity(), largerCapacity);
 }
 
-TEST_F(Assets_Mesh, sentinel_mesh) {
-    MeshID sentinel_ID = MeshID::invalid_UID();
+TEST_F(Assets_Mesh, invalid_mesh_properties) {
+    Mesh invalid_mesh = Mesh::invalid();
 
-    EXPECT_FALSE(Meshes::has(sentinel_ID));
-    EXPECT_EQ(0u, Meshes::get_primitive_count(sentinel_ID));
-    EXPECT_EQ(nullptr, Meshes::get_primitives(sentinel_ID));
-    EXPECT_EQ(0u, Meshes::get_vertex_count(sentinel_ID));
-    EXPECT_EQ(nullptr, Meshes::get_positions(sentinel_ID));
-    EXPECT_EQ(nullptr, Meshes::get_normals(sentinel_ID));
-    EXPECT_EQ(nullptr, Meshes::get_texcoords(sentinel_ID));
-    Math::AABB bounds = Meshes::get_bounds(sentinel_ID);
+    EXPECT_FALSE(invalid_mesh.exists());
+    EXPECT_EQ(0u, invalid_mesh.get_primitive_count());
+    EXPECT_EQ(nullptr, invalid_mesh.get_primitives());
+    EXPECT_EQ(0u, invalid_mesh.get_vertex_count());
+    EXPECT_EQ(nullptr, invalid_mesh.get_positions());
+    EXPECT_EQ(nullptr, invalid_mesh.get_normals());
+    EXPECT_EQ(nullptr, invalid_mesh.get_texcoords());
+    Math::AABB bounds = invalid_mesh.get_bounds();
     EXPECT_TRUE(isnan(bounds.minimum.x) && isnan(bounds.minimum.y) && isnan(bounds.minimum.z) &&
                 isnan(bounds.maximum.x) && isnan(bounds.maximum.y) && isnan(bounds.maximum.z));
 }
 
 TEST_F(Assets_Mesh, create) {
-    MeshID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
+    Mesh mesh = Mesh("TestMesh", 32u, 16u);
 
-    EXPECT_TRUE(Meshes::has(mesh_ID));
-    EXPECT_EQ(32u, Meshes::get_primitive_count(mesh_ID));
-    EXPECT_NE(nullptr, Meshes::get_primitives(mesh_ID));
-    EXPECT_EQ(16u, Meshes::get_vertex_count(mesh_ID));
-    EXPECT_NE(nullptr, Meshes::get_positions(mesh_ID));
-    EXPECT_NE(nullptr, Meshes::get_normals(mesh_ID));
-    EXPECT_NE(nullptr, Meshes::get_texcoords(mesh_ID));
-    EXPECT_INVALID_AABB(Meshes::get_bounds(mesh_ID));
+    EXPECT_TRUE(mesh.exists());
+    EXPECT_EQ(32u, mesh.get_primitive_count());
+    EXPECT_NE(nullptr, mesh.get_primitives());
+    EXPECT_EQ(16u, mesh.get_vertex_count());
+    EXPECT_NE(nullptr, mesh.get_positions());
+    EXPECT_NE(nullptr, mesh.get_normals());
+    EXPECT_NE(nullptr, mesh.get_texcoords());
+    EXPECT_INVALID_AABB(mesh.get_bounds());
 
     // Test mesh created notification.
     Core::Iterable<Meshes::ChangedIterator> changed_meshes = Meshes::get_changed_meshes();
     EXPECT_EQ(1, changed_meshes.end() - changed_meshes.begin());
-    EXPECT_EQ(mesh_ID, *changed_meshes.begin());
-    EXPECT_EQ(Meshes::Change::Created, Meshes::get_changes(mesh_ID));
+    EXPECT_EQ(mesh, *changed_meshes.begin());
+    EXPECT_EQ(Meshes::Change::Created, mesh.get_changes());
 }
 
 TEST_F(Assets_Mesh, create_only_positions) {
-    MeshID mesh_ID = Meshes::create("TestMesh", 32u, 16u, MeshFlag::Position);
+    Mesh mesh = Mesh("TestMesh", 32u, 16u, MeshFlag::Position);
 
-    EXPECT_TRUE(Meshes::has(mesh_ID));
-    EXPECT_EQ(32u, Meshes::get_primitive_count(mesh_ID));
-    EXPECT_NE(nullptr, Meshes::get_primitives(mesh_ID));
-    EXPECT_EQ(16u, Meshes::get_vertex_count(mesh_ID));
-    EXPECT_NE(nullptr, Meshes::get_positions(mesh_ID));
-    EXPECT_EQ(nullptr, Meshes::get_normals(mesh_ID));
-    EXPECT_EQ(nullptr, Meshes::get_texcoords(mesh_ID));
+    EXPECT_TRUE(mesh.exists());
+    EXPECT_EQ(32u, mesh.get_primitive_count());
+    EXPECT_NE(nullptr, mesh.get_primitives());
+    EXPECT_EQ(16u, mesh.get_vertex_count());
+    EXPECT_NE(nullptr, mesh.get_positions());
+    EXPECT_EQ(nullptr, mesh.get_normals());
+    EXPECT_EQ(nullptr, mesh.get_texcoords());
 
     // Test mesh created notification.
     Core::Iterable<Meshes::ChangedIterator> changed_meshes = Meshes::get_changed_meshes();
     EXPECT_EQ(1, changed_meshes.end() - changed_meshes.begin());
-    EXPECT_EQ(mesh_ID, *changed_meshes.begin());
-    EXPECT_EQ(Meshes::Change::Created, Meshes::get_changes(mesh_ID));
+    EXPECT_EQ(mesh, *changed_meshes.begin());
+    EXPECT_EQ(Meshes::Change::Created, mesh.get_changes());
 }
 
 TEST_F(Assets_Mesh, destroy) {
-    MeshID mesh_ID = Meshes::create("TestMesh", 32u, 16u);
-    EXPECT_TRUE(Meshes::has(mesh_ID));
+    Mesh mesh = Mesh("TestMesh", 32u, 16u);
+    EXPECT_TRUE(mesh.exists());
 
     Meshes::reset_change_notifications();
 
-    Meshes::destroy(mesh_ID);
-    EXPECT_FALSE(Meshes::has(mesh_ID));
+    mesh.destroy();
+    EXPECT_FALSE(mesh.exists());
 
     // Test mesh destroyed notification.
     Core::Iterable<Meshes::ChangedIterator> changed_meshes = Meshes::get_changed_meshes();
     EXPECT_EQ(1, changed_meshes.end() - changed_meshes.begin());
-    EXPECT_EQ(mesh_ID, *changed_meshes.begin());
-    EXPECT_EQ(Meshes::Change::Destroyed, Meshes::get_changes(mesh_ID));
+    EXPECT_EQ(mesh, *changed_meshes.begin());
+    EXPECT_EQ(Meshes::Change::Destroyed, mesh.get_changes());
 }
 
 TEST_F(Assets_Mesh, create_and_destroy_notifications) {
-    MeshID mesh_ID0 = Meshes::create("TestMesh0", 32u, 16u);
-    MeshID mesh_ID1 = Meshes::create("TestMesh1", 32u, 16u);
-    EXPECT_TRUE(Meshes::has(mesh_ID0));
-    EXPECT_TRUE(Meshes::has(mesh_ID1));
+    Mesh mesh0 = Mesh("TestMesh0", 32u, 16u);
+    Mesh mesh1 = Mesh("TestMesh1", 32u, 16u);
+    EXPECT_TRUE(mesh0.exists());
+    EXPECT_TRUE(mesh1.exists());
 
     { // Test mesh create notifications.
         Core::Iterable<Meshes::ChangedIterator> changed_meshes = Meshes::get_changed_meshes();
@@ -123,11 +123,11 @@ TEST_F(Assets_Mesh, create_and_destroy_notifications) {
         bool mesh0_created = false;
         bool mesh1_created = false;
         bool other_changes = false;
-        for (const MeshID mesh_ID : changed_meshes) {
-            bool mesh_created = Meshes::get_changes(mesh_ID) == Meshes::Change::Created;
-            if (mesh_ID == mesh_ID0 && mesh_created)
+        for (const Mesh mesh : changed_meshes) {
+            bool mesh_created = mesh.get_changes() == Meshes::Change::Created;
+            if (mesh == mesh0 && mesh_created)
                 mesh0_created = true;
-            else if (mesh_ID == mesh_ID1 && mesh_created)
+            else if (mesh == mesh1 && mesh_created)
                 mesh1_created = true;
             else
                 other_changes = true;
@@ -141,16 +141,16 @@ TEST_F(Assets_Mesh, create_and_destroy_notifications) {
     Meshes::reset_change_notifications();
 
     { // Test destroy.
-        Meshes::destroy(mesh_ID0);
-        EXPECT_FALSE(Meshes::has(mesh_ID0));
+        mesh0.destroy();
+        EXPECT_FALSE(mesh0.exists());
 
         Core::Iterable<Meshes::ChangedIterator> changed_meshes = Meshes::get_changed_meshes();
         EXPECT_EQ(1, changed_meshes.end() - changed_meshes.begin());
 
         bool mesh0_destroyed = false;
         bool other_changes = false;
-        for (const MeshID mesh_ID : changed_meshes) {
-            if (mesh_ID == mesh_ID0 && Meshes::get_changes(mesh_ID) == Meshes::Change::Destroyed)
+        for (const Mesh mesh : changed_meshes) {
+            if (mesh == mesh0 && mesh.get_changes() == Meshes::Change::Destroyed)
                 mesh0_destroyed = true;
             else
                 other_changes = true;
@@ -163,30 +163,30 @@ TEST_F(Assets_Mesh, create_and_destroy_notifications) {
     Meshes::reset_change_notifications();
 
     { // Test that destroyed mesh cannot be destroyed again.
-        EXPECT_FALSE(Meshes::has(mesh_ID0));
+        EXPECT_FALSE(mesh0.exists());
         
-        Meshes::destroy(mesh_ID0);
-        EXPECT_FALSE(Meshes::has(mesh_ID0));
+        mesh0.destroy();
+        EXPECT_FALSE(mesh0.exists());
         EXPECT_TRUE(Meshes::get_changed_meshes().is_empty());
     }
 }
 
 TEST_F(Assets_Mesh, normals_correspond_to_winding_order) {
-    MeshID plane_ID = MeshCreation::plane(3);
-    EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(plane_ID));
-    EXPECT_EQ(0, MeshTests::count_degenerate_primitives(plane_ID, 0.000001f));
+    Mesh plane = MeshCreation::plane(3);
+    EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(plane));
+    EXPECT_EQ(0, MeshTests::count_degenerate_primitives(plane, 0.000001f));
 
-    MeshID box_ID = MeshCreation::box(3);
-    EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(box_ID));
-    EXPECT_EQ(0, MeshTests::count_degenerate_primitives(box_ID, 0.000001f));
+    Mesh box = MeshCreation::box(3);
+    EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(box));
+    EXPECT_EQ(0, MeshTests::count_degenerate_primitives(box, 0.000001f));
 
-    MeshID cylinder_ID = MeshCreation::cylinder(3, 3);
-    EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(cylinder_ID));
-    EXPECT_EQ(0, MeshTests::count_degenerate_primitives(cylinder_ID, 0.000001f));
+    Mesh cylinder = MeshCreation::cylinder(3, 3);
+    EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(cylinder));
+    EXPECT_EQ(0, MeshTests::count_degenerate_primitives(cylinder, 0.000001f));
 
-    MeshID revolved_sphere_ID = MeshCreation::revolved_sphere(3, 3);
-    EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(revolved_sphere_ID));
-    EXPECT_EQ(0, MeshTests::count_degenerate_primitives(revolved_sphere_ID, 0.000001f));
+    Mesh revolved_sphere = MeshCreation::revolved_sphere(3, 3);
+    EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(revolved_sphere));
+    EXPECT_EQ(0, MeshTests::count_degenerate_primitives(revolved_sphere, 0.000001f));
 }
 
 TEST_F(Assets_Mesh, expand_index_buffer) {
@@ -227,7 +227,7 @@ TEST_F(Assets_Mesh, hard_normal_computation) {
 TEST_F(Assets_Mesh, merge_duplicate_vertices) {
     using namespace Math;
 
-    Mesh two_tris = Meshes::create("two_tris", 2, 6, MeshFlag::Position);
+    Mesh two_tris = Mesh("two_tris", 2, 6, MeshFlag::Position);
     Vector3f* positions = two_tris.get_positions();
     positions[0] = Vector3f(0, 0, 0);
     positions[1] = positions[3] = Vector3f(1, 0, 0);
@@ -259,7 +259,7 @@ TEST_F(Assets_Mesh, merge_duplicate_vertices) {
 TEST_F(Assets_Mesh, merge_duplicate_vertices_returns_copy_if_no_duplicates) {
     using namespace Math;
 
-    Mesh expected_mesh = Meshes::create("two_tris", 2, 6, MeshFlag::Position);
+    Mesh expected_mesh = Mesh("two_tris", 2, 6, MeshFlag::Position);
     Vector3f* positions = expected_mesh.get_positions();
     positions[0] = Vector3f(0, 0, 0);
     positions[1] = Vector3f(1, 0, 0);
@@ -289,7 +289,7 @@ TEST_F(Assets_Mesh, merge_duplicate_vertices_with_different_positions_if_positio
     using namespace Math;
 
     // Single triangle with duplicate normals at vertex 1 and 2.
-    Mesh single_tri = Meshes::create("single_tri", 1, 3, { MeshFlag::Position, MeshFlag::Normal });
+    Mesh single_tri = Mesh("single_tri", 1, 3, { MeshFlag::Position, MeshFlag::Normal });
     Vector3f* positions = single_tri.get_positions();
     Vector3f* normals = single_tri.get_normals();
     positions[0] = Vector3f(0, 0, 0); normals[0] = Vector3f(1, 0, 0);

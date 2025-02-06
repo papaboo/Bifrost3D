@@ -65,21 +65,21 @@ unsigned int sizeof_format(PixelFormat format) {
     return 0u;
 }
 
-inline ImageID convert_image(const std::string& name, void* loaded_pixels, int width, int height, int channel_count, bool is_HDR) {
+inline Image convert_image(const std::string& name, void* loaded_pixels, int width, int height, int channel_count, bool is_HDR) {
     if (loaded_pixels == nullptr) {
         printf("StbImageLoader::load(%s) error: '%s'\n", name.c_str(), stbi_failure_reason());
-        return ImageID::invalid_UID();
+        return Image::invalid();
     }
 
     PixelFormat pixel_format = resolve_format(channel_count, is_HDR);
     if (pixel_format == PixelFormat::Unknown) {
         printf("StbImageLoader::load(%s) error: 'Could not resolve format'\n", name.c_str());
-        return ImageID::invalid_UID();
+        return Image::invalid();
     }
 
     float image_gamma = is_HDR ? 1.0f : 2.2f;
-    ImageID image_ID = Images::create2D(name, pixel_format, image_gamma, Vector2ui(width, height));
-    Images::PixelData pixel_data = Images::get_pixels(image_ID);
+    Image image = Image::create2D(name, pixel_format, image_gamma, Vector2ui(width, height));
+    Images::PixelData pixel_data = image.get_pixels();
     if (channel_count == 2) {
         unsigned char* pixel_data_uc4 = (unsigned char*)pixel_data;
         unsigned char* loaded_data_uc2 = (unsigned char*)loaded_pixels;
@@ -95,10 +95,10 @@ inline ImageID convert_image(const std::string& name, void* loaded_pixels, int w
 
     stbi_image_free(loaded_pixels);
 
-    return image_ID;
+    return image;
 }
 
-ImageID load(const std::string& path) {
+Image load(const std::string& path) {
     stbi_set_flip_vertically_on_load(true);
 
     void* loaded_pixels = nullptr;
@@ -112,7 +112,7 @@ ImageID load(const std::string& path) {
     return convert_image(path, loaded_pixels, width, height, channel_count, is_HDR);
 }
 
-Bifrost::Assets::ImageID load_from_memory(const std::string& name, const void* const data, int data_byte_count) {
+Image load_from_memory(const std::string& name, const void* const data, int data_byte_count) {
     stbi_set_flip_vertically_on_load(false);
 
     int width, height, channel_count;

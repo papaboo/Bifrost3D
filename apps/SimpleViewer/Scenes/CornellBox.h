@@ -50,75 +50,73 @@ void create_cornell_box(Scene::CameraID camera_ID, Scene::SceneNode root_node) {
     { // Add light source.
         Vector3f light_position = Vector3f(0.0f, 0.45f, 0.0f);
         Transform light_transform = Transform(light_position);
-        SceneNode light_node = SceneNodes::create("Light", light_transform);
+        SceneNode light_node = SceneNode("Light", light_transform);
         light_node.set_parent(root_node);
-        LightSourceID light_ID = LightSources::create_sphere_light(light_node.get_ID(), RGB(2.0f), 0.05f);
+        SphereLight(light_node, RGB(2.0f), 0.05f);
     }
 
     { // Create room.
-        MeshID plane_mesh_ID = MeshCreation::plane(1);
+        Mesh plane_mesh = MeshCreation::plane(1);
         float PI_half = PI<float>() * 0.5f;
 
         { // Floor
             Transform floor_transform = Transform(Vector3f(0.0f, -0.5f, 0.0f));
-            SceneNode floor_node = SceneNodes::create("Floor", floor_transform);
-            MeshModels::create(floor_node.get_ID(), plane_mesh_ID, white_material.get_ID());
+            SceneNode floor_node = SceneNode("Floor", floor_transform);
+            MeshModel(floor_node, plane_mesh, white_material);
             floor_node.set_parent(root_node);
         }
 
         { // Roof
             Transform roof_transform = Transform(Vector3f(0.0f, 0.5f, 0.0f), Quaternionf::from_angle_axis(Math::PI<float>(), Vector3f::forward()));
-            SceneNode roof_node = SceneNodes::create("Roof", roof_transform);
-            MeshModels::create(roof_node.get_ID(), plane_mesh_ID, white_material.get_ID());
+            SceneNode roof_node = SceneNode("Roof", roof_transform);
+            MeshModel(roof_node, plane_mesh, white_material);
             roof_node.set_parent(root_node);
         }
 
         { // Back
             Transform back_transform = Transform(Vector3f(0.0f, 0.0f, 0.5f), Quaternionf::from_angle_axis(-PI_half, Vector3f::right()));
-            SceneNode back_node = SceneNodes::create("Back", back_transform);
-            MeshModels::create(back_node.get_ID(), plane_mesh_ID, white_material.get_ID());
+            SceneNode back_node = SceneNode("Back", back_transform);
+            MeshModel(back_node, plane_mesh, white_material);
             back_node.set_parent(root_node);
         }
 
         { // Left
             Transform left_transform = Transform(Vector3f(-0.5f, 0.0f, 0.0f), Quaternionf::from_angle_axis(-PI_half, Vector3f::forward()));
-            SceneNode left_node = SceneNodes::create("Left", left_transform);
-            MeshModels::create(left_node.get_ID(), plane_mesh_ID, red_material.get_ID());
+            SceneNode left_node = SceneNode("Left", left_transform);
+            MeshModel(left_node, plane_mesh, red_material);
             left_node.set_parent(root_node);
         }
 
         { // Right
             Transform right_transform = Transform(Vector3f(0.5f, 0.0f, 0.0f), Quaternionf::from_angle_axis(PI_half, Vector3f::forward()));
-            SceneNode right_node = SceneNodes::create("Right", right_transform);
-            MeshModels::create(right_node.get_ID(), plane_mesh_ID, green_material.get_ID());
+            SceneNode right_node = SceneNode("Right", right_transform);
+            MeshModel(right_node, plane_mesh, green_material);
             right_node.set_parent(root_node);
         }
     }
 
     { // Create small box.
-        MeshID box_mesh_ID = MeshCreation::box(1);
+        Mesh box_mesh = MeshCreation::box(1);
 
         Transform transform = Transform(Vector3f(0.2f, -0.35f, -0.2f),
             Quaternionf::from_angle_axis(PI<float>() / 6.0f, Vector3f::up()),
             0.3f);
-        SceneNode node = SceneNodes::create("Small box", transform);
-        MeshModels::create(node.get_ID(), box_mesh_ID, iron_material.get_ID());
+        SceneNode node = SceneNode("Small box", transform);
+        MeshModel(node, box_mesh, iron_material);
         node.set_parent(root_node);
     }
 
     { // Create big box.
-        MeshID box_mesh_ID = MeshCreation::box(1);
+        Mesh box_mesh = MeshCreation::box(1);
 
-        Vector3f* positions = Meshes::get_positions(box_mesh_ID);
-        for (unsigned int v = 0; v < Meshes::get_vertex_count(box_mesh_ID); ++v) {
-            positions[v].y *= 2.0f;
-        }
+        for (Vector3f& position : box_mesh.get_position_iterable())
+            position.y *= 2.0f;
 
         Transform transform = Transform(Vector3f(-0.2f, -0.2f, 0.2f),
             Quaternionf::from_angle_axis(-PI<float>() / 6.0f, Vector3f::up()),
             0.3f);
-        SceneNode node = SceneNodes::create("Big box", transform);
-        MeshModels::create(node.get_ID(), box_mesh_ID, copper_material.get_ID());
+        SceneNode node = SceneNode("Big box", transform);
+        MeshModel(node, box_mesh, copper_material);
         node.set_parent(root_node);
     }
 }

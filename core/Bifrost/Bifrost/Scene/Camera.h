@@ -142,7 +142,7 @@ public:
     // Grabs screenshot data from the renderer and stores it in an intermediate format while the datamodel is considered immutable.
     static void fill_screenshot(CameraID camera_ID, ScreenshotFiller screenshot_filler);
     static ScreenshotContent pending_screenshots(CameraID camera_ID);
-    static Assets::ImageID resolve_screenshot(CameraID camera_ID, Screenshot::Content image_content, const std::string& name); // Resolves the last screenshot into an image.
+    static Assets::Image resolve_screenshot(CameraID camera_ID, Screenshot::Content image_content, const std::string& name); // Resolves the last screenshot into an image.
 
     //---------------------------------------------------------------------------------------------
     // Changes since last game loop tick.

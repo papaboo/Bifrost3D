@@ -84,7 +84,7 @@ struct Blurer::Implementation final {
         engine.get_window().set_name("Komodo - " + m_input.get_name());
 
         Vector2ui size = m_input.get_size_2D();
-        m_blurred_image = Images::create2D("blurred_" + m_input.get_name(), PixelFormat::RGB_Float, 2.2f, size);
+        m_blurred_image = Image::create2D("blurred_" + m_input.get_name(), PixelFormat::RGB_Float, 2.2f, size);
 
         bool headless = engine.get_window().get_width() == 0 && engine.get_window().get_height() == 0;
         if (headless) {
@@ -155,7 +155,7 @@ struct Blurer::Implementation final {
     // Update.
     // --------------------------------------------------------------------------------------------
     Image blur_image(Image image) {
-        ImageOperations::Blur::gaussian(image.get_ID(), m_std_dev, m_blurred_image.get_ID());
+        ImageOperations::Blur::gaussian(image, m_std_dev, m_blurred_image);
         return m_blurred_image;
     }
 

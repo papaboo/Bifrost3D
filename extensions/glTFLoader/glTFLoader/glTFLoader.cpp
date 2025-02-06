@@ -47,7 +47,7 @@ inline bool string_ends_with(const std::string& s, const std::string& end) {
 }
 
 struct LoadedMesh {
-    MeshID ID;
+    Mesh Mesh;
     bool is_used;
 };
 
@@ -123,14 +123,14 @@ inline std::string to_string(ImageUsage usage) {
 }
 
 typedef size_t ConvertedImageKey;
-inline size_t hash_converted_image(ImageID image_ID, ImageID image2_ID, ImageUsage usage) {
-    return (size_t)image2_ID.get_index() << 32 | image_ID.get_index() << 8 | (size_t)usage;
+inline size_t hash_converted_image(Image image, Image image2, ImageUsage usage) {
+    return (size_t)image2.get_ID().get_index() << 32 | image.get_ID().get_index() << 8 | (size_t)usage;
 }
-inline size_t hash_converted_image(ImageID image_ID, ImageUsage usage) {
-    return hash_converted_image(image_ID, ImageID::invalid_UID(), usage);
+inline size_t hash_converted_image(Image image, ImageUsage usage) {
+    return hash_converted_image(image, Image::invalid(), usage);
 }
 
-using ImageCache = std::unordered_map<ConvertedImageKey, ImageID>;
+using ImageCache = std::unordered_map<ConvertedImageKey, Image>;
 
 struct SamplerParams {
     MagnificationFilter Magnification_filter = MagnificationFilter::Linear;
@@ -145,23 +145,23 @@ struct SamplerParams {
         WrapV = convert_wrap_mode(glTF_sampler.wrapT);
     }
 
-    inline TextureID create_texture_2D(ImageID image_ID) {
-        if (Images::has(image_ID))
-            return Textures::create2D(image_ID, Magnification_filter, Minification_filter, WrapU, WrapV);
-        return TextureID::invalid_UID();
+    inline Texture create_texture_2D(Image image) {
+        if (image.exists())
+            return Texture::create2D(image, Magnification_filter, Minification_filter, WrapU, WrapV);
+        return Texture::invalid();
     }
 };
 
 struct TextureState {
     int glTF_image_index = -1;
-    ImageID Image_ID = ImageID::invalid_UID();
+    Image Image = Image::invalid();
     SamplerParams Sampler;
 
     void parse_glTF_texture(tinygltf::Model& model, int texture_index) {
         const auto& glTF_texture = model.textures[texture_index];
         glTF_image_index = glTF_texture.source;
         const auto& glTF_image = model.images[glTF_image_index];
-        memcpy(&Image_ID, glTF_image.image.data(), sizeof(Image_ID));
+        memcpy(&Image, glTF_image.image.data(), sizeof(Image));
         assert(Images::has(Image_ID));
 
         // Extract sampler params.
@@ -173,12 +173,12 @@ struct TextureState {
 // Extracts a single channel from an image or retrieves it from the cache. The resulting image is cached.
 Image extract_channel(Image image, int channel, ImageUsage usage, const std::string& name, ImageCache& converted_images) {
     if (channel >= channel_count(image.get_pixel_format()))
-        return ImageID::invalid_UID();
+        return Image::invalid();
 
     if (image.get_pixel_format() == PixelFormat::Alpha8 && channel == 0)
         return image;
 
-    auto converted_image_hash = hash_converted_image(image.get_ID(), usage);
+    auto converted_image_hash = hash_converted_image(image, usage);
     auto& converted_image_itr = converted_images.find(converted_image_hash);
     if (converted_image_itr != converted_images.end())
         return converted_image_itr->second;
@@ -186,12 +186,12 @@ Image extract_channel(Image image, int channel, ImageUsage usage, const std::str
     // Extract the channel from the image and store the resulting image in the cache.
     unsigned int mipmap_count = image.get_mipmap_count();
     Vector2ui size = image.get_size_2D();
-    ImageID single_channel_image_ID = Images::create2D(name + "_" + to_string(usage), PixelFormat::Alpha8, 1.0, size, mipmap_count);
+    Image single_channel_image = Image::create2D(name + "_" + to_string(usage), PixelFormat::Alpha8, 1.0, size, mipmap_count);
 
     unsigned char min_value = 255;
     for (unsigned int m = 0; m < mipmap_count; ++m) {
         int pixel_count = image.get_pixel_count(m);
-        unsigned char* dst_pixels = Images::get_pixels<unsigned char>(single_channel_image_ID, m);
+        unsigned char* dst_pixels = single_channel_image.get_pixels<unsigned char>(m);
 
         auto src_format = image.get_pixel_format();
         if (src_format == PixelFormat::RGB24 || src_format == PixelFormat::RGBA32) {
@@ -216,12 +216,12 @@ Image extract_channel(Image image, int channel, ImageUsage usage, const std::str
 
     // Only create single channel image if it has values other than 1.0.
     if (min_value < 255) {
-        converted_images.insert({ converted_image_hash, single_channel_image_ID });
-        return single_channel_image_ID;
+        converted_images.insert({ converted_image_hash, single_channel_image });
+        return single_channel_image;
     } else {
-        Images::destroy(single_channel_image_ID);
-        converted_images.insert({ converted_image_hash, ImageID::invalid_UID() });
-        return ImageID::invalid_UID();
+        single_channel_image.destroy();
+        converted_images.insert({ converted_image_hash, Image::invalid() });
+        return Image::invalid();
     }
 }
 
@@ -234,13 +234,13 @@ Image extract_tint_roughness(Image tint_image, Image roughness_image, const std:
     if (!roughness_image.exists() && channel_count(tint_image.get_pixel_format()) == 3)
         return tint_image;
 
-    auto tint_roughness_image_hash = hash_converted_image(tint_image.get_ID(), roughness_image.get_ID(), ImageUsage::Tint_roughness);
+    auto tint_roughness_image_hash = hash_converted_image(tint_image, roughness_image, ImageUsage::Tint_roughness);
     auto& converted_image_itr = converted_images.find(tint_roughness_image_hash);
     if (converted_image_itr != converted_images.end())
         return converted_image_itr->second;
 
     Image dst_image = ImageUtils::combine_tint_roughness(tint_image, roughness_image, 1);
-    converted_images.insert({ tint_roughness_image_hash, dst_image.get_ID() });
+    converted_images.insert({ tint_roughness_image_hash, dst_image });
     return dst_image;
 }
 
@@ -277,9 +277,9 @@ bool decompose_transformation(Matrix3x4d matrix, Transform& transform) {
 // Importer
 // ------------------------------------------------------------------------------------------------
 
-SceneNodeID import_node(const tinygltf::Model& model, const tinygltf::Node& node, const Matrix3x4d parent_transform, 
-                        const std::vector<int>& meshes_start_index, std::vector<LoadedMesh>& meshes,
-                        const std::vector<MaterialID>& material_IDs) {
+SceneNode import_node(const tinygltf::Model& model, const tinygltf::Node& node, const Matrix3x4d parent_transform, 
+                      const std::vector<int>& meshes_start_index, std::vector<LoadedMesh>& meshes,
+                      const std::vector<Material>& materials) {
     // Local transform and scene node.
     Matrix3x4d local_transform;
     if (node.matrix.size() == 16) {
@@ -311,7 +311,7 @@ SceneNodeID import_node(const tinygltf::Model& model, const tinygltf::Node& node
     Transform decomposed_global_transform;
     bool apply_residual_transformation = !decompose_transformation(global_transform, decomposed_global_transform);
 
-    SceneNodeID scene_node_ID = SceneNodes::create(node.name, decomposed_global_transform);
+    SceneNode scene_node = SceneNode(node.name, decomposed_global_transform);
 
     if (node.mesh >= 0) {
         // Get loaded mesh indices.
@@ -329,26 +329,26 @@ SceneNodeID import_node(const tinygltf::Model& model, const tinygltf::Node& node
             }
 
             // Create model.
-            auto& mesh = meshes[mesh_index++];
-            MeshID mesh_ID = mesh.ID;
+            auto& loaded_mesh = meshes[mesh_index++];
+            Mesh mesh = loaded_mesh.Mesh;
             if (apply_residual_transformation) {
-                mesh_ID = MeshUtils::deep_clone(mesh_ID);
-                MeshUtils::transform_mesh(mesh_ID, residual_transformation);
+                mesh = MeshUtils::deep_clone(mesh);
+                MeshUtils::transform_mesh(mesh, residual_transformation);
             }
-            mesh.is_used = mesh_ID == mesh.ID;
-            auto material_ID = material_IDs[primitive.material];
-            MeshModels::create(scene_node_ID, mesh_ID, material_ID);
+            loaded_mesh.is_used = mesh == loaded_mesh.Mesh;
+            auto material = materials[primitive.material];
+            MeshModel(scene_node, mesh, material);
         }
     }
 
     // Recurse over children.
     for (const int child_node_index : node.children) {
         const auto& node = model.nodes[child_node_index];
-        SceneNode child_node = import_node(model, node, global_transform, meshes_start_index, meshes, material_IDs);
-        child_node.set_parent(scene_node_ID);
+        SceneNode child_node = import_node(model, node, global_transform, meshes_start_index, meshes, materials);
+        child_node.set_parent(scene_node);
     }
 
-    return scene_node_ID;
+    return scene_node;
 };
 
 template<typename T>
@@ -364,7 +364,7 @@ void copy_indices(unsigned int* bifrost_indices, const T* glTF_indices, size_t c
 // ------------------------------------------------------------------------------------------------
 // Loads a glTF file.
 // ------------------------------------------------------------------------------------------------
-SceneNodeID load(const std::string& filename) {
+SceneNode load(const std::string& filename) {
 
     // See https://github.com/syoyo/tinygltf/blob/master/loader_example.cc
 
@@ -384,21 +384,21 @@ SceneNodeID load(const std::string& filename) {
         }
 
         if (image.get_width() < 1 || image.get_height() < 1) {
-            Images::destroy(image.get_ID());
+            image.destroy();
             if (error)
                 *error += "glTFLoader::load error: Failed to load image from memory.\n";
             return false;
         }
 
         if (req_width > 0 && image.get_width() != req_width) {
-            Images::destroy(image.get_ID());
+            image.destroy();
             if (error)
                 *error += "glTFLoader::load error: Image width mismatch.\n";
             return false;
         }
 
         if (req_height > 0 && image.get_height() != req_height) {
-            Images::destroy(image.get_ID());
+            image.destroy();
             if (error)
                 *error += "glTFLoader::load error: Image height mismatch.\n";
             return false;
@@ -409,7 +409,7 @@ SceneNodeID load(const std::string& filename) {
         glTF_image->component = channel_count(image.get_pixel_format());
         // HACK Store image ID in pixels instead of pixel data.
         glTF_image->image.resize(4);
-        memcpy(glTF_image->image.data(), &image.get_ID(), sizeof(ImageID));
+        memcpy(glTF_image->image.data(), &image, sizeof(Image));
 
         return true;
     };
@@ -448,9 +448,9 @@ SceneNodeID load(const std::string& filename) {
     ImageCache converted_images;
     auto image_is_used = std::vector<bool>(model.images.size());
     std::fill(image_is_used.begin(), image_is_used.end(), false);
-    auto loaded_material_IDs = std::vector<MaterialID>(model.materials.size());
+    auto loaded_materials = std::vector<Material>(model.materials.size());
 
-    auto flag_image_as_used = [&](int glTF_image_index, ImageID glTF_image, ImageID converted_image) {
+    auto flag_image_as_used = [&](int glTF_image_index, Image glTF_image, Image converted_image) {
         if (glTF_image_index >= 0 && glTF_image == converted_image)
             image_is_used[glTF_image_index] = true;
     };
@@ -500,29 +500,29 @@ SceneNodeID load(const std::string& filename) {
         }
 
         // Convert images from glTF channel layout to Bifrost channel layout.
-        auto metallic_image = extract_channel(metallic_roughness_tex.Image_ID, 2, ImageUsage::Metallic, glTF_mat.name, converted_images);
-        flag_image_as_used(metallic_roughness_tex.glTF_image_index, metallic_roughness_tex.Image_ID, metallic_image.get_ID());
-        mat_data.metallic_texture_ID = metallic_roughness_tex.Sampler.create_texture_2D(metallic_image.get_ID());
+        auto metallic_image = extract_channel(metallic_roughness_tex.Image, 2, ImageUsage::Metallic, glTF_mat.name, converted_images);
+        flag_image_as_used(metallic_roughness_tex.glTF_image_index, metallic_roughness_tex.Image, metallic_image);
+        mat_data.metallic_texture_ID = metallic_roughness_tex.Sampler.create_texture_2D(metallic_image).get_ID();
 
-        auto coverage_image = extract_channel(tint_coverage_tex.Image_ID, 3, ImageUsage::Coverage, glTF_mat.name, converted_images);
-        flag_image_as_used(tint_coverage_tex.glTF_image_index, tint_coverage_tex.Image_ID, coverage_image.get_ID());
-        mat_data.coverage_texture_ID = tint_coverage_tex.Sampler.create_texture_2D(coverage_image.get_ID());
+        auto coverage_image = extract_channel(tint_coverage_tex.Image, 3, ImageUsage::Coverage, glTF_mat.name, converted_images);
+        flag_image_as_used(tint_coverage_tex.glTF_image_index, tint_coverage_tex.Image, coverage_image);
+        mat_data.coverage_texture_ID = tint_coverage_tex.Sampler.create_texture_2D(coverage_image).get_ID();
 
-        auto tint_roughness_image = extract_tint_roughness(tint_coverage_tex.Image_ID, metallic_roughness_tex.Image_ID, glTF_mat.name, converted_images);
-        flag_image_as_used(tint_coverage_tex.glTF_image_index, tint_coverage_tex.Image_ID, tint_roughness_image.get_ID());
-        flag_image_as_used(tint_coverage_tex.glTF_image_index, metallic_roughness_tex.Image_ID, tint_roughness_image.get_ID());
-        mat_data.tint_roughness_texture_ID = tint_coverage_tex.Sampler.create_texture_2D(tint_roughness_image.get_ID());
+        auto tint_roughness_image = extract_tint_roughness(tint_coverage_tex.Image, metallic_roughness_tex.Image, glTF_mat.name, converted_images);
+        flag_image_as_used(tint_coverage_tex.glTF_image_index, tint_coverage_tex.Image, tint_roughness_image);
+        flag_image_as_used(tint_coverage_tex.glTF_image_index, metallic_roughness_tex.Image, tint_roughness_image);
+        mat_data.tint_roughness_texture_ID = tint_coverage_tex.Sampler.create_texture_2D(tint_roughness_image).get_ID();
 
-        loaded_material_IDs[i] = Materials::create(glTF_mat.name, mat_data);
+        loaded_materials[i] = Material(glTF_mat.name, mat_data);
     }
 
     // Delete images not used by the datamodel.
     for (int i = 0; i < image_is_used.size(); ++i) {
         if (!image_is_used[i]) {
             const auto& glTF_image = model.images[i];
-            ImageID image_ID;
-            memcpy(&image_ID, glTF_image.image.data(), sizeof(image_ID));
-            Images::destroy(image_ID);
+            Image image;
+            memcpy(&image, glTF_image.image.data(), sizeof(image));
+            image.destroy();
         }
     }
 
@@ -583,7 +583,7 @@ SceneNodeID load(const std::string& filename) {
             if (glTF_mesh.primitives.size() > 1)
                 mesh_name = mesh_name + "_primitive_" + std::to_string(p);
 
-            Mesh mesh = Meshes::create(mesh_name, primitive_count, vertex_count, mesh_flags);
+            Mesh mesh = Mesh(mesh_name, primitive_count, vertex_count, mesh_flags);
 
             if (has_index_buffer) {
                 // Import primitve indices.
@@ -677,7 +677,7 @@ SceneNodeID load(const std::string& filename) {
 
             mesh.set_bounds(AABB(min_position, max_position));
 
-            loaded_meshes.push_back({ mesh.get_ID(), false });
+            loaded_meshes.push_back({ mesh, false });
         }
     }
     // Finally push the total number of meshes to allow fetching begin and end indices as [index] and [index+1]
@@ -698,7 +698,7 @@ SceneNodeID load(const std::string& filename) {
         static auto destroy_unused_meshes = [](const std::vector<LoadedMesh>& meshes) {
             for (auto mesh : meshes)
                 if (!mesh.is_used)
-                    Meshes::destroy(mesh.ID);
+                    mesh.Mesh.destroy();
         };
 
         const tinygltf::Scene& scene = model.scenes[model.defaultScene];
@@ -706,22 +706,22 @@ SceneNodeID load(const std::string& filename) {
         if (scene.nodes.size() == 1) {
             // Only one node. Import it and return.
             const auto& node = model.nodes[scene.nodes[0]];
-            SceneNodeID root_node_ID = import_node(model, node, identity_transform, loaded_meshes_start_index, loaded_meshes, loaded_material_IDs);
+            SceneNode root_node = import_node(model, node, identity_transform, loaded_meshes_start_index, loaded_meshes, loaded_materials);
             destroy_unused_meshes(loaded_meshes);
-            return root_node_ID;
+            return root_node;
         } else {
             // Several root nodes in the scene. Attach them to a single common root node.
-            SceneNode root_node = SceneNodes::create("Scene root");
+            SceneNode root_node = SceneNode("Scene root");
             for (size_t i = 0; i < scene.nodes.size(); i++) {
                 const auto& node = model.nodes[scene.nodes[i]];
-                SceneNode child_node = import_node(model, node, identity_transform, loaded_meshes_start_index, loaded_meshes, loaded_material_IDs);
+                SceneNode child_node = import_node(model, node, identity_transform, loaded_meshes_start_index, loaded_meshes, loaded_materials);
                 child_node.set_parent(root_node);
             }
             destroy_unused_meshes(loaded_meshes);
-            return root_node.get_ID();
+            return root_node;
         }
     }
-    return SceneNodeID::invalid_UID();
+    return SceneNode::invalid();
 }
 
 bool file_supported(const std::string& filename) {

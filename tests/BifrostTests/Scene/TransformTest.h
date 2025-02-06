@@ -44,7 +44,7 @@ protected:
 };
 
 TEST_F(Scene_Transform, identity_as_default) {
-    SceneNode foo = SceneNodes::create("Foo");
+    SceneNode foo = SceneNode("Foo");
     const Transform global_trans = foo.get_global_transform();
     const Transform local_trans = foo.get_local_transform();
 
@@ -55,7 +55,7 @@ TEST_F(Scene_Transform, identity_as_default) {
 }
 
 TEST_F(Scene_Transform, set_transform) {
-    SceneNode foo = SceneNodes::create("Foo");
+    SceneNode foo = SceneNode("Foo");
     const Transform new_trans = Transform(Vector3f(3, 5, 9), normalize(Quaternionf(1, 2, 3, 4)), 3);
     foo.set_global_transform(new_trans);
 
@@ -63,8 +63,8 @@ TEST_F(Scene_Transform, set_transform) {
 }
 
 TEST_F(Scene_Transform, hierarchical_translation) {
-    SceneNode foo = SceneNodes::create("Foo");
-    SceneNode bar = SceneNodes::create("Bar");
+    SceneNode foo = SceneNode("Foo");
+    SceneNode bar = SceneNode("Bar");
     bar.set_parent(foo);
 
     const Vector3f translation = Vector3f(3, 5, 9);
@@ -78,8 +78,8 @@ TEST_F(Scene_Transform, hierarchical_translation) {
 }
 
 TEST_F(Scene_Transform, hierarchical_rotation) {
-    SceneNode foo = SceneNodes::create("Foo");
-    SceneNode bar = SceneNodes::create("Bar");
+    SceneNode foo = SceneNode("Foo");
+    SceneNode bar = SceneNode("Bar");
     bar.set_parent(foo);
 
     const Quaternionf rotation = normalize(Quaternionf(1, 2, 3, 4));
@@ -93,8 +93,8 @@ TEST_F(Scene_Transform, hierarchical_rotation) {
 }
 
 TEST_F(Scene_Transform, local_transform) {
-    SceneNode n0 = SceneNodes::create("n0");
-    SceneNode n1 = SceneNodes::create("n1");
+    SceneNode n0 = SceneNode("n0");
+    SceneNode n1 = SceneNode("n1");
     n0.set_global_transform(Transform(Vector3f(1, 2, 3), Quaternionf::from_angle_axis(degrees_to_radians(45.0f), Vector3f(0, 1, 0))));
     n1.set_global_transform(Transform(Vector3f(1, 2, 3), Quaternionf::from_angle_axis(degrees_to_radians(-45.0f), Vector3f(0, 1, 0))));
     n1.set_parent(n0);
@@ -112,8 +112,8 @@ TEST_F(Scene_Transform, local_transform) {
 }
 
 TEST_F(Scene_Transform, preserve_local_transform_on_parent_transformation) {
-    SceneNode n0 = SceneNodes::create("n0");
-    SceneNode n1 = SceneNodes::create("n1");
+    SceneNode n0 = SceneNode("n0");
+    SceneNode n1 = SceneNode("n1");
 
     n0.set_global_transform(Transform(Vector3f(1, 1, 1)));
     n1.set_parent(n0);
@@ -137,13 +137,13 @@ TEST_F(Scene_Transform, complex_hierachy) {
     // t1 t2  t5
     //    / \   \
     //   t3 t4   t6
-    SceneNode n0 = SceneNodes::create("n0");
-    SceneNode n1 = SceneNodes::create("n1");
-    SceneNode n2 = SceneNodes::create("n2");
-    SceneNode n3 = SceneNodes::create("n3");
-    SceneNode n4 = SceneNodes::create("n4");
-    SceneNode n5 = SceneNodes::create("n5");
-    SceneNode n6 = SceneNodes::create("n6");
+    SceneNode n0 = SceneNode("n0");
+    SceneNode n1 = SceneNode("n1");
+    SceneNode n2 = SceneNode("n2");
+    SceneNode n3 = SceneNode("n3");
+    SceneNode n4 = SceneNode("n4");
+    SceneNode n5 = SceneNode("n5");
+    SceneNode n6 = SceneNode("n6");
 
     n1.set_parent(n0);
     n2.set_parent(n0);
@@ -219,8 +219,8 @@ TEST_F(Scene_Transform, complex_hierachy) {
 }
 
 TEST_F(Scene_Transform, look_at) {
-    SceneNode n0 = SceneNodes::create("n0");
-    SceneNode n1 = SceneNodes::create("n1");
+    SceneNode n0 = SceneNode("n0");
+    SceneNode n1 = SceneNode("n1");
     n0.set_global_transform(Transform::identity());
     n1.set_global_transform(Transform(Vector3f(3, 5, 9)));
 
@@ -244,9 +244,9 @@ TEST_F(Scene_Transform, look_at) {
 }
 
 TEST_F(Scene_Transform, Transform_changed_notification) {
-    SceneNode n0 = SceneNodes::create("n0");
-    SceneNode n1 = SceneNodes::create("n1");
-    SceneNode n2 = SceneNodes::create("n2");
+    SceneNode n0 = SceneNode("n0");
+    SceneNode n1 = SceneNode("n1");
+    SceneNode n2 = SceneNode("n2");
 
     SceneNodes::reset_change_notifications();
 
@@ -262,11 +262,11 @@ TEST_F(Scene_Transform, Transform_changed_notification) {
         bool n2_changed = false;
         bool other_changes = false;
 
-        for (SceneNodeID node_ID : SceneNodes::get_changed_nodes()) {
-            bool transform_changed = SceneNodes::get_changes(node_ID) == SceneNodes::Change::Transform;
-            if (node_ID == n0.get_ID() && transform_changed)
+        for (const SceneNode changed_node : SceneNodes::get_changed_nodes()) {
+            bool transform_changed = changed_node.get_changes() == SceneNodes::Change::Transform;
+            if (changed_node == n0 && transform_changed)
                 n0_changed = true;
-            else if (node_ID == n2.get_ID() && transform_changed)
+            else if (changed_node == n2 && transform_changed)
                 n2_changed = true;
             else
                 other_changes = true;
@@ -282,9 +282,9 @@ TEST_F(Scene_Transform, Transform_changed_notification) {
 
     { // Test that after clearing the change notifications no nodes are flagged as changed.
         EXPECT_TRUE(SceneNodes::get_changed_nodes().is_empty());
-        EXPECT_EQ(SceneNodes::get_changes(n0.get_ID()), SceneNodes::Change::None);
-        EXPECT_EQ(SceneNodes::get_changes(n1.get_ID()), SceneNodes::Change::None);
-        EXPECT_EQ(SceneNodes::get_changes(n2.get_ID()), SceneNodes::Change::None);
+        EXPECT_EQ(n0.get_changes(), SceneNodes::Change::None);
+        EXPECT_EQ(n1.get_changes(), SceneNodes::Change::None);
+        EXPECT_EQ(n2.get_changes(), SceneNodes::Change::None);
     }
 
     { // Test that transform changes are propagated downwards.
@@ -298,13 +298,13 @@ TEST_F(Scene_Transform, Transform_changed_notification) {
         bool n1_changed = false;
         bool n2_changed = false;
 
-        for (SceneNodeID node_ID : SceneNodes::get_changed_nodes()) {
-            bool transform_changed = SceneNodes::get_changes(node_ID) == SceneNodes::Change::Transform;
-            if (node_ID == n0.get_ID() && transform_changed)
+        for (const SceneNode changed_node : SceneNodes::get_changed_nodes()) {
+            bool transform_changed = changed_node.get_changes() == SceneNodes::Change::Transform;
+            if (changed_node == n0 && transform_changed)
                 n0_changed = true;
-            if (node_ID == n1.get_ID() && transform_changed)
+            if (changed_node == n1 && transform_changed)
                 n1_changed = true;
-            if (node_ID == n2.get_ID() && transform_changed)
+            if (changed_node == n2 && transform_changed)
                 n2_changed = true;
         }
 

@@ -103,7 +103,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
             RGBA tint = scene.get_environment_tint();
             env.tint = { tint.r, tint.g, tint.b, tint.a };
 
-            env.texture_ID = scene.get_environment_map();
+            env.texture_ID = scene.get_environment_map().get_ID();
 
             if (env.texture_ID != 0) {
 

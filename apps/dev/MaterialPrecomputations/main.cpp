@@ -48,7 +48,7 @@ double estimate_rho(float3 wo, float roughness, unsigned int sample_count, Sampl
 }
 
 Image estimate_rho(unsigned int width, unsigned int height, unsigned int sample_count, SampleRoughBSDF sample_rough_BSDF) {
-    Image rho_image = Images::create2D("rho", PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
+    Image rho_image = Image::create2D("rho", PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
     Math::RGB* rho_image_pixels = rho_image.get_pixels<Math::RGB>();
 
     #pragma omp parallel for
@@ -358,7 +358,7 @@ int main(int argc, char** argv) {
         material_params.metallic = 0.0f;
         material_params.specularity = 0.0f;
 
-        Image rho = Images::create2D("rho", PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
+        Image rho = Image::create2D("rho", PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
         Math::RGB* rho_pixels = rho.get_pixels<Math::RGB>();
 
         for (int y = 0; y < int(height); ++y) {

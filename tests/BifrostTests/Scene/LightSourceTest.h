@@ -60,16 +60,16 @@ TEST_F(Scene_LightSource, sentinel_node) {
 TEST_F(Scene_LightSource, create_sphere_light) {
     LightSources::allocate(2u);
 
-    SceneNode light_node = SceneNodes::create("Light");
+    SceneNode light_node = SceneNode("Light");
 
     const Math::RGB light_power(100.0f);
     const float light_radius = 2.0f;
 
     LightSources::allocate(2u);
-    SphereLight light = LightSources::create_sphere_light(light_node.get_ID(), light_power, light_radius);
+    SphereLight light = SphereLight(light_node, light_power, light_radius);
     EXPECT_TRUE(light.exists());
 
-    EXPECT_EQ(LightSources::Type::Sphere, LightSources::get_type(light.get_ID()));
+    EXPECT_EQ(LightSources::Type::Sphere, light.get_type());
     EXPECT_EQ(light_node, light.get_node());
     EXPECT_EQ(light_power, light.get_power());
     EXPECT_EQ(light_radius, light.get_radius());
@@ -77,7 +77,7 @@ TEST_F(Scene_LightSource, create_sphere_light) {
     // Test scene node created notification.
     Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
     EXPECT_EQ(1, changed_lights.end() - changed_lights.begin());
-    EXPECT_EQ(light.get_ID(), *changed_lights.begin());
+    EXPECT_EQ(light, *changed_lights.begin());
     EXPECT_EQ(LightSources::Change::Created, light.get_changes());
 
     LightSources::deallocate();
@@ -86,22 +86,22 @@ TEST_F(Scene_LightSource, create_sphere_light) {
 TEST_F(Scene_LightSource, create_directional_light) {
     LightSources::allocate(2u);
 
-    SceneNode light_node = SceneNodes::create("Light");
+    SceneNode light_node = SceneNode("Light");
 
     const Math::RGB light_radiance(2.0f);
 
     LightSources::allocate(2u);
-    DirectionalLight light = LightSources::create_directional_light(light_node.get_ID(), light_radiance);
+    DirectionalLight light = DirectionalLight(light_node, light_radiance);
     EXPECT_TRUE(light.exists());
 
-    EXPECT_EQ(LightSources::Type::Directional, LightSources::get_type(light.get_ID()));
+    EXPECT_EQ(LightSources::Type::Directional, light.get_type());
     EXPECT_EQ(light_node, light.get_node());
     EXPECT_EQ(light_radiance, light.get_radiance());
 
     // Test scene node created notification.
     Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
     EXPECT_EQ(1, changed_lights.end() - changed_lights.begin());
-    EXPECT_EQ(light.get_ID(), *changed_lights.begin());
+    EXPECT_EQ(light, *changed_lights.begin());
     EXPECT_EQ(LightSources::Change::Created, light.get_changes());
 
     LightSources::deallocate();
@@ -110,20 +110,20 @@ TEST_F(Scene_LightSource, create_directional_light) {
 TEST_F(Scene_LightSource, destroy) {
     LightSources::allocate(2u);
 
-    SceneNodeID node_ID = SceneNodes::create("Foo");
-    LightSourceID light_ID = LightSources::create_sphere_light(node_ID, Math::RGB::white(), 0.0f);
-    EXPECT_TRUE(LightSources::has(light_ID));
+    SceneNode node = SceneNode("Foo");
+    SphereLight light = SphereLight(node, Math::RGB::white(), 0.0f);
+    EXPECT_TRUE(light.exists());
 
     LightSources::reset_change_notifications();
 
-    LightSources::destroy(light_ID);
-    EXPECT_FALSE(LightSources::has(light_ID));
+    light.destroy();
+    EXPECT_FALSE(light.exists());
 
     // Test scene node destroyed notification.
     Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
     EXPECT_EQ(1, changed_lights.end() - changed_lights.begin());
-    EXPECT_EQ(light_ID, *changed_lights.begin());
-    EXPECT_EQ(LightSources::Change::Destroyed, LightSources::get_changes(light_ID));
+    EXPECT_EQ(light, *changed_lights.begin());
+    EXPECT_EQ(LightSources::Change::Destroyed, light.get_changes());
 
     LightSources::deallocate();
 }
@@ -131,12 +131,12 @@ TEST_F(Scene_LightSource, destroy) {
 TEST_F(Scene_LightSource, create_and_destroy_notifications) {
     LightSources::allocate(8u);
 
-    SceneNodeID node_ID = SceneNodes::create("Foo");
+    SceneNode node = SceneNode("Foo");
 
-    LightSourceID light_ID0 = LightSources::create_sphere_light(node_ID, Math::RGB(0.0f), 0.0f);
-    LightSourceID light_ID1 = LightSources::create_sphere_light(node_ID, Math::RGB(1.0f), 0.0f);
-    EXPECT_TRUE(LightSources::has(light_ID0));
-    EXPECT_TRUE(LightSources::has(light_ID1));
+    SphereLight light0 = SphereLight(node, Math::RGB(0.0f), 0.0f);
+    SpotLight light1 = SpotLight(node, Math::RGB(1.0f), 0.0f, 0.0f);
+    EXPECT_TRUE(light0.exists());
+    EXPECT_TRUE(light1.exists());
 
     { // Test scene node create notifications.
         Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
@@ -147,9 +147,9 @@ TEST_F(Scene_LightSource, create_and_destroy_notifications) {
         bool other_changes = false;
         for (const LightSourceID light_ID : changed_lights) {
             bool light_created = LightSources::get_changes(light_ID) == LightSources::Change::Created;
-            if (light_ID == light_ID0 && light_created)
+            if (light0 == light_ID && light_created)
                 node0_created = true;
-            else if (light_ID == light_ID1 && light_created)
+            else if (light1 == light_ID && light_created)
                 node1_created = true;
             else
                 other_changes = true;
@@ -163,8 +163,8 @@ TEST_F(Scene_LightSource, create_and_destroy_notifications) {
     LightSources::reset_change_notifications();
 
     { // Test destroy.
-        LightSources::destroy(light_ID0);
-        EXPECT_FALSE(LightSources::has(light_ID0));
+        light0.destroy();
+        EXPECT_FALSE(light0.exists());
 
         Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
         EXPECT_EQ(1, changed_lights.end() - changed_lights.begin());
@@ -172,7 +172,7 @@ TEST_F(Scene_LightSource, create_and_destroy_notifications) {
         bool node0_destroyed = false;
         bool other_changes = false;
         for (const LightSourceID light_ID : changed_lights) {
-            if (light_ID == light_ID0 && LightSources::get_changes(light_ID) == LightSources::Change::Destroyed)
+            if (light0 == light_ID && LightSources::get_changes(light_ID) == LightSources::Change::Destroyed)
                 node0_destroyed = true;
             else
                 other_changes = true;
@@ -185,10 +185,10 @@ TEST_F(Scene_LightSource, create_and_destroy_notifications) {
     LightSources::reset_change_notifications();
 
     { // Test that destroyed node cannot be destroyed again.
-        EXPECT_FALSE(LightSources::has(light_ID0));
+        EXPECT_FALSE(light0.exists());
         
-        LightSources::destroy(light_ID0);
-        EXPECT_FALSE(LightSources::has(light_ID0));
+        light0.destroy();
+        EXPECT_FALSE(light0.exists());
         EXPECT_TRUE(LightSources::get_changed_lights().is_empty());
     }
 

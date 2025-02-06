@@ -37,7 +37,7 @@ GTEST_TEST(Scene_SceneNode, sentinel_node) {
     SceneNodes::allocate(1u);
 
     SceneNode sentinel = SceneNodeID::invalid_UID();
-    SceneNode node = SceneNodes::create("Foo");
+    SceneNode node = SceneNode("Foo");
 
     // Test that sentinel node cannot have it's parent set.
     sentinel.set_parent(node);
@@ -52,35 +52,35 @@ GTEST_TEST(Scene_SceneNode, sentinel_node) {
 
 GTEST_TEST(Scene_SceneNode, create) {
     SceneNodes::allocate(2u);
-    SceneNodeID node_ID = SceneNodes::create("Foo");
-    EXPECT_TRUE(SceneNodes::has(node_ID));
+    SceneNode node = SceneNode("Foo");
+    EXPECT_TRUE(node.exists());
 
-    EXPECT_EQ("Foo", SceneNodes::get_name(node_ID));
+    EXPECT_EQ("Foo", node.get_name());
 
     // Test scene node created notification.
     Core::Iterable<SceneNodes::ChangedIterator> changed_nodes = SceneNodes::get_changed_nodes();
     EXPECT_EQ(1, changed_nodes.end() - changed_nodes.begin());
-    EXPECT_EQ(node_ID, *changed_nodes.begin());
-    EXPECT_EQ(SceneNodes::Change::Created, SceneNodes::get_changes(node_ID));
+    EXPECT_EQ(node, *changed_nodes.begin());
+    EXPECT_EQ(SceneNodes::Change::Created, node.get_changes());
 
     SceneNodes::deallocate();
 }
 
 GTEST_TEST(Scene_SceneNode, destroy) {
     SceneNodes::allocate(2u);
-    SceneNodeID node_ID = SceneNodes::create("Foo");
-    EXPECT_TRUE(SceneNodes::has(node_ID));
+    SceneNode node = SceneNode("Foo");
+    EXPECT_TRUE(node.exists());
 
     SceneNodes::reset_change_notifications();
 
-    SceneNodes::destroy(node_ID);
-    EXPECT_FALSE(SceneNodes::has(node_ID));
+    node.destroy();
+    EXPECT_FALSE(node.exists());
 
     // Test scene node destroyed notification.
     Core::Iterable<SceneNodes::ChangedIterator> changed_nodes = SceneNodes::get_changed_nodes();
     EXPECT_EQ(1, changed_nodes.end() - changed_nodes.begin());
-    EXPECT_EQ(node_ID, *changed_nodes.begin());
-    EXPECT_EQ(SceneNodes::Change::Destroyed, SceneNodes::get_changes(node_ID));
+    EXPECT_EQ(node, *changed_nodes.begin());
+    EXPECT_EQ(SceneNodes::Change::Destroyed, node.get_changes());
 
     SceneNodes::deallocate();
 }
@@ -88,10 +88,10 @@ GTEST_TEST(Scene_SceneNode, destroy) {
 GTEST_TEST(Scene_SceneNode, create_and_destroy_notifications) {
     SceneNodes::allocate(8u);
 
-    SceneNodeID node_ID0 = SceneNodes::create("Foo");
-    SceneNodeID node_ID1 = SceneNodes::create("Bar");
-    EXPECT_TRUE(SceneNodes::has(node_ID0));
-    EXPECT_TRUE(SceneNodes::has(node_ID1));
+    SceneNode node0 = SceneNode("Foo");
+    SceneNode node1 = SceneNode("Bar");
+    EXPECT_TRUE(node0.exists());
+    EXPECT_TRUE(node1.exists());
 
     { // Test scene node create notifications.
         Core::Iterable<SceneNodes::ChangedIterator> changed_nodes = SceneNodes::get_changed_nodes();
@@ -100,11 +100,11 @@ GTEST_TEST(Scene_SceneNode, create_and_destroy_notifications) {
         bool node0_created = false;
         bool node1_created = false;
         bool other_changes = false;
-        for (const SceneNodeID node_ID : changed_nodes) {
-            bool node_created = SceneNodes::get_changes(node_ID) == SceneNodes::Change::Created;
-            if (node_ID == node_ID0 && node_created)
+        for (const SceneNode node : changed_nodes) {
+            bool node_created = node.get_changes() == SceneNodes::Change::Created;
+            if (node == node0 && node_created)
                 node0_created = true;
-            else if (node_ID == node_ID1 && node_created)
+            else if (node == node1 && node_created)
                 node1_created = true;
             else
                 other_changes = true;
@@ -118,24 +118,24 @@ GTEST_TEST(Scene_SceneNode, create_and_destroy_notifications) {
     SceneNodes::reset_change_notifications();
 
     { // Test destroy.
-        SceneNodes::destroy(node_ID0);
-        EXPECT_FALSE(SceneNodes::has(node_ID0));
+        node0.destroy();
+        EXPECT_FALSE(node0.exists());
 
         Core::Iterable<SceneNodes::ChangedIterator> changed_nodes = SceneNodes::get_changed_nodes();
         EXPECT_EQ(1, changed_nodes.end() - changed_nodes.begin());
 
         SceneNode node = *changed_nodes.begin();
-        bool node0_destroyed = node.get_ID() == node_ID0 && node.get_changes() == SceneNodes::Change::Destroyed;
+        bool node0_destroyed = node == node0 && node.get_changes() == SceneNodes::Change::Destroyed;
         EXPECT_TRUE(node0_destroyed);
     }
 
     SceneNodes::reset_change_notifications();
 
     { // Test that destroyed node cannot be destroyed again.
-        EXPECT_FALSE(SceneNodes::has(node_ID0));
+        EXPECT_FALSE(node0.exists());
 
-        SceneNodes::destroy(node_ID0);
-        EXPECT_FALSE(SceneNodes::has(node_ID0));
+        node0.destroy();
+        EXPECT_FALSE(node0.exists());
         EXPECT_TRUE(SceneNodes::get_changed_nodes().is_empty());
     }
 
@@ -144,9 +144,9 @@ GTEST_TEST(Scene_SceneNode, create_and_destroy_notifications) {
 
 GTEST_TEST(Scene_SceneNode, parenting) {
     SceneNodes::allocate(4u);
-    SceneNode n0 = SceneNodes::create("n0");
-    SceneNode n1 = SceneNodes::create("n1");
-    SceneNode n2 = SceneNodes::create("n2");
+    SceneNode n0 = SceneNode("n0");
+    SceneNode n1 = SceneNode("n1");
+    SceneNode n2 = SceneNode("n2");
 
     EXPECT_FALSE(n1.get_parent().exists());
     
@@ -177,13 +177,13 @@ GTEST_TEST(Scene_SceneNode, creating_hierarchy) {
     //      / \    \
     //    id2 id5  id1
     SceneNodes::allocate(1u);
-    SceneNode n0 = SceneNodes::create("n0");
-    SceneNode n1 = SceneNodes::create("n1");
-    SceneNode n2 = SceneNodes::create("n2");
-    SceneNode n3 = SceneNodes::create("n3");
-    SceneNode n4 = SceneNodes::create("n4");
-    SceneNode n5 = SceneNodes::create("n5");
-    SceneNode n6 = SceneNodes::create("n6");
+    SceneNode n0 = SceneNode("n0");
+    SceneNode n1 = SceneNode("n1");
+    SceneNode n2 = SceneNode("n2");
+    SceneNode n3 = SceneNode("n3");
+    SceneNode n4 = SceneNode("n4");
+    SceneNode n5 = SceneNode("n5");
+    SceneNode n6 = SceneNode("n6");
     
     EXPECT_TRUE(n0.exists());
     EXPECT_TRUE(n1.exists());
@@ -248,13 +248,13 @@ GTEST_TEST(Scene_SceneNode, graph_traversal) {
     //      / \    \
     //    id2 id5  id1
     SceneNodes::allocate(1u);
-    SceneNode n0 = SceneNodes::create("n0");
-    SceneNode n1 = SceneNodes::create("n1");
-    SceneNode n2 = SceneNodes::create("n2");
-    SceneNode n3 = SceneNodes::create("n3");
-    SceneNode n4 = SceneNodes::create("n4");
-    SceneNode n5 = SceneNodes::create("n5");
-    SceneNode n6 = SceneNodes::create("n6");
+    SceneNode n0 = SceneNode("n0");
+    SceneNode n1 = SceneNode("n1");
+    SceneNode n2 = SceneNode("n2");
+    SceneNode n3 = SceneNode("n3");
+    SceneNode n4 = SceneNode("n4");
+    SceneNode n5 = SceneNode("n5");
+    SceneNode n6 = SceneNode("n6");
 
     n0.set_parent(n3);
     n4.set_parent(n3);

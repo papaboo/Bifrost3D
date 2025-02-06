@@ -14,18 +14,18 @@
 namespace ImageOperations {
 namespace Exposure {
 
-float summed_log_luminance(Bifrost::Assets::ImageID image_ID);
+float summed_log_luminance(Bifrost::Assets::Image image);
 
 // Implements equation (1) in Reinhard et al, 2002, Photographic Tone Reproduction for Digital Images.
-float log_average_luminance(Bifrost::Assets::ImageID image_ID);
+float log_average_luminance(Bifrost::Assets::Image image);
 
 template <typename ForwardIterator>
-inline void log_luminance_histogram(Bifrost::Assets::ImageID image_ID, float min_log_luminance, float max_log_luminance,
+inline void log_luminance_histogram(Bifrost::Assets::Image image, float min_log_luminance, float max_log_luminance,
                                     ForwardIterator begin, ForwardIterator end) {
     using namespace Bifrost::Math;
 
     int size = unsigned int(end - begin);
-    Bifrost::Assets::Images::iterate_pixels(image_ID, [&](RGBA pixel) {
+    Bifrost::Assets::Images::iterate_pixels(image.get_ID(), [&](RGBA pixel) {
         float log_luminance = log2(fmaxf(luminance(pixel.rgb()), 0.0001f));
         float normalized_index = inverse_lerp(min_log_luminance, max_log_luminance, log_luminance);
         int index = clamp(int(normalized_index * size), 0, size - 1);

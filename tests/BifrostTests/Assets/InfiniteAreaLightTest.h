@@ -32,16 +32,16 @@ protected:
 };
 
 TEST_F(Assets_InfiniteAreaLight, consistent_PDF_and_evaluate) {
-    Image image = Images::create2D("Noisy", PixelFormat::Alpha8, 1.0f, Math::Vector2ui(4, 4));
+    Image image = Image::create2D("Noisy", PixelFormat::Alpha8, 1.0f, Math::Vector2ui(4, 4));
 
     unsigned char f[] = { 0, 5, 0, 3, 1, 2, 1, 4, 3, 7, 5, 1, 9, 4, 1, 1 };
 
     unsigned char* pixels = image.get_pixels<unsigned char>();
     std::memcpy(pixels, f, image.get_pixel_count());
 
-    TextureID latlong_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
+    Texture latlong = Texture::create2D(image, MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
 
-    const InfiniteAreaLight light = InfiniteAreaLight(latlong_ID);
+    const InfiniteAreaLight light = InfiniteAreaLight(latlong);
 
     for (int i = 0; i < 32; ++i) {
         auto sample = light.sample(Math::RNG::sample02(i));
@@ -51,14 +51,14 @@ TEST_F(Assets_InfiniteAreaLight, consistent_PDF_and_evaluate) {
 }
 
 TEST_F(Assets_InfiniteAreaLight, diffuse_integrates_to_white) {
-    Image image = Images::create2D("White", PixelFormat::Alpha8, 2.2f, Math::Vector2ui(512, 256));
+    Image image = Image::create2D("White", PixelFormat::Alpha8, 2.2f, Math::Vector2ui(512, 256));
 
     unsigned char* pixels = image.get_pixels<unsigned char>();
     std::fill(pixels, pixels + image.get_pixel_count(), 255);
 
-    TextureID latlong_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
+    Texture latlong = Texture::create2D(image, MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
 
-    const InfiniteAreaLight light = InfiniteAreaLight(latlong_ID);
+    const InfiniteAreaLight light = InfiniteAreaLight(latlong);
 
     const int MAX_SAMPLES = 8192;
     float radiance[MAX_SAMPLES];

@@ -9,8 +9,9 @@
 #ifndef _BIFROST_ASSETS_STB_IMAGE_LOADER_H_
 #define _BIFROST_ASSETS_STB_IMAGE_LOADER_H_
 
-#include <Bifrost/Utils/IdDeclarations.h>
 #include <string>
+
+namespace Bifrost::Assets { class Image; }
 
 namespace StbImageLoader {
 
@@ -18,8 +19,8 @@ namespace StbImageLoader {
 // Loads an image file.
 // Basic support for png, exr, jpg and more.
 // -----------------------------------------------------------------------
-Bifrost::Assets::ImageID load(const std::string& filename);
-Bifrost::Assets::ImageID load_from_memory(const std::string& name, const void* const data, int data_byte_count);
+Bifrost::Assets::Image load(const std::string& filename);
+Bifrost::Assets::Image load_from_memory(const std::string& name, const void* const data, int data_byte_count);
 
 } // NS StbImageLoader
 

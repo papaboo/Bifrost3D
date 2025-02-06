@@ -190,12 +190,12 @@ void RenderingGUI::layout_frame() {
         { // Resolve existing screenshots
             for (auto cam_ID : Cameras::get_iterable()) {
                 auto output_screenshot = [&](Screenshot::Content content, char* file_extension) {
-                    auto image_ID = Cameras::resolve_screenshot(cam_ID, content, "ss");
-                    if (Images::has(image_ID)) {
+                    Image image = Cameras::resolve_screenshot(cam_ID, content, "ss");
+                    if (image.exists()) {
                         std::string path = std::string(m_screenshot.path) + file_extension;
-                        if (!StbImageWriter::write(image_ID, path))
+                        if (!StbImageWriter::write(image, path))
                             printf("Failed to output screenshot to '%s'\n", path.c_str());
-                        Images::destroy(image_ID);
+                        image.destroy();
                     }
                 };
                 output_screenshot(Screenshot::Content::ColorLDR, ".png");

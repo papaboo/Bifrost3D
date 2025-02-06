@@ -489,7 +489,7 @@ public:
             SceneConstants scene_vars;
             scene_vars.view_projection_matrix = projection_matrix * to_matrix4x4(world_to_view_transform);
             RGB env_tint = scene.get_environment_tint();
-            scene_vars.environment_tint = { env_tint.r, env_tint.g, env_tint.b, float(scene.get_environment_map().get_index()) };
+            scene_vars.environment_tint = { env_tint.r, env_tint.g, env_tint.b, float(scene.get_environment_map().get_ID().get_index()) };
             scene_vars.g_buffer_to_ao_index_offset = m_ssao.compute_g_buffer_to_ao_index_offset(m_settings.ssao.settings, backbuffer_viewport);
             scene_vars.viewport_size = { backbuffer_viewport.width, backbuffer_viewport.height };
             scene_vars.inverse_view_projection_matrix = to_matrix4x4(view_to_world_transform) * inverse_projection_matrix;

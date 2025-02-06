@@ -24,16 +24,14 @@ using namespace Bifrost;
 
 namespace Scenes {
 
-void create_veach_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneRootID scene_ID) {
+void create_veach_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneRoot scene) {
     using namespace Bifrost::Assets;
     using namespace Bifrost::Math;
     using namespace Bifrost::Scene;
 
-    SceneRoot scene = scene_ID;
-
     // Black background if no environment map is specified.
-    if (!Textures::has(SceneRoots::get_environment_map(scene_ID)))
-        SceneRoots::set_environment_tint(scene_ID, RGB::black());
+    if (!scene.get_environment_map().exists())
+        scene.set_environment_tint(RGB::black());
 
     { // Setup camera transform. Look downwards by 22.5 degress
         Vector3f camera_translation = Vector3f(0.0f, 2.0f, 0.0f);
@@ -46,9 +44,9 @@ void create_veach_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::
         material_data.flags = MaterialFlag::ThinWalled;
         Material material = Material("Floor", material_data);
 
-        SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0, 0.0f, 0), Quaternionf::identity(), 50));
-        MeshID plane_mesh_ID = MeshCreation::plane(1, { MeshFlag::Position, MeshFlag::Texcoord });
-        MeshModels::create(plane_node.get_ID(), plane_mesh_ID, material.get_ID());
+        SceneNode plane_node = SceneNode("Floor", Transform(Vector3f(0, 0.0f, 0), Quaternionf::identity(), 50));
+        Mesh plane_mesh = MeshCreation::plane(1, { MeshFlag::Position, MeshFlag::Texcoord });
+        MeshModel(plane_node, plane_mesh, material);
         plane_node.set_parent(scene.get_root_node());
     }
 
@@ -90,8 +88,8 @@ void create_veach_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::
         float light_radius = interlight_distance / 4.0f;
         for (int i = light_count - 1; i >= 0; --i) {
             Transform light_transform = Transform(light_positions[i]);
-            SceneNode light_node = SceneNodes::create("Light", light_transform);
-            LightSourceID light_ID =  LightSources::create_sphere_light(light_node.get_ID(), light_colors[i] * 10, light_radius);
+            SceneNode light_node = SceneNode("Light", light_transform);
+            SphereLight(light_node, light_colors[i] * 10, light_radius);
             light_node.set_parent(scene.get_root_node());
             light_radius *= 0.333f;
         }
@@ -111,8 +109,8 @@ void create_veach_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::
 
         // Place the first block.
         Material material = Material::create_metal("Block0", RGB(0.7f), base_roughness);
-        SceneNode block_node = SceneNodes::create("Block0", block_0_position);
-        MeshModels::create(block_node.get_ID(), block_mesh.get_ID(), material.get_ID());
+        SceneNode block_node = SceneNode("Block0", block_0_position);
+        MeshModel(block_node, block_mesh, material);
         block_node.set_parent(scene.get_root_node());
 
         Transform previous_transform = block_node.get_global_transform();
@@ -142,8 +140,8 @@ void create_veach_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::
 
             float roughness_scale = (block_count - 1 - b) / float(block_count - 1);
             Material material = Material::create_metal("Block" + std::to_string(b), RGB(0.7f), base_roughness * roughness_scale);
-            SceneNode block_node = SceneNodes::create("Block" + std::to_string(b), block_transform);
-            MeshModels::create(block_node.get_ID(), block_mesh.get_ID(), material.get_ID());
+            SceneNode block_node = SceneNode("Block" + std::to_string(b), block_transform);
+            MeshModel(block_node, block_mesh, material);
             block_node.set_parent(scene.get_root_node());
 
             previous_transform = block_transform;

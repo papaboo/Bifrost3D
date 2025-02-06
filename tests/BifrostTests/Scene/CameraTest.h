@@ -90,9 +90,8 @@ TEST_F(Scene_Camera, create) {
     CameraUtils::compute_perspective_projection(1, 1000, Math::PI<float>() / 4.0f, 8.0f / 6.0f,
                                                 perspective_matrix, inverse_perspective_matrix);
 
-    SceneRootID scene_ID = SceneRoots::create("Root", Math::RGB::white());
-    CameraID cam_ID = Cameras::create("Test cam", scene_ID,
-                                          perspective_matrix, inverse_perspective_matrix);
+    SceneRoot scene = SceneRoot("Root", Math::RGB::white());
+    CameraID cam_ID = Cameras::create("Test cam", scene.get_ID(), perspective_matrix, inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
 
     EXPECT_EQ(Cameras::get_name(cam_ID), "Test cam");
@@ -109,11 +108,11 @@ TEST_F(Scene_Camera, create) {
 }
 
 TEST_F(Scene_Camera, create_and_destroy_notifications) {
-    SceneRootID scene_ID = SceneRoots::create("Root", Math::RGB::white());
+    SceneRoot scene = SceneRoot("Root", Math::RGB::white());
     Math::Matrix4x4f perspective_matrix = Math::Matrix4x4f::identity(), inverse_perspective_matrix = Math::Matrix4x4f::identity();
 
-    CameraID cam_ID0 = Cameras::create("Cam0", scene_ID, perspective_matrix, inverse_perspective_matrix);
-    CameraID cam_ID1 = Cameras::create("Cam1", scene_ID, perspective_matrix, inverse_perspective_matrix);
+    CameraID cam_ID0 = Cameras::create("Cam0", scene.get_ID(), perspective_matrix, inverse_perspective_matrix);
+    CameraID cam_ID1 = Cameras::create("Cam1", scene.get_ID(), perspective_matrix, inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID0));
     EXPECT_TRUE(Cameras::has(cam_ID1));
 
@@ -164,9 +163,8 @@ TEST_F(Scene_Camera, set_new_matrices) {
     CameraUtils::compute_perspective_projection(1, 1000, Math::PI<float>() / 4.0f, 8.0f / 6.0f,
         initial_perspective_matrix, initial_inverse_perspective_matrix);
 
-    SceneRootID scene_ID = SceneRoots::create("Root", Math::RGB::white());
-    CameraID cam_ID = Cameras::create("Test cam", scene_ID,
-                                      initial_perspective_matrix, initial_inverse_perspective_matrix);
+    SceneRoot scene = SceneRoot("Root", Math::RGB::white());
+    CameraID cam_ID = Cameras::create("Test cam", scene.get_ID(), initial_perspective_matrix, initial_inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
 
     EXPECT_EQ(Cameras::get_projection_matrix(cam_ID), initial_perspective_matrix);
@@ -183,19 +181,19 @@ TEST_F(Scene_Camera, set_new_matrices) {
 }
 
 TEST_F(Scene_Camera, z_sorting) {
-    SceneRootID scene_ID = SceneRoots::create("Root", Math::RGB::white());
+    SceneRoot scene = SceneRoot("Root", Math::RGB::white());
 
-    CameraID high_z_cam_ID = Cameras::create("high z cam", scene_ID, Math::Matrix4x4f::identity(), Math::Matrix4x4f::identity());
+    CameraID high_z_cam_ID = Cameras::create("high z cam", scene.get_ID(), Math::Matrix4x4f::identity(), Math::Matrix4x4f::identity());
     Cameras::set_z_index(high_z_cam_ID, 10);
 
-    CameraID low_z_cam_ID = Cameras::create("Low z cam", scene_ID, Math::Matrix4x4f::identity(), Math::Matrix4x4f::identity());
+    CameraID low_z_cam_ID = Cameras::create("Low z cam", scene.get_ID(), Math::Matrix4x4f::identity(), Math::Matrix4x4f::identity());
     Cameras::set_z_index(low_z_cam_ID, 0);
 
     auto sorted_IDs = Cameras::get_z_sorted_IDs();
     EXPECT_EQ(low_z_cam_ID, sorted_IDs[0]);
     EXPECT_EQ(high_z_cam_ID, sorted_IDs[1]);
 
-    CameraID medium_z_cam_ID = Cameras::create("Medium z cam", scene_ID, Math::Matrix4x4f::identity(), Math::Matrix4x4f::identity());
+    CameraID medium_z_cam_ID = Cameras::create("Medium z cam", scene.get_ID(), Math::Matrix4x4f::identity(), Math::Matrix4x4f::identity());
     Cameras::set_z_index(medium_z_cam_ID, 5);
 
     sorted_IDs = Cameras::get_z_sorted_IDs();
@@ -230,8 +228,8 @@ TEST_F(Scene_Camera, screenshots) {
     Images::allocate(1);
 
     Matrix4x4f initial_perspective_matrix = Matrix4x4f::identity(), initial_inverse_perspective_matrix = Matrix4x4f::identity();
-    SceneRootID scene_ID = SceneRoots::create("Root", RGB::white());
-    CameraID cam_ID = Cameras::create("Test cam", scene_ID, initial_perspective_matrix, initial_inverse_perspective_matrix);
+    SceneRoot scene = SceneRoot("Root", RGB::white());
+    CameraID cam_ID = Cameras::create("Test cam", scene.get_ID(), initial_perspective_matrix, initial_inverse_perspective_matrix);
     EXPECT_FALSE(Cameras::is_screenshot_requested(cam_ID));
 
     { // Request LDR image with at least 1 iteration. Filler has two iterations so it should be successful.
@@ -276,8 +274,8 @@ TEST_F(Scene_Camera, ray_projection) {
     CameraUtils::compute_perspective_projection(1, 1000, PI<float>() / 4.0f, 8.0f / 6.0f,
         perspective_matrix, inverse_perspective_matrix);
 
-    SceneRootID scene_ID = SceneRoots::create("Root", RGB::white());
-    CameraID cam_ID = Cameras::create("Test cam", scene_ID, perspective_matrix, inverse_perspective_matrix);
+    SceneRoot scene = SceneRoot("Root", RGB::white());
+    CameraID cam_ID = Cameras::create("Test cam", scene.get_ID(), perspective_matrix, inverse_perspective_matrix);
     EXPECT_TRUE(Cameras::has(cam_ID));
 
     const float maximally_allowed_cos_angle = cos(degrees_to_radians(0.5f));

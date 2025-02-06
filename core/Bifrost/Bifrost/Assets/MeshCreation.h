@@ -18,19 +18,19 @@ namespace Bifrost::Assets {
 //----------------------------------------------------------------------------
 namespace MeshCreation {
 
-MeshID plane(unsigned int quads_per_edge, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
+Mesh plane(unsigned int quads_per_edge, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
-MeshID box(unsigned int quads_per_edge, Math::Vector3f size = Math::Vector3f::one(), MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
+Mesh box(unsigned int quads_per_edge, Math::Vector3f size = Math::Vector3f::one(), MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
-MeshID beveled_box(unsigned int quads_per_side, float normalized_bevel_size, Math::Vector3f size = Math::Vector3f::one(), MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
+Mesh beveled_box(unsigned int quads_per_side, float normalized_bevel_size, Math::Vector3f size = Math::Vector3f::one(), MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
-MeshID cylinder(unsigned int vertical_quads, unsigned int circumference_quads, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
+Mesh cylinder(unsigned int vertical_quads, unsigned int circumference_quads, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
-MeshID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
+Mesh revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
-MeshID spherical_box(unsigned int quads_per_edge, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
+Mesh spherical_box(unsigned int quads_per_edge, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
-MeshID torus(unsigned int revolution_quads, unsigned int circumference_quads, float minor_radius, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
+Mesh torus(unsigned int revolution_quads, unsigned int circumference_quads, float minor_radius, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
 
 } // NS MeshCreation
 } // NS Bifrost::Assets

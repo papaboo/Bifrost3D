@@ -1,13 +1,6 @@
 BACKLOG:
-* Use Mesh instead of MeshID and same for materials
- * Check get_ID usages
- * Add constructors to avoid calling the heaps directly
- * Add destructors/delete
- * Avoid Materials::Data and use Material directly with appropriate factory functions.
- * Mesh creation, is it a box or a cube? Are cubes equally sized on all sides?
- * Add size to plane
- * SceneNode::set_name(string) with reference and make get_name const reference. (search for "(std::string" or ", std::string" to see if there are other spots
 * Rough glass
+ * Glass sphere in test scene should have a strong specular highlight from the area light
  * Delta dirac reflections when GGX alpha is near 0
   * bool TrowbridgeReitzDistribution::EffectivelySmooth() const { return std::max(alpha_x, alpha_y) < 1e-3f; }
   * Rename MisPDF to PDF

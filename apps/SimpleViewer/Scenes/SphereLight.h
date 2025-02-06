@@ -26,9 +26,9 @@ class MovingLight final {
 public:
     MovingLight(Scene::SceneNode root_node) {
         Math::Transform light_transform = Math::Transform(Math::Vector3f(0.0f, 1.0f, -10.0f));
-        m_light_node = Scene::SceneNodes::create("light", light_transform);
+        m_light_node = Scene::SceneNode("light", light_transform);
         m_light_node.set_parent(root_node);
-        Scene::LightSources::create_sphere_light(m_light_node.get_ID(), Math::RGB(300.0f), 2.0f);
+        Scene::SphereLight(m_light_node, Math::RGB(300.0f), 2.0f);
     }
 
     void move(Core::Engine& engine) {
@@ -50,12 +50,12 @@ private:
     Scene::SceneNode m_light_node;
 };
 
-void create(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneRootID scene_ID) {
+void create(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneRoot scene) {
     using namespace Bifrost::Assets;
     using namespace Bifrost::Math;
     using namespace Bifrost::Scene;
 
-    SceneNode root_node = SceneRoots::get_root_node(scene_ID);
+    SceneNode root_node = scene.get_root_node();
 
     { // Setup camera transform.
         Transform cam_transform = Cameras::get_transform(camera_ID);
@@ -65,19 +65,18 @@ void create(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneRootID 
     }
 
     { // Remove environment light
-        SceneRoot scene = scene_ID;
-        if (!Textures::has(scene.get_environment_map()))
+        if (!scene.get_environment_map().exists())
             scene.set_environment_tint(RGB::black());
     }
 
     { // Add sphere lights.
         Vector3f positions[] = { Vector3f(5.0f, 0.25f, -10.0f), Math::Vector3f(-10.0f, 2.0f, -2.0f), Math::Vector3f(-2.0f, 10.0f, 2.0f) };
         for (int i = 0; i < 3; ++i) {
-            SceneNode light_node = SceneNodes::create("light", Transform(positions[i]));
+            SceneNode light_node = SceneNode("light", Transform(positions[i]));
             light_node.set_parent(root_node);
             RGB light_power = RGB::black();
             light_power[i] = 400.0f;
-            LightSources::create_sphere_light(light_node.get_ID(), light_power, 4.0f / powf(2, float(i)));
+            SphereLight(light_node, light_power, 4.0f / powf(2, float(i)));
         }
     }
 
@@ -91,7 +90,7 @@ void create(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneRootID 
         Materials::Data material0_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 1, 0.02f);
         Materials::Data material1_data = Materials::Data::create_metal(gold_tint, 0.02f);
 
-        MeshID sphere_mesh_ID = MeshCreation::revolved_sphere(32, 16);
+        Mesh sphere_mesh = MeshCreation::revolved_sphere(32, 16);
         Transform sphere_transform = Transform(Vector3f(0.0f, 1.0f, 0.0f), Quaternionf::identity(), 1.5f);
 
         for (int m = 0; m < 9; ++m) {
@@ -106,8 +105,8 @@ void create(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneRootID 
             Material material = Material("Lerped material", material_data);
 
             Transform transform = Transform(Vector3f(float(m - 4) * 1.25f, 0.0, 0.0f));
-            SceneNode node = SceneNodes::create("Model", transform);
-            MeshModels::create(node.get_ID(), sphere_mesh_ID, material.get_ID());
+            SceneNode node = SceneNode("Model", transform);
+            MeshModel(node, sphere_mesh, material);
             node.set_parent(root_node);
         }
     }
