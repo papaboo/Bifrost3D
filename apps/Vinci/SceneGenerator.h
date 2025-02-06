@@ -49,7 +49,7 @@ public:
 
         typedef Mesh(*MeshGenerator)(NumberGenerator&);
         int mesh_generator_count = 4;
-        MeshGenerator mesh_generators[] = { generate_cube, generate_cylinder, generate_sphere, generate_torus };
+        MeshGenerator mesh_generators[] = { generate_box, generate_cylinder, generate_sphere, generate_torus };
 
         for (int n = 0; n < node_count; ++n) {
             auto mesh_generator = mesh_generators[rng.sample1ui() % mesh_generator_count];
@@ -153,9 +153,9 @@ private:
         return node_ID;
     }
 
-    static Mesh generate_cube(NumberGenerator& rng) {
+    static Mesh generate_box(NumberGenerator& rng) {
         Vector3f scaling = rng.sample3f() * 1.5f + 0.5f;
-        return MeshCreation::cube(1, scaling);
+        return MeshCreation::box(1, scaling);
     }
 
     static Mesh generate_cylinder(NumberGenerator& rng) {

@@ -131,9 +131,9 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
             Materials::Data grout_material_data = Materials::Data::create_dielectric(RGB(0.2f, 0.2f, 0.2f), 0.9f, 0.04f);
             Material grout_material = Materials::create("Pool tile", grout_material_data);
 
-            Mesh grout_side1 = MeshCreation::cube(1, Vector3f(2.0f, 0.5f, 0.25f), positions_and_normals);
-            Mesh grout_side2 = MeshCreation::cube(1, Vector3f(0.25f, 0.5f, 1.5f), positions_and_normals);
-            Mesh grout_floor = MeshCreation::cube(1, Vector3f(1.5f, 0.02f, 1.5f), positions_and_normals);
+            Mesh grout_side1 = MeshCreation::box(1, Vector3f(2.0f, 0.5f, 0.25f), positions_and_normals);
+            Mesh grout_side2 = MeshCreation::box(1, Vector3f(0.25f, 0.5f, 1.5f), positions_and_normals);
+            Mesh grout_floor = MeshCreation::box(1, Vector3f(1.5f, 0.02f, 1.5f), positions_and_normals);
             MeshUtils::TransformedMesh meshes[5] = {
                 { grout_side1.get_ID(), Transform(Vector3f(0, 0, 0.875f)) },
                 { grout_side1.get_ID(), Transform(Vector3f(0, 0, -0.875f)) },
@@ -155,7 +155,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
             Materials::Data tile_material_data = Materials::Data::create_coated_dielectric(RGB(0.001f, 0.56f, 0.81f), 0.8f, 0.04f, 0.05f);
             Material tile_material = Materials::create("Pool tile", tile_material_data);
 
-            Mesh tmp_tile_mesh = MeshCreation::beveled_cube(5, 0.002f, Vector3f(0.235f, 0.005f, 0.235f), positions_and_normals);
+            Mesh tmp_tile_mesh = MeshCreation::beveled_box(5, 0.002f, Vector3f(0.235f, 0.005f, 0.235f), positions_and_normals);
             Mesh tile_mesh = MeshUtils::merge_duplicate_vertices(tmp_tile_mesh, { MeshFlag::Position, MeshFlag::Normal });
             Meshes::destroy(tmp_tile_mesh.get_ID());
 
@@ -247,7 +247,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
 
         { // Glass box
             Material box_material = Materials::create("Glass sheet", box_material_data);
-            Mesh box_mesh = MeshCreation::cube(1, Vector3f(1, 1, 0.001f));
+            Mesh box_mesh = MeshCreation::box(1, Vector3f(1, 1, 0.001f));
 
             // Fix UVs so they match the UVs of the plane below by aligning them with the xy plane.
             // The box positions are in range [-0.5f, 0.5f].
@@ -292,7 +292,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
             Materials::Data coat_material_data = Materials::Data::create_transmissive(RGB::white(), coat_roughness, coat_specularity);
             Material coat_material = Materials::create("Coat", coat_material_data);
 
-            Mesh box_mesh = MeshCreation::cube(1, Vector3f(1, 1, 0.002f));
+            Mesh box_mesh = MeshCreation::box(1, Vector3f(1, 1, 0.002f));
             SceneNode box_node = SceneNodes::create("Nickel coat", Transform(Vector3f(-6, -0.5f, 0)));
             MeshModels::create(box_node.get_ID(), box_mesh.get_ID(), coat_material.get_ID());
             box_node.set_parent(root_node);

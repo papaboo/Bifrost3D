@@ -62,7 +62,7 @@ void create_sphere_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Sce
             add_mesh_to_scene(sphere_mesh_ID, sphere_transform);
 
             sphere_transform.translation.z += 1.5f * sphere_spacing;
-            sphere_mesh_ID = MeshCreation::spherical_cube(1 << i);
+            sphere_mesh_ID = MeshCreation::spherical_box(1 << i);
             add_mesh_to_scene(sphere_mesh_ID, sphere_transform);
         }
     }

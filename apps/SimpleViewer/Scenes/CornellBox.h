@@ -98,7 +98,7 @@ void create_cornell_box(Scene::CameraID camera_ID, Scene::SceneNode root_node) {
     }
 
     { // Create small box.
-        MeshID box_mesh_ID = MeshCreation::cube(1);
+        MeshID box_mesh_ID = MeshCreation::box(1);
 
         Transform transform = Transform(Vector3f(0.2f, -0.35f, -0.2f),
             Quaternionf::from_angle_axis(PI<float>() / 6.0f, Vector3f::up()),
@@ -109,7 +109,7 @@ void create_cornell_box(Scene::CameraID camera_ID, Scene::SceneNode root_node) {
     }
 
     { // Create big box.
-        MeshID box_mesh_ID = MeshCreation::cube(1);
+        MeshID box_mesh_ID = MeshCreation::box(1);
 
         Vector3f* positions = Meshes::get_positions(box_mesh_ID);
         for (unsigned int v = 0; v < Meshes::get_vertex_count(box_mesh_ID); ++v) {

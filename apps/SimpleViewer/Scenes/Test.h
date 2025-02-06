@@ -85,7 +85,7 @@ class BoxGun final {
 public:
     BoxGun(Scene::CameraID shooter_node_ID)
         : m_shooter_node_ID(shooter_node_ID)
-        , m_cube_mesh_ID(Assets::MeshCreation::cube(1))
+        , m_box_mesh_ID(Assets::MeshCreation::box(1))
         , m_model_ID(Assets::MeshModelID::invalid_UID())
         , m_existed_time(0.0f) {
     }
@@ -102,22 +102,22 @@ public:
             Math::Transform transform = Cameras::get_transform(m_shooter_node_ID);
             transform.scale = 0.1f;
             transform.translation -= transform.rotation.up() * transform.scale;
-            SceneNodeID cube_node_ID = SceneNodes::create("Cube", transform);
-            m_model_ID = MeshModels::create(cube_node_ID, m_cube_mesh_ID, *Materials::begin()); // Just grab the first material, whatever that is.
+            SceneNodeID box_node_ID = SceneNodes::create("Box", transform);
+            m_model_ID = MeshModels::create(box_node_ID, m_box_mesh_ID, *Materials::begin()); // Just grab the first material, whatever that is.
             m_existed_time = 0.0f;
         }
 
         if (m_model_ID != MeshModelID::invalid_UID()) {
             float delta_time = engine.get_time().get_smooth_delta_time();
             m_existed_time += delta_time;
-            SceneNode cube_node = MeshModels::get_scene_node_ID(m_model_ID);
-            Math::Transform transform = cube_node.get_global_transform();
+            SceneNode box_node = MeshModels::get_scene_node_ID(m_model_ID);
+            Math::Transform transform = box_node.get_global_transform();
             transform.translation += transform.rotation.forward() * 3.0f * delta_time;
-            cube_node.set_global_transform(transform);
+            box_node.set_global_transform(transform);
 
-            // Cube bullets should only exist for 2 seconds.
+            // box bullets should only exist for 2 seconds.
             if (m_existed_time > 2.0f) {
-                SceneNodes::destroy(cube_node.get_ID());
+                SceneNodes::destroy(box_node.get_ID());
                 MeshModels::destroy(m_model_ID);
                 m_model_ID = MeshModelID::invalid_UID();
             }
@@ -126,7 +126,7 @@ public:
 
 private:
     Scene::CameraID m_shooter_node_ID;
-    Assets::MeshID m_cube_mesh_ID;
+    Assets::MeshID m_box_mesh_ID;
     Assets::MeshModelID m_model_ID;
 
     float m_existed_time;
