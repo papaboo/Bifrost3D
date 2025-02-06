@@ -122,7 +122,7 @@ static inline void deallocate_pixels(PixelFormat format, Images::PixelData data)
     }
 }
 
-ImageID Images::create3D(const std::string& name, PixelFormat format, float gamma, Vector3ui size, unsigned int mipmap_count) {
+ImageID Images::create(const std::string& name, PixelFormat format, float gamma, Vector3ui size, unsigned int mipmap_count) {
     assert(m_metainfo != nullptr);
     assert(m_pixels != nullptr);
     assert(mipmap_count > 0u);
@@ -162,7 +162,7 @@ ImageID Images::create3D(const std::string& name, PixelFormat format, float gamm
     return id;
 }
 
-ImageID Images::create2D(const std::string& name, PixelFormat format, float gamma, Math::Vector2ui size, PixelData& pixels) {
+ImageID Images::create(const std::string& name, PixelFormat format, float gamma, Math::Vector3ui size, PixelData& pixels) {
     assert(m_metainfo != nullptr);
     assert(m_pixels != nullptr);
 
@@ -185,7 +185,7 @@ ImageID Images::create2D(const std::string& name, PixelFormat format, float gamm
     metainfo.depth = 1u;
 
     metainfo.mipmap_count = 1u;
-    metainfo.total_pixel_count = size.x * size.y;
+    metainfo.total_pixel_count = size.x * size.y * size.z;
     metainfo.is_mipmapable = false;
     m_pixels[id] = pixels; pixels = nullptr; // Take ownership of pixels.
     m_changes.set_change(id, Change::Created);
@@ -494,11 +494,10 @@ void Image::clear(Math::RGBA clear_color) {
 
 namespace ImageUtils {
 
-void fill_mipmap_chain(ImageID image_ID) {
+void fill_mipmap_chain(Image image) {
     // assert that depth is 1, since 3D textures are not supported.
 
     // Future work: Optimize for the most used data formats.
-    Image image = image_ID;
     for (unsigned int m = 0; m < image.get_mipmap_count() - 1; ++m) {
         for (unsigned int y = 0; y + 1 < image.get_height(m); y += 2) { // TODO Doesn't work with 1D textures does it?
             for (unsigned int x = 0; x + 1 < image.get_width(m); x += 2) {
@@ -551,9 +550,8 @@ void fill_mipmap_chain(ImageID image_ID) {
     }
 }
 
-void compute_summed_area_table(ImageID image_ID, RGBA* sat_result) {
-    Image img = image_ID;
-    unsigned int width = img.get_width(), height = img.get_height();
+void compute_summed_area_table(Image image, RGBA* sat_result) {
+    unsigned int width = image.get_width(), height = image.get_height();
 
     // Initialize high precision buffer.
     // TODO Instead of preallocating a huge Vector4d array, two rows (current and previous) would do.
@@ -562,15 +560,15 @@ void compute_summed_area_table(ImageID image_ID, RGBA* sat_result) {
     auto RGBA_to_vector4d = [](RGBA rgba) -> Vector4d { return Vector4d(rgba.r, rgba.g, rgba.b, rgba.a); };
 
     // Fill the lower row and left column.
-    sat[0] = RGBA_to_vector4d(img.get_pixel(Vector2ui(0, 0)));
+    sat[0] = RGBA_to_vector4d(image.get_pixel(Vector2ui(0, 0)));
     for (unsigned int x = 1; x < width; ++x)
-        sat[x] = RGBA_to_vector4d(img.get_pixel(Vector2ui(x, 0))) + sat[x-1];
+        sat[x] = RGBA_to_vector4d(image.get_pixel(Vector2ui(x, 0))) + sat[x-1];
     for (unsigned int y = 1; y < height; ++y)
-        sat[y * width] = RGBA_to_vector4d(img.get_pixel(Vector2ui(0, y))) + sat[(y - 1)  * width];
+        sat[y * width] = RGBA_to_vector4d(image.get_pixel(Vector2ui(0, y))) + sat[(y - 1)  * width];
 
     for (unsigned int y = 1; y < height; ++y)
         for (unsigned int x = 1; x < width; ++x) {
-            Vector4d pixel = RGBA_to_vector4d(img.get_pixel(Vector2ui(x, y)));
+            Vector4d pixel = RGBA_to_vector4d(image.get_pixel(Vector2ui(x, y)));
             sat[x + y * width] = pixel + sat[x + (y - 1)  * width] + sat[(x - 1) + y  * width] - sat[(x - 1) + (y - 1)  * width];
         }
 
@@ -593,7 +591,7 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
     if (!roughness.exists()) {
         if (has_alpha(tint_format)) {
             assert(tint_format == PixelFormat::RGBA32); // The alternative is float, but float isn't usual for tint.
-            Image tint_sans_roughness = Images::create2D(tint.get_name(), PixelFormat::RGBA32, 2.2f, size, tint.get_mipmap_count());
+            Image tint_sans_roughness = Image::create2D(tint.get_name(), PixelFormat::RGBA32, 2.2f, size, tint.get_mipmap_count());
             RGBA32* new_tint_pixels = tint_sans_roughness.get_pixels<RGBA32>();
             memcpy(new_tint_pixels, tint.get_pixels(), size.x * size.y * size_of(tint_format));
             // Set roughness to multiplicative identity.
@@ -608,7 +606,7 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
         if (roughness_format == PixelFormat::Roughness8)
             return roughness;
         else
-            return ImageUtils::copy_with_new_format(roughness.get_ID(), PixelFormat::Roughness8, 1.0f, [=](RGBA pixel) -> RGBA {
+            return ImageUtils::copy_with_new_format(roughness, PixelFormat::Roughness8, 1.0f, [=](RGBA pixel) -> RGBA {
                 float v = pixel[roughness_channel];
                 return RGBA(v, v, v, v);
             });
@@ -639,7 +637,7 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
         // Sanitize roughness channel index based on pixel format. Fx for Alpha8 the channel index is 3, but since only one channel contains information, the channel index must be reduced to 0 for direct access.
         roughness_channel = min(roughness_channel, roughness_pixel_size - 1);
 
-        Image tint_roughness = Images::create2D(tint.get_name() + "_" + roughness.get_name(), PixelFormat::RGBA32, tint.get_gamma(), size, mipmap_count);
+        Image tint_roughness = Image::create2D(tint.get_name() + "_" + roughness.get_name(), PixelFormat::RGBA32, tint.get_gamma(), size, mipmap_count);
 
         const unsigned char* tint_pixels = (const unsigned char*)tint.get_pixels();
         const unsigned char* roughness_pixels = (unsigned char*)roughness.get_pixels() + roughness_channel;
@@ -676,7 +674,7 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
 
     } else {
         // Fallback path
-        Image tint_roughness = Images::create2D(tint.get_name() + "_" + roughness.get_name(), PixelFormat::RGBA32, 2.2f, size, mipmap_count);
+        Image tint_roughness = Image::create2D(tint.get_name() + "_" + roughness.get_name(), PixelFormat::RGBA32, 2.2f, size, mipmap_count);
 
         #pragma omp parallel for schedule(dynamic, 16)
         for (int c = 0; c < chunk_count; ++c) {

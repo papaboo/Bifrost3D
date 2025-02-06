@@ -9,7 +9,7 @@
 #ifndef _BIFROST_TINY_EXR_H_
 #define _BIFROST_TINY_EXR_H_
 
-#include <Bifrost/Utils/IdDeclarations.h>
+#include <Bifrost/Assets/Image.h>
 #include <string>
 
 namespace TinyExr {
@@ -30,18 +30,18 @@ enum class Result {
 // -----------------------------------------------------------------------
 // Load an exr image file.
 // -----------------------------------------------------------------------
-Result load_verbose(const std::string& filename, Bifrost::Assets::ImageID& image_ID);
+Result load_verbose(const std::string& filename, Bifrost::Assets::Image& image);
 
-inline Bifrost::Assets::ImageID load(const std::string& filename) {
-    Bifrost::Assets::ImageID image_ID;
-    load_verbose(filename, image_ID);
-    return image_ID;
+inline Bifrost::Assets::Image load(const std::string& filename) {
+    Bifrost::Assets::Image image;
+    load_verbose(filename, image);
+    return image;
 }
 
 // -----------------------------------------------------------------------
 // Store an exr image file.
 // -----------------------------------------------------------------------
-Result store(Bifrost::Assets::ImageID image_ID, const std::string& filename);
+Result store(Bifrost::Assets::Image image, const std::string& filename);
 
 } // NS TinyExr
 

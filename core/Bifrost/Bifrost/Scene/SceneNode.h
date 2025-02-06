@@ -112,10 +112,10 @@ private:
 };
 
 // ---------------------------------------------------------------------------
-// The bifrost scene node.
+// The Bifrost scene node.
 // The scene node implements the Entity Component System, 
 // https://en.wikipedia.org/wiki/Entity_component_system, with entities being 
-// managed by their own managers, e.g. the Foo component is managed by the FooManager.
+// managed by their own managers, e.g. the Foo component is managed by the Foos.
 // ---------------------------------------------------------------------------
 class SceneNode final {
 public:
@@ -124,9 +124,14 @@ public:
     // -----------------------------------------------------------------------
     SceneNode() : m_ID(SceneNodeID::invalid_UID()) { }
     SceneNode(SceneNodeID id) : m_ID(id) { }
+    SceneNode(const std::string& name, Math::Transform transform = Math::Transform::identity())
+        : m_ID(SceneNodes::create(name, transform)) { }
 
-    inline const SceneNodeID get_ID() const { return m_ID; }
+    static SceneNode invalid() { return SceneNodeID::invalid_UID(); }
+
+    inline void destroy() { SceneNodes::destroy(m_ID); }
     inline bool exists() const { return SceneNodes::has(m_ID); }
+    inline const SceneNodeID get_ID() const { return m_ID; }
 
     inline bool operator==(SceneNode rhs) const { return m_ID == rhs.m_ID; }
     inline bool operator!=(SceneNode rhs) const { return m_ID != rhs.m_ID; }
@@ -135,7 +140,7 @@ public:
     // Getters and setters.
     // -----------------------------------------------------------------------
     inline std::string get_name() const { return SceneNodes::get_name(m_ID); }
-    inline void set_name(std::string name) { SceneNodes::set_name(m_ID, name); }
+    inline void set_name(const std::string& name) { SceneNodes::set_name(m_ID, name); }
 
     inline SceneNode get_parent() const { return SceneNode(SceneNodes::get_parent_ID(m_ID)); }
     inline void set_parent(SceneNode parent) { SceneNodes::set_parent(m_ID, parent.get_ID()); }

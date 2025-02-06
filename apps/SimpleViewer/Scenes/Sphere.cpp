@@ -48,30 +48,30 @@ void create_sphere_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Sce
         const float y_offset = sphere_scale * 0.5f;
 
         for (int i = 0; i < sphere_model_count; ++i) {
-            auto add_mesh_to_scene = [=](MeshID mesh_ID, Transform transform) {
-                SceneNode sphere_node = SceneNodes::create("Sphere", transform);
-                MeshModels::create(sphere_node.get_ID(), mesh_ID, material.get_ID());
+            auto add_mesh_to_scene = [=](Mesh mesh, Transform transform) {
+                SceneNode sphere_node = SceneNode("Sphere", transform);
+                MeshModel(sphere_node, mesh, material);
                 sphere_node.set_parent(root_node);
             };
 
             Vector3f translation = Vector3f(x_offset + i * sphere_spacing, y_offset, 0.0f);
             Transform sphere_transform = Transform(translation, Quaternionf::identity(), sphere_scale);
 
-            MeshID sphere_mesh_ID = MeshCreation::revolved_sphere(1 << (i + 2), 1 << (i + 1));
-            add_mesh_to_scene(sphere_mesh_ID, sphere_transform);
+            Mesh sphere_mesh = MeshCreation::revolved_sphere(1 << (i + 2), 1 << (i + 1));
+            add_mesh_to_scene(sphere_mesh, sphere_transform);
 
             sphere_transform.translation.z += 1.5f * sphere_spacing;
-            sphere_mesh_ID = MeshCreation::spherical_box(1 << i);
-            add_mesh_to_scene(sphere_mesh_ID, sphere_transform);
+            sphere_mesh = MeshCreation::spherical_box(1 << i);
+            add_mesh_to_scene(sphere_mesh, sphere_transform);
         }
     }
 
     { // Add a directional light.
         Transform light_transform = Transform(Vector3f(20.0f, 20.0f, -20.0f));
         light_transform.look_at(Vector3f::zero());
-        SceneNode light_node = SceneNodes::create("light", light_transform);
+        SceneNode light_node = SceneNode("light", light_transform);
         light_node.set_parent(root_node);
-        LightSources::create_directional_light(light_node.get_ID(), RGB(3.0f, 2.9f, 2.5f));
+        DirectionalLight(light_node, RGB(3.0f, 2.9f, 2.5f));
     }
 }
 

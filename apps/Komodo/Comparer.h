@@ -80,8 +80,8 @@ public:
         } else
             images.push_back(target);
 
-        Image diff_image = Images::create2D(diff_path, reference.get_pixel_format(), reference.get_gamma(),
-                                            Bifrost::Math::Vector2ui(reference.get_width(), reference.get_height()));
+        Image diff_image = Image::create2D(diff_path, reference.get_pixel_format(), reference.get_gamma(),
+                                           Bifrost::Math::Vector2ui(reference.get_width(), reference.get_height()));
         images.push_back(diff_image);
 
         printf("Compare '%s' with '%s'\n", reference_path.c_str(), target_path.c_str());

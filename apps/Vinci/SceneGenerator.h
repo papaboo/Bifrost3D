@@ -33,7 +33,7 @@ private:
     typedef RNG::XorShift32 NumberGenerator;
 public:
     RandomScene(int seed, CameraID camera_ID, std::string& texture_directory) 
-    : m_seed(seed), m_camera_ID(camera_ID), m_textures(TextureManager(texture_directory)), m_root_node(SceneNodes::create("root node")) {
+    : m_seed(seed), m_camera_ID(camera_ID), m_textures(TextureManager(texture_directory)), m_root_node(SceneNode("root node")) {
         new_scene();
     }
 
@@ -77,16 +77,16 @@ public:
             Transform transform = Transform(translation, rotation);
 
             // Generate random material
-            auto material_ID = m_textures.generate_random_material(rng);
-            m_materials.push_back(material_ID);
+            auto material = m_textures.generate_random_material(rng);
+            m_materials.push_back(material);
 
             // Assemble in scene node.
-            SceneNodeID node_ID = SceneNodes::create("Heightmap", transform);
-            m_nodes.push_back(node_ID);
-            auto mesh_model = MeshModels::create(node_ID, mesh.get_ID(), material_ID);
+            SceneNode node = SceneNode("Heightmap", transform);
+            m_nodes.push_back(node);
+            auto mesh_model = MeshModel(node, mesh, material);
             m_mesh_models.push_back(mesh_model);
 
-            SceneNodes::set_parent(node_ID, m_root_node.get_ID());
+            node.set_parent(m_root_node);
         }
 
         m_seed = rng.get_seed();
@@ -94,21 +94,21 @@ public:
 
     ~RandomScene() {
         clear_scene();
-        SceneNodes::destroy(m_root_node.get_ID());
+        m_root_node.destroy();
     }
 
     void clear_scene() {
         for (auto mesh : m_meshes)
-            Meshes::destroy(mesh.get_ID());
+            mesh.destroy();
         m_meshes.clear();
         for (auto material : m_materials)
-            Materials::destroy(material.get_ID());
+            material.destroy();
         m_materials.clear();
         for (auto node : m_nodes)
-            SceneNodes::destroy(node.get_ID());
+            node.destroy();
         m_nodes.clear();
         for (auto model : m_mesh_models)
-            MeshModels::destroy(model.get_ID());
+            model.destroy();
         m_mesh_models.clear();
     }
 
@@ -141,16 +141,16 @@ private:
         Transform transform = Transform(translation, rotation);
 
         // Generate random material
-        auto material_ID = m_textures.generate_random_material(rng);
-        m_materials.push_back(material_ID);
+        auto material = m_textures.generate_random_material(rng);
+        m_materials.push_back(material);
 
         // Assemble in scene node.
-        SceneNodeID node_ID = SceneNodes::create("Node", transform);
-        m_nodes.push_back(node_ID);
-        auto mesh_model = MeshModels::create(node_ID, mesh.get_ID(), material_ID);
+        SceneNode node = SceneNode("Node", transform);
+        m_nodes.push_back(node);
+        auto mesh_model = MeshModel(node, mesh, material);
         m_mesh_models.push_back(mesh_model);
 
-        return node_ID;
+        return node;
     }
 
     static Mesh generate_box(NumberGenerator& rng) {
@@ -219,7 +219,7 @@ private:
             }
         }
 
-        MeshUtils::compute_normals(heightmap.get_ID());
+        MeshUtils::compute_normals(heightmap);
 
         auto bounds = AABB::invalid();
         for (auto& position : position_itr)
@@ -239,7 +239,7 @@ private:
             positions[i] *= scaling;
 
         if (mesh.get_normals() != nullptr)
-            MeshUtils::compute_normals(mesh.get_ID());
+            MeshUtils::compute_normals(mesh);
 
         AABB bounds = mesh.get_bounds();
         bounds.minimum *= scaling;

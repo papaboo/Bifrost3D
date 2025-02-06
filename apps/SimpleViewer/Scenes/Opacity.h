@@ -48,15 +48,15 @@ void create_opacity_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene
 
     { // Sphere light
         Transform light_transform = Transform(Vector3f(0.0f, 0.5f, 0.0f));
-        SceneNodeID light_node_ID = SceneNodes::create("Light", light_transform);
-        LightSourceID light_ID = LightSources::create_sphere_light(light_node_ID, RGB(50.0f), 0.1f);
-        SceneNodes::set_parent(light_node_ID, root_node.get_ID());
+        SceneNode light_node = SceneNode("Light", light_transform);
+        light_node.set_parent(root_node);
+        SphereLight(light_node, RGB(50.0f), 0.1f);
     }
 
     { // Partial coverage box around the light.
         unsigned int width = 17, height = 17;
-        ImageID image_ID = Images::create2D("Grid", PixelFormat::Alpha8, 1.0f, Vector2ui(width, height));
-        unsigned char* pixels = Images::get_pixels<unsigned char>(image_ID);
+        Image image = Image::create2D("Grid", PixelFormat::Alpha8, 1.0f, Vector2ui(width, height));
+        unsigned char* pixels = image.get_pixels<unsigned char>();
         for (unsigned int y = 0; y < height; ++y) {
             for (unsigned int x = 0; x < width; ++x) {
                 unsigned char* pixel = pixels + (x + y * width);
@@ -66,14 +66,14 @@ void create_opacity_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene
         }
 
         Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.005f, 0.01f, 0.25f), 0.05f, 0.04f);
-        material_data.coverage_texture_ID = Textures::create2D(image_ID, MagnificationFilter::None, MinificationFilter::None);
+        material_data.coverage_texture_ID = Texture::create2D(image, MagnificationFilter::None, MinificationFilter::None).get_ID();
         material_data.flags = MaterialFlag::Cutout;
         Material material = Material("Plastic", material_data);
 
         Transform transform = Transform(Vector3f(0.0f, 0.5f, 0.0f));
-        SceneNode box_node = SceneNodes::create("Swizz box", transform);
-        MeshID box_mesh_ID = MeshCreation::box(1);
-        MeshModels::create(box_node.get_ID(), box_mesh_ID, material.get_ID());
+        SceneNode box_node = SceneNode("Swizz box", transform);
+        Mesh box_mesh = MeshCreation::box(1);
+        MeshModel(box_node, box_mesh, material);
         box_node.set_parent(root_node);
     }
 
@@ -81,23 +81,23 @@ void create_opacity_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene
         Materials::Data transparent_material_data = Materials::Data::create_dielectric(RGB(0.25f), 0.95f, 0.04f);
         transparent_material_data.coverage = 0.75;
         transparent_material_data.flags = MaterialFlag::ThinWalled;
-        MaterialID transparent_material_ID = Materials::create("Transparent", transparent_material_data);
+        Material transparent_material = Material("Transparent", transparent_material_data);
 
-        MeshID plane_mesh_ID = MeshCreation::plane(1);
+        Mesh plane_mesh = MeshCreation::plane(1);
 
         Quaternionf rotation = Quaternionf::from_angle_axis(Math::PI<float>() * 0.5f, Vector3f::right());
 
         {
             Transform transform = Transform(Vector3f(1.0f, 1.0f, -2.0f), rotation, 2.0f);
-            SceneNode plane_node = SceneNodes::create("Plane", transform);
-            MeshModels::create(plane_node.get_ID(), plane_mesh_ID, transparent_material_ID);
+            SceneNode plane_node = SceneNode("Plane", transform);
+            MeshModel(plane_node, plane_mesh, transparent_material);
             plane_node.set_parent(root_node);
         }
 
         {
             Transform transform = Transform(Vector3f(0.0f, 0.25f, -3.0f), rotation, 1.0f);
-            SceneNode plane_node = SceneNodes::create("Plane", transform);
-            MeshModels::create(plane_node.get_ID(), plane_mesh_ID, transparent_material_ID);
+            SceneNode plane_node = SceneNode("Plane", transform);
+            MeshModel(plane_node, plane_mesh, transparent_material);
             plane_node.set_parent(root_node);
         }
     }

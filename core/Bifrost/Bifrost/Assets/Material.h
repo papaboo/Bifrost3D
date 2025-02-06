@@ -104,7 +104,7 @@ public:
         float transmission;
         Flags flags;
 
-        static Data create_dielectric(Math::RGB tint, float roughness, float specularity) {
+        static Data create_dielectric(Math::RGB tint, float roughness, float specularity = default_specularity) {
             Data res = {};
             res.tint = tint;
             res.roughness = roughness;
@@ -252,6 +252,8 @@ public:
         m_ID = Materials::create(name, data);
     }
 
+    static Material invalid() { return MaterialID::invalid_UID(); }
+
     static Material create_dielectric(const std::string& name, Math::RGB tint, float roughness, float specularity = default_specularity) {
         auto data = Materials::Data::create_dielectric(tint, roughness, specularity);
         return Materials::create(name, data);
@@ -272,8 +274,9 @@ public:
         return Materials::create(name, data);
     }
 
-    inline const MaterialID get_ID() const { return m_ID; }
+    inline void destroy() { Materials::destroy(m_ID); }
     inline bool exists() const { return Materials::has(m_ID); }
+    inline const MaterialID get_ID() const { return m_ID; }
 
     inline bool operator==(Material rhs) const { return m_ID == rhs.m_ID; }
     inline bool operator!=(Material rhs) const { return m_ID != rhs.m_ID; }
@@ -327,7 +330,7 @@ public:
     inline float get_transmission() const { return Materials::get_transmission(m_ID); }
     inline void set_transmission(float transmission) { Materials::set_coverage(m_ID, transmission); }
 
-    inline Materials::Changes get_changes() { return Materials::get_changes(m_ID); }
+    inline Materials::Changes get_changes() const { return Materials::get_changes(m_ID); }
 
 private:
     MaterialID m_ID;

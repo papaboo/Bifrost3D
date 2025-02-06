@@ -76,7 +76,7 @@ inline Vector3f parse_vector3f(const char* rgb_str) { return parse_array_type<Ve
 inline Vector4f parse_vector4f(const char* rgb_str) { return parse_array_type<Vector4f>(rgb_str); }
 inline RGB parse_RGB(const char* rgb_str) { return parse_array_type<RGB>(rgb_str); }
 
-ImageID load_image(const std::string& filename) {
+Image load_image(const std::string& filename) {
     return StbImageLoader::load(filename);
 }
 
@@ -127,7 +127,7 @@ struct Options {
                 if (image.exists()) {
                     if (channel_count(image.get_pixel_format()) != 4)
                         image.change_format(PixelFormat::RGBA_Float, 1.0f);
-                    options.environment_map = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
+                    options.environment_map = Texture::create2D(image, MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp).get_ID();
                     if (options.environment_tint == RGB::black()) // Test if environment tint hasn't been set and if not then set it to white, so the environment map is shown.
                         options.environment_tint = RGB::white();
                 }
@@ -262,9 +262,9 @@ public:
             m_light_node.set_global_transform(light_transform);
 
             // Unfortunately lights won't move, so we have to manually flag the light as updated.
-            for (auto light : LightSources::get_iterable()) {
-                if (LightSources::get_node_ID(light) == m_light_node.get_ID()) {
-                    SpotLight spot_light = SpotLight(light);
+            for (LightSource light : LightSources::get_iterable()) {
+                if (light.get_node() == m_light_node) {
+                    SpotLight spot_light = SpotLight(light.get_ID());
                     float radius = spot_light.get_radius();
                     spot_light.set_radius(radius);
                 }
@@ -299,11 +299,11 @@ public:
         if (Cameras::pending_screenshots(camera_ID()).any_set()) {
             // Resolve and save screenshots.
             auto output_screenshot = [&](Screenshot::Content content, const std::string& path) {
-                auto image_ID = Cameras::resolve_screenshot(camera_ID(), content, "ss");
-                if (Images::has(image_ID)) {
-                    if (!StbImageWriter::write(image_ID, path))
+                auto image = Cameras::resolve_screenshot(camera_ID(), content, "ss");
+                if (image.exists()) {
+                    if (!StbImageWriter::write(image, path))
                         printf("Failed to output screenshot to '%s'\n", path.c_str());
-                    Images::destroy(image_ID);
+                    image.destroy();
                 }
             };
 
@@ -371,7 +371,7 @@ static inline void miniheaps_cleanup_callback() {
 
 int setup_scene(Engine& engine, Options& options) {
     // Setup scene root.
-    SceneRoot scene_root = SceneRoots::create("Model scene", options.environment_map.get_ID(), options.environment_tint);
+    SceneRoot scene_root = SceneRoot("Model scene", options.environment_map, options.environment_tint);
     SceneNode root_node = scene_root.get_root_node();
 
     // Setup camera
@@ -446,9 +446,9 @@ int setup_scene(Engine& engine, Options& options) {
     Transform light_transform = cam_transform;
     light_transform.translation += cam_transform.rotation.forward() * near * 0.999f;
     Transform camera_to_light_transform = cam_transform.inverse() * light_transform;
-    SceneNode light_node = SceneNodes::create("light node", light_transform);
+    SceneNode light_node = SceneNode("light node", light_transform);
     light_node.set_parent(root_node);
-    LightSources::create_spot_light(light_node.get_ID(), RGB(25), 0.75f, cos_field_of_view);
+    SpotLight(light_node, RGB(25), 0.75f, cos_field_of_view);
 
     scene_refresher->set_light_node(light_node, camera_to_light_transform);
 

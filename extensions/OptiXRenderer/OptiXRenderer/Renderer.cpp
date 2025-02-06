@@ -1090,9 +1090,9 @@ struct Renderer::Implementation {
                 }
 
                 if (scene_data.get_changes().any_set(SceneRoots::Change::EnvironmentMap, SceneRoots::Change::Created)) {
-                    TextureID environment_map_ID = scene_data.get_environment_map();
-                    if (environment_map_ID != scene.environment.get_environment_map_ID()) {
-                        Image image = Textures::get_image_ID(environment_map_ID);
+                    Texture environment_map = scene_data.get_environment_map();
+                    if (environment_map != scene.environment.get_environment_map()) {
+                        Image image = environment_map.get_image();
                         // Only textures with four channels are supported.
                         if (channel_count(image.get_pixel_format()) == 4) { // TODO Support other formats as well by converting the buffers to float4 and upload.
 #if PRESAMPLE_ENVIRONMENT_MAP

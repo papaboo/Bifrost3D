@@ -129,9 +129,14 @@ public:
     // -----------------------------------------------------------------------
     Mesh() : m_ID(MeshID::invalid_UID()) {}
     Mesh(MeshID id) : m_ID(id) {}
+    Mesh(const std::string& name, unsigned int primitive_count, unsigned int vertex_count, MeshFlags buffer_bitmask = MeshFlag::AllBuffers)
+        : m_ID(Meshes::create(name, primitive_count, vertex_count, buffer_bitmask)) { }
 
-    inline const MeshID get_ID() const { return m_ID; }
+    static Mesh invalid() { return MeshID::invalid_UID(); }
+
+    inline void destroy() { Meshes::destroy(m_ID); }
     inline bool exists() const { return Meshes::has(m_ID); }
+    inline const MeshID get_ID() const { return m_ID; }
 
     inline bool operator==(Mesh rhs) const { return m_ID == rhs.m_ID; }
     inline bool operator!=(Mesh rhs) const { return m_ID != rhs.m_ID; }
@@ -168,10 +173,10 @@ public:
         return mesh_flags;
     }
 
-    inline Meshes::Changes get_changes() { return Meshes::get_changes(m_ID); }
+    inline Meshes::Changes get_changes() const { return Meshes::get_changes(m_ID); }
 
 private:
-    const MeshID m_ID;
+    MeshID m_ID;
 };
 
 //----------------------------------------------------------------------------
@@ -183,26 +188,26 @@ private:
 //----------------------------------------------------------------------------
 namespace MeshUtils {
 
-MeshID deep_clone(MeshID mesh_ID);
-void transform_mesh(MeshID mesh_ID, Math::Matrix3x4f affine_transform);
-void transform_mesh(MeshID mesh_ID, Math::Transform transform);
+Mesh deep_clone(Mesh mesh_ID);
+void transform_mesh(Mesh mesh_ID, Math::Matrix3x4f affine_transform);
+void transform_mesh(Mesh mesh_ID, Math::Transform transform);
 
 //-------------------------------------------------------------------------
 // Mesh combine utilities.
 //-------------------------------------------------------------------------
 struct TransformedMesh {
-    MeshID mesh_ID;
+    Mesh mesh;
     Math::Transform transform;
 };
 
-MeshID combine(const std::string& name, 
-                    const TransformedMesh* const meshes_begin, const TransformedMesh* const meshes_end, 
-                    MeshFlags flags = MeshFlag::AllBuffers);
+Mesh combine(const std::string& name, 
+             const TransformedMesh* const meshes_begin, const TransformedMesh* const meshes_end, 
+             MeshFlags flags = MeshFlag::AllBuffers);
 
-inline MeshID combine(const std::string& name, 
-                      MeshID mesh0_ID, Math::Transform transform0,
-                      MeshID mesh1_ID, Math::Transform transform1, 
-                           MeshFlags flags = MeshFlag::AllBuffers) {
+inline Mesh combine(const std::string& name, 
+                    Mesh mesh0_ID, Math::Transform transform0,
+                    Mesh mesh1_ID, Math::Transform transform1, 
+                    MeshFlags flags = MeshFlag::AllBuffers) {
     TransformedMesh mesh0 = { mesh0_ID, transform0 };
     TransformedMesh mesh1 = { mesh1_ID, transform1 };
     TransformedMesh meshes[2] = { mesh0, mesh1 };
@@ -216,7 +221,7 @@ void compute_hard_normals(Math::Vector3f* positions_begin, Math::Vector3f* posit
 // Computes per vertex normals.
 void compute_normals(Math::Vector3ui* primitives_begin, Math::Vector3ui* primitives_end,
                      Math::Vector3f* normals_begin, Math::Vector3f* normals_end, Math::Vector3f* positions_begin);
-void compute_normals(MeshID mesh_ID);
+void compute_normals(Mesh mesh);
 
 // Expands a buffer and a list of triangle vertex indices into a non-indexed buffer.
 // Useful for expanding meshes that uses indexing into a mesh that does not.
@@ -256,15 +261,13 @@ namespace MeshTests {
 // is facing the same general direction as the normals.
 // TODO optional function that all invalid primitives are passed to.
 // Returns the number of primitives whose winding order did not correspond to their vertex normals.
-unsigned int normals_correspond_to_winding_order(MeshID mesh_ID);
+unsigned int normals_correspond_to_winding_order(Mesh mesh);
 
 // TODO callback function that receives found degenerate primitives.
-unsigned int count_degenerate_primitives(MeshID mesh_ID, float epsilon_squared = 0.000001f);
+unsigned int count_degenerate_primitives(Mesh mesh, float epsilon_squared = 0.000001f);
 
 // Tests that no indices index out of bounds.
-inline bool has_invalid_indices(MeshID mesh_ID) {
-    Mesh mesh = mesh_ID;
-
+inline bool has_invalid_indices(Mesh mesh) {
     unsigned int max_index = 0;
     for (unsigned int i = 0; i < mesh.get_index_count(); ++i)
         max_index = Math::max(max_index, mesh.get_indices()[i]);

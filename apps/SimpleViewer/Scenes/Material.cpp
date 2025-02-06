@@ -52,7 +52,7 @@ public:
 
     ~MaterialGUI() {
         for (int m = 0; m < material_count; ++m)
-            Materials::destroy(m_materials[m].get_ID());
+            m_materials[m].destroy();
     }
 
     inline Material get_material(int index) const { return m_materials[index]; }
@@ -124,12 +124,12 @@ private:
 
 SceneNode shallow_clone(SceneNode node) {
     // Clone the node
-    SceneNode cloned_node = SceneNodes::create(node.get_name(), node.get_global_transform());
+    SceneNode cloned_node = SceneNode(node.get_name(), node.get_global_transform());
 
     // Clone the mesh model
     MeshModel mesh_model = MeshModels::get_attached_mesh_model(node.get_ID());
     if (mesh_model.exists())
-        MeshModels::create(cloned_node.get_ID(), mesh_model.get_mesh().get_ID(), mesh_model.get_material().get_ID());
+        MeshModel(cloned_node, mesh_model.get_mesh(), mesh_model.get_material());
 
     // Recurse over children and attach to cloned node
     for (SceneNode child_node : node.get_children()) {
@@ -152,9 +152,9 @@ void create_material_scene(CameraID camera_ID, SceneNode root_node, ImGui::ImGui
     { // Add a directional light.
         Transform light_transform = Transform(Vector3f(20.0f, 20.0f, -20.0f));
         light_transform.look_at(Vector3f::zero());
-        SceneNode light_node = SceneNodes::create("light", light_transform);
+        SceneNode light_node = SceneNode("light", light_transform);
         light_node.set_parent(root_node);
-        LightSources::create_directional_light(light_node.get_ID(), RGB(3.0f, 2.9f, 2.5f));
+        DirectionalLight(light_node, RGB(3.0f, 2.9f, 2.5f));
     }
 
     { // Create checkered floor.

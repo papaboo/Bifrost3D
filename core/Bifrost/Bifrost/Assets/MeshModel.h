@@ -99,9 +99,14 @@ public:
     //---------------------------------------------------------------------------------------------
     MeshModel() : m_ID(MeshModelID::invalid_UID()) {}
     MeshModel(MeshModelID id) : m_ID(id) {}
+    MeshModel(Scene::SceneNode scene_node, Mesh mesh, Material material) :
+        m_ID(MeshModels::create(scene_node.get_ID(), mesh.get_ID(), material.get_ID())) {}
 
-    inline const MeshModelID get_ID() const { return m_ID; }
+    static MeshModel invalid() { return MeshModelID::invalid_UID(); }
+
+    inline void destroy() { MeshModels::destroy(m_ID); }
     inline bool exists() const { return MeshModels::has(m_ID); }
+    inline const MeshModelID get_ID() const { return m_ID; }
 
     inline bool operator==(MeshModel rhs) const { return m_ID == rhs.m_ID; }
     inline bool operator!=(MeshModel rhs) const { return m_ID != rhs.m_ID; }

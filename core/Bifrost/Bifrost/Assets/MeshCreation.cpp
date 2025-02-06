@@ -19,16 +19,16 @@ namespace Bifrost {
 namespace Assets {
 namespace MeshCreation {
 
-MeshID plane(unsigned int quads_per_edge, MeshFlags buffer_bitmask) {
+Mesh plane(unsigned int quads_per_edge, MeshFlags buffer_bitmask) {
     if (quads_per_edge == 0)
-        return MeshID::invalid_UID();
+        return Mesh();
 
     unsigned int size = quads_per_edge + 1;
     unsigned int vertex_count = size * size;
     unsigned int quad_count = quads_per_edge * quads_per_edge;
     unsigned int index_count = quad_count * 2;
     
-    Mesh mesh = Meshes::create("Plane", index_count, vertex_count, buffer_bitmask);
+    Mesh mesh = Mesh("Plane", index_count, vertex_count, buffer_bitmask);
 
     // Vertex attributes.
     float tc_normalizer = 1.0f / quads_per_edge;
@@ -56,12 +56,12 @@ MeshID plane(unsigned int quads_per_edge, MeshFlags buffer_bitmask) {
     Vector3f extends = Vector3f(0.5f, 0.0f, 0.5f);
     mesh.set_bounds(AABB(-extends, extends));
 
-    return mesh.get_ID();
+    return mesh;
 }
 
-MeshID box(unsigned int quads_per_edge, Vector3f size, MeshFlags buffer_bitmask) {
+Mesh box(unsigned int quads_per_edge, Vector3f size, MeshFlags buffer_bitmask) {
     if (quads_per_edge == 0)
-        return MeshID::invalid_UID();
+        return Mesh();
 
     unsigned int sides = 6;
 
@@ -73,7 +73,7 @@ MeshID box(unsigned int quads_per_edge, Vector3f size, MeshFlags buffer_bitmask)
     unsigned int verts_per_side = verts_per_edge * verts_per_edge;
     unsigned int vertex_count = verts_per_side * sides;
 
-    Mesh mesh = Meshes::create("Box", index_count, vertex_count, buffer_bitmask);
+    Mesh mesh = Mesh("Box", index_count, vertex_count, buffer_bitmask);
 
     // Create the vertices.
     // [..TOP.. ..BOTTOM.. ..LEFT.. ..RIGHT.. ..FRONT.. ..BACK..]
@@ -142,12 +142,12 @@ MeshID box(unsigned int quads_per_edge, Vector3f size, MeshFlags buffer_bitmask)
 
     mesh.set_bounds(AABB(-half_size, half_size));
 
-    return mesh.get_ID();
+    return mesh;
 }
 
-MeshID beveled_box(unsigned int quads_per_side, float bevel_size, Math::Vector3f size, MeshFlags buffer_bitmask) {
+Mesh beveled_box(unsigned int quads_per_side, float bevel_size, Math::Vector3f size, MeshFlags buffer_bitmask) {
     if (quads_per_side == 0)
-        return MeshID::invalid_UID();
+        return Mesh();
 
     // Create a regular box with additional 6 quads per side to be used for beveling.
     const int bevel_quads = 3;
@@ -197,14 +197,14 @@ MeshID beveled_box(unsigned int quads_per_side, float bevel_size, Math::Vector3f
     }
 
     if (mesh.get_normals() != nullptr)
-        MeshUtils::compute_normals(mesh.get_ID());
+        MeshUtils::compute_normals(mesh);
 
-    return mesh.get_ID();
+    return mesh;
 }
 
-MeshID cylinder(unsigned int vertical_quads, unsigned int circumference_quads, MeshFlags buffer_bitmask) {
+Mesh cylinder(unsigned int vertical_quads, unsigned int circumference_quads, MeshFlags buffer_bitmask) {
     if (vertical_quads == 0 || circumference_quads == 0)
-        return MeshID::invalid_UID();
+        return Mesh();
 
     unsigned int lid_vertex_count = circumference_quads + 1;
     unsigned int side_vertex_count = (vertical_quads + 1) * circumference_quads;
@@ -214,7 +214,7 @@ MeshID cylinder(unsigned int vertical_quads, unsigned int circumference_quads, M
     unsigned int index_count = 2 * lid_index_count + side_index_count;
     float radius = 0.5f;
 
-    Mesh mesh = Meshes::create("Cylinder", index_count, vertex_count, buffer_bitmask);
+    Mesh mesh = Mesh("Cylinder", index_count, vertex_count, buffer_bitmask);
 
     // Vertex layout is
     // [..TOP.. ..BOTTOM.. ..SIDE..]
@@ -311,7 +311,7 @@ MeshID cylinder(unsigned int vertical_quads, unsigned int circumference_quads, M
 
     mesh.set_bounds(AABB(Vector3f(-radius), Vector3f(radius)));
 
-    return mesh.get_ID();
+    return mesh;
 }
 
 static Vector3f spherical_to_direction(float theta, float phi) {
@@ -322,9 +322,9 @@ static Vector3f spherical_to_direction(float theta, float phi) {
     return Vector3f(x, y, z);
 }
 
-MeshID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads, MeshFlags buffer_bitmask) {
+Mesh revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads, MeshFlags buffer_bitmask) {
     if (longitude_quads < 3 || latitude_quads < 2)
-        return MeshID::invalid_UID();
+        return Mesh();
 
     unsigned int latitude_size = latitude_quads + 1;
     unsigned int longitude_size = longitude_quads + 1;
@@ -333,7 +333,7 @@ MeshID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads
     unsigned int index_count = (quad_count - longitude_quads) * 2;
     float radius = 0.5f;
 
-    Mesh mesh = Meshes::create("RevolvedSphere", index_count, vertex_count, buffer_bitmask);
+    Mesh mesh = Mesh("RevolvedSphere", index_count, vertex_count, buffer_bitmask);
 
     { // Vertex attributes.
         Vector3f* positions = mesh.get_positions();
@@ -376,10 +376,10 @@ MeshID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads
 
     mesh.set_bounds(AABB(Vector3f(-radius), Vector3f(radius)));
 
-    return mesh.get_ID();
+    return mesh;
 }
 
-MeshID spherical_box(unsigned int quads_per_edge, MeshFlags buffer_bitmask) {
+Mesh spherical_box(unsigned int quads_per_edge, MeshFlags buffer_bitmask) {
     Mesh mesh = box(quads_per_edge, Vector3f::one(), buffer_bitmask);
 
     Vector3f* positions = mesh.get_positions();
@@ -391,12 +391,12 @@ MeshID spherical_box(unsigned int quads_per_edge, MeshFlags buffer_bitmask) {
         normals[i] = normal;
     }
 
-    return mesh.get_ID();
+    return mesh;
 }
 
-MeshID torus(unsigned int revolution_quads, unsigned int circumference_quads, float minor_radius, MeshFlags buffer_bitmask) {
+Mesh torus(unsigned int revolution_quads, unsigned int circumference_quads, float minor_radius, MeshFlags buffer_bitmask) {
     if (revolution_quads == 0 || circumference_quads == 0)
-        return MeshID::invalid_UID();
+        return Mesh();
 
     if (minor_radius <= 0.0f || minor_radius >= 0.5f)
     {
@@ -410,7 +410,7 @@ MeshID torus(unsigned int revolution_quads, unsigned int circumference_quads, fl
     unsigned int index_count = 2 * revolution_quads * circumference_quads;
     float major_radius = 0.5f;
 
-    Mesh mesh = Meshes::create("Torus", index_count, vertex_count, buffer_bitmask);
+    Mesh mesh = Mesh("Torus", index_count, vertex_count, buffer_bitmask);
 
     // Precompute local normal directions.
     Core::Array<Vector3f> local_normal_dirs(circumference_vertex_count);
@@ -465,7 +465,7 @@ MeshID torus(unsigned int revolution_quads, unsigned int circumference_quads, fl
     Vector3f max_corner = Vector3f(major_radius + minor_radius, minor_radius, major_radius + minor_radius);
     mesh.set_bounds(AABB(-max_corner, max_corner));
 
-    return mesh.get_ID();
+    return mesh;
 }
 
 } // NS MeshCreation

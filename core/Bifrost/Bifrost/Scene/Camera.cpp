@@ -206,19 +206,19 @@ Cameras::ScreenshotContent Cameras::pending_screenshots(CameraID camera_ID) {
     return content;
 }
 
-Assets::ImageID Cameras::resolve_screenshot(CameraID camera_ID, Screenshot::Content image_content, const std::string& name) {
+Assets::Image Cameras::resolve_screenshot(CameraID camera_ID, Screenshot::Content image_content, const std::string& name) {
     auto& info = m_screenshot_request[camera_ID];
     for (int i = 0; i < info.images.size(); ++i) {
-        auto& image = info.images[i];
-        if (image.content == image_content) {
-            bool is_HDR = image.content == Screenshot::Content::ColorHDR;
-            auto image_ID = Assets::Images::create2D(name, image.format, is_HDR ? 1.0f : 2.2f, Vector2ui(image.width, image.height), image.pixels);
+        auto& screen_shot = info.images[i];
+        if (screen_shot.content == image_content) {
+            bool is_HDR = screen_shot.content == Screenshot::Content::ColorHDR;
+            auto image = Assets::Image::create2D(name, screen_shot.format, is_HDR ? 1.0f : 2.2f, Vector2ui(screen_shot.width, screen_shot.height), screen_shot.pixels);
             info.images.erase(info.images.begin() + i);
-            return image_ID;
+            return image;
         }
     }
 
-    return Assets::ImageID::invalid_UID();
+    return Assets::Image::invalid();
 }
 
 //*****************************************************************************

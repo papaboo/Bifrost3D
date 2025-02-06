@@ -58,7 +58,7 @@ void output_convoluted_image(const std::string& original_image_file, Image image
     std::ostringstream output_file;
     output_file << file_sans_extension << "_roughness_" << roughness << extension;
     if (extension.compare(".exr") == 0)
-        TinyExr::store(image.get_ID(), output_file.str());
+        TinyExr::store(image, output_file.str());
     else
         StbImageWriter::write(image, output_file.str());
 }
@@ -346,11 +346,11 @@ int initialize(Engine& engine) {
     if (image.get_pixel_format() != PixelFormat::RGB_Float || image.get_gamma() != 1.0f)
         image.change_format(PixelFormat::RGB_Float, 1.0f);
 
-    TextureID texture_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
+    Texture texture = Texture::create2D(image, MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
     std::unique_ptr<InfiniteAreaLight> infinite_area_light = nullptr;
     std::vector<LightSample> light_samples = std::vector<LightSample>();
     if (g_options.sample_method == ConvolutionType::Light || g_options.sample_method == ConvolutionType::MIS) {
-        infinite_area_light = std::make_unique<InfiniteAreaLight>(texture_ID);
+        infinite_area_light = std::make_unique<InfiniteAreaLight>(texture);
         light_samples.resize(g_options.sample_count * 8);
         #pragma omp parallel for schedule(dynamic, 16)
         for (int s = 0; s < light_samples.size(); ++s)
@@ -370,7 +370,7 @@ int initialize(Engine& engine) {
     for (int r = 0; r < g_convoluted_images.size(); ++r) {
         int width = image.get_width(), height = image.get_height();
 
-        g_convoluted_images[r] = Images::create2D("Convoluted image", PixelFormat::RGB_Float, 1.0f, Vector2ui(width, height));
+        g_convoluted_images[r] = Image::create2D("Convoluted image", PixelFormat::RGB_Float, 1.0f, Vector2ui(width, height));
         RGB* target_pixels = g_convoluted_images[r].get_pixels<RGB>();
 
         // No convolution needed when roughness is 0.
@@ -392,10 +392,10 @@ int initialize(Engine& engine) {
         float roughness = r / (g_convoluted_images.size() - 1.0f);
         float alpha = roughness * roughness;
 
-        TextureID previous_roughness_tex_ID = TextureID::invalid_UID();
+        Texture previous_roughness_tex = Texture::invalid();
         if (is_recursive(g_options.sample_method)) {
             int prev_r = r - 1;
-            previous_roughness_tex_ID = Textures::create2D(g_convoluted_images[prev_r].get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
+            previous_roughness_tex = Texture::create2D(g_convoluted_images[prev_r], MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
             float prev_roughness = prev_r / (g_convoluted_images.size() - 1.0f);
             float prev_alpha = prev_roughness * prev_roughness;
             float target_alpha = alpha;
@@ -406,7 +406,7 @@ int initialize(Engine& engine) {
             if (g_options.sample_method == ConvolutionType::Separable)
                 IBL_convolution->ggx_kernel(alpha, width, height, image.get_pixels<RGB>(), target_pixels);
             else if (g_options.sample_method == ConvolutionType::SeparableRecursive) {
-                Image prev_convoluted_image = Textures::get_image_ID(previous_roughness_tex_ID);
+                Image prev_convoluted_image = previous_roughness_tex.get_image();
                 IBL_convolution->ggx_kernel(alpha, width, height, prev_convoluted_image.get_pixels<RGB>(), target_pixels);
             }
             finished_pixel_count += width * height;
@@ -487,14 +487,14 @@ int initialize(Engine& engine) {
                     for (int s = 0; s < g_options.sample_count; ++s) {
                         const GGX::Sample& sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
                         Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
-                        radiance += sample2D(texture_ID, sample_uv).rgb();
+                        radiance += sample2D(texture, sample_uv).rgb();
                     }
                     break;
                 case ConvolutionType::Recursive:
                     for (int s = 0; s < g_options.sample_count; ++s) {
                         const GGX::Sample& sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
                         Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
-                        radiance += sample2D(previous_roughness_tex_ID, sample_uv).rgb();
+                        radiance += sample2D(previous_roughness_tex, sample_uv).rgb();
                     }
                     break;
                 }
@@ -509,7 +509,7 @@ int initialize(Engine& engine) {
             }
         }
 
-        Textures::destroy(previous_roughness_tex_ID);
+        previous_roughness_tex.destroy();
 
         if (g_options.headless)
             output_convoluted_image(g_image_file, g_convoluted_images[r], roughness);

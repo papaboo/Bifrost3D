@@ -144,34 +144,31 @@ AABB Meshes::compute_bounds(MeshID mesh_ID) {
 
 namespace MeshUtils {
 
-MeshID deep_clone(MeshID mesh_ID) {
-    Mesh mesh = mesh_ID;
-    MeshID new_ID = Meshes::create(mesh.get_name() + "_clone", mesh.get_primitive_count(), mesh.get_vertex_count(), mesh.get_flags());
+Mesh deep_clone(Mesh mesh) {
+    Mesh new_mesh = Meshes::create(mesh.get_name() + "_clone", mesh.get_primitive_count(), mesh.get_vertex_count(), mesh.get_flags());
 
     Vector3f* positions_begin = mesh.get_positions();
     if (positions_begin != nullptr)
-        std::copy_n(positions_begin, mesh.get_vertex_count(), Meshes::get_positions(new_ID));
+        std::copy_n(positions_begin, mesh.get_vertex_count(), new_mesh.get_positions());
 
     Vector3f* normals_begin = mesh.get_normals();
     if (normals_begin != nullptr)
-        std::copy_n(normals_begin, mesh.get_vertex_count(), Meshes::get_normals(new_ID));
+        std::copy_n(normals_begin, mesh.get_vertex_count(), new_mesh.get_normals());
 
     Vector2f* texcoords_begin = mesh.get_texcoords();
     if (texcoords_begin != nullptr)
-        std::copy_n(texcoords_begin, mesh.get_vertex_count(), Meshes::get_texcoords(new_ID));
+        std::copy_n(texcoords_begin, mesh.get_vertex_count(), new_mesh.get_texcoords());
 
     Vector3ui* primitives_begin = mesh.get_primitives();
     if (primitives_begin != nullptr)
-        std::copy_n(primitives_begin, mesh.get_primitive_count(), Meshes::get_primitives(new_ID));
+        std::copy_n(primitives_begin, mesh.get_primitive_count(), new_mesh.get_primitives());
 
-    Meshes::set_bounds(new_ID, mesh.get_bounds());
+    new_mesh.set_bounds(mesh.get_bounds());
 
-    return new_ID;
+    return new_mesh;
 }
 
-void transform_mesh(MeshID mesh_ID, Matrix3x4f affine_transform) {
-    Mesh mesh = mesh_ID;
-
+void transform_mesh(Mesh mesh, Matrix3x4f affine_transform) {
     Matrix3x3f rotation;
     rotation.set_column(0, affine_transform.get_column(0));
     rotation.set_column(1, affine_transform.get_column(1));
@@ -200,30 +197,28 @@ void transform_mesh(MeshID mesh_ID, Matrix3x4f affine_transform) {
     }
 }
 
-void transform_mesh(MeshID mesh_ID, Transform transform) {
-    transform_mesh(mesh_ID, to_matrix3x4(transform));
+void transform_mesh(Mesh mesh, Transform transform) {
+    transform_mesh(mesh, to_matrix3x4(transform));
 }
 
-MeshID combine(const std::string& name,
-                    const TransformedMesh* const meshes_begin,
-                    const TransformedMesh* const meshes_end,
-                    MeshFlags flags) {
+Mesh combine(const std::string& name,
+             const TransformedMesh* const meshes_begin,
+             const TransformedMesh* const meshes_end,
+             MeshFlags flags) {
 
     auto meshes = Core::Iterable<const TransformedMesh* const>(meshes_begin, meshes_end);
 
     unsigned int primitive_count = 0u;
     unsigned int vertex_count = 0u;
     for (TransformedMesh transformed_mesh : meshes) {
-        Mesh mesh = transformed_mesh.mesh_ID;
+        Mesh mesh = transformed_mesh.mesh;
         primitive_count += mesh.get_primitive_count();
         vertex_count += mesh.get_vertex_count();
     }
 
     // Determine shared buffers.
-    for (TransformedMesh transformed_mesh : meshes) {
-        Mesh mesh = transformed_mesh.mesh_ID;
-        flags &= mesh.get_flags();
-    }
+    for (TransformedMesh transformed_mesh : meshes)
+        flags &= transformed_mesh.mesh.get_flags();
 
     Mesh merged_mesh = Mesh(Meshes::create(name, primitive_count, vertex_count, flags));
 
@@ -231,7 +226,7 @@ MeshID combine(const std::string& name,
         Vector3ui* primitives = merged_mesh.get_primitives();
         unsigned int primitive_offset = 0u;
         for (TransformedMesh transformed_mesh : meshes) {
-            Mesh mesh = transformed_mesh.mesh_ID;
+            Mesh mesh = transformed_mesh.mesh;
             for (Vector3ui primitive : mesh.get_primitive_iterable())
                 *(primitives++) = primitive + primitive_offset;
             primitive_offset += mesh.get_vertex_count();
@@ -241,7 +236,7 @@ MeshID combine(const std::string& name,
     if (flags.contains(MeshFlag::Position)) {
         Vector3f* positions = merged_mesh.get_positions();
         for (TransformedMesh transformed_mesh : meshes) {
-            Mesh mesh = transformed_mesh.mesh_ID;
+            Mesh mesh = transformed_mesh.mesh;
             for (Vector3f position : mesh.get_position_iterable())
                 *(positions++) = transformed_mesh.transform * position;
         }
@@ -250,7 +245,7 @@ MeshID combine(const std::string& name,
     if (flags.contains(MeshFlag::Normal)) {
         Vector3f* normals = merged_mesh.get_normals();
         for (TransformedMesh transformed_mesh : meshes) {
-            Mesh mesh = transformed_mesh.mesh_ID;
+            Mesh mesh = transformed_mesh.mesh;
             for (Vector3f normal : mesh.get_normal_iterable())
                 *(normals++) = transformed_mesh.transform.rotation * normal;
         }
@@ -259,7 +254,7 @@ MeshID combine(const std::string& name,
     if (flags.contains(MeshFlag::Texcoord)) {
         Vector2f* texcoords = merged_mesh.get_texcoords();
         for (TransformedMesh transformed_mesh : meshes) {
-            Mesh mesh = transformed_mesh.mesh_ID;
+            Mesh mesh = transformed_mesh.mesh;
             memcpy(texcoords, mesh.get_texcoords(), sizeof(Vector2f) * mesh.get_vertex_count());
             texcoords += mesh.get_vertex_count();
         }
@@ -303,8 +298,7 @@ void compute_normals(Vector3ui* primitives_begin, Vector3ui* primitives_end,
     std::for_each(normals_begin, normals_end, [](Vector3f& n) { n = normalize(n); });
 }
 
-void compute_normals(MeshID mesh_ID) {
-    Mesh mesh = mesh_ID;
+void compute_normals(Mesh mesh) {
     compute_normals(mesh.get_primitives(), mesh.get_primitives() + mesh.get_primitive_count(),
                     mesh.get_normals(), mesh.get_normals() + mesh.get_vertex_count(),
                     mesh.get_positions());
@@ -388,8 +382,7 @@ Mesh merge_duplicate_vertices(Mesh mesh, MeshFlags attribute_types) {
 
 namespace MeshTests {
 
-unsigned int normals_correspond_to_winding_order(MeshID mesh_ID) {
-    Mesh mesh = mesh_ID;
+unsigned int normals_correspond_to_winding_order(Mesh mesh) {
     unsigned int failed_primitives = 0;
 
     for (Vector3ui primitive : mesh.get_primitive_iterable()) {
@@ -424,8 +417,7 @@ unsigned int normals_correspond_to_winding_order(MeshID mesh_ID) {
     return failed_primitives;
 }
 
-unsigned int count_degenerate_primitives(MeshID mesh_ID, float epsilon_squared) {
-    Mesh mesh = mesh_ID;
+unsigned int count_degenerate_primitives(Mesh mesh, float epsilon_squared) {
     unsigned int degenerate_primitives = 0;
 
     for (Vector3ui primitive : mesh.get_primitive_iterable()) {

@@ -28,9 +28,9 @@ namespace Scenes {
 SceneNode create_checkered_floor(float floor_size, float checker_size) {
     // 2x2 checkered texture to be repeated across the floor.
     unsigned int size = 2;
-    ImageID tint_roughness_image_ID = Images::create2D("Floor color", PixelFormat::RGBA32, 2.2f, Vector2ui(size, size));
-    Images::set_mipmapable(tint_roughness_image_ID, true);
-    unsigned char* tint_roughness_pixels = (unsigned char*)Images::get_pixels(tint_roughness_image_ID);
+    Image tint_roughness_image = Image::create2D("Floor color", PixelFormat::RGBA32, 2.2f, Vector2ui(size, size));
+    tint_roughness_image.set_mipmapable(true);
+    unsigned char* tint_roughness_pixels = (unsigned char*)tint_roughness_image.get_pixels();
     for (unsigned int y = 0; y < size; ++y) {
         for (unsigned int x = 0; x < size; ++x) {
             bool is_black = (x & 1) != (y & 1);
@@ -43,7 +43,7 @@ SceneNode create_checkered_floor(float floor_size, float checker_size) {
 
     // Material
     Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 0.4f, 0.04f);
-    material_data.tint_roughness_texture_ID = Textures::create2D(tint_roughness_image_ID, MagnificationFilter::None, MinificationFilter::Trilinear);
+    material_data.tint_roughness_texture_ID = Texture::create2D(tint_roughness_image, MagnificationFilter::None, MinificationFilter::Trilinear).get_ID();
     material_data.flags = MaterialFlag::ThinWalled;
     Material material = Material("Floor", material_data);
 
@@ -55,8 +55,8 @@ SceneNode create_checkered_floor(float floor_size, float checker_size) {
     for (Vector2f& texcoord_itr : plane_mesh.get_texcoord_iterable())
         texcoord_itr = (texcoord_itr - 0.5f) * uv_scale; // Subtract 0.5 to keep high precision of texcoords near the center of the floor.
 
-    SceneNode plane_node = SceneNodes::create("Floor");
-    MeshModels::create(plane_node.get_ID(), plane_mesh.get_ID(), material.get_ID());
+    SceneNode plane_node = SceneNode("Floor");
+    MeshModel(plane_node, plane_mesh, material);
     
     return plane_node;
 }
@@ -68,7 +68,7 @@ void replace_material(Material material, SceneNode parent_node, const std::strin
             if (mesh_model.exists())
                 mesh_model.set_material(material);
         }
-        });
+    });
 }
 
 Bifrost::Scene::SceneNode load_shader_ball(const std::filesystem::path& resource_directory, Material material) {
@@ -92,9 +92,9 @@ Bifrost::Scene::SceneNode load_shader_ball(const std::filesystem::path& resource
                 mesh_model.set_material(rubber_material);
             else {
                 // Delete anything but the shaderball.
-                Meshes::destroy(mesh_model.get_mesh().get_ID());
-                Materials::destroy(mesh_model.get_material().get_ID());
-                MeshModels::destroy(mesh_model.get_ID());
+                mesh_model.get_mesh().destroy();
+                mesh_model.get_material().destroy();
+                mesh_model.destroy();
             }
         }
     });

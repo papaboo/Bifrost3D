@@ -20,7 +20,7 @@ using namespace Bifrost::Math;
 
 namespace TinyExr {
 
-Result load_verbose(const std::string& filename, Bifrost::Assets::ImageID& image_ID) {
+Result load_verbose(const std::string& filename, Bifrost::Assets::Image& image) {
 
     float* rgba = nullptr;
     int width, height;
@@ -29,13 +29,13 @@ Result load_verbose(const std::string& filename, Bifrost::Assets::ImageID& image
 
     if (res == Result::Success) {
         float image_gamma = 1.0f;
-        image_ID = Images::create2D(filename, PixelFormat::RGBA_Float, image_gamma, Vector2ui(width, height));
-        Images::PixelData pixel_data = Images::get_pixels(image_ID);
+        image = Image::create2D(filename, PixelFormat::RGBA_Float, image_gamma, Vector2ui(width, height));
+        Images::PixelData pixel_data = image.get_pixels();
         memcpy(pixel_data, rgba, sizeof(float) * 4 * width * height);
     }
     else
     {
-        image_ID = ImageID::invalid_UID();
+        image = Image::invalid();
         printf("TinyExr: %s\n", error_msg);
     }
 
@@ -44,11 +44,10 @@ Result load_verbose(const std::string& filename, Bifrost::Assets::ImageID& image
     return res;
 }
 
-Result store(Bifrost::Assets::ImageID image_ID, const std::string& filename) {
+Result store(Bifrost::Assets::Image image, const std::string& filename) {
     Result res;
     const char* error_msg = nullptr;
 
-    Image image = image_ID;
     if (image.get_pixel_format() == PixelFormat::RGB_Float || image.get_pixel_format() == PixelFormat::RGBA_Float) {
         int save_as_fp16 = 0;
         res = (Result)SaveEXR((float*)image.get_pixels(), image.get_width(), image.get_height(), channel_count(image.get_pixel_format()),

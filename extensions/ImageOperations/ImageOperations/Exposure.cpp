@@ -14,17 +14,16 @@ using namespace Bifrost::Math;
 namespace ImageOperations {
 namespace Exposure {
 
-float summed_log_luminance(ImageID image_ID) {
+float summed_log_luminance(Image image) {
     double summed_log_luminance = 0.0;
-    Images::iterate_pixels(image_ID, [&](RGBA pixel) { summed_log_luminance += log2(fmaxf(luminance(pixel.rgb()), 0.0001f)); });
+    Images::iterate_pixels(image.get_ID(), [&](RGBA pixel) { summed_log_luminance += log2(fmaxf(luminance(pixel.rgb()), 0.0001f)); });
     return float(summed_log_luminance);
 }
 
-float log_average_luminance(ImageID image_ID) {
-    Image image = image_ID;
+float log_average_luminance(Image image) {
     // Corrects an error in the paper. We have to average summed log luminance BEFORE using exp2.
     // Otherwise the result is always going to be nearly or exactly zero.
-    return exp2(summed_log_luminance(image_ID) / image.get_pixel_count());
+    return exp2(summed_log_luminance(image) / image.get_pixel_count());
 }
 
 } // NS Exposure

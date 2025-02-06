@@ -234,7 +234,7 @@ struct ColorGrader::Implementation final {
 
             auto reinhard_auto_exposure = [](void* client_data) {
                 ColorGrader::Implementation* data = (ColorGrader::Implementation*)client_data;
-                float scene_key = Exposure::log_average_luminance(data->m_input.get_ID());
+                float scene_key = Exposure::log_average_luminance(data->m_input);
                 float linear_exposure = 0.5f / scene_key;
                 data->m_exposure_bias = log2(linear_exposure);
                 data->m_upload_image = true;
@@ -243,7 +243,7 @@ struct ColorGrader::Implementation final {
 
             auto auto_geometric_mean = [](void* client_data) {
                 ColorGrader::Implementation* data = (ColorGrader::Implementation*)client_data;
-                float log_average_luminance = Exposure::log_average_luminance(data->m_input.get_ID());
+                float log_average_luminance = Exposure::log_average_luminance(data->m_input);
                 float key_value = 1.03f - (2.0f / (2 + log10(log_average_luminance + 1)));
                 float linear_exposure = key_value / log_average_luminance;
                 data->m_exposure_bias = log2(max(linear_exposure, 0.0001f));
@@ -260,8 +260,8 @@ struct ColorGrader::Implementation final {
                     auto& histogram = data->m_histogram;
 
                     std::fill(histogram.histogram.begin(), histogram.histogram.end(), 0u);
-                    Exposure::log_luminance_histogram(data->m_input.get_ID(), histogram.min_log_luminance, histogram.max_log_luminance, 
-                                                                       histogram.histogram.begin(), histogram.histogram.end());
+                    Exposure::log_luminance_histogram(data->m_input, histogram.min_log_luminance, histogram.max_log_luminance, 
+                                                      histogram.histogram.begin(), histogram.histogram.end());
 
                     // Compute linear exposure from histogram.
                     float min_pixel_count = data->m_input.get_pixel_count() * histogram.min_percentage;
@@ -382,11 +382,11 @@ struct ColorGrader::Implementation final {
                 // Tonemap and store the image
                 ColorGrader::Implementation* data = (ColorGrader::Implementation*)client_data;
                 Vector2ui size = data->m_input.get_size_2D();
-                Image output_image = Images::create2D("tonemapped_" + data->m_input.get_name(), PixelFormat::RGB_Float, 2.2f, size);
+                Image output_image = Image::create2D("tonemapped_" + data->m_input.get_name(), PixelFormat::RGB_Float, 2.2f, size);
                 RGB* pixels = output_image.get_pixels<RGB>();
                 data->color_grade_image(data->m_input, pixels);
                 store_image(output_image, data->m_output_path);
-                Images::destroy(output_image.get_ID());
+                output_image.destroy();
             };
             TwAddButton(bar, "Save", save_image, this, "");
         }
@@ -420,7 +420,7 @@ struct ColorGrader::Implementation final {
             if (m_output_path.size() != 0) {
                 // Color grade and store the image
                 Vector2ui size = m_input.get_size_2D();
-                Image output_image = Images::create2D("tonemapped_" + m_input.get_name(), PixelFormat::RGB_Float, 2.2f, size);
+                Image output_image = Image::create2D("tonemapped_" + m_input.get_name(), PixelFormat::RGB_Float, 2.2f, size);
                 RGB* pixels = output_image.get_pixels<RGB>();
                 color_grade_image(m_input, pixels);
                 store_image(output_image, m_output_path);
@@ -469,7 +469,7 @@ struct ColorGrader::Implementation final {
         if (m_bloom.enabled) { // Bloom
             static Image high_intensity_image = ImageID::invalid_UID();
             if (!high_intensity_image.exists())
-                high_intensity_image = Images::create2D("high intensity", PixelFormat::RGB_Float, 1.0f, image_size);
+                high_intensity_image = Image::create2D("high intensity", PixelFormat::RGB_Float, 1.0f, image_size);
 
             #pragma omp parallel for schedule(dynamic, 16)
             for (int i = 0; i < (int)image.get_pixel_count(); ++i) {
@@ -481,10 +481,10 @@ struct ColorGrader::Implementation final {
             }
 
             if (!bloom_image.exists())
-                bloom_image = Images::create2D("high intensity", PixelFormat::RGB_Float, 1.0f, image_size);
+                bloom_image = Image::create2D("high intensity", PixelFormat::RGB_Float, 1.0f, image_size);
             float pixel_support = image.get_height() * max(0.001f, m_bloom.support);
             float std_dev = pixel_support / 4.0f;
-            Blur::gaussian(high_intensity_image.get_ID(), std_dev, bloom_image.get_ID());
+            Blur::gaussian(high_intensity_image, std_dev, bloom_image);
         }
 
         { // Tonemap

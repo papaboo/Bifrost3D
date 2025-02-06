@@ -91,7 +91,7 @@ static inline void update_FPS(Engine& engine) {
     engine.get_window().set_name(title.str().c_str());
 }
 
-ImageID load_image(const std::string& path) {
+Image load_image(const std::string& path) {
     const int read_only_flag = 4;
     if (_access(path.c_str(), read_only_flag) >= 0)
         return StbImageLoader::load(path);
@@ -114,7 +114,7 @@ ImageID load_image(const std::string& path) {
 
     // No dice. Report error and return an invalid ID.
     printf("No image found at '%s'\n", path.c_str());
-    return ImageID::invalid_UID();
+    return Image::invalid();
 }
 
 // Merges all nodes in the scene sharing the same material and destroys all other nodes.
@@ -182,7 +182,7 @@ void mesh_combine_whole_scene(SceneNodeID scene_root) {
                     // Create new scene node to hold the combined model.
                     SceneNode node0 = MeshModels::get_scene_node_ID(segment_begin->model_ID);
                     Transform transform = node0.get_global_transform();
-                    SceneNode merged_node = SceneNodes::create(material.get_name() + "_combined", transform);
+                    SceneNode merged_node = SceneNode(material.get_name() + "_combined", transform);
                     merged_node.set_parent(scene_root);
 
                     std::vector<MeshUtils::TransformedMesh> transformed_meshes = std::vector<MeshUtils::TransformedMesh>();
@@ -195,12 +195,12 @@ void mesh_combine_whole_scene(SceneNodeID scene_root) {
 
                     std::string mesh_name = material.get_name() + "_combined_mesh";
                     unsigned int mesh_flags = segment_begin->key; // The mesh flags are contained in the key.
-                    MeshID merged_mesh_ID = MeshUtils::combine(mesh_name, transformed_meshes.data(), transformed_meshes.data() + transformed_meshes.size(), mesh_flags);
+                    Mesh merged_mesh = MeshUtils::combine(mesh_name, transformed_meshes.data(), transformed_meshes.data() + transformed_meshes.size(), mesh_flags);
 
                     // Create new model.
-                    MeshModelID merged_model = MeshModels::create(merged_node.get_ID(), merged_mesh_ID, material.get_ID());
-                    if (merged_mesh_ID.get_index() < used_meshes.size())
-                        used_meshes[merged_model] = true;
+                    MeshModel(merged_node, merged_mesh, material);
+                    if (merged_mesh.get_ID().get_index() < used_meshes.size())
+                        used_meshes[merged_mesh.get_ID()] = true;
                 }
 
                 segment_begin = itr;
@@ -219,8 +219,8 @@ void mesh_combine_whole_scene(SceneNodeID scene_root) {
     for (OrderedModel ordered_model : ordered_models) {
         MeshModel model = ordered_model.model_ID;
         if (!model.get_mesh().exists()) {
-            SceneNodes::destroy(model.get_scene_node().get_ID());
-            MeshModels::destroy(model.get_ID());
+            model.get_scene_node().destroy();
+            model.destroy();
         }
     }
 }
@@ -334,57 +334,57 @@ int initializer(Engine& engine) {
 
 int initialize_scene(Engine& engine, ImGui::ImGuiAdaptor* imgui) {
     // Setup scene.
-    SceneRootID scene_ID = SceneRootID::invalid_UID();
+    SceneRoot scene = SceneRoot::invalid();
     if (!g_environment.empty()) {
         Image image = StbImageLoader::load(g_environment);
         if (image.exists()) {
             if (channel_count(image.get_pixel_format()) != 4)
                 image.change_format(PixelFormat::RGBA_Float, 1.0f);
-            TextureID env_ID = Textures::create2D(image.get_ID(), MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
-            scene_ID = SceneRoots::create("Model scene", env_ID);
+            Texture env = Texture::create2D(image, MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
+            scene = SceneRoot("Model scene", env);
         } else
-            scene_ID = SceneRoots::create("Model scene", g_environment_color);
+            scene = SceneRoot("Model scene", g_environment_color);
     } else
-        scene_ID = SceneRoots::create("Model scene", g_environment_color);
-    SceneNodeID root_node_ID = SceneRoots::get_root_node(scene_ID);
+        scene = SceneRoot("Model scene", g_environment_color);
+    SceneNode root_node = scene.get_root_node();
 
     // Create camera. Matrices will be set up by the CameraViewportHandler.
-    CameraID cam_ID = Cameras::create("Camera", scene_ID, Matrix4x4f::identity(), Matrix4x4f::identity());
+    CameraID cam_ID = Cameras::create("Camera", scene.get_ID(), Matrix4x4f::identity(), Matrix4x4f::identity());
     camera_handler = new CameraViewportHandler(cam_ID, engine.get_window().get_aspect_ratio(), 0.1f, 100.0f);
 
     // Load model
     auto resource_directory = engine.data_directory() / "SimpleViewer" / "Resources";
     bool load_model_from_file = false;
     if (g_scene.empty() || g_scene.compare("CornellBox") == 0)
-        Scenes::create_cornell_box(cam_ID, root_node_ID);
+        Scenes::create_cornell_box(cam_ID, root_node);
     else if (g_scene.compare("GlassScene") == 0)
-        Scenes::create_glass_scene(cam_ID, root_node_ID, resource_directory);
+        Scenes::create_glass_scene(cam_ID, root_node, resource_directory);
     else if (g_scene.compare("MaterialScene") == 0)
-        Scenes::create_material_scene(cam_ID, root_node_ID, imgui, resource_directory);
+        Scenes::create_material_scene(cam_ID, root_node, imgui, resource_directory);
     else if (g_scene.compare("OpacityScene") == 0)
-        Scenes::create_opacity_scene(engine, cam_ID, root_node_ID);
+        Scenes::create_opacity_scene(engine, cam_ID, root_node);
     else if (g_scene.compare("SphereScene") == 0)
-        Scenes::create_sphere_scene(cam_ID, root_node_ID);
+        Scenes::create_sphere_scene(cam_ID, root_node);
     else if (g_scene.compare("SphereLightScene") == 0)
-        Scenes::SphereLightScene::create(engine, cam_ID, scene_ID);
+        Scenes::SphereLightScene::create(engine, cam_ID, scene);
     else if (g_scene.compare("TestScene") == 0)
-        Scenes::create_test_scene(engine, cam_ID, root_node_ID, resource_directory);
+        Scenes::create_test_scene(engine, cam_ID, root_node, resource_directory);
     else if (g_scene.compare("VeachScene") == 0)
-        Scenes::create_veach_scene(engine, cam_ID, scene_ID);
+        Scenes::create_veach_scene(engine, cam_ID, scene);
     else {
         printf("Loading scene: '%s'\n", g_scene.c_str());
-        SceneNodeID obj_root_ID = SceneNodeID::invalid_UID();
+        SceneNode obj_root = SceneNode::invalid();
         if (ObjLoader::file_supported(g_scene))
-            obj_root_ID = ObjLoader::load(g_scene, load_image);
+            obj_root = ObjLoader::load(g_scene, load_image);
         else if (glTFLoader::file_supported(g_scene))
-            obj_root_ID = glTFLoader::load(g_scene);
-        SceneNodes::set_parent(obj_root_ID, root_node_ID);
+            obj_root = glTFLoader::load(g_scene);
+        obj_root.set_parent(root_node);
         // mesh_combine_whole_scene(root_node_ID);
         detect_and_flag_cutout_materials();
         load_model_from_file = true;
     }
 
-    if (SceneNodes::get_children_IDs(root_node_ID).size() == 0u) {
+    if (root_node.get_children().size() == 0u) {
         printf("SimpleViewer error: No objects in scene.\n");
         return -1;
     }
@@ -412,9 +412,9 @@ int initialize_scene(Engine& engine, ImGui::ImGuiAdaptor* imgui) {
     if (no_light_sources && load_model_from_file) {
         Quaternionf light_direction = Quaternionf::look_in(normalize(Vector3f(-0.1f, -10.0f, -0.1f)));
         Transform light_transform = Transform(Vector3f::zero(), light_direction);
-        SceneNodeID light_node_ID = SceneNodes::create("Light", light_transform);
-        LightSourceID light_ID = LightSources::create_directional_light(light_node_ID, RGB(15.0f));
-        SceneNodes::set_parent(light_node_ID, root_node_ID);
+        SceneNode light_node = SceneNode("Light", light_transform);
+        DirectionalLight(light_node, RGB(15.0f));
+        light_node.set_parent(root_node);
     }
 
     float scene_size = magnitude(scene_bounds.size());

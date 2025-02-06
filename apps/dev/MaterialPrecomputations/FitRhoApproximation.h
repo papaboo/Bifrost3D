@@ -137,8 +137,8 @@ struct GgxRhoFitter {
 };
 
 void output_fitting_images(GgxRhoApproximation approximation, const std::string& output_dir, const std::string& prefix, int width = 64, int height = 64) {
-    Image GGX_no_specularity_image = Images::create2D("GGX_no_specularity", PixelFormat::Intensity8, 2.2f, Vector2ui(width, height));
-    Image GGX_full_specularity_image = Images::create2D("GGX_full_specularity", PixelFormat::Intensity8, 2.2f, Vector2ui(width, height));
+    Image GGX_no_specularity_image = Image::create2D("GGX_no_specularity", PixelFormat::Intensity8, 2.2f, Vector2ui(width, height));
+    Image GGX_full_specularity_image = Image::create2D("GGX_full_specularity", PixelFormat::Intensity8, 2.2f, Vector2ui(width, height));
     for (int y = 0; y < height; ++y)
     {
         float roughness = y / float(height - 1);
@@ -155,8 +155,8 @@ void output_fitting_images(GgxRhoApproximation approximation, const std::string&
     StbImageWriter::write(GGX_no_specularity_image, output_dir + prefix + "_GGX_no_specularity.png");
     StbImageWriter::write(GGX_full_specularity_image, output_dir + prefix + "_GGX_full_specularity.png");
 
-    Images::destroy(GGX_no_specularity_image.get_ID());
-    Images::destroy(GGX_full_specularity_image.get_ID());
+    GGX_no_specularity_image.destroy();
+    GGX_full_specularity_image.destroy();
 }
 
 void print_params(GgxRhoApproximation approximation) {

@@ -119,9 +119,17 @@ public:
     // --------------------------------------------------------------------------------------------
     SceneRoot() : m_ID(SceneRootID::invalid_UID()) {}
     SceneRoot(SceneRootID id) : m_ID(id) {}
+    SceneRoot(const std::string& name, Math::RGB environment_tint)
+        : m_ID(SceneRoots::create(name, Assets::TextureID::invalid_UID(), environment_tint)) {}
 
-    inline const SceneRootID get_ID() const { return m_ID; }
+    SceneRoot(const std::string& name, Assets::Texture environment_map, Math::RGB environment_tint = Math::RGB::white())
+        : m_ID(SceneRoots::create(name, environment_map.get_ID(), environment_tint)) {}
+
+    static SceneRoot invalid() { return SceneRootID::invalid_UID(); }
+
+    inline void destroy() { SceneRoots::destroy(m_ID); }
     inline bool exists() const { return SceneRoots::has(m_ID); }
+    inline const SceneRootID get_ID() const { return m_ID; }
 
     inline bool operator==(SceneRoot rhs) const { return m_ID == rhs.m_ID; }
     inline bool operator!=(SceneRoot rhs) const { return m_ID != rhs.m_ID; }
@@ -130,11 +138,11 @@ public:
     // Getters and setters.
     //---------------------------------------------------------------------------------------------
     inline std::string get_name() const { return SceneRoots::get_name(m_ID); }
-    inline SceneNodeID get_root_node() const { return SceneRoots::get_root_node(m_ID); }
+    inline SceneNode get_root_node() const { return SceneRoots::get_root_node(m_ID); }
     inline Math::RGB get_environment_tint() const { return SceneRoots::get_environment_tint(m_ID); }
     inline void set_environment_tint(Math::RGB tint) { SceneRoots::set_environment_tint(m_ID, tint); }
-    inline Assets::TextureID get_environment_map() const { return SceneRoots::get_environment_map(m_ID); }
-    inline void set_environment_map(Assets::TextureID environment_map) { SceneRoots::set_environment_map(m_ID, environment_map); }
+    inline Assets::Texture get_environment_map() const { return SceneRoots::get_environment_map(m_ID); }
+    inline void set_environment_map(Assets::Texture environment_map) { SceneRoots::set_environment_map(m_ID, environment_map.get_ID()); }
     inline Assets::InfiniteAreaLight* get_environment_light() { return SceneRoots::get_environment_light(m_ID); }
 
     //---------------------------------------------------------------------------------------------

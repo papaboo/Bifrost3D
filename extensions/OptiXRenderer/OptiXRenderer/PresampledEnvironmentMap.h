@@ -18,11 +18,7 @@
 //-------------------------------------------------------------------------------------------------
 // Forward declarations.
 //-------------------------------------------------------------------------------------------------
-namespace Bifrost {
-namespace Assets {
-    class InfiniteAreaLight;
-}
-}
+namespace Bifrost::Assets { class InfiniteAreaLight; }
 
 namespace OptiXRenderer {
 
@@ -37,13 +33,13 @@ public:
     //---------------------------------------------------------------------------------------------
     PresampledEnvironmentMap() = default;
     PresampledEnvironmentMap(optix::float3 tint)
-        : m_environment_map_ID(Bifrost::Assets::TextureID::invalid_UID())
+        : m_environment_map(Bifrost::Assets::Texture::invalid())
         , m_per_pixel_PDF(nullptr), m_samples(nullptr), m_light(PresampledEnvironmentLight::empty(tint)) {}
     PresampledEnvironmentMap(optix::Context& context, const Bifrost::Assets::InfiniteAreaLight& light, optix::float3 tint,
                              optix::TextureSampler* texture_cache, int sample_count = 0);
 
     PresampledEnvironmentMap& operator=(PresampledEnvironmentMap&& rhs) {
-        m_environment_map_ID = rhs.m_environment_map_ID;
+        m_environment_map = rhs.m_environment_map;
         m_per_pixel_PDF = rhs.m_per_pixel_PDF; rhs.m_per_pixel_PDF = nullptr;
         m_samples = rhs.m_samples; rhs.m_samples = nullptr;
         m_light = rhs.m_light;
@@ -67,14 +63,14 @@ public:
     // Next event estimation is disabled if sample count is 1. The only sample in the buffer is going to be an invalid one.
     inline bool next_event_estimation_possible() const { return m_light.sample_count > 1; }
 
-    Bifrost::Assets::TextureID get_environment_map_ID() const { return m_environment_map_ID; }
+    Bifrost::Assets::Texture get_environment_map() const { return m_environment_map; }
 
 private:
     PresampledEnvironmentMap(PresampledEnvironmentMap& other) = delete;
     PresampledEnvironmentMap(PresampledEnvironmentMap&& other) = delete;
     PresampledEnvironmentMap& operator=(PresampledEnvironmentMap& rhs) = delete;
 
-    Bifrost::Assets::TextureID m_environment_map_ID;
+    Bifrost::Assets::Texture m_environment_map;
 
     optix::TextureSampler m_per_pixel_PDF;
     optix::Buffer m_samples;

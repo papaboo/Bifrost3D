@@ -104,9 +104,7 @@ void Textures::destroy(TextureID texture_ID) {
 // Sampling functions.
 //-----------------------------------------------------------------------------
 
-Math::RGBA sample2D(TextureID texture_ID, Vector2f texcoord, int mipmap_level) {
-    Texture texture = texture_ID;
-
+Math::RGBA sample2D(Texture texture, Vector2f texcoord, int mipmap_level) {
     { // Modify tex coord based on wrap mode.
         if (texture.get_wrapmode_U() == WrapMode::Clamp)
             texcoord.x = clamp(texcoord.x, 0.0f, nearly_one);

@@ -128,8 +128,15 @@ public:
     Texture() : m_ID(TextureID::invalid_UID()) {}
     Texture(TextureID id) : m_ID(id) {}
 
-    inline const TextureID get_ID() const { return m_ID; }
+    static Texture create2D(Image image, MagnificationFilter magnification_filter = MagnificationFilter::Linear, MinificationFilter minification_filter = MinificationFilter::Linear, WrapMode wrapmode_U = WrapMode::Repeat, WrapMode wrapmode_V = WrapMode::Repeat) {
+        return Textures::create2D(image.get_ID(), magnification_filter, minification_filter, wrapmode_U, wrapmode_V);
+    }
+
+    static Texture invalid() { return TextureID::invalid_UID(); }
+
+    inline void destroy() { Textures::destroy(m_ID); }
     inline bool exists() const { return Textures::has(m_ID); }
+    inline TextureID get_ID() const { return m_ID; }
 
     inline bool operator==(Texture rhs) const { return m_ID == rhs.m_ID; }
     inline bool operator!=(Texture rhs) const { return m_ID != rhs.m_ID; }
@@ -158,7 +165,7 @@ private:
 //-------------------------------------------------------------------------------------------------
 // Texture sampling
 //-------------------------------------------------------------------------------------------------
-Math::RGBA sample2D(TextureID texture_ID, Math::Vector2f texcoord, int mipmap_level = 0);
+Math::RGBA sample2D(Texture texture, Math::Vector2f texcoord, int mipmap_level = 0);
 
 } // NS Assets
 } // NS Bifrost

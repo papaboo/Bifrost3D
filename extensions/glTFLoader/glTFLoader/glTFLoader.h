@@ -13,6 +13,8 @@
 
 #include <string>
 
+namespace Bifrost::Scene { class SceneNode; }
+
 namespace glTFLoader {
 
 // ------------------------------------------------------------------------------------------------
@@ -23,7 +25,7 @@ namespace glTFLoader {
 // * Import cameras. Perhaps as viewpoints, since there is no way to enable/disable cameras.
 // * Support triangle fan and triangle strip as well.
 // ------------------------------------------------------------------------------------------------
-Bifrost::Scene::SceneNodeID load(const std::string& filename);
+Bifrost::Scene::SceneNode load(const std::string& filename);
 
 bool file_supported(const std::string& filename);
 
