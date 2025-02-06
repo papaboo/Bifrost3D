@@ -71,10 +71,10 @@ void create_opacity_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene
         MaterialID material_ID = Materials::create("Plastic", material_data);
 
         Transform transform = Transform(Vector3f(0.0f, 0.5f, 0.0f));
-        SceneNode cube_node = SceneNodes::create("Swizz box", transform);
-        MeshID cube_mesh_ID = MeshCreation::cube(1);
-        MeshModels::create(cube_node.get_ID(), cube_mesh_ID, material_ID);
-        cube_node.set_parent(root_node);
+        SceneNode box_node = SceneNodes::create("Swizz box", transform);
+        MeshID box_mesh_ID = MeshCreation::box(1);
+        MeshModels::create(box_node.get_ID(), box_mesh_ID, material_ID);
+        box_node.set_parent(root_node);
     }
 
     { // Planes in front of the box.

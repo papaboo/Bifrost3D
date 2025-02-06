@@ -176,9 +176,9 @@ TEST_F(Assets_Mesh, normals_correspond_to_winding_order) {
     EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(plane_ID));
     EXPECT_EQ(0, MeshTests::count_degenerate_primitives(plane_ID, 0.000001f));
 
-    MeshID cube_ID = MeshCreation::cube(3);
-    EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(cube_ID));
-    EXPECT_EQ(0, MeshTests::count_degenerate_primitives(cube_ID, 0.000001f));
+    MeshID box_ID = MeshCreation::box(3);
+    EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(box_ID));
+    EXPECT_EQ(0, MeshTests::count_degenerate_primitives(box_ID, 0.000001f));
 
     MeshID cylinder_ID = MeshCreation::cylinder(3, 3);
     EXPECT_EQ(0, MeshTests::normals_correspond_to_winding_order(cylinder_ID));
@@ -190,7 +190,7 @@ TEST_F(Assets_Mesh, normals_correspond_to_winding_order) {
 }
 
 TEST_F(Assets_Mesh, expand_index_buffer) {
-    Mesh mesh = MeshCreation::cube(2);
+    Mesh mesh = MeshCreation::box(2);
     unsigned int expanded_vertex_count = mesh.get_primitive_count() * 3;
     Math::Vector3f* expanded_positions = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), mesh.get_positions());
 
@@ -207,19 +207,19 @@ TEST_F(Assets_Mesh, expand_index_buffer) {
 TEST_F(Assets_Mesh, hard_normal_computation) {
     using namespace Math;
 
-    // Test that the computed hard normals match the cubes normals, which are hard as well.
-    Mesh cube = MeshCreation::cube(2);
-    unsigned int expanded_vertex_count = cube.get_primitive_count() * 3;
-    Vector3f* positions = MeshUtils::expand_indexed_buffer(cube.get_primitives(), cube.get_primitive_count(), cube.get_positions());
+    // Test that the computed hard normals match the box' normals, which are hard as well.
+    Mesh box = MeshCreation::box(2);
+    unsigned int expanded_vertex_count = box.get_primitive_count() * 3;
+    Vector3f* positions = MeshUtils::expand_indexed_buffer(box.get_primitives(), box.get_primitive_count(), box.get_positions());
     Vector3f* hard_normals = new Vector3f[expanded_vertex_count];
     MeshUtils::compute_hard_normals(positions, positions + expanded_vertex_count, hard_normals);
 
-    for (unsigned int p = 0; p < cube.get_primitive_count(); ++p) {
-        Math::Vector3ui face = cube.get_primitives()[p];
+    for (unsigned int p = 0; p < box.get_primitive_count(); ++p) {
+        Math::Vector3ui face = box.get_primitives()[p];
         for (int i = 0; i < 3; ++i) {
-            Math::Vector3f cube_normal = cube.get_normals()[face[i]];
+            Math::Vector3f box_normal = box.get_normals()[face[i]];
             Math::Vector3f hard_normal = hard_normals[p * 3 + i];
-            EXPECT_NORMAL_EQ(cube_normal, hard_normal, 0.000001);
+            EXPECT_NORMAL_EQ(box_normal, hard_normal, 0.000001);
         }
     }
 }

@@ -59,7 +59,7 @@ MeshID plane(unsigned int quads_per_edge, MeshFlags buffer_bitmask) {
     return mesh.get_ID();
 }
 
-MeshID cube(unsigned int quads_per_edge, Vector3f size, MeshFlags buffer_bitmask) {
+MeshID box(unsigned int quads_per_edge, Vector3f size, MeshFlags buffer_bitmask) {
     if (quads_per_edge == 0)
         return MeshID::invalid_UID();
 
@@ -73,7 +73,7 @@ MeshID cube(unsigned int quads_per_edge, Vector3f size, MeshFlags buffer_bitmask
     unsigned int verts_per_side = verts_per_edge * verts_per_edge;
     unsigned int vertex_count = verts_per_side * sides;
 
-    Mesh mesh = Meshes::create("Cube", index_count, vertex_count, buffer_bitmask);
+    Mesh mesh = Meshes::create("Box", index_count, vertex_count, buffer_bitmask);
 
     // Create the vertices.
     // [..TOP.. ..BOTTOM.. ..LEFT.. ..RIGHT.. ..FRONT.. ..BACK..]
@@ -145,26 +145,26 @@ MeshID cube(unsigned int quads_per_edge, Vector3f size, MeshFlags buffer_bitmask
     return mesh.get_ID();
 }
 
-MeshID beveled_cube(unsigned int quads_per_side, float bevel_size, Math::Vector3f size, MeshFlags buffer_bitmask) {
+MeshID beveled_box(unsigned int quads_per_side, float bevel_size, Math::Vector3f size, MeshFlags buffer_bitmask) {
     if (quads_per_side == 0)
         return MeshID::invalid_UID();
 
-    // Create a regular cube with additional 6 quads per side to be used for beveling.
+    // Create a regular box with additional 6 quads per side to be used for beveling.
     const int bevel_quads = 3;
     unsigned int full_quads_per_side = quads_per_side + 2 * bevel_quads;
-    Mesh mesh = cube(full_quads_per_side, size, buffer_bitmask);
+    Mesh mesh = box(full_quads_per_side, size, buffer_bitmask);
 
-    // Relocate vertices to move the vertices used for beveling near the edges of the cube.
-    // A band of three quads are moved such that they are bevel_size from the edges of the cube and
-    // the rest of the vertices are moved such that they are uniformly distributed on the flat side of the cube.
-    // The beveling effect is created by all vertices having bevel_size distance to an 'inner cube', thus giving the rounded edges.
-    // The distance to the 'inner cube' is trivially upheld for vertices on the flat sides.
-    // The cube's vertices are in the range [-size / 2, size / 2].
+    // Relocate vertices to move the vertices used for beveling near the edges of the box.
+    // A band of three quads are moved such that they are bevel_size from the edges of the box and
+    // the rest of the vertices are moved such that they are uniformly distributed on the flat side of the box.
+    // The beveling effect is created by all vertices having bevel_size distance to an 'inner box', thus giving the rounded edges.
+    // The distance to the 'inner box' is trivially upheld for vertices on the flat sides.
+    // The box' vertices are in the range [-size / 2, size / 2].
     Vector3f half_size = 0.5f * size;
     Vector3f initial_quad_size = size / float(full_quads_per_side);
     Vector3f bevel_vertex_threshold = half_size - initial_quad_size * bevel_quads;
     Vector3f side_quad_scale = (half_size - bevel_size) / bevel_vertex_threshold;
-    AABB inner_cube = AABB(-half_size + bevel_size, half_size - bevel_size);
+    AABB inner_box = AABB(-half_size + bevel_size, half_size - bevel_size);
 
     Vector3f* positions = mesh.get_positions();
     for (unsigned int v = 0; v < mesh.get_vertex_count(); ++v) {
@@ -179,7 +179,7 @@ MeshID beveled_cube(unsigned int quads_per_side, float bevel_size, Math::Vector3
                 float bevel_t = inverse_lerp(bevel_vertex_threshold[d], half_size[d], abs(position[d]));
                 position[d] = sign * lerp(half_size[d] - bevel_size, half_size[d], bevel_t);
             } else
-                // Move vertex position on the side of the cube to uniformly fill in the space between the beveled edges.
+                // Move vertex position on the side of the box to uniformly fill in the space between the beveled edges.
                 position[d] *= side_quad_scale[d];
             return is_bevel_pos;
         };
@@ -189,8 +189,8 @@ MeshID beveled_cube(unsigned int quads_per_side, float bevel_size, Math::Vector3
         bevel_vertex |= move_coordinate(2);
 
         if (bevel_vertex) {
-            // Compute direction from closest point on inner cube and use that direction as the normal and to determine the position.
-            Vector3f closest_point = inner_cube.closest_point_on_surface(position);
+            // Compute direction from closest point on inner box and use that direction as the normal and to determine the position.
+            Vector3f closest_point = inner_box.closest_point_on_surface(position);
             Vector3f direction = normalize(position - closest_point);
             position = closest_point + bevel_size * direction;
         }
@@ -379,8 +379,8 @@ MeshID revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads
     return mesh.get_ID();
 }
 
-MeshID spherical_cube(unsigned int quads_per_edge, MeshFlags buffer_bitmask) {
-    Mesh mesh = cube(quads_per_edge, Vector3f::one(), buffer_bitmask);
+MeshID spherical_box(unsigned int quads_per_edge, MeshFlags buffer_bitmask) {
+    Mesh mesh = box(quads_per_edge, Vector3f::one(), buffer_bitmask);
 
     Vector3f* positions = mesh.get_positions();
     Vector3f* normals = mesh.get_normals();
