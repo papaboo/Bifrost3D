@@ -41,7 +41,7 @@ public:
             material_data.specularity = lerp(m_material0_data.specularity, m_material1_data.specularity, lerp_t);
             material_data.metallic = lerp(m_material0_data.metallic, m_material1_data.metallic, lerp_t);
             material_data.coverage = lerp(m_material0_data.coverage, m_material1_data.coverage, lerp_t);
-            m_materials[m] = Materials::create("Lerped material " + std::to_string(m), material_data);
+            m_materials[m] = Material("Lerped material " + std::to_string(m), material_data);
         }
 
         std::fill_n(m_ggx.sampled_rho, m_ggx.sample_count, 0.0f);

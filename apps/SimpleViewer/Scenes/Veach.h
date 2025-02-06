@@ -44,11 +44,11 @@ void create_veach_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::
     { // Create floor.
         Materials::Data material_data = Materials::Data::create_dielectric(RGB(0.4f, 0.4f, 0.4f), 0.9f, 0.04f);
         material_data.flags = MaterialFlag::ThinWalled;
-        MaterialID material_ID = Materials::create("Floor", material_data);
+        Material material = Material("Floor", material_data);
 
         SceneNode plane_node = SceneNodes::create("Floor", Transform(Vector3f(0, 0.0f, 0), Quaternionf::identity(), 50));
         MeshID plane_mesh_ID = MeshCreation::plane(1, { MeshFlag::Position, MeshFlag::Texcoord });
-        MeshModels::create(plane_node.get_ID(), plane_mesh_ID, material_ID);
+        MeshModels::create(plane_node.get_ID(), plane_mesh_ID, material.get_ID());
         plane_node.set_parent(scene.get_root_node());
     }
 
@@ -110,10 +110,9 @@ void create_veach_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::
             positions[v] *= Vector3f(light_distance * 1.1f, 0.01f, block_depth);
 
         // Place the first block.
-        Materials::Data material_data = Materials::Data::create_metal(RGB(0.7f, 0.7f, 0.7f), base_roughness);
-        MaterialID material_ID = Materials::create("Block0", material_data);
+        Material material = Material::create_metal("Block0", RGB(0.7f), base_roughness);
         SceneNode block_node = SceneNodes::create("Block0", block_0_position);
-        MeshModels::create(block_node.get_ID(), block_mesh.get_ID(), material_ID);
+        MeshModels::create(block_node.get_ID(), block_mesh.get_ID(), material.get_ID());
         block_node.set_parent(scene.get_root_node());
 
         Transform previous_transform = block_node.get_global_transform();
@@ -142,10 +141,9 @@ void create_veach_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::
             block_transform.rotation = Quaternionf::look_in(cross(-block_normal, Vector3f::right()));
 
             float roughness_scale = (block_count - 1 - b) / float(block_count - 1);
-            Materials::Data material_data = Materials::Data::create_metal(RGB(0.7f, 0.7f, 0.7f), base_roughness * roughness_scale);
-            MaterialID material_ID = Materials::create("Block" + std::to_string(b), material_data);
+            Material material = Material::create_metal("Block" + std::to_string(b), RGB(0.7f), base_roughness * roughness_scale);
             SceneNode block_node = SceneNodes::create("Block" + std::to_string(b), block_transform);
-            MeshModels::create(block_node.get_ID(), block_mesh.get_ID(), material_ID);
+            MeshModels::create(block_node.get_ID(), block_mesh.get_ID(), material.get_ID());
             block_node.set_parent(scene.get_root_node());
 
             previous_transform = block_transform;

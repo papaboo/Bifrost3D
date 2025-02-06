@@ -45,7 +45,7 @@ SceneNode create_checkered_floor(float floor_size, float checker_size) {
     Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 0.4f, 0.04f);
     material_data.tint_roughness_texture_ID = Textures::create2D(tint_roughness_image_ID, MagnificationFilter::None, MinificationFilter::Trilinear);
     material_data.flags = MaterialFlag::ThinWalled;
-    MaterialID material_ID = Materials::create("Floor", material_data);
+    Material material = Material("Floor", material_data);
 
     // Mesh scaled to be floor size and with texture coordinates to match the checker size.
     Mesh plane_mesh = MeshCreation::plane(2, { MeshFlag::Position, MeshFlag::Texcoord });
@@ -56,7 +56,7 @@ SceneNode create_checkered_floor(float floor_size, float checker_size) {
         texcoord_itr = (texcoord_itr - 0.5f) * uv_scale; // Subtract 0.5 to keep high precision of texcoords near the center of the floor.
 
     SceneNode plane_node = SceneNodes::create("Floor");
-    MeshModels::create(plane_node.get_ID(), plane_mesh.get_ID(), material_ID);
+    MeshModels::create(plane_node.get_ID(), plane_mesh.get_ID(), material.get_ID());
     
     return plane_node;
 }
@@ -71,14 +71,13 @@ void replace_material(Material material, SceneNode parent_node, const std::strin
         });
 }
 
-Bifrost::Scene::SceneNode load_shader_ball(const std::filesystem::path& resource_directory, Bifrost::Assets::Material material) {
+Bifrost::Scene::SceneNode load_shader_ball(const std::filesystem::path& resource_directory, Material material) {
     printf("Mori knob curtesy of Yasutoshi Mori\n");
     auto shader_ball_path = resource_directory / "Shaderball.gltf";
     SceneNode shader_ball_node = glTFLoader::load(shader_ball_path.generic_string());
 
     // Rubber material for the inside
-    Materials::Data rubber_material_data = Materials::Data::create_dielectric(RGB(0.05f), 1, 0.04f);
-    Material rubber_material = Materials::create("Rubber", rubber_material_data);
+    Material rubber_material = Material::create_dielectric("Rubber", RGB(0.05f), 1);
 
     const std::string inside_node_name = "Node2";
     const std::string outside_node_name = "Node5";
