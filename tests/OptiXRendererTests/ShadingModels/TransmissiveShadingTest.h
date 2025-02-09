@@ -183,7 +183,7 @@ GTEST_TEST(TransmissiveShadingModel, regression_test) {
             auto response = bsdf_responses[response_index++];
 
             EXPECT_COLOR_EQ_PCT(response.reflectance, sample.reflectance, 0.0001f);
-            EXPECT_FLOAT_EQ_PCT(response.PDF, sample.PDF, 0.0001f);
+            EXPECT_PDF_EQ_PCT(response.PDF, sample.PDF, 0.0001f);
         }
     }
 }

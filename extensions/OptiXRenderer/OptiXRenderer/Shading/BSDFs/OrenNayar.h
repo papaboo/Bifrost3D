@@ -85,7 +85,7 @@ __inline_all__ float3 evaluate(float3 albedo, float roughness, float3 wo, float3
     return albedo * evaluate(roughness, wo, wi, exact);
 }
 
-__inline_all__ float PDF(float roughness, float3 wo, float3 wi) {
+__inline_all__ PDF pdf(float roughness, float3 wo, float3 wi) {
     float cos_theta = wo.z;
     float uniform_probability = pow(roughness, 0.1f) * (0.162925f + cos_theta * (-0.372058f + (0.538233f - 0.290822f*cos_theta)*cos_theta));
     float cltc_probability = 1.0f - uniform_probability;
@@ -95,10 +95,9 @@ __inline_all__ float PDF(float roughness, float3 wo, float3 wi) {
 }
 
 __inline_all__ BSDFResponse evaluate_with_PDF(float3 albedo, float roughness, float3 wo, float3 wi, bool exact = false) {
-    BSDFResponse response;
-    response.reflectance = evaluate(albedo, roughness, wo, wi, exact);
-    response.PDF = PDF(roughness, wo, wi);
-    return response;
+    auto reflectance = evaluate(albedo, roughness, wo, wi, exact);
+    auto PDF = pdf(roughness, wo, wi);
+    return { reflectance, PDF };
 }
 
 __inline_all__ BSDFSample sample(float3 albedo, float roughness, float3 wo, float2 random_sample, bool exact = false) {

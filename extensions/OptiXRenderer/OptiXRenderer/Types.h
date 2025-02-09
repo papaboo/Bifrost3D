@@ -136,13 +136,66 @@ struct PrimitiveID {
     __inline_all__ bool operator==(const PrimitiveID& rhs) const { return instance_id == rhs.instance_id && primitive_id == rhs.primitive_id; }
 };
 
+// PDF wrapper.
+// The wrapper contains a PDF and a boolean indicating if the sample can be used for multiple importance sampling (MIS).
+// Delta dirac function PDFs are represented by NaN.
+__constant_all__ float MIN_VALID_PDF = 0.000001f;
+struct PDF {
+public:
+    float m_PDF;
+
+    PDF() = default;
+    __inline_all__ PDF(float pdf) : m_PDF(pdf) {}
+
+    __inline_all__ static PDF invalid() { return PDF(nanf("")); }
+    __inline_all__ static PDF delta_dirac(float pdf = 1) { return PDF(-pdf); }
+
+    __inline_all__ bool operator==(PDF rhs) const { return m_PDF == rhs.m_PDF; }
+    __inline_all__ bool operator!=(PDF rhs) const { return m_PDF != rhs.m_PDF; }
+
+    __inline_all__ float value() const { return abs(m_PDF); }
+    __inline_all__ bool is_valid() const { return value() > MIN_VALID_PDF; }
+    __inline_all__ bool is_delta_dirac() const { return !(m_PDF >= 0.0f); }
+    __inline_all__ void disable_MIS() { if (m_PDF >= 0.0f) m_PDF = -m_PDF; }
+    __inline_all__ bool is_valid_and_not_delta_dirac() const { return m_PDF > MIN_VALID_PDF; }
+    __inline_all__ bool use_for_MIS() const { return is_valid_and_not_delta_dirac(); }
+
+    __inline_all__ PDF& scale(float s) {
+#ifdef _DEBUG
+        if (s < 0.0f)
+            THROW(OPTIX_NEGATIVE_PDF_SCALE_EXCEPTION);
+#endif
+
+        m_PDF *= s;
+        return *this;
+    }
+    __inline_all__ PDF& operator*=(float s) { return scale(s); }
+    __inline_all__ PDF operator*(float s) const { PDF copy = *this; return copy.scale(s); }
+
+    __inline_all__ PDF& add(PDF rhs) {
+#ifdef _DEBUG
+        if (is_delta_dirac() || rhs.is_delta_dirac())
+            THROW(OPTIX_DELTA_DIRAC_PDF_ADDITION_EXCEPTION);
+#endif
+
+        m_PDF += rhs.m_PDF;
+        return *this;
+    }
+    __inline_all__ PDF& operator+=(PDF rhs) { return add(rhs); }
+    __inline_all__ PDF operator+(PDF rhs) const { PDF copy = *this; return copy.add(rhs); }
+
+    __inline_all__ static bool is_valid(float PDF) {
+        return PDF > 0.000001f;
+    }
+};
+
 //----------------------------------------------------------------------------
 // Light source structs.
 //----------------------------------------------------------------------------
 
 struct __align__(16) LightSample {
     optix::float3 radiance;
-    float PDF;
+    PDF PDF;
     optix::float3 direction_to_light;
     float distance;
 
@@ -247,33 +300,10 @@ struct __align__(16) Light {
 // Material type and sampling structs.
 //----------------------------------------------------------------------------
 
-// PDF wrapper for multiple importance sampling.
-// The wrapper contains a PDF and a boolean indicating if the PDF should be used for multiple importance sampling or not.
-struct MisPDF {
-private:
-    float m_PDF;
-
-public:
-    __inline_all__ static MisPDF from_PDF(float pdf) {
-        MisPDF mis_PDF;
-        mis_PDF.m_PDF = pdf;
-        return mis_PDF;
-    }
-    __inline_all__ static MisPDF delta_dirac() {
-        MisPDF mis_PDF;
-        mis_PDF.m_PDF = -FLT_MAX;
-        return mis_PDF;
-    }
-
-    __inline_all__ float PDF() const { return abs(m_PDF); }
-    __inline_all__ void disable_MIS() { m_PDF = -PDF(); }
-    __inline_all__ bool use_for_MIS() const { return m_PDF > 0.0f; }
-};
-
 // NOTE the suboptimal alignment of 8 instead of 16 yields a tiny tiny performance benefit. I have no clue why.
 struct __align__(8) BSDFResponse {
     optix::float3 reflectance;
-    float PDF;
+    PDF PDF;
 
     __inline_all__ static BSDFResponse none() {
         BSDFResponse evaluation = {};
@@ -283,7 +313,7 @@ struct __align__(8) BSDFResponse {
 
 struct __align__(16) BSDFSample {
     optix::float3 reflectance;
-    float PDF;
+    PDF PDF;
     optix::float3 direction;
     float __padding;
 
@@ -375,7 +405,7 @@ struct __align__(16) MonteCarloPayload {
     optix::float3 position;
     float ray_min_t;
     optix::float3 direction;
-    MisPDF bsdf_MIS_PDF;
+    PDF bsdf_PDF;
 
     LightSample light_sample;
     optix::float3 light_sample_origin;

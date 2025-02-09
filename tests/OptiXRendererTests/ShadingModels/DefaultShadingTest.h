@@ -90,7 +90,7 @@ GTEST_TEST(DefaultShadingModel, Helmholtz_reciprocity) {
         for (unsigned int s = 0u; s < MAX_SAMPLES; ++s) {
             float3 rng_sample = make_float3(RNG::sample02(s), float(s) / float(MAX_SAMPLES));
             BSDFSample sample = plastic_material.sample(wo, rng_sample);
-            if (is_PDF_valid(sample.PDF)) {
+            if (sample.PDF.is_valid()) {
                 // Re-evaluate contribution from both directions to avoid 
                 // floating point imprecission between sampling and evaluating.
                 // (Yes, they can actually get quite high on smooth materials.)
@@ -429,7 +429,7 @@ GTEST_TEST(DefaultShadingModel, regression_test) {
                 auto response = bsdf_responses[response_index++];
 
                 EXPECT_FLOAT3_EQ_PCT(response.reflectance, sample.reflectance, 0.0001f);
-                EXPECT_FLOAT_EQ_PCT(response.PDF, sample.PDF, 0.0001f);
+                EXPECT_PDF_EQ_PCT(response.PDF, sample.PDF, 0.0001f);
             }
         }
 }

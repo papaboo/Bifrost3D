@@ -51,7 +51,7 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, optix::floa
         light_sample.direction_to_light /= light_sample.distance;
         light_sample.radiance = light.power / (4.0f * PIf * light_sample.distance * light_sample.distance);
         light_sample.distance -= light.radius;
-        light_sample.PDF = 1.0f;
+        light_sample.PDF = PDF::delta_dirac(1);
     } else {
         // Sample the cone and project the sample onto the sphere.
         float cos_theta = sqrtf(1.0f - sin_theta_squared);
@@ -78,12 +78,12 @@ __inline_all__ LightSample sample_radiance(const SphereLight& light, optix::floa
     return light_sample;
 }
 
-__inline_all__ float PDF(const SphereLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
+__inline_all__ PDF pdf(const SphereLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
     optix::float3 vector_to_light_center = light.position - lit_position;
 
     float sin_theta_squared = light.radius * light.radius / optix::dot(vector_to_light_center, vector_to_light_center);
     if (sin_theta_squared < sphere_light_small_sin_theta_squared)
-        return 0.0f;
+        return PDF::delta_dirac(0);
     else {
         float cos_theta_max = sqrtf(1.0f - sin_theta_squared);
         float cos_theta = optix::dot(direction_to_light, optix::normalize(vector_to_light_center));

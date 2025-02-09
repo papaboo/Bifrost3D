@@ -52,15 +52,14 @@ __inline_all__ float3 evaluate(float3 tint, float roughness, float3 wo, float3 w
     return tint * evaluate(roughness, wo, wi, halfway);
 }
 
-__inline_all__ float PDF(float roughness, float3 wo, float3 wi) {
+__inline_all__ PDF pdf(float roughness, float3 wo, float3 wi) {
     return Distributions::Cosine::PDF(wi.z);
 }
 
 __inline_all__ BSDFResponse evaluate_with_PDF(float3 tint, float roughness, float3 wo, float3 wi) {
-    BSDFResponse response;
-    response.reflectance = evaluate(tint, roughness, wo, wi);
-    response.PDF = PDF(roughness, wo, wi);
-    return response;
+    auto reflectance = evaluate(tint, roughness, wo, wi);
+    auto PDF = pdf(roughness, wo, wi);
+    return { reflectance, PDF };
 }
 
 __inline_all__ BSDFSample sample(float3 tint, float roughness, float3 wo, float2 random_sample) {

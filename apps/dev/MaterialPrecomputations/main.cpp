@@ -38,8 +38,8 @@ double estimate_rho(float3 wo, float roughness, unsigned int sample_count, Sampl
     for (unsigned int s = 0; s < sample_count; ++s) {
         float2 rng_sample = RNG::sample02(s);
         BSDFSample sample = sample_rough_BSDF(tint, roughness, wo, rng_sample);
-        if (is_PDF_valid(sample.PDF))
-            throughput[s] = sample.reflectance.x * sample.direction.z / sample.PDF;
+        if (sample.PDF.is_valid())
+            throughput[s] = sample.reflectance.x * sample.direction.z / sample.PDF.value();
         else
             throughput[s] = 0.0;
     }
@@ -210,8 +210,8 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
             // Binary search to find the alpha that hits the target PDF
             float prev_alpha = t == 0 ? 1.0f : alphas[index - 1];
             float3 reflected_wi = { -wo.x, -wo.y, wo.z };
-            PDFSample low_PDF_sample = { prev_alpha, encode_PDF(GGX_R::PDF(prev_alpha, wo, reflected_wi)) };
-            PDFSample high_PDF_sample = { 0.0f, encode_PDF(GGX_R::PDF(0.00000000001f, wo, reflected_wi)) };
+            PDFSample low_PDF_sample = { prev_alpha, encode_PDF(GGX_R::pdf(prev_alpha, wo, reflected_wi)) };
+            PDFSample high_PDF_sample = { 0.0f, encode_PDF(GGX_R::pdf(0.00000000001f, wo, reflected_wi)) };
 
             float alpha = 0.0f;
             if (encoded_target_PDF >= high_PDF_sample.encoded_PDF)
@@ -222,7 +222,7 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
                 PDFSample middle_sample;
                 do {
                     float middle_alpha = (low_PDF_sample.alpha + high_PDF_sample.alpha) * 0.5f;
-                    middle_sample = { middle_alpha, encode_PDF(GGX_R::PDF(middle_alpha, wo, reflected_wi)) };
+                    middle_sample = { middle_alpha, encode_PDF(GGX_R::pdf(middle_alpha, wo, reflected_wi)) };
                     if (encoded_target_PDF < middle_sample.encoded_PDF)
                         high_PDF_sample = middle_sample;
                     else
@@ -377,9 +377,9 @@ int main(int argc, char** argv) {
 
                     float3 rng_sample = make_float3(RNG::sample02(s), (s + 0.5f) / sample_count);
                     BSDFSample sample = material.sample(wo, rng_sample);
-                    if (is_PDF_valid(sample.PDF)) {
-                        total_throughput[s] = sample.reflectance.x * sample.direction.z / sample.PDF;
-                        specular_throughput[s] = sample.reflectance.y * sample.direction.z / sample.PDF;
+                    if (sample.PDF.is_valid()) {
+                        total_throughput[s] = sample.reflectance.x * sample.direction.z / sample.PDF.value();
+                        specular_throughput[s] = sample.reflectance.y * sample.direction.z / sample.PDF.value();
                     } else
                         total_throughput[s] = specular_throughput[s] = 0.0;
                 }

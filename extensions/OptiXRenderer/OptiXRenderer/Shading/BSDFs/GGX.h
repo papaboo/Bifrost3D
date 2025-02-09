@@ -81,15 +81,14 @@ __inline_all__ float evaluate(float alpha, float specularity, float3 wo, float3 
     return evaluate(alpha, make_float3(specularity), wo, wi).x;
 }
 
-__inline_all__ float PDF(float alpha, float3 wo, float3 wi) {
+__inline_all__ float pdf(float alpha, float3 wo, float3 wi) {
     return Distributions::GGX_Bounded_VNDF::reflection_PDF(alpha, wo, wi);
 }
 
 __inline_all__ BSDFResponse evaluate_with_PDF(float alpha, float3 specularity, float3 wo, float3 wi) {
-    BSDFResponse response;
-    response.reflectance = evaluate(alpha, specularity, wo, wi);
-    response.PDF = PDF(alpha, wo, wi);
-    return response;
+    auto reflectance = evaluate(alpha, specularity, wo, wi);
+    auto PDF = pdf(alpha, wo, wi);
+    return { reflectance, PDF };
 }
 
 __inline_all__ BSDFResponse evaluate_with_PDF(float alpha, float specularity, float3 wo, float3 wi) {
@@ -164,7 +163,7 @@ __inline_all__ float evaluate(float alpha, float ior_i_over_o, float3 wo, float3
     return evaluate(alpha, wo, wi, ior_i_over_o, halfway);
 }
 
-__inline_all__ float PDF(float alpha, float ior_i_over_o, float3 wo, float3 wi) {
+__inline_all__ PDF pdf(float alpha, float ior_i_over_o, float3 wo, float3 wi) {
     // Cannot sample reflection.
     if (sign(wo.z) == sign(wi.z))
         return 0;
@@ -185,10 +184,9 @@ __inline_all__ float PDF(float alpha, float ior_i_over_o, float3 wo, float3 wi) 
 }
 
 __inline_all__ BSDFResponse evaluate_with_PDF(float alpha, float ior_i_over_o, float3 wo, float3 wi) {
-    BSDFResponse response;
-    response.reflectance = make_float3(1) * evaluate(alpha, ior_i_over_o, wo, wi);
-    response.PDF = PDF(alpha, ior_i_over_o, wo, wi);
-    return response;
+    auto reflectance = make_float3(1) * evaluate(alpha, ior_i_over_o, wo, wi);
+    auto PDF = pdf(alpha, ior_i_over_o, wo, wi);
+    return { reflectance, PDF };
 }
 
 __inline_all__ BSDFSample sample(float alpha, float ior_i_over_o, float3 wo, float2 random_sample) {
@@ -204,7 +202,7 @@ __inline_all__ BSDFSample sample(float alpha, float ior_i_over_o, float3 wo, flo
     if (!refract(bsdf_sample.direction, -wo, halfway, ior_i_over_o))
         return BSDFSample::none(); // Remove the contribution for now.
 
-    bsdf_sample.PDF *= transmission_PDF_scale(ior_i_over_o, wo, bsdf_sample.direction, halfway);
+    bsdf_sample.PDF = bsdf_sample.PDF * transmission_PDF_scale(ior_i_over_o, wo, bsdf_sample.direction, halfway);
 
     // Discard samples if wi is on the same side as wo, which is interpreted as energyloss.
     bool energyloss = bsdf_sample.direction.z >= -0.0f;
@@ -262,7 +260,7 @@ __inline_all__ float3 evaluate(float3 tint, float alpha, float specularity, floa
     return f * (is_transmission ? tint : make_float3(1));
 }
 
-__inline_all__ float PDF(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
+__inline_all__ float pdf(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
     bool entering = wo.z >= 0.0f;
     if (!entering) {
         wo.z = -wo.z;
@@ -296,10 +294,9 @@ __inline_all__ float PDF(float alpha, float specularity, float ior_i_over_o, flo
 }
 
 __inline_all__ BSDFResponse evaluate_with_PDF(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
-    BSDFResponse response;
-    response.reflectance = make_float3(1) * evaluate(alpha, specularity, ior_i_over_o, wo, wi);
-    response.PDF = PDF(alpha, specularity, ior_i_over_o, wo, wi);
-    return response;
+    auto reflectance = make_float3(1) * evaluate(alpha, specularity, ior_i_over_o, wo, wi);
+    auto PDF = pdf(alpha, specularity, ior_i_over_o, wo, wi);
+    return { reflectance, PDF };
 }
 
 __inline_all__ BSDFResponse evaluate_with_PDF(float3 tint, float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
@@ -318,7 +315,7 @@ __inline_all__ BSDFSample sample(float alpha, float specularity, float ior_i_ove
         wo.z = -wo.z;
 
     float3 halfway = Distributions::GGX_VNDF::sample_halfway(alpha, wo, make_float2(random_sample));
-    bsdf_sample.PDF = Distributions::GGX_VNDF::PDF(alpha, wo, halfway);
+    float pdf = Distributions::GGX_VNDF::PDF(alpha, wo, halfway);
 
     // Reflect or refract based on Fresnel
     float reflection_propability = schlick_fresnel(specularity, dot(wo, halfway));
@@ -326,17 +323,18 @@ __inline_all__ BSDFSample sample(float alpha, float specularity, float ior_i_ove
 
     // Reflect or refract
     if (is_reflection) {
-        bsdf_sample.PDF *= reflection_propability;
-        bsdf_sample.PDF /= 4.0f * dot(wo, halfway);
+        pdf *= reflection_propability;
+        pdf /= 4.0f * dot(wo, halfway);
 
         bsdf_sample.direction = reflect(-wo, halfway);
     } else {
         if (!refract(bsdf_sample.direction, -wo, halfway, ior_i_over_o))
             return BSDFSample::none(); // Remove the contribution for now.
 
-        bsdf_sample.PDF *= GGX_T::transmission_PDF_scale(ior_i_over_o, wo, bsdf_sample.direction, halfway);
-        bsdf_sample.PDF *= 1 - reflection_propability;
+        pdf *= GGX_T::transmission_PDF_scale(ior_i_over_o, wo, bsdf_sample.direction, halfway);
+        pdf *= 1 - reflection_propability;
     }
+    bsdf_sample.PDF = pdf;
 
     // Discard samples if the direction points into the surface (energy loss).
     bool energyloss = is_reflection ? bsdf_sample.direction.z < 0.0f : bsdf_sample.direction.z >= 0.0f;

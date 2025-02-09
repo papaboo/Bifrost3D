@@ -63,15 +63,18 @@ struct GGXMinimumRoughness {
     const static int angle_sample_count = 32;
     const static int max_PDF_sample_count = 32;
 
-    __inline_all__ static float from_PDF(float abs_cos_theta, float max_PDF) {
+    __inline_all__ static float from_PDF(float abs_cos_theta, PDF max_PDF) {
+        if (max_PDF.is_delta_dirac())
+            return 0.0f;
+
 #if GPU_DEVICE
-        float encoded_PDF = encode_PDF(max_PDF);
+        float encoded_PDF = encode_PDF(max_PDF.value());
         // Rescale uv to start and end at the center of the first and last pixel, as the center values represent the boundaries of the function.
         float2 uv = make_float2(optix::lerp(0.5f / max_PDF_sample_count, (max_PDF_sample_count - 0.5f) / max_PDF_sample_count, encoded_PDF),
                                 optix::lerp(0.5f / angle_sample_count, (angle_sample_count - 0.5f) / angle_sample_count, abs_cos_theta));
         float min_alpha = tex2D(estimate_GGX_alpha_texture, uv.x, uv.y);
 #else
-        float min_alpha = Bifrost::Assets::Shading::Estimate_GGX_bounded_VNDF_alpha::estimate_alpha(abs_cos_theta, max_PDF);
+        float min_alpha = Bifrost::Assets::Shading::Estimate_GGX_bounded_VNDF_alpha::estimate_alpha(abs_cos_theta, max_PDF.value());
 #endif
         return BSDFs::GGX::roughness_from_alpha(min_alpha);
     }

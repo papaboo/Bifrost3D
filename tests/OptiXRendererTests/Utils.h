@@ -27,14 +27,15 @@ inline bool almost_equal_eps(float lhs, float rhs, float eps) {
     return abs(lhs - rhs) <= abs(eps);
 }
 
-#define EXPECT_FLOAT_EQ_EPS(expected, actual, epsilon) EXPECT_PRED3(almost_equal_eps, expected, actual, epsilon)
+#define EXPECT_FLOAT_EQ_EPS(expected, actual, epsilon) EXPECT_PRED3(almost_equal_eps, float(expected), float(actual), epsilon)
 
 inline bool almost_equal_percentage(float lhs, float rhs, float percentage) {
     float eps = lhs * percentage;
     return almost_equal_eps(lhs, rhs, eps);
 }
 
-#define EXPECT_FLOAT_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(almost_equal_percentage, expected, actual, percentage)
+#define EXPECT_FLOAT_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(almost_equal_percentage, float(expected), float(actual), percentage)
+#define EXPECT_PDF_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(almost_equal_percentage, expected.value(), actual.value(), percentage)
 
 inline bool equal_float3_eps(optix::float3 lhs, optix::float3 rhs, float epsilon) {
     return almost_equal_eps(lhs.x, rhs.x, epsilon) &&

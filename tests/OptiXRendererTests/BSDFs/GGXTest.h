@@ -36,8 +36,8 @@ public:
         return optix::make_float3(1) * Shading::BSDFs::GGX_R::evaluate(m_alpha, m_specularity, wo, wi);
     }
 
-    float PDF(optix::float3 wo, optix::float3 wi) const {
-        return Shading::BSDFs::GGX_R::PDF(m_alpha, wo, wi);
+    PDF pdf(optix::float3 wo, optix::float3 wi) const {
+        return Shading::BSDFs::GGX_R::pdf(m_alpha, wo, wi);
     }
 
     BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
@@ -188,7 +188,7 @@ GTEST_TEST(GGX_R, estimate_bounded_VNDF_alpha_from_max_PDF) {
         optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
         optix::float3 reflected_wi = { -wo.x, -wo.y, wo.z };
 
-        float estimated_PDF = GGX_R::PDF(estimated_alpha, wo, reflected_wi);
+        float estimated_PDF = GGX_R::pdf(estimated_alpha, wo, reflected_wi);
 
         // Shift alpha towards the correct PDF by the max_alpha_error.
         // If the estimated PDF is lower than the max PDF, then the alpha needs to be reduced (the peak increased),
@@ -196,7 +196,7 @@ GTEST_TEST(GGX_R, estimate_bounded_VNDF_alpha_from_max_PDF) {
         float alpha_step_size = max_alpha_error * (estimated_PDF < max_PDF ? -1 : 1);
         float shifted_alpha = estimated_alpha + alpha_step_size;
         shifted_alpha = optix::clamp(shifted_alpha, 0.0f, 1.0f);
-        float shifted_PDF = GGX_R::PDF(shifted_alpha, wo, reflected_wi);
+        float shifted_PDF = GGX_R::pdf(shifted_alpha, wo, reflected_wi);
 
         // Wether the max PDF is found somewhere between the estimated PDF and the shifted PDF,
         // i.e. the correct alpha is between the estimated alpha and the shifted alpha.
@@ -229,8 +229,8 @@ public:
         return optix::make_float3(reflectance);
     }
 
-    float PDF(optix::float3 wo, optix::float3 wi) const {
-        return Shading::BSDFs::GGX_T::PDF(m_alpha, m_ior_i_over_o, wo, wi);
+    PDF pdf(optix::float3 wo, optix::float3 wi) const {
+        return Shading::BSDFs::GGX_T::pdf(m_alpha, m_ior_i_over_o, wo, wi);
     }
 
     BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
@@ -328,7 +328,7 @@ GTEST_TEST(GGX_T, consistent_sampling_across_hemispheres) {
                 auto ggx = GGXTransmissionWrapper(alpha, ior_i_over_o);
                 auto positive_sample = ggx.sample(positive_wo, random_sample);
                 auto negative_sample = ggx.sample(negative_wo, random_sample);
-                EXPECT_EQ(positive_sample.PDF, negative_sample.PDF);
+                EXPECT_EQ(positive_sample.PDF.value(), negative_sample.PDF.value());
                 EXPECT_FLOAT3_EQ(positive_sample.reflectance, negative_sample.reflectance);
 
                 optix::float3 flipped_negative_direction = negative_sample.direction;
@@ -402,10 +402,10 @@ public:
         return Shading::BSDFs::GGX::evaluate(m_tint, m_alpha, m_specularity, m_ior_i_over_o, wo, wi);
     }
 
-    float PDF(optix::float3 wo, optix::float3 wi) const {
+    PDF pdf(optix::float3 wo, optix::float3 wi) const {
         if (m_disable_reflection && same_hemisphere(wo, wi))
             return 0.0f;
-        return Shading::BSDFs::GGX::PDF(m_alpha, m_specularity, m_ior_i_over_o, wo, wi);
+        return Shading::BSDFs::GGX::pdf(m_alpha, m_specularity, m_ior_i_over_o, wo, wi);
     }
 
     BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {

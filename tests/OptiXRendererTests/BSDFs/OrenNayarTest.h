@@ -29,8 +29,8 @@ public:
         return Shading::BSDFs::OrenNayar::evaluate(m_tint, m_roughness, wo, wi, true);
     }
 
-    float PDF(optix::float3 wo, optix::float3 wi) const {
-        return Shading::BSDFs::OrenNayar::PDF(m_roughness, wo, wi);
+    PDF pdf(optix::float3 wo, optix::float3 wi) const {
+        return Shading::BSDFs::OrenNayar::pdf(m_roughness, wo, wi);
     }
 
     BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {

@@ -29,8 +29,8 @@ public:
         return Shading::BSDFs::Burley::evaluate(m_tint, m_roughness, wi, wo);
     }
 
-    float PDF(optix::float3 wi, optix::float3 wo) const {
-        return Shading::BSDFs::Burley::PDF(m_roughness, wi, wo);
+    PDF pdf(optix::float3 wi, optix::float3 wo) const {
+        return Shading::BSDFs::Burley::pdf(m_roughness, wi, wo);
     }
 
     BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
