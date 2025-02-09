@@ -56,7 +56,7 @@ public:
         setup_shading(tint, roughness, material.specularity, cos_theta);
     }
 
-    __inline_all__ static TransmissiveShading initialize_with_max_PDF_hint(const Material& material, optix::float2 texcoord, float cos_theta_o, float max_PDF_hint) {
+    __inline_all__ static TransmissiveShading initialize_with_max_PDF_hint(const Material& material, optix::float2 texcoord, float cos_theta_o, PDF max_PDF_hint) {
         float min_roughness = GGXMinimumRoughness::from_PDF(abs(cos_theta_o), max_PDF_hint);
         return TransmissiveShading(material, texcoord, cos_theta_o, min_roughness);
     }

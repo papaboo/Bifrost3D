@@ -34,7 +34,7 @@ __inline_all__ float is_delta_light(const SpotLight& light) {
     return light.radius == 0.0f;
 }
 
-__inline_all__ float PDF(const SpotLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
+__inline_all__ PDF pdf(const SpotLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
     using namespace optix;
 
     float cos_theta = -dot(light.direction, direction_to_light);
@@ -54,7 +54,7 @@ __inline_all__ float PDF(const SpotLight& light, optix::float3 lit_position, opt
         }
     }
 
-    return 0;
+    return PDF::delta_dirac(0);
 }
 
 __inline_all__ optix::float3 evaluate(const SpotLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {

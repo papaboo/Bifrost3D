@@ -195,10 +195,6 @@ __inline_all__ optix::float3 latlong_texcoord_to_direction(optix::float2 uv) {
     return -optix::make_float3(sin_theta * cos_phi, cos_theta, sin_theta * sin_phi);
 }
 
-__inline_all__ bool is_PDF_valid(float PDF) {
-    return PDF > 0.000001f;
-}
-
 // Insert a 0 bit in between each of the 16 low bits of v.
 __inline_all__ unsigned int part_by_1(unsigned int v) {
     v &= 0x0000ffff;                 // v = ---- ---- ---- ---- fedc ba98 7654 3210

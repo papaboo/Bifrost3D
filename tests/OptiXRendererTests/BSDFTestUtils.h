@@ -42,10 +42,10 @@ RhoResult directional_hemispherical_reflectance_function(BSDFModel bsdf_model, f
         BSDFSample sample = bsdf_model.sample(wo, rng_sample);
 
         float3 reflectance = { 0, 0, 0 };
-        if (is_PDF_valid(sample.PDF)) {
-            reflectance = sample.reflectance * abs(sample.direction.z) / sample.PDF; // f * ||cos_theta|| / pdf
+        if (sample.PDF.is_valid()) {
+            reflectance = sample.reflectance * abs(sample.direction.z) / sample.PDF.value(); // f * ||cos_theta|| / pdf
 
-            float direction_weight = sum(sample.reflectance) / sample.PDF;
+            float direction_weight = sum(sample.reflectance) / sample.PDF.value();
             summed_directions = { summed_directions.x + direction_weight * sample.direction.x,
                                   summed_directions.y + direction_weight * sample.direction.y,
                                   summed_directions.z + direction_weight * sample.direction.z };
@@ -92,7 +92,7 @@ void helmholtz_reciprocity(BSDFModel bsdf_model, float3 wo, unsigned int sample_
         float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
         BSDFSample sample = bsdf_model.sample(wo, rng_sample);
 
-        if (is_PDF_valid(sample.PDF)) {
+        if (sample.PDF.is_valid()) {
             float3 f = bsdf_model.evaluate(sample.direction, wo);
             EXPECT_COLOR_EQ_EPS(sample.reflectance, f, 0.0001f) << bsdf_model.to_string();
         }
@@ -105,16 +105,16 @@ void BSDF_consistency_test(BSDFModel bsdf_model, float3 wo, unsigned int sample_
         float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
         BSDFSample sample = bsdf_model.sample(wo, rng_sample);
 
-        EXPECT_GE(sample.PDF, 0.0f) << bsdf_model.to_string();
-        if (is_PDF_valid(sample.PDF)) {
+        EXPECT_GE(sample.PDF.value(), 0.0f) << bsdf_model.to_string();
+        if (sample.PDF.is_valid()) {
             EXPECT_GE(sample.reflectance.x, 0.0f) << bsdf_model.to_string();
 
-            EXPECT_FLOAT_EQ_PCT(sample.PDF, bsdf_model.PDF(wo, sample.direction), 0.00002f) << bsdf_model.to_string();
+            EXPECT_PDF_EQ_PCT(sample.PDF, bsdf_model.pdf(wo, sample.direction), 0.00002f) << bsdf_model.to_string();
             EXPECT_COLOR_EQ_PCT(sample.reflectance, bsdf_model.evaluate(wo, sample.direction), 0.00002f) << bsdf_model.to_string();
 
             BSDFResponse response = bsdf_model.evaluate_with_PDF(wo, sample.direction);
             EXPECT_COLOR_EQ_PCT(sample.reflectance, response.reflectance, 0.00002f) << bsdf_model.to_string();
-            EXPECT_FLOAT_EQ_PCT(sample.PDF, response.PDF, 0.00002f) << bsdf_model.to_string();
+            EXPECT_PDF_EQ_PCT(sample.PDF, response.PDF, 0.00002f) << bsdf_model.to_string();
         }
     }
 }
@@ -137,7 +137,7 @@ void PDF_positivity_test(BSDFModel bsdf_model, optix::float3 wo, unsigned int sa
 
         // Test that if the bsdf reflects light, then the PDF is positive.
         if (!is_black(sample.reflectance))
-            EXPECT_GE(sample.PDF, 0.0f) << bsdf_model.to_string();
+            EXPECT_GE(sample.PDF.value(), 0.0f) << bsdf_model.to_string();
     }
 }
 

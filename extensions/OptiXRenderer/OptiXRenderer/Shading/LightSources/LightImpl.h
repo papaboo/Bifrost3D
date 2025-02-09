@@ -51,20 +51,20 @@ __inline_dev__ LightSample sample_radiance(const Light& light, optix::float3 pos
     return LightSample::none();
 }
 
-__inline_dev__ float PDF(const Light& light, optix::float3 lit_position, optix::float3 direction_to_light) {
+__inline_dev__ PDF pdf(const Light& light, optix::float3 lit_position, optix::float3 direction_to_light) {
     switch (light.get_type()) {
     case Light::Sphere:
-        return PDF(light.sphere, lit_position, direction_to_light);
+        return pdf(light.sphere, lit_position, direction_to_light);
     case Light::Directional:
-        return PDF(light.directional, direction_to_light);
+        return pdf(light.directional, direction_to_light);
     case Light::Environment:
-        return PDF(light.environment, direction_to_light);
+        return pdf(light.environment, direction_to_light);
     case Light::PresampledEnvironment:
-        return PDF(light.presampled_environment, direction_to_light);
+        return pdf(light.presampled_environment, direction_to_light);
     case Light::Spot:
-        return PDF(light.spot, lit_position, direction_to_light);
+        return pdf(light.spot, lit_position, direction_to_light);
     }
-    return 0.0f;
+    return PDF::invalid();
 }
 
 __inline_dev__ optix::float3 evaluate(const Light& light, optix::float3 position, optix::float3 direction_to_light) {
@@ -84,19 +84,19 @@ __inline_dev__ optix::float3 evaluate(const Light& light, optix::float3 position
 }
 
 template <typename LightType>
-__inline_dev__ optix::float3 evaluate_intersection(const LightType& light, optix::float3 position, optix::float3 direction_to_light,  MisPDF bsdf_PDF) {
+__inline_dev__ optix::float3 evaluate_intersection(const LightType& light, optix::float3 position, optix::float3 direction_to_light, PDF bsdf_PDF) {
     optix::float3 radiance = evaluate(light, position, ray.direction);
 
     if (bsdf_PDF.use_for_MIS()) {
         // Calculate MIS weight and scale the radiance by it.
-        float light_PDF = PDF(light, position, ray.direction);
-        radiance *= MonteCarlo::MIS_weight(bsdf_PDF.PDF(), light_PDF);
+        PDF light_PDF = pdf(light, position, ray.direction);
+        radiance *= MonteCarlo::MIS_weight(bsdf_PDF, light_PDF);
     }
 
     return radiance;
 }
 
-__inline_dev__ optix::float3 evaluate_intersection(const Light& light, optix::float3 position, optix::float3 direction_to_light, MisPDF bsdf_PDF) {
+__inline_dev__ optix::float3 evaluate_intersection(const Light& light, optix::float3 position, optix::float3 direction_to_light, PDF bsdf_PDF) {
     switch (light.get_type()) {
     case Light::Sphere:
         return evaluate_intersection(light.sphere, position, direction_to_light, bsdf_PDF);

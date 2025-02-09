@@ -26,11 +26,11 @@ __inline_dev__ LightSample sample_radiance(const PresampledEnvironmentLight& lig
     return sample;
 }
 
-__inline_dev__ float PDF(const PresampledEnvironmentLight& light, optix::float3 direction_to_light) {
+__inline_dev__ PDF pdf(const PresampledEnvironmentLight& light, optix::float3 direction_to_light) {
     optix::float2 uv = direction_to_latlong_texcoord(direction_to_light);
     float sin_theta = sqrtf(1.0f - direction_to_light.y * direction_to_light.y);
     float PDF = optix::rtTex2D<float>(light.per_pixel_PDF_ID, uv.x, uv.y) / sin_theta;
-    return sin_theta == 0.0f ? 0.0f : PDF;
+    return sin_theta == 0.0f ? PDF::delta_dirac(0) : PDF;
 }
 
 __inline_dev__ optix::float3 evaluate(const PresampledEnvironmentLight& light, optix::float3 direction_to_light) {
@@ -46,8 +46,8 @@ __inline_dev__ LightSample sample_radiance(const PresampledEnvironmentLight& lig
     return sample_radiance(light, random_sample);
 }
 
-__inline_dev__ float PDF(const PresampledEnvironmentLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
-    return PDF(light, direction_to_light);
+__inline_dev__ PDF pdf(const PresampledEnvironmentLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
+    return pdf(light, direction_to_light);
 }
 
 __inline_dev__ optix::float3 evaluate(const PresampledEnvironmentLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {

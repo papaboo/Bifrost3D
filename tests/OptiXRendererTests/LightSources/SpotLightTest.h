@@ -46,8 +46,8 @@ GTEST_TEST(SpotLight, consistent_PDF_and_radiance) {
                 for (unsigned int i = 0u; i < MAX_LIGHT_SAMPLES; ++i) {
                     LightSample sample = LightSources::sample_radiance(light, position, RNG::sample02(i));
 
-                    float PDF = LightSources::PDF(light, position, sample.direction_to_light);
-                    EXPECT_FLOAT_EQ_EPS(sample.PDF, PDF, 0.0001f);
+                    PDF PDF = LightSources::pdf(light, position, sample.direction_to_light);
+                    EXPECT_PDF_EQ_PCT(sample.PDF, PDF, 0.0001f);
 
                     if (sample.radiance.x > 0.0f) {
                         float radiance = LightSources::evaluate(light, position, sample.direction_to_light).x;
@@ -73,19 +73,19 @@ GTEST_TEST(SpotLight, pdf_rejects_rays_that_miss) {
     const float3 hit_light_direction = normalize(make_float3(1.0f, 10.0f, 0.0f));
     const float3 miss_light_direction = normalize(make_float3(3.0f, 10.0f, 0.0f));
 
-    float hit_light_PDF = LightSources::PDF(light, lit_position, hit_light_direction);
-    EXPECT_GT(hit_light_PDF, 0.0f);
+    PDF hit_light_PDF = LightSources::pdf(light, lit_position, hit_light_direction);
+    EXPECT_TRUE(hit_light_PDF.is_valid());
 
     // Implementation specific note:
     // This only works because this light setup uses the surface PDF instead of the light distribution (cone) PDF, which can be zero outside the light source surface.
     // This dependency to the PDF and Sample implementation is very unfortunate, but I currently cannot think of a better way to test the borders of the distribution.
-    float miss_light_PDF = LightSources::PDF(light, lit_position, miss_light_direction);
-    EXPECT_FLOAT_EQ(miss_light_PDF, 0.0f);
+    PDF miss_light_PDF = LightSources::pdf(light, lit_position, miss_light_direction);
+    EXPECT_FALSE(miss_light_PDF.is_valid());
 
     // Flip cone light so lit position is behind.
     light.direction = -light.direction;
-    EXPECT_FLOAT_EQ(LightSources::PDF(light, lit_position, hit_light_direction), 0.0f);
-    EXPECT_FLOAT_EQ(LightSources::PDF(light, lit_position, miss_light_direction), 0.0f);
+    EXPECT_FALSE(LightSources::pdf(light, lit_position, hit_light_direction).is_valid());
+    EXPECT_FALSE(LightSources::pdf(light, lit_position, miss_light_direction).is_valid());
 }
 
 Bifrost::Math::Statistics<double> estimate_power(SpotLight light, float disk_depth, Bifrost::Math::Vector2f* light_UVs, int light_UV_count) {
@@ -113,9 +113,9 @@ Bifrost::Math::Statistics<double> estimate_power(SpotLight light, float disk_dep
         for (int j = 0; j < light_UV_count; ++j) {
             float2 light_UV = make_float2(light_UVs[j].x, light_UVs[j].y);
             auto light_sample = LightSources::sample_radiance(light, disk_position, light_UV);
-            if (is_PDF_valid(light_sample.PDF)) {
+            if (light_sample.PDF.is_valid()) {
                 float cos_theta = dot(light_sample.direction_to_light, disk_normal);
-                sample_radiances[j] = light_sample.radiance.x * cos_theta / light_sample.PDF;
+                sample_radiances[j] = light_sample.radiance.x * cos_theta / light_sample.PDF.value();
             } else
                 sample_radiances[j] = 0.0f;
         }

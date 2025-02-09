@@ -64,12 +64,12 @@ __inline_dev__ LightSample sample_single_light(const ShadingModel& material, flo
     light_sample.radiance *= g_scene.light_count; // Scale up radiance to account for only sampling one light.
 
     float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction_to_light);
-    light_sample.radiance *= abs(N_dot_L) / light_sample.PDF;
+    light_sample.radiance *= abs(N_dot_L) / light_sample.PDF.value();
 
     // Apply MIS weights if the light isn't a delta function.
     const float3 shading_light_direction = world_shading_tbn * light_sample.direction_to_light;
     BSDFResponse bsdf_response = material.evaluate_with_PDF(wo, shading_light_direction);
-    bool apply_MIS = !LightSources::is_delta_light(light, monte_carlo_payload.position);
+    bool apply_MIS = !light_sample.PDF.is_delta_dirac();
     if (apply_MIS)
         // The light source connected to the final bounce will be scaled by the MIS weight as well, even though the BSDF sample isn't traced and thus the second sample scheme isn't used.
         // This is done as the MIS weight will still reduce variance from light sources that would be more easily sampled using the BSDf.
@@ -204,9 +204,9 @@ __inline_all__ void path_tracing_closest_hit() {
     BSDFSample bsdf_sample = material.sample(wo, bsdf_random_uvs);
     bool is_reflection = bsdf_sample.direction.z >= 0;
     monte_carlo_payload.direction = bsdf_sample.direction * world_shading_tbn;
-    monte_carlo_payload.bsdf_MIS_PDF = MisPDF::from_PDF(bsdf_sample.PDF);
-    if (is_PDF_valid(bsdf_sample.PDF))
-        monte_carlo_payload.throughput *= bsdf_sample.reflectance * (abs(bsdf_sample.direction.z) / bsdf_sample.PDF); // f * ||cos(theta)|| / pdf
+    monte_carlo_payload.bsdf_PDF = bsdf_sample.PDF;
+    if (bsdf_sample.PDF.is_valid())
+        monte_carlo_payload.throughput *= bsdf_sample.reflectance * abs(bsdf_sample.direction.z) / bsdf_sample.PDF.value(); // f * ||cos(theta)|| / pdf
     else
         monte_carlo_payload.throughput = make_float3(0.0f);
 
@@ -227,8 +227,8 @@ __inline_all__ void path_tracing_closest_hit() {
     monte_carlo_payload.bounces += 1u;
 
     // Disable multiple importance sampling if there are no valid light samples.
-    if (!is_PDF_valid(monte_carlo_payload.light_sample.PDF))
-        monte_carlo_payload.bsdf_MIS_PDF.disable_MIS();
+    if (!monte_carlo_payload.light_sample.PDF.is_valid())
+        monte_carlo_payload.bsdf_PDF.disable_MIS();
 }
 
 //----------------------------------------------------------------------------
@@ -237,7 +237,7 @@ __inline_all__ void path_tracing_closest_hit() {
 
 struct DefaultMaterialCreator {
     __inline_all__ static DefaultShading create(const Material& material_params, optix::float2 texcoord, float cos_theta_o) {
-        float max_PDF_hint = monte_carlo_payload.bsdf_MIS_PDF.PDF() * g_camera_state.path_regularization_PDF_scale;
+        PDF max_PDF_hint = monte_carlo_payload.bsdf_PDF * g_camera_state.path_regularization_PDF_scale;
         return DefaultShading::initialize_with_max_PDF_hint(material_params, texcoord, cos_theta_o, max_PDF_hint);
     }
 };
@@ -259,7 +259,7 @@ RT_PROGRAM void diffuse_closest_hit() {
 
 struct TransmissiveMaterialCreator {
     __inline_all__ static TransmissiveShading create(const Material& material_params, optix::float2 texcoord, float cos_theta_o) {
-        float max_PDF_hint = monte_carlo_payload.bsdf_MIS_PDF.PDF() * g_camera_state.path_regularization_PDF_scale;
+        PDF max_PDF_hint = monte_carlo_payload.bsdf_PDF * g_camera_state.path_regularization_PDF_scale;
         return TransmissiveShading::initialize_with_max_PDF_hint(material_params, texcoord, cos_theta_o, max_PDF_hint);
     }
 };
@@ -292,10 +292,10 @@ RT_PROGRAM void light_closest_hit() {
     float3 light_radiance = make_float3(0, 0, 0);
     if (light.get_type() == Light::Sphere)
         light_radiance = LightSources::evaluate_intersection(light.sphere, ray.origin, ray.direction,
-                                                             monte_carlo_payload.bsdf_MIS_PDF);
+                                                             monte_carlo_payload.bsdf_PDF);
     else if (light.get_type() == Light::Spot)
         light_radiance = LightSources::evaluate_intersection(light.spot, ray.origin, ray.direction,
-                                                             monte_carlo_payload.bsdf_MIS_PDF);
+                                                             monte_carlo_payload.bsdf_PDF);
 
     monte_carlo_payload.radiance += monte_carlo_payload.throughput * light_radiance;
     monte_carlo_payload.throughput = make_float3(0.0f);

@@ -9,7 +9,7 @@
 #ifndef _OPTIXRENDERER_MONTE_CARLO_H_
 #define _OPTIXRENDERER_MONTE_CARLO_H_
 
-#include <OptiXRenderer/Defines.h>
+#include <OptiXRenderer/Types.h>
 
 namespace OptiXRenderer {
 namespace MonteCarlo {
@@ -28,12 +28,11 @@ __inline_all__ float balance_heuristic(float pdf1, float pdf2) {
 // It is assumed that pdf1 is always valid, i.e. not NaN.
 // pdf2 is allowed to be NaN, but generally try to avoid it. :)
 __inline_all__ float power_heuristic(float pdf1, float pdf2) {
-    pdf1 *= pdf1;
-    pdf2 *= pdf2;
-    return balance_heuristic(pdf1, pdf2);
+    return balance_heuristic(pdf1 * pdf1, pdf2 * pdf2);
 }
 
 __inline_all__ float MIS_weight(float pdf1, float pdf2) { return balance_heuristic(pdf1, pdf2); }
+__inline_all__ float MIS_weight(PDF pdf1, PDF pdf2) { return MIS_weight(pdf1.value(), pdf2.value()); }
 
 } // NS MonteCarlo
 } // NS OptiXRenderer

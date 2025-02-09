@@ -59,7 +59,7 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     MonteCarloPayload payload = {};
     payload.throughput = make_float3(1.0f);
     payload.light_sample = LightSample::none();
-    payload.bsdf_MIS_PDF = MisPDF::delta_dirac();
+    payload.bsdf_PDF = PDF::delta_dirac();
 
 #if LCG_RNG
     payload.rng.set_state(__brev(RNG::teschner_hash(x, y) + accumulation_count));
@@ -126,17 +126,18 @@ __inline_dev__ void path_trace_single_bounce(MonteCarloPayload& payload) {
         rtTrace(g_scene_root, shadow_ray, shadow_payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_CLOSESTHIT);
 
         payload.radiance += shadow_payload.radiance;
-
-        payload.light_sample = LightSample::none();
     }
+
+    // Reset light sample
+    payload.light_sample = LightSample::none();
 }
 
 RT_PROGRAM void path_tracing_RPG() {
 
     accumulate([](MonteCarloPayload payload) -> float3 {
-        do
+        do {
             path_trace_single_bounce(payload);
-        while (payload.bounces <= g_camera_state.max_bounce_count && !is_black(payload.throughput));
+        } while (payload.bounces <= g_camera_state.max_bounce_count && !is_black(payload.throughput));
 
         return payload.radiance;
     });
@@ -351,7 +352,7 @@ RT_PROGRAM void miss() {
     unsigned int environment_map_ID = g_scene.environment_light.environment_map_ID;
     if (environment_map_ID)
         environment_radiance *= LightSources::evaluate_intersection(g_scene.environment_light, ray.origin, ray.direction, 
-                                                                    monte_carlo_payload.bsdf_MIS_PDF);
+                                                                    monte_carlo_payload.bsdf_PDF);
 
     monte_carlo_payload.radiance += monte_carlo_payload.throughput * environment_radiance;
     monte_carlo_payload.throughput = make_float3(0.0f);

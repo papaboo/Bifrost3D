@@ -27,8 +27,8 @@ public:
         return Shading::BSDFs::Lambert::evaluate(m_tint);
     }
 
-    float PDF(optix::float3 wo, optix::float3 wi) const {
-        return Shading::BSDFs::Lambert::PDF(wo, wi);
+    PDF pdf(optix::float3 wo, optix::float3 wi) const {
+        return Shading::BSDFs::Lambert::pdf(wo, wi);
     }
 
     BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
