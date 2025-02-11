@@ -1,41 +1,33 @@
 BACKLOG:
-* Rough glass
- * Glass sphere in test scene should have a strong specular highlight from the area light
- * Delta dirac reflections when GGX alpha is near 0
-  * bool TrowbridgeReitzDistribution::EffectivelySmooth() const { return std::max(alpha_x, alpha_y) < 1e-3f; }
-  * Rename MisPDF to PDF
- * Can we use Bounded VNDF when the IOR is greater (or was it less) than 1.0? So cases where the refraction will cause more of the lobe to be occluded.
- * Add total internal reflection to GGX_T and GGX. PBRT 8.2.1
-  * https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/totalinternalreflection for delta dirac implementation
-  * Detect critical angle (sinThetaT >= 1). Use snell's law and known IOR and sinThetaO.
-   * This should be possible given the halfway vector, so we could expand the fresnel reflectivity to either be fresnel or 1 in case of TIR. Which should work for sampling and evaluation.
-  * How to handle evaluation reflectance? We can do it in TransmissiveShading by scaling the reflection using a precomputation, but ideally I'd like it directly in GGX.
-  * Can we estimate a function for GGX, where given an angle, it will tell us how much contribution is below that angle? I.e. how much contribution is below the critical angle and causing reflection.
- * Handle thin walled transmissive material
-  * Test!!
-  * Thin walled materials should not refract, effectively only tinting the transmission by the base color.
-  * See PBRTv4 bxdfs.cpp line 80: if (eta == 1 || mfDistrib.EffectivelySmooth()) { .. }
-  * Does that amount to just squaring alpha, squaring tint, and disabling refraction / IOR of 1?
-  * Thinwalled transmissive smooth materials can tint the anyhit
- * How can we ensure that refractions handle bidirectional renderers? PBRT does it by tracing 'importance' or radiance. I think I'd prefer to just differentiate on samping wo or wi.
-  * The current implementation samples wi from wo, but internally it acts as if wo is wi. See both the reflectance scaling and refract(...) expects the incident light direction.
-  * See PBRT section 16.1. Apparently light rays need to be scaled, but not view rays.
- * Energy preserving transmission. 16^3 8bit texture?
-  * cos_theta, roughness, and relative IOR dependent.
-  * Implement TransmissiveShading::Rho
- * Add support for local refraction in the coat in default shading
- * Define how we should scale roughness of a surface underneath another rough surface.
-  * Fixed coat roughness, binary search of underlying roughness that matches GGX * GGX
- * Approximate rough glass in DX11 using a gaussian filter, see Doom 2016.
-  * Possibly expand with OIT using moments, as transparency is a PITA https://momentsingraphics.de/MissingTMBOITCode.html
- * Support for absorption / Beers law. Add case to transmission test scene. Whisky in glass? (Cylinder inside glass)
-  * Suppport for nested layers? Add (ice) cubes to the whisky. Make a tesselated box, bevel the edges and randomly offset the side vertices. Add air bubble inside the ice cubes.
-  * See Yi's post on nested dielectrics and ordering
 * Screenshot
  * DX renderer including margin for SSAO?
  * OptiX renderer not getting screenshot call
  * Update readme and reference images.
 * Vertex color support
+* Rough glass
+ * Glass sphere in test scene should have a strong specular highlight from the area light
+ * Can we use Bounded VNDF when the IOR is greater (or was it less) than 1.0? So cases where the refraction will cause more of the lobe to be occluded.
+ * Energy preserving transmission. 16^3 8bit texture?
+  * cos_theta, roughness, and relative IOR dependent.
+  * Implement TransmissiveShading::Rho
+ * Define how we should scale roughness of a surface underneath another rough surface.
+  * Fixed coat roughness, binary search of underlying roughness that matches GGX * GGX
+ * Handle thin walled transmissive material
+  * Test!!
+  * What about total internal reflection on smooth thinwalled surfaces? Isn't that basically just an energy dump as the angle between the normal and wo never changes?
+  * Thin walled materials should not refract, effectively only tinting the transmission by the base color.
+  * Does that amount to just squaring alpha, squaring tint, and disabling refraction / IOR of 1?
+  * Thinwalled transmissive smooth materials can tint the anyhit. But remember to take the previous BSDF PDF into account
+  * Should support cutout (Kalestra as glass)
+ * How can we ensure that refractions handle bidirectional renderers? PBRT does it by tracing 'importance' or radiance. I think I'd prefer to just differentiate on samping wo or wi.
+  * The current implementation samples wi from wo, but internally it acts as if wo is wi. See both the reflectance scaling and refract(...) expects the incident light direction.
+  * See PBRT section 16.1. Apparently light rays need to be scaled, but not view rays.
+ * Add support for local refraction in the coat in default shading
+ * Approximate rough glass in DX11 using a gaussian filter, see Doom 2016.
+  * Possibly expand with OIT using moments, as transparency is a PITA https://momentsingraphics.de/MissingTMBOITCode.html
+ * Support for absorption / Beers law. Add case to transmission test scene. Whisky in glass? (Cylinder inside glass)
+  * Suppport for nested layers? Add (ice) cubes to the whisky. Make a tesselated box, bevel the edges and randomly offset the side vertices. Add air bubble inside the ice cubes.
+  * See Yi's post on nested dielectrics and ordering
 * Improving shadow terminator
  * Reflections: Hacking the shadow terminator https://jo.dreggn.org/home/2021_terminator.pdf
  * Refractions: Taming the shadow terminator https://www.yiningkarlli.com/projects/shadowterminator.html
