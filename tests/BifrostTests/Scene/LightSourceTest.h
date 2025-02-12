@@ -44,15 +44,15 @@ TEST_F(Scene_LightSource, resizing) {
     EXPECT_LT(LightSources::capacity(), larger_capacity);
 }
 
-TEST_F(Scene_LightSource, sentinel_node) {
+TEST_F(Scene_LightSource, invalid_sphere_light_properties) {
     LightSources::allocate(1u);
 
-    LightSourceID sentinel_ID = LightSourceID::invalid_UID();
+    SphereLight invalid_light = SphereLight::invalid();
 
-    EXPECT_FALSE(LightSources::has(sentinel_ID));
+    EXPECT_FALSE(invalid_light.exists());
 
-    EXPECT_EQ(SceneNodeID::invalid_UID(), LightSources::get_node_ID(sentinel_ID));
-    EXPECT_EQ(Math::RGB(100000, 0, 100000), LightSources::get_sphere_light_power(sentinel_ID));
+    EXPECT_EQ(SceneNode::invalid(), invalid_light.get_node());
+    EXPECT_EQ(Math::RGB(100000, 0, 100000), invalid_light.get_power());
 
     LightSources::deallocate();
 }
@@ -145,11 +145,11 @@ TEST_F(Scene_LightSource, create_and_destroy_notifications) {
         bool node0_created = false;
         bool node1_created = false;
         bool other_changes = false;
-        for (const LightSourceID light_ID : changed_lights) {
-            bool light_created = LightSources::get_changes(light_ID) == LightSources::Change::Created;
-            if (light0 == light_ID && light_created)
+        for (const LightSource light : changed_lights) {
+            bool light_created = light.get_changes() == LightSources::Change::Created;
+            if (light0 == light && light_created)
                 node0_created = true;
-            else if (light1 == light_ID && light_created)
+            else if (light1 == light && light_created)
                 node1_created = true;
             else
                 other_changes = true;
@@ -171,8 +171,8 @@ TEST_F(Scene_LightSource, create_and_destroy_notifications) {
 
         bool node0_destroyed = false;
         bool other_changes = false;
-        for (const LightSourceID light_ID : changed_lights) {
-            if (light0 == light_ID && LightSources::get_changes(light_ID) == LightSources::Change::Destroyed)
+        for (const LightSource light : changed_lights) {
+            if (light0 == light && light.get_changes() == LightSources::Change::Destroyed)
                 node0_destroyed = true;
             else
                 other_changes = true;
