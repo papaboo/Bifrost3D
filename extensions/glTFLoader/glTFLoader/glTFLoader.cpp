@@ -162,7 +162,7 @@ struct TextureState {
         glTF_image_index = glTF_texture.source;
         const auto& glTF_image = model.images[glTF_image_index];
         memcpy(&Image, glTF_image.image.data(), sizeof(Image));
-        assert(Images::has(Image_ID));
+        assert(Image.exists());
 
         // Extract sampler params.
         if (glTF_texture.sampler >= 0)
