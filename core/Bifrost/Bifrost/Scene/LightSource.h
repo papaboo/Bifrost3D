@@ -175,10 +175,7 @@ public:
     SphereLight(SceneNode node, Math::RGB power, float radius)
         : LightSource(LightSources::create_sphere_light(node.get_ID(), power, radius)) { }
 
-    static SphereLight invalid() { return LightSourceID::invalid_UID(); }
-
-    inline bool operator==(SphereLight rhs) const { return m_ID == rhs.m_ID; }
-    inline bool operator!=(SphereLight rhs) const { return m_ID != rhs.m_ID; }
+    static SphereLight invalid() { return SphereLight(); }
 
     // -----------------------------------------------------------------------
     // Getters and setters.
@@ -203,10 +200,7 @@ public:
     SpotLight(SceneNode node, Math::RGB power, float radius, float cos_angle)
         : LightSource(LightSources::create_spot_light(node.get_ID(), power, radius, cos_angle)) {}
 
-    static SpotLight invalid() { return LightSourceID::invalid_UID(); }
-
-    inline bool operator==(SpotLight rhs) const { return m_ID == rhs.m_ID; }
-    inline bool operator!=(SpotLight rhs) const { return m_ID != rhs.m_ID; }
+    static SpotLight invalid() { return SpotLight(); }
 
     // -----------------------------------------------------------------------
     // Getters and setters.
@@ -234,10 +228,7 @@ public:
     DirectionalLight(SceneNode node, Math::RGB radiance)
         : LightSource(LightSources::create_directional_light(node.get_ID(), radiance)) { }
     
-    static DirectionalLight invalid() { return LightSourceID::invalid_UID(); }
-
-    inline bool operator==(DirectionalLight rhs) const { return m_ID == rhs.m_ID; }
-    inline bool operator!=(DirectionalLight rhs) const { return m_ID != rhs.m_ID; }
+    static DirectionalLight invalid() { return DirectionalLight(); }
 
     // -----------------------------------------------------------------------
     // Getters and setters.
