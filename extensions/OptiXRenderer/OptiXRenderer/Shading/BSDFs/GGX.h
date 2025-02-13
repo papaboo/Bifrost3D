@@ -81,7 +81,7 @@ __inline_all__ float evaluate(float alpha, float specularity, float3 wo, float3 
     return evaluate(alpha, make_float3(specularity), wo, wi).x;
 }
 
-__inline_all__ float pdf(float alpha, float3 wo, float3 wi) {
+__inline_all__ PDF pdf(float alpha, float3 wo, float3 wi) {
     return Distributions::GGX_Bounded_VNDF::reflection_PDF(alpha, wo, wi);
 }
 
@@ -144,8 +144,8 @@ __inline_all__ float evaluate(float alpha, float3 wo, float3 wi, float ior_i_ove
     if (sign(wo.z) == sign(wi.z))
         return 0.0f;
 
-    // Discard backfacing microfacets. Hemisphere-invariant version of equation 9.35 in PBRT4.
-    if (dot(wo, halfway) * dot(wi, halfway) >= 0.0f)
+    // Discard backfacing microfacets. Equation 9.35 in PBRT4.
+    if (dot(wi, halfway) * wi.z <= 0 || dot(wo, halfway) * wo.z <= 0)
         return 0.0f;
 
     float G = BSDFs::GGX::height_correlated_G(alpha, wo, wi);
@@ -166,7 +166,7 @@ __inline_all__ float evaluate(float alpha, float ior_i_over_o, float3 wo, float3
 __inline_all__ PDF pdf(float alpha, float ior_i_over_o, float3 wo, float3 wi) {
     // Cannot sample reflection.
     if (sign(wo.z) == sign(wi.z))
-        return 0;
+        return PDF::invalid();
 
     bool entering = wo.z >= 0.0f;
     if (!entering) {
@@ -178,7 +178,7 @@ __inline_all__ PDF pdf(float alpha, float ior_i_over_o, float3 wo, float3 wi) {
 
     // Discard backfacing microfacets. Equation 9.35 in PBRT4.
     if (dot(wo, halfway) < 0.0f || dot(wi, halfway) >= 0.0f)
-        return 0.0f;
+        return PDF::invalid();
 
     return Distributions::GGX_VNDF::PDF(alpha, wo, halfway) * transmission_PDF_scale(ior_i_over_o, wo, wi, halfway);
 }
@@ -239,9 +239,9 @@ __inline_all__ float evaluate(float alpha, float specularity, float ior_i_over_o
     else {
         float3 halfway = GGX_T::compute_halfway_vector(ior_i_over_o, wo, wi);
 
-        // Discard backfacing microfacets. Hemisphere-invariant version of equation 9.35 in PBRT4.
-        if (dot(wo, halfway) * dot(wi, halfway) > 0)
-            return 0;
+        // Discard backfacing microfacets. Equation 9.35 in PBRT4.
+        if (dot(wi, halfway) * wi.z <= 0 || dot(wo, halfway) * wo.z <= 0)
+            return 0.0f;
 
         float G = BSDFs::GGX::height_correlated_G(alpha, wo, wi);
         float D = Distributions::GGX_VNDF::D(alpha, halfway);
@@ -260,7 +260,7 @@ __inline_all__ float3 evaluate(float3 tint, float alpha, float specularity, floa
     return f * (is_transmission ? tint : make_float3(1));
 }
 
-__inline_all__ float pdf(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
+__inline_all__ PDF pdf(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
     bool entering = wo.z >= 0.0f;
     if (!entering) {
         wo.z = -wo.z;
@@ -274,9 +274,9 @@ __inline_all__ float pdf(float alpha, float specularity, float ior_i_over_o, flo
     // Discard samples if the direction points into the surface (energy loss).
     // Discard backfacing microfacets. Equation 9.35 in PBRT4.
     bool energy_loss = is_refraction ? wi.z >= 0.0f : wi.z < 0.0f;
-    bool backfacing_microfacet = is_refraction && dot(wo, halfway) * dot(wi, halfway) > 0;
+    bool backfacing_microfacet = is_refraction && (dot(wo, halfway) < 0.0f || dot(wi, halfway) >= 0.0f);
     if (energy_loss || backfacing_microfacet)
-        return 0;
+        return PDF::invalid();
 
     float PDF = Distributions::GGX_VNDF::PDF(alpha, wo, halfway);
 
