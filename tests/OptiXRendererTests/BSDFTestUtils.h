@@ -137,7 +137,7 @@ void PDF_positivity_test(BSDFModel bsdf_model, optix::float3 wo, unsigned int sa
 
         // Test that if the bsdf reflects light, then the PDF is positive.
         if (!is_black(sample.reflectance))
-            EXPECT_GE(sample.PDF.value(), 0.0f) << bsdf_model.to_string();
+            EXPECT_GT(sample.PDF.value(), 0.0f) << bsdf_model.to_string() << ", cos_theta: " << wo.z;
     }
 }
 

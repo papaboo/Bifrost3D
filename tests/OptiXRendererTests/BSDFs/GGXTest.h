@@ -188,7 +188,7 @@ GTEST_TEST(GGX_R, estimate_bounded_VNDF_alpha_from_max_PDF) {
         optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
         optix::float3 reflected_wi = { -wo.x, -wo.y, wo.z };
 
-        float estimated_PDF = GGX_R::pdf(estimated_alpha, wo, reflected_wi);
+        float estimated_PDF = GGX_R::pdf(estimated_alpha, wo, reflected_wi).value();
 
         // Shift alpha towards the correct PDF by the max_alpha_error.
         // If the estimated PDF is lower than the max PDF, then the alpha needs to be reduced (the peak increased),
@@ -196,7 +196,7 @@ GTEST_TEST(GGX_R, estimate_bounded_VNDF_alpha_from_max_PDF) {
         float alpha_step_size = max_alpha_error * (estimated_PDF < max_PDF ? -1 : 1);
         float shifted_alpha = estimated_alpha + alpha_step_size;
         shifted_alpha = optix::clamp(shifted_alpha, 0.0f, 1.0f);
-        float shifted_PDF = GGX_R::pdf(shifted_alpha, wo, reflected_wi);
+        float shifted_PDF = GGX_R::pdf(shifted_alpha, wo, reflected_wi).value();
 
         // Wether the max PDF is found somewhere between the estimated PDF and the shifted PDF,
         // i.e. the correct alpha is between the estimated alpha and the shifted alpha.

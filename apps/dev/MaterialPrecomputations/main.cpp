@@ -171,8 +171,11 @@ void output_brdf(Image image, int sample_count, const std::string& filename, con
 void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const std::string& filename) {
     const int sample_count = max_PDF_count * cos_theta_count;
     constexpr float k = 1.0f; // Found to give a decent distribution of alphas, where decent is defined as the distribution of neighbouring alphas in the lookup table with the lowest standard deviatino
-    auto encode_PDF = [=](float pdf) -> float {
-        float non_linear_PDF = pdf / (k + pdf);
+    auto encode_PDF = [=](PDF pdf) -> float {
+        if (pdf.is_delta_dirac())
+            return 1;
+
+        float non_linear_PDF = pdf.value() / (k + pdf.value());
         return (non_linear_PDF - 0.13f) / 0.87f;
     };
 
