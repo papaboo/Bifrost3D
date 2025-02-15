@@ -80,10 +80,10 @@ struct GGXMinimumRoughness {
     }
 
     __inline_all__ static float encode_PDF(float pdf) {
-        // Floats larger than 16777216 can't represent integers accurately, so we max at 16777216 - 1 to accurately represent the addition below.
-        pdf = fminf(pdf, 16777215.0f);
         float non_linear_PDF = pdf / (1.0f + pdf);
-        return (non_linear_PDF - 0.13f) / 0.87f;
+        float encoded_PDF = (non_linear_PDF - 0.13f) / 0.87f;
+        encoded_PDF = fminf(1.0f, encoded_PDF); // Clamps NaNs to 1
+        return encoded_PDF;
     }
 };
 

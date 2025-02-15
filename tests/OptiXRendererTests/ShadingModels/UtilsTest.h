@@ -47,6 +47,38 @@ GTEST_TEST(ShadingModelUtils, GGX_minimum_roughness_PDF_encoding_consistent) {
     }
 }
 
+GTEST_TEST(ShadingModelUtils, GGX_minimum_roughness_edge_case_handling) {
+    { // Delta dirac functions are considered as perfect reflections and support a perfectly smooth surfaces on the next bounce.
+        float cos_theta = 0.5f;
+        PDF delta_pdf = PDF::delta_dirac(1);
+        float delta_minimum_roughness = Shading::ShadingModels::GGXMinimumRoughness::from_PDF(cos_theta, delta_pdf);
+        EXPECT_FLOAT_EQ(delta_minimum_roughness, 0.0f);
+    }
+
+    { // An infinitely high PDF is from a practically mirror-like surface and should support perfectly smooth surfaces on the next bounce.
+        float cos_theta = 0.5f;
+        PDF infinite_pdf = PDF(INFINITY);
+        float infinite_minimum_roughness = Shading::ShadingModels::GGXMinimumRoughness::from_PDF(cos_theta, infinite_pdf);
+        EXPECT_FLOAT_EQ(infinite_minimum_roughness, 0.0f);
+    }
+
+    { // An invalid PDF is as such not important, as it shouldn't produce further bounces.
+        // But for the sake of completeness we define that the next bounce should support perfectly smooth surfaces,
+        // as invalid/NaN PDFs can happen if the numerics become unstable on really smooth surfaces.
+        float cos_theta = 0.5f;
+        PDF invalid_pdf = PDF::invalid();
+        float invalid_minimum_roughness = Shading::ShadingModels::GGXMinimumRoughness::from_PDF(cos_theta, invalid_pdf);
+        EXPECT_FLOAT_EQ(invalid_minimum_roughness, 0.0f);
+    }
+
+    { // A low PDF should result in the next surface interaction having a high roughness
+        float cos_theta = 0.5f;
+        PDF low_pdf = PDF(0);
+        float low_pdf_minimum_roughness = Shading::ShadingModels::GGXMinimumRoughness::from_PDF(cos_theta, low_pdf);
+        EXPECT_FLOAT_EQ(low_pdf_minimum_roughness, 1.0f);
+    }
+}
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_SHADING_MODELS_UTILS_TEST_H_
