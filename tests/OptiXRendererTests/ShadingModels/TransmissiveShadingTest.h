@@ -93,7 +93,7 @@ GTEST_TEST(TransmissiveShadingModel, PDF_positivity) {
     for (float cos_theta_o : {-0.8f, -0.4f, 0.1f, 0.5f, 0.9f}) {
         optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
 
-        Material material_params = smooth_glass_parameters();
+        Material material_params = frosted_glass_parameters();
         for (float roughness : { 0.2f, 0.6f, 1.0f }) {
             material_params.roughness = roughness;
             auto shading_model = TransmissiveShadingWrapper(material_params, wo.z);
@@ -103,12 +103,16 @@ GTEST_TEST(TransmissiveShadingModel, PDF_positivity) {
 }
 
 GTEST_TEST(TransmissiveShadingModel, Fresnel) {
+    using namespace Shading::BSDFs;
     using namespace Shading::ShadingModels;
     using namespace optix;
 
     // Test that specular reflections are white and incident reflections are black, i.e. all light is transmitted, when specularity is 0.
     Material material_params = smooth_glass_parameters();
     material_params.specularity = 0.0f; // Testing specularity. Physically-based fubar value.
+
+    // Material must be rougher than GGX::MIN_ALPHA otherwise the material will be defined as a delta dirac function and can't be evaluated.
+    material_params.roughness = GGX::roughness_from_alpha(GGX::MIN_ALPHA + 1e-6f);
 
     { // Test that incident reflectivity is black.
         float3 wo = make_float3(0.0f, 0.0f, 1.0f);

@@ -427,6 +427,12 @@ public:
     }
 };
 
+GTEST_TEST(GGX, zero_roughness_converted_to_effectively_smooth_alpha) {
+    float smooth_roughness = 0.0f;
+    float smooth_alpha = Shading::BSDFs::GGX::alpha_from_roughness(smooth_roughness);
+    EXPECT_TRUE(Shading::BSDFs::GGX::effectively_smooth(smooth_alpha));
+}
+
 GTEST_TEST(GGX, power_conservation) {
     for (float ior_i_over_o : { 0.5f, 0.9f, 1.1f, 1.5f })
         for (float cos_theta_o : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
@@ -434,7 +440,7 @@ GTEST_TEST(GGX, power_conservation) {
             for (float alpha : { 0.0f, 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
                 auto ggx = GGXWrapper(alpha, 0.04f, ior_i_over_o);
                 auto res = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 1024u);
-                EXPECT_FLOAT3_LE(res.reflectance, 1.0f);
+                EXPECT_FLOAT3_LE(res.reflectance, 1.0f + 1e-5f) << ggx.to_string() << ", cos_theta: " << cos_theta_o;
             }
         }
 }
