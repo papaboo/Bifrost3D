@@ -219,27 +219,33 @@ public:
         }
 
         // Break if a sample with an invalid PDF is produced.
-        if (!bsdf_sample.PDF.is_valid_and_not_delta_dirac())
+        if (bsdf_sample.PDF.invalid_or_delta_dirac())
             return bsdf_sample;
 
         // Compute contribution of the material components not sampled.
         if (!sample_diffuse) {
             // Evaluate diffuse layer as well.
             BSDFResponse diffuse_response = BSDFs::OrenNayar::evaluate_with_PDF(m_diffuse_tint, m_roughness, wo, bsdf_sample.direction);
-            bsdf_sample.reflectance += diffuse_response.reflectance;
-            bsdf_sample.PDF += diffuse_response.PDF * (1 - coat_probability) * (1 - specular_probability);
+            if (diffuse_response.PDF.is_valid_and_not_delta_dirac()) {
+                bsdf_sample.reflectance += diffuse_response.reflectance;
+                bsdf_sample.PDF += diffuse_response.PDF * (1 - coat_probability) * (1 - specular_probability);
+            }
         }
         if (!sample_specular) {
             // Evaluate specular layer as well.
             BSDFResponse specular_response = BSDFs::GGX_R::evaluate_with_PDF(get_specular_alpha(), m_specularity, wo, bsdf_sample.direction);
-            bsdf_sample.reflectance += specular_response.reflectance * m_specular_scale;
-            bsdf_sample.PDF += specular_response.PDF * (1 - coat_probability) * specular_probability;
+            if (specular_response.PDF.is_valid_and_not_delta_dirac()) {
+                bsdf_sample.reflectance += specular_response.reflectance * m_specular_scale;
+                bsdf_sample.PDF += specular_response.PDF * (1 - coat_probability) * specular_probability;
+            }
         }
         if (!sample_coat && m_coat_scale > 0) {
             // Evaluate coat layer as well.
             BSDFResponse coat_response = BSDFs::GGX_R::evaluate_with_PDF(m_coat_alpha, COAT_SPECULARITY, wo, bsdf_sample.direction);
-            bsdf_sample.reflectance += m_coat_scale * coat_response.reflectance;
-            bsdf_sample.PDF += coat_response.PDF * coat_probability;
+            if (coat_response.PDF.is_valid_and_not_delta_dirac()) {
+                bsdf_sample.reflectance += m_coat_scale * coat_response.reflectance;
+                bsdf_sample.PDF += coat_response.PDF * coat_probability;
+            }
         }
 
         return bsdf_sample;

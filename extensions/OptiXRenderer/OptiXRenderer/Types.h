@@ -158,6 +158,7 @@ public:
     __inline_all__ bool is_delta_dirac() const { return !(m_PDF >= 0.0f); }
     __inline_all__ void disable_MIS() { if (m_PDF >= 0.0f) m_PDF = -m_PDF; }
     __inline_all__ bool is_valid_and_not_delta_dirac() const { return m_PDF > MIN_VALID_PDF; }
+    __inline_all__ bool invalid_or_delta_dirac() const { return !(m_PDF > MIN_VALID_PDF); }
     __inline_all__ bool use_for_MIS() const { return is_valid_and_not_delta_dirac(); }
 
     __inline_all__ PDF& scale(float s) {
