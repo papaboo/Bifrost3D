@@ -87,7 +87,10 @@ const float alphas[] = {
 
 float encode_PDF(float pdf) {
     float non_linear_PDF = pdf / (1.0f + pdf);
-    return (non_linear_PDF - 0.13f) / 0.87f;
+    float encoded_PDF = (non_linear_PDF - 0.13f) / 0.87f;
+    if (isnan(encoded_PDF))
+        encoded_PDF = 1.0f;
+    return encoded_PDF;
 }
 float decode_PDF(float encoded_pdf) {
     float non_linear_PDF = encoded_pdf * 0.87f + 0.13f;
@@ -98,6 +101,8 @@ float estimate_alpha(float wo_dot_normal, float max_PDF) {
     using namespace Bifrost::Math;
 
     float encoded_PDF = encode_PDF(max_PDF);
+    encoded_PDF = fminf(1.0f, encoded_PDF);
+    encoded_PDF = fmaxf(0.0f, encoded_PDF);
 
     float wo_dot_normal_coord = wo_dot_normal * (wo_dot_normal_sample_count - 1);
     int lower_wo_dot_normal_row = int(wo_dot_normal_coord);
