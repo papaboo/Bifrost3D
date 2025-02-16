@@ -141,6 +141,20 @@ __inline_all__ optix::float3 schlick_fresnel(optix::float3 incident_specular, fl
     return (1.0f - t) * incident_specular + t;
 }
 
+__inline_all__ float dielectric_schlick_fresnel(float incident_specular, float abs_cos_theta, float ior_i_over_o) {
+    // Return 1.0 for full reflection in case of total internal reflection.
+    // cos(theta) is expected to be absolute and ior_i_over_o to have been preadjusted to fit the side hit.
+    // Sources:
+    // * PBRT's FrDielectric in scattering.h
+    // * https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/totalinternalreflection
+    float sin2_theta = 1 - pow2(abs_cos_theta);
+    if (sin2_theta >= pow2(ior_i_over_o))
+        return 1.0f;
+
+    float t = pow5(1.0f - abs_cos_theta);
+    return (1.0f - t) * incident_specular + t;
+}
+
 //-----------------------------------------------------------------------------
 // Trigonometri utils
 //-----------------------------------------------------------------------------
