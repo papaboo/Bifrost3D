@@ -268,26 +268,34 @@ namespace GGX {
 using namespace optix;
 
 __inline_all__ float evaluate(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
-    if (GGX::effectively_smooth(alpha))
+    if (GGX::effectively_smooth(alpha) || wo.z == 0.0f || wi.z == 0.0f)
         return 0.0f;
 
-    bool is_reflection = same_hemisphere(wo, wi);
-    if (is_reflection)
-        return BSDFs::GGX_R::evaluate(alpha, specularity, wo, wi);
-    else {
-        float3 halfway = GGX_T::compute_halfway_vector(ior_i_over_o, wo, wi);
+    bool entering = wo.z >= 0.0f;
+    if (!entering) {
+        wo.z = -wo.z;
+        wi.z = -wi.z;
+    }
 
+    bool is_reflection = same_hemisphere(wo, wi);
+
+    float halfway_ior = is_reflection ? 1.0f : ior_i_over_o;
+    float3 halfway = GGX_T::compute_halfway_vector(halfway_ior, wo, wi);
+
+    float G = GGX::height_correlated_G(alpha, wo, wi);
+    float D = Distributions::GGX_VNDF::D(alpha, halfway);
+    float F = dielectric_schlick_fresnel(specularity, dot(wo, halfway), ior_i_over_o);
+
+    if (is_reflection)
+        return F * D * G / (4.0f * wo.z * wi.z);
+    else {
         // Discard backfacing microfacets. Equation 9.35 in PBRT4.
         if (dot(wi, halfway) * wi.z <= 0 || dot(wo, halfway) * wo.z <= 0)
             return 0.0f;
 
-        float G = BSDFs::GGX::height_correlated_G(alpha, wo, wi);
-        float D = Distributions::GGX_VNDF::D(alpha, halfway);
-        float F = 1.0f - schlick_fresnel(specularity, abs(dot(wo, halfway)));
-
         // Walter et al 07 equation 21. Similar to PBRT V3, equation 8.20, page 548
         float f1 = abs(dot(wo, halfway) * dot(wi, halfway) / (wo.z * wi.z));
-        float f2 = G * F * D * pow2(ior_i_over_o / (dot(wo, halfway) + ior_i_over_o * dot(wi, halfway)));
+        float f2 = (1 - F) * G * D * pow2(ior_i_over_o / (dot(wo, halfway) + ior_i_over_o * dot(wi, halfway)));
         return f1 * f2;
     }
 }
@@ -308,28 +316,27 @@ __inline_all__ PDF pdf(float alpha, float specularity, float ior_i_over_o, float
         wi.z = -wi.z;
     }
 
-    bool is_refraction = sign(wo.z) != sign(wi.z);
-    ior_i_over_o = is_refraction ? ior_i_over_o : 1.0f;
-    float3 halfway = GGX_T::compute_halfway_vector(ior_i_over_o, wo, wi);
+    bool is_reflection = same_hemisphere(wo, wi);
 
-    // Discard samples if the direction points into the surface (energy loss).
+    float halfway_ior = is_reflection ? 1.0f : ior_i_over_o;
+    float3 halfway = GGX_T::compute_halfway_vector(halfway_ior, wo, wi);
+
     // Discard backfacing microfacets. Equation 9.35 in PBRT4.
-    bool energy_loss = is_refraction ? wi.z >= 0.0f : wi.z < 0.0f;
-    bool backfacing_microfacet = is_refraction && (dot(wo, halfway) < 0.0f || dot(wi, halfway) >= 0.0f);
-    if (energy_loss || backfacing_microfacet)
+    bool backfacing_microfacet = !is_reflection && (dot(wo, halfway) < 0.0f || dot(wi, halfway) >= 0.0f);
+    if (backfacing_microfacet)
         return PDF::invalid();
 
-    float PDF = Distributions::GGX_VNDF::PDF(alpha, wo, halfway);
-
-    // Change of variable.
-    if (is_refraction)
-        PDF *= GGX_T::transmission_PDF_scale(ior_i_over_o, wo, wi, halfway);
-    else
-        PDF /= 4.0f * dot(wo, halfway);
+    PDF PDF = Distributions::GGX_VNDF::PDF(alpha, wo, halfway);
 
     // Scale the PDF by the probability to reflect or refract.
-    float reflection_propability = schlick_fresnel(specularity, dot(wo, halfway));
-    PDF *= is_refraction ? (1 - reflection_propability) : reflection_propability;
+    float reflection_probability = dielectric_schlick_fresnel(specularity, dot(wo, halfway), ior_i_over_o);
+    PDF *= is_reflection ? reflection_probability : (1 - reflection_probability);
+
+    // Change of variable.
+    if (is_reflection)
+        PDF *= 1 / (4.0f * dot(wo, halfway));
+    else
+        PDF *= GGX_T::transmission_PDF_scale(ior_i_over_o, wo, wi, halfway);
 
     return PDF;
 }
@@ -357,7 +364,7 @@ __inline_all__ BSDFSample sample(float alpha, float specularity, float ior_i_ove
 
     if (GGX::effectively_smooth(alpha)) {
         // Sample perfectly specular BTDF
-        float reflection_probability = schlick_fresnel(specularity, abs(wo.z));
+        float reflection_probability = dielectric_schlick_fresnel(specularity, abs(wo.z), ior_i_over_o);
         float transmission_probability = 1 - reflection_probability;
 
         if (random_sample.z < reflection_probability) {
@@ -368,8 +375,7 @@ __inline_all__ BSDFSample sample(float alpha, float specularity, float ior_i_ove
             bsdf_sample.PDF = PDF::delta_dirac(transmission_probability);
             // Sample perfectly specular BTDF
             if (!refract(bsdf_sample.direction, -wo, make_float3(0, 0, 1), ior_i_over_o))
-                // Return reflection ray from total internal reflection.
-                bsdf_sample.direction = { -wo.x, -wo.y, wo.z };
+                return BSDFSample::none(); // Should practically never happen, as total internal reflection is included in the Fresnel computation.
         }
 
         // Reflectance is proportional to the PDF.
@@ -377,26 +383,24 @@ __inline_all__ BSDFSample sample(float alpha, float specularity, float ior_i_ove
         bsdf_sample.reflectance = { reflectance, reflectance, reflectance };
     } else {
         float3 halfway = Distributions::GGX_VNDF::sample_halfway(alpha, wo, make_float2(random_sample));
-        float pdf = Distributions::GGX_VNDF::PDF(alpha, wo, halfway);
+        bsdf_sample.PDF = Distributions::GGX_VNDF::PDF(alpha, wo, halfway);
 
         // Reflect or refract based on Fresnel
-        float reflection_propability = schlick_fresnel(specularity, dot(wo, halfway));
-        bool is_reflection = random_sample.z < reflection_propability;
+        float reflection_probability = dielectric_schlick_fresnel(specularity, dot(wo, halfway), ior_i_over_o);
+        bool is_reflection = random_sample.z < reflection_probability;
 
         // Reflect or refract
         if (is_reflection) {
-            pdf *= reflection_propability;
-            pdf /= 4.0f * dot(wo, halfway);
-
             bsdf_sample.direction = reflect(-wo, halfway);
+
+            bsdf_sample.PDF *= reflection_probability / (4.0f * dot(wo, halfway));
         } else {
             if (!refract(bsdf_sample.direction, -wo, halfway, ior_i_over_o))
-                return BSDFSample::none(); // Remove the contribution for now.
+                return BSDFSample::none(); // Should practically never happen, as total internal reflection is included in the Fresnel computation.
 
-            pdf *= GGX_T::transmission_PDF_scale(ior_i_over_o, wo, bsdf_sample.direction, halfway);
-            pdf *= 1 - reflection_propability;
+            bsdf_sample.PDF *= 1 - reflection_probability;
+            bsdf_sample.PDF *= GGX_T::transmission_PDF_scale(ior_i_over_o, wo, bsdf_sample.direction, halfway);
         }
-        bsdf_sample.PDF = pdf;
 
         // Discard samples if the direction points into the surface (energy loss).
         bool energyloss = is_reflection ? bsdf_sample.direction.z < 0.0f : bsdf_sample.direction.z >= 0.0f;

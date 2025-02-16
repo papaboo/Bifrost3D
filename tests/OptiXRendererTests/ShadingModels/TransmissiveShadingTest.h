@@ -168,24 +168,27 @@ GTEST_TEST(TransmissiveShadingModel, regression_test) {
     const unsigned int MAX_SAMPLES = 2;
 
     BSDFResponse bsdf_responses[] = {
-        {400.362793f, 400.362793f, 400.362793f, 83.876236f},
-        {77.502472f, 79.134109f, 77.502472f, 63.220791f},
-        {904.332703f, 923.371338f, 904.332703f, 805.072449f},
-        {220.748367f, 225.395706f, 220.748367f, 199.066086f},
+        {101.145973f, 101.145973f, 101.145973f, 70.955925f},
+        {29.997084f, 29.997084f, 29.997084f, 19.304911f},
+        {3757.321777f, 3757.321777f, 3757.321777f, 445.397308f},
+        {4296.205566f, 4296.205566f, 4296.205566f, 235.904617f},
+        {609.079041f, 621.901794f, 609.079041f, 507.171906f},
+        {148.730103f, 151.861267f, 148.730103f, 126.277611f},
         {1632.925171f, 1667.302612f, 1632.925171f, 1718.868652f},
-        {408.665649f, 417.269165f, 408.665649f, 430.136108f} };
+        {408.665649f, 417.269165f, 408.665649f, 430.136139f} };
 
     Material material_params = frosted_glass_parameters();
     int response_index = 0;
-    for (float cos_theta_o : { 0.2f, 0.6f, 1.0f }) {
+    for (float cos_theta_o : { -0.7f, -0.1f, 0.4f, 1.0f }) {
         float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
         auto material = TransmissiveShading(material_params, wo.z);
+        wo.z = abs(wo.z);
         for (int s = 0; s < MAX_SAMPLES; ++s) {
             float3 rng_sample = make_float3(RNG::sample02(s), (s + 0.5f) / MAX_SAMPLES);
             BSDFSample sample = material.sample(wo, rng_sample);
-            // printf("{%.6ff, %.6ff, %.6ff, %.6ff},\n", sample.reflectance.x, sample.reflectance.y, sample.reflectance.z, sample.PDF);
+            // printf("{%.6ff, %.6ff, %.6ff, %.6ff},\n", sample.reflectance.x, sample.reflectance.y, sample.reflectance.z, sample.PDF.value());
             auto response = bsdf_responses[response_index++];
-
+            
             EXPECT_COLOR_EQ_PCT(response.reflectance, sample.reflectance, 0.0001f);
             EXPECT_PDF_EQ_PCT(response.PDF, sample.PDF, 0.0001f);
         }

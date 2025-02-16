@@ -537,7 +537,7 @@ GTEST_TEST(GGX, sampling_standard_deviation) {
     float alpha = 0.75f;
     float specularity = 0.5f;
     float ior_i_over_os[] = { 0.5f, 0.9f, 1.1f, 1.5f };
-    float expected_rho_std_devs[] = { 1.07f, 0.61f, 0.46f, 0.46f };
+    float expected_rho_std_devs[] = { 0.70f, 0.57f, 0.46f, 0.46f };
     for (int i = 0; i < 4; i++) {
         auto ggx = GGXWrapper(alpha, specularity, ior_i_over_os[i]);
         BSDFTestUtils::BSDF_sampling_variance_test(ggx, 1024, expected_rho_std_devs[i]);
