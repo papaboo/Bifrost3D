@@ -92,10 +92,6 @@ float encode_PDF(float pdf) {
         encoded_PDF = 1.0f;
     return encoded_PDF;
 }
-float decode_PDF(float encoded_pdf) {
-    float non_linear_PDF = encoded_pdf * 0.87f + 0.13f;
-    return non_linear_PDF / (1.0f - non_linear_PDF);
-}
 
 float estimate_alpha(float wo_dot_normal, float max_PDF) {
     using namespace Bifrost::Math;

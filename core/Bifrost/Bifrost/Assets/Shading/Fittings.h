@@ -59,7 +59,6 @@ extern const int wo_dot_normal_sample_count;
 extern const int max_PDF_sample_count;
 extern const float alphas[];
 float encode_PDF(float pdf);
-float decode_PDF(float encoded_PDF);
 float estimate_alpha(float wo_dot_normal, float max_PDF);
 
 } // NS Estimate_GGX_bounded_VNDF_alpha 
