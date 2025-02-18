@@ -182,7 +182,7 @@ GTEST_TEST(GGX_R, estimate_bounded_VNDF_alpha_from_max_PDF) {
     for (int i = 0; i < sample_count; i++) {
         optix::float2 sample = RNG::sample02(i);
         float cos_theta_o = sample.x;
-        float max_PDF = Estimate_GGX_bounded_VNDF_alpha::decode_PDF(sample.y);
+        float max_PDF = sample.y / (1 - sample.y); // Non-linear mapping from [0, 1] to [0, inf[
         float estimated_alpha = Estimate_GGX_bounded_VNDF_alpha::estimate_alpha(cos_theta_o, max_PDF);
 
         optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
