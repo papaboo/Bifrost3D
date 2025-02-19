@@ -27,6 +27,7 @@ set(INPUT_SRCS
 set(MATH_SRCS
   Math/Distribution1DTest.h
   Math/Distribution2DTest.h
+  Math/FixedPointTypesTest.h
   Math/LineTest.h
   Math/MatrixTest.h
   Math/OctahedralNormalTest.h

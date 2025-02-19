@@ -10,6 +10,7 @@
 #define _BIFROST_MATH_TYPE_TRAITS_TEST_H_
 
 #include <Bifrost/Math/Color.h>
+#include <Bifrost/Math/FixedPointTypes.h>
 #include <Bifrost/Math/Matrix.h>
 #include <Bifrost/Math/Plane.h>
 #include <Bifrost/Math/Quaternion.h>
@@ -81,6 +82,12 @@ GTEST_TEST(Math_TypeTraits, Transform) {
     EXPECT_TRUE(std::is_trivial<Transform>::value);
     EXPECT_TRUE(std::is_standard_layout<Transform>::value);
     EXPECT_TRUE(std::is_pod<Transform>::value);
+}
+
+GTEST_TEST(Math_TypeTraits, UNorm8) {
+    EXPECT_TRUE(std::is_trivial<UNorm8>::value);
+    EXPECT_TRUE(std::is_standard_layout<UNorm8>::value);
+    EXPECT_TRUE(std::is_pod<UNorm8>::value);
 }
 
 GTEST_TEST(Math_TypeTraits, Vector2f) {
