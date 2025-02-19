@@ -39,9 +39,15 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
     { // Add a directional light.
         Transform light_transform = Transform(Vector3f(20.0f, 20.0f, -20.0f));
         light_transform.look_at(Vector3f::zero());
-        SceneNode light_node = SceneNode("light", light_transform);
+        SceneNode light_node = SceneNode("Directional light", light_transform);
         light_node.set_parent(root_node);
         DirectionalLight(light_node, RGB(3.0f, 2.9f, 2.5f));
+    }
+
+    { // Add sphere light
+        SceneNode sphere_light_node = SceneNode("Sphere light", Transform(Vector3f(1, 5, 2)));
+        SphereLight light = SphereLight(sphere_light_node, RGB(800.0f, 600.0f, 600.0f), 1.0f);
+        sphere_light_node.set_parent(root_node);
     }
 
     { // Create floor.
@@ -116,7 +122,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
         diamond_node.set_global_transform(Transform(Vector3f(-3, 0, 0), rotation));
         diamond_node.set_parent(root_node);
 
-        Material diamond_material = Material::create_transmissive("Diamond", RGB(1.0f), 0.0f, diamond_specularity);
+        Material diamond_material = Material::create_transmissive("Diamond", RGB(0.94f), 0.0f, diamond_specularity);
         replace_material(diamond_material, diamond_node, "pCone1_DiamondOutside_0");
     }
 
@@ -169,8 +175,6 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
             }
 
             { // Places tiles
-                RNG::XorShift32 rng = RNG::XorShift32(73856093);
-
                 auto create_tile_at = [&](Transform transform) {
                     SceneNode tile_node = SceneNode("Tile", transform);
                     MeshModel(tile_node, tile_mesh, tile_material);
@@ -210,9 +214,14 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
         { // Water
             Material water_material = Material::create_transmissive("Water", RGB(0.95f), 0.0f, water_specularity);
 
+            RNG::XorShift32 rng = RNG::XorShift32(73856093);
+
             Mesh water_surface = MeshCreation::plane(128, positions_and_normals);
-            for (Vector3f& position : water_surface.get_position_iterable())
-                position.y += 0.02f * (sin(10 * position.x) + sin(7 * position.z));
+            for (Vector3f& position : water_surface.get_position_iterable()) {
+                position.y += 0.02f * (sin(11 * position.x) + sin(7 * position.z));
+                position.y += 0.01f * (sin(3 * position.x + 7) + sin(5 * position.z + 3));
+                position.y += 0.001f * (rng.sample1f() - 0.5f);
+            }
             water_surface.compute_bounds();
             MeshUtils::compute_normals(water_surface);
 
