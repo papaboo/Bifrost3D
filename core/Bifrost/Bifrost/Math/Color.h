@@ -10,6 +10,7 @@
 #define _BIFROST_MATH_COLOR_H_
 
 #include <Bifrost/Core/Defines.h>
+#include <Bifrost/Math/FixedPointTypes.h>
 
 #include <algorithm>
 #include <sstream>
@@ -240,11 +241,11 @@ struct RGBA final {
 //*****************************************************************************
 
 struct RGB24 {
-    unsigned char r, g, b;
+    UNorm8 r, g, b;
 };
 
 struct RGBA32 {
-    unsigned char r, g, b, a;
+    UNorm8 r, g, b, a;
 };
 
 //*****************************************************************************

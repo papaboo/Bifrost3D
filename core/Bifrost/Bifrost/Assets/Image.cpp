@@ -223,24 +223,22 @@ Images::PixelData Images::get_pixels(ImageID image_ID, int mipmap_level) {
 }
 
 static RGBA get_nonlinear_pixel(Images::PixelData pixels, PixelFormat format, unsigned int index) {
-    float byte_normalizer = 1.0f / 255.0f;
-
     switch (format) {
     case PixelFormat::Alpha8: {
-        float alpha = ((unsigned char*)pixels)[index] * byte_normalizer;
+        float alpha = ((UNorm8*)pixels)[index];
         return RGBA(1.0f, 1.0f, 1.0f, alpha);
     }
     case PixelFormat::Intensity8: {
-        float i = ((unsigned char*)pixels)[index] * byte_normalizer;
+        float i = ((UNorm8*)pixels)[index];
         return RGBA(i, i, i, 1.0f);
     }
     case PixelFormat::RGB24: {
         RGB24 pixel = ((RGB24*)pixels)[index];
-        return RGBA(pixel.r * byte_normalizer, pixel.g * byte_normalizer, pixel.b * byte_normalizer, 1.0f);
+        return RGBA(pixel.r, pixel.g, pixel.b, 1.0f);
     }
     case PixelFormat::RGBA32: {
         RGBA32 pixel = ((RGBA32*)pixels)[index];
-        return RGBA(pixel.r * byte_normalizer, pixel.g * byte_normalizer, pixel.b * byte_normalizer, pixel.a * byte_normalizer);
+        return RGBA(pixel.r, pixel.g, pixel.b, pixel.a);
     }
     case PixelFormat::Intensity_Float: {
         float value = ((float*)pixels)[index];
@@ -306,28 +304,28 @@ static void set_linear_pixel(Images::PixelData pixels, PixelFormat pixel_format,
     color = gammacorrect(color, 1.0f / gamma);
     switch (pixel_format) {
     case PixelFormat::Alpha8: {
-        unsigned char* pixel = ((unsigned char*)pixels) + index;
-        pixel[0] = unsigned char(clamp(color.a * 255.0f + 0.5f, 0.0f, 255.0f));
+        UNorm8* pixel = ((UNorm8*)pixels) + index;
+        pixel[0] = color.a;
         break;
     }
     case PixelFormat::Intensity8: {
-        unsigned char* pixel = ((unsigned char*)pixels) + index;
-        pixel[0] = unsigned char(clamp(color.r * 255.0f + 0.5f, 0.0f, 255.0f));
+        UNorm8* pixel = ((UNorm8*)pixels) + index;
+        pixel[0] = color.r;
         break;
     }
     case PixelFormat::RGB24: {
         RGB24* pixel = ((RGB24*)pixels) + index;
-        pixel->r = unsigned char(clamp(color.r * 255.0f + 0.5f, 0.0f, 255.0f));
-        pixel->g = unsigned char(clamp(color.g * 255.0f + 0.5f, 0.0f, 255.0f));
-        pixel->b = unsigned char(clamp(color.b * 255.0f + 0.5f, 0.0f, 255.0f));
+        pixel->r = color.r;
+        pixel->g = color.g;
+        pixel->b = color.b;
         break;
     }
     case PixelFormat::RGBA32: {
         RGBA32* pixel = ((RGBA32*)pixels) + index;
-        pixel->r = unsigned char(clamp(color.r * 255.0f + 0.5f, 0.0f, 255.0f));
-        pixel->g = unsigned char(clamp(color.g * 255.0f + 0.5f, 0.0f, 255.0f));
-        pixel->b = unsigned char(clamp(color.b * 255.0f + 0.5f, 0.0f, 255.0f));
-        pixel->a = unsigned char(clamp(color.a * 255.0f + 0.5f, 0.0f, 255.0f));
+        pixel->r = color.r;
+        pixel->g = color.g;
+        pixel->b = color.b;
+        pixel->a = color.a;
         break;
     }
     case PixelFormat::Intensity_Float: {
@@ -401,11 +399,11 @@ void Images::change_format(ImageID image_ID, PixelFormat new_format, float new_g
     for (unsigned int m = 1; m < image.get_mipmap_count(); ++m)
         total_pixel_count += image.get_width(m) * image.get_height(m) * image.get_depth(m);
 
-    auto gamma_correct_bytes = [](unsigned char* pixels, unsigned int total_pixel_count, float gamma) {
+    auto gamma_correct_bytes = [](UNorm8* pixels, unsigned int total_pixel_count, float gamma) {
         for (unsigned int p = 0; p < total_pixel_count; ++p) {
-            unsigned char linear_value = pixels[p];
-            float non_linear_pixel = pow(linear_value / 255.0f, gamma);
-            pixels[p] = unsigned char(clamp(non_linear_pixel * 255.0f + 0.5f, 0.0f, 255.0f));
+            UNorm8 linear_value = pixels[p];
+            float non_linear_pixel = pow(linear_value, gamma);
+            pixels[p] = non_linear_pixel;
         }
     };
 
@@ -413,11 +411,11 @@ void Images::change_format(ImageID image_ID, PixelFormat new_format, float new_g
         // Gamma correct if intensity values have been gamma corrected.
         // Alpha is not affected by gamma, so new gamma is effectively one.
         if (old_gamma != 1.0f)
-            gamma_correct_bytes(image.get_pixels<unsigned char>(), total_pixel_count, old_gamma);
+            gamma_correct_bytes(image.get_pixels<UNorm8>(), total_pixel_count, old_gamma);
     } else if (old_format == PixelFormat::Alpha8 && new_format == PixelFormat::Intensity8) {
         // Alpha is not affected by gamma, so old gamma is effectively one.
         if (new_gamma != 1.0f)
-            gamma_correct_bytes(image.get_pixels<unsigned char>(), total_pixel_count, 1.0f / new_gamma);
+            gamma_correct_bytes(image.get_pixels<UNorm8>(), total_pixel_count, 1.0f / new_gamma);
     } else {
         // Formatsizes don't match up and we need to copy to a new pixel allocation.
         PixelData new_pixels = allocate_pixels(new_format, total_pixel_count);
@@ -426,7 +424,7 @@ void Images::change_format(ImageID image_ID, PixelFormat new_format, float new_g
         if (old_format == PixelFormat::RGBA32 && new_format == PixelFormat::Alpha8) {
             // Copy the alpha channel from RGBA32 into Alpha8
             RGBA32* old_pixels = image.get_pixels<RGBA32>();
-            unsigned char* new_pixels_typed = (unsigned char*)new_pixels;
+            UNorm8* new_pixels_typed = (UNorm8*)new_pixels;
             for (unsigned int p = 0; p < total_pixel_count; ++p)
                 new_pixels_typed[p] = old_pixels[p].a;
         } else if (!has_alpha(old_format) && new_format == PixelFormat::Alpha8) {
@@ -477,14 +475,14 @@ void Image::clear(Math::RGBA clear_color) {
     PixelFormat format = get_pixel_format();
     int pixel_size = size_of(format);
     unsigned int total_pixel_count = get_total_pixel_count();
-    unsigned char* pixels_begin = (unsigned char*)get_pixels();
-    unsigned char* pixels_end = pixels_begin + total_pixel_count * pixel_size;
+    byte* pixels_begin = (byte*)get_pixels();
+    byte* pixels_end = pixels_begin + total_pixel_count * pixel_size;
 
     // Copy the first pixel into the rest of the pixels.
     if (pixel_size == 1)
         memset(pixels_begin + 1, *pixels_begin, total_pixel_count);
     else
-        for (unsigned char* pixel_itr = pixels_begin + pixel_size; pixel_itr < pixels_end; pixel_itr += pixel_size)
+        for (byte* pixel_itr = pixels_begin + pixel_size; pixel_itr < pixels_end; pixel_itr += pixel_size)
             memcpy(pixel_itr, pixels_begin, pixel_size);
 }
 
@@ -596,7 +594,7 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
             memcpy(new_tint_pixels, tint.get_pixels(), size.x * size.y * size_of(tint_format));
             // Set roughness to multiplicative identity.
             for (unsigned int i = 0; i < size.x * size.y; ++i)
-                new_tint_pixels[i].a = 255;
+                new_tint_pixels[i].a = byte(255);
             return tint_sans_roughness;
         } else
             return tint;
@@ -639,8 +637,8 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
 
         Image tint_roughness = Image::create2D(tint.get_name() + "_" + roughness.get_name(), PixelFormat::RGBA32, tint.get_gamma(), size, mipmap_count);
 
-        const unsigned char* tint_pixels = (const unsigned char*)tint.get_pixels();
-        const unsigned char* roughness_pixels = (unsigned char*)roughness.get_pixels() + roughness_channel;
+        const UNorm8* tint_pixels = (const UNorm8*)tint.get_pixels();
+        const UNorm8* roughness_pixels = (const UNorm8*)roughness.get_pixels() + roughness_channel;
         RGBA32* tint_roughness_pixels = tint_roughness.get_pixels<RGBA32>();
 
         #pragma omp parallel for schedule(dynamic, 16)
@@ -664,9 +662,9 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
             else
                 // Roughness is stored as a color and should be degammaed.
                 for (int p = pixel_begin; p < pixel_end; ++p) {
-                    float nonlinear_roughness = roughness_pixels[p * roughness_pixel_size] / 255.0f;
+                    float nonlinear_roughness = roughness_pixels[p * roughness_pixel_size];
                     float linear_roughness = powf(nonlinear_roughness, roughness.get_gamma());
-                    tint_roughness_pixels[p].a = unsigned char(linear_roughness * 255 + 0.5f);
+                    tint_roughness_pixels[p].a = linear_roughness;
                 }
         }
 

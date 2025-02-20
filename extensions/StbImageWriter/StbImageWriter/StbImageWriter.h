@@ -29,10 +29,10 @@ inline bool write(Bifrost::Assets::ImageID imageID, const std::string& path) {
 
 bool write(unsigned char* pixels, unsigned int width, unsigned int height, unsigned int channel_count, const std::string& path);
 inline bool write(Bifrost::Math::RGB24* pixels, unsigned int width, unsigned int height, const std::string& path) {
-    return write(&pixels[0].r, width, height, 3, path);
+    return write(&pixels[0].r.raw, width, height, 3, path);
 }
 inline bool write(Bifrost::Math::RGBA32* pixels, unsigned int width, unsigned int height, const std::string& path) {
-    return write(&pixels[0].r, width, height, 4, path);
+    return write(&pixels[0].r.raw, width, height, 4, path);
 }
 
 bool write(float* pixels, unsigned int width, unsigned int height, unsigned int channel_count, const std::string& path);
