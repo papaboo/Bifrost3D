@@ -150,9 +150,7 @@ void mesh_combine_whole_scene(SceneNodeID scene_root) {
 
         // Least significant bits in key consist of mesh flags.
         Mesh mesh = MeshModels::get_mesh_ID(model_ID);
-        key |= int(mesh.get_positions() ? MeshFlag::Position : MeshFlag::None);
-        key |= int(mesh.get_normals() ? MeshFlag::Normal : MeshFlag::None);
-        key |= int(mesh.get_texcoords() ? MeshFlag::Texcoord : MeshFlag::None);
+        key |= mesh.get_flags().raw();
 
         OrderedModel model = { key, model_ID };
         ordered_models.push_back(model);
