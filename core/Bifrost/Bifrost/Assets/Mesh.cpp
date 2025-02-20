@@ -39,22 +39,24 @@ void Meshes::allocate(unsigned int capacity) {
 
     // Allocate dummy element at 0.
     m_names[0] = "Dummy Node";
-    Buffers buffers = {};
-    m_buffers[0] = buffers;
+    m_buffers[0] = {};
     m_bounds[0] = AABB(Vector3f(nanf("")), Vector3f(nanf("")));
+}
+
+void Meshes::delete_buffers(Meshes::Buffers& buffers) {
+    delete[] buffers.primitives; buffers.primitives = nullptr;
+    delete[] buffers.positions; buffers.positions = nullptr;
+    delete[] buffers.normals; buffers.normals = nullptr;
+    delete[] buffers.texcoords; buffers.texcoords = nullptr;
+    delete[] buffers.tint_and_roughness; buffers.tint_and_roughness = nullptr;
 }
 
 void Meshes::deallocate() {
     if (!is_allocated())
         return;
 
-    for (MeshID id : m_UID_generator) {
-        Buffers& buffers = m_buffers[id];
-        delete[] buffers.primitives;
-        delete[] buffers.positions;
-        delete[] buffers.normals;
-        delete[] buffers.texcoords;
-    }
+    for (MeshID id : m_UID_generator)
+        delete_buffers(m_buffers[id]);
     delete[] m_names; m_names = nullptr;
     delete[] m_buffers; m_buffers = nullptr;
     delete[] m_bounds; m_bounds = nullptr;
@@ -108,6 +110,7 @@ MeshID Meshes::create(const std::string& name, unsigned int primitive_count, uns
     m_buffers[id].positions = (buffer_bitmask.contains(MeshFlag::Position)) ? new Vector3f[vertex_count] : nullptr;
     m_buffers[id].normals = (buffer_bitmask.contains(MeshFlag::Normal)) ? new Vector3f[vertex_count] : nullptr;
     m_buffers[id].texcoords = (buffer_bitmask.contains(MeshFlag::Texcoord)) ? new Vector2f[vertex_count] : nullptr;
+    m_buffers[id].tint_and_roughness = (buffer_bitmask.contains(MeshFlag::TintAndRoughness)) ? new TintRoughness[vertex_count] : nullptr;
     m_bounds[id] = AABB::invalid();
     m_changes.set_change(id, Change::Created);
 
@@ -116,13 +119,7 @@ MeshID Meshes::create(const std::string& name, unsigned int primitive_count, uns
 
 void Meshes::destroy(MeshID mesh_ID) {
     if (m_UID_generator.erase(mesh_ID)) {
-
-        Buffers& buffers = m_buffers[mesh_ID];
-        delete[] buffers.primitives;
-        delete[] buffers.positions;
-        delete[] buffers.normals;
-        delete[] buffers.texcoords;
-
+        delete_buffers(m_buffers[mesh_ID]);
         m_changes.add_change(mesh_ID, Change::Destroyed);
     }
 }
@@ -158,6 +155,10 @@ Mesh deep_clone(Mesh mesh) {
     Vector2f* texcoords_begin = mesh.get_texcoords();
     if (texcoords_begin != nullptr)
         std::copy_n(texcoords_begin, mesh.get_vertex_count(), new_mesh.get_texcoords());
+
+    TintRoughness* tint_begin = mesh.get_tint_and_roughness();
+    if (tint_begin != nullptr)
+        std::copy_n(tint_begin, mesh.get_vertex_count(), new_mesh.get_tint_and_roughness());
 
     Vector3ui* primitives_begin = mesh.get_primitives();
     if (primitives_begin != nullptr)
@@ -260,6 +261,15 @@ Mesh combine(const std::string& name,
         }
     }
 
+    if (flags.contains(MeshFlag::TintAndRoughness)) {
+        TintRoughness* colors = merged_mesh.get_tint_and_roughness();
+        for (TransformedMesh transformed_mesh : meshes) {
+            Mesh mesh = transformed_mesh.mesh;
+            memcpy(colors, mesh.get_tint_and_roughness(), sizeof(TintRoughness) * mesh.get_vertex_count());
+            colors += mesh.get_vertex_count();
+        }
+    }
+
     merged_mesh.compute_bounds();
 
     return merged_mesh.get_ID();
@@ -314,6 +324,7 @@ Mesh merge_duplicate_vertices(Mesh mesh, MeshFlags attribute_types) {
     Vector3f* positions = attribute_types.is_set(MeshFlag::Position) ? mesh.get_positions() : nullptr;
     Vector3f* normals = attribute_types.is_set(MeshFlag::Normal) ? mesh.get_normals() : nullptr;
     Vector2f* uvs = attribute_types.is_set(MeshFlag::Texcoord) ? mesh.get_texcoords() : nullptr;
+    TintRoughness* colors = attribute_types.is_set(MeshFlag::TintAndRoughness) ? mesh.get_tint_and_roughness() : nullptr;
 
     // Detect duplicate vertices and fill array of new vertex indices.
     unsigned int duplicate_count = 0;
@@ -332,6 +343,8 @@ Mesh merge_duplicate_vertices(Mesh mesh, MeshFlags attribute_types) {
                 is_equal &= normals[v] == normals[j];
             if (uvs != nullptr)
                 is_equal &= uvs[v] == uvs[j];
+            if (colors != nullptr)
+                is_equal &= colors[v] == colors[j];
 
             if (is_equal) {
                 duplicate_found = true;
@@ -355,6 +368,7 @@ Mesh merge_duplicate_vertices(Mesh mesh, MeshFlags attribute_types) {
     Vector3f* new_positions = new_mesh.get_positions();
     Vector3f* new_normals = new_mesh.get_normals();
     Vector2f* new_uvs = new_mesh.get_texcoords();
+    TintRoughness* new_colors = new_mesh.get_tint_and_roughness();
     for (unsigned int v = 0; v < vertex_count; ++v) {
         unsigned int new_v = new_vertex_indices[v];
         if (positions != nullptr)
@@ -363,6 +377,8 @@ Mesh merge_duplicate_vertices(Mesh mesh, MeshFlags attribute_types) {
             new_normals[new_v] = normals[v];
         if (uvs != nullptr)
             new_uvs[new_v] = uvs[v];
+        if (colors != nullptr)
+            new_colors[new_v] = colors[v];
     }
 
     // Copy primitives one index at a time to support primitives of arbitrary arity.
