@@ -14,19 +14,20 @@
 #include <Bifrost/Core/Iterable.h>
 #include <Bifrost/Core/UniqueIDGenerator.h>
 #include <Bifrost/Math/AABB.h>
+#include <Bifrost/Math/Color.h>
 #include <Bifrost/Math/Matrix.h>
 #include <Bifrost/Math/Transform.h>
 #include <Bifrost/Math/Vector.h>
 
-namespace Bifrost {
-namespace Assets {
+namespace Bifrost::Assets {
 
 enum class MeshFlag : unsigned char {
-    None       = 0u,
-    Position   = 1u << 0u,
-    Normal     = 1u << 1u,
-    Texcoord   = 1u << 2u,
-    AllBuffers = Position | Normal | Texcoord
+    None             = 0u,
+    Position         = 1u << 0u,
+    Normal           = 1u << 1u,
+    Texcoord         = 1u << 2u,
+    TintAndRoughness = 1u << 3u,
+    AllBuffers = Position | Normal | Texcoord | TintAndRoughness
 };
 typedef Core::Bitmask<MeshFlag> MeshFlags;
 
@@ -36,6 +37,13 @@ typedef Core::Bitmask<MeshFlag> MeshFlags;
 class Meshes;
 typedef Core::TypedUIDGenerator<Meshes> MeshIDGenerator;
 typedef MeshIDGenerator::UID MeshID;
+
+struct TintRoughness {
+    Math::RGB24 tint;
+    Math::UNorm8 roughness;
+
+    __always_inline__ bool operator==(TintRoughness rhs) const { return memcmp(this, &rhs, sizeof(rhs)) == 0; }
+};
 
 //----------------------------------------------------------------------------
 // Container for mesh properties and their bufers.
@@ -61,7 +69,7 @@ public:
 
     static inline Iterator begin() { return m_UID_generator.begin(); }
     static inline Iterator end() { return m_UID_generator.end(); }
-    static inline Core::Iterable<Iterator> get_iterable() { return Core::Iterable<Iterator>(begin(), end()); }
+    static inline Core::Iterable<Iterator> get_iterable() { return Core::Iterable(begin(), end()); }
 
     static inline std::string get_name(MeshID mesh_ID) { return m_names[mesh_ID]; }
     static inline void set_name(MeshID mesh_ID, const std::string& name) { m_names[mesh_ID] = name; }
@@ -75,6 +83,7 @@ public:
     static inline Math::Vector3f* get_positions(MeshID mesh_ID) { return m_buffers[mesh_ID].positions; }
     static inline Math::Vector3f* get_normals(MeshID mesh_ID) { return m_buffers[mesh_ID].normals; }
     static inline Math::Vector2f* get_texcoords(MeshID mesh_ID) { return m_buffers[mesh_ID].texcoords; }
+    static inline TintRoughness* get_tint_and_roughness(MeshID mesh_ID) { return m_buffers[mesh_ID].tint_and_roughness; }
     static inline Math::AABB get_bounds(MeshID mesh_ID) { return m_bounds[mesh_ID]; }
     static inline void set_bounds(MeshID mesh_ID, Math::AABB bounds) { m_bounds[mesh_ID] = bounds; }
     static Math::AABB compute_bounds(MeshID mesh_ID);
@@ -108,7 +117,9 @@ private:
         Math::Vector3f* positions;
         Math::Vector3f* normals;
         Math::Vector2f* texcoords;
+        TintRoughness* tint_and_roughness;
     };
+    static void delete_buffers(Buffers& buffers);
 
     static MeshIDGenerator m_UID_generator;
     static std::string* m_names;
@@ -149,18 +160,20 @@ public:
 
     inline unsigned int get_index_count() { return Meshes::get_index_count(m_ID); }
     inline unsigned int* get_indices() { return Meshes::get_indices(m_ID); }
-    inline Core::Iterable<unsigned int*> get_indices_iterable() { return Core::Iterable<unsigned int*>(get_indices(), get_index_count()); }
+    inline Core::Iterable<unsigned int*> get_indices_iterable() { return Core::Iterable(get_indices(), get_index_count()); }
     inline unsigned int get_primitive_count() { return Meshes::get_primitive_count(m_ID); }
     inline Math::Vector3ui* get_primitives() { return Meshes::get_primitives(m_ID); }
-    inline Core::Iterable<Math::Vector3ui*> get_primitive_iterable() { return Core::Iterable<Math::Vector3ui*>(get_primitives(), get_primitive_count()); }
+    inline Core::Iterable<Math::Vector3ui*> get_primitive_iterable() { return Core::Iterable(get_primitives(), get_primitive_count()); }
 
     inline unsigned int get_vertex_count() { return Meshes::get_vertex_count(m_ID); }
     inline Math::Vector3f* get_positions() { return Meshes::get_positions(m_ID); }
-    inline Core::Iterable<Math::Vector3f*> get_position_iterable() { return Core::Iterable<Math::Vector3f*>(get_positions(), get_vertex_count()); }
+    inline Core::Iterable<Math::Vector3f*> get_position_iterable() { return Core::Iterable(get_positions(), get_vertex_count()); }
     inline Math::Vector3f* get_normals() { return Meshes::get_normals(m_ID); }
-    inline Core::Iterable<Math::Vector3f*> get_normal_iterable() { return Core::Iterable<Math::Vector3f*>(get_normals(), get_vertex_count()); }
+    inline Core::Iterable<Math::Vector3f*> get_normal_iterable() { return Core::Iterable(get_normals(), get_vertex_count()); }
     inline Math::Vector2f* get_texcoords() { return Meshes::get_texcoords(m_ID); }
-    inline Core::Iterable<Math::Vector2f*> get_texcoord_iterable() { return Core::Iterable<Math::Vector2f*>(get_texcoords(), get_vertex_count()); }
+    inline Core::Iterable<Math::Vector2f*> get_texcoord_iterable() { return Core::Iterable(get_texcoords(), get_vertex_count()); }
+    inline TintRoughness* get_tint_and_roughness() { return Meshes::get_tint_and_roughness(m_ID); }
+    inline Core::Iterable<TintRoughness*> get_tint_and_roughness_iterable() { return Core::Iterable(get_tint_and_roughness(), get_vertex_count()); }
 
     inline Math::AABB get_bounds() { return Meshes::get_bounds(m_ID); }
     inline void set_bounds(Math::AABB bounds) { Meshes::set_bounds(m_ID, bounds); }
@@ -170,6 +183,7 @@ public:
         MeshFlags mesh_flags = get_positions() ? MeshFlag::Position : MeshFlag::None;
         mesh_flags |= get_normals() ? MeshFlag::Normal : MeshFlag::None;
         mesh_flags |= get_texcoords() ? MeshFlag::Texcoord : MeshFlag::None;
+        mesh_flags |= get_tint_and_roughness() ? MeshFlag::TintAndRoughness : MeshFlag::None;
         return mesh_flags;
     }
 
@@ -228,7 +242,7 @@ void compute_normals(Mesh mesh);
 template <typename RandomAccessIterator>
 void expand_indexed_buffer(Math::Vector3ui* primitives, int primitive_count, RandomAccessIterator buffer_itr, 
                            RandomAccessIterator expanded_buffer_itr) {
-    for (Math::Vector3ui primitive : Core::Iterable<Math::Vector3ui*>(primitives, primitive_count)) {
+    for (Math::Vector3ui primitive : Core::Iterable(primitives, primitive_count)) {
         *expanded_buffer_itr++ = buffer_itr[primitive.x];
         *expanded_buffer_itr++ = buffer_itr[primitive.y];
         *expanded_buffer_itr++ = buffer_itr[primitive.z];
@@ -277,7 +291,6 @@ inline bool has_invalid_indices(Mesh mesh) {
 
 } // NS MeshTests
 
-} // NS Assets
-} // NS Bifrost
+} // NS Bifrost::Assets
 
 #endif // _BIFROST_ASSETS_MESH_H_
