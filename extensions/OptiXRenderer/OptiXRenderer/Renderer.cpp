@@ -1260,10 +1260,10 @@ struct Renderer::Implementation {
             RGBA32* pixels = new RGBA32[frame_pixel_count];
             half4* gpu_pixels = (half4*)output_buffer->map();
             for (int i = 0; i < frame_pixel_count; ++i) {
-                pixels[i].r = unsigned char(gpu_pixels[i].x * 255.0f + 0.5f);
-                pixels[i].g = unsigned char(gpu_pixels[i].y * 255.0f + 0.5f);
-                pixels[i].b = unsigned char(gpu_pixels[i].z * 255.0f + 0.5f);
-                pixels[i].a = 255;
+                pixels[i].r = byte(gpu_pixels[i].x * 255.0f + 0.5f);
+                pixels[i].g = byte(gpu_pixels[i].y * 255.0f + 0.5f);
+                pixels[i].b = byte(gpu_pixels[i].z * 255.0f + 0.5f);
+                pixels[i].a = byte(255);
             }
             output_buffer->unmap();
 

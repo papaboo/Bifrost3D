@@ -39,10 +39,10 @@ GTEST_TEST(Math_FixedPointTypes, UNorm8) {
     EXPECT_EQ(0.0f, zero.value());
 
     // Test that unchecked creation works similarly to the standard constructor for values in range.
-    EXPECT_EQ(UNorm8(0.0f), UNorm8::create_unchecked(0.0f));
-    EXPECT_EQ(UNorm8(0.2f), UNorm8::create_unchecked(0.2f));
-    EXPECT_EQ(UNorm8(0.7f), UNorm8::create_unchecked(0.7f));
-    EXPECT_EQ(UNorm8(1.0f), UNorm8::create_unchecked(1.0f));
+    EXPECT_EQ(UNorm8(0.0f).raw, UNorm8::create_unchecked(0.0f).raw);
+    EXPECT_EQ(UNorm8(0.2f).raw, UNorm8::create_unchecked(0.2f).raw);
+    EXPECT_EQ(UNorm8(0.7f).raw, UNorm8::create_unchecked(0.7f).raw);
+    EXPECT_EQ(UNorm8(1.0f).raw, UNorm8::create_unchecked(1.0f).raw);
 }
 
 } // NS Math

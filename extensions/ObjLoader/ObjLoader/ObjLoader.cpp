@@ -84,7 +84,7 @@ void load_material_images(const std::vector<tinyobj::material_t>& materials, con
                     unsigned int mipmap_count = tint_image.get_mipmap_count();
                     Vector2ui size = tint_image.get_size_2D();
                     Image coverage_image = Image::create2D(tint_image_path, PixelFormat::Alpha8, 1.0f, size);
-                    unsigned char* coverage_pixels = coverage_image.get_pixels<unsigned char>();
+                    UNorm8* coverage_pixels = coverage_image.get_pixels<UNorm8>();
 
                     float min_coverage = 1.0f;
                     if (tint_image.get_pixel_format() == PixelFormat::RGBA32) {
@@ -93,7 +93,7 @@ void load_material_images(const std::vector<tinyobj::material_t>& materials, con
                         for (unsigned int p = 0; p < tint_image.get_pixel_count(); ++p) {
                             coverage_pixels[p] = tint_pixels[p].a;
                             min_coverage = fminf(min_coverage, coverage_pixels[p]);
-                            tint_pixels[p].a = 255;
+                            tint_pixels[p].a = byte(255);
                         }
                         min_coverage /= 255;
 
