@@ -232,13 +232,34 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
         cylinder_node.set_parent(root_node);
     }
 
-    { // Copper / rubber sphere.
-        struct TintRoughness {
-            unsigned char r, g, b, roughness;
-        };
+    { // Cube with vertex colors and roughness
+        Materials::Data material_data = Materials::Data::create_dielectric(RGB::white(), 1.0f);
+        MaterialID material_ID = Materials::create("Vertex attributes", material_data);
 
-        const TintRoughness rubber_tint = { 3, 3, 3, 192 };
-        const TintRoughness metal_tint = { 255, 255, 255, 0 };
+        Transform transform = Transform(Vector3f(-3.0f, 0.5f, 0.0f));
+        SceneNode cube_node = SceneNodes::create("Cube with vertex attributes", transform);
+        Mesh box_mesh = MeshCreation::box(2, Vector3f::one(), { MeshFlag::Position, MeshFlag::TintAndRoughness });
+
+        // Update tint and roughness
+        // Set the color to the vertex position, in the range [0, 1]
+        // Roughness should be 1 at the edges, and 0 at the center of each side.
+        Vector3f* positions = box_mesh.get_positions();
+        TintRoughness* tints = box_mesh.get_tint_and_roughness();
+        for (unsigned int v = 0; v < box_mesh.get_vertex_count(); ++v) {
+            tints[v].tint.r = positions[v].x;
+            tints[v].tint.g = positions[v].y;
+            tints[v].tint.b = positions[v].z;
+            Vector3f roughness3d = 2.0f * (positions[v] - 0.5f);
+            tints[v].roughness = Math::min(Math::min(roughness3d.x, roughness3d.y), roughness3d.z);
+        }
+
+        MeshModels::create(cube_node.get_ID(), box_mesh.get_ID(), material_ID);
+        cube_node.set_parent(root_node);
+    }
+
+    { // Copper / rubber sphere.
+        const TintRoughness rubber_tint = { byte(3), byte(3), byte(3), byte(192) };
+        const TintRoughness metal_tint = { 1.0f, 1.0f, 1.0f, 0.0f };
 
         const int size = 1024;
         const int metal_streak_count = 5;
@@ -259,7 +280,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
                     tint_roughness_pixels[_x + y * size] = metal_tint;
                     float t = inverse_lerp<float>(float(streak_begin), streak_end - 1.0f, float(x));
                     float roughness = sin(t * PI<float>());
-                    tint_roughness_pixels[_x + y * size].roughness = 255u - unsigned char(roughness * 255u);
+                    tint_roughness_pixels[_x + y * size].roughness = 1.0f - roughness;
                 }
 
                 streak_begin += 1;
