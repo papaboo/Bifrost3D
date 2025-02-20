@@ -232,13 +232,136 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
         cylinder_node.set_parent(root_node);
     }
 
-    { // Copper / rubber sphere.
-        struct TintRoughness {
-            unsigned char r, g, b, roughness;
-        };
+    { // Vertex tint and vertex roughness
+        SceneNode vertex_tint_node = SceneNode("Vertex color");
+        MeshFlags mesh_flags = { MeshFlag::Position, MeshFlag::Normal, MeshFlag::TintAndRoughness };
 
-        const TintRoughness rubber_tint = { 3, 3, 3, 192 };
-        const TintRoughness metal_tint = { 255, 255, 255, 0 };
+        float sphere_offset = 0.15f;
+        float sphere_radius = 0.4f;
+        Vector3f sphere_center = Vector3f(0, sphere_offset + sphere_radius, 0);
+
+        Material identity_metal_material = Material::create_metal("Metal base", RGB::white(), 1.0f); // Identity metal material
+
+        { // Base torus
+            float torus_minor_radius = 0.05f;
+            float torus_y_scale = 3;
+            Mesh mesh = MeshCreation::torus(64, 64, torus_minor_radius, mesh_flags);
+            for (Vector3f& position : mesh.get_position_iterable())
+                position.y *= torus_y_scale;
+            mesh.compute_bounds();
+
+            float min_y = mesh.get_bounds().minimum.y;
+            float max_y = mesh.get_bounds().maximum.y;
+            for (unsigned int v = 0; v < mesh.get_vertex_count(); v++) {
+                float t = inverse_lerp(min_y, max_y, mesh.get_positions()[v].y);
+                RGB albedo = lerp(silver_tint, gold_tint, sqrt(t));
+                float roughness = 1.0f - t;
+                mesh.get_tint_and_roughness()[v] = { albedo.r, albedo.g, albedo.b, roughness };
+            }
+
+            SceneNode node = SceneNode("Metal base", Transform(Vector3f(0, 3 * torus_minor_radius, 0)));
+            MeshModel(node, mesh, identity_metal_material);
+
+            node.set_parent(vertex_tint_node);
+        }
+
+        { // Sphere
+            Mesh mesh = MeshCreation::spherical_box(32, mesh_flags);
+            for (Vector3f& position : mesh.get_position_iterable())
+                position *= 2 * sphere_radius;
+            mesh.compute_bounds();
+
+            RGB white = RGB::white();
+            RGB blue = RGB(0.05f, 0.67f, 0.83f);
+            RGB orange = RGB(0.9f, 0.36f, 0.0f);
+
+            float min_y = mesh.get_bounds().minimum.y;
+            float max_y = mesh.get_bounds().maximum.y;
+            for (unsigned int v = 0; v < mesh.get_vertex_count(); v++) {
+                float t = inverse_lerp(min_y, max_y, mesh.get_positions()[v].y);
+
+                // Interpolate from white to blue to orange
+                RGB tint = t < 0.4f ?
+                    lerp(white, blue, t / 0.4f) :
+                    lerp(blue, orange, (t - 0.4f) / 0.6f);
+                float roughness = t;
+                mesh.get_tint_and_roughness()[v] = { tint.r, tint.g, tint.b, roughness };
+            }
+
+            SceneNode node = SceneNode("Metal globe", Transform(sphere_center));
+            MeshModel(node, mesh, identity_metal_material);
+            node.set_parent(vertex_tint_node);
+        }
+
+        { // Glass spikes
+            Material identity_glass_material = Material::create_transmissive("Identity glass material", RGB::white(), 1.0f);
+            RGB orange = RGB(0.9f, 0.36f, 0.0f);
+
+            // Reshape plane as disc with radius of 1
+            Mesh disc = MeshCreation::plane(10, mesh_flags);
+            for (unsigned int i = 0; i < disc.get_vertex_count(); ++i) {
+                Vector3f& position = disc.get_positions()[i];
+
+                // Ignore the center vertex
+                if (position != Vector3f::zero()) {
+
+                    Vector3f disc_edge = normalize(position);
+
+                    // Project to side to figure out where the vertex is along the radius
+                    float point_t = max(abs(position.x) / 0.5f, abs(position.z) / 0.5f);
+                    position = disc_edge * point_t;
+
+                    // Set tint based distance to center
+                    RGB tint = lerp(orange, RGB::white(), point_t);
+                    disc.get_tint_and_roughness()[i] = { tint.r, tint.g, tint.b, 1.0f - point_t };
+                } else
+                    disc.get_tint_and_roughness()[i] = { orange.r, orange.g, orange.b, 1.0f };
+            }
+
+            auto projected_point_on_sphere = [=](Vector3f point) -> Vector3f {
+                Vector3f direction = normalize(point - sphere_center);
+                return (sphere_radius - 0.01f) * direction + sphere_center;
+            };
+
+            for (int i = 0; i < 20; ++i) {
+                Vector2f uv = RNG::sample02(i) - 0.5f;
+                Vector3f uv_pos = Vector3f(uv.x, sphere_center.y + sphere_radius, uv.y);
+                Vector3f cone_base_center = projected_point_on_sphere(uv_pos);
+                Vector2f cone_pos = Vector2f(cone_base_center.x, cone_base_center.z);
+
+                Mesh cone = MeshUtils::deep_clone(disc);
+
+                float height = sqrt(pow2(sphere_radius) - pow2(cone_pos.x) - pow2(cone_pos.y));
+                float width = 0.75f * height;
+
+                for (Vector3f& position : cone.get_position_iterable()) {
+                    // Turn disc into cone shape
+                    float t = magnitude(position);
+                    position.y = 1 - t;
+                    position *= Vector3f(width, height, width);
+                    
+                    // Position relative to sphere
+                    position = cone_base_center + position;
+
+                    // Move towards sphere surface
+                    Vector3f sphere_surface_position = projected_point_on_sphere(position);
+                    position = lerp(position, sphere_surface_position, t);
+                }
+                MeshUtils::compute_normals(cone);
+
+                cone.compute_bounds();
+                SceneNode node = SceneNode("Cone");
+                MeshModel(node, cone, identity_glass_material);
+                node.set_parent(vertex_tint_node);
+            }
+        }
+
+        vertex_tint_node.set_global_transform(Vector3f(-3, 0 ,0));
+    }
+
+    { // Copper / rubber sphere.
+        const TintRoughness rubber_tint = { byte(3), byte(3), byte(3), byte(192) };
+        const TintRoughness metal_tint = { 1.0f, 1.0f, 1.0f, 0.0f };
 
         const int size = 1024;
         const int metal_streak_count = 5;
@@ -259,7 +382,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
                     tint_roughness_pixels[_x + y * size] = metal_tint;
                     float t = inverse_lerp<float>(float(streak_begin), streak_end - 1.0f, float(x));
                     float roughness = sin(t * PI<float>());
-                    tint_roughness_pixels[_x + y * size].roughness = 255u - unsigned char(roughness * 255u);
+                    tint_roughness_pixels[_x + y * size].roughness = 1.0f - roughness;
                 }
 
                 streak_begin += 1;

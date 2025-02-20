@@ -349,6 +349,10 @@ int initialize_scene(Engine& engine, ImGui::ImGuiAdaptor* imgui) {
     // Create camera. Matrices will be set up by the CameraViewportHandler.
     CameraID cam_ID = Cameras::create("Camera", scene.get_ID(), Matrix4x4f::identity(), Matrix4x4f::identity());
     camera_handler = new CameraViewportHandler(cam_ID, engine.get_window().get_aspect_ratio(), 0.1f, 100.0f);
+#ifdef OPTIX_FOUND
+    // High bounce count to support scenes with lots of glass or many total internal reflection bounces.
+    optix_renderer->set_max_bounce_count(cam_ID, 32);
+#endif
 
     // Load model
     auto resource_directory = engine.data_directory() / "SimpleViewer" / "Resources";
@@ -370,6 +374,11 @@ int initialize_scene(Engine& engine, ImGui::ImGuiAdaptor* imgui) {
     else if (g_scene.compare("VeachScene") == 0)
         Scenes::create_veach_scene(engine, cam_ID, scene);
     else {
+#ifdef OPTIX_FOUND
+        // Conservative bounce count, as the loaded scenes could be very heavy on bounces and geometry.
+        optix_renderer->set_max_bounce_count(cam_ID, 4);
+#endif
+
         printf("Loading scene: '%s'\n", g_scene.c_str());
         SceneNode obj_root = SceneNode::invalid();
         if (ObjLoader::file_supported(g_scene))
@@ -438,8 +447,7 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
 
     if (optix_enabled) {
         auto* optix_adaptor = (DX11OptiXAdaptor::Adaptor*)compositor->add_renderer(DX11OptiXAdaptor::Adaptor::initialize).get();
-        if (optix_adaptor != nullptr)
-            optix_renderer = optix_adaptor->get_renderer();
+        optix_renderer = optix_adaptor->get_renderer();
     }
 
 #else
