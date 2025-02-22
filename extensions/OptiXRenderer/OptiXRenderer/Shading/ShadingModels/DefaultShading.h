@@ -129,7 +129,7 @@ public:
     }
 
 #if GPU_DEVICE
-    __inline_all__ DefaultShading(const Material& material, float abs_cos_theta_o, optix::float2 texcoord, float min_roughness = 0.0f) {
+    __inline_all__ DefaultShading(const Material& material, optix::float2 texcoord, float4 tint_and_roughness_scale, float abs_cos_theta_o, float min_roughness = 0.0f) {
         using namespace optix;
 
         // Coat
@@ -139,7 +139,7 @@ public:
         float metallic = material.get_metallic(texcoord);
 
         // Tint and roughness
-        float4 tint_roughness = material.get_tint_roughness(texcoord);
+        float4 tint_roughness = material.get_tint_roughness(texcoord) * tint_and_roughness_scale;
         float3 tint = make_float3(tint_roughness);
         float roughness = max(tint_roughness.w, min_roughness);
 
@@ -148,9 +148,9 @@ public:
         setup_sampling_probabilities(abs_cos_theta_o, coat_rho);
     }
 
-    __inline_all__ static DefaultShading initialize_with_max_PDF_hint(const Material& material, optix::float2 texcoord, float abs_cos_theta_o, PDF max_PDF_hint) {
+    __inline_all__ static DefaultShading initialize_with_max_PDF_hint(const Material& material, optix::float2 texcoord, float4 tint_and_roughness_scale, float abs_cos_theta_o, PDF max_PDF_hint) {
         float min_roughness = GGXMinimumRoughness::from_PDF(abs_cos_theta_o, max_PDF_hint);
-        return DefaultShading(material, abs_cos_theta_o, texcoord, min_roughness);
+        return DefaultShading(material, texcoord, tint_and_roughness_scale, abs_cos_theta_o, min_roughness);
     }
 #endif
 

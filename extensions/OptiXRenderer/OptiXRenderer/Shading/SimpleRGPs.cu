@@ -176,7 +176,8 @@ RT_PROGRAM void path_tracing_RPG() {
                     // This is because default material's rho contains the view dependent specular highlight as well,
                     // which can give an edge in the image between surfaces with different normals,
                     // so the albedo image captures both the surface albedo and surface normal effects.
-                    const auto material = DefaultShading(material_parameters, abs_cos_theta, payload.texcoord);
+                    float4 tint_and_roughness_scale = unorm8_to_float(payload.tint_and_roughness_scale);
+                    const auto material = DefaultShading(material_parameters, payload.texcoord, tint_and_roughness_scale, abs_cos_theta);
                     albedo = material.rho(abs_cos_theta);
                 } else
                     // Must have hit a light source. Accumulate it's contribution, but normalize to [0, 1] range otherwise AI denoising blows up.
@@ -286,14 +287,15 @@ RT_PROGRAM void albedo_RPG() {
     process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
         float abs_cos_theta = abs(dot(last_ray_direction, payload.shading_normal));
         const auto& material_parameters = g_materials[payload.material_index];
+        float4 tint_and_roughness_scale = unorm8_to_float(payload.tint_and_roughness_scale);
         if (material_parameters.shading_model == Material::ShadingModel::Default) {
-            auto material = Shading::ShadingModels::DefaultShading(material_parameters, abs_cos_theta, payload.texcoord);
+            auto material = Shading::ShadingModels::DefaultShading(material_parameters, payload.texcoord, tint_and_roughness_scale, abs_cos_theta);
             return material.rho(abs_cos_theta);
         } else if (material_parameters.shading_model == Material::ShadingModel::Diffuse) {
-            float4 tint_roughness = material_parameters.get_tint_roughness(payload.texcoord);
+            float4 tint_roughness = material_parameters.get_tint_roughness(payload.texcoord) * tint_and_roughness_scale;
             return Shading::ShadingModels::DiffuseShading(make_float3(tint_roughness), tint_roughness.w).rho(abs_cos_theta);
         } else if (material_parameters.shading_model == Material::ShadingModel::Transmissive) {
-            auto material = Shading::ShadingModels::TransmissiveShading(material_parameters, payload.texcoord, abs_cos_theta);
+            auto material = Shading::ShadingModels::TransmissiveShading(material_parameters, payload.texcoord, tint_and_roughness_scale, abs_cos_theta);
             return material.rho(abs_cos_theta);
         } else
             return { 0, 0, 0 };
@@ -302,15 +304,17 @@ RT_PROGRAM void albedo_RPG() {
 
 RT_PROGRAM void tint_RPG() {
     process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
+        float3 tint_scale = make_float3(unorm8_to_float(payload.tint_and_roughness_scale));
         const auto& material_parameters = g_materials[payload.material_index];
-        return make_float3(material_parameters.get_tint_roughness(payload.texcoord));
+        return make_float3(material_parameters.get_tint_roughness(payload.texcoord)) * tint_scale;
     });
 }
 
 RT_PROGRAM void roughness_RPG() {
     process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
+        float roughness_scale = unorm8_to_float(payload.tint_and_roughness_scale).w;
         const auto& material_parameters = g_materials[payload.material_index];
-        float roughness = material_parameters.get_tint_roughness(payload.texcoord).w;
+        float roughness = material_parameters.get_tint_roughness(payload.texcoord).w * roughness_scale;
         return { roughness, roughness, roughness };
     });
 }

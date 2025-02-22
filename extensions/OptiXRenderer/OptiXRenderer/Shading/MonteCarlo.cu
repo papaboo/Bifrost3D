@@ -48,6 +48,7 @@ rtDeclareVariable(float3, intersection_point, attribute intersection_point, );
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 rtDeclareVariable(float2, texcoord, attribute texcoord, );
+rtDeclareVariable(float4, tint_and_roughness_scale, attribute tint_and_roughness_scale, );
 rtDeclareVariable(unsigned int, primitive_index, attribute primitive_index, );
 
 //-----------------------------------------------------------------------------
@@ -165,6 +166,7 @@ __inline_all__ void path_tracing_closest_hit() {
     // Store them after successful sefl-intersection and coverage checks to avoid storing state of an ignored surface.
     monte_carlo_payload.material_index = model_state.material_index;
     monte_carlo_payload.texcoord = texcoord;
+    monte_carlo_payload.tint_and_roughness_scale = float_to_unorm8(tint_and_roughness_scale);
     monte_carlo_payload.primitive_id = primitive_id;
 
     // Setup normals and tangents.
@@ -238,7 +240,7 @@ __inline_all__ void path_tracing_closest_hit() {
 struct DefaultMaterialCreator {
     __inline_all__ static DefaultShading create(const Material& material_params, optix::float2 texcoord, float cos_theta_o) {
         PDF max_PDF_hint = monte_carlo_payload.bsdf_PDF * g_camera_state.path_regularization_PDF_scale;
-        return DefaultShading::initialize_with_max_PDF_hint(material_params, texcoord, cos_theta_o, max_PDF_hint);
+        return DefaultShading::initialize_with_max_PDF_hint(material_params, texcoord, tint_and_roughness_scale, cos_theta_o, max_PDF_hint);
     }
 };
 
@@ -248,7 +250,7 @@ RT_PROGRAM void default_closest_hit() {
 
 struct DiffuseMaterialCreator {
     __inline_all__ static DiffuseShading create(const Material& material_params, optix::float2 texcoord, float cos_theta_o) {
-        float4 tint_roughness = material_params.get_tint_roughness(texcoord);
+        float4 tint_roughness = material_params.get_tint_roughness(texcoord) * tint_and_roughness_scale;
         return DiffuseShading(make_float3(tint_roughness), tint_roughness.w);
     }
 };
@@ -260,7 +262,7 @@ RT_PROGRAM void diffuse_closest_hit() {
 struct TransmissiveMaterialCreator {
     __inline_all__ static TransmissiveShading create(const Material& material_params, optix::float2 texcoord, float cos_theta_o) {
         PDF max_PDF_hint = monte_carlo_payload.bsdf_PDF * g_camera_state.path_regularization_PDF_scale;
-        return TransmissiveShading::initialize_with_max_PDF_hint(material_params, texcoord, cos_theta_o, max_PDF_hint);
+        return TransmissiveShading::initialize_with_max_PDF_hint(material_params, texcoord, tint_and_roughness_scale, cos_theta_o, max_PDF_hint);
     }
 };
 
