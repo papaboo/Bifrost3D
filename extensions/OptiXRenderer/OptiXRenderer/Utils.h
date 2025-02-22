@@ -194,6 +194,15 @@ __inline_all__ float sin2_phi(optix::float3 w) { return pow2(sin_phi(w)); }
 // Utility functions
 //-----------------------------------------------------------------------------
 
+__inline_all__ optix::float4 unorm8_to_float(optix::uchar4 unorms) {
+    return optix::make_float4(unorms.x / 255.0f, unorms.y / 255.0f, unorms.z / 255.0f, unorms.w / 255.0f);
+}
+
+__inline_all__ optix::uchar4 float_to_unorm8(optix::float4 values) {
+    return optix::make_uchar4((unsigned char)saturate(values.x * 255.0f + 0.5f), (unsigned char)saturate(values.y * 255.0f + 0.5f),
+                              (unsigned char)saturate(values.z * 255.0f + 0.5f), (unsigned char)saturate(values.w * 255.0f + 0.5f));
+}
+
 __inline_all__ optix::float2 direction_to_latlong_texcoord(optix::float3 direction) {
     float u = (atan2f(direction.z, direction.x) + PIf) * 0.5f / PIf;
     float v = (asinf(direction.y) + PIf * 0.5f) / PIf;

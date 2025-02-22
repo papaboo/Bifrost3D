@@ -45,20 +45,20 @@ public:
     }
 
 #if GPU_DEVICE
-    __inline_all__ TransmissiveShading(const Material& material, optix::float2 texcoord, float cos_theta, float min_roughness = 0.0f) {
+    __inline_all__ TransmissiveShading(const Material& material, optix::float2 texcoord, float4 tint_and_roughness_scale, float cos_theta, float min_roughness = 0.0f) {
         using namespace optix;
 
         // Tint and roughness
-        float4 tint_roughness = material.get_tint_roughness(texcoord);
+        float4 tint_roughness = material.get_tint_roughness(texcoord) * tint_and_roughness_scale;
         float3 tint = make_float3(tint_roughness);
         float roughness = max(tint_roughness.w, min_roughness);
 
         setup_shading(tint, roughness, material.specularity, cos_theta);
     }
 
-    __inline_all__ static TransmissiveShading initialize_with_max_PDF_hint(const Material& material, optix::float2 texcoord, float cos_theta_o, PDF max_PDF_hint) {
+    __inline_all__ static TransmissiveShading initialize_with_max_PDF_hint(const Material& material, optix::float2 texcoord, float4 tint_and_roughness_scale, float cos_theta_o, PDF max_PDF_hint) {
         float min_roughness = GGXMinimumRoughness::from_PDF(abs(cos_theta_o), max_PDF_hint);
-        return TransmissiveShading(material, texcoord, cos_theta_o, min_roughness);
+        return TransmissiveShading(material, texcoord, tint_and_roughness_scale, cos_theta_o, min_roughness);
     }
 #endif
 

@@ -18,11 +18,13 @@ rtDeclareVariable(int, mesh_flags, , );
 rtBuffer<uint3> index_buffer;
 rtBuffer<VertexGeometry> geometry_buffer;
 rtBuffer<float2> texcoord_buffer;
+rtBuffer<uchar4> tint_and_roughness_buffer;
 
 rtDeclareVariable(float3, intersection_point, attribute intersection_point, );
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, ); 
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, ); 
 rtDeclareVariable(float2, texcoord, attribute texcoord, );
+rtDeclareVariable(float4, tint_and_roughness_scale, attribute tint_and_roughness_scale, );
 rtDeclareVariable(unsigned int, primitive_index, attribute primitive_index, );
 
 //-------------------------------------------------------------------------------------------------
@@ -51,11 +53,23 @@ RT_PROGRAM void interpolate_attributes() {
         shading_normal = geometric_normal;
 
     if (mesh_flags & MeshFlags::Texcoords) {
-        const float2 texcoord0 = texcoord_buffer[vertex_indices.x];
-        const float2 texcoord1 = texcoord_buffer[vertex_indices.y];
-        const float2 texcoord2 = texcoord_buffer[vertex_indices.z];
+        float2 texcoord0 = texcoord_buffer[vertex_indices.x];
+        float2 texcoord1 = texcoord_buffer[vertex_indices.y];
+        float2 texcoord2 = texcoord_buffer[vertex_indices.z];
         texcoord = texcoord1 * barycentrics.x + texcoord2 * barycentrics.y + texcoord0 * barycentrics_z;
     }
     else
         texcoord - make_float2(0.0f);
+
+    if (mesh_flags & MeshFlags::Tints) {
+        const float byte_to_float_normalizer = 1.0f / 255.0f;
+        uchar4 tint0 = tint_and_roughness_buffer[vertex_indices.x];
+        uchar4 tint1 = tint_and_roughness_buffer[vertex_indices.y];
+        uchar4 tint2 = tint_and_roughness_buffer[vertex_indices.z];
+        tint_and_roughness_scale.x = (tint1.x * barycentrics.x + tint2.x * barycentrics.y + tint0.x * barycentrics_z) * byte_to_float_normalizer;
+        tint_and_roughness_scale.y = (tint1.y * barycentrics.x + tint2.y * barycentrics.y + tint0.y * barycentrics_z) * byte_to_float_normalizer;
+        tint_and_roughness_scale.z = (tint1.z * barycentrics.x + tint2.z * barycentrics.y + tint0.z * barycentrics_z) * byte_to_float_normalizer;
+        tint_and_roughness_scale.w = (tint1.w * barycentrics.x + tint2.w * barycentrics.y + tint0.w * barycentrics_z) * byte_to_float_normalizer;
+    } else
+        tint_and_roughness_scale = make_float4(1.0f); // Multiplicative identity
 }
