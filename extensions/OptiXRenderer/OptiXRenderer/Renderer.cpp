@@ -65,6 +65,10 @@ static inline size_t size_of(RTformat format) {
     case RT_FORMAT_UNSIGNED_INT2: return sizeof(uint2);
     case RT_FORMAT_UNSIGNED_INT3: return sizeof(uint3);
     case RT_FORMAT_UNSIGNED_INT4: return sizeof(uint4);
+    case RT_FORMAT_UNSIGNED_BYTE: return sizeof(byte);
+    case RT_FORMAT_UNSIGNED_BYTE2: return sizeof(uchar2);
+    case RT_FORMAT_UNSIGNED_BYTE3: return sizeof(uchar3);
+    case RT_FORMAT_UNSIGNED_BYTE4: return sizeof(uchar4);
     default:
         printf("ERROR: OptiXRenderer::Renderer::size_of does not support format: %u\n", (unsigned int)format);
         return 0;
@@ -104,7 +108,11 @@ static inline optix::GeometryTriangles load_mesh(optix::Context& context, Mesh m
 
     optix::Buffer texcoord_buffer = mesh.get_texcoords() != nullptr ?
         create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, vertex_count, mesh.get_texcoords()) :
-        context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, 0); // TODO Use shared default buffer or bind default to context.
+        context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, 0);
+
+    optix::Buffer tint_buffer = mesh.get_tint_and_roughness() != nullptr ?
+        create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_BYTE4, vertex_count, mesh.get_tint_and_roughness()) :
+        context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_BYTE4, 0);
 
     { // Setup triangle geometry representation.
         optix::GeometryTriangles triangle_mesh = context->createGeometryTriangles();
@@ -120,6 +128,7 @@ static inline optix::GeometryTriangles load_mesh(optix::Context& context, Mesh m
         triangle_mesh["index_buffer"]->setBuffer(index_buffer);
         triangle_mesh["geometry_buffer"]->setBuffer(geometry_buffer);
         triangle_mesh["texcoord_buffer"]->setBuffer(texcoord_buffer);
+        triangle_mesh["tint_and_roughness_buffer"]->setBuffer(tint_buffer);
 
         OPTIX_VALIDATE(triangle_mesh);
         return triangle_mesh;
@@ -141,6 +150,7 @@ static inline optix::GeometryInstance create_model(optix::Context& context, Mesh
 
     unsigned char mesh_flags = mesh.get_normals() != nullptr ? MeshFlags::Normals : MeshFlags::None;
     mesh_flags |= mesh.get_texcoords() != nullptr ? MeshFlags::Texcoords : MeshFlags::None;
+    mesh_flags |= mesh.get_tint_and_roughness() != nullptr ? MeshFlags::Tints : MeshFlags::None;
     optix_model["mesh_flags"]->setInt(mesh_flags);
     OPTIX_VALIDATE(optix_model);
 
@@ -593,6 +603,7 @@ struct Renderer::Implementation {
                         meshes[mesh_ID]["index_buffer"]->getBuffer()->destroy();
                         meshes[mesh_ID]["geometry_buffer"]->getBuffer()->destroy();
                         meshes[mesh_ID]["texcoord_buffer"]->getBuffer()->destroy();
+                        meshes[mesh_ID]["tint_and_roughness_buffer"]->getBuffer()->destroy();
 
                         meshes[mesh_ID]->destroy();
                         meshes[mesh_ID] = nullptr;
