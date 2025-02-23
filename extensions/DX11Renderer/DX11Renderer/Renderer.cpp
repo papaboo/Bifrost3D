@@ -247,10 +247,11 @@ public:
             // Create the input layout
             D3D11_INPUT_ELEMENT_DESC input_layout_desc[] = {
                 { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-                { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+                { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+                { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 2, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
             };
 
-            THROW_DX11_ERROR(m_device->CreateInputLayout(input_layout_desc, 2, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout));
+            THROW_DX11_ERROR(m_device->CreateInputLayout(input_layout_desc, 3, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout));
 
             // Create a default emptyish buffer.
             D3D11_BUFFER_DESC empty_desc = {};
@@ -341,9 +342,11 @@ public:
 
     ~Implementation() {
         for (Dx11Mesh mesh : m_meshes) {
+            safe_release(&mesh.constant_buffer);
             safe_release(&mesh.indices);
             safe_release(mesh.geometry_address());
             safe_release(mesh.texcoords_address());
+            safe_release(mesh.tint_and_roughness_address());
         }
 
         delete m_environments;
@@ -360,11 +363,6 @@ public:
             // Opaque state
             m_render_context->RSSetState(m_g_buffer.opaque.raster_state);
             m_render_context->IASetInputLayout(m_g_buffer.opaque.vertex_input_layout);
-
-            // Set null buffer as default texcoord buffer.
-            unsigned int stride = sizeof(float2);
-            unsigned int offset = 0;
-            m_render_context->IASetVertexBuffers(2, 1, &m_vertex_shading.null_buffer, &stride, &offset);
         }
 
         { // Render sphere lights.
@@ -396,15 +394,17 @@ public:
         Dx11Mesh mesh = m_meshes[model.mesh_ID];
 
         { // Set the buffers.
+            context->VSSetConstantBuffers(4, 1, &mesh.constant_buffer);
+
             if (mesh.index_count != 0)
                 context->IASetIndexBuffer(mesh.indices, DXGI_FORMAT_R32_UINT, 0);
 
             // Setup strides and offsets for the buffers.
-            // Layout is [geometry, texcoords].
-            static unsigned int strides[2] = { sizeof(float4), sizeof(float2) };
-            static unsigned int offsets[2] = { 0, 0 };
+            // Layout is [geometry, texcoords, tint_and_roughness].
+            static unsigned int strides[3] = { sizeof(float4), sizeof(float2), sizeof(TintRoughness) };
+            static unsigned int offsets[3] = { 0, 0, 0 };
 
-            context->IASetVertexBuffers(0, mesh.buffer_count, mesh.buffers, strides, offsets);
+            context->IASetVertexBuffers(0, mesh.vertex_buffer_count, mesh.vertex_buffers, strides, offsets);
         }
 
         { // Bind world transform.
@@ -615,7 +615,7 @@ public:
             m_render_context->Draw(3, 0);
 
             display_constant_buffer.release();
-            m_render_context->PSSetConstantBuffers(1, 1, &display_constant_buffer);
+            m_render_context->PSSetConstantBuffers(1, 1, &display_constant_buffer); // Reset by setting cleared buffer
 
             post_render_cleanup();
             return { m_backbuffer_SRV, backbuffer_viewport, std::numeric_limits<unsigned int>::max() };
@@ -639,14 +639,8 @@ public:
         }
 
         { // Render models.
-
             m_render_context->IASetInputLayout(m_vertex_shading.input_layout);
             m_render_context->VSSetShader(m_vertex_shading.shader, 0, 0);
-
-            // Set null buffer as default texcoord buffer.
-            unsigned int stride = sizeof(float2);
-            unsigned int offset = 0;
-            m_render_context->IASetVertexBuffers(2, 1, &m_vertex_shading.null_buffer, &stride, &offset);
 
             // Setup debug material if needed.
             bool debug_material_params = m_debug_settings.display_mode == DebugSettings::DisplayMode::Tint ||
@@ -800,9 +794,11 @@ public:
                 if (mesh_changes.any_set(Meshes::Change::Created, Meshes::Change::Destroyed)) {
                     if (m_meshes[mesh_ID].vertex_count != 0) {
                         m_meshes[mesh_ID].index_count = m_meshes[mesh_ID].vertex_count = 0;
+                        safe_release(&m_meshes[mesh_ID].constant_buffer);
                         safe_release(&m_meshes[mesh_ID].indices);
                         safe_release(m_meshes[mesh_ID].geometry_address());
                         safe_release(m_meshes[mesh_ID].texcoords_address());
+                        safe_release(m_meshes[mesh_ID].tint_and_roughness_address());
                     }
                 }
 
@@ -886,7 +882,7 @@ public:
                                 texcoords = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), texcoords);
 
                             HRESULT hr = upload_default_buffer(texcoords, dx_mesh.vertex_count, D3D11_BIND_VERTEX_BUFFER,
-                                                               dx_mesh.texcoords_address());
+                                dx_mesh.texcoords_address());
                             if (FAILED(hr))
                                 printf("Could not upload %s's texcoord buffer.\n", mesh.get_name().c_str());
 
@@ -896,8 +892,33 @@ public:
                             *dx_mesh.texcoords_address() = m_vertex_shading.null_buffer;
                     }
 
+                    { // Upload tints and roughness if present, otherwise upload 'null buffer'.
+                        TintRoughness* tints = mesh.get_tint_and_roughness();
+                        if (tints != nullptr) {
+
+                            if (expand_indexed_buffers)
+                                tints = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), tints);
+
+                            HRESULT hr = upload_default_buffer(tints, dx_mesh.vertex_count, D3D11_BIND_VERTEX_BUFFER, dx_mesh.tint_and_roughness_address());
+                            if (FAILED(hr))
+                                printf("Could not upload %s's tint and roughness buffer.\n", mesh.get_name().c_str());
+
+                            if (tints != mesh.get_tint_and_roughness())
+                                delete[] tints;
+                        } else
+                            *dx_mesh.tint_and_roughness_address() = m_vertex_shading.null_buffer;
+                    }
+
+                    // Constant buffer
+                    Dx11MeshConstans mesh_constants;
+                    mesh_constants.has_tint_and_roughness = mesh.get_tint_and_roughness() != nullptr;
+                    THROW_DX11_ERROR(create_constant_buffer(m_device, mesh_constants, &dx_mesh.constant_buffer));
+
+                    // Set the buffer count to the minimal number of buffers containing data.
                     bool has_texcoords = mesh.get_texcoords() != nullptr;
-                    dx_mesh.buffer_count = has_texcoords ? 2 : 1;
+                    dx_mesh.vertex_buffer_count = has_texcoords ? 2 : 1;
+                    bool has_colors = mesh.get_tint_and_roughness() != nullptr;
+                    dx_mesh.vertex_buffer_count = has_colors ? 3 : dx_mesh.vertex_buffer_count;
 
                     m_meshes[mesh_ID] = dx_mesh;
                 }
@@ -905,7 +926,7 @@ public:
         }
 
         m_mesh_models.handle_updates();
-                }
+    }
 
     Renderer::Settings get_settings() const { return m_settings; }
     void set_settings(Settings& settings) { m_settings = settings; }
