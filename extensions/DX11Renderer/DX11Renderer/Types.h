@@ -257,20 +257,26 @@ struct Dx11VertexGeometry {
     int encoded_normal;
 };
 
+struct Dx11MeshConstans {
+    int has_tint_and_roughness;
+    float3 _padding;
+};
+
 struct Dx11Mesh {
-    unsigned int index_count;
-    unsigned int vertex_count;
-    ID3D11Buffer* indices;
-
-    ID3D11Buffer* buffers[2]; // [geometry, texcoords]
-    int buffer_count;
-
     AABB bounds;
 
-    ID3D11Buffer* geometry() { return buffers[0]; }
-    ID3D11Buffer** geometry_address() { return buffers + 0; }
-    ID3D11Buffer* texcoords() { return buffers[1]; }
-    ID3D11Buffer** texcoords_address() { return buffers + 1; }
+    ID3D11Buffer* constant_buffer;
+
+    unsigned int index_count;
+    ID3D11Buffer* indices;
+
+    unsigned int vertex_count;
+    ID3D11Buffer* vertex_buffers[3]; // [geometry, texcoords, tint_and_roughness]
+    int vertex_buffer_count; // Count including the last non-empty buffer. Can include empty ones. For example if tint is valid, the count will be 3, but textures can still be null.
+
+    ID3D11Buffer** geometry_address() { return vertex_buffers + 0; }
+    ID3D11Buffer** texcoords_address() { return vertex_buffers + 1; }
+    ID3D11Buffer** tint_and_roughness_address() { return vertex_buffers + 2; }
 };
 
 struct Dx11Model {
