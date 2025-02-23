@@ -25,6 +25,11 @@ cbuffer material : register(b3) {
     ShadingModels::Parameters material_params;
 }
 
+cbuffer vertex_constants : register(b4) {
+    int tint_and_roughness_buffer_set;
+    float3 _padding;
+}
+
 cbuffer lights : register(b12) {
     int4 light_count;
     LightData light_data[12];
@@ -41,18 +46,20 @@ struct Varyings {
     float3 world_position : WORLD_POSITION;
     float3 normal : NORMAL;
     float2 texcoord : TEXCOORD;
+    float4 tint_and_roughness_scale : COLOR;
 };
 
 // ------------------------------------------------------------------------------------------------
 // Vertex shader.
 // ------------------------------------------------------------------------------------------------
 
-Varyings vs(float4 geometry : GEOMETRY, float2 texcoord : TEXCOORD) {
+Varyings vs(float4 geometry : GEOMETRY, float2 texcoord : TEXCOORD, float4 tint_and_roughness_scale : COLOR) {
     Varyings output;
     output.world_position.xyz = mul(float4(geometry.xyz, 1.0f), to_world_matrix);
     output.position = mul(float4(output.world_position.xyz, 1.0f), scene_vars.view_projection_matrix);
     output.normal.xyz = normalize(mul(float4(decode_octahedral_normal(asint(geometry.w)), 0.0), to_world_matrix));
     output.texcoord = texcoord;
+    output.tint_and_roughness_scale = tint_and_roughness_buffer_set ? tint_and_roughness_scale : float4(1,1,1,1);
     return output;
 }
 
@@ -61,7 +68,7 @@ Varyings vs(float4 geometry : GEOMETRY, float2 texcoord : TEXCOORD) {
 // ------------------------------------------------------------------------------------------------
 
 interface IShadingModelCreator {
-    ShadingModels::IShadingModel create(float2 texcoord, float abs_cos_theta_o);
+    ShadingModels::IShadingModel create(float2 texcoord, float4 tint_and_roughness_scale, float abs_cos_theta_o);
 };
 
 float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, bool is_front_face, float ambient_visibility) {
@@ -73,7 +80,7 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
 
     float3 wo = mul(world_to_shading_TBN, world_wo);
 
-    const ShadingModels::IShadingModel shading_model = shading_model_creator.create(input.texcoord, wo.z);
+    const ShadingModels::IShadingModel shading_model = shading_model_creator.create(input.texcoord, input.tint_and_roughness_scale, wo.z);
 
     // Apply IBL
     float3 radiance = scene_vars.environment_tint.rgb * shading_model.evaluate_IBL(world_wo, world_normal, ambient_visibility);
@@ -119,14 +126,14 @@ float4 transparent(IShadingModelCreator shading_model_creator, Varyings input, b
 // ------------------------------------------------------------------------------------------------
 
 struct DefaultShadingCreator : IShadingModelCreator {
-    ShadingModels::IShadingModel create(float2 texcoord, float abs_cos_theta_o) {
-        return create_typed(texcoord, abs_cos_theta_o);
+    ShadingModels::IShadingModel create(float2 texcoord, float4 tint_and_roughness_scale, float abs_cos_theta_o) {
+        return create_typed(texcoord, tint_and_roughness_scale, abs_cos_theta_o);
     }
 
     // Helper method for creating default shading that returns an instance of default shading
     // instead of the interface type required by IShadingModelCreator.
-    static ShadingModels::DefaultShading create_typed(float2 texcoord, float abs_cos_theta_o) {
-        float4 tint_roughness = material_params.tint_roughness(texcoord);
+    static ShadingModels::DefaultShading create_typed(float2 texcoord, float4 tint_and_roughness_scale, float abs_cos_theta_o) {
+        float4 tint_roughness = material_params.tint_roughness(texcoord) * tint_and_roughness_scale;
         float3 tint = tint_roughness.rgb;
         float roughness = tint_roughness.w;
 
@@ -154,8 +161,8 @@ float4 default_transparent(Varyings input, bool is_front_face : SV_IsFrontFace) 
 // ------------------------------------------------------------------------------------------------
 
 struct DiffuseShadingCreator : IShadingModelCreator {
-    ShadingModels::IShadingModel create(float2 texcoord, float abs_cos_theta_o) {
-        float4 tint_roughness = material_params.tint_roughness(texcoord);
+    ShadingModels::IShadingModel create(float2 texcoord, float4 tint_and_roughness_scale, float abs_cos_theta_o) {
+        float4 tint_roughness = material_params.tint_roughness(texcoord) * tint_and_roughness_scale;
         return ShadingModels::DiffuseShading::create(tint_roughness.rgb, tint_roughness.w);
     }
 };
@@ -176,11 +183,11 @@ float4 diffuse_transparent(Varyings input, bool is_front_face : SV_IsFrontFace) 
 
 struct TransmissiveShadingCreator : IShadingModelCreator {
     float transmission;
-    ShadingModels::IShadingModel create(float2 texcoord, float abs_cos_theta_o) {
+    ShadingModels::IShadingModel create(float2 texcoord, float4 tint_and_roughness_scale, float abs_cos_theta_o) {
         // We can reuse the specular layer of the default shading for the transmissive material.
         // The diffuse tint is simply considered as the transmissive tint, used to compute the transmission factor
         // and then zeroed to avoid diffuse light interaction.
-        ShadingModels::DefaultShading default_shading = DefaultShadingCreator::create_typed(texcoord, abs_cos_theta_o);
+        ShadingModels::DefaultShading default_shading = DefaultShadingCreator::create_typed(texcoord, tint_and_roughness_scale, abs_cos_theta_o);
 
         // The pipeline currently doesn't support RGB scaled transmission. Instead we use the average of the transmissive tint.
         float3 transmission_tint = default_shading.diffuse_tint();
@@ -262,7 +269,7 @@ float4 visualize_material_params(Varyings input, bool is_front_face : SV_IsFront
     }
 
     if (visualization_mode == visualize_roughness) {
-        float roughness = material_params.tint_roughness(input.texcoord).w;
+        float roughness = material_params.tint_roughness(input.texcoord).w * input.tint_and_roughness_scale.w;
         return float4(roughness, roughness, roughness, 1);
     }
 
@@ -302,7 +309,7 @@ float4 visualize_material_params(Varyings input, bool is_front_face : SV_IsFront
         return float4(uv_tint, 1);
     }
 
-    float3 tint = material_params.tint_roughness(input.texcoord).rgb;
+    float3 tint = material_params.tint_roughness(input.texcoord).rgb * input.tint_and_roughness_scale.rgb;
     return float4(tint, 1);
 }
 
