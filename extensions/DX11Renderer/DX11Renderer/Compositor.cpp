@@ -172,9 +172,7 @@ public:
         }
     }
 
-    bool is_valid() const {
-        return m_device.resource != nullptr;
-    }
+    bool is_valid() const { return (bool)m_device; }
 
     std::unique_ptr<IRenderer>& add_renderer(RendererCreator renderer_creator) {
         IRenderer* renderer = renderer_creator(m_device, m_data_directory);

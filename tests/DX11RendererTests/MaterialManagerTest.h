@@ -130,4 +130,4 @@ GTEST_TEST(MaterialManager, sample_GPU_rho_texture_consistent_with_CPU) {
 
 } // NS DX11Renderer
 
-#endif // _DX11RENDERER_PREFIX_SUM_TEST_H_
+#endif // _DX11RENDERER_MATERIAL_MANAGER_TEST_H_

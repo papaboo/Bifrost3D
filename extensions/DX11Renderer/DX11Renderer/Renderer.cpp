@@ -9,6 +9,7 @@
 #include <DX11Renderer/EnvironmentManager.h>
 #include <DX11Renderer/LightManager.h>
 #include <DX11Renderer/MaterialManager.h>
+#include <DX11Renderer/MeshManager.h>
 #include <DX11Renderer/MeshModelManager.h>
 #include <DX11Renderer/Renderer.h>
 #include <DX11Renderer/ShaderManager.h>
@@ -20,8 +21,6 @@
 #include <Bifrost/Assets/Mesh.h>
 #include <Bifrost/Assets/MeshModel.h>
 #include <Bifrost/Core/Engine.h>
-#include <Bifrost/Core/Window.h>
-#include <Bifrost/Math/OctahedralNormal.h>
 #include <Bifrost/Scene/Camera.h>
 #include <Bifrost/Scene/SceneRoot.h>
 
@@ -53,12 +52,11 @@ private:
     DebugSettings m_debug_settings;
 
     // Bifrost resources
-    vector<Dx11Mesh> m_meshes = vector<Dx11Mesh>(0);
-
     EnvironmentManager* m_environments;
     MaterialManager m_materials;
     TextureManager m_textures;
     TransformManager m_transforms;
+    MeshManager m_meshes;
     MeshModelManager m_mesh_models;
     SSAO::AlchemyAO m_ssao;
 
@@ -90,7 +88,6 @@ private:
     } m_g_buffer;
 
     struct {
-        OBuffer null_buffer;
         OInputLayout input_layout;
         OVertexShader shader;
     } m_vertex_shading;
@@ -159,7 +156,7 @@ private:
 
 public:
     Implementation(ODevice1& device, const std::filesystem::path& data_directory)
-        : m_device(device), m_shader_manager(ShaderManager(data_directory)) {
+        : m_device(device), m_shader_manager(data_directory), m_meshes(device){
 
         device->GetImmediateContext1(&m_render_context);
 
@@ -252,17 +249,6 @@ public:
             };
 
             THROW_DX11_ERROR(m_device->CreateInputLayout(input_layout_desc, 3, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout));
-
-            // Create a default emptyish buffer.
-            D3D11_BUFFER_DESC empty_desc = {};
-            empty_desc.Usage = D3D11_USAGE_IMMUTABLE;
-            empty_desc.ByteWidth = sizeof(Vector4f);
-            empty_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-
-            Vector4f lval = Vector4f::zero();
-            D3D11_SUBRESOURCE_DATA empty_data = {};
-            empty_data.pSysMem = &lval;
-            THROW_DX11_ERROR(m_device->CreateBuffer(&empty_desc, &empty_data, &m_vertex_shading.null_buffer));
         }
 
         { // Setup raster states
@@ -341,14 +327,6 @@ public:
     }
 
     ~Implementation() {
-        for (Dx11Mesh mesh : m_meshes) {
-            safe_release(&mesh.constant_buffer);
-            safe_release(&mesh.indices);
-            safe_release(mesh.geometry_address());
-            safe_release(mesh.texcoords_address());
-            safe_release(mesh.tint_and_roughness_address());
-        }
-
         delete m_environments;
     }
 
@@ -391,7 +369,7 @@ public:
 
     template <bool geometry_only>
     void render_model(ID3D11DeviceContext1* context, Dx11Model model) {
-        Dx11Mesh mesh = m_meshes[model.mesh_ID];
+        Dx11Mesh mesh = m_meshes.get_mesh(model.mesh_ID);
 
         { // Set the buffers.
             context->VSSetConstantBuffers(4, 1, &mesh.constant_buffer);
@@ -711,7 +689,7 @@ public:
                         Vector3f cam_pos = Cameras::get_transform(camera_ID).translation;
                         for (auto model_itr = m_mesh_models.cbegin_transparent_models(); model_itr != m_mesh_models.cend(); ++model_itr) {
                             // Calculate the distance to point halfway between the models center and side of the bounding box.
-                            Dx11Mesh& mesh = m_meshes[model_itr->mesh_ID];
+                            const Dx11Mesh& mesh = m_meshes.get_mesh(model_itr->mesh_ID);
                             Transform transform = m_transforms.get_transform(model_itr->transform_ID);
                             Bifrost::Math::AABB bounds = { Vector3f(mesh.bounds.min.x, mesh.bounds.min.y, mesh.bounds.min.z),
                                                            Vector3f(mesh.bounds.max.x, mesh.bounds.max.y, mesh.bounds.max.z) };
@@ -760,18 +738,6 @@ public:
         return { m_backbuffer_SRV, backbuffer_viewport, std::numeric_limits<unsigned int>::max() };
     }
 
-    template <typename T>
-    HRESULT upload_default_buffer(T* data, int element_count, D3D11_BIND_FLAG flags, ID3D11Buffer** buffer) {
-        D3D11_BUFFER_DESC desc = {};
-        desc.Usage = D3D11_USAGE_DEFAULT;
-        desc.ByteWidth = sizeof(T) * element_count;
-        desc.BindFlags = flags;
-
-        D3D11_SUBRESOURCE_DATA resource_data = {};
-        resource_data.pSysMem = data;
-        return m_device->CreateBuffer(&desc, &resource_data, buffer);
-    }
-
     void handle_updates() {
         m_environments->handle_updates(m_device, *m_render_context);
         m_lights.manager.handle_updates(*m_render_context);
@@ -785,146 +751,7 @@ public:
                     m_ssao.clear_camera_state(cam_ID);
         }
 
-        { // Mesh updates.
-            for (MeshID mesh_ID : Meshes::get_changed_meshes()) {
-                if (m_meshes.size() <= mesh_ID)
-                    m_meshes.resize(Meshes::capacity());
-
-                auto mesh_changes = Meshes::get_changes(mesh_ID);
-                if (mesh_changes.any_set(Meshes::Change::Created, Meshes::Change::Destroyed)) {
-                    if (m_meshes[mesh_ID].vertex_count != 0) {
-                        m_meshes[mesh_ID].index_count = m_meshes[mesh_ID].vertex_count = 0;
-                        safe_release(&m_meshes[mesh_ID].constant_buffer);
-                        safe_release(&m_meshes[mesh_ID].indices);
-                        safe_release(m_meshes[mesh_ID].geometry_address());
-                        safe_release(m_meshes[mesh_ID].texcoords_address());
-                        safe_release(m_meshes[mesh_ID].tint_and_roughness_address());
-                    }
-                }
-
-                if (mesh_changes.is_set(Meshes::Change::Created) && !mesh_changes.is_set(Meshes::Change::Destroyed)) {
-                    Bifrost::Assets::Mesh mesh = mesh_ID;
-                    Dx11Mesh dx_mesh = {};
-
-                    Bifrost::Math::AABB bounds = mesh.get_bounds();
-                    dx_mesh.bounds = { make_float3(bounds.minimum), make_float3(bounds.maximum) };
-
-                    // Expand the indexed buffers if an index buffer is used, but no normals are given.
-                    // In that case we need to compute hard normals per triangle and we can only store that for non-indexed buffers.
-                    // NOTE Alternatively look into storing the hard normals in a buffer and index into it based on the triangle ID?
-                    bool expand_indexed_buffers = mesh.get_primitive_count() != 0 && mesh.get_normals() == nullptr;
-
-                    if (!expand_indexed_buffers) { // Upload indices.
-                        dx_mesh.index_count = mesh.get_index_count();
-
-                        HRESULT hr = upload_default_buffer(mesh.get_primitives(), dx_mesh.index_count / 3,
-                                                           D3D11_BIND_INDEX_BUFFER, &dx_mesh.indices);
-                        if (FAILED(hr))
-                            printf("Could not upload '%s' index buffer.\n", mesh.get_name().c_str());
-                    }
-
-                    dx_mesh.vertex_count = mesh.get_vertex_count();
-                    Vector3f* positions = mesh.get_positions();
-
-                    if (expand_indexed_buffers) {
-                        // Expand the positions.
-                        dx_mesh.vertex_count = mesh.get_index_count();
-                        positions = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), mesh.get_positions());
-                    }
-
-                    { // Upload geometry.
-                        auto create_vertex_geometry = [](Vector3f p, Vector3f n) -> Dx11VertexGeometry {
-                            float3 dx_p = { p.x, p.y, p.z };
-                            OctahedralNormal encoded_normal = OctahedralNormal::encode_precise(n);
-                            int2 dx_normal = { encoded_normal.encoding.x, encoded_normal.encoding.y };
-                            int packed_dx_normal = (dx_normal.x - SHRT_MIN) | (dx_normal.y << 16);
-                            Dx11VertexGeometry geometry = { dx_p, packed_dx_normal };
-                            return geometry;
-                        };
-
-                        Vector3f* normals = mesh.get_normals();
-
-                        Dx11VertexGeometry* geometry = new Dx11VertexGeometry[dx_mesh.vertex_count];
-                        if (normals == nullptr) {
-                            // Compute hard normals. Positions have already been expanded if there is an index buffer.
-                            #pragma omp parallel for
-                            for (int i = 0; i < int(dx_mesh.vertex_count); i += 3) {
-                                Vector3f p0 = positions[i], p1 = positions[i + 1], p2 = positions[i+2];
-                                Vector3f normal = normalize(cross(p1 - p0, p2 - p0));
-                                geometry[i] = create_vertex_geometry(p0, normal);
-                                geometry[i+1] = create_vertex_geometry(p1, normal);
-                                geometry[i+2] = create_vertex_geometry(p2, normal);
-                            }
-                        } else {
-                            // Copy position and normal.
-                            #pragma omp parallel for
-                            for (int i = 0; i < int(dx_mesh.vertex_count); ++i)
-                                geometry[i] = create_vertex_geometry(positions[i], normals[i]);
-                        }
-
-                        HRESULT hr = upload_default_buffer(geometry, dx_mesh.vertex_count, D3D11_BIND_VERTEX_BUFFER,
-                            dx_mesh.geometry_address());
-                        if (FAILED(hr))
-                            printf("Could not upload %s's geometry buffer.\n", mesh.get_name().c_str());
-
-                        delete[] geometry;
-                    }
-
-                    // Delete temporary expanded positions.
-                    if (positions != mesh.get_positions())
-                        delete[] positions;
-
-                    { // Upload texcoords if present, otherwise upload 'null buffer'.
-                        Vector2f* texcoords = mesh.get_texcoords();
-                        if (texcoords != nullptr) {
-
-                            if (expand_indexed_buffers)
-                                texcoords = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), texcoords);
-
-                            HRESULT hr = upload_default_buffer(texcoords, dx_mesh.vertex_count, D3D11_BIND_VERTEX_BUFFER,
-                                dx_mesh.texcoords_address());
-                            if (FAILED(hr))
-                                printf("Could not upload %s's texcoord buffer.\n", mesh.get_name().c_str());
-
-                            if (texcoords != mesh.get_texcoords())
-                                delete[] texcoords;
-                        } else
-                            *dx_mesh.texcoords_address() = m_vertex_shading.null_buffer;
-                    }
-
-                    { // Upload tints and roughness if present, otherwise upload 'null buffer'.
-                        TintRoughness* tints = mesh.get_tint_and_roughness();
-                        if (tints != nullptr) {
-
-                            if (expand_indexed_buffers)
-                                tints = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), tints);
-
-                            HRESULT hr = upload_default_buffer(tints, dx_mesh.vertex_count, D3D11_BIND_VERTEX_BUFFER, dx_mesh.tint_and_roughness_address());
-                            if (FAILED(hr))
-                                printf("Could not upload %s's tint and roughness buffer.\n", mesh.get_name().c_str());
-
-                            if (tints != mesh.get_tint_and_roughness())
-                                delete[] tints;
-                        } else
-                            *dx_mesh.tint_and_roughness_address() = m_vertex_shading.null_buffer;
-                    }
-
-                    // Constant buffer
-                    Dx11MeshConstans mesh_constants;
-                    mesh_constants.has_tint_and_roughness = mesh.get_tint_and_roughness() != nullptr;
-                    THROW_DX11_ERROR(create_constant_buffer(m_device, mesh_constants, &dx_mesh.constant_buffer));
-
-                    // Set the buffer count to the minimal number of buffers containing data.
-                    bool has_texcoords = mesh.get_texcoords() != nullptr;
-                    dx_mesh.vertex_buffer_count = has_texcoords ? 2 : 1;
-                    bool has_colors = mesh.get_tint_and_roughness() != nullptr;
-                    dx_mesh.vertex_buffer_count = has_colors ? 3 : dx_mesh.vertex_buffer_count;
-
-                    m_meshes[mesh_ID] = dx_mesh;
-                }
-            }
-        }
-
+        m_meshes.handle_updates(m_device);
         m_mesh_models.handle_updates();
     }
 

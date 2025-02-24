@@ -20,28 +20,29 @@ namespace DX11Renderer {
 // ------------------------------------------------------------------------------------------------
 template <typename T>
 class OwnedResourcePtr {
-public:
-    T* resource;
+private:
+    T* m_resource;
 
+public:
     // --------------------------------------------------------------------------------------------
     // Constructors and destructor.
     // --------------------------------------------------------------------------------------------
     OwnedResourcePtr(T* res = nullptr)
-        : resource(res) { }
+        : m_resource(res) { }
 
     OwnedResourcePtr(OwnedResourcePtr&& other)
-        : resource(other.detach()) { }
+        : m_resource(other.detach()) { }
 
     OwnedResourcePtr& operator=(OwnedResourcePtr&& rhs) {
-        if (resource) resource->Release();
-        resource = rhs.detach();
+        if (m_resource) m_resource->Release();
+        m_resource = rhs.detach();
         return *this;
     }
 
     ~OwnedResourcePtr() {
-        if (resource != nullptr) {
-            resource->Release();
-            resource = nullptr;
+        if (m_resource != nullptr) {
+            m_resource->Release();
+            m_resource = nullptr;
         }
     }
 
@@ -49,33 +50,38 @@ public:
     // Data access.
     // --------------------------------------------------------------------------------------------
 
-    inline operator bool() const { return resource != nullptr; }
+    inline operator bool() const { return m_resource != nullptr; }
 
-    inline operator T*() { return resource; }
-    inline operator T&() { return *resource; }
-    inline T* get() { return resource; }
-    inline T* operator->() { return resource; }
-    inline const T* const operator->() const { return resource; }
+    inline operator T*() { return m_resource; }
+    inline operator T&() { return *m_resource; }
+    inline T* get() { return m_resource; }
+    inline T* operator->() { return m_resource; }
+    inline const T* const operator->() const { return m_resource; }
 
-    inline T** operator&() { return &resource; }
-    inline T* const * operator&() const { return &resource; }
+    inline T** operator&() { return &m_resource; }
+    inline T* const * operator&() const { return &m_resource; }
+
+    inline bool operator==(T* rhs) const { return m_resource == rhs; }
+    inline bool operator==(OwnedResourcePtr<T> rhs) const { return m_resource == rhs.m_resource; }
+    inline bool operator!=(T* rhs) const { return m_resource != rhs; }
+    inline bool operator!=(OwnedResourcePtr<T> rhs) const { return m_resource != rhs.m_resource; }
 
     // --------------------------------------------------------------------------------------------
     // Resource management.
     // --------------------------------------------------------------------------------------------
 
     inline unsigned int release() { 
-        if (resource == nullptr) return 0u;
-        unsigned int res = resource->Release(); resource = nullptr; return res;
+        if (m_resource == nullptr) return 0u;
+        unsigned int res = m_resource->Release(); m_resource = nullptr; return res;
     }
     inline void swap(OwnedResourcePtr<T>& other) {
-        T* tmp = other.resource;
-        other.resource = resource;
-        resource = tmp;
+        T* tmp = other.m_resource;
+        other.m_resource = m_resource;
+        m_resource = tmp;
     }
 
 private:
-    inline T* detach() { T* tmp = resource; resource = nullptr; return tmp; }
+    inline T* detach() { T* tmp = m_resource; m_resource = nullptr; return tmp; }
 
     OwnedResourcePtr(OwnedResourcePtr& other) = delete;
     OwnedResourcePtr& operator=(OwnedResourcePtr& rhs) = delete;
