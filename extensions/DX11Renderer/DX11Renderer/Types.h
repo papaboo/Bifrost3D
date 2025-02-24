@@ -263,6 +263,8 @@ struct Dx11MeshConstans {
 };
 
 struct Dx11Mesh {
+    static const unsigned int MAX_BUFFER_COUNT = 3;
+
     AABB bounds;
 
     ID3D11Buffer* constant_buffer;
@@ -271,12 +273,17 @@ struct Dx11Mesh {
     ID3D11Buffer* indices;
 
     unsigned int vertex_count;
-    ID3D11Buffer* vertex_buffers[3]; // [geometry, texcoords, tint_and_roughness]
-    int vertex_buffer_count; // Count including the last non-empty buffer. Can include empty ones. For example if tint is valid, the count will be 3, but textures can still be null.
+    ID3D11Buffer* vertex_buffers[MAX_BUFFER_COUNT]; // [geometry, texcoords, tint_and_roughness]
+    unsigned int vertex_buffer_count; // Count including the last non-empty buffer. Can include empty ones. For example if tint is valid, the count will be 3, but textures can still be null.
 
     ID3D11Buffer** geometry_address() { return vertex_buffers + 0; }
     ID3D11Buffer** texcoords_address() { return vertex_buffers + 1; }
     ID3D11Buffer** tint_and_roughness_address() { return vertex_buffers + 2; }
+
+    static Dx11Mesh invalid() {
+        Dx11Mesh mesh = {};
+        return mesh;
+    }
 };
 
 struct Dx11Model {

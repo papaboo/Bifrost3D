@@ -8,6 +8,7 @@ if (TARGET DX11Renderer)
     LogAverageLuminanceTest.h
     main.cpp
     MaterialManagerTest.h
+    MeshManagerTest.h
     PrefixSumTest.h
     Utils.h
   )
