@@ -1,9 +1,17 @@
 BACKLOG:
+* MeshModelManager tests
+ * Material change event
+ * transparent_mesh_sorting
+  * Is thinwalled transparent handled correctly in DX11 renderer? Do we set the proper state when transitioning from thin walled to non thinwalled
+* Vertex color support
+ * Better simple viewer test scene object.
+  * Load shader ball and set vertex colors left to right, roughness top to bottom.
 * Screenshot
  * DX renderer including margin for SSAO?
  * OptiX renderer not getting screenshot call
+ * Use screenshot feature for simple DX11 and OptiX render tests? Just render a diffuse triangle or the tint.
  * Update readme and reference images.
-* Vertex color support
+* Sponza gltf doesn't show up in image viewer again. Probably a scale issue
 * Rough glass
  * Glass sphere in test scene should have a strong specular highlight from the area light
  * Can we use Bounded VNDF when the IOR is greater (or was it less) than 1.0? So cases where the refraction will cause more of the lobe to be occluded.
@@ -35,12 +43,12 @@ BACKLOG:
  * See how gltf distinguishes between opacity, cutout and refracting. They should be orthogonal, as you can still have refracting perforated microgeometry.
   * Cutout implies thinwalled and opacity is subpixel cutout, so does opacity < 1 imply thinwalled as well? Otherwise definining the medium that the light moves through gets 'tricky'
 * Bugs
- * SimpleViewer test scene - There seems to be a sampler bug. The blue torus has a ghost highlight from the blinking light and if the blinking light is on, then the copper sphere has a discontinuity in shading bases on position. It's not the RNG. Has been tested with LCG
+ * SimpleViewer glass test scene. The area light reflection in the nearly specular black floor checkers has a ghost reflection. Not RNG and not wi re-reflection as the floor is flat.
  * SimpleViewer can't switch between rasterizer and ray tracer using P after alt tabbing. Windows input seems to be recorded correctly, but the keyboard state is wrong. Perhaps a clear/reinitialize is in order?
  * Simpleviewers picture in picture's height/depth ratio doesn't update when the viewport updates
  * Test scene area light reflection in floor has artifacts.
  * Environment map has different intensities in DX and OptiX. See --environment-map "C:\Users\Asger Hoedt\Development\data\textures\spheremaps\3DTotal_free_sample_1_Bg.jpg"
- * DX11 crash when box gun shot destroyed
+* Agx tone mapper https://iolite-engine.com/blog_posts/minimal_agx_implementation
 * Bump mapping
  * Create test scene with a plane where one side has proper micro geometry and the other is normal mapped.
  * Use Microfacet-based Normal Mapping for Robust Monte Carlo Path Tracing to solve the energy preservation issue.
@@ -74,7 +82,7 @@ BACKLOG:
  * Generalized Resampled Importance Sampling
  * Change the rng seed to be based on a frame count instead of an accumulation count
   * How will that affect non-ReSTIR
-* Decima Engine Area lights
+* Decima Engine Area lights or linearly transformed cosines
  * https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Shaders/Private/BRDF.ush
  * https://www.guerrilla-games.com/read/decima-engine-advances-in-lighting-and-aa
 * Blue noise seed
