@@ -52,7 +52,7 @@ protected:
         OBuffer constant_buffer;
         THROW_DX11_ERROR(create_constant_buffer(device, constants, &constant_buffer));
 
-        context->CSSetConstantBuffers(0, 1, &constant_buffer);
+        context->CSSetConstantBuffers(ConstantRegisters::CameraEffects, 1, &constant_buffer);
 
         return constant_buffer;
     }

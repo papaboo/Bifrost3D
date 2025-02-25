@@ -132,7 +132,7 @@ private:
         Matrix3x4f world_to_view_matrix;
         Matrix3x4f view_to_world_matrix;
     };
-    OBuffer m_scene_buffer;
+    OBuffer m_scene_constants;
 
     // Lights
     struct {
@@ -303,7 +303,7 @@ public:
         }
 
         { // Scene constant buffer
-            THROW_DX11_ERROR(create_constant_buffer(m_device, sizeof(SceneConstants), &m_scene_buffer));
+            THROW_DX11_ERROR(create_constant_buffer(m_device, sizeof(SceneConstants), &m_scene_constants));
         }
 
         { // Setup lights
@@ -372,7 +372,7 @@ public:
         Dx11Mesh mesh = m_meshes.get_mesh(model.mesh_ID);
 
         { // Set the buffers.
-            context->VSSetConstantBuffers(4, 1, &mesh.constant_buffer);
+            context->VSSetConstantBuffers(ConstantRegisters::Mesh, 1, &mesh.constant_buffer);
 
             if (mesh.index_count != 0)
                 context->IASetIndexBuffer(mesh.indices, DXGI_FORMAT_R32_UINT, 0);
@@ -386,13 +386,13 @@ public:
         }
 
         { // Bind world transform.
-            m_transforms.bind_transform(*context, 2, model.transform_ID);
+            m_transforms.bind_transform(*context, ConstantRegisters::SceneNode, model.transform_ID);
         }
 
         { // Material parameters
 
           // Bind material constant buffer.
-            m_materials.bind_material(*context, 3, model.material_ID);
+            m_materials.bind_material(*context, ConstantRegisters::Material, model.material_ID);
 
             Dx11MaterialTextures& material_textures = m_materials.get_material_textures(model.material_ID);
 
@@ -475,15 +475,15 @@ public:
             scene_vars.inverse_projection_matrix = inverse_projection_matrix;
             scene_vars.world_to_view_matrix = to_matrix3x4(world_to_view_transform);
             scene_vars.view_to_world_matrix = to_matrix3x4(view_to_world_transform);
-            m_render_context->UpdateSubresource(m_scene_buffer, 0, nullptr, &scene_vars, 0, 0);
-            m_render_context->VSSetConstantBuffers(13, 1, &m_scene_buffer);
-            m_render_context->PSSetConstantBuffers(13, 1, &m_scene_buffer);
-            m_render_context->CSSetConstantBuffers(13, 1, &m_scene_buffer);
+            m_render_context->UpdateSubresource(m_scene_constants, 0, nullptr, &scene_vars, 0, 0);
+            m_render_context->VSSetConstantBuffers(ConstantRegisters::Scene, 1, &m_scene_constants);
+            m_render_context->PSSetConstantBuffers(ConstantRegisters::Scene, 1, &m_scene_constants);
+            m_render_context->CSSetConstantBuffers(ConstantRegisters::Scene, 1, &m_scene_constants);
         }
 
         { // Bind light buffers
-            m_render_context->VSSetConstantBuffers(12, 1, m_lights.manager.light_buffer_addr());
-            m_render_context->PSSetConstantBuffers(12, 1, m_lights.manager.light_buffer_addr());
+            m_render_context->VSSetConstantBuffers(ConstantRegisters::Lights, 1, m_lights.manager.light_buffer_addr());
+            m_render_context->PSSetConstantBuffers(ConstantRegisters::Lights, 1, m_lights.manager.light_buffer_addr());
         }
 
         m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -587,13 +587,13 @@ public:
             OBuffer display_constant_buffer;
             create_constant_buffer(m_device, display_constants, &display_constant_buffer);
 
-            m_render_context->PSSetConstantBuffers(1, 1, &display_constant_buffer);
+            m_render_context->PSSetConstantBuffers(ConstantRegisters::DebugOutput, 1, &display_constant_buffer);
             m_render_context->VSSetShader(m_debug.display_vertex_shader, 0, 0);
             m_render_context->PSSetShader(m_debug.display_debug_pixel_shader, 0, 0);
             m_render_context->Draw(3, 0);
 
             display_constant_buffer.release();
-            m_render_context->PSSetConstantBuffers(1, 1, &display_constant_buffer); // Reset by setting cleared buffer
+            m_render_context->PSSetConstantBuffers(ConstantRegisters::DebugOutput, 1, &display_constant_buffer); // Reset by setting cleared buffer
 
             post_render_cleanup();
             return { m_backbuffer_SRV, backbuffer_viewport, std::numeric_limits<unsigned int>::max() };
@@ -632,7 +632,7 @@ public:
                 Vector4i debug_material_constants = { m_debug_settings.display_mode, 0, 0, 0 };
                 OBuffer debug_material_constant_buffer;
                 create_constant_buffer(m_device, debug_material_constants, &debug_material_constant_buffer);
-                m_render_context->PSSetConstantBuffers(4, 1, &debug_material_constant_buffer);
+                m_render_context->PSSetConstantBuffers(ConstantRegisters::DebugOutput, 1, &debug_material_constant_buffer);
 
                 // Clear blend.
                 m_render_context->OMSetBlendState(nullptr, 0, 0xffffffff);

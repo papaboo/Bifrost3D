@@ -17,6 +17,10 @@
 // Input buffers.
 // ------------------------------------------------------------------------------------------------
 
+cbuffer vertex_constants : register(b1) {
+    int tint_and_roughness_buffer_set;
+}
+
 cbuffer transform : register(b2) {
     float4x3 to_world_matrix;
 };
@@ -25,13 +29,9 @@ cbuffer material : register(b3) {
     ShadingModels::Parameters material_params;
 }
 
-cbuffer vertex_constants : register(b4) {
-    int tint_and_roughness_buffer_set;
-    float3 _padding;
-}
-
 cbuffer lights : register(b12) {
-    int4 light_count;
+    int light_count;
+    int3 _padding;
     LightData light_data[12];
 }
 
@@ -85,7 +85,7 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
     // Apply IBL
     float3 radiance = scene_vars.environment_tint.rgb * shading_model.evaluate_IBL(world_wo, world_normal, ambient_visibility);
 
-    for (int l = 0; l < light_count.x; ++l) {
+    for (int l = 0; l < light_count; ++l) {
         LightData light = light_data[l];
 
         bool is_sphere_light = light.type() == LightType::Sphere && light.sphere_radius() > 0.0f;
@@ -223,7 +223,7 @@ static const uint visualize_coat_roughness = 9;
 static const uint visualize_coverage = 10;
 static const uint visualize_UV = 11;
 
-cbuffer visualization_mode : register(b4) {
+cbuffer visualization_mode : register(b11) {
     uint visualization_mode;
 }
 
