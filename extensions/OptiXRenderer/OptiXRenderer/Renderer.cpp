@@ -82,9 +82,7 @@ static inline optix::Buffer create_buffer(optix::Context& context, unsigned int 
 // Model loading.
 //-------------------------------------------------------------------------------------------------
 
-static inline optix::GeometryTriangles load_mesh(optix::Context& context, MeshID mesh_ID, optix::Program attribute_program) {
-
-    Mesh mesh = mesh_ID;
+static inline optix::GeometryTriangles load_mesh(optix::Context& context, Mesh mesh, optix::Program attribute_program) {
 
     optix::Buffer index_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT3, mesh.get_primitive_count(), mesh.get_primitives());
 
@@ -586,8 +584,10 @@ struct Renderer::Implementation {
 
         { // Mesh updates.
             for (MeshID mesh_ID : Meshes::get_changed_meshes()) {
+                auto changes = Meshes::get_changes(mesh_ID);
+
                 // Destroy a destroyed mesh or a previous one where a new one has been created.
-                if (Meshes::get_changes(mesh_ID).any_set(Meshes::Change::Created, Meshes::Change::Destroyed)) {
+                if (changes.any_set(Meshes::Change::Created, Meshes::Change::Destroyed)) {
                     if (mesh_ID < meshes.size() && meshes[mesh_ID]) {
 
                         meshes[mesh_ID]["index_buffer"]->getBuffer()->destroy();
@@ -599,7 +599,10 @@ struct Renderer::Implementation {
                     }
                 }
 
-                if (Meshes::get_changes(mesh_ID).contains(Meshes::Change::Created)) {
+                if (changes.contains(Meshes::Change::Destroyed))
+                    continue;
+
+                if (changes.is_set(Meshes::Change::Created)) {
                     if (meshes.size() <= mesh_ID)
                         meshes.resize(Meshes::capacity());
                     meshes[mesh_ID] = load_mesh(context, mesh_ID, triangle_attribute_program);
@@ -665,15 +668,17 @@ struct Renderer::Implementation {
                 textures.resize(Textures::capacity());
 
                 for (TextureID texture_ID : Textures::get_changed_textures()) {
+                    auto changes = Textures::get_changes(texture_ID);
+
                     // Destroy a destroyed texture or a previous one where a new one has been created.
-                    if (Textures::get_changes(texture_ID).any_set(Textures::Change::Destroyed, Textures::Change::Created)) {
+                    if (changes.any_set(Textures::Change::Destroyed, Textures::Change::Created)) {
                         if (textures[texture_ID]) {
                             textures[texture_ID]->destroy();
                             textures[texture_ID] = nullptr;
                         }
                     }
 
-                    if (Textures::get_changes(texture_ID).contains(Textures::Change::Destroyed))
+                    if (changes.contains(Textures::Change::Destroyed))
                         continue;
 
                     static auto convert_wrap_mode = [](WrapMode wrapmode) {
@@ -684,7 +689,7 @@ struct Renderer::Implementation {
                         return RT_WRAP_REPEAT;
                     };
 
-                    if (Textures::get_changes(texture_ID).contains(Textures::Change::Created)) {
+                    if (changes.contains(Textures::Change::Created)) {
                         TextureSampler& texture = textures[texture_ID] = context->createTextureSampler();
                         texture->setWrapMode(0, convert_wrap_mode(Textures::get_wrapmode_U(texture_ID)));
                         texture->setWrapMode(1, convert_wrap_mode(Textures::get_wrapmode_V(texture_ID)));
