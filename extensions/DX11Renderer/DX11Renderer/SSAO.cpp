@@ -91,7 +91,7 @@ OShaderResourceView& BilateralBlur::apply(ID3D11DeviceContext1& context, ORender
         context.PSSetShaderResources(0, 2, SRVs);
         auto& srv = (i % 2) == 0 ? ao_SRV : m_intermediate_SRV;
         context.PSSetShaderResources(2, 1, &srv);
-        context.PSSetConstantBuffers(2, 1, &m_constants[i]);
+        context.PSSetConstantBuffers(ConstantRegisters::SsaoFilter, 1, &m_constants[i]);
         context.Draw(3, 0);
     }
 
@@ -265,8 +265,8 @@ OShaderResourceView& AlchemyAO::apply(ID3D11DeviceContext1& context, unsigned in
     }
 
     ID3D11Buffer* constant_buffers[] = { m_constants, m_samples.buffer };
-    context.VSSetConstantBuffers(0, 1, constant_buffers);
-    context.PSSetConstantBuffers(0, 2, constant_buffers);
+    context.VSSetConstantBuffers(ConstantRegisters::SsaoSettings, 1, constant_buffers);
+    context.PSSetConstantBuffers(ConstantRegisters::SsaoSettings, 2, constant_buffers);
 
     // Compute linear depth and filter.
     // Assumes that the G-buffer viewport is set // TODO Assert on viewport dimensions!
