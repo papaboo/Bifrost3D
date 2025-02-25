@@ -568,6 +568,8 @@ SceneNode load(const std::string& filename) {
                     mesh_flags |= MeshFlag::Normal;
                 else if (attribute.first.compare("TEXCOORD_0") == 0)
                     mesh_flags |= MeshFlag::Texcoord;
+                else if (attribute.first.compare("COLOR_0") == 0)
+                    mesh_flags |= MeshFlag::TintAndRoughness;
             }
             assert(mesh_flags.is_set(MeshFlag::Position));
 
@@ -620,31 +622,10 @@ SceneNode load(const std::string& filename) {
                 const auto& accessor = model.accessors[attribute.second];
                 const auto& buffer_view = model.bufferViews[accessor.bufferView];
                 const auto& buffer = model.buffers[buffer_view.buffer];
+                int buffer_offset = buffer_view.byteOffset + accessor.byteOffset;
+                int byte_stride = accessor.ByteStride(buffer_view);
 
-                void* destination_buffer = nullptr;
-                int element_size = -1;
-                if (attribute.first.compare("POSITION") == 0) {
-                    assert(accessor.type == TINYGLTF_TYPE_VEC3 && accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                    element_size = sizeof(Vector3f);
-                    destination_buffer = mesh.get_positions();
-                    auto min_vals = accessor.minValues;
-                    min_position = Vector3f(Vector3d(min_vals[0], min_vals[1], min_vals[2]));
-                    auto max_vals = accessor.maxValues;
-                    max_position = Vector3f(Vector3d(max_vals[0], max_vals[1], max_vals[2]));
-                } else if (attribute.first.compare("NORMAL") == 0) {
-                    assert(accessor.type == TINYGLTF_TYPE_VEC3 && accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                    element_size = sizeof(Vector3f);
-                    destination_buffer = mesh.get_normals();
-                } else if (attribute.first.compare("TEXCOORD_0") == 0) {
-                    assert(accessor.type == TINYGLTF_TYPE_VEC2 && accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                    element_size = sizeof(Vector2f);
-                    destination_buffer = mesh.get_texcoords();
-                }
-
-                // Only handle known buffers.
-                if (destination_buffer != nullptr) {
-                    int buffer_offset = buffer_view.byteOffset + accessor.byteOffset;
-                    int byte_stride = accessor.ByteStride(buffer_view);
+                auto copy_identity_elements = [&](void* destination_buffer, int element_size) {
                     assert(byte_stride != -1);
 
                     const unsigned char* src = buffer.data.data() + buffer_offset;
@@ -655,6 +636,36 @@ SceneNode load(const std::string& filename) {
                         dst += element_size;
                         src += byte_stride;
                     }
+                };
+
+                if (attribute.first.compare("POSITION") == 0) {
+                    assert(accessor.type == TINYGLTF_TYPE_VEC3 && accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                    auto min_vals = accessor.minValues;
+                    min_position = Vector3f(Vector3d(min_vals[0], min_vals[1], min_vals[2]));
+                    auto max_vals = accessor.maxValues;
+                    max_position = Vector3f(Vector3d(max_vals[0], max_vals[1], max_vals[2]));
+                    copy_identity_elements(mesh.get_positions(), sizeof(Vector3f));
+                } else if (attribute.first.compare("NORMAL") == 0) {
+                    assert(accessor.type == TINYGLTF_TYPE_VEC3 && accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                    copy_identity_elements(mesh.get_normals(), sizeof(Vector3f));
+                } else if (attribute.first.compare("TEXCOORD_0") == 0) {
+                    assert(accessor.type == TINYGLTF_TYPE_VEC2 && accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                    copy_identity_elements(mesh.get_texcoords(), sizeof(Vector2f));
+                } else if (attribute.first.compare("COLOR_0") == 0) {
+                    assert(accessor.type == TINYGLTF_TYPE_VEC4);
+                    assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT || accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE);
+
+                    auto* tints = mesh.get_tint_and_roughness();
+                    const unsigned char* src = buffer.data.data() + buffer_offset;
+                    for (unsigned int i = 0; i < vertex_count; ++i) {
+                        if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT) {
+                            float* tint_src = (float*)src;
+                            tints[i] = { tint_src[0], tint_src[1], tint_src[2], UNorm8::one() };
+                        } else // accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE
+                            tints[i] = { src[0], src[1], src[2], UNorm8::one() };
+                        src += byte_stride;
+                    }
+                        
                 }
             }
 
