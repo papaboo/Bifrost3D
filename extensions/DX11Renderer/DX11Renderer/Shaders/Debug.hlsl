@@ -37,7 +37,7 @@ Texture2D normal_tex : register(t0);
 Texture2D depth_tex : register(t1);
 Texture2D ao_tex : register(t2);
 
-cbuffer debug_constants : register(b1) {
+cbuffer debug_constants : register(b11) {
     int mode;
     int3 _padding;
 };

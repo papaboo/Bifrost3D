@@ -81,7 +81,7 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
     float min_log_luminance = -8;
     float max_log_luminance = 4;
     OBuffer constant_buffer = create_camera_effects_constants(device, { bin_count, 1 }, min_log_luminance, max_log_luminance);
-    context->CSSetConstantBuffers(0, 1, &constant_buffer);
+    context->CSSetConstantBuffers(ConstantRegisters::CameraEffects, 1, &constant_buffer);
 
     // Image with one element in each bucket.
     half4 pixels[bin_count];
@@ -117,7 +117,7 @@ TEST_F(ExposureHistogramFixture, small_image) {
     float min_log_luminance = -8;
     float max_log_luminance = 4;
     OBuffer constant_buffer = create_camera_effects_constants(device, { width, height }, min_log_luminance, max_log_luminance);
-    context->CSSetConstantBuffers(0, 1, &constant_buffer);
+    context->CSSetConstantBuffers(ConstantRegisters::CameraEffects, 1, &constant_buffer);
 
     // Image with 4 elements in each bucket and (4 + width) elements in the first and last bucket
     const int element_count = width * height;
@@ -179,7 +179,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
     OBuffer constant_buffer = create_camera_effects_constants(device, { 1, 1 }, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
 
     context->CSSetShader(compute_exposure_shader, nullptr, 0u);
-    context->CSSetConstantBuffers(0, 1, &constant_buffer);
+    context->CSSetConstantBuffers(ConstantRegisters::CameraEffects, 1, &constant_buffer);
     context->CSSetShaderResources(0, 1, &histogram_SRV);
     context->CSSetUnorderedAccessViews(0, 1, &linear_exposure_UAV, 0u);
     context->Dispatch(1, 1, 1);
@@ -224,7 +224,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_histogram) {
     OBuffer constant_buffer = create_camera_effects_constants(device, { 1, 1 }, min_log_luminance, max_log_luminance, min_percentage, max_percentage);
 
     context->CSSetShader(compute_exposure_shader, nullptr, 0u);
-    context->CSSetConstantBuffers(0, 1, &constant_buffer);
+    context->CSSetConstantBuffers(ConstantRegisters::CameraEffects, 1, &constant_buffer);
     context->CSSetShaderResources(0, 1, &histogram_SRV);
     context->CSSetUnorderedAccessViews(0, 1, &linear_exposure_UAV, 0u);
     context->Dispatch(1, 1, 1);

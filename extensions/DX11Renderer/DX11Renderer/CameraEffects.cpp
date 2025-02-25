@@ -40,7 +40,7 @@ OShaderResourceView& GaussianBloom::filter(ID3D11DeviceContext1& context, ID3D11
 #if CHECK_IMPLICIT_STATE
     // Check that the constants and sampler are bound.
     OBuffer bound_constants;
-    context.CSGetConstantBuffers(0, 1, &bound_constants);
+    context.CSGetConstantBuffers(ConstantRegisters::CameraEffects, 1, &bound_constants);
     always_assert(bound_constants.get() == &constants);
 #endif
 
@@ -141,7 +141,7 @@ OShaderResourceView& DualKawaseBloom::filter(ID3D11DeviceContext1& context, ID3D
 #if CHECK_IMPLICIT_STATE
     // Check that the constants and sampler are bound.
     OBuffer bound_constants;
-    context.CSGetConstantBuffers(0, 1, &bound_constants);
+    context.CSGetConstantBuffers(ConstantRegisters::CameraEffects, 1, &bound_constants);
     always_assert(bound_constants.get() == &constants);
 #endif
 
@@ -277,7 +277,7 @@ void LogAverageLuminance::compute(ID3D11DeviceContext1& context, ID3D11Buffer* c
 #if CHECK_IMPLICIT_STATE
     // Check that the constants and sampler are bound.
     OBuffer bound_constants;
-    context.CSGetConstantBuffers(0, 1, &bound_constants);
+    context.CSGetConstantBuffers(ConstantRegisters::CameraEffects, 1, &bound_constants);
     always_assert(bound_constants.get() == constants);
 #endif
 
@@ -319,7 +319,7 @@ OShaderResourceView& ExposureHistogram::reduce_histogram(ID3D11DeviceContext1& c
 #if CHECK_IMPLICIT_STATE
     // Check that the constants and sampler are bound.
     OBuffer bound_constants;
-    context.CSGetConstantBuffers(0, 1, &bound_constants);
+    context.CSGetConstantBuffers(CAMERA_EFFECTS_CONSTANTS_REGISTER, 1, &bound_constants);
     always_assert(bound_constants.get() == constants);
 #endif
 
@@ -344,7 +344,7 @@ void ExposureHistogram::compute_linear_exposure(ID3D11DeviceContext1& context, I
 #if CHECK_IMPLICIT_STATE
     // Check that the constants and sampler are bound.
     OBuffer bound_constants;
-    context.CSGetConstantBuffers(0, 1, &bound_constants);
+    context.CSGetConstantBuffers(ConstantRegisters::CameraEffects, 1, &bound_constants);
     always_assert(bound_constants.get() == constants);
 #endif
 
@@ -448,7 +448,7 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Bifrost::Math::Camera
     }
 
     // Setup state
-    context.CSSetConstantBuffers(0, 1, &m_constant_buffer);
+    context.CSSetConstantBuffers(ConstantRegisters::CameraEffects, 1, &m_constant_buffer);
 
     { // Determine exposure.
         if (settings.exposure.mode == ExposureMode::Histogram)
@@ -456,8 +456,6 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Bifrost::Math::Camera
         else if (settings.exposure.mode == ExposureMode::LogAverage)
             m_log_average_luminance.compute_linear_exposure(context, m_constant_buffer, frame_SRV, frame_viewport.width, m_linear_exposure_UAV);
         else { // settings.exposure.mode == ExposureMode::Fixed
-            context.CSSetConstantBuffers(0, 1, &m_constant_buffer);
-
             context.CSSetUnorderedAccessViews(0, 1, &m_linear_exposure_UAV, 0u);
             context.CSSetShader(m_linear_exposure_from_bias_shader, nullptr, 0u);
             context.Dispatch(1, 1, 1);
@@ -485,7 +483,7 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Bifrost::Math::Camera
         context.RSSetViewports(1, &dx_viewport);
         context.OMSetRenderTargets(1, &backbuffer_RTV, nullptr);
         context.RSSetState(m_raster_state);
-        context.PSSetConstantBuffers(0, 1, &m_constant_buffer);
+        context.PSSetConstantBuffers(ConstantRegisters::CameraEffects, 1, &m_constant_buffer);
 
         context.VSSetShader(m_fullscreen_VS, 0, 0);
 

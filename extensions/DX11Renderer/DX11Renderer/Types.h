@@ -9,8 +9,8 @@
 #ifndef _DX11RENDERER_RENDERER_TYPES_H_
 #define _DX11RENDERER_RENDERER_TYPES_H_
 
-#include <Bifrost/Core/UniqueIDGenerator.h>
 #include <Bifrost/Math/half.h>
+#include <Bifrost/Utils/IdDeclarations.h>
 
 #include <DX11Renderer/OwnedResourcePtr.h>
 
@@ -42,23 +42,6 @@ struct IDXGIAdapter1;
 struct IDXGIDevice;
 struct IDXGIFactory1;
 struct IDXGIFactory2;
-
-//-------------------------------------------------------------------------------------------------
-// Asset ID forward declaration.
-//-------------------------------------------------------------------------------------------------
-namespace Bifrost::Assets {
-class Meshes;
-typedef Core::TypedUIDGenerator<Meshes>::UID MeshID;
-class MeshModels;
-typedef Core::TypedUIDGenerator<MeshModels> MeshModelIDGenerator;
-typedef MeshModelIDGenerator::UID MeshModelID;
-class Materials;
-typedef Core::TypedUIDGenerator<Materials>::UID MaterialID;
-}
-namespace Bifrost::Scene {
-class SceneNodes;
-typedef Core::TypedUIDGenerator<SceneNodes>::UID SceneNodeID;
-}
 
 //-------------------------------------------------------------------------------------------------
 // DX11 enum none flags.
@@ -104,9 +87,6 @@ using ODXGIFactory2 = DX11Renderer::OwnedResourcePtr<IDXGIFactory2>;
 // Storage.
 //-------------------------------------------------------------------------------------------------
 
-#define CONSTANT_ELEMENT_SIZE 16
-#define CONSTANT_BUFFER_ALIGNMENT 256
-
 struct half2 {
     half_float::half x, y;
 };
@@ -134,6 +114,35 @@ struct float4 {
 struct AABB {
     float3 min, max;
 };
+
+//-------------------------------------------------------------------------------------------------
+// Constant buffer values
+//-------------------------------------------------------------------------------------------------
+
+#define CONSTANT_ELEMENT_SIZE 16
+#define CONSTANT_BUFFER_ALIGNMENT 256
+
+namespace ConstantRegisters {
+// SSAO
+constexpr int SsaoSettings = 0;
+constexpr int SsaoSamples = 1;
+constexpr int SsaoFilter = 2;
+
+// Scene rendering
+constexpr int Mesh = 1; // VS constants
+constexpr int SceneNode = 2;
+constexpr int Material = 3;
+constexpr int DebugOutput = 11;
+constexpr int Lights = 12;
+constexpr int Scene = 13;
+
+// Camera effects
+constexpr int CameraEffects = 0;
+};
+
+//-------------------------------------------------------------------------------------------------
+// Screen space ambient occlusion settings.
+//-------------------------------------------------------------------------------------------------
 
 enum class SsaoFilter { Cross, Box };
 
