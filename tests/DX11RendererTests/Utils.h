@@ -13,6 +13,8 @@
 #include <DX11Renderer/Compositor.h>
 #include <DX11Renderer/Utils.h>
 
+#include <Bifrost/Assets/Mesh.h>
+
 // -------------------------------------------------------------------------------------------------
 // Typedefs.
 // -------------------------------------------------------------------------------------------------
@@ -51,6 +53,21 @@ inline DX11Renderer::OBuffer create_camera_effects_constants(DX11Renderer::ODevi
     DX11Renderer::OBuffer constant_buffer;
     THROW_DX11_ERROR(DX11Renderer::create_constant_buffer(device, constants, &constant_buffer));
     return constant_buffer;
+}
+
+inline Bifrost::Assets::Mesh create_triangle(const std::string& name, Bifrost::Assets::MeshFlags additional_mesh_flags = Bifrost::Assets::MeshFlag::None) {
+    using namespace Bifrost::Assets;
+
+    MeshFlags geometry_flags = { MeshFlag::Position, MeshFlag::Normal };
+    Mesh mesh = Mesh(name, 1, 3, geometry_flags | additional_mesh_flags);
+    mesh.get_positions()[0] = Bifrost::Math::Vector3f(0, 0, 0);
+    mesh.get_positions()[1] = Bifrost::Math::Vector3f(0, 1, 0);
+    mesh.get_positions()[2] = Bifrost::Math::Vector3f(1, 0, 0);
+    mesh.get_indices()[0] = 0;
+    mesh.get_indices()[1] = 1;
+    mesh.get_indices()[2] = 2;
+    mesh.compute_bounds();
+    return mesh;
 }
 
 // -------------------------------------------------------------------------------------------------

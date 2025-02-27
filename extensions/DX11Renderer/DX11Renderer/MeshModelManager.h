@@ -31,12 +31,14 @@ public:
 
     void handle_updates();
 
+    const Dx11Model& get_model(unsigned int model_index) const { return m_sorted_models[m_model_indices[model_index]]; }
+
     inline Iterator begin() { return m_sorted_models.begin() + 1; }
     inline ConstIterator cbegin() const { return m_sorted_models.cbegin() + 1; }
-    inline ConstIterator begin() const { cbegin(); }
+    inline ConstIterator begin() const { return cbegin(); }
     inline Iterator end() { return m_sorted_models.end(); }
     inline ConstIterator cend() const { return m_sorted_models.cend(); }
-    inline ConstIterator end() const { cend(); }
+    inline ConstIterator end() const { return cend(); }
 
     inline ConstIterator cbegin_opaque_models() const { return begin(); }
     inline ConstIterator cbegin_opaque_thin_walled_models() const { return m_begin_opaque_thin_walled_models; }

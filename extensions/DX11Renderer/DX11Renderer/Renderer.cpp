@@ -361,7 +361,7 @@ public:
                     m_render_context->PSSetShader(m_g_buffer.thin_walled.pixel_shader, 0, 0);
                 }
 
-                assert(model_itr->model_ID != 0);
+                assert(MeshModel(model_itr->model_ID).exists());
                 render_model<true>(m_render_context, *model_itr);
             }
         }
@@ -642,8 +642,6 @@ public:
 
                 m_render_context->PSSetShader(m_debug.material_params_shader, 0, 0);
                 for (auto model_itr = m_mesh_models.cbegin(); model_itr != m_mesh_models.cend(); ++model_itr) {
-                    assert(model_itr->model_ID != 0);
-
                     // Setup two-sided raster state for thin-walled materials.
                     if (model_itr == m_mesh_models.cbegin_opaque_thin_walled_models())
                         m_raster_state.set_raster_state(m_raster_state.thin_walled, m_render_context);
@@ -659,7 +657,7 @@ public:
                     unsigned int previous_shading_model = 0;
                     m_render_context->PSSetShader(m_opaque.shading_models[previous_shading_model], 0, 0);
                     for (auto model_itr = m_mesh_models.cbegin(); model_itr != m_mesh_models.cbegin_transparent_models(); ++model_itr) {
-                        assert(model_itr->model_ID != 0);
+                        assert(MeshModel(model_itr->model_ID).exists());
 
                         // Setup two-sided raster state for thin-walled materials.
                         if (model_itr == m_mesh_models.cbegin_opaque_thin_walled_models())
@@ -711,7 +709,7 @@ public:
                     m_render_context->PSSetShader(m_transparent.shading_models[previous_shading_model], 0, 0);
                     for (auto transparent_model : transparent_models) {
                         Dx11Model model = *transparent_model.model_iterator;
-                        assert(model.model_ID != 0);
+                        assert(MeshModel(model.model_ID).exists());
 
                         unsigned int current_shading_model = m_materials.get_material(model.material_ID).shading_model;
                         if (previous_shading_model != current_shading_model) {
