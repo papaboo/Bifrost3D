@@ -13,6 +13,7 @@
 #include <LogAverageLuminanceTest.h>
 #include <MaterialManagerTest.h>
 #include <MeshManagerTest.h>
+#include <MeshModelManagerTest.h>
 #include <PrefixSumTest.h>
 
 // NOTE

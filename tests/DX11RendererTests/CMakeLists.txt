@@ -9,6 +9,7 @@ if (TARGET DX11Renderer)
     main.cpp
     MaterialManagerTest.h
     MeshManagerTest.h
+    MeshModelManagerTest.h
     PrefixSumTest.h
     Utils.h
   )

@@ -361,7 +361,7 @@ public:
                     m_render_context->PSSetShader(m_g_buffer.thin_walled.pixel_shader, 0, 0);
                 }
 
-                assert(model_itr->model_ID != 0);
+                assert(MeshModel(model_itr->model_ID).exists());
                 render_model<true>(m_render_context, *model_itr);
             }
         }

@@ -31,6 +31,8 @@ public:
 
     void handle_updates();
 
+    const Dx11Model& get_model(unsigned int model_index) const { return m_sorted_models[m_model_indices[model_index]]; }
+
     inline Iterator begin() { return m_sorted_models.begin() + 1; }
     inline ConstIterator cbegin() const { return m_sorted_models.cbegin() + 1; }
     inline ConstIterator begin() const { cbegin(); }
