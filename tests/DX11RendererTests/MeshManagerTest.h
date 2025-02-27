@@ -32,21 +32,6 @@ protected:
     }
 };
 
-Bifrost::Assets::Mesh create_triangle(const std::string& name, Bifrost::Assets::MeshFlags additional_mesh_flags = Bifrost::Assets::MeshFlag::None) {
-    using namespace Bifrost::Assets;
-
-    MeshFlags geometry_flags = { MeshFlag::Position, MeshFlag::Normal };
-    Mesh mesh = Mesh(name, 1, 3, geometry_flags | additional_mesh_flags);
-    mesh.get_positions()[0] = Bifrost::Math::Vector3f(0, 0, 0);
-    mesh.get_positions()[1] = Bifrost::Math::Vector3f(0, 1, 0);
-    mesh.get_positions()[2] = Bifrost::Math::Vector3f(1, 0, 0);
-    mesh.get_indices()[0] = 0;
-    mesh.get_indices()[1] = 1;
-    mesh.get_indices()[2] = 2;
-    mesh.compute_bounds();
-    return mesh;
-}
-
 TEST_F(MeshManagerFixture, create_dx_mesh_representation) {
     using namespace Bifrost::Assets;
 

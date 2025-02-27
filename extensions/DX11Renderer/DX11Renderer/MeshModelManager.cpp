@@ -40,7 +40,7 @@ void MeshModelManager::handle_updates() {
     bool models_updated = false;
 
     if (!MeshModels::get_changed_models().is_empty()) {
-        if (m_sorted_models.size() <= MeshModels::capacity()) {
+        if (m_model_indices.size() < MeshModels::capacity()) {
             m_sorted_models.reserve(MeshModels::capacity());
             int old_size = (int)m_model_indices.size();
             m_model_indices.resize(MeshModels::capacity());
@@ -52,6 +52,7 @@ void MeshModelManager::handle_updates() {
 
             if (model.get_changes().contains(MeshModels::Change::Destroyed)) {
                 Dx11Model dx_model = {};
+                dx_model.properties = Dx11Model::Properties::Destroyed;
                 m_sorted_models[model_index] = dx_model;
 
                 m_model_indices[model.get_ID()] = 0;
@@ -111,9 +112,13 @@ void MeshModelManager::handle_updates() {
         #pragma omp parallel for
         for (int i = 1; i < m_sorted_models.size(); ++i) {
             Dx11Model& model = m_sorted_models[i];
+            Dx11Model& prevModel = m_sorted_models[i - 1];
+
+            // Update the index of the model
             m_model_indices[model.model_ID] = i;
 
-            Dx11Model& prevModel = m_sorted_models[i - 1];
+            // Update the iterators to the clusters of models with the same properties.
+            // This can be done in parallel as it only relies on information of the current and previous model.
             if (prevModel.properties != model.properties) {
                 bool thin_walled_transition = !prevModel.is_thin_walled() && model.is_thin_walled();
 
