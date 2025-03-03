@@ -15,7 +15,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <string>
 
 namespace Bifrost {
 namespace Math {

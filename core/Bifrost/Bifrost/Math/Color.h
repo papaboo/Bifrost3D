@@ -249,11 +249,94 @@ struct RGBA32 {
 };
 
 //*****************************************************************************
+// HSV.
+//*****************************************************************************
+
+struct HSV {
+    float h, s, v;
+
+    HSV() = default;
+
+    HSV(float h, float s, float v) : h(h), s(s), v(v) { }
+
+    // Conversion from https://www.rapidtables.com/convert/color/rgb-to-hsv.html
+    explicit HSV(RGB rgb)
+    : h(0), s(0), v(0) {
+        float c_max = fmaxf(rgb.r, fmaxf(rgb.g, rgb.b));
+        float c_min = fminf(rgb.r, fminf(rgb.g, rgb.b));
+        float c_delta = c_max - c_min;
+
+        // Degenerate case
+        if (c_max == 0)
+            return;
+
+        v = c_max;
+        s = c_delta / c_max;
+
+        if (c_delta) {
+            if (c_max == rgb.r) {
+                h = (rgb.g - rgb.b) / c_delta;
+                if (h < 0.0f) // simple replacement for 'mod 6'
+                    h += 6;
+            } else if (c_max == rgb.g)
+                h = (rgb.b - rgb.r) / c_delta + 2;
+            else // c_max == rgb.b
+                h = (rgb.r - rgb.g) / c_delta + 4;
+            h *= 60;
+        }
+    }
+
+    // Conversion from https://www.rapidtables.com/convert/color/hsv-to-rgb.html
+    explicit operator RGB() const {
+        float c = v * s;
+        float x = c * (1 - abs(fmodf(h / 60.0f, 2) - 1));
+        float m = v - c;
+        float x_m = x + m;
+
+        if (h < 60.0f)
+            return RGB(v, x_m, m);
+        else if (h < 120.0f)
+            return RGB(x_m, v, m);
+        else if (h < 180.0f)
+            return RGB(m, v, x_m);
+        else if (h < 240.0f)
+            return RGB(m, x_m, v);
+        else if (h < 300.0f)
+            return RGB(x_m, m, v);
+        else // h < 360.0f
+            return RGB(v, m, x_m);
+    }
+
+    inline std::string to_string() const {
+        std::ostringstream out;
+        out << "[h: " << h << ", s: " << s << ", v: " << v << "]";
+        return out.str();
+    }
+};
+
+//*****************************************************************************
 // Free functions.
 //*****************************************************************************
 
 __always_inline__ RGBA lerp(RGBA a, RGBA b, float t) {
     return RGBA(a.rgb() + (b.rgb() - a.rgb()) * t, a.a + (b.a - a.a) * t);
+}
+
+__always_inline__ HSV lerp(HSV a, HSV b, float t) {
+    auto lerp = [](float a, float b, float t) -> float { return a + (b - a) * t; };
+
+    // Hue is expressed as angles, so we need to handle the case where a low angle should lerp towards a large angle, e.g. 10 degrees should lerp towards 350 degrees
+    // This is done by subtracting 360 from the high number, such that it becomes an interpolation between 10 and -10.
+    if (abs(a.h - b.h) > 180)
+        if (a.h > b.h)
+            a.h -= 360;
+        else
+            b.h -= 360;
+    float h = lerp(a.h, b.h, t);
+    if (h < 0.0f)
+        h += 360;
+
+    return HSV(h, lerp(a.s, b.s, t), lerp(a.v, b.v, t));
 }
 
 __always_inline__ RGB gammacorrect(RGB color, float gamma) {

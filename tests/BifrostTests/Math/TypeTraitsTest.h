@@ -24,6 +24,12 @@
 namespace Bifrost {
 namespace Math {
 
+GTEST_TEST(Math_TypeTraits, HSV) {
+    EXPECT_TRUE(std::is_trivial<HSV>::value);
+    EXPECT_TRUE(std::is_standard_layout<HSV>::value);
+    EXPECT_TRUE(std::is_pod<HSV>::value);
+}
+
 GTEST_TEST(Math_TypeTraits, Linef) {
     EXPECT_TRUE(std::is_trivial<Linef>::value);
     EXPECT_TRUE(std::is_standard_layout<Linef>::value);

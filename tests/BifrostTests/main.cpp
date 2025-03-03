@@ -21,6 +21,7 @@
 
 #include <Input/KeyboardTest.h>
 
+#include <Math/ColorTest.h>
 #include <Math/Distribution1DTest.h>
 #include <Math/Distribution2DTest.h>
 #include <Math/FixedPointTypesTest.h>

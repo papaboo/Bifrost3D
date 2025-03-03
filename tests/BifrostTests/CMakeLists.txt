@@ -25,6 +25,7 @@ set(INPUT_SRCS
 )
 
 set(MATH_SRCS
+  Math/ColorTest.h
   Math/Distribution1DTest.h
   Math/Distribution2DTest.h
   Math/FixedPointTypesTest.h
