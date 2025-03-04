@@ -14,6 +14,7 @@
 #include <MaterialManagerTest.h>
 #include <MeshManagerTest.h>
 #include <MeshModelManagerTest.h>
+#include <TextureManagerTest.h>
 #include <PrefixSumTest.h>
 
 // NOTE
