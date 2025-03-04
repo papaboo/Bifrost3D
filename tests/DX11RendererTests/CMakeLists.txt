@@ -11,6 +11,7 @@ if (TARGET DX11Renderer)
     MeshManagerTest.h
     MeshModelManagerTest.h
     PrefixSumTest.h
+    TextureManagerTest.h
     Utils.h
   )
 

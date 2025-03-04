@@ -63,8 +63,14 @@ OSamplerState TextureManager::create_clamped_linear_sampler(ID3D11Device1& devic
 void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& device_context) {
     { // Image updates.
         if (!Images::get_changed_images().is_empty()) {
-            if (m_images.size() < Images::capacity())
+            if (m_images.size() < Images::capacity()) {
                 m_images.resize(Images::capacity());
+
+                // Reset the images pointed to by the textures
+                for (Texture texture : Textures::get_iterable())
+                    if (texture.exists())
+                        m_textures[texture.get_ID()].image = &m_images[texture.get_image().get_ID()];
+            }
 
             static auto to_DX_format = [](PixelFormat format) -> DXGI_FORMAT {
                 switch (format) {
@@ -96,16 +102,16 @@ void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1&
                 return new_pixels - pixel_count * 4;;
             };
 
-            for (ImageID image_ID : Images::get_changed_images()) {
-                Dx11Image& dx_image = m_images[image_ID];
+            for (Image image : Images::get_changed_images()) {
+                auto image_changes = image.get_changes();
+                Dx11Image& dx_image = m_images[image.get_ID()];
 
-                if (Images::get_changes(image_ID).is_set(Images::Change::Destroyed)) {
+                if (image_changes.is_set(Images::Change::Destroyed)) {
                     dx_image.srv.release();
 
-                } else if (Images::get_changes(image_ID).is_set(Images::Change::Created)) {
+                } else if (image_changes.is_set(Images::Change::Created)) {
                     dx_image.srv.release(); // Explicit release because the resource pointer is directly modified below.
 
-                    Image image = image_ID;
                     D3D11_TEXTURE2D_DESC tex_desc = {};
                     tex_desc.Width = image.get_width();
                     tex_desc.Height = image.get_height();
@@ -166,7 +172,7 @@ void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1&
                     if (resource_data.pSysMem != image.get_pixels())
                         delete[] resource_data.pSysMem;
 
-                } else if (Images::get_changes(image_ID).is_set(Images::Change::PixelsUpdated))
+                } else if (image_changes.is_set(Images::Change::PixelsUpdated))
                     assert(!"Pixel update not implemented yet.\n");
             }
         }
@@ -177,16 +183,16 @@ void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1&
             if (m_textures.size() < Textures::capacity())
                 m_textures.resize(Textures::capacity());
 
-            for (TextureID tex_ID : Textures::get_changed_textures()) {
-                Dx11Texture& dx_tex = m_textures[tex_ID];
+            for (Texture texture : Textures::get_changed_textures()) {
+                auto tex_changes = texture.get_changes();
+                Dx11Texture& dx_tex = m_textures[texture.get_ID()];
 
-                if (Textures::get_changes(tex_ID) == Textures::Change::Destroyed) {
+                if (tex_changes.is_set(Textures::Change::Destroyed)) {
+                    dx_tex.image = nullptr;
                     dx_tex.sampler.release();
 
-                } else if (Textures::get_changes(tex_ID).contains(Textures::Change::Created)) {
+                } else if (tex_changes.contains(Textures::Change::Created)) {
                     dx_tex.sampler.release(); // Explicit release, because the resource will be overwritten below.
-
-                    Texture texture = tex_ID;
 
                     static auto to_DX_filtermode = [](MagnificationFilter mag_filter, MinificationFilter min_filter) -> D3D11_FILTER {
                         if (mag_filter == MagnificationFilter::None) {
