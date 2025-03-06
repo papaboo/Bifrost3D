@@ -23,8 +23,9 @@ namespace DX11Renderer {
 //----------------------------------------------------------------------------
 class TextureManager {
 private:
-    std::vector<Dx11Image> m_images = std::vector<Dx11Image>(0);
     std::vector<Dx11Texture> m_textures = std::vector<Dx11Texture>(0);
+    std::vector<Dx11Image> m_images = std::vector<Dx11Image>(0);
+    std::vector<Bifrost::Assets::ImageID> m_newly_referenced_images = std::vector<Bifrost::Assets::ImageID>(0);
 
     // Default textures.
     struct DefaultTexture {
