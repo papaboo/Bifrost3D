@@ -107,7 +107,6 @@ TEST_F(TextureManagerFixture, destroyed_assets_are_cleared) {
 
     auto image = create_image();
     auto texture = create_texture(image);
-
     texture_manager.handle_updates(device, context);
 
     { // Assert that image and texture has been allocated.
@@ -130,6 +129,30 @@ TEST_F(TextureManagerFixture, destroyed_assets_are_cleared) {
         auto& dx_texture = texture_manager.get_texture(texture.get_ID());
         EXPECT_EQ(dx_texture.image, nullptr);
         EXPECT_EQ(dx_texture.sampler, nullptr);
+    }
+}
+
+TEST_F(TextureManagerFixture, unreferenced_images_are_not_uploaded) {
+    TextureManager texture_manager(device);
+
+    auto image = create_image();
+    texture_manager.handle_updates(device, context);
+
+    { // Assert that image has not been allocated
+        auto& dx_image = texture_manager.get_image(image.get_ID());
+        EXPECT_EQ(dx_image.srv, nullptr);
+    }
+
+    auto texture = create_texture(image);
+    texture_manager.handle_updates(device, context);
+
+    { // Assert that image and texture has been allocated.
+        auto& dx_image = texture_manager.get_image(image.get_ID());
+        EXPECT_NE(dx_image.srv, nullptr);
+
+        auto& dx_texture = texture_manager.get_texture(texture.get_ID());
+        EXPECT_NE(dx_texture.image, nullptr);
+        EXPECT_NE(dx_texture.sampler, nullptr);
     }
 }
 
