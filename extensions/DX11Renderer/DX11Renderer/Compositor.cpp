@@ -287,9 +287,10 @@ public:
                 Screenshot::Content color_content = is_HDR ? Screenshot::Content::ColorHDR : Screenshot::Content::ColorLDR;
                 if (content_requested.is_set(color_content)) {
                     ID3D11View* color_buffer_view = is_HDR ? (ID3D11View*)frame.frame_SRV : (ID3D11View*)m_swap_chain_RTV;
+                    Recti source_viewport = is_HDR ? frame.frame_viewport : viewport;
                     OResource sourceResource;
                     color_buffer_view->GetResource(&sourceResource);
-                    auto screenshot = screenshot_filler(m_device, m_render_context, is_HDR, (ID3D11Texture2D*)sourceResource.get(), frame.frame_viewport);
+                    auto screenshot = screenshot_filler(m_device, m_render_context, is_HDR, (ID3D11Texture2D*)sourceResource.get(), source_viewport);
                     if (screenshot.pixels != nullptr)
                         images.push_back(screenshot);
                 }
