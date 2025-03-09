@@ -258,6 +258,27 @@ void compute_perspective_projection(float near_distance, float far_distance, flo
     inverse_projection_matrix[3][3] = - projection_matrix[2][2] / projection_matrix[2][3];
 }
 
+void compute_orthographic_projection(float width, float height, float depth,
+                                     Matrix4x4f& projection_matrix, Matrix4x4f& inverse_projection_matrix) {
+    // Based on 
+    // https://www.scratchapixel.com/lessons/3d-basic-rendering/perspective-and-orthographic-projection-matrix/orthographic-projection-matrix.html
+    // Simplified as the projection's width and height are centered around 0,0 and the near plane is located at 0.
+    projection_matrix = {};
+    projection_matrix[0][0] = 2 / width;
+    projection_matrix[1][1] = 2 / height;
+    projection_matrix[2][2] = 2 / depth;
+    projection_matrix[2][3] = -1;
+    projection_matrix[3][3] = 1;
+
+    // Inline computation of inverse matrix. Has higher precision than the general invert and is faster.
+    inverse_projection_matrix = {};
+    inverse_projection_matrix[0][0] = 0.5f * width;
+    inverse_projection_matrix[1][1] = 0.5f * height;
+    inverse_projection_matrix[2][2] = 0.5f * depth;
+    inverse_projection_matrix[2][3] = 0.5f * depth;
+    inverse_projection_matrix[3][3] = 1.0f;
+}
+
 Ray ray_from_viewport_point(CameraID camera_ID, Vector2f viewport_point) {
 
     Matrix4x4f inverse_projection_matrix = Cameras::get_inverse_view_projection_matrix(camera_ID);
