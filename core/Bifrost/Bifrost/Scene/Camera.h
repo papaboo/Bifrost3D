@@ -199,6 +199,9 @@ namespace CameraUtils {
 void compute_perspective_projection(float near_distance, float far_distance, float field_of_view_in_radians, float aspect_ratio,
                                     Math::Matrix4x4f& projection_matrix, Math::Matrix4x4f& inverse_projection_matrix);
 
+void compute_orthographic_projection(float width, float height, float depth,
+                                     Math::Matrix4x4f& projection_matrix, Math::Matrix4x4f& inverse_projection_matrix);
+
 // Future work: compute_orthographic_projection
 
 // Generates a ray in worldspace shot from the point in the viewport of the referenced camera.

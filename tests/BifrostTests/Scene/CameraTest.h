@@ -65,7 +65,7 @@ TEST_F(Scene_Camera, perspective_matrices) {
                                                 perspective_matrix, inverse_perspective_matrix);
 
     // Ground truth matrix computed in Unity.
-    // Has the third 'column' flipped, to switch from OpenGL representation to DX, +Z forward.
+    // Has the third column negated, to switch from OpenGL representation to DX, +Z forward.
     Math::Matrix4x4f qed = { 1.81066f, 0.00000f, 0.00000f,  0.00000f,
                              0.00000f, 2.41421f, 0.00000f,  0.00000f,
                              0.00000f, 0.00000f, 1.00200f, -2.00200f,
@@ -73,6 +73,41 @@ TEST_F(Scene_Camera, perspective_matrices) {
 
     EXPECT_PRED3(compare_matrix4x4f, perspective_matrix, qed, 25);
     EXPECT_PRED3(compare_matrix4x4f, inverse_perspective_matrix, invert(perspective_matrix), 1);
+}
+
+TEST_F(Scene_Camera, orthographic_matrices) {
+    using namespace Bifrost::Math;
+
+    float width = 8, height = 4, depth = 16;
+
+    Matrix4x4f orthographic_matrix, inverse_orthographic_matrix;
+    CameraUtils::compute_orthographic_projection(width, height, depth, orthographic_matrix, inverse_orthographic_matrix);
+
+    // Ground truth orthographic projection matrix.
+    Matrix4x4f qed = { 0.25f, 0.0f, 0.000f,  0.0f,
+                       0.00f, 0.5f, 0.000f,  0.0f,
+                       0.00f, 0.0f, 0.125f, -1.0f,
+                       0.00f, 0.0f, 0.000f,  1.0f };
+
+    EXPECT_PRED3(compare_matrix4x4f, orthographic_matrix, qed, 1);
+    EXPECT_PRED3(compare_matrix4x4f, inverse_orthographic_matrix, invert(orthographic_matrix), 1);
+
+    { // Ray projection testing
+        SceneRoot scene = SceneRoot("Root", RGB::white());
+        CameraID cam_ID = Cameras::create("Test cam", scene.get_ID(), orthographic_matrix, inverse_orthographic_matrix);
+        Ray lower_left_ray = CameraUtils::ray_from_viewport_point(cam_ID, Vector2f(0.0f, 0.0f));
+        Ray upper_right_ray = CameraUtils::ray_from_viewport_point(cam_ID, Vector2f(1.0f, 1.0f));
+
+        // Rays should point forward.
+        EXPECT_EQ(lower_left_ray.direction, Vector3f::forward());
+        EXPECT_EQ(upper_right_ray.direction, Vector3f::forward());
+
+        // Test that lower-left and upper right rays start at the expected positions.
+        Vector3f expected_lower_left_origin = Vector3f(-width, -height, 0.0f) * 0.5f;
+        Vector3f expected_upper_right_origin = Vector3f(width, height, 0.0f) * 0.5f;
+        EXPECT_EQ(lower_left_ray.origin, expected_lower_left_origin);
+        EXPECT_EQ(upper_right_ray.origin, expected_upper_right_origin);
+    }
 }
 
 TEST_F(Scene_Camera, sentinel_camera) {
