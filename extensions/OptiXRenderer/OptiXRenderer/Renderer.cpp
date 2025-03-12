@@ -1228,7 +1228,6 @@ struct Renderer::Implementation {
 
         // Rerender for the requested content into a scratch render buffer.
         auto& camera_state = per_camera_state[camera_ID];
-        unsigned int accumulation_count = camera_state.accumulations;
         auto output_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_SHORT4, frame_width, frame_height);
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
         auto accumulation_buffer = context->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER, frame_width, frame_height);
@@ -1239,10 +1238,12 @@ struct Renderer::Implementation {
 
         auto screenshots = std::vector<Screenshot>();
 
-        // Upload general camera state
+        // Prepare camera state for the auxiliary buffers
         CameraStateGPU camera_state_GPU = prepare_camera_state(camera_ID, frame_size);
         camera_state_GPU.output_buffer = output_buffer->getId();
         camera_state_GPU.accumulation_buffer = accumulation_buffer->getId();
+        unsigned int accumulation_count = max(1u, camera_state.accumulations);
+
         context["g_scene"]->setUserData(sizeof(scene.GPU_state), &scene.GPU_state);
 
         auto render_auxiliary_feature = [&](unsigned int entrypoint) {
@@ -1266,31 +1267,30 @@ struct Renderer::Implementation {
             screenshots.emplace_back(frame_width, frame_height, Screenshot::Content::Depth, PixelFormat::Intensity_Float, pixels);
         }
 
-        auto readback_rgba32_screenshot = [&](Screenshot::Content content) {
+        auto readback_rgb24_screenshot = [&](Screenshot::Content content) {
             // Readback screenshot data
-            RGBA32* pixels = new RGBA32[frame_pixel_count];
+            RGB24* pixels = new RGB24[frame_pixel_count];
             half4* gpu_pixels = (half4*)output_buffer->map();
             for (int i = 0; i < frame_pixel_count; ++i) {
-                pixels[i].r = byte(gpu_pixels[i].x * 255.0f + 0.5f);
-                pixels[i].g = byte(gpu_pixels[i].y * 255.0f + 0.5f);
-                pixels[i].b = byte(gpu_pixels[i].z * 255.0f + 0.5f);
-                pixels[i].a = byte(255);
+                pixels[i].r = float(gpu_pixels[i].x);
+                pixels[i].g = float(gpu_pixels[i].y);
+                pixels[i].b = float(gpu_pixels[i].z);
             }
             output_buffer->unmap();
 
-            screenshots.emplace_back(frame_width, frame_height, content, PixelFormat::RGBA32, pixels);
+            screenshots.emplace_back(frame_width, frame_height, content, PixelFormat::RGB24, pixels);
         };
 
         // Render albedo
         if (content_requested.contains(Screenshot::Content::Albedo)) {
             render_auxiliary_feature(EntryPoints::Albedo);
-            readback_rgba32_screenshot(Screenshot::Content::Albedo);
+            readback_rgb24_screenshot(Screenshot::Content::Albedo);
         }
 
         // Render tint
         if (content_requested.contains(Screenshot::Content::Tint)) {
             render_auxiliary_feature(EntryPoints::Tint);
-            readback_rgba32_screenshot(Screenshot::Content::Tint);
+            readback_rgb24_screenshot(Screenshot::Content::Tint);
         }
 
         // Render roughness
@@ -1301,7 +1301,7 @@ struct Renderer::Implementation {
             unsigned char* pixels = new unsigned char[frame_pixel_count];
             half4* gpu_pixels = (half4*)output_buffer->map();
             for (int i = 0; i < frame_pixel_count; ++i)
-                pixels[i] = unsigned char(gpu_pixels[i].x * 255.0f + 0.5f);
+                pixels[i] = UNorm8::to_byte(gpu_pixels[i].x);
             output_buffer->unmap();
 
             screenshots.emplace_back(frame_width, frame_height, Screenshot::Content::Roughness, PixelFormat::Intensity8, pixels);
