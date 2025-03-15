@@ -11,7 +11,10 @@
 
 #include <optixu/optixu_math_namespace.h>
 
-#include <string>
+#include <gtest/gtest.h>
+
+#include <filesystem>
+#include <ostream>
 
 //-----------------------------------------------------------------------------
 // Comparison helpers.
@@ -85,5 +88,11 @@ inline bool equal_normal_eps(optix::float3 lhs, optix::float3 rhs, double epsilo
 inline std::ostream& operator<<(std::ostream& s, const optix::float3 v) {
     return s << "[x: " << v.x << ", y: " << v.y << ", z: " << v.z << "]";
 }
+
+//-----------------------------------------------------------------------------
+// Other utility methods. Utility utils if you will.
+//-----------------------------------------------------------------------------
+
+std::filesystem::path get_data_directory();
 
 #endif // _OPTIXRENDERERTEST_UTILS_H_
