@@ -6,7 +6,9 @@ if (TARGET OptiXRenderer)
     BSDFTestUtils.h
     main.cpp
     MiscTest.h
+    RendererTest.h
     Utils.h
+    Utils.cpp
   )
 
   set(ASSETS_SRCS
