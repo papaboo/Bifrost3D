@@ -143,12 +143,18 @@ void Materials::set_tint_roughness_texture_ID(MaterialID material_ID, TextureID 
 
 bool Materials::has_tint_texture(MaterialID material_ID) {
     Texture tex = m_materials[material_ID].tint_roughness_texture_ID;
+    if (!tex.exists() || !tex.get_image().exists())
+        return false;
+
     auto pixel_format = tex.get_image().get_pixel_format();
     return channel_count(pixel_format) >= 3;
 }
 
 bool Materials::has_roughness_texture(MaterialID material_ID) {
     Texture tex = m_materials[material_ID].tint_roughness_texture_ID;
+    if (!tex.exists() || !tex.get_image().exists())
+        return false;
+
     auto pixel_format = tex.get_image().get_pixel_format();
     return channel_count(pixel_format) == 4 || pixel_format == PixelFormat::Roughness8;
 }
