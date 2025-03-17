@@ -267,43 +267,64 @@ void RenderingGUI::layout_frame() {
         ImGui::Separator();
 
         ImGui::PoppedTreeNode("Lights", [&]() {
-            for (LightSourceID light_ID : LightSources::get_iterable()) {
-                SceneNode scene_node = LightSources::get_node_ID(light_ID);
+            for (LightSource light : LightSources::get_iterable()) {
+                SceneNode scene_node = light.get_node();
                 ImGui::PoppedTreeNode(scene_node.get_name().c_str(), [&]() {
-                    LightSources::Type light_type = LightSources::get_type(light_ID);
+                    LightSources::Type light_type = light.get_type();
                     
                     if (light_type == LightSources::Type::Sphere) {
-                        SphereLight light = SphereLight(light_ID);
+                        SphereLight sphere_light = light;
 
-                        float radius = light.get_radius();
+                        float radius = sphere_light.get_radius();
                         if (ImGui::InputFloat("Radius", &radius))
-                            light.set_radius(radius);
+                            sphere_light.set_radius(radius);
 
-                        RGB power = light.get_power();
+                        RGB power = sphere_light.get_power();
                         if (ImGui::InputFloat3("Power", &power.r))
-                            light.set_power(power);
+                            sphere_light.set_power(power);
                     } else if (light_type == LightSources::Type::Spot) {
-                        SpotLight light = SpotLight(light_ID);
+                        SpotLight spot_light = light;
                         
-                        float radius = light.get_radius();
+                        float radius = spot_light.get_radius();
                         if (ImGui::InputFloat("Radius", &radius))
-                            light.set_radius(radius);
+                            spot_light.set_radius(radius);
 
-                        float cos_angle = light.get_cos_angle();
+                        float cos_angle = spot_light.get_cos_angle();
                         if (ImGui::SliderFloat("Cos(angle)", &cos_angle, 0, 0.999f))
-                            light.set_cos_angle(cos_angle);
+                            spot_light.set_cos_angle(cos_angle);
 
-                        RGB power = light.get_power();
+                        RGB power = spot_light.get_power();
                         if (ImGui::InputFloat3("Power", &power.r))
-                            light.set_power(power);
+                            spot_light.set_power(power);
                     } else if (light_type == LightSources::Type::Directional) {
-                        DirectionalLight light = DirectionalLight(light_ID);
+                        DirectionalLight directional_light = light;
 
-                        RGB radiance = light.get_radiance();
+                        RGB radiance = directional_light.get_radiance();
                         if (ImGui::InputFloat3("Radiance", &radiance.r))
-                            light.set_radiance(radiance);
+                            directional_light.set_radiance(radiance);
                     }
+
+                    if (ImGui::Button("Delete"))
+                        light.destroy();
                 });
+            }
+
+            auto create_new_light_node = [](const std::string& name) -> SceneNode {
+                CameraID camera_ID = *Cameras::get_iterable().begin();
+                Transform transform = Cameras::get_transform(camera_ID);
+                SceneNode root_node = SceneRoot(Cameras::get_scene_ID(camera_ID)).get_root_node();
+                SceneNode light_node = SceneNode(name, transform);
+                light_node.set_parent(root_node);
+                return light_node;
+            };
+
+            if (ImGui::Button("Create Directional Light")) {
+                SceneNode light_node = create_new_light_node("Directional Light");
+                DirectionalLight(light_node, RGB(0.5f));
+            }
+            if (ImGui::Button("Create Sphere Light")) {
+                SceneNode light_node = create_new_light_node("Sphere Light");
+                SphereLight(light_node, RGB(1.0f), 0.1f);
             }
         });
 
