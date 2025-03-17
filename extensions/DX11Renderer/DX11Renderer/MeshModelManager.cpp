@@ -20,7 +20,7 @@ MeshModelManager::MeshModelManager() {
     m_sorted_models.reserve(MeshModels::capacity());
     m_sorted_models[0] = {};
 
-    m_model_indices = std::vector<unsigned int>(MeshModels::capacity());
+    m_model_indices = std::vector<unsigned int>(MeshModels::capacity(), 0u);
 }
 
 inline unsigned int model_properties_from_material(Material material) {
@@ -42,9 +42,7 @@ void MeshModelManager::handle_updates() {
     if (!MeshModels::get_changed_models().is_empty()) {
         if (m_model_indices.size() < MeshModels::capacity()) {
             m_sorted_models.reserve(MeshModels::capacity());
-            int old_size = (int)m_model_indices.size();
-            m_model_indices.resize(MeshModels::capacity());
-            std::fill(m_model_indices.begin() + old_size, m_model_indices.end(), 0);
+            m_model_indices.resize(MeshModels::capacity(), 0u);
         }
 
         for (MeshModel model : MeshModels::get_changed_models()) {
@@ -133,7 +131,7 @@ void MeshModelManager::handle_updates() {
             }
         }
 
-        // Correct interators in case no transition between buckets was found.
+        // Correct iterators in case no transition between buckets was found.
         if (m_begin_transparent_models > m_sorted_models.begin() + model_count)
             m_begin_transparent_models = m_sorted_models.begin() + model_count;
         if (m_begin_cutout_models > m_begin_transparent_models)
