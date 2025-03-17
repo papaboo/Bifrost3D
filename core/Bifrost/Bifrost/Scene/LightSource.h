@@ -171,7 +171,7 @@ public:
     // Constructors and destructors.
     // -----------------------------------------------------------------------
     SphereLight() : LightSource(LightSourceID::invalid_UID()) {}
-    SphereLight(LightSourceID id) : LightSource(id) { assert(LightSources::get_type(id) == LightSources::Type::Sphere); }
+    SphereLight(LightSource light) : LightSource(light) { assert(light.get_type() == LightSources::Type::Sphere); }
     SphereLight(SceneNode node, Math::RGB power, float radius)
         : LightSource(LightSources::create_sphere_light(node.get_ID(), power, radius)) { }
 
@@ -196,7 +196,7 @@ public:
     // Constructors and destructors.
     // -----------------------------------------------------------------------
     SpotLight() : LightSource(LightSourceID::invalid_UID()) {}
-    SpotLight(LightSourceID id) : LightSource(id) { assert(LightSources::get_type(id) == LightSources::Type::Spot); }
+    SpotLight(LightSource light) : LightSource(light) { assert(light.get_type() == LightSources::Type::Spot); }
     SpotLight(SceneNode node, Math::RGB power, float radius, float cos_angle)
         : LightSource(LightSources::create_spot_light(node.get_ID(), power, radius, cos_angle)) {}
 
@@ -224,7 +224,7 @@ public:
     // Constructors and destructors.
     // -----------------------------------------------------------------------
     DirectionalLight() : LightSource(LightSourceID::invalid_UID()) {}
-    DirectionalLight(LightSourceID id) : LightSource(id) { assert(LightSources::get_type(id) == LightSources::Type::Directional); }
+    DirectionalLight(LightSource light) : LightSource(light) { assert(light.get_type() == LightSources::Type::Directional); }
     DirectionalLight(SceneNode node, Math::RGB radiance)
         : LightSource(LightSources::create_directional_light(node.get_ID(), radiance)) { }
     
