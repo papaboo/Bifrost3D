@@ -55,6 +55,10 @@ void MeshModelManager::handle_updates() {
 
                 m_model_indices[model.get_ID()] = 0;
             } else if (model.get_changes().contains(MeshModels::Change::Created)) {
+                assert(model.exists());
+                assert(model.get_mesh().exists());
+                assert(model.get_material().exists());
+
                 Dx11Model dx_model;
                 dx_model.model_ID = model.get_ID();
                 dx_model.material_ID = model.get_material().get_ID();
@@ -68,6 +72,9 @@ void MeshModelManager::handle_updates() {
                 } else
                     m_sorted_models[model_index] = dx_model;
             } else if (model.get_changes().contains(MeshModels::Change::Material)) {
+                assert(model.exists());
+                assert(model.get_material().exists());
+
                 Dx11Model& dx_model = m_sorted_models[model_index];
                 dx_model.material_ID = model.get_material().get_ID();
                 dx_model.properties = model_properties_from_material(model.get_material());
@@ -84,6 +91,7 @@ void MeshModelManager::handle_updates() {
             // Ignore invalid models.
             if (model_itr->model_ID == 0)
                 continue;
+            assert(MeshModel(model_itr->model_ID).exists());
 
             // Update material properties and set models_updated to true in case there was a change.
             Material material = model_itr->material_ID;

@@ -93,6 +93,9 @@ void LightManager::handle_updates(ID3D11DeviceContext1& device_context) {
         Dx11Light* gpu_lights = m_data.lights;
         unsigned int light_index = 0;
         for (LightSourceID light_ID : LightSources::get_iterable()) {
+            if (!LightSource(light_ID).exists())
+                continue;
+
             m_ID_to_index[light_ID] = light_index;
             m_index_to_ID[light_index] = light_ID;
 
@@ -105,13 +108,13 @@ void LightManager::handle_updates(ID3D11DeviceContext1& device_context) {
 
         Dx11Light* gpu_lights = m_data.lights;
 
-        auto destroy_light = [](LightSources::Changes changes) -> bool {
+        auto light_destroyed = [](LightSources::Changes changes) -> bool {
             return changes.is_set(LightSources::Change::Destroyed) && changes.not_set(LightSources::Change::Created);
         };
 
-        // First process destroyed lights to ensure that we don't allocate lights and then afterwards adds holes to the light array.
+        // First process destroyed lights to ensure that we don't allocate lights and then afterwards add holes to the light array.
         for (LightSourceID light_ID : LightSources::get_changed_lights()) {
-            if (!destroy_light(LightSources::get_changes(light_ID)))
+            if (!light_destroyed(LightSources::get_changes(light_ID)))
                 continue;
 
             unsigned int light_index = m_ID_to_index[light_ID];
@@ -129,9 +132,10 @@ void LightManager::handle_updates(ID3D11DeviceContext1& device_context) {
         // Then update or create the rest of the light sources.
         for (LightSourceID light_ID : LightSources::get_changed_lights()) {
             auto light_changes = LightSources::get_changes(light_ID);
-            if (destroy_light(light_changes))
+            if (light_destroyed(light_changes))
                 continue;
 
+            assert(LightSource(light_ID).exists());
             if (light_changes.is_set(LightSources::Change::Created)) {
                 unsigned int light_index = m_data.active_count++;
                 m_ID_to_index[light_ID] = light_index;

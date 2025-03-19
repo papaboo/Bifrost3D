@@ -125,6 +125,8 @@ inline unsigned char* rgb24_to_rgba32(unsigned char* pixels, int pixel_count) {
 }
 
 inline void fill_image(ID3D11Device1& device, ID3D11DeviceContext1& device_context, Image image, Dx11Image& dx_image) {
+    assert(image.exists());
+
     D3D11_TEXTURE2D_DESC tex_desc = {};
     tex_desc.Width = image.get_width();
     tex_desc.Height = image.get_height();
