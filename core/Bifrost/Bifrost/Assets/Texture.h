@@ -63,7 +63,7 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(TextureID texture_ID) { return m_UID_generator.has(texture_ID); }
+    static inline bool has(TextureID texture_ID) { return m_UID_generator.has(texture_ID) && get_changes(texture_ID).not_set(Change::Destroyed); }
 
     static TextureID create2D(ImageID, MagnificationFilter magnification_filter = MagnificationFilter::Linear, MinificationFilter minification_filter = MinificationFilter::Linear, WrapMode wrapmode_U = WrapMode::Repeat, WrapMode wrapmode_V = WrapMode::Repeat);
     static void destroy(TextureID texture_ID);
@@ -96,7 +96,7 @@ public:
     typedef std::vector<TextureID>::iterator ChangedIterator;
     static Core::Iterable<ChangedIterator> get_changed_textures() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications() { m_changes.reset_change_notifications(); }
+    static void reset_change_notifications();
 
 private:
     static void reserve_image_data(unsigned int new_capacity, unsigned int old_capacity);

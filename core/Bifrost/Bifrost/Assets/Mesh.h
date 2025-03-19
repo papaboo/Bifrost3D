@@ -62,7 +62,7 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static inline bool has(MeshID mesh_ID) { return m_UID_generator.has(mesh_ID); }
+    static inline bool has(MeshID mesh_ID) { return m_UID_generator.has(mesh_ID) && get_changes(mesh_ID) != Change::Destroyed; }
 
     static MeshID create(const std::string& name, unsigned int primitive_count, unsigned int vertex_count, MeshFlags buffer_bitmask = MeshFlag::AllBuffers);
     static void destroy(MeshID mesh_ID);
@@ -71,7 +71,7 @@ public:
     static inline Iterator end() { return m_UID_generator.end(); }
     static inline Core::Iterable<Iterator> get_iterable() { return Core::Iterable(begin(), end()); }
 
-    static inline std::string get_name(MeshID mesh_ID) { return m_names[mesh_ID]; }
+    static inline const std::string& get_name(MeshID mesh_ID) { return m_names[mesh_ID]; }
     static inline void set_name(MeshID mesh_ID, const std::string& name) { m_names[mesh_ID] = name; }
 
     static inline unsigned int get_primitive_count(MeshID mesh_ID) { return m_buffers[mesh_ID].primitive_count; }
@@ -104,7 +104,7 @@ public:
     typedef std::vector<MeshID>::iterator ChangedIterator;
     static inline Core::Iterable<ChangedIterator> get_changed_meshes() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications() { m_changes.reset_change_notifications(); }
+    static void reset_change_notifications();
 
 private:
     static void reserve_mesh_data(unsigned int new_capacity, unsigned int old_capacity);
@@ -155,7 +155,7 @@ public:
     // -----------------------------------------------------------------------
     // Getters and setters.
     // -----------------------------------------------------------------------
-    inline std::string get_name() const { return Meshes::get_name(m_ID); }
+    inline const std::string& get_name() const { return Meshes::get_name(m_ID); }
     inline void set_name(const std::string& name) { Meshes::set_name(m_ID, name); }
 
     inline unsigned int get_index_count() { return Meshes::get_index_count(m_ID); }

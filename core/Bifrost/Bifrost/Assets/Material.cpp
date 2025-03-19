@@ -111,7 +111,7 @@ MaterialID Materials::create(const std::string& name, const Data& data) {
 }
 
 void Materials::destroy(MaterialID material_ID) {
-    if (m_UID_generator.erase(material_ID))
+    if (has(material_ID))
         m_changes.add_change(material_ID, Change::Destroyed);
 }
 
@@ -203,6 +203,13 @@ void Materials::set_transmission(MaterialID material_ID, float transmission) {
 
 void Materials::flag_as_updated(MaterialID material_ID) {
     m_changes.add_change(material_ID, Change::Updated);
+}
+
+void Materials::reset_change_notifications() {
+    for (MaterialID material_ID : get_changed_materials())
+        if (get_changes(material_ID).is_set(Change::Destroyed))
+            m_UID_generator.erase(material_ID);
+    m_changes.reset_change_notifications();
 }
 
 } // NS Assets

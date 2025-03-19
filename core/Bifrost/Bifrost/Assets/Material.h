@@ -151,7 +151,7 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static inline bool has(MaterialID material_ID) { return m_UID_generator.has(material_ID); }
+    static inline bool has(MaterialID material_ID) { return m_UID_generator.has(material_ID) && get_changes(material_ID) != Change::Destroyed; }
 
     static MaterialID create(const std::string& name, const Data& data);
     static void destroy(MaterialID material_ID);
@@ -160,7 +160,7 @@ public:
     static inline Iterator end() { return m_UID_generator.end(); }
     static inline Core::Iterable<Iterator> get_iterable() { return Core::Iterable<Iterator>(begin(), end()); }
 
-    static inline std::string get_name(MaterialID material_ID) { return m_names[material_ID]; }
+    static inline const std::string& get_name(MaterialID material_ID) { return m_names[material_ID]; }
     static inline void set_name(MaterialID material_ID, const std::string& name) { m_names[material_ID] = name; }
 
     static inline ShadingModel get_shading_model(MaterialID material_ID) { return m_materials[material_ID].shading_model; }
@@ -222,7 +222,7 @@ public:
     typedef std::vector<MaterialID>::iterator ChangedIterator;
     static Core::Iterable<ChangedIterator> get_changed_materials() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications() { m_changes.reset_change_notifications(); }
+    static void reset_change_notifications();
 
 private:
     static void reserve_material_data(unsigned int new_capacity, unsigned int old_capacity);
@@ -284,7 +284,7 @@ public:
     // -----------------------------------------------------------------------
     // Getters and setters.
     // -----------------------------------------------------------------------
-    inline std::string get_name() const { return Materials::get_name(m_ID); }
+    inline const std::string& get_name() const { return Materials::get_name(m_ID); }
     inline void set_name(const std::string& name) { Materials::set_name(m_ID, name); }
 
     inline ShadingModel get_shading_model() { return Materials::get_shading_model(m_ID); }

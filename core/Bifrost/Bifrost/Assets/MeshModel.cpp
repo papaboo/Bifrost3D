@@ -81,7 +81,7 @@ MeshModelID MeshModels::create(Scene::SceneNodeID scene_node_ID, MeshID mesh_ID,
 }
 
 void MeshModels::destroy(MeshModelID model_ID) {
-    if (m_UID_generator.erase(model_ID))
+    if (has(model_ID))
         m_changes.add_change(model_ID, Change::Destroyed);
 }
 
@@ -98,6 +98,13 @@ void MeshModels::set_material_ID(MeshModelID model_ID, MaterialID material_ID) {
 
     m_models[model_ID].material_ID = material_ID;
     m_changes.add_change(model_ID, Change::Material);
+}
+
+void MeshModels::reset_change_notifications() {
+    for (MeshModelID model_ID : get_changed_models())
+        if (get_changes(model_ID).is_set(Change::Destroyed))
+            m_UID_generator.erase(model_ID);
+    m_changes.reset_change_notifications();
 }
 
 } // NS Assets

@@ -86,7 +86,7 @@ SceneRootID SceneRoots::create(const std::string& name, Assets::TextureID enviro
 void SceneRoots::destroy(SceneRootID scene_ID) {
     // We don't actually destroy anything when destroying a scene.
     // The properties will get overwritten later when a scene is created in same the spot.
-    if (m_UID_generator.erase(scene_ID))
+    if (has(scene_ID))
         m_changes.add_change(scene_ID, Change::Destroyed);
 }
 
@@ -101,6 +101,13 @@ void SceneRoots::set_environment_map(SceneRootID scene_ID, Assets::TextureID env
     delete m_scenes[scene_ID].environment_light;
     m_scenes[scene_ID].environment_light = Assets::Textures::has(environment_map) ? new Assets::InfiniteAreaLight(environment_map) : nullptr;
     m_changes.add_change(scene_ID, Change::EnvironmentMap);
+}
+
+void SceneRoots::reset_change_notifications() {
+    for (SceneRootID scene_ID : get_changed_scenes())
+        if (get_changes(scene_ID).is_set(Change::Destroyed))
+            m_UID_generator.erase(scene_ID);
+    m_changes.reset_change_notifications();
 }
 
 } // NS Scene

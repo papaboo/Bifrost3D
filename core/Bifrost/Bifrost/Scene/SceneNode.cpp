@@ -122,7 +122,7 @@ SceneNodeID SceneNodes::create(const std::string& name, Transform transform) {
 
 void SceneNodes::destroy(SceneNodeID node_ID) {
     // We don't actually destroy anything when destroying a node. The properties will get overwritten later when a node is created in same the spot.
-    if (m_UID_generator.erase(node_ID))
+    if (has(node_ID))
         m_changes.add_change(node_ID, Change::Destroyed);
 }
 
@@ -246,6 +246,13 @@ void SceneNodes::unsafe_set_global_transform(SceneNodeID node_ID, Transform new_
         m_global_transforms[child_ID] = new_transform * delta_transform;
         m_changes.add_change(child_ID, Change::Transform);
     });
+}
+
+void SceneNodes::reset_change_notifications() {
+    for (SceneNodeID node_ID : get_changed_nodes())
+        if (get_changes(node_ID).is_set(Change::Destroyed))
+            m_UID_generator.erase(node_ID);
+    m_changes.reset_change_notifications();
 }
 
 } // NS Scene
