@@ -80,9 +80,10 @@ void MeshManager::handle_updates(ID3D11Device1& device) {
                 release_mesh(dx_mesh);
         }
 
-        // Ignore updates to meshes that are ultimately destroyed.
+        // Destroyed meshes have been released above.
         if (mesh_changes.is_set(Meshes::Change::Destroyed))
             continue;
+        assert(mesh.exists());
 
         if (mesh_changes.is_set(Meshes::Change::Created)) {
             Dx11Mesh dx_mesh = {};

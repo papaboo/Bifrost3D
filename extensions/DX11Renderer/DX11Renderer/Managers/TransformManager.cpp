@@ -41,6 +41,8 @@ void TransformManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext
             continue;
 
         if (node_changes.any_set(SceneNodes::Change::Created, SceneNodes::Change::Transform)) {
+            assert(SceneNode(node_ID).exists());
+
             m_transforms[node_ID] = SceneNodes::get_global_transform(node_ID);
             Matrix4x4f to_world = to_matrix4x4(m_transforms[node_ID]);
             if (m_GPU_transforms[node_ID] == nullptr)

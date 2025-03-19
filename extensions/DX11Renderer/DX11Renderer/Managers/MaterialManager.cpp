@@ -71,6 +71,8 @@ void MaterialManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1
     for (Material mat : Materials::get_changed_materials()) {
         // Just ignore deleted materials. They shouldn't be referenced anyway.
         if (!mat.get_changes().is_set(Materials::Change::Destroyed)) {
+            assert(mat.exists());
+
             unsigned int material_index = mat.get_ID();
 
             Dx11Material dx_mat = make_dx11material(mat);
