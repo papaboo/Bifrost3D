@@ -6,7 +6,7 @@
 // See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include <DX11Renderer/TextureManager.h>
+#include <DX11Renderer/Managers/TextureManager.h>
 #include <DX11Renderer/Utils.h>
 
 #include <Bifrost/Assets/Image.h>
@@ -14,7 +14,7 @@
 
 using namespace Bifrost::Assets;
 
-namespace DX11Renderer {
+namespace DX11Renderer::Managers {
 
 TextureManager::TextureManager(ID3D11Device1& device) {
     // Initialize null image and texture.
@@ -261,4 +261,4 @@ void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1&
     }
 }
 
-} // NS DX11Renderer
+} // NS DX11Renderer::Managers

@@ -6,7 +6,7 @@
 // See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include "Dx11Renderer/MeshManager.h"
+#include "Dx11Renderer/Managers/MeshManager.h"
 #include "Dx11Renderer/Utils.h"
 
 #include <Bifrost/Assets/Mesh.h>
@@ -15,9 +15,9 @@
 using namespace Bifrost::Assets;
 using namespace Bifrost::Math;
 
-namespace DX11Renderer {
+namespace DX11Renderer::Managers {
 
-void safe_release(Dx11Mesh& mesh) {
+void release_mesh(Dx11Mesh& mesh) {
     mesh.index_count = mesh.vertex_count = mesh.vertex_buffer_count = 0;
     safe_release(&mesh.constant_buffer);
     safe_release(&mesh.indices);
@@ -41,7 +41,7 @@ MeshManager::MeshManager(ID3D11Device1& device) {
 
 MeshManager::~MeshManager() {
     for (Dx11Mesh& mesh : m_meshes)
-        safe_release(mesh);
+        release_mesh(mesh);
 }
 
 template <typename T>
@@ -77,7 +77,7 @@ void MeshManager::handle_updates(ID3D11Device1& device) {
         if (mesh_changes.any_set(Meshes::Change::Created, Meshes::Change::Destroyed)) {
             Dx11Mesh& dx_mesh = m_meshes[mesh_ID];
             if (dx_mesh.vertex_count != 0) // Nothing to release
-                safe_release(dx_mesh);
+                release_mesh(dx_mesh);
         }
 
         // Ignore updates to meshes that are ultimately destroyed.
@@ -206,4 +206,4 @@ void MeshManager::handle_updates(ID3D11Device1& device) {
     }
 }
 
-} // NS DX11Renderer
+} // NS DX11Renderer::Managers

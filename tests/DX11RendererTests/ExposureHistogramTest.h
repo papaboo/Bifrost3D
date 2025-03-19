@@ -17,7 +17,7 @@
 #include <Bifrost/Math/Utils.h>
 
 #include <DX11Renderer/CameraEffects.h>
-#include <DX11Renderer/ShaderManager.h>
+#include <DX11Renderer/Managers/ShaderManager.h>
 
 #include <random>
 
@@ -75,7 +75,7 @@ TEST_F(ExposureHistogramFixture, tiny_image) {
     auto device = create_test_device();
     auto context = get_immidiate_context1(device);
 
-    ExposureHistogram& histogram = ExposureHistogram(*device, ShaderManager());
+    ExposureHistogram& histogram = ExposureHistogram(*device, Managers::ShaderManager());
     const unsigned int bin_count = ExposureHistogram::bin_count;
 
     float min_log_luminance = -8;
@@ -109,7 +109,7 @@ TEST_F(ExposureHistogramFixture, small_image) {
     auto device = create_test_device();
     auto context = get_immidiate_context1(device);
 
-    ExposureHistogram& histogram = ExposureHistogram(*device, ShaderManager());
+    ExposureHistogram& histogram = ExposureHistogram(*device, Managers::ShaderManager());
     const unsigned int bin_count = ExposureHistogram::bin_count;
 
     const int width = bin_count;
@@ -168,7 +168,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_constant_histogram) {
     OUnorderedAccessView linear_exposure_UAV;
     OBuffer linear_exposure_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &linear_exposure_UAV);
 
-    OBlob compute_exposure_blob = ShaderManager().compile_shader_from_file("CameraEffects/ReduceExposureHistogram.hlsl", "cs_5_0", "CameraEffects::compute_linear_exposure");
+    OBlob compute_exposure_blob = Managers::ShaderManager().compile_shader_from_file("CameraEffects/ReduceExposureHistogram.hlsl", "cs_5_0", "CameraEffects::compute_linear_exposure");
     OComputeShader compute_exposure_shader;
     THROW_DX11_ERROR(device->CreateComputeShader(UNPACK_BLOB_ARGS(compute_exposure_blob), nullptr, &compute_exposure_shader));
 
@@ -213,7 +213,7 @@ TEST_F(ExposureHistogramFixture, exposure_from_histogram) {
     OUnorderedAccessView linear_exposure_UAV;
     OBuffer linear_exposure_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, 1, nullptr, &linear_exposure_UAV);
 
-    OBlob compute_exposure_blob = ShaderManager().compile_shader_from_file("CameraEffects/ReduceExposureHistogram.hlsl", "cs_5_0", "CameraEffects::compute_linear_exposure");
+    OBlob compute_exposure_blob = Managers::ShaderManager().compile_shader_from_file("CameraEffects/ReduceExposureHistogram.hlsl", "cs_5_0", "CameraEffects::compute_linear_exposure");
     OComputeShader compute_exposure_shader;
     THROW_DX11_ERROR(device->CreateComputeShader(UNPACK_BLOB_ARGS(compute_exposure_blob), nullptr, &compute_exposure_shader));
 

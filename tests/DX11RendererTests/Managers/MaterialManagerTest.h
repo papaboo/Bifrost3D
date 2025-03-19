@@ -14,10 +14,11 @@
 
 #include <Bifrost/Assets/Shading/Fittings.h>
 
-#include <DX11Renderer/MaterialManager.h>
-#include <DX11Renderer/TextureManager.h>
+#include <DX11Renderer/Managers/MaterialManager.h>
+#include <DX11Renderer/Managers/ShaderManager.h>
+#include <DX11Renderer/Managers/TextureManager.h>
 
-namespace DX11Renderer {
+namespace DX11Renderer::Managers {
 
 // ------------------------------------------------------------------------------------------------
 // Ensure that the hardcoded rho texture dimensions used to adjust the sample coordinates 
@@ -128,6 +129,6 @@ GTEST_TEST(MaterialManager, sample_GPU_rho_texture_consistent_with_CPU) {
     }
 }
 
-} // NS DX11Renderer
+} // NS DX11Renderer::Managers
 
 #endif // _DX11RENDERER_MATERIAL_MANAGER_TEST_H_

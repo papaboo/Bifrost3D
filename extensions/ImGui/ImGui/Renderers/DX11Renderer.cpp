@@ -10,7 +10,7 @@
 
 #include <ImGui/Src/imgui.h>
 
-#include <DX11Renderer/ShaderManager.h>
+#include <DX11Renderer/Managers/ShaderManager.h>
 #include <DX11Renderer/Utils.h>
 
 using namespace ::DX11Renderer;
@@ -84,7 +84,7 @@ struct DX11Renderer::Implementation {
             create_constant_buffer(m_device, 16 * sizeof(float), &m_projection_matrix);
         }
 
-        auto shader_manager = ShaderManager(data_directory);
+        auto shader_manager = Managers::ShaderManager(data_directory);
 
         { // Shaders
             { // Vertex

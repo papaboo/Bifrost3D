@@ -16,30 +16,34 @@ if (DIRECTX11_FOUND AND WIN32)
     DX11Renderer/Compositor.cpp
     DX11Renderer/ConstantBufferArray.h
     DX11Renderer/Defines.h
-    DX11Renderer/EnvironmentManager.h
-    DX11Renderer/EnvironmentManager.cpp
-    DX11Renderer/LightManager.h
-    DX11Renderer/MaterialManager.h
-    DX11Renderer/MaterialManager.cpp
-    DX11Renderer/MeshManager.h
-    DX11Renderer/MeshManager.cpp
-    DX11Renderer/MeshModelManager.h
-    DX11Renderer/MeshModelManager.cpp
     DX11Renderer/OwnedResourcePtr.h
     DX11Renderer/PrefixSum.h
     DX11Renderer/Renderer.h
     DX11Renderer/Renderer.cpp
-    DX11Renderer/ShaderManager.h
-    DX11Renderer/ShaderManager.cpp
     DX11Renderer/SSAO.h
     DX11Renderer/SSAO.cpp
-    DX11Renderer/TextureManager.h
-    DX11Renderer/TextureManager.cpp
-    DX11Renderer/TransformManager.h
-    DX11Renderer/TransformManager.cpp
     DX11Renderer/Types.h
     DX11Renderer/Utils.h
     DX11Renderer/Utils.cpp
+  )
+
+  set(MANAGERS_SRC
+    DX11Renderer/Managers/EnvironmentManager.h
+    DX11Renderer/Managers/EnvironmentManager.cpp
+    DX11Renderer/Managers/LightManager.cpp
+    DX11Renderer/Managers/LightManager.h
+    DX11Renderer/Managers/MaterialManager.h
+    DX11Renderer/Managers/MaterialManager.cpp
+    DX11Renderer/Managers/MeshManager.h
+    DX11Renderer/Managers/MeshManager.cpp
+    DX11Renderer/Managers/MeshModelManager.h
+    DX11Renderer/Managers/MeshModelManager.cpp
+    DX11Renderer/Managers/ShaderManager.h
+    DX11Renderer/Managers/ShaderManager.cpp
+    DX11Renderer/Managers/TextureManager.h
+    DX11Renderer/Managers/TextureManager.cpp
+    DX11Renderer/Managers/TransformManager.h
+    DX11Renderer/Managers/TransformManager.cpp
   )
 
   set(SHADERS_SRC
@@ -83,10 +87,12 @@ if (DIRECTX11_FOUND AND WIN32)
 
   add_library(${LIBRARY_NAME}
     ${ROOT_SRC}
+    ${MANAGERS_SRC}
     ${ALL_SHADER_SRC}
   )
 
   source_group("" FILES ${ROOT_SRC})
+  source_group("Managers" FILES ${MANAGERS_SRC})
   source_group("Shaders" FILES ${SHADERS_SRC})
   source_group("Shaders\\BSDFs" FILES ${SHADERS_BSDFS_SRC})
   source_group("Shaders\\CameraEffects" FILES ${SHADERS_CAMERAEFFECTS_SRC})

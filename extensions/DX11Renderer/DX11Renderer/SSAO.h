@@ -9,7 +9,7 @@
 #ifndef _DX11RENDERER_RENDERER_SSAO_H_
 #define _DX11RENDERER_RENDERER_SSAO_H_
 
-#include <DX11Renderer/ShaderManager.h>
+#include <DX11Renderer/Managers/ShaderManager.h>
 #include <DX11Renderer/Types.h>
 
 #include <Bifrost/Math/Rect.h>
@@ -19,7 +19,7 @@
 //-------------------------------------------------------------------------------------------------
 // Forward declarations.
 //-------------------------------------------------------------------------------------------------
-namespace DX11Renderer { class ShaderManager; }
+namespace DX11Renderer::Managers { class ShaderManager; }
 
 namespace DX11Renderer::SSAO {
 
@@ -30,7 +30,7 @@ public:
     BilateralBlur() = default;
     BilateralBlur(BilateralBlur&& other) = default;
     BilateralBlur(BilateralBlur& other) = delete;
-    BilateralBlur(ID3D11Device1& device, SsaoFilter type, const ShaderManager& shader_manager);
+    BilateralBlur(ID3D11Device1& device, SsaoFilter type, const Managers::ShaderManager& shader_manager);
 
     BilateralBlur& operator=(BilateralBlur&& rhs) = default;
     BilateralBlur& operator=(BilateralBlur& rhs) = delete;
@@ -69,7 +69,7 @@ public:
     AlchemyAO() = default;
     AlchemyAO(AlchemyAO&& other) = default;
     AlchemyAO(AlchemyAO& other) = delete;
-    AlchemyAO(ID3D11Device1& device, const ShaderManager& shader_manager);
+    AlchemyAO(ID3D11Device1& device, const Managers::ShaderManager& shader_manager);
 
     AlchemyAO& operator=(AlchemyAO&& rhs) = default;
     AlchemyAO& operator=(AlchemyAO& rhs) = delete;
@@ -96,7 +96,7 @@ private:
     void resize_ao_buffer(ID3D11DeviceContext1& context, int ssao_width, int ssao_height);
     void resize_depth_buffer(ID3D11DeviceContext1& context, unsigned int camera_ID, int depth_width, int depth_height);
 
-    ShaderManager m_shader_manager;
+    Managers::ShaderManager m_shader_manager;
 
     struct Samples {
         static const unsigned int capacity = 256;

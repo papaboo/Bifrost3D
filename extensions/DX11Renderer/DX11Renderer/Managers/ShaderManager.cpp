@@ -6,7 +6,7 @@
 // See LICENSE.txt for more detail.
 //-------------------------------------------------------------------------------------------------
 
-#include <DX11Renderer/ShaderManager.h>
+#include <DX11Renderer/Managers/ShaderManager.h>
 #include <DX11Renderer/Utils.h>
 
 #define NOMINMAX
@@ -16,7 +16,7 @@
 
 using namespace std::filesystem;
 
-namespace DX11Renderer {
+namespace DX11Renderer::Managers {
 
 // For ID3DInclude examples see
 // * https://www.asawicki.info/news_1515_implementing_id3d10include
@@ -146,4 +146,4 @@ OBlob ShaderManager::compile_shader_from_file(const char* const shader_path, con
     return compile_shader_from_file(converted_path, target, entry_point);
 }
 
-} // NS DX11Renderer
+} // NS DX11Renderer::Managers

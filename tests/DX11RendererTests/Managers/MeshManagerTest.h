@@ -12,11 +12,11 @@
 #include <gtest/gtest.h>
 #include <Utils.h>
 
-#include <DX11Renderer/MeshManager.h>
+#include <DX11Renderer/Managers/MeshManager.h>
 
 #include <Bifrost/Assets/Mesh.h>
 
-namespace DX11Renderer {
+namespace DX11Renderer::Managers {
 
 class MeshManagerFixture : public ::testing::Test {
 protected:
@@ -109,6 +109,6 @@ TEST_F(MeshManagerFixture, destroyed_mesh_is_cleared) {
     EXPECT_EQ(nullptr, *dx_mesh.geometry_address());
 }
 
-} // NS DX11Renderer
+} // NS DX11Renderer::Managers
 
 #endif // _DX11RENDERER_MESH_MANAGER_TEST_H_
