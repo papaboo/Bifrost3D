@@ -46,7 +46,7 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(LightSourceID light_ID) { return m_UID_generator.has(light_ID); }
+    static inline bool has(LightSourceID light_ID) { return m_UID_generator.has(light_ID) && get_changes(light_ID).not_set(Change::Destroyed); }
 
     static LightSourceID create_sphere_light(SceneNodeID node_ID, Math::RGB power, float radius);
     static LightSourceID create_spot_light(SceneNodeID node_ID, Math::RGB power, float radius, float cos_angle);
@@ -99,7 +99,7 @@ public:
     typedef std::vector<LightSourceID>::iterator ChangedIterator;
     static Core::Iterable<ChangedIterator> get_changed_lights() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications() { m_changes.reset_change_notifications(); }
+    static void reset_change_notifications();
 
 private:
     static LightSourceIDGenerator m_UID_generator;

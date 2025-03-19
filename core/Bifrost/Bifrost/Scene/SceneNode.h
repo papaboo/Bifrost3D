@@ -46,7 +46,7 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(SceneNodeID node_ID) { return m_UID_generator.has(node_ID); }
+    static inline bool has(SceneNodeID node_ID) { return m_UID_generator.has(node_ID) && get_changes(node_ID).not_set(Change::Destroyed); }
 
     static SceneNodeID create(const std::string& name, Math::Transform transform = Math::Transform::identity());
     static void destroy(SceneNodeID node_ID);
@@ -92,7 +92,7 @@ public:
     typedef std::vector<SceneNodeID>::iterator ChangedIterator;
     static Core::Iterable<ChangedIterator> get_changed_nodes() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications() { return m_changes.reset_change_notifications(); }
+    static void reset_change_notifications();
 
 private:
     static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);

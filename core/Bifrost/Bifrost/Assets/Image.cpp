@@ -71,10 +71,6 @@ void Images::reserve(unsigned int new_capacity) {
     reserve_image_data(m_UID_generator.capacity(), old_capacity);
 }
 
-bool Images::has(ImageID image_ID) {
-    return m_UID_generator.has(image_ID) && m_changes.get_changes(image_ID) != Change::Destroyed;
-}
-
 static inline Images::PixelData allocate_pixels(PixelFormat format, unsigned int pixel_count) {
     switch (format) {
     case PixelFormat::Alpha8:
@@ -194,7 +190,7 @@ ImageID Images::create(const std::string& name, PixelFormat format, float gamma,
 }
 
 void Images::destroy(ImageID image_ID) {
-    if (m_UID_generator.erase(image_ID)) {
+    if (has(image_ID)) {
         deallocate_pixels(m_metainfo[image_ID].pixel_format, m_pixels[image_ID]);
         m_pixels[image_ID] = nullptr;
         m_changes.add_change(image_ID, Change::Destroyed);
@@ -459,6 +455,13 @@ void Images::change_format(ImageID image_ID, PixelFormat new_format, float new_g
 
     m_metainfo[image_ID].pixel_format = new_format;
     m_changes.add_change(image_ID, Change::PixelsUpdated);
+}
+
+void Images::reset_change_notifications() {
+    for (ImageID image_ID : get_changed_images())
+        if (get_changes(image_ID).is_set(Change::Destroyed))
+            m_UID_generator.erase(image_ID);
+    m_changes.reset_change_notifications();
 }
 
 void Image::clear() {

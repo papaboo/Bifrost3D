@@ -69,7 +69,7 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(CameraID camera_ID) { return m_UID_generator.has(camera_ID); }
+    static inline bool has(CameraID camera_ID) { return m_UID_generator.has(camera_ID) && get_changes(camera_ID).not_set(Change::Destroyed); }
 
     static CameraID create(const std::string& name, SceneRootID scene_ID,
                            Math::Matrix4x4f projection_matrix, Math::Matrix4x4f inverse_projection_matrix,
@@ -161,7 +161,7 @@ public:
     typedef std::vector<CameraID>::iterator ChangedIterator;
     static Core::Iterable<ChangedIterator> get_changed_cameras() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications() { return m_changes.reset_change_notifications(); }
+    static void reset_change_notifications();
 
 private:
 

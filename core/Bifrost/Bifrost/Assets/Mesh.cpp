@@ -118,7 +118,7 @@ MeshID Meshes::create(const std::string& name, unsigned int primitive_count, uns
 }
 
 void Meshes::destroy(MeshID mesh_ID) {
-    if (m_UID_generator.erase(mesh_ID)) {
+    if (has(mesh_ID)) {
         delete_buffers(m_buffers[mesh_ID]);
         m_changes.add_change(mesh_ID, Change::Destroyed);
     }
@@ -133,6 +133,13 @@ AABB Meshes::compute_bounds(MeshID mesh_ID) {
 
     m_bounds[mesh_ID] = bounds;
     return bounds;
+}
+
+void Meshes::reset_change_notifications() {
+    for (MeshID mesh_ID : get_changed_meshes())
+        if (get_changes(mesh_ID).is_set(Change::Destroyed))
+            m_UID_generator.erase(mesh_ID);
+    m_changes.reset_change_notifications();
 }
 
 //-----------------------------------------------------------------------------

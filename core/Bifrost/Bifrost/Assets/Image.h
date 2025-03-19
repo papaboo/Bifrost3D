@@ -106,7 +106,7 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(ImageID image_ID);
+    static inline bool has(ImageID image_ID) { return m_UID_generator.has(image_ID) && get_changes(image_ID) != Change::Destroyed; }
 
     static ImageID create(const std::string& name, PixelFormat format, float gamma, Math::Vector3ui size, unsigned int mipmap_count = 1);
     static ImageID create(const std::string& name, PixelFormat format, float gamma, Math::Vector3ui size, PixelData& pixels);
@@ -117,7 +117,7 @@ public:
     static inline Iterator end() { return m_UID_generator.end(); }
     static inline Core::Iterable<Iterator> get_iterable() { return { begin(), end() }; }
 
-    static inline std::string get_name(ImageID image_ID) { return m_metainfo[image_ID].name; }
+    static inline const std::string& get_name(ImageID image_ID) { return m_metainfo[image_ID].name; }
     static inline void set_name(ImageID image_ID, const std::string& name) { m_metainfo[image_ID].name = name; }
 
     static inline PixelFormat get_pixel_format(ImageID image_ID) { return m_metainfo[image_ID].pixel_format; }
@@ -181,7 +181,7 @@ public:
     typedef std::vector<ImageID>::iterator ChangedIterator;
     static Core::Iterable<ChangedIterator> get_changed_images() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications() { m_changes.reset_change_notifications(); }
+    static void reset_change_notifications();
 
 private:
     static void reserve_image_data(unsigned int new_capacity, unsigned int old_capacity);
@@ -241,7 +241,7 @@ public:
     // -----------------------------------------------------------------------
     // Getters and setters.
     // -----------------------------------------------------------------------
-    inline std::string get_name() const { return Images::get_name(m_ID); }
+    inline const std::string& get_name() const { return Images::get_name(m_ID); }
     inline void set_name(const std::string& name) { Images::set_name(m_ID, name); }
 
     inline PixelFormat get_pixel_format() const { return Images::get_pixel_format(m_ID); }

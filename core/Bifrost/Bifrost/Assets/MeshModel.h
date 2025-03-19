@@ -40,7 +40,7 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(MeshModelID model_ID) { return m_UID_generator.has(model_ID); }
+    static inline bool has(MeshModelID model_ID) { return m_UID_generator.has(model_ID) && get_changes(model_ID).not_set(Change::Destroyed); }
 
     static MeshModelID create(Scene::SceneNodeID scene_node_ID, MeshID mesh_ID, MaterialID material_ID);
     static void destroy(MeshModelID model_ID);
@@ -73,7 +73,7 @@ public:
     typedef std::vector<MeshModelID>::iterator ChangedIterator;
     static Core::Iterable<ChangedIterator> get_changed_models() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications() { m_changes.reset_change_notifications(); }
+    static void reset_change_notifications();
 
 private:
     static void reserve_model_data(unsigned int new_capacity, unsigned int old_capacity);

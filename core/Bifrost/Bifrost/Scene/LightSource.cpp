@@ -119,8 +119,8 @@ LightSourceID LightSources::create_directional_light(SceneNodeID node_ID, Math::
 
 void LightSources::destroy(LightSourceID light_ID) {
     // We don't actually destroy anything when destroying a light. 
-    // The properties will get overwritten later when a node is created in same the spot.
-    if (m_UID_generator.erase(light_ID)) 
+    // The properties will get overwritten later when a light is created in same the spot.
+    if (has(light_ID)) 
         m_changes.add_change(light_ID, Change::Destroyed);
 }
 
@@ -138,6 +138,13 @@ bool LightSources::is_delta_light(LightSourceID light_ID) {
 
 void LightSources::flag_as_updated(LightSourceID light_ID) {
     m_changes.add_change(light_ID, Change::Updated);
+}
+
+void LightSources::reset_change_notifications() {
+    for (LightSourceID light_ID : get_changed_lights())
+        if (get_changes(light_ID).is_set(Change::Destroyed))
+            m_UID_generator.erase(light_ID);
+    m_changes.reset_change_notifications();
 }
 
 // ------------------------------------------------------------------------------------------------

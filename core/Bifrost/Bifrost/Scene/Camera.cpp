@@ -164,7 +164,7 @@ CameraID Cameras::create(const std::string& name, SceneRootID scene_ID,
 void Cameras::destroy(CameraID camera_ID) {
     // We don't actually destroy anything when destroying a camera.
     // The properties will get overwritten later when a new camera is created in same the spot.
-    if (m_UID_generator.erase(camera_ID))
+    if (has(camera_ID))
         m_changes.add_change(camera_ID, Change::Destroyed);
 }
 
@@ -219,6 +219,13 @@ Assets::Image Cameras::resolve_screenshot(CameraID camera_ID, Screenshot::Conten
     }
 
     return Assets::Image::invalid();
+}
+
+void Cameras::reset_change_notifications() {
+    for (CameraID camera_ID : get_changed_cameras())
+        if (get_changes(camera_ID).is_set(Change::Destroyed))
+            m_UID_generator.erase(camera_ID);
+    m_changes.reset_change_notifications();
 }
 
 //*****************************************************************************

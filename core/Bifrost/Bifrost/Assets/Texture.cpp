@@ -96,8 +96,15 @@ TextureID Textures::create2D(ImageID image_ID, MagnificationFilter magnification
 }
 
 void Textures::destroy(TextureID texture_ID) {
-    if (m_UID_generator.erase(texture_ID))
+    if (has(texture_ID))
         m_changes.add_change(texture_ID, Change::Destroyed);
+}
+
+void Textures::reset_change_notifications() {
+    for (TextureID texture_ID : get_changed_textures())
+        if (get_changes(texture_ID).is_set(Change::Destroyed))
+            m_UID_generator.erase(texture_ID);
+    m_changes.reset_change_notifications();
 }
 
 //-----------------------------------------------------------------------------

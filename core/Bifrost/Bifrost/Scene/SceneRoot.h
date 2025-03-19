@@ -50,7 +50,7 @@ public:
 
     static inline unsigned int capacity() { return m_UID_generator.capacity(); }
     static void reserve(unsigned int new_capacity);
-    static bool has(SceneRootID scene_ID) { return m_UID_generator.has(scene_ID); }
+    static bool has(SceneRootID scene_ID) { return m_UID_generator.has(scene_ID) && get_changes(scene_ID).not_set(Change::Destroyed); }
 
     static SceneRootID create(const std::string& name, Assets::TextureID environment_map, Math::RGB environment_tint = Math::RGB::white());
     static SceneRootID create(const std::string& name, Math::RGB environment_tint) {
@@ -91,7 +91,7 @@ public:
     typedef std::vector<SceneRootID>::iterator ChangedIterator;
     static Core::Iterable<ChangedIterator> get_changed_scenes() { return m_changes.get_changed_resources(); }
 
-    static void reset_change_notifications() { m_changes.reset_change_notifications(); }
+    static void reset_change_notifications();
 private:
 
     static void reserve_scene_data(unsigned int new_capacity, unsigned int old_capacity);
