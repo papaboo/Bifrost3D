@@ -6,19 +6,14 @@
 // See LICENSE.txt for more detail.
 //-------------------------------------------------------------------------------------------------
 
-#ifndef _DX11RENDERER_SHADER_MANAGER_H_
-#define _DX11RENDERER_SHADER_MANAGER_H_
+#ifndef _DX11RENDERER_MANAGERS_SHADER_MANAGER_H_
+#define _DX11RENDERER_MANAGERS_SHADER_MANAGER_H_
 
 #include <DX11Renderer/Types.h>
 
 #include <filesystem>
 
-//-------------------------------------------------------------------------------------------------
-// Forward declarations.
-//-------------------------------------------------------------------------------------------------
-namespace std::filesystem { class path; }
-
-namespace DX11Renderer {
+namespace DX11Renderer::Managers {
 
 //-------------------------------------------------------------------------------------------------
 // DirectX 11 shader manager.
@@ -43,6 +38,6 @@ private:
     std::filesystem::path m_library_path;
 };
 
-} // NS DX11Renderer
+} // NS DX11Renderer::Managers
 
-#endif // _DX11RENDERER_SHADER_MANAGER_H_
+#endif // _DX11RENDERER_MANAGERS_MANAGER_H_

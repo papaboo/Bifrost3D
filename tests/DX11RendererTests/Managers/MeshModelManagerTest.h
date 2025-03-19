@@ -12,14 +12,14 @@
 #include <gtest/gtest.h>
 #include <Utils.h>
 
-#include <DX11Renderer/MeshModelManager.h>
+#include <DX11Renderer/Managers/MeshModelManager.h>
 
 #include <Bifrost/Assets/Material.h>
 #include <Bifrost/Assets/Mesh.h>
 #include <Bifrost/Assets/MeshModel.h>
 #include <Bifrost/Scene/SceneNode.h>
 
-namespace DX11Renderer {
+namespace DX11Renderer::Managers {
 
 class MeshModelManagerFixture : public ::testing::Test {
 protected:
@@ -62,7 +62,7 @@ inline Bifrost::Assets::MeshModel create_small_mesh_model() {
 }
 
 TEST_F(MeshModelManagerFixture, invalid_model_at_first_index) {
-    MeshModelManager mesh_model_manager = MeshModelManager();
+    auto mesh_model_manager = MeshModelManager();
 
     Dx11Model model = mesh_model_manager.get_model(0);
     EXPECT_EQ(0, model.transform_ID.get_index());
@@ -72,7 +72,7 @@ TEST_F(MeshModelManagerFixture, invalid_model_at_first_index) {
 }
 
 TEST_F(MeshModelManagerFixture, create_model) {
-    MeshModelManager mesh_model_manager = MeshModelManager();
+    auto mesh_model_manager = MeshModelManager();
 
     auto model = create_small_mesh_model();
 
@@ -89,7 +89,7 @@ TEST_F(MeshModelManagerFixture, create_model) {
 }
 
 TEST_F(MeshModelManagerFixture, created_and_destroyed_model_is_ignored) {
-    MeshModelManager mesh_model_manager = MeshModelManager();
+    auto mesh_model_manager = MeshModelManager();
 
     auto mesh_model = create_small_mesh_model();
     unsigned int mesh_model_index = mesh_model.get_ID();
@@ -102,7 +102,7 @@ TEST_F(MeshModelManagerFixture, created_and_destroyed_model_is_ignored) {
 }
 
 TEST_F(MeshModelManagerFixture, destroyed_model_is_cleared) {
-    MeshModelManager mesh_model_manager = MeshModelManager();
+    auto mesh_model_manager = MeshModelManager();
 
     auto model = create_small_mesh_model();
     unsigned int model_index = model.get_ID();
@@ -127,7 +127,7 @@ TEST_F(MeshModelManagerFixture, destroyed_model_is_cleared) {
 }
 
 TEST_F(MeshModelManagerFixture, handle_material_changed) {
-    MeshModelManager mesh_model_manager = MeshModelManager();
+    auto mesh_model_manager = MeshModelManager();
 
     auto model = create_small_mesh_model();
     auto initial_material = model.get_material();

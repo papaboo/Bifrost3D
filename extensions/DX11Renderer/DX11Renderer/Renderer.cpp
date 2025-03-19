@@ -6,16 +6,16 @@
 // See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include <DX11Renderer/EnvironmentManager.h>
-#include <DX11Renderer/LightManager.h>
-#include <DX11Renderer/MaterialManager.h>
-#include <DX11Renderer/MeshManager.h>
-#include <DX11Renderer/MeshModelManager.h>
+#include <DX11Renderer/Managers/EnvironmentManager.h>
+#include <DX11Renderer/Managers/LightManager.h>
+#include <DX11Renderer/Managers/MaterialManager.h>
+#include <DX11Renderer/Managers/MeshManager.h>
+#include <DX11Renderer/Managers/MeshModelManager.h>
+#include <DX11Renderer/Managers/ShaderManager.h>
+#include <DX11Renderer/Managers/TextureManager.h>
+#include <DX11Renderer/Managers/TransformManager.h>
 #include <DX11Renderer/Renderer.h>
-#include <DX11Renderer/ShaderManager.h>
 #include <DX11Renderer/SSAO.h>
-#include <DX11Renderer/TextureManager.h>
-#include <DX11Renderer/TransformManager.h>
 #include <DX11Renderer/Utils.h>
 
 #include <Bifrost/Assets/Mesh.h>
@@ -31,6 +31,7 @@ using namespace Bifrost::Assets;
 using namespace Bifrost::Core;
 using namespace Bifrost::Math;
 using namespace Bifrost::Scene;
+using namespace DX11Renderer::Managers;
 using namespace std;
 
 namespace DX11Renderer {

@@ -7,10 +7,11 @@
 // ------------------------------------------------------------------------------------------------
 
 #include <DX11Renderer/CameraEffects.h>
-#include <DX11Renderer/ShaderManager.h>
+#include <DX11Renderer/Managers/ShaderManager.h>
 #include <DX11Renderer/Utils.h>
 
 using namespace Bifrost::Math;
+using namespace DX11Renderer::Managers;
 
 namespace DX11Renderer {
 

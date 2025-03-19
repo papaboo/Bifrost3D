@@ -11,6 +11,8 @@
 
 #include <Bifrost/Math/RNG.h>
 
+using namespace DX11Renderer::Managers;
+
 namespace DX11Renderer {
 namespace SSAO {
 

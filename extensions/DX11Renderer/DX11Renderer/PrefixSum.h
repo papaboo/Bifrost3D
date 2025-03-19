@@ -9,7 +9,7 @@
 #ifndef _DX11RENDERER_RENDERER_PREFIX_SUM_H_
 #define _DX11RENDERER_RENDERER_PREFIX_SUM_H_
 
-#include <DX11Renderer/ShaderManager.h>
+#include <DX11Renderer/Managers/ShaderManager.h>
 
 namespace DX11Renderer {
 
@@ -33,7 +33,7 @@ public:
     PrefixSum(ID3D11Device1& device) {
         auto prefix_sum_path = "Compute/PrefixSum.hlsl";
 
-        auto shader_manager = ShaderManager();
+        auto shader_manager = Managers::ShaderManager();
 
         OBlob reduce_shader_blob = shader_manager.compile_shader_from_file(prefix_sum_path, "cs_5_0", "reduce");
         THROW_DX11_ERROR(device.CreateComputeShader(UNPACK_BLOB_ARGS(reduce_shader_blob), nullptr, &m_reduce_shader));

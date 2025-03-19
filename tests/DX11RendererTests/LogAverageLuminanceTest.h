@@ -18,7 +18,7 @@
 #include <Bifrost/Math/Utils.h>
 
 #include <DX11Renderer/CameraEffects.h>
-#include <DX11Renderer/ShaderManager.h>
+#include <DX11Renderer/Managers/ShaderManager.h>
 #include <DX11Renderer/Utils.h>
 
 #include <random>
@@ -42,7 +42,7 @@ protected:
         auto device = create_test_device();
         auto context = get_immidiate_context1(device);
 
-        auto& log_average_exposure = LogAverageLuminance(*device, ShaderManager());
+        auto& log_average_exposure = LogAverageLuminance(*device, Managers::ShaderManager());
 
         float min_log_luminance = -24;
         float max_log_luminance = 24;

@@ -9,7 +9,7 @@
 #include <DX11Renderer/Compositor.h>
 
 #include <DX11Renderer/CameraEffects.h>
-#include <DX11Renderer/ShaderManager.h>
+#include <DX11Renderer/Managers/ShaderManager.h>
 #include <DX11Renderer/Utils.h>
 
 #include <Bifrost/Core/Renderer.h>
@@ -158,7 +158,7 @@ public:
                 m_counter_hertz = 1.0 / freq.QuadPart;
             }
 
-            auto shader_manager = ShaderManager(m_data_directory);
+            auto shader_manager = Managers::ShaderManager(m_data_directory);
             m_camera_effects = CameraEffects(m_device, shader_manager);
         }
 

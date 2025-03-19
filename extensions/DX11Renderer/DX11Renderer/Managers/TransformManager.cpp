@@ -6,7 +6,7 @@
 // See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include "Dx11Renderer/TransformManager.h"
+#include "Dx11Renderer/Managers/TransformManager.h"
 #include "Dx11Renderer/Utils.h"
 
 #include <Bifrost/Math/Conversions.h>
@@ -15,7 +15,7 @@
 using namespace Bifrost::Math;
 using namespace Bifrost::Scene;
 
-namespace DX11Renderer {
+namespace DX11Renderer::Managers {
 
 TransformManager::TransformManager(ID3D11Device1& device, ID3D11DeviceContext1& context) {
     m_transforms.resize(1);
@@ -51,4 +51,4 @@ void TransformManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext
     }
 }
 
-} // NS DX11Renderer
+} // NS DX11Renderer::Managers

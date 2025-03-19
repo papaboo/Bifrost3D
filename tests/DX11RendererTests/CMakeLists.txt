@@ -7,15 +7,18 @@ if (TARGET DX11Renderer)
     ExposureHistogramTest.h
     LogAverageLuminanceTest.h
     main.cpp
-    MaterialManagerTest.h
-    MeshManagerTest.h
-    MeshModelManagerTest.h
     PrefixSumTest.h
-    TextureManagerTest.h
     Utils.h
   )
 
-  add_executable(${PROJECT_NAME} ${SRCS})
+  set(MANAGERS_SRCS
+    Managers/MaterialManagerTest.h
+    Managers/MeshManagerTest.h
+    Managers/MeshModelManagerTest.h
+    Managers/TextureManagerTest.h
+  )
+
+  add_executable(${PROJECT_NAME} ${SRCS} ${MANAGERS_SRCS})
 
   target_include_directories(${PROJECT_NAME} PRIVATE .)
 
@@ -26,6 +29,7 @@ if (TARGET DX11Renderer)
   )
 
   source_group("" FILES ${SRCS})
+  source_group("Managers" FILES ${MANAGERS_SRCS})
 
   set_target_properties(${PROJECT_NAME} PROPERTIES
     FOLDER "Tests"

@@ -6,14 +6,14 @@
 // See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include "Dx11Renderer/MeshModelManager.h"
+#include "Dx11Renderer/Managers/MeshModelManager.h"
 
 #include <Bifrost/Assets/Material.h>
 #include <Bifrost/Assets/MeshModel.h>
 
 using namespace Bifrost::Assets;
 
-namespace DX11Renderer {
+namespace DX11Renderer::Managers {
 
 MeshModelManager::MeshModelManager() {
     m_sorted_models = std::vector<Dx11Model>(1);
@@ -144,4 +144,4 @@ void MeshModelManager::handle_updates() {
     }
 }
 
-} // NS DX11Renderer
+} // NS DX11Renderer::Managers

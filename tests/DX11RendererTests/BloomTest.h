@@ -16,7 +16,7 @@
 #include <Bifrost/Math/Half.h>
 
 #include <DX11Renderer/CameraEffects.h>
-#include <DX11Renderer/ShaderManager.h>
+#include <DX11Renderer/Managers/ShaderManager.h>
 #include <DX11Renderer/Utils.h>
 
 namespace DX11Renderer {
@@ -32,7 +32,7 @@ protected:
     virtual void SetUp() {
         m_device = create_test_device();
         m_device->GetImmediateContext1(&m_context);
-        m_shader_manager = ShaderManager();
+        m_shader_manager = Managers::ShaderManager();
     }
 
     virtual void TearDown() {
@@ -207,7 +207,7 @@ protected:
     // --------------------------------------------------------------------------------------------
     ODevice1 m_device;
     ODeviceContext1 m_context;
-    ShaderManager m_shader_manager;
+    Managers::ShaderManager m_shader_manager;
 
     int m_support;
 };

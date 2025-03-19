@@ -10,8 +10,8 @@
 
 #include <DX11OptiXAdaptor/Adaptor.h>
 
+#include <DX11Renderer/Managers/ShaderManager.h>
 #include <DX11Renderer/Renderer.h>
-#include <DX11Renderer/ShaderManager.h>
 #include <DX11Renderer/Utils.h>
 #include <OptiXRenderer/Defines.h>
 #include <OptiXRenderer/Renderer.h>
@@ -114,7 +114,7 @@ public:
                 "   return pixels[int(pixel_pos.x) + int(viewport_size.y - pixel_pos.y - 1) * frame_buffer_size.x];\n"
                 "}\n";
 
-            auto shader_manager = ShaderManager(data_directory);
+            auto shader_manager = Managers::ShaderManager(data_directory);
             OBlob vertex_shader_bytecode = shader_manager.compile_shader_source(vertex_src, "vs_5_0", "optix_adaptor_vs");
             THROW_DX11_ERROR(m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_bytecode), nullptr, &m_vertex_shader));
 

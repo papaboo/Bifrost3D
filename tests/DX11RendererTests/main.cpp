@@ -8,13 +8,14 @@
 
 #include <gtest/gtest.h>
 
+#include <Managers/MaterialManagerTest.h>
+#include <Managers/MeshManagerTest.h>
+#include <Managers/MeshModelManagerTest.h>
+#include <Managers/TextureManagerTest.h>
+
 #include <BloomTest.h>
 #include <ExposureHistogramTest.h>
 #include <LogAverageLuminanceTest.h>
-#include <MaterialManagerTest.h>
-#include <MeshManagerTest.h>
-#include <MeshModelManagerTest.h>
-#include <TextureManagerTest.h>
 #include <PrefixSumTest.h>
 
 // NOTE

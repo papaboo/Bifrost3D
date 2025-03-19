@@ -6,8 +6,8 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#ifndef _DX11RENDERER_RENDERER_ENVIRONMENT_MANAGER_H_
-#define _DX11RENDERER_RENDERER_ENVIRONMENT_MANAGER_H_
+#ifndef _DX11RENDERER_MANAGERS_ENVIRONMENT_MANAGER_H_
+#define _DX11RENDERER_MANAGERS_ENVIRONMENT_MANAGER_H_
 
 #include "Dx11Renderer/Types.h"
 
@@ -18,12 +18,12 @@
 //-------------------------------------------------------------------------------------------------
 // Forward declarations.
 //-------------------------------------------------------------------------------------------------
-namespace DX11Renderer {
+namespace DX11Renderer::Managers {
 class ShaderManager;
 class TextureManager;
 }
 
-namespace DX11Renderer {
+namespace DX11Renderer::Managers {
 
 //-------------------------------------------------------------------------------------------------
 // Environment manager.
@@ -61,6 +61,6 @@ private:
     OComputeShader m_convolution_shader;
 };
 
-} // NS DX11Renderer
+} // NS DX11Renderer::Managers
 
-#endif // _DX11RENDERER_RENDERER_ENVIRONMENT_MANAGER_H_
+#endif // _DX11RENDERER_MANAGERS_ENVIRONMENT_MANAGER_H_

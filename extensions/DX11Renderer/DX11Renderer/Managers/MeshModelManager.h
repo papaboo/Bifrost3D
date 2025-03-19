@@ -6,14 +6,14 @@
 // See LICENSE.txt for more detail.
 //-------------------------------------------------------------------------------------------------
 
-#ifndef _DX11RENDERER_RENDERER_MESH_MODEL_MANAGER_H_
-#define _DX11RENDERER_RENDERER_MESH_MODEL_MANAGER_H_
+#ifndef _DX11RENDERER_MANAGERS_MESH_MODEL_MANAGER_H_
+#define _DX11RENDERER_MANAGERS_MESH_MODEL_MANAGER_H_
 
 #include "Dx11Renderer/Types.h"
 
 #include <vector>
 
-namespace DX11Renderer {
+namespace DX11Renderer::Managers {
 
 //-------------------------------------------------------------------------------------------------
 // Mesh model manager.
@@ -57,6 +57,6 @@ private:
     ConstIterator m_begin_transparent_models;
 };
 
-} // NS DX11Renderer
+} // NS DX11Renderer::Managers
 
-#endif // _DX11RENDERER_RENDERER_MESH_MODEL_MANAGER_H_
+#endif // _DX11RENDERER_MANAGERS_MESH_MODEL_MANAGER_H_

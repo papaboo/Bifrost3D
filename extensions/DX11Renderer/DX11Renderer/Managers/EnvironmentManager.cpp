@@ -6,9 +6,9 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#include "Dx11Renderer/EnvironmentManager.h"
-#include "Dx11Renderer/ShaderManager.h"
-#include "Dx11Renderer/TextureManager.h"
+#include "Dx11Renderer/Managers/EnvironmentManager.h"
+#include "Dx11Renderer/Managers/ShaderManager.h"
+#include "Dx11Renderer/Managers/TextureManager.h"
 #include "Dx11Renderer/Utils.h"
 
 #include "Bifrost/Assets/InfiniteAreaLight.h"
@@ -19,7 +19,7 @@ using namespace Bifrost::Assets;
 using namespace Bifrost::Math;
 using namespace Bifrost::Scene;
 
-namespace DX11Renderer {
+namespace DX11Renderer::Managers {
 
 //=================================================================================================
 // Environment manager.
@@ -314,4 +314,4 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
     }
 }
 
-} // NS DX11Renderer
+} // NS DX11Renderer::Managers

@@ -6,7 +6,7 @@
 // See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include "Dx11Renderer/MaterialManager.h"
+#include "Dx11Renderer/Managers/MaterialManager.h"
 #include "Dx11Renderer/Utils.h"
 
 #include <Bifrost/Assets/Material.h>
@@ -14,7 +14,7 @@
 
 using namespace Bifrost::Assets;
 
-namespace DX11Renderer {
+namespace DX11Renderer::Managers {
 
 inline Dx11Material make_dx11material(Material mat) {
     Dx11Material dx11_material = {};
@@ -106,4 +106,4 @@ OShaderResourceView MaterialManager::create_GGX_with_fresnel_rho_srv(ID3D11Devic
     return GGX_with_fresnel_rho_srv;
 }
 
-} // NS DX11Renderer
+} // NS DX11Renderer::Managers

@@ -12,12 +12,12 @@
 #include <gtest/gtest.h>
 #include <Utils.h>
 
-#include <DX11Renderer/TextureManager.h>
+#include <DX11Renderer/Managers/TextureManager.h>
 
 #include <Bifrost/Assets/Image.h>
 #include <Bifrost/Assets/Texture.h>
 
-namespace DX11Renderer {
+namespace DX11Renderer::Managers {
 
 class TextureManagerFixture : public ::testing::Test {
 protected:
@@ -156,6 +156,6 @@ TEST_F(TextureManagerFixture, unreferenced_images_are_not_uploaded) {
     }
 }
 
-} // NS DX11Renderer
+} // NS DX11Renderer::Managers
 
 #endif // _DX11RENDERER_TEXTURE_MANAGER_TEST_H_
