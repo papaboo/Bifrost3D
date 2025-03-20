@@ -254,12 +254,14 @@ inline void PlotMultiEx(ImGuiPlotType plot_type, const char* label, PlotData* pl
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, inner_bb.Min.y), label);
 }
 
-void PlotLines(const char* label, PlotData* plots, int plot_count, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size) {
-    PlotMultiEx(ImGuiPlotType_Lines, label, plots, plot_count, overlay_text, scale_min, scale_max, graph_size);
+void PlotLines(const char* label, PlotData* plots, int plot_count, const char* overlay_text, float scale_min, float scale_max, Vector2f graph_size) {
+    ImVec2 size = ImVec2(graph_size.x, graph_size.y);
+    PlotMultiEx(ImGuiPlotType_Lines, label, plots, plot_count, overlay_text, scale_min, scale_max, size);
 }
 
-void PlotHistograms(const char* label, PlotData* plots, int plot_count, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size) {
-    PlotMultiEx(ImGuiPlotType_Histogram, label, plots, plot_count, overlay_text, scale_min, scale_max, graph_size);
+void PlotHistograms(const char* label, PlotData* plots, int plot_count, const char* overlay_text, float scale_min, float scale_max, Vector2f graph_size) {
+    ImVec2 size = ImVec2(graph_size.x, graph_size.y);
+    PlotMultiEx(ImGuiPlotType_Histogram, label, plots, plot_count, overlay_text, scale_min, scale_max, size);
 }
 
 } // NS ImGui
