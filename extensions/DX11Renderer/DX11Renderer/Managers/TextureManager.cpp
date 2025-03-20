@@ -189,68 +189,66 @@ inline void fill_image(ID3D11Device1& device, ID3D11DeviceContext1& device_conte
 }
 
 void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& device_context) {
+    { // Resize containers
+        if (m_textures.size() < Textures::capacity())
+            m_textures.resize(Textures::capacity());
+
+        if (m_images.size() < Images::capacity()) {
+            m_images.resize(Images::capacity());
+
+            // Reset the images pointed to by the textures
+            for (Texture texture : Textures::get_iterable())
+                if (texture.exists())
+                    m_textures[texture.get_ID()].image = &m_images[texture.get_image().get_ID()];
+        }
+    }
+
     { // Texture/sampler updates.
-        if (!Textures::get_changed_textures().is_empty()) {
-            if (m_textures.size() < Textures::capacity())
-                m_textures.resize(Textures::capacity());
+        for (Texture texture : Textures::get_changed_textures()) {
+            auto tex_changes = texture.get_changes();
+            Dx11Texture& dx_tex = m_textures[texture.get_ID()];
 
-            for (Texture texture : Textures::get_changed_textures()) {
-                auto tex_changes = texture.get_changes();
-                Dx11Texture& dx_tex = m_textures[texture.get_ID()];
+            if (tex_changes.is_set(Textures::Change::Destroyed)) {
+                dx_tex.image = nullptr;
+                dx_tex.sampler.release();
 
-                if (tex_changes.is_set(Textures::Change::Destroyed)) {
-                    dx_tex.image = nullptr;
-                    dx_tex.sampler.release();
+            } else if (tex_changes.contains(Textures::Change::Created)) {
+                dx_tex.sampler.release(); // Explicit release, because the resource will be overwritten below.
 
-                } else if (tex_changes.contains(Textures::Change::Created)) {
-                    dx_tex.sampler.release(); // Explicit release, because the resource will be overwritten below.
+                D3D11_SAMPLER_DESC desc = {};
+                desc.Filter = to_DX_filtermode(texture.get_magnification_filter(), texture.get_minification_filter());
+                desc.AddressU = to_DX_wrapmode(texture.get_wrapmode_U());
+                desc.AddressV = to_DX_wrapmode(texture.get_wrapmode_V());
+                desc.AddressW = to_DX_wrapmode(texture.get_wrapmode_W());
+                desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+                desc.MinLOD = 0;
+                desc.MaxLOD = D3D11_FLOAT32_MAX;
 
-                    D3D11_SAMPLER_DESC desc = {};
-                    desc.Filter = to_DX_filtermode(texture.get_magnification_filter(), texture.get_minification_filter());
-                    desc.AddressU = to_DX_wrapmode(texture.get_wrapmode_U());
-                    desc.AddressV = to_DX_wrapmode(texture.get_wrapmode_V());
-                    desc.AddressW = to_DX_wrapmode(texture.get_wrapmode_W());
-                    desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-                    desc.MinLOD = 0;
-                    desc.MaxLOD = D3D11_FLOAT32_MAX;
+                HRESULT hr = device.CreateSamplerState(&desc, &dx_tex.sampler);
+                if (FAILED(hr))
+                    printf("Could not create the sampler.\n");
 
-                    HRESULT hr = device.CreateSamplerState(&desc, &dx_tex.sampler);
-                    if (FAILED(hr))
-                        printf("Could not create the sampler.\n");
-
-                    ImageID image_ID = texture.get_image().get_ID();
-                    dx_tex.image = &m_images[image_ID]; // References address in m_images, that may not have been assigned the image yet, but will before handle_updates is done.
-                    if (texture.get_image().exists())
-                        m_newly_referenced_images.push_back(image_ID);
-                }
+                ImageID image_ID = texture.get_image().get_ID();
+                dx_tex.image = &m_images[image_ID]; // References address in m_images, that may not have been assigned the image yet, but will before handle_updates is done.
+                if (texture.get_image().exists())
+                    m_newly_referenced_images.push_back(image_ID);
             }
         }
     }
 
     { // Image updates.
-        if (!Images::get_changed_images().is_empty()) {
-            if (m_images.size() < Images::capacity()) {
-                m_images.resize(Images::capacity());
+        for (Image image : Images::get_changed_images()) {
+            auto image_changes = image.get_changes();
+            Dx11Image& dx_image = m_images[image.get_ID()];
 
-                // Reset the images pointed to by the textures
-                for (Texture texture : Textures::get_iterable())
-                    if (texture.exists())
-                        m_textures[texture.get_ID()].image = &m_images[texture.get_image().get_ID()];
-            }
-
-            for (Image image : Images::get_changed_images()) {
-                auto image_changes = image.get_changes();
-                Dx11Image& dx_image = m_images[image.get_ID()];
-
-                if (image_changes.any_set(Images::Change::Created, Images::Change::Destroyed))
-                    // In case the image is destroyed, we obviously need to release the resource's SRV.
-                    // IN case a new image has been created, we also release the SRV of a previous image, if one exists,
-                    // as the SRV will get overwritten when a new image is created.
-                    // Actual image creation is handled by iterating through the set of newly referenced images
-                    dx_image.srv.release();
-                else if (image_changes.is_set(Images::Change::PixelsUpdated) && dx_image.srv != nullptr)
-                    assert(!"Pixel update not implemented yet.\n");
-            }
+            if (image_changes.any_set(Images::Change::Created, Images::Change::Destroyed))
+                // In case the image is destroyed, we obviously need to release the resource's SRV.
+                // IN case a new image has been created, we also release the SRV of a previous image, if one exists,
+                // as the SRV will get overwritten when a new image is created.
+                // Actual image creation is handled by iterating through the set of newly referenced images
+                dx_image.srv.release();
+            else if (image_changes.is_set(Images::Change::PixelsUpdated) && dx_image.srv != nullptr)
+                assert(!"Pixel update not implemented yet.\n");
         }
 
         // Handle images referenced by newly created textures, where the image hasn't previously been uploaded.
