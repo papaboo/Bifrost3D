@@ -29,7 +29,6 @@
 #include <optixu/optixu_math_namespace.h>
 
 #include <assert.h>
-#include <memory>
 #include <set>
 #include <vector>
 
