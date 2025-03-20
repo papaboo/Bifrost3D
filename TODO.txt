@@ -1,21 +1,13 @@
 BACKLOG:
-* Agx tone mapper https://iolite-engine.com/blog_posts/minimal_agx_implementation
- * Online sample that shows Agx with color grading before tonemapping
- * Possible to fit AgX to ACES?
- * Visaulize AgX in tonemapping UI
-* Sponza gltf doesn't show up in image viewer again. Probably a scale issue
-* DX sphere light bugs
- * Test scene area light reflection in floor has artifacts.
- * Glass sphere in test scene should have a strong specular highlight from the area light. It helps if alpha limit is removed
 * Rough glass
+ * Include tint in sampling probabilities
  * Can we use Bounded VNDF when the IOR is greater (or was it less) than 1.0? So cases where the refraction will cause more of the lobe to be occluded.
- * Energy preserving transmission. 16^3 8bit texture?
-  * cos_theta, roughness, and relative IOR dependent.
-  * Implement TransmissiveShading::Rho
+  * Dump GGX useful/valid RNG values
  * Define how we should scale roughness of a surface underneath another rough surface.
   * Fixed coat roughness, binary search of underlying roughness that matches GGX * GGX
  * Handle thin walled transmissive material
   * Test!!
+  * Should reflection only GGX handle total internal reflection? Will that mean that we'll always have to use the 3D rho LUT?
   * What about total internal reflection on smooth thinwalled surfaces? Isn't that basically just an energy dump as the angle between the normal and wo never changes?
   * Thin walled materials should not refract, effectively only tinting the transmission by the base color.
   * Does that amount to just squaring alpha, squaring tint, and disabling refraction / IOR of 1?
@@ -26,26 +18,38 @@ BACKLOG:
   * See PBRT section 16.1. Apparently light rays need to be scaled, but not view rays.
  * Add support for local refraction in the coat in default shading. Can we do it by defining a constant offset to all rays? cosTheta for the base surface needs to be updated as well.
  * Approximate rough glass in DX11 using a gaussian filter, see Doom 2016.
+  * Implement transmissive material with energy conservation.
   * Possibly expand with OIT using moments, as transparency is a PITA https://momentsingraphics.de/MissingTMBOITCode.html
- * Support for absorption / Beers law. Add case to transmission test scene. Whisky in glass? (Cylinder inside glass)
-  * Suppport for nested layers? Add (ice) cubes to the whisky. Make a tesselated box, bevel the edges and randomly offset the side vertices. Add air bubble inside the ice cubes.
-  * See Yi's post on nested dielectrics and ordering
 * Improving shadow terminator
  * Reflections: Hacking the shadow terminator https://jo.dreggn.org/home/2021_terminator.pdf
  * Refractions: Taming the shadow terminator https://www.yiningkarlli.com/projects/shadowterminator.html
 * Integrate rough glass into DefaultShading
- * See how gltf distinguishes between opacity, cutout and refracting. They should be orthogonal, as you can still have refracting perforated microgeometry.
+ * Integrate as coat + coat_t * ((GGX_R + GGX_T) + diffuse)? That way we keep all GGX terms in one place and can normalize them combined. Can be hard when GGX_T does total internal reflection with a scale.
+ * See how gltf distinguishes between opacity, cutout and refracting. They should be orthogonal, as you can still have refracting perforated microgeometry. https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_transmission/README.md
   * Cutout implies thinwalled and opacity is subpixel cutout, so does opacity < 1 imply thinwalled as well? Otherwise definining the medium that the light moves through gets 'tricky'
+* Support for absorption / Beers law. Add case to transmission test scene. Whisky in glass? (Cylinder inside glass)
+ * Suppport for nested layers? Add (ice) cubes to the whisky. Make a tesselated box, bevel the edges and randomly offset the side vertices. Add air bubble inside the ice cubes.
+ * See Yi's post on nested dielectrics and ordering
 * Bugs
- * SimpleViewer glass test scene. The area light reflection in the nearly specular black floor checkers has a ghost reflection. Not RNG and not wi re-reflection as the floor is flat.
  * SimpleViewer can't switch between rasterizer and ray tracer using P after alt tabbing. Windows input seems to be recorded correctly, but the keyboard state is wrong. Perhaps a clear/reinitialize is in order?
  * Simpleviewers picture in picture's height/depth ratio doesn't update when the viewport updates
  * Environment map has different intensities in DX and OptiX. See --environment-map "C:\Users\Asger Hoedt\Development\data\textures\spheremaps\3DTotal_free_sample_1_Bg.jpg"
+  * It could be the R11G11B10 encoding. We can try RGBM instead and then GGX convolution should be done at full precision and the mipmaps converted to RGBM afterwards to preserve intensity during convolution.
+ * Light sampling:
+  * Ryde scene has intense fire flies from environment sampling even when using a diffuse material.
+  * gltf jaw shows weird shadow artifacts when adding a second light source.
 * Bump mapping
  * Create test scene with a plane where one side has proper micro geometry and the other is normal mapped.
  * Use Microfacet-based Normal Mapping for Robust Monte Carlo Path Tracing to solve the energy preservation issue.
  * Or simply negate the part of the shading hemisphere that disagrees with the geometric normal to make a complete hemisphere.
   * That should preserve abs(cos(theta)) as well, so not affect variance adversely
+* Upgrade OptiX to get better denoiser
+ * sea_keep_lonely_watcher shows bright artifacts on transparent geometry. They seem to come from the anyhit programs not always intersecting all geometry, but stopping after the first nearest intersections.
+ * Implement statistical denoiser as https://dl.acm.org/doi/pdf/10.1145/3680528.3687591
+* Linearly transformed cosine area lights, and set up tests to verify that it works.
+ * https://blog.selfshadow.com/publications/s2017-shading-course/heitz/s2017_pbs_ltc_lines_disks.pdf
+ * Additional light types. Square, tube, ring, ... The ring light should be the reflectance of the outer disk minus the reflectance of the inner disk.
+  * https://github.com/guiqi134/LTC-Area-Lights
 * Emissive meshes
  * Mirror glTF for starters. Emissive texture and emissive 'strength'
   * https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_emissive_strength/README.md
@@ -55,28 +59,18 @@ BACKLOG:
   * https://gpuopen.com/download/publications/Hierarchical_Light_Sampling_with_Accurate_Spherical_Gaussian_Lighting.pdf
   * https://dl.acm.org/doi/10.1145/3665320.3670993
 * Remove color banding
- * http://www.loopit.dk/banding_in_games.pdf and https://www.shadertoy.com/view/4t2SDh
+ * http://www.loopit.dk/banding_in_games.pdf, see slide 37 and 38 for handling linear to sRGB backbuffers
 * Threadsafe asset management
  * Assets shouldn't be copied on resize/reserve, as that gives issues when multithreading asset creation.
   * Instead we can allocate the assets in chunks and just allocate more chunks as needed. Linked list style
   * To avoid dereferencing multiple pointers whenever an asset's property is accessed, we can just return the (now static) reference to the asset. So instead of having Images::get_size, we'll instead use Images::get(image_ID) to return an image and then call get_size on that.
  * Allow multithreaded UID generation
  * Use the threadsafe asset management in model loaders to parallelize asset loading and creation.
-* Dithered transparency in the material
- * using a fairly large blue noise texture, morton encoding or Laine-Karras hash
- * Consider it an engine effect and include it in the path tracer as well
- * See https://www.youtube.com/watch?v=NHd1PeJfyzE
-* Upgrade OptiX to get better denoiser
- * sea_keep_lonely_watcher shows bright artifacts on transparent geometry. They seem to come from the anyhit programs not always intersecting all geometry, but stopping after the first nearest intersections.
- * Implement statistical denoiser as https://dl.acm.org/doi/pdf/10.1145/3680528.3687591
 * ReSTIR
  * Start with the simpler Spatiotemporal variance-guided filtering: real-time reconstruction for path-traced global illumination
  * Generalized Resampled Importance Sampling
  * Change the rng seed to be based on a frame count instead of an accumulation count
   * How will that affect non-ReSTIR
-* Decima Engine Area lights or linearly transformed cosines
- * https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Shaders/Private/BRDF.ush
- * https://www.guerrilla-games.com/read/decima-engine-advances-in-lighting-and-aa
 * Blue noise seed
  * PBRTs random morton code seed looks pretty simple (and I do love a good morton code)
   * Make ZSobolSampler 'progressive' with fixed 256 sample offset in between the pixels.
