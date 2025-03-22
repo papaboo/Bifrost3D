@@ -67,9 +67,9 @@ static const float3x3 AP1_to_sRGB = {
     -0.0240088310, -0.128999621, 1.15324795 };
 
 static const float3 AP1_RGB2Y = {
-    0.2722287168, // AP1_to_XYZ_mat[0][1],
-    0.6740817658, // AP1_to_XYZ_mat[1][1],
-    0.0536895174 // AP1_to_XYZ_mat[2][1]
+    0.2722287168, // AP1_to_XYZ[0][1],
+    0.6740817658, // AP1_to_XYZ[1][1],
+    0.0536895174 // AP1_to_XYZ[2][1]
 };
 
 inline float3 unreal4(float3 color, float black_clip = 0.0f, float toe = 0.53f, float slope = 0.91f, float shoulder = 0.23f, float white_clip = 0.035f) {
@@ -119,6 +119,40 @@ inline float3 unreal4(float3 color, float black_clip = 0.0f, float toe = 0.53f, 
     return mul(AP1_to_sRGB, max(0.0, tone_color));
 }
 
+// Mean error^2: 3.6705141e-06
+float3 agxDefaultContrastApprox(float3 c) {
+    return -0.00232f + c * (0.1191f + c * (0.4298f + c * (-6.868f + c * (31.96f + c * (-40.14f + c * 15.5f)))));
+}
+
+// AgX tonemapping operator
+// https://iolite-engine.com/blog_posts/minimal_agx_implementation
+float3 agx(float3 linear_color) {
+    // Transform to AgX color space
+    const float3x3 linear_to_agx = { 0.842479062253094, 0.0784335999999992, 0.0792237451477643,
+                                     0.0423282422610123, 0.878468636469772, 0.0791661274605434,
+                                     0.0423756549057051, 0.0784336, 0.879142973793104 };
+    float3 c = mul(linear_to_agx, linear_color);
+
+    // Log2 space encoding
+    const float min_exposure_value = -12.47393;
+    const float max_exposure_value = 4.026069;
+    c.r = log2(c.r);
+    c.g = log2(c.g);
+    c.b = log2(c.b);
+    c = (c - min_exposure_value) / (max_exposure_value - min_exposure_value); // Inverse lerp between min and max by c
+
+    // Apply sigmoid function approximation
+    c = agxDefaultContrastApprox(saturate(c));
+
+    // Transform back from AgX color space
+    const float3x3 agx_to_tonemapped = { 1.19687900512017, -0.0980208811401368, -0.0990297440797205,
+                                        -0.0528968517574562, 1.15190312990417, -0.0989611768448433,
+                                        -0.0529716355144438, -0.0980434501171241, 1.15107367264116 };
+    c = mul(agx_to_tonemapped, c);
+
+    return pow(abs(c), 2.2);
+}
+
 // ------------------------------------------------------------------------------------------------
 // Simple vignette using smoothstep.
 // Adapted from https://github.com/mattdesl/lwjgl-basics/wiki/ShaderLesson3
@@ -163,6 +197,12 @@ class Unreal4Tonemapper : ITonemapper {
     }
 };
 
+class AgXTonemapper : ITonemapper {
+    float3 tonemap(float3 color) {
+        return agx(color);
+    }
+};
+
 float4 postprocess_pixel(int2 pixel_index, ITonemapper tonemapper) {
     // Bloom and exposure
     float linear_exposure = linear_exposure_buffer[0];
@@ -191,6 +231,11 @@ float4 linear_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
 
 float4 unreal4_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
     Unreal4Tonemapper tonemapper;
+    return postprocess_pixel(position.xy, tonemapper);
+}
+
+float4 agx_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
+    AgXTonemapper tonemapper;
     return postprocess_pixel(position.xy, tonemapper);
 }
 
