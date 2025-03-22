@@ -62,7 +62,7 @@ void camera_effects(CameraID camera_ID) {
         });
 
         ImGui::PoppedTreeNode("Tonemapping", [&]() {
-            const char* tonemapping_modes[] = { "Linear", "Filmic" };
+            const char* tonemapping_modes[] = { "Linear", "Filmic", "AgX" };
             int current_tonemapping_mode = (int)effects_settings.tonemapping.mode;
             has_changed |= ImGui::Combo("Tonemapper", &current_tonemapping_mode, tonemapping_modes, IM_ARRAYSIZE(tonemapping_modes));
             effects_settings.tonemapping.mode = (TonemappingMode)current_tonemapping_mode;
@@ -75,10 +75,12 @@ void camera_effects(CameraID camera_ID) {
                 for (int i = 0; i < max_sample_count; ++i) {
                     float c = (i / (max_sample_count - 1.0f)) * 2.0f;
                     switch (effects_settings.tonemapping.mode) {
-                    case TonemappingMode::Filmic:
-                        intensities[i] = luminance(filmic(RGB(c), filmic_settings)); break;
                     case TonemappingMode::Linear:
                         intensities[i] = c; break;
+                    case TonemappingMode::Filmic:
+                        intensities[i] = luminance(filmic(RGB(c), filmic_settings)); break;
+                    case TonemappingMode::AgX:
+                        intensities[i] = luminance(agx(RGB(c))); break;
                     }
                 }
                 ImGui::PlotLines("", intensities, IM_ARRAYSIZE(intensities), 0, "Intensity [0, 2]", 0.0f, 1.0f, ImVec2(0, 80));
