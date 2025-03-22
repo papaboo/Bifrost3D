@@ -234,6 +234,7 @@ private:
     OVertexShader m_fullscreen_VS;
     OPixelShader m_linear_tonemapping_PS;
     OPixelShader m_filmic_tonemapping_PS;
+    OPixelShader m_agx_tonemapping_PS;
 };
 
 } // NS DX11Renderer
