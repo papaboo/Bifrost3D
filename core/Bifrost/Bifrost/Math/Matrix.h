@@ -10,6 +10,7 @@
 #define _BIFROST_MATH_MATRIX_H_
 
 #include <Bifrost/Core/Defines.h>
+#include <Bifrost/Math/Color.h>
 #include <Bifrost/Math/Vector.h>
 
 #include <cstring>
@@ -336,6 +337,26 @@ __always_inline__ Matrix3x4<T> operator*(Matrix3x4<T> affine_lhs, Matrix3x4<T> a
             if (c == 3)
                 res[r][c] += affine_lhs[r][3];
         }
+    return res;
+}
+
+// Color matrix multiplication
+__always_inline__ RGB operator*(RGB lhs, Matrix3x3f rhs) {
+    RGB res;
+    for (int c = 0; c < 3; ++c) {
+        Vector3f column = rhs.get_column(c);
+        res[c] = lhs.r * column.x + lhs.g * column.y + lhs.b * column.z;
+    }
+    return res;
+}
+
+// Color matrix multiplication
+__always_inline__ RGB operator*(Matrix3x3f lhs, RGB rhs) {
+    RGB res;
+    for (int r = 0; r < 3; ++r) {
+        Vector3f row = lhs.get_row(r);
+        res[r] = rhs.r * row.x + rhs.g * row.y + rhs.b * row.z;
+    }
     return res;
 }
 
