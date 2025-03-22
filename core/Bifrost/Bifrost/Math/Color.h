@@ -12,12 +12,10 @@
 #include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/FixedPointTypes.h>
 
-#include <algorithm>
 #include <sstream>
 #include <string>
 
-namespace Bifrost {
-namespace Math {
+namespace Bifrost::Math {
 
 struct RGB final {
     typedef float value_type;
@@ -370,8 +368,7 @@ __always_inline__ float chroma(RGB color) {
     return sqrtf(alpha * alpha + beta * beta);
 }
 
-} // NS Math
-} // NS Bifrost
+} // NS Bifrost::Math
 
 // ------------------------------------------------------------------------------------------------
 // Convenience functions that appends a color's string representation to an ostream.

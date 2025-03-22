@@ -15,7 +15,7 @@
 
 namespace Bifrost::Math::CameraEffects {
 
-enum class TonemappingMode { Linear, Filmic, Count };
+enum class TonemappingMode { Linear, Filmic, AgX, Count };
 enum class ExposureMode { Fixed, LogAverage, Histogram, Count };
 
 struct TonemappingSettings {
@@ -219,6 +219,43 @@ inline RGB filmic(RGB color, float slope = 0.91f, float toe = 0.53f, float shoul
 
 inline RGB filmic(RGB color, TonemappingSettings s) {
     return filmic(color, s.slope, s.toe, s.shoulder, s.black_clip, s.white_clip);
+}
+
+// ------------------------------------------------------------------------------------------------
+// AgX tonemapping operator
+// https://iolite-engine.com/blog_posts/minimal_agx_implementation
+// ------------------------------------------------------------------------------------------------
+
+// Mean error^2: 3.6705141e-06
+inline RGB agxDefaultContrastApprox(RGB c) {
+    return -0.00232f + c * (0.1191f + c * (0.4298f + c * (-6.868f + c * (31.96f + c * (-40.14f + c * 15.5f)))));
+}
+
+inline RGB agx(RGB linear_color) {
+    // Transform to AgX color space
+    const Matrix3x3f linear_to_agx = { 0.842479062253094f, 0.0784335999999992f, 0.0792237451477643f,
+                                       0.0423282422610123f, 0.878468636469772f, 0.0791661274605434f,
+                                       0.0423756549057051f, 0.0784336f, 0.879142973793104f };
+    RGB c = linear_to_agx * linear_color;
+
+    // Log2 space encoding
+    const RGB min_exposure_value = RGB(-12.47393f);
+    const RGB max_exposure_value = RGB(4.026069f);
+    c.r = log2(c.r);
+    c.g = log2(c.g);
+    c.b = log2(c.b);
+    c = inverse_lerp(min_exposure_value, max_exposure_value, c);
+
+    // Apply sigmoid function approximation
+    c = agxDefaultContrastApprox(saturate(c));
+
+    // Transform back from AgX color space
+    const Matrix3x3f agx_to_tonemapped = { 1.19687900512017f, -0.0980208811401368f, -0.0990297440797205f,
+                                          -0.0528968517574562f, 1.15190312990417f, -0.0989611768448433f,
+                                          -0.0529716355144438f, -0.0980434501171241f, 1.15107367264116f };
+    c = agx_to_tonemapped * c;
+
+    return gammacorrect(c, 2.2f);
 }
 
 } // NS Bifrost::Math::CameraEffects
