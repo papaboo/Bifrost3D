@@ -28,16 +28,14 @@ using namespace OptiXRenderer;
 using namespace OptiXRenderer::Shading::BSDFs;
 using namespace OptiXRenderer::Shading::ShadingModels;
 
-typedef BSDFSample(*SampleRoughBSDF)(float3 tint, float roughness, float3 wo, float2 random_sample);
+typedef BSDFSample(*SampleRoughBRDF)(float roughness, float3 wo, float2 random_sample);
 
-double estimate_rho(float3 wo, float roughness, unsigned int sample_count, SampleRoughBSDF sample_rough_BSDF) {
-
-    const float3 tint = make_float3(1.0f, 1.0f, 1.0f);
+double estimate_rho(float3 wo, float roughness, unsigned int sample_count, SampleRoughBRDF sample_rough_BSDF) {
 
     Core::Array<double> throughput = Core::Array<double>(sample_count);
     for (unsigned int s = 0; s < sample_count; ++s) {
         float2 rng_sample = RNG::sample02(s);
-        BSDFSample sample = sample_rough_BSDF(tint, roughness, wo, rng_sample);
+        BSDFSample sample = sample_rough_BSDF(roughness, wo, rng_sample);
         if (sample.PDF.is_valid())
             throughput[s] = sample.reflectance.x * sample.direction.z / sample.PDF.value();
         else
@@ -47,7 +45,7 @@ double estimate_rho(float3 wo, float roughness, unsigned int sample_count, Sampl
     return Math::sort_and_pairwise_summation(throughput.begin(), throughput.end()) / sample_count;
 }
 
-Image estimate_rho(unsigned int width, unsigned int height, unsigned int sample_count, SampleRoughBSDF sample_rough_BSDF) {
+Image estimate_rho(unsigned int width, unsigned int height, unsigned int sample_count, SampleRoughBRDF sample_rough_BSDF) {
     Image rho_image = Image::create2D("rho", PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
     Math::RGB* rho_image_pixels = rho_image.get_pixels<Math::RGB>();
 
@@ -402,8 +400,12 @@ int main(int argc, char** argv) {
     }
 
     { // Compute Burley rho.
+        static auto sample_burley = [](float roughness, float3 wo, float2 random_sample) -> BSDFSample {
+            float alpha = GGX::alpha_from_roughness(roughness);
+            return Burley::sample({1, 1, 1}, alpha, wo, random_sample);
+        };
 
-        Image rho = estimate_rho(width, height, sample_count, Burley::sample);
+        Image rho = estimate_rho(width, height, sample_count, sample_burley);
 
         // Store.
         StbImageWriter::write(rho, output_dir + "BurleyRho.png");
@@ -412,7 +414,7 @@ int main(int argc, char** argv) {
 
     { // Compute GGX rho.
 
-        static auto sample_ggx = [](float3 tint, float roughness, float3 wo, float2 random_sample) -> BSDFSample {
+        static auto sample_ggx = [](float roughness, float3 wo, float2 random_sample) -> BSDFSample {
             float alpha = GGX::alpha_from_roughness(roughness);
             return GGX_R::sample(alpha, 1, wo, random_sample);
         };
@@ -426,7 +428,7 @@ int main(int argc, char** argv) {
 
     { // Compute GGX with fresnel rho.
 
-        static auto sample_ggx_with_fresnel = [](float3 tint, float roughness, float3 wo, float2 random_sample) -> BSDFSample {
+        static auto sample_ggx_with_fresnel = [](float roughness, float3 wo, float2 random_sample) -> BSDFSample {
             float alpha = GGX::alpha_from_roughness(roughness);
             return GGX_R::sample(alpha, 0, wo, random_sample);
         };
