@@ -173,7 +173,7 @@ float3 evaluate_sphere_light_GGX(SphereLight light, float3 light_radiance, float
     float specular_ambient_visibility = BSDFs::GGX::scaled_ambient_visibility(ggx_alpha, ambient_visibility);
 
     // Limit GGX alpha as nearly specular surfaces produce artifacts.
-    ggx_alpha = max(0.0005, ggx_alpha);
+    ggx_alpha = max(0.002, ggx_alpha);
 
     float cos_theta_i = wi.z;
     float sin_theta_squared = pow2(light.radius) / dot(most_representative_point, most_representative_point);
