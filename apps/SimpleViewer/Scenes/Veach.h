@@ -88,7 +88,7 @@ void create_veach_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::
         float light_radius = interlight_distance / 4.0f;
         for (int i = light_count - 1; i >= 0; --i) {
             Transform light_transform = Transform(light_positions[i]);
-            SceneNode light_node = SceneNode("Light", light_transform);
+            SceneNode light_node = SceneNode("Light" + std::to_string(i), light_transform);
             SphereLight(light_node, light_colors[i] * 10, light_radius);
             light_node.set_parent(scene.get_root_node());
             light_radius *= 0.333f;
