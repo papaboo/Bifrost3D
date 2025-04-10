@@ -24,14 +24,6 @@ extern const float burley[];
 float sample_burley(float wo_dot_normal, float roughness);
 
 // ------------------------------------------------------------------------------------------------
-// Default shading rho fit
-// ------------------------------------------------------------------------------------------------
-extern const int default_shading_angle_sample_count;
-extern const int default_shading_roughness_sample_count;
-extern const Bifrost::Math::Vector2f default_shading[];
-Bifrost::Math::Vector2f sample_default_shading(float wo_dot_normal, float roughness);
-
-// ------------------------------------------------------------------------------------------------
 // GGX rho fit
 // ------------------------------------------------------------------------------------------------
 extern const int GGX_angle_sample_count;
