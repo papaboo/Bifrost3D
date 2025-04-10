@@ -1,4 +1,4 @@
-// Fit the directional-hemispherical reflectance function (rho) to an apprimated model.
+// Fit the directional-hemispherical reflectance function (rho) to an approximated model.
 // ------------------------------------------------------------------------------------------------
 // Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
