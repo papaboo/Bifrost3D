@@ -18,8 +18,6 @@ SET(ASSETS_SRCS
 SET(ASSETS_SHADING_SRCS 
   Bifrost/Assets/Shading/BurleyRho.cpp
   Bifrost/Assets/Shading/BurleyRho.png
-  Bifrost/Assets/Shading/DefaultShadingRho.cpp
-  Bifrost/Assets/Shading/DefaultShadingRho.png
   Bifrost/Assets/Shading/EstimateGGXBoundedVNDFAlpha.cpp
   Bifrost/Assets/Shading/Fittings.h
   Bifrost/Assets/Shading/GGXRho.cpp

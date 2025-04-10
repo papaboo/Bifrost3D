@@ -26,7 +26,7 @@ using namespace OptiXRenderer;
 
 typedef BSDFSample(*SampleRoughBRDF)(float roughness, float3 wo, float2 random_sample);
 
-double estimate_rho(float3 wo, float roughness, unsigned int sample_count, SampleRoughBRDF sample_rough_BSDF) {
+double sample_rho(float3 wo, float roughness, unsigned int sample_count, SampleRoughBRDF sample_rough_BSDF) {
 
     Core::Array<double> throughput = Core::Array<double>(sample_count);
     for (unsigned int s = 0; s < sample_count; ++s) {
@@ -41,7 +41,7 @@ double estimate_rho(float3 wo, float roughness, unsigned int sample_count, Sampl
     return Math::sort_and_pairwise_summation(throughput.begin(), throughput.end()) / sample_count;
 }
 
-Assets::Image estimate_rho(unsigned int width, unsigned int height, unsigned int sample_count, SampleRoughBRDF sample_rough_BSDF) {
+Assets::Image tabulate_rho(unsigned int width, unsigned int height, unsigned int sample_count, SampleRoughBRDF sample_rough_BSDF) {
     Assets::Image rho_image = Assets::Image::create2D("rho", Assets::PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
     Math::RGB* rho_image_pixels = rho_image.get_pixels<Math::RGB>();
 
@@ -51,7 +51,7 @@ Assets::Image estimate_rho(unsigned int width, unsigned int height, unsigned int
         for (int x = 0; x < int(width); ++x) {
             float cos_theta = fmaxf(0.000001f, x / float(width - 1));
             float3 wo = make_float3(sqrt(1.0f - cos_theta * cos_theta), 0.0f, cos_theta);
-            double rho = estimate_rho(wo, roughness, sample_count, sample_rough_BSDF);
+            double rho = sample_rho(wo, roughness, sample_count, sample_rough_BSDF);
             rho_image_pixels[x + y * width] = Math::RGB(float(rho));
         }
     }
@@ -91,7 +91,7 @@ void output_brdf(Assets::Image image, int sample_count, const std::string& filen
     out_header <<
         "// " << description << "\n"
         "// ------------------------------------------------------------------------------------------------\n"
-        "// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors\n"
+        "// Copyright (C) Bifrost. See AUTHORS.txt for authors\n"
         "//\n"
         "// This program is open source and distributed under the New BSD License.\n"
         "// See LICENSE.txt for more detail.\n"
