@@ -57,12 +57,13 @@ if (MSVC)
   add_definitions(-wd4626) # assignment operator was implicitly defined as deleted
 
   add_definitions(-wd4710) # Function not inlined
-  add_definitions(-wd4711) # Function selected for automatic inline expansion.
+  add_definitions(-wd4711) # Function selected for automatic inline expansion
+  add_definitions(-wd4723) # Potential divide by zero
 
   add_definitions(-wd5026) # move constructor was implicitly defined as deleted
   add_definitions(-wd5027) # move assignment operator was implicitly defined as deleted
 
-  add_definitions(-wd6993) # Do not warn that OpenMP is analyzed single threaded.
+  add_definitions(-wd6993) # Do not warn that OpenMP is analyzed single threaded
 
   add_definitions(-wd26451) # Arithmetic overflow warning. Pops up all places where ints are used as sizes to allocated arrays.
   add_definitions(-wd26812) # Prefer enum class over enum.
