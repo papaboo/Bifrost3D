@@ -144,7 +144,7 @@ GTEST_TEST(GGX_R, fully_grazing_evaluates_to_black) {
 
 // Validate that a few select samples in the GGX and GGX with Fresnel precomputed Rho tables have the correct values and can be looked up correct.
 // We test the corner and middle samples and make sure that the sample coordinates match with the original precomputed sample coords.
-GTEST_TEST(GGX_R, validate_ggx_rho_precomputations) {
+GTEST_TEST(GGX_R, validate_ggx_reflection_rho_precomputations) {
     using namespace Bifrost::Assets::Shading;
     using namespace OptiXRenderer::Shading::BSDFs;
 
@@ -162,12 +162,12 @@ GTEST_TEST(GGX_R, validate_ggx_rho_precomputations) {
             auto no_specularity_ggx = GGXReflectionWrapper(alpha, 0.0f);
             float expected_no_specularity_rho = BSDFTestUtils::directional_hemispherical_reflectance_function(no_specularity_ggx, wo, sample_count).reflectance.x;
             float actual_no_specularity_rho = Rho::sample_GGX_with_fresnel(cos_theta_o, roughness);
-            EXPECT_FLOAT_EQ_EPS(expected_no_specularity_rho, actual_no_specularity_rho, 0.0001f) << "for cos_theta: " << cos_theta << " and roughness: " << roughness;
+            EXPECT_FLOAT_EQ_EPS(expected_no_specularity_rho, actual_no_specularity_rho, 0.0001f) << "for cos_theta: " << cos_theta_o << " and roughness: " << roughness;
 
             auto full_specularity_ggx = GGXReflectionWrapper(alpha, 1.0f);
             float expected_full_specularity_rho = BSDFTestUtils::directional_hemispherical_reflectance_function(full_specularity_ggx, wo, sample_count).reflectance.x;
             float actual_full_specularity_rho = Rho::sample_GGX(cos_theta_o, roughness);
-            EXPECT_FLOAT_EQ_EPS(expected_full_specularity_rho, actual_full_specularity_rho, 0.0001f) << "for cos_theta: " << cos_theta << " and roughness: " << roughness;
+            EXPECT_FLOAT_EQ_EPS(expected_full_specularity_rho, actual_full_specularity_rho, 0.0001f) << "for cos_theta: " << cos_theta_o << " and roughness: " << roughness;
         }
     }
 }
@@ -563,6 +563,43 @@ GTEST_TEST(GGX, fully_grazing_evaluates_to_black) {
 
                 float grazing_wi_f = ggx.evaluate(normalize(grazing_wo + w_offset), grazing_wi).x;
                 EXPECT_FLOAT_EQ(grazing_wi_f, 0.0f) << ggx.to_string();
+            }
+        }
+    }
+}
+
+// Validate that a few select samples in the dielectric GGX precomputed Rho tables have the correct values and can be looked up correct.
+// We test the corner and middle samples and make sure that the sample coordinates match with the original precomputed sample coords.
+GTEST_TEST(GGX, validate_ggx_rho_precomputations) {
+    using namespace Bifrost::Assets::Shading;
+    using namespace OptiXRenderer::Shading::BSDFs;
+
+    int sample_count = 4096;
+
+    float middle_cos_theta = (Rho::dielectric_GGX_angle_sample_count / 2) / (Rho::dielectric_GGX_angle_sample_count - 1.0f);
+    float middle_roughness = (Rho::dielectric_GGX_roughness_sample_count / 2) / (Rho::dielectric_GGX_roughness_sample_count - 1.0f);
+    float middle_alpha = GGX::alpha_from_roughness(middle_roughness);
+    float common_specularity = 0.04f;
+
+    for (float cos_theta_o : { 0.000001f, middle_cos_theta, 1.0f }) {
+        optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
+        for (float alpha : { GGX::MIN_ALPHA, middle_alpha, 1.0f }) {
+            float roughness = GGX::roughness_from_alpha(alpha);
+            for (float specularity : { Rho::dielectric_GGX_minimum_specularity, common_specularity, Rho::dielectric_GGX_maximum_specularity }) {
+                float ior_i_over_o = dielectric_ior_from_specularity(specularity);
+
+                optix::float3 transmission_tint = { 1, 0, 0 };
+                auto ggx = GGXWrapper(alpha, specularity, ior_i_over_o, transmission_tint);
+                optix::float3 expected_rho = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, sample_count).reflectance;
+                float expected_total_reflectance = expected_rho.x; // Red contains both reflected and transmitted contribution.
+                float expected_reflected_reflectance = expected_rho.y; // Green only contains reflected contribution as green transitted tint is 0.
+
+                auto actual_rho = Rho::sample_dielectric_GGX(cos_theta_o, roughness, specularity);
+                float actual_total_reflectance = actual_rho.x;
+                float reflection_ratio = actual_rho.y;
+                float actual_reflected_reflectance = actual_total_reflectance * reflection_ratio;
+                EXPECT_FLOAT_EQ_EPS(expected_total_reflectance, actual_total_reflectance, 0.002f) << "for cos_theta: " << cos_theta_o << ", roughness: " << roughness << ", specularity: " << specularity;
+                EXPECT_FLOAT_EQ_EPS(expected_reflected_reflectance, actual_reflected_reflectance, 0.014f) << "for cos_theta: " << cos_theta_o << ", roughness: " << roughness << ", specularity: " << specularity;
             }
         }
     }
