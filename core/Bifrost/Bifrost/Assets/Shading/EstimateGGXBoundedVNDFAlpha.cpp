@@ -1,7 +1,7 @@
 // Estimate the alpha of the GGX bounded VNDF distribution based on the maximal PDF when sampling the bounded VNDF
 // and the angle between the view direction and the normal.
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors
+// Copyright (C) Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
@@ -10,7 +10,7 @@
 // ------------------------------------------------------------------------------------------------
 
 #include <Bifrost/Assets/Shading/Fittings.h>
-#include <Bifrost/Math/Utils.h>
+#include <Bifrost/Math/ImageSampling.h>
 
 namespace Bifrost::Assets::Shading::Estimate_GGX_bounded_VNDF_alpha {
 
@@ -94,31 +94,9 @@ float encode_PDF(float pdf) {
 }
 
 float estimate_alpha(float wo_dot_normal, float max_PDF) {
-    using namespace Bifrost::Math;
-
     float encoded_PDF = encode_PDF(max_PDF);
-    encoded_PDF = fminf(1.0f, encoded_PDF);
-    encoded_PDF = fmaxf(0.0f, encoded_PDF);
 
-    float wo_dot_normal_coord = wo_dot_normal * (wo_dot_normal_sample_count - 1);
-    int lower_wo_dot_normal_row = int(wo_dot_normal_coord);
-    int upper_wo_dot_normal_row = min(lower_wo_dot_normal_row + 1, wo_dot_normal_sample_count - 1);
-
-    float encoded_PDF_coord = encoded_PDF * (max_PDF_sample_count - 1);
-    int lower_encoded_PDF_column = int(encoded_PDF_coord);
-    int upper_encoded_PDF_column = min(lower_encoded_PDF_column + 1, max_PDF_sample_count - 1);
-
-    // Interpolate by encoded PDF
-    float encoded_PDF_t = encoded_PDF_coord - lower_encoded_PDF_column;
-    const float* lower_alpha_row = alphas + lower_wo_dot_normal_row * wo_dot_normal_sample_count;
-    float lower_alpha = lerp(lower_alpha_row[lower_encoded_PDF_column], lower_alpha_row[upper_encoded_PDF_column], encoded_PDF_t);
-
-    const float* upper_alpha_row = alphas + upper_wo_dot_normal_row * wo_dot_normal_sample_count;
-    float upper_alpha = lerp(upper_alpha_row[lower_encoded_PDF_column], upper_alpha_row[upper_encoded_PDF_column], encoded_PDF_t);
-
-    // Interpolate by wo_dot_normal
-    float wo_dot_normal_t = wo_dot_normal_coord - lower_wo_dot_normal_row;
-    return lerp(lower_alpha, upper_alpha, wo_dot_normal_t);
+    return Math::ImageSampling::bilinear(alphas, max_PDF_sample_count, wo_dot_normal_sample_count, encoded_PDF, wo_dot_normal);
 }
 
 } // NS Bifrost::Assets::Shading::Estimate_GGX_bounded_VNDF_alpha

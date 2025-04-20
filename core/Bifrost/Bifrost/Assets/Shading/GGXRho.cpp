@@ -1,6 +1,6 @@
 // Directional-hemispherical reflectance for GGX.
 // ------------------------------------------------------------------------------------------------
-// Copyright (C) 2018, Bifrost. See AUTHORS.txt for authors
+// Copyright (C) Bifrost. See AUTHORS.txt for authors
 //
 // This program is open source and distributed under the New BSD License.
 // See LICENSE.txt for more detail.
@@ -9,7 +9,7 @@
 // ------------------------------------------------------------------------------------------------
 
 #include <Bifrost/Assets/Shading/Fittings.h>
-#include <Bifrost/Math/Utils.h>
+#include <Bifrost/Math/ImageSampling.h>
 
 namespace Bifrost::Assets::Shading::Rho {
 
@@ -85,27 +85,7 @@ const float GGX[] = {
 };
 
 float sample_GGX(float wo_dot_normal, float roughness) {
-    using namespace Bifrost::Math;
-
-    float roughness_coord = roughness * (GGX_roughness_sample_count - 1);
-    int lower_roughness_row = int(roughness_coord);
-    int upper_roughness_row = min(lower_roughness_row + 1, GGX_roughness_sample_count - 1);
-
-    float wo_dot_normal_coord = wo_dot_normal * (GGX_angle_sample_count - 1);
-    int lower_wo_dot_normal_column = int(wo_dot_normal_coord);
-    int upper_wo_dot_normal_column = min(lower_wo_dot_normal_column + 1, GGX_angle_sample_count - 1);
-
-    // Interpolate by wo_dot_normal
-    float wo_dot_normal_t = wo_dot_normal * (GGX_angle_sample_count - 1) - lower_wo_dot_normal_column;
-    const float* lower_rho_row = GGX + lower_roughness_row * GGX_roughness_sample_count;
-    float lower_rho = lerp(lower_rho_row[lower_wo_dot_normal_column], lower_rho_row[upper_wo_dot_normal_column], wo_dot_normal_t);
-
-    const float* upper_rho_row = GGX + upper_roughness_row * GGX_roughness_sample_count;
-    float upper_rho = lerp(upper_rho_row[lower_wo_dot_normal_column], upper_rho_row[upper_wo_dot_normal_column], wo_dot_normal_t);
-
-    // Interpolate by roughness
-    float roughness_t = roughness_coord - lower_roughness_row;
-    return lerp(lower_rho, upper_rho, roughness_t);
+    return Math::ImageSampling::bilinear(GGX, GGX_angle_sample_count, GGX_roughness_sample_count, wo_dot_normal, roughness);
 }
 
 } // NS Bifrost::Assets::Shading::Rho
