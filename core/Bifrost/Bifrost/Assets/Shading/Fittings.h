@@ -24,6 +24,17 @@ extern const float burley[];
 float sample_burley(float wo_dot_normal, float roughness);
 
 // ------------------------------------------------------------------------------------------------
+// Dielectric GGX rho fit
+// ------------------------------------------------------------------------------------------------
+extern const int dielectric_GGX_angle_sample_count;
+extern const int dielectric_GGX_roughness_sample_count;
+extern const int dielectric_GGX_specularity_sample_count;
+extern const float dielectric_GGX_minimum_specularity;
+extern const float dielectric_GGX_maximum_specularity;
+extern const Math::Vector2f dielectric_GGX[];
+Math::Vector2f sample_dielectric_GGX(float wo_dot_normal, float roughness, float specularity);
+
+// ------------------------------------------------------------------------------------------------
 // GGX rho fit
 // ------------------------------------------------------------------------------------------------
 extern const int GGX_angle_sample_count;
@@ -44,7 +55,7 @@ float sample_GGX_with_fresnel(float wo_dot_normal, float roughness);
 namespace Estimate_GGX_bounded_VNDF_alpha {
 
 // ------------------------------------------------------------------------------------------------
-// Estimate the alpha of the GGX distribution that with the given maximal PDF from a angle.
+// Estimate the alpha of the GGX distribution that with the given maximal PDF from an angle.
 // ------------------------------------------------------------------------------------------------
 extern const int alpha_sample_count;
 extern const int wo_dot_normal_sample_count;

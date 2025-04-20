@@ -18,6 +18,7 @@ SET(ASSETS_SRCS
 SET(ASSETS_SHADING_SRCS 
   Bifrost/Assets/Shading/BurleyRho.cpp
   Bifrost/Assets/Shading/BurleyRho.png
+  Bifrost/Assets/Shading/DielectricGGXRho.cpp
   Bifrost/Assets/Shading/EstimateGGXBoundedVNDFAlpha.cpp
   Bifrost/Assets/Shading/Fittings.h
   Bifrost/Assets/Shading/GGXRho.cpp
