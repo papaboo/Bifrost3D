@@ -8,6 +8,7 @@
 
 #include <FitRhoApproximation.h>
 #include <GGXAlphaFromMaxPDF.h>
+#include <PrecomputeDielectricBSDFRho.h>
 #include <PrecomputeRoughBRDFRho.h>
 
 #include <OptiXRenderer/Shading/BSDFs/Burley.h>
@@ -51,7 +52,6 @@ int main(int argc, char** argv) {
     }
 
     { // Compute GGX reflection rho.
-
         static auto sample_ggx = [](float roughness, float3 wo, float2 random_sample) -> BSDFSample {
             float alpha = GGX::alpha_from_roughness(roughness);
             return GGX_R::sample(alpha, 1, wo, random_sample);
@@ -65,7 +65,6 @@ int main(int argc, char** argv) {
     }
 
     { // Compute GGX reflection with fresnel rho.
-
         static auto sample_ggx_with_fresnel = [](float roughness, float3 wo, float2 random_sample) -> BSDFSample {
             float alpha = GGX::alpha_from_roughness(roughness);
             return GGX_R::sample(alpha, 0, wo, random_sample);
@@ -77,6 +76,21 @@ int main(int argc, char** argv) {
         StbImageWriter::write(rho, output_dir + "GGXWithFresnelRho.png");
         PrecomputeRoughBRDFRho::output_brdf<1>(rho, sample_count, output_dir + "GGXWithFresnelRho.cpp", "GGX_with_fresnel",
             "Directional-hemispherical reflectance for GGX with fresnel factor.");
+    }
+
+    { // Compute dielectric GGX rho.
+        static auto sample_dielectric_ggx = [](float roughness, float specularity, float3 wo, float3 random_sample) -> BSDFSample {
+            float alpha = GGX::alpha_from_roughness(roughness);
+            float ior = dielectric_ior_from_specularity(specularity);
+            return GGX::sample(alpha, specularity, ior, wo, random_sample);
+        };
+
+        int size = 16;
+        Image rho = PrecomputeDielectricBSDFRho::tabulate_rho(size, size, size, sample_count, sample_dielectric_ggx);
+
+        // Store.
+        PrecomputeDielectricBSDFRho::output_brdf(rho, sample_count, output_dir + "DielectricGGXRho.cpp", "dielectric_GGX",
+            "Directional-hemispherical reflectance for dielectric GGX.");
     }
 
     return 0;
