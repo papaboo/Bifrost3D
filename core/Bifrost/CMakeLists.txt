@@ -61,6 +61,7 @@ SET(MATH_SRCS
   Bifrost/Math/Distributions.h
   Bifrost/Math/FixedPointTypes.h
   Bifrost/Math/half.h
+  Bifrost/Math/ImageSampling.h
   Bifrost/Math/Intersect.h
   Bifrost/Math/Line.h
   Bifrost/Math/Matrix.h
