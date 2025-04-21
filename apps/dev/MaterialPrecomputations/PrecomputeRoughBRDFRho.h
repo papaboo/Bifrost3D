@@ -69,23 +69,12 @@ std::string format_float(float v) {
     return out.str();
 }
 
-std::string get_rho_type(int dimensions) {
-    std::ostringstream out;
-    if (dimensions == 1)
-        out << "float";
-    else
-        out << "Vector" << dimensions << "f";
-    return out.str();
-}
-
 template <int ElementDimensions>
 void output_brdf(Assets::Image image, int sample_count, const std::string& filename, const std::string& data_name, const std::string& description) {
 
     unsigned int width = image.get_width();
     unsigned int height = image.get_height();
     Math::RGB* image_pixels = image.get_pixels<Math::RGB>();
-
-    std::string rho_type = get_rho_type(ElementDimensions);
 
     std::ofstream out_header(filename);
     out_header <<
@@ -100,18 +89,15 @@ void output_brdf(Assets::Image image, int sample_count, const std::string& filen
         "// ------------------------------------------------------------------------------------------------\n"
         "\n"
         "#include <Bifrost/Assets/Shading/Fittings.h>\n"
-        "#include <Bifrost/Math/Utils.h>\n"
-        "\n";
-    if (ElementDimensions > 1)
-        out_header << "using Bifrost::Math::" << rho_type << ";\n\n";
-    out_header <<
+        "#include <Bifrost/Math/ImageSampling.h>\n"
+        "\n"
         "namespace Bifrost::Assets::Shading::Rho {\n"
-        "\n";
-    out_header << "const int " << data_name << "_sample_count = " << sample_count << "u;\n"
+        "\n"
+        "const int " << data_name << "_sample_count = " << sample_count << "u;\n"
         "const int " << data_name << "_angle_sample_count = " << width << "u;\n"
         "const int " << data_name << "_roughness_sample_count = " << height << "u;\n"
         "\n"
-        "const " << rho_type << " " << data_name << "[] = {\n";
+        "const float " << data_name << "[] = {\n";
 
     for (int y = 0; y < int(height); ++y) {
         float roughness = y / float(height - 1);
@@ -119,12 +105,7 @@ void output_brdf(Assets::Image image, int sample_count, const std::string& filen
         out_header << "    ";
         for (int x = 0; x < int(width); ++x) {
             Math::RGB& rho = image_pixels[x + y * width];
-            if (ElementDimensions == 1)
-                out_header << format_float(rho.r) << ", ";
-            else if (ElementDimensions == 2)
-                out_header << "Vector2f(" << format_float(rho.r) << ", " << format_float(rho.g) << "), ";
-            else if (ElementDimensions == 3)
-                out_header << "Vector3f(" << format_float(rho.r) << ", " << format_float(rho.g) << ", " << format_float(rho.b) << "), ";
+            out_header << format_float(rho.r) << ", ";
         }
         out_header << "\n";
     }
@@ -132,28 +113,8 @@ void output_brdf(Assets::Image image, int sample_count, const std::string& filen
     out_header <<
         "};\n"
         "\n"
-        "" << rho_type << " sample_" << data_name << "(float wo_dot_normal, float roughness) {\n"
-        "    using namespace Bifrost::Math;\n"
-        "\n"
-        "    float roughness_coord = roughness * (" << data_name << "_roughness_sample_count - 1);\n"
-        "    int lower_roughness_row = int(roughness_coord);\n"
-        "    int upper_roughness_row = min(lower_roughness_row + 1, " << data_name << "_roughness_sample_count - 1);\n"
-        "\n"
-        "    float wo_dot_normal_coord = wo_dot_normal * (" << data_name << "_angle_sample_count - 1);\n"
-        "    int lower_wo_dot_normal_column = int(wo_dot_normal_coord);\n"
-        "    int upper_wo_dot_normal_column = min(lower_wo_dot_normal_column + 1, " << data_name << "_angle_sample_count - 1);\n"
-        "\n"
-        "    // Interpolate by wo_dot_normal\n"
-        "    float wo_dot_normal_t = wo_dot_normal_coord - lower_wo_dot_normal_column;\n"
-        "    const " << rho_type << "* lower_rho_row = " << data_name << " + lower_roughness_row * " << data_name << "_roughness_sample_count;\n"
-        "    " << rho_type << " lower_rho = lerp(lower_rho_row[lower_wo_dot_normal_column], lower_rho_row[upper_wo_dot_normal_column], wo_dot_normal_t);\n"
-        "\n"
-        "    const " << rho_type << "* upper_rho_row = " << data_name << " + upper_roughness_row * " << data_name << "_roughness_sample_count;\n"
-        "    " << rho_type << " upper_rho = lerp(upper_rho_row[lower_wo_dot_normal_column], upper_rho_row[upper_wo_dot_normal_column], wo_dot_normal_t);\n"
-        "\n"
-        "    // Interpolate by roughness\n"
-        "    float roughness_t = roughness_coord - lower_roughness_row;\n"
-        "    return lerp(lower_rho, upper_rho, roughness_t);\n"
+        "float sample_" << data_name << "(float wo_dot_normal, float roughness) {\n"
+        "    return Math::ImageSampling::bilinear(" << data_name << ", " << data_name << "_angle_sample_count, " << data_name << "_roughness_sample_count, wo_dot_normal, roughness);\n"
         "}\n"
         "\n"
         "} // NS Bifrost::Assets::Shading::Rho\n";
