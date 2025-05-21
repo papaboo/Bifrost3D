@@ -12,6 +12,7 @@
 #if GPU_DEVICE
 rtTextureSampler<float, 2> estimate_GGX_alpha_texture;
 rtTextureSampler<float2, 2> ggx_with_fresnel_rho_texture;
+rtTextureSampler<float2, 3> dielectric_ggx_rho_texture;
 #else
 #include <Bifrost/Assets/Shading/Fittings.h>
 #endif
@@ -21,7 +22,7 @@ namespace Shading {
 namespace ShadingModels {
 
 // ------------------------------------------------------------------------------------------------
-// Specular rho helpers.
+// Specular rho helper.
 // ------------------------------------------------------------------------------------------------
 struct SpecularRho {
     const static int angle_sample_count = 32;
@@ -44,15 +45,44 @@ struct SpecularRho {
     __inline_all__ static SpecularRho fetch(float abs_cos_theta, float roughness) {
 #if GPU_DEVICE
         // Adjust UV coordinates to start sampling half a pixel into the texture, as the pixel values correspond to the boundaries of the rho function.
-        float cos_theta_uv = optix::lerp(0.5 / angle_sample_count, (angle_sample_count - 0.5) / angle_sample_count, abs_cos_theta);
-        float roughness_uv = optix::lerp(0.5 / roughness_sample_count, (roughness_sample_count - 0.5) / roughness_sample_count, roughness);
+        float cos_theta_u = optix::lerp(0.5f / angle_sample_count, 1.0f - 0.5f / angle_sample_count, abs_cos_theta);
+        float roughness_v = optix::lerp(0.5f / roughness_sample_count, 1.0f - 0.5f / roughness_sample_count, roughness);
 
-        float2 specular_rho = tex2D(ggx_with_fresnel_rho_texture, cos_theta_uv, roughness_uv);
+        float2 specular_rho = tex2D(ggx_with_fresnel_rho_texture, cos_theta_u, roughness_v);
         return { specular_rho.x, specular_rho.y };
 #else
         return { Bifrost::Assets::Shading::Rho::sample_GGX_with_fresnel(abs_cos_theta, roughness),
                  Bifrost::Assets::Shading::Rho::sample_GGX(abs_cos_theta, roughness) };
 #endif
+    }
+};
+
+// ------------------------------------------------------------------------------------------------
+// Dielectric rho helper.
+// ------------------------------------------------------------------------------------------------
+struct DielectricRho {
+    const static int angle_sample_count = 16;
+    const static int roughness_sample_count = 16;
+    const static int specularity_sample_count = 16;
+
+    float total_rho, reflected_rho;
+
+    __inline_all__ static DielectricRho fetch(float abs_cos_theta, float roughness, float specularity) {
+#if GPU_DEVICE
+        float specularity_t = (specularity - 0.0125f) / 0.2375f; // Remap valid specularity values to [0, 1]
+
+        // Adjust UV coordinates to start sampling half a pixel into the texture, as the pixel values correspond to the boundaries of the rho function.
+        float cos_theta_u = optix::lerp(0.5f / angle_sample_count, 1.0f - 0.5f / angle_sample_count, abs_cos_theta);
+        float roughness_v = optix::lerp(0.5f / roughness_sample_count, 1.0f - 0.5f / roughness_sample_count, roughness);
+        float specularity_w = optix::lerp(0.5f / specularity_sample_count, 1.0f - 0.5f / specularity_sample_count, specularity_t);
+
+        float2 rhos = tex3D(dielectric_ggx_rho_texture, cos_theta_u, roughness_v, specularity_w);
+#else
+        auto rhos = Bifrost::Assets::Shading::Rho::sample_dielectric_GGX(abs_cos_theta, roughness, specularity);
+#endif
+        float total_rho = rhos.x;
+        float reflected_rho = rhos.y;
+        return { total_rho, reflected_rho };
     }
 };
 
@@ -70,8 +100,8 @@ struct GGXMinimumRoughness {
 #if GPU_DEVICE
         float encoded_PDF = encode_PDF(max_PDF.value());
         // Rescale uv to start and end at the center of the first and last pixel, as the center values represent the boundaries of the function.
-        float2 uv = make_float2(optix::lerp(0.5f / max_PDF_sample_count, (max_PDF_sample_count - 0.5f) / max_PDF_sample_count, encoded_PDF),
-                                optix::lerp(0.5f / angle_sample_count, (angle_sample_count - 0.5f) / angle_sample_count, abs_cos_theta));
+        float2 uv = make_float2(optix::lerp(0.5f / max_PDF_sample_count, 1.0f - 0.5f / max_PDF_sample_count, encoded_PDF),
+                                optix::lerp(0.5f / angle_sample_count, 1.0f - 0.5f / angle_sample_count, abs_cos_theta));
         float min_alpha = tex2D(estimate_GGX_alpha_texture, uv.x, uv.y);
 #else
         float min_alpha = Bifrost::Assets::Shading::Estimate_GGX_bounded_VNDF_alpha::estimate_alpha(abs_cos_theta, max_PDF.value());

@@ -375,68 +375,82 @@ struct Renderer::Implementation {
             material_parameters->setElementSize(sizeof(OptiXRenderer::Material));
             context["g_materials"]->set(material_parameters);
 
-            { // Upload texture for estimating roughness from cos(theta) and max_PDF
+            { // Upload precomputed textures
                 using namespace Bifrost::Assets::Shading;
 
-                // Create buffer.
-                int width = Estimate_GGX_bounded_VNDF_alpha::wo_dot_normal_sample_count;
-                int height = Estimate_GGX_bounded_VNDF_alpha::max_PDF_sample_count;
-                Buffer alpha_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_SHORT, width, height);
+                static auto wrap_in_sampler = [](Context context, Buffer image) {
+                    TextureSampler texture = context->createTextureSampler();
+                    texture->setWrapMode(0, RT_WRAP_CLAMP_TO_EDGE);
+                    texture->setWrapMode(1, RT_WRAP_CLAMP_TO_EDGE);
+                    texture->setWrapMode(2, RT_WRAP_CLAMP_TO_EDGE);
+                    texture->setIndexingMode(RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
+                    texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT);
+                    texture->setMaxAnisotropy(0.0f);
+                    texture->setMipLevelCount(1u);
+                    texture->setFilteringModes(RT_FILTER_LINEAR, RT_FILTER_LINEAR, RT_FILTER_NONE);
+                    texture->setArraySize(1u);
+                    texture->setBuffer(0u, 0u, image);
+                    OPTIX_VALIDATE(texture);
 
-                unsigned short* rho_data = static_cast<unsigned short*>(alpha_buffer->map());
-                for (int i = 0; i < width * height; ++i)
-                    rho_data[i] = unsigned short(Estimate_GGX_bounded_VNDF_alpha::alphas[i] * 65535 + 0.5f);
-                alpha_buffer->unmap();
-                OPTIX_VALIDATE(alpha_buffer);
+                    return texture;
+                };
 
-                // ... and wrap it in a texture sampler.
-                TextureSampler& rho_texture = context->createTextureSampler();
-                rho_texture->setWrapMode(0, RT_WRAP_CLAMP_TO_EDGE);
-                rho_texture->setWrapMode(1, RT_WRAP_CLAMP_TO_EDGE);
-                rho_texture->setWrapMode(2, RT_WRAP_CLAMP_TO_EDGE);
-                rho_texture->setIndexingMode(RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
-                rho_texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT);
-                rho_texture->setMaxAnisotropy(1.0f);
-                rho_texture->setMipLevelCount(1u);
-                rho_texture->setFilteringModes(RT_FILTER_LINEAR, RT_FILTER_LINEAR, RT_FILTER_NONE);
-                rho_texture->setArraySize(1u);
-                rho_texture->setBuffer(0u, 0u, alpha_buffer);
-                OPTIX_VALIDATE(rho_texture);
+                { // Upload texture for estimating roughness from cos(theta) and max_PDF
+                    // Create buffer.
+                    int width = Estimate_GGX_bounded_VNDF_alpha::wo_dot_normal_sample_count;
+                    int height = Estimate_GGX_bounded_VNDF_alpha::max_PDF_sample_count;
+                    Buffer alpha_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_SHORT, width, height);
 
-                context["estimate_GGX_alpha_texture"]->setTextureSampler(rho_texture);
-            }
+                    unsigned short* rho_data = static_cast<unsigned short*>(alpha_buffer->map());
+                    for (int i = 0; i < width * height; ++i)
+                        rho_data[i] = unsigned short(Estimate_GGX_bounded_VNDF_alpha::alphas[i] * 65535 + 0.5f);
+                    alpha_buffer->unmap();
+                    OPTIX_VALIDATE(alpha_buffer);
 
-            { // Upload directional-hemispherical reflectance texture.
-                using namespace Bifrost::Assets::Shading;
+                    TextureSampler alpha_texture = wrap_in_sampler(context, alpha_buffer);
 
-                // Create buffer.
-                unsigned int width = Rho::GGX_with_fresnel_angle_sample_count;
-                unsigned int height = Rho::GGX_with_fresnel_roughness_sample_count;
-                Buffer rho_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_SHORT2, width, height);
-
-                unsigned short* rho_data = static_cast<unsigned short*>(rho_buffer->map());
-                for (unsigned int i = 0; i < width * height; ++i) {
-                    rho_data[2 * i] = unsigned short(Rho::GGX_with_fresnel[i] * 65535 + 0.5f); // No specularity
-                    rho_data[2 * i + 1] = unsigned short(Rho::GGX[i] * 65535 + 0.5f); // Full specularity
+                    context["estimate_GGX_alpha_texture"]->setTextureSampler(alpha_texture);
                 }
-                rho_buffer->unmap();
-                OPTIX_VALIDATE(rho_buffer);
 
-                // ... and wrap it in a texture sampler.
-                TextureSampler& rho_texture = context->createTextureSampler();
-                rho_texture->setWrapMode(0, RT_WRAP_CLAMP_TO_EDGE);
-                rho_texture->setWrapMode(1, RT_WRAP_CLAMP_TO_EDGE);
-                rho_texture->setWrapMode(2, RT_WRAP_CLAMP_TO_EDGE);
-                rho_texture->setIndexingMode(RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
-                rho_texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT);
-                rho_texture->setMaxAnisotropy(1.0f);
-                rho_texture->setMipLevelCount(1u);
-                rho_texture->setFilteringModes(RT_FILTER_LINEAR, RT_FILTER_LINEAR, RT_FILTER_NONE);
-                rho_texture->setArraySize(1u);
-                rho_texture->setBuffer(0u, 0u, rho_buffer);
-                OPTIX_VALIDATE(rho_texture);
+                { // Upload reflecting GGX directional-hemispherical reflectance texture.
+                    // Create buffer.
+                    unsigned int width = Rho::GGX_with_fresnel_angle_sample_count;
+                    unsigned int height = Rho::GGX_with_fresnel_roughness_sample_count;
+                    Buffer rho_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_SHORT2, width, height);
 
-                context["ggx_with_fresnel_rho_texture"]->setTextureSampler(rho_texture);
+                    unsigned short* rho_data = static_cast<unsigned short*>(rho_buffer->map());
+                    for (unsigned int i = 0; i < width * height; ++i) {
+                        rho_data[2 * i] = unsigned short(Rho::GGX_with_fresnel[i] * 65535 + 0.5f); // No specularity
+                        rho_data[2 * i + 1] = unsigned short(Rho::GGX[i] * 65535 + 0.5f); // Full specularity
+                    }
+                    rho_buffer->unmap();
+                    OPTIX_VALIDATE(rho_buffer);
+
+                    TextureSampler rho_texture = wrap_in_sampler(context, rho_buffer);
+
+                    context["ggx_with_fresnel_rho_texture"]->setTextureSampler(rho_texture);
+                }
+
+                { // Upload dielectric GGX directional-hemispherical reflectance texture.
+                    // Create buffer.
+                    unsigned int width = Rho::dielectric_GGX_angle_sample_count;
+                    unsigned int height = Rho::dielectric_GGX_roughness_sample_count;
+                    unsigned int depth = Rho::dielectric_GGX_specularity_sample_count;
+                    Buffer rho_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_SHORT2, width, height, depth);
+
+                    unsigned short* rho_data = static_cast<unsigned short*>(rho_buffer->map());
+                    for (unsigned int i = 0; i < width * height * depth; ++i) {
+                        Vector2f dielectic_rho = Rho::dielectric_GGX[i];
+                        rho_data[2 * i] = unsigned short(dielectic_rho.x * 65535 + 0.5f); // Full rho
+                        rho_data[2 * i + 1] = unsigned short(dielectic_rho.y * 65535 + 0.5f); // Reflected rho
+                    }
+                    rho_buffer->unmap();
+                    OPTIX_VALIDATE(rho_buffer);
+
+                    TextureSampler rho_texture = wrap_in_sampler(context, rho_buffer);
+
+                    context["dielectric_ggx_rho_texture"]->setTextureSampler(rho_texture);
+                }
             }
         }
 

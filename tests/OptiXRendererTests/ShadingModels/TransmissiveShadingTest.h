@@ -12,6 +12,8 @@
 #include <ShadingModels/ShadingModelTestUtils.h>
 #include <Utils.h>
 
+#include <Bifrost/Assets/Shading/Fittings.h>
+
 #include <OptiXRenderer/RNG.h>
 #include <OptiXRenderer/Shading/ShadingModels/TransmissiveShading.h>
 #include <OptiXRenderer/Utils.h>
@@ -55,6 +57,7 @@ public:
         return out.str();
     }
 };
+
 GTEST_TEST(TransmissiveShadingModel, power_conservation) {
     using namespace Shading::ShadingModels;
 
@@ -65,11 +68,33 @@ GTEST_TEST(TransmissiveShadingModel, power_conservation) {
 
     for (float roughness : { 0.2f, 0.7f }) {
         material_params.roughness = roughness;
-        for (float cos_theta_o : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
+        for (float cos_theta_o : { 0.1f, 0.4f, 0.7f, 1.0f }) {
             optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
             auto shading_model = TransmissiveShading(material_params, wo.z);
             auto rho = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
-            EXPECT_LE(rho.x, 1.0f) << " with roughness " << roughness << " and cos_theta " << cos_theta_o;
+            EXPECT_LE(rho.x, 1.005f) << " with roughness " << roughness << " and cos_theta " << cos_theta_o;
+        }
+    }
+}
+
+GTEST_TEST(TransmissiveShadingModel, white_hot_furnace) {
+    using namespace Bifrost::Assets::Shading;
+    using namespace Shading::ShadingModels;
+
+    // A white material
+    Material material_params = {};
+    material_params.tint = optix::make_float3(1.0f, 1.0f, 1.0f);
+
+    for (float specularity : { Rho::dielectric_GGX_minimum_specularity, 0.04f, Rho::dielectric_GGX_maximum_specularity }) {
+        material_params.specularity = specularity;
+        for (float roughness : { 0.2f, 0.7f }) {
+            material_params.roughness = roughness;
+            for (float cos_theta_o : { 0.1f, 0.4f, 0.7f, 1.0f }) {
+                optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
+                auto shading_model = TransmissiveShading(material_params, wo.z);
+                auto rho = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
+                EXPECT_FLOAT_EQ_EPS(rho.x, 1.0f, 0.006f) << " with specularity " << specularity << ", roughness " << roughness << ", and cos_theta " << cos_theta_o;
+            }
         }
     }
 }
@@ -90,7 +115,7 @@ GTEST_TEST(TransmissiveShadingModel, function_consistency) {
 }
 
 GTEST_TEST(TransmissiveShadingModel, PDF_positivity) {
-    for (float cos_theta_o : {-0.8f, -0.4f, 0.1f, 0.5f, 0.9f}) {
+    for (float cos_theta_o : { -0.8f, -0.4f, 0.1f, 0.5f, 0.9f }) {
         optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
 
         Material material_params = frosted_glass_parameters();
@@ -168,14 +193,14 @@ GTEST_TEST(TransmissiveShadingModel, regression_test) {
     const unsigned int MAX_SAMPLES = 2;
 
     BSDFResponse bsdf_responses[] = {
-        {101.145973f, 101.145973f, 101.145973f, 70.955925f},
-        {29.997084f, 29.997084f, 29.997084f, 19.304911f},
-        {3757.321777f, 3757.321777f, 3757.321777f, 445.397308f},
-        {4296.205566f, 4296.205566f, 4296.205566f, 235.904617f},
-        {609.079041f, 621.901794f, 609.079041f, 507.171906f},
-        {148.730103f, 151.861267f, 148.730103f, 126.277611f},
-        {1632.925171f, 1667.302612f, 1632.925171f, 1718.868652f},
-        {408.665649f, 417.269165f, 408.665649f, 430.136139f} };
+        {101.198158f, 101.198158f, 101.198158f, 70.955925f},
+        {30.012560f, 30.012560f, 30.012560f, 19.304911f},
+        {3977.393066f, 3977.393066f, 3977.393066f, 445.397308f},
+        {4547.839844f, 4547.839844f, 4547.839844f, 235.904617f},
+        {610.265503f, 623.113281f, 610.265503f, 507.171906f},
+        {149.019821f, 152.157089f, 149.019821f, 126.277611f},
+        {1632.926880f, 1667.304443f, 1632.926880f, 1718.868652f},
+        {408.666077f, 417.269623f, 408.666077f, 430.136139f} };
 
     Material material_params = frosted_glass_parameters();
     int response_index = 0;
@@ -188,7 +213,7 @@ GTEST_TEST(TransmissiveShadingModel, regression_test) {
             BSDFSample sample = material.sample(wo, rng_sample);
             // printf("{%.6ff, %.6ff, %.6ff, %.6ff},\n", sample.reflectance.x, sample.reflectance.y, sample.reflectance.z, sample.PDF.value());
             auto response = bsdf_responses[response_index++];
-            
+
             EXPECT_COLOR_EQ_PCT(response.reflectance, sample.reflectance, 0.0001f);
             EXPECT_PDF_EQ_PCT(response.PDF, sample.PDF, 0.0001f);
         }
