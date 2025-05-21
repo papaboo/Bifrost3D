@@ -29,6 +29,20 @@ GTEST_TEST(ShadingModelUtils, GGX_rho_texture_size) {
     EXPECT_EQ(actual_roughness_sample_count, expected_roughness_sample_count);
 }
 
+GTEST_TEST(ShadingModelUtils, dielectric_GGX_rho_texture_size) {
+    int expected_angle_sample_count = Bifrost::Assets::Shading::Rho::dielectric_GGX_angle_sample_count;
+    int actual_angle_sample_count = Shading::ShadingModels::DielectricRho::angle_sample_count;
+    EXPECT_EQ(actual_angle_sample_count, expected_angle_sample_count);
+
+    int expected_roughness_sample_count = Bifrost::Assets::Shading::Rho::dielectric_GGX_roughness_sample_count;
+    int actual_roughness_sample_count = Shading::ShadingModels::DielectricRho::roughness_sample_count;
+    EXPECT_EQ(actual_roughness_sample_count, expected_roughness_sample_count);
+
+    int expected_specularity_sample_count = Bifrost::Assets::Shading::Rho::dielectric_GGX_specularity_sample_count;
+    int actual_specularity_sample_count = Shading::ShadingModels::DielectricRho::specularity_sample_count;
+    EXPECT_EQ(actual_specularity_sample_count, expected_specularity_sample_count);
+}
+
 GTEST_TEST(ShadingModelUtils, GGX_minimum_roughness_texture_size) {
     int expected_angle_sample_count = Bifrost::Assets::Shading::Estimate_GGX_bounded_VNDF_alpha::wo_dot_normal_sample_count;
     int actual_angle_sample_count = Shading::ShadingModels::GGXMinimumRoughness::angle_sample_count;
