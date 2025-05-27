@@ -108,4 +108,28 @@ OShaderResourceView MaterialManager::create_GGX_with_fresnel_rho_srv(ID3D11Devic
     return GGX_with_fresnel_rho_srv;
 }
 
+// Setup GGX with fresnel rho texture.
+OShaderResourceView MaterialManager::create_dielectric_GGX_srv(ID3D11Device1& device) {
+    using namespace Bifrost::Assets::Shading;
+
+    const unsigned int width = Rho::dielectric_GGX_angle_sample_count;
+    const unsigned int height = Rho::dielectric_GGX_roughness_sample_count;
+    const unsigned int depth = Rho::dielectric_GGX_specularity_sample_count;
+    const unsigned int element_count = width * height * depth;
+
+    unsigned short* rho = new unsigned short[2 * element_count];
+    for (unsigned int i = 0; i < element_count; ++i) {
+        auto dielectic_rho = Rho::dielectric_GGX[i];
+        rho[2 * i] = unsigned short(dielectic_rho.x * 65535 + 0.5f); // Full rho
+        rho[2 * i + 1] = unsigned short(dielectic_rho.y * 65535 + 0.5f); // Reflected rho
+    }
+
+    OShaderResourceView dielectric_GGX_rho_srv;
+    create_texture_3D(device, DXGI_FORMAT_R16G16_UNORM, rho, width, height, depth, D3D11_USAGE_IMMUTABLE, &dielectric_GGX_rho_srv);
+
+    delete[] rho;
+
+    return dielectric_GGX_rho_srv;
+}
+
 } // NS DX11Renderer::Managers

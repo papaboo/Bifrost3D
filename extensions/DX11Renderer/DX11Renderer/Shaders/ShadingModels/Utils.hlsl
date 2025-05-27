@@ -32,6 +32,7 @@ SamplerState tint_roughness_sampler : register(s2);
 Texture2D metallic_tex : register(t3);
 SamplerState metallic_sampler : register(s3);
 
+Texture3D<float2> dielectric_ggx_rho_tex : register(t14);
 Texture2D<float2> ggx_with_fresnel_rho_tex : register(t15);
 
 // ------------------------------------------------------------------------------------------------
@@ -57,8 +58,8 @@ struct SpecularRho {
 
     static SpecularRho fetch(float abs_cos_theta, float roughness) {
         // Adjust UV coordinates to start sampling half a pixel into the texture, as the pixel values correspond to the boundaries of the rho function.
-        float cos_theta_uv = lerp(0.5 / angle_sample_count, (angle_sample_count - 0.5) / angle_sample_count, abs_cos_theta);
-        float roughness_uv = lerp(0.5 / roughness_sample_count, (roughness_sample_count - 0.5) / roughness_sample_count, roughness);
+        float cos_theta_uv = lerp(0.5 / angle_sample_count, 1.0 - 0.5 / angle_sample_count, abs_cos_theta);
+        float roughness_uv = lerp(0.5 / roughness_sample_count, 1.0 - 0.5 / roughness_sample_count, roughness);
 
         float2 specular_rho = ggx_with_fresnel_rho_tex.SampleLevel(bilinear_sampler, float2(cos_theta_uv, roughness_uv), 0);
         SpecularRho res;
@@ -71,6 +72,29 @@ struct SpecularRho {
 static float3 compute_specular_rho(float3 specularity, float abs_cos_theta, float roughness) {
     return SpecularRho::fetch(abs_cos_theta, roughness).rho(specularity);
 }
+
+struct DielectricRho {
+    static const int angle_sample_count = 16;
+    static const int roughness_sample_count = 16;
+    static const int specularity_sample_count = 16;
+
+    float total, reflection;
+
+    static DielectricRho fetch(float abs_cos_theta, float roughness, float specularity) {
+        float specularity_t = (specularity - 0.0125f) / 0.2375f; // Remap valid specularity values to [0, 1]
+
+        // Adjust UV coordinates to start sampling half a pixel into the texture, as the pixel values correspond to the boundaries of the rho function.
+        float cos_theta_u = lerp(0.5 / angle_sample_count, 1.0 - 0.5 / angle_sample_count, abs_cos_theta);
+        float roughness_v = lerp(0.5 / roughness_sample_count, 1.0 - 0.5 / roughness_sample_count, roughness);
+        float specularity_w = lerp(0.5 / specularity_sample_count, 1.0 - 0.5 / specularity_sample_count, specularity_t);
+
+        float2 specular_rho = dielectric_ggx_rho_tex.SampleLevel(bilinear_sampler, float3(cos_theta_u, roughness_v, specularity_w), 0);
+        DielectricRho res;
+        res.total = specular_rho.r;
+        res.reflection = specular_rho.g;
+        return res;
+    }
+};
 
 // ------------------------------------------------------------------------------------------------
 // Parameters.

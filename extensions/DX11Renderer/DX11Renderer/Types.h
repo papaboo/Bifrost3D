@@ -34,6 +34,7 @@ struct ID3D11Resource;
 struct ID3D11SamplerState;
 struct ID3D11ShaderResourceView;
 struct ID3D11Texture2D;
+struct ID3D11Texture3D;
 struct ID3D11VertexShader;
 struct ID3D11UnorderedAccessView;
 
@@ -74,6 +75,7 @@ using OResource = DX11Renderer::OwnedResourcePtr<ID3D11Resource>;
 using OSamplerState = DX11Renderer::OwnedResourcePtr<ID3D11SamplerState>;
 using OShaderResourceView = DX11Renderer::OwnedResourcePtr<ID3D11ShaderResourceView>;
 using OTexture2D = DX11Renderer::OwnedResourcePtr<ID3D11Texture2D>;
+using OTexture3D = DX11Renderer::OwnedResourcePtr<ID3D11Texture3D>;
 using OVertexShader = DX11Renderer::OwnedResourcePtr<ID3D11VertexShader>;
 using OUnorderedAccessView = DX11Renderer::OwnedResourcePtr<ID3D11UnorderedAccessView>;
 
