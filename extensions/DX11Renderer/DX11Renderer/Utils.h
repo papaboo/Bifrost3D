@@ -238,6 +238,42 @@ inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, u
     return create_texture_2D(device, format, nullptr, width, height, D3D11_USAGE_DEFAULT, texture_SRV, texture_UAV, texture_RTV);
 }
 
+inline OTexture3D create_texture_3D(ID3D11Device1& device, DXGI_FORMAT format, void* pixels, unsigned int width, unsigned int height, unsigned int depth, D3D11_USAGE usage,
+                                    ID3D11ShaderResourceView** texture_SRV, ID3D11UnorderedAccessView** texture_UAV = nullptr, ID3D11RenderTargetView** texture_RTV = nullptr) {
+    D3D11_TEXTURE3D_DESC tex_desc;
+    tex_desc.Width = width;
+    tex_desc.Height = height;
+    tex_desc.Depth = depth;
+    tex_desc.MipLevels = 1;
+    tex_desc.Format = format;
+    tex_desc.Usage = usage;
+    tex_desc.BindFlags = (texture_SRV == nullptr ? D3D11_BIND_NONE : D3D11_BIND_SHADER_RESOURCE) |
+                         (texture_UAV == nullptr ? D3D11_BIND_NONE : D3D11_BIND_UNORDERED_ACCESS) |
+                         (texture_RTV == nullptr ? D3D11_BIND_NONE : D3D11_BIND_RENDER_TARGET);
+    tex_desc.CPUAccessFlags = 0;
+    tex_desc.MiscFlags = 0;
+
+    OTexture3D texture;
+    if (pixels != nullptr) {
+        D3D11_SUBRESOURCE_DATA resource_data = {};
+        resource_data.SysMemPitch = sizeof_dx_format(tex_desc.Format) * width;
+        resource_data.SysMemSlicePitch = resource_data.SysMemPitch * height;
+        resource_data.pSysMem = pixels;
+
+        THROW_DX11_ERROR(device.CreateTexture3D(&tex_desc, &resource_data, &texture));
+    } else
+        THROW_DX11_ERROR(device.CreateTexture3D(&tex_desc, nullptr, &texture));
+
+    if (texture_SRV != nullptr)
+        THROW_DX11_ERROR(device.CreateShaderResourceView(texture, nullptr, texture_SRV));
+    if (texture_UAV != nullptr)
+        THROW_DX11_ERROR(device.CreateUnorderedAccessView(texture, nullptr, texture_UAV));
+    if (texture_RTV != nullptr)
+        THROW_DX11_ERROR(device.CreateRenderTargetView(texture, nullptr, texture_RTV));
+
+    return texture;
+};
+
 // ------------------------------------------------------------------------------------------------
 // Resource data readback utilities. 
 // Highly inefficient and should only be used for debug or one-time purposes.

@@ -39,6 +39,7 @@ public:
     void handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& context);
 
     static OShaderResourceView create_GGX_with_fresnel_rho_srv(ID3D11Device1& device);
+    static OShaderResourceView create_dielectric_GGX_srv(ID3D11Device1& device);
 
 private:
     MaterialManager(MaterialManager& other) = delete;
