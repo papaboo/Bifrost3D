@@ -246,6 +246,9 @@ private:
 public:
     PracticalScrambledSobol() = default;
 
+    __inline_all__ PracticalScrambledSobol(unsigned int index, unsigned int dimension)
+        : m_index(index), m_dimension(dimension) { }
+
     __inline_all__ PracticalScrambledSobol(unsigned int x, unsigned int y, unsigned int accumulation_count) {
         // Poor mans attempt at simple blue noise.
         // morton_encode(x, y) ^ accumulation_count gives perfect blue noise in the first frame,
