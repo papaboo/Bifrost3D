@@ -267,6 +267,13 @@ __inline_all__ BSDFSample sample(float alpha, float ior_i_over_o, float3 wo, flo
 namespace GGX {
 using namespace optix;
 
+__inline_all__ float normalize_reflection_probability(float reflection_probability, float3 transmission_tint) {
+    float transmission_probability = 1.0f - reflection_probability;
+    float scaled_transmission_probability = sum(transmission_tint) * transmission_probability;
+    float scaled_reflection_probability = 3 * reflection_probability;
+    return scaled_reflection_probability / (scaled_reflection_probability + scaled_transmission_probability);
+}
+
 __inline_all__ float evaluate(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
     if (GGX::effectively_smooth(alpha) || wo.z == 0.0f || wi.z == 0.0f)
         return 0.0f;
@@ -300,13 +307,13 @@ __inline_all__ float evaluate(float alpha, float specularity, float ior_i_over_o
     }
 }
 
-__inline_all__ float3 evaluate(float3 tint, float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
+__inline_all__ float3 evaluate(float3 transmission_tint, float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
     float f = evaluate(alpha, specularity, ior_i_over_o, wo, wi);
     bool is_transmission = sign(wo.z) != sign(wi.z);
-    return f * (is_transmission ? tint : make_float3(1));
+    return f * (is_transmission ? transmission_tint : make_float3(1));
 }
 
-__inline_all__ PDF pdf(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
+__inline_all__ PDF pdf(float3 transmission_tint, float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
     if (GGX::effectively_smooth(alpha))
         return PDF::invalid();
 
@@ -330,7 +337,8 @@ __inline_all__ PDF pdf(float alpha, float specularity, float ior_i_over_o, float
 
     // Scale the PDF by the probability to reflect or refract.
     float reflection_probability = dielectric_schlick_fresnel(specularity, dot(wo, halfway), ior_i_over_o);
-    PDF *= is_reflection ? reflection_probability : (1 - reflection_probability);
+    float normalized_reflection_probability = normalize_reflection_probability(reflection_probability, transmission_tint);
+    PDF *= is_reflection ? normalized_reflection_probability : (1 - normalized_reflection_probability);
 
     // Change of variable.
     if (is_reflection)
@@ -341,20 +349,24 @@ __inline_all__ PDF pdf(float alpha, float specularity, float ior_i_over_o, float
     return PDF;
 }
 
+__inline_all__ PDF pdf(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
+    return pdf(make_float3(1), alpha, specularity, ior_i_over_o, wo, wi);
+}
+
+__inline_all__ BSDFResponse evaluate_with_PDF(float3 transmission_tint, float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
+    auto reflectance = evaluate(transmission_tint, alpha, specularity, ior_i_over_o, wo, wi);
+    auto PDF = pdf(transmission_tint, alpha, specularity, ior_i_over_o, wo, wi);
+    return { reflectance, PDF };
+}
+
 __inline_all__ BSDFResponse evaluate_with_PDF(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
+    return evaluate_with_PDF(make_float3(1), alpha, specularity, ior_i_over_o, wo, wi);
     auto reflectance = make_float3(1) * evaluate(alpha, specularity, ior_i_over_o, wo, wi);
     auto PDF = pdf(alpha, specularity, ior_i_over_o, wo, wi);
     return { reflectance, PDF };
 }
 
-__inline_all__ BSDFResponse evaluate_with_PDF(float3 tint, float alpha, float specularity, float ior_i_over_o, float3 wo, float3 wi) {
-    BSDFResponse response = evaluate_with_PDF(alpha, specularity, ior_i_over_o, wo, wi);
-    bool is_transmission = sign(wo.z) != sign(wi.z);
-    response.reflectance *= is_transmission ? tint : make_float3(1);
-    return response;
-}
-
-__inline_all__ BSDFSample sample(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 random_sample) {
+__inline_all__ BSDFSample sample(float3 transmission_tint, float alpha, float specularity, float ior_i_over_o, float3 wo, float3 random_sample) {
     BSDFSample bsdf_sample;
 
     // Sample GGX
@@ -365,40 +377,43 @@ __inline_all__ BSDFSample sample(float alpha, float specularity, float ior_i_ove
     if (GGX::effectively_smooth(alpha)) {
         // Sample perfectly specular BTDF
         float reflection_probability = dielectric_schlick_fresnel(specularity, abs(wo.z), ior_i_over_o);
-        float transmission_probability = 1 - reflection_probability;
+        float normalized_reflection_probability = normalize_reflection_probability(reflection_probability, transmission_tint);
+        bool is_reflection = random_sample.z < normalized_reflection_probability;
 
-        if (random_sample.z < reflection_probability) {
+        if (is_reflection) {
             // Sample perfectly specular BRDF
-            bsdf_sample.PDF = PDF::delta_dirac(reflection_probability);
+            bsdf_sample.PDF = PDF::delta_dirac(normalized_reflection_probability);
             bsdf_sample.direction = { -wo.x, -wo.y, wo.z };
         } else {
-            bsdf_sample.PDF = PDF::delta_dirac(transmission_probability);
+            bsdf_sample.PDF = PDF::delta_dirac(1.0f - normalized_reflection_probability);
             // Sample perfectly specular BTDF
             if (!refract(bsdf_sample.direction, -wo, make_float3(0, 0, 1), ior_i_over_o))
                 return BSDFSample::none(); // Should practically never happen, as total internal reflection is included in the Fresnel computation.
         }
 
-        // Reflectance is proportional to the PDF.
-        float reflectance = bsdf_sample.PDF.value() / abs(bsdf_sample.direction.z);
+        // Reflectance is proportional to Fresnel.
+        float reflectance = (is_reflection ? reflection_probability : (1.0f - reflection_probability)) / abs(bsdf_sample.direction.z);
         bsdf_sample.reflectance = { reflectance, reflectance, reflectance };
     } else {
-        float3 halfway = Distributions::GGX_VNDF::sample_halfway(alpha, wo, make_float2(random_sample));
-        bsdf_sample.PDF = Distributions::GGX_VNDF::PDF(alpha, wo, halfway);
+        auto halfway_sample = Distributions::GGX_VNDF::sample(alpha, wo, make_float2(random_sample));
+        float3 halfway = halfway_sample.direction;
+        bsdf_sample.PDF = halfway_sample.PDF;
 
         // Reflect or refract based on Fresnel
         float reflection_probability = dielectric_schlick_fresnel(specularity, dot(wo, halfway), ior_i_over_o);
-        bool is_reflection = random_sample.z < reflection_probability;
+        float normalized_reflection_probability = normalize_reflection_probability(reflection_probability, transmission_tint);
+        bool is_reflection = random_sample.z < normalized_reflection_probability;
 
         // Reflect or refract
         if (is_reflection) {
             bsdf_sample.direction = reflect(-wo, halfway);
 
-            bsdf_sample.PDF *= reflection_probability / (4.0f * dot(wo, halfway));
+            bsdf_sample.PDF *= normalized_reflection_probability / (4.0f * dot(wo, halfway));
         } else {
             if (!refract(bsdf_sample.direction, -wo, halfway, ior_i_over_o))
                 return BSDFSample::none(); // Should practically never happen, as total internal reflection is included in the Fresnel computation.
 
-            bsdf_sample.PDF *= 1 - reflection_probability;
+            bsdf_sample.PDF *= 1 - normalized_reflection_probability;
             bsdf_sample.PDF *= GGX_T::transmission_PDF_scale(ior_i_over_o, wo, bsdf_sample.direction, halfway);
         }
 
@@ -411,17 +426,18 @@ __inline_all__ BSDFSample sample(float alpha, float specularity, float ior_i_ove
         bsdf_sample.reflectance = make_float3(f);
     }
 
+    bool is_transmission = sign(wo.z) != sign(bsdf_sample.direction.z);
+    if (is_transmission)
+        bsdf_sample.reflectance *= transmission_tint;
+
     if (!entering)
         bsdf_sample.direction.z = -bsdf_sample.direction.z;
 
     return bsdf_sample;
 }
 
-__inline_all__ BSDFSample sample(float3 tint, float alpha, float specularity, float ior_i_over_o, float3 wo, float3 random_sample) {
-    BSDFSample bsdf_sample = sample(alpha, specularity, ior_i_over_o, wo, random_sample);
-    if (sign(wo.z) != sign(bsdf_sample.direction.z))
-        bsdf_sample.reflectance *= tint;
-    return bsdf_sample;
+__inline_all__ BSDFSample sample(float alpha, float specularity, float ior_i_over_o, float3 wo, float3 random_sample) {
+    return sample(make_float3(1), alpha, specularity, ior_i_over_o, wo, random_sample);
 }
 
 } // NS GGX
