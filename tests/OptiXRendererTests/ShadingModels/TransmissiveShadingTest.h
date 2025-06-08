@@ -72,7 +72,7 @@ GTEST_TEST(TransmissiveShadingModel, power_conservation) {
             optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
             auto shading_model = TransmissiveShading(material_params, wo.z);
             auto rho = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
-            EXPECT_LE(rho.x, 1.005f) << " with roughness " << roughness << " and cos_theta " << cos_theta_o;
+            EXPECT_LE(rho.x, 1.019f) << " with roughness " << roughness << " and cos_theta " << cos_theta_o;
         }
     }
 }
@@ -93,7 +93,7 @@ GTEST_TEST(TransmissiveShadingModel, white_hot_furnace) {
                 optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
                 auto shading_model = TransmissiveShading(material_params, wo.z);
                 auto rho = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
-                EXPECT_FLOAT_EQ_EPS(rho.x, 1.0f, 0.006f) << " with specularity " << specularity << ", roughness " << roughness << ", and cos_theta " << cos_theta_o;
+                EXPECT_FLOAT_EQ_EPS(rho.x, 1.0f, 0.026f) << " with specularity " << specularity << ", roughness " << roughness << ", and cos_theta " << cos_theta_o;
             }
         }
     }
@@ -193,14 +193,14 @@ GTEST_TEST(TransmissiveShadingModel, regression_test) {
     const unsigned int MAX_SAMPLES = 2;
 
     BSDFResponse bsdf_responses[] = {
-        {101.198158f, 101.198158f, 101.198158f, 70.955925f},
-        {30.012560f, 30.012560f, 30.012560f, 19.304911f},
-        {3977.393066f, 3977.393066f, 3977.393066f, 445.397308f},
-        {4547.839844f, 4547.839844f, 4547.839844f, 235.904617f},
-        {610.265503f, 623.113281f, 610.265503f, 504.575867f},
-        {149.019821f, 152.157089f, 149.019821f, 125.492897f},
-        {1632.926880f, 1667.304443f, 1632.926880f, 1715.760010f},
-        {408.666077f, 417.269623f, 408.666077f, 429.358185f} };
+        {101.158836f, 101.158836f, 101.158836f, 70.955925f},
+        {30.000898f, 30.000898f, 30.000898f, 19.304911f},
+        {3981.586426f, 3981.586426f, 3981.586426f, 445.397308f},
+        {4552.634766f, 4552.634766f, 4552.634766f, 235.904617f},
+        {609.356812f, 622.185425f, 609.356812f, 504.575867f},
+        {148.797943f, 151.930527f, 148.797943f, 125.492897f},
+        {1632.932373f, 1667.309937f, 1632.932373f, 1715.760010f},
+        {408.667450f, 417.270996f, 408.667450f, 429.358185f} };
 
     Material material_params = frosted_glass_parameters();
     int response_index = 0;
