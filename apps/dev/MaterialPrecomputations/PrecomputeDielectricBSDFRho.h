@@ -34,21 +34,47 @@ typedef BSDFSample(*SampleDieletricBSDF)(float roughness, float specularity, flo
 
 float2 sample_rho(float3 wo, float roughness, float specularity, unsigned int sample_count, SampleDieletricBSDF sample_rough_BSDF) {
 
+    // Since we use a QMC RNG the sample count should be a power of two.
+    sample_count = next_power_of_two(sample_count);
+
+    // Each hemisphere should receive at least half the number of samples expected by the input sample count.
+    unsigned int sample_count_per_hemisphere = sample_count / 2;
+    unsigned int max_sample_count = 65536u;
+
     auto reflected_throughput = Core::Array<double>(sample_count);
     auto transmitted_throughput = Core::Array<double>(sample_count);
-    for (unsigned int s = 0; s < sample_count; ++s) {
-        float3 rng_sample = make_float3(RNG::sample02(s), (s + 0.5f) / sample_count);
-        BSDFSample sample = sample_rough_BSDF(roughness, specularity, wo, rng_sample);
-        reflected_throughput[s] = transmitted_throughput[s] = 0.0;
-        if (sample.PDF.is_valid())
-        {
-            auto& throughput = sample.direction.z < 0.0f ? transmitted_throughput : reflected_throughput;
-            throughput[s] = sample.reflectance.x * abs(sample.direction.z) / sample.PDF.value();
-        }
-    }
 
-    double reflected_rho = Math::sort_and_pairwise_summation(reflected_throughput.begin(), reflected_throughput.end()) / sample_count;
-    double transmitted_rho = Math::sort_and_pairwise_summation(transmitted_throughput.begin(), transmitted_throughput.end()) / sample_count;
+    auto rng = RNG::PracticalScrambledSobol(0, 0);
+    unsigned int samples_drawn = 0;
+    bool undersampled_reflection = true;
+    bool undersampled_transmission = true;
+    do {
+        for (; samples_drawn < sample_count; ++samples_drawn) {
+            float3 rng_sample = make_float3(rng.sample4f());
+            BSDFSample sample = sample_rough_BSDF(roughness, specularity, wo, rng_sample);
+            reflected_throughput[samples_drawn] = transmitted_throughput[samples_drawn] = 0.0;
+            if (sample.PDF.is_valid()) {
+                auto& throughput = sample.direction.z < 0.0f ? transmitted_throughput : reflected_throughput;
+                throughput[samples_drawn] = sample.reflectance.x * abs(sample.direction.z) / sample.PDF.value();;
+            }
+        }
+
+        // Bump the sample count to the next power of two in case we need to draw more samples.
+        sample_count *= 2;
+
+        // While one hemisphere hasn't seen enough samples keep drawing new samples.
+        // Or, if no samples have been allocated to one of the hemispheres, then simply ignore that hemisphere.
+        undersampled_reflection = reflected_throughput.size() < sample_count_per_hemisphere && reflected_throughput.size() != 0;
+        undersampled_transmission = transmitted_throughput.size() < sample_count_per_hemisphere && transmitted_throughput.size() != 0;
+    } while (samples_drawn <= max_sample_count && (undersampled_reflection || undersampled_transmission));
+
+    double reflected_rho = 0.0;
+    if (reflected_throughput.size())
+        reflected_rho = Math::sort_and_pairwise_summation(reflected_throughput.begin(), reflected_throughput.end()) / samples_drawn;
+    double transmitted_rho = 0.0;
+    if (transmitted_throughput.size())
+        transmitted_rho = Math::sort_and_pairwise_summation(transmitted_throughput.begin(), transmitted_throughput.end()) / samples_drawn;
+
     return { float(reflected_rho), float(transmitted_rho) };
 }
 

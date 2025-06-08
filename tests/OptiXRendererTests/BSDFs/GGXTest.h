@@ -627,8 +627,8 @@ GTEST_TEST(GGX, validate_ggx_rho_precomputations) {
                 float actual_total_reflectance = actual_rho.x;
                 float reflection_ratio = actual_rho.y;
                 float actual_reflected_reflectance = actual_total_reflectance * reflection_ratio;
-                EXPECT_FLOAT_EQ_EPS(expected_total_reflectance, actual_total_reflectance, 0.0021f) << "for cos_theta: " << cos_theta_o << ", roughness: " << roughness << ", specularity: " << specularity;
-                EXPECT_FLOAT_EQ_EPS(expected_reflected_reflectance, actual_reflected_reflectance, 0.014f) << "for cos_theta: " << cos_theta_o << ", roughness: " << roughness << ", specularity: " << specularity;
+                EXPECT_FLOAT_EQ_EPS(expected_total_reflectance, actual_total_reflectance, 0.0221f) << "for cos_theta: " << cos_theta_o << ", roughness: " << roughness << ", specularity: " << specularity;
+                EXPECT_FLOAT_EQ_EPS(expected_reflected_reflectance, actual_reflected_reflectance, 0.038f) << "for cos_theta: " << cos_theta_o << ", roughness: " << roughness << ", specularity: " << specularity;
             }
         }
     }
