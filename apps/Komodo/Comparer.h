@@ -80,7 +80,7 @@ public:
         } else
             images.push_back(target);
 
-        Image diff_image = Image::create2D(diff_path, reference.get_pixel_format(), reference.get_gamma(),
+        Image diff_image = Image::create2D(diff_path, reference.get_pixel_format(), reference.is_sRGB(),
                                            Bifrost::Math::Vector2ui(reference.get_width(), reference.get_height()));
         images.push_back(diff_image);
 

@@ -41,7 +41,7 @@ inline Bifrost::Assets::Image create_image() {
     using namespace Bifrost::Assets;
     using namespace Bifrost::Math;
 
-    Image image = Image::create2D("Test image", PixelFormat::RGB_Float, 1.0f, Vector2ui(2, 2));
+    Image image = Image::create2D("Test image", PixelFormat::RGB_Float, false, Vector2ui(2, 2));
     image.set_pixel(RGBA(0, 0, 0, 1), Vector2ui(0, 0));
     image.set_pixel(RGBA(0, 1, 0, 1), Vector2ui(0, 1));
     image.set_pixel(RGBA(1, 0, 0, 1), Vector2ui(1, 0));

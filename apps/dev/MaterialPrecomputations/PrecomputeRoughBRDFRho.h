@@ -42,7 +42,7 @@ double sample_rho(float3 wo, float roughness, unsigned int sample_count, SampleR
 }
 
 Assets::Image tabulate_rho(unsigned int width, unsigned int height, unsigned int sample_count, SampleRoughBRDF sample_rough_BSDF) {
-    Assets::Image rho_image = Assets::Image::create2D("rho", Assets::PixelFormat::RGB_Float, 1.0f, Math::Vector2ui(width, height));
+    Assets::Image rho_image = Assets::Image::create2D("rho", Assets::PixelFormat::RGB_Float, false, Math::Vector2ui(width, height));
     Math::RGB* rho_image_pixels = rho_image.get_pixels<Math::RGB>();
 
 #pragma omp parallel for

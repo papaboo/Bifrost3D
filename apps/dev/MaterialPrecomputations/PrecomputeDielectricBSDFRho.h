@@ -79,7 +79,7 @@ float2 sample_rho(float3 wo, float roughness, float specularity, unsigned int sa
 }
 
 Assets::Image tabulate_rho(int width, int height, int depth, unsigned int sample_count, SampleDieletricBSDF sample_rough_BSDF) {
-    Assets::Image rho_image = Assets::Image::create3D("rho", Assets::PixelFormat::RGB_Float, 1.0f, Math::Vector3ui(width, height, depth));
+    Assets::Image rho_image = Assets::Image::create3D("rho", Assets::PixelFormat::RGB_Float, false, Math::Vector3ui(width, height, depth));
     Math::RGB* rho_image_pixels = rho_image.get_pixels<Math::RGB>();
 
 #pragma omp parallel for

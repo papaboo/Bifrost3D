@@ -87,10 +87,8 @@ inline void gaussian(Bifrost::Assets::Image image, float std_dev, Bifrost::Asset
 
 inline Bifrost::Assets::Image gaussian(Bifrost::Assets::Image image, float std_dev) {
     using namespace Bifrost::Assets;
-    using namespace Bifrost::Math;
 
-    Vector3ui size = image.get_size_3D();
-    Image result = Image::create3D("blurred_" + image.get_name(), image.get_pixel_format(), image.get_gamma(), size);
+    Image result = Image::create3D("blurred_" + image.get_name(), image.get_pixel_format(), image.is_sRGB(), image.get_size_3D());
     gaussian(image, std_dev, result);
     return result;
 }

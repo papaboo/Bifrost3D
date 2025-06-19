@@ -87,7 +87,6 @@ typedef ImageIDGenerator::UID ImageID;
 // Images are indexed from the lower left corner to the top right one.
 // E.g. (0, 0) is in the lower left corner.
 // Future work:
-// * Replace gamma by an is_sRGB bool/flag. We only ever use gamma 2.2 anyway. Then we can also precompute sRGB <-> linear tables for faster encoding and decoding.
 // * A for_each that applies a lambda to all pixels. Maybe specialize it 
 //   for floats and bytes and profile if that speeds up anything.
 // * set_pixels.
@@ -108,8 +107,8 @@ public:
     static void reserve(unsigned int new_capacity);
     static inline bool has(ImageID image_ID) { return m_UID_generator.has(image_ID) && get_changes(image_ID) != Change::Destroyed; }
 
-    static ImageID create(const std::string& name, PixelFormat format, float gamma, Math::Vector3ui size, unsigned int mipmap_count = 1);
-    static ImageID create(const std::string& name, PixelFormat format, float gamma, Math::Vector3ui size, PixelData& pixels);
+    static ImageID create(const std::string& name, PixelFormat format, bool is_sRGB, Math::Vector3ui size, unsigned int mipmap_count = 1);
+    static ImageID create(const std::string& name, PixelFormat format, bool is_sRGB, Math::Vector3ui size, PixelData& pixels);
 
     static void destroy(ImageID image_ID);
 
@@ -121,8 +120,8 @@ public:
     static inline void set_name(ImageID image_ID, const std::string& name) { m_metainfo[image_ID].name = name; }
 
     static inline PixelFormat get_pixel_format(ImageID image_ID) { return m_metainfo[image_ID].pixel_format; }
-    static inline float get_gamma(ImageID image_ID) { return m_metainfo[image_ID].gamma; }
-    static void set_gamma(ImageID image_ID, float gamma) { m_metainfo[image_ID].gamma = gamma; }
+    static inline bool is_sRGB(ImageID image_ID) { return m_metainfo[image_ID].is_sRGB; }
+    static void set_sRGB(ImageID image_ID, bool is_sRGB) { m_metainfo[image_ID].is_sRGB = is_sRGB; }
     static inline unsigned int get_mipmap_count(ImageID image_ID) { return m_metainfo[image_ID].mipmap_count; }
     static inline unsigned int get_width(ImageID image_ID, unsigned int mipmap_level = 0) { return Math::max(1u, m_metainfo[image_ID].width >> mipmap_level); }
     static inline unsigned int get_height(ImageID image_ID, unsigned int mipmap_level = 0) { return Math::max(1u, m_metainfo[image_ID].height >> mipmap_level); }
@@ -161,7 +160,7 @@ public:
         }
     }
 
-    static void change_format(ImageID image_ID, PixelFormat new_format, float new_gamma);
+    static void change_format(ImageID image_ID, PixelFormat new_format, bool is_sRGB);
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -194,7 +193,7 @@ private:
         unsigned int mipmap_count;
         unsigned int total_pixel_count;
         PixelFormat pixel_format;
-        float gamma;
+        bool is_sRGB;
         bool is_mipmapable;
     };
 
@@ -215,18 +214,18 @@ public:
     Image() : m_ID(ImageID::invalid_UID()) {}
     Image(ImageID id) : m_ID(id) {}
 
-    static Image create3D(const std::string& name, PixelFormat format, float gamma, Math::Vector3ui size, unsigned int mipmap_count = 1) {
-        return Images::create(name, format, gamma, size, mipmap_count);
+    static Image create3D(const std::string& name, PixelFormat format, bool is_sRGB, Math::Vector3ui size, unsigned int mipmap_count = 1) {
+        return Images::create(name, format, is_sRGB, size, mipmap_count);
     }
-    static Image create2D(const std::string& name, PixelFormat format, float gamma, Math::Vector2ui size, unsigned int mipmap_count = 1) {
-        return Images::create(name, format, gamma, Math::Vector3ui(size, 1u), mipmap_count);
+    static Image create2D(const std::string& name, PixelFormat format, bool is_sRGB, Math::Vector2ui size, unsigned int mipmap_count = 1) {
+        return Images::create(name, format, is_sRGB, Math::Vector3ui(size, 1u), mipmap_count);
     }
-    static Image create1D(const std::string& name, PixelFormat format, float gamma, unsigned int width, unsigned int mipmap_count = 1) {
-        return Images::create(name, format, gamma, Math::Vector3ui(width, 1u, 1u), mipmap_count);
+    static Image create1D(const std::string& name, PixelFormat format, bool is_sRGB, unsigned int width, unsigned int mipmap_count = 1) {
+        return Images::create(name, format, is_sRGB, Math::Vector3ui(width, 1u, 1u), mipmap_count);
     }
 
-    static ImageID create2D(const std::string& name, PixelFormat format, float gamma, Math::Vector2ui size, Images::PixelData& pixels) {
-        return Images::create(name, format, gamma, Math::Vector3ui(size, 1u), pixels);
+    static ImageID create2D(const std::string& name, PixelFormat format, bool is_sRGB, Math::Vector2ui size, Images::PixelData& pixels) {
+        return Images::create(name, format, is_sRGB, Math::Vector3ui(size, 1u), pixels);
     }
 
     static Image invalid() { return ImageID::invalid_UID(); }
@@ -245,7 +244,8 @@ public:
     inline void set_name(const std::string& name) { Images::set_name(m_ID, name); }
 
     inline PixelFormat get_pixel_format() const { return Images::get_pixel_format(m_ID); }
-    inline float get_gamma() const { return Images::get_gamma(m_ID); }
+    inline bool is_sRGB() const { return Images::is_sRGB(m_ID); }
+    inline void set_sRGB(bool is_sRGB) const { return Images::set_sRGB(m_ID, is_sRGB); }
     inline bool is_mipmapable() const { return Images::is_mipmapable(m_ID); }
     inline void set_mipmapable(bool value) { Images::set_mipmapable(m_ID, value); }
     inline unsigned int get_mipmap_count() const { return Images::get_mipmap_count(m_ID); }
@@ -274,7 +274,7 @@ public:
     template <typename Operation>
     inline void iterate_pixels(Operation pixel_operation) { Images::iterate_pixels(m_ID, pixel_operation); }
 
-    inline void change_format(PixelFormat new_format, float new_gamma) { Images::change_format(m_ID, new_format, new_gamma); }
+    inline void change_format(PixelFormat new_format, bool is_sRGB) { Images::change_format(m_ID, new_format, is_sRGB); }
 
     void clear();
     void clear(Math::RGBA clear_color);
@@ -291,10 +291,10 @@ private:
 namespace ImageUtils {
 
 template <typename T>
-inline Image copy_with_new_format(Image image, PixelFormat new_format, float new_gamma, T process_pixel) {
+inline Image copy_with_new_format(Image image, PixelFormat new_format, bool is_sRGB, T process_pixel) {
     unsigned int mipmap_count = image.get_mipmap_count();
     Math::Vector3ui size = image.get_size_3D();
-    Image new_image = Image::create3D(image.get_name(), new_format, new_gamma, size, mipmap_count);
+    Image new_image = Image::create3D(image.get_name(), new_format, is_sRGB, size, mipmap_count);
 
     for (unsigned int m = 0; m < mipmap_count; ++m)
         #pragma omp parallel for schedule(dynamic, 16)
@@ -307,12 +307,12 @@ inline Image copy_with_new_format(Image image, PixelFormat new_format, float new
     return new_image;
 }
 
-inline Image copy_with_new_format(Image image, PixelFormat new_format, float new_gamma) {
-    return copy_with_new_format(image, new_format, new_gamma, [](Math::RGBA c) -> Math::RGBA { return c; } );
+inline Image copy_with_new_format(Image image, PixelFormat new_format, bool is_sRGB) {
+    return copy_with_new_format(image, new_format, is_sRGB, [](Math::RGBA c) -> Math::RGBA { return c; } );
 }
 
 inline Image copy_with_new_format(Image image, PixelFormat new_format) {
-    return copy_with_new_format(image, new_format, image.get_gamma());
+    return copy_with_new_format(image, new_format, image.is_sRGB());
 }
 
 void fill_mipmap_chain(Image image);

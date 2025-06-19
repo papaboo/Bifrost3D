@@ -55,7 +55,7 @@ void create_opacity_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene
 
     { // Partial coverage box around the light.
         unsigned int width = 17, height = 17;
-        Image image = Image::create2D("Grid", PixelFormat::Alpha8, 1.0f, Vector2ui(width, height));
+        Image image = Image::create2D("Grid", PixelFormat::Alpha8, false, Vector2ui(width, height));
         unsigned char* pixels = image.get_pixels<unsigned char>();
         for (unsigned int y = 0; y < height; ++y) {
             for (unsigned int x = 0; x < width; ++x) {

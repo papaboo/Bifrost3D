@@ -135,7 +135,7 @@ protected:
     Bifrost::Assets::Image render_auxiliary(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Screenshot::Content content, Bifrost::Math::Vector2i size) {
         renderer->handle_updates();
         auto image = renderer->request_auxiliary_buffers(camera_ID, content, size)[0];
-        return Bifrost::Assets::Image::create2D("auxiliary buffer", image.format, 1.0f, Bifrost::Math::Vector2ui(image.width, image.height), image.pixels);
+        return Bifrost::Assets::Image::create2D("auxiliary buffer", image.format, false, Bifrost::Math::Vector2ui(image.width, image.height), image.pixels);
     }
 };
 

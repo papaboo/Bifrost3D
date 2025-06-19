@@ -336,8 +336,11 @@ int initialize_scene(Engine& engine, ImGui::ImGuiAdaptor* imgui) {
     if (!g_environment.empty()) {
         Image image = StbImageLoader::load(g_environment);
         if (image.exists()) {
-            if (channel_count(image.get_pixel_format()) != 4)
-                image.change_format(PixelFormat::RGBA_Float, 1.0f);
+            if (channel_count(image.get_pixel_format()) != 4) {
+                // OptiXRenderer requires four channel environment maps
+                PixelFormat format = image.is_sRGB() ? PixelFormat::RGBA32 : PixelFormat::RGBA_Float;
+                image.change_format(format, image.is_sRGB());
+            }
             Texture env = Texture::create2D(image, MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
             scene = SceneRoot("Model scene", env);
         } else

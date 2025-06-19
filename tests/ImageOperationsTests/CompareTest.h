@@ -27,7 +27,7 @@ protected:
 };
 
 inline Image create_image(int width, int height) {
-    Image img = Image::create2D("img", PixelFormat::RGBA_Float, 1.0f, Vector2ui(width, height));
+    Image img = Image::create2D("img", PixelFormat::RGBA_Float, false, Vector2ui(width, height));
 
     for (int y = 0; y < height; ++y)
         for (int x = 0; x < width; ++x)

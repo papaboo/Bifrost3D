@@ -32,7 +32,7 @@ TEST_F(Math_ImageSampling, bilinear) {
     int height = 8;
 
     // Create test image where the red component in the image corresponds to the u sample and green corresponds to v.
-    auto image = Assets::Image::create2D("test", Assets::PixelFormat::RGB_Float, 1.0f, Vector2ui(width, height));
+    auto image = Assets::Image::create2D("test", Assets::PixelFormat::RGB_Float, false, Vector2ui(width, height));
     for (int y = 0; y < height; ++y)
         for (int x = 0; x < width; ++x) {
             RGBA pixel = RGBA(x / (width - 1.0f), y / (height - 1.0f), 0, 1);
@@ -58,7 +58,7 @@ TEST_F(Math_ImageSampling, trilinear) {
     int depth = 5;
 
     // Create test image where the red component in the image corresponds to the u sample and green corresponds to v.
-    auto image = Assets::Image::create3D("test", Assets::PixelFormat::RGB_Float, 1.0f, Vector3ui(width, height, depth));
+    auto image = Assets::Image::create3D("test", Assets::PixelFormat::RGB_Float, false, Vector3ui(width, height, depth));
     for (int z = 0; z < depth; ++z)
         for (int y = 0; y < height; ++y)
             for (int x = 0; x < width; ++x) {

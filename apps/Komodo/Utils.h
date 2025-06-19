@@ -96,7 +96,7 @@ inline void store_image(Bifrost::Assets::Image image, const std::string& path) {
 inline Bifrost::Assets::Image create_error_image() {
     using namespace Bifrost::Assets;
 
-    Image error_img = Image::create2D("No images loaded", PixelFormat::RGBA32, 2.2f, Bifrost::Math::Vector2ui(16, 16));
+    Image error_img = Image::create2D("No images loaded", PixelFormat::RGBA32, true, Bifrost::Math::Vector2ui(16, 16));
     unsigned char* pixels = (unsigned char*)error_img.get_pixels();
     for (unsigned int y = 0; y < error_img.get_height(); ++y) {
         for (unsigned int x = 0; x < error_img.get_width(); ++x) {

@@ -53,11 +53,11 @@ TEST_F(Assets_Images, invalid_image_properties) {
 }
 
 TEST_F(Assets_Images, create) {
-    Image image = Image::create3D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1,2,3), 2);
+    Image image = Image::create3D("Test image", PixelFormat::RGBA32, true, Math::Vector3ui(1,2,3), 2);
 
     EXPECT_TRUE(image.exists());
     EXPECT_EQ(PixelFormat::RGBA32, image.get_pixel_format());
-    EXPECT_EQ(2.2f, image.get_gamma());
+    EXPECT_EQ(true, image.is_sRGB());
     EXPECT_EQ(2u, image.get_mipmap_count());
     EXPECT_EQ(1u, image.get_width());
     EXPECT_EQ(2u, image.get_height());
@@ -73,7 +73,7 @@ TEST_F(Assets_Images, create) {
 }
 
 TEST_F(Assets_Images, destroy) {
-    Image image = Image::create3D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1, 2, 3));
+    Image image = Image::create3D("Test image", PixelFormat::RGBA32, true, Math::Vector3ui(1, 2, 3));
     EXPECT_TRUE(image.exists());
 
     Images::reset_change_notifications();
@@ -89,8 +89,8 @@ TEST_F(Assets_Images, destroy) {
 }
 
 TEST_F(Assets_Images, create_and_destroy_notifications) {
-    Image image0 = Image::create3D("Test image 0", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1, 2, 3));
-    Image image1 = Image::create3D("Test image 1", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(3, 2, 1));
+    Image image0 = Image::create3D("Test image 0", PixelFormat::RGBA32, true, Math::Vector3ui(1, 2, 3));
+    Image image1 = Image::create3D("Test image 1", PixelFormat::RGBA32, true, Math::Vector3ui(3, 2, 1));
     EXPECT_TRUE(image0.exists());
     EXPECT_TRUE(image1.exists());
 
@@ -158,7 +158,7 @@ TEST_F(Assets_Images, create_and_clear) {
     using namespace Bifrost::Math;
 
     auto test_format = [](PixelFormat format, RGBA default_clear_color, RGBA specific_clear_color) {
-        Image image = Image::create2D("Test image", format, 2.2f, Math::Vector2ui(4, 4), 2);
+        Image image = Image::create2D("Test image", format, true, Math::Vector2ui(4, 4), 2);
 
         auto test_pixels = [=](RGBA test_color) {
             RGBA pixel0 = image.get_pixel(Vector2ui(2, 2), 0);
@@ -192,7 +192,7 @@ TEST_F(Assets_Images, create_and_clear) {
 }
 
 TEST_F(Assets_Images, create_and_change) {
-    Image image = Image::create3D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector3ui(1, 2, 3));
+    Image image = Image::create3D("Test image", PixelFormat::RGBA32, true, Math::Vector3ui(1, 2, 3));
 
     image.set_pixel(Math::RGBA::yellow(), Math::Vector2ui(0,1));
 
@@ -205,7 +205,7 @@ TEST_F(Assets_Images, create_and_change) {
 }
 
 TEST_F(Assets_Images, pixel_updates) {
-    Image image = Image::create2D("Test image", PixelFormat::RGBA_Float, 2.2f, Math::Vector2ui(3, 2), 2);
+    Image image = Image::create2D("Test image", PixelFormat::RGBA_Float, false, Math::Vector2ui(3, 2), 2);
 
     image.set_pixel(Math::RGBA(1, 2, 3, 1), Math::Vector2ui(0, 0));
     image.set_pixel(Math::RGBA(4, 5, 6, 1), Math::Vector2ui(1, 0));
@@ -231,7 +231,7 @@ TEST_F(Assets_Images, pixel_updates) {
 
 TEST_F(Assets_Images, mipmap_size) {
     unsigned int mipmap_count = 4u;
-    Image image = Image::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(8, 6), mipmap_count);
+    Image image = Image::create2D("Test image", PixelFormat::RGBA32, true, Math::Vector2ui(8, 6), mipmap_count);
 
     EXPECT_EQ(mipmap_count, image.get_mipmap_count());
 
@@ -254,7 +254,7 @@ TEST_F(Assets_Images, mipmap_size) {
 TEST_F(Assets_Images, mipmapable_events) {
 
     unsigned int width = 2, height = 2;
-    Image image = Image::create2D("Test image", PixelFormat::RGBA_Float, 1.0f, Math::Vector2ui(width, height));
+    Image image = Image::create2D("Test image", PixelFormat::RGBA_Float, false, Math::Vector2ui(width, height));
     EXPECT_FALSE(image.is_mipmapable());
 
     Images::reset_change_notifications();
@@ -298,7 +298,7 @@ TEST_F(Assets_ImageUtils, fill_mipmaps) {
     using namespace Bifrost::Math;
 
     unsigned int width = 7, height = 5, mipmap_count = 3u;
-    Image image = Image::create2D("Test image", PixelFormat::RGBA_Float, 1.0f, Vector2ui(width, height), mipmap_count);
+    Image image = Image::create2D("Test image", PixelFormat::RGBA_Float, false, Vector2ui(width, height), mipmap_count);
 
     EXPECT_EQ(7u, image.get_width(0));
     EXPECT_EQ(3u, image.get_width(1));
@@ -327,7 +327,7 @@ TEST_F(Assets_ImageUtils, summed_area_table_from_image) {
     using namespace Bifrost::Math;
 
     unsigned int width = 5, height = 3;
-    Image image = Image::create2D("Test image", PixelFormat::RGBA_Float, 1.0f, Vector2ui(width, height));
+    Image image = Image::create2D("Test image", PixelFormat::RGBA_Float, false, Vector2ui(width, height));
 
     // Fill image
     // [0, -1, 0, 0], [1, -1, 0, 0], [2, -1, 0, 0], [3, -1, 0, 0], [4, -1, 0, 0]
@@ -363,13 +363,13 @@ TEST_F(Assets_ImageUtils, combine_tint_and_roughness) {
     Vector2ui size = Vector2ui(width, height);
     int pixel_count = int(size.x * size.y);
 
-    Image intensity8 = Image::create2D("Intensity8", PixelFormat::Intensity8, 2.2f, size, 1);
-    Image rgb24 = Image::create2D("RGB24", PixelFormat::RGB24, 2.2f, size, 1);
-    Image rgba32 = Image::create2D("RGBA32", PixelFormat::RGBA32, 2.2f, size, 1);
-    Image roughness8 = Image::create2D("Roughness8", PixelFormat::Roughness8, 2.2f, size, 1);
-    Image rgb_float = Image::create2D("RGB_Float", PixelFormat::RGB_Float, 1.0f, size, 1);
-    Image rgba_float = Image::create2D("RGBA_Float", PixelFormat::RGBA_Float, 1.0f, size, 1);
-    Image intensity_float = Image::create2D("Intensity_Float", PixelFormat::Intensity_Float, 1.0f, size, 1);
+    Image intensity8 = Image::create2D("Intensity8", PixelFormat::Intensity8, true, size, 1);
+    Image rgb24 = Image::create2D("RGB24", PixelFormat::RGB24, true, size, 1);
+    Image rgba32 = Image::create2D("RGBA32", PixelFormat::RGBA32, true, size, 1);
+    Image roughness8 = Image::create2D("Roughness8", PixelFormat::Roughness8, true, size, 1);
+    Image rgb_float = Image::create2D("RGB_Float", PixelFormat::RGB_Float, false, size, 1);
+    Image rgba_float = Image::create2D("RGBA_Float", PixelFormat::RGBA_Float, false, size, 1);
+    Image intensity_float = Image::create2D("Intensity_Float", PixelFormat::Intensity_Float, false, size, 1);
 
     for (int p = 0; p < pixel_count; ++p) {
         float v = p / float(pixel_count - 1);
@@ -405,24 +405,23 @@ TEST_F(Assets_ImageUtils, combine_tint_and_roughness) {
 
     auto test_combination = [](const Image tint, const Image roughness, int roughness_channel) {
         Image combined_tint_roughness = ImageUtils::combine_tint_roughness(tint, roughness, roughness_channel);
-        int pixel_count = int(combined_tint_roughness.get_pixel_count());
+        unsigned int pixel_count = combined_tint_roughness.get_pixel_count();
 
-        // Assert on pixels
-        // Quantize values to byte precision.
-        for (int p = 0; p < pixel_count; ++p) {
-            int input_red = int(tint.get_pixel(p).r * 255.0f + 0.5f);
-            int combined_red = int(combined_tint_roughness.get_pixel(p).r * 255.0f + 0.5f);
-            ASSERT_EQ(input_red, combined_red);
-            int input_green = int(tint.get_pixel(p).g * 255.0f + 0.5f);
-            int combined_green = int(combined_tint_roughness.get_pixel(p).g * 255.0f + 0.5f);
-            ASSERT_EQ(input_green, combined_green);
-            int input_blue = int(tint.get_pixel(p).b * 255.0f + 0.5f);
-            int combined_blue = int(combined_tint_roughness.get_pixel(p).b * 255.0f + 0.5f);
-            ASSERT_EQ(input_blue, combined_blue);
+        // Assert on pixels quantized to byte precision.
+        for (unsigned int p = 0; p < pixel_count; ++p) {
+            UNorm8 input_red = tint.get_pixel(p).r;
+            UNorm8 combined_red = combined_tint_roughness.get_pixel(p).r;
+            ASSERT_EQ(input_red.raw, combined_red.raw);
+            UNorm8 input_green = tint.get_pixel(p).g;
+            UNorm8 combined_green = combined_tint_roughness.get_pixel(p).g;
+            ASSERT_EQ(input_green.raw, combined_green.raw);
+            UNorm8 input_blue = tint.get_pixel(p).b;
+            UNorm8 combined_blue = combined_tint_roughness.get_pixel(p).b;
+            ASSERT_EQ(input_blue.raw, combined_blue.raw) << p;
 
-            int input_roughness = int(roughness.get_pixel(p)[roughness_channel] * 255.0f + 0.5f);
-            int combined_roughness = int(combined_tint_roughness.get_pixel(p)[roughness_channel] * 255.0f + 0.5f);
-            ASSERT_EQ(input_roughness, combined_roughness);
+            UNorm8 input_roughness = roughness.get_pixel(p)[roughness_channel];
+            UNorm8 combined_roughness = combined_tint_roughness.get_pixel(p)[roughness_channel];
+            ASSERT_EQ(input_roughness.raw, combined_roughness.raw);
         }
     };
 

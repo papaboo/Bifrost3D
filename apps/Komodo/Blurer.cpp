@@ -24,7 +24,7 @@ struct Blurer::Implementation final {
     float m_std_dev;
 
     Image m_input;
-    Image m_blurred_image; // RGB with gamma 1, to allows us to easily map the data.
+    Image m_blurred_image;
     std::string m_output_path = "";
 
     GLuint m_tex_ID = 0u;
@@ -84,7 +84,7 @@ struct Blurer::Implementation final {
         engine.get_window().set_name("Komodo - " + m_input.get_name());
 
         Vector2ui size = m_input.get_size_2D();
-        m_blurred_image = Image::create2D("blurred_" + m_input.get_name(), PixelFormat::RGB_Float, 2.2f, size);
+        m_blurred_image = Image::create2D("blurred_" + m_input.get_name(), PixelFormat::RGB_Float, false, size);
 
         bool headless = engine.get_window().get_width() == 0 && engine.get_window().get_height() == 0;
         if (headless) {

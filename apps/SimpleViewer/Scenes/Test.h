@@ -198,7 +198,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
 
             auto world_mask_path = resource_directory / "WorldMask.png";
             Image world_mask = StbImageLoader::load(world_mask_path.generic_string());
-            world_mask.change_format(PixelFormat::Roughness8, 1.0f);
+            world_mask.change_format(PixelFormat::Roughness8, false);
             glass_material.set_tint_roughness_texture(Texture::create2D(world_mask));
 
             Mesh sphere_mesh = MeshCreation::revolved_sphere(64, 32);
@@ -215,7 +215,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
     { // Destroyable cylinder. TODO Implement destruction of the mesh, model and scene node.
         // Checkered roughness texture.
         const int size = 32;
-        Image roughness = Image::create2D("Cylinder roughness", PixelFormat::Roughness8, 1.0f, Vector2ui(size));
+        Image roughness = Image::create2D("Cylinder roughness", PixelFormat::Roughness8, false, Vector2ui(size));
         unsigned char* roughness_pixels = roughness.get_pixels<unsigned char>();
         for (unsigned int y = 0; y < size; ++y)
             for (unsigned int x = 0; x < size; ++x)
@@ -365,10 +365,10 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
 
         const int size = 1024;
         const int metal_streak_count = 5;
-        Image tint_roughness = Image::create2D("Sphere tint", PixelFormat::RGBA32, 2.2f, Vector2ui(size));
+        Image tint_roughness = Image::create2D("Sphere tint", PixelFormat::RGBA32, true, Vector2ui(size));
         TintRoughness* tint_roughness_pixels = tint_roughness.get_pixels<TintRoughness>();
         std::fill_n(tint_roughness_pixels, size* size, rubber_tint);
-        Image metalness = Image::create2D("Sphere metalness", PixelFormat::Alpha8, 1.0f, Vector2ui(size));
+        Image metalness = Image::create2D("Sphere metalness", PixelFormat::Alpha8, false, Vector2ui(size));
         unsigned char* metalness_pixels = metalness.get_pixels<unsigned char>();
         std::fill_n(metalness_pixels, size* size, (unsigned char)0u);
         #pragma omp parallel for 
@@ -408,7 +408,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
 
     { // Partial coverage plastic torus.
         unsigned int width = 16, height = 16;
-        Image coverage_image = Image::create2D("Grid", PixelFormat::Alpha8, 1.0f, Vector2ui(width, height));
+        Image coverage_image = Image::create2D("Grid", PixelFormat::Alpha8, false, Vector2ui(width, height));
         unsigned char* pixels = coverage_image.get_pixels<unsigned char>();
         for (unsigned int y = 0; y < height; ++y) {
             for (unsigned int x = 0; x < width; ++x) {
