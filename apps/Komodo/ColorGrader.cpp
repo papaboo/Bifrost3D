@@ -382,7 +382,7 @@ struct ColorGrader::Implementation final {
                 // Tonemap and store the image
                 ColorGrader::Implementation* data = (ColorGrader::Implementation*)client_data;
                 Vector2ui size = data->m_input.get_size_2D();
-                Image output_image = Image::create2D("tonemapped_" + data->m_input.get_name(), PixelFormat::RGB_Float, 2.2f, size);
+                Image output_image = Image::create2D("tonemapped_" + data->m_input.get_name(), PixelFormat::RGB_Float, false, size);
                 RGB* pixels = output_image.get_pixels<RGB>();
                 data->color_grade_image(data->m_input, pixels);
                 store_image(output_image, data->m_output_path);
@@ -420,7 +420,7 @@ struct ColorGrader::Implementation final {
             if (m_output_path.size() != 0) {
                 // Color grade and store the image
                 Vector2ui size = m_input.get_size_2D();
-                Image output_image = Image::create2D("tonemapped_" + m_input.get_name(), PixelFormat::RGB_Float, 2.2f, size);
+                Image output_image = Image::create2D("tonemapped_" + m_input.get_name(), PixelFormat::RGB_Float, false, size);
                 RGB* pixels = output_image.get_pixels<RGB>();
                 color_grade_image(m_input, pixels);
                 store_image(output_image, m_output_path);
@@ -469,7 +469,7 @@ struct ColorGrader::Implementation final {
         if (m_bloom.enabled) { // Bloom
             static Image high_intensity_image = ImageID::invalid_UID();
             if (!high_intensity_image.exists())
-                high_intensity_image = Image::create2D("high intensity", PixelFormat::RGB_Float, 1.0f, image_size);
+                high_intensity_image = Image::create2D("high intensity", PixelFormat::RGB_Float, false, image_size);
 
             #pragma omp parallel for schedule(dynamic, 16)
             for (int i = 0; i < (int)image.get_pixel_count(); ++i) {
@@ -481,7 +481,7 @@ struct ColorGrader::Implementation final {
             }
 
             if (!bloom_image.exists())
-                bloom_image = Image::create2D("high intensity", PixelFormat::RGB_Float, 1.0f, image_size);
+                bloom_image = Image::create2D("high intensity", PixelFormat::RGB_Float, false, image_size);
             float pixel_support = image.get_height() * max(0.001f, m_bloom.support);
             float std_dev = pixel_support / 4.0f;
             Blur::gaussian(high_intensity_image, std_dev, bloom_image);

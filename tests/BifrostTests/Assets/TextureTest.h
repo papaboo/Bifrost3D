@@ -50,7 +50,7 @@ TEST_F(Assets_Textures, invalid_texture_properties) {
 }
 
 TEST_F(Assets_Textures, create) {
-    Image image = Image::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(3, 3));
+    Image image = Image::create2D("Test image", PixelFormat::RGBA32, true, Math::Vector2ui(3, 3));
     Texture texture = Texture::create2D(image);
 
     EXPECT_TRUE(texture.exists());
@@ -64,7 +64,7 @@ TEST_F(Assets_Textures, create) {
 }
 
 TEST_F(Assets_Textures, destroy) {
-    Image image = Image::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(1, 1));
+    Image image = Image::create2D("Test image", PixelFormat::RGBA32, true, Math::Vector2ui(1, 1));
 
     Texture texture = Texture::create2D(image);
     EXPECT_TRUE(texture.exists());
@@ -82,7 +82,7 @@ TEST_F(Assets_Textures, destroy) {
 }
 
 TEST_F(Assets_Textures, create_and_destroy_notifications) {
-    Image image = Image::create2D("Test image", PixelFormat::RGBA32, 2.2f, Math::Vector2ui(1, 1));
+    Image image = Image::create2D("Test image", PixelFormat::RGBA32, true, Math::Vector2ui(1, 1));
 
     Texture texture0 = Texture::create2D(image);
     Texture texture1 = Texture::create2D(image);
@@ -148,7 +148,7 @@ TEST_F(Assets_Textures, sample2D) {
     using namespace Bifrost::Math;
 
     unsigned int size = 4;
-    Image image = Image::create2D("Test", PixelFormat::RGBA_Float, 1.0f, Vector2ui(size));
+    Image image = Image::create2D("Test", PixelFormat::RGBA_Float, false, Vector2ui(size));
     for (unsigned int y = 0; y < size; ++y)
         for (unsigned int x = 0; x < size; ++x)
             image.set_pixel(RGBA(x / float(size), y / float(size), 0, 1), Vector2ui(x, y));

@@ -720,10 +720,10 @@ struct Renderer::Implementation {
                         texture->setWrapMode(2, convert_wrap_mode(Textures::get_wrapmode_W(texture_ID)));
                         texture->setIndexingMode(RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
                         ImageID image_ID = Textures::get_image_ID(texture_ID);
-                        if (Images::get_gamma(image_ID) == 1.0f)
-                            texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT); // Image is in linear color space.
+                        if (Images::is_sRGB(image_ID))
+                            texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT_SRGB);
                         else
-                            texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT_SRGB); // Assume that image is in sRGB color space.
+                            texture->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT);
                         texture->setMaxAnisotropy(1.0f);
                         texture->setMipLevelCount(1u);
                         RTfiltermode min_filtermode = Textures::get_minification_filter(texture_ID) == MinificationFilter::None ? RT_FILTER_NEAREST : RT_FILTER_LINEAR;

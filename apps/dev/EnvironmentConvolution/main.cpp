@@ -342,9 +342,9 @@ int initialize(Engine& engine) {
         return 1;
     }
 
-    // Convert image to HDR if needed.
-    if (image.get_pixel_format() != PixelFormat::RGB_Float || image.get_gamma() != 1.0f)
-        image.change_format(PixelFormat::RGB_Float, 1.0f);
+    // Convert image format to linear HDR if needed.
+    if (image.get_pixel_format() != PixelFormat::RGB_Float || image.is_sRGB())
+        image.change_format(PixelFormat::RGB_Float, false);
 
     Texture texture = Texture::create2D(image, MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
     std::unique_ptr<InfiniteAreaLight> infinite_area_light = nullptr;
@@ -370,7 +370,7 @@ int initialize(Engine& engine) {
     for (int r = 0; r < g_convoluted_images.size(); ++r) {
         int width = image.get_width(), height = image.get_height();
 
-        g_convoluted_images[r] = Image::create2D("Convoluted image", PixelFormat::RGB_Float, 1.0f, Vector2ui(width, height));
+        g_convoluted_images[r] = Image::create2D("Convoluted image", PixelFormat::RGB_Float, false, Vector2ui(width, height));
         RGB* target_pixels = g_convoluted_images[r].get_pixels<RGB>();
 
         // No convolution needed when roughness is 0.

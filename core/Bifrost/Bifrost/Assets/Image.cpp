@@ -118,7 +118,7 @@ static inline void deallocate_pixels(PixelFormat format, Images::PixelData data)
     }
 }
 
-ImageID Images::create(const std::string& name, PixelFormat format, float gamma, Vector3ui size, unsigned int mipmap_count) {
+ImageID Images::create(const std::string& name, PixelFormat format, bool is_sRGB, Vector3ui size, unsigned int mipmap_count) {
     assert(m_metainfo != nullptr);
     assert(m_pixels != nullptr);
     assert(mipmap_count > 0u);
@@ -129,14 +129,14 @@ ImageID Images::create(const std::string& name, PixelFormat format, float gamma,
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_image_data(m_UID_generator.capacity(), old_capacity);
 
-    // Only apply gamma to images that store colors.
+    // Only apply sRGB gamma encoding to images that store colors.
     if (format == PixelFormat::Alpha8)
-        gamma = 1.0f;
+        is_sRGB = false;
 
     MetaInfo& metainfo = m_metainfo[id];
     metainfo.name = name;
     metainfo.pixel_format = format;
-    metainfo.gamma = gamma;
+    metainfo.is_sRGB = is_sRGB;
     metainfo.width = size.x;
     metainfo.height = size.y;
     metainfo.depth = size.z;
@@ -158,7 +158,7 @@ ImageID Images::create(const std::string& name, PixelFormat format, float gamma,
     return id;
 }
 
-ImageID Images::create(const std::string& name, PixelFormat format, float gamma, Math::Vector3ui size, PixelData& pixels) {
+ImageID Images::create(const std::string& name, PixelFormat format, bool is_sRGB, Math::Vector3ui size, PixelData& pixels) {
     assert(m_metainfo != nullptr);
     assert(m_pixels != nullptr);
 
@@ -168,14 +168,14 @@ ImageID Images::create(const std::string& name, PixelFormat format, float gamma,
         // The capacity has changed and the size of all arrays need to be adjusted.
         reserve_image_data(m_UID_generator.capacity(), old_capacity);
 
-    // Only apply gamma to images that store colors.
+    // Only apply sRGB gamma encoding to images that store colors.
     if (format == PixelFormat::Alpha8)
-        gamma = 1.0f;
+        is_sRGB = false;
 
     MetaInfo& metainfo = m_metainfo[id];
     metainfo.name = name;
     metainfo.pixel_format = format;
-    metainfo.gamma = gamma;
+    metainfo.is_sRGB = is_sRGB;
     metainfo.width = size.x;
     metainfo.height = size.y;
     metainfo.depth = 1u;
@@ -256,8 +256,11 @@ static RGBA get_nonlinear_pixel(Images::PixelData pixels, PixelFormat format, un
 static inline RGBA get_linear_pixel(ImageID image_ID, unsigned int index) {
     Images::PixelData pixels = Images::get_pixels(image_ID);
     PixelFormat format = Images::get_pixel_format(image_ID);
-    RGBA nonlinear_color = get_nonlinear_pixel(pixels, format, index);
-    return gammacorrect(nonlinear_color, Images::get_gamma(image_ID));
+    RGBA color = get_nonlinear_pixel(pixels, format, index);
+    if (Images::is_sRGB(image_ID))
+        return sRGB_to_linear(color);
+    else
+        return color;
 }
 
 RGBA Images::get_pixel(ImageID image_ID, unsigned int index, unsigned int mipmap_level) {
@@ -296,8 +299,9 @@ RGBA Images::get_pixel(ImageID image_ID, Vector3ui index, unsigned int mipmap_le
     return get_linear_pixel(image_ID, pixel_index);
 }
 
-static void set_linear_pixel(Images::PixelData pixels, PixelFormat pixel_format, unsigned int index, RGBA color, float gamma) {
-    color = gammacorrect(color, 1.0f / gamma);
+static void set_linear_pixel(Images::PixelData pixels, PixelFormat pixel_format, unsigned int index, RGBA color, bool is_sRGB) {
+    if (is_sRGB)
+        color = linear_to_sRGB(color);
     switch (pixel_format) {
     case PixelFormat::Alpha8: {
         UNorm8* pixel = ((UNorm8*)pixels) + index;
@@ -344,7 +348,7 @@ static void set_linear_pixel(Images::PixelData pixels, PixelFormat pixel_format,
 static inline void set_linear_pixel(ImageID image_ID, RGBA color, unsigned int index) {
     Images::PixelData pixels = Images::get_pixels(image_ID);
     PixelFormat format = Images::get_pixel_format(image_ID);
-    set_linear_pixel(pixels, format, index, color, Images::get_gamma(image_ID));
+    set_linear_pixel(pixels, format, index, color, Images::is_sRGB(image_ID));
 }
 
 void Images::set_pixel(ImageID image_ID, RGBA color, unsigned int index, unsigned int mipmap_level) {
@@ -386,32 +390,33 @@ void Images::set_pixel(ImageID image_ID, RGBA color, Vector3ui index, unsigned i
     m_changes.add_change(image_ID, Change::PixelsUpdated);
 }
 
-void Images::change_format(ImageID image_ID, PixelFormat new_format, float new_gamma) {
+void Images::change_format(ImageID image_ID, PixelFormat new_format, bool new_is_sRGB) {
     Image image = image_ID;
     PixelFormat old_format = image.get_pixel_format();
-    float old_gamma = image.get_gamma();
+    bool old_is_sRGB = image.is_sRGB();
 
     unsigned int total_pixel_count = image.get_width() * image.get_height() * image.get_depth();
     for (unsigned int m = 1; m < image.get_mipmap_count(); ++m)
         total_pixel_count += image.get_width(m) * image.get_height(m) * image.get_depth(m);
 
-    auto gamma_correct_bytes = [](UNorm8* pixels, unsigned int total_pixel_count, float gamma) {
-        for (unsigned int p = 0; p < total_pixel_count; ++p) {
-            UNorm8 linear_value = pixels[p];
-            float non_linear_pixel = pow(linear_value, gamma);
-            pixels[p] = non_linear_pixel;
-        }
-    };
-
     if (old_format == PixelFormat::Intensity8 && new_format == PixelFormat::Alpha8) {
-        // Gamma correct if intensity values have been gamma corrected.
-        // Alpha is not affected by gamma, so new gamma is effectively one.
-        if (old_gamma != 1.0f)
-            gamma_correct_bytes(image.get_pixels<UNorm8>(), total_pixel_count, old_gamma);
+        // Gamma correct if intensity values are sRGB encoded.
+        if (old_is_sRGB) {
+            UNorm8* pixels = image.get_pixels<UNorm8>();
+            for (unsigned int p = 0; p < total_pixel_count; ++p) {
+                UNorm8 non_linear_value = pixels[p];
+                pixels[p] = sRGB_to_linear(non_linear_value);
+            }
+        }
     } else if (old_format == PixelFormat::Alpha8 && new_format == PixelFormat::Intensity8) {
-        // Alpha is not affected by gamma, so old gamma is effectively one.
-        if (new_gamma != 1.0f)
-            gamma_correct_bytes(image.get_pixels<UNorm8>(), total_pixel_count, 1.0f / new_gamma);
+        // Alpha is not sRGB encoded and should be encoded if the new format requires it.
+        if (new_is_sRGB) {
+            UNorm8* pixels = image.get_pixels<UNorm8>();
+            for (unsigned int p = 0; p < total_pixel_count; ++p) {
+                UNorm8 non_linear_value = pixels[p];
+                pixels[p] = linear_to_sRGB(non_linear_value);
+            }
+        }
     } else {
         // Formatsizes don't match up and we need to copy to a new pixel allocation.
         PixelData new_pixels = allocate_pixels(new_format, total_pixel_count);
@@ -433,19 +438,19 @@ void Images::change_format(ImageID image_ID, PixelFormat new_format, float new_g
                 if (channel_count > 0) pixel.a += pixel.g;
                 if (channel_count > 1) pixel.a += pixel.b;
                 pixel.a *= normalizer;
-                set_linear_pixel(new_pixels, new_format, p, pixel, new_gamma);
+                set_linear_pixel(new_pixels, new_format, p, pixel, new_is_sRGB);
             }
         } else if (old_format == PixelFormat::Alpha8 && !has_alpha(new_format)) {
             // Copy from alpha to RGB channels.
             for (unsigned int p = 0; p < total_pixel_count; ++p) {
                 RGBA pixel = get_linear_pixel(image_ID, p);
                 pixel.r = pixel.g = pixel.b = pixel.a;
-                set_linear_pixel(new_pixels, new_format, p, pixel, new_gamma);
+                set_linear_pixel(new_pixels, new_format, p, pixel, new_is_sRGB);
             }
         } else {
             for (unsigned int p = 0; p < total_pixel_count; ++p) {
                 RGBA pixel = get_linear_pixel(image_ID, p);
-                set_linear_pixel(new_pixels, new_format, p, pixel, new_gamma);
+                set_linear_pixel(new_pixels, new_format, p, pixel, new_is_sRGB);
             }
         }
 
@@ -454,6 +459,7 @@ void Images::change_format(ImageID image_ID, PixelFormat new_format, float new_g
     }
 
     m_metainfo[image_ID].pixel_format = new_format;
+    m_metainfo[image_ID].is_sRGB = new_is_sRGB;
     m_changes.add_change(image_ID, Change::PixelsUpdated);
 }
 
@@ -592,7 +598,7 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
     if (!roughness.exists()) {
         if (has_alpha(tint_format)) {
             assert(tint_format == PixelFormat::RGBA32); // The alternative is float, but float isn't usual for tint.
-            Image tint_sans_roughness = Image::create2D(tint.get_name(), PixelFormat::RGBA32, 2.2f, size, tint.get_mipmap_count());
+            Image tint_sans_roughness = Image::create2D(tint.get_name(), PixelFormat::RGBA32, true, size, tint.get_mipmap_count());
             RGBA32* new_tint_pixels = tint_sans_roughness.get_pixels<RGBA32>();
             memcpy(new_tint_pixels, tint.get_pixels(), size.x * size.y * size_of(tint_format));
             // Set roughness to multiplicative identity.
@@ -602,12 +608,12 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
         } else
             return tint;
     }
-    
+
     if (!tint.exists()) {
         if (roughness_format == PixelFormat::Roughness8)
             return roughness;
         else
-            return ImageUtils::copy_with_new_format(roughness, PixelFormat::Roughness8, 1.0f, [=](RGBA pixel) -> RGBA {
+            return ImageUtils::copy_with_new_format(roughness, PixelFormat::Roughness8, false, [=](RGBA pixel) -> RGBA {
                 float v = pixel[roughness_channel];
                 return RGBA(v, v, v, v);
             });
@@ -638,7 +644,7 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
         // Sanitize roughness channel index based on pixel format. Fx for Alpha8 the channel index is 3, but since only one channel contains information, the channel index must be reduced to 0 for direct access.
         roughness_channel = min(roughness_channel, roughness_pixel_size - 1);
 
-        Image tint_roughness = Image::create2D(tint.get_name() + "_" + roughness.get_name(), PixelFormat::RGBA32, tint.get_gamma(), size, mipmap_count);
+        Image tint_roughness = Image::create2D(tint.get_name() + "_" + roughness.get_name(), PixelFormat::RGBA32, tint.is_sRGB(), size, mipmap_count);
 
         const UNorm8* tint_pixels = (const UNorm8*)tint.get_pixels();
         const UNorm8* roughness_pixels = (const UNorm8*)roughness.get_pixels() + roughness_channel;
@@ -658,15 +664,15 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
             }
 
             // Fill roughness channels
-            if (roughness_format == PixelFormat::Roughness8 || roughness.get_gamma() == 1.0f)
-                // Roughnes is stored in alpha and should not be gamma corrected.
+            if (roughness_format == PixelFormat::Roughness8 || !roughness.is_sRGB())
+                // Roughnes is stored as a linear value.
                 for (int p = pixel_begin; p < pixel_end; ++p)
                     tint_roughness_pixels[p].a = roughness_pixels[p * roughness_pixel_size];
             else
-                // Roughness is stored as a color and should be degammaed.
+                // Roughness is stored in an sRGB encoded color and should be decoded.
                 for (int p = pixel_begin; p < pixel_end; ++p) {
                     float nonlinear_roughness = roughness_pixels[p * roughness_pixel_size];
-                    float linear_roughness = powf(nonlinear_roughness, roughness.get_gamma());
+                    float linear_roughness = sRGB_to_linear(nonlinear_roughness);
                     tint_roughness_pixels[p].a = linear_roughness;
                 }
         }
@@ -675,7 +681,8 @@ Image combine_tint_roughness(const Image tint, const Image roughness, int roughn
 
     } else {
         // Fallback path
-        Image tint_roughness = Image::create2D(tint.get_name() + "_" + roughness.get_name(), PixelFormat::RGBA32, 2.2f, size, mipmap_count);
+        PixelFormat new_format = tint_is_byte ? PixelFormat::RGBA32 : PixelFormat::RGBA_Float;
+        Image tint_roughness = Image::create2D(tint.get_name() + "_" + roughness.get_name(), new_format, tint.is_sRGB(), size, mipmap_count);
 
         #pragma omp parallel for schedule(dynamic, 16)
         for (int c = 0; c < chunk_count; ++c) {

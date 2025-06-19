@@ -20,19 +20,12 @@ using namespace Bifrost::Math;
 
 namespace StbImageLoader {
 
-bool check_HDR_fileformat(const std::string& path) {
+bool is_HDR_fileformat(const std::string& path) {
     return memcmp(path.c_str() + path.size() - 4, ".hdr", sizeof(unsigned char) * 4) == 0;
 }
 
-static PixelFormat resolve_format(int channels, bool is_HDR) {
-    if (is_HDR) {
-        switch (channels) {
-        case 3:
-            return PixelFormat::RGB_Float;
-        case 4:
-            return PixelFormat::RGBA_Float;
-        }
-    } else {
+static PixelFormat resolve_format(int channels, bool is_sRGB) {
+    if (is_sRGB) {
         switch (channels) {
         case 1:
             return PixelFormat::Intensity8;
@@ -41,6 +34,13 @@ static PixelFormat resolve_format(int channels, bool is_HDR) {
         case 2: // [intensity, alpha]. Data is expanded when copied to the datamodel.
         case 4:
             return PixelFormat::RGBA32;
+        }
+    } else {
+        switch (channels) {
+        case 3:
+            return PixelFormat::RGB_Float;
+        case 4:
+            return PixelFormat::RGBA_Float;
         }
     }
     return PixelFormat::Unknown;
@@ -65,20 +65,19 @@ unsigned int sizeof_format(PixelFormat format) {
     return 0u;
 }
 
-inline Image convert_image(const std::string& name, void* loaded_pixels, int width, int height, int channel_count, bool is_HDR) {
+inline Image convert_image(const std::string& name, void* loaded_pixels, int width, int height, int channel_count, bool is_sRGB) {
     if (loaded_pixels == nullptr) {
         printf("StbImageLoader::load(%s) error: '%s'\n", name.c_str(), stbi_failure_reason());
         return Image::invalid();
     }
 
-    PixelFormat pixel_format = resolve_format(channel_count, is_HDR);
+    PixelFormat pixel_format = resolve_format(channel_count, is_sRGB);
     if (pixel_format == PixelFormat::Unknown) {
         printf("StbImageLoader::load(%s) error: 'Could not resolve format'\n", name.c_str());
         return Image::invalid();
     }
 
-    float image_gamma = is_HDR ? 1.0f : 2.2f;
-    Image image = Image::create2D(name, pixel_format, image_gamma, Vector2ui(width, height));
+    Image image = Image::create2D(name, pixel_format, is_sRGB, Vector2ui(width, height));
     Images::PixelData pixel_data = image.get_pixels();
     if (channel_count == 2) {
         unsigned char* pixel_data_uc4 = (unsigned char*)pixel_data;
@@ -103,13 +102,13 @@ Image load(const std::string& path) {
 
     void* loaded_pixels = nullptr;
     int width, height, channel_count;
-    bool is_HDR = check_HDR_fileformat(path);
-    if (is_HDR)
-        loaded_pixels = stbi_loadf(path.c_str(), &width, &height, &channel_count, 0);
-    else
+    bool is_sRGB = !is_HDR_fileformat(path);
+    if (is_sRGB)
         loaded_pixels = stbi_load(path.c_str(), &width, &height, &channel_count, 0);
+    else
+        loaded_pixels = stbi_loadf(path.c_str(), &width, &height, &channel_count, 0);
 
-    return convert_image(path, loaded_pixels, width, height, channel_count, is_HDR);
+    return convert_image(path, loaded_pixels, width, height, channel_count, is_sRGB);
 }
 
 Image load_from_memory(const std::string& name, const void* const data, int data_byte_count) {
@@ -118,8 +117,8 @@ Image load_from_memory(const std::string& name, const void* const data, int data
     int width, height, channel_count;
     void* loaded_pixels = stbi_load_from_memory((stbi_uc*)data, data_byte_count, &width, &height, &channel_count, 0);
 
-    bool is_HDR = false; // NOTE Currently we cannot distinguish LDR from HDR images.
-    return convert_image(name, loaded_pixels, width, height, channel_count, is_HDR);
+    bool is_sRGB = true; // NOTE Currently we cannot distinguish LDR from HDR images.
+    return convert_image(name, loaded_pixels, width, height, channel_count, is_sRGB);
 }
 
 } // NS StbImageLoader

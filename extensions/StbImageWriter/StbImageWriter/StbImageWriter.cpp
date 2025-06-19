@@ -104,16 +104,15 @@ bool write(Image image, const std::string& path) {
         did_succeed = save_image(path, file_type, width, height, channel_count, pixels);
         delete[] pixels;
     } else {
-        unsigned char* pixels = new unsigned char[width * height * channel_count];
-        float gamma = 1.0f / 2.2f;
+        Bifrost::byte* pixels = new Bifrost::byte[width * height * channel_count];
         for (unsigned int y = 0; y < height; ++y)
             for (unsigned int x = 0; x < width; ++x) {
                 int data_index = x + (height - 1 - y) * width;
-                unsigned char* pixel_data = pixels + data_index * channel_count;
+                Bifrost::byte* pixel_data = pixels + data_index * channel_count;
                 RGBA pixel = image.get_pixel(Vector2ui(x, y));
                 for (int c = 0; c < channel_count; ++c) {
-                    float channel_intensity = c != 3 ? pow(pixel[c], gamma) : pixel[c]; // Gamma correct colors but leave alpha as linear.
-                    pixel_data[c] = unsigned char(clamp(channel_intensity, 0.0f, 1.0f) * 255 + 0.5f);
+                    float channel_intensity = c != 3 ? linear_to_sRGB(pixel[c]) : pixel[c]; // sRGB encoded colors but leave alpha as linear.
+                    pixel_data[c] = UNorm8(channel_intensity).raw;
                 }
             }
 

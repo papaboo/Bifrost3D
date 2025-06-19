@@ -212,7 +212,7 @@ Assets::Image Cameras::resolve_screenshot(CameraID camera_ID, Screenshot::Conten
         auto& screen_shot = info.images[i];
         if (screen_shot.content == image_content) {
             bool is_HDR = screen_shot.content == Screenshot::Content::ColorHDR;
-            auto image = Assets::Image::create2D(name, screen_shot.format, is_HDR ? 1.0f : 2.2f, Vector2ui(screen_shot.width, screen_shot.height), screen_shot.pixels);
+            auto image = Assets::Image::create2D(name, screen_shot.format, !is_HDR, Vector2ui(screen_shot.width, screen_shot.height), screen_shot.pixels);
             info.images.erase(info.images.begin() + i);
             return image;
         }

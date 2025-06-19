@@ -236,7 +236,7 @@ void create_glass_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Scen
     }
 
     // Image of gradient from 0 to 1
-    Image roughness_gradient = Image::create2D("Gradient", PixelFormat::Roughness8, 1.0f, Vector2ui(8, 1));
+    Image roughness_gradient = Image::create2D("Gradient", PixelFormat::Roughness8, false, Vector2ui(8, 1));
     unsigned char* roughness_gradient_pixels = roughness_gradient.get_pixels<unsigned char>();
     for (unsigned int x = 0; x < 8; ++x)
         roughness_gradient_pixels[x] = x * 31;

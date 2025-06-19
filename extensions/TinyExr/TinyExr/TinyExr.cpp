@@ -28,8 +28,8 @@ Result load_verbose(const std::string& filename, Bifrost::Assets::Image& image) 
     Result res = (Result)LoadEXR(&rgba, &width, &height, filename.c_str(), &error_msg);
 
     if (res == Result::Success) {
-        float image_gamma = 1.0f;
-        image = Image::create2D(filename, PixelFormat::RGBA_Float, image_gamma, Vector2ui(width, height));
+        bool is_SRGB = false;
+        image = Image::create2D(filename, PixelFormat::RGBA_Float, is_SRGB, Vector2ui(width, height));
         Images::PixelData pixel_data = image.get_pixels();
         memcpy(pixel_data, rgba, sizeof(float) * 4 * width * height);
     }

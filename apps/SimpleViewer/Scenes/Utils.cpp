@@ -28,7 +28,7 @@ namespace Scenes {
 SceneNode create_checkered_floor(float floor_size, float checker_size) {
     // 2x2 checkered texture to be repeated across the floor.
     unsigned int size = 2;
-    Image tint_roughness_image = Image::create2D("Floor color", PixelFormat::RGBA32, 2.2f, Vector2ui(size, size));
+    Image tint_roughness_image = Image::create2D("Floor color", PixelFormat::RGBA32, true, Vector2ui(size, size));
     tint_roughness_image.set_mipmapable(true);
     unsigned char* tint_roughness_pixels = (unsigned char*)tint_roughness_image.get_pixels();
     for (unsigned int y = 0; y < size; ++y) {

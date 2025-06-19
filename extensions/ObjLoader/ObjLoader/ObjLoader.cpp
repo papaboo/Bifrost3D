@@ -67,7 +67,7 @@ void load_material_images(const std::vector<tinyobj::material_t>& materials, con
 
             if (coverage_image.exists())
                 if (coverage_image.get_pixel_format() != PixelFormat::Alpha8)
-                    coverage_image.change_format(PixelFormat::Alpha8, 1.0f);
+                    coverage_image.change_format(PixelFormat::Alpha8, false);
             else
                 printf("ObjLoader::load error: Could not load image at '%s'.\n", coverage_image_path.c_str());
         }
@@ -83,7 +83,7 @@ void load_material_images(const std::vector<tinyobj::material_t>& materials, con
                 if (channel_count(tint_image.get_pixel_format()) == 4) {
                     unsigned int mipmap_count = tint_image.get_mipmap_count();
                     Vector2ui size = tint_image.get_size_2D();
-                    Image coverage_image = Image::create2D(tint_image_path, PixelFormat::Alpha8, 1.0f, size);
+                    Image coverage_image = Image::create2D(tint_image_path, PixelFormat::Alpha8, false, size);
                     UNorm8* coverage_pixels = coverage_image.get_pixels<UNorm8>();
 
                     float min_coverage = 1.0f;

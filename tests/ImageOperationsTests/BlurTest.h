@@ -31,7 +31,7 @@ protected:
 };
 
 inline Image create_image(int width, int height) {
-    Image img = Image::create2D("img", PixelFormat::RGBA_Float, 1.0f, Vector2ui(width, height));
+    Image img = Image::create2D("img", PixelFormat::RGBA_Float, false, Vector2ui(width, height));
 
     for (int y = 0; y < height; ++y)
         for (int x = 0; x < width; ++x)
@@ -43,8 +43,8 @@ inline Image create_image(int width, int height) {
 TEST_F(ImageOperations_Blur, mirroring) {
     const int size = 8;
 
-    Image image = Image::create2D("img", PixelFormat::RGBA_Float, 1.0f, Vector2ui(size, size));
-    Image mirrored_image = Image::create2D("img", PixelFormat::RGBA_Float, 1.0f, Vector2ui(size, size));
+    Image image = Image::create2D("img", PixelFormat::RGBA_Float, false, Vector2ui(size, size));
+    Image mirrored_image = Image::create2D("img", PixelFormat::RGBA_Float, false, Vector2ui(size, size));
     for (int y = 0; y < size; ++y)
         for (int x = 0; x < size; ++x) {
             RGB pixel = RGB(float(x), float(1.0f / (y + 1)), float(x * x * y * y));
