@@ -37,7 +37,7 @@ public:
     EnvironmentManager(ID3D11Device1& device, TextureManager& textures, const ShaderManager& shader_manager);
 
     // Render an environment to the active backbuffer.
-    bool render(ID3D11DeviceContext1& render_context, int environment_ID);
+    void render(ID3D11DeviceContext1& render_context, int environment_ID);
 
     void handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& device_context);
 
