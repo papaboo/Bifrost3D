@@ -17,7 +17,7 @@ using namespace optix;
 namespace OptiXRenderer {
 
 PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Assets::InfiniteAreaLight& light, optix::float3 tint,
-                                                   TextureSampler* texture_cache, int sample_count) {
+                                                   TextureSampler environment_sampler, unsigned int sample_count) {
 
     int width = light.get_width(), height = light.get_height();
 
@@ -26,7 +26,7 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Asset
     // importance sampling disabled only contains a single invalid sample.
     bool is_tiny_image = (width * height) < (64 * 32);
     bool is_dark_image = light.image_integral() < 0.00001f;
-    bool disable_importance_sampling = is_tiny_image || is_dark_image;
+    bool disable_importance_sampling = is_tiny_image || is_dark_image || sample_count == 0;
 
     { // Per pixel PDF sampler.
         optix::Buffer per_pixel_PDF_buffer;
@@ -56,7 +56,7 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Asset
     }
 
     { // Draw light samples.
-        sample_count = sample_count <= 0 ? 8192 : Math::next_power_of_two(sample_count);
+        sample_count = max(2u, Math::next_power_of_two(sample_count));
         int exponent = (int)log2(sample_count);
         if (disable_importance_sampling)
             sample_count = 1;
@@ -71,7 +71,7 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Asset
             Math::RNG::fill_progressive_multijittered_bluenoise_samples(rng_samples, rng_samples + sample_count);
 
             #pragma omp parallel for schedule(dynamic, 16)
-            for (int i = 0; i < sample_count; ++i) {
+            for (int i = 0; i < int(sample_count); ++i) {
                 // Decorrelate stratified random numbers for light samples and ray samples.
                 // The rays RNG expect that samples drawn similar random numbers produce light samples drawn from similar places.
                 // That assumption breaks when drawing the samples with PMJ, as those samples are themselves nicely stratified,
@@ -97,7 +97,7 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Asset
     m_light.samples_ID = m_samples->getId();
     m_light.per_pixel_PDF_ID = m_per_pixel_PDF->getId();
     m_light.sample_count = sample_count;
-    m_light.environment_map_ID = texture_cache[light.get_texture_ID()]->getId();
+    m_light.environment_map_ID = environment_sampler->getId();
     m_light.tint = tint;
 }
 

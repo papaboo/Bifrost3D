@@ -47,7 +47,7 @@ public:
         , m_color_texture(nullptr), m_marginal_CDF(nullptr), m_conditional_CDF(nullptr), m_per_pixel_PDF(nullptr)
         , m_tint(tint) { }
 
-    EnvironmentMap(optix::Context& context, const Bifrost::Assets::InfiniteAreaLight& light, optix::float3 tint, optix::TextureSampler* texture_cache);
+    EnvironmentMap(optix::Context& context, const Bifrost::Assets::InfiniteAreaLight& light, optix::float3 tint, optix::TextureSampler environment_sampler);
 
     EnvironmentMap& operator=(EnvironmentMap&& rhs) {
         m_environment_map_ID = rhs.m_environment_map_ID;

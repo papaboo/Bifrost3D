@@ -17,8 +17,8 @@ using namespace optix;
 
 namespace OptiXRenderer {
 
-EnvironmentMap::EnvironmentMap(Context& context, const Assets::InfiniteAreaLight& light, float3 tint, TextureSampler* texture_cache)
-    : m_environment_map_ID(light.get_texture_ID()), m_color_texture(texture_cache[light.get_texture_ID()]), m_tint(tint) {
+EnvironmentMap::EnvironmentMap(Context& context, const Assets::InfiniteAreaLight& light, float3 tint, TextureSampler environment_sampler)
+    : m_environment_map_ID(light.get_texture_ID()), m_color_texture(environment_sampler), m_tint(tint) {
 
     int width = light.get_width(), height = light.get_height();
 
