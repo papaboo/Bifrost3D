@@ -48,7 +48,7 @@ EnvironmentManager::EnvironmentManager(ID3D11Device1& device, TextureManager& te
     THROW_DX11_ERROR(device.CreateSamplerState(&sampler_desc, &m_sampler));
 }
 
-bool EnvironmentManager::render(ID3D11DeviceContext1& render_context, int environment_ID) {
+void EnvironmentManager::render(ID3D11DeviceContext1& render_context, int environment_ID) {
 
 #if CHECK_IMPLICIT_STATE
     // Check that the screen space triangle will be rendered correctly.
@@ -75,20 +75,15 @@ bool EnvironmentManager::render(ID3D11DeviceContext1& render_context, int enviro
         render_context.PSSetSamplers(0, 1, &m_sampler);
 
         render_context.Draw(3, 0);
-
-        return true;
     } else {
         // Bind white environment instead.
         render_context.PSSetShaderResources(0, 1, &m_textures.white_texture().srv);
         render_context.PSSetSamplers(0, 1, &m_textures.white_texture().sampler);
 
         ORenderTargetView backbuffer;
-        ODepthStencilView depth;
-        render_context.OMGetRenderTargets(1, &backbuffer, &depth);
+        render_context.OMGetRenderTargets(1, &backbuffer, nullptr);
 
         render_context.ClearRenderTargetView(backbuffer, &env.tint.x);
-
-        return false;
     }
 }
 
@@ -126,9 +121,8 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                     R11G11B10_Float* pixel_data = new R11G11B10_Float[total_pixel_count];
 
                     { // Compute mipmap pixels.
-                        using namespace InfiniteAreaLightUtils;
                         R11G11B10_Float* next_pixels = pixel_data;
-                        IBLConvolution<R11G11B10_Float>* convolutions = new IBLConvolution<R11G11B10_Float>[mipmap_count];
+                        auto* convolutions = new InfiniteAreaLightUtils::IBLConvolution<R11G11B10_Float>[mipmap_count];
                         for (int m = 0; m < mipmap_count; ++m) {
                             convolutions[m].Width = env_width >> m;
                             convolutions[m].Height = env_height >> m;
@@ -138,7 +132,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                             next_pixels += convolutions[m].Width * convolutions[m].Height;
                         }
 
-                        convolute(light, convolutions, convolutions + mipmap_count,
+                        InfiniteAreaLightUtils::convolute(light, convolutions, convolutions + mipmap_count,
                             [](RGB c) -> R11G11B10_Float { return R11G11B10_Float(c.r, c.g, c.b); });
 
                         delete[] convolutions;
@@ -232,7 +226,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
 
                         THROW_DX11_ERROR(device.CreateTexture2D(&tex_desc, nullptr, &env.texture2D));
 
-                        R11G11B10_Float* pixels = new R11G11B10_Float[env_width* env_height];
+                        R11G11B10_Float* pixels = new R11G11B10_Float[env_width * env_height];
                         #pragma omp parallel for schedule(dynamic, 16)
                         for (int i = 0; i < env_width * env_height; ++i) {
                             int x = i % env_width, y = i / env_width;
