@@ -36,7 +36,7 @@ public:
         : m_environment_map(Bifrost::Assets::Texture::invalid())
         , m_per_pixel_PDF(nullptr), m_samples(nullptr), m_light(PresampledEnvironmentLight::empty(tint)) {}
     PresampledEnvironmentMap(optix::Context& context, const Bifrost::Assets::InfiniteAreaLight& light, optix::float3 tint,
-                             optix::TextureSampler* texture_cache, int sample_count = 0);
+                             optix::TextureSampler environment_sampler, unsigned int sample_count = 8192);
 
     PresampledEnvironmentMap& operator=(PresampledEnvironmentMap&& rhs) {
         m_environment_map = rhs.m_environment_map;
