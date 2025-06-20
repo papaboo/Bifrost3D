@@ -231,7 +231,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         for (int i = 0; i < env_width * env_height; ++i) {
                             int x = i % env_width, y = i / env_width;
                             Vector2f uv = Vector2f((x + 0.5f) / env_width, (y + 0.5f) / env_height);
-                            RGB c = sample2D(light.get_texture_ID(), uv).rgb();
+                            RGB c = sample2D(light.get_texture(), uv).rgb();
                             pixels[x + y * env_width] = R11G11B10_Float(c.r, c.g, c.b);
                         }
 
