@@ -111,6 +111,19 @@ GTEST_TEST(Math_Color_HSV, lerp_towards_closest_hue) {
     }
 }
 
+GTEST_TEST(Math_Color_sRGB, sRGB_to_linear_to_sRGB_identity_conversions) {
+    for (int v = 0; v < 256; v++) {
+        UNorm8 expected = byte(v);
+        UNorm8 actual = linear_to_sRGB(sRGB_to_linear(expected));
+        EXPECT_FLOAT_EQ(expected.raw, actual.raw);
+    }
+}
+
+GTEST_TEST(Math_Color_sRGB, linear_to_sRGB_to_linear_identity_conversions) {
+    for (float v = 0.0f; v <= 1.0f; v += 0.125f)
+        EXPECT_FLOAT_EQ(v, sRGB_to_linear(linear_to_sRGB(v)));
+}
+
 } // NS Bifrost::Math
 
 #endif // _BIFROST_MATH_COLOR_TEST_H_

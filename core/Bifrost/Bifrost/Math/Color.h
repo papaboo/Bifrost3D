@@ -345,6 +345,38 @@ __always_inline__ RGBA gammacorrect(RGBA color, float gamma) {
     return RGBA(gammacorrect(color.rgb(), gamma), color.a);
 }
 
+// Source: https://physicallybased.info/tools/
+__always_inline__ float sRGB_to_linear(float sRGB_intensity) {
+    if (sRGB_intensity < 0.04045f)
+        return sRGB_intensity * 0.0773993808f;
+    else
+        return pow(sRGB_intensity * 0.9478672986f + 0.0521327014f, 2.4f);
+}
+
+__always_inline__ RGB sRGB_to_linear(RGB color) {
+    return RGB(sRGB_to_linear(color.r), sRGB_to_linear(color.g), sRGB_to_linear(color.b));
+}
+
+__always_inline__ RGBA sRGB_to_linear(RGBA color) {
+    return RGBA(sRGB_to_linear(color.r), sRGB_to_linear(color.g), sRGB_to_linear(color.b), color.a);
+}
+
+// Source: https://physicallybased.info/tools/
+__always_inline__ float linear_to_sRGB(float linear_intensity) {
+    if (linear_intensity < 0.0031308f)
+        return linear_intensity * 12.92f;
+    else
+        return 1.055f * pow(linear_intensity, 1.0f / 2.4f) - 0.055f;
+}
+
+__always_inline__ RGB linear_to_sRGB(RGB color) {
+    return RGB(linear_to_sRGB(color.r), linear_to_sRGB(color.g), linear_to_sRGB(color.b));
+}
+
+__always_inline__ RGBA linear_to_sRGB(RGBA color) {
+    return RGBA(linear_to_sRGB(color.r), linear_to_sRGB(color.g), linear_to_sRGB(color.b), color.a);
+}
+
 __always_inline__ float luminance(RGB color) {
     return 0.2126f * color.r + 0.7152f * color.g + 0.0722f * color.b;
 }
