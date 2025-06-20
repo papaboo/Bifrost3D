@@ -54,8 +54,8 @@ public:
     //*********************************************************************************************
     // Getters.
     //*********************************************************************************************
-    inline TextureID get_texture_ID() const { return m_latlong.get_ID(); }
-    inline ImageID get_image_ID() const { return m_latlong.get_image().get_ID(); }
+    inline Texture get_texture() const { return m_latlong; }
+    inline Image get_image() const { return m_latlong.get_image(); }
     inline unsigned int get_width() const { return m_latlong.get_image().get_width(); }
     inline unsigned int get_height() const { return m_latlong.get_image().get_height(); }
     inline const float* const get_image_marginal_CDF() const { return m_distribution.get_marginal_CDF(); }
@@ -66,7 +66,7 @@ public:
     //*********************************************************************************************
 
     Math::RGB evaluate(Math::Vector2f uv) const {
-        return sample2D(m_latlong.get_ID(), uv).rgb();
+        return sample2D(m_latlong, uv).rgb();
     }
 
     Math::RGB evaluate(Math::Vector3f direction_to_light) const {
@@ -87,7 +87,7 @@ public:
         LightSample sample;
         sample.direction_to_light = Math::latlong_texcoord_to_direction(CDF_sample.index);
         sample.distance = 1e30f;
-        sample.radiance = sample2D(m_latlong.get_ID(), CDF_sample.index).rgb();
+        sample.radiance = sample2D(m_latlong, CDF_sample.index).rgb();
         float sin_theta = abs(sqrtf(1.0f - sample.direction_to_light.y * sample.direction_to_light.y));
         float PDF = float(CDF_sample.PDF) / (2.0f * Math::PI<float>() * Math::PI<float>() * sin_theta);
         sample.PDF = sin_theta == 0.0f ? 0.0f : PDF;

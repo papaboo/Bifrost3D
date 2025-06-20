@@ -1125,7 +1125,7 @@ struct Renderer::Implementation {
                         // Only textures with four channels are supported.
                         if (channel_count(image.get_pixel_format()) == 4) { // TODO Support other formats as well by converting the buffers to float4 and upload.
                             const InfiniteAreaLight& environment_light = *(scene_data.get_environment_light());
-                            TextureSampler environment_sampler = textures[environment_light.get_texture_ID()];
+                            TextureSampler environment_sampler = textures[environment_light.get_texture().get_ID()];
 #if PRESAMPLE_ENVIRONMENT_MAP
                             scene.environment = PresampledEnvironmentMap(context, environment_light, env_tint, environment_sampler);
                             scene.GPU_state.environment_light = scene.environment.get_light().presampled_environment;

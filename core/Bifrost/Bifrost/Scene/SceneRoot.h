@@ -69,7 +69,7 @@ public:
     static inline Assets::InfiniteAreaLight* get_environment_light(SceneRootID scene_ID) { return m_scenes[scene_ID].environment_light; }
     static inline Assets::TextureID get_environment_map(SceneRootID scene_ID) { 
         auto environment_light = m_scenes[scene_ID].environment_light;
-        return environment_light == nullptr ? Assets::TextureID::invalid_UID() : environment_light->get_texture_ID();
+        return environment_light == nullptr ? Assets::TextureID::invalid_UID() : environment_light->get_texture().get_ID();
     }
     static void set_environment_map(SceneRootID scene_ID, Assets::TextureID environment_map);
 
