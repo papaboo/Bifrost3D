@@ -94,14 +94,17 @@ inline D3D11_TEXTURE_ADDRESS_MODE to_DX_wrapmode(WrapMode wm) {
     return D3D11_TEXTURE_ADDRESS_MIRROR;
 }
 
-inline DXGI_FORMAT to_DX_format(PixelFormat format) {
+inline DXGI_FORMAT to_DX_format(PixelFormat format, bool is_sRGB) {
+    if (is_sRGB && (format == PixelFormat::RGB_Float || format == PixelFormat::RGBA_Float || format == PixelFormat::Intensity_Float))
+        printf("DX11Renderer: sRGB encoding not supported for floating point image formats.\n");
+
     switch (format) {
     case PixelFormat::Alpha8:
         return DXGI_FORMAT_A8_UNORM;
     case PixelFormat::RGB24:
         return DXGI_FORMAT_UNKNOWN;
     case PixelFormat::RGBA32:
-        return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+        return is_sRGB ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
     case PixelFormat::RGB_Float:
         return DXGI_FORMAT_R32G32B32_FLOAT;
     case PixelFormat::RGBA_Float:
@@ -112,9 +115,9 @@ inline DXGI_FORMAT to_DX_format(PixelFormat format) {
     }
 }
 
-inline unsigned char* rgb24_to_rgba32(unsigned char* pixels, int pixel_count) {
-    unsigned char* new_pixels = new unsigned char[pixel_count * 4];
-    unsigned char* pixel_end = pixels + pixel_count * 3;
+inline byte* rgb24_to_rgba32(byte* pixels, int pixel_count) {
+    byte* new_pixels = new byte[pixel_count * 4];
+    byte* pixel_end = pixels + pixel_count * 3;
     while (pixels < pixel_end) {
         *new_pixels++ = *pixels++;
         *new_pixels++ = *pixels++;
@@ -132,7 +135,7 @@ inline void fill_image(ID3D11Device1& device, ID3D11DeviceContext1& device_conte
     tex_desc.Height = image.get_height();
     tex_desc.MipLevels = image.get_mipmap_count();
     tex_desc.ArraySize = 1;
-    tex_desc.Format = to_DX_format(image.get_pixel_format());
+    tex_desc.Format = to_DX_format(image.get_pixel_format(), image.is_sRGB());
     tex_desc.SampleDesc.Count = 1;
     tex_desc.SampleDesc.Quality = 0;
     tex_desc.Usage = D3D11_USAGE_DEFAULT;
@@ -143,8 +146,8 @@ inline void fill_image(ID3D11Device1& device, ID3D11DeviceContext1& device_conte
 
     // RGB24 not supported. Instead convert it to RGBA32.
     if (image.get_pixel_format() == PixelFormat::RGB24) {
-        tex_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-        resource_data.pSysMem = rgb24_to_rgba32((unsigned char*)resource_data.pSysMem, image.get_pixel_count());
+        tex_desc.Format = image.is_sRGB() ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
+        resource_data.pSysMem = rgb24_to_rgba32((byte*)resource_data.pSysMem, image.get_pixel_count());
     }
 
     if (tex_desc.Format != DXGI_FORMAT_UNKNOWN) {
