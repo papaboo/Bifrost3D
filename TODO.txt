@@ -1,25 +1,21 @@
 BACKLOG:
 * Rough glass
- * Include tint in sampling probabilities
- * Can we use Bounded VNDF when the IOR is greater (or was it less) than 1.0? So cases where the refraction will cause more of the lobe to be occluded.
-  * Dump GGX useful/valid RNG values
  * Define how we should scale roughness of a surface underneath another rough surface.
   * Fixed coat roughness, binary search of underlying roughness that matches GGX * GGX
  * Handle thin walled transmissive material
   * Test!!
   * Should reflection only GGX handle total internal reflection? Will that mean that we'll always have to use the 3D rho LUT?
   * What about total internal reflection on smooth thinwalled surfaces? Isn't that basically just an energy dump as the angle between the normal and wo never changes?
-  * Thin walled materials should not refract, effectively only tinting the transmission by the base color.
   * Does that amount to just squaring alpha, squaring tint, and disabling refraction / IOR of 1?
   * Thinwalled transmissive smooth materials can tint the anyhit. But remember to take the previous BSDF PDF into account
   * Should support cutout (Kalestra as glass)
- * How can we ensure that refractions handle bidirectional renderers? PBRT does it by tracing 'importance' or radiance. I think I'd prefer to just differentiate on samping wo or wi.
-  * The current implementation samples wi from wo, but internally it acts as if wo is wi. See both the reflectance scaling and refract(...) expects the incident light direction.
-  * See PBRT section 16.1. Apparently light rays need to be scaled, but not view rays.
  * Add support for local refraction in the coat in default shading. Can we do it by defining a constant offset to all rays? cosTheta for the base surface needs to be updated as well.
  * Approximate rough glass in DX11 using a gaussian filter, see Doom 2016.
   * Implement transmissive material with energy conservation.
   * Possibly expand with OIT using moments, as transparency is a PITA https://momentsingraphics.de/MissingTMBOITCode.html
+* Upgrade OptiX to get better denoiser
+ * sea_keep_lonely_watcher shows bright artifacts on transparent geometry. They seem to come from the anyhit programs not always intersecting all geometry, but stopping after the first nearest intersections.
+ * Implement statistical denoiser as https://dl.acm.org/doi/pdf/10.1145/3680528.3687591
 * Improving shadow terminator
  * Reflections: Hacking the shadow terminator https://jo.dreggn.org/home/2021_terminator.pdf
  * Refractions: Taming the shadow terminator https://www.yiningkarlli.com/projects/shadowterminator.html
@@ -33,19 +29,11 @@ BACKLOG:
 * Bugs
  * SimpleViewer can't switch between rasterizer and ray tracer using P after alt tabbing. Windows input seems to be recorded correctly, but the keyboard state is wrong. Perhaps a clear/reinitialize is in order?
  * Simpleviewers picture in picture's height/depth ratio doesn't update when the viewport updates
- * Environment map has different intensities in DX and OptiX. See --environment-map "C:\Users\Asger Hoedt\Development\data\textures\spheremaps\3DTotal_free_sample_1_Bg.jpg"
-  * It could be the R11G11B10 encoding. We can try RGBM instead and then GGX convolution should be done at full precision and the mipmaps converted to RGBM afterwards to preserve intensity during convolution.
- * Light sampling:
-  * Ryde scene has intense fire flies from environment sampling even when using a diffuse material.
-  * gltf jaw shows weird shadow artifacts when adding a second light source.
 * Bump mapping
  * Create test scene with a plane where one side has proper micro geometry and the other is normal mapped.
  * Use Microfacet-based Normal Mapping for Robust Monte Carlo Path Tracing to solve the energy preservation issue.
  * Or simply negate the part of the shading hemisphere that disagrees with the geometric normal to make a complete hemisphere.
   * That should preserve abs(cos(theta)) as well, so not affect variance adversely
-* Upgrade OptiX to get better denoiser
- * sea_keep_lonely_watcher shows bright artifacts on transparent geometry. They seem to come from the anyhit programs not always intersecting all geometry, but stopping after the first nearest intersections.
- * Implement statistical denoiser as https://dl.acm.org/doi/pdf/10.1145/3680528.3687591
 * Linearly transformed cosine area lights, and set up tests to verify that it works.
  * https://blog.selfshadow.com/publications/s2017-shading-course/heitz/s2017_pbs_ltc_lines_disks.pdf
  * Additional light types. Square, tube, ring, ... The ring light should be the reflectance of the outer disk minus the reflectance of the inner disk.
@@ -75,6 +63,10 @@ BACKLOG:
  * PBRTs random morton code seed looks pretty simple (and I do love a good morton code)
   * Make ZSobolSampler 'progressive' with fixed 256 sample offset in between the pixels.
  * Heitz and Georgiev blue noise screen space seed scheme.
+* Photon mapping
+ * How can we ensure that refractions handle bidirectional renderers? PBRT does it by tracing 'importance' or radiance. I think I'd prefer to just differentiate on samping wo or wi.
+  * The current implementation samples wi from wo, but internally it acts as if wo is wi. See both the reflectance scaling and refract(...) expects the incident light direction.
+  * See PBRT section 16.1. Apparently light rays need to be scaled, but not view rays.
 * SDF shadows - check UE4
  * http://kunzhou.net/2013/fur-rendering-tvcg.pdf
  * RTSDF: Real-time Signed Distance Fields for Soft Shadow Approximation in Games
