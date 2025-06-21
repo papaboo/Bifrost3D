@@ -226,13 +226,13 @@ Image extract_channel(Image image, int channel, ImageUsage usage, const std::str
 }
 
 Image extract_tint_roughness(Image tint_image, Image roughness_image, const std::string& name, ImageCache& converted_images) {
+    // Return tint_image if the roughness image doesn't exist and the tint image doesn't contain an alpha channel.
+    if (!roughness_image.exists() && !has_alpha(tint_image.get_pixel_format()))
+        return tint_image;
+
     // Handle case where tint doesn't exist.
     if (!tint_image.exists())
         return extract_channel(roughness_image, 1, ImageUsage::Roughness, name, converted_images);
-
-    // Return tint_image if it has three channels and roughness image doesn't exist.
-    if (!roughness_image.exists() && channel_count(tint_image.get_pixel_format()) == 3)
-        return tint_image;
 
     auto tint_roughness_image_hash = hash_converted_image(tint_image, roughness_image, ImageUsage::Tint_roughness);
     auto& converted_image_itr = converted_images.find(tint_roughness_image_hash);
