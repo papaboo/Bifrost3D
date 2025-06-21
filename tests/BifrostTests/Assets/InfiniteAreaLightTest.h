@@ -32,11 +32,11 @@ protected:
 };
 
 TEST_F(Assets_InfiniteAreaLight, consistent_PDF_and_evaluate) {
-    Image image = Image::create2D("Noisy", PixelFormat::Alpha8, false, Math::Vector2ui(4, 4));
+    Image image = Image::create2D("Noisy", PixelFormat::Intensity8, false, Math::Vector2ui(4, 4));
 
-    unsigned char f[] = { 0, 5, 0, 3, 1, 2, 1, 4, 3, 7, 5, 1, 9, 4, 1, 1 };
+    byte f[] = { 0, 5, 0, 3, 1, 2, 1, 4, 3, 7, 5, 1, 9, 4, 1, 1 };
 
-    unsigned char* pixels = image.get_pixels<unsigned char>();
+    byte* pixels = image.get_pixels<byte>();
     std::memcpy(pixels, f, image.get_pixel_count());
 
     Texture latlong = Texture::create2D(image, MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
@@ -51,9 +51,9 @@ TEST_F(Assets_InfiniteAreaLight, consistent_PDF_and_evaluate) {
 }
 
 TEST_F(Assets_InfiniteAreaLight, diffuse_integrates_to_white) {
-    Image image = Image::create2D("White", PixelFormat::Alpha8, true, Math::Vector2ui(512, 256));
+    Image image = Image::create2D("White", PixelFormat::Intensity8, false, Math::Vector2ui(512, 256));
 
-    unsigned char* pixels = image.get_pixels<unsigned char>();
+    byte* pixels = image.get_pixels<byte>();
     std::fill(pixels, pixels + image.get_pixel_count(), 255);
 
     Texture latlong = Texture::create2D(image, MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
