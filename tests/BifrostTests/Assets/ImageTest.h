@@ -158,7 +158,7 @@ TEST_F(Assets_Images, create_and_clear) {
     using namespace Bifrost::Math;
 
     auto test_format = [](PixelFormat format, RGBA default_clear_color, RGBA specific_clear_color) {
-        Image image = Image::create2D("Test image", format, true, Math::Vector2ui(4, 4), 2);
+        Image image = Image::create2D("Test image", format, false, Math::Vector2ui(4, 4), 2);
 
         auto test_pixels = [=](RGBA test_color) {
             RGBA pixel0 = image.get_pixel(Vector2ui(2, 2), 0);
@@ -182,13 +182,13 @@ TEST_F(Assets_Images, create_and_clear) {
     };
 
     float nan = nanf("");
-    // test_format(PixelFormat::Alpha8, RGBA(nan, nan, nan, 0), RGBA(nan, nan, nan, 1));
-    // test_format(PixelFormat::Intensity8, RGBA(0, 0, 0, 1), RGBA(1, 1, 1, 1));
-    // test_format(PixelFormat::RGB24, RGBA(0, 0, 0, 1), RGBA(0, 1, 0, 1));
+    test_format(PixelFormat::Alpha8, RGBA(nan, nan, nan, 0), RGBA(nan, nan, nan, 1));
+    test_format(PixelFormat::Intensity8, RGBA(0, 0, 0, 1), RGBA(1, 1, 1, 1));
+    test_format(PixelFormat::RGB24, RGBA(0, 0, 0, 1), RGBA(0, 1, 0, 1));
     test_format(PixelFormat::RGBA32, RGBA(0, 0, 0, 0), RGBA(1, 0, 0, 1));
-    // test_format(PixelFormat::Intensity_Float, RGBA(0, 0, 0, 1), RGBA(1, 1, 1, 1));
-    // test_format(PixelFormat::RGB_Float, RGBA(0, 0, 0, 1), RGBA(0.0f, 0.5f, 1, 1));
-    // test_format(PixelFormat::RGBA_Float, RGBA(0, 0, 0, 0), RGBA(0.0f, 0.5f, 0.75f, 1.0f));
+    test_format(PixelFormat::Intensity_Float, RGBA(0, 0, 0, 1), RGBA(1, 1, 1, 1));
+    test_format(PixelFormat::RGB_Float, RGBA(0, 0, 0, 1), RGBA(0.0f, 0.5f, 1, 1));
+    test_format(PixelFormat::RGBA_Float, RGBA(0, 0, 0, 0), RGBA(0.0f, 0.5f, 0.75f, 1.0f));
 }
 
 TEST_F(Assets_Images, create_and_change) {
