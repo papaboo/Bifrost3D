@@ -187,17 +187,20 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                         { // Light samples.
                             const unsigned int light_sample_count = 2048;
 
+                            Vector2f* light_rng_samples = new Vector2f[light_sample_count];
+                            RNG::fill_progressive_multijittered_bluenoise_samples(light_rng_samples, light_rng_samples + light_sample_count);
+
+                            LightSample* light_samples = new LightSample[light_sample_count];
+                            #pragma omp parallel for schedule(dynamic, 16)
+                            for (int i = 0; i < light_sample_count; ++i)
+                                light_samples[i] = light.sample(light_rng_samples[i]);
+
                             D3D11_BUFFER_DESC sample_buffer_desc = {};
                             sample_buffer_desc.Usage = D3D11_USAGE_IMMUTABLE;
                             sample_buffer_desc.ByteWidth = sizeof(LightSample) * light_sample_count;
                             sample_buffer_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
                             sample_buffer_desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
                             sample_buffer_desc.StructureByteStride = sizeof(LightSample);
-
-                            LightSample* light_samples = new LightSample[light_sample_count];
-                            #pragma omp parallel for schedule(dynamic, 16)
-                            for (int i = 0; i < light_sample_count; ++i)
-                                light_samples[i] = light.sample(RNG::sample02(i));
 
                             D3D11_SUBRESOURCE_DATA sample_resource_data = {};
                             sample_resource_data.pSysMem = light_samples;
@@ -206,6 +209,7 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                             THROW_DX11_ERROR(device.CreateBuffer(&sample_buffer_desc, &sample_resource_data, &light_samples_buffer));
 
                             delete[] light_samples;
+                            delete[] light_rng_samples;
 
                             THROW_DX11_ERROR(device.CreateShaderResourceView(light_samples_buffer, nullptr, &light_samples_SRV));
                         }
