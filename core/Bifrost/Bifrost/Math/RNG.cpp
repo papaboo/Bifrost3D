@@ -19,7 +19,7 @@ namespace RNG {
 // Generate progressive multi-jittered samples with a blue noise approximation.
 // Progressive Multi-Jittered Sample Sequences - Supplemental materials, Christensen et al., 2018
 // http://graphics.pixar.com/library/ProgressiveMultiJitteredSampling/pmj_suppl.pdf.
-// The nearest neighbour search is implemented by searcing nearby strata for their random samples.
+// The nearest neighbour search is implemented by searching nearby strata for their random samples.
 // ------------------------------------------------------------------------------------------------
 void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, Vector2f* samples_end, unsigned int blue_noise_samples) {
     unsigned int total_sample_count = unsigned int(samples_end - samples_begin);
