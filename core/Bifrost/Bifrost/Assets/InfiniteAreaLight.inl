@@ -115,16 +115,26 @@ inline void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, 
     using namespace Bifrost::Math;
     using namespace Bifrost::Math::Distributions;
 
-    int max_sample_count = 0;
+    int max_requested_sample_count = 0;
     for (IBLConvolution<T>* itr = begin; itr != end; ++itr)
-        max_sample_count = max(max_sample_count, itr->sample_count);
+        max_requested_sample_count = max(max_requested_sample_count, itr->sample_count);
+
+    unsigned int light_sample_count = 4 * max_requested_sample_count;
+    unsigned int max_ggx_sample_count = 4 * max_requested_sample_count;
+
+    // Precompute blue noise random samples.
+    unsigned int max_sample_count = max(light_sample_count, max_ggx_sample_count);
+    Math::Vector2f* rng_samples = new Math::Vector2f[max_sample_count];
+    Math::RNG::fill_progressive_multijittered_bluenoise_samples(rng_samples, rng_samples + max_sample_count);
 
     // Precompute light samples.
-    std::vector<LightSample> light_samples = std::vector<LightSample>();
-    light_samples.resize(max_sample_count * 4);
+    LightSample* light_samples = new LightSample[light_sample_count];
     #pragma omp parallel for schedule(dynamic, 16)
-    for (int s = 0; s < light_samples.size(); ++s)
-        light_samples[s] = light.sample(RNG::sample02(s));
+    for (int s = 0; s < int(light_sample_count); ++s)
+        light_samples[s] = light.sample(rng_samples[s]);
+
+    // Preallocate GGX samples.
+    GGX::Sample* ggx_samples = new GGX::Sample[max_ggx_sample_count];
 
     for (; begin != end; ++begin) {
 
@@ -143,11 +153,10 @@ inline void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, 
             continue;
         }
 
-        std::vector<GGX::Sample> ggx_samples = std::vector<GGX::Sample>();
-        ggx_samples.resize(begin->sample_count * 4);
+        unsigned int ggx_sample_count = 4 * begin->sample_count;
         #pragma omp parallel for schedule(dynamic, 16)
-        for (int s = 0; s < ggx_samples.size(); ++s)
-            ggx_samples[s] = GGX::sample(alpha, RNG::sample02(s));
+        for (int s = 0; s < int(ggx_sample_count); ++s)
+            ggx_samples[s] = GGX::sample(alpha, rng_samples[s]);
 
         #pragma omp parallel for schedule(dynamic, 16)
         for (int i = 0; i < width * height; ++i) {
@@ -159,11 +168,11 @@ inline void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, 
             Vector3f up_vector = latlong_texcoord_to_direction(up_uv);
             Quaternionf up_rotation = Quaternionf::look_in(up_vector);
 
-            RGB radiance = RGB::black();
-
-            int light_sample_count = begin->sample_count / 2;
-            for (int s = 0; s < begin->sample_count / 2; ++s) {
-                const LightSample& sample = light_samples[(s + RNG::teschner_hash(x, y)) % light_samples.size()];
+            unsigned int light_sample_count = begin->sample_count / 2;
+            unsigned int light_sample_offset = RNG::teschner_hash(x, y);
+            RGB light_radiance = RGB::black();
+            for (unsigned int s = 0; s < light_sample_count; ++s) {
+                const LightSample& sample = light_samples[(s + light_sample_offset) % light_sample_count];
                 if (sample.PDF < 0.000000001f)
                     continue;
 
@@ -174,25 +183,32 @@ inline void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, 
                     continue;
 
                 float mis_weight = RNG::power_heuristic(sample.PDF, ggx_PDF);
-                radiance += sample.radiance * (mis_weight * ggx_f * cos_theta / sample.PDF);
+                light_radiance += sample.radiance * (mis_weight * ggx_f * cos_theta / sample.PDF);
             }
+            light_radiance /= float(light_sample_count);
 
-            int bsdf_sample_count = begin->sample_count - light_sample_count;
-            for (int s = 0; s < bsdf_sample_count; ++s) {
-                GGX::Sample sample = ggx_samples[(s + RNG::teschner_hash(x, y, 1)) % ggx_samples.size()];
+            unsigned int ggx_sample_count = begin->sample_count - light_sample_count;
+            unsigned int ggx_sample_offset = RNG::teschner_hash(x, y, 1);
+            RGB ggx_radiance = RGB::black();
+            for (unsigned int s = 0; s < ggx_sample_count; ++s) {
+                GGX::Sample sample = ggx_samples[(s + ggx_sample_offset) % ggx_sample_count];
                 if (sample.PDF < 0.000000001f)
                     continue;
 
                 sample.direction = normalize(up_rotation * sample.direction);
                 float mis_weight = RNG::power_heuristic(sample.PDF, light.PDF(sample.direction));
-                radiance += light.evaluate(sample.direction) * mis_weight;
+                ggx_radiance += light.evaluate(sample.direction) * mis_weight;
             }
+            ggx_radiance /= float(ggx_sample_count);
 
-            // Account for the samples being split evenly between BSDF and light.
-            radiance *= 2.0f;
-            begin->Pixels[x + y * width] = color_conversion(radiance / float(begin->sample_count));
+            RGB radiance = ggx_radiance + light_radiance;
+            begin->Pixels[x + y * width] = color_conversion(radiance);
         }
     }
+
+    delete[] ggx_samples;
+    delete[] light_samples;
+    delete[] rng_samples;
 }
 
 inline void reconstruct_solid_angle_PDF_sans_sin_theta(const InfiniteAreaLight& light, float* per_pixel_PDF) {
