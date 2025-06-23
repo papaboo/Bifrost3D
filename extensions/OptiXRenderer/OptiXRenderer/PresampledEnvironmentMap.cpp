@@ -24,9 +24,8 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Asset
     // Check if we should disable importance sampling.
     // To avoid too much branching in the shaders, a presampled environment with 
     // importance sampling disabled only contains a single invalid sample.
-    bool is_tiny_image = (width * height) < (64 * 32);
     bool is_dark_image = light.image_integral() < 0.00001f;
-    bool disable_importance_sampling = is_tiny_image || is_dark_image || sample_count == 0;
+    bool disable_importance_sampling = is_dark_image || sample_count == 0;
 
     { // Per pixel PDF sampler.
         optix::Buffer per_pixel_PDF_buffer;
