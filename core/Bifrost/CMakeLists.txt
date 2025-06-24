@@ -2,7 +2,7 @@ SET(ASSETS_SRCS
   Bifrost/Assets/Image.h
   Bifrost/Assets/Image.cpp
   Bifrost/Assets/InfiniteAreaLight.h
-  Bifrost/Assets/InfiniteAreaLight.inl
+  Bifrost/Assets/InfiniteAreaLight.cpp
   Bifrost/Assets/Material.h
   Bifrost/Assets/Material.cpp
   Bifrost/Assets/Mesh.h

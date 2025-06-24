@@ -238,8 +238,8 @@ struct EnvironmentLight {
     unsigned short tint_y; // Tint stored as fixedpoint
     unsigned short tint_z; // Tint stored as fixedpoint
     unsigned short __padding; // Tint stored as fixedpoint
-    unsigned short width;
-    unsigned short height;
+    unsigned short PDF_width;
+    unsigned short PDF_height;
 
     __inline_all__ static EnvironmentLight empty(optix::float3 tint) {
         EnvironmentLight light = {};

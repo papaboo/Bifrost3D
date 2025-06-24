@@ -19,7 +19,7 @@ namespace OptiXRenderer {
 PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Assets::InfiniteAreaLight& light, optix::float3 tint,
                                                    TextureSampler environment_sampler, unsigned int sample_count) {
 
-    int width = light.get_width(), height = light.get_height();
+    int PDF_width = light.get_PDF_width(), PDF_height = light.get_PDF_height();
 
     // Check if we should disable importance sampling.
     // To avoid too much branching in the shaders, a presampled environment with 
@@ -35,7 +35,7 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Asset
             per_pixel_PDF_data[0] = 0.0f;
             per_pixel_PDF_buffer->unmap();
         } else {
-            per_pixel_PDF_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, width, height);
+            per_pixel_PDF_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT, PDF_width, PDF_height);
             float* per_pixel_PDF_data = static_cast<float*>(per_pixel_PDF_buffer->map());
             Assets::InfiniteAreaLightUtils::reconstruct_solid_angle_PDF_sans_sin_theta(light, per_pixel_PDF_data);
             per_pixel_PDF_buffer->unmap();
@@ -50,7 +50,7 @@ PresampledEnvironmentMap::PresampledEnvironmentMap(Context& context, const Asset
         m_per_pixel_PDF->setMipLevelCount(1u);
         m_per_pixel_PDF->setFilteringModes(RT_FILTER_NEAREST, RT_FILTER_NEAREST, RT_FILTER_NONE);
         m_per_pixel_PDF->setArraySize(1u);
-        m_per_pixel_PDF->setBuffer(0u, 0u, per_pixel_PDF_buffer);
+        m_per_pixel_PDF->setBuffer(per_pixel_PDF_buffer);
         OPTIX_VALIDATE(m_per_pixel_PDF);
     }
 

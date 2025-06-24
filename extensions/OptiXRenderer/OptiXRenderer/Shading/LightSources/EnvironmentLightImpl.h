@@ -26,7 +26,7 @@ __inline_dev__ optix::float2 sample_CDFs_for_uv(const EnvironmentLight& light, o
     int conditional_row = 0;
     { // Binary search the marginal CDF for the sampled row.
         int lowerbound = 0;
-        int upperbound = light.height; // The CDFs are one unit larger pr dimension than the environment image, hence no -1 is needed.
+        int upperbound = light.PDF_height; // The CDFs are one unit larger per dimension than the environment image, hence no -1 is needed.
         while (lowerbound + 1 != upperbound) {
             int middlebound = (lowerbound + upperbound) / 2;
             float cdf = rtTex1D<float>(light.marginal_CDF_ID, middlebound);
@@ -41,12 +41,12 @@ __inline_dev__ optix::float2 sample_CDFs_for_uv(const EnvironmentLight& light, o
         float cdf_at_lowerbound = rtTex1D<float>(light.marginal_CDF_ID, lowerbound);
         float dv = random_sample.y - cdf_at_lowerbound;
         dv /= rtTex1D<float>(light.marginal_CDF_ID, lowerbound + 1) - cdf_at_lowerbound;
-        uv.y = (lowerbound + dv) / float(light.height);
+        uv.y = (lowerbound + dv) / float(light.PDF_height);
     }
 
     { // Binary search the row of the conditional CDF for the sampled texel.
         int lowerbound = 0;
-        int upperbound = light.width; // The CDFs are one unit larger pr dimension than the environment image, hence no -1 is needed.
+        int upperbound = light.PDF_width; // The CDFs are one unit larger pr dimension than the environment image, hence no -1 is needed.
         while (lowerbound + 1 != upperbound) {
             int middlebound = (lowerbound + upperbound) / 2;
             float cdf = rtTex2D<float>(light.conditional_CDF_ID, middlebound, conditional_row);
@@ -60,7 +60,7 @@ __inline_dev__ optix::float2 sample_CDFs_for_uv(const EnvironmentLight& light, o
         float cdf_at_lowerbound = rtTex2D<float>(light.conditional_CDF_ID, lowerbound, conditional_row);
         float du = random_sample.x - cdf_at_lowerbound;
         du /= rtTex2D<float>(light.conditional_CDF_ID, lowerbound + 1, conditional_row) - cdf_at_lowerbound;
-        uv.x = (lowerbound + du) / float(light.width);
+        uv.x = (lowerbound + du) / float(light.PDF_width);
     }
 
     return uv;
