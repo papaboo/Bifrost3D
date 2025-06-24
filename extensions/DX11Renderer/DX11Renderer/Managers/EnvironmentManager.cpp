@@ -176,10 +176,12 @@ void EnvironmentManager::handle_updates(ID3D11Device1& device, ID3D11DeviceConte
                     {
                         { // Per pixel PDF.
 
-                            float* per_pixel_PDF_data = new float[light.get_width() * light.get_height()];
+                            unsigned int PDF_width = light.get_PDF_width();
+                            unsigned int PDF_height = light.get_PDF_height();
+                            float* per_pixel_PDF_data = new float[PDF_width * PDF_height];
                             InfiniteAreaLightUtils::reconstruct_solid_angle_PDF_sans_sin_theta(light, per_pixel_PDF_data);
 
-                            create_texture_2D(device, DXGI_FORMAT_R32_FLOAT, per_pixel_PDF_data, light.get_width(), light.get_height(), D3D11_USAGE_IMMUTABLE, &per_pixel_PDF_SRV);
+                            create_texture_2D(device, DXGI_FORMAT_R32_FLOAT, per_pixel_PDF_data, PDF_width, PDF_height, D3D11_USAGE_IMMUTABLE, &per_pixel_PDF_SRV);
 
                             delete[] per_pixel_PDF_data;
                         }
