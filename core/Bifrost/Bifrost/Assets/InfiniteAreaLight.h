@@ -49,6 +49,10 @@ public:
     // Constructor.
     //*********************************************************************************************
     explicit InfiniteAreaLight(Texture latlong);
+    InfiniteAreaLight(InfiniteAreaLight& other) = delete;
+    InfiniteAreaLight(InfiniteAreaLight&& other) = default;
+    InfiniteAreaLight& operator=(InfiniteAreaLight& rhs) = delete;
+    InfiniteAreaLight& operator=(InfiniteAreaLight&& rhs) = default;
 
     //*********************************************************************************************
     // Getters.
