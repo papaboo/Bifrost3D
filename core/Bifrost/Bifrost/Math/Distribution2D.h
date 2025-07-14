@@ -59,6 +59,8 @@ public:
             m_conditional_CDF[i] = T(other.get_conditional_CDF()[i]);
     }
 
+    Distribution2D(Distribution2D<T>&& other) = default;
+
     ~Distribution2D() {
         delete[] m_marginal_CDF;
         delete[] m_conditional_CDF;
