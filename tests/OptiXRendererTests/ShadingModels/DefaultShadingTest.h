@@ -200,7 +200,7 @@ GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation
     using namespace optix;
 
     // Test albedo is properly estimated.
-    static auto test_albedo = [](float3 wo, float roughness, float metallic, float coat = 0.0f, float coat_roughness = 0.0f) {
+    static auto test_albedo = [](float3 wo, float roughness, float metallic, float coat, float coat_roughness) {
         Material material_params = {};
         material_params.tint = make_float3(1.0f, 1.0f, 1.0f);
         material_params.roughness = roughness;
@@ -350,20 +350,21 @@ Shading::ShadingModels::DefaultShading generate_interpolated_coated_material(Mat
 // the linear interpolation property of the coat, but that is how the material is defined.
 // A coated material and a non-coated material can still be linearly interpolated,
 // if we ensure that they both have the same roughness after being created.
+// The specularity of the base material will be affected by the coat, as the base is now viewed through a coat instead of air.
+// This means that interpolated rho values are not exact, but the difference is expected
+// and expressed as an acceptable deviation in final rho values.
 GTEST_TEST(DefaultShadingModel, coat_interpolation) {
     using namespace Shading::ShadingModels;
     using namespace optix;
 
-    Material material_params = ShadingModelTestUtils::plastic_parameters();
-    material_params.roughness = 0.85f;
-    float original_roughness = material_params.roughness;
-
     for (float coat_roughness : { 0.0f, 0.5f, 1.0f }) {
-        material_params.coat_roughness = coat_roughness;
         for (float cos_theta : { 0.2f, 0.4f, 0.6f, 0.8f, 1.0f }) {
+            Material material_params = ShadingModelTestUtils::plastic_parameters();
             material_params.coat = 1;
-            material_params.roughness = original_roughness;
+            material_params.coat_roughness = coat_roughness;
+
             auto coated_material = DefaultShading(material_params, cos_theta);
+            float coated_specularity = coated_material.get_specularity().x;
             float3 coated_rho = coated_material.rho(cos_theta);
 
             // Verify that material roughness is lower when the coat isn't perfectly smooth.
@@ -373,24 +374,31 @@ GTEST_TEST(DefaultShadingModel, coat_interpolation) {
             material_params.coat = 0;
             material_params.roughness = coated_material.get_roughness();
             auto non_coated_material = DefaultShading(material_params, cos_theta);
+            float non_coated_specularity = non_coated_material.get_specularity().x;
             float3 non_coated_rho = non_coated_material.rho(cos_theta);
 
             // Verify that the two materials have the same roughness.
-            EXPECT_FLOAT_EQ_EPS(non_coated_material.get_roughness(), coated_material.get_roughness(), 1e-6f);
+            EXPECT_FLOAT_EQ(non_coated_material.get_roughness(), coated_material.get_roughness());
 
             for (float coat : { 0.25f, 0.5f, 0.75f }) {
                 // Generate a material with a partial coat that has the same roughness as the coated material.
                 material_params.coat = coat;
                 auto material = generate_interpolated_coated_material(material_params, cos_theta, coated_material.get_roughness());
-                float3 rho = material.rho(cos_theta);
+                float interpolated_specularity = material.get_specularity().x;
+                float3 interpolated_rho = material.rho(cos_theta);
 
                 // Verify that the two materials have the same roughness.
                 EXPECT_FLOAT_EQ_EPS(material.get_roughness(), coated_material.get_roughness(), 1e-6f);
 
+                // Verify that the interpolated materials specularity is bounded by the coated and non-coated specularity.
+                EXPECT_LE(interpolated_specularity, non_coated_specularity);
+                EXPECT_GE(interpolated_specularity, coated_specularity);
+
                 // Test that the directional-hemispherical reflectance of the semi-coated material equals
                 // the one evaluated by interpolating between a material with no coat and coated material.
-                float3 interpolated_rho = lerp(non_coated_rho, coated_rho, coat);
-                EXPECT_FLOAT3_EQ_EPS(interpolated_rho, rho, 1e-6f);
+                float acceptable_pct_deviation = 0.01f;
+                float3 expected_rho = lerp(non_coated_rho, coated_rho, coat);
+                EXPECT_FLOAT3_EQ_PCT(expected_rho, interpolated_rho, acceptable_pct_deviation);
             }
         }
     }
@@ -415,9 +423,9 @@ GTEST_TEST(DefaultShadingModel, regression_test) {
         { 0.012840f, 0.122771f, 0.14915f, 0.034218f }, { 0.011330f, 0.121562f, 0.14802f, 0.254778f },
         { 0.051809f, 0.085369f, 0.09342f, 0.286622f }, { 0.013969f, 0.145090f, 0.17656f, 0.218950f },
         // Coated plastic
-        { 0.025882f, 0.085914f, 0.10032f, 0.021608f }, { 0.024285f, 0.101100f, 0.11954f, 0.227178f },
-        { 0.024037f, 0.134924f, 0.16154f, 0.042118f }, { 0.018326f, 0.129946f, 0.15673f, 0.237763f },
-        { 0.087775f, 0.111903f, 0.11769f, 0.288118f }, { 0.022880f, 0.158369f, 0.19089f, 0.209116f }, };
+        { 0.019427f, 0.080461f, 0.09511f, 0.016557f }, { 0.019548f, 0.097645f, 0.11639f, 0.229655f },
+        { 0.018394f, 0.131132f, 0.15819f, 0.039832f }, { 0.014879f, 0.128362f, 0.15560f, 0.244286f },
+        { 0.082712f, 0.107243f, 0.11313f, 0.288642f }, { 0.019216f, 0.156968f, 0.19003f, 0.210914f } };
 
     int response_index = 0;
     for (int i = 0; i < 3; ++i)

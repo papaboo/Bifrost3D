@@ -37,6 +37,7 @@ namespace ShadingModels {
 // * Reintroduce the Helmholtz reciprocity. See Revisiting Physically Based Shading at Imageworks for scale by precomputed rho.
 // ---------------------------------------------------------------------------
 #define COAT_SPECULARITY 0.04f
+#define COAT_IOR 1.5f
 #define USHORT_MAX 65535.0f
 
 class DefaultShading {
@@ -72,9 +73,36 @@ private:
 
         float abs_cos_theta_o = abs(cos_theta_o);
 
-        // Adjust specular reflection roughness
-        float coat_modulated_roughness = modulate_roughness_under_coat(roughness, coat_roughness);
-        m_roughness = lerp(roughness, coat_modulated_roughness, coat_scale);
+        m_roughness = roughness;
+        float3 conductor_specularity = tint;
+
+        // Adjust parameters if coat is enabled.
+        if (coat_scale > 0) {
+            // Adjust specular reflection roughness
+            float coat_modulated_roughness = modulate_roughness_under_coat(roughness, coat_roughness);
+            m_roughness = lerp(roughness, coat_modulated_roughness, coat_scale);
+
+            // Adjust base material specularity if coat is enabled
+            // The specularity can become NaN if the input specularity is white, which is physically impossible, but doable in the data model.
+            if (dielectric_specularity < 1.0f) {
+                float coated_dielectric_specularity = adjust_dielectric_specularity_to_exterior_medium(COAT_IOR, dielectric_specularity);
+                dielectric_specularity = lerp(dielectric_specularity, coated_dielectric_specularity, coat_scale);
+            }
+
+            if (metallic > 0) {
+                // Not all extinction coefficients are valid for all specularities and some combinations will result in NANs in the adjusted specularity.
+                // To avoid these issues we use zero extinction, which results in the same adjustment as to dielectric specularity.
+                float3 metal_extinction_coefficient = optix::make_float3(0, 0, 0);
+                float3 coated_conductor_specularity = adjust_conductor_specularity_to_exterior_medium({ COAT_IOR, COAT_IOR, COAT_IOR }, conductor_specularity, metal_extinction_coefficient);
+                conductor_specularity = lerp(conductor_specularity, coated_conductor_specularity, coat_scale);
+
+                // The specularity can become NaN if the input specularity is white, which is physically impossible, but doable in the data model.
+                // In this case we simply reset the specularity to 1.
+                conductor_specularity.x = isnan(conductor_specularity.x) ? 1.0f : conductor_specularity.x;
+                conductor_specularity.y = isnan(conductor_specularity.y) ? 1.0f : conductor_specularity.y;
+                conductor_specularity.z = isnan(conductor_specularity.z) ? 1.0f : conductor_specularity.z;
+            }
+        }
 
         // Dielectric material parameters
         float specular_alpha, dielectric_specular_transmission;
@@ -84,12 +112,10 @@ private:
 
         // Interpolate between dieletric and conductor parameters based on the metallic parameter.
         // Conductor diffuse component is black, so interpolation amounts to scaling.
-        float3 conductor_specularity = tint;
         m_specularity = lerp(make_float3(dielectric_specularity), conductor_specularity, metallic);
         m_diffuse_tint = dielectric_tint * (1.0f - metallic);
 
         // Setup clear coat
-        coat_rho = 0.0f;
         if (coat_scale > 0) {
             // Clear coat with fixed index of refraction of 1.5 / specularity of 0.04, representative of polyurethane and glass.
             float coat_transmission;
@@ -101,9 +127,9 @@ private:
             m_diffuse_tint *= coat_transmission;
         } else {
             // No coat
+            coat_rho = 0;
             m_coat_scale = 0;
             m_coat_alpha = 0;
-            m_coat_probability = 0;
         }
     }
 
@@ -156,6 +182,7 @@ public:
 
     __inline_all__ float get_roughness() const { return m_roughness; }
     __inline_all__ float get_specular_alpha() const { return BSDFs::GGX::alpha_from_roughness(m_roughness); }
+    __inline_all__ optix::float3 get_specularity() const { return m_specularity; }
 
     __inline_all__ float get_diffuse_probability() const { return 1.0f - (m_specular_probability + m_coat_probability) / USHORT_MAX; }
     __inline_all__ float get_specular_probability() const { return m_specular_probability / USHORT_MAX; }
