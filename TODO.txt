@@ -1,31 +1,42 @@
+* Precompute rough thin sheet reflectance. It's a 3D function
+ * Move integration to OptiXRenderer util
+ * Precompute reflection and transmission scaling coefficients
+* Disable refraction in thin-walled materials and 1 / ior^2 radiance correction (which should cancel out for thin sheets)
+ * Do it inside transmissive material first. Then we can generalize if we need to for default material
+ * Test that there is no refraction
+ * Disney uses 0.65 * relative_ior + 0.35 to scale the transmissive roughness (Extending the Disney BRDF to a BSDF with Integrated Subsurface Scattering, Burley et all, Figure 15)
+* Test!
+* Should support cutout (Kalestra as glass)
+
 BACKLOG:
-* Rough glass
- * Define how we should scale roughness of a surface underneath another rough surface.
-  * Fixed coat roughness, binary search of underlying roughness that matches GGX * GGX
- * Handle thin walled transmissive material
-  * Test!!
-  * Should reflection only GGX handle total internal reflection? Will that mean that we'll always have to use the 3D rho LUT?
-  * What about total internal reflection on smooth thinwalled surfaces? Isn't that basically just an energy dump as the angle between the normal and wo never changes?
-  * Does that amount to just squaring alpha, squaring tint, and disabling refraction / IOR of 1?
-  * Thinwalled transmissive smooth materials can tint the anyhit. But remember to take the previous BSDF PDF into account
-  * Should support cutout (Kalestra as glass)
- * Add support for local refraction in the coat in default shading. Can we do it by defining a constant offset to all rays? cosTheta for the base surface needs to be updated as well.
- * Approximate rough glass in DX11 using a gaussian filter, see Doom 2016.
-  * Implement transmissive material with energy conservation.
-  * Possibly expand with OIT using moments, as transparency is a PITA https://momentsingraphics.de/MissingTMBOITCode.html
+* Transmissive coat
+ * Implement a coated material integrater. Similar to the thin_sheet integrator and should support double sided materials ingrained in glass
+  * Coat tint is squareroot of actual tint (tint in and tint out)
+ * Test alpha that approximates double GGX distribution for the underlying surface
+  * Fit a spherical distribution or just take variance of the sampled directions
+ * Apply coat to both reflection and refraction when thinwalled, only reflection when non-thinwalled
+ * Test that coated evaluated rho matches sampled rho
+ * Validate sampling probabilities.
+* Apply darkening from total internal reflection to coated materials?
 * Upgrade OptiX to get better denoiser
  * sea_keep_lonely_watcher shows bright artifacts on transparent geometry. They seem to come from the anyhit programs not always intersecting all geometry, but stopping after the first nearest intersections.
  * Implement statistical denoiser as https://dl.acm.org/doi/pdf/10.1145/3680528.3687591
 * Improving shadow terminator
  * Reflections: Hacking the shadow terminator https://jo.dreggn.org/home/2021_terminator.pdf
  * Refractions: Taming the shadow terminator https://www.yiningkarlli.com/projects/shadowterminator.html
-* Integrate rough glass into DefaultShading
- * Integrate as coat + coat_t * ((GGX_R + GGX_T) + diffuse)? That way we keep all GGX terms in one place and can normalize them combined. Can be hard when GGX_T does total internal reflection with a scale.
- * See how gltf distinguishes between opacity, cutout and refracting. They should be orthogonal, as you can still have refracting perforated microgeometry. https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_transmission/README.md
-  * Cutout implies thinwalled and opacity is subpixel cutout, so does opacity < 1 imply thinwalled as well? Otherwise definining the medium that the light moves through gets 'tricky'
-* Support for absorption / Beers law. Add case to transmission test scene. Whisky in glass? (Cylinder inside glass)
- * Suppport for nested layers? Add (ice) cubes to the whisky. Make a tesselated box, bevel the edges and randomly offset the side vertices. Add air bubble inside the ice cubes.
- * See Yi's post on nested dielectrics and ordering
+* Rough glass
+ * Thinwalled transmissive smooth materials can tint the anyhit of next event estimations. But remember to take the previous BSDF PDF into account
+ * Add support for local refraction in the coat in default shading.
+ * Approximate rough glass in DX11 using a gaussian filter, see Doom 2016.
+  * Implement transmissive material with energy conservation.
+  * Possibly expand with OIT using moments, as transparency is a PITA https://momentsingraphics.de/MissingTMBOITCode.html
+ * Integrate rough glass into DefaultShading
+  * Integrate as coat + coat_t * ((GGX_R + GGX_T) + diffuse)? That way we keep all GGX terms in one place and can normalize them combined. Can be hard when GGX_T does total internal reflection with a scale.
+  * See how gltf distinguishes between opacity, cutout and refracting. They should be orthogonal, as you can still have refracting perforated microgeometry. https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_transmission/README.md
+   * Cutout implies thinwalled and opacity is subpixel cutout, so does opacity < 1 imply thinwalled as well? Otherwise definining the medium that the light moves through gets 'tricky'
+  * Support for absorption / Beers law. Add case to transmission test scene. Whisky in glass? (Cylinder inside glass)
+   * Suppport for nested layers? Add (ice) cubes to the whisky. Make a tesselated box, bevel the edges and randomly offset the side vertices. Add air bubble inside the ice cubes.
+   * See Yi's post on nested dielectrics and ordering
 * Bugs
  * SimpleViewer can't switch between rasterizer and ray tracer using P after alt tabbing. Windows input seems to be recorded correctly, but the keyboard state is wrong. Perhaps a clear/reinitialize is in order?
  * Simpleviewers picture in picture's height/depth ratio doesn't update when the viewport updates
@@ -34,10 +45,12 @@ BACKLOG:
  * Use Microfacet-based Normal Mapping for Robust Monte Carlo Path Tracing to solve the energy preservation issue.
  * Or simply negate the part of the shading hemisphere that disagrees with the geometric normal to make a complete hemisphere.
   * That should preserve abs(cos(theta)) as well, so not affect variance adversely
+ * Position-Normal Manifold for Efficient Glint Rendering on High-Resolution Normal Maps for efficient stable LOD / roughness under minimization.
 * Linearly transformed cosine area lights, and set up tests to verify that it works.
  * https://blog.selfshadow.com/publications/s2017-shading-course/heitz/s2017_pbs_ltc_lines_disks.pdf
  * Additional light types. Square, tube, ring, ... The ring light should be the reflectance of the outer disk minus the reflectance of the inner disk.
   * https://github.com/guiqi134/LTC-Area-Lights
+  * https://www.shadertoy.com/view/3dsBD4
 * Emissive meshes
  * Mirror glTF for starters. Emissive texture and emissive 'strength'
   * https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_emissive_strength/README.md
