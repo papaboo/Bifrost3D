@@ -22,6 +22,8 @@ namespace OptiXRenderer {
 // Constants
 //-----------------------------------------------------------------------------
 
+__constant_all__ float COAT_SPECULARITY = 0.04f;
+__constant_all__ float COAT_IOR = 1.5f;
 __constant_all__ float AIR_IOR = 1.0f;
 
 //-----------------------------------------------------------------------------
@@ -93,6 +95,11 @@ __inline_all__ float pow2(float x) {
 
 __inline_all__ optix::float3 pow2(optix::float3 x) {
     return x * x;
+}
+
+__inline_all__ float pow4(float x) {
+    float xx = x * x;
+    return xx * xx;
 }
 
 __inline_all__ float pow5(float x) {
@@ -301,10 +308,14 @@ __inline_all__ void compute_tangents(optix::float3 normal,
 }
 
 // Scales the roughness of a material placed underneath a rough coat layer.
-// This is done simulate how a wider lobe from the rough transmission would
+// This is done to simulate how a wider lobe from the rough transmission would
 // perceptually widen the specular lobe of the underlying material.
+// The implementation is based on equation 86 in the Roughening chapter of the OpenPBR course notes for Physically Based Shading 2025.
+// https://blog.selfshadow.com/publications/s2025-shading-course/
 __inline_all__ float modulate_roughness_under_coat(float base_roughness, float coat_roughness) {
-    return sqrt(1.0f - (1.0f - pow2(base_roughness)) * (1.0f - pow2(coat_roughness)));
+    float x_coat = 1 - AIR_IOR / COAT_IOR;
+    float adjusted_roughness4 = fminf(1, pow4(base_roughness) + 2.0f * x_coat * pow4(coat_roughness));
+    return pow(adjusted_roughness4, 0.25f);
 }
 
 // Offset ray origin along the geometric normal. Values should ideally be in world space.
