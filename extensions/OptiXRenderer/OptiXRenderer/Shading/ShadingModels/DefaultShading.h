@@ -36,8 +36,6 @@ namespace ShadingModels {
 // Future work:
 // * Reintroduce the Helmholtz reciprocity. See Revisiting Physically Based Shading at Imageworks for scale by precomputed rho.
 // ---------------------------------------------------------------------------
-#define COAT_SPECULARITY 0.04f
-#define COAT_IOR 1.5f
 #define USHORT_MAX 65535.0f
 
 class DefaultShading {
