@@ -16,6 +16,10 @@
 
 #include <cmath>
 
+namespace optix {
+__inline_all__ float3 make_float3(double3 v) { return make_float3(float(v.x), float(v.y), float(v.z)); }
+}
+
 namespace OptiXRenderer {
 
 //-----------------------------------------------------------------------------
