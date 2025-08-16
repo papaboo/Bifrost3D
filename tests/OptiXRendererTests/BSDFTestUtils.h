@@ -81,9 +81,9 @@ inline RhoResult directional_hemispherical_reflectance_function(BSDFModel bsdf_m
                                    (float)reflectance_statistics[1].standard_deviation(),
                                    (float)reflectance_statistics[2].standard_deviation() };
 
-    float3 direction = { float(summed_directions.x), float(summed_directions.y), float(summed_directions.z) };
+    float3 direction = normalize(make_float3(summed_directions));
 
-    return { mean_reflectance, reflectance_std_dev, normalize(direction) };
+    return { mean_reflectance, reflectance_std_dev, direction };
 }
 
 template <typename BSDFModel>
@@ -155,6 +155,71 @@ inline void PDF_positivity_test(BSDFModel bsdf_model, optix::float3 wo, unsigned
         if (!is_black(sample.reflectance))
             EXPECT_GT(sample.PDF.value(), 0.0f) << bsdf_model.to_string() << ", cos_theta: " << wo.z;
     }
+}
+
+struct ThinSheetThroughput {
+    optix::float3 reflected;
+    optix::float3 transmitted;
+};
+
+inline ThinSheetThroughput integrate_over_thin_sheet(std::function<BSDFSample(optix::float3 wo, optix::float3 random_sample)> bsdf_model_sampler,
+                                                     optix::float3 wo, unsigned int path_count, unsigned int bounce_count = 8u) {
+    using namespace optix;
+
+    double3 summed_reflection = { 0.0, 0.0, 0.0 };
+    double3 summed_transmission = { 0.0, 0.0, 0.0 };
+    for (unsigned int i = 0; i < path_count; ++i) {
+        // Keep track of the ray state. The ray is either entering, bouncing inside the thin sheet, or exited.
+        float3 throughput = { 1.0f, 1.0f, 1.0f };
+        float3 ray_wo = wo;
+        bool terminate_ray = false;
+        bool escaped_ray_is_reflection = false;
+
+        for (unsigned int bounce = 0; bounce < bounce_count && !terminate_ray; ++bounce) {
+
+            // First bounce is from air to the sheet. All other bounces are from inside the sheet towards air.
+            float hemisphere_sign = (bounce == 0) ? 1.0f : -1.0f;
+            ray_wo.z = hemisphere_sign * abs(ray_wo.z);
+
+            float4 rng_sample = RNG::PracticalScrambledSobol::sample4f(i, 0, bounce);
+            BSDFSample bsdf_sample = bsdf_model_sampler(ray_wo, make_float3(rng_sample));
+
+            if (bsdf_sample.PDF.is_valid())
+                throughput *= bsdf_sample.reflectance * abs(bsdf_sample.direction.z) / bsdf_sample.PDF.value(); // f * ||cos(theta)|| / pdf
+            else {
+                throughput = make_float3(0.0f);
+                terminate_ray = true;
+            }
+
+            // Terminate the ray if the first interaction is a reflection or if the ray is inside the sheet and transmits
+            bool is_inside = bounce > 0;
+            bool transmission_out_of_sheet = is_inside && sign(bsdf_sample.direction.z) != sign(ray_wo.z);
+            bool initial_reflection_event = bounce == 0 && bsdf_sample.direction.z >= 0.0f;
+            if (initial_reflection_event || transmission_out_of_sheet)
+                terminate_ray = true;
+
+            ray_wo = bsdf_sample.direction;
+
+            // As the ray is bouncing between the two surfaces of the sheet,
+            // odd bounces escape as a reflection and even bounces as a transmission.
+            escaped_ray_is_reflection = (bounce % 2) == 0;
+        }
+
+        if (escaped_ray_is_reflection) {
+            summed_reflection.x += throughput.x;
+            summed_reflection.y += throughput.y;
+            summed_reflection.z += throughput.z;
+        } else {
+            summed_transmission.x += throughput.x;
+            summed_transmission.y += throughput.y;
+            summed_transmission.z += throughput.z;
+        }
+    }
+
+    float3 reflected = make_float3(summed_reflection) / float(path_count);
+    float3 transmitted = make_float3(summed_transmission) / float(path_count);
+
+    return { reflected, transmitted };
 }
 
 inline float3 w_from_cos_theta(float cos_theta) {
