@@ -93,6 +93,54 @@ GTEST_TEST(ShadingModelUtils, GGX_minimum_roughness_edge_case_handling) {
     }
 }
 
+GTEST_TEST(ShadingModelUtils, lambertian_thin_sheet_reflects_all_energy) {
+    using namespace optix;
+
+    float3 tint = { 1.0f, 0.5f, 0.25f };
+    float3 black = { 0.0f, 0.0f, 0.0f };
+
+    auto lambertian_sampler = [=](float3 wo, float3 random_sample) -> BSDFSample {
+        return Shading::BSDFs::Lambert::sample(tint, optix::make_float2(random_sample));
+    };
+
+    float3 wo = { 0, 0, 1 };
+    unsigned int path_count = 2048;
+    auto throughput = BSDFTestUtils::integrate_over_thin_sheet(lambertian_sampler, wo, path_count);
+
+    EXPECT_FLOAT3_EQ(tint, throughput.reflected);
+    EXPECT_FLOAT3_EQ(black, throughput.transmitted);
+}
+
+GTEST_TEST(ShadingModelUtils, smooth_ggx_thin_sheet_reflects_according_to_specularity) {
+    using namespace optix;
+
+    float3 transmission_tint = { 1.0f, 1.0f, 1.0f };
+    float alpha = 0.0; // Smooth surface
+
+    for (float specularity : { 0.1f, 0.25f, 0.5f }) {
+        float medium_ior = dielectric_ior_from_specularity(specularity);
+
+        auto ggx_sampler = [=](float3 wo, float3 random_sample) -> BSDFSample {
+            bool entering = wo.z >= 0.0f;
+            float ior_o = entering ? 1.0f : medium_ior;
+            float ior_i = entering ? medium_ior : 1.0f;
+            float ior_i_over_o = ior_i / ior_o;
+
+            return Shading::BSDFs::GGX::sample(transmission_tint, alpha, specularity, ior_i_over_o, wo, random_sample);
+        };
+
+        float3 wo = { 0, 0, 1 };
+        unsigned int path_count = 2048;
+        auto throughput = BSDFTestUtils::integrate_over_thin_sheet(ggx_sampler, wo, path_count, 32);
+
+        float expected_reflectance = (2 * specularity) / (1 + specularity);
+        float expected_transmission = (1 - specularity) / (1 + specularity);
+
+        EXPECT_FLOAT3_EQ_EPS(make_float3(expected_reflectance), throughput.reflected, 0.015f);
+        EXPECT_FLOAT3_EQ_EPS(make_float3(expected_transmission), throughput.transmitted, 0.015f);
+    }
+}
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_SHADING_MODELS_UTILS_TEST_H_
