@@ -97,6 +97,10 @@ __inline_all__ float saturate(float v) {
     return optix::clamp(v, 0.0f, 1.0f);
 }
 
+__inline_all__ optix::float3 sqrt3(optix::float3 v) {
+    return { sqrtf(v.x), sqrtf(v.y), sqrtf(v.z) };
+}
+
 __inline_all__ float pow2(float x) {
     return x * x;
 }

@@ -111,33 +111,34 @@ GTEST_TEST(ShadingModelUtils, lambertian_thin_sheet_reflects_all_energy) {
     EXPECT_FLOAT3_EQ(black, throughput.transmitted);
 }
 
-GTEST_TEST(ShadingModelUtils, smooth_ggx_thin_sheet_reflects_according_to_specularity) {
+GTEST_TEST(ShadingModelUtils, smooth_ggx_thin_sheet_reflects_according_to_expectation) {
+    using namespace Bifrost::Assets::Shading;
     using namespace optix;
 
-    float3 transmission_tint = { 1.0f, 1.0f, 1.0f };
     float alpha = 0.0; // Smooth surface
+    float3 transmission_tint = { 1.0f, 0.5f, 0.25f };
+    optix::float3 transmission_tint_per_side = sqrt3(transmission_tint);
 
-    for (float specularity : { 0.1f, 0.25f, 0.5f }) {
-        float medium_ior = dielectric_ior_from_specularity(specularity);
+    for (float medium_IOR : { Rho::dielectric_GGX_minimum_IOR_into_dense_medium, COAT_IOR, Rho::dielectric_GGX_maximum_IOR_into_dense_medium }) {
+        float specularity = dielectric_specularity(AIR_IOR, medium_IOR);
 
         auto ggx_sampler = [=](float3 wo, float3 random_sample) -> BSDFSample {
             bool entering = wo.z >= 0.0f;
-            float ior_o = entering ? 1.0f : medium_ior;
-            float ior_i = entering ? medium_ior : 1.0f;
-            float ior_i_over_o = ior_i / ior_o;
+            float ior_i_over_o = entering ? (medium_IOR / AIR_IOR) : (AIR_IOR / medium_IOR);
 
-            return Shading::BSDFs::GGX::sample(transmission_tint, alpha, specularity, ior_i_over_o, wo, random_sample);
+            return Shading::BSDFs::GGX::sample(transmission_tint_per_side, alpha, specularity, ior_i_over_o, wo, random_sample);
         };
 
-        float3 wo = { 0, 0, 1 };
-        unsigned int path_count = 2048;
-        auto throughput = BSDFTestUtils::integrate_over_thin_sheet(ggx_sampler, wo, path_count, 32);
+        for (float cos_theta_o : { 0.3f, 0.5f, 1.0f }) {
+            float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
+            unsigned int path_count = 4096;
+            unsigned int max_bounce_count = 32;
+            auto throughput = BSDFTestUtils::integrate_over_thin_sheet(ggx_sampler, wo, path_count, max_bounce_count);
+            auto expected_throughput = BSDFTestUtils::smooth_thin_sheet_reflectance(cos_theta_o, medium_IOR, transmission_tint);
 
-        float expected_reflectance = (2 * specularity) / (1 + specularity);
-        float expected_transmission = (1 - specularity) / (1 + specularity);
-
-        EXPECT_FLOAT3_EQ_EPS(make_float3(expected_reflectance), throughput.reflected, 0.015f);
-        EXPECT_FLOAT3_EQ_EPS(make_float3(expected_transmission), throughput.transmitted, 0.015f);
+            EXPECT_FLOAT3_EQ_EPS(expected_throughput.reflected, throughput.reflected, 0.01f);
+            EXPECT_FLOAT3_EQ_EPS(expected_throughput.transmitted, throughput.transmitted, 0.01f);
+        }
     }
 }
 

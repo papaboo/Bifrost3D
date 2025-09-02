@@ -222,6 +222,45 @@ inline ThinSheetThroughput integrate_over_thin_sheet(std::function<BSDFSample(op
     return { reflected, transmitted };
 }
 
+// Compute the expected ratio of light reflected and transmitted of a smooth, thin, locally flat medium when viewed from the angle theta_o
+inline ThinSheetThroughput smooth_thin_sheet_reflectance(float cos_theta_o, float medium_IOR, optix::float3 transmission_tint) {
+    // Medium cannot have lower IOR than air.
+    if (medium_IOR <= AIR_IOR)
+        return { optix::make_float3(nanf("")), optix::make_float3(nanf("")) };
+
+    float specularity = dielectric_specularity(AIR_IOR, medium_IOR);
+    optix::float3 transmission_tint_per_side = sqrt3(transmission_tint);
+
+    float refracted_cos_theta;
+    bool total_internal_reflection = !refract(refracted_cos_theta, -abs(cos_theta_o), medium_IOR / AIR_IOR);
+    if (total_internal_reflection)
+        return { optix::make_float3(1), optix::make_float3(0) };
+
+    // The reflected and transmitted throughput of a thin sheet depends on the reflection and transmission at the initial intersection, R0 and T0,
+    // and the reflection and transmission of the refract light bouncing inside the glass, Ri and Ti.
+    // As every intersection after the first happens at the border of the glass, with air on the other side, they all have the same R and T values.
+    float R0 = dielectric_schlick_fresnel(specularity, cos_theta_o, medium_IOR / AIR_IOR);
+    optix::float3 T0 = (1 - R0) * transmission_tint_per_side;
+    float Ri = schlick_fresnel(specularity, abs(refracted_cos_theta));
+    optix::float3 Ti = (1 - Ri) * transmission_tint_per_side;
+
+    // The expected amount of light reflected, Re, is given by the amount of light reflected by the first intersection and
+    // all the transmitted light that does an odd number of reflections inside the glass before transmitting and exiting on the same side as entered.
+    // Re = R0 + T0 * Ri * Ti + T0 * Ri^3 * Ti + T0 * Ri^5 * Ti + ...
+    //    = R + T0 * Ti * (Ri + Ri^3 + Ri^5 + ...)
+    //    = R + T0 * Ti * Ri * (1 + Ri^2 + Ri^4 + ...)
+    //    = R + T0 * Ti * Ri * 1 / (1 - Ri^2) <-- Use the geometric power series to get an expression for the infinite series.
+    // Similarly, the expected amount of transmitted light, Te, is given by the light that transmits at the first intersection,
+    // performs an even number of reflections inside the glass, and then exits with a final transmission event.
+    // Te = T0 * Ti + T0 * Ri^2 * Ti + T0 * Ri^4 * Ti + T0 * Ri^6 * Ti + ...
+    //    = T0 * Ti * (1 + Ri^2 + Ri^4 + Ri^6 + ...)
+    //    = T0 * Ti * 1 / (1 - Ri^2) <-- Use the geometric power series to get an expression for the infinite series.
+    optix::float3 reflected = R0 + (Ri * T0 * Ti) / (1 - Ri * Ri);
+    optix::float3 transmitted = (T0 * Ti) / (1 - Ri * Ri);
+
+    return { reflected, transmitted };
+}
+
 inline float3 w_from_cos_theta(float cos_theta) {
     return { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
 }
