@@ -53,7 +53,7 @@ using namespace Bifrost::Input;
 using namespace Bifrost::Math;
 using namespace Bifrost::Scene;
 
-static std::string g_scene;
+static std::string g_scene_name;
 static std::string g_environment;
 static RGB g_environment_color = RGB(0.68f, 0.92f, 1.0f);
 static DX11Renderer::Compositor* compositor = nullptr;
@@ -67,11 +67,7 @@ static Vector3f g_camera_translation = Vector3f(nanf(""));
 static float g_camera_horizontal_rotation = nanf("");
 static float g_camera_vertical_rotation = nanf("");
 
-#ifdef OPTIX_FOUND
-bool optix_enabled = true;
-bool rasterizer_enabled = true;
 OptiXRenderer::Renderer* optix_renderer = nullptr;
-#endif
 
 static inline void update_FPS(Engine& engine) {
     static const int COUNT = 8;
@@ -353,28 +349,28 @@ int initialize_scene(Engine& engine, ImGui::ImGuiAdaptor* imgui) {
     CameraID cam_ID = Cameras::create("Camera", scene.get_ID(), Matrix4x4f::identity(), Matrix4x4f::identity());
     camera_handler = new CameraViewportHandler(cam_ID, engine.get_window().get_aspect_ratio(), 0.1f, 100.0f);
 #ifdef OPTIX_FOUND
-    // High bounce count to support scenes with lots of glass or many total internal reflection bounces.
+    // High bounce count to support test scenes with lots of glass or many total internal reflection bounces.
     optix_renderer->set_max_bounce_count(cam_ID, 32);
 #endif
 
     // Load model
     auto resource_directory = engine.data_directory() / "SimpleViewer" / "Resources";
     bool load_model_from_file = false;
-    if (g_scene.empty() || g_scene.compare("CornellBox") == 0)
+    if (g_scene_name.empty() || g_scene_name.compare("CornellBox") == 0)
         Scenes::create_cornell_box(cam_ID, root_node);
-    else if (g_scene.compare("GlassScene") == 0)
+    else if (g_scene_name.compare("GlassScene") == 0)
         Scenes::create_glass_scene(cam_ID, root_node, resource_directory);
-    else if (g_scene.compare("MaterialScene") == 0)
+    else if (g_scene_name.compare("MaterialScene") == 0)
         Scenes::create_material_scene(cam_ID, root_node, imgui, resource_directory);
-    else if (g_scene.compare("OpacityScene") == 0)
+    else if (g_scene_name.compare("OpacityScene") == 0)
         Scenes::create_opacity_scene(engine, cam_ID, root_node);
-    else if (g_scene.compare("SphereScene") == 0)
+    else if (g_scene_name.compare("SphereScene") == 0)
         Scenes::create_sphere_scene(cam_ID, root_node);
-    else if (g_scene.compare("SphereLightScene") == 0)
+    else if (g_scene_name.compare("SphereLightScene") == 0)
         Scenes::SphereLightScene::create(engine, cam_ID, scene);
-    else if (g_scene.compare("TestScene") == 0)
+    else if (g_scene_name.compare("TestScene") == 0)
         Scenes::create_test_scene(engine, cam_ID, root_node, resource_directory);
-    else if (g_scene.compare("VeachScene") == 0)
+    else if (g_scene_name.compare("VeachScene") == 0)
         Scenes::create_veach_scene(engine, cam_ID, scene);
     else {
 #ifdef OPTIX_FOUND
@@ -382,12 +378,12 @@ int initialize_scene(Engine& engine, ImGui::ImGuiAdaptor* imgui) {
         optix_renderer->set_max_bounce_count(cam_ID, 4);
 #endif
 
-        printf("Loading scene: '%s'\n", g_scene.c_str());
+        printf("Loading scene: '%s'\n", g_scene_name.c_str());
         SceneNode obj_root = SceneNode::invalid();
-        if (ObjLoader::file_supported(g_scene))
-            obj_root = ObjLoader::load(g_scene, load_image);
-        else if (glTFLoader::file_supported(g_scene))
-            obj_root = glTFLoader::load(g_scene);
+        if (ObjLoader::file_supported(g_scene_name))
+            obj_root = ObjLoader::load(g_scene_name, load_image);
+        else if (glTFLoader::file_supported(g_scene_name))
+            obj_root = glTFLoader::load(g_scene_name);
         obj_root.set_parent(root_node);
         // mesh_combine_whole_scene(root_node_ID);
         detect_and_flag_cutout_materials();
@@ -444,17 +440,11 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
 
     compositor = Compositor::initialize(hwnd, window);
 
+    dx11_renderer = (Renderer*)compositor->add_renderer(Renderer::initialize).get();
+
 #ifdef OPTIX_FOUND
-    if (rasterizer_enabled)
-        dx11_renderer = (Renderer*)compositor->add_renderer(Renderer::initialize).get();
-
-    if (optix_enabled) {
-        auto* optix_adaptor = (DX11OptiXAdaptor::Adaptor*)compositor->add_renderer(DX11OptiXAdaptor::Adaptor::initialize).get();
-        optix_renderer = optix_adaptor->get_renderer();
-    }
-
-#else
-    compositor->add_renderer(Renderer::initialize);
+    auto* optix_adaptor = (DX11OptiXAdaptor::Adaptor*)compositor->add_renderer(DX11OptiXAdaptor::Adaptor::initialize).get();
+    optix_renderer = optix_adaptor->get_renderer();
 #endif
 
     engine.add_non_mutating_callback([=] { compositor->render(); });
@@ -466,11 +456,7 @@ int win32_window_initialized(Engine& engine, Window& window, HWND& hwnd) {
         return scene_result;
 
     { // Setup GUI
-#ifdef OPTIX_FOUND
         imgui->add_frame(std::make_unique<GUI::RenderingGUI>(camera_navigation, compositor, dx11_renderer, optix_renderer));
-#else
-        imgui->add_frame(std::make_unique<GUI::RenderingGUI>(camera_navigation, compositor, dx11_renderer));
-#endif
         compositor->add_GUI_renderer(ImGui::Renderers::DX11Renderer::initialize);
     }
 
@@ -484,10 +470,6 @@ void print_usage() {
         "usage simpleviewer:\n"
         "  -h  | --help: Show command line usage for simpleviewer.\n"
         "  -s  | --scene <model>: Loads the model specified. Reserved names are 'CornellBox', 'GlassScene', 'MaterialScene', 'SphereScene', 'SphereLightScene', 'TestScene' and 'VeachScene', which loads the corresponding builtin scenes.\n"
-#ifdef OPTIX_FOUND
-        "  -p | --path-tracing-only: Launches with the path tracer as the only avaliable renderer.\n"
-        "  -r | --rasterizer-only: Launches with the rasterizer as the only avaliable renderer.\n"
-#endif
         "  -e  | --environment-map <image>: Loads the specified image for the environment.\n"
         "  -c  | --environment-tint [R,G,B]: Tint the environment by the specified value.\n"
         "      | --window-size [width, height]: Size of the window.\n"
@@ -545,7 +527,7 @@ int main(int argc, char** argv) {
     int argument = 1;
     while (argument < argc) {
         if (strcmp(argv[argument], "--scene") == 0 || strcmp(argv[argument], "-s") == 0)
-            g_scene = std::string(argv[++argument]);
+            g_scene_name = std::string(argv[++argument]);
         else if (strcmp(argv[argument], "--environment-map") == 0 || strcmp(argv[argument], "-e") == 0)
             g_environment = std::string(argv[++argument]);
         else if (strcmp(argv[argument], "--environment-tint") == 0 || strcmp(argv[argument], "-c") == 0)
@@ -559,21 +541,12 @@ int main(int argc, char** argv) {
             g_camera_vertical_rotation = camera_rotation.x;
             g_camera_horizontal_rotation = camera_rotation.y;
         }
-#ifdef OPTIX_FOUND
-        else if (strcmp(argv[argument], "--path-tracing-only") == 0 || strcmp(argv[argument], "-p") == 0) {
-            optix_enabled = true;
-            rasterizer_enabled = false;
-        } else if (strcmp(argv[argument], "--rasterizer-only") == 0 || strcmp(argv[argument], "-r") == 0) {
-            optix_enabled = false;
-            rasterizer_enabled = true;
-        }
-#endif
         else
             printf("Unknown argument: '%s'\n", argv[argument]);
         ++argument;
     }
 
-    if (g_scene.empty())
+    if (g_scene_name.empty())
         printf("SimpleViewer will display the Cornell Box scene.\n");
 
     int error_code = Win32Driver::run(initializer, win32_window_initialized);
