@@ -102,17 +102,6 @@ __always_inline__ float non_zero_sign(float v) {
     return signbit(v) ? -1.0f : 1.0f;
 }
 
-// Linear interpolation of arbitrary types that implement addition, subtraction and multiplication.
-template <typename T, typename U>
-__always_inline__ T lerp(const T a, const T b, const U t) {
-    return a + (b - a) * t;
-}
-
-template <typename T, typename U>
-__always_inline__ T inverse_lerp(const T a, const T b, const U v) {
-    return (v - a) / (b - a);
-}
-
 template <typename T>
 __always_inline__ T min(const T a, const T b) {
     return a < b ? a : b;
@@ -193,6 +182,31 @@ __always_inline__ unsigned int reverse_bits(unsigned int n) {
 __always_inline__ float dielectric_specularity(float ior_o, float ior_i) {
     return pow2((ior_o - ior_i) / (ior_o + ior_i));
 }
+
+// ------------------------------------------------------------------------------------------------
+// Interpolation
+// ------------------------------------------------------------------------------------------------
+
+// Linear interpolation of arbitrary types that implement addition, subtraction and multiplication.
+template <typename T, typename U>
+__always_inline__ T lerp(T a, T b, U t) {
+    return a + (b - a) * t;
+}
+
+template <typename T, typename U>
+__always_inline__ T inverse_lerp(T a, T b, U v) {
+    return (v - a) / (b - a);
+}
+
+// Smooth Hermite interpolation of arbitrary types that implement addition, subtraction and multiplication.
+// Mirrors the implementation of the smoothstep functionality found in most graphics API's.
+// https://en.wikipedia.org/wiki/Smoothstep
+__always_inline__ float smoothstep(float a, float b, float t) {
+    // Scale, and clamp x to 0..1 range
+    float x = clamp01((t - a) / (b - a));
+    return x * x * (3.0f - 2.0f * x);
+}
+
 // ------------------------------------------------------------------------------------------------
 // Stable pairwise summation.
 // ------------------------------------------------------------------------------------------------
