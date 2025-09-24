@@ -143,6 +143,84 @@ GTEST_TEST(ShadingModelUtils, smooth_ggx_thin_sheet_reflects_according_to_expect
     }
 }
 
+GTEST_TEST(ShadingModelUtils, approx_smooth_ggx_thin_sheet_is_nearly_exact_for_smooth_surfaces) {
+    using namespace Bifrost::Assets::Shading;
+    using namespace optix;
+    using namespace OptiXRenderer::Shading::ShadingModels;
+
+    float roughness = 0.0; // Smooth surface
+    float3 transmission_tint = { 1.0f, 0.5f, 0.25f };
+
+    float air_IOR = 1.0f;
+    float common_IOR = 1.5f; // glass/coat IOR
+    float tested_IORs[3] = { Rho::dielectric_GGX_minimum_IOR_into_dense_medium, common_IOR, Rho::dielectric_GGX_maximum_IOR_into_dense_medium };
+
+    for (float medium_IOR : tested_IORs) {
+        for (float cos_theta_o : { 0.3f, 0.5f, 1.0f}) {
+            auto expected_throughput = BSDFTestUtils::smooth_thin_sheet_reflectance(cos_theta_o, medium_IOR, transmission_tint);
+            auto approximate_throughput = approx_thin_sheet_reflectance(cos_theta_o, roughness, medium_IOR, transmission_tint);
+
+            // The test needs a small epsilon as the approximate implementation discretizes the output, which causes inaccuracies.
+            float epsilon = 0.025f;
+            EXPECT_FLOAT3_EQ_EPS(expected_throughput.reflected, approximate_throughput.reflected, epsilon);
+            EXPECT_FLOAT3_EQ_EPS(expected_throughput.transmitted, approximate_throughput.transmitted, epsilon);
+        }
+    }
+}
+
+GTEST_TEST(ShadingModelUtils, approx_rough_ggx_thin_sheet_regression_test) {
+    using namespace Bifrost::Assets::Shading;
+    using namespace optix;
+    using namespace OptiXRenderer::Shading::ShadingModels;
+
+    float3 transmission_tint = { 1.0f, 0.5f, 0.25f };
+    optix::float3 transmission_tint_per_side = sqrt3(transmission_tint);
+
+    float air_IOR = 1.0f;
+    float common_IOR = 1.5f; // glass/coat IOR
+    float tested_IORs[6] = {
+        Rho::dielectric_GGX_minimum_IOR_into_light_medium, 1.0f / common_IOR, Rho::dielectric_GGX_maximum_IOR_into_light_medium,
+        Rho::dielectric_GGX_minimum_IOR_into_dense_medium, common_IOR, Rho::dielectric_GGX_maximum_IOR_into_dense_medium,
+    };
+
+    for (float roughness : { 0.0f, 0.5f, 1.0f }) {
+        float alpha = Shading::BSDFs::GGX::alpha_from_roughness(roughness);
+        for (float medium_IOR : tested_IORs) {
+            float specularity = dielectric_specularity(air_IOR, medium_IOR);
+            float ior_air_over_medium = air_IOR / medium_IOR;
+            float ior_medium_over_air = medium_IOR / air_IOR;
+
+            auto ggx_sampler = [=](float3 wo, float3 random_sample) -> BSDFSample {
+                bool entering = wo.z >= 0.0f;
+                float ior_i_over_o = entering ? ior_medium_over_air : ior_air_over_medium;
+
+                auto sample = Shading::BSDFs::GGX::sample(transmission_tint_per_side, alpha, specularity, ior_i_over_o, wo, random_sample);
+                float total_rho = DielectricRho::fetch(abs(wo.z), roughness, specularity).total_rho;
+                sample.reflectance /= total_rho; // Normalize wrt rho
+                return sample;
+            };
+
+            for (float cos_theta_o : { 0.3f, 0.5f, 1.0f}) {
+                float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
+                unsigned int path_count = 4096;
+                unsigned int max_bounce_count = 32;
+                auto expected_throughput = BSDFTestUtils::integrate_over_thin_sheet(ggx_sampler, wo, path_count, max_bounce_count);
+
+                // The red channel doesn't loose energy while reflecting or transmitting, so we expect the total throughput to be close to 1
+                float no_energy_loss_throughput = expected_throughput.reflected.x + expected_throughput.transmitted.x;
+                EXPECT_FLOAT_EQ_EPS(1, no_energy_loss_throughput, 0.025f);
+
+                auto approximate_throughput = approx_thin_sheet_reflectance(cos_theta_o, roughness, ior_medium_over_air, transmission_tint);
+
+                // The test needs a small epsilon as the approximate implementation discretizes the output, which causes inaccuracies.
+                float epsilon = 0.025f;
+                EXPECT_FLOAT3_EQ_EPS(expected_throughput.reflected, approximate_throughput.reflected, epsilon) << "cos_theta: " << cos_theta_o << ", roughness: " << roughness << ", medium_IOR: " << medium_IOR;
+                EXPECT_FLOAT3_EQ_EPS(expected_throughput.transmitted, approximate_throughput.transmitted, epsilon) << "cos_theta: " << cos_theta_o << ", roughness: " << roughness << ", medium_IOR: " << medium_IOR;
+            }
+        }
+    }
+}
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_SHADING_MODELS_UTILS_TEST_H_
