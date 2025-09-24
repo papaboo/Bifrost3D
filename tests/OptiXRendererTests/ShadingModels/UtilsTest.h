@@ -142,6 +142,89 @@ GTEST_TEST(ShadingModelUtils, smooth_ggx_thin_sheet_reflects_according_to_expect
     }
 }
 
+GTEST_TEST(ShadingModelUtils, approx_smooth_ggx_thin_sheet_is_nearly_exact_for_smooth_surfaces) {
+    using namespace Bifrost::Assets::Shading;
+    using namespace optix;
+    using namespace OptiXRenderer::Shading::ShadingModels;
+
+    float roughness = 0.0; // Smooth surface
+    float3 transmission_tint = { 1.0f, 0.5f, 0.25f };
+
+    for (float medium_IOR : { Rho::dielectric_GGX_minimum_IOR_into_dense_medium, COAT_IOR, Rho::dielectric_GGX_maximum_IOR_into_dense_medium }) {
+        for (float cos_theta_o : { 0.3f, 0.5f, 1.0f }) {
+            auto expected_throughput = BSDFTestUtils::smooth_thin_sheet_reflectance(cos_theta_o, medium_IOR, transmission_tint);
+            auto approximate_throughput = approx_thin_sheet_reflectance(cos_theta_o, roughness, medium_IOR, transmission_tint);
+
+            // The test needs a small epsilon as the approximate implementation discretizes the output, which causes inaccuracies.
+            float epsilon = 0.025f;
+            EXPECT_FLOAT3_EQ_EPS(expected_throughput.reflected, approximate_throughput.reflected, epsilon);
+            EXPECT_FLOAT3_EQ_EPS(expected_throughput.transmitted, approximate_throughput.transmitted, epsilon);
+        }
+    }
+}
+
+GTEST_TEST(ShadingModelUtils, approx_rough_ggx_thin_sheet_RMSE_regression_test) {
+    using namespace Bifrost::Assets::Shading;
+    using namespace optix;
+    using namespace OptiXRenderer::Shading::ShadingModels;
+
+    float3 transmission_tint = { 1.0f, 0.5f, 0.25f };
+    optix::float3 transmission_tint_per_side = sqrt3(transmission_tint);
+
+    float tested_IORs[6] = {
+        Rho::dielectric_GGX_minimum_IOR_into_light_medium, 1.0f / COAT_IOR, Rho::dielectric_GGX_maximum_IOR_into_light_medium,
+        Rho::dielectric_GGX_minimum_IOR_into_dense_medium, COAT_IOR, Rho::dielectric_GGX_maximum_IOR_into_dense_medium,
+    };
+
+    float3 summed_squared_reflection_error = { 0, 0, 0 };
+    float3 summed_squared_transmission_error = { 0, 0, 0 };
+    float sample_count = 0;
+    for (float roughness : { 0.0f, 0.5f, 1.0f }) {
+        float alpha = Shading::BSDFs::GGX::alpha_from_roughness(roughness);
+        for (float medium_IOR : tested_IORs) {
+            float specularity = dielectric_specularity(AIR_IOR, medium_IOR);
+            float ior_air_over_medium = AIR_IOR / medium_IOR;
+            float ior_medium_over_air = medium_IOR / AIR_IOR;
+
+            auto ggx_sampler = [=](float3 wo, float3 random_sample) -> BSDFSample {
+                bool entering = wo.z >= 0.0f;
+                float ior_i_over_o = entering ? ior_medium_over_air : ior_air_over_medium;
+
+                auto sample = Shading::BSDFs::GGX::sample(transmission_tint_per_side, alpha, specularity, ior_i_over_o, wo, random_sample);
+                float total_rho = DielectricRho::fetch(abs(wo.z), roughness, ior_i_over_o).total_rho;
+                sample.reflectance /= total_rho; // Normalize wrt rho
+                return sample;
+            };
+
+            for (float cos_theta_o : { 0.3f, 0.5f, 1.0f}) {
+                float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
+                unsigned int path_count = 16384; // High path count as both surfaces can be rough and have high variance, so a large sample size is needed to make it converge.
+                unsigned int max_bounce_count = 32;
+                auto expected_throughput = BSDFTestUtils::integrate_over_thin_sheet(ggx_sampler, wo, path_count, max_bounce_count);
+
+                // The red channel doesn't loose energy while reflecting or transmitting, so we expect the total throughput to be close to 1
+                float no_energy_loss_throughput = expected_throughput.reflected.x + expected_throughput.transmitted.x;
+                EXPECT_FLOAT_EQ_EPS(1, no_energy_loss_throughput, 0.025f);
+
+                auto approximate_throughput = approx_thin_sheet_reflectance(cos_theta_o, roughness, ior_medium_over_air, transmission_tint);
+
+                summed_squared_reflection_error += pow2(expected_throughput.reflected - approximate_throughput.reflected);
+                summed_squared_transmission_error += pow2(expected_throughput.transmitted - approximate_throughput.transmitted);
+                sample_count++;
+            }
+        }
+    }
+
+    float3 root_mean_squared_reflection_error = sqrt3(summed_squared_reflection_error / sample_count);
+    float3 root_mean_squared_transmission_error = sqrt3(summed_squared_transmission_error / sample_count);
+
+    float epsilon = 0.025f;
+    float3 expected_reflection_error = { 0.213529f, 0.200066f, 0.197312f };
+    float3 expected_transmission_error = { 0.200979f, 0.100499f, 0.0502933f };
+    EXPECT_FLOAT3_EQ_EPS(expected_reflection_error, root_mean_squared_reflection_error, epsilon);
+    EXPECT_FLOAT3_EQ_EPS(expected_transmission_error, root_mean_squared_transmission_error, epsilon);
+}
+
 } // NS OptiXRenderer
 
 #endif // _OPTIXRENDERER_SHADING_MODELS_UTILS_TEST_H_

@@ -129,6 +129,42 @@ struct GGXMinimumRoughness {
     }
 };
 
+struct ThinSheetThroughput {
+    optix::float3 reflected;
+    optix::float3 transmitted;
+};
+
+// Approximate thin sheet reflectance.
+// The algorithm is based on the exact solution for smooth thin sheets found in BSDFTestUtils::smooth_thin_sheet_reflectance.
+// For rough thin sheets the solution is approximated by replacing the exact smooth reflectance with the precomputed rough reflectance.
+__inline_all__ ThinSheetThroughput approx_thin_sheet_reflectance(float abs_cos_theta, float roughness, float ior_i_over_o, optix::float3 transmission_tint) {
+    using namespace optix;
+
+    // Compute the representative refracted cos(theta) that the opposite side of the sheet is observed from.
+    float refracted_cos_theta;
+    bool total_internal_reflection = !refract(refracted_cos_theta, -abs_cos_theta, ior_i_over_o);
+    if (total_internal_reflection)
+        return { optix::make_float3(1), optix::make_float3(0) };
+
+    // Compute the reflected rho for each different type of intersection and the combined rho for the transmission.
+    auto rho0 = DielectricRho::fetch(abs_cos_theta, roughness, ior_i_over_o);
+    float R0 = rho0.reflected_rho / rho0.total_rho; // Compensate for energy-loss by dividing by total rho
+    float T0 = 1 - R0;
+    // NOTE For the transmission rho the relative IOR should be inverted, as the ray is coming from the backside.
+    // But for some reason that doesn't give the correct result when comparing with smooth surfaces, so we'll leave it like it is.
+    auto rhoi = DielectricRho::fetch(abs(refracted_cos_theta), roughness, ior_i_over_o);
+    float Ri = rhoi.reflected_rho / rhoi.total_rho; // Compensate for energy-loss by dividing by total rho
+    float Ti = 1 - Ri;
+    float3 T0Ti = T0 * Ti * transmission_tint;
+
+    // Implementation that reuses computations for speed.
+    // See smooth_thin_sheet_reflectance for the derivation of the terms.
+    float3 transmitted = T0Ti / (1 - Ri * Ri);
+    float3 reflected = R0 + Ri * transmitted;
+
+    return { reflected, transmitted };
+}
+
 } // NS ShadingModels
 } // NS Shading
 } // NS OptiXRenderer
