@@ -85,15 +85,15 @@ GTEST_TEST(TransmissiveShadingModel, white_hot_furnace) {
     Material material_params = {};
     material_params.tint = optix::make_float3(1.0f, 1.0f, 1.0f);
 
-    for (float specularity : { Rho::dielectric_GGX_minimum_specularity, 0.04f, Rho::dielectric_GGX_maximum_specularity }) {
-        material_params.specularity = specularity;
+    for (float medium_IOR : { Rho::dielectric_GGX_minimum_IOR_into_dense_medium, 1.5f, Rho::dielectric_GGX_maximum_IOR_into_dense_medium }) {
+        material_params.specularity = dielectric_specularity(1.0f, medium_IOR);
         for (float roughness : { 0.2f, 0.7f }) {
             material_params.roughness = roughness;
             for (float cos_theta_o : { 0.1f, 0.4f, 0.7f, 1.0f }) {
                 optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
                 auto shading_model = TransmissiveShading(material_params, wo.z);
                 auto rho = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
-                EXPECT_FLOAT_EQ_EPS(rho.x, 1.0f, 0.026f) << " with specularity " << specularity << ", roughness " << roughness << ", and cos_theta " << cos_theta_o;
+                EXPECT_FLOAT_EQ_EPS(rho.x, 1.0f, 0.026f) << " with specularity " << material_params.specularity << ", roughness " << roughness << ", and cos_theta " << cos_theta_o;
             }
         }
     }
@@ -193,12 +193,12 @@ GTEST_TEST(TransmissiveShadingModel, regression_test) {
     const unsigned int MAX_SAMPLES = 2;
 
     BSDFResponse bsdf_responses[] = {
-        {101.189842f, 101.189842f, 101.189842f, 70.955925f},
-        {30.010094f, 30.010094f, 30.010094f, 19.304911f},
-        {3977.416016f, 3977.416016f, 3977.416016f, 445.397308f},
-        {4547.866211f, 4547.866211f, 4547.866211f, 235.904617f},
-        {610.325867f, 623.174866f, 610.325867f, 504.575867f},
-        {149.034561f, 152.172134f, 149.034561f, 125.492897f},
+        {102.196815f, 102.196815f, 102.196815f, 70.955925f},
+        {30.308733f, 30.308733f, 30.308733f, 19.304911f},
+        {4075.826172f, 4075.826172f, 4075.826172f, 445.397308f},
+        {4660.390625f, 4660.390625f, 4660.390625f, 235.904617f},
+        {610.321655f, 623.170593f, 610.321655f, 504.575867f},
+        {149.033539f, 152.171082f, 149.033539f, 125.492897f},
         {1633.225708f, 1667.609497f, 1633.225708f, 1715.760010f},
         {408.740875f, 417.345978f, 408.740875f, 429.358185f} };
 

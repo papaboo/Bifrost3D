@@ -38,8 +38,8 @@ GTEST_TEST(ShadingModelUtils, dielectric_GGX_rho_texture_size) {
     int actual_roughness_sample_count = Shading::ShadingModels::DielectricRho::roughness_sample_count;
     EXPECT_EQ(actual_roughness_sample_count, expected_roughness_sample_count);
 
-    int expected_specularity_sample_count = Bifrost::Assets::Shading::Rho::dielectric_GGX_specularity_sample_count;
-    int actual_specularity_sample_count = Shading::ShadingModels::DielectricRho::specularity_sample_count;
+    int expected_specularity_sample_count = Bifrost::Assets::Shading::Rho::dielectric_GGX_ior_i_over_o_sample_count;
+    int actual_specularity_sample_count = Shading::ShadingModels::DielectricRho::ior_i_over_o_sample_count;
     EXPECT_EQ(actual_specularity_sample_count, expected_specularity_sample_count);
 }
 

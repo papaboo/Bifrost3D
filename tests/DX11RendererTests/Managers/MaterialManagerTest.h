@@ -148,7 +148,7 @@ GTEST_TEST(MaterialManager, GPU_dielectric_GGX_rho_texture_dimensions_consistent
         "void rho_dimensions_cs(uint2 threadIndex : SV_GroupThreadID) {\n"
         "   rho_dimensions[0] = ShadingModels::DielectricRho::angle_sample_count;\n"
         "   rho_dimensions[1] = ShadingModels::DielectricRho::roughness_sample_count;\n"
-        "   rho_dimensions[2] = ShadingModels::DielectricRho::specularity_sample_count;\n"
+        "   rho_dimensions[2] = ShadingModels::DielectricRho::ior_i_over_o_sample_count;\n"
         "}\n";
     OComputeShader rho_dimensions_shader;
     OBlob rho_dimensions_blob = ShaderManager().compile_shader_source(rho_dimensions_cs, "cs_5_0", "rho_dimensions_cs");
@@ -166,7 +166,7 @@ GTEST_TEST(MaterialManager, GPU_dielectric_GGX_rho_texture_dimensions_consistent
 
     EXPECT_EQ(gpu_rho_dimensions[0], Rho::dielectric_GGX_angle_sample_count);
     EXPECT_EQ(gpu_rho_dimensions[1], Rho::dielectric_GGX_roughness_sample_count);
-    EXPECT_EQ(gpu_rho_dimensions[2], Rho::dielectric_GGX_specularity_sample_count);
+    EXPECT_EQ(gpu_rho_dimensions[2], Rho::dielectric_GGX_ior_i_over_o_sample_count);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -197,10 +197,10 @@ GTEST_TEST(MaterialManager, sample_GPU_dielectric_GGX_rho_texture_consistent_wit
         "void sample_rho_cs(uint3 threadIndex : SV_GroupThreadID) {\n"
         "   float cos_theta = threadIndex.x / (samples_per_dimension - 1.0f);\n"
         "   float roughness = threadIndex.y / (samples_per_dimension - 1.0f);\n"
-        "   float specularity = 0.02 + 0.02 * threadIndex.z;\n" // Specularity samples in range [0.02, 0.08]
+        "   float ior_i_over_o = 0.4 + 2.0 * threadIndex.z / (samples_per_dimension - 1.0f);\n" // ior_i_over_o samples in range [0.4, 2.4]
         "   uint linear_index = threadIndex.x + (threadIndex.y + threadIndex.z * samples_per_dimension) * samples_per_dimension;\n"
-        "   ShadingModels::DielectricRho dielectric_rho = ShadingModels::DielectricRho::fetch(cos_theta, roughness, specularity);\n"
-        "   rho_samples[linear_index] = float2(dielectric_rho.total, dielectric_rho.reflection);\n"
+        "   ShadingModels::DielectricRho dielectric_rho = ShadingModels::DielectricRho::fetch(cos_theta, roughness, ior_i_over_o);\n"
+        "   rho_samples[linear_index] = float2(dielectric_rho.total, dielectric_rho.reflected);\n"
         "}\n";
     OComputeShader sample_rho_shader;
     OBlob sample_rho_blob = ShaderManager().compile_shader_source(sample_rho_cs, "cs_5_0", "sample_rho_cs");
@@ -221,22 +221,20 @@ GTEST_TEST(MaterialManager, sample_GPU_dielectric_GGX_rho_texture_consistent_wit
 
     // Compare with the CPU version
     for (int z = 0; z < samples_per_dimension; z++) {
-        float specularity = 0.02f + 0.02f * z;
+        float ior_i_over_o = 0.4f + 2.0f * z / (samples_per_dimension - 1.0f);
         for (int y = 0; y < samples_per_dimension; y++) {
             float roughness = y / (samples_per_dimension - 1.0f);
             for (int x = 0; x < samples_per_dimension; x++) {
                 float cos_theta = x / (samples_per_dimension - 1.0f);
 
+                auto cpu = Rho::sample_dielectric_GGX(cos_theta, roughness, ior_i_over_o);
+
                 int linear_index = x + (y + z * samples_per_dimension) * samples_per_dimension;
-                float actual_total_rho = gpu_rho_result[linear_index].x;
-                float actual_reflection_rho = gpu_rho_result[linear_index].y;
+                float gpu_total_rho = gpu_rho_result[linear_index].x;
+                float gpu_reflection_rho = gpu_rho_result[linear_index].y;
 
-                auto rho = Rho::sample_dielectric_GGX(cos_theta, roughness, specularity);
-                float expected_total_rho = rho.x;
-                float expected_reflection_rho = rho.y;
-
-                EXPECT_FLOAT_EQ_EPS(actual_total_rho, expected_total_rho, 0.0001f) << "cos_theta: " << cos_theta << ", roughness: " << roughness << ", specularity: " << specularity;
-                EXPECT_FLOAT_EQ_EPS(actual_reflection_rho, expected_reflection_rho, 0.0001f) << "cos_theta: " << cos_theta << ", roughness: " << roughness << ", specularity: " << specularity;
+                EXPECT_FLOAT_EQ_EPS(gpu_total_rho, cpu.total_rho, 0.0001f) << "cos_theta: " << cos_theta << ", roughness: " << roughness << ", ior_i_over_o: " << ior_i_over_o;
+                EXPECT_FLOAT_EQ_EPS(gpu_reflection_rho, cpu.reflected_rho, 0.0001f) << "cos_theta: " << cos_theta << ", roughness: " << roughness << ", ior_i_over_o: " << ior_i_over_o;
             }
         }
     }

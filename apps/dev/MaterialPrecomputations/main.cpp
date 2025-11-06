@@ -82,17 +82,17 @@ int main(int argc, char** argv) {
     }
 
     { // Compute dielectric GGX rho.
-        static auto sample_dielectric_ggx = [](float roughness, float specularity, float3 wo, float3 random_sample) -> BSDFSample {
+        static auto sample_dielectric_ggx = [](float roughness, float ior_i, float3 wo, float3 random_sample) -> BSDFSample {
             float alpha = GGX::alpha_from_roughness(roughness);
-            float ior = dielectric_ior_from_specularity(specularity);
-            return GGX::sample(alpha, specularity, ior, wo, random_sample);
+            float specularity = OptiXRenderer::dielectric_specularity(1.0f, ior_i);
+            return GGX::sample(alpha, specularity, ior_i, wo, random_sample);
         };
 
         int size = 16;
-        Image rho = PrecomputeDielectricBSDFRho::tabulate_rho(size, size, size, sample_count, rng, sample_dielectric_ggx);
+        auto rho = PrecomputeDielectricBSDFRho::tabulate_rho(size, size, size, sample_count, rng, sample_dielectric_ggx);
 
         // Store.
-        PrecomputeDielectricBSDFRho::output_brdf(rho, sample_count, output_dir + "DielectricGGXRho.cpp", "dielectric_GGX",
+        PrecomputeDielectricBSDFRho::output_brdf(rho, output_dir + "DielectricGGXRho.cpp", "dielectric_GGX",
             "Directional-hemispherical reflectance for dielectric GGX.");
     }
 

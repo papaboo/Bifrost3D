@@ -36,12 +36,12 @@ public:
         
         float medium_ior = dielectric_ior_from_specularity(m_specularity);
         bool entering = cos_theta >= 0.0f;
-        float ior_o = entering ? 1.0f : medium_ior;
-        float ior_i = entering ? medium_ior : 1.0f;
+        float ior_o = entering ? AIR_IOR : medium_ior;
+        float ior_i = entering ? medium_ior : AIR_IOR;
         m_ior_i_over_o = ior_i / ior_o;
 
         // Compensate for energy lost due to internal scattering.
-        float rho = DielectricRho::fetch(abs(cos_theta), roughness, m_specularity).total_rho;
+        float rho = DielectricRho::fetch(abs(cos_theta), roughness, m_ior_i_over_o).total_rho;
         m_energy_loss_adjustment = 1.0f / rho;
     }
 
