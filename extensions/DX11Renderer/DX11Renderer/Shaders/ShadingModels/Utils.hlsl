@@ -76,22 +76,33 @@ static float3 compute_specular_rho(float3 specularity, float abs_cos_theta, floa
 struct DielectricRho {
     static const int angle_sample_count = 16;
     static const int roughness_sample_count = 16;
-    static const int specularity_sample_count = 16;
+    static const int ior_i_over_o_sample_count = 16;
 
-    float total, reflection;
+    float total, reflected;
 
-    static DielectricRho fetch(float abs_cos_theta, float roughness, float specularity) {
-        float specularity_t = (specularity - 0.0125f) / 0.2375f; // Remap valid specularity values to [0, 1]
+    static DielectricRho fetch(float abs_cos_theta, float roughness, float ior_i_over_o) {
 
         // Adjust UV coordinates to start sampling half a pixel into the texture, as the pixel values correspond to the boundaries of the rho function.
         float cos_theta_u = lerp(0.5 / angle_sample_count, 1.0 - 0.5 / angle_sample_count, abs_cos_theta);
         float roughness_v = lerp(0.5 / roughness_sample_count, 1.0 - 0.5 / roughness_sample_count, roughness);
-        float specularity_w = lerp(0.5 / specularity_sample_count, 1.0 - 0.5 / specularity_sample_count, specularity_t);
 
-        float2 specular_rho = dielectric_ggx_rho_tex.SampleLevel(bilinear_sampler, float3(cos_theta_u, roughness_v, specularity_w), 0);
+        float ior_i_over_o_w = 0;
+        if (ior_i_over_o < 1.0f) {
+            // Entering light medium
+            float ior_i_over_o_t = saturate((ior_i_over_o - 0.331492f) / 0.457982f); // Remap valid ior_i_over_o values from [0.331492, 0.789474] to [0, 1]
+            ior_i_over_o_w = lerp(0.5 / ior_i_over_o_sample_count, 1.0 - 0.5 / ior_i_over_o_sample_count, ior_i_over_o_t);
+            ior_i_over_o_w = 0.5f * ior_i_over_o_w; // Remap to first part of 3D texture, where the light samples are.
+        } else {
+            // Entering dense medium
+            float ior_i_over_o_t = saturate((ior_i_over_o - 1.26667f) / 1.75f); // Remap valid ior_i_over_o values from [1.26667, 3.01667] to [0, 1]
+            ior_i_over_o_w = lerp(0.5 / ior_i_over_o_sample_count, 1.0 - 0.5 / ior_i_over_o_sample_count, ior_i_over_o_t);
+            ior_i_over_o_w = 0.5f * ior_i_over_o_w + 0.5f; // Remap to last part of 3D texture, where the dense samples are.
+        }
+
+        float2 dielectric_rho = dielectric_ggx_rho_tex.SampleLevel(bilinear_sampler, float3(cos_theta_u, roughness_v, ior_i_over_o_w), 0);
         DielectricRho res;
-        res.total = specular_rho.r;
-        res.reflection = specular_rho.g;
+        res.total = dielectric_rho.r;
+        res.reflected = dielectric_rho.g;
         return res;
     }
 };

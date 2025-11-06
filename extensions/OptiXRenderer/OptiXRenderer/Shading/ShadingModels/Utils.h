@@ -63,26 +63,38 @@ struct SpecularRho {
 struct DielectricRho {
     const static int angle_sample_count = 16;
     const static int roughness_sample_count = 16;
-    const static int specularity_sample_count = 16;
+    const static int ior_i_over_o_sample_count = 16;
 
     float total_rho, reflected_rho;
 
-    __inline_all__ static DielectricRho fetch(float abs_cos_theta, float roughness, float specularity) {
+    __inline_all__ static DielectricRho fetch(float abs_cos_theta, float roughness, float ior_i_over_o) {
 #if GPU_DEVICE
-        float specularity_t = (specularity - 0.0125f) / 0.2375f; // Remap valid specularity values to [0, 1]
-
         // Adjust UV coordinates to start sampling half a pixel into the texture, as the pixel values correspond to the boundaries of the rho function.
-        float cos_theta_u = optix::lerp(0.5f / angle_sample_count, 1.0f - 0.5f / angle_sample_count, abs_cos_theta);
-        float roughness_v = optix::lerp(0.5f / roughness_sample_count, 1.0f - 0.5f / roughness_sample_count, roughness);
-        float specularity_w = optix::lerp(0.5f / specularity_sample_count, 1.0f - 0.5f / specularity_sample_count, specularity_t);
+        float cos_theta_u = optix::lerp(0.5 / angle_sample_count, 1.0 - 0.5 / angle_sample_count, abs_cos_theta);
+        float roughness_v = optix::lerp(0.5 / roughness_sample_count, 1.0 - 0.5 / roughness_sample_count, roughness);
 
-        float2 rhos = tex3D(dielectric_ggx_rho_texture, cos_theta_u, roughness_v, specularity_w);
+        float ior_i_over_o_w = 0;
+        if (ior_i_over_o < 1.0f) {
+            // Entering light medium
+            float ior_i_over_o_t = saturate((ior_i_over_o - 0.331492f) / 0.457982f); // Remap valid ior_i_over_o values from [0.331492, 0.789474] to [0, 1]
+            ior_i_over_o_w = optix::lerp(0.5 / ior_i_over_o_sample_count, 1.0 - 0.5 / ior_i_over_o_sample_count, ior_i_over_o_t);
+            ior_i_over_o_w = 0.5f * ior_i_over_o_w; // Remap to first part of 3D texture, where the light samples are.
+        } else {
+            // Entering dense medium
+            float ior_i_over_o_t = saturate((ior_i_over_o - 1.26667f) / 1.75f); // Remap valid ior_i_over_o values from [1.26667, 3.01667] to [0, 1]
+            ior_i_over_o_w = optix::lerp(0.5 / ior_i_over_o_sample_count, 1.0 - 0.5 / ior_i_over_o_sample_count, ior_i_over_o_t);
+            ior_i_over_o_w = 0.5f * ior_i_over_o_w + 0.5f; // Remap to last part of 3D texture, where the dense samples are.
+        }
+
+        float2 rhos = tex3D(dielectric_ggx_rho_texture, cos_theta_u, roughness_v, ior_i_over_o_w);
+        DielectricRho res;
+        res.total_rho = rhos.x;
+        res.reflected_rho = rhos.y;
+        return res;
 #else
-        auto rhos = Bifrost::Assets::Shading::Rho::sample_dielectric_GGX(abs_cos_theta, roughness, specularity);
+        auto rhos = Bifrost::Assets::Shading::Rho::sample_dielectric_GGX(abs_cos_theta, roughness, ior_i_over_o);
+        return { rhos.total_rho, rhos.reflected_rho };
 #endif
-        float total_rho = rhos.x;
-        float reflected_rho = rhos.y;
-        return { total_rho, reflected_rho };
     }
 };
 

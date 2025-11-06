@@ -26,13 +26,22 @@ float sample_burley(float wo_dot_normal, float roughness);
 // ------------------------------------------------------------------------------------------------
 // Dielectric GGX rho fit
 // ------------------------------------------------------------------------------------------------
+struct DielectricRho {
+    float total_rho;
+    float reflected_rho;
+    inline float transmitted_rho() const { return total_rho - reflected_rho; }
+};
+
 extern const int dielectric_GGX_angle_sample_count;
 extern const int dielectric_GGX_roughness_sample_count;
-extern const int dielectric_GGX_specularity_sample_count;
-extern const float dielectric_GGX_minimum_specularity;
-extern const float dielectric_GGX_maximum_specularity;
-extern const Math::Vector2f dielectric_GGX[];
-Math::Vector2f sample_dielectric_GGX(float wo_dot_normal, float roughness, float specularity);
+extern const int dielectric_GGX_ior_i_over_o_sample_count;
+extern const float dielectric_GGX_minimum_IOR_into_light_medium;
+extern const float dielectric_GGX_maximum_IOR_into_light_medium;
+extern const float dielectric_GGX_minimum_IOR_into_dense_medium;
+extern const float dielectric_GGX_maximum_IOR_into_dense_medium;
+extern const Math::Vector2f dielectric_GGX_into_light_medium[];
+extern const Math::Vector2f dielectric_GGX_into_dense_medium[];
+DielectricRho sample_dielectric_GGX(float wo_dot_normal, float roughness, float ior_i_over_o);
 
 // ------------------------------------------------------------------------------------------------
 // GGX rho fit

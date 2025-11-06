@@ -435,20 +435,31 @@ struct Renderer::Implementation {
                     // Create buffer.
                     unsigned int width = Rho::dielectric_GGX_angle_sample_count;
                     unsigned int height = Rho::dielectric_GGX_roughness_sample_count;
-                    unsigned int depth = Rho::dielectric_GGX_specularity_sample_count;
-                    Buffer rho_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_SHORT2, width, height, depth);
+                    const unsigned int per_density_depth = Rho::dielectric_GGX_ior_i_over_o_sample_count;
+                    const unsigned int per_density_element_count = width * height * per_density_depth;
 
-                    unsigned short* rho_data = static_cast<unsigned short*>(rho_buffer->map());
-                    for (unsigned int i = 0; i < width * height * depth; ++i) {
-                        Vector2f dielectic_rho = Rho::dielectric_GGX[i];
-                        rho_data[2 * i] = unsigned short(dielectic_rho.x * 65535 + 0.5f); // Full rho
-                        rho_data[2 * i + 1] = unsigned short(dielectic_rho.y * 65535 + 0.5f); // Reflected rho
+                    Buffer rho_buffer = context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_SHORT2, width, height, 2 * per_density_depth);
+                    ushort2* rho_data = static_cast<ushort2*>(rho_buffer->map());
+
+                    // Light medium rhos
+                    for (unsigned int i = 0; i < per_density_element_count; ++i) {
+                        auto dielectic_rho = Rho::dielectric_GGX_into_light_medium[i];
+                        rho_data[i] = { unsigned short(dielectic_rho.x * 65535 + 0.5f), // Full rho
+                                        unsigned short(dielectic_rho.y * 65535 + 0.5f) }; // Reflected rho
                     }
+
+                    // Dense medium rhos
+                    ushort2* dense_rho = rho_data + per_density_element_count;
+                    for (unsigned int i = 0; i < per_density_element_count; ++i) {
+                        auto dielectic_rho = Rho::dielectric_GGX_into_dense_medium[i];
+                        dense_rho[i] = { unsigned short(dielectic_rho.x * 65535 + 0.5f), // Full rho
+                                         unsigned short(dielectic_rho.y * 65535 + 0.5f) }; // Reflected rho
+                    }
+
                     rho_buffer->unmap();
                     OPTIX_VALIDATE(rho_buffer);
 
                     TextureSampler rho_texture = wrap_in_sampler(context, rho_buffer);
-
                     context["dielectric_ggx_rho_texture"]->setTextureSampler(rho_texture);
                 }
             }

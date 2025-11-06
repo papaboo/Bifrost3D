@@ -89,6 +89,10 @@ using ODXGIFactory2 = DX11Renderer::OwnedResourcePtr<IDXGIFactory2>;
 // Storage.
 //-------------------------------------------------------------------------------------------------
 
+struct ushort2 {
+    unsigned short x, y;
+};
+
 struct half2 {
     half_float::half x, y;
 };

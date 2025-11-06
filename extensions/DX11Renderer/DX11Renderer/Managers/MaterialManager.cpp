@@ -114,18 +114,28 @@ OShaderResourceView MaterialManager::create_dielectric_GGX_srv(ID3D11Device1& de
 
     const unsigned int width = Rho::dielectric_GGX_angle_sample_count;
     const unsigned int height = Rho::dielectric_GGX_roughness_sample_count;
-    const unsigned int depth = Rho::dielectric_GGX_specularity_sample_count;
-    const unsigned int element_count = width * height * depth;
+    const unsigned int per_density_depth = Rho::dielectric_GGX_ior_i_over_o_sample_count;
+    const unsigned int element_count = width * height * per_density_depth;
 
-    unsigned short* rho = new unsigned short[2 * element_count];
+    ushort2* rho = new ushort2[2 * element_count]; // Light and dense medium samples combined.
+
+    // Light medium rhos
     for (unsigned int i = 0; i < element_count; ++i) {
-        auto dielectic_rho = Rho::dielectric_GGX[i];
-        rho[2 * i] = unsigned short(dielectic_rho.x * 65535 + 0.5f); // Full rho
-        rho[2 * i + 1] = unsigned short(dielectic_rho.y * 65535 + 0.5f); // Reflected rho
+        auto dielectic_rho = Rho::dielectric_GGX_into_light_medium[i];
+        rho[i] = { unsigned short(dielectic_rho.x * 65535 + 0.5f), // Full rho
+                   unsigned short(dielectic_rho.y * 65535 + 0.5f) }; // Reflected rho
+    }
+
+    // Dense medium rhos
+    ushort2* dense_rho = rho + element_count;
+    for (unsigned int i = 0; i < element_count; ++i) {
+        auto dielectic_rho = Rho::dielectric_GGX_into_dense_medium[i];
+        dense_rho[i] = { unsigned short(dielectic_rho.x * 65535 + 0.5f), // Full rho
+                         unsigned short(dielectic_rho.y * 65535 + 0.5f) }; // Reflected rho
     }
 
     OShaderResourceView dielectric_GGX_rho_srv;
-    create_texture_3D(device, DXGI_FORMAT_R16G16_UNORM, rho, width, height, depth, D3D11_USAGE_IMMUTABLE, &dielectric_GGX_rho_srv);
+    create_texture_3D(device, DXGI_FORMAT_R16G16_UNORM, rho, width, height, 2 * per_density_depth, D3D11_USAGE_IMMUTABLE, &dielectric_GGX_rho_srv);
 
     delete[] rho;
 

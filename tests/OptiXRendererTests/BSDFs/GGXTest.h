@@ -599,36 +599,42 @@ GTEST_TEST(GGX, fully_grazing_evaluates_to_black) {
 
 // Validate that a few select samples in the dielectric GGX precomputed Rho tables have the correct values and can be looked up correct.
 // We test the corner and middle samples and make sure that the sample coordinates match with the original precomputed sample coords.
-GTEST_TEST(GGX, validate_ggx_rho_precomputations) {
+GTEST_TEST(GGX, validate_dielectric_ggx_rho_precomputations) {
     using namespace Bifrost::Assets::Shading;
     using namespace OptiXRenderer::Shading::BSDFs;
 
-    int sample_count = 4096;
+    int sample_count = 8192;
 
     float middle_cos_theta = (Rho::dielectric_GGX_angle_sample_count / 2) / (Rho::dielectric_GGX_angle_sample_count - 1.0f);
+
     float middle_roughness = (Rho::dielectric_GGX_roughness_sample_count / 2) / (Rho::dielectric_GGX_roughness_sample_count - 1.0f);
     float middle_alpha = GGX::alpha_from_roughness(middle_roughness);
-    float common_specularity = 0.04f;
 
-    for (float cos_theta_o : { 0.000001f, middle_cos_theta, 1.0f }) {
+    float common_IOR = 1.5f; // glass and coat IOR
+    float tested_IORs[6] = {
+        Rho::dielectric_GGX_minimum_IOR_into_light_medium, 1.0f / common_IOR, Rho::dielectric_GGX_maximum_IOR_into_light_medium,
+        Rho::dielectric_GGX_minimum_IOR_into_dense_medium, common_IOR, Rho::dielectric_GGX_maximum_IOR_into_dense_medium,
+    };
+
+    for (float cos_theta_o : { 1 / 15.0f, middle_cos_theta, 1.0f }) {
         optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
         for (float alpha : { GGX::MIN_ALPHA, middle_alpha, 1.0f }) {
             float roughness = GGX::roughness_from_alpha(alpha);
-            for (float specularity : { Rho::dielectric_GGX_minimum_specularity, common_specularity, Rho::dielectric_GGX_maximum_specularity }) {
-                float ior_i_over_o = dielectric_ior_from_specularity(specularity);
+            for (float medium_IOR : tested_IORs) {
+                float ior_i_over_o = medium_IOR / AIR_IOR;
+                float specularity = dielectric_specularity(AIR_IOR, medium_IOR);
 
                 optix::float3 transmission_tint = { 1, 0, 0 };
                 auto ggx = GGXWrapper(alpha, specularity, ior_i_over_o, transmission_tint);
                 optix::float3 expected_rho = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, sample_count).reflectance;
                 float expected_total_reflectance = expected_rho.x; // Red contains both reflected and transmitted contribution.
-                float expected_reflected_reflectance = expected_rho.y; // Green only contains reflected contribution as green transitted tint is 0.
+                float expected_reflected_reflectance = expected_rho.y; // Green only contains reflected contribution as green transmitted tint is 0.
 
-                auto actual_rho = Rho::sample_dielectric_GGX(cos_theta_o, roughness, specularity);
-                float actual_total_reflectance = actual_rho.x;
-                float reflection_ratio = actual_rho.y;
-                float actual_reflected_reflectance = actual_total_reflectance * reflection_ratio;
-                EXPECT_FLOAT_EQ_EPS(expected_total_reflectance, actual_total_reflectance, 0.0221f) << "for cos_theta: " << cos_theta_o << ", roughness: " << roughness << ", specularity: " << specularity;
-                EXPECT_FLOAT_EQ_EPS(expected_reflected_reflectance, actual_reflected_reflectance, 0.038f) << "for cos_theta: " << cos_theta_o << ", roughness: " << roughness << ", specularity: " << specularity;
+                auto actual_rho = Rho::sample_dielectric_GGX(cos_theta_o, roughness, ior_i_over_o);
+                float actual_total_reflectance = actual_rho.total_rho;
+                float actual_reflected_reflectance = actual_rho.reflected_rho;
+                EXPECT_FLOAT_EQ_EPS(expected_total_reflectance, actual_total_reflectance, 0.0029f) << "for cos_theta: " << cos_theta_o << ", roughness: " << roughness << ", ior_i_over_o: " << ior_i_over_o;
+                EXPECT_FLOAT_EQ_EPS(expected_reflected_reflectance, actual_reflected_reflectance, 0.0024f) << "for cos_theta: " << cos_theta_o << ", roughness: " << roughness << ", ior_i_over_o: " << ior_i_over_o;
             }
         }
     }
