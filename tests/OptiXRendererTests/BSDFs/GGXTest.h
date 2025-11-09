@@ -506,8 +506,8 @@ GTEST_TEST(GGX, transmission_reflectance_equals_GGX_T) {
             for (float alpha : { 0.0675f, 0.25f, 1.0f }) {
                 auto ggx = GGXWrapper(alpha, specularity, ior_i_over_o, transmissive_tint, disable_reflection);
                 auto ggx_t = GGXTransmissionWrapper(alpha, ior_i_over_o, specularity);
-                auto ggx_result = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 2 * 4096);
-                auto ggx_t_result = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx_t, wo, 2 * 2048);
+                auto ggx_result = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 4096);
+                auto ggx_t_result = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx_t, wo, 4096);
 
                 float cos_theta_direction = dot(ggx_result.mean_direction, ggx_t_result.mean_direction);
                 EXPECT_FLOAT3_EQ_EPS(ggx_result.reflectance, ggx_t_result.reflectance, 0.0015f) << ggx.to_string();

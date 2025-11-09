@@ -9,12 +9,9 @@
 #ifndef _PRECOMPUTE_DIELECTRIC_BSDF_RHO_H_
 #define _PRECOMPUTE_DIELECTRIC_BSDF_RHO_H_
 
-#include <OptiXRenderer/Shading/BSDFs/GGX.h>
-#include <OptiXRenderer/RNG.h>
+#include <PmjbRNG.h>
 
 #include <Bifrost/Assets/Image.h>
-#include <Bifrost/Core/Array.h>
-#include <Bifrost/Math/Utils.h>
 
 #include <fstream>
 
@@ -32,57 +29,62 @@ const float specularity_range = max_specularity - min_specularity;
 
 typedef BSDFSample(*SampleDieletricBSDF)(float roughness, float specularity, float3 wo, float3 random_sample);
 
-float2 sample_rho(float3 wo, float roughness, float specularity, unsigned int sample_count, SampleDieletricBSDF sample_rough_BSDF) {
-
-    // Since we use a QMC RNG the sample count should be a power of two.
-    sample_count = next_power_of_two(sample_count);
+float2 sample_rho(float3 wo, float roughness, float specularity, unsigned int sample_count, const PmjbRNG& rng, SampleDieletricBSDF sample_rough_BSDF) {
 
     // Each hemisphere should receive at least half the number of samples expected by the input sample count.
     unsigned int sample_count_per_hemisphere = sample_count / 2;
-    unsigned int max_sample_count = 65536u;
 
-    auto reflected_throughput = Core::Array<double>(sample_count);
-    auto transmitted_throughput = Core::Array<double>(sample_count);
-
-    auto rng = RNG::PracticalScrambledSobol(0, 0);
-    unsigned int samples_drawn = 0;
-    bool undersampled_reflection = true;
-    bool undersampled_transmission = true;
-    do {
-        for (; samples_drawn < sample_count; ++samples_drawn) {
-            float3 rng_sample = make_float3(rng.sample4f());
+    // Predraw 256 samples to estimate the distribution of samples between each hemisphere.
+    int total_sample_count;
+    {
+        const int rng_pre_sample_count = 256;
+        int reflected_sample_count = 0, transmitted_sample_count = 0;
+        for (int s = 0; s < rng_pre_sample_count; ++s) {
+            float3 rng_sample = rng.sample_3f(s, rng_pre_sample_count);
             BSDFSample sample = sample_rough_BSDF(roughness, specularity, wo, rng_sample);
-            reflected_throughput[samples_drawn] = transmitted_throughput[samples_drawn] = 0.0;
             if (sample.PDF.is_valid()) {
-                auto& throughput = sample.direction.z < 0.0f ? transmitted_throughput : reflected_throughput;
-                throughput[samples_drawn] = sample.reflectance.x * abs(sample.direction.z) / sample.PDF.value();;
+                if (sample.direction.z < 0.0f)
+                    ++transmitted_sample_count;
+                else
+                    ++reflected_sample_count;
             }
         }
 
-        // Bump the sample count to the next power of two in case we need to draw more samples.
-        sample_count *= 2;
+        float valid_sample_count = float(transmitted_sample_count + reflected_sample_count);
+        float reflected_ratio = reflected_sample_count / valid_sample_count;
+        float transmitted_ratio = transmitted_sample_count / valid_sample_count;
 
-        // While one hemisphere hasn't seen enough samples keep drawing new samples.
-        // Or, if no samples have been allocated to one of the hemispheres, then simply ignore that hemisphere.
-        undersampled_reflection = reflected_throughput.size() < sample_count_per_hemisphere && reflected_throughput.size() != 0;
-        undersampled_transmission = transmitted_throughput.size() < sample_count_per_hemisphere && transmitted_throughput.size() != 0;
-    } while (samples_drawn <= max_sample_count && (undersampled_reflection || undersampled_transmission));
+        float smallest_ratio = fminf(reflected_ratio, transmitted_ratio);
+        if (smallest_ratio == 0.0f)
+            smallest_ratio = 0.5f;
+        total_sample_count = int(sample_count_per_hemisphere / smallest_ratio);
 
-    double reflected_rho = 0.0;
-    if (reflected_throughput.size())
-        reflected_rho = Math::sort_and_pairwise_summation(reflected_throughput.begin(), reflected_throughput.end()) / samples_drawn;
-    double transmitted_rho = 0.0;
-    if (transmitted_throughput.size())
-        transmitted_rho = Math::sort_and_pairwise_summation(transmitted_throughput.begin(), transmitted_throughput.end()) / samples_drawn;
+        // Since we use a QMC RNG the sample count should be a power of two.
+        total_sample_count = next_power_of_two(total_sample_count);
+        total_sample_count = min(total_sample_count, rng.m_max_sample_capacity);
+    }
 
+    double reflected_throughput = 0.0;
+    double transmitted_throughput = 0.0;
+    for (int s = 0; s < total_sample_count; ++s) {
+        float3 rng_sample = rng.sample_3f(s, total_sample_count);
+        BSDFSample sample = sample_rough_BSDF(roughness, specularity, wo, rng_sample);
+        if (sample.PDF.is_valid()) {
+            double& throughput = sample.direction.z < 0.0f ? transmitted_throughput : reflected_throughput;
+            throughput += sample.reflectance.x * abs(sample.direction.z) / sample.PDF.value();
+        }
+    }
+
+    double reflected_rho = reflected_throughput / total_sample_count;
+    double transmitted_rho = transmitted_throughput / total_sample_count;
     return { float(reflected_rho), float(transmitted_rho) };
 }
 
-Assets::Image tabulate_rho(int width, int height, int depth, unsigned int sample_count, SampleDieletricBSDF sample_rough_BSDF) {
+Assets::Image tabulate_rho(int width, int height, int depth, unsigned int sample_count, const PmjbRNG& rng, SampleDieletricBSDF sample_rough_BSDF) {
     Assets::Image rho_image = Assets::Image::create3D("rho", Assets::PixelFormat::RGB_Float, false, Math::Vector3ui(width, height, depth));
     Math::RGB* rho_image_pixels = rho_image.get_pixels<Math::RGB>();
 
-#pragma omp parallel for
+    #pragma omp parallel for
     for (int z = 0; z < depth; ++z) {
         float specularity_t = z / float(depth - 1);
         float specularity = lerp(min_specularity, max_specularity, specularity_t);
@@ -91,7 +93,7 @@ Assets::Image tabulate_rho(int width, int height, int depth, unsigned int sample
             for (int x = 0; x < width; ++x) {
                 float cos_theta = fmaxf(0.000001f, x / float(width - 1));
                 float3 wo = make_float3(sqrt(1.0f - cos_theta * cos_theta), 0.0f, cos_theta);
-                float2 rho = sample_rho(wo, roughness, specularity, sample_count, sample_rough_BSDF);
+                float2 rho = sample_rho(wo, roughness, specularity, sample_count, rng, sample_rough_BSDF);
                 rho_image_pixels[x + width * (y + z * height)] = Math::RGB(rho.x + rho.y, rho.x, rho.y);
             }
         }

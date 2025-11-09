@@ -11,10 +11,10 @@
 
 #include <Utils.h>
 
+#include <Bifrost/Math/RNG.h>
 #include <Bifrost/Math/Statistics.h>
 
 #include <OptiXRenderer/Distributions.h>
-#include <OptiXRenderer/RNG.h>
 #include <OptiXRenderer/Utils.h>
 
 #include <gtest/gtest.h>
@@ -24,10 +24,41 @@ namespace BSDFTestUtils {
 
 using namespace optix;
 
+struct PmjbRNG {
+    unsigned int m_max_sample_capacity;
+    Bifrost::Math::Vector2f* m_samples;
+
+    PmjbRNG(unsigned int max_sample_capacity) {
+        m_max_sample_capacity = max_sample_capacity;
+        m_samples = new Bifrost::Math::Vector2f[max_sample_capacity];
+        Bifrost::Math::RNG::fill_progressive_multijittered_bluenoise_samples(m_samples, m_samples + max_sample_capacity);
+    }
+    PmjbRNG(PmjbRNG& other) = delete;
+    PmjbRNG(PmjbRNG&& other) = default;
+
+    PmjbRNG& operator=(PmjbRNG& rhs) = delete;
+    PmjbRNG& operator=(PmjbRNG&& rhs) = default;
+
+    ~PmjbRNG() { delete[] m_samples; }
+
+    float2 sample_2f(int i) const { return make_float2(m_samples[i].x, m_samples[i].y); }
+    float3 sample_3f(int i, int max_sample_count) const { return make_float3(sample_2f(i), (i + 0.5f) / max_sample_count); }
+};
+
+// Precompute the random numbers and make them available as a global constant,
+// to make it easy to reuse across the BSDF sample test utils and avoid recomputing them multiple times.
+static const PmjbRNG g_rng = PmjbRNG(8192u);
+
 struct RhoResult {
-    optix::float3 reflectance;
-    optix::float3 std_dev;
-    optix::float3 mean_direction;
+    float3 reflectance;
+    float3 std_dev;
+    float3 mean_direction;
+
+    static RhoResult invalid() {
+        RhoResult res;
+        res.reflectance = res.std_dev = res.mean_direction = make_float3(nanf(""));
+        return res;
+    }
 };
 
 template <typename BSDFModel>
@@ -35,11 +66,14 @@ RhoResult directional_hemispherical_reflectance_function(BSDFModel bsdf_model, f
     using namespace Bifrost::Math;
     using namespace optix;
 
+    // Return an invalid result if more samples are requested than can be produced.
+    if (g_rng.m_max_sample_capacity < sample_count)
+        return RhoResult::invalid();
+
     Statistics<double> reflectance_statistics[3] = { Statistics<double>(), Statistics<double>(), Statistics<double>() };
     double3 summed_directions = { 0.0, 0.0, 0.0 };
     for (unsigned int i = 0u; i < sample_count; ++i) {
-        float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
-        BSDFSample sample = bsdf_model.sample(wo, rng_sample);
+        BSDFSample sample = bsdf_model.sample(wo, g_rng.sample_3f(i, sample_count));
 
         float3 reflectance = { 0, 0, 0 };
         if (sample.PDF.is_valid()) {
@@ -89,7 +123,7 @@ void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count
 template <typename BSDFModel>
 void helmholtz_reciprocity(BSDFModel bsdf_model, float3 wo, unsigned int sample_count) {
     for (unsigned int i = 0u; i < sample_count; ++i) {
-        float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
+        float3 rng_sample = g_rng.sample_3f(i, sample_count);
         BSDFSample sample = bsdf_model.sample(wo, rng_sample);
 
         if (sample.PDF.is_valid()) {
@@ -102,7 +136,7 @@ void helmholtz_reciprocity(BSDFModel bsdf_model, float3 wo, unsigned int sample_
 template <typename BSDFModel>
 void BSDF_consistency_test(BSDFModel bsdf_model, float3 wo, unsigned int sample_count) {
     for (unsigned int i = 0u; i < sample_count; ++i) {
-        float3 rng_sample = make_float3(RNG::sample02(i), (i + 0.5f) / sample_count);
+        float3 rng_sample = g_rng.sample_3f(i, sample_count);
         BSDFSample sample = bsdf_model.sample(wo, rng_sample);
 
         if (sample.PDF.is_valid()) {
@@ -124,8 +158,7 @@ void PDF_positivity_test(BSDFModel bsdf_model, optix::float3 wo, unsigned int sa
     using namespace optix;
 
     for (unsigned int i = 0u; i < sample_count; ++i) {
-        float2 rng_sample = RNG::sample02(i);
-        auto wi = Distributions::UniformSphere::sample(rng_sample).direction;
+        auto wi = Distributions::UniformSphere::sample(g_rng.sample_2f(i)).direction;
 
         BSDFResponse sample = bsdf_model.evaluate_with_PDF(wo, wi);
 

@@ -9,12 +9,9 @@
 #ifndef _PRECOMPUTE_ROUGH_BRDF_RHO_H_
 #define _PRECOMPUTE_ROUGH_BRDF_RHO_H_
 
-#include <OptiXRenderer/Shading/BSDFs/GGX.h>
-#include <OptiXRenderer/RNG.h>
+#include <PmjbRNG.h>
 
 #include <Bifrost/Assets/Image.h>
-#include <Bifrost/Core/Array.h>
-#include <Bifrost/Math/Utils.h>
 
 #include <fstream>
 
@@ -26,22 +23,19 @@ using namespace OptiXRenderer;
 
 typedef BSDFSample(*SampleRoughBRDF)(float roughness, float3 wo, float2 random_sample);
 
-double sample_rho(float3 wo, float roughness, unsigned int sample_count, SampleRoughBRDF sample_rough_BSDF) {
+float sample_rho(float3 wo, float roughness, unsigned int sample_count, const PmjbRNG& rng, SampleRoughBRDF sample_rough_BSDF) {
 
-    Core::Array<double> throughput = Core::Array<double>(sample_count);
+    double throughput = 0.0;
     for (unsigned int s = 0; s < sample_count; ++s) {
-        float2 rng_sample = RNG::sample02(s);
-        BSDFSample sample = sample_rough_BSDF(roughness, wo, rng_sample);
+        BSDFSample sample = sample_rough_BSDF(roughness, wo, rng.sample_2f(s));
         if (sample.PDF.is_valid())
-            throughput[s] = sample.reflectance.x * sample.direction.z / sample.PDF.value();
-        else
-            throughput[s] = 0.0;
+            throughput += sample.reflectance.x * sample.direction.z / sample.PDF.value();
     }
 
-    return Math::sort_and_pairwise_summation(throughput.begin(), throughput.end()) / sample_count;
+    return float(throughput / sample_count);
 }
 
-Assets::Image tabulate_rho(unsigned int width, unsigned int height, unsigned int sample_count, SampleRoughBRDF sample_rough_BSDF) {
+Assets::Image tabulate_rho(unsigned int width, unsigned int height, unsigned int sample_count, const PmjbRNG& rng, SampleRoughBRDF sample_rough_BSDF) {
     Assets::Image rho_image = Assets::Image::create2D("rho", Assets::PixelFormat::RGB_Float, false, Math::Vector2ui(width, height));
     Math::RGB* rho_image_pixels = rho_image.get_pixels<Math::RGB>();
 
@@ -51,8 +45,8 @@ Assets::Image tabulate_rho(unsigned int width, unsigned int height, unsigned int
         for (int x = 0; x < int(width); ++x) {
             float cos_theta = fmaxf(0.000001f, x / float(width - 1));
             float3 wo = make_float3(sqrt(1.0f - cos_theta * cos_theta), 0.0f, cos_theta);
-            double rho = sample_rho(wo, roughness, sample_count, sample_rough_BSDF);
-            rho_image_pixels[x + y * width] = Math::RGB(float(rho));
+            float rho = sample_rho(wo, roughness, sample_count, rng, sample_rough_BSDF);
+            rho_image_pixels[x + y * width] = Math::RGB(rho);
         }
     }
 

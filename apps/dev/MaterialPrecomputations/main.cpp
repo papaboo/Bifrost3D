@@ -6,6 +6,8 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
+#include <PmjbRNG.h>
+
 #include <FitRhoApproximation.h>
 #include <GGXAlphaFromMaxPDF.h>
 #include <PrecomputeDielectricBSDFRho.h>
@@ -32,6 +34,7 @@ int main(int argc, char** argv) {
     const unsigned int width = 32, height = 32, sample_count = 4096;
 
     Images::allocate(1);
+    PmjbRNG rng = PmjbRNG(16384);
 
     // fit_GGX_rho_approximation(output_dir);
 
@@ -44,7 +47,7 @@ int main(int argc, char** argv) {
             return Burley::sample({1, 1, 1}, alpha, wo, random_sample);
         };
 
-        Image rho = PrecomputeRoughBRDFRho::tabulate_rho(width, height, sample_count, sample_burley);
+        Image rho = PrecomputeRoughBRDFRho::tabulate_rho(width, height, sample_count, rng, sample_burley);
 
         // Store.
         StbImageWriter::write(rho, output_dir + "BurleyRho.png");
@@ -57,7 +60,7 @@ int main(int argc, char** argv) {
             return GGX_R::sample(alpha, 1, wo, random_sample);
         };
 
-        Image rho = PrecomputeRoughBRDFRho::tabulate_rho(width, height, sample_count, sample_ggx);
+        Image rho = PrecomputeRoughBRDFRho::tabulate_rho(width, height, sample_count, rng, sample_ggx);
 
         // Store.
         StbImageWriter::write(rho, output_dir + "GGXRho.png");
@@ -70,7 +73,7 @@ int main(int argc, char** argv) {
             return GGX_R::sample(alpha, 0, wo, random_sample);
         };
 
-        Image rho = PrecomputeRoughBRDFRho::tabulate_rho(width, height, sample_count, sample_ggx_with_fresnel);
+        Image rho = PrecomputeRoughBRDFRho::tabulate_rho(width, height, sample_count, rng, sample_ggx_with_fresnel);
 
         // Store.
         StbImageWriter::write(rho, output_dir + "GGXWithFresnelRho.png");
@@ -86,7 +89,7 @@ int main(int argc, char** argv) {
         };
 
         int size = 16;
-        Image rho = PrecomputeDielectricBSDFRho::tabulate_rho(size, size, size, sample_count, sample_dielectric_ggx);
+        Image rho = PrecomputeDielectricBSDFRho::tabulate_rho(size, size, size, sample_count, rng, sample_dielectric_ggx);
 
         // Store.
         PrecomputeDielectricBSDFRho::output_brdf(rho, sample_count, output_dir + "DielectricGGXRho.cpp", "dielectric_GGX",
