@@ -406,6 +406,7 @@ CameraEffects::CameraEffects(ID3D11Device1& device, const ShaderManager& shader_
         m_linear_tonemapping_PS = create_pixel_shader("CameraEffects::linear_tonemapping_ps");
         m_filmic_tonemapping_PS = create_pixel_shader("CameraEffects::unreal4_tonemapping_ps");
         m_agx_tonemapping_PS = create_pixel_shader("CameraEffects::agx_tonemapping_ps");
+        m_khronos_neutral_tonemapping_PS = create_pixel_shader("CameraEffects::khronos_neutral_tonemapping_ps");
     }
 }
 
@@ -493,8 +494,10 @@ void CameraEffects::process(ID3D11DeviceContext1& context, Bifrost::Math::Camera
             context.PSSetShader(m_linear_tonemapping_PS, 0, 0);
         else if (settings.tonemapping.mode == TonemappingMode::Filmic)
             context.PSSetShader(m_filmic_tonemapping_PS, 0, 0);
-        else // settings.tonemapping.mode == TonemappingMode::AgX
+        else if (settings.tonemapping.mode == TonemappingMode::AgX)
             context.PSSetShader(m_agx_tonemapping_PS, 0, 0);
+        else // settings.tonemapping.mode == TonemappingMode::KhronosNeutral
+            context.PSSetShader(m_khronos_neutral_tonemapping_PS, 0, 0);
 
         ID3D11ShaderResourceView* srvs[3] = { frame_SRV, m_linear_exposure_SRV, bloom_SRV };
         context.PSSetShaderResources(0, 3, srvs);

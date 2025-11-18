@@ -15,7 +15,7 @@
 
 namespace Bifrost::Math::CameraEffects {
 
-enum class TonemappingMode { Linear, Filmic, AgX, Count };
+enum class TonemappingMode { Linear, Filmic, AgX, KhronosNeutral, Count };
 enum class ExposureMode { Fixed, LogAverage, Histogram, Count };
 
 struct TonemappingSettings {
@@ -227,7 +227,7 @@ inline RGB filmic(RGB color, TonemappingSettings s) {
 // ------------------------------------------------------------------------------------------------
 
 // Mean error^2: 3.6705141e-06
-inline RGB agxDefaultContrastApprox(RGB c) {
+inline RGB agx_default_contrast_approx(RGB c) {
     return -0.00232f + c * (0.1191f + c * (0.4298f + c * (-6.868f + c * (31.96f + c * (-40.14f + c * 15.5f)))));
 }
 
@@ -247,7 +247,7 @@ inline RGB agx(RGB linear_color) {
     c = inverse_lerp(min_exposure_value, max_exposure_value, c);
 
     // Apply sigmoid function approximation
-    c = agxDefaultContrastApprox(saturate(c));
+    c = agx_default_contrast_approx(saturate(c));
 
     // Transform back from AgX color space
     const Matrix3x3f agx_to_tonemapped = { 1.19687900512017f, -0.0980208811401368f, -0.0990297440797205f,
@@ -256,6 +256,30 @@ inline RGB agx(RGB linear_color) {
     c = agx_to_tonemapped * c;
 
     return gammacorrect(c, 2.2f);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Khronos neutral tonemapping operator
+// https://modelviewer.dev/examples/tone-mapping#commerce
+// ------------------------------------------------------------------------------------------------
+
+inline RGB khronos_neutral_tone_mapping(RGB linear_color) {
+    const float start_compression = 0.8f - 0.04f;
+    const float desaturation = 0.15f;
+
+    float x = min(linear_color.r, min(linear_color.g, linear_color.b));
+    float offset = x < 0.08f ? x - 6.25f * x * x : 0.04f;
+    linear_color -= offset;
+
+    float peak = max(linear_color.r, max(linear_color.g, linear_color.b));
+    if (peak < start_compression) return linear_color;
+
+    float d = 1.0f - start_compression;
+    float new_peak = 1.0f - d * d / (peak + d - start_compression);
+    linear_color *= new_peak / peak;
+
+    float g = 1.0f - 1.0f / (desaturation * (peak - new_peak) + 1.0f);
+    return lerp(linear_color, RGB::white() * new_peak, g);
 }
 
 } // NS Bifrost::Math::CameraEffects

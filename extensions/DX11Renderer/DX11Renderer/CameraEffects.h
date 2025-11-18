@@ -235,6 +235,7 @@ private:
     OPixelShader m_linear_tonemapping_PS;
     OPixelShader m_filmic_tonemapping_PS;
     OPixelShader m_agx_tonemapping_PS;
+    OPixelShader m_khronos_neutral_tonemapping_PS;
 };
 
 } // NS DX11Renderer

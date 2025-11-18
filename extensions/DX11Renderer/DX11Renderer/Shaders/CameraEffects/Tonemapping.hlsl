@@ -153,6 +153,27 @@ float3 agx(float3 linear_color) {
     return pow(abs(c), 2.2);
 }
 
+// Khronos neutral tonemapping operator
+// https://modelviewer.dev/examples/tone-mapping#commerce
+float3 khronos_neutral_tone_mapping(float3 linear_color) {
+    const float start_compression = 0.8 - 0.04;
+    const float desaturation = 0.15;
+
+    float x = min(linear_color.r, min(linear_color.g, linear_color.b));
+    float offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
+    linear_color -= offset;
+
+    float peak = max(linear_color.r, max(linear_color.g, linear_color.b));
+    if (peak < start_compression) return linear_color;
+
+    float d = 1.0 - start_compression;
+    float new_peak = 1.0 - d * d / (peak + d - start_compression);
+    linear_color *= new_peak / peak;
+
+    float g = 1.0 - 1.0 / (desaturation * (peak - new_peak) + 1.0f);
+    return lerp(linear_color, new_peak, g);
+}
+
 // ------------------------------------------------------------------------------------------------
 // Simple vignette using smoothstep.
 // Adapted from https://github.com/mattdesl/lwjgl-basics/wiki/ShaderLesson3
@@ -197,10 +218,12 @@ class Unreal4Tonemapper : ITonemapper {
     }
 };
 
+class KhronosNeutralTonemapper : ITonemapper {
+    float3 tonemap(float3 color) { return khronos_neutral_tone_mapping(color); }
+};
+
 class AgXTonemapper : ITonemapper {
-    float3 tonemap(float3 color) {
-        return agx(color);
-    }
+    float3 tonemap(float3 color) { return agx(color); }
 };
 
 float4 postprocess_pixel(int2 pixel_index, ITonemapper tonemapper) {
@@ -231,6 +254,11 @@ float4 linear_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
 
 float4 unreal4_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
     Unreal4Tonemapper tonemapper;
+    return postprocess_pixel(position.xy, tonemapper);
+}
+
+float4 khronos_neutral_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
+    KhronosNeutralTonemapper tonemapper;
     return postprocess_pixel(position.xy, tonemapper);
 }
 
