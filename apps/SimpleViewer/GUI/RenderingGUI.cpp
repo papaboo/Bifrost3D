@@ -62,7 +62,7 @@ void camera_effects(CameraID camera_ID) {
         });
 
         ImGui::PoppedTreeNode("Tonemapping", [&]() {
-            const char* tonemapping_modes[] = { "Linear", "Filmic", "AgX" };
+            const char* tonemapping_modes[] = { "Linear", "Filmic", "AgX", "Khronos Neutral" };
             int current_tonemapping_mode = (int)effects_settings.tonemapping.mode;
             has_changed |= ImGui::Combo("Tonemapper", &current_tonemapping_mode, tonemapping_modes, IM_ARRAYSIZE(tonemapping_modes));
             effects_settings.tonemapping.mode = (TonemappingMode)current_tonemapping_mode;
@@ -81,6 +81,8 @@ void camera_effects(CameraID camera_ID) {
                         intensities[i] = luminance(filmic(RGB(c), filmic_settings)); break;
                     case TonemappingMode::AgX:
                         intensities[i] = luminance(agx(RGB(c))); break;
+                    case TonemappingMode::KhronosNeutral:
+                        intensities[i] = luminance(khronos_neutral_tone_mapping(RGB(c))); break;
                     }
                 }
                 ImGui::PlotLines("", intensities, IM_ARRAYSIZE(intensities), 0, "Intensity [0, 2]", 0.0f, 1.0f, ImVec2(0, 80));
