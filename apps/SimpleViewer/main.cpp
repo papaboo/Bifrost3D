@@ -338,7 +338,7 @@ int initialize_scene(Engine& engine, ImGui::ImGuiAdaptor* imgui) {
                 image.change_format(format, image.is_sRGB());
             }
             Texture env = Texture::create2D(image, MagnificationFilter::Linear, MinificationFilter::Linear, WrapMode::Repeat, WrapMode::Clamp);
-            scene = SceneRoot("Model scene", env);
+            scene = SceneRoot("Model scene", env, g_environment_color);
         } else
             scene = SceneRoot("Model scene", g_environment_color);
     } else
