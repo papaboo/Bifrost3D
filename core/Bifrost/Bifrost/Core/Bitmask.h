@@ -70,6 +70,7 @@ public:
     inline bool any_set() const { return m_mask != T(0); }
     inline bool any_set(E v) const { return (T(v) & m_mask) != T(0); }
     inline bool any_set(E v1, E v2) const { return ((T(v1) | T(v2)) & m_mask) != T(0); }
+    inline bool any_set(E v1, E v2, E v3) const { return ((T(v1) | T(v2) | T(v3)) & m_mask) != T(0); }
 
     // --------------------------------------------------------------------------------------------
     // Comparisons.
