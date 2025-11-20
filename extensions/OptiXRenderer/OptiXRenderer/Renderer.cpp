@@ -1133,24 +1133,6 @@ struct Renderer::Implementation {
                             scene.environment = EnvironmentMap(context, environment_light, env_tint, environment_sampler);
                             scene.GPU_state.environment_light = scene.environment.get_light().environment;
 #endif
-                            if (scene.environment.next_event_estimation_possible()) {
-                                // Append environment light to the end of the light source buffer.
-                                // NOTE When multi-scene support is added we cannot know if an environment light is available pr scene, 
-                                // so we do not know if the environment light is always valid.
-                                // This can be solved by making the environment light a proxy that points to the scene environment light, if available.
-                                // If not available, then reduce the lightcount by one CPU side before rendering the scene.
-                                // That way we should have minimal performance impact GPU side.
-#if _DEBUG
-                                RTsize light_source_capacity;
-                                lights.sources->getSize(light_source_capacity);
-                                assert(lights.count + 1 <= light_source_capacity);
-#endif
-                                Light* device_lights = (Light*)lights.sources->map();
-                                device_lights[lights.count++] = scene.environment.get_light();
-                                lights.sources->unmap();
-
-                                scene.GPU_state.light_count = lights.count;
-                            }
                         } else {
 #if PRESAMPLE_ENVIRONMENT_MAP
                             scene.environment = PresampledEnvironmentMap(env_tint);
@@ -1163,6 +1145,41 @@ struct Renderer::Implementation {
                         }
                         should_reset_accumulations = true;
                     }
+                }
+
+                // Update the environment light reference in the light list, if the light should be importance sampled.
+                if (scene_data.get_changes().any_set(SceneRoots::Change::Created, SceneRoots::Change::EnvironmentTint, SceneRoots::Change::EnvironmentMap) &&
+                    scene.environment.next_event_estimation_possible()) {
+
+                    // Search for the environment light in the list of lights.
+                    Light* device_lights = (Light*)lights.sources->map();
+                    Light* device_light = nullptr;
+                    for (unsigned int light_index = 0; light_index < lights.count; light_index++)
+                        if (device_lights[light_index].is_type(scene.environment.get_light().get_type())) {
+                            device_light = device_lights + light_index;
+                            break;
+                        }
+
+                    if (device_light == nullptr) {
+                        // Append environment light to the end of the light source buffer.
+                        // NOTE When multi-scene support is added we cannot know if an environment light is available pr scene, 
+                        // so we do not know if the environment light is always valid.
+                        // This can be solved by making the environment light a proxy that points to the scene environment light, if available.
+                        // If not available, then reduce the lightcount by one CPU side before rendering the scene.
+                        // That way we should have minimal performance impact GPU side.
+
+#if _DEBUG
+                        RTsize light_source_capacity;
+                        lights.sources->getSize(light_source_capacity);
+                        assert(lights.count + 1 <= light_source_capacity);
+#endif
+                        device_lights[lights.count++] = scene.environment.get_light();
+                        scene.GPU_state.light_count = lights.count;
+                    }
+                    else
+                        *device_light = scene.environment.get_light();
+
+                    lights.sources->unmap();
                 }
             }
         }

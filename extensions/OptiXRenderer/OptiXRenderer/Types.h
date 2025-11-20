@@ -295,7 +295,7 @@ struct __align__(16) Light {
     };
 
     unsigned int flags;
-    __inline_all__ unsigned int get_type() const { return flags & TypeMask; }
+    __inline_all__ Flags get_type() const { return Flags(flags & TypeMask); }
     __inline_all__ bool is_type(Flags light_type) { return get_type() == light_type; }
 };
 
