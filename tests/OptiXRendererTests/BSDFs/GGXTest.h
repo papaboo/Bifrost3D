@@ -393,8 +393,11 @@ public:
     optix::float3 m_tint;
     bool m_disable_reflection;
 
-    GGXWrapper(float alpha, float specularity, float ior_i_over_o, optix::float3 tint = optix::make_float3(1), bool disable_reflection = false)
-        : m_alpha(alpha), m_specularity(specularity), m_ior_i_over_o(ior_i_over_o), m_tint(tint), m_disable_reflection(disable_reflection){}
+    GGXWrapper(float alpha, float ior_i_over_o, optix::float3 tint = optix::make_float3(1), bool disable_reflection = false)
+        : m_alpha(alpha), m_specularity(dielectric_specularity(AIR_IOR, ior_i_over_o)), m_ior_i_over_o(ior_i_over_o),
+          m_tint(tint), m_disable_reflection(disable_reflection) { }
+
+    void overwrite_specularity(float specularity) { m_specularity = specularity; }
 
     optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
         if (m_disable_reflection && same_hemisphere(wo, wi))
@@ -438,7 +441,7 @@ GTEST_TEST(GGX, power_conservation) {
         for (float cos_theta_o : { -1.0f, -0.7f, -0.4f, -0.1f, 0.1f, 0.4f, 0.7f, 1.0f }) {
             optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
             for (float alpha : { 0.0f, 0.0675f, 0.125f, 0.25f, 0.5f, 1.0f }) {
-                auto ggx = GGXWrapper(alpha, 0.04f, ior_i_over_o);
+                auto ggx = GGXWrapper(alpha, ior_i_over_o);
                 auto res = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 1024u);
                 EXPECT_FLOAT3_LE(res.reflectance, 1.0f + 1e-5f) << ggx.to_string() << ", cos_theta: " << cos_theta_o;
             }
@@ -451,7 +454,7 @@ GTEST_TEST(GGX, function_consistency) {
             optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
             for (float alpha : { 0.0675f, 0.25f, 1.0f }) {
                 for (float transmission_tint : { 0.5f, 1.0f }) {
-                    auto ggx = GGXWrapper(alpha, 0.04f, ior_i_over_o, optix::make_float3(transmission_tint));
+                    auto ggx = GGXWrapper(alpha, ior_i_over_o, optix::make_float3(transmission_tint));
                     BSDFTestUtils::BSDF_consistency_test(ggx, wo, 16u);
                 }
             }
@@ -459,13 +462,12 @@ GTEST_TEST(GGX, function_consistency) {
 }
 
 GTEST_TEST(GGX, PDF_positivity) {
-    float specularity = 0.5f;
-    float ior = dielectric_ior_from_specularity(specularity);
+    float medium_IOR = 1.5f;
 
     for (float cos_theta_o : {-0.8f, -0.4f, 0.1f, 0.5f, 0.9f}) {
         optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
         for (float alpha : { 0.2f, 0.6f, 1.0f }) {
-            auto ggx = GGXWrapper(alpha, specularity, ior);
+            auto ggx = GGXWrapper(alpha, medium_IOR);
             BSDFTestUtils::PDF_positivity_test(ggx, wo, 128);
         }
     }
@@ -474,13 +476,13 @@ GTEST_TEST(GGX, PDF_positivity) {
 GTEST_TEST(GGX, reflection_reflectance_equals_GGX_R) {
     using namespace optix;
 
-    float fully_specular = 1.0f; // Disable transmission
     float ior_i_over_o = 1.5f;
 
     for (float cos_theta_o : { 0.2f, 1.0f }) {
         float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
         for (float alpha : { 0.0675f, 0.25f, 1.0f }) {
-            auto ggx = GGXWrapper(alpha, fully_specular, ior_i_over_o);
+            auto ggx = GGXWrapper(alpha, ior_i_over_o);
+            ggx.overwrite_specularity(1.0f); // Disable transmission
             auto ggx_r = GGXReflectionWrapper(alpha);
             auto ggx_result = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 4096);
             auto ggx_r_result = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx_r, wo, 2048);
@@ -496,7 +498,6 @@ GTEST_TEST(GGX, transmission_reflectance_equals_GGX_T) {
     using namespace optix;
 
     float specularity = 0.0f;
-    float ior_i_over_o = 1.5f;
     float3 transmissive_tint = { 1.0f, 1.0f, 1.0f };
     bool disable_reflection = true;
 
@@ -504,7 +505,8 @@ GTEST_TEST(GGX, transmission_reflectance_equals_GGX_T) {
         for (float cos_theta_o : { 0.4f, 1.0f }) {
             float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
             for (float alpha : { 0.0675f, 0.25f, 1.0f }) {
-                auto ggx = GGXWrapper(alpha, specularity, ior_i_over_o, transmissive_tint, disable_reflection);
+                auto ggx = GGXWrapper(alpha, ior_i_over_o, transmissive_tint, disable_reflection);
+                ggx.overwrite_specularity(specularity);
                 auto ggx_t = GGXTransmissionWrapper(alpha, ior_i_over_o, specularity);
                 auto ggx_result = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 4096);
                 auto ggx_t_result = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx_t, wo, 4096);
@@ -528,9 +530,10 @@ GTEST_TEST(GGX, sample_according_to_specularity) {
 
     for (float cos_theta : { -1.0f, 1.0f }) {
         float3 wo = { 0, 0, cos_theta };
-        for (float specularity : { 0.0f, 0.5f, 1.0f }) {
-            for (float ior_i_over_o : { 0.5f, 1.5f }) {
-                auto ggx = GGXWrapper(alpha, specularity, ior_i_over_o, black);
+        for (float ior_i_over_o : { 0.5f, 1.5f }) {
+            for (float specularity : { 0.0f, 0.5f, 1.0f }) {
+                auto ggx = GGXWrapper(alpha, ior_i_over_o, black);
+                ggx.overwrite_specularity(specularity);
                 auto res = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, 1024u);
                 EXPECT_FLOAT_EQ_EPS(specularity, res.reflectance.x, 0.00001f) << "alpha: " << alpha << ", cos_theta: " << cos_theta << ", specularity: " << specularity;
             }
@@ -540,11 +543,11 @@ GTEST_TEST(GGX, sample_according_to_specularity) {
 
 GTEST_TEST(GGX, sampling_standard_deviation) {
     float alpha = 0.75f;
-    float specularity = 0.5f;
     float ior_i_over_os[] = { 0.5f, 0.9f, 1.1f, 1.5f };
     float expected_rho_std_devs[] = { 0.70f, 0.57f, 0.46f, 0.46f };
     for (int i = 0; i < 4; i++) {
-        auto ggx = GGXWrapper(alpha, specularity, ior_i_over_os[i]);
+        auto ggx = GGXWrapper(alpha, ior_i_over_os[i]);
+        ggx.overwrite_specularity(0.5f); // Somewhat equal distribution of samples between reflection and transmission.
         BSDFTestUtils::BSDF_sampling_variance_test(ggx, 1024, expected_rho_std_devs[i]);
     }
 }
@@ -552,12 +555,11 @@ GTEST_TEST(GGX, sampling_standard_deviation) {
 GTEST_TEST(GGX, black_transmission_never_sampled) {
     using namespace optix;
 
-    float specularity = 0.5f;
-    float ior = dielectric_ior_from_specularity(specularity);
+    float medium_IOR = 1.5f;
     float3 black_transmission = make_float3(0.0f);
 
     for (float alpha : { 0.2f, 0.6f, 1.0f }) {
-        auto ggx = GGXWrapper(alpha, specularity, ior, black_transmission);
+        auto ggx = GGXWrapper(alpha, medium_IOR, black_transmission);
         for (float cos_theta_o : { 0.1f, 0.5f, 0.9f }) {
             optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
 
@@ -576,13 +578,13 @@ GTEST_TEST(GGX, black_transmission_never_sampled) {
 GTEST_TEST(GGX, fully_grazing_evaluates_to_black) {
     using namespace optix;
 
-    const float specularity = 1.0f;
     const float3 grazing_wo = make_float3(0.0f, 1.0f, 0.0f);
     const float3 grazing_wi = make_float3(0.0f, -1.0f, 0.0f);
 
     for (float alpha : { 0.0f, 0.5f, 1.0f }) {
         for (float ior_i_over_o : { 0.5f, 0.9f, 1.1f, 1.5f }) {
-            auto ggx = GGXWrapper(alpha, specularity, ior_i_over_o);
+            auto ggx = GGXWrapper(alpha, ior_i_over_o);
+            ggx.overwrite_specularity(1.0f);
 
             for (float z_offset : { -0.1f, 0.0f, 0.1f }) {
                 float3 w_offset = { 0, 0, z_offset };
@@ -625,7 +627,7 @@ GTEST_TEST(GGX, validate_dielectric_ggx_rho_precomputations) {
                 float specularity = dielectric_specularity(AIR_IOR, medium_IOR);
 
                 optix::float3 transmission_tint = { 1, 0, 0 };
-                auto ggx = GGXWrapper(alpha, specularity, ior_i_over_o, transmission_tint);
+                auto ggx = GGXWrapper(alpha, ior_i_over_o, transmission_tint);
                 optix::float3 expected_rho = BSDFTestUtils::directional_hemispherical_reflectance_function(ggx, wo, sample_count).reflectance;
                 float expected_total_reflectance = expected_rho.x; // Red contains both reflected and transmitted contribution.
                 float expected_reflected_reflectance = expected_rho.y; // Green only contains reflected contribution as green transmitted tint is 0.
