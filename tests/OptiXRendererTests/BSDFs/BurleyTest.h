@@ -25,12 +25,12 @@ public:
     BurleyWrapper(float roughness)
         : m_roughness(roughness) {}
 
-    optix::float3 evaluate(optix::float3 wi, optix::float3 wo) const {
-        return Shading::BSDFs::Burley::evaluate(m_tint, m_roughness, wi, wo);
+    optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
+        return Shading::BSDFs::Burley::evaluate(m_tint, m_roughness, wo, wi);
     }
 
-    PDF pdf(optix::float3 wi, optix::float3 wo) const {
-        return Shading::BSDFs::Burley::pdf(m_roughness, wi, wo);
+    PDF pdf(optix::float3 wo, optix::float3 wi) const {
+        return Shading::BSDFs::Burley::pdf(m_roughness, wo, wi);
     }
 
     BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
