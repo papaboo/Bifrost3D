@@ -22,8 +22,6 @@ namespace BSDFs {
 // Sources:
 // * Physically-Based Shading at Disney, Burley et al., 12.
 // * https://github.com/wdas/brdf/blob/master/src/brdfs/disney.brdf
-// Future work
-// * Improve sampling. Perhaps GGX or PowerCosine distribution will make a better fit.
 //----------------------------------------------------------------------------
 namespace Burley {
 
