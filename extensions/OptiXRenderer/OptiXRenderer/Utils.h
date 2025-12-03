@@ -34,6 +34,10 @@ __inline_all__ float average(optix::float3 v) {
     return (v.x + v.y + v.z) / 3.0f;
 }
 
+__inline_all__ float distance(optix::float3 p0, optix::float3 p1) {
+    return optix::length(p0 - p1);
+}
+
 // Toroidal shift of a base random number.
 __inline_all__ optix::float4 toroidal_shift(optix::float4 base, optix::float4 shift) {
     optix::float4 s = base + shift;
@@ -95,6 +99,10 @@ __inline_all__ float pow2(float x) {
 
 __inline_all__ optix::float3 pow2(optix::float3 x) {
     return x * x;
+}
+
+__inline_all__ float pow3(float x) {
+    return x * x * x;
 }
 
 __inline_all__ float pow4(float x) {
