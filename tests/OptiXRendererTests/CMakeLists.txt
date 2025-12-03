@@ -16,6 +16,7 @@ if (TARGET OptiXRenderer)
   )
 
   set(BSDFS_SRCS
+    BSDFs/BurleySSSTest.h
     BSDFs/BurleyTest.h
     BSDFs/GGXTest.h
     BSDFs/LambertTest.h
