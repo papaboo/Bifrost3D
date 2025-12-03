@@ -10,6 +10,7 @@
 
 #include <Assets/FlagsTest.h>
 
+#include <BSDFs/BurleySSSTest.h>
 #include <BSDFs/BurleyTest.h>
 #include <BSDFs/GGXTest.h>
 #include <BSDFs/LambertTest.h>

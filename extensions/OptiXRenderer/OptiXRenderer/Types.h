@@ -326,6 +326,18 @@ struct __align__(16) BSDFSample {
     }
 };
 
+struct __align__(16) SeparableBSSRDFPositionSample {
+    optix::float3 reflectance;
+    PDF PDF;
+    optix::float3 position;
+    float __padding;
+
+    __inline_all__ static SeparableBSSRDFPositionSample none() {
+        SeparableBSSRDFPositionSample sample = {};
+        return sample;
+    }
+};
+
 struct __align__(16) Material {
     enum Flags : unsigned short {
         None = 0u,

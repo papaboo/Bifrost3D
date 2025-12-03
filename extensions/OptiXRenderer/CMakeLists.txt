@@ -41,9 +41,10 @@ if (CUDA_FOUND AND OPTIX_FOUND AND SUPPORTED_VISUAL_STUDIO_FOUND)
   )
 
   set(SHADING_BSDFS_SRC
-    OptiXRenderer/Shading/BSDFs/Lambert.h
     OptiXRenderer/Shading/BSDFs/Burley.h
+    OptiXRenderer/Shading/BSDFs/BurleySSS.h
     OptiXRenderer/Shading/BSDFs/GGX.h
+    OptiXRenderer/Shading/BSDFs/Lambert.h
     OptiXRenderer/Shading/BSDFs/OrenNayar.h
   )
 
