@@ -63,6 +63,7 @@ BACKLOG:
  * PBRTs random morton code seed looks pretty simple (and I do love a good morton code)
   * Make ZSobolSampler 'progressive' with fixed 256 sample offset in between the pixels.
  * Heitz and Georgiev blue noise screen space seed scheme.
+* Sheen for simple cloth rendering - Practical Multiple-Scattering Sheen Using Linearly Transformed Cosines, https://tizianzeltner.com/projects/Zeltner2022Practical/
 * Photon mapping
  * How can we ensure that refractions handle bidirectional renderers? PBRT does it by tracing 'importance' or radiance. I think I'd prefer to just differentiate on samping wo or wi.
   * The current implementation samples wi from wo, but internally it acts as if wo is wi. See both the reflectance scaling and refract(...) expects the incident light direction.
