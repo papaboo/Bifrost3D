@@ -73,7 +73,7 @@ struct Statistics final {
         T m1 = mean();
         return m2 - m1 * m1;
     }
-    __always_inline__ T standard_deviation() const { return (T)sqrt(variance()); }
+    __always_inline__ T standard_deviation() const { return (T)sqrt(max(T(0), variance())); }
 
     //---------------------------------------------------------------------------------------------
     // Operations.
