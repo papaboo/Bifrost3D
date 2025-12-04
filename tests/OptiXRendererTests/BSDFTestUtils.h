@@ -54,6 +54,9 @@ struct RhoResult {
     float3 std_dev;
     float3 mean_direction;
 
+    // Normalize error wrt reflectance, so dark BSDFs don't automatically have a smaller error
+    float3 normalized_std_dev() const { return std_dev / reflectance; }
+
     static RhoResult invalid() {
         RhoResult res;
         res.reflectance = res.std_dev = res.mean_direction = make_float3(nanf(""));
@@ -108,7 +111,7 @@ void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count
     for (float cos_theta : {0.1f, 0.3f, 0.5f, 0.7f, 0.9f, 1.0f}) {
         float3 wo = w_from_cos_theta(cos_theta);
         auto rho = directional_hemispherical_reflectance_function(bsdf_model, wo, sample_count);
-        optix::float3 rho_std_dev = rho.std_dev / rho.reflectance; // Normalize error wrt reflectance, so dark BSDFs don't automatically have a smaller error
+        optix::float3 rho_std_dev = rho.normalized_std_dev();
         total_std_dev += rho_std_dev;
     }
     optix::float3 average_std_dev = total_std_dev / 6;
