@@ -125,11 +125,10 @@ __inline_all__ optix::float3 conductor_specularity(optix::float3 ior_o, optix::f
 // It is assumed that the specularity describes the specularity of the material when bordering air, i.e ior_o is 1.0.
 // Finding the index of refraction requires solving a second degree polynomial with two solutions.
 // For dielectrics the solution with the largest value is the correct one.
+// The whole thing can be reduced to the expression below.
+// Source: Extending the Disney BRDF to a BSDF with Integrated Subsurface Scattering, section 3.2, Burley, 2015
 __inline_all__ float dielectric_ior_from_specularity(float specularity) {
-    float a = specularity - 1;
-    float b = 2 * specularity + 2;
-    float c = a;
-    return (-b - sqrt(b*b - 4 * a * c)) / (2 * a);
+    return 2.0f / (1.0f - sqrt(specularity)) - 1.0f;
 }
 
 // Estimates a conductor's index of refraction from specularity.
