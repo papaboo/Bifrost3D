@@ -6,6 +6,8 @@
 // See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
+#define NOMINMAX
+
 #include <CameraHandlers.h>
 
 #include <Scenes/CornellBox.h>
@@ -38,11 +40,13 @@
 #ifdef OPTIX_FOUND
 #include <DX11OptiXAdaptor/Adaptor.h>
 #include <OptiXRenderer/Renderer.h>
+#include <OptiXRenderer/Shading/BSDFs/BurleySSS.h>
 #endif
 
 #include <glTFLoader/glTFLoader.h>
 #include <ObjLoader/ObjLoader.h>
 #include <StbImageLoader/StbImageLoader.h>
+#include <StbImageWriter/StbImageWriter.h>
 
 #include <iostream>
 #include <io.h>
@@ -515,7 +519,78 @@ inline RGB parse_RGB(const char* const rgb_str) {
     return RGB(vec.x, vec.y, vec.z);
 }
 
+struct PmjbRNG {
+    unsigned int m_max_sample_capacity;
+    Bifrost::Math::Vector2f* m_samples;
+
+    PmjbRNG(unsigned int max_sample_capacity) {
+        m_max_sample_capacity = max_sample_capacity;
+        m_samples = new Bifrost::Math::Vector2f[max_sample_capacity];
+        Bifrost::Math::RNG::fill_progressive_multijittered_bluenoise_samples(m_samples, m_samples + max_sample_capacity);
+    }
+    PmjbRNG(PmjbRNG& other) = delete;
+    PmjbRNG(PmjbRNG&& other) = default;
+
+    PmjbRNG& operator=(PmjbRNG& rhs) = delete;
+    PmjbRNG& operator=(PmjbRNG&& rhs) = default;
+
+    ~PmjbRNG() { delete[] m_samples; }
+
+    optix::float2 sample_2f(int i) const { return optix::make_float2(m_samples[i].x, m_samples[i].y); }
+    optix::float3 sample_3f(int i, int max_sample_count) const { return optix::make_float3(sample_2f(i), (i + 0.5f) / max_sample_count); }
+};
+
+
 int main(int argc, char** argv) {
+
+    { // BSSRDF image output
+        using namespace optix;
+        using namespace OptiXRenderer::Shading::BSDFs;
+
+        Images::allocate(8u);
+
+        auto ketchup_params = BurleySSS::Parameters::create({ 0.164f, 0.006f, 0.002f }, { 4.76f, 0.58f, 0.39f });
+        auto marble_params = BurleySSS::Parameters::create({ 0.830f, 0.791f, 0.753f }, { 8.51f, 5.57f, 3.95f });
+        auto potato = BurleySSS::Parameters::create({ 0.764f, 0.613f, 0.213f }, { 14.27f, 7.23f, 2.04f });
+        auto skin1 = BurleySSS::Parameters::create({ 0.436f, 0.227f, 0.131f }, { 3.67f, 1.37f, 0.68f });
+        auto whole_milk = BurleySSS::Parameters::create({ 0.908f, 0.881f, 0.759f }, { 10.90f, 6.58f, 2.51f });
+        BurleySSS::Parameters bssrdf_params[5] = { ketchup_params, marble_params, potato, skin1, whole_milk };
+
+        const int sample_count = 1024;
+        PmjbRNG rng = PmjbRNG(sample_count);
+
+        // Each pixel represents one mm in world space.
+        // All pixels with x in [0, 49] are lit with irradiance 1 and pixels after are in shadow.
+        int width = 100;
+        int height = 100;
+        Image image = Image::create2D("BurleySSS", PixelFormat::RGB24, true, Vector2ui(width, height));
+
+        int shadow_boundary = width / 2;
+        for (int y = 0; y < height; y++) {
+            int bssrdf_index = int(y / (height / 5.0f));
+            BurleySSS::Parameters sss_params = bssrdf_params[bssrdf_index];
+            for (int x = 0; x < width; x++) {
+                float3 radiance = { 0.0f, 0.0f, 0.0f };
+                for (int i = 0; i < sample_count; i++) {
+                    float3 rng_sample = rng.sample_3f(i, sample_count);
+                    auto sss_sample = BurleySSS::ImportanceSampleChannels::sample(sss_params, make_float3(float(x), float(y), 0), rng_sample);
+                    bool in_shadow = sss_sample.pi.x >= shadow_boundary;
+                    if (sss_sample.PDF.is_valid() && !in_shadow) {
+                        radiance += sss_sample.reflectance / sss_sample.PDF.value();
+                    }
+                }
+
+                radiance /= sample_count;
+                RGBA pixel = { radiance.x, radiance.y, radiance.z, 1.0f };
+
+                image.set_pixel(pixel, Vector2ui(x, y));
+            }
+        }
+
+        StbImageWriter::write(image.get_ID(), "C:/Temp/SSS.png");
+    }
+
+    return 0;
 
     std::string command = argc >= 2 ? std::string(argv[1]) : "";
     if (command.compare("-h") == 0 || command.compare("--help") == 0) {
