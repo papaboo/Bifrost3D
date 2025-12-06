@@ -22,6 +22,8 @@ namespace OptiXRenderer {
 // Constants
 //-----------------------------------------------------------------------------
 
+__constant_all__ float COAT_SPECULARITY = 0.04f;
+__constant_all__ float COAT_IOR = 1.5f;
 __constant_all__ float AIR_IOR = 1.0f;
 
 //-----------------------------------------------------------------------------
@@ -95,6 +97,11 @@ __inline_all__ optix::float3 pow2(optix::float3 x) {
     return x * x;
 }
 
+__inline_all__ float pow4(float x) {
+    float xx = x * x;
+    return xx * xx;
+}
+
 __inline_all__ float pow5(float x) {
     float xx = x * x;
     return xx * xx * x;
@@ -118,11 +125,10 @@ __inline_all__ optix::float3 conductor_specularity(optix::float3 ior_o, optix::f
 // It is assumed that the specularity describes the specularity of the material when bordering air, i.e ior_o is 1.0.
 // Finding the index of refraction requires solving a second degree polynomial with two solutions.
 // For dielectrics the solution with the largest value is the correct one.
+// The whole thing can be reduced to the expressin below.
+// Source: Extending the Disney BRDF to a BSDF with Integrated Subsurface Scattering, section 3.2, Burley, 2015
 __inline_all__ float dielectric_ior_from_specularity(float specularity) {
-    float a = specularity - 1;
-    float b = 2 * specularity + 2;
-    float c = a;
-    return (-b - sqrt(b*b - 4 * a * c)) / (2 * a);
+    return 2.0f / (1.0f - sqrt(specularity)) - 1.0f;
 }
 
 // Estimates a conductor's index of refraction from specularity.
@@ -136,6 +142,26 @@ __inline_all__ optix::float3 conductor_ior_from_specularity(optix::float3 specul
     optix::float3 d = b * b - 4 * a * c;
     optix::float3 sqrt_d = { sqrt(d.x), sqrt(d.y), sqrt(d.z) };
     return (-b + sqrt_d) / (2 * a);
+}
+
+// Adjust the specularity of a dielectric material, which is set with the assumption that the material is seen through air,
+// to the specularity that the material would have as seen through a volume with the ior defined by the exterior ior.
+__inline_all__ float adjust_dielectric_specularity_to_exterior_medium(float exterior_ior, float specularity_through_air) {
+    // Convert specularity to base_ior
+    float base_ior = dielectric_ior_from_specularity(specularity_through_air);
+
+    // Compute new base specularity
+    return dielectric_specularity(exterior_ior, base_ior);
+}
+
+// Adjust the specularity of a conductor material, which is set with the assumption that the material is seen through air,
+// to the specularity that the material would have as seen through a volume with the ior defined by the exterior ior.
+__inline_all__ optix::float3 adjust_conductor_specularity_to_exterior_medium(optix::float3 exterior_ior, optix::float3 specularity_through_air, optix::float3 extinction_coefficient) {
+    // Convert specularity to base_ior
+    optix::float3 base_ior = conductor_ior_from_specularity(specularity_through_air, extinction_coefficient);
+
+    // Compute new base specularity
+    return conductor_specularity(exterior_ior, base_ior, extinction_coefficient);
 }
 
 __inline_all__ float schlick_fresnel(float incident_specular, float abs_cos_theta) {
@@ -281,10 +307,14 @@ __inline_all__ void compute_tangents(optix::float3 normal,
 }
 
 // Scales the roughness of a material placed underneath a rough coat layer.
-// This is done simulate how a wider lobe from the rough transmission would
+// This is done to simulate how a wider lobe from the rough transmission would
 // perceptually widen the specular lobe of the underlying material.
+// The implementation is based on equation 86 in the Roughening chapter of the OpenPBR course notes for Physically Based Shading 2025.
+// https://blog.selfshadow.com/publications/s2025-shading-course/
 __inline_all__ float modulate_roughness_under_coat(float base_roughness, float coat_roughness) {
-    return sqrt(1.0f - (1.0f - pow2(base_roughness)) * (1.0f - pow2(coat_roughness)));
+    float x_coat = 1 - AIR_IOR / COAT_IOR;
+    float adjusted_roughness4 = fminf(1, pow4(base_roughness) + 2.0f * x_coat * pow4(coat_roughness));
+    return pow(adjusted_roughness4, 0.25f);
 }
 
 // Offset ray origin along the geometric normal. Values should ideally be in world space.

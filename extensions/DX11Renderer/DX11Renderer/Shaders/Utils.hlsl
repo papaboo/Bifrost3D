@@ -24,6 +24,10 @@ static const float PI = 3.14159265358979323846f;
 static const float TWO_PI = 6.283185307f;
 static const float RECIP_PI = 0.31830988618379067153776752674503f;
 
+static const float COAT_SPECULARITY = 0.04f;
+static const float COAT_IOR = 1.5f;
+static const float AIR_IOR = 1.0f;
+
 // ------------------------------------------------------------------------------------------------
 // Types.
 // ------------------------------------------------------------------------------------------------
@@ -75,6 +79,7 @@ float non_zero_sign(float v) { return v >= 0.0f ? +1.0f : -1.0f; }
 float2 non_zero_sign(float2 v) { return float2(non_zero_sign(v.x), non_zero_sign(v.y)); }
 
 float pow2(float x) { return x * x; }
+float3 pow2(float3 x) { return x * x; }
 float pow4(float x) { float xx = x * x; return xx * xx; }
 float pow5(float x) { return pow4(x) * x; }
 
@@ -159,6 +164,47 @@ float3 perspective_position_from_depth(float z_over_w, float2 viewport_uv, float
 }
 
 // ------------------------------------------------------------------------------------------------
+// Index of refraction and specularity utility functions.
+// ------------------------------------------------------------------------------------------------
+
+// Specularity of dielectrics at normal incidence, where the ray is leaving a medium with index of refraction ior_o
+// and entering a medium with index of refraction, ior_i.
+// Ray Tracing Gems 2, Chapter 9, The Schlick Fresnel Approximation, page 110 footnote.
+float dielectric_specularity(float ior_o, float ior_i) {
+    return pow2((ior_o - ior_i) / (ior_o + ior_i));
+}
+
+// Specularity of dielectrics at normal incidence, where the ray is leaving a dielectric medium with index of refraction ior_o
+// and entering a conductor medium with index of refraction, ior_i, and extinction coefficient, ext_i.
+float3 conductor_specularity(float3 ior_o, float3 ior_i, float3 ext_i) {
+    float3 ext_i_sqrd = pow2(ext_i);
+    return (pow2(ior_o - ior_i) + ext_i_sqrd) / (pow2(ior_o + ior_i) + ext_i_sqrd);
+}
+
+// Estimates a dielectric's index of refraction from specularity.
+// It is assumed that the specularity describes the specularity of the material when bordering air, i.e ior_o is 1.0.
+// Finding the index of refraction requires solving a second degree polynomial with two solutions.
+// For dielectrics the solution with the largest value is the correct one.
+// The whole thing can be reduced to the expressin below.
+// Source: Extending the Disney BRDF to a BSDF with Integrated Subsurface Scattering, section 3.2, Burley, 2015
+float dielectric_ior_from_specularity(float specularity) {
+    return 2.0f / (1.0f - sqrt(specularity)) - 1.0f;
+}
+
+// Estimates a conductor's index of refraction from specularity.
+// It is assumed that the specularity describes the specularity of the material when bordering air, i.e ior_o is 1.0.
+// Finding the index of refraction requires solving a second degree polynomial with two solutions.
+// For dielectrics the solution with the lowest value is the correct one.
+float3 conductor_ior_from_specularity(float3 specularity, float3 ext_i) {
+    float3 a = specularity - 1;
+    float3 b = 2 * specularity + 2;
+    float3 c = a + (specularity - 1) * pow2(ext_i);
+    float3 d = b * b - 4 * a * c;
+    float3 sqrt_d = { sqrt(d.x), sqrt(d.y), sqrt(d.z) };
+    return (-b + sqrt_d) / (2 * a);
+}
+
+// ------------------------------------------------------------------------------------------------
 // Utility functions.
 // ------------------------------------------------------------------------------------------------
 
@@ -186,8 +232,32 @@ float3x3 create_inverse_TBN(float3 normal) {
 // Scales the roughness of a material placed underneath a rough coat layer.
 // This is done simulate how a wider lobe from the rough transmission would
 // perceptually widen the specular lobe of the underlying material.
+// The implementation is based on equation 86 in the Roughening chapter of the OpenPBR course notes for Physically Based Shading 2025.
+// https://blog.selfshadow.com/publications/s2025-shading-course/
 float modulate_roughness_under_coat(float base_roughness, float coat_roughness) {
-    return sqrt(1.0f - (1.0f - pow2(base_roughness)) * (1.0f - pow2(coat_roughness)));
+    float x_coat = 1 - AIR_IOR / COAT_IOR;
+    float adjusted_roughness4 = min(1, pow4(base_roughness) + 2.0f * x_coat * pow4(coat_roughness));
+    return pow(adjusted_roughness4, 0.25f);
+}
+
+// Adjust the specularity of a dielectric material, which is set with the assumption that the material is seen through air,
+// to the specularity that the material would have as seen through a volume with the ior defined by the exterior ior.
+float adjust_dielectric_specularity_to_exterior_medium(float exterior_ior, float specularity_through_air) {
+    // Convert specularity to base_ior
+    float base_ior = dielectric_ior_from_specularity(specularity_through_air);
+
+    // Compute new base specularity
+    return dielectric_specularity(exterior_ior, base_ior);
+}
+
+// Adjust the specularity of a conductor material, which is set with the assumption that the material is seen through air,
+// to the specularity that the material would have as seen through a volume with the ior defined by the exterior ior.
+float3 adjust_conductor_specularity_to_exterior_medium(float3 exterior_ior, float3 specularity_through_air, float3 extinction_coefficient) {
+    // Convert specularity to base_ior
+    float3 base_ior = conductor_ior_from_specularity(specularity_through_air, extinction_coefficient);
+
+    // Compute new base specularity
+    return conductor_specularity(exterior_ior, base_ior, extinction_coefficient);
 }
 
 float3 decode_octahedral_normal(int packed_encoded_normal) {

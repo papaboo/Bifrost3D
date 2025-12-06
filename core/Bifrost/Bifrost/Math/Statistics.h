@@ -31,7 +31,7 @@ struct Statistics final {
     // Constructors
     //---------------------------------------------------------------------------------------------
     Statistics()
-        : minimum(T(-1e30)), maximum(T(1e30)), sum(0), sum_squared(0), sample_count(0) {}
+        : minimum(T(1e30)), maximum(T(-1e30)), sum(0), sum_squared(0), sample_count(0) {}
 
     template <typename RandomAccessItr, class UnaryPredicate>
     Statistics(RandomAccessItr first, RandomAccessItr last, UnaryPredicate predicate) {
@@ -73,7 +73,7 @@ struct Statistics final {
         T m1 = mean();
         return m2 - m1 * m1;
     }
-    __always_inline__ T standard_deviation() const { return (T)sqrt(variance()); }
+    __always_inline__ T standard_deviation() const { return (T)sqrt(max(T(0), variance())); }
 
     //---------------------------------------------------------------------------------------------
     // Operations.

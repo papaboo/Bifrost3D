@@ -22,6 +22,12 @@
 
 namespace OptiXRenderer {
 
+// Index of refraction and extinction coefficient for mediums at wavelengths 630nm (red), 532nm (green) and 465nm (blue)
+const optix::float3 gold_ior = { 0.1986f, 0.54463f, 1.2515f };
+const optix::float3 gold_extinction = { 3.228f, 2.1406f, 1.7517f };
+const optix::float3 titanium_ior = { 2.6979f, 2.4793f, 2.3050f };
+const optix::float3 titanium_extinction = { 3.7571f, 3.3511f, 3.0820f };
+
 GTEST_TEST(OctahedralNormal, equality_with_bifrost_implementation) {
     using namespace Bifrost;
 
@@ -185,12 +191,7 @@ GTEST_TEST(Specularity, conductor_conversions_to_and_from_index_of_refraction) {
     using namespace optix;
     float accuracy = 1e-5f;
 
-    // Index of refraction and extinction coefficient for mediums at wavelengths 630nm (red), 532nm (green) and 465nm (blue)
     const float3 air_ior = { 1.0f, 1.0f, 1.0f };
-    const float3 gold_ior = { 0.1986f, 0.54463f, 1.2515f };
-    const float3 gold_extinction = { 3.228f, 2.1406f, 1.7517f };
-    const float3 titanium_ior = { 2.6979f, 2.4793f, 2.3050f };
-    const float3 titanium_extinction = { 3.7571f, 3.3511f, 3.0820f };
 
     // Specularity of medium when transitioning from air to medium at wavelengths 630nm (red), 532nm (green) and 465nm (blue)
     const float3 gold_specularity = { 0.932999f, 0.687356f, 0.384839f };
@@ -209,6 +210,42 @@ GTEST_TEST(Specularity, conductor_conversions_to_and_from_index_of_refraction) {
 
     EXPECT_FLOAT3_EQ_PCT(gold_ior, computed_gold_ior, accuracy);
     EXPECT_FLOAT3_EQ_PCT(titanium_ior, computed_titanium_ior, accuracy);
+}
+
+GTEST_TEST(Specularity, scaling_dielectric_specularity_under_coat) {
+    using namespace optix;
+
+    const float air_ior = 1.0f;
+    const float coat_ior = 1.5f;
+
+    for (float base_ior : { 1.0f, 1.2f, 1.4f }) {
+        // The expected specularity of the base material viewed through the coat instead of air.
+        float expected_base_specularity_through_coat = dielectric_specularity(coat_ior, base_ior);
+
+        float base_specularity_through_air = dielectric_specularity(air_ior, base_ior);
+        float actual_base_specularity_through_coat = adjust_dielectric_specularity_to_exterior_medium(coat_ior, base_specularity_through_air);
+
+        EXPECT_FLOAT_EQ_EPS(expected_base_specularity_through_coat, actual_base_specularity_through_coat, 1e-7f);
+    }
+}
+
+GTEST_TEST(Specularity, scaling_conductor_specularity_under_coat) {
+    using namespace optix;
+
+    const float3 air_ior = { 1.0f, 1.0f, 1.0f };
+    const float3 coat_ior = { 1.5f, 1.5f, 1.5f };
+
+    for (float3 base_ior : { gold_ior, titanium_ior }) {
+        for (float3 base_extinction : { gold_extinction, titanium_extinction }) {
+            // The expected specularity of the base material viewed through the coat instead of air.
+            float3 expected_base_specularity_through_coat = conductor_specularity(coat_ior, base_ior, base_extinction);
+
+            float3 base_specularity_through_air = conductor_specularity(air_ior, base_ior, base_extinction);
+            float3 actual_base_specularity_through_coat = adjust_conductor_specularity_to_exterior_medium(coat_ior, base_specularity_through_air, base_extinction);
+
+            EXPECT_FLOAT3_EQ_EPS(expected_base_specularity_through_coat, actual_base_specularity_through_coat, 0.02f);
+        }
+    }
 }
 
 GTEST_TEST(Trigonometry, fix_backfacing_shading_normal) {
