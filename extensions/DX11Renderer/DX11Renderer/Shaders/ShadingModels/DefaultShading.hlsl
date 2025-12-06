@@ -40,6 +40,7 @@ struct DefaultShading : IShadingModel {
     float m_coat_alpha;
 
     static const float COAT_SPECULARITY = 0.04f;
+    static const float COAT_IOR = 1.5f;
 
     static void compute_specular_properties(float roughness, float specularity, float scale, float cos_theta_o,
         out float alpha, out float reflection_scale, out float transmission_scale) {
@@ -57,10 +58,36 @@ struct DefaultShading : IShadingModel {
     static DefaultShading create(float3 tint, float roughness, float dielectric_specularity, float metallic, float coat_scale, float coat_roughness, float abs_cos_theta_o) {
 
         DefaultShading shading;
+        shading.m_roughness = roughness;
+        float3 conductor_specularity = tint;
 
-        // Adjust specular reflection roughness
-        float coat_modulated_roughness = modulate_roughness_under_coat(roughness, coat_roughness);
-        shading.m_roughness = lerp(roughness, coat_modulated_roughness, coat_scale);
+        // Adjust parameters if coat is enabled.
+        if (coat_scale > 0) {
+            // Adjust specular reflection roughness
+            float coat_modulated_roughness = modulate_roughness_under_coat(roughness, coat_roughness);
+            shading.m_roughness = lerp(roughness, coat_modulated_roughness, coat_scale);
+
+            // Adjust base material specularity if coat is enabled
+            // The specularity can become NaN if the input specularity is white, which is physically impossible, but doable in the data model.
+            if (dielectric_specularity < 1.0f) {
+                float coated_dielectric_specularity = adjust_dielectric_specularity_to_exterior_medium(COAT_IOR, dielectric_specularity);
+                dielectric_specularity = lerp(dielectric_specularity, coated_dielectric_specularity, coat_scale);
+            }
+
+            if (metallic > 0) {
+                // Not all extinction coefficients are valid for all specularities and some combinations will result in NANs in the adjusted specularity.
+                // To avoid these issues we use zero extinction, which results in the same adjustment as to dielectric specularity.
+                float3 metal_extinction_coefficient = float3(0, 0, 0);
+                float3 coated_conductor_specularity = adjust_conductor_specularity_to_exterior_medium(float3(COAT_IOR, COAT_IOR, COAT_IOR), conductor_specularity, metal_extinction_coefficient);
+                conductor_specularity = lerp(conductor_specularity, coated_conductor_specularity, coat_scale);
+
+                // The specularity can become NaN if the input specularity is white, which is physically impossible, but doable in the data model.
+                // In this case we simply reset the specularity to 1.
+                conductor_specularity.x = isnan(conductor_specularity.x) ? 1.0f : conductor_specularity.x;
+                conductor_specularity.y = isnan(conductor_specularity.y) ? 1.0f : conductor_specularity.y;
+                conductor_specularity.z = isnan(conductor_specularity.z) ? 1.0f : conductor_specularity.z;
+            }
+        }
 
         // Dielectric material parameters
         float specular_alpha, dielectric_specular_transmission;
@@ -70,7 +97,6 @@ struct DefaultShading : IShadingModel {
 
         // Interpolate between dieletric and conductor parameters based on the metallic parameter.
         // Conductor diffuse component is black, so interpolation amounts to scaling.
-        float3 conductor_specularity = tint;
         shading.m_specularity = lerp(dielectric_specularity, conductor_specularity, metallic);
         shading.m_diffuse_tint = dielectric_tint * (1.0f - metallic);
 
