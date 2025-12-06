@@ -39,9 +39,6 @@ struct DefaultShading : IShadingModel {
     float m_coat_scale;
     float m_coat_alpha;
 
-    static const float COAT_SPECULARITY = 0.04f;
-    static const float COAT_IOR = 1.5f;
-
     static void compute_specular_properties(float roughness, float specularity, float scale, float cos_theta_o,
         out float alpha, out float reflection_scale, out float transmission_scale) {
         alpha = BSDFs::GGX::alpha_from_roughness(roughness);
