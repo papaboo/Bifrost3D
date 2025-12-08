@@ -222,7 +222,7 @@ __inline_all__ BSDFSample sample(float alpha, float ior_i_over_o, float3 wo, flo
 
     if (GGX::effectively_smooth(alpha)) {
         // Sample perfectly specular BTDF
-        if (!refract(bsdf_sample.direction, -wo, make_float3(0, 0, 1), ior_i_over_o))
+        if (!refract(bsdf_sample.direction, -wo, ior_i_over_o))
             return BSDFSample::none();
 
         float reflectance = 1.0f / abs(bsdf_sample.direction.z);
@@ -233,7 +233,7 @@ __inline_all__ BSDFSample sample(float alpha, float ior_i_over_o, float3 wo, flo
         float3 halfway = Distributions::GGX_VNDF::sample_halfway(alpha, wo, random_sample);
         bsdf_sample.PDF = Distributions::GGX_VNDF::PDF(alpha, wo, halfway);
 
-        if (!refract(bsdf_sample.direction, -wo, halfway, ior_i_over_o))
+        if (!optix::refract(bsdf_sample.direction, -wo, halfway, ior_i_over_o))
             return BSDFSample::none();
 
         bsdf_sample.PDF = bsdf_sample.PDF * transmission_PDF_scale(ior_i_over_o, wo, bsdf_sample.direction, halfway);
@@ -387,7 +387,7 @@ __inline_all__ BSDFSample sample(float3 transmission_tint, float alpha, float sp
         } else {
             bsdf_sample.PDF = PDF::delta_dirac(1.0f - normalized_reflection_probability);
             // Sample perfectly specular BTDF
-            if (!refract(bsdf_sample.direction, -wo, make_float3(0, 0, 1), ior_i_over_o))
+            if (!refract(bsdf_sample.direction, -wo, ior_i_over_o))
                 return BSDFSample::none(); // Should practically never happen, as total internal reflection is included in the Fresnel computation.
         }
 
@@ -410,7 +410,7 @@ __inline_all__ BSDFSample sample(float3 transmission_tint, float alpha, float sp
 
             bsdf_sample.PDF *= normalized_reflection_probability / (4.0f * dot(wo, halfway));
         } else {
-            if (!refract(bsdf_sample.direction, -wo, halfway, ior_i_over_o))
+            if (!optix::refract(bsdf_sample.direction, -wo, halfway, ior_i_over_o))
                 return BSDFSample::none(); // Should practically never happen, as total internal reflection is included in the Fresnel computation.
 
             bsdf_sample.PDF *= 1 - normalized_reflection_probability;

@@ -230,6 +230,39 @@ __inline_all__ float sin_phi(optix::float3 w) {
 }
 __inline_all__ float sin2_phi(optix::float3 w) { return pow2(sin_phi(w)); }
 
+// Copy of OptiX' refract implementation, but with normal set to (0, 0, 1).
+__inline_all__ bool refract(optix::float3& refraction_direction, optix::float3 wi, float ior_i_over_o) {
+    float normal_z = 1;
+    float cos_theta_i = wi.z;
+
+    if (cos_theta_i > 0.0f) {
+        normal_z = -1;
+        cos_theta_i = -cos_theta_i;
+    } else
+        ior_i_over_o = 1.f / ior_i_over_o;
+
+    float k = 1.0f - ior_i_over_o * ior_i_over_o * (1.0f - cos_theta_i * cos_theta_i);
+
+    refraction_direction = ior_i_over_o * wi - optix::make_float3(0, 0, (ior_i_over_o * cos_theta_i + sqrtf(k)) * normal_z);
+    return k >= 0.0f;
+}
+
+__inline_all__ bool refract(float& refraction_cos_theta, float cos_theta_i, float ior_i_over_o) {
+    float normal_z = 1;
+    float adjusted_cos_theta_i = cos_theta_i;
+
+    if (cos_theta_i > 0.0f) {
+        normal_z = -1;
+        adjusted_cos_theta_i = -adjusted_cos_theta_i;
+    } else
+        ior_i_over_o = 1.f / ior_i_over_o;
+
+    float k = 1.0f - pow2(ior_i_over_o) * (1.0f - pow2(adjusted_cos_theta_i));
+
+    refraction_cos_theta = ior_i_over_o * cos_theta_i - (ior_i_over_o * adjusted_cos_theta_i + sqrtf(k)) * normal_z;
+    return k >= 0.0f;
+}
+
 //-----------------------------------------------------------------------------
 // Utility functions
 //-----------------------------------------------------------------------------
