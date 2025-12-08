@@ -13,8 +13,9 @@
 
 #include <Bifrost/Math/OctahedralNormal.h>
 
+#include <OptiXRenderer/Distributions.h>
 #include <OptiXRenderer/MonteCarlo.h>
-#include <OptiXRenderer/Types.h>
+#include <OptiXRenderer/RNG.h>
 
 #include <gtest/gtest.h>
 
@@ -286,6 +287,38 @@ GTEST_TEST(Trigonometry, fix_backfacing_shading_normal_with_target_cos_theta) {
     corrected_normal = fix_backfacing_shading_normal(wo_below_hemipshere, normal, target_cos_theta);
     actual_cos_theta = dot(wo_below_hemipshere, corrected_normal);
     EXPECT_FLOAT_EQ_EPS(target_cos_theta, actual_cos_theta, 1e-5f);
+}
+
+GTEST_TEST(Trigonometry, refract_overload_gives_same_result_as_optix_implementation) {
+    using namespace optix;
+
+    float3 up = make_float3(0, 0, 1);
+
+    for (int wo_s = 0; wo_s < 16; wo_s++) {
+        float3 wo = Distributions::UniformHemisphere::sample(RNG::sample02(wo_s)).direction;
+        for (float ior_i_over_o : { 0.33f, 0.7f, 1.5f, 3.0f }) {
+            float3 expected_direction;
+            bool expected_success = optix::refract(expected_direction, wo, up, ior_i_over_o);
+
+            { // Test vector implementation
+                float3 actual_refraction;
+                bool actual_success = OptiXRenderer::refract(actual_refraction, wo, ior_i_over_o);
+
+                EXPECT_EQ(expected_success, actual_success);
+                if (actual_success) // The reference implementation returns the zero vector if refraction failed, while the OptiXRenderer implementation returns an undefined result.
+                    EXPECT_FLOAT3_EQ_EPS(expected_direction, actual_refraction, 1e-6f);
+            }
+
+            { // Test angle implementation
+                float actual_refracted_cos_theta;
+                bool actual_success = OptiXRenderer::refract(actual_refracted_cos_theta, wo.z, ior_i_over_o);
+
+                EXPECT_EQ(expected_success, actual_success);
+                if (actual_success) // The reference implementation returns the zero vector if refraction failed, while the OptiXRenderer implementation returns an undefined result.
+                    EXPECT_FLOAT_EQ_EPS(expected_direction.z, actual_refracted_cos_theta, 1e-6f);
+            }
+        }
+    }
 }
 
 } // NS OptiXRenderer
