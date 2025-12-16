@@ -63,7 +63,7 @@ inline RhoResult directional_hemispherical_reflectance_function(BSDFModel bsdf_m
         if (sample.PDF.is_valid()) {
             reflectance = sample.reflectance * abs(sample.direction.z) / sample.PDF.value(); // f * ||cos_theta|| / pdf
 
-            float direction_weight = sum(sample.reflectance) / sample.PDF.value();
+            float direction_weight = sum(reflectance);
             summed_directions = { summed_directions.x + direction_weight * sample.direction.x,
                                   summed_directions.y + direction_weight * sample.direction.y,
                                   summed_directions.z + direction_weight * sample.direction.z };
