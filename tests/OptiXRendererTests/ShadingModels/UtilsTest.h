@@ -150,10 +150,8 @@ GTEST_TEST(ShadingModelUtils, approx_smooth_ggx_thin_sheet_is_nearly_exact_for_s
     float roughness = 0.0; // Smooth surface
     float3 transmission_tint = { 1.0f, 0.5f, 0.25f };
 
-    float tested_IORs[3] = { Rho::dielectric_GGX_minimum_IOR_into_dense_medium, COAT_IOR, Rho::dielectric_GGX_maximum_IOR_into_dense_medium };
-
-    for (float medium_IOR : tested_IORs) {
-        for (float cos_theta_o : { 0.3f, 0.5f, 1.0f}) {
+    for (float medium_IOR : { Rho::dielectric_GGX_minimum_IOR_into_dense_medium, COAT_IOR, Rho::dielectric_GGX_maximum_IOR_into_dense_medium }) {
+        for (float cos_theta_o : { 0.3f, 0.5f, 1.0f }) {
             auto expected_throughput = BSDFTestUtils::smooth_thin_sheet_reflectance(cos_theta_o, medium_IOR, transmission_tint);
             auto approximate_throughput = approx_thin_sheet_reflectance(cos_theta_o, roughness, medium_IOR, transmission_tint);
 

@@ -150,6 +150,8 @@ __inline_all__ ThinSheetThroughput approx_thin_sheet_reflectance(float abs_cos_t
     auto rho0 = DielectricRho::fetch(abs_cos_theta, roughness, ior_i_over_o);
     float R0 = rho0.reflected_rho / rho0.total_rho; // Compensate for energy-loss by dividing by total rho
     float T0 = 1 - R0;
+    // NOTE For the transmission rho the relative IOR should be inverted, as the ray is coming from the backside.
+    // But for some reason that doesn't give the correct result when comparing with smooth surfaces, so we'll leave it like it is.
     auto rhoi = DielectricRho::fetch(abs(refracted_cos_theta), roughness, ior_i_over_o);
     float Ri = rhoi.reflected_rho / rhoi.total_rho; // Compensate for energy-loss by dividing by total rho
     float Ti = 1 - Ri;
