@@ -112,16 +112,14 @@ GTEST_TEST(ShadingModelUtils, lambertian_thin_sheet_reflects_all_energy) {
 }
 
 GTEST_TEST(ShadingModelUtils, smooth_ggx_thin_sheet_reflects_according_to_expectation) {
-    using namespace Bifrost::Assets::Shading; 
+    using namespace Bifrost::Assets::Shading;
     using namespace optix;
 
     float alpha = 0.0; // Smooth surface
     float3 transmission_tint = { 1.0f, 0.5f, 0.25f };
     optix::float3 transmission_tint_per_side = sqrt3(transmission_tint);
 
-    float tested_IORs[3] = { Rho::dielectric_GGX_minimum_IOR_into_dense_medium, COAT_IOR, Rho::dielectric_GGX_maximum_IOR_into_dense_medium };
-
-    for (float medium_IOR : tested_IORs) {
+    for (float medium_IOR : { Rho::dielectric_GGX_minimum_IOR_into_dense_medium, COAT_IOR, Rho::dielectric_GGX_maximum_IOR_into_dense_medium }) {
         float specularity = dielectric_specularity(AIR_IOR, medium_IOR);
 
         auto ggx_sampler = [=](float3 wo, float3 random_sample) -> BSDFSample {
@@ -131,7 +129,7 @@ GTEST_TEST(ShadingModelUtils, smooth_ggx_thin_sheet_reflects_according_to_expect
             return Shading::BSDFs::GGX::sample(transmission_tint_per_side, alpha, specularity, ior_i_over_o, wo, random_sample);
         };
 
-        for (float cos_theta_o : { 0.3f, 0.5f, 1.0f}) {
+        for (float cos_theta_o : { 0.3f, 0.5f, 1.0f }) {
             float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
             unsigned int path_count = 4096;
             unsigned int max_bounce_count = 32;
