@@ -1,34 +1,23 @@
-* rhoi should be 1 / ior_i_over_o instead of ior_i_over_o??
-* When precomputing dielectric rho, use dielectric fresnel for specular surfaces instead of sampling.
-
-
-* Check OpenPBR course notes and reference instead of doing theory yourself
-  * Quantify how much roughness of the transmission changes? If it's a lot then I'll need to draw two halfway vectors, one for each side.
-   * If we have a thinwalled GGX sampler with a transmission probability argument, then it should be trivial to add, as we can test on the transmission probability first.
-   * Conty and Kulla slide 58 has a roughness approximation equation: https://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_slides_v2.pdf
-   * Disney uses 0.65 * relative_ior + 0.35 to scale the transmissive roughness (Extending the Disney BRDF to a BSDF with Integrated Subsurface Scattering, Burley et all)
-   * I should probably use that in approx approx_thin_sheet_reflectance?
-  * Disable refraction in thin-walled materials and 1 / ior^2 radiance correction (which should cancel out for thin sheets)
-   * Do it inside transmissive material first. Then we can generalize if we need to for default material
-   * Test that there is no refraction
-  * Test!
- * Precompute rough thin sheet reflectance and transmission roughness. It's a 3D function
- * Should support cutout (Kalestra as glass)
-
- * Transmissive coat
-  * Implement a coated material integrater. Similar to the thin_sheet integrator and should support double sided materials ingrained in glass
-  * Coat tint is squareroot of actual tint (tint in and tint out)
-  * Test alpha that approximates double GGX distribution for the underlying surface
-   * Fit a spherical distribution or just take variance of the sampled directions
-  * Apply coat to both reflection and refraction when thinwalled, only reflection when non-thinwalled
-  * Test that coated evaluated rho matches sampled rho
-  * Validate sampling probabilities.
- * Apply darkening from total internal reflection to coated materials?
-
-* Move tint_roughness scale out of materials/shading and into Material? Would remove the extra material constructor and scale better / better separation
-
+* Precompute rough thin sheet reflectance. It's a 3D function
+ * Move integration to OptiXRenderer util
+ * Precompute reflection and transmission scaling coefficients
+* Disable refraction in thin-walled materials and 1 / ior^2 radiance correction (which should cancel out for thin sheets)
+ * Do it inside transmissive material first. Then we can generalize if we need to for default material
+ * Test that there is no refraction
+ * Disney uses 0.65 * relative_ior + 0.35 to scale the transmissive roughness (Extending the Disney BRDF to a BSDF with Integrated Subsurface Scattering, Burley et all, Figure 15)
+* Test!
+* Should support cutout (Kalestra as glass)
 
 BACKLOG:
+* Transmissive coat
+ * Implement a coated material integrater. Similar to the thin_sheet integrator and should support double sided materials ingrained in glass
+  * Coat tint is squareroot of actual tint (tint in and tint out)
+ * Test alpha that approximates double GGX distribution for the underlying surface
+  * Fit a spherical distribution or just take variance of the sampled directions
+ * Apply coat to both reflection and refraction when thinwalled, only reflection when non-thinwalled
+ * Test that coated evaluated rho matches sampled rho
+ * Validate sampling probabilities.
+* Apply darkening from total internal reflection to coated materials?
 * PracticalScrambledSobol has a really bad 3x4f sample distribution in the third, seventh and 11'th dim.
  * See ShadingModelUtils, smooth_ggx_thin_sheet_reflects_according_to_specularity
  * Check if it is correctly implemented by comparing to PBRT
