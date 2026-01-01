@@ -98,13 +98,13 @@ struct Sphere {
 Sphere scene[] = { // Scene: radius, position, emission, color, material
     Sphere(1e5, Vector3d(1e5 + 1, 40.8, 81.6), RGB::black(), RGB(.75f, .25f, .25f), BSDF::Diffuse),//Left
     Sphere(1e5, Vector3d(-1e5 + 99, 40.8, 81.6), RGB::black(), RGB(.25f, .25f, .75f), BSDF::Diffuse),//Rght
-    Sphere(1e5, Vector3d(50, 40.8, 1e5), RGB::black(), RGB(.75f, .75f, .75f), BSDF::Diffuse),//Back
-    Sphere(1e5, Vector3d(50, 40.8, -1e5 + 170), RGB(), RGB::black(), BSDF::Diffuse),//Frnt
-    Sphere(1e5, Vector3d(50, 1e5, 81.6), RGB::black(), RGB(.75f, .75f, .75f), BSDF::Diffuse),//Botm
-    Sphere(1e5, Vector3d(50, -1e5 + 81.6, 81.6), RGB::black(), RGB(.75f, .75f, .75f), BSDF::Diffuse),//Top
-    Sphere(16.5, Vector3d(27, 16.5, 47), RGB::black(), RGB(1.0f, 1.0f, 1.0f)*.999f, BSDF::Specular),//Mirr
-    Sphere(16.5, Vector3d(73, 16.5, 78), RGB::black(), RGB(1.0f, 1.0f, 1.0f)*.999f, BSDF::Glass),//Glas
-    Sphere(600, Vector3d(50, 681.6 - .27, 81.6), RGB(12.0f, 12.0f, 12.0f), RGB::black(), BSDF::Diffuse) //Lite
+    Sphere(1e5, Vector3d(50, 40.8, 1e5), RGB::black(), RGB(.75f), BSDF::Diffuse),//Back
+    Sphere(1e5, Vector3d(50, 40.8, -1e5 + 170), RGB::black(), RGB::black(), BSDF::Diffuse),//Frnt
+    Sphere(1e5, Vector3d(50, 1e5, 81.6), RGB::black(), RGB(.75f), BSDF::Diffuse),//Botm
+    Sphere(1e5, Vector3d(50, -1e5 + 81.6, 81.6), RGB::black(), RGB(.75f), BSDF::Diffuse),//Top
+    Sphere(16.5, Vector3d(27, 16.5, 47), RGB::black(), RGB(.999f), BSDF::Specular),//Mirr
+    Sphere(16.5, Vector3d(73, 16.5, 78), RGB::black(), RGB(.999f), BSDF::Glass),//Glas
+    Sphere(600, Vector3d(50, 681.6 - .27, 81.6), RGB(12.0f), RGB::black(), BSDF::Diffuse) //Light
 };
 
 inline bool intersect(Ray r, double &t, int &id) {

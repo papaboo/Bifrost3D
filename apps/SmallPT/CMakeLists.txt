@@ -5,6 +5,7 @@ find_package(OpenGL REQUIRED)
 set(SRCS 
   main.cpp
   smallpt.h
+  smallvpt.h
 )
 
 add_executable(${PROJECT_NAME} ${SRCS})

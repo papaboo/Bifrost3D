@@ -12,6 +12,7 @@
 #endif
 
 #include <smallpt.h>
+#include <smallvpt.h>
 
 #include <Bifrost/Core/Array.h>
 
@@ -116,7 +117,8 @@ void main(int argc, char** argv) {
             }
         }
 
-        smallpt::accumulateRadiance(camera, gWindowWidth, gWindowHeight, gBackbuffer, accumulations);
+        // smallpt::accumulateRadiance(camera, gWindowWidth, gWindowHeight, gBackbuffer, accumulations);
+        smallvpt_accumulateRadiance(gWindowWidth, gWindowHeight, gBackbuffer, accumulations);
 
         { // Update the backbuffer.
             glViewport(0, 0, gWindowWidth, gWindowHeight);
