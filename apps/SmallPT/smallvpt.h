@@ -54,9 +54,10 @@ enum Refl_t { DIFF, SPEC, REFR };  // material types, used in radiance()
 
 struct Sphere {
 	double rad;       // radius
-	Vec p, e, c;      // position, emission, color
+    Vec p;
+    RGB e, c;      // position, emission, color
 	Refl_t refl;      // reflection type (DIFFuse, SPECular, REFRactive)
-	Sphere(double rad_, Vec p_, Vec e_, Vec c_, Refl_t refl_):
+	Sphere(double rad_, Vec p_, RGB e_, RGB c_, Refl_t refl_):
 	rad(rad_), p(p_), e(e_), c(c_), refl(refl_) {}
 	double intersect(const Ray &r, double *tin = NULL, double *tout = NULL) const { // returns distance, 0 if nohit
 		Vec op = p-r.o; // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
@@ -74,21 +75,19 @@ struct Sphere {
 //};
 
 Sphere spheres[] = { // Scene: radius, position, emission, color, material
-    Sphere(1e5, Vec(1e5 + 1, 40.8, 81.6), Vec(), Vec(.75f, .25f, .25f), DIFF),//Left
-    Sphere(1e5, Vec(-1e5 + 99, 40.8, 81.6), Vec(), Vec(.25f, .25f, .75f), DIFF),//Rght
-    Sphere(1e5, Vec(50, 40.8, 1e5), Vec(), Vec(.75f, .75f, .75f), DIFF),//Back
-    Sphere(1e5, Vec(50, 40.8, -1e5 + 170), Vec(), Vec(), DIFF),//Frnt
-    Sphere(1e5, Vec(50, 1e5, 81.6), Vec(), Vec(.75f, .75f, .75f), DIFF),//Botm
-    Sphere(1e5, Vec(50, -1e5 + 81.6, 81.6), Vec(), Vec(.75f, .75f, .75f), DIFF),//Top
-    Sphere(16.5, Vec(27, 16.5, 47), Vec(), Vec(1.0f, 1.0f, 1.0f)*.999f, SPEC),//Mirr
-    Sphere(16.5, Vec(73, 16.5, 78), Vec(), Vec(1.0f, 1.0f, 1.0f)*.999f, REFR),//Glas
-    Sphere(600, Vec(50, 681.6 - .27, 81.6), Vec(12.0f, 12.0f, 12.0f), Vec(), DIFF) //Lite
+    Sphere(1e5, Vec(1e5 + 1, 40.8, 81.6), RGB::black(), RGB(.75f, .25f, .25f), DIFF),//Left
+    Sphere(1e5, Vec(-1e5 + 99, 40.8, 81.6), RGB::black(), RGB(.25f, .25f, .75f), DIFF),//Rght
+    Sphere(1e5, Vec(50, 40.8, 1e5), RGB::black(), RGB(.75f), DIFF),//Back
+    Sphere(1e5, Vec(50, 40.8, -1e5 + 170), RGB::black(), RGB::black(), DIFF),//Frnt
+    Sphere(1e5, Vec(50, 1e5, 81.6), RGB::black(), RGB(.75f), DIFF),//Botm
+    Sphere(1e5, Vec(50, -1e5 + 81.6, 81.6), RGB::black(), RGB(.75f), DIFF),//Top
+    Sphere(16.5, Vec(27, 16.5, 47), RGB::black(), RGB(.999f), SPEC),//Mirr
+    Sphere(16.5, Vec(73, 16.5, 78), RGB::black(), RGB(.999f), REFR),//Glas
+    Sphere(600, Vec(50, 681.6 - .27, 81.6), RGB(12.0f), RGB::black(), DIFF) //Light
 };
 
-Sphere homogeneousMedium(300, Vec(50,50,80), Vec(), Vec(), DIFF);
+Sphere homogeneousMedium(300, Vec(50,50,80), RGB::black(), RGB::black(), DIFF);
 const double sigma_s = 0.009, sigma_a = 0.006, sigma_t = sigma_s+sigma_a;
-inline double clamp(double x){ return x<0 ? 0 : x>1 ? 1 : x; }
-inline int toInt(double x){ return int(pow(clamp(x),1/2.2)*255+.5); }
 inline bool intersect(const Ray &r, double &t, int &id, double tmax=1e20){
 	double n=sizeof(spheres)/sizeof(Sphere), d, inf=t=tmax;
 	for(int i=int(n);i--;) if((d=spheres[i].intersect(r))&&d<t){t=d;id=i;}
@@ -96,10 +95,6 @@ inline bool intersect(const Ray &r, double &t, int &id, double tmax=1e20){
 }
 inline double sampleSegment(double epsilon, float sigma, float smax) {
 	return -log(1.0 - epsilon * (1.0 - exp(-sigma * smax))) / sigma;
-}
-inline Vec sampleSphere(double e1, double e2) {
-	double z = 1.0 - 2.0 * e1, sint = sqrt(1.0 - z * z);
-	return Vec(cos(2.0 * M_PI * e2) * sint, sin(2.0 * M_PI * e2) * sint, z);
 }
 inline Vec sampleHG(double g, double e1, double e2) {
 	//double s=2.0*e1-1.0, f = (1.0-g*g)/(1.0+g*s), cost = 0.5*(1.0/g)*(1.0+g*g-f*f), sint = sqrt(1.0-cost*cost);
@@ -120,7 +115,6 @@ inline void generateOrthoBasis(Vec &u, Vec &v, Vec w) {
 inline double scatter(const Ray &r, Ray *sRay, double tin, float tout, double &s) {
 	s = sampleSegment(XORShift::frand(), float(sigma_s), float(tout - tin));
 	Vec x = r.o + r.d *tin + r.d * s;
-	//Vec dir = sampleSphere(XORShift::frand(), XORShift::frand()); //Sample a direction ~ uniform phase function
 	Vec dir = sampleHG(-0.5,XORShift::frand(), XORShift::frand()); //Sample a direction ~ Henyey-Greenstein's phase function
 	Vec u,v;
 	generateOrthoBasis(u,v,r.d);
@@ -128,10 +122,10 @@ inline double scatter(const Ray &r, Ray *sRay, double tin, float tout, double &s
 	if (sRay)	*sRay = Ray(x, dir);
 	return (1.0 - exp(-sigma_s * (tout - tin)));
 }
-Vec radiance(const Ray &r, int depth) {
+RGB radiance(const Ray &r, int depth) {
     // Avoid stack overflow from recursion
     if (depth > 250)
-        return Vec();
+        return RGB::black();
 
 	double t;                               // distance to intersection
 	int id=0;                               // id of intersected object
@@ -147,38 +141,39 @@ Vec radiance(const Ray &r, int depth) {
 			scaleBy = 1.0;
 		}
 		else
-			if (!intersect(r, t, id)) return Vec();
+			if (!intersect(r, t, id)) return RGB::black();
 		if (t >= tnear) {
 			double dist = (t > tfar ? tfar - tnear : t - tnear); 
 			absorption=exp(-sigma_t * dist);
 		}
 	}
 	else
-		if (!intersect(r, t, id)) return Vec();
+		if (!intersect(r, t, id)) return RGB::black();
 	const Sphere &obj = spheres[id];        // the hit object
-	Vec x=r.o+r.d*t, n=(x-obj.p).norm(), nl=n.dot(r.d)<0?n:n*-1, f=obj.c,Le=obj.e;
-	double p = f.x>f.y && f.x>f.z ? f.x : f.y>f.z ? f.y : f.z; // max refl
-	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);} else return Vec(); //R.R.
+    Vec x = r.o + r.d*t, n = (x - obj.p).norm(), nl = n.dot(r.d) < 0 ? n : n * -1;
+    RGB f = obj.c, Le = obj.e;
+	double p = f.r>f.g && f.r>f.b ? f.r : f.g>f.b ? f.g : f.b; // max refl
+	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);} else return RGB::black(); //R.R.
 	if (n.dot(nl)>0 || obj.refl != REFR) {f = f * absorption; Le = obj.e * absorption;}// no absorption inside glass
 	else scaleBy=1.0;
 	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
 		double r1=2*M_PI*XORShift::frand(), r2=XORShift::frand(), r2s=sqrt(r2);
 		Vec w=nl, u=((fabs(w.x)>.1?Vec(0,1):Vec(1))%w).norm(), v=w%u;
 		Vec d = (u*cos(r1)*r2s + v*sin(r1)*r2s + w*sqrt(1-r2)).norm();
-		return (Le + f.mult(radiance(Ray(x,d),depth))) * scaleBy;
+		return (Le + f * radiance(Ray(x,d),depth)) * scaleBy;
 	} else if (obj.refl == SPEC)            // Ideal SPECULAR reflection
-		return (Le + f.mult(radiance(Ray(x,r.d-n*2*n.dot(r.d)),depth))) * scaleBy;
+		return (Le + f * radiance(Ray(x,r.d-n*2*n.dot(r.d)),depth)) * scaleBy;
 	Ray reflRay(x, r.d-n*2*n.dot(r.d));     // Ideal dielectric REFRACTION
 	bool into = n.dot(nl)>0;                // Ray from outside going in?
 	double nc=1, nt=1.5, nnt=into?nc/nt:nt/nc, ddn=r.d.dot(nl), cos2t;
 	if ((cos2t=1-nnt*nnt*(1-ddn*ddn))<0)    // Total internal reflection
-		return (Le + f.mult(radiance(reflRay,depth)));
+		return (Le + f * radiance(reflRay,depth));
 	Vec tdir = (r.d*nnt - n*((into?1:-1)*(ddn*nnt+sqrt(cos2t)))).norm();
 	double a=nt-nc, b=nt+nc, R0=a*a/(b*b), c = 1-(into?-ddn:tdir.dot(n));
 	double Re=R0+(1-R0)*c*c*c*c*c,Tr=1-Re,P=.25+.5*Re,RP=Re/P,TP=Tr/(1-P);
 		return (Le + (depth>2 ? (XORShift::frand()<P ?   // Russian roulette
-		radiance(reflRay,depth)*RP:f.mult(radiance(Ray(x,tdir),depth)*TP)) :
-	radiance(reflRay,depth)*Re+f.mult(radiance(Ray(x,tdir),depth)*Tr)))*scaleBy;
+		radiance(reflRay,depth)*RP:(f * radiance(Ray(x,tdir),depth)*TP)) :
+	    radiance(reflRay,depth)*Re+(f * radiance(Ray(x,tdir),depth)*Tr)))*scaleBy;
 }
 
 void smallvpt_accumulateRadiance(int w, int h, RGB *const backbuffer, int& accumulations) {
@@ -201,42 +196,12 @@ void smallvpt_accumulateRadiance(int w, int h, RGB *const backbuffer, int& accum
             double r2 = 2 * XORShift::frand(), dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
             Vec d = cx * (((sx + .5 + dx) / 2 + x) / w - .5) +
                 cy * (((sy + .5 + dy) / 2 + y) / h - .5) + cam.d;
-            Vec r = radiance(Ray(cam.o + d * 140, d.norm()), 0);
+            RGB r = radiance(Ray(cam.o + d * 140, d.norm()), 0);
             // Camera rays are pushed ^^^^^ forward to start in interior
-            // c[i] = c[i] + Vec(clamp(r.x), clamp(r.y), clamp(r.z))*.25;
             int i = (h - y - 1) * w + x;
-            backbuffer[i] = lerp(backbuffer[i], RGB(r.x, r.y, r.z), blendFactor);
+            backbuffer[i] = lerp(backbuffer[i], r, blendFactor);
         }
     }
 }
-
-/*
-int main(int argc, char *argv[]) {
-	int w=1024, h=768, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
-	Ray cam(Vec(50,52,285), Vec(0,-0.042612,-1).norm()); // cam pos, dir
-	Vec cx=Vec(w*.5135/h), cy=(cx%cam.d).norm()*.5135, r, *c=new Vec[w*h];
-#pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP
-	for (int y=0; y<h; y++) {                       // Loop over image rows
-		fprintf(stderr,"\rRendering (%d spp) %5.2f%%",samps*4,100.*y/(h-1));
-		for (unsigned short x=0; x<w; x++)   // Loop cols
-			for (int sy=0, i=(h-y-1)*w+x; sy<2; sy++)     // 2x2 subpixel rows
-				for (int sx=0; sx<2; sx++, r=Vec()){        // 2x2 subpixel cols
-					for (int s=0; s<samps; s++){
-						double r1=2*XORShift::frand(), dx=r1<1 ? sqrt(r1)-1: 1-sqrt(2-r1);
-						double r2=2*XORShift::frand(), dy=r2<1 ? sqrt(r2)-1: 1-sqrt(2-r2);
-						Vec d = cx*( ( (sx+.5 + dx)/2 + x)/w - .5) +
-							cy*( ( (sy+.5 + dy)/2 + y)/h - .5) + cam.d;
-						r = r + radiance(Ray(cam.o+d*140,d.norm()),0)*(1./samps);
-					} // Camera rays are pushed ^^^^^ forward to start in interior
-					c[i] = c[i] + Vec(clamp(r.x),clamp(r.y),clamp(r.z))*.25;
-				}
-	}
-	FILE *f = fopen("image.ppm", "w"); // Write image to PPM file.
-	fprintf(f, "P3\n%d %d\n%d\n", w, h, 255);
-	for (int i=0; i<w*h; i++)
-		fprintf(f,"%d %d %d ", toInt(c[i].x), toInt(c[i].y), toInt(c[i].z));
-}
-
-*/
 
 #endif // _SMALL_VPT_H_
