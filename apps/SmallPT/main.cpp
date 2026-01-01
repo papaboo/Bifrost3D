@@ -12,6 +12,7 @@
 #endif
 
 #include <smallpt.h>
+#include <smallvpt.h>
 
 #include <Bifrost/Math/Color.h>
 
@@ -19,7 +20,6 @@
 
 #include <stdio.h>
 
-using Bifrost::Core::Array;
 using namespace Bifrost::Math;
 
 bool gRestartAccumulation = true;
@@ -74,8 +74,12 @@ inline bool is_power_of_two_or_zero(unsigned int v) {
 
 void main(int argc, char** argv) {
 
+    printf("SmallPT: Use '--volumetric' argument to enable volumetric effects.\n");
+
     if (!glfwInit())
         exit(EXIT_FAILURE);
+
+    bool volumetric_integrator = argc >= 2 && strcmp(argv[1], "--volumetric") == 0;
 
     GLFWwindow* window = glfwCreateWindow(256, 196, "smallpt", nullptr, nullptr);
 
@@ -90,7 +94,6 @@ void main(int argc, char** argv) {
     glfwSetWindowSizeCallback(window, windowSizeCallback);
 
     // Initialization
-    smallpt::Ray camera(Vector3d(50, 52, 295.6), normalize(Vector3d(0, -0.042612, -1))); // cam pos, dir
     gRestartAccumulation = true;
     int accumulations = 0;
     GLuint tex_ID; {
@@ -125,7 +128,10 @@ void main(int argc, char** argv) {
             }
         }
 
-        smallpt::accumulateRadiance(camera, gWindowWidth, gWindowHeight, gBackbuffer, accumulations);
+        if (volumetric_integrator)
+            smallvpt::accumulate_radiance(gWindowWidth, gWindowHeight, gBackbuffer, accumulations);
+        else
+            smallpt::accumulate_radiance(gWindowWidth, gWindowHeight, gBackbuffer, accumulations);
 
         { // Update the backbuffer.
             glViewport(0, 0, gWindowWidth, gWindowHeight);
@@ -140,9 +146,8 @@ void main(int argc, char** argv) {
             }
 
             // Logarithmic upload. Uploaded every time the number of accumulations is a power of two.
-            // Divide by four to get the first 8 frames.
             int INTERACTIVE_FRAMES = 3;
-            if (accumulations < INTERACTIVE_FRAMES || is_power_of_two_or_zero(accumulations - INTERACTIVE_FRAMES)) {
+            if (accumulations < INTERACTIVE_FRAMES || is_power_of_two_or_zero(accumulations - INTERACTIVE_FRAMES) || (accumulations - INTERACTIVE_FRAMES) % 32 == 0) {
                 // Backbuffer data is interpreted as sRGB, so we need to convert from linear colors to sRGB.
                 int pixel_count = gWindowWidth * gWindowHeight;
                 for (int i = 0; i < pixel_count; ++i)
