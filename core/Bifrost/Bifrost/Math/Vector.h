@@ -176,6 +176,18 @@ __always_inline__ Vector3<T> cross(Vector3<T> lhs, Vector3<T> rhs) {
                       (lhs.x * rhs.y) - (lhs.y * rhs.x));
 }
 
+// Computes a tangent and bitangent that together with the normal creates an orthonormal basis.
+// Building an Orthonormal Basis, Revisited, Duff et al.
+// http://jcgt.org/published/0006/01/01/paper.pdf
+template<typename T>
+__always_inline__ void compute_tangents(Vector3<T> normal, Vector3<T>& tangent, Vector3<T>& bitangent) {
+    T sign = T(copysignf(1.0f, (float)normal.z));
+    T a = T(-1) / (sign + normal.z);
+    T b = normal.x * normal.y * a;
+    tangent = { T(1) + sign * normal.x * normal.x * a, sign * b, -sign * normal.x };
+    bitangent = { b, sign + normal.y * normal.y * a, -normal.y };
+}
+
 template<typename T>
 __always_inline__ Vector2<T> min(Vector2<T> lhs, Vector2<T> rhs) {
     return Vector2<T>(lhs.x > rhs.x ? rhs.x : lhs.x, lhs.y > rhs.y ? rhs.y : lhs.y);
