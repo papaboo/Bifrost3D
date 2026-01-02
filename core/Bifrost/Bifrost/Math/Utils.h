@@ -163,7 +163,7 @@ __always_inline__ float radians_to_degress(float radians) {
 
 template <typename T>
 __always_inline__ Vector3<T> reflect(Vector3<T> incident, Vector3<T> normal) {
-    return incident - normal * dot(normal, incident) * T(2);
+    return incident - normal * (dot(normal, incident) * T(2));
 }
 
 __always_inline__ unsigned int reverse_bits(unsigned int n) {
