@@ -133,7 +133,6 @@ void main(int argc, char** argv) {
             }
 
             // Logarithmic upload. Uploaded every time the number of accumulations is a power of two.
-            // Divide by four to get the first 8 frames.
             int INTERACTIVE_FRAMES = 3;
             if (accumulations < INTERACTIVE_FRAMES || is_power_of_two_or_zero(accumulations - INTERACTIVE_FRAMES)) {
                 glBindTexture(GL_TEXTURE_2D, tex_ID);

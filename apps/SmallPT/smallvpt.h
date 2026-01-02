@@ -46,8 +46,13 @@ struct Vec {        // Usage: time ./smallpt 5000 && xv image.ppm
 	Vec& norm(){ return *this = *this * (1/sqrt(x*x+y*y+z*z)); }
 	float length() {return sqrt(x*x+y*y+z*z); }
 	double dot(const Vec &b) const { return x*b.x+y*b.y+z*b.z; } // cross:
-	Vec operator%(Vec&b){return Vec(y*b.z-z*b.y,z*b.x-x*b.z,x*b.y-y*b.x);}
+	// Vec operator%(Vec&b){return Vec(y*b.z-z*b.y,z*b.x-x*b.z,x*b.y-y*b.x);}
 };
+__always_inline__ Vec cross(Vec lhs, Vec rhs) {
+    return Vec((lhs.y * rhs.z) - (lhs.z * rhs.y),
+               (lhs.z * rhs.x) - (lhs.x * rhs.z),
+               (lhs.x * rhs.y) - (lhs.y * rhs.x));
+}
 
 struct Ray { Vec o, d; Ray() {} Ray(Vec o_, Vec d_) : o(o_), d(d_) {} };
 enum Refl_t { DIFF, SPEC, REFR };  // material types, used in radiance()
@@ -109,8 +114,8 @@ inline void generateOrthoBasis(Vec &u, Vec &v, Vec w) {
 	else if (fabs(w.y) <= fabs(w.z)) coVec = Vec(-w.z,0,w.x);
 	else coVec = Vec(-w.y,w.x,0);
 	coVec.norm();
-	u = w%coVec,
-	v = w%u;
+	u = cross(w, coVec),
+	v = cross(w, u);
 }
 inline double scatter(const Ray &r, Ray *sRay, double tin, float tout, double &s) {
 	s = sampleSegment(XORShift::frand(), float(sigma_s), float(tout - tin));
@@ -158,7 +163,9 @@ RGB radiance(const Ray &r, int depth) {
 	else scaleBy=1.0;
 	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
 		double r1=2*M_PI*XORShift::frand(), r2=XORShift::frand(), r2s=sqrt(r2);
-		Vec w=nl, u=((fabs(w.x)>.1?Vec(0,1):Vec(1))%w).norm(), v=w%u;
+        Vec w = nl;
+        Vec u = cross((fabs(w.x) > .1 ? Vec(0, 1) : Vec(1)), w).norm();
+        Vec v = cross(w, u);
 		Vec d = (u*cos(r1)*r2s + v*sin(r1)*r2s + w*sqrt(1-r2)).norm();
 		return (Le + f * radiance(Ray(x,d),depth)) * scaleBy;
 	} else if (obj.refl == SPEC)            // Ideal SPECULAR reflection
@@ -184,7 +191,7 @@ void smallvpt_accumulateRadiance(int w, int h, RGB *const backbuffer, int& accum
     float blendFactor = 1.0f / accumulations;
 
     Vec cx = Vec(w*.5135 / h);
-    Vec cy = (cx%cam.d).norm()*.5135;
+    Vec cy = cross(cx, cam.d).norm()*.5135;
     #pragma omp parallel for schedule(dynamic, 1)
     for (int y = 0; y < h; y++) {
         for (unsigned short x = 0; x < w; x++) {
