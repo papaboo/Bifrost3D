@@ -116,7 +116,7 @@ inline void generateOrthoBasis(Vec &u, Vec &v, Vec w) {
 		else coVec = Vec(-w.y,w.x,0);
 	else if (fabs(w.y) <= fabs(w.z)) coVec = Vec(-w.z,0,w.x);
 	else coVec = Vec(-w.y,w.x,0);
-	coVec.norm();
+	coVec = normalize(coVec);
 	u = cross(w, coVec),
 	v = cross(w, u);
 }
@@ -158,7 +158,7 @@ RGB radiance(const Ray &r, int depth) {
 	else
 		if (!intersect(r, t, id)) return RGB::black();
 	const Sphere &obj = spheres[id];        // the hit object
-    Vec x = r.o + r.d*t, n = (x - obj.p).norm(), nl = dot(n, r.d) < 0 ? n : n * -1;
+    Vec x = r.o + r.d*t, n = normalize(x - obj.p), nl = dot(n, r.d) < 0 ? n : n * -1;
     RGB f = obj.c, Le = obj.e;
 	double p = f.r>f.g && f.r>f.b ? f.r : f.g>f.b ? f.g : f.b; // max refl
 	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);} else return RGB::black(); //R.R.
@@ -167,9 +167,9 @@ RGB radiance(const Ray &r, int depth) {
 	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
 		double r1=2*M_PI*XORShift::frand(), r2=XORShift::frand(), r2s=sqrt(r2);
         Vec w = nl;
-        Vec u = cross((fabs(w.x) > .1 ? Vec(0, 1) : Vec(1)), w).norm();
+        Vec u = normalize(cross((fabs(w.x) > .1 ? Vec(0, 1) : Vec(1)), w));
         Vec v = cross(w, u);
-		Vec d = (u*cos(r1)*r2s + v*sin(r1)*r2s + w*sqrt(1-r2)).norm();
+		Vec d = normalize(u*cos(r1)*r2s + v*sin(r1)*r2s + w*sqrt(1-r2));
 		return (Le + f * radiance(Ray(x,d),depth)) * scaleBy;
 	} else if (obj.refl == SPEC)            // Ideal SPECULAR reflection
 		return (Le + f * radiance(Ray(x,r.d-n*2*dot(n, r.d)),depth)) * scaleBy;
@@ -178,7 +178,7 @@ RGB radiance(const Ray &r, int depth) {
 	double nc=1, nt=1.5, nnt=into?nc/nt:nt/nc, ddn=dot(r.d, nl), cos2t;
 	if ((cos2t=1-nnt*nnt*(1-ddn*ddn))<0)    // Total internal reflection
 		return (Le + f * radiance(reflRay,depth));
-	Vec tdir = (r.d*nnt - n*((into?1:-1)*(ddn*nnt+sqrt(cos2t)))).norm();
+	Vec tdir = normalize(r.d*nnt - n*((into?1:-1)*(ddn*nnt+sqrt(cos2t))));
 	double a=nt-nc, b=nt+nc, R0=a*a/(b*b), c = 1-(into?-ddn:dot(n, tdir));
 	double Re=R0+(1-R0)*c*c*c*c*c,Tr=1-Re,P=.25+.5*Re,RP=Re/P,TP=Tr/(1-P);
 		return (Le + (depth>2 ? (XORShift::frand()<P ?   // Russian roulette
@@ -188,13 +188,13 @@ RGB radiance(const Ray &r, int depth) {
 
 void smallvpt_accumulateRadiance(int w, int h, RGB *const backbuffer, int& accumulations) {
 
-    Ray cam(Vec(50, 52, 285), Vec(0, -0.042612, -1).norm()); // cam pos, dir
+    Ray cam(Vec(50, 52, 285), normalize(Vec(0, -0.042612, -1))); // cam pos, dir
 
     ++accumulations;
     float blendFactor = 1.0f / accumulations;
 
     Vec cx = Vec(w*.5135 / h);
-    Vec cy = cross(cx, cam.d).norm()*.5135;
+    Vec cy = normalize(cross(cx, cam.d))*.5135;
     #pragma omp parallel for schedule(dynamic, 1)
     for (int y = 0; y < h; y++) {
         for (unsigned short x = 0; x < w; x++) {
@@ -206,7 +206,7 @@ void smallvpt_accumulateRadiance(int w, int h, RGB *const backbuffer, int& accum
             double r2 = 2 * XORShift::frand(), dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
             Vec d = cx * (((sx + .5 + dx) / 2 + x) / w - .5) +
                 cy * (((sy + .5 + dy) / 2 + y) / h - .5) + cam.d;
-            RGB r = radiance(Ray(cam.o + d * 140, d.norm()), 0);
+            RGB r = radiance(Ray(cam.o + d * 140, normalize(d)), 0);
             // Camera rays are pushed ^^^^^ forward to start in interior
             int i = (h - y - 1) * w + x;
             backbuffer[i] = lerp(backbuffer[i], r, blendFactor);
