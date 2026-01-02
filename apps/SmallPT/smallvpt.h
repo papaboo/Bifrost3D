@@ -167,7 +167,7 @@ RGB radiance(const Ray &r, int depth) {
 	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
 		double r1=2*M_PI*XORShift::frand(), r2=XORShift::frand(), r2s=sqrt(r2);
         Vec w = nl;
-        Vec u = normalize(cross((fabs(w.x) > .1 ? Vec(0, 1) : Vec(1)), w));
+        Vec u = normalize(cross((fabs(w.x) > .1 ? Vec(0, 1, 0) : Vec(1, 0, 0)), w));
         Vec v = cross(w, u);
 		Vec d = normalize(u*cos(r1)*r2s + v*sin(r1)*r2s + w*sqrt(1-r2));
 		return (Le + f * radiance(Ray(x,d),depth)) * scaleBy;
@@ -193,7 +193,7 @@ void smallvpt_accumulateRadiance(int w, int h, RGB *const backbuffer, int& accum
     ++accumulations;
     float blendFactor = 1.0f / accumulations;
 
-    Vec cx = Vec(w*.5135 / h);
+    Vec cx = Vec(w*.5135 / h, 0, 0);
     Vec cy = normalize(cross(cx, cam.d))*.5135;
     #pragma omp parallel for schedule(dynamic, 1)
     for (int y = 0; y < h; y++) {

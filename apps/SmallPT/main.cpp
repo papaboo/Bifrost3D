@@ -134,7 +134,7 @@ void main(int argc, char** argv) {
 
             // Logarithmic upload. Uploaded every time the number of accumulations is a power of two.
             int INTERACTIVE_FRAMES = 3;
-            if (accumulations < INTERACTIVE_FRAMES || is_power_of_two_or_zero(accumulations - INTERACTIVE_FRAMES)) {
+            if (accumulations < INTERACTIVE_FRAMES || is_power_of_two_or_zero(accumulations - INTERACTIVE_FRAMES) || (accumulations - INTERACTIVE_FRAMES) % 32 == 0) {
                 glBindTexture(GL_TEXTURE_2D, tex_ID);
                 const GLint BASE_IMAGE_LEVEL = 0;
                 const GLint NO_BORDER = 0;
