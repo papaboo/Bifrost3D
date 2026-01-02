@@ -18,9 +18,6 @@
 
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <algorithm>
 
 using namespace Bifrost::Math;
 
@@ -37,7 +34,7 @@ namespace XORShift { // XOR shift PRNG
 	}
 }
 
-struct Ray { Vector3d o, d; Ray() {} Ray(Vector3d o_, Vector3d d_) : o(o_), d(d_) {} };
+struct Ray { Vector3d origin, direction; Ray() {} Ray(Vector3d o, Vector3d d) : origin(o), direction(d) {} };
 enum class BSDF { Diffuse, Specular, Glass };
 
 struct Sphere {
@@ -48,8 +45,8 @@ struct Sphere {
 	Sphere(double r, Vector3d p, RGB e, RGB a, BSDF bsdf):
         radius(r), position(p), emission(e), albedo(a), bsdf(bsdf) {}
 	double intersect(const Ray &r, double *tin = NULL, double *tout = NULL) const { // returns distance, 0 if nohit
-        Vector3d op = position - r.o; // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
-		double t, eps=1e-4, b=dot(op, r.d), det=b*b-dot(op, op)+ radius * radius;
+        Vector3d op = position - r.origin; // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
+		double t, eps=1e-4, b=dot(op, r.direction), det=b*b-dot(op, op)+ radius * radius;
 		if (det<0) return 0; else det=sqrt(det);
 		if (tin && tout) {*tin=(b-det<=0)?0:b-det;*tout=b+det;}
 		return (t=b-det)>eps ? t : ((t=b+det)>eps ? t : 0);
@@ -86,11 +83,11 @@ inline Vector3d sampleHG(double g, double e1, double e2) {
 
 inline double scatter(const Ray &r, Ray *sRay, double tin, float tout, double &s) {
 	s = sampleSegment(XORShift::frand(), float(sigma_s), float(tout - tin));
-	Vector3d x = r.o + r.d *tin + r.d * s;
+	Vector3d x = r.origin + r.direction *tin + r.direction * s;
 	Vector3d dir = sampleHG(-0.5,XORShift::frand(), XORShift::frand()); //Sample a direction ~ Henyey-Greenstein's phase function
 	Vector3d u, v;
-    compute_tangents(r.d, u, v);
-	dir = u*dir.x+v*dir.y+r.d*dir.z;
+    compute_tangents(r.direction, u, v);
+	dir = u*dir.x+v*dir.y+r.direction*dir.z;
 	if (sRay)	*sRay = Ray(x, dir);
 	return (1.0 - exp(-sigma_s * (tout - tin)));
 }
@@ -122,7 +119,7 @@ RGB radiance(const Ray &r, int depth) {
 	else
 		if (!intersect(r, t, id)) return RGB::black();
 	const Sphere &obj = spheres[id];        // the hit object
-    Vector3d x = r.o + r.d*t, n = normalize(x - obj.position), nl = dot(n, r.d) < 0 ? n : n * -1;
+    Vector3d x = r.origin + r.direction*t, n = normalize(x - obj.position), nl = dot(n, r.direction) < 0 ? n : n * -1;
     RGB f = obj.albedo, Le = obj.emission;
 	double p = f.r>f.g && f.r>f.b ? f.r : f.g>f.b ? f.g : f.b; // max refl
 	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);} else return RGB::black(); // Russian roulette
@@ -136,13 +133,13 @@ RGB radiance(const Ray &r, int depth) {
 		Vector3d d = normalize(u*cos(r1)*r2s + v*sin(r1)*r2s + w*sqrt(1-r2));
 		return (Le + f * radiance(Ray(x,d),depth)) * scaleBy;
 	} else if (obj.bsdf == BSDF::Specular)
-		return (Le + f * radiance(Ray(x,r.d-n*2*dot(n, r.d)),depth)) * scaleBy;
-	Ray reflRay(x, r.d-n*2*dot(n, r.d));     // Ideal dielectric REFRACTION
+		return (Le + f * radiance(Ray(x,r.direction -n*2*dot(n, r.direction)),depth)) * scaleBy;
+	Ray reflRay(x, r.direction-n*2*dot(n, r.direction));     // Ideal dielectric REFRACTION
 	bool into = dot(n, nl)>0;                // Ray from outside going in?
-	double nc=1, nt=1.5, nnt=into?nc/nt:nt/nc, ddn=dot(r.d, nl), cos2t;
+	double nc=1, nt=1.5, nnt=into?nc/nt:nt/nc, ddn=dot(r.direction, nl), cos2t;
 	if ((cos2t=1-nnt*nnt*(1-ddn*ddn))<0)    // Total internal reflection
 		return (Le + f * radiance(reflRay,depth));
-    Vector3d tdir = normalize(r.d*nnt - n*((into?1:-1)*(ddn*nnt+sqrt(cos2t))));
+    Vector3d tdir = normalize(r.direction*nnt - n*((into?1:-1)*(ddn*nnt+sqrt(cos2t))));
 	double a=nt-nc, b=nt+nc, R0=a*a/(b*b), c = 1-(into?-ddn:dot(n, tdir));
 	double Re=R0+(1-R0)*c*c*c*c*c,Tr=1-Re,P=.25+.5*Re,RP=Re/P,TP=Tr/(1-P);
 		return (Le + (depth>2 ? (XORShift::frand()<P ?   // Russian roulette
@@ -158,7 +155,7 @@ void smallvpt_accumulateRadiance(int w, int h, RGB *const backbuffer, int& accum
     float blendFactor = 1.0f / accumulations;
 
     Vector3d cx = Vector3d(w*.5135 / h, 0, 0);
-    Vector3d cy = normalize(cross(cx, cam.d))*.5135;
+    Vector3d cy = normalize(cross(cx, cam.direction))*.5135;
     #pragma omp parallel for schedule(dynamic, 1)
     for (int y = 0; y < h; y++) {
         for (unsigned short x = 0; x < w; x++) {
@@ -169,8 +166,8 @@ void smallvpt_accumulateRadiance(int w, int h, RGB *const backbuffer, int& accum
             double r1 = 2 * XORShift::frand(), dx = r1 < 1 ? sqrt(r1) - 1 : 1 - sqrt(2 - r1);
             double r2 = 2 * XORShift::frand(), dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
             Vector3d d = cx * (((sx + .5 + dx) / 2 + x) / w - .5) +
-                cy * (((sy + .5 + dy) / 2 + y) / h - .5) + cam.d;
-            RGB r = radiance(Ray(cam.o + d * 140, normalize(d)), 0);
+                cy * (((sy + .5 + dy) / 2 + y) / h - .5) + cam.direction;
+            RGB r = radiance(Ray(cam.origin + d * 140, normalize(d)), 0);
             // Camera rays are pushed ^^^^^ forward to start in interior
             int i = (h - y - 1) * w + x;
             backbuffer[i] = lerp(backbuffer[i], r, blendFactor);
