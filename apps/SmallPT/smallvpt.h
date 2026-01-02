@@ -43,9 +43,9 @@ struct Vec {        // Usage: time ./smallpt 5000 && xv image.ppm
 	Vec operator-(const Vec &b) const { return Vec(x-b.x,y-b.y,z-b.z); }
 	Vec operator*(double b) const { return Vec(x*b,y*b,z*b); }
 	Vec mult(const Vec &b) const { return Vec(x*b.x,y*b.y,z*b.z); }
-	Vec& norm(){ return *this = *this * (1/sqrt(x*x+y*y+z*z)); }
+	Vec& norm1(){ return *this = *this * (1/sqrt(x*x+y*y+z*z)); }
 	float length() {return sqrt(x*x+y*y+z*z); }
-	double dot(const Vec &b) const { return x*b.x+y*b.y+z*b.z; } // cross:
+	// double dot(const Vec &b) const { return x*b.x+y*b.y+z*b.z; } // cross:
 	// Vec operator%(Vec&b){return Vec(y*b.z-z*b.y,z*b.x-x*b.z,x*b.y-y*b.x);}
 };
 __always_inline__ Vec cross(Vec lhs, Vec rhs) {
@@ -53,6 +53,9 @@ __always_inline__ Vec cross(Vec lhs, Vec rhs) {
                (lhs.z * rhs.x) - (lhs.x * rhs.z),
                (lhs.x * rhs.y) - (lhs.y * rhs.x));
 }
+double dot(Vec lhs, Vec rhs) { return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z; }
+Vec normalize(Vec v) { return v.norm1(); }
+
 
 struct Ray { Vec o, d; Ray() {} Ray(Vec o_, Vec d_) : o(o_), d(d_) {} };
 enum Refl_t { DIFF, SPEC, REFR };  // material types, used in radiance()
@@ -66,7 +69,7 @@ struct Sphere {
 	rad(rad_), p(p_), e(e_), c(c_), refl(refl_) {}
 	double intersect(const Ray &r, double *tin = NULL, double *tout = NULL) const { // returns distance, 0 if nohit
 		Vec op = p-r.o; // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
-		double t, eps=1e-4, b=op.dot(r.d), det=b*b-op.dot(op)+rad*rad;
+		double t, eps=1e-4, b=dot(op, r.d), det=b*b-dot(op, op)+rad*rad;
 		if (det<0) return 0; else det=sqrt(det);
 		if (tin && tout) {*tin=(b-det<=0)?0:b-det;*tout=b+det;}
 		return (t=b-det)>eps ? t : ((t=b+det)>eps ? t : 0);
@@ -155,11 +158,11 @@ RGB radiance(const Ray &r, int depth) {
 	else
 		if (!intersect(r, t, id)) return RGB::black();
 	const Sphere &obj = spheres[id];        // the hit object
-    Vec x = r.o + r.d*t, n = (x - obj.p).norm(), nl = n.dot(r.d) < 0 ? n : n * -1;
+    Vec x = r.o + r.d*t, n = (x - obj.p).norm(), nl = dot(n, r.d) < 0 ? n : n * -1;
     RGB f = obj.c, Le = obj.e;
 	double p = f.r>f.g && f.r>f.b ? f.r : f.g>f.b ? f.g : f.b; // max refl
 	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);} else return RGB::black(); //R.R.
-	if (n.dot(nl)>0 || obj.refl != REFR) {f = f * absorption; Le = obj.e * absorption;}// no absorption inside glass
+	if (dot(n, nl)>0 || obj.refl != REFR) {f = f * absorption; Le = obj.e * absorption;}// no absorption inside glass
 	else scaleBy=1.0;
 	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
 		double r1=2*M_PI*XORShift::frand(), r2=XORShift::frand(), r2s=sqrt(r2);
@@ -169,14 +172,14 @@ RGB radiance(const Ray &r, int depth) {
 		Vec d = (u*cos(r1)*r2s + v*sin(r1)*r2s + w*sqrt(1-r2)).norm();
 		return (Le + f * radiance(Ray(x,d),depth)) * scaleBy;
 	} else if (obj.refl == SPEC)            // Ideal SPECULAR reflection
-		return (Le + f * radiance(Ray(x,r.d-n*2*n.dot(r.d)),depth)) * scaleBy;
-	Ray reflRay(x, r.d-n*2*n.dot(r.d));     // Ideal dielectric REFRACTION
-	bool into = n.dot(nl)>0;                // Ray from outside going in?
-	double nc=1, nt=1.5, nnt=into?nc/nt:nt/nc, ddn=r.d.dot(nl), cos2t;
+		return (Le + f * radiance(Ray(x,r.d-n*2*dot(n, r.d)),depth)) * scaleBy;
+	Ray reflRay(x, r.d-n*2*dot(n, r.d));     // Ideal dielectric REFRACTION
+	bool into = dot(n, nl)>0;                // Ray from outside going in?
+	double nc=1, nt=1.5, nnt=into?nc/nt:nt/nc, ddn=dot(r.d, nl), cos2t;
 	if ((cos2t=1-nnt*nnt*(1-ddn*ddn))<0)    // Total internal reflection
 		return (Le + f * radiance(reflRay,depth));
 	Vec tdir = (r.d*nnt - n*((into?1:-1)*(ddn*nnt+sqrt(cos2t)))).norm();
-	double a=nt-nc, b=nt+nc, R0=a*a/(b*b), c = 1-(into?-ddn:tdir.dot(n));
+	double a=nt-nc, b=nt+nc, R0=a*a/(b*b), c = 1-(into?-ddn:dot(n, tdir));
 	double Re=R0+(1-R0)*c*c*c*c*c,Tr=1-Re,P=.25+.5*Re,RP=Re/P,TP=Tr/(1-P);
 		return (Le + (depth>2 ? (XORShift::frand()<P ?   // Russian roulette
 		radiance(reflRay,depth)*RP:(f * radiance(Ray(x,tdir),depth)*TP)) :
