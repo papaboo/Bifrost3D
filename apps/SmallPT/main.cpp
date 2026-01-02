@@ -13,7 +13,7 @@
 
 #include <smallpt.h>
 
-#include <Bifrost/Core/Array.h>
+#include <Bifrost/Math/Color.h>
 
 #include <glfw/glfw3.h>
 
@@ -22,11 +22,9 @@
 using Bifrost::Core::Array;
 using namespace Bifrost::Math;
 
-inline float clamp(float x) { return x < 0.0f ? 0.0f : x > 1.0f ? 1.0f : x; }
-inline int toInt(float x) { return int(pow(clamp(x), 1.0f / 2.2f) * 255.0f + .5f); }
-
 bool gRestartAccumulation = true;
 RGB* gBackbuffer = nullptr;
+RGB* sRGB_colors = nullptr;
 int gWindowWidth = 0;
 int gWindowHeight = 0;
 
@@ -49,8 +47,10 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
             FILE *f = fopen("image.ppm", "w");
             fprintf(f, "P3\n%d %d\n%d\n", gWindowWidth, gWindowHeight, 255);
             for (int i = 0; i < gWindowWidth * gWindowHeight; ++i) {
-                RGB& c = gBackbuffer[i];
-                fprintf(f, "%d %d %d ", toInt(c.r), toInt(c.g), toInt(c.b));
+                RGB linear_color = gBackbuffer[i];
+                RGB sRGB_color = Bifrost::Math::linear_to_sRGB(linear_color);
+                RGB24 sRGB_24 = { sRGB_color.r, sRGB_color.g, sRGB_color.b };
+                fprintf(f, "%d %d %d ", sRGB_24.r.raw, sRGB_24.g.raw, sRGB_24.b.raw);
             }
         }
         break;
@@ -113,6 +113,9 @@ void main(int argc, char** argv) {
                 gBackbuffer = new RGB[gWindowWidth * gWindowHeight];
                 for (RGB* p = gBackbuffer; p < (gBackbuffer + gWindowWidth * gWindowHeight); ++p)
                     *p = RGB::black();
+
+                delete[] sRGB_colors;
+                sRGB_colors = new RGB[gWindowWidth * gWindowHeight];
             }
         }
 
@@ -134,10 +137,15 @@ void main(int argc, char** argv) {
             // Divide by four to get the first 8 frames.
             int INTERACTIVE_FRAMES = 3;
             if (accumulations < INTERACTIVE_FRAMES || is_power_of_two_or_zero(accumulations - INTERACTIVE_FRAMES)) {
+                // Backbuffer data is interpreted as sRGB, so we need to convert from linear colors to sRGB.
+                int pixel_count = gWindowWidth * gWindowHeight;
+                for (int i = 0; i < pixel_count; ++i)
+                    sRGB_colors[i] = Bifrost::Math::linear_to_sRGB(gBackbuffer[i]);
+
                 glBindTexture(GL_TEXTURE_2D, tex_ID);
                 const GLint BASE_IMAGE_LEVEL = 0;
                 const GLint NO_BORDER = 0;
-                glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGB, gWindowWidth, gWindowHeight, NO_BORDER, GL_RGB, GL_FLOAT, gBackbuffer);
+                glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGB, gWindowWidth, gWindowHeight, NO_BORDER, GL_RGB, GL_FLOAT, sRGB_colors);
             }
 
             glClear(GL_COLOR_BUFFER_BIT);
