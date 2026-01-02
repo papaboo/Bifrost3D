@@ -38,43 +38,37 @@ namespace XORShift { // XOR shift PRNG
 }
 
 struct Ray { Vector3d o, d; Ray() {} Ray(Vector3d o_, Vector3d d_) : o(o_), d(d_) {} };
-enum Refl_t { DIFF, SPEC, REFR };  // material types, used in radiance()
+enum class BSDF { Diffuse, Specular, Glass };
 
 struct Sphere {
-	double rad;       // radius
-    Vector3d p;
-    RGB e, c;      // position, emission, color
-	Refl_t refl;      // reflection type (DIFFuse, SPECular, REFRactive)
-	Sphere(double rad_, Vector3d p_, RGB e_, RGB c_, Refl_t refl_):
-	rad(rad_), p(p_), e(e_), c(c_), refl(refl_) {}
+	double radius;
+    Vector3d position;
+    RGB emission, albedo;
+    BSDF bsdf;
+	Sphere(double r, Vector3d p, RGB e, RGB a, BSDF bsdf):
+        radius(r), position(p), emission(e), albedo(a), bsdf(bsdf) {}
 	double intersect(const Ray &r, double *tin = NULL, double *tout = NULL) const { // returns distance, 0 if nohit
-        Vector3d op = p-r.o; // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
-		double t, eps=1e-4, b=dot(op, r.d), det=b*b-dot(op, op)+rad*rad;
+        Vector3d op = position - r.o; // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
+		double t, eps=1e-4, b=dot(op, r.d), det=b*b-dot(op, op)+ radius * radius;
 		if (det<0) return 0; else det=sqrt(det);
 		if (tin && tout) {*tin=(b-det<=0)?0:b-det;*tout=b+det;}
 		return (t=b-det)>eps ? t : ((t=b+det)>eps ? t : 0);
 	}
 };
-//Sphere spheres[] = {//Scene: radius, position, emission, color, material 
-//	Sphere(26.5,Vec(27,18.5,78),       Vec(),Vec(1,1,1)*.75, SPEC),//Mirr
-//	Sphere(12,Vec(70,43,78),       Vec(),Vec(0.27,0.8,0.8), REFR),//Glas
-//	Sphere(8, Vec(55,87,78),Vec(),  Vec(1,1,1)*.75, DIFF), //Lite
-//	Sphere(4, Vec(55,80,78),Vec(10,10,10),  Vec(), DIFF) //Lite
-//};
 
 Sphere spheres[] = { // Scene: radius, position, emission, color, material
-    Sphere(1e5, Vector3d(1e5 + 1, 40.8, 81.6), RGB::black(), RGB(.75f, .25f, .25f), DIFF),//Left
-    Sphere(1e5, Vector3d(-1e5 + 99, 40.8, 81.6), RGB::black(), RGB(.25f, .25f, .75f), DIFF),//Rght
-    Sphere(1e5, Vector3d(50, 40.8, 1e5), RGB::black(), RGB(.75f), DIFF),//Back
-    Sphere(1e5, Vector3d(50, 40.8, -1e5 + 170), RGB::black(), RGB::black(), DIFF),//Frnt
-    Sphere(1e5, Vector3d(50, 1e5, 81.6), RGB::black(), RGB(.75f), DIFF),//Botm
-    Sphere(1e5, Vector3d(50, -1e5 + 81.6, 81.6), RGB::black(), RGB(.75f), DIFF),//Top
-    Sphere(16.5, Vector3d(27, 16.5, 47), RGB::black(), RGB(.999f), SPEC),//Mirr
-    Sphere(16.5, Vector3d(73, 16.5, 78), RGB::black(), RGB(.999f), REFR),//Glas
-    Sphere(600, Vector3d(50, 681.6 - .27, 81.6), RGB(12.0f), RGB::black(), DIFF) //Light
+    Sphere(1e5, Vector3d(1e5 + 1, 40.8, 81.6), RGB::black(), RGB(.75f, .25f, .25f), BSDF::Diffuse), // Left
+    Sphere(1e5, Vector3d(-1e5 + 99, 40.8, 81.6), RGB::black(), RGB(.25f, .25f, .75f), BSDF::Diffuse), // Right
+    Sphere(1e5, Vector3d(50, 40.8, 1e5), RGB::black(), RGB(.75f), BSDF::Diffuse), // Back
+    Sphere(1e5, Vector3d(50, 40.8, -1e5 + 170), RGB::black(), RGB::black(), BSDF::Diffuse), // Front
+    Sphere(1e5, Vector3d(50, 1e5, 81.6), RGB::black(), RGB(.75f), BSDF::Diffuse), // Bottom
+    Sphere(1e5, Vector3d(50, -1e5 + 81.6, 81.6), RGB::black(), RGB(.75f), BSDF::Diffuse), // Top
+    Sphere(16.5, Vector3d(27, 16.5, 47), RGB::black(), RGB(.999f), BSDF::Specular), // Mirror
+    Sphere(16.5, Vector3d(73, 16.5, 78), RGB::black(), RGB(.999f), BSDF::Glass), // Glass
+    Sphere(600, Vector3d(50, 681.6 - .27, 81.6), RGB(12.0f), RGB::black(), BSDF::Diffuse) // Light
 };
 
-Sphere homogeneousMedium(300, Vector3d(50,50,80), RGB::black(), RGB::black(), DIFF);
+Sphere homogeneousMedium(300, Vector3d(50,50,80), RGB::black(), RGB::black(), BSDF::Diffuse);
 const double sigma_s = 0.009, sigma_a = 0.006, sigma_t = sigma_s+sigma_a;
 inline bool intersect(const Ray &r, double &t, int &id, double tmax=1e20){
 	double n=sizeof(spheres)/sizeof(Sphere), d, inf=t=tmax;
@@ -113,7 +107,7 @@ RGB radiance(const Ray &r, int depth) {
 		Ray sRay;
 		double s, ms = scatter(r, &sRay, tnear, tfar, s), prob_s = ms;
 		scaleBy = 1.0/(1.0-prob_s);
-		if (XORShift::frand() <= prob_s) {// Sample surface or volume?
+		if (XORShift::frand() <= prob_s) { // Sample surface or volume?
 			if (!intersect(r, t, id, tnear + s))
 				return radiance(sRay, ++depth) * ms * (1.0/prob_s);
 			scaleBy = 1.0;
@@ -128,20 +122,20 @@ RGB radiance(const Ray &r, int depth) {
 	else
 		if (!intersect(r, t, id)) return RGB::black();
 	const Sphere &obj = spheres[id];        // the hit object
-    Vector3d x = r.o + r.d*t, n = normalize(x - obj.p), nl = dot(n, r.d) < 0 ? n : n * -1;
-    RGB f = obj.c, Le = obj.e;
+    Vector3d x = r.o + r.d*t, n = normalize(x - obj.position), nl = dot(n, r.d) < 0 ? n : n * -1;
+    RGB f = obj.albedo, Le = obj.emission;
 	double p = f.r>f.g && f.r>f.b ? f.r : f.g>f.b ? f.g : f.b; // max refl
-	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);} else return RGB::black(); //R.R.
-	if (dot(n, nl)>0 || obj.refl != REFR) {f = f * absorption; Le = obj.e * absorption;}// no absorption inside glass
+	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);} else return RGB::black(); // Russian roulette
+	if (dot(n, nl)>0 || obj.bsdf != BSDF::Glass) {f = f * absorption; Le = obj.emission * absorption;} // no absorption inside glass
 	else scaleBy=1.0;
-	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
+	if (obj.bsdf == BSDF::Diffuse) {
 		double r1=2*M_PI*XORShift::frand(), r2=XORShift::frand(), r2s=sqrt(r2);
         Vector3d w = nl;
         Vector3d u = normalize(cross((fabs(w.x) > .1 ? Vector3d(0, 1, 0) : Vector3d(1, 0, 0)), w));
         Vector3d v = cross(w, u);
 		Vector3d d = normalize(u*cos(r1)*r2s + v*sin(r1)*r2s + w*sqrt(1-r2));
 		return (Le + f * radiance(Ray(x,d),depth)) * scaleBy;
-	} else if (obj.refl == SPEC)            // Ideal SPECULAR reflection
+	} else if (obj.bsdf == BSDF::Specular)
 		return (Le + f * radiance(Ray(x,r.d-n*2*dot(n, r.d)),depth)) * scaleBy;
 	Ray reflRay(x, r.d-n*2*dot(n, r.d));     // Ideal dielectric REFRACTION
 	bool into = dot(n, nl)>0;                // Ray from outside going in?
