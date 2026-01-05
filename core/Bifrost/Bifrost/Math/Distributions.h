@@ -64,7 +64,7 @@ namespace Sphere {
 
 __always_inline__ float PDF() { return 0.5f / PI<float>(); }
 
-__always_inline__ Vector3f Sample(Vector2f random_sample) {
+__always_inline__ Vector3f sample(Vector2f random_sample) {
     float z = 1.0f - 2.0f * random_sample.x;
     float r = sqrt(fmaxf(0.0f, 1.0f - z * z));
     float phi = 2.0f * PI<float>() * random_sample.y;

@@ -31,7 +31,7 @@ GTEST_TEST(Math_OctahedralNormal, encode_decode) {
             }
 
     for (int s = 0; s < 10000; ++s) {
-        Vector3f normal = normalize(Distributions::Sphere::Sample(RNG::sample02(s)));
+        Vector3f normal = normalize(Distributions::Sphere::sample(RNG::sample02(s)));
         Vector3f decoded_normal = OctahedralNormal::encode_precise(normal).decode();
         EXPECT_NORMAL_EQ(normal, decoded_normal, max_error);
     }
