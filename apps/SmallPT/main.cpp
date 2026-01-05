@@ -58,6 +58,12 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 }
 
 void windowSizeCallback(GLFWwindow* window, int width, int height) {
+    // Avoid restarting accumulation if the window is minimized.
+    bool is_minimized = width <= 0 || height <= 0;
+    bool no_resize = gWindowWidth == width && gWindowHeight == height;
+    if (is_minimized || no_resize)
+        return;
+
     // Backbuffer and window sizes are updated by the re-initialization in the main loop.
     gRestartAccumulation = true;
 }
