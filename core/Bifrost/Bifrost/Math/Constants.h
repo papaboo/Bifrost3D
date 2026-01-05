@@ -13,7 +13,7 @@ namespace Bifrost {
 namespace Math {
 
 template<typename T>
-inline T PI() { return T(3.1415926535897932385); }
+constexpr inline T PI() { return T(3.1415926535897932385); }
 
 // The floating point number just below one.
 const float nearly_one = 0xffffff / float(1 << 24);
