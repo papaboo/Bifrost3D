@@ -13,6 +13,7 @@
 #pragma warning(disable: 4244) // Disable double to float warning
 
 #include <Bifrost/Math/Color.h>
+#include <Bifrost/Math/Distributions.h>
 #include <Bifrost/Math/Utils.h>
 #include <Bifrost/Math/Vector.h>
 
@@ -84,22 +85,14 @@ inline bool intersect_scene(const Ray &r, double &t, int &id, double tmax = 1e20
 inline float sampleSegment(double epsilon, float sigma, float smax) {
     return -logf(1.0f - epsilon * (1.0f - expf(-sigma * smax))) / sigma;
 }
-inline Vector3f sampleHG(float g, float e1, float e2) {
-    float s = 1.0f - 2.0f * e1;
-    float cost = (s + 2.0f * g * g * g * (-1.0f + e1) * e1 + g * g * s + 2.0f * g * (1.0f - e1 + e1 * e1)) / ((1.0f + g * s) * (1.0f + g * s));
-    float sint = sqrt(1.0f - cost * cost);
-    return Vector3f(cosf(2.0f * M_PI * e2) * sint, sinf(2.0f * M_PI * e2) * sint, cost);
-}
 
 inline double scatter(const Ray &ray, Ray &scattering_ray, double tin, float tout, double &s) {
     double t_distance = tout - tin;
     s = sampleSegment(XORShift::frand(), float(sigma_s), float(t_distance));
     Vector3d scattering_position = ray.origin + ray.direction * (tin + s);
-    Vector3f local_dir = sampleHG(-0.5, XORShift::frand(), XORShift::frand()); //Sample a direction ~ Henyey-Greenstein's phase function
-    Vector3f tangent, bitangent;
-    compute_tangents((Vector3f)ray.direction, tangent, bitangent);
-    Vector3d ray_dir = Vector3d(tangent * local_dir.x + bitangent * local_dir.y) + ray.direction * local_dir.z;
-    scattering_ray = Ray(scattering_position, ray_dir);
+    Vector2f rng_sample = Vector2f(XORShift::frand(), XORShift::frand());
+    Vector3f ray_dir = Distributions::HenyeyGreenstein::sample_direction(-0.5, Vector3f(ray.direction), rng_sample);
+    scattering_ray = Ray(scattering_position, Vector3d(ray_dir));
     return 1.0 - exp(-sigma_s * t_distance);
 }
 RGB integrate_radiance(const Ray &r, int depth) {
