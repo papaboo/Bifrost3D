@@ -11,65 +11,15 @@
 
 #include <Bifrost/Math/Color.h>
 #include <Bifrost/Math/Constants.h>
-#include <Bifrost/Math/Vector.h>
+#include <Bifrost/Math/RNG.h>
 #include <Bifrost/Math/Utils.h>
+#include <Bifrost/Math/Vector.h>
 
 #include <math.h>
 
 namespace smallpt {
 
 using namespace Bifrost::Math;
-
-class LinearCongruential {
-private:
-    static const unsigned int multiplier = 1664525u;
-    static const unsigned int increment = 1013904223u;
-    static const unsigned int max = 0xFFFFFFFFu; // uint32 max.
-
-    unsigned int mState;
-
-    unsigned int next() {
-        mState = multiplier * mState + increment;
-        return mState;
-    }
-
-    float nextFloat() {
-        const float invMax = 1.0f / (float(max) + 1.0f);
-        return float(next()) * invMax;
-    }
-
-public:
-    LinearCongruential(unsigned int seed)
-        : mState(seed) { }
-
-    unsigned int getSeed() const { return mState; }
-
-    float sample1D() {
-        return nextFloat();
-    }
-};
-
-// Robert Jenkins hash function.
-// https://gist.github.com/badboy/6267743
-inline unsigned int RobertJenkinsHash(unsigned int a) {
-    a = (a + 0x7ed55d16) + (a << 12);
-    a = (a ^ 0xc761c23c) ^ (a >> 19);
-    a = (a + 0x165667b1) + (a << 5);
-    a = (a + 0xd3a2646c) ^ (a << 9);
-    a = (a + 0xfd7046c5) + (a << 3);
-    a = (a ^ 0xb55a4f09) ^ (a >> 16);
-    return a;
-}
-
-// Divide and conquor bit reversal.
-// https://graphics.stanford.edu/~seander/bithacks.html#ReverseParallel
-inline unsigned int reverseBits(unsigned int v) {
-    v = ((v >> 1) & 0x55555555) | ((v & 0x55555555) << 1);
-    v = ((v >> 2) & 0x33333333) | ((v & 0x33333333) << 2);
-    v = ((v >> 4) & 0x0F0F0F0F) | ((v & 0x0F0F0F0F) << 4);
-    v = ((v >> 8) & 0x00FF00FF) | ((v & 0x00FF00FF) << 8);
-    return (v >> 16) | (v << 16);
-}
 
 struct Ray { 
     Vector3d origin, direction; 
@@ -112,10 +62,10 @@ inline bool intersect(Ray r, double &t, int &id) {
     return t < inf;
 }
 
-RGB radiance(const Ray &ray, int depth, LinearCongruential& rng) {
+RGB radiance(const Ray &ray, int depth, RNG::LinearCongruential& rng) {
     // distance to intersection
     double t;
-    // id of intersected object                               
+    // id of intersected object
     int id = 0;
     // if miss, return black  
     if (depth > 20 || !intersect(ray, t, id)) return RGB::black();
@@ -127,12 +77,12 @@ RGB radiance(const Ray &ray, int depth, LinearCongruential& rng) {
     RGB f = obj.color;
     float maxRefl = f.r>f.g && f.r>f.b ? f.r : f.g>f.b ? f.g : f.b;
     if (++depth > 5)
-        if (rng.sample1D() < maxRefl) f = f * (1 / maxRefl);
+        if (rng.sample1f() < maxRefl) f = f * (1 / maxRefl);
         else return obj.emission; // Russion roulette
 
         if (obj.bsdf == BSDF::Diffuse) {
-            double r1 = 2.0f * PI<float>() * rng.sample1D();
-            double r2 = rng.sample1D();
+            double r1 = 2.0f * PI<float>() * rng.sample1f();
+            double r2 = rng.sample1f();
             double r2s = sqrt(r2);
             // Tangent space
             Vector3d w = nl;
@@ -161,7 +111,7 @@ RGB radiance(const Ray &ray, int depth, LinearCongruential& rng) {
             float P = .25f + .5f * Re;
             float RP = Re / P;
             float TP = Tr / (1.0f - P);
-            return obj.emission + f * (depth>2 ? (rng.sample1D()<P ?   // Russian roulette
+            return obj.emission + f * (depth>2 ? (rng.sample1f()<P ?   // Russian roulette
                 radiance(reflRay, depth, rng)*RP : radiance(Ray(pos, tdir), depth, rng)*TP) :
                 radiance(reflRay, depth, rng)*Re + radiance(Ray(pos, tdir), depth, rng)*Tr);
         }
@@ -183,9 +133,9 @@ void accumulate_radiance(int w, int h, RGB *const backbuffer, int& accumulations
             int sx = accumulations % 2;
             int sy = (accumulations >> 1) % 2;
             int index = (y * 2 + sy) * (w * 2) + x * 2 + sx;
-            LinearCongruential rng = LinearCongruential(RobertJenkinsHash(unsigned int(index)) ^ reverseBits(unsigned int(accumulations)));
-            double r1 = 2 * rng.sample1D(), dx = r1 < 1 ? sqrt(r1) - 1 : 1 - sqrt(2 - r1);
-            double r2 = 2 * rng.sample1D(), dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
+            RNG::LinearCongruential rng = RNG::LinearCongruential(RNG::jenkins_hash(unsigned int(index)) ^ reverse_bits(unsigned int(accumulations)));
+            double r1 = 2 * rng.sample1f(), dx = r1 < 1 ? sqrt(r1) - 1 : 1 - sqrt(2 - r1);
+            double r2 = 2 * rng.sample1f(), dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
             Vector3d d = cx * (((sx + .5 + dx) / 2 + x) / w - .5) +
                 cy * (((sy + .5 + dy) / 2 + y) / h - .5) + cam.direction;
             int i = (h - y - 1) * w + x;

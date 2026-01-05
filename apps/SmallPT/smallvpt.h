@@ -14,6 +14,7 @@
 
 #include <Bifrost/Math/Color.h>
 #include <Bifrost/Math/Distributions.h>
+#include <Bifrost/Math/RNG.h>
 #include <Bifrost/Math/Utils.h>
 #include <Bifrost/Math/Vector.h>
 
@@ -23,19 +24,6 @@
 using namespace Bifrost::Math;
 
 namespace smallvpt {
-
-namespace XORShift { // XOR shift PRNG
-unsigned int x = 123456789;
-unsigned int y = 362436069;
-unsigned int z = 521288629;
-unsigned int w = 88675123;
-inline float frand() {
-    unsigned int t;
-    t = x ^ (x << 11);
-    x = y; y = z; z = w;
-    return (w = (w ^ (w >> 19)) ^ (t ^ (t >> 8))) * (1.0f / 4294967295.0f);
-}
-};
 
 struct Ray { Vector3d origin, direction; Ray() {} Ray(Vector3d o, Vector3d d) : origin(o), direction(d) {} };
 enum class BSDF { Diffuse, Specular, Glass };
@@ -86,16 +74,16 @@ inline float sampleSegment(double epsilon, float sigma, float smax) {
     return -logf(1.0f - epsilon * (1.0f - expf(-sigma * smax))) / sigma;
 }
 
-inline double scatter(const Ray &ray, Ray &scattering_ray, double tin, float tout, double &s) {
+inline double scatter(const Ray &ray, Ray &scattering_ray, double tin, float tout, RNG::LinearCongruential& rng, double &s) {
     double t_distance = tout - tin;
-    s = sampleSegment(XORShift::frand(), float(sigma_s), float(t_distance));
+    s = sampleSegment(rng.sample1f(), float(sigma_s), float(t_distance));
     Vector3d scattering_position = ray.origin + ray.direction * (tin + s);
-    Vector2f rng_sample = Vector2f(XORShift::frand(), XORShift::frand());
+    Vector2f rng_sample = rng.sample2f();
     Vector3f ray_dir = Distributions::HenyeyGreenstein::sample_direction(-0.5, Vector3f(ray.direction), rng_sample);
     scattering_ray = Ray(scattering_position, Vector3d(ray_dir));
     return 1.0 - exp(-sigma_s * t_distance);
 }
-RGB integrate_radiance(const Ray &r, int depth) {
+RGB integrate_radiance(const Ray &r, int depth, RNG::LinearCongruential rng) {
     // Avoid stack overflow from recursion
     if (depth > 250)
         return RGB::black();
@@ -106,11 +94,11 @@ RGB integrate_radiance(const Ray &r, int depth) {
     bool inside_medium = homogeneousMedium.intersect(r, &tnear, &tfar) > 0;
     if (inside_medium) {
         Ray sRay;
-        double s, ms = scatter(r, sRay, tnear, tfar, s), scattering_probability = ms;
-        if (XORShift::frand() <= scattering_probability) {
+        double s, ms = scatter(r, sRay, tnear, tfar, rng, s), scattering_probability = ms;
+        if (rng.sample1f() <= scattering_probability) {
             // Sample volume
             if (!intersect_scene(r, ray_t, scene_object_id, tnear + s))
-                return integrate_radiance(sRay, ++depth) * (ms / scattering_probability);
+                return integrate_radiance(sRay, ++depth, rng) * (ms / scattering_probability);
         } else {
             // Sample surface
             double surface_interaction_probability = 1.0 - scattering_probability;
@@ -142,26 +130,26 @@ RGB integrate_radiance(const Ray &r, int depth) {
     // The material's emission is always applied and therefore not scaled by russian roulette probability.
     if (++depth > 5) {
         float max_albedo_value = max(albedo.r, max(albedo.g, albedo.b));
-        if (XORShift::frand() < max_albedo_value)
+        if (rng.sample1f() < max_albedo_value)
             albedo *= 1.0f / max_albedo_value;
         else
             return emission;
     }
 
     if (scene_object.bsdf == BSDF::Diffuse) {
-        float r1 = 2 * float(M_PI) * XORShift::frand();
-        float r2 = XORShift::frand();
+        float r1 = 2 * float(M_PI) * rng.sample1f();
+        float r2 = rng.sample1f();
         float r2s = sqrt(r2);
         Vector3f normal = Vector3f(nl);
         Vector3f tangent, bitangent;
         compute_tangents(normal, tangent, bitangent);
         Vector3d d = (Vector3d)normalize(tangent * cosf(r1) * r2s + bitangent * sinf(r1) * r2s + normal * sqrt(1 - r2));
-        return (emission + albedo * integrate_radiance(Ray(x, d), depth)) * recip_surface_interaction_probability;
+        return (emission + albedo * integrate_radiance(Ray(x, d), depth, rng)) * recip_surface_interaction_probability;
     }
 
     Ray reflection_ray(x, reflect(r.direction, n));
     if (scene_object.bsdf == BSDF::Specular)
-        return (emission + albedo * integrate_radiance(reflection_ray, depth)) * recip_surface_interaction_probability;
+        return (emission + albedo * integrate_radiance(reflection_ray, depth, rng)) * recip_surface_interaction_probability;
 
     // Glass
     bool into = dot(n, nl) > 0; // Ray from outside going in?
@@ -171,17 +159,17 @@ RGB integrate_radiance(const Ray &r, int depth) {
     double ddn = dot(r.direction, nl);
     double cos2t;
     if ((cos2t = 1 - relative_ior * relative_ior * (1 - ddn * ddn)) < 0)    // Total internal reflection
-        return (emission + integrate_radiance(reflection_ray, depth)) * recip_surface_interaction_probability;
+        return (emission + integrate_radiance(reflection_ray, depth, rng)) * recip_surface_interaction_probability;
     Vector3d tdir = normalize(r.direction * relative_ior - n * ((into ? 1 : -1)*(ddn * relative_ior + sqrt(cos2t))));
     double specularity = dielectric_specularity(air_ior, glass_ior);
     double cos_theta = into ? -ddn : dot(n, tdir);
     double Re = schlick_fresnel(specularity, cos_theta);
     double Tr = 1 - Re;
     double reflection_probability = Re;
-    bool is_reflection = XORShift::frand() < reflection_probability;
+    bool is_reflection = rng.sample1f() < reflection_probability;
     return (emission + (is_reflection ? // Russian roulette between reflection and refraction
-        integrate_radiance(reflection_ray, depth) :
-        (albedo * integrate_radiance(Ray(x, tdir), depth)))) * recip_surface_interaction_probability;
+        integrate_radiance(reflection_ray, depth, rng) :
+        (albedo * integrate_radiance(Ray(x, tdir), depth, rng)))) * recip_surface_interaction_probability;
 }
 
 void accumulate_radiance(int w, int h, RGB *const backbuffer, int& accumulations) {
@@ -199,15 +187,17 @@ void accumulate_radiance(int w, int h, RGB *const backbuffer, int& accumulations
             // Stratify samples in 2x2 in image plane.
             int sx = accumulations % 2;
             int sy = (accumulations >> 1) % 2;
+            int index = (h - y - 1) * w + x;
 
-            double r1 = 2 * XORShift::frand(), dx = r1 < 1 ? sqrt(r1) - 1 : 1 - sqrt(2 - r1);
-            double r2 = 2 * XORShift::frand(), dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
+            RNG::LinearCongruential rng = RNG::LinearCongruential(RNG::jenkins_hash(unsigned int(index)) ^ reverse_bits(unsigned int(accumulations)));
+
+            double r1 = 2 * rng.sample1f(), dx = r1 < 1 ? sqrt(r1) - 1 : 1 - sqrt(2 - r1);
+            double r2 = 2 * rng.sample1f(), dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
             Vector3d d = cx * (((sx + .5 + dx) / 2 + x) / w - .5) +
                 cy * (((sy + .5 + dy) / 2 + y) / h - .5) + cam.direction;
-            RGB r = integrate_radiance(Ray(cam.origin + d * 140, normalize(d)), 0);
+            RGB r = integrate_radiance(Ray(cam.origin + d * 140, normalize(d)), 0, rng);
             // Camera rays are pushed ^^^^^ forward to start in interior
-            int i = (h - y - 1) * w + x;
-            backbuffer[i] = lerp(backbuffer[i], r, blendFactor);
+            backbuffer[index] = lerp(backbuffer[index], r, blendFactor);
         }
     }
 }
