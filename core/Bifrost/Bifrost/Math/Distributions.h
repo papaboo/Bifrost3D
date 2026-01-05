@@ -12,6 +12,7 @@
 #include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/Constants.h>
 #include <Bifrost/Math/Vector.h>
+#include <Bifrost/Math/Utils.h>
 
 namespace Bifrost {
 namespace Math {
@@ -72,6 +73,81 @@ __always_inline__ Vector3f sample(Vector2f random_sample) {
 }
 
 } // NS Sphere
+
+//=================================================================================================
+// Henyey-Greenstein distribution.
+// Physically Based Rendering version 4, section 11.3.1
+// https://www.pbr-book.org/4ed/Volume_Scattering/Phase_Functions#TheHenyeyndashGreensteinPhaseFunction
+//=================================================================================================
+namespace HenyeyGreenstein {
+
+struct Sample {
+    Vector3f direction;
+    float PDF;
+};
+
+// When g approximates -1 and random_sample approximates 0 or when g approximates 1 and random_sample approximates 1,
+// the computation of cos_theta below is unstable and can give 0, leading to NaNs.
+// For now we limit g to the range where it is stable.
+__always_inline__ float safe_g(float g) {
+    return clamp(g, -.99f, .99f);
+}
+
+__always_inline__ float evaluate(float g, float cos_theta) {
+    g = safe_g(g);
+    float denominator = 1 + pow2(g) + 2 * g * cos_theta;
+    constexpr float recip_4_pi = 1.0f / (4 * PI<float>());
+    return recip_4_pi * (1 - pow2(g)) / (denominator * sqrt(max(0.0f, denominator)));
+}
+
+__always_inline__ float evaluate(float g, Vector3f wo, Vector3f wi) {
+    float cos_theta = dot(wo, wi);
+    return evaluate(g, cos_theta);
+}
+
+// Sample the cosine of the angle for the distribution.
+__always_inline__ float sample_cos_theta(float g, float random_sample) {
+    g = safe_g(g);
+
+    if (abs(g) < 1e-3f)
+        return 1 - 2 * random_sample; // Use spherical distribution directly when g is close to 0.
+    else
+        return -1 / (2 * g) * (1 + pow2(g) - pow2((1 - pow2(g)) / (1 + g - 2 * g * random_sample)));
+}
+
+// Sample a direction in the distribution wrt [0,0,1] as wo.
+__always_inline__ Vector3f sample_direction(float g, Vector2f random_sample) {
+    float cos_theta = sample_cos_theta(g, random_sample.x);
+
+    float sin_theta = sqrt(fmaxf(0.0f, 1.0f - pow2(cos_theta)));
+    float phi = 2.0f * PI<float>() * random_sample.y;
+    return Vector3f(sin_theta * cos(phi), sin_theta * sin(phi), cos_theta);
+}
+
+// Sample the distribution wrt [0,0,1] as wo.
+__always_inline__ Sample sample(float g, Vector2f random_sample) {
+    Vector3f wi = sample_direction(g, random_sample);
+    float pdf = evaluate(g, wi.z);
+    return { wi, pdf };
+}
+
+// Sample a direction in the distribution.
+__always_inline__ Vector3f sample_direction(float g, Vector3f wo, Vector2f random_sample) {
+    Vector3f local_wi = sample_direction(g, random_sample);
+
+    Vector3f tangent, bitangent;
+    compute_tangents(wo, tangent, bitangent);
+    return tangent * local_wi.x + bitangent * local_wi.y + wo * local_wi.z;
+}
+
+// Sample the distribution.
+__always_inline__ Sample sample(float g, Vector3f wo, Vector2f random_sample) {
+    Vector3f wi = sample_direction(g, wo, random_sample);
+    float pdf = evaluate(g, dot(wo, wi));
+    return { wi, pdf };
+}
+
+} // NS HenyeyGreenstein
 
 } // NS Distributions
 } // NS Math
