@@ -138,6 +138,12 @@ __always_inline__ bool is_power_of_two(unsigned int v) {
 }
 
 __always_inline__ float pow2(float x) { return x * x; }
+__always_inline__ float pow4(float x) { return pow2(x * x); }
+__always_inline__ float pow5(float x) { return pow2(x * x) * x; }
+
+__always_inline__ float schlick_fresnel(float incident_specular, float abs_cos_theta) {
+    return incident_specular + (1.0f - incident_specular) * pow5(1.0f - abs_cos_theta);
+}
 
 // See answer from johnwbyrd on https://stackoverflow.com/questions/2589096/find-most-significant-bit-left-most-that-is-set-in-a-bit-array
 __always_inline__ unsigned int most_significant_bit(unsigned int v) {
