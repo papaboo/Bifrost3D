@@ -16,6 +16,11 @@
 namespace Bifrost {
 namespace Math {
 
+GTEST_TEST(Math_Utils, compute_ulps_handles_sign) {
+    int zero_sign_difference = compute_ulps(0.0f, -0.0f);
+    EXPECT_EQ(0, zero_sign_difference);
+}
+
 GTEST_TEST(Math_Utils, previous_float) {
     for (float v : {-1.0f, -0.0f, 0.0f, 1.0f}) {
         float previous_v = previous_float(v);
