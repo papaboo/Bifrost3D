@@ -56,9 +56,11 @@ Sphere spheres[] = { // Scene: radius, position, emission, color, material
     Sphere(600, Vector3d(50, 681.6 - .27, 81.6), RGB(12.0f), RGB::black(), BSDF::Diffuse) // Light
 };
 
-Sphere homogeneousMedium(300, Vector3d(50, 50, 80), RGB::black(), RGB::black(), BSDF::Diffuse);
+Sphere homogeneous_medium(300, Vector3d(50, 50, 80), RGB::black(), RGB::black(), BSDF::Diffuse);
+const float sigma_s = 0.009f; // Scattering coefficient
+const float sigma_a = 0.006f; // Absorption coefficient
+const float sigma_t = sigma_s + sigma_a; // Attenuation coefficient
 
-const double sigma_s = 0.009, sigma_a = 0.006, sigma_t = sigma_s + sigma_a;
 inline bool intersect_scene(const Ray &r, double &t, int &id, double tmax = 1e20) {
     int scene_object_count = sizeof(spheres) / sizeof(Sphere);
     double d;
@@ -70,59 +72,64 @@ inline bool intersect_scene(const Ray &r, double &t, int &id, double tmax = 1e20
         }
     return t < tmax;
 }
-inline float sampleSegment(double epsilon, float sigma, float smax) {
-    return -logf(1.0f - epsilon * (1.0f - expf(-sigma * smax))) / sigma;
+inline float sample_segment(double u, float sigma_s, float smax) {
+    return -logf(1.0f - u * (1.0f - expf(-sigma_s * smax))) / sigma_s;
 }
 
-inline double scatter(const Ray &ray, Ray &scattering_ray, double tin, float tout, RNG::LinearCongruential& rng, double &s) {
-    double t_distance = tout - tin;
-    s = sampleSegment(rng.sample1f(), float(sigma_s), float(t_distance));
-    Vector3d scattering_position = ray.origin + ray.direction * (tin + s);
+inline float scatter(const Ray &ray, double medium_t_near, float medium_t_far, RNG::LinearCongruential& rng, double &scatter_t, Ray &scattering_ray) {
+    float t_distance = float(medium_t_far - medium_t_near);
+    scatter_t = medium_t_near + sample_segment(rng.sample1f(), sigma_s, t_distance);
+    float scattering_probability = 1.0f - expf(-sigma_s * t_distance);
+
+    Vector3d scattering_position = ray.origin + ray.direction * scatter_t;
     Vector2f rng_sample = rng.sample2f();
     Vector3f ray_dir = Distributions::HenyeyGreenstein::sample_direction(-0.5, Vector3f(ray.direction), rng_sample);
     scattering_ray = Ray(scattering_position, Vector3d(ray_dir));
-    return 1.0 - exp(-sigma_s * t_distance);
+
+    return scattering_probability;
 }
-RGB integrate_radiance(const Ray &r, int depth, RNG::LinearCongruential rng) {
+RGB integrate_radiance(const Ray &ray, int depth, RNG::LinearCongruential rng) {
     // Avoid stack overflow from recursion
     if (depth > 250)
         return RGB::black();
 
     double ray_t;
     int scene_object_id = 0;
-    double tnear, tfar, recip_surface_interaction_probability = 1.0, absorption = 1.0;
-    bool inside_medium = homogeneousMedium.intersect(r, &tnear, &tfar) > 0;
+    double medium_t_near, medium_t_far;
+    float recip_surface_interaction_probability = 1.0f, absorption = 1.0f;
+    bool inside_medium = homogeneous_medium.intersect(ray, &medium_t_near, &medium_t_far) > 0;
     if (inside_medium) {
-        Ray sRay;
-        double s, ms = scatter(r, sRay, tnear, tfar, rng, s), scattering_probability = ms;
+        double scatter_t;
+        Ray scattered_ray;
+        float scattering_probability = scatter(ray, medium_t_near, medium_t_far, rng, scatter_t, scattered_ray);
         if (rng.sample1f() <= scattering_probability) {
             // Sample volume
-            if (!intersect_scene(r, ray_t, scene_object_id, tnear + s))
-                return integrate_radiance(sRay, ++depth, rng) * (ms / scattering_probability);
+            if (!intersect_scene(ray, ray_t, scene_object_id, scatter_t))
+                return integrate_radiance(scattered_ray, ++depth, rng);
         } else {
             // Sample surface
             double surface_interaction_probability = 1.0 - scattering_probability;
             recip_surface_interaction_probability = 1.0 / surface_interaction_probability;
-            if (!intersect_scene(r, ray_t, scene_object_id))
+            if (!intersect_scene(ray, ray_t, scene_object_id))
                 return RGB::black();
         }
-        if (ray_t >= tnear) {
-            double dist = (ray_t > tfar ? tfar - tnear : ray_t - tnear);
-            absorption = exp(-sigma_t * dist);
+        if (ray_t >= medium_t_near) {
+            double dist = ray_t > medium_t_far ? medium_t_far - medium_t_near : ray_t - medium_t_near;
+            absorption = beers_law(sigma_t, (float)dist);
         }
     } else
-        if (!intersect_scene(r, ray_t, scene_object_id))
+        if (!intersect_scene(ray, ray_t, scene_object_id))
             return RGB::black();
 
     const Sphere& scene_object = spheres[scene_object_id];
-    Vector3d x = r.origin + r.direction * ray_t;
+    Vector3d x = ray.origin + ray.direction * ray_t;
     Vector3d n = normalize(x - scene_object.position);
-    Vector3d nl = dot(n, r.direction) < 0 ? n : n * -1;
+    Vector3d nl = dot(n, ray.direction) < 0 ? n : n * -1;
     RGB albedo = scene_object.albedo, emission = scene_object.emission;
 
     // Scale the ray response by the absorption
-    albedo = albedo * absorption;
-    emission = scene_object.emission * absorption;
+    albedo *= absorption;
+    emission *= absorption;
 
     // Russian roulette after 5 interactions.
     // The decision is taken based on local albedo information.
@@ -147,7 +154,7 @@ RGB integrate_radiance(const Ray &r, int depth, RNG::LinearCongruential rng) {
         return (emission + albedo * integrate_radiance(Ray(x, d), depth, rng)) * recip_surface_interaction_probability;
     }
 
-    Ray reflection_ray(x, reflect(r.direction, n));
+    Ray reflection_ray(x, reflect(ray.direction, n));
     if (scene_object.bsdf == BSDF::Specular)
         return (emission + albedo * integrate_radiance(reflection_ray, depth, rng)) * recip_surface_interaction_probability;
 
@@ -156,11 +163,11 @@ RGB integrate_radiance(const Ray &r, int depth, RNG::LinearCongruential rng) {
     double air_ior = 1;
     double glass_ior = 1.5;
     double relative_ior = into ? air_ior / glass_ior : glass_ior / air_ior;
-    double ddn = dot(r.direction, nl);
+    double ddn = dot(ray.direction, nl);
     double cos2t;
     if ((cos2t = 1 - relative_ior * relative_ior * (1 - ddn * ddn)) < 0)    // Total internal reflection
         return (emission + integrate_radiance(reflection_ray, depth, rng)) * recip_surface_interaction_probability;
-    Vector3d tdir = normalize(r.direction * relative_ior - n * ((into ? 1 : -1)*(ddn * relative_ior + sqrt(cos2t))));
+    Vector3d tdir = normalize(ray.direction * relative_ior - n * ((into ? 1 : -1)*(ddn * relative_ior + sqrt(cos2t))));
     double specularity = dielectric_specularity(air_ior, glass_ior);
     double cos_theta = into ? -ddn : dot(n, tdir);
     double Re = schlick_fresnel(specularity, cos_theta);

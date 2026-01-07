@@ -190,6 +190,14 @@ __always_inline__ float dielectric_specularity(float ior_o, float ior_i) {
 }
 
 // ------------------------------------------------------------------------------------------------
+// Volume scattering utilities
+// ------------------------------------------------------------------------------------------------
+
+// Compute the attenuation of a beam passing through a medium.
+// https://en.wikipedia.org/wiki/Beer%E2%80%93Lambert_law
+__always_inline__ float beers_law(float optical_density, float distance) { return expf(-optical_density * distance); }
+
+// ------------------------------------------------------------------------------------------------
 // Interpolation
 // ------------------------------------------------------------------------------------------------
 
