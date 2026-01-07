@@ -14,19 +14,19 @@
 #include <smallpt.h>
 #include <smallvpt.h>
 
+#include <Bifrost/Assets/Image.h>
 #include <Bifrost/Math/Color.h>
 
 #include <glfw/glfw3.h>
 
-#include <stdio.h>
+#include <StbImageWriter/StbImageWriter.h>
 
+using namespace Bifrost::Assets;
 using namespace Bifrost::Math;
 
 bool gRestartAccumulation = true;
-RGB* gBackbuffer = nullptr;
+Image g_backbuffer = Image::invalid();
 RGB* sRGB_colors = nullptr;
-int gWindowWidth = 0;
-int gWindowHeight = 0;
 
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     switch (key) {
@@ -38,20 +38,25 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
         if (action == GLFW_RELEASE)
             gRestartAccumulation = true;
         break;
-    case GLFW_KEY_SPACE:
-        // Pause accumulation (and allow the user to single step through accumulations using arrows).
-        ;
     case GLFW_KEY_P:
         if (action == GLFW_RELEASE) {
-            // Write image to PPM file.
-            FILE *f = fopen("image.ppm", "w");
-            fprintf(f, "P3\n%d %d\n%d\n", gWindowWidth, gWindowHeight, 255);
-            for (int i = 0; i < gWindowWidth * gWindowHeight; ++i) {
-                RGB linear_color = gBackbuffer[i];
-                RGB sRGB_color = Bifrost::Math::linear_to_sRGB(linear_color);
-                RGB24 sRGB_24 = { sRGB_color.r, sRGB_color.g, sRGB_color.b };
-                fprintf(f, "%d %d %d ", sRGB_24.r.raw, sRGB_24.g.raw, sRGB_24.b.raw);
+            // Write backbuffer to png.
+            Image image = Image::create2D("Image", PixelFormat::RGB_Float, false, g_backbuffer.get_size_2D());
+
+            // Flip image vertically
+            int width = image.get_width();
+            int height = image.get_height();
+            int row_size = width * sizeof(RGB);
+            RGB* backbuffer_pixels = g_backbuffer.get_pixels<RGB>();
+            RGB* image_pixels = image.get_pixels<RGB>();
+            for (int y = 0; y < height; ++y) {
+                int buffer_row_offset = y * width;
+                int image_row_offset = (height - y - 1) * width;
+                memcpy(image_pixels + image_row_offset,  backbuffer_pixels + buffer_row_offset, row_size);
             }
+            StbImageWriter::write(image, "image.png");
+
+            image.destroy();
         }
         break;
     }
@@ -60,7 +65,7 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 void windowSizeCallback(GLFWwindow* window, int width, int height) {
     // Avoid restarting accumulation if the window is minimized.
     bool is_minimized = width <= 0 || height <= 0;
-    bool no_resize = gWindowWidth == width && gWindowHeight == height;
+    bool no_resize = g_backbuffer.get_width() == width && g_backbuffer.get_height() == height;
     if (is_minimized || no_resize)
         return;
 
@@ -75,6 +80,8 @@ inline bool is_power_of_two_or_zero(unsigned int v) {
 void main(int argc, char** argv) {
 
     printf("SmallPT: Use '--volumetric' argument to enable volumetric effects.\n");
+
+    Images::allocate(2u);
 
     if (!glfwInit())
         exit(EXIT_FAILURE);
@@ -115,26 +122,26 @@ void main(int argc, char** argv) {
         if (gRestartAccumulation) {
             gRestartAccumulation = false;
             accumulations = 0;
-            int pixelCount = gWindowWidth * gWindowHeight;
-            glfwGetFramebufferSize(window, &gWindowWidth, &gWindowHeight);
-            if (gWindowWidth * gWindowHeight > int(pixelCount)) {
-                delete[] gBackbuffer;
-                gBackbuffer = new RGB[gWindowWidth * gWindowHeight];
-                for (RGB* p = gBackbuffer; p < (gBackbuffer + gWindowWidth * gWindowHeight); ++p)
-                    *p = RGB::black();
+            int buffer_width, buffer_height;
+            glfwGetFramebufferSize(window, &buffer_width, &buffer_height);
+            if (buffer_width != g_backbuffer.get_width() || buffer_height != g_backbuffer.get_height()) {
+                g_backbuffer.destroy();
+                g_backbuffer = Image::create2D("Backbuffer", PixelFormat::RGB_Float, false, Vector2ui(buffer_width, buffer_height));
+                g_backbuffer.clear(RGB::black());
 
                 delete[] sRGB_colors;
-                sRGB_colors = new RGB[gWindowWidth * gWindowHeight];
+                sRGB_colors = new RGB[buffer_width * buffer_height];
             }
         }
 
+        RGB* backbuffer_pixels = g_backbuffer.get_pixels<RGB>();
         if (volumetric_integrator)
-            smallvpt::accumulate_radiance(gWindowWidth, gWindowHeight, gBackbuffer, accumulations);
+            smallvpt::accumulate_radiance(g_backbuffer.get_width(), g_backbuffer.get_height(), backbuffer_pixels, accumulations);
         else
-            smallpt::accumulate_radiance(gWindowWidth, gWindowHeight, gBackbuffer, accumulations);
+            smallpt::accumulate_radiance(g_backbuffer.get_width(), g_backbuffer.get_height(), backbuffer_pixels, accumulations);
 
         { // Update the backbuffer.
-            glViewport(0, 0, gWindowWidth, gWindowHeight);
+            glViewport(0, 0, g_backbuffer.get_width(), g_backbuffer.get_height());
 
             { // Setup matrices. I really don't need to do this every frame, since they never change.
                 glMatrixMode(GL_PROJECTION);
@@ -149,14 +156,15 @@ void main(int argc, char** argv) {
             int INTERACTIVE_FRAMES = 3;
             if (accumulations < INTERACTIVE_FRAMES || is_power_of_two_or_zero(accumulations - INTERACTIVE_FRAMES) || (accumulations - INTERACTIVE_FRAMES) % 32 == 0) {
                 // Backbuffer data is interpreted as sRGB, so we need to convert from linear colors to sRGB.
-                int pixel_count = gWindowWidth * gWindowHeight;
+                RGB* backbuffer_pixels = g_backbuffer.get_pixels<RGB>();
+                int pixel_count = g_backbuffer.get_pixel_count();
                 for (int i = 0; i < pixel_count; ++i)
-                    sRGB_colors[i] = Bifrost::Math::linear_to_sRGB(gBackbuffer[i]);
+                    sRGB_colors[i] = Bifrost::Math::linear_to_sRGB(backbuffer_pixels[i]);
 
                 glBindTexture(GL_TEXTURE_2D, tex_ID);
                 const GLint BASE_IMAGE_LEVEL = 0;
                 const GLint NO_BORDER = 0;
-                glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGB, gWindowWidth, gWindowHeight, NO_BORDER, GL_RGB, GL_FLOAT, sRGB_colors);
+                glTexImage2D(GL_TEXTURE_2D, BASE_IMAGE_LEVEL, GL_RGB, g_backbuffer.get_width(), g_backbuffer.get_height(), NO_BORDER, GL_RGB, GL_FLOAT, sRGB_colors);
             }
 
             glClear(GL_COLOR_BUFFER_BIT);
