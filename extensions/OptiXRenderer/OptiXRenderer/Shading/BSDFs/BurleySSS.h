@@ -33,10 +33,10 @@ using namespace optix;
 // Container for parameters for the Burley's subsurface scattering approximation.
 // We precompute the parameters and store them to avoid redoing the same transformations multiple times.
 struct Parameters {
-    const float3 albedo;
+    float3 albedo;
 
     // l / s from equation 3 in Approximate Reflectance Profiles for Efficient Subsurface Scattering
-    const float3 diffuse_mean_free_path;
+    float3 diffuse_mean_free_path;
 
     // Equation 6 in Approximate Reflectance Profiles for Efficient Subsurface Scattering.
     __inline_all__ static float3 mean_free_path_scaling_term(float3 albedo) {
