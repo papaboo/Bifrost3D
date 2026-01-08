@@ -75,6 +75,28 @@ __always_inline__ Vector3f sample(Vector2f random_sample) {
 } // NS Sphere
 
 //=================================================================================================
+// Exponential distribution.
+//=================================================================================================
+namespace Exponential {
+
+struct Sample {
+    float distance;
+    float PDF;
+};
+
+__always_inline__ float PDF(float sigma, float distance) { return sigma * std::expf(-sigma * distance); }
+
+__always_inline__ float sample_distance(float sigma, float random_sample) { return -std::logf(1 - random_sample) / sigma; }
+
+__always_inline__ Sample sample(float sigma, float random_sample) {
+    float distance = sample_distance(sigma, random_sample);
+    float pdf = PDF(sigma, distance);
+    return { distance, pdf };
+}
+
+} // NS Exponential
+
+//=================================================================================================
 // Henyey-Greenstein distribution.
 // Physically Based Rendering version 4, section 11.3.1
 // https://www.pbr-book.org/4ed/Volume_Scattering/Phase_Functions#TheHenyeyndashGreensteinPhaseFunction
