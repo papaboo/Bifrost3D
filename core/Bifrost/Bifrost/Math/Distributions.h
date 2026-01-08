@@ -63,7 +63,7 @@ __always_inline__ Sample sample(float alpha, Vector2f random_sample) {
 //=================================================================================================
 namespace Sphere {
 
-__always_inline__ float PDF() { return 0.5f / PI<float>(); }
+__always_inline__ float PDF() { return 1.0f / (4.0f * PI<float>()); }
 
 __always_inline__ Vector3f sample(Vector2f random_sample) {
     float z = 1.0f - 2.0f * random_sample.x;
