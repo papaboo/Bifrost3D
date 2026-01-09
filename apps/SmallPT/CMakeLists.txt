@@ -27,3 +27,5 @@ source_group("" FILES ${SRCS})
 set_target_properties(${PROJECT_NAME} PROPERTIES
   FOLDER "Apps"
 )
+
+target_compile_options(${PROJECT_NAME} PRIVATE ${CXX_FAST_MATH})

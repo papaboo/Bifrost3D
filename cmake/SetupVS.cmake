@@ -19,6 +19,8 @@ if (MSVC)
     file(WRITE ${USER_FILENAME} ${USER_CONFIG})
   endfunction()
 
+  set(CXX_FAST_MATH "/fp:fast")
+
   # Multithreaded compilation for faster compilation
   add_compile_options(/MP)
 

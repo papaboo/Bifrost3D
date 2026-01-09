@@ -110,7 +110,6 @@ target_include_directories(Bifrost PUBLIC .)
 set_target_properties(Bifrost PROPERTIES 
   LINKER_LANGUAGE CXX
   FOLDER "Core"
-  COMPILE_FLAGS "-W3"
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fp:fast")
+target_compile_options(Bifrost PRIVATE ${CXX_FAST_MATH})
