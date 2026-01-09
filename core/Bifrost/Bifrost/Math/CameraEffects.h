@@ -29,7 +29,6 @@ struct TonemappingSettings {
     static TonemappingSettings uncharted2() { return { 0.0f, 0.55f, 0.63f, 0.47f, 0.01f }; }
     static TonemappingSettings HP() { return { 0.0f, 0.63f, 0.65f, 0.45f, 0.0f }; }
     static TonemappingSettings legacy() { return { 0.0f, 0.3f, 0.98f, 0.22f, 0.025f}; }
-    static TonemappingSettings default() { return ACES(); }
 };
 
 struct Settings final {
@@ -61,7 +60,7 @@ struct Settings final {
 
     float film_grain;
 
-    static Settings default() {
+    static Settings preset() {
         Settings res = {};
         res.exposure.mode = ExposureMode::Histogram;
         res.exposure.min_log_luminance = -4;
@@ -79,7 +78,7 @@ struct Settings final {
         res.vignette = 0.63f;
 
         res.tonemapping.mode = TonemappingMode::Filmic;
-        res.tonemapping.settings = TonemappingSettings::default();
+        res.tonemapping.settings = TonemappingSettings::ACES();
 
         res.film_grain = 1 / 255.0f;
 
@@ -105,7 +104,7 @@ struct Settings final {
         res.vignette = 0.0f;
 
         res.tonemapping.mode = TonemappingMode::Linear;
-        res.tonemapping.settings = TonemappingSettings::default();
+        res.tonemapping.settings = TonemappingSettings::ACES(); // Doesn't impact linear tonemapping, but is initialized in case a user switches to another tonemapper.
 
         res.film_grain = 0.0f;
 
