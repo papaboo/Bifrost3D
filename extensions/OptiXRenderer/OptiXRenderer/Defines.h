@@ -44,7 +44,7 @@ void validate_optix_resource(T resource, char* file, int line) {
 
 #ifndef __inline_all__
 #    if GPU_DEVICE
-#        define __inline_all__ __forceinline__ __host__ __device__
+#        define __inline_all__ __always_inline__ __host__ __device__
 #    else
 #        define __inline_all__ __always_inline__
 #    endif
@@ -52,7 +52,7 @@ void validate_optix_resource(T resource, char* file, int line) {
 
 #ifndef __inline_dev__
 #    if GPU_DEVICE
-#        define __inline_dev__ __forceinline__ __device__
+#        define __inline_dev__ __always_inline__ __device__
 #    else
 #        define __inline_dev__ __always_inline__
 #    endif
