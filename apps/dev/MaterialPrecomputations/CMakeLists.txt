@@ -23,12 +23,6 @@ if (TARGET OptiXRenderer)
   target_compile_definitions(${PROJECT_NAME} PRIVATE 
     BIFROST_SHADING_DIR="${BIFROST_ROOT_DIR}/core/Bifrost/Bifrost/Assets/Shading/"
   )
-
-  if (WIN32)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE 
-      NOMINMAX # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
-    )
-  endif()
 else()
   message(STATUS "OptiXRenderer not found. Skipping material precomputation development project.")
 endif()

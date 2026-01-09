@@ -105,12 +105,6 @@ if (CUDA_FOUND AND OPTIX_FOUND AND SUPPORTED_VISUAL_STUDIO_FOUND)
     LINKER_LANGUAGE CXX
     FOLDER "Extensions"
   )
-
-  if (WIN32)
-    target_compile_definitions(${LIBRARY_NAME} PRIVATE 
-      NOMINMAX # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
-    )
-  endif()
 else()
   if (NOT CUDA_FOUND)
     message(WARNING "OptiXRenderer: CUDA not installed.")

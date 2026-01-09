@@ -9,7 +9,6 @@
 #include <DX11Renderer/Managers/ShaderManager.h>
 #include <DX11Renderer/Utils.h>
 
-#define NOMINMAX
 #include <D3DCompiler.h>
 
 #include <fstream>

@@ -21,6 +21,10 @@ if (MSVC)
 
   set(CXX_FAST_MATH "/fp:fast")
 
+  add_compile_definitions(
+    NOMINMAX # D3DCompiler.h and OptiX math needs NOMINMAX defined. See optixu_math_namespace.h. And noone else should use this!
+  )
+
   # Multithreaded compilation for faster compilation
   add_compile_options(/MP)
 
