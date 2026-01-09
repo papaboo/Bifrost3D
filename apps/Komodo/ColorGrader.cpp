@@ -67,7 +67,7 @@ struct ColorGrader::Implementation final {
     // Tonemapping members
     float m_reinhard_whitepoint = 3.0f;
 
-    CameraEffects::TonemappingSettings m_unreal4 = CameraEffects::TonemappingSettings::default();
+    CameraEffects::TonemappingSettings m_unreal4 = CameraEffects::TonemappingSettings::ACES();
 
     TwBar* m_gui = nullptr;
 
@@ -340,9 +340,6 @@ struct ColorGrader::Implementation final {
                         switch (preset) {
                         case Presets::None:
                             break; // Do nothing
-                        case Presets::ACES:
-                            data->m_unreal4 = CameraEffects::TonemappingSettings::ACES();
-                            break;
                         case Presets::Uncharted2:
                             data->m_unreal4 = CameraEffects::TonemappingSettings::uncharted2();
                             break;
@@ -352,8 +349,9 @@ struct ColorGrader::Implementation final {
                         case Presets::Legacy:
                             data->m_unreal4 = CameraEffects::TonemappingSettings::legacy();
                             break;
+                        case Presets::ACES:
                         default:
-                            data->m_unreal4 = CameraEffects::TonemappingSettings::default();
+                            data->m_unreal4 = CameraEffects::TonemappingSettings::ACES();
                             break;
                         }
 

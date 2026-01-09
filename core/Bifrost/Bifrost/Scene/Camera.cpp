@@ -154,7 +154,7 @@ CameraID Cameras::create(const std::string& name, SceneRootID scene_ID,
     m_inverse_projection_matrices[id] = inverse_projection_matrix;
     m_viewports[id] = Rectf(0, 0, 1, 1);
     m_renderer_IDs[id] = Core::Renderers::has(renderer_ID) ? renderer_ID : *Core::Renderers::begin();
-    m_effects_settings[id] = CameraEffects::Settings::default();
+    m_effects_settings[id] = CameraEffects::Settings::preset();
     m_screenshot_request[id] = {};
     m_changes.set_change(id, Change::Created);
 
