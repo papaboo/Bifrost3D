@@ -71,9 +71,9 @@ public:
     static void apply_delta_transform(SceneNodeID node_ID, Math::Transform delta_transform);
 
     template<typename F>
-    static void apply_recursively(SceneNodeID node_ID, F& function);
+    static void apply_recursively(SceneNodeID node_ID, const F& function);
     template<typename F>
-    static void apply_to_children_recursively(SceneNodeID node_ID, F& function);
+    static void apply_to_children_recursively(SceneNodeID node_ID, const F& function);
 
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
@@ -96,7 +96,7 @@ public:
 
 private:
     static void reserve_node_data(unsigned int new_capacity, unsigned int old_capacity);
-    static void SceneNodes::unsafe_set_global_transform(SceneNodeID node_ID, Math::Transform transform);
+    static void unsafe_set_global_transform(SceneNodeID node_ID, Math::Transform transform);
 
 
     static SceneNodeIDGenerator m_UID_generator;
@@ -159,9 +159,9 @@ public:
     // Apply a function recursively to the scene node hierarchy.
     // -----------------------------------------------------------------------
     template<typename F>
-    inline void apply_recursively(F& function) { SceneNodes::apply_recursively<F>(m_ID, function); }
+    inline void apply_recursively(const F& function) { SceneNodes::apply_recursively<F>(m_ID, function); }
     template<typename F>
-    inline void apply_to_children_recursively(F& function) { SceneNodes::apply_to_children_recursively<F>(m_ID, function); }
+    inline void apply_to_children_recursively(const F& function) { SceneNodes::apply_to_children_recursively<F>(m_ID, function); }
 
 private:
     SceneNodeID m_ID;
@@ -172,7 +172,7 @@ private:
 // ---------------------------------------------------------------------------
 
 template<typename F>
-void SceneNodes::apply_to_children_recursively(SceneNodeID node_ID, F& function) {
+void SceneNodes::apply_to_children_recursively(SceneNodeID node_ID, const F& function) {
     SceneNodeID node = m_first_child_IDs[node_ID];
     if (node == SceneNodeID::invalid_UID())
         return;
@@ -204,7 +204,7 @@ void SceneNodes::apply_to_children_recursively(SceneNodeID node_ID, F& function)
 }
 
 template<typename F>
-void SceneNodes::apply_recursively(SceneNodeID node_ID, F& function) {
+void SceneNodes::apply_recursively(SceneNodeID node_ID, const F& function) {
     function(node_ID);
     apply_to_children_recursively(node_ID, function);
 }
