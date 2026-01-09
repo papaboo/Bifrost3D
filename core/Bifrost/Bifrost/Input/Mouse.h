@@ -63,30 +63,30 @@ public:
     inline Math::Vector2i get_delta() const { return m_delta; }
 
     inline void button_tapped(Button button, bool pressed) {
-        unsigned char button_ID = unsigned char(button);
+        unsigned char button_ID = (unsigned char)button;
         m_button_states[button_ID].is_pressed = pressed;
         unsigned int halftaps = m_button_states[button_ID].halftaps;
         m_button_states[button_ID].halftaps = (halftaps == MAX_HALFTAP_COUNT) ? (MAX_HALFTAP_COUNT - 1) : (halftaps + 1); // Checking for overflow! In case of overflow the tap count is reduced by one to maintain proper even/odd tap count relationship.
     }
 
-    inline bool is_pressed(Button button) const { return m_button_states[unsigned char(button)].is_pressed && !m_button_states[unsigned char(button)].is_consumed; }
+    inline bool is_pressed(Button button) const { return m_button_states[(unsigned char)button].is_pressed && !m_button_states[(unsigned char)button].is_consumed; }
     inline bool is_released(Button button) const { return !is_pressed(button); }
-    inline unsigned int halftaps(Button button) const { return m_button_states[unsigned char(button)].halftaps; }
+    inline unsigned int halftaps(Button button) const { return m_button_states[(unsigned char)button].halftaps; }
 
     inline bool was_pressed(Button button) const {
-        const ButtonState state = m_button_states[unsigned char(button)];
+        const ButtonState state = m_button_states[(unsigned char)button];
         return ((state.is_pressed && state.halftaps == 1) || state.halftaps > 1) && !state.is_consumed;
     }
     inline bool was_released(Button button) const {
-        const ButtonState state = m_button_states[unsigned char(button)];
+        const ButtonState state = m_button_states[(unsigned char)button];
         return ((!state.is_pressed && state.halftaps == 1) || state.halftaps > 1) && !state.is_consumed;
     }
 
     inline void add_scroll_delta(float scroll_delta) { m_scroll_delta += scroll_delta; }
     inline float get_scroll_delta() const { return m_scroll_delta; }
 
-    inline bool is_consumed(Button button) const { return m_button_states[unsigned char(button)].is_consumed; }
-    inline void consume_button_event(Button button) { m_button_states[unsigned char(button)].is_consumed = true; }
+    inline bool is_consumed(Button button) const { return m_button_states[(unsigned char)button].is_consumed; }
+    inline void consume_button_event(Button button) { m_button_states[(unsigned char)button].is_consumed = true; }
 
     inline void consume_all_button_events() {
         for (ButtonState& state : m_button_states)
