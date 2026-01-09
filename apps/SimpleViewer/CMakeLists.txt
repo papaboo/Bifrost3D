@@ -77,3 +77,5 @@ endforeach()
 if (MSVC)
   create_project_VS_user_file(${PROJECT_NAME})
 endif()
+
+target_compile_options(${PROJECT_NAME} PRIVATE ${CXX_FAST_MATH})
