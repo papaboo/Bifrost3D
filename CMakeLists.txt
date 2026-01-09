@@ -63,11 +63,11 @@ add_extension("DX11OptiXAdapter") # Depends on OptiXRenderer and DX11Renderer
 add_extension("AntTweakBar")
 add_extension("GLFWDriver")
 add_extension("ImageOperations")
-add_extension("Imgui") # Depends on DX11Renderer ... for now.
+add_extension("ImGui") # Depends on DX11Renderer ... for now.
 add_extension("ObjLoader")
 add_extension("StbImageLoader")
 add_extension("StbImageWriter")
-add_extension("GLTFLoader") # Depends on StbImageLoader and StbImageWriter
+add_extension("glTFLoader") # Depends on StbImageLoader and StbImageWriter
 add_extension("TinyExr")
 add_extension("Win32Driver")
 add_extension("gtest")
