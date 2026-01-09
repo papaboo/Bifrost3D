@@ -18,7 +18,6 @@
 #include <Bifrost/Math/Vector.h>
 #include <Bifrost/Math/Utils.h>
 
-#define NOMINMAX
 #include <D3D11_1.h>
 #undef RGB
 

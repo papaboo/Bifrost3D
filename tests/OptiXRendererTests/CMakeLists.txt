@@ -56,10 +56,6 @@ if (TARGET OptiXRenderer)
   )
 
   if (WIN32)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE 
-      NOMINMAX # OptiX math needs NOMINMAX defined. See optixu_math_namespace.h
-    )
-
     add_definitions(/wd4723) # Disable potential divide by zero warning.
     add_definitions(/wd4756) # Disable overflow in constant arithmetic warning.
 
