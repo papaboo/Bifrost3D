@@ -194,7 +194,7 @@ void accumulate_radiance(int w, int h, RGB *const backbuffer, int& accumulations
             // Stratify samples in 2x2 in image plane.
             int sx = accumulations % 2;
             int sy = (accumulations >> 1) % 2;
-            int index = (h - y - 1) * w + x;
+            int index = y * w + x;
 
             RNG::LinearCongruential rng = RNG::LinearCongruential(RNG::jenkins_hash(unsigned int(index)) ^ reverse_bits(unsigned int(accumulations)));
 
