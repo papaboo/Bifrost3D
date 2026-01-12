@@ -56,10 +56,8 @@ Sphere spheres[] = { // Scene: radius, position, emission, color, material
     Sphere(600, Vector3d(50, 681.6 - .27, 81.6), RGB(12.0f), RGB::black(), BSDF::Diffuse) // Light
 };
 
-Sphere homogeneous_medium(300, Vector3d(50, 50, 80), RGB::black(), RGB::black(), BSDF::Diffuse);
-const float sigma_s = 0.009f; // Scattering coefficient
-const float sigma_a = 0.006f; // Absorption coefficient
-const float sigma_t = sigma_s + sigma_a; // Attenuation coefficient
+Sphere homogeneous_medium(300, Vector3d(50, 50, 80), RGB::black(), RGB(0.9f, 0.6f, 0.3f), BSDF::Diffuse);
+const float sigma_t = 0.01f; // Attenuation coefficient
 
 inline bool intersect_scene(const Ray &r, double &t, int &id, double tmax = 1e20) {
     int scene_object_count = sizeof(spheres) / sizeof(Sphere);
@@ -72,111 +70,94 @@ inline bool intersect_scene(const Ray &r, double &t, int &id, double tmax = 1e20
         }
     return t < tmax;
 }
-inline float sample_segment(double u, float sigma_s, float smax) {
-    return -logf(1.0f - u * (1.0f - expf(-sigma_s * smax))) / sigma_s;
-}
 
-inline float scatter(const Ray &ray, double medium_t_near, float medium_t_far, RNG::LinearCongruential& rng, double &scatter_t, Ray &scattering_ray) {
-    float t_distance = float(medium_t_far - medium_t_near);
-    scatter_t = medium_t_near + sample_segment(rng.sample1f(), sigma_s, t_distance);
-    float scattering_probability = 1.0f - expf(-sigma_s * t_distance);
-
-    Vector3d scattering_position = ray.origin + ray.direction * scatter_t;
-    Vector2f rng_sample = rng.sample2f();
-    Vector3f ray_dir = Distributions::HenyeyGreenstein::sample_direction(-0.5, Vector3f(ray.direction), rng_sample);
-    scattering_ray = Ray(scattering_position, Vector3d(ray_dir));
-
-    return scattering_probability;
-}
 RGB integrate_radiance(const Ray &ray, int depth, RNG::LinearCongruential rng) {
     // Avoid stack overflow from recursion
     if (depth > 250)
         return RGB::black();
 
-    double ray_t;
-    int scene_object_id = 0;
     double medium_t_near, medium_t_far;
-    float recip_surface_interaction_probability = 1.0f, absorption = 1.0f;
-    bool inside_medium = homogeneous_medium.intersect(ray, &medium_t_near, &medium_t_far) > 0;
-    if (inside_medium) {
-        double scatter_t;
-        Ray scattered_ray;
-        float scattering_probability = scatter(ray, medium_t_near, medium_t_far, rng, scatter_t, scattered_ray);
-        if (rng.sample1f() <= scattering_probability) {
-            // Sample volume
-            if (!intersect_scene(ray, ray_t, scene_object_id, scatter_t))
-                return integrate_radiance(scattered_ray, ++depth, rng);
-        } else {
-            // Sample surface
-            double surface_interaction_probability = 1.0 - scattering_probability;
-            recip_surface_interaction_probability = 1.0 / surface_interaction_probability;
-            if (!intersect_scene(ray, ray_t, scene_object_id))
-                return RGB::black();
-        }
-        if (ray_t >= medium_t_near) {
-            double dist = ray_t > medium_t_far ? medium_t_far - medium_t_near : ray_t - medium_t_near;
-            absorption = beers_law(sigma_t, (float)dist);
-        }
-    } else
-        if (!intersect_scene(ray, ray_t, scene_object_id))
+    bool intersects_medium = homogeneous_medium.intersect(ray, &medium_t_near, &medium_t_far) > 0;
+    float scatter_t = 1e20f;
+    if (intersects_medium)
+        scatter_t = medium_t_near + Distributions::Exponential::sample_distance(sigma_t, rng.sample1f());
+
+    double surface_t;
+    int scene_object_id = -1;
+    bool surface_intersection = intersect_scene(ray, surface_t, scene_object_id, scatter_t);
+
+    if (!surface_intersection && !intersects_medium)
+        // No intersection
+        return RGB::black();
+    else if (scatter_t <= surface_t) {
+        // Scattering event before surface interaction
+
+        // Russian roulette based on single scattering albedo, which is the absorption probability.
+        RGB single_scattering_albedo = homogeneous_medium.albedo;
+        if (rng.sample1f() >= average(single_scattering_albedo))
             return RGB::black();
 
-    const Sphere& scene_object = spheres[scene_object_id];
-    Vector3d x = ray.origin + ray.direction * ray_t;
-    Vector3d n = normalize(x - scene_object.position);
-    Vector3d nl = dot(n, ray.direction) < 0 ? n : n * -1;
-    RGB albedo = scene_object.albedo, emission = scene_object.emission;
+        // Create new ray from scattering event.
+        Vector3d scattering_position = ray.origin + ray.direction * scatter_t;
+        Vector3f direction_sample = Distributions::HenyeyGreenstein::sample_direction(-0.5, Vector3f(ray.direction), rng.sample2f());
+        Ray scattered_ray = Ray(scattering_position, Vector3d(direction_sample));
 
-    // Scale the ray response by the absorption
-    albedo *= absorption;
-    emission *= absorption;
+        return single_scattering_albedo * integrate_radiance(scattered_ray, ++depth, rng);
+    } else {
+        // Surface interaction before scattering event.
+        const Sphere& scene_object = spheres[scene_object_id];
+        Vector3d x = ray.origin + ray.direction * surface_t;
+        Vector3d n = normalize(x - scene_object.position);
+        Vector3d nl = dot(n, ray.direction) < 0 ? n : n * -1;
+        RGB albedo = scene_object.albedo, emission = scene_object.emission;
 
-    // Russian roulette after 5 interactions.
-    // The decision is taken based on local albedo information.
-    // If the ray passes, then albedo is scaled by the russian roulette probability and tracing continues.
-    // The material's emission is always applied and therefore not scaled by russian roulette probability.
-    if (++depth > 5) {
-        float max_albedo_value = max(albedo.r, max(albedo.g, albedo.b));
-        if (rng.sample1f() < max_albedo_value)
-            albedo *= 1.0f / max_albedo_value;
-        else
-            return emission;
+        // Russian roulette after 5 interactions.
+        // The decision is taken based on local albedo information.
+        // If the ray passes, then albedo is scaled by the russian roulette probability and tracing continues.
+        // The material's emission is always applied and therefore not scaled by russian roulette probability.
+        if (++depth > 5) {
+            float max_albedo_value = max(albedo.r, max(albedo.g, albedo.b));
+            if (rng.sample1f() < max_albedo_value)
+                albedo *= 1.0f / max_albedo_value;
+            else
+                return emission;
+        }
+
+        if (scene_object.bsdf == BSDF::Diffuse) {
+            float r1 = 2 * float(M_PI) * rng.sample1f();
+            float r2 = rng.sample1f();
+            float r2s = sqrt(r2);
+            Vector3f normal = Vector3f(nl);
+            Vector3f tangent, bitangent;
+            compute_tangents(normal, tangent, bitangent);
+            Vector3d d = (Vector3d)normalize(tangent * cosf(r1) * r2s + bitangent * sinf(r1) * r2s + normal * sqrt(1 - r2));
+            return (emission + albedo * integrate_radiance(Ray(x, d), depth, rng));
+        }
+
+        Ray reflection_ray(x, reflect(ray.direction, n));
+        if (scene_object.bsdf == BSDF::Specular)
+            return (emission + albedo * integrate_radiance(reflection_ray, depth, rng));
+
+        // Glass
+        bool into = dot(n, nl) > 0; // Ray from outside going in?
+        double air_ior = 1;
+        double glass_ior = 1.5;
+        double relative_ior = into ? air_ior / glass_ior : glass_ior / air_ior;
+        double ddn = dot(ray.direction, nl);
+        double cos2t;
+        if ((cos2t = 1 - relative_ior * relative_ior * (1 - ddn * ddn)) < 0)    // Total internal reflection
+            return (emission + integrate_radiance(reflection_ray, depth, rng));
+        Vector3d tdir = normalize(ray.direction * relative_ior - n * ((into ? 1 : -1)*(ddn * relative_ior + sqrt(cos2t))));
+        double specularity = dielectric_specularity(air_ior, glass_ior);
+        double cos_theta = into ? -ddn : dot(n, tdir);
+        double Re = schlick_fresnel(specularity, cos_theta);
+        double Tr = 1 - Re;
+        double reflection_probability = Re;
+        bool is_reflection = rng.sample1f() < reflection_probability;
+        return (emission + (is_reflection ? // Russian roulette between reflection and refraction
+            integrate_radiance(reflection_ray, depth, rng) :
+            (albedo * integrate_radiance(Ray(x, tdir), depth, rng))));
     }
-
-    if (scene_object.bsdf == BSDF::Diffuse) {
-        float r1 = 2 * float(M_PI) * rng.sample1f();
-        float r2 = rng.sample1f();
-        float r2s = sqrt(r2);
-        Vector3f normal = Vector3f(nl);
-        Vector3f tangent, bitangent;
-        compute_tangents(normal, tangent, bitangent);
-        Vector3d d = (Vector3d)normalize(tangent * cosf(r1) * r2s + bitangent * sinf(r1) * r2s + normal * sqrt(1 - r2));
-        return (emission + albedo * integrate_radiance(Ray(x, d), depth, rng)) * recip_surface_interaction_probability;
-    }
-
-    Ray reflection_ray(x, reflect(ray.direction, n));
-    if (scene_object.bsdf == BSDF::Specular)
-        return (emission + albedo * integrate_radiance(reflection_ray, depth, rng)) * recip_surface_interaction_probability;
-
-    // Glass
-    bool into = dot(n, nl) > 0; // Ray from outside going in?
-    double air_ior = 1;
-    double glass_ior = 1.5;
-    double relative_ior = into ? air_ior / glass_ior : glass_ior / air_ior;
-    double ddn = dot(ray.direction, nl);
-    double cos2t;
-    if ((cos2t = 1 - relative_ior * relative_ior * (1 - ddn * ddn)) < 0)    // Total internal reflection
-        return (emission + integrate_radiance(reflection_ray, depth, rng)) * recip_surface_interaction_probability;
-    Vector3d tdir = normalize(ray.direction * relative_ior - n * ((into ? 1 : -1)*(ddn * relative_ior + sqrt(cos2t))));
-    double specularity = dielectric_specularity(air_ior, glass_ior);
-    double cos_theta = into ? -ddn : dot(n, tdir);
-    double Re = schlick_fresnel(specularity, cos_theta);
-    double Tr = 1 - Re;
-    double reflection_probability = Re;
-    bool is_reflection = rng.sample1f() < reflection_probability;
-    return (emission + (is_reflection ? // Russian roulette between reflection and refraction
-        integrate_radiance(reflection_ray, depth, rng) :
-        (albedo * integrate_radiance(Ray(x, tdir), depth, rng)))) * recip_surface_interaction_probability;
 }
 
 void accumulate_radiance(int w, int h, RGB *const backbuffer, int& accumulations) {
