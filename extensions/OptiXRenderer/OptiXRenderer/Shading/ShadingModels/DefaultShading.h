@@ -66,7 +66,7 @@ private:
 
     // Sets up the specular microfacet and the diffuse reflection as described in setup_base_layer().
     __inline_all__ void setup_shading(optix::float3 tint, float roughness, float dielectric_specularity, float metallic, float coat_scale, float coat_roughness,
-                                      float cos_theta_o, float& coat_rho) {
+        float cos_theta_o, float& coat_rho) {
         using namespace optix;
 
         float abs_cos_theta_o = abs(cos_theta_o);
@@ -193,23 +193,25 @@ public:
         if (wo.z < 0.000001f || wi.z < 0.000001f)
             return BSDFResponse::none();
 
-        BSDFResponse specular_eval = BSDFs::GGX_R::evaluate_with_PDF(get_specular_alpha(), m_specularity, wo, wi);
-        BSDFResponse diffuse_eval = BSDFs::OrenNayar::evaluate_with_PDF(m_diffuse_tint, m_roughness, wo, wi);
+        BSDFResponse diffuse_response = BSDFs::OrenNayar::evaluate_with_PDF(m_diffuse_tint, m_roughness, wo, wi);
+        BSDFResponse specular_response = BSDFs::GGX_R::evaluate_with_PDF(get_specular_alpha(), m_specularity, wo, wi);
+        specular_response.reflectance *= m_specular_scale;
 
-        BSDFResponse res;
-        res.reflectance = diffuse_eval.reflectance + specular_eval.reflectance * m_specular_scale;
+        BSDFResponse response;
+        response.reflectance = diffuse_response.reflectance + specular_response.reflectance;
 
+        float diffuse_probability = get_diffuse_probability();
         float specular_probability = get_specular_probability();
-        res.PDF = diffuse_eval.PDF * (1 - specular_probability) + specular_eval.PDF * specular_probability;
+        response.PDF = diffuse_response.PDF * diffuse_probability + specular_response.PDF * specular_probability;
 
         if (m_coat_scale > 0) {
             float coat_probability = get_coat_probability();
-            BSDFResponse coat_eval = BSDFs::GGX_R::evaluate_with_PDF(m_coat_alpha, COAT_SPECULARITY, wo, wi);
-            res.reflectance += m_coat_scale * coat_eval.reflectance;
-            res.PDF = res.PDF * (1 - coat_probability) + coat_eval.PDF * coat_probability;
+            BSDFResponse coat_response = BSDFs::GGX_R::evaluate_with_PDF(m_coat_alpha, COAT_SPECULARITY, wo, wi);
+            response.reflectance += m_coat_scale * coat_response.reflectance;
+            response.PDF += coat_response.PDF * coat_probability;
         }
 
-        return res;
+        return response;
     }
 
     // Sample all BSDF based on the contribution of each BRDF.
@@ -222,21 +224,22 @@ public:
 
         float specular_probability = get_specular_probability();
         float coat_probability = get_coat_probability();
+        float diffuse_probability = 1 - coat_probability - specular_probability;
 
         // Pick a BRDF
         bool sample_coat = random_sample.z < coat_probability;
-        bool sample_specular = !sample_coat && (random_sample.z - coat_probability) / (1 - coat_probability) < specular_probability;
+        bool sample_specular = !sample_coat && random_sample.z < (coat_probability + specular_probability);
         bool sample_diffuse = !sample_coat && !sample_specular;
 
         // Sample selected BRDF.
         BSDFSample bsdf_sample;
         if (sample_diffuse) {
             bsdf_sample = BSDFs::OrenNayar::sample(m_diffuse_tint, m_roughness, wo, make_float2(random_sample));
-            bsdf_sample.PDF *= (1 - coat_probability) * (1 - specular_probability);
+            bsdf_sample.PDF *= diffuse_probability;
         } else if (sample_specular) {
             bsdf_sample = BSDFs::GGX_R::sample(get_specular_alpha(), m_specularity, wo, make_float2(random_sample));
             bsdf_sample.reflectance *= m_specular_scale;
-            bsdf_sample.PDF *= (1 - coat_probability) * specular_probability;
+            bsdf_sample.PDF *= specular_probability;
         } else {
             bsdf_sample = BSDFs::GGX_R::sample(m_coat_alpha, COAT_SPECULARITY, wo, make_float2(random_sample));
             bsdf_sample.reflectance *= m_coat_scale;
@@ -253,7 +256,7 @@ public:
             BSDFResponse diffuse_response = BSDFs::OrenNayar::evaluate_with_PDF(m_diffuse_tint, m_roughness, wo, bsdf_sample.direction);
             if (diffuse_response.PDF.is_valid_and_not_delta_dirac()) {
                 bsdf_sample.reflectance += diffuse_response.reflectance;
-                bsdf_sample.PDF += diffuse_response.PDF * (1 - coat_probability) * (1 - specular_probability);
+                bsdf_sample.PDF += diffuse_response.PDF * diffuse_probability;
             }
         }
         if (!sample_specular) {
@@ -261,7 +264,7 @@ public:
             BSDFResponse specular_response = BSDFs::GGX_R::evaluate_with_PDF(get_specular_alpha(), m_specularity, wo, bsdf_sample.direction);
             if (specular_response.PDF.is_valid_and_not_delta_dirac()) {
                 bsdf_sample.reflectance += specular_response.reflectance * m_specular_scale;
-                bsdf_sample.PDF += specular_response.PDF * (1 - coat_probability) * specular_probability;
+                bsdf_sample.PDF += specular_response.PDF * specular_probability;
             }
         }
         if (!sample_coat && m_coat_scale > 0) {

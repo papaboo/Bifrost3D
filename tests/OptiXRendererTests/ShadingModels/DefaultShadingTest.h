@@ -279,7 +279,9 @@ GTEST_TEST(DefaultShadingModel, sampling_probability_match_reflectance_contribut
                         float actual_diffuse_probability = material.get_diffuse_probability();
                         float actual_specular_probability = material.get_specular_probability();
                         float actual_coat_probability = material.get_coat_probability();
+                        float total_actual_probability = actual_diffuse_probability + actual_specular_probability + actual_coat_probability;
 
+                        EXPECT_FLOAT_EQ_EPS(total_actual_probability, 1.0f, 2e-5f); // The BRDF layer probabilities sum to 1
                         EXPECT_FLOAT_EQ_EPS(expected_diffuse_contribution, actual_diffuse_probability, 2e-5f);
                         EXPECT_FLOAT_EQ_EPS(expected_specular_contribution, actual_specular_probability, 2e-5f);
                         EXPECT_FLOAT_EQ_EPS(expected_coat_contribution, actual_coat_probability, 2e-5f);
@@ -423,9 +425,9 @@ GTEST_TEST(DefaultShadingModel, regression_test) {
         { 0.012840f, 0.122771f, 0.14915f, 0.034218f }, { 0.011330f, 0.121562f, 0.14802f, 0.254778f },
         { 0.051809f, 0.085369f, 0.09342f, 0.286622f }, { 0.013969f, 0.145090f, 0.17656f, 0.218950f },
         // Coated plastic
-        { 0.019217f, 0.081176f, 0.09605f, 0.016248f }, { 0.019548f, 0.0975228f, 0.116237f, 0.228988f },
-        { 0.017937f, 0.128354f, 0.15485f, 0.037653f }, { 0.014534f, 0.125507f, 0.15214f, 0.240573f },
-        { 0.088420f, 0.115108f, 0.12151f, 0.301626f }, { 0.018240f, 0.147322f, 0.17830f, 0.205125f } };
+        { 0.019217f, 0.081176f, 0.09605f, 0.0164565f }, { 0.019548f, 0.0975228f, 0.116237f, 0.228887f },
+        { 0.017937f, 0.128354f, 0.15485f, 0.0377722f }, { 0.014534f, 0.125507f, 0.15214f, 0.239682f },
+        { 0.088420f, 0.115108f, 0.12151f, 0.317704f }, { 0.018240f, 0.147322f, 0.17830f, 0.192018f } };
 
     int response_index = 0;
     for (int i = 0; i < 3; ++i)
