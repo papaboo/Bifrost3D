@@ -17,7 +17,7 @@ namespace OptiXRenderer {
 namespace ShadingModelTestUtils {
 
 using namespace optix;
-    
+
 Material gold_parameters() {
     Material gold_params = {};
     gold_params.tint = make_float3(1.0f, 0.766f, 0.336f);
@@ -44,8 +44,7 @@ Material coated_plastic_parameters() {
 }
 
 template <typename ShadingModel>
-BSDFTestUtils::RhoResult directional_hemispherical_reflectance_function(ShadingModel shading_model, float3 wo) {
-    unsigned int sample_count = 8192u;
+BSDFTestUtils::RhoResult directional_hemispherical_reflectance_function(ShadingModel shading_model, float3 wo, unsigned int sample_count = 8192u) {
     return BSDFTestUtils::directional_hemispherical_reflectance_function(shading_model, wo, sample_count);
 }
 
