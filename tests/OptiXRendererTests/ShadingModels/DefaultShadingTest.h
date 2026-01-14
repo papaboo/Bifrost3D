@@ -196,31 +196,32 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
 }
 
 GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation) {
+    using namespace Bifrost::Assets::Shading;
     using namespace Shading::ShadingModels;
     using namespace optix;
 
     // Test albedo is properly estimated.
     static auto test_albedo = [](float3 wo, float roughness, float metallic, float coat, float coat_roughness) {
         Material material_params = {};
-        material_params.tint = make_float3(1.0f, 1.0f, 1.0f);
+        material_params.tint = make_float3(1.0f, 0.5f, 0.25f);
         material_params.roughness = roughness;
         material_params.metallic = metallic;
         material_params.specularity = 0.04f;
         material_params.coat = coat;
         material_params.coat_roughness = coat_roughness;
-        auto shading_model = DefaultShading(material_params, wo.z);
-        float3 sample_mean = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
+        auto shading_model = DefaultShadingWrapper(material_params, wo.z);
 
-        float3 rho = shading_model.rho(wo.z);
+        float3 expected_rho = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
+        float3 actual_rho = shading_model.rho(wo.z);
 
         // The error is slightly higher for low roughness materials.
         float error_percentage = 0.015f * (2 - roughness) * (2 - coat_roughness);
-        EXPECT_FLOAT3_EQ_PCT(sample_mean, rho, error_percentage) << "Material params: roughness: " << roughness << ", metallic: " << metallic << ", coat: " << coat << ", coat roughness: " << coat_roughness;
+        EXPECT_FLOAT3_EQ_PCT(expected_rho, actual_rho, error_percentage) << shading_model.to_string();
     };
 
     const float3 incident_wo = make_float3(0.0f, 0.0f, 1.0f);
     const float3 average_wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
-    const float3 grazing_wo = normalize(make_float3(1.0f, 0.0f, 0.01f));
+    const float3 grazing_wo = BSDFTestUtils::w_from_cos_theta(1.0f / (Rho::GGX_angle_sample_count - 1.0f)); // Map cos_theta to an angle that has been sampled in the rho precomputation
 
     for (float3 wo : { incident_wo, average_wo, grazing_wo })
         for (float roughness : { 0.25f, 0.75f })
