@@ -49,14 +49,47 @@ public:
 
     BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const { return m_shading_model.sample(wo, random_sample); }
 
+    optix::float3 rho(float abs_cos_theta_wi) const { return m_shading_model.rho(abs_cos_theta_wi); }
+
     std::string to_string() const {
         std::ostringstream out;
         out << "Glass shading:" << std::endl;
         out << "  Tint: " << m_material_params.tint.x << ", " << m_material_params.tint.y << ", " << m_material_params.tint.z << std::endl;
         out << "  Roughness:" << m_material_params.roughness << std::endl;
+        out << "  Specularity:" << m_material_params.specularity << std::endl;
         return out.str();
     }
 };
+
+GTEST_TEST(TransmissiveShadingModel, directional_hemispherical_reflectance_estimation) {
+    using namespace Bifrost::Assets::Shading;
+    using namespace Shading::ShadingModels;
+    using namespace optix;
+
+    // Test albedo is properly estimated.
+    static auto test_albedo = [](float3 wo, float roughness) {
+        Material material_params = {};
+        material_params.tint = make_float3(1.0f, 0.5f, 0.25f);
+        material_params.roughness = roughness;
+        material_params.specularity = 0.04f;
+        auto shading_model = TransmissiveShadingWrapper(material_params, wo.z);
+
+        float3 expected_rho = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo, 16384u).reflectance;
+        float3 actual_rho = shading_model.rho(wo.z);
+
+        // The error is slightly higher for low roughness materials.
+        float error_percentage = 0.015f * (2 - roughness);
+        EXPECT_FLOAT3_EQ_PCT(expected_rho, actual_rho, error_percentage) << shading_model.to_string();
+    };
+
+    const float3 incident_wo = make_float3(0.0f, 0.0f, 1.0f);
+    const float3 average_wo = normalize(make_float3(1.0f, 0.0f, 1.0f));
+    const float3 grazing_wo = BSDFTestUtils::w_from_cos_theta(1.0f / (Rho::dielectric_GGX_angle_sample_count - 1.0f)); // Map cos_theta to an angle that has been sampled in the rho precomputation
+
+    for (float3 wo : { incident_wo, average_wo, grazing_wo })
+        for (float roughness : { 0.25f, 0.75f })
+            test_albedo(wo, roughness);
+}
 
 GTEST_TEST(TransmissiveShadingModel, white_hot_furnace) {
     using namespace Bifrost::Assets::Shading;
@@ -72,9 +105,9 @@ GTEST_TEST(TransmissiveShadingModel, white_hot_furnace) {
             material_params.roughness = roughness;
             for (float cos_theta_o : { 0.1f, 0.4f, 0.7f, 1.0f }) {
                 optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
-                auto shading_model = TransmissiveShading(material_params, wo.z);
+                auto shading_model = TransmissiveShadingWrapper(material_params, wo.z);
                 auto rho = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
-                EXPECT_FLOAT_EQ_EPS(rho.x, 1.0f, 0.026f) << " with specularity " << material_params.specularity << ", roughness " << roughness << ", and cos_theta " << cos_theta_o;
+                EXPECT_FLOAT_EQ_EPS(rho.x, 1.0f, 0.026f) << shading_model.to_string();
             }
         }
     }
