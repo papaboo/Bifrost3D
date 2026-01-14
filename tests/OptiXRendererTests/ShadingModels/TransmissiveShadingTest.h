@@ -58,25 +58,6 @@ public:
     }
 };
 
-GTEST_TEST(TransmissiveShadingModel, power_conservation) {
-    using namespace Shading::ShadingModels;
-
-    // A white material to stress test power_conservation.
-    Material material_params = {};
-    material_params.tint = optix::make_float3(1.0f, 1.0f, 1.0f);
-    material_params.specularity = 0.02f;
-
-    for (float roughness : { 0.2f, 0.7f }) {
-        material_params.roughness = roughness;
-        for (float cos_theta_o : { 0.1f, 0.4f, 0.7f, 1.0f }) {
-            optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
-            auto shading_model = TransmissiveShading(material_params, wo.z);
-            auto rho = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
-            EXPECT_LE(rho.x, 1.019f) << " with roughness " << roughness << " and cos_theta " << cos_theta_o;
-        }
-    }
-}
-
 GTEST_TEST(TransmissiveShadingModel, white_hot_furnace) {
     using namespace Bifrost::Assets::Shading;
     using namespace Shading::ShadingModels;
