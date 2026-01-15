@@ -7,6 +7,7 @@
 // ------------------------------------------------------------------------------------------------
 
 #include <Bifrost/Assets/Image.h>
+#include <Bifrost/Assets/Media.h>
 #include <Bifrost/Math/Distributions.h>
 #include <Bifrost/Math/Intersect.h>
 #include <Bifrost/Math/Plane.h>
@@ -20,30 +21,10 @@
 #include <StbImageWriter/StbImageWriter.h>
 
 using namespace Bifrost::Assets;
+using namespace Bifrost::Assets::Media;
 using namespace Bifrost::Math;
 
 enum ScatteringMethod { RandomWalk, Burley };
-
-struct MeasuredScatteringParameters {
-    RGB scattering_coefficient;
-    RGB absorption_coefficient;
-    RGB diffuse_albedo; // TODO Compute from scattering and absorption. See A Practical Model for Subsurface Light Transport, Jensen et al., 2001
-
-    // Get the attenuation coefficient, or extinction coefficient, which is the sum of scattering and absorption along the path.
-    // PBRT v4, section 11.1.3
-    // https://pbr-book.org/4ed/Volume_Scattering/Volume_Scattering_Processes#OutScatteringandAttenuation
-    RGB get_attenuation_coefficient() const { return scattering_coefficient + absorption_coefficient; }
-
-    // The mean free path is the reciprocal of the attenuation coefficient.
-    // PBRT v4, section 11.1.3
-    // https://pbr-book.org/4ed/Volume_Scattering/Volume_Scattering_Processes#OutScatteringandAttenuation
-    RGB get_mean_free_path() const {
-        RGB sigma_t = get_attenuation_coefficient();
-        return RGB(1.0f / sigma_t.r, 1.0f / sigma_t.g, 1.0f / sigma_t.b);
-    }
-
-    RGB get_single_scattering_albedo() const { return scattering_coefficient / (scattering_coefficient + absorption_coefficient); }
-};
 
 struct Options {
     ScatteringMethod scattering_method = ScatteringMethod::RandomWalk;
@@ -89,12 +70,11 @@ int main(int argc, char** argv) {
 
     // Parameters from A Practical Model for Subsurface Light Transport, Jensen et al., 2001
     const int bssrdf_count = 5;
-    MeasuredScatteringParameters ketchup = { RGB(0.18f, 0.07f, 0.03f), RGB(0.061f, 0.97f, 1.45f), RGB(0.164f, 0.006f, 0.002f) };
-    MeasuredScatteringParameters marble = { RGB(2.19f, 2.62f, 3.00f), RGB(0.0021f, 0.0041f, 0.0071f), RGB(0.830f, 0.791f, 0.753f) };
-    MeasuredScatteringParameters potato = { RGB(0.68f, 0.70f, 0.55f), RGB(0.0024f, 0.0090f, 0.12f), RGB(0.764f, 0.613f, 0.213f) };
-    MeasuredScatteringParameters skin1 = { RGB(0.74f, 0.88f, 1.01f), RGB(0.032f, 0.17f, 0.48f), RGB(0.436f, 0.227f, 0.131f) };
-    MeasuredScatteringParameters whole_milk = { RGB(2.55f, 3.21f, 3.77f), RGB(0.0011f, 0.0024f, 0.014f), RGB(0.908f, 0.881f, 0.759f) };
-    MeasuredScatteringParameters sss_params[bssrdf_count] = { potato, marble, whole_milk, skin1, ketchup };
+    MeasuredScatteringParameters sss_params[bssrdf_count] = { MeasuredScatteringParameters::potato(),
+                                                              MeasuredScatteringParameters::marble(),
+                                                              MeasuredScatteringParameters::wholemilk(),
+                                                              MeasuredScatteringParameters::skin1(),
+                                                              MeasuredScatteringParameters::ketchup() };
 
     int width = 100, height = 100;
     int half_width = width / 2;
@@ -162,11 +142,6 @@ int main(int argc, char** argv) {
                             } else {
                                 // Sample scattering direction from isotropic (spherical) distribution
                                 auto direction_sample = Distributions::Sphere::sample(rng.sample2f());
-                                // auto direction_sample_PDF = Distributions::Sphere::PDF();
-
-                                // Adjust throughput by phase function P and sampling probabilities.
-                                // They cancel out as long as we trace one color channel at a time.
-                                // throughput *= direction_sample_PDF / direction_sample_PDF;
 
                                 throughput *= single_scattering_albedo[c];
 
@@ -202,7 +177,7 @@ int main(int argc, char** argv) {
         const float mean_free_path_fitting_scale = 1.5f;
         BurleySSS::Parameters bssrdf_params[bssrdf_count];
         for (int bssrdf_index = 0; bssrdf_index < bssrdf_count; ++bssrdf_index) {
-            RGB albedo = sss_params[bssrdf_index].diffuse_albedo;
+            RGB albedo = sss_params[bssrdf_index].get_diffuse_albedo();
             RGB mfp = sss_params[bssrdf_index].get_mean_free_path() * mean_free_path_fitting_scale;
             bssrdf_params[bssrdf_index] = BurleySSS::Parameters::create({ albedo.r, albedo.g, albedo.b }, { mfp.r, mfp.g, mfp.b } );
         }
