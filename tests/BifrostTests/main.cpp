@@ -11,6 +11,7 @@
 #include <Assets/ImageTest.h>
 #include <Assets/InfiniteAreaLightTest.h>
 #include <Assets/MaterialTest.h>
+#include <Assets/MediaTest.h>
 #include <Assets/MeshTest.h>
 #include <Assets/MeshModelTest.h>
 #include <Assets/TextureTest.h>
