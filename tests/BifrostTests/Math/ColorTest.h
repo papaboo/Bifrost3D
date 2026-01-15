@@ -11,7 +11,7 @@
 
 #include <Bifrost/Math/Color.h>
 
-#include <gtest/gtest.h>
+#include <Expects.h>
 
 namespace Bifrost::Math {
 

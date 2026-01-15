@@ -9,6 +9,7 @@ set(ASSETS_SRCS
   Assets/ImageTest.h
   Assets/InfiniteAreaLightTest.h
   Assets/MaterialTest.h
+  Assets/MediaTest.h
   Assets/MeshModelTest.h
   Assets/MeshTest.h
   Assets/TextureTest.h
