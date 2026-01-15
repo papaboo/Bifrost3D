@@ -2,9 +2,11 @@ if (TARGET OptiXRenderer)
 
   set(PROJECT_NAME "SubsurfaceScatteringTestBed")
 
-  set(SRCS main.cpp )
+  set(SRCS Integrate.h main.cpp Plot.h Utils.h)
 
   add_executable(${PROJECT_NAME} ${SRCS})
+
+  target_include_directories(${PROJECT_NAME} PRIVATE .)
 
   target_link_libraries(${PROJECT_NAME}
     Bifrost OptiXRenderer StbImageWriter
