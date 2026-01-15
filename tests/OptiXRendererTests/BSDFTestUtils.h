@@ -47,7 +47,7 @@ struct PmjbRNG {
 
 // Precompute the random numbers and make them available as a global constant,
 // to make it easy to reuse across the BSDF sample test utils and avoid recomputing them multiple times.
-static const PmjbRNG g_rng = PmjbRNG(8192u);
+static const PmjbRNG g_rng = PmjbRNG(16384u);
 
 struct RhoResult {
     float3 reflectance;

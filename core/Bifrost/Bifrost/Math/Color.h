@@ -377,6 +377,10 @@ __always_inline__ RGBA linear_to_sRGB(RGBA color) {
     return RGBA(linear_to_sRGB(color.r), linear_to_sRGB(color.g), linear_to_sRGB(color.b), color.a);
 }
 
+__always_inline__ float average(RGB color) {
+    return (color.r + color.g + color.b) / 3.0f;
+}
+
 __always_inline__ float luminance(RGB color) {
     return 0.2126f * color.r + 0.7152f * color.g + 0.0722f * color.b;
 }

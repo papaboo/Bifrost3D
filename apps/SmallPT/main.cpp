@@ -41,22 +41,7 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
     case GLFW_KEY_P:
         if (action == GLFW_RELEASE) {
             // Write backbuffer to png.
-            Image image = Image::create2D("Image", PixelFormat::RGB_Float, false, g_backbuffer.get_size_2D());
-
-            // Flip image vertically
-            int width = image.get_width();
-            int height = image.get_height();
-            int row_size = width * sizeof(RGB);
-            RGB* backbuffer_pixels = g_backbuffer.get_pixels<RGB>();
-            RGB* image_pixels = image.get_pixels<RGB>();
-            for (int y = 0; y < height; ++y) {
-                int buffer_row_offset = y * width;
-                int image_row_offset = (height - y - 1) * width;
-                memcpy(image_pixels + image_row_offset,  backbuffer_pixels + buffer_row_offset, row_size);
-            }
-            StbImageWriter::write(image, "image.png");
-
-            image.destroy();
+            StbImageWriter::write(g_backbuffer, "image.png");
         }
         break;
     }
@@ -170,16 +155,16 @@ void main(int argc, char** argv) {
             glClear(GL_COLOR_BUFFER_BIT);
             glBegin(GL_QUADS); {
 
-                glTexCoord2f(0.0f, 1.0f);
+                glTexCoord2f(0.0f, 0.0f);
                 glVertex3f(-1.0f, -1.0f, 0.f);
 
-                glTexCoord2f(1.0f, 1.0f);
+                glTexCoord2f(1.0f, 0.0f);
                 glVertex3f(1.0f, -1.0f, 0.f);
 
-                glTexCoord2f(1.0f, 0.0f);
+                glTexCoord2f(1.0f, 1.0f);
                 glVertex3f(1.0f, 1.0f, 0.f);
 
-                glTexCoord2f(0.0f, 0.0f);
+                glTexCoord2f(0.0f, 1.0f);
                 glVertex3f(-1.0f, 1.0f, 0.f);
 
             } glEnd();

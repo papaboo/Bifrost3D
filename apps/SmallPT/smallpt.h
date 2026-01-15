@@ -138,9 +138,9 @@ void accumulate_radiance(int w, int h, RGB *const backbuffer, int& accumulations
             double r2 = 2 * rng.sample1f(), dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
             Vector3d d = cx * (((sx + .5 + dx) / 2 + x) / w - .5) +
                 cy * (((sy + .5 + dy) / 2 + y) / h - .5) + cam.direction;
-            int i = (h - y - 1) * w + x;
             RGB r = radiance(Ray(cam.origin + d * 140, normalize(d)), 0, rng);
             //            Camera rays are pushed ^^^^^ forward to start in interior
+            int i = y * w + x;
             backbuffer[i] = lerp(backbuffer[i], r, blendFactor);
         }
     }
