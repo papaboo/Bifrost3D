@@ -129,17 +129,12 @@ private:
 // Linear congruential random number generator
 // ------------------------------------------------------------------------------------------------
 struct LinearCongruential final {
-private:
     static const unsigned int multiplier = 1664525u;
     static const unsigned int increment = 1013904223u;
 
     unsigned int m_state;
 
-public:
     explicit LinearCongruential(unsigned int seed) : m_state(seed) { }
-
-    __always_inline__ void seed(unsigned int seed) { m_state = seed; }
-    __always_inline__ unsigned int get_seed() const { return m_state; }
 
     __always_inline__ unsigned int sample1ui() {
         m_state = multiplier * m_state + increment;
@@ -149,6 +144,7 @@ public:
     __always_inline__ float sample1f() { return float(sample1ui()) * uint_normalizer; }
     __always_inline__ Vector2f sample2f() { return Vector2f(sample1f(), sample1f()); }
     __always_inline__ Vector3f sample3f() { return Vector3f(sample1f(), sample1f(), sample1f()); }
+    __always_inline__ Vector4f sample4f() { return Vector4f(sample1f(), sample1f(), sample1f(), sample1f()); }
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -160,9 +156,6 @@ struct XorShift32 final {
 
     explicit XorShift32(unsigned int seed) : m_state(seed) { }
 
-    __always_inline__ void seed(unsigned int seed) { m_state = seed; }
-    __always_inline__ unsigned int get_seed() const { return m_state; }
-
     __always_inline__ unsigned int sample1ui() {
         m_state ^= m_state << 13;
         m_state ^= m_state >> 17;
@@ -173,6 +166,7 @@ struct XorShift32 final {
     __always_inline__ float sample1f() { return float(sample1ui()) * uint_normalizer; }
     __always_inline__ Vector2f sample2f() { return Vector2f(sample1f(), sample1f()); }
     __always_inline__ Vector3f sample3f() { return Vector3f(sample1f(), sample1f(), sample1f()); }
+    __always_inline__ Vector4f sample4f() { return Vector4f(sample1f(), sample1f(), sample1f(), sample1f()); }
 };
 
 } // NS RNG
