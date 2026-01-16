@@ -33,19 +33,19 @@ using namespace optix;
 // Container for parameters for the Burley's subsurface scattering approximation.
 // We precompute the parameters and store them to avoid redoing the same transformations multiple times.
 struct Parameters {
-    float3 albedo;
+    float3 diffuse_albedo;
 
     // l / s from equation 3 in Approximate Reflectance Profiles for Efficient Subsurface Scattering
     float3 diffuse_mean_free_path;
 
     // Equation 6 in Approximate Reflectance Profiles for Efficient Subsurface Scattering.
-    __inline_all__ static float3 mean_free_path_scaling_term(float3 albedo) {
-        return 1.9f - albedo + 3.5f * pow2(albedo - 0.8f);
+    __inline_all__ static float3 mean_free_path_scaling_term(float3 diffuse_albedo) {
+        return 1.9f - diffuse_albedo + 3.5f * pow2(diffuse_albedo - 0.8f);
     }
 
-    __inline_all__ static Parameters create(float3 albedo, float3 mean_free_path) {
-        float3 s = mean_free_path_scaling_term(albedo);
-        return { albedo, mean_free_path / s };
+    __inline_all__ static Parameters create(float3 diffuse_albedo, float3 mean_free_path) {
+        float3 s = mean_free_path_scaling_term(diffuse_albedo);
+        return { diffuse_albedo, mean_free_path / s };
     }
 };
 
@@ -70,7 +70,7 @@ __inline_all__ float3 evaluate(float entry_and_exit_distance, float3 diffuse_mea
 // Equation 3 in Approximate Reflectance Profiles for Efficient Subsurface Scattering.
 __inline_all__ float3 evaluate(Parameters params, float3 po, float3 pi) {
     float r = distance(po, pi);
-    return params.albedo * evaluate(r, params.diffuse_mean_free_path);
+    return params.diffuse_albedo * evaluate(r, params.diffuse_mean_free_path);
 }
 
 // Performs sampling of a Normalized Burley diffusion profile in polar coordinates.
@@ -161,7 +161,7 @@ __inline_all__ SeparableBSSRDFPositionSample sample(Parameters params, float3 po
     SeparableBSSRDFPositionSample bssrdf_sample;
     bssrdf_sample.position = po + pi_offset;
     bssrdf_sample.PDF = 1 / reciprocal_PDF;
-    bssrdf_sample.reflectance = params.albedo * evaluate(radius, params.diffuse_mean_free_path);
+    bssrdf_sample.reflectance = params.diffuse_albedo * evaluate(radius, params.diffuse_mean_free_path);
     return bssrdf_sample;
 }
 
@@ -173,7 +173,7 @@ __inline_all__ PDF pdf(Parameters params, float3 po, float3 pi) {
     float r = distance(po, pi);
     float3 per_channel_PDF = evaluate(r, params.diffuse_mean_free_path);
 
-    float3 per_channel_probability = params.albedo / sum(params.albedo);
+    float3 per_channel_probability = params.diffuse_albedo / sum(params.diffuse_albedo);
 
     return sum(per_channel_PDF * per_channel_probability);
 }
@@ -186,7 +186,7 @@ __inline_all__ BSDFResponse evaluate_with_PDF(Parameters params, float3 po, floa
 
 // Sample the Burley normalized diffusion profile.
 __inline_all__ SeparableBSSRDFPositionSample sample(Parameters params, float3 po, float3 random_sample) {
-    float3 per_channel_probability = params.albedo / sum(params.albedo);
+    float3 per_channel_probability = params.diffuse_albedo / sum(params.diffuse_albedo);
 
     float sample_scattering_distance;
     if (random_sample.z < per_channel_probability.x)
@@ -206,7 +206,7 @@ __inline_all__ SeparableBSSRDFPositionSample sample(Parameters params, float3 po
     SeparableBSSRDFPositionSample bssrdf_sample;
     bssrdf_sample.position = po + pi_offset;
     bssrdf_sample.PDF = sum(per_channel_PDF * per_channel_probability);
-    bssrdf_sample.reflectance = params.albedo * per_channel_PDF;
+    bssrdf_sample.reflectance = params.diffuse_albedo * per_channel_PDF;
     return bssrdf_sample;
 }
 
@@ -239,7 +239,7 @@ __inline_all__ SeparableBSSRDFPositionSample sample(Parameters params, float3 po
     SeparableBSSRDFPositionSample bssrdf_sample;
     bssrdf_sample.position = po + pi_offset;
     bssrdf_sample.PDF = evaluate(radius, sample_scattering_distance);
-    bssrdf_sample.reflectance = params.albedo * evaluate(radius, params.diffuse_mean_free_path);
+    bssrdf_sample.reflectance = params.diffuse_albedo * evaluate(radius, params.diffuse_mean_free_path);
     return bssrdf_sample;
 }
 
