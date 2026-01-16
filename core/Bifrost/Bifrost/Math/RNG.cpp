@@ -9,8 +9,6 @@
 #include <Bifrost/Math/RNG.h>
 #include <Bifrost/Math/Utils.h>
 
-#include <cassert>
-
 namespace Bifrost {
 namespace Math {
 namespace RNG {
@@ -23,7 +21,6 @@ namespace RNG {
 // ------------------------------------------------------------------------------------------------
 void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, Vector2f* samples_end, unsigned int blue_noise_samples) {
     unsigned int total_sample_count = unsigned int(samples_end - samples_begin);
-    assert(is_power_of_two(total_sample_count));
 
     auto rng = RNG::LinearCongruential(19349669);
     auto rnd = [&]() -> float { return rng.sample1f(); };
@@ -34,9 +31,10 @@ void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, V
 
     // Create occupied array.
     const unsigned short FREE_STRATUM = 65535;
-    auto* tmp_storage = new unsigned short[2 * total_sample_count];
+    int tmp_storage_size = next_power_of_two(total_sample_count);
+    auto* tmp_storage = new unsigned short[2 * tmp_storage_size];
     auto stratum_samples_x = tmp_storage;
-    auto stratum_samples_y = tmp_storage + total_sample_count;
+    auto stratum_samples_y = tmp_storage + tmp_storage_size;
 
     auto generate_sample_point = [&](Vector2f oldpt, int i, int j, int xhalf, int yhalf, int prev_grid_size, int prev_sample_count) {
         int next_sample_count = 2 * prev_sample_count;
@@ -128,7 +126,7 @@ void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, V
         mark_occupied_strata(prev_sample_count);
 
         // Loop over N old samples and generate 1 new sample for each
-        for (unsigned int s = 0; s < prev_sample_count; ++s) {
+        for (unsigned int s = 0; s < prev_sample_count && next_sample_index < total_sample_count; ++s) {
             Vector2f oldpt = samples_begin[s];
             int i = int(prev_grid_size * oldpt.x);
             int j = int(prev_grid_size * oldpt.y);
@@ -152,7 +150,7 @@ void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, V
         // and generate 2 new samples for each – one at a time to keep the order consecutive (for "greedy" best candidates)
 
         // Select one of the two remaining subquadrants
-        for (unsigned int s = 0; s < prev_sample_count / 2; ++s) {
+        for (unsigned int s = 0; s < prev_sample_count / 2 && next_sample_index < total_sample_count; ++s) {
             Vector2f oldpt = samples_begin[s];
             int i = int(prev_grid_size * oldpt.x);
             int j = int(prev_grid_size * oldpt.y);
@@ -169,7 +167,7 @@ void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, V
         }
 
         // And finally fill in the last subquadrants opposite to the previous subquadrant filled.
-        for (unsigned int s = 0; s < prev_sample_count / 2; ++s) {
+        for (unsigned int s = 0; s < prev_sample_count / 2 && next_sample_index < total_sample_count; ++s) {
             Vector2f oldpt = samples_begin[s + prev_sample_count];
             int i = int(prev_grid_size * oldpt.x);
             int j = int(prev_grid_size * oldpt.y);
