@@ -41,7 +41,7 @@ public:
     static BurleySSSWrapper skin1() { return BurleySSSWrapper({ 0.436f, 0.227f, 0.131f }, { 3.67f, 1.37f, 0.68f }); }
     static BurleySSSWrapper whole_milk() { return BurleySSSWrapper({ 0.908f, 0.881f, 0.759f }, { 10.90f, 6.58f, 2.51f }); }
 
-    optix::float3 get_albedo() const { return m_parameters.albedo; }
+    optix::float3 get_albedo() const { return m_parameters.diffuse_albedo; }
 
     optix::float3 evaluate(optix::float3 po, optix::float3 pi) const {
         return Shading::BSDFs::BurleySSS::evaluate(m_parameters, po, pi);
@@ -76,7 +76,7 @@ public:
 
     std::string to_string() const {
         std::ostringstream out;
-        out << "Burley: albedo: " << m_parameters.albedo << ", diffuse mean free path: " << m_parameters.diffuse_mean_free_path;
+        out << "Burley: diffuse albedo: " << m_parameters.diffuse_albedo << ", diffuse mean free path: " << m_parameters.diffuse_mean_free_path;
         return out.str();
     }
 };
