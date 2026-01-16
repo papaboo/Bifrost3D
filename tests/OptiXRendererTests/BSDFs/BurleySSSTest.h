@@ -87,14 +87,14 @@ BSDFTestUtils::RhoResult directional_hemispherical_reflectance_function(BSSRDFMo
     using namespace optix;
 
     // Return an invalid result if more samples are requested than can be produced.
-    if (BSDFTestUtils::g_rng.m_max_sample_capacity < sample_count)
+    if (BSDFTestUtils::g_bsdf_rng.m_max_sample_capacity < sample_count)
         return BSDFTestUtils::RhoResult::invalid();
 
     const float3 po = { 1.0f, -2.0f, 4.0f };
 
     Statistics<double> reflectance_statistics[3] = { Statistics<double>(), Statistics<double>(), Statistics<double>() };
     for (unsigned int i = 0u; i < sample_count; ++i) {
-        float3 rng = BSDFTestUtils::g_rng.sample_3f(i, sample_count);
+        float3 rng = BSDFTestUtils::bsdf_rng_sample3f(i, sample_count);
         auto sample = bssrdf_model.sample(po, rng);
 
         // All sampled PDFs are valid, so the validity check is avoided in order to not bias the result by ignoring samples with low PDF.
@@ -148,7 +148,7 @@ GTEST_TEST(BurleySSS, function_consistency) {
     for (auto sampling_strategy : BurleySSSWrapper::sampling_strategies)
         burley.set_sampling_strategy(sampling_strategy);
         for (unsigned int i = 0u; i < sample_count; ++i) {
-            float3 rng_sample = BSDFTestUtils::g_rng.sample_3f(i, sample_count);
+            float3 rng_sample = BSDFTestUtils::bsdf_rng_sample3f(i, sample_count);
             auto sample = burley.sample(po, rng_sample);
 
             if (sample.PDF.is_valid()) {

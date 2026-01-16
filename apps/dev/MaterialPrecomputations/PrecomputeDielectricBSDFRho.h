@@ -9,15 +9,15 @@
 #ifndef _PRECOMPUTE_DIELECTRIC_BSDF_RHO_H_
 #define _PRECOMPUTE_DIELECTRIC_BSDF_RHO_H_
 
-#include <PmjbRNG.h>
-
 #include <Bifrost/Assets/Image.h>
+#include <Bifrost/Math/RNG.h>
 
 #include <fstream>
 
 namespace PrecomputeDielectricBSDFRho {
 
 using namespace Bifrost;
+using namespace Bifrost::Math;
 using namespace optix;
 using namespace OptiXRenderer;
 
@@ -31,7 +31,7 @@ const float max_light_ior_i = 1.0f / min_dense_ior_i;
 
 typedef BSDFSample(*SampleDieletricBSDF)(float roughness, float ior_i, float3 wo, float3 random_sample);
 
-float2 sample_rho(float3 wo, float roughness, float ior_i, unsigned int sample_count, const PmjbRNG& rng, SampleDieletricBSDF sample_rough_BSDF) {
+float2 sample_rho(float3 wo, float roughness, float ior_i, unsigned int sample_count, const Math::RNG::PmjbRNG& rng, SampleDieletricBSDF sample_rough_BSDF) {
 
     // Each hemisphere should receive at least half the number of samples expected by the input sample count.
     unsigned int sample_count_per_hemisphere = sample_count / 2;
@@ -42,8 +42,8 @@ float2 sample_rho(float3 wo, float roughness, float ior_i, unsigned int sample_c
         const int rng_pre_sample_count = 256;
         int reflected_sample_count = 0, transmitted_sample_count = 0;
         for (int s = 0; s < rng_pre_sample_count; ++s) {
-            float3 rng_sample = rng.sample_3f(s, rng_pre_sample_count);
-            BSDFSample sample = sample_rough_BSDF(roughness, ior_i, wo, rng_sample);
+            Vector3f uv = rng.sample3f(s, rng_pre_sample_count);
+            BSDFSample sample = sample_rough_BSDF(roughness, ior_i, wo, { uv.x, uv.y, uv.z });
             if (sample.PDF.is_valid()) {
                 if (sample.direction.z < 0.0f)
                     ++transmitted_sample_count;
@@ -63,14 +63,14 @@ float2 sample_rho(float3 wo, float roughness, float ior_i, unsigned int sample_c
 
         // Since we use a QMC RNG the sample count should be a power of two.
         total_sample_count = next_power_of_two(total_sample_count);
-        total_sample_count = min(total_sample_count, rng.m_max_sample_capacity);
+        total_sample_count = min(total_sample_count, (int)rng.m_max_sample_capacity);
     }
 
     double reflected_throughput = 0.0;
     double transmitted_throughput = 0.0;
     for (int s = 0; s < total_sample_count; ++s) {
-        float3 rng_sample = rng.sample_3f(s, total_sample_count);
-        BSDFSample sample = sample_rough_BSDF(roughness, ior_i, wo, rng_sample);
+        Vector3f uv = rng.sample3f(s, total_sample_count);
+        BSDFSample sample = sample_rough_BSDF(roughness, ior_i, wo, { uv.x, uv.y, uv.z });
         if (sample.PDF.is_valid()) {
             double& throughput = sample.direction.z < 0.0f ? transmitted_throughput : reflected_throughput;
             throughput += sample.reflectance.x * abs(sample.direction.z) / sample.PDF.value();
@@ -89,11 +89,11 @@ struct TabulatedRho {
     Assets::Image into_dense_medium;
 };
 
-TabulatedRho tabulate_rho(int width, int height, int depth, unsigned int sample_count, const PmjbRNG& rng, SampleDieletricBSDF sample_rough_BSDF) {
-    Assets::Image rho_into_light_medium_image = Assets::Image::create3D("rho into light medium", Assets::PixelFormat::RGB_Float, false, Math::Vector3ui(width, height, depth));
-    Math::RGB* rho_into_light_medium_pixels = rho_into_light_medium_image.get_pixels<Math::RGB>();
-    Assets::Image rho_into_dense_medium_image = Assets::Image::create3D("rho into dense medium", Assets::PixelFormat::RGB_Float, false, Math::Vector3ui(width, height, depth));
-    Math::RGB* rho_into_dense_medium_pixels = rho_into_dense_medium_image.get_pixels<Math::RGB>();
+TabulatedRho tabulate_rho(int width, int height, int depth, unsigned int sample_count, const Math::RNG::PmjbRNG& rng, SampleDieletricBSDF sample_rough_BSDF) {
+    Assets::Image rho_into_light_medium_image = Assets::Image::create3D("rho into light medium", Assets::PixelFormat::RGB_Float, false, Vector3ui(width, height, depth));
+    RGB* rho_into_light_medium_pixels = rho_into_light_medium_image.get_pixels<RGB>();
+    Assets::Image rho_into_dense_medium_image = Assets::Image::create3D("rho into dense medium", Assets::PixelFormat::RGB_Float, false, Vector3ui(width, height, depth));
+    RGB* rho_into_dense_medium_pixels = rho_into_dense_medium_image.get_pixels<RGB>();
 
     #pragma omp parallel for
     for (int z = 0; z < depth; ++z) {
@@ -107,10 +107,10 @@ TabulatedRho tabulate_rho(int width, int height, int depth, unsigned int sample_
                 float3 wo = make_float3(sqrt(1.0f - cos_theta * cos_theta), 0.0f, cos_theta);
 
                 float2 light_rho = sample_rho(wo, roughness, light_ior_i, sample_count, rng, sample_rough_BSDF);
-                rho_into_light_medium_pixels[x + width * (y + z * height)] = Math::RGB(light_rho.x + light_rho.y, light_rho.x, light_rho.y);
+                rho_into_light_medium_pixels[x + width * (y + z * height)] = RGB(light_rho.x + light_rho.y, light_rho.x, light_rho.y);
 
                 float2 dense_rho = sample_rho(wo, roughness, dense_ior_i, sample_count, rng, sample_rough_BSDF);
-                rho_into_dense_medium_pixels[x + width * (y + z * height)] = Math::RGB(dense_rho.x + dense_rho.y, dense_rho.x, dense_rho.y);
+                rho_into_dense_medium_pixels[x + width * (y + z * height)] = RGB(dense_rho.x + dense_rho.y, dense_rho.x, dense_rho.y);
             }
         }
     }
@@ -140,8 +140,8 @@ void output_brdf(TabulatedRho rho, const std::string& filename, const std::strin
     unsigned int cos_angle_sample_count = rho.into_light_medium.get_width();
     unsigned int roughness_sample_count = rho.into_light_medium.get_height();
     unsigned int ior_i_sample_count = rho.into_light_medium.get_depth();
-    Math::RGB* into_light_medium_pixels = rho.into_light_medium.get_pixels<Math::RGB>();
-    Math::RGB* into_dense_medium_pixels = rho.into_dense_medium.get_pixels<Math::RGB>();
+    RGB* into_light_medium_pixels = rho.into_light_medium.get_pixels<RGB>();
+    RGB* into_dense_medium_pixels = rho.into_dense_medium.get_pixels<RGB>();
 
     float min_IOR_into_light_medium = rho.min_light_ior_i;
     float max_IOR_into_light_medium = rho.max_light_ior_i;
@@ -188,7 +188,7 @@ void output_brdf(TabulatedRho rho, const std::string& filename, const std::strin
             out_header << "    // Roughness " << roughness << "\n";
             out_header << "    ";
             for (int x = 0; x < int(cos_angle_sample_count); ++x) {
-                Math::RGB rho = into_light_medium_pixels[x + y * cos_angle_sample_count + z * cos_angle_sample_count * roughness_sample_count];
+                RGB rho = into_light_medium_pixels[x + y * cos_angle_sample_count + z * cos_angle_sample_count * roughness_sample_count];
                 float total_reflectance = rho.r;
                 float reflected_reflectance = rho.g;
                 out_header << "{" << format_float(total_reflectance) << ", " << format_float(reflected_reflectance) << "}, ";
@@ -209,7 +209,7 @@ void output_brdf(TabulatedRho rho, const std::string& filename, const std::strin
             out_header << "    // Roughness " << roughness << "\n";
             out_header << "    ";
             for (int x = 0; x < int(cos_angle_sample_count); ++x) {
-                Math::RGB rho = into_dense_medium_pixels[x + y * cos_angle_sample_count + z * cos_angle_sample_count * roughness_sample_count];
+                RGB rho = into_dense_medium_pixels[x + y * cos_angle_sample_count + z * cos_angle_sample_count * roughness_sample_count];
                 float total_reflectance = rho.r;
                 float reflected_reflectance = rho.g;
                 out_header << "{" << format_float(total_reflectance) << ", " << format_float(reflected_reflectance) << "}, ";

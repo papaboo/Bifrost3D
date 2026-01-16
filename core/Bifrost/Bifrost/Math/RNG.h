@@ -95,6 +95,37 @@ __always_inline__ float power_heuristic(float pdf1, float pdf2) {
 void fill_progressive_multijittered_bluenoise_samples(Vector2f* samples_begin, Vector2f* samples_end, unsigned int blue_noise_samples = 8);
 
 // ------------------------------------------------------------------------------------------------
+// Up to three dimensional blue noise distribution.
+// Useful for integrating over BRDFs.
+// ------------------------------------------------------------------------------------------------
+struct PmjbRNG {
+    unsigned int m_max_sample_capacity;
+    Bifrost::Math::Vector2f* m_samples;
+
+    PmjbRNG(unsigned int max_sample_capacity) {
+        m_max_sample_capacity = max_sample_capacity;
+        m_samples = new Bifrost::Math::Vector2f[max_sample_capacity];
+        Bifrost::Math::RNG::fill_progressive_multijittered_bluenoise_samples(m_samples, m_samples + max_sample_capacity);
+    }
+    ~PmjbRNG() {
+        delete[] m_samples;
+        m_samples = nullptr;
+        m_max_sample_capacity = 0;
+    }
+
+    Vector2f sample2f(unsigned int i) const { return m_samples[i]; }
+    Vector3f sample3f(unsigned int i, unsigned int max_sample_count) const { return Vector3f(m_samples[i], (i + 0.5f) / max_sample_count); }
+
+private:
+    // Avoid handling memory moves and copies by deleting all operations.
+    PmjbRNG(PmjbRNG& other) = delete;
+    PmjbRNG(PmjbRNG&& other) = delete;
+
+    PmjbRNG& operator=(PmjbRNG& rhs) = delete;
+    PmjbRNG& operator=(PmjbRNG&& rhs) = delete;
+};
+
+// ------------------------------------------------------------------------------------------------
 // Linear congruential random number generator
 // ------------------------------------------------------------------------------------------------
 struct LinearCongruential final {

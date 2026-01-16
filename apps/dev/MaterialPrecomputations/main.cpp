@@ -6,8 +6,6 @@
 // See LICENSE.txt for more detail.
 // ------------------------------------------------------------------------------------------------
 
-#include <PmjbRNG.h>
-
 #include <FitRhoApproximation.h>
 #include <GGXAlphaFromMaxPDF.h>
 #include <PrecomputeDielectricBSDFRho.h>
@@ -17,6 +15,7 @@
 #include <OptiXRenderer/Shading/BSDFs/GGX.h>
 
 #include <Bifrost/Assets/Image.h>
+#include <Bifrost/Math/RNG.h>
 
 #include <StbImageWriter/StbImageWriter.h>
 
@@ -34,7 +33,7 @@ int main(int argc, char** argv) {
     const unsigned int width = 32, height = 32, sample_count = 4096;
 
     Images::allocate(1);
-    PmjbRNG rng = PmjbRNG(16384);
+    Bifrost::Math::RNG::PmjbRNG rng(16384u);
 
     // fit_GGX_rho_approximation(output_dir);
 
