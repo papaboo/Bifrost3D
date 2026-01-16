@@ -9,25 +9,26 @@
 #ifndef _PRECOMPUTE_ROUGH_BRDF_RHO_H_
 #define _PRECOMPUTE_ROUGH_BRDF_RHO_H_
 
-#include <PmjbRNG.h>
-
 #include <Bifrost/Assets/Image.h>
+#include <Bifrost/Math/RNG.h>
 
 #include <fstream>
 
 namespace PrecomputeRoughBRDFRho {
 
 using namespace Bifrost;
+using namespace Bifrost::Math;
 using namespace optix;
 using namespace OptiXRenderer;
 
 typedef BSDFSample(*SampleRoughBRDF)(float roughness, float3 wo, float2 random_sample);
 
-float sample_rho(float3 wo, float roughness, unsigned int sample_count, const PmjbRNG& rng, SampleRoughBRDF sample_rough_BSDF) {
+float sample_rho(float3 wo, float roughness, unsigned int sample_count, const Math::RNG::PmjbRNG& rng, SampleRoughBRDF sample_rough_BSDF) {
 
     double throughput = 0.0;
     for (unsigned int s = 0; s < sample_count; ++s) {
-        BSDFSample sample = sample_rough_BSDF(roughness, wo, rng.sample_2f(s));
+        Vector2f uv = rng.sample2f(s);
+        BSDFSample sample = sample_rough_BSDF(roughness, wo, { uv.x, uv.y });
         if (sample.PDF.is_valid())
             throughput += sample.reflectance.x * sample.direction.z / sample.PDF.value();
     }
@@ -35,9 +36,9 @@ float sample_rho(float3 wo, float roughness, unsigned int sample_count, const Pm
     return float(throughput / sample_count);
 }
 
-Assets::Image tabulate_rho(unsigned int width, unsigned int height, unsigned int sample_count, const PmjbRNG& rng, SampleRoughBRDF sample_rough_BSDF) {
-    Assets::Image rho_image = Assets::Image::create2D("rho", Assets::PixelFormat::RGB_Float, false, Math::Vector2ui(width, height));
-    Math::RGB* rho_image_pixels = rho_image.get_pixels<Math::RGB>();
+Assets::Image tabulate_rho(unsigned int width, unsigned int height, unsigned int sample_count, const Math::RNG::PmjbRNG& rng, SampleRoughBRDF sample_rough_BSDF) {
+    Assets::Image rho_image = Assets::Image::create2D("rho", Assets::PixelFormat::RGB_Float, false, Vector2ui(width, height));
+    RGB* rho_image_pixels = rho_image.get_pixels<RGB>();
 
 #pragma omp parallel for
     for (int y = 0; y < int(height); ++y) {
@@ -46,7 +47,7 @@ Assets::Image tabulate_rho(unsigned int width, unsigned int height, unsigned int
             float cos_theta = fmaxf(0.000001f, x / float(width - 1));
             float3 wo = make_float3(sqrt(1.0f - cos_theta * cos_theta), 0.0f, cos_theta);
             float rho = sample_rho(wo, roughness, sample_count, rng, sample_rough_BSDF);
-            rho_image_pixels[x + y * width] = Math::RGB(rho);
+            rho_image_pixels[x + y * width] = RGB(rho);
         }
     }
 
@@ -68,7 +69,7 @@ void output_brdf(Assets::Image image, int sample_count, const std::string& filen
 
     unsigned int width = image.get_width();
     unsigned int height = image.get_height();
-    Math::RGB* image_pixels = image.get_pixels<Math::RGB>();
+    RGB* image_pixels = image.get_pixels<RGB>();
 
     std::ofstream out_header(filename);
     out_header <<
@@ -98,7 +99,7 @@ void output_brdf(Assets::Image image, int sample_count, const std::string& filen
         out_header << "    // Roughness " << roughness << "\n";
         out_header << "    ";
         for (int x = 0; x < int(width); ++x) {
-            Math::RGB& rho = image_pixels[x + y * width];
+            RGB& rho = image_pixels[x + y * width];
             out_header << format_float(rho.r) << ", ";
         }
         out_header << "\n";

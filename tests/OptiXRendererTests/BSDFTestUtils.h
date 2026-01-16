@@ -24,30 +24,11 @@ namespace BSDFTestUtils {
 
 using namespace optix;
 
-struct PmjbRNG {
-    unsigned int m_max_sample_capacity;
-    Bifrost::Math::Vector2f* m_samples;
-
-    PmjbRNG(unsigned int max_sample_capacity) {
-        m_max_sample_capacity = max_sample_capacity;
-        m_samples = new Bifrost::Math::Vector2f[max_sample_capacity];
-        Bifrost::Math::RNG::fill_progressive_multijittered_bluenoise_samples(m_samples, m_samples + max_sample_capacity);
-    }
-    PmjbRNG(PmjbRNG& other) = delete;
-    PmjbRNG(PmjbRNG&& other) = default;
-
-    PmjbRNG& operator=(PmjbRNG& rhs) = delete;
-    PmjbRNG& operator=(PmjbRNG&& rhs) = default;
-
-    ~PmjbRNG() { delete[] m_samples; }
-
-    float2 sample_2f(int i) const { return make_float2(m_samples[i].x, m_samples[i].y); }
-    float3 sample_3f(int i, int max_sample_count) const { return make_float3(sample_2f(i), (i + 0.5f) / max_sample_count); }
-};
-
 // Precompute the random numbers and make them available as a global constant,
 // to make it easy to reuse across the BSDF sample test utils and avoid recomputing them multiple times.
-static const PmjbRNG g_rng = PmjbRNG(16384u);
+static const Bifrost::Math::RNG::PmjbRNG g_bsdf_rng(16384u);
+inline float2 bsdf_rng_sample2f(int i) { auto s = g_bsdf_rng.sample2f(i); return { s.x, s.y }; }
+inline float3 bsdf_rng_sample3f(int i, int max_sample_count) { auto s = g_bsdf_rng.sample3f(i, max_sample_count); return { s.x, s.y, s.z }; }
 
 struct RhoResult {
     float3 reflectance;
@@ -65,18 +46,18 @@ struct RhoResult {
 };
 
 template <typename BSDFModel>
-RhoResult directional_hemispherical_reflectance_function(BSDFModel bsdf_model, float3 wo, unsigned int sample_count) {
+inline RhoResult directional_hemispherical_reflectance_function(BSDFModel bsdf_model, float3 wo, unsigned int sample_count) {
     using namespace Bifrost::Math;
     using namespace optix;
 
     // Return an invalid result if more samples are requested than can be produced.
-    if (g_rng.m_max_sample_capacity < sample_count)
+    if (g_bsdf_rng.m_max_sample_capacity < sample_count)
         return RhoResult::invalid();
 
     Statistics<double> reflectance_statistics[3] = { Statistics<double>(), Statistics<double>(), Statistics<double>() };
     double3 summed_directions = { 0.0, 0.0, 0.0 };
     for (unsigned int i = 0u; i < sample_count; ++i) {
-        BSDFSample sample = bsdf_model.sample(wo, g_rng.sample_3f(i, sample_count));
+        BSDFSample sample = bsdf_model.sample(wo, bsdf_rng_sample3f(i, sample_count));
 
         float3 reflectance = { 0, 0, 0 };
         if (sample.PDF.is_valid()) {
@@ -106,7 +87,7 @@ RhoResult directional_hemispherical_reflectance_function(BSDFModel bsdf_model, f
 }
 
 template <typename BSDFModel>
-void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count, optix::float3 expected_rho_std_dev, float epsilon = 0.01f) {
+inline void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count, optix::float3 expected_rho_std_dev, float epsilon = 0.01f) {
     optix::float3 total_std_dev = { 0, 0, 0 };
     for (float cos_theta : {0.1f, 0.3f, 0.5f, 0.7f, 0.9f, 1.0f}) {
         float3 wo = w_from_cos_theta(cos_theta);
@@ -119,14 +100,14 @@ void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count
 }
 
 template <typename BSDFModel>
-void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count, float expected_rho_std_dev, float epsilon = 0.01f) {
+inline void BSDF_sampling_variance_test(BSDFModel bsdf_model, unsigned int sample_count, float expected_rho_std_dev, float epsilon = 0.01f) {
     BSDF_sampling_variance_test(bsdf_model, sample_count, optix::make_float3(expected_rho_std_dev), epsilon);
 }
 
 template <typename BSDFModel>
-void helmholtz_reciprocity(BSDFModel bsdf_model, float3 wo, unsigned int sample_count) {
+inline void helmholtz_reciprocity(BSDFModel bsdf_model, float3 wo, unsigned int sample_count) {
     for (unsigned int i = 0u; i < sample_count; ++i) {
-        float3 rng_sample = g_rng.sample_3f(i, sample_count);
+        float3 rng_sample = bsdf_rng_sample3f(i, sample_count);
         BSDFSample sample = bsdf_model.sample(wo, rng_sample);
 
         if (sample.PDF.is_valid()) {
@@ -137,9 +118,9 @@ void helmholtz_reciprocity(BSDFModel bsdf_model, float3 wo, unsigned int sample_
 }
 
 template <typename BSDFModel>
-void BSDF_consistency_test(BSDFModel bsdf_model, float3 wo, unsigned int sample_count) {
+inline void BSDF_consistency_test(BSDFModel bsdf_model, float3 wo, unsigned int sample_count) {
     for (unsigned int i = 0u; i < sample_count; ++i) {
-        float3 rng_sample = g_rng.sample_3f(i, sample_count);
+        float3 rng_sample = bsdf_rng_sample3f(i, sample_count);
         BSDFSample sample = bsdf_model.sample(wo, rng_sample);
 
         if (sample.PDF.is_valid()) {
@@ -157,11 +138,11 @@ void BSDF_consistency_test(BSDFModel bsdf_model, float3 wo, unsigned int sample_
 
 // Sample BRDF over a sphere and validate that if the BRDF reflects light, then the PDF must be positive.
 template <typename BSDFModel>
-void PDF_positivity_test(BSDFModel bsdf_model, optix::float3 wo, unsigned int sample_count) {
+inline void PDF_positivity_test(BSDFModel bsdf_model, optix::float3 wo, unsigned int sample_count) {
     using namespace optix;
 
     for (unsigned int i = 0u; i < sample_count; ++i) {
-        auto wi = Distributions::UniformSphere::sample(g_rng.sample_2f(i)).direction;
+        auto wi = Distributions::UniformSphere::sample(bsdf_rng_sample2f(i)).direction;
 
         BSDFResponse sample = bsdf_model.evaluate_with_PDF(wo, wi);
 
@@ -176,7 +157,7 @@ void PDF_positivity_test(BSDFModel bsdf_model, optix::float3 wo, unsigned int sa
     }
 }
 
-float3 w_from_cos_theta(float cos_theta) {
+inline float3 w_from_cos_theta(float cos_theta) {
     return { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
 }
 
