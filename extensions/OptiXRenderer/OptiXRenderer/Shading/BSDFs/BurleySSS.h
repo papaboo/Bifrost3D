@@ -33,18 +33,29 @@ using namespace optix;
 // Container for parameters for the Burley's subsurface scattering approximation.
 // We precompute the parameters and store them to avoid redoing the same transformations multiple times.
 struct Parameters {
+    enum class LightConfig { Search, Diffuse };
+
     float3 diffuse_albedo;
 
     // l / s from equation 3 in Approximate Reflectance Profiles for Efficient Subsurface Scattering
     float3 diffuse_mean_free_path;
 
+    // Equation 5 in Approximate Reflectance Profiles for Efficient Subsurface Scattering.
+    __inline_all__ static float3 search_light_mean_free_path_scaling_term(float3 diffuse_albedo) {
+        float3 a = diffuse_albedo - 0.8f;
+        float3 aaa = a * a * a;
+        return 1.85f - diffuse_albedo + 7.0f * make_float3(abs(aaa.x), abs(aaa.y), abs(aaa.z));
+    }
+
     // Equation 6 in Approximate Reflectance Profiles for Efficient Subsurface Scattering.
-    __inline_all__ static float3 mean_free_path_scaling_term(float3 diffuse_albedo) {
+    __inline_all__ static float3 diffuse_light_mean_free_path_scaling_term(float3 diffuse_albedo) {
         return 1.9f - diffuse_albedo + 3.5f * pow2(diffuse_albedo - 0.8f);
     }
 
-    __inline_all__ static Parameters create(float3 diffuse_albedo, float3 mean_free_path) {
-        float3 s = mean_free_path_scaling_term(diffuse_albedo);
+    __inline_all__ static Parameters create(float3 diffuse_albedo, float3 mean_free_path, LightConfig light_config = LightConfig::Diffuse) {
+        float3 s = light_config == LightConfig::Diffuse ?
+            diffuse_light_mean_free_path_scaling_term(diffuse_albedo) :
+            search_light_mean_free_path_scaling_term(diffuse_albedo);
         return { diffuse_albedo, mean_free_path / s };
     }
 };
