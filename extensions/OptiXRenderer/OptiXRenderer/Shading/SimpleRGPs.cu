@@ -57,18 +57,15 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     int accumulation_count, const CameraStateGPU& camera_state_GPU) {
 
     MonteCarloPayload payload = {};
+    payload.pixel_hash = RNG::pcg2d(x, y).x;
+    payload.accumulation_count = accumulation_count;
+
     payload.throughput = make_float3(1.0f);
     payload.light_sample = LightSample::none();
     payload.bsdf_PDF = PDF::delta_dirac();
 
-#if LCG_RNG
-    payload.rng.set_state(__brev(RNG::teschner_hash(x, y) + accumulation_count));
-#elif PRACTICAL_SOBOL_RNG
-    payload.rng = RNG::PracticalScrambledSobol(x, y, accumulation_count);
-#endif
-
     // Generate rays.
-    RNG::LinearCongruential rng; rng.set_state(__brev(RNG::teschner_hash(x, y, accumulation_count)));
+    RNG::LinearCongruential rng(__brev(RNG::teschner_hash(x, y, accumulation_count)));
     float2 screen_pos = make_float2(x, y) + (accumulation_count == 0 ? make_float2(0.5f) : rng.sample2f());
     float2 viewport_pos = make_float2(screen_pos.x / float(image_width), screen_pos.y / float(image_height));
     fill_ray_info(viewport_pos, camera_state_GPU, payload.position, payload.direction);
