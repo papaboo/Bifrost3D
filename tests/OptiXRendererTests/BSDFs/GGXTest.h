@@ -563,9 +563,8 @@ GTEST_TEST(GGX, black_transmission_never_sampled) {
         for (float cos_theta_o : { 0.1f, 0.5f, 0.9f }) {
             optix::float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
 
-            auto rng = RNG::PracticalScrambledSobol(0, 0);
             for (int i = 0; i < 128; i++) {
-                float3 rng_sample = make_float3(rng.sample4f());
+                float3 rng_sample = BSDFTestUtils::bsdf_rng_sample3f(i, 128);
                 auto sample = ggx.sample(wo, rng_sample);
 
                 // Test that the sample always represents a reflection.
