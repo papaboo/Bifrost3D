@@ -437,7 +437,12 @@ struct __align__(16) MonteCarloPayload {
     unsigned int accumulation_count;
 
     __inline_dev__ optix::float4 rng_sample4f(unsigned int sampling_dimension) {
-        return RNG::PracticalScrambledSobol::sample4f(accumulation_count, pixel_hash, RngSamplingDimension::MAX_DIMENSIONS * bounces + sampling_dimension);
+        unsigned int dimension = RngSamplingDimension::MAX_DIMENSIONS * bounces + sampling_dimension;
+        // Comment in to debug correlation errors from QMC RNG.
+        // RNG::LinearCongruential rng = RNG::LinearCongruential(pixel_hash ^ accumulation_count);
+        // rng.skip_ahead(dimension);
+        // return rng.sample4f();
+        return RNG::PracticalScrambledSobol::sample4f(accumulation_count, pixel_hash, dimension);
     }
 
     __inline_dev__ void debug_output(optix::float3 color) {

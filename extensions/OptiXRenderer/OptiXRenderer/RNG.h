@@ -171,6 +171,13 @@ public:
         m_state = seed;
     }
 
+    __inline_all__ void skip_ahead(int samples_skipped) {
+        // Inefficient implementation, but this is only used to debug correlation errors, so inefficiency is okay.
+        // For a fast implementation see https://www.nayuki.io/page/fast-skipping-in-a-linear-congruential-generator
+        for (int i = 0; i < samples_skipped; ++i)
+            sample1ui();
+    }
+
     __inline_all__ unsigned int sample1ui() {
         m_state = multiplier * m_state + increment;
         return m_state;
