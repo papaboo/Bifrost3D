@@ -121,6 +121,28 @@ __inline_all__ unsigned int laine_karras_hash(unsigned int x, unsigned int seed)
     return x;
 }
 
+// Hash Functions for GPU Rendering, Jarzynski et al., 2020, https://jcgt.org/published/0009/03/02/
+// Source of all hash functions https://www.shadertoy.com/view/XlGcRh
+// Fast hash with good distribution.
+__inline_all__ optix::uint2 pcg2d(unsigned int x, unsigned int y) {
+    x = x * 1664525u + 1013904223u;
+    y = y * 1664525u + 1013904223u;
+
+    x += y * 1664525u;
+    y += x * 1664525u;
+
+    x = x ^ (x >> 16u);
+    y = y ^ (y >> 16u);
+
+    x += y * 1664525u;
+    y += x * 1664525u;
+
+    x = x ^ (x >> 16u);
+    y = y ^ (y >> 16u);
+
+    return { x, y };
+}
+
 // Hash developed by cessen and used in pbrt4.
 // Can be used as a fast replacement for Owen-scrambling.
 // https://psychopath.io/post/2021_01_30_building_a_better_lk_hash
@@ -145,8 +167,9 @@ private:
     unsigned int m_state;
 
 public:
-    __inline_all__ void set_state(unsigned int seed) { m_state = seed; }
-    __inline_all__ unsigned int get_state() const { return m_state; }
+    __inline_all__ LinearCongruential(unsigned int seed) {
+        m_state = seed;
+    }
 
     __inline_all__ unsigned int sample1ui() {
         m_state = multiplier * m_state + increment;
@@ -203,9 +226,13 @@ private:
 // ------------------------------------------------------------------------------------------------
 // Practical Hash-based Owen Scrambling, Brent Burley, 2020
 // We use primes as our per bounce seed to decorrelate the samples.
+// For a practical implementation in a path tracer see Blender's Cycles: sobol_burley.h and path_rng_4D in pattern.h
 // ------------------------------------------------------------------------------------------------
-struct __align__(4) PracticalScrambledSobol {
+struct PracticalScrambledSobol {
 private:
+    // The original source code from Burley uses a function called hash_combine to mix the seed and dimensions.
+    // But no implementation is given in the source and there is no standard c++ hash_combine function.
+    // This implementation is found at https://www.shadertoy.com/view/wlyyDm, which unfortunately also doesn't have a source.
     __inline_all__ static unsigned int hash_combine(unsigned int seed, unsigned int v) {
         return seed ^ (v + (seed << 6) + (seed >> 2));
     }
@@ -230,7 +257,9 @@ private:
         return { res[0], res[1], res[2], res[3] };
     }
 
-    __inline_all__ static optix::uint4 shuffled_scrambled_sobol4d(unsigned int index, unsigned int seed) {
+public:
+
+    __inline_all__ static optix::uint4 sample4ui(unsigned int index, unsigned int seed) {
         index = nested_uniform_scramble_base2(index, seed);
         optix::uint4 xs = sobol_sample4ui(index);
         xs.x = nested_uniform_scramble_base2(xs.x, hash_combine(seed, 0));
@@ -240,38 +269,20 @@ private:
         return xs;
     }
 
-    unsigned int m_index : 24;
-    unsigned int m_dimension : 8;
-
-public:
-    PracticalScrambledSobol() = default;
-
-    __inline_all__ PracticalScrambledSobol(unsigned int index, unsigned int dimension)
-        : m_index(index), m_dimension(dimension) { }
-
-    __inline_all__ PracticalScrambledSobol(unsigned int x, unsigned int y, unsigned int accumulation_count) {
-        // Poor mans attempt at simple blue noise.
-        // morton_encode(x, y) ^ accumulation_count gives perfect blue noise in the first frame,
-        // but starts to share random number chains between pixels from the second accumulation.
-        // That means information loss for denoisers and RESTIR.
-        // To avoid that we space out the index repetition by offseting the index by morton index << 8,
-        // this offsets the indices by enough that shared information is far enough apart that RESTIR shouldn't care
-        // and it seems fair to assume that after 256 samples per pixel we'd have enough information for a denoiser.
-        // If more than 256 samples per pixel are needed then the user is assummed to want a ground truth reference without denoising,
-        // at which point the sample correlation isn't an issue for the individual pixel.
-        int morton_index = morton_encode(x, y);
-        m_index = ((morton_index << 8) + morton_index) ^ accumulation_count;
-        m_dimension = 0;
+    // Helper function for generating samples in a path tracer.
+    __inline_all__ static optix::uint4 sample4ui(unsigned int accumulation_count, unsigned int pixel_hash, unsigned int dimension) {
+        // Implemented according to section 5.3 'Use in a Path Tracer'.
+        // Specifically we hash the pixel hash and dimension together using a high quality hash function.
+        // The reason that this is favored over simply reseeding using an RNG is that this allows dimensions to be sampled out of order.
+        unsigned int index = accumulation_count;
+        unsigned int seed = pcg2d(pixel_hash, dimension).x;
+        return sample4ui(index, seed);
     }
 
-    __inline_all__ unsigned int get_state() const { return m_dimension; }
-    __inline_all__ void set_state(unsigned int state) { m_dimension = state; }
-
-    __inline_all__ optix::uint4 sample4ui() {
-        return shuffled_scrambled_sobol4d(m_index, primes[m_dimension++ % 128]);
+    // Helper function for generating samples in a path tracer.
+    __inline_all__ static optix::float4 sample4f(unsigned int accumulation_count, unsigned int pixel_hash, unsigned int dimension) {
+        return optix::make_float4(sample4ui(accumulation_count, pixel_hash, dimension)) * uint_normalizer;
     }
-
-    __inline_all__ optix::float4 sample4f() { return optix::make_float4(sample4ui()) * uint_normalizer; }
 };
 
 } // NS RNG

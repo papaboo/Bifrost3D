@@ -14,13 +14,6 @@
 #define DOUBLE_PRECISION_ACCUMULATION_BUFFER 1
 #define PRESAMPLE_ENVIRONMENT_MAP 1
 
-// Pick an RNG by defining which is used.
-// Define LCG_RNG to 1 to use a simple LCG for random number generation.
-#define LCG_RNG 0
-// Define PRACTICAL_SOBOL_RNG to 1 to use the QMC RNG from Practical Hash-Based Owen Scrambling.
-#define PRACTICAL_SOBOL_RNG 1
-static_assert((LCG_RNG + PRACTICAL_SOBOL_RNG) == 1, "Only one RNG can be selected.");
-
 template <typename T>
 void validate_optix_resource(T resource, char* file, int line) {
     try {

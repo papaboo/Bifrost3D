@@ -407,13 +407,16 @@ struct __align__(16) Material {
 // Ray payloads.
 //----------------------------------------------------------------------------
 
+enum RngSamplingDimension {
+    NEXT_EVENT_ESTIMATION = 0,
+    BSDF = 1,
+    MAX_DIMENSIONS = 2,
+};
+
 struct __align__(16) MonteCarloPayload {
     optix::float3 radiance;
-#if LCG_RNG
-    RNG::LinearCongruential rng;
-#elif PRACTICAL_SOBOL_RNG
-    RNG::PracticalScrambledSobol rng;
-#endif
+    PrimitiveID primitive_id;
+
     optix::float3 throughput;
     unsigned int bounces;
 
@@ -430,7 +433,12 @@ struct __align__(16) MonteCarloPayload {
     int material_index;
 
     optix::float2 texcoord;
-    PrimitiveID primitive_id;
+    unsigned int pixel_hash;
+    unsigned int accumulation_count;
+
+    __inline_dev__ optix::float4 rng_sample4f(unsigned int sampling_dimension) {
+        return RNG::PracticalScrambledSobol::sample4f(accumulation_count, pixel_hash, RngSamplingDimension::MAX_DIMENSIONS * bounces + sampling_dimension);
+    }
 
     __inline_dev__ void debug_output(optix::float3 color) {
         throughput = { 0,0,0 };
