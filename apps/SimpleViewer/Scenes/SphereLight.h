@@ -90,7 +90,7 @@ void create(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneRoot sc
         Materials::Data material0_data = Materials::Data::create_dielectric(RGB(0.02f, 0.27f, 0.33f), 1, 0.02f);
         Materials::Data material1_data = Materials::Data::create_metal(gold_tint, 0.02f);
 
-        Mesh sphere_mesh = MeshCreation::revolved_sphere(32, 16);
+        Mesh sphere_mesh = MeshCreation::revolved_sphere(32, 16, MeshFlag::GeometryBuffers);
         Transform sphere_transform = Transform(Vector3f(0.0f, 1.0f, 0.0f), Quaternionf::identity(), 1.5f);
 
         for (int m = 0; m < 9; ++m) {

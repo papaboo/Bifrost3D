@@ -17,10 +17,14 @@ using namespace Bifrost::Math;
 
 namespace Bifrost::Assets::MeshCreation {
 
-void default_initialize_tint_and_roughness(Mesh mesh) {
+void default_initialize_shading(Mesh mesh) {
     if (mesh.get_tint_and_roughness() != nullptr)
         for (TintRoughness& color : mesh.get_tint_and_roughness_iterable())
             color = { UNorm8::one(), UNorm8::one(), UNorm8::one(), UNorm8::one() };
+
+    if (mesh.get_emission() != nullptr)
+        for (RGB& emission : mesh.get_emission_iterable())
+            emission = 2 * RGB::red();
 }
 
 Mesh plane(unsigned int quads_per_edge, MeshFlags buffer_bitmask) {
@@ -33,7 +37,7 @@ Mesh plane(unsigned int quads_per_edge, MeshFlags buffer_bitmask) {
     unsigned int index_count = quad_count * 2;
 
     Mesh mesh = Mesh("Plane", index_count, vertex_count, buffer_bitmask);
-    default_initialize_tint_and_roughness(mesh);
+    default_initialize_shading(mesh);
 
     // Vertex attributes.
     float tc_normalizer = 1.0f / quads_per_edge;
@@ -79,7 +83,7 @@ Mesh box(unsigned int quads_per_edge, Vector3f size, MeshFlags buffer_bitmask) {
     unsigned int vertex_count = verts_per_side * sides;
 
     Mesh mesh = Mesh("Box", index_count, vertex_count, buffer_bitmask);
-    default_initialize_tint_and_roughness(mesh);
+    default_initialize_shading(mesh);
 
     // Create the vertices.
     // [..TOP.. ..BOTTOM.. ..LEFT.. ..RIGHT.. ..FRONT.. ..BACK..]
@@ -221,7 +225,7 @@ Mesh cylinder(unsigned int vertical_quads, unsigned int circumference_quads, Mes
     float radius = 0.5f;
 
     Mesh mesh = Mesh("Cylinder", index_count, vertex_count, buffer_bitmask);
-    default_initialize_tint_and_roughness(mesh);
+    default_initialize_shading(mesh);
 
     // Vertex layout is
     // [..TOP.. ..BOTTOM.. ..SIDE..]
@@ -341,7 +345,7 @@ Mesh revolved_sphere(unsigned int longitude_quads, unsigned int latitude_quads, 
     float radius = 0.5f;
 
     Mesh mesh = Mesh("RevolvedSphere", index_count, vertex_count, buffer_bitmask);
-    default_initialize_tint_and_roughness(mesh);
+    default_initialize_shading(mesh);
 
     { // Vertex attributes.
         Vector3f* positions = mesh.get_positions();
@@ -419,7 +423,7 @@ Mesh torus(unsigned int revolution_quads, unsigned int circumference_quads, floa
     float major_radius = 0.5f;
 
     Mesh mesh = Mesh("Torus", index_count, vertex_count, buffer_bitmask);
-    default_initialize_tint_and_roughness(mesh);
+    default_initialize_shading(mesh);
 
     // Precompute local normal directions.
     Core::Array<Vector3f> local_normal_dirs(circumference_vertex_count);

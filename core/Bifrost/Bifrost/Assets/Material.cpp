@@ -201,6 +201,11 @@ void Materials::set_transmission(MaterialID material_ID, float transmission) {
     flag_as_updated(material_ID);
 }
 
+void Materials::set_emission(MaterialID material_ID, Math::RGB emission) {
+    m_materials[material_ID].emission = emission;
+    flag_as_updated(material_ID);
+}
+
 void Materials::flag_as_updated(MaterialID material_ID) {
     m_changes.add_change(material_ID, Change::Updated);
 }

@@ -57,11 +57,11 @@ void create_sphere_scene(Bifrost::Scene::CameraID camera_ID, Bifrost::Scene::Sce
             Vector3f translation = Vector3f(x_offset + i * sphere_spacing, y_offset, 0.0f);
             Transform sphere_transform = Transform(translation, Quaternionf::identity(), sphere_scale);
 
-            Mesh sphere_mesh = MeshCreation::revolved_sphere(1 << (i + 2), 1 << (i + 1));
+            Mesh sphere_mesh = MeshCreation::revolved_sphere(1 << (i + 2), 1 << (i + 1), MeshFlag::GeometryBuffers);
             add_mesh_to_scene(sphere_mesh, sphere_transform);
 
             sphere_transform.translation.z += 1.5f * sphere_spacing;
-            sphere_mesh = MeshCreation::spherical_box(1 << i);
+            sphere_mesh = MeshCreation::spherical_box(1 << i, MeshFlag::GeometryBuffers);
             add_mesh_to_scene(sphere_mesh, sphere_transform);
         }
     }
