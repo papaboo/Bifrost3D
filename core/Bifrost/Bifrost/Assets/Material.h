@@ -102,6 +102,7 @@ public:
         float coverage;
         TextureID coverage_texture_ID;
         float transmission;
+        Math::RGB emission;
         Flags flags;
 
         static Data create_dielectric(Math::RGB tint, float roughness, float specularity = default_specularity) {
@@ -204,6 +205,9 @@ public:
     static inline float get_transmission(MaterialID material_ID) { return m_materials[material_ID].transmission; }
     static void set_transmission(MaterialID material_ID, float transmission);
 
+    static inline Math::RGB get_emission(MaterialID material_ID) { return m_materials[material_ID].emission; }
+    static void set_emission(MaterialID material_ID, Math::RGB emission);
+
     //-------------------------------------------------------------------------
     // Changes since last game loop tick.
     //-------------------------------------------------------------------------
@@ -274,6 +278,13 @@ public:
         return Materials::create(name, data);
     }
 
+    static Material create_emissive(const std::string& name, Math::RGB emission) {
+        Materials::Data data = {};
+        data.emission = emission;
+        data.coverage = 1.0f;
+        return Materials::create(name, data);
+    }
+
     inline void destroy() { Materials::destroy(m_ID); }
     inline bool exists() const { return Materials::has(m_ID); }
     inline const MaterialID get_ID() const { return m_ID; }
@@ -328,7 +339,10 @@ public:
     inline void set_coverage_texture_ID(TextureID texture_ID) { Materials::set_coverage_texture_ID(m_ID, texture_ID); }
 
     inline float get_transmission() const { return Materials::get_transmission(m_ID); }
-    inline void set_transmission(float transmission) { Materials::set_coverage(m_ID, transmission); }
+    inline void set_transmission(float transmission) { Materials::set_transmission(m_ID, transmission); }
+
+    inline Math::RGB get_emission() const { return Materials::get_emission(m_ID); }
+    inline void set_emission(Math::RGB transmission) { Materials::set_emission(m_ID, transmission); }
 
     inline Materials::Changes get_changes() const { return Materials::get_changes(m_ID); }
 

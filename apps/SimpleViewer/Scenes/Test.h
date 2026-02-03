@@ -201,7 +201,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
             world_mask.change_format(PixelFormat::Roughness8, false);
             glass_material.set_tint_roughness_texture(Texture::create2D(world_mask));
 
-            Mesh sphere_mesh = MeshCreation::revolved_sphere(64, 32);
+            Mesh sphere_mesh = MeshCreation::revolved_sphere(64, 32, { MeshFlag::GeometryBuffers, MeshFlag::Texcoord });
             Vector2f* uvs = sphere_mesh.get_texcoords();
             for (unsigned int v = 0; v < sphere_mesh.get_vertex_count(); ++v)
                 uvs[v].y = 1.0f - uvs[v].y;
@@ -227,7 +227,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
 
         Transform transform = Transform(Vector3f(-1.5f, 0.5f, 0.0f));
         SceneNode cylinder_node = SceneNode("Destroyed Cylinder", transform);
-        Mesh cylinder_mesh = MeshCreation::cylinder(4, 16);
+        Mesh cylinder_mesh = MeshCreation::cylinder(4, 16, { MeshFlag::GeometryBuffers, MeshFlag::Texcoord });
         MeshModel(cylinder_node, cylinder_mesh, material);
         cylinder_node.set_parent(root_node);
     }
@@ -398,7 +398,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
 
         Transform transform = Transform(Vector3f(1.5f, 0.5f, 0.0f));
         SceneNode sphere_node = SceneNode("Sphere", transform);
-        Mesh sphere_mesh = MeshCreation::revolved_sphere(128, 64);
+        Mesh sphere_mesh = MeshCreation::revolved_sphere(128, 64, { MeshFlag::GeometryBuffers, MeshFlag::Texcoord });
         MeshModel(sphere_node, sphere_mesh, material);
         sphere_node.set_parent(root_node);
 
@@ -426,7 +426,7 @@ void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::S
 
         Transform transform = Transform(Vector3f(3.0f, 0.35f, 0.0f), Quaternionf::identity(), 0.7f);
         SceneNode torus_node = SceneNode("Swizz torus", transform);
-        Mesh torus_mesh = MeshCreation::torus(64, 64, 0.49f);
+        Mesh torus_mesh = MeshCreation::torus(64, 64, 0.49f, { MeshFlag::GeometryBuffers, MeshFlag::Texcoord });
 
         MeshModel(torus_node, torus_mesh, material);
         torus_node.set_parent(root_node);
