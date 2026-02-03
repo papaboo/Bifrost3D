@@ -54,13 +54,14 @@ TEST_F(Assets_Mesh, invalid_mesh_properties) {
     EXPECT_EQ(nullptr, invalid_mesh.get_normals());
     EXPECT_EQ(nullptr, invalid_mesh.get_texcoords());
     EXPECT_EQ(nullptr, invalid_mesh.get_tint_and_roughness());
+    EXPECT_EQ(nullptr, invalid_mesh.get_emission());
     Math::AABB bounds = invalid_mesh.get_bounds();
     EXPECT_TRUE(isnan(bounds.minimum.x) && isnan(bounds.minimum.y) && isnan(bounds.minimum.z) &&
                 isnan(bounds.maximum.x) && isnan(bounds.maximum.y) && isnan(bounds.maximum.z));
 }
 
 TEST_F(Assets_Mesh, create) {
-    Mesh mesh = Mesh("TestMesh", 32u, 16u);
+    Mesh mesh = Mesh("TestMesh", 32u, 16u, MeshFlag::AllBuffers);
 
     EXPECT_TRUE(mesh.exists());
     EXPECT_EQ(32u, mesh.get_primitive_count());
@@ -70,6 +71,7 @@ TEST_F(Assets_Mesh, create) {
     EXPECT_NE(nullptr, mesh.get_normals());
     EXPECT_NE(nullptr, mesh.get_texcoords());
     EXPECT_NE(nullptr, mesh.get_tint_and_roughness());
+    EXPECT_NE(nullptr, mesh.get_emission());
     EXPECT_INVALID_AABB(mesh.get_bounds());
 
     // Test mesh created notification.
@@ -90,6 +92,7 @@ TEST_F(Assets_Mesh, create_only_positions) {
     EXPECT_EQ(nullptr, mesh.get_normals());
     EXPECT_EQ(nullptr, mesh.get_texcoords());
     EXPECT_EQ(nullptr, mesh.get_tint_and_roughness());
+    EXPECT_EQ(nullptr, mesh.get_emission());
 
     // Test mesh created notification.
     Core::Iterable<Meshes::ChangedIterator> changed_meshes = Meshes::get_changed_meshes();

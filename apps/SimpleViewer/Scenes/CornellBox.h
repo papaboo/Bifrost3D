@@ -56,7 +56,7 @@ void create_cornell_box(Scene::CameraID camera_ID, Scene::SceneNode root_node) {
     }
 
     { // Create room.
-        Mesh plane_mesh = MeshCreation::plane(1);
+        Mesh plane_mesh = MeshCreation::plane(1, MeshFlag::GeometryBuffers);
         float PI_half = PI<float>() * 0.5f;
 
         { // Floor
