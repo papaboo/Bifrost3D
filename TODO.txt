@@ -19,6 +19,9 @@ BACKLOG:
 * Improving shadow terminator
  * Reflections: Hacking the shadow terminator https://jo.dreggn.org/home/2021_terminator.pdf
  * Refractions: Taming the shadow terminator https://www.yiningkarlli.com/projects/shadowterminator.html
+* Subsurface material with artistic parameters
+ * Burley in DX
+ * Random Walk in OptiXRenderer. Just a brute force extinction/albedo implementation where SSS rays ignore everything but their own mesh?
 * Integrate rough glass into DefaultShading
  * Integrate as coat + coat_t * ((GGX_R + GGX_T) + diffuse)? That way we keep all GGX terms in one place and can normalize them combined. Can be hard when GGX_T does total internal reflection with a scale.
  * See how gltf distinguishes between opacity, cutout and refracting. They should be orthogonal, as you can still have refracting perforated microgeometry. https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_transmission/README.md
@@ -34,15 +37,11 @@ BACKLOG:
  * Use Microfacet-based Normal Mapping for Robust Monte Carlo Path Tracing to solve the energy preservation issue.
  * Or simply negate the part of the shading hemisphere that disagrees with the geometric normal to make a complete hemisphere.
   * That should preserve abs(cos(theta)) as well, so not affect variance adversely
-* Linearly transformed cosine area lights, and set up tests to verify that it works.
- * https://blog.selfshadow.com/publications/s2017-shading-course/heitz/s2017_pbs_ltc_lines_disks.pdf
- * Additional light types. Square, tube, ring, ... The ring light should be the reflectance of the outer disk minus the reflectance of the inner disk.
-  * https://github.com/guiqi134/LTC-Area-Lights
-* Emissive meshes
+* Emissive textured meshes
  * Mirror glTF for starters. Emissive texture and emissive 'strength'
   * https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_emissive_strength/README.md
- * Do something similar to or reuse the fixed light samples in PresampledEnvironmentLight and add MIS
-  * Presample mesh lights. Handle textures by random sampling and then do reestimated importance sampling when combining samples. Cheapest memory wise, parallelisable, and a pretty simple solution.
+ * LTC texture support in DX11
+ * Presampled textured mesh lights. Handle textures by random sampling and then do reestimated importance sampling when combining samples. Cheapest memory wise, parallelisable, and a pretty simple solution.
  * Efficient triangle sampling
   * https://gpuopen.com/download/publications/Hierarchical_Light_Sampling_with_Accurate_Spherical_Gaussian_Lighting.pdf
   * https://dl.acm.org/doi/10.1145/3665320.3670993
