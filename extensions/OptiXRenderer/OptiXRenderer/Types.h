@@ -48,6 +48,7 @@ struct MeshFlags {
     static const unsigned char Normals = 1u << 0u;
     static const unsigned char Texcoords = 1u << 1u;
     static const unsigned char Tints = 1u << 2u;
+    static const unsigned char Emissive = 1u << 3u;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -79,6 +80,25 @@ struct __align__(4) OctahedralNormal {
 //----------------------------------------------------------------------------
 // Base types.
 //----------------------------------------------------------------------------
+
+struct UNorm16 {
+    unsigned short raw;
+
+    UNorm16() = default;
+    __inline_all__ UNorm16(float v) : raw(encode(v)) {}
+
+    __inline_all__ static UNorm16 from_raw(unsigned short raw) { UNorm16 res; res.raw = raw; return res; }
+    __inline_all__ static UNorm16 create_unchecked(float v) { return from_raw((unsigned short)(v * 65535.0f + 0.5f)); }
+
+    __inline_all__ static float decode(unsigned short v) { return v / 65535.0f; }
+    __inline_all__ static unsigned short encode(float v) { return (unsigned short)(saturate(v) * 65535.0f + 0.5f); }
+
+    __inline_all__ bool operator==(UNorm16 rhs) const { return raw == rhs.raw; }
+    __inline_all__ bool operator!=(UNorm16 rhs) const { return raw != rhs.raw; }
+
+    __inline_all__ float value() const { return decode(raw); }
+    __inline_all__ operator float() const { return decode(raw); }
+};
 
 struct __align__(16) Sphere {
     optix::float3 center;
@@ -365,9 +385,9 @@ struct __align__(16) Material {
     float coverage;
     int coverage_texture_ID;
 
-    float coat;
-    float coat_roughness;
-    optix::float2 __padding2;
+    optix::float3 emission;
+    UNorm16 coat;
+    UNorm16 coat_roughness;
 
     __inline_all__ bool is_thin_walled() const { return (flags & (Flags::Cutout | Flags::ThinWalled)) != 0; }
     __inline_all__ bool is_cutout() const { return (flags & Flags::Cutout) != 0; }

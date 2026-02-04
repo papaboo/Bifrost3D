@@ -113,6 +113,10 @@ static inline optix::GeometryTriangles load_mesh(optix::Context& context, Mesh m
         create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_BYTE4, vertex_count, mesh.get_tint_and_roughness()) :
         context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_BYTE4, 0);
 
+    optix::Buffer emission_buffer = mesh.get_emission() != nullptr ?
+        create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, vertex_count, mesh.get_emission()) :
+        context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 0);
+
     { // Setup triangle geometry representation.
         optix::GeometryTriangles triangle_mesh = context->createGeometryTriangles();
 
@@ -128,6 +132,7 @@ static inline optix::GeometryTriangles load_mesh(optix::Context& context, Mesh m
         triangle_mesh["geometry_buffer"]->setBuffer(geometry_buffer);
         triangle_mesh["texcoord_buffer"]->setBuffer(texcoord_buffer);
         triangle_mesh["tint_and_roughness_buffer"]->setBuffer(tint_buffer);
+        triangle_mesh["emission_buffer"]->setBuffer(emission_buffer);
 
         OPTIX_VALIDATE(triangle_mesh);
         return triangle_mesh;
@@ -150,6 +155,7 @@ static inline optix::GeometryInstance create_model(optix::Context& context, Mesh
     unsigned char mesh_flags = mesh.get_normals() != nullptr ? MeshFlags::Normals : MeshFlags::None;
     mesh_flags |= mesh.get_texcoords() != nullptr ? MeshFlags::Texcoords : MeshFlags::None;
     mesh_flags |= mesh.get_tint_and_roughness() != nullptr ? MeshFlags::Tints : MeshFlags::None;
+    mesh_flags |= mesh.get_emission() != nullptr ? MeshFlags::Emissive : MeshFlags::None;
     optix_model["mesh_flags"]->setInt(mesh_flags);
     OPTIX_VALIDATE(optix_model);
 
@@ -805,6 +811,8 @@ struct Renderer::Implementation {
                     device_material.coverage_texture_ID = samplers[texture_ID]->getId();
                 } else
                     device_material.coverage_texture_ID = 0;
+
+                device_material.emission = to_float3(host_material.get_emission());
             };
 
             if (!Materials::get_changed_materials().is_empty()) {
