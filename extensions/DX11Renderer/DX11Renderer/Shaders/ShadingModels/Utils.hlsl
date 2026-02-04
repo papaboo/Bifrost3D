@@ -121,16 +121,20 @@ struct TextureBound {
 };
 
 struct Parameters {
+    int shading_model; // Shading model pixel shaders are set on the host, but this can be used to validate that the correct pixel shaders are used.
     float3 m_tint;
+
     unsigned int m_textures_bound;
     float m_roughness;
     float m_specularity;
     float m_metallic;
+
+    float3 emission;
     float m_coverage;
+
     float m_coat;
     float m_coat_roughness;
-    int shading_model; // Shading model pixel shaders are set on the host, but this can be used to validate that the correct pixel shaders are used.
-    float __padding;
+    float2 __padding;
 
     float4 tint_roughness(float2 texcoord) {
         float4 tint_roughness = float4(m_tint, m_roughness);
