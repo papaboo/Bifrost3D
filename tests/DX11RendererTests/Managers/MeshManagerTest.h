@@ -66,6 +66,8 @@ TEST_F(MeshManagerFixture, create_dx_mesh_representation) {
             EXPECT_EQ(null_buffer, *dx_mesh.texcoords_address());
         if (mesh.get_tint_and_roughness() == nullptr)
             EXPECT_EQ(null_buffer, *dx_mesh.tint_and_roughness_address());
+        if (mesh.get_emission() == nullptr)
+            EXPECT_EQ(null_buffer, *dx_mesh.emission_address());
     }
 }
 
