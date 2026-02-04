@@ -74,7 +74,11 @@ static inline size_t size_of(RTformat format) {
     }
 }
 
-static inline optix::Buffer create_buffer(optix::Context& context, unsigned int buffer_type, RTformat format, RTsize element_count, void* data) {
+static inline optix::Buffer safe_create_buffer(optix::Context& context, unsigned int buffer_type, RTformat format, RTsize element_count, void* data) {
+    // Create a zero sized buffer if the data is invalid.
+    if (data == nullptr)
+        return context->createBuffer(buffer_type, format, 0);
+
     optix::Buffer buffer = context->createBuffer(buffer_type, format, element_count);
     memcpy(buffer->map(), data, element_count * size_of(format));
     buffer->unmap();
@@ -87,7 +91,7 @@ static inline optix::Buffer create_buffer(optix::Context& context, unsigned int 
 
 static inline optix::GeometryTriangles load_mesh(optix::Context& context, Mesh mesh, optix::Program attribute_program) {
 
-    optix::Buffer index_buffer = create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT3, mesh.get_primitive_count(), mesh.get_primitives());
+    optix::Buffer index_buffer = safe_create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT3, mesh.get_primitive_count(), mesh.get_primitives());
 
     // Position and normal buffer
     unsigned int vertex_count = mesh.get_vertex_count();
@@ -105,13 +109,9 @@ static inline optix::GeometryTriangles load_mesh(optix::Context& context, Mesh m
     }
     geometry_buffer->unmap();
 
-    optix::Buffer texcoord_buffer = mesh.get_texcoords() != nullptr ?
-        create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, vertex_count, mesh.get_texcoords()) :
-        context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, 0);
-
-    optix::Buffer tint_buffer = mesh.get_tint_and_roughness() != nullptr ?
-        create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_BYTE4, vertex_count, mesh.get_tint_and_roughness()) :
-        context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_BYTE4, 0);
+    optix::Buffer texcoord_buffer = safe_create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT2, vertex_count, mesh.get_texcoords());
+    optix::Buffer tint_buffer = safe_create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_BYTE4, vertex_count, mesh.get_tint_and_roughness());
+    optix::Buffer emission_buffer = safe_create_buffer(context, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, vertex_count, mesh.get_emission());
 
     { // Setup triangle geometry representation.
         optix::GeometryTriangles triangle_mesh = context->createGeometryTriangles();
@@ -128,6 +128,7 @@ static inline optix::GeometryTriangles load_mesh(optix::Context& context, Mesh m
         triangle_mesh["geometry_buffer"]->setBuffer(geometry_buffer);
         triangle_mesh["texcoord_buffer"]->setBuffer(texcoord_buffer);
         triangle_mesh["tint_and_roughness_buffer"]->setBuffer(tint_buffer);
+        triangle_mesh["emission_buffer"]->setBuffer(emission_buffer);
 
         OPTIX_VALIDATE(triangle_mesh);
         return triangle_mesh;
@@ -150,6 +151,7 @@ static inline optix::GeometryInstance create_model(optix::Context& context, Mesh
     unsigned char mesh_flags = mesh.get_normals() != nullptr ? MeshFlags::Normals : MeshFlags::None;
     mesh_flags |= mesh.get_texcoords() != nullptr ? MeshFlags::Texcoords : MeshFlags::None;
     mesh_flags |= mesh.get_tint_and_roughness() != nullptr ? MeshFlags::Tints : MeshFlags::None;
+    mesh_flags |= mesh.get_emission() != nullptr ? MeshFlags::Emissive : MeshFlags::None;
     optix_model["mesh_flags"]->setInt(mesh_flags);
     OPTIX_VALIDATE(optix_model);
 
@@ -805,6 +807,8 @@ struct Renderer::Implementation {
                     device_material.coverage_texture_ID = samplers[texture_ID]->getId();
                 } else
                     device_material.coverage_texture_ID = 0;
+
+                device_material.emission = to_float3(host_material.get_emission());
             };
 
             if (!Materials::get_changed_materials().is_empty()) {

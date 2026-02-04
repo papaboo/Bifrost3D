@@ -19,12 +19,14 @@ rtBuffer<uint3> index_buffer;
 rtBuffer<VertexGeometry> geometry_buffer;
 rtBuffer<float2> texcoord_buffer;
 rtBuffer<uchar4> tint_and_roughness_buffer;
+rtBuffer<float3> emission_buffer;
 
 rtDeclareVariable(float3, intersection_point, attribute intersection_point, );
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, ); 
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, ); 
 rtDeclareVariable(float2, texcoord, attribute texcoord, );
 rtDeclareVariable(float4, tint_and_roughness_scale, attribute tint_and_roughness_scale, );
+rtDeclareVariable(float3, emission, attribute emission, );
 rtDeclareVariable(unsigned int, primitive_index, attribute primitive_index, );
 
 //-------------------------------------------------------------------------------------------------
@@ -72,4 +74,11 @@ RT_PROGRAM void interpolate_attributes() {
         tint_and_roughness_scale.w = (tint1.w * barycentrics.x + tint2.w * barycentrics.y + tint0.w * barycentrics_z) * byte_to_float_normalizer;
     } else
         tint_and_roughness_scale = make_float4(1.0f); // Multiplicative identity
+
+    if (mesh_flags & MeshFlags::Emissive) {
+        emission = emission_buffer[vertex_indices.y] * barycentrics.x + 
+                   emission_buffer[vertex_indices.z] * barycentrics.y +
+                   emission_buffer[vertex_indices.x] * barycentrics_z;
+    } else
+        emission = make_float3(1.0f); // Multiplicative identity to scale the material emission
 }
