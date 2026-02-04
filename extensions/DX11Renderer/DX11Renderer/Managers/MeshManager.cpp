@@ -192,9 +192,29 @@ void MeshManager::handle_updates(ID3D11Device1& device) {
                 }
             }
 
+            { // Upload emissive attribute if present, otherwise upload 'null buffer'.
+                RGB* emission = mesh.get_emission();
+                if (emission != nullptr) {
+
+                    if (expand_indexed_buffers)
+                        emission = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), emission);
+
+                    HRESULT hr = upload_vertex_buffer(device, emission, dx_mesh.vertex_count, dx_mesh.emission_address());
+                    if (FAILED(hr))
+                        printf("Could not upload %s's emission buffer.\n", mesh.get_name().c_str());
+
+                    if (emission != mesh.get_emission())
+                        delete[] emission;
+                } else {
+                    m_null_buffer.get()->AddRef();
+                    *dx_mesh.emission_address() = m_null_buffer;
+                }
+            }
+
             // Constant buffer
             Dx11MeshConstans mesh_constants;
-            mesh_constants.has_tint_and_roughness = mesh.get_tint_and_roughness() != nullptr;
+            mesh_constants.vertex_flags = mesh.get_tint_and_roughness() ? Dx11Mesh::VertexFlags::TintAndRoughnessBufferBound : Dx11Mesh::VertexFlags::None;
+            mesh_constants.vertex_flags |= mesh.get_emission() ? Dx11Mesh::VertexFlags::EmissionBufferBound : Dx11Mesh::VertexFlags::None;
             THROW_DX11_ERROR(create_constant_buffer(device, mesh_constants, &dx_mesh.constant_buffer));
 
             // Set the buffer count to the minimal number of buffers containing data.

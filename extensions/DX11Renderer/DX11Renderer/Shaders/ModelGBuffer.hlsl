@@ -15,7 +15,7 @@
 
 cbuffer transform : register(b2) {
     float4x3 to_world_matrix;
-};
+}
 
 cbuffer material : register(b3) {
     ShadingModels::Parameters material_params;
@@ -23,7 +23,7 @@ cbuffer material : register(b3) {
 
 cbuffer scene_variables : register(b13) {
     SceneVariables scene_vars;
-};
+}
 
 // ------------------------------------------------------------------------------------------------
 // Opaque model.

@@ -243,13 +243,14 @@ public:
             THROW_DX11_ERROR(m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shading.shader));
 
             // Create the input layout
-            D3D11_INPUT_ELEMENT_DESC input_layout_desc[] = {
+            D3D11_INPUT_ELEMENT_DESC input_layout_desc[Dx11Mesh::MAX_BUFFER_COUNT] = {
                 { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
                 { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-                { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 2, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+                { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 2, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+                { "EMISSION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 3, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
             };
 
-            THROW_DX11_ERROR(m_device->CreateInputLayout(input_layout_desc, 3, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout));
+            THROW_DX11_ERROR(m_device->CreateInputLayout(input_layout_desc, Dx11Mesh::MAX_BUFFER_COUNT, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout));
         }
 
         { // Setup raster states
@@ -379,11 +380,11 @@ public:
                 context->IASetIndexBuffer(mesh.indices, DXGI_FORMAT_R32_UINT, 0);
 
             // Setup strides and offsets for the buffers.
-            // Layout is [geometry, texcoords, tint_and_roughness].
-            static unsigned int strides[3] = { sizeof(float4), sizeof(float2), sizeof(TintRoughness) };
-            static unsigned int offsets[3] = { 0, 0, 0 };
+            // Layout is [geometry, texcoords, tint_and_roughness, emission].
+            static unsigned int strides[Dx11Mesh::MAX_BUFFER_COUNT] = { sizeof(float4), sizeof(float2), sizeof(TintRoughness), sizeof(RGB) };
+            static unsigned int offsets[Dx11Mesh::MAX_BUFFER_COUNT] = { 0, 0, 0, 0 };
 
-            context->IASetVertexBuffers(0, mesh.vertex_buffer_count, mesh.vertex_buffers, strides, offsets);
+            context->IASetVertexBuffers(0, Dx11Mesh::MAX_BUFFER_COUNT, mesh.vertex_buffers, strides, offsets);
         }
 
         { // Bind world transform.
@@ -392,7 +393,7 @@ public:
 
         { // Material parameters
 
-          // Bind material constant buffer.
+            // Bind material constant buffer.
             m_materials.bind_material(*context, ConstantRegisters::Material, model.material_ID);
 
             Dx11MaterialTextures& material_textures = m_materials.get_material_textures(model.material_ID);

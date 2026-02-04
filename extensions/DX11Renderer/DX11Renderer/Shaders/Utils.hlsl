@@ -32,6 +32,12 @@ static const float AIR_IOR = 1.0f;
 // Types.
 // ------------------------------------------------------------------------------------------------
 
+struct VertexFlags {
+    static const unsigned int None = 0;
+    static const unsigned int TintAndRoughnessBufferBound = 1 << 0;
+    static const unsigned int EmissionBufferBound = 1 << 1;
+};
+
 struct Cone {
     float3 direction;
     float cos_theta;
