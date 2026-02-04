@@ -32,7 +32,7 @@ rtDeclareVariable(CameraStateGPU, g_camera_state, , );
 rtDeclareVariable(SceneStateGPU, g_scene, , );
 
 // Material parameters.
-rtBuffer<Material, 1> g_materials;
+rtBuffer<OptiXRenderer::Material, 1> g_materials;
 
 // Model parameters
 rtDeclareVariable(ModelState, model_state, , );
@@ -49,6 +49,7 @@ rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 rtDeclareVariable(float2, texcoord, attribute texcoord, );
 rtDeclareVariable(float4, tint_and_roughness_scale, attribute tint_and_roughness_scale, );
+rtDeclareVariable(float3, emission, attribute emission, );
 rtDeclareVariable(unsigned int, primitive_index, attribute primitive_index, );
 
 //-----------------------------------------------------------------------------
@@ -188,6 +189,10 @@ __inline_all__ void path_tracing_closest_hit() {
 
     float cos_theta = hit_from_front || material_parameter.is_thin_walled() ? wo.z : -wo.z;
     const auto material = MaterialCreator::create(material_parameter, texcoord, cos_theta);
+
+    { // Apply surface emission
+        monte_carlo_payload.radiance += monte_carlo_payload.throughput * emission * material_parameter.emission;
+    }
 
     { // Next event estimation, sample the light sources directly.
         monte_carlo_payload.light_sample = reestimated_light_samples(material, world_intersection_point, wo, world_shading_tbn);
