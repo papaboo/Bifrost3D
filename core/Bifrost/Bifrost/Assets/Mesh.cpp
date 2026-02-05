@@ -176,6 +176,33 @@ Mesh deep_clone(Mesh mesh) {
     return new_mesh;
 }
 
+void scale_mesh(Mesh mesh, Vector3f scale) {
+
+    // Scale positions.
+    Vector3f* positions_itr = mesh.get_positions();
+    if (positions_itr != nullptr) {
+        Vector3f* positions_end = positions_itr + mesh.get_vertex_count();
+        for (; positions_itr != positions_end; ++positions_itr)
+            *positions_itr *= scale;
+
+        // Scale bounds
+        AABB bounds = mesh.get_bounds();
+        bounds.minimum *= scale;
+        bounds.maximum *= scale;
+        mesh.set_bounds(bounds);
+    }
+
+    // Scale normals, if the scaling non-uniform.
+    bool uniform_scaling = scale.x == scale.y && scale.y == scale.z;
+    Vector3f* normals_itr = mesh.get_normals();
+    if (normals_itr != nullptr && !uniform_scaling) {
+        Vector3f recip_scale = 1.0f / scale;
+        Vector3f* normals_end = normals_itr + mesh.get_vertex_count();
+        for (; normals_itr != normals_end; ++normals_itr)
+            *normals_itr = normalize(*normals_itr * recip_scale);
+    }
+}
+
 void transform_mesh(Mesh mesh, Matrix3x4f affine_transform) {
     Matrix3x3f rotation;
     rotation.set_column(0, affine_transform.get_column(0));
@@ -201,7 +228,7 @@ void transform_mesh(Mesh mesh, Matrix3x4f affine_transform) {
         Matrix3x3f normal_rotation = transpose(invert(rotation));
         Vector3f* normals_end = normals_itr + mesh.get_vertex_count();
         for (; normals_itr != normals_end; ++normals_itr)
-            *normals_itr = normal_rotation * *normals_itr;
+            *normals_itr = normalize(normal_rotation * *normals_itr);
     }
 }
 
