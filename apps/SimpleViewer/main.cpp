@@ -358,20 +358,22 @@ int initialize_scene(Engine& engine, ImGui::ImGuiAdaptor* imgui) {
     bool load_model_from_file = false;
     if (g_scene_name.empty() || g_scene_name.compare("CornellBox") == 0)
         Scenes::create_cornell_box(cam_ID, root_node);
-    else if (g_scene_name.compare("GlassScene") == 0)
+    else if (g_scene_name.compare("GlassScene") == 0 || g_scene_name.compare("Glass") == 0)
         Scenes::create_glass_scene(cam_ID, root_node, resource_directory);
-    else if (g_scene_name.compare("MaterialScene") == 0)
+    else if (g_scene_name.compare("MaterialScene") == 0 || g_scene_name.compare("Materials") == 0)
         Scenes::create_material_scene(cam_ID, root_node, imgui, resource_directory);
     else if (g_scene_name.compare("OpacityScene") == 0)
         Scenes::create_opacity_scene(engine, cam_ID, root_node);
-    else if (g_scene_name.compare("SphereScene") == 0)
+    else if (g_scene_name.compare("SphereScene") == 0 || g_scene_name.compare("Spheres") == 0)
         Scenes::create_sphere_scene(cam_ID, root_node);
-    else if (g_scene_name.compare("SphereLightScene") == 0)
+    else if (g_scene_name.compare("SphereLightScene") == 0 || g_scene_name.compare("SphereLights") == 0)
         Scenes::SphereLightScene::create(engine, cam_ID, scene);
-    else if (g_scene_name.compare("TestScene") == 0)
+    else if (g_scene_name.compare("TestScene") == 0 || g_scene_name.compare("Test") == 0)
         Scenes::create_test_scene(engine, cam_ID, root_node, resource_directory);
-    else if (g_scene_name.compare("VeachScene") == 0)
-        Scenes::create_veach_scene(engine, cam_ID, scene);
+    else if (g_scene_name.compare("VeachScene") == 0 || g_scene_name.compare("Veach") == 0)
+        Scenes::create_veach_scene(engine, cam_ID, scene, false);
+    else if (g_scene_name.compare("MeshLightScene") == 0 || g_scene_name.compare("MeshLights") == 0)
+        Scenes::create_veach_scene(engine, cam_ID, scene, true);
     else {
 #ifdef OPTIX_FOUND
         // Conservative bounce count, as the loaded scenes could be very heavy on bounces and geometry.
