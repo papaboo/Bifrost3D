@@ -202,9 +202,11 @@ private:
 //----------------------------------------------------------------------------
 namespace MeshUtils {
 
-Mesh deep_clone(Mesh mesh_ID);
-void transform_mesh(Mesh mesh_ID, Math::Matrix3x4f affine_transform);
-void transform_mesh(Mesh mesh_ID, Math::Transform transform);
+Mesh deep_clone(Mesh mesh);
+void scale_mesh(Mesh mesh, Math::Vector3f scale);
+inline void scale_mesh(Mesh mesh, float scale) { scale_mesh(mesh, Math::Vector3f(scale)); }
+void transform_mesh(Mesh mesh, Math::Matrix3x4f affine_transform);
+void transform_mesh(Mesh mesh, Math::Transform transform);
 
 //-------------------------------------------------------------------------
 // Mesh combine utilities.
@@ -219,12 +221,10 @@ Mesh combine(const std::string& name,
              MeshFlags flags = MeshFlag::AllBuffers);
 
 inline Mesh combine(const std::string& name, 
-                    Mesh mesh0_ID, Math::Transform transform0,
-                    Mesh mesh1_ID, Math::Transform transform1, 
+                    Mesh mesh0, Math::Transform transform0,
+                    Mesh mesh1, Math::Transform transform1, 
                     MeshFlags flags = MeshFlag::AllBuffers) {
-    TransformedMesh mesh0 = { mesh0_ID, transform0 };
-    TransformedMesh mesh1 = { mesh1_ID, transform1 };
-    TransformedMesh meshes[2] = { mesh0, mesh1 };
+    TransformedMesh meshes[2] = { { mesh0, transform0 }, { mesh1, transform1 } };
     return combine(name, meshes, meshes + 2, flags);
 }
 
