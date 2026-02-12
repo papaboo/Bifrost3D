@@ -428,9 +428,10 @@ struct __align__(16) Material {
 //----------------------------------------------------------------------------
 
 enum RngSamplingDimension {
-    NEXT_EVENT_ESTIMATION = 0,
-    BSDF = 1,
-    MAX_DIMENSIONS = 2,
+    CAMERA_PARAMETERS = 0,
+    NEXT_EVENT_ESTIMATION = 1,
+    BSDF = 2,
+    MAX_DIMENSIONS = 8, // High enough that it won't change if we add new dimensions, such as volumetric sampling or path guiding.
 };
 
 struct __align__(16) MonteCarloPayload {
@@ -464,6 +465,8 @@ struct __align__(16) MonteCarloPayload {
         // return rng.sample4f();
         return RNG::PracticalScrambledSobol::sample4f(accumulation_count, pixel_hash, dimension);
     }
+
+    __inline_dev__ optix::float2 rng_sample2f(unsigned int sampling_dimension) { return make_float2(rng_sample4f(sampling_dimension)); }
 
     __inline_dev__ void debug_output(optix::float3 color) {
         throughput = { 0,0,0 };
