@@ -28,7 +28,6 @@ public:
     ~MeshManager();
 
     inline const Dx11Mesh& get_mesh(unsigned int mesh_index) const { return m_meshes[mesh_index]; }
-    inline const OBuffer& get_null_buffer() const { return m_null_buffer; }
 
     void handle_updates(ID3D11Device1& device);
 
@@ -36,7 +35,6 @@ private:
     MeshManager(MeshManager& other) = delete;
     MeshManager& operator=(MeshManager& rhs) = delete;
 
-    OBuffer m_null_buffer;
     std::vector<Dx11Mesh> m_meshes;
 };
 

@@ -32,11 +32,6 @@ MeshManager::MeshManager(ID3D11Device1& device) {
     empty_desc.Usage = D3D11_USAGE_IMMUTABLE;
     empty_desc.ByteWidth = sizeof(Vector4f);
     empty_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-
-    Vector4f lval = Vector4f::zero();
-    D3D11_SUBRESOURCE_DATA empty_data = {};
-    empty_data.pSysMem = &lval;
-    THROW_DX11_ERROR(device.CreateBuffer(&empty_desc, &empty_data, &m_null_buffer));
 }
 
 MeshManager::~MeshManager() {
@@ -167,9 +162,6 @@ void MeshManager::handle_updates(ID3D11Device1& device) {
 
                     if (texcoords != mesh.get_texcoords())
                         delete[] texcoords;
-                } else {
-                    m_null_buffer.get()->AddRef();
-                    *dx_mesh.texcoords_address() = m_null_buffer;
                 }
             }
 
@@ -186,9 +178,6 @@ void MeshManager::handle_updates(ID3D11Device1& device) {
 
                     if (tints != mesh.get_tint_and_roughness())
                         delete[] tints;
-                } else {
-                    m_null_buffer.get()->AddRef();
-                    *dx_mesh.tint_and_roughness_address() = m_null_buffer;
                 }
             }
 
@@ -205,9 +194,6 @@ void MeshManager::handle_updates(ID3D11Device1& device) {
 
                     if (emission != mesh.get_emission())
                         delete[] emission;
-                } else {
-                    m_null_buffer.get()->AddRef();
-                    *dx_mesh.emission_address() = m_null_buffer;
                 }
             }
 
@@ -219,7 +205,7 @@ void MeshManager::handle_updates(ID3D11Device1& device) {
 
             // Set the buffer count to the minimal number of buffers containing data.
             dx_mesh.vertex_buffer_count = Dx11Mesh::MAX_BUFFER_COUNT;
-            while (dx_mesh.vertex_buffer_count > 1 && m_null_buffer == dx_mesh.vertex_buffers[dx_mesh.vertex_buffer_count - 1])
+            while (dx_mesh.vertex_buffer_count > 1 && nullptr == dx_mesh.vertex_buffers[dx_mesh.vertex_buffer_count - 1])
                 dx_mesh.vertex_buffer_count--;
 
             m_meshes[mesh_ID] = dx_mesh;
