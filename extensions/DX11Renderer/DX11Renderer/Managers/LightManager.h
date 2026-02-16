@@ -12,7 +12,8 @@
 #include "Dx11Renderer/Types.h"
 
 #include "Bifrost/Core/Array.h"
-#include "Bifrost/Scene/LightSource.h"
+#include "Bifrost/Math/Vector.h"
+#include "Bifrost/Utils/IdDeclarations.h"
 
 namespace DX11Renderer::Managers {
 

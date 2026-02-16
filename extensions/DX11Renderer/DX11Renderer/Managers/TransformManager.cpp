@@ -26,6 +26,10 @@ TransformManager::TransformManager(ID3D11Device1& device, ID3D11DeviceContext1& 
     create_constant_buffer(device, identity_matrix, &m_GPU_transforms[0]);
 }
 
+void TransformManager::bind_transform(ID3D11DeviceContext1& context, unsigned int slot, unsigned int transform_index) {
+    context.VSSetConstantBuffers(slot, 1, &m_GPU_transforms[transform_index]);
+}
+
 void TransformManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& context) {
     if (SceneNodes::get_changed_nodes().is_empty())
         return;

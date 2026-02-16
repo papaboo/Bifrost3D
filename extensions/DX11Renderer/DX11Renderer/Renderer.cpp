@@ -22,6 +22,7 @@
 #include <Bifrost/Assets/MeshModel.h>
 #include <Bifrost/Core/Engine.h>
 #include <Bifrost/Scene/Camera.h>
+#include "Bifrost/Scene/LightSource.h"
 #include <Bifrost/Scene/SceneRoot.h>
 
 #include <algorithm>

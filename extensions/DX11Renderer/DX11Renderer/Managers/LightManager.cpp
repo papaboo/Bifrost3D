@@ -10,6 +10,8 @@
 
 #include "Dx11Renderer/Utils.h"
 
+#include "Bifrost/Scene/LightSource.h"
+
 namespace DX11Renderer::Managers {
 
 using namespace Bifrost::Core;

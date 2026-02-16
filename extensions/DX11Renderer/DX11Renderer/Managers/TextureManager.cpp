@@ -20,7 +20,6 @@ TextureManager::TextureManager(ID3D11Device1& device) {
     // Initialize null image and texture.
     m_textures.resize(Textures::capacity());
     m_images.resize(Images::capacity());
-    m_newly_referenced_images.reserve(Images::capacity());
 
     // Create default textures.
     static auto create_color_texture = [](ID3D11Device1& device, unsigned char pixel[4]) -> DefaultTexture {
@@ -206,6 +205,11 @@ void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1&
         }
     }
 
+
+    std::vector<ImageID> newly_referenced_images = std::vector<ImageID>(0);
+    size_t changed_texture_count = Textures::get_changed_textures().end() - Textures::get_changed_textures().begin();
+    newly_referenced_images.reserve(changed_texture_count);
+
     { // Texture/sampler updates.
         for (Texture texture : Textures::get_changed_textures()) {
             auto tex_changes = texture.get_changes();
@@ -234,7 +238,7 @@ void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1&
                 ImageID image_ID = texture.get_image().get_ID();
                 dx_tex.image = &m_images[image_ID]; // References address in m_images, that may not have been assigned the image yet, but will before handle_updates is done.
                 if (texture.get_image().exists())
-                    m_newly_referenced_images.push_back(image_ID);
+                    newly_referenced_images.push_back(image_ID);
             }
         }
     }
@@ -255,12 +259,11 @@ void TextureManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1&
         }
 
         // Handle images referenced by newly created textures, where the image hasn't previously been uploaded.
-        for (Image image : m_newly_referenced_images) {
+        for (Image image : newly_referenced_images) {
             Dx11Image& dx_image = m_images[image.get_ID()];
             if (dx_image.srv == nullptr)
                 fill_image(device, device_context, image, dx_image);
         }
-        m_newly_referenced_images.clear();
     }
 }
 
