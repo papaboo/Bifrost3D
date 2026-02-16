@@ -59,6 +59,10 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
     create_constant_buffer(device, m_materials[0], &m_GPU_materials[0]);
 }
 
+void MaterialManager::bind_material(ID3D11DeviceContext1& context, unsigned int slot, unsigned int material_index) {
+    context.PSSetConstantBuffers(slot, 1, &m_GPU_materials[material_index]);
+}
+
 void MaterialManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& context) {
     if (Materials::get_changed_materials().is_empty())
         return;
