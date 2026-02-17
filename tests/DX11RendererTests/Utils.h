@@ -67,6 +67,17 @@ inline Bifrost::Assets::Mesh create_triangle(const std::string& name, Bifrost::A
     mesh.get_indices()[1] = 1;
     mesh.get_indices()[2] = 2;
     mesh.compute_bounds();
+
+    if (mesh.get_tint_and_roughness() != nullptr) {
+        Bifrost::Math::RGB24 identity_tint = { 1.0f, 1.0f, 1.0f };
+        mesh.get_tint_and_roughness()[0] = mesh.get_tint_and_roughness()[1] = mesh.get_tint_and_roughness()[2] = { identity_tint, 1.0f };
+    }
+
+    if (mesh.get_emission() != nullptr) {
+        Bifrost::Math::RGB identity_emission = { 1.0f, 1.0f, 1.0f };
+        mesh.get_emission()[0] = mesh.get_emission()[1] = mesh.get_emission()[2] = identity_emission;
+    }
+
     return mesh;
 }
 

@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include <Managers/MaterialManagerTest.h>
+#include <Managers/MeshLightManagerTest.h>
 #include <Managers/MeshManagerTest.h>
 #include <Managers/MeshModelManagerTest.h>
 #include <Managers/TextureManagerTest.h>

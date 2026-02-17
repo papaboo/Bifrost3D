@@ -146,6 +146,12 @@ constexpr int Scene = 13;
 constexpr int CameraEffects = 0;
 };
 
+namespace SrvRegisters {
+constexpr int MeshLights = 12;
+constexpr int Ssao = 13;
+constexpr int TabulatedGgxWithFresnelRho = 15;
+}
+
 //-------------------------------------------------------------------------------------------------
 // Screen space ambient occlusion settings.
 //-------------------------------------------------------------------------------------------------
