@@ -9,11 +9,19 @@
 #include "ShadingModels/DefaultShading.hlsl"
 #include "ShadingModels/DiffuseShading.hlsl"
 #include "LightSources.hlsl"
+#include "LtcLightSources.hlsl"
 #include "Utils.hlsl"
 
 // ------------------------------------------------------------------------------------------------
 // Input buffers.
 // ------------------------------------------------------------------------------------------------
+
+struct MeshLight {
+    float3 positions[3];
+    float3 emission[3];
+    uint is_thinwalled;
+    uint __128bit_alignment_padding;
+};
 
 cbuffer vertex_constants : register(b1) {
     int vertex_flags;
@@ -26,6 +34,8 @@ cbuffer transform : register(b2) {
 cbuffer material : register(b3) {
     ShadingModels::Parameters material_params;
 }
+
+StructuredBuffer<MeshLight> mesh_lights : register(t12);
 
 cbuffer lights : register(b12) {
     int light_count;
@@ -54,8 +64,8 @@ struct Varyings {
 
 Varyings vs(float4 geometry : GEOMETRY, float2 texcoord : TEXCOORD, float4 tint_and_roughness_scale : COLOR, float3 emission : EMISSION) {
     Varyings output;
-    output.world_position.xyz = mul(float4(geometry.xyz, 1.0f), to_world_matrix);
-    output.position = mul(float4(output.world_position.xyz, 1.0f), scene_vars.view_projection_matrix);
+    output.world_position = mul(float4(geometry.xyz, 1.0f), to_world_matrix);
+    output.position = mul(float4(output.world_position, 1.0f), scene_vars.view_projection_matrix);
     output.normal.xyz = normalize(mul(float4(decode_octahedral_normal(asint(geometry.w)), 0.0), to_world_matrix));
     output.texcoord = texcoord;
     output.tint_and_roughness_scale = vertex_flags & VertexFlags::TintAndRoughnessBufferBound ? tint_and_roughness_scale : float4(1,1,1,1);
@@ -72,7 +82,7 @@ interface IShadingModelCreator {
 };
 
 float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, bool is_front_face, float ambient_visibility) {
-    float3 world_wo = normalize(scene_vars.camera_world_position() - input.world_position.xyz);
+    float3 world_wo = normalize(scene_vars.camera_world_position() - input.world_position);
 
     float3 world_normal = normalize(input.normal.xyz) * (is_front_face ? 1.0 : -1.0);
     world_normal = fix_backfacing_shading_normal(world_wo, world_normal, 0.002f);
@@ -96,16 +106,29 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
         if (is_sphere_light) {
             // Compute sphere light position in shading space
             SphereLight sphere_light = light.sphere_light();
-            sphere_light.position = mul(world_to_shading_TBN, sphere_light.position - input.world_position.xyz);
+            sphere_light.position = mul(world_to_shading_TBN, sphere_light.position - input.world_position);
 
             radiance += shading_model.evaluate_sphere_light(wo, sphere_light, ambient_visibility);
         } else {
             // Apply regular delta lights.
-            LightSample light_sample = sample_light(light, input.world_position.xyz);
+            LightSample light_sample = sample_light(light, input.world_position);
             float3 wi = mul(world_to_shading_TBN, light_sample.direction_to_light);
             float3 f = shading_model.evaluate(wo, wi);
             radiance += f * light_sample.radiance * abs(wi.z);
         }
+    }
+
+    // Apply mesh lights
+    uint mesh_light_count, mesh_light_size;
+    mesh_lights.GetDimensions(mesh_light_count, mesh_light_size);    
+    for (uint ml = 0; ml < mesh_light_count; ++ml) {
+        MeshLight light = mesh_lights[ml];
+        bool two_sided = light.is_thinwalled;
+
+        float3 albedo = float3(1, 1, 1); // TODO fetch from material along with ltc paramaters. Check how it's done in Blender. Can we use closures? Or should we always allocate the max amount of LTCs?
+
+        radiance += 0.5f * albedo * Ltc::evaluate_mesh_light_lambert(world_normal, world_wo, input.world_position, light.positions, light.emission, two_sided);
+        radiance += 0.5f * albedo * Ltc::evaluate_mesh_light_mirror(world_normal, world_wo, input.world_position, light.positions, light.emission, two_sided);
     }
 
     return radiance;
