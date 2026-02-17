@@ -13,6 +13,7 @@
 #include <BSDFs/GGX.hlsl>
 #include <ShadingModels/IShadingModel.hlsl>
 #include <ShadingModels/Utils.hlsl>
+#include <Utils.hlsl>
 
 namespace ShadingModels {
 
@@ -168,6 +169,31 @@ struct DefaultShading : IShadingModel {
             radiance += m_coat_scale * evaluate_IBL_GGX(wo, normal, m_coat_alpha, COAT_SPECULARITY, ambient_visibility);
 
         return radiance;
+    }
+
+    // Convert the material into an approximate linearly transformed cosine representation.
+    BsdfLtcStack get_LTC_representation(float cos_theta_o) {
+        BsdfLtcStack ltc_stack;
+        ltc_stack.bsdfs[0].tint = m_diffuse_tint;
+        ltc_stack.bsdfs[0].shading_to_ltc = OrenNayarLTC::fetch(cos_theta_o, m_roughness);
+
+        float3 specular_rho = compute_specular_rho(m_specularity, cos_theta_o, m_roughness);
+        ltc_stack.bsdfs[1].tint = m_specular_scale * specular_rho;
+        ltc_stack.bsdfs[1].shading_to_ltc = GGXReflectionLTC::fetch(cos_theta_o, m_roughness);
+        ltc_stack.count = 2;
+
+        if (m_coat_scale > 0) {
+            float roughness = coat_roughness();
+            float3 coat_rho = compute_specular_rho(COAT_SPECULARITY, cos_theta_o, roughness);
+            ltc_stack.bsdfs[2].tint = m_coat_scale * coat_rho;
+            ltc_stack.bsdfs[2].shading_to_ltc = GGXReflectionLTC::fetch(cos_theta_o, roughness);
+            ltc_stack.count = 3;
+        } else {
+            // Remove warning about potential usage of uninitialized variables.
+            ltc_stack.bsdfs[2].tint = float3(0, 0, 0);
+            ltc_stack.bsdfs[2].shading_to_ltc = IsotropicLTC::identity();
+        }
+        return ltc_stack;
     }
 };
 

@@ -9,11 +9,19 @@
 #include "ShadingModels/DefaultShading.hlsl"
 #include "ShadingModels/DiffuseShading.hlsl"
 #include "LightSources.hlsl"
+#include "LtcAreaLight.hlsl"
 #include "Utils.hlsl"
 
 // ------------------------------------------------------------------------------------------------
 // Input buffers.
 // ------------------------------------------------------------------------------------------------
+
+struct MeshLight {
+    float3 positions[3];
+    float3 emission[3];
+    uint is_thinwalled;
+    uint __128bit_alignment_padding;
+};
 
 cbuffer vertex_constants : register(b1) {
     int vertex_flags;
@@ -27,6 +35,8 @@ cbuffer material : register(b3) {
     ShadingModels::Parameters material_params;
 }
 
+StructuredBuffer<MeshLight> mesh_lights : register(t11);
+
 cbuffer lights : register(b12) {
     int light_count;
     int3 _padding;
@@ -37,7 +47,7 @@ cbuffer scene_variables : register(b13) {
     SceneVariables scene_vars;
 };
 
-Texture2D ssao_tex : register(t13);
+Texture2D ssao_tex : register(t12);
 
 struct Varyings {
     float4 position : SV_POSITION;
@@ -72,7 +82,7 @@ interface IShadingModelCreator {
 };
 
 float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, bool is_front_face, float ambient_visibility) {
-    float3 world_wo = normalize(scene_vars.camera_world_position() - input.world_position.xyz);
+    float3 world_wo = normalize(scene_vars.camera_world_position() - input.world_position);
 
     float3 world_normal = normalize(input.normal.xyz) * (is_front_face ? 1.0 : -1.0);
     world_normal = fix_backfacing_shading_normal(world_wo, world_normal, 0.002f);
@@ -96,16 +106,33 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
         if (is_sphere_light) {
             // Compute sphere light position in shading space
             SphereLight sphere_light = light.sphere_light();
-            sphere_light.position = mul(world_to_shading_TBN, sphere_light.position - input.world_position.xyz);
+            sphere_light.position = mul(world_to_shading_TBN, sphere_light.position - input.world_position);
 
             radiance += shading_model.evaluate_sphere_light(wo, sphere_light, ambient_visibility);
         } else {
             // Apply regular delta lights.
-            LightSample light_sample = sample_light(light, input.world_position.xyz);
+            LightSample light_sample = sample_light(light, input.world_position);
             float3 wi = mul(world_to_shading_TBN, light_sample.direction_to_light);
             float3 f = shading_model.evaluate(wo, wi);
             radiance += f * light_sample.radiance * abs(wi.z);
         }
+    }
+
+    // Apply mesh lights
+    ShadingModels::BsdfLtcStack bsdf_ltcs = shading_model.get_LTC_representation(abs(wo.z));
+
+    uint mesh_light_count, mesh_light_size;
+    mesh_lights.GetDimensions(mesh_light_count, mesh_light_size);    
+    for (uint ml = 0; ml < mesh_light_count; ++ml) {
+        MeshLight light = mesh_lights[ml];
+        bool two_sided = light.is_thinwalled;
+
+        #pragma warning (disable: 3557) // Disable warning about potential loop unrolling. For some materials the count will be a constant, for others it will be a variable.
+        for (int brdf_index = 0; brdf_index < bsdf_ltcs.count; ++brdf_index) {
+            ShadingModels::BsdfLtc bsdf_ltc = bsdf_ltcs.bsdfs[brdf_index];
+            radiance += bsdf_ltc.tint * LtcAreaLight::evaluate_triangle_light(bsdf_ltc.shading_to_ltc, world_wo, input.world_position, world_normal, light.positions, light.emission, two_sided);
+        }
+        #pragma warning (enable: 3557)
     }
 
     return radiance;

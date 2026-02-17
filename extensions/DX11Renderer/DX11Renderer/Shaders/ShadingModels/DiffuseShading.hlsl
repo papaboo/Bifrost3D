@@ -12,6 +12,7 @@
 #include <BSDFs/Diffuse.hlsl>
 #include <ShadingModels/IShadingModel.hlsl>
 #include <ShadingModels/Utils.hlsl>
+#include <Utils.hlsl>
 
 namespace ShadingModels {
 
@@ -56,6 +57,15 @@ struct DiffuseShading : IShadingModel {
     // Evaluate the material lit by an IBL.
     float3 evaluate_IBL(float3 wo, float3 normal, float ambient_visibility) {
         return evaluate_IBL_lambert(wo, normal, m_tint, ambient_visibility);
+    }
+
+    // Convert the material into an approximate linearly transformed cosine representation.
+    BsdfLtcStack get_LTC_representation(float cos_theta_o) {
+        BsdfLtcStack ltc_stack;
+        ltc_stack.bsdfs[0].tint = m_tint;
+        ltc_stack.bsdfs[0].shading_to_ltc = OrenNayarLTC::fetch(cos_theta_o, m_roughness);
+        ltc_stack.count = 1;
+        return ltc_stack;
     }
 };
 

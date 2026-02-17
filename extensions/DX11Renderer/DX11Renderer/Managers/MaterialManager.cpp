@@ -49,6 +49,7 @@ inline static Dx11MaterialTextures make_dx11material_textures(Material mat) {
 
 MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& context) {
     m_GGX_with_fresnel_rho_srv = create_GGX_with_fresnel_rho_srv(device);
+    m_GGX_LTC_fit_rho_srv = create_GGX_LTC_fit_srv(device);
 
     m_materials.resize(1);
     m_materials[0] = make_dx11material(MaterialID::invalid_UID());

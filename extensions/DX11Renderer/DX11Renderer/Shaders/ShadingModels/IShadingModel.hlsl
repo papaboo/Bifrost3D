@@ -10,8 +10,21 @@
 #define _DX11_RENDERER_SHADERS_SHADING_MODELS_SHADING_MODEL_INTERFACE_H_
 
 #include <LightSources.hlsl>
+#include <Utils.hlsl>
 
 namespace ShadingModels {
+
+struct BsdfLtc {
+    float3 tint;
+    IsotropicLTC shading_to_ltc;
+};
+
+struct BsdfLtcStack {
+    static const int MAX_CAPACITY = 3; // Diffuse, specular, and coat
+
+    BsdfLtc bsdfs[MAX_CAPACITY];
+    int count;
+};
 
 // ------------------------------------------------------------------------------------------------
 // Shading model interface.
@@ -24,6 +37,9 @@ interface IShadingModel {
 
     // Evaluate the material lit by an IBL.
     float3 evaluate_IBL(float3 wo, float3 normal, float ambient_visibility);
+
+    // Convert the material into an approximate linearly transformed cosine representation.
+    BsdfLtcStack get_LTC_representation(float cos_theta_o);
 };
 
 } // NS ShadingModels

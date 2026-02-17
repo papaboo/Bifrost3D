@@ -34,6 +34,8 @@ if (DIRECTX11_FOUND AND WIN32)
     DX11Renderer/Managers/LightManager.h
     DX11Renderer/Managers/MaterialManager.h
     DX11Renderer/Managers/MaterialManager.cpp
+    DX11Renderer/Managers/MeshLightManager.h
+    DX11Renderer/Managers/MeshLightManager.cpp
     DX11Renderer/Managers/MeshManager.h
     DX11Renderer/Managers/MeshManager.cpp
     DX11Renderer/Managers/MeshModelManager.h
