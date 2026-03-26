@@ -64,6 +64,7 @@ SET(MATH_SRCS
   Bifrost/Math/ImageSampling.h
   Bifrost/Math/Intersect.h
   Bifrost/Math/Line.h
+  Bifrost/Math/LTC.h
   Bifrost/Math/Matrix.h
   Bifrost/Math/MortonEncode.h
   Bifrost/Math/NelderMead.h
