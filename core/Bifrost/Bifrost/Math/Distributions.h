@@ -14,9 +14,36 @@
 #include <Bifrost/Math/Vector.h>
 #include <Bifrost/Math/Utils.h>
 
-namespace Bifrost {
-namespace Math {
-namespace Distributions {
+namespace Bifrost::Math::Distributions {
+
+//=================================================================================================
+// Cosine distribution.
+//=================================================================================================
+namespace Cosine {
+
+struct Sample {
+    Vector3f direction;
+    float PDF;
+};
+
+__always_inline__ float PDF(float abs_cos_theta) {
+    return abs_cos_theta / PI<float>();
+}
+
+__always_inline__ Sample sample(Vector2f random_sample) {
+    float r2 = random_sample.x;
+    float r = sqrt(1.0f - r2);
+    float z = sqrt(r2);
+
+    float phi = 2.0f * PI<float>() * random_sample.y;
+
+    Sample res;
+    res.direction = Vector3f(r * cos(phi), r * sin(phi), z);
+    res.PDF = z / PI<float>();
+    return res;
+}
+
+} // NS Cosine
 
 //=================================================================================================
 // GGX distribution.
@@ -56,7 +83,6 @@ __always_inline__ Sample sample(float alpha, Vector2f random_sample) {
 }
 
 } // NS GGX
-
 
 //=================================================================================================
 // Uniform sphere distribution.
@@ -171,8 +197,6 @@ __always_inline__ Sample sample(float g, Vector3f wo, Vector2f random_sample) {
 
 } // NS HenyeyGreenstein
 
-} // NS Distributions
-} // NS Math
-} // NS Bifrost
+} // NS Bifrost::Math::Distributions
 
 #endif // _BIFROST_MATH_DISTRIBUTIONS_H_

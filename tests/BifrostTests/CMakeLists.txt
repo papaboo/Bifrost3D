@@ -32,6 +32,7 @@ set(MATH_SRCS
   Math/FixedPointTypesTest.h
   Math/ImageSamplingTest.h
   Math/LineTest.h
+  Math/LTCTest.h
   Math/MatrixTest.h
   Math/OctahedralNormalTest.h
   Math/QuaternionTest.h

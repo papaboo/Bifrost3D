@@ -8,6 +8,7 @@
 
 #include <Bifrost/Math/AABB.h>
 #include <Bifrost/Math/Color.h>
+#include <Bifrost/Math/Matrix.h>
 #include <Bifrost/Math/Quaternion.h>
 
 #include <gtest/gtest.h>
@@ -92,6 +93,12 @@ inline bool equal_quaternion(Bifrost::Math::Quaternion<T> expected, Bifrost::Mat
     return Bifrost::Math::almost_equal(expected, actual);
 }
 #define EXPECT_QUAT_F_EQ(expected, actual) EXPECT_PRED2(equal_quaternion<float>, expected, actual)
+
+template <typename T>
+inline bool equal_matrix(Bifrost::Math::Matrix3x3<T> expected, Bifrost::Math::Matrix3x3<T> actual) {
+    return Bifrost::Math::almost_equal(expected, actual);
+}
+#define EXPECT_MATRIX3X3F_EQ(expected, actual) EXPECT_PRED2(equal_matrix<float>, expected, actual)
 
 // ------------------------------------------------------------------------------------------------
 // Misc
