@@ -23,6 +23,7 @@
 #include <ShadingModels/TransmissiveShadingTest.h>
 #include <ShadingModels/UtilsTest.h>
 
+#include <LTCTest.h>
 #include <RendererTest.h>
 #include <MiscTest.h>
 
