@@ -4,6 +4,7 @@ if (TARGET OptiXRenderer)
 
   set(SRCS 
     BSDFTestUtils.h
+    LTCTest.h
     main.cpp
     MiscTest.h
     RendererTest.h
