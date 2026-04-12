@@ -62,7 +62,7 @@ inline void scatter_in_media(Bifrost::Math::Ray ray, float sigma_t, float single
         // Check if the ray leaves the medium and apply light if that's the case.
         if (!exits_medium) {
             // Sample scattering direction from isotropic (spherical) distribution
-            auto direction_sample = Distributions::Sphere::sample(direction_rng_sample);
+            auto direction_sample = Distributions::Sphere::sample_direction(direction_rng_sample);
 
             throughput *= single_scattering_albedo;
 

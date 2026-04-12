@@ -44,11 +44,13 @@ public:
 
     inline float evaluate(Vector3f w) const { return PDF(w); }
 
-    inline Vector3f sample(Vector2f random_sample) const {
+    inline Distributions::DirectionalSample sample(Vector2f random_sample) const {
         auto cosine_direction = Distributions::Cosine::sample(random_sample).direction;
 
         // Transform cosine sample to LTC sample.
-        return Math::normalize(get_M() * cosine_direction);
+        Vector3f ltc_direction = Math::normalize(get_M() * cosine_direction);
+
+        return { ltc_direction, PDF(ltc_direction) };
     }
 };
 

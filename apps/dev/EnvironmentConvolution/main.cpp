@@ -413,7 +413,7 @@ int initialize(Engine& engine) {
 
         } else {
 
-            std::vector<GGX::Sample> ggx_samples = std::vector<GGX::Sample>();
+            std::vector<DirectionalSample> ggx_samples = std::vector<DirectionalSample>();
             ggx_samples.resize(g_options.sample_count * 8);
             #pragma omp parallel for schedule(dynamic, 16)
             for (int s = 0; s < ggx_samples.size(); ++s)
@@ -454,7 +454,7 @@ int initialize(Engine& engine) {
                     }
 
                     for (int s = 0; s < bsdf_sample_count; ++s) {
-                        GGX::Sample sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
+                        DirectionalSample sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
                         if (sample.PDF < 0.000000001f)
                             continue;
 
@@ -484,14 +484,14 @@ int initialize(Engine& engine) {
                     break;
                 case ConvolutionType::BSDF:
                     for (int s = 0; s < g_options.sample_count; ++s) {
-                        const GGX::Sample& sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
+                        const DirectionalSample& sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
                         Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
                         radiance += sample2D(texture, sample_uv).rgb();
                     }
                     break;
                 case ConvolutionType::Recursive:
                     for (int s = 0; s < g_options.sample_count; ++s) {
-                        const GGX::Sample& sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
+                        const DirectionalSample& sample = ggx_samples[(s + bsdf_index_offset) % ggx_samples.size()];
                         Vector2f sample_uv = direction_to_latlong_texcoord(up_rotation * sample.direction);
                         radiance += sample2D(previous_roughness_tex, sample_uv).rgb();
                     }

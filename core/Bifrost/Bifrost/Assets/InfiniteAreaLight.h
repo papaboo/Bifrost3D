@@ -154,7 +154,7 @@ inline void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, 
         light_samples[s] = light.sample(rng_samples[s]);
 
     // Preallocate GGX samples.
-    GGX::Sample* ggx_samples = new GGX::Sample[max_ggx_sample_count];
+    DirectionalSample* ggx_samples = new DirectionalSample[max_ggx_sample_count];
 
     for (; begin != end; ++begin) {
 
@@ -211,7 +211,7 @@ inline void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, 
             unsigned int ggx_sample_offset = RNG::teschner_hash(x, y, 1);
             RGB ggx_radiance = RGB::black();
             for (unsigned int s = 0; s < ggx_sample_count; ++s) {
-                GGX::Sample sample = ggx_samples[(s + ggx_sample_offset) % ggx_sample_count];
+                DirectionalSample sample = ggx_samples[(s + ggx_sample_offset) % ggx_sample_count];
                 if (sample.PDF < 0.000000001f)
                     continue;
 
