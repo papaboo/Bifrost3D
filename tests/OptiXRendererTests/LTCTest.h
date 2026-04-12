@@ -33,18 +33,18 @@ float LTC_error(optix::float3 wo, BSDF bsdf, Bifrost::Math::IsotropicLTC ltc, in
         optix::float3 random_sample = BSDFTestUtils::bsdf_rng_sample3f(i, max_sample_count);
 
         { // LTC error
-            Bifrost::Math::Vector3f wi = ltc.sample({ random_sample.x, random_sample.y });
+            auto ltc_sample = ltc.sample({ random_sample.x, random_sample.y });
+            float ltc_evaluation = ltc_sample.PDF; // LTC's are perfectly sampled
+            auto wi = ltc_sample.direction;
             float cos_theta_i = abs(wi.z);
 
             BSDFResponse bsdf_response = bsdf.evaluate_with_PDF(wo, { wi.x, wi.y, wi.z });
             float ltc_target = bsdf_response.reflectance.x * cos_theta_i;
-            float ltc_evaluation = ltc.evaluate(wi);
-            float ltc_PDF = ltc_evaluation; // LTC's are perfectly sampled
 
             // error with MIS weight
             if (bsdf_response.PDF.is_valid()) {
                 float error = fabsf(ltc_target - ltc_evaluation);
-                summed_error += pow3(error) / (ltc_PDF + bsdf_response.PDF.value());
+                summed_error += pow3(error) / (ltc_sample.PDF + bsdf_response.PDF.value());
                 ++valid_sample_count;
             }
         }

@@ -172,7 +172,7 @@ void test_encoding(const std::string& name, EncodeDecode encode_decode) {
     const int sample_count = 100000;
 
     Statistics<double> stats = Statistics<double>(0, sample_count, [=](int i) -> double {
-        Vector3d normal = normalize((Vector3d)Distributions::Sphere::sample(RNG::sample02(i)));
+        Vector3d normal = normalize((Vector3d)Distributions::Sphere::sample_direction(RNG::sample02(i)));
         Vector3d decoded_normal = (Vector3d)encode_decode((Vector3f)normal);
         return magnitude(normal - decoded_normal);
     });

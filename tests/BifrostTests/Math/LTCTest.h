@@ -48,13 +48,11 @@ GTEST_TEST(Math_LTC, identity_LTC_is_diffuse_distribution) {
     for (int s = 0; s < 8; ++s) {
         Vector2f random_sample = rng.sample2f();
 
-        Vector3f ltc_direction = ltc.sample(random_sample);
-        float ltc_PDF = ltc.PDF(ltc_direction);
-
+        auto ltc_sample = ltc.sample(random_sample);
         auto cosine_sample = Distributions::Cosine::sample(random_sample);
 
-        EXPECT_FLOAT_EQ_EPS(cosine_sample.PDF, ltc_PDF, 1e-6f);
-        EXPECT_NORMAL_EQ(cosine_sample.direction, ltc_direction, 1e-5f);
+        EXPECT_FLOAT_EQ_EPS(cosine_sample.PDF, ltc_sample.PDF, 1e-6f);
+        EXPECT_NORMAL_EQ(cosine_sample.direction, ltc_sample.direction, 1e-5f);
     }
 }
 
@@ -85,8 +83,8 @@ GTEST_TEST(Math_LTC, integrates_to_one) {
 
         double sum = 0.0f;
         for (unsigned int i = 0; i < sample_count; ++i) {
-            Vector3f wi = ltc.sample(ltc_rng.sample2f(i));
-            sum += ltc.evaluate(wi) / ltc.PDF(wi);
+            auto ltc_sample = ltc.sample(ltc_rng.sample2f(i));
+            sum += ltc.evaluate(ltc_sample.direction) / ltc_sample.PDF;
         }
         float integral = float(sum / sample_count);
 
