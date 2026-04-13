@@ -1,3 +1,33 @@
+LTC area lights
+* LTC support in DX11
+ * First correct implementation from paper
+  * Test in OptiXRendererTest
+   * Integrate triangle light on OrenNayar surface
+   * Integrate triangle light on GGX surface
+   * Integrate partially hidden triangle on OrenNayar surface
+    * Clipping and approximation solution
+   * Integrate partially hidden triangle on GGX surface
+   * Compare LTC with ground truth.
+   * DefaultShading test that combines OrenNayar with GGX
+  * Specular/DefaultShading support
+   * Scale by LTC RGB
+   * Loop over all lights and LTC parameterizations. LTC in out loop, light in inner. Check how Blender does it
+  * Clipless
+   * Slide 102, Real-Time Area Lighting: a Journey from Research to Production, Stephen Hill and Eric Heitz, Siggraph, 2017
+   * See slide 58 in implementation presentation or clip'ed quad code.
+   * Test and visualize to figure out wth is going on.
+ * Avoid self illumination. Using mesh model ID or check if a point is included?
+* DX11Mesh buffers should be owned instead of pointers
+
+* Disk lights ....
+* Ring light (wide disk - smaller disk)
+
+
+Emission texture support and load from gltf and obj
+
+Implement high performance root finding for third order polynomials and use it to solve single scattering albedo to Burley SSS diffuse albedo
+* https://www.youtube.com/watch?v=6u8-QFrDY10
+
 BACKLOG:
 * Rough glass
  * Define how we should scale roughness of a surface underneath another rough surface.
