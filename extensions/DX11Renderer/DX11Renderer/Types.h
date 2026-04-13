@@ -146,6 +146,12 @@ constexpr int Scene = 13;
 constexpr int CameraEffects = 0;
 };
 
+namespace SrvRegisters {
+constexpr int MeshLights = 12;
+constexpr int Ssao = 13;
+constexpr int TabulatedGgxWithFresnelRho = 15;
+}
+
 //-------------------------------------------------------------------------------------------------
 // Screen space ambient occlusion settings.
 //-------------------------------------------------------------------------------------------------
@@ -240,16 +246,20 @@ struct TextureBound {
 };
 
 struct Dx11Material {
+    unsigned int shading_model;
     float3 tint;
+
     unsigned int textures_bound;
     float roughness;
     float specularity;
     float metallic;
+
+    float3 emission;
     float coverage;
+
     float coat;
     float coat_roughness;
-    unsigned int shading_model;
-    float __padding;
+    float2 __padding;
 };
 
 struct Dx11MaterialTextures {
@@ -273,12 +283,18 @@ struct Dx11VertexGeometry {
 };
 
 struct Dx11MeshConstans {
-    int has_tint_and_roughness;
+    unsigned int vertex_flags;
     float3 _padding;
 };
 
 struct Dx11Mesh {
-    static const unsigned int MAX_BUFFER_COUNT = 3;
+    struct VertexFlags {
+        static const unsigned int None = 0;
+        static const unsigned int TintAndRoughnessBufferBound = 1 << 0;
+        static const unsigned int EmissionBufferBound = 1 << 1;
+    };
+
+    static const unsigned int MAX_BUFFER_COUNT = 4;
 
     AABB bounds;
 
@@ -288,12 +304,13 @@ struct Dx11Mesh {
     ID3D11Buffer* indices;
 
     unsigned int vertex_count;
-    ID3D11Buffer* vertex_buffers[MAX_BUFFER_COUNT]; // [geometry, texcoords, tint_and_roughness]
+    ID3D11Buffer* vertex_buffers[MAX_BUFFER_COUNT]; // [geometry, texcoords, tint_and_roughness, emission]
     unsigned int vertex_buffer_count; // Count including the last non-empty buffer. Can include empty ones. For example if tint is valid, the count will be 3, but textures can still be null.
 
     ID3D11Buffer** geometry_address() { return vertex_buffers + 0; }
     ID3D11Buffer** texcoords_address() { return vertex_buffers + 1; }
     ID3D11Buffer** tint_and_roughness_address() { return vertex_buffers + 2; }
+    ID3D11Buffer** emission_address() { return vertex_buffers + 3; }
 
     static Dx11Mesh invalid() {
         Dx11Mesh mesh = {};

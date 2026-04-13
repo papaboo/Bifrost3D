@@ -14,8 +14,7 @@
 
 #include <gtest/gtest.h>
 
-namespace Bifrost {
-namespace Math {
+namespace Bifrost::Math {
 
 GTEST_TEST(Math_OctahedralNormal, encode_decode) {
     const float max_error = 0.000047f;
@@ -31,13 +30,12 @@ GTEST_TEST(Math_OctahedralNormal, encode_decode) {
             }
 
     for (int s = 0; s < 10000; ++s) {
-        Vector3f normal = normalize(Distributions::Sphere::sample(RNG::sample02(s)));
+        Vector3f normal = normalize(Distributions::Sphere::sample_direction(RNG::sample02(s)));
         Vector3f decoded_normal = OctahedralNormal::encode_precise(normal).decode();
         EXPECT_NORMAL_EQ(normal, decoded_normal, max_error);
     }
 }
 
-} // NS Math
-} // NS Bifrost
+} // NS Bifrost::Math
 
 #endif // _BIFROST_MATH_OCTAHEDRAL_NORMAL_TEST_H_

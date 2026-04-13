@@ -14,6 +14,7 @@
 #include <Bifrost/Assets/Shading/Fittings.h>
 
 #include <OptiXRenderer/Shading/BSDFs/GGX.h>
+#include <OptiXRenderer/Shading/ShadingModels/Utils.h>
 #include <OptiXRenderer/RNG.h>
 
 #include <gtest/gtest.h>
@@ -28,30 +29,45 @@ class GGXReflectionWrapper {
 public:
     float m_alpha;
     float m_specularity;
+    bool m_normalize_rho;
 
     GGXReflectionWrapper(float alpha, float specularity = 1.0f)
-        : m_alpha(alpha), m_specularity(specularity) {}
+        : m_alpha(alpha), m_specularity(specularity), m_normalize_rho(false) {}
 
     optix::float3 evaluate(optix::float3 wo, optix::float3 wi) const {
-        return optix::make_float3(1) * Shading::BSDFs::GGX_R::evaluate(m_alpha, m_specularity, wo, wi);
+        float scale = m_normalize_rho ? rho_normalizer(abs(wo.z)) : 1;
+        return optix::make_float3(scale) * Shading::BSDFs::GGX_R::evaluate(m_alpha, m_specularity, wo, wi);
     }
+
+    void normalized_rho(bool normalize_rho) { m_normalize_rho = normalize_rho; }
 
     PDF pdf(optix::float3 wo, optix::float3 wi) const {
         return Shading::BSDFs::GGX_R::pdf(m_alpha, wo, wi);
     }
 
     BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
-        return Shading::BSDFs::GGX_R::evaluate_with_PDF(m_alpha, m_specularity, wo, wi);
+        BSDFResponse response = Shading::BSDFs::GGX_R::evaluate_with_PDF(m_alpha, m_specularity, wo, wi);
+        if (m_normalize_rho)
+            response.reflectance *= rho_normalizer(abs(wo.z));
+        return response;
     }
 
     BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
-        return Shading::BSDFs::GGX_R::sample(m_alpha, m_specularity, wo, optix::make_float2(random_sample));
+        BSDFSample sample = Shading::BSDFs::GGX_R::sample(m_alpha, m_specularity, wo, optix::make_float2(random_sample));
+        if (m_normalize_rho)
+            sample.reflectance *= rho_normalizer(abs(wo.z));
+        return sample;
     }
 
     std::string to_string() const {
         std::ostringstream out;
         out << "GGX reflection: alpha: " << m_alpha << ", specularity: " << m_specularity;
         return out.str();
+    }
+
+private:
+    float rho_normalizer(float abs_cos_theta_o) const {
+        return 1.0f / Shading::ShadingModels::SpecularRho::fetch(abs_cos_theta_o, Shading::BSDFs::GGX::roughness_from_alpha(m_alpha)).rho(m_specularity);
     }
 };
 

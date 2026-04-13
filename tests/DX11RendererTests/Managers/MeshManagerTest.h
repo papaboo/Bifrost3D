@@ -36,7 +36,6 @@ TEST_F(MeshManagerFixture, create_dx_mesh_representation) {
     using namespace Bifrost::Assets;
 
     MeshManager mesh_manager(device);
-    const OBuffer& null_buffer = mesh_manager.get_null_buffer();
 
     // Create mesh with just geometry, mesh with texcoords and mesh with colors
     Mesh geometry_mesh = create_triangle("Geometry");
@@ -59,13 +58,15 @@ TEST_F(MeshManagerFixture, create_dx_mesh_representation) {
         EXPECT_EQ(mesh.get_index_count(), dx_mesh.index_count);
         EXPECT_EQ(mesh.get_vertex_count(), dx_mesh.vertex_count);
 
-        EXPECT_NE(null_buffer, dx_mesh.indices);
+        EXPECT_NE(nullptr, dx_mesh.indices);
 
         // Test that empty buffers are set to the null buffer.
         if (mesh.get_texcoords() == nullptr)
-            EXPECT_EQ(null_buffer, *dx_mesh.texcoords_address());
+            EXPECT_EQ(nullptr, *dx_mesh.texcoords_address());
         if (mesh.get_tint_and_roughness() == nullptr)
-            EXPECT_EQ(null_buffer, *dx_mesh.tint_and_roughness_address());
+            EXPECT_EQ(nullptr, *dx_mesh.tint_and_roughness_address());
+        if (mesh.get_emission() == nullptr)
+            EXPECT_EQ(nullptr, *dx_mesh.emission_address());
     }
 }
 

@@ -9,6 +9,7 @@
 #include <DX11Renderer/Managers/EnvironmentManager.h>
 #include <DX11Renderer/Managers/LightManager.h>
 #include <DX11Renderer/Managers/MaterialManager.h>
+#include <DX11Renderer/Managers/MeshLightManager.h>
 #include <DX11Renderer/Managers/MeshManager.h>
 #include <DX11Renderer/Managers/MeshModelManager.h>
 #include <DX11Renderer/Managers/ShaderManager.h>
@@ -22,6 +23,7 @@
 #include <Bifrost/Assets/MeshModel.h>
 #include <Bifrost/Core/Engine.h>
 #include <Bifrost/Scene/Camera.h>
+#include "Bifrost/Scene/LightSource.h"
 #include <Bifrost/Scene/SceneRoot.h>
 
 #include <algorithm>
@@ -57,6 +59,7 @@ private:
     MaterialManager m_materials;
     TextureManager m_textures;
     TransformManager m_transforms;
+    MeshLightManager m_mesh_lights;
     MeshManager m_meshes;
     MeshModelManager m_mesh_models;
     SSAO::AlchemyAO m_ssao;
@@ -157,7 +160,7 @@ private:
 
 public:
     Implementation(ODevice1& device, const std::filesystem::path& data_directory)
-        : m_device(device), m_shader_manager(data_directory), m_meshes(device){
+        : m_device(device), m_shader_manager(data_directory), m_meshes(device) {
 
         device->GetImmediateContext1(&m_render_context);
 
@@ -168,9 +171,10 @@ public:
             m_mesh_models = MeshModelManager();
             m_textures = TextureManager(m_device);
             m_transforms = TransformManager(m_device, *m_render_context);
+            m_mesh_lights = MeshLightManager();
 
             // Setup static state.
-            m_render_context->PSSetShaderResources(15, 1, m_materials.get_GGX_with_fresnel_rho_srv_addr());
+            m_render_context->PSSetShaderResources(SrvRegisters::TabulatedGgxWithFresnelRho, 1, m_materials.get_GGX_with_fresnel_rho_srv_addr());
 
             OSamplerState linear_sampler = TextureManager::create_clamped_linear_sampler(device);
             m_render_context->PSSetSamplers(15, 1, &linear_sampler);
@@ -243,13 +247,14 @@ public:
             THROW_DX11_ERROR(m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_vertex_shading.shader));
 
             // Create the input layout
-            D3D11_INPUT_ELEMENT_DESC input_layout_desc[] = {
+            D3D11_INPUT_ELEMENT_DESC input_layout_desc[Dx11Mesh::MAX_BUFFER_COUNT] = {
                 { "GEOMETRY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
                 { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-                { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 2, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+                { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 2, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+                { "EMISSION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 3, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
             };
 
-            THROW_DX11_ERROR(m_device->CreateInputLayout(input_layout_desc, 3, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout));
+            THROW_DX11_ERROR(m_device->CreateInputLayout(input_layout_desc, Dx11Mesh::MAX_BUFFER_COUNT, UNPACK_BLOB_ARGS(vertex_shader_blob), &m_vertex_shading.input_layout));
         }
 
         { // Setup raster states
@@ -379,11 +384,11 @@ public:
                 context->IASetIndexBuffer(mesh.indices, DXGI_FORMAT_R32_UINT, 0);
 
             // Setup strides and offsets for the buffers.
-            // Layout is [geometry, texcoords, tint_and_roughness].
-            static unsigned int strides[3] = { sizeof(float4), sizeof(float2), sizeof(TintRoughness) };
-            static unsigned int offsets[3] = { 0, 0, 0 };
+            // Layout is [geometry, texcoords, tint_and_roughness, emission].
+            static unsigned int strides[Dx11Mesh::MAX_BUFFER_COUNT] = { sizeof(float4), sizeof(float2), sizeof(TintRoughness), sizeof(RGB) };
+            static unsigned int offsets[Dx11Mesh::MAX_BUFFER_COUNT] = { 0, 0, 0, 0 };
 
-            context->IASetVertexBuffers(0, mesh.vertex_buffer_count, mesh.vertex_buffers, strides, offsets);
+            context->IASetVertexBuffers(0, Dx11Mesh::MAX_BUFFER_COUNT, mesh.vertex_buffers, strides, offsets);
         }
 
         { // Bind world transform.
@@ -392,7 +397,7 @@ public:
 
         { // Material parameters
 
-          // Bind material constant buffer.
+            // Bind material constant buffer.
             m_materials.bind_material(*context, ConstantRegisters::Material, model.material_ID);
 
             Dx11MaterialTextures& material_textures = m_materials.get_material_textures(model.material_ID);
@@ -485,6 +490,8 @@ public:
         { // Bind light buffers
             m_render_context->VSSetConstantBuffers(ConstantRegisters::Lights, 1, m_lights.manager.light_buffer_addr());
             m_render_context->PSSetConstantBuffers(ConstantRegisters::Lights, 1, m_lights.manager.light_buffer_addr());
+
+            m_render_context->PSSetShaderResources(SrvRegisters::MeshLights, 1, &m_mesh_lights.get_combined_mesh_lights_SRV());
         }
 
         m_render_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -493,7 +500,7 @@ public:
             auto g_buffer_marker = PerformanceMarker(*m_render_context, L"G-buffer");
 
             // Re-allocate buffers if the dimensions have changed.
-            if (m_g_buffer.width < unsigned int(g_buffer_width )|| m_g_buffer.height < unsigned int(g_buffer_height)) {
+            if (m_g_buffer.width < unsigned int(g_buffer_width) || m_g_buffer.height < unsigned int(g_buffer_height)) {
                 m_g_buffer.width = std::max(m_g_buffer.width, unsigned int(g_buffer_width));
                 m_g_buffer.height = std::max(m_g_buffer.height, unsigned int(g_buffer_height));
 
@@ -601,7 +608,7 @@ public:
         }
 
         m_render_context->OMSetRenderTargets(1, &m_backbuffer_RTV, m_g_buffer.depth_view);
-        m_render_context->PSSetShaderResources(13, 1, &ssao_SRV);
+        m_render_context->PSSetShaderResources(SrvRegisters::Ssao, 1, &ssao_SRV);
         m_raster_state.set_raster_state(m_raster_state.backface_culled, m_render_context);
         m_render_context->OMSetDepthStencilState(m_opaque.depth_state, 0);
 
@@ -752,6 +759,7 @@ public:
 
         m_meshes.handle_updates(m_device);
         m_mesh_models.handle_updates();
+        m_mesh_lights.handle_updates(m_device);
     }
 
     Renderer::Settings get_settings() const { return m_settings; }

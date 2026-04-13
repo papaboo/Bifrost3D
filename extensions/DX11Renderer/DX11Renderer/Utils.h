@@ -13,6 +13,7 @@
 #include <DX11Renderer/Types.h>
 
 #include <Bifrost/Math/AABB.h>
+#include <Bifrost/Math/Color.h>
 #include <Bifrost/Math/Rect.h>
 #include <Bifrost/Math/Transform.h>
 #include <Bifrost/Math/Vector.h>
@@ -100,8 +101,11 @@ inline int sizeof_dx_format(DXGI_FORMAT format) {
 ODevice1 get_device1(ID3D11DeviceContext1& context);
 
 inline float3 make_float3(Bifrost::Math::Vector3f v) {
-    float3 r = { v.x, v.y, v.z };
-    return r;
+    return { v.x, v.y, v.z };
+}
+
+inline float3 make_float3(Bifrost::Math::RGB v) {
+    return { v.r, v.g, v.b };
 }
 
 inline float alpha_sort_value(Bifrost::Math::Vector3f camera_pos, Bifrost::Math::Transform transform, Bifrost::Math::AABB bounds) {
@@ -143,7 +147,7 @@ inline HRESULT create_constant_buffer(ID3D11Device1& device, T& data, ID3D11Buff
     return device.CreateBuffer(&desc, &resource_data, constant_buffer);
 }
 
-inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, void* data, int element_count,
+inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, const void* const data, unsigned int element_count,
                                      ID3D11ShaderResourceView** buffer_SRV, ID3D11UnorderedAccessView** buffer_UAV = nullptr) {
     D3D11_BUFFER_DESC buffer_desc = {};
     buffer_desc.Usage = D3D11_USAGE_DEFAULT;
@@ -184,9 +188,57 @@ inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, 
     return buffer;
 };
 
-inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, int element_count,
+inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, unsigned int element_count,
                                      ID3D11ShaderResourceView** buffer_SRV, ID3D11UnorderedAccessView** buffer_UAV = nullptr) {
     return create_default_buffer(device, format, nullptr, element_count, buffer_SRV, buffer_UAV);
+}
+
+template <typename S>
+inline OBuffer create_structured_buffer(ID3D11Device1& device, const S* const data, unsigned int element_count,
+    ID3D11ShaderResourceView** buffer_SRV, ID3D11UnorderedAccessView** buffer_UAV = nullptr) {
+    D3D11_BUFFER_DESC buffer_desc = {};
+    buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+    buffer_desc.StructureByteStride = sizeof(S);
+    buffer_desc.ByteWidth = sizeof(S) * element_count;
+    buffer_desc.BindFlags = (buffer_SRV == nullptr ? D3D11_BIND_NONE : D3D11_BIND_SHADER_RESOURCE) |
+                            (buffer_UAV == nullptr ? D3D11_BIND_NONE : D3D11_BIND_UNORDERED_ACCESS);
+    buffer_desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+    buffer_desc.CPUAccessFlags = 0;
+
+    OBuffer buffer;
+    if (data != nullptr) {
+        D3D11_SUBRESOURCE_DATA buffer_data = {};
+        buffer_data.pSysMem = data;
+        THROW_DX11_ERROR(device.CreateBuffer(&buffer_desc, &buffer_data, &buffer));
+    } else
+        THROW_DX11_ERROR(device.CreateBuffer(&buffer_desc, nullptr, &buffer));
+
+    if (buffer_SRV) {
+        D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+        srv_desc.Format = DXGI_FORMAT_UNKNOWN;
+        srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+        srv_desc.Buffer.FirstElement = 0;
+        srv_desc.Buffer.NumElements = element_count;
+        THROW_DX11_ERROR(device.CreateShaderResourceView(buffer, &srv_desc, buffer_SRV));
+    }
+
+    if (buffer_UAV) {
+        D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
+        uav_desc.Format = DXGI_FORMAT_UNKNOWN;
+        uav_desc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+        uav_desc.Buffer.FirstElement = 0;
+        uav_desc.Buffer.NumElements = element_count;
+        uav_desc.Buffer.Flags = 0;
+        THROW_DX11_ERROR(device.CreateUnorderedAccessView(buffer, &uav_desc, buffer_UAV));
+    }
+
+    return buffer;
+}
+
+template <typename S>
+inline OBuffer create_structured_buffer(ID3D11Device1& device, unsigned int element_count,
+    ID3D11ShaderResourceView** buffer_SRV, ID3D11UnorderedAccessView** buffer_UAV = nullptr) {
+    return create_structured_buffer<S>(device, nullptr, element_count, buffer_SRV, buffer_UAV);
 }
 
 inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, void* pixels, unsigned int width, unsigned int height, D3D11_USAGE usage,

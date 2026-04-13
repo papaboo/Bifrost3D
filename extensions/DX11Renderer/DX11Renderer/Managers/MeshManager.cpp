@@ -32,11 +32,6 @@ MeshManager::MeshManager(ID3D11Device1& device) {
     empty_desc.Usage = D3D11_USAGE_IMMUTABLE;
     empty_desc.ByteWidth = sizeof(Vector4f);
     empty_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-
-    Vector4f lval = Vector4f::zero();
-    D3D11_SUBRESOURCE_DATA empty_data = {};
-    empty_data.pSysMem = &lval;
-    THROW_DX11_ERROR(device.CreateBuffer(&empty_desc, &empty_data, &m_null_buffer));
 }
 
 MeshManager::~MeshManager() {
@@ -167,9 +162,6 @@ void MeshManager::handle_updates(ID3D11Device1& device) {
 
                     if (texcoords != mesh.get_texcoords())
                         delete[] texcoords;
-                } else {
-                    m_null_buffer.get()->AddRef();
-                    *dx_mesh.texcoords_address() = m_null_buffer;
                 }
             }
 
@@ -186,20 +178,34 @@ void MeshManager::handle_updates(ID3D11Device1& device) {
 
                     if (tints != mesh.get_tint_and_roughness())
                         delete[] tints;
-                } else {
-                    m_null_buffer.get()->AddRef();
-                    *dx_mesh.tint_and_roughness_address() = m_null_buffer;
+                }
+            }
+
+            { // Upload emissive attribute if present, otherwise upload 'null buffer'.
+                RGB* emission = mesh.get_emission();
+                if (emission != nullptr) {
+
+                    if (expand_indexed_buffers)
+                        emission = MeshUtils::expand_indexed_buffer(mesh.get_primitives(), mesh.get_primitive_count(), emission);
+
+                    HRESULT hr = upload_vertex_buffer(device, emission, dx_mesh.vertex_count, dx_mesh.emission_address());
+                    if (FAILED(hr))
+                        printf("Could not upload %s's emission buffer.\n", mesh.get_name().c_str());
+
+                    if (emission != mesh.get_emission())
+                        delete[] emission;
                 }
             }
 
             // Constant buffer
             Dx11MeshConstans mesh_constants;
-            mesh_constants.has_tint_and_roughness = mesh.get_tint_and_roughness() != nullptr;
+            mesh_constants.vertex_flags = mesh.get_tint_and_roughness() ? Dx11Mesh::VertexFlags::TintAndRoughnessBufferBound : Dx11Mesh::VertexFlags::None;
+            mesh_constants.vertex_flags |= mesh.get_emission() ? Dx11Mesh::VertexFlags::EmissionBufferBound : Dx11Mesh::VertexFlags::None;
             THROW_DX11_ERROR(create_constant_buffer(device, mesh_constants, &dx_mesh.constant_buffer));
 
             // Set the buffer count to the minimal number of buffers containing data.
             dx_mesh.vertex_buffer_count = Dx11Mesh::MAX_BUFFER_COUNT;
-            while (dx_mesh.vertex_buffer_count > 1 && m_null_buffer == dx_mesh.vertex_buffers[dx_mesh.vertex_buffer_count - 1])
+            while (dx_mesh.vertex_buffer_count > 1 && nullptr == dx_mesh.vertex_buffers[dx_mesh.vertex_buffer_count - 1])
                 dx_mesh.vertex_buffer_count--;
 
             m_meshes[mesh_ID] = dx_mesh;

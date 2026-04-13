@@ -32,6 +32,12 @@ static const float AIR_IOR = 1.0f;
 // Types.
 // ------------------------------------------------------------------------------------------------
 
+struct VertexFlags {
+    static const unsigned int None = 0;
+    static const unsigned int TintAndRoughnessBufferBound = 1 << 0;
+    static const unsigned int EmissionBufferBound = 1 << 1;
+};
+
 struct Cone {
     float3 direction;
     float cos_theta;
@@ -388,5 +394,54 @@ CentroidAndSolidangle centroid_and_solidangle_on_hemisphere(Cone cone) {
         }
     }
 }
+
+// ------------------------------------------------------------------------------------------------
+// Intersection functions
+// ------------------------------------------------------------------------------------------------
+
+// Mueller-Trumbore ray/triangle intersection.
+bool ray_triangle_intersection(float3 ray_origin, float3 ray_direction, float3 positions[3], out float3 barycentric_coords, bool two_sided = true) {
+
+    float3 edge1 = positions[1] - positions[0];
+    float3 edge2 = positions[2] - positions[0];
+    float3 ray_cross_edge2 = cross(ray_direction, edge2);
+    float determinant = dot(edge1, ray_cross_edge2);
+
+    if (two_sided ? determinant == 0 : determinant <= 0) {
+        // Output degenerate barycentric coords as the ray is parallel to the triangle plane.
+        barycentric_coords = float3(0, 0, 0);
+        return false;
+    }
+
+    float inv_determinant = 1.0 / determinant;
+    float3 s = ray_origin - positions[0];
+    float u = inv_determinant * dot(s, ray_cross_edge2);
+
+    float3 s_cross_edge1 = cross(s, edge1);
+    float v = inv_determinant * dot(ray_direction, s_cross_edge1);
+
+    float distance = inv_determinant * dot(edge2, s_cross_edge1);
+
+    barycentric_coords = float3(1 - u - v, u, v);
+
+    // Ray intersected the triangle if the barycentric coordinates are valid and the triangle is in front of the ray.
+    bool valid_u = u >= 0 && u <= 1;
+    bool valid_v = v >= 0 && u + v <= 1;
+    bool valid_distance = distance > 0.0;
+    return valid_u && valid_v && valid_distance;
+}
+
+// If barycentric coordinates fall outside of a triangle, i.e. one of more of the coordinates are negative,
+// we can coarsely project the barycentric coordinates to the triangle by clamping the coordinates to 0 and re-normalizing.
+// This doesn't find the closest barycentric coordinate geometrically speaking though.
+float3 project_barycentric_coords_to_triangle_coarse(float3 barycentric_coord) {
+    barycentric_coord.x = max(0, barycentric_coord.x);
+    barycentric_coord.y = max(0, barycentric_coord.y);
+    barycentric_coord.z = max(0, barycentric_coord.z);
+
+    return normalize(barycentric_coord);
+}
+
+
 
 #endif // _DX11_RENDERER_SHADERS_UTILS_H_

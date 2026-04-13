@@ -377,6 +377,10 @@ void RenderingGUI::layout_frame() {
                             material.set_coverage(coverage);
                     }
 
+                    RGB emission = material.get_emission();
+                    if (ImGui::ColorEdit3("Emission", &emission.r))
+                        material.set_emission(emission);
+
                     Materials::Flags flags = material.get_flags();
                     bool flags_changed = ImGui::CheckboxFlags("Thin walled", &flags, MaterialFlag::ThinWalled);
                     flags_changed |= ImGui::CheckboxFlags("Cutout", &flags, MaterialFlag::Cutout);

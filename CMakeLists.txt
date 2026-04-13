@@ -60,7 +60,6 @@ subdirs("${BIFROST_ROOT_DIR}/core/Bifrost")
   add_extension("DX11Renderer")
   add_extension("OptiXRenderer")
 add_extension("DX11OptiXAdapter") # Depends on OptiXRenderer and DX11Renderer
-add_extension("AntTweakBar")
 add_extension("GLFWDriver")
 add_extension("ImageOperations")
 add_extension("ImGui") # Depends on DX11Renderer ... for now.

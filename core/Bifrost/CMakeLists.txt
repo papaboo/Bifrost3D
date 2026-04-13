@@ -22,10 +22,12 @@ SET(ASSETS_SHADING_SRCS
   Bifrost/Assets/Shading/DielectricGGXRho.cpp
   Bifrost/Assets/Shading/EstimateGGXBoundedVNDFAlpha.cpp
   Bifrost/Assets/Shading/Fittings.h
+  Bifrost/Assets/Shading/GGXLinearlyTransformedCosines.cpp
   Bifrost/Assets/Shading/GGXRho.cpp
   Bifrost/Assets/Shading/GGXRho.png
   Bifrost/Assets/Shading/GGXWithFresnelRho.cpp
   Bifrost/Assets/Shading/GGXWithFresnelRho.png
+  Bifrost/Assets/Shading/LinearlyTransformedCosines.h
 )
 
 SET(CORE_SRCS 
@@ -64,6 +66,7 @@ SET(MATH_SRCS
   Bifrost/Math/ImageSampling.h
   Bifrost/Math/Intersect.h
   Bifrost/Math/Line.h
+  Bifrost/Math/LTC.h
   Bifrost/Math/Matrix.h
   Bifrost/Math/MortonEncode.h
   Bifrost/Math/NelderMead.h

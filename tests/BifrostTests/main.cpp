@@ -28,6 +28,7 @@
 #include <Math/FixedPointTypesTest.h>
 #include <Math/ImageSamplingTest.h>
 #include <Math/LineTest.h>
+#include <Math/LTCTest.h>
 #include <Math/MatrixTest.h>
 #include <Math/OctahedralNormalTest.h>
 #include <Math/QuaternionTest.h>

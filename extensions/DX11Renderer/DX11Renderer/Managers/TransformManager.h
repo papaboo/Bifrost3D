@@ -9,10 +9,8 @@
 #ifndef _DX11RENDERER_MANAGERS_TRANSFORM_MANAGER_H_
 #define _DX11RENDERER_MANAGERS_TRANSFORM_MANAGER_H_
 
-#include "Dx11Renderer/ConstantBufferArray.h"
 #include "Dx11Renderer/Types.h"
 
-#include <Bifrost/Math/Matrix.h>
 #include <Bifrost/Math/Transform.h>
 
 #include <vector>
@@ -35,9 +33,7 @@ public:
     TransformManager& operator=(TransformManager&& rhs) = default;
     
     inline Bifrost::Math::Transform& get_transform(unsigned int transform_index) { return m_transforms[transform_index]; }
-    inline void bind_transform(ID3D11DeviceContext1& context, unsigned int slot, unsigned int transform_index) { 
-        context.VSSetConstantBuffers(slot, 1, &m_GPU_transforms[transform_index]);
-    }
+    void bind_transform(ID3D11DeviceContext1& context, unsigned int slot, unsigned int transform_index);
 
     void handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& context);
 

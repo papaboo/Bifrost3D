@@ -9,16 +9,22 @@
 #include "ShadingModels/DefaultShading.hlsl"
 #include "ShadingModels/DiffuseShading.hlsl"
 #include "LightSources.hlsl"
+#include "LtcLightSources.hlsl"
 #include "Utils.hlsl"
-
-#pragma warning (disable: 3556) // Disable warning about dividing by integers is slow. It's a constant!!
 
 // ------------------------------------------------------------------------------------------------
 // Input buffers.
 // ------------------------------------------------------------------------------------------------
 
+struct MeshLight {
+    float3 positions[3];
+    float3 emission[3];
+    uint is_thinwalled;
+    uint __128bit_alignment_padding;
+};
+
 cbuffer vertex_constants : register(b1) {
-    int tint_and_roughness_buffer_set;
+    int vertex_flags;
 }
 
 cbuffer transform : register(b2) {
@@ -28,6 +34,8 @@ cbuffer transform : register(b2) {
 cbuffer material : register(b3) {
     ShadingModels::Parameters material_params;
 }
+
+StructuredBuffer<MeshLight> mesh_lights : register(t12);
 
 cbuffer lights : register(b12) {
     int light_count;
@@ -47,19 +55,21 @@ struct Varyings {
     float3 normal : NORMAL;
     float2 texcoord : TEXCOORD;
     float4 tint_and_roughness_scale : COLOR;
+    float3 emission : EMISSION;
 };
 
 // ------------------------------------------------------------------------------------------------
 // Vertex shader.
 // ------------------------------------------------------------------------------------------------
 
-Varyings vs(float4 geometry : GEOMETRY, float2 texcoord : TEXCOORD, float4 tint_and_roughness_scale : COLOR) {
+Varyings vs(float4 geometry : GEOMETRY, float2 texcoord : TEXCOORD, float4 tint_and_roughness_scale : COLOR, float3 emission : EMISSION) {
     Varyings output;
-    output.world_position.xyz = mul(float4(geometry.xyz, 1.0f), to_world_matrix);
-    output.position = mul(float4(output.world_position.xyz, 1.0f), scene_vars.view_projection_matrix);
+    output.world_position = mul(float4(geometry.xyz, 1.0f), to_world_matrix);
+    output.position = mul(float4(output.world_position, 1.0f), scene_vars.view_projection_matrix);
     output.normal.xyz = normalize(mul(float4(decode_octahedral_normal(asint(geometry.w)), 0.0), to_world_matrix));
     output.texcoord = texcoord;
-    output.tint_and_roughness_scale = tint_and_roughness_buffer_set ? tint_and_roughness_scale : float4(1,1,1,1);
+    output.tint_and_roughness_scale = vertex_flags & VertexFlags::TintAndRoughnessBufferBound ? tint_and_roughness_scale : float4(1,1,1,1);
+    output.emission = vertex_flags & VertexFlags::EmissionBufferBound ? emission : float3(1, 1, 1); // Multiplicative identity to let the material emission decide how emissive the model is.
     return output;
 }
 
@@ -72,7 +82,7 @@ interface IShadingModelCreator {
 };
 
 float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, bool is_front_face, float ambient_visibility) {
-    float3 world_wo = normalize(scene_vars.camera_world_position() - input.world_position.xyz);
+    float3 world_wo = normalize(scene_vars.camera_world_position() - input.world_position);
 
     float3 world_normal = normalize(input.normal.xyz) * (is_front_face ? 1.0 : -1.0);
     world_normal = fix_backfacing_shading_normal(world_wo, world_normal, 0.002f);
@@ -82,9 +92,13 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
 
     const ShadingModels::IShadingModel shading_model = shading_model_creator.create(input.texcoord, input.tint_and_roughness_scale, wo.z);
 
-    // Apply IBL
-    float3 radiance = scene_vars.environment_tint.rgb * shading_model.evaluate_IBL(world_wo, world_normal, ambient_visibility);
+    // Apply surface emission
+    float3 radiance = input.emission * material_params.emission;
 
+    // Apply IBL
+    radiance += scene_vars.environment_tint.rgb * shading_model.evaluate_IBL(world_wo, world_normal, ambient_visibility);
+
+    // Apply analytical light sources
     for (int l = 0; l < light_count; ++l) {
         LightData light = light_data[l];
 
@@ -92,16 +106,29 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
         if (is_sphere_light) {
             // Compute sphere light position in shading space
             SphereLight sphere_light = light.sphere_light();
-            sphere_light.position = mul(world_to_shading_TBN, sphere_light.position - input.world_position.xyz);
+            sphere_light.position = mul(world_to_shading_TBN, sphere_light.position - input.world_position);
 
             radiance += shading_model.evaluate_sphere_light(wo, sphere_light, ambient_visibility);
         } else {
             // Apply regular delta lights.
-            LightSample light_sample = sample_light(light, input.world_position.xyz);
+            LightSample light_sample = sample_light(light, input.world_position);
             float3 wi = mul(world_to_shading_TBN, light_sample.direction_to_light);
             float3 f = shading_model.evaluate(wo, wi);
             radiance += f * light_sample.radiance * abs(wi.z);
         }
+    }
+
+    // Apply mesh lights
+    uint mesh_light_count, mesh_light_size;
+    mesh_lights.GetDimensions(mesh_light_count, mesh_light_size);    
+    for (uint ml = 0; ml < mesh_light_count; ++ml) {
+        MeshLight light = mesh_lights[ml];
+        bool two_sided = light.is_thinwalled;
+
+        float3 albedo = float3(1, 1, 1); // TODO fetch from material along with ltc paramaters. Check how it's done in Blender. Can we use closures? Or should we always allocate the max amount of LTCs?
+
+        radiance += 0.5f * albedo * Ltc::evaluate_mesh_light_lambert(world_normal, world_wo, input.world_position, light.positions, light.emission, two_sided);
+        radiance += 0.5f * albedo * Ltc::evaluate_mesh_light_mirror(world_normal, world_wo, input.world_position, light.positions, light.emission, two_sided);
     }
 
     return radiance;
@@ -191,7 +218,7 @@ struct TransmissiveShadingCreator : IShadingModelCreator {
 
         // The pipeline currently doesn't support RGB scaled transmission. Instead we use the average of the transmissive tint.
         float3 transmission_tint = default_shading.diffuse_tint();
-        transmission = 1.0f - (transmission_tint.r + transmission_tint.g + transmission_tint.b) / 3;
+        transmission = 1.0f - (transmission_tint.r + transmission_tint.g + transmission_tint.b) / 3.0f;
 
         default_shading.zero_diffuse_component();
         return default_shading;
@@ -289,8 +316,8 @@ float4 visualize_material_params(Varyings input, bool is_front_face : SV_IsFront
         const int block_count = 24;
         float2 uv = frac(input.texcoord);
         float2 uv_blocks = uv * block_count;
-        int2 uv_blocks_indices = int2(uv_blocks);
-        bool show_u = uv_blocks_indices.x % 2 == uv_blocks_indices.y % 2;
+        uint2 uv_blocks_indices = uint2(uv_blocks);
+        bool show_u = uv_blocks_indices.x % 2u == uv_blocks_indices.y % 2u;
         float3 uv_tint = float3(0.5, 0.5, 0.5);
         if (show_u)
             uv_tint = inside_arrow(uv_blocks - uv_blocks_indices) ? float3(uv.x, 0, 0) : uv_tint;

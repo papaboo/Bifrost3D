@@ -14,19 +14,41 @@
 #include <Bifrost/Math/Vector.h>
 #include <Bifrost/Math/Utils.h>
 
-namespace Bifrost {
-namespace Math {
-namespace Distributions {
+namespace Bifrost::Math::Distributions {
+
+struct DirectionalSample {
+    Vector3f direction;
+    float PDF;
+};
+
+//=================================================================================================
+// Cosine distribution.
+//=================================================================================================
+namespace Cosine {
+
+__always_inline__ float PDF(float abs_cos_theta) {
+    return abs_cos_theta / PI<float>();
+}
+
+__always_inline__ DirectionalSample sample(Vector2f random_sample) {
+    float r2 = random_sample.x;
+    float r = sqrt(1.0f - r2);
+    float z = sqrt(r2);
+
+    float phi = 2.0f * PI<float>() * random_sample.y;
+
+    DirectionalSample res;
+    res.direction = Vector3f(r * cos(phi), r * sin(phi), z);
+    res.PDF = z / PI<float>();
+    return res;
+}
+
+} // NS Cosine
 
 //=================================================================================================
 // GGX distribution.
 //=================================================================================================
 namespace GGX {
-
-struct Sample {
-    Vector3f direction;
-    float PDF;
-};
 
 __always_inline__ float D(float alpha, float abs_cos_theta) {
     float alpha_sqrd = alpha * alpha;
@@ -41,7 +63,7 @@ __always_inline__ float PDF(float alpha, float abs_cos_theta) {
     return D(alpha, abs_cos_theta) * abs_cos_theta;
 }
 
-__always_inline__ Sample sample(float alpha, Vector2f random_sample) {
+__always_inline__ DirectionalSample sample(float alpha, Vector2f random_sample) {
     float phi = random_sample.y * (2.0f * PI<float>());
 
     float tan_theta_sqrd = alpha * alpha * random_sample.x / (1.0f - random_sample.x);
@@ -49,7 +71,7 @@ __always_inline__ Sample sample(float alpha, Vector2f random_sample) {
 
     float r = sqrt(fmaxf(1.0f - cos_theta * cos_theta, 0.0f));
 
-    Sample res;
+    DirectionalSample res;
     res.direction = Vector3f(cos(phi) * r, sin(phi) * r, cos_theta);
     res.PDF = PDF(alpha, cos_theta); // We have to be able to inline this to reuse some temporaries.
     return res;
@@ -57,19 +79,22 @@ __always_inline__ Sample sample(float alpha, Vector2f random_sample) {
 
 } // NS GGX
 
-
 //=================================================================================================
 // Uniform sphere distribution.
 //=================================================================================================
 namespace Sphere {
 
-__always_inline__ float PDF() { return 1.0f / (4.0f * PI<float>()); }
+__always_inline__ float PDF() { return 0.25f / PI<float>(); }
 
-__always_inline__ Vector3f sample(Vector2f random_sample) {
+__always_inline__ Vector3f sample_direction(Vector2f random_sample) {
     float z = 1.0f - 2.0f * random_sample.x;
     float r = sqrt(fmaxf(0.0f, 1.0f - z * z));
     float phi = 2.0f * PI<float>() * random_sample.y;
     return Vector3f(r * cos(phi), r * sin(phi), z);
+}
+
+__always_inline__ DirectionalSample sample(Vector2f random_sample) {
+    return { sample_direction(random_sample), PDF() };
 }
 
 } // NS Sphere
@@ -102,11 +127,6 @@ __always_inline__ Sample sample(float sigma, float random_sample) {
 // https://www.pbr-book.org/4ed/Volume_Scattering/Phase_Functions#TheHenyeyndashGreensteinPhaseFunction
 //=================================================================================================
 namespace HenyeyGreenstein {
-
-struct Sample {
-    Vector3f direction;
-    float PDF;
-};
 
 // When g approximates -1 and random_sample approximates 0 or when g approximates 1 and random_sample approximates 1,
 // the computation of cos_theta below is unstable and can give 0, leading to NaNs.
@@ -147,7 +167,7 @@ __always_inline__ Vector3f sample_direction(float g, Vector2f random_sample) {
 }
 
 // Sample the distribution wrt [0,0,1] as wo.
-__always_inline__ Sample sample(float g, Vector2f random_sample) {
+__always_inline__ DirectionalSample sample(float g, Vector2f random_sample) {
     Vector3f wi = sample_direction(g, random_sample);
     float pdf = evaluate(g, wi.z);
     return { wi, pdf };
@@ -163,7 +183,7 @@ __always_inline__ Vector3f sample_direction(float g, Vector3f wo, Vector2f rando
 }
 
 // Sample the distribution.
-__always_inline__ Sample sample(float g, Vector3f wo, Vector2f random_sample) {
+__always_inline__ DirectionalSample sample(float g, Vector3f wo, Vector2f random_sample) {
     Vector3f wi = sample_direction(g, wo, random_sample);
     float pdf = evaluate(g, dot(wo, wi));
     return { wi, pdf };
@@ -171,8 +191,6 @@ __always_inline__ Sample sample(float g, Vector3f wo, Vector2f random_sample) {
 
 } // NS HenyeyGreenstein
 
-} // NS Distributions
-} // NS Math
-} // NS Bifrost
+} // NS Bifrost::Math::Distributions
 
 #endif // _BIFROST_MATH_DISTRIBUTIONS_H_

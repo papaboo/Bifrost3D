@@ -11,8 +11,6 @@
 
 #include "Dx11Renderer/Types.h"
 
-#include "Bifrost/Math/Matrix.h"
-
 #include <vector>
 
 //-------------------------------------------------------------------------------------------------

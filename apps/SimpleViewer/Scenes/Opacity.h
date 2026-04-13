@@ -72,7 +72,7 @@ void create_opacity_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene
 
         Transform transform = Transform(Vector3f(0.0f, 0.5f, 0.0f));
         SceneNode box_node = SceneNode("Swizz box", transform);
-        Mesh box_mesh = MeshCreation::box(1);
+        Mesh box_mesh = MeshCreation::box(1, Vector3f::one(), { MeshFlag::Position, MeshFlag::Texcoord });
         MeshModel(box_node, box_mesh, material);
         box_node.set_parent(root_node);
     }
@@ -83,7 +83,7 @@ void create_opacity_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene
         transparent_material_data.flags = MaterialFlag::ThinWalled;
         Material transparent_material = Material("Transparent", transparent_material_data);
 
-        Mesh plane_mesh = MeshCreation::plane(1);
+        Mesh plane_mesh = MeshCreation::plane(1, MeshFlag::Position);
 
         Quaternionf rotation = Quaternionf::from_angle_axis(Math::PI<float>() * 0.5f, Vector3f::right());
 

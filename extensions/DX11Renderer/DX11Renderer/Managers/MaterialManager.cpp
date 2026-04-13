@@ -26,6 +26,9 @@ inline Dx11Material make_dx11material(Material mat) {
     dx11_material.specularity = mat.get_specularity();
     dx11_material.metallic = mat.get_metallic();
     dx11_material.coverage = mat.is_cutout() ? mat.get_cutout_threshold() : mat.get_coverage();
+    dx11_material.emission.x = mat.get_emission().r;
+    dx11_material.emission.y = mat.get_emission().g;
+    dx11_material.emission.z = mat.get_emission().b;
     dx11_material.coat = mat.get_coat();
     dx11_material.coat_roughness = mat.get_coat_roughness();
     dx11_material.textures_bound = mat.has_tint_texture() ? TextureBound::Tint : TextureBound::None;
@@ -54,6 +57,10 @@ MaterialManager::MaterialManager(ID3D11Device1& device, ID3D11DeviceContext1& co
 
     m_GPU_materials.resize(1);
     create_constant_buffer(device, m_materials[0], &m_GPU_materials[0]);
+}
+
+void MaterialManager::bind_material(ID3D11DeviceContext1& context, unsigned int slot, unsigned int material_index) {
+    context.PSSetConstantBuffers(slot, 1, &m_GPU_materials[material_index]);
 }
 
 void MaterialManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext1& context) {

@@ -60,8 +60,6 @@ struct Parameters {
     }
 };
 
-using namespace optix;
-
 // Equation 2 in Approximate Reflectance Profiles for Efficient Subsurface Scattering.
 __inline_all__ float evaluate(float entry_and_exit_distance, float diffuse_mean_free_path) {
     // Note: These are not actually derived as single and multi scattering terms, but can be viewed as such and it makes the code names more readable.

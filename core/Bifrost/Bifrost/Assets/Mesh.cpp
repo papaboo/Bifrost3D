@@ -15,8 +15,7 @@
 
 using namespace Bifrost::Math;
 
-namespace Bifrost {
-namespace Assets {
+namespace Bifrost::Assets {
 
 MeshIDGenerator Meshes::m_UID_generator = MeshIDGenerator(0u);
 std::string* Meshes::m_names = nullptr;
@@ -49,6 +48,7 @@ void Meshes::delete_buffers(Meshes::Buffers& buffers) {
     delete[] buffers.normals; buffers.normals = nullptr;
     delete[] buffers.texcoords; buffers.texcoords = nullptr;
     delete[] buffers.tint_and_roughness; buffers.tint_and_roughness = nullptr;
+    delete[] buffers.emission; buffers.emission = nullptr;
 }
 
 void Meshes::deallocate() {
@@ -111,6 +111,7 @@ MeshID Meshes::create(const std::string& name, unsigned int primitive_count, uns
     m_buffers[id].normals = (buffer_bitmask.contains(MeshFlag::Normal)) ? new Vector3f[vertex_count] : nullptr;
     m_buffers[id].texcoords = (buffer_bitmask.contains(MeshFlag::Texcoord)) ? new Vector2f[vertex_count] : nullptr;
     m_buffers[id].tint_and_roughness = (buffer_bitmask.contains(MeshFlag::TintAndRoughness)) ? new TintRoughness[vertex_count] : nullptr;
+    m_buffers[id].emission = (buffer_bitmask.contains(MeshFlag::Emissive)) ? new RGB[vertex_count] : nullptr;
     m_bounds[id] = AABB::invalid();
     m_changes.set_change(id, Change::Created);
 
@@ -167,6 +168,10 @@ Mesh deep_clone(Mesh mesh) {
     if (tint_begin != nullptr)
         std::copy_n(tint_begin, mesh.get_vertex_count(), new_mesh.get_tint_and_roughness());
 
+    RGB* emission_begin = mesh.get_emission();
+    if (emission_begin != nullptr)
+        std::copy_n(emission_begin, mesh.get_vertex_count(), new_mesh.get_emission());
+
     Vector3ui* primitives_begin = mesh.get_primitives();
     if (primitives_begin != nullptr)
         std::copy_n(primitives_begin, mesh.get_primitive_count(), new_mesh.get_primitives());
@@ -174,6 +179,33 @@ Mesh deep_clone(Mesh mesh) {
     new_mesh.set_bounds(mesh.get_bounds());
 
     return new_mesh;
+}
+
+void scale_mesh(Mesh mesh, Vector3f scale) {
+
+    // Scale positions.
+    Vector3f* positions_itr = mesh.get_positions();
+    if (positions_itr != nullptr) {
+        Vector3f* positions_end = positions_itr + mesh.get_vertex_count();
+        for (; positions_itr != positions_end; ++positions_itr)
+            *positions_itr *= scale;
+
+        // Scale bounds
+        AABB bounds = mesh.get_bounds();
+        bounds.minimum *= scale;
+        bounds.maximum *= scale;
+        mesh.set_bounds(bounds);
+    }
+
+    // Scale normals, if the scaling non-uniform.
+    bool uniform_scaling = scale.x == scale.y && scale.y == scale.z;
+    Vector3f* normals_itr = mesh.get_normals();
+    if (normals_itr != nullptr && !uniform_scaling) {
+        Vector3f recip_scale = 1.0f / scale;
+        Vector3f* normals_end = normals_itr + mesh.get_vertex_count();
+        for (; normals_itr != normals_end; ++normals_itr)
+            *normals_itr = normalize(*normals_itr * recip_scale);
+    }
 }
 
 void transform_mesh(Mesh mesh, Matrix3x4f affine_transform) {
@@ -201,7 +233,7 @@ void transform_mesh(Mesh mesh, Matrix3x4f affine_transform) {
         Matrix3x3f normal_rotation = transpose(invert(rotation));
         Vector3f* normals_end = normals_itr + mesh.get_vertex_count();
         for (; normals_itr != normals_end; ++normals_itr)
-            *normals_itr = normal_rotation * *normals_itr;
+            *normals_itr = normalize(normal_rotation * *normals_itr);
     }
 }
 
@@ -277,6 +309,15 @@ Mesh combine(const std::string& name,
         }
     }
 
+    if (flags.contains(MeshFlag::Emissive)) {
+        RGB* emission = merged_mesh.get_emission();
+        for (TransformedMesh transformed_mesh : meshes) {
+            Mesh mesh = transformed_mesh.mesh;
+            memcpy(emission, mesh.get_emission(), sizeof(RGB) * mesh.get_vertex_count());
+            emission += mesh.get_vertex_count();
+        }
+    }
+
     merged_mesh.compute_bounds();
 
     return merged_mesh.get_ID();
@@ -332,6 +373,7 @@ Mesh merge_duplicate_vertices(Mesh mesh, MeshFlags attribute_types) {
     Vector3f* normals = attribute_types.is_set(MeshFlag::Normal) ? mesh.get_normals() : nullptr;
     Vector2f* uvs = attribute_types.is_set(MeshFlag::Texcoord) ? mesh.get_texcoords() : nullptr;
     TintRoughness* colors = attribute_types.is_set(MeshFlag::TintAndRoughness) ? mesh.get_tint_and_roughness() : nullptr;
+    RGB* emission = attribute_types.is_set(MeshFlag::Emissive) ? mesh.get_emission() : nullptr;
 
     // Detect duplicate vertices and fill array of new vertex indices.
     unsigned int duplicate_count = 0;
@@ -352,6 +394,8 @@ Mesh merge_duplicate_vertices(Mesh mesh, MeshFlags attribute_types) {
                 is_equal &= uvs[v] == uvs[j];
             if (colors != nullptr)
                 is_equal &= colors[v] == colors[j];
+            if (emission != nullptr)
+                is_equal &= emission[v] == emission[j];
 
             if (is_equal) {
                 duplicate_found = true;
@@ -376,6 +420,7 @@ Mesh merge_duplicate_vertices(Mesh mesh, MeshFlags attribute_types) {
     Vector3f* new_normals = new_mesh.get_normals();
     Vector2f* new_uvs = new_mesh.get_texcoords();
     TintRoughness* new_colors = new_mesh.get_tint_and_roughness();
+    RGB* new_emission = new_mesh.get_emission();
     for (unsigned int v = 0; v < vertex_count; ++v) {
         unsigned int new_v = new_vertex_indices[v];
         if (positions != nullptr)
@@ -386,6 +431,8 @@ Mesh merge_duplicate_vertices(Mesh mesh, MeshFlags attribute_types) {
             new_uvs[new_v] = uvs[v];
         if (colors != nullptr)
             new_colors[new_v] = colors[v];
+        if (emission != nullptr)
+            new_emission[new_v] = emission[v];
     }
 
     // Copy primitives one index at a time to support primitives of arbitrary arity.
@@ -463,5 +510,4 @@ unsigned int count_degenerate_primitives(Mesh mesh, float epsilon_squared) {
 
 } // NS MeshUtils
 
-} // NS Assets
-} // NS Bifrost
+} // NS Bifrost::Assets

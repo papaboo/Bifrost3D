@@ -27,7 +27,10 @@ enum class MeshFlag : unsigned char {
     Normal           = 1u << 1u,
     Texcoord         = 1u << 2u,
     TintAndRoughness = 1u << 3u,
-    AllBuffers = Position | Normal | Texcoord | TintAndRoughness
+    Emissive         = 1u << 4u,
+    GeometryBuffers  = Position + Normal,
+    DefaultBuffers   = GeometryBuffers | TintAndRoughness, // The smallest set of selfcontained mesh attributes used for rendering a mesh
+    AllBuffers = Position | Normal | Texcoord | TintAndRoughness | Emissive
 };
 typedef Core::Bitmask<MeshFlag> MeshFlags;
 
@@ -84,6 +87,7 @@ public:
     static inline Math::Vector3f* get_normals(MeshID mesh_ID) { return m_buffers[mesh_ID].normals; }
     static inline Math::Vector2f* get_texcoords(MeshID mesh_ID) { return m_buffers[mesh_ID].texcoords; }
     static inline TintRoughness* get_tint_and_roughness(MeshID mesh_ID) { return m_buffers[mesh_ID].tint_and_roughness; }
+    static inline Math::RGB* get_emission(MeshID mesh_ID) { return m_buffers[mesh_ID].emission; }
     static inline Math::AABB get_bounds(MeshID mesh_ID) { return m_bounds[mesh_ID]; }
     static inline void set_bounds(MeshID mesh_ID, Math::AABB bounds) { m_bounds[mesh_ID] = bounds; }
     static Math::AABB compute_bounds(MeshID mesh_ID);
@@ -118,6 +122,7 @@ private:
         Math::Vector3f* normals;
         Math::Vector2f* texcoords;
         TintRoughness* tint_and_roughness;
+        Math::RGB* emission;
     };
     static void delete_buffers(Buffers& buffers);
 
@@ -140,7 +145,7 @@ public:
     // -----------------------------------------------------------------------
     Mesh() : m_ID(MeshID::invalid_UID()) {}
     Mesh(MeshID id) : m_ID(id) {}
-    Mesh(const std::string& name, unsigned int primitive_count, unsigned int vertex_count, MeshFlags buffer_bitmask = MeshFlag::AllBuffers)
+    Mesh(const std::string& name, unsigned int primitive_count, unsigned int vertex_count, MeshFlags buffer_bitmask = MeshFlag::DefaultBuffers)
         : m_ID(Meshes::create(name, primitive_count, vertex_count, buffer_bitmask)) { }
 
     static Mesh invalid() { return MeshID::invalid_UID(); }
@@ -174,6 +179,8 @@ public:
     inline Core::Iterable<Math::Vector2f*> get_texcoord_iterable() { return Core::Iterable(get_texcoords(), get_vertex_count()); }
     inline TintRoughness* get_tint_and_roughness() { return Meshes::get_tint_and_roughness(m_ID); }
     inline Core::Iterable<TintRoughness*> get_tint_and_roughness_iterable() { return Core::Iterable(get_tint_and_roughness(), get_vertex_count()); }
+    inline Math::RGB* get_emission() { return Meshes::get_emission(m_ID); }
+    inline Core::Iterable<Math::RGB*> get_emission_iterable() { return Core::Iterable(get_emission(), get_vertex_count()); }
 
     inline Math::AABB get_bounds() { return Meshes::get_bounds(m_ID); }
     inline void set_bounds(Math::AABB bounds) { Meshes::set_bounds(m_ID, bounds); }
@@ -184,6 +191,7 @@ public:
         mesh_flags |= get_normals() ? MeshFlag::Normal : MeshFlag::None;
         mesh_flags |= get_texcoords() ? MeshFlag::Texcoord : MeshFlag::None;
         mesh_flags |= get_tint_and_roughness() ? MeshFlag::TintAndRoughness : MeshFlag::None;
+        mesh_flags |= get_emission() ? MeshFlag::Emissive : MeshFlag::None;
         return mesh_flags;
     }
 
@@ -202,9 +210,11 @@ private:
 //----------------------------------------------------------------------------
 namespace MeshUtils {
 
-Mesh deep_clone(Mesh mesh_ID);
-void transform_mesh(Mesh mesh_ID, Math::Matrix3x4f affine_transform);
-void transform_mesh(Mesh mesh_ID, Math::Transform transform);
+Mesh deep_clone(Mesh mesh);
+void scale_mesh(Mesh mesh, Math::Vector3f scale);
+inline void scale_mesh(Mesh mesh, float scale) { scale_mesh(mesh, Math::Vector3f(scale)); }
+void transform_mesh(Mesh mesh, Math::Matrix3x4f affine_transform);
+void transform_mesh(Mesh mesh, Math::Transform transform);
 
 //-------------------------------------------------------------------------
 // Mesh combine utilities.
@@ -219,12 +229,10 @@ Mesh combine(const std::string& name,
              MeshFlags flags = MeshFlag::AllBuffers);
 
 inline Mesh combine(const std::string& name, 
-                    Mesh mesh0_ID, Math::Transform transform0,
-                    Mesh mesh1_ID, Math::Transform transform1, 
+                    Mesh mesh0, Math::Transform transform0,
+                    Mesh mesh1, Math::Transform transform1, 
                     MeshFlags flags = MeshFlag::AllBuffers) {
-    TransformedMesh mesh0 = { mesh0_ID, transform0 };
-    TransformedMesh mesh1 = { mesh1_ID, transform1 };
-    TransformedMesh meshes[2] = { mesh0, mesh1 };
+    TransformedMesh meshes[2] = { { mesh0, transform0 }, { mesh1, transform1 } };
     return combine(name, meshes, meshes + 2, flags);
 }
 
