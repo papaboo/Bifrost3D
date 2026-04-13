@@ -1,4 +1,26 @@
 BACKLOG:
+* LTC area lights
+ * Verify DefaultShading to LTC conversion in Bifrost
+ * Avoid self illumination in DX11. Using mesh model ID or check if a point is included?
+  * Can we move the emissive triangle a bit backwards along the normal, effectively adding a small band around them where they don't light up.
+  * Using model & facetID shouldn't work on highly tesselated surfaces, so we probably need the plane offset.
+ * Clipless polygon culling
+  * Slide 102, Real-Time Area Lighting: a Journey from Research to Production, Stephen Hill and Eric Heitz, Siggraph, 2017
+  * See slide 58 in implementation presentation or clip'ed quad code.
+ * Replace sphere lights in DX
+ * Disk lights
+ * Ring light (wide disk - smaller disk)
+* DX11Mesh buffers should be owned instead of pointers
+* Distribution viewer app
+ * Pick 2D directional distribution, sample for high res [0, 1]^2 plane and offset the vertices to see the distribution
+  * Move wo if distribution depends on view direction.
+  * Select between Lambert, OrenNayar, Burley, GGX, LTC.
+  * Can we do DefaultShading as well and multiple LTCs fitted to DefaultShading?
+  * What about the two distributions of glass / dielectric GGX?
+ * Add the same view as in LTC. Renderer hemispheres and evalute the magnitude of the distribution per pixel on the hemisphere
+* Implement high performance root finding for third order polynomials and use it to solve single scattering albedo to Burley SSS diffuse albedo https://www.youtube.com/watch?v=6u8-QFrDY10
+* Fix VS 2026 warnings
+* Optimize OrenNayar sampling. It seems that replacing UniformHemisphere sampling with Cosine reduces variance, but that doesn't line up with the results in the EON paper. See if I can reproduce the results and use Nelder-Mead to re-fit the distribution weight to low variance cosine sampling.
 * Transmissive coat
  * Implement a coated material integrator. Similar to the thin_sheet integrator and should support double sided materials ingrained in glass
   * Coat tint is square root of actual tint (tint in and tint out)
@@ -43,7 +65,11 @@ BACKLOG:
  * Or simply negate the part of the shading hemisphere that disagrees with the geometric normal to make a complete hemisphere.
   * That should preserve abs(cos(theta)) as well, so not affect variance adversely
  * Position-Normal Manifold for Efficient Glint Rendering on High-Resolution Normal Maps for efficient stable LOD / roughness under minimization.
+* Improved Fresnel fitting for GGX LTCs - https://blog.selfshadow.com/publications/s2016-advances/
+ * Will improve GGX importance sampling via LTCs and area light application in DX11.
+ * Check if it's possible to simply fit with full and no specularity and then interpolate between the two, just like we do for GGX rho.
 * Emissive textured meshes
+ * Fix LTC vertex color interpolation in DX11.
  * Mirror glTF for starters. Emissive texture and emissive 'strength'
   * https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_emissive_strength/README.md
  * LTC texture support in DX11
