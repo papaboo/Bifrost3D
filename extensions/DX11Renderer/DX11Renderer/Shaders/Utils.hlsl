@@ -77,6 +77,10 @@ struct SceneVariables {
 // Math utils
 // ------------------------------------------------------------------------------------------------
 
+// NaN check that shouldn't be optimized out by the compiler.
+// See https://sakibsaikia.github.io/graphics/2022/01/04/Nan-Checks-In-HLSL.html
+bool is_NaN(float x) { return (asuint(x) & 0x7fffffff) > 0x7f800000; }
+
 unsigned int ceil_divide(unsigned int a, unsigned int b) { return (a / b) + ((a % b) > 0); }
 
 float heaviside(float v) { return v >= 0.0f ? 1.0f : 0.0f; }
@@ -119,13 +123,13 @@ float3 latlong_texcoord_to_direction(float2 uv) {
     return -float3(sin_theta * cos(phi), cos(theta), sin_theta * sin(phi));
 }
 
-// Fix shading normals that are facing away from the camera that intersected the surface.
+// Fix shading normals that are facing away from the ray that intersected the surface.
 // The issue happens when a ray intersects a triangle, where the shading normal at
 // one of more vertices are pointing away from the view direction. Think tesselated sphere.
 // We 'fix' this by offsetting the shading normal along the view direction, w, until it is no longer viewed from behind.
 // w is assumed to be normalized.
 // It's possible to set a target cos(angle) or dot(w,n). As the output normal is normalized afterwards,
-// the target is going to be overshot by by the returned normal,
+// the target is going to be overshot by the returned normal,
 // but as it's generally smaller cos_theta adjustments we're interested in that's acceptable.
 float3 fix_backfacing_shading_normal(float3 w, float3 n, float target_cos_theta) {
     float cos_theta = dot(w, n);
