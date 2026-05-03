@@ -13,6 +13,7 @@
 #include <Assets/Shading/BSDFs/GGXTest.h>
 #include <Assets/Shading/BSDFs/LambertTest.h>
 #include <Assets/Shading/BSDFs/OrenNayarTest.h>
+#include <Assets/Shading/LightSources/LtcAreaLightTest.h>
 #include <Assets/Shading/FittingsTest.h>
 #include <Assets/Shading/ThinSheetTest.h>
 #include <Assets/Shading/UtilsTest.h>
