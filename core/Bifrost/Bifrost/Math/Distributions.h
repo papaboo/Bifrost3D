@@ -17,6 +17,11 @@
 
 namespace Bifrost::Math::Distributions {
 
+struct PositionalSample {
+    Vector3f position;
+    float PDF;
+};
+
 struct DirectionalSample {
     Vector3f direction;
     float PDF;
@@ -28,11 +33,11 @@ struct DirectionalSample {
 //=================================================================================================
 namespace Triangle {
 
-__always_inline__ GPU_ENABLED  float PDF(float triangle_area) {
+_inline_all_archs_ float PDF(float triangle_area) {
     return 1.0f / triangle_area;
 }
 
-__always_inline__ GPU_ENABLED  Vector3f sample_barycentric_coords(Vector2f random_sample) {
+_inline_all_archs_ Vector3f sample_barycentric_coords(Vector2f random_sample) {
     float b0, b1;
     if (random_sample.x < random_sample.y) {
         b0 = random_sample.x * 0.5f;
@@ -42,6 +47,13 @@ __always_inline__ GPU_ENABLED  Vector3f sample_barycentric_coords(Vector2f rando
         b0 = random_sample.x - b1;
     }
     return { b0, b1, 1 - b0 - b1 };
+}
+
+_inline_all_archs_ PositionalSample sample(Vector3f v0, Vector3f v1, Vector3f v2, float triangle_area, Vector2f random_sample) {
+    Vector3f bc = Distributions::Triangle::sample_barycentric_coords(random_sample);
+    Vector3f light_sample_point = v0 * bc.x + v1 * bc.y + v2 * bc.z;
+    float area_pdf = Distributions::Triangle::PDF(triangle_area);
+    return { light_sample_point, area_pdf };
 }
 
 }//=================================================================================================

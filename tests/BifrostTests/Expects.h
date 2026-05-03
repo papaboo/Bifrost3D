@@ -77,6 +77,11 @@ inline bool rgb_less_or_equal(Bifrost::Math::RGB value, float threshold) {
 }
 #define EXPECT_RGB_LE(value, threshold) EXPECT_PRED2(rgb_less_or_equal, value, threshold)
 
+inline bool rgb_greater_than(Bifrost::Math::RGB value, float threshold) {
+    return value.r > threshold && value.g > threshold && value.b > threshold;
+}
+#define EXPECT_RGB_GT(value, threshold) EXPECT_PRED2(rgb_greater_than, value, threshold)
+
 inline bool equal_rgba(Bifrost::Math::RGBA lhs, Bifrost::Math::RGBA rhs) {
     return equal_rgb(lhs.rgb(), rhs.rgb()) && Bifrost::Math::almost_equal(lhs.a, rhs.a);
 }
