@@ -38,8 +38,8 @@ OpaqueVaryings opaque_VS(float4 geometry : GEOMETRY) {
     OpaqueVaryings varyings;
     float3 world_position = mul(float4(geometry.xyz, 1.0f), to_world_matrix).xyz;
     varyings.position = mul(float4(world_position, 1.0f), scene_vars.view_projection_matrix);
-    float3 world_normal = mul(float4(decode_octahedral_normal(asint(geometry.w)), 0.0), to_world_matrix);
-    varyings.normal = mul(float4(world_normal, 0), scene_vars.world_to_view_matrix);
+    float3 world_normal = mul(decode_unnormalized_octahedral_normal(asint(geometry.w)), (float3x3)to_world_matrix);
+    varyings.normal = normalize(mul(world_normal, (float3x3)scene_vars.world_to_view_matrix));
     return varyings;
 }
 
@@ -61,8 +61,8 @@ ThinWalledVaryings thin_walled_VS(float4 geometry : GEOMETRY, float2 uv : TEXCOO
     ThinWalledVaryings varyings;
     float3 world_position = mul(float4(geometry.xyz, 1.0f), to_world_matrix).xyz;
     varyings.position = mul(float4(world_position, 1.0f), scene_vars.view_projection_matrix);
-    float3 world_normal = mul(float4(decode_octahedral_normal(asint(geometry.w)), 0.0), to_world_matrix);
-    varyings.normal = mul(float4(world_normal, 0), scene_vars.world_to_view_matrix);
+    float3 world_normal = mul(decode_unnormalized_octahedral_normal(asint(geometry.w)), (float3x3)to_world_matrix);
+    varyings.normal = normalize(mul(world_normal, (float3x3)scene_vars.world_to_view_matrix));
     varyings.uv = uv;
     return varyings;
 }

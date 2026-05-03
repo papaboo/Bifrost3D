@@ -15,8 +15,7 @@
 
 #include <limits.h>
 
-namespace Bifrost {
-namespace Math {
+namespace Bifrost::Math {
 
 //-------------------------------------------------------------------------------------------------
 // Encodes a unit vector using an octahedral representation and directx 11's fixed point encoding.
@@ -86,19 +85,18 @@ public:
         return encode_precise(Vector3f(x, y, z));
     }
 
+    // Decode the octahedral normal.
+    // Fast, branchless implementation found at https://x.com/Stubbesaurus/status/937994790553227264/photo/1
     __always_inline__ Vector3f decode() const {
-        Vector2f p2 = Vector2f(encoding);
-        Vector3f n = Vector3f(p2, SHRT_MAX - abs(p2.x) - abs(p2.y));
-        if (n.z < 0.0f) {
-            float tmp_x = (SHRT_MAX - abs(n.y)) * sign(n.x);
-            n.y = (SHRT_MAX - abs(n.x)) * sign(n.y);
-            n.x = tmp_x;
-        }
+        Vector2f f = Vector2f(encoding);
+        Vector3f n = Vector3f(f, SHRT_MAX - abs(f.x) - abs(f.y));
+        float t = fmaxf(-n.z, 0.0f);
+        n.x += n.x >= 0 ? -t : t;
+        n.y += n.y >= 0 ? -t : t;
         return normalize(n);
     }
 };
 
-} // NS Math
-} // NS Bifrost
+} // NS Bifrost::Math
 
 #endif // _BIFROST_MATH_OCTAHEDRAL_NORMAL_H_

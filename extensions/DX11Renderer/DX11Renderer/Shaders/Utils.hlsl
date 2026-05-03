@@ -270,7 +270,7 @@ float3 adjust_conductor_specularity_to_exterior_medium(float3 exterior_ior, floa
     return conductor_specularity(exterior_ior, base_ior, extinction_coefficient);
 }
 
-float3 decode_octahedral_normal(int packed_encoded_normal) {
+float3 decode_unnormalized_octahedral_normal(int packed_encoded_normal) {
     const int SHORT_MAX = 32767;
     const int SHORT_MIN = -32768;
 
@@ -279,29 +279,12 @@ float3 decode_octahedral_normal(int packed_encoded_normal) {
     int encoding_x = (packed_encoded_normal & 0xFFFF) + SHORT_MIN;
     int encoding_y = packed_encoded_normal >> 16;
 
-    float2 p2 = float2(encoding_x, encoding_y);
-    float3 n = float3(p2, SHORT_MAX - abs(p2.x) - abs(p2.y));
-    if (n.z < 0.0f) {
-        float tmp_x = (SHORT_MAX - abs(n.y)) * non_zero_sign(n.x);
-        n.y = (SHORT_MAX - abs(n.x)) * non_zero_sign(n.y);
-        n.x = tmp_x;
-    }
+    float2 f = float2(encoding_x, encoding_y);
+    float3 n = float3(f, SHORT_MAX - abs(f.x) - abs(f.y));
+    float t = max(-n.z, 0.0f);
+    n.x += n.x >= 0 ? -t : t;
+    n.y += n.y >= 0 ? -t : t;
     return n;
-}
-
-float2 encode_octahedral_normal(float3 normal) {
-    float l1norm = abs(normal.x) + abs(normal.y) + abs(normal.z);
-    float2 result = normal.xy / l1norm;
-    if (normal.z < 0.0)
-        result = (1.0 - abs(result.yx)) * non_zero_sign(result.xy);
-    return result;
-}
-
-float3 decode_octahedral_normal(float2 encoded_normal) {
-    float3 n = float3(encoded_normal.xy, 1.0 - abs(encoded_normal.x) - abs(encoded_normal.y));
-    if (n.z < 0.0)
-        n.xy = (1.0 - abs(n.yx)) * non_zero_sign(n.xy);
-    return normalize(n);
 }
 
 float2 encode_ss_octahedral_normal(float3 normal) {
@@ -310,7 +293,7 @@ float2 encode_ss_octahedral_normal(float3 normal) {
 }
 
 float3 decode_ss_octahedral_normal(float2 encoded_normal) {
-    float3 n = float3(encoded_normal.xy, -1.0 + abs(encoded_normal.x) + abs(encoded_normal.y));
+    float3 n = float3(encoded_normal, -1.0 + abs(encoded_normal.x) + abs(encoded_normal.y));
     return normalize(n);
 }
 

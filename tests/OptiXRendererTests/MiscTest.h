@@ -43,7 +43,7 @@ GTEST_TEST(OctahedralNormal, equality_with_bifrost_implementation) {
                 Math::Vector3f bifrost_decoded_normal = bifrost_encoded_normal.decode();
 
                 OctahedralNormal optix_encoded_normal = { bifrost_encoded_normal.encoding.x, bifrost_encoded_normal.encoding.y };
-                optix::float3 optix_decoded_normal = optix::normalize(optix_encoded_normal.decode_unnormalized());
+                optix::float3 optix_decoded_normal = optix_encoded_normal.decode();
 
                 EXPECT_FLOAT_EQ(bifrost_decoded_normal.x, optix_decoded_normal.x);
                 EXPECT_FLOAT_EQ(bifrost_decoded_normal.y, optix_decoded_normal.y);
