@@ -53,27 +53,19 @@ struct MeshFlags {
 
 //-------------------------------------------------------------------------------------------------
 // OptiX decoder for Bifrost::Math::OctahedralNormal.
+// Fast, branchless implementation found at https://x.com/Stubbesaurus/status/937994790553227264/photo/1
 //-------------------------------------------------------------------------------------------------
 struct __align__(4) OctahedralNormal {
 
     optix::short2 encoding;
 
-    __inline_all__ static float sign(float v) { return v >= 0.0f ? +1.0f : -1.0f; }
-
-    __inline_all__ optix::float3 decode_unnormalized() const {
-        optix::float2 p2 = optix::make_float2(encoding.x, encoding.y);
-        optix::float3 n = optix::make_float3(p2, SHRT_MAX - fabsf(p2.x) - fabsf(p2.y));
-        if (n.z < 0.0f) {
-            float tmp_x = (SHRT_MAX - fabsf(n.y)) * sign(n.x);
-            n.y = (SHRT_MAX - fabsf(n.x)) * sign(n.y);
-            n.x = tmp_x;
-        }
-        return n;
-    }
-
     __inline_all__ optix::float3 decode() const {
-        optix::float3 decoded_unnormalized = decode_unnormalized();
-        return optix::normalize(decoded_unnormalized);
+        optix::float2 f = optix::make_float2(encoding.x, encoding.y);
+        optix::float3 n = optix::make_float3(f, SHRT_MAX - abs(f.x) - abs(f.y));
+        float t = fmaxf(-n.z, 0.0f);
+        n.x += n.x >= 0 ? -t : t;
+        n.y += n.y >= 0 ? -t : t;
+        return optix::normalize(n);
     }
 };
 
