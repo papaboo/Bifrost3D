@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.18)
 
 set(PROJECT_NAME "Bifrost3D")
 project(${PROJECT_NAME} LANGUAGES CXX)
@@ -59,7 +59,9 @@ subdirs("${BIFROST_ROOT_DIR}/core/Bifrost")
 
   add_extension("DX11Renderer")
   add_extension("OptiXRenderer")
+  add_extension("OptiX7Renderer")
 add_extension("DX11OptiXAdapter") # Depends on OptiXRenderer and DX11Renderer
+add_extension("DX11OptiX7Adapter") # Depends on OptiX7Renderer and DX11Renderer
 add_extension("GLFWDriver")
 add_extension("ImageOperations")
 add_extension("ImGui") # Depends on DX11Renderer ... for now.
