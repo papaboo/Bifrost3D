@@ -56,6 +56,9 @@ target_link_libraries(${PROJECT_NAME}
 if (TARGET DX11OptiXAdaptor)
   add_definitions(-DOPTIX_FOUND)
   target_link_libraries(${PROJECT_NAME} DX11OptiXAdaptor OptiXRenderer)
+elseif (TARGET DX11OptiX7Adaptor)
+  add_definitions(-DOPTIX_FOUND)
+  target_link_libraries(${PROJECT_NAME} DX11OptiX7Adaptor OptiX7Renderer)
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
