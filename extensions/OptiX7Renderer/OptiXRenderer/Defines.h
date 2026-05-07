@@ -1,0 +1,62 @@
+// OptiX shading defines.
+// ---------------------------------------------------------------------------
+// Copyright (C) Bifrost. See AUTHORS.txt for authors.
+//
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+// ---------------------------------------------------------------------------
+
+#ifndef _OPTIXRENDERER_SHADING_DEFINES_H_
+#define _OPTIXRENDERER_SHADING_DEFINES_H_
+
+#define DOUBLE_PRECISION_ACCUMULATION_BUFFER 1
+#define PRESAMPLE_ENVIRONMENT_MAP 1
+
+#if (defined(__CUDACC__) || defined(__CUDABE__))
+#define GPU_DEVICE 1
+#endif
+
+#ifndef __inline_all__
+#    if GPU_DEVICE
+#        define __inline_all__ inline __host__ __device__
+#    else
+#        define __inline_all__ __always_inline__
+#    endif
+#endif
+
+#ifndef __inline_dev__
+#    if GPU_DEVICE
+#        define __inline_dev__ inline __device__
+#    else
+#        define __inline_dev__ __always_inline__
+#    endif
+#endif
+
+#if GPU_DEVICE
+#    define __constant_all__ __constant__
+#else
+#    define __constant_all__ static const
+#endif
+
+#if GPU_DEVICE
+#define THROW(e) rtThrow(e)
+#else
+#define THROW(e) throw e
+#endif
+
+#define RT_ASSERT(condition, exception_ID) do { if (!condition) THROW(exception_ID); } while(false)
+
+// Constants.
+#define PIf 3.14159265358979323846f
+#define TWO_PIf 6.283185307f
+#define RECIP_PIf 0.31830988618379067153776752674503f
+#define FLT_MAX 3.402823466e+38F
+
+// OptiX exceptions.
+#define OPTIX_NOT_IMPLEMENTED (RT_EXCEPTION_USER + 0)
+#define OPTIX_SHADING_WRONG_HEMISPHERE_EXCEPTION (RT_EXCEPTION_USER + 1)
+#define OPTIX_LIGHT_EVALUATED_OFF_SURFACE_EXCEPTION (RT_EXCEPTION_USER + 2)
+#define OPTIX_NEGATIVE_PDF_SCALE_EXCEPTION (RT_EXCEPTION_USER + 3)
+#define OPTIX_DELTA_DIRAC_PDF_ADDITION_EXCEPTION (RT_EXCEPTION_USER + 4)
+
+#endif // _OPTIXRENDERER_SHADING_DEFINES_H_
