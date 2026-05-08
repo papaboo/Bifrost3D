@@ -72,6 +72,8 @@ static string get_ptx_from_cu_source(const string& sample_name, const string& cu
     include_dirs.push_back(string("-I") + OPTIX_RENDERER_INCLUDE_DIR);
     include_dirs.push_back(string("-I") + OPTIX_INCLUDE_DIR);
     include_dirs.push_back(string("-I") + CUDA_INCLUDE_DIR);
+    include_dirs.push_back(string("-I") + "C:/Users/Asger Hoedt/Development/Bifrost/core/Bifrost");
+    include_dirs.push_back(string("-I") + "C:/Program Files/Microsoft Visual Studio/2022/Professional/VC/Tools/MSVC/14.44.35207/include");
 
     vector<const char*> compile_args;
     for (const std::string& dir : include_dirs)

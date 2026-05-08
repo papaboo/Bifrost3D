@@ -9,48 +9,35 @@
 #ifndef _OPTIXRENDERER_SHADING_DEFINES_H_
 #define _OPTIXRENDERER_SHADING_DEFINES_H_
 
-#define DOUBLE_PRECISION_ACCUMULATION_BUFFER 1
-#define PRESAMPLE_ENVIRONMENT_MAP 1
+#include <Bifrost/Core/Defines.h>
 
-#if (defined(__CUDACC__) || defined(__CUDABE__))
-#define GPU_DEVICE 1
+#define __inline_all__ __always_inline__ GPU_ENABLED
+
+#if GPU_COMPILATION
+#    define __inline_dev__ __always_inline__ __device__
+#else
+#    define __inline_dev__ __always_inline__
 #endif
 
-#ifndef __inline_all__
-#    if GPU_DEVICE
-#        define __inline_all__ inline __host__ __device__
-#    else
-#        define __inline_all__ __always_inline__
-#    endif
-#endif
-
-#ifndef __inline_dev__
-#    if GPU_DEVICE
-#        define __inline_dev__ inline __device__
-#    else
-#        define __inline_dev__ __always_inline__
-#    endif
-#endif
-
-#if GPU_DEVICE
+#if GPU_COMPILATION
 #    define __constant_all__ __constant__
 #else
 #    define __constant_all__ static const
 #endif
-
-#if GPU_DEVICE
-#define THROW(e) rtThrow(e)
-#else
-#define THROW(e) throw e
-#endif
-
-#define RT_ASSERT(condition, exception_ID) do { if (!condition) THROW(exception_ID); } while(false)
 
 // Constants.
 #define PIf 3.14159265358979323846f
 #define TWO_PIf 6.283185307f
 #define RECIP_PIf 0.31830988618379067153776752674503f
 #define FLT_MAX 3.402823466e+38F
+
+#if GPU_COMPILATION
+#define THROW(e) rtThrow(e)
+#else
+#define THROW(e) throw e
+#endif
+
+#define RT_ASSERT(condition, exception_ID) do { if (!condition) THROW(exception_ID); } while(false)
 
 // OptiX exceptions.
 #define OPTIX_NOT_IMPLEMENTED (RT_EXCEPTION_USER + 0)

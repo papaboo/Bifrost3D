@@ -11,34 +11,59 @@
 
 #include <OptiXRenderer/Defines.h>
 
-#include <cuda_runtime.h>
-#include <cuda_fp16.h>
+#include <Bifrost/Math/Matrix.h>
 
-#include <optix_types.h>
+#include <cuda_fp16.h>
 
 namespace OptiXRenderer {
 
-struct half4 { __half x, y, z, w; };
-half4 create_half4(float x, float y, float z, float w) { return { x, y, z, w }; }
+using AccumulationElementType = Bifrost::Math::Vector4d;
 
-// Record for the shader binding table
-template <typename T>
-struct SbtRecord {
-    __align__(OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
-    T data;
+struct RGBA16f { __half r, g, b, a; };
+__inline_all__ RGBA16f make_rgba16f(Bifrost::Math::RGB rgb, float a = 1.0f) { return { rgb.r, rgb.g, rgb.b, a }; }
+
+struct RayTypes {
+    static const unsigned int Radiance = 0;
+    // static const unsigned int Shadow = 1;
+    static const unsigned int Count = 1;
 };
 
-struct CameraState {
-    half4* output_buffer;
-    unsigned int output_buffer_width;
-    unsigned int output_buffer_height;
+//----------------------------------------------------------------------------
+// Ray payloads.
+//----------------------------------------------------------------------------
+
+struct __align__(16) RadiancePayload {
+    Bifrost::Math::RGB radiance;
+    float __lala;
 };
 
-struct RayGenData {
-    float r, g, b;
+//----------------------------------------------------------------------------
+// Pipeline and scene parameters
+//----------------------------------------------------------------------------
+
+struct PipelineParams {
+    Bifrost::Math::Matrix3x3f view_to_world_rotation;
+    Bifrost::Math::Matrix4x4f inverse_projection_matrix;
+    Bifrost::Math::Matrix4x4f inverse_view_projection_matrix;
+
+    unsigned int accumulations;
+    unsigned int max_bounce_count;
+    unsigned int frame_width;
+    unsigned int frame_height;
+    RGBA16f* output_buffer;
+    AccumulationElementType* accumulation_buffer;
+
+    float path_regularization_PDF_scale;
+
+    struct {
+        OptixTraversableHandle traversable;
+        Bifrost::Math::RGB environment_tint;
+    } scene;
 };
 
+struct RayGenData { };
 struct MissShaderData { };
+struct HitsShaderData {};
 
 } // NS OptiXRenderer
 
