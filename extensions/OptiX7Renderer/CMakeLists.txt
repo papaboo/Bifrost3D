@@ -28,6 +28,7 @@ set(CUDA_NVRTC_ENABLED ON CACHE BOOL "Use NVRTC to compile PTX at run-time inste
 
 set(ROOT_SRC
   OptiXRenderer/CUDAUtils.h
+  OptiXRenderer/CUDAUtils.cpp
   OptiXRenderer/Defines.h
   OptiXRenderer/PtxLoader.h
   OptiXRenderer/PtxLoader.cpp
@@ -35,6 +36,13 @@ set(ROOT_SRC
   OptiXRenderer/Renderer.h
   OptiXRenderer/Renderer.cpp
   OptiXRenderer/Types.h
+  OptiXRenderer/Utils.h
+  OptiXRenderer/Utils.cpp
+)
+
+set(MANAGERS_SRC
+  OptiXRenderer/Managers/AccelerationStructureManager.h
+  OptiXRenderer/Managers/AccelerationStructureManager.cpp
 )
 
 set(SHADING_SRC
@@ -53,7 +61,7 @@ if (NOT CUDA_NVRTC_ENABLED)
   cuda_wrap_srcs(${LIBRARY_NAME} PTX GENERATED_FILES ${SHADING_SRC} OPTIONS ${NVCC_OPTIONS})
 endif()
 
-add_library(${LIBRARY_NAME} ${_cmake_options} ${ROOT_SRC} ${SHADING_SRC} ${GENERATED_FILES})
+add_library(${LIBRARY_NAME} ${_cmake_options} ${ROOT_SRC} ${MANAGERS_SRC} ${SHADING_SRC} ${GENERATED_FILES})
 
 target_include_directories(${LIBRARY_NAME} PUBLIC . ${CUDA_INCLUDE_DIRS} PRIVATE ${OPTIX_INCLUDE_DIR})
 
@@ -73,6 +81,7 @@ target_compile_definitions(${LIBRARY_NAME} PRIVATE
   OPTIX_INCLUDE_DIR="${OPTIX_INCLUDE_DIR}")
 
 source_group("" FILES ${ROOT_SRC})
+source_group("Managers" FILES ${MANAGERS_SRC})
 source_group("Shading" FILES ${SHADING_SRC})
 source_group("Shading\\ptx" FILES ${GENERATED_FILES})
 
