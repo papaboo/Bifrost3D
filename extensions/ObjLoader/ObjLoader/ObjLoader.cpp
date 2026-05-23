@@ -164,7 +164,8 @@ SceneNode load(const std::string& path, ImageLoader image_loader) {
         Materials::Data material_data = {};
         material_data.flags = MaterialFlag::None;
         material_data.tint = RGB(tiny_mat.diffuse[0], tiny_mat.diffuse[1], tiny_mat.diffuse[2]);
-        material_data.roughness = sqrt(2.0f / (tiny_mat.shininess + 2.0f)); // Map from blinn shininess to material roughness. See D_Blinn in https://github.com/EpicGames/UnrealEngine/blob/d94b38ae3446da52224bedd2568c078f828b4039/Engine/Shaders/Private/BRDF.ush
+        float ggx_alpha_squared = 2.0f / (tiny_mat.shininess + 2.0f); // Map from blinn shininess to GGX alpha. See D_Blinn in https://github.com/EpicGames/UnrealEngine/blob/d94b38ae3446da52224bedd2568c078f828b4039/Engine/Shaders/Private/BRDF.ush
+        material_data.roughness = pow(ggx_alpha_squared, 0.25f); // roughness = sqrt(ggx_alpha)
         bool is_metallic = tiny_mat.illum == 3 || tiny_mat.illum == 5;
         material_data.metallic = is_metallic ? 1.0f : 0.0f;
         material_data.specularity = (tiny_mat.specular[0] + tiny_mat.specular[1] + tiny_mat.specular[2]) / 3.0f;
