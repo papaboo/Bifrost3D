@@ -1,4 +1,25 @@
+Trace scene and output surface normal
+ * Support per vertex color - Move model data as part of GAS instead of SBT
+ * Then load meshes (cornell box)
+  * ShaderBindingTableManager? Or Stb and AS manager? Is it even possible to separate the two?
+ * Check what happens if scene is empty
+ * https://www.willusher.io/graphics/2019/11/20/the-sbt-three-ways/
+ * https://developer.nvidia.com/blog/efficient-ray-tracing-with-nvidia-optix-shader-binding-table-optimization/
+Environment map in miss program
+Render albedo
+Debug targets
+ * Include AS visit heat map?
+Path tracer
+Light sources
+Samplable environment maps
+Screen shots
+Update apps and tests to use Bifrost instead of OptiXRenderer
+Support DX on Intel CPU in Adaptor by copying pixels to CPU and upload to DX. Warn in constructor if that happens
+
 BACKLOG:
+* MIS compensation: optimizing sampling techniques in multiple importance sampling - https://dl.acm.org/doi/10.1145/3355089.3356565
+ * Large variance reduction at the cost of a tiny precomputation.
+ * Use for environment maps by simply computing the average irradiance in the env map and subtract that from the pixel values. That leaves samples that focus on the regions with large contributions and the BSDF sampling will take care of the low variance regions. Can we do the same for the combinations of BRDFs in DefaultShading?
 * Transmissive coat
  * Implement a coated material integrator. Similar to the thin_sheet integrator and should support double sided materials ingrained in glass
   * Coat tint is square root of actual tint (tint in and tint out)
