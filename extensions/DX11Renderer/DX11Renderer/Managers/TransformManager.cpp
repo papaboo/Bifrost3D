@@ -22,7 +22,7 @@ TransformManager::TransformManager(ID3D11Device1& device, ID3D11DeviceContext1& 
     m_transforms[0] = Transform::identity();
 
     m_GPU_transforms.resize(1);
-    auto identity_matrix = Matrix4x4f::identity();
+    auto identity_matrix = Matrix3x4f::identity();
     create_constant_buffer(device, identity_matrix, &m_GPU_transforms[0]);
 }
 
@@ -48,7 +48,7 @@ void TransformManager::handle_updates(ID3D11Device1& device, ID3D11DeviceContext
             assert(SceneNode(node_ID).exists());
 
             m_transforms[node_ID] = SceneNodes::get_global_transform(node_ID);
-            Matrix4x4f to_world = to_matrix4x4(m_transforms[node_ID]);
+            Matrix3x4f to_world = to_matrix3x4(m_transforms[node_ID]);
             if (m_GPU_transforms[node_ID] == nullptr)
                 create_constant_buffer(device, to_world, &m_GPU_transforms[node_ID], D3D11_USAGE_DEFAULT);
             else
