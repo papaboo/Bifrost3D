@@ -56,7 +56,7 @@ Varyings vs(float4 geometry : GEOMETRY, float2 texcoord : TEXCOORD, float4 tint_
     Varyings output;
     output.world_position.xyz = mul(float4(geometry.xyz, 1.0f), to_world_matrix);
     output.position = mul(float4(output.world_position.xyz, 1.0f), scene_vars.view_projection_matrix);
-    output.normal.xyz = normalize(mul(float4(decode_octahedral_normal(asint(geometry.w)), 0.0), to_world_matrix));
+    output.normal.xyz = normalize(mul(decode_octahedral_normal(asint(geometry.w)), (float3x3)to_world_matrix));
     output.texcoord = texcoord;
     output.tint_and_roughness_scale = vertex_flags & VertexFlags::TintAndRoughnessBufferBound ? tint_and_roughness_scale : float4(1,1,1,1);
     output.emission = vertex_flags & VertexFlags::EmissionBufferBound ? emission : float3(1, 1, 1); // Multiplicative identity to let the material emission decide how emissive the model is.
