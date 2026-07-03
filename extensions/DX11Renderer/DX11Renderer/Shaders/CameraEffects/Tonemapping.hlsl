@@ -247,22 +247,22 @@ float4 postprocess_pixel(int2 pixel_index, ITonemapper tonemapper) {
     return float4(color, 1.0f);
 }
 
-float4 linear_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
+float4 linear_tonemapping_ps(noperspective float4 position : SV_POSITION) : SV_TARGET {
     LinearTonemapper tonemapper;
     return postprocess_pixel(position.xy, tonemapper);
 }
 
-float4 unreal4_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
+float4 unreal4_tonemapping_ps(noperspective float4 position : SV_POSITION) : SV_TARGET {
     Unreal4Tonemapper tonemapper;
     return postprocess_pixel(position.xy, tonemapper);
 }
 
-float4 khronos_neutral_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
+float4 khronos_neutral_tonemapping_ps(noperspective float4 position : SV_POSITION) : SV_TARGET {
     KhronosNeutralTonemapper tonemapper;
     return postprocess_pixel(position.xy, tonemapper);
 }
 
-float4 agx_tonemapping_ps(float4 position : SV_POSITION) : SV_TARGET {
+float4 agx_tonemapping_ps(noperspective float4 position : SV_POSITION) : SV_TARGET {
     AgXTonemapper tonemapper;
     return postprocess_pixel(position.xy, tonemapper);
 }
