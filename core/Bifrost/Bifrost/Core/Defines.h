@@ -15,6 +15,18 @@
 #define __always_inline__ inline
 #endif
 
+#if (defined(__CUDACC__) || defined(__CUDABE__))
+#define GPU_COMPILATION 1
+#endif
+
+// Patterns for __host__ __device__ programming in CUDA, Mejstrik and Woblistin, 2024
+// Pattern: Host device everything (relevant)
+#ifdef __CUDACC__
+#define GPU_ENABLED __host__ __device__
+#else
+#define GPU_ENABLED
+#endif
+
 namespace Bifrost {
 
 typedef unsigned char byte; // We don't use std::byte, as byte is mainly treated as an int8 and std::byte doesn't support math operations.

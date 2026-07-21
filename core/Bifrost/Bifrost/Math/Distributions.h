@@ -22,24 +22,52 @@ struct DirectionalSample {
 };
 
 //=================================================================================================
+// Uniform sphere distribution.
+//=================================================================================================
+namespace Sphere {
+
+__always_inline__ GPU_ENABLED Vector3f create_direction(float phi, float cos_theta) {
+    float radius = sqrt(fmaxf(0.0f, 1.0f - cos_theta * cos_theta));
+    float sin_phi, cos_phi;
+    sincos(phi, sin_phi, cos_phi);
+    return Vector3f(radius * cos_phi, radius * sin_phi, cos_theta);
+}
+
+__always_inline__ GPU_ENABLED float PDF() { return 0.25f / PI<float>(); }
+
+__always_inline__ GPU_ENABLED Vector3f sample_direction(Vector2f random_sample) {
+    float cos_theta = 1.0f - 2.0f * random_sample.x;
+    float phi = 2.0f * PI<float>() * random_sample.y;
+    return create_direction(phi, cos_theta);
+}
+
+__always_inline__ GPU_ENABLED DirectionalSample sample(Vector2f random_sample) {
+    return { sample_direction(random_sample), PDF() };
+}
+
+} // NS Sphere
+
+//=================================================================================================
 // Cosine distribution.
 //=================================================================================================
 namespace Cosine {
 
-__always_inline__ float PDF(float abs_cos_theta) {
+__always_inline__ GPU_ENABLED float PDF(float abs_cos_theta) {
     return abs_cos_theta / PI<float>();
 }
 
-__always_inline__ DirectionalSample sample(Vector2f random_sample) {
+__always_inline__ GPU_ENABLED DirectionalSample sample(Vector2f random_sample) {
     float r2 = random_sample.x;
+    float cos_theta = sqrt(r2);
     float r = sqrt(1.0f - r2);
-    float z = sqrt(r2);
 
     float phi = 2.0f * PI<float>() * random_sample.y;
+    float sin_phi, cos_phi;
+    sincos(phi, sin_phi, cos_phi);
 
     DirectionalSample res;
-    res.direction = Vector3f(r * cos(phi), r * sin(phi), z);
-    res.PDF = z / PI<float>();
+    res.direction = Vector3f(r * cos_phi, r * sin_phi, cos_theta);
+    res.PDF = cos_theta / PI<float>();
     return res;
 }
 
@@ -50,7 +78,7 @@ __always_inline__ DirectionalSample sample(Vector2f random_sample) {
 //=================================================================================================
 namespace GGX {
 
-__always_inline__ float D(float alpha, float abs_cos_theta) {
+__always_inline__ GPU_ENABLED float D(float alpha, float abs_cos_theta) {
     float alpha_sqrd = alpha * alpha;
     float cos_theta_sqrd = abs_cos_theta * abs_cos_theta;
     float tan_theta_sqrd = fmaxf(1.0f - cos_theta_sqrd, 0.0f) / cos_theta_sqrd;
@@ -59,45 +87,23 @@ __always_inline__ float D(float alpha, float abs_cos_theta) {
     return alpha_sqrd / (PI<float>() * cos_theta_cubed * foo * foo);
 }
 
-__always_inline__ float PDF(float alpha, float abs_cos_theta) {
+__always_inline__ GPU_ENABLED float PDF(float alpha, float abs_cos_theta) {
     return D(alpha, abs_cos_theta) * abs_cos_theta;
 }
 
-__always_inline__ DirectionalSample sample(float alpha, Vector2f random_sample) {
+__always_inline__ GPU_ENABLED DirectionalSample sample(float alpha, Vector2f random_sample) {
     float phi = random_sample.y * (2.0f * PI<float>());
 
     float tan_theta_sqrd = alpha * alpha * random_sample.x / (1.0f - random_sample.x);
     float cos_theta = 1.0f / sqrt(1.0f + tan_theta_sqrd);
 
-    float r = sqrt(fmaxf(1.0f - cos_theta * cos_theta, 0.0f));
-
     DirectionalSample res;
-    res.direction = Vector3f(cos(phi) * r, sin(phi) * r, cos_theta);
-    res.PDF = PDF(alpha, cos_theta); // We have to be able to inline this to reuse some temporaries.
+    res.direction = Sphere::create_direction(phi, cos_theta);
+    res.PDF = PDF(alpha, cos_theta);
     return res;
 }
 
 } // NS GGX
-
-//=================================================================================================
-// Uniform sphere distribution.
-//=================================================================================================
-namespace Sphere {
-
-__always_inline__ float PDF() { return 0.25f / PI<float>(); }
-
-__always_inline__ Vector3f sample_direction(Vector2f random_sample) {
-    float z = 1.0f - 2.0f * random_sample.x;
-    float r = sqrt(fmaxf(0.0f, 1.0f - z * z));
-    float phi = 2.0f * PI<float>() * random_sample.y;
-    return Vector3f(r * cos(phi), r * sin(phi), z);
-}
-
-__always_inline__ DirectionalSample sample(Vector2f random_sample) {
-    return { sample_direction(random_sample), PDF() };
-}
-
-} // NS Sphere
 
 //=================================================================================================
 // Exponential distribution.
@@ -109,11 +115,11 @@ struct Sample {
     float PDF;
 };
 
-__always_inline__ float PDF(float sigma, float distance) { return sigma * std::expf(-sigma * distance); }
+__always_inline__ GPU_ENABLED float PDF(float sigma, float distance) { return sigma * exp(-sigma * distance); }
 
-__always_inline__ float sample_distance(float sigma, float random_sample) { return -std::logf(1 - random_sample) / sigma; }
+__always_inline__ GPU_ENABLED float sample_distance(float sigma, float random_sample) { return -log(1 - random_sample) / sigma; }
 
-__always_inline__ Sample sample(float sigma, float random_sample) {
+__always_inline__ GPU_ENABLED Sample sample(float sigma, float random_sample) {
     float distance = sample_distance(sigma, random_sample);
     float pdf = PDF(sigma, distance);
     return { distance, pdf };
@@ -131,24 +137,22 @@ namespace HenyeyGreenstein {
 // When g approximates -1 and random_sample approximates 0 or when g approximates 1 and random_sample approximates 1,
 // the computation of cos_theta below is unstable and can give 0, leading to NaNs.
 // For now we limit g to the range where it is stable.
-__always_inline__ float safe_g(float g) {
-    return clamp(g, -.99f, .99f);
-}
+__always_inline__ GPU_ENABLED float safe_g(float g) { return clamp(g, -.99f, .99f); }
 
-__always_inline__ float evaluate(float g, float cos_theta) {
+__always_inline__ GPU_ENABLED float evaluate(float g, float cos_theta) {
     g = safe_g(g);
     float denominator = 1 + pow2(g) + 2 * g * cos_theta;
     constexpr float recip_4_pi = 1.0f / (4 * PI<float>());
     return recip_4_pi * (1 - pow2(g)) / (denominator * sqrt(max(0.0f, denominator)));
 }
 
-__always_inline__ float evaluate(float g, Vector3f wo, Vector3f wi) {
+__always_inline__ GPU_ENABLED float evaluate(float g, Vector3f wo, Vector3f wi) {
     float cos_theta = dot(wo, wi);
     return evaluate(g, cos_theta);
 }
 
 // Sample the cosine of the angle for the distribution.
-__always_inline__ float sample_cos_theta(float g, float random_sample) {
+__always_inline__ GPU_ENABLED float sample_cos_theta(float g, float random_sample) {
     g = safe_g(g);
 
     if (abs(g) < 1e-3f)
@@ -158,7 +162,7 @@ __always_inline__ float sample_cos_theta(float g, float random_sample) {
 }
 
 // Sample a direction in the distribution wrt [0,0,1] as wo.
-__always_inline__ Vector3f sample_direction(float g, Vector2f random_sample) {
+__always_inline__ GPU_ENABLED Vector3f sample_direction(float g, Vector2f random_sample) {
     float cos_theta = sample_cos_theta(g, random_sample.x);
 
     float sin_theta = sqrt(fmaxf(0.0f, 1.0f - pow2(cos_theta)));
@@ -167,14 +171,14 @@ __always_inline__ Vector3f sample_direction(float g, Vector2f random_sample) {
 }
 
 // Sample the distribution wrt [0,0,1] as wo.
-__always_inline__ DirectionalSample sample(float g, Vector2f random_sample) {
+__always_inline__ GPU_ENABLED DirectionalSample sample(float g, Vector2f random_sample) {
     Vector3f wi = sample_direction(g, random_sample);
     float pdf = evaluate(g, wi.z);
     return { wi, pdf };
 }
 
 // Sample a direction in the distribution.
-__always_inline__ Vector3f sample_direction(float g, Vector3f wo, Vector2f random_sample) {
+__always_inline__ GPU_ENABLED Vector3f sample_direction(float g, Vector3f wo, Vector2f random_sample) {
     Vector3f local_wi = sample_direction(g, random_sample);
 
     Vector3f tangent, bitangent;
@@ -183,7 +187,7 @@ __always_inline__ Vector3f sample_direction(float g, Vector3f wo, Vector2f rando
 }
 
 // Sample the distribution.
-__always_inline__ DirectionalSample sample(float g, Vector3f wo, Vector2f random_sample) {
+__always_inline__ GPU_ENABLED DirectionalSample sample(float g, Vector3f wo, Vector2f random_sample) {
     Vector3f wi = sample_direction(g, wo, random_sample);
     float pdf = evaluate(g, dot(wo, wi));
     return { wi, pdf };

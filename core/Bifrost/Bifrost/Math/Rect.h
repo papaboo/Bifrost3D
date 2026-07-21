@@ -12,11 +12,11 @@
 #include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/Vector.h>
 
-#include <cstring>
+#ifndef GPU_COMPILATION
 #include <sstream>
+#endif
 
-namespace Bifrost {
-namespace Math {
+namespace Bifrost::Math {
 
 //----------------------------------------------------------------------------
 // Implementation of a templated rectangle.
@@ -35,32 +35,34 @@ public:
     T height;
 
     Rect() = default;
-    Rect(T x, T y, T width, T height)
+    GPU_ENABLED Rect(T x, T y, T width, T height)
         : x(x), y(y), width(width), height(height) { }
     template <typename U>
-    explicit Rect(Rect<U> other)
+    GPU_ENABLED explicit Rect(Rect<U> other)
         : x(T(other.x)), y(T(other.y)), width(T(other.width)), height(T(other.height)) { }
 
-    __always_inline__ Vector2<T> get_offset() const { return Vector2<T>(x, y); }
-    __always_inline__ Vector2<T> get_size() const { return Vector2<T>(width, height); }
-    __always_inline__ Vector2<T> get_min() const { return Vector2<T>(x, y); }
-    __always_inline__ Vector2<T> get_max() const { return Vector2<T>(x+width, y+height); }
+    __always_inline__ GPU_ENABLED Vector2<T> get_offset() const { return Vector2<T>(x, y); }
+    __always_inline__ GPU_ENABLED Vector2<T> get_size() const { return Vector2<T>(width, height); }
+    __always_inline__ GPU_ENABLED Vector2<T> get_min() const { return Vector2<T>(x, y); }
+    __always_inline__ GPU_ENABLED Vector2<T> get_max() const { return Vector2<T>(x+width, y+height); }
 
     //*************************************************************************
     // Comparison operators.
     //*************************************************************************
-    __always_inline__ bool operator==(Rect<T> rhs) const {
+    __always_inline__ GPU_ENABLED bool operator==(Rect<T> rhs) const {
         return memcmp(this, &rhs, sizeof(rhs)) == 0;
     }
-    __always_inline__ bool operator!=(Rect<T> rhs) const {
+    __always_inline__ GPU_ENABLED bool operator!=(Rect<T> rhs) const {
         return memcmp(this, &rhs, sizeof(rhs)) != 0;
     }
 
+#ifndef GPU_COMPILATION
     inline std::string to_string() const {
         std::ostringstream out;
         out << "[x: " << x << ", y: " << y << ", width: " << width << ", height: " << height << "]";
         return out.str();
     }
+#endif
 };
 
 //*****************************************************************************
@@ -71,13 +73,14 @@ typedef Rect<double> Rectd;
 typedef Rect<float> Rectf;
 typedef Rect<int> Recti;
 
-} // NS Math
-} // NS Bifrost
+} // NS Bifrost::Math
 
 // Convenience function that appends a rectangle's string representation to an ostream.
+#ifndef GPU_COMPILATION
 template<class T>
 __always_inline__ std::ostream& operator<<(std::ostream& s, Bifrost::Math::Rect<T> v) {
     return s << v.to_string();
 }
+#endif
 
 #endif // _BIFROST_MATH_RECT_H_

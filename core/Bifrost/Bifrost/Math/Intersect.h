@@ -13,15 +13,13 @@
 #include <Bifrost/Math/Plane.h>
 #include <Bifrost/Math/Ray.h>
 
-namespace Bifrost {
-namespace Math {
+namespace Bifrost::Math {
 
 // https://www.siggraph.org/education/materials/HyperGraph/raytrace/rayplane_intersection.htm
-__always_inline__ float intersect(Ray ray, Plane plane) {
+__always_inline__ GPU_ENABLED float intersect(Ray ray, Plane plane) {
     return -(dot(plane.get_normal(), ray.origin) + plane.d) / dot(plane.get_normal(), ray.direction);
 }
 
-} // NS Math
-} // NS Bifrost
+} // NS Bifrost::Math
 
 #endif // _BIFROST_MATH_PLANE_H_
