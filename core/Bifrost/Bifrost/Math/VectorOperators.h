@@ -11,29 +11,29 @@
 //*****************************************************************************
 // Indexing operators.
 //*****************************************************************************
-__always_inline__ T& operator[](const int i) { return begin()[i]; }
-__always_inline__ T operator[](const int i) const { return begin()[i]; }
+__always_inline__ GPU_ENABLED T& operator[](const int i) { return begin()[i]; }
+__always_inline__ GPU_ENABLED T operator[](const int i) const { return begin()[i]; }
 
 //*****************************************************************************
 // Addition operators.
 //*****************************************************************************
-__always_inline__ Vector<T>& operator+=(T rhs) {
+__always_inline__ GPU_ENABLED Vector<T>& operator+=(T rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] += rhs;
     return *this;
 }
-__always_inline__ Vector<T>& operator+=(Vector<T> rhs) {
+__always_inline__ GPU_ENABLED Vector<T>& operator+=(Vector<T> rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] += rhs[i];
     return *this;
 }
-__always_inline__ Vector<T> operator+(T rhs) const {
+__always_inline__ GPU_ENABLED Vector<T> operator+(T rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] += rhs;
     return ret;
 }
-__always_inline__ Vector<T> operator+(Vector<T> rhs) const {
+__always_inline__ GPU_ENABLED Vector<T> operator+(Vector<T> rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] += rhs[i];
@@ -43,29 +43,29 @@ __always_inline__ Vector<T> operator+(Vector<T> rhs) const {
 //*****************************************************************************
 // Subtraction operators.
 //*****************************************************************************
-__always_inline__ Vector<T>& operator-=(T rhs) {
+__always_inline__ GPU_ENABLED Vector<T>& operator-=(T rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] -= rhs;
     return *this;
 }
-__always_inline__ Vector<T>& operator-=(Vector<T> rhs) {
+__always_inline__ GPU_ENABLED Vector<T>& operator-=(Vector<T> rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] -= rhs[i];
     return *this;
 }
-__always_inline__ Vector<T> operator-(T rhs) const {
+__always_inline__ GPU_ENABLED Vector<T> operator-(T rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] -= rhs;
     return ret;
 }
-__always_inline__ Vector<T> operator-(Vector<T> rhs) const {
+__always_inline__ GPU_ENABLED Vector<T> operator-(Vector<T> rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] -= rhs[i];
     return ret;
 }
-__always_inline__ Vector<T> operator-() const {
+__always_inline__ GPU_ENABLED Vector<T> operator-() const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] = -(*this)[i];
@@ -75,23 +75,23 @@ __always_inline__ Vector<T> operator-() const {
 //*****************************************************************************
 // Multiplication operators.
 //*****************************************************************************
-__always_inline__ Vector<T>& operator*=(T rhs) {
+__always_inline__ GPU_ENABLED Vector<T>& operator*=(T rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] *= rhs;
     return *this;
 }
-__always_inline__ Vector<T>& operator*=(Vector<T> rhs) {
+__always_inline__ GPU_ENABLED Vector<T>& operator*=(Vector<T> rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] *= rhs[i];
     return *this;
 }
-__always_inline__ Vector<T> operator*(T rhs) const {
+__always_inline__ GPU_ENABLED Vector<T> operator*(T rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] *= rhs;
     return ret;
 }
-__always_inline__ Vector<T> operator*(Vector<T> rhs) const {
+__always_inline__ GPU_ENABLED Vector<T> operator*(Vector<T> rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] *= rhs[i];
@@ -101,23 +101,23 @@ __always_inline__ Vector<T> operator*(Vector<T> rhs) const {
 //*****************************************************************************
 // Division operators.
 //*****************************************************************************
-__always_inline__ Vector<T>& operator/=(T rhs) {
+__always_inline__ GPU_ENABLED Vector<T>& operator/=(T rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] /= rhs;
     return *this;
 }
-__always_inline__ Vector<T>& operator/=(Vector<T> rhs) {
+__always_inline__ GPU_ENABLED Vector<T>& operator/=(Vector<T> rhs) {
     for (int i = 0; i < N; ++i)
         begin()[i] /= rhs[i];
     return *this;
 }
-__always_inline__ Vector<T> operator/(T rhs) const {
+__always_inline__ GPU_ENABLED Vector<T> operator/(T rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] /= rhs;
     return ret;
 }
-__always_inline__ Vector<T> operator/(Vector<T> rhs) const {
+__always_inline__ GPU_ENABLED Vector<T> operator/(Vector<T> rhs) const {
     Vector<T> ret(*this);
     for (int i = 0; i < N; ++i)
         ret[i] /= rhs[i];
@@ -127,9 +127,15 @@ __always_inline__ Vector<T> operator/(Vector<T> rhs) const {
 //*****************************************************************************
 // Comparison operators.
 //*****************************************************************************
-__always_inline__ bool operator==(Vector<T> rhs) const {
-    return memcmp(this, &rhs, sizeof(rhs)) == 0;
+__always_inline__ GPU_ENABLED bool operator==(Vector<T> rhs) const {
+    bool equal = true;
+    for (int i = 0; i < N; ++i)
+        equal &= begin()[i] == rhs[i];
+    return equal;
 }
-__always_inline__ bool operator!=(Vector<T> rhs) const {
-    return memcmp(this, &rhs, sizeof(rhs)) != 0;
+__always_inline__ GPU_ENABLED bool operator!=(Vector<T> rhs) const {
+    bool not_equal = false;
+    for (int i = 0; i < N; ++i)
+        not_equal |= begin()[i] != rhs[i];
+    return not_equal;
 }

@@ -13,17 +13,18 @@
 #include <Bifrost/Math/Constants.h>
 #include <Bifrost/Math/Vector.h>
 
+#ifndef GPU_COMPILATION
 #include <algorithm>
 #include <cmath>
+#endif
 
-namespace Bifrost {
-namespace Math {
+namespace Bifrost::Math {
 
 // ------------------------------------------------------------------------------------------------
 // Floating point precision helpers.
 // ------------------------------------------------------------------------------------------------
 
-inline int compute_ulps(float a, float b) {
+inline GPU_ENABLED int compute_ulps(float a, float b) {
     static_assert(sizeof(float) == sizeof(int), "Implementation needed for when float and int have different sizes.");
 
     int a_as_int;
@@ -43,7 +44,7 @@ inline int compute_ulps(float a, float b) {
 
 // Floating point almost_equal function.
 // http://www.cygnus-software.com/papers/comparingfloats/comparingfloats.htm
-inline bool almost_equal(float a, float b, unsigned short max_ulps = 4) {
+inline GPU_ENABLED bool almost_equal(float a, float b, unsigned short max_ulps = 4) {
     return compute_ulps(a, b) <= max_ulps;
 }
 
@@ -77,13 +78,22 @@ __always_inline__ float next_float(float v) {
 // Trigonometry.
 // ------------------------------------------------------------------------------------------------
 
-__always_inline__ Vector2f direction_to_latlong_texcoord(Vector3f direction) {
+__always_inline__ GPU_ENABLED void sincos(float theta, float& sin_theta, float& cos_theta) {
+#if GPU_COMPILATION
+    sincosf(theta, &sin_theta, &cos_theta);
+#else
+    sin_theta = sin(theta);
+    cos_theta = cos(theta);
+#endif
+}
+
+__always_inline__ GPU_ENABLED Vector2f direction_to_latlong_texcoord(Vector3f direction) {
     float u = (atan2f(direction.z, direction.x) + PI<float>()) * 0.5f / PI<float>();
     float v = (asinf(direction.y) + PI<float>() * 0.5f) / PI<float>();
     return Vector2f(u, v);
 }
 
-__always_inline__ Vector3f latlong_texcoord_to_direction(Vector2f uv) {
+__always_inline__ GPU_ENABLED Vector3f latlong_texcoord_to_direction(Vector2f uv) {
     float phi = uv.x * 2.0f * PI<float>();
     float theta = uv.y * PI<float>();
     float sin_theta = sinf(theta);
@@ -173,6 +183,9 @@ __always_inline__ Vector3<T> reflect(Vector3<T> incident, Vector3<T> normal) {
 }
 
 __always_inline__ unsigned int reverse_bits(unsigned int n) {
+#ifdef GPU_COMPILATION
+    return __brev(n);
+#else
     // Reverse bits of n.
     n = (n << 16) | (n >> 16);
     n = ((n & 0x00ff00ff) << 8) | ((n & 0xff00ff00) >> 8);
@@ -180,6 +193,7 @@ __always_inline__ unsigned int reverse_bits(unsigned int n) {
     n = ((n & 0x33333333) << 2) | ((n & 0xcccccccc) >> 2);
     n = ((n & 0x55555555) << 1) | ((n & 0xaaaaaaaa) >> 1);
     return n;
+#endif
 }
 
 // Specularity of dielectrics at normal incidence, where the ray is leaving a medium with index of refraction ior_o
@@ -225,6 +239,7 @@ __always_inline__ float smoothstep(float a, float b, float t) {
 // Stable pairwise summation.
 // ------------------------------------------------------------------------------------------------
 
+#ifndef GPU_COMPILATION
 // Inplace iterative pairwise summation.
 // Uses the input iterators to store the temporaries.
 // http://en.wikipedia.org/wiki/Pairwise_summation
@@ -252,6 +267,7 @@ inline typename std::iterator_traits<InputIterator>::value_type sort_and_pairwis
     std::sort(begin, end);
     return pairwise_summation(begin, end);
 }
+#endif
 
 // ------------------------------------------------------------------------------------------------
 // Tap for a bilinearly sampled gaussian filter.
@@ -287,13 +303,12 @@ inline void fill_bilinear_gaussian_samples(float std_dev, Tap* samples_begin, Ta
 
         total_weight += weight;
     }
-    total_weight *= 2; // Double the total weight as it's only summed for the one half of the symetric bell curve.
+    total_weight *= 2; // Double the total weight as it's only summed for the one half of the symmetric bell curve.
 
     for (int s = 0; s < sample_count; ++s)
         samples_begin[s].weight /= total_weight;
 }
 
-} // NS Math
-} // NS Bifrost
+} // NS Bifrost::Math
 
 #endif // _BIFROST_MATH_UTILS_H_

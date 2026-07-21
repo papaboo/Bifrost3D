@@ -11,16 +11,16 @@
 
 #include <Bifrost/Core/Defines.h>
 
-#include <cstring>
+#ifndef GPU_COMPILATION
 #include <sstream>
+#endif
 
-namespace Bifrost {
-namespace Math {
+namespace Bifrost::Math {
 
 template <typename T>
-struct Vector2 final {
+struct alignas(2 * sizeof(T)) Vector2 final {
 public:
-    template <typename T> using Vector = Vector2;
+    template <typename TT> using Vector = Vector2;
     typedef T value_type;
     static const int N = 2;
 
@@ -31,24 +31,26 @@ public:
     T y;
 
     Vector2() = default;
-    explicit Vector2(T s) : x(s), y(s) { }
-    Vector2(T x, T y) : x(x), y(y) { }
+    GPU_ENABLED explicit Vector2(T s) : x(s), y(s) { }
+    GPU_ENABLED Vector2(T x, T y) : x(x), y(y) { }
     template <typename U>
-    explicit Vector2(const Vector2<U>& v) : x(T(v.x)), y(T(v.y)) { }
+    GPU_ENABLED explicit Vector2(const Vector2<U>& v) : x(T(v.x)), y(T(v.y)) { }
 
-    static __always_inline__ Vector2<T> zero() { return Vector2<T>(0, 0); }
-    static __always_inline__ Vector2<T> one() { return Vector2<T>(1, 1); }
+    static __always_inline__ GPU_ENABLED Vector2<T> zero() { return Vector2<T>(0, 0); }
+    static __always_inline__ GPU_ENABLED Vector2<T> one() { return Vector2<T>(1, 1); }
 
-    __always_inline__ T* begin() { return &x; }
-    __always_inline__ const T* const begin() const { return &x; }
-    __always_inline__ T* end() { return begin() + N; }
-    __always_inline__ const T* const end() const { return begin() + N; }
+    __always_inline__ GPU_ENABLED T* begin() { return &x; }
+    __always_inline__ GPU_ENABLED const T* begin() const { return &x; }
+    __always_inline__ GPU_ENABLED T* end() { return begin() + N; }
+    __always_inline__ GPU_ENABLED const T* end() const { return begin() + N; }
 
+#ifndef GPU_COMPILATION
     inline std::string to_string() const {
         std::ostringstream out;
         out << "[x: " << x << ", y: " << y << "]";
         return out.str();
     }
+#endif
 
 #include "VectorOperators.h"
 };
@@ -56,7 +58,7 @@ public:
 template <typename T>
 struct Vector3 final {
 public:
-    template <typename T> using Vector = Vector3;
+    template <typename TT> using Vector = Vector3;
     typedef T value_type;
     static const int N = 3;
 
@@ -68,37 +70,39 @@ public:
     T z;
 
     Vector3() = default;
-    explicit Vector3(T s) : x(s), y(s), z(s) { }
-    Vector3(T x, T y, T z) : x(x), y(y), z(z) { }
+    GPU_ENABLED explicit Vector3(T s) : x(s), y(s), z(s) { }
+    GPU_ENABLED Vector3(T x, T y, T z) : x(x), y(y), z(z) { }
     template <typename U>
-    explicit Vector3(const Vector3<U>& v) : x(T(v.x)), y(T(v.y)), z(T(v.z)) { }
-    Vector3(const Vector2<T> v, T z) : x(v.x), y(v.y), z(z) { }
+    GPU_ENABLED explicit Vector3(const Vector3<U>& v) : x(T(v.x)), y(T(v.y)), z(T(v.z)) { }
+    GPU_ENABLED Vector3(const Vector2<T> v, T z) : x(v.x), y(v.y), z(z) { }
 
-    static __always_inline__ Vector3<T> zero() { return Vector3(0, 0, 0); }
-    static __always_inline__ Vector3<T> one() { return Vector3(1, 1, 1); }
+    static __always_inline__ GPU_ENABLED Vector3<T> zero() { return Vector3(0, 0, 0); }
+    static __always_inline__ GPU_ENABLED Vector3<T> one() { return Vector3(1, 1, 1); }
 
-    static __always_inline__ Vector3<T> forward() { return Vector3(0, 0, 1); }
-    static __always_inline__ Vector3<T> up() { return Vector3(0, 1, 0); }
-    static __always_inline__ Vector3<T> right() { return Vector3(1, 0, 0); }
+    static __always_inline__ GPU_ENABLED Vector3<T> forward() { return Vector3(0, 0, 1); }
+    static __always_inline__ GPU_ENABLED Vector3<T> up() { return Vector3(0, 1, 0); }
+    static __always_inline__ GPU_ENABLED Vector3<T> right() { return Vector3(1, 0, 0); }
 
-    __always_inline__ T* begin() { return &x; }
-    __always_inline__ const T* const begin() const { return &x; }
-    __always_inline__ T* end() { return begin() + N; }
-    __always_inline__ const T* const end() const { return begin() + N; }
+    __always_inline__ GPU_ENABLED T* begin() { return &x; }
+    __always_inline__ GPU_ENABLED const T* begin() const { return &x; }
+    __always_inline__ GPU_ENABLED T* end() { return begin() + N; }
+    __always_inline__ GPU_ENABLED const T* end() const { return begin() + N; }
 
+#ifndef GPU_COMPILATION
     inline std::string to_string() const {
         std::ostringstream out;
         out << "[x: " << x << ", y: " << y << ", z: " << z << "]";
         return out.str();
     }
+#endif
 
 #include "VectorOperators.h"
 };
 
 template <typename T>
-struct Vector4 final {
+struct alignas(4 * sizeof(T)) Vector4 final {
 public:
-    template <typename T> using Vector = Vector4;
+    template <typename TT> using Vector = Vector4;
     typedef T value_type;
     static const int N = 4;
 
@@ -111,26 +115,28 @@ public:
     T w;
 
     Vector4() = default;
-    explicit Vector4(T s) : x(s), y(s), z(s), w(s) { }
-    Vector4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) { }
+    GPU_ENABLED explicit Vector4(T s) : x(s), y(s), z(s), w(s) { }
+    GPU_ENABLED Vector4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) { }
     template <typename U>
-    Vector4(const Vector4<U> v) : x(T(v.x)), y(T(v.y)), z(T(v.z)), w(T(v.w)) { }
-    Vector4(const Vector2<T> v, T z, T w) : x(v.x), y(v.y), z(z), w(w) { }
-    Vector4(const Vector3<T> v, T w) : x(v.x), y(v.y), z(v.z), w(w) { }
+    GPU_ENABLED Vector4(const Vector4<U> v) : x(T(v.x)), y(T(v.y)), z(T(v.z)), w(T(v.w)) { }
+    GPU_ENABLED Vector4(const Vector2<T> v, T z, T w) : x(v.x), y(v.y), z(z), w(w) { }
+    GPU_ENABLED Vector4(const Vector3<T> v, T w) : x(v.x), y(v.y), z(v.z), w(w) { }
 
-    static __always_inline__ Vector4<T> zero() { return Vector4<T>(0, 0, 0, 0); }
-    static __always_inline__ Vector4<T> one() { return Vector4<T>(1, 1, 1, 1); }
+    static __always_inline__ GPU_ENABLED Vector4<T> zero() { return Vector4<T>(0, 0, 0, 0); }
+    static __always_inline__ GPU_ENABLED Vector4<T> one() { return Vector4<T>(1, 1, 1, 1); }
 
-    __always_inline__ T* begin() { return &x; }
-    __always_inline__ const T* const begin() const { return &x; }
-    __always_inline__ T* end() { return begin() + N; }
-    __always_inline__ const T* const end() const { return begin() + N; }
+    __always_inline__ GPU_ENABLED T* begin() { return &x; }
+    __always_inline__ GPU_ENABLED const T* begin() const { return &x; }
+    __always_inline__ GPU_ENABLED T* end() { return begin() + N; }
+    __always_inline__ GPU_ENABLED const T* end() const { return begin() + N; }
 
+#ifndef GPU_COMPILATION
     inline std::string to_string() const {
         std::ostringstream out;
         out << "[x: " << x << ", y: " << y << ", z: " << z << ", w: " << w << "]";
         return out.str();
     }
+#endif
 
 #include "VectorOperators.h"
 };
@@ -141,7 +147,7 @@ public:
 
 // Compute the dot product between two vectors.
 template<template<typename> class Vector, typename T>
-__always_inline__ T dot(Vector<T> lhs, Vector<T> rhs) {
+__always_inline__ GPU_ENABLED T dot(Vector<T> lhs, Vector<T> rhs) {
     T res = lhs[0] * rhs[0];
     for (int i = 1; i < Vector<T>::N; ++i)
         res += lhs[i] * rhs[i];
@@ -151,26 +157,26 @@ __always_inline__ T dot(Vector<T> lhs, Vector<T> rhs) {
 // Compute the squared magnitude of the input vector.
 // Useful when comparing the relative size between vectors, where the exact magnitude isn't needed.
 template<template<typename> class Vector, typename T>
-__always_inline__ T magnitude_squared(Vector<T> v) {
+__always_inline__ GPU_ENABLED T magnitude_squared(Vector<T> v) {
     return dot(v, v);
 }
 
 // Compute the magnitude of the input vector.
 template<template<typename> class Vector, typename T>
-__always_inline__ T magnitude(Vector<T> v) {
+__always_inline__ GPU_ENABLED T magnitude(Vector<T> v) {
     return (T)sqrt(dot(v, v));
 }
 
 // Create a normalized version of the input vector.
 template<template<typename> class Vector, typename T>
-__always_inline__ Vector<T> normalize(Vector<T> v){
+__always_inline__ GPU_ENABLED Vector<T> normalize(Vector<T> v){
     T m = magnitude(v);
     return v / m;
 }
 
 // Cross product between two 3-dimensional vectors.
 template<typename T>
-__always_inline__ Vector3<T> cross(Vector3<T> lhs, Vector3<T> rhs) {
+__always_inline__ GPU_ENABLED Vector3<T> cross(Vector3<T> lhs, Vector3<T> rhs) {
     return Vector3<T>((lhs.y * rhs.z) - (lhs.z * rhs.y),
                       (lhs.z * rhs.x) - (lhs.x * rhs.z),
                       (lhs.x * rhs.y) - (lhs.y * rhs.x));
@@ -189,19 +195,19 @@ __always_inline__ void compute_tangents(Vector3<T> normal, Vector3<T>& tangent, 
 }
 
 template<typename T>
-__always_inline__ Vector2<T> min(Vector2<T> lhs, Vector2<T> rhs) {
+__always_inline__ GPU_ENABLED Vector2<T> min(Vector2<T> lhs, Vector2<T> rhs) {
     return Vector2<T>(lhs.x > rhs.x ? rhs.x : lhs.x, lhs.y > rhs.y ? rhs.y : lhs.y);
 }
 
 template<typename T>
-__always_inline__ Vector3<T> min(Vector3<T> lhs, Vector3<T> rhs) {
+__always_inline__ GPU_ENABLED Vector3<T> min(Vector3<T> lhs, Vector3<T> rhs) {
     return Vector3<T>(lhs.x > rhs.x ? rhs.x : lhs.x,
                       lhs.y > rhs.y ? rhs.y : lhs.y,
                       lhs.z > rhs.z ? rhs.z : lhs.z);
 }
 
 template<typename T>
-__always_inline__ Vector4<T> min(Vector4<T> lhs, Vector4<T> rhs) {
+__always_inline__ GPU_ENABLED Vector4<T> min(Vector4<T> lhs, Vector4<T> rhs) {
     return Vector4<T>(lhs.x > rhs.x ? rhs.x : lhs.x,
                       lhs.y > rhs.y ? rhs.y : lhs.y,
                       lhs.z > rhs.z ? rhs.z : lhs.z,
@@ -209,19 +215,19 @@ __always_inline__ Vector4<T> min(Vector4<T> lhs, Vector4<T> rhs) {
 }
 
 template<typename T>
-__always_inline__ Vector2<T> max(Vector2<T> lhs, Vector2<T> rhs) {
+__always_inline__ GPU_ENABLED Vector2<T> max(Vector2<T> lhs, Vector2<T> rhs) {
     return Vector2<T>(lhs.x < rhs.x ? rhs.x : lhs.x, lhs.y < rhs.y ? rhs.y : lhs.y);
 }
 
 template<typename T>
-__always_inline__ Vector3<T> max(Vector3<T> lhs, Vector3<T> rhs) {
+__always_inline__ GPU_ENABLED Vector3<T> max(Vector3<T> lhs, Vector3<T> rhs) {
     return Vector3<T>(lhs.x < rhs.x ? rhs.x : lhs.x,
                       lhs.y < rhs.y ? rhs.y : lhs.y,
                       lhs.z < rhs.z ? rhs.z : lhs.z);
 }
 
 template<typename T>
-__always_inline__ Vector4<T> max(Vector4<T> lhs, Vector4<T> rhs) {
+__always_inline__ GPU_ENABLED Vector4<T> max(Vector4<T> lhs, Vector4<T> rhs) {
     return Vector4<T>(lhs.x < rhs.x ? rhs.x : lhs.x,
                       lhs.y < rhs.y ? rhs.y : lhs.y,
                       lhs.z < rhs.z ? rhs.z : lhs.z,
@@ -265,12 +271,12 @@ typedef Vector4<double> Vector4d;
 typedef Vector4<float> Vector4f;
 typedef Vector4<int> Vector4i;
 
-} // NS Math
-} // NS Bifrost
+} // NS Bifrost::Math
 
 // ------------------------------------------------------------------------------------------------
 // Convenience functions that appends a vector's string representation to an ostream.
 // ------------------------------------------------------------------------------------------------
+#ifndef GPU_COMPILATION
 template<class T>
 __always_inline__ std::ostream& operator<<(std::ostream& s, Bifrost::Math::Vector2<T> v){
     return s << v.to_string();
@@ -285,68 +291,69 @@ template<class T>
 __always_inline__ std::ostream& operator<<(std::ostream& s, Bifrost::Math::Vector4<T> v){
     return s << v.to_string();
 }
+#endif
 
 // ------------------------------------------------------------------------------------------------
 // Math operator overloading.
 // ------------------------------------------------------------------------------------------------
 
 template<class T>
-__always_inline__ Bifrost::Math::Vector2<T> operator+(T lhs, Bifrost::Math::Vector2<T> rhs) {
+__always_inline__ GPU_ENABLED Bifrost::Math::Vector2<T> operator+(T lhs, Bifrost::Math::Vector2<T> rhs) {
     return rhs + lhs;
 }
 
 template<class T>
-__always_inline__ Bifrost::Math::Vector3<T> operator+(T lhs, Bifrost::Math::Vector3<T> rhs) {
+__always_inline__ GPU_ENABLED Bifrost::Math::Vector3<T> operator+(T lhs, Bifrost::Math::Vector3<T> rhs) {
     return rhs + lhs;
 }
 
 template<class T>
-__always_inline__ Bifrost::Math::Vector4<T> operator+(T lhs, Bifrost::Math::Vector4<T> rhs) {
+__always_inline__ GPU_ENABLED Bifrost::Math::Vector4<T> operator+(T lhs, Bifrost::Math::Vector4<T> rhs) {
     return rhs + lhs;
 }
 
 template<class T>
-__always_inline__ Bifrost::Math::Vector2<T> operator-(T lhs, Bifrost::Math::Vector2<T> rhs) {
+__always_inline__ GPU_ENABLED Bifrost::Math::Vector2<T> operator-(T lhs, Bifrost::Math::Vector2<T> rhs) {
     return Bifrost::Math::Vector2<T>(lhs - rhs.x, lhs - rhs.y);
 }
 
 template<class T>
-__always_inline__ Bifrost::Math::Vector3<T> operator-(T lhs, Bifrost::Math::Vector3<T> rhs) {
+__always_inline__ GPU_ENABLED Bifrost::Math::Vector3<T> operator-(T lhs, Bifrost::Math::Vector3<T> rhs) {
     return Bifrost::Math::Vector3<T>(lhs - rhs.x, lhs - rhs.y, lhs - rhs.z);
 }
 
 template<class T>
-__always_inline__ Bifrost::Math::Vector4<T> operator-(T lhs, Bifrost::Math::Vector4<T> rhs) {
+__always_inline__ GPU_ENABLED Bifrost::Math::Vector4<T> operator-(T lhs, Bifrost::Math::Vector4<T> rhs) {
     return Bifrost::Math::Vector4<T>(lhs - rhs.x, lhs - rhs.y, lhs - rhs.z, lhs - rhs.w);
 }
 
 template<class T>
-__always_inline__ Bifrost::Math::Vector2<T> operator*(T lhs, Bifrost::Math::Vector2<T> rhs) {
+__always_inline__ GPU_ENABLED Bifrost::Math::Vector2<T> operator*(T lhs, Bifrost::Math::Vector2<T> rhs) {
     return rhs * lhs;
 }
 
 template<class T>
-__always_inline__ Bifrost::Math::Vector3<T> operator*(T lhs, Bifrost::Math::Vector3<T> rhs) {
+__always_inline__ GPU_ENABLED Bifrost::Math::Vector3<T> operator*(T lhs, Bifrost::Math::Vector3<T> rhs) {
     return rhs * lhs;
 }
 
 template<class T>
-__always_inline__ Bifrost::Math::Vector4<T> operator*(T lhs, Bifrost::Math::Vector4<T> rhs) {
+__always_inline__ GPU_ENABLED Bifrost::Math::Vector4<T> operator*(T lhs, Bifrost::Math::Vector4<T> rhs) {
     return rhs * lhs;
 }
 
 template<class T>
-__always_inline__ Bifrost::Math::Vector2<T> operator/(T lhs, Bifrost::Math::Vector2<T> rhs) {
+__always_inline__ GPU_ENABLED Bifrost::Math::Vector2<T> operator/(T lhs, Bifrost::Math::Vector2<T> rhs) {
     return Bifrost::Math::Vector2<T>(lhs / rhs.x, lhs / rhs.y);
 }
 
 template<class T>
-__always_inline__ Bifrost::Math::Vector3<T> operator/(T lhs, Bifrost::Math::Vector3<T> rhs) {
+__always_inline__ GPU_ENABLED Bifrost::Math::Vector3<T> operator/(T lhs, Bifrost::Math::Vector3<T> rhs) {
     return Bifrost::Math::Vector3<T>(lhs / rhs.x, lhs / rhs.y, lhs / rhs.z);
 }
 
 template<class T>
-__always_inline__ Bifrost::Math::Vector4<T> operator/(T lhs, Bifrost::Math::Vector4<T> rhs) {
+__always_inline__ GPU_ENABLED Bifrost::Math::Vector4<T> operator/(T lhs, Bifrost::Math::Vector4<T> rhs) {
     return Bifrost::Math::Vector4<T>(lhs / rhs.x, lhs / rhs.y, lhs / rhs.z, lhs / rhs.w);
 }
 

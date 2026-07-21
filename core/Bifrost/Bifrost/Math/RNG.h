@@ -13,14 +13,12 @@
 #include <Bifrost/Math/MortonEncode.h>
 #include <Bifrost/Math/Vector.h>
 
-namespace Bifrost {
-namespace Math {
-namespace RNG {
+namespace Bifrost::Math::RNG {
 
 const float uint_normalizer = 1.0f / 4294967296.0f;
 
 // Reverse bits of n.
-__always_inline__ unsigned int reverse_bits(unsigned int n) {
+__always_inline__ GPU_ENABLED unsigned int reverse_bits(unsigned int n) {
     n = (n << 16) | (n >> 16);
     n = ((n & 0x00ff00ff) << 8) | ((n & 0xff00ff00) >> 8);
     n = ((n & 0x0f0f0f0f) << 4) | ((n & 0xf0f0f0f0) >> 4);
@@ -29,12 +27,12 @@ __always_inline__ unsigned int reverse_bits(unsigned int n) {
     return n;
 }
 
-__always_inline__ float van_der_corput(unsigned int n, unsigned int scramble) {
+__always_inline__ GPU_ENABLED float van_der_corput(unsigned int n, unsigned int scramble) {
     n = reverse_bits(n) ^ scramble;
     return n * uint_normalizer;
 }
 
-__always_inline__ float sobol2(unsigned int n, unsigned int scramble) {
+__always_inline__ GPU_ENABLED float sobol2(unsigned int n, unsigned int scramble) {
 
     for (unsigned int v = 1u << 31u; n != 0; n >>= 1u, v ^= v >> 1u)
         if (n & 0x1) scramble ^= v;
@@ -42,22 +40,22 @@ __always_inline__ float sobol2(unsigned int n, unsigned int scramble) {
     return scramble * uint_normalizer;
 }
 
-__always_inline__ Vector2f sample02(unsigned int n, Vector2ui scramble = Vector2ui(5569, 95597)) {
+__always_inline__ GPU_ENABLED Vector2f sample02(unsigned int n, Vector2ui scramble = Vector2ui(5569, 95597)) {
     return Vector2f(van_der_corput(n, scramble.x), sobol2(n, scramble.y));
 }
 
 // Optimized Spatial Hashing for Collision Detection of Deformable Objects.
 // Teschner et al, 2013
-__always_inline__ unsigned int teschner_hash(unsigned int x, unsigned int y) {
+__always_inline__ GPU_ENABLED unsigned int teschner_hash(unsigned int x, unsigned int y) {
     return (x * 73856093) ^ (y * 19349669);
 }
-__always_inline__ unsigned int teschner_hash(unsigned int x, unsigned int y, unsigned int z) {
+__always_inline__ GPU_ENABLED unsigned int teschner_hash(unsigned int x, unsigned int y, unsigned int z) {
     return (x * 73856093) ^ (y * 19349669) ^ (z * 83492791);
 }
 
 // Robert Jenkins hash function.
 // https://gist.github.com/badboy/6267743
-__always_inline__ unsigned int jenkins_hash(unsigned int a) {
+__always_inline__ GPU_ENABLED unsigned int jenkins_hash(unsigned int a) {
     a = (a + 0x7ed55d16) + (a << 12);
     a = (a ^ 0xc761c23c) ^ (a >> 19);
     a = (a + 0x165667b1) + (a << 5);
@@ -69,12 +67,12 @@ __always_inline__ unsigned int jenkins_hash(unsigned int a) {
 
 // Hashes x and y ensuring maximal distance between consecutive xs and ys.
 // NOTE: Unless filtered afterwards it visually displays a ton of correlation.
-__always_inline__ unsigned int even_distribution_2D(unsigned int x, unsigned int y) { return reverse_bits(morton_encode(x, y)); }
+__always_inline__ GPU_ENABLED unsigned int even_distribution_2D(unsigned int x, unsigned int y) { return reverse_bits(morton_encode(x, y)); }
 
 // Computes the power heuristic of pdf1 and pdf2.
 // It is assumed that pdf1 is always valid, i.e. not NaN.
 // pdf2 is allowed to be NaN, but generally try to avoid it. :)
-__always_inline__ float power_heuristic(float pdf1, float pdf2) {
+__always_inline__ GPU_ENABLED float power_heuristic(float pdf1, float pdf2) {
     pdf1 *= pdf1;
     pdf2 *= pdf2;
     float result = pdf1 / (pdf1 + pdf2);
@@ -86,6 +84,7 @@ __always_inline__ float power_heuristic(float pdf1, float pdf2) {
     return !isnan(result) ? result : (pdf1 > pdf2 ? 1.0f : 0.0f);
 }
 
+#ifndef GPU_COMPILATION
 // ------------------------------------------------------------------------------------------------
 // Generate progressive multi-jittered samples with a blue noise approximation.
 // Progressive Multi-Jittered Sample Sequences - Supplemental materials, Christensen et al., 2018
@@ -124,6 +123,7 @@ private:
     PmjbRNG& operator=(PmjbRNG& rhs) = delete;
     PmjbRNG& operator=(PmjbRNG&& rhs) = delete;
 };
+#endif
 
 // ------------------------------------------------------------------------------------------------
 // Linear congruential random number generator
@@ -134,17 +134,18 @@ struct LinearCongruential final {
 
     unsigned int m_state;
 
-    explicit LinearCongruential(unsigned int seed) : m_state(seed) { }
+    LinearCongruential() = default;
+    explicit GPU_ENABLED LinearCongruential(unsigned int seed) : m_state(seed) { }
 
-    __always_inline__ unsigned int sample1ui() {
+    __always_inline__ GPU_ENABLED unsigned int sample1ui() {
         m_state = multiplier * m_state + increment;
         return m_state;
     }
 
-    __always_inline__ float sample1f() { return float(sample1ui()) * uint_normalizer; }
-    __always_inline__ Vector2f sample2f() { return Vector2f(sample1f(), sample1f()); }
-    __always_inline__ Vector3f sample3f() { return Vector3f(sample1f(), sample1f(), sample1f()); }
-    __always_inline__ Vector4f sample4f() { return Vector4f(sample1f(), sample1f(), sample1f(), sample1f()); }
+    __always_inline__ GPU_ENABLED float sample1f() { return float(sample1ui()) * uint_normalizer; }
+    __always_inline__ GPU_ENABLED Vector2f sample2f() { return Vector2f(sample1f(), sample1f()); }
+    __always_inline__ GPU_ENABLED Vector3f sample3f() { return Vector3f(sample1f(), sample1f(), sample1f()); }
+    __always_inline__ GPU_ENABLED Vector4f sample4f() { return Vector4f(sample1f(), sample1f(), sample1f(), sample1f()); }
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -154,23 +155,22 @@ struct LinearCongruential final {
 struct XorShift32 final {
     unsigned int m_state;
 
-    explicit XorShift32(unsigned int seed) : m_state(seed) { }
+    XorShift32() = default;
+    explicit GPU_ENABLED XorShift32(unsigned int seed) : m_state(seed) { }
 
-    __always_inline__ unsigned int sample1ui() {
+    __always_inline__ GPU_ENABLED unsigned int sample1ui() {
         m_state ^= m_state << 13;
         m_state ^= m_state >> 17;
         m_state ^= m_state << 5;
         return m_state;
     }
 
-    __always_inline__ float sample1f() { return float(sample1ui()) * uint_normalizer; }
-    __always_inline__ Vector2f sample2f() { return Vector2f(sample1f(), sample1f()); }
-    __always_inline__ Vector3f sample3f() { return Vector3f(sample1f(), sample1f(), sample1f()); }
-    __always_inline__ Vector4f sample4f() { return Vector4f(sample1f(), sample1f(), sample1f(), sample1f()); }
+    __always_inline__ GPU_ENABLED float sample1f() { return float(sample1ui()) * uint_normalizer; }
+    __always_inline__ GPU_ENABLED Vector2f sample2f() { return Vector2f(sample1f(), sample1f()); }
+    __always_inline__ GPU_ENABLED Vector3f sample3f() { return Vector3f(sample1f(), sample1f(), sample1f()); }
+    __always_inline__ GPU_ENABLED Vector4f sample4f() { return Vector4f(sample1f(), sample1f(), sample1f(), sample1f()); }
 };
 
-} // NS RNG
-} // NS Math
-} // NS Bifrost
+} // NS Bifrost::Math::RNG
 
 #endif // _BIFROST_MATH_RNG_H_

@@ -12,11 +12,11 @@
 #include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/Vector.h>
 
-#include <cstring>
+#ifndef GPU_COMPILATION
 #include <sstream>
+#endif
 
-namespace Bifrost {
-namespace Math {
+namespace Bifrost::Math {
 
 //----------------------------------------------------------------------------
 // Implementation of an axis-aligned bounding box.
@@ -30,59 +30,62 @@ public:
     Vector3f maximum;
 
     AABB() = default;
-    AABB(Vector3f minimum, Vector3f maximum)
+    GPU_ENABLED AABB(Vector3f minimum, Vector3f maximum)
         : minimum(minimum), maximum(maximum) {
     }
 
-    static __always_inline__ AABB invalid() {
+    static __always_inline__ GPU_ENABLED AABB invalid() {
         return AABB(Vector3f(std::numeric_limits<float>::infinity()), Vector3f(-std::numeric_limits<float>::infinity()));
     }
 
     //*************************************************************************
     // Comparison operators.
     //*************************************************************************
-    __always_inline__ bool operator==(AABB rhs) const {
-        return memcmp(this, &rhs, sizeof(rhs)) == 0;
+    __always_inline__ GPU_ENABLED bool operator==(AABB rhs) const {
+        return minimum == rhs.minimum && maximum == rhs.maximum;
     }
-    __always_inline__ bool operator!=(AABB rhs) const {
-        return memcmp(this, &rhs, sizeof(rhs)) != 0;
+    __always_inline__ GPU_ENABLED bool operator!=(AABB rhs) const {
+        return minimum != rhs.minimum || maximum != rhs.maximum;
     }
 
-    __always_inline__ void grow_to_contain(Vector3f point) {
+    __always_inline__ GPU_ENABLED void grow_to_contain(Vector3f point) {
         minimum = min(minimum, point);
         maximum = max(maximum, point);
     }
 
-    __always_inline__ void grow_to_contain(AABB aabb) {
+    __always_inline__ GPU_ENABLED void grow_to_contain(AABB aabb) {
         minimum = min(minimum, aabb.minimum);
         maximum = max(maximum, aabb.maximum);
     }
 
-    __always_inline__ Vector3f center() const {
+    __always_inline__ GPU_ENABLED Vector3f center() const {
         return (maximum + minimum) * 0.5f;
     }
 
-    __always_inline__ Vector3f size() const {
+    __always_inline__ GPU_ENABLED Vector3f size() const {
         return maximum - minimum;
     }
 
-    __always_inline__ Vector3f closest_point_on_surface(Vector3f point) const {
+    __always_inline__ GPU_ENABLED Vector3f closest_point_on_surface(Vector3f point) const {
         return max(minimum, min(maximum, point));
     }
 
+#ifndef GPU_COMPILATION
     inline std::string to_string() const {
         std::ostringstream out;
         out << "[minimum: " << minimum << ", maximum: " << maximum << "]";
         return out.str();
     }
+#endif
 };
 
-} // NS Math
-} // NS Bifrost
+} // NS Bifrost::Math
 
 // Convenience function that appends an AABB's string representation to an ostream.
+#ifndef GPU_COMPILATION
 __always_inline__ std::ostream& operator<<(std::ostream& s, Bifrost::Math::AABB v) {
     return s << v.to_string();
 }
+#endif
 
 #endif // _BIFROST_MATH_AABB_H_

@@ -20,7 +20,7 @@ namespace Bifrost::Math {
 // Real-Time Polygonal-Light Shading with Linearly Transformed Cosines, Heitz et al., 2016.
 // The implementation is a mix between what is found in the paper and the accompanying code sample.
 // We have included 5 parameters here instead of the regular 4,
-// as the EON Oren-Nayer fitting and the final GGX fitting differ on which matrix-element to scale to 1.
+// as the EON Oren-Nayar fitting and the final GGX fitting differ on which matrix-element to scale to 1.
 // ------------------------------------------------------------------------------------------------
 struct IsotropicLTC {
 public:
@@ -28,11 +28,11 @@ public:
 
     static inline IsotropicLTC identity() { return { 1, 1, 1, 0, 0 }; }
 
-    inline Matrix3x3f get_inverse_M() const { return { m00, 0, m02, 0, m11, 0, m20, 0, m22 }; }
-    inline Matrix3x3f get_M() const { return invert(get_inverse_M()); }
-    inline float inverse_M_determinant() const { return m11 * (m00 * m22 - m02 * m20); }
+    __always_inline__ GPU_ENABLED  Matrix3x3f get_inverse_M() const { return { m00, 0, m02, 0, m11, 0, m20, 0, m22 }; }
+    __always_inline__ GPU_ENABLED  Matrix3x3f get_M() const { return invert(get_inverse_M()); }
+    __always_inline__ GPU_ENABLED  float inverse_M_determinant() const { return m11 * (m00 * m22 - m02 * m20); }
 
-    inline float PDF(Vector3f w) const {
+    __always_inline__ GPU_ENABLED  float PDF(Vector3f w) const {
         Vector3f w_original_scaled = get_inverse_M() * w;
 
         float l = 1.0f / magnitude(w_original_scaled); // magnitude(invert(inverse_M) * normalize(w_original)) in the paper source.
@@ -42,9 +42,9 @@ public:
         return Distributions::Cosine::PDF(original_cos_theta) * reciprocal_jacobian;
     }
 
-    inline float evaluate(Vector3f w) const { return PDF(w); }
+    __always_inline__ GPU_ENABLED  float evaluate(Vector3f w) const { return PDF(w); }
 
-    inline Distributions::DirectionalSample sample(Vector2f random_sample) const {
+    __always_inline__ GPU_ENABLED  Distributions::DirectionalSample sample(Vector2f random_sample) const {
         auto cosine_direction = Distributions::Cosine::sample(random_sample).direction;
 
         // Transform cosine sample to LTC sample.
