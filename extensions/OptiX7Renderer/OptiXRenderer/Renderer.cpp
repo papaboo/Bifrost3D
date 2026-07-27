@@ -162,12 +162,17 @@ struct Renderer::Implementation {
         { // Setup module
             OptixModuleCompileOptions module_compile_options = {};
             module_compile_options.maxRegisterCount = OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
-            module_compile_options.optLevel = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
-            module_compile_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
+#ifdef NDEBUG
+            module_compile_options.optLevel = OPTIX_COMPILE_OPTIMIZATION_LEVEL_3;
+            module_compile_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_MINIMAL;
+#else
+            module_compile_options.optLevel = OPTIX_COMPILE_OPTIMIZATION_LEVEL_0;
+            module_compile_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+#endif
 
             std::string ptx_source = PtxLoader::load_ptx("Shading/RGSolidColor.cu");
 
-            OPTIX_LOG_CHECK(optixModuleCreateFromPTX(m_context,&module_compile_options, &pipeline_compile_options,
+            OPTIX_LOG_CHECK(optixModuleCreate(m_context,&module_compile_options, &pipeline_compile_options,
                 ptx_source.c_str(), ptx_source.size(), error_log, &error_log_size, &m_module));
         }
 
@@ -207,13 +212,12 @@ struct Renderer::Implementation {
 
             OptixPipelineLinkOptions pipeline_link_options = {};
             pipeline_link_options.maxTraceDepth = max_trace_depth;
-            pipeline_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
             OPTIX_LOG_CHECK(optixPipelineCreate(m_context, &pipeline_compile_options, &pipeline_link_options,
                 program_entries, program_count, error_log, &error_log_size, &m_pipeline));
 
             OptixStackSizes stack_sizes = {};
             for (auto& prog_group : program_entries)
-                OPTIX_CHECK(optixUtilAccumulateStackSizes(prog_group, &stack_sizes));
+                OPTIX_CHECK(optixUtilAccumulateStackSizes(prog_group, &stack_sizes, m_pipeline));
 
             uint32_t direct_callable_stack_size_from_traversal;
             uint32_t direct_callable_stack_size_from_state;
