@@ -29,6 +29,30 @@ struct __align__(16) DirectionalSample {
 };
 
 //=================================================================================================
+// Triangle distribution.
+// A Low-Distortion Map Between Triangle and Square, Heitz, 2019
+//=================================================================================================
+namespace Triangle {
+
+__inline_all__ float PDF(float triangle_area) {
+    return 1.0f / triangle_area;
+}
+
+__inline_all__ optix::float3 sample_barycentric_coords(optix::float2 random_sample) {
+    float b0, b1;
+    if (random_sample.x < random_sample.y) {
+        b0 = random_sample.x * 0.5f;
+        b1 = random_sample.y - b0;
+    } else {
+        b1 = random_sample.y * 0.5f;
+        b0 = random_sample.x - b1;
+    }
+    return { b0, b1, 1 - b0 - b1 };
+}
+
+}
+
+//=================================================================================================
 // Disk distribution.
 //=================================================================================================
 namespace Disk {

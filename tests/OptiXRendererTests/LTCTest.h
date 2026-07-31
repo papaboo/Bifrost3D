@@ -10,13 +10,14 @@
 #define _OPTIXRENDERER_LTC_TEST_H_
 
 #include <Bifrost/Assets/Shading/LinearlyTransformedCosines.h>
+#include <Bifrost/Math/Statistics.h>
+
+#include <OPtiXRenderer/Distributions.h>
 
 #include <BSDFs/GGXTest.h>
 #include <BSDFs/LambertTest.h>
 #include <BSDFs/OrenNayarTest.h>
 #include <BSDFTestUtils.h>
-
-#include <Bifrost/Math/Statistics.h>
 
 #include <gtest/gtest.h>
 
@@ -121,6 +122,47 @@ GTEST_TEST(LTC, GGX_error) {
 
     EXPECT_LT(error_statistics.mean(), 46.0f);
     EXPECT_LT(error_statistics.standard_deviation(), 107.0f);
+}
+
+GTEST_TEST(LTC, lambert_integrate_triangle_light) {
+    using namespace optix;
+
+    // Define the surface plane to illuminate.
+    // The surface passes through origo and the normal is along positive z.
+    float3 surface_point = { 0, 0, 0 };
+    float3 surface_normal = { 0, 0, 1 };
+
+    // Define triangle light above surface plane.
+    float distance_to_surface = 1.0f;
+    float emission = 1;
+    float3 v0 = { -1, 1, distance_to_surface };
+    float3 v1 = { 1, 1, distance_to_surface };
+    float3 v2 = { 1, -1, distance_to_surface };
+    float3 light_surface_normal = { 0, 0, -1 };
+    float light_surface_area = 2;
+
+    // Integrate light
+    int max_sample_count = 1024;
+    float integral = 0.0f;
+    for (int s = 0; s < max_sample_count; ++s) {
+        // Sample barycentric coordinates
+        float3 bc = Distributions::Triangle::sample_barycentric_coords(BSDFTestUtils::bsdf_rng_sample2f(s));
+        float area_pdf = Distributions::Triangle::PDF(light_surface_area);
+
+        float3 light_sample_point = bc.x * v0 + bc.y * v1 + bc.z * v2;
+        float3 wi = normalize(light_sample_point - surface_point);
+
+        // Converting from local area PDF to solid angle PDF wrt the surface point.
+        float area_PDF_to_solid_angle_PDF = abs(dot(wi, light_surface_normal)) / length_squared(light_sample_point - surface_point);
+        float solid_angle_PDF = area_pdf * area_PDF_to_solid_angle_PDF;
+
+        float f = 1 / PIf; // TODO Block if light is on the backside / evaluate by material
+        float abs_cos_theta_i = abs(dot(surface_normal, wi));
+
+        integral += f * emission * abs_cos_theta_i / solid_angle_PDF;
+    }
+
+    integral /= max_sample_count;
 }
 
 } // NS OptiXRenderer

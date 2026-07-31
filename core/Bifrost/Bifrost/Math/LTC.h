@@ -54,6 +54,57 @@ public:
     }
 };
 
+namespace LTCAreaLights {
+
+// Edge integral using the fitted function to replace acos and gain increased precision.
+// Real-Time Area Lighting: a Journey from Research to Production, Stephen Hill and Eric Heitz, Siggraph, 2017
+inline Vector3f vector_edge_integral(Vector3f v1, Vector3f v2) {
+    float x = dot(v1, v2);
+    float y = abs(x);
+
+    float a = 0.8543985f + (0.4965155f + 0.0145206f * y) * y;
+    float b = 3.4175940f + (4.1616724f + y) * y;
+    float v = a / b;
+
+    float theta_over_sintheta = (x > 0.0f) ? v : 0.5f / sqrt(fmaxf(1.0f - x * x, 1e-7f)) - v;
+
+    return cross(v1, v2) * theta_over_sintheta;
+}
+
+inline float edge_integral(Vector3f v1, Vector3f v2) { return vector_edge_integral(v1, v2).z; }
+
+inline float evaluate_mesh_light_lambert(Vector3f normal, Vector3f wo, Vector3f position, Vector3f positions[3], bool two_sided) {
+    // Construct orthonormal basis around normal with tangent pointing along the view direction.
+    Vector3f tangent = normalize(wo - normal * dot(wo, normal));
+    Vector3f bitangent = cross(normal, tangent);
+
+    // Rotate area light in (T1, T2, N) basis
+    Matrix3x3f M_inverse = Matrix3x3f({ tangent, bitangent, normal });
+    // float3x3 M_inverse = transpose(float3x3(tangent, bitangent, normal));
+
+    positions[0] = M_inverse * (positions[0] - position);
+    positions[1] = M_inverse * (positions[1] - position);
+    positions[2] = M_inverse * (positions[2] - position);
+
+    // TODO triangle clipping
+
+    // Project vertices onto sphere
+    positions[0] = normalize(positions[0]);
+    positions[1] = normalize(positions[1]);
+    positions[2] = normalize(positions[2]);
+
+    // Integrate triangle over cosine distribution.
+    Vector3f F = { 0, 0, 0 };
+    F += vector_edge_integral(positions[0], positions[1]);
+    F += vector_edge_integral(positions[1], positions[2]);
+    F += vector_edge_integral(positions[2], positions[0]);
+    float integral = two_sided ? abs(F.z) : fmaxf(0.0, -F.z); // Negate integral due to winding order. TODO Fix later in MeshLightManager? Would be nice to keep this code in sync with other reference implementations
+
+    return integral;
+}
+
+} // NS LTCAreaLights
+
 } // NS Bifrost::Math
 
 #endif // _BIFROST_MATH_LTC_H_
