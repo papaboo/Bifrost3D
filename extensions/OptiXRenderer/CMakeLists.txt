@@ -5,7 +5,7 @@ if (WIN32 AND ((MSVC_VERSION LESS_EQUAL 1910) OR (MSVC_VERSION GREATER 1929)))
   return()
 endif()
 
-find_package(CUDA 10.0)
+find_package(CUDA 11.1)
 if (NOT CUDA_FOUND)
   message(WARNING "OptiXRenderer: CUDA not installed.")
   return()
