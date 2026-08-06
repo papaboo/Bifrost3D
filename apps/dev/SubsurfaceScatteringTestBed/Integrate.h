@@ -13,12 +13,11 @@
 
 #include <Bifrost/Assets/Image.h>
 #include <Bifrost/Assets/Media.h>
+#include <Bifrost/Assets/Shading/BSDFs/BurleySSS.h>
 #include <Bifrost/Math/Intersect.h>
 #include <Bifrost/Math/Plane.h>
 #include <Bifrost/Math/Ray.h>
 #include <Bifrost/Math/RNG.h>
-
-#include <OptiXRenderer/Shading/BSDFs/BurleySSS.h>
 
 #include <StbImageWriter/StbImageWriter.h>
 
@@ -26,6 +25,7 @@ namespace Integrate {
 
 using namespace Bifrost::Assets;
 using namespace Bifrost::Assets::Media;
+using namespace Bifrost::Assets::Shading::BSDFs;
 using namespace Bifrost::Math;
 
 const float pixel_scale = 0.2f;
@@ -74,7 +74,7 @@ inline void random_walk_integrate(Image output, float slab_thickness) {
             RGB radiance = { 0.0f, 0.0f, 0.0f };
             for (int c = 0; c < 3; ++c) {
                 for (int i = 0; i < path_count; i++) {
-                    auto rng = ScatteringSobolRNG(i, OptiXRenderer::RNG::pcg2d(x, y).x);
+                    auto rng = ScatteringSobolRNG(i, RNG::pcg2d(x, y).x);
 
                     // Ray starting right past the surface at x,y and looking into the medium along negative z.
                     Ray ray = Ray(Vector3f(float(x), float(y), -1e-6f) * pixel_scale, Vector3f(0, 0, -1));
@@ -101,14 +101,11 @@ inline void random_walk_integrate(Image output, float slab_thickness) {
 }
 
 inline void burley_integrator(Image output, float slab_thickness) {
-    using namespace optix;
-    using namespace OptiXRenderer::Shading::BSDFs;
-
     BurleySSS::Parameters bssrdf_params[bssrdf_count];
     for (int bssrdf_index = 0; bssrdf_index < bssrdf_count; ++bssrdf_index) {
         RGB albedo = sss_params[bssrdf_index].diffuse_albedo;
-        RGB mfp = sss_params[bssrdf_index].mean_free_path;
-        bssrdf_params[bssrdf_index] = BurleySSS::Parameters::create({ albedo.r, albedo.g, albedo.b }, { mfp.r, mfp.g, mfp.b }, BurleySSS::Parameters::LightConfig::Search);
+        Vector3f mfp = sss_params[bssrdf_index].mean_free_path;
+        bssrdf_params[bssrdf_index] = BurleySSS::Parameters::create(albedo, mfp, BurleySSS::Parameters::LightConfig::Search);
     }
 
     const int width = output.get_width();
@@ -119,12 +116,12 @@ inline void burley_integrator(Image output, float slab_thickness) {
         BurleySSS::Parameters sss_params = bssrdf_params[y];
         #pragma omp parallel for schedule(dynamic, 5)
         for (int x = 0; x < width; x++) {
-            float3 radiance = { 0.0f, 0.0f, 0.0f };
-            float3 energy_loss = { 0.0f, 0.0f, 0.0f };
+            RGB radiance = { 0.0f, 0.0f, 0.0f };
+            RGB energy_loss = { 0.0f, 0.0f, 0.0f };
             for (int i = 0; i < sample_count; i++) {
                 Vector3f rng_sample = rng.sample3f(i, sample_count);
 
-                float3 po = make_float3(float(x), float(y), 0) * pixel_scale;
+                Vector3f po = Vector3f(float(x), float(y), 0) * pixel_scale;
 
                 auto sss_sample = BurleySSS::AlbedoMIS::sample(sss_params, po, { rng_sample.x, rng_sample.y, rng_sample.z });
                 bool in_shadow = is_in_shadow(sss_sample.position.x);
@@ -132,7 +129,7 @@ inline void burley_integrator(Image output, float slab_thickness) {
                     radiance += sss_sample.reflectance / sss_sample.PDF.value();
 
                 // Approximate energy lost by frontside light scattering out the backside.
-                float3 backside_position = sss_sample.position;
+                Vector3f backside_position = sss_sample.position;
                 backside_position.z -= slab_thickness;
                 auto sss_sample_energy_loss = BurleySSS::evaluate(sss_params, po, backside_position);
                 if (!in_shadow)
@@ -140,9 +137,7 @@ inline void burley_integrator(Image output, float slab_thickness) {
             }
 
             radiance = radiance / sample_count - energy_loss / sample_count;
-            RGBA pixel = { radiance.x, radiance.y, radiance.z, 1.0f };
-
-            output.set_pixel(pixel, Vector2ui(x, y));
+            output.set_pixel(RGBA(radiance), Vector2ui(x, y));
         }
     }
 }

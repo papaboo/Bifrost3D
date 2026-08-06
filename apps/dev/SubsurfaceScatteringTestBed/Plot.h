@@ -13,13 +13,10 @@
 
 #include <Bifrost/Assets/Image.h>
 #include <Bifrost/Assets/Media.h>
+#include <Bifrost/Assets/Shading/BSDFs/BurleySSS.h>
 #include <Bifrost/Core/Array.h>
-#include <Bifrost/Math/Intersect.h>
 #include <Bifrost/Math/Plane.h>
 #include <Bifrost/Math/Ray.h>
-
-#include <OptiXRenderer/RNG.h>
-#include <OptiXRenderer/Shading/BSDFs/BurleySSS.h>
 
 #include <StbImageWriter/StbImageWriter.h>
 
@@ -29,7 +26,7 @@ using namespace Bifrost::Assets;
 using namespace Bifrost::Assets::Media;
 using namespace Bifrost::Core;
 using namespace Bifrost::Math;
-using namespace OptiXRenderer::Shading::BSDFs;
+using namespace Bifrost::Assets::Shading::BSDFs;
 
 struct TestSetup {
     float diffuse_albedo;
@@ -62,7 +59,7 @@ inline void plot_random_walk(float slab_thickness) {
         // Instead of only counting path that exit at a specific radius, which would be impossible, we instead associate each radius with a ring around origo.
         // The reflectance contribution to each ring is estimated using density estimation, similar to photon mapping.
 
-        ArtisticScatteringParameters artistic_params = { RGB(tests[p].diffuse_albedo), RGB(1.0f) };
+        ArtisticScatteringParameters artistic_params = { RGB(tests[p].diffuse_albedo), Vector3f(1.0f) };
         auto scattering_params = MeasuredScatteringParameters::from_artistic_parameters(artistic_params);
         float sigma_t = scattering_params.get_attenuation_coefficient().r;
         float single_scattering_albedo = scattering_params.get_single_scattering_albedo().r;
@@ -147,8 +144,6 @@ inline void plot_random_walk(float slab_thickness) {
 
 // Recreate search light and diffuse light experiment from Approximate Reflectance Profiles for Efficient Subsurface Scattering.
 inline void plot_burley(BurleySSS::Parameters::LightConfig light_config, float slab_thickness) {
-    using namespace optix;
-
     int size = 200;
     Image plot = Image::create2D("Burley plot", PixelFormat::RGB24, true, Vector2ui(size, size));
     plot.clear(RGBA::white());
@@ -162,13 +157,13 @@ inline void plot_burley(BurleySSS::Parameters::LightConfig light_config, float s
         auto params = BurleySSS::Parameters::create({ albedo, albedo, albedo }, { mean_free_path, mean_free_path, mean_free_path }, light_config);
         for (int x = 0; x < size; ++x) {
             float radius = max_radius * (x + 0.5f) / size;
-            float f = params.diffuse_albedo.x * BurleySSS::evaluate(radius, params.diffuse_mean_free_path.x);
+            float f = params.diffuse_albedo.r * BurleySSS::evaluate(radius, params.diffuse_mean_free_path.x);
 
             // Compute energy lost due to light scattering out the backside.
             float f_energy_loss = 0.0f;
             if (!isinf(slab_thickness)) {
                 float backside_distance = sqrt(pow2(radius) + pow2(slab_thickness));
-                f_energy_loss = params.diffuse_albedo.x * BurleySSS::evaluate(backside_distance, params.diffuse_mean_free_path.x);
+                f_energy_loss = params.diffuse_albedo.r * BurleySSS::evaluate(backside_distance, params.diffuse_mean_free_path.x);
             }
 
             float y = radius * (f - f_energy_loss); // Y-axis is r*R(r)
