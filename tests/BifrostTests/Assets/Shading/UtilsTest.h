@@ -1,0 +1,246 @@
+// Test Bifrost shading utilities.
+// ---------------------------------------------------------------------------
+// Copyright (C) Bifrost. See AUTHORS.txt for authors.
+//
+// This program is open source and distributed under the New BSD License.
+// See LICENSE.txt for more detail.
+// ---------------------------------------------------------------------------
+
+#ifndef _BIFROST_ASSETS_SHADING_UTILS_TEST_H_
+#define _BIFROST_ASSETS_SHADING_UTILS_TEST_H_
+
+#include <Bifrost/Assets/Shading/Constants.h>
+#include <Bifrost/Assets/Shading/Utils.h>
+#include <Bifrost/Math/Distributions.h>
+#include <Bifrost/Math/RNG.h>
+
+#include <Expects.h>
+
+namespace Bifrost::Assets::Shading {
+
+GTEST_TEST(Assets_Shading_MonteCarlo, Balance_heuristic_invariants) {
+    // Sanity checks.
+    EXPECT_FLOAT_EQ(0.5f, MonteCarlo::balance_heuristic(1.0f, 1.0f));
+    EXPECT_FLOAT_EQ(0.25f, MonteCarlo::balance_heuristic(1.0f, 3.0f));
+
+    // The balance heuristic should return 1 if the second pdf is NAN, as then the first sample trivially wins.
+    EXPECT_EQ(1.0f, MonteCarlo::balance_heuristic(1.0f, NAN));
+
+    float almost_inf = std::numeric_limits<float>::max();
+    EXPECT_TRUE(isinf(almost_inf + almost_inf));
+
+    // The balance heuristic should handle values close to infinity.
+    EXPECT_FLOAT_EQ(1.0f / almost_inf, MonteCarlo::balance_heuristic(1.0f, almost_inf));
+    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::balance_heuristic(almost_inf, 1.0f));
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.5f * almost_inf, almost_inf));
+    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::balance_heuristic(almost_inf, 0.5f * almost_inf));
+
+    // The balance heuristic should handle infinity.
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(1.0f, std::numeric_limits<float>::infinity()));
+    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::balance_heuristic(std::numeric_limits<float>::infinity(), 1.0f));
+
+    // Zero should be a valid first parameter and always return zero.
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.0f, 0.0f));
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.0f, 1.0f));
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.0f, almost_inf));
+}
+
+GTEST_TEST(Assets_Shading_MonteCarlo, PDF) {
+    { // PDF with valid value contains valid value.
+        float simple_value = 0.5f;
+        PDF simple_PDF = simple_value;
+        EXPECT_EQ(simple_value, simple_PDF.value());
+        EXPECT_TRUE(simple_PDF.is_valid());
+        EXPECT_TRUE(simple_PDF.use_for_MIS());
+        EXPECT_FALSE(simple_PDF.is_delta_dirac());
+
+        // Disabling valid PDF for MIS flags MIS as disabled.
+        simple_PDF.disable_MIS();
+        EXPECT_EQ(simple_value, simple_PDF.value());
+        EXPECT_TRUE(simple_PDF.is_valid());
+        EXPECT_FALSE(simple_PDF.use_for_MIS());
+        EXPECT_TRUE(simple_PDF.is_delta_dirac()); // We flag PDFs as invalid for MIS by flagging them as delta dirac, so this is unfortunately true.
+    }
+
+    {// PDF validity check ignores tiny values as they are not robustly handled by floating point math.
+        float invalid_value = MIN_VALID_PDF * 0.5f;
+        PDF invalid_PDF = invalid_value;
+        EXPECT_EQ(invalid_value, invalid_PDF.value());
+        EXPECT_FALSE(invalid_PDF.is_valid());
+        EXPECT_FALSE(invalid_PDF.use_for_MIS());
+        EXPECT_FALSE(invalid_PDF.is_delta_dirac());
+
+        // Disable MIS on already invalid PDF changes nothing
+        invalid_PDF.disable_MIS();
+        EXPECT_EQ(invalid_value, invalid_PDF.value());
+        EXPECT_FALSE(invalid_PDF.is_valid());
+        EXPECT_FALSE(invalid_PDF.use_for_MIS());
+        EXPECT_TRUE(invalid_PDF.is_delta_dirac()); // We flag PDFs as invalid for MIS by flagging them as delta dirac, so this is unfortunately true.
+    }
+
+    { // Delta dirac PDFs are invalid and cannot be used for MIS
+        PDF delta_PDF = PDF::delta_dirac(1);
+        EXPECT_TRUE(delta_PDF.is_valid());
+        EXPECT_FALSE(delta_PDF.use_for_MIS());
+        EXPECT_TRUE(delta_PDF.is_delta_dirac());
+
+        // Disable MIS on a delta dirac PDF changes nothing as MIS isn't applicable to delta functions.
+        delta_PDF.disable_MIS();
+        EXPECT_TRUE(delta_PDF.is_valid());
+        EXPECT_FALSE(delta_PDF.use_for_MIS());
+        EXPECT_TRUE(delta_PDF.is_delta_dirac());
+    }
+
+    { // Invalid PDF
+        PDF invalid_PDF = PDF::invalid();
+        EXPECT_FALSE(invalid_PDF.is_valid());
+        EXPECT_FALSE(invalid_PDF.use_for_MIS());
+        EXPECT_TRUE(invalid_PDF.is_delta_dirac());
+
+        // Disable MIS on already invalid PDF changes nothing
+        invalid_PDF.disable_MIS();
+        EXPECT_FALSE(invalid_PDF.is_valid());
+        EXPECT_FALSE(invalid_PDF.use_for_MIS());
+        EXPECT_TRUE(invalid_PDF.is_delta_dirac());
+    }
+}
+
+GTEST_TEST(Assets_Shading_MonteCarlo, Power_heuristic_invariants) {
+    // Sanity checks.
+    EXPECT_FLOAT_EQ(0.5f, MonteCarlo::power_heuristic(1.0f, 1.0f));
+    EXPECT_FLOAT_EQ(0.1f, MonteCarlo::power_heuristic(1.0f, 3.0f));
+
+    // The power heuristic should return 1 if the second pdf is NAN, as then the first sample trivially wins.
+    EXPECT_EQ(1.0f, MonteCarlo::power_heuristic(1.0f, NAN));
+
+    float almost_inf = std::numeric_limits<float>::max();
+    EXPECT_TRUE(isinf(almost_inf * almost_inf));
+
+    // The power heuristic should handle values that squared become infinity.
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(1.0f, almost_inf));
+    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::power_heuristic(almost_inf, 1.0f));
+
+    // Zero should be a valid first parameter and always return zero.
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.0f, 0.0f));
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.0f, 1.0f));
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.0f, almost_inf));
+
+    // Hacking the power heuristic by giving it pdf's that'll force the divisor to become infinite.
+    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.9f * sqrt(almost_inf), sqrt(almost_inf)));
+    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::power_heuristic(sqrt(almost_inf), 0.9f * sqrt(almost_inf)));
+}
+
+GTEST_TEST(Assets_Shading_Specularity, dielectric_conversions_to_and_from_index_of_refraction) {
+    // Index of refraction
+    const float air_ior = 1.0f;
+    const float water_ior = 1.333f;
+    const float glass_ior = 1.50f;
+
+    // Specularity of medium when transitioning from air to medium.
+    const float water_specularity = 0.02037318784f;
+    const float glass_specularity = 0.04f;
+
+    // Test conversion from index of refraction to specularity.
+    float computed_water_specularity = dielectric_specularity(air_ior, water_ior);
+    float computed_glass_specularity = dielectric_specularity(air_ior, glass_ior);
+
+    EXPECT_FLOAT_EQ(water_specularity, computed_water_specularity);
+    EXPECT_FLOAT_EQ(glass_specularity, computed_glass_specularity);
+
+    // Test conversion from specularity to index of refraction
+    float computed_water_ior = dielectric_ior_from_specularity(water_specularity);
+    float computed_glass_ior = dielectric_ior_from_specularity(glass_specularity);
+
+    EXPECT_FLOAT_EQ(water_ior, computed_water_ior);
+    EXPECT_FLOAT_EQ(glass_ior, computed_glass_ior);
+}
+
+GTEST_TEST(Assets_Shading_Specularity, conductor_conversions_to_and_from_index_of_refraction) {
+    float accuracy = 1e-5f;
+
+    const Math::RGB air_ior = { 1.0f, 1.0f, 1.0f };
+
+    // Specularity of medium when transitioning from air to medium at wavelengths 630nm (red), 532nm (green) and 465nm (blue)
+    const Math::RGB gold_specularity = { 0.932999f, 0.687356f, 0.384839f };
+    const Math::RGB titanium_specularity = { 0.61167696422f, 0.57501477894f, 0.54852055032f };
+
+    // Test conversion from index of refraction to specularity.
+    Math::RGB computed_gold_specularity = conductor_specularity(air_ior, gold_ior, gold_extinction);
+    Math::RGB computed_titanium_specularity = conductor_specularity(air_ior, titanium_ior, titanium_extinction);
+
+    EXPECT_RGB_EQ_PCT(gold_specularity, computed_gold_specularity, accuracy);
+    EXPECT_RGB_EQ_PCT(titanium_specularity, computed_titanium_specularity, accuracy);
+
+    // Test conversion from specularity to index of refraction
+    Math::RGB computed_gold_ior = conductor_ior_from_specularity(gold_specularity, gold_extinction);
+    Math::RGB computed_titanium_ior = conductor_ior_from_specularity(titanium_specularity, titanium_extinction);
+
+    EXPECT_RGB_EQ_PCT(gold_ior, computed_gold_ior, accuracy);
+    EXPECT_RGB_EQ_PCT(titanium_ior, computed_titanium_ior, accuracy);
+}
+
+GTEST_TEST(Assets_Shading_Specularity, scaling_dielectric_specularity_under_coat) {
+    // adjust_dielectric_specularity_to_exterior_medium makes the assumption that air's Index of Refraction is exactly 1.
+    const float air_ior = 1.0f;
+
+    for (float base_ior : { ice_ior, coat_ior, diamond_ior }) {
+        // The expected specularity of the base material viewed through the coat instead of air.
+        float expected_base_specularity_through_coat = dielectric_specularity(coat_ior, base_ior);
+
+        float base_specularity_through_air = dielectric_specularity(air_ior, base_ior);
+        float actual_base_specularity_through_coat = adjust_dielectric_specularity_to_exterior_medium(coat_ior, base_specularity_through_air);
+
+        EXPECT_FLOAT_EQ_EPS(expected_base_specularity_through_coat, actual_base_specularity_through_coat, 1e-7f);
+    }
+}
+
+GTEST_TEST(Assets_Shading_Specularity, scaling_conductor_specularity_under_coat) {
+    const Math::RGB air_ior_3 = Math::RGB(air_ior);
+    const Math::RGB coat_ior_3 = Math::RGB(coat_ior);
+
+    for (Math::RGB base_ior : { gold_ior, titanium_ior }) {
+        for (Math::RGB base_extinction : { gold_extinction, titanium_extinction }) {
+            // The expected specularity of the base material viewed through the coat instead of air.
+            Math::RGB expected_base_specularity_through_coat = conductor_specularity(coat_ior_3, base_ior, base_extinction);
+
+            Math::RGB base_specularity_through_air = conductor_specularity(air_ior_3, base_ior, base_extinction);
+            Math::RGB actual_base_specularity_through_coat = adjust_conductor_specularity_to_exterior_medium(coat_ior_3, base_specularity_through_air, base_extinction);
+
+            EXPECT_RGB_EQ_EPS(expected_base_specularity_through_coat, actual_base_specularity_through_coat, 0.02f);
+        }
+    }
+}
+
+GTEST_TEST(Assets_Shading_Trigonometry, refract_overloads_gives_same_result_as_full_implementation) {
+    Math::Vector3f up = Math::Vector3f(0, 0, 1);
+
+    for (int wo_s = 0; wo_s < 16; wo_s++) {
+        Math::Vector3f wo = Math::Distributions::UniformHemisphere::sample(Math::RNG::sample02(wo_s)).direction;
+        for (float ior_i_over_o : { 0.33f, 0.7f, 1.5f, 3.0f }) {
+            Math::Vector3f expected_direction;
+            bool expected_success = refract(expected_direction, wo, up, ior_i_over_o);
+
+            { // Test vector implementation
+                Math::Vector3f actual_refraction;
+                bool actual_success = refract(actual_refraction, wo, ior_i_over_o);
+
+                EXPECT_EQ(expected_success, actual_success);
+                if (actual_success) // The reference implementation returns the zero vector if refraction failed, while the OptiXRenderer implementation returns an undefined result.
+                    EXPECT_VECTOR3F_EQ_EPS(expected_direction, actual_refraction, 1e-6f);
+            }
+
+            { // Test angle implementation
+                float actual_refracted_cos_theta;
+                bool actual_success = refract(actual_refracted_cos_theta, wo.z, ior_i_over_o);
+
+                EXPECT_EQ(expected_success, actual_success);
+                if (actual_success) // The reference implementation returns the zero vector if refraction failed, while the OptiXRenderer implementation returns an undefined result.
+                    EXPECT_FLOAT_EQ_EPS(expected_direction.z, actual_refracted_cos_theta, 1e-6f);
+            }
+        }
+    }
+}
+
+} // NS Bifrost::Assets::Shading
+
+#endif // _BIFROST_ASSETS_SHADING_UTILS_TEST_H_

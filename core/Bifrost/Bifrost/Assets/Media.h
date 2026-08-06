@@ -32,7 +32,7 @@ struct MeasuredScatteringParameters {
     // The mean free path is the reciprocal of the attenuation coefficient.
     // PBRT v4, section 11.1.3
     // https://pbr-book.org/4ed/Volume_Scattering/Volume_Scattering_Processes#OutScatteringandAttenuation
-    __always_inline__ Math::RGB get_mean_free_path() const {
+    __always_inline__ Math::Vector3f get_mean_free_path() const {
         Math::RGB sigma_t = get_attenuation_coefficient();
         return { 1.0f / sigma_t.r, 1.0f / sigma_t.g, 1.0f / sigma_t.b };
     }
@@ -79,7 +79,7 @@ struct MeasuredScatteringParameters {
 //----------------------------------------------------------------------------
 struct ArtisticScatteringParameters {
     Math::RGB diffuse_albedo;
-    Math::RGB mean_free_path;
+    Math::Vector3f mean_free_path;
 
     static ArtisticScatteringParameters from_measured_parameters(const MeasuredScatteringParameters& measured_parameters, float medium_ior = 1.3f);
 
@@ -112,8 +112,8 @@ MeasuredScatteringParameters MeasuredScatteringParameters::from_artistic_paramet
     Math::RGB a = artistic_parameters.diffuse_albedo;
     Math::RGB exponent = -5.09406f * a + 2.61188f * a * a - 4.31805f * a * a * a;
     Math::RGB single_scattering_albedo = { 1 - expf(exponent.r), 1 - expf(exponent.g), 1 - expf(exponent.b) };
-    Math::RGB mpf = artistic_parameters.mean_free_path;
-    Math::RGB attenuation_coefficient = { 1 / mpf.r, 1 / mpf.g, 1 / mpf.b };
+    Math::Vector3f mpf = artistic_parameters.mean_free_path;
+    Math::RGB attenuation_coefficient = { 1.0f / mpf.x, 1.0f / mpf.y, 1.0f / mpf.z };
 
     Math::RGB scattering_coefficient = single_scattering_albedo * attenuation_coefficient;
     Math::RGB absorption_coefficient = attenuation_coefficient - scattering_coefficient;

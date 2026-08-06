@@ -22,6 +22,7 @@ namespace Scenes {
 
 void create_cornell_box(Scene::CameraID camera_ID, Scene::SceneNode root_node) {
     using namespace Bifrost::Assets;
+    using namespace Bifrost::Assets::Shading;
     using namespace Bifrost::Math;
     using namespace Bifrost::Scene;
 

@@ -34,7 +34,7 @@ struct RGB final {
     GPU_ENABLED RGB(float intensity)
         : r(intensity), g(intensity), b(intensity) { }
 
-    GPU_ENABLED RGB(float r, float g, float b)
+    constexpr GPU_ENABLED RGB(float r, float g, float b)
         : r(r), g(g), b(b) { }
 
     static __always_inline__ GPU_ENABLED RGB black()  { return RGB(0.0f, 0.0f, 0.0f); }
@@ -384,6 +384,10 @@ __always_inline__ GPU_ENABLED RGBA linear_to_sRGB(RGBA color) {
     return RGBA(linear_to_sRGB(color.r), linear_to_sRGB(color.g), linear_to_sRGB(color.b), color.a);
 }
 
+__always_inline__ GPU_ENABLED float sum(RGB color) {
+    return color.r + color.g + color.b;
+}
+
 __always_inline__ GPU_ENABLED float average(RGB color) {
     return (color.r + color.g + color.b) / 3.0f;
 }
@@ -411,6 +415,14 @@ __always_inline__ GPU_ENABLED float chroma(RGB color) {
     return sqrtf(alpha * alpha + beta * beta);
 }
 
+__always_inline__ GPU_ENABLED RGB pow2(RGB color) {
+    return color * color;
+}
+
+_inline_all_archs_ bool is_black(RGB color) {
+    return color.r <= 0.0f && color.g <= 0.0f && color.b <= 0.0f;
+}
+
 } // NS Bifrost::Math
 
 // ------------------------------------------------------------------------------------------------
@@ -432,6 +444,10 @@ __always_inline__ std::ostream& operator<<(std::ostream& s, Bifrost::Math::RGBA 
 
 __always_inline__ GPU_ENABLED Bifrost::Math::RGB operator+(float lhs, Bifrost::Math::RGB rhs) {
     return rhs + lhs;
+}
+
+__always_inline__ GPU_ENABLED Bifrost::Math::RGB operator-(float lhs, Bifrost::Math::RGB rhs) {
+    return { lhs - rhs.r, lhs - rhs.g, lhs - rhs.b };
 }
 
 __always_inline__ GPU_ENABLED Bifrost::Math::RGB operator*(float lhs, Bifrost::Math::RGB rhs) {

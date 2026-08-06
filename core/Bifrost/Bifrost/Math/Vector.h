@@ -157,22 +157,23 @@ __always_inline__ GPU_ENABLED T dot(Vector<T> lhs, Vector<T> rhs) {
 // Compute the squared magnitude of the input vector.
 // Useful when comparing the relative size between vectors, where the exact magnitude isn't needed.
 template<template<typename> class Vector, typename T>
-__always_inline__ GPU_ENABLED T magnitude_squared(Vector<T> v) {
-    return dot(v, v);
-}
+__always_inline__ GPU_ENABLED T magnitude_squared(Vector<T> v) { return dot(v, v); }
 
 // Compute the magnitude of the input vector.
 template<template<typename> class Vector, typename T>
-__always_inline__ GPU_ENABLED T magnitude(Vector<T> v) {
-    return (T)sqrt(dot(v, v));
-}
+__always_inline__ GPU_ENABLED T magnitude(Vector<T> v) { return (T)sqrt(dot(v, v)); }
+
+// Compute the distance squared between the two points.
+template<template<typename> class Vector, typename T>
+_inline_all_archs_ T distance_squared(Vector<T> p0, Vector<T> p1) { return magnitude_squared(p0 - p1); }
+
+// Compute the distance between the two points.
+template<template<typename> class Vector, typename T>
+_inline_all_archs_ T distance(Vector<T> p0, Vector<T> p1) { return magnitude(p0 - p1); }
 
 // Create a normalized version of the input vector.
 template<template<typename> class Vector, typename T>
-__always_inline__ GPU_ENABLED Vector<T> normalize(Vector<T> v){
-    T m = magnitude(v);
-    return v / m;
-}
+__always_inline__ GPU_ENABLED Vector<T> normalize(Vector<T> v) { return v / magnitude(v); }
 
 // Cross product between two 3-dimensional vectors.
 template<typename T>
@@ -186,7 +187,7 @@ __always_inline__ GPU_ENABLED Vector3<T> cross(Vector3<T> lhs, Vector3<T> rhs) {
 // Building an Orthonormal Basis, Revisited, Duff et al.
 // http://jcgt.org/published/0006/01/01/paper.pdf
 template<typename T>
-__always_inline__ void compute_tangents(Vector3<T> normal, Vector3<T>& tangent, Vector3<T>& bitangent) {
+__always_inline__ GPU_ENABLED void compute_tangents(Vector3<T> normal, Vector3<T>& tangent, Vector3<T>& bitangent) {
     T sign = T(copysignf(1.0f, (float)normal.z));
     T a = T(-1) / (sign + normal.z);
     T b = normal.x * normal.y * a;
@@ -270,6 +271,7 @@ typedef Vector3<unsigned int> Vector3ui;
 typedef Vector4<double> Vector4d;
 typedef Vector4<float> Vector4f;
 typedef Vector4<int> Vector4i;
+typedef Vector4<unsigned int> Vector4ui;
 
 } // NS Bifrost::Math
 

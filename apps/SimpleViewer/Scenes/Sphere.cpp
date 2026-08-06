@@ -18,6 +18,7 @@
 #include <Bifrost/Scene/SceneNode.h>
 
 using namespace Bifrost::Assets;
+using namespace Bifrost::Assets::Shading;
 using namespace Bifrost::Math;
 using namespace Bifrost::Scene;
 

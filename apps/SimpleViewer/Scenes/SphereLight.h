@@ -52,6 +52,7 @@ private:
 
 void create(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneRoot scene) {
     using namespace Bifrost::Assets;
+    using namespace Bifrost::Assets::Shading;
     using namespace Bifrost::Math;
     using namespace Bifrost::Scene;
 

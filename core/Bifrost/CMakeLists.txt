@@ -19,6 +19,7 @@ SET(ASSETS_SRCS
 SET(ASSETS_SHADING_SRCS 
   Bifrost/Assets/Shading/BurleyRho.cpp
   Bifrost/Assets/Shading/BurleyRho.png
+  Bifrost/Assets/Shading/Constants.h
   Bifrost/Assets/Shading/DielectricGGXRho.cpp
   Bifrost/Assets/Shading/EstimateGGXBoundedVNDFAlpha.cpp
   Bifrost/Assets/Shading/Fittings.h
@@ -28,6 +29,15 @@ SET(ASSETS_SHADING_SRCS
   Bifrost/Assets/Shading/GGXWithFresnelRho.cpp
   Bifrost/Assets/Shading/GGXWithFresnelRho.png
   Bifrost/Assets/Shading/LinearlyTransformedCosines.h
+  Bifrost/Assets/Shading/Utils.h
+)
+
+SET(ASSETS_SHADING_BSDFS_SRCS
+  Bifrost/Assets/Shading/BSDFs/Burley.h
+  Bifrost/Assets/Shading/BSDFs/BurleySSS.h
+  Bifrost/Assets/Shading/BSDFs/GGX.h
+  Bifrost/Assets/Shading/BSDFs/Lambert.h
+  Bifrost/Assets/Shading/BSDFs/OrenNayar.h
 )
 
 SET(CORE_SRCS 
@@ -99,10 +109,11 @@ SET(UTILS_SRCS
   Bifrost/Utils/IdDeclarations.h
 )
 
-add_library(Bifrost ${ASSETS_SRCS} ${ASSETS_SHADING_SRCS} ${CORE_SRCS} ${INPUT_SRCS} ${MATH_SRCS} ${SCENE_SRCS} ${UTILS_SRCS})
+add_library(Bifrost ${ASSETS_SRCS} ${ASSETS_SHADING_SRCS} ${ASSETS_SHADING_BSDFS_SRCS} ${CORE_SRCS} ${INPUT_SRCS} ${MATH_SRCS} ${SCENE_SRCS} ${UTILS_SRCS})
 
 SOURCE_GROUP("Assets" FILES ${ASSETS_SRCS})
 SOURCE_GROUP("Assets\\Shading" FILES ${ASSETS_SHADING_SRCS})
+SOURCE_GROUP("Assets\\Shading\\BSDFs" FILES ${ASSETS_SHADING_BSDFS_SRCS})
 SOURCE_GROUP("Core" FILES ${CORE_SRCS})
 SOURCE_GROUP("Input" FILES ${INPUT_SRCS})
 SOURCE_GROUP("Math" FILES ${MATH_SRCS})
