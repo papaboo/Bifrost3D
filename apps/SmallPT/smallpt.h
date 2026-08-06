@@ -15,8 +15,6 @@
 #include <Bifrost/Math/Utils.h>
 #include <Bifrost/Math/Vector.h>
 
-#include <math.h>
-
 namespace smallpt {
 
 using namespace Bifrost::Math;
