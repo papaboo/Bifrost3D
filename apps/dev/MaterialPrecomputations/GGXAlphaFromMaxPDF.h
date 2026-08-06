@@ -9,15 +9,14 @@
 #ifndef _GGX_ALPHA_FROM_MAX_PDF_H_
 #define _GGX_ALPHA_FROM_MAX_PDF_H_
 
-#include <OptiXRenderer/Shading/BSDFs/GGX.h>
+#include <Bifrost/Assets/Shading/BSDFs/GGX.h>
 
 #include <fstream>
 
 // Given a max PDF and cos(theta) compute the corresponding alpha of the GGX distribution with that max PDF.
 void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const std::string& filename) {
-    using namespace optix;
-    using namespace OptiXRenderer;
-    using namespace OptiXRenderer::Shading::BSDFs;
+    using namespace Bifrost::Assets::Shading::BSDFs;
+    using namespace Bifrost::Math;
 
     const int sample_count = max_PDF_count * cos_theta_count;
     constexpr float k = 1.0f; // Found to give a decent distribution of alphas, where decent is defined as the distribution of neighbouring alphas in the lookup table with the lowest standard deviatino
@@ -53,8 +52,8 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
     float* alphas = new float[sample_count];
     for (int c = 0; c < cos_theta_count; ++c) {
         float cos_theta = fmaxf(c / (cos_theta_count - 1.0f), 0.0001f);
-        float3 wo = { sqrt(1 - OptiXRenderer::pow2(cos_theta)), 0.0f, cos_theta };
-        float3 wi = { -wo.x, -wo.y, wo.z };
+        Vector3f wo = { sqrt(1 - pow2(cos_theta)), 0.0f, cos_theta };
+        Vector3f wi = { -wo.x, -wo.y, wo.z };
 
         for (int t = 0; t < max_PDF_count; ++t) {
             int index = t + c * max_PDF_count;
@@ -62,7 +61,7 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
 
             // Binary search to find the alpha that hits the target PDF
             float prev_alpha = t == 0 ? 1.0f : alphas[index - 1];
-            float3 reflected_wi = { -wo.x, -wo.y, wo.z };
+            Vector3f reflected_wi = { -wo.x, -wo.y, wo.z };
             PDFSample low_PDF_sample = { prev_alpha, encode_PDF(GGX_R::pdf(prev_alpha, wo, reflected_wi)) };
             PDFSample high_PDF_sample = { 0.0f, encode_PDF(GGX_R::pdf(0.00000000001f, wo, reflected_wi)) };
 

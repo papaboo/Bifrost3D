@@ -11,18 +11,16 @@
 #include <PrecomputeDielectricBSDFRho.h>
 #include <PrecomputeRoughBRDFRho.h>
 
-#include <OptiXRenderer/Shading/BSDFs/Burley.h>
-#include <OptiXRenderer/Shading/BSDFs/GGX.h>
-
+#include <Bifrost/Assets/Shading/BSDFs/Burley.h>
+#include <Bifrost/Assets/Shading/BSDFs/GGX.h>
 #include <Bifrost/Assets/Image.h>
 #include <Bifrost/Math/RNG.h>
 
 #include <StbImageWriter/StbImageWriter.h>
 
 using namespace Bifrost::Assets;
-using namespace optix;
-using namespace OptiXRenderer;
-using namespace OptiXRenderer::Shading::BSDFs;
+using namespace Bifrost::Assets::Shading::BSDFs;
+using namespace Bifrost::Math;
 
 int main(int argc, char** argv) {
     printf("Material Precomputations\n");
@@ -33,7 +31,7 @@ int main(int argc, char** argv) {
     const unsigned int width = 32, height = 32, sample_count = 4096;
 
     Images::allocate(1);
-    Bifrost::Math::RNG::PmjbRNG rng(16384u);
+    RNG::PmjbRNG rng(16384u);
 
     // fit_GGX_rho_approximation(output_dir);
 
@@ -41,7 +39,7 @@ int main(int argc, char** argv) {
     estimate_alpha_from_max_PDF(32, 32, output_dir + "EstimateGGXBoundedVNDFAlpha.cpp");
 
     { // Compute Burley rho.
-        static auto sample_burley = [](float roughness, float3 wo, float2 random_sample) -> BSDFSample {
+        static auto sample_burley = [](float roughness, Vector3f wo, Vector2f random_sample) -> BSDFSample {
             float alpha = GGX::alpha_from_roughness(roughness);
             return Burley::sample({1, 1, 1}, alpha, wo, random_sample);
         };
@@ -54,7 +52,7 @@ int main(int argc, char** argv) {
     }
 
     { // Compute GGX reflection rho.
-        static auto sample_ggx = [](float roughness, float3 wo, float2 random_sample) -> BSDFSample {
+        static auto sample_ggx = [](float roughness, Vector3f wo, Vector2f random_sample) -> BSDFSample {
             float alpha = GGX::alpha_from_roughness(roughness);
             return GGX_R::sample(alpha, 1, wo, random_sample);
         };
@@ -67,7 +65,7 @@ int main(int argc, char** argv) {
     }
 
     { // Compute GGX reflection with fresnel rho.
-        static auto sample_ggx_with_fresnel = [](float roughness, float3 wo, float2 random_sample) -> BSDFSample {
+        static auto sample_ggx_with_fresnel = [](float roughness, Vector3f wo, Vector2f random_sample) -> BSDFSample {
             float alpha = GGX::alpha_from_roughness(roughness);
             return GGX_R::sample(alpha, 0, wo, random_sample);
         };
@@ -81,9 +79,9 @@ int main(int argc, char** argv) {
     }
 
     { // Compute dielectric GGX rho.
-        static auto sample_dielectric_ggx = [](float roughness, float ior_i, float3 wo, float3 random_sample) -> BSDFSample {
+        static auto sample_dielectric_ggx = [](float roughness, float ior_i, Vector3f wo, Vector3f random_sample) -> BSDFSample {
             float alpha = GGX::alpha_from_roughness(roughness);
-            float specularity = OptiXRenderer::dielectric_specularity(1.0f, ior_i);
+            float specularity = dielectric_specularity(1.0f, ior_i);
             return GGX::sample(alpha, specularity, ior_i, wo, random_sample);
         };
 
