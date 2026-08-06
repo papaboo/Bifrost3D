@@ -66,10 +66,9 @@ void validate_optix_resource(T resource, char* file, int line) {
 #define RT_ASSERT(condition, exception_ID) do { if (!condition) THROW(exception_ID); } while(false)
 
 // Constants.
-#define PIf 3.14159265358979323846f
-#define TWO_PIf 6.283185307f
-#define RECIP_PIf 0.31830988618379067153776752674503f
-#define FLT_MAX 3.402823466e+38F
+constexpr float PIf = 3.14159265358979323846f;
+constexpr float TWO_PIf = 6.283185307f;
+constexpr float RECIP_PIf = 0.31830988618379067153776752674503f;
 
 // OptiX exceptions.
 #define OPTIX_NOT_IMPLEMENTED (RT_EXCEPTION_USER + 0)

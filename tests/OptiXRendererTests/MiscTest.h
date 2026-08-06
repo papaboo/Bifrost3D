@@ -59,7 +59,7 @@ GTEST_TEST(MonteCarlo, Balance_heuristic_invariants) {
     // The balance heuristic should return 1 if the second pdf is NAN, as then the first sample trivially wins.
     EXPECT_EQ(1.0f, MonteCarlo::balance_heuristic(1.0f, NAN));
 
-    float almost_inf = FLT_MAX;
+    float almost_inf = std::numeric_limits<float>::max();
     EXPECT_TRUE(isinf(almost_inf + almost_inf));
 
     // The balance heuristic should handle values close to infinity.
