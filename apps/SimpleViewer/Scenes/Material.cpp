@@ -18,6 +18,7 @@
 #include <ImGui/ImGuiAdaptor.h>
 
 using namespace Bifrost::Assets;
+using namespace Bifrost::Assets::Shading;
 using namespace Bifrost::Math;
 using namespace Bifrost::Scene;
 

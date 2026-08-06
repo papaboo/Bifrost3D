@@ -22,9 +22,24 @@
 // Patterns for __host__ __device__ programming in CUDA, Mejstrik and Woblistin, 2024
 // Pattern: Host device everything (relevant)
 #ifdef __CUDACC__
-#define GPU_ENABLED __host__ __device__
+#define _all_archs_ __host__ __device__
 #else
-#define GPU_ENABLED
+#define _all_archs_
+#endif
+
+// For backwards compatibility
+#define GPU_ENABLED _all_archs_
+
+#if GPU_COMPILATION
+#    define _inline_all_archs_ __always_inline__ _all_archs_
+#else
+#    define _inline_all_archs_ __always_inline__
+#endif
+
+#if GPU_COMPILATION
+#    define _constant_all_archs_ __constant__
+#else
+#    define _constant_all_archs_ static const
 #endif
 
 namespace Bifrost {

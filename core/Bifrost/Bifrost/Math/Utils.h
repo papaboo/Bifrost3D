@@ -75,65 +75,39 @@ __always_inline__ float next_float(float v) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Trigonometry.
-// ------------------------------------------------------------------------------------------------
-
-__always_inline__ GPU_ENABLED void sincos(float theta, float& sin_theta, float& cos_theta) {
-#if GPU_COMPILATION
-    sincosf(theta, &sin_theta, &cos_theta);
-#else
-    sin_theta = sin(theta);
-    cos_theta = cos(theta);
-#endif
-}
-
-__always_inline__ GPU_ENABLED Vector2f direction_to_latlong_texcoord(Vector3f direction) {
-    float u = (atan2f(direction.z, direction.x) + PI<float>()) * 0.5f / PI<float>();
-    float v = (asinf(direction.y) + PI<float>() * 0.5f) / PI<float>();
-    return Vector2f(u, v);
-}
-
-__always_inline__ GPU_ENABLED Vector3f latlong_texcoord_to_direction(Vector2f uv) {
-    float phi = uv.x * 2.0f * PI<float>();
-    float theta = uv.y * PI<float>();
-    float sin_theta = sinf(theta);
-    return -Vector3f(sin_theta * cosf(phi), cosf(theta), sin_theta * sinf(phi));
-}
-
-// ------------------------------------------------------------------------------------------------
 // General helper methods.
 // ------------------------------------------------------------------------------------------------
 
-__always_inline__ unsigned int ceil_divide(unsigned int a, unsigned int b) {
+_inline_all_archs_ unsigned int ceil_divide(unsigned int a, unsigned int b) {
     return (a / b) + ((a % b) > 0);
 }
 
-__always_inline__ float non_zero_sign(float v) {
+_inline_all_archs_ float non_zero_sign(float v) {
     return signbit(v) ? -1.0f : 1.0f;
 }
 
 template <typename T>
-__always_inline__ T min(const T a, const T b) {
+_inline_all_archs_ T min(const T a, const T b) {
     return a < b ? a : b;
 }
 
 template <typename T>
-__always_inline__ T max(const T a, const T b) {
+_inline_all_archs_ T max(const T a, const T b) {
     return a > b ? a : b;
 }
 
 template <typename T>
-__always_inline__ T clamp(const T value, const T lower_bound, const T upper_bound) {
+_inline_all_archs_ T clamp(const T value, const T lower_bound, const T upper_bound) {
     return min(max(value, lower_bound), upper_bound);
 }
 
 template <typename T>
-__always_inline__ T clamp01(const T value) {
+_inline_all_archs_ T clamp01(const T value) {
     return min(max(value, T(0)), T(1));
 }
 
 // Finds the smallest power of 2 greater or equal to x.
-__always_inline__ unsigned int next_power_of_two(unsigned int x) {
+_inline_all_archs_ unsigned int next_power_of_two(unsigned int x) {
     --x;
     x |= x >> 1;
     x |= x >> 2;
@@ -143,22 +117,18 @@ __always_inline__ unsigned int next_power_of_two(unsigned int x) {
     return x + 1;
 }
 
-__always_inline__ bool is_power_of_two(unsigned int v) {
+_inline_all_archs_ bool is_power_of_two(unsigned int v) {
     return v && !(v & (v - 1));
 }
 
-__always_inline__ float pow2(float x) { return x * x; }
-__always_inline__ float pow4(float x) { return pow2(x * x); }
-__always_inline__ float pow5(float x) { return pow2(x * x) * x; }
-
-__always_inline__ float schlick_fresnel(float incident_specular, float abs_cos_theta) {
-    return incident_specular + (1.0f - incident_specular) * pow5(1.0f - abs_cos_theta);
-}
+_inline_all_archs_ float pow2(float x) { return x * x; }
+_inline_all_archs_ float pow4(float x) { return pow2(x * x); }
+_inline_all_archs_ float pow5(float x) { return pow2(x * x) * x; }
 
 // See answer from johnwbyrd on https://stackoverflow.com/questions/2589096/find-most-significant-bit-left-most-that-is-set-in-a-bit-array
-__always_inline__ unsigned int most_significant_bit(unsigned int v) {
+_inline_all_archs_ unsigned int most_significant_bit(unsigned int v) {
     static const int MultiplyDeBruijnBitPosition[32] = { 0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
-                                                         8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31};
+                                                         8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31 };
 
     v |= v >> 1;
     v |= v >> 2;
@@ -169,20 +139,15 @@ __always_inline__ unsigned int most_significant_bit(unsigned int v) {
     return MultiplyDeBruijnBitPosition[(v * 0x07C4ACDDU) >> 27];
 }
 
-__always_inline__ float degrees_to_radians(float degress) {
+_inline_all_archs_ float degrees_to_radians(float degress) {
     return degress * (PI<float>() / 180.0f);
 }
 
-__always_inline__ float radians_to_degress(float radians) {
+_inline_all_archs_ float radians_to_degress(float radians) {
     return radians * (180.0f / PI<float>());
 }
 
-template <typename T>
-__always_inline__ Vector3<T> reflect(Vector3<T> incident, Vector3<T> normal) {
-    return incident - normal * (dot(normal, incident) * T(2));
-}
-
-__always_inline__ unsigned int reverse_bits(unsigned int n) {
+_inline_all_archs_ unsigned int reverse_bits(unsigned int n) {
 #ifdef GPU_COMPILATION
     return __brev(n);
 #else
@@ -196,20 +161,61 @@ __always_inline__ unsigned int reverse_bits(unsigned int n) {
 #endif
 }
 
-// Specularity of dielectrics at normal incidence, where the ray is leaving a medium with index of refraction ior_o
-// and entering a medium with index of refraction, ior_i.
-// Ray Tracing Gems 2, Chapter 9, The Schlick Fresnel Approximation, page 110 footnote.
-__always_inline__ float dielectric_specularity(float ior_o, float ior_i) {
-    return pow2((ior_o - ior_i) / (ior_o + ior_i));
+// ------------------------------------------------------------------------------------------------
+// Trigonometry.
+// ------------------------------------------------------------------------------------------------
+
+_inline_all_archs_ float cos_theta(Vector3f w) { return w.z; }
+_inline_all_archs_ float cos2_theta(Vector3f w) { return w.z * w.z; }
+_inline_all_archs_ float abs_cos_theta(Vector3f w) { return abs(w.z); }
+
+_inline_all_archs_ float sin2_theta(Vector3f w) { return fmaxf(0.0f, 1.0f - cos2_theta(w)); }
+_inline_all_archs_ float sin_theta(Vector3f w) { return sqrt(sin2_theta(w)); }
+
+_inline_all_archs_ float tan_theta(Vector3f w) { return sin_theta(w) / cos_theta(w); }
+_inline_all_archs_ float tan2_theta(Vector3f w) { return sin2_theta(w) / cos2_theta(w); }
+
+_inline_all_archs_ float cos_phi(Vector3f w) {
+    float sin_theta_ = sin_theta(w);
+    return (sin_theta_ == 0) ? 1.0f : clamp(w.x / sin_theta_, -1.0f, 1.0f);
+}
+_inline_all_archs_ float cos2_phi(Vector3f w) { return pow2(cos_phi(w)); }
+
+_inline_all_archs_ float sin_phi(Vector3f w) {
+    float sin_theta_ = sin_theta(w);
+    return (sin_theta_ == 0) ? 0.0f : clamp(w.y / sin_theta_, -1.0f, 1.0f);
+}
+_inline_all_archs_ float sin2_phi(Vector3f w) { return pow2(sin_phi(w)); }
+
+_inline_all_archs_ void sincos(float theta, float& sin_theta, float& cos_theta) {
+#if GPU_COMPILATION
+    sincosf(theta, &sin_theta, &cos_theta);
+#else
+    sin_theta = sin(theta);
+    cos_theta = cos(theta);
+#endif
 }
 
-// ------------------------------------------------------------------------------------------------
-// Volume scattering utilities
-// ------------------------------------------------------------------------------------------------
+_inline_all_archs_ Vector2f direction_to_latlong_texcoord(Vector3f direction) {
+    float u = (atan2f(direction.z, direction.x) + PI<float>()) * 0.5f / PI<float>();
+    float v = (asinf(direction.y) + PI<float>() * 0.5f) / PI<float>();
+    return Vector2f(u, v);
+}
 
-// Compute the attenuation of a beam passing through a medium.
-// https://en.wikipedia.org/wiki/Beer%E2%80%93Lambert_law
-__always_inline__ float beers_law(float optical_density, float distance) { return expf(-optical_density * distance); }
+_inline_all_archs_ Vector3f latlong_texcoord_to_direction(Vector2f uv) {
+    float phi = uv.x * 2.0f * PI<float>();
+    float theta = uv.y * PI<float>();
+    float sin_theta, cos_theta;
+    sincos(theta, sin_theta, cos_theta);
+    float sin_phi, cos_phi;
+    sincos(phi, sin_phi, cos_phi);
+    return -Vector3f(sin_theta * cos_phi, cos_theta, sin_theta * sin_phi);
+}
+
+template <typename T>
+_inline_all_archs_ Vector3<T> reflect(Vector3<T> incident, Vector3<T> normal) {
+    return incident - normal * (dot(normal, incident) * T(2));
+}
 
 // ------------------------------------------------------------------------------------------------
 // Interpolation
@@ -217,19 +223,19 @@ __always_inline__ float beers_law(float optical_density, float distance) { retur
 
 // Linear interpolation of arbitrary types that implement addition, subtraction and multiplication.
 template <typename T, typename U>
-__always_inline__ T lerp(T a, T b, U t) {
+_inline_all_archs_ T lerp(T a, T b, U t) {
     return a + (b - a) * t;
 }
 
 template <typename T, typename U>
-__always_inline__ T inverse_lerp(T a, T b, U v) {
+_inline_all_archs_ T inverse_lerp(T a, T b, U v) {
     return (v - a) / (b - a);
 }
 
 // Smooth Hermite interpolation of arbitrary types that implement addition, subtraction and multiplication.
 // Mirrors the implementation of the smoothstep functionality found in most graphics API's.
 // https://en.wikipedia.org/wiki/Smoothstep
-__always_inline__ float smoothstep(float a, float b, float t) {
+_inline_all_archs_ float smoothstep(float a, float b, float t) {
     // Scale, and clamp x to 0..1 range
     float x = clamp01((t - a) / (b - a));
     return x * x * (3.0f - 2.0f * x);

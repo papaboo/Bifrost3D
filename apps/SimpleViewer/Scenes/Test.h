@@ -11,6 +11,7 @@
 
 #include <Scenes/Utils.h>
 
+#include <Bifrost/Assets/Shading/Constants.h>
 #include <Bifrost/Assets/Image.h>
 #include <Bifrost/Assets/Mesh.h>
 #include <Bifrost/Assets/MeshCreation.h>
@@ -134,6 +135,7 @@ private:
 
 void create_test_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::SceneNode root_node, const std::filesystem::path& resource_directory) {
     using namespace Bifrost::Assets;
+    using namespace Bifrost::Assets::Shading;
     using namespace Bifrost::Math;
     using namespace Bifrost::Scene;
 

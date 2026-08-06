@@ -34,7 +34,7 @@ GTEST_TEST(Assets_Media, convert_measured_scattering_parameters_to_artistic) {
         auto actual_artistic = ArtisticScatteringParameters::from_measured_parameters(matching_test_parameters[p].measured_parameters);
 
         EXPECT_RGB_EQ_EPS(expected_artistic.diffuse_albedo, actual_artistic.diffuse_albedo, 0.002f);
-        EXPECT_RGB_EQ_EPS(expected_artistic.mean_free_path, actual_artistic.mean_free_path, 0.00001f);
+        EXPECT_VECTOR3F_EQ_EPS(expected_artistic.mean_free_path, actual_artistic.mean_free_path, 0.00001f);
     }
 }
 
@@ -47,7 +47,7 @@ GTEST_TEST(Assets_Media, convert_artistic_scattering_parameters_to_measured) {
 
         // Test against the parameters that Chiang's conversion algorithm was fitted against.
         EXPECT_RGB_EQ_EPS(expected_measured_parameters.get_single_scattering_albedo(), actual_measured_parameters.get_single_scattering_albedo(), 0.2f);
-        EXPECT_RGB_EQ_EPS(expected_measured_parameters.get_mean_free_path(), actual_measured_parameters.get_mean_free_path(), 0.00001f);
+        EXPECT_VECTOR3F_EQ_EPS(expected_measured_parameters.get_mean_free_path(), actual_measured_parameters.get_mean_free_path(), 0.00001f);
     }
 }
 

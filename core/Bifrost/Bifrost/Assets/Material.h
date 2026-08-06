@@ -10,14 +10,15 @@
 #define _BIFROST_ASSETS_MATERIAL_H_
 
 #include <Bifrost/Assets/Texture.h>
+#include <Bifrost/Assets/Shading/Constants.h>
+#include <Bifrost/Assets/Shading/Utils.h>
 #include <Bifrost/Core/Bitmask.h>
 #include <Bifrost/Core/ChangeSet.h>
 #include <Bifrost/Core/Iterable.h>
 #include <Bifrost/Core/UniqueIDGenerator.h>
 #include <Bifrost/Math/Color.h>
 
-namespace Bifrost {
-namespace Assets {
+namespace Bifrost::Assets {
 
 // ---------------------------------------------------------------------------
 // Bifrost material flags.
@@ -37,40 +38,6 @@ enum class ShadingModel : unsigned char {
     Transmissive = 2u,
     Count = 3
 };
-
-// ---------------------------------------------------------------------------
-// Indices of refraction
-// ---------------------------------------------------------------------------
-const float air_ior = 1.0003f;
-const float ice_ior = 1.31f;
-const float water_ior = 1.33f;
-const float glass_ior = 1.52f;
-const float diamond_ior = 2.42f;
-
-// ---------------------------------------------------------------------------
-// Specularities of materials in air
-// ---------------------------------------------------------------------------
-const float default_specularity = 0.04f;
-const float coat_specularity = 0.04f;
-const float ice_specularity = Math::dielectric_specularity(air_ior, ice_ior);
-const float water_specularity = Math::dielectric_specularity(air_ior, water_ior);
-const float glass_specularity = Math::dielectric_specularity(air_ior, glass_ior);
-const float diamond_specularity = Math::dielectric_specularity(air_ior, diamond_ior);
-
-// ---------------------------------------------------------------------------
-// Metal tints.
-// Source: https://dev.epicgames.com/documentation/en-us/unreal-engine/physically-based-materials-in-unreal-engine
-// ---------------------------------------------------------------------------
-const Math::RGB iron_tint = Math::RGB(0.560f, 0.570f, 0.580f);
-const Math::RGB silver_tint = Math::RGB(0.972f, 0.960f, 0.915f);
-const Math::RGB aluminum_tint = Math::RGB(0.913f, 0.921f, 0.925f);
-const Math::RGB gold_tint = Math::RGB(1.000f, 0.766f, 0.336f);
-const Math::RGB copper_tint = Math::RGB(0.955f, 0.637f, 0.538f);
-const Math::RGB chromium_tint = Math::RGB(0.550f, 0.556f, 0.554f);
-const Math::RGB nickel_tint = Math::RGB(0.660f, 0.609f, 0.526f);
-const Math::RGB titanium_tint = Math::RGB(0.542f, 0.497f, 0.449f);
-const Math::RGB cobalt_tint = Math::RGB(0.662f, 0.655f, 0.634f);
-const Math::RGB platinum_tint = Math::RGB(0.672f, 0.637f, 0.585f);
 
 //----------------------------------------------------------------------------
 // Material ID
@@ -106,7 +73,7 @@ public:
         Math::RGB emission;
         Flags flags;
 
-        static Data create_dielectric(Math::RGB tint, float roughness, float specularity = default_specularity) {
+        static Data create_dielectric(Math::RGB tint, float roughness, float specularity = Assets::Shading::default_specularity) {
             Data res = {};
             res.tint = tint;
             res.roughness = roughness;
@@ -136,7 +103,7 @@ public:
             return res;
         }
 
-        static Data create_transmissive(Math::RGB tint, float roughness, float specularity = glass_specularity) {
+        static Data create_transmissive(Math::RGB tint, float roughness, float specularity = Assets::Shading::glass_specularity) {
             Data res = {};
             res.shading_model = ShadingModel::Transmissive;
             res.tint = tint;
@@ -259,7 +226,7 @@ public:
 
     static Material invalid() { return MaterialID::invalid_UID(); }
 
-    static Material create_dielectric(const std::string& name, Math::RGB tint, float roughness, float specularity = default_specularity) {
+    static Material create_dielectric(const std::string& name, Math::RGB tint, float roughness, float specularity = Assets::Shading::default_specularity) {
         auto data = Materials::Data::create_dielectric(tint, roughness, specularity);
         return Materials::create(name, data);
     }
@@ -274,7 +241,7 @@ public:
         return Materials::create(name, data);
     }
 
-    static Material create_transmissive(const std::string& name, Math::RGB tint, float roughness, float specularity = glass_specularity) {
+    static Material create_transmissive(const std::string& name, Math::RGB tint, float roughness, float specularity = Assets::Shading::glass_specularity) {
         auto data = Materials::Data::create_transmissive(tint, roughness, specularity);
         return Materials::create(name, data);
     }
@@ -351,7 +318,6 @@ private:
     MaterialID m_ID;
 };
 
-} // NS Assets
-} // NS Bifrost
+} // NS Bifrost::Assets
 
 #endif // _BIFROST_ASSETS_MATERIAL_H_

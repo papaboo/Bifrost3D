@@ -35,6 +35,7 @@ inline bool almost_equal_percentage(float lhs, float rhs, float percentage) {
     return almost_equal_eps(lhs, rhs, eps);
 }
 #define EXPECT_FLOAT_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(almost_equal_percentage, expected, actual, percentage)
+#define EXPECT_PDF_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(almost_equal_percentage, expected.value(), actual.value(), percentage)
 
 inline bool double_almost_equal_eps(double lhs, double rhs, double eps) {
     return abs(lhs - rhs) <= eps;
@@ -63,11 +64,21 @@ inline bool equal_rgb_eps(Bifrost::Math::RGB lhs, Bifrost::Math::RGB rhs, float 
 }
 #define EXPECT_RGB_EQ_EPS(expected, actual, eps) EXPECT_PRED3(equal_rgb_eps, expected, actual, eps)
 
+inline bool equal_rgb_percentage(Bifrost::Math::RGB expected, Bifrost::Math::RGB actual, float percentage) {
+    Bifrost::Math::RGB epsilon = expected * percentage;
+    return almost_equal_eps(expected.r, actual.r, epsilon.r) &&
+           almost_equal_eps(expected.g, actual.g, epsilon.g) &&
+           almost_equal_eps(expected.b, actual.b, epsilon.b);
+}
+#define EXPECT_RGB_EQ_PCT(expected, actual, eps) EXPECT_PRED3(equal_rgb_percentage, expected, actual, eps)
+
+inline bool rgb_less_or_equal(Bifrost::Math::RGB value, float threshold) {
+    return value.r <= threshold && value.g <= threshold && value.b <= threshold;
+}
+#define EXPECT_RGB_LE(value, threshold) EXPECT_PRED2(rgb_less_or_equal, value, threshold)
+
 inline bool equal_rgba(Bifrost::Math::RGBA lhs, Bifrost::Math::RGBA rhs) {
-    return Bifrost::Math::almost_equal(lhs.r, rhs.r)
-        && Bifrost::Math::almost_equal(lhs.g, rhs.g)
-        && Bifrost::Math::almost_equal(lhs.b, rhs.b)
-        && Bifrost::Math::almost_equal(lhs.a, rhs.a);
+    return equal_rgb(lhs.rgb(), rhs.rgb()) && Bifrost::Math::almost_equal(lhs.a, rhs.a);
 }
 #define EXPECT_RGBA_EQ(expected, actual) EXPECT_PRED2(equal_rgba, expected, actual)
 
@@ -83,10 +94,20 @@ inline bool equal_normal_eps(Bifrost::Math::Vector3f lhs, Bifrost::Math::Vector3
 
 #define EXPECT_NORMAL_EQ(expected, actual, epsilon) EXPECT_PRED3(equal_normal_eps, expected, actual, epsilon)
 
-inline bool equal_Vector2f(Bifrost::Math::Vector2f lhs, Bifrost::Math::Vector2f rhs) {
+inline bool equal_vector2f(Bifrost::Math::Vector2f lhs, Bifrost::Math::Vector2f rhs) {
     return Bifrost::Math::almost_equal(lhs.x, rhs.x) && Bifrost::Math::almost_equal(lhs.y, rhs.y);
 }
-#define EXPECT_VECTOR2F_EQ(expected, actual) EXPECT_PRED2(equal_Vector2f, expected, actual)
+#define EXPECT_VECTOR2F_EQ(expected, actual) EXPECT_PRED2(equal_vector2f, expected, actual)
+
+inline bool equal_vector3f(Bifrost::Math::Vector3f lhs, Bifrost::Math::Vector3f rhs) {
+    return Bifrost::Math::almost_equal(lhs.x, rhs.x) && Bifrost::Math::almost_equal(lhs.y, rhs.y) && Bifrost::Math::almost_equal(lhs.z, rhs.z);
+}
+#define EXPECT_VECTOR3F_EQ(expected, actual) EXPECT_PRED2(equal_vector3f, expected, actual)
+
+inline bool equal_vector3f_eps(Bifrost::Math::Vector3f lhs, Bifrost::Math::Vector3f rhs, float eps) {
+    return abs(lhs.x - rhs.x) < eps && abs(lhs.y - rhs.y) < eps && abs(lhs.z - rhs.z) < eps;
+}
+#define EXPECT_VECTOR3F_EQ_EPS(expected, actual, eps) EXPECT_PRED3(equal_vector3f_eps, expected, actual, eps)
 
 template <typename T>
 inline bool equal_quaternion(Bifrost::Math::Quaternion<T> expected, Bifrost::Math::Quaternion<T> actual) {

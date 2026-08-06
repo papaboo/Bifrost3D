@@ -8,6 +8,14 @@
 
 #include <gtest/gtest.h>
 
+#include <Assets/Shading/BSDFs/BurleySSSTest.h>
+#include <Assets/Shading/BSDFs/BurleyTest.h>
+#include <Assets/Shading/BSDFs/GGXTest.h>
+#include <Assets/Shading/BSDFs/LambertTest.h>
+#include <Assets/Shading/BSDFs/OrenNayarTest.h>
+#include <Assets/Shading/FittingsTest.h>
+#include <Assets/Shading/ThinSheetTest.h>
+#include <Assets/Shading/UtilsTest.h>
 #include <Assets/ImageTest.h>
 #include <Assets/InfiniteAreaLightTest.h>
 #include <Assets/MaterialTest.h>
