@@ -12,18 +12,17 @@
 
 #pragma warning(disable: 4244) // Disable double to float warning
 
+#include <Bifrost/Assets/Shading/Utils.h>
 #include <Bifrost/Math/Color.h>
 #include <Bifrost/Math/Distributions.h>
 #include <Bifrost/Math/RNG.h>
 #include <Bifrost/Math/Utils.h>
 #include <Bifrost/Math/Vector.h>
 
-#define _USE_MATH_DEFINES
-#include <math.h>
-
-using namespace Bifrost::Math;
-
 namespace smallvpt {
+
+using namespace Bifrost::Assets::Shading;
+using namespace Bifrost::Math;
 
 struct Ray { Vector3d origin, direction; Ray() {} Ray(Vector3d o, Vector3d d) : origin(o), direction(d) {} };
 enum class BSDF { Diffuse, Specular, Glass };
@@ -124,7 +123,7 @@ RGB integrate_radiance(const Ray &ray, int depth, RNG::LinearCongruential rng) {
         }
 
         if (scene_object.bsdf == BSDF::Diffuse) {
-            float r1 = 2 * float(M_PI) * rng.sample1f();
+            float r1 = 2 * PIf * rng.sample1f();
             float r2 = rng.sample1f();
             float r2s = sqrt(r2);
             Vector3f normal = Vector3f(nl);
