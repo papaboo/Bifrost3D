@@ -11,8 +11,7 @@
 
 #include <Bifrost/Math/Distributions.h>
 #include <Bifrost/Math/Ray.h>
-
-#include <OptiXRenderer/RNG.h>
+#include <Bifrost/Math/RNG.h>
 
 #include <functional>
 
@@ -27,8 +26,7 @@ public:
         : m_path_index(path_index), m_pixel_hash(pixel_hash), m_dimension(0) {}
 
     inline Bifrost::Math::Vector4f sample4f() {
-        optix::float4 v = OptiXRenderer::RNG::PracticalScrambledSobol::sample4f(m_path_index, m_pixel_hash, m_dimension++);
-        return { v.x, v.y, v.z, v.w };
+        return Bifrost::Math::RNG::PracticalScrambledSobol::sample4f(m_path_index, m_pixel_hash, m_dimension++);
     }
 };
 
