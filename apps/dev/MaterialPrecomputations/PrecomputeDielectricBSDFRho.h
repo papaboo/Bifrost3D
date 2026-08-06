@@ -9,6 +9,7 @@
 #ifndef _PRECOMPUTE_DIELECTRIC_BSDF_RHO_H_
 #define _PRECOMPUTE_DIELECTRIC_BSDF_RHO_H_
 
+#include <Bifrost/Assets/Shading/Utils.h>
 #include <Bifrost/Assets/Image.h>
 #include <Bifrost/Math/RNG.h>
 
@@ -18,8 +19,6 @@ namespace PrecomputeDielectricBSDFRho {
 
 using namespace Bifrost;
 using namespace Bifrost::Math;
-using namespace optix;
-using namespace OptiXRenderer;
 
 // Using the same specularity (or F0) range of [0.0125, 0.25] as in
 // Enforcing Energy Preservation in Microfacet Models, Sforza et al,
@@ -29,9 +28,9 @@ const float max_dense_ior_i = 3.0f + ior_i_offset; // Relative IOR of medium wit
 const float min_light_ior_i = 1.0f / max_dense_ior_i;
 const float max_light_ior_i = 1.0f / min_dense_ior_i;
 
-typedef BSDFSample(*SampleDieletricBSDF)(float roughness, float ior_i, float3 wo, float3 random_sample);
+typedef BSDFSample(*SampleDieletricBSDF)(float roughness, float ior_i, Vector3f wo, Vector3f random_sample);
 
-float2 sample_rho(float3 wo, float roughness, float ior_i, unsigned int sample_count, const Math::RNG::PmjbRNG& rng, SampleDieletricBSDF sample_rough_BSDF) {
+Vector2f sample_rho(Vector3f wo, float roughness, float ior_i, unsigned int sample_count, const RNG::PmjbRNG& rng, SampleDieletricBSDF sample_rough_BSDF) {
 
     // Each hemisphere should receive at least half the number of samples expected by the input sample count.
     unsigned int sample_count_per_hemisphere = sample_count / 2;
@@ -73,7 +72,7 @@ float2 sample_rho(float3 wo, float roughness, float ior_i, unsigned int sample_c
         BSDFSample sample = sample_rough_BSDF(roughness, ior_i, wo, { uv.x, uv.y, uv.z });
         if (sample.PDF.is_valid()) {
             double& throughput = sample.direction.z < 0.0f ? transmitted_throughput : reflected_throughput;
-            throughput += sample.reflectance.x * abs(sample.direction.z) / sample.PDF.value();
+            throughput += sample.reflectance.r * abs(sample.direction.z) / sample.PDF.value();
         }
     }
 
@@ -104,12 +103,12 @@ TabulatedRho tabulate_rho(int width, int height, int depth, unsigned int sample_
             float roughness = y / float(height - 1);
             for (int x = 0; x < width; ++x) {
                 float cos_theta = fmaxf(0.000001f, x / float(width - 1));
-                float3 wo = make_float3(sqrt(1.0f - cos_theta * cos_theta), 0.0f, cos_theta);
+                Vector3f wo = Vector3f(sqrt(1.0f - cos_theta * cos_theta), 0.0f, cos_theta);
 
-                float2 light_rho = sample_rho(wo, roughness, light_ior_i, sample_count, rng, sample_rough_BSDF);
+                Vector2f light_rho = sample_rho(wo, roughness, light_ior_i, sample_count, rng, sample_rough_BSDF);
                 rho_into_light_medium_pixels[x + width * (y + z * height)] = RGB(light_rho.x + light_rho.y, light_rho.x, light_rho.y);
 
-                float2 dense_rho = sample_rho(wo, roughness, dense_ior_i, sample_count, rng, sample_rough_BSDF);
+                Vector2f dense_rho = sample_rho(wo, roughness, dense_ior_i, sample_count, rng, sample_rough_BSDF);
                 rho_into_dense_medium_pixels[x + width * (y + z * height)] = RGB(dense_rho.x + dense_rho.y, dense_rho.x, dense_rho.y);
             }
         }
