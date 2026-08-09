@@ -13,6 +13,10 @@
 #include <OptiXRenderer/PublicTypes.h>
 #include <OptiXRenderer/RNG.h>
 
+#include <Bifrost/Assets/Shading/Utils.h>
+#include <Bifrost/Math/Color.h>
+#include <Bifrost/Math/Vector.h>
+
 #ifndef GPU_DEVICE
 #include <optixu/optixpp_namespace.h>
 #undef RGB
@@ -23,6 +27,17 @@
 #include <cuda_fp16.h>
 
 namespace OptiXRenderer {
+
+//-------------------------------------------------------------------------------------------------
+// Alias commonly used types from Bifrost
+//-------------------------------------------------------------------------------------------------
+using RGB = Bifrost::Math::RGB;
+using Vector2f = Bifrost::Math::Vector2f;
+using Vector3f = Bifrost::Math::Vector3f;
+using Vector4f = Bifrost::Math::Vector4f;
+using PDF = Bifrost::Assets::Shading::PDF;
+using BSDFResponse = Bifrost::Assets::Shading::BSDFResponse;
+using BSDFSample = Bifrost::Assets::Shading::BSDFSample;
 
 struct RayTypes {
     static const unsigned int MonteCarlo = 0;
@@ -149,60 +164,6 @@ struct PrimitiveID {
     __inline_all__ bool operator==(const PrimitiveID& rhs) const { return instance_id == rhs.instance_id && primitive_id == rhs.primitive_id; }
 };
 
-// PDF wrapper.
-// The wrapper contains a PDF and a boolean indicating if the sample can be used for multiple importance sampling (MIS).
-// Delta dirac function PDFs are represented by NaN.
-__constant_all__ float MIN_VALID_PDF = 0.000001f;
-struct PDF {
-public:
-    float m_PDF;
-
-    PDF() = default;
-    __inline_all__ PDF(float pdf) : m_PDF(pdf) {}
-
-    __inline_all__ static PDF invalid() { return PDF(nanf("")); }
-    __inline_all__ static PDF delta_dirac(float pdf = 1) { return PDF(-pdf); }
-
-    __inline_all__ bool operator==(PDF rhs) const { return m_PDF == rhs.m_PDF; }
-    __inline_all__ bool operator!=(PDF rhs) const { return m_PDF != rhs.m_PDF; }
-
-    __inline_all__ float value() const { return abs(m_PDF); }
-    __inline_all__ bool is_valid() const { return value() > MIN_VALID_PDF; }
-    __inline_all__ bool is_delta_dirac() const { return !(m_PDF >= 0.0f); }
-    __inline_all__ void disable_MIS() { if (m_PDF >= 0.0f) m_PDF = -m_PDF; }
-    __inline_all__ bool is_valid_and_not_delta_dirac() const { return m_PDF > MIN_VALID_PDF; }
-    __inline_all__ bool invalid_or_delta_dirac() const { return !(m_PDF > MIN_VALID_PDF); }
-    __inline_all__ bool use_for_MIS() const { return is_valid_and_not_delta_dirac(); }
-
-    __inline_all__ PDF& scale(float s) {
-#ifdef _DEBUG
-        if (s < 0.0f)
-            THROW(OPTIX_NEGATIVE_PDF_SCALE_EXCEPTION);
-#endif
-
-        m_PDF *= s;
-        return *this;
-    }
-    __inline_all__ PDF& operator*=(float s) { return scale(s); }
-    __inline_all__ PDF operator*(float s) const { PDF copy = *this; return copy.scale(s); }
-
-    __inline_all__ PDF& add(PDF rhs) {
-#ifdef _DEBUG
-        if (is_delta_dirac() || rhs.is_delta_dirac())
-            THROW(OPTIX_DELTA_DIRAC_PDF_ADDITION_EXCEPTION);
-#endif
-
-        m_PDF += rhs.m_PDF;
-        return *this;
-    }
-    __inline_all__ PDF& operator+=(PDF rhs) { return add(rhs); }
-    __inline_all__ PDF operator+(PDF rhs) const { PDF copy = *this; return copy.add(rhs); }
-
-    __inline_all__ static bool is_valid(float PDF) {
-        return PDF > 0.000001f;
-    }
-};
-
 //----------------------------------------------------------------------------
 // Light source structs.
 //----------------------------------------------------------------------------
@@ -314,41 +275,6 @@ struct __align__(16) Light {
 //----------------------------------------------------------------------------
 // Material type and sampling structs.
 //----------------------------------------------------------------------------
-
-// NOTE the suboptimal alignment of 8 instead of 16 yields a tiny tiny performance benefit. I have no clue why.
-struct __align__(8) BSDFResponse {
-    optix::float3 reflectance;
-    PDF PDF;
-
-    __inline_all__ static BSDFResponse none() {
-        BSDFResponse evaluation = {};
-        return evaluation;
-    }
-};
-
-struct __align__(16) BSDFSample {
-    optix::float3 reflectance;
-    PDF PDF;
-    optix::float3 direction;
-    float __padding;
-
-    __inline_all__ static BSDFSample none() {
-        BSDFSample sample = {};
-        return sample;
-    }
-};
-
-struct __align__(16) SeparableBSSRDFPositionSample {
-    optix::float3 reflectance;
-    PDF PDF;
-    optix::float3 position;
-    float __padding;
-
-    __inline_all__ static SeparableBSSRDFPositionSample none() {
-        SeparableBSSRDFPositionSample sample = {};
-        return sample;
-    }
-};
 
 struct __align__(16) Material {
     enum Flags : unsigned short {
@@ -534,5 +460,16 @@ struct __align__(8) AIDenoiserStateGPU {
 };
 
 } // NS OptiXRenderer
+
+//-----------------------------------------------------------------------------
+// Conversions
+//-----------------------------------------------------------------------------
+
+namespace OptiXRenderer {
+__inline_all__ optix::float3 to_float3(Bifrost::Math::Vector3f v) { return { v.x, v.y, v.z }; }
+__inline_all__ optix::float3 to_float3(Bifrost::Math::RGB c) { return { c.r, c.g, c.b }; }
+__inline_all__ Bifrost::Math::Vector3f to_vector3f(optix::float3 v) { return { v.x, v.y, v.z }; }
+__inline_all__ Bifrost::Math::RGB to_rgb(optix::float3 c) { return { c.x, c.y, c.z }; }
+}
 
 #endif // _OPTIXRENDERER_TYPES_H_

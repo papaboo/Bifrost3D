@@ -9,14 +9,14 @@
 #ifndef _OPTIXRENDERER_SHADING_MODEL_DEFAULT_SHADING_H_
 #define _OPTIXRENDERER_SHADING_MODEL_DEFAULT_SHADING_H_
 
-#include <OptiXRenderer/Shading/BSDFs/OrenNayar.h>
-#include <OptiXRenderer/Shading/BSDFs/GGX.h>
-#include <OptiXRenderer/Shading/ShadingModels/Utils.h>
-#include <OptiXRenderer/Utils.h>
+#include <Bifrost/Assets/Shading/BSDFs/OrenNayar.h>
+#include <Bifrost/Assets/Shading/BSDFs/GGX.h>
+#include <Bifrost/Assets/Shading/Utils.h>
 
-namespace OptiXRenderer {
-namespace Shading {
-namespace ShadingModels {
+#include <OptiXRenderer/Shading/ShadingModels/Utils.h>
+#include <OptiXRenderer/Types.h>
+
+namespace OptiXRenderer::Shading::ShadingModels {
 
 // ---------------------------------------------------------------------------
 // The default shading model.
@@ -40,9 +40,9 @@ namespace ShadingModels {
 
 class DefaultShading {
 private:
-    optix::float3 m_diffuse_tint;
+    Bifrost::Math::RGB m_diffuse_tint;
     float m_roughness;
-    optix::float3 m_specularity;
+    Bifrost::Math::RGB m_specularity;
     float m_specular_scale;
     float m_coat_scale;
     float m_coat_alpha;
@@ -51,7 +51,7 @@ private:
 
     __inline_all__ static float compute_specular_properties(float roughness, float specularity, float scale, float abs_cos_theta_o,
         float& alpha, float& reflection_scale, float& transmission_scale) {
-        alpha = BSDFs::GGX::alpha_from_roughness(roughness);
+        alpha = Bifrost::Assets::Shading::BSDFs::GGX::alpha_from_roughness(roughness);
         SpecularRho rho_computation = SpecularRho::fetch(abs_cos_theta_o, roughness);
 
         // Compensate for lost energy due to multi-scattering and scale by the strength of the specular reflection.
@@ -83,15 +83,16 @@ private:
             // Adjust base material specularity if coat is enabled
             // The specularity can become NaN if the input specularity is white, which is physically impossible, but doable in the data model.
             if (dielectric_specularity < 1.0f) {
-                float coated_dielectric_specularity = adjust_dielectric_specularity_to_exterior_medium(COAT_IOR, dielectric_specularity);
+                float coated_dielectric_specularity = adjust_dielectric_specularity_to_exterior_medium(Bifrost::Assets::Shading::coat_ior, dielectric_specularity);
                 dielectric_specularity = lerp(dielectric_specularity, coated_dielectric_specularity, coat_scale);
             }
 
             if (metallic > 0) {
                 // Not all extinction coefficients are valid for all specularities and some combinations will result in NANs in the adjusted specularity.
                 // To avoid these issues we use zero extinction, which results in the same adjustment as to dielectric specularity.
-                float3 metal_extinction_coefficient = optix::make_float3(0, 0, 0);
-                float3 coated_conductor_specularity = adjust_conductor_specularity_to_exterior_medium({ COAT_IOR, COAT_IOR, COAT_IOR }, conductor_specularity, metal_extinction_coefficient);
+                float3 conductor_extinction_coefficient = optix::make_float3(0, 0, 0);
+                float3 exterior_ior = { Bifrost::Assets::Shading::coat_ior, Bifrost::Assets::Shading::coat_ior, Bifrost::Assets::Shading::coat_ior };
+                float3 coated_conductor_specularity = adjust_conductor_specularity_to_exterior_medium(exterior_ior, conductor_specularity, conductor_extinction_coefficient);
                 conductor_specularity = lerp(conductor_specularity, coated_conductor_specularity, coat_scale);
 
                 // The specularity can become NaN if the input specularity is white, which is physically impossible, but doable in the data model.
@@ -110,14 +111,14 @@ private:
 
         // Interpolate between dieletric and conductor parameters based on the metallic parameter.
         // Conductor diffuse component is black, so interpolation amounts to scaling.
-        m_specularity = lerp(make_float3(dielectric_specularity), conductor_specularity, metallic);
-        m_diffuse_tint = dielectric_tint * (1.0f - metallic);
+        m_specularity = to_rgb(lerp(make_float3(dielectric_specularity), conductor_specularity, metallic));
+        m_diffuse_tint = to_rgb(dielectric_tint * (1.0f - metallic));
 
         // Setup clear coat
         if (coat_scale > 0) {
             // Clear coat with fixed index of refraction of 1.5 / specularity of 0.04, representative of polyurethane and glass.
             float coat_transmission;
-            coat_rho = compute_specular_properties(coat_roughness, COAT_SPECULARITY, coat_scale, abs_cos_theta_o,
+            coat_rho = compute_specular_properties(coat_roughness, Bifrost::Assets::Shading::coat_specularity, coat_scale, abs_cos_theta_o,
                 m_coat_alpha, m_coat_scale, coat_transmission);
 
             // Scale specular and diffuse component by the coat transmission.
@@ -179,22 +180,21 @@ public:
 #endif
 
     __inline_all__ float get_roughness() const { return m_roughness; }
-    __inline_all__ float get_specular_alpha() const { return BSDFs::GGX::alpha_from_roughness(m_roughness); }
-    __inline_all__ optix::float3 get_specularity() const { return m_specularity; }
+    __inline_all__ float get_specular_alpha() const { return Bifrost::Assets::Shading::BSDFs::GGX::alpha_from_roughness(m_roughness); }
+    __inline_all__ optix::float3 get_specularity() const { return to_float3(m_specularity); }
 
     __inline_all__ float get_diffuse_probability() const { return 1.0f - (m_specular_probability + m_coat_probability) / USHORT_MAX; }
     __inline_all__ float get_specular_probability() const { return m_specular_probability / USHORT_MAX; }
     __inline_all__ float get_coat_probability() const { return m_coat_probability / USHORT_MAX; }
 
     __inline_all__ BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
-        using namespace optix;
-
         // Return no contribution if the light is on the backside.
         if (wo.z < 0.000001f || wi.z < 0.000001f)
             return BSDFResponse::none();
 
-        BSDFResponse diffuse_response = BSDFs::OrenNayar::evaluate_with_PDF(m_diffuse_tint, m_roughness, wo, wi);
-        BSDFResponse specular_response = BSDFs::GGX_R::evaluate_with_PDF(get_specular_alpha(), m_specularity, wo, wi);
+        auto _wo = to_vector3f(wo), _wi = to_vector3f(wi);
+        auto diffuse_response = Bifrost::Assets::Shading::BSDFs::OrenNayar::evaluate_with_PDF(m_diffuse_tint, m_roughness, _wo, _wi);
+        auto specular_response = Bifrost::Assets::Shading::BSDFs::GGX_R::evaluate_with_PDF(get_specular_alpha(), m_specularity, _wo, _wi);
         specular_response.reflectance *= m_specular_scale;
 
         BSDFResponse response;
@@ -206,7 +206,7 @@ public:
 
         if (m_coat_scale > 0) {
             float coat_probability = get_coat_probability();
-            BSDFResponse coat_response = BSDFs::GGX_R::evaluate_with_PDF(m_coat_alpha, COAT_SPECULARITY, wo, wi);
+            auto coat_response = Bifrost::Assets::Shading::BSDFs::GGX_R::evaluate_with_PDF(m_coat_alpha, Bifrost::Assets::Shading::coat_specularity, _wo, _wi);
             response.reflectance += m_coat_scale * coat_response.reflectance;
             response.PDF += coat_response.PDF * coat_probability;
         }
@@ -216,8 +216,6 @@ public:
 
     // Sample all BSDF based on the contribution of each BRDF.
     __inline_all__ BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const {
-        using namespace optix;
-
         // Don't sample material from behind.
         if (wo.z < 0.000001f)
             return BSDFSample::none();
@@ -232,16 +230,18 @@ public:
         bool sample_diffuse = !sample_coat && !sample_specular;
 
         // Sample selected BRDF.
+        auto _wo = to_vector3f(wo);
+        auto bsdf_random_sample = Bifrost::Math::Vector2f(random_sample.x, random_sample.y);
         BSDFSample bsdf_sample;
         if (sample_diffuse) {
-            bsdf_sample = BSDFs::OrenNayar::sample(m_diffuse_tint, m_roughness, wo, make_float2(random_sample));
+            bsdf_sample = Bifrost::Assets::Shading::BSDFs::OrenNayar::sample(m_diffuse_tint, m_roughness, _wo, bsdf_random_sample);
             bsdf_sample.PDF *= diffuse_probability;
         } else if (sample_specular) {
-            bsdf_sample = BSDFs::GGX_R::sample(get_specular_alpha(), m_specularity, wo, make_float2(random_sample));
+            bsdf_sample = Bifrost::Assets::Shading::BSDFs::GGX_R::sample(get_specular_alpha(), m_specularity, _wo, bsdf_random_sample);
             bsdf_sample.reflectance *= m_specular_scale;
             bsdf_sample.PDF *= specular_probability;
         } else {
-            bsdf_sample = BSDFs::GGX_R::sample(m_coat_alpha, COAT_SPECULARITY, wo, make_float2(random_sample));
+            bsdf_sample = Bifrost::Assets::Shading::BSDFs::GGX_R::sample(m_coat_alpha, Bifrost::Assets::Shading::coat_specularity, _wo, bsdf_random_sample);
             bsdf_sample.reflectance *= m_coat_scale;
             bsdf_sample.PDF *= coat_probability;
         }
@@ -253,7 +253,7 @@ public:
         // Compute contribution of the material components not sampled.
         if (!sample_diffuse) {
             // Evaluate diffuse layer as well.
-            BSDFResponse diffuse_response = BSDFs::OrenNayar::evaluate_with_PDF(m_diffuse_tint, m_roughness, wo, bsdf_sample.direction);
+            auto diffuse_response = Bifrost::Assets::Shading::BSDFs::OrenNayar::evaluate_with_PDF(m_diffuse_tint, m_roughness, _wo, bsdf_sample.direction);
             if (diffuse_response.PDF.is_valid_and_not_delta_dirac()) {
                 bsdf_sample.reflectance += diffuse_response.reflectance;
                 bsdf_sample.PDF += diffuse_response.PDF * diffuse_probability;
@@ -261,7 +261,7 @@ public:
         }
         if (!sample_specular) {
             // Evaluate specular layer as well.
-            BSDFResponse specular_response = BSDFs::GGX_R::evaluate_with_PDF(get_specular_alpha(), m_specularity, wo, bsdf_sample.direction);
+            auto specular_response = Bifrost::Assets::Shading::BSDFs::GGX_R::evaluate_with_PDF(get_specular_alpha(), m_specularity, _wo, bsdf_sample.direction);
             if (specular_response.PDF.is_valid_and_not_delta_dirac()) {
                 bsdf_sample.reflectance += specular_response.reflectance * m_specular_scale;
                 bsdf_sample.PDF += specular_response.PDF * specular_probability;
@@ -269,7 +269,7 @@ public:
         }
         if (!sample_coat && m_coat_scale > 0) {
             // Evaluate coat layer as well.
-            BSDFResponse coat_response = BSDFs::GGX_R::evaluate_with_PDF(m_coat_alpha, COAT_SPECULARITY, wo, bsdf_sample.direction);
+            auto coat_response = Bifrost::Assets::Shading::BSDFs::GGX_R::evaluate_with_PDF(m_coat_alpha, Bifrost::Assets::Shading::coat_specularity, _wo, bsdf_sample.direction);
             if (coat_response.PDF.is_valid_and_not_delta_dirac()) {
                 bsdf_sample.reflectance += m_coat_scale * coat_response.reflectance;
                 bsdf_sample.PDF += coat_response.PDF * coat_probability;
@@ -287,18 +287,16 @@ public:
         return radiance;
     }
 
-    __inline_all__ optix::float3 diffuse_rho(float abs_cos_theta) const { return m_diffuse_tint; }
+    __inline_all__ optix::float3 diffuse_rho(float abs_cos_theta) const { return to_float3(m_diffuse_tint); }
     __inline_all__ optix::float3 specular_rho(float abs_cos_theta) const {
-        return SpecularRho::fetch(abs_cos_theta, m_roughness).rho(m_specularity) * m_specular_scale;
+        return SpecularRho::fetch(abs_cos_theta, m_roughness).rho(to_float3(m_specularity)) * m_specular_scale;
     }
     __inline_all__ float coat_rho(float abs_cos_theta) const {
-        float coat_roughness = BSDFs::GGX::roughness_from_alpha(m_coat_alpha);
-        return SpecularRho::fetch(abs_cos_theta, coat_roughness).rho(COAT_SPECULARITY) * m_coat_scale;
+        float coat_roughness = Bifrost::Assets::Shading::BSDFs::GGX::roughness_from_alpha(m_coat_alpha);
+        return SpecularRho::fetch(abs_cos_theta, coat_roughness).rho(Bifrost::Assets::Shading::coat_specularity) * m_coat_scale;
     }
 };
 
-} // NS ShadingModels
-} // NS Shading
-} // NS OptiXRenderer
+} // NS OptiXRenderer::Shading::ShadingModels
 
 #endif // _OPTIXRENDERER_SHADING_MODEL_DEFAULT_SHADING_H_

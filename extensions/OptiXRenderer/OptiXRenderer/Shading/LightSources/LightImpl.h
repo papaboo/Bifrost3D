@@ -9,7 +9,6 @@
 #ifndef _OPTIXRENDERER_LIGHT_IMPLEMENTATION_H_
 #define _OPTIXRENDERER_LIGHT_IMPLEMENTATION_H_
 
-#include <OptiXRenderer/MonteCarlo.h>
 #include <OptiXRenderer/Shading/LightSources/DirectionalLightImpl.h>
 #include <OptiXRenderer/Shading/LightSources/EnvironmentLightImpl.h>
 #include <OptiXRenderer/Shading/LightSources/PresampledEnvironmentLightImpl.h>
@@ -90,7 +89,7 @@ __inline_dev__ optix::float3 evaluate_intersection(const LightType& light, optix
     if (bsdf_PDF.use_for_MIS()) {
         // Calculate MIS weight and scale the radiance by it.
         PDF light_PDF = pdf(light, position, ray.direction);
-        radiance *= MonteCarlo::MIS_weight(bsdf_PDF, light_PDF);
+        radiance *= MIS_weight(bsdf_PDF.value(), light_PDF.value());
     }
 
     return radiance;

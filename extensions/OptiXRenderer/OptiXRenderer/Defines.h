@@ -31,33 +31,23 @@ void validate_optix_resource(T resource, char* file, int line) {
 #define OPTIX_VALIDATE(o)
 #endif
 
-#if (defined(__CUDACC__) || defined(__CUDABE__))
+#ifdef GPU_COMPILATION
 #define GPU_DEVICE 1
 #endif
 
-#ifndef __inline_all__
-#    if GPU_DEVICE
-#        define __inline_all__ __always_inline__ __host__ __device__
-#    else
-#        define __inline_all__ __always_inline__
-#    endif
-#endif
+#define __inline_all__ _inline_all_archs_
 
 #ifndef __inline_dev__
-#    if GPU_DEVICE
+#    if GPU_COMPILATION
 #        define __inline_dev__ __always_inline__ __device__
 #    else
 #        define __inline_dev__ __always_inline__
 #    endif
 #endif
 
-#if GPU_DEVICE
-#    define __constant_all__ __constant__
-#else
-#    define __constant_all__ static const
-#endif
+#define __constant_all__ _constant_all_archs_
 
-#if GPU_DEVICE
+#if GPU_COMPILATION
 #define THROW(e) rtThrow(e)
 #else
 #define THROW(e) throw e

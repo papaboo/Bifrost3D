@@ -11,6 +11,9 @@
 
 #include <optixu/optixu_math_namespace.h>
 
+#include <Bifrost/Math/Color.h>
+#include <Bifrost/Math/Vector.h>
+
 #include <gtest/gtest.h>
 
 #include <filesystem>
@@ -80,6 +83,21 @@ inline bool equal_normal_eps(optix::float3 lhs, optix::float3 rhs, double epsilo
 }
 
 #define EXPECT_NORMAL_EQ(expected, actual, epsilon) EXPECT_PRED3(equal_normal_eps, expected, actual, epsilon)
+
+inline bool equal_rgb_percentage(Bifrost::Math::RGB expected, Bifrost::Math::RGB actual, float percentage) {
+    Bifrost::Math::RGB epsilon = expected * percentage;
+    return almost_equal_eps(expected.r, actual.r, epsilon.r) &&
+           almost_equal_eps(expected.g, actual.g, epsilon.g) &&
+           almost_equal_eps(expected.b, actual.b, epsilon.b);
+}
+#define EXPECT_RGB_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(equal_rgb_percentage, expected, actual, percentage)
+
+inline bool equal_rgb_eps(Bifrost::Math::RGB lhs, Bifrost::Math::RGB rhs, float epsilon) {
+    return almost_equal_eps(lhs.r, rhs.r, epsilon) &&
+           almost_equal_eps(lhs.g, rhs.g, epsilon) &&
+           almost_equal_eps(lhs.b, rhs.b, epsilon);
+}
+#define EXPECT_RGB_EQ_EPS(expected, actual, epsilon) EXPECT_PRED3(equal_rgb_eps, expected, actual, epsilon)
 
 //-----------------------------------------------------------------------------
 // To string functions.

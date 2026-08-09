@@ -14,6 +14,7 @@
 #include <Bifrost/Assets/Texture.h>
 
 #include <optixu/optixpp_namespace.h>
+#undef RGB
 
 //-------------------------------------------------------------------------------------------------
 // Forward declarations.

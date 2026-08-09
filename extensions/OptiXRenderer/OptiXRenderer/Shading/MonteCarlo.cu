@@ -6,7 +6,6 @@
 // See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#include <OptiXRenderer/MonteCarlo.h>
 #include <OptiXRenderer/Shading/ShadingModels/DefaultShading.h>
 #include <OptiXRenderer/Shading/ShadingModels/DiffuseShading.h>
 #include <OptiXRenderer/Shading/ShadingModels/TransmissiveShading.h>
@@ -75,13 +74,13 @@ __inline_dev__ LightSample sample_single_light(const ShadingModel& material, flo
     if (apply_MIS)
         // The light source connected to the final bounce will be scaled by the MIS weight as well, even though the BSDF sample isn't traced and thus the second sample scheme isn't used.
         // This is done as the MIS weight will still reduce variance from light sources that would be more easily sampled using the BSDf.
-        light_sample.radiance *= MonteCarlo::MIS_weight(light_sample.PDF, bsdf_response.PDF);
+        light_sample.radiance *= MIS_weight(light_sample.PDF.value(), bsdf_response.PDF.value());
     else
         // BIAS Nearly specular materials and delta lights will lead to insane fireflies, so we clamp them here.
-        bsdf_response.reflectance = fminf(bsdf_response.reflectance, make_float3(32.0f));
+        bsdf_response.reflectance = { min(bsdf_response.reflectance.r, 32.0f), min(bsdf_response.reflectance.g, 32.0f), min(bsdf_response.reflectance.b, 32.0f) };
 
     // Inline the material response into the light sample's radiance.
-    light_sample.radiance *= bsdf_response.reflectance;
+    light_sample.radiance *= to_float3(bsdf_response.reflectance);
 
     return light_sample;
 }
@@ -204,10 +203,10 @@ __inline_all__ void path_tracing_closest_hit() {
     // BSDF sampling.
     BSDFSample bsdf_sample = material.sample(wo, bsdf_random_uvs);
     bool is_reflection = bsdf_sample.direction.z >= 0;
-    monte_carlo_payload.direction = bsdf_sample.direction * world_shading_tbn;
+    monte_carlo_payload.direction = to_float3(bsdf_sample.direction) * world_shading_tbn;
     monte_carlo_payload.bsdf_PDF = bsdf_sample.PDF;
     if (bsdf_sample.PDF.is_valid())
-        monte_carlo_payload.throughput *= bsdf_sample.reflectance * abs(bsdf_sample.direction.z) / bsdf_sample.PDF.value(); // f * ||cos(theta)|| / pdf
+        monte_carlo_payload.throughput *= to_float3(bsdf_sample.reflectance) * abs(bsdf_sample.direction.z) / bsdf_sample.PDF.value(); // f * ||cos(theta)|| / pdf
     else
         monte_carlo_payload.throughput = make_float3(0.0f);
 
