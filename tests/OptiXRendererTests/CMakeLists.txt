@@ -4,7 +4,6 @@ if (TARGET OptiXRenderer)
 
   set(SRCS 
     BSDFTestUtils.h
-    LTCTest.h
     main.cpp
     MiscTest.h
     RendererTest.h
@@ -14,14 +13,6 @@ if (TARGET OptiXRenderer)
 
   set(ASSETS_SRCS
     Assets/FlagsTest.h
-  )
-
-  set(BSDFS_SRCS
-    BSDFs/BurleySSSTest.h
-    BSDFs/BurleyTest.h
-    BSDFs/GGXTest.h
-    BSDFs/LambertTest.h
-    BSDFs/OrenNayarTest.h
   )
 
   set(LIGHTSOURCES_SRCS
@@ -36,7 +27,7 @@ if (TARGET OptiXRenderer)
     ShadingModels/UtilsTest.h
   )
 
-  add_executable(${PROJECT_NAME} ${SRCS} ${ASSETS_SRCS} ${BSDFS_SRCS} ${LIGHTSOURCES_SRCS} ${SHADING_MODELS_SRCS})
+  add_executable(${PROJECT_NAME} ${SRCS} ${ASSETS_SRCS} ${LIGHTSOURCES_SRCS} ${SHADING_MODELS_SRCS})
 
   target_include_directories(${PROJECT_NAME} PRIVATE .)
 
@@ -48,7 +39,6 @@ if (TARGET OptiXRenderer)
 
   source_group("" FILES ${SRCS})
   source_group("Assets" FILES ${ASSETS_SRCS})
-  source_group("BSDFs" FILES ${BSDFS_SRCS})
   source_group("LightSources" FILES ${LIGHTSOURCES_SRCS})
   source_group("ShadingModels" FILES ${SHADING_MODELS_SRCS})
 

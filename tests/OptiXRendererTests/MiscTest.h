@@ -14,7 +14,6 @@
 #include <Bifrost/Math/OctahedralNormal.h>
 
 #include <OptiXRenderer/Distributions.h>
-#include <OptiXRenderer/MonteCarlo.h>
 #include <OptiXRenderer/RNG.h>
 
 #include <gtest/gtest.h>
@@ -49,118 +48,6 @@ GTEST_TEST(OctahedralNormal, equality_with_bifrost_implementation) {
                 EXPECT_FLOAT_EQ(bifrost_decoded_normal.y, optix_decoded_normal.y);
                 EXPECT_FLOAT_EQ(bifrost_decoded_normal.z, optix_decoded_normal.z);
             }
-}
-
-GTEST_TEST(MonteCarlo, Balance_heuristic_invariants) {
-    // Sanity checks.
-    EXPECT_FLOAT_EQ(0.5f, MonteCarlo::balance_heuristic(1.0f, 1.0f));
-    EXPECT_FLOAT_EQ(0.25f, MonteCarlo::balance_heuristic(1.0f, 3.0f));
-
-    // The balance heuristic should return 1 if the second pdf is NAN, as then the first sample trivially wins.
-    EXPECT_EQ(1.0f, MonteCarlo::balance_heuristic(1.0f, NAN));
-
-    float almost_inf = std::numeric_limits<float>::max();
-    EXPECT_TRUE(isinf(almost_inf + almost_inf));
-
-    // The balance heuristic should handle values close to infinity.
-    EXPECT_FLOAT_EQ(1.0f / almost_inf, MonteCarlo::balance_heuristic(1.0f, almost_inf));
-    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::balance_heuristic(almost_inf, 1.0f));
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.5f * almost_inf, almost_inf));
-    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::balance_heuristic(almost_inf, 0.5f * almost_inf));
-
-    // The balance heuristic should handle infinity.
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(1.0f, INFINITY));
-    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::balance_heuristic(INFINITY, 1.0f));
-
-    // Zero should be a valid first parameter and always return zero.
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.0f, 0.0f));
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.0f, 1.0f));
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.0f, almost_inf));
-}
-
-GTEST_TEST(MonteCarlo, PDF) {
-    { // PDF with valid value contains valid value.
-        float simple_value = 0.5f;
-        PDF simple_PDF = simple_value;
-        EXPECT_EQ(simple_value, simple_PDF.value());
-        EXPECT_TRUE(simple_PDF.is_valid());
-        EXPECT_TRUE(simple_PDF.use_for_MIS());
-        EXPECT_FALSE(simple_PDF.is_delta_dirac());
-
-        // Disabling valid PDF for MIS flags MIS as disabled.
-        simple_PDF.disable_MIS();
-        EXPECT_EQ(simple_value, simple_PDF.value());
-        EXPECT_TRUE(simple_PDF.is_valid());
-        EXPECT_FALSE(simple_PDF.use_for_MIS());
-        EXPECT_TRUE(simple_PDF.is_delta_dirac()); // We flag PDFs as invalid for MIS by flagging them as delta dirac, so this is unfortunately true.
-    }
-
-    {// PDF validity check ignores tiny values as they are not robustly handled by floating point math.
-        float invalid_value = MIN_VALID_PDF * 0.5f;
-        PDF invalid_PDF = invalid_value;
-        EXPECT_EQ(invalid_value, invalid_PDF.value());
-        EXPECT_FALSE(invalid_PDF.is_valid());
-        EXPECT_FALSE(invalid_PDF.use_for_MIS());
-        EXPECT_FALSE(invalid_PDF.is_delta_dirac());
-
-        // Disable MIS on already invalid PDF changes nothing
-        invalid_PDF.disable_MIS();
-        EXPECT_EQ(invalid_value, invalid_PDF.value());
-        EXPECT_FALSE(invalid_PDF.is_valid());
-        EXPECT_FALSE(invalid_PDF.use_for_MIS());
-        EXPECT_TRUE(invalid_PDF.is_delta_dirac()); // We flag PDFs as invalid for MIS by flagging them as delta dirac, so this is unfortunately true.
-    }
-
-    { // Delta dirac PDFs are invalid and cannot be used for MIS
-        PDF delta_PDF = PDF::delta_dirac(1);
-        EXPECT_TRUE(delta_PDF.is_valid());
-        EXPECT_FALSE(delta_PDF.use_for_MIS());
-        EXPECT_TRUE(delta_PDF.is_delta_dirac());
-
-        // Disable MIS on a delta dirac PDF changes nothing as MIS isn't applicable to delta functions.
-        delta_PDF.disable_MIS();
-        EXPECT_TRUE(delta_PDF.is_valid());
-        EXPECT_FALSE(delta_PDF.use_for_MIS());
-        EXPECT_TRUE(delta_PDF.is_delta_dirac());
-    }
-
-    { // Invalid PDF
-        PDF invalid_PDF = PDF::invalid();
-        EXPECT_FALSE(invalid_PDF.is_valid());
-        EXPECT_FALSE(invalid_PDF.use_for_MIS());
-        EXPECT_TRUE(invalid_PDF.is_delta_dirac());
-
-        // Disable MIS on already invalid PDF changes nothing
-        invalid_PDF.disable_MIS();
-        EXPECT_FALSE(invalid_PDF.is_valid());
-        EXPECT_FALSE(invalid_PDF.use_for_MIS());
-        EXPECT_TRUE(invalid_PDF.is_delta_dirac());
-    }
-}
-
-GTEST_TEST(MonteCarlo, Power_heuristic_invariants) {
-    // Sanity checks.
-    EXPECT_FLOAT_EQ(0.5f, MonteCarlo::power_heuristic(1.0f, 1.0f));
-    EXPECT_FLOAT_EQ(0.1f, MonteCarlo::power_heuristic(1.0f, 3.0f));
-
-    // The power heuristic should return 1 if the second pdf is NAN, as then the first sample trivially wins.
-    EXPECT_EQ(1.0f, MonteCarlo::power_heuristic(1.0f, NAN));
-
-    float almost_inf = FLT_MAX;
-    EXPECT_TRUE(isinf(almost_inf * almost_inf));
-
-    // The power heuristic should handle values that squared become infinity.
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(1.0f, almost_inf));
-    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::power_heuristic(almost_inf, 1.0f));
-
-    // Zero should be a valid first parameter and always return zero.
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.0f, 0.0f));
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.0f, 1.0f));
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.0f, almost_inf));
-
-    // Hacking the power heuristic by giving it pdf's that'll force the divisor to become infinite.
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.9f * sqrt(almost_inf), sqrt(almost_inf)));
-    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::power_heuristic(sqrt(almost_inf), 0.9f * sqrt(almost_inf)));
 }
 
 GTEST_TEST(Specularity, dielectric_conversions_to_and_from_index_of_refraction) {

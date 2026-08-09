@@ -11,6 +11,8 @@
 
 #include <OptiXRenderer/Defines.h>
 
+#include <Bifrost/Assets/Shading/Constants.h>
+
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_matrix_namespace.h>
 
@@ -26,8 +28,6 @@ namespace OptiXRenderer {
 // Constants
 //-----------------------------------------------------------------------------
 
-__constant_all__ float COAT_SPECULARITY = 0.04f;
-__constant_all__ float COAT_IOR = 1.5f;
 __constant_all__ float AIR_IOR = 1.0f;
 
 //-----------------------------------------------------------------------------
@@ -361,7 +361,7 @@ __inline_all__ void compute_tangents(optix::float3 normal,
 // The implementation is based on equation 86 in the Roughening chapter of the OpenPBR course notes for Physically Based Shading 2025.
 // https://blog.selfshadow.com/publications/s2025-shading-course/
 __inline_all__ float modulate_roughness_under_coat(float base_roughness, float coat_roughness) {
-    float x_coat = 1 - AIR_IOR / COAT_IOR;
+    float x_coat = 1 - AIR_IOR / Bifrost::Assets::Shading::coat_ior;
     float adjusted_roughness4 = fminf(1, pow4(base_roughness) + 2.0f * x_coat * pow4(coat_roughness));
     return pow(adjusted_roughness4, 0.25f);
 }
@@ -395,6 +395,8 @@ __inline_all__ optix::float3 offset_ray_origin(optix::float3 ray_origin, optix::
     geometric_normal = cos_theta >= 0 ? geometric_normal : -geometric_normal;
     return offset_ray_origin(ray_origin, geometric_normal);
 }
+
+__inline_all__ float MIS_weight(float pdf1, float pdf2) { return Bifrost::Assets::Shading::MonteCarlo::balance_heuristic(pdf1, pdf2); }
 
 } // NS OptiXRenderer
 

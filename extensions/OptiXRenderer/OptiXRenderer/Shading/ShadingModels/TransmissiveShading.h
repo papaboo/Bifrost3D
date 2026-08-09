@@ -9,19 +9,19 @@
 #ifndef _OPTIXRENDERER_SHADING_MODEL_TRANSMISSIVE_SHADING_H_
 #define _OPTIXRENDERER_SHADING_MODEL_TRANSMISSIVE_SHADING_H_
 
-#include <OptiXRenderer/Shading/BSDFs/GGX.h>
+#include <Bifrost/Assets/Shading/BSDFs/GGX.h>
+
+#include <OptiXRenderer/Types.h>
 #include <OptiXRenderer/Utils.h>
 
-namespace OptiXRenderer {
-namespace Shading {
-namespace ShadingModels {
+namespace OptiXRenderer::Shading::ShadingModels {
 
 // ---------------------------------------------------------------------------
 // The transmissive shading material.
 // ---------------------------------------------------------------------------
 class TransmissiveShading {
 private:
-    optix::float3 m_transmission_tint;
+    Bifrost::Math::RGB m_transmission_tint;
     float m_specularity;
     float m_ggx_alpha;
     float m_ior_i_over_o;
@@ -30,9 +30,9 @@ private:
 public:
 
     __inline_all__ void setup_shading(optix::float3 transmission_tint, float roughness, float specularity, float cos_theta_o) {
-        m_transmission_tint = transmission_tint;
+        m_transmission_tint = to_rgb(transmission_tint);
         m_specularity = specularity;
-        m_ggx_alpha = BSDFs::GGX::alpha_from_roughness(roughness);
+        m_ggx_alpha = Bifrost::Assets::Shading::BSDFs::GGX::alpha_from_roughness(roughness);
         
         float medium_ior = dielectric_ior_from_specularity(m_specularity);
         bool entering = cos_theta_o >= 0.0f;
@@ -72,7 +72,7 @@ public:
         if (wo.z < 0.000001f)
             return BSDFResponse::none();
 
-        BSDFResponse response = BSDFs::GGX::evaluate_with_PDF(m_transmission_tint, m_ggx_alpha, m_specularity, m_ior_i_over_o, wo, wi);
+        auto response = Bifrost::Assets::Shading::BSDFs::GGX::evaluate_with_PDF(m_transmission_tint, m_ggx_alpha, m_specularity, m_ior_i_over_o, to_vector3f(wo), to_vector3f(wi));
         response.reflectance *= m_energy_loss_adjustment;
         return response;
     }
@@ -82,22 +82,20 @@ public:
         if (wo.z < 0.000001f)
             return BSDFSample::none();
 
-        BSDFSample sample = BSDFs::GGX::sample(m_transmission_tint, m_ggx_alpha, m_specularity, m_ior_i_over_o, wo, random_sample);
+        auto sample = Bifrost::Assets::Shading::BSDFs::GGX::sample(m_transmission_tint, m_ggx_alpha, m_specularity, m_ior_i_over_o, to_vector3f(wo), to_vector3f(random_sample));
         sample.reflectance *= m_energy_loss_adjustment;
         return sample;
     }
 
     // Estimate the directional-hemispherical reflectance function.
     __inline_all__ optix::float3 rho(float abs_cos_theta_o) const {
-        float roughness = BSDFs::GGX::roughness_from_alpha(m_ggx_alpha);
+        float roughness = Bifrost::Assets::Shading::BSDFs::GGX::roughness_from_alpha(m_ggx_alpha);
         DielectricRho rho = DielectricRho::fetch(abs_cos_theta_o, roughness, m_ior_i_over_o);
         float reflection = rho.reflected_rho / rho.total_rho;
-        return reflection + (1 - reflection) * m_transmission_tint;
+        return reflection + (1 - reflection) * to_float3(m_transmission_tint);
     }
 };
 
-} // NS ShadingModels
-} // NS Shading
-} // NS OptiXRenderer
+} // NS OptiXRenderer::Shading::ShadingModels
 
 #endif // _OPTIXRENDERER_SHADING_MODEL_TRANSMISSIVE_SHADING_H_

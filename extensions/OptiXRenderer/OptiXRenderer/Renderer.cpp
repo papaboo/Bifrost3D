@@ -26,6 +26,7 @@
 #include <Bifrost/Scene/SceneNode.h>
 
 #include <optixu/optixpp_namespace.h>
+#undef RGB
 #include <optixu/optixu_math_namespace.h>
 
 #include <assert.h>
@@ -44,9 +45,6 @@ using namespace optix;
 namespace OptiXRenderer {
 
 const int MAX_RNG_SAMPLE_OFFSETS = 256;
-
-inline float3 to_float3(const RGB v) { return { v.r, v.g, v.b }; }
-inline float3 to_float3(const Vector3f v) { return { v.x, v.y, v.z }; }
 
 struct half4 { __half x, y, z, w; };
 

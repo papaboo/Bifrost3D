@@ -155,20 +155,20 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
         { // Test that incident reflectivity is red.
             float3 wo = make_float3(0.0f, 0.0f, 1.0f);
             auto material = DefaultShading(material_params, wo.z);
-            float3 weight = material.evaluate_with_PDF(wo, wo).reflectance;
-            EXPECT_GT(weight.x, 0.0f);
-            EXPECT_FLOAT_EQ_EPS(weight.y, 0.0f, 1e-6f);
-            EXPECT_FLOAT_EQ_EPS(weight.z, 0.0f, 1e-6f);
+            RGB weight = material.evaluate_with_PDF(wo, wo).reflectance;
+            EXPECT_GT(weight.r, 0.0f);
+            EXPECT_FLOAT_EQ_EPS(weight.g, 0.0f, 1e-6f);
+            EXPECT_FLOAT_EQ_EPS(weight.b, 0.0f, 1e-6f);
         }
 
         { // Test that grazing angle reflectivity is white.
             float3 wo = normalize(make_float3(0.0f, 1.0f, 0.001f));
             float3 wi = normalize(make_float3(0.0f, -1.0f, 0.001f));
             auto material = DefaultShading(material_params, wo.z);
-            float3 weight = material.evaluate_with_PDF(wo, wi).reflectance;
-            EXPECT_GT(weight.x, 0.99f);
-            EXPECT_FLOAT_EQ(weight.x, weight.y);
-            EXPECT_FLOAT_EQ(weight.x, weight.z);
+            RGB weight = material.evaluate_with_PDF(wo, wi).reflectance;
+            EXPECT_GT(weight.r, 0.99f);
+            EXPECT_FLOAT_EQ(weight.r, weight.g);
+            EXPECT_FLOAT_EQ(weight.r, weight.b);
         }
     }
 
@@ -178,19 +178,19 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
         { // Test that incident reflectivity equals a scaled tint.
             float3 wo = make_float3(0.0f, 0.0f, 1.0f);
             auto material = DefaultShading(material_params, wo.z);
-            float3 weight = material.evaluate_with_PDF(wo, wo).reflectance;
-            float scale = material_params.tint.x / weight.x;
-            EXPECT_FLOAT3_EQ_EPS(scale * weight, material_params.tint, 1e-6f);
+            RGB weight = material.evaluate_with_PDF(wo, wo).reflectance;
+            float scale = material_params.tint.x / weight.r;
+            EXPECT_RGB_EQ_EPS(scale * weight, to_rgb(material_params.tint), 1e-6f);
         }
 
         { // Test that grazing angle reflectivity is nearly white.
             float3 wo = normalize(make_float3(0.0f, 1.0f, 0.001f));
             float3 wi = normalize(make_float3(0.0f, -1.0f, 0.001f));
             auto material = DefaultShading(material_params, wo.z);
-            float3 weight = material.evaluate_with_PDF(wo, wi).reflectance;
-            EXPECT_GT(weight.y, 0.99f);
-            EXPECT_FLOAT_EQ_PCT(weight.y, weight.x, 0.01f);
-            EXPECT_FLOAT_EQ_PCT(weight.y, weight.z, 0.01f);
+            RGB weight = material.evaluate_with_PDF(wo, wi).reflectance;
+            EXPECT_GT(weight.g, 0.99f);
+            EXPECT_FLOAT_EQ_PCT(weight.g, weight.r, 0.01f);
+            EXPECT_FLOAT_EQ_PCT(weight.g, weight.b, 0.01f);
         }
     }
 }
@@ -418,17 +418,17 @@ GTEST_TEST(DefaultShadingModel, regression_test) {
 
     BSDFResponse bsdf_responses[] = {
         // Gold
-        { 497358.250000f, 380976.437500f, 167112.35938f, 497357.968750f }, { 124339.296875f, 95243.906250f, 41778.00000f, 124339.195313f },
-        { 994714.562500f, 762453.062500f, 335647.75000f, 703369.687500f }, { 249080.015625f, 190921.531250f, 84049.10156f, 175985.171875f },
-        { 4957685248.0f, 4900781568.0f, 4796215808.0f, 49668972.0f }, { 1455754624.0f, 1439689728.0f, 1410168448.0f, 13442245.0f },
+        { { 497358.250000f, 380976.437500f, 167112.35938f }, 497357.968750f }, { { 124339.296875f, 95243.906250f, 41778.00000f }, 124339.195313f },
+        { { 994714.562500f, 762453.062500f, 335647.75000f }, 703369.687500f }, { { 249080.015625f, 190921.531250f, 84049.10156f} , 175985.171875f },
+        { { 4957685248.0f, 4900781568.0f, 4796215808.0f }, 49668972.0f }, { {1455754624.0f, 1439689728.0f, 1410168448.0f} , 13442245.0f },
         // Plastic
-        { 0.011624f, 0.076557f, 0.09214f, 0.010905f }, { 0.012486f, 0.092185f, 0.11131f, 0.230607f },
-        { 0.012840f, 0.122771f, 0.14915f, 0.034218f }, { 0.011330f, 0.121562f, 0.14802f, 0.254778f },
-        { 0.051809f, 0.085369f, 0.09342f, 0.286622f }, { 0.013969f, 0.145090f, 0.17656f, 0.218950f },
+        { { 0.011624f, 0.076557f, 0.09214f} , 0.010905f }, { { 0.012486f, 0.092185f, 0.11131f} , 0.230607f },
+        { { 0.012840f, 0.122771f, 0.14915f} , 0.034218f }, { { 0.011330f, 0.121562f, 0.14802f} , 0.254778f },
+        { { 0.051809f, 0.085369f, 0.09342f} , 0.286622f }, { { 0.013969f, 0.145090f, 0.17656f} , 0.218950f },
         // Coated plastic
-        { 0.019217f, 0.081176f, 0.09605f, 0.0164565f }, { 0.019548f, 0.0975228f, 0.116237f, 0.228887f },
-        { 0.017939f, 0.128357f, 0.15486f, 0.0377722f }, { 0.014534f, 0.125507f, 0.15214f, 0.239682f },
-        { 0.088401f, 0.115091f, 0.12150f, 0.317704f }, { 0.018240f, 0.147322f, 0.17830f, 0.192018f } };
+        { { 0.019217f, 0.081176f, 0.09605f} , 0.0164565f }, { { 0.019548f, 0.0975228f, 0.116237f }, 0.228887f },
+        { { 0.017939f, 0.128357f, 0.15486f} , 0.0377722f }, { { 0.014534f, 0.125507f, 0.15214f }, 0.239682f },
+        { { 0.088401f, 0.115091f, 0.12150f} , 0.317704f }, { { 0.018240f, 0.147322f, 0.17830f} , 0.192018f } };
 
     int response_index = 0;
     for (int i = 0; i < 3; ++i)
@@ -437,10 +437,10 @@ GTEST_TEST(DefaultShadingModel, regression_test) {
             for (int s = 0; s < MAX_SAMPLES; ++s) {
                 float3 rng_sample = make_float3(RNG::sample02(s), (s + 0.5f) / MAX_SAMPLES);
                 BSDFSample sample = material.sample(wo, rng_sample);
-                // printf("{ %.6ff, %.6ff, %.5ff, %.6ff },\n", sample.reflectance.x, sample.reflectance.y, sample.reflectance.z, sample.PDF.value());
+                // printf("{ { %.6ff, %.6ff, %.5ff }, %.6ff },\n", sample.reflectance.x, sample.reflectance.y, sample.reflectance.z, sample.PDF.value());
                 auto response = bsdf_responses[response_index++];
 
-                EXPECT_FLOAT3_EQ_PCT(response.reflectance, sample.reflectance, 0.0001f);
+                EXPECT_RGB_EQ_PCT(response.reflectance, sample.reflectance, 0.0001f);
                 EXPECT_PDF_EQ_PCT(response.PDF, sample.PDF, 0.0001f);
             }
         }

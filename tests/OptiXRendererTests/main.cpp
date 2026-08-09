@@ -10,12 +10,6 @@
 
 #include <Assets/FlagsTest.h>
 
-#include <BSDFs/BurleySSSTest.h>
-#include <BSDFs/BurleyTest.h>
-#include <BSDFs/GGXTest.h>
-#include <BSDFs/LambertTest.h>
-#include <BSDFs/OrenNayarTest.h>
-
 #include <LightSources/SphereLightTest.h>
 #include <LightSources/SpotLightTest.h>
 
@@ -23,7 +17,6 @@
 #include <ShadingModels/TransmissiveShadingTest.h>
 #include <ShadingModels/UtilsTest.h>
 
-#include <LTCTest.h>
 #include <RendererTest.h>
 #include <MiscTest.h>
 

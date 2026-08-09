@@ -142,7 +142,7 @@ GTEST_TEST(TransmissiveShadingModel, PDF_positivity) {
 }
 
 GTEST_TEST(TransmissiveShadingModel, Fresnel) {
-    using namespace Shading::BSDFs;
+    using namespace Bifrost::Assets::Shading::BSDFs;
     using namespace Shading::ShadingModels;
     using namespace optix;
 
@@ -156,20 +156,20 @@ GTEST_TEST(TransmissiveShadingModel, Fresnel) {
     { // Test that incident reflectivity is black.
         float3 wo = make_float3(0.0f, 0.0f, 1.0f);
         auto shading_model = TransmissiveShading(material_params, wo.z);
-        float3 weight = shading_model.evaluate_with_PDF(wo, wo).reflectance;
-        EXPECT_FLOAT_EQ(weight.x, 0.0f);
-        EXPECT_FLOAT_EQ(weight.y, 0.0f);
-        EXPECT_FLOAT_EQ(weight.z, 0.0f);
+        RGB weight = shading_model.evaluate_with_PDF(wo, wo).reflectance;
+        EXPECT_FLOAT_EQ(weight.r, 0.0f);
+        EXPECT_FLOAT_EQ(weight.g, 0.0f);
+        EXPECT_FLOAT_EQ(weight.b, 0.0f);
     }
 
     { // Test that grazing angle reflectivity is white.
         float3 wo = normalize(make_float3(0.0f, 1.0f, 0.001f));
         float3 wi = normalize(make_float3(0.0f, -1.0f, 0.001f));
         auto shading_model = TransmissiveShading(material_params, wo.z);
-        float3 weight = shading_model.evaluate_with_PDF(wo, wi).reflectance;
-        EXPECT_GT(weight.x, 0.99f);
-        EXPECT_FLOAT_EQ(weight.x, weight.y);
-        EXPECT_FLOAT_EQ(weight.x, weight.z);
+        RGB weight = shading_model.evaluate_with_PDF(wo, wi).reflectance;
+        EXPECT_GT(weight.r, 0.99f);
+        EXPECT_FLOAT_EQ(weight.r, weight.g);
+        EXPECT_FLOAT_EQ(weight.r, weight.b);
     }
 }
 
@@ -188,7 +188,7 @@ GTEST_TEST(TransmissiveShadingModel, snells_law) {
         float3 wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
         auto shading_model = TransmissiveShading(material_params, wo.z);
 
-        float3 wi = shading_model.sample(wo, make_float3(0.5f, 0.5f, transmission_random_sample)).direction;
+        Vector3f wi = shading_model.sample(wo, make_float3(0.5f, 0.5f, transmission_random_sample)).direction;
 
         // Test that wi was sampled as a transmission.
         EXPECT_LT(wi.z, 0.0f);
@@ -207,14 +207,14 @@ GTEST_TEST(TransmissiveShadingModel, regression_test) {
     const unsigned int MAX_SAMPLES = 2;
 
     BSDFResponse bsdf_responses[] = {
-        {102.196815f, 102.196815f, 102.196815f, 70.955925f},
-        {30.308733f, 30.308733f, 30.308733f, 19.304911f},
-        {4075.826172f, 4075.826172f, 4075.826172f, 445.397308f},
-        {4660.390625f, 4660.390625f, 4660.390625f, 235.904617f},
-        {610.321655f, 623.170593f, 610.321655f, 504.575867f},
-        {149.033539f, 152.171082f, 149.033539f, 125.492897f},
-        {1633.225708f, 1667.609497f, 1633.225708f, 1715.760010f},
-        {408.740875f, 417.345978f, 408.740875f, 429.358185f} };
+        { { 102.196815f, 102.196815f, 102.196815f }, 70.955925f},
+        { { 30.308733f, 30.308733f, 30.308733f }, 19.304911f},
+        { { 4075.826172f, 4075.826172f, 4075.826172f }, 445.397308f},
+        { { 4660.390625f, 4660.390625f, 4660.390625f }, 235.904617f},
+        { { 610.321655f, 623.170593f, 610.321655f }, 504.575867f},
+        { { 149.033539f, 152.171082f, 149.033539f }, 125.492897f},
+        { { 1633.225708f, 1667.609497f, 1633.225708f }, 1715.760010f},
+        { { 408.740875f, 417.345978f, 408.740875f }, 429.358185f} };
 
     Material material_params = frosted_glass_parameters();
     int response_index = 0;
@@ -225,10 +225,10 @@ GTEST_TEST(TransmissiveShadingModel, regression_test) {
         for (int s = 0; s < MAX_SAMPLES; ++s) {
             float3 rng_sample = make_float3(RNG::sample02(s), (s + 0.5f) / MAX_SAMPLES);
             BSDFSample sample = material.sample(wo, rng_sample);
-            // printf("{%.6ff, %.6ff, %.6ff, %.6ff},\n", sample.reflectance.x, sample.reflectance.y, sample.reflectance.z, sample.PDF.value());
+            // printf("{ { %.6ff, %.6ff, %.6ff }, %.6ff},\n", sample.reflectance.x, sample.reflectance.y, sample.reflectance.z, sample.PDF.value());
             auto response = bsdf_responses[response_index++];
 
-            EXPECT_COLOR_EQ_PCT(response.reflectance, sample.reflectance, 0.0001f);
+            EXPECT_RGB_EQ_PCT(response.reflectance, sample.reflectance, 0.0001f);
             EXPECT_PDF_EQ_PCT(response.PDF, sample.PDF, 0.0001f);
         }
     }

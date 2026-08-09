@@ -14,6 +14,7 @@
 #include <OptiXRenderer/PublicTypes.h>
 
 #include <optixu/optixpp_namespace.h>
+#undef RGB
 
 namespace OptiXRenderer {
 

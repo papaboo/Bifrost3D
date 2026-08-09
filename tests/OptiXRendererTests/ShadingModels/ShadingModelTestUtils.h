@@ -56,10 +56,10 @@ void consistency_test(ShadingModel shading_model, float3 wo, unsigned int sample
 
         EXPECT_GE(sample.PDF.value(), 0.0f) << shading_model.to_string();
         if (sample.PDF.is_valid()) {
-            EXPECT_GE(sample.reflectance.x, 0.0f) << shading_model.to_string();
+            EXPECT_GE(sample.reflectance.r, 0.0f) << shading_model.to_string();
 
-            BSDFResponse response = shading_model.evaluate_with_PDF(wo, sample.direction);
-            EXPECT_COLOR_EQ_PCT(sample.reflectance, response.reflectance, 0.00002f) << shading_model.to_string();
+            BSDFResponse response = shading_model.evaluate_with_PDF(wo, to_float3(sample.direction));
+            EXPECT_RGB_EQ_PCT(sample.reflectance, response.reflectance, 0.00002f) << shading_model.to_string();
             EXPECT_PDF_EQ_PCT(sample.PDF, response.PDF, 0.00002f) << shading_model.to_string();
         }
     }

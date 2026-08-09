@@ -29,7 +29,6 @@ set(ROOT_SRC
   OptiXRenderer/IBackend.h
   OptiXRenderer/IBackend.cpp
   OptiXRenderer/Intersect.h
-  OptiXRenderer/MonteCarlo.h
   OptiXRenderer/PresampledEnvironmentMap.h
   OptiXRenderer/PresampledEnvironmentMap.cpp
   OptiXRenderer/PublicTypes.h
@@ -45,14 +44,6 @@ set(SHADING_SRC
   OptiXRenderer/Shading/MonteCarlo.cu
   OptiXRenderer/Shading/SimpleRGPs.cu
   OptiXRenderer/Shading/TriangleAttributes.cu
-)
-
-set(SHADING_BSDFS_SRC
-  OptiXRenderer/Shading/BSDFs/Burley.h
-  OptiXRenderer/Shading/BSDFs/BurleySSS.h
-  OptiXRenderer/Shading/BSDFs/GGX.h
-  OptiXRenderer/Shading/BSDFs/Lambert.h
-  OptiXRenderer/Shading/BSDFs/OrenNayar.h
 )
 
 set(SHADING_LIGHTSOURCES_SRC
@@ -79,7 +70,7 @@ file(MAKE_DIRECTORY ${CUDA_GENERATED_OUTPUT_DIR})
 include_directories(. SYSTEM ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
 # TODO cuda_include_directories(. ${CUDA_INCLUDE_DIRS} ${OPTIX_INCLUDE_DIRS})
 # Create custom commands and targets for each file.
-set(_OPTIONS "--use_fast_math;--restrict")
+set(_OPTIONS "-std=c++17;--use_fast_math;--restrict")
 cuda_wrap_srcs(${LIBRARY_NAME} PTX _GENERATED_FILES ${SHADING_SRC} ${SHADING_LIGHTSOURCES_SRC} OPTIONS ${_OPTIONS} )
 
 # Add the library.
@@ -87,7 +78,6 @@ add_library(${LIBRARY_NAME} ${_cmake_options}
   ${_GENERATED_FILES}
   ${ROOT_SRC}
   ${SHADING_SRC}
-  ${SHADING_BSDFS_SRC}
   ${SHADING_LIGHTSOURCES_SRC}
   ${SHADING_SHADING_MODELS_SRC}
   ${LINK_FILE}
@@ -95,7 +85,6 @@ add_library(${LIBRARY_NAME} ${_cmake_options}
 
 source_group("" FILES ${ROOT_SRC})
 source_group("Shading" FILES ${SHADING_SRC})
-source_group("Shading\\BSDFs" FILES ${SHADING_BSDFS_SRC})
 source_group("Shading\\LightSources" FILES ${SHADING_LIGHTSOURCES_SRC})
 source_group("Shading\\ShadingModels" FILES ${SHADING_SHADING_MODELS_SRC})
 source_group("Shading\\ptx" FILES ${_GENERATED_FILES}) # Add the ptx files to a source group.
