@@ -34,7 +34,7 @@ public:
 
     Math::RGB evaluate(Math::Vector3f wo, Math::Vector3f wi) const {
         float scale = m_normalize_rho ? rho_normalizer(abs(wo.z)) : 1;
-        return Shading::BSDFs::GGX_R::evaluate(m_alpha, m_specularity, wo, wi) * scale;
+        return Math::RGB(Shading::BSDFs::GGX_R::evaluate(m_alpha, m_specularity, wo, wi) * scale);
     }
 
     void normalized_rho(bool normalize_rho) { m_normalize_rho = normalize_rho; }

@@ -90,7 +90,7 @@ public:
 #endif
 
     template<typename U>
-    GPU_ENABLED Matrix(Matrix<R, C, U> rhs) {
+    GPU_ENABLED explicit Matrix(Matrix<R, C, U> rhs) {
         U* rhs_elements = rhs.begin();
         for (int i = 0; i < N; ++i)
             m_elements[i] = T(rhs_elements[i]);
