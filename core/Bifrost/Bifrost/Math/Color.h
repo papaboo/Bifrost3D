@@ -31,7 +31,7 @@ struct RGB final {
 
     RGB() = default;
 
-    GPU_ENABLED RGB(float intensity)
+    explicit GPU_ENABLED RGB(float intensity)
         : r(intensity), g(intensity), b(intensity) { }
 
     constexpr GPU_ENABLED RGB(float r, float g, float b)
