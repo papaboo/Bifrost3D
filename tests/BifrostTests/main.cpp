@@ -35,6 +35,7 @@
 #include <Math/Distribution2DTest.h>
 #include <Math/FixedPointTypesTest.h>
 #include <Math/ImageSamplingTest.h>
+#include <Math/IntersectTest.h>
 #include <Math/LineTest.h>
 #include <Math/LTCTest.h>
 #include <Math/MatrixTest.h>
