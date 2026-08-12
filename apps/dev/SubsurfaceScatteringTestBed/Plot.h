@@ -70,11 +70,11 @@ inline void plot_random_walk(float slab_thickness) {
         auto distance_to_medium_boundary = [=](Ray ray) {
             float distance = INFINITY;
 
-            float distance_to_front = intersect(ray, front_surface);
+            float distance_to_front = Intersect::ray_plane(ray, front_surface);
             if (distance_to_front >= 0.0f)
                 distance = fminf(distance_to_front, distance);
 
-            float distance_to_back = intersect(ray, back_surface);
+            float distance_to_back = Intersect::ray_plane(ray, back_surface);
             if (distance_to_back >= 0.0f)
                 distance = fminf(distance_to_back, distance);
 

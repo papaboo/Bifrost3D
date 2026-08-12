@@ -76,7 +76,7 @@ void create_veach_scene(Core::Engine& engine, Scene::CameraID camera_ID, Scene::
         Vector3f light_positions[light_count];
         for (int i = 0; i < light_count; ++i) {
             Ray ray_to_light = CameraUtils::ray_from_viewport_point(camera_ID, Vector2f(0.2f + 0.2f * i, 0.9f));
-            float distance_to_light = intersect(ray_to_light, light_plane);
+            float distance_to_light = Intersect::ray_plane(ray_to_light, light_plane);
             light_positions[i] = ray_to_light.position_at(distance_to_light);
             light_mean_position += light_positions[i];
         }

@@ -46,6 +46,7 @@ set(MATH_SRCS
   Math/Distribution2DTest.h
   Math/FixedPointTypesTest.h
   Math/ImageSamplingTest.h
+  Math/IntersectTest.h
   Math/LineTest.h
   Math/LTCTest.h
   Math/MatrixTest.h
