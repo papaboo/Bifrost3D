@@ -161,8 +161,8 @@ GTEST_TEST(Assets_Shading_Fittings, validate_oren_nayar_LTC_error) {
         }
     }
 
-    EXPECT_LT(error_statistics.mean(), 0.0045f);
-    EXPECT_LT(error_statistics.standard_deviation(), 0.007f);
+    EXPECT_LT(error_statistics.mean(), 0.0016f);
+    EXPECT_LT(error_statistics.standard_deviation(), 0.0044f);
 }
 
 GTEST_TEST(Assets_Shading_Fittings, validate_GGX_LTC_error) {

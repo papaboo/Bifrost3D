@@ -24,15 +24,24 @@ namespace Bifrost::Math {
 // ------------------------------------------------------------------------------------------------
 struct IsotropicLTC {
 public:
-    float m00, m11, m22, m02, m20;
+    // Elements in the inverse M matrix
+    float e00, e11, e22, e02, e20;
 
-    static inline IsotropicLTC identity() { return { 1, 1, 1, 0, 0 }; }
+    static _inline_all_archs_ IsotropicLTC from_inverse_M(float e00, float e11, float e22, float e02, float e20) {
+        return { e00, e11, e22, e02, e20 };
+    }
+    static _inline_all_archs_ IsotropicLTC from_M(float e00, float e11, float e22, float e02, float e20) {
+        Matrix3x3f inverse_M = invert_matrix(e00, e11, e22, e02, e20);
+        return { inverse_M(0, 0), inverse_M(1, 1), inverse_M(2, 2), inverse_M(0, 2), inverse_M(2, 0) };
+    }
 
-    __always_inline__ GPU_ENABLED  Matrix3x3f get_inverse_M() const { return { m00, 0, m02, 0, m11, 0, m20, 0, m22 }; }
-    __always_inline__ GPU_ENABLED  Matrix3x3f get_M() const { return invert(get_inverse_M()); }
-    __always_inline__ GPU_ENABLED  float inverse_M_determinant() const { return m11 * (m00 * m22 - m02 * m20); }
+    static _inline_all_archs_ IsotropicLTC identity() { return { 1, 1, 1, 0, 0 }; }
 
-    __always_inline__ GPU_ENABLED  float PDF(Vector3f w) const {
+    _inline_all_archs_ Matrix3x3f get_inverse_M() const { return { e00, 0.0f, e02, 0.0f, e11, 0.0f, e20, 0.0f, e22 }; }
+    _inline_all_archs_ Matrix3x3f get_M() const { return invert_matrix(e00, e11, e22, e02, e20); }
+    _inline_all_archs_ float inverse_M_determinant() const { return e11 * (e00 * e22 - e02 * e20); }
+
+    _inline_all_archs_ float PDF(Vector3f w) const {
         Vector3f w_original_scaled = get_inverse_M() * w;
 
         float l = 1.0f / magnitude(w_original_scaled); // magnitude(invert(inverse_M) * normalize(w_original)) in the paper source.
@@ -42,15 +51,40 @@ public:
         return Distributions::Cosine::PDF(original_cos_theta) * reciprocal_jacobian;
     }
 
-    __always_inline__ GPU_ENABLED  float evaluate(Vector3f w) const { return PDF(w); }
+    _inline_all_archs_ float evaluate(Vector3f w) const { return PDF(w); }
 
-    __always_inline__ GPU_ENABLED  Distributions::DirectionalSample sample(Vector2f random_sample) const {
+    _inline_all_archs_ Distributions::DirectionalSample sample(Vector2f random_sample) const {
         auto cosine_direction = Distributions::Cosine::sample(random_sample).direction;
 
         // Transform cosine sample to LTC sample.
         Vector3f ltc_direction = Math::normalize(get_M() * cosine_direction);
 
         return { ltc_direction, PDF(ltc_direction) };
+    }
+
+private:
+    // Specialized 3x3 matrix inversion for diagonal cross matrices.
+    _inline_all_archs_ static Matrix3x3f invert_matrix(float e00, float e11, float e22, float e02, float e20) {
+        // As all non-zero elements are scaled by e11, we inline that into the precomputed determinant.
+        // e11 is part of computing the determinant, so removing it produces e11 / determinant.
+        // float determinant = e11 * (e00 * e22 - e02 * e20); // Included for reference
+        float e11_over_determinant = 1.0f / (e00 * e22 - e02 * e20);
+
+        Matrix3x3f inverse;
+
+        inverse[0][0] = e22 * e11_over_determinant;
+        inverse[0][1] = 0.0f;
+        inverse[0][2] = - e02 * e11_over_determinant;
+
+        inverse[1][0] = 0.0f;
+        inverse[1][1] = 1.0f / e11;
+        inverse[1][2] = 0.0f;
+
+        inverse[2][0] = - e20 * e11_over_determinant;
+        inverse[2][1] = 0.0f;
+        inverse[2][2] = e00 * e11_over_determinant;
+
+        return inverse;
     }
 };
 
