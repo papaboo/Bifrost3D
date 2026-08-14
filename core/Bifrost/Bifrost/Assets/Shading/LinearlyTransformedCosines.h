@@ -29,7 +29,8 @@ inline Math::IsotropicLTC oren_nayar_LTC_coefficients(float cos_theta_o, float r
     float m02 = roughness * (-1.16407f + 1.15859f*mu + (0.150815f - 0.150105f*mu)*roughness) / (mu*mu*mu - 1.43545f);
     float m11 = 1.0f + roughness * (0.20013f + (-0.506373f + 0.261777f*mu)*mu);
     float m20 = roughness * (0.540852f + (-1.01625f + 0.475392f*mu)*mu) / (-1.0743f + (0.0725628f + mu)*mu);
-    return { m00, m11, 1.0f, m02, m20 };
+
+    return Math::IsotropicLTC::from_M(m00, m11, 1.0f, m02, m20);
 }
 
 // ------------------------------------------------------------------------------------------------
