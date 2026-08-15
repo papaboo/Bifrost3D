@@ -39,7 +39,7 @@ public:
 
     void normalized_rho(bool normalize_rho) { m_normalize_rho = normalize_rho; }
 
-    PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
+    Math::MonteCarlo::PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
         return Shading::BSDFs::GGX_R::pdf(m_alpha, wo, wi);
     }
 
@@ -212,7 +212,7 @@ public:
         return Math::RGB(reflectance);
     }
 
-    PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
+    Math::MonteCarlo::PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
         return Shading::BSDFs::GGX_T::pdf(m_alpha, m_ior_i_over_o, wo, wi);
     }
 
@@ -383,7 +383,7 @@ public:
         return Shading::BSDFs::GGX::evaluate(m_tint, m_alpha, m_specularity, m_ior_i_over_o, wo, wi);
     }
 
-    PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
+    Math::MonteCarlo::PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
         if (m_disable_reflection && same_hemisphere(wo, wi))
             return 0.0f;
         return Shading::BSDFs::GGX::pdf(m_tint, m_alpha, m_specularity, m_ior_i_over_o, wo, wi);

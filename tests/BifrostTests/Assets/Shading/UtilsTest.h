@@ -18,66 +18,6 @@
 
 namespace Bifrost::Assets::Shading {
 
-GTEST_TEST(Assets_Shading_MonteCarlo, PDF) {
-    { // PDF with valid value contains valid value.
-        float simple_value = 0.5f;
-        PDF simple_PDF = simple_value;
-        EXPECT_EQ(simple_value, simple_PDF.value());
-        EXPECT_TRUE(simple_PDF.is_valid());
-        EXPECT_TRUE(simple_PDF.use_for_MIS());
-        EXPECT_FALSE(simple_PDF.is_delta_dirac());
-
-        // Disabling valid PDF for MIS flags MIS as disabled.
-        simple_PDF.disable_MIS();
-        EXPECT_EQ(simple_value, simple_PDF.value());
-        EXPECT_TRUE(simple_PDF.is_valid());
-        EXPECT_FALSE(simple_PDF.use_for_MIS());
-        EXPECT_TRUE(simple_PDF.is_delta_dirac()); // We flag PDFs as invalid for MIS by flagging them as delta dirac, so this is unfortunately true.
-    }
-
-    {// PDF validity check ignores tiny values as they are not robustly handled by floating point math.
-        float invalid_value = MIN_VALID_PDF * 0.5f;
-        PDF invalid_PDF = invalid_value;
-        EXPECT_EQ(invalid_value, invalid_PDF.value());
-        EXPECT_FALSE(invalid_PDF.is_valid());
-        EXPECT_FALSE(invalid_PDF.use_for_MIS());
-        EXPECT_FALSE(invalid_PDF.is_delta_dirac());
-
-        // Disable MIS on already invalid PDF changes nothing
-        invalid_PDF.disable_MIS();
-        EXPECT_EQ(invalid_value, invalid_PDF.value());
-        EXPECT_FALSE(invalid_PDF.is_valid());
-        EXPECT_FALSE(invalid_PDF.use_for_MIS());
-        EXPECT_TRUE(invalid_PDF.is_delta_dirac()); // We flag PDFs as invalid for MIS by flagging them as delta dirac, so this is unfortunately true.
-    }
-
-    { // Delta dirac PDFs are invalid and cannot be used for MIS
-        PDF delta_PDF = PDF::delta_dirac(1);
-        EXPECT_TRUE(delta_PDF.is_valid());
-        EXPECT_FALSE(delta_PDF.use_for_MIS());
-        EXPECT_TRUE(delta_PDF.is_delta_dirac());
-
-        // Disable MIS on a delta dirac PDF changes nothing as MIS isn't applicable to delta functions.
-        delta_PDF.disable_MIS();
-        EXPECT_TRUE(delta_PDF.is_valid());
-        EXPECT_FALSE(delta_PDF.use_for_MIS());
-        EXPECT_TRUE(delta_PDF.is_delta_dirac());
-    }
-
-    { // Invalid PDF
-        PDF invalid_PDF = PDF::invalid();
-        EXPECT_FALSE(invalid_PDF.is_valid());
-        EXPECT_FALSE(invalid_PDF.use_for_MIS());
-        EXPECT_TRUE(invalid_PDF.is_delta_dirac());
-
-        // Disable MIS on already invalid PDF changes nothing
-        invalid_PDF.disable_MIS();
-        EXPECT_FALSE(invalid_PDF.is_valid());
-        EXPECT_FALSE(invalid_PDF.use_for_MIS());
-        EXPECT_TRUE(invalid_PDF.is_delta_dirac());
-    }
-}
-
 GTEST_TEST(Assets_Shading_Specularity, dielectric_conversions_to_and_from_index_of_refraction) {
     // Index of refraction
     const float air_ior = 1.0f;

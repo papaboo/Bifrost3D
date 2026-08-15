@@ -35,7 +35,7 @@ using RGB = Bifrost::Math::RGB;
 using Vector2f = Bifrost::Math::Vector2f;
 using Vector3f = Bifrost::Math::Vector3f;
 using Vector4f = Bifrost::Math::Vector4f;
-using PDF = Bifrost::Assets::Shading::PDF;
+using PDF = Bifrost::Math::MonteCarlo::PDF;
 using BSDFResponse = Bifrost::Assets::Shading::BSDFResponse;
 using BSDFSample = Bifrost::Assets::Shading::BSDFSample;
 

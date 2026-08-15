@@ -316,6 +316,60 @@ public:
 
 namespace Bifrost::Math::MonteCarlo {
 
+// PDF wrapper.
+// The wrapper contains a PDF and a boolean indicating if the sample can be used for multiple importance sampling (MIS).
+// Delta dirac function PDFs are represented by NaN.
+constexpr float MIN_VALID_PDF = 0.000001f;
+struct PDF {
+public:
+    float m_PDF;
+
+    PDF() = default;
+    _inline_all_archs_ PDF(float pdf) : m_PDF(pdf) {}
+
+    _inline_all_archs_ static PDF invalid() { return PDF(nanf("")); }
+    _inline_all_archs_ static PDF delta_dirac(float pdf = 1) { return PDF(-pdf); }
+
+    _inline_all_archs_ bool operator==(PDF rhs) const { return m_PDF == rhs.m_PDF; }
+    _inline_all_archs_ bool operator!=(PDF rhs) const { return m_PDF != rhs.m_PDF; }
+
+    _inline_all_archs_ float value() const { return abs(m_PDF); }
+    _inline_all_archs_ bool is_valid() const { return value() > MIN_VALID_PDF; }
+    _inline_all_archs_ bool is_delta_dirac() const { return !(m_PDF >= 0.0f); }
+    _inline_all_archs_ void disable_MIS() { if (m_PDF >= 0.0f) m_PDF = -m_PDF; }
+    _inline_all_archs_ bool is_valid_and_not_delta_dirac() const { return m_PDF > MIN_VALID_PDF; }
+    _inline_all_archs_ bool invalid_or_delta_dirac() const { return !(m_PDF > MIN_VALID_PDF); }
+    _inline_all_archs_ bool use_for_MIS() const { return is_valid_and_not_delta_dirac(); }
+
+    _inline_all_archs_ PDF& scale(float s) {
+#ifndef GPU_COMPILATION
+        if (s < 0.0f)
+            throw std::exception("PDF scale's must be positive");
+#endif
+
+        m_PDF *= s;
+        return *this;
+    }
+    _inline_all_archs_ PDF& operator*=(float s) { return scale(s); }
+    _inline_all_archs_ PDF operator*(float s) const { PDF copy = *this; return copy.scale(s); }
+
+    _inline_all_archs_ PDF& add(PDF rhs) {
+#ifndef GPU_COMPILATION
+        if (is_delta_dirac() || rhs.is_delta_dirac())
+            throw std::exception("Delta dirac PDF's can't be added up");
+#endif
+
+        m_PDF += rhs.m_PDF;
+        return *this;
+    }
+    _inline_all_archs_ PDF& operator+=(PDF rhs) { return add(rhs); }
+    _inline_all_archs_ PDF operator+(PDF rhs) const { PDF copy = *this; return copy.add(rhs); }
+
+    _inline_all_archs_ static bool is_valid(float PDF) {
+        return PDF > 0.000001f;
+    }
+};
+
 // Computes the balance heuristic of pdf1 and pdf2.
 // It is assumed that pdf1 is always valid, i.e. not NaN.
 // pdf2 is allowed to be NaN, but generally try to avoid it. :)

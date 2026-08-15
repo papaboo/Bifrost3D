@@ -28,7 +28,7 @@ public:
         return Shading::BSDFs::Lambert::evaluate(m_albedo);
     }
 
-    PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
+    Math::MonteCarlo::PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
         return Shading::BSDFs::Lambert::pdf(wo, wi);
     }
 

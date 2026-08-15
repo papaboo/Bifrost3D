@@ -24,7 +24,7 @@ _inline_all_archs_ Math::RGB evaluate(Math::RGB albedo) {
     return albedo * RECIP_PIf;
 }
 
-_inline_all_archs_ PDF pdf(Math::Vector3f wo, Math::Vector3f wi) {
+_inline_all_archs_ Math::MonteCarlo::PDF pdf(Math::Vector3f wo, Math::Vector3f wi) {
     return Math::Distributions::Cosine::PDF(wi.z);
 }
 

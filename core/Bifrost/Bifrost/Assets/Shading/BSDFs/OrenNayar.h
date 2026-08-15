@@ -87,7 +87,7 @@ _inline_all_archs_ float uniform_sampling_probability(float roughness, float cos
     return pow(roughness, 0.1f) * (0.162925f + cos_theta * (-0.372058f + (0.538233f - 0.290822f * cos_theta) * cos_theta));
 }
 
-_inline_all_archs_ PDF pdf(float roughness, Vector3f wo, Vector3f wi) {
+_inline_all_archs_ MonteCarlo::PDF pdf(float roughness, Vector3f wo, Vector3f wi) {
     float cos_theta = wo.z;
     float uniform_probability = uniform_sampling_probability(roughness, cos_theta);
     float cltc_probability = 1.0f - uniform_probability;

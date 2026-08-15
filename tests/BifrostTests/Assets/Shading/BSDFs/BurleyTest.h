@@ -30,7 +30,7 @@ public:
         return Shading::BSDFs::Burley::evaluate(m_tint, m_roughness, wo, wi);
     }
 
-    PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
+    Math::MonteCarlo::PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
         return Shading::BSDFs::Burley::pdf(m_roughness, wo, wi);
     }
 

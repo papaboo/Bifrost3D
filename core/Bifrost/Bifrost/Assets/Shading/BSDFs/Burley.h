@@ -48,7 +48,7 @@ _inline_all_archs_ RGB evaluate(RGB tint, float roughness, Vector3f wo, Vector3f
     return tint * evaluate(roughness, wo, wi, halfway);
 }
 
-_inline_all_archs_ PDF pdf(float roughness, Vector3f wo, Vector3f wi) {
+_inline_all_archs_ MonteCarlo::PDF pdf(float roughness, Vector3f wo, Vector3f wi) {
     return Distributions::Cosine::PDF(wi.z);
 }
 
