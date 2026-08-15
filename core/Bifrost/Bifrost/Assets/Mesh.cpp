@@ -10,6 +10,7 @@
 
 #include <Bifrost/Core/Array.h>
 #include <Bifrost/Math/Conversions.h>
+#include <Bifrost/Math/Triangle.h>
 
 #include <assert.h>
 
@@ -329,7 +330,7 @@ void compute_hard_normals(Vector3f* positions_begin, Vector3f* positions_end, Ve
         Vector3f p1 = *positions_begin++;
         Vector3f p2 = *positions_begin++;
 
-        Vector3f normal = normalize(cross(p1 - p0, p2 - p0));
+        Vector3f normal = Trianglef::get_normal(p0, p1, p2);
         *normals_begin++ = normal;
         *normals_begin++ = normal;
         *normals_begin++ = normal;

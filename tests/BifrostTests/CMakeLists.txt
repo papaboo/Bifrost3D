@@ -54,6 +54,7 @@ set(MATH_SRCS
   Math/RNGTest.h
   Math/StatisticsTest.h
   Math/TransformTest.h
+  Math/TriangleTest.h
   Math/TypeTraitsTest.h
   Math/UtilsTest.h
 )
