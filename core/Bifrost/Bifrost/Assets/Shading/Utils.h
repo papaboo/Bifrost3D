@@ -266,27 +266,6 @@ struct alignas(16) SeparableBSSRDFPositionSample {
     }
 };
 
-namespace MonteCarlo {
-
-// Computes the balance heuristic of pdf1 and pdf2.
-// It is assumed that pdf1 is always valid, i.e. not NaN.
-// pdf2 is allowed to be NaN, but generally try to avoid it. :)
-_inline_all_archs_ float balance_heuristic(float pdf1, float pdf2) {
-    float divisor = pdf1 + pdf2;
-    float result = pdf1 / divisor;
-    bool result_is_invalid = isinf(divisor) || isnan(result);
-    return result_is_invalid ? (pdf1 <= pdf2 ? 0.0f : 1.0f) : result;
-}
-
-// Computes the power heuristic of pdf1 and pdf2.
-// It is assumed that pdf1 is always valid, i.e. not NaN.
-// pdf2 is allowed to be NaN, but generally try to avoid it. :)
-_inline_all_archs_ float power_heuristic(float pdf1, float pdf2) {
-    return balance_heuristic(pdf1 * pdf1, pdf2 * pdf2);
-}
-
-} // NS MonteCarlo
-
 } // NS Bifrost::Assets::Shading
 
 #endif // _BIFROST_ASSETS_SHADING_UTILS_H_

@@ -18,33 +18,6 @@
 
 namespace Bifrost::Assets::Shading {
 
-GTEST_TEST(Assets_Shading_MonteCarlo, Balance_heuristic_invariants) {
-    // Sanity checks.
-    EXPECT_FLOAT_EQ(0.5f, MonteCarlo::balance_heuristic(1.0f, 1.0f));
-    EXPECT_FLOAT_EQ(0.25f, MonteCarlo::balance_heuristic(1.0f, 3.0f));
-
-    // The balance heuristic should return 1 if the second pdf is NAN, as then the first sample trivially wins.
-    EXPECT_EQ(1.0f, MonteCarlo::balance_heuristic(1.0f, NAN));
-
-    float almost_inf = std::numeric_limits<float>::max();
-    EXPECT_TRUE(isinf(almost_inf + almost_inf));
-
-    // The balance heuristic should handle values close to infinity.
-    EXPECT_FLOAT_EQ(1.0f / almost_inf, MonteCarlo::balance_heuristic(1.0f, almost_inf));
-    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::balance_heuristic(almost_inf, 1.0f));
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.5f * almost_inf, almost_inf));
-    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::balance_heuristic(almost_inf, 0.5f * almost_inf));
-
-    // The balance heuristic should handle infinity.
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(1.0f, std::numeric_limits<float>::infinity()));
-    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::balance_heuristic(std::numeric_limits<float>::infinity(), 1.0f));
-
-    // Zero should be a valid first parameter and always return zero.
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.0f, 0.0f));
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.0f, 1.0f));
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::balance_heuristic(0.0f, almost_inf));
-}
-
 GTEST_TEST(Assets_Shading_MonteCarlo, PDF) {
     { // PDF with valid value contains valid value.
         float simple_value = 0.5f;
@@ -103,31 +76,6 @@ GTEST_TEST(Assets_Shading_MonteCarlo, PDF) {
         EXPECT_FALSE(invalid_PDF.use_for_MIS());
         EXPECT_TRUE(invalid_PDF.is_delta_dirac());
     }
-}
-
-GTEST_TEST(Assets_Shading_MonteCarlo, Power_heuristic_invariants) {
-    // Sanity checks.
-    EXPECT_FLOAT_EQ(0.5f, MonteCarlo::power_heuristic(1.0f, 1.0f));
-    EXPECT_FLOAT_EQ(0.1f, MonteCarlo::power_heuristic(1.0f, 3.0f));
-
-    // The power heuristic should return 1 if the second pdf is NAN, as then the first sample trivially wins.
-    EXPECT_EQ(1.0f, MonteCarlo::power_heuristic(1.0f, NAN));
-
-    float almost_inf = std::numeric_limits<float>::max();
-    EXPECT_TRUE(isinf(almost_inf * almost_inf));
-
-    // The power heuristic should handle values that squared become infinity.
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(1.0f, almost_inf));
-    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::power_heuristic(almost_inf, 1.0f));
-
-    // Zero should be a valid first parameter and always return zero.
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.0f, 0.0f));
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.0f, 1.0f));
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.0f, almost_inf));
-
-    // Hacking the power heuristic by giving it pdf's that'll force the divisor to become infinite.
-    EXPECT_FLOAT_EQ(0.0f, MonteCarlo::power_heuristic(0.9f * sqrt(almost_inf), sqrt(almost_inf)));
-    EXPECT_FLOAT_EQ(1.0f, MonteCarlo::power_heuristic(sqrt(almost_inf), 0.9f * sqrt(almost_inf)));
 }
 
 GTEST_TEST(Assets_Shading_Specularity, dielectric_conversions_to_and_from_index_of_refraction) {

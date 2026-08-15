@@ -202,7 +202,7 @@ inline void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, 
                 if (isnan(ggx_f))
                     continue;
 
-                float mis_weight = RNG::power_heuristic(sample.PDF, ggx_PDF);
+                float mis_weight = MonteCarlo::power_heuristic(sample.PDF, ggx_PDF);
                 light_radiance += sample.radiance * (mis_weight * ggx_f * cos_theta / sample.PDF);
             }
             light_radiance /= float(light_sample_count);
@@ -216,7 +216,7 @@ inline void convolute(const InfiniteAreaLight& light, IBLConvolution<T>* begin, 
                     continue;
 
                 sample.direction = normalize(up_rotation * sample.direction);
-                float mis_weight = RNG::power_heuristic(sample.PDF, light.PDF(sample.direction));
+                float mis_weight = MonteCarlo::power_heuristic(sample.PDF, light.PDF(sample.direction));
                 ggx_radiance += light.evaluate(sample.direction) * mis_weight;
             }
             ggx_radiance /= float(ggx_sample_count);

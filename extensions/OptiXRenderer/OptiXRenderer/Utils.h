@@ -12,6 +12,7 @@
 #include <OptiXRenderer/Defines.h>
 
 #include <Bifrost/Assets/Shading/Constants.h>
+#include <Bifrost/Math/RNG.h>
 
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_matrix_namespace.h>
@@ -396,7 +397,7 @@ __inline_all__ optix::float3 offset_ray_origin(optix::float3 ray_origin, optix::
     return offset_ray_origin(ray_origin, geometric_normal);
 }
 
-__inline_all__ float MIS_weight(float pdf1, float pdf2) { return Bifrost::Assets::Shading::MonteCarlo::balance_heuristic(pdf1, pdf2); }
+__inline_all__ float MIS_weight(float pdf1, float pdf2) { return Bifrost::Math::MonteCarlo::balance_heuristic(pdf1, pdf2); }
 
 } // NS OptiXRenderer
 

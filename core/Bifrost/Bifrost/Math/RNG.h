@@ -162,21 +162,6 @@ _inline_all_archs_ unsigned int cessen_owen_hash(unsigned int x, unsigned int se
 // NOTE: Unless filtered afterwards it visually displays a ton of correlation.
 _inline_all_archs_ unsigned int even_distribution_2D(unsigned int x, unsigned int y) { return reverse_bits(morton_encode(x, y)); }
 
-// Computes the power heuristic of pdf1 and pdf2.
-// It is assumed that pdf1 is always valid, i.e. not NaN.
-// pdf2 is allowed to be NaN, but generally try to avoid it. :)
-_inline_all_archs_ float power_heuristic(float pdf1, float pdf2) {
-    pdf1 *= pdf1;
-    pdf2 *= pdf2;
-    float result = pdf1 / (pdf1 + pdf2);
-    // This is where floating point math gets tricky!
-    // If the mis weight is NaN then it can be caused by three things.
-    // 1. pdf1 is so insanely high that pdf1 * pdf1 = infinity. In that case we end up with inf / (inf + pdf2^2) and return 1, unless pdf2 was larger than pdf1, i.e. 'more infinite :p', then we return 0.
-    // 2. Conversely pdf2 can also be so insanely high that pdf2 * pdf2 = infinity. This is handled analogously to above.
-    // 3. pdf2 can also be NaN. In this case the power heuristic is ill-defined and we return 0.
-    return !isnan(result) ? result : (pdf1 > pdf2 ? 1.0f : 0.0f);
-}
-
 #ifndef GPU_COMPILATION
 // ------------------------------------------------------------------------------------------------
 // Generate progressive multi-jittered samples with a blue noise approximation.
@@ -327,5 +312,32 @@ public:
 };
 
 } // NS Bifrost::Math::RNG
+
+
+namespace Bifrost::Math::MonteCarlo {
+
+// Computes the balance heuristic of pdf1 and pdf2.
+// It is assumed that pdf1 is always valid, i.e. not NaN.
+// pdf2 is allowed to be NaN, but generally try to avoid it. :)
+_inline_all_archs_ float balance_heuristic(float pdf1, float pdf2) {
+    float divisor = pdf1 + pdf2;
+    float result = pdf1 / divisor;
+    bool result_is_invalid = isinf(divisor) || isnan(result);
+    // This is where floating point math gets tricky!
+    // If the mis weight is NaN then it can be caused by three things.
+    // 1. pdf1 can be infinity. In that case we end up with inf / (inf + pdf2) and return 1.
+    // 2. Conversely pdf2 can also be infinity. This is handled analogously to above, but pdf2 dominates and we return 0.
+    // 3. pdf2 can also be NaN. In this case the power heuristic is ill-defined, we assumed that the sample is outside of pdf2's domain and return 0.
+    return result_is_invalid ? (pdf1 <= pdf2 ? 0.0f : 1.0f) : result;
+}
+
+// Computes the power heuristic of pdf1 and pdf2.
+// It is assumed that pdf1 is always valid, i.e. not NaN.
+// pdf2 is allowed to be NaN, but generally try to avoid it. :)
+_inline_all_archs_ float power_heuristic(float pdf1, float pdf2) {
+    return balance_heuristic(pdf1 * pdf1, pdf2 * pdf2);
+}
+
+} // NS Bifrost::Math::MonteCarlo
 
 #endif // _BIFROST_MATH_RNG_H_
