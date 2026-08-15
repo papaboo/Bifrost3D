@@ -42,7 +42,7 @@ public:
         return Shading::BSDFs::BurleySSS::evaluate(m_parameters, po, pi);
     }
 
-    PDF pdf(Math::Vector3f po, Math::Vector3f pi) const {
+    Math::MonteCarlo::PDF pdf(Math::Vector3f po, Math::Vector3f pi) const {
         if (m_sampling_strategy == SamplingStrategy::SampleMostScattering)
             return Shading::BSDFs::BurleySSS::SampleMostScattering::pdf(m_parameters, po, pi);
         else if (m_sampling_strategy == SamplingStrategy::KarisApproximation)

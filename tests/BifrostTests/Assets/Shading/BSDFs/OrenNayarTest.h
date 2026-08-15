@@ -30,7 +30,7 @@ public:
         return Shading::BSDFs::OrenNayar::evaluate(m_albedo, m_roughness, wo, wi, true);
     }
 
-    PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
+    Math::MonteCarlo::PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
         return Shading::BSDFs::OrenNayar::pdf(m_roughness, wo, wi);
     }
 

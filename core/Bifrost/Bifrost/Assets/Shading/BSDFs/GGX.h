@@ -83,9 +83,9 @@ _inline_all_archs_ float evaluate(float alpha, float specularity, Vector3f wo, V
     return evaluate(alpha, RGB(specularity), wo, wi).r;
 }
 
-_inline_all_archs_ PDF pdf(float alpha, Vector3f wo, Vector3f wi) {
+_inline_all_archs_ MonteCarlo::PDF pdf(float alpha, Vector3f wo, Vector3f wi) {
     if (GGX::effectively_smooth(alpha))
-        return PDF::invalid();
+        return MonteCarlo::PDF::invalid();
     return Distributions::GGX_Bounded_VNDF::reflection_PDF(alpha, wo, wi);
 }
 
@@ -111,7 +111,7 @@ _inline_all_archs_ BSDFSample sample(float alpha, RGB specularity, Vector3f wo, 
         // Sample perfectly specular BRDF
         BSDFSample bsdf_sample;
         bsdf_sample.direction = { -wo.x, -wo.y, wo.z };
-        bsdf_sample.PDF = PDF::delta_dirac(1);
+        bsdf_sample.PDF = MonteCarlo::PDF::delta_dirac(1);
         bsdf_sample.reflectance = schlick_fresnel(specularity, abs(wo.z)) / abs(bsdf_sample.direction.z);
         return bsdf_sample;
     } else {
@@ -181,13 +181,13 @@ _inline_all_archs_ float evaluate(float alpha, float ior_i_over_o, Vector3f wo, 
     return evaluate(alpha, wo, wi, ior_i_over_o, halfway);
 }
 
-_inline_all_archs_ PDF pdf(float alpha, float ior_i_over_o, Vector3f wo, Vector3f wi) {
+_inline_all_archs_ MonteCarlo::PDF pdf(float alpha, float ior_i_over_o, Vector3f wo, Vector3f wi) {
     if (GGX::effectively_smooth(alpha))
-        return PDF::invalid();
+        return MonteCarlo::PDF::invalid();
 
     // Cannot sample reflection.
     if (same_hemisphere(wo, wi))
-        return PDF::invalid();
+        return MonteCarlo::PDF::invalid();
 
     bool entering = wo.z >= 0.0f;
     if (!entering) {
@@ -199,7 +199,7 @@ _inline_all_archs_ PDF pdf(float alpha, float ior_i_over_o, Vector3f wo, Vector3
 
     // Discard backfacing microfacets. Equation 9.35 in PBRT4.
     if (dot(wo, halfway) < 0.0f || dot(wi, halfway) >= 0.0f)
-        return PDF::invalid();
+        return MonteCarlo::PDF::invalid();
 
     return Distributions::GGX_VNDF::PDF(alpha, wo, halfway) * transmission_PDF_scale(ior_i_over_o, wo, wi, halfway);
 }
@@ -225,7 +225,7 @@ _inline_all_archs_ BSDFSample sample(float alpha, float ior_i_over_o, Vector3f w
 
         float reflectance = 1.0f / abs(bsdf_sample.direction.z);
         bsdf_sample.reflectance = { reflectance, reflectance, reflectance };
-        bsdf_sample.PDF = PDF::delta_dirac(1);
+        bsdf_sample.PDF = MonteCarlo::PDF::delta_dirac(1);
     } else {
         // Sample rough BTDF
         Vector3f halfway = Distributions::GGX_VNDF::sample_halfway(alpha, wo, random_sample);
@@ -312,9 +312,9 @@ _inline_all_archs_ RGB evaluate(RGB transmission_tint, float alpha, float specul
     return (is_transmission ? transmission_tint : RGB(1)) * f;
 }
 
-_inline_all_archs_ PDF pdf(RGB transmission_tint, float alpha, float specularity, float ior_i_over_o, Vector3f wo, Vector3f wi) {
+_inline_all_archs_ MonteCarlo::PDF pdf(RGB transmission_tint, float alpha, float specularity, float ior_i_over_o, Vector3f wo, Vector3f wi) {
     if (GGX::effectively_smooth(alpha))
-        return PDF::invalid();
+        return MonteCarlo::PDF::invalid();
 
     bool entering = wo.z >= 0.0f;
     if (!entering) {
@@ -330,9 +330,9 @@ _inline_all_archs_ PDF pdf(RGB transmission_tint, float alpha, float specularity
     // Discard backfacing microfacets. Equation 9.35 in PBRT4.
     bool backfacing_microfacet = !is_reflection && (dot(wo, halfway) < 0.0f || dot(wi, halfway) >= 0.0f);
     if (backfacing_microfacet)
-        return PDF::invalid();
+        return MonteCarlo::PDF::invalid();
 
-    PDF PDF = Distributions::GGX_VNDF::PDF(alpha, wo, halfway);
+    auto PDF = Distributions::GGX_VNDF::PDF(alpha, wo, halfway);
 
     // Scale the PDF by the probability to reflect or refract.
     float reflection_probability = dielectric_schlick_fresnel(specularity, dot(wo, halfway), ior_i_over_o);
@@ -348,7 +348,7 @@ _inline_all_archs_ PDF pdf(RGB transmission_tint, float alpha, float specularity
     return PDF;
 }
 
-_inline_all_archs_ PDF pdf(float alpha, float specularity, float ior_i_over_o, Vector3f wo, Vector3f wi) {
+_inline_all_archs_ MonteCarlo::PDF pdf(float alpha, float specularity, float ior_i_over_o, Vector3f wo, Vector3f wi) {
     return pdf(RGB::white(), alpha, specularity, ior_i_over_o, wo, wi);
 }
 
@@ -381,10 +381,10 @@ _inline_all_archs_ BSDFSample sample(RGB transmission_tint, float alpha, float s
 
         if (is_reflection) {
             // Sample perfectly specular BRDF
-            bsdf_sample.PDF = PDF::delta_dirac(normalized_reflection_probability);
+            bsdf_sample.PDF = MonteCarlo::PDF::delta_dirac(normalized_reflection_probability);
             bsdf_sample.direction = { -wo.x, -wo.y, wo.z };
         } else {
-            bsdf_sample.PDF = PDF::delta_dirac(1.0f - normalized_reflection_probability);
+            bsdf_sample.PDF = MonteCarlo::PDF::delta_dirac(1.0f - normalized_reflection_probability);
             // Sample perfectly specular BTDF
             if (!refract(bsdf_sample.direction, -wo, ior_i_over_o))
                 return BSDFSample::none(); // Should practically never happen, as total internal reflection is included in the Fresnel computation.

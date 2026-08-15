@@ -143,7 +143,7 @@ _inline_all_archs_ float sample_diffusion_profile_approximation(float u, float d
 // as suggested in Efficient Screen Space Subsurface Scattering Using Burley's Normalized Diffusion in Realtime, slide 26.
 namespace SampleMostScattering {
 
-_inline_all_archs_ PDF pdf(Parameters params, Vector3f po, Vector3f pi) {
+_inline_all_archs_ MonteCarlo::PDF pdf(Parameters params, Vector3f po, Vector3f pi) {
     float r = distance(po, pi);
     float sampled_diffuse_mean_free_path = fmax(params.diffuse_mean_free_path.x, fmax(params.diffuse_mean_free_path.y, params.diffuse_mean_free_path.z));
     return evaluate(r, sampled_diffuse_mean_free_path);
@@ -179,7 +179,7 @@ _inline_all_archs_ SeparableBSSRDFPositionSample sample(Parameters params, Vecto
 
 namespace AlbedoMIS {
 
-_inline_all_archs_ PDF pdf(Parameters params, Vector3f po, Vector3f pi) {
+_inline_all_archs_ MonteCarlo::PDF pdf(Parameters params, Vector3f po, Vector3f pi) {
     float r = distance(po, pi);
     RGB per_channel_PDF = evaluate(r, params.diffuse_mean_free_path);
 
@@ -226,7 +226,7 @@ _inline_all_archs_ SeparableBSSRDFPositionSample sample(Parameters params, Vecto
 
 namespace ApproximateSampling {
 
-_inline_all_archs_ PDF pdf(Parameters params, Vector3f po, Vector3f pi) {
+_inline_all_archs_ MonteCarlo::PDF pdf(Parameters params, Vector3f po, Vector3f pi) {
     float r = distance(po, pi);
     float sampled_diffuse_mean_free_path = fmax(params.diffuse_mean_free_path.x, fmax(params.diffuse_mean_free_path.y, params.diffuse_mean_free_path.z));
     return evaluate(r, sampled_diffuse_mean_free_path);

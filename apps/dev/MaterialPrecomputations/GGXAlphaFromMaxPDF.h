@@ -20,7 +20,7 @@ void estimate_alpha_from_max_PDF(int cos_theta_count, int max_PDF_count, const s
 
     const int sample_count = max_PDF_count * cos_theta_count;
     constexpr float k = 1.0f; // Found to give a decent distribution of alphas, where decent is defined as the distribution of neighbouring alphas in the lookup table with the lowest standard deviatino
-    auto encode_PDF = [=](PDF pdf) -> float {
+    auto encode_PDF = [=](MonteCarlo::PDF pdf) -> float {
         if (pdf.is_delta_dirac())
             return 1;
 
