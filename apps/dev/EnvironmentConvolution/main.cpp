@@ -449,7 +449,7 @@ int initialize(Engine& engine) {
                         if (isnan(ggx_f))
                             continue;
 
-                        float mis_weight = RNG::power_heuristic(sample.PDF, GGX::PDF(alpha, cos_theta));
+                        float mis_weight = MonteCarlo::power_heuristic(sample.PDF, GGX::PDF(alpha, cos_theta));
                         radiance += sample.radiance * (mis_weight * ggx_f * cos_theta / sample.PDF);
                     }
 
@@ -459,7 +459,7 @@ int initialize(Engine& engine) {
                             continue;
 
                         sample.direction = normalize(up_rotation * sample.direction);
-                        float mis_weight = RNG::power_heuristic(sample.PDF, infinite_area_light->PDF(sample.direction));
+                        float mis_weight = MonteCarlo::power_heuristic(sample.PDF, infinite_area_light->PDF(sample.direction));
                         radiance += infinite_area_light->evaluate(sample.direction) * mis_weight;
                     }
 
