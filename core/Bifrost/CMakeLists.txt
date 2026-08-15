@@ -89,6 +89,7 @@ SET(MATH_SRCS
   Bifrost/Math/RNG.cpp
   Bifrost/Math/Statistics.h
   Bifrost/Math/Transform.h
+  Bifrost/Math/Triangle.h
   Bifrost/Math/Utils.h
   Bifrost/Math/Vector.h
   Bifrost/Math/VectorOperators.h

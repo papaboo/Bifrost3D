@@ -43,6 +43,7 @@
 #include <Math/RNGTest.h>
 #include <Math/StatisticsTest.h>
 #include <Math/TransformTest.h>
+#include <Math/TriangleTest.h>
 #include <Math/TypeTraitsTest.h>
 #include <Math/UtilsTest.h>
 
