@@ -33,6 +33,9 @@ public:
         : m_alpha(alpha), m_specularity(specularity), m_normalize_rho(false) {}
 
     Math::RGB evaluate(Math::Vector3f wo, Math::Vector3f wi) const {
+        if (!same_hemisphere(wo, wi))
+            return Math::RGB::black();
+
         float scale = m_normalize_rho ? rho_normalizer(abs(wo.z)) : 1;
         return Math::RGB(Shading::BSDFs::GGX_R::evaluate(m_alpha, m_specularity, wo, wi) * scale);
     }
@@ -40,10 +43,15 @@ public:
     void normalized_rho(bool normalize_rho) { m_normalize_rho = normalize_rho; }
 
     Math::MonteCarlo::PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
+        if (!same_hemisphere(wo, wi))
+            return Math::MonteCarlo::PDF::invalid();
         return Shading::BSDFs::GGX_R::pdf(m_alpha, wo, wi);
     }
 
     BSDFResponse evaluate_with_PDF(Math::Vector3f wo, Math::Vector3f wi) const {
+        if (!same_hemisphere(wo, wi))
+            return BSDFResponse::none();
+
         BSDFResponse response = Shading::BSDFs::GGX_R::evaluate_with_PDF(m_alpha, m_specularity, wo, wi);
         if (m_normalize_rho)
             response.reflectance *= rho_normalizer(abs(wo.z));

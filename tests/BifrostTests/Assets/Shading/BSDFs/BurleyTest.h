@@ -27,14 +27,20 @@ public:
         : m_roughness(roughness) {}
 
     Math::RGB evaluate(Math::Vector3f wo, Math::Vector3f wi) const {
+        if (!same_hemisphere(wo, wi))
+            return Math::RGB::black();
         return Shading::BSDFs::Burley::evaluate(m_tint, m_roughness, wo, wi);
     }
 
     Math::MonteCarlo::PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
+        if (!same_hemisphere(wo, wi))
+            return Math::MonteCarlo::PDF::invalid();
         return Shading::BSDFs::Burley::pdf(m_roughness, wo, wi);
     }
 
     BSDFResponse evaluate_with_PDF(Math::Vector3f wo, Math::Vector3f wi) const {
+        if (!same_hemisphere(wo, wi))
+            return BSDFResponse::none();
         return Shading::BSDFs::Burley::evaluate_with_PDF(m_tint, m_roughness, wo, wi);
     }
 

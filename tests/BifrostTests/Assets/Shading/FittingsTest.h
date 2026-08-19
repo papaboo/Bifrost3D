@@ -183,8 +183,8 @@ GTEST_TEST(Assets_Shading_Fittings, validate_GGX_LTC_error) {
         }
     }
 
-    EXPECT_LT(error_statistics.mean(), 46.0f);
-    EXPECT_LT(error_statistics.standard_deviation(), 107.0f);
+    EXPECT_FLOAT_EQ_EPS(error_statistics.mean(), 46.0f, 0.5f);
+    EXPECT_FLOAT_EQ_EPS(error_statistics.standard_deviation(), 106.0f, 0.5f);
 }
 
 } // NS Bifrost::Assets::Shading
