@@ -27,14 +27,20 @@ public:
         : m_roughness(roughness), m_albedo(albedo) {}
 
     Math::RGB evaluate(Math::Vector3f wo, Math::Vector3f wi) const {
+        if (!same_hemisphere(wo, wi))
+            return Math::RGB::black();
         return Shading::BSDFs::OrenNayar::evaluate(m_albedo, m_roughness, wo, wi, true);
     }
 
     Math::MonteCarlo::PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
+        if (!same_hemisphere(wo, wi))
+            return Math::MonteCarlo::PDF::invalid();
         return Shading::BSDFs::OrenNayar::pdf(m_roughness, wo, wi);
     }
 
     BSDFResponse evaluate_with_PDF(Math::Vector3f wo, Math::Vector3f wi) const {
+        if (!same_hemisphere(wo, wi))
+            return BSDFResponse::none();
         return Shading::BSDFs::OrenNayar::evaluate_with_PDF(m_albedo, m_roughness, wo, wi, true);
     }
 

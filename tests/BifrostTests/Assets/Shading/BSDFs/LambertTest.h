@@ -25,14 +25,20 @@ public:
     LambertWrapper() {}
 
     Math::RGB evaluate(Math::Vector3f wo, Math::Vector3f wi) const {
+        if (!same_hemisphere(wo, wi))
+            return Math::RGB::black();
         return Shading::BSDFs::Lambert::evaluate(m_albedo);
     }
 
     Math::MonteCarlo::PDF pdf(Math::Vector3f wo, Math::Vector3f wi) const {
+        if (!same_hemisphere(wo, wi))
+            return Math::MonteCarlo::PDF::invalid();
         return Shading::BSDFs::Lambert::pdf(wo, wi);
     }
 
     BSDFResponse evaluate_with_PDF(Math::Vector3f wo, Math::Vector3f wi) const {
+        if (!same_hemisphere(wo, wi))
+            return BSDFResponse::none();
         return Shading::BSDFs::Lambert::evaluate_with_PDF(m_albedo, wo, wi);
     }
 
