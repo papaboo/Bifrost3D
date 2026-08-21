@@ -152,6 +152,6 @@ TEST_F(MeshModelManagerFixture, handle_material_changed) {
     EXPECT_EQ(glass_material, dx11_model.material_ID);
 }
 
-} // NS DX11Renderer
+} // NS DX11Renderer::Managers
 
 #endif // _DX11RENDERER_MESH_MODEL_MANAGER_TEST_H_

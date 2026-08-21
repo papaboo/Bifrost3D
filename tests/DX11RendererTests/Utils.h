@@ -75,7 +75,7 @@ inline Bifrost::Assets::Mesh create_triangle(const std::string& name, Bifrost::A
 // -------------------------------------------------------------------------------------------------
 
 inline bool almost_equal_eps(float lhs, float rhs, float eps) {
-    return abs(lhs - rhs) < eps;
+    return abs(lhs - rhs) <= eps;
 }
 #define EXPECT_FLOAT_EQ_EPS(expected, actual, epsilon) EXPECT_PRED3(almost_equal_eps, expected, actual, epsilon)
 
@@ -86,7 +86,7 @@ inline bool almost_equal_percentage(float lhs, float rhs, float percentage) {
 #define EXPECT_FLOAT_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(almost_equal_percentage, expected, actual, percentage)
 
 inline bool double_almost_equal_eps(double lhs, double rhs, double eps) {
-    return abs(lhs - rhs) < eps;
+    return abs(lhs - rhs) <= eps;
 }
 #define EXPECT_DOUBLE_EQ_EPS(expected, actual, epsilon) EXPECT_PRED3(double_almost_equal_eps, expected, actual, epsilon)
 
@@ -101,10 +101,21 @@ static bool equal_vector3f(Bifrost::Math::Vector3f lhs, Bifrost::Math::Vector3f 
 }
 #define EXPECT_VECTOR3F_EQ(expected, actual) EXPECT_PRED2(equal_vector3f, expected, actual)
 
-static bool equal_Vector3f_pct(Bifrost::Math::Vector3f expected, Bifrost::Math::Vector3f actual, Bifrost::Math::Vector3f pct) {
+static bool equal_vector3f_pct(Bifrost::Math::Vector3f expected, Bifrost::Math::Vector3f actual, Bifrost::Math::Vector3f pct) {
     auto eps = expected * pct;
-    return abs(expected.x - actual.x) < eps.x && abs(expected.y - actual.y) < eps.y && abs(expected.z - actual.z) < eps.z;
+    return abs(expected.x - actual.x) <= eps.x && abs(expected.y - actual.y) <= eps.y && abs(expected.z - actual.z) <= eps.z;
 }
-#define EXPECT_VECTOR3F_EQ_PCT(expected, actual, pct) EXPECT_PRED3(equal_Vector3f_pct, expected, actual, pct)
+#define EXPECT_VECTOR3F_EQ_PCT(expected, actual, pct) EXPECT_PRED3(equal_vector3f_pct, expected, actual, pct)
+
+static bool equal_vector4f(Bifrost::Math::Vector4f lhs, Bifrost::Math::Vector4f rhs) {
+    return Bifrost::Math::almost_equal(lhs.x, rhs.x) && Bifrost::Math::almost_equal(lhs.y, rhs.y) && Bifrost::Math::almost_equal(lhs.z, rhs.z) && Bifrost::Math::almost_equal(lhs.w, rhs.w);
+}
+#define EXPECT_VECTOR4F_EQ(expected, actual) EXPECT_PRED2(equal_vector4f, expected, actual)
+
+static bool equal_rgb_pct(Bifrost::Math::RGB expected, Bifrost::Math::RGB actual, float pct) {
+    auto eps = expected * pct;
+    return abs(expected.r - actual.r) <= abs(eps.r) && abs(expected.g - actual.g) <= abs(eps.g) && abs(expected.b - actual.b) <= abs(eps.b);
+}
+#define EXPECT_RGB_EQ_PCT(expected, actual, pct) EXPECT_PRED3(equal_rgb_pct, expected, actual, pct)
 
 #endif // _DX11RENDERERTEST_UTILS_H_

@@ -11,12 +11,13 @@
 
 #include <Bifrost/Assets/Material.h>
 #include <Bifrost/Assets/Shading/Fittings.h>
+#include <Bifrost/Assets/Shading/LinearlyTransformedCosines.h>
 
 using namespace Bifrost::Assets;
 
 namespace DX11Renderer::Managers {
 
-inline Dx11Material make_dx11material(Material mat) {
+inline static Dx11Material make_dx11material(Material mat) {
     Dx11Material dx11_material = {};
     dx11_material.shading_model = (unsigned int)mat.get_shading_model();
     dx11_material.tint.x = mat.get_tint().r;
@@ -38,7 +39,7 @@ inline Dx11Material make_dx11material(Material mat) {
     return dx11_material;
 }
 
-inline Dx11MaterialTextures make_dx11material_textures(Material mat) {
+inline static Dx11MaterialTextures make_dx11material_textures(Material mat) {
     Dx11MaterialTextures dx11_material_textures = {};
     dx11_material_textures.tint_roughness_index = mat.get_tint_roughness_texture_ID();
     dx11_material_textures.coverage_index = mat.get_coverage_texture_ID();
@@ -101,10 +102,10 @@ OShaderResourceView MaterialManager::create_GGX_with_fresnel_rho_srv(ID3D11Devic
     const unsigned int width = Rho::GGX_with_fresnel_angle_sample_count;
     const unsigned int height = Rho::GGX_with_fresnel_roughness_sample_count;
 
-    unsigned short* rho = new unsigned short[2 * width * height];
+    ushort2* rho = new ushort2[width * height];
     for (unsigned int i = 0; i < width * height; ++i) {
-        rho[2 * i] = unsigned short(Rho::GGX_with_fresnel[i] * 65535 + 0.5f); // No specularity
-        rho[2 * i + 1] = unsigned short(Rho::GGX[i] * 65535 + 0.5f); // Full specularity
+        rho[i] = { unsigned short(Rho::GGX_with_fresnel[i] * 65535 + 0.5f), // No specularity
+                   unsigned short(Rho::GGX[i] * 65535 + 0.5f) }; // Full specularity
     }
 
     OShaderResourceView GGX_with_fresnel_rho_srv;
@@ -147,6 +148,32 @@ OShaderResourceView MaterialManager::create_dielectric_GGX_srv(ID3D11Device1& de
     delete[] rho;
 
     return dielectric_GGX_rho_srv;
+}
+
+OShaderResourceView MaterialManager::create_GGX_LTC_fit_srv(ID3D11Device1& device) {
+    using namespace Bifrost::Assets::Shading;
+    using namespace Bifrost::Math;
+
+    const unsigned int width = LTC::GGX_reflection_angle_sample_count;
+    const unsigned int height = LTC::GGX_reflection_roughness_sample_count;
+    const unsigned int element_count = width * height;
+
+    // Scale the LTC parameters by their mininimum and maximum bounds, which allows us to upload them quantized between o and 1.
+    auto* scaled_LTC_parameters = new Vector4<unsigned short>[element_count];
+    for (unsigned int i = 0; i < element_count; ++i) {
+        Vector4 scaled_params = inverse_lerp(LTC::GGX_reflection_minimum_param, LTC::GGX_reflection_maximum_param, LTC::GGX_reflection_LTC_params[i]);
+        scaled_LTC_parameters[i] = { unsigned short(scaled_params.x * 65535 + 0.5f),
+                                     unsigned short(scaled_params.y * 65535 + 0.5f),
+                                     unsigned short(scaled_params.z * 65535 + 0.5f),
+                                     unsigned short(scaled_params.w * 65535 + 0.5f) };
+    }
+
+    OShaderResourceView GGX_LTC_fit_srv;
+    create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_UNORM, scaled_LTC_parameters, width, height, D3D11_USAGE_IMMUTABLE, &GGX_LTC_fit_srv);
+
+    delete[] scaled_LTC_parameters;
+
+    return GGX_LTC_fit_srv;
 }
 
 } // NS DX11Renderer::Managers
