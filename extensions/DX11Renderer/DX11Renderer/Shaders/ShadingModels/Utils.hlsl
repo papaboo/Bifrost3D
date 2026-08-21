@@ -32,6 +32,7 @@ SamplerState tint_roughness_sampler : register(s2);
 Texture2D metallic_tex : register(t3);
 SamplerState metallic_sampler : register(s3);
 
+Texture2D<float4> ggx_ltc_fit_tex : register(t13);
 Texture3D<float2> dielectric_ggx_rho_tex : register(t14);
 Texture2D<float2> ggx_with_fresnel_rho_tex : register(t15);
 
@@ -106,6 +107,42 @@ struct DielectricRho {
         return res;
     }
 };
+
+// ------------------------------------------------------------------------------------------------
+// Linearly transformed cosine approximations of BRDFs.
+// ------------------------------------------------------------------------------------------------
+
+namespace OrenNayarLTC {
+static IsotropicLTC fetch(float abs_cos_theta_o, float roughness) {
+    float mu = abs_cos_theta_o;
+    float m00 = 1.0f + roughness * (0.303392f + (-0.518982f + 0.111709f*mu)*mu + (-0.276266f + 0.335918f*mu) * roughness);
+    float m02 = roughness * (-1.16407f + 1.15859f*mu + (0.150815f - 0.150105f*mu)*roughness) / (mu*mu*mu - 1.43545f);
+    float m11 = 1.0f + roughness * (0.20013f + (-0.506373f + 0.261777f*mu)*mu);
+    float m20 = roughness * (0.540852f + (-1.01625f + 0.475392f*mu)*mu) / (-1.0743f + (0.0725628f + mu)*mu);
+
+    return IsotropicLTC::from_M(m00, m11, 1.0f, m02, m20);
+}
+}
+
+namespace GGXReflectionLTC {
+static const int angle_sample_count = 64;
+static const int roughness_sample_count = 64;
+static const float4 minimum_param_value = float4(0.0, -0.297647, -0.0138124, 0.0);
+static const float4 maximum_param_value = float4(1.00099, 0.0263276, 0.590569, 1.6577);
+
+static IsotropicLTC fetch(float abs_cos_theta_o, float roughness) {
+    float v = sqrt(max(0.0f, 1 - abs_cos_theta_o));
+
+    // Adjust UV coordinates to start sampling half a pixel into the texture, as the pixel values correspond to the boundaries of the LTC fit.
+    float roughness_u = lerp(0.5 / roughness_sample_count, 1.0 - 0.5 / roughness_sample_count, roughness);
+    float cos_theta_v = lerp(0.5 / angle_sample_count, 1.0 - 0.5 / angle_sample_count, v);
+
+    float4 scaled_ltc_params = ggx_ltc_fit_tex.SampleLevel(bilinear_sampler, float2(roughness_u, cos_theta_v), 0);
+    float4 ltc_params = lerp(minimum_param_value, maximum_param_value, scaled_ltc_params);
+
+    return IsotropicLTC::from_inverse_M(ltc_params.x, 1, ltc_params.w, ltc_params.z, ltc_params.y);
+}
+}
 
 // ------------------------------------------------------------------------------------------------
 // Parameters.

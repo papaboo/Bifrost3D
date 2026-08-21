@@ -13,6 +13,7 @@
 #include <Utils.h>
 
 #include <Bifrost/Assets/Shading/Fittings.h>
+#include <Bifrost/Assets/Shading/LinearlyTransformedCosines.h>
 
 #include <DX11Renderer/Managers/MaterialManager.h>
 #include <DX11Renderer/Managers/ShaderManager.h>
@@ -236,6 +237,114 @@ GTEST_TEST(MaterialManager, sample_GPU_dielectric_GGX_rho_texture_consistent_wit
                 EXPECT_FLOAT_EQ_EPS(gpu_total_rho, cpu.total_rho, 0.0001f) << "cos_theta: " << cos_theta << ", roughness: " << roughness << ", ior_i_over_o: " << ior_i_over_o;
                 EXPECT_FLOAT_EQ_EPS(gpu_reflection_rho, cpu.reflected_rho, 0.0001f) << "cos_theta: " << cos_theta << ", roughness: " << roughness << ", ior_i_over_o: " << ior_i_over_o;
             }
+        }
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+// Ensure that the hardcoded GGX ltc texture dimensions used to adjust the sample coordinates 
+// on the GPU match the ones on the CPU.
+// ------------------------------------------------------------------------------------------------
+GTEST_TEST(MaterialManager, GPU_GGX_LTC_texture_dimensions_consistent_with_CPU) {
+    using namespace Bifrost::Assets::Shading;
+
+    // Setup GPU
+    auto device = create_test_device();
+    auto context = get_immidiate_context1(device);
+
+    // Create compute shader to return the texture dimensions
+    const char* ltc_dimensions_cs =
+        "#include <ShadingModels/Utils.hlsl>\n"
+        "\n"
+        "RWStructuredBuffer<int> ltc_dimensions : register(u0);\n"
+        "\n"
+        "[numthreads(1, 1, 1)]\n"
+        "void ltc_dimensions_cs(uint2 threadIndex : SV_GroupThreadID) {\n"
+        "   ltc_dimensions[0] = ShadingModels::GGXReflectionLTC::angle_sample_count;\n"
+        "   ltc_dimensions[1] = ShadingModels::GGXReflectionLTC::roughness_sample_count;\n"
+        "}\n";
+    OComputeShader ltc_dimensions_shader;
+    OBlob shader_blob = ShaderManager().compile_shader_source(ltc_dimensions_cs, "cs_5_0", "ltc_dimensions_cs");
+    THROW_DX11_ERROR(device->CreateComputeShader(UNPACK_BLOB_ARGS(shader_blob), nullptr, &ltc_dimensions_shader));
+
+    OUnorderedAccessView ltc_dimensions_UAV;
+    OBuffer ltc_dimensions_buffer = create_default_buffer(device, DXGI_FORMAT_R32_UINT, nullptr, 2, nullptr, &ltc_dimensions_UAV);
+    context->CSSetUnorderedAccessViews(0, 1, &ltc_dimensions_UAV, nullptr);
+
+    context->CSSetShader(ltc_dimensions_shader, nullptr, 0);
+    context->Dispatch(1, 1, 1);
+
+    int gpu_ltc_dimensions[2];
+    Readback::buffer(device, context, ltc_dimensions_buffer, gpu_ltc_dimensions, gpu_ltc_dimensions + 2);
+
+    EXPECT_EQ(gpu_ltc_dimensions[0], LTC::GGX_reflection_angle_sample_count);
+    EXPECT_EQ(gpu_ltc_dimensions[1], LTC::GGX_reflection_roughness_sample_count);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Test that sampling the precomputed GGX rho texture results in the right values.
+// Essentially this tests that the GPU UV offsets are consistent with the CPU UV offsets.
+// ------------------------------------------------------------------------------------------------
+GTEST_TEST(MaterialManager, sample_GPU_GGX_LTC_texture_consistent_with_CPU) {
+    using namespace Bifrost::Assets::Shading;
+
+    // Setup GPU
+    auto device = create_test_device();
+    auto context = get_immidiate_context1(device);
+
+    // Upload rho texture and bilinear sampler
+    auto GGX_LTC_fit_srv = MaterialManager::create_GGX_LTC_fit_srv(device);
+    context->CSSetShaderResources(13, 1, &GGX_LTC_fit_srv);
+    auto bilinear_sampler = TextureManager::create_clamped_linear_sampler(device);
+    context->CSSetSamplers(15, 1, &bilinear_sampler);
+
+    // Create compute shader to sample the rho texture
+    const char* sample_rho_cs =
+        "#include <ShadingModels/Utils.hlsl>\n"
+        "\n"
+        "RWStructuredBuffer<float4> ltc_samples : register(u0);\n"
+        "static const int samples_per_dimension = 4;\n"
+        "\n"
+        "[numthreads(samples_per_dimension, samples_per_dimension, 1)]\n"
+        "void sample_rho_cs(uint2 threadIndex : SV_GroupThreadID) {\n"
+        "   float cos_theta_o = threadIndex.x / (samples_per_dimension - 1.0f);\n"
+        "   float roughness = threadIndex.y / (samples_per_dimension - 1.0f);\n"
+        "   uint linear_index = threadIndex.x + threadIndex.y * samples_per_dimension;\n"
+        "   IsotropicLTC ltc = ShadingModels::GGXReflectionLTC::fetch(cos_theta_o, roughness);\n"
+        "   ltc_samples[linear_index] = float4(ltc.e00, ltc.e02, ltc.e22, ltc.e20);\n" // e11 is 1 and ignored for the test.
+        "}\n";
+    OComputeShader sample_ltc_shader;
+    OBlob shader_blob = ShaderManager().compile_shader_source(sample_rho_cs, "cs_5_0", "sample_rho_cs");
+    THROW_DX11_ERROR(device->CreateComputeShader(UNPACK_BLOB_ARGS(shader_blob), nullptr, &sample_ltc_shader));
+
+    // Sample the ltc texture on the GPU and readback the samples
+    const int samples_per_dimension = 4;
+    const int sample_count = samples_per_dimension * samples_per_dimension;
+    OUnorderedAccessView buffer_UAV;
+    OBuffer gpu_buffer = create_default_buffer(device, DXGI_FORMAT_R32G32B32A32_FLOAT, nullptr, sample_count, nullptr, &buffer_UAV);
+    context->CSSetUnorderedAccessViews(0, 1, &buffer_UAV, nullptr);
+
+    context->CSSetShader(sample_ltc_shader, nullptr, 0);
+    context->Dispatch(1, 1, 1);
+
+    float4 gpu_ltc_result[sample_count];
+    Readback::buffer(device, context, gpu_buffer, gpu_ltc_result, gpu_ltc_result + sample_count);
+
+    // Compare with the CPU version
+    for (int y = 0; y < samples_per_dimension; y++) {
+        float roughness = y / (samples_per_dimension - 1.0f);
+        for (int x = 0; x < samples_per_dimension; x++) {
+            float cos_theta_o = x / (samples_per_dimension - 1.0f);
+
+            float4 actual_ltc_params = gpu_ltc_result[x + y * samples_per_dimension];
+
+            auto expected_ltc = LTC::GGX_reflection_LTC_coefficients(cos_theta_o, roughness);
+            float4 expected_ltc_params = { expected_ltc.e00, expected_ltc.e02, expected_ltc.e22, expected_ltc.e20 };
+
+            EXPECT_FLOAT_EQ_EPS(actual_ltc_params.x, expected_ltc_params.x, 0.0002f) << "cos_theta_o: " << cos_theta_o << ", roughness: " << roughness;
+            EXPECT_FLOAT_EQ_EPS(actual_ltc_params.y, expected_ltc_params.y, 0.0002f) << "cos_theta_o: " << cos_theta_o << ", roughness: " << roughness;
+            EXPECT_FLOAT_EQ_EPS(actual_ltc_params.z, expected_ltc_params.z, 0.0002f) << "cos_theta_o: " << cos_theta_o << ", roughness: " << roughness;
+            EXPECT_FLOAT_EQ_EPS(actual_ltc_params.w, expected_ltc_params.w, 0.0002f) << "cos_theta_o: " << cos_theta_o << ", roughness: " << roughness;
         }
     }
 }

@@ -8,6 +8,8 @@
 
 #include <gtest/gtest.h>
 
+#include <LightSources/LtcAreaLightTest.h>
+
 #include <Managers/MaterialManagerTest.h>
 #include <Managers/MeshManagerTest.h>
 #include <Managers/MeshModelManagerTest.h>

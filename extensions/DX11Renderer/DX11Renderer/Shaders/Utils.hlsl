@@ -58,6 +58,44 @@ struct Sphere {
     }
 };
 
+// ------------------------------------------------------------------------------------------------
+// Linearly transformed cosines implementtation.
+// Stores the inverse M matrix, so the matrix that transforms from shading space to LTC space,
+// as we transform lights into LTC space for approximating area lights.
+// ------------------------------------------------------------------------------------------------
+struct IsotropicLTC {
+    // Elements in the inverse M matrix
+    float e00, e11, e22, e02, e20;
+
+    static IsotropicLTC from_inverse_M(float e00, float e11, float e22, float e02, float e20) {
+        IsotropicLTC ltc = { e00, e11, e22, e02, e20 };
+        return ltc;
+    }
+    static IsotropicLTC from_M(float e00, float e11, float e22, float e02, float e20) {
+        float3x3 inverse_M = invert_matrix(e00, e11, e22, e02, e20);
+        return from_inverse_M(inverse_M._m00, inverse_M._m11, inverse_M._m22, inverse_M._m02, inverse_M._m20);
+    }
+
+    static IsotropicLTC identity() { return from_inverse_M(1, 1, 1, 0, 0); }
+
+    float3x3 get_inverse_M() { return float3x3(e00, 0.0f, e02, 0.0f, e11, 0.0f, e20, 0.0f, e22); }
+    float3x3 get_M() { return invert_matrix(e00, e11, e22, e02, e20); }
+    float inverse_M_determinant() { return e11 * (e00 * e22 - e02 * e20); }
+
+    // Specialized 3x3 matrix inversion for diagonal cross matrices.
+    static float3x3 invert_matrix(float e00, float e11, float e22, float e02, float e20) {
+        // As all non-zero elements are scaled by e11, we inline that into the precomputed determinant.
+        // e11 is part of computing the determinant, so removing it produces e11 / determinant.
+        // float determinant = e11 * (e00 * e22 - e02 * e20); // Included for reference
+        float e11_over_determinant = 1.0f / (e00 * e22 - e02 * e20);
+
+        float3x3 inverse = { e22 * e11_over_determinant, 0.0f, -e02 * e11_over_determinant,
+                             0.0f, 1.0f / e11, 0.0f,
+                            -e20 * e11_over_determinant, 0.0f, e00 * e11_over_determinant };
+        return inverse;
+    }
+};
+
 // Mirrored CPU side by Renderer::SceneConstants
 struct SceneVariables {
     float4x4 view_projection_matrix;
@@ -380,6 +418,53 @@ CentroidAndSolidangle centroid_and_solidangle_on_hemisphere(Cone cone) {
             return Cone::make(centroid_direction, solidangle);
         }
     }
+}
+
+// ------------------------------------------------------------------------------------------------
+// Intersection functions
+// ------------------------------------------------------------------------------------------------
+
+// Mueller-Trumbore ray/triangle intersection.
+bool ray_triangle_intersection(float3 ray_origin, float3 ray_direction, float3 positions[3], out float3 barycentric_coords, bool two_sided = true) {
+
+    float3 edge1 = positions[1] - positions[0];
+    float3 edge2 = positions[2] - positions[0];
+    float3 ray_cross_edge2 = cross(ray_direction, edge2);
+    float determinant = dot(edge1, ray_cross_edge2);
+
+    if (two_sided ? determinant == 0 : determinant <= 0) {
+        // Output degenerate barycentric coords as the ray is parallel to the triangle plane.
+        barycentric_coords = float3(0, 0, 0);
+        return false;
+    }
+
+    float inv_determinant = 1.0 / determinant;
+    float3 s = ray_origin - positions[0];
+    float u = inv_determinant * dot(s, ray_cross_edge2);
+
+    float3 s_cross_edge1 = cross(s, edge1);
+    float v = inv_determinant * dot(ray_direction, s_cross_edge1);
+
+    float distance = inv_determinant * dot(edge2, s_cross_edge1);
+
+    barycentric_coords = float3(1 - u - v, u, v);
+
+    // Ray intersected the triangle if the barycentric coordinates are valid and the triangle is in front of the ray.
+    bool valid_u = u >= 0 && u <= 1;
+    bool valid_v = v >= 0 && u + v <= 1;
+    bool valid_distance = distance > 0.0;
+    return valid_u && valid_v && valid_distance;
+}
+
+// If barycentric coordinates fall outside of a triangle, i.e. one of more of the coordinates are negative,
+// we can coarsely project the barycentric coordinates to the triangle by clamping the coordinates to 0 and re-normalizing.
+// This doesn't find the closest barycentric coordinate geometrically speaking though.
+float3 project_barycentric_coords_to_triangle_coarse(float3 barycentric_coord) {
+    barycentric_coord.x = max(0, barycentric_coord.x);
+    barycentric_coord.y = max(0, barycentric_coord.y);
+    barycentric_coord.z = max(0, barycentric_coord.z);
+
+    return barycentric_coord / (barycentric_coord.x + barycentric_coord.y + barycentric_coord.z);
 }
 
 #endif // _DX11_RENDERER_SHADERS_UTILS_H_

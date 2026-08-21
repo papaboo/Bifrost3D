@@ -189,7 +189,7 @@ inline OBuffer create_default_buffer(ID3D11Device1& device, DXGI_FORMAT format, 
     return create_default_buffer(device, format, nullptr, element_count, buffer_SRV, buffer_UAV);
 }
 
-inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, void* pixels, unsigned int width, unsigned int height, D3D11_USAGE usage,
+inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, const void* pixels, unsigned int width, unsigned int height, D3D11_USAGE usage,
                                     ID3D11ShaderResourceView** texture_SRV, ID3D11UnorderedAccessView** texture_UAV = nullptr, ID3D11RenderTargetView** texture_RTV = nullptr) {
     D3D11_TEXTURE2D_DESC tex_desc;
     tex_desc.Width = width;
@@ -227,7 +227,7 @@ inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, v
     return texture;
 };
 
-inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, void* pixels, unsigned int width, unsigned int height,
+inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, const void* pixels, unsigned int width, unsigned int height,
                                     ID3D11ShaderResourceView** texture_SRV, ID3D11UnorderedAccessView** texture_UAV = nullptr, ID3D11RenderTargetView** texture_RTV = nullptr) {
     return create_texture_2D(device, format, pixels, width, height, D3D11_USAGE_DEFAULT, texture_SRV, texture_UAV, texture_RTV);
 }
@@ -237,7 +237,7 @@ inline OTexture2D create_texture_2D(ID3D11Device1& device, DXGI_FORMAT format, u
     return create_texture_2D(device, format, nullptr, width, height, D3D11_USAGE_DEFAULT, texture_SRV, texture_UAV, texture_RTV);
 }
 
-inline OTexture3D create_texture_3D(ID3D11Device1& device, DXGI_FORMAT format, void* pixels, unsigned int width, unsigned int height, unsigned int depth, D3D11_USAGE usage,
+inline OTexture3D create_texture_3D(ID3D11Device1& device, DXGI_FORMAT format, const void* pixels, unsigned int width, unsigned int height, unsigned int depth, D3D11_USAGE usage,
                                     ID3D11ShaderResourceView** texture_SRV, ID3D11UnorderedAccessView** texture_UAV = nullptr, ID3D11RenderTargetView** texture_RTV = nullptr) {
     D3D11_TEXTURE3D_DESC tex_desc;
     tex_desc.Width = width;

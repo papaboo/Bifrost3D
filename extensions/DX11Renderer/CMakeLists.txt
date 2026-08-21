@@ -51,6 +51,7 @@ if (DIRECTX11_FOUND AND WIN32)
     DX11Renderer/Shaders/EnvironmentMap.hlsl
     DX11Renderer/Shaders/IBLConvolution.hlsl
     DX11Renderer/Shaders/LightSources.hlsl
+    DX11Renderer/Shaders/LtcAreaLight.hlsl
     DX11Renderer/Shaders/ModelGBuffer.hlsl
     DX11Renderer/Shaders/ModelShading.hlsl
     DX11Renderer/Shaders/RNG.hlsl
