@@ -16,6 +16,7 @@
 
 #include <Bifrost/Assets/Shading/Fittings.h>
 #include <Bifrost/Assets/Shading/LinearlyTransformedCosines.h>
+#include <Bifrost/Math/RNG.h>
 
 namespace Bifrost::Assets::Shading {
 
@@ -108,24 +109,28 @@ float LTC_error(Math::Vector3f wo, BSDF bsdf, Math::IsotropicLTC ltc, int max_sa
             // error with MIS weight
             if (bsdf_response.PDF.is_valid()) {
                 float error = fabsf(ltc_target - ltc_evaluation);
-                summed_error += (error * error * error) / (ltc_sample.PDF + bsdf_response.PDF.value());
+                error = error * error * error;
+                float mis_weight = Math::MonteCarlo::balance_heuristic(ltc_sample.PDF, bsdf_response.PDF.value());
+                summed_error += error * mis_weight / ltc_sample.PDF;
                 ++valid_sample_count;
             }
         }
 
         { // BSDF error
             BSDFSample bsdf_sample = bsdf.sample(wo, random_sample);
-            Math::Vector3f wi = bsdf_sample.direction;
-            float cos_theta_i = abs(wi.z);
-
-            float ltc_target = bsdf_sample.reflectance.r * cos_theta_i;
-            float ltc_evaluation = ltc.evaluate(wi);
-            float ltc_PDF = ltc_evaluation; // LTC's are perfectly sampled
-
-            // error with MIS weight
             if (bsdf_sample.PDF.is_valid()) {
+                Math::Vector3f wi = bsdf_sample.direction;
+                float cos_theta_i = abs(wi.z);
+
+                float ltc_target = bsdf_sample.reflectance.r * cos_theta_i;
+                float ltc_evaluation = ltc.evaluate(wi);
+                float ltc_PDF = ltc_evaluation; // LTC's are perfectly sampled
+
+                // error with MIS weight
                 float error = fabsf(ltc_target - ltc_evaluation);
-                summed_error += (error * error * error) / (ltc_PDF + bsdf_sample.PDF.value());
+                error = error * error * error;
+                float mis_weight = Math::MonteCarlo::balance_heuristic(bsdf_sample.PDF.value(), ltc_PDF);
+                summed_error += error * mis_weight / bsdf_sample.PDF.value();
                 ++valid_sample_count;
             }
         }
@@ -166,12 +171,11 @@ GTEST_TEST(Assets_Shading_Fittings, validate_oren_nayar_LTC_error) {
 }
 
 GTEST_TEST(Assets_Shading_Fittings, validate_GGX_LTC_error) {
-    const float full_specularity = 1.0f; // The LTCs are fitted without the Fresnel term
-
     auto error_statistics = Bifrost::Math::Statistics<float>();
 
     for (float roughness : { 0.1f, 0.5f, 0.9f }) {
-        auto brdf = BSDFs::GGXReflectionWrapper(roughness, full_specularity);
+        const float full_specularity = 1.0f; // The LTCs are fitted without the Fresnel term
+        auto brdf = BSDFs::GGXReflectionWrapper(BSDFs::GGX::alpha_from_roughness(roughness), full_specularity);
         brdf.normalized_rho(true);
         for (float cos_theta_o : { 0.1f, 0.5f, 0.9f }) {
             auto ltc = Bifrost::Assets::Shading::LTC::GGX_reflection_LTC_coefficients(cos_theta_o, roughness);
@@ -183,8 +187,8 @@ GTEST_TEST(Assets_Shading_Fittings, validate_GGX_LTC_error) {
         }
     }
 
-    EXPECT_FLOAT_EQ_EPS(error_statistics.mean(), 46.0f, 0.5f);
-    EXPECT_FLOAT_EQ_EPS(error_statistics.standard_deviation(), 106.0f, 0.5f);
+    EXPECT_FLOAT_EQ_EPS(error_statistics.mean(), 621.0f, 0.5f);
+    EXPECT_FLOAT_EQ_EPS(error_statistics.standard_deviation(), 1755.0f, 0.5f);
 }
 
 } // NS Bifrost::Assets::Shading
