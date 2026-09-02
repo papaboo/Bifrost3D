@@ -38,6 +38,8 @@ inline Math::IsotropicLTC oren_nayar_LTC_coefficients(float cos_theta_o, float r
 // ------------------------------------------------------------------------------------------------
 extern const int GGX_reflection_angle_sample_count;
 extern const int GGX_reflection_roughness_sample_count;
+extern const Math::Vector4f GGX_reflection_minimum_param;
+extern const Math::Vector4f GGX_reflection_maximum_param;
 extern const Math::Vector4f GGX_reflection_LTC_params[];
 Math::IsotropicLTC GGX_reflection_LTC_coefficients(float cos_theta_o, float roughness);
 

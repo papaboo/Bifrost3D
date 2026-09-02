@@ -49,7 +49,7 @@ GTEST_TEST(Assets_Shading_Fittings, validate_ggx_reflection_rho_precomputations)
 
 // Validate that a few select samples in the dielectric GGX precomputed Rho tables have the correct values and can be looked up correct.
 // We test the corner and middle samples and make sure that the sample coordinates match with the original precomputed sample coords.
-GTEST_TEST(Assets_Shading_Fittings, validate_dielectric_ggx_rho_precomputations) {
+GTEST_TEST(Assets_Shading_Fittings, validate_dielectric_GGX_rho_precomputations) {
     int sample_count = 8192;
 
     float middle_cos_theta = (Rho::dielectric_GGX_angle_sample_count / 2) / (Rho::dielectric_GGX_angle_sample_count - 1.0f);
@@ -141,7 +141,7 @@ float LTC_error(Math::Vector3f wo, BSDF bsdf, Math::IsotropicLTC ltc, int max_sa
 
 GTEST_TEST(Assets_Shading_Fittings, validate_lambert_LTC_fitting) {
     auto brdf = BSDFs::LambertWrapper();
-    auto ltc = Bifrost::Assets::Shading::LTC::lambert_LTC_coefficients();
+    auto ltc = LTC::lambert_LTC_coefficients();
     for (float cos_theta_o : { 0.1f, 0.5f, 0.9f }) {
         Math::Vector3f wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
         float error = LTC_error(wo, brdf, ltc);
@@ -157,7 +157,7 @@ GTEST_TEST(Assets_Shading_Fittings, validate_oren_nayar_LTC_error) {
     for (float roughness : { 0.1f, 0.5f, 0.9f }) {
         auto brdf = BSDFs::OrenNayarWrapper(roughness);
         for (float cos_theta_o : { 0.1f, 0.5f, 0.9f }) {
-            auto ltc = Bifrost::Assets::Shading::LTC::oren_nayar_LTC_coefficients(cos_theta_o, roughness);
+            auto ltc = LTC::oren_nayar_LTC_coefficients(cos_theta_o, roughness);
 
             Math::Vector3f wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
             float error = LTC_error(wo, brdf, ltc);
@@ -178,7 +178,7 @@ GTEST_TEST(Assets_Shading_Fittings, validate_GGX_LTC_error) {
         auto brdf = BSDFs::GGXReflectionWrapper(BSDFs::GGX::alpha_from_roughness(roughness), full_specularity);
         brdf.normalized_rho(true);
         for (float cos_theta_o : { 0.1f, 0.5f, 0.9f }) {
-            auto ltc = Bifrost::Assets::Shading::LTC::GGX_reflection_LTC_coefficients(cos_theta_o, roughness);
+            auto ltc = LTC::GGX_reflection_LTC_coefficients(cos_theta_o, roughness);
 
             Math::Vector3f wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
             float error = LTC_error(wo, brdf, ltc);
@@ -189,6 +189,25 @@ GTEST_TEST(Assets_Shading_Fittings, validate_GGX_LTC_error) {
 
     EXPECT_FLOAT_EQ_EPS(error_statistics.mean(), 621.0f, 0.5f);
     EXPECT_FLOAT_EQ_EPS(error_statistics.standard_deviation(), 1755.0f, 0.5f);
+}
+
+GTEST_TEST(Assets_Shading_Fittings, correct_GGX_LTC_bounds) {
+    using namespace Bifrost::Math;
+
+    int count = LTC::GGX_reflection_angle_sample_count * LTC::GGX_reflection_roughness_sample_count;
+    Vector4f expected_minimum = Vector4f(INFINITY);
+    Vector4f expected_maximum = Vector4f(-INFINITY);
+    for (int i = 0; i < count; ++i) {
+        Vector4f value = LTC::GGX_reflection_LTC_params[i];
+        expected_minimum = min(expected_minimum, value);
+        expected_maximum = max(expected_maximum, value);
+    }
+
+    Vector4f actual_minimum = LTC::GGX_reflection_minimum_param;
+    Vector4f actual_maximum = LTC::GGX_reflection_maximum_param;
+
+    EXPECT_VECTOR4F_EQ_EPS(expected_minimum, actual_minimum, 1e-6f);
+    EXPECT_VECTOR4F_EQ_EPS(expected_maximum, actual_maximum, 1e-6f);
 }
 
 } // NS Bifrost::Assets::Shading
