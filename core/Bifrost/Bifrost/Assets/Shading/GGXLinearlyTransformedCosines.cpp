@@ -16,6 +16,9 @@ namespace Bifrost::Assets::Shading::LTC {
 const int GGX_reflection_angle_sample_count = 64;
 const int GGX_reflection_roughness_sample_count = 64;
 
+const Vector4f GGX_reflection_minimum_param = Vector4f(0.0f, -0.297647f, -0.0138124f, 0.0f);
+const Vector4f GGX_reflection_maximum_param = Vector4f(1.00099f, 0.0263276f, 0.590569f, 1.6577f);
+
 // Parameters found in the g_ltc_1 array in https://github.com/selfshadow/ltc_code/blob/master/fit/results/ltc.js
 const Vector4f GGX_reflection_LTC_params[] = {
     Vector4f(1, 0, 0, 2e-05f),

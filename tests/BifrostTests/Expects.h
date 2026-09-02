@@ -32,7 +32,7 @@ inline bool almost_equal_eps(float lhs, float rhs, float eps) {
 
 inline bool almost_equal_percentage(float lhs, float rhs, float percentage) {
     float eps = lhs * percentage;
-    return almost_equal_eps(lhs, rhs, eps);
+    return almost_equal_eps(lhs, rhs, abs(eps));
 }
 #define EXPECT_FLOAT_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(almost_equal_percentage, expected, actual, percentage)
 #define EXPECT_PDF_EQ_PCT(expected, actual, percentage) EXPECT_PRED3(almost_equal_percentage, expected.value(), actual.value(), percentage)
@@ -108,6 +108,11 @@ inline bool equal_vector3f_eps(Bifrost::Math::Vector3f lhs, Bifrost::Math::Vecto
     return abs(lhs.x - rhs.x) < eps && abs(lhs.y - rhs.y) < eps && abs(lhs.z - rhs.z) < eps;
 }
 #define EXPECT_VECTOR3F_EQ_EPS(expected, actual, eps) EXPECT_PRED3(equal_vector3f_eps, expected, actual, eps)
+
+inline bool equal_vector4f_eps(Bifrost::Math::Vector4f lhs, Bifrost::Math::Vector4f rhs, float eps) {
+    return abs(lhs.x - rhs.x) < eps && abs(lhs.y - rhs.y) < eps && abs(lhs.z - rhs.z) < eps && abs(lhs.w - rhs.w) < eps;
+}
+#define EXPECT_VECTOR4F_EQ_EPS(expected, actual, eps) EXPECT_PRED3(equal_vector4f_eps, expected, actual, eps)
 
 template <typename T>
 inline bool equal_quaternion(Bifrost::Math::Quaternion<T> expected, Bifrost::Math::Quaternion<T> actual) {
