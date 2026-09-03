@@ -105,7 +105,7 @@ MeshID Meshes::create(const std::string& name, unsigned int primitive_count, uns
 
     m_names[id] = name;
     m_buffers[id].primitive_count = primitive_count;
-    m_buffers[id].primitives = new Vector3ui[primitive_count];
+    m_buffers[id].primitives = primitive_count != 0 ? new Vector3ui[primitive_count] : nullptr;
     m_buffers[id].vertex_count = vertex_count;
     m_buffers[id].positions = (buffer_bitmask.contains(MeshFlag::Position)) ? new Vector3f[vertex_count] : nullptr;
     m_buffers[id].normals = (buffer_bitmask.contains(MeshFlag::Normal)) ? new Vector3f[vertex_count] : nullptr;
