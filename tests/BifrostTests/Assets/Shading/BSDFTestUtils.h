@@ -136,6 +136,22 @@ inline void BSDF_consistency_test(BSDFModel bsdf_model, Vector3f wo, unsigned in
     }
 }
 
+template <typename ShadingModel>
+inline void shading_model_consistency_test(ShadingModel bsdf_model, Vector3f wo, unsigned int sample_count) {
+    for (unsigned int i = 0u; i < sample_count; ++i) {
+        Vector3f rng_sample = bsdf_rng_sample3f(i, sample_count);
+        BSDFSample sample = bsdf_model.sample(wo, rng_sample);
+
+        if (sample.PDF.is_valid()) {
+            EXPECT_GE(sample.reflectance.r, 0.0f) << bsdf_model.to_string() << ", cos_theta: " << wo.z;
+
+            BSDFResponse response = bsdf_model.evaluate_with_PDF(wo, sample.direction);
+            EXPECT_RGB_EQ_PCT(sample.reflectance, response.reflectance, 0.00002f) << bsdf_model.to_string() << ", cos_theta: " << wo.z;
+            EXPECT_PDF_EQ_PCT(sample.PDF, response.PDF, 0.00002f) << bsdf_model.to_string() << ", cos_theta: " << wo.z;
+        }
+    }
+}
+
 // Sample BRDF over a sphere and validate that if the BRDF reflects light, then the PDF must be positive.
 template <typename BSDFModel>
 inline void PDF_positivity_test(BSDFModel bsdf_model, Vector3f wo, unsigned int sample_count) {

@@ -36,6 +36,10 @@ set(ASSETS_SHADING_LIGHTSOURCES_SRCS
   Assets/Shading/LightSources/TriangleLightLTCTest.h
 )
 
+set(ASSETS_SHADING_SHADINGMODELS_SRCS
+  Assets/Shading/ShadingModels/DefaultShadingTest.h
+)
+
 set(CORE_SRCS
   Core/ArrayTest.h
   Core/BitmaskTest.h
@@ -74,7 +78,17 @@ set(SCENE_SRCS
   Scene/TransformTest.h
 )
 
-add_executable(${PROJECT_NAME} ${SRCS} ${ASSETS_SRCS} ${ASSETS_SHADING_SRCS} ${ASSETS_SHADING_BSDFS_SRCS} ${ASSETS_SHADING_LIGHTSOURCES_SRCS} ${CORE_SRCS} ${INPUT_SRCS} ${MATH_SRCS} ${SCENE_SRCS})
+add_executable(${PROJECT_NAME}
+               ${SRCS}
+               ${ASSETS_SRCS}
+               ${ASSETS_SHADING_SRCS}
+               ${ASSETS_SHADING_BSDFS_SRCS}
+               ${ASSETS_SHADING_LIGHTSOURCES_SRCS}
+               ${ASSETS_SHADING_SHADINGMODELS_SRCS}
+               ${CORE_SRCS}
+               ${INPUT_SRCS}
+               ${MATH_SRCS}
+               ${SCENE_SRCS})
 target_include_directories(${PROJECT_NAME} PRIVATE .)
 target_link_libraries(${PROJECT_NAME} gtest Bifrost)
 
@@ -83,6 +97,7 @@ source_group("Assets" FILES ${ASSETS_SRCS})
 source_group("Assets\\Shading" FILES ${ASSETS_SHADING_SRCS})
 source_group("Assets\\Shading\\BSDFs" FILES ${ASSETS_SHADING_BSDFS_SRCS})
 source_group("Assets\\Shading\\LightSources" FILES ${ASSETS_SHADING_LIGHTSOURCES_SRCS})
+source_group("Assets\\Shading\\ShadingModels" FILES ${ASSETS_SHADING_SHADINGMODELS_SRCS})
 source_group("Core" FILES ${CORE_SRCS})
 source_group("Input" FILES ${INPUT_SRCS})
 source_group("Math" FILES ${MATH_SRCS})
