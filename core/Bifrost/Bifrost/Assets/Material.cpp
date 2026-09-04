@@ -12,8 +12,7 @@
 
 using namespace Bifrost::Math;
 
-namespace Bifrost {
-namespace Assets {
+namespace Bifrost::Assets {
 
 MaterialIDGenerator Materials::m_UID_generator = MaterialIDGenerator(0u);
 std::string* Materials::m_names = nullptr;
@@ -143,20 +142,14 @@ void Materials::set_tint_roughness_texture_ID(MaterialID material_ID, TextureID 
 
 bool Materials::has_tint_texture(MaterialID material_ID) {
     Texture tex = m_materials[material_ID].tint_roughness_texture_ID;
-    if (!tex.exists() || !tex.get_image().exists())
-        return false;
-
     auto pixel_format = tex.get_image().get_pixel_format();
-    return channel_count(pixel_format) >= 3;
+    return has_color(pixel_format);
 }
 
 bool Materials::has_roughness_texture(MaterialID material_ID) {
     Texture tex = m_materials[material_ID].tint_roughness_texture_ID;
-    if (!tex.exists() || !tex.get_image().exists())
-        return false;
-
     auto pixel_format = tex.get_image().get_pixel_format();
-    return channel_count(pixel_format) == 4 || pixel_format == PixelFormat::Roughness8;
+    return has_alpha(pixel_format);
 }
 
 void Materials::set_specularity(MaterialID material_ID, float incident_specularity) {
@@ -217,5 +210,45 @@ void Materials::reset_change_notifications() {
     m_changes.reset_change_notifications();
 }
 
-} // NS Assets
-} // NS Bifrost
+Math::RGB Material::get_tint(Vector2f texcoord) const {
+    Math::RGB tint = get_tint();
+    if (has_tint_texture())
+        tint *= sample2D(get_tint_roughness_texture(), texcoord).rgb();
+    return tint;
+}
+
+float Material::get_roughness(Vector2f texcoord) const {
+    float roughness = get_roughness();
+    if (has_roughness_texture())
+        roughness *= sample2D(get_tint_roughness_texture(), texcoord).a;
+    return roughness;
+}
+
+std::tuple<Math::RGB, float> Material::get_tint_roughness(Math::Vector2f texcoord) const {
+    Math::RGB tint = get_tint();
+    float roughness = get_roughness();
+    
+    Texture texture = get_tint_roughness_texture();
+    if (texture.get_image().exists()) {
+        RGBA tint_roughness = sample2D(texture, texcoord);
+        auto pixel_format = texture.get_image().get_pixel_format();
+        
+        if (has_color(pixel_format))
+            tint *= tint_roughness.rgb();
+        if (has_alpha(pixel_format))
+            roughness *= tint_roughness.a;
+    }
+    return { tint, roughness };
+}
+
+float Material::get_metallic(Vector2f texcoord) const {
+    float metallic = get_metallic();
+
+    Texture texture = get_metallic_texture();
+    if (texture.get_image().exists())
+        metallic *= sample2D(texture, texcoord).a;
+
+    return metallic;
+}
+
+} // NS Bifrost::Assets

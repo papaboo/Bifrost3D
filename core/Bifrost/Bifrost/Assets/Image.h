@@ -71,6 +71,11 @@ inline int channel_count(PixelFormat format) {
     }
 }
 
+inline bool has_color(PixelFormat format) {
+    return format == PixelFormat::Intensity8 || format == PixelFormat::RGB24 || format == PixelFormat::RGBA32
+        || format == PixelFormat::Intensity_Float || format == PixelFormat::RGB_Float || format == PixelFormat::RGBA_Float;
+}
+
 inline bool has_alpha(PixelFormat format) {
     return format == PixelFormat::Alpha8 || format == PixelFormat::RGBA32 || format == PixelFormat::RGBA_Float;
 }

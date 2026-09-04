@@ -13,17 +13,20 @@
 
 #include <gtest/gtest.h>
 
-namespace Bifrost {
-namespace Assets {
+namespace Bifrost::Assets {
 
 class Assets_Material : public ::testing::Test {
 protected:
     // Per-test set-up and tear-down logic.
     virtual void SetUp() {
         Materials::allocate(8u);
+        Textures::allocate(8u);
+        Images::allocate(8u);
     }
     virtual void TearDown() {
         Materials::deallocate();
+        Textures::deallocate();
+        Images::deallocate();
     }
 };
 
@@ -218,7 +221,117 @@ TEST_F(Assets_Material, change_notifications) {
     }
 }
 
-} // NS Assets
-} // NS Bifrost
+TEST_F(Assets_Material, tint_sampling) {
+    using namespace Bifrost::Math;
+
+    RGB base_tint = { 0.1f, 0.5f, 0.9f };
+    Vector2f texcoords = { 0.5f, 0.5f };
+
+    { // No texture
+        Material no_texture_mat = Material::create_dielectric("no_texture", base_tint, 0.5f);
+        EXPECT_FALSE(no_texture_mat.has_tint_texture());
+        EXPECT_RGB_EQ(base_tint, no_texture_mat.get_tint(texcoords));
+    }
+
+    { // Intensity texture
+        float image_tint = 0.5f;
+        Image image = Image::create2D("intensity", PixelFormat::Intensity_Float, false, { 1, 1 });
+        image.set_pixel(Math::RGB(image_tint), 0);
+        Texture texture = Texture::create2D(image);
+        Material intensity_textured_mat = Material::create_dielectric("intensity_textured", base_tint, 0.5f);
+        intensity_textured_mat.set_tint_roughness_texture(texture);
+        EXPECT_TRUE(intensity_textured_mat.has_tint_texture());
+        EXPECT_RGB_EQ(base_tint * image_tint, intensity_textured_mat.get_tint(texcoords));
+    }
+
+    { // RGB texture
+        RGB image_tint = { 0.4f, 0.5f, 1.0f };
+        Image image = Image::create2D("color", PixelFormat::RGB_Float, false, { 1, 1 });
+        image.set_pixel(image_tint, 0);
+        Texture texture = Texture::create2D(image);
+        Material color_textured_mat = Material::create_dielectric("color_textured", base_tint, 0.5f);
+        color_textured_mat.set_tint_roughness_texture(texture);
+        EXPECT_TRUE(color_textured_mat.has_tint_texture());
+        EXPECT_RGB_EQ(base_tint * image_tint, color_textured_mat.get_tint(texcoords));
+    }
+
+    { // Roughness only texture should not affect tint
+        float image_roughness = 0.5f;
+        Image image = Image::create2D("roughness", PixelFormat::Roughness8, false, { 1, 1 });
+        image.set_pixel(Math::RGBA(RGB::white(), image_roughness), 0);
+        Texture texture = Texture::create2D(image);
+        Material roughness_textured_mat = Material::create_dielectric("roughness_textured", base_tint, 0.5f);
+        roughness_textured_mat.set_tint_roughness_texture(texture);
+        EXPECT_FALSE(roughness_textured_mat.has_tint_texture());
+        EXPECT_TRUE(roughness_textured_mat.has_roughness_texture());
+        EXPECT_RGB_EQ(base_tint, roughness_textured_mat.get_tint(texcoords));
+    }
+}
+
+TEST_F(Assets_Material, roughness_sampling) {
+    using namespace Bifrost::Math;
+
+    float base_roughness = 0.75f;
+    Vector2f texcoords = { 0.5f, 0.5f };
+
+    { // No texture
+        Material no_texture_mat = Material::create_dielectric("no_texture", RGB::white(), base_roughness);
+        EXPECT_FALSE(no_texture_mat.has_roughness_texture());
+        EXPECT_FLOAT_EQ(base_roughness, no_texture_mat.get_roughness(texcoords));
+    }
+
+    { // Roughness texture
+        float image_roughness = 0.5f;
+        Image image = Image::create2D("roughness", PixelFormat::Roughness8, false, { 1, 1 });
+        image.set_pixel(Math::RGBA(RGB::white(), image_roughness), 0);
+        Texture texture = Texture::create2D(image);
+        Material roughness_textured_mat = Material::create_dielectric("roughness_textured", RGB::white(), base_roughness);
+        roughness_textured_mat.set_tint_roughness_texture(texture);
+        EXPECT_TRUE(roughness_textured_mat.has_roughness_texture());
+        EXPECT_FLOAT_EQ_EPS(base_roughness * image_roughness, roughness_textured_mat.get_roughness(texcoords), UNorm8::max_precision());
+    }
+
+    { // Intensity texture should not affect roughness
+        float image_tint = 0.5f;
+        Image image = Image::create2D("intensity", PixelFormat::Intensity_Float, false, { 1, 1 });
+        image.set_pixel(Math::RGB(image_tint), 0);
+        Texture texture = Texture::create2D(image);
+        Material intensity_textured_mat = Material::create_dielectric("intensity_textured", RGB::white(), base_roughness);
+        intensity_textured_mat.set_tint_roughness_texture(texture);
+        EXPECT_TRUE(intensity_textured_mat.has_tint_texture());
+        EXPECT_FALSE(intensity_textured_mat.has_roughness_texture());
+        EXPECT_FLOAT_EQ(base_roughness, intensity_textured_mat.get_roughness(texcoords));
+    }
+}
+
+TEST_F(Assets_Material, tint_roughness_sampling) {
+    using namespace Bifrost::Math;
+
+    RGB base_tint = { 0.1f, 0.5f, 0.9f };
+    float base_roughness = 0.75f;
+    RGB image_tint = { 0.4f, 1.0f, 0.2f };
+    float image_roughness = 0.5f;
+    Vector2f texcoords = { 0.5f, 0.5f };
+
+    Image image = Image::create2D("color", PixelFormat::RGBA_Float, false, { 1, 1 });
+    image.set_pixel({ image_tint, image_roughness }, 0);
+    Texture texture = Texture::create2D(image);
+    Material textured_mat = Material::create_dielectric("color_roughness_textured", base_tint, base_roughness);
+    textured_mat.set_tint_roughness_texture(texture);
+    
+    EXPECT_TRUE(textured_mat.has_tint_texture());
+    EXPECT_TRUE(textured_mat.has_roughness_texture());
+
+    // Sample properties individually
+    EXPECT_RGB_EQ(base_tint * image_tint, textured_mat.get_tint(texcoords));
+    EXPECT_FLOAT_EQ(base_roughness * image_roughness, textured_mat.get_roughness(texcoords));
+
+    // Sample properties at the same time.
+    auto [actual_tint, actual_roughness] = textured_mat.get_tint_roughness(texcoords);
+    EXPECT_RGB_EQ(base_tint * image_tint, actual_tint);
+    EXPECT_FLOAT_EQ(base_roughness * image_roughness, actual_roughness);
+}
+
+} // NS Bifrost::Assets
 
 #endif // _BIFROST_ASSETS_MATERIAL_TEST_H_
