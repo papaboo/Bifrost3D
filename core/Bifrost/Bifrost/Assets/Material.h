@@ -275,19 +275,23 @@ public:
     inline bool is_cutout() const { return get_flags().is_set(MaterialFlag::Cutout); }
 
     inline Math::RGB get_tint() const { return Materials::get_tint(m_ID); }
+    Math::RGB get_tint(Math::Vector2f texcoord) const;
     inline void set_tint(Math::RGB tint) { Materials::set_tint(m_ID, tint); }
     inline float get_roughness() const { return Materials::get_roughness(m_ID); }
+    float get_roughness(Math::Vector2f texcoord) const;
     inline void set_roughness(float roughness) { Materials::set_roughness(m_ID, roughness); }
     inline const Texture get_tint_roughness_texture() const { return Materials::get_tint_roughness_texture_ID(m_ID); }
     inline TextureID get_tint_roughness_texture_ID() const { return Materials::get_tint_roughness_texture_ID(m_ID); }
     inline void set_tint_roughness_texture(Texture tint_roughness_texture) { Materials::set_tint_roughness_texture_ID(m_ID, tint_roughness_texture.get_ID()); }
     inline bool has_tint_texture() const { return Materials::has_tint_texture(m_ID); }
     inline bool has_roughness_texture() const { return Materials::has_roughness_texture(m_ID); }
+    std::tuple<Math::RGB, float> get_tint_roughness(Math::Vector2f texcoord) const;
 
     inline float get_specularity() const { return Materials::get_specularity(m_ID); }
     inline void set_specularity(float specularity) { Materials::set_specularity(m_ID, specularity); }
 
     inline float get_metallic() const { return Materials::get_metallic(m_ID); }
+    float get_metallic(Math::Vector2f texcoord) const;
     inline void set_metallic(float metallic) { Materials::set_metallic(m_ID, metallic); }
     inline const Texture get_metallic_texture() const { return Materials::get_metallic_texture_ID(m_ID); }
     inline TextureID get_metallic_texture_ID() const { return Materials::get_metallic_texture_ID(m_ID); }
