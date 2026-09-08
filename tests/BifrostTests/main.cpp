@@ -17,6 +17,7 @@
 #include <Assets/Shading/LightSources/TriangleLightTest.h>
 #include <Assets/Shading/LightSources/TriangleLightLTCTest.h>
 #include <Assets/Shading/ShadingModels/DefaultShadingTest.h>
+#include <Assets/Shading/ShadingModels/DefaultShadingLTCTest.h>
 #include <Assets/Shading/FittingsTest.h>
 #include <Assets/Shading/ThinSheetTest.h>
 #include <Assets/Shading/UtilsTest.h>

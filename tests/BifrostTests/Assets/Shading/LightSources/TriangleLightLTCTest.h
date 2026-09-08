@@ -24,7 +24,7 @@ namespace Bifrost::Assets::Shading::LightSources {
 
 template <typename BSDFModel>
 float triangle_light_integration_error(Math::Vector3f wo, BSDFModel bsdf_model, Math::IsotropicLTC ltc_bsdf_model, Math::Trianglef light_surface,
-                                       int max_sample_count = 4096) {
+                                       int sample_count = 4096) {
     using namespace Bifrost::Math;
 
     // Create a two-sided light with emitted radiance set to white.
@@ -38,39 +38,7 @@ float triangle_light_integration_error(Math::Vector3f wo, BSDFModel bsdf_model, 
     Vector3f surface_point = { 0, 0, 0 };
     Vector3f surface_normal = { 0, 0, 1 };
 
-    // Integrate light
-    RGB monte_carlo_estimation = RGB::black();
-    {
-        // Sample lights
-        for (int s = 0; s < max_sample_count; ++s) {
-            auto light_sample = light.sample_radiance(surface_point, BSDFTestUtils::bsdf_rng_sample2f(s));
-            Vector3f wi = light_sample.direction_to_light;
-
-            auto bsdf_response = bsdf_model.evaluate_with_PDF(wo, wi);
-            float abs_cos_theta_i = abs(dot(surface_normal, wi));
-
-            RGB contribution = light_sample.radiance * bsdf_response.reflectance * abs_cos_theta_i / light_sample.PDF.value();
-            float mis_weight = MonteCarlo::balance_heuristic(light_sample.PDF, bsdf_response.PDF);
-            monte_carlo_estimation += contribution * mis_weight;
-        }
-
-        // Sample BSDF
-        for (int s = 0; s < max_sample_count; ++s) {
-            auto bsdf_sample = bsdf_model.sample(wo, BSDFTestUtils::bsdf_rng_sample3f(s, max_sample_count));
-            Vector3f wi = bsdf_sample.direction;
-
-            auto light_response = light.evaluate_with_PDF(surface_point, wi);
-            if (light_response.PDF.is_valid_and_not_delta_dirac()) {
-                float abs_cos_theta_i = abs(dot(surface_normal, wi));
-
-                RGB contribution = light_response.radiance * bsdf_sample.reflectance * abs_cos_theta_i / bsdf_sample.PDF.value();
-                float mis_weight = MonteCarlo::balance_heuristic(bsdf_sample.PDF, light_response.PDF);
-                monte_carlo_estimation += contribution * mis_weight;
-            }
-        }
-
-        monte_carlo_estimation /= max_sample_count;
-    }
+    RGB monte_carlo_estimation = BSDFTestUtils::integrate_light_over_surface(wo, surface_point, surface_normal, bsdf_model, light, sample_count);
 
     RGB ltc_estimation = light.evaluate(ltc_bsdf_model, wo, surface_point, surface_normal);
 

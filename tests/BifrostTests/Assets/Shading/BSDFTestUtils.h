@@ -171,6 +171,45 @@ inline void PDF_positivity_test(BSDFModel bsdf_model, Vector3f wo, unsigned int 
     }
 }
 
+// Integrate over the surface point with the given shading model to find the light reflected towards wo.
+template <typename BSDFModel, typename LightSource>
+inline Math::RGB integrate_light_over_surface(Vector3f wo, Vector3f surface_point, Vector3f surface_normal,
+                                              BSDFModel bsdf_model, LightSource light_source, unsigned int sample_count) {
+    RGB monte_carlo_estimation = RGB::black();
+    
+    // Sample lights
+    for (int s = 0; s < sample_count; ++s) {
+        auto light_sample = light_source.sample_radiance(surface_point, BSDFTestUtils::bsdf_rng_sample2f(s));
+        Vector3f wi = light_sample.direction_to_light;
+
+        auto bsdf_response = bsdf_model.evaluate_with_PDF(wo, wi);
+        if (bsdf_response.PDF.is_valid_and_not_delta_dirac()) {
+            float abs_cos_theta_i = abs(dot(surface_normal, wi));
+
+            RGB contribution = light_sample.radiance * bsdf_response.reflectance * abs_cos_theta_i / light_sample.PDF.value();
+            float mis_weight = MonteCarlo::balance_heuristic(light_sample.PDF, bsdf_response.PDF);
+            monte_carlo_estimation += contribution * mis_weight;
+        }
+    }
+
+    // Sample BSDF
+    for (int s = 0; s < sample_count; ++s) {
+        auto bsdf_sample = bsdf_model.sample(wo, BSDFTestUtils::bsdf_rng_sample3f(s, sample_count));
+        Vector3f wi = bsdf_sample.direction;
+
+        auto light_response = light_source.evaluate_with_PDF(surface_point, wi);
+        if (light_response.PDF.is_valid_and_not_delta_dirac()) {
+            float abs_cos_theta_i = abs(dot(surface_normal, wi));
+
+            RGB contribution = light_response.radiance * bsdf_sample.reflectance * abs_cos_theta_i / bsdf_sample.PDF.value();
+            float mis_weight = MonteCarlo::balance_heuristic(bsdf_sample.PDF, light_response.PDF);
+            monte_carlo_estimation += contribution * mis_weight;
+        }
+    }
+
+    return monte_carlo_estimation /= sample_count;
+}
+
 struct ThinSheetThroughput {
     RGB reflected;
     RGB transmitted;

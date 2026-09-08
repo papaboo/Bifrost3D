@@ -1,4 +1,4 @@
-// OptiX shading model utils.
+// Bifrost shading model utils.
 // ---------------------------------------------------------------------------
 // Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
@@ -12,8 +12,14 @@
 #include <Bifrost/Assets/Shading/Constants.h>
 #include <Bifrost/Assets/Shading/Fittings.h>
 #include <Bifrost/Math/Color.h>
+#include <Bifrost/Math/LTC.h>
 
 namespace Bifrost::Assets::Shading::ShadingModels {
+
+struct BsdfLtc {
+    Math::RGB tint;
+    Math::IsotropicLTC shading_to_ltc;
+};
 
 // Scales the roughness of a material placed underneath a rough coat layer.
 // This is done to simulate how a wider lobe from the rough transmission would perceptually widen the specular lobe of the underlying material.

@@ -312,6 +312,37 @@ public:
         float coat_roughness = BSDFs::GGX::roughness_from_alpha(m_coat_alpha);
         return SpecularRho::fetch(abs_cos_theta, coat_roughness).rho(coat_specularity) * m_coat_scale;
     }
+
+    struct BsdfLtcStack {
+        BsdfLtc stack[3];
+        unsigned int count;
+
+        _inline_all_archs_ BsdfLtc& operator[](int index) { return stack[index]; }
+    };
+
+    // Convert the material into an approximate linearly transformed cosine representation.
+    _inline_all_archs_ BsdfLtcStack get_LTC_representation(float cos_theta_o) const {
+        BsdfLtcStack ltc_stack = {};
+
+        ltc_stack.stack[0].tint = specular_rho(cos_theta_o);
+        ltc_stack.stack[0].shading_to_ltc = LTC::GGX_reflection_LTC_coefficients(cos_theta_o, m_roughness);
+        ltc_stack.count = 1;
+
+        if (m_diffuse_tint != Math::RGB::black()) {
+            ltc_stack.stack[1].tint = m_diffuse_tint;
+            ltc_stack.stack[1].shading_to_ltc = LTC::oren_nayar_LTC_coefficients(cos_theta_o, m_roughness);
+            ltc_stack.count = 2;
+        }
+
+        if (m_coat_scale > 0) {
+            float coat_roughness = BSDFs::GGX::roughness_from_alpha(m_coat_alpha);
+            ltc_stack.stack[ltc_stack.count].tint = Math::RGB(coat_rho(cos_theta_o));
+            ltc_stack.stack[ltc_stack.count].shading_to_ltc = LTC::GGX_reflection_LTC_coefficients(cos_theta_o, coat_roughness);
+            ltc_stack.count++;
+        }
+
+        return ltc_stack;
+    }
 };
 
 } // NS Bifrost::Assets::Shading::ShadingModels

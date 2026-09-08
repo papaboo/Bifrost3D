@@ -38,6 +38,7 @@ set(ASSETS_SHADING_LIGHTSOURCES_SRCS
 
 set(ASSETS_SHADING_SHADINGMODELS_SRCS
   Assets/Shading/ShadingModels/DefaultShadingTest.h
+  Assets/Shading/ShadingModels/DefaultShadingLTCTest.h
 )
 
 set(CORE_SRCS
