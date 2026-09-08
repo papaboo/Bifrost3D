@@ -38,6 +38,8 @@ public:
 
     BSDFSample sample(Math::Vector3f wo, Math::Vector3f random_sample) const { return m_shading_model.sample(wo, random_sample); }
 
+    DefaultShading::BsdfLtcStack get_LTC_representation(float cos_theta_o) const { return m_shading_model.get_LTC_representation(cos_theta_o); }
+
     float get_roughness() const { return m_shading_model.get_roughness(); }
 
     float get_diffuse_probability() const { return m_shading_model.get_diffuse_probability(); }
