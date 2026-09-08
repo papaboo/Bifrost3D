@@ -15,6 +15,59 @@
 
 namespace Bifrost::Math {
 
+GTEST_TEST(Math_Intersect, valid_hit) {
+
+    EXPECT_TRUE(Intersect::valid_hit(5));
+    EXPECT_FALSE(Intersect::valid_hit(Intersect::no_hit_value));
+    EXPECT_FALSE(Intersect::valid_hit(NAN));
+
+    EXPECT_FALSE(Intersect::no_hit(5));
+    EXPECT_TRUE(Intersect::no_hit(Intersect::no_hit_value));
+    EXPECT_TRUE(Intersect::no_hit(NAN));
+}
+
+GTEST_TEST(Math_Intersect, ray_disk) {
+    // Define test disk
+    Vector3f disk_position = Vector3f::zero();
+    Vector3f disk_direction = { 0, 0, 1 };
+    float disk_radius = 1.0f;
+
+    { // Ray one unit from the plane and pointing directly at it.
+        auto ray = Ray({ 0, 0, 1 }, { 0, 0, -1 });
+        float distance = Intersect::ray_disk(ray, disk_position, disk_direction, disk_radius);
+
+        EXPECT_FLOAT_EQ(1.0f, distance);
+    }
+
+    { // Ray four units from the disk, point at it at an angle. The direction is chosen such that the distance the ray travels is 5.
+        auto ray = Ray({ 0, -3, 4 }, normalize(Vector3f(0, 3, -4)));
+        float distance = Intersect::ray_disk(ray, disk_position, disk_direction, disk_radius);
+
+        EXPECT_FLOAT_EQ(5.0f, distance);
+    }
+
+    { // Ray perpendicular to the disk misses.
+        auto ray = Ray({ 0, 0, 1 }, { 0, 1, 0 });
+        float distance = Intersect::ray_disk(ray, disk_position, disk_direction, disk_radius);
+
+        EXPECT_TRUE(Intersect::no_hit(distance));
+    }
+
+    { // Do not report hits behind the ray
+        auto ray = Ray({ 0, 0, 1 }, { 0, 0, 1 });
+        float distance = Intersect::ray_disk(ray, disk_position, disk_direction, disk_radius);
+
+        EXPECT_TRUE(Intersect::no_hit(distance));
+    }
+
+    { // Do not report hits on rays shooting past the disk
+        auto ray = Ray({ 0, 2, 1 }, { 0, 0, -1 });
+        float distance = Intersect::ray_disk(ray, disk_position, disk_direction, disk_radius);
+
+        EXPECT_TRUE(Intersect::no_hit(distance));
+    }
+}
+
 GTEST_TEST(Math_Intersect, ray_plane) {
     // Define test plane at origo, with surface normal pointing along +z.
     auto plane = Plane::from_point_normal(Vector3f::zero(), { 0, 0, 1 });
@@ -43,6 +96,40 @@ GTEST_TEST(Math_Intersect, ray_plane) {
     { // Do not report hits behind the ray
         auto ray = Ray({ 0, 0, 1 }, { 0, 0, 1 });
         float distance = Intersect::ray_plane(ray, plane);
+
+        EXPECT_TRUE(Intersect::no_hit(distance));
+    }
+}
+
+GTEST_TEST(Math_Intersect, ray_sphere) {
+    // Define test sphere
+    Vector3f disk_position = Vector3f::zero();
+    float disk_radius = 1.0f;
+
+    { // Ray one unit from the plane and pointing directly at it.
+        auto ray = Ray({ 0, 0, 2 }, { 0, 0, -1 });
+        float distance = Intersect::ray_sphere(ray, disk_position, disk_radius);
+
+        EXPECT_FLOAT_EQ(1.0f, distance);
+    }
+
+    { // Ray four units from the disk, point at it at an angle. The direction is chosen such that the distance the ray travels is 5.
+        auto ray = Ray({ 0, -3, 5 }, normalize(Vector3f(0, 3, -4)));
+        float distance = Intersect::ray_sphere(ray, disk_position, disk_radius);
+
+        EXPECT_FLOAT_EQ(5.0f, distance);
+    }
+
+    { // Do not report hits behind the ray
+        auto ray = Ray({ 0, 0, 2 }, { 0, 0, 1 });
+        float distance = Intersect::ray_sphere(ray, disk_position, disk_radius);
+
+        EXPECT_TRUE(Intersect::no_hit(distance));
+    }
+
+    { // Do not report hits on rays shooting past the sphere
+        auto ray = Ray({ 0, 2, 1 }, { 0, 0, -1 });
+        float distance = Intersect::ray_sphere(ray, disk_position, disk_radius);
 
         EXPECT_TRUE(Intersect::no_hit(distance));
     }

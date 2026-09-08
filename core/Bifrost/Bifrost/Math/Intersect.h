@@ -16,16 +16,55 @@
 
 namespace Bifrost::Math::Intersect {
 
-constexpr float no_hit_value = INFINITY;
+constexpr float no_hit_value = -INFINITY;
 
-_inline_all_archs_ bool valid_hit(float distance) { return abs(distance) != INFINITY; } // NAN safe check
-_inline_all_archs_ bool no_hit(float distance) { return !valid_hit(distance); }
+_inline_all_archs_ bool valid_hit(float distance) { return !isinf(distance) && !isnan(distance); }
+_inline_all_archs_ bool no_hit(float distance) { return isinf(distance) || isnan(distance); }
+
+// https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection
+_inline_all_archs_ float ray_disk(Vector3f ray_origin, Vector3f ray_direction, Vector3f disk_center, Vector3f disk_normal, float disk_radius) {
+    Plane plane = Plane::from_point_normal(disk_center, disk_normal);
+    float distance_to_plane = -(dot(plane.get_normal(), ray_origin) + plane.d) / dot(plane.get_normal(), ray_direction);
+
+    Vector3f plane_intersection = ray_origin + ray_direction * distance_to_plane;
+    Vector3f v = plane_intersection - disk_center;
+    float distance_squared = dot(v, v);
+    if (distance_squared <= disk_radius * disk_radius && distance_to_plane >= 0.0f)
+        return distance_to_plane;
+    else
+        return no_hit_value;
+}
+
+_inline_all_archs_ float ray_disk(Ray ray, Vector3f disk_center, Vector3f disk_normal, float disk_radius) {
+    return ray_disk(ray.origin, ray.direction, disk_center, disk_normal, disk_radius);
+}
 
 // https://www.siggraph.org/education/materials/HyperGraph/raytrace/rayplane_intersection.htm
 _inline_all_archs_ float ray_plane(Ray ray, Plane plane) {
     float distance = -(dot(plane.get_normal(), ray.origin) + plane.d) / dot(plane.get_normal(), ray.direction);
     bool hit_behind_ray = distance < 0.0f;
     return hit_behind_ray ? no_hit_value : distance;
+}
+
+// Intersection of ray and sphere.
+// Returns the distance to the sphere or negative if no hit.
+// Source: Ray Tracing Gems 1, chapter 7, Precision Improvements for Ray / Sphere Intersection 
+// and https://www.shadertoy.com/view/WdXfR2. The second precision improvement from Ray Tracing Gems 1 isn't included.
+_inline_all_archs_ float ray_sphere(Vector3f ray_origin, Vector3f ray_direction, Vector3f sphere_center, float sphere_radius) {
+    Vector3f direction_to_sphere = ray_origin - sphere_center;
+    float b = dot(direction_to_sphere, ray_direction);
+    float radius_squared = sphere_radius * sphere_radius;
+    Vector3f fbd = direction_to_sphere - ray_direction * b;
+    float d = radius_squared - dot(fbd, fbd);
+    if (d > 0.0) {
+        float distance = -b - sqrt(d);
+        return distance >= 0.0f ? distance : no_hit_value;
+    } else
+        return no_hit_value;
+}
+
+_inline_all_archs_ float ray_sphere(Ray ray, Vector3f sphere_center, float sphere_radius) {
+    return ray_sphere(ray.origin, ray.direction, sphere_center, sphere_radius);
 }
 
 struct TriangleHit {
@@ -77,6 +116,6 @@ _inline_all_archs_ TriangleHit ray_triangle(Ray ray, Trianglef triangle, bool tw
     return ray_triangle(ray, &triangle.v0, two_sided);
 }
 
-} // NS Bifrost::Math::intersect
+} // NS Bifrost::Math::Intersect
 
 #endif // _BIFROST_MATH_PLANE_H_
