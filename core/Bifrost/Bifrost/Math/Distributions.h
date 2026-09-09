@@ -11,7 +11,9 @@
 
 #include <Bifrost/Core/Defines.h>
 #include <Bifrost/Math/Constants.h>
+#include <Bifrost/Math/Intersect.h>
 #include <Bifrost/Math/Matrix.h>
+#include <Bifrost/Math/RNG.h>
 #include <Bifrost/Math/Vector.h>
 #include <Bifrost/Math/Utils.h>
 
@@ -56,31 +58,92 @@ _inline_all_archs_ PositionalSample sample(Vector3f v0, Vector3f v1, Vector3f v2
     return { light_sample_point, area_pdf };
 }
 
+_inline_all_archs_ Math::MonteCarlo::PDF solid_angle_PDF(
+    Vector3f position, Vector3f direction_to_triangle, Vector3f v0, Vector3f v1, Vector3f v2, Vector3f triangle_normal, float triangle_area) {
+
+    Vector3f triangle[3] = { v0, v1, v2 };
+    auto triangle_hit = Intersect::ray_triangle(Ray(position, direction_to_triangle), triangle);
+    if (!triangle_hit.hit())
+        return Math::MonteCarlo::PDF::invalid();
+
+    auto area_PDF = PDF(triangle_area);
+    float area_PDF_to_solid_angle_PDF = pow2(triangle_hit.distance) / abs(dot(direction_to_triangle, triangle_normal));
+    float light_solid_angle_PDF = area_PDF * area_PDF_to_solid_angle_PDF;
+
+    // Lit position is in the plane spanned by the triangle.
+    if (isinf(light_solid_angle_PDF))
+        return Math::MonteCarlo::PDF::invalid();
+
+    return light_solid_angle_PDF;
+}
+
+// Sample the triangle with respect to the solid angle of the position.
+_inline_all_archs_ DirectionalSample sample_solid_angle(Vector3f position, Vector3f v0, Vector3f v1, Vector3f v2, Vector3f normal, float triangle_area, Vector2f random_sample) {
+    PositionalSample area_sample = sample(v0, v1, v2, triangle_area, random_sample);
+
+    Vector3f direction_to_light = area_sample.position - position;
+    float light_distance_squared = magnitude_squared(direction_to_light);
+    float light_distance = sqrt(light_distance_squared);
+
+    // Converting from local area PDF to solid angle PDF wrt the surface point.
+    // See PBRT v4 page 282.
+    // As we don't normalize the direction to the light, we have to scale by the cubed distance, instead of the normal squared distance.
+    float area_PDF_to_solid_angle_PDF = (light_distance_squared * light_distance) / abs(dot(direction_to_light, normal));
+    float light_solid_angle_PDF = area_sample.PDF * area_PDF_to_solid_angle_PDF;
+
+    return { direction_to_light, light_solid_angle_PDF };
+}
+
 }//=================================================================================================
 // Uniform sphere distribution.
 //=================================================================================================
 namespace Sphere {
 
-__always_inline__ GPU_ENABLED Vector3f create_direction(float phi, float cos_theta) {
+_inline_all_archs_ Vector3f create_direction(float phi, float cos_theta) {
     float radius = sqrt(fmaxf(0.0f, 1.0f - cos_theta * cos_theta));
     float sin_phi, cos_phi;
     sincos(phi, sin_phi, cos_phi);
     return Vector3f(radius * cos_phi, radius * sin_phi, cos_theta);
 }
 
-constexpr __always_inline__ GPU_ENABLED float PDF() { return 0.25f / PI<float>(); }
+constexpr _inline_all_archs_ float PDF() { return 0.25f / PI<float>(); }
 
-__always_inline__ GPU_ENABLED Vector3f sample_direction(Vector2f random_sample) {
+_inline_all_archs_ Vector3f sample_direction(Vector2f random_sample) {
     float cos_theta = 1.0f - 2.0f * random_sample.x;
     float phi = 2.0f * PI<float>() * random_sample.y;
     return create_direction(phi, cos_theta);
 }
 
-__always_inline__ GPU_ENABLED DirectionalSample sample(Vector2f random_sample) {
+_inline_all_archs_ DirectionalSample sample(Vector2f random_sample) {
     return { sample_direction(random_sample), PDF() };
 }
 
 } // NS Sphere
+
+//=================================================================================================
+// Uniform cone distribution.
+//=================================================================================================
+namespace Cone {
+
+_inline_all_archs_ float PDF(float cos_theta_max) {
+    return 1.0f / (2.0f * PI<float>() * (1.0f - cos_theta_max));
+}
+
+_inline_all_archs_ DirectionalSample sample(float cos_theta_max, Vector2f random_sample) {
+    float cos_theta = (1.0f - random_sample.x) + random_sample.x * cos_theta_max;
+    float sin_theta = sqrt(1.0f - cos_theta * cos_theta);
+
+    float phi = 2.0f * PI<float>() * random_sample.y;
+    float sin_phi, cos_phi;
+    sincos(phi, sin_phi, cos_phi);
+
+    DirectionalSample res;
+    res.direction = { cos_phi * sin_theta, sin_phi * sin_theta, cos_theta };
+    res.PDF = PDF(cos_theta_max);
+    return res;
+}
+
+} // NS Cone
 
 //=================================================================================================
 // Uniform hemisphere distribution.
