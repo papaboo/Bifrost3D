@@ -327,7 +327,7 @@ public:
     PDF() = default;
     _inline_all_archs_ PDF(float pdf) : m_PDF(pdf) {}
 
-    _inline_all_archs_ static PDF invalid() { return PDF(nanf("")); }
+    _inline_all_archs_ static PDF invalid() { return PDF(-nanf("")); }
     _inline_all_archs_ static PDF delta_dirac(float pdf = 1) { return PDF(-pdf); }
 
     _inline_all_archs_ bool operator==(PDF rhs) const { return m_PDF == rhs.m_PDF; }
@@ -335,7 +335,7 @@ public:
 
     _inline_all_archs_ float value() const { return abs(m_PDF); }
     _inline_all_archs_ bool is_valid() const { return value() > MIN_VALID_PDF; }
-    _inline_all_archs_ bool is_delta_dirac() const { return !(m_PDF >= 0.0f); }
+    _inline_all_archs_ bool is_delta_dirac() const { return signbit(m_PDF); }
     _inline_all_archs_ void disable_MIS() { if (m_PDF >= 0.0f) m_PDF = -m_PDF; }
     _inline_all_archs_ bool is_valid_and_not_delta_dirac() const { return m_PDF > MIN_VALID_PDF; }
     _inline_all_archs_ bool invalid_or_delta_dirac() const { return !(m_PDF > MIN_VALID_PDF); }
