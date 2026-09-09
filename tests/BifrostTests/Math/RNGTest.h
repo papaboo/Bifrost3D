@@ -80,6 +80,11 @@ GTEST_TEST(Assets_Math_MonteCarlo, PDF) {
         EXPECT_FALSE(delta_PDF.use_for_MIS());
         EXPECT_TRUE(delta_PDF.is_delta_dirac());
 
+        PDF zero_delta_PDF = PDF::delta_dirac(0);
+        EXPECT_FALSE(zero_delta_PDF.is_valid());
+        EXPECT_FALSE(zero_delta_PDF.use_for_MIS());
+        EXPECT_TRUE(zero_delta_PDF.is_delta_dirac());
+
         // Disable MIS on a delta dirac PDF changes nothing as MIS isn't applicable to delta functions.
         delta_PDF.disable_MIS();
         EXPECT_TRUE(delta_PDF.is_valid());
