@@ -10,6 +10,7 @@
 #define _BIFROST_ASSETS_SHADING_UTILS_H_
 
 #include <Bifrost/Math/Color.h>
+#include <Bifrost/Math/Matrix.h>
 #include <Bifrost/Math/RNG.h>
 #include <Bifrost/Math/Vector.h>
 
@@ -113,6 +114,17 @@ _inline_all_archs_ Math::RGB adjust_conductor_specularity_to_exterior_medium(Mat
     return conductor_specularity(exterior_ior, base_ior, extinction_coefficient);
 }
 
+_inline_all_archs_ Math::Matrix3x3f compute_TBN(Math::Vector3f normal) {
+    Math::Vector3f tangent, bitangent;
+    Math::compute_tangents(normal, tangent, bitangent);
+
+    Math::Matrix3x3f res = {};
+    res.set_row(0, tangent);
+    res.set_row(1, bitangent);
+    res.set_row(2, normal);
+    return res;
+}
+
 // Copy of OptiX' refract implementation, but with normal set to (0, 0, 1).
 _inline_all_archs_ bool refract(Math::Vector3f& refraction_direction, Math::Vector3f wi, Math::Vector3f n, const float ior) {
     Math::Vector3f nn = n;
@@ -176,7 +188,33 @@ _inline_all_archs_ bool refract(float& refraction_cos_theta, float cos_theta_i, 
 _inline_all_archs_ float beers_law(float optical_density, float distance) { return expf(-optical_density * distance); }
 
 // ------------------------------------------------------------------------------------------------
-// BSDF sampling utils
+// Light sampling and evaluation utils
+// ------------------------------------------------------------------------------------------------
+
+struct alignas(8) LightResponse {
+    Math::RGB radiance;
+    Math::MonteCarlo::PDF PDF;
+
+    _inline_all_archs_ static LightResponse none() {
+        LightResponse evaluation = {};
+        return evaluation;
+    }
+};
+
+struct alignas(16) LightSample {
+    Math::RGB radiance;
+    Math::MonteCarlo::PDF PDF;
+    Math::Vector3f direction_to_light;
+    float distance;
+
+    _inline_all_archs_ static LightSample none() {
+        LightSample sample = {};
+        return sample;
+    }
+};
+
+// ------------------------------------------------------------------------------------------------
+// BSDF sampling and evaluation utils
 // ------------------------------------------------------------------------------------------------
 
 struct alignas(8) BSDFResponse {
