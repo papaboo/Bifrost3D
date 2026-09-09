@@ -1,15 +1,18 @@
 BACKLOG:
 * LTC area lights
- * Verify DefaultShading to LTC conversion in Bifrost
- * Avoid self illumination in DX11. Using mesh model ID or check if a point is included?
-  * Can we move the emissive triangle a bit backwards along the normal, effectively adding a small band around them where they don't light up.
-  * Using model & facetID shouldn't work on highly tesselated surfaces, so we probably need the plane offset.
+ * Disk lights
+  * Flat light sources types with same power far away should illuminate the surface equally
+  * Ring light (wide disk - smaller disk)
+ * Replace sphere lights in DX with LTCs
  * Clipless polygon culling
   * Slide 102, Real-Time Area Lighting: a Journey from Research to Production, Stephen Hill and Eric Heitz, Siggraph, 2017
   * See slide 58 in implementation presentation or clip'ed quad code.
- * Replace sphere lights in DX
- * Disk lights
- * Ring light (wide disk - smaller disk)
+ * Avoid self illumination in DX11. Using mesh model ID or check if a point is included?
+  * Can we move the emissive triangle a bit backwards along the normal, effectively adding a small band around them where they don't light up.
+  * Using model & facetID shouldn't work on highly tesselated surfaces, so we probably need the plane offset.
+  * Check the self occlusion precision code from OptiX and NVIDIA
+* Improve sphere light sampling by implementing https://iliyan.com/publications/ProjectedSphericalCaps/
+ * Handle case where sample point is inside the sphere by uniform sampling and a add a backside/inside lighting boolean. Sphere intersection must handle this case optionally as well.
 * DX11Mesh buffers should be owned instead of pointers
 * Distribution viewer app
  * Pick 2D directional distribution, sample for high res [0, 1]^2 plane and offset the vertices to see the distribution
@@ -18,10 +21,16 @@ BACKLOG:
   * Can we do DefaultShading as well and multiple LTCs fitted to DefaultShading?
   * What about the two distributions of glass / dielectric GGX?
  * Add the same view as in LTC. Renderer hemispheres and evalute the magnitude of the distribution per pixel on the hemisphere
+* Upgrade OptiX to get better denoiser
+ * sea_keep_lonely_watcher shows bright artifacts on transparent geometry. They seem to come from the anyhit programs not always intersecting all geometry, but stopping after the first nearest intersections.
 * Implement high performance root finding for third order polynomials and use it to solve single scattering albedo to Burley SSS diffuse albedo https://www.youtube.com/watch?v=6u8-QFrDY10
 * Fix VS 2026 warnings
 * Optimize OrenNayar sampling. It seems that replacing UniformHemisphere sampling with Cosine reduces variance, but that doesn't line up with the results in the EON paper. See if I can reproduce the results and use Nelder-Mead to re-fit the distribution weight to low variance cosine sampling.
+* Improving shadow terminator
+ * Reflections: Hacking the shadow terminator https://jo.dreggn.org/home/2021_terminator.pdf
+ * Refractions: Taming the shadow terminator https://www.yiningkarlli.com/projects/shadowterminator.html
 * Transmissive coat
+ * Online spherical gaussian fitting
  * Implement a coated material integrator. Similar to the thin_sheet integrator and should support double sided materials ingrained in glass
   * Coat tint is square root of actual tint (tint in and tint out)
   * Tinted coat with white material underneath should appear as the tinted color
@@ -35,13 +44,8 @@ BACKLOG:
  * Disable refraction in thin-walled materials and 1 / ior^2 radiance correction (which should cancel out for thin sheets)
   * Disney uses 0.65 * relative_ior + 0.35 to scale the transmissive roughness (Extending the Disney BRDF to a BSDF with Integrated Subsurface Scattering, Burley et all, Figure 15)
  * Should support cutout (Kalestra as glass)
-* Apply darkening from total internal reflection to coated materials?
-* Upgrade OptiX to get better denoiser
- * sea_keep_lonely_watcher shows bright artifacts on transparent geometry. They seem to come from the anyhit programs not always intersecting all geometry, but stopping after the first nearest intersections.
- * Implement statistical denoiser as https://dl.acm.org/doi/pdf/10.1145/3680528.3687591
-* Improving shadow terminator
- * Reflections: Hacking the shadow terminator https://jo.dreggn.org/home/2021_terminator.pdf
- * Refractions: Taming the shadow terminator https://www.yiningkarlli.com/projects/shadowterminator.html
+ * Apply darkening from total internal reflection to coated materials?
+* Implement statistical denoiser as https://dl.acm.org/doi/pdf/10.1145/3680528.3687591
 * Subsurface material with artistic parameters
  * Burley in DX
  * Random Walk in OptiXRenderer. Just a brute force extinction/albedo implementation where SSS rays ignore everything but their own mesh?
