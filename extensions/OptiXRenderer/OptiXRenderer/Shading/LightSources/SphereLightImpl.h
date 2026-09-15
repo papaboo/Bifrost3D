@@ -82,7 +82,7 @@ __inline_all__ PDF pdf(const SphereLight& light, optix::float3 lit_position, opt
     optix::float3 vector_to_light_center = light.position - lit_position;
 
     float sin_theta_squared = light.radius * light.radius / optix::dot(vector_to_light_center, vector_to_light_center);
-    if (sin_theta_squared < sphere_light_small_sin_theta_squared)
+    if (sin_theta_squared <= sphere_light_small_sin_theta_squared)
         return PDF::delta_dirac(0);
     else {
         float cos_theta_max = sqrtf(1.0f - sin_theta_squared);
