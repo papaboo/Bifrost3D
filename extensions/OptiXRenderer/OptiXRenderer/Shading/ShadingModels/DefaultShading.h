@@ -109,7 +109,7 @@ private:
             specular_alpha, m_specular_scale, dielectric_specular_transmission);
         float3 dielectric_tint = tint * dielectric_specular_transmission;
 
-        // Interpolate between dieletric and conductor parameters based on the metallic parameter.
+        // Interpolate between dielectric and conductor parameters based on the metallic parameter.
         // Conductor diffuse component is black, so interpolation amounts to scaling.
         m_specularity = to_rgb(lerp(make_float3(dielectric_specularity), conductor_specularity, metallic));
         m_diffuse_tint = to_rgb(dielectric_tint * (1.0f - metallic));
