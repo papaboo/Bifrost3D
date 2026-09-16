@@ -159,10 +159,10 @@ OShaderResourceView MaterialManager::create_GGX_LTC_fit_srv(ID3D11Device1& devic
     const unsigned int height = LTC::GGX_reflection_roughness_sample_count;
     const unsigned int element_count = width * height;
 
-    // Scale the LTC parameters by their mininimum and maximum bounds, which allows us to upload them quantized between o and 1.
+    // Scale the LTC parameters by their minimum and maximum bounds, which allows us to upload them quantized between 0 and 1.
     auto* scaled_LTC_parameters = new Vector4<unsigned short>[element_count];
     for (unsigned int i = 0; i < element_count; ++i) {
-        Vector4 scaled_params = inverse_lerp(LTC::GGX_reflection_minimum_param, LTC::GGX_reflection_maximum_param, LTC::GGX_reflection_LTC_params[i]);
+        Vector4f scaled_params = inverse_lerp(LTC::GGX_reflection_minimum_param, LTC::GGX_reflection_maximum_param, LTC::GGX_reflection_LTC_params[i]);
         scaled_LTC_parameters[i] = { unsigned short(scaled_params.x * 65535 + 0.5f),
                                      unsigned short(scaled_params.y * 65535 + 0.5f),
                                      unsigned short(scaled_params.z * 65535 + 0.5f),
