@@ -59,7 +59,7 @@ struct Sphere {
 };
 
 // ------------------------------------------------------------------------------------------------
-// Linearly transformed cosines implementtation.
+// Linearly transformed cosines implementation.
 // Stores the inverse M matrix, so the matrix that transforms from shading space to LTC space,
 // as we transform lights into LTC space for approximating area lights.
 // ------------------------------------------------------------------------------------------------

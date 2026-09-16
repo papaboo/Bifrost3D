@@ -114,7 +114,7 @@ float3 vector_edge_integral(float3 v1, float3 v2) {
 
 float edge_integral(float3 v1, float3 v2) { return vector_edge_integral(v1, v2).z; }
 
-float3 evaluate_triangle_light(IsotropicLTC bsdf, float3 wo, float3 position, float3 normal, float3 positions[3], float3 emission[3], bool two_sided) {
+float3 evaluate_triangle_light(IsotropicLTC bsdf, float3 wo, float3 position, float3 normal, float3 positions[3], float3 emitted_radiance[3], bool two_sided) {
     // Rotate area light in (T1, T2, N) basis
     float3x3 ltc_basis = ltc_shading_space(wo, normal);
 
@@ -146,8 +146,8 @@ float3 evaluate_triangle_light(IsotropicLTC bsdf, float3 wo, float3 position, fl
         F += vector_edge_integral(ltc_vertices[3], ltc_vertices[0]);
     float integral = two_sided ? abs(F.z) : max(0.0, -F.z); // Negate integral due to winding order.
 
-    float3 point_emission = emission[0];
-    if (any(emission[0] != emission[1]) || any(emission[0] != emission[2])) {
+    float3 point_emitted_radiance = emitted_radiance[0];
+    if (any(emitted_radiance[0] != emitted_radiance[1]) || any(emitted_radiance[0] != emitted_radiance[2])) {
         // F points to the polygon and should always intersect.
         // Slide 105 in Real-Time Area Lighting: a Journey from Research to Production
         // TODO Handle triangle clipping, as the fourth vertex isn't accounted for and color indices and vertex indices don't line up.
@@ -155,15 +155,15 @@ float3 evaluate_triangle_light(IsotropicLTC bsdf, float3 wo, float3 position, fl
         float3 barycentric_coord;
         if (!ray_triangle_intersection(float3(0, 0, 0), -F, triangle_vertices, barycentric_coord))
             barycentric_coord = project_barycentric_coords_to_triangle_coarse(barycentric_coord);
-        point_emission = emission[0] * barycentric_coord.x + emission[1] * barycentric_coord.y + emission[2] * barycentric_coord.z;
+        point_emitted_radiance = emitted_radiance[0] * barycentric_coord.x + emitted_radiance[1] * barycentric_coord.y + emitted_radiance[2] * barycentric_coord.z;
     }
 
-    return integral * point_emission;
+    return integral * point_emitted_radiance;
 }
 
 float evaluate_triangle_light(IsotropicLTC bsdf, float3 wo, float3 position, float3 normal, float3 positions[3], bool two_sided) {
-    float3 emission[3] = { float3(1,1,1), float3(1,1,1), float3(1,1,1) };
-    return evaluate_triangle_light(bsdf, wo, position, normal, positions, emission, two_sided).r;
+    float3 emitted_radiance[3] = { float3(1,1,1), float3(1,1,1), float3(1,1,1) };
+    return evaluate_triangle_light(bsdf, wo, position, normal, positions, emitted_radiance, two_sided).r;
 }
 
 // Evalaute a triangle light on a lambertian surface.

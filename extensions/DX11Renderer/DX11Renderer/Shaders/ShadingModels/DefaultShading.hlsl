@@ -93,7 +93,7 @@ struct DefaultShading : IShadingModel {
             specular_alpha, shading.m_specular_scale, dielectric_specular_transmission);
         float3 dielectric_tint = tint * dielectric_specular_transmission;
 
-        // Interpolate between dieletric and conductor parameters based on the metallic parameter.
+        // Interpolate between dielectric and conductor parameters based on the metallic parameter.
         // Conductor diffuse component is black, so interpolation amounts to scaling.
         shading.m_specularity = lerp(dielectric_specularity, conductor_specularity, metallic);
         shading.m_diffuse_tint = dielectric_tint * (1.0f - metallic);
