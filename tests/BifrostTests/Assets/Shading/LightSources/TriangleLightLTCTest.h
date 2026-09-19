@@ -1,4 +1,4 @@
-// Test Bifrost's LTC area lights.
+// Test Bifrost's LTC triangle light approximation.
 // ---------------------------------------------------------------------------
 // Copyright (C) Bifrost. See AUTHORS.txt for authors.
 //
@@ -6,8 +6,8 @@
 // See LICENSE.txt for more detail.
 // ---------------------------------------------------------------------------
 
-#ifndef _BIFROST_ASSETS_SHADING_LIGHTSOURCES_LTC_AREA_LIGHT_TEST_H_
-#define _BIFROST_ASSETS_SHADING_LIGHTSOURCES_LTC_AREA_LIGHT_TEST_H_
+#ifndef _BIFROST_ASSETS_SHADING_LIGHTSOURCES_TRIANGLE_LIGHT_LTC_TEST_H_
+#define _BIFROST_ASSETS_SHADING_LIGHTSOURCES_TRIANGLE_LIGHT_LTC_TEST_H_
 
 #include <Assets/Shading/BSDFs/GGXTest.h>
 #include <Assets/Shading/BSDFs/LambertTest.h>
@@ -15,39 +15,23 @@
 #include <Assets/Shading/BSDFTestUtils.h>
 #include <Expects.h>
 
-#include <Bifrost/Assets/Shading/LightSources/LtcAreaLight.h>
+#include <Bifrost/Assets/Shading/LightSources/TriangleLight.h>
 #include <Bifrost/Assets/Shading/LinearlyTransformedCosines.h>
-#include <Bifrost/Math/Intersect.h>
 
 #include <gtest/gtest.h>
 
 namespace Bifrost::Assets::Shading::LightSources {
 
-struct EmissiveTriangle {
-    Math::RGB emission;
-    Math::Vector3f v0, v1, v2;
-    Math::Vector3f normal;
-    float surface_area;
-    bool two_sided = true;
-
-    EmissiveTriangle(Math::RGB emission, Math::Vector3f v0, Math::Vector3f v1, Math::Vector3f v2)
-        : emission(emission), v0(v0), v1(v1), v2(v2) {
-        Math::Vector3f light_surface_normal = 0.5f * Math::Trianglef::get_up(v0, v1, v2);
-        surface_area = magnitude(light_surface_normal);
-        normal = light_surface_normal / surface_area;
-    }
-
-    Math::Vector3f* vertices() { return &v0; }
-
-    inline Math::RGB evaluate(Math::IsotropicLTC ltc_bsdf_model, Math::Vector3f wo, Math::Vector3f surface_point, Math::Vector3f surface_normal) const {
-        return LtcAreaLight::evaluate_triangle_light(ltc_bsdf_model, wo, surface_point, surface_normal, &v0, emission, two_sided);
-    }
-};
-
 template <typename BSDFModel>
-Math::RGB triangle_light_integration_error(Math::Vector3f wo, BSDFModel bsdf_model, Math::IsotropicLTC ltc_bsdf_model, EmissiveTriangle light,
-                                           int max_sample_count = 4096) {
+float triangle_light_integration_error(Math::Vector3f wo, BSDFModel bsdf_model, Math::IsotropicLTC ltc_bsdf_model, Math::Trianglef light_surface,
+                                       int max_sample_count = 4096) {
     using namespace Bifrost::Math;
+
+    // Create a two-sided light with emitted radiance set to white.
+    RGB emitted_radiance = RGB::white();
+    bool is_two_sided = true;
+    RGB power = emitted_radiance * PIf * 2 * light_surface.get_surface_area();
+    TriangleLight light = TriangleLight(light_surface, power, is_two_sided);
 
     // Define the surface plane to illuminate.
     // The surface passes through origo and the normal is along positive z.
@@ -59,21 +43,14 @@ Math::RGB triangle_light_integration_error(Math::Vector3f wo, BSDFModel bsdf_mod
     {
         // Sample lights
         for (int s = 0; s < max_sample_count; ++s) {
-            auto light_sample = Distributions::Triangle::sample(light.v0, light.v1, light.v2, light.surface_area, BSDFTestUtils::bsdf_rng_sample2f(s));
-
-            Vector3f direction_to_light = light_sample.position - surface_point;
-            float light_distance_squared = magnitude_squared(direction_to_light);
-            Vector3f wi = direction_to_light / sqrt(light_distance_squared);
-
-            // Converting from local area PDF to solid angle PDF wrt the surface point.
-            float area_PDF_to_solid_angle_PDF = light_distance_squared / abs(dot(wi, light.normal));
-            float light_solid_angle_PDF = light_sample.PDF * area_PDF_to_solid_angle_PDF;
+            auto light_sample = light.sample_radiance(surface_point, BSDFTestUtils::bsdf_rng_sample2f(s));
+            Vector3f wi = light_sample.direction_to_light;
 
             auto bsdf_response = bsdf_model.evaluate_with_PDF(wo, wi);
             float abs_cos_theta_i = abs(dot(surface_normal, wi));
 
-            RGB contribution = light.emission * bsdf_response.reflectance * abs_cos_theta_i / light_solid_angle_PDF;
-            float mis_weight = MonteCarlo::balance_heuristic(light_solid_angle_PDF, bsdf_response.PDF.value());
+            RGB contribution = light_sample.radiance * bsdf_response.reflectance * abs_cos_theta_i / light_sample.PDF.value();
+            float mis_weight = MonteCarlo::balance_heuristic(light_sample.PDF, bsdf_response.PDF);
             monte_carlo_estimation += contribution * mis_weight;
         }
 
@@ -82,17 +59,12 @@ Math::RGB triangle_light_integration_error(Math::Vector3f wo, BSDFModel bsdf_mod
             auto bsdf_sample = bsdf_model.sample(wo, BSDFTestUtils::bsdf_rng_sample3f(s, max_sample_count));
             Vector3f wi = bsdf_sample.direction;
 
-            auto light_hit = Intersect::ray_triangle(Ray(surface_point, wi), light.vertices(), light.two_sided);
-            if (light_hit.hit()) {
-                // Converting from local area PDF to solid angle PDF wrt the surface point.
-                float light_surface_PDF = Distributions::Triangle::PDF(light.surface_area);
-                float area_PDF_to_solid_angle_PDF = pow2(light_hit.distance) / abs(dot(wi, light.normal));
-                float light_solid_angle_PDF = light_surface_PDF * area_PDF_to_solid_angle_PDF;
-
+            auto light_response = light.evaluate_with_PDF(surface_point, wi);
+            if (light_response.PDF.is_valid_and_not_delta_dirac()) {
                 float abs_cos_theta_i = abs(dot(surface_normal, wi));
 
-                RGB contribution = light.emission * bsdf_sample.reflectance * abs_cos_theta_i / bsdf_sample.PDF.value();
-                float mis_weight = MonteCarlo::balance_heuristic(bsdf_sample.PDF.value(), light_solid_angle_PDF);
+                RGB contribution = light_response.radiance * bsdf_sample.reflectance * abs_cos_theta_i / bsdf_sample.PDF.value();
+                float mis_weight = MonteCarlo::balance_heuristic(bsdf_sample.PDF, light_response.PDF);
                 monte_carlo_estimation += contribution * mis_weight;
             }
         }
@@ -103,10 +75,10 @@ Math::RGB triangle_light_integration_error(Math::Vector3f wo, BSDFModel bsdf_mod
     RGB ltc_estimation = light.evaluate(ltc_bsdf_model, wo, surface_point, surface_normal);
 
     RGB error = monte_carlo_estimation - ltc_estimation;
-    return { abs(error.r), abs(error.g), abs(error.b) };
+    return (abs(error.r) + abs(error.g) + abs(error.b)) / 3.0f;
 }
 
-GTEST_TEST(Assets_Shading_LightSources_LTC, triangle_light_only_shades_in_front) {
+GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, triangle_light_only_shades_in_front) {
     using namespace Bifrost::Math;
 
     // Define the surface plane to illuminate.
@@ -122,20 +94,17 @@ GTEST_TEST(Assets_Shading_LightSources_LTC, triangle_light_only_shades_in_front)
     Vector3f light_v0 = { -1, 1, distance_to_surface };
     Vector3f light_v1 = { 1, -1, distance_to_surface };
     Vector3f light_v2 = { 1, 1, distance_to_surface };
-    auto light = EmissiveTriangle(RGB::white(), light_v0, light_v1, light_v2);
-    // Assert that the light's normal points upwards
-    EXPECT_VECTOR3F_EQ(Vector3f(0, 0, 1), light.normal);
 
-    light.two_sided = true;
-    RGB radiance = light.evaluate(ltc_bsdf, wo, surface_point, surface_normal);
+    auto two_sided_light = TriangleLight({ light_v0, light_v1, light_v2 }, RGB::white(), true);
+    RGB radiance = two_sided_light.evaluate(ltc_bsdf, wo, surface_point, surface_normal);
     EXPECT_RGB_GT(radiance, 0.0f);
 
-    light.two_sided = false;
-    radiance = light.evaluate(ltc_bsdf, wo, surface_point, surface_normal);
+    auto one_sided_light = TriangleLight({ light_v0, light_v1, light_v2 }, RGB::white(), false);
+    radiance = one_sided_light.evaluate(ltc_bsdf, wo, surface_point, surface_normal);
     EXPECT_RGB_EQ(radiance, RGB::black());
 }
 
-GTEST_TEST(Assets_Shading_LightSources_LTC, lambert_integration_over_triangle_light_error) {
+GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, lambert_integration_over_triangle_light_error) {
     using namespace Bifrost::Math;
 
     auto lambert_bsdf = BSDFs::LambertWrapper();
@@ -146,20 +115,20 @@ GTEST_TEST(Assets_Shading_LightSources_LTC, lambert_integration_over_triangle_li
     Vector3f light_v0 = { -1, 1, distance_to_surface };
     Vector3f light_v1 = { 1, 1, distance_to_surface };
     Vector3f light_v2 = { 1, -1, distance_to_surface };
-    auto light = EmissiveTriangle(RGB::white(), light_v0, light_v1, light_v2);
+    Trianglef light_surface = { light_v0, light_v1, light_v2 };
 
     int max_wo_sample_count = 8;
     int max_sample_count = 4096;
     for (int wo_i = 0; wo_i < max_wo_sample_count; ++wo_i) {
         Vector3f wo = Distributions::Cosine::sample(BSDFTestUtils::bsdf_rng_sample2f(wo_i)).direction;
         float cos_theta_o = wo.z;
-        RGB ltc_integration_error = triangle_light_integration_error(wo, lambert_bsdf, ltc_bsdf, light, max_sample_count);
+        float ltc_integration_error = triangle_light_integration_error(wo, lambert_bsdf, ltc_bsdf, light_surface, max_sample_count);
 
-        EXPECT_RGB_EQ_EPS(RGB(0.0f), ltc_integration_error, 1e-5f);
+        EXPECT_FLOAT_EQ_EPS(0.0f, ltc_integration_error, 1e-5f);
     }
 }
 
-GTEST_TEST(Assets_Shading_LightSources_LTC, oren_nayar_integration_over_triangle_light_error) {
+GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, oren_nayar_integration_over_triangle_light_error) {
     using namespace Bifrost::Math;
 
     // Define triangle light above surface plane at (0, 0, 0) with normal pointing upwards.
@@ -167,7 +136,7 @@ GTEST_TEST(Assets_Shading_LightSources_LTC, oren_nayar_integration_over_triangle
     Vector3f light_v0 = { -1, 1, distance_to_surface };
     Vector3f light_v1 = { 1, 1, distance_to_surface };
     Vector3f light_v2 = { 1, -1, distance_to_surface };
-    auto light = EmissiveTriangle(RGB::white(), light_v0, light_v1, light_v2);
+    Trianglef light_surface = { light_v0, light_v1, light_v2 };
 
     int max_wo_sample_count = 8;
     int max_sample_count = 4096;
@@ -182,8 +151,8 @@ GTEST_TEST(Assets_Shading_LightSources_LTC, oren_nayar_integration_over_triangle
 
             auto ltc_bsdf = Bifrost::Assets::Shading::LTC::oren_nayar_LTC_coefficients(cos_theta_o, roughness);
 
-            RGB ltc_integration_error = triangle_light_integration_error(wo, oren_nayar_bsdf, ltc_bsdf, light, max_sample_count);
-            error += ltc_integration_error.r;
+            float ltc_integration_error = triangle_light_integration_error(wo, oren_nayar_bsdf, ltc_bsdf, light_surface, max_sample_count);
+            error += ltc_integration_error;
         }
     }
     error /= max_wo_sample_count;
@@ -191,7 +160,7 @@ GTEST_TEST(Assets_Shading_LightSources_LTC, oren_nayar_integration_over_triangle
     EXPECT_FLOAT_EQ_EPS(0.0077f, error, 1e-4f);
 }
 
-GTEST_TEST(Assets_Shading_LightSources_LTC, GGX_integration_over_triangle_light_error) {
+GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, GGX_integration_over_triangle_light_error) {
     using namespace Bifrost::Math;
 
     // Define triangle light above surface plane at (0, 0, 0) with normal pointing upwards.
@@ -199,7 +168,7 @@ GTEST_TEST(Assets_Shading_LightSources_LTC, GGX_integration_over_triangle_light_
     Vector3f light_v0 = { -1, 1, distance_to_surface };
     Vector3f light_v1 = { 1, 1, distance_to_surface };
     Vector3f light_v2 = { 1, -1, distance_to_surface };
-    auto light = EmissiveTriangle(RGB::white(), light_v0, light_v1, light_v2);
+    Trianglef light_surface = { light_v0, light_v1, light_v2 };
 
     int max_wo_sample_count = 8;
     int max_sample_count = 4096;
@@ -216,8 +185,8 @@ GTEST_TEST(Assets_Shading_LightSources_LTC, GGX_integration_over_triangle_light_
 
             auto ltc_bsdf = Bifrost::Assets::Shading::LTC::GGX_reflection_LTC_coefficients(cos_theta_o, roughness);
 
-            RGB ltc_integration_error = triangle_light_integration_error(wo, ggx_bsdf, ltc_bsdf, light, max_sample_count);
-            error += ltc_integration_error.r;
+            float ltc_integration_error = triangle_light_integration_error(wo, ggx_bsdf, ltc_bsdf, light_surface, max_sample_count);
+            error += ltc_integration_error;
         }
     }
     error /= max_wo_sample_count;
@@ -225,7 +194,7 @@ GTEST_TEST(Assets_Shading_LightSources_LTC, GGX_integration_over_triangle_light_
     EXPECT_FLOAT_EQ_EPS(0.01611f, error, 1e-4f);
 }
 
-GTEST_TEST(Assets_Shading_LightSources_LTC, light_behind_surface_does_not_illuminate) {
+GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, light_behind_surface_does_not_illuminate) {
     using namespace Bifrost::Math;
 
     Vector3f surface_point = { 0, 0, 0 };
@@ -236,21 +205,19 @@ GTEST_TEST(Assets_Shading_LightSources_LTC, light_behind_surface_does_not_illumi
     Vector3f light_v0 = { -1, 1, distance_to_surface };
     Vector3f light_v1 = { 1, -1, distance_to_surface };
     Vector3f light_v2 = { 1, 1, distance_to_surface };
-    auto light = EmissiveTriangle(RGB::white(), light_v0, light_v1, light_v2);
-    light.two_sided = true; // Ensure that the light always casts light at the surface.
-
-    auto ltc_lambert_bsdf = Bifrost::Assets::Shading::LTC::lambert_LTC_coefficients();
+    bool is_two_sided = true; // Ensure that the light always casts light at the surface.
+    auto light = TriangleLight({ light_v0, light_v1, light_v2 }, RGB::white(), is_two_sided);
 
     for (float cos_theta_o : { 0.2f, 0.6f, 1.0f }) {
         Vector3f wo = BSDFTestUtils::w_from_cos_theta(cos_theta_o);
 
-        RGB radiance = light.evaluate(ltc_lambert_bsdf, wo, surface_point, surface_normal);
+        RGB radiance = light.evaluate_radiance(wo, surface_point, surface_normal);
         EXPECT_RGB_EQ(radiance, RGB::black());
     }
 }
 
 // When two vertices are below the horizon, then the triangle should be cropped to a new triangle on the horizon.
-GTEST_TEST(Assets_Shading_LightSources_LTC, crop_triangle_by_horizon_with_one_vertex_above_horizon) {
+GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, crop_triangle_by_horizon_with_one_vertex_above_horizon) {
     using namespace Bifrost::Math;
 
     Vector3f vertex_above = { 1, 0, 2 };
@@ -291,7 +258,7 @@ GTEST_TEST(Assets_Shading_LightSources_LTC, crop_triangle_by_horizon_with_one_ve
 }
 
 // When two vertices are below the horizon, then the triangle should be cropped to a new triangle on the horizon.
-GTEST_TEST(Assets_Shading_LightSources_LTC, crop_triangle_by_horizon_with_two_vertices_above_horizon) {
+GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, crop_triangle_by_horizon_with_two_vertices_above_horizon) {
     using namespace Bifrost::Math;
 
     Vector3f vertex_below = { 1, 0, -2 };
@@ -340,7 +307,7 @@ GTEST_TEST(Assets_Shading_LightSources_LTC, crop_triangle_by_horizon_with_two_ve
     test_triangle_configuration(1, 0);
 }
 
-GTEST_TEST(Assets_Shading_LightSources_LTC, light_clipping_on_lambertian_surface_has_no_error) {
+GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, light_clipping_on_lambertian_surface_has_no_error) {
     using namespace Bifrost::Math;
 
     auto lambert_bsdf = BSDFs::LambertWrapper();
@@ -357,17 +324,16 @@ GTEST_TEST(Assets_Shading_LightSources_LTC, light_clipping_on_lambertian_surface
         Vector3f light_v0 = { 1, -1, v0_above_horizon ? 1.0f : -1.0f };
         Vector3f light_v1 = { 1, 0, v1_above_horizon ? 1.0f : -1.0f };
         Vector3f light_v2 = { 1, 1, v2_above_horizon ? 1.0f : -1.0f };
-        auto light = EmissiveTriangle(RGB::white(), light_v0, light_v1, light_v2);
-        light.two_sided = true; // We ignore winding order and light direction to make the test simpler.
+        Trianglef light_surface = { light_v0, light_v1, light_v2 };
 
         Vector3f wo = { 0, 0, 1 };
 
-        RGB ltc_integration_error = triangle_light_integration_error(wo, lambert_bsdf, ltc_lambert_bsdf, light);
-        EXPECT_RGB_EQ_EPS(RGB(0), ltc_integration_error, 1e-4f);
+        float ltc_integration_error = triangle_light_integration_error(wo, lambert_bsdf, ltc_lambert_bsdf, light_surface);
+        EXPECT_FLOAT_EQ_EPS(0, ltc_integration_error, 1e-4f);
     }
 }
 
-GTEST_TEST(Assets_Shading_LightSources_LTC, LTC_evaluation_is_shading_space_rotation_agnostic) {
+GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, LTC_evaluation_is_shading_space_rotation_agnostic) {
     using namespace Bifrost::Math;
 
     Vector3f surface_point = { 0, 0, 0 };
@@ -392,7 +358,7 @@ GTEST_TEST(Assets_Shading_LightSources_LTC, LTC_evaluation_is_shading_space_rota
         Vector3f light_v0 = surface_normal;
         Vector3f light_v1 = surface_normal + Vector3f(wi.x, wi.y, 0);
         Vector3f light_v2 = surface_normal + Vector3f(w_tangent.x, w_tangent.y, 0);
-        auto light = EmissiveTriangle(RGB::white(), light_v0, light_v1, light_v2);
+        auto light = TriangleLight({ light_v0, light_v1, light_v2 }, RGB::white());
 
         radiances[i] = light.evaluate(ltc_bsdf, wo, surface_point, surface_normal);
     }
@@ -401,6 +367,96 @@ GTEST_TEST(Assets_Shading_LightSources_LTC, LTC_evaluation_is_shading_space_rota
     EXPECT_RGB_EQ_EPS(radiances[0], radiances[2], 1e-5f);
 }
 
+GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, LTC_evaluation_accounts_for_geometric_term) {
+    using namespace Bifrost::Math;
+
+    Vector3f wo = Vector3f(0, 0, 1);
+    float distance = 100;
+    // Shaded position far from the light source.
+    Vector3f shaded_position = Vector3f(0, 0, -distance);
+    Vector3f shaded_normal = Vector3f(0, 0, 1);
+
+    // Use a small triangle so the radiance contribution is dominated by the geometric term.
+    Trianglef light_surface = { { -1, 1, 0 }, { 1, -1, 0 }, { 1, 1, 0 } };
+    auto light = TriangleLight(light_surface, RGB::white() * 1e4f);
+    Vector3f light_center = (light_surface.v0 + light_surface.v1 + light_surface.v2) / 3.0f;
+
+    // Expected radiance at 'distance' from light source and with no reduction in light area from rotation.
+    RGB expected_radiance = light.evaluate_radiance(wo, shaded_position, shaded_normal);
+
+    for (int y = -1; y <= 1; ++y)
+        for (int x = -1; x <= 1; ++x) {
+            Vector3f local_shaded_position = shaded_position + Vector3f(x, y, 0) * distance;
+            Vector3f direction_to_light = normalize(light_center - local_shaded_position);
+            // Project shaded position to keep same distance to light as reference point.
+            local_shaded_position = light_center - direction_to_light * distance;
+            
+            // Test that LTC lights have a uniform light distribution, meaning that they emit equal amounts of light in each direction
+            // and only the projected area of the light has an impact on a shaded point facing towards the light.
+            float light_area_reduction = abs(dot(direction_to_light, light.get_normal()));
+            {
+                Vector3f shaded_normal_facing_light = direction_to_light;
+                RGB radiance = light.evaluate_radiance(wo, local_shaded_position, shaded_normal_facing_light);
+                RGB radiance_corrected_for_area_reduction = radiance / (light_area_reduction);
+
+                EXPECT_RGB_EQ_PCT(expected_radiance, radiance_corrected_for_area_reduction, 0.001f) << "[x: " << x << ", y: " << y << "]: light area reduction: " << light_area_reduction;
+            }
+
+            // Test that LTC lights respect the geometric term from tilting the surface,
+            // such that the light is distributed over a larger surface and less light arrives at a single point.
+            {
+                RGB radiance = light.evaluate_radiance(wo, local_shaded_position, shaded_normal);
+
+                // Divide out the geometric term and the light area reduction
+                float geometric_term = abs(dot(direction_to_light, shaded_normal));
+                RGB corrected_radiance = radiance / (geometric_term * light_area_reduction);
+
+                EXPECT_RGB_EQ_PCT(expected_radiance, corrected_radiance, 0.001f) << "[x: " << x << ", y: " << y << "]: geometric term: " << geometric_term;
+            }
+        }
+}
+
+GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, LTC_integration_yields_same_result_as_triangle_light) {
+    using namespace Bifrost::Math;
+
+    int max_samples = 1024;
+    int max_wo_sample_count = 4;
+
+    auto lambert_bsdf = BSDFs::LambertWrapper();
+    auto ltc_lambert_bsdf = Bifrost::Assets::Shading::LTC::lambert_LTC_coefficients();
+    Vector3f wo = Vector3f(0, 0, 1); // wo just needs to lie in the positive hemipshere for lambert bsdf, the direction itself is irrelevant.
+
+    for (float size : { 1, 5 }) {
+        Trianglef triangle = Trianglef(Vector3f(0, 0, 0), Vector3f(0, size, 0), Vector3f(size, 0, 0));
+        Vector3f light_center = (triangle.v0 + triangle.v1 + triangle.v2) / 3;
+        TriangleLight light = TriangleLight(triangle, RGB(10), false);
+
+        for (int x : { -1, 0, 1, 2, 5 }) {
+            Vector3f shaded_position = Vector3f(x, 0, -1) * 10;
+            Vector3f direction_to_light = normalize(light_center - shaded_position);
+
+            for (Vector3f shaded_normal : { Vector3f(0, 0, 1), direction_to_light }) {
+
+                EXPECT_LT(dot(shaded_normal, light.get_normal()), 0.0f) << "Triangle light should point towards shaded position.";
+
+                RGB summed_reflectance_area_light = RGB(0.0f);
+                for (unsigned int s = 0u; s < max_samples; ++s) {
+                    Vector2f random_sample = BSDFTestUtils::bsdf_rng_sample2f(s);
+
+                    LightSample sample = light.sample_radiance(shaded_position, random_sample);
+                    Vector3f wi = sample.direction_to_light;
+                    summed_reflectance_area_light += lambert_bsdf.evaluate(wo, wi) * sample.radiance * (dot(shaded_normal, wi) / sample.PDF.value());
+                }
+                RGB reflectance_area_light = summed_reflectance_area_light / float(max_samples);
+
+                RGB reflectance_ltc_light = light.evaluate(ltc_lambert_bsdf, wo, shaded_position, shaded_normal);
+
+                EXPECT_RGB_EQ_PCT(reflectance_ltc_light, reflectance_area_light, 0.0025f) << "ratio: " << reflectance_area_light.r / reflectance_ltc_light.r;
+            }
+        }
+    }
+}
+
 } // NS Bifrost::Assets::Shading::LightSources
 
-#endif // _BIFROST_ASSETS_SHADING_LIGHTSOURCES_LTC_AREA_LIGHT_TEST_H_
+#endif // _BIFROST_ASSETS_SHADING_LIGHTSOURCES_TRIANGLE_LIGHT_LTC_TEST_H_

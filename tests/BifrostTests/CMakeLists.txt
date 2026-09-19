@@ -31,9 +31,9 @@ set(ASSETS_SHADING_BSDFS_SRCS
 )
 set(ASSETS_SHADING_LIGHTSOURCES_SRCS
   Assets/Shading/LightSources/LightTestUtils.h
-  Assets/Shading/LightSources/LtcAreaLightTest.h
   Assets/Shading/LightSources/SphereLightTest.h
   Assets/Shading/LightSources/TriangleLightTest.h
+  Assets/Shading/LightSources/TriangleLightLTCTest.h
 )
 
 set(CORE_SRCS

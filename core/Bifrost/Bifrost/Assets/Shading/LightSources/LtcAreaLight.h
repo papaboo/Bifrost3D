@@ -152,8 +152,8 @@ _inline_all_archs_ float evaluate_triangle_light(Math::IsotropicLTC bsdf, Math::
     return integral;
 }
 
-_inline_all_archs_ Math::RGB evaluate_triangle_light(Math::IsotropicLTC bsdf, Math::Vector3f wo, Math::Vector3f position, Math::Vector3f normal, const Math::Vector3f light_vertices[3], Math::RGB emission, bool two_sided) {
-    return emission * evaluate_triangle_light(bsdf, wo, position, normal, light_vertices, two_sided);
+_inline_all_archs_ Math::RGB evaluate_triangle_light(Math::IsotropicLTC bsdf, Math::Vector3f wo, Math::Vector3f position, Math::Vector3f normal, const Math::Vector3f light_vertices[3], Math::RGB emitted_radiance, bool two_sided) {
+    return emitted_radiance * evaluate_triangle_light(bsdf, wo, position, normal, light_vertices, two_sided);
 }
 
 _inline_all_archs_ float evaluate_triangle_light_lambert(Math::Vector3f wo, Math::Vector3f position, Math::Vector3f normal, Math::Vector3f light_vertices[3], bool two_sided) {

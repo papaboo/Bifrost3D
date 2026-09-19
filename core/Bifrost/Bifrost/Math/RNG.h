@@ -384,6 +384,7 @@ _inline_all_archs_ float balance_heuristic(float pdf1, float pdf2) {
     // 3. pdf2 can also be NaN. In this case the power heuristic is ill-defined, we assumed that the sample is outside of pdf2's domain and return 0.
     return result_is_invalid ? (pdf1 <= pdf2 ? 0.0f : 1.0f) : result;
 }
+_inline_all_archs_ float balance_heuristic(PDF pdf1, PDF pdf2) { return balance_heuristic(pdf1.value(), pdf2.value()); }
 
 // Computes the power heuristic of pdf1 and pdf2.
 // It is assumed that pdf1 is always valid, i.e. not NaN.
@@ -391,6 +392,7 @@ _inline_all_archs_ float balance_heuristic(float pdf1, float pdf2) {
 _inline_all_archs_ float power_heuristic(float pdf1, float pdf2) {
     return balance_heuristic(pdf1 * pdf1, pdf2 * pdf2);
 }
+_inline_all_archs_ float power_heuristic(PDF pdf1, PDF pdf2) { return power_heuristic(pdf1.value(), pdf2.value()); }
 
 } // NS Bifrost::Math::MonteCarlo
 

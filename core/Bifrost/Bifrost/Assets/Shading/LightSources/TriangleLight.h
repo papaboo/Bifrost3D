@@ -11,6 +11,7 @@
 
 #include <Bifrost/Math/Distributions.h>
 #include <Bifrost/Math/Triangle.h>
+#include <Bifrost/Assets/Shading/LightSources/LtcAreaLight.h>
 #include <Bifrost/Assets/Shading/Utils.h>
 
 #ifndef GPU_COMPILATION
@@ -114,7 +115,17 @@ public:
         if (PDF.invalid_or_delta_dirac())
             return { Math::RGB::black(), PDF };
 
-        return { get_emitted_radiance(), PDF};
+        return { get_emitted_radiance(), PDF };
+    }
+
+    _inline_all_archs_ Math::RGB evaluate(Math::IsotropicLTC ltc_bsdf_model, Math::Vector3f wo, Math::Vector3f surface_position, Math::Vector3f surface_normal) const {
+        return LtcAreaLight::evaluate_triangle_light(ltc_bsdf_model, wo, surface_position, surface_normal, &m_surface.v0, get_emitted_radiance(), m_is_two_sided);
+    }
+
+    _inline_all_archs_ Math::RGB evaluate_radiance(Math::Vector3f wo, Math::Vector3f surface_position, Math::Vector3f surface_normal) const {
+        Math::RGB lambertian_reflectance = evaluate(Math::IsotropicLTC::identity(), wo, surface_position, surface_normal);
+        // Multiply by PI to remove the effect of the lambertian surface and get radiance
+        return lambertian_reflectance * PIf;
     }
 
 #ifndef GPU_COMPILATION
