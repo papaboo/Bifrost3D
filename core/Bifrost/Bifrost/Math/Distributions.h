@@ -19,14 +19,30 @@
 
 namespace Bifrost::Math::Distributions {
 
-struct PositionalSample {
-    Vector3f position;
-    float PDF;
-};
-
 struct DirectionalSample {
     Vector3f direction;
     float PDF;
+};
+
+struct PositionalSample {
+    Vector3f position;
+    float PDF;
+
+    // Convert the area sample to a directional sample with a solid angle PDF as observed from the given position.
+    // The normal of the sampled surface must be known and passed as well.
+    _inline_all_archs_ DirectionalSample to_directional_sample(Vector3f sampled_surface_normal, Vector3f observer_position) const {
+        Vector3f direction_to_area = position - observer_position;
+        float distance_squared = magnitude_squared(direction_to_area);
+        float distance = sqrt(distance_squared);
+
+        // Converting from local area PDF to solid angle PDF wrt the surface point.
+        // See PBRT v4 page 282.
+        // As we don't normalize the direction to the light, we have to scale by the cubed distance, instead of the normal squared distance.
+        float area_PDF_to_solid_angle_PDF = (distance_squared * distance) / abs(dot(direction_to_area, sampled_surface_normal));
+        float solid_angle_PDF = PDF * area_PDF_to_solid_angle_PDF;
+
+        return { direction_to_area, solid_angle_PDF };
+    }
 };
 
 //=================================================================================================
@@ -66,6 +82,7 @@ _inline_all_archs_ Math::MonteCarlo::PDF solid_angle_PDF(
     if (!triangle_hit.hit())
         return Math::MonteCarlo::PDF::invalid();
 
+    // Converting from local area PDF to solid angle PDF wrt the surface point.
     auto area_PDF = PDF(triangle_area);
     float area_PDF_to_solid_angle_PDF = pow2(triangle_hit.distance) / abs(dot(direction_to_triangle, triangle_normal));
     float light_solid_angle_PDF = area_PDF * area_PDF_to_solid_angle_PDF;
@@ -81,17 +98,7 @@ _inline_all_archs_ Math::MonteCarlo::PDF solid_angle_PDF(
 _inline_all_archs_ DirectionalSample sample_solid_angle(Vector3f position, Vector3f v0, Vector3f v1, Vector3f v2, Vector3f normal, float triangle_area, Vector2f random_sample) {
     PositionalSample area_sample = sample(v0, v1, v2, triangle_area, random_sample);
 
-    Vector3f direction_to_light = area_sample.position - position;
-    float light_distance_squared = magnitude_squared(direction_to_light);
-    float light_distance = sqrt(light_distance_squared);
-
-    // Converting from local area PDF to solid angle PDF wrt the surface point.
-    // See PBRT v4 page 282.
-    // As we don't normalize the direction to the light, we have to scale by the cubed distance, instead of the normal squared distance.
-    float area_PDF_to_solid_angle_PDF = (light_distance_squared * light_distance) / abs(dot(direction_to_light, normal));
-    float light_solid_angle_PDF = area_sample.PDF * area_PDF_to_solid_angle_PDF;
-
-    return { direction_to_light, light_solid_angle_PDF };
+    return area_sample.to_directional_sample(normal, position);
 }
 
 }//=================================================================================================
@@ -119,6 +126,83 @@ _inline_all_archs_ DirectionalSample sample(Vector2f random_sample) {
 }
 
 } // NS Sphere
+
+//=================================================================================================
+// Uniform disk distribution.
+//=================================================================================================
+namespace Disk {
+
+_inline_all_archs_ float PDF(float radius) {
+    return 1.0f / (PI<float>() * radius * radius);
+}
+
+_inline_all_archs_ PositionalSample sample(float radius, Vector2f random_sample) {
+    float r = sqrtf(random_sample.x) * radius;
+    float phi = 2.0f * PI<float>() * random_sample.y;
+    Vector3f position = Vector3f(r * cosf(phi), r * sinf(phi), 0.0f);
+    return { position, PDF(radius) };
+}
+
+// Concentric mapping sampling from Ray Tracing Gems 16.5.1.2. Supposed to better preserve stratification across samples.
+_inline_all_archs_ PositionalSample sample_concentric_mapping(float radius, Vector2f random_sample) {
+    float pdf = PDF(radius);
+
+    float a = 2 * random_sample.x - 1;
+    float b = 2 * random_sample.y - 1;
+    // This check deviates from the sample in Ray Tracing Gems, but the check in Ray Tracing Gems
+    // mapped all samples with b == 0 to the center and made it impossible to invert the function.
+    // The new check makes it invertible and is consistent with PBRT's code.
+    if (a == 0 && b == 0)
+        return { Vector3f::zero(), pdf };
+
+    float r, phi;
+    if (a * a > b * b) {
+        r = radius * a;
+        phi = (PI<float>() / 4) * (b / a);
+    } else {
+        r = radius * b;
+        phi = (PI<float>() / 2) - (PI<float>() / 4) * (a / b);
+    }
+
+    float sin_phi, cos_phi;
+    sincos(phi, sin_phi, cos_phi);
+
+    Vector3f position = Vector3f(r * cos_phi, r * sin_phi, 0.0f);
+    return { position, pdf };
+}
+
+_inline_all_archs_ Math::MonteCarlo::PDF solid_angle_PDF(
+    Vector3f position, Vector3f direction_to_triangle, Vector3f disk_center, float disk_radius, Vector3f disk_normal) {
+
+    float distance = Intersect::ray_disk(Ray(position, direction_to_triangle), disk_center, disk_normal, disk_radius);
+    if (Intersect::no_hit(distance))
+        return Math::MonteCarlo::PDF::invalid();
+
+    // Converting from local area PDF to solid angle PDF wrt the surface point.
+    auto area_PDF = PDF(disk_radius);
+    float area_PDF_to_solid_angle_PDF = pow2(distance) / abs(dot(direction_to_triangle, disk_normal));
+    float light_solid_angle_PDF = area_PDF * area_PDF_to_solid_angle_PDF;
+
+    // Lit position is in the plane spanned by the disk.
+    if (isinf(light_solid_angle_PDF))
+        return Math::MonteCarlo::PDF::invalid();
+
+    return light_solid_angle_PDF;
+}
+
+// Sample the triangle with respect to the solid angle of the position.
+_inline_all_archs_ DirectionalSample sample_solid_angle(Vector3f position, Vector3f disk_center, float disk_radius, Vector3f disk_normal, Vector2f random_sample) {
+    PositionalSample area_sample = sample_concentric_mapping(disk_radius, random_sample);
+
+    // Transform 2D disk sample to 3D.
+    Vector3f tangent, bitangent;
+    compute_tangents(disk_normal, tangent, bitangent);
+    area_sample.position = disk_center + tangent * area_sample.position.x + bitangent * area_sample.position.y;
+
+    return area_sample.to_directional_sample(disk_normal, position);
+}
+
+} // NS Cone
 
 //=================================================================================================
 // Uniform cone distribution.
