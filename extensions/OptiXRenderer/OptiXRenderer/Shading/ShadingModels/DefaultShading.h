@@ -143,6 +143,12 @@ private:
 
         float coat_probability = coat_rho_sum * recip_total_rho;
         m_coat_probability = unsigned short(coat_probability * USHORT_MAX + 0.5f);
+
+        // Robustly handle the unlikely case that both specular and coat probability is 0.5, which would round up when encoding.
+        // The decoded probability of both would be slightly above 0.5, resulting in a negative diffuse probability.
+        int summed_stored_probability = m_coat_probability + m_specular_probability;
+        if (summed_stored_probability > USHORT_MAX)
+            m_coat_probability -= summed_stored_probability - USHORT_MAX;
     }
 
 public:
