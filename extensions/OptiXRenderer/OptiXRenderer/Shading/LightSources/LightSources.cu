@@ -7,7 +7,6 @@
 // ---------------------------------------------------------------------------
 
 #include <OptiXRenderer/Intersect.h>
-#include <OptiXRenderer/Shading/LightSources/SphereLightImpl.h>
 
 #include <optix.h>
 #include <optixu/optixu_aabb.h>
@@ -35,7 +34,7 @@ RT_PROGRAM void intersect(int prim_index) {
     float t = -1e30f;
     if (light.get_type() == Light::Sphere) {
         const SphereLight sphere_light = light.sphere;
-        t = Intersect::ray_sphere(ray, Sphere::make(sphere_light.position, sphere_light.radius));
+        t = Intersect::ray_sphere(ray, Sphere::make(to_float3(sphere_light.get_position()), sphere_light.get_radius()));
     } else if (light.get_type() == Light::Spot) {
         const SpotLight spot_light = light.spot;
         t = Intersect::ray_disk(ray, Disk::make(spot_light.position, spot_light.direction, spot_light.radius));
@@ -47,12 +46,13 @@ RT_PROGRAM void intersect(int prim_index) {
         float3 coarse_intersection_point = t * ray.direction + ray.origin;
         if (light.get_type() == Light::Sphere) {
             const SphereLight sphere_light = light.sphere;
-            shading_normal = normalize(coarse_intersection_point - sphere_light.position);
+            float3 light_center = to_float3(sphere_light.get_position());
+            shading_normal = normalize(coarse_intersection_point - light_center);
 
             // Computing the intersection point using origin + t * direction can be unstable if t is large.
             // To avoid this the intersection point is recomputed wrt the shading normal,
             // to ensure that the intersection point is as close to the sphere surface as possible.
-            intersection_point = sphere_light.position + sphere_light.radius * shading_normal;
+            intersection_point = light_center + sphere_light.get_radius() * shading_normal;
         } else if (light.get_type() == Light::Spot) {
             const SpotLight spot_light = light.spot;
             shading_normal = spot_light.direction;
@@ -81,9 +81,9 @@ RT_PROGRAM void bounds(int primitive_index, float result[6]) {
     // Light is either a sphere light or a spot light.
     // TODO Tighter bounds around disk?
     bool is_sphere_light = light.get_type() == Light::Sphere;
-    float radius = is_sphere_light ? light.sphere.radius : light.spot.radius;
+    float radius = is_sphere_light ? light.sphere.get_radius() : light.spot.radius;
     if (radius > 0.0f) {
-        optix::float3 position = is_sphere_light ? light.sphere.position : light.spot.position;
+        optix::float3 position = is_sphere_light ? to_float3(light.sphere.get_position()) : light.spot.position;
         aabb->m_min = position - radius;
         aabb->m_max = position + radius;
     } else

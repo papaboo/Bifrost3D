@@ -860,9 +860,8 @@ struct Renderer::Implementation {
 
                         device_light.flags = Light::Sphere;
 
-                        device_light.sphere.position = to_float3(host_light.get_node().get_global_transform().translation);
-                        device_light.sphere.radius = host_light.get_radius();
-                        device_light.sphere.power = to_float3(host_light.get_power());
+                        auto light_position = host_light.get_node().get_global_transform().translation;
+                        device_light.sphere = SphereLight(light_position, host_light.get_radius(), host_light.get_power());
                         break;
                     }
                     case LightSources::Type::Spot: {
@@ -889,10 +888,9 @@ struct Renderer::Implementation {
                     }
                     default:
                         printf("OptiXRenderer warning: Unknown light source type %u on light %u\n", LightSources::get_type(light_ID), light_ID.get_index());
+                        // Create a bright purple lightsource at origo to show the bad lightsource in the scene.
                         device_light.flags = Light::Sphere;
-                        device_light.sphere.position = { 0, 0, 0 };
-                        device_light.sphere.power = { 100000, 0, 100000 };
-                        device_light.sphere.radius = 5;
+                        device_light.sphere = SphereLight({ 0, 0, 0 }, 5, { 100000, 0, 100000 });
                     }
 
                     if (!LightSources::is_delta_light(light_ID))
