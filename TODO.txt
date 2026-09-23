@@ -1,16 +1,41 @@
 BACKLOG:
 * LTC area lights
  * Disk lights
-  * Flat light sources types with same power far away should illuminate the surface equally
+  * LTC disklight
+   * Initial solution with clipping function approximation
+   * Add proper clipping approximation function - and fix integral test error!
+   * Track down more NaNs
+   * GGX regression test, as GGX really tests the LTC coefficients (OrenNayar is too boring)
+   * Refactor, document and rename variables
+   * Test the cubic solver and move it to Maths.
+   * PR to the reference repo - Fix clamping and simplify point transformation
+  * Move PI constants out of shading utils and into shading constants
+  * Add to DX light sources
+   * Split delta lights and area lights buffers? Or just order the lights in the buffer?
+   * Integrate disk light
+    * Should I precompute the sphere integration texture or just compute it on the fly?
+   * Triangle light with uniform emission should not compute 3d form factor
+   * Replace sphere lights in DX with disk LTC. Any way to improve it for surfaces close to the light source? Precompute difference and scale result? Move light?
+  * LTCs won't compile in OptiX
   * Ring light (wide disk - smaller disk)
- * Replace sphere lights in DX with LTCs
+   * New intersection and sampling
+   * Test that power is conserved
+  * Add light cutoff angle to Bifrost disk light and use instead of spot light
+   * Scale in DX11. Should be possible by using the angle of F and compare it with the solid angle of the light + the falloff angle
+   * Or just integrate over the squashed disk as a polygon?
  * Clipless polygon culling
   * Slide 102, Real-Time Area Lighting: a Journey from Research to Production, Stephen Hill and Eric Heitz, Siggraph, 2017
   * See slide 58 in implementation presentation or clip'ed quad code.
+ * Integrate as 8 vertex sphere which rotates so a vertex is aligned with the direction of w0 (pointing downwards in LTC space)
+ * Optimize by moving area light computations into shading space and compute shading space once?
  * Avoid self illumination in DX11. Using mesh model ID or check if a point is included?
   * Can we move the emissive triangle a bit backwards along the normal, effectively adding a small band around them where they don't light up.
   * Using model & facetID shouldn't work on highly tesselated surfaces, so we probably need the plane offset.
   * Check the self occlusion precision code from OptiX and NVIDIA
+* Fix IBL sampling. It uses the wrong GGX sampling algorithm
+ * Add environment light and use surface/BRDF/light integration util to write a simple convoluter
+ * Precompute RNG blue noise samples.
+ * Easy to precompute the BRDF samples? If so do it and see if it speeds up the integration
 * Improve sphere light sampling by implementing https://iliyan.com/publications/ProjectedSphericalCaps/
  * Handle case where sample point is inside the sphere by uniform sampling and a add a backside/inside lighting boolean. Sphere intersection must handle this case optionally as well.
 * DX11Mesh buffers should be owned instead of pointers
@@ -23,7 +48,7 @@ BACKLOG:
  * Add the same view as in LTC. Renderer hemispheres and evalute the magnitude of the distribution per pixel on the hemisphere
 * Upgrade OptiX to get better denoiser
  * sea_keep_lonely_watcher shows bright artifacts on transparent geometry. They seem to come from the anyhit programs not always intersecting all geometry, but stopping after the first nearest intersections.
-* Implement high performance root finding for third order polynomials and use it to solve single scattering albedo to Burley SSS diffuse albedo https://www.youtube.com/watch?v=6u8-QFrDY10
+* Implement high performance root finding for third order polynomials and use it to solve single scattering albedo to Burley SSS diffuse albedo and speed up disk lights https://www.youtube.com/watch?v=6u8-QFrDY10
 * Fix VS 2026 warnings
 * Optimize OrenNayar sampling. It seems that replacing UniformHemisphere sampling with Cosine reduces variance, but that doesn't line up with the results in the EON paper. See if I can reproduce the results and use Nelder-Mead to re-fit the distribution weight to low variance cosine sampling.
 * Improving shadow terminator
