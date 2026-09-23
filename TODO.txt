@@ -1,16 +1,32 @@
+Merrell barefoot trail
+
+Ask copilot to look for bugs in MonteCarlo.cu
+
 BACKLOG:
 * LTC area lights
  * Disk lights
-  * Flat light sources types with same power far away should illuminate the surface equally
+  * LTC disklight
   * Ring light (wide disk - smaller disk)
- * Replace sphere lights in DX with LTCs
+   * New intersection and sampling
+   * Test that power is conserved
+  * Add to DX light sources
+   * Split delta lights and area lights buffers? Or just order the lights in the buffer?
+  * Add to OptiX light sources
+   * LTCs won't compile
+  * Add light cutoff angle to Bifrost disk light and use instead of spot light
+   * Scale in DX11. Should be possible by using the angle of F and compare it with the solid angle of the light + the falloff angle
+   * Or just integrate over the squashed disk as a polygon?
+ * Replace sphere lights in DX with disk LTC
  * Clipless polygon culling
   * Slide 102, Real-Time Area Lighting: a Journey from Research to Production, Stephen Hill and Eric Heitz, Siggraph, 2017
   * See slide 58 in implementation presentation or clip'ed quad code.
+ * Integrate as 8 vertex sphere which rotates so a vertex is aligned with the direction of w0 (pointing downwards in LTC space)
+ * Optimize by moving area light computations into shading space and compute shading space once?
  * Avoid self illumination in DX11. Using mesh model ID or check if a point is included?
   * Can we move the emissive triangle a bit backwards along the normal, effectively adding a small band around them where they don't light up.
   * Using model & facetID shouldn't work on highly tesselated surfaces, so we probably need the plane offset.
   * Check the self occlusion precision code from OptiX and NVIDIA
+* Fix IBL sampling. It uses the wrong GGX sampling algorithm
 * Improve sphere light sampling by implementing https://iliyan.com/publications/ProjectedSphericalCaps/
  * Handle case where sample point is inside the sphere by uniform sampling and a add a backside/inside lighting boolean. Sphere intersection must handle this case optionally as well.
 * DX11Mesh buffers should be owned instead of pointers
