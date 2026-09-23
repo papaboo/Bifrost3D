@@ -12,8 +12,7 @@
 #include <OptiXRenderer/Types.h>
 #include <OptiXRenderer/Utils.h>
 
-namespace OptiXRenderer {
-namespace LightSources {
+namespace OptiXRenderer::LightSources {
 
 __inline_dev__ bool is_delta_light(const PresampledEnvironmentLight& light) {
     return false;
@@ -38,23 +37,10 @@ __inline_dev__ optix::float3 evaluate(const PresampledEnvironmentLight& light, o
     return light.tint * optix::make_float3(optix::rtTex2D<optix::float4>(light.environment_map_ID, uv.x, uv.y));
 }
 
-// ------------------------------------------------------------------------------------------------
-// Functions with generalized parameters.
-// ------------------------------------------------------------------------------------------------
-
-__inline_dev__ LightSample sample_radiance(const PresampledEnvironmentLight& light, optix::float3 lit_position, optix::float2 random_sample) {
-    return sample_radiance(light, random_sample);
+__inline_dev__ LightResponse evaluate_with_PDF(const PresampledEnvironmentLight& light, optix::float3 direction_to_light) {
+    return { to_rgb(evaluate(light, direction_to_light)), pdf(light, direction_to_light) };
 }
 
-__inline_dev__ PDF pdf(const PresampledEnvironmentLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
-    return pdf(light, direction_to_light);
-}
-
-__inline_dev__ optix::float3 evaluate(const PresampledEnvironmentLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
-    return evaluate(light, direction_to_light);
-}
-
-} // NS LightSources
-} // NS OptiXRenderer
+} // NS OptiXRenderer::LightSources
 
 #endif // _OPTIXRENDERER_PRESAMPLED_ENVIRONMENT_LIGHT_IMPLEMENTATION_H_
