@@ -350,9 +350,14 @@ RT_PROGRAM void miss() {
     float3 environment_radiance = g_scene.environment_light.get_tint();
 
     unsigned int environment_map_ID = g_scene.environment_light.environment_map_ID;
-    if (environment_map_ID)
-        environment_radiance = LightSources::evaluate_intersection(g_scene.environment_light, ray.origin, ray.direction, 
-                                                                   monte_carlo_payload.bsdf_PDF);
+    if (environment_map_ID) {
+        LightResponse response = LightSources::evaluate_with_PDF(g_scene.environment_light, ray.direction);
+
+        if (monte_carlo_payload.bsdf_PDF.use_for_MIS())
+            // Calculate MIS weight and scale the radiance by it.
+            response.radiance *= MIS_weight(monte_carlo_payload.bsdf_PDF, response.PDF);
+        environment_radiance = to_float3(response.radiance);
+    }
 
     monte_carlo_payload.radiance += monte_carlo_payload.throughput * environment_radiance;
     monte_carlo_payload.throughput = make_float3(0.0f);

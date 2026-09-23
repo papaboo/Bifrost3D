@@ -13,6 +13,7 @@
 #include <OptiXRenderer/PublicTypes.h>
 #include <OptiXRenderer/RNG.h>
 
+#include <Bifrost/Assets/Shading/LightSources/SphereLight.h>
 #include <Bifrost/Assets/Shading/Utils.h>
 #include <Bifrost/Math/Color.h>
 #include <Bifrost/Math/Vector.h>
@@ -39,6 +40,7 @@ using PDF = Bifrost::Math::MonteCarlo::PDF;
 using BSDFResponse = Bifrost::Assets::Shading::BSDFResponse;
 using BSDFSample = Bifrost::Assets::Shading::BSDFSample;
 using LightResponse = Bifrost::Assets::Shading::LightResponse;
+using SphereLight = Bifrost::Assets::Shading::LightSources::SphereLight;
 
 struct RayTypes {
     static const unsigned int MonteCarlo = 0;
@@ -181,12 +183,6 @@ struct __align__(16) LightSample {
         sample.PDF = PDF::delta_dirac(0);
         return sample;
     }
-};
-
-struct SphereLight {
-    optix::float3 power;
-    optix::float3 position;
-    float radius;
 };
 
 struct SpotLight {

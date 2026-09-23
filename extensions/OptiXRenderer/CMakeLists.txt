@@ -52,7 +52,6 @@ set(SHADING_LIGHTSOURCES_SRC
   OptiXRenderer/Shading/LightSources/LightImpl.h
   OptiXRenderer/Shading/LightSources/LightSources.cu
   OptiXRenderer/Shading/LightSources/PresampledEnvironmentLightImpl.h
-  OptiXRenderer/Shading/LightSources/SphereLightImpl.h
   OptiXRenderer/Shading/LightSources/SpotLightImpl.h
 )
 
