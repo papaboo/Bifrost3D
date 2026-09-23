@@ -397,7 +397,7 @@ __inline_all__ optix::float3 offset_ray_origin(optix::float3 ray_origin, optix::
     return offset_ray_origin(ray_origin, geometric_normal);
 }
 
-__inline_all__ float MIS_weight(float pdf1, float pdf2) { return Bifrost::Math::MonteCarlo::balance_heuristic(pdf1, pdf2); }
+__inline_all__ float MIS_weight(Bifrost::Math::MonteCarlo::PDF pdf1, Bifrost::Math::MonteCarlo::PDF pdf2) { return Bifrost::Math::MonteCarlo::balance_heuristic(pdf1, pdf2); }
 
 } // NS OptiXRenderer
 
