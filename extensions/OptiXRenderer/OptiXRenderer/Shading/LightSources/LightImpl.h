@@ -15,8 +15,7 @@
 #include <OptiXRenderer/Shading/LightSources/SphereLightImpl.h>
 #include <OptiXRenderer/Shading/LightSources/SpotLightImpl.h>
 
-namespace OptiXRenderer {
-namespace LightSources {
+namespace OptiXRenderer::LightSources {
 
 __inline_dev__ bool is_delta_light(const Light& light, optix::float3 position) {
     switch (light.get_type()) {
@@ -50,63 +49,32 @@ __inline_dev__ LightSample sample_radiance(const Light& light, optix::float3 pos
     return LightSample::none();
 }
 
-__inline_dev__ PDF pdf(const Light& light, optix::float3 lit_position, optix::float3 direction_to_light) {
+__inline_dev__ LightResponse evaluate_with_PDF(const Light& light, optix::float3 lit_position, optix::float3 direction_to_light) {
     switch (light.get_type()) {
     case Light::Sphere:
-        return pdf(light.sphere, lit_position, direction_to_light);
+        return { to_rgb(evaluate(light.sphere, lit_position, direction_to_light)), pdf(light.sphere, lit_position, direction_to_light) };
     case Light::Directional:
-        return pdf(light.directional, direction_to_light);
+        return { to_rgb(evaluate(light.directional, direction_to_light)), pdf(light.directional, direction_to_light) };
     case Light::Environment:
-        return pdf(light.environment, direction_to_light);
+        return { to_rgb(evaluate(light.environment, direction_to_light)), pdf(light.environment, direction_to_light) };
     case Light::PresampledEnvironment:
-        return pdf(light.presampled_environment, direction_to_light);
+        return { to_rgb(evaluate(light.presampled_environment, direction_to_light)), pdf(light.presampled_environment, direction_to_light) };
     case Light::Spot:
-        return pdf(light.spot, lit_position, direction_to_light);
+        return { to_rgb(evaluate(light.spot, lit_position, direction_to_light)), pdf(light.spot, lit_position, direction_to_light) };
     }
-    return PDF::invalid();
+    return LightResponse::none();
 }
 
-__inline_dev__ optix::float3 evaluate(const Light& light, optix::float3 position, optix::float3 direction_to_light) {
-    switch (light.get_type()) {
-    case Light::Sphere:
-        return evaluate(light.sphere, position, direction_to_light);
-    case Light::Directional:
-        return evaluate(light.directional, direction_to_light);
-    case Light::Environment:
-        return evaluate(light.environment, direction_to_light);
-    case Light::PresampledEnvironment:
-        return evaluate(light.presampled_environment, direction_to_light);
-    case Light::Spot:
-        return evaluate(light.spot, position, direction_to_light);
-    }
-    return optix::make_float3(0.0f);
-}
+__inline_dev__ optix::float3 evaluate_intersection(const Light& light, optix::float3 lit_position, optix::float3 direction_to_light, PDF bsdf_PDF) {
+    LightResponse response = evaluate_with_PDF(light, lit_position, direction_to_light);
 
-template <typename LightType>
-__inline_dev__ optix::float3 evaluate_intersection(const LightType& light, optix::float3 position, optix::float3 direction_to_light, PDF bsdf_PDF) {
-    optix::float3 radiance = evaluate(light, position, ray.direction);
-
-    if (bsdf_PDF.use_for_MIS()) {
+    if (bsdf_PDF.use_for_MIS())
         // Calculate MIS weight and scale the radiance by it.
-        PDF light_PDF = pdf(light, position, ray.direction);
-        radiance *= MIS_weight(bsdf_PDF.value(), light_PDF.value());
-    }
+        response.radiance *= MIS_weight(bsdf_PDF, response.PDF);
 
-    return radiance;
+    return to_float3(response.radiance);
 }
 
-__inline_dev__ optix::float3 evaluate_intersection(const Light& light, optix::float3 position, optix::float3 direction_to_light, PDF bsdf_PDF) {
-    switch (light.get_type()) {
-    case Light::Sphere:
-        return evaluate_intersection(light.sphere, position, direction_to_light, bsdf_PDF);
-    case Light::Spot:
-        return evaluate_intersection(light.spot, position, direction_to_light, bsdf_PDF);
-    default:
-        return optix::make_float3(1000.0f, 0, 1000);
-    }
-}
-
-} // NS LightSources
-} // NS OptiXRenderer
+} // NS OptiXRenderer::LightSources
 
 #endif // _OPTIXRENDERER_LIGHT_IMPLEMENTATION_H_
