@@ -74,7 +74,7 @@ __inline_dev__ LightSample sample_single_light(const ShadingModel& material, flo
     if (apply_MIS)
         // The light source connected to the final bounce will be scaled by the MIS weight as well, even though the BSDF sample isn't traced and thus the second sample scheme isn't used.
         // This is done as the MIS weight will still reduce variance from light sources that would be more easily sampled using the BSDf.
-        light_sample.radiance *= MIS_weight(light_sample.PDF.value(), bsdf_response.PDF.value());
+        light_sample.radiance *= MIS_weight(light_sample.PDF, bsdf_response.PDF);
     else
         // BIAS Nearly specular materials and delta lights will lead to insane fireflies, so we clamp them here.
         bsdf_response.reflectance = { min(bsdf_response.reflectance.r, 32.0f), min(bsdf_response.reflectance.g, 32.0f), min(bsdf_response.reflectance.b, 32.0f) };
@@ -290,8 +290,6 @@ RT_PROGRAM void shadow_any_hit() {
 RT_PROGRAM void light_closest_hit() {
     Light light = g_scene.light_buffer[primitive_index];
     float3 light_radiance = LightSources::evaluate_intersection(light, ray.origin, ray.direction, monte_carlo_payload.bsdf_PDF);
-
-    monte_carlo_payload.throughput = fminf(monte_carlo_payload.throughput, make_float3(4));
 
     monte_carlo_payload.radiance += monte_carlo_payload.throughput * light_radiance;
     monte_carlo_payload.throughput = make_float3(0.0f);

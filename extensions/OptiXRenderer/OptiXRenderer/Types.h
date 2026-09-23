@@ -38,6 +38,7 @@ using Vector4f = Bifrost::Math::Vector4f;
 using PDF = Bifrost::Math::MonteCarlo::PDF;
 using BSDFResponse = Bifrost::Assets::Shading::BSDFResponse;
 using BSDFSample = Bifrost::Assets::Shading::BSDFSample;
+using LightResponse = Bifrost::Assets::Shading::LightResponse;
 
 struct RayTypes {
     static const unsigned int MonteCarlo = 0;
