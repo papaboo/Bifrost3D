@@ -21,7 +21,7 @@ namespace OptiXRenderer::Shading::ShadingModels {
 // ---------------------------------------------------------------------------
 class TransmissiveShading {
 private:
-    Bifrost::Math::RGB m_transmission_tint;
+    RGB m_transmission_tint;
     float m_specularity;
     float m_ggx_alpha;
     float m_ior_i_over_o;
@@ -29,8 +29,8 @@ private:
 
 public:
 
-    __inline_all__ void setup_shading(optix::float3 transmission_tint, float roughness, float specularity, float cos_theta_o) {
-        m_transmission_tint = to_rgb(transmission_tint);
+    __inline_all__ void setup_shading(RGB transmission_tint, float roughness, float specularity, float cos_theta_o) {
+        m_transmission_tint = transmission_tint;
         m_specularity = specularity;
         m_ggx_alpha = Bifrost::Assets::Shading::BSDFs::GGX::alpha_from_roughness(roughness);
         
@@ -55,7 +55,7 @@ public:
 
         // Tint and roughness
         float4 tint_roughness = material.get_tint_roughness(texcoord) * tint_and_roughness_scale;
-        float3 transmission_tint = make_float3(tint_roughness);
+        RGB transmission_tint = { tint_roughness.x, tint_roughness.y, tint_roughness.z };
         float roughness = max(tint_roughness.w, min_roughness);
 
         setup_shading(transmission_tint, roughness, material.specularity, cos_theta_o);
@@ -88,11 +88,11 @@ public:
     }
 
     // Estimate the directional-hemispherical reflectance function.
-    __inline_all__ optix::float3 rho(float abs_cos_theta_o) const {
+    __inline_all__ RGB rho(float abs_cos_theta_o) const {
         float roughness = Bifrost::Assets::Shading::BSDFs::GGX::roughness_from_alpha(m_ggx_alpha);
         DielectricRho rho = DielectricRho::fetch(abs_cos_theta_o, roughness, m_ior_i_over_o);
         float reflection = rho.reflected_rho / rho.total_rho;
-        return reflection + (1 - reflection) * to_float3(m_transmission_tint);
+        return reflection + m_transmission_tint * (1 - reflection);
     }
 };
 

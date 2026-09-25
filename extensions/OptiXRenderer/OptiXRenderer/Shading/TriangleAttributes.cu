@@ -26,7 +26,7 @@ rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, ); 
 rtDeclareVariable(float2, texcoord, attribute texcoord, );
 rtDeclareVariable(float4, tint_and_roughness_scale, attribute tint_and_roughness_scale, );
-rtDeclareVariable(float3, emission, attribute emission, );
+rtDeclareVariable(RGB, emission, attribute emission, );
 rtDeclareVariable(unsigned int, primitive_index, attribute primitive_index, );
 
 //-------------------------------------------------------------------------------------------------
@@ -75,10 +75,10 @@ RT_PROGRAM void interpolate_attributes() {
     } else
         tint_and_roughness_scale = make_float4(1.0f); // Multiplicative identity
 
-    if (mesh_flags & MeshFlags::Emissive) {
-        emission = emission_buffer[vertex_indices.y] * barycentrics.x + 
-                   emission_buffer[vertex_indices.z] * barycentrics.y +
-                   emission_buffer[vertex_indices.x] * barycentrics_z;
-    } else
-        emission = make_float3(1.0f); // Multiplicative identity to scale the material emission
+    if (mesh_flags & MeshFlags::Emissive)
+        emission = to_rgb(emission_buffer[vertex_indices.y] * barycentrics.x + 
+                          emission_buffer[vertex_indices.z] * barycentrics.y +
+                          emission_buffer[vertex_indices.x] * barycentrics_z);
+    else
+        emission = RGB(1.0f); // Multiplicative identity to scale the material emission
 }

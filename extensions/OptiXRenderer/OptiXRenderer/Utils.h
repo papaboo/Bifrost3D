@@ -171,16 +171,6 @@ __inline_all__ float adjust_dielectric_specularity_to_exterior_medium(float exte
     return dielectric_specularity(exterior_ior, base_ior);
 }
 
-// Adjust the specularity of a conductor material, which is set with the assumption that the material is seen through air,
-// to the specularity that the material would have as seen through a volume with the ior defined by the exterior ior.
-__inline_all__ optix::float3 adjust_conductor_specularity_to_exterior_medium(optix::float3 exterior_ior, optix::float3 specularity_through_air, optix::float3 extinction_coefficient) {
-    // Convert specularity to base_ior
-    optix::float3 base_ior = conductor_ior_from_specularity(specularity_through_air, extinction_coefficient);
-
-    // Compute new base specularity
-    return conductor_specularity(exterior_ior, base_ior, extinction_coefficient);
-}
-
 __inline_all__ float schlick_fresnel(float incident_specular, float abs_cos_theta) {
     return incident_specular + (1.0f - incident_specular) * pow5(1.0f - abs_cos_theta);
 }
