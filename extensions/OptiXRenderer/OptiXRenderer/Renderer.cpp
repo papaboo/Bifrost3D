@@ -882,8 +882,8 @@ struct Renderer::Implementation {
 
                         device_light.flags = Light::Directional;
 
-                        device_light.directional.direction = to_float3(host_light.get_node().get_global_transform().rotation.forward());
-                        device_light.directional.radiance = to_float3(host_light.get_radiance());
+                        auto light_direction = host_light.get_node().get_global_transform().rotation.forward();
+                        device_light.directional = DirectionalLight(light_direction, host_light.get_radiance());
                         break;
                     }
                     default:
