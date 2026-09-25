@@ -37,7 +37,7 @@ RT_PROGRAM void intersect(int prim_index) {
         t = Intersect::ray_sphere(ray, Sphere::make(to_float3(sphere_light.get_position()), sphere_light.get_radius()));
     } else if (light.get_type() == Light::Spot) {
         const SpotLight spot_light = light.spot;
-        t = Intersect::ray_disk(ray, Disk::make(spot_light.position, spot_light.direction, spot_light.radius));
+        t = Intersect::ray_disk(ray, Disk::make(to_float3(spot_light.position), to_float3(spot_light.direction), spot_light.radius));
     }
 
     if (rtPotentialIntersection(t)) {
@@ -55,12 +55,12 @@ RT_PROGRAM void intersect(int prim_index) {
             intersection_point = light_center + sphere_light.get_radius() * shading_normal;
         } else if (light.get_type() == Light::Spot) {
             const SpotLight spot_light = light.spot;
-            shading_normal = spot_light.direction;
+            shading_normal = to_float3(spot_light.direction);
 
             // Computing the intersection point using origin + t * direction can be unstable if t is large.
             // So the coarse but close intersection point is projected on to the plane.
-            float t_fine = Intersect::point_distance_to_plane(coarse_intersection_point, spot_light.position, spot_light.direction);
-            intersection_point = coarse_intersection_point + t_fine * spot_light.direction;
+            float t_fine = Intersect::point_distance_to_plane(coarse_intersection_point, to_float3(spot_light.position), to_float3(spot_light.direction));
+            intersection_point = coarse_intersection_point + t_fine * to_float3(spot_light.direction);
         }
 
         geometric_normal = shading_normal;
@@ -83,7 +83,7 @@ RT_PROGRAM void bounds(int primitive_index, float result[6]) {
     bool is_sphere_light = light.get_type() == Light::Sphere;
     float radius = is_sphere_light ? light.sphere.get_radius() : light.spot.radius;
     if (radius > 0.0f) {
-        optix::float3 position = is_sphere_light ? to_float3(light.sphere.get_position()) : light.spot.position;
+        optix::float3 position = is_sphere_light ? to_float3(light.sphere.get_position()) : to_float3(light.spot.position);
         aabb->m_min = position - radius;
         aabb->m_max = position + radius;
     } else
