@@ -17,8 +17,7 @@
 #include <Bifrost/Math/Half.h>
 #include <Bifrost/Scene/SceneNode.h>
 
-namespace Bifrost {
-namespace Scene {
+namespace Bifrost::Scene {
 
 //----------------------------------------------------------------------------
 // Light source ID
@@ -36,6 +35,7 @@ public:
 
     enum class Type : unsigned char {
         Sphere,
+        Disk,
         Spot,
         Directional
     };
@@ -49,6 +49,7 @@ public:
     static inline bool has(LightSourceID light_ID) { return m_UID_generator.has(light_ID) && get_changes(light_ID).not_set(Change::Destroyed); }
 
     static LightSourceID create_sphere_light(SceneNodeID node_ID, Math::RGB power, float radius);
+    static LightSourceID create_disk_light(SceneNodeID node_ID, Math::RGB power, float radius);
     static LightSourceID create_spot_light(SceneNodeID node_ID, Math::RGB power, float radius, float cos_angle);
     static LightSourceID create_directional_light(SceneNodeID node_ID, Math::RGB radiance);
     static void destroy(LightSourceID light_ID);
@@ -67,6 +68,13 @@ public:
     static void set_sphere_light_power(LightSourceID light_ID, Math::RGB power);
     static inline float get_sphere_light_radius(LightSourceID light_ID) { assert(get_type(light_ID) == Type::Sphere); return m_lights[light_ID].sphere.radius; }
     static void set_sphere_light_radius(LightSourceID light_ID, float radius);
+
+    // Disk light.
+    static inline bool is_delta_disk_light(LightSourceID light_ID) { assert(get_type(light_ID) == Type::Disk); return m_lights[light_ID].disk.radius == 0.0f; }
+    static inline Math::RGB get_disk_light_power(LightSourceID light_ID) { return m_lights[light_ID].color; }
+    static void set_disk_light_power(LightSourceID light_ID, Math::RGB power);
+    static inline float get_disk_light_radius(LightSourceID light_ID) { assert(get_type(light_ID) == Type::Disk); return m_lights[light_ID].disk.radius; }
+    static void set_disk_light_radius(LightSourceID light_ID, float radius);
 
     // Spot light
     static inline bool is_delta_spot_light(LightSourceID light_ID) { assert(get_type(light_ID) == Type::Spot); return m_lights[light_ID].spot.radius == 0.0f || m_lights[light_ID].spot.cos_angle == USHRT_MAX; }
@@ -112,6 +120,10 @@ private:
             struct {
                 float radius;
             } sphere;
+
+            struct {
+                float radius;
+            } disk;
 
             struct {
                 half_float::half radius;
@@ -188,6 +200,31 @@ public:
 };
 
 // ---------------------------------------------------------------------------
+// Bifrost disk light wrapper.
+// ---------------------------------------------------------------------------
+class DiskLight final : public LightSource {
+public:
+    // -----------------------------------------------------------------------
+    // Constructors and destructors.
+    // -----------------------------------------------------------------------
+    DiskLight() : LightSource(LightSourceID::invalid_UID()) {}
+    DiskLight(LightSource light) : LightSource(light) { assert(light.get_type() == LightSources::Type::Disk); }
+    DiskLight(SceneNode node, Math::RGB power, float radius)
+        : LightSource(LightSources::create_disk_light(node.get_ID(), power, radius)) {}
+
+    static DiskLight invalid() { return DiskLight(); }
+
+    // -----------------------------------------------------------------------
+    // Getters and setters.
+    // -----------------------------------------------------------------------
+    inline bool is_delta_light() const { return LightSources::is_delta_disk_light(m_ID); }
+    inline Math::RGB get_power() const { return LightSources::get_disk_light_power(m_ID); }
+    inline void set_power(Math::RGB power) { LightSources::set_disk_light_power(m_ID, power); }
+    inline float get_radius() const { return LightSources::get_disk_light_radius(m_ID); }
+    inline void set_radius(float radius) { LightSources::set_disk_light_radius(m_ID, radius); }
+};
+
+// ---------------------------------------------------------------------------
 // Bifrost spot light wrapper.
 // ---------------------------------------------------------------------------
 class SpotLight final : public LightSource {
@@ -238,7 +275,6 @@ public:
     inline void set_radiance(Math::RGB radiance) { LightSources::set_directional_light_radiance(m_ID, radiance); }
 };
 
-} // NS Scene
-} // NS Bifrost
+} // NS Bifrost::Scene
 
 #endif // _BIFROST_SCENE_LIGHT_SOURCE_H_
