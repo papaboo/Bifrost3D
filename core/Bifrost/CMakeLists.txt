@@ -41,6 +41,7 @@ SET(ASSETS_SHADING_BSDFS_SRCS
 )
 
 SET(ASSETS_SHADING_LIGHTSOURCES_SRCS
+  Bifrost/Assets/Shading/LightSources/DirectionalLight.h
   Bifrost/Assets/Shading/LightSources/DiskLight.h
   Bifrost/Assets/Shading/LightSources/LtcAreaLight.h
   Bifrost/Assets/Shading/LightSources/TriangleLight.h
