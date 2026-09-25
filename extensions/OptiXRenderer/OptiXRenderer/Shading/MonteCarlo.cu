@@ -48,7 +48,7 @@ rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 rtDeclareVariable(float2, texcoord, attribute texcoord, );
 rtDeclareVariable(float4, tint_and_roughness_scale, attribute tint_and_roughness_scale, );
-rtDeclareVariable(float3, emission, attribute emission, );
+rtDeclareVariable(RGB, emission, attribute emission, );
 rtDeclareVariable(unsigned int, primitive_index, attribute primitive_index, );
 
 //-----------------------------------------------------------------------------
@@ -197,7 +197,7 @@ __inline_all__ void path_tracing_closest_hit() {
         monte_carlo_payload.light_sample = reestimated_light_samples(material, world_intersection_point, wo, world_shading_tbn);
         monte_carlo_payload.light_sample_origin = offset_ray_origin(
             world_intersection_point, to_float3(monte_carlo_payload.light_sample.direction_to_light), world_geometric_normal);
-        monte_carlo_payload.light_sample.radiance *= to_rgb(monte_carlo_payload.throughput);
+        monte_carlo_payload.light_sample.radiance *= monte_carlo_payload.throughput;
     }
 
     // BSDF sampling.
@@ -206,9 +206,9 @@ __inline_all__ void path_tracing_closest_hit() {
     monte_carlo_payload.direction = to_float3(bsdf_sample.direction) * world_shading_tbn;
     monte_carlo_payload.bsdf_PDF = bsdf_sample.PDF;
     if (bsdf_sample.PDF.is_valid())
-        monte_carlo_payload.throughput *= to_float3(bsdf_sample.reflectance) * abs(bsdf_sample.direction.z) / bsdf_sample.PDF.value(); // f * ||cos(theta)|| / pdf
+        monte_carlo_payload.throughput *= bsdf_sample.reflectance * abs(bsdf_sample.direction.z) / bsdf_sample.PDF.value(); // f * ||cos(theta)|| / pdf
     else
-        monte_carlo_payload.throughput = make_float3(0.0f);
+        monte_carlo_payload.throughput = RGB::black();
 
     // Mirror the BSDF direction if the sampled BSDF direction points into the geometry.
     // This makes the integrator non-symmetric wrt wi and wo, but gives a decent
@@ -249,7 +249,7 @@ RT_PROGRAM void default_closest_hit() {
 struct DiffuseMaterialCreator {
     __inline_all__ static DiffuseShading create(const Material& material_params, optix::float2 texcoord, float cos_theta_o) {
         float4 tint_roughness = material_params.get_tint_roughness(texcoord) * tint_and_roughness_scale;
-        return DiffuseShading(make_float3(tint_roughness), tint_roughness.w);
+        return DiffuseShading({ tint_roughness.x, tint_roughness.y, tint_roughness.z }, tint_roughness.w);
     }
 };
 
@@ -277,8 +277,8 @@ rtDeclareVariable(ShadowPayload, shadow_payload, rtPayload, );
 RT_PROGRAM void shadow_any_hit() {
     float coverage = g_materials[model_state.material_index].get_coverage(texcoord);
     shadow_payload.radiance *= 1.0f - coverage;
-    if (shadow_payload.radiance.x < 0.0000001f && shadow_payload.radiance.y < 0.0000001f && shadow_payload.radiance.z < 0.0000001f) {
-        shadow_payload.radiance = make_float3(0, 0, 0);
+    if (shadow_payload.radiance.r < 0.0000001f && shadow_payload.radiance.g < 0.0000001f && shadow_payload.radiance.b < 0.0000001f) {
+        shadow_payload.radiance = RGB::black();
         rtTerminateRay();
     }
 }
@@ -289,10 +289,10 @@ RT_PROGRAM void shadow_any_hit() {
 
 RT_PROGRAM void light_closest_hit() {
     Light light = g_scene.light_buffer[primitive_index];
-    float3 light_radiance = LightSources::evaluate_intersection(light, ray.origin, ray.direction, monte_carlo_payload.bsdf_PDF);
+    RGB light_radiance = LightSources::evaluate_intersection(light, ray.origin, ray.direction, monte_carlo_payload.bsdf_PDF);
 
     monte_carlo_payload.radiance += monte_carlo_payload.throughput * light_radiance;
-    monte_carlo_payload.throughput = make_float3(0.0f);
+    monte_carlo_payload.throughput = RGB::black();
     monte_carlo_payload.position = ray.direction * t_hit + ray.origin;
     monte_carlo_payload.shading_normal = shading_normal;
     monte_carlo_payload.primitive_id = PrimitiveID::make(InstanceID::analytical_light_sources(), primitive_index);
