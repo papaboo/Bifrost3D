@@ -41,6 +41,7 @@ using PDF = Bifrost::Math::MonteCarlo::PDF;
 using BSDFResponse = Bifrost::Assets::Shading::BSDFResponse;
 using BSDFSample = Bifrost::Assets::Shading::BSDFSample;
 using LightResponse = Bifrost::Assets::Shading::LightResponse;
+using LightSample = Bifrost::Assets::Shading::LightSample;
 using SphereLight = Bifrost::Assets::Shading::LightSources::SphereLight;
 using DirectionalLight = Bifrost::Assets::Shading::LightSources::DirectionalLight;
 
@@ -173,25 +174,11 @@ struct PrimitiveID {
 // Light source structs.
 //----------------------------------------------------------------------------
 
-struct __align__(16) LightSample {
-    optix::float3 radiance;
-    PDF PDF;
-    optix::float3 direction_to_light;
-    float distance;
-
-    __inline_all__ static LightSample none() {
-        LightSample sample = {};
-        sample.direction_to_light = { 0, 1, 0 };
-        sample.PDF = PDF::delta_dirac(0);
-        return sample;
-    }
-};
-
 struct SpotLight {
-    optix::float3 power;
-    optix::float3 position;
+    RGB power;
+    Vector3f position;
     float radius;
-    optix::float3 direction;
+    Vector3f direction;
     float cos_angle;
 };
 

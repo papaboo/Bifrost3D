@@ -33,20 +33,16 @@ __inline_dev__ bool is_delta_light(const Light& light, optix::float3 lit_positio
 
 __inline_dev__ LightSample sample_radiance(const Light& light, optix::float3 lit_position, optix::float2 random_sample) {
     switch (light.get_type()) {
-    case Light::Sphere: {
-        auto sample = light.sphere.sample_radiance(to_vector3f(lit_position), { random_sample.x, random_sample.y });
-        return { to_float3(sample.radiance), sample.PDF, to_float3(sample.direction_to_light), sample.distance };
-    }
-    case Light::Directional: {
-        auto sample = light.directional.sample_radiance();
-        return { to_float3(sample.radiance), sample.PDF, to_float3(sample.direction_to_light), sample.distance };
-    }
+    case Light::Sphere:
+        return light.sphere.sample_radiance(to_vector3f(lit_position), { random_sample.x, random_sample.y });
+    case Light::Directional:
+        return light.directional.sample_radiance();
     case Light::Environment:
         return sample_radiance(light.environment, random_sample);
     case Light::PresampledEnvironment:
         return sample_radiance(light.presampled_environment, random_sample);
     case Light::Spot:
-        return sample_radiance(light.spot, lit_position, random_sample);
+        return sample_radiance(light.spot, to_vector3f(lit_position), { random_sample.x, random_sample.y });
     }
     return LightSample::none();
 }
@@ -62,7 +58,7 @@ __inline_dev__ LightResponse evaluate_with_PDF(const Light& light, optix::float3
     case Light::PresampledEnvironment:
         return evaluate_with_PDF(light.presampled_environment, direction_to_light);
     case Light::Spot:
-        return { to_rgb(evaluate(light.spot, lit_position, direction_to_light)), pdf(light.spot, lit_position, direction_to_light) };
+        return evaluate_with_PDF(light.spot, to_vector3f(lit_position), to_vector3f(direction_to_light));
     }
     return LightResponse::none();
 }
