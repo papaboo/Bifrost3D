@@ -13,6 +13,7 @@
 #include <Assets/Shading/BSDFs/GGXTest.h>
 #include <Assets/Shading/BSDFs/LambertTest.h>
 #include <Assets/Shading/BSDFs/OrenNayarTest.h>
+#include <Assets/Shading/LightSources/AreaLightsTest.h>
 #include <Assets/Shading/LightSources/DiskLightTest.h>
 #include <Assets/Shading/LightSources/SphereLightTest.h>
 #include <Assets/Shading/LightSources/TriangleLightTest.h>
