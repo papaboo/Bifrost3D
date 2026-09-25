@@ -39,15 +39,15 @@ public:
     float get_specular_probability() const { return m_shading_model.get_specular_probability(); }
     float get_coat_probability() const { return m_shading_model.get_coat_probability(); }
 
-    optix::float3 rho(float abs_cos_theta_wi) const { return m_shading_model.rho(abs_cos_theta_wi); }
-    optix::float3 diffuse_rho(float abs_cos_theta_wi) const { return m_shading_model.diffuse_rho(abs_cos_theta_wi); }
-    optix::float3 specular_rho(float abs_cos_theta_wi) const { return m_shading_model.specular_rho(abs_cos_theta_wi); }
+    RGB rho(float abs_cos_theta_wi) const { return m_shading_model.rho(abs_cos_theta_wi); }
+    RGB diffuse_rho(float abs_cos_theta_wi) const { return m_shading_model.diffuse_rho(abs_cos_theta_wi); }
+    RGB specular_rho(float abs_cos_theta_wi) const { return m_shading_model.specular_rho(abs_cos_theta_wi); }
     float coat_rho(float abs_cos_theta_wi) const { return m_shading_model.coat_rho(abs_cos_theta_wi); }
 
     std::string to_string() const {
         std::ostringstream out;
         out << "Default shading:" << std::endl;
-        out << "  Tint: " << m_material_params.tint.x << ", " << m_material_params.tint.y << ", " << m_material_params.tint.z << std::endl;
+        out << "  Tint: " << m_material_params.tint.r << ", " << m_material_params.tint.g << ", " << m_material_params.tint.b << std::endl;
         out << "  Roughness: " << m_material_params.roughness << std::endl;
         out << "  Metalness: " << m_material_params.metallic << std::endl;
         out << "  Coverage: " << m_material_params.coverage << std::endl;
@@ -63,7 +63,7 @@ GTEST_TEST(DefaultShadingModel, power_conservation) {
 
     // A white material to stress test power_conservation.
     Material material_params = {};
-    material_params.tint = make_float3(1.0f, 1.0f, 1.0f);
+    material_params.tint = RGB::white();
     material_params.metallic = 0.0f;
     material_params.specularity = 0.02f;
 
@@ -147,7 +147,7 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
 
     { // Test that specular reflections on non-metals are white and incident reflections are diffuse.
         Material material_params = {};
-        material_params.tint = make_float3(1.0f, 0.0f, 0.0f);
+        material_params.tint = RGB(1.0f, 0.0f, 0.0f);
         material_params.roughness = 0.02f;
         material_params.metallic = 0.0f;
         material_params.specularity = 0.0f; // Testing specularity. Physically-based fubar value.
@@ -179,8 +179,8 @@ GTEST_TEST(DefaultShadingModel, Fresnel) {
             float3 wo = make_float3(0.0f, 0.0f, 1.0f);
             auto material = DefaultShading(material_params, wo.z);
             RGB weight = material.evaluate_with_PDF(wo, wo).reflectance;
-            float scale = material_params.tint.x / weight.r;
-            EXPECT_RGB_EQ_EPS(scale * weight, to_rgb(material_params.tint), 1e-6f);
+            float scale = material_params.tint.r / weight.r;
+            EXPECT_RGB_EQ_EPS(scale * weight, material_params.tint, 1e-6f);
         }
 
         { // Test that grazing angle reflectivity is nearly white.
@@ -203,7 +203,7 @@ GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation
     // Test albedo is properly estimated.
     static auto test_albedo = [](float3 wo, float roughness, float metallic, float coat_strength, float coat_roughness) {
         Material material_params = {};
-        material_params.tint = make_float3(1.0f, 0.5f, 0.25f);
+        material_params.tint = RGB(1.0f, 0.5f, 0.25f);
         material_params.roughness = roughness;
         material_params.metallic = metallic;
         material_params.specularity = 0.04f;
@@ -211,12 +211,12 @@ GTEST_TEST(DefaultShadingModel, directional_hemispherical_reflectance_estimation
         material_params.coat_roughness = coat_roughness;
         auto shading_model = DefaultShadingWrapper(material_params, wo.z);
 
-        float3 expected_rho = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance;
-        float3 actual_rho = shading_model.rho(wo.z);
+        RGB expected_rho = to_rgb(ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo).reflectance);
+        RGB actual_rho = shading_model.rho(wo.z);
 
         // The error is slightly higher for low roughness materials.
         float error_percentage = 0.015f * (2 - roughness) * (2 - coat_roughness);
-        EXPECT_FLOAT3_EQ_PCT(expected_rho, actual_rho, error_percentage) << shading_model.to_string();
+        EXPECT_RGB_EQ_PCT(expected_rho, actual_rho, error_percentage) << shading_model.to_string();
     };
 
     const float3 incident_wo = make_float3(0.0f, 0.0f, 1.0f);
@@ -245,7 +245,7 @@ GTEST_TEST(DefaultShadingModel, white_hot_room) {
             for (int a = 0; a < 5; ++a) {
                 float abs_cos_theta = 1.0f - float(a) * 0.2f;
                 auto material = DefaultShadingWrapper(white_material_params, abs_cos_theta);
-                EXPECT_FLOAT_EQ(1.0f, material.rho(abs_cos_theta).x) << material.to_string();
+                EXPECT_FLOAT_EQ(1.0f, material.rho(abs_cos_theta).r) << material.to_string();
             }
         }
     }
@@ -268,10 +268,10 @@ GTEST_TEST(DefaultShadingModel, sampling_probability_match_reflectance_contribut
                         material_params.coat_roughness = coat_roughness;
                         auto material = DefaultShadingWrapper(material_params, cos_theta_o);
 
-                        float3 diffuse_rho = material.diffuse_rho(cos_theta_o);
-                        float3 specular_rho = material.specular_rho(cos_theta_o);
-                        float3 coat_rho = make_float3(material.coat_rho(cos_theta_o));
-                        float3 total_rho = material.rho(cos_theta_o);
+                        RGB diffuse_rho = material.diffuse_rho(cos_theta_o);
+                        RGB specular_rho = material.specular_rho(cos_theta_o);
+                        RGB coat_rho = RGB(material.coat_rho(cos_theta_o));
+                        RGB total_rho = material.rho(cos_theta_o);
 
                         float expected_diffuse_contribution = sum(diffuse_rho) / sum(total_rho);
                         float expected_specular_contribution = sum(specular_rho) / sum(total_rho);
@@ -294,7 +294,7 @@ GTEST_TEST(DefaultShadingModel, metallic_interpolation) {
     using namespace optix;
 
     Material material_params = {};
-    material_params.tint = make_float3(1.0f, 0.5f, 0.25f);
+    material_params.tint = RGB(1.0f, 0.5f, 0.25f);
     material_params.specularity = 0.04f;
 
     for (float roughness : { 0.0f, 0.5f, 1.0f }) {
@@ -304,20 +304,20 @@ GTEST_TEST(DefaultShadingModel, metallic_interpolation) {
 
                 material_params.metallic = metallic;
                 auto material = DefaultShadingWrapper(material_params, abs_cos_theta);
-                float3 rho = material.rho(abs_cos_theta);
+                RGB rho = material.rho(abs_cos_theta);
 
                 material_params.metallic = 0;
                 auto dielectric_material = DefaultShading(material_params, abs_cos_theta);
-                float3 dielectric_rho = dielectric_material.rho(abs_cos_theta);
+                RGB dielectric_rho = dielectric_material.rho(abs_cos_theta);
 
                 material_params.metallic = 1;
                 auto conductor_material = DefaultShading(material_params, abs_cos_theta);
-                float3 conductor_rho = conductor_material.rho(abs_cos_theta);
+                RGB conductor_rho = conductor_material.rho(abs_cos_theta);
 
                 // Test that the directional-hemispherical reflectance of the semi-metallic material equals
                 // the one evaluated by interpolating a fully dielectric and fully conductor material.
-                float3 interpolated_rho = lerp(dielectric_rho, conductor_rho, metallic);
-                EXPECT_FLOAT3_EQ_EPS(interpolated_rho, rho, 1e-6f) << material.to_string();
+                RGB interpolated_rho = lerp(dielectric_rho, conductor_rho, metallic);
+                EXPECT_RGB_EQ_EPS(interpolated_rho, rho, 1e-6f) << material.to_string();
             }
         }
     }
@@ -367,8 +367,8 @@ GTEST_TEST(DefaultShadingModel, coat_interpolation) {
             material_params.coat_roughness = coat_roughness;
 
             auto coated_material = DefaultShading(material_params, cos_theta);
-            float coated_specularity = coated_material.get_specularity().x;
-            float3 coated_rho = coated_material.rho(cos_theta);
+            float coated_specularity = coated_material.get_specularity().r;
+            RGB coated_rho = coated_material.rho(cos_theta);
 
             // Verify that material roughness is lower when the coat isn't perfectly smooth.
             if (coat_roughness > 0.0)
@@ -377,8 +377,8 @@ GTEST_TEST(DefaultShadingModel, coat_interpolation) {
             material_params.coat = 0.0f;
             material_params.roughness = coated_material.get_roughness();
             auto non_coated_material = DefaultShading(material_params, cos_theta);
-            float non_coated_specularity = non_coated_material.get_specularity().x;
-            float3 non_coated_rho = non_coated_material.rho(cos_theta);
+            float non_coated_specularity = non_coated_material.get_specularity().r;
+            RGB non_coated_rho = non_coated_material.rho(cos_theta);
 
             // Verify that the two materials have the same roughness.
             EXPECT_FLOAT_EQ(non_coated_material.get_roughness(), coated_material.get_roughness());
@@ -387,8 +387,8 @@ GTEST_TEST(DefaultShadingModel, coat_interpolation) {
                 // Generate a material with a partial coat that has the same roughness as the coated material.
                 material_params.coat = coat_strength;
                 auto material = generate_interpolated_coated_material(material_params, cos_theta, coated_material.get_roughness());
-                float interpolated_specularity = material.get_specularity().x;
-                float3 interpolated_rho = material.rho(cos_theta);
+                float interpolated_specularity = material.get_specularity().r;
+                RGB interpolated_rho = material.rho(cos_theta);
 
                 // Verify that the two materials have the same roughness.
                 EXPECT_FLOAT_EQ_EPS(material.get_roughness(), coated_material.get_roughness(), 1e-6f);
@@ -400,8 +400,8 @@ GTEST_TEST(DefaultShadingModel, coat_interpolation) {
                 // Test that the directional-hemispherical reflectance of the semi-coated material equals
                 // the one evaluated by interpolating between a material with no coat and coated material.
                 float acceptable_pct_deviation = 0.01f;
-                float3 expected_rho = lerp(non_coated_rho, coated_rho, coat_strength);
-                EXPECT_FLOAT3_EQ_PCT(expected_rho, interpolated_rho, acceptable_pct_deviation);
+                RGB expected_rho = lerp(non_coated_rho, coated_rho, coat_strength);
+                EXPECT_RGB_EQ_PCT(expected_rho, interpolated_rho, acceptable_pct_deviation);
             }
         }
     }

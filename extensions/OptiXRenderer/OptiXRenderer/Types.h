@@ -271,7 +271,7 @@ struct __align__(16) Material {
 
     Flags flags;
     ShadingModel shading_model;
-    optix::float3 tint;
+    RGB tint;
 
     float roughness;
     int tint_roughness_texture_ID;
@@ -283,7 +283,7 @@ struct __align__(16) Material {
     float coverage;
     int coverage_texture_ID;
 
-    optix::float3 emission;
+    RGB emission;
     UNorm16 coat;
     UNorm16 coat_roughness;
 
@@ -293,7 +293,7 @@ struct __align__(16) Material {
 
 #if GPU_DEVICE
     __inline_all__ optix::float4 get_tint_roughness(optix::float2 texcoord) const {
-        optix::float4 tint_roughness = optix::make_float4(tint, roughness);
+        optix::float4 tint_roughness = optix::make_float4(tint.r, tint.g, tint.b, roughness);
         if (tint_roughness_texture_ID)
             tint_roughness *= optix::rtTex2D<optix::float4>(tint_roughness_texture_ID, texcoord.x, texcoord.y);
         if (roughness_texture_ID)
@@ -333,10 +333,10 @@ enum RngSamplingDimension {
 };
 
 struct __align__(16) MonteCarloPayload {
-    optix::float3 radiance;
+    RGB radiance;
     PrimitiveID primitive_id;
 
-    optix::float3 throughput;
+    RGB throughput;
     unsigned int bounces;
 
     optix::float3 position;
@@ -366,14 +366,15 @@ struct __align__(16) MonteCarloPayload {
 
     __inline_dev__ optix::float2 rng_sample2f(unsigned int sampling_dimension) { return make_float2(rng_sample4f(sampling_dimension)); }
 
-    __inline_dev__ void debug_output(optix::float3 color) {
+    __inline_dev__ void debug_output(RGB color) {
         throughput = { 0,0,0 };
         radiance = color;
     }
+    __inline_dev__ void debug_output(optix::float3 color) { debug_output(RGB(color.x, color.y, color.z)); }
 };
 
 struct ShadowPayload {
-    optix::float3 radiance;
+    RGB radiance;
 };
 
 //----------------------------------------------------------------------------
