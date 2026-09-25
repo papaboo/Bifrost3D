@@ -758,7 +758,7 @@ struct Renderer::Implementation {
                 device_material.flags = Material::Flags(host_material.get_flags().raw());
                 device_material.shading_model = Material::ShadingModel(int(host_material.get_shading_model()));
 
-                device_material.tint = to_float3(host_material.get_tint());
+                device_material.tint = host_material.get_tint();
                 if (host_material.has_tint_texture()) {
                     // Validate that the image has 4 channels! Otherwise OptiX goes boom boom.
                     TextureID texture_ID = host_material.get_tint_roughness_texture_ID();
@@ -806,7 +806,7 @@ struct Renderer::Implementation {
                 } else
                     device_material.coverage_texture_ID = 0;
 
-                device_material.emission = to_float3(host_material.get_emission());
+                device_material.emission = host_material.get_emission();
             };
 
             if (!Materials::get_changed_materials().is_empty()) {

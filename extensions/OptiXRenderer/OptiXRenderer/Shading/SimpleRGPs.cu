@@ -60,7 +60,7 @@ __inline_dev__ MonteCarloPayload initialize_monte_carlo_payload(int x, int y, in
     payload.pixel_hash = RNG::pcg2d(x, y).x;
     payload.accumulation_count = accumulation_count;
 
-    payload.throughput = make_float3(1.0f);
+    payload.throughput = RGB(1.0f);
     payload.light_sample = LightSample::none();
     payload.bsdf_PDF = PDF::delta_dirac();
 
@@ -80,30 +80,30 @@ __inline_dev__ void accumulate(Evaluator evaluator) {
     MonteCarloPayload payload = initialize_monte_carlo_payload(g_launch_index.x, g_launch_index.y,
         screen_size.x, screen_size.y, accumulation_count, camera_state);
 
-    float3 radiance = evaluator(payload);
+    RGB radiance = evaluator(payload);
 
     auto accumulation_buffer = camera_state.accumulation_buffer;
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
     double3 accumulated_radiance_d;
     if (accumulation_count != 0) {
         double3 prev_radiance = make_double3(accumulation_buffer[g_launch_index].x, accumulation_buffer[g_launch_index].y, accumulation_buffer[g_launch_index].z);
-        accumulated_radiance_d = lerp_double(prev_radiance, make_double3(radiance.x, radiance.y, radiance.z), 1.0 / (accumulation_count + 1.0));
+        accumulated_radiance_d = lerp_double(prev_radiance, make_double3(radiance.r, radiance.g, radiance.b), 1.0 / (accumulation_count + 1.0));
     } else
-        accumulated_radiance_d = make_double3(radiance.x, radiance.y, radiance.z);
+        accumulated_radiance_d = make_double3(radiance.r, radiance.g, radiance.b);
     accumulation_buffer[g_launch_index] = make_double4(accumulated_radiance_d.x, accumulated_radiance_d.y, accumulated_radiance_d.z, 1.0f);
-    float3 accumulated_radiance = make_float3(accumulated_radiance_d.x, accumulated_radiance_d.y, accumulated_radiance_d.z);
+    RGB accumulated_radiance = RGB(accumulated_radiance_d.x, accumulated_radiance_d.y, accumulated_radiance_d.z);
 #else
-    float3 accumulated_radiance;
+    RGB accumulated_radiance;
     if (accumulation_count != 0) {
-        float3 prev_radiance = make_float3(accumulation_buffer[g_launch_index]);
+        RGB prev_radiance = to_rgb(make_float3(accumulation_buffer[g_launch_index]));
         accumulated_radiance = lerp(prev_radiance, radiance, 1.0f / (accumulation_count + 1.0f));
     }
     else
         accumulated_radiance = radiance;
-    accumulation_buffer[g_launch_index] = make_float4(accumulated_radiance, 1.0f);
+    accumulation_buffer[g_launch_index] = make_float4(to_float3(accumulated_radiance), 1.0f);
 #endif
 
-    camera_state.output_buffer[g_launch_index] = float_to_half(make_float4(accumulated_radiance, 1.0f));
+    camera_state.output_buffer[g_launch_index] = float_to_half(make_float4(to_float3(accumulated_radiance), 1.0f));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -117,7 +117,7 @@ __inline_dev__ void path_trace_single_bounce(MonteCarloPayload& payload) {
     // Trace shadow ray for light sample.
     const LightSample& light_sample = payload.light_sample;
     if (light_sample.radiance.r > 0 || light_sample.radiance.g > 0 || light_sample.radiance.b > 0) {
-        ShadowPayload shadow_payload = { to_float3(light_sample.radiance) };
+        ShadowPayload shadow_payload = { light_sample.radiance };
         Ray shadow_ray(payload.light_sample_origin, to_float3(light_sample.direction_to_light), RayTypes::Shadow, 0.0f, light_sample.distance);
         rtTrace(g_scene_root, shadow_ray, shadow_payload, RT_VISIBILITY_ALL, RT_RAY_FLAG_DISABLE_CLOSESTHIT);
 
@@ -130,7 +130,7 @@ __inline_dev__ void path_trace_single_bounce(MonteCarloPayload& payload) {
 
 RT_PROGRAM void path_tracing_RPG() {
 
-    accumulate([](MonteCarloPayload payload) -> float3 {
+    accumulate([](MonteCarloPayload payload) -> RGB {
         do {
             path_trace_single_bounce(payload);
         } while (payload.bounces <= g_camera_state.max_bounce_count && !is_black(payload.throughput));
@@ -147,9 +147,9 @@ namespace AIDenoiser {
 rtDeclareVariable(AIDenoiserStateGPU, g_AI_denoiser_state, , );
 
 RT_PROGRAM void path_tracing_RPG() {
-    float3 albedo = { 0, 0, 0 };
+    RGB albedo = { 0, 0, 0 };
 
-    accumulate([&](MonteCarloPayload payload) -> float3 {
+    accumulate([&](MonteCarloPayload payload) -> RGB {
         bool properties_accumulated = false;
         do {
             float3 last_ray_direction = payload.direction;
@@ -187,9 +187,9 @@ RT_PROGRAM void path_tracing_RPG() {
 
     // Accumulate albedo
     auto albedo_buffer = g_AI_denoiser_state.albedo_buffer;
-    const float3 prev_albedo = make_float3(albedo_buffer[g_launch_index]);
-    const float3 accumulated_albedo = lerp(prev_albedo, albedo, 1.0f / (g_camera_state.accumulations + 1));
-    albedo_buffer[g_launch_index] = make_float4(accumulated_albedo, 1.0f);
+    const RGB prev_albedo = to_rgb(make_float3(albedo_buffer[g_launch_index]));
+    const RGB accumulated_albedo = lerp(prev_albedo, albedo, 1.0f / (g_camera_state.accumulations + 1));
+    albedo_buffer[g_launch_index] = make_float4(accumulated_albedo.r, accumulated_albedo.g, accumulated_albedo.b, 1.0f);
 
     // Output radiance.
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
@@ -226,7 +226,7 @@ RT_PROGRAM void copy_to_output() {
 
 RT_PROGRAM void depth_RPG() {
 
-    accumulate([=](MonteCarloPayload payload) -> float3 {
+    accumulate([=](MonteCarloPayload payload) -> RGB {
         float depth = 0;
         do {
             float3 last_position = payload.position;
@@ -235,7 +235,7 @@ RT_PROGRAM void depth_RPG() {
             depth += length(last_position - payload.position);
         } while (payload.material_index == 0 && !is_black(payload.throughput));
 
-        return make_float3(depth, depth, depth);
+        return RGB(depth);
     });
 
 #ifdef DOUBLE_PRECISION_ACCUMULATION_BUFFER
@@ -264,7 +264,7 @@ RT_PROGRAM void depth_RPG() {
 
 template <typename IntersectionProcessor>
 __inline_dev__ void process_material_intersection(IntersectionProcessor process_intersection) {
-    accumulate([process_intersection](MonteCarloPayload payload) -> float3 {
+    accumulate([process_intersection](MonteCarloPayload payload) -> RGB {
         float3 last_ray_direction = payload.direction;
         do {
             last_ray_direction = payload.direction;
@@ -273,14 +273,14 @@ __inline_dev__ void process_material_intersection(IntersectionProcessor process_
         } while (payload.material_index == 0 && !is_black(payload.throughput));
 
         if (payload.material_index == 0)
-            return make_float3(0, 0, 0);
+            return RGB::black();
 
         return process_intersection(payload, last_ray_direction);
     });
 }
 
 RT_PROGRAM void albedo_RPG() {
-    process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
+    process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> RGB {
         float abs_cos_theta = abs(dot(last_ray_direction, payload.shading_normal));
         const auto& material_parameters = g_materials[payload.material_index];
         float4 tint_and_roughness_scale = unorm8_to_float(payload.tint_and_roughness_scale);
@@ -289,7 +289,7 @@ RT_PROGRAM void albedo_RPG() {
             return material.rho(abs_cos_theta);
         } else if (material_parameters.shading_model == Material::ShadingModel::Diffuse) {
             float4 tint_roughness = material_parameters.get_tint_roughness(payload.texcoord) * tint_and_roughness_scale;
-            return Shading::ShadingModels::DiffuseShading(make_float3(tint_roughness), tint_roughness.w).rho(abs_cos_theta);
+            return Shading::ShadingModels::DiffuseShading(to_rgb(make_float3(tint_roughness)), tint_roughness.w).rho(abs_cos_theta);
         } else if (material_parameters.shading_model == Material::ShadingModel::Transmissive) {
             auto material = Shading::ShadingModels::TransmissiveShading(material_parameters, payload.texcoord, tint_and_roughness_scale, abs_cos_theta);
             return material.rho(abs_cos_theta);
@@ -299,25 +299,25 @@ RT_PROGRAM void albedo_RPG() {
 }
 
 RT_PROGRAM void tint_RPG() {
-    process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
+    process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> RGB {
         float3 tint_scale = make_float3(unorm8_to_float(payload.tint_and_roughness_scale));
         const auto& material_parameters = g_materials[payload.material_index];
-        return make_float3(material_parameters.get_tint_roughness(payload.texcoord)) * tint_scale;
+        return to_rgb(make_float3(material_parameters.get_tint_roughness(payload.texcoord)) * tint_scale);
     });
 }
 
 RT_PROGRAM void roughness_RPG() {
-    process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
+    process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> RGB {
         float roughness_scale = unorm8_to_float(payload.tint_and_roughness_scale).w;
         const auto& material_parameters = g_materials[payload.material_index];
         float roughness = material_parameters.get_tint_roughness(payload.texcoord).w * roughness_scale;
-        return { roughness, roughness, roughness };
+        return RGB(roughness);
     });
 }
 
 RT_PROGRAM void shading_normal_RPG() {
-    process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
-        return payload.shading_normal * 0.5f + 0.5f;
+    process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> RGB {
+        return to_rgb(payload.shading_normal * 0.5f + 0.5f);
     });
 }
 
@@ -326,15 +326,15 @@ RT_PROGRAM void shading_normal_RPG() {
 // in the most significant bits for neighbouring ID's and decoding the bitmask as a morton code
 // splits the most significant bits into the different color channels.
 // To have different colors across different geometry instances, we additionally xor the primitive ID with the instance ID.
-__inline_dev__ float3 primitive_id_to_color(PrimitiveID primitive_id) {
+__inline_dev__ RGB primitive_id_to_color(PrimitiveID primitive_id) {
     unsigned int instance_encoding = primitive_id.instance_id.id & 0x3FFFFFF;
     unsigned int primitive_encoding = reverse_bits(primitive_id.primitive_id + 1) >> 2;
     uint3 color = morton_decode_3D(instance_encoding ^ primitive_encoding);
-    return make_float3(color) / 1023.0f;
+    return to_rgb(make_float3(color) / 1023.0f);
 }
 
 RT_PROGRAM void primitive_id_RPG() {
-    process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> float3 {
+    process_material_intersection([](const MonteCarloPayload& payload, float3 last_ray_direction) -> RGB {
         return primitive_id_to_color(payload.primitive_id);
     });
 }
@@ -347,7 +347,7 @@ rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(MonteCarloPayload, monte_carlo_payload, rtPayload, );
 
 RT_PROGRAM void miss() {
-    float3 environment_radiance = g_scene.environment_light.get_tint();
+    RGB environment_radiance = to_rgb(g_scene.environment_light.get_tint());
 
     unsigned int environment_map_ID = g_scene.environment_light.environment_map_ID;
     if (environment_map_ID) {
@@ -356,11 +356,11 @@ RT_PROGRAM void miss() {
         if (monte_carlo_payload.bsdf_PDF.use_for_MIS())
             // Calculate MIS weight and scale the radiance by it.
             response.radiance *= MIS_weight(monte_carlo_payload.bsdf_PDF, response.PDF);
-        environment_radiance = to_float3(response.radiance);
+        environment_radiance = response.radiance;
     }
 
     monte_carlo_payload.radiance += monte_carlo_payload.throughput * environment_radiance;
-    monte_carlo_payload.throughput = make_float3(0.0f);
+    monte_carlo_payload.throughput = RGB(0.0f);
     monte_carlo_payload.position = 1e30f * monte_carlo_payload.direction;
     monte_carlo_payload.shading_normal = -ray.direction;
     monte_carlo_payload.primitive_id = PrimitiveID::make(InstanceID::analytical_light_sources(), 0xFFFFFFFF);
