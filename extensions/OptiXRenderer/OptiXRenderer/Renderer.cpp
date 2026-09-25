@@ -870,10 +870,10 @@ struct Renderer::Implementation {
 
                         device_light.flags = Light::Spot;
 
-                        device_light.spot.position = to_float3(light_transform.translation);
+                        device_light.spot.position = light_transform.translation;
                         device_light.spot.radius = host_light.get_radius();
-                        device_light.spot.power = to_float3(host_light.get_power());
-                        device_light.spot.direction = to_float3(light_transform.rotation.forward());
+                        device_light.spot.power = host_light.get_power();
+                        device_light.spot.direction = light_transform.rotation.forward();
                         device_light.spot.cos_angle = host_light.get_cos_angle();
                         break;
                     }
