@@ -9,7 +9,6 @@
 #ifndef _OPTIXRENDERER_LIGHT_IMPLEMENTATION_H_
 #define _OPTIXRENDERER_LIGHT_IMPLEMENTATION_H_
 
-#include <OptiXRenderer/Shading/LightSources/DirectionalLightImpl.h>
 #include <OptiXRenderer/Shading/LightSources/EnvironmentLightImpl.h>
 #include <OptiXRenderer/Shading/LightSources/PresampledEnvironmentLightImpl.h>
 #include <OptiXRenderer/Shading/LightSources/SpotLightImpl.h>
@@ -21,7 +20,7 @@ __inline_dev__ bool is_delta_light(const Light& light, optix::float3 lit_positio
     case Light::Sphere:
         return light.sphere.is_delta_light(to_vector3f(lit_position));
     case Light::Directional:
-        return is_delta_light(light.directional);
+        return light.directional.is_delta_light();
     case Light::Environment:
         return is_delta_light(light.environment);
     case Light::PresampledEnvironment:
@@ -38,8 +37,10 @@ __inline_dev__ LightSample sample_radiance(const Light& light, optix::float3 lit
         auto sample = light.sphere.sample_radiance(to_vector3f(lit_position), { random_sample.x, random_sample.y });
         return { to_float3(sample.radiance), sample.PDF, to_float3(sample.direction_to_light), sample.distance };
     }
-    case Light::Directional:
-        return sample_radiance(light.directional, random_sample);
+    case Light::Directional: {
+        auto sample = light.directional.sample_radiance();
+        return { to_float3(sample.radiance), sample.PDF, to_float3(sample.direction_to_light), sample.distance };
+    }
     case Light::Environment:
         return sample_radiance(light.environment, random_sample);
     case Light::PresampledEnvironment:
@@ -55,7 +56,7 @@ __inline_dev__ LightResponse evaluate_with_PDF(const Light& light, optix::float3
     case Light::Sphere:
         return light.sphere.evaluate_with_PDF(to_vector3f(lit_position), to_vector3f(direction_to_light));
     case Light::Directional:
-        return { to_rgb(evaluate(light.directional, direction_to_light)), pdf(light.directional, direction_to_light) };
+        return light.directional.evaluate_with_PDF(to_vector3f(lit_position), to_vector3f(direction_to_light));
     case Light::Environment:
         return evaluate_with_PDF(light.environment, direction_to_light);
     case Light::PresampledEnvironment:
