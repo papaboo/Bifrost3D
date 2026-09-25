@@ -127,8 +127,6 @@ static IsotropicLTC fetch(float abs_cos_theta_o, float roughness) {
 namespace GGXReflectionLTC {
 static const int angle_sample_count = 64;
 static const int roughness_sample_count = 64;
-static const float4 minimum_param_value = float4(0.0, -0.297647, -0.0138124, 0.0);
-static const float4 maximum_param_value = float4(1.00099, 0.0263276, 0.590569, 1.6577);
 
 static IsotropicLTC fetch(float abs_cos_theta_o, float roughness) {
     float v = sqrt(max(0.0f, 1 - abs_cos_theta_o));
@@ -137,8 +135,7 @@ static IsotropicLTC fetch(float abs_cos_theta_o, float roughness) {
     float roughness_u = lerp(0.5 / roughness_sample_count, 1.0 - 0.5 / roughness_sample_count, roughness);
     float cos_theta_v = lerp(0.5 / angle_sample_count, 1.0 - 0.5 / angle_sample_count, v);
 
-    float4 scaled_ltc_params = ggx_ltc_fit_tex.SampleLevel(bilinear_sampler, float2(roughness_u, cos_theta_v), 0);
-    float4 ltc_params = lerp(minimum_param_value, maximum_param_value, scaled_ltc_params);
+    float4 ltc_params = ggx_ltc_fit_tex.SampleLevel(bilinear_sampler, float2(roughness_u, cos_theta_v), 0);
 
     return IsotropicLTC::from_inverse_M(ltc_params.x, 1, ltc_params.w, ltc_params.z, ltc_params.y);
 }

@@ -155,24 +155,18 @@ OShaderResourceView MaterialManager::create_GGX_LTC_fit_srv(ID3D11Device1& devic
     using namespace Bifrost::Assets::Shading;
     using namespace Bifrost::Math;
 
-    const unsigned int width = LTC::GGX_reflection_angle_sample_count;
-    const unsigned int height = LTC::GGX_reflection_roughness_sample_count;
+    const unsigned int width = LTC::GGX_reflection_roughness_sample_count;
+    const unsigned int height = LTC::GGX_reflection_angle_sample_count;
     const unsigned int element_count = width * height;
 
-    // Scale the LTC parameters by their minimum and maximum bounds, which allows us to upload them quantized between 0 and 1.
-    auto* scaled_LTC_parameters = new Vector4<unsigned short>[element_count];
-    for (unsigned int i = 0; i < element_count; ++i) {
-        Vector4f scaled_params = inverse_lerp(LTC::GGX_reflection_minimum_param, LTC::GGX_reflection_maximum_param, LTC::GGX_reflection_LTC_params[i]);
-        scaled_LTC_parameters[i] = { unsigned short(scaled_params.x * 65535 + 0.5f),
-                                     unsigned short(scaled_params.y * 65535 + 0.5f),
-                                     unsigned short(scaled_params.z * 65535 + 0.5f),
-                                     unsigned short(scaled_params.w * 65535 + 0.5f) };
-    }
+    auto* LTC_parameters = new Vector4<half>[element_count];
+    for (unsigned int i = 0; i < element_count; ++i)
+        LTC_parameters[i] = LTC::GGX_reflection_LTC_params[i];
 
     OShaderResourceView GGX_LTC_fit_srv;
-    create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_UNORM, scaled_LTC_parameters, width, height, D3D11_USAGE_IMMUTABLE, &GGX_LTC_fit_srv);
+    create_texture_2D(device, DXGI_FORMAT_R16G16B16A16_FLOAT, LTC_parameters, width, height, D3D11_USAGE_IMMUTABLE, &GGX_LTC_fit_srv);
 
-    delete[] scaled_LTC_parameters;
+    delete[] LTC_parameters;
 
     return GGX_LTC_fit_srv;
 }
