@@ -64,11 +64,11 @@ __inline_dev__ LightSample sample_single_light(const ShadingModel& material, flo
     LightSample light_sample = LightSources::sample_radiance(light, intersection_point, make_float2(random_sample));
     light_sample.radiance *= g_scene.light_count; // Scale up radiance to account for only sampling one light.
 
-    float N_dot_L = dot(world_shading_tbn.get_normal(), light_sample.direction_to_light);
+    float N_dot_L = dot(world_shading_tbn.get_normal(), to_float3(light_sample.direction_to_light));
     light_sample.radiance *= abs(N_dot_L) / light_sample.PDF.value();
 
     // Apply MIS weights if the light isn't a delta function.
-    const float3 shading_light_direction = world_shading_tbn * light_sample.direction_to_light;
+    const float3 shading_light_direction = world_shading_tbn * to_float3(light_sample.direction_to_light);
     BSDFResponse bsdf_response = material.evaluate_with_PDF(wo, shading_light_direction);
     bool apply_MIS = !light_sample.PDF.is_delta_dirac();
     if (apply_MIS)
@@ -80,7 +80,7 @@ __inline_dev__ LightSample sample_single_light(const ShadingModel& material, flo
         bsdf_response.reflectance = { min(bsdf_response.reflectance.r, 32.0f), min(bsdf_response.reflectance.g, 32.0f), min(bsdf_response.reflectance.b, 32.0f) };
 
     // Inline the material response into the light sample's radiance.
-    light_sample.radiance *= to_float3(bsdf_response.reflectance);
+    light_sample.radiance *= bsdf_response.reflectance;
 
     return light_sample;
 }
@@ -196,8 +196,8 @@ __inline_all__ void path_tracing_closest_hit() {
     { // Next event estimation, sample the light sources directly.
         monte_carlo_payload.light_sample = reestimated_light_samples(material, world_intersection_point, wo, world_shading_tbn);
         monte_carlo_payload.light_sample_origin = offset_ray_origin(
-            world_intersection_point, monte_carlo_payload.light_sample.direction_to_light, world_geometric_normal);
-        monte_carlo_payload.light_sample.radiance *= monte_carlo_payload.throughput;
+            world_intersection_point, to_float3(monte_carlo_payload.light_sample.direction_to_light), world_geometric_normal);
+        monte_carlo_payload.light_sample.radiance *= to_rgb(monte_carlo_payload.throughput);
     }
 
     // BSDF sampling.

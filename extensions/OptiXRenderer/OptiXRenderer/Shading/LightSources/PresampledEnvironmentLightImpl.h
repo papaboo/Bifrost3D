@@ -21,7 +21,7 @@ __inline_dev__ bool is_delta_light(const PresampledEnvironmentLight& light) {
 __inline_dev__ LightSample sample_radiance(const PresampledEnvironmentLight& light, optix::float2 random_sample) {
     int index = random_sample.x * light.sample_count;
     LightSample sample = rtBufferId<LightSample, 1>(light.samples_ID)[index];
-    sample.radiance *= light.tint;
+    sample.radiance *= to_rgb(light.tint);
     return sample;
 }
 
