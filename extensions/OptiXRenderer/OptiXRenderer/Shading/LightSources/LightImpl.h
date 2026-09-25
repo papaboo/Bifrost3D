@@ -63,14 +63,14 @@ __inline_dev__ LightResponse evaluate_with_PDF(const Light& light, optix::float3
     return LightResponse::none();
 }
 
-__inline_dev__ optix::float3 evaluate_intersection(const Light& light, optix::float3 lit_position, optix::float3 direction_to_light, PDF bsdf_PDF) {
+__inline_dev__ RGB evaluate_intersection(const Light& light, optix::float3 lit_position, optix::float3 direction_to_light, PDF bsdf_PDF) {
     LightResponse response = evaluate_with_PDF(light, lit_position, direction_to_light);
 
     if (bsdf_PDF.use_for_MIS())
         // Calculate MIS weight and scale the radiance by it.
         response.radiance *= MIS_weight(bsdf_PDF, response.PDF);
 
-    return to_float3(response.radiance);
+    return response.radiance;
 }
 
 } // NS OptiXRenderer::LightSources
