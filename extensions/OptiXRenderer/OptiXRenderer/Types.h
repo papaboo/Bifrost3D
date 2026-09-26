@@ -38,6 +38,7 @@ using RGB = Bifrost::Math::RGB;
 using Vector2f = Bifrost::Math::Vector2f;
 using Vector3f = Bifrost::Math::Vector3f;
 using Vector4f = Bifrost::Math::Vector4f;
+using Disk = Bifrost::Math::Disk;
 using PDF = Bifrost::Math::MonteCarlo::PDF;
 using BSDFResponse = Bifrost::Assets::Shading::BSDFResponse;
 using BSDFSample = Bifrost::Assets::Shading::BSDFSample;
@@ -122,17 +123,6 @@ struct __align__(16) Sphere {
     __inline_all__ static Sphere make(optix::float3 center, float radius) {
         Sphere s = { center, radius };
         return s;
-    }
-};
-
-struct Disk {
-    optix::float3 center;
-    optix::float3 normal;
-    float radius;
-
-    __inline_all__ static Disk make(optix::float3 center, optix::float3 normal, float radius) {
-        Disk d = { center, normal, radius };
-        return d;
     }
 };
 
