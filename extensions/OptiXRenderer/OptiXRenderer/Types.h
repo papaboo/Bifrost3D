@@ -14,6 +14,7 @@
 #include <OptiXRenderer/RNG.h>
 
 #include <Bifrost/Assets/Shading/LightSources/DirectionalLight.h>
+#include <Bifrost/Assets/Shading/LightSources/DiskLight.h>
 #include <Bifrost/Assets/Shading/LightSources/SphereLight.h>
 #include <Bifrost/Assets/Shading/Utils.h>
 #include <Bifrost/Math/Color.h>
@@ -42,8 +43,9 @@ using BSDFResponse = Bifrost::Assets::Shading::BSDFResponse;
 using BSDFSample = Bifrost::Assets::Shading::BSDFSample;
 using LightResponse = Bifrost::Assets::Shading::LightResponse;
 using LightSample = Bifrost::Assets::Shading::LightSample;
-using SphereLight = Bifrost::Assets::Shading::LightSources::SphereLight;
 using DirectionalLight = Bifrost::Assets::Shading::LightSources::DirectionalLight;
+using DiskLight = Bifrost::Assets::Shading::LightSources::DiskLight;
+using SphereLight = Bifrost::Assets::Shading::LightSources::SphereLight;
 
 struct RayTypes {
     static const unsigned int MonteCarlo = 0;
@@ -232,16 +234,18 @@ struct __align__(16) Light {
     enum Flags {
         None = 0u,
         Sphere = 1u,
-        Directional = 2u,
-        Environment = 3u,
-        PresampledEnvironment = 4u,
-        Spot = 5u,
+        Disk = 2u,
+        Directional = 3u,
+        Environment = 4u,
+        PresampledEnvironment = 5u,
+        Spot = 6u,
         TypeMask = 7u
     };
 
     union {
         SphereLight sphere;
         DirectionalLight directional;
+        DiskLight disk;
         EnvironmentLight environment;
         PresampledEnvironmentLight presampled_environment;
         SpotLight spot;

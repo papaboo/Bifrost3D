@@ -864,7 +864,20 @@ struct Renderer::Implementation {
                         device_light.sphere = SphereLight(light_position, host_light.get_radius(), host_light.get_power());
                         break;
                     }
-                    case LightSources::Type::Spot: {
+                    case LightSources::Type::Disk: {
+                        Scene::DiskLight host_light = light_ID;
+                        auto light_transform = host_light.get_node().get_global_transform();
+
+                        device_light.flags = Light::Disk;
+
+                        auto light_position = host_light.get_node().get_global_transform().translation;
+                        auto light_direction = host_light.get_node().get_global_transform().rotation.forward();
+                        Math::Disk surface = Math::Disk(light_position, host_light.get_radius(), light_direction);
+                        device_light.disk = DiskLight(surface, host_light.get_power(), true);
+                        break;
+                    }
+                    case LightSources::Type::Spot:
+                    {
                         Scene::SpotLight host_light = light_ID;
                         auto light_transform = host_light.get_node().get_global_transform();
 

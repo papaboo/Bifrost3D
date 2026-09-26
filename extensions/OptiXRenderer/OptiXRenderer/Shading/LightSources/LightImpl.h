@@ -19,6 +19,8 @@ __inline_dev__ bool is_delta_light(const Light& light, optix::float3 lit_positio
     switch (light.get_type()) {
     case Light::Sphere:
         return light.sphere.is_delta_light(to_vector3f(lit_position));
+    case Light::Disk:
+        return light.disk.is_delta_light();
     case Light::Directional:
         return light.directional.is_delta_light();
     case Light::Environment:
@@ -35,6 +37,8 @@ __inline_dev__ LightSample sample_radiance(const Light& light, optix::float3 lit
     switch (light.get_type()) {
     case Light::Sphere:
         return light.sphere.sample_radiance(to_vector3f(lit_position), { random_sample.x, random_sample.y });
+    case Light::Disk:
+        return light.disk.sample_radiance(to_vector3f(lit_position), { random_sample.x, random_sample.y });
     case Light::Directional:
         return light.directional.sample_radiance();
     case Light::Environment:
@@ -51,6 +55,8 @@ __inline_dev__ LightResponse evaluate_with_PDF(const Light& light, optix::float3
     switch (light.get_type()) {
     case Light::Sphere:
         return light.sphere.evaluate_with_PDF(to_vector3f(lit_position), to_vector3f(direction_to_light));
+    case Light::Disk:
+        return light.disk.evaluate_with_PDF(to_vector3f(lit_position), to_vector3f(direction_to_light));
     case Light::Directional:
         return light.directional.evaluate_with_PDF(to_vector3f(lit_position), to_vector3f(direction_to_light));
     case Light::Environment:
