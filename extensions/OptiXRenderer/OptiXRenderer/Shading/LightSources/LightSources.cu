@@ -8,6 +8,8 @@
 
 #include <OptiXRenderer/Intersect.h>
 
+#include <Bifrost/Math/Intersect.h>
+
 #include <optix.h>
 #include <optixu/optixu_aabb.h>
 #include <optixu/optixu_math.h>
@@ -36,11 +38,11 @@ RT_PROGRAM void intersect(int prim_index) {
         const SphereLight sphere_light = light.sphere;
         t = Intersect::ray_sphere(ray, Sphere::make(to_float3(sphere_light.get_position()), sphere_light.get_radius()));
     } else if (light.get_type() == Light::Disk) {
-        const Bifrost::Math::Disk disk = light.disk.get_surface();
-        t = Intersect::ray_disk(ray, Disk::make(to_float3(disk.center), to_float3(disk.normal), disk.radius));
+        const Disk disk = light.disk.get_surface();
+        t = Bifrost::Math::Intersect::ray_disk(to_vector3f(ray.origin), to_vector3f(ray.direction), disk.center, disk.normal, disk.radius);
     } else if (light.get_type() == Light::Spot) {
         const SpotLight spot_light = light.spot;
-        t = Intersect::ray_disk(ray, Disk::make(to_float3(spot_light.position), to_float3(spot_light.direction), spot_light.radius));
+        t = Bifrost::Math::Intersect::ray_disk(to_vector3f(ray.origin), to_vector3f(ray.direction), spot_light.position, spot_light.direction, spot_light.radius);
     }
 
     if (rtPotentialIntersection(t)) {
@@ -57,7 +59,7 @@ RT_PROGRAM void intersect(int prim_index) {
             // to ensure that the intersection point is as close to the sphere surface as possible.
             intersection_point = light_center + sphere_light.get_radius() * shading_normal;
         } else if (light.get_type() == Light::Disk) {
-            const Bifrost::Math::Disk disk = light.disk.get_surface();
+            const Disk disk = light.disk.get_surface();
             shading_normal = to_float3(disk.normal);
 
             // Computing the intersection point using origin + t * direction can be unstable if t is large.
