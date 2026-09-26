@@ -179,27 +179,27 @@ struct EnvironmentLight {
     int marginal_CDF_ID;
     int conditional_CDF_ID;
     int per_pixel_PDF_ID;
-    unsigned short tint_x; // Tint stored as fixedpoint
-    unsigned short tint_y; // Tint stored as fixedpoint
-    unsigned short tint_z; // Tint stored as fixedpoint
+    unsigned short tint_r; // Tint stored as fixedpoint
+    unsigned short tint_g; // Tint stored as fixedpoint
+    unsigned short tint_b; // Tint stored as fixedpoint
     unsigned short __padding; // Tint stored as fixedpoint
     unsigned short PDF_width;
     unsigned short PDF_height;
 
-    __inline_all__ static EnvironmentLight empty(optix::float3 tint) {
+    __inline_all__ static EnvironmentLight empty(RGB tint) {
         EnvironmentLight light = {};
         light.set_tint(tint);
         return light;
     }
 
-    __inline_all__ void set_tint(optix::float3 tint) {
-        tint_x = (unsigned short)fmaxf(65535.0f, tint.x * 65535.0f + 0.5f);
-        tint_y = (unsigned short)fmaxf(65535.0f, tint.y * 65535.0f + 0.5f);
-        tint_z = (unsigned short)fmaxf(65535.0f, tint.z * 65535.0f + 0.5f);
+    __inline_all__ void set_tint(RGB tint) {
+        tint_r = (unsigned short)fminf(65535.0f, tint.r * 65535.0f + 0.5f);
+        tint_g = (unsigned short)fminf(65535.0f, tint.g * 65535.0f + 0.5f);
+        tint_b = (unsigned short)fminf(65535.0f, tint.b * 65535.0f + 0.5f);
     }
 
-    __inline_all__ optix::float3 get_tint() const {
-        return optix::make_float3(tint_x / 65535.0f, tint_y / 65535.0f, tint_z / 65535.0f);
+    __inline_all__ RGB get_tint() const {
+        return RGB(tint_r / 65535.0f, tint_g / 65535.0f, tint_b / 65535.0f);
     }
 };
 
@@ -208,16 +208,16 @@ struct PresampledEnvironmentLight {
     int per_pixel_PDF_ID; // Texture ID.
     int samples_ID; // Buffer ID.
     int sample_count;
-    optix::float3 tint;
+    RGB tint;
 
-    __inline_all__ static PresampledEnvironmentLight empty(optix::float3 tint) {
+    __inline_all__ static PresampledEnvironmentLight empty(RGB tint) {
         PresampledEnvironmentLight light = {};
         light.tint = tint;
         return light;
     }
 
-    __inline_all__ void set_tint(optix::float3 t) { tint = t; }
-    __inline_all__ optix::float3 get_tint() const { return tint; }
+    __inline_all__ void set_tint(RGB t) { tint = t; }
+    __inline_all__ RGB get_tint() const { return tint; }
 };
 
 struct __align__(16) Light {

@@ -43,7 +43,7 @@ public:
     // Constructors and destructor.
     //---------------------------------------------------------------------------------------------
     EnvironmentMap() = default;
-    EnvironmentMap(optix::float3 tint)
+    EnvironmentMap(RGB tint)
         : m_environment_map(Bifrost::Assets::Texture::invalid())
         , m_color_texture(nullptr), m_marginal_CDF(nullptr), m_conditional_CDF(nullptr), m_per_pixel_PDF(nullptr) {
         // Initialize the GPU environment light representation.
@@ -51,7 +51,7 @@ public:
         m_environment_light.set_tint(tint);
     }
 
-    EnvironmentMap(optix::Context& context, const Bifrost::Assets::InfiniteAreaLight& light, optix::float3 tint, optix::TextureSampler environment_sampler);
+    EnvironmentMap(optix::Context& context, const Bifrost::Assets::InfiniteAreaLight& light, RGB tint, optix::TextureSampler environment_sampler);
 
     EnvironmentMap& operator=(EnvironmentMap&& rhs) {
         m_environment_light = rhs.m_environment_light;
@@ -65,7 +65,7 @@ public:
 
     ~EnvironmentMap();
 
-    inline void set_tint(optix::float3 tint) { m_environment_light.set_tint(tint); }
+    inline void set_tint(RGB tint) { m_environment_light.set_tint(tint); }
 
     //---------------------------------------------------------------------------------------------
     // Getters.
