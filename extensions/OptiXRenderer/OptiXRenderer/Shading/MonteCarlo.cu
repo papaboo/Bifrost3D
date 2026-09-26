@@ -62,14 +62,16 @@ __inline_dev__ LightSample sample_single_light(const ShadingModel& material, flo
     int light_index = min(g_scene.light_count - 1, int(random_sample.z * g_scene.light_count));
     const Light& light = g_scene.light_buffer[light_index];
     LightSample light_sample = LightSources::sample_radiance(light, intersection_point, make_float2(random_sample));
+    if (!light_sample.PDF.is_valid())
+        return light_sample;
+
     light_sample.radiance *= g_scene.light_count; // Scale up radiance to account for only sampling one light.
 
-    float N_dot_L = dot(world_shading_tbn.get_normal(), to_float3(light_sample.direction_to_light));
-    light_sample.radiance *= abs(N_dot_L) / light_sample.PDF.value();
+    float3 wi = world_shading_tbn * to_float3(light_sample.direction_to_light);
+    light_sample.radiance *= abs(wi.z) / light_sample.PDF.value();
 
     // Apply MIS weights if the light isn't a delta function.
-    const float3 shading_light_direction = world_shading_tbn * to_float3(light_sample.direction_to_light);
-    BSDFResponse bsdf_response = material.evaluate_with_PDF(wo, shading_light_direction);
+    BSDFResponse bsdf_response = material.evaluate_with_PDF(wo, wi);
     bool apply_MIS = !light_sample.PDF.is_delta_dirac();
     if (apply_MIS)
         // The light source connected to the final bounce will be scaled by the MIS weight as well, even though the BSDF sample isn't traced and thus the second sample scheme isn't used.
@@ -109,12 +111,14 @@ __inline_dev__ LightSample reestimated_light_samples(const ShadingModel& materia
         float new_light_weight = sum(new_light_sample.radiance);
         float new_light_probability = new_light_weight / (light_weight + new_light_weight);
 
-        // Decide which light to keep and adjust the radiance.
-        if (use_new_light_decision < new_light_probability) {
-            light_sample = new_light_sample;
-            light_sample.radiance /= new_light_probability;
-        } else
-            light_sample.radiance /= 1.0f - new_light_probability;
+        if (!isnan(new_light_probability)) {
+            // Decide which light to keep and adjust the radiance.
+            if (use_new_light_decision < new_light_probability) {
+                light_sample = new_light_sample;
+                light_sample.radiance /= new_light_probability;
+            } else
+                light_sample.radiance /= 1.0f - new_light_probability;
+        }
     }
     light_sample.radiance /= light_sample_count;
 
