@@ -35,6 +35,9 @@ RT_PROGRAM void intersect(int prim_index) {
     if (light.get_type() == Light::Sphere) {
         const SphereLight sphere_light = light.sphere;
         t = Intersect::ray_sphere(ray, Sphere::make(to_float3(sphere_light.get_position()), sphere_light.get_radius()));
+    } else if (light.get_type() == Light::Disk) {
+        const Bifrost::Math::Disk disk = light.disk.get_surface();
+        t = Intersect::ray_disk(ray, Disk::make(to_float3(disk.center), to_float3(disk.normal), disk.radius));
     } else if (light.get_type() == Light::Spot) {
         const SpotLight spot_light = light.spot;
         t = Intersect::ray_disk(ray, Disk::make(to_float3(spot_light.position), to_float3(spot_light.direction), spot_light.radius));
@@ -53,6 +56,14 @@ RT_PROGRAM void intersect(int prim_index) {
             // To avoid this the intersection point is recomputed wrt the shading normal,
             // to ensure that the intersection point is as close to the sphere surface as possible.
             intersection_point = light_center + sphere_light.get_radius() * shading_normal;
+        } else if (light.get_type() == Light::Disk) {
+            const Bifrost::Math::Disk disk = light.disk.get_surface();
+            shading_normal = to_float3(disk.normal);
+
+            // Computing the intersection point using origin + t * direction can be unstable if t is large.
+            // So the coarse but close intersection point is projected on to the plane.
+            float t_fine = Intersect::point_distance_to_plane(coarse_intersection_point, to_float3(disk.center), to_float3(disk.normal));
+            intersection_point = coarse_intersection_point + t_fine * to_float3(disk.normal);
         } else if (light.get_type() == Light::Spot) {
             const SpotLight spot_light = light.spot;
             shading_normal = to_float3(spot_light.direction);
@@ -70,20 +81,23 @@ RT_PROGRAM void intersect(int prim_index) {
 }
 
 RT_PROGRAM void bounds(int primitive_index, float result[6]) {
-    optix::Aabb* aabb = (optix::Aabb*)result;
-
     const Light& light = g_scene.light_buffer[primitive_index];
-    if (light.get_type() != Light::Sphere && light.get_type() != Light::Spot) {
-        aabb->invalidate();
-        return;
+    optix::float3 position;
+    float radius = 0.0f;
+    if (light.get_type() == Light::Sphere) {
+        position = to_float3(light.sphere.get_position());
+        radius = light.sphere.get_radius();
+    } else if (light.get_type() == Light::Disk) {
+        position = to_float3(light.disk.get_surface().center);
+        radius = light.disk.get_surface().radius;
+    } else if (light.get_type() == Light::Spot) {
+        position = to_float3(light.spot.position);
+        radius = light.spot.radius;
     }
 
-    // Light is either a sphere light or a spot light.
     // TODO Tighter bounds around disk?
-    bool is_sphere_light = light.get_type() == Light::Sphere;
-    float radius = is_sphere_light ? light.sphere.get_radius() : light.spot.radius;
+    optix::Aabb* aabb = (optix::Aabb*)result;
     if (radius > 0.0f) {
-        optix::float3 position = is_sphere_light ? to_float3(light.sphere.get_position()) : to_float3(light.spot.position);
         aabb->m_min = position - radius;
         aabb->m_max = position + radius;
     } else
